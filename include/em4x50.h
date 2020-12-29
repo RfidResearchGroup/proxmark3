@@ -36,6 +36,7 @@
 // misc
 #define TIMEOUT                     2000
 #define DUMP_FILESIZE               136
+#define EM4X50_MAX_NO_SAMPLES       1000
 
 typedef struct {
     bool addr_given;
@@ -47,7 +48,9 @@ typedef struct {
 } PACKED em4x50_data_t;
 
 typedef struct {
-    bool field;
+    bool check_field;
+    int field;
+    int cycles;
 } PACKED em4x50_test_t;
 
 typedef struct {

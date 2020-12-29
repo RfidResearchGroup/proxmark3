@@ -62,6 +62,26 @@ static void wait_timer(uint32_t period) {
     while (AT91C_BASE_TC0->TC_CV < period);
 }
 
+static void catch_samples(void) {
+
+    uint8_t sample = 0;
+
+    if (EM4X50_MAX_NO_SAMPLES > CARD_MEMORY_SIZE) {
+        Dbprintf("exeeded emulator memory size");
+        return;
+    }
+
+    uint8_t *em4x50_sample_buffer = BigBuf_get_addr();
+
+    memcpy(em4x50_sample_buffer, &gHigh, 1);
+    memcpy(em4x50_sample_buffer + 1, &gLow, 1);
+
+    for (int i = 2; i < EM4X50_MAX_NO_SAMPLES + 2; i++) {
+        sample = AT91C_BASE_SSC->SSC_RHR;
+        memcpy(em4x50_sample_buffer + i, &sample, 1);
+        wait_timer(T0); // 8µs delay
+    }
+}
 
 // extract and check parities
 // return result of parity check and extracted plain data
@@ -242,11 +262,13 @@ static bool invalid_bit(void) {
 
     // get sample at 3/4 of bit period
     wait_timer(T0 * EM4X50_T_TAG_THREE_QUARTER_PERIOD);
+    //wait_timer(T0 * EM4X50_T_TAG_HALF_PERIOD);
 
     uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
     // wait until end of bit period
     wait_timer(T0 * EM4X50_T_TAG_QUARTER_PERIOD);
+    //wait_timer(T0 * EM4X50_T_TAG_HALF_PERIOD);
 
     // bit in "undefined" state?
     if (sample <= gHigh && sample >= gLow)
@@ -422,6 +444,8 @@ static int find_double_listen_window(bool bcommand) {
 
                     // skip the next bit...
                     wait_timer(T0 * EM4X50_T_TAG_FULL_PERIOD);
+                    catch_samples();
+                    break;
 
                     // ...and check if the following bit does make sense
                     // (if not it is the correct position within the second
@@ -723,24 +747,11 @@ static bool em4x50_sim_send_word(uint32_t word) {
 
 static bool em4x50_sim_send_listen_window(void) {
 
-    bool cond = false;
     uint16_t check = 0;
-    uint32_t tval1[5 * EM4X50_T_TAG_FULL_PERIOD] = {0};
-    uint32_t tval2[5 * EM4X50_T_TAG_FULL_PERIOD] = {0};
-
-    StartTicks();
 
     for (int t = 0; t < 5 * EM4X50_T_TAG_FULL_PERIOD; t++) {
 
-        cond = ((t >= 3 * EM4X50_T_TAG_FULL_PERIOD) && (t < 4 * EM4X50_T_TAG_FULL_PERIOD));
-        
         // wait until SSC_CLK goes HIGH
-        if (cond) {
-            AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
-            AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-            while (AT91C_BASE_TC0->TC_CV > 0);
-        }
-        
         while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
             WDT_HIT();
             
@@ -751,8 +762,6 @@ static bool em4x50_sim_send_listen_window(void) {
             }
             ++check;
         }
-        if (cond)
-            tval1[t] = GetTicks();
 
         if (t >= 4 * EM4X50_T_TAG_FULL_PERIOD)
             SHORT_COIL();
@@ -768,12 +777,6 @@ static bool em4x50_sim_send_listen_window(void) {
         check = 0;
 
         // wait until SSC_CLK goes LOW
-        if (cond) {
-            AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
-            AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-            while (AT91C_BASE_TC0->TC_CV > 0);
-        }
-        
         while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
             WDT_HIT();
             if (check == 1000) {
@@ -783,15 +786,7 @@ static bool em4x50_sim_send_listen_window(void) {
             }
             ++check;
         }
-        if (cond)
-            tval2[t] = GetTicks();
     }
-
-    for (int t = 0; t < 5 * EM4X50_T_TAG_FULL_PERIOD; t++) {
-        //if (tval[t] > 4)
-            Dbprintf("%3i probably RM intialization found: delta = %i %i", t, tval1[t], tval2[t]);
-    }
-    Dbprintf("");
     
     return true;
 }
@@ -1315,33 +1310,72 @@ void em4x50_test(em4x50_test_t *ett) {
 
     int status = PM3_EFAILED;
 
-    em4x50_setup_read();
+    // set field on or off
+    if (ett->field != -1) {
+        em4x50_setup_read();
+        if (ett->field == 1) {
+            LED_A_ON();
+        } else {
+            HIGH(GPIO_SSC_DOUT);
+            LED_A_OFF();
+        }
+        status = ett->field;
+    }
 
-    if (ett->field) {
-        LOW(GPIO_SSC_DOUT);
-        LED_A_ON();
+    // check field status
+    if (ett->check_field) {
+        em4x50_setup_sim();
+        bool field_on = false;
+        while (BUTTON_PRESS() == false) {
 
-        if (DBGLEVEL >= DBG_DEBUG)
-            Dbprintf("switched field on");
-        
+            if (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
+                if (field_on == false) {
+                    Dbprintf("field on");
+                    field_on = true;
+                }
+            } else if (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK){
+                if (field_on == true) {
+                    Dbprintf("field off");
+                    field_on = false;
+                }
+            }
+        }
         status = 1;
-    } else {
-        HIGH(GPIO_SSC_DOUT);
-        LED_A_OFF();
-
-        if (DBGLEVEL >= DBG_DEBUG)
-            Dbprintf("switched field off");
-        
-        status = 0;
     }
     
-    while (BUTTON_PRESS() == false) {
+    // timing values
+    if (ett->cycles != 0) {
+        uint32_t tval = 0;
+        uint32_t tvalhigh[ett->cycles];
+        uint32_t tvallow[ett->cycles];
 
-        if (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
-            Dbprintf("field on");
-        } else if (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)){
-            Dbprintf("field on");
+        em4x50_setup_sim();
+        AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0);
+        AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
+        AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+        AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
+        AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+        while (AT91C_BASE_TC0->TC_CV > 0);
+        
+        for (int t = 0; t < ett->cycles; t++) {
+        
+            // field on -> high value
+            AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+            tval = AT91C_BASE_TC0->TC_CV;
+            while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
+            tvalhigh[t] = AT91C_BASE_TC0->TC_CV - tval;
+
+            // filed off -> zero value
+            AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+            tval = AT91C_BASE_TC0->TC_CV;
+            while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);
+            tvallow[t] = AT91C_BASE_TC0->TC_CV - tval;
         }
+        
+        for (int t = 0; t < ett->cycles; t++) {
+            Dbprintf("%03i %li %li", t, tvallow[t], tvalhigh[t]);
+        }
+
     }
     
     reply_ng(CMD_LF_EM4X50_TEST, status, NULL, 0);

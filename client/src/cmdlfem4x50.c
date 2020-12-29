@@ -23,6 +23,61 @@
 
 static int CmdHelp(const char *Cmd);
 
+static void write_gnuplot_config_file(int gHigh, int gLow) {
+
+    const char *fn = "../data/data.gnu";
+    FILE *fp = NULL;
+
+    if ((fp = fopen(fn, "w+")) == false) {
+        PrintAndLogEx(WARNING, "Fail, open file %s", fn);
+    }
+
+    fprintf(fp, "set term qt size 1400, 350 enhanced\n");
+    fprintf(fp, "set border 31 front linecolor rgb 'dark-grey' linewidth 1.000 dashtype solid\n");
+    fprintf(fp, "set xtics  0, 1 textcolor rgb 'dark-grey'\n");
+    fprintf(fp, "set ytics  0, 64 textcolor rgb 'dark-grey'\n");
+    fprintf(fp, "set title 'EM4x50 signal (amplitude vs time)'\n");
+    fprintf(fp, "set title  font ',14' textcolor rgb 'white'\n");
+    fprintf(fp, "set xlabel 'time / ms'\n");
+    fprintf(fp, "set xlabel  font ',12' textcolor rgb 'dark-grey'\n");
+    fprintf(fp, "set ylabel 'amplitude'\n");
+    fprintf(fp, "set ylabel  font ',12' textcolor rgb 'dark-grey'\n");
+    fprintf(fp, "set key textcolor 'green'\n");
+    fprintf(fp, "set grid\n");
+    fprintf(fp, "#set time textcolor 'dark-grey'\n");
+    fprintf(fp, "plot [0:][-50:300] '../data/data.dat' u ($1/1000):2 w l linecolor 'green' title '500/4', '../data/data.dat' u ($1/1000):3 w l linecolor 'yellow' title 'gHigh = %i', '../data/data.dat' u ($1/1000):4 w l linecolor 'yellow' title 'gLow = %i'\n", gHigh, gLow);
+    fprintf(fp, "pause -1\n");
+
+    fclose(fp);
+}
+
+static void get_samples(void) {
+
+    int gHigh = 0, gLow = 0;
+    const char *fn = "../data/data.dat";
+    FILE *fp = NULL;
+
+    // download from BigBuf memory
+    uint8_t data[EM4X50_MAX_NO_SAMPLES + 2] = {0x0};
+    if (GetFromDevice(BIG_BUF, data, EM4X50_MAX_NO_SAMPLES + 2, 0, NULL, 0, NULL, 2500, false) == false) {
+        PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+    }
+
+    if ((fp = fopen(fn, "w+")) == false) {
+        PrintAndLogEx(WARNING, "Fail, open file %s", fn);
+    }
+
+    gHigh = data[0];
+    gLow = data[1];
+    for (int i = 2; i < EM4X50_MAX_NO_SAMPLES + 2; i++) {
+        fprintf(fp, "%i %i %i %i\n", (i - 2) * 8, data[i], gHigh, gLow);
+    }
+
+    fclose(fp);
+
+    write_gnuplot_config_file(gHigh, gLow);
+}
+
 static void prepare_result(const uint8_t *data, int fwr, int lwr, em4x50_word_t *words) {
 
     // restructure received result in "em4x50_word_t" structure
@@ -612,6 +667,8 @@ int CmdEM4x50Read(const char *Cmd) {
         }
     }
 
+    get_samples();
+    
     return em4x50_read(&etd, NULL);
 }
 
@@ -1162,19 +1219,43 @@ int CmdEM4x50Test(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 test",
                   "perform EM4x50 tests.",
-                  "lf em 4x50 test --field 1    -> reader field on \n"
+                  "lf em 4x50 test --field on   -> reader field on\n"
+                  "lf em 4x50 test --field off  -> reader field off\n"
+                  "lf em 4x50 test --check      -> check on/off status of reader field\n"
+                  "lf em 4x50 test --cycles 100  -> measure time of 100 field cycles\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("", "field", "field off/on"),
+        arg_str0(NULL, "field", "on/off", "field on/off"),
+        arg_lit0(NULL, "check", "check if field is on or off"),
+        arg_int0(NULL, "cycles", "<dec>", "number of field cycles"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    em4x50_test_t ett;
-    ett.field = arg_get_lit(ctx, 1);
+    // option: field
+    int slen = 0;
+    char format[3] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)format, sizeof(format), &slen);
+    em4x50_test_t ett = {.field = -1};
+    if (slen != 0) {
+        if (strcmp(format, "on") == 0) {
+            ett.field = 1;
+        } else if (strcmp(format, "off") == 0) {
+            ett.field = 0;
+        } else {
+            PrintAndLogEx(INFO, "Unknown option for --field: %s", format);
+            return PM3_ESOFT;
+        }
+    }
+
+    // option: check_field
+    ett.check_field = arg_get_lit(ctx, 2);
+    // option: cycles
+    ett.cycles = arg_get_int_def(ctx, 3, 0);
+    
     CLIParserFree(ctx);
 
     // start
@@ -1185,9 +1266,14 @@ int CmdEM4x50Test(const char *Cmd) {
 
     // print response
     if (resp.status == 1) {
-        PrintAndLogEx(SUCCESS, "Field switched " _GREEN_("on"));
+        if (ett.field == 1)
+            PrintAndLogEx(SUCCESS, "Field switched " _GREEN_("on"));
+        if (ett.check_field == 1)
+            PrintAndLogEx(SUCCESS, "Field status evaluated");
     } else if (resp.status == 0) {
         PrintAndLogEx(SUCCESS, "Field switched " _GREEN_("off"));
+    } else if (resp.status == -1) {
+        PrintAndLogEx(INFO, "Nothing done");
     } else {
         PrintAndLogEx(FAILED, "Test call " _RED_("failed"));
     }
