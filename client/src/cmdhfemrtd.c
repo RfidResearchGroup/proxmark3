@@ -20,7 +20,7 @@
 #include "protocols.h"              // definitions of ISO14A/7816 protocol
 #include "emv/apduinfo.h"           // GetAPDUCodeDescription
 #include "sha1.h"                   // KSeed calculation etc
-#include "crypto/libpcrypto.h"      // Hash calculation (sha256), TODO: AES too
+#include "crypto/libpcrypto.h"      // Hash calculation (sha256, sha512)
 #include "mifare/desfire_crypto.h"  // des_encrypt/des_decrypt
 #include "des.h"                    // mbedtls_des_key_set_parity
 #include "cmdhf14b.h"               // exchange_14b_apdu
