@@ -20,8 +20,7 @@
 #    Uncomment to override    #
 ###############################
 #export SerialPort="COM5"
-#export DebuggerPath="${workspaceFolder}/../../msys2/mingw64/bin/gdb.exe"
-#export JLinkServerPath="/c/Program Files (x86)/SEGGER/JLink/JLinkGDBServerCL.exe"
+#export JLinkServerPath="C:/Program Files (x86)/SEGGER/JLink/JLinkGDBServerCL.exe"
 
 #Debugging on 256KB systems is not recommended
 #This option does not override PLATFORM_SIZE
@@ -59,12 +58,6 @@ function setup_gdb_linux {
 	fi
 }
 
-function setup_gdb_ps {
-	if [ -z "$DebuggerPath" ]; then
-		export DebuggerPath="${workspaceFolder}/../../msys2/mingw64/bin/gdb.exe"
-	fi
-}
-
 function setup_jlink_linux {
 	if [ -z "$JLinkServerPath" ]; then
 		export JLinkServerPath="/opt/SEGGER/JLink/JLinkGDBServerCLExe"
@@ -88,9 +81,9 @@ function setup_jlink_wsl {
 
 function setup_jlink_ps {
 	if [ -z "$JLinkServerPath" ]; then
-		export JLinkServerPath="/c/Program Files (x86)/SEGGER/JLink/JLinkGDBServerCL.exe"
+		export JLinkServerPath="c:/Program Files (x86)/SEGGER/JLink/JLinkGDBServerCL.exe"
 	fi
-	if [ ! -x "$JLinkServerPath" ]; then
+	if [ ! -x $(cygpath \"$JLinkServerPath\") ]; then
 		echo >&2 "[!!] JLinkGDBServerCL.exe not found, please set JLinkServerPath manually"
 		exit 1
 	fi

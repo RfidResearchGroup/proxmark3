@@ -15,6 +15,7 @@
             "name": "Client: (gdb) Build & Launch",
             "type": "cppdbg",
             "request": "launch",
+			"cwd": "${workspaceFolder}",
             "program": "${cwd}/client/proxmark3",
             "args": ["${SerialPort}"],
             "stopAtEntry": false,
@@ -28,13 +29,13 @@
                 }
             ],
             "preLaunchTask": "client: Debug: clean & make",
-            "miDebuggerPath": "${DebuggerPath}"
+            "miDebuggerPath": "${workspaceFolder}/../../msys2/mingw64/bin/gdb.exe"
         },{
             "name": "Firmware: (J-Link) Build & Launch",
             "type": "cortex-debug",
             "request": "launch",
             "cwd": "${workspaceRoot}",
-            "preLaunchTask": "fullimage: clean & make",
+            "preLaunchTask": "fullimage: clean & make debug",
             "executable": "${workspaceRoot}/armsrc/obj/fullimage.elf",
             "serverpath": "${JLinkServerPath}",
             "servertype": "jlink",
@@ -42,7 +43,7 @@
             "interface": "jtag",
             "serialNumber": "", //If you have more than one J-Link probe, add the serial number here.
             "runToMain": false,
-            "armToolchainPath": "/usr/bin/"
+            "armToolchainPath": "${workspaceFolder}/../../msys2/mingw64/bin"
         }
     ]
 }
