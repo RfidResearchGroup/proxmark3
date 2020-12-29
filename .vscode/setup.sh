@@ -40,7 +40,7 @@ function setup_serial_port {
 	if [ -z "$SerialPort" ]; then
 		pm3list=$($VSCODEPATH/../pm3 --list 2>/dev/null)
 		#Use first port listed 
-		SerialPort=$(echo $pm3list | head -n 1 | cut -c 4-)
+		export SerialPort=$(echo $pm3list | head -n 1 | cut -c 4-)
 		if [ -z "$SerialPort" ]; then
 			echo >&2 "[!!] No serial port found, please set SerialPort manually"
 			exit 1
