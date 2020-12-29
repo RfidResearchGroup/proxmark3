@@ -1544,6 +1544,9 @@ static int emrtd_parse_ef_sod_hash_algo(uint8_t *data, size_t datalen, int *hash
     uint8_t hashalgoset[64] = { 0x00 };
     size_t hashalgosetlen = 0;
 
+    // We'll return hash algo -1 if we can't find anything
+    *hashalgo = -1;
+
     if (!emrtd_lds_get_data_by_tag(data, datalen, hashalgoset, &hashalgosetlen, 0x30, 0x00, false, true, 0)) {
         PrintAndLogEx(ERR, "Failed to read hash algo set from EF_SOD.");
         return false;
@@ -1571,8 +1574,6 @@ static int emrtd_parse_ef_sod_hash_algo(uint8_t *data, size_t datalen, int *hash
         }
     }
 
-    // Return hash algo -1 if we can't find anything
-    *hashalgo = -1;
     PrintAndLogEx(ERR, "Failed to parse hash list (Unknown algo: %s). Hash verification won't be available.", sprint_hex_inrow(hashalgoset, hashalgosetlen));
     return PM3_ESOFT;
 }
