@@ -1532,6 +1532,7 @@ static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_
     return PM3_SUCCESS;
 }
 
+// https://security.stackexchange.com/questions/131241/where-do-magic-constants-for-signature-algorithms-come-from
 static const uint8_t emrtd_hashalgo_sha256[] = {0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01};
 static const uint8_t emrtd_hashalgo_sha512[] = {0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03};
 
@@ -1615,6 +1616,16 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
     return PM3_SUCCESS;
 }
 
+static void emrtd_calc_dg_hash(uint8_t *data, size_t datalen, uint8_t *hash_out, int hash_algo) {
+    memset(hash_out, 0, 64);
+
+    if (hash_algo == 1) {
+        sha256hash(data, datalen, hash_out);
+    } else if (hash_algo == 3) {
+        sha512hash(data, datalen, hash_out);
+    }
+}
+
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     int resplen = 0;
@@ -1694,12 +1705,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
                     dg->parser(response, resplen);
 
                 // Check file hash
-                memset(hash_out, 0, 64);
-                if (hash_algo == 1) {
-                    sha256hash(response, resplen, hash_out);
-                } else if (hash_algo == 3) {
-                    sha512hash(response, resplen, hash_out);
-                }
+                emrtd_calc_dg_hash(response, resplen, hash_out, hash_algo);
 
                 if (memcmp(dg_hashes[dg->dgnum], hash_out, 64) == 0) {
                     PrintAndLogEx(SUCCESS, _GREEN_("Hash verification passed for EF_DG%i."), dg->dgnum);
@@ -1785,12 +1791,7 @@ int infoHF_EMRTD_offline(const char *path) {
                     dg->parser(data, datalen);
 
                 // Check file hash
-                memset(hash_out, 0, 64);
-                if (hash_algo == 1) {
-                    sha256hash(data, datalen, hash_out);
-                } else if (hash_algo == 3) {
-                    sha512hash(data, datalen, hash_out);
-                }
+                emrtd_calc_dg_hash(data, datalen, hash_out, hash_algo);
 
                 if (memcmp(dg_hashes[dg->dgnum], hash_out, 64) == 0) {
                     PrintAndLogEx(SUCCESS, _GREEN_("Hash verification passed for EF_DG%i."), dg->dgnum);
