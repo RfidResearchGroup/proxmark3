@@ -30,7 +30,7 @@ export DeviceMem="512"
 
 VSCODEPATH=$(dirname "$0")
 
-function get_serial_port {
+function setup_serial_port {
 	if [ -z "$SerialPort" ]; then
 		pm3list=$($VSCODEPATH/../pm3 --list 2>/dev/null)
 		#Use first port listed 
@@ -40,26 +40,91 @@ function get_serial_port {
 			exit 1
 		fi
 	fi
-	
 	echo "Using $SerialPort as port"
 }
 
+function setup_gdb_linux {
+	if [ -z "$DebuggerPath" ]; then
+		export DebuggerPath="/usr/bin/gdb"
+	fi
+	if [ ! -x "$DebuggerPath" ]; then
+		echo >&2 "[!!] gdb not found, please set DebuggerPath manually"
+		exit 1
+	fi
+}
+
+function setup_jlink_linux {
+	if [ -z "$JLinkServerPath" ]; then
+		export JLinkServerPath="/opt/SEGGER/JLink/JLinkGDBServerCLExe"
+	fi
+	if [ ! -x "$JLinkServerPath" ]; then
+		echo >&2 "[!!] JLinkGDBServerCLExe not found, please set JLinkServerPath manually"
+		exit 1
+	fi
+	
+}
+
+function setup_jlink_wsl {
+	if [ -z "$JLinkServerPath" ]; then
+		export JLinkServerPath="/mnt/c/Program Files (x86)/SEGGER/JLink/JLinkGDBServerCL.exe"
+	fi
+	if [ ! -x "$JLinkServerPath" ]; then
+		echo >&2 "[!!] JLinkGDBServerCLExe not found, please set JLinkServerPath manually"
+		exit 1
+	fi
+}
+
+function setup_wsl {
+	setup_serial_port
+	setup_gdb_linux
+	setup_jlink_wsl
+	cp "$VSCODEPATH/templates/tasks_wsl.json" "$VSCODEPATH/tasks.json"
+	envsubst <"$VSCODEPATH/templates/launch_wsl.json" > "$VSCODEPATH/launch.json"
+}
+
+function setup_linux {
+	setup_serial_port
+	setup_gdb_linux
+	setup_jlink_linux
+	cp "$VSCODEPATH/templates/tasks_linux.json" "$VSCODEPATH/tasks.json"
+	envsubst <"$VSCODEPATH/templates/launch_linux.json" > "$VSCODEPATH/launch.json"
+}
+
+function setup_ps {
+	setup_serial_port
+	if [ -z "$JLinkServerPath" ]; then
+		export JLinkServerPath="c/Program Files (x86)/SEGGER/JLink/JLinkGDBServerCL.exe"
+	fi
+}
+
+if [ -f "$VSCODEPATH/launch.json" ] || [ -f "$VSCODEPATH/tasks.json"  ]; then
+	read -p "Existing configuration found, do you want to override it? " -n 1 -r
+	if [[ $REPLY =~ ^[Yy]$ ]]
+	then
+		rm "$VSCODEPATH/launch.json.bak" 2> /dev/null
+		rm "$VSCODEPATH/tasks.json.bak" 2> /dev/null
+		mv "$VSCODEPATH/launch.json" "$VSCODEPATH/launch.json.bak" 2> /dev/null
+		mv "$VSCODEPATH/tasks.json" "$VSCODEPATH/tasks.json.bak" 2> /dev/null
+	else
+		echo >&2 "[!!] user abort"
+		exit 1
+	fi
+
+fi
 
 HOSTOS=$(uname | awk '{print toupper($0)}')
 if [ "$HOSTOS" = "LINUX" ]; then
     if uname -a|grep -q Microsoft; then
-        echo "WSL"
+		setup_wsl
     else
-        echo "LINUX"
+		setup_linux
     fi
 elif [ "$HOSTOS" = "DARWIN" ]; then
 	echo >&2 "[!!] MacOS not supported, sorry!"
 	exit 1
 elif [[ "$HOSTOS" =~ MINGW(32|64)_NT* ]]; then
-    echo "ProxSpace"
+	setup_ps
 else
     echo >&2 "[!!] Host OS not recognized, abort: $HOSTOS"
     exit 1
 fi
-
-get_serial_port
