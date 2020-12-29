@@ -79,7 +79,7 @@ function setup_wsl {
 	setup_gdb_linux
 	setup_jlink_wsl
 	cp "$VSCODEPATH/templates/tasks_wsl.json" "$VSCODEPATH/tasks.json"
-	envsubst <"$VSCODEPATH/templates/launch_wsl.json" > "$VSCODEPATH/launch.json"
+	envsubst '${SerialPort} ${DebuggerPath} ${JLinkServerPath} ${DeviceMem}' <"$VSCODEPATH/templates/launch_wsl.json" > "$VSCODEPATH/launch.json"
 }
 
 function setup_linux {
@@ -87,7 +87,7 @@ function setup_linux {
 	setup_gdb_linux
 	setup_jlink_linux
 	cp "$VSCODEPATH/templates/tasks_linux.json" "$VSCODEPATH/tasks.json"
-	envsubst <"$VSCODEPATH/templates/launch_linux.json" > "$VSCODEPATH/launch.json"
+	envsubst '${SerialPort} ${DebuggerPath} ${JLinkServerPath} ${DeviceMem}' <"$VSCODEPATH/templates/launch_linux.json" > "$VSCODEPATH/launch.json"
 }
 
 function setup_ps {
