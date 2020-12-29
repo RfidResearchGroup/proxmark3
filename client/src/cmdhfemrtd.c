@@ -1532,6 +1532,29 @@ static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_
     return PM3_SUCCESS;
 }
 
+static const uint8_t emrtd_hashalgo_sha256[] = {0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01};
+static const uint8_t emrtd_hashalgo_sha512[] = {0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03};
+
+static int emrtd_parse_ef_sod_hash_algo(uint8_t *data, size_t datalen, int *hashalgo) {
+    uint8_t hashalgoset[64] = { 0x00 };
+    size_t hashalgosetlen = 0;
+
+    if (!emrtd_lds_get_data_by_tag(data, datalen, hashalgoset, &hashalgosetlen, 0x30, 0x00, false, true, 0)) {
+        PrintAndLogEx(ERR, "Failed to read hash algo set from EF_SOD.");
+        return false;
+    }
+
+    PrintAndLogEx(DEBUG, "hash algo set: %s", sprint_hex_inrow(hashalgoset, hashalgosetlen));
+
+    if (memcmp(emrtd_hashalgo_sha256, hashalgoset, 11) == 0) {
+        *hashalgo = 1;
+    } else if (memcmp(emrtd_hashalgo_sha512, hashalgoset, 11) == 0) {
+        *hashalgo = 3;
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *hashes, int *hashalgo) {
     uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     uint8_t hashlist[EMRTD_MAX_FILE_SIZE] = { 0x00 };
@@ -1552,6 +1575,8 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
     }
 
     PrintAndLogEx(DEBUG, "hash data: %s", sprint_hex_inrow(emrtdsig, emrtdsiglen));
+
+    emrtd_parse_ef_sod_hash_algo(emrtdsig, emrtdsiglen, hashalgo);
 
     if (!emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, hashlist, &hashlistlen, 0x30, 0x00, false, true, 1)) {
         PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD.");
@@ -1638,6 +1663,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     // Grab the hash list
     uint8_t dg_hashes[16][64];
     uint8_t hash_out[64];
+    int hash_algo = 0;
 
     if (!emrtd_select_and_read(response, &resplen, dg_table[EF_SOD].fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
         PrintAndLogEx(ERR, "Failed to read EF_SOD.");
@@ -1645,7 +1671,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         return PM3_ESOFT;
     }
 
-    res = emrtd_parse_ef_sod_hashes(response, resplen, *dg_hashes);
+    res = emrtd_parse_ef_sod_hashes(response, resplen, *dg_hashes, &hash_algo);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD. Hash checks will fail.");
     }
@@ -1663,7 +1689,13 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
                     dg->parser(response, resplen);
 
                 // Check file hash
-                sha512hash(response, resplen, hash_out);
+                memset(hash_out, 0, 64);
+                if (hash_algo == 1) {
+                    sha256hash(response, resplen, hash_out);
+                } else if (hash_algo == 3) {
+                    sha512hash(response, resplen, hash_out);
+                }
+
                 if (memcmp(dg_hashes[dg->dgnum], hash_out, 64) == 0) {
                     PrintAndLogEx(SUCCESS, _GREEN_("Hash verification passed for EF_DG%i."), dg->dgnum);
                 } else {
@@ -1713,6 +1745,7 @@ int infoHF_EMRTD_offline(const char *path) {
     // Grab the hash list
     uint8_t dg_hashes[16][64];
     uint8_t hash_out[64];
+    int hash_algo = 0;
 
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
@@ -1724,7 +1757,7 @@ int infoHF_EMRTD_offline(const char *path) {
         return PM3_ESOFT;
     }
 
-    res = emrtd_parse_ef_sod_hashes(data, datalen, *dg_hashes);
+    res = emrtd_parse_ef_sod_hashes(data, datalen, *dg_hashes, &hash_algo);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD. Hash checks will fail.");
     }
@@ -1747,7 +1780,13 @@ int infoHF_EMRTD_offline(const char *path) {
                     dg->parser(data, datalen);
 
                 // Check file hash
-                sha512hash(data, datalen, hash_out);
+                memset(hash_out, 0, 64);
+                if (hash_algo == 1) {
+                    sha256hash(data, datalen, hash_out);
+                } else if (hash_algo == 3) {
+                    sha512hash(data, datalen, hash_out);
+                }
+
                 if (memcmp(dg_hashes[dg->dgnum], hash_out, 64) == 0) {
                     PrintAndLogEx(SUCCESS, _GREEN_("Hash verification passed for EF_DG%i."), dg->dgnum);
                 } else {
