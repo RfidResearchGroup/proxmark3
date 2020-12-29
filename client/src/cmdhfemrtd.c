@@ -1485,7 +1485,6 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
 }
 
 static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_t *dataout, size_t *dataoutlen) {
-    // very very very very cursed code.
     uint8_t top[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     uint8_t signeddata[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     uint8_t emrtdsigcontainer[EMRTD_MAX_FILE_SIZE] = { 0x00 };
