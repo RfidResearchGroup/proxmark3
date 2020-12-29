@@ -30,6 +30,13 @@ export DeviceMem="512"
 
 VSCODEPATH=$(dirname "$0")
 
+function print_config {
+	echo "Updating with following configuration:"
+	echo "SerialPort: $SerialPort"
+	echo "DebuggerPath: $DebuggerPath"
+	echo "JLinkServerPath: $JLinkServerPath"
+}
+
 function setup_serial_port {
 	if [ -z "$SerialPort" ]; then
 		pm3list=$($VSCODEPATH/../pm3 --list 2>/dev/null)
@@ -40,7 +47,6 @@ function setup_serial_port {
 			exit 1
 		fi
 	fi
-	echo "Using $SerialPort as port"
 }
 
 function setup_gdb_linux {
@@ -78,6 +84,7 @@ function setup_wsl {
 	setup_serial_port
 	setup_gdb_linux
 	setup_jlink_wsl
+	print_config
 	cp "$VSCODEPATH/templates/tasks_wsl.json" "$VSCODEPATH/tasks.json"
 	envsubst '${SerialPort} ${DebuggerPath} ${JLinkServerPath} ${DeviceMem}' <"$VSCODEPATH/templates/launch_wsl.json" > "$VSCODEPATH/launch.json"
 }
@@ -86,6 +93,7 @@ function setup_linux {
 	setup_serial_port
 	setup_gdb_linux
 	setup_jlink_linux
+	print_config
 	cp "$VSCODEPATH/templates/tasks_linux.json" "$VSCODEPATH/tasks.json"
 	envsubst '${SerialPort} ${DebuggerPath} ${JLinkServerPath} ${DeviceMem}' <"$VSCODEPATH/templates/launch_linux.json" > "$VSCODEPATH/launch.json"
 }
@@ -95,6 +103,7 @@ function setup_ps {
 	if [ -z "$JLinkServerPath" ]; then
 		export JLinkServerPath="c/Program Files (x86)/SEGGER/JLink/JLinkGDBServerCL.exe"
 	fi
+	print_config
 }
 
 if [ -f "$VSCODEPATH/launch.json" ] || [ -f "$VSCODEPATH/tasks.json"  ]; then
