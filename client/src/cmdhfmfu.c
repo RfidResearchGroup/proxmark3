@@ -83,23 +83,6 @@ static int usage_hf_mfu_restore(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_hf_mfu_rdbl(void) {
-    PrintAndLogEx(NORMAL, "Read a block and print. It autodetects card type.\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu rdbl b <block number> k <key> l\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  b <no>  : block to read");
-    PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
-    PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu rdbl b 0"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu rdbl b 0 k 00112233445566778899AABBCCDDEEFF"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu rdbl b 0 k AABBCCDD"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
-
 static int usage_hf_mfu_eload(void) {
     PrintAndLogEx(NORMAL, "It loads emul dump from the file " _YELLOW_("`filename.eml`"));
     PrintAndLogEx(NORMAL, "Hint: See " _YELLOW_("`script run hf_mfu_dumptoemulator`") " to convert the .bin to the eml");
@@ -1628,7 +1611,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         PrintAndLogEx(INFO, "Block: %0d (0x%02X) [ %s]", blockno, blockno, sprint_hex(data, datalen));
 
     if (ak_len) {
-        PrintAndLogEx(INFO, "Using %s  %s", (ak_len == 16) ? "3des" : "pwd", sprint_hex(authenticationkey, ak_len));
+        PrintAndLogEx(INFO, "Using %s " _GREEN_("%s"), (ak_len == 16) ? "3des" : "pwd", sprint_hex(authenticationkey, ak_len));
     }
     
     //Send write Block
@@ -1673,66 +1656,52 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
 //
 static int CmdHF14AMfURdBl(const char *Cmd) {
 
-    int blockNo = -1;
-    bool errors = false;
-    bool hasAuthKey = false;
-    bool hasPwdKey = false;
-    bool swapEndian = false;
-    uint8_t cmdp = 0;
-    uint8_t keylen = 0;
-    uint8_t data[16] = {0x00};
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu rdbl",
+                  "Read a block and print. It autodetects card type.",
+                  "hf mfu rdbl -b 0\n"
+                  "hf mfu rdbl -b 0 -k AABBCCDD\n"
+                  "hf mfu rdbl -b 0 --key 00112233445566778899AABBCCDDEEFF"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,        
+        arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
+        arg_lit0("l", NULL,           "swap entered key's endianness"),
+        arg_int1("b", "block", "<dec>", "block number to write"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int ak_len = 0;
     uint8_t authenticationkey[16] = {0x00};
+    CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
+    bool swap_endian = arg_get_lit(ctx, 2);
+    int blockno = arg_get_int_def(ctx, 3, -1);
+    CLIParserFree(ctx);
+
+    bool has_auth_key = false;
+    bool has_pwd = false;
+    if (ak_len == 16) {
+        has_auth_key = true;
+    } else if (ak_len == 4) {
+        has_pwd = true;
+    } else if (ak_len != 0){
+        PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+        return PM3_EINVARG;
+    }
+
+    if (blockno < 0) {
+        PrintAndLogEx(WARNING, "Wrong block number");
+        return PM3_EINVARG;
+    }
+
     uint8_t *authKeyPtr = authenticationkey;
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_mfu_rdbl();
-            case 'k':
-                // EV1/NTAG size key
-                keylen = param_gethex(Cmd, cmdp + 1, data, 8);
-                if (!keylen) {
-                    memcpy(authenticationkey, data, 4);
-                    cmdp += 2;
-                    hasPwdKey = true;
-                    break;
-                }
-                // UL-C size key
-                keylen = param_gethex(Cmd, cmdp + 1, data, 32);
-                if (!keylen) {
-                    memcpy(authenticationkey, data, 16);
-                    cmdp += 2;
-                    hasAuthKey = true;
-                    break;
-                }
-                PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
-                errors = true;
-                break;
-            case 'b':
-                blockNo = param_get8(Cmd, cmdp + 1);
-                if (blockNo < 0) {
-                    PrintAndLogEx(WARNING, "Wrong block number");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'l':
-                swapEndian = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter: " _RED_("'%c'"), param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-    //Validations
-    if (errors || cmdp == 0) return usage_hf_mfu_rdbl();
-
-    if (blockNo == -1) return usage_hf_mfu_rdbl();
     // start with getting tagtype
     TagTypeUL_t tagtype = GetHF14AMfU_Type();
-    if (tagtype == UL_ERROR) return -1;
+    if (tagtype == UL_ERROR)
+        return PM3_ESOFT;
 
     uint8_t maxblockno = 0;
     for (uint8_t idx = 0; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
@@ -1741,43 +1710,53 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
             break;
         }
     }
-    if (blockNo > maxblockno) {
+    if (blockno > maxblockno) {
         PrintAndLogEx(WARNING, "block number to large. Max block is %u/0x%02X \n", maxblockno, maxblockno);
-        return usage_hf_mfu_rdbl();
+        return PM3_EINVARG;
     }
 
     // Swap endianness
-    if (swapEndian && hasAuthKey) authKeyPtr = SwapEndian64(authenticationkey, 16, 8);
-    if (swapEndian && hasPwdKey)  authKeyPtr = SwapEndian64(authenticationkey, 4, 4);
+    if (swap_endian) {
+        if (has_auth_key)
+            authKeyPtr = SwapEndian64(authenticationkey, ak_len, 8);
+
+        if (has_pwd)
+            authKeyPtr = SwapEndian64(authenticationkey, ak_len, 4);
+    }
+
+    if (ak_len) {
+        PrintAndLogEx(INFO, "Using %s " _GREEN_("%s"), (ak_len == 16) ? "3des" : "pwd", sprint_hex(authenticationkey, ak_len));
+    }    
 
     //Read Block
     uint8_t keytype = 0;
     uint8_t datalen = 0;
-    if (hasAuthKey) {
+    if (has_auth_key) {
         keytype = 1;
         datalen = 16;
-    } else if (hasPwdKey) {
+    } else if (has_pwd) {
         keytype = 2;
         datalen = 4;
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_READBL, blockNo, keytype, 0, authKeyPtr, datalen);
+    SendCommandMIX(CMD_HF_MIFAREU_READBL, blockno, keytype, 0, authKeyPtr, datalen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK = resp.oldarg[0] & 0xff;
         if (isOK) {
             uint8_t *d = resp.data.asBytes;
-            PrintAndLogEx(NORMAL, "\nBlock#  | Data        | Ascii");
-            PrintAndLogEx(NORMAL, "-----------------------------");
-            PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s\n", blockNo, blockNo, sprint_hex(d, 4), sprint_ascii(d, 4));
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "Block#  | Data        | Ascii");
+            PrintAndLogEx(INFO, "-----------------------------");
+            PrintAndLogEx(INFO, "%02d/0x%02X | %s| %s\n", blockno, blockno, sprint_hex(d, 4), sprint_ascii(d, 4));
         } else {
             PrintAndLogEx(WARNING, "Failed reading block: (%02x)", isOK);
         }
     } else {
         PrintAndLogEx(WARNING, "Command execute time-out");
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
