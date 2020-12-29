@@ -58,7 +58,7 @@
         },{
             "type": "cortex-debug",
             "request": "launch",
-            "name": "Debug J-Link",
+            "name": "Firmware debug",
             "cwd": "${workspaceRoot}",
             "preLaunchTask": "fullimage: clean & make",
             "executable": "${workspaceRoot}/armsrc/obj/fullimage.stage1.elf",
@@ -67,7 +67,7 @@
             "device": "AT91SAM7S512",
             "interface": "jtag",
             "serialNumber": "", //If you have more than one J-Link probe, add the serial number here.
-            "runToMain": true,
+            "runToMain": false,
             "armToolchainPath": "/usr/bin/"
             }
     ],
