@@ -21,7 +21,7 @@
 ###############################
 #export SerialPort="COM5"
 #export DebuggerPath="${workspaceFolder}/../../msys2/mingw64/bin/gdb.exe"
-#export JLinkServerPath="c/Program Files (x86)/SEGGER/JLink/JLinkGDBServerCL.exe"
+#export JLinkServerPath="/c/Program Files (x86)/SEGGER/JLink/JLinkGDBServerCL.exe"
 
 #Debugging on 256KB systems is not recommended
 #This option does not override PLATFORM_SIZE
@@ -59,6 +59,12 @@ function setup_gdb_linux {
 	fi
 }
 
+function setup_gdb_ps {
+	if [ -z "$DebuggerPath" ]; then
+		export DebuggerPath="${workspaceFolder}/../../msys2/mingw64/bin/gdb.exe"
+	fi
+}
+
 function setup_jlink_linux {
 	if [ -z "$JLinkServerPath" ]; then
 		export JLinkServerPath="/opt/SEGGER/JLink/JLinkGDBServerCLExe"
@@ -75,7 +81,17 @@ function setup_jlink_wsl {
 		export JLinkServerPath="/mnt/c/Program Files (x86)/SEGGER/JLink/JLinkGDBServerCL.exe"
 	fi
 	if [ ! -x "$JLinkServerPath" ]; then
-		echo >&2 "[!!] JLinkGDBServerCLExe not found, please set JLinkServerPath manually"
+		echo >&2 "[!!] JLinkGDBServerCL.exe not found, please set JLinkServerPath manually"
+		exit 1
+	fi
+}
+
+function setup_jlink_ps {
+	if [ -z "$JLinkServerPath" ]; then
+		export JLinkServerPath="/c/Program Files (x86)/SEGGER/JLink/JLinkGDBServerCL.exe"
+	fi
+	if [ ! -x "$JLinkServerPath" ]; then
+		echo >&2 "[!!] JLinkGDBServerCL.exe not found, please set JLinkServerPath manually"
 		exit 1
 	fi
 }
@@ -85,7 +101,6 @@ function setup_wsl {
 	setup_gdb_linux
 	setup_jlink_wsl
 	print_config
-	cp "$VSCODEPATH/templates/tasks_wsl.json" "$VSCODEPATH/tasks.json"
 	envsubst '${SerialPort} ${DebuggerPath} ${JLinkServerPath} ${DeviceMem}' <"$VSCODEPATH/templates/launch_wsl.json" > "$VSCODEPATH/launch.json"
 }
 
@@ -94,26 +109,23 @@ function setup_linux {
 	setup_gdb_linux
 	setup_jlink_linux
 	print_config
-	cp "$VSCODEPATH/templates/tasks_linux.json" "$VSCODEPATH/tasks.json"
 	envsubst '${SerialPort} ${DebuggerPath} ${JLinkServerPath} ${DeviceMem}' <"$VSCODEPATH/templates/launch_linux.json" > "$VSCODEPATH/launch.json"
 }
 
 function setup_ps {
 	setup_serial_port
-	if [ -z "$JLinkServerPath" ]; then
-		export JLinkServerPath="c/Program Files (x86)/SEGGER/JLink/JLinkGDBServerCL.exe"
-	fi
+	setup_gdb_ps
+	setup_jlink_ps
 	print_config
+	envsubst '${SerialPort} ${DebuggerPath} ${JLinkServerPath} ${DeviceMem}' <"$VSCODEPATH/templates/launch_ps.json" > "$VSCODEPATH/launch.json"
 }
 
-if [ -f "$VSCODEPATH/launch.json" ] || [ -f "$VSCODEPATH/tasks.json"  ]; then
+if [ -f "$VSCODEPATH/launch.json" ]; then
 	read -p "Existing configuration found, do you want to override it? " -n 1 -r
 	if [[ $REPLY =~ ^[Yy]$ ]]
 	then
 		rm "$VSCODEPATH/launch.json.bak" 2> /dev/null
-		rm "$VSCODEPATH/tasks.json.bak" 2> /dev/null
 		mv "$VSCODEPATH/launch.json" "$VSCODEPATH/launch.json.bak" 2> /dev/null
-		mv "$VSCODEPATH/tasks.json" "$VSCODEPATH/tasks.json.bak" 2> /dev/null
 	else
 		echo >&2 "[!!] user abort"
 		exit 1

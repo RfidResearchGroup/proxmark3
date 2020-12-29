@@ -112,3 +112,4 @@ fpga_version_info.c
 #VSCode files
 !.vscode/templates/*.json
 !.vscode/extensions.json
+!.vscode/tasks.json

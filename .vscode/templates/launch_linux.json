@@ -44,7 +44,7 @@
             "type": "cortex-debug",
             "request": "launch",
             "cwd": "${workspaceRoot}",
-            "preLaunchTask": "fullimage: clean & make",
+            "preLaunchTask": "fullimage: clean & make debug",
             "executable": "${workspaceRoot}/armsrc/obj/fullimage.elf",
             "serverpath": "${JLinkServerPath}", 
             "servertype": "jlink",
