@@ -83,7 +83,8 @@ function setup_jlink_ps {
 	if [ -z "$JLinkServerPath" ]; then
 		export JLinkServerPath="c:/Program Files (x86)/SEGGER/JLink/JLinkGDBServerCL.exe"
 	fi
-	if [ ! -x $(cygpath \"$JLinkServerPath\") ]; then
+	jlinkpath=$(cygpath "$JLinkServerPath")
+	if [ ! -x "$jlinkpath" ]; then
 		echo >&2 "[!!] JLinkGDBServerCL.exe not found, please set JLinkServerPath manually"
 		exit 1
 	fi
@@ -107,10 +108,10 @@ function setup_linux {
 
 function setup_ps {
 	setup_serial_port
-	setup_gdb_ps
 	setup_jlink_ps
+	export DebuggerPath="Using ProxSpace gbd"
 	print_config
-	envsubst '${SerialPort} ${DebuggerPath} ${JLinkServerPath} ${DeviceMem}' <"$VSCODEPATH/templates/launch_ps.json" > "$VSCODEPATH/launch.json"
+	envsubst '${SerialPort} ${JLinkServerPath} ${DeviceMem}' <"$VSCODEPATH/templates/launch_ps.json" > "$VSCODEPATH/launch.json"
 }
 
 if [ -f "$VSCODEPATH/launch.json" ]; then
