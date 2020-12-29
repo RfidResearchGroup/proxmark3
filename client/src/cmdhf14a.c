@@ -2162,18 +2162,17 @@ static uint64_t inc_sw_error_occurence(uint16_t sw, uint64_t all_sw[256][256]) {
 
 static int CmdHf14AFindapdu(const char *Cmd) {
     // TODO: Option to select AID/File (and skip INS 0xA4).
-    // TODO: Validate the decoding of the APDU (not specific to this command, check
-    //       https://cardwerk.com/smartcards/smartcard_standard_ISO7816-4_5_basic_organizations.aspx#chap5_3_2).
-    // TODO: Check all cases (APDUs) with no data bytes (no/short/extended length).
+    // TODO: Check all instructions with extended APDUs if the card support it.
+    // TODO: Option to reset tag before every command.
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a apdufind",
-                  "Enumerate APDU's of ISO7816 protocol to find valid CLS/INS/P1P2 commands.\n"
+                  "Enumerate APDU's of ISO7816 protocol to find valid CLS/INS/P1/P2 commands.\n"
                   "It loops all 256 possible values for each byte.\n"
-                  "The loop oder is INS -> P1/P2 (alternating) -> CLA\n"
+                  "The loop oder is INS -> P1/P2 (alternating) -> CLA.\n"
                   "Tag must be on antenna before running.",
                   "hf 14a apdufind\n"
                   "hf 14a apdufind --cla 80\n"
-                  "hf 14a apdufind --cla 80 --error-limit 20 --skip-ins a4 --skip-ins b0\n"
+                  "hf 14a apdufind --cla 80 --error-limit 20 --skip-ins a4 --skip-ins b0 --with-le\n"
                  );
 
     void *argtable[] = {
@@ -2183,8 +2182,9 @@ static int CmdHf14AFindapdu(const char *Cmd) {
         arg_str0(NULL, "p1",            "<hex>",    "Start value of P1 (1 hex byte)"),
         arg_str0(NULL, "p2",            "<hex>",    "Start value of P2 (1 hex byte)"),
         arg_u64_0("r", "reset",         "<number>", "Minimum secondes before resetting the tag (to prevent timeout issues). Default is 5 minutes"),
-        arg_u64_0("e", "error-limit",   "<number>", "Maximum times an status word other than 0x9000 or 0x6D00 is shown. Default is 256."),
+        arg_u64_0("e", "error-limit",   "<number>", "Maximum times an status word other than 0x9000 or 0x6D00 is shown. Default is 512."),
         arg_strx0("s", "skip-ins",      "<hex>",    "Do not test an instructions (can be specifed multiple times)"),
+        arg_lit0("l",  "with-le",                   "Serach  for APDUs with Le=0 (case 2S) as well"),
         arg_lit0("v",  "verbose",                   "Verbose output"),
         arg_param_end
     };
@@ -2203,11 +2203,12 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     uint8_t p2_arg[1] = {0};
     CLIGetHexWithReturn(ctx, 4, p2_arg, &p2_len);
     uint64_t reset_time = arg_get_u64_def(ctx, 5, 5 * 60);
-    uint64_t error_limit = arg_get_u64_def(ctx, 6, 256);
+    uint64_t error_limit = arg_get_u64_def(ctx, 6, 512);
     int ignore_ins_len = 0;
     uint8_t ignore_ins_arg[250] = {0};
     CLIGetHexWithReturn(ctx, 7, ignore_ins_arg, &ignore_ins_len);
-    bool verbose = arg_get_lit(ctx, 8);
+    bool with_le = arg_get_lit(ctx, 8);
+    bool verbose = arg_get_lit(ctx, 9);
 
     CLIParserFree(ctx);
 
@@ -2267,58 +2268,32 @@ retry_ins:
                     PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
                 }
 
-                // Send APDU.
-                uint8_t command[4] = {cla, ins, p1, p2};
-                int command_n = sizeof(command);
-                res = ExchangeAPDU14a(command, command_n, activate_field, keep_field_on, response, sizeof(response), &response_n);
-                if (res) {
-                    DropField();
-                    activate_field = true;
-                    goto retry_ins;
-                }
-                uint16_t sw = get_sw(response, response_n);
-                sw_occurences = inc_sw_error_occurence(sw, all_sw);
-
-                // Was there and length error? If so, try with Le length (case 2 instad of case 1,
-                // https://stackoverflow.com/a/30679558). Le = 0x00 will get interpreted as extended length APDU
-                // with Le being 0x0100.
-                bool command_with_le = false;
-                if (sw == 0x6700) {
-                    if (sw_occurences < error_limit) {
-                        PrintAndLogEx(INFO, "Got response for APDU \"%02X%02X%02X%02X\": %04X (%s)", cla, ins, p1, p2,
-                                      sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-                        PrintAndLogEx(INFO, "Resending current command with Le = 0x0100 (extended length APDU)");
-                    }
-                    uint8_t command2[7] = {cla, ins, p1, p2, 0x00};
-                    int command2_n = sizeof(command2);
-                    res = ExchangeAPDU14a(command2, command2_n, activate_field, keep_field_on, response, sizeof(response), &response_n);
+                // Send APDU without Le (case 1) and with Le = 0 (case 2S), if "with-le" was set.
+                uint8_t command[5] = {cla, ins, p1, p2, 0x00};
+                int command_n = 4;
+                for (int i = 0; i < 1 + with_le; i++) {
+                    // Send APDU.
+                    res = ExchangeAPDU14a(command, command_n + i, activate_field, keep_field_on, response, sizeof(response), &response_n);
                     if (res) {
                         DropField();
                         activate_field = true;
                         goto retry_ins;
                     }
-                    sw = get_sw(response, response_n);
+                    uint16_t sw = get_sw(response, response_n);
                     sw_occurences = inc_sw_error_occurence(sw, all_sw);
-                    command_with_le = true;
-                }
 
-                // Show response.
-                if (sw_occurences < error_limit) {
-                    logLevel_t log_level = INFO;
-                    if (sw == 0x9000) {
-                        log_level = SUCCESS;
-                    }
-                    if (command_with_le) {
-                        PrintAndLogEx(log_level, "Got response for APDU \"%02X%02X%02X%02X00\": %04X (%s)", cla, ins, p1, p2,
+                    // Show response.
+                    if (sw_occurences < error_limit) {
+                        logLevel_t log_level = INFO;
+                        if (sw == 0x9000) {
+                            log_level = SUCCESS;
+                        }
+                        PrintAndLogEx(log_level, "Got response for APDU \"%s\": %04X (%s)", sprint_hex_inrow(command, command_n + i),
                                       sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-                    } else {
-                        PrintAndLogEx(log_level, "Got response for APDU \"%02X%02X%02X%02X\": %04X (%s)", cla, ins, p1, p2,
-                                      sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-                    }
-                    // Show response data.
-                    if (response_n > 2) {
-                        PrintAndLogEx(SUCCESS, "Response data is: %s | %s", sprint_hex_inrow(response, response_n - 2),
-                                      sprint_ascii(response, response_n - 2));
+                        if (response_n > 2) {
+                            PrintAndLogEx(SUCCESS, "Response data is: %s | %s", sprint_hex_inrow(response, response_n - 2),
+                                          sprint_ascii(response, response_n - 2));
+                        }
                     }
                 }
                 activate_field = false; // Do not reativate the filed until the next reset.
