@@ -21,6 +21,7 @@ int aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int l
 int aes_cmac(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int length);
 int aes_cmac8(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int length);
 
+int sha1hash(uint8_t *input, int length, uint8_t *hash);
 int sha256hash(uint8_t *input, int length, uint8_t *hash);
 int sha512hash(uint8_t *input, int length, uint8_t *hash);
 

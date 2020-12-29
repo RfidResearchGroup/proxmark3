@@ -27,6 +27,14 @@ typedef struct emrtd_dg_s {
     int (*dumper)(uint8_t *data, size_t datalen);
 } emrtd_dg_t;
 
+typedef struct emrtd_hashalg_s {
+    const char *name;
+    int (*hasher)(uint8_t *datain, int datainlen, uint8_t *dataout);
+    size_t hashlen;
+    size_t descriptorlen;
+    const uint8_t descriptor[15];
+} emrtd_hashalg_t;
+
 int CmdHFeMRTD(const char *Cmd);
 
 int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available);

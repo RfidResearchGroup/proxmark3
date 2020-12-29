@@ -19,6 +19,7 @@
 #include <mbedtls/cmac.h>
 #include <mbedtls/pk.h>
 #include <mbedtls/ecdsa.h>
+#include <mbedtls/sha1.h>
 #include <mbedtls/sha256.h>
 #include <mbedtls/sha512.h>
 #include <mbedtls/ctr_drbg.h>
@@ -89,6 +90,15 @@ static int fixed_rand(void *rng_state, unsigned char *output, size_t len) {
     } else {
         memset(output, 0x00, len);
     }
+
+    return 0;
+}
+
+int sha1hash(uint8_t *input, int length, uint8_t *hash) {
+    if (!hash || !input)
+        return 1;
+
+    mbedtls_sha1(input, length, hash);
 
     return 0;
 }

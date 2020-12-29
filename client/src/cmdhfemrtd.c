@@ -19,8 +19,7 @@
 #include "cmdhf14a.h"               // ExchangeAPDU14a
 #include "protocols.h"              // definitions of ISO14A/7816 protocol
 #include "emv/apduinfo.h"           // GetAPDUCodeDescription
-#include "sha1.h"                   // KSeed calculation etc
-#include "crypto/libpcrypto.h"      // Hash calculation (sha256, sha512)
+#include "crypto/libpcrypto.h"      // Hash calculation (sha1, sha256, sha512)
 #include "mifare/desfire_crypto.h"  // des_encrypt/des_decrypt
 #include "des.h"                    // mbedtls_des_key_set_parity
 #include "cmdhf14b.h"               // exchange_14b_apdu
@@ -106,6 +105,16 @@ static emrtd_dg_t dg_table[] = {
     {0xff, 0,  "011C", "EF_CardAccess",   "PACE SecurityInfos",                                 true,  false, true,  true,  NULL,                     NULL},
     {0xff, 0,  "011D", "EF_CardSecurity", "PACE SecurityInfos for Chip Authentication Mapping", true,  false, false, true,  NULL,                     NULL},
     {0x00, 0,  NULL, NULL, NULL, false, false, false, false, NULL, NULL}
+};
+
+// https://security.stackexchange.com/questions/131241/where-do-magic-constants-for-signature-algorithms-come-from
+// https://tools.ietf.org/html/rfc3447#page-43
+static emrtd_hashalg_t hashalg_table[] = {
+//  name        hash func   len len descriptor
+    {"SHA-1",   sha1hash,   20,  9, {0x06, 0x05, 0x2B, 0x0E, 0x03, 0x02, 0x1A, 0x05, 0x00}},
+    {"SHA-256", sha256hash, 32, 11, {0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01}},
+    {"SHA-512", sha512hash, 64, 11, {0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03}},
+    {NULL,      NULL,       0,  0,  {}}
 };
 
 static emrtd_dg_t *emrtd_tag_to_dg(uint8_t tag) {
@@ -339,7 +348,7 @@ static void emrtd_deskey(uint8_t *seed, const uint8_t *type, int length, uint8_t
 
     // SHA1 the key
     unsigned char key[64];
-    mbedtls_sha1(data, length + 4, key);
+    sha1hash(data, length + 4, key);
     PrintAndLogEx(DEBUG, "key............... %s", sprint_hex_inrow(key, length + 4));
 
     // Set parity bits
@@ -822,7 +831,7 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
     PrintAndLogEx(DEBUG, "kmrz.............. " _GREEN_("%s"), kmrz);
 
     uint8_t kseed[20] = { 0x00 };
-    mbedtls_sha1((unsigned char *)kmrz, strlen(kmrz), kseed);
+    sha1hash((unsigned char *)kmrz, strlen(kmrz), kseed);
     PrintAndLogEx(DEBUG, "kseed (sha1)...... %s ", sprint_hex_inrow(kseed, 16));
 
     emrtd_deskey(kseed, KENC_type, 16, kenc);
@@ -1531,10 +1540,6 @@ static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_
     return PM3_SUCCESS;
 }
 
-// https://security.stackexchange.com/questions/131241/where-do-magic-constants-for-signature-algorithms-come-from
-static const uint8_t emrtd_hashalgo_sha256[] = {0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01};
-static const uint8_t emrtd_hashalgo_sha512[] = {0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03};
-
 static int emrtd_parse_ef_sod_hash_algo(uint8_t *data, size_t datalen, int *hashalgo) {
     uint8_t hashalgoset[64] = { 0x00 };
     size_t hashalgosetlen = 0;
@@ -1546,16 +1551,23 @@ static int emrtd_parse_ef_sod_hash_algo(uint8_t *data, size_t datalen, int *hash
 
     PrintAndLogEx(DEBUG, "hash algo set: %s", sprint_hex_inrow(hashalgoset, hashalgosetlen));
 
-    if (memcmp(emrtd_hashalgo_sha256, hashalgoset, 11) == 0) {
-        *hashalgo = 1;
-    } else if (memcmp(emrtd_hashalgo_sha512, hashalgoset, 11) == 0) {
-        *hashalgo = 3;
-    } else {
-        *hashalgo = 0;
-        return PM3_ESOFT;
+    for (int hashi = 0; hashalg_table[hashi].name != NULL; hashi++) {
+        PrintAndLogEx(DEBUG, "trying: %s", hashalg_table[hashi].name);
+        // We're only interested in checking if the length matches to avoid memory shenanigans
+        if (hashalg_table[hashi].descriptorlen != hashalgosetlen) {
+            PrintAndLogEx(DEBUG, "len mismatch: %i", hashalgosetlen);
+            continue;
+        }
+
+        if (memcmp(hashalg_table[hashi].descriptor, hashalgoset, hashalgosetlen) == 0) {
+            *hashalgo = hashi;
+            return PM3_SUCCESS;
+        }
     }
 
-    return PM3_SUCCESS;
+    // Return hash algo 0 if we can't find anything
+    *hashalgo = -1;
+    return PM3_ESOFT;
 }
 
 static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *hashes, int *hashalgo) {
@@ -1580,7 +1592,7 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
     PrintAndLogEx(DEBUG, "hash data: %s", sprint_hex_inrow(emrtdsig, emrtdsiglen));
 
     if (emrtd_parse_ef_sod_hash_algo(emrtdsig, emrtdsiglen, hashalgo) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to parse hash list. Unknown algo?");
+        PrintAndLogEx(ERR, "Failed to parse hash list (Unknown algo?). Hash verification won't be available.");
     }
 
     if (!emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, hashlist, &hashlistlen, 0x30, 0x00, false, true, 1)) {
@@ -1613,16 +1625,6 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
     }
 
     return PM3_SUCCESS;
-}
-
-static void emrtd_calc_dg_hash(uint8_t *data, size_t datalen, uint8_t *hash_out, int hash_algo) {
-    memset(hash_out, 0, 64);
-
-    if (hash_algo == 1) {
-        sha256hash(data, datalen, hash_out);
-    } else if (hash_algo == 3) {
-        sha512hash(data, datalen, hash_out);
-    }
 }
 
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
@@ -1703,13 +1705,18 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
                 if (dg->parser != NULL)
                     dg->parser(response, resplen);
 
+                PrintAndLogEx(DEBUG, "EF_DG%i hash algo: %i", dg->dgnum, hash_algo);
                 // Check file hash
-                emrtd_calc_dg_hash(response, resplen, hash_out, hash_algo);
+                if (hash_algo != -1) {
+                    PrintAndLogEx(DEBUG, "EF_DG%i hash on EF_SOD: %s", dg->dgnum, sprint_hex_inrow(dg_hashes[dg->dgnum], hashalg_table[hash_algo].hashlen));
+                    hashalg_table[hash_algo].hasher(response, resplen, hash_out);
+                    PrintAndLogEx(DEBUG, "EF_DG%i hash calc: %s", dg->dgnum, sprint_hex_inrow(hash_out, hashalg_table[hash_algo].hashlen));
 
-                if (memcmp(dg_hashes[dg->dgnum], hash_out, 64) == 0) {
-                    PrintAndLogEx(SUCCESS, _GREEN_("Hash verification passed for EF_DG%i."), dg->dgnum);
-                } else {
-                    PrintAndLogEx(ERR, _RED_("Hash verification failed for EF_DG%i."), dg->dgnum);
+                    if (memcmp(dg_hashes[dg->dgnum], hash_out, hashalg_table[hash_algo].hashlen) == 0) {
+                        PrintAndLogEx(SUCCESS, _GREEN_("Hash verification passed for EF_DG%i."), dg->dgnum);
+                    } else {
+                        PrintAndLogEx(ERR, _RED_("Hash verification failed for EF_DG%i."), dg->dgnum);
+                    }
                 }
             }
         }
@@ -1789,13 +1796,18 @@ int infoHF_EMRTD_offline(const char *path) {
                 if (dg->parser != NULL)
                     dg->parser(data, datalen);
 
+                PrintAndLogEx(DEBUG, "EF_DG%i hash algo: %i", dg->dgnum, hash_algo);
                 // Check file hash
-                emrtd_calc_dg_hash(data, datalen, hash_out, hash_algo);
+                if (hash_algo != -1) {
+                    PrintAndLogEx(DEBUG, "EF_DG%i hash on EF_SOD: %s", dg->dgnum, sprint_hex_inrow(dg_hashes[dg->dgnum], hashalg_table[hash_algo].hashlen));
+                    hashalg_table[hash_algo].hasher(data, datalen, hash_out);
+                    PrintAndLogEx(DEBUG, "EF_DG%i hash calc: %s", dg->dgnum, sprint_hex_inrow(hash_out, hashalg_table[hash_algo].hashlen));
 
-                if (memcmp(dg_hashes[dg->dgnum], hash_out, 64) == 0) {
-                    PrintAndLogEx(SUCCESS, _GREEN_("Hash verification passed for EF_DG%i."), dg->dgnum);
-                } else {
-                    PrintAndLogEx(ERR, _RED_("Hash verification failed for EF_DG%i."), dg->dgnum);
+                    if (memcmp(dg_hashes[dg->dgnum], hash_out, hashalg_table[hash_algo].hashlen) == 0) {
+                        PrintAndLogEx(SUCCESS, _GREEN_("Hash verification passed for EF_DG%i."), dg->dgnum);
+                    } else {
+                        PrintAndLogEx(ERR, _RED_("Hash verification failed for EF_DG%i."), dg->dgnum);
+                    }
                 }
                 free(data);
             }
