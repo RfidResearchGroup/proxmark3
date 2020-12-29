@@ -58,10 +58,10 @@
         },{
             "type": "cortex-debug",
             "request": "launch",
-            "name": "Firmware debug",
+            "name": "(Linux) Firmware debug",
             "cwd": "${workspaceRoot}",
             "preLaunchTask": "fullimage: clean & make",
-            "executable": "${workspaceRoot}/armsrc/obj/fullimage.stage1.elf",
+            "executable": "${workspaceRoot}/armsrc/obj/fullimage.elf",
             "serverpath": "/opt/SEGGER/JLink/JLinkGDBServerCLExe", 
             "servertype": "jlink",
             "device": "AT91SAM7S512",
@@ -69,7 +69,21 @@
             "serialNumber": "", //If you have more than one J-Link probe, add the serial number here.
             "runToMain": false,
             "armToolchainPath": "/usr/bin/"
-            }
+        },{
+            "type": "cortex-debug",
+            "request": "launch",
+            "name": "(WSL) Firmware debug",
+            "cwd": "${workspaceRoot}",
+            "preLaunchTask": "fullimage: clean & make",
+            "executable": "${workspaceRoot}/armsrc/obj/fullimage.elf",
+            "serverpath": "/mnt/c/Program Files (x86)/SEGGER/JLink/JLinkGDBServerCL.exe", 
+            "servertype": "jlink",
+            "device": "AT91SAM7S512",
+            "interface": "jtag",
+            "serialNumber": "", //If you have more than one J-Link probe, add the serial number here.
+            "runToMain": false,
+            "armToolchainPath": "/usr/bin/"
+        }
     ],
     "inputs": [
         {
