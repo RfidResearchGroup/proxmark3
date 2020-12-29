@@ -66,6 +66,11 @@ else
   DEFCFLAGS = -Wall -Werror -O3 -fstrict-aliasing -pipe
   DEFLDFLAGS =
 endif
+
+ifeq ($(DEBUG_ARM),1)
+  APP_CFLAGS += -g
+  SKIP_COMPRESSION=1
+endif
 # Next ones are activated only if SANITIZE=1
 ifeq ($(SANITIZE),1)
   DEFCFLAGS += -g -fsanitize=address -fno-omit-frame-pointer

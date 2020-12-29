@@ -71,7 +71,7 @@
         },{
             "label": "fullimage: clean & make debug",
             "type": "shell",
-            "command": "make armsrc/clean && make armsrc/all SKIP_COMPRESSION=1 DEBUG=1",
+            "command": "make armsrc/clean && make armsrc/all DEBUG_ARM=1",
             "problemMatcher": [
                 "$gcc"
             ],
