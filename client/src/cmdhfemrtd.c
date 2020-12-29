@@ -1550,6 +1550,9 @@ static int emrtd_parse_ef_sod_hash_algo(uint8_t *data, size_t datalen, int *hash
         *hashalgo = 1;
     } else if (memcmp(emrtd_hashalgo_sha512, hashalgoset, 11) == 0) {
         *hashalgo = 3;
+    } else {
+        *hashalgo = 0;
+        return PM3_ESOFT;
     }
 
     return PM3_SUCCESS;
@@ -1576,7 +1579,9 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
 
     PrintAndLogEx(DEBUG, "hash data: %s", sprint_hex_inrow(emrtdsig, emrtdsiglen));
 
-    emrtd_parse_ef_sod_hash_algo(emrtdsig, emrtdsiglen, hashalgo);
+    if (emrtd_parse_ef_sod_hash_algo(emrtdsig, emrtdsiglen, hashalgo) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to parse hash list. Unknown algo?");
+    }
 
     if (!emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, hashlist, &hashlistlen, 0x30, 0x00, false, true, 1)) {
         PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD.");
