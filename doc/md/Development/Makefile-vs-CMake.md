@@ -15,6 +15,7 @@ At the moment both are maintained because they don't perfectly overlap yet.
 |-----|---|---|---|
 | verbose | `V=1` | `VERBOSE=1` |   |
 | debug build | `DEBUG=1` | `-DCMAKE_BUILD_TYPE=Debug` | client only |
+| ARM debug build | `DEBUG_ARM=1` | **no** | for use with JLink and VSCode |
 | warnings management | yes (1) | **no** | (1) cf Makefile.defs |
 | extra GCC warnings | GCCEXTRA=1 | **no** |   |
 | extra Clang warnings | CLANGEXTRA=1 | **no** | only on host |
@@ -83,7 +84,13 @@ At the moment both are maintained because they don't perfectly overlap yet.
 
 `makefile` only at the moment
 
-`PLATFORM`, `PLATFORM_EXTRAS`, `DESTDIR`, `PREFIX`, `FWTAG`
+Supposedly via `Makefile.platform`:
+
+`PLATFORM`, `PLATFORM_SIZE`, `PLATFORM_EXTRAS`, `SKIP_*`, `STANDALONE`
+
+Other:
+
+`DESTDIR`, `PREFIX`, `FWTAG`
 
 ## Global
 
