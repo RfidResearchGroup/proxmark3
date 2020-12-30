@@ -24,7 +24,7 @@ typedef struct emrtd_dg_s {
     bool required; // some are required only if PACE
     bool fastdump; // fast to dump
     int (*parser)(uint8_t *data, size_t datalen);
-    int (*dumper)(uint8_t *data, size_t datalen);
+    int (*dumper)(uint8_t *data, size_t datalen, const char *path);
 } emrtd_dg_t;
 
 typedef struct emrtd_hashalg_s {
@@ -37,7 +37,7 @@ typedef struct emrtd_hashalg_s {
 
 int CmdHFeMRTD(const char *Cmd);
 
-int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available);
+int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available, const char *path);
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available);
 int infoHF_EMRTD_offline(const char *path);
 #endif
