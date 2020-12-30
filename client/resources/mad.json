@@ -6097,6 +6097,13 @@
         "system_integrator": "CDVI"
     },
     {
+        "application": "(access control and security) VIGIK",
+        "company": "NORALSY",
+        "mad": "0x4980",
+        "service_provider": "NORALSY",
+        "system_integrator": "NORALSY"
+    },
+    {
         "application": "Card Administratin, cardholder adminstration, access control & security, company services, miscellaneous applications",
         "company": "Ministry of Defense",
         "mad": "0x4A01",
