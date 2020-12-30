@@ -50,10 +50,10 @@
 const uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
 const uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
 
-static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length);
-static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length);
-static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length);
-static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length);
+static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length, const char *path);
+static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length, const char *path);
+static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length, const char *path);
+static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length, const char *path);
 static int emrtd_print_ef_com_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen);
@@ -710,7 +710,7 @@ static bool emrtd_select_and_read(uint8_t *dataout, int *dataoutlen, const char 
 const uint8_t jpeg_header[4] = { 0xFF, 0xD8, 0xFF, 0xE0 };
 const uint8_t jpeg2k_header[6] = { 0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50 };
 
-static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length) {
+static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length, const char *path) {
     int offset, datalen = 0;
 
     // This is a hacky impl that just looks for the image header. I'll improve it eventually.
@@ -730,11 +730,20 @@ static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length) {
         return PM3_ESOFT;
     }
 
-    saveFile(dg_table[EF_DG2].filename, file_contents[offset] == 0xFF ? ".jpg" : ".jp2", file_contents + offset, datalen);
+    char *filepath = calloc(strlen(path) + 100, sizeof(char));
+    if (filepath == NULL)
+        return PM3_EMALLOC;
+    strcpy(filepath, path);
+    strncat(filepath, PATHSEP, 2);
+    strcat(filepath, dg_table[EF_DG2].filename);
+
+    saveFile(filepath, file_contents[offset] == 0xFF ? ".jpg" : ".jp2", file_contents + offset, datalen);
+
+    free(filepath);
     return PM3_SUCCESS;
 }
 
-static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length) {
+static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length, const char *path) {
     uint8_t data[EMRTD_MAX_FILE_SIZE];
     size_t datalen = 0;
 
@@ -744,7 +753,16 @@ static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length) {
     }
 
     if (datalen < EMRTD_MAX_FILE_SIZE) {
-        saveFile(dg_table[EF_DG5].filename, data[0] == 0xFF ? ".jpg" : ".jp2", data, datalen);
+        char *filepath = calloc(strlen(path) + 100, sizeof(char));
+        if (filepath == NULL)
+            return PM3_EMALLOC;
+        strcpy(filepath, path);
+        strncat(filepath, PATHSEP, 2);
+        strcat(filepath, dg_table[EF_DG5].filename);
+
+        saveFile(filepath, data[0] == 0xFF ? ".jpg" : ".jp2", data, datalen);
+
+        free(filepath);
     } else {
         PrintAndLogEx(ERR, "error (emrtd_dump_ef_dg5) datalen out-of-bounds");
         return PM3_ESOFT;
@@ -752,7 +770,7 @@ static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length) {
     return PM3_SUCCESS;
 }
 
-static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length) {
+static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length, const char *path) {
     uint8_t data[EMRTD_MAX_FILE_SIZE];
     size_t datalen = 0;
 
@@ -762,7 +780,16 @@ static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length) {
     }
 
     if (datalen < EMRTD_MAX_FILE_SIZE) {
-        saveFile(dg_table[EF_DG7].filename, data[0] == 0xFF ? ".jpg" : ".jp2", data, datalen);
+        char *filepath = calloc(strlen(path) + 100, sizeof(char));
+        if (filepath == NULL)
+            return PM3_EMALLOC;
+        strcpy(filepath, path);
+        strncat(filepath, PATHSEP, 2);
+        strcat(filepath, dg_table[EF_DG7].filename);
+
+        saveFile(filepath, data[0] == 0xFF ? ".jpg" : ".jp2", data, datalen);
+
+        free(filepath);
     } else {
         PrintAndLogEx(ERR, "error (emrtd_dump_ef_dg7) datalen out-of-bounds");
         return PM3_ESOFT;
@@ -770,7 +797,7 @@ static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length) {
     return PM3_SUCCESS;
 }
 
-static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length) {
+static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length, const char *path) {
     int fieldlen = emrtd_get_asn1_field_length(file_contents, file_length, 1);
     int datalen = emrtd_get_asn1_data_length(file_contents, file_length, 1);
 
@@ -779,11 +806,19 @@ static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length) {
         return PM3_SUCCESS;
     }
 
-    saveFile(dg_table[EF_SOD].filename, ".p7b", file_contents + fieldlen + 1, datalen);
+    char *filepath = calloc(strlen(path) + 100, sizeof(char));
+    if (filepath == NULL)
+        return PM3_EMALLOC;
+    strcpy(filepath, path);
+    strncat(filepath, PATHSEP, 2);
+    strcat(filepath, dg_table[EF_SOD].filename);
+
+    saveFile(filepath, ".p7b", file_contents + fieldlen + 1, datalen);
+    free(filepath);
     return PM3_ESOFT;
 }
 
-static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, const char *file, const char *name, bool use_secure, bool use_14b) {
+static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, const char *file, const char *name, bool use_secure, bool use_14b, const char *path) {
     uint8_t response[EMRTD_MAX_FILE_SIZE];
     int resplen = 0;
 
@@ -791,13 +826,22 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, cons
         return false;
     }
 
+    char *filepath = calloc(strlen(path) + 100, sizeof(char));
+    if (filepath == NULL)
+        return PM3_EMALLOC;
+    strcpy(filepath, path);
+    strncat(filepath, PATHSEP, 2);
+    strcat(filepath, name);
+
     PrintAndLogEx(INFO, "Read %s, len: %i.", name, resplen);
     PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    saveFile(name, ".BIN", response, resplen);
+    saveFile(filepath, ".BIN", response, resplen);
     emrtd_dg_t *dg = emrtd_fileid_to_dg(file);
     if ((dg != NULL) && (dg->dumper != NULL)) {
-        dg->dumper(response, resplen);
+        dg->dumper(response, resplen, path);
     }
+
+    free(filepath);
     return true;
 }
 
@@ -983,7 +1027,7 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     return true;
 }
 
-int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
+int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available, const char *path) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     int resplen = 0;
     uint8_t ssc[8] = { 0x00 };
@@ -999,7 +1043,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     // Dump EF_CardAccess (if available)
-    if (!emrtd_dump_file(ks_enc, ks_mac, ssc, dg_table[EF_CardAccess].fileid, dg_table[EF_CardAccess].filename, BAC, use_14b)) {
+    if (!emrtd_dump_file(ks_enc, ks_mac, ssc, dg_table[EF_CardAccess].fileid, dg_table[EF_CardAccess].filename, BAC, use_14b, path)) {
         PrintAndLogEx(INFO, "Couldn't dump EF_CardAccess, card does not support PACE.");
         PrintAndLogEx(HINT, "This is expected behavior for cards without PACE, and isn't something to be worried about.");
     }
@@ -1016,9 +1060,20 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         DropField();
         return PM3_ESOFT;
     }
+
+
+    char *filepath = calloc(strlen(path) + 100, sizeof(char));
+    if (filepath == NULL)
+        return PM3_EMALLOC;
+    strcpy(filepath, path);
+    strncat(filepath, PATHSEP, 2);
+    strcat(filepath, dg_table[EF_COM].filename);
+
     PrintAndLogEx(INFO, "Read EF_COM, len: %i.", resplen);
     PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    saveFile(dg_table[EF_COM].filename, ".BIN", response, resplen);
+    saveFile(filepath, ".BIN", response, resplen);
+
+    free(filepath);
 
     uint8_t filelist[50];
     size_t filelistlen = 0;
@@ -1041,7 +1096,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         }
         PrintAndLogEx(DEBUG, "Current file: %s", dg->filename);
         if (!dg->pace && !dg->eac) {
-            emrtd_dump_file(ks_enc, ks_mac, ssc, dg->fileid, dg->filename, BAC, use_14b);
+            emrtd_dump_file(ks_enc, ks_mac, ssc, dg->fileid, dg->filename, BAC, use_14b, path);
         }
     }
     DropField();
@@ -1891,6 +1946,7 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
         arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
         arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars"),
+        arg_str0(NULL, "path", "<dirpath>", "save dump to the given dirpath"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1957,11 +2013,16 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
         }
     }
 
+    uint8_t path[FILENAME_MAX] = { 0x00 };
+    if (CLIParamStrToBuf(arg_get_str(ctx, 5), path, sizeof(path), &slen) != 0 || slen == 0) {
+        path[0] = '.';
+    }
+
     CLIParserFree(ctx);
     if (error) {
         return PM3_ESOFT;
     }
-    return dumpHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
+    return dumpHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC, (const char *)path);
 }
 
 static int cmd_hf_emrtd_info(const char *Cmd) {
