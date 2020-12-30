@@ -51,23 +51,20 @@ void Vector(void) {
     }
     common_area.flags.osimage_present = 1;
 
-#ifdef WITH_NO_COMPRESSION
     /* Set up data segment: Copy from flash to ram */
-    char *src = &__data_src_start__;
-    char *dst = &__data_start__;
-    char *end = &__data_end__;
-    while (dst < end) *dst++ = *src++;
-    dst = &__bss_start__;
-    end = &__bss_end__;
+#ifdef WITH_NO_COMPRESSION
+    char *data_src = &__data_src_start__;
+    char *data_dst = &__data_start__;
+    char *data_end = &__data_end__;
+    while (data_dst < data_end) *data_dst++ = *data_src++;
 #else
     uncompress_data_section();
-
-    /* Set up (that is: clear) BSS. */
-    char *dst = &__bss_start__;
-    char *end = &__bss_end__;
 #endif
 
-    while (dst < end) *dst++ = 0;
+    /* Set up (that is: clear) BSS. */
+    char *bss_dst = &__bss_start__;
+    char *bss_end = &__bss_end__;
+    while (bss_dst < bss_end) *bss_dst++ = 0;
 
     AppMain();
 }
