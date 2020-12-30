@@ -134,8 +134,8 @@ Check column "offline" for their availability.
 |`hf 14a list            `|Y       |`List ISO 14443-a history`
 |`hf 14a info            `|N       |`Tag information`
 |`hf 14a reader          `|N       |`Act like an ISO14443-a reader`
-|`hf 14a cuids           `|N       |`<n> Collect n>0 ISO14443-a UIDs in one go`
-|`hf 14a sim             `|N       |`<UID> -- Simulate ISO 14443-a tag`
+|`hf 14a cuids           `|N       |`Collect n>0 ISO14443-a UIDs in one go`
+|`hf 14a sim             `|N       |`Simulate ISO 14443-a tag`
 |`hf 14a sniff           `|N       |`sniff ISO 14443-a traffic`
 |`hf 14a apdu            `|N       |`Send ISO 14443-4 APDU to tag`
 |`hf 14a chaining        `|N       |`Control ISO 14443-4 input chaining`
