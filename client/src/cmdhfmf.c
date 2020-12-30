@@ -4869,27 +4869,44 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool verbose = arg_get_lit(ctx, 1);
     uint8_t aid[2] = {0};
-    int aidlen;
+    int aidlen = 0;
     CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
-    uint8_t key[6] = {0};
-    int keylen;
-    CLIGetHexWithReturn(ctx, 3, key, &keylen);
+    uint8_t userkey[6] = {0};
+    int keylen = 0;
+    CLIGetHexWithReturn(ctx, 3, userkey, &keylen);
     bool keyB = arg_get_lit(ctx, 4);
     bool swapmad = arg_get_lit(ctx, 5);
     bool decodeholder = arg_get_lit(ctx, 6);
 
     CLIParserFree(ctx);
 
-    if (aidlen != 2 && !decodeholder && keylen > 0) {
-        PrintAndLogEx(WARNING, "Using default MAD keys instead");
-    }
-
     uint8_t sector0[16 * 4] = {0};
     uint8_t sector10[16 * 4] = {0};
+
+    bool got_first = true;
     if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector0)) {
         PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
+        got_first = false;
+    }
+
+    // User supplied key
+    if (got_first == false && keylen == 6) {
+        if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, userkey, sector0)) {
+        PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't the custom key is wrong");
+        } else {
+            got_first = true;
+        }
+    }
+
+    // Both default and user supplied key failed
+    if (got_first == false) {
         return PM3_ESOFT;
     }
+
+//    if (aidlen != 2 && !decodeholder) {
+//        PrintAndLogEx(WARNING, "Using default MAD keys instead");
+
+
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("MIFARE App Directory Information") " ----------------");
@@ -4921,7 +4938,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
         // user specified key
         if (keylen == 6) {
-            memcpy(akey, key, 6);
+            memcpy(akey, userkey, 6);
         }
 
         uint16_t aaid = 0x0004;
