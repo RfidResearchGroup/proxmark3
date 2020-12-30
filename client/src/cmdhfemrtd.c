@@ -1777,8 +1777,8 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     // Grab the hash list
-    uint8_t dg_hashes_sod[17][64] = { 0x00 };
-    uint8_t dg_hashes_calc[17][64] = { 0x00 };
+    uint8_t dg_hashes_sod[17][64] = { { 0 } };
+    uint8_t dg_hashes_calc[17][64] = { { 0 } };
     int hash_algo = 0;
 
     if (!emrtd_select_and_read(response, &resplen, dg_table[EF_SOD].fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
@@ -1856,8 +1856,8 @@ int infoHF_EMRTD_offline(const char *path) {
     free(data);
 
     // Grab the hash list
-    uint8_t dg_hashes_sod[17][64] = { 0x00 };
-    uint8_t dg_hashes_calc[17][64] = { 0x00 };
+    uint8_t dg_hashes_sod[17][64] = { { 0 } };
+    uint8_t dg_hashes_calc[17][64] = { { 0 } };
     int hash_algo = 0;
 
     strcpy(filepath, path);
