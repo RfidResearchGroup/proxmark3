@@ -1638,6 +1638,39 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
     return PM3_SUCCESS;
 }
 
+static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_sod, int hash_algo) {
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_SOD") " --------------------");
+
+    if (hash_algo == -1) {
+        PrintAndLogEx(SUCCESS, "Hash algorithm: " _YELLOW_("Unknown"));
+    } else {
+        PrintAndLogEx(SUCCESS, "Hash algorithm: " _YELLOW_("%s"), hashalg_table[hash_algo].name);
+
+        uint8_t all_zeroes[64] = { 0x00 };
+        bool calc_all_zero, sod_all_zero, hash_matches;
+        for (int i = 1; i <= 16; i++) {
+            calc_all_zero = (memcmp(dg_hashes_calc + (i * 64), all_zeroes, hashalg_table[hash_algo].hashlen) == 0);
+            sod_all_zero = (memcmp(dg_hashes_sod + (i * 64), all_zeroes, hashalg_table[hash_algo].hashlen) == 0);
+            hash_matches = (memcmp(dg_hashes_sod + (i * 64), dg_hashes_calc + (i * 64), hashalg_table[hash_algo].hashlen) == 0);
+            // Ignore files we don't haven't read and lack hashes to
+            if (calc_all_zero == true && sod_all_zero == true) {
+                continue;
+            } else if (calc_all_zero == true) {
+                PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File couldn't be read, but is in EF_SOD."), i);
+            } else if (sod_all_zero == true) {
+                PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File is not in EF_SOD."), i);
+            } else if (hash_matches == false) {
+                PrintAndLogEx(SUCCESS, "EF_DG%i: " _RED_("Invalid"), i);
+            } else {
+                PrintAndLogEx(SUCCESS, "EF_DG%i: " _GREEN_("Valid"), i);
+            }
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     int resplen = 0;
@@ -1727,6 +1760,9 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         }
     }
     DropField();
+
+    emrtd_print_ef_sod_info(*dg_hashes_calc, *dg_hashes_sod, hash_algo);
+
     return PM3_SUCCESS;
 }
 
@@ -1814,34 +1850,7 @@ int infoHF_EMRTD_offline(const char *path) {
     }
     free(filepath);
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_SOD") " --------------------");
-
-    if (hash_algo == -1) {
-        PrintAndLogEx(SUCCESS, "Hash algorithm: " _YELLOW_("Unknown"));
-    } else {
-        PrintAndLogEx(SUCCESS, "Hash algorithm: " _YELLOW_("%s"), hashalg_table[hash_algo].name);
-
-        uint8_t all_zeroes[64] = { 0x00 };
-        bool calc_all_zero, sod_all_zero, hash_matches;
-        for (int i = 1; i <= 16; i++) {
-            calc_all_zero = (memcmp(dg_hashes_calc[i], all_zeroes, hashalg_table[hash_algo].hashlen) == 0);
-            sod_all_zero = (memcmp(dg_hashes_sod[i], all_zeroes, hashalg_table[hash_algo].hashlen) == 0);
-            hash_matches = (memcmp(dg_hashes_sod[i], dg_hashes_calc[i], hashalg_table[hash_algo].hashlen) == 0);
-            // Ignore files we don't haven't read and lack hashes to
-            if (calc_all_zero == true && sod_all_zero == true) {
-                continue;
-            } else if (calc_all_zero == true) {
-                PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File couldn't be read, but is in EF_SOD."), i);
-            } else if (sod_all_zero == true) {
-                PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File is not in EF_SOD."), i);
-            } else if (hash_matches == false) {
-                PrintAndLogEx(SUCCESS, "EF_DG%i: " _RED_("Invalid"), i);
-            } else {
-                PrintAndLogEx(SUCCESS, "EF_DG%i: " _GREEN_("Valid"), i);
-            }
-        }
-    }
+    emrtd_print_ef_sod_info(*dg_hashes_calc, *dg_hashes_sod, hash_algo);
 
     return PM3_SUCCESS;
 }
