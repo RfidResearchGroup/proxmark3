@@ -1832,9 +1832,9 @@ int infoHF_EMRTD_offline(const char *path) {
             if (calc_all_zero == true && sod_all_zero == true) {
                 continue;
             } else if (calc_all_zero == true) {
-                PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File read access denied, but is in EF_SOD"), i);
+                PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File couldn't be read, but is in EF_SOD."), i);
             } else if (sod_all_zero == true) {
-                PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File not in EF_SOD"), i);
+                PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File is not in EF_SOD."), i);
             } else if (hash_matches == false) {
                 PrintAndLogEx(SUCCESS, "EF_DG%i: " _RED_("Invalid"), i);
             } else {
