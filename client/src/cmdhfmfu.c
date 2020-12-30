@@ -675,10 +675,10 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces) {
     if (ismagic)
         snprintf(typestr + strlen(typestr), 4, " (");
 
-    snprintf(typestr + strlen(typestr) , sizeof(typestr) - strlen(typestr), " %s ", (tagtype & MAGIC) ?  _GREEN_("magic") : "");
+    snprintf(typestr + strlen(typestr), sizeof(typestr) - strlen(typestr), " %s ", (tagtype & MAGIC) ?  _GREEN_("magic") : "");
     tagtype ^= MAGIC;
-    snprintf(typestr + strlen(typestr) , sizeof(typestr) - strlen(typestr), "%s", (tagtype & MAGIC_1A) ? _GREEN_("Gen 1a") : "");
-    snprintf(typestr + strlen(typestr) , sizeof(typestr) - strlen(typestr), "%s", (tagtype & MAGIC_1B) ? _GREEN_("Gen 1b") : "");
+    snprintf(typestr + strlen(typestr), sizeof(typestr) - strlen(typestr), "%s", (tagtype & MAGIC_1A) ? _GREEN_("Gen 1a") : "");
+    snprintf(typestr + strlen(typestr), sizeof(typestr) - strlen(typestr), "%s", (tagtype & MAGIC_1B) ? _GREEN_("Gen 1b") : "");
 
     if (ismagic)
         snprintf(typestr + strlen(typestr), 4, " )");
@@ -840,9 +840,9 @@ static int ulev1_print_counters(void) {
         if (len == 3) {
             PrintAndLogEx(INFO, "       [%0d]: %s", i, sprint_hex(counter, 3));
             PrintAndLogEx(SUCCESS, "            - %02X tearing (%s)"
-                    , tear[0]
-                    , (tear[0] == 0xBD) ? _GREEN_("ok") : _RED_("fail")
-                    );
+                          , tear[0]
+                          , (tear[0] == 0xBD) ? _GREEN_("ok") : _RED_("fail")
+                         );
         }
     }
     return len;
@@ -938,7 +938,7 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
     PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_public_keys[i].value);
     PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
     PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
-    PrintAndLogEx(SUCCESS, "       Signature verification (" _GREEN_("successful") ")" );
+    PrintAndLogEx(SUCCESS, "       Signature verification (" _GREEN_("successful") ")");
     return PM3_SUCCESS;
 }
 
@@ -969,9 +969,9 @@ static int ntag_print_counter(void) {
     (void)len;
     PrintAndLogEx(INFO, "       [02]: %s", sprint_hex(counter, 3));
     PrintAndLogEx(SUCCESS, "            - %02X tearing (%s)"
-                    , tear[0]
-                    , (tear[0] == 0xBD) ? _GREEN_("ok") : _RED_("fail")
-                    );
+                  , tear[0]
+                  , (tear[0] == 0xBD) ? _GREEN_("ok") : _RED_("fail")
+                 );
     return len;
 }
 
@@ -1513,7 +1513,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
                  );
 
     void *argtable[] = {
-        arg_param_begin,        
+        arg_param_begin,
         arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
         arg_lit0("l", NULL,           "swap entered key's endianness"),
         arg_int1("b", "block", "<dec>", "block number to write"),
@@ -1540,7 +1540,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         has_auth_key = true;
     } else if (ak_len == 4) {
         has_pwd = true;
-    } else if (ak_len != 0){
+    } else if (ak_len != 0) {
         PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
         return PM3_EINVARG;
     }
@@ -1559,7 +1559,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
 
     // starting with getting tagtype
     TagTypeUL_t tagtype = GetHF14AMfU_Type();
-    if (tagtype == UL_ERROR) 
+    if (tagtype == UL_ERROR)
         return PM3_ESOFT;
 
     uint8_t maxblockno = 0;
@@ -1576,7 +1576,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
 
     // Swap endianness
     if (swap_endian) {
-        if (has_auth_key) 
+        if (has_auth_key)
             authKeyPtr = SwapEndian64(authenticationkey, 16, 8);
 
         if (has_pwd)
@@ -1591,7 +1591,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
     if (ak_len) {
         PrintAndLogEx(INFO, "Using %s " _GREEN_("%s"), (ak_len == 16) ? "3des" : "pwd", sprint_hex(authenticationkey, ak_len));
     }
-    
+
     //Send write Block
 
     // 4 or 16.
@@ -1643,7 +1643,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
                  );
 
     void *argtable[] = {
-        arg_param_begin,        
+        arg_param_begin,
         arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
         arg_lit0("l", NULL,           "swap entered key's endianness"),
         arg_int1("b", "block", "<dec>", "block number to write"),
@@ -1664,7 +1664,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
         has_auth_key = true;
     } else if (ak_len == 4) {
         has_pwd = true;
-    } else if (ak_len != 0){
+    } else if (ak_len != 0) {
         PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
         return PM3_EINVARG;
     }
@@ -1704,7 +1704,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
 
     if (ak_len) {
         PrintAndLogEx(INFO, "Using %s " _GREEN_("%s"), (ak_len == 16) ? "3des" : "pwd", sprint_hex(authenticationkey, ak_len));
-    }    
+    }
 
     //Read Block
     uint8_t keytype = 0;
@@ -1932,13 +1932,13 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         has_auth_key = true;
     } else if (ak_len == 4) {
         has_pwd = true;
-    } else if (ak_len != 0){
+    } else if (ak_len != 0) {
         PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
         return PM3_EINVARG;
     }
 
     bool manual_pages = false;
-    if ( start_page > 0)
+    if (start_page > 0)
         manual_pages = true;
 
     if (pages != 16)

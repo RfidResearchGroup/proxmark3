@@ -314,9 +314,9 @@ static void SendVersion(void) {
     struct p payload;
     payload.id = *(AT91C_DBGU_CIDR);
 #ifdef WITH_NO_COMPRESSION
-	payload.section_size = (uint32_t)&_bootrom_end - (uint32_t)&_bootrom_start + (uint32_t)&__os_size__;
+    payload.section_size = (uint32_t)&_bootrom_end - (uint32_t)&_bootrom_start + (uint32_t)&__os_size__;
 #else
-	payload.section_size = text_and_rodata_section_size + compressed_data_section_size;
+    payload.section_size = text_and_rodata_section_size + compressed_data_section_size;
 #endif
     payload.versionstr_len = strlen(VersionString) + 1;
     memcpy(payload.versionstr, VersionString, payload.versionstr_len);

@@ -73,7 +73,7 @@ end
 --- Set UID on magic command enabled
 function magicUID(b0, b1, b2,  isgen1a)
 
-    if isgen1a then 
+    if isgen1a then
         print('Using backdoor Magic tag (gen1a) function')
     else
         print('Using backdoor Magic tag (gen1b) function')
@@ -81,21 +81,21 @@ function magicUID(b0, b1, b2,  isgen1a)
 
     -- write block 0
     core.console('hf 14a raw -k -a -b 7 40')
-    if isgen1a then 
+    if isgen1a then
         core.console('hf 14a raw -k -a 43')
     end
     core.console('hf 14a raw -c -a A200'..b0)
 
     -- write block 1
     core.console('hf 14a raw -k -a -b 7 40')
-    if isgen1a then 
+    if isgen1a then
         core.console('hf 14a raw -k -a 43')
     end
     core.console('hf 14a raw -c -a A201'..b1)
 
     -- write block 2
     core.console('hf 14a raw -k -a -b 7 40')
-    if isgen1a then 
+    if isgen1a then
         core.console('hf 14a raw -k -a 43')
     end
     core.console('hf 14a raw -c -a A202'..b2)
@@ -154,7 +154,7 @@ function main(args)
 
     core.clearCommandBuffer()
 
-    if tagtype == 3 then        
+    if tagtype == 3 then
         brickableUID(block0, block1, block2)
     else
         local is_gen1a = (tagtype == 1)
