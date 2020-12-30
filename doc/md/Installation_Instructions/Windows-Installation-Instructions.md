@@ -149,18 +149,3 @@ Note that it may take a quite long time for a freshly plugged Proxmark3 to be vi
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 
-## Color text on windows 10
-In later versions of windows 10 you may be able to get color to work by setting this registry key
-```
-[HKEY_CURRENT_USER\Console]
-    "VirtualTerminalLevel"=dword:00000001
-```
-You also need to disable "use legacy console" in the cmd.exe properties, or set the following registry key
-```
-[HKEY_CURRENT_USER\Console]
-    "ForceV2"=dword:00000001
-```
-After making these changes, you will need to start a new command prompt (cmd.exe) to ensure its using the new settings.
-
-If after making these changes (and restarting proxmark3.exe) you get extra characters and no color text, set either key to 0 or enable legacy mode again (and restart the command prompt).
-

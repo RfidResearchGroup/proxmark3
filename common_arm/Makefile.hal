@@ -137,6 +137,9 @@ endif
 ifneq ($(SKIP_HFPLOT),1)
     PLATFORM_DEFS += -DWITH_HFPLOT
 endif
+ifeq ($(SKIP_COMPRESSION),1)
+    PLATFORM_DEFS += -DWITH_NO_COMPRESSION
+endif
 
 # Standalone mode
 ifneq ($(strip $(filter $(PLATFORM_DEFS),$(STANDALONE_REQ_DEFS))),$(strip $(STANDALONE_REQ_DEFS)))
