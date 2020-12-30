@@ -1638,6 +1638,39 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
     return PM3_SUCCESS;
 }
 
+static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_sod, int hash_algo) {
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_SOD") " --------------------");
+
+    if (hash_algo == -1) {
+        PrintAndLogEx(SUCCESS, "Hash algorithm: " _YELLOW_("Unknown"));
+    } else {
+        PrintAndLogEx(SUCCESS, "Hash algorithm: " _YELLOW_("%s"), hashalg_table[hash_algo].name);
+
+        uint8_t all_zeroes[64] = { 0x00 };
+        bool calc_all_zero, sod_all_zero, hash_matches;
+        for (int i = 1; i <= 16; i++) {
+            calc_all_zero = (memcmp(dg_hashes_calc + (i * 64), all_zeroes, hashalg_table[hash_algo].hashlen) == 0);
+            sod_all_zero = (memcmp(dg_hashes_sod + (i * 64), all_zeroes, hashalg_table[hash_algo].hashlen) == 0);
+            hash_matches = (memcmp(dg_hashes_sod + (i * 64), dg_hashes_calc + (i * 64), hashalg_table[hash_algo].hashlen) == 0);
+            // Ignore files we don't haven't read and lack hashes to
+            if (calc_all_zero == true && sod_all_zero == true) {
+                continue;
+            } else if (calc_all_zero == true) {
+                PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File couldn't be read, but is in EF_SOD."), i);
+            } else if (sod_all_zero == true) {
+                PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File is not in EF_SOD."), i);
+            } else if (hash_matches == false) {
+                PrintAndLogEx(SUCCESS, "EF_DG%i: " _RED_("Invalid"), i);
+            } else {
+                PrintAndLogEx(SUCCESS, "EF_DG%i: " _GREEN_("Valid"), i);
+            }
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     int resplen = 0;
@@ -1689,8 +1722,8 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     // Grab the hash list
-    uint8_t dg_hashes[16][64];
-    uint8_t hash_out[64];
+    uint8_t dg_hashes_sod[17][64] = { 0x00 };
+    uint8_t dg_hashes_calc[17][64] = { 0x00 };
     int hash_algo = 0;
 
     if (!emrtd_select_and_read(response, &resplen, dg_table[EF_SOD].fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
@@ -1699,7 +1732,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         return PM3_ESOFT;
     }
 
-    res = emrtd_parse_ef_sod_hashes(response, resplen, *dg_hashes, &hash_algo);
+    res = emrtd_parse_ef_sod_hashes(response, resplen, *dg_hashes_sod, &hash_algo);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD. Hash checks will fail.");
     }
@@ -1719,20 +1752,17 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
                 PrintAndLogEx(DEBUG, "EF_DG%i hash algo: %i", dg->dgnum, hash_algo);
                 // Check file hash
                 if (hash_algo != -1) {
-                    PrintAndLogEx(DEBUG, "EF_DG%i hash on EF_SOD: %s", dg->dgnum, sprint_hex_inrow(dg_hashes[dg->dgnum], hashalg_table[hash_algo].hashlen));
-                    hashalg_table[hash_algo].hasher(response, resplen, hash_out);
-                    PrintAndLogEx(DEBUG, "EF_DG%i hash calc: %s", dg->dgnum, sprint_hex_inrow(hash_out, hashalg_table[hash_algo].hashlen));
-
-                    if (memcmp(dg_hashes[dg->dgnum], hash_out, hashalg_table[hash_algo].hashlen) == 0) {
-                        PrintAndLogEx(SUCCESS, _GREEN_("Hash verification passed for EF_DG%i."), dg->dgnum);
-                    } else {
-                        PrintAndLogEx(ERR, _RED_("Hash verification failed for EF_DG%i."), dg->dgnum);
-                    }
+                    PrintAndLogEx(DEBUG, "EF_DG%i hash on EF_SOD: %s", dg->dgnum, sprint_hex_inrow(dg_hashes_sod[dg->dgnum], hashalg_table[hash_algo].hashlen));
+                    hashalg_table[hash_algo].hasher(response, resplen, dg_hashes_calc[dg->dgnum]);
+                    PrintAndLogEx(DEBUG, "EF_DG%i hash calc: %s", dg->dgnum, sprint_hex_inrow(dg_hashes_calc[dg->dgnum], hashalg_table[hash_algo].hashlen));
                 }
             }
         }
     }
     DropField();
+
+    emrtd_print_ef_sod_info(*dg_hashes_calc, *dg_hashes_sod, hash_algo);
+
     return PM3_SUCCESS;
 }
 
@@ -1771,8 +1801,8 @@ int infoHF_EMRTD_offline(const char *path) {
     free(data);
 
     // Grab the hash list
-    uint8_t dg_hashes[16][64];
-    uint8_t hash_out[64];
+    uint8_t dg_hashes_sod[17][64] = { 0x00 };
+    uint8_t dg_hashes_calc[17][64] = { 0x00 };
     int hash_algo = 0;
 
     strcpy(filepath, path);
@@ -1785,7 +1815,7 @@ int infoHF_EMRTD_offline(const char *path) {
         return PM3_ESOFT;
     }
 
-    res = emrtd_parse_ef_sod_hashes(data, datalen, *dg_hashes, &hash_algo);
+    res = emrtd_parse_ef_sod_hashes(data, datalen, *dg_hashes_sod, &hash_algo);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD. Hash checks will fail.");
     }
@@ -1810,21 +1840,18 @@ int infoHF_EMRTD_offline(const char *path) {
                 PrintAndLogEx(DEBUG, "EF_DG%i hash algo: %i", dg->dgnum, hash_algo);
                 // Check file hash
                 if (hash_algo != -1) {
-                    PrintAndLogEx(DEBUG, "EF_DG%i hash on EF_SOD: %s", dg->dgnum, sprint_hex_inrow(dg_hashes[dg->dgnum], hashalg_table[hash_algo].hashlen));
-                    hashalg_table[hash_algo].hasher(data, datalen, hash_out);
-                    PrintAndLogEx(DEBUG, "EF_DG%i hash calc: %s", dg->dgnum, sprint_hex_inrow(hash_out, hashalg_table[hash_algo].hashlen));
-
-                    if (memcmp(dg_hashes[dg->dgnum], hash_out, hashalg_table[hash_algo].hashlen) == 0) {
-                        PrintAndLogEx(SUCCESS, _GREEN_("Hash verification passed for EF_DG%i."), dg->dgnum);
-                    } else {
-                        PrintAndLogEx(ERR, _RED_("Hash verification failed for EF_DG%i."), dg->dgnum);
-                    }
+                    PrintAndLogEx(DEBUG, "EF_DG%i hash on EF_SOD: %s", dg->dgnum, sprint_hex_inrow(dg_hashes_sod[dg->dgnum], hashalg_table[hash_algo].hashlen));
+                    hashalg_table[hash_algo].hasher(data, datalen, dg_hashes_calc[dg->dgnum]);
+                    PrintAndLogEx(DEBUG, "EF_DG%i hash calc: %s", dg->dgnum, sprint_hex_inrow(dg_hashes_calc[dg->dgnum], hashalg_table[hash_algo].hashlen));
                 }
                 free(data);
             }
         }
     }
     free(filepath);
+
+    emrtd_print_ef_sod_info(*dg_hashes_calc, *dg_hashes_sod, hash_algo);
+
     return PM3_SUCCESS;
 }
 
