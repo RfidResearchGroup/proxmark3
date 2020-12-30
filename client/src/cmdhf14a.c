@@ -209,34 +209,6 @@ static int usage_hf_14a_config(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_hf_14a_sim(void) {
-    PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n");
-    PrintAndLogEx(NORMAL, "Usage: hf 14a sim [h] t <type> u <uid> [n <numreads>] [x] [e] [v]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h     : This help");
-    PrintAndLogEx(NORMAL, "    t     : 1 = MIFARE Classic 1k");
-    PrintAndLogEx(NORMAL, "            2 = MIFARE Ultralight");
-    PrintAndLogEx(NORMAL, "            3 = MIFARE Desfire");
-    PrintAndLogEx(NORMAL, "            4 = ISO/IEC 14443-4");
-    PrintAndLogEx(NORMAL, "            5 = MIFARE Tnp3xxx");
-    PrintAndLogEx(NORMAL, "            6 = MIFARE Mini");
-    PrintAndLogEx(NORMAL, "            7 = AMIIBO (NTAG 215),  pack 0x8080");
-    PrintAndLogEx(NORMAL, "            8 = MIFARE Classic 4k");
-    PrintAndLogEx(NORMAL, "            9 = FM11RF005SH Shanghai Metro");
-    PrintAndLogEx(NORMAL, "           10 = JCOP 31/41 Rothult");
-    PrintAndLogEx(NORMAL, "    u     : 4, 7 or 10 byte UID");
-    PrintAndLogEx(NORMAL, "    n     : (Optional) Exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
-    PrintAndLogEx(NORMAL, "    x     : (Optional) Performs the 'reader attack', nr/ar attack against a reader");
-    PrintAndLogEx(NORMAL, "    e     : (Optional) Fill simulator keys from found keys");
-    PrintAndLogEx(NORMAL, "    v     : (Optional) Verbose");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344 x"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344556677"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 112233445566778899AA"));
-    return PM3_SUCCESS;
-}
-
 static int CmdHF14AList(const char *Cmd) {
     char args[128] = {0};
     if (strlen(Cmd) == 0) {
@@ -595,10 +567,23 @@ static int CmdHF14AInfo(const char *Cmd) {
 
 // Collect ISO14443 Type A UIDs
 static int CmdHF14ACUIDs(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a cuids",
+                  "Collect n>0 ISO14443-a UIDs in one go",
+                  "hf 14a cuids -n 5 <-- Collect 5 UIDs");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("n", "num", "<dec>", "Number of UIDs to collect"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
     // requested number of UIDs
-    int n = atoi(Cmd);
     // collect at least 1 (e.g. if no parameter was given)
-    n = n > 0 ? n : 1;
+    int n = arg_get_int_def(ctx, 1, 1);
+
+    CLIParserFree(ctx);
 
     uint64_t t1 =  msclock();
     PrintAndLogEx(SUCCESS, "collecting %d UIDs", n);
@@ -633,83 +618,81 @@ static int CmdHF14ACUIDs(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "end: %" PRIu64 " seconds", (msclock() - t1) / 1000);
     return 1;
 }
+
 // ## simulate iso14443a tag
 int CmdHF14ASim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a sim",
+                  "Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID",
+                  "hf 14a sim -t 1 --uid 11223344      -> MIFARE Classic 1k\n"
+                  "hf 14a sim -t 2                     -> MIFARE Ultralight\n"
+                  "hf 14a sim -t 3                     -> MIFARE Desfire\n"
+                  "hf 14a sim -t 4                     -> ISO/IEC 14443-4\n"
+                  "hf 14a sim -t 5                     -> MIFARE Tnp3xxx\n"
+                  "hf 14a sim -t 6                     -> MIFARE Mini\n"
+                  "hf 14a sim -t 7                     -> AMIIBO (NTAG 215),  pack 0x8080\n"
+                  "hf 14a sim -t 8                     -> MIFARE Classic 4k\n"
+                  "hf 14a sim -t 9                     -> FM11RF005SH Shanghai Metro\n"
+                  "hf 14a sim -t 10                    -> ST25TA IKEA Rothult\n");
 
-    int uidlen = 0;
-    uint8_t flags = 0, tagtype = 1, cmdp = 0;
-    uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("t", "type", "<1-10> ", "Simulation type to use"),
+        arg_str0("u", "uid", "<hex>", "4, 7 or 10 byte UID"),
+        arg_int0("n", "num", "<dec>", "Exit simulation after <numreads> blocks have been read by reader. 0 = infinite"),
+        arg_lit0(NULL, "nr", "Performs the 'reader attack', nr/ar attack against a reader"),
+        arg_lit0(NULL, "sk", "Fill simulator keys from found keys"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int tagtype = arg_get_int(ctx, 1);
+
+    int uid_len = 0;
+    uint8_t uid[10] = {0};
+    CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
+
+    uint8_t flags = 0;
     bool useUIDfromEML = true;
-    bool setEmulatorMem = false;
-    bool verbose = false;
-    bool errors = false;
-    sector_t *k_sector = NULL;
-    uint8_t k_sectorsCount = 40;
-    uint8_t exitAfterNReads = 0;
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_14a_sim();
-            case 't':
-                // Retrieve the tag type
-                tagtype = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (tagtype == 0)
-                    errors = true;
-                cmdp += 2;
+    if (uid_len > 0) {
+        switch (uid_len) {
+            case 10:
+                flags |= FLAG_10B_UID_IN_DATA;
                 break;
-            case 'u':
-                // Retrieve the full 4,7,10 byte long uid
-                param_gethex_ex(Cmd, cmdp + 1, uid, &uidlen);
-                uidlen >>= 1;
-                switch (uidlen) {
-                    case 10:
-                        flags |= FLAG_10B_UID_IN_DATA;
-                        break;
-                    case 7:
-                        flags |= FLAG_7B_UID_IN_DATA;
-                        break;
-                    case 4:
-                        flags |= FLAG_4B_UID_IN_DATA;
-                        break;
-                    default:
-                        errors = true;
-                        break;
-                }
-                if (!errors) {
-                    PrintAndLogEx(SUCCESS, "Emulating " _YELLOW_("ISO/IEC 14443 type A tag")" with " _GREEN_("%d byte UID (%s)"), uidlen, sprint_hex(uid, uidlen));
-                    useUIDfromEML = false;
-                }
-                cmdp += 2;
+            case 7:
+                flags |= FLAG_7B_UID_IN_DATA;
                 break;
-            case 'n':
-                exitAfterNReads = param_get8(Cmd, cmdp + 1);
-                cmdp += 2;
-                break;
-            case 'v':
-                verbose = true;
-                cmdp++;
-                break;
-            case 'x':
-                flags |= FLAG_NR_AR_ATTACK;
-                cmdp++;
-                break;
-            case 'e':
-                setEmulatorMem = true;
-                cmdp++;
+            case 4:
+                flags |= FLAG_4B_UID_IN_DATA;
                 break;
             default:
-                PrintAndLogEx(WARNING, "Unknown parameter " _RED_("'%c'"), param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+                PrintAndLogEx(ERR, "Please specify a 4, 7, or 10 byte UID");
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
         }
+        PrintAndLogEx(SUCCESS, "Emulating " _YELLOW_("ISO/IEC 14443 type A tag")" with " _GREEN_("%d byte UID (%s)"), uid_len, sprint_hex(uid, uid_len));
+        useUIDfromEML = false;
     }
 
-    //Validations
-    if (errors || cmdp == 0) return usage_hf_14a_sim();
+    uint8_t exitAfterNReads = arg_get_int(ctx, 3);
 
-    if (useUIDfromEML)
+    if (arg_get_lit(ctx, 4)) {
+        flags |= FLAG_NR_AR_ATTACK;
+    }
+
+    bool setEmulatorMem = arg_get_lit(ctx, 5);
+    bool verbose = arg_get_lit(ctx, 6);
+
+    CLIParserFree(ctx);
+
+    sector_t *k_sector = NULL;
+    uint8_t k_sectorsCount = 40;
+
+    if (useUIDfromEML) {
         flags |= FLAG_UID_IN_EMUL;
+    }
 
     struct {
         uint8_t tagtype;
@@ -721,7 +704,7 @@ int CmdHF14ASim(const char *Cmd) {
     payload.tagtype = tagtype;
     payload.flags = flags;
     payload.exitAfter = exitAfterNReads;
-    memcpy(payload.uid, uid, uidlen);
+    memcpy(payload.uid, uid, uid_len);
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443A_SIMULATE, (uint8_t *)&payload, sizeof(payload));
@@ -2327,11 +2310,11 @@ out:
 
 static command_t CommandTable[] = {
     {"help",        CmdHelp,              AlwaysAvailable, "This help"},
-    {"list",        CmdHF14AList,         AlwaysAvailable,  "List ISO 14443-a history"},
+    {"list",        CmdHF14AList,         AlwaysAvailable, "List ISO 14443-a history"},
     {"info",        CmdHF14AInfo,         IfPm3Iso14443a,  "Tag information"},
     {"reader",      CmdHF14AReader,       IfPm3Iso14443a,  "Act like an ISO14443-a reader"},
-    {"cuids",       CmdHF14ACUIDs,        IfPm3Iso14443a,  "<n> Collect n>0 ISO14443-a UIDs in one go"},
-    {"sim",         CmdHF14ASim,          IfPm3Iso14443a,  "<UID> -- Simulate ISO 14443-a tag"},
+    {"cuids",       CmdHF14ACUIDs,        IfPm3Iso14443a,  "Collect n>0 ISO14443-a UIDs in one go"},
+    {"sim",         CmdHF14ASim,          IfPm3Iso14443a,  "Simulate ISO 14443-a tag"},
     {"sniff",       CmdHF14ASniff,        IfPm3Iso14443a,  "sniff ISO 14443-a traffic"},
     {"apdu",        CmdHF14AAPDU,         IfPm3Iso14443a,  "Send ISO 14443-4 APDU to tag"},
     {"chaining",    CmdHF14AChaining,     IfPm3Iso14443a,  "Control ISO 14443-4 input chaining"},
