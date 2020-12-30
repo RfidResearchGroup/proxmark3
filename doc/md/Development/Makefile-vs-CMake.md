@@ -15,11 +15,10 @@ At the moment both are maintained because they don't perfectly overlap yet.
 |-----|---|---|---|
 | verbose | `V=1` | `VERBOSE=1` |   |
 | debug build | `DEBUG=1` | `-DCMAKE_BUILD_TYPE=Debug` | client only |
-| ARM debug build | `DEBUG_ARM=1` | **no** | for use with JLink and VSCode |
 | warnings management | yes (1) | **no** | (1) cf Makefile.defs |
-| extra GCC warnings | GCCEXTRA=1 | **no** |   |
-| extra Clang warnings | CLANGEXTRA=1 | **no** | only on host |
-| AddressSanitize | SANITIZE=1 | **no** | only on host |
+| extra GCC warnings | `GCCEXTRA=1` | **no** |   |
+| extra Clang warnings | `CLANGEXTRA=1` | **no** | only on host |
+| AddressSanitize | `SANITIZE=1` | **no** | only on host |
 | compilation | in place | in build dir | |
 | user `CFLAGS`/`LDFLAGS` | envvars honored (1) | envvars honored (2) | (1) also `LDLIBS` and `INCLUDES_CLIENT` for more tuning (2) only at first cmake call |
 | Mingw gnu printf | `_ISOC99_SOURCE` | `_ISOC99_SOURCE` | and in cbor.h: `__attribute__((format (__MINGW_PRINTF_FORMAT, 2, 3)))`|
@@ -78,19 +77,34 @@ At the moment both are maintained because they don't perfectly overlap yet.
 
 `makefile` only at the moment
 
-`SKIPGPU`
+| Feature | Makefile | Remarks |
+|-----|---|---|
+| Skip GPU-dependent code | `SKIPGPU=1` | to skip ht2crack5gpu tool when compiling the hitag2crack toolsuite |
 
 ## ARM
 
 `makefile` only at the moment
 
-Supposedly via `Makefile.platform`:
+### Features to be used via `Makefile.platform`:
 
-`PLATFORM`, `PLATFORM_SIZE`, `PLATFORM_EXTRAS`, `SKIP_*`, `STANDALONE`
+`SKIP_*`, `STANDALONE`
 
-Other:
+| Feature | Makefile | Remarks |
+|-----|---|---|
+| Platform choice | `PLATFORM=` | values: `PM3RDV4`, `PM3OTHER` |
+| Platform size | `PLATFORM_SIZE=` | values: `256`, `512` |
+| Platform extras | `PLATFORM_EXTRAS=` | values: `BTADDON`, `FPC_USART_DEV` |
+| Skip LF/HF techs in the firmware | `SKIP_`*`=1` | see `common_arm/Makefile.hal` for a list |
+| Standalone mode choice | `STANDALONE=` | see `doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md` for a list |
 
-`DESTDIR`, `PREFIX`, `FWTAG`
+### Other features:
+
+| Feature | Makefile | Remarks |
+|-----|---|---|
+| ARM debug build | `DEBUG_ARM=1` | to be used with JLink and VSCode |
+| Install dest dir | `DESTDIR=` | for maintainers |
+| Install prefix dir | `PREFIX=` | for maintainers |
+| Tag firmware image | `FWTAG=` | for maintainers |
 
 ## Global
 
