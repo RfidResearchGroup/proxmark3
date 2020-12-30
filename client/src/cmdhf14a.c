@@ -2219,7 +2219,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
 
     bool inc_p1 = true;
     bool skip_ins = false;
-    uint64_t all_sw[256][256] = {0};
+    uint64_t all_sw[256][256] = { { 0 } };
     uint64_t sw_occurences = 0;
     uint64_t t_start = msclock();
     uint64_t t_last_reset = msclock();
