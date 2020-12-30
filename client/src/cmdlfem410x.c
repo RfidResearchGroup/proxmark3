@@ -585,8 +585,8 @@ static int CmdEM410xClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x clone",
                   "Writes EM410x ID to a T55x7 or Q5/T5555 tag",
-                  "lf em 410x clone --id 0F0368568B        -> write id to T55x7 tag\n"
-                  "lf em 410x clone --id 0F0368568B --q5   -> write id to Q5/T5555 tag"
+                  "lf em 410x clone --uid 0F0368568B        -> write id to T55x7 tag\n"
+                  "lf em 410x clone --uid 0F0368568B --q5   -> write id to Q5/T5555 tag"
                  );
 
     void *argtable[] = {
