@@ -142,7 +142,7 @@ void printHf14aConfig(void) {
     Dbprintf("  [b] BCC override........%i %s%s%s",
              hf14aconfig.forcebcc,
              (hf14aconfig.forcebcc == 0) ? "( " _GREEN_("No") " ) follow standard" : "",
-             (hf14aconfig.forcebcc == 1) ? "( " _RED_("Yes") " ) always do CL2" : "",
+             (hf14aconfig.forcebcc == 1) ? "( " _RED_("Yes") " ) force fix of bad BCC" : "",
              (hf14aconfig.forcebcc == 2) ? "( " _RED_("Yes") " ) always use card BCC" : ""
             );
     Dbprintf("  [2] CL2 override........%i %s%s%s",

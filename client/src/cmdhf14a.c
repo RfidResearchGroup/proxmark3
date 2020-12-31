@@ -170,45 +170,6 @@ const char *getTagInfo(uint8_t uid) {
 static uint16_t frameLength = 0;
 uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 
-static int usage_hf_14a_config(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf 14a config [a 0|1|2] [b 0|1|2] [2 0|1|2] [3 0|1|2]");
-    PrintAndLogEx(NORMAL, "\nOptions:");
-    PrintAndLogEx(NORMAL, "       h                 This help");
-    PrintAndLogEx(NORMAL, "       a 0|1|2           ATQA<>anticollision: 0=follow standard 1=execute anticol 2=skip anticol");
-    PrintAndLogEx(NORMAL, "       b 0|1|2           BCC:                 0=follow standard 1=use fixed BCC   2=use card BCC");
-    PrintAndLogEx(NORMAL, "       2 0|1|2           SAK<>CL2:            0=follow standard 1=execute CL2     2=skip CL2");
-    PrintAndLogEx(NORMAL, "       3 0|1|2           SAK<>CL3:            0=follow standard 1=execute CL3     2=skip CL3");
-    PrintAndLogEx(NORMAL, "       r 0|1|2           SAK<>ATS:            0=follow standard 1=execute RATS    2=skip RATS");
-    PrintAndLogEx(NORMAL, "\nExamples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config       ")"     Print current configuration");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 1   ")"     Force execution of anticollision");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 0   ")"     Restore ATQA interpretation");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config b 1   ")"     Force fix of bad BCC in anticollision");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config b 0   ")"     Restore BCC check");
-    PrintAndLogEx(NORMAL, "\nExamples to revive Gen2/DirectWrite magic cards failing at anticollision:");
-    PrintAndLogEx(NORMAL, _CYAN_("    MFC 1k 4b UID")":");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 1 b 2 2 2 r 2"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 11223344440804006263646566676869"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 0 b 0 2 0 r 0"));
-    PrintAndLogEx(NORMAL, _CYAN_("    MFC 4k 4b UID")":");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 1 b 2 2 2 r 2"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 11223344441802006263646566676869"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 0 b 0 2 0 r 0"));
-    PrintAndLogEx(NORMAL, _CYAN_("    MFC 1k 7b UID")":");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 1 b 2 2 1 3 2 r 2"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566084400626364656667"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 0 b 0 2 0 3 0 r 0"));
-    PrintAndLogEx(NORMAL, _CYAN_("    MFC 4k 7b UID")":");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 1 b 2 2 1 3 2 r 2"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566184200626364656667"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 0 b 0 2 0 3 0 r 0"));
-    PrintAndLogEx(NORMAL, _CYAN_("    MFUL ")"/" _CYAN_(" MFUL EV1 ")"/" _CYAN_(" MFULC")":");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 1 b 2 2 1 3 2 r 2"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf mfu setuid 04112233445566"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 0 b 0 2 0 3 0 r 0"));
-    return PM3_SUCCESS;
-}
-
 static int CmdHF14AList(const char *Cmd) {
     char args[128] = {0};
     if (strlen(Cmd) == 0) {
@@ -237,142 +198,120 @@ int hf14a_getconfig(hf14a_config *config) {
     return PM3_SUCCESS;
 }
 
-int hf14a_setconfig(hf14a_config *config) {
+int hf14a_setconfig(hf14a_config *config, bool verbose) {
     if (!session.pm3_present) return PM3_ENOTTY;
 
     clearCommandBuffer();
-    if (config != NULL)
+    if (config != NULL) {
         SendCommandNG(CMD_HF_ISO14443A_SET_CONFIG, (uint8_t *)config, sizeof(hf14a_config));
-    else
+        if (verbose) {
+            SendCommandNG(CMD_HF_ISO14443A_PRINT_CONFIG, NULL, 0);
+        }
+    } else {
         SendCommandNG(CMD_HF_ISO14443A_PRINT_CONFIG, NULL, 0);
+    }
 
     return PM3_SUCCESS;
 }
 
+static int hf_14a_config_example(void) {
+    PrintAndLogEx(NORMAL, "\nExamples to revive Gen2/DirectWrite magic cards failing at anticollision:");
+    PrintAndLogEx(NORMAL, _CYAN_("    MFC 1k 4b UID")":");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 1 --bcc 2 --cl2 2 --rats 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 11223344440804006263646566676869"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 0 --bcc 0 --cl2 0 --rats 0"));
+    PrintAndLogEx(NORMAL, _CYAN_("    MFC 4k 4b UID")":");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 1 --bcc 2 --cl2 2 --rats 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 11223344441802006263646566676869"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 0 --bcc 0 --cl2 0 --rats 0"));
+    PrintAndLogEx(NORMAL, _CYAN_("    MFC 1k 7b UID")":");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 1 --bcc 2 --cl2 1 --cl3 2 --rats 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566084400626364656667"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 0 --bcc 0 --cl2 0 --rats 0"));
+    PrintAndLogEx(NORMAL, _CYAN_("    MFC 4k 7b UID")":");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 1 --bcc 2 --cl2 1 --cl3 2 --rats 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566184200626364656667"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 0 --bcc 0 --cl2 0 --rats 0"));
+    PrintAndLogEx(NORMAL, _CYAN_("    MFUL ")"/" _CYAN_(" MFUL EV1 ")"/" _CYAN_(" MFULC")":");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 1 --bcc 2 --cl2 1 --cl3 2 r 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf mfu setuid 04112233445566"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 0 --bcc 0 --cl2 0 --rats 0"));
+    return PM3_SUCCESS;
+}
 static int CmdHf14AConfig(const char *Cmd) {
-
     if (!session.pm3_present) return PM3_ENOTTY;
 
-    // if called with no params, just print the device config
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a config",
+                  "Configure 14a settings (use with caution)",
+                  "hf 14a config  -> Print current configuration\n"
+                  "hf 14a config --atqa 0 -> Follow standard\n"
+                  "hf 14a config --atqa 1 -> Force execution of anticollision\n"
+                  "hf 14a config --atqa 2 -> Skip anticollision\n"
+                  "hf 14a config --bcc 0  -> Follow standard\n"
+                  "hf 14a config --bcc 1  -> Force fix of bad BCC in anticollision\n"
+                  "hf 14a config --bcc 2  -> Use card BCC\n"
+                  "hf 14a config --cl2 0  -> Follow standard\n"
+                  "hf 14a config --cl2 1  -> Execute CL2\n"
+                  "hf 14a config --cl2 2  -> Skip CL2\n"
+                  "hf 14a config --cl3 0  -> Follow standard\n"
+                  "hf 14a config --cl3 1  -> Execute CL3\n"
+                  "hf 14a config --cl3 2  -> Skip CL3\n"
+                  "hf 14a config --rats 0  -> Follow standard\n"
+                  "hf 14a config --rats 1  -> Execute RATS\n"
+                  "hf 14a config --rats 2  -> Skip RATS");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "atqa", "<dec>", "Configure ATQA<>anticollision behavior"),
+        arg_int0(NULL, "bcc", "<dec>", "Configure BCC behavior"),
+        arg_int0(NULL, "cl2", "<dec>", "Configure SAK<>CL2 behavior"),
+        arg_int0(NULL, "cl3", "<dec>", "Configure SAK<>CL3 behavior"),
+        arg_int0(NULL, "rats", "<dec>", "Configure RATS behavior"),
+        arg_lit0("v", "verbose", "verbose output, also prints examples for reviving Gen2 cards"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int atqa = arg_get_int_def(ctx, 1, -1);
+    int bcc = arg_get_int_def(ctx, 2, -1);
+    int cl2 = arg_get_int_def(ctx, 3, -1);
+    int cl3 = arg_get_int_def(ctx, 4, -1);
+    int rats = arg_get_int_def(ctx, 5, -1);
+
+    int *config_options[5] = {&atqa, &bcc, &cl2, &cl3, &rats};
+
+    bool verbose = arg_get_lit(ctx, 6);
+
+    CLIParserFree(ctx);
+
+    // validations
     if (strlen(Cmd) == 0) {
-        return hf14a_setconfig(NULL);
+        return hf14a_setconfig(NULL, verbose);
     }
 
-    hf14a_config config = {
-        .forceanticol = -1,
-        .forcebcc = -1,
-        .forcecl2 = -1,
-        .forcecl3 = -1,
-        .forcerats = -1
-    };
+    if (verbose) {
+        hf_14a_config_example();
+    }
 
-    bool errors = false;
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (param_getchar(Cmd, cmdp)) {
-            case 'h':
-                return usage_hf_14a_config();
-            case 'a':
-                switch (param_getchar(Cmd, cmdp + 1)) {
-                    case '0':
-                        config.forceanticol = 0;
-                        break;
-                    case '1':
-                        config.forceanticol = 1;
-                        break;
-                    case '2':
-                        config.forceanticol = 2;
-                        break;
-                    default:
-                        PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));
-                        errors = 1;
-                        break;
-                }
-                cmdp += 2;
-                break;
-            case 'b':
-                switch (param_getchar(Cmd, cmdp + 1)) {
-                    case '0':
-                        config.forcebcc = 0;
-                        break;
-                    case '1':
-                        config.forcebcc = 1;
-                        break;
-                    case '2':
-                        config.forcebcc = 2;
-                        break;
-                    default:
-                        PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));
-                        errors = 1;
-                        break;
-                }
-                cmdp += 2;
-                break;
-            case '2':
-                switch (param_getchar(Cmd, cmdp + 1)) {
-                    case '0':
-                        config.forcecl2 = 0;
-                        break;
-                    case '1':
-                        config.forcecl2 = 1;
-                        break;
-                    case '2':
-                        config.forcecl2 = 2;
-                        break;
-                    default:
-                        PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));
-                        errors = 1;
-                        break;
-                }
-                cmdp += 2;
-                break;
-            case '3':
-                switch (param_getchar(Cmd, cmdp + 1)) {
-                    case '0':
-                        config.forcecl3 = 0;
-                        break;
-                    case '1':
-                        config.forcecl3 = 1;
-                        break;
-                    case '2':
-                        config.forcecl3 = 2;
-                        break;
-                    default:
-                        PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));
-                        errors = 1;
-                        break;
-                }
-                cmdp += 2;
-                break;
-            case 'r':
-                switch (param_getchar(Cmd, cmdp + 1)) {
-                    case '0':
-                        config.forcerats = 0;
-                        break;
-                    case '1':
-                        config.forcerats = 1;
-                        break;
-                    case '2':
-                        config.forcerats = 2;
-                        break;
-                    default:
-                        PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));
-                        errors = 1;
-                        break;
-                }
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = 1;
-                break;
+    for (int i = 0; i < 5; ++i) {
+        if (*config_options[i] > -1) {
+            if (*config_options[i] > 2) {
+                PrintAndLogEx(ERR, "Argument must be 0, 1, or 2");
+                return PM3_EINVARG;
+            }
         }
     }
 
-    // validations
-    if (errors) return usage_hf_14a_config();
+    hf14a_config config = {
+        .forceanticol = atqa,
+        .forcebcc = bcc,
+        .forcecl2 = cl2,
+        .forcecl3 = cl3,
+        .forcerats = rats
+    };
 
-    return hf14a_setconfig(&config);
+    return hf14a_setconfig(&config, verbose);
 }
 
 int Hf14443_4aGetCardData(iso14a_card_select_t *card) {

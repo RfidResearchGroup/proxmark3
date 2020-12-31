@@ -45,12 +45,12 @@ Here are some tips if the card doesn't react or gives error on a simple `hf 14a 
 
 Let's force a 4b UID anticollision and see what happens:
 ```
-hf 14a config a 1 b 2 2 2 r 2
+hf 14a config --atqa 1 --bcc 2 --cl2 2 --rats 2
 hf 14a reader
 ```
 It it responds, we know it's a TypeA card. But maybe it's a 7b UID, so let's force a 7b UID anticollision:
 ```
-hf 14a config a 1 b 2 2 1 3 2 r 2
+hf 14a config --atqa 1 --bcc 2 --cl2 1 --cl3 2 --rats 2
 hf 14a reader
 ```
 At this stage, you know if it's a TypeA 4b or 7b card and you can check further on this page how to reconfigure different types of cards.
@@ -58,7 +58,7 @@ At this stage, you know if it's a TypeA 4b or 7b card and you can check further 
 To restore anticollision config of the Proxmark3:
 
 ```
-hf 14a config a 0 b 0 2 0 3 0 r 0
+hf 14a config --atqa 0 --bcc 0 --cl2 0 --cl3 0 --rats 0
 ```
 # MIFARE Classic
 
@@ -335,26 +335,26 @@ hf mf wrbl 0 A FFFFFFFFFFFF 11223344440804006263646566676869
 When "soft-bricked" (by writing invalid data in block0), these ones may help:
 
 ```
-hf 14a config h
+hf 14a config -h
 ```
 
 e.g. for 4b UID:
 
 ```
-hf 14a config a 1 b 2 2 2 r 2
+hf 14a config --atqa 1 --bcc 2 --cl2 2 --rats 2
 hf mf wrbl 0 A FFFFFFFFFFFF 11223344440804006263646566676869 # for 1k
 hf mf wrbl 0 A FFFFFFFFFFFF 11223344441802006263646566676869 # for 4k
-hf 14a config a 0 b 0 2 0 r 0
+hf 14a config --atqa 0 --bcc 0 --cl2 0 --rats 0
 hf 14a reader
 ```
 
 e.g. for 7b UID:
 
 ```
-hf 14a config a 1 b 2 2 1 3 2 r 2
+hf 14a config --atqa 1 --bcc 2 --cl2 1 --cl3 2 --rats 2
 hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566084400626364656667 # for 1k
 hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566184200626364656667 # for 4k
-hf 14a config a 0 b 0 2 0 3 0 r 0
+hf 14a config --atqa 0 --bcc 0 --cl2 0 --cl3 0 --rats 0
 hf 14a reader
 ```
 ## MIFARE Classic DirectWrite, FUID version aka 1-write
@@ -537,7 +537,7 @@ script run hf_mfu_setuid -h
 When "soft-bricked" (by writing invalid data in block0), these ones may help:
 
 ```
-hf 14a config h
+hf 14a config -h
 script run run hf_mf_magicrevive -u
 ```
 
@@ -599,14 +599,14 @@ hf 14a raw    -c    a2 02 44480000
 When "soft-bricked" (by writing invalid data in block0), these ones may help:
 
 ```
-hf 14a config h
+hf 14a config -h
 ```
 
 E.g.:
 ```
-hf 14a config a 1 b 2 2 1 3 2 r 2
+hf 14a config --atqa 1 --bcc 2 --cl2 1 --cl3 2 --rats 2
 hf mfu setuid 04112233445566
-hf 14a config a 0 b 0 2 0 3 0 r 0
+hf 14a config --atqa 0 --bcc 0 --cl2 0 --cl3 0 --rats 0
 hf 14a reader
 ```
 
