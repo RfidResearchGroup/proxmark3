@@ -27,7 +27,7 @@ int CmdHF14ASniff(const char *Cmd); // used by hf topaz sniff
 int CmdHF14ASim(const char *Cmd);   // used by hf mfu sim
 
 int hf14a_getconfig(hf14a_config *config);
-int hf14a_setconfig(hf14a_config *config);
+int hf14a_setconfig(hf14a_config *config, bool verbose);
 int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search);
 const char *getTagInfo(uint8_t uid);
 int Hf14443_4aGetCardData(iso14a_card_select_t *card);

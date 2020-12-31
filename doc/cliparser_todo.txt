@@ -41,7 +41,6 @@ data print
 data samples
 data setdebugmode
 data tune
-hf 14a config
 hf 14b sriwrite
 hf 15 dump
 hf 15 info
