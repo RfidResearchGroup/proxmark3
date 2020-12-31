@@ -42,73 +42,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hf_mfu_restore(void) {
-    PrintAndLogEx(NORMAL, "Restore dumpfile onto card.");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu restore [h] [l] [s] k <key> n <filename w .bin> ");
-    PrintAndLogEx(NORMAL, "  Options :");
-    PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
-    PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
-    PrintAndLogEx(NORMAL, "  s       : (optional) enable special write UID " _BLUE_("-MAGIC TAG ONLY-"));
-    PrintAndLogEx(NORMAL, "  e       : (optional) enable special write version/signature " _BLUE_("-MAGIC NTAG 21* ONLY-"));
-    PrintAndLogEx(NORMAL, "  r       : (optional) use the password found in dumpfile to configure tag. requires " _YELLOW_("'e'") " parameter to work");
-    PrintAndLogEx(NORMAL, "  f <fn>  : " _YELLOW_("filename w .bin") " to restore");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu restore s f myfile"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu restore k AABBCCDD s f myfile"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu restore k AABBCCDD s e r f myfile"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
-static int usage_hf_mfu_eload(void) {
-    PrintAndLogEx(NORMAL, "It loads emul dump from the file " _YELLOW_("`filename.eml`"));
-    PrintAndLogEx(NORMAL, "Hint: See " _YELLOW_("`script run hf_mfu_dumptoemulator`") " to convert the .bin to the eml");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu eload u <file name w/o `.eml`> [numblocks]");
-    PrintAndLogEx(NORMAL, "  Options:");
-    PrintAndLogEx(NORMAL, "    h          : this help");
-    PrintAndLogEx(NORMAL, "    u          : UL (required)");
-    PrintAndLogEx(NORMAL, "    [filename] : without `.eml` (required)");
-    PrintAndLogEx(NORMAL, "    numblocks  : number of blocks to load from eml file (optional)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mfu eload u filename"));
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mfu eload u filename 57"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
-static int usage_hf_mfu_sim(void) {
-    PrintAndLogEx(NORMAL, "\nEmulating Ultralight tag from emulator memory\n");
-    PrintAndLogEx(NORMAL, "\nBe sure to load the emulator memory first!\n");
-    PrintAndLogEx(NORMAL, "Usage: hf mfu sim t 7 u <uid> [n <num>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h       : this help");
-    PrintAndLogEx(NORMAL, "    t 7     : 7 = NTAG or Ultralight sim (required)");
-    PrintAndLogEx(NORMAL, "    n <num> : exit simulation after <num> blocks have been read by reader. 0 = infinite (optional)");
-    PrintAndLogEx(NORMAL, "    u <uid> : 4 or 7 byte UID (optional)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mfu sim t 7"));
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mfu sim t 7 u 1122344556677"));
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mfu sim t 7 u 1122344556677 n 5"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
-static int usage_hf_mfu_ucauth(void) {
-    PrintAndLogEx(NORMAL, "Tests 3DES password on Mifare Ultralight-C tag.");
-    PrintAndLogEx(NORMAL, "If password is not specified, a set of known defaults will be tested.");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu cauth [k] <password (32 hex symbols)>");
-    PrintAndLogEx(NORMAL, "       k          - keep field on (only if a password is provided too)");
-    PrintAndLogEx(NORMAL, "       [password] - (32 hex symbols)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu cauth"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu cauth 000102030405060708090a0b0c0d0e0f"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
 static int usage_hf_mfu_ucsetpwd(void) {
     PrintAndLogEx(NORMAL, "Set 3DES password on Mifare Ultralight-C tag.");
     PrintAndLogEx(NORMAL, "Usage:  hf mfu setpwd <password (32 hex symbols)>");
@@ -349,10 +282,10 @@ static int try_default_3des_keys(uint8_t **correct_key) {
         uint8_t *key = default_3des_keys[i];
         if (ulc_authentication(key, true)) {
             *correct_key = key;
-            return 1;
+            return PM3_SUCCESS;
         }
     }
-    return 0;
+    return PM3_ESOFT;
 }
 
 static int ulev1_requestAuthentication(uint8_t *pwd, uint8_t *pack, uint16_t packLength) {
@@ -615,7 +548,7 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces) {
     memset(typestr, 0x00, sizeof(typestr));
 
     if (tagtype & UL)
-        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("MIFARE Ultralight (MF0ICU1)s"), spaces, "");
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("MIFARE Ultralight (MF0ICU1)"), spaces, "");
     else if (tagtype & UL_C)
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("MIFARE Ultralight C (MF0ULC)"), spaces, "");
     else if (tagtype & UL_NANO_40)
@@ -676,7 +609,7 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces) {
         snprintf(typestr + strlen(typestr), 4, " (");
 
     snprintf(typestr + strlen(typestr), sizeof(typestr) - strlen(typestr), " %s ", (tagtype & MAGIC) ?  _GREEN_("magic") : "");
-    tagtype ^= MAGIC;
+    tagtype &= ~(MAGIC);
     snprintf(typestr + strlen(typestr), sizeof(typestr) - strlen(typestr), "%s", (tagtype & MAGIC_1A) ? _GREEN_("Gen 1a") : "");
     snprintf(typestr + strlen(typestr), sizeof(typestr) - strlen(typestr), "%s", (tagtype & MAGIC_1B) ? _GREEN_("Gen 1b") : "");
 
@@ -688,11 +621,11 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces) {
 }
 
 static int ulc_print_3deskey(uint8_t *data) {
-    PrintAndLogEx(NORMAL, "         deskey1 [44/0x2C]: %s [%s]", sprint_hex(data, 4), sprint_ascii(data, 4));
-    PrintAndLogEx(NORMAL, "         deskey1 [45/0x2D]: %s [%s]", sprint_hex(data + 4, 4), sprint_ascii(data + 4, 4));
-    PrintAndLogEx(NORMAL, "         deskey2 [46/0x2E]: %s [%s]", sprint_hex(data + 8, 4), sprint_ascii(data + 8, 4));
-    PrintAndLogEx(NORMAL, "         deskey2 [47/0x2F]: %s [%s]", sprint_hex(data + 12, 4), sprint_ascii(data + 12, 4));
-    PrintAndLogEx(NORMAL, "\n 3des key: %s", sprint_hex(SwapEndian64(data, 16, 8), 16));
+    PrintAndLogEx(INFO, "    deskey1 [44/0x2C]: %s [%s]", sprint_hex(data, 4), sprint_ascii(data, 4));
+    PrintAndLogEx(INFO, "    deskey1 [45/0x2D]: %s [%s]", sprint_hex(data + 4, 4), sprint_ascii(data + 4, 4));
+    PrintAndLogEx(INFO, "    deskey2 [46/0x2E]: %s [%s]", sprint_hex(data + 8, 4), sprint_ascii(data + 8, 4));
+    PrintAndLogEx(INFO, "    deskey2 [47/0x2F]: %s [%s]", sprint_hex(data + 12, 4), sprint_ascii(data + 12, 4));
+    PrintAndLogEx(INFO, "3des key: " _GREEN_("%s"), sprint_hex_inrow(SwapEndian64(data, 16, 8), 16));
     return PM3_SUCCESS;
 }
 
@@ -839,7 +772,7 @@ static int ulev1_print_counters(void) {
         len = ulev1_readCounter(i, counter, sizeof(counter));
         if (len == 3) {
             PrintAndLogEx(INFO, "       [%0d]: %s", i, sprint_hex(counter, 3));
-            PrintAndLogEx(SUCCESS, "            - %02X tearing (%s)"
+            PrintAndLogEx(SUCCESS, "            - %02X tearing ( %s )"
                           , tear[0]
                           , (tear[0] == 0xBD) ? _GREEN_("ok") : _RED_("fail")
                          );
@@ -930,7 +863,7 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
     if (is_valid == false || i == ARRAYLEN(nxp_mfu_public_keys)) {
         PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
         PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
-        PrintAndLogEx(SUCCESS, "       Signature verification (" _RED_("fail") ")");
+        PrintAndLogEx(SUCCESS, "       Signature verification ( " _RED_("fail") " )");
         return PM3_ESOFT;
     }
 
@@ -938,7 +871,7 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
     PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_public_keys[i].value);
     PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
     PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
-    PrintAndLogEx(SUCCESS, "       Signature verification (" _GREEN_("successful") ")");
+    PrintAndLogEx(SUCCESS, "       Signature verification ( " _GREEN_("successful") " )");
     return PM3_SUCCESS;
 }
 
@@ -968,7 +901,7 @@ static int ntag_print_counter(void) {
     len = ulev1_readCounter(0x02, counter, sizeof(counter));
     (void)len;
     PrintAndLogEx(INFO, "       [02]: %s", sprint_hex(counter, 3));
-    PrintAndLogEx(SUCCESS, "            - %02X tearing (%s)"
+    PrintAndLogEx(SUCCESS, "            - %02X tearing ( %s )"
                   , tear[0]
                   , (tear[0] == 0xBD) ? _GREEN_("ok") : _RED_("fail")
                  );
@@ -1036,6 +969,19 @@ static int ul_magic_test(void) {
             break;
     }
     return 0;
+}
+
+static char *GenerateFilename(const char *prefix, const char *suffix) {
+    iso14a_card_select_t card;
+    if (ul_select(&card) == false) {
+        PrintAndLogEx(WARNING, "No tag found.");
+        return NULL;
+    }
+
+    char *fptr = calloc(sizeof(char) * (strlen(prefix) + strlen(suffix)) + sizeof(card.uid) * 2 + 1,  sizeof(uint8_t));
+    strcpy(fptr, prefix);
+    FillFileNameByUID(fptr, card.uid, suffix, card.uidlen);
+    return fptr;
 }
 
 uint32_t GetHF14AMfU_Type(void) {
@@ -1218,7 +1164,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
-        arg_lit0("l", NULL,           "swap entered key's endianness"),
+        arg_lit0("l", NULL, "swap entered key's endianness"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1319,7 +1265,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             }
 
             // also try to diversify default keys..  look into CmdHF14AMfGenDiverseKeys
-            if (try_default_3des_keys(&key)) {
+            if (try_default_3des_keys(&key) == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "Found default 3des key: ");
                 uint8_t keySwap[16];
                 memcpy(keySwap, SwapEndian64(key, 16, 8), 16);
@@ -1425,7 +1371,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenA(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found a default password: " _GREEN_("%s") " Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                PrintAndLogEx(SUCCESS, "Found default password " _GREEN_("%s") " pack %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -1437,7 +1383,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenB(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found a default password: " _GREEN_("%s") " Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                PrintAndLogEx(SUCCESS, "Found default password " _GREEN_("%s") " pack %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -1449,7 +1395,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenC(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found a default password: " _GREEN_("%s") " Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                PrintAndLogEx(SUCCESS, "Found default password " _GREEN_("%s") " pack %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -1461,7 +1407,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenD(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found a default password:" _GREEN_("%s") " Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                PrintAndLogEx(SUCCESS, "Found default password" _GREEN_("%s") " pack %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -1473,7 +1419,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 key = default_pwd_pack[i];
                 len = ulev1_requestAuthentication(key, pack, sizeof(pack));
                 if (len > -1) {
-                    PrintAndLogEx(SUCCESS, "Found a default password: " _GREEN_("%s") " Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                    PrintAndLogEx(SUCCESS, "Found default password " _GREEN_("%s") " pack %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
                     break;
                 } else {
                     if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
@@ -1515,7 +1461,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
-        arg_lit0("l", NULL,           "swap entered key's endianness"),
+        arg_lit0("l", NULL, "swap entered key's endianness"),
         arg_int1("b", "block", "<dec>", "block number to write"),
         arg_str1("d", "data", "<hex>", "block data (4 or 16 hex bytes, 16 hex bytes will do a compatibility write)"),
         arg_param_end
@@ -1645,7 +1591,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
-        arg_lit0("l", NULL,           "swap entered key's endianness"),
+        arg_lit0("l", NULL, "swap entered key's endianness"),
         arg_int1("b", "block", "<dec>", "block number to write"),
         arg_param_end
     };
@@ -1729,7 +1675,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
             PrintAndLogEx(INFO, "-----------------------------");
             PrintAndLogEx(INFO, "%02d/0x%02X | %s| %s\n", blockno, blockno, sprint_hex(d, 4), sprint_ascii(d, 4));
         } else {
-            PrintAndLogEx(WARNING, "Failed reading block: (%02x)", isOK);
+            PrintAndLogEx(WARNING, "Failed reading block: ( %02x )", isOK);
         }
     } else {
         PrintAndLogEx(WARNING, "Command execute time-out");
@@ -1906,7 +1852,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "specify a filename for dump file"),
         arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
-        arg_lit0("l", NULL,           "swap entered key's endianness"),
+        arg_lit0("l", NULL, "swap entered key's endianness"),
         arg_int0("p", "page", "<dec>", "manually set start page number to start from"),
         arg_int0("q", "qty", "<dec>", "manually set number of pages to dump"),
         arg_param_end
@@ -2154,82 +2100,58 @@ static void wait4response(uint8_t b) {
 //  Restore dump file onto tag
 //
 static int CmdHF14AMfURestore(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu restore",
+                  "Restore dumpfile onto card.",
+                  "hf mfu restore -f myfile -s                 -> user specified filename and special write\n"
+                  "hf mfu restore -f myfile -k AABBCCDD -s     -> user specified filename, special write and use key\n"
+                  "hf mfu restore -f myfile -k AABBCCDD -ser   -> user specified filename, special write, use key, ..."
+                  );
 
-    char tempStr[50] = {0};
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "specify a filename to restore"),
+        arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
+        arg_lit0("l", NULL, "swap entered key's endianness"),
+        arg_lit0("s", NULL, "enable special write UID -MAGIC TAG ONLY-"),
+        arg_lit0("e", NULL, "enable special write version/signature -MAGIC NTAG 21* ONLY-"),
+        arg_lit0("r", NULL, "use the password found in dumpfile to configure tag. requires " _YELLOW_("'-e'") " parameter to work"),
+        arg_lit0("v", "verbose", "verbose"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    uint8_t authkey[16] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    int ak_len = 0;
+    uint8_t authkey[16] = {0x00};
     uint8_t *p_authkey = authkey;
-    uint8_t cmdp = 0, keylen = 0;
+    CLIGetHexWithReturn(ctx, 2, authkey, &ak_len);
+
+    bool swap_endian = arg_get_lit(ctx, 3);
+    bool write_special = arg_get_lit(ctx, 4);
+    bool write_extra = arg_get_lit(ctx, 5);
+    bool read_key = arg_get_lit(ctx, 6);
+    bool verbose = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
     bool hasKey = false;
-    bool swapEndian = false;
-    bool errors = false;
-    bool write_special = false;
-    bool write_extra = false;
-    bool read_key = false;
-    bool verbose = false;
-    size_t filelen = 0;
-
-    memset(authkey, 0x00, sizeof(authkey));
-
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_mfu_restore();
-            case 'k':
-                keylen = param_getstr(Cmd, cmdp + 1, tempStr, sizeof(tempStr));
-                if (keylen == 32 || keylen == 8) { //ul-c or ev1/ntag key length
-                    errors = param_gethex(tempStr, 0, authkey, keylen);
-                    keylen /= 2;
-                } else {
-                    PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
-                    errors = true;
-                }
-                cmdp += 2;
-                hasKey = true;
-                break;
-            case 'l':
-                swapEndian = true;
-                cmdp++;
-                break;
-            case 'f':
-                filelen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-
-                if (filelen > FILE_PATH_SIZE - 5)
-                    filelen = FILE_PATH_SIZE - 5;
-
-                if (filelen < 1)
-                    sprintf(filename, "dumpdata.bin");
-
-                cmdp += 2;
-                break;
-            case 's':
-                cmdp++;
-                write_special = true;
-                break;
-            case 'e':
-                cmdp++;
-                write_extra = true;
-                break;
-            case 'r':
-                cmdp++;
-                read_key = true;
-                break;
-            case 'v':
-                cmdp++;
-                verbose = true;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter: " _RED_("'%c'"), param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-
-    //Validations
-    if (errors || cmdp == 0) return usage_hf_mfu_restore();
 
     uint8_t *dump = NULL;
     size_t bytes_read = 0;
+
+    if (fnlen == 0) {
+        char *fptr = GenerateFilename("hf-mfu-", "-dump.bin");
+        if (fptr != NULL) {
+            strcpy(filename, fptr);
+        } else {
+            snprintf(filename, sizeof(filename), "dumpdata.bin");
+        }            
+        free(fptr);
+    }
+
     if (loadFile_safe(filename, "", (void **)&dump, &bytes_read) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), filename);
         return PM3_EIO;
@@ -2263,19 +2185,19 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     printMFUdumpEx(mem, pages, 0);
 
     // Swap endianness
-    if (swapEndian && hasKey) {
-        if (keylen == 16)
-            p_authkey = SwapEndian64(authkey, keylen, 8);
+    if (swap_endian && hasKey) {
+        if (ak_len == 16)
+            p_authkey = SwapEndian64(authkey, ak_len, 8);
         else
-            p_authkey = SwapEndian64(authkey, keylen, 4);
+            p_authkey = SwapEndian64(authkey, ak_len, 4);
     }
 
     uint8_t data[20] = {0};
     uint8_t keytype = 0;
     // set key - only once
     if (hasKey) {
-        keytype = (keylen == 16) ? 1 : 2;
-        memcpy(data + 4, p_authkey, keylen);
+        keytype = (ak_len == 16) ? 1 : 2;
+        memcpy(data + 4, p_authkey, ak_len);
     }
 
     // write version, signature, pack
@@ -2379,16 +2301,54 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 //  Load emulator with dump file
 //
 static int CmdHF14AMfUeLoad(const char *Cmd) {
-    char c = tolower(param_getchar(Cmd, 0));
-    if (c == 'h' || c == 0x00) return usage_hf_mfu_eload();
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu eload",
+                  "It loads emul dump from the file `filename.eml`",
+                  "hf mfu eload -u -f myfile\n"
+                  "hf mfu eload -u -f myfile -q 57   -> load 57 blocks from myfile"
+                  );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "specify a filename w/o `.eml` to load"),
+        arg_lit1("u", NULL, "Ultralight Family type"),
+        arg_int0("q", "qty", "<dec>", "number of blocks to load from eml file"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(HINT, "Hint: See " _YELLOW_("`script run hf_mfu_dumptoemulator`") " to convert the .bin to .eml");
     return CmdHF14AMfELoad(Cmd);
 }
 //
 //  Simulate tag
 //
 static int CmdHF14AMfUSim(const char *Cmd) {
-    char c = tolower(param_getchar(Cmd, 0));
-    if (c == 'h' || c == 0x00) return usage_hf_mfu_sim();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu sim",
+                  "Simulate MIFARE Ultralight family type based upon\n"
+                  "ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n"
+                  "from emulator memory.  See `hf mfu eload` first",
+                  "hf mfu sim -t 2 --uid 1122344556677        -> MIFARE Ultralight\n"
+                  "hf mfu sim -t 7 --uid 1122344556677 -n 5   -> AMIIBO (NTAG 215),  pack 0x8080"
+                  );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("t", "type", "<1-10> ", "Simulation type to use"),
+        arg_str0("u", "uid", "<hex>", "4, 7 or 10 byte UID"),
+        arg_int0("n", "num", "<dec>", "Exit simulation after <numreads> blocks have been read by reader. 0 = infinite"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIParserFree(ctx);
     return CmdHF14ASim(Cmd);
 }
 
@@ -2396,43 +2356,58 @@ static int CmdHF14AMfUSim(const char *Cmd) {
 // Ultralight C Methods
 //-------------------------------------------------------------------------------
 
-//
 // Ultralight C Authentication
 //
-
 static int CmdHF14AMfUCAuth(const char *Cmd) {
-    uint8_t cmdp = 0;
-    char c = tolower(param_getchar(Cmd, 0));
-    if (c == 'h') {
-        return usage_hf_mfu_ucauth();
-    }
-    bool keep_field_on = false;
-    if (c == 'k') {
-        keep_field_on = true;
-        cmdp++;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu cauth",
+                  "Tests 3DES password on Mifare Ultralight-C tag.\n"
+                  "If password is not specified, a set of known defaults will be tested.",
+                  "hf mfu cauth\n"
+                  "hf mfu cauth --key 000102030405060708090a0b0c0d0e0f"
+                  );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
+        arg_lit0("l", NULL, "swap entered key's endianness"),
+        arg_lit0("k", NULL, "keep field on (only if a password is provided too)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    int ak_len = 0;
+    uint8_t authenticationkey[16] = {0x00};
+    uint8_t *authKeyPtr = authenticationkey;
+    CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
+    bool swap_endian = arg_get_lit(ctx, 2);
+    bool keep_field_on = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if (ak_len != 16 && ak_len != 0) {
+        PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+        return PM3_EINVARG;
     }
 
-    uint8_t key_buf[16];
-    uint8_t *key;
-    int succeeded;
+    // Swap endianness
+    if (swap_endian && ak_len) {
+        authKeyPtr = SwapEndian64(authenticationkey, 16, 8);
+    }
 
-    // If no hex key is specified, try all known ones
-    if (strlen(Cmd + cmdp) == 0) {
-        succeeded = try_default_3des_keys(&key);
-        // Else try user-supplied
+    bool isok = false;
+
+    // If no hex key is specified, try default keys
+    if (ak_len == 0) {
+        isok = (try_default_3des_keys(&authKeyPtr) == PM3_SUCCESS); 
     } else {
-        if (param_gethex(Cmd, cmdp, key_buf, 32)) {
-            PrintAndLogEx(WARNING, "Password must include 32 HEX symbols");
-            return PM3_EINVARG;
-        }
-        succeeded = ulc_authentication(key_buf, ! keep_field_on);
-        key = key_buf;
+        // try user-supplied
+        isok = ulc_authentication(authKeyPtr, !keep_field_on);
     }
 
-    if (succeeded)
-        PrintAndLogEx(SUCCESS, "Authentication successful. 3des key: %s", sprint_hex(key, 16));
+    if (isok)
+        PrintAndLogEx(SUCCESS, "Authentication success. 3des key: " _GREEN_("%s"), sprint_hex_inrow(authKeyPtr, 16));
     else
-        PrintAndLogEx(WARNING, "Authentication failed");
+        PrintAndLogEx(WARNING, "Authentication ( " _RED_("fail") " )");
 
     return PM3_SUCCESS;
 }
@@ -3484,7 +3459,7 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("k", "key", "replace default key for NDEF", NULL),
-        arg_lit0("l", "key", "(optional) swap entered key's endianness"),
+        arg_lit0("l", NULL, "swap entered key's endianness"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
