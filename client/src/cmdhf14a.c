@@ -217,25 +217,25 @@ int hf14a_setconfig(hf14a_config *config, bool verbose) {
 static int hf_14a_config_example(void) {
     PrintAndLogEx(NORMAL, "\nExamples to revive Gen2/DirectWrite magic cards failing at anticollision:");
     PrintAndLogEx(NORMAL, _CYAN_("    MFC 1k 4b UID")":");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 1 --bcc 2 --cl2 2 --rats 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa force --bcc ignore --cl2 skip --rats skip"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 11223344440804006263646566676869"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 0 --bcc 0 --cl2 0 --rats 0"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --std"));
     PrintAndLogEx(NORMAL, _CYAN_("    MFC 4k 4b UID")":");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 1 --bcc 2 --cl2 2 --rats 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa force --bcc ignore --cl2 skip --rats skip"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 11223344441802006263646566676869"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 0 --bcc 0 --cl2 0 --rats 0"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --std"));
     PrintAndLogEx(NORMAL, _CYAN_("    MFC 1k 7b UID")":");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 1 --bcc 2 --cl2 1 --cl3 2 --rats 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa force --bcc ignore --cl2 force --cl3 skip --rats skip"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566084400626364656667"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 0 --bcc 0 --cl2 0 --rats 0"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --std"));
     PrintAndLogEx(NORMAL, _CYAN_("    MFC 4k 7b UID")":");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 1 --bcc 2 --cl2 1 --cl3 2 --rats 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa forcce --bcc ignore --cl2 force --cl3 skip --rats skip"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566184200626364656667"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 0 --bcc 0 --cl2 0 --rats 0"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --std"));
     PrintAndLogEx(NORMAL, _CYAN_("    MFUL ")"/" _CYAN_(" MFUL EV1 ")"/" _CYAN_(" MFULC")":");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 1 --bcc 2 --cl2 1 --cl3 2 r 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa force --bcc ignore --cl2 force --cl3 skip -rats skip"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf mfu setuid 04112233445566"));
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa 0 --bcc 0 --cl2 0 --rats 0"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --std"));
     return PM3_SUCCESS;
 }
 static int CmdHf14AConfig(const char *Cmd) {
@@ -244,44 +244,101 @@ static int CmdHf14AConfig(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a config",
                   "Configure 14a settings (use with caution)",
-                  "hf 14a config  -> Print current configuration\n"
-                  "hf 14a config --atqa 0 -> Follow standard\n"
-                  "hf 14a config --atqa 1 -> Force execution of anticollision\n"
-                  "hf 14a config --atqa 2 -> Skip anticollision\n"
-                  "hf 14a config --bcc 0  -> Follow standard\n"
-                  "hf 14a config --bcc 1  -> Force fix of bad BCC in anticollision\n"
-                  "hf 14a config --bcc 2  -> Use card BCC\n"
-                  "hf 14a config --cl2 0  -> Follow standard\n"
-                  "hf 14a config --cl2 1  -> Execute CL2\n"
-                  "hf 14a config --cl2 2  -> Skip CL2\n"
-                  "hf 14a config --cl3 0  -> Follow standard\n"
-                  "hf 14a config --cl3 1  -> Execute CL3\n"
-                  "hf 14a config --cl3 2  -> Skip CL3\n"
-                  "hf 14a config --rats 0  -> Follow standard\n"
-                  "hf 14a config --rats 1  -> Execute RATS\n"
-                  "hf 14a config --rats 2  -> Skip RATS");
+                  "hf 14a config              -> Print current configuration\n"
+                  "hf 14a config --std        -> Reset default configuration (follow standard)\n"
+                  "hf 14a config --atqa std   -> Follow standard\n"
+                  "hf 14a config --atqa force -> Force execution of anticollision\n"
+                  "hf 14a config --atqa skip  -> Skip anticollision\n"
+                  "hf 14a config --bcc std    -> Follow standard\n"
+                  "hf 14a config --bcc fix    -> Fix bad BCC in anticollision\n"
+                  "hf 14a config --bcc ignore -> Ignore bad BCC and use it as such\n"
+                  "hf 14a config --cl2 std    -> Follow standard\n"
+                  "hf 14a config --cl2 force  -> Execute CL2\n"
+                  "hf 14a config --cl2 skip   -> Skip CL2\n"
+                  "hf 14a config --cl3 std    -> Follow standard\n"
+                  "hf 14a config --cl3 force  -> Execute CL3\n"
+                  "hf 14a config --cl3 skip   -> Skip CL3\n"
+                  "hf 14a config --rats std   -> Follow standard\n"
+                  "hf 14a config --rats force -> Execute RATS\n"
+                  "hf 14a config --rats skip  -> Skip RATS");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0(NULL, "atqa", "<dec>", "Configure ATQA<>anticollision behavior"),
-        arg_int0(NULL, "bcc", "<dec>", "Configure BCC behavior"),
-        arg_int0(NULL, "cl2", "<dec>", "Configure SAK<>CL2 behavior"),
-        arg_int0(NULL, "cl3", "<dec>", "Configure SAK<>CL3 behavior"),
-        arg_int0(NULL, "rats", "<dec>", "Configure RATS behavior"),
+        arg_str0(NULL, "atqa", "<std|force|skip>", "Configure ATQA<>anticollision behavior"),
+        arg_str0(NULL, "bcc", "<std|fix|ignore>", "Configure BCC behavior"),
+        arg_str0(NULL, "cl2", "<std|force|skip>", "Configure SAK<>CL2 behavior"),
+        arg_str0(NULL, "cl3", "<std|force|skip>", "Configure SAK<>CL3 behavior"),
+        arg_str0(NULL, "rats", "<std|force|skip>", "Configure RATS behavior"),
+        arg_lit0(NULL, "std", "Reset default configuration: follow all standard"),
         arg_lit0("v", "verbose", "verbose output, also prints examples for reviving Gen2 cards"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool defaults = arg_get_lit(ctx, 6);
+    int vlen = 0;
+    char value[10];
+    int atqa = defaults ? 0 : -1;
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)value, sizeof(value), &vlen);
+    if (vlen > 0) {
+        if (strcmp(value, "std") == 0) atqa = 0;
+        else if (strcmp(value, "force") == 0) atqa = 1;
+        else if (strcmp(value, "skip") == 0) atqa = 2;
+        else {
+            PrintAndLogEx(ERR, "atqa argument must be 'std', 'force', or 'skip'");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+    int bcc = defaults ? 0 : -1;
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)value, sizeof(value), &vlen);
+    if (vlen > 0) {
+        if (strcmp(value, "std") == 0) bcc = 0;
+        else if (strcmp(value, "fix") == 0) bcc = 1;
+        else if (strcmp(value, "ignore") == 0) bcc = 2;
+        else {
+            PrintAndLogEx(ERR, "bcc argument must be 'std', 'fix', or 'ignore'");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+    int cl2 = defaults ? 0 : -1;
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)value, sizeof(value), &vlen);
+    if (vlen > 0) {
+        if (strcmp(value, "std") == 0) cl2 = 0;
+        else if (strcmp(value, "force") == 0) cl2 = 1;
+        else if (strcmp(value, "skip") == 0) cl2 = 2;
+        else {
+            PrintAndLogEx(ERR, "cl2 argument must be 'std', 'force', or 'skip'");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+    int cl3 = defaults ? 0 : -1;
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)value, sizeof(value), &vlen);
+    if (vlen > 0) {
+        if (strcmp(value, "std") == 0) cl3 = 0;
+        else if (strcmp(value, "force") == 0) cl3 = 1;
+        else if (strcmp(value, "skip") == 0) cl3 = 2;
+        else {
+            PrintAndLogEx(ERR, "cl3 argument must be 'std', 'force', or 'skip'");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+    int rats = defaults ? 0 : -1;
+    CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)value, sizeof(value), &vlen);
+    if (vlen > 0) {
+        if (strcmp(value, "std") == 0) rats = 0;
+        else if (strcmp(value, "force") == 0) rats = 1;
+        else if (strcmp(value, "skip") == 0) rats = 2;
+        else {
+            PrintAndLogEx(ERR, "rats argument must be 'std', 'force', or 'skip'");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
 
-    int atqa = arg_get_int_def(ctx, 1, -1);
-    int bcc = arg_get_int_def(ctx, 2, -1);
-    int cl2 = arg_get_int_def(ctx, 3, -1);
-    int cl3 = arg_get_int_def(ctx, 4, -1);
-    int rats = arg_get_int_def(ctx, 5, -1);
-
-    int *config_options[5] = {&atqa, &bcc, &cl2, &cl3, &rats};
-
-    bool verbose = arg_get_lit(ctx, 6);
+    bool verbose = arg_get_lit(ctx, 7);
 
     CLIParserFree(ctx);
 
@@ -292,15 +349,6 @@ static int CmdHf14AConfig(const char *Cmd) {
 
     if (verbose) {
         hf_14a_config_example();
-    }
-
-    for (int i = 0; i < 5; ++i) {
-        if (*config_options[i] > -1) {
-            if (*config_options[i] > 2) {
-                PrintAndLogEx(ERR, "Argument must be 0, 1, or 2");
-                return PM3_EINVARG;
-            }
-        }
     }
 
     hf14a_config config = {
