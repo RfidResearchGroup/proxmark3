@@ -115,21 +115,6 @@ STATICLIBS += $(HARDNESTEDLIB)
 LDLIBS +=$(HARDNESTEDLIBLD)
 INCLUDES += $(HARDNESTEDLIBINC)
 
-## Jansson
-ifneq ($(SKIPJANSSONSYSTEM),1)
-    JANSSONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags jansson 2>/dev/null)
-    JANSSONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs jansson 2>/dev/null)
-    ifneq ($(JANSSONLDLIBS),)
-        JANSSONLIB =
-        JANSSONLIBLD = $(JANSSONLDLIBS)
-        JANSSONLIBINC = $(JANSSONINCLUDES)
-        JANSSON_FOUND = 1
-    endif
-endif
-STATICLIBS += $(JANSSONLIB)
-LDLIBS += $(JANSSONLIBLD)
-INCLUDES += $(JANSSONLIBINC)
-
 ## Lua
 ifneq ($(SKIPLUASYSTEM),1)
     LUAINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags lua5.2 2>/dev/null)
@@ -144,6 +129,21 @@ endif
 STATICLIBS += $(LUALIB)
 LDLIBS += $(LUALIBLD)
 INCLUDES += $(LUALIBINC)
+
+## Jansson
+ifneq ($(SKIPJANSSONSYSTEM),1)
+    JANSSONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags jansson 2>/dev/null)
+    JANSSONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs jansson 2>/dev/null)
+    ifneq ($(JANSSONLDLIBS),)
+        JANSSONLIB =
+        JANSSONLIBLD = $(JANSSONLDLIBS)
+        JANSSONLIBINC = $(JANSSONINCLUDES)
+        JANSSON_FOUND = 1
+    endif
+endif
+STATICLIBS += $(JANSSONLIB)
+LDLIBS += $(JANSSONLIBLD)
+INCLUDES += $(JANSSONLIBINC)
 
 ## mbed TLS
 # system library cannot be used because it is compiled by default without CMAC support
