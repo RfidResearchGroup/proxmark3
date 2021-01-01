@@ -42,41 +42,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hf_mfu_ucsetpwd(void) {
-    PrintAndLogEx(NORMAL, "Set 3DES password on Mifare Ultralight-C tag.");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu setpwd <password (32 hex symbols)>");
-    PrintAndLogEx(NORMAL, "       [password] - (32 hex symbols)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("         hf mfu setpwd 000102030405060708090a0b0c0d0e0f"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 
-static int usage_hf_mfu_ucsetuid(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu setuid <uid (14 hex symbols)>");
-    PrintAndLogEx(NORMAL, "       [uid] - (14 hex symbols)");
-    PrintAndLogEx(NORMAL, "\n");
-    PrintAndLogEx(NORMAL, "This only works for " _BLUE_("Magic Ultralight") " tags.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("         hf mfu setuid 11223344556677"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
-static int usage_hf_mfu_gendiverse(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu gen [h] [r] <uid (8 hex symbols)>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h       : this help");
-    PrintAndLogEx(NORMAL, "    r       : read uid from tag");
-    PrintAndLogEx(NORMAL, "    <uid>   : 4 byte UID (optional)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mfu gen r"));
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mfu gen 11223344"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 
 static int usage_hf_mfu_pwdgen(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mfu pwdgen [h|t] [r] <uid (14 hex symbols)>");
@@ -2137,7 +2103,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
-    bool hasKey = false;
+    bool has_key = false;
 
     uint8_t *dump = NULL;
     size_t bytes_read = 0;
@@ -2185,7 +2151,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     printMFUdumpEx(mem, pages, 0);
 
     // Swap endianness
-    if (swap_endian && hasKey) {
+    if (swap_endian && has_key) {
         if (ak_len == 16)
             p_authkey = SwapEndian64(authkey, ak_len, 8);
         else
@@ -2195,7 +2161,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     uint8_t data[20] = {0};
     uint8_t keytype = 0;
     // set key - only once
-    if (hasKey) {
+    if (has_key) {
         keytype = (ak_len == 16) ? 1 : 2;
         memcpy(data + 4, p_authkey, ak_len);
     }
@@ -2209,16 +2175,15 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 #define MFU_NTAG_SPECIAL_VERSION    0xFA
 #define MFU_NTAG_SPECIAL_SIGNATURE  0xF2
         // pwd
-        if (hasKey || read_key) {
+        if (has_key || read_key) {
 
+            memcpy(data,  p_authkey, 4);
             if (read_key) {
                 // try reading key from dump and use.
                 memcpy(data, mem->data + (bytes_read - MFU_DUMP_PREFIX_LENGTH - 8), 4);
-            } else {
-                memcpy(data,  p_authkey, 4);
             }
 
-            PrintAndLogEx(NORMAL, "special PWD     block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PWD, sprint_hex(data, 4));
+            PrintAndLogEx(INFO, "special PWD     block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PWD, sprint_hex(data, 4));
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PWD, keytype, 0, data, sizeof(data));
 
@@ -2234,7 +2199,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         memcpy(data, mem->data + (bytes_read - MFU_DUMP_PREFIX_LENGTH - 4), 2);
         data[2] = 0;
         data[3] = 0;
-        PrintAndLogEx(NORMAL, "special PACK    block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PACK, sprint_hex(data, 4));
+        PrintAndLogEx(INFO, "special PACK    block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PACK, sprint_hex(data, 4));
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PACK, keytype, 0, data, sizeof(data));
         wait4response(MFU_NTAG_SPECIAL_PACK);
@@ -2242,7 +2207,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         // Signature
         for (uint8_t s = MFU_NTAG_SPECIAL_SIGNATURE, i = 0; s < MFU_NTAG_SPECIAL_SIGNATURE + 8; s++, i += 4) {
             memcpy(data, mem->signature + i, 4);
-            PrintAndLogEx(NORMAL, "special SIG     block written 0x%X - %s\n", s, sprint_hex(data, 4));
+            PrintAndLogEx(INFO, "special SIG     block written 0x%X - %s\n", s, sprint_hex(data, 4));
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
             wait4response(s);
@@ -2251,7 +2216,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         // Version
         for (uint8_t s = MFU_NTAG_SPECIAL_VERSION, i = 0; s < MFU_NTAG_SPECIAL_VERSION + 2; s++, i += 4) {
             memcpy(data, mem->version + i, 4);
-            PrintAndLogEx(NORMAL, "special VERSION block written 0x%X - %s\n", s, sprint_hex(data, 4));
+            PrintAndLogEx(INFO, "special VERSION block written 0x%X - %s\n", s, sprint_hex(data, 4));
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
             wait4response(s);
@@ -2271,14 +2236,14 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         wait4response(b);
         PrintAndLogEx(NORMAL, "." NOLF);
     }
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
 
     // write special data last
     if (write_special) {
 
         PrintAndLogEx(INFO, "Restoring configuration blocks.\n");
 
-        PrintAndLogEx(NORMAL, "authentication with keytype[%x]  %s\n", (uint8_t)(keytype & 0xff), sprint_hex(p_authkey, 4));
+        PrintAndLogEx(INFO, "authentication with keytype[%x]  %s\n", (uint8_t)(keytype & 0xff), sprint_hex(p_authkey, 4));
 
         // otp, uid, lock, cfg1, cfg0, dynlockbits
         uint8_t blocks[] = {3, 0, 1, 2, pages - 5, pages - 4, pages - 3};
@@ -2288,13 +2253,13 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
             wait4response(b);
-            PrintAndLogEx(NORMAL, "special block written %u - %s\n", b, sprint_hex(data, 4));
+            PrintAndLogEx(INFO, "special block written %u - %s\n", b, sprint_hex(data, 4));
         }
     }
 
     DropField();
     free(dump);
-    PrintAndLogEx(INFO, "Finish restore");
+    PrintAndLogEx(INFO, "Restore finished");
     return PM3_SUCCESS;
 }
 //
@@ -2317,10 +2282,6 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-
-    int fnlen = 0;
-    char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
     PrintAndLogEx(HINT, "Hint: See " _YELLOW_("`script run hf_mfu_dumptoemulator`") " to convert the .bin to .eml");
@@ -2513,26 +2474,38 @@ static int CmdTestDES(const char * cmd)
 // Mifare Ultralight C - Set password
 //
 static int CmdHF14AMfUCSetPwd(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu setpwd",
+                  "Set the 3DES key on MIFARE Ultralight-C tag. ",
+                  "hf mfu setpwd --key 000102030405060708090a0b0c0d0e0f"
+                  );
 
-    uint8_t pwd[16] = {0x00};
-    char cmdp = tolower(param_getchar(Cmd, 0));
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("k", "key", "<hex>", "New key (16 bytes)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    int k_len = 0;
+    uint8_t key[16] = {0x00};
+    CLIGetHexWithReturn(ctx, 1, key, &k_len);
+    CLIParserFree(ctx);
 
-    if (strlen(Cmd) == 0  || cmdp == 'h') return usage_hf_mfu_ucsetpwd();
-
-    if (param_gethex(Cmd, 0, pwd, 32)) {
-        PrintAndLogEx(WARNING, "Password must include 32 HEX symbols");
+    if (k_len != 16) {
+        PrintAndLogEx(WARNING, "Key must be 16 hex bytes");
         return PM3_EINVARG;
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREUC_SETPWD, 0, 0, 0, pwd, 16);
+    SendCommandMIX(CMD_HF_MIFAREUC_SETPWD, 0, 0, 0, key, sizeof(key));
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         if ((resp.oldarg[0] & 0xff) == 1) {
-            PrintAndLogEx(INFO, "Ultralight-C new password: %s", sprint_hex(pwd, 16));
+            PrintAndLogEx(INFO, "Ultralight-C new key: %s", sprint_hex(key, sizeof(key)));
         } else {
-            PrintAndLogEx(WARNING, "Failed writing at block %u", (uint8_t)(resp.oldarg[1] & 0xff));
+            PrintAndLogEx(WARNING, "Failed writing at block %u", (uint8_t)(resp.oldarg[1] & 0xFF));
             return PM3_ESOFT;
         }
     } else {
@@ -2546,20 +2519,35 @@ static int CmdHF14AMfUCSetPwd(const char *Cmd) {
 // Magic UL / UL-C tags  - Set UID
 //
 static int CmdHF14AMfUCSetUid(const char *Cmd) {
+   
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu setuid",
+                  "Set uid on MIFARE Ultralight tag.\n"
+                  "This only works for `magic Ultralight` tags.",
+                  "hf mfu setuid --uid 11223344556677"
+                  );
 
-    PacketResponseNG resp;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("uk", "uid", "<hex>", "new uid (7 bytes)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    int u_len = 0;
     uint8_t uid[7] = {0x00};
-    char cmdp = tolower(param_getchar(Cmd, 0));
+    CLIGetHexWithReturn(ctx, 1, uid, &u_len);
+    CLIParserFree(ctx);
 
-    if (strlen(Cmd) == 0  || cmdp == 'h') return usage_hf_mfu_ucsetuid();
-
-    if (param_gethex(Cmd, 0, uid, 14)) {
-        PrintAndLogEx(WARNING, "UID must include 14 HEX symbols");
+    if (u_len != 7) {
+        PrintAndLogEx(WARNING, "UID must be 7 hex bytes");
         return PM3_EINVARG;
     }
 
     PrintAndLogEx(INFO, "Please ignore possible transient BCC warnings");
+
     // read block2.
+    PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_READBL, 2, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -2632,12 +2620,28 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
 }
 
 static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu keygen",
+                  "Set the 3DES key on MIFARE Ultralight-C tag. ",
+                  "hf mfu keygen -r\n"
+                  "hf mfu keygen --uid 11223344556677"
+                  );
 
-    uint8_t uid[4];
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0  || cmdp == 'h') return usage_hf_mfu_gendiverse();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("u", "uid", "<hex>", "4|7 hex byte UID"),
+        arg_lit0("r", NULL, "read UID from tag"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    int ulen = 0;
+    uint8_t uid[7];
+    CLIGetHexWithReturn(ctx, 1, uid, &ulen);
+    bool read_tag = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
 
-    if (cmdp == 'r') {
+    if (read_tag) {
         // read uid from tag
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
@@ -2656,17 +2660,14 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
             PrintAndLogEx(WARNING, "iso14443a card select failed");
             return PM3_ESOFT;
         }
-        /*
-                if (card.uidlen != 4) {
-                    PrintAndLogEx(WARNING, "Wrong sized UID, expected 4bytes got %d", card.uidlen);
-                    return PM3_ESOFT;
-                }
-        */
-        memcpy(uid, card.uid, card.uidlen);
-    } else {
-        if (param_gethex(Cmd, 0, uid, 8)) return usage_hf_mfu_gendiverse();
-    }
 
+        if (card.uidlen != 4 && card.uidlen != 7) {
+            PrintAndLogEx(WARNING, "Wrong sized UID, expected 4|7 bytes got %d", card.uidlen);
+            return PM3_ESOFT;
+        }
+        ulen = card.uidlen;
+        memcpy(uid, card.uid, card.uidlen);
+    }
 
     uint8_t iv[8] = { 0x00 };
     uint8_t block = 0x01;
@@ -2687,10 +2688,10 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
     mix[6] = block ^ uid[2];
     mix[7] = uid[3];
 
-    mbedtls_des3_context ctx;
-    mbedtls_des3_set2key_enc(&ctx, masterkey);
+    mbedtls_des3_context ctx_des3;
+    mbedtls_des3_set2key_enc(&ctx_des3, masterkey);
 
-    mbedtls_des3_crypt_cbc(&ctx  // des3_context
+    mbedtls_des3_crypt_cbc(&ctx_des3  // des3_context
                            , MBEDTLS_DES_ENCRYPT    // int mode
                            , sizeof(mix)    // length
                            , iv             // iv[8]
@@ -2699,12 +2700,12 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
                           );
 
     PrintAndLogEx(SUCCESS, "-- 3DES version");
-    PrintAndLogEx(SUCCESS, "Masterkey    :\t %s", sprint_hex(masterkey, sizeof(masterkey)));
-    PrintAndLogEx(SUCCESS, "UID          :\t %s", sprint_hex(uid, sizeof(uid)));
-    PrintAndLogEx(SUCCESS, "block        :\t %0d", block);
-    PrintAndLogEx(SUCCESS, "Mifare key   :\t %s", sprint_hex(mifarekeyA, sizeof(mifarekeyA)));
-    PrintAndLogEx(SUCCESS, "Message      :\t %s", sprint_hex(mix, sizeof(mix)));
-    PrintAndLogEx(SUCCESS, "Diversified key: %s", sprint_hex(divkey + 1, 6));
+    PrintAndLogEx(SUCCESS, "Masterkey......... %s", sprint_hex(masterkey, sizeof(masterkey)));
+    PrintAndLogEx(SUCCESS, "UID............... %s", sprint_hex(uid, ulen));
+    PrintAndLogEx(SUCCESS, "block............. %0d", block);
+    PrintAndLogEx(SUCCESS, "Mifare key........ %s", sprint_hex(mifarekeyA, sizeof(mifarekeyA)));
+    PrintAndLogEx(SUCCESS, "Message........... %s", sprint_hex(mix, sizeof(mix)));
+    PrintAndLogEx(SUCCESS, "Diversified key... %s", sprint_hex(divkey + 1, 6));
 
     for (int i = 0; i < ARRAYLEN(mifarekeyA); ++i) {
         dkeyA[i]  = (mifarekeyA[i] << 1) & 0xff;
@@ -2724,9 +2725,9 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
     memcpy(dmkey + 16, dkeyA, 8);
     memset(iv, 0x00, 8);
 
-    mbedtls_des3_set3key_enc(&ctx, dmkey);
+    mbedtls_des3_set3key_enc(&ctx_des3, dmkey);
 
-    mbedtls_des3_crypt_cbc(&ctx  // des3_context
+    mbedtls_des3_crypt_cbc(&ctx_des3  // des3_context
                            , MBEDTLS_DES_ENCRYPT    // int mode
                            , sizeof(newpwd) // length
                            , iv             // iv[8]
@@ -2735,12 +2736,12 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
                           );
 
     PrintAndLogEx(SUCCESS, "\n-- DES version");
-    PrintAndLogEx(SUCCESS, "Mifare dkeyA :\t %s", sprint_hex(dkeyA, sizeof(dkeyA)));
-    PrintAndLogEx(SUCCESS, "Mifare dkeyB :\t %s", sprint_hex(dkeyB, sizeof(dkeyB)));
-    PrintAndLogEx(SUCCESS, "Mifare ABA   :\t %s", sprint_hex(dmkey, sizeof(dmkey)));
-    PrintAndLogEx(SUCCESS, "Mifare Pwd   :\t %s", sprint_hex(newpwd, sizeof(newpwd)));
+    PrintAndLogEx(SUCCESS, "MIFARE dkeyA...... %s", sprint_hex(dkeyA, sizeof(dkeyA)));
+    PrintAndLogEx(SUCCESS, "MIFARE dkeyB...... %s", sprint_hex(dkeyB, sizeof(dkeyB)));
+    PrintAndLogEx(SUCCESS, "MIFARE ABA........ %s", sprint_hex(dmkey, sizeof(dmkey)));
+    PrintAndLogEx(SUCCESS, "MIFARE PWD........ %s", sprint_hex(newpwd, sizeof(newpwd)));
 
-    mbedtls_des3_free(&ctx);
+    mbedtls_des3_free(&ctx_des3);
 
     mbedtls_aes_context ctx_aes;
     uint8_t aes_iv[16] = { 0x00 };
@@ -2752,8 +2753,8 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
     mbedtls_aes_free(&ctx_aes);
 
     PrintAndLogEx(SUCCESS, "\n-- AES version");
-    PrintAndLogEx(SUCCESS, "Mifare AES m :\t %s", sprint_hex(aes_masterkey, sizeof(aes_masterkey)));
-    PrintAndLogEx(SUCCESS, "Mifare Div   :\t %s", sprint_hex(aes_output, sizeof(aes_output)));
+    PrintAndLogEx(SUCCESS, "MIFARE AES mk..... %s", sprint_hex(aes_masterkey, sizeof(aes_masterkey)));
+    PrintAndLogEx(SUCCESS, "MIFARE Div........ %s", sprint_hex(aes_output, sizeof(aes_output)));
 
     // next. from the diversify_key method.
     return PM3_SUCCESS;
