@@ -131,6 +131,7 @@ LDLIBS += $(LUALIBLD)
 INCLUDES += $(LUALIBINC)
 
 ## Jansson
+# Jansson section needs to be after Lua to avoid interferences on macOS if a locally incompatible Lua was available, see PR 1155
 ifneq ($(SKIPJANSSONSYSTEM),1)
     JANSSONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags jansson 2>/dev/null)
     JANSSONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs jansson 2>/dev/null)
