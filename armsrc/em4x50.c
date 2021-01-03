@@ -11,6 +11,7 @@
 #include "fpgaloader.h"
 #include "ticks.h"
 #include "dbprint.h"
+#include "lfsampling.h"
 #include "lfadc.h"
 #include "lfdemod.h"
 #include "commonutil.h"
@@ -34,14 +35,15 @@
 #define EM4X50_T_TAG_FULL_PERIOD            64
 #define EM4X50_T_TAG_TPP                    64
 #define EM4X50_T_TAG_TWA                    64
+#define EM4X50_T_TAG_TINIT                  2112
+#define EM4X50_T_TAG_TWEE                   3200
 #define EM4X50_T_TAG_WAITING_FOR_SIGNAL     75
 #define EM4X50_T_WAITING_FOR_DBLLIW         1550
-#define EM4X50_T_WAITING_FOR_SNGLLIW        140     // this value seems to be
-// critical;
-// if it's too low
-// (e.g. < 120) some cards
-// are no longer readable
-// although they're ok
+#define EM4X50_T_WAITING_FOR_ACK            4
+
+// the following value seems to be critical; if it's too low (e.g. < 120)
+// some cards are no longer readable although they're ok
+#define EM4X50_T_WAITING_FOR_SNGLLIW        140
 
 #define EM4X50_TAG_TOLERANCE                8
 #define EM4X50_TAG_WORD                     45
@@ -55,6 +57,14 @@
 
 int gHigh = 190;
 int gLow = 60;
+int gcount = 0;
+int gcycles = 0;
+int rm = 0;
+
+static bool em4x50_sim_send_listen_window(void);
+static void em4x50_sim_handle_command(uint8_t command);
+
+void catch_samples(void);
 
 // do nothing for <period> using timer0
 static void wait_timer(uint32_t period) {
@@ -62,7 +72,7 @@ static void wait_timer(uint32_t period) {
     while (AT91C_BASE_TC0->TC_CV < period);
 }
 
-static void catch_samples(void) {
+void catch_samples(void) {
 
     uint8_t sample = 0;
 
@@ -160,19 +170,22 @@ static void em4x50_setup_read(void) {
 
     // Enable Peripheral Clock for
     //   TIMER_CLOCK0, used to measure exact timing before answering
-    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0);// | (1 << AT91C_ID_TC1);
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
     AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
 
     // Disable timer during configuration
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 
     // TC0: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
     AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
+    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
 
     // TC1: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
 
     // Enable and reset counters
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
     // synchronized startup procedure
     while (AT91C_BASE_TC0->TC_CV > 0) {}; // wait until TC1 returned to zero
@@ -182,13 +195,27 @@ static void em4x50_setup_read(void) {
 }
 
 static void em4x50_setup_sim(void) {
+    StopTicks();
+
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+
+    sample_config *sc = getSamplingConfig();
+    sc->decimation = 1;
+    sc->averaging = 0;
+    sc->divisor = LF_DIVISOR_125;
+
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
 
     AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
     AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
     AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
+    
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0);
+    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 }
 
 // calculate signal properties (mean amplitudes) from measured data:
@@ -323,12 +350,12 @@ static void em4x50_reader_send_bit(int bit) {
 
     if (bit == 0) {
 
-        // disable modulation (drops the field) for 7 cycles of carrier
+        // disable modulation (activate the field) for 7 cycles of carrier
         // period (Opt64)
         LOW(GPIO_SSC_DOUT);
         while (AT91C_BASE_TC0->TC_CV < T0 * 7);
 
-        // enable modulation (activates the field) for remaining first
+        // enable modulation (drop the field) for remaining first
         // half of bit period
         HIGH(GPIO_SSC_DOUT);
         while (AT91C_BASE_TC0->TC_CV < T0 * EM4X50_T_TAG_HALF_PERIOD);
@@ -432,9 +459,7 @@ static int find_double_listen_window(bool bcommand) {
                 // first listen window found
 
                 if (bcommand) {
-
-//                    SpinDelay(10);
-
+                    
                     // data transmission from card has to be stopped, because
                     // a commamd shall be issued
 
@@ -444,8 +469,6 @@ static int find_double_listen_window(bool bcommand) {
 
                     // skip the next bit...
                     wait_timer(T0 * EM4X50_T_TAG_FULL_PERIOD);
-                    catch_samples();
-                    break;
 
                     // ...and check if the following bit does make sense
                     // (if not it is the correct position within the second
@@ -499,14 +522,19 @@ static int request_receive_mode(void) {
 // If <bliw> is true then within the single listen window right after the
 // ack signal a RM request has to be sent.
 static bool check_ack(bool bliw) {
+    int cnt_pulses = 0;
+    
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+    //while (cnt_pulses < EM4X50_T_WAITING_FOR_ACK) {
     while (AT91C_BASE_TC0->TC_CV < T0 * 4 * EM4X50_T_TAG_FULL_PERIOD) {
 
         if (BUTTON_PRESS())
             return false;
-
+        
         if (check_pulse_length(get_pulse_length(), 2 * EM4X50_T_TAG_FULL_PERIOD)) {
 
+            catch_samples();
+            
             // The received signal is either ACK or NAK.
 
             if (check_pulse_length(get_pulse_length(), 2 * EM4X50_T_TAG_FULL_PERIOD)) {
@@ -542,6 +570,7 @@ static bool check_ack(bool bliw) {
                 break;
             }
         }
+        cnt_pulses++;
     }
 
     return false;
@@ -745,6 +774,154 @@ static bool em4x50_sim_send_word(uint32_t word) {
     return true;
 }
 
+static int wait_cycles(int maxperiods) {
+
+    int period = 0;
+
+    while (period < maxperiods) {
+        
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);
+        
+        period++;
+    }
+    
+    return PM3_SUCCESS;
+}
+
+static int get_cycles(void) {
+
+    int cycles = 0;
+
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+    while (AT91C_BASE_TC0->TC_CV < T0 * EM4X50_T_TAG_FULL_PERIOD) {
+
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
+        
+        // check again to minimize desynchronization
+        if (AT91C_BASE_TC0->TC_CV >= T0 * EM4X50_T_TAG_FULL_PERIOD)
+            break;
+        
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);
+
+        cycles++;
+    }
+
+    return cycles;
+}
+
+static uint8_t em4x50_sim_read_bit(void) {
+
+    int cond = EM4X50_T_TAG_FULL_PERIOD - EM4X50_TAG_TOLERANCE;
+
+    return (get_cycles() < cond) ? 0 : 1;
+}
+
+static uint8_t em4x50_sim_read_byte(void) {
+    
+    uint8_t byte = 0;
+    
+    for (int i = 0; i < 8; i++) {
+        byte <<= 1;
+        byte |= em4x50_sim_read_bit();
+    }
+        
+    return byte;
+}
+
+static uint8_t em4x50_sim_read_byte_with_parity_check(void) {
+    
+    uint8_t byte = 0, parity = 0, pval = 0;
+    
+    for (int i = 0; i < 8; i++) {
+        byte <<= 1;
+        byte |= em4x50_sim_read_bit();
+        parity ^= (byte & 1);
+    }
+        
+    pval = em4x50_sim_read_bit();
+
+    return (parity == pval) ? byte : 0;
+}
+
+static uint32_t em4x50_sim_read_word(void) {
+    
+    uint8_t parities = 0, parities_calculated = 0, stop_bit = 0;
+    uint8_t bytes[4] = {0};
+
+    // read plain data
+    for (int i = 0; i < 4; i++) {
+        bytes[i] = em4x50_sim_read_byte_with_parity_check();
+    }
+        
+    // read column parities and stop bit
+    parities = em4x50_sim_read_byte();
+    stop_bit = em4x50_sim_read_bit();
+
+    // calculate column parities from data
+    for (int i = 0; i < 8; i++) {
+        parities_calculated <<= 1;
+        for (int j = 0; j < 4; j++) {
+            parities_calculated ^= (bytes[j] >> (7 - i)) & 1;
+        }
+    }
+    
+    // check parities
+    if ((parities == parities_calculated) && (stop_bit == 0)) {
+        return BYTES2UINT32(bytes);
+    }
+    
+    return 0;
+}
+
+static void em4x50_sim_send_ack(void) {
+
+    SHORT_COIL();
+    wait_cycles(EM4X50_T_TAG_HALF_PERIOD);
+
+    OPEN_COIL();
+    wait_cycles(EM4X50_T_TAG_HALF_PERIOD);
+
+    SHORT_COIL();
+    wait_cycles(3 * EM4X50_T_TAG_HALF_PERIOD);
+
+    OPEN_COIL();
+    wait_cycles(EM4X50_T_TAG_HALF_PERIOD);
+
+    SHORT_COIL();
+    wait_cycles(3 * EM4X50_T_TAG_HALF_PERIOD);
+
+    OPEN_COIL();
+    wait_cycles(EM4X50_T_TAG_HALF_PERIOD);
+    
+    SHORT_COIL();
+}
+
+static void em4x50_sim_send_nak(void) {
+
+    SHORT_COIL();
+    wait_cycles(EM4X50_T_TAG_HALF_PERIOD);
+
+    OPEN_COIL();
+    wait_cycles(EM4X50_T_TAG_HALF_PERIOD);
+
+    SHORT_COIL();
+    wait_cycles(3 * EM4X50_T_TAG_HALF_PERIOD);
+
+    OPEN_COIL();
+    wait_cycles(EM4X50_T_TAG_HALF_PERIOD);
+
+    SHORT_COIL();
+    wait_cycles(EM4X50_T_TAG_FULL_PERIOD);
+
+    OPEN_COIL();
+    wait_cycles(EM4X50_T_TAG_HALF_PERIOD);
+
+    SHORT_COIL();
+    wait_cycles(EM4X50_T_TAG_HALF_PERIOD);
+}
+
+/*
 static bool em4x50_sim_send_listen_window(void) {
 
     uint16_t check = 0;
@@ -790,6 +967,257 @@ static bool em4x50_sim_send_listen_window(void) {
     
     return true;
 }
+*/
+
+static void em4x50_sim_handle_login_command(void) {
+
+    //uint8_t *em4x50_mem = BigBuf_get_EM_addr();
+    uint32_t password = 0;
+    //uint32_t tag[EM4X50_NO_WORDS] = {0x0};
+
+    // read password
+    password = em4x50_sim_read_word();
+
+    //for (int i = 0; i < EM4X50_NO_WORDS; i++)
+    //    tag[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
+
+    // processing pause time (corresponds to a "1" bit)
+    em4x50_sim_send_bit(1);
+
+    em4x50_sim_send_ack();
+
+    /*
+    if (password == tag[0]) {
+        em4x50_sim_send_ack();
+    } else {
+        em4x50_sim_send_ack();
+    }
+    */
+    
+    // continue with standard read mode
+    em4x50_sim_handle_command(0);
+    Dbprintf("password = %08x", password);
+    BigBuf_free();
+}
+
+static void em4x50_sim_handle_reset_command(void) {
+
+    // processing pause time (corresponds to a "1" bit)
+    em4x50_sim_send_bit(1);
+
+    // send ACK
+    em4x50_sim_send_ack();
+    
+    // wait for tinit
+    wait_timer(T0 * EM4X50_T_TAG_TINIT);
+
+    // continue with standard read mode
+    em4x50_sim_handle_command(0);
+}
+
+static void em4x50_sim_handle_write_command(void) {
+
+    uint8_t *em4x50_mem = BigBuf_get_EM_addr();
+    uint8_t address = 0;
+    uint32_t data = 0;
+    uint32_t tag[EM4X50_NO_WORDS] = {0x0};
+
+    // read address
+    address = em4x50_sim_read_byte_with_parity_check();
+    // read data
+    data = em4x50_sim_read_word();
+    
+    for (int i = 0; i < EM4X50_NO_WORDS; i++) {
+        tag[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
+    }
+
+    // extract necessary control data
+    bool raw = (tag[EM4X50_CONTROL] >> CONFIG_BLOCK) & READ_AFTER_WRITE;
+    // extract protection data
+    int fwrp = tag[EM4X50_PROTECTION] & 0xFF;         // first word read protected
+    int lwrp = (tag[EM4X50_PROTECTION] >> 8) & 0xFF;  // last word read protected
+    
+    // save data to tag
+    tag[address] = data;
+    
+    // write access time
+    wait_timer(T0 * EM4X50_T_TAG_TWA);
+
+    if ((address >= fwrp) && (address <= lwrp)) {
+        em4x50_sim_send_nak();
+    } else if ((address == EM4X50_DEVICE_SERIAL)
+               && (address == EM4X50_DEVICE_ID)
+               && (address == 0)
+               ) {
+        em4x50_sim_send_nak();
+    } else {
+        em4x50_sim_send_ack();
+    }
+    
+    // EEPROM write time
+    //wait_timer(T0 * EM4X50_T_TAG_TWEE);
+    
+    em4x50_sim_send_ack();
+
+    // if "read after write" (raw) bit is set, repeat written data once
+    if (raw) {
+        em4x50_sim_send_listen_window();
+        em4x50_sim_send_listen_window();
+        em4x50_sim_send_word(tag[address]);
+    }
+
+    BigBuf_free();
+
+    // continue with standard read mode
+    em4x50_sim_handle_command(0);
+}
+
+static void em4x50_sim_handle_selective_read_command(void) {
+
+    uint8_t *em4x50_mem = BigBuf_get_EM_addr();
+    uint32_t address = 0;
+    uint32_t tag[EM4X50_NO_WORDS] = {0x0};
+
+    // read password
+    address = em4x50_sim_read_word();
+
+    // extract control data
+    int fwr = address & 0xFF;           // first word read
+    int lwr = (address >> 8) & 0xFF;    // last word read
+
+    for (int i = 0; i < EM4X50_NO_WORDS; i++) {
+        tag[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
+    }
+
+    // extract protection data
+    int fwrp = tag[EM4X50_PROTECTION] & 0xFF;         // first word read protected
+    int lwrp = (tag[EM4X50_PROTECTION] >> 8) & 0xFF;  // last word read protected
+    
+    // processing pause time (corresponds to a "1" bit)
+    em4x50_sim_send_bit(1);
+
+    em4x50_sim_send_ack();
+    
+    while (BUTTON_PRESS() == false) {
+
+        WDT_HIT();
+        em4x50_sim_send_listen_window();
+        for (int i = fwr; i <= lwr; i++) {
+
+            em4x50_sim_send_listen_window();
+
+            if ((i >= fwrp) && (i <= lwrp)) {
+                em4x50_sim_send_word(0x00);
+            } else {
+                em4x50_sim_send_word(tag[i]);
+            }
+        }
+    }
+    
+    BigBuf_free();
+}
+
+static void em4x50_sim_handle_standard_read_command(void) {
+    
+    uint8_t *em4x50_mem = BigBuf_get_EM_addr();
+    uint32_t tag[EM4X50_NO_WORDS] = {0x0};
+
+    for (int i = 0; i < EM4X50_NO_WORDS; i++) {
+        tag[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
+    }
+
+    // extract control data
+    int fwr = tag[CONFIG_BLOCK] & 0xFF;           // first word read
+    int lwr = (tag[CONFIG_BLOCK] >> 8) & 0xFF;    // last word read
+    // extract protection data
+    int fwrp = tag[EM4X50_PROTECTION] & 0xFF;         // first word read protected
+    int lwrp = (tag[EM4X50_PROTECTION] >> 8) & 0xFF;  // last word read protected
+
+    while (BUTTON_PRESS() == false) {
+
+        WDT_HIT();
+        em4x50_sim_send_listen_window();
+        for (int i = fwr; i <= lwr; i++) {
+
+            em4x50_sim_send_listen_window();
+
+            if ((i >= fwrp) && (i <= lwrp)) {
+                em4x50_sim_send_word(0x00);
+            } else {
+                em4x50_sim_send_word(tag[i]);
+            }
+        }
+    }
+    BigBuf_free();
+}
+
+static void em4x50_sim_handle_command(uint8_t command) {
+    
+    switch (command) {
+
+        case EM4X50_COMMAND_LOGIN:
+            em4x50_sim_handle_login_command();
+            break;
+
+        case EM4X50_COMMAND_RESET:
+            em4x50_sim_handle_reset_command();
+            break;
+
+        case EM4X50_COMMAND_WRITE:
+            em4x50_sim_handle_write_command();
+            break;
+
+        case EM4X50_COMMAND_WRITE_PASSWORD:
+            Dbprintf("Command = write_password");
+            break;
+
+        case EM4X50_COMMAND_SELECTIVE_READ:
+            em4x50_sim_handle_selective_read_command();
+            break;
+
+        default:
+            em4x50_sim_handle_standard_read_command();
+            break;
+    }
+}
+
+// reader requests receive mode (rm) by sending two zeros
+static void check_rm_request(void) {
+    
+    int cond = EM4X50_T_TAG_FULL_PERIOD - EM4X50_TAG_TOLERANCE;
+    
+    // look for first zero
+    if (get_cycles() < cond) {
+    
+        // look for second zero
+        if (get_cycles() < cond) {
+
+            // read mode request detected, get command from reader
+            uint8_t command = em4x50_sim_read_byte_with_parity_check();
+            em4x50_sim_handle_command(command);
+        }
+    }
+}
+
+static bool em4x50_sim_send_listen_window(void) {
+
+    SHORT_COIL();
+    wait_cycles(EM4X50_T_TAG_HALF_PERIOD);
+
+    OPEN_COIL();
+    wait_cycles(EM4X50_T_TAG_HALF_PERIOD);
+
+    SHORT_COIL();
+    wait_cycles(2 * EM4X50_T_TAG_FULL_PERIOD);
+
+    OPEN_COIL();
+    check_rm_request();
+
+    SHORT_COIL();
+    wait_cycles(EM4X50_T_TAG_FULL_PERIOD);
+
+    return true;
+}
 
 // simple login to EM4x50,
 // used in operations that require authentication
@@ -805,8 +1233,9 @@ static bool login(uint32_t password) {
         wait_timer(T0 * EM4X50_T_TAG_TPP);
 
         // check if ACK is returned
-        if (check_ack(false))
+        if (check_ack(false)) {
             return PM3_SUCCESS;
+        }
 
     } else {
         if (DBGLEVEL >= DBG_DEBUG)
@@ -1051,6 +1480,7 @@ void em4x50_info(em4x50_data_t *etd) {
     uint32_t addresses = 0x00002100; // read from fwr = 0 to lwr = 33 (0x21)
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
+    gcount = 0;
     em4x50_setup_read();
 
     if (get_signalproperties() && find_em4x50_tag()) {
@@ -1064,7 +1494,7 @@ void em4x50_info(em4x50_data_t *etd) {
     }
 
     lf_finalize();
-
+    
     reply_ng(CMD_LF_EM4X50_INFO, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
 
@@ -1081,6 +1511,7 @@ void em4x50_reader(void) {
 
     LOW(GPIO_SSC_DOUT);
     lf_finalize();
+    
     reply_ng(CMD_LF_EM4X50_READER, now, (uint8_t *)words, 4 * now);
 }
 
@@ -1244,28 +1675,10 @@ void em4x50_writepwd(em4x50_data_t *etd) {
 
 // simulate uploaded data in emulator memory
 // (currently simulation allows only a one-way communication)
-void em4x50_sim(uint8_t *filename) {
+void em4x50_sim() {
     int status = PM3_SUCCESS;
     uint8_t *em4x50_mem = BigBuf_get_EM_addr();
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
-
-#ifdef WITH_FLASH
-
-    if (strlen((char *)filename) != 0) {
-
-        BigBuf_free();
-
-        int changed = rdv40_spiffs_lazy_mount();
-        uint32_t size = size_in_spiffs((char *)filename);
-        em4x50_mem = BigBuf_malloc(size);
-
-        rdv40_spiffs_read_as_filetype((char *)filename, em4x50_mem, size, RDV40_SPIFFS_SAFETY_SAFE);
-
-        if (changed)
-            rdv40_spiffs_lazy_unmount();
-    }
-
-#endif
 
     for (int i = 0; i < EM4X50_NO_WORDS; i++)
         words[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
@@ -1273,6 +1686,11 @@ void em4x50_sim(uint8_t *filename) {
     // only if valid em4x50 data (e.g. uid == serial)
     if (words[EM4X50_DEVICE_SERIAL] != words[EM4X50_DEVICE_ID]) {
 
+        em4x50_setup_sim();
+
+        em4x50_sim_handle_command(0);
+        
+        /*
         // extract control data
         int fwr = words[CONFIG_BLOCK] & 0xFF;           // first word read
         int lwr = (words[CONFIG_BLOCK] >> 8) & 0xFF;    // last word read
@@ -1280,11 +1698,10 @@ void em4x50_sim(uint8_t *filename) {
         int fwrp = words[EM4X50_PROTECTION] & 0xFF;         // first word read protected
         int lwrp = (words[EM4X50_PROTECTION] >> 8) & 0xFF;  // last word read protected
 
-        em4x50_setup_sim();
-
         // iceman,  will need a usb cmd check to break as well
         while (BUTTON_PRESS() == false) {
 
+            rm = 0;
             WDT_HIT();
             em4x50_sim_send_listen_window();
             for (int i = fwr; i <= lwr; i++) {
@@ -1297,12 +1714,14 @@ void em4x50_sim(uint8_t *filename) {
                     em4x50_sim_send_word(words[i]);
             }
         }
+         */
     } else {
         status = PM3_ENODATA;
     }
 
     BigBuf_free();
     lf_finalize();
+    
     reply_ng(CMD_LF_EM4X50_SIM, status, NULL, 0);
 }
 
@@ -1350,11 +1769,6 @@ void em4x50_test(em4x50_test_t *ett) {
         uint32_t tvallow[ett->cycles];
 
         em4x50_setup_sim();
-        AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0);
-        AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
-        AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-        AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
-        AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
         while (AT91C_BASE_TC0->TC_CV > 0);
         
         for (int t = 0; t < ett->cycles; t++) {
@@ -1376,6 +1790,25 @@ void em4x50_test(em4x50_test_t *ett) {
             Dbprintf("%03i %li %li", t, tvallow[t], tvalhigh[t]);
         }
 
+    }
+    
+    em4x50_setup_sim();
+    for (;;) {
+        em4x50_sim_send_listen_window();
+        em4x50_sim_send_listen_window();
+        em4x50_sim_send_bit(0);
+        em4x50_sim_send_bit(0);
+        em4x50_sim_send_bit(0);
+        em4x50_sim_send_ack();
+        em4x50_sim_send_ack();
+        em4x50_sim_send_bit(0);
+        em4x50_sim_send_bit(0);
+        em4x50_sim_send_bit(0);
+        em4x50_sim_send_nak();
+        em4x50_sim_send_nak();
+        em4x50_sim_send_bit(0);
+        em4x50_sim_send_bit(0);
+        em4x50_sim_send_bit(0);
     }
     
     reply_ng(CMD_LF_EM4X50_TEST, status, NULL, 0);

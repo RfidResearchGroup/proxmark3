@@ -12,7 +12,7 @@
 #define CMDLFEM4X70_H__
 
 #include "common.h"
-#include "em4x50.h"
+#include "em4x70.h"
 
 #define TIMEOUT                     2000
 

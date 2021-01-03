@@ -78,6 +78,31 @@ static void get_samples(void) {
     write_gnuplot_config_file(gHigh, gLow);
 }
 
+/*
+static void get_time_samples(void) {
+
+    const char *fn = "../data/data.dat";
+    FILE *fp = NULL;
+
+    // download from BigBuf memory
+    uint32_t data[EM4X50_MAX_TIME_SAMPLES] = {0x0};
+    if (GetFromDevice(BIG_BUF, (uint8_t *)data, EM4X50_MAX_TIME_SAMPLES, 0, NULL, 0, NULL, 2500, false) == false) {
+        PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+    }
+
+    if ((fp = fopen(fn, "w+")) == false) {
+        PrintAndLogEx(WARNING, "Fail, open file %s", fn);
+    }
+
+    for (int i = 0; i < EM4X50_MAX_TIME_SAMPLES; i++) {
+        PrintAndLogEx(INFO, "%i %"PRIu32"", i, data[i]);
+        fprintf(fp, "%i %"PRIu32"\n", i, data[i]);
+    }
+
+    fclose(fp);
+}
+*/
+
 static void prepare_result(const uint8_t *data, int fwr, int lwr, em4x50_word_t *words) {
 
     // restructure received result in "em4x50_word_t" structure
@@ -398,6 +423,8 @@ int CmdEM4x50Login(const char *Cmd) {
     else
         PrintAndLogEx(FAILED, "Login " _RED_("failed"));
 
+    get_samples();
+    
     return resp.status;
 }
 
@@ -667,8 +694,6 @@ int CmdEM4x50Read(const char *Cmd) {
         }
     }
 
-    get_samples();
-    
     return em4x50_read(&etd, NULL);
 }
 
