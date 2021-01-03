@@ -400,20 +400,21 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf mfu help            `|Y       |`This help`
-|`hf mfu info            `|N       |`Tag information`
-|`hf mfu dump            `|N       |`Dump Ultralight / Ultralight-C / NTAG tag to binary file`
-|`hf mfu restore         `|N       |`Restore a dump onto a MFU MAGIC tag`
-|`hf mfu eload           `|N       |`load Ultralight .eml dump file into emulator memory`
-|`hf mfu rdbl            `|N       |`Read block`
-|`hf mfu wrbl            `|N       |`Write block`
-|`hf mfu cauth           `|N       |`Authentication    - Ultralight C`
-|`hf mfu setpwd          `|N       |`Set 3des password - Ultralight-C`
-|`hf mfu setuid          `|N       |`Set UID - MAGIC tags only`
-|`hf mfu sim             `|N       |`Simulate Ultralight from emulator memory`
-|`hf mfu gen             `|Y       |`Generate 3des mifare diversified keys`
+|`hf mfu keygen          `|Y       |`Generate 3DES MIFARE diversified keys`
 |`hf mfu pwdgen          `|Y       |`Generate pwd from known algos`
 |`hf mfu otptear         `|N       |`Tear-off test on OTP bits`
+|`hf mfu cauth           `|N       |`Authentication - Ultralight-C`
+|`hf mfu dump            `|N       |`Dump MIFARE Ultralight family tag to binary file`
+|`hf mfu info            `|N       |`Tag information`
 |`hf mfu ndef            `|N       |`Prints NDEF records from card`
+|`hf mfu rdbl            `|N       |`Read block`
+|`hf mfu restore         `|N       |`Restore a dump onto a MFU MAGIC tag`
+|`hf mfu wrbl            `|N       |`Write block`
+|`hf mfu eload           `|N       |`load Ultralight .eml dump file into emulator memory`
+|`hf mfu eview           `|N       |`View emulator memory`
+|`hf mfu sim             `|N       |`Simulate MIFARE Ultralight from emulator memory`
+|`hf mfu setpwd          `|N       |`Set 3DES key - Ultralight-C`
+|`hf mfu setuid          `|N       |`Set UID - MAGIC tags only`
 
 
 ### hf mfdes

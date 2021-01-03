@@ -2072,7 +2072,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
                   "hf mfu restore -f myfile -s                 -> user specified filename and special write\n"
                   "hf mfu restore -f myfile -k AABBCCDD -s     -> user specified filename, special write and use key\n"
                   "hf mfu restore -f myfile -k AABBCCDD -ser   -> user specified filename, special write, use key, ..."
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -2114,7 +2114,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             strcpy(filename, fptr);
         } else {
             snprintf(filename, sizeof(filename), "dumpdata.bin");
-        }            
+        }
         free(fptr);
     }
 
@@ -2272,7 +2272,7 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
                   "It loads emul dump from the file `filename.eml`",
                   "hf mfu eload -u -f myfile\n"
                   "hf mfu eload -u -f myfile -q 57   -> load 57 blocks from myfile"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -2298,7 +2298,7 @@ static int CmdHF14AMfUSim(const char *Cmd) {
                   "from emulator memory.  See `hf mfu eload` first",
                   "hf mfu sim -t 2 --uid 1122344556677        -> MIFARE Ultralight\n"
                   "hf mfu sim -t 7 --uid 1122344556677 -n 5   -> AMIIBO (NTAG 215),  pack 0x8080"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -2326,7 +2326,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
                   "If password is not specified, a set of known defaults will be tested.",
                   "hf mfu cauth\n"
                   "hf mfu cauth --key 000102030405060708090a0b0c0d0e0f"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -2336,7 +2336,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     int ak_len = 0;
     uint8_t authenticationkey[16] = {0x00};
     uint8_t *authKeyPtr = authenticationkey;
@@ -2359,7 +2359,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
 
     // If no hex key is specified, try default keys
     if (ak_len == 0) {
-        isok = (try_default_3des_keys(&authKeyPtr) == PM3_SUCCESS); 
+        isok = (try_default_3des_keys(&authKeyPtr) == PM3_SUCCESS);
     } else {
         // try user-supplied
         isok = ulc_authentication(authKeyPtr, !keep_field_on);
@@ -2478,7 +2478,7 @@ static int CmdHF14AMfUCSetPwd(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfu setpwd",
                   "Set the 3DES key on MIFARE Ultralight-C tag. ",
                   "hf mfu setpwd --key 000102030405060708090a0b0c0d0e0f"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -2486,7 +2486,7 @@ static int CmdHF14AMfUCSetPwd(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     int k_len = 0;
     uint8_t key[16] = {0x00};
     CLIGetHexWithReturn(ctx, 1, key, &k_len);
@@ -2519,13 +2519,13 @@ static int CmdHF14AMfUCSetPwd(const char *Cmd) {
 // Magic UL / UL-C tags  - Set UID
 //
 static int CmdHF14AMfUCSetUid(const char *Cmd) {
-   
+
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu setuid",
                   "Set uid on MIFARE Ultralight tag.\n"
                   "This only works for `magic Ultralight` tags.",
                   "hf mfu setuid --uid 11223344556677"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -2533,7 +2533,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     int u_len = 0;
     uint8_t uid[7] = {0x00};
     CLIGetHexWithReturn(ctx, 1, uid, &u_len);
@@ -2625,7 +2625,7 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
                   "Set the 3DES key on MIFARE Ultralight-C tag. ",
                   "hf mfu keygen -r\n"
                   "hf mfu keygen --uid 11223344556677"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -2634,7 +2634,7 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     int ulen = 0;
     uint8_t uid[7];
     CLIGetHexWithReturn(ctx, 1, uid, &ulen);
@@ -3556,7 +3556,7 @@ static int CmdHF14AMfuEView(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfu eview",
                   "It displays emulator memory",
                   "hf mfu eview"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -3610,10 +3610,10 @@ static command_t CommandTable[] = {
     {"info",    CmdHF14AMfUInfo,           IfPm3Iso14443a,  "Tag information"},
     {"ndef",    CmdHF14MfuNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
     {"rdbl",    CmdHF14AMfURdBl,           IfPm3Iso14443a,  "Read block"},
-    {"restore", CmdHF14AMfURestore,        IfPm3Iso14443a,  "Restore a dump onto a MFU MAGIC tag"},    
+    {"restore", CmdHF14AMfURestore,        IfPm3Iso14443a,  "Restore a dump onto a MFU MAGIC tag"},
     {"wrbl",    CmdHF14AMfUWrBl,           IfPm3Iso14443a,  "Write block"},
-    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},    
-    {"eload",   CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "load Ultralight .eml dump file into emulator memory"},    
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
+    {"eload",   CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "load Ultralight .eml dump file into emulator memory"},
     {"eview",   CmdHF14AMfuEView,          IfPm3Iso14443a,  "View emulator memory"},
     {"sim",     CmdHF14AMfUSim,            IfPm3Iso14443a,  "Simulate MIFARE Ultralight from emulator memory"},
     {"setpwd",  CmdHF14AMfUCSetPwd,        IfPm3Iso14443a,  "Set 3DES key - Ultralight-C"},
