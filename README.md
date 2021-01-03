@@ -82,16 +82,13 @@ If you are having troubles with these files, contact the package maintainer @gat
 
 Ref:
 For Proxmark3 RDV4
-- [Precompiled builds for RDV40 dedicated x86](https://drive.google.com/open?id=13zUs-aiQkYaSl5KWrBtuW5IWCoHJPsue)
-- [Precompiled builds for RDV40 dedicated x64](https://drive.google.com/open?id=1SyPB8t5Vo8O0Lh7PjNm3Kv-mO4BNbxjX)
+- [Precompiled builds for RDV40 dedicated x64](https://www.proxmarkbuilds.org/#rdv40-64/)
 
 For Proxmark3 RDV4 with blueshark addon
-- [Precompiled builds for RDV40 dedicated with Bluetooth addon x86](https://drive.google.com/open?id=1TqWYctkRvkLshQ1ZRBHPLDzYHR-asuMO)
-- [Precompiled builds for RDV40 dedicated with Bluetooth addon x64](https://drive.google.com/open?id=17ful7u2QyYmMQzQzc5fAf8nJvyoDJfSL)
+- [Precompiled builds for RDV40 dedicated with Bluetooth addon x64](https://www.proxmarkbuilds.org/#rdv40_bt-64/)
 
 Generice Proxmark3 devices (non RDV4),  for Proxmark3 Easy,  RDV1, RDV2, RDV3, etc etc
-- [Precompiled builds for RRG / Iceman repository x86](https://drive.google.com/open?id=1PI3Xr1mussPBPnYGu4ZjWzGPARK4N7JR)
-- [Precompiled builds for RRG / Iceman repository x64](https://drive.google.com/open?id=1uX9RtYGinuFrpHybu4xq_BE3HrobI20e)
+- [Precompiled builds for RRG / Iceman repository x64](https://www.proxmarkbuilds.org/#rrg_other-64/)
 
 
 ## Roadmap
