@@ -22,6 +22,7 @@
 #include <stdlib.h>
 
 #ifdef HAVE_READLINE
+//Load readline after stdio.h
 #include <readline/readline.h>
 #endif
 
