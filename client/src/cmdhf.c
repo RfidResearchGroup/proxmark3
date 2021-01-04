@@ -410,11 +410,11 @@ static command_t CommandTable[] = {
     {"waveshare",   CmdHFWaveshare,   AlwaysAvailable, "{ Waveshare NFC ePaper...             }"},
     {"-----------", CmdHelp,          AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},
-    {"list",        CmdTraceList,     AlwaysAvailable,    "List protocol data in trace buffer"},
+    {"list",        CmdTraceList,     AlwaysAvailable, "List protocol data in trace buffer"},
     {"plot",        CmdHFPlot,        IfPm3Hfplot,     "Plot signal"},
     {"tune",        CmdHFTune,        IfPm3Present,    "Continuously measure HF antenna tuning"},
     {"search",      CmdHFSearch,      AlwaysAvailable, "Search for known HF tags"},
-    {"sniff",       CmdHFSniff,       IfPm3Hfsniff,    "<samples to skip (10000)> <triggers to skip (1)> Generic HF Sniff"},
+    {"sniff",       CmdHFSniff,       IfPm3Hfsniff,    "Generic HF Sniff"},
     {NULL, NULL, NULL, NULL}
 };
 
