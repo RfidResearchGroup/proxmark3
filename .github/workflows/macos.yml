@@ -12,12 +12,10 @@ jobs:
       run: brew link --overwrite python
     - name: Update brew repos
       run: brew update
-    - name: Upgrade packages
-      run: brew upgrade
     - name: Tap RfidResearchGroup/proxmark3
       run: brew tap RfidResearchGroup/proxmark3
     - name: Install dependencies
-      run: readline qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc
+      run: brew install readline qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc
     - name: Build
       run: make clean && make V=1
     - name: Test
