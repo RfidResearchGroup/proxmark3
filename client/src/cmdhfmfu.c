@@ -42,45 +42,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-
-
-static int usage_hf_mfu_pwdgen(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu pwdgen [h|t] [r] <uid (14 hex symbols)>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h       : this help");
-    PrintAndLogEx(NORMAL, "    t       : selftest");
-    PrintAndLogEx(NORMAL, "    r       : read uid from tag");
-    PrintAndLogEx(NORMAL, "    <uid>   : 7 byte UID (optional)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mfu pwdgen r"));
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mfu pwdgen 11223344556677"));
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mfu pwdgen t"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
-static int usage_hf_mfu_otp_tearoff(void) {
-    PrintAndLogEx(NORMAL, "Tear-off test against OTP block (no 3) on MFU tags - More help sooner or later\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu otptear b <block number> i <intervalTime> l <limitTime> s <startTime> d <data before> t <data after>\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  b <no>    : (optional) block to run the test -  default block: 8 (not OTP for safety)");
-    PrintAndLogEx(NORMAL, "  i <time>  : (optional) time interval to increase in each test - default 500 us");
-    PrintAndLogEx(NORMAL, "  l <time>  : (optional) limit time to run the test - default 3000 us");
-    PrintAndLogEx(NORMAL, "  s <time>  : (optional) start time to run the test - default 0 us");
-    PrintAndLogEx(NORMAL, "  d <data>  : (optional) data to full-write before trying the OTP test - default 0x00");
-    PrintAndLogEx(NORMAL, "  t <data>  : (optional) data to write while running the OTP test - default 0x00");
-    PrintAndLogEx(NORMAL, "  m <data>  : (optional) exit criteria, if block matches this value");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf mfu otptear b 3");
-    PrintAndLogEx(NORMAL, "        hf mfu otptear b 8 i 100 l 3000 s 1000");
-    PrintAndLogEx(NORMAL, "        hf mfu otptear b 3 i 1 l 200");
-    PrintAndLogEx(NORMAL, "        hf mfu otptear b 3 i 100 l 2500 s 200 d FFFFFFFF t EEEEEEEE");
-    PrintAndLogEx(NORMAL, "        hf mfu otptear b 3 i 100 l 2500 s 200 d FFFFFFFF t EEEEEEEE m 00000000    -> such quite when OTP is reset");
-    return PM3_SUCCESS;
-}
-
-
 uint8_t default_3des_keys[][16] = {
     { 0x42, 0x52, 0x45, 0x41, 0x4b, 0x4d, 0x45, 0x49, 0x46, 0x59, 0x4f, 0x55, 0x43, 0x41, 0x4e, 0x21 }, // 3des std key
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // all zeroes
@@ -2761,14 +2722,39 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
 }
 
 static int CmdHF14AMfUPwdGen(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu pwdgen",
+                  "Generate different passwords from known pwdgen algos",
+                  "hf mfu pwdgen -r\n"
+                  "hf mfu pwdgen -t\n"
+                  "hf mfu pwdgen --uid 11223344556677"
+                 );
 
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("u", "uid", "<hex>", "uid (7 bytes)"),
+        arg_lit0("r", NULL, "read uid from tag"),
+        arg_lit0("t", NULL, "selftest"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int u_len = 0;
     uint8_t uid[7] = {0x00};
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0  || cmdp == 'h') return usage_hf_mfu_pwdgen();
+    CLIGetHexWithReturn(ctx, 1, uid, &u_len);
+    bool use_tag = arg_get_lit(ctx, 2);
+    bool selftest = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
 
-    if (cmdp == 't') return generator_selftest();
+    if (selftest) 
+        return generator_selftest();
 
-    if (cmdp == 'r') {
+    if (u_len != 7) {
+        PrintAndLogEx(WARNING, "Key must be 7 hex bytes");
+        return PM3_EINVARG;
+    }
+
+    if (use_tag) {
         // read uid from tag
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
@@ -2791,22 +2777,20 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
             return PM3_ESOFT;
         }
         memcpy(uid, card.uid, sizeof(uid));
-    } else {
-        if (param_gethex(Cmd, 0, uid, 14)) return usage_hf_mfu_pwdgen();
     }
 
-    PrintAndLogEx(NORMAL, "---------------------------------");
-    PrintAndLogEx(NORMAL, " Using UID : %s", sprint_hex(uid, 7));
-    PrintAndLogEx(NORMAL, "---------------------------------");
-    PrintAndLogEx(NORMAL, " algo | pwd      | pack");
-    PrintAndLogEx(NORMAL, "------+----------+-----");
-    PrintAndLogEx(NORMAL, " EV1  | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
-    PrintAndLogEx(NORMAL, " Ami  | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
-    PrintAndLogEx(NORMAL, " LD   | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
-    PrintAndLogEx(NORMAL, " XYZ  | %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
-    PrintAndLogEx(NORMAL, "------+----------+-----");
-    PrintAndLogEx(NORMAL, " Vingcard algo");
-    PrintAndLogEx(NORMAL, "--------------------");
+    PrintAndLogEx(INFO, "---------------------------------");
+    PrintAndLogEx(INFO, " Using UID : %s", sprint_hex(uid, 7));
+    PrintAndLogEx(INFO, "---------------------------------");
+    PrintAndLogEx(INFO, " algo | pwd      | pack");
+    PrintAndLogEx(INFO, "------+----------+-----");
+    PrintAndLogEx(INFO, " EV1  | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
+    PrintAndLogEx(INFO, " Ami  | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
+    PrintAndLogEx(INFO, " LD   | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
+    PrintAndLogEx(INFO, " XYZ  | %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
+    PrintAndLogEx(INFO, "------+----------+-----");
+    PrintAndLogEx(INFO, " Vingcard algo");
+    PrintAndLogEx(INFO, "--------------------");
     return PM3_SUCCESS;
 }
 
@@ -2815,85 +2799,87 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
 // Moebius et al
 //
 static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
-    uint8_t blockNoUint = 8;
-    uint8_t cmdp = 0;
-    bool errors = 0, use_match = false;
-    uint8_t match[4] = {0x00};
-    uint8_t teardata[8] = {0x00};
-    uint32_t interval = 500; // time in us
-    uint32_t timeLimit = 3000; // time in us
-    uint32_t startTime = 0; // time in us
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu otptear",
+                  "Tear-off test against OTP block",
+                  "hf mfu otptear -b 3\n"
+                  "hf mfu otptear -b 3 -i 100 -s 1000\n"
+                  "hf mfu otptear -b 3 -i 1 -e 200\n"
+                  "hf mfu otptear -b 3 -i 100 -s 200 -e 2500 -d FFFFFFFF -t EEEEEEEE\n"
+                  "hf mfu otptear -b 3 -i 100 -s 200 -e 2500 -d FFFFFFFF -t EEEEEEEE -m 00000000    -> quite when OTP is reset"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_mfu_otp_tearoff();
-            case 'b':
-                blockNoUint = param_get8(Cmd, cmdp + 1);
-                if (blockNoUint < 2) {
-                    PrintAndLogEx(WARNING, "Wrong block number");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'i':
-                interval = param_get32ex(Cmd, cmdp + 1, interval, 10);
-                cmdp += 2;
-                break;
-            case 'l':
-                timeLimit = param_get32ex(Cmd, cmdp + 1, timeLimit, 10);
-                if (timeLimit < interval) {
-                    PrintAndLogEx(WARNING, "Wrong time limit number");
-                    errors = true;
-                }
-                if (timeLimit > 43000) {
-                    PrintAndLogEx(WARNING, "You can't set delay out of 1..43000 range!");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 's':
-                startTime = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                if (startTime > (timeLimit - interval)) {
-                    PrintAndLogEx(WARNING, "Wrong start time number");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'd':
-                if (param_gethex(Cmd, cmdp + 1, teardata, 8)) {
-                    PrintAndLogEx(WARNING, "Block data must include 8 HEX symbols");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 't':
-                if (param_gethex(Cmd, cmdp + 1, teardata + 4, 8)) {
-                    PrintAndLogEx(WARNING, "Block data must include 8 HEX symbols");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'm':
-                if (param_gethex(Cmd, cmdp + 1, match, 8)) {
-                    PrintAndLogEx(WARNING, "Block data must include 8 HEX symbols");
-                    errors = true;
-                }
-                use_match = true;
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("b", "blk", "<dec>", "target block (def 8)"),
+        arg_u64_0("i", "inc", "<dec>", "increase time steps (def 500 us)"),
+        arg_u64_0("e", "end", "<dec>", "end time (def 3000 us)"),
+        arg_u64_0("s", "start", "<dec>", "start time (def 0 us)"),
+        arg_str0("d", "data", "<hex>", "initialise data before run (4 bytes)"),
+        arg_str0("t", "test", "<hex>", "test write data (4 bytes)"),
+        arg_str0("m", "match", "<hex>", "exit criteria, if block matches this value (4 bytes)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t blockno = arg_get_u32_def(ctx, 1, 8);
+    uint32_t steps = arg_get_u32_def(ctx, 2, 500);
+    uint32_t end = arg_get_u32_def(ctx, 3, 3000);
+    uint32_t start = arg_get_u32_def(ctx, 4, 0);
+
+    int d_len = 0;
+    uint8_t data[4] = {0x00};
+    CLIGetHexWithReturn(ctx, 5, data, &d_len);
+
+    int t_len = 0;
+    uint8_t test[4] = {0x00};
+    CLIGetHexWithReturn(ctx, 6, test, &t_len);
+
+    int m_len = 0;
+    uint8_t match[4] = {0x00};
+    CLIGetHexWithReturn(ctx, 7, match, &m_len);
+    bool use_match = (m_len > 0);
+    CLIParserFree(ctx);
+
+    if (blockno < 2) {
+        PrintAndLogEx(WARNING, "Block number must be larger than 2.");
+        return PM3_EINVARG;
+    }
+    if (end < steps) {
+        PrintAndLogEx(WARNING, "end time smaller than increase value");
+        return PM3_EINVARG;
+    }
+    if (end > 43000) {
+        PrintAndLogEx(WARNING, "end time - out of 1 .. 43000 range");
+        return PM3_EINVARG;
+    }
+    if (start > (end - steps)) {
+        PrintAndLogEx(WARNING, "Start time larger then (end time + steps)");
+        return PM3_EINVARG;
     }
 
-    if (errors) return usage_hf_mfu_otp_tearoff();
+    if (d_len && d_len != 4) {
+        PrintAndLogEx(WARNING, "data must be 4 hex bytes");
+        return PM3_EINVARG;
+    }
+
+    if (t_len && t_len != 4) {
+        PrintAndLogEx(WARNING, "test data must be 4 hex bytes");
+        return PM3_EINVARG;
+    }
+
+    if (m_len && m_len != 4) {
+        PrintAndLogEx(WARNING, "match data must be 4 hex bytes");
+        return PM3_EINVARG;
+    }
+
+   uint8_t teardata[8] = {0x00};
+   memcpy(teardata, data, sizeof(data));
+   memcpy(teardata + sizeof(data), test, sizeof(test));
 
     PrintAndLogEx(INFO, "----------------- " _CYAN_("MFU Tear off") " ---------------------");
     PrintAndLogEx(INFO, "Starting Tear-off test");
-    PrintAndLogEx(INFO, "Target block no: %u", blockNoUint);
+    PrintAndLogEx(INFO, "Target block no: %u", blockno);
     PrintAndLogEx(INFO, "Target inital block data : %s", sprint_hex_inrow(teardata, 4));
     PrintAndLogEx(INFO, "Target write block data  : %s", sprint_hex_inrow(teardata + 4, 4));
     PrintAndLogEx(INFO, "----------------------------------------------------");
@@ -2901,23 +2887,22 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     bool got_pre = false, got_post = false, lock_on = false;
     uint8_t pre[4] = {0};
     uint8_t post[4] = {0};
-    uint32_t actualTime = startTime;
-
+    uint32_t current = start;
     int phase_clear = -1;
     int phase_newwr = -1;
-
     uint8_t retries = 0;
-    while (actualTime <= (timeLimit - interval)) {
+
+    while (current <= (end - steps)) {
 
         if (kbd_enter_pressed()) {
             PrintAndLogEx(INFO, "\naborted via keyboard!\n");
             break;
         }
 
-        PrintAndLogEx(INFO, "Using tear-off delay " _GREEN_("%" PRIu32) " us", actualTime);
+        PrintAndLogEx(INFO, "Using tear-off delay " _GREEN_("%" PRIu32) " us", current);
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_MIFAREU_READBL, blockno, 0, 0, NULL, 0);
         PacketResponseNG resp;
 
         got_pre = false;
@@ -2930,7 +2915,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         }
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MFU_OTP_TEAROFF, blockNoUint, actualTime, 0, teardata, 8);
+        SendCommandMIX(CMD_HF_MFU_OTP_TEAROFF, blockno, current, 0, teardata, 8);
 
         // we be getting ACK that we are silently ignoring here..
 
@@ -2946,7 +2931,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
 
         got_post = false;
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_MIFAREU_READBL, blockno, 0, 0, NULL, 0);
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             isOK = resp.oldarg[0] & 0xFF;
             if (isOK) {
@@ -2965,19 +2950,19 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
             if (memcmp(pre, post, sizeof(pre)) == 0) {
 
                 PrintAndLogEx(INFO, "Current %02d (0x%02X) %s"
-                              , blockNoUint
-                              , blockNoUint
+                              , blockno
+                              , blockno
                               , poststr
                              );
             } else {
 
                 // skip first message, since its the reset write.
-                if (actualTime == startTime) {
+                if (current == start) {
                     PrintAndLogEx(INFO, "Inital write");
                 } else {
                     PrintAndLogEx(INFO, _CYAN_("Tear off occured") " : %02d (0x%02X) %s vs " _RED_("%s")
-                                  , blockNoUint
-                                  , blockNoUint
+                                  , blockno
+                                  , blockno
                                   , prestr
                                   , poststr
                                  );
@@ -2985,11 +2970,11 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                     lock_on = true;
 
                     if (phase_clear == -1)
-                        phase_clear = actualTime;
+                        phase_clear = current;
 
                     // new write phase must be atleast 100us later..
-                    if (phase_clear > -1 && phase_newwr == -1 && actualTime > (phase_clear + 100))
-                        phase_newwr = actualTime;
+                    if (phase_clear > -1 && phase_newwr == -1 && current > (phase_clear + 100))
+                        phase_newwr = current;
                 }
             }
 
@@ -3017,14 +3002,14 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                     PrintAndLogEx(NORMAL, "---------------------------------\n");
                 }
         */
-        if (startTime != timeLimit) {
-            actualTime += interval;
+        if (start != end) {
+            current += steps;
         } else {
             if (lock_on == false) {
                 if (++retries == 20) {
-                    actualTime++;
-                    timeLimit++;
-                    startTime++;
+                    current++;
+                    end++;
+                    start++;
                     retries = 0;
                     PrintAndLogEx(INFO, _CYAN_("Retried %u times, increased delay with 1us"), retries);
                 }
@@ -3603,7 +3588,7 @@ static command_t CommandTable[] = {
     {"keygen",  CmdHF14AMfUGenDiverseKeys, AlwaysAvailable, "Generate 3DES MIFARE diversified keys"},
     {"pwdgen",  CmdHF14AMfUPwdGen,         AlwaysAvailable, "Generate pwd from known algos"},
     {"otptear", CmdHF14AMfuOtpTearoff,     IfPm3Iso14443a,  "Tear-off test on OTP bits"},
-//    {"countertear", CmdHF14AMfuEv1CounterTearoff,     IfPm3Iso14443a,  "Tear-off test on Ev1 Counter bits"},
+//    {"tear_cnt", CmdHF14AMfuEv1CounterTearoff,     IfPm3Iso14443a,  "Tear-off test on Ev1/NTAG Counter bits"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
     {"cauth",   CmdHF14AMfUCAuth,          IfPm3Iso14443a,  "Authentication - Ultralight-C"},
     {"dump",    CmdHF14AMfUDump,           IfPm3Iso14443a,  "Dump MIFARE Ultralight family tag to binary file"},

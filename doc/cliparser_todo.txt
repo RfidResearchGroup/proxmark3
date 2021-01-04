@@ -102,22 +102,7 @@ hf mf gen3uid
 hf mf gen3blk
 hf mf gen3freeze
 hf mf ice
-hf mfu info
-hf mfu dump
-hf mfu restore
-hf mfu eload
-hf mfu rdbl
-hf mfu wrbl
-hf mfu cauth
-hf mfu setpwd
-hf mfu setuid
-hf mfu sim
-hf mfu gen
-hf mfu pwdgen
-hf mfu otptear
-hf mfdes enum
 hf mfdes getuid
-hf mfdes info
 hw connect
 hw dbg
 hw detectreader
