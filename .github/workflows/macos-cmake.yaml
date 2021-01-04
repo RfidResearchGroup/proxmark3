@@ -1,0 +1,20 @@
+name: MacOS (cmake) Build and Test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Update brew repos
+      run: brew update
+    - name: Tap RfidResearchGroup/proxmark3
+      run: brew tap RfidResearchGroup/proxmark3
+    - name: Install dependencies
+      run: brew install readline qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc
+    - name: Build
+      run: mkdir -p client/build && ( cd client/build && cmake .. && make VERBOSE=1 )
+    - name: Test
+      run: make client/check CHECKARGS="--clientbin ./client/build/proxmark3"
