@@ -74,13 +74,13 @@ static bool OpenPm3(void) {
 jint Console(JNIEnv *env, jobject instance, jstring cmd_) {
 
     if (!conn.run) {
-        if (OpenPm3() && TestProxmark() == PM3_SUCCESS) {
+        if (OpenPm3() && TestProxmark(session.current_device) == PM3_SUCCESS) {
             LOGD("Connected to device");
             PrintAndLogEx(SUCCESS, "Connected to device");
         } else {
             LOGD("Failed to connect to device");
             PrintAndLogEx(ERR, "Failed to connect to device");
-            CloseProxmark();
+            CloseProxmark(session.current_device);
         }
     }
 
@@ -110,10 +110,10 @@ jboolean IsClientRunning(JNIEnv *env, jobject instance) {
  * */
 jboolean TestPm3(JNIEnv *env, jobject instance) {
     if (open() == false) {
-        CloseProxmark();
+        CloseProxmark(session.current_device);
         return false;
     }
-    bool ret = (TestProxmark() == PM3_SUCCESS);
+    bool ret = (TestProxmark(session.current_device) == PM3_SUCCESS);
     return (jboolean)(ret);
 }
 
@@ -121,7 +121,7 @@ jboolean TestPm3(JNIEnv *env, jobject instance) {
  * stop pm3 client
  * */
 void ClosePm3(JNIEnv *env, jobject instance) {
-    CloseProxmark();
+    CloseProxmark(session.current_device);
 }
 
 /*
