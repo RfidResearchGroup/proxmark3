@@ -26,35 +26,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hw_setmux(void) {
-    PrintAndLogEx(NORMAL, "Set the ADC mux to a specific value");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hw setmux [h] <lopkd | loraw | hipkd | hiraw>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h          This help");
-    PrintAndLogEx(NORMAL, "       <type>     Low peak, Low raw, Hi peak, Hi raw");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hw setmux lopkd"));
-    return PM3_SUCCESS;
-}
-
-static int usage_hw_connect(void) {
-    PrintAndLogEx(NORMAL, "Connects to a Proxmark3 device via specified serial port");
-    PrintAndLogEx(NORMAL, "Baudrate here is only for physical UART or UART-BT, " _YELLOW_("not")" for USB-CDC or blue shark add-on");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hw connect [h] [p <port>] [b <baudrate>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h              This help");
-    PrintAndLogEx(NORMAL, "       p <port>       Serial port to connect to, else retry the last used one");
-    PrintAndLogEx(NORMAL, "       b <baudrate>   Baudrate");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hw connect p "SERIAL_PORT_EXAMPLE_H));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hw connect p "SERIAL_PORT_EXAMPLE_H" b 115200"));
-    return PM3_SUCCESS;
-}
-
 static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
     char asBuff[120];
     memset(asBuff, 0, sizeof(asBuff));
@@ -564,51 +535,114 @@ static int CmdSetDivisor(const char *Cmd) {
 
 static int CmdSetMux(const char *Cmd) {
 
-    if (strlen(Cmd) < 5) {
-        usage_hw_setmux();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw setmux",
+                  "Set the ADC mux to a specific value",
+                  "hw setmux --hiraw    -> set HIGH RAW"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "lopkd", "low peak"),
+        arg_lit0(NULL, "loraw", "low raw"),
+        arg_lit0(NULL, "hipkd", "high peak"),
+        arg_lit0(NULL, "hiraw", "high raw"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool lopkd = arg_get_lit(ctx, 1);
+    bool loraw = arg_get_lit(ctx, 2);
+    bool hipkd = arg_get_lit(ctx, 3);
+    bool hiraw = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    if ((lopkd + loraw + hipkd + hiraw) > 1) {
+        PrintAndLogEx(INFO, "Can only set one mux");
         return PM3_EINVARG;
     }
-
-    str_lower((char *)Cmd);
 
     uint8_t arg = 0;
-    if (strcmp(Cmd, "lopkd") == 0)
+    if (lopkd)
         arg = 0;
-    else if (strcmp(Cmd, "loraw") == 0)
+    else if (loraw)
         arg = 1;
-    else if (strcmp(Cmd, "hipkd") == 0)
+    else if (hipkd)
         arg = 2;
-    else if (strcmp(Cmd, "hiraw") == 0)
+    else if (hiraw)
         arg = 3;
-    else {
-        usage_hw_setmux();
-        return PM3_EINVARG;
-    }
+
     clearCommandBuffer();
     SendCommandNG(CMD_SET_ADC_MUX, (uint8_t *)&arg, sizeof(arg));
     return PM3_SUCCESS;
 }
 
 static int CmdStandalone(const char *Cmd) {
-//    (void)Cmd; // Cmd is not used so far
-    uint8_t arg = param_get8ex(Cmd, 0, 0, 10);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw standalone",
+                  "Start standalone mode",
+                  "hw standalone       -> start \n"
+                  "hw standalone -a 1  -> start and send arg 1"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("a", "arg", "<dec>", "argument byte"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint8_t arg = arg_get_u32(ctx, 1);
+    CLIParserFree(ctx);
     clearCommandBuffer();
     SendCommandNG(CMD_STANDALONE, (uint8_t *)&arg, sizeof(arg));
     return PM3_SUCCESS;
 }
 
 static int CmdTune(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw tune",
+                  "Measure antenna tuning",
+                  "hw tune"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return CmdTuneSamples(Cmd);
 }
 
 static int CmdVersion(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw version",
+                  "Show version information about the connected Proxmark3",
+                  "hw version"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     pm3_version(true, false);
     return PM3_SUCCESS;
 }
 
 static int CmdStatus(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw status",
+                  "Show runtime status information about the connected Proxmark3",
+                  "hw status"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandNG(CMD_STATUS, NULL, 0);
@@ -692,7 +726,19 @@ static int CmdTearoff(const char *Cmd) {
 }
 
 static int CmdTia(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw tia",
+                  "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider",
+                  "hw tia"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
     PrintAndLogEx(INFO, "Triggering new Timing Interval Acquisition (TIA)...");
     clearCommandBuffer();
     SendCommandNG(CMD_TIA, NULL, 0);
@@ -706,19 +752,38 @@ static int CmdTia(const char *Cmd) {
 }
 
 static int CmdPing(const char *Cmd) {
-    uint32_t len = strtol(Cmd, NULL, 0);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw ping",
+                  "Test if the Proxmark3 is responsive",
+                  "hw ping\n"
+                  "hw ping --len 32"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("l", "len", "<dec>", "length of payload to send"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t len = arg_get_u32(ctx, 1);
+    CLIParserFree(ctx);
+
     if (len > PM3_CMD_DATA_SIZE)
         len = PM3_CMD_DATA_SIZE;
+
     if (len) {
-        PrintAndLogEx(INFO, "Ping sent with payload len = %d", len);
+        PrintAndLogEx(INFO, "Ping sent with payload len " _YELLOW_("%d"), len);
     } else {
         PrintAndLogEx(INFO, "Ping sent");
     }
+
     clearCommandBuffer();
     PacketResponseNG resp;
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
+
     for (uint16_t i = 0; i < len; i++)
         data[i] = i & 0xFF;
+
     SendCommandNG(CMD_PING, data, len);
     if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
         if (len) {
@@ -734,35 +799,38 @@ static int CmdPing(const char *Cmd) {
 
 static int CmdConnect(const char *Cmd) {
 
-    uint32_t baudrate = USART_BAUD_RATE;
-    uint8_t cmdp = 0;
-    char port[FILE_PATH_SIZE] = {0};
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw connect",
+                  "Connects to a Proxmark3 device via specified serial port.\n"
+                  "Baudrate here is only for physical UART or UART-BT, NOT for USB-CDC or blue shark add-on",
+                  "hw connect -p "SERIAL_PORT_EXAMPLE_H"\n"
+                  "hw connect -p "SERIAL_PORT_EXAMPLE_H" -b 115200"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hw_connect();
-            case 'p': {
-                param_getstr(Cmd, cmdp + 1, port, sizeof(port));
-                cmdp += 2;
-                break;
-            }
-            case 'b':
-                baudrate = param_get32ex(Cmd, cmdp + 1, USART_BAUD_RATE, 10);
-                if (baudrate == 0)
-                    return usage_hw_connect();
-                cmdp += 2;
-                break;
-            default:
-                usage_hw_connect();
-                return PM3_EINVARG;
-        }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("p", "port", NULL, "Serial port to connect to, else retry the last used one"),
+        arg_u64_0("b", "baud", "<dec>", "Baudrate"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int p_len = FILE_PATH_SIZE;
+    char port[FILE_PATH_SIZE] = {0};
+    CLIGetStrWithReturn(ctx, 1, (uint8_t*)port, &p_len);
+    uint32_t baudrate = arg_get_u32_def(ctx, 2, USART_BAUD_RATE);
+    CLIParserFree(ctx);
+
+    if (baudrate == 0) {
+        PrintAndLogEx(WARNING, "Baudrate can't be zero");
+        return PM3_EINVARG;
     }
 
     // default back to previous used serial port
     if (strlen(port) == 0) {
         if (strlen(conn.serial_port_name) == 0) {
-            return usage_hw_connect();
+            PrintAndLogEx(WARNING, "Must specify a serial port");
+            return PM3_EINVARG;
         }
         memcpy(port, conn.serial_port_name, sizeof(port));
     }
@@ -794,7 +862,7 @@ static command_t CommandTable[] = {
     {"ping",          CmdPing,         IfPm3Present,    "Test if the Proxmark3 is responsive"},
     {"readmem",       CmdReadmem,      IfPm3Present,    "Read memory at decimal address from flash"},
     {"reset",         CmdReset,        IfPm3Present,    "Reset the Proxmark3"},
-    {"setlfdivisor",  CmdSetDivisor,   IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12MHz/(divisor+1)"},
+    {"setlfdivisor",  CmdSetDivisor,   IfPm3Present,    "Drive LF antenna at 12MHz / (divisor + 1)"},
     {"setmux",        CmdSetMux,       IfPm3Present,    "Set the ADC mux to a specific value"},
     {"standalone",    CmdStandalone,   IfPm3Present,    "Jump to the standalone mode"},
     {"status",        CmdStatus,       IfPm3Present,    "Show runtime status information about the connected Proxmark3"},

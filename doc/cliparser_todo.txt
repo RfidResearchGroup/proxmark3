@@ -103,15 +103,7 @@ hf mf gen3blk
 hf mf gen3freeze
 hf mf ice
 hf mfdes getuid
-hw connect
-hw ping
 hw setlfdivisor
-hw setmux
-hw standalone
-hw status
-hw tia
-hw tune
-hw version
 lf config
 lf cmdread
 lf read
