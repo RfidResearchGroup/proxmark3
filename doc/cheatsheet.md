@@ -153,7 +153,9 @@ Load iCLASS dump into memory for simulation
 ```
 Options
 ---
-f <filename>     : load iCLASS tag-dump filename
+-f, --file <filename>          filename of dump
+    --json                     load JSON type dump
+    --eml                      load EML type dump
 
 pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
 ```
