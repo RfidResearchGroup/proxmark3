@@ -26,36 +26,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_dbg(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hw dbg [h] <debug level>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h    this help");
-    PrintAndLogEx(NORMAL, "       <debug level>  (Optional) see list for valid levels");
-    PrintAndLogEx(NORMAL, "           0 - no debug messages");
-    PrintAndLogEx(NORMAL, "           1 - error messages");
-    PrintAndLogEx(NORMAL, "           2 - plus information messages");
-    PrintAndLogEx(NORMAL, "           3 - plus debug messages");
-    PrintAndLogEx(NORMAL, "           4 - print even debug messages in timing critical functions");
-    PrintAndLogEx(NORMAL, "               Note: this option therefore may cause malfunction itself");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("           hw dbg 3"));
-    return 0;
-}
-
-static int usage_hw_detectreader(void) {
-    PrintAndLogEx(NORMAL, "Start to detect presences of reader field");
-    PrintAndLogEx(NORMAL, "press pm3 button to change modes and finally exit");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hw detectreader [h] <L|H>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h          This help");
-    PrintAndLogEx(NORMAL, "       <type>     L = 125/134 kHz, H = 13.56 MHz");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hw detectreader L"));
-    return PM3_SUCCESS;
-}
-
 static int usage_hw_setmux(void) {
     PrintAndLogEx(NORMAL, "Set the ADC mux to a specific value");
     PrintAndLogEx(NORMAL, "");
@@ -371,32 +341,81 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
 
 static int CmdDbg(const char *Cmd) {
 
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || ctmp == 'h') return usage_dbg();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw dbg",
+                  "Set device side debug level output.\n"
+                  "Note: option -4, this option may cause malfunction itself",
+                  "hw dbg -1\n"
+                 );
 
-    uint8_t dbgMode = param_get8ex(Cmd, 0, 0, 10);
-    if (dbgMode > 4) return usage_dbg();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("0", NULL, "no debug messages"),
+        arg_lit0("1", NULL, "error messages"),
+        arg_lit0("2", NULL, "plus information messages"),
+        arg_lit0("3", NULL, "plus debug messages"),
+        arg_lit0("4", NULL, "print even debug messages in timing critical functions"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool lv0 = arg_get_lit(ctx, 1);
+    bool lv1 = arg_get_lit(ctx, 2);
+    bool lv2 = arg_get_lit(ctx, 3);
+    bool lv3 = arg_get_lit(ctx, 3);
+    bool lv4 = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
 
-    SendCommandNG(CMD_SET_DBGMODE, &dbgMode, 1);
+    if ((lv0 + lv1 + lv2 + lv3 + lv4) > 1) {
+        PrintAndLogEx(INFO, "Can only set one debug level");
+        return PM3_EINVARG;
+    }
+
+    uint8_t dbg = 0;
+    if (lv0)
+        dbg = 0;
+    else if (lv1)
+        dbg = 1;
+    else if (lv2)
+        dbg = 2;    
+    else if (lv3)
+        dbg = 3;    
+    else if (lv4)
+        dbg = 4;
+
+    SendCommandNG(CMD_SET_DBGMODE, &dbg, sizeof(dbg));
     return PM3_SUCCESS;
 }
 
 static int CmdDetectReader(const char *Cmd) {
-    uint8_t arg = 0;
-    char c = toupper(Cmd[0]);
-    switch (c) {
-        case 'L':
-            arg = 1;
-            break;
-        case 'H':
-            arg = 2;
-            break;
-        default: {
-            usage_hw_detectreader();
-            return PM3_EINVARG;
-        }
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw detectreader",
+                  "Start to detect presences of reader field",
+                  "hw detectreader -L\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("L", "LF", "detect low frequence 125/134 kHz"),
+        arg_lit0("H", "HF", "detect high frequence 13.56 MHZ"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool lf = arg_get_lit(ctx, 1);
+    bool hf = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if ((lf + hf) > 1) {
+        PrintAndLogEx(INFO, "Can only set one frequence");
+        return PM3_EINVARG;
     }
 
+    uint8_t arg = 0;
+    if (lf)
+        arg = 1;
+    else if (hf)
+        arg = 2;
+
+    PrintAndLogEx(INFO, "press pm3 button to change modes and finally exit");
     clearCommandBuffer();
     SendCommandNG(CMD_LISTEN_READER_FIELD, (uint8_t *)&arg, sizeof(arg));
     return PM3_SUCCESS;
@@ -404,38 +423,107 @@ static int CmdDetectReader(const char *Cmd) {
 
 // ## FPGA Control
 static int CmdFPGAOff(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw fpgaoff",
+                  "Turn of fpga and antenna field",
+                  "hw fpgaoff\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
     clearCommandBuffer();
     SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
     return PM3_SUCCESS;
 }
 
 static int CmdLCD(const char *Cmd) {
-    int i, j;
-    sscanf(Cmd, "%x %d", &i, &j);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw lcd",
+                  "Send command/data to LCD",
+                  "hw lcd -r AA -c 03    -> sends 0xAA three times"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("r", "raw", "<hex>",  "data "),
+        arg_int1("c", "cnt", "<dec>",  "number of times to send"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    int r_len = 0;
+    uint8_t raw[1] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &r_len);
+    int j = arg_get_int(ctx, 2);
+    if (j < 1) {
+        PrintAndLogEx(WARNING, "Count must be larger than zero");
+        return PM3_EINVARG;
+    }
+
     while (j--) {
         clearCommandBuffer();
-        SendCommandMIX(CMD_LCD, i & 0x1ff, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_LCD, raw[0], 0, 0, NULL, 0);
     }
     return PM3_SUCCESS;
 }
 
 static int CmdLCDReset(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw lcdreset",
+                  "Hardware reset LCD",
+                  "hw lcdreset\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     clearCommandBuffer();
     SendCommandNG(CMD_LCD_RESET, NULL, 0);
     return PM3_SUCCESS;
 }
 
 static int CmdReadmem(const char *Cmd) {
-    uint32_t address = strtol(Cmd, NULL, 0);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw readmem",
+                  "Read memory at decimal address from ARM chip flash.",
+                  "hw readmem -a 10000"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1("a", "adr", "<dec>", "address to read"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t address = arg_get_u32(ctx, 1);
+    CLIParserFree(ctx);
     clearCommandBuffer();
     SendCommandNG(CMD_READ_MEM, (uint8_t *)&address, sizeof(address));
     return PM3_SUCCESS;
 }
 
 static int CmdReset(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw reset",
+                  "Reset the Proxmark3 device.",
+                  "hw reset"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     clearCommandBuffer();
     SendCommandNG(CMD_HARDWARE_RESET, NULL, 0);
     PrintAndLogEx(INFO, "Proxmark3 has been reset.");
@@ -683,14 +771,14 @@ static int CmdConnect(const char *Cmd) {
 static command_t CommandTable[] = {
     {"-------------", CmdHelp,         AlwaysAvailable, "----------------------- " _CYAN_("Hardware") " -----------------------"},
     {"help",          CmdHelp,         AlwaysAvailable, "This help"},
-    {"connect",       CmdConnect,      AlwaysAvailable, "connect Proxmark3 to serial port"},
+    {"connect",       CmdConnect,      AlwaysAvailable, "Connect Proxmark3 to serial port"},
     {"dbg",           CmdDbg,          IfPm3Present,    "Set Proxmark3 debug level"},
-    {"detectreader",  CmdDetectReader, IfPm3Present,    "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
+    {"detectreader",  CmdDetectReader, IfPm3Present,    "Detect external reader field"},
     {"fpgaoff",       CmdFPGAOff,      IfPm3Present,    "Set FPGA off"},
-    {"lcd",           CmdLCD,          IfPm3Lcd,        "<HEX command> <count> -- Send command/data to LCD"},
+    {"lcd",           CmdLCD,          IfPm3Lcd,        "Send command/data to LCD"},
     {"lcdreset",      CmdLCDReset,     IfPm3Lcd,        "Hardware reset LCD"},
     {"ping",          CmdPing,         IfPm3Present,    "Test if the Proxmark3 is responsive"},
-    {"readmem",       CmdReadmem,      IfPm3Present,    "[address] -- Read memory at decimal address from flash"},
+    {"readmem",       CmdReadmem,      IfPm3Present,    "Read memory at decimal address from flash"},
     {"reset",         CmdReset,        IfPm3Present,    "Reset the Proxmark3"},
     {"setlfdivisor",  CmdSetDivisor,   IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12MHz/(divisor+1)"},
     {"setmux",        CmdSetMux,       IfPm3Present,    "Set the ADC mux to a specific value"},
