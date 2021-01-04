@@ -8,9 +8,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Brew python bug workaround
+      run: brew link --overwrite python
     - name: Update brew repos
       run: brew update
-    - name: Update packages
+    - name: Upgrade packages
       run: brew upgrade
     - name: Tap RfidResearchGroup/proxmark3
       run: brew tap RfidResearchGroup/proxmark3
