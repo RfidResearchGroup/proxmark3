@@ -535,7 +535,21 @@ static int CmdReset(const char *Cmd) {
  * 600kHz.
  */
 static int CmdSetDivisor(const char *Cmd) {
-    uint8_t arg = param_get8ex(Cmd, 0, 95, 10);
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw setdivisor",
+                  "Drive LF antenna at 12 MHz / (divisor + 1).",
+                  "hw setdivisor -d 88"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1("d", "div", "<dec>", "19 - 255 divisor value (def 95)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint8_t arg = arg_get_u32_def(ctx, 1, 95);
+    CLIParserFree(ctx);
 
     if (arg < 19) {
         PrintAndLogEx(ERR, "divisor must be between" _YELLOW_("19") " and " _YELLOW_("255"));

@@ -104,14 +104,7 @@ hf mf gen3freeze
 hf mf ice
 hf mfdes getuid
 hw connect
-hw dbg
-hw detectreader
-hw fpgaoff
-hw lcd
-hw lcdreset
 hw ping
-hw readmem
-hw reset
 hw setlfdivisor
 hw setmux
 hw standalone
