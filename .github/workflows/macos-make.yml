@@ -8,9 +8,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Update brew repos
     - name: Set Git http.postBuffer to something high
       run: git config --global http.postBuffer 524288000
+    - name: Update brew repos
       run: brew update
     - name: Tap RfidResearchGroup/proxmark3
       run: brew tap RfidResearchGroup/proxmark3
