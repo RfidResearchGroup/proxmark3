@@ -17,8 +17,7 @@ vpath %.dic dictionaries
 OBJDIR = obj
 
 ifeq ($(platform),Darwin)
-    # cf brew info qt: qt not symlinked anymore
-    PKG_CONFIG_ENV := PKG_CONFIG_PATH=/usr/local/opt/qt/lib/pkgconfig
+	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt/lib/pkgconfig
 endif
 
 ###################
@@ -279,8 +278,8 @@ CXXINCLUDES += $(QTINCLUDES)
 ## Readline
 ifneq ($(SKIPREADLINE),1)
     ifeq ($(platform),Darwin)
-        LDLIBS += -L/usr/local/opt/readline/lib
-        INCLUDES += -I/usr/local/opt/readline/include
+		LDLIBS += -L$(BREW_PREFIX)/opt/readline/lib
+		INCLUDES += -I$(BREW_PREFIX)/opt/readline/include
     endif
     LDLIBS += -lreadline
     READLINE_FOUND = 1

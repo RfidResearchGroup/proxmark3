@@ -57,6 +57,11 @@ else
   RANLIB= ranlib
 endif
 
+# For detection of Apple Silicon
+ifeq ($(platform),Darwin)
+  BREW_PREFIX = $(shell brew --prefix)
+endif
+
 ifeq ($(DEBUG),1)
   DEFCXXFLAGS = -g -O0 -pipe
   DEFCFLAGS = -g -O0 -fstrict-aliasing -pipe

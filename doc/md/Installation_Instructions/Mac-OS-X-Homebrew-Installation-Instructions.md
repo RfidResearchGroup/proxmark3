@@ -1,5 +1,21 @@
 # Homebrew (Mac OS X), automatic installation
 
+## Apple Silicon (M1) Notes
+
+Ensure Rosetta 2 is installed as it's currently needed to run `arm-none-eabi-gcc` as it's delivered as a precombiled x86_64 binary.
+
+If you see an error like:
+
+```sh
+bad CPU type in executable
+```
+
+Then you are missing Rosetta 2 and need to install it: `/usr/sbin/softwareupdate --install-rosetta`
+
+Homebrew has changed their prefix to differentiate between native Apple Silicon and Intel compiled binaries.  The Makefile attempts to account for this but please note that whichever terminal or application you're using must be running under Architecture "Apple" as seen by Activity Monitor as all child processes inherit the Rosetta 2 environment of their parent.  You can check which architecture you're currently running under with a `uname -m` in your terminal.
+
+Visual Studio Code still runs under Rosetta 2 and if you're developing for proxmark3 on an Apple Silicon Mac you might want to consider running the Insiders build which has support for running natively on Apple Silicon.
+
 ## Install Proxmark3 tools
 
 These instructions comes from @Chrisfu, where we got the proxmark3.rb scriptfile from.
