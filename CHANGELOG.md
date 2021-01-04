@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed Makefile to account for changes when running on Apple Silicon (@tcprst)
  - Added support for debugging ARM with JTAG & VSCode (@Gator96100)
  - Added MFUL "Gen1b" suport to `hf_mfu_setuid.lua` (@iceman1001)
  - Added possibility to get bargraph in `lf tune` and `hf tune` (@iceman1001, @doegox)

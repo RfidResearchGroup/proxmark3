@@ -32,7 +32,7 @@ find_package(PkgConfig)
 if (NOT SKIPQT EQUAL 1)
     if(APPLE AND EXISTS /usr/local/opt/qt5)
         # Homebrew installs Qt5 (up to at least 5.11.0) in
-        # /usr/local/qt5. Ensure that it can be found by CMake
+        # /usr/local/opt/qt5. Ensure that it can be found by CMake
         # since it is not in the default /usr/local prefix.
         # Add it to PATHS so that it doesn't override the
         # CMAKE_PREFIX_PATH environment variable.
@@ -40,6 +40,16 @@ if (NOT SKIPQT EQUAL 1)
         # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
         list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /usr/local/opt/qt5)
     endif(APPLE AND EXISTS /usr/local/opt/qt5)
+    if(APPLE AND EXISTS /opt/homebrew/opt/qt5)
+        # Homebrew on Apple Silicon installs Qt5 in
+        # /opt/homebrew/opt/qt5. Ensure that it can be found by CMake
+        # since it is not in the default /usr/local prefix.
+        # Add it to PATHS so that it doesn't override the
+        # CMAKE_PREFIX_PATH environment variable.
+        # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
+        # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
+        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt5)
+    endif(APPLE AND EXISTS /opt/homebrew/opt/qt5)
     set(QT_PACKAGELIST
         Qt5Core
         Qt5Widgets
@@ -77,8 +87,8 @@ endif (EMBED_READLINE OR EMBED_BZIP2)
 
 if (NOT SKIPREADLINE EQUAL 1)
     if (APPLE)
-      find_path(READLINE_INCLUDE_DIRS readline/readline.h /usr/local/opt/readline/include /opt/local/include /opt/include /usr/local/include /usr/include NO_DEFAULT_PATH)
-      find_library(READLINE_LIBRARIES readline /usr/local/opt/readline/lib /opt/local/lib /opt/lib /usr/local/lib /usr/lib NO_DEFAULT_PATH)
+      find_path(READLINE_INCLUDE_DIRS readline/readline.h /usr/local/opt/readline/include /opt/local/include /opt/include /usr/local/include /usr/include /opt/homebrew/opt/readline/include NO_DEFAULT_PATH)
+      find_library(READLINE_LIBRARIES readline /usr/local/opt/readline/lib /opt/local/lib /opt/lib /usr/local/lib /usr/lib /opt/homebrew/opt/readline/lib NO_DEFAULT_PATH)
     endif (APPLE)
     if (EMBED_READLINE)
         ExternalProject_Add(ncurses
