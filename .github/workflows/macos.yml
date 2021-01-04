@@ -12,12 +12,8 @@ jobs:
       - name: Set Git http.postBuffer to something high
         run: git config --global http.postBuffer 524288000
 
-      - name: handle homebrew quirks
-        run: |
-          brew uninstall openssl@1.0.2t
-          rm -rf /usr/local/etc/openssl
-          rm -rf /usr/local/etc/openssl@1.1
-          rm -rf /usr/local/bin/2to3
+      - name: Handle homebrew quirks
+        run: rm -rf /usr/local/bin/2to3
 
       - name: Update brew repos
         run: brew update
@@ -51,12 +47,8 @@ jobs:
       - name: Set Git http.postBuffer to something high
         run: git config --global http.postBuffer 524288000
 
-      - name: handle homebrew quirks
-        run: |
-          brew uninstall openssl@1.0.2t
-          rm -rf /usr/local/etc/openssl
-          rm -rf /usr/local/etc/openssl@1.1
-          rm -rf /usr/local/bin/2to3
+      - name: Handle homebrew quirks
+        run: rm -rf /usr/local/bin/2to3
 
       - name: Update brew repos
         run: brew update
@@ -91,12 +83,8 @@ jobs:
       - name: Set Git http.postBuffer to something high
         run: git config --global http.postBuffer 524288000
 
-      - name: handle homebrew quirks
-        run: |
-          brew uninstall openssl@1.0.2t
-          rm -rf /usr/local/etc/openssl
-          rm -rf /usr/local/etc/openssl@1.1
-          rm -rf /usr/local/bin/2to3
+      - name: Handle homebrew quirks
+        run: rm -rf /usr/local/bin/2to3
 
       - name: Update brew repos
         run: brew update
