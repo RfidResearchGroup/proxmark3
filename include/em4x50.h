@@ -52,6 +52,7 @@ typedef struct {
 
 typedef struct {
     bool check_field;
+    bool reset;
     int field;
     int cycles;
 } PACKED em4x50_test_t;

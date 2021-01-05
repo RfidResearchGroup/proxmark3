@@ -1247,7 +1247,8 @@ int CmdEM4x50Test(const char *Cmd) {
                   "lf em 4x50 test --field on   -> reader field on\n"
                   "lf em 4x50 test --field off  -> reader field off\n"
                   "lf em 4x50 test --check      -> check on/off status of reader field\n"
-                  "lf em 4x50 test --cycles 100  -> measure time of 100 field cycles\n"
+                  "lf em 4x50 test --cycles 100 -> measure time of 100 field cycles\n"
+                  "lf em 4x50 test --reset      -> intitiate reset command\n"
                  );
 
     void *argtable[] = {
@@ -1255,6 +1256,7 @@ int CmdEM4x50Test(const char *Cmd) {
         arg_str0(NULL, "field", "on/off", "field on/off"),
         arg_lit0(NULL, "check", "check if field is on or off"),
         arg_int0(NULL, "cycles", "<dec>", "number of field cycles"),
+        arg_lit0(NULL, "reset", "initiates a manual reset command"),
         arg_param_end
     };
 
@@ -1280,7 +1282,9 @@ int CmdEM4x50Test(const char *Cmd) {
     ett.check_field = arg_get_lit(ctx, 2);
     // option: cycles
     ett.cycles = arg_get_int_def(ctx, 3, 0);
-    
+    // option: reset
+    ett.reset = arg_get_lit(ctx, 4);
+
     CLIParserFree(ctx);
 
     // start
@@ -1295,8 +1299,13 @@ int CmdEM4x50Test(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Field switched " _GREEN_("on"));
         if (ett.check_field == 1)
             PrintAndLogEx(SUCCESS, "Field status evaluated");
+        if (ett.reset == 1)
+            PrintAndLogEx(SUCCESS, "reset command " _GREEN_("ok"));
     } else if (resp.status == 0) {
-        PrintAndLogEx(SUCCESS, "Field switched " _GREEN_("off"));
+        if (ett.field == 1)
+            PrintAndLogEx(SUCCESS, "Field switched " _GREEN_("off"));
+        if (ett.reset == 1)
+            PrintAndLogEx(SUCCESS, "reset command " _GREEN_("failed"));
     } else if (resp.status == -1) {
         PrintAndLogEx(INFO, "Nothing done");
     } else {
