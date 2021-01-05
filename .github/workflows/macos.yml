@@ -3,7 +3,7 @@ name: MacOS Build and Test
 on: [push, pull_request]
 
 jobs:
-  build-make:
+  macos-make:
     runs-on: macos-latest
 
     steps:
@@ -36,9 +36,9 @@ jobs:
       - name: Test
         run: make check
 
-  build-make-btaddon:
+  macos-make-btaddon:
     if: always()
-    needs: [build-make]
+    needs: [macos-make]
     runs-on: macos-latest
 
     steps:
@@ -72,9 +72,9 @@ jobs:
       - name: Test
         run: make check
 
-  build-cmake:
+  macos-cmake:
     if: always()
-    needs: [build-make, build-make-btaddon]
+    needs: [macos-make, macos-make-btaddon]
     runs-on: macos-latest
 
     steps:
