@@ -3,7 +3,7 @@ name: Ubuntu Build and Test
 on: [push, pull_request]
 
 jobs:
-  build-make:
+  ubuntu-make:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,9 +26,9 @@ jobs:
       - name: Test
         run: make check
 
-  build-make-btaddon:
+  ubuntu-make-btaddon:
     if: always()
-    needs: [build-make]
+    needs: [ubuntu-make]
     runs-on: ubuntu-latest
 
     steps:
@@ -52,9 +52,9 @@ jobs:
       - name: Test
         run: make check
 
-  build-cmake:
+  ubuntu-cmake:
     if: always()
-    needs: [build-make, build-make-btaddon]
+    needs: [ubuntu-make, ubuntu-make-btaddon]
     runs-on: ubuntu-latest
 
     steps:
