@@ -57,12 +57,17 @@
 
 int gHigh = 190;
 int gLow = 60;
+
+// a global parameter is needed to indicate whether a previous login was
+// successful, so operations that require authentication may be performed
+bool gLogin = 0;
+
 int gcount = 0;
 int gcycles = 0;
 int rm = 0;
 
-static bool em4x50_sim_send_listen_window(void);
-static void em4x50_sim_handle_command(uint8_t command);
+static bool em4x50_sim_send_listen_window(uint32_t *tag);
+static void em4x50_sim_handle_command(uint8_t command, uint32_t *tag);
 
 void catch_samples(void);
 
@@ -170,22 +175,19 @@ static void em4x50_setup_read(void) {
 
     // Enable Peripheral Clock for
     //   TIMER_CLOCK0, used to measure exact timing before answering
-    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0);// | (1 << AT91C_ID_TC1);
     AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
 
     // Disable timer during configuration
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 
     // TC0: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
     AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
-    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
 
     // TC1: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
 
     // Enable and reset counters
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
     // synchronized startup procedure
     while (AT91C_BASE_TC0->TC_CV > 0) {}; // wait until TC1 returned to zero
@@ -289,13 +291,11 @@ static bool invalid_bit(void) {
 
     // get sample at 3/4 of bit period
     wait_timer(T0 * EM4X50_T_TAG_THREE_QUARTER_PERIOD);
-    //wait_timer(T0 * EM4X50_T_TAG_HALF_PERIOD);
 
     uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
     // wait until end of bit period
     wait_timer(T0 * EM4X50_T_TAG_QUARTER_PERIOD);
-    //wait_timer(T0 * EM4X50_T_TAG_HALF_PERIOD);
 
     // bit in "undefined" state?
     if (sample <= gHigh && sample >= gLow)
@@ -522,18 +522,14 @@ static int request_receive_mode(void) {
 // If <bliw> is true then within the single listen window right after the
 // ack signal a RM request has to be sent.
 static bool check_ack(bool bliw) {
-    int cnt_pulses = 0;
-    
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    //while (cnt_pulses < EM4X50_T_WAITING_FOR_ACK) {
-    while (AT91C_BASE_TC0->TC_CV < T0 * 4 * EM4X50_T_TAG_FULL_PERIOD) {
-
+    int count_cycles = 0;
+    while (count_cycles < EM4X50_T_WAITING_FOR_ACK) {
         if (BUTTON_PRESS())
             return false;
         
         if (check_pulse_length(get_pulse_length(), 2 * EM4X50_T_TAG_FULL_PERIOD)) {
 
-            catch_samples();
+            //catch_samples();
             
             // The received signal is either ACK or NAK.
 
@@ -570,7 +566,7 @@ static bool check_ack(bool bliw) {
                 break;
             }
         }
-        cnt_pulses++;
+        count_cycles++;
     }
 
     return false;
@@ -919,6 +915,8 @@ static void em4x50_sim_send_nak(void) {
 
     SHORT_COIL();
     wait_cycles(EM4X50_T_TAG_HALF_PERIOD);
+
+    OPEN_COIL();
 }
 
 /*
@@ -969,68 +967,57 @@ static bool em4x50_sim_send_listen_window(void) {
 }
 */
 
-static void em4x50_sim_handle_login_command(void) {
+static void em4x50_sim_handle_login_command(uint32_t *tag) {
 
-    //uint8_t *em4x50_mem = BigBuf_get_EM_addr();
     uint32_t password = 0;
-    //uint32_t tag[EM4X50_NO_WORDS] = {0x0};
 
     // read password
     password = em4x50_sim_read_word();
 
-    //for (int i = 0; i < EM4X50_NO_WORDS; i++)
-    //    tag[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
-
     // processing pause time (corresponds to a "1" bit)
     em4x50_sim_send_bit(1);
 
-    em4x50_sim_send_ack();
-
-    /*
+    // empirically determined delay (to be examined seperately)
+    wait_cycles(1);
+    
     if (password == tag[0]) {
         em4x50_sim_send_ack();
+        gLogin = true;
     } else {
-        em4x50_sim_send_ack();
+        em4x50_sim_send_nak();
+        gLogin = false;
     }
-    */
     
     // continue with standard read mode
-    em4x50_sim_handle_command(0);
-    Dbprintf("password = %08x", password);
-    BigBuf_free();
+    em4x50_sim_handle_command(0, tag);
 }
 
-static void em4x50_sim_handle_reset_command(void) {
+static void em4x50_sim_handle_reset_command(uint32_t *tag) {
 
     // processing pause time (corresponds to a "1" bit)
     em4x50_sim_send_bit(1);
 
     // send ACK
     em4x50_sim_send_ack();
+    gLogin = false;
     
     // wait for tinit
-    wait_timer(T0 * EM4X50_T_TAG_TINIT);
-
+    wait_cycles(EM4X50_T_TAG_TINIT);
+    
     // continue with standard read mode
-    em4x50_sim_handle_command(0);
+    em4x50_sim_handle_command(0, tag);
 }
 
-static void em4x50_sim_handle_write_command(void) {
+static void em4x50_sim_handle_write_command(uint32_t *tag) {
 
-    uint8_t *em4x50_mem = BigBuf_get_EM_addr();
     uint8_t address = 0;
     uint32_t data = 0;
-    uint32_t tag[EM4X50_NO_WORDS] = {0x0};
 
     // read address
     address = em4x50_sim_read_byte_with_parity_check();
     // read data
     data = em4x50_sim_read_word();
     
-    for (int i = 0; i < EM4X50_NO_WORDS; i++) {
-        tag[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
-    }
-
     // extract necessary control data
     bool raw = (tag[EM4X50_CONTROL] >> CONFIG_BLOCK) & READ_AFTER_WRITE;
     // extract protection data
@@ -1041,7 +1028,7 @@ static void em4x50_sim_handle_write_command(void) {
     tag[address] = data;
     
     // write access time
-    wait_timer(T0 * EM4X50_T_TAG_TWA);
+    wait_cycles(EM4X50_T_TAG_TWA);
 
     if ((address >= fwrp) && (address <= lwrp)) {
         em4x50_sim_send_nak();
@@ -1055,28 +1042,24 @@ static void em4x50_sim_handle_write_command(void) {
     }
     
     // EEPROM write time
-    //wait_timer(T0 * EM4X50_T_TAG_TWEE);
+    wait_cycles(EM4X50_T_TAG_TWEE);
     
     em4x50_sim_send_ack();
 
     // if "read after write" (raw) bit is set, repeat written data once
     if (raw) {
-        em4x50_sim_send_listen_window();
-        em4x50_sim_send_listen_window();
+        em4x50_sim_send_listen_window(tag);
+        em4x50_sim_send_listen_window(tag);
         em4x50_sim_send_word(tag[address]);
     }
 
-    BigBuf_free();
-
     // continue with standard read mode
-    em4x50_sim_handle_command(0);
+    em4x50_sim_handle_command(0, tag);
 }
 
-static void em4x50_sim_handle_selective_read_command(void) {
+static void em4x50_sim_handle_selective_read_command(uint32_t *tag) {
 
-    uint8_t *em4x50_mem = BigBuf_get_EM_addr();
     uint32_t address = 0;
-    uint32_t tag[EM4X50_NO_WORDS] = {0x0};
 
     // read password
     address = em4x50_sim_read_word();
@@ -1084,10 +1067,6 @@ static void em4x50_sim_handle_selective_read_command(void) {
     // extract control data
     int fwr = address & 0xFF;           // first word read
     int lwr = (address >> 8) & 0xFF;    // last word read
-
-    for (int i = 0; i < EM4X50_NO_WORDS; i++) {
-        tag[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
-    }
 
     // extract protection data
     int fwrp = tag[EM4X50_PROTECTION] & 0xFF;         // first word read protected
@@ -1098,34 +1077,27 @@ static void em4x50_sim_handle_selective_read_command(void) {
 
     em4x50_sim_send_ack();
     
+    // iceman,  will need a usb cmd check to break as well
     while (BUTTON_PRESS() == false) {
 
         WDT_HIT();
-        em4x50_sim_send_listen_window();
+        em4x50_sim_send_listen_window(tag);
         for (int i = fwr; i <= lwr; i++) {
 
-            em4x50_sim_send_listen_window();
+            em4x50_sim_send_listen_window(tag);
 
-            if ((i >= fwrp) && (i <= lwrp)) {
+            // if not authenticated do not send read protected words
+            if ((gLogin == false) && (i >= fwrp) && (i <= lwrp)) {
                 em4x50_sim_send_word(0x00);
             } else {
                 em4x50_sim_send_word(tag[i]);
             }
         }
     }
-    
-    BigBuf_free();
 }
 
-static void em4x50_sim_handle_standard_read_command(void) {
+static void em4x50_sim_handle_standard_read_command(uint32_t *tag) {
     
-    uint8_t *em4x50_mem = BigBuf_get_EM_addr();
-    uint32_t tag[EM4X50_NO_WORDS] = {0x0};
-
-    for (int i = 0; i < EM4X50_NO_WORDS; i++) {
-        tag[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
-    }
-
     // extract control data
     int fwr = tag[CONFIG_BLOCK] & 0xFF;           // first word read
     int lwr = (tag[CONFIG_BLOCK] >> 8) & 0xFF;    // last word read
@@ -1133,13 +1105,14 @@ static void em4x50_sim_handle_standard_read_command(void) {
     int fwrp = tag[EM4X50_PROTECTION] & 0xFF;         // first word read protected
     int lwrp = (tag[EM4X50_PROTECTION] >> 8) & 0xFF;  // last word read protected
 
+    // iceman,  will need a usb cmd check to break as well
     while (BUTTON_PRESS() == false) {
 
         WDT_HIT();
-        em4x50_sim_send_listen_window();
+        em4x50_sim_send_listen_window(tag);
         for (int i = fwr; i <= lwr; i++) {
 
-            em4x50_sim_send_listen_window();
+            em4x50_sim_send_listen_window(tag);
 
             if ((i >= fwrp) && (i <= lwrp)) {
                 em4x50_sim_send_word(0x00);
@@ -1148,23 +1121,22 @@ static void em4x50_sim_handle_standard_read_command(void) {
             }
         }
     }
-    BigBuf_free();
 }
 
-static void em4x50_sim_handle_command(uint8_t command) {
+static void em4x50_sim_handle_command(uint8_t command, uint32_t *tag) {
     
     switch (command) {
 
         case EM4X50_COMMAND_LOGIN:
-            em4x50_sim_handle_login_command();
+            em4x50_sim_handle_login_command(tag);
             break;
 
         case EM4X50_COMMAND_RESET:
-            em4x50_sim_handle_reset_command();
+            em4x50_sim_handle_reset_command(tag);
             break;
 
         case EM4X50_COMMAND_WRITE:
-            em4x50_sim_handle_write_command();
+            em4x50_sim_handle_write_command(tag);
             break;
 
         case EM4X50_COMMAND_WRITE_PASSWORD:
@@ -1172,17 +1144,17 @@ static void em4x50_sim_handle_command(uint8_t command) {
             break;
 
         case EM4X50_COMMAND_SELECTIVE_READ:
-            em4x50_sim_handle_selective_read_command();
+            em4x50_sim_handle_selective_read_command(tag);
             break;
 
         default:
-            em4x50_sim_handle_standard_read_command();
+            em4x50_sim_handle_standard_read_command(tag);
             break;
     }
 }
 
 // reader requests receive mode (rm) by sending two zeros
-static void check_rm_request(void) {
+static void check_rm_request(uint32_t *tag) {
     
     int cond = EM4X50_T_TAG_FULL_PERIOD - EM4X50_TAG_TOLERANCE;
     
@@ -1194,12 +1166,12 @@ static void check_rm_request(void) {
 
             // read mode request detected, get command from reader
             uint8_t command = em4x50_sim_read_byte_with_parity_check();
-            em4x50_sim_handle_command(command);
+            em4x50_sim_handle_command(command, tag);
         }
     }
 }
 
-static bool em4x50_sim_send_listen_window(void) {
+static bool em4x50_sim_send_listen_window(uint32_t *tag) {
 
     SHORT_COIL();
     wait_cycles(EM4X50_T_TAG_HALF_PERIOD);
@@ -1211,7 +1183,7 @@ static bool em4x50_sim_send_listen_window(void) {
     wait_cycles(2 * EM4X50_T_TAG_FULL_PERIOD);
 
     OPEN_COIL();
-    check_rm_request();
+    check_rm_request(tag);
 
     SHORT_COIL();
     wait_cycles(EM4X50_T_TAG_FULL_PERIOD);
@@ -1230,7 +1202,7 @@ static bool login(uint32_t password) {
         // send password
         em4x50_reader_send_word(password);
 
-        wait_timer(T0 * EM4X50_T_TAG_TPP);
+        wait_timer(T0 * (EM4X50_T_TAG_TPP));
 
         // check if ACK is returned
         if (check_ack(false)) {
@@ -1377,7 +1349,7 @@ static int reset(void) {
 
         // send reset command
         em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_RESET);
-
+        
         if (check_ack(false))
             return PM3_SUCCESS;
 
@@ -1674,60 +1646,36 @@ void em4x50_writepwd(em4x50_data_t *etd) {
 }
 
 // simulate uploaded data in emulator memory
-// (currently simulation allows only a one-way communication)
 void em4x50_sim() {
     int status = PM3_SUCCESS;
     uint8_t *em4x50_mem = BigBuf_get_EM_addr();
-    uint32_t words[EM4X50_NO_WORDS] = {0x0};
+    uint32_t tag[EM4X50_NO_WORDS] = {0x0};
 
     for (int i = 0; i < EM4X50_NO_WORDS; i++)
-        words[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
+        tag[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
 
     // only if valid em4x50 data (e.g. uid == serial)
-    if (words[EM4X50_DEVICE_SERIAL] != words[EM4X50_DEVICE_ID]) {
+    if (tag[EM4X50_DEVICE_SERIAL] != tag[EM4X50_DEVICE_ID]) {
 
+        // init
         em4x50_setup_sim();
+        gLogin = false;
 
-        em4x50_sim_handle_command(0);
+        // start with inital command = standard read mode (= 0)
+        em4x50_sim_handle_command(0, tag);
         
-        /*
-        // extract control data
-        int fwr = words[CONFIG_BLOCK] & 0xFF;           // first word read
-        int lwr = (words[CONFIG_BLOCK] >> 8) & 0xFF;    // last word read
-        // extract protection data
-        int fwrp = words[EM4X50_PROTECTION] & 0xFF;         // first word read protected
-        int lwrp = (words[EM4X50_PROTECTION] >> 8) & 0xFF;  // last word read protected
-
-        // iceman,  will need a usb cmd check to break as well
-        while (BUTTON_PRESS() == false) {
-
-            rm = 0;
-            WDT_HIT();
-            em4x50_sim_send_listen_window();
-            for (int i = fwr; i <= lwr; i++) {
-
-                em4x50_sim_send_listen_window();
-
-                if ((i >= fwrp) && (i <= lwrp))
-                    em4x50_sim_send_word(0x00);
-                else
-                    em4x50_sim_send_word(words[i]);
-            }
-        }
-         */
     } else {
         status = PM3_ENODATA;
     }
 
     BigBuf_free();
     lf_finalize();
-    
     reply_ng(CMD_LF_EM4X50_SIM, status, NULL, 0);
 }
 
 void em4x50_test(em4x50_test_t *ett) {
 
-    int status = PM3_EFAILED;
+    int status = 0;
 
     // set field on or off
     if (ett->field != -1) {
@@ -1791,25 +1739,21 @@ void em4x50_test(em4x50_test_t *ett) {
         }
 
     }
-    
-    em4x50_setup_sim();
-    for (;;) {
-        em4x50_sim_send_listen_window();
-        em4x50_sim_send_listen_window();
-        em4x50_sim_send_bit(0);
-        em4x50_sim_send_bit(0);
-        em4x50_sim_send_bit(0);
-        em4x50_sim_send_ack();
-        em4x50_sim_send_ack();
-        em4x50_sim_send_bit(0);
-        em4x50_sim_send_bit(0);
-        em4x50_sim_send_bit(0);
-        em4x50_sim_send_nak();
-        em4x50_sim_send_nak();
-        em4x50_sim_send_bit(0);
-        em4x50_sim_send_bit(0);
-        em4x50_sim_send_bit(0);
+        
+    // perform reset
+    if (ett->reset) {
+        em4x50_setup_read();
+
+        status = PM3_EFAILED;
+        if (get_signalproperties() && find_em4x50_tag()) {
+
+            if (reset() == PM3_SUCCESS) {
+                status = 1;
+            }
+        }
+
+        lf_finalize();
     }
-    
+
     reply_ng(CMD_LF_EM4X50_TEST, status, NULL, 0);
 }
