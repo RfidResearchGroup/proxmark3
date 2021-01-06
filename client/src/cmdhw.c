@@ -508,9 +508,9 @@ static int CmdReset(const char *Cmd) {
 static int CmdSetDivisor(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hw setdivisor",
+    CLIParserInit(&ctx, "hw setlfdivisor",
                   "Drive LF antenna at 12 MHz / (divisor + 1).",
-                  "hw setdivisor -d 88"
+                  "hw setlfdivisor -d 88"
                  );
 
     void *argtable[] = {
@@ -523,7 +523,7 @@ static int CmdSetDivisor(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (arg < 19) {
-        PrintAndLogEx(ERR, "divisor must be between" _YELLOW_("19") " and " _YELLOW_("255"));
+        PrintAndLogEx(ERR, "Divisor must be between" _YELLOW_("19") " and " _YELLOW_("255"));
         return PM3_EINVARG;
     }
     // 12 000 000 (12MHz)
