@@ -1211,25 +1211,43 @@ int CmdEM4x50Restore(const char *Cmd) {
 }
 
 int CmdEM4x50Sim(const char *Cmd) {
+    
+    uint32_t password = 0;
+    
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 sim",
                   "Simulates a EM4x50 tag.\n"
                   "Upload using `lf em 4x50 eload`",
                   "lf em 4x50 sim"
+                  "lf em 4x50 sim -p 27182818   -> uses password for eload data"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_str0("p", "passsword", "<hex>", "password, 4 bytes, lsb"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int pwd_len = 0;
+    uint8_t pwd[4] = {0};
+    CLIGetHexWithReturn(ctx, 1, pwd, &pwd_len);
+    CLIParserFree(ctx);
+
+    if (pwd_len) {
+        if (pwd_len != 4) {
+            PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwd_len);
+            return PM3_EINVARG;
+        } else {
+            password = BYTES2UINT32(pwd);
+        }
+    }
     CLIParserFree(ctx);
 
     PrintAndLogEx(INFO, "Simulating data from emulator memory");
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_SIM, NULL, 0);
+    SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&password, sizeof(password));
     PacketResponseNG resp;
     WaitForResponse(CMD_LF_EM4X50_SIM, &resp);
     if (resp.status == PM3_SUCCESS)
