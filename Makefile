@@ -46,7 +46,7 @@ ifneq (,$(INSTALLTOOLS))
 endif
 ifneq (,$(INSTALLSIMFW))
 	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
-	$(Q)$(CP) $(foreach fw,$(INSTALLSIMFW),tools/simmodule/$(fw)) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
+	$(Q)$(CP) $(foreach fw,$(INSTALLSIMFW),client/resources/$(fw)) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
 endif
 ifeq ($(platform),Linux)
 	$(Q)$(MKDIR) $(DESTDIR)$(UDEV_PREFIX)
