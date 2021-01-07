@@ -221,7 +221,7 @@ while true; do
     if $TESTALL || $TESTCOMMON; then
       echo -e "\n${C_BLUE}Testing common:${C_NC}"
       if ! CheckFileExist "hardnested tables exists"       "./client/resources/hardnested_tables/bitflip_0_001_states.bin.bz2"; then break; fi
-      if ! CheckFileExist "simmodule fw file exists"       "./tools/simmodule/sim011.bin"; then break; fi
+      if ! CheckFileExist "simmodule fw file exists"       "./client/resources/sim011.bin"; then break; fi
       echo -e "\n${C_BLUE}Testing tools:${C_NC}"
       if ! CheckExecute "xorcheck test"                    "tools/xorcheck.py 04 00 80 64 ba" "final LRC XOR byte value: 5A"; then break; fi
       if ! CheckExecute "findbits test"                    "tools/findbits.py 73 0110010101110011" "Match at bit 9: 011001010"; then break; fi
