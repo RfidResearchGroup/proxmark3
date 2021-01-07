@@ -1,7 +1,5 @@
 clear
 pref
-analyse lcr
-analyse crc
 analyse chksum
 analyse dates
 analyse tea
