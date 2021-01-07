@@ -338,8 +338,8 @@ static int smart_response(uint8_t *data) {
 
 static int CmdSmartRaw(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "smart brute",
-                  "Tries to bruteforce SFI, using a known list of AID's",
+    CLIParserInit(&ctx, "smart raw",
+                  "Sends raw bytes to card",
                   "smart raw -s -0 -d 00a404000e315041592e5359532e4444463031  -> `1PAY.SYS.DDF01` PPSE directory with get ATR\n"
                   "smart raw -0 -d 00a404000e325041592e5359532e4444463031     -> `2PAY.SYS.DDF01` PPSE directory\n"
                   "smart raw -0 -t -d 00a4040007a0000000041010                -> Mastercard\n"
