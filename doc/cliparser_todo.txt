@@ -141,10 +141,5 @@ lf t55xx recoverpw
 lf t55xx sniff
 lf t55xx special
 lf t55xx wipe
-smart info
-smart reader
 smart raw
-smart upgrade
-smart setclock
-smart brute
 script run

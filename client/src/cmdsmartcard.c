@@ -26,36 +26,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_sm_raw(void) {
-    PrintAndLogEx(NORMAL, "Usage: smart raw [h|r|c] d <0A 0B 0C ... hex>");
-    PrintAndLogEx(NORMAL, "       h          :  this help");
-    PrintAndLogEx(NORMAL, "       r          :  do not read response");
-    PrintAndLogEx(NORMAL, "       a          :  active smartcard without select (reset sc module)");
-    PrintAndLogEx(NORMAL, "       s          :  active smartcard with select (get ATR)");
-    PrintAndLogEx(NORMAL, "       t          :  executes TLV decoder if it possible");
-    PrintAndLogEx(NORMAL, "       0          :  use protocol T=0");
-    PrintAndLogEx(NORMAL, "       d <bytes>  :  bytes to send");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        smart raw s 0 d 00a404000e315041592e5359532e4444463031  - `1PAY.SYS.DDF01` PPSE directory with get ATR");
-    PrintAndLogEx(NORMAL, "        smart raw 0 d 00a404000e325041592e5359532e4444463031    - `2PAY.SYS.DDF01` PPSE directory");
-    PrintAndLogEx(NORMAL, "        smart raw 0 t d 00a4040007a0000000041010              - Mastercard");
-    PrintAndLogEx(NORMAL, "        smart raw 0 t d 00a4040007a0000000031010                - Visa");
-    return PM3_SUCCESS;
-}
-
-static int usage_sm_brute(void) {
-    PrintAndLogEx(NORMAL, "Tries to bruteforce SFI, using a known list of AID's ");
-    PrintAndLogEx(NORMAL, "Usage: smart brute [h]");
-    PrintAndLogEx(NORMAL, "       h          :  this help");
-    PrintAndLogEx(NORMAL, "       t          :  executes TLV decoder if it possible");
-//  PrintAndLogEx(NORMAL, "       0          :  use protocol T=0");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        smart brute t");
-    return PM3_SUCCESS;
-}
-
 static int smart_loadjson(const char *preferredName, json_t **root) {
 
     json_error_t error;
@@ -367,67 +337,42 @@ static int smart_response(uint8_t *data) {
 }
 
 static int CmdSmartRaw(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "smart brute",
+                  "Tries to bruteforce SFI, using a known list of AID's",
+                  "smart raw -s -0 -d 00a404000e315041592e5359532e4444463031  -> `1PAY.SYS.DDF01` PPSE directory with get ATR\n"
+                  "smart raw -0 -d 00a404000e325041592e5359532e4444463031     -> `2PAY.SYS.DDF01` PPSE directory\n"
+                  "smart raw -0 -t -d 00a4040007a0000000041010                -> Mastercard\n"
+                  "smart raw -0 -t -d 00a4040007a0000000031010                -> Visa"
+                 );
 
-    int hexlen = 0;
-    bool active = false;
-    bool active_select = false;
-    bool useT0 = false;
-    uint8_t cmdp = 0;
-    bool errors = false, reply = true, decodeTLV = false, breakloop = false;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("r", NULL, "do not read response"),
+        arg_lit0("a", NULL, "active smartcard without select (reset sc module)"),
+        arg_lit0("s", NULL, "active smartcard with select (get ATR)"),
+        arg_lit0("t", "tlv", "executes TLV decoder if it possible"),
+        arg_lit0("0", NULL, "use protocol T=0"),
+        arg_str1("d", "data", "<hex>", "bytes to send"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool reply = arg_get_lit(ctx, 1);
+    bool active = arg_get_lit(ctx, 2);
+    bool active_select = arg_get_lit(ctx, 3);
+    bool decode_tlv = arg_get_lit(ctx, 4);
+    bool use_t0 = arg_get_lit(ctx, 5);
+
+    int dlen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 6), data, sizeof(data), &dlen);
+    CLIParserFree(ctx);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_sm_raw();
-            case 'r':
-                reply = false;
-                cmdp++;
-                break;
-            case 'a':
-                active = true;
-                cmdp++;
-                break;
-            case 's':
-                active_select = true;
-                cmdp++;
-                break;
-            case 't':
-                decodeTLV = true;
-                cmdp++;
-                break;
-            case '0':
-                useT0 = true;
-                cmdp++;
-                break;
-            case 'd': {
-                switch (param_gethex_to_eol(Cmd, cmdp + 1, data, sizeof(data), &hexlen)) {
-                    case 1:
-                        PrintAndLogEx(WARNING, "Invalid HEX value.");
-                        return PM3_EINVARG;
-                    case 2:
-                        PrintAndLogEx(WARNING, "Too many bytes.  Max %zu bytes", sizeof(data));
-                        return PM3_EINVARG;
-                    case 3:
-                        PrintAndLogEx(WARNING, "Hex must have even number of digits.");
-                        return PM3_EINVARG;
-                }
-                cmdp++;
-                breakloop = true;
-                break;
-            }
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-
-        if (breakloop)
-            break;
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
     }
-
-    //Validations
-    if (errors || cmdp == 0) return usage_sm_raw();
 
     uint8_t flags = SC_LOG;
     if (active || active_select) {
@@ -437,15 +382,15 @@ static int CmdSmartRaw(const char *Cmd) {
             flags |= SC_SELECT;
     }
 
-    if (hexlen > 0) {
-        if (useT0)
+    if (dlen > 0) {
+        if (use_t0)
             flags |= SC_RAW_T0;
         else
             flags |= SC_RAW;
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_SMART_RAW, flags, hexlen, 0, data, hexlen);
+    SendCommandOLD(CMD_SMART_RAW, flags, dlen, 0, data, dlen);
 
     // reading response from smart card
     if (reply) {
@@ -464,13 +409,13 @@ static int CmdSmartRaw(const char *Cmd) {
             data[4] = buf[1];
 
             clearCommandBuffer();
-            SendCommandMIX(CMD_SMART_RAW, 0, hexlen, 0, data, hexlen);
+            SendCommandMIX(CMD_SMART_RAW, 0, dlen, 0, data, dlen);
             len = smart_response(buf);
 
             data[4] = 0;
         }
 
-        if (decodeTLV && len > 4)
+        if (decode_tlv && len > 4)
             TLVPrintFromBuffer(buf, len - 2);
         else {
             if (len > 16) {
@@ -488,8 +433,6 @@ static int CmdSmartRaw(const char *Cmd) {
 }
 
 static int CmdSmartUpgrade(const char *Cmd) {
-
-
     PrintAndLogEx(INFO, "-------------------------------------------------------------------");
     PrintAndLogEx(WARNING, _RED_("WARNING") " - sim module firmware upgrade");
     PrintAndLogEx(WARNING, _RED_("A dangerous command, do wrong and you could brick the sim module"));
@@ -964,33 +907,22 @@ static void smart_brute_options(bool decodeTLV) {
 }
 
 static int CmdSmartBruteforceSFI(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "smart brute",
+                  "Tries to bruteforce SFI, using a known list of AID's",
+                  "smart brute -t"
+                 );
 
-    uint8_t cmdp = 0;
-    bool errors = false, decodeTLV = false; //, useT0 = false;
-
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_sm_brute();
-            case 't':
-                decodeTLV = true;
-                cmdp++;
-                break;
-            /*
-                    case '0':
-                        useT0 = true;
-                        cmdp++;
-                        break;
-            */
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-
-    //Validations
-    if (errors) return usage_sm_brute();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("t", "tlv", "executes TLV decoder if it possible"),
+//        arg_lit0("0", NULL, "use protocol T=0"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool decode_tlv = arg_get_lit(ctx, 1);
+//    bool use_t0 = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
 
     const char *SELECT = "00a40400%02zu%s";
 
@@ -1083,11 +1015,11 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 
         PrintAndLogEx(SUCCESS, "\nAID %s | %s | %s", aid, vendor, name);
 
-        smart_brute_options(decodeTLV);
+        smart_brute_options(decode_tlv);
 
         smart_brute_prim();
 
-        smart_brute_sfi(decodeTLV);
+        smart_brute_sfi(decode_tlv);
 
         PrintAndLogEx(SUCCESS, "\nSFI brute force done\n");
     }
@@ -1108,7 +1040,7 @@ static command_t CommandTable[] = {
     {"info",     CmdSmartInfo,          IfPm3Smartcard,  "Tag information"},
     {"reader",   CmdSmartReader,        IfPm3Smartcard,  "Act like an IS07816 reader"},
     {"raw",      CmdSmartRaw,           IfPm3Smartcard,  "Send raw hex data to tag"},
-    {"upgrade",  CmdSmartUpgrade,       AlwaysAvailable,  "Upgrade sim module firmware"},
+    {"upgrade",  CmdSmartUpgrade,       AlwaysAvailable, "Upgrade sim module firmware"},
     {"setclock", CmdSmartSetClock,      IfPm3Smartcard,  "Set clock speed"},
     {"brute",    CmdSmartBruteforceSFI, IfPm3Smartcard,  "Bruteforce SFI"},
     {NULL, NULL, NULL, NULL}
