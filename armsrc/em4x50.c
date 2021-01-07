@@ -60,9 +60,9 @@ int gLow = 60;
 
 // a global parameter is needed to indicate whether a previous login was
 // successful, so operations that require authentication may be performed
-bool gLogin = 0;
+bool gLogin = false;
 // additionally a global variable to identify the WritePassword process
-bool gWritePasswordProcess = 0;
+bool gWritePasswordProcess = false;
 
 int gcount = 0;
 int gcycles = 0;
@@ -777,12 +777,35 @@ static bool em4x50_sim_send_word(uint32_t word) {
 
 static int wait_cycles(int maxperiods) {
 
-    int period = 0;
+    int period = 0, check = 0;
 
     while (period < maxperiods) {
         
-        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
-        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
+            WDT_HIT();
+            
+            if (check == 1000) {
+                if (BUTTON_PRESS()) {
+                    malsehn(PM3_SUCCESS);
+                }
+                check = 0;
+            }
+            ++check;
+        }
+
+        check = 0;
+        
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+            WDT_HIT();
+            
+            if (check == 1000) {
+                if (BUTTON_PRESS()) {
+                    malsehn(PM3_SUCCESS);
+                }
+                check = 0;
+            }
+            ++check;
+        }
         
         period++;
     }
@@ -830,19 +853,19 @@ static uint8_t em4x50_sim_read_byte(void) {
     return byte;
 }
 
-static uint8_t em4x50_sim_read_byte_with_parity_check(void) {
+static bool em4x50_sim_read_byte_with_parity_check(uint8_t *byte) {
     
-    uint8_t byte = 0, parity = 0, pval = 0;
+    uint8_t parity = 0, pval = 0;
     
     for (int i = 0; i < 8; i++) {
-        byte <<= 1;
-        byte |= em4x50_sim_read_bit();
-        parity ^= (byte & 1);
+        *byte <<= 1;
+        *byte |= em4x50_sim_read_bit();
+        parity ^= ((*byte) & 1);
     }
         
     pval = em4x50_sim_read_bit();
 
-    return (parity == pval) ? byte : 0;
+    return (parity == pval);
 }
 
 static bool em4x50_sim_read_word(uint32_t *word) {
@@ -852,7 +875,7 @@ static bool em4x50_sim_read_word(uint32_t *word) {
 
     // read plain data
     for (int i = 0; i < 4; i++) {
-        bytes[i] = em4x50_sim_read_byte_with_parity_check();
+         em4x50_sim_read_byte_with_parity_check(&bytes[i]);
     }
         
     // read column parities and stop bit
@@ -1017,7 +1040,7 @@ static void em4x50_sim_handle_write_command(uint32_t *tag) {
 
     // read address
     uint8_t address = 0;
-    address = em4x50_sim_read_byte_with_parity_check();
+    bool addr_ok = em4x50_sim_read_byte_with_parity_check(&address);
     // read data
     uint32_t data = 0;
     bool word_ok = em4x50_sim_read_word(&data);
@@ -1025,7 +1048,7 @@ static void em4x50_sim_handle_write_command(uint32_t *tag) {
     // write access time
     wait_cycles(EM4X50_T_TAG_TWA);
 
-    if (word_ok == false) {
+    if ((addr_ok == false) || (word_ok == false)) {
         em4x50_sim_send_nak();
         em4x50_sim_handle_command(0, tag);
     }
@@ -1286,7 +1309,8 @@ static void check_rm_request(uint32_t *tag) {
                 em4x50_sim_handle_command(EM4X50_COMMAND_WRITE_PASSWORD, tag);
             } else {
                 // read mode request detected, get command from reader
-                uint8_t command = em4x50_sim_read_byte_with_parity_check();
+                uint8_t command = 0;
+                em4x50_sim_read_byte_with_parity_check(&command);
                 em4x50_sim_handle_command(command, tag);
             }
         }
@@ -1682,7 +1706,13 @@ static int write_password(uint32_t password, uint32_t new_password) {
                 wait_timer(T0 * EM4X50_T_TAG_TWA);
 
                 if (check_ack(false)) {
-                    //Dbprintf("zweites ack");
+
+                    // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time)
+                    // for saving data and should return with ACK
+                    for (int i = 0; i < 50; i++) {
+                        wait_timer(T0 * EM4X50_T_TAG_FULL_PERIOD);
+                    }
+
                     if (check_ack(false)) {
                         return PM3_SUCCESS;
                     }
@@ -1777,7 +1807,9 @@ void em4x50_writepwd(em4x50_data_t *etd) {
 
 // simulate uploaded data in emulator memory
 void em4x50_sim(uint32_t *password) {
+    
     int status = PM3_SUCCESS;
+    
     uint8_t *em4x50_mem = BigBuf_get_EM_addr();
     uint32_t tag[EM4X50_NO_WORDS] = {0x0};
 
