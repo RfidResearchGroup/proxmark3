@@ -652,7 +652,7 @@ pm3 --> mem load -f iclass_default_keys --iclass
 
 Upgrade Sim Module firmware
 ```
-pm3 --> smart upgrade f ../tools/simmodule/sim011.bin
+pm3 --> smart upgrade -f sim011.bin
 ```
 
 ## Smart Card
@@ -668,38 +668,41 @@ Act like an IS07816 reader
 pm3 --> smart reader
 ```
 
-Set clock speed
+Set clock speed for smart card interface
 ```
 Options
 ---
-c <speed>       : clockspeed (0 = 16MHz, 1=8MHz, 2=4MHz)
+    --16mhz                    16 MHz clock speed
+    --8mhz                     8 MHz clock speed
+    --4mhz                     4 MHz clock speed
 
-pm3 --> smart setclock c 2
+
+pm3 --> smart setclock --8mhz
 ```
 
 Send raw hex data
 ```
 Options
 ---
-r           : do not read response
-a           : active smartcard without select (reset smart module)
-s           : active smartcard with select (get ATR)
-t           : executes TLV decoder if it possible
-0           : use protocol T=0
-d <bytes>   : bytes to send
+-r                             do not read response
+-a                             active smartcard without select (reset sc module)
+-s                             active smartcard with select (get ATR)
+-t, --tlv                      executes TLV decoder if it possible
+-0                             use protocol T=0
+-d, --data <hex>               bytes to send
 
-pm3 --> smart raw s 0 d 00a404000e315041592e5359532e4444463031 : 1PAY.SYS.DDF01 PPSE directory with get ATR
-pm3 --> smart raw 0 d 00a404000e325041592e5359532e4444463031   : 2PAY.SYS.DDF01 PPSE directory
-pm3 --> smart raw 0 t d 00a4040007a0000000041010               : Mastercard
-pm3 --> smart raw 0 t d 00a4040007a0000000031010               : Visa
+pm3 --> smart raw -s -0 -d 00a404000e315041592e5359532e4444463031
+pm3 --> smart raw -0 -d 00a404000e325041592e5359532e4444463031
+pm3 --> smart raw -0 -t -d 00a4040007a0000000041010
+pm3 --> smart raw -0 -t -d 00a4040007a0000000031010
 ````
 
 Bruteforce SPI
 ```
 Options
 ---
-t          : executes TLV decoder if it possible
+-t, --tlv                      executes TLV decoder if it possible
 
 pm3 --> smart brute
-pm3 --> smart brute t
+pm3 --> smart brute --tlv
 ```
