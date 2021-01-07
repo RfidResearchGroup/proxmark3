@@ -13,63 +13,16 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
-
 #include "cmdparser.h"    // command_t
-#include "commonutil.h"  // ARRAYLEN
+#include "cliparser.h"    // 
+#include "commonutil.h"   // ARRAYLEN
 #include "comms.h"
 #include "util_posix.h"
 #include "usart_defs.h"
 #include "ui.h"           // PrintAndLog
 
+
 static int CmdHelp(const char *Cmd);
-
-static int usage_usart_bt_pin(void) {
-    PrintAndLogEx(NORMAL, "Change BT add-on PIN");
-    PrintAndLogEx(NORMAL, "WARNING: this requires");
-    PrintAndLogEx(NORMAL, "      1) BTpower to be turned ON");
-    PrintAndLogEx(NORMAL, "      2) BT add-on to NOT be connected");
-    PrintAndLogEx(NORMAL, "      => the add-on blue LED must blink");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  usart btpin [h] d NNNN");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           d NNNN     Desired PIN");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "      usart btpin d 1234");
-    PrintAndLogEx(NORMAL, "expected output: nothing");
-    return PM3_SUCCESS;
-}
-
-static int usage_usart_bt_factory(void) {
-    PrintAndLogEx(NORMAL, "Reset BT add-on to factory settings");
-    PrintAndLogEx(NORMAL, _RED_("WARNING: process only if strictly needed!"));
-    PrintAndLogEx(NORMAL, "This requires");
-    PrintAndLogEx(NORMAL, "      1) BTpower to be turned ON");
-    PrintAndLogEx(NORMAL, "      2) BT add-on to NOT be connected");
-    PrintAndLogEx(NORMAL, "      => the add-on blue LED must blink");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  usart btfactory [h]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    return PM3_SUCCESS;
-}
-
-static int usage_usart_tx(void) {
-    PrintAndLogEx(NORMAL, "Send string over USART");
-    PrintAndLogEx(NORMAL, _RED_("WARNING: it will have side-effects if used in USART HOST mode!"));
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  usart tx [h] d \"string\"");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           d string   string to send");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      usart tx d \"AT+VERSION\"");
-    PrintAndLogEx(NORMAL, "      usart tx d \"AT+VERSION\\r\\n\"");
-    PrintAndLogEx(NORMAL, "expected output: nothing");
-    return PM3_SUCCESS;
-}
 
 static int usage_usart_txhex(void) {
     PrintAndLogEx(NORMAL, "Send bytes over USART");
@@ -292,28 +245,30 @@ static int usart_bt_testcomm(uint32_t baudrate, uint8_t parity) {
 }
 
 static int CmdUsartBtFactory(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "usart btfactory",
+                  "Reset BT add-on to factory settings\n"
+                  "WARNING: process only if strictly needed!\n"
+                  "This requires\n"
+                  "    1) BTpower to be turned ON\n"
+                  "    2) BT add-on to NOT be connected\n"
+                  "      => the add-on blue LED must blink",
+                  "usart btfactory"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
 // take care to define compatible settings:
 # define BTADDON_BAUD_AT  "AT+BAUD8"
 # define BTADDON_BAUD_NUM "115200"
-    uint8_t cmdp = 0;
-    bool errors = false;
+
     uint32_t baudrate = 0;
     uint8_t parity = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_usart_bt_factory();
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-    //Validations
-    if (errors) {
-        usage_usart_bt_factory();
-        return PM3_EINVARG;
-    }
 
     if (USART_BAUD_RATE != atoi(BTADDON_BAUD_NUM)) {
         PrintAndLogEx(WARNING, _RED_("WARNING:") " current Proxmark3 firmware has default USART baudrate = %i", USART_BAUD_RATE);
@@ -476,42 +431,39 @@ static int CmdUsartBtFactory(const char *Cmd) {
 }
 
 static int CmdUsartBtPin(const char *Cmd) {
-    uint8_t cmdp = 0;
-    bool errors = false;
-    char pin[5] = {0};
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "usart btpin",
+                  "Change BT add-on PIN.\n"
+                  "WARNING: this requires\n"
+                  "    1) BTpower to be turned ON\n"
+                  "    2) BT add-on to NOT be connected\n"
+                  "      => the add-on blue LED must blink",
+                  "usart btpin -p 1234"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_usart_bt_pin();
-            case 'd':
-                if (param_getstr(Cmd, cmdp + 1, pin, sizeof(pin)) != sizeof(pin) - 1) {
-                    PrintAndLogEx(FAILED, "PIN has wrong length, must be 4 digits");
-                    errors = true;
-                    break;
-                }
-                for (size_t i = 0; i < sizeof(pin) - 1; i++) {
-                    if ((pin[i] < '0') || (pin[i] > '9')) {
-                        PrintAndLogEx(FAILED, "PIN has wrong char \"%c\", must be 4 digits", pin[i]);
-                        errors = true;
-                        break;
-                    }
-                }
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("p", "pin", "<dec>", "Desired PIN number (4 digits)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int plen = 4;
+    char pin[5] = { 0, 0 ,0, 0, 0 };
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)pin, sizeof(pin), &plen);
+    CLIParserFree(ctx);
+
+    if (plen != 4) {
+        PrintAndLogEx(FAILED, "PIN must be 4 digits");
+        return PM3_EINVARG;        
+    }
+
+    for (uint8_t i = 0; i < plen; i++) {
+        if (isdigit(pin[i]) == false) {
+            PrintAndLogEx(FAILED, "PIN must be 4 digits");
+            return PM3_EINVARG;        
         }
     }
-
-    //Validations
-    if (errors || cmdp == 0) {
-        usage_usart_bt_pin();
-        return PM3_EINVARG;
-    }
-
+   
     char string[6 + sizeof(pin)] = {0};
     sprintf(string, "AT+PIN%s", pin);
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
@@ -537,63 +489,57 @@ static int CmdUsartBtPin(const char *Cmd) {
 }
 
 static int CmdUsartTX(const char *Cmd) {
-    uint8_t cmdp = 0;
-    bool errors = false;
-    char string[PM3_CMD_DATA_SIZE] = {0};
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "usart tx",
+                  "Send string over USART.\n"
+                  "WARNING:  it will have side-effects if used in USART HOST mode!",
+                  "usart tx -d \"AT+VERSION\"\n"
+                  "usart tx -d \"AT+VERSION\\r\\n\""
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_usart_tx();
-            case 'd':
-                if (param_getstr(Cmd, cmdp + 1, string, sizeof(string)) >= sizeof(string)) {
-                    PrintAndLogEx(FAILED, "String too long");
-                    errors = true;
-                    break;
-                }
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-    //Validations
-    if (errors || cmdp == 0) {
-        usage_usart_tx();
-        return PM3_EINVARG;
-    }
-    char string2[PM3_CMD_DATA_SIZE] = {0};
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", NULL, "string to send"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int slen = 0;
+    char s[PM3_CMD_DATA_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)s, sizeof(s), &slen);
+    CLIParserFree(ctx);
+
+    char clean[PM3_CMD_DATA_SIZE] = {0};
     size_t i2 = 0;
-    size_t n = strlen(string);
+    size_t n = strlen(s);
+
+    // strip / replace 
     for (size_t i = 0; i < n; i++) {
-        if ((i < n - 1) && (string[i] == '\\') && (string[i + 1] == '\\')) {
+        if ((i < n - 1) && (s[i] == '\\') && (s[i + 1] == '\\')) {
             i++;
-            string2[i2++] = '\\';
+            clean[i2++] = '\\';
             continue;
         }
-        if ((i < n - 1) && (string[i] == '\\') && (string[i + 1] == '"')) {
+        if ((i < n - 1) && (s[i] == '\\') && (s[i + 1] == '"')) {
             i++;
-            string2[i2++] = '"';
+            clean[i2++] = '"';
             continue;
         }
-        if (string[i] == '"') {
+        if (s[i] == '"') {
             continue;
         }
-        if ((i < n - 1) && (string[i] == '\\') && (string[i + 1] == 'r')) {
+        if ((i < n - 1) && (s[i] == '\\') && (s[i + 1] == 'r')) {
             i++;
-            string2[i2++] = '\r';
+            clean[i2++] = '\r';
             continue;
         }
-        if ((i < n - 1) && (string[i] == '\\') && (string[i + 1] == 'n')) {
+        if ((i < n - 1) && (s[i] == '\\') && (s[i + 1] == 'n')) {
             i++;
-            string2[i2++] = '\n';
+            clean[i2++] = '\n';
             continue;
         }
-        string2[i2++] = string[i];
+        clean[i2++] = s[i];
     }
-    return usart_tx((uint8_t *)string2, strlen(string2));
+    return usart_tx((uint8_t *)clean, strlen(clean));
 }
 
 static int CmdUsartRX(const char *Cmd) {
@@ -781,7 +727,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdUsart(const char *Cmd) {

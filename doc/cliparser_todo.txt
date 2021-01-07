@@ -103,7 +103,6 @@ hf mf gen3blk
 hf mf gen3freeze
 hf mf ice
 hf mfdes getuid
-hw setlfdivisor
 lf config
 lf cmdread
 lf read
@@ -150,9 +149,6 @@ smart upgrade
 smart setclock
 smart brute
 script run
-usart btpin
-usart btfactory
-usart tx
 usart rx
 usart txrx
 usart txhex
