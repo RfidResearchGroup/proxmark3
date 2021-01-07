@@ -22,23 +22,12 @@
 #include "tea.h"
 #include "legic_prng.h"
 #include "cmddata.h"      // demodbuffer
+#include "graph.h"
+#include "proxgui.h"
+#include "cliparser.h"
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_analyse_lcr(void) {
-    PrintAndLogEx(NORMAL, "Specifying the bytes of a UID with a known LRC will find the last byte value");
-    PrintAndLogEx(NORMAL, "needed to generate that LRC with a rolling XOR. All bytes should be specified in HEX.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  analyse lcr [h] <bytes>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           <bytes>    bytes to calc missing XOR in a LCR");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      analyse lcr 04008064BA");
-    PrintAndLogEx(NORMAL, "expected output: Target (BA) requires final LRC XOR byte value: 5A");
-    return PM3_SUCCESS;
-}
 static int usage_analyse_checksum(void) {
     PrintAndLogEx(NORMAL, "The bytes will be added with eachother and than limited with the applied mask");
     PrintAndLogEx(NORMAL, "Finally compute ones' complement of the least significant bytes");
@@ -55,18 +44,7 @@ static int usage_analyse_checksum(void) {
     PrintAndLogEx(NORMAL, "expected output: 0x61");
     return PM3_SUCCESS;
 }
-static int usage_analyse_crc(void) {
-    PrintAndLogEx(NORMAL, "A stub method to test different crc implementations inside the PM3 sourcecode. Just because you figured out the poly, doesn't mean you get the desired output");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  analyse crc [h] <bytes>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           <bytes>    bytes to calc crc");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      analyse crc 137AF00A0A0D");
-    return PM3_SUCCESS;
-}
+
 static int usage_analyse_nuid(void) {
     PrintAndLogEx(NORMAL, "Generate 4byte NUID from 7byte UID");
     PrintAndLogEx(NORMAL, "");
@@ -263,121 +241,135 @@ static int CmdAnalyseLfsr(const char *Cmd) {
     return 0;
 }
 static int CmdAnalyseLCR(const char *Cmd) {
-    uint8_t data[50];
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_lcr();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse lcr",
+                  "Specifying the bytes of a UID with a known LRC will find the last byte value\n"
+                  "needed to generate that LRC with a rolling XOR. All bytes should be specified in HEX.",
+                  "analyse lcr -d 04008064BA     ->  Target (BA) requires final LRC XOR byte value: 5A"
+                 );
 
-    int len = 0;
-    switch (param_gethex_to_eol(Cmd, 0, data, sizeof(data), &len)) {
-        case 1:
-            PrintAndLogEx(WARNING, "Invalid HEX value.");
-            return 1;
-        case 2:
-            PrintAndLogEx(WARNING, "Too many bytes.  Max %zu bytes", sizeof(data));
-            return 1;
-        case 3:
-            PrintAndLogEx(WARNING, "Hex must have even number of digits.");
-            return 1;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "bytes to calc missing XOR in a LCR"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int dlen = 0;
+    uint8_t data[100] = {0x00};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
+    CLIParserFree(ctx);
+   
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
     }
-    uint8_t finalXor = calculateLRC(data, len);
-    PrintAndLogEx(NORMAL, "Target [%02X] requires final LRC XOR byte value: 0x%02X", data[len - 1], finalXor);
-    return 0;
+
+    uint8_t finalXor = calculateLRC(data, dlen);
+    PrintAndLogEx(SUCCESS, "Target [%02X] requires final LRC XOR byte value: " _YELLOW_("0x%02X"), data[dlen - 1], finalXor);
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
 }
+
 static int CmdAnalyseCRC(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse crc",
+                  "A stub method to test different crc implementations inside the PM3 sourcecode.\n"
+                  "Just because you figured out the poly, doesn't mean you get the desired output",
+                  "analyse crc -d 137AF00A0A0D"
+                 );
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_crc();
-
-    int len = strlen(Cmd);
-    if (len & 1) return usage_analyse_crc();
-
-    // add 1 for null terminator.
-    uint8_t *data = calloc(len + 1,  sizeof(uint8_t));
-    if (!data) return 1;
-
-    if (param_gethex(Cmd, 0, data, len)) {
-        free(data);
-        return usage_analyse_crc();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "bytes to calc crc"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int dlen = 0;
+    uint8_t data[1024] = {0x00};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
+    CLIParserFree(ctx);
+   
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
     }
-    len >>= 1;
 
-    PrintAndLogEx(NORMAL, "\nTests with (%d) | %s", len, sprint_hex(data, len));
+    PrintAndLogEx(INFO, "\nTests with (%d) | %s", dlen, sprint_hex(data, dlen));
 
     // 51  f5  7a  d6
     uint8_t uid[] = {0x51, 0xf5, 0x7a, 0xd6}; //12 34 56
     init_table(CRC_LEGIC);
     uint8_t legic8 = CRC8Legic(uid, sizeof(uid));
-    PrintAndLogEx(NORMAL, "Legic 16 | %X (EF6F expected) [legic8 = %02x]", crc16_legic(data, len, legic8), legic8);
+    PrintAndLogEx(INFO, "Legic 16 | %X (EF6F expected) [legic8 = %02x]", crc16_legic(data, dlen, legic8), legic8);
     init_table(CRC_FELICA);
-    PrintAndLogEx(NORMAL, "FeliCa | %X ", crc16_xmodem(data, len));
+    PrintAndLogEx(INFO, "FeliCa | %X ", crc16_xmodem(data, dlen));
 
-    PrintAndLogEx(NORMAL, "\nTests of reflection. Current methods in source code");
-    PrintAndLogEx(NORMAL, "   reflect(0x3e23L,3) is %04X == 0x3e26", reflect(0x3e23L, 3));
-    PrintAndLogEx(NORMAL, "       reflect8(0x80) is %02X == 0x01", reflect8(0x80));
-    PrintAndLogEx(NORMAL, "    reflect16(0x8000) is %04X == 0x0001", reflect16(0xc6c6));
+    PrintAndLogEx(INFO, "\nTests of reflection. Current methods in source code");
+    PrintAndLogEx(INFO, "   reflect(0x3e23L,3) is %04X == 0x3e26", reflect(0x3e23L, 3));
+    PrintAndLogEx(INFO, "       reflect8(0x80) is %02X == 0x01", reflect8(0x80));
+    PrintAndLogEx(INFO, "    reflect16(0x8000) is %04X == 0x0001", reflect16(0xc6c6));
 
     uint8_t b1, b2;
     // ISO14443 crc B
-    compute_crc(CRC_14443_B, data, len, &b1, &b2);
+    compute_crc(CRC_14443_B, data, dlen, &b1, &b2);
     uint16_t crcBB_1 = b1 << 8 | b2;
-    uint16_t bbb = Crc16ex(CRC_14443_B, data, len);
-    PrintAndLogEx(NORMAL, "ISO14443 crc B  | %04x == %04x \n", crcBB_1, bbb);
+    uint16_t bbb = Crc16ex(CRC_14443_B, data, dlen);
+    PrintAndLogEx(INFO, "ISO14443 crc B  | %04x == %04x \n", crcBB_1, bbb);
 
 
     // Test of CRC16,  '123456789' string.
     //
 
-    PrintAndLogEx(NORMAL, "\n\nStandard test with 31 32 33 34 35 36 37 38 39  '123456789'\n\n");
+    PrintAndLogEx(INFO, "\n\nStandard test with 31 32 33 34 35 36 37 38 39  '123456789'\n\n");
     uint8_t dataStr[] = { 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39 };
     legic8 = CRC8Legic(dataStr, sizeof(dataStr));
 
     //these below has been tested OK.
-    PrintAndLogEx(NORMAL, "Confirmed CRC Implementations");
-    PrintAndLogEx(NORMAL, "-------------------------------------\n");
-    PrintAndLogEx(NORMAL, "CRC 8 based\n\n");
-    PrintAndLogEx(NORMAL, "LEGIC: CRC8 : %X (C6 expected)", legic8);
-    PrintAndLogEx(NORMAL, "MAXIM: CRC8 : %X (A1 expected)", CRC8Maxim(dataStr, sizeof(dataStr)));
-    PrintAndLogEx(NORMAL, "-------------------------------------\n");
-    PrintAndLogEx(NORMAL, "CRC16 based\n\n");
+    PrintAndLogEx(INFO, "Confirmed CRC Implementations");
+    PrintAndLogEx(INFO, "-------------------------------------\n");
+    PrintAndLogEx(INFO, "CRC 8 based\n\n");
+    PrintAndLogEx(INFO, "LEGIC: CRC8 : %X (C6 expected)", legic8);
+    PrintAndLogEx(INFO, "MAXIM: CRC8 : %X (A1 expected)", CRC8Maxim(dataStr, sizeof(dataStr)));
+    PrintAndLogEx(INFO, "-------------------------------------\n");
+    PrintAndLogEx(INFO, "CRC16 based\n\n");
 
     // input from commandline
-    PrintAndLogEx(NORMAL, "CCITT  | %X (29B1 expected)", Crc16ex(CRC_CCITT, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(INFO, "CCITT  | %X (29B1 expected)", Crc16ex(CRC_CCITT, dataStr, sizeof(dataStr)));
 
     uint8_t poll[] = {0xb2, 0x4d, 0x12, 0x01, 0x01, 0x2e, 0x3d, 0x17, 0x26, 0x47, 0x80, 0x95, 0x00, 0xf1, 0x00, 0x00, 0x00, 0x01, 0x43, 0x00, 0xb3, 0x7f};
-    PrintAndLogEx(NORMAL, "FeliCa | %04X (B37F expected)", Crc16ex(CRC_FELICA, poll + 2, sizeof(poll) - 4));
-    PrintAndLogEx(NORMAL, "FeliCa | %04X (0000 expected)", Crc16ex(CRC_FELICA, poll + 2, sizeof(poll) - 2));
+    PrintAndLogEx(INFO, "FeliCa | %04X (B37F expected)", Crc16ex(CRC_FELICA, poll + 2, sizeof(poll) - 4));
+    PrintAndLogEx(INFO, "FeliCa | %04X (0000 expected)", Crc16ex(CRC_FELICA, poll + 2, sizeof(poll) - 2));
 
     uint8_t sel_corr[] = { 0x40, 0xe1, 0xe1, 0xff, 0xfe, 0x5f, 0x02, 0x3c, 0x43, 0x01};
-    PrintAndLogEx(NORMAL, "iCLASS | %04x (0143 expected)", Crc16ex(CRC_ICLASS, sel_corr, sizeof(sel_corr) - 2));
-    PrintAndLogEx(NORMAL, "---------------------------------------------------------------\n\n\n");
+    PrintAndLogEx(INFO, "iCLASS | %04x (0143 expected)", Crc16ex(CRC_ICLASS, sel_corr, sizeof(sel_corr) - 2));
+    PrintAndLogEx(INFO, "---------------------------------------------------------------\n\n\n");
 
     // ISO14443 crc A
     compute_crc(CRC_14443_A, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcAA = b1 << 8 | b2;
-    PrintAndLogEx(NORMAL, "ISO14443 crc A  | %04x or %04x (BF05 expected)\n", crcAA, Crc16ex(CRC_14443_A, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(INFO, "ISO14443 crc A  | %04x or %04x (BF05 expected)\n", crcAA, Crc16ex(CRC_14443_A, dataStr, sizeof(dataStr)));
 
     // ISO14443 crc B
     compute_crc(CRC_14443_B, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcBB = b1 << 8 | b2;
-    PrintAndLogEx(NORMAL, "ISO14443 crc B  | %04x or %04x (906E expected)\n", crcBB, Crc16ex(CRC_14443_B, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(INFO, "ISO14443 crc B  | %04x or %04x (906E expected)\n", crcBB, Crc16ex(CRC_14443_B, dataStr, sizeof(dataStr)));
 
     // ISO15693 crc  (x.25)
     compute_crc(CRC_15693, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcCC = b1 << 8 | b2;
-    PrintAndLogEx(NORMAL, "ISO15693 crc X25| %04x or %04x (906E expected)\n", crcCC, Crc16ex(CRC_15693, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(INFO, "ISO15693 crc X25| %04x or %04x (906E expected)\n", crcCC, Crc16ex(CRC_15693, dataStr, sizeof(dataStr)));
 
     // ICLASS
     compute_crc(CRC_ICLASS, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcDD = b1 << 8 | b2;
-    PrintAndLogEx(NORMAL, "ICLASS crc      | %04x or %04x\n", crcDD, Crc16ex(CRC_ICLASS, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(INFO, "ICLASS crc      | %04x or %04x\n", crcDD, Crc16ex(CRC_ICLASS, dataStr, sizeof(dataStr)));
 
     // FeliCa
     compute_crc(CRC_FELICA, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcEE = b1 << 8 | b2;
-    PrintAndLogEx(NORMAL, "FeliCa          | %04x or %04x (31C3 expected)\n", crcEE, Crc16ex(CRC_FELICA, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(INFO, "FeliCa          | %04x or %04x (31C3 expected)\n", crcEE, Crc16ex(CRC_FELICA, dataStr, sizeof(dataStr)));
 
-    free(data);
-    return 0;
+    return PM3_SUCCESS;
 }
 static int CmdAnalyseCHKSUM(const char *Cmd) {
 
