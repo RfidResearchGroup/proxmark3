@@ -149,8 +149,3 @@ smart upgrade
 smart setclock
 smart brute
 script run
-usart rx
-usart txrx
-usart txhex
-usart rxhex
-usart config
