@@ -28,23 +28,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_analyse_checksum(void) {
-    PrintAndLogEx(NORMAL, "The bytes will be added with eachother and than limited with the applied mask");
-    PrintAndLogEx(NORMAL, "Finally compute ones' complement of the least significant bytes");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  analyse chksum [h] [v] b <bytes> m <mask>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           v          suppress header");
-    PrintAndLogEx(NORMAL, "           b <bytes>  bytes to calc missing XOR in a LCR");
-    PrintAndLogEx(NORMAL, "           m <mask>   bit mask to limit the outpuyt");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      analyse chksum b 137AF00A0A0D m FF");
-    PrintAndLogEx(NORMAL, "expected output: 0x61");
-    return PM3_SUCCESS;
-}
-
 static int usage_analyse_nuid(void) {
     PrintAndLogEx(NORMAL, "Generate 4byte NUID from 7byte UID");
     PrintAndLogEx(NORMAL, "");
@@ -371,70 +354,94 @@ static int CmdAnalyseCRC(const char *Cmd) {
 
     return PM3_SUCCESS;
 }
+
 static int CmdAnalyseCHKSUM(const char *Cmd) {
 
-    uint8_t data[50];
-    uint8_t cmdp = 0;
-    uint32_t mask = 0xFFFF;
-    bool errors = false;
-    bool useHeader = false;
-    int len = 0;
-    memset(data, 0x0, sizeof(data));
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse chksum",
+                  "The bytes will be added with eachother and than limited with the applied mask\n"
+                  "Finally compute ones' complement of the least significant bytes.",
+                  "analyse chksum -d 137AF00A0A0D     ->  expected output: 0x61\n"
+                  "analyse chksum -d 137AF00A0A0D -m FF"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (param_getchar(Cmd, cmdp)) {
-            case 'b':
-            case 'B':
-                param_gethex_ex(Cmd, cmdp + 1, data, &len);
-                if (len % 2) errors = true;
-                len >>= 1;
-                cmdp += 2;
-                break;
-            case 'm':
-            case 'M':
-                mask = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                cmdp += 2;
-                break;
-            case 'v':
-            case 'V':
-                useHeader = true;
-                cmdp++;
-                break;
-            case 'h':
-            case 'H':
-                return usage_analyse_checksum();
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "bytes to calc checksum"),
+        arg_str0("m", "mask", "<hex>", "bit mask to limit the output (4 hex bytes max)"),
+        arg_lit0("v", "verbose", "verbose"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int dlen = 0;
+    uint8_t data[100] = {0x00};
+    memset(data, 0x0, sizeof(data));
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
+    if (res) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
+    const char *s = arg_get_str(ctx, 2)->sval[0];
+    bool verbose = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+   
+    uint32_t mlen = 0;
+    if (s) 
+        mlen = strlen(s);
+
+    if (mlen > 8) {
+        PrintAndLogEx(FAILED, "Mask value is max 4 hex bytes");
+        return PM3_EINVARG;        
+    }
+
+    uint32_t mask = 0;
+    if (mlen == 0) {
+        mask = 0xFFFF;
+    } else {
+        for (int i = 0; i < mlen; i++) {
+            char c = s[i];
+            // capitalize
+            if (c >= 'a' && c <= 'f')
+                c -= 32;
+            // convert to numeric value
+            if (c >= '0' && c <= '9')
+                c -= '0';
+            else if (c >= 'A' && c <= 'F')
+                c -= 'A' - 10;
+            else
+                continue;
+
+            mask <<= 4;
+            mask |= c;
         }
     }
-    //Validations
-    if (errors || cmdp == 0) return usage_analyse_checksum();
 
-    if (useHeader) {
-        PrintAndLogEx(NORMAL, "     add          | sub         | add 1's compl    | sub 1's compl   | xor");
-        PrintAndLogEx(NORMAL, "byte nibble crumb | byte nibble | byte nibble cumb | byte nibble     | byte nibble cumb |  BSD       |");
-        PrintAndLogEx(NORMAL, "------------------+-------------+------------------+-----------------+--------------------");
+    PrintAndLogEx(INFO, "Mask value 0x%x", mask);
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "     add          | sub         | add 1's compl    | sub 1's compl   | xor");
+        PrintAndLogEx(INFO, "byte nibble crumb | byte nibble | byte nibble cumb | byte nibble     | byte nibble cumb |  BSD       |");
+        PrintAndLogEx(INFO, "------------------+-------------+------------------+-----------------+--------------------");
     }
-    PrintAndLogEx(NORMAL, "0x%X 0x%X   0x%X  | 0x%X 0x%X   | 0x%X 0x%X   0x%X | 0x%X 0x%X       | 0x%X 0x%X   0x%X  | 0x%X  0x%X |\n",
-                  calcSumByteAdd(data, len, mask)
-                  , calcSumNibbleAdd(data, len, mask)
-                  , calcSumCrumbAdd(data, len, mask)
-                  , calcSumByteSub(data, len, mask)
-                  , calcSumNibbleSub(data, len, mask)
-                  , calcSumByteAddOnes(data, len, mask)
-                  , calcSumNibbleAddOnes(data, len, mask)
-                  , calcSumCrumbAddOnes(data, len, mask)
-                  , calcSumByteSubOnes(data, len, mask)
-                  , calcSumNibbleSubOnes(data, len, mask)
-                  , calcSumByteXor(data, len, mask)
-                  , calcSumNibbleXor(data, len, mask)
-                  , calcSumCrumbXor(data, len, mask)
-                  , calcBSDchecksum8(data, len, mask)
-                  , calcBSDchecksum4(data, len, mask)
+    PrintAndLogEx(INFO, "0x%X 0x%X   0x%X  | 0x%X 0x%X   | 0x%X 0x%X   0x%X | 0x%X 0x%X       | 0x%X 0x%X   0x%X  | 0x%X  0x%X |\n",
+                  calcSumByteAdd(data, dlen, mask)
+                  , calcSumNibbleAdd(data, dlen, mask)
+                  , calcSumCrumbAdd(data, dlen, mask)
+                  , calcSumByteSub(data, dlen, mask)
+                  , calcSumNibbleSub(data, dlen, mask)
+                  , calcSumByteAddOnes(data, dlen, mask)
+                  , calcSumNibbleAddOnes(data, dlen, mask)
+                  , calcSumCrumbAddOnes(data, dlen, mask)
+                  , calcSumByteSubOnes(data, dlen, mask)
+                  , calcSumNibbleSubOnes(data, dlen, mask)
+                  , calcSumByteXor(data, dlen, mask)
+                  , calcSumNibbleXor(data, dlen, mask)
+                  , calcSumCrumbXor(data, dlen, mask)
+                  , calcBSDchecksum8(data, dlen, mask)
+                  , calcBSDchecksum4(data, dlen, mask)
                  );
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdAnalyseDates(const char *Cmd) {
