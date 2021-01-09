@@ -29,18 +29,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_analyse_a(void) {
-    PrintAndLogEx(NORMAL, "Iceman's personal garbage test command");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  analyse a [h] d <bytes>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           d <bytes>  bytes to send to device");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      analyse a d 137AF00A0A0D");
-    return PM3_SUCCESS;
-}
 static int usage_analyse_demodbuffer(void) {
     PrintAndLogEx(NORMAL, "loads a binary string into demod buffer");
     PrintAndLogEx(NORMAL, "");
@@ -497,14 +485,31 @@ static char *pb(uint32_t b) {
 */
 
 static int CmdAnalyseA(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse a",
+                  "Iceman's personal garbage test command",
+                  "analyse a -d 137AF00A0A0D"
+                 );
 
-    return usage_analyse_a();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "bytes to manipulate"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int dlen = 0;
+    uint8_t data[100] = {0x00};
+    memset(data, 0x0, sizeof(data));
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
+    if (res) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
+    CLIParserFree(ctx);
+    return PM3_SUCCESS;
+
     /*
-        PrintAndLogEx(NORMAL, "-- " _BLUE_("its my message") "\n");
-        PrintAndLogEx(NORMAL, "-- " _RED_("its my message") "\n");
-        PrintAndLogEx(NORMAL, "-- " _YELLOW_("its my message") "\n");
-        PrintAndLogEx(NORMAL, "-- " _GREEN_("its my message") "\n");
-
         //uint8_t syncBit = 99;
         // The start bit is one ore more Sequence Y followed by a Sequence Z (... 11111111 00x11111). We need to distinguish from
         // Sequence X followed by Sequence Y followed by Sequence Z     (111100x1 11111111 00x11111)
@@ -516,28 +521,22 @@ static int CmdAnalyseA(const char *Cmd) {
         uint8_t byte_offset = 99;
         // reverse byte
         uint8_t rev =  reflect8(bt);
-        PrintAndLogEx(NORMAL, "input  %02x | %02x \n", bt, rev);
+        PrintAndLogEx(INFO, "input  %02x | %02x \n", bt, rev);
         // add byte to shift register
         shiftReg = shiftReg << 8 | rev;
 
-        PrintAndLogEx(NORMAL, "shiftreg after %08x | pattern %08x \n", shiftReg, SYNC_16BIT);
+        PrintAndLogEx(INFO, "shiftreg after %08x | pattern %08x \n", shiftReg, SYNC_16BIT);
 
         uint8_t n0 = 0, n1 = 0;
 
         n0 = (rev & (uint8_t)(~(0xFF >> (8 - 4)))) >> 4;
         n1 = (n1 << 4) | (rev & (uint8_t)(~(0xFF << 4)));
 
-        PrintAndLogEx(NORMAL, "rev %02X | %02X %s | %02X %s |\n", rev, n0, pb(n0), n1, pb(n1));
+        PrintAndLogEx(INFO, "rev %02X | %02X %s | %02X %s |\n", rev, n0, pb(n0), n1, pb(n1));
     */
-    /*
-    hex(0xb24d shr 0) 0xB24D 0b1011001001001101
-    hex(0xb24d shr 1) 0x5926
-    hex(0xb24d shr 2) 0x2C93
-    */
-
     /*
         for (int i = 0; i < 16; i++) {
-            PrintAndLogEx(NORMAL, " (shiftReg >> %d) & 0xFFFF ==  %08x ---", i, ((shiftReg >> i) & 0xFFFF));
+            PrintAndLogEx(INFO, " (shiftReg >> %d) & 0xFFFF ==  %08x ---", i, ((shiftReg >> i) & 0xFFFF));
 
             // kolla om SYNC_PATTERN finns.
             if (((shiftReg >> 7) & 0xFFFF) == SYNC_16BIT) byte_offset = 7;
@@ -549,7 +548,7 @@ static int CmdAnalyseA(const char *Cmd) {
             else if (((shiftReg >> 1) & 0xFFFF) == SYNC_16BIT) byte_offset = 1;
             else if (((shiftReg >> 0) & 0xFFFF) == SYNC_16BIT) byte_offset = 0;
 
-            PrintAndLogEx(NORMAL, "Offset  %u \n", byte_offset);
+            PrintAndLogEx(INFO, "Offset  %u \n", byte_offset);
             if (byte_offset != 99)
                 break;
 
@@ -557,14 +556,14 @@ static int CmdAnalyseA(const char *Cmd) {
         }
 
         uint8_t p1 = (rev & (uint8_t)(~(0xFF << byte_offset)));
-        PrintAndLogEx(NORMAL, "Offset  %u  | leftovers  %02x  %s \n", byte_offset, p1, pb(p1));
+        PrintAndLogEx(INFO, "Offset  %u  | leftovers  %02x  %s \n", byte_offset, p1, pb(p1));
 
     */
 
     /*
-    pm3 --> da hex2bin 4db2     0100110110110010
+    pm3 --> da hex2bin 4db2   0100110110110010
     */
-    //return 0;
+    //return PM3_SUCCESS;
     /*
         // split byte into two parts.
         uint8_t offset = 3, n0 = 0, n1 = 0;
@@ -574,23 +573,23 @@ static int CmdAnalyseA(const char *Cmd) {
             n0 = (rev & (uint8_t)(~(0xFF >> (8-offset)))) >> offset;
             n1 = (n1 << offset) | (rev & (uint8_t)(~(0xFF << offset)));
 
-            PrintAndLogEx(NORMAL, "rev %02X | %02X %s | %02X %s |\n", rev, n0, pb(n0), n1, pb(n1) );
+            PrintAndLogEx(INFO, "rev %02X | %02X %s | %02X %s |\n", rev, n0, pb(n0), n1, pb(n1) );
             n0 = 0, n1 = 0;
-            // PrintAndLogEx(NORMAL, " (0xFF >> offset) == %s |\n", pb( (0xFF >> offset)) );
-            //PrintAndLogEx(NORMAL, "~(0xFF >> (8-offset)) == %s |\n", pb(  (uint8_t)(~(0xFF >> (8-offset))) ) );
-            //PrintAndLogEx(NORMAL, " rev & xxx == %s\n\n", pb( (rev & (uint8_t)(~(0xFF << offset))) ));
+            // PrintAndLogEx(INFO, " (0xFF >> offset) == %s |\n", pb( (0xFF >> offset)) );
+            //PrintAndLogEx(INFO, "~(0xFF >> (8-offset)) == %s |\n", pb(  (uint8_t)(~(0xFF >> (8-offset))) ) );
+            //PrintAndLogEx(INFO, " rev & xxx == %s\n\n", pb( (rev & (uint8_t)(~(0xFF << offset))) ));
         }
-    return 0;
+    return PM3_SUCCESS;
         // from A  -- x bits into B and the rest into C.
 
         for ( uint8_t i=0; i<8; i++){
-            PrintAndLogEx(NORMAL, "%u | %02X %s | %02X %s |\n", i, a, pb(a), b, pb(b) );
+            PrintAndLogEx(INFO, "%u | %02X %s | %02X %s |\n", i, a, pb(a), b, pb(b) );
             b = a & (a & (0xFF >> (8-i)));
             a >>=1;
         }
 
         */
-//    return 0;
+//    return PM3_SUCCESS;
 
     /*
         // 14443-A
@@ -601,7 +600,7 @@ static int CmdAnalyseA(const char *Cmd) {
 
         // 14443-B
         uint8_t u14b[] = {0x05, 0x00, 0x08, 0x39, 0x73};
-        PrintAndLogEx(NORMAL, "14b check crc            | %s\n", (check_crc(CRC_14443_B, u14b, sizeof(u14b))) ? "YES" : "NO");
+        PrintAndLogEx(INFO, "14b check crc            | %s\n", (check_crc(CRC_14443_B, u14b, sizeof(u14b))) ? "YES" : "NO");
 
         // 15693 test
         uint8_t u15_c[] = {0x05, 0x00, 0x08, 0x39, 0x73}; // correct
@@ -621,28 +620,10 @@ static int CmdAnalyseA(const char *Cmd) {
         PrintAndLogEx(FAILED, "FeliCa check wrong crc   | %s\n", (check_crc(CRC_FELICA, felica_w, sizeof(felica_w))) ? "YES" : "NO");
         PrintAndLogEx(SUCCESS, "FeliCa check correct crc | %s\n", (check_crc(CRC_FELICA, felica_c, sizeof(felica_c))) ? "YES" : "NO");
 
-        PrintAndLogEx(NORMAL, "\n\n");
+        PrintAndLogEx(NORMAL, "\n");
 
-        return 0;
+        return PM3_SUCCESS;
         */
-    /*
-    bool term = !isatty(STDIN_FILENO);
-    if (!term) {
-        char star[4];
-        star[0] = '-';
-        star[1] = '\\';
-        star[2] = '|';
-        star[3] = '/';
-
-        for (uint8_t k=0; k<4; k = (k+1) % 4 ) {
-            PrintAndLogEx(NORMAL, "\e[s%c\e[u", star[k]);
-            fflush(stdout);
-            if (kbd_enter_pressed()) {
-                break;
-            }
-        }
-    }
-    */
 
 //piwi
 // uid(2e086b1a) nt(230736f6) ks(0b0008000804000e) nr(000000000)
@@ -777,7 +758,7 @@ static int CmdAnalyseA(const char *Cmd) {
     /*
     for (uint8_t i=0; i<31; i++){
         uint64_t a = keys[i] ^ keys[i+1];
-        PrintAndLogEx(NORMAL, "%u | %012" PRIX64 " | \n", i, a);
+        PrintAndLogEx(INFO, "%u | %012" PRIX64 " | \n", i, a);
     }
     */
 
@@ -795,8 +776,8 @@ static int CmdAnalyseA(const char *Cmd) {
         0x2F
     };
 
-    PrintAndLogEx(NORMAL, "UID   | %s\n", sprint_hex(uid,4 ));
-    PrintAndLogEx(NORMAL, "KEY A | %s\n", sprint_hex(key_s0a, 6));
+    PrintAndLogEx(INFO, "UID   | %s\n", sprint_hex(uid,4 ));
+    PrintAndLogEx(INFO, "KEY A | %s\n", sprint_hex(key_s0a, 6));
 
     // arrays w all keys
     uint64_t foo[32] = {0};
@@ -816,7 +797,7 @@ static int CmdAnalyseA(const char *Cmd) {
         uint64_t a = foo[i];
         uint64_t b = foo[i+16];
 
-        PrintAndLogEx(NORMAL, "%02u | %012" PRIX64 " %s | %012" PRIX64 " %s\n",
+        PrintAndLogEx(INFO, "%02u | %012" PRIX64 " %s | %012" PRIX64 " %s\n",
             i,
             a,
             ( a == keya[i])?"ok":"err",
@@ -825,7 +806,7 @@ static int CmdAnalyseA(const char *Cmd) {
         );
     }
     */
-//    return 0;
+//    return PM3_SUCCESS;
 }
 
 static int CmdAnalyseNuid(const char *Cmd) {
