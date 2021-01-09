@@ -55,29 +55,27 @@ int preferences_load(void) {
     session.show_hints = true;
 
     session.bar_mode = STYLE_VALUE;
-//    setDefaultPath (spDefault, "");
-//    setDefaultPath (spDump, "");
-//    setDefaultPath (spTrace, "");
+    setDefaultPath (spDefault, "");
+    setDefaultPath (spDump, "");
+    setDefaultPath (spTrace, "");
 
-    /*
-        // default save path
-        if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
-            setDefaultPath (spDefault, get_my_user_directory());
-        else
-            setDefaultPath (spDefault, ".");
+    // default save path
+    if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
+        setDefaultPath (spDefault, get_my_user_directory());
+    else
+        setDefaultPath (spDefault, ".");
 
-        // default dump path
-        if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
-            setDefaultPath (spDump, get_my_user_directory());
-        else
-            setDefaultPath (spDump, ".");
+    // default dump path
+    if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
+        setDefaultPath (spDump, get_my_user_directory());
+    else
+        setDefaultPath (spDump, ".");
 
-        // default dump path
-        if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
-            setDefaultPath (spTrace, get_my_user_directory());
-        else
-            setDefaultPath (spTrace, ".");
-    */
+    // default dump path
+    if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
+        setDefaultPath (spTrace, get_my_user_directory());
+    else
+        setDefaultPath (spTrace, ".");
 
     if (session.incognito) {
         PrintAndLogEx(INFO, "No preferences file will be loaded");
@@ -179,9 +177,9 @@ void preferences_save_callback(json_t *root) {
 
     JsonSaveBoolean(root, "os.supports.colors", session.supports_colors);
 
-//   JsonSaveStr(root, "file.default.savepath", session.defaultPaths[spDefault]);
-//   JsonSaveStr(root, "file.default.dumppath", session.defaultPaths[spDump]);
-//   JsonSaveStr(root, "file.default.tracepath", session.defaultPaths[spTrace]);
+   JsonSaveStr(root, "file.default.savepath", session.defaultPaths[spDefault]);
+   JsonSaveStr(root, "file.default.dumppath", session.defaultPaths[spDump]);
+   JsonSaveStr(root, "file.default.tracepath", session.defaultPaths[spTrace]);
 
     // Plot window
     JsonSaveInt(root, "window.plot.xpos", session.plot.x);
@@ -246,7 +244,6 @@ void preferences_save_callback(json_t *root) {
         }
     */
 }
-
 void preferences_load_callback(json_t *root) {
     json_error_t up_error = {0};
     int b1;
@@ -262,19 +259,19 @@ void preferences_load_callback(json_t *root) {
         if (strncmp(tempStr, "simple", 6) == 0) session.client_debug_level = cdbSIMPLE;
         if (strncmp(tempStr, "full", 4) == 0) session.client_debug_level = cdbFULL;
     }
-    /*
-        // default save path
-        if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.savepath", &s1) == 0)
-            setDefaultPath (spDefault,s1);
 
-        // default dump path
-        if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.dumppath", &s1) == 0)
-            setDefaultPath (spDump,s1);
+    // default save path
+    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.savepath", &s1) == 0)
+        setDefaultPath (spDefault, s1);
 
-        // default trace path
-        if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.tracepath", &s1) == 0)
-            setDefaultPath (spTrace,s1);
-    */
+    // default dump path
+    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.dumppath", &s1) == 0)
+        setDefaultPath (spDump, s1);
+
+    // default trace path
+    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.tracepath", &s1) == 0)
+        setDefaultPath (spTrace, s1);
+
     // window plot
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "window.plot.xpos", &i1) == 0)
         session.plot.x = i1;
@@ -338,37 +335,6 @@ void preferences_load_callback(json_t *root) {
 
 // Help Functions
 
-
-/*
-static int usage_set_devicedebug(void) {
-    PrintAndLogEx(NORMAL, "Usage: pref set devicedebug <off | error | info | debug | extended>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("off")"         - no debug messages");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("error")"       - error messages");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("info")"        - info messages");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("debug")"       - debug messages");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("extended")"    - extended debug messages");
-
-    return PM3_SUCCESS;
-}
-*/
-
-
-
-/*
-static int usage_set_savePaths(void) {
-    PrintAndLogEx(NORMAL, "Usage: pref set savepaths [help] [create] [default <path>] [dump <path>] [trace <path>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("create")"      - Create directory if it does not exist");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("default")"     - Deafult path");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("dump")"        - Dump path");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("trace")"       - Trace help");
-
-    return PM3_SUCCESS;
-}
-*/
 // Preference Processing Functions
 // typedef enum preferenceId {prefNONE,prefHELP,prefEMOJI,prefCOLOR,prefPLOT,prefOVERLAY,prefHINTS,prefCLIENTDEBUG} preferenceId_t;
 typedef enum prefShowOpt {prefShowNone, prefShowOLD, prefShowNEW} prefShowOpt_t;
@@ -452,40 +418,56 @@ static void showDeviceDebugState(prefShowOpt_t opt) {
     }
 }
 */
-/*
-static void showSavePathState(savePaths_t pathIndex, prefShowOpt_t opt) {
 
-    char tempStr[50];
+static void showSavePathState(savePaths_t path_index, prefShowOpt_t opt) {
 
-    switch (pathIndex) {
+    char s[50];
+    switch (path_index) {
         case spDefault:
-            strcpy (tempStr,"default save path......");
+            strcpy (s, "default save path......");
             break;
         case spDump:
-            strcpy (tempStr,"dump save path.........");
+            strcpy (s, "dump save path.........");
             break;
         case spTrace:
-            strcpy (tempStr,"trace save path........");
+            strcpy (s, "trace save path........");
             break;
+        case spItemCount:
         default:
-            strcpy (tempStr,_RED_("unknown")" save path......");
+            strcpy (s, _RED_("unknown")" save path......");
     }
-    if ((session.defaultPaths[pathIndex] == NULL) || (strcmp(session.defaultPaths[pathIndex],"") == 0))
-        PrintAndLogEx(INFO, "   %s %s "_WHITE_("not set"), prefShowMsg(opt),tempStr);
-    else
-        PrintAndLogEx(INFO, "   %s %s "_GREEN_("%s"), prefShowMsg(opt), tempStr, session.defaultPaths[pathIndex]);
+
+    if ((session.defaultPaths[path_index] == NULL) || (strcmp(session.defaultPaths[path_index], "") == 0)) {
+        PrintAndLogEx(INFO, "   %s %s "_WHITE_("not set"),
+            prefShowMsg(opt),
+            s
+        );
+    } else {
+        PrintAndLogEx(INFO, "   %s %s "_GREEN_("%s"),
+            prefShowMsg(opt),
+            s,
+            session.defaultPaths[path_index]
+        );
+    }
 }
 
 static void showPlotPosState(void) {
     PrintAndLogEx(INFO, "    Plot window............ X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
-                  session.plot.x, session.plot.y, session.plot.h, session.plot.w);
+        session.plot.x,
+        session.plot.y,
+        session.plot.h,
+        session.plot.w
+    );
 }
 
 static void showOverlayPosState(void) {
     PrintAndLogEx(INFO, "    Slider/Overlay window.. X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
-                  session.overlay.x, session.overlay.y, session.overlay.h, session.overlay.w);
+        session.overlay.x,
+        session.overlay.y,
+        session.overlay.h,
+        session.overlay.w
+    );
 }
-*/
 
 static void showHintsState(prefShowOpt_t opt) {
     if (session.show_hints)
@@ -668,70 +650,72 @@ static int setCmdDebug(const char *Cmd) {
 /*
 static int setCmdDeviceDebug (const char *Cmd)
 {
-    uint8_t cmdp = 0;
-    bool errors = false;
-    bool validValue = false;
-    char strOpt[50];
-    devicedebugLevel_t newValue = session.device_debug_level;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "pref set devicedebug ",
+                  "Set presistent preference of device side debug level",
+                  "pref set devicedebug --on"
+                 );
 
-    if (param_getchar(Cmd, cmdp) == 0x00)
-        return usage_set_devicedebug ();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "off", "no debug messages"),
+        arg_lit0(NULL, "error", "error messages"),
+        arg_lit0(NULL, "info", "info messages"),
+        arg_lit0(NULL, "dbg", "debug messages"),
+        arg_lit0(NULL, "ext", "extended debug messages"),        
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool use_off = arg_get_lit(ctx, 1);
+    bool use_err = arg_get_lit(ctx, 2);
+    bool use_info = arg_get_lit(ctx, 3);
+    bool use_dbg = arg_get_lit(ctx, 4);
+    bool use_ext = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx);
 
-    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
-
-        if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
-            str_lower(strOpt); // convert to lowercase
-
-            if (strncmp (strOpt,"help",4) == 0)
-                return usage_set_devicedebug();
-            if (strncmp (strOpt,"off",3) == 0) {
-                validValue = true;
-                newValue = ddbOFF;
-            }
-            if (strncmp (strOpt,"error",5) == 0) {
-                validValue = true;
-                newValue = ddbERROR;
-            }
-            if (strncmp (strOpt,"info",4) == 0) {
-                validValue = true;
-                newValue = ddbINFO;
-            }
-            if (strncmp (strOpt,"debug",5) == 0) {
-                validValue = true;
-                newValue = ddbDEBUG;
-            }
-            if (strncmp (strOpt,"extended",8) == 0) {
-                validValue = true;
-                newValue = ddbEXTENDED;
-            }
-
-            if (validValue) {
-                if (session.device_debug_level != newValue) {// changed
-                    showDeviceDebugState (prefShowOLD);
-                    session.device_debug_level = newValue;
-                    showDeviceDebugState (prefShowNEW);
-                    preferences_save();
-                } else {
-                    PrintAndLogEx(INFO,"nothing changed");
-                    showDeviceDebugState (prefShowNone);
-                }
-                if (session.pm3_present) {
-                    PrintAndLogEx (INFO,"setting device debug loglevel");
-                    SendCommandNG(CMD_SET_DBGMODE, &session.device_debug_level, 1);
-                    PacketResponseNG resp;
-                    if (WaitForResponseTimeout(CMD_SET_DBGMODE, &resp, 2000) == false)
-                        PrintAndLogEx (INFO,"failed to set device debug loglevel");
-                }
-            } else {
-                PrintAndLogEx(ERR,"invalid option");
-                return usage_set_devicedebug();
-            }
-        }
+    if ( (use_off + use_err + use_info + use_dbg + use_ext) > 1) {
+        PrintAndLogEx(FAILED, "Can only set one option");
+        return PM3_EINVARG;
     }
 
+    devicedebugLevel_t new_value = session.device_debug_level;
+
+    if (use_off) {
+        new_value = ddbOFF;
+    }
+    if (use_err) {
+        new_value = ddbERROR;
+    }
+    if (use_info) {
+        new_value = ddbINFO;
+    }
+    if (use_dbg) {
+        new_value = ddbDEBUG;
+    }
+    if (use_ext) {
+        new_value = ddbEXTENDED;
+    }
+
+    if (session.device_debug_level != new_value) {// changed
+        showDeviceDebugState (prefShowOLD);
+        session.device_debug_level = new_value;
+        showDeviceDebugState (prefShowNEW);
+        preferences_save();
+    } else {
+        showDeviceDebugState (prefShowNone);
+    }
+
+    if (session.pm3_present) {
+        PrintAndLogEx (INFO,"setting device debug loglevel");
+        SendCommandNG(CMD_SET_DBGMODE, &session.device_debug_level, 1);
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_SET_DBGMODE, &resp, 2000) == false)
+            PrintAndLogEx (WARNING,"failed to set device debug loglevel");
+    }
     return PM3_SUCCESS;
 }
 */
+
 static int setCmdHint(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "pref set hints ",
@@ -774,6 +758,7 @@ static int setCmdHint(const char *Cmd) {
 
     return PM3_SUCCESS;
 }
+
 static int setCmdPlotSliders(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "pref set plotsliders ",
@@ -816,96 +801,86 @@ static int setCmdPlotSliders(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-/*
 static int setCmdSavePaths (const char *Cmd) {
-    uint8_t cmdp = 0;
-    bool errors = false;
-    // bool validValue = false;
-    char *strOpt = NULL;
-    int  optLen = 0;
-    char *newValue = NULL;
-    bool createDir = false;
-    savePaths_t pathItem = spItemCount;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "pref set savepath",
+                  "Set presistent preference of file paths in the client",
+                  "pref set savepaths --dump /home/mydumpfolder      -> all dump files will be saved into this folder\n"
+                  "pref set savepaths --def /home/myfolder -c    -> create if needed, all files will be saved into this folder"
+                 );
 
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("c", "create", "create directory if it does not exist"),
+        arg_str0(NULL, "def", "<path>", "default path"),
+        arg_str0(NULL, "dump", "<path>", "dump file path"),
+        arg_str0(NULL, "trace", "<path>", "trace path"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool create_dir = arg_get_lit(ctx, 1);
 
-    if (param_getchar(Cmd, cmdp) == 0x00)
-        return usage_set_savePaths();
+    int deflen = 0;
+    char def_path[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)def_path, FILE_PATH_SIZE, &deflen);
 
-    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
+    int dulen = 0;
+    char dump_path[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)dump_path, FILE_PATH_SIZE, &dulen);
 
-        optLen = param_getlength(Cmd, cmdp)+1;
-        strOpt = (char *)realloc(strOpt,optLen+1);//, sizeof(uint8_t));
+    int tlen = 0;
+    char trace_path[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)trace_path, FILE_PATH_SIZE, &tlen);
+    CLIParserFree(ctx);
 
-        if (param_getstr(Cmd, cmdp++, strOpt, optLen) != 0) {
-            str_lower(strOpt); // convert to lowercase
+    if (deflen == 0 && dulen == 0 && tlen == 0) {
+        PrintAndLogEx(FAILED, "Must give atleast one path");
+        return PM3_EINVARG;
+    }
 
-            if (strncmp(strOpt, "help", 4) == 0)
-                return usage_set_savePaths();
+    savePaths_t path_item = spItemCount;
+    char *path = NULL;
+    if (deflen) {
+        path_item = spDefault;
+        path = def_path;
+    }
+    if (dulen) {
+        path_item = spDump;
+        path = dump_path;
+    }
+    if (tlen) {
+        path_item = spTrace;
+        path = trace_path;
+    }
 
-            if (strncmp(strOpt, "create", 6) == 0) {
-                // check if 2 more options.
-                if (param_getlength(Cmd, cmdp+1) == 0) // should have min 2 more options
-                    return usage_set_savePaths();
-                createDir = true;
-            } else {
-                if ((strncmp(strOpt, "default", 7) == 0) ||
-                    (strncmp(strOpt, "dump", 4) == 0) ||
-                    (strncmp(strOpt, "trace", 5) == 0)) {
+    // remove trailing slash.
+    size_t nplen = strlen(path);
+    if ((path[nplen - 1] == '/') || (path[nplen - 1] == '\\')) {
+        path[nplen - 1] = 0x00;
+    }
 
-                    // Get Path
-                    optLen = param_getlength(Cmd, cmdp) + 1;
-                    newValue = (char *)realloc(newValue, optLen+1);
-                    if (param_getstr(Cmd, cmdp++, newValue, optLen) == 0) {
-                        PrintAndLogEx(INFO, "missing %s path",strOpt);
-                        return usage_set_savePaths();
-                    }
-                    // remove trailing slash.
-                    if ((newValue[strlen(newValue)-1] == '/') || (newValue[strlen(newValue)-1] == '\\'))
-                        newValue[strlen(newValue)-1] = 0x00;
+    // Check path
+    if (fileExists(path) == false && create_dir == false) {
+        PrintAndLogEx(ERR,"path does not exist... "_RED_("%s"), path);
+    } 
 
-                    // Check path
-                    if (!fileExists(newValue) && !createDir) {
-                        PrintAndLogEx(ERR,"path does not exist... "_RED_("%s"),newValue);
-                    } else {
-                        // do we need to create it
-                    //    if (!fileExists(newValue))
-                    //        create_path (newValue); //mkdir (newValue,0x777);
+    // do we need to create it
+    //    if (!fileExists(newValue))
+    //        create_path (newValue); //mkdir (newValue,0x777);
 
-                        pathItem = spItemCount;
-                        if (strncmp(strOpt, "default", 7) == 0) pathItem = spDefault;
-                        if (strncmp(strOpt, "dump", 4) == 0) pathItem = spDump;
-                        if (strncmp(strOpt, "trace", 5) == 0) pathItem = spTrace;
-
-                        if (pathItem < spItemCount) {
-                            if (strcmp(newValue, session.defaultPaths[pathItem]) != 0) {
-                                showSavePathState(pathItem, prefShowOLD);
-                                setDefaultPath (pathItem, newValue);
-                                showSavePathState(pathItem, prefShowNEW);
-                                preferences_save();
-                            } else {
-                                PrintAndLogEx(INFO, "nothing changed");
-                                showSavePathState(pathItem, prefShowNone);
-                            }
-                        }
-                    }
-                } else {
-                    return usage_set_savePaths();
-                }
-            }
+    if (path_item < spItemCount) {
+        if (strcmp(path, session.defaultPaths[path_item]) != 0) {
+            showSavePathState(path_item, prefShowOLD);
+            setDefaultPath (path_item, path);
+            showSavePathState(path_item, prefShowNEW);
+            preferences_save();
+        } else {
+            showSavePathState(path_item, prefShowNone);
         }
     }
 
-    // clean up
-    if (strOpt != NULL) free (strOpt);
-    if (newValue != NULL) free (newValue);
-
     return PM3_SUCCESS;
 }
-
-static int getCmdHelp(const char *Cmd) {
-    return PM3_SUCCESS;
-}
-*/
 
 static int setCmdBarMode(const char *Cmd) {
     CLIParserContext *ctx;
@@ -984,13 +959,18 @@ static int getCmdBarMode(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int getCmdSavePaths(const char *Cmd) {
+    showSavePathState(spDefault, prefShowNone);
+    showSavePathState(spDump, prefShowNone);
+    showSavePathState(spTrace, prefShowNone);
+    return PM3_SUCCESS;
+}
 
 static command_t CommandTableGet[] = {
-//     {"help",             getCmdHelp,          AlwaysAvailable, "This help"},
     {"barmode",          getCmdBarMode,       AlwaysAvailable, "Get bar mode preference"},
     {"clientdebug",      getCmdDebug,         AlwaysAvailable, "Get client debug level preference"},
     {"color",            getCmdColor,         AlwaysAvailable, "Get color support preference"},
-    //  {"defaultsavepaths", getCmdSavePaths,     AlwaysAvailable, "... to be adjusted next ... "},
+    {"savepaths",        getCmdSavePaths,     AlwaysAvailable, "Get file folder  "},
     //  {"devicedebug",      getCmdDeviceDebug,   AlwaysAvailable, "Get device debug level"},
     {"emoji",            getCmdEmoji,         AlwaysAvailable, "Get emoji display preference"},
     {"hints",            getCmdHint,          AlwaysAvailable, "Get hint display preference"},
@@ -1005,7 +985,7 @@ static command_t CommandTableSet[] = {
     {"color",            setCmdColor,         AlwaysAvailable, "Set color support"},
     {"emoji",            setCmdEmoji,         AlwaysAvailable, "Set emoji display"},
     {"hints",            setCmdHint,          AlwaysAvailable, "Set hint display"},
-    //  {"defaultsavepaths", setCmdSavePaths,     AlwaysAvailable, "... to be adjusted next ... "},
+    {"savepaths",        setCmdSavePaths,     AlwaysAvailable, "... to be adjusted next ... "},
     //  {"devicedebug",      setCmdDeviceDebug,   AlwaysAvailable, "Set device debug level"},
     {"plotsliders", setCmdPlotSliders,         AlwaysAvailable, "Set plot slider display"},
     {NULL, NULL, NULL, NULL}
@@ -1042,11 +1022,11 @@ static int CmdPrefShow(const char *Cmd) {
     showEmojiState(prefShowNone);
     showHintsState(prefShowNone);
     showColorState(prefShowNone);
-    // showPlotPosState ();
-    // showOverlayPosState ();
-    //  showSavePathState(spDefault, prefShowNone);
-    //  showSavePathState(spDump, prefShowNone);
-    //  showSavePathState(spTrace, prefShowNone);
+    showPlotPosState();
+    showOverlayPosState();
+    showSavePathState(spDefault, prefShowNone);
+    showSavePathState(spDump, prefShowNone);
+    showSavePathState(spTrace, prefShowNone);
     showClientDebugState(prefShowNone);
     showPlotSliderState(prefShowNone);
 //    showDeviceDebugState(prefShowNone);

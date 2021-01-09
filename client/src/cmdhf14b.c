@@ -287,7 +287,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b raw",
-                  "Sends raw bytes to card ",
+                  "Sends raw bytes to card",
                   "hf 14b raw -cks      --data 0200a40400    -> standard select\n"
                   "hf 14b raw -ck --sr  --data 0200a40400    -> SRx select\n"
                   "hf 14b raw -ck --cts --data 0200a40400    -> C-ticket select\n"

@@ -195,8 +195,8 @@ bool create_path(const char *dirname) {
     return true;
 }
 */
-/*
-bool setDefaultPath (savePaths_t pathIndex,const char *Path) {
+
+bool setDefaultPath (savePaths_t pathIndex, const char *Path) {
 
     if (pathIndex < spItemCount) {
         if ((Path == NULL) && (session.defaultPaths[pathIndex] != NULL)) {
@@ -208,13 +208,11 @@ bool setDefaultPath (savePaths_t pathIndex,const char *Path) {
             session.defaultPaths[pathIndex] = (char *)realloc(session.defaultPaths[pathIndex], strlen(Path) + 1);
             strcpy(session.defaultPaths[pathIndex], Path);
         }
-    } else {
-        return false;
+        return true;
     }
-
-    return true;
+    return false;
 }
-*/
+
 static char *filenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
