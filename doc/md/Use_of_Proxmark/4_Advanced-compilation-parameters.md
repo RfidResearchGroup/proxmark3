@@ -136,7 +136,7 @@ So for example, at the time of writing, this is a valid `Makefile.platform` comp
 PLATFORM=PM3OTHER
 PLATFORM_SIZE=256
 STANDALONE=
-SKIP_LEGICRF=1
+SKIP_HITAG=1
 SKIP_FELICA=1
 ```
 Situation might change when the firmware is growing of course, requiring to skip more elements.
