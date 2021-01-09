@@ -5,8 +5,6 @@
 //-----------------------------------------------------------------------------
 // Preferences Functions
 //-----------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------
 // Notes
 //      To add a new setting
 //      Add the new setting to the session_arg_t; in ui.h
@@ -25,6 +23,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <proxmark3.h>
+#include "cliparser.h"
 
 static int CmdHelp(const char *Cmd);
 static int setCmdHelp(const char *Cmd);
@@ -160,17 +159,17 @@ void preferences_save_callback(json_t *root) {
 
     // Emoji
     switch (session.emoji_mode) {
-        case ALIAS:
+        case EMO_ALIAS:
             JsonSaveStr(root, "show.emoji", "alias");
             break;
-        case EMOJI:
+        case EMO_EMOJI:
             JsonSaveStr(root, "show.emoji", "emoji");
             break;
-        case ALTTEXT:
+        case EMO_ALTTEXT:
             JsonSaveStr(root, "show.emoji", "alttext");
             break;
-        case ERASE:
-            JsonSaveStr(root, "show.emoji", "erase");
+        case EMO_NONE:
+            JsonSaveStr(root, "show.emoji", "none");
             break;
         default:
             JsonSaveStr(root, "show.emoji", "ALIAS");
@@ -302,10 +301,10 @@ void preferences_load_callback(json_t *root) {
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "show.emoji", &s1) == 0) {
         strncpy(tempStr, s1, sizeof(tempStr) - 1);
         str_lower(tempStr);
-        if (strncmp(tempStr, "alias", 5) == 0) session.emoji_mode = ALIAS;
-        if (strncmp(tempStr, "emoji", 5) == 0) session.emoji_mode = EMOJI;
-        if (strncmp(tempStr, "alttext", 7) == 0) session.emoji_mode = ALTTEXT;
-        if (strncmp(tempStr, "erase", 5) == 0) session.emoji_mode = ERASE;
+        if (strncmp(tempStr, "alias", 5) == 0) session.emoji_mode = EMO_ALIAS;
+        if (strncmp(tempStr, "emoji", 5) == 0) session.emoji_mode = EMO_EMOJI;
+        if (strncmp(tempStr, "alttext", 7) == 0) session.emoji_mode = EMO_ALTTEXT;
+        if (strncmp(tempStr, "none", 4) == 0) session.emoji_mode = EMO_NONE;
     }
 
     if (json_unpack_ex(root, &up_error, 0, "{s:b}", "show.hints", &b1) == 0)
@@ -339,45 +338,6 @@ void preferences_load_callback(json_t *root) {
 
 // Help Functions
 
-static int usage_set_emoji(void) {
-    PrintAndLogEx(NORMAL, "Usage: pref set emoji <alias | emoji | alttext | erase>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("alias")"       - Show alias for emoji");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("emoji")"       - Show amoji");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("alttext")"     - Show alt text for emoji");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("erase")"       - Dont show emoji or text");
-    return PM3_SUCCESS;
-}
-
-static int usage_set_color(void) {
-    PrintAndLogEx(NORMAL, "Usage: pref set color <off | ansi>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("off")"         - Dont use colors");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("ansi")"        - Use ANSI colors");
-    return PM3_SUCCESS;
-}
-
-static int usage_set_debug(void) {
-    PrintAndLogEx(NORMAL, "Usage: pref set clientdebug <off | simple | full>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("off")"         - no debug messages");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("simple")"      - simple debug messages");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("full")"        - full debug messages");
-    return PM3_SUCCESS;
-}
-
-static int usage_set_bar_mode(void) {
-    PrintAndLogEx(NORMAL, "Usage: pref set barmode <bar | mixed | value>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("bar")"         - measured values as bar only");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("mixed")"       - measured values as numbers and bar");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("value")"       - measured values");
-    return PM3_SUCCESS;
-}
 
 /*
 static int usage_set_devicedebug(void) {
@@ -393,23 +353,8 @@ static int usage_set_devicedebug(void) {
     return PM3_SUCCESS;
 }
 */
-static int usage_set_hints(void) {
-    PrintAndLogEx(NORMAL, "Usage: pref set hints <off | on>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("off")"         - Dont display hints");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("on")"          - Display hints");
-    return PM3_SUCCESS;
-}
 
-static int usage_set_plotsliders(void) {
-    PrintAndLogEx(NORMAL, "Usage: pref set plotsliders <on | off>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("on")"          - show plot slider controls");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("off")"         - hide plot slider controls");
-    return PM3_SUCCESS;
-}
+
 
 /*
 static int usage_set_savePaths(void) {
@@ -431,30 +376,29 @@ typedef enum prefShowOpt {prefShowNone, prefShowOLD, prefShowNEW} prefShowOpt_t;
 static const char *prefShowMsg(prefShowOpt_t Opt) {
     switch (Opt) {
         case prefShowOLD:
-            return _YELLOW_("[old]");
+            return "( " _YELLOW_("old") " )";
         case prefShowNEW:
-            return _GREEN_("[new]");
+            return "( " _GREEN_("new") " )";
         case prefShowNone:
             return "";
     }
-
     return "";
 }
 
 static void showEmojiState(prefShowOpt_t opt) {
 
     switch (session.emoji_mode) {
-        case ALIAS:
+        case EMO_ALIAS:
             PrintAndLogEx(INFO, "   %s emoji.................. "_GREEN_("alias"), prefShowMsg(opt));
             break;
-        case EMOJI:
+        case EMO_EMOJI:
             PrintAndLogEx(INFO, "   %s emoji.................. "_GREEN_("emoji"), prefShowMsg(opt));
             break;
-        case ALTTEXT:
+        case EMO_ALTTEXT:
             PrintAndLogEx(INFO, "   %s emoji.................. "_GREEN_("alttext"), prefShowMsg(opt));
             break;
-        case ERASE:
-            PrintAndLogEx(INFO, "   %s emoji.................. "_GREEN_("erase"), prefShowMsg(opt));
+        case EMO_NONE:
+            PrintAndLogEx(INFO, "   %s emoji.................. "_GREEN_("none"), prefShowMsg(opt));
             break;
         default:
             PrintAndLogEx(INFO, "   %s emoji.................. "_RED_("unknown"), prefShowMsg(opt));
@@ -574,153 +518,149 @@ static void showBarModeState(prefShowOpt_t opt) {
     }
 }
 
-
 static int setCmdEmoji(const char *Cmd) {
-    uint8_t cmdp = 0;
-    bool errors = false;
-    bool validValue = false;
-    char strOpt[50];
-    emojiMode_t newValue = session.emoji_mode;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "pref set emoji ",
+                  "Set presistent preference of using emojis in the client",
+                  "pref set emoji --alias"
+                 );
 
-    if (param_getchar(Cmd, cmdp) == 0x00)
-        return usage_set_emoji();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "alias", "show alias for emoji"),
+        arg_lit0(NULL, "emoji", "show emoji"),
+        arg_lit0(NULL, "alttext", "show alt text for emoji"),
+        arg_lit0(NULL, "none", "don't show emoji or text"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool show_a = arg_get_lit(ctx, 1);
+    bool show_e = arg_get_lit(ctx, 2);
+    bool show_alt = arg_get_lit(ctx, 3);
+    bool show_none = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+   
+    if ( (show_a + show_e + show_alt + show_none) > 1) {
+        PrintAndLogEx(FAILED, "Can only set one option");
+        return PM3_EINVARG;
+    }
 
-    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
+    emojiMode_t new_value = session.emoji_mode;
 
-        if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
-            str_lower(strOpt); // convert to lowercase
+    if (show_a) {
+        new_value = EMO_ALIAS;
+    }
+    if (show_e) {
+        new_value = EMO_EMOJI;
+    }
+    if (show_alt) {
+        new_value = EMO_ALTTEXT;
+    }
+    if (show_none) {
+        new_value = EMO_NONE;
+    }
 
-            if (strncmp(strOpt, "help", 4) == 0)
-                return usage_set_emoji();
-            if (strncmp(strOpt, "alias", 5) == 0) {
-                validValue = true;
-                newValue = ALIAS;
-            }
-            if (strncmp(strOpt, "emoji", 5) == 0) {
-                validValue = true;
-                newValue = EMOJI;
-            }
-            if (strncmp(strOpt, "alttext", 7) == 0) {
-                validValue = true;
-                newValue = ALTTEXT;
-            }
-            if (strncmp(strOpt, "erase", 5) == 0) {
-                validValue = true;
-                newValue = ERASE;
-            }
-
-            if (validValue) {
-                if (session.emoji_mode != newValue) {// changed
-                    showEmojiState(prefShowOLD);
-                    session.emoji_mode = newValue;
-                    showEmojiState(prefShowNEW);
-                    preferences_save();
-                } else {
-                    PrintAndLogEx(INFO, "nothing changed");
-                    showEmojiState(prefShowNone);
-                }
-            } else {
-                PrintAndLogEx(ERR, "invalid option");
-                return usage_set_emoji();
-            }
-        }
+    if (session.emoji_mode != new_value) {// changed
+        showEmojiState(prefShowOLD);
+        session.emoji_mode = new_value;
+        showEmojiState(prefShowNEW);
+        preferences_save();
+    } else {
+        showEmojiState(prefShowNone);
     }
 
     return PM3_SUCCESS;
 }
 
 static int setCmdColor(const char *Cmd) {
-    uint8_t cmdp = 0;
-    bool errors = false;
-    bool validValue = false;
-    char strOpt[50];
-    bool newValue = session.supports_colors;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "pref set color ",
+                  "Set presistent preference of using colors in the client",
+                  "pref set color --ansi"
+                 );
 
-    if (param_getchar(Cmd, cmdp) == 0x00)
-        return usage_set_color();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "ansi", "use ANSI colors"),
+        arg_lit0(NULL, "off", "don't use colors"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool use_c = arg_get_lit(ctx, 1);
+    bool use_n = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
 
-    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
+    if ( (use_c + use_n) > 1) {
+        PrintAndLogEx(FAILED, "Can only set one option");
+        return PM3_EINVARG;
+    }
 
-        if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
-            str_lower(strOpt); // convert to lowercase
+    bool new_value = session.supports_colors;
+    if (use_c) {
+        new_value = true;
+    }
 
-            if (strncmp(strOpt, "help", 4) == 0)
-                return usage_set_color();
-            if (strncmp(strOpt, "off", 3) == 0) {
-                validValue = true;
-                newValue = false;
-            }
-            if (strncmp(strOpt, "ansi", 4) == 0) {
-                validValue = true;
-                newValue = true;
-            }
+    if (use_n) {
+        new_value = false;
+    }
 
-            if (validValue) {
-                if (session.supports_colors != newValue) {// changed
-                    showColorState(prefShowOLD);
-                    session.supports_colors = newValue;
-                    showColorState(prefShowNEW);
-                    preferences_save();
-                } else {
-                    PrintAndLogEx(INFO, "nothing changed");
-                    showColorState(prefShowNone);
-                }
-            } else {
-                PrintAndLogEx(ERR, "invalid option");
-                return usage_set_color();
-            }
-        }
+    if (session.supports_colors != new_value) {
+        showColorState(prefShowOLD);
+        session.supports_colors = new_value;
+        showColorState(prefShowNEW);
+        preferences_save();
+    } else {
+        showColorState(prefShowNone);
     }
 
     return PM3_SUCCESS;
 }
 
 static int setCmdDebug(const char *Cmd) {
-    uint8_t cmdp = 0;
-    bool errors = false;
-    bool validValue = false;
-    char strOpt[50];
-    clientdebugLevel_t newValue = session.client_debug_level;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "pref set clientdebug ",
+                  "Set presistent preference of using clientside debug level",
+                  "pref set clientdebug --simple"
+                 );
 
-    if (param_getchar(Cmd, cmdp) == 0x00)
-        return usage_set_debug();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "off", "no debug messages"),
+        arg_lit0(NULL, "simple", "simple debug messages"),
+        arg_lit0(NULL, "full", "full debug messages"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool use_off = arg_get_lit(ctx, 1);
+    bool use_simple = arg_get_lit(ctx, 2);
+    bool use_full = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
 
-    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
+    if ( (use_off + use_simple + use_full) > 1) {
+        PrintAndLogEx(FAILED, "Can only set one option");
+        return PM3_EINVARG;
+    }
 
-        if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
-            str_lower(strOpt); // convert to lowercase
+    clientdebugLevel_t new_value = session.client_debug_level;
 
-            if (strncmp(strOpt, "help", 4) == 0)
-                return usage_set_debug();
-            if (strncmp(strOpt, "off", 3) == 0) {
-                validValue = true;
-                newValue = cdbOFF;
-            }
-            if (strncmp(strOpt, "simple", 6) == 0) {
-                validValue = true;
-                newValue = cdbSIMPLE;
-            }
-            if (strncmp(strOpt, "full", 4) == 0) {
-                validValue = true;
-                newValue = cdbFULL;
-            }
+    if (use_off) {
+        new_value = cdbOFF;
+    }
+    if (use_simple) {
+        new_value = cdbSIMPLE;
+    }
+    if (use_full) {
+        new_value = cdbFULL;
+    }
 
-            if (validValue) {
-                if (session.client_debug_level != newValue) {// changed
-                    showClientDebugState(prefShowOLD);
-                    session.client_debug_level = newValue;
-                    g_debugMode = newValue;
-                    showClientDebugState(prefShowNEW);
-                    preferences_save();
-                } else {
-                    PrintAndLogEx(INFO, "nothing changed");
-                    showClientDebugState(prefShowNone);
-                }
-            } else {
-                PrintAndLogEx(ERR, "invalid option");
-                return usage_set_debug();
-            }
-        }
+    if (session.client_debug_level != new_value) {
+        showClientDebugState(prefShowOLD);
+        session.client_debug_level = new_value;
+        g_debugMode = new_value;
+        showClientDebugState(prefShowNEW);
+        preferences_save();
+    } else {
+        showClientDebugState(prefShowNone);
     }
 
     return PM3_SUCCESS;
@@ -793,93 +733,86 @@ static int setCmdDeviceDebug (const char *Cmd)
 }
 */
 static int setCmdHint(const char *Cmd) {
-    uint8_t cmdp = 0;
-    bool errors = false;
-    bool validValue = false;
-    char strOpt[50];
-    bool newValue = session.show_hints;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "pref set hints ",
+                  "Set presistent preference of showing hint messages in the client",
+                  "pref set hints --on"
+                 );
 
-    if (param_getchar(Cmd, cmdp) == 0x00)
-        return usage_set_hints();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "off", "hide hints"),
+        arg_lit0(NULL, "on", "show hints"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool use_off = arg_get_lit(ctx, 1);
+    bool use_on = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
 
-    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
+    if ( (use_off + use_on) > 1) {
+        PrintAndLogEx(FAILED, "Can only set one option");
+        return PM3_EINVARG;
+    }
+ 
+     bool new_value = session.show_hints;
+    if (use_off) {
+        new_value = false;
+    }
+    if (use_on) {
+        new_value = true;
+    }
 
-        if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
-            str_lower(strOpt); // convert to lowercase
-
-            if (strncmp(strOpt, "help", 4) == 0)
-                return usage_set_hints();
-            if (strncmp(strOpt, "off", 3) == 0) {
-                validValue = true;
-                newValue = false;
-            }
-            if (strncmp(strOpt, "on", 2) == 0) {
-                validValue = true;
-                newValue = true;
-            }
-
-            if (validValue) {
-                if (session.show_hints != newValue) {// changed
-                    showHintsState(prefShowOLD);
-                    session.show_hints = newValue;
-                    showHintsState(prefShowNEW);
-                    preferences_save();
-                } else {
-                    PrintAndLogEx(INFO, "nothing changed");
-                    showHintsState(prefShowNone);
-                }
-            } else {
-                PrintAndLogEx(ERR, "invalid option");
-                return usage_set_hints();
-            }
-        }
+    if (session.show_hints != new_value) {
+        showHintsState(prefShowOLD);
+        session.show_hints = new_value;
+        showHintsState(prefShowNEW);
+        preferences_save();
+    } else {
+        showHintsState(prefShowNone);
     }
 
     return PM3_SUCCESS;
 }
 static int setCmdPlotSliders(const char *Cmd) {
-    uint8_t cmdp = 0;
-    bool errors = false;
-    bool validValue = false;
-    char strOpt[50];
-    bool newValue = session.overlay_sliders;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "pref set plotsliders ",
+                  "Set presistent preference of showing the plotslider control in the client",
+                  "pref set plotsliders --on"
+                 );
 
-    if (param_getchar(Cmd, cmdp) == 0x00)
-        return usage_set_plotsliders();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "off", "hide plot slider controls"),
+        arg_lit0(NULL, "on", "show plot slider controls"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool use_off = arg_get_lit(ctx, 1);
+    bool use_on = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
 
-    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
-
-        if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
-            str_lower(strOpt); // convert to lowercase
-
-            if (strncmp(strOpt, "help", 4) == 0)
-                return usage_set_plotsliders();
-            if (strncmp(strOpt, "off", 3) == 0) {
-                validValue = true;
-                newValue = false;
-            }
-            if (strncmp(strOpt, "on", 2) == 0) {
-                validValue = true;
-                newValue = true;
-            }
-
-            if (validValue) {
-                if (session.overlay_sliders != newValue) {// changed
-                    showPlotSliderState(prefShowOLD);
-                    session.overlay_sliders = newValue;
-                    showPlotSliderState(prefShowNEW);
-                    preferences_save();
-                } else {
-                    PrintAndLogEx(INFO, "nothing changed");
-                    showPlotSliderState(prefShowNone);
-                }
-            } else {
-                PrintAndLogEx(ERR, "invalid option");
-                return usage_set_plotsliders();
-            }
-        }
+    if ( (use_off + use_on) > 1) {
+        PrintAndLogEx(FAILED, "Can only set one option");
+        return PM3_EINVARG;
+    }
+ 
+    bool new_value = session.overlay_sliders;
+    if (use_off) {
+        new_value = false;
+    }
+    if (use_on) {
+        new_value = true;
     }
 
+    if (session.overlay_sliders != new_value) {
+        showPlotSliderState(prefShowOLD);
+        session.overlay_sliders = new_value;
+        showPlotSliderState(prefShowNEW);
+        preferences_save();
+    } else {
+        showPlotSliderState(prefShowNone);
+    }
     return PM3_SUCCESS;
 }
 
@@ -975,53 +908,49 @@ static int getCmdHelp(const char *Cmd) {
 */
 
 static int setCmdBarMode(const char *Cmd) {
-    uint8_t cmdp = 0;
-    bool errors = false;
-    bool validValue = false;
-    char strOpt[50];
-    barMode_t newValue = session.bar_mode;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "pref set barmode",
+                  "Set presistent preference of HF/LF tune command styled output in the client",
+                  "pref set barmode --mix"
+                 );
 
-    if (param_getchar(Cmd, cmdp) == 0x00)
-        return usage_set_bar_mode();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "bar", "measured values as bar only"),
+        arg_lit0(NULL, "mix", "measured values as numbers and bar"),
+        arg_lit0(NULL, "val", "measured values only"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool show_bar = arg_get_lit(ctx, 1);
+    bool show_mix = arg_get_lit(ctx, 2);
+    bool show_val = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
 
-    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
-
-        if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
-            str_lower(strOpt); // convert to lowercase
-
-            if (strncmp(strOpt, "help", 4) == 0)
-                return usage_set_bar_mode();
-
-            if (strncmp(strOpt, "bar", 3) == 0) {
-                validValue = true;
-                newValue = STYLE_BAR;
-            }
-            if (strncmp(strOpt, "mixed", 5) == 0) {
-                validValue = true;
-                newValue = STYLE_MIXED;
-            }
-            if (strncmp(strOpt, "value", 5) == 0) {
-                validValue = true;
-                newValue = STYLE_VALUE;
-            }
-
-            if (validValue) {
-                if (session.bar_mode != newValue) {// changed
-                    showBarModeState(prefShowOLD);
-                    session.bar_mode = newValue;
-                    showBarModeState(prefShowNEW);
-                    preferences_save();
-                } else {
-                    PrintAndLogEx(INFO, "nothing changed");
-                    showBarModeState(prefShowNone);
-                }
-            } else {
-                PrintAndLogEx(ERR, "invalid option");
-                return usage_set_bar_mode();
-            }
-        }
+    if ( (show_bar + show_mix + show_val) > 1) {
+        PrintAndLogEx(FAILED, "Can only set one option");
+        return PM3_EINVARG;
     }
 
+    barMode_t new_value = session.bar_mode;
+    if (show_bar) {
+        new_value = STYLE_BAR;
+    }
+    if (show_mix) {
+        new_value = STYLE_MIXED;
+    }
+    if (show_val) {
+        new_value = STYLE_VALUE;
+    }
+
+    if (session.bar_mode != new_value) {
+        showBarModeState(prefShowOLD);
+        session.bar_mode = new_value;
+        showBarModeState(prefShowNEW);
+        preferences_save();
+    } else {
+        showBarModeState(prefShowNone);
+    }
     return PM3_SUCCESS;
 }
 
@@ -1056,7 +985,7 @@ static int getCmdBarMode(const char *Cmd) {
 }
 
 
-static command_t getCommandTable[] = {
+static command_t CommandTableGet[] = {
 //     {"help",             getCmdHelp,          AlwaysAvailable, "This help"},
     {"barmode",          getCmdBarMode,       AlwaysAvailable, "Get bar mode preference"},
     {"clientdebug",      getCmdDebug,         AlwaysAvailable, "Get client debug level preference"},
@@ -1069,7 +998,7 @@ static command_t getCommandTable[] = {
     {NULL, NULL, NULL, NULL}
 };
 
-static command_t setCommandTable[] = {
+static command_t CommandTableSet[] = {
     {"help",             setCmdHelp,          AlwaysAvailable, "This help"},
     {"barmode",          setCmdBarMode,       AlwaysAvailable, "Set bar mode"},
     {"clientdebug",      setCmdDebug,         AlwaysAvailable, "Set client debug level"},
@@ -1084,18 +1013,18 @@ static command_t setCommandTable[] = {
 
 static int setCmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    CmdsHelp(setCommandTable);
+    CmdsHelp(CommandTableSet);
     return PM3_SUCCESS;
 }
 
 static int CmdPrefGet(const char *Cmd) {
     clearCommandBuffer();
-    return CmdsParse(getCommandTable, Cmd);
+    return CmdsParse(CommandTableGet, Cmd);
 }
 
 static int CmdPrefSet(const char *Cmd) {
     clearCommandBuffer();
-    return CmdsParse(setCommandTable, Cmd);
+    return CmdsParse(CommandTableSet, Cmd);
 }
 
 static int CmdPrefShow(const char *Cmd) {

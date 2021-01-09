@@ -24,7 +24,7 @@ extern "C" {
 
 typedef enum {STYLE_BAR, STYLE_MIXED, STYLE_VALUE} barMode_t;
 typedef enum logLevel {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG, INPLACE, HINT} logLevel_t;
-typedef enum emojiMode {ALIAS, EMOJI, ALTTEXT, ERASE} emojiMode_t;
+typedef enum emojiMode {EMO_ALIAS, EMO_EMOJI, EMO_ALTTEXT, EMO_NONE} emojiMode_t;
 typedef enum clientdebugLevel {cdbOFF, cdbSIMPLE, cdbFULL} clientdebugLevel_t;
 // typedef enum devicedebugLevel {ddbOFF, ddbERROR, ddbINFO, ddbDEBUG, ddbEXTENDED} devicedebugLevel_t;
 //typedef enum savePaths {spDefault, spDump, spTrace, spItemCount} savePaths_t; // last item spItemCount used to auto map to number of files
