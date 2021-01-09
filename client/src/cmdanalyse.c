@@ -25,21 +25,10 @@
 #include "graph.h"
 #include "proxgui.h"
 #include "cliparser.h"
+#include "generator.h"    // generate nuid
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_analyse_nuid(void) {
-    PrintAndLogEx(NORMAL, "Generate 4byte NUID from 7byte UID");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  analyse hid [h] <bytes>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           <bytes>  input bytes (14 hexsymbols)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      analyse nuid 11223344556677");
-    return PM3_SUCCESS;
-}
 static int usage_analyse_a(void) {
     PrintAndLogEx(NORMAL, "Iceman's personal garbage test command");
     PrintAndLogEx(NORMAL, "");
@@ -839,56 +828,75 @@ static int CmdAnalyseA(const char *Cmd) {
 //    return 0;
 }
 
-static void generate4bNUID(uint8_t *uid, uint8_t *nuid) {
-    uint16_t crc;
-    uint8_t b1, b2;
-
-    compute_crc(CRC_14443_A, uid, 3, &b1, &b2);
-    nuid[0] = (b2 & 0xE0) | 0xF;
-    nuid[1] = b1;
-    crc = b1;
-    crc |= b2 << 8;
-    crc = crc16_fast(&uid[3], 4, reflect16(crc), true, true);
-    nuid[2] = (crc >> 8) & 0xFF ;
-    nuid[3] = crc & 0xFF;
-}
-
 static int CmdAnalyseNuid(const char *Cmd) {
-    uint8_t nuid[4] = {0};
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse nuid",
+                  "Generate 4byte NUID from 7byte UID",
+                  "analyse nuid -d 11223344556677"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("d", "data", "<hex>", "bytes to send"),
+        arg_lit0("t", "test", "self test"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int uidlen = 0;
     uint8_t uid[7] = {0};
-    int len = 0;
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_nuid();
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), uid, sizeof(uid), &uidlen);
+    bool selftest = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+   
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
+
+    uint8_t nuid[4] = {0};
 
     /* src: https://www.nxp.com/docs/en/application-note/AN10927.pdf */
     /* selftest1  UID 040D681AB52281  -> NUID 8F430FEF */
     /* selftest2  UID 04183F09321B85  -> NUID 4F505D7D */
-    if (cmdp == 't') {
+    if (selftest) {
         uint8_t uid_test1[] = {0x04, 0x0d, 0x68, 0x1a, 0xb5, 0x22, 0x81};
         uint8_t nuid_test1[] = {0x8f, 0x43, 0x0f, 0xef};
         uint8_t uid_test2[] = {0x04, 0x18, 0x3f, 0x09, 0x32, 0x1b, 0x85};
         uint8_t nuid_test2[] = {0x4f, 0x50, 0x5d, 0x7d};
         memcpy(uid, uid_test1, sizeof(uid));
-        generate4bNUID(uid, nuid);
+        mfc_generate4b_nuid(uid, nuid);
 
+        PrintAndLogEx(INFO, "Self tests");
         bool test1 = (0 == memcmp(nuid, nuid_test1, sizeof(nuid)));
-        PrintAndLogEx(SUCCESS, "Selftest1 %s\n",  test1 ? _GREEN_("OK") : _RED_("Fail"));
+        PrintAndLogEx((test1) ? SUCCESS : FAILED, "1. %s -> %s ( %s )"
+            , sprint_hex_inrow(uid_test1, sizeof(uid_test1))
+            , sprint_hex(nuid, sizeof(nuid))
+            ,  test1 ? _GREEN_("ok") : _RED_("fail")
+            );
 
         memcpy(uid, uid_test2, sizeof(uid));
-        generate4bNUID(uid, nuid);
+        mfc_generate4b_nuid(uid, nuid);
         bool test2 = (0 == memcmp(nuid, nuid_test2, sizeof(nuid)));
-        PrintAndLogEx(SUCCESS, "Selftest2 %s\n", test2 ? _GREEN_("OK") : _RED_("Fail"));
-        return 0;
+        PrintAndLogEx((test2) ? SUCCESS : FAILED, "2. %s -> %s ( %s )\n"
+            , sprint_hex_inrow(uid_test2, sizeof(uid_test2))
+            , sprint_hex(nuid, sizeof(nuid))
+            , test2 ? _GREEN_("ok") : _RED_("fail")
+            );
+
+        return PM3_SUCCESS;
     }
 
-    param_gethex_ex(Cmd, 0, uid, &len);
-    if (len % 2  || len != 14) return usage_analyse_nuid();
+    if (uidlen != 7) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
 
-    generate4bNUID(uid, nuid);
+    mfc_generate4b_nuid(uid, nuid);
 
-    PrintAndLogEx(NORMAL, "UID  | %s \n", sprint_hex(uid, 7));
-    PrintAndLogEx(NORMAL, "NUID | %s \n", sprint_hex(nuid, 4));
-    return 0;
+    PrintAndLogEx(INFO, "UID  | %s \n", sprint_hex(uid, 7));
+    PrintAndLogEx(INFO, "NUID | %s \n", sprint_hex(nuid, 4));
+    return PM3_SUCCESS;
 }
 
 static int CmdAnalyseDemodBuffer(const char *Cmd) {
