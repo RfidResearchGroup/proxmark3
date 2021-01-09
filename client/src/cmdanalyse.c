@@ -29,19 +29,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_analyse_demodbuffer(void) {
-    PrintAndLogEx(NORMAL, "loads a binary string into demod buffer");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  analyse demodbuff [h] <binarystring>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h                This help");
-    PrintAndLogEx(NORMAL, "           <binarystring>   Binary string to load");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      analyse demodbuff 0011101001001011");
-    return PM3_SUCCESS;
-}
-
 static uint8_t calculateLRC(uint8_t *bytes, uint8_t len) {
     uint8_t LRC = 0;
     for (uint8_t i = 0; i < len; i++)
@@ -185,21 +172,58 @@ static uint16_t calcBSDchecksum4(uint8_t *bytes, uint8_t len, uint32_t mask) {
 
 // measuring LFSR maximum length
 static int CmdAnalyseLfsr(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse lfsr",
+                  "looks at LEGIC Prime's lfsr,  iterates the first 48 values",
+                  "analyse lfsr --iv 55"
+                 );
 
-    uint8_t iv = param_get8ex(Cmd, 0, 0, 16);
-    uint8_t find = param_get8ex(Cmd, 1, 0, 16);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "iv", "<hex>", "init vector data (1 hex byte)"),
+        arg_str0(NULL, "find", "<hex>", "lfsr data to find (1 hex byte)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int iv_len = 0;
+    uint8_t idata[1] = {0};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), idata, sizeof(idata), &iv_len);
 
-    PrintAndLogEx(NORMAL, "LEGIC LFSR IV 0x%02X: \n", iv);
-    PrintAndLogEx(NORMAL, " bit# | lfsr | ^0x40 |  0x%02X ^ lfsr \n", find);
+    if (res) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(FAILED, "Error parsing IV byte");
+        return PM3_EINVARG;
+    }
+
+    int f_len = 0;
+    uint8_t fdata[1] = {0};
+    res = CLIParamHexToBuf(arg_get_str(ctx, 2), fdata, sizeof(fdata), &f_len);
+    CLIParserFree(ctx);
+
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing FIND byte");
+        return PM3_EINVARG;
+    }
+
+    uint8_t iv = idata[0];
+    uint8_t find = fdata[0];
+
+    PrintAndLogEx(INFO, "LEGIC Prime lfsr");
+    PrintAndLogEx(INFO, "iv..... 0x%02X", iv);
+    PrintAndLogEx(INFO, "----+------+-------+--------------");
+    PrintAndLogEx(INFO, " i# | lfsr | ^0x40 |  0x%02X ^ lfsr", find);
+    PrintAndLogEx(INFO, "----+------+-------+--------------");
 
     for (uint8_t i = 0x01; i < 0x30; i += 1) {
         legic_prng_init(iv);
         legic_prng_forward(i);
         uint16_t lfsr = legic_prng_get_bits(12);  /* Any nonzero start state will work. */
-        PrintAndLogEx(NORMAL, " %02X | %03X | %03X | %03X \n", i, lfsr, 0x40 ^ lfsr, find ^ lfsr);
+        PrintAndLogEx(INFO, " %02X |  %03X |  %03X  | %03X", i, lfsr, 0x40 ^ lfsr, find ^ lfsr);
     }
-    return 0;
+    PrintAndLogEx(INFO, "----+------+-------+--------------");
+    return PM3_SUCCESS;
 }
+
 static int CmdAnalyseLCR(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "analyse lcr",
@@ -422,27 +446,49 @@ static int CmdAnalyseCHKSUM(const char *Cmd) {
 }
 
 static int CmdAnalyseDates(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    // look for datestamps in a given array of bytes
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse dates",
+                  "Tool to look for date/time stamps in a given array of bytes",
+                  "analyse dates"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     PrintAndLogEx(NORMAL, "To be implemented. Feel free to contribute!");
-    return 0;
+    return PM3_SUCCESS;
 }
+
 static int CmdAnalyseTEASelfTest(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse tea",
+                  "Crypto TEA self tests",
+                  "analyse tea -d 1122334455667788"
+                 );
 
-    uint8_t v[8], v_le[8];
-    memset(v, 0x00, sizeof(v));
-    memset(v_le, 0x00, sizeof(v_le));
-    uint8_t *v_ptr = v_le;
-
-    uint8_t cmdlen = strlen(Cmd);
-    cmdlen = (sizeof(v) << 2 < cmdlen) ? sizeof(v) << 2 : cmdlen;
-
-    if (param_gethex(Cmd, 0, v, cmdlen) > 0) {
-        PrintAndLogEx(WARNING, "Can't read hex chars, uneven? :: %u", cmdlen);
-        return 1;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "bytes to encrypt ( 8 hex bytes )"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int dlen = 0;
+    uint8_t data[8] = {0x00};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
+    CLIParserFree(ctx);
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
     }
 
-    SwapEndian64ex(v, 8, 4, v_ptr);
+    uint8_t v_le[8];
+    memset(v_le, 0x00, sizeof(v_le));
+    uint8_t *v_ptr = v_le;
+   
+    SwapEndian64ex(data, 8, 4, v_ptr);
 
     // ENCRYPTION KEY:
     uint8_t key[16] = {0x55, 0xFE, 0xF6, 0x30, 0x62, 0xBF, 0x0B, 0xC1, 0xC9, 0xB3, 0x7C, 0x34, 0x97, 0x3E, 0x29, 0xFB };
@@ -450,39 +496,20 @@ static int CmdAnalyseTEASelfTest(const char *Cmd) {
     uint8_t *key_ptr = keyle;
     SwapEndian64ex(key, sizeof(key), 4, key_ptr);
 
-    PrintAndLogEx(NORMAL, "TEST LE enc| %s", sprint_hex(v_ptr, 8));
+    PrintAndLogEx(INFO, "TEA crypto testing");
+    PrintAndLogEx(INFO, "-----------------------------------+---------");
+    PrintAndLogEx(INFO, "LE enc.... %s", sprint_hex_ascii(v_ptr, 8));
 
     tea_decrypt(v_ptr, key_ptr);
-    PrintAndLogEx(NORMAL, "TEST LE dec | %s", sprint_hex_ascii(v_ptr, 8));
+    PrintAndLogEx(INFO, "LE dec.... %s", sprint_hex_ascii(v_ptr, 8));
 
     tea_encrypt(v_ptr, key_ptr);
+    PrintAndLogEx(INFO, "enc1...... %s", sprint_hex_ascii(v_ptr, 8));
     tea_encrypt(v_ptr, key_ptr);
-    PrintAndLogEx(NORMAL, "TEST enc2 | %s", sprint_hex_ascii(v_ptr, 8));
-
-    return 0;
+    PrintAndLogEx(INFO, "enc2...... %s", sprint_hex_ascii(v_ptr, 8));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
 }
-
-/*
-static char *pb(uint32_t b) {
-    static char buf1[33] = {0};
-    static char buf2[33] = {0};
-    static char *s;
-
-    if (s != buf1)
-        s = buf1;
-    else
-        s = buf2;
-
-    memset(s, 0, sizeof(buf1));
-
-    uint32_t mask = 0x80000000;
-    for (uint8_t i = 0; i < 32; i++) {
-        s[i] = (mask & b) ? '1' : '0';
-        mask >>= 1;
-    }
-    return s;
-}
-*/
 
 static int CmdAnalyseA(const char *Cmd) {
     CLIParserContext *ctx;
@@ -881,22 +908,35 @@ static int CmdAnalyseNuid(const char *Cmd) {
 }
 
 static int CmdAnalyseDemodBuffer(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse demodbuff",
+                  "loads a binary string into demod buffer",
+                  "analyse demodbuff -d 0011101001001011"
+                 );
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_demodbuffer();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<bin>", "binary string to load"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    const char *s = arg_get_str(ctx, 1)->sval[0];
+    CLIParserFree(ctx);
+   
+    if (s == NULL) {
+        PrintAndLogEx(FAILED, "Must provide a binary string");
+        return PM3_EINVARG;
+    }
 
-    int bg = 0, en = 0;
-    if (param_getptr(Cmd, &bg, &en, 0))
-        return usage_analyse_demodbuffer();
-
-    int len = MIN((en - bg + 1), MAX_DEMOD_BUF_LEN);
+    int len = MIN(strlen(s), MAX_DEMOD_BUF_LEN);
 
     // add 1 for null terminator.
     uint8_t *data = calloc(len + 1,  sizeof(uint8_t));
-    if (!data) return PM3_EMALLOC;
+    if (data == NULL)
+        return PM3_EMALLOC;
 
-    for (int i = 0; bg <= en; bg++, i++) {
-        char c = Cmd[bg];
+    for (int i = 0; i <= strlen(s); i++) {
+        char c = s[i];
         if (c == '1')
             DemodBuffer[i] = 1;
         if (c == '0')

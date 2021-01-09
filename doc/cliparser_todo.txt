@@ -1,13 +1,5 @@
 clear
 pref
-analyse chksum
-analyse dates
-analyse tea
-analyse lfsr
-analyse a
-analyse nuid
-analyse demodbuff
-analyse freq
 data biphaserawdecode
 data detectclock
 data fsktonrz
