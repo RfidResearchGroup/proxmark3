@@ -1515,6 +1515,7 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
                         printTag("MIFARE DESFire CL2");
                         printTag("MIFARE DESFire EV1 256B/2K/4K/8K CL2");
                         printTag("MIFARE DESFire EV2 2K/4K/8K/16K/32K");
+                        printTag("MIFARE DESFire EV3 2K/4K/8K");
                         printTag("MIFARE DESFire Light 640B");
                     } else {
                         printTag("MIFARE Plus EV1 2K/4K CL2 in SL3");
