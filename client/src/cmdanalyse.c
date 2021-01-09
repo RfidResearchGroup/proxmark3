@@ -12,7 +12,7 @@
 #include <stdlib.h>       // size_t
 #include <string.h>
 #include <ctype.h>        // tolower
-//#include <stdio.h>        // printf
+#include <math.h>
 #include "commonutil.h"   // reflect...
 #include "comms.h"        // clearCommandBuffer
 #include "cmdparser.h"    // command_t
@@ -944,28 +944,114 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
 
         PrintAndLogEx(NORMAL, "%c" NOLF, c);
     }
-
     PrintAndLogEx(NORMAL, "");
-
     DemodBufferLen = len;
     free(data);
+    PrintAndLogEx(HINT, "Use `" _YELLOW_("data print") "` to view demod buffer");
     return PM3_SUCCESS;
 }
 
 static int CmdAnalyseFreq(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse freq",
+                  "calc wave lengths",
+                  "analyse freq"
+                 );
 
-//    char cmdp = tolower(param_getchar(Cmd, 0));
-//    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_freq();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     const double c = 299792458;
     double len_125 = c / 125000;
     double len_134 = c / 134000;
     double len_1356 = c / 13560000;
 
+    double rf_range_125 = len_125 / (M_PI * 2);
+    double rf_range_134 = len_134 / (M_PI * 2);
+    double rf_range_1356 = len_1356 / (M_PI * 2);
+
     PrintAndLogEx(INFO, "Wavelengths");
-    PrintAndLogEx(INFO, "   125 kHz has %f meters", len_125);
-    PrintAndLogEx(INFO, "   134 kHz has %f meters", len_134);
-    PrintAndLogEx(INFO, " 13.56 mHz has %f meters", len_1356);
+    PrintAndLogEx(INFO, "   125 kHz has %f m, rf range %f m", len_125, rf_range_125);
+    PrintAndLogEx(INFO, "   134 kHz has %f m, rf range %f m", len_134, rf_range_134);
+    PrintAndLogEx(INFO, " 13.56 mHz has %f m, rf range %f m", len_1356, rf_range_1356);
+    return PM3_SUCCESS;
+}
+
+static int CmdAnalyseFoo(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyze foo",
+                  "experiments of cliparse",
+                  "analyse foo -r a0000000a0002021"
+                  );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("r", "raw",  "<hex>", "raw bytes (strx)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    // raw param
+    int datalen = 256;
+    uint8_t data[256];
+    CLIGetHexWithReturn(ctx, 1, data, &datalen);
+
+    int data3len = 512;    
+    uint8_t data3[512];    
+    CLIGetStrWithReturn(ctx, 1, data3, &data3len);
+
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(INFO, "-r");
+    PrintAndLogEx(INFO, "Got:  %s", sprint_hex_inrow(data, datalen));
+    PrintAndLogEx(INFO, "Got:  %s", data3);
+    
+    ClearGraph(false);
+    GraphTraceLen = 15000;
+
+    for (int i = 0; i < 4095; i++) {
+        int o = 0;
+
+        // 0010 0000
+        if (i & 0x2000) o |= 0x80;    // corr_i_accum[13]
+        // 0001 1100
+        if (i & 0x1C00) o |= 0x40;    // corr_i_accum[12] | corr_i_accum[11] | corr_i_accum[10]
+        // 0000 1110
+        if (i & 0x0E00) o |= 0x20;    // corr_i_accum[12] | corr_i_accum[11] | corr_i_accum[9],
+        o |= (i & 0x1F0) >> 4;        // corr_i_accum[8:4]
+
+        GraphBuffer[i] = o;
+    }
+
+    for (int i = 0; i < 4095; i++) {
+        int o = 0;
+
+        // Send 8 bits of in phase tag signal
+        //if (corr_i_accum[13:11] == 3'b000 || corr_i_accum[13:11] == 3'b111)
+        if ((i & 0x3800) == 0 || (i & 0x3800) == 0x3800) {
+            o |= (i & 0xFF0) >> 4;   // corr_i_out <= corr_i_accum[11:4];
+        } else {
+            // truncate to maximum value
+            //if (corr_i_accum[13] == 1'b0)
+            if ((i & 0x2000) == 0) {
+                o |= 0x7f;     //  corr_i_out <= 8'b01111111;
+            }
+        }
+        GraphBuffer[i + 5000] = o;
+    }
+
+    for (int i = 0; i < 4095; i++) {
+        int o = i >> 5;
+        GraphBuffer[i + 10000] = o;
+    }
+
+    RepaintGraphWindow();
+    ShowGraphWindow();
     return PM3_SUCCESS;
 }
 
@@ -981,6 +1067,7 @@ static command_t CommandTable[] = {
     {"nuid",    CmdAnalyseNuid,     AlwaysAvailable, "create NUID from 7byte UID"},
     {"demodbuff", CmdAnalyseDemodBuffer, AlwaysAvailable, "Load binary string to demodbuffer"},
     {"freq",    CmdAnalyseFreq,     AlwaysAvailable, "Calc wave lengths"},
+    {"foo",    CmdAnalyseFoo,     AlwaysAvailable, "muxer"},
     {NULL, NULL, NULL, NULL}
 };
 
