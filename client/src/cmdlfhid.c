@@ -344,6 +344,7 @@ static int CmdHIDClone(const char *Cmd) {
         arg_strx0("r",  "raw",     "<hex>", "raw bytes"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -365,10 +366,21 @@ static int CmdHIDClone(const char *Cmd) {
 
     bool q5 = arg_get_lit(ctx, 7);
     bool em = arg_get_lit(ctx, 8);
+
+
+    int bin_len = 63;
+    uint8_t bin[70] = {0};
+    CLIGetStrWithReturn(ctx, 9, bin, &bin_len);
+
     CLIParserFree(ctx);
 
     if (q5 && em) {
         PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
+
+    if (bin_len > 127) {
+        PrintAndLogEx(ERR, "Binary wiegand string must be less than 128 bits");
         return PM3_EINVARG;
     }
 
