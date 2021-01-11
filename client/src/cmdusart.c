@@ -160,12 +160,12 @@ static int usart_bt_testcomm(uint32_t baudrate, uint8_t parity) {
 static int CmdUsartBtFactory(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "usart btfactory",
-                  "Reset BT add-on to factory settings\n"
-                  "WARNING: process only if strictly needed!\n"
+                  "Reset BT add-on to factory settings\n"                  
                   "This requires\n"
                   "    1) BTpower to be turned ON\n"
                   "    2) BT add-on to NOT be connected\n"
-                  "      => the add-on blue LED must blink",
+                  "      => the add-on blue LED must blink\n\n"
+                  _RED_("WARNING:") _CYAN_(" process only if strictly needed!"),
                   "usart btfactory"
                  );
 
