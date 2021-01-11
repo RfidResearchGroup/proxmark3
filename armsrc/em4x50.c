@@ -46,6 +46,7 @@
 #define EM4X50_T_WAITING_FOR_SNGLLIW        140
 
 #define EM4X50_TAG_TOLERANCE                8
+#define EM4X50_ZERO_DETECTION               3
 #define EM4X50_TAG_WORD                     45
 #define EM4X50_TAG_MAX_NO_BYTES             136
 
@@ -60,14 +61,10 @@ int gHigh = 190;
 int gLow = 60;
 
 // a global parameter is needed to indicate whether a previous login was
-// successful, so operations that require authentication may be performed
+// successful, so operations that require authentication can be handled
 bool gLogin = false;
 // additionally a global variable to identify the WritePassword process
 bool gWritePasswordProcess = false;
-
-int gcount = 0;
-int gcycles = 0;
-int rm = 0;
 
 static int em4x50_sim_send_listen_window(uint32_t *tag);
 
@@ -812,35 +809,48 @@ static int wait_cycles(int maxperiods) {
     
     return PM3_SUCCESS;
 }
-
-static int get_cycles(void) {
+ 
+static uint8_t em4x50_sim_read_bit(void) {
 
     int cycles = 0;
 
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV < T0 * (EM4X50_T_TAG_FULL_PERIOD - 2)) {
+    while (cycles < EM4X50_T_TAG_FULL_PERIOD) {
 
+        // wait until reader field disappears
         while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
 
-        // check again to minimize desynchronization
-        if (AT91C_BASE_TC0->TC_CV >= T0 * EM4X50_T_TAG_FULL_PERIOD)
-            break;
+        // reader field is off, reset timer TC0
+        AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
 
-        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);
-        
+        // now check until reader switches on carrier field
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+
+            // check if cycle (i.e. off -> on -> off) takes longer than T0
+            if (AT91C_BASE_TC0->TC_CV > T0 * EM4X50_ZERO_DETECTION) {
+
+                // gap detected; wait until reader field is switched on again
+                while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);
+                
+                // now we have a reference "position", from here it will take
+                // slightly less 32 cycles until the end of the bit period
+                wait_cycles(EM4X50_T_TAG_FULL_PERIOD - EM4X50_ZERO_DETECTION);
+                
+                // end of bit period is reached; return with bit value "0"
+                // (cf. datasheet)
+                return 0;
+            }
+
+        }
+
+        // no gap detected, i.e. reader field is still up;
+        // continue with counting cycles
         cycles++;
     }
 
-    return cycles;
+    // reached 64 cycles (= EM4X50_T_TAG_FULL_PERIOD) -> return bit value "1"
+    return 1;
 }
-
-static uint8_t em4x50_sim_read_bit(void) {
-
-    int cond = EM4X50_T_TAG_FULL_PERIOD - EM4X50_TAG_TOLERANCE;
-
-    return (get_cycles() < cond) ? 0 : 1;
-}
-
+ 
 static uint8_t em4x50_sim_read_byte(void) {
     
     uint8_t byte = 0;
@@ -954,8 +964,7 @@ static int em4x50_sim_handle_login_command(uint32_t *tag) {
     // read password
     uint32_t password = 0;
     bool pwd_ok = em4x50_sim_read_word(&password);
-    //Dbprintf("address = %08x", address);
-    wait_cycles(15);
+    //wait_cycles(15);
 
     // processing pause time (corresponds to a "1" bit)
     em4x50_sim_send_bit(1);
@@ -1261,13 +1270,11 @@ static int em4x50_sim_handle_standard_read_command(uint32_t *tag) {
 // reader requests receive mode (rm) by sending two zeros
 static int check_rm_request(uint32_t *tag) {
     
-    int cond = EM4X50_T_TAG_FULL_PERIOD - EM4X50_TAG_TOLERANCE;
-    
     // look for first zero
-    if (get_cycles() < cond) {
-    
+    if (em4x50_sim_read_bit() == 0) {
+
         // look for second zero
-        if (get_cycles() < cond) {
+        if (em4x50_sim_read_bit() == 0) {
 
             // if command before was EM4X50_COMMAND_WRITE_PASSWORD
             // switch to separate process
@@ -1569,7 +1576,6 @@ void em4x50_info(em4x50_data_t *etd) {
     uint32_t addresses = 0x00002100; // read from fwr = 0 to lwr = 33 (0x21)
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
-    gcount = 0;
     em4x50_setup_read();
 
     if (get_signalproperties() && find_em4x50_tag()) {
