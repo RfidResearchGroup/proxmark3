@@ -93,10 +93,6 @@ client/traces/*
 client/dumps/*
 *.ice
 *.new
-tools/mf_nonce_brute/mf_nonce_brute
-tools/andrew/*
-tools/jtag_openocd/openocd_configuration
-ppls patches/*
 *- Copy.*
 /EF_*
 
@@ -105,12 +101,13 @@ client/lualibs/pm3_cmd.lua
 # recompiled
 fpga_version_info.c
 
+# log / history
 .proxmark3/*
 
 # .tmp files are created during compilation
 *.tmp
 
-#VSCode files
+# VSCode files
 !.vscode/templates/*.json
 !.vscode/extensions.json
 !.vscode/tasks.json
