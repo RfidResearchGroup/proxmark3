@@ -282,25 +282,6 @@ static int usage_t55xx_chk(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_t55xx_bruteforce(void) {
-    PrintAndLogEx(NORMAL, "This command uses bruteforce to scan a number range");
-    PrintAndLogEx(NORMAL, "press " _YELLOW_("'enter'") " to cancel the command");
-    PrintAndLogEx(NORMAL, _RED_("WARNING:") " this may brick non-password protected chips!");
-    PrintAndLogEx(NORMAL, "Try reading block 7 before\n");
-    PrintAndLogEx(NORMAL, "Usage: lf t55xx bruteforce [h] [r <mode>] [s <start password>] [e <end password>]");
-    PrintAndLogEx(NORMAL, "       password must be 4 bytes (8 hex symbols)");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     h            - this help");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_ALL, T55XX_DLMODE_ALL);
-    PrintAndLogEx(NORMAL, "     s <start_pwd>  - 4 byte hex value to start pwd search at");
-    PrintAndLogEx(NORMAL, "     e <end_pwd>    - 4 byte hex value to end pwd search at");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf t55xx bruteforce r 2 s aaaaaa77 e aaaaaa99"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
 static int usage_t55xx_dangerraw(void) {
     PrintAndLogEx(NORMAL, "This command allows to emit arbitrary raw commands on T5577 and cut the field after arbitrary duration.");
     PrintAndLogEx(NORMAL, _RED_("WARNING:") " this may lock definitively the tag in an unusable state!");
@@ -3192,62 +3173,84 @@ out:
 
 // Bruteforce - incremental password range search
 static int CmdT55xxBruteForce(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx bruteforce",
+                  "This command uses bruteforce to scan a number range.\n"
+                  "Try reading Page 0, block 7 before.\n\n"
+                  _RED_("WARNING") _CYAN_(" this may brick non-password protected chips!"),
+                  "lf t55xx bruteforce --r2 -s aaaaaa77 -e aaaaaa99\n"
+                 );
 
-    uint32_t start_password = 0x00000000; //start password
-    uint32_t end_password = 0xFFFFFFFF; //end   password
-    uint32_t curr = 0;
-    uint8_t downlink_mode = 0;
-    uint8_t found = 0; // > 0 if found xx1 xx downlink needed, 1 found
-    uint8_t cmdp = 0;
-    bool errors = false;
+   void *argtable[3 + 6] = {
+        arg_param_begin,
+        arg_str1("s", "start", "<hex>", "search start password (4 hex bytes)"),
+        arg_str1("e", "end", "<hex>", "search end password (4 hex bytes)"),
+    };
+    uint8_t idx = 3;
+    arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_ALL, T55XX_DLMODE_ALL);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_t55xx_bruteforce();
-            case 'r':
-                downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode > 4)
-                    downlink_mode = 0;
-
-                cmdp += 2;
-                break;
-            case 's':
-                start_password = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                cmdp += 2;
-                break;
-            case 'e':
-                end_password   = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    uint32_t start_password = 0;
+    int res = arg_get_u32_hexstr_def(ctx, 1, 0, &start_password);
+    if (res == 2) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(FAILED, "start password should be 4 bytes");
+        return PM3_EINVARG;
     }
 
-    if (start_password >= end_password)
-        errors = true;
+    uint32_t end_password = 0xFFFFFFFF;
+    res = arg_get_u32_hexstr_def(ctx, 2, 0xFFFFFFFF, &end_password);
+    if (res == 2) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(FAILED, "end password should be 4 bytes");
+        return PM3_EINVARG;
+    }
 
-    if (errors || cmdp == 0) return usage_t55xx_bruteforce();
+    bool r0 = arg_get_lit(ctx, 3);
+    bool r1 = arg_get_lit(ctx, 4);
+    bool r2 = arg_get_lit(ctx, 5);
+    bool r3 = arg_get_lit(ctx, 6);
+    bool ra = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
 
-    uint64_t t1 = msclock();
+    if ((r0 + r1 + r2 + r3 + ra) > 1) {
+        PrintAndLogEx(FAILED, "Error multiple downlink encoding");
+        return PM3_EINVARG;
+    }
 
-    curr = start_password;
+    uint8_t downlink_mode = config.downlink_mode;
+    if (r0)
+        downlink_mode = refFixedBit;
+    else if (r1)
+        downlink_mode = refLongLeading;
+    else if (r2)
+        downlink_mode = refLeading0;
+    else if (r3)
+        downlink_mode = ref1of4;
 
+    uint32_t curr = 0;
+    uint8_t found = 0; // > 0 if found xx1 xx downlink needed, 1 found
+
+    if (start_password >= end_password) {
+        PrintAndLogEx(FAILED, "Error, start larger then end password");
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, "press " _GREEN_("'enter'") " to cancel the command");
     PrintAndLogEx(INFO, "Search password range [%08X -> %08X]", start_password, end_password);
 
-    while (found == 0) {
+    uint64_t t1 = msclock();
+    curr = start_password;
 
+    while (found == 0) {
+        
         PrintAndLogEx(NORMAL, "." NOLF);
 
         if (IsCancelled()) {
             return PM3_EOPABORTED;
         }
 
-        // iceman: don't forget to change to true -> ra
-        found = t55xx_try_one_password(curr, downlink_mode, true);
+        found = t55xx_try_one_password(curr, downlink_mode, ra);
 
         if (curr == end_password)
             break;
@@ -3341,7 +3344,7 @@ static int CmdT55xxRecoverPW(const char *Cmd) {
     else if (r3)
         downlink_mode = ref1of4;
 
-    PrintAndLogEx(NORMAL, "press " _YELLOW_("'enter'") " to cancel the command");
+    PrintAndLogEx(NORMAL, "press " _GREEN_("'enter'") " to cancel the command");
 
     int bit = 0;
     uint32_t curr_password = 0x0;
@@ -4171,25 +4174,24 @@ static int CmdT55xxSniff(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
+    {"-----------",  CmdHelp,                 AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
     {"help",         CmdHelp,                 AlwaysAvailable, "This help"},
     {"clonehelp",    CmdT55xxCloneHelp,       IfPm3Lf,         "Shows the available clone commands"},
     {"config",       CmdT55xxSetConfig,       AlwaysAvailable, "Set/Get T55XX configuration (modulation, inverted, offset, rate)"},
-    {"dangerraw",    CmdT55xxDangerousRaw,    IfPm3Lf,         "Sends raw bitstream. Dangerous, do not use!! b <bitstream> t <timing>"},
-    {"detect",       CmdT55xxDetect,          AlwaysAvailable, "[1] Try detecting the tag modulation from reading the configuration block."},
+    {"dangerraw",    CmdT55xxDangerousRaw,    IfPm3Lf,         "Sends raw bitstream. Dangerous, do not use!!"},
+    {"detect",       CmdT55xxDetect,          AlwaysAvailable, "Try detecting the tag modulation from reading the configuration block"},
     {"deviceconfig", CmdT55xxSetDeviceConfig, IfPm3Lf,         "Set/Get T55XX device configuration"},
-    {"dump",         CmdT55xxDump,            IfPm3Lf,         "[password] [o] Dump T55xx card Page 0 block 0-7. Optional [password], [override]"},
-    {"info",         CmdT55xxInfo,            AlwaysAvailable, "[1] Show T55x7 configuration data (page 0/ blk 0)"},
-    {"p1detect",     CmdT55xxDetectPage1,     IfPm3Lf,         "[1] Try detecting if this is a t55xx tag by reading page 1"},
-    {"read",         CmdT55xxReadBlock,       IfPm3Lf,         "b <block> p [password] [o] [1] -- Read T55xx block data. Optional [p password], [override], [page1]"},
+    {"dump",         CmdT55xxDump,            IfPm3Lf,         "Dump T55xx card Page 0 block 0-7"},
+    {"info",         CmdT55xxInfo,            AlwaysAvailable, "Show T55x7 configuration data (page 0/ blk 0)"},
+    {"p1detect",     CmdT55xxDetectPage1,     IfPm3Lf,         "Try detecting if this is a t55xx tag by reading page 1"},
+    {"read",         CmdT55xxReadBlock,       IfPm3Lf,         "Read T55xx block data"},
     {"resetread",    CmdResetRead,            IfPm3Lf,         "Send Reset Cmd then lf read the stream to attempt to identify the start of it (needs a demod and/or plot after)"},
-    {"restore",      CmdT55xxRestore,         IfPm3Lf,         "f <filename> [p <password>] Restore T55xx card Page 0 / Page 1 blocks"},
-    {"trace",        CmdT55xxReadTrace,       AlwaysAvailable, "[1] Show T55x7 traceability data (page 1/ blk 0-1)"},
+    {"restore",      CmdT55xxRestore,         IfPm3Lf,         "Restore T55xx card Page 0 / Page 1 blocks"},
+    {"trace",        CmdT55xxReadTrace,       AlwaysAvailable, "Show T55x7 traceability data (page 1/ blk 0-1)"},
     {"wakeup",       CmdT55xxWakeUp,          IfPm3Lf,         "Send AOR wakeup command"},
-    {"write",        CmdT55xxWriteBlock,      IfPm3Lf,         "b <block> d <data> p [password] [1] -- Write T55xx block data. Optional [p password], [page1]"},
-
-    {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("recovery") " ---------------------"},
-    {"bruteforce",   CmdT55xxBruteForce,      IfPm3Lf,         "<start password> <end password> Simple bruteforce attack to find password"},
+    {"write",        CmdT55xxWriteBlock,      IfPm3Lf,         "Write T55xx block data"},
+    {"-----------",  CmdHelp,                 AlwaysAvailable, "--------------------- " _CYAN_("recovery") " ---------------------"},
+    {"bruteforce",   CmdT55xxBruteForce,      IfPm3Lf,         "Simple bruteforce attack to find password"},
     {"chk",          CmdT55xxChkPwds,         IfPm3Lf,         "Check passwords from dictionary/flash"},
     {"protect",      CmdT55xxProtect,         IfPm3Lf,         "Password protect tag"},
     {"recoverpw",    CmdT55xxRecoverPW,       IfPm3Lf,         "Try to recover from bad password write from a cloner"},
