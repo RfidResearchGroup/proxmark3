@@ -114,10 +114,8 @@ lf hitag cc
 lf t55xx config
 lf t55xx dangerraw
 lf t55xx detect
-lf t55xx deviceconfig
 lf t55xx dump
 lf t55xx info
-lf t55xx p1detect
 lf t55xx read
 lf t55xx resetread
 lf t55xx restore
@@ -126,6 +124,5 @@ lf t55xx wakeup
 lf t55xx write
 lf t55xx bruteforce
 lf t55xx chk
-lf t55xx recoverpw
 lf t55xx special
 script run
