@@ -29,6 +29,20 @@ const char *thread_strerror (int error)
 	switch (error)
 	{
 		case THREAD_NOERROR: return (const char *) "No error";
+		case THREAD_ERROR_CTX_IS_NULL: return (const char *) "CTX IS NULL";
+		case THREAD_ERROR_CTX_IS_INIT: return (const char *) "CTX IS INIT";
+		case THREAD_ERROR_TYPE_INVALID: return (const char *) "INVALID TYPE";
+		case THREAD_ERROR_COUNT_INVALID: return (const char *) "INVALID THREAD COUNT";
+		case THREAD_ERROR_ATTR_SETDETACH: return (const char *) "SETDETACHSTATE FAILED";
+		case THREAD_ERROR_ATTR: return (const char *) "INIT ATTR FAILED";
+		case THREAD_ERROR_MUTEXATTR: return (const char *) "INIT MUTEXATTR FAILED";
+		case THREAD_ERROR_CREATE: return (const char *) "PTHREAD CREATE FAILED";
+		case THREAD_ERROR_MUTEX: return (const char *) "INIT MUTEXFAILED";
+		case THREAD_ERROR_COND: return (const char *) "INIT COND FAILED";
+		case THREAD_ERROR_MUTEX_USLEEP: return (const char *) "INIT MUTEX USLEEP FAILED";
+		case THREAD_ERROR_COND_USLEEP: return (const char *) "INIT COND USLEEP FAILED";
+		case THREAD_ERROR_GENERIC: return (const char *) "GENERIC ERROR";
+		case THREAD_ERROR_ALLOC: return (const char *) "ALLOC FAILED";
 	}
 
 	return (const char *) "GENERIC";
