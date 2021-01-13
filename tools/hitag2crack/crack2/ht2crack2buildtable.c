@@ -427,7 +427,8 @@ static void *sorttable(void *dd) {
             close(fdin);
 
             // sort it
-            qsort_r(table, numentries, DATASIZE, datacmp, NULL);
+            void *dummy = NULL; // clang
+            qsort_r(table, numentries, DATASIZE, datacmp, dummy);
 
             // write to file
             sprintf(outfile, "sorted/%02x/%02x.bin", i, j);

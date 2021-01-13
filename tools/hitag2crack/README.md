@@ -5,6 +5,7 @@ Authors:
 
 * Attacks 1, 2, 3, 4 : Kevin Sheldrake <kev@headhacking.com>
 * Attacks 5, 5gpu : anonymous, based on https://github.com/factoritbv/hitag2hell by FactorIT B.V.
+* Attacks 5, 5opencl : Gabriele Gristina <gabriele.gristina@gmail.com>, based on 5gpu
 
 Introduction
 ------------
@@ -205,8 +206,8 @@ Stop once you got two pairs.
 $ ./ht2crack5 <UID> <nR1> <aR1> <nR2> <aR2>
 ```
 
-Usage details: Attack 5gpu
---------------------------
+Usage details: Attack 5gpu/5opencl
+----------------------------------
 
 Attack 5gpu requires two encrypted nonce and challenge
 response value pairs (nR, aR) for the tag's UID.
@@ -219,6 +220,14 @@ Stop once you got two pairs.
 ```
 $ ./ht2crack5gpu <UID> <nR1> <aR1> <nR2> <aR2>
 ```
+
+Attack 5opencl requires the same of 5gpu version.
+
+```
+$ ./ht2crack5opencl <UID> <nR1> <aR1> <nR2> <aR2>
+```
+
+More details in crack5opencl/README.md
 
 Usage details: Next steps
 -------------------------
