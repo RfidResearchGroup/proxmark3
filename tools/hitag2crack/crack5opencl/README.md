@@ -26,10 +26,10 @@ encrypted nonces and challenge response values.  They should be in hex.
 
 UID is the UID of the tag that you used to gather the nR aR values.
 
-Following the help:
+Usage:
 
 ```
-$ ./ht2crack5opencl 
+$ ./ht2crack5opencl
 ./ht2crack5opencl [options] {UID} {nR1} {aR1} {nR2} {aR2}
 
 Options:
@@ -50,7 +50,7 @@ Example, select devices 1, 2 and 3 using platform 1 and 2, with random queue eng
 ./ht2crack5opencl -D 2 -Q 2 -p 1,2 -d 1,2,3 2ab12bf2 4B71E49D 6A606453 D79BD94B 16A2255B
 ```
 
-You can found the correct OpenCL Platform ID's (-p) and Device ID's (-d) by:
+You can find the correct OpenCL Platform ID (-p) and Device ID (-d) with:
 
 ```
 ./ht2crack5opencl -s
