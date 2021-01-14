@@ -1,6 +1,4 @@
-# RRG / Iceman repo - Proxmark3
-
-
+# RRG / Iceman - Proxmark3
 
 
 | Releases     | Coverity    | Contributors |
@@ -13,7 +11,8 @@
 | ![MacOS Build and Test](https://github.com/RfidResearchGroup/proxmark3/workflows/MacOS%20Build%20and%20Test/badge.svg?branch=master) | ![Ubuntu Build and Test](https://github.com/RfidResearchGroup/proxmark3/workflows/Ubuntu%20Build%20and%20Test/badge.svg?branch=master) | [![Build status](https://ci.appveyor.com/api/projects/status/b4gwrhq3nc876cuu/branch/master?svg=true)](https://ci.appveyor.com/project/RfidResearchGroup/proxmark3/branch/master) |
 
 
-# PROXMARK INSTALLATION AND OVERVIEW
+
+# PROXMARK3 INSTALLATION AND OVERVIEW
 
 | FAQ's & Updates     | Installation        | Use of the Proxmark |
 | ------------------- |:-------------------:| -------------------:|
@@ -41,11 +40,13 @@
 |[Notes on cliparser usage](/doc/cliparser.md)|[Notes on clocks](/doc/clocks.md)||
 
 
-## Build for non-RDV4 Proxmark3 platforms
+## Build for Proxmark3 RDV4
+See the instruction links in the tables above to build, flash and run for your Proxmark3 RDV4 device.
 
-In order to build this repo for other/generic Proxmark3 platforms we urge you to read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
+## Build for generic Proxmark3 platforms
+In order to build this repo for generic Proxmark3 platforms we urge you to read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
 
-With other/generic Proxmark3 platforms we mean: 
+With generic Proxmark3 platforms we mean: 
   - RDV1
   - RDV2
   - RDV3 easy
@@ -95,15 +96,16 @@ Hardware to run client on
    - Nvidia Jetson Nano
 
 ## Precompiled binaries
-We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where @gator96100 has set up a AWS bucket with many mingw binaries which is up-to-date. We link to these files here as to make it easier for users.
+We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where [@gator96100](https://github.com/gator96100) has set up a AWS bucket with precompiled Proxspace (Mingw) binaries which is recompiled every night and with that also up-to-date. We link to these files here as to make it easier for users.
+_If you use his pre-compiled Proxspace binaries do consider buy him a coffee for his efforts. Remember nothing says thank you as good as a donation._
 
-If you are having troubles with these files, contact the package maintainer [@gator96100](https://github.com/gator96100) and read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) where known issues has been documented.
+If you are having troubles with these files, contact the package maintainer [@gator96100](https://github.com/gator96100) and read [homepage of his proxmark builds](https://www.proxmarkbuilds.org/) or read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) where known issues has been documented with regards to the precompiled builds.  
 
-
+Proxmark3 RDV4 devices
 - [Precompiled builds for RDV40 dedicated x64](https://www.proxmarkbuilds.org/#rdv40-64/)
 - [Precompiled builds for RDV40 dedicated with Bluetooth addon x64](https://www.proxmarkbuilds.org/#rdv40_bt-64/)
 
-Generic Proxmark3 devices (non RDV4),  for Proxmark3 Easy,  RDV1, RDV2, RDV3, etc etc
+Generic Proxmark3 devices
 - [Precompiled builds for RRG / Iceman repository x64](https://www.proxmarkbuilds.org/#rrg_other-64/)
 
 
@@ -157,7 +159,7 @@ The separation from official Proxmark3 repo gives us a lot of freedom to create 
 
 ## Proxmark3 GUI
 
-The official PM3-GUI from Gaucho will not work.
+The official PM3-GUI from Gaucho will not work. Not to mention is quite old and not maintained any longer.
 
 The new [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) will work more or less. Change is needed in order to show helptext when client isn't connected to a device.  We don't know how active the maintainers are.  There has been brought to our attention that there is quite a few Chinese Windows GUI available. Usually you find them on alibaba / taobao ads but we have no idea which fw/client they are compatible with.  Proceed with caution if you decide to go down that road.
 
