@@ -40,10 +40,24 @@
 |[Notes on Color usage](/doc/colors_notes.md)|[Makefile vs CMake](/doc/md/Development/Makefile-vs-CMake.md)|[Notes on Cloner guns](/doc/cloner_notes.md)|
 |[Notes on cliparser usage](/doc/cliparser.md)|[Notes on clocks](/doc/clocks.md)||
 
+
 ## Build for non-RDV4 Proxmark3 platforms
 
 In order to build this repo for other Proxmark3 platforms we urge you to read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
 
+With other Proxmark3 platforms we mean: 
+  - RDV1
+  - RDV2
+  - RDV3 easy
+  - Proxmark Evolution (needs extra care)
+  - Radiowar black PCB version
+  - Ryscorp green PCB version
+  - Ryscorp Pm3Pro
+  - VX
+  - numerous Chinese adapted versions of the RDV3 easy (kkmoon, pisworks etc)
+
+### side note about size of these other Proxmark3 platforms
+You need to keep a eye on how large your ARM chip built-in flash memory is. With 512kb you are fine but if its 256kb you need to compile this repo with even less functionality.  When running the ./pm3-flash-all you can see which size your device have if you have the bootloader from this repo installed. Otherwise you will find the size reported in the start message when running the Proxmark3 client.
 
 ## What has changed?
 
@@ -53,7 +67,9 @@ On the hardware side:
   * added smart card module
   * added FPC connector
 
-On the software side: quite a lot, see the [Changelog file](CHANGELOG.md).
+On the software side:
+
+quite a lot, see the [Changelog file](CHANGELOG.md) which we try to keep updated.
 
 ## Development
 
@@ -67,7 +83,7 @@ This repo compiles nicely on
    - ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora, Debian
    - Rasbian
    - Android / Termux
-   - Mac OS X / Homebrew
+   - Mac OS X / Homebrew / Apple Silicon
    - WSL1  (Windows subsystem linux) on Windows 10
    - Docker container
       - [ RRG / Iceman repo based ubuntu 18.04 container ](https://hub.docker.com/r/secopsconsult/proxmark3)
@@ -76,12 +92,12 @@ This repo compiles nicely on
 Hardware to run client on
    - PC
    - Android
-   - Raspberry Pi & Raspberry Pi Zero
+   - Raspberry Pi, Raspberry Pi Zero
    - Nvidia Jetson Nano
 
 ## Precompiled binaries
 We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where @gator96100 has set up a google drive with many mingw binaries which is up-to-date. We link to these files here as to make it easier for users.
-If you are having troubles with these files, contact the package maintainer @gator96100 and read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) where known issues has been documented.
+If you are having troubles with these files, contact the package maintainer [@gator96100](https://github.com/gator96100) and read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) where known issues has been documented.
 
 
 Ref:
@@ -104,28 +120,32 @@ We usually merge your contributions fast since we do like the idea of getting a 
 
 ## Issues & Troubleshooting
 Please search the [issues](https://github.com/rfidresearchgroup/proxmark3/issues) page here and see if your issue is listed in the first instance.
-Read the [Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md) guide to weed out most known problems.
+Read the [Troubleshooting guide](/doc/md/Installation_Instructions/Troubleshooting.md) to weed out most known problems.
 
-Next place to visit is the [Proxmark Forum](http://www.proxmark.org/forum/index.php). Learn to search it well and finally Google / duckduckgo is your friend :)    You will find many blogposts, youtube videos, tweets, reddit
+Next place to visit is the [Proxmark3 Forum](http://www.proxmark.org/forum/index.php). Learn to search it well and finally Google / duckduckgo is your friend :) 
+You will find many blogposts, youtube videos, tweets, reddit
 
 ### Offical channels
+   - [Proxmark3 community discord server](https://discord.gg/QfPvGFRQxH)
    - [Proxmark3 IRC channel](http://webchat.freenode.net/?channels=#proxmark3)
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
-   - [Twitter](https://twitter.com/proxmark3/)
-   - [Proxmark3 community discord server](https://discord.gg/QfPvGFRQxH)
- 
- _no slack channel_
+   - [Proxmark3 Twitter](https://twitter.com/proxmark3/)   
+   - [Proxmark3 forum](http://www.proxmark.org/forum/index.php)
+   -  _no slack channel_
 
 Iceman has quite a few videos on his [youtube channel](https://www.youtube.com/c/ChrisHerrmann1001)
 
 ## Cheat sheet
 
-Thanks to Alex Dibs, you can enjoy a [command cheat sheet](/doc/cheatsheet.md)
+You can enjoy a [command cheat sheet](/doc/cheatsheet.md) and we are trying to keep it updated. 
+[Thanks to Alex Dib!](https://github.com/scund00r)
 
 ## Maintainers ( package, distro )
 
-To all distro, package maintainers, we tried to make your life easier. `make install` is now available and if you want to know more.
-- [Maintainers](/doc/md/Development/Maintainers.md)
+To all distro, package maintainers, we tried to make your life easier.
+
+`make install` is now available and if you want to know more.
+- [For maintainers](/doc/md/Development/Maintainers.md)
 
 ## Why didn't you base it on official Proxmark3 Master?
 
@@ -134,7 +154,8 @@ The separation from official Proxmark3 repo gives us a lot of freedom to create 
 ## Proxmark3 GUI
 
 The official PM3-GUI from Gaucho will not work.
-The new [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) will work more or less. Change is needed in order to show helptext when client isn't connected to a device.  We don't know how active the maintainers.
+
+The new [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) will work more or less. Change is needed in order to show helptext when client isn't connected to a device.  We don't know how active the maintainers are.  There has been brought to our attention that there is quite a few Chinese Windows GUI available. Usually you find them on alibaba / taobao ads but we have no idea which fw/client they are compatible with.  Proceed with caution if you decide to go down that road.
 
 # Donations
 
