@@ -1547,10 +1547,10 @@ int main(int argc, char **argv) {
 
     struct timeval cpu_t_start, cpu_t_end, cpu_t_result;
 
-    fprintf(stderr, "Attack 5 - opencl - start (Max Slices %u, %s order", max_step, wu_queue_strdesc(ctx.queue_ctx.queue_type));
+    printf("Attack 5 - opencl - start (Max Slices %u, %s order", max_step, wu_queue_strdesc(ctx.queue_ctx.queue_type));
 
-    if (!verbose) fprintf(stderr, ")\n\n");
-    else fprintf(stderr, ", Profile %d, Async Threads %s, HiTag2 key verify on device %s)\n\n", profile, (ctx.thread_sched_type == THREAD_TYPE_ASYNC) ? "yes" : "no", (force_hitag2_opencl) ? "yes" : "no");
+    if (!verbose) printf(")\n\n");
+    else printf(", Profile %d, Async Threads %s, HiTag2 key verify on device %s)\n\n", profile, (ctx.thread_sched_type == THREAD_TYPE_ASYNC) ? "yes" : "no", (force_hitag2_opencl) ? "yes" : "no");
 
     if (gettimeofday(&cpu_t_start, NULL) == -1) {
         printf("! gettimeofday(start) failed (%d): %s\n", errno, strerror(errno));
