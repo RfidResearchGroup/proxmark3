@@ -210,6 +210,22 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
         return PM3_SUCCESS;
     }
 
+    if (strcmp(Cmd, "star") == 0) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(NORMAL, "  \\o       o/");
+        PrintAndLogEx(NORMAL, "   v\\     /v");
+        PrintAndLogEx(NORMAL, "    <\\   />");
+        PrintAndLogEx(NORMAL, "     |\\o/|");
+        PrintAndLogEx(NORMAL, " _\\__o | o__/");
+        PrintAndLogEx(NORMAL, "     |/ \\|");
+        PrintAndLogEx(NORMAL, "    o/   \\o");
+        PrintAndLogEx(NORMAL, "   /v     v\\");
+        PrintAndLogEx(NORMAL, "  />       <\\");
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;
+    }
+
+
     char cmd_name[128];
     memset(cmd_name, 0, sizeof(cmd_name));
 
