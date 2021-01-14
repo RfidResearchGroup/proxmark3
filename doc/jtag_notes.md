@@ -81,3 +81,6 @@ GND | 6
 
 * https://github.com/Proxmark/proxmark3/wiki/De-Bricking-Segger
 
+## Stack Overflow write up article.
+https://stackoverflow.com/questions/48794076/error-halt-timed-out-wake-up-gdb/64291913#64291913
+
