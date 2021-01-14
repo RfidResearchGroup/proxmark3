@@ -17,15 +17,15 @@ Known definitions:
 +============================================+
 | PLATFORM        | DESCRIPTION              |
 +============================================+
-| PM3RDV4 (def)   | Proxmark3 rdv4           |
+| PM3RDV4 (def)   | Proxmark3 RDV4           |
 +--------------------------------------------+
-| PM3OTHER        | Proxmark3 Generic target |
+| PM3GENERIC      | Proxmark3 generic target |
 +--------------------------------------------+
 
 +============================================+
 | PLATFORM_EXTRAS | DESCRIPTION              |
 +============================================+
-| BTADDON         | Proxmark3 rdv4 BT add-on |
+| BTADDON         | Proxmark3 RDV4 BT add-on |
 +--------------------------------------------+
 
 endef
@@ -33,10 +33,10 @@ endef
 define HELP_DEFINITIONS
 Options to define platform, platform extras and/or standalone mode:
 (1) Run make with your PLATFORM, PLATFORM_EXTRAS and/or STANDALONE choices as follows:
-make PLATFORM=PM3OTHER STANDALONE=$(HELP_EXAMPLE_STANDALONE)
+make PLATFORM=PM3GENERIC STANDALONE=$(HELP_EXAMPLE_STANDALONE)
 
 (2) Save a file called Makefile.platform with contents, e.g.:
-PLATFORM=PM3OTHER
+PLATFORM=PM3GENERIC
 
 or if you have a Proxmark 3 RDV4 with the BT add-on:
 PLATFORM=PM3RDV4
@@ -74,9 +74,12 @@ PLTNAME = Unknown Platform
 
 ifeq ($(PLATFORM),PM3RDV4)
     PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH -DRDV4
-    PLTNAME = Proxmark3 rdv4
+    PLTNAME = Proxmark3 RDV4
 else ifeq ($(PLATFORM),PM3OTHER)
-    PLTNAME = Proxmark3 Generic target
+    PLTNAME = Proxmark3 generic target
+else ifeq ($(PLATFORM),PM3GENERIC)
+    PLTNAME = Proxmark3 generic target
+
 else
     $(error Invalid or empty PLATFORM: $(PLATFORM). $(KNOWN_DEFINITIONS))
 endif

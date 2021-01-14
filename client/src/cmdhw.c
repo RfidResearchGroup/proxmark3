@@ -963,7 +963,7 @@ void pm3_version(bool verbose, bool oneliner) {
 
         PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3") " ]");
         if (IfPm3Rdv4Fw() == false) {
-            PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3OTHER"));
+            PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3GENERIC"));
             if (IfPm3FpcUsartHost()) {
                 PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", _GREEN_("present"));
             }
