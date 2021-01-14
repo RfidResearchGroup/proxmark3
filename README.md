@@ -56,8 +56,7 @@ With other Proxmark3 platforms we mean:
   - VX
   - numerous Chinese adapted versions of the RDV3 easy (kkmoon, pisworks etc)
 
-### side note about size of these other Proxmark3 platforms
-You need to keep a eye on how large your ARM chip built-in flash memory is. With 512kb you are fine but if its 256kb you need to compile this repo with even less functionality.  When running the ./pm3-flash-all you can see which size your device have if you have the bootloader from this repo installed. Otherwise you will find the size reported in the start message when running the Proxmark3 client.
+> ⚠ **Note**: About flash memory size of other Proxmark3 platforms. You need to keep a eye on how large your ARM chip built-in flash memory is. With 512kb you are fine but if its 256kb you need to compile this repo with even less functionality.  When running the `./pm3-flash-all` you can see which size your device have if you have the bootloader from this repo installed. Otherwise you will find the size reported in the start message when running the Proxmark3 client `./pm3`.
 
 ## What has changed?
 
