@@ -43,9 +43,9 @@
 
 ## Build for non-RDV4 Proxmark3 platforms
 
-In order to build this repo for other Proxmark3 platforms we urge you to read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
+In order to build this repo for other/generic Proxmark3 platforms we urge you to read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
 
-With other Proxmark3 platforms we mean: 
+With other/generic Proxmark3 platforms we mean: 
   - RDV1
   - RDV2
   - RDV3 easy
@@ -95,18 +95,15 @@ Hardware to run client on
    - Nvidia Jetson Nano
 
 ## Precompiled binaries
-We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where @gator96100 has set up a google drive with many mingw binaries which is up-to-date. We link to these files here as to make it easier for users.
+We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where @gator96100 has set up a AWS bucket with many mingw binaries which is up-to-date. We link to these files here as to make it easier for users.
+
 If you are having troubles with these files, contact the package maintainer [@gator96100](https://github.com/gator96100) and read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) where known issues has been documented.
 
 
-Ref:
-For Proxmark3 RDV4
 - [Precompiled builds for RDV40 dedicated x64](https://www.proxmarkbuilds.org/#rdv40-64/)
-
-For Proxmark3 RDV4 with blueshark addon
 - [Precompiled builds for RDV40 dedicated with Bluetooth addon x64](https://www.proxmarkbuilds.org/#rdv40_bt-64/)
 
-Generice Proxmark3 devices (non RDV4),  for Proxmark3 Easy,  RDV1, RDV2, RDV3, etc etc
+Generic Proxmark3 devices (non RDV4),  for Proxmark3 Easy,  RDV1, RDV2, RDV3, etc etc
 - [Precompiled builds for RRG / Iceman repository x64](https://www.proxmarkbuilds.org/#rrg_other-64/)
 
 
@@ -125,14 +122,22 @@ Next place to visit is the [Proxmark3 Forum](http://www.proxmark.org/forum/index
 You will find many blogposts, youtube videos, tweets, reddit
 
 ### Offical channels
-   - [Proxmark3 community discord server](https://discord.gg/QfPvGFRQxH)
+   - [RFID Hacking community discord server](https://discord.gg/QfPvGFRQxH)
    - [Proxmark3 IRC channel](http://webchat.freenode.net/?channels=#proxmark3)
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
    - [Proxmark3 Twitter](https://twitter.com/proxmark3/)   
    - [Proxmark3 forum](http://www.proxmark.org/forum/index.php)
    -  _no slack channel_
 
-Iceman has quite a few videos on his [youtube channel](https://www.youtube.com/c/ChrisHerrmann1001)
+
+### Youtube channels
+Iceman has quite a few videos on his channel and Quentyn has risen up the last year with good informative videos. We suggest you check them out and smash that subscribe buttons!
+
+ - [Iceman channel](https://www.youtube.com/c/ChrisHerrmann1001)
+ - [Quentyn Taylor](https://www.youtube.com/channel/UCL91C3IZDv3wfj2ABhdRIrw)
+ - [Hacker warehouse channel](https://www.youtube.com/channel/UCimS6P854cQ23j6c_xst7EQ)
+
+_ if you think of some more good youtube channels to be on this list, let us know!_
 
 ## Cheat sheet
 
@@ -144,7 +149,7 @@ You can enjoy a [command cheat sheet](/doc/cheatsheet.md) and we are trying to k
 To all distro, package maintainers, we tried to make your life easier.
 
 `make install` is now available and if you want to know more.
-- [For maintainers](/doc/md/Development/Maintainers.md)
+- [Notes for maintainers](/doc/md/Development/Maintainers.md)
 
 ## Why didn't you base it on official Proxmark3 Master?
 
