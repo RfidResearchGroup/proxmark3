@@ -2746,7 +2746,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     bool selftest = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    if (selftest) 
+    if (selftest)
         return generator_selftest();
 
     if (u_len != 7) {
@@ -2873,9 +2873,9 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-   uint8_t teardata[8] = {0x00};
-   memcpy(teardata, data, sizeof(data));
-   memcpy(teardata + sizeof(data), test, sizeof(test));
+    uint8_t teardata[8] = {0x00};
+    memcpy(teardata, data, sizeof(data));
+    memcpy(teardata + sizeof(data), test, sizeof(test));
 
     PrintAndLogEx(INFO, "----------------- " _CYAN_("MFU Tear off") " ---------------------");
     PrintAndLogEx(INFO, "Starting Tear-off test");

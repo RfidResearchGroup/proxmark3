@@ -614,7 +614,7 @@ static int CmdSmartInfo(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool verbose = arg_get_lit(ctx, 1);    
+    bool verbose = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
     clearCommandBuffer();
@@ -628,7 +628,7 @@ static int CmdSmartInfo(const char *Cmd) {
     }
 
     if (resp.status != PM3_SUCCESS) {
-        if (verbose) { 
+        if (verbose) {
             PrintAndLogEx(WARNING, "smart card select failed");
         }
         return PM3_ESOFT;
@@ -685,7 +685,7 @@ static int CmdSmartReader(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool verbose = arg_get_lit(ctx, 1);    
+    bool verbose = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
     clearCommandBuffer();
@@ -700,7 +700,7 @@ static int CmdSmartReader(const char *Cmd) {
 
     if (resp.status != PM3_SUCCESS) {
         if (verbose) {
-             PrintAndLogEx(WARNING, "smart card select failed");
+            PrintAndLogEx(WARNING, "smart card select failed");
         }
         return PM3_ESOFT;
     }
@@ -733,7 +733,7 @@ static int CmdSmartSetClock(const char *Cmd) {
     bool c4 = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    if ((c16 + c8 + c4) > 1 ) {
+    if ((c16 + c8 + c4) > 1) {
         PrintAndLogEx(WARNING, "Only one clock speed can be used at a time");
         return PM3_EINVARG;
     }

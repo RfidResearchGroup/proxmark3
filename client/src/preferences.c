@@ -55,27 +55,27 @@ int preferences_load(void) {
     session.show_hints = true;
 
     session.bar_mode = STYLE_VALUE;
-    setDefaultPath (spDefault, "");
-    setDefaultPath (spDump, "");
-    setDefaultPath (spTrace, "");
+    setDefaultPath(spDefault, "");
+    setDefaultPath(spDump, "");
+    setDefaultPath(spTrace, "");
 
     // default save path
     if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
-        setDefaultPath (spDefault, get_my_user_directory());
+        setDefaultPath(spDefault, get_my_user_directory());
     else
-        setDefaultPath (spDefault, ".");
+        setDefaultPath(spDefault, ".");
 
     // default dump path
     if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
-        setDefaultPath (spDump, get_my_user_directory());
+        setDefaultPath(spDump, get_my_user_directory());
     else
-        setDefaultPath (spDump, ".");
+        setDefaultPath(spDump, ".");
 
     // default dump path
     if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
-        setDefaultPath (spTrace, get_my_user_directory());
+        setDefaultPath(spTrace, get_my_user_directory());
     else
-        setDefaultPath (spTrace, ".");
+        setDefaultPath(spTrace, ".");
 
     if (session.incognito) {
         PrintAndLogEx(INFO, "No preferences file will be loaded");
@@ -177,9 +177,9 @@ void preferences_save_callback(json_t *root) {
 
     JsonSaveBoolean(root, "os.supports.colors", session.supports_colors);
 
-   JsonSaveStr(root, "file.default.savepath", session.defaultPaths[spDefault]);
-   JsonSaveStr(root, "file.default.dumppath", session.defaultPaths[spDump]);
-   JsonSaveStr(root, "file.default.tracepath", session.defaultPaths[spTrace]);
+    JsonSaveStr(root, "file.default.savepath", session.defaultPaths[spDefault]);
+    JsonSaveStr(root, "file.default.dumppath", session.defaultPaths[spDump]);
+    JsonSaveStr(root, "file.default.tracepath", session.defaultPaths[spTrace]);
 
     // Plot window
     JsonSaveInt(root, "window.plot.xpos", session.plot.x);
@@ -262,15 +262,15 @@ void preferences_load_callback(json_t *root) {
 
     // default save path
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.savepath", &s1) == 0)
-        setDefaultPath (spDefault, s1);
+        setDefaultPath(spDefault, s1);
 
     // default dump path
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.dumppath", &s1) == 0)
-        setDefaultPath (spDump, s1);
+        setDefaultPath(spDump, s1);
 
     // default trace path
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.tracepath", &s1) == 0)
-        setDefaultPath (spTrace, s1);
+        setDefaultPath(spTrace, s1);
 
     // window plot
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "window.plot.xpos", &i1) == 0)
@@ -424,49 +424,49 @@ static void showSavePathState(savePaths_t path_index, prefShowOpt_t opt) {
     char s[50];
     switch (path_index) {
         case spDefault:
-            strcpy (s, "default save path......");
+            strcpy(s, "default save path......");
             break;
         case spDump:
-            strcpy (s, "dump save path.........");
+            strcpy(s, "dump save path.........");
             break;
         case spTrace:
-            strcpy (s, "trace save path........");
+            strcpy(s, "trace save path........");
             break;
         case spItemCount:
         default:
-            strcpy (s, _RED_("unknown")" save path......");
+            strcpy(s, _RED_("unknown")" save path......");
     }
 
     if ((session.defaultPaths[path_index] == NULL) || (strcmp(session.defaultPaths[path_index], "") == 0)) {
         PrintAndLogEx(INFO, "   %s %s "_WHITE_("not set"),
-            prefShowMsg(opt),
-            s
-        );
+                      prefShowMsg(opt),
+                      s
+                     );
     } else {
         PrintAndLogEx(INFO, "   %s %s "_GREEN_("%s"),
-            prefShowMsg(opt),
-            s,
-            session.defaultPaths[path_index]
-        );
+                      prefShowMsg(opt),
+                      s,
+                      session.defaultPaths[path_index]
+                     );
     }
 }
 
 static void showPlotPosState(void) {
     PrintAndLogEx(INFO, "    Plot window............ X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
-        session.plot.x,
-        session.plot.y,
-        session.plot.h,
-        session.plot.w
-    );
+                  session.plot.x,
+                  session.plot.y,
+                  session.plot.h,
+                  session.plot.w
+                 );
 }
 
 static void showOverlayPosState(void) {
     PrintAndLogEx(INFO, "    Slider/Overlay window.. X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
-        session.overlay.x,
-        session.overlay.y,
-        session.overlay.h,
-        session.overlay.w
-    );
+                  session.overlay.x,
+                  session.overlay.y,
+                  session.overlay.h,
+                  session.overlay.w
+                 );
 }
 
 static void showHintsState(prefShowOpt_t opt) {
@@ -521,8 +521,8 @@ static int setCmdEmoji(const char *Cmd) {
     bool show_alt = arg_get_lit(ctx, 3);
     bool show_none = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
-   
-    if ( (show_a + show_e + show_alt + show_none) > 1) {
+
+    if ((show_a + show_e + show_alt + show_none) > 1) {
         PrintAndLogEx(FAILED, "Can only set one option");
         return PM3_EINVARG;
     }
@@ -572,7 +572,7 @@ static int setCmdColor(const char *Cmd) {
     bool use_n = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    if ( (use_c + use_n) > 1) {
+    if ((use_c + use_n) > 1) {
         PrintAndLogEx(FAILED, "Can only set one option");
         return PM3_EINVARG;
     }
@@ -618,7 +618,7 @@ static int setCmdDebug(const char *Cmd) {
     bool use_full = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    if ( (use_off + use_simple + use_full) > 1) {
+    if ((use_off + use_simple + use_full) > 1) {
         PrintAndLogEx(FAILED, "Can only set one option");
         return PM3_EINVARG;
     }
@@ -662,7 +662,7 @@ static int setCmdDeviceDebug (const char *Cmd)
         arg_lit0(NULL, "error", "error messages"),
         arg_lit0(NULL, "info", "info messages"),
         arg_lit0(NULL, "dbg", "debug messages"),
-        arg_lit0(NULL, "ext", "extended debug messages"),        
+        arg_lit0(NULL, "ext", "extended debug messages"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -734,12 +734,12 @@ static int setCmdHint(const char *Cmd) {
     bool use_on = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    if ( (use_off + use_on) > 1) {
+    if ((use_off + use_on) > 1) {
         PrintAndLogEx(FAILED, "Can only set one option");
         return PM3_EINVARG;
     }
- 
-     bool new_value = session.show_hints;
+
+    bool new_value = session.show_hints;
     if (use_off) {
         new_value = false;
     }
@@ -777,11 +777,11 @@ static int setCmdPlotSliders(const char *Cmd) {
     bool use_on = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    if ( (use_off + use_on) > 1) {
+    if ((use_off + use_on) > 1) {
         PrintAndLogEx(FAILED, "Can only set one option");
         return PM3_EINVARG;
     }
- 
+
     bool new_value = session.overlay_sliders;
     if (use_off) {
         new_value = false;
@@ -801,7 +801,7 @@ static int setCmdPlotSliders(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int setCmdSavePaths (const char *Cmd) {
+static int setCmdSavePaths(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "pref set savepath",
                   "Set presistent preference of file paths in the client",
@@ -861,8 +861,8 @@ static int setCmdSavePaths (const char *Cmd) {
 
     // Check path
     if (fileExists(path) == false && create_dir == false) {
-        PrintAndLogEx(ERR,"path does not exist... "_RED_("%s"), path);
-    } 
+        PrintAndLogEx(ERR, "path does not exist... "_RED_("%s"), path);
+    }
 
     // do we need to create it
     //    if (!fileExists(newValue))
@@ -871,7 +871,7 @@ static int setCmdSavePaths (const char *Cmd) {
     if (path_item < spItemCount) {
         if (strcmp(path, session.defaultPaths[path_item]) != 0) {
             showSavePathState(path_item, prefShowOLD);
-            setDefaultPath (path_item, path);
+            setDefaultPath(path_item, path);
             showSavePathState(path_item, prefShowNEW);
             preferences_save();
         } else {
@@ -902,7 +902,7 @@ static int setCmdBarMode(const char *Cmd) {
     bool show_val = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    if ( (show_bar + show_mix + show_val) > 1) {
+    if ((show_bar + show_mix + show_val) > 1) {
         PrintAndLogEx(FAILED, "Can only set one option");
         return PM3_EINVARG;
     }

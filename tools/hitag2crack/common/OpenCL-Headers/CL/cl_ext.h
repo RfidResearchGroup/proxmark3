@@ -54,9 +54,9 @@ extern "C" {
  * before using.
  */
 #define cl_APPLE_SetMemObjectDestructor 1
-cl_int  CL_API_ENTRY clSetMemObjectDestructorAPPLE(  cl_mem memobj,
-                                        void (* pfn_notify)(cl_mem memobj, void * user_data),
-                                        void * user_data)             CL_EXT_SUFFIX__VERSION_1_0;
+cl_int  CL_API_ENTRY clSetMemObjectDestructorAPPLE(cl_mem memobj,
+                                                   void (* pfn_notify)(cl_mem memobj, void *user_data),
+                                                   void *user_data)             CL_EXT_SUFFIX__VERSION_1_0;
 
 
 /* Context Logging Functions
@@ -68,22 +68,22 @@ cl_int  CL_API_ENTRY clSetMemObjectDestructorAPPLE(  cl_mem memobj,
  * clLogMessagesToSystemLog forwards on all log messages to the Apple System Logger
  */
 #define cl_APPLE_ContextLoggingFunctions 1
-extern void CL_API_ENTRY clLogMessagesToSystemLogAPPLE(  const char * errstr,
-                                            const void * private_info,
-                                            size_t       cb,
-                                            void *       user_data)  CL_EXT_SUFFIX__VERSION_1_0;
+extern void CL_API_ENTRY clLogMessagesToSystemLogAPPLE(const char *errstr,
+                                                       const void *private_info,
+                                                       size_t       cb,
+                                                       void        *user_data)  CL_EXT_SUFFIX__VERSION_1_0;
 
 /* clLogMessagesToStdout sends all log messages to the file descriptor stdout */
-extern void CL_API_ENTRY clLogMessagesToStdoutAPPLE(   const char * errstr,
-                                          const void * private_info,
-                                          size_t       cb,
-                                          void *       user_data)    CL_EXT_SUFFIX__VERSION_1_0;
+extern void CL_API_ENTRY clLogMessagesToStdoutAPPLE(const char *errstr,
+                                                    const void *private_info,
+                                                    size_t       cb,
+                                                    void        *user_data)    CL_EXT_SUFFIX__VERSION_1_0;
 
 /* clLogMessagesToStderr sends all log messages to the file descriptor stderr */
-extern void CL_API_ENTRY clLogMessagesToStderrAPPLE(   const char * errstr,
-                                          const void * private_info,
-                                          size_t       cb,
-                                          void *       user_data)    CL_EXT_SUFFIX__VERSION_1_0;
+extern void CL_API_ENTRY clLogMessagesToStderrAPPLE(const char *errstr,
+                                                    const void *private_info,
+                                                    size_t       cb,
+                                                    void        *user_data)    CL_EXT_SUFFIX__VERSION_1_0;
 
 
 /************************
@@ -99,13 +99,13 @@ extern void CL_API_ENTRY clLogMessagesToStderrAPPLE(   const char * errstr,
 
 extern CL_API_ENTRY cl_int CL_API_CALL
 clIcdGetPlatformIDsKHR(cl_uint          num_entries,
-                       cl_platform_id * platforms,
-                       cl_uint *        num_platforms);
+                       cl_platform_id *platforms,
+                       cl_uint         *num_platforms);
 
 typedef CL_API_ENTRY cl_int
 (CL_API_CALL *clIcdGetPlatformIDsKHR_fn)(cl_uint          num_entries,
-                                         cl_platform_id * platforms,
-                                         cl_uint *        num_platforms);
+                                         cl_platform_id *platforms,
+                                         cl_uint         *num_platforms);
 
 
 /*******************************
@@ -125,15 +125,15 @@ typedef CL_API_ENTRY cl_int
 
 extern CL_API_ENTRY cl_program CL_API_CALL
 clCreateProgramWithILKHR(cl_context   context,
-                         const void * il,
+                         const void *il,
                          size_t       length,
-                         cl_int *     errcode_ret);
+                         cl_int      *errcode_ret);
 
 typedef CL_API_ENTRY cl_program
 (CL_API_CALL *clCreateProgramWithILKHR_fn)(cl_context   context,
-                                           const void * il,
+                                           const void *il,
                                            size_t       length,
-                                           cl_int *     errcode_ret) CL_EXT_SUFFIX__VERSION_1_2;
+                                           cl_int      *errcode_ret) CL_EXT_SUFFIX__VERSION_1_2;
 
 /* Extension: cl_khr_image2d_from_buffer
  *
@@ -203,14 +203,14 @@ typedef cl_properties cl_queue_properties_khr;
 extern CL_API_ENTRY cl_command_queue CL_API_CALL
 clCreateCommandQueueWithPropertiesKHR(cl_context context,
                                       cl_device_id device,
-                                      const cl_queue_properties_khr* properties,
-                                      cl_int* errcode_ret) CL_EXT_SUFFIX__VERSION_1_2;
+                                      const cl_queue_properties_khr *properties,
+                                      cl_int *errcode_ret) CL_EXT_SUFFIX__VERSION_1_2;
 
 typedef CL_API_ENTRY cl_command_queue
 (CL_API_CALL *clCreateCommandQueueWithPropertiesKHR_fn)(cl_context context,
                                                         cl_device_id device,
-                                                        const cl_queue_properties_khr* properties,
-                                                        cl_int* errcode_ret) CL_EXT_SUFFIX__VERSION_1_2;
+                                                        const cl_queue_properties_khr *properties,
+                                                        cl_int *errcode_ret) CL_EXT_SUFFIX__VERSION_1_2;
 
 
 /******************************************
@@ -282,17 +282,17 @@ typedef CL_API_ENTRY cl_int
 typedef cl_ulong  cl_device_partition_property_ext;
 extern CL_API_ENTRY cl_int CL_API_CALL
 clCreateSubDevicesEXT(cl_device_id   in_device,
-                      const cl_device_partition_property_ext * properties,
+                      const cl_device_partition_property_ext *properties,
                       cl_uint        num_entries,
-                      cl_device_id * out_devices,
-                      cl_uint *      num_devices) CL_EXT_SUFFIX__VERSION_1_1;
+                      cl_device_id *out_devices,
+                      cl_uint       *num_devices) CL_EXT_SUFFIX__VERSION_1_1;
 
 typedef CL_API_ENTRY cl_int
-(CL_API_CALL * clCreateSubDevicesEXT_fn)(cl_device_id   in_device,
-                                         const cl_device_partition_property_ext * properties,
-                                         cl_uint        num_entries,
-                                         cl_device_id * out_devices,
-                                         cl_uint *      num_devices) CL_EXT_SUFFIX__VERSION_1_1;
+(CL_API_CALL *clCreateSubDevicesEXT_fn)(cl_device_id   in_device,
+                                        const cl_device_partition_property_ext *properties,
+                                        cl_uint        num_entries,
+                                        cl_device_id *out_devices,
+                                        cl_uint       *num_devices) CL_EXT_SUFFIX__VERSION_1_1;
 
 /* cl_device_partition_property_ext */
 #define CL_DEVICE_PARTITION_EQUALLY_EXT             0x4050
@@ -340,20 +340,20 @@ typedef cl_bitfield cl_mem_migration_flags_ext;
 extern CL_API_ENTRY cl_int CL_API_CALL
 clEnqueueMigrateMemObjectEXT(cl_command_queue command_queue,
                              cl_uint          num_mem_objects,
-                             const cl_mem *   mem_objects,
+                             const cl_mem    *mem_objects,
                              cl_mem_migration_flags_ext flags,
                              cl_uint          num_events_in_wait_list,
-                             const cl_event * event_wait_list,
-                             cl_event *       event);
+                             const cl_event *event_wait_list,
+                             cl_event        *event);
 
 typedef CL_API_ENTRY cl_int
 (CL_API_CALL *clEnqueueMigrateMemObjectEXT_fn)(cl_command_queue command_queue,
                                                cl_uint          num_mem_objects,
-                                               const cl_mem *   mem_objects,
+                                               const cl_mem    *mem_objects,
                                                cl_mem_migration_flags_ext flags,
                                                cl_uint          num_events_in_wait_list,
-                                               const cl_event * event_wait_list,
-                                               cl_event *       event);
+                                               const cl_event *event_wait_list,
+                                               cl_event        *event);
 
 
 /*********************************
@@ -391,8 +391,7 @@ clGetDeviceImageInfoQCOM(cl_device_id             device,
                          void                    *param_value,
                          size_t                  *param_value_size_ret);
 
-typedef struct _cl_mem_ext_host_ptr
-{
+typedef struct _cl_mem_ext_host_ptr {
     /* Type of external memory allocation. */
     /* Legal values will be defined in layered extensions. */
     cl_uint  allocation_type;
@@ -417,8 +416,7 @@ typedef struct _cl_mem_ext_host_ptr
 
 #define CL_MEM_ION_HOST_PTR_QCOM                  0x40A8
 
-typedef struct _cl_mem_ion_host_ptr
-{
+typedef struct _cl_mem_ion_host_ptr {
     /* Type of external memory allocation. */
     /* Must be CL_MEM_ION_HOST_PTR_QCOM for ION allocations. */
     cl_mem_ext_host_ptr  ext_host_ptr;
@@ -427,7 +425,7 @@ typedef struct _cl_mem_ion_host_ptr
     int                  ion_filedesc;
 
     /* Host pointer to the ION allocated memory */
-    void*                ion_hostptr;
+    void                *ion_hostptr;
 
 } cl_mem_ion_host_ptr;
 
@@ -438,14 +436,13 @@ typedef struct _cl_mem_ion_host_ptr
 
 #define CL_MEM_ANDROID_NATIVE_BUFFER_HOST_PTR_QCOM                  0x40C6
 
-typedef struct _cl_mem_android_native_buffer_host_ptr
-{
+typedef struct _cl_mem_android_native_buffer_host_ptr {
     /* Type of external memory allocation. */
     /* Must be CL_MEM_ANDROID_NATIVE_BUFFER_HOST_PTR_QCOM for Android native buffers. */
     cl_mem_ext_host_ptr  ext_host_ptr;
 
     /* Virtual pointer to the android native buffer */
-    void*                anb_ptr;
+    void                *anb_ptr;
 
 } cl_mem_android_native_buffer_host_ptr;
 
@@ -487,18 +484,18 @@ typedef struct _cl_mem_android_native_buffer_host_ptr
 extern CL_API_ENTRY cl_int CL_API_CALL
 clEnqueueAcquireGrallocObjectsIMG(cl_command_queue      command_queue,
                                   cl_uint               num_objects,
-                                  const cl_mem *        mem_objects,
+                                  const cl_mem         *mem_objects,
                                   cl_uint               num_events_in_wait_list,
-                                  const cl_event *      event_wait_list,
-                                  cl_event *            event) CL_EXT_SUFFIX__VERSION_1_2;
+                                  const cl_event       *event_wait_list,
+                                  cl_event             *event) CL_EXT_SUFFIX__VERSION_1_2;
 
 extern CL_API_ENTRY cl_int CL_API_CALL
 clEnqueueReleaseGrallocObjectsIMG(cl_command_queue      command_queue,
                                   cl_uint               num_objects,
-                                  const cl_mem *        mem_objects,
+                                  const cl_mem         *mem_objects,
                                   cl_uint               num_events_in_wait_list,
-                                  const cl_event *      event_wait_list,
-                                  cl_event *            event) CL_EXT_SUFFIX__VERSION_1_2;
+                                  const cl_event       *event_wait_list,
+                                  cl_event             *event) CL_EXT_SUFFIX__VERSION_1_2;
 
 /******************************************
  * cl_img_generate_mipmap extension *
@@ -524,7 +521,7 @@ clEnqueueGenerateMipmapIMG(cl_command_queue          command_queue,
                            cl_uint                   num_events_in_wait_list,
                            const cl_event            *event_wait_list,
                            cl_event *event) CL_EXT_SUFFIX__VERSION_1_2;
-  
+
 /******************************************
  * cl_img_mem_properties extension *
  ******************************************/
@@ -561,20 +558,20 @@ clGetKernelSubGroupInfoKHR(cl_kernel    in_kernel,
                            cl_device_id in_device,
                            cl_kernel_sub_group_info param_name,
                            size_t       input_value_size,
-                           const void * input_value,
+                           const void *input_value,
                            size_t       param_value_size,
-                           void *       param_value,
-                           size_t *     param_value_size_ret) CL_EXT_SUFFIX__VERSION_2_0_DEPRECATED;
+                           void        *param_value,
+                           size_t      *param_value_size_ret) CL_EXT_SUFFIX__VERSION_2_0_DEPRECATED;
 
 typedef CL_API_ENTRY cl_int
-(CL_API_CALL * clGetKernelSubGroupInfoKHR_fn)(cl_kernel    in_kernel,
-                                              cl_device_id in_device,
-                                              cl_kernel_sub_group_info param_name,
-                                              size_t       input_value_size,
-                                              const void * input_value,
-                                              size_t       param_value_size,
-                                              void *       param_value,
-                                              size_t *     param_value_size_ret) CL_EXT_SUFFIX__VERSION_2_0_DEPRECATED;
+(CL_API_CALL *clGetKernelSubGroupInfoKHR_fn)(cl_kernel    in_kernel,
+                                             cl_device_id in_device,
+                                             cl_kernel_sub_group_info param_name,
+                                             size_t       input_value_size,
+                                             const void *input_value,
+                                             size_t       param_value_size,
+                                             void        *param_value,
+                                             size_t      *param_value_size_ret) CL_EXT_SUFFIX__VERSION_2_0_DEPRECATED;
 
 
 /*********************************
@@ -661,8 +658,7 @@ typedef cl_uint cl_version_khr;
 
 #define CL_NAME_VERSION_MAX_NAME_SIZE_KHR 64
 
-typedef struct _cl_name_version_khr
-{
+typedef struct _cl_name_version_khr {
     cl_version_khr version;
     char name[CL_NAME_VERSION_MAX_NAME_SIZE_KHR];
 } cl_name_version_khr;
@@ -739,12 +735,12 @@ typedef intptr_t cl_import_properties_arm;
  * function clCreateBuffer.
  */
 extern CL_API_ENTRY cl_mem CL_API_CALL
-clImportMemoryARM( cl_context context,
-                   cl_mem_flags flags,
-                   const cl_import_properties_arm *properties,
-                   void *memory,
-                   size_t size,
-                   cl_int *errcode_ret) CL_EXT_SUFFIX__VERSION_1_0;
+clImportMemoryARM(cl_context context,
+                  cl_mem_flags flags,
+                  const cl_import_properties_arm *properties,
+                  void *memory,
+                  size_t size,
+                  cl_int *errcode_ret) CL_EXT_SUFFIX__VERSION_1_0;
 
 
 /******************************************
@@ -783,7 +779,7 @@ typedef cl_bitfield cl_svm_mem_flags_arm;
 typedef cl_uint     cl_kernel_exec_info_arm;
 typedef cl_bitfield cl_device_svm_capabilities_arm;
 
-extern CL_API_ENTRY void * CL_API_CALL
+extern CL_API_ENTRY void *CL_API_CALL
 clSVMAllocARM(cl_context       context,
               cl_svm_mem_flags_arm flags,
               size_t           size,
@@ -791,68 +787,68 @@ clSVMAllocARM(cl_context       context,
 
 extern CL_API_ENTRY void CL_API_CALL
 clSVMFreeARM(cl_context        context,
-             void *            svm_pointer) CL_EXT_SUFFIX__VERSION_1_2;
+             void             *svm_pointer) CL_EXT_SUFFIX__VERSION_1_2;
 
 extern CL_API_ENTRY cl_int CL_API_CALL
 clEnqueueSVMFreeARM(cl_command_queue  command_queue,
                     cl_uint           num_svm_pointers,
-                    void *            svm_pointers[],
-                    void (CL_CALLBACK * pfn_free_func)(cl_command_queue queue,
-                                                       cl_uint          num_svm_pointers,
-                                                       void *           svm_pointers[],
-                                                       void *           user_data),
-                    void *            user_data,
+                    void             *svm_pointers[],
+                    void (CL_CALLBACK *pfn_free_func)(cl_command_queue queue,
+                                                      cl_uint          num_svm_pointers,
+                                                      void            *svm_pointers[],
+                                                      void            *user_data),
+                    void             *user_data,
                     cl_uint           num_events_in_wait_list,
-                    const cl_event *  event_wait_list,
-                    cl_event *        event) CL_EXT_SUFFIX__VERSION_1_2;
+                    const cl_event   *event_wait_list,
+                    cl_event         *event) CL_EXT_SUFFIX__VERSION_1_2;
 
 extern CL_API_ENTRY cl_int CL_API_CALL
 clEnqueueSVMMemcpyARM(cl_command_queue  command_queue,
                       cl_bool           blocking_copy,
-                      void *            dst_ptr,
-                      const void *      src_ptr,
+                      void             *dst_ptr,
+                      const void       *src_ptr,
                       size_t            size,
                       cl_uint           num_events_in_wait_list,
-                      const cl_event *  event_wait_list,
-                      cl_event *        event) CL_EXT_SUFFIX__VERSION_1_2;
+                      const cl_event   *event_wait_list,
+                      cl_event         *event) CL_EXT_SUFFIX__VERSION_1_2;
 
 extern CL_API_ENTRY cl_int CL_API_CALL
 clEnqueueSVMMemFillARM(cl_command_queue  command_queue,
-                       void *            svm_ptr,
-                       const void *      pattern,
+                       void             *svm_ptr,
+                       const void       *pattern,
                        size_t            pattern_size,
                        size_t            size,
                        cl_uint           num_events_in_wait_list,
-                       const cl_event *  event_wait_list,
-                       cl_event *        event) CL_EXT_SUFFIX__VERSION_1_2;
+                       const cl_event   *event_wait_list,
+                       cl_event         *event) CL_EXT_SUFFIX__VERSION_1_2;
 
 extern CL_API_ENTRY cl_int CL_API_CALL
 clEnqueueSVMMapARM(cl_command_queue  command_queue,
                    cl_bool           blocking_map,
                    cl_map_flags      flags,
-                   void *            svm_ptr,
+                   void             *svm_ptr,
                    size_t            size,
                    cl_uint           num_events_in_wait_list,
-                   const cl_event *  event_wait_list,
-                   cl_event *        event) CL_EXT_SUFFIX__VERSION_1_2;
+                   const cl_event   *event_wait_list,
+                   cl_event         *event) CL_EXT_SUFFIX__VERSION_1_2;
 
 extern CL_API_ENTRY cl_int CL_API_CALL
 clEnqueueSVMUnmapARM(cl_command_queue  command_queue,
-                     void *            svm_ptr,
+                     void             *svm_ptr,
                      cl_uint           num_events_in_wait_list,
-                     const cl_event *  event_wait_list,
-                     cl_event *        event) CL_EXT_SUFFIX__VERSION_1_2;
+                     const cl_event   *event_wait_list,
+                     cl_event         *event) CL_EXT_SUFFIX__VERSION_1_2;
 
 extern CL_API_ENTRY cl_int CL_API_CALL
 clSetKernelArgSVMPointerARM(cl_kernel    kernel,
                             cl_uint      arg_index,
-                            const void * arg_value) CL_EXT_SUFFIX__VERSION_1_2;
+                            const void *arg_value) CL_EXT_SUFFIX__VERSION_1_2;
 
 extern CL_API_ENTRY cl_int CL_API_CALL
 clSetKernelExecInfoARM(cl_kernel            kernel,
                        cl_kernel_exec_info_arm  param_name,
                        size_t               param_value_size,
-                       const void *         param_value) CL_EXT_SUFFIX__VERSION_1_2;
+                       const void          *param_value) CL_EXT_SUFFIX__VERSION_1_2;
 
 /********************************
  * cl_arm_get_core_id extension *

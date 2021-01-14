@@ -196,11 +196,11 @@ bool create_path(const char *dirname) {
 }
 */
 
-bool setDefaultPath (savePaths_t pathIndex, const char *Path) {
+bool setDefaultPath(savePaths_t pathIndex, const char *Path) {
 
     if (pathIndex < spItemCount) {
         if ((Path == NULL) && (session.defaultPaths[pathIndex] != NULL)) {
-            free (session.defaultPaths[pathIndex]);
+            free(session.defaultPaths[pathIndex]);
             session.defaultPaths[pathIndex] = NULL;
         }
 

@@ -43,87 +43,84 @@ License: GNU General Public License v3 or any later version (see LICENSE.txt)
 #define MAX_OPENCL_DEVICES 16
 
 // defines structures
-typedef struct compute_device_ctx
-{
-	char name[0xff];
-	char vendor[0x40];
-	char version[0x40];
-	char driver_version[0x40];
+typedef struct compute_device_ctx {
+    char name[0xff];
+    char vendor[0x40];
+    char version[0x40];
+    char driver_version[0x40];
 
-	bool is_gpu, is_apple_gpu, is_nv;
-	bool have_lop3, have_local_memory;
-	bool warning, unsupported;
+    bool is_gpu, is_apple_gpu, is_nv;
+    bool have_lop3, have_local_memory;
+    bool warning, unsupported;
 
-	bool selected;
-	bool enabled;
+    bool selected;
+    bool enabled;
 
-	unsigned char pad1[4];
-	unsigned int sm_maj;
-	unsigned int sm_min;
-	unsigned int compute_units;
+    unsigned char pad1[4];
+    unsigned int sm_maj;
+    unsigned int sm_min;
+    unsigned int compute_units;
 
-	cl_device_id device_id;
-	cl_platform_id platform_id;
+    cl_device_id device_id;
+    cl_platform_id platform_id;
 
 } compute_device_ctx_t;
 
-typedef struct compute_platform_ctx
-{
-	unsigned int device_cnt;
-	unsigned int compute_units_max;
+typedef struct compute_platform_ctx {
+    unsigned int device_cnt;
+    unsigned int compute_units_max;
 
-	bool is_nv, is_apple, is_intel;
-	bool warning;
-	bool selected;
+    bool is_nv, is_apple, is_intel;
+    bool warning;
+    bool selected;
 
-	unsigned char pad1[3];
-	compute_device_ctx_t device[0x10];
+    unsigned char pad1[3];
+    compute_device_ctx_t device[0x10];
 
-	char name[0xff];
-	char vendor[0x40];
-	char version[0x40];
+    char name[0xff];
+    char vendor[0x40];
+    char version[0x40];
 
-	unsigned char pad2[1];
-	cl_platform_id platform_id;
-	cl_context context;
-	cl_program program;
+    unsigned char pad2[1];
+    cl_platform_id platform_id;
+    cl_context context;
+    cl_program program;
 
 } compute_platform_ctx_t;
 
-typedef struct opencl_ctx
-{
-	char *kernelSource[1];
-	size_t kernelSource_len;
+typedef struct opencl_ctx {
+    char *kernelSource[1];
+    size_t kernelSource_len;
 
-	size_t *global_ws;
-	size_t *local_ws;
-	int *profiles;
+    size_t *global_ws;
+    size_t *local_ws;
+    int *profiles;
 
-	cl_device_id *device_ids;       // compute device id's array
-	cl_context *contexts;           // compute contexts
-	cl_command_queue *commands;     // compute command queue (for each device)
-	cl_program *programs;           // compute program's
-	cl_kernel *kernels;             // compute kernel's
+    cl_device_id *device_ids;       // compute device id's array
+    cl_context *contexts;           // compute contexts
+    cl_command_queue *commands;     // compute command queue (for each device)
+    cl_program *programs;           // compute program's
+    cl_kernel *kernels;             // compute kernel's
 
 //	cl_mem cand_base;               // device memory used for the candidate base
-	cl_mem *keystreams;             // device memory used for the keystream array
-	cl_mem *candidates;             // device memory used for the candidates array
-	cl_mem *matches;                // device memory used for the matches array
-	cl_mem *matches_found;          // device memory used for the matches_found array
-	cl_mem *checks;                 // device memory used for uid, aR2, nR1, nR2
+    cl_mem *keystreams;             // device memory used for the keystream array
+    cl_mem *candidates;             // device memory used for the candidates array
+    cl_mem *matches;                // device memory used for the matches array
+    cl_mem *matches_found;          // device memory used for the matches_found array
+    cl_mem *checks;                 // device memory used for uid, aR2, nR1, nR2
 
-	wu_queue_ctx_t queue_ctx;
-	bool profiling;
-	unsigned char pad2[1];
-	short thread_sched_type;
-	bool force_hitag2_opencl;
+    wu_queue_ctx_t queue_ctx;
+    bool profiling;
+    unsigned char pad2[1];
+    short thread_sched_type;
+    bool force_hitag2_opencl;
 
-	unsigned char pad3[3];
+    unsigned char pad3[3];
 
 } opencl_ctx_t;
 
-bool plat_dev_enabled (unsigned int id, unsigned int *sel, unsigned int cnt, unsigned int cur_type, unsigned int allow_type);
+bool plat_dev_enabled(unsigned int id, unsigned int *sel, unsigned int cnt, unsigned int cur_type, unsigned int allow_type);
 
-int runKernel (opencl_ctx_t *ctx, uint32_t cand_base, uint64_t *matches, uint32_t *matches_found, size_t id);
+int runKernel(opencl_ctx_t *ctx, uint32_t cand_base, uint64_t *matches, uint32_t *matches_found, size_t id);
 
 #endif // OPENCL_H

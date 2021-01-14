@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include "cmdparser.h"    // command_t
-#include "cliparser.h"    // 
+#include "cliparser.h"    //
 #include "commonutil.h"   // ARRAYLEN
 #include "comms.h"
 #include "util_posix.h"
@@ -119,7 +119,7 @@ static int CmdUsartConfig(const char *Cmd) {
     bool po = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
-    if ((pn + pe + po) > 1 ) {
+    if ((pn + pe + po) > 1) {
         PrintAndLogEx(WARNING, "Only one parity can be used at a time");
         return PM3_EINVARG;
     }
@@ -160,7 +160,7 @@ static int usart_bt_testcomm(uint32_t baudrate, uint8_t parity) {
 static int CmdUsartBtFactory(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "usart btfactory",
-                  "Reset BT add-on to factory settings\n"                  
+                  "Reset BT add-on to factory settings\n"
                   "This requires\n"
                   "    1) BTpower to be turned ON\n"
                   "    2) BT add-on to NOT be connected\n"
@@ -361,22 +361,22 @@ static int CmdUsartBtPin(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int plen = 4;
-    char pin[5] = { 0, 0 ,0, 0, 0 };
+    char pin[5] = { 0, 0, 0, 0, 0 };
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)pin, sizeof(pin), &plen);
     CLIParserFree(ctx);
 
     if (plen != 4) {
         PrintAndLogEx(FAILED, "PIN must be 4 digits");
-        return PM3_EINVARG;        
+        return PM3_EINVARG;
     }
 
     for (uint8_t i = 0; i < plen; i++) {
         if (isdigit(pin[i]) == false) {
             PrintAndLogEx(FAILED, "PIN must be 4 digits");
-            return PM3_EINVARG;        
+            return PM3_EINVARG;
         }
     }
-   
+
     char string[6 + sizeof(pin)] = {0};
     sprintf(string, "AT+PIN%s", pin);
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
@@ -425,7 +425,7 @@ static int CmdUsartTX(const char *Cmd) {
     size_t i2 = 0;
     size_t n = strlen(s);
 
-    // strip / replace 
+    // strip / replace
     for (size_t i = 0; i < n; i++) {
         if ((i < n - 1) && (s[i] == '\\') && (s[i + 1] == '\\')) {
             i++;
@@ -469,7 +469,7 @@ static int CmdUsartRX(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint32_t waittime = arg_get_u32_def(ctx, 1, 0);    
+    uint32_t waittime = arg_get_u32_def(ctx, 1, 0);
     CLIParserFree(ctx);
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
@@ -501,7 +501,7 @@ static int CmdUsartTXRX(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint32_t waittime = arg_get_u32_def(ctx, 1, 1000);    
+    uint32_t waittime = arg_get_u32_def(ctx, 1, 1000);
     int slen = 0;
     char s[PM3_CMD_DATA_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)s, sizeof(s), &slen);
@@ -568,7 +568,7 @@ static int CmdUsartTXhex(const char *Cmd) {
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
     CLIParserFree(ctx);
-   
+
     if (res) {
         PrintAndLogEx(FAILED, "Error parsing bytes");
         return PM3_EINVARG;
@@ -591,7 +591,7 @@ static int CmdUsartRXhex(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint32_t waittime = arg_get_u32_def(ctx, 1, 0);    
+    uint32_t waittime = arg_get_u32_def(ctx, 1, 0);
     CLIParserFree(ctx);
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};

@@ -506,7 +506,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hw help                `|Y       |`This help`
-|`hw connect             `|Y       |`connect Proxmark3 to serial port`
+|`hw connect             `|Y       |`Connect Proxmark3 to serial port`
 |`hw dbg                 `|N       |`Set Proxmark3 debug level`
 |`hw detectreader        `|N       |`Detect external reader field`
 |`hw fpgaoff             `|N       |`Set FPGA off`
@@ -515,7 +515,7 @@ Check column "offline" for their availability.
 |`hw ping                `|N       |`Test if the Proxmark3 is responsive`
 |`hw readmem             `|N       |`Read memory at decimal address from flash`
 |`hw reset               `|N       |`Reset the Proxmark3`
-|`hw setlfdivisor        `|N       |`Drive LF antenna at 12 MHz / (divisor + 1)`
+|`hw setlfdivisor        `|N       |`Drive LF antenna at 12MHz / (divisor + 1)`
 |`hw setmux              `|N       |`Set the ADC mux to a specific value`
 |`hw standalone          `|N       |`Jump to the standalone mode`
 |`hw status              `|N       |`Show runtime status information about the connected Proxmark3`

@@ -80,11 +80,11 @@ static void print_usage_t55xx_downloadlink(uint8_t ShowAll, uint8_t dl_mode_defa
 }
 
 static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, uint8_t dl_mode_def) {
-    
-    char *r0 = (char*)calloc(56, sizeof(uint8_t));    
-    char *r1 = (char*)calloc(56, sizeof(uint8_t));
-    char *r2 = (char*)calloc(56, sizeof(uint8_t));
-    char *r3 = (char*)calloc(56, sizeof(uint8_t));
+
+    char *r0 = (char *)calloc(56, sizeof(uint8_t));
+    char *r1 = (char *)calloc(56, sizeof(uint8_t));
+    char *r2 = (char *)calloc(56, sizeof(uint8_t));
+    char *r3 = (char *)calloc(56, sizeof(uint8_t));
 
     sprintf(r0, "downlink - fixed bit length %s", (dl_mode_def == 0) ? "(detected def)" : "");
     sprintf(r1, "downlink - long leading reference %s", (dl_mode_def == 1) ? "(detected def)" : "");
@@ -98,12 +98,12 @@ static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, u
     at[n++] = arg_lit0(NULL, "r3", r3);
 
     if (show == T55XX_DLMODE_ALL) {
-        char *r4 = (char*)calloc(50, sizeof(uint8_t));
+        char *r4 = (char *)calloc(50, sizeof(uint8_t));
         sprintf(r4, "try all downlink modes %s", (dl_mode_def == 4) ? "(def)" : "");
         at[n++] = arg_lit0(NULL, "all", r4);
     }
     at[n++] = arg_param_end;
-    *idx = n;  
+    *idx = n;
 }
 
 
@@ -2876,7 +2876,7 @@ static int CmdT55xxWipe(const char *Cmd) {
                  );
 
     // 4 + (5 or 6)
-   void *argtable[9] = {
+    void *argtable[9] = {
         arg_param_begin,
         arg_str0("c", "cfg", "<hex>", "configuration block0 (4 hex bytes)"),
         arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
@@ -2887,7 +2887,7 @@ static int CmdT55xxWipe(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool usepwd = false, gotconf = false;
-    uint32_t block0 = 0; 
+    uint32_t block0 = 0;
     int res = arg_get_u32_hexstr_def(ctx, 1, 0, &block0);
     if (res == 1) {
         gotconf = true;
@@ -2907,7 +2907,7 @@ static int CmdT55xxWipe(const char *Cmd) {
             PrintAndLogEx(WARNING, "Password should be 4 bytes, using default pwd");
     }
 
-    bool Q5 = arg_get_lit(ctx, 3); 
+    bool Q5 = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     PrintAndLogEx(INFO, "Target " _YELLOW_("%s")" tag", (Q5) ? "Q5/T5555" : "T55x7");
@@ -3181,7 +3181,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
                   "lf t55xx bruteforce --r2 -s aaaaaa77 -e aaaaaa99\n"
                  );
 
-   void *argtable[3 + 6] = {
+    void *argtable[3 + 6] = {
         arg_param_begin,
         arg_str1("s", "start", "<hex>", "search start password (4 hex bytes)"),
         arg_str1("e", "end", "<hex>", "search end password (4 hex bytes)"),
@@ -3243,7 +3243,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
     curr = start_password;
 
     while (found == 0) {
-        
+
         PrintAndLogEx(NORMAL, "." NOLF);
 
         if (IsCancelled()) {
@@ -3308,7 +3308,7 @@ static int CmdT55xxRecoverPW(const char *Cmd) {
                  );
 
     // 2 + (5 or 6)
-   void *argtable[8] = {
+    void *argtable[8] = {
         arg_param_begin,
         arg_str1("p", "pwd", "<hex>", "password (4 hex bytes)"),
     };
@@ -3548,7 +3548,7 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
                  );
 
     // 2 + (5 or 6)
-   void *argtable[7] = {
+    void *argtable[7] = {
         arg_param_begin,
         arg_lit0("1", NULL, "extract using data from graphbuffer"),
         arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
@@ -3565,7 +3565,7 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
     if (res == 2) {
         PrintAndLogEx(INFO, "Password should be 4 hex bytes");
         return PM3_EINVARG;
-    } else if ( res == 1) {
+    } else if (res == 1) {
         usepwd = true;
     }
 
@@ -3606,7 +3606,7 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
 
     if (use_graphbuf == false) {
         for (uint8_t dl_mode = downlink_mode; dl_mode < 4; dl_mode++) {
-            
+
             if (AcquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, usepwd, password, dl_mode) == false)
                 continue;
 
@@ -3644,7 +3644,7 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
                   "lf t55xx deviceconfig -a 55 -b 14 -c 21 -d 30          -> default EM4305"
                  );
 
-   void *argtable[10 + 5] = {
+    void *argtable[10 + 5] = {
         arg_param_begin,
         arg_int0("a", NULL, "<8..255>", "Set start gap"),
         arg_int0("b", NULL, "<8..255>", "Set write gap"),
@@ -3677,7 +3677,7 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
 
     if ((r0 + r1 + r2 + r3) > 1) {
         PrintAndLogEx(FAILED, "Error multiple downlink encoding");
-        return PM3_EINVARG;        
+        return PM3_EINVARG;
     }
 
     uint8_t downlink_mode = 0;
@@ -3755,7 +3755,7 @@ static int CmdT55xxProtect(const char *Cmd) {
                  );
 
     // 4 + (5 or 6)
-   void *argtable[4 + 5] = {
+    void *argtable[4 + 5] = {
         arg_param_begin,
         arg_lit0("o", "override", "override safety check"),
         arg_str1("p", "pwd", "<hex>", "password (4 hex bytes)"),
@@ -3766,17 +3766,17 @@ static int CmdT55xxProtect(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     uint8_t override = 0;
-    if (arg_get_lit(ctx, 1)) 
+    if (arg_get_lit(ctx, 1))
         override = 2;
 
     uint32_t password = 0;
-    bool usepwd = false; 
+    bool usepwd = false;
     int res = arg_get_u32_hexstr_def(ctx, 2, 0, &password);
     if (res == 2) {
         CLIParserFree(ctx);
         PrintAndLogEx(FAILED, "Error parsing password bytes");
         return PM3_EINVARG;
-    } else if ( res == 1) {
+    } else if (res == 1) {
         usepwd = true;
         override = 1;
     }
@@ -3942,7 +3942,7 @@ static int CmdT55xxSniff(const char *Cmd) {
     char dataText [100];
     int pulseBuffer[80] = { 0 }; // max should be 73 +/- - Holds Pulse widths
     char data[80]; //  linked to pulseBuffer. - Holds 0/1 from pulse widths
- 
+
     // setup and sample data from Proxmark
     // if not directed to existing sample/graphbuffer
     if (use_graphbuf == false) {
@@ -4159,7 +4159,7 @@ static int CmdT55xxSniff(const char *Cmd) {
         }
 
         // Print results
-        if (have_data) { 
+        if (have_data) {
             if (blockAddr == 7)
                 PrintAndLogEx(SUCCESS, "%-20s  | "_GREEN_("%8s")" | "_YELLOW_("%8s")" |  "_YELLOW_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, dataText, blockAddr, page, minWidth, maxWidth, data);
             else

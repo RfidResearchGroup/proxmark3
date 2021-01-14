@@ -23,7 +23,7 @@ extern "C" {
 
 #include <CL/cl_gl.h>
 
-/* 
+/*
  *  cl_khr_gl_event extension
  */
 #define CL_COMMAND_GL_FENCE_SYNC_OBJECT_KHR     0x200D
@@ -31,7 +31,7 @@ extern "C" {
 extern CL_API_ENTRY cl_event CL_API_CALL
 clCreateEventFromGLsyncKHR(cl_context context,
                            cl_GLsync  sync,
-                           cl_int *   errcode_ret) CL_EXT_SUFFIX__VERSION_1_1;
+                           cl_int    *errcode_ret) CL_EXT_SUFFIX__VERSION_1_1;
 
 #ifdef __cplusplus
 }

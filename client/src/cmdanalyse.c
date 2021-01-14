@@ -242,7 +242,7 @@ static int CmdAnalyseLCR(const char *Cmd) {
     uint8_t data[100] = {0x00};
     int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
     CLIParserFree(ctx);
-   
+
     if (res) {
         PrintAndLogEx(FAILED, "Error parsing bytes");
         return PM3_EINVARG;
@@ -272,7 +272,7 @@ static int CmdAnalyseCRC(const char *Cmd) {
     uint8_t data[1024] = {0x00};
     int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
     CLIParserFree(ctx);
-   
+
     if (res) {
         PrintAndLogEx(FAILED, "Error parsing bytes");
         return PM3_EINVARG;
@@ -386,14 +386,14 @@ static int CmdAnalyseCHKSUM(const char *Cmd) {
     const char *s = arg_get_str(ctx, 2)->sval[0];
     bool verbose = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
-   
+
     uint32_t mlen = 0;
-    if (s) 
+    if (s)
         mlen = strlen(s);
 
     if (mlen > 8) {
         PrintAndLogEx(FAILED, "Mask value is max 4 hex bytes");
-        return PM3_EINVARG;        
+        return PM3_EINVARG;
     }
 
     uint32_t mask = 0;
@@ -487,7 +487,7 @@ static int CmdAnalyseTEASelfTest(const char *Cmd) {
     uint8_t v_le[8];
     memset(v_le, 0x00, sizeof(v_le));
     uint8_t *v_ptr = v_le;
-   
+
     SwapEndian64ex(data, 8, 4, v_ptr);
 
     // ENCRYPTION KEY:
@@ -856,7 +856,7 @@ static int CmdAnalyseNuid(const char *Cmd) {
     int res = CLIParamHexToBuf(arg_get_str(ctx, 1), uid, sizeof(uid), &uidlen);
     bool selftest = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
-   
+
     if (res) {
         PrintAndLogEx(FAILED, "Error parsing bytes");
         return PM3_EINVARG;
@@ -878,19 +878,19 @@ static int CmdAnalyseNuid(const char *Cmd) {
         PrintAndLogEx(INFO, "Self tests");
         bool test1 = (0 == memcmp(nuid, nuid_test1, sizeof(nuid)));
         PrintAndLogEx((test1) ? SUCCESS : FAILED, "1. %s -> %s ( %s )"
-            , sprint_hex_inrow(uid_test1, sizeof(uid_test1))
-            , sprint_hex(nuid, sizeof(nuid))
-            ,  test1 ? _GREEN_("ok") : _RED_("fail")
-            );
+                      , sprint_hex_inrow(uid_test1, sizeof(uid_test1))
+                      , sprint_hex(nuid, sizeof(nuid))
+                      ,  test1 ? _GREEN_("ok") : _RED_("fail")
+                     );
 
         memcpy(uid, uid_test2, sizeof(uid));
         mfc_generate4b_nuid(uid, nuid);
         bool test2 = (0 == memcmp(nuid, nuid_test2, sizeof(nuid)));
         PrintAndLogEx((test2) ? SUCCESS : FAILED, "2. %s -> %s ( %s )\n"
-            , sprint_hex_inrow(uid_test2, sizeof(uid_test2))
-            , sprint_hex(nuid, sizeof(nuid))
-            , test2 ? _GREEN_("ok") : _RED_("fail")
-            );
+                      , sprint_hex_inrow(uid_test2, sizeof(uid_test2))
+                      , sprint_hex(nuid, sizeof(nuid))
+                      , test2 ? _GREEN_("ok") : _RED_("fail")
+                     );
 
         return PM3_SUCCESS;
     }
@@ -922,7 +922,7 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     const char *s = arg_get_str(ctx, 1)->sval[0];
     CLIParserFree(ctx);
-   
+
     if (s == NULL) {
         PrintAndLogEx(FAILED, "Must provide a binary string");
         return PM3_EINVARG;
@@ -987,7 +987,7 @@ static int CmdAnalyseFoo(const char *Cmd) {
     CLIParserInit(&ctx, "analyze foo",
                   "experiments of cliparse",
                   "analyse foo -r a0000000a0002021"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1001,8 +1001,8 @@ static int CmdAnalyseFoo(const char *Cmd) {
     uint8_t data[256];
     CLIGetHexWithReturn(ctx, 1, data, &datalen);
 
-    int data3len = 512;    
-    uint8_t data3[512];    
+    int data3len = 512;
+    uint8_t data3[512];
     CLIGetStrWithReturn(ctx, 1, data3, &data3len);
 
     CLIParserFree(ctx);
@@ -1010,7 +1010,7 @@ static int CmdAnalyseFoo(const char *Cmd) {
     PrintAndLogEx(INFO, "-r");
     PrintAndLogEx(INFO, "Got:  %s", sprint_hex_inrow(data, datalen));
     PrintAndLogEx(INFO, "Got:  %s", data3);
-    
+
     ClearGraph(false);
     GraphTraceLen = 15000;
 
