@@ -137,7 +137,7 @@ Iceman has quite a few videos on his channel and Quentyn has risen up the last y
  - [Quentyn Taylor](https://www.youtube.com/channel/UCL91C3IZDv3wfj2ABhdRIrw)
  - [Hacker warehouse channel](https://www.youtube.com/channel/UCimS6P854cQ23j6c_xst7EQ)
 
-_ if you think of some more good youtube channels to be on this list, let us know!_
+_if you think of some more good youtube channels to be on this list, let us know!_
 
 ## Cheat sheet
 
