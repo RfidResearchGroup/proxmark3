@@ -204,7 +204,7 @@ int main (int argc, char **argv)
 
 	char *platforms_selected = NULL;
 	char *devices_selected = NULL;
-	unsigned int device_types_selected = 2;
+	unsigned int device_types_selected = 0;
 	unsigned int thread_scheduler_type_selected = THREAD_TYPE_ASYNC;
 	unsigned int profile_selected = 2;
 	unsigned int queue_type = 0;
