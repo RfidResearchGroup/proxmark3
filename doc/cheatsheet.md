@@ -153,7 +153,9 @@ Load iCLASS dump into memory for simulation
 ```
 Options
 ---
-f <filename>     : load iCLASS tag-dump filename
+-f, --file <filename>          filename of dump
+    --json                     load JSON type dump
+    --eml                      load EML type dump
 
 pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
 ```
@@ -191,9 +193,9 @@ Extract custom iCLASS key (loclass attack)
 ```
 Options
 ---
-f <filename>   : specify a filename to clone from
-k <key>        : Access Key as 16 hex symbols or 1 hex to select key from memory
---elite        : Elite computations applied to key
+-f <filename>                  specify a filename to clone from
+-k <key>                       Access Key as 16 hex symbols or 1 hex to select key from memory
+    --elite                    Elite computations applied to key
 
 pm3 --> hf iclass sim -t 2
 pm3 --> hf iclass loclass -f iclass_mac_attack.bin
@@ -329,10 +331,10 @@ pm3 --> hf mfu info
 
 Clone MIFARE Ultralight EV1 Sequence
 ```
-pm3 --> hf mfu dump k FFFFFFFF
+pm3 --> hf mfu dump -k FFFFFFFF
 pm3 --> script run hf_mfu_dumptoemulator -i hf-mfu-XXXX-dump.bin -o hf-mfu-XXXX-dump.eml
-pm3 --> hf mfu eload u hf-mfu-XXXX-dump.eml
-pm3 --> hf mfu sim t 7 u hf-mfu-XXXX-dump.eml
+pm3 --> hf mfu eload -u -f hf-mfu-XXXX-dump.eml
+pm3 --> hf mfu sim -t 7 -f hf-mfu-XXXX-dump.eml
 ```
 
 Bruteforce MIFARE Classic card numbers from 11223344 to 11223346
@@ -359,11 +361,11 @@ Options
 ---
 -w <format> --oem <OEM> --fc <FC> --cn <CN> --issue <issuelevel>
 
--w            : wiegand format to use
---oem        : OEM number / site code
---fc         : facility code
---cn         : card number
---issue      : issue level
+-w                             wiegand format to use
+    --oem                      OEM number / site code
+    --fc                       facility code
+    --cn                       card number
+    --issue                    issue level
 
 pm3 --> wiegand encode -w H10301 --oem 0 --fc 56  --cn 150
 ```
@@ -372,8 +374,8 @@ Convert Site & Facility code from Wiegand raw hex to numbers
 ```
 Options
 ---
--p           : ignore parity errors
---raw        : raw hex to be decoded
+-p                             ignore parity errors
+    --raw                      raw hex to be decoded
 
 pm3 --> wiegand decode --raw 2006f623ae
 ```
@@ -408,15 +410,15 @@ Brute force HID reader
 ```
 Options
 ---
--v, --verbose        : verbose logging, show all tries
--w, --wiegand format : see `wiegand list` for available formats
--f, --fn dec         : facility code
--c, --cn dec         : card number to start with
--i dec               : issue level
--o, --oem dec        : OEM code
--d, --delay dec      : delay betweens attempts in ms. Default 1000ms
---up                 : direction to increment card number. (default is both directions)
---down               : direction to decrement card number. (default is both directions)
+-v, --verbose                  verbose logging, show all tries
+-w, --wiegand format           see `wiegand list` for available formats
+-f, --fn dec                   facility code
+-c, --cn dec                   card number to start with
+-i dec                         issue level
+-o, --oem dec                  OEM code
+-d, --delay dec                delay betweens attempts in ms. Default 1000ms
+    --up                       direction to increment card number. (default is both directions)
+    --down                     direction to decrement card number. (default is both directions)
 
 pm3 --> lf hid brute -w H10301 -f 224
 pm3 --> lf hid brute -v -w H10301 -f 21 -c 200 -d 2000
@@ -439,18 +441,24 @@ Simulate Indala card
 ```
 Options
 ---
-<uid> :  64/224 UID
+-r, --raw <hex>                raw bytes
+    --heden <decimal>          Cardnumber for Heden 2L format
 
-pm3 --> lf indala sim a0000000c2c436c1
+pm3 --> lf indala sim -r a0000000c2c436c1
 ```
 
 Clone to T55x7 card
 ```
 Options
 ---
-<uid> :  64/224 UID
+-r, --raw <hex>                raw bytes
+    --heden <decimal>          Cardnumber for Heden 2L format
+    --fc <decimal>             Facility Code (26 bit H10301 format)
+    --cn <decimal>             Cardnumber (26 bit H10301 format)
+    --q5                       specify writing to Q5/T5555 tag
+    --em                       specify writing to EM4305/4469 tag
 
-pm3 --> lf indala clone a0000000c2c436c1
+pm3 --> lf indala clone -r a0000000c2c436c1
 ```
 
 ## Hitag
@@ -628,11 +636,11 @@ Load default keys into flash memory (RDV4 only)
 ```
 Options
 ---
--o <offset>         : offset in memory
--f <filename>       : file name
---mfc               : upload 6 bytes keys (mifare key dictionary)
---iclass            : upload 8 bytes keys (iClass key dictionary)
---t55xx             : upload 4 bytes keys (pwd dictionary)
+-o <offset>                    offset in memory
+-f <filename>                  file name
+    --mfc                      upload 6 bytes keys (mifare key dictionary)
+    --iclass                   upload 8 bytes keys (iClass key dictionary)
+    --t55xx                    upload 4 bytes keys (pwd dictionary)
 
 pm3 --> mem load -f mfc_default_keys --mfc
 pm3 --> mem load -f t55xx_default_pwds --t5xx
@@ -644,7 +652,7 @@ pm3 --> mem load -f iclass_default_keys --iclass
 
 Upgrade Sim Module firmware
 ```
-pm3 --> smart upgrade f ../tools/simmodule/sim011.bin
+pm3 --> smart upgrade -f sim011.bin
 ```
 
 ## Smart Card
@@ -660,38 +668,41 @@ Act like an IS07816 reader
 pm3 --> smart reader
 ```
 
-Set clock speed
+Set clock speed for smart card interface
 ```
 Options
 ---
-c <speed>       : clockspeed (0 = 16MHz, 1=8MHz, 2=4MHz)
+    --16mhz                    16 MHz clock speed
+    --8mhz                     8 MHz clock speed
+    --4mhz                     4 MHz clock speed
 
-pm3 --> smart setclock c 2
+
+pm3 --> smart setclock --8mhz
 ```
 
 Send raw hex data
 ```
 Options
 ---
-r           : do not read response
-a           : active smartcard without select (reset smart module)
-s           : active smartcard with select (get ATR)
-t           : executes TLV decoder if it possible
-0           : use protocol T=0
-d <bytes>   : bytes to send
+-r                             do not read response
+-a                             active smartcard without select (reset sc module)
+-s                             active smartcard with select (get ATR)
+-t, --tlv                      executes TLV decoder if it possible
+-0                             use protocol T=0
+-d, --data <hex>               bytes to send
 
-pm3 --> smart raw s 0 d 00a404000e315041592e5359532e4444463031 : 1PAY.SYS.DDF01 PPSE directory with get ATR
-pm3 --> smart raw 0 d 00a404000e325041592e5359532e4444463031   : 2PAY.SYS.DDF01 PPSE directory
-pm3 --> smart raw 0 t d 00a4040007a0000000041010               : Mastercard
-pm3 --> smart raw 0 t d 00a4040007a0000000031010               : Visa
+pm3 --> smart raw -s -0 -d 00a404000e315041592e5359532e4444463031
+pm3 --> smart raw -0 -d 00a404000e325041592e5359532e4444463031
+pm3 --> smart raw -0 -t -d 00a4040007a0000000041010
+pm3 --> smart raw -0 -t -d 00a4040007a0000000031010
 ````
 
 Bruteforce SPI
 ```
 Options
 ---
-t          : executes TLV decoder if it possible
+-t, --tlv                      executes TLV decoder if it possible
 
 pm3 --> smart brute
-pm3 --> smart brute t
+pm3 --> smart brute --tlv
 ```

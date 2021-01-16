@@ -7,7 +7,7 @@
 # -samy kamkar 05/28/2017
 #
 # hf mf eload u FILENAME_MINUS_EML
-# hf 14a sim t 7 u UID
+# hf 14a sim -t 7 -u UID
 
 # perl -lne 'chomp; s/\s+(\S+)$//;$f=$1;if($f=~s/-(\S+)//){$g=hex($1);}else{$g=hex($f)}$f=hex($f); for$m($f..$g){print "0x" . substr(unpack("H4",pack("n",$m)),1) ." => \"$_\","}' /tmp/game  >> game2
 # perl -lne 'if(/^(\S.*?)\s+\w?\w\w\w\w(\s*-\s*\w?\w\w\w\w)?\s*$/){$l=$1} s/(\w{4,5}\s*-\s*)?(\w{4,5})$//; $a=$1;$b=$2; $b=hex($b); $a=$a?hex($a):$b; for$m($a..$b){print "0x" . substr(unpack("H4",pack("n",$m)),0) ." => \"$l\","}' /tmp/g2
@@ -685,7 +685,7 @@ $uid = uc $uid;
 #print STDERR "amiitool -d -k ../client/amiitool/key_retail.bin -i $input -o $input.decrypted\n";
 $input =~ s/\....$//;
 print STDERR "hf mf eload u $input\n";
-print STDERR "hf 14a sim t 7 u $uid\n";
+print STDERR "hf 14a sim -t 7 -u $uid\n";
 
 
 __DATA__

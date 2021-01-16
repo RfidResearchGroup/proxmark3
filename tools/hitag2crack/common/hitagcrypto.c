@@ -208,7 +208,9 @@
 
 // We want the crypto functions to be as fast as possible, so optimize!
 // The best compiler optimization in Microchip's free XC32 edition is -O1
+#ifndef __APPLE__
 #pragma GCC optimize("O1")
+#endif
 
 // private, nonlinear function to generate 1 crypto bit
 static uint32_t hitag2_crypt(uint64_t x);
@@ -367,4 +369,6 @@ uint32_t hitag2_nstep(Hitag_State *pstate, uint32_t steps) {
 }
 
 // end of crypto core, revert to default optimization level
+#ifndef __APPLE__
 #pragma GCC reset_options
+#endif

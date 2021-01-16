@@ -711,7 +711,7 @@ void pm3_init(void) {
     session.help_dump_mode = false;
     session.incognito = false;
     session.supports_colors = false;
-    session.emoji_mode = ALTTEXT;
+    session.emoji_mode = EMO_ALTTEXT;
     session.stdinOnTTY = false;
     session.stdoutOnTTY = false;
 
@@ -769,14 +769,14 @@ int main(int argc, char *argv[]) {
     session.stdinOnTTY = isatty(STDIN_FILENO);
     session.stdoutOnTTY = isatty(STDOUT_FILENO);
     session.supports_colors = false;
-    session.emoji_mode = ALTTEXT;
+    session.emoji_mode = EMO_ALTTEXT;
     if (session.stdinOnTTY && session.stdoutOnTTY) {
 #if defined(__linux__) || defined(__APPLE__)
         session.supports_colors = true;
-        session.emoji_mode = EMOJI;
+        session.emoji_mode = EMO_EMOJI;
 #elif defined(_WIN32)
         session.supports_colors = DetectWindowsAnsiSupport();
-        session.emoji_mode = ALTTEXT;
+        session.emoji_mode = EMO_ALTTEXT;
 #endif
     }
     for (int i = 1; i < argc; i++) {
@@ -976,7 +976,7 @@ int main(int argc, char *argv[]) {
     // even if prefs, we disable colors if stdin or stdout is not a TTY
     if ((! session.stdinOnTTY) || (! session.stdoutOnTTY)) {
         session.supports_colors = false;
-        session.emoji_mode = ALTTEXT;
+        session.emoji_mode = EMO_ALTTEXT;
     }
 
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway

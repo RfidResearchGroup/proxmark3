@@ -154,7 +154,7 @@ t55xx_configurations_t T55xx_Timing  = {
         { 29 * 8, 17 * 8, 15 * 8, 40 * 8, 15 * 8, 0, 0 },           // Leading 0
         { 29 * 8, 17 * 8, 15 * 8, 31 * 8, 15 * 8, 47 * 8, 63 * 8 }  // 1 of 4
 #else
-// PM3OTHER or like offical repo
+// PM3GENERIC or like official repo
         { 31 * 8, 20 * 8, 18 * 8, 50 * 8, 15 * 8, 0, 0 },           // Default Fixed
         { 31 * 8, 20 * 8, 18 * 8, 50 * 8, 15 * 8, 0, 0 },           // Long Leading Ref.
         { 31 * 8, 20 * 8, 18 * 8, 40 * 8, 15 * 8, 0, 0 },           // Leading 0

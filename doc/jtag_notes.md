@@ -74,7 +74,13 @@ GND | 6
 ## Third party notes on using a RaspBerry Pi
 
 * http://www.lucasoldi.com/2017/01/17/unbrick-proxmark3-with-a-raspberry-pi-and-openocd/
+* https://wiki.elvis.science/index.php?title=Proxmark3:_Debricking
+* https://github.com/synthetos/PiOCD/wiki/Using-a-Raspberry-Pi-as-a-JTAG-Dongle
 
 ## Third party notes on using a J-Link on Windows
 
 * https://github.com/Proxmark/proxmark3/wiki/De-Bricking-Segger
+
+## Stack Overflow write up article.
+https://stackoverflow.com/questions/48794076/error-halt-timed-out-wake-up-gdb/64291913#64291913
+

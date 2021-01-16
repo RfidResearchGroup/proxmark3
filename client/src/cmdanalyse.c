@@ -12,7 +12,7 @@
 #include <stdlib.h>       // size_t
 #include <string.h>
 #include <ctype.h>        // tolower
-//#include <stdio.h>        // printf
+#include <math.h>
 #include "commonutil.h"   // reflect...
 #include "comms.h"        // clearCommandBuffer
 #include "cmdparser.h"    // command_t
@@ -22,87 +22,12 @@
 #include "tea.h"
 #include "legic_prng.h"
 #include "cmddata.h"      // demodbuffer
+#include "graph.h"
+#include "proxgui.h"
+#include "cliparser.h"
+#include "generator.h"    // generate nuid
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_analyse_lcr(void) {
-    PrintAndLogEx(NORMAL, "Specifying the bytes of a UID with a known LRC will find the last byte value");
-    PrintAndLogEx(NORMAL, "needed to generate that LRC with a rolling XOR. All bytes should be specified in HEX.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  analyse lcr [h] <bytes>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           <bytes>    bytes to calc missing XOR in a LCR");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      analyse lcr 04008064BA");
-    PrintAndLogEx(NORMAL, "expected output: Target (BA) requires final LRC XOR byte value: 5A");
-    return PM3_SUCCESS;
-}
-static int usage_analyse_checksum(void) {
-    PrintAndLogEx(NORMAL, "The bytes will be added with eachother and than limited with the applied mask");
-    PrintAndLogEx(NORMAL, "Finally compute ones' complement of the least significant bytes");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  analyse chksum [h] [v] b <bytes> m <mask>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           v          suppress header");
-    PrintAndLogEx(NORMAL, "           b <bytes>  bytes to calc missing XOR in a LCR");
-    PrintAndLogEx(NORMAL, "           m <mask>   bit mask to limit the outpuyt");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      analyse chksum b 137AF00A0A0D m FF");
-    PrintAndLogEx(NORMAL, "expected output: 0x61");
-    return PM3_SUCCESS;
-}
-static int usage_analyse_crc(void) {
-    PrintAndLogEx(NORMAL, "A stub method to test different crc implementations inside the PM3 sourcecode. Just because you figured out the poly, doesn't mean you get the desired output");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  analyse crc [h] <bytes>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           <bytes>    bytes to calc crc");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      analyse crc 137AF00A0A0D");
-    return PM3_SUCCESS;
-}
-static int usage_analyse_nuid(void) {
-    PrintAndLogEx(NORMAL, "Generate 4byte NUID from 7byte UID");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  analyse hid [h] <bytes>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           <bytes>  input bytes (14 hexsymbols)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      analyse nuid 11223344556677");
-    return PM3_SUCCESS;
-}
-static int usage_analyse_a(void) {
-    PrintAndLogEx(NORMAL, "Iceman's personal garbage test command");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  analyse a [h] d <bytes>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           d <bytes>  bytes to send to device");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      analyse a d 137AF00A0A0D");
-    return PM3_SUCCESS;
-}
-static int usage_analyse_demodbuffer(void) {
-    PrintAndLogEx(NORMAL, "loads a binary string into demod buffer");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  analyse demodbuff [h] <binarystring>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h                This help");
-    PrintAndLogEx(NORMAL, "           <binarystring>   Binary string to load");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      analyse demodbuff 0011101001001011");
-    return PM3_SUCCESS;
-}
 
 static uint8_t calculateLRC(uint8_t *bytes, uint8_t len) {
     uint8_t LRC = 0;
@@ -247,226 +172,323 @@ static uint16_t calcBSDchecksum4(uint8_t *bytes, uint8_t len, uint32_t mask) {
 
 // measuring LFSR maximum length
 static int CmdAnalyseLfsr(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse lfsr",
+                  "looks at LEGIC Prime's lfsr,  iterates the first 48 values",
+                  "analyse lfsr --iv 55"
+                 );
 
-    uint8_t iv = param_get8ex(Cmd, 0, 0, 16);
-    uint8_t find = param_get8ex(Cmd, 1, 0, 16);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "iv", "<hex>", "init vector data (1 hex byte)"),
+        arg_str0(NULL, "find", "<hex>", "lfsr data to find (1 hex byte)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int iv_len = 0;
+    uint8_t idata[1] = {0};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), idata, sizeof(idata), &iv_len);
 
-    PrintAndLogEx(NORMAL, "LEGIC LFSR IV 0x%02X: \n", iv);
-    PrintAndLogEx(NORMAL, " bit# | lfsr | ^0x40 |  0x%02X ^ lfsr \n", find);
+    if (res) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(FAILED, "Error parsing IV byte");
+        return PM3_EINVARG;
+    }
+
+    int f_len = 0;
+    uint8_t fdata[1] = {0};
+    res = CLIParamHexToBuf(arg_get_str(ctx, 2), fdata, sizeof(fdata), &f_len);
+    CLIParserFree(ctx);
+
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing FIND byte");
+        return PM3_EINVARG;
+    }
+
+    uint8_t iv = idata[0];
+    uint8_t find = fdata[0];
+
+    PrintAndLogEx(INFO, "LEGIC Prime lfsr");
+    PrintAndLogEx(INFO, "iv..... 0x%02X", iv);
+    PrintAndLogEx(INFO, "----+------+-------+--------------");
+    PrintAndLogEx(INFO, " i# | lfsr | ^0x40 |  0x%02X ^ lfsr", find);
+    PrintAndLogEx(INFO, "----+------+-------+--------------");
 
     for (uint8_t i = 0x01; i < 0x30; i += 1) {
         legic_prng_init(iv);
         legic_prng_forward(i);
         uint16_t lfsr = legic_prng_get_bits(12);  /* Any nonzero start state will work. */
-        PrintAndLogEx(NORMAL, " %02X | %03X | %03X | %03X \n", i, lfsr, 0x40 ^ lfsr, find ^ lfsr);
+        PrintAndLogEx(INFO, " %02X |  %03X |  %03X  | %03X", i, lfsr, 0x40 ^ lfsr, find ^ lfsr);
     }
-    return 0;
+    PrintAndLogEx(INFO, "----+------+-------+--------------");
+    return PM3_SUCCESS;
 }
+
 static int CmdAnalyseLCR(const char *Cmd) {
-    uint8_t data[50];
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_lcr();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse lcr",
+                  "Specifying the bytes of a UID with a known LRC will find the last byte value\n"
+                  "needed to generate that LRC with a rolling XOR. All bytes should be specified in HEX.",
+                  "analyse lcr -d 04008064BA     ->  Target (BA) requires final LRC XOR byte value: 5A"
+                 );
 
-    int len = 0;
-    switch (param_gethex_to_eol(Cmd, 0, data, sizeof(data), &len)) {
-        case 1:
-            PrintAndLogEx(WARNING, "Invalid HEX value.");
-            return 1;
-        case 2:
-            PrintAndLogEx(WARNING, "Too many bytes.  Max %zu bytes", sizeof(data));
-            return 1;
-        case 3:
-            PrintAndLogEx(WARNING, "Hex must have even number of digits.");
-            return 1;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "bytes to calc missing XOR in a LCR"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int dlen = 0;
+    uint8_t data[100] = {0x00};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
+    CLIParserFree(ctx);
+
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
     }
-    uint8_t finalXor = calculateLRC(data, len);
-    PrintAndLogEx(NORMAL, "Target [%02X] requires final LRC XOR byte value: 0x%02X", data[len - 1], finalXor);
-    return 0;
+
+    uint8_t finalXor = calculateLRC(data, dlen);
+    PrintAndLogEx(SUCCESS, "Target [%02X] requires final LRC XOR byte value: " _YELLOW_("0x%02X"), data[dlen - 1], finalXor);
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
 }
+
 static int CmdAnalyseCRC(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse crc",
+                  "A stub method to test different crc implementations inside the PM3 sourcecode.\n"
+                  "Just because you figured out the poly, doesn't mean you get the desired output",
+                  "analyse crc -d 137AF00A0A0D"
+                 );
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_crc();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "bytes to calc crc"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int dlen = 0;
+    uint8_t data[1024] = {0x00};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
+    CLIParserFree(ctx);
 
-    int len = strlen(Cmd);
-    if (len & 1) return usage_analyse_crc();
-
-    // add 1 for null terminator.
-    uint8_t *data = calloc(len + 1,  sizeof(uint8_t));
-    if (!data) return 1;
-
-    if (param_gethex(Cmd, 0, data, len)) {
-        free(data);
-        return usage_analyse_crc();
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
     }
-    len >>= 1;
 
-    PrintAndLogEx(NORMAL, "\nTests with (%d) | %s", len, sprint_hex(data, len));
+    PrintAndLogEx(INFO, "\nTests with (%d) | %s", dlen, sprint_hex(data, dlen));
 
     // 51  f5  7a  d6
     uint8_t uid[] = {0x51, 0xf5, 0x7a, 0xd6}; //12 34 56
     init_table(CRC_LEGIC);
     uint8_t legic8 = CRC8Legic(uid, sizeof(uid));
-    PrintAndLogEx(NORMAL, "Legic 16 | %X (EF6F expected) [legic8 = %02x]", crc16_legic(data, len, legic8), legic8);
+    PrintAndLogEx(INFO, "Legic 16 | %X (EF6F expected) [legic8 = %02x]", crc16_legic(data, dlen, legic8), legic8);
     init_table(CRC_FELICA);
-    PrintAndLogEx(NORMAL, "FeliCa | %X ", crc16_xmodem(data, len));
+    PrintAndLogEx(INFO, "FeliCa | %X ", crc16_xmodem(data, dlen));
 
-    PrintAndLogEx(NORMAL, "\nTests of reflection. Current methods in source code");
-    PrintAndLogEx(NORMAL, "   reflect(0x3e23L,3) is %04X == 0x3e26", reflect(0x3e23L, 3));
-    PrintAndLogEx(NORMAL, "       reflect8(0x80) is %02X == 0x01", reflect8(0x80));
-    PrintAndLogEx(NORMAL, "    reflect16(0x8000) is %04X == 0x0001", reflect16(0xc6c6));
+    PrintAndLogEx(INFO, "\nTests of reflection. Current methods in source code");
+    PrintAndLogEx(INFO, "   reflect(0x3e23L,3) is %04X == 0x3e26", reflect(0x3e23L, 3));
+    PrintAndLogEx(INFO, "       reflect8(0x80) is %02X == 0x01", reflect8(0x80));
+    PrintAndLogEx(INFO, "    reflect16(0x8000) is %04X == 0x0001", reflect16(0xc6c6));
 
     uint8_t b1, b2;
     // ISO14443 crc B
-    compute_crc(CRC_14443_B, data, len, &b1, &b2);
+    compute_crc(CRC_14443_B, data, dlen, &b1, &b2);
     uint16_t crcBB_1 = b1 << 8 | b2;
-    uint16_t bbb = Crc16ex(CRC_14443_B, data, len);
-    PrintAndLogEx(NORMAL, "ISO14443 crc B  | %04x == %04x \n", crcBB_1, bbb);
+    uint16_t bbb = Crc16ex(CRC_14443_B, data, dlen);
+    PrintAndLogEx(INFO, "ISO14443 crc B  | %04x == %04x \n", crcBB_1, bbb);
 
 
     // Test of CRC16,  '123456789' string.
     //
 
-    PrintAndLogEx(NORMAL, "\n\nStandard test with 31 32 33 34 35 36 37 38 39  '123456789'\n\n");
+    PrintAndLogEx(INFO, "\n\nStandard test with 31 32 33 34 35 36 37 38 39  '123456789'\n\n");
     uint8_t dataStr[] = { 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39 };
     legic8 = CRC8Legic(dataStr, sizeof(dataStr));
 
     //these below has been tested OK.
-    PrintAndLogEx(NORMAL, "Confirmed CRC Implementations");
-    PrintAndLogEx(NORMAL, "-------------------------------------\n");
-    PrintAndLogEx(NORMAL, "CRC 8 based\n\n");
-    PrintAndLogEx(NORMAL, "LEGIC: CRC8 : %X (C6 expected)", legic8);
-    PrintAndLogEx(NORMAL, "MAXIM: CRC8 : %X (A1 expected)", CRC8Maxim(dataStr, sizeof(dataStr)));
-    PrintAndLogEx(NORMAL, "-------------------------------------\n");
-    PrintAndLogEx(NORMAL, "CRC16 based\n\n");
+    PrintAndLogEx(INFO, "Confirmed CRC Implementations");
+    PrintAndLogEx(INFO, "-------------------------------------\n");
+    PrintAndLogEx(INFO, "CRC 8 based\n\n");
+    PrintAndLogEx(INFO, "LEGIC: CRC8 : %X (C6 expected)", legic8);
+    PrintAndLogEx(INFO, "MAXIM: CRC8 : %X (A1 expected)", CRC8Maxim(dataStr, sizeof(dataStr)));
+    PrintAndLogEx(INFO, "-------------------------------------\n");
+    PrintAndLogEx(INFO, "CRC16 based\n\n");
 
     // input from commandline
-    PrintAndLogEx(NORMAL, "CCITT  | %X (29B1 expected)", Crc16ex(CRC_CCITT, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(INFO, "CCITT  | %X (29B1 expected)", Crc16ex(CRC_CCITT, dataStr, sizeof(dataStr)));
 
     uint8_t poll[] = {0xb2, 0x4d, 0x12, 0x01, 0x01, 0x2e, 0x3d, 0x17, 0x26, 0x47, 0x80, 0x95, 0x00, 0xf1, 0x00, 0x00, 0x00, 0x01, 0x43, 0x00, 0xb3, 0x7f};
-    PrintAndLogEx(NORMAL, "FeliCa | %04X (B37F expected)", Crc16ex(CRC_FELICA, poll + 2, sizeof(poll) - 4));
-    PrintAndLogEx(NORMAL, "FeliCa | %04X (0000 expected)", Crc16ex(CRC_FELICA, poll + 2, sizeof(poll) - 2));
+    PrintAndLogEx(INFO, "FeliCa | %04X (B37F expected)", Crc16ex(CRC_FELICA, poll + 2, sizeof(poll) - 4));
+    PrintAndLogEx(INFO, "FeliCa | %04X (0000 expected)", Crc16ex(CRC_FELICA, poll + 2, sizeof(poll) - 2));
 
     uint8_t sel_corr[] = { 0x40, 0xe1, 0xe1, 0xff, 0xfe, 0x5f, 0x02, 0x3c, 0x43, 0x01};
-    PrintAndLogEx(NORMAL, "iCLASS | %04x (0143 expected)", Crc16ex(CRC_ICLASS, sel_corr, sizeof(sel_corr) - 2));
-    PrintAndLogEx(NORMAL, "---------------------------------------------------------------\n\n\n");
+    PrintAndLogEx(INFO, "iCLASS | %04x (0143 expected)", Crc16ex(CRC_ICLASS, sel_corr, sizeof(sel_corr) - 2));
+    PrintAndLogEx(INFO, "---------------------------------------------------------------\n\n\n");
 
     // ISO14443 crc A
     compute_crc(CRC_14443_A, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcAA = b1 << 8 | b2;
-    PrintAndLogEx(NORMAL, "ISO14443 crc A  | %04x or %04x (BF05 expected)\n", crcAA, Crc16ex(CRC_14443_A, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(INFO, "ISO14443 crc A  | %04x or %04x (BF05 expected)\n", crcAA, Crc16ex(CRC_14443_A, dataStr, sizeof(dataStr)));
 
     // ISO14443 crc B
     compute_crc(CRC_14443_B, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcBB = b1 << 8 | b2;
-    PrintAndLogEx(NORMAL, "ISO14443 crc B  | %04x or %04x (906E expected)\n", crcBB, Crc16ex(CRC_14443_B, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(INFO, "ISO14443 crc B  | %04x or %04x (906E expected)\n", crcBB, Crc16ex(CRC_14443_B, dataStr, sizeof(dataStr)));
 
     // ISO15693 crc  (x.25)
     compute_crc(CRC_15693, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcCC = b1 << 8 | b2;
-    PrintAndLogEx(NORMAL, "ISO15693 crc X25| %04x or %04x (906E expected)\n", crcCC, Crc16ex(CRC_15693, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(INFO, "ISO15693 crc X25| %04x or %04x (906E expected)\n", crcCC, Crc16ex(CRC_15693, dataStr, sizeof(dataStr)));
 
     // ICLASS
     compute_crc(CRC_ICLASS, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcDD = b1 << 8 | b2;
-    PrintAndLogEx(NORMAL, "ICLASS crc      | %04x or %04x\n", crcDD, Crc16ex(CRC_ICLASS, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(INFO, "ICLASS crc      | %04x or %04x\n", crcDD, Crc16ex(CRC_ICLASS, dataStr, sizeof(dataStr)));
 
     // FeliCa
     compute_crc(CRC_FELICA, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcEE = b1 << 8 | b2;
-    PrintAndLogEx(NORMAL, "FeliCa          | %04x or %04x (31C3 expected)\n", crcEE, Crc16ex(CRC_FELICA, dataStr, sizeof(dataStr)));
+    PrintAndLogEx(INFO, "FeliCa          | %04x or %04x (31C3 expected)\n", crcEE, Crc16ex(CRC_FELICA, dataStr, sizeof(dataStr)));
 
-    free(data);
-    return 0;
+    return PM3_SUCCESS;
 }
+
 static int CmdAnalyseCHKSUM(const char *Cmd) {
 
-    uint8_t data[50];
-    uint8_t cmdp = 0;
-    uint32_t mask = 0xFFFF;
-    bool errors = false;
-    bool useHeader = false;
-    int len = 0;
-    memset(data, 0x0, sizeof(data));
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse chksum",
+                  "The bytes will be added with eachother and than limited with the applied mask\n"
+                  "Finally compute ones' complement of the least significant bytes.",
+                  "analyse chksum -d 137AF00A0A0D     ->  expected output: 0x61\n"
+                  "analyse chksum -d 137AF00A0A0D -m FF"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (param_getchar(Cmd, cmdp)) {
-            case 'b':
-            case 'B':
-                param_gethex_ex(Cmd, cmdp + 1, data, &len);
-                if (len % 2) errors = true;
-                len >>= 1;
-                cmdp += 2;
-                break;
-            case 'm':
-            case 'M':
-                mask = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                cmdp += 2;
-                break;
-            case 'v':
-            case 'V':
-                useHeader = true;
-                cmdp++;
-                break;
-            case 'h':
-            case 'H':
-                return usage_analyse_checksum();
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "bytes to calc checksum"),
+        arg_str0("m", "mask", "<hex>", "bit mask to limit the output (4 hex bytes max)"),
+        arg_lit0("v", "verbose", "verbose"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int dlen = 0;
+    uint8_t data[100] = {0x00};
+    memset(data, 0x0, sizeof(data));
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
+    if (res) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
+    const char *s = arg_get_str(ctx, 2)->sval[0];
+    bool verbose = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    uint32_t mlen = 0;
+    if (s)
+        mlen = strlen(s);
+
+    if (mlen > 8) {
+        PrintAndLogEx(FAILED, "Mask value is max 4 hex bytes");
+        return PM3_EINVARG;
+    }
+
+    uint32_t mask = 0;
+    if (mlen == 0) {
+        mask = 0xFFFF;
+    } else {
+        for (int i = 0; i < mlen; i++) {
+            char c = s[i];
+            // capitalize
+            if (c >= 'a' && c <= 'f')
+                c -= 32;
+            // convert to numeric value
+            if (c >= '0' && c <= '9')
+                c -= '0';
+            else if (c >= 'A' && c <= 'F')
+                c -= 'A' - 10;
+            else
+                continue;
+
+            mask <<= 4;
+            mask |= c;
         }
     }
-    //Validations
-    if (errors || cmdp == 0) return usage_analyse_checksum();
 
-    if (useHeader) {
-        PrintAndLogEx(NORMAL, "     add          | sub         | add 1's compl    | sub 1's compl   | xor");
-        PrintAndLogEx(NORMAL, "byte nibble crumb | byte nibble | byte nibble cumb | byte nibble     | byte nibble cumb |  BSD       |");
-        PrintAndLogEx(NORMAL, "------------------+-------------+------------------+-----------------+--------------------");
+    PrintAndLogEx(INFO, "Mask value 0x%x", mask);
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "     add          | sub         | add 1's compl    | sub 1's compl   | xor");
+        PrintAndLogEx(INFO, "byte nibble crumb | byte nibble | byte nibble cumb | byte nibble     | byte nibble cumb |  BSD       |");
+        PrintAndLogEx(INFO, "------------------+-------------+------------------+-----------------+--------------------");
     }
-    PrintAndLogEx(NORMAL, "0x%X 0x%X   0x%X  | 0x%X 0x%X   | 0x%X 0x%X   0x%X | 0x%X 0x%X       | 0x%X 0x%X   0x%X  | 0x%X  0x%X |\n",
-                  calcSumByteAdd(data, len, mask)
-                  , calcSumNibbleAdd(data, len, mask)
-                  , calcSumCrumbAdd(data, len, mask)
-                  , calcSumByteSub(data, len, mask)
-                  , calcSumNibbleSub(data, len, mask)
-                  , calcSumByteAddOnes(data, len, mask)
-                  , calcSumNibbleAddOnes(data, len, mask)
-                  , calcSumCrumbAddOnes(data, len, mask)
-                  , calcSumByteSubOnes(data, len, mask)
-                  , calcSumNibbleSubOnes(data, len, mask)
-                  , calcSumByteXor(data, len, mask)
-                  , calcSumNibbleXor(data, len, mask)
-                  , calcSumCrumbXor(data, len, mask)
-                  , calcBSDchecksum8(data, len, mask)
-                  , calcBSDchecksum4(data, len, mask)
+    PrintAndLogEx(INFO, "0x%X 0x%X   0x%X  | 0x%X 0x%X   | 0x%X 0x%X   0x%X | 0x%X 0x%X       | 0x%X 0x%X   0x%X  | 0x%X  0x%X |\n",
+                  calcSumByteAdd(data, dlen, mask)
+                  , calcSumNibbleAdd(data, dlen, mask)
+                  , calcSumCrumbAdd(data, dlen, mask)
+                  , calcSumByteSub(data, dlen, mask)
+                  , calcSumNibbleSub(data, dlen, mask)
+                  , calcSumByteAddOnes(data, dlen, mask)
+                  , calcSumNibbleAddOnes(data, dlen, mask)
+                  , calcSumCrumbAddOnes(data, dlen, mask)
+                  , calcSumByteSubOnes(data, dlen, mask)
+                  , calcSumNibbleSubOnes(data, dlen, mask)
+                  , calcSumByteXor(data, dlen, mask)
+                  , calcSumNibbleXor(data, dlen, mask)
+                  , calcSumCrumbXor(data, dlen, mask)
+                  , calcBSDchecksum8(data, dlen, mask)
+                  , calcBSDchecksum4(data, dlen, mask)
                  );
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdAnalyseDates(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    // look for datestamps in a given array of bytes
-    PrintAndLogEx(NORMAL, "To be implemented. Feel free to contribute!");
-    return 0;
-}
-static int CmdAnalyseTEASelfTest(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse dates",
+                  "Tool to look for date/time stamps in a given array of bytes",
+                  "analyse dates"
+                 );
 
-    uint8_t v[8], v_le[8];
-    memset(v, 0x00, sizeof(v));
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    PrintAndLogEx(NORMAL, "To be implemented. Feel free to contribute!");
+    return PM3_SUCCESS;
+}
+
+static int CmdAnalyseTEASelfTest(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse tea",
+                  "Crypto TEA self tests",
+                  "analyse tea -d 1122334455667788"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "bytes to encrypt ( 8 hex bytes )"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int dlen = 0;
+    uint8_t data[8] = {0x00};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
+    CLIParserFree(ctx);
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
+
+    uint8_t v_le[8];
     memset(v_le, 0x00, sizeof(v_le));
     uint8_t *v_ptr = v_le;
 
-    uint8_t cmdlen = strlen(Cmd);
-    cmdlen = (sizeof(v) << 2 < cmdlen) ? sizeof(v) << 2 : cmdlen;
-
-    if (param_gethex(Cmd, 0, v, cmdlen) > 0) {
-        PrintAndLogEx(WARNING, "Can't read hex chars, uneven? :: %u", cmdlen);
-        return 1;
-    }
-
-    SwapEndian64ex(v, 8, 4, v_ptr);
+    SwapEndian64ex(data, 8, 4, v_ptr);
 
     // ENCRYPTION KEY:
     uint8_t key[16] = {0x55, 0xFE, 0xF6, 0x30, 0x62, 0xBF, 0x0B, 0xC1, 0xC9, 0xB3, 0x7C, 0x34, 0x97, 0x3E, 0x29, 0xFB };
@@ -474,49 +496,47 @@ static int CmdAnalyseTEASelfTest(const char *Cmd) {
     uint8_t *key_ptr = keyle;
     SwapEndian64ex(key, sizeof(key), 4, key_ptr);
 
-    PrintAndLogEx(NORMAL, "TEST LE enc| %s", sprint_hex(v_ptr, 8));
+    PrintAndLogEx(INFO, "TEA crypto testing");
+    PrintAndLogEx(INFO, "-----------------------------------+---------");
+    PrintAndLogEx(INFO, "LE enc.... %s", sprint_hex_ascii(v_ptr, 8));
 
     tea_decrypt(v_ptr, key_ptr);
-    PrintAndLogEx(NORMAL, "TEST LE dec | %s", sprint_hex_ascii(v_ptr, 8));
+    PrintAndLogEx(INFO, "LE dec.... %s", sprint_hex_ascii(v_ptr, 8));
 
     tea_encrypt(v_ptr, key_ptr);
+    PrintAndLogEx(INFO, "enc1...... %s", sprint_hex_ascii(v_ptr, 8));
     tea_encrypt(v_ptr, key_ptr);
-    PrintAndLogEx(NORMAL, "TEST enc2 | %s", sprint_hex_ascii(v_ptr, 8));
-
-    return 0;
+    PrintAndLogEx(INFO, "enc2...... %s", sprint_hex_ascii(v_ptr, 8));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
 }
-
-/*
-static char *pb(uint32_t b) {
-    static char buf1[33] = {0};
-    static char buf2[33] = {0};
-    static char *s;
-
-    if (s != buf1)
-        s = buf1;
-    else
-        s = buf2;
-
-    memset(s, 0, sizeof(buf1));
-
-    uint32_t mask = 0x80000000;
-    for (uint8_t i = 0; i < 32; i++) {
-        s[i] = (mask & b) ? '1' : '0';
-        mask >>= 1;
-    }
-    return s;
-}
-*/
 
 static int CmdAnalyseA(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse a",
+                  "Iceman's personal garbage test command",
+                  "analyse a -d 137AF00A0A0D"
+                 );
 
-    return usage_analyse_a();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "bytes to manipulate"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int dlen = 0;
+    uint8_t data[100] = {0x00};
+    memset(data, 0x0, sizeof(data));
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
+    if (res) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
+    CLIParserFree(ctx);
+    return PM3_SUCCESS;
+
     /*
-        PrintAndLogEx(NORMAL, "-- " _BLUE_("its my message") "\n");
-        PrintAndLogEx(NORMAL, "-- " _RED_("its my message") "\n");
-        PrintAndLogEx(NORMAL, "-- " _YELLOW_("its my message") "\n");
-        PrintAndLogEx(NORMAL, "-- " _GREEN_("its my message") "\n");
-
         //uint8_t syncBit = 99;
         // The start bit is one ore more Sequence Y followed by a Sequence Z (... 11111111 00x11111). We need to distinguish from
         // Sequence X followed by Sequence Y followed by Sequence Z     (111100x1 11111111 00x11111)
@@ -528,28 +548,22 @@ static int CmdAnalyseA(const char *Cmd) {
         uint8_t byte_offset = 99;
         // reverse byte
         uint8_t rev =  reflect8(bt);
-        PrintAndLogEx(NORMAL, "input  %02x | %02x \n", bt, rev);
+        PrintAndLogEx(INFO, "input  %02x | %02x \n", bt, rev);
         // add byte to shift register
         shiftReg = shiftReg << 8 | rev;
 
-        PrintAndLogEx(NORMAL, "shiftreg after %08x | pattern %08x \n", shiftReg, SYNC_16BIT);
+        PrintAndLogEx(INFO, "shiftreg after %08x | pattern %08x \n", shiftReg, SYNC_16BIT);
 
         uint8_t n0 = 0, n1 = 0;
 
         n0 = (rev & (uint8_t)(~(0xFF >> (8 - 4)))) >> 4;
         n1 = (n1 << 4) | (rev & (uint8_t)(~(0xFF << 4)));
 
-        PrintAndLogEx(NORMAL, "rev %02X | %02X %s | %02X %s |\n", rev, n0, pb(n0), n1, pb(n1));
+        PrintAndLogEx(INFO, "rev %02X | %02X %s | %02X %s |\n", rev, n0, pb(n0), n1, pb(n1));
     */
-    /*
-    hex(0xb24d shr 0) 0xB24D 0b1011001001001101
-    hex(0xb24d shr 1) 0x5926
-    hex(0xb24d shr 2) 0x2C93
-    */
-
     /*
         for (int i = 0; i < 16; i++) {
-            PrintAndLogEx(NORMAL, " (shiftReg >> %d) & 0xFFFF ==  %08x ---", i, ((shiftReg >> i) & 0xFFFF));
+            PrintAndLogEx(INFO, " (shiftReg >> %d) & 0xFFFF ==  %08x ---", i, ((shiftReg >> i) & 0xFFFF));
 
             // kolla om SYNC_PATTERN finns.
             if (((shiftReg >> 7) & 0xFFFF) == SYNC_16BIT) byte_offset = 7;
@@ -561,7 +575,7 @@ static int CmdAnalyseA(const char *Cmd) {
             else if (((shiftReg >> 1) & 0xFFFF) == SYNC_16BIT) byte_offset = 1;
             else if (((shiftReg >> 0) & 0xFFFF) == SYNC_16BIT) byte_offset = 0;
 
-            PrintAndLogEx(NORMAL, "Offset  %u \n", byte_offset);
+            PrintAndLogEx(INFO, "Offset  %u \n", byte_offset);
             if (byte_offset != 99)
                 break;
 
@@ -569,14 +583,14 @@ static int CmdAnalyseA(const char *Cmd) {
         }
 
         uint8_t p1 = (rev & (uint8_t)(~(0xFF << byte_offset)));
-        PrintAndLogEx(NORMAL, "Offset  %u  | leftovers  %02x  %s \n", byte_offset, p1, pb(p1));
+        PrintAndLogEx(INFO, "Offset  %u  | leftovers  %02x  %s \n", byte_offset, p1, pb(p1));
 
     */
 
     /*
-    pm3 --> da hex2bin 4db2     0100110110110010
+    pm3 --> da hex2bin 4db2   0100110110110010
     */
-    //return 0;
+    //return PM3_SUCCESS;
     /*
         // split byte into two parts.
         uint8_t offset = 3, n0 = 0, n1 = 0;
@@ -586,23 +600,23 @@ static int CmdAnalyseA(const char *Cmd) {
             n0 = (rev & (uint8_t)(~(0xFF >> (8-offset)))) >> offset;
             n1 = (n1 << offset) | (rev & (uint8_t)(~(0xFF << offset)));
 
-            PrintAndLogEx(NORMAL, "rev %02X | %02X %s | %02X %s |\n", rev, n0, pb(n0), n1, pb(n1) );
+            PrintAndLogEx(INFO, "rev %02X | %02X %s | %02X %s |\n", rev, n0, pb(n0), n1, pb(n1) );
             n0 = 0, n1 = 0;
-            // PrintAndLogEx(NORMAL, " (0xFF >> offset) == %s |\n", pb( (0xFF >> offset)) );
-            //PrintAndLogEx(NORMAL, "~(0xFF >> (8-offset)) == %s |\n", pb(  (uint8_t)(~(0xFF >> (8-offset))) ) );
-            //PrintAndLogEx(NORMAL, " rev & xxx == %s\n\n", pb( (rev & (uint8_t)(~(0xFF << offset))) ));
+            // PrintAndLogEx(INFO, " (0xFF >> offset) == %s |\n", pb( (0xFF >> offset)) );
+            //PrintAndLogEx(INFO, "~(0xFF >> (8-offset)) == %s |\n", pb(  (uint8_t)(~(0xFF >> (8-offset))) ) );
+            //PrintAndLogEx(INFO, " rev & xxx == %s\n\n", pb( (rev & (uint8_t)(~(0xFF << offset))) ));
         }
-    return 0;
+    return PM3_SUCCESS;
         // from A  -- x bits into B and the rest into C.
 
         for ( uint8_t i=0; i<8; i++){
-            PrintAndLogEx(NORMAL, "%u | %02X %s | %02X %s |\n", i, a, pb(a), b, pb(b) );
+            PrintAndLogEx(INFO, "%u | %02X %s | %02X %s |\n", i, a, pb(a), b, pb(b) );
             b = a & (a & (0xFF >> (8-i)));
             a >>=1;
         }
 
         */
-//    return 0;
+//    return PM3_SUCCESS;
 
     /*
         // 14443-A
@@ -613,7 +627,7 @@ static int CmdAnalyseA(const char *Cmd) {
 
         // 14443-B
         uint8_t u14b[] = {0x05, 0x00, 0x08, 0x39, 0x73};
-        PrintAndLogEx(NORMAL, "14b check crc            | %s\n", (check_crc(CRC_14443_B, u14b, sizeof(u14b))) ? "YES" : "NO");
+        PrintAndLogEx(INFO, "14b check crc            | %s\n", (check_crc(CRC_14443_B, u14b, sizeof(u14b))) ? "YES" : "NO");
 
         // 15693 test
         uint8_t u15_c[] = {0x05, 0x00, 0x08, 0x39, 0x73}; // correct
@@ -633,28 +647,10 @@ static int CmdAnalyseA(const char *Cmd) {
         PrintAndLogEx(FAILED, "FeliCa check wrong crc   | %s\n", (check_crc(CRC_FELICA, felica_w, sizeof(felica_w))) ? "YES" : "NO");
         PrintAndLogEx(SUCCESS, "FeliCa check correct crc | %s\n", (check_crc(CRC_FELICA, felica_c, sizeof(felica_c))) ? "YES" : "NO");
 
-        PrintAndLogEx(NORMAL, "\n\n");
+        PrintAndLogEx(NORMAL, "\n");
 
-        return 0;
+        return PM3_SUCCESS;
         */
-    /*
-    bool term = !isatty(STDIN_FILENO);
-    if (!term) {
-        char star[4];
-        star[0] = '-';
-        star[1] = '\\';
-        star[2] = '|';
-        star[3] = '/';
-
-        for (uint8_t k=0; k<4; k = (k+1) % 4 ) {
-            PrintAndLogEx(NORMAL, "\e[s%c\e[u", star[k]);
-            fflush(stdout);
-            if (kbd_enter_pressed()) {
-                break;
-            }
-        }
-    }
-    */
 
 //piwi
 // uid(2e086b1a) nt(230736f6) ks(0b0008000804000e) nr(000000000)
@@ -789,7 +785,7 @@ static int CmdAnalyseA(const char *Cmd) {
     /*
     for (uint8_t i=0; i<31; i++){
         uint64_t a = keys[i] ^ keys[i+1];
-        PrintAndLogEx(NORMAL, "%u | %012" PRIX64 " | \n", i, a);
+        PrintAndLogEx(INFO, "%u | %012" PRIX64 " | \n", i, a);
     }
     */
 
@@ -807,8 +803,8 @@ static int CmdAnalyseA(const char *Cmd) {
         0x2F
     };
 
-    PrintAndLogEx(NORMAL, "UID   | %s\n", sprint_hex(uid,4 ));
-    PrintAndLogEx(NORMAL, "KEY A | %s\n", sprint_hex(key_s0a, 6));
+    PrintAndLogEx(INFO, "UID   | %s\n", sprint_hex(uid,4 ));
+    PrintAndLogEx(INFO, "KEY A | %s\n", sprint_hex(key_s0a, 6));
 
     // arrays w all keys
     uint64_t foo[32] = {0};
@@ -828,7 +824,7 @@ static int CmdAnalyseA(const char *Cmd) {
         uint64_t a = foo[i];
         uint64_t b = foo[i+16];
 
-        PrintAndLogEx(NORMAL, "%02u | %012" PRIX64 " %s | %012" PRIX64 " %s\n",
+        PrintAndLogEx(INFO, "%02u | %012" PRIX64 " %s | %012" PRIX64 " %s\n",
             i,
             a,
             ( a == keya[i])?"ok":"err",
@@ -837,78 +833,110 @@ static int CmdAnalyseA(const char *Cmd) {
         );
     }
     */
-//    return 0;
-}
-
-static void generate4bNUID(uint8_t *uid, uint8_t *nuid) {
-    uint16_t crc;
-    uint8_t b1, b2;
-
-    compute_crc(CRC_14443_A, uid, 3, &b1, &b2);
-    nuid[0] = (b2 & 0xE0) | 0xF;
-    nuid[1] = b1;
-    crc = b1;
-    crc |= b2 << 8;
-    crc = crc16_fast(&uid[3], 4, reflect16(crc), true, true);
-    nuid[2] = (crc >> 8) & 0xFF ;
-    nuid[3] = crc & 0xFF;
+//    return PM3_SUCCESS;
 }
 
 static int CmdAnalyseNuid(const char *Cmd) {
-    uint8_t nuid[4] = {0};
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse nuid",
+                  "Generate 4byte NUID from 7byte UID",
+                  "analyse nuid -d 11223344556677"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("d", "data", "<hex>", "bytes to send"),
+        arg_lit0("t", "test", "self test"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int uidlen = 0;
     uint8_t uid[7] = {0};
-    int len = 0;
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_nuid();
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), uid, sizeof(uid), &uidlen);
+    bool selftest = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
+
+    uint8_t nuid[4] = {0};
 
     /* src: https://www.nxp.com/docs/en/application-note/AN10927.pdf */
     /* selftest1  UID 040D681AB52281  -> NUID 8F430FEF */
     /* selftest2  UID 04183F09321B85  -> NUID 4F505D7D */
-    if (cmdp == 't') {
+    if (selftest) {
         uint8_t uid_test1[] = {0x04, 0x0d, 0x68, 0x1a, 0xb5, 0x22, 0x81};
         uint8_t nuid_test1[] = {0x8f, 0x43, 0x0f, 0xef};
         uint8_t uid_test2[] = {0x04, 0x18, 0x3f, 0x09, 0x32, 0x1b, 0x85};
         uint8_t nuid_test2[] = {0x4f, 0x50, 0x5d, 0x7d};
         memcpy(uid, uid_test1, sizeof(uid));
-        generate4bNUID(uid, nuid);
+        mfc_generate4b_nuid(uid, nuid);
 
+        PrintAndLogEx(INFO, "Self tests");
         bool test1 = (0 == memcmp(nuid, nuid_test1, sizeof(nuid)));
-        PrintAndLogEx(SUCCESS, "Selftest1 %s\n",  test1 ? _GREEN_("OK") : _RED_("Fail"));
+        PrintAndLogEx((test1) ? SUCCESS : FAILED, "1. %s -> %s ( %s )"
+                      , sprint_hex_inrow(uid_test1, sizeof(uid_test1))
+                      , sprint_hex(nuid, sizeof(nuid))
+                      ,  test1 ? _GREEN_("ok") : _RED_("fail")
+                     );
 
         memcpy(uid, uid_test2, sizeof(uid));
-        generate4bNUID(uid, nuid);
+        mfc_generate4b_nuid(uid, nuid);
         bool test2 = (0 == memcmp(nuid, nuid_test2, sizeof(nuid)));
-        PrintAndLogEx(SUCCESS, "Selftest2 %s\n", test2 ? _GREEN_("OK") : _RED_("Fail"));
-        return 0;
+        PrintAndLogEx((test2) ? SUCCESS : FAILED, "2. %s -> %s ( %s )\n"
+                      , sprint_hex_inrow(uid_test2, sizeof(uid_test2))
+                      , sprint_hex(nuid, sizeof(nuid))
+                      , test2 ? _GREEN_("ok") : _RED_("fail")
+                     );
+
+        return PM3_SUCCESS;
     }
 
-    param_gethex_ex(Cmd, 0, uid, &len);
-    if (len % 2  || len != 14) return usage_analyse_nuid();
+    if (uidlen != 7) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
 
-    generate4bNUID(uid, nuid);
+    mfc_generate4b_nuid(uid, nuid);
 
-    PrintAndLogEx(NORMAL, "UID  | %s \n", sprint_hex(uid, 7));
-    PrintAndLogEx(NORMAL, "NUID | %s \n", sprint_hex(nuid, 4));
-    return 0;
+    PrintAndLogEx(INFO, "UID  | %s \n", sprint_hex(uid, 7));
+    PrintAndLogEx(INFO, "NUID | %s \n", sprint_hex(nuid, 4));
+    return PM3_SUCCESS;
 }
 
 static int CmdAnalyseDemodBuffer(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse demodbuff",
+                  "loads a binary string into demod buffer",
+                  "analyse demodbuff -d 0011101001001011"
+                 );
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_demodbuffer();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<bin>", "binary string to load"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    const char *s = arg_get_str(ctx, 1)->sval[0];
+    CLIParserFree(ctx);
 
-    int bg = 0, en = 0;
-    if (param_getptr(Cmd, &bg, &en, 0))
-        return usage_analyse_demodbuffer();
+    if (s == NULL) {
+        PrintAndLogEx(FAILED, "Must provide a binary string");
+        return PM3_EINVARG;
+    }
 
-    int len = MIN((en - bg + 1), MAX_DEMOD_BUF_LEN);
+    int len = MIN(strlen(s), MAX_DEMOD_BUF_LEN);
 
     // add 1 for null terminator.
     uint8_t *data = calloc(len + 1,  sizeof(uint8_t));
-    if (!data) return PM3_EMALLOC;
+    if (data == NULL)
+        return PM3_EMALLOC;
 
-    for (int i = 0; bg <= en; bg++, i++) {
-        char c = Cmd[bg];
+    for (int i = 0; i <= strlen(s); i++) {
+        char c = s[i];
         if (c == '1')
             DemodBuffer[i] = 1;
         if (c == '0')
@@ -916,28 +944,114 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
 
         PrintAndLogEx(NORMAL, "%c" NOLF, c);
     }
-
     PrintAndLogEx(NORMAL, "");
-
     DemodBufferLen = len;
     free(data);
+    PrintAndLogEx(HINT, "Use `" _YELLOW_("data print") "` to view demod buffer");
     return PM3_SUCCESS;
 }
 
 static int CmdAnalyseFreq(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse freq",
+                  "calc wave lengths",
+                  "analyse freq"
+                 );
 
-//    char cmdp = tolower(param_getchar(Cmd, 0));
-//    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_freq();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     const double c = 299792458;
     double len_125 = c / 125000;
     double len_134 = c / 134000;
     double len_1356 = c / 13560000;
 
+    double rf_range_125 = len_125 / (M_PI * 2);
+    double rf_range_134 = len_134 / (M_PI * 2);
+    double rf_range_1356 = len_1356 / (M_PI * 2);
+
     PrintAndLogEx(INFO, "Wavelengths");
-    PrintAndLogEx(INFO, "   125 kHz has %f meters", len_125);
-    PrintAndLogEx(INFO, "   134 kHz has %f meters", len_134);
-    PrintAndLogEx(INFO, " 13.56 mHz has %f meters", len_1356);
+    PrintAndLogEx(INFO, "   125 kHz has %f m, rf range %f m", len_125, rf_range_125);
+    PrintAndLogEx(INFO, "   134 kHz has %f m, rf range %f m", len_134, rf_range_134);
+    PrintAndLogEx(INFO, " 13.56 mHz has %f m, rf range %f m", len_1356, rf_range_1356);
+    return PM3_SUCCESS;
+}
+
+static int CmdAnalyseFoo(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyze foo",
+                  "experiments of cliparse",
+                  "analyse foo -r a0000000a0002021"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("r", "raw",  "<hex>", "raw bytes (strx)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    // raw param
+    int datalen = 256;
+    uint8_t data[256];
+    CLIGetHexWithReturn(ctx, 1, data, &datalen);
+
+    int data3len = 512;
+    uint8_t data3[512];
+    CLIGetStrWithReturn(ctx, 1, data3, &data3len);
+
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(INFO, "-r");
+    PrintAndLogEx(INFO, "Got:  %s", sprint_hex_inrow(data, datalen));
+    PrintAndLogEx(INFO, "Got:  %s", data3);
+
+    ClearGraph(false);
+    GraphTraceLen = 15000;
+
+    for (int i = 0; i < 4095; i++) {
+        int o = 0;
+
+        // 0010 0000
+        if (i & 0x2000) o |= 0x80;    // corr_i_accum[13]
+        // 0001 1100
+        if (i & 0x1C00) o |= 0x40;    // corr_i_accum[12] | corr_i_accum[11] | corr_i_accum[10]
+        // 0000 1110
+        if (i & 0x0E00) o |= 0x20;    // corr_i_accum[12] | corr_i_accum[11] | corr_i_accum[9],
+        o |= (i & 0x1F0) >> 4;        // corr_i_accum[8:4]
+
+        GraphBuffer[i] = o;
+    }
+
+    for (int i = 0; i < 4095; i++) {
+        int o = 0;
+
+        // Send 8 bits of in phase tag signal
+        //if (corr_i_accum[13:11] == 3'b000 || corr_i_accum[13:11] == 3'b111)
+        if ((i & 0x3800) == 0 || (i & 0x3800) == 0x3800) {
+            o |= (i & 0xFF0) >> 4;   // corr_i_out <= corr_i_accum[11:4];
+        } else {
+            // truncate to maximum value
+            //if (corr_i_accum[13] == 1'b0)
+            if ((i & 0x2000) == 0) {
+                o |= 0x7f;     //  corr_i_out <= 8'b01111111;
+            }
+        }
+        GraphBuffer[i + 5000] = o;
+    }
+
+    for (int i = 0; i < 4095; i++) {
+        int o = i >> 5;
+        GraphBuffer[i + 10000] = o;
+    }
+
+    RepaintGraphWindow();
+    ShowGraphWindow();
     return PM3_SUCCESS;
 }
 
@@ -953,6 +1067,7 @@ static command_t CommandTable[] = {
     {"nuid",    CmdAnalyseNuid,     AlwaysAvailable, "create NUID from 7byte UID"},
     {"demodbuff", CmdAnalyseDemodBuffer, AlwaysAvailable, "Load binary string to demodbuffer"},
     {"freq",    CmdAnalyseFreq,     AlwaysAvailable, "Calc wave lengths"},
+    {"foo",    CmdAnalyseFoo,     AlwaysAvailable, "muxer"},
     {NULL, NULL, NULL, NULL}
 };
 

@@ -195,12 +195,12 @@ bool create_path(const char *dirname) {
     return true;
 }
 */
-/*
-bool setDefaultPath (savePaths_t pathIndex,const char *Path) {
+
+bool setDefaultPath(savePaths_t pathIndex, const char *Path) {
 
     if (pathIndex < spItemCount) {
         if ((Path == NULL) && (session.defaultPaths[pathIndex] != NULL)) {
-            free (session.defaultPaths[pathIndex]);
+            free(session.defaultPaths[pathIndex]);
             session.defaultPaths[pathIndex] = NULL;
         }
 
@@ -208,13 +208,11 @@ bool setDefaultPath (savePaths_t pathIndex,const char *Path) {
             session.defaultPaths[pathIndex] = (char *)realloc(session.defaultPaths[pathIndex], strlen(Path) + 1);
             strcpy(session.defaultPaths[pathIndex], Path);
         }
-    } else {
-        return false;
+        return true;
     }
-
-    return true;
+    return false;
 }
-*/
+
 static char *filenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
@@ -735,7 +733,7 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
     fflush(f);
     fclose(f);
     PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s"), fileName);
-    PrintAndLogEx(INFO, " OBS! --> 0xFFFFFFFFFFFF <-- has been inserted for unknown keys.");
+    PrintAndLogEx(INFO, "FYI! --> " _YELLOW_("0xFFFFFFFFFFFF") " <-- has been inserted for unknown keys where " _YELLOW_("res") " is " _YELLOW_("0"));
     free(fileName);
     return PM3_SUCCESS;
 }

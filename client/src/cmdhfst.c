@@ -351,7 +351,7 @@ static int cmd_hf_st_sim(const char *Cmd) {
     }
 
     char param[40];
-    snprintf(param, sizeof(param), "t 10 u %s", sprint_hex_inrow(uid, uidlen));
+    snprintf(param, sizeof(param), "-t 10 -u %s", sprint_hex_inrow(uid, uidlen));
     return CmdHF14ASim(param);
 }
 

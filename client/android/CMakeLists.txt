@@ -106,6 +106,7 @@ add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/cmdhf15.c
         ${PM3_ROOT}/client/src/cmdhfcryptorf.c
         ${PM3_ROOT}/client/src/cmdhfepa.c
+        ${PM3_ROOT}/client/src/cmdhfemrtd.c
         ${PM3_ROOT}/client/src/cmdhffelica.c
         ${PM3_ROOT}/client/src/cmdhffido.c
         ${PM3_ROOT}/client/src/cmdhficlass.c
@@ -126,9 +127,11 @@ add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/cmdlfawid.c
         ${PM3_ROOT}/client/src/cmdlfcotag.c
         ${PM3_ROOT}/client/src/cmdlfdestron.c
-        ${PM3_ROOT}/client/src/cmdlfem4x.c
+        ${PM3_ROOT}/client/src/cmdlfem.c
+        ${PM3_ROOT}/client/src/cmdlfem410x.c
         ${PM3_ROOT}/client/src/cmdlfem4x05.c
         ${PM3_ROOT}/client/src/cmdlfem4x50.c
+        ${PM3_ROOT}/client/src/cmdlfem4x70.c
         ${PM3_ROOT}/client/src/cmdlffdxb.c
         ${PM3_ROOT}/client/src/cmdlfgallagher.c
         ${PM3_ROOT}/client/src/cmdlfguard.c

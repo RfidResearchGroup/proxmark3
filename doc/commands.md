@@ -121,7 +121,7 @@ Check column "offline" for their availability.
 |`hf plot                `|N       |`Plot signal`
 |`hf tune                `|N       |`Continuously measure HF antenna tuning`
 |`hf search              `|Y       |`Search for known HF tags`
-|`hf sniff               `|N       |`<samples to skip (10000)> <triggers to skip (1)> Generic HF Sniff`
+|`hf sniff               `|N       |`Generic HF Sniff`
 
 
 ### hf 14a
@@ -134,8 +134,8 @@ Check column "offline" for their availability.
 |`hf 14a list            `|Y       |`List ISO 14443-a history`
 |`hf 14a info            `|N       |`Tag information`
 |`hf 14a reader          `|N       |`Act like an ISO14443-a reader`
-|`hf 14a cuids           `|N       |`<n> Collect n>0 ISO14443-a UIDs in one go`
-|`hf 14a sim             `|N       |`<UID> -- Simulate ISO 14443-a tag`
+|`hf 14a cuids           `|N       |`Collect n>0 ISO14443-a UIDs in one go`
+|`hf 14a sim             `|N       |`Simulate ISO 14443-a tag`
 |`hf 14a sniff           `|N       |`sniff ISO 14443-a traffic`
 |`hf 14a apdu            `|N       |`Send ISO 14443-4 APDU to tag`
 |`hf 14a chaining        `|N       |`Control ISO 14443-4 input chaining`
@@ -198,8 +198,8 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf epa help            `|Y       |`This help`
-|`hf epa cnonces         `|N       |`<m> <n> <d> Acquire n>0 encrypted PACE nonces of size m>0 with d sec pauses`
-|`hf epa preplay         `|N       |`<mse> <get> <map> <pka> <ma> Perform PACE protocol by replaying given APDUs`
+|`hf epa cnonces         `|N       |`Acquire encrypted PACE nonces of specific size`
+|`hf epa preplay         `|N       |`Perform PACE protocol by replaying given APDUs`
 
 
 ### hf emrtd
@@ -260,29 +260,29 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`hf iclass help         `|Y       |`    This help`
-|`hf iclass dump         `|N       |`[*] Dump Picopass / iCLASS tag to file`
-|`hf iclass info         `|Y       |`    Tag information`
-|`hf iclass list         `|Y       |`    List iclass history`
-|`hf iclass rdbl         `|N       |`[*] Read Picopass / iCLASS block`
-|`hf iclass reader       `|N       |`    Act like an Picopass / iCLASS reader`
-|`hf iclass restore      `|N       |`[*] Restore a dump file onto a Picopass / iCLASS tag`
-|`hf iclass sniff        `|N       |`    Eavesdrop Picopass / iCLASS communication`
-|`hf iclass wrbl         `|N       |`[*] Write Picopass / iCLASS block`
-|`hf iclass chk          `|N       |`[*] Check keys`
-|`hf iclass loclass      `|Y       |`[*] Use loclass to perform bruteforce reader attack`
-|`hf iclass lookup       `|Y       |`[*] Uses authentication trace to check for key in dictionary file`
-|`hf iclass sim          `|N       |`[*] Simulate iCLASS tag`
-|`hf iclass eload        `|N       |`[*] Load Picopass / iCLASS dump file into emulator memory`
-|`hf iclass esave        `|N       |`[*] Save emulator memory to file`
-|`hf iclass eview        `|N       |`[.] View emulator memory`
-|`hf iclass calcnewkey   `|Y       |`[*] Calc diversified keys (blocks 3 & 4) to write new keys`
-|`hf iclass encode       `|Y       |`[*] Encode binary wiegand to block 7`
-|`hf iclass encrypt      `|Y       |`[*] Encrypt given block data`
-|`hf iclass decrypt      `|Y       |`[*] Decrypt given block data or tag dump file`
-|`hf iclass managekeys   `|Y       |`[*] Manage keys to use with iclass commands`
-|`hf iclass permutekey   `|N       |`    Permute function from 'heart of darkness' paper`
-|`hf iclass view         `|Y       |`[*] Display content from tag dump file`
+|`hf iclass help         `|Y       |`This help`
+|`hf iclass dump         `|N       |`Dump Picopass / iCLASS tag to file`
+|`hf iclass info         `|Y       |`Tag information`
+|`hf iclass list         `|Y       |`List iclass history`
+|`hf iclass rdbl         `|N       |`Read Picopass / iCLASS block`
+|`hf iclass reader       `|N       |`Act like an Picopass / iCLASS reader`
+|`hf iclass restore      `|N       |`Restore a dump file onto a Picopass / iCLASS tag`
+|`hf iclass sniff        `|N       |`Eavesdrop Picopass / iCLASS communication`
+|`hf iclass wrbl         `|N       |`Write Picopass / iCLASS block`
+|`hf iclass chk          `|N       |`Check keys`
+|`hf iclass loclass      `|Y       |`Use loclass to perform bruteforce reader attack`
+|`hf iclass lookup       `|Y       |`Uses authentication trace to check for key in dictionary file`
+|`hf iclass sim          `|N       |`Simulate iCLASS tag`
+|`hf iclass eload        `|N       |`Load Picopass / iCLASS dump file into emulator memory`
+|`hf iclass esave        `|N       |`Save emulator memory to file`
+|`hf iclass eview        `|N       |`View emulator memory`
+|`hf iclass calcnewkey   `|Y       |`Calc diversified keys (blocks 3 & 4) to write new keys`
+|`hf iclass encode       `|Y       |`Encode binary wiegand to block 7`
+|`hf iclass encrypt      `|Y       |`Encrypt given block data`
+|`hf iclass decrypt      `|Y       |`Decrypt given block data or tag dump file`
+|`hf iclass managekeys   `|Y       |`Manage keys to use with iclass commands`
+|`hf iclass permutekey   `|N       |`Permute function from 'heart of darkness' paper`
+|`hf iclass view         `|Y       |`Display content from tag dump file`
 
 
 ### hf legic
@@ -400,20 +400,21 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf mfu help            `|Y       |`This help`
-|`hf mfu info            `|N       |`Tag information`
-|`hf mfu dump            `|N       |`Dump Ultralight / Ultralight-C / NTAG tag to binary file`
-|`hf mfu restore         `|N       |`Restore a dump onto a MFU MAGIC tag`
-|`hf mfu eload           `|N       |`load Ultralight .eml dump file into emulator memory`
-|`hf mfu rdbl            `|N       |`Read block`
-|`hf mfu wrbl            `|N       |`Write block`
-|`hf mfu cauth           `|N       |`Authentication    - Ultralight C`
-|`hf mfu setpwd          `|N       |`Set 3des password - Ultralight-C`
-|`hf mfu setuid          `|N       |`Set UID - MAGIC tags only`
-|`hf mfu sim             `|N       |`Simulate Ultralight from emulator memory`
-|`hf mfu gen             `|Y       |`Generate 3des mifare diversified keys`
+|`hf mfu keygen          `|Y       |`Generate 3DES MIFARE diversified keys`
 |`hf mfu pwdgen          `|Y       |`Generate pwd from known algos`
 |`hf mfu otptear         `|N       |`Tear-off test on OTP bits`
+|`hf mfu cauth           `|N       |`Authentication - Ultralight-C`
+|`hf mfu dump            `|N       |`Dump MIFARE Ultralight family tag to binary file`
+|`hf mfu info            `|N       |`Tag information`
 |`hf mfu ndef            `|N       |`Prints NDEF records from card`
+|`hf mfu rdbl            `|N       |`Read block`
+|`hf mfu restore         `|N       |`Restore a dump onto a MFU MAGIC tag`
+|`hf mfu wrbl            `|N       |`Write block`
+|`hf mfu eload           `|N       |`load Ultralight .eml dump file into emulator memory`
+|`hf mfu eview           `|N       |`View emulator memory`
+|`hf mfu sim             `|N       |`Simulate MIFARE Ultralight from emulator memory`
+|`hf mfu setpwd          `|N       |`Set 3DES key - Ultralight-C`
+|`hf mfu setuid          `|N       |`Set UID - MAGIC tags only`
 
 
 ### hf mfdes
@@ -505,16 +506,16 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hw help                `|Y       |`This help`
-|`hw connect             `|Y       |`connect Proxmark3 to serial port`
+|`hw connect             `|Y       |`Connect Proxmark3 to serial port`
 |`hw dbg                 `|N       |`Set Proxmark3 debug level`
-|`hw detectreader        `|N       |`['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)`
+|`hw detectreader        `|N       |`Detect external reader field`
 |`hw fpgaoff             `|N       |`Set FPGA off`
-|`hw lcd                 `|N       |`<HEX command> <count> -- Send command/data to LCD`
+|`hw lcd                 `|N       |`Send command/data to LCD`
 |`hw lcdreset            `|N       |`Hardware reset LCD`
 |`hw ping                `|N       |`Test if the Proxmark3 is responsive`
-|`hw readmem             `|N       |`[address] -- Read memory at decimal address from flash`
+|`hw readmem             `|N       |`Read memory at decimal address from flash`
 |`hw reset               `|N       |`Reset the Proxmark3`
-|`hw setlfdivisor        `|N       |`<19 - 255> -- Drive LF antenna at 12MHz/(divisor+1)`
+|`hw setlfdivisor        `|N       |`Drive LF antenna at 12MHz / (divisor + 1)`
 |`hw setmux              `|N       |`Set the ADC mux to a specific value`
 |`hw standalone          `|N       |`Jump to the standalone mode`
 |`hw status              `|N       |`Show runtime status information about the connected Proxmark3`

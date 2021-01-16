@@ -46,7 +46,7 @@ ifneq (,$(INSTALLTOOLS))
 endif
 ifneq (,$(INSTALLSIMFW))
 	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
-	$(Q)$(CP) $(foreach fw,$(INSTALLSIMFW),tools/simmodule/$(fw)) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
+	$(Q)$(CP) $(foreach fw,$(INSTALLSIMFW),client/resources/$(fw)) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
 endif
 ifeq ($(platform),Linux)
 	$(Q)$(MKDIR) $(DESTDIR)$(UDEV_PREFIX)
@@ -169,7 +169,7 @@ help:
 	@echo "+ fpga_compress   - Make tools/fpga_compress"
 	@echo
 	@echo "+ style           - Apply some automated source code formatting rules"
-	@echo "+ cliparser       - Generate cliparser TODO
+	@echo "+ cliparser       - Generate cliparser TODO"
 	@echo "+ check           - Run offline tests. Set CHECKARGS to pass arguments to the test script"
 	@echo "+ .../check       - Run offline tests against specific target. See above."
 	@echo "+ miscchecks      - Detect various encoding issues in source code"

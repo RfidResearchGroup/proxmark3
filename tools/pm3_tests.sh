@@ -221,7 +221,7 @@ while true; do
     if $TESTALL || $TESTCOMMON; then
       echo -e "\n${C_BLUE}Testing common:${C_NC}"
       if ! CheckFileExist "hardnested tables exists"       "./client/resources/hardnested_tables/bitflip_0_001_states.bin.bz2"; then break; fi
-      if ! CheckFileExist "simmodule fw file exists"       "./tools/simmodule/sim011.bin"; then break; fi
+      if ! CheckFileExist "simmodule fw file exists"       "./client/resources/sim011.bin"; then break; fi
       echo -e "\n${C_BLUE}Testing tools:${C_NC}"
       if ! CheckExecute "xorcheck test"                    "tools/xorcheck.py 04 00 80 64 ba" "final LRC XOR byte value: 5A"; then break; fi
       if ! CheckExecute "findbits test"                    "tools/findbits.py 73 0110010101110011" "Match at bit 9: 011001010"; then break; fi
@@ -318,6 +318,15 @@ while true; do
       HT2CRACK5GPUNRAR="B438220C 944FFD74 942C59E3 3D450B34"
       # Order of magnitude to crack it: ~15s -> tagged as "slow"
       if ! CheckExecute slow gpu "ht2crack5gpu test"        "cd $HT2CRACK5GPUPATH; ./ht2crack5gpu $HT2CRACK5GPUUID $HT2CRACK5GPUNRAR" "Key: $HT2CRACK5GPUKEY"; then break; fi
+
+      echo -e "\n${C_BLUE}Testing ht2crack5opencl:${C_NC} ${HT2CRACK5OPENCLPATH:=./tools/hitag2crack/crack5opencl/}"
+      if ! CheckFileExist "ht2crack5opencl exists"            "$HT2CRACK5OPENCLPATH/ht2crack5opencl"; then break; fi
+      HT2CRACK5OPENCLUID=12345678
+      HT2CRACK5OPENCLKEY=AABBCCDDEEFF
+      # The speed depends on the nRaR so we'll use two pairs known to work fast
+      HT2CRACK5OPENCLNRAR="B438220C 944FFD74 942C59E3 3D450B34"
+      # Order of magnitude to crack it: ~15s -> tagged as "slow"
+      if ! CheckExecute slow gpu "ht2crack5opencl test"        "cd $HT2CRACK5OPENCLPATH; ./ht2crack5opencl $HT2CRACK5OPENCLUID $HT2CRACK5OPENCLNRAR" "Key found.*: $HT2CRACK5OPENCLKEY"; then break; fi
     fi
     if $TESTALL || $TESTCLIENT; then
       echo -e "\n${C_BLUE}Testing client:${C_NC} ${CLIENTBIN:=./client/proxmark3}"
@@ -333,7 +342,7 @@ while true; do
       if ! CheckExecute "reveng readline test"    "$CLIENTBIN -c 'reveng -h;reveng -D'" "CRC-64/GO-ISO"; then break; fi
       if ! CheckExecute "reveng -g test"          "$CLIENTBIN -c 'reveng -g abda202c'" "CRC-16/ISO-IEC-14443-3-A"; then break; fi
       if ! CheckExecute "reveng -w test"          "$CLIENTBIN -c 'reveng -w 8 -s 01020304e3 010204039d'" "CRC-8/SMBUS"; then break; fi
-      if ! CheckExecute "mfu pwdgen test"         "$CLIENTBIN -c 'hf mfu pwdgen t'" "Selftest OK"; then break; fi
+      if ! CheckExecute "mfu pwdgen test"         "$CLIENTBIN -c 'hf mfu pwdgen -t'" "Selftest OK"; then break; fi
       if ! CheckExecute "trace load/list 14a"     "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -1 -t 14a;'" "READBLOCK(8)"; then break; fi
       if ! CheckExecute "trace load/list x"       "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -x1 -t 14a;'" "0.0101840425"; then break; fi
 

@@ -22,6 +22,7 @@
 #include <stdlib.h>
 
 #ifdef HAVE_READLINE
+//Load readline after stdio.h
 #include <readline/readline.h>
 #endif
 
@@ -201,14 +202,14 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
                                   };
     switch (level) {
         case ERR:
-            if (session.emoji_mode == EMOJI)
+            if (session.emoji_mode == EMO_EMOJI)
                 strncpy(prefix,  "[" _RED_("!!") "] :rotating_light: ", sizeof(prefix) - 1);
             else
                 strncpy(prefix, "[" _RED_("!!") "] ", sizeof(prefix) - 1);
             stream = stderr;
             break;
         case FAILED:
-            if (session.emoji_mode == EMOJI)
+            if (session.emoji_mode == EMO_EMOJI)
                 strncpy(prefix, "[" _RED_("-") "] :no_entry: ", sizeof(prefix) - 1);
             else
                 strncpy(prefix, "[" _RED_("-") "] ", sizeof(prefix) - 1);
@@ -223,7 +224,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
             strncpy(prefix, "[" _GREEN_("+") "] ", sizeof(prefix) - 1);
             break;
         case WARNING:
-            if (session.emoji_mode == EMOJI)
+            if (session.emoji_mode == EMO_EMOJI)
                 strncpy(prefix, "[" _CYAN_("!") "] :warning:  ", sizeof(prefix) - 1);
             else
                 strncpy(prefix, "[" _CYAN_("!") "] ", sizeof(prefix) - 1);
@@ -232,7 +233,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
             strncpy(prefix, "[" _YELLOW_("=") "] ", sizeof(prefix) - 1);
             break;
         case INPLACE:
-            if (session.emoji_mode == EMOJI) {
+            if (session.emoji_mode == EMO_EMOJI) {
                 strncpy(prefix, spinner_emoji[PrintAndLogEx_spinidx], sizeof(prefix) - 1);
                 PrintAndLogEx_spinidx++;
                 if (PrintAndLogEx_spinidx >= ARRAYLEN(spinner_emoji))
@@ -387,7 +388,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
 #endif
 
     if ((g_printAndLog & PRINTANDLOG_LOG) && logging && logfile) {
-        memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), ALTTEXT);
+        memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), EMO_ALTTEXT);
         if (filter_ansi) { // already done
             fprintf(logfile, "%s", buffer3);
         } else {
@@ -465,12 +466,12 @@ static bool emojify_token(const char *token, uint8_t token_length, const char **
     while (EmojiTable[i].alias && EmojiTable[i].emoji) {
         if ((strlen(EmojiTable[i].alias) == token_length) && (0 == memcmp(EmojiTable[i].alias, token, token_length))) {
             switch (mode) {
-                case EMOJI: {
+                case EMO_EMOJI: {
                     *emojified_token = EmojiTable[i].emoji;
                     *emojified_token_length = strlen(EmojiTable[i].emoji);
                     break;
                 }
-                case ALTTEXT: {
+                case EMO_ALTTEXT: {
                     int j = 0;
                     *emojified_token_length = 0;
                     while (EmojiAltTable[j].alias && EmojiAltTable[i].alttext) {
@@ -483,11 +484,11 @@ static bool emojify_token(const char *token, uint8_t token_length, const char **
                     }
                     break;
                 }
-                case ERASE: {
+                case EMO_NONE: {
                     *emojified_token_length = 0;
                     break;
                 }
-                case ALIAS: { // should never happen
+                case EMO_ALIAS: { // should never happen
                     return false;
                 }
             }
@@ -507,7 +508,7 @@ static bool token_charset(uint8_t c) {
 }
 
 void memcpy_filter_emoji(void *dest, const void *src, size_t n, emojiMode_t mode) {
-    if (mode == ALIAS) {
+    if (mode == EMO_ALIAS) {
         memcpy(dest, src, n);
     } else {
         // tokenize emoji
@@ -657,7 +658,7 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
         "\xe2\x96\x88",
     };
 
-    uint8_t mode = (session.emoji_mode == EMOJI);
+    uint8_t mode = (session.emoji_mode == EMO_EMOJI);
 
     const char *block[] = {"#", "\xe2\x96\x88"};
     // use a 3-byte space in emoji mode to ease computations
@@ -689,7 +690,7 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
     char *cbar = calloc(collen, sizeof(uint8_t));
 
     // Add colors
-    if ( session.supports_colors ) {
+    if (session.supports_colors) {
         int p60 = unit * (width * 60 / 100);
         int p20 = unit * (width * 20 / 100);
         snprintf(cbar,  collen,  _GREEN_("%.*s"), p60, bar);
@@ -709,12 +710,12 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
             break;
         }
         case STYLE_MIXED: {
-            sprintf(buffer, "%s [ %zu mV / %2u V / %2u Vmax ]", cbar, count, (uint32_t)(count / 1000), (uint32_t)(max / 1000));
+            sprintf(buffer, "%s [ %zu mV / %2u V / %2u Vmax ]   ", cbar, count, (uint32_t)(count / 1000), (uint32_t)(max / 1000));
             printf("\b%c[2K\r[" _YELLOW_("=")"] %s ", 27, buffer);
             break;
         }
         case STYLE_VALUE: {
-            printf("[" _YELLOW_("=")"] %zu mV / %2u V / %2u Vmax\r", count, (uint32_t)(count / 1000), (uint32_t)(max / 1000));
+            printf("[" _YELLOW_("=")"] %zu mV / %2u V / %2u Vmax   \r", count, (uint32_t)(count / 1000), (uint32_t)(max / 1000));
             break;
         }
     }

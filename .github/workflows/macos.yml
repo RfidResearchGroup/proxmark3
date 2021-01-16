@@ -1,0 +1,115 @@
+name: MacOS Build and Test
+
+on: [push, pull_request]
+
+jobs:
+  macos-make:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set Git http.postBuffer to something high
+        run: git config --global http.postBuffer 524288000
+
+      - name: Handle homebrew quirks
+        run: rm -rf /usr/local/bin/2to3
+
+      - name: Update brew repos
+        run: brew update
+        continue-on-error: true
+
+      - name: Tap RfidResearchGroup/proxmark3
+        run: brew tap RfidResearchGroup/proxmark3
+
+      - name: Install dependencies
+        run: brew install readline qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc
+
+      - name: make clean
+        run: make clean
+
+      - name: Build
+        env:
+          V: 1
+        run: make
+
+      - name: Test
+        run: make check
+
+  macos-make-btaddon:
+    if: always()
+    needs: [macos-make]
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set Git http.postBuffer to something high
+        run: git config --global http.postBuffer 524288000
+
+      - name: Handle homebrew quirks
+        run: rm -rf /usr/local/bin/2to3
+
+      - name: Update brew repos
+        run: brew update
+        continue-on-error: true
+
+      - name: Tap RfidResearchGroup/proxmark3
+        run: brew tap RfidResearchGroup/proxmark3
+
+      - name: Install dependencies
+        run: brew install readline qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc
+
+      - name: make clean
+        run: make clean
+
+      - name: Build
+        env:
+          V: 1
+          PLATFORM_EXTRAS: BTADDON
+        run: make
+
+      - name: Test
+        run: make check
+
+  macos-cmake:
+    if: always()
+    needs: [macos-make, macos-make-btaddon]
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set Git http.postBuffer to something high
+        run: git config --global http.postBuffer 524288000
+
+      - name: Handle homebrew quirks
+        run: rm -rf /usr/local/bin/2to3
+
+      - name: Update brew repos
+        run: brew update
+        continue-on-error: true
+
+      - name: Tap RfidResearchGroup/proxmark3
+        run: brew tap RfidResearchGroup/proxmark3
+
+      - name: Install dependencies
+        run: brew install readline qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc
+
+      - name: Prepare Build Folders
+        run: mkdir -p client/build
+
+      - name: Initiate cmake environment
+        run: cmake ..
+        working-directory: client/build/
+
+      - name: Build
+        env:
+          VERBOSE: 1
+        run: make
+        working-directory: client/build/
+
+      - name: Test
+        env:
+          CHECKARGS: "--clientbin ./client/build/proxmark3"
+        run: make client/check

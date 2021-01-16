@@ -285,4 +285,26 @@ uint64_t arg_get_u64_hexstr_def(CLIParserContext *ctx, uint8_t paramnum, uint64_
     return rv;
 }
 
+int arg_get_u32_hexstr_def(CLIParserContext *ctx, uint8_t paramnum, uint32_t def, uint32_t *out) {
+    return arg_get_u32_hexstr_def_nlen(ctx, paramnum, def, out, 4);
+}
+
+int arg_get_u32_hexstr_def_nlen(CLIParserContext *ctx, uint8_t paramnum, uint32_t def, uint32_t *out, uint8_t nlen) {
+    int n = 0;
+    uint8_t d[nlen];
+    int res = CLIParamHexToBuf(arg_get_str(ctx, paramnum), d, sizeof(d), &n);
+    if (res == 0 && n == nlen) {
+        uint32_t rv = 0;
+        for (uint8_t i = 0; i < n; i++) {
+            rv <<= 8;
+            rv |= d[i];
+        }
+        *out = rv;
+        return 1;
+    } else if (res == 0 && n) {
+        *out = def;
+        return 2;
+    }
+    return 0;
+}
 
