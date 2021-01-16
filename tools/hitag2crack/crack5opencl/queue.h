@@ -95,7 +95,7 @@ typedef struct wu_queue_ctx {
 
     // mutex
     pthread_mutexattr_t queue_mutex_attr;
-//	unsigned char pad1[4];
+    unsigned char pad1[4];
     pthread_mutex_t queue_mutex;
 
 } wu_queue_ctx_t;
