@@ -38,6 +38,7 @@ License: GNU General Public License v3 or any later version (see LICENSE.txt)
 #include <stdbool.h>
 
 #include <stdio.h>
+#include <errno.h>
 
 // max number of concurrent devices (tested up to 4x RTX 3090)
 #define MAX_OPENCL_DEVICES 16
@@ -54,9 +55,10 @@ typedef struct compute_device_ctx {
     bool warning, unsupported;
 
     bool selected;
-    bool enabled;
 
-    unsigned char pad1[4];
+    unsigned char pad1[1];
+    unsigned int profile;
+
     unsigned int sm_maj;
     unsigned int sm_min;
     unsigned int compute_units;
@@ -70,11 +72,11 @@ typedef struct compute_platform_ctx {
     unsigned int device_cnt;
     unsigned int compute_units_max;
 
-    bool is_nv, is_apple, is_intel;
+    bool is_nv, is_apple, is_intel, is_pocl;
     bool warning;
     bool selected;
 
-    unsigned char pad1[3];
+    unsigned char pad1[2];
     compute_device_ctx_t device[0x10];
 
     char name[0xff];
@@ -94,7 +96,7 @@ typedef struct opencl_ctx {
 
     size_t *global_ws;
     size_t *local_ws;
-    int *profiles;
+    unsigned int *profiles;
 
     cl_device_id *device_ids;       // compute device id's array
     cl_context *contexts;           // compute contexts
@@ -120,7 +122,8 @@ typedef struct opencl_ctx {
 } opencl_ctx_t;
 
 bool plat_dev_enabled(unsigned int id, unsigned int *sel, unsigned int cnt, unsigned int cur_type, unsigned int allow_type);
-
+unsigned int get_smallest_profile (compute_platform_ctx_t *cd_ctx, size_t ocl_platform_cnt);
+int discoverDevices(unsigned int profile_selected, uint32_t device_types_selected, cl_uint *ocl_platform_cnt, size_t *selected_platforms_cnt, size_t *selected_devices_cnt, compute_platform_ctx_t **cd_ctx, unsigned int *plat_sel, unsigned int plat_cnt, unsigned int *dev_sel, unsigned int dev_cnt, bool verbose, bool show);
 int runKernel(opencl_ctx_t *ctx, uint32_t cand_base, uint64_t *matches, uint32_t *matches_found, size_t id);
 
 #endif // OPENCL_H

@@ -340,7 +340,7 @@ int wu_queue_pop(wu_queue_ctx_t *ctx, wu_queue_data_t *wu, short remove) {
             break;
         case QUEUE_TYPE_RANDOM: // from the head
 #if TEST_UNIT == 1
-            fprintf(stdout, "pop id %ld\n", wu->id);
+            fprintf(stdout, "pop id %zu\n", wu->id);
             fflush(stdout);
 #endif
             if (ptrPrev == NULL) {
@@ -441,9 +441,9 @@ int main(void) {
 
     wu_queue_type_t types[4] = { QUEUE_TYPE_FORWARD, QUEUE_TYPE_REVERSE, QUEUE_TYPE_RANDOM, 1234 };
     int types_max = (int)(sizeof(types) / sizeof(wu_queue_type_t));
-    int ret = 0;
 
     for (i = 0; i < types_max; i++) {
+        int ret = 0;
         printf("[%d] trying wu_queue_init() in %s mode\n", i, wu_queue_strdesc(types[i]));
 
         if ((ret = wu_queue_init(&ctx, types[i])) != 0) {

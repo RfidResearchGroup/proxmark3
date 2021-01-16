@@ -151,7 +151,7 @@ static bool parse_arg(char *restrict in, unsigned int *out, unsigned int *out_cn
                 unsigned int tmp_sel = (unsigned int) strtoul(next, NULL, 10);
                 if (errno == EINVAL || errno == ERANGE ||
                         (tmp_sel < 1 || tmp_sel > 16)) {
-                    printf("! Invalid %s argument\n", (opt_type == 0) ? "'platform'" : "'device'");
+                    printf("Error: invalid %s argument\n", (opt_type == 0) ? "'platform'" : "'device'");
                     return false;
                 }
 
@@ -165,7 +165,7 @@ static bool parse_arg(char *restrict in, unsigned int *out, unsigned int *out_cn
         } else {
             out[0] = (unsigned int) strtoul(in, NULL, 10);
             if (errno == EINVAL || errno == ERANGE) {
-                printf("! Invalid %s argument\n", (opt_type == 0) ? "'platform'" : "'device'");
+                printf("Error: invalid %s argument\n", (opt_type == 0) ? "'platform'" : "'device'");
                 return false;
             }
             *out_cnt = 1;
@@ -191,7 +191,6 @@ int main(int argc, char **argv) {
     unsigned int profile_selected = 2;
     unsigned int queue_type = 0;
 
-    uint32_t target = 0;
     uint32_t **matches_found = NULL;
     uint64_t **matches = NULL;
 
@@ -211,7 +210,7 @@ int main(int argc, char **argv) {
                 // 0: gpu, 1: cpu, 2: all
                 device_types_selected = (unsigned int) strtoul(optarg, NULL, 10);
                 if (device_types_selected > 2) {
-                    printf("! Invalid DEVICE TYPE argument (accepted values: from 0 to 2)\n");
+                    printf("Error: invalid DEVICE TYPE argument (accepted values: from 0 to 2)\n");
                     usage(argv[0]);
                 }
                 break;
@@ -222,7 +221,7 @@ int main(int argc, char **argv) {
             case 'P':
                 profile_selected = (unsigned int) strtoul(optarg, NULL, 10);
                 if (profile_selected > 10) {
-                    printf("! Invalid PROFILE argument (accepted valuee: from 0 to 10)\n");
+                    printf("Error: invalid PROFILE argument (accepted valuee: from 0 to 10)\n");
                     usage(argv[0]);
                 }
                 break;
@@ -233,7 +232,7 @@ int main(int argc, char **argv) {
                 // 0: forward, 1: reverse, 2: random
                 queue_type = (unsigned int) strtoul(optarg, NULL, 10);
                 if (queue_type != QUEUE_TYPE_FORWARD && queue_type != QUEUE_TYPE_REVERSE && queue_type != QUEUE_TYPE_RANDOM) {
-                    printf("! Invalid QUEUE TYPE argument (accepted values: 0, 1 or 2)\n");
+                    printf("Error: invalid QUEUE TYPE argument (accepted values: 0, 1 or 2)\n");
                     usage(argv[0]);
                 }
                 break;
@@ -298,13 +297,13 @@ int main(int argc, char **argv) {
 
         printf("Device types selected : %s\n", (device_types_selected == CL_DEVICE_TYPE_GPU) ? "GPU" : (device_types_selected == CL_DEVICE_TYPE_CPU) ? "CPU" : "ALL");
         printf("Scheduler selected    : %s\n", (thread_scheduler_type_selected == 0) ? "sequential" : "async");
-        printf("Profile selected      : %d\n", profile_selected);
+        printf("Profile selected      : %u\n", profile_selected);
     }
 
     if (!show) {
         if ((argc - optind) < 5) {
 #if DEBUGME > 0
-            printf("! Invalid extra arguments\n");
+            printf("Error: invalid extra arguments\n");
 #endif
             usage(argv[0]);
         }
@@ -313,41 +312,41 @@ int main(int argc, char **argv) {
             switch (e) {
                 case 0: // UID
                     if (!strncmp(argv[optind], "0x", 2) || !strncmp(argv[optind], "0X", 2)) {
-                        if (strlen(argv[optind]) != 2 + 8) { printf("! Invalid UID length\n"); usage(argv[0]); }
+                        if (strlen(argv[optind]) != 2 + 8) { printf("Error: invalid UID length\n"); usage(argv[0]); }
                         uid = (uint32_t) rev32(hexreversetoulong(argv[optind] + 2));
                     } else {
-                        if (strlen(argv[optind]) != 8) { printf("! Invalid UID length\n"); usage(argv[0]); }
+                        if (strlen(argv[optind]) != 8) { printf("Error: invalid UID length\n"); usage(argv[0]); }
                         uid = (uint32_t) rev32(hexreversetoulong(argv[optind]));
                     }
                     break;
 
                 case 1: // nR1
                     if (!strncmp(argv[optind], "0x", 2) || !strncmp(argv[optind], "0X", 2)) {
-                        if (strlen(argv[optind]) != 2 + 8) { printf("! Invalid nR1 length\n"); usage(argv[0]); }
+                        if (strlen(argv[optind]) != 2 + 8) { printf("Error: invalid nR1 length\n"); usage(argv[0]); }
                         nR1 = (uint32_t) rev32(hexreversetoulong(argv[optind] + 2));
                     } else {
-                        if (strlen(argv[optind]) != 8) { printf("! Invalid nR1 length\n"); usage(argv[0]); }
+                        if (strlen(argv[optind]) != 8) { printf("Error: invalid nR1 length\n"); usage(argv[0]); }
                         nR1 = (uint32_t) rev32(hexreversetoulong(argv[optind]));
                     }
                     break;
 
                 case 2: // aR1
-                    if (strlen(argv[optind]) != 8) { printf("! Invalid aR1 length\n"); usage(argv[0]); }
+                    if (strlen(argv[optind]) != 8) { printf("Error: invalid aR1 length\n"); usage(argv[0]); }
                     aR1 = (uint32_t) strtoul(argv[optind], NULL, 16);
                     break;
 
                 case 3: // nR2
                     if (!strncmp(argv[optind], "0x", 2) || !strncmp(argv[optind], "0X", 2)) {
-                        if (strlen(argv[optind]) != 2 + 8) { printf("! Invalid nR2 length\n"); usage(argv[0]); }
+                        if (strlen(argv[optind]) != 2 + 8) { printf("Error: invalid nR2 length\n"); usage(argv[0]); }
                         nR2 = (uint32_t) rev32(hexreversetoulong(argv[optind] + 2));
                     } else {
-                        if (strlen(argv[optind]) != 8) { printf("! Invalid nR2 length\n"); usage(argv[0]); }
+                        if (strlen(argv[optind]) != 8) { printf("Error: invalid nR2 length\n"); usage(argv[0]); }
                         nR2 = (uint32_t) rev32(hexreversetoulong(argv[optind]));
                     }
                     break;
 
                 case 4: // aR2
-                    if (strlen(argv[optind]) != 8) { printf("! Invalid aR2 length\n"); usage(argv[0]); }
+                    if (strlen(argv[optind]) != 8) { printf("Error: invalid aR2 length\n"); usage(argv[0]); }
                     aR2 = (uint32_t) strtoul(argv[optind], NULL, 16);
                     break;
 
@@ -371,7 +370,7 @@ int main(int argc, char **argv) {
     if (!show) {
         if (verbose) printf("uid: %u, aR2: %u, nR1: %u, nR2: %u\n", checks[0], checks[1], checks[2], checks[3]);
 
-        target = ~aR1;
+        uint32_t target = ~aR1;
         // bitslice inverse target bits
         bitslice(~target, keystream);
 
@@ -446,388 +445,32 @@ int main(int argc, char **argv) {
         close(fd);
     }
 
-    // now discover and set up compute device(s)
     int err = 0;
     cl_uint ocl_platform_cnt = 0;
-    unsigned int ocl_platform_max = MAX_OPENCL_DEVICES; // 16
-
-    cl_platform_id *ocl_platforms = (cl_platform_id *) calloc(ocl_platform_max, sizeof(cl_platform_id));
-    if (!ocl_platforms) {
-        printf("Error: calloc (ocl_platforms) failed (%d): %s\n", errno, strerror(errno));
-        MEMORY_FREE_ALL
-        exit(2);
-    }
-
-    MEMORY_FREE_ADD(ocl_platforms)
-
-    // enum platforms
-    err = clGetPlatformIDs(ocl_platform_max, ocl_platforms, &ocl_platform_cnt);
-    if (err != CL_SUCCESS) {
-        printf("Error: clGetPlatformIDs() failed (%d)\n", err);
-        MEMORY_FREE_ALL
-        exit(2);
-    }
-
-    if (ocl_platform_cnt == 0) {
-        printf("No platforms found, exit\n");
-        MEMORY_FREE_ALL
-        exit(2);
-    }
-
-    // allocate memory to hold info about platforms/devices
-    compute_platform_ctx_t *cd_ctx = (compute_platform_ctx_t *) calloc(ocl_platform_cnt, sizeof(compute_platform_ctx_t));
-    if (!cd_ctx) {
-        printf("Error: calloc (compute_platform_ctx_t) failed (%d): %s\n", errno, strerror(errno));
-        MEMORY_FREE_ALL
-        exit(err);
-    }
-
-    MEMORY_FREE_ADD(cd_ctx)
-
-    cl_platform_info ocl_platforms_info[3] = { CL_PLATFORM_NAME, CL_PLATFORM_VENDOR, CL_PLATFORM_VERSION };
-    unsigned int ocl_platforms_info_cnt = sizeof(ocl_platforms_info) / sizeof(cl_platform_info);
-
-    cl_device_info ocl_devices_info[8] = { CL_DEVICE_TYPE, CL_DEVICE_NAME, CL_DEVICE_VERSION, CL_DRIVER_VERSION, CL_DEVICE_VENDOR, CL_DEVICE_LOCAL_MEM_TYPE, CL_DEVICE_MAX_WORK_ITEM_SIZES, CL_DEVICE_MAX_COMPUTE_UNITS };
-    unsigned int ocl_devices_info_cnt = sizeof(ocl_devices_info) / sizeof(cl_device_info);
-
-    unsigned int info_idx = 0;
-    size_t tmp_len = 0;
-    char *tmp_buf = NULL;
-
-    unsigned int global_device_id = 0;
     size_t selected_platforms_cnt = 0;
     size_t selected_devices_cnt = 0;
+    compute_platform_ctx_t *cd_ctx = NULL;
 
     if (show) verbose = true;
 
-    if (verbose) printf("- Found %u OpenCL Platform(s)\n", ocl_platform_cnt);
-
-    for (cl_uint platform_idx = 0; platform_idx < ocl_platform_cnt; platform_idx++) {
-        cd_ctx[platform_idx].platform_id = ocl_platforms[platform_idx];
-        cd_ctx[platform_idx].selected = plat_dev_enabled(platform_idx, plat_sel, plat_cnt, 0, 0);
-
-        if (cd_ctx[platform_idx].selected) selected_platforms_cnt++;
-
-        if (verbose) printf("\n-- Platform ID: %d\n", platform_idx + 1);
-
-        for (info_idx = 0; info_idx < ocl_platforms_info_cnt; info_idx++) {
-            cl_platform_info ocl_info = ocl_platforms_info[info_idx];
-
-            err = clGetPlatformInfo(cd_ctx[platform_idx].platform_id, ocl_info, 0, NULL, &tmp_len);
-            if (err != CL_SUCCESS) {
-                printf("Error: clGetPlatformInfo(param size) failed (%d)\n", err);
-                MEMORY_FREE_ALL
-                exit(2);
-            }
-
-            if (tmp_len > 0) {
-                if (!(tmp_buf = (char *) calloc(tmp_len, sizeof(char)))) {
-                    printf("Error: calloc (ocl_info %u) failed (%d): %s\n", info_idx, errno, strerror(errno));
-                    MEMORY_FREE_ALL
-                    exit(2);
-                }
-
-                MEMORY_FREE_ADD(tmp_buf)
-
-                err = clGetPlatformInfo(cd_ctx[platform_idx].platform_id, ocl_info, tmp_len, tmp_buf, 0);
-                if (err != CL_SUCCESS) {
-                    printf("Error: clGetPlatformInfo(param) failed (%d)\n", err);
-                    MEMORY_FREE_ALL
-                    exit(2);
-                }
-            } else {
-                tmp_len = 4;
-                if (!(tmp_buf = (char *) calloc(tmp_len, sizeof(char)))) {
-                    printf("Error: calloc (ocl_info %u) failed (%d): %s\n", info_idx, errno, strerror(errno));
-                    MEMORY_FREE_ALL
-                    exit(2);
-                }
-
-                MEMORY_FREE_ADD(tmp_buf)
-
-                strncpy(tmp_buf, "N/A\0", tmp_len);
-            }
-
-            if (verbose) {
-                const char *tmp_info_desc = (info_idx == 0) ? "Name" : (info_idx == 1) ? "Vendor" : "Version";
-
-                printf("%14s: %s\n", tmp_info_desc, tmp_buf);
-            }
-
-            switch (info_idx) {
-                case 0:
-                    strncpy(cd_ctx[platform_idx].name, tmp_buf, tmp_len < 0xff ? tmp_len : 0xff - 1);
-                    break;
-                case 1:
-                    strncpy(cd_ctx[platform_idx].vendor, tmp_buf, tmp_len < 0x40 ? tmp_len : 0x40 - 1);
-                    break;
-                case 2:
-                    strncpy(cd_ctx[platform_idx].version, tmp_buf, tmp_len < 0x40 ? tmp_len : 0x40 - 1);
-                    break;
-            }
-
-            if (info_idx == 1) {
-                // todo: do the same this devices
-                if (!strncmp(tmp_buf, "NVIDIA", 6)) cd_ctx[platform_idx].is_nv = true;
-                else if (!strncmp(tmp_buf, "Apple", 5)) { cd_ctx[platform_idx].is_apple = true; cd_ctx[platform_idx].warning = true; }
-                else if (!strncmp(tmp_buf, "Intel", 5)) cd_ctx[platform_idx].is_intel = true;
-            }
-
-            MEMORY_FREE_DEL(tmp_buf)
-        }
-
-        if (!show && verbose) {
-            printf("%14s: %s\n", "Selected", (cd_ctx[platform_idx].selected) ? "yes" : "no");
-            if (cd_ctx[platform_idx].warning) printf("\n%14s: performance will not be optimal using this platform\n\n", "=====> Warning");
-        }
-
-        // enum devices with this platform
-        unsigned int ocl_device_cnt = 0;
-        unsigned int ocl_device_max = MAX_OPENCL_DEVICES;
-
-        cl_device_id *ocl_devices = (cl_device_id *) calloc(ocl_device_max, sizeof(cl_device_id));
-        if (!ocl_devices) {
-            printf("Error: calloc (ocl_devices) failed (%d): %s\n", errno, strerror(errno));
-            MEMORY_FREE_ALL
-            exit(2);
-        }
-
-        MEMORY_FREE_ADD(ocl_devices)
-
-        err = clGetDeviceIDs(cd_ctx[platform_idx].platform_id, CL_DEVICE_TYPE_ALL, ocl_device_max, ocl_devices, &ocl_device_cnt);
-        if (ocl_device_cnt == 0) {
-            if (device_types_selected == CL_DEVICE_TYPE_ALL) printf("No device(s) available with platform id %d\n", platform_idx);
-            cd_ctx[platform_idx].device_cnt = 0;
-            continue;
-        }
-
-        if (err != CL_SUCCESS) {
-            printf("Error: clGetDeviceIDs(cnt) failed (%d)\n", err);
-            MEMORY_FREE_ALL
-            exit(2);
-        }
-
-        if (verbose) printf("%14s: %u\n", "Device(s)", ocl_device_cnt);
-
-        cd_ctx[platform_idx].device_cnt = ocl_device_cnt;
-
-        for (unsigned int device_idx = 0; device_idx < ocl_device_cnt; device_idx++) {
-            memset(&cd_ctx[platform_idx].device[device_idx], 0, sizeof(compute_device_ctx_t));
-            cl_device_id ocl_device = ocl_devices[device_idx];
-            cd_ctx[platform_idx].device[device_idx].platform_id = cd_ctx[platform_idx].platform_id;
-
-            if (verbose) printf("---- * ID: %u\n", global_device_id + 1);
-
-            for (info_idx = 0; info_idx < ocl_devices_info_cnt; info_idx++) {
-                cl_device_info ocl_dev_info = ocl_devices_info[info_idx];
-
-                if (info_idx == 0) {
-                    cl_device_type device_type;
-
-                    err = clGetDeviceInfo(ocl_device, ocl_dev_info, sizeof(cl_device_type), &device_type, 0);
-                    if (err != CL_SUCCESS) {
-                        printf("Error: clGetDeviceInfo(device_type) failed (%d)\n", err);
-                        MEMORY_FREE_ALL
-                        exit(2);
-                    }
-
-                    if (device_type & CL_DEVICE_TYPE_GPU) cd_ctx[platform_idx].device[device_idx].is_gpu = 1;
-
-                    if (verbose) printf("%14s: %s\n", "Device Type", (device_type & CL_DEVICE_TYPE_GPU) ? "GPU" : (device_type & CL_DEVICE_TYPE_CPU) ? "CPU" : "Other");
-
-                    cd_ctx[platform_idx].device[device_idx].selected = plat_dev_enabled(global_device_id, dev_sel, dev_cnt, (unsigned int) device_type, device_types_selected);
-                    global_device_id++;
-                    if (cd_ctx[platform_idx].device[device_idx].selected) selected_devices_cnt++;
-                    continue;
-                } else if (info_idx == 5) {
-                    cl_device_local_mem_type local_mem_type;
-
-                    err = clGetDeviceInfo(ocl_device, ocl_dev_info, sizeof(cl_device_local_mem_type), &local_mem_type, 0);
-                    if (err != CL_SUCCESS) {
-                        printf("Error: clGetDeviceInfo(local_mem_type) failed (%d)\n", err);
-                        MEMORY_FREE_ALL
-                        exit(2);
-                    }
-
-                    if (local_mem_type == CL_LOCAL || local_mem_type == CL_GLOBAL) {
-                        if (verbose) printf("%14s: %s\n", "Local Mem Type", (local_mem_type == CL_LOCAL) ? "Local" : "Global");
-
-                        if (cd_ctx[platform_idx].is_apple) {
-                            if (strncmp(cd_ctx[platform_idx].device[device_idx].vendor, "Intel", 5) != 0) cd_ctx[platform_idx].device[device_idx].have_local_memory = true;
-                        } else if (cd_ctx[platform_idx].is_nv) cd_ctx[platform_idx].device[device_idx].have_local_memory = true;
-                        /*
-                        						// swap the 'if' comment for enable local memory with apple gpu's (my Iris crash, abort 6)
-                        						// if (!(!strncmp (cd_ctx[platform_idx].device[device_idx].vendor, "Intel", 5) && cd_ctx[platform_idx].is_apple && !cd_ctx[platform_idx].device[device_idx].is_gpu))
-                        						if (!(!strncmp (cd_ctx[platform_idx].device[device_idx].vendor, "Intel", 5) && cd_ctx[platform_idx].is_apple))
-                        						{
-                        							cd_ctx[platform_idx].device[device_idx].have_local_memory = true;
-                        						}
-                        */
-                    } else {
-                        if (verbose) printf("%14s: None\n", "Local Mem Type");
-                    }
-
-                    if (verbose) printf("%14s: %s\n", "Local Mem Opt", (cd_ctx[platform_idx].device[device_idx].have_local_memory) ? "yes" : "no");
-
-                    continue;
-                } else if (info_idx == 6) {
-                    size_t wis[3] = { 0 };
-                    err = clGetDeviceInfo(ocl_device, ocl_dev_info, sizeof(size_t) * 3, wis, 0);
-                    if (err != CL_SUCCESS) {
-                        printf("Error: clGetDeviceInfo(work_items_size) failed (%d)\n", err);
-                        MEMORY_FREE_ALL
-                        exit(2);
-                    }
-
-                    if (verbose) printf("%14s: (%zu,%zu,%zu)\n", "Max Work-Items", wis[0], wis[1], wis[2]);
-
-#if APPLE_GPU_BROKEN == 1
-                    if (wis[1] < GLOBAL_WS_1 && cd_ctx[platform_idx].device[device_idx].is_apple_gpu) {
-                        cd_ctx[platform_idx].device[device_idx].unsupported = true;
-                    }
-#endif
-                    continue;
-                } else if (info_idx == 7) {
-                    cl_uint cores = 0;
-                    err = clGetDeviceInfo(ocl_device, ocl_dev_info, sizeof(cl_uint), &cores, 0);
-                    if (err != CL_SUCCESS) {
-                        printf("Error: clGetDeviceInfo(compute_units) failed (%d)\n", err);
-                        MEMORY_FREE_ALL
-                        exit(2);
-                    }
-
-                    if (verbose) printf("%14s: %u\n", "Compute Units", cores);
-
-                    cd_ctx[platform_idx].device[device_idx].compute_units = cores;
-                    continue;
-                }
-
-                tmp_len = 0;
-                tmp_buf = NULL;
-
-                err = clGetDeviceInfo(ocl_device, ocl_dev_info, 0, NULL, &tmp_len);
-                if (err != CL_SUCCESS) {
-                    printf("Error: clGetDeviceInfo(param size) failed (%d)\n", err);
-                    MEMORY_FREE_ALL
-                    exit(2);
-                }
-
-                if (tmp_len > 0) {
-                    if (!(tmp_buf = (char *) calloc(tmp_len, sizeof(char)))) {
-                        printf("Error: calloc (ocl_dev_info %u) failed (%d): %s\n", info_idx, errno, strerror(errno));
-                        MEMORY_FREE_ALL
-                        exit(2);
-                    }
-
-                    MEMORY_FREE_ADD(tmp_buf)
-
-                    err = clGetDeviceInfo(ocl_device, ocl_dev_info, tmp_len, tmp_buf, 0);
-                    if (err != CL_SUCCESS) {
-                        printf("Error: clGetDeviceInfo(param) failed (%d)\n", err);
-                        MEMORY_FREE_ALL
-                        exit(2);
-                    }
-                } else {
-                    tmp_len = 4;
-                    if (!(tmp_buf = (char *) calloc(tmp_len, sizeof(char)))) {
-                        printf("Error: calloc (ocl_dev_info %u) failed (%d): %s\n", info_idx, errno, strerror(errno));
-                        MEMORY_FREE_ALL
-                        exit(2);
-                    }
-
-                    MEMORY_FREE_ADD(tmp_buf)
-
-                    strncpy(tmp_buf, "N/A\0", tmp_len);
-                }
-
-                if (verbose) {
-                    const char *tmp_dev_info_desc = (info_idx == 1) ? "Name" : (info_idx == 2) ? "Version" : (info_idx == 3) ? "Driver Version" : "Vendor";
-
-                    printf("%14s: %s\n", tmp_dev_info_desc, tmp_buf);
-                }
-
-                switch (info_idx) {
-                    case 1:
-                        strncpy(cd_ctx[platform_idx].device[device_idx].name, tmp_buf, tmp_len < 0xff ? tmp_len : 0xff - 1);
-                        break;
-                    case 2:
-                        strncpy(cd_ctx[platform_idx].device[device_idx].version, tmp_buf, tmp_len < 0x40 ? tmp_len : 0x40 - 1);
-                        break;
-                    case 3:
-                        strncpy(cd_ctx[platform_idx].device[device_idx].driver_version, tmp_buf, tmp_len < 0x40 ? tmp_len : 0x40 - 1);
-                        break;
-                    case 4:
-                        strncpy(cd_ctx[platform_idx].device[device_idx].vendor, tmp_buf, tmp_len < 0x40 ? tmp_len : 0x40 - 1);
-                        break;
-                }
-
-                if (info_idx == 4) {
-                    if (!strncmp(tmp_buf, "Intel", 5) && cd_ctx[platform_idx].is_apple) {
-                        // disable hitag2 with apple platform and not apple device vendor (< Apple M1)
-                        ctx.force_hitag2_opencl = false;
-
-                        cd_ctx[platform_idx].device[device_idx].is_apple_gpu = cd_ctx[platform_idx].device[device_idx].is_gpu;
-                    }
-
-                    if (!strncmp(tmp_buf, "NVIDIA", 6) && cd_ctx[platform_idx].is_nv) {
-                        unsigned int sm_maj = 0, sm_min = 0;
-
-                        err  = clGetDeviceInfo(ocl_device, 0x4000, sizeof(unsigned int), &sm_maj, 0);
-                        err |= clGetDeviceInfo(ocl_device, 0x4001, sizeof(unsigned int), &sm_min, 0);
-
-                        if (err != CL_SUCCESS) {
-                            printf("Error: clGetDeviceInfo(sm_maj/sm_min) failed (%d)\n", err);
-                            MEMORY_FREE_ALL
-                            exit(2);
-                        }
-
-                        cd_ctx[platform_idx].device[device_idx].sm_maj = sm_maj;
-                        cd_ctx[platform_idx].device[device_idx].sm_min = sm_min;
-
-                        if (verbose) printf("%14s: %u%u\n", "SM", sm_maj, sm_min);
-
-                        if (sm_maj >= 5) { // >= Maxwell
-                            // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#logic-and-shift-instructions-lop3
-                            // Requires sm_50 or higher.
-                            cd_ctx[platform_idx].device[device_idx].have_lop3 = true;
-                        } else {
-                            cd_ctx[platform_idx].device[device_idx].warning = true;
-                        }
-
-                        cd_ctx[platform_idx].device[device_idx].is_nv = true;
-                    } else {
-                        cd_ctx[platform_idx].device[device_idx].warning = true;
-                    }
-                }
-
-                MEMORY_FREE_DEL(tmp_buf)
-            }
-
-            if (!show && verbose) printf("%14s: %s\n", "Selected", (cd_ctx[platform_idx].device[device_idx].selected) ? "yes" : "no");
-
-            if (cd_ctx[platform_idx].device[device_idx].unsupported) {
-                printf("\n%14s: this device was not supported, beacuse of missing resources\n\n", "=====> Warning");
-                continue;
-            }
-
-            if (cd_ctx[platform_idx].device[device_idx].warning) {
-                if (!show && verbose) printf("\n%14s: performance will not be optimal using this device\n\n", "=====> Warning");
-            }
-
-            cd_ctx[platform_idx].device[device_idx].device_id = ocl_device;
-        }
-        MEMORY_FREE_DEL(ocl_devices)
+    // now discover and set up compute device(s)
+    if ((err = discoverDevices(profile_selected, device_types_selected, &ocl_platform_cnt, &selected_platforms_cnt, &selected_devices_cnt, &cd_ctx, plat_sel, plat_cnt, dev_sel, dev_cnt, verbose, show)) != 0)
+    {
+      printf ("Error: discoverDevices() failed\n");
+      if (err < -5) free (cd_ctx);
+      MEMORY_FREE_ALL
+      exit (2);
     }
-    MEMORY_FREE_DEL(ocl_platforms)
-
-    // new selection engine, need to support multi-gpu system (with the same platform)
 
     if (verbose) printf("\n");
 
+    // new selection engine, need to support multi-gpu system (with the same platform)
     if (show) {
         MEMORY_FREE_ALL
         exit(2);
     }
+
+    MEMORY_FREE_ADD(cd_ctx)
 
     if (selected_platforms_cnt == 0) {
         printf("! No platform was selected ...\n");
@@ -854,6 +497,11 @@ int main(int argc, char **argv) {
 
         for (q = 0; q < cd_ctx[w].device_cnt; q++) {
             if (!cd_ctx[w].device[q].selected) continue;
+
+            if (cd_ctx[w].is_apple && !strncmp(cd_ctx[w].device[q].vendor, "Intel", 5)) {
+                // disable hitag2 with apple platform and not apple device vendor (< Apple M1)
+                ctx.force_hitag2_opencl = false;
+            }
 
             printf("%2zu - %s", z, cd_ctx[w].device[q].name);
             if (verbose) {
@@ -989,14 +637,6 @@ int main(int argc, char **argv) {
 
     MEMORY_FREE_ADD(ctx.local_ws)
 
-    if (!(ctx.profiles = (int *) calloc(selected_devices_cnt, sizeof(int)))) {
-        printf("Error: calloc (ctx.profiles) failed (%d): %s\n", errno, strerror(errno));
-        MEMORY_FREE_ALL
-        exit(2);
-    }
-
-    MEMORY_FREE_ADD(ctx.profiles)
-
     // show buidlog in case of error
     // todo: only for device models
     unsigned int build_errors = 0;
@@ -1121,7 +761,6 @@ int main(int argc, char **argv) {
                 if (err != CL_SUCCESS) {
                     printf("[%zu] Error: clGetProgramBuildInfo failed (%d)\n", z, err);
                     continue;
-//					exit (2);
                 }
 
                 if (len == 0) continue;
@@ -1132,17 +771,13 @@ int main(int argc, char **argv) {
                 if (!buffer) {
                     printf("[%zu] Error: calloc (CL_PROGRAM_BUILD_LOG) failed (%d): %s\n", z, errno, strerror(errno));
                     continue;
-//					exit (2);
                 }
-
-                MEMORY_FREE_ADD(buffer)
 
                 err = clGetProgramBuildInfo(ctx.programs[z], cd_ctx[w].device[q].device_id, CL_PROGRAM_BUILD_LOG, len, buffer, 0);
                 if (err != CL_SUCCESS) {
                     printf("[%zu] clGetProgramBuildInfo() failed (%d)\n", z, err);
-                    MEMORY_FREE_DEL(buffer)
+                    free (buffer);
                     continue;
-//					exit (2);
                 }
 
 #if DEBUGME > 0
@@ -1152,7 +787,7 @@ int main(int argc, char **argv) {
                     printf("[%zu] Build log (len %zu):\n--------\n%s\n--------\n", z, len, buffer);
                 }
 
-                MEMORY_FREE_DEL(buffer)
+                free (buffer);
 
                 build_logs++;
 #if DEBUGME == 0
@@ -1196,75 +831,12 @@ int main(int argc, char **argv) {
         }
     }
 
-    // z is device counter, dolphin counter as well
-
     // setup, phase 2 (select lower profile)
-
-    int profile = 0xff;
-
-    g = 0;
-
-    for (w = 0; w < ocl_platform_cnt; w++) {
-        if (!cd_ctx[w].selected) continue;
-
-        for (q = 0; q < cd_ctx[w].device_cnt; q++) {
-            if (!cd_ctx[w].device[q].selected) continue;
-
-            ctx.profiles[g] = (int) profile_selected; // start with default
-
-#if DEBUGME > 1
-            printf("[debug] Initial profile for device %zu: %d\n", z, ctx.profiles[g]);
-#endif
-
-            // force profile to 0 with Apple GPU's to get it stable, and 1 for CPU
-            if (cd_ctx[w].is_apple && !strncmp(cd_ctx[w].device[q].vendor, "Intel", 5)) {
-                if (cd_ctx[w].device[q].is_gpu) {
-                    if (profile_selected > 2) ctx.profiles[g] = PROFILE_DEFAULT; // Apple-Intel GPU's, 2 is the old 0
-                } else {
-                    if (profile_selected > 3) ctx.profiles[g] = PROFILE_DEFAULT; // Apple-Intel CPU's, 3 is the old 1
-                }
-            }
-
-            // force profile to 0 with Intel GPU and 2 wih Intel CPU's
-            if (cd_ctx[w].is_intel && !strncmp(cd_ctx[w].device[q].vendor, "Intel", 5)) {
-                if (cd_ctx[w].device[q].is_gpu) {
-                    ctx.profiles[g] = 0; // Intel GPU, work better with a very slow profile
-                } else {
-                    if (profile_selected > 2) ctx.profiles[g] = PROFILE_DEFAULT; // Intel CPU (2 is the old 0)
-                }
-            }
-
-            // force profile to 2 with NVIDIA GPU's with NVIDIA platform
-            if (cd_ctx[w].is_nv && cd_ctx[w].device[q].is_gpu && !strncmp(cd_ctx[w].device[q].vendor, "NVIDIA", 6)) {
-                if (profile_selected > 10) {
-                    // NVIDIA RTX 3090 perform better with 5
-                    ctx.profiles[g] = (cd_ctx[w].device[q].sm_maj >= 8) ? 5 : PROFILE_DEFAULT;
-                }
-            }
-
-            // probably unstested hw, set profile to 0
-            if (profile_selected == 0xff) {
-                profile_selected = 0;
-                ctx.profiles[g] = 0;
-            }
-
-            // with same devices will be selected the best
-            // but for different devices in the same platform we need the worst for now (todo)
-            if (ctx.profiles[q] < profile) profile = ctx.profiles[q];
-        }
-    }
-
-    // profile consistency check
-    if (profile < 0 || profile > 10) {
-        printf("! Error: the selected profile is not allowed (%d)\n", profile);
-        MEMORY_FREE_OPENCL(ctx, z)
-        MEMORY_FREE_LIST_Z(matches, z)
-        MEMORY_FREE_LIST_Z(matches_found, z)
-        MEMORY_FREE_ALL
-        exit(2);
-    }
+    unsigned int profile = get_smallest_profile (cd_ctx, ocl_platform_cnt);
 
     // setup, phase 3 (finis him)
+
+    // z is device counter, dolphin buggy counter as well
 
     z = 0;
 
@@ -1296,8 +868,7 @@ int main(int argc, char **argv) {
                     MEMORY_FREE_ALL
                     exit(2);
                 }
-            } else {
-                // one
+            } else { // one
                 if (!(matches[z] = (uint64_t *) calloc(1, sizeof(uint64_t)))) {
                     printf("[%zu] Error: calloc (matches) failed (%d): %s\n", z, errno, strerror(errno));
                     MEMORY_FREE_OPENCL(ctx, z)
@@ -1374,7 +945,7 @@ int main(int argc, char **argv) {
             }
 
             err = clEnqueueWriteBuffer(ctx.commands[z], ctx.candidates[z], CL_TRUE, 0, sizeof(uint16_t) * ((1 << 20) * 3), candidates, 0, NULL, NULL);
-//			err = clEnqueueWriteBuffer(ctx.commands[z], ctx.candidates, CL_TRUE, 0, sizeof(uint64_t) * ((1 << 20)), candidates, 0, NULL, NULL);
+            // err = clEnqueueWriteBuffer(ctx.commands[z], ctx.candidates, CL_TRUE, 0, sizeof(uint64_t) * ((1 << 20)), candidates, 0, NULL, NULL);
             if (err != CL_SUCCESS) {
                 printf("[%zu] Error: clEnqueueWriteBuffer(ctx.candidates) failed (%d)\n", z, err);
                 MEMORY_FREE_OPENCL(ctx, z)
@@ -1492,17 +1063,14 @@ int main(int argc, char **argv) {
         t_arg[z].aR2 = aR2;
         t_arg[z].nR1 = nR1;
         t_arg[z].nR2 = nR2;
-        t_arg[z].max_step = max_step;
+        t_arg[z].max_slices = max_step;
         t_arg[z].ocl_ctx = &ctx;
         t_arg[z].device_id = z;
-        t_arg[z].async = (ctx.thread_sched_type == THREAD_TYPE_ASYNC);
         t_arg[z].thread_ctx = &th_ctx;
-
-        if (ctx.thread_sched_type == THREAD_TYPE_ASYNC) {
-            t_arg[z].matches = matches[z];
-            t_arg[z].matches_found = matches_found[z];
-            t_arg[z].status = TH_START;
-        }
+        t_arg[z].r = false;
+        t_arg[z].matches = matches[z];
+        t_arg[z].matches_found = matches_found[z];
+        t_arg[z].status = TH_START;
     }
 
     if (ctx.thread_sched_type == THREAD_TYPE_ASYNC) {
@@ -1550,202 +1118,20 @@ int main(int argc, char **argv) {
     printf("Attack 5 - opencl - start (Max Slices %u, %s order", max_step, wu_queue_strdesc(ctx.queue_ctx.queue_type));
 
     if (!verbose) printf(")\n\n");
-    else printf(", Profile %d, Async Threads %s, HiTag2 key verify on device %s)\n\n", profile, (ctx.thread_sched_type == THREAD_TYPE_ASYNC) ? "yes" : "no", (force_hitag2_opencl) ? "yes" : "no");
+    else printf(", Profile %u, Async Threads %s, HiTag2 key verify on device %s)\n\n", profile, (ctx.thread_sched_type == THREAD_TYPE_ASYNC) ? "yes" : "no", (force_hitag2_opencl) ? "yes" : "no");
 
     if (gettimeofday(&cpu_t_start, NULL) == -1) {
-        printf("! gettimeofday(start) failed (%d): %s\n", errno, strerror(errno));
+        printf("Error: gettimeofday(start) failed (%d): %s\n", errno, strerror(errno));
         show_overall_time = false;
     }
 
-    if (ctx.thread_sched_type == THREAD_TYPE_ASYNC) {
-        // crack hitag key or die tryin'
-        unsigned int th_cnt;
-
-        bool done = false;
-
-        do { // master
-            th_cnt = 0;
-
-            for (z = 0; z < thread_count; z++) {
-#if TDEBUG >= 1 && DEBUGME == 1
-                if (thread_count == 1) { printf("[%zu] get status from slave ...\n", z); fflush(stdout); }
-#endif
-
-                pthread_mutex_lock(&th_ctx.thread_mutexs[z]);
-                thread_status_t cur_status = t_arg[z].status;
-                pthread_mutex_unlock(&th_ctx.thread_mutexs[z]);
-
-#if TDEBUG >= 1 && DEBUGME == 1
-                if (thread_count == 1) { printf("[%zu] slave status: %s\n", z, thread_status_strdesc(cur_status)); fflush(stdout); }
-#endif
-
-                if (found) {
-#if TDEBUG >= 3
-                    printf("[%zu] Processing exit logic\n", z);
-                    fflush(stdout);
-#endif
-
-                    if (cur_status < TH_FOUND_KEY) {
-#if TDEBUG >= 1
-                        printf("[%zu] key found from another thread, set quit\n", z);
-                        fflush(stdout);
-#endif
-                        pthread_mutex_lock(&th_ctx.thread_mutexs[z]);
-                        t_arg[z].status = TH_END;
-                        t_arg[z].quit = true;
-                        if (cur_status == TH_WAIT) pthread_cond_signal(&th_ctx.thread_conds[z]);
-                        pthread_mutex_unlock(&th_ctx.thread_mutexs[z]);
-                    } else {
-                        if (thread_count == 1) {
-                            th_cnt++;
-#if TDEBUG >= 1
-                            printf("[%zu] Increment th_cnt: %u/%zu\n", z, th_cnt, thread_count);
-                            fflush(stdout);
-#endif
-                        }
-                    }
-                    continue;
-                }
-
-                if (cur_status == TH_WAIT) {
-                    pthread_mutex_lock(&th_ctx.thread_mutexs[z]);
-
-                    if (found) {
-#if TDEBUG >= 1
-                        printf("[%zu] key is found in another thread 1\n", z);
-                        fflush(stdout);
-#endif
-                        t_arg[z].status = TH_END;
-                        t_arg[z].quit = true;
-                        pthread_mutex_unlock(&th_ctx.thread_mutexs[z]);
-                        continue;
-                    }
-
-                    if (wu_queue_done(&ctx.queue_ctx) != QUEUE_EMPTY) {
-                        t_arg[z].status = TH_PROCESSING;
-
-#if TDEBUG >= 1
-                        printf("[master] slave [%zu], I give you another try (%s)\n", z, thread_status_strdesc(t_arg[z].status));
-                        fflush(stdout);
-#endif
-
-                        pthread_cond_signal(&th_ctx.thread_conds[z]);
-                        pthread_mutex_unlock(&th_ctx.thread_mutexs[z]);
-                        continue;
-                    } else {
-#if TDEBUG >= 1
-                        printf("[master] slave [%zu], max step reached. Quit.\n", z);
-                        fflush(stdout);
-#endif
-
-                        cur_status = t_arg[z].status = TH_END;
-                        t_arg[z].quit = true;
-
-                        pthread_cond_signal(&th_ctx.thread_conds[z]);
-                        pthread_mutex_unlock(&th_ctx.thread_mutexs[z]);
-                    }
-                }
-
-                if (cur_status == TH_PROCESSING) {
-                    if (th_ctx.enable_condusleep) {
-#if TDEBUG >= 1
-                        printf("[master] before pthread_cond_wait, TH_PROCESSING\n");
-#endif
-                        pthread_mutex_lock(&th_ctx.thread_mutex_usleep);
-#if TDEBUG >= 1
-                        printf("[master] slave [%zu], I'm waiting you end of task, I'm in %s give me a signal.\n", z, thread_status_strdesc(t_arg[z].status));
-                        fflush(stdout);
-#endif
-                        pthread_cond_wait(&th_ctx.thread_cond_usleep, &th_ctx.thread_mutex_usleep);
-#if TDEBUG >= 1
-                        printf("[master] slave [%zu], got the signal with new state: %s.\n", z, thread_status_strdesc(t_arg[z].status));
-                        fflush(stdout);
-#endif
-
-                        if (t_arg[z].status == TH_FOUND_KEY) found = true;
-
-                        pthread_mutex_unlock(&th_ctx.thread_mutex_usleep);
-#if TDEBUG >= 1
-                        printf("[master] after pthread_cond_wait, TH_PROCESSING\n");
-#endif
-                        continue;
-                    }
-
-                    if (found) {
-#if TDEBUG >= 1
-                        printf("[master] slave [%zu], the key is found. set TH_END from TH_PROCESSING\n", z);
-                        fflush(stdout);
-#endif
-
-                        pthread_mutex_lock(&th_ctx.thread_mutexs[z]);
-                        t_arg[z].status = TH_END;
-                        t_arg[z].quit = true;
-                        pthread_mutex_unlock(&th_ctx.thread_mutexs[z]);
-                        continue;
-                    }
-                }
-
-                if (cur_status == TH_ERROR) {
-                    // something went wrong
-                    pthread_mutex_lock(&th_ctx.thread_mutexs[z]);
-                    t_arg[z].status = TH_END;
-                    t_arg[z].quit = true;
-                    pthread_mutex_unlock(&th_ctx.thread_mutexs[z]);
-                    continue;
-                }
-
-                // todo, do more clean exit logic
-                if (cur_status >= TH_FOUND_KEY) {
-                    th_cnt++;
-
-                    if (cur_status == TH_FOUND_KEY) {
-                        thread_setEnd(&th_ctx, t_arg);
-                        found = true;
-                        done = true;
-                    }
-                }
-            }
-
-            if (th_cnt == thread_count) done = true;
-
-        } while (!done);
-
-        // end of async engine
-    } else if (ctx.thread_sched_type == THREAD_TYPE_SEQ) {
-        uint32_t step = 0;
-        bool quit = false;
-
-        for (step = 0; step < max_step; step += thread_count) {
-            for (z = 0; z < thread_count; z++) {
-                t_arg[z].r = found;
-                t_arg[z].matches = matches[z];
-                t_arg[z].matches_found = matches_found[z];
-            }
-
-            if ((ret = thread_start(&th_ctx, t_arg)) != 0) {
-                printf("Error: thread_start() failed (%d): %s\n", ret, thread_strerror(ret));
-                thread_destroy(&th_ctx);
-                MEMORY_FREE_OPENCL(ctx, z)
-                MEMORY_FREE_LIST_Z(matches, z)
-                MEMORY_FREE_LIST_Z(matches_found, z)
-                MEMORY_FREE_ALL
-                exit(3);
-            }
-
-            // waiting threads return
-            thread_stop(&th_ctx);
-
-            for (z = 0; z < th_ctx.thread_count; z++) {
-                if (t_arg[z].r) found = true;
-
-                if (t_arg[z].err) {
-                    error = true;
-                    quit = true;
-                }
-            }
-
-            if (found || quit) break;
-        }
+    // Hokuto Hyakuretsu Ken
+    ret = thread_start_scheduler (&th_ctx, t_arg, &ctx.queue_ctx);
+    if (ret < 0) {
+        printf("Error: thread_start_scheduler() failed (%d): %s\n", ret, thread_strerror(ret));
+        error = true;
+    } else if (ret == 0) {
+        found = true;
     }
 
     // if found, show the key here
@@ -1755,7 +1141,7 @@ int main(int argc, char **argv) {
 
             if (thread_count > 1) printf("[%zu] ", y);
 
-            printf("Key found @ slice %lu/%lu: ", t_arg[y].slice, t_arg[y].max_step);
+            printf("Key found @ slice %zu/%zu: ", t_arg[y].slice, t_arg[y].max_slices);
             for (int i = 0; i < 6; i++) {
                 printf("%02X", (uint8_t)(t_arg[y].key & 0xff));
                 t_arg[y].key = t_arg[y].key >> 8;
@@ -1770,14 +1156,13 @@ int main(int argc, char **argv) {
         if (gettimeofday(&cpu_t_end, NULL) == 0) {
             timersub(&cpu_t_end, &cpu_t_start, &cpu_t_result);
         } else {
-            printf("! gettimeofday(end) failed (%d): %s\n", errno, strerror(errno));
+            printf("Error. gettimeofday(end) failed (%d): %s\n", errno, strerror(errno));
             show_overall_time = false;
         }
     }
 
     if (!found) {
         printf("\nError. %s\n", (error) ? "something went wrong :(" : "Key not found :|");
-        if (error) exit(-1);
     }
 
     printf("\nAttack 5 - opencl - end");
@@ -1792,17 +1177,19 @@ int main(int argc, char **argv) {
     fflush(stdout);
 #endif
 
-    thread_stop(&th_ctx);
+    if (!error && th_ctx.type != THREAD_TYPE_SEQ) thread_stop(&th_ctx);
 
 #if DEBUGME > 1
     printf("destroy threads\n");
     fflush(stdout);
 #endif
 
-    if ((ret = thread_destroy(&th_ctx)) != 0) {
+    if (!error) {
+        if ((ret = thread_destroy(&th_ctx)) != 0) {
 #if DEBUGME > 0
-        printf("Warning: thread_destroy() failed (%d): %s\n", ret, thread_strerror(ret));
+            printf("Warning: thread_destroy() failed (%d): %s\n", ret, thread_strerror(ret));
 #endif
+        }
     }
 
 #if DEBUGME > 1

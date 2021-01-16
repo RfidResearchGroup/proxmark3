@@ -56,6 +56,8 @@ const char *thread_strerror(int error) {
             return (const char *) "GENERIC ERROR";
         case THREAD_ERROR_ALLOC:
             return (const char *) "ALLOC FAILED";
+        case THREAD_ERROR_INTERNAL:
+            return (const char *) "INTERNAL ERROR";
     }
 
     return (const char *) "GENERIC";
@@ -174,6 +176,198 @@ int thread_init(thread_ctx_t *ctx, short type, size_t thread_count) {
     return 0;
 }
 
+int thread_start_scheduler (thread_ctx_t *ctx, thread_args_t *t_arg, wu_queue_ctx_t *queue_ctx)
+{
+    size_t z = 0;
+    bool found = false;
+    bool done = false;
+    unsigned int th_cnt = 0;
+
+    if (ctx->type == THREAD_TYPE_SEQ) {
+        bool error = false;
+        uint32_t slice = 0;
+        for (slice = 0; slice < t_arg[0].max_slices; slice += ctx->thread_count) {
+            int err = 0;
+
+            if ((err = thread_start(ctx, t_arg)) != 0) {
+                printf("Error: thread_start() failed (%d): %s\n", err, thread_strerror(err));
+            }
+
+            // waiting threads return
+            if (err == 0) thread_stop(ctx);
+
+            for (z = 0; z < ctx->thread_count; z++) {
+                if (t_arg[z].r) {
+                    found = true;
+                    break;
+                }
+
+                if (t_arg[z].err) {
+                    error = true;
+                }
+            }
+
+            // internel err
+            if (error && err == 0) {
+                thread_destroy(ctx);
+                err = THREAD_ERROR_INTERNAL;
+            }
+
+            if (err != 0) return err;
+
+            if (found) break;
+        }
+    } else if (ctx->type == THREAD_TYPE_ASYNC) {
+
+        // crack hitag key or die tryin'
+        do { // master
+            th_cnt = 0;
+
+            for (z = 0; z < ctx->thread_count; z++) {
+#if TDEBUG >= 1 && DEBUGME == 1
+                if (ctx->thread_count == 1) { printf("[%zu] get status from thread ...\n", z); fflush(stdout); }
+#endif
+
+                pthread_mutex_lock(&ctx->thread_mutexs[z]);
+                thread_status_t cur_status = t_arg[z].status;
+                pthread_mutex_unlock(&ctx->thread_mutexs[z]);
+
+#if TDEBUG >= 1 && DEBUGME == 1
+                if (ctx->thread_count == 1) { printf("[%zu] thread status: %s\n", z, thread_status_strdesc(cur_status)); fflush(stdout); }
+#endif
+                if (found) {
+#if TDEBUG >= 3
+                    printf("[%zu] Processing exit logic\n", z);
+                    fflush(stdout);
+#endif
+
+                    if (cur_status < TH_FOUND_KEY) {
+#if TDEBUG >= 1
+                        printf("[%zu] key found from another thread, set quit\n", z);
+                        fflush(stdout);
+#endif
+                        pthread_mutex_lock(&ctx->thread_mutexs[z]);
+                        t_arg[z].status = TH_END;
+                        t_arg[z].quit = true;
+                        if (cur_status == TH_WAIT) pthread_cond_signal(&ctx->thread_conds[z]);
+                        pthread_mutex_unlock(&ctx->thread_mutexs[z]);
+                    } else {
+                        if (ctx->thread_count == 1) {
+                            th_cnt++;
+#if TDEBUG >= 1
+                            printf("[%zu] Increment th_cnt: %u/%zu\n", z, th_cnt, ctx->thread_count);
+                            fflush(stdout);
+#endif
+                        }
+                    }
+                    continue;
+                }
+
+                if (cur_status == TH_WAIT) {
+                    pthread_mutex_lock(&ctx->thread_mutexs[z]);
+
+                    if (found) {
+#if TDEBUG >= 1
+                        printf("[%zu] key is found in another thread 1\n", z);
+                        fflush(stdout);
+#endif
+                        t_arg[z].status = TH_END;
+                        t_arg[z].quit = true;
+                        pthread_mutex_unlock(&ctx->thread_mutexs[z]);
+                        continue;
+                    }
+
+                    if (wu_queue_done(queue_ctx) != QUEUE_EMPTY) {
+                        t_arg[z].status = TH_PROCESSING;
+
+#if TDEBUG >= 1
+                        printf("[master] thread [%zu], I give you another try (%s)\n", z, thread_status_strdesc(t_arg[z].status));
+                        fflush(stdout);
+#endif
+
+                        pthread_cond_signal(&ctx->thread_conds[z]);
+                        pthread_mutex_unlock(&ctx->thread_mutexs[z]);
+                        continue;
+                    } else {
+#if TDEBUG >= 1
+                        printf("[master] thread [%zu], max step reached. Quit.\n", z);
+                        fflush(stdout);
+#endif
+
+                        cur_status = t_arg[z].status = TH_END;
+                        t_arg[z].quit = true;
+
+                        pthread_cond_signal(&ctx->thread_conds[z]);
+                        pthread_mutex_unlock(&ctx->thread_mutexs[z]);
+                    }
+                }
+
+                if (cur_status == TH_PROCESSING) {
+                    if (ctx->enable_condusleep) {
+#if TDEBUG >= 1
+                        printf("[master] before pthread_cond_wait, TH_PROCESSING\n");
+                        fflush(stdout);
+#endif
+                        pthread_mutex_lock(&ctx->thread_mutex_usleep);
+#if TDEBUG >= 1
+                        printf("[master] thread [%zu], I'm waiting you end of task, I'm in %s give me a signal.\n", z, thread_status_strdesc(t_arg[z].status));
+                        fflush(stdout);
+#endif
+                        pthread_cond_wait(&ctx->thread_cond_usleep, &ctx->thread_mutex_usleep);
+#if TDEBUG >= 1
+                        printf("[master] thread [%zu], got the signal with new state: %s.\n", z, thread_status_strdesc(t_arg[z].status));
+                        fflush(stdout);
+#endif
+                        if (t_arg[z].status == TH_FOUND_KEY) found = true;
+
+                        pthread_mutex_unlock(&ctx->thread_mutex_usleep);
+#if TDEBUG >= 1
+                        printf("[master] after pthread_cond_wait, TH_PROCESSING\n");
+                        fflush(stdout);
+#endif
+                        continue;
+                    }
+
+                    if (found) {
+#if TDEBUG >= 1
+                        printf("[master] thread [%zu], the key is found. set TH_END from TH_PROCESSING\n", z);
+                        fflush(stdout);
+#endif
+                        pthread_mutex_lock(&ctx->thread_mutexs[z]);
+                        t_arg[z].status = TH_END;
+                        t_arg[z].quit = true;
+                        pthread_mutex_unlock(&ctx->thread_mutexs[z]);
+                        continue;
+                    }
+                }
+                if (cur_status == TH_ERROR) {
+                    // something went wrong
+                    pthread_mutex_lock(&ctx->thread_mutexs[z]);
+                    t_arg[z].status = TH_END;
+                    t_arg[z].quit = true;
+                    pthread_mutex_unlock(&ctx->thread_mutexs[z]);
+                    continue;
+                }
+
+                if (cur_status >= TH_FOUND_KEY) {
+                    th_cnt++;
+
+                    if (cur_status == TH_FOUND_KEY) {
+                        thread_setEnd(ctx, t_arg);
+                        found = true;
+                        done = true;
+                    }
+                }
+            }
+
+            if (th_cnt == ctx->thread_count) done = true;
+
+        } while (!done);
+    }
+
+    return (found) ? 0 : 1;
+}
+
 int thread_destroy(thread_ctx_t *ctx) {
     if (!ctx) return -1;
     if (!ctx->init) return -2;
@@ -258,8 +452,6 @@ const char *thread_status_strdesc(thread_status_t s) {
             return (const char *) "PROCESSING";
         case TH_ERROR:
             return (const char *) "ERROR";
-        case TH_STOP:
-            return (const char *) "STOP";
         case TH_FOUND_KEY:
             return (const char *) "FOUND_KEY";
         case TH_END:
@@ -274,11 +466,10 @@ bool thread_setEnd(thread_ctx_t *ctx, thread_args_t *t_arg) {
 
     size_t z;
 
-    int m_ret = 0;
     int c_ret = 0;
 
     for (z = 0; z < ctx->thread_count; z++) {
-        m_ret = pthread_mutex_lock(&ctx->thread_mutexs[z]);
+        int m_ret = pthread_mutex_lock(&ctx->thread_mutexs[z]);
         if (m_ret != 0) {
             tprintf("[%zu] [%s] Error: pthread_mutex_lock() failed (%d): %s\n", z, __func__, m_ret, strerror(m_ret));
         }
@@ -296,10 +487,10 @@ bool thread_setEnd(thread_ctx_t *ctx, thread_args_t *t_arg) {
         }
 
 #if DEBUGME > 0
-        tprintf("[%zu] [%s] Set thread status to TH_STOP\n", z, __func__);
+        tprintf("[%zu] [%s] Set thread status to TH_END\n", z, __func__);
 #endif
 
-        t_arg[z].status = TH_STOP;
+        t_arg[z].status = TH_END;
 
         if (tmp == TH_WAIT) {
 #if DEBUGME > 0
@@ -366,7 +557,7 @@ void *computing_process(void *arg) {
 
     if (!ctx->force_hitag2_opencl) {
 #if DEBUGME >= 2
-        printf("[slave][%zu] master, I found %5u candidates @ slice %zu\n", z, matches_found[0], a->slice + 1);
+        printf("[%s][%zu] master, I found %5u candidates @ slice %zu\n", __func__, z, matches_found[0], a->slice + 1);
         fflush(stdout);
 #endif
 
@@ -378,7 +569,7 @@ void *computing_process(void *arg) {
         // the OpenCL kernel return only one key if found, else nothing
 
 #if TDEBUG >= 1
-        printf("[slave][%zu] master, I found the key @ slice %zu\n", z, a->slice + 1);
+        printf("[%s][%zu] master, I found the key @ slice %zu\n", __func__, z, a->slice + 1);
         fflush(stdout);
 #endif
 
@@ -400,32 +591,31 @@ void *computing_process_async(void *arg) {
     // fetching data from thread struct, I hope they are good
     thread_status_t status = a->status;
 
+    uint64_t *matches = a->matches;
+    uint32_t *matches_found = a->matches_found;
     uint32_t uid = a->uid;
     uint32_t aR2 = a->aR2;
     uint32_t nR1 = a->nR1;
     uint32_t nR2 = a->nR2;
 
-    uint64_t *matches = a->matches;
-    uint32_t *matches_found = a->matches_found;
-    size_t max_step = a->max_step;
+    size_t max_slices = a->max_slices;
 
     opencl_ctx_t *ctx = a->ocl_ctx;
 
     pthread_mutex_unlock(&a->thread_ctx->thread_mutexs[z]);
 
     uint64_t off = 0;
-//	size_t slice = 0;
     int ret = 0;
 
     if (status == TH_START) {
 #if TDEBUG >= 1
-        printf("[slave][%zu] plat id %d, uid %u, aR2 %u, nR1 %u, nR2 %u, Initial status: %s\n", z, ctx->id_platform, uid, aR2, nR1, nR2, thread_status_strdesc(status));
+        printf("[%s][%zu] plat id %d, uid %u, aR2 %u, nR1 %u, nR2 %u, Initial status: %s\n", __func__, z, ctx->id_platform, uid, aR2, nR1, nR2, thread_status_strdesc(status));
 #endif
         status = TH_WAIT;
         // proceed to next
     }
 
-    do { // slave
+    do {
         if (status == TH_WAIT) {
             pthread_mutex_lock(&a->thread_ctx->thread_mutexs[z]);
 
@@ -433,7 +623,7 @@ void *computing_process_async(void *arg) {
 
             if (a->status == TH_END) { // other threads found the key
                 fflush(stdout);
-                status = TH_END;
+                //status = TH_END;
                 a->quit = true;
                 pthread_mutex_unlock(&a->thread_ctx->thread_mutexs[z]);
                 pthread_exit(NULL);
@@ -444,7 +634,7 @@ void *computing_process_async(void *arg) {
                     pthread_mutex_lock(&a->thread_ctx->thread_mutex_usleep);
                     pthread_cond_signal(&a->thread_ctx->thread_cond_usleep);  // unlock master/TH_PROCESSING cond
 #if TDEBUG >= 1
-                    printf("[slate][%zu] after pthread_cond_signal TH_WAIT\n", z);
+                    printf("[%s][%zu] after pthread_cond_signal TH_WAIT\n", __func__, z);
                     fflush(stdout);
 #endif
                     pthread_mutex_unlock(&a->thread_ctx->thread_mutex_usleep);
@@ -452,7 +642,7 @@ void *computing_process_async(void *arg) {
             }
 
 #if TDEBUG >= 1
-            printf("[slave][%zu] master, i'm here to serve you. I'm in %s give me a signal.\n", z, thread_status_strdesc(status));
+            printf("[%s][%zu] master, i'm here to serve you. I'm in %s give me a signal.\n", __func__, z, thread_status_strdesc(status));
             fflush(stdout);
 #endif
 
@@ -461,7 +651,7 @@ void *computing_process_async(void *arg) {
             status = a->status; // read new status from master
 
 #if TDEBUG >= 2
-            printf("[slave][%zu] master, got the signal with new state: %s.\n", z, thread_status_strdesc(status));
+            printf("[%s][%zu] master, got the signal with new state: %s.\n", __func__, z, thread_status_strdesc(status));
             fflush(stdout);
 #endif
 
@@ -469,7 +659,7 @@ void *computing_process_async(void *arg) {
 
             if (status == TH_WAIT) {
 #if TDEBUG >=1
-                printf("[slave] ! Error: need to be TH_PROCESSING or TH_END, not TH_WAIT ... exit\n");
+                printf("[%s] ! Error: need to be TH_PROCESSING or TH_END, not TH_WAIT ... exit\n", __func__);
                 fflush(stdout);
 #endif
                 break;
@@ -478,7 +668,7 @@ void *computing_process_async(void *arg) {
 
         if (status == TH_ERROR) {
 #if TDEBUG >= 1
-            printf("[slave][%zu] master, got error signal, proceed with exit\n", z);
+            printf("[%s][%zu] master, got error signal, proceed with exit\n", __func__, z);
             fflush(stdout);
 #endif
             pthread_exit(NULL);
@@ -486,7 +676,7 @@ void *computing_process_async(void *arg) {
 
         if (status == TH_PROCESSING) {
 #if TDEBUG >= 2
-            printf("[slave][%zu] master, got a work-unit, processing ...\n", z);
+            printf("[%s][%zu] master, got a work-unit, processing ...\n", __func__, z);
             fflush(stdout);
 #endif
 
@@ -521,7 +711,7 @@ void *computing_process_async(void *arg) {
                     a->status = TH_ERROR;
                     pthread_mutex_unlock(&a->thread_ctx->thread_mutexs[z]);
 #if TDEBUG >= 1
-                    printf("[slave][%zu] master, something is broken, exit\n", z);
+                    printf("[%s][%zu] master, something is broken, exit\n", __func__, z);
                     fflush(stdout);
 #endif
 
@@ -529,7 +719,7 @@ void *computing_process_async(void *arg) {
                         pthread_mutex_lock(&a->thread_ctx->thread_mutex_usleep);
                         pthread_cond_signal(&a->thread_ctx->thread_cond_usleep);  // unlock master/TH_PROCESSING cond
 #if TDEBUG >= 1
-                        printf("[slave][%zu] after pthread_cond_signal TH_ERROR\n", z);
+                        printf("[%s][%zu] after pthread_cond_signal TH_ERROR\n", __func__, z);
 #endif
                         pthread_mutex_unlock(&a->thread_ctx->thread_mutex_usleep);
                     }
@@ -539,12 +729,12 @@ void *computing_process_async(void *arg) {
                 }
 
 #if TDEBUG >= 1
-                printf("[slave][%zu] master, process is done but no candidates found\n", z);
+                printf("[%s][%zu] master, process is done but no candidates found\n", __func__, z);
                 fflush(stdout);
 #endif
                 pthread_mutex_lock(&a->thread_ctx->thread_mutexs[z]);
 
-                if (a->slice >= max_step) a->status = TH_END;
+                if (a->slice >= max_slices) a->status = TH_END;
                 else a->status = TH_WAIT;
 
                 status = a->status;
@@ -555,7 +745,7 @@ void *computing_process_async(void *arg) {
                     pthread_mutex_lock(&a->thread_ctx->thread_mutex_usleep);
                     pthread_cond_signal(&a->thread_ctx->thread_cond_usleep);  // unlock master/TH_PROCESSING cond
 #if TDEBUG >= 1
-                    printf("[slave][%zu] after pthread_cond_signal TH_WAIT\n", z);
+                    printf("[%s][%zu] after pthread_cond_signal TH_WAIT\n", __func__, z);
                     fflush(stdout);
 #endif
                     pthread_mutex_unlock(&a->thread_ctx->thread_mutex_usleep);
@@ -566,7 +756,7 @@ void *computing_process_async(void *arg) {
 
             if (!ctx->force_hitag2_opencl) {
 #if TDEBUG >= 1
-                printf("[slave][%zu] master, we got %5u candidates. Proceed to validation\n", z, matches_found[0]);
+                printf("[%s][%zu] master, we got %5u candidates. Proceed to validation\n", __func__, z, matches_found[0]);
                 fflush(stdout);
 #endif
 
@@ -576,7 +766,7 @@ void *computing_process_async(void *arg) {
                         a->status = TH_END;
                         pthread_mutex_unlock(&a->thread_ctx->thread_mutexs[z]);
 #if TDEBUG >= 1
-                        printf("[slave][%zu] master, Another thread found the key, quit 2 \n", z);
+                        printf("[%s][%zu] master, Another thread found the key, quit 2 \n", __func__, z);
                         fflush(stdout);
 #endif
 
@@ -584,7 +774,8 @@ void *computing_process_async(void *arg) {
                             pthread_mutex_lock(&a->thread_ctx->thread_mutex_usleep);
                             pthread_cond_signal(&a->thread_ctx->thread_cond_usleep);  // unlock master/TH_PROCESSING cond
 #if TDEBUG >= 1
-                            printf("[slave][%zu] after pthread_cond_signal TH_END\n", z);
+                            printf("[%s][%zu] after pthread_cond_signal TH_END\n", __func__, z);
+                            fflush (stdout);
 #endif
                             pthread_mutex_unlock(&a->thread_ctx->thread_mutex_usleep);
                         }
@@ -600,7 +791,7 @@ void *computing_process_async(void *arg) {
                         a->quit = true;
                         pthread_mutex_unlock(&a->thread_ctx->thread_mutexs[z]);
 #if TDEBUG >= 1
-                        printf("[slave][%zu] master, I found the key ! state %" STR(OFF_FORMAT_U) ", slice %zu\n", z, a->s, a->slice + 1);
+                        printf("[%s][%zu] master, I found the key ! state %" STR(OFF_FORMAT_U) ", slice %zu\n", __func__, z, a->s, a->slice + 1);
                         fflush(stdout);
 #endif
 
@@ -608,7 +799,7 @@ void *computing_process_async(void *arg) {
                             pthread_mutex_lock(&a->thread_ctx->thread_mutex_usleep);
                             pthread_cond_signal(&a->thread_ctx->thread_cond_usleep);  // unlock master/TH_PROCESSING cond
 #if TDEBUG >= 1
-                            printf("[slave][%zu] after pthread_cond_signal TH_FOUND_KEY\n", z);
+                            printf("[%s][%zu] after pthread_cond_signal TH_FOUND_KEY\n", __func__, z);
 #endif
                             pthread_mutex_unlock(&a->thread_ctx->thread_mutex_usleep);
                         }
@@ -622,7 +813,7 @@ void *computing_process_async(void *arg) {
                     a->status = TH_END;
                     pthread_mutex_unlock(&a->thread_ctx->thread_mutexs[z]);
 #if TDEBUG >= 1
-                    printf("[slave][%zu] master, Another thread found the key, quit 1 \n", z);
+                    printf("[%s][%zu] master, Another thread found the key, quit 1 \n", __func__, z);
                     fflush(stdout);
 #endif
 
@@ -630,7 +821,7 @@ void *computing_process_async(void *arg) {
                         pthread_mutex_lock(&a->thread_ctx->thread_mutex_usleep);
                         pthread_cond_signal(&a->thread_ctx->thread_cond_usleep);  // unlock master/TH_PROCESSING cond
 #if TDEBUG >= 1
-                        printf("[slave][%zu] after pthread_cond_signal TH_END\n", z);
+                        printf("[%s][%zu] after pthread_cond_signal TH_END\n", __func__, z);
 #endif
                         pthread_mutex_unlock(&a->thread_ctx->thread_mutex_usleep);
                     }
@@ -651,7 +842,7 @@ void *computing_process_async(void *arg) {
                 a->quit = true;
                 pthread_mutex_unlock(&a->thread_ctx->thread_mutexs[z]);
 #if TDEBUG >= 1
-                printf("[slave][%zu] master, I found the key at slice %zu\n", z, a->slice + 1);
+                printf("[%s][%zu] master, I found the key at slice %zu\n", __func__, z, a->slice + 1);
                 fflush(stdout);
 #endif
 
@@ -659,7 +850,7 @@ void *computing_process_async(void *arg) {
                     pthread_mutex_lock(&a->thread_ctx->thread_mutex_usleep);
                     pthread_cond_signal(&a->thread_ctx->thread_cond_usleep);  // unlock master/TH_PROCESSING cond
 #if TDEBUG >= 1
-                    printf("[slave][%zu] after pthread_cond_signal TH_FOUND_KEY\n", z);
+                    printf("[%s][%zu] after pthread_cond_signal TH_FOUND_KEY\n", __func__, z);
 #endif
                     pthread_mutex_unlock(&a->thread_ctx->thread_mutex_usleep);
                 }
@@ -671,10 +862,10 @@ void *computing_process_async(void *arg) {
         if (status >= TH_FOUND_KEY) {
 #if TDEBUG >= 1
             if (status == TH_FOUND_KEY) {
-                printf("[slave][%zu] master, TH_FOUND_KEY, if you see this message, something is wrong\n", z);
+                printf("[%s][%zu] master, TH_FOUND_KEY, if you see this message, something is wrong\n", __func__, z);
                 fflush(stdout);
             } else if (status == TH_END) {
-                printf("[slave][%zu] master, TH_END reached\n", z);
+                printf("[%s][%zu] master, TH_END reached\n", __func__, z);
                 fflush(stdout);
             }
 #endif
