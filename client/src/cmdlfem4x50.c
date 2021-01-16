@@ -1249,11 +1249,25 @@ int CmdEM4x50Sim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&password, sizeof(password));
     PacketResponseNG resp;
-    WaitForResponse(CMD_LF_EM4X50_SIM, &resp);
-    if (resp.status == PM3_SUCCESS)
-        PrintAndLogEx(INFO, "Done");
+    
+    PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
+    bool keypress = kbd_enter_pressed();
+    while (keypress == false) {
+        keypress = kbd_enter_pressed();
+
+        if (WaitForResponseTimeout(CMD_LF_EM4X50_SIM, &resp, 1500)) {
+            break;
+        }
+
+    }
+    if (keypress) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+    }
+
+    if ((resp.status == PM3_SUCCESS) || (resp.status == PM3_EOPABORTED))
+        PrintAndLogEx(SUCCESS, "Done");
     else
-        PrintAndLogEx(FAILED, "No valid em4x50 data in memory.");
+        PrintAndLogEx(FAILED, "No valid em4x50 data in memory");
 
     return resp.status;
 }
