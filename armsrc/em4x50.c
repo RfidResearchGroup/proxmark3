@@ -708,9 +708,9 @@ static int em4x50_sim_send_bit(uint8_t bit) {
 static int em4x50_sim_send_byte(uint8_t byte) {
 
     // send byte
-    for (int i = 0; i < 8; i++)
-        if (em4x50_sim_send_bit((byte >> (7 - i)) & 1) == PM3_ETIMEOUT)
-            return PM3_ETIMEOUT;
+    for (int i = 0; i < 8; i++) {
+        em4x50_sim_send_bit((byte >> (7 - i)) & 1);
+    }
 
     return PM3_SUCCESS;
 
@@ -724,13 +724,8 @@ static int em4x50_sim_send_byte_with_parity(uint8_t byte) {
     for (int i = 0; i < 8; i++)
         parity ^= (byte >> i) & 1;
 
-    if (em4x50_sim_send_byte(byte) == PM3_ETIMEOUT) {
-        return PM3_ETIMEOUT;
-    }
-
-    if (em4x50_sim_send_bit(parity) == PM3_ETIMEOUT) {
-        return PM3_ETIMEOUT;
-    }
+    em4x50_sim_send_byte(byte);
+    em4x50_sim_send_bit(parity);
 
     return PM3_SUCCESS;
 }
@@ -744,9 +739,7 @@ static int em4x50_sim_send_word(uint32_t word) {
 
     // 4 bytes each with even row parity bit
     for (int i = 0; i < 4; i++) {
-        if (em4x50_sim_send_byte_with_parity((word >> ((3 - i) * 8)) & 0xFF) == PM3_ETIMEOUT) {
-            return PM3_ETIMEOUT;
-        }
+        em4x50_sim_send_byte_with_parity((word >> ((3 - i) * 8)) & 0xFF);
     }
 
     // column parity
@@ -756,14 +749,10 @@ static int em4x50_sim_send_word(uint32_t word) {
             cparity ^= (((word >> ((3 - j) * 8)) & 0xFF) >> (7 - i)) & 1;
         }
     }
-    if (em4x50_sim_send_byte(cparity) == PM3_ETIMEOUT) {
-        return PM3_ETIMEOUT;
-    }
+    em4x50_sim_send_byte(cparity);
 
     // stop bit
-    if (em4x50_sim_send_bit(0) == PM3_ETIMEOUT) {
-        return PM3_ETIMEOUT;
-    }
+    em4x50_sim_send_bit(0);
 
     return PM3_SUCCESS;
 }
@@ -848,15 +837,11 @@ static int em4x50_sim_read_bit(void) {
  
 static int em4x50_sim_read_byte(void) {
     
-    int bit = 0, byte = 0;
+    int byte = 0;
     
     for (int i = 0; i < 8; i++) {
         byte <<= 1;
-        bit = em4x50_sim_read_bit();
-        if (bit == PM3_ETIMEOUT) {
-            return PM3_ETIMEOUT;
-        }
-        byte |= bit;
+        byte |= em4x50_sim_read_bit();
     }
         
     return byte;
@@ -864,24 +849,16 @@ static int em4x50_sim_read_byte(void) {
 
 static int em4x50_sim_read_byte_with_parity_check(uint8_t *byte) {
     
-    int bit = 0, pval = 0;
+    int pval = 0;
     uint8_t parity = 0;
     
     for (int i = 0; i < 8; i++) {
         *byte <<= 1;
-        bit = em4x50_sim_read_bit();
-        if (bit == PM3_ETIMEOUT) {
-            return PM3_ETIMEOUT;
-        }
-        *byte |= bit;
-
+        *byte |= em4x50_sim_read_bit();
         parity ^= ((*byte) & 1);
     }
         
     pval = em4x50_sim_read_bit();
-    if (pval == PM3_ETIMEOUT) {
-        return PM3_ETIMEOUT;
-    }
 
     return (parity == pval) ? PM3_SUCCESS : PM3_EFAILED;
 }
@@ -894,20 +871,12 @@ static int em4x50_sim_read_word(uint32_t *word) {
 
     // read plain data
     for (int i = 0; i < 4; i++) {
-        if (em4x50_sim_read_byte_with_parity_check(&bytes[i]) != PM3_SUCCESS) {
-            return PM3_ETIMEOUT;
-        }
+        em4x50_sim_read_byte_with_parity_check(&bytes[i]);
     }
-        
+
     // read column parities and stop bit
     parities = em4x50_sim_read_byte();
-    if (parities == PM3_ETIMEOUT) {
-        return PM3_ETIMEOUT;
-    }
     stop_bit = em4x50_sim_read_bit();
-    if (stop_bit == PM3_ETIMEOUT) {
-        return PM3_ETIMEOUT;
-    }
 
     // calculate column parities from data
     for (int i = 0; i < 8; i++) {
@@ -1217,8 +1186,7 @@ static int em4x50_sim_handle_selective_read_command(uint32_t *tag) {
     // last word read protected
     int lwrp = (reflect32(tag[EM4X50_PROTECTION]) >> 8) & 0xFF;
     
-    // iceman,  will need a usb cmd check to break as well
-    while (BUTTON_PRESS() == false) {
+    while ((BUTTON_PRESS() == false) && (data_available() == false)) {
 
         WDT_HIT();
 
@@ -1260,7 +1228,7 @@ static int em4x50_sim_handle_standard_read_command(uint32_t *tag) {
     int lwrp = (reflect32(tag[EM4X50_PROTECTION]) >> 8) & 0xFF;
 
     // iceman,  will need a usb cmd check to break as well
-    while (BUTTON_PRESS() == false) {
+    while ((BUTTON_PRESS() == false) && (data_available() == false)) {
 
         WDT_HIT();
 
@@ -1832,10 +1800,6 @@ void em4x50_sim(uint32_t *password) {
 
         for (;;) {
 
-            if (data_available()) {
-                command = PM3_EOPABORTED;
-            }
-            
             switch (command) {
 
                 case EM4X50_COMMAND_LOGIN:
@@ -1863,10 +1827,12 @@ void em4x50_sim(uint32_t *password) {
                     break;
             }
             
+            // stop if key (pm3 button or enter key) has been pressed
             if (command == PM3_EOPABORTED) {
                 break;
             }
             
+            // if timeout (e.g. no reader field) go on with standard read mode
             if (command == PM3_ETIMEOUT) {
                 command = EM4X50_COMMAND_STANDARD_READ;
             }

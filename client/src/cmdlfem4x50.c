@@ -1212,6 +1212,7 @@ int CmdEM4x50Restore(const char *Cmd) {
 
 int CmdEM4x50Sim(const char *Cmd) {
     
+    int status = PM3_EFAILED;
     uint32_t password = 0;
     
     CLIParserContext *ctx;
@@ -1256,16 +1257,18 @@ int CmdEM4x50Sim(const char *Cmd) {
         keypress = kbd_enter_pressed();
 
         if (WaitForResponseTimeout(CMD_LF_EM4X50_SIM, &resp, 1500)) {
+            status = resp.status;
             break;
         }
 
     }
     if (keypress) {
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        status = PM3_EOPABORTED;
     }
 
-    if ((resp.status == PM3_SUCCESS) || (resp.status == PM3_EOPABORTED))
-        PrintAndLogEx(SUCCESS, "Done");
+    if ((status == PM3_SUCCESS) || (status == PM3_EOPABORTED))
+        PrintAndLogEx(INFO, "Done");
     else
         PrintAndLogEx(FAILED, "No valid em4x50 data in memory");
 
