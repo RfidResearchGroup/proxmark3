@@ -70,35 +70,10 @@ bool gLogin = false;
 // to be able to identfiy it
 bool gWritePasswordProcess = false;
 
-static int em4x50_sim_send_listen_window(uint32_t *tag);
-
-void catch_samples(void);
-
 // do nothing for <period> using timer0
 static void wait_timer(uint32_t period) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
     while (AT91C_BASE_TC0->TC_CV < period);
-}
-
-void catch_samples(void) {
-
-    uint8_t sample = 0;
-
-    if (EM4X50_MAX_NO_SAMPLES > CARD_MEMORY_SIZE) {
-        Dbprintf("exeeded emulator memory size");
-        return;
-    }
-
-    uint8_t *em4x50_sample_buffer = BigBuf_get_addr();
-
-    memcpy(em4x50_sample_buffer, &gHigh, 1);
-    memcpy(em4x50_sample_buffer + 1, &gLow, 1);
-
-    for (int i = 2; i < EM4X50_MAX_NO_SAMPLES + 2; i++) {
-        sample = AT91C_BASE_SSC->SSC_RHR;
-        memcpy(em4x50_sample_buffer + i, &sample, 1);
-        wait_timer(T0); // 8µs delay
-    }
 }
 
 // extract and check parities
@@ -387,7 +362,7 @@ static void em4x50_reader_send_byte(uint8_t byte) {
     }
 }
 
-// send byte followed by its (equal) parity bit
+// send byte followed by its (even) parity bit
 static void em4x50_reader_send_byte_with_parity(uint8_t byte) {
     int parity = 0, bit = 0;
 
@@ -537,8 +512,6 @@ static bool check_ack(bool bliw) {
         
         if (check_pulse_length(get_pulse_length(), 2 * EM4X50_T_TAG_FULL_PERIOD)) {
 
-            //catch_samples();
-            
             // The received signal is either ACK or NAK.
 
             if (check_pulse_length(get_pulse_length(), 2 * EM4X50_T_TAG_FULL_PERIOD)) {
@@ -1245,7 +1218,7 @@ static void wait_cycles(int maxperiods) {
     }
 }
 
-// read single bit while simulating
+// read single bit in simulation mode
 static int em4x50_sim_read_bit(void) {
 
     int cycles = 0;
@@ -1292,7 +1265,7 @@ static int em4x50_sim_read_bit(void) {
     return 1;
 }
 
-// read byte in while simulation either with or without parity check (even)
+// read byte in simulation mode either with or without parity check (even)
 static bool em4x50_sim_read_byte(uint8_t *byte, bool paritycheck) {
     
     for (int i = 0; i < 8; i++) {
@@ -1318,7 +1291,7 @@ static bool em4x50_sim_read_byte(uint8_t *byte, bool paritycheck) {
         
 }
 
-// read complete word while simulating
+// read complete word in simulation mode
 static bool em4x50_sim_read_word(uint32_t *word) {
     
     uint8_t stop_bit = 0;
@@ -1379,7 +1352,7 @@ static int check_rm_request(uint32_t *tag) {
     return (bit != PM3_ETIMEOUT) ? PM3_SUCCESS : PM3_ETIMEOUT;
 }
 
-// send single listen window while simulating
+// send single listen window in simulation mode
 static int em4x50_sim_send_listen_window(uint32_t *tag) {
     
     SHORT_COIL();
@@ -1454,7 +1427,7 @@ static void em4x50_sim_send_nak(void) {
     OPEN_COIL();
 }
 
-// standard read mode process (simulation mode) 
+// standard read mode process (simulation mode)
 static int em4x50_sim_handle_standard_read_command(uint32_t *tag) {
     
     int command = 0;
@@ -1560,13 +1533,10 @@ static int em4x50_sim_handle_login_command(uint32_t *tag) {
     uint32_t password = 0;
     bool pwd = em4x50_sim_read_word(&password);
     
-    // signal that reader sent the password
-    LED_D_ON();
-    
     // processing pause time (corresponds to a "1" bit)
     em4x50_sim_send_bit(1);
 
-    // empirically determined delay (to be examined seperately)
+    // empirically determined delay (to be checked in detail)
     wait_cycles(1);
     
     if (pwd && (password == reflect32(tag[EM4X50_DEVICE_PASSWORD]))) {
@@ -1593,7 +1563,7 @@ static int em4x50_sim_handle_reset_command(uint32_t *tag) {
     gLogin = false;
     LED_A_OFF();
     
-    // wait for tinit
+    // wait for initialization (tinit)
     wait_cycles(EM4X50_T_TAG_TINIT);
     
     // continue with standard read mode
@@ -1681,7 +1651,7 @@ static int em4x50_sim_handle_write_command(uint32_t *tag) {
     
     // EEPROM write time
     // strange: need some sort of 'waveform correction', otherwise ack signal
-    // will not be detected; sending a single "1" as last "bit"" of Twee
+    // will not be detected; sending a single "1" as last "bit" of Twee
     // seems to solve the problem
     wait_cycles(EM4X50_T_TAG_TWEE - EM4X50_T_TAG_FULL_PERIOD);
     em4x50_sim_send_bit(1);
@@ -1775,7 +1745,6 @@ static int em4x50_sim_handle_writepwd_command(uint32_t *tag) {
 // LED A -> operations that require authentication are possible
 // LED B -> standard read mode is active
 // LED C -> command has been transmitted by reader
-// LED D -> password has been caught from reader
 void em4x50_sim(uint32_t *password) {
     
     int command = PM3_ENODATA;
@@ -1857,89 +1826,4 @@ void em4x50_sim(uint32_t *password) {
     BigBuf_free();
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_SIM, command, NULL, 0);
-}
-
-void em4x50_test(em4x50_test_t *ett) {
-
-    int status = 0;
-
-    // set field on or off
-    if (ett->field != -1) {
-        em4x50_setup_read();
-        if (ett->field == 1) {
-            LED_A_ON();
-        } else {
-            HIGH(GPIO_SSC_DOUT);
-            LED_A_OFF();
-        }
-        status = ett->field;
-    }
-
-    // check field status
-    if (ett->check_field) {
-        em4x50_setup_sim();
-        bool field_on = false;
-        while (BUTTON_PRESS() == false) {
-
-            if (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
-                if (field_on == false) {
-                    Dbprintf("field on");
-                    field_on = true;
-                }
-            } else if (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK){
-                if (field_on == true) {
-                    Dbprintf("field off");
-                    field_on = false;
-                }
-            }
-        }
-        status = 1;
-    }
-    
-    // timing values
-    if (ett->cycles != 0) {
-        uint32_t tval = 0;
-        uint32_t tvalhigh[ett->cycles];
-        uint32_t tvallow[ett->cycles];
-
-        em4x50_setup_sim();
-        while (AT91C_BASE_TC0->TC_CV > 0);
-        
-        for (int t = 0; t < ett->cycles; t++) {
-        
-            // field on -> high value
-            AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-            tval = AT91C_BASE_TC0->TC_CV;
-            while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
-            tvalhigh[t] = AT91C_BASE_TC0->TC_CV - tval;
-
-            // filed off -> zero value
-            AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-            tval = AT91C_BASE_TC0->TC_CV;
-            while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);
-            tvallow[t] = AT91C_BASE_TC0->TC_CV - tval;
-        }
-        
-        for (int t = 0; t < ett->cycles; t++) {
-            Dbprintf("%03i %li %li", t, tvallow[t], tvalhigh[t]);
-        }
-
-    }
-        
-    // perform reset
-    if (ett->reset) {
-        em4x50_setup_read();
-
-        status = PM3_EFAILED;
-        if (get_signalproperties() && find_em4x50_tag()) {
-
-            if (reset() == PM3_SUCCESS) {
-                status = 1;
-            }
-        }
-
-        lf_finalize();
-    }
-
-    reply_ng(CMD_LF_EM4X50_TEST, status, NULL, 0);
 }

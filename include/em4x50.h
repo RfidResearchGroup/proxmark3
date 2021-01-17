@@ -36,8 +36,6 @@
 // misc
 #define TIMEOUT                     2000
 #define DUMP_FILESIZE               136
-#define EM4X50_MAX_NO_SAMPLES       1000
-#define EM4X50_MAX_TIME_SAMPLES     1000
 
 #define BYTES2UINT32(x) ((x[0] << 24) | (x[1] << 16) | (x[2] << 8) | (x[3]))
 
@@ -49,13 +47,6 @@ typedef struct {
     uint32_t word;
     uint32_t addresses;
 } PACKED em4x50_data_t;
-
-typedef struct {
-    bool check_field;
-    bool reset;
-    int field;
-    int cycles;
-} PACKED em4x50_test_t;
 
 typedef struct {
     uint8_t byte[4];
