@@ -40,8 +40,10 @@
 #define EM4X50_T_TAG_WAITING_FOR_SIGNAL     75
 #define EM4X50_T_WAITING_FOR_DBLLIW         1550
 #define EM4X50_T_WAITING_FOR_ACK            4
-#define EM4X50_T_SIMULATION_TIMEOUT_READ    5000 // 400
-#define EM4X50_T_SIMULATION_TIMEOUT_WAIT    5000 // 50
+
+// timeout values for simulation mode (may vary with regard to reader)
+#define EM4X50_T_SIMULATION_TIMEOUT_READ    600
+#define EM4X50_T_SIMULATION_TIMEOUT_WAIT    50
 
 // the following value seems to be critical; if it's too low (e.g. < 120)
 // some cards are no longer readable although they're ok
@@ -1118,18 +1120,19 @@ void em4x50_writepwd(em4x50_data_t *etd) {
 // send bit in receive mode by counting carrier cycles
 static void em4x50_sim_send_bit(uint8_t bit) {
 
-    uint16_t timeout = EM4X50_T_TAG_FULL_PERIOD;
+    //uint16_t timeout = EM4X50_T_TAG_FULL_PERIOD;
+    uint16_t timeout = 500;
 
     for (int t = 0; t < EM4X50_T_TAG_FULL_PERIOD; t++) {
 
         // wait until SSC_CLK goes HIGH
         // used as a simple detection of a reader field?
-        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) && (timeout--));
+        while ((timeout--) && !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
         
-        if (timeout == 0) {
+        if (timeout <= 0) {
             return;
         }
-        timeout = EM4X50_T_TAG_FULL_PERIOD;
+        timeout = 500;
 
         if (bit)
             OPEN_COIL();
@@ -1137,11 +1140,11 @@ static void em4x50_sim_send_bit(uint8_t bit) {
             SHORT_COIL();
 
         //wait until SSC_CLK goes LOW
-        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK && (timeout--));
-        if (timeout == 0) {
+        while ((timeout--) && (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
+        if (timeout <= 0) {
             return;
         }
-        timeout = EM4X50_T_TAG_FULL_PERIOD;
+        timeout = 500;
 
         if (t == EM4X50_T_TAG_HALF_PERIOD)
             bit ^= 1;
@@ -1202,13 +1205,13 @@ static void wait_cycles(int maxperiods) {
 
     while (period < maxperiods) {
         
-        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) && (timeout--));
+        while ((timeout--) && !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
         if (timeout <= 0) {
             return;
         }
         timeout = EM4X50_T_SIMULATION_TIMEOUT_WAIT;
         
-        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK && (timeout--));
+        while ((timeout--) && (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
         if (timeout <= 0) {
             return;
         }
@@ -1238,7 +1241,7 @@ static int em4x50_sim_read_bit(void) {
             if (AT91C_BASE_TC0->TC_CV > T0 * EM4X50_ZERO_DETECTION) {
 
                 // gap detected; wait until reader field is switched on again
-                while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK && (timeout--));
+                while ((timeout--) && (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
                 
                 if (timeout <= 0) {
                     return PM3_ETIMEOUT;
@@ -1253,7 +1256,6 @@ static int em4x50_sim_read_bit(void) {
                 // (cf. datasheet)
                 return 0;
             }
-
         }
 
         // no gap detected, i.e. reader field is still up;
@@ -1433,7 +1435,7 @@ static int em4x50_sim_handle_standard_read_command(uint32_t *tag) {
     int command = 0;
 
     // extract control data
-    int fwr = reflect32(tag[EM4X50_CONTROL]) & 0xFF;      // first word read
+    int fwr = reflect32(tag[EM4X50_CONTROL]) & 0xFF;        // first word read
     int lwr = (reflect32(tag[EM4X50_CONTROL]) >> 8) & 0xFF; // last word read
     // extract protection data:
     // first word read protected
@@ -1441,7 +1443,6 @@ static int em4x50_sim_handle_standard_read_command(uint32_t *tag) {
     // last word read protected
     int lwrp = (reflect32(tag[EM4X50_PROTECTION]) >> 8) & 0xFF;
 
-    // iceman,  will need a usb cmd check to break as well
     while ((BUTTON_PRESS() == false) && (data_available() == false)) {
 
         WDT_HIT();
@@ -1536,9 +1537,6 @@ static int em4x50_sim_handle_login_command(uint32_t *tag) {
     // processing pause time (corresponds to a "1" bit)
     em4x50_sim_send_bit(1);
 
-    // empirically determined delay (to be checked in detail)
-    wait_cycles(1);
-    
     if (pwd && (password == reflect32(tag[EM4X50_DEVICE_PASSWORD]))) {
         em4x50_sim_send_ack();
         gLogin = true;
@@ -1766,6 +1764,7 @@ void em4x50_sim(uint32_t *password) {
         // init
         em4x50_setup_sim();
         gLogin = false;
+        gWritePasswordProcess = false;
 
         // start with inital command = standard read mode
         command = EM4X50_COMMAND_STANDARD_READ;
@@ -1809,6 +1808,12 @@ void em4x50_sim(uint32_t *password) {
                     LED_C_OFF();
                     command = em4x50_sim_handle_standard_read_command(tag);
                     break;
+                    
+                // bit errors during reading may lead to unknown commands
+                // -> continue with standard read mode
+                default:
+                    command = EM4X50_COMMAND_STANDARD_READ;
+                    break;
             }
             
             // stop if key (pm3 button or enter key) has been pressed
@@ -1822,7 +1827,7 @@ void em4x50_sim(uint32_t *password) {
             }
         }
     }
-    
+
     BigBuf_free();
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_SIM, command, NULL, 0);
