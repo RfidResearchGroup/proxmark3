@@ -78,6 +78,7 @@ static void wait_timer(uint32_t period) {
     while (AT91C_BASE_TC0->TC_CV < period);
 }
 
+
 // extract and check parities
 // return result of parity check and extracted plain data
 static bool extract_parities(uint64_t word, uint32_t *data) {
@@ -177,17 +178,9 @@ static void em4x50_setup_read(void) {
 }
 
 static void em4x50_setup_sim(void) {
-    StopTicks();
-
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-
-    sample_config *sc = getSamplingConfig();
-    sc->decimation = 1;
-    sc->averaging = 0;
-    sc->divisor = LF_DIVISOR_125;
-
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
 
     AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
     AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
@@ -444,7 +437,7 @@ static int find_double_listen_window(bool bcommand) {
                 // first listen window found
 
                 if (bcommand) {
-                    
+
                     // data transmission from card has to be stopped, because
                     // a commamd shall be issued
 
@@ -463,6 +456,7 @@ static int find_double_listen_window(bool bcommand) {
                         // send RM for request mode
                         em4x50_reader_send_bit(0);
                         em4x50_reader_send_bit(0);
+
                         LED_B_OFF();
 
                         return PM3_SUCCESS;
@@ -511,7 +505,7 @@ static bool check_ack(bool bliw) {
     while (count_cycles < EM4X50_T_WAITING_FOR_ACK) {
         if (BUTTON_PRESS())
             return false;
-        
+
         if (check_pulse_length(get_pulse_length(), 2 * EM4X50_T_TAG_FULL_PERIOD)) {
 
             // The received signal is either ACK or NAK.
@@ -661,12 +655,11 @@ static bool login(uint32_t password) {
         // send password
         em4x50_reader_send_word(password);
 
-        wait_timer(T0 * (EM4X50_T_TAG_TPP));
+        wait_timer(T0 * EM4X50_T_TAG_TPP);
 
         // check if ACK is returned
-        if (check_ack(false)) {
+        if (check_ack(false))
             return PM3_SUCCESS;
-        }
 
     } else {
         if (DBGLEVEL >= DBG_DEBUG)
@@ -808,7 +801,7 @@ static int reset(void) {
 
         // send reset command
         em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_RESET);
-        
+
         if (check_ack(false))
             return PM3_SUCCESS;
 
@@ -924,7 +917,7 @@ void em4x50_info(em4x50_data_t *etd) {
     }
 
     lf_finalize();
-    
+
     reply_ng(CMD_LF_EM4X50_INFO, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
 
@@ -941,7 +934,6 @@ void em4x50_reader(void) {
 
     LOW(GPIO_SSC_DOUT);
     lf_finalize();
-    
     reply_ng(CMD_LF_EM4X50_READER, now, (uint8_t *)words, 4 * now);
 }
 
@@ -970,15 +962,14 @@ static int write(uint32_t word, uint32_t addresses) {
             // look for ACK sequence
             if (check_ack(false)) {
 
-                // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time)
+                // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time = 3.2ms = 50 * 64 periods)
                 // for saving data and should return with ACK
                 for (int i = 0; i < 50; i++) {
                     wait_timer(T0 * EM4X50_T_TAG_FULL_PERIOD);
                 }
 
-                if (check_ack(false)) {
+                if (check_ack(false))
                     return PM3_SUCCESS;
-                }
             }
         }
     } else {
@@ -1019,15 +1010,14 @@ static int write_password(uint32_t password, uint32_t new_password) {
 
                 if (check_ack(false)) {
 
-                    // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time)
+                    // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time = 3.2ms = 50 * 64 periods)
                     // for saving data and should return with ACK
                     for (int i = 0; i < 50; i++) {
                         wait_timer(T0 * EM4X50_T_TAG_FULL_PERIOD);
                     }
 
-                    if (check_ack(false)) {
+                    if (check_ack(false))
                         return PM3_SUCCESS;
-                    }
                 }
             }
         }
@@ -1425,8 +1415,6 @@ static void em4x50_sim_send_nak(void) {
 
     SHORT_COIL();
     wait_cycles(EM4X50_T_TAG_HALF_PERIOD);
-
-    OPEN_COIL();
 }
 
 // standard read mode process (simulation mode)
@@ -1821,9 +1809,12 @@ void em4x50_sim(uint32_t *password) {
                 break;
             }
             
-            // if timeout (e.g. no reader field) continue with standard read mode
+            // if timeout (e.g. no reader field) continue with standard read
+            // mode and reset former authentication
             if (command == PM3_ETIMEOUT) {
                 command = EM4X50_COMMAND_STANDARD_READ;
+                gLogin = false;
+                LED_A_OFF();
             }
         }
     }
