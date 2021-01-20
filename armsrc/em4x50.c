@@ -1111,7 +1111,7 @@ void em4x50_writepwd(em4x50_data_t *etd) {
 static void em4x50_sim_send_bit(uint8_t bit) {
 
     //uint16_t timeout = EM4X50_T_TAG_FULL_PERIOD;
-    uint16_t timeout = 500;
+    uint16_t timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
     for (int t = 0; t < EM4X50_T_TAG_FULL_PERIOD; t++) {
 
@@ -1122,7 +1122,7 @@ static void em4x50_sim_send_bit(uint8_t bit) {
         if (timeout <= 0) {
             return;
         }
-        timeout = 500;
+        timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
         if (bit)
             OPEN_COIL();
@@ -1134,7 +1134,7 @@ static void em4x50_sim_send_bit(uint8_t bit) {
         if (timeout <= 0) {
             return;
         }
-        timeout = 500;
+        timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
         if (t == EM4X50_T_TAG_HALF_PERIOD)
             bit ^= 1;
