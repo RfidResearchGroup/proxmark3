@@ -123,11 +123,13 @@ proxmark3
 
 and you must adapt accordingly the file path of some commands, e.g.
 
+using the executable direct:
 ```
 proxmark3 <YOUR_PORT_HERE> --flash --image /usr/local/share/proxmark3/firmware/fullimage.elf
 <>
 proxmark3 <YOUR_PORT_HERE> --flash --image /usr/share/proxmark3/firmware/fullimage.elf
 
+using the script:
 pm3 --> smart upgrade -f /usr/local/share/proxmark3/firmware/sim011.bin
 <>
 pm3 --> smart upgrade -f /usr/share/proxmark3/firmware/sim011.bin
