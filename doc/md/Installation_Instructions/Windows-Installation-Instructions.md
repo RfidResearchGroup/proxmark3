@@ -23,7 +23,9 @@ We have listed three ways to use these two setups  (dev environment vs pre-compi
 _note:  this video is a bit out-of-date but still informative_
 [![Windows Installation tutorial](https://github.com/5w0rdfish/Proxmark3-RDV4-ParrotOS/blob/master/screenshot-www.youtube.com-2019.03.17-20-44-33.png)](https://youtu.be/zzF0NCMJnYU "Windows Installation Tutorial")
 
-## Driver Installation
+## Driver Installation ( Windows 7 )
+
+_note: for Windows 7 you will this step.  On a later Windows edition skip this._
 
 Install required drivers for your Windows installation. You may need admin privileges to do this.  
 Step by step guides are online such as [RyscCorps](https://store.ryscc.com/blogs/news/how-to-install-a-proxmark3-driver-on-windows-10).
@@ -73,7 +75,10 @@ pacman -S mingw-w64-x86_64-astyle
 
 To use the compiled client, the only differences are that executables end with `.exe` (e.g. `proxmark3.exe`) and that the Proxmark3 port is one of your `comX` ports where "X" is the com port number assigned to proxmark3 under Windows, so commands like `proxmark3 /dev/ttyACMX` become `proxmark3.exe comX`.
 
+## Done!
+
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
+
 
 # Installing pre-compiled binaries with ProxSpace
 ^[Top](#top)
@@ -166,6 +171,8 @@ echo "export DISPLAY=:0" >> ~/.bashrc
 ```
 
 Note that it may take a quite long time for a freshly plugged Proxmark3 to be visible on a WSL /dev/ttySX port.
+
+## Done!
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 
