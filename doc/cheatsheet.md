@@ -544,10 +544,10 @@ Set timings to default
 ```
 Options
 ---
-p            : persist to flashmemory
-z            : Set default t55x7 timings (use p to save if required)
+-p            : persist to flash memory (RDV4)
+-z            : Set default t55x7 timings (use `-p` to save if required)
 
-pm3 --> lf t55xx deviceconfig z p
+pm3 --> lf t55xx deviceconfig -z -p
 ```
 
 Write to T55xx block

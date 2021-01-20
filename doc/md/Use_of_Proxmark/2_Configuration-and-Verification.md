@@ -8,16 +8,16 @@ You will need to run these commands to make sure your rdv4 is prepared
 
 The lua script actually executes the following commands below.  These are here because of documentation, you can jump down to *Verify sim module firmware version* part.
 ```
-[usb] pm3 --> mem load f mfc_default_keys m
-[usb] pm3 --> mem load f t55xx_default_pwds t
-[usb] pm3 --> mem load f iclass_default_keys i
-[usb] pm3 --> lf t55xx deviceconfig a 29 b 17 c 15 d 47 e 15 p
-[usb] pm3 --> lf t55xx deviceconfig r 1 a 31 b 20 c 18 d 50 e 15 p
-[usb] pm3 --> lf t55xx deviceconfig r 2 a 31 b 20 c 18 d 40 e 15 p
-[usb] pm3 --> lf t55xx deviceconfig r 3 a 29 b 17 c 15 d 31 e 15 f 47 g 63 p
+[usb] pm3 --> mem load -f mfc_default_keys -m
+[usb] pm3 --> mem load -f t55xx_default_pwds -t
+[usb] pm3 --> mem load -f iclass_default_keys -i
+[usb] pm3 --> lf t55xx deviceconfig -a 29 -b 17 -c 15 -d 47 -e 15 -p
+[usb] pm3 --> lf t55xx deviceconfig -r 1 -a 31 -b 20 -c 18 -d 50 -e 15 -p
+[usb] pm3 --> lf t55xx deviceconfig -r 2 -a 31 -b 20 -c 18 -d 40 -e 15 -p
+[usb] pm3 --> lf t55xx deviceconfig -r 3 -a 29 -b 17 -c 15 -d 31 -e 15 -f 47 -g 63 -p
 
 Set all t55xx settings to defaults (will set all 4 at once)
-[usb] pm3 --> lf t55xx deviceconfig z p
+[usb] pm3 --> lf t55xx deviceconfig -z -p
 ```
 
 

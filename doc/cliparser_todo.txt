@@ -122,7 +122,5 @@ lf t55xx restore
 lf t55xx trace
 lf t55xx wakeup
 lf t55xx write
-lf t55xx bruteforce
-lf t55xx chk
 lf t55xx special
 script run
