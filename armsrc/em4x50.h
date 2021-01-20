@@ -19,7 +19,7 @@ void em4x50_writepwd(em4x50_data_t *etd);
 void em4x50_read(em4x50_data_t *etd);
 void em4x50_brute(em4x50_data_t *etd);
 void em4x50_login(uint32_t *password);
-void em4x50_sim(uint8_t *filename);
+void em4x50_sim(uint32_t *password);
 void em4x50_reader(void);
 void em4x50_chk(uint8_t *filename);
 

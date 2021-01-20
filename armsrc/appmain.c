@@ -1145,7 +1145,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             // destroy the Emulator Memory.
             //-----------------------------------------------------------------------------
             FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-            em4x50_sim((uint8_t *)packet->data.asBytes);
+            em4x50_sim((uint32_t *)packet->data.asBytes);
             break;
         }
         case CMD_LF_EM4X50_READER: {
