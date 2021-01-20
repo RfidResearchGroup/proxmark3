@@ -1,9 +1,10 @@
 local getopt = require('getopt')
 local ansicolors  = require('ansicolors')
+local utils = require('utils')
 
 copyright = 'Copyright (c) 2019 IceSQL AB. All rights reserved.'
 author = 'Christian Herrmann'
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc = [[
 This script initialize a Proxmark3 RDV4.0 with
   - uploading dictionary files to flashmem
@@ -83,9 +84,13 @@ function main(args)
     print('Configure T55XX device side to match RDV4')
     print(dash)
     core.console('lf t55xx deviceconfig --r0 -a 29 -b 17 -c 15 -d 47 -e 15 -p')
+    utils.Sleep(1)
     core.console('lf t55xx deviceconfig --r1 -a 29 -b 17 -c 18 -d 50 -e 15 -p')
+    utils.Sleep(1)
     core.console('lf t55xx deviceconfig --r2 -a 29 -b 17 -c 18 -d 40 -e 15 -p')
+    utils.Sleep(1)
     core.console('lf t55xx deviceconfig --r3 -a 29 -b 17 -c 15 -d 31 -e 15 -f 47 -g 63 -p')
+    utils.Sleep(1)
 
     print('')
     print('')
