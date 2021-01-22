@@ -696,7 +696,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
 
     LED_C_ON();
 
-    for (uint16_t i = 0; i <= PM3_CMD_DATA_SIZE - 4; i += 4) {
+    while (num_nonces < PM3_CMD_DATA_SIZE / 4) {
 
         // Test if the action was cancelled
         if (BUTTON_PRESS()) {
@@ -746,18 +746,14 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
             continue;
         }
 
-        num_nonces++;
-
         // Save the tag nonce (nt)
-        buf[i]   = answer[0];
-        buf[i + 1] = answer[1];
-        buf[i + 2] = answer[2];
-        buf[i + 3] = answer[3];
+        memcpy(buf + num_nonces * 4, answer, 4);
+        num_nonces++;
     }
 
     LED_C_OFF();
     LED_B_ON();
-    reply_old(CMD_ACK, isOK, cuid, num_nonces - 1, buf, sizeof(buf));
+    reply_old(CMD_ACK, isOK, cuid, num_nonces, buf, sizeof(buf));
     LED_B_OFF();
 
     if (DBGLEVEL >= 3) DbpString("AcquireNonces finished");
