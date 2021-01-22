@@ -474,7 +474,7 @@ static bool emojify_token(const char *token, uint8_t token_length, const char **
                 case EMO_ALTTEXT: {
                     int j = 0;
                     *emojified_token_length = 0;
-                    while (EmojiAltTable[j].alias && EmojiAltTable[i].alttext) {
+                    while (EmojiAltTable[j].alias && EmojiAltTable[j].alttext) {
                         if ((strlen(EmojiAltTable[j].alias) == token_length) && (0 == memcmp(EmojiAltTable[j].alias, token, token_length))) {
                             *emojified_token = EmojiAltTable[j].alttext;
                             *emojified_token_length = strlen(EmojiAltTable[j].alttext);
