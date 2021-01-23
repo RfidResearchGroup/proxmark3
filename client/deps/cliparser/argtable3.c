@@ -2554,18 +2554,18 @@ static void arg_lit_errorfn(
 
     switch (errorcode) {
         case EMINCOUNT:
-            fprintf(fp, "%s: missing option ", progname);
+            fprintf(fp, "[!] %s: missing option ", progname);
             arg_print_option(fp, shortopts, longopts, datatype, "\n");
             fprintf(fp, "\n");
             break;
 
         case EMAXCOUNT:
-            fprintf(fp, "%s: extraneous option ", progname);
+            fprintf(fp, "[!] %s: extraneous option ", progname);
             arg_print_option(fp, shortopts, longopts, datatype, "\n");
             break;
     }
 
-    ARG_TRACE(("%s:errorfn(%p, %p, %d, %s, %s)\n", __FILE__, parent, fp,
+    ARG_TRACE(("[!] %s:errorfn(%p, %p, %d, %s, %s)\n", __FILE__, parent, fp,
                errorcode, argval, progname));
 }
 
@@ -2859,7 +2859,7 @@ static void arg_rex_errorfn(struct arg_rex *parent,
     /* make argval NULL safe */
     argval = argval ? argval : "";
 
-    fprintf(fp, "%s: ", progname);
+    fprintf(fp, "[!] %s: ", progname);
     switch (errorcode) {
         case EMINCOUNT:
             fputs("missing option ", fp);
@@ -3790,7 +3790,7 @@ static void arg_str_errorfn(
     /* make argval NULL safe */
     argval = argval ? argval : "";
 
-    fprintf(fp, "%s: ", progname);
+    fprintf(fp, "[!] %s: ", progname);
     switch (errorcode) {
         case EMINCOUNT:
             fputs("missing option ", fp);
