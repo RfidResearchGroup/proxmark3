@@ -1129,10 +1129,10 @@ int CmdEM4x50Restore(const char *Cmd) {
 }
 
 int CmdEM4x50Sim(const char *Cmd) {
-    
+
     int status = PM3_EFAILED;
     uint32_t password = 0;
-    
+
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 sim",
                   "Simulates a EM4x50 tag.\n"
@@ -1168,7 +1168,7 @@ int CmdEM4x50Sim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&password, sizeof(password));
     PacketResponseNG resp;
-    
+
     PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
     bool keypress = kbd_enter_pressed();
     while (keypress == false) {

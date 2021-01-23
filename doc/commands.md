@@ -38,6 +38,7 @@ Check column "offline" for their availability.
 |`analyse nuid           `|Y       |`create NUID from 7byte UID`
 |`analyse demodbuff      `|Y       |`Load binary string to demodbuffer`
 |`analyse freq           `|Y       |`Calc wave lengths`
+|`analyse foo            `|Y       |`muxer`
 
 
 ### data
@@ -883,25 +884,25 @@ Check column "offline" for their availability.
 |`lf t55xx help          `|Y       |`This help`
 |`lf t55xx clonehelp     `|N       |`Shows the available clone commands`
 |`lf t55xx config        `|Y       |`Set/Get T55XX configuration (modulation, inverted, offset, rate)`
-|`lf t55xx dangerraw     `|N       |`Sends raw bitstream. Dangerous, do not use!! b <bitstream> t <timing>`
-|`lf t55xx detect        `|Y       |`[1] Try detecting the tag modulation from reading the configuration block.`
-|`lf t55xx deviceconfig  `|N       |`Set/Get T55XX device configuration (startgap, writegap, write0, write1, readgap`
-|`lf t55xx dump          `|N       |`[password] [o] Dump T55xx card Page 0 block 0-7. Optional [password], [override]`
-|`lf t55xx info          `|Y       |`[1] Show T55x7 configuration data (page 0/ blk 0)`
-|`lf t55xx p1detect      `|N       |`[1] Try detecting if this is a t55xx tag by reading page 1`
-|`lf t55xx read          `|N       |`b <block> p [password] [o] [1] -- Read T55xx block data. Optional [p password], [override], [page1]`
+|`lf t55xx dangerraw     `|N       |`Sends raw bitstream. Dangerous, do not use!!`
+|`lf t55xx detect        `|Y       |`Try detecting the tag modulation from reading the configuration block`
+|`lf t55xx deviceconfig  `|N       |`Set/Get T55XX device configuration`
+|`lf t55xx dump          `|N       |`Dump T55xx card Page 0 block 0-7`
+|`lf t55xx info          `|Y       |`Show T55x7 configuration data (page 0/ blk 0)`
+|`lf t55xx p1detect      `|N       |`Try detecting if this is a t55xx tag by reading page 1`
+|`lf t55xx read          `|N       |`Read T55xx block data`
 |`lf t55xx resetread     `|N       |`Send Reset Cmd then lf read the stream to attempt to identify the start of it (needs a demod and/or plot after)`
-|`lf t55xx restore       `|N       |`f <filename> [p <password>] Restore T55xx card Page 0 / Page 1 blocks`
-|`lf t55xx trace         `|Y       |`[1] Show T55x7 traceability data (page 1/ blk 0-1)`
+|`lf t55xx restore       `|N       |`Restore T55xx card Page 0 / Page 1 blocks`
+|`lf t55xx trace         `|Y       |`Show T55x7 traceability data (page 1/ blk 0-1)`
 |`lf t55xx wakeup        `|N       |`Send AOR wakeup command`
-|`lf t55xx write         `|N       |`b <block> d <data> p [password] [1] -- Write T55xx block data. Optional [p password], [page1]`
-|`lf t55xx bruteforce    `|N       |`<start password> <end password> Simple bruteforce attack to find password`
+|`lf t55xx write         `|N       |`Write T55xx block data`
+|`lf t55xx bruteforce    `|N       |`Simple bruteforce attack to find password`
 |`lf t55xx chk           `|N       |`Check passwords from dictionary/flash`
 |`lf t55xx protect       `|N       |`Password protect tag`
-|`lf t55xx recoverpw     `|N       |`[password] Try to recover from bad password write from a cloner. Only use on PW protected chips!`
+|`lf t55xx recoverpw     `|N       |`Try to recover from bad password write from a cloner`
 |`lf t55xx sniff         `|Y       |`Attempt to recover T55xx commands from sample buffer`
 |`lf t55xx special       `|N       |`Show block changes with 64 different offsets`
-|`lf t55xx wipe          `|N       |`[q] Wipe a T55xx tag and set defaults (will destroy any data on tag)`
+|`lf t55xx wipe          `|N       |`Wipe a T55xx tag and set defaults (will destroy any data on tag)`
 
 
 ### lf viking

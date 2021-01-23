@@ -454,12 +454,11 @@ int main(int argc, char **argv) {
     if (show) verbose = true;
 
     // now discover and set up compute device(s)
-    if ((err = discoverDevices(profile_selected, device_types_selected, &ocl_platform_cnt, &selected_platforms_cnt, &selected_devices_cnt, &cd_ctx, plat_sel, plat_cnt, dev_sel, dev_cnt, verbose, show)) != 0)
-    {
-      printf ("Error: discoverDevices() failed\n");
-      if (err < -5) free (cd_ctx);
-      MEMORY_FREE_ALL
-      exit (2);
+    if ((err = discoverDevices(profile_selected, device_types_selected, &ocl_platform_cnt, &selected_platforms_cnt, &selected_devices_cnt, &cd_ctx, plat_sel, plat_cnt, dev_sel, dev_cnt, verbose, show)) != 0) {
+        printf("Error: discoverDevices() failed\n");
+        if (err < -5) free(cd_ctx);
+        MEMORY_FREE_ALL
+        exit(2);
     }
 
     if (verbose) printf("\n");
@@ -776,7 +775,7 @@ int main(int argc, char **argv) {
                 err = clGetProgramBuildInfo(ctx.programs[z], cd_ctx[w].device[q].device_id, CL_PROGRAM_BUILD_LOG, len, buffer, 0);
                 if (err != CL_SUCCESS) {
                     printf("[%zu] clGetProgramBuildInfo() failed (%d)\n", z, err);
-                    free (buffer);
+                    free(buffer);
                     continue;
                 }
 
@@ -787,7 +786,7 @@ int main(int argc, char **argv) {
                     printf("[%zu] Build log (len %zu):\n--------\n%s\n--------\n", z, len, buffer);
                 }
 
-                free (buffer);
+                free(buffer);
 
                 build_logs++;
 #if DEBUGME == 0
@@ -832,7 +831,7 @@ int main(int argc, char **argv) {
     }
 
     // setup, phase 2 (select lower profile)
-    unsigned int profile = get_smallest_profile (cd_ctx, ocl_platform_cnt);
+    unsigned int profile = get_smallest_profile(cd_ctx, ocl_platform_cnt);
 
     // setup, phase 3 (finis him)
 
@@ -1126,7 +1125,7 @@ int main(int argc, char **argv) {
     }
 
     // Hokuto Hyakuretsu Ken
-    ret = thread_start_scheduler (&th_ctx, t_arg, &ctx.queue_ctx);
+    ret = thread_start_scheduler(&th_ctx, t_arg, &ctx.queue_ctx);
     if (ret < 0) {
         printf("Error: thread_start_scheduler() failed (%d): %s\n", ret, thread_strerror(ret));
         error = true;

@@ -176,8 +176,7 @@ int thread_init(thread_ctx_t *ctx, short type, size_t thread_count) {
     return 0;
 }
 
-int thread_start_scheduler (thread_ctx_t *ctx, thread_args_t *t_arg, wu_queue_ctx_t *queue_ctx)
-{
+int thread_start_scheduler(thread_ctx_t *ctx, thread_args_t *t_arg, wu_queue_ctx_t *queue_ctx) {
     size_t z = 0;
     bool found = false;
     bool done = false;
@@ -775,7 +774,7 @@ void *computing_process_async(void *arg) {
                             pthread_cond_signal(&a->thread_ctx->thread_cond_usleep);  // unlock master/TH_PROCESSING cond
 #if TDEBUG >= 1
                             printf("[%s][%zu] after pthread_cond_signal TH_END\n", __func__, z);
-                            fflush (stdout);
+                            fflush(stdout);
 #endif
                             pthread_mutex_unlock(&a->thread_ctx->thread_mutex_usleep);
                         }
