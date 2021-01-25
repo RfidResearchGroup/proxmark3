@@ -2079,6 +2079,8 @@ static void free_candidates_memory(statelist_t *sl) {
         return;
 
     free_candidates_memory(sl->next);
+    sl->len[0] = 0;
+    sl->len[1] = 0;
     free(sl);
 }
 
