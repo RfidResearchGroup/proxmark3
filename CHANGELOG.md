@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Added support for bidirectional communication for `lf em 4x50 sim` (@tharexde)
+ - Change `PLATFORM=PM3OTHER` to `PLATFORM=PM3GENERIC` (@iceman1001)
  - Added `tools/hitag2crack/crack5opencl`, an optimized version of `crack5gpu` (@matrix)
  - Fixed Makefile to account for changes when running on Apple Silicon (@tcprst)
  - Added support for debugging ARM with JTAG & VSCode (@Gator96100)
