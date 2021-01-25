@@ -1668,7 +1668,7 @@ static inline bool bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_e
     if (!possible) {
 #ifdef DEBUG_KEY_ELIMINATION
         if (!quiet && known_target_key != -1 && state == test_state[odd_even]) {
-            PrintAndLogEx(NORMAL, "Initial state lists: %s test state eliminated by bitflip property.\n", odd_even == EVEN_STATE ? "even" : "odd");
+            PrintAndLogEx(INFO, "Initial state lists: %s test state eliminated by bitflip property.", odd_even == EVEN_STATE ? "even" : "odd");
             sprintf(failstr, "Initial %s Byte Bitflip property", odd_even == EVEN_STATE ? "even" : "odd");
         }
 #endif
@@ -1791,14 +1791,14 @@ static void add_matching_states(statelist_t *cands, uint8_t part_sum_a0, uint8_t
 static statelist_t *add_more_candidates(void) {
     statelist_t *new_candidates;
     if (candidates == NULL) {
-        candidates = (statelist_t *)malloc(sizeof(statelist_t));
+        candidates = (statelist_t *)calloc(sizeof(statelist_t), sizeof(uint8_t));
         new_candidates = candidates;
     } else {
         new_candidates = candidates;
         while (new_candidates->next != NULL) {
             new_candidates = new_candidates->next;
         }
-        new_candidates = new_candidates->next = (statelist_t *)malloc(sizeof(statelist_t));
+        new_candidates = new_candidates->next = (statelist_t *)calloc(sizeof(statelist_t), sizeof(uint8_t));
     }
     new_candidates->next = NULL;
     new_candidates->len[ODD_STATE] = 0;
@@ -1813,14 +1813,15 @@ static void add_bitflip_candidates(uint8_t byte) {
 
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
         uint32_t worstcase_size = nonces[byte].num_states_bitarray[odd_even] + 1;
-        candidates1->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
+        candidates1->states[odd_even] = (uint32_t *)calloc(worstcase_size, sizeof(uint32_t));
         if (candidates1->states[odd_even] == NULL) {
-            PrintAndLogEx(ERR, "Out of memory error in add_bitflip_candidates().\n");
+            PrintAndLogEx(ERR, "Out of memory error in add_bitflip_candidates()");
             exit(4);
         }
 
         bitarray_to_list(byte, nonces[byte].states_bitarray[odd_even], candidates1->states[odd_even], &(candidates1->len[odd_even]), odd_even);
 
+        // slim down the allocated memory.
         if (candidates1->len[odd_even] + 1 < worstcase_size) {
             candidates1->states[odd_even] = realloc(candidates1->states[odd_even], sizeof(uint32_t) * (candidates1->len[odd_even] + 1));
         }
