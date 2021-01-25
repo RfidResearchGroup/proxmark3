@@ -25,7 +25,7 @@
 typedef struct guess_sum_a8 {
     float prob;
     uint64_t num_states;
-    uint8_t sum_a8_idx;
+    uint16_t sum_a8_idx;
 } guess_sum_a8_t;
 
 typedef struct noncelistentry {
@@ -40,7 +40,7 @@ typedef struct noncelist {
     guess_sum_a8_t sum_a8_guess[NUM_SUMS];
     bool sum_a8_guess_dirty;
     float expected_num_brute_force;
-    uint8_t BitFlips[0x400];
+    uint16_t BitFlips[0x400];
     uint32_t *states_bitarray[2];
     uint32_t num_states_bitarray[2];
     bool all_bitflips_dirty[2];
