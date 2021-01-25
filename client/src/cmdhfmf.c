@@ -576,6 +576,9 @@ static int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
 }
 
 static char *GenerateFilename(const char *prefix, const char *suffix) {
+    if (! IfPm3Iso14443a()) {
+        return NULL;
+    }
     uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     int uidlen = 0;
     char *fptr = calloc(sizeof(char) * (strlen(prefix) + strlen(suffix)) + sizeof(uid) * 2 + 1,  sizeof(uint8_t));
@@ -1972,8 +1975,9 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     uint64_t foundkey = 0;
     int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key ? trgkey : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey, filename);
 
-    if (tests == 0)
+    if ((tests == 0) && IfPm3Iso14443a()) {
         DropField();
+    }
 
     if (isOK) {
         switch (isOK) {
