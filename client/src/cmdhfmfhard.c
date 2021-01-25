@@ -2179,6 +2179,9 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
     get_SIMD_instruction_set(instr_set);
     PrintAndLogEx(SUCCESS, "Using %s SIMD core.", instr_set);
 
+    // initialize static arrays
+    memset(part_sum_count, 0, sizeof(part_sum_count));
+
     srand((unsigned) time(NULL));
     brute_force_per_second = brute_force_benchmark();
     write_stats = false;
