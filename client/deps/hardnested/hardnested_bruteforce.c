@@ -465,7 +465,8 @@ float brute_force_benchmark(void) {
 
     free(test_candidates[0].states[ODD_STATE]);
     free(test_candidates[0].states[EVEN_STATE]);
-
+    test_candidates[0].len[ODD_STATE] = 0;
+    test_candidates[0].len[EVEN_STATE] = 0;
     return bf_rate;
 }
 
