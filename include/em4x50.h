@@ -33,6 +33,14 @@
 #define FIRST_WORD_WRITE_INHIBITED  2       // third byte
 #define LAST_WORD_WRITE_INHIBITED   3       // fourth byte
 
+// commands
+#define EM4X50_COMMAND_LOGIN                0x01
+#define EM4X50_COMMAND_RESET                0x80
+#define EM4X50_COMMAND_WRITE                0x12
+#define EM4X50_COMMAND_WRITE_PASSWORD       0x11
+#define EM4X50_COMMAND_SELECTIVE_READ       0x0A
+#define EM4X50_COMMAND_STANDARD_READ        0x02 // virtual command
+
 // misc
 #define TIMEOUT                     2000
 #define DUMP_FILESIZE               136
@@ -51,5 +59,8 @@ typedef struct {
 typedef struct {
     uint8_t byte[4];
 } PACKED em4x50_word_t;
+
+extern bool gLogin;
+extern bool gWritePasswordProcess;
 
 #endif /* EM4X50_H__ */
