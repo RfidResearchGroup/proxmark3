@@ -3883,24 +3883,39 @@ static int CmdT55xxSniff(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool use_graphbuf = arg_get_lit(ctx, 1);
     uint8_t tolerance = arg_get_int_def(ctx, 2, 5);
-    uint8_t width1 = arg_get_int(ctx, 3);
-    uint8_t width0 = arg_get_int(ctx, 4);
+    int opt_width1 = arg_get_int_def(ctx, 3, -1);
+    int opt_width0 = arg_get_int_def(ctx, 4, -1);
     CLIParserFree(ctx);
 
-    if (width0 && width1 == 0) {
+    if (opt_width0 > 0  && opt_width1 == -1) {
         PrintAndLogEx(ERR, _RED_("Missing sample width for ONE"));
         return PM3_EINVARG;
     }
 
-    if (width1 && width0 == 0) {
+    if (opt_width1 > 0 && opt_width0 == -1) {
         PrintAndLogEx(ERR, _RED_("Missing sample width for ZERO"));
         return PM3_EINVARG;
     }
 
-    if ((width0 == 0) || (width1 == 0)) {
-        PrintAndLogEx(ERR, "Must call with --one and --zero params");
+    if (opt_width0 == 0) {
+        PrintAndLogEx(ERR, "Must call with --zero larger than 0");
         return PM3_EINVARG;
     }
+    if ((opt_width0 == 0) || (opt_width1 == 0)) {
+        PrintAndLogEx(ERR, "Must call with --one larger than 0");
+        return PM3_EINVARG;
+    }
+
+    uint8_t width1 = 0;
+    uint8_t width0 = 0;
+
+    if (opt_width0 > -1) 
+        width0 = (uint8_t)opt_width0 & 0xFF;
+
+    if (opt_width1 > -1) 
+        width1 = (uint8_t)opt_width1 & 0xFF;
+
+
 
     /*
         Notes:
