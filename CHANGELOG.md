@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `trace list -t mf` - now can use external dictionary keys file
  - Added support for bidirectional communication for `lf em 4x50 sim` (@tharexde)
  - Change `PLATFORM=PM3OTHER` to `PLATFORM=PM3GENERIC` (@iceman1001)
  - Added `tools/hitag2crack/crack5opencl`, an optimized version of `crack5gpu` (@matrix)
