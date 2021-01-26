@@ -559,7 +559,10 @@ void SetSIMDInstr(SIMDExecInstr instr) {
 static SIMDExecInstr GetSIMDInstr(void) {
     SIMDExecInstr instr;
 
+#if defined(COMPILER_HAS_SIMD)
     __builtin_cpu_init();
+#endif
+
 #if defined(COMPILER_HAS_SIMD_AVX512)
     if (__builtin_cpu_supports("avx512f"))
         instr = SIMD_AVX512;
