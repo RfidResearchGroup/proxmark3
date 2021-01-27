@@ -773,15 +773,38 @@ int CmdEM4x05Write(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int0("a", "addr", "<dec>", "memory address to write to. (0-13)"),
-        arg_str1("d", "data", "<hex>", "data to write, 4 bytes hex"),
-        arg_str0("p", "pwd", "<hex>", "optional - password, 4 bytes hex"),
+        arg_str1("d", "data", "<hex>", "data to write (4 hex bytes)"),
+        arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
         arg_lit0(NULL, "po", "protect operation"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     uint8_t addr = (uint8_t)arg_get_int_def(ctx, 1, 50);
-    uint32_t data = arg_get_u32(ctx, 2);
-    uint64_t inputpwd = arg_get_u64_hexstr_def(ctx, 3, 0xFFFFFFFFFFFFFFFF);
+    uint32_t data = 0;
+    int res = arg_get_u32_hexstr_def(ctx, 2, 0, &data);
+    if (res == 2) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Data must be 4 hex bytes");
+        return PM3_EINVARG;
+    } else if (res == 0) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Data must be 4 hex bytes");
+        return PM3_EINVARG;
+    }
+
+    bool use_pwd = false;
+    uint32_t pwd = 0;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 3, 0, &pwd, 4, true);
+    if (res == 2) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Password must be 4 hex bytes");
+        return PM3_EINVARG;
+    } else if (res == 3) {
+        use_pwd = false;
+    } else if (res == 1) {
+        use_pwd = true;
+    }
+
     bool protect_operation = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
@@ -790,22 +813,19 @@ int CmdEM4x05Write(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    bool use_pwd = false;
-    uint32_t pwd = (inputpwd != 0xFFFFFFFFFFFFFFFF) ? (inputpwd & 0xFFFFFFFF) : 0;
-    if (pwd == 0xFFFFFFFF) {
-        if (protect_operation)
-            PrintAndLogEx(INFO, "Writing protection words data %08X", data);
-        else
-            PrintAndLogEx(INFO, "Writing address %d data %08X", addr, data);
-    } else {
-        use_pwd = true;
+    if (use_pwd) {
         if (protect_operation)
             PrintAndLogEx(INFO, "Writing protection words data %08X using password %08X", data, pwd);
         else
             PrintAndLogEx(INFO, "Writing address %d data %08X using password %08X", addr, data, pwd);
+    } else {
+        if (protect_operation)
+            PrintAndLogEx(INFO, "Writing protection words data %08X", data);
+        else
+            PrintAndLogEx(INFO, "Writing address %d data %08X", addr, data);
     }
 
-    int res = PM3_SUCCESS;
+    res = PM3_SUCCESS;
     // set Protect Words
     if (protect_operation) {
         res = em4x05_protect(pwd, use_pwd, data);

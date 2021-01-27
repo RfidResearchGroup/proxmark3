@@ -170,6 +170,14 @@ static uint16_t calcBSDchecksum4(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return sum;
 }
 
+// 0xFF - ( n1 ^ n... )
+static uint16_t calcXORchecksum(uint8_t *bytes, uint8_t len, uint32_t mask) {
+    return 0xFF - calcSumByteXor(bytes, len, mask);
+}
+
+
+//2148050707DB0A0E000001C4000000
+
 // measuring LFSR maximum length
 static int CmdAnalyseLfsr(const char *Cmd) {
     CLIParserContext *ctx;
@@ -421,11 +429,12 @@ static int CmdAnalyseCHKSUM(const char *Cmd) {
     PrintAndLogEx(INFO, "Mask value 0x%x", mask);
 
     if (verbose) {
-        PrintAndLogEx(INFO, "     add          | sub         | add 1's compl    | sub 1's compl   | xor");
-        PrintAndLogEx(INFO, "byte nibble crumb | byte nibble | byte nibble cumb | byte nibble     | byte nibble cumb |  BSD       |");
-        PrintAndLogEx(INFO, "------------------+-------------+------------------+-----------------+--------------------");
+        PrintAndLogEx(INFO, "------------------+-------------+------------------+-----------------+------------------+-----------+-------------");
+        PrintAndLogEx(INFO, "     add          | sub         | add 1's compl    | sub 1's compl   | xor              |           |");
+        PrintAndLogEx(INFO, "byte nibble crumb | byte nibble | byte nibble cumb | byte nibble     | byte nibble cumb |  BSD      | 0xFF - (n^n)");
+        PrintAndLogEx(INFO, "------------------+-------------+------------------+-----------------+------------------+-----------+-------------");
     }
-    PrintAndLogEx(INFO, "0x%X 0x%X   0x%X  | 0x%X 0x%X   | 0x%X 0x%X   0x%X | 0x%X 0x%X       | 0x%X 0x%X   0x%X  | 0x%X  0x%X |\n",
+    PrintAndLogEx(INFO, "0x%X 0x%X   0x%X  | 0x%X 0x%X   | 0x%X 0x%X   0x%X | 0x%X 0x%X       | 0x%X 0x%X   0x%X   | 0x%X  0x%X | 0x%X\n",
                   calcSumByteAdd(data, dlen, mask)
                   , calcSumNibbleAdd(data, dlen, mask)
                   , calcSumCrumbAdd(data, dlen, mask)
@@ -441,6 +450,7 @@ static int CmdAnalyseCHKSUM(const char *Cmd) {
                   , calcSumCrumbXor(data, dlen, mask)
                   , calcBSDchecksum8(data, dlen, mask)
                   , calcBSDchecksum4(data, dlen, mask)
+                  , calcXORchecksum(data, dlen, mask)
                  );
     return PM3_SUCCESS;
 }

@@ -262,26 +262,7 @@ static int usage_t55xx_wakup(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx wakeup p 11223344") "  - send wakeup password");
     return PM3_SUCCESS;
 }
-static int usage_t55xx_chk(void) {
-    PrintAndLogEx(NORMAL, "This command uses a dictionary attack");
-    PrintAndLogEx(NORMAL, "press " _YELLOW_("'enter'") " to cancel the command");
-    PrintAndLogEx(NORMAL,  _RED_("WARNING:") " this may brick non-password protected chips!");
-    PrintAndLogEx(NORMAL, "Try to reading block 7 before\n");
-    PrintAndLogEx(NORMAL, "Usage: lf t55xx chk [h] [m] [r <mode>] [f <*.dic>] [e <em4100 id>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     h            - this help");
-    PrintAndLogEx(NORMAL, "     m            - use dictionary from flashmemory\n");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_ALL, T55XX_DLMODE_ALL);
-    PrintAndLogEx(NORMAL, "     f <*.dic>    - loads a default keys dictionary file <*.dic>");
-    PrintAndLogEx(NORMAL, "     e <EM4100>   - will try the calculated password from some cloners based on EM4100 ID");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf t55xx chk m"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf t55xx chk f t55xx_default_pwds"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf t55xx chk e aa11223344"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
+
 static int usage_t55xx_dangerraw(void) {
     PrintAndLogEx(NORMAL, "This command allows to emit arbitrary raw commands on T5577 and cut the field after arbitrary duration.");
     PrintAndLogEx(NORMAL, _RED_("WARNING:") " this may lock definitively the tag in an unusable state!");
@@ -2974,68 +2955,83 @@ static bool IsCancelled(void) {
 
 // load a default pwd file.
 static int CmdT55xxChkPwds(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx chk",
+                  "This command uses a dictionary attack.\n"
+                  "For some cloners, try '--em' for known pwdgen algo.\n"
+                  "Try to reading Page 0 block 7 before.\n"
+                  _RED_("WARNING:") _CYAN_(" this may brick non-password protected chips!"),
+                  "lf t55xx chk -m                     -> use dictionary from flash memory (RDV4)\n"
+                  "lf t55xx chk -f my_dictionary_pwds  -> loads a default keys dictionary file\n"
+                  "lf t55xx chk --em aa11223344        -> try known pwdgen algo from some cloners based on EM4100 ID"
+                 );
 
+    // 4 + (5 or 6)
+   void *argtable[9] = {
+        arg_param_begin,
+        arg_lit0("m", "fm", "use dictionary from flash memory (RDV4)"),
+        arg_str0("f", "file", "<filename>", "file name"),
+        arg_str0(NULL, "em", "<hex>", "EM4100 ID (5 hex bytes)"),
+    };
+    uint8_t idx = 4;
+    arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_ALL, T55XX_DLMODE_ALL);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool from_flash = arg_get_lit(ctx, 1);
+
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    bool found = false;
-    uint8_t timeout = 0;
-    uint8_t *keyBlock = NULL;
-    bool from_flash = false;
-    bool try_all_dl_modes = false;
-    uint8_t downlink_mode = 0;
-    bool use_pwd_file = false;
-    int dl_mode; // to try each downlink mode for each password
-    uint8_t cmdp = 0;
-    bool errors = false;
-    bool useCardPassword = false;
-    uint32_t cardPassword = 0x00;
-    uint64_t cardID = 0x00;
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, sizeof(filename), &fnlen);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_t55xx_chk();
-            case 'r':
-                downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode >= 4) {
-                    try_all_dl_modes = true;
-                    downlink_mode = 0;
-                }
-                cmdp += 2;
-                break;
-            case 'm':
-                from_flash = true;
-                cmdp++;
-                break;
-            case 'f':
-                if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) == 0) {
-                    PrintAndLogEx(ERR, "Error, no filename after 'f' was found");
-                    errors = true;
-                }
-                use_pwd_file = true;
-                cmdp += 2;
-                break;
-            case 'e':
                 // White cloner password based on EM4100 ID
-                useCardPassword = true;
-                cardID = param_get64ex(Cmd, cmdp + 1, 0, 16);
-                uint32_t card32Bit = cardID & 0xFFFFFFFF;
-                cardPassword = lf_t55xx_white_pwdgen(card32Bit);
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    bool use_calc_password = false;
+    uint32_t card_password = 0x00;
+    uint64_t cardid = 0;
+    int res = arg_get_u64_hexstr_def_nlen(ctx, 3, 0x00, &cardid, 5, true);
+    if (res == 1) {
+        use_calc_password = true;
+        uint32_t calc = cardid & 0xFFFFFFFF;
+        card_password = lf_t55xx_white_pwdgen(calc);
+    }
+    if (res == 2) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "EM4100 ID must be 5 hex bytes");
+        return PM3_EINVARG;
+    }
+    if (res == 0) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
 
-    if (errors) return usage_t55xx_chk();
+    bool r0 = arg_get_lit(ctx, 4);
+    bool r1 = arg_get_lit(ctx, 5);
+    bool r2 = arg_get_lit(ctx, 6);
+    bool r3 = arg_get_lit(ctx, 7);
+    bool ra = arg_get_lit(ctx, 8);
+    CLIParserFree(ctx);
 
+    if ((r0 + r1 + r2 + r3 + ra) > 1) {
+        PrintAndLogEx(FAILED, "Error multiple downlink encoding");
+        return PM3_EINVARG;
+    }
+
+    uint8_t downlink_mode = config.downlink_mode;
+    if (r0)
+        downlink_mode = refFixedBit;
+    else if (r1)
+        downlink_mode = refLongLeading;
+    else if (r2)
+        downlink_mode = refLeading0;
+    else if (r3)
+        downlink_mode = ref1of4;
+
+    bool use_pwd_file = false;
     if (strlen(filename) == 0) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
         use_pwd_file = true;
     }
 
+    PrintAndLogEx(INFO, "press " _GREEN_("'enter'") " to cancel the command");
     PrintAndLogEx(NORMAL, "");
     /*
     // block 7,  page1 = false, usepwd = false, override = false, pwd = 00000000
@@ -3047,6 +3043,8 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     }
     */
 
+    bool found = false;
+
     uint64_t t1 = msclock();
     uint8_t flags = downlink_mode << 3;
 
@@ -3055,6 +3053,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         SendCommandNG(CMD_LF_T55XX_CHK_PWDS, &flags, sizeof(flags));
         PacketResponseNG resp;
 
+        uint8_t timeout = 0;
         while (!WaitForResponseTimeout(CMD_LF_T55XX_CHK_PWDS, &resp, 2000)) {
             timeout++;
             PrintAndLogEx(NORMAL, "." NOLF);
@@ -3090,55 +3089,59 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         goto out;
     }
 
-    // try calculated password
-    if (useCardPassword) {
+    // to try each downlink mode for each password
+    int dl_mode; 
 
-        PrintAndLogEx(INFO, "testing %08"PRIX32" generated ", cardPassword);
+    // try calculated password
+    if (use_calc_password) {
+
+        PrintAndLogEx(INFO, "testing %08"PRIX32" generated ", card_password);
         for (dl_mode = downlink_mode; dl_mode <= 3; dl_mode++) {
 
-            if (!AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, cardPassword, dl_mode)) {
+            if (!AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, card_password, dl_mode)) {
                 continue;
             }
 
-            found = t55xxTryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, cardPassword);
+            found = t55xxTryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, card_password);
             if (found) {
-                PrintAndLogEx(SUCCESS, "found valid password : [ " _GREEN_("%08"PRIX32) " ]", cardPassword);
-                dl_mode = 4; // Exit other downlink mode checks
+                PrintAndLogEx(SUCCESS, "found valid password : [ " _GREEN_("%08"PRIX32) " ]", card_password);
+                break;
             }
 
-            if (!try_all_dl_modes) // Exit loop if not trying all downlink modes
-                dl_mode = 4;
+            if (ra == false)
+                break;
         }
     }
 
     if ((found == false) && use_pwd_file) {
         uint32_t keycount = 0;
+        uint8_t *keyblock = NULL;
 
-        int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 4, &keycount);
-        if (res != PM3_SUCCESS || keycount == 0 || keyBlock == NULL) {
+        res = loadFileDICTIONARY_safe(filename, (void **) &keyblock, 4, &keycount);
+        if (res != PM3_SUCCESS || keycount == 0 || keyblock == NULL) {
             PrintAndLogEx(WARNING, "no keys found in file");
-            if (keyBlock != NULL)
-                free(keyBlock);
+            if (keyblock != NULL)
+                free(keyblock);
 
             return PM3_ESOFT;
         }
 
-        PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
+        PrintAndLogEx(INFO, "press " _GREEN_("'enter'") " to cancel the command");
 
-        for (uint32_t c = 0; c < keycount; ++c) {
+        for (uint32_t c = 0; c < keycount && found == false; ++c) {
 
             if (!session.pm3_present) {
                 PrintAndLogEx(WARNING, "device offline\n");
-                free(keyBlock);
+                free(keyblock);
                 return PM3_ENODATA;
             }
 
             if (IsCancelled()) {
-                free(keyBlock);
+                free(keyblock);
                 return PM3_EOPABORTED;
             }
 
-            uint32_t curr_password = bytes_to_num(keyBlock + 4 * c, 4);
+            uint32_t curr_password = bytes_to_num(keyblock + 4 * c, 4);
 
             PrintAndLogEx(INFO, "testing %08"PRIX32, curr_password);
             for (dl_mode = downlink_mode; dl_mode <= 3; dl_mode++) {
@@ -3150,20 +3153,19 @@ static int CmdT55xxChkPwds(const char *Cmd) {
                 found = t55xxTryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, curr_password);
                 if (found) {
                     PrintAndLogEx(SUCCESS, "found valid password: [ " _GREEN_("%08"PRIX32) " ]", curr_password);
-                    dl_mode = 4; // Exit other downlink mode checks
-                    c = keycount; // Exit loop
+                    break;
                 }
 
-                if (!try_all_dl_modes) // Exit loop if not trying all downlink modes
-                    dl_mode = 4;
+                if (ra == false) // Exit loop if not trying all downlink modes
+                    break;
             }
         }
+
+        free(keyblock);
     }
 
     if (found == false)
-        PrintAndLogEx(WARNING, "check pwd failed");
-
-    free(keyBlock);
+        PrintAndLogEx(WARNING, "failed to find password");
 
 out:
     t1 = msclock() - t1;
