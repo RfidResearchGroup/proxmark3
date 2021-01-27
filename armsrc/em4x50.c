@@ -28,11 +28,12 @@
 #define T0                                  192
 #endif
 
-// the following terms are used (for carrier frequency of 125 kHz):
+// conversions (carrier frequency 125 kHz):
 // 1 us = 1.5 ticks
 // 1 cycle = 1 period = 8 us = 12 ticks
-// 1 bit = 64 cycles = 768 ticks = 512 us
+// 1 bit = 64 cycles = 768 ticks = 512 us (for Opt64)
 #define CYCLES2TICKS                        12
+#define CYCLES2MUSEC                        8
 
 // given in cycles/periods
 #define EM4X50_T_TAG_QUARTER_PERIOD         16
@@ -46,8 +47,8 @@
 #define EM4X50_T_TAG_WAITING_FOR_SIGNAL     75
 #define EM4X50_T_WAITING_FOR_DBLLIW         1550
 #define EM4X50_T_WAITING_FOR_ACK            4
-#define EM4X50_TAG_TOLERANCE                8
-#define EM4X50_ZERO_DETECTION               3
+#define EM4X50_T_TOLERANCE                  8
+#define EM4X50_T_ZERO_DETECTION             3
 
 // timeout values (empirical) for simulation mode (may vary with regard to reader)
 #define EM4X50_T_SIMULATION_TIMEOUT_READ    600
@@ -71,17 +72,6 @@ bool gLogin = false;
 // compared to operations like read, write, login, so it is necessary to
 // to be able to identfiy it
 bool gWritePasswordProcess = false;
-
-// do nothing for <period> using timer0
-static void wait_timer(uint32_t period) {
-    
-    int timeout = period;
-    uint32_t tval = GetTicks();
-    
-    //AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    //while (AT91C_BASE_TC0->TC_CV < period);
-    while ((timeout--) && (GetTicks() - tval < period));
-}
 
 // extract and check parities
 // return result of parity check and extracted plain data
@@ -142,7 +132,6 @@ void em4x50_setup_read(void) {
     StartTicks();
     
     // 50ms for the resonant antenna to settle.
-    //SpinDelay(50);
     WaitMS(50);
 
     // Now set up the SSC to get the ADC samples that are now streaming at us.
@@ -161,27 +150,6 @@ void em4x50_setup_read(void) {
     // Disable modulation at default, which means enable the field
     LOW(GPIO_SSC_DOUT);
 
-    /*
-    // Enable Peripheral Clock for
-    //   TIMER_CLOCK0, used to measure exact timing before answering
-    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0);// | (1 << AT91C_ID_TC1);
-    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
-
-    // Disable timer during configuration
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-
-    // TC0: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
-
-    // TC1: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
-
-    // Enable and reset counters
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-
-    // synchronized startup procedure
-    while (AT91C_BASE_TC0->TC_CV > 0) {}; // wait until TC1 returned to zero
-    */
-     
     // Watchdog hit
     WDT_HIT();
 }
@@ -196,13 +164,6 @@ void em4x50_setup_sim(void) {
     AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
     
     StartTicks();
-    /*
-    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0);
-    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    */
      
     // Watchdog hit
     WDT_HIT();
@@ -231,8 +192,7 @@ bool get_signalproperties(void) {
         if (BUTTON_PRESS()) return false;
 
         // about 2 samples per bit period
-        //wait_timer(T0 * EM4X50_T_TAG_HALF_PERIOD);
-        wait_timer(12 * EM4X50_T_TAG_HALF_PERIOD);
+        WaitUS(EM4X50_T_TAG_HALF_PERIOD * CYCLES2MUSEC);
 
         // ignore first samples
         if ((i > SIGNAL_IGNORE_FIRST_SAMPLES) && (AT91C_BASE_SSC->SSC_RHR > noise)) {
@@ -250,8 +210,6 @@ bool get_signalproperties(void) {
     // 3 single "full periods" to eliminate the influence of a listen window
     for (int i = 0; i < no_periods; i++) {
 
-        //AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-        //while (AT91C_BASE_TC0->TC_CV < T0 * 3 * EM4X50_T_TAG_FULL_PERIOD) {
         tval = GetTicks();
         while (GetTicks() - tval < 12 * 3 * EM4X50_T_TAG_FULL_PERIOD) {
 
@@ -284,14 +242,12 @@ bool get_signalproperties(void) {
 static bool invalid_bit(void) {
 
     // get sample at 3/4 of bit period
-    //wait_timer(T0 * EM4X50_T_TAG_THREE_QUARTER_PERIOD);
-    wait_timer(12 * EM4X50_T_TAG_THREE_QUARTER_PERIOD);
+    WaitUS(EM4X50_T_TAG_THREE_QUARTER_PERIOD * CYCLES2MUSEC);
 
     uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
     // wait until end of bit period
-    //wait_timer(T0 * EM4X50_T_TAG_QUARTER_PERIOD);
-    wait_timer(12 * EM4X50_T_TAG_QUARTER_PERIOD);
+    WaitUS(EM4X50_T_TAG_QUARTER_PERIOD * CYCLES2MUSEC);
 
     // bit in "undefined" state?
     if (sample <= gHigh && sample >= gLow)
@@ -314,7 +270,6 @@ static uint32_t get_pulse_length(void) {
     if (timeout == 0)
         return 0;
 
-    //AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
     tval = GetTicks();
     timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
 
@@ -331,23 +286,20 @@ static uint32_t get_pulse_length(void) {
     if (timeout == 0)
         return 0;
 
-    //return (uint32_t)AT91C_BASE_TC0->TC_CV;
     return GetTicks() - tval;
 
 }
 
 // check if pulse length <pl> corresponds to given length <length>
 static bool check_pulse_length(uint32_t pl, int length) {
-    //return ((pl >= T0 * (length - EM4X50_TAG_TOLERANCE)) && (pl <= T0 * (length + EM4X50_TAG_TOLERANCE)));
-    return ((pl >= 12 * (length - EM4X50_TAG_TOLERANCE)) && (pl <= 12 * (length + EM4X50_TAG_TOLERANCE)));
+    return ((pl >= (length - EM4X50_T_TOLERANCE) * CYCLES2TICKS) &&
+            (pl <= (length + EM4X50_T_TOLERANCE) * CYCLES2TICKS));
 }
 
 // send single bit according to EM4x50 application note and datasheet
 static void em4x50_reader_send_bit(int bit) {
-    int timeout = 500;
 
     // reset clock for the next bit
-    //AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
     uint32_t tval = GetTicks();
 
     if (bit == 0) {
@@ -356,34 +308,22 @@ static void em4x50_reader_send_bit(int bit) {
         // period (Opt64)
         LOW(GPIO_SSC_DOUT);
         //while (AT91C_BASE_TC0->TC_CV < T0 * 7);
-        while ((timeout--) && (GetTicks() - tval < 12 * 7));
-        if (timeout <= 0)
-            return;
-        timeout = 500;
+        while (GetTicks() - tval < 7 * CYCLES2TICKS);
         
         // enable modulation (drop the field) for remaining first
         // half of bit period
         HIGH(GPIO_SSC_DOUT);
-        //while (AT91C_BASE_TC0->TC_CV < T0 * EM4X50_T_TAG_HALF_PERIOD);
-        while ((timeout--) && (GetTicks() - tval < 12 * EM4X50_T_TAG_HALF_PERIOD));
-        if (timeout <= 0)
-            return;
-        timeout = 500;
+        while (GetTicks() - tval < EM4X50_T_TAG_HALF_PERIOD * CYCLES2TICKS);
 
         // disable modulation for second half of bit period
         LOW(GPIO_SSC_DOUT);
-        //while (AT91C_BASE_TC0->TC_CV < T0 * EM4X50_T_TAG_FULL_PERIOD);
-        while ((timeout--) && (GetTicks() - tval < 12 * EM4X50_T_TAG_FULL_PERIOD));
-        if (timeout <= 0)
-            return;
-        timeout = 500;
+        while (GetTicks() - tval < EM4X50_T_TAG_FULL_PERIOD * CYCLES2TICKS);
 
     } else {
 
         // bit = "1" means disable modulation for full bit period
         LOW(GPIO_SSC_DOUT);
-        //while (AT91C_BASE_TC0->TC_CV < T0 * EM4X50_T_TAG_FULL_PERIOD);
-        while ((timeout--) && (GetTicks() - tval < 12 * EM4X50_T_TAG_FULL_PERIOD));
+        while (GetTicks() - tval < EM4X50_T_TAG_FULL_PERIOD * CYCLES2TICKS);
     }
 }
 
@@ -483,8 +423,7 @@ static int find_double_listen_window(bool bcommand) {
                     // second window follows - sync on this to issue a command
 
                     // skip the next bit...
-                    //wait_timer(T0 * EM4X50_T_TAG_FULL_PERIOD);
-                    wait_timer(12 * EM4X50_T_TAG_FULL_PERIOD);
+                    WaitUS(EM4X50_T_TAG_FULL_PERIOD * CYCLES2MUSEC);
 
                     // ...and check if the following bit does make sense
                     // (if not it is the correct position within the second
@@ -562,8 +501,7 @@ static bool check_ack(bool bliw) {
 
                     // wait for 2 bits (remaining "bit" of ACK signal + first
                     // "bit" of listen window)
-                    //wait_timer(T0 * 2 * EM4X50_T_TAG_FULL_PERIOD);
-                    wait_timer(12 * 2 * EM4X50_T_TAG_FULL_PERIOD);
+                    WaitUS(2 * EM4X50_T_TAG_FULL_PERIOD * CYCLES2MUSEC);
 
                     // check for listen window (if first bit cannot be interpreted
                     // as a valid bit it must belong to a listen window)
@@ -694,8 +632,7 @@ static bool login(uint32_t password) {
         // send password
         em4x50_reader_send_word(password);
 
-        //wait_timer(T0 * EM4X50_T_TAG_TPP);
-        wait_timer(12 * EM4X50_T_TAG_TPP);
+        WaitUS(EM4X50_T_TAG_TPP * CYCLES2MUSEC);
 
         // check if ACK is returned
         if (check_ack(false))
@@ -1000,8 +937,7 @@ static int write(uint32_t word, uint32_t addresses) {
         } else {
 
             // wait for T0 * EM4X50_T_TAG_TWA (write access time)
-            //wait_timer(T0 * EM4X50_T_TAG_TWA);
-            wait_timer(12 * EM4X50_T_TAG_TWA);
+            WaitUS(EM4X50_T_TAG_TWA * CYCLES2MUSEC);
 
             // look for ACK sequence
             if (check_ack(false)) {
@@ -1009,8 +945,7 @@ static int write(uint32_t word, uint32_t addresses) {
                 // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time = 3.2ms = 50 * 64 periods)
                 // for saving data and should return with ACK
                 for (int i = 0; i < 50; i++) {
-                    //wait_timer(T0 * EM4X50_T_TAG_FULL_PERIOD);
-                    wait_timer(12 * EM4X50_T_TAG_FULL_PERIOD);
+                    WaitUS(EM4X50_T_TAG_FULL_PERIOD * CYCLES2MUSEC);
                 }
 
                 if (check_ack(false))
@@ -1041,8 +976,7 @@ static int write_password(uint32_t password, uint32_t new_password) {
         } else {
 
             // wait for T0 * EM4x50_T_TAG_TPP (processing pause time)
-            //wait_timer(T0 * EM4X50_T_TAG_TPP);
-            wait_timer(12 * EM4X50_T_TAG_TPP);
+            WaitUS(EM4X50_T_TAG_TPP * CYCLES2MUSEC);
 
             // look for ACK sequence and send rm request
             // during following listen window
@@ -1052,16 +986,14 @@ static int write_password(uint32_t password, uint32_t new_password) {
                 em4x50_reader_send_word(new_password);
 
                 // wait for T0 * EM4X50_T_TAG_TWA (write access time)
-                //wait_timer(T0 * EM4X50_T_TAG_TWA);
-                wait_timer(12 * EM4X50_T_TAG_TWA);
+                WaitUS(EM4X50_T_TAG_TWA * CYCLES2MUSEC);
 
                 if (check_ack(false)) {
 
                     // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time = 3.2ms = 50 * 64 periods)
                     // for saving data and should return with ACK
                     for (int i = 0; i < 50; i++) {
-                        //wait_timer(T0 * EM4X50_T_TAG_FULL_PERIOD);
-                        wait_timer(12 * EM4X50_T_TAG_FULL_PERIOD);
+                        WaitUS(EM4X50_T_TAG_FULL_PERIOD * CYCLES2MUSEC);
                     }
 
                     if (check_ack(false))
@@ -1276,7 +1208,7 @@ static int em4x50_sim_read_bit(void) {
         while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
 
             // check if current cycle takes longer than "usual""
-            if (GetTicks() - tval > EM4X50_ZERO_DETECTION * CYCLES2TICKS) {
+            if (GetTicks() - tval > EM4X50_T_ZERO_DETECTION * CYCLES2TICKS) {
 
                 // gap detected; wait until reader field is switched on again
                 while ((timeout--) && (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
