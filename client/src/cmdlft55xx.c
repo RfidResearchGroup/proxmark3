@@ -3310,7 +3310,7 @@ static int CmdT55xxRecoverPW(const char *Cmd) {
     // 2 + (5 or 6)
     void *argtable[8] = {
         arg_param_begin,
-        arg_str1("p", "pwd", "<hex>", "password (4 hex bytes)"),
+        arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
     };
     uint8_t idx = 2;
     arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_ALL, T55XX_DLMODE_ALL);
@@ -3758,7 +3758,7 @@ static int CmdT55xxProtect(const char *Cmd) {
     void *argtable[4 + 5] = {
         arg_param_begin,
         arg_lit0("o", "override", "override safety check"),
-        arg_str1("p", "pwd", "<hex>", "password (4 hex bytes)"),
+        arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
         arg_str1("n", "new", "<hex>", "new password (4 hex bytes)"),
     };
     uint8_t idx = 4;
