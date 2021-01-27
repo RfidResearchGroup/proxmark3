@@ -615,7 +615,7 @@ int CmdTraceList(const char *Cmd) {
                   "trace list -t hitags   -> interpret as " _YELLOW_("HitagS") " communications\n"
                   "trace list -t lto      -> interpret as " _YELLOW_("LTO-CM") " communications\n"
                   "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") " communitcations\n"
-                  "trace list -t mf -d <mfc_default_keys.dic>    -> use dictionary keys file\n"
+                  "trace list -t mf --dict <mfc_default_keys>    -> use dictionary keys file\n"
                   "trace list -t 14a -f                          -> show frame delay times\n"
                   "trace list -t 14a -1                          -> use trace buffer "
                  );
@@ -630,7 +630,7 @@ int CmdTraceList(const char *Cmd) {
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
                  "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
         arg_strx0("t", "type", NULL, "protocol to annotate the trace"),
-        arg_strx0("d", "dict", NULL, "use dictionary keys file"),
+        arg_strx0(NULL, "dict", "<file>", "use dictionary keys file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -648,8 +648,11 @@ int CmdTraceList(const char *Cmd) {
     str_lower(type);
 
     int diclen = 0;
-    char dictionary[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 8), (uint8_t *)dictionary, sizeof(dictionary), &diclen);
+    char dictionary[FILE_PATH_SIZE + 2] = {0};
+    if (CLIParamStrToBuf(arg_get_str(ctx, 8), (uint8_t *)dictionary, FILE_PATH_SIZE, &diclen)) {
+        PrintAndLogEx(FAILED, "Dictionary file name too long or invalid.");
+        diclen = 0;
+    }
 
     CLIParserFree(ctx);
 
