@@ -20,20 +20,21 @@
 #include "../em4x50.h"
 
 /*
- * `lf_tharexde` simulates EM4x50 dumps uploaded  words/blocks, reads words of standard read
- * mode of EM4x50 tags and stores them in internal flash.
+ * `lf_tharexde` simulates EM4x50 dumps uploaded to flash, reads words
+ * transmitted by EM4x50 tags in standard read mode and stores them in
+ * internal flash.
  * It requires RDV4 hardware (for flash and battery).
  *
  * On entering stand-alone mode, this module will start simulating EM4x50 data.
  * Data is read from eml dump file uploaded to flash memory.
  *
  * On switching to read/record mode by pressing pm3 button, module will start
- * reading/recording EM4x50 data. Every found / collected data will be
- * written/appended to the logfile in flash as a text string.
+ * reading EM4x50 data. Each collected data set will be written/appended to the
+ * logfile in flash as a text string.
  *
  * LEDs:
  * - LED A: simulating
- * - LED B: reading / record
+ * - LED B: reading/recording
  * - LED C: writing to flash
  * - LED D: unmounting/sync'ing flash (normally < 100ms)
  *
@@ -124,11 +125,10 @@ void RunMod(void) {
 
     bool state_change = true;
     int no_words = 0, command = 0;
-    uint8_t entry[81], state = STATE_SIM;
+    uint8_t entry[400], state = STATE_SIM;
     uint32_t tag[EM4X50_NO_WORDS] = {0x0};
 
     rdv40_spiffs_lazy_mount();
-
     StandAloneMode();
     Dbprintf(_YELLOW_("Standalone mode THAREXDE started"));
 
@@ -144,10 +144,7 @@ void RunMod(void) {
         int button_pressed = BUTTON_CLICKED(1000);
         if (button_pressed == BUTTON_SINGLE_CLICK) {
 
-            SpinUp(100);
-
             switch (state) {
-
                 case STATE_SIM:
                     state = STATE_READ;
                     break;
@@ -161,7 +158,6 @@ void RunMod(void) {
             state_change = true;
 
         } else if (button_pressed == BUTTON_HOLD) {
-            SpinDown(100);
             break;
         }
 
@@ -210,47 +206,35 @@ void RunMod(void) {
                 LEDsoff();
                 LED_B_ON();
                 Dbprintf("");
-                Dbprintf(_YELLOW_("switched to EM4x50 reading mode"));
-
-                memset(entry, 0, sizeof(entry));
-                memset(tag, 0, sizeof(tag));
+                Dbprintf(_YELLOW_("switched to EM4x50 reading mode\n"));
 
                 log_exists = exists_in_spiffs(LF_EM4X50_LOGFILE_COLLECT);
-                
                 em4x50_setup_read();
-                
                 state_change = false;
             }
 
+            no_words = 0;
+            memset(tag, 0, sizeof(tag));
             standard_read(&no_words, tag);
-
-            // reset timers
-            AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; // re-enable timer and wait for TC0
-            AT91C_BASE_TC0->TC_RC  = 0; // set TIOA (carry bit) on overflow, return to zero
-            AT91C_BASE_TC0->TC_RA  = 1; // clear carry bit on next clock cycle
-            AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; // reset and re-enable timer
 
             if (no_words > 0) {
 
                 memset(entry, 0, sizeof(entry));
 
-                Dbprintf("");
-                sprintf((char *)entry, "found new EM4x50 tag:");
-                Dbprintf("%s", entry);
-                strcat((char *)entry, "\n");
-                append(LF_EM4X50_LOGFILE_COLLECT, entry, strlen((char *)entry));
-
+                sprintf((char *)entry, "found EM4x50 tag:\n");
                 for (int i = 0; i < no_words; i++) {
-
-                    sprintf((char *)entry, "  %2i -> 0x%08"PRIx32"", i + 1, tag[i]);
-                    Dbprintf("%s", entry);
-                    strcat((char *)entry, "\n");
-                    append(LF_EM4X50_LOGFILE_COLLECT, entry, strlen((char *)entry));
+                    sprintf((char *)entry + strlen((char *)entry), "%08"PRIx32"\n", tag[i]);
                 }
+                Dbprintf("%s", entry);
+                sprintf((char *)entry + strlen((char *)entry), "\n");
+                append(LF_EM4X50_LOGFILE_COLLECT, entry, strlen((char *)entry));
             }
-            
-            memset(tag, 0, sizeof(tag));
-            no_words = 0;
+
+            // reset timer
+            AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; // re-enable timer and wait for TC0
+            AT91C_BASE_TC0->TC_RC  = 0; // set TIOA (carry bit) on overflow, return to zero
+            AT91C_BASE_TC0->TC_RA  = 1; // clear carry bit on next clock cycle
+            AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; // reset and re-enable timer
         }
     }
 
