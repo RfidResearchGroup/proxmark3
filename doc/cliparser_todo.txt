@@ -1,5 +1,6 @@
 clear
 pref
+analyse foo
 data biphaserawdecode
 data detectclock
 data fsktonrz
@@ -95,12 +96,10 @@ hf mf ice
 lf config
 lf cmdread
 lf read
-lf search
 lf sim
 lf simask
 lf simfsk
 lf simpsk
-lf simbidir
 lf sniff
 lf em 410x
 lf em 4x05
