@@ -15,6 +15,8 @@
 #include "protocols.h"
 #include "parity.h"             // oddparity
 #include "cmdhflist.h"          // annotations
+#include "commonutil.h"         // ARRAYLEN
+#include "mifare/mifaredefault.h"          // mifare default key array
 #include "comms.h"              // for sending cmds to device. GetFromBigBuf
 #include "fileutils.h"          // for saveFile
 #include "cmdlfhitag.h"         // annotate hitag
@@ -131,7 +133,8 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
     return ret;
 }
 
-static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol, bool showWaitCycles, bool markCRCBytes, uint32_t *prev_eot, bool use_us) {
+static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol, bool showWaitCycles, bool markCRCBytes, uint32_t *prev_eot, bool use_us, 
+                               const uint64_t *mfDicKeys, uint32_t mfDicKeysCount) {
     // sanity check
     if (is_last_record(tracepos, traceLen)) {
         PrintAndLogEx(DEBUG, "last record triggered.  t-pos: %u  t-len %u", tracepos, traceLen);
@@ -428,7 +431,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     }
 
     if (protocol == PROTO_MIFARE) {
-        if (DecodeMifareData(frame, data_len, parityBytes, hdr->isResponse, mfData, &mfDataLen)) {
+        if (DecodeMifareData(frame, data_len, parityBytes, hdr->isResponse, mfData, &mfDataLen, mfDicKeys, mfDicKeysCount)) {
             memset(explanation, 0x00, sizeof(explanation));
             if (hdr->isResponse == false) {
                 annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen);
@@ -612,8 +615,9 @@ int CmdTraceList(const char *Cmd) {
                   "trace list -t hitags   -> interpret as " _YELLOW_("HitagS") " communications\n"
                   "trace list -t lto      -> interpret as " _YELLOW_("LTO-CM") " communications\n"
                   "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") " communitcations\n"
-                  "trace list -t 14a -f    -> show frame delay times\n"
-                  "trace list -t 14a -1    -> use trace buffer "
+                  "trace list -t mf --dict <mfc_default_keys>    -> use dictionary keys file\n"
+                  "trace list -t 14a -f                          -> show frame delay times\n"
+                  "trace list -t 14a -1                          -> use trace buffer "
                  );
 
     void *argtable[] = {
@@ -626,6 +630,7 @@ int CmdTraceList(const char *Cmd) {
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
                  "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
         arg_strx0("t", "type", NULL, "protocol to annotate the trace"),
+        arg_strx0(NULL, "dict", "<file>", "use dictionary keys file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -641,6 +646,13 @@ int CmdTraceList(const char *Cmd) {
     char type[10] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 7), (uint8_t *)type, sizeof(type), &tlen);
     str_lower(type);
+
+    int diclen = 0;
+    char dictionary[FILE_PATH_SIZE + 2] = {0};
+    if (CLIParamStrToBuf(arg_get_str(ctx, 8), (uint8_t *)dictionary, FILE_PATH_SIZE, &diclen)) {
+        PrintAndLogEx(FAILED, "Dictionary file name too long or invalid.");
+        diclen = 0;
+    }
 
     CLIParserFree(ctx);
 
@@ -742,6 +754,34 @@ int CmdTraceList(const char *Cmd) {
         }
 
 
+        const uint64_t *dicKeys = NULL;
+        uint32_t dicKeysCount = 0;
+        bool dictionaryLoad = false;
+
+        if (protocol == PROTO_MIFARE) {
+            if (diclen > 0) {
+                uint8_t *keyBlock = NULL;
+                int res = loadFileDICTIONARY_safe(dictionary, (void **) &keyBlock, 6, &dicKeysCount);
+                if (res != PM3_SUCCESS || dicKeysCount == 0 || keyBlock == NULL) {
+                    PrintAndLogEx(FAILED, "An error occurred while loading the dictionary! (we will use the default keys now)");
+                } else {
+                    dicKeys = calloc(dicKeysCount, sizeof(uint64_t));
+                    for (int i = 0; i < dicKeysCount; i++) {
+                        uint64_t key = bytes_to_num(keyBlock + i * 6, 6);
+                        memcpy((uint8_t *) &dicKeys[i], &key, sizeof(uint64_t));
+                    }
+                    dictionaryLoad = true;
+                }
+                if (keyBlock != NULL) {
+                    free(keyBlock);
+                }
+            }
+            if (dicKeys == NULL) {
+                dicKeys = g_mifare_default_keys;
+                dicKeysCount = ARRAYLEN(g_mifare_default_keys);
+            }
+        }
+
         PrintAndLogEx(NORMAL, "");
         if (use_relative) {
             PrintAndLogEx(NORMAL, "        Gap |   Duration | Src | Data (! denotes parity error, ' denotes short bytes)                    | CRC | Annotation");
@@ -761,11 +801,14 @@ int CmdTraceList(const char *Cmd) {
         }
 
         while (tracepos < g_traceLen) {
-            tracepos = printTraceLine(tracepos, g_traceLen, g_trace, protocol, show_wait_cycles, mark_crc, prev_EOT, use_us);
+            tracepos = printTraceLine(tracepos, g_traceLen, g_trace, protocol, show_wait_cycles, mark_crc, prev_EOT, use_us, dicKeys, dicKeysCount);
 
             if (kbd_enter_pressed())
                 break;
         }
+
+        if (dictionaryLoad)
+            free((void *) dicKeys);
     }
 
     if (show_hex)
