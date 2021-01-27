@@ -53,8 +53,8 @@
 #include "flashmem.h"
 #endif
 
-#define LF_CLOCK 64 //for 125kHz
-#define LF_RWSB_T55XX_TYPE 1 //Tag type: 0 - T5555, 1-T55x7
+#define LF_CLOCK 64 // for 125kHz
+#define LF_RWSB_T55XX_TYPE 1 // Tag type: 0 - T5555, 1-T55x7
 
 #define LF_RWSB_UNKNOWN_RESULT 0
 #define LF_RWSB_BRUTE_STOPED 1
@@ -90,7 +90,7 @@ static uint64_t rev_quads(uint64_t bits) {
     return result >> 24;
 }
 
-static void FillBuff(uint8_t bit) {
+static void fill_buff(uint8_t bit) {
     uint8_t *bba = BigBuf_get_addr();
     memset(bba + buflen, bit, LF_CLOCK / 2);
     buflen += (LF_CLOCK / 2);
@@ -99,30 +99,30 @@ static void FillBuff(uint8_t bit) {
 }
 
 static void ConstructEM410xEmulBuf(uint64_t id) {
-    int i, j, binary[4], parity[4];
+    int i, j;
+    int binary[4] = {0,0,0,0};
+    int parity[4] = {0,0,0,0};
     buflen = 0;
 
     for (i = 0; i < 9; i++)
-        FillBuff(1);
-
-    parity[0] = parity[1] = parity[2] = parity[3] = 0;
+        fill_buff(1);
 
     for (i = 0; i < 10; i++) {
         for (j = 3; j >= 0; j--, id /= 2)
             binary[j] = id % 2;
 
         for (j = 0; j < 4; j++)
-            FillBuff(binary[j]);
+            fill_buff(binary[j]);
 
-        FillBuff(binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
+        fill_buff(binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
         for (j = 0; j < 4; j++)
             parity[j] ^= binary[j];
     }
 
     for (j = 0; j < 4; j++)
-        FillBuff(parity[j]);
+        fill_buff(parity[j]);
 
-    FillBuff(0);
+    fill_buff(0);
 }
 
 static void LED_Update(int mode, int slot) {

@@ -56,7 +56,7 @@ static uint64_t rev_quads(uint64_t bits) {
     return result >> 24;
 }
 
-static void fillbuff(uint8_t bit) {
+static void fill_buff(uint8_t bit) {
     uint8_t *bba = BigBuf_get_addr();
     memset(bba + buflen, bit, LF_CLOCK / 2);
     buflen += (LF_CLOCK / 2);
@@ -72,24 +72,24 @@ static void construct_EM410x_emul(uint64_t id) {
     buflen = 0;
 
     for (i = 0; i < 9; i++)
-        fillbuff(1);
+        fill_buff(1);
 
     for (i = 0; i < 10; i++) {
         for (j = 3; j >= 0; j--, id /= 2)
             binary[j] = id % 2;
 
         for (j = 0; j < 4; j++)
-            fillbuff(binary[j]);
+            fill_buff(binary[j]);
 
-        fillbuff(binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
+        fill_buff(binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
         for (j = 0; j < 4; j++)
             parity[j] ^= binary[j];
     }
 
     for (j = 0; j < 4; j++)
-        fillbuff(parity[j]);
+        fill_buff(parity[j]);
 
-    fillbuff(0);
+    fill_buff(0);
 }
 
 static void led_slot(int i) {
