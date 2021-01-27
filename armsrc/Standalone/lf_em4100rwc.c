@@ -41,7 +41,7 @@
 // In high[] must be nulls
 static uint64_t low[] = {0x565AF781C7, 0x540053E4E2, 0x1234567890, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static uint32_t high[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-static uint8_t *bba, slots_count;
+static uint8_t slots_count;
 static int buflen;
 
 void ModInfo(void) {
@@ -57,6 +57,7 @@ static uint64_t rev_quads(uint64_t bits) {
 }
 
 static void fillbuff(uint8_t bit) {
+    uint8_t *bba = BigBuf_get_addr();
     memset(bba + buflen, bit, LF_CLOCK / 2);
     buflen += (LF_CLOCK / 2);
     memset(bba + buflen, bit ^ 1, LF_CLOCK / 2);
@@ -66,8 +67,8 @@ static void fillbuff(uint8_t bit) {
 static void construct_EM410x_emul(uint64_t id) {
 
     int i, j;
-    int binary[4] = {0};
-    int parity[4] = {0};
+    int binary[4] = {0,0,0,0};
+    int parity[4] = {0,0,0,0};
     buflen = 0;
 
     for (i = 0; i < 9; i++)
@@ -138,7 +139,6 @@ void RunMod(void) {
     //      3 - write to T5555 tag
     uint8_t state = 0;
     slots_count = ARRAYLEN(low);
-    bba = BigBuf_get_addr();
     led_slot(selected);
     for (;;) {
 
