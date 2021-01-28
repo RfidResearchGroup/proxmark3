@@ -2966,8 +2966,11 @@ static int CmdT55xxChkPwds(const char *Cmd) {
                   "lf t55xx chk --em aa11223344        -> try known pwdgen algo from some cloners based on EM4100 ID"
                  );
 
-    // 4 + (5 or 6)
-   void *argtable[9] = {
+   // Calculate size of argtable accordingly:
+   // 1 (help) + 3 (three user specified params) + ( 5 or 6  T55XX_DLMODE)
+   // 4 + (T55XX_DLMODE_xxx 5)
+   // 4 + (T55XX_DLMODE_ALL 6) == 10
+   void *argtable[10] = {
         arg_param_begin,
         arg_lit0("m", "fm", "use dictionary from flash memory (RDV4)"),
         arg_str0("f", "file", "<filename>", "file name"),
