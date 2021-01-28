@@ -125,10 +125,9 @@ static int doPreambleSearch(size_t *startIdx) {
 
     // skip first two 0 bits as they might have been missed in the demod
     uint8_t preamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 1, 0, 1, 0};
-    uint8_t errpreamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 0, 0, 0, 1};
-
     if (!preambleSearchEx(DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
 
+        uint8_t errpreamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 0, 0, 0, 1};
         if (!preambleSearchEx(DemodBuffer, errpreamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 preamble not found :: %zu", *startIdx);
             return PM3_ESOFT;
@@ -258,10 +257,10 @@ static int em4x05_setdemod_buffer(uint32_t *word, size_t idx) {
 // should cover 90% of known used configs
 // the rest will need to be manually demoded for now...
 static int em4x05_demod_resp(uint32_t *word, bool onlyPreamble) {
-    size_t idx = 0;
     *word = 0;
+    int res;
+    size_t idx = 0;
     bool found_err = false;
-    int res = PM3_SUCCESS;
     do {
         if (detectASK_MAN()) {
             res = doPreambleSearch(&idx);
@@ -1694,6 +1693,10 @@ int CmdEM4x05Unlock(const char *Cmd) {
 
         // write
         res = unlock_write_protect(use_pwd, pwd, write_value, verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "failed unlock write");
+            return PM3_ESOFT;
+        }
 
         // read after trigger
         res = em4x05_read_word_ext(14, pwd, use_pwd, &word14);
@@ -1853,7 +1856,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
         PrintAndLogEx(INFO, "Old protection word => " _YELLOW_("%08X"), search_value);
         char bitstring[9] = {0};
         for (int i = 0; i < 8; i++) {
-            bitstring[i] = bitflips & (0xF << ((7 - i) * 4)) ? 'x' : '.';
+            bitstring[i] = (bitflips & (0xF << ((7 - i) * 4))) ? 'x' : '.';
         }
         // compute number of bits flipped
 
@@ -1955,23 +1958,8 @@ uint32_t static em4x05_Sniff_GetBlock(char *bits, bool fwd) {
 
 int CmdEM4x05Sniff(const char *Cmd) {
 
-    bool sampleData = true;
-    bool haveData = false;
-    size_t idx = 0;
-    char cmdText [100];
-    char dataText [100];
-    char blkAddr[4];
-    char bits[80];
-    int bitidx;
-    int ZeroWidth;    // 32-42 "1" is 32
-    int CycleWidth;
-    size_t pulseSamples;
-    size_t pktOffset;
-    int i;
-    bool eop = false;
-    uint32_t tmpValue;
-    bool pwd = false;
-    bool fwd = false;
+    bool pwd = false, fwd = false;
+    bool haveData, sampleData = true;
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x05_sniff",
@@ -1988,11 +1976,20 @@ int CmdEM4x05Sniff(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-
-    sampleData = !arg_get_lit(ctx, 1);
+    sampleData = (arg_get_lit(ctx, 1) == false);
     fwd = arg_get_lit(ctx, 2);
-
     CLIParserFree(ctx);
+
+    char cmdText[100];
+    char dataText[100];
+    char blkAddr[4];
+    char bits[80];
+    int i, bitidx;
+    int ZeroWidth;    // 32-42 "1" is 32
+    int CycleWidth;
+    size_t idx = 0, pulseSamples, pktOffset;
+    uint32_t tmpValue;
+    bool eop = false;
 
     // setup and sample data from Proxmark
     // if not directed to existing sample/graphbuffer
@@ -2076,7 +2073,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
                             haveData = true;
                             sprintf(cmdText, "Write");
                             tmpValue = (bits[4] - '0') + ((bits[5] - '0') << 1) + ((bits[6] - '0') << 2)  + ((bits[7] - '0') << 3);
-                            sprintf(blkAddr, "%d", tmpValue);
+                            sprintf(blkAddr, "%u", tmpValue);
                             if (tmpValue == 2) {
                                 pwd = true;
                             }
@@ -2090,7 +2087,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
                             pwd = false;
                             sprintf(cmdText, "Read");
                             tmpValue = (bits[4] - '0') + ((bits[5] - '0') << 1) + ((bits[6] - '0') << 2)  + ((bits[7] - '0') << 3);
-                            sprintf(blkAddr, "%d", tmpValue);
+                            sprintf(blkAddr, "%u", tmpValue);
                             sprintf(dataText, " ");
                         }
 
