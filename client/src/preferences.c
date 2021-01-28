@@ -834,7 +834,7 @@ static int setCmdSavePaths(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (deflen == 0 && dulen == 0 && tlen == 0) {
-        PrintAndLogEx(FAILED, "Must give atleast one path");
+        PrintAndLogEx(FAILED, "Must give at least one path");
         return PM3_EINVARG;
     }
 
@@ -851,6 +851,11 @@ static int setCmdSavePaths(const char *Cmd) {
     if (tlen) {
         path_item = spTrace;
         path = trace_path;
+    }
+
+    if (path == NULL) {
+        PrintAndLogEx(FAILED, "Must give at least one path");
+        return PM3_EINVARG;
     }
 
     // remove trailing slash.
