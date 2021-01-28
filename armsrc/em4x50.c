@@ -646,7 +646,7 @@ static int get_word_from_bitstream(uint32_t *data) {
 
 // simple login to EM4x50,
 // used in operations that require authentication
-static bool login(uint32_t password) {
+static int login(uint32_t password) {
     if (request_receive_mode() == PM3_SUCCESS) {
 
         // send login command
@@ -722,7 +722,7 @@ static bool brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
 void em4x50_login(uint32_t *password) {
     em4x50_setup_read();
 
-    uint8_t status = PM3_EFAILED;
+    int status = PM3_EFAILED;
     if (get_signalproperties() && find_em4x50_tag())
         status = login(*password);
 
@@ -1111,7 +1111,7 @@ void em4x50_writepwd(em4x50_data_t *etd) {
 static void em4x50_sim_send_bit(uint8_t bit) {
 
     //uint16_t timeout = EM4X50_T_TAG_FULL_PERIOD;
-    uint16_t timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
+    int16_t timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
     for (int t = 0; t < EM4X50_T_TAG_FULL_PERIOD; t++) {
 
@@ -1236,7 +1236,7 @@ static int em4x50_sim_read_bit(void) {
                 if (timeout <= 0) {
                     return PM3_ETIMEOUT;
                 }
-                timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
+                // timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
                 // now we have a reference "position", from here it will take
                 // slightly less than 32 cycles until the end of the bit period
@@ -1420,8 +1420,6 @@ static void em4x50_sim_send_nak(void) {
 // standard read mode process (simulation mode)
 static int em4x50_sim_handle_standard_read_command(uint32_t *tag) {
 
-    int command = 0;
-
     // extract control data
     int fwr = reflect32(tag[EM4X50_CONTROL]) & 0xFF;        // first word read
     int lwr = (reflect32(tag[EM4X50_CONTROL]) >> 8) & 0xFF; // last word read
@@ -1435,7 +1433,7 @@ static int em4x50_sim_handle_standard_read_command(uint32_t *tag) {
 
         WDT_HIT();
 
-        command = em4x50_sim_send_listen_window(tag);
+        int command = em4x50_sim_send_listen_window(tag);
         if (command != PM3_SUCCESS) {
             return command;
         }
@@ -1460,8 +1458,6 @@ static int em4x50_sim_handle_standard_read_command(uint32_t *tag) {
 
 // selective read mode process (simulation mode)
 static int em4x50_sim_handle_selective_read_command(uint32_t *tag) {
-
-    int command = 0;
 
     // read password
     uint32_t address = 0;
@@ -1491,7 +1487,7 @@ static int em4x50_sim_handle_selective_read_command(uint32_t *tag) {
 
         WDT_HIT();
 
-        command = em4x50_sim_send_listen_window(tag);
+        int command = em4x50_sim_send_listen_window(tag);
         if (command != PM3_SUCCESS) {
             return command;
         }
