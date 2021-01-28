@@ -2066,7 +2066,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
     bool has_key = false;
     if (ak_len > 0) {
-        if (ak_len != 4 || ak_len != 16) {
+        if (ak_len != 4 && ak_len != 16) {
             PrintAndLogEx(ERR, "Wrong key length. expected 4 or 16, got %d", ak_len);
             return PM3_EINVARG;
         } else {

@@ -1004,7 +1004,7 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
                  );
 
     char modeldesc[40];
-    snprintf(modeldesc, sizeof(modeldesc), "model number [0 - %u] of your tag", MEND - 1);
+    snprintf(modeldesc, sizeof(modeldesc), "model number [0 - %d] of your tag", MEND - 1);
 
     void *argtable[] = {
         arg_param_begin,
