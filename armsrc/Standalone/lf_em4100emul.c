@@ -49,7 +49,7 @@ static void fill_buff(uint8_t bit) {
     buflen += (LF_CLOCK / 2);
 }
 
-static void ConstructEM410xEmulBuf(uint64_t id) {
+static void construct_EM410x_emul(uint64_t id) {
 
     int i, j;
     int binary[4] = {0,0,0,0};
@@ -96,10 +96,11 @@ void RunMod(void) {
     for (;;) {
         WDT_HIT();
         if (data_available()) break;
+
         SpinDelay(100);
         SpinUp(100);
         LED_Slot(selected);
-        ConstructEM410xEmulBuf(rev_quads(low[selected]));
+        construct_EM410x_emul(rev_quads(low[selected]));
         SimulateTagLowFrequency(buflen, 0, true);
         selected = (selected + 1) % slots_count;
     }

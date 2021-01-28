@@ -98,7 +98,7 @@ static void fill_buff(uint8_t bit) {
     buflen += (LF_CLOCK / 2);
 }
 
-static void ConstructEM410xEmulBuf(uint64_t id) {
+static void construct_EM410x_emul(uint64_t id) {
     int i, j;
     int binary[4] = {0,0,0,0};
     int parity[4] = {0,0,0,0};
@@ -226,7 +226,7 @@ static int BruteEMTag(uint64_t originalCard, int slot) {
         cardnum = cardnum + direction;
         uint64_t currentCard = PackEmID(originalCard, cardnum);
         Dbprintf("[=] >>  Simulating card id %"PRIx64" <<", currentCard);
-        ConstructEM410xEmulBuf(rev_quads(currentCard));
+        construct_EM410x_emul(rev_quads(currentCard));
         SimulateTagLowFrequencyEx(buflen, 0, 1, bruteforceSpeed[bruteforceSpeedCurrent] * 10000);
 
         int button_pressed = BUTTON_CLICKED(1000);
@@ -271,7 +271,7 @@ static int ExecuteMode(int mode, int slot) {
             return LF_RWSB_UNKNOWN_RESULT;
         case LF_RWSB_MODE_SIM:
             Dbprintf("[=] >>  Sim mode started  <<");
-            ConstructEM410xEmulBuf(rev_quads(low[slot]));
+            construct_EM410x_emul(rev_quads(low[slot]));
             SimulateTagLowFrequency(buflen, 0, 1);
             return LF_RWSB_UNKNOWN_RESULT;
         case LF_RWSB_MODE_WRITE:
