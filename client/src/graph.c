@@ -149,7 +149,7 @@ void convertGraphFromBitstreamEx(int hi, int low) {
 }
 
 // Get or auto-detect ask clock rate
-int GetAskClock(const char *str, bool printAns) {
+int GetAskClock(const char *str, bool verbose) {
     if (getSignalProperties()->isnoise)
         return -1;
 
