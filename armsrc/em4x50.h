@@ -14,8 +14,6 @@
 #include "../include/em4x50.h"
 
 void em4x50_setup_read(void);
-bool get_signalproperties(void);
-bool find_em4x50_tag(void);
 int standard_read(int *now, uint32_t *words);
 
 void em4x50_setup_sim(void);
