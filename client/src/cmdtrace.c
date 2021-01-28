@@ -582,11 +582,10 @@ static int CmdTraceSave(const char *Cmd) {
 
     if (g_traceLen == 0) {
         download_trace();
-    }
-
-    if (g_traceLen == 0) {
-        PrintAndLogEx(WARNING, "trace is empty, nothing to save");
-        return PM3_SUCCESS;
+        if (g_traceLen == 0) {
+            PrintAndLogEx(WARNING, "trace is empty, nothing to save");
+            return PM3_SUCCESS;
+        }
     }
 
     saveFile(filename, ".trace", g_trace, g_traceLen);
