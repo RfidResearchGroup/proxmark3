@@ -68,7 +68,7 @@ bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t *rmac, uint8_t *
 
     iclass_prekey_t *prekey = calloc(ICLASS_KEYS_MAX, sizeof(iclass_prekey_t));
     if (prekey == false) {
-        return PM3_EMALLOC;
+        return false;
     }
 
     uint8_t ccnr[12];
@@ -1075,10 +1075,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(INFO, "Block 9 decoder");
-                uint8_t pinsize = 0;
                 if (use_sc) {
-                    pinsize = GetPinSize(decrypted + (8 * 6));
-
+                    uint8_t pinsize = GetPinSize(decrypted + (8 * 6));
                     if (pinsize > 0) {
 
                         uint64_t pin = bytes_to_num(decrypted + (8 * 9), 5);
