@@ -2074,7 +2074,7 @@ static int CmdHFiClass_loclass(const char *Cmd) {
                   "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>\n"
                   "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>\n"
                   "   ... totalling N*24 bytes",
-                  "hf iclass loclass -f iclass-dump.bin\n"
+                  "hf iclass loclass -f iclass_dump.bin\n"
                   "hf iclass loclass --test");
 
     void *argtable[] = {
