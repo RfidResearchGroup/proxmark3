@@ -93,9 +93,11 @@ static bool get_input_data_from_file(uint32_t *tag, char *inputfile) {
         rdv40_spiffs_read_as_filetype(inputfile, mem, size, RDV40_SPIFFS_SAFETY_SAFE);
 
         now = size / 9;
-        for (int i = 0; i < now; i++)
-            for (int j = 0; j < 4; j++)
+        for (int i = 0; i < now; i++) {
+            for (int j = 0; j < 4; j++) {
                 tag[i] |= (hex2int(mem[2 * j + 9 * i]) << 4 | hex2int(mem[2 * j + 1 + 9 * i])) << ((3 - j) * 8);
+            }
+        }
 
         Dbprintf(_YELLOW_("read tag data from input file"));
     }
@@ -107,14 +109,12 @@ static bool get_input_data_from_file(uint32_t *tag, char *inputfile) {
 
 static void append(const char *filename, uint8_t *entry, size_t entry_len) {
 
-    LED_D_ON();
     if (log_exists == false) {
         rdv40_spiffs_write(filename, entry, entry_len, RDV40_SPIFFS_SAFETY_SAFE);
         log_exists = true;
     } else {
         rdv40_spiffs_append(filename, entry, entry_len, RDV40_SPIFFS_SAFETY_SAFE);
     }
-    LED_D_OFF();
 }
 
 void ModInfo(void) {
@@ -179,6 +179,7 @@ void RunMod(void) {
                 // init; start with command = standard read mode
                 em4x50_setup_sim();
                 gLogin = false;
+                LED_D_OFF();
                 gWritePasswordProcess = false;
                 command = EM4X50_COMMAND_STANDARD_READ;
 
@@ -197,6 +198,7 @@ void RunMod(void) {
             if (command == PM3_ETIMEOUT) {
                 command = EM4X50_COMMAND_STANDARD_READ;
                 gLogin = false;
+                LED_D_OFF();
             }
             
         } else if (state == STATE_READ) {
