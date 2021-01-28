@@ -1845,9 +1845,8 @@ void BruteforceIso15693Afi(uint32_t speed) {
 
     int datalen = 5;
     uint32_t eof_time = 0;
-    uint32_t start_time = GetCountSspClk();
     int recvlen = SendDataTag(data, datalen, true, speed, recv, sizeof(recv), 0, ISO15693_READER_TIMEOUT, &eof_time);
-    start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    uint32_t start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
 
     WDT_HIT();
 
