@@ -183,7 +183,7 @@ int GetAskClock(const char *str, bool verbose) {
         setClockGrid(clock1, idx);
     }
     // Only print this message if we're not looping something
-    if (printAns || g_debugMode)
+    if (verbose || g_debugMode)
         PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d, Best Starting Position: %d", clock1, idx);
 
     free(bits);
