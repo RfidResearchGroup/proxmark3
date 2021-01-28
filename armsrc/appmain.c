@@ -1666,10 +1666,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             iClass_ReadBlock(packet->data.asBytes);
             break;
         }
-        case CMD_HF_ICLASS_AUTH: { //check
-            iClass_Authentication(packet->data.asBytes);
-            break;
-        }
         case CMD_HF_ICLASS_CHKKEYS: {
             iClass_Authentication_fast(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
