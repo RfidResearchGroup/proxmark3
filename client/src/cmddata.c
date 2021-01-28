@@ -1576,7 +1576,7 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose) {
 
     uint32_t n = end - start;
 
-    if (n <= 0 || n > pm3_capabilities.bigbuf_size - 1)
+    if (n == 0 || n > pm3_capabilities.bigbuf_size - 1)
         n = pm3_capabilities.bigbuf_size - 1;
 
     if (verbose)
