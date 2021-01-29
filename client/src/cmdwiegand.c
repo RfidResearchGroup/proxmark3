@@ -25,24 +25,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static void print_wiegand_code(wiegand_message_t *packed) {
-    const char *s = "Encoded wiegand: ";
-    if (packed->Top != 0) {
-        PrintAndLogEx(SUCCESS, "%s" _GREEN_("%X%08X%08X"),
-                      s,
-                      (uint32_t)packed->Top,
-                      (uint32_t)packed->Mid,
-                      (uint32_t)packed->Bot
-                     );
-    } else {
-        PrintAndLogEx(SUCCESS, "%s" _YELLOW_("%X%08X"),
-                      s,
-                      (uint32_t)packed->Mid,
-                      (uint32_t)packed->Bot
-                     );
-    }
-}
-
 int CmdWiegandList(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -76,7 +58,7 @@ int CmdWiegandEncode(const char *Cmd) {
         arg_u64_1(NULL, "cn", "<dec>", "card number"),
         arg_u64_0(NULL, "issue", "<dec>", "issue level"),
         arg_u64_0(NULL, "oem", "<dec>", "OEM code"),
-        arg_str1("w", "wiegand", "<format>", "see `wiegand list` for available formats"),
+        arg_str0("w", "wiegand", "<format>", "see `wiegand list` for available formats"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -94,21 +76,27 @@ int CmdWiegandEncode(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)format, sizeof(format), &len);
     CLIParserFree(ctx);
 
-    int idx = HIDFindCardFormat(format);
-    if (idx == -1) {
-        PrintAndLogEx(WARNING, "Unknown format: %s", format);
-        return PM3_EINVARG;
+    int idx = -1;
+    if (len) {
+        idx = HIDFindCardFormat(format);
+        if (idx == -1) {
+            PrintAndLogEx(WARNING, "Unknown format: %s", format);
+            return PM3_EINVARG;
+        }
     }
 
-    wiegand_message_t packed;
-    memset(&packed, 0, sizeof(wiegand_message_t));
-
-    if (HIDPack(idx, &data, &packed) == false) {
-        PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
-        return PM3_ESOFT;
+    if (idx != -1) {
+        wiegand_message_t packed;
+        memset(&packed, 0, sizeof(wiegand_message_t));
+        if (HIDPack(idx, &data, &packed) == false) {
+            PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
+            return PM3_ESOFT;
+        }
+        print_wiegand_code(&packed);
+    } else {
+        // try all formats and print only the ones that work.
+        HIDPackTryAll(&data);
     }
-
-    print_wiegand_code(&packed);
     return PM3_SUCCESS;
 }
 

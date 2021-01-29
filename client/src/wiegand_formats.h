@@ -44,5 +44,7 @@ int HIDFindCardFormat(const char *format);
 cardformat_t HIDGetCardFormat(int idx);
 bool HIDPack(int format_idx, wiegand_card_t *card, wiegand_message_t *packed);
 bool HIDTryUnpack(wiegand_message_t *packed, bool ignore_parity);
-
+void HIDPackTryAll(wiegand_card_t *card);
+void print_wiegand_code(wiegand_message_t *packed);
+void print_desc_wiegand(cardformat_t *fmt, wiegand_message_t *packed);
 #endif

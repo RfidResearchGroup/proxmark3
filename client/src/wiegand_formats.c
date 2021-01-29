@@ -8,7 +8,9 @@
 // HID card format packing/unpacking routines
 //-----------------------------------------------------------------------------
 #include "wiegand_formats.h"
+#include <stdlib.h>
 #include "commonutil.h"
+
 
 static bool Pack_H10301(wiegand_card_t *card, wiegand_message_t *packed) {
     memset(packed, 0, sizeof(wiegand_message_t));
@@ -823,7 +825,7 @@ static const cardformat_t FormatTable[] = {
     {"Optus34", Pack_Optus,   Unpack_Optus,   "Indala Optus 34-bit",        {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"Smartpass", Pack_Smartpass, Unpack_Smartpass, "Cardkey Smartpass 34-bit", {1, 1, 1, 0, 0}}, // from cardinfo.barkweb.com.au
     {"BQT", Pack_bqt, Unpack_bqt, "BQT 34-bit", {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
-    {"C1k35s",  Pack_C1k35s,  Unpack_C1k35s,  "HID Corporate 1000 35-bit standard layout", {1, 1, 0, 0, 1}}, // imported from old pack/unpack
+    {"C1k35s",  Pack_C1k35s,  Unpack_C1k35s,  "HID Corporate 1000 35-bit std", {1, 1, 0, 0, 1}}, // imported from old pack/unpack
     {"C15001",  Pack_C15001,  Unpack_C15001,  "HID KeyScan 36-bit",         {1, 1, 0, 1, 1}}, // from Proxmark forums
     {"S12906",  Pack_S12906,  Unpack_S12906,  "HID Simplex 36-bit",         {1, 1, 1, 0, 1}}, // from cardinfo.barkweb.com.au
     {"Sie36",   Pack_Sie36,   Unpack_Sie36,   "HID 36-bit Siemens",         {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
@@ -834,7 +836,7 @@ static const cardformat_t FormatTable[] = {
     {"MDI37",  Pack_MDI37, Unpack_MDI37,  "PointGuard MDI 37-bit",   {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"P10001",  Pack_P10001,  Unpack_P10001,  "HID P10001 Honeywell 40-bit", {1, 1, 0, 1, 0}}, // from cardinfo.barkweb.com.au
     {"Casi40",  Pack_CasiRusco40, Unpack_CasiRusco40, "Casi-Rusco 40-bit",   {1, 0, 0, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"C1k48s",  Pack_C1k48s,  Unpack_C1k48s,  "HID Corporate 1000 48-bit standard layout", {1, 1, 0, 0, 1}}, // imported from old pack/unpack
+    {"C1k48s",  Pack_C1k48s,  Unpack_C1k48s,  "HID Corporate 1000 48-bit std", {1, 1, 0, 0, 1}}, // imported from old pack/unpack
     {NULL, NULL, NULL, NULL, {0, 0, 0, 0, 0}} // Must null terminate array
 };
 
@@ -842,16 +844,57 @@ void HIDListFormats(void) {
     if (FormatTable[0].Name == NULL)
         return;
 
-    PrintAndLogEx(NORMAL, "%-10s %s", "Name", "Description");
-    PrintAndLogEx(NORMAL, "------------------------------------------------------------");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "%-10s %s", "Name", "Description");
+    PrintAndLogEx(INFO, "------------------------------------------------------------");
 
     int i = 0;
     while (FormatTable[i].Name) {
-        PrintAndLogEx(NORMAL, _YELLOW_("%-10s")" %-30s", FormatTable[i].Name, FormatTable[i].Descrp);
+        PrintAndLogEx(INFO, _YELLOW_("%-10s")" %-30s", FormatTable[i].Name, FormatTable[i].Descrp);
         ++i;
     }
     PrintAndLogEx(NORMAL, "");
     return;
+}
+
+void print_desc_wiegand(cardformat_t *fmt, wiegand_message_t *packed) {
+
+    char *s = calloc(128, sizeof(uint8_t));
+    sprintf(s, _YELLOW_("%-10s")" %-30s",  fmt->Name, fmt->Descrp);
+
+    if (packed->Top != 0) {
+        PrintAndLogEx(SUCCESS, "%s --> " _GREEN_("%X%08X%08X"),
+                      s,
+                      (uint32_t)packed->Top,
+                      (uint32_t)packed->Mid,
+                      (uint32_t)packed->Bot
+                     );
+    } else {
+        PrintAndLogEx(SUCCESS, "%s --> " _YELLOW_("%X%08X"),
+                      s,
+                      (uint32_t)packed->Mid,
+                      (uint32_t)packed->Bot
+                     );
+    }
+    free(s);
+}
+
+void print_wiegand_code(wiegand_message_t *packed) {
+    const char *s = "Encoded wiegand: ";
+    if (packed->Top != 0) {
+        PrintAndLogEx(SUCCESS, "%s" _GREEN_("%X%08X%08X"),
+                      s,
+                      (uint32_t)packed->Top,
+                      (uint32_t)packed->Mid,
+                      (uint32_t)packed->Bot
+                     );
+    } else {
+        PrintAndLogEx(SUCCESS, "%s" _YELLOW_("%X%08X"),
+                      s,
+                      (uint32_t)packed->Mid,
+                      (uint32_t)packed->Bot
+                     );
+    }
 }
 
 cardformat_t HIDGetCardFormat(int idx) {
@@ -884,6 +927,26 @@ bool HIDPack(int format_idx, wiegand_card_t *card, wiegand_message_t *packed) {
         return false;
 
     return FormatTable[format_idx].Pack(card, packed);
+}
+
+void HIDPackTryAll(wiegand_card_t *card) {
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "%-10s %-30s --> Encoded wiegand", "Name", "Description");
+    PrintAndLogEx(INFO, "----------------------------------------------------------------------");
+
+    wiegand_message_t packed;
+    int i = 0;
+    while (FormatTable[i].Name) {
+        memset(&packed, 0, sizeof(wiegand_message_t));
+        bool res = FormatTable[i].Pack(card, &packed);
+        if (res) {
+            cardformat_t fmt = HIDGetCardFormat(i);
+            print_desc_wiegand(&fmt, &packed);
+        }
+        i++;
+    }
+    PrintAndLogEx(NORMAL, "");
 }
 
 static void HIDDisplayUnpackedCard(wiegand_card_t *card, const cardformat_t format) {
@@ -951,3 +1014,4 @@ bool HIDTryUnpack(wiegand_message_t *packed, bool ignore_parity) {
 
     return result;
 }
+
