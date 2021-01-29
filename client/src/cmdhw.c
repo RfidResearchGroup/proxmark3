@@ -332,8 +332,8 @@ static int CmdDbg(const char *Cmd) {
     bool lv0 = arg_get_lit(ctx, 1);
     bool lv1 = arg_get_lit(ctx, 2);
     bool lv2 = arg_get_lit(ctx, 3);
-    bool lv3 = arg_get_lit(ctx, 3);
-    bool lv4 = arg_get_lit(ctx, 4);
+    bool lv3 = arg_get_lit(ctx, 4);
+    bool lv4 = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     if ((lv0 + lv1 + lv2 + lv3 + lv4) > 1) {
