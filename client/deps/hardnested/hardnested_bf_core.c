@@ -143,7 +143,7 @@ bitslice_test_nonces_t bitslice_test_nonces_NOSIMD;
 bitslice_test_nonces_t bitslice_test_nonces_dispatch;
 
 #if defined (_WIN32)
-#define malloc_bitslice(x) __builtin_assume_aligned(_aligned_malloc((x), MAX_BITSLICES/8), MAX_BITSLICES/8)
+#define malloc_bitslice(x) __builtin_assume_aligned(_aligned_malloc((x), MAX_BITSLICES / 8), MAX_BITSLICES / 8)
 #define free_bitslice(x) _aligned_free(x)
 #elif defined (__APPLE__)
 static void *malloc_bitslice(size_t x) {
@@ -156,7 +156,7 @@ static void *malloc_bitslice(size_t x) {
 }
 #define free_bitslice(x) free(x)
 #else
-#define malloc_bitslice(x) memalign(MAX_BITSLICES/8, (x))
+#define malloc_bitslice(x) memalign(MAX_BITSLICES / 8, (x))
 #define free_bitslice(x) free(x)
 #endif
 
@@ -559,6 +559,10 @@ void SetSIMDInstr(SIMDExecInstr instr) {
 static SIMDExecInstr GetSIMDInstr(void) {
     SIMDExecInstr instr;
 
+#if defined(COMPILER_HAS_SIMD)
+    __builtin_cpu_init();
+#endif
+
 #if defined(COMPILER_HAS_SIMD_AVX512)
     if (__builtin_cpu_supports("avx512f"))
         instr = SIMD_AVX512;
@@ -575,7 +579,7 @@ static SIMDExecInstr GetSIMDInstr(void) {
             instr = SIMD_MMX;
         else
 #endif
-            instr = SIMD_NONE;
+        instr = SIMD_NONE;
 
     return instr;
 }

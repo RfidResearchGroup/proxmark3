@@ -347,112 +347,112 @@ while true; do
       if ! CheckExecute "trace load/list x"       "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -x1 -t 14a;'" "0.0101840425"; then break; fi
 
       echo -e "\n${C_BLUE}Testing LF:${C_NC}"
-      if ! CheckExecute "lf AWID test"          "$CLIENTBIN -c 'data load -f traces/lf_AWID-15-259.pm3;lf search 1'" "AWID ID found"; then break; fi
-      if ! CheckExecute "lf EM410x test"        "$CLIENTBIN -c 'data load -f traces/lf_EM4102-1.pm3;lf search 1'" "EM410x ID found"; then break; fi
-      if ! CheckExecute "lf EM4x05 test"        "$CLIENTBIN -c 'data load -f traces/lf_EM4x05.pm3;lf search 1'" "FDX-B ID found"; then break; fi
-      if ! CheckExecute "lf FDX-A FECAVA test"  "$CLIENTBIN -c 'data load -f traces/lf_EM4305_fdxa_destron.pm3;lf search 1'" "FDX-A FECAVA Destron ID found"; then break; fi
-      if ! CheckExecute "lf FDX-B test"         "$CLIENTBIN -c 'data load -f traces/lf_HomeAgain1600.pm3;lf search 1'" "FDX-B ID found"; then break; fi
+      if ! CheckExecute "lf AWID test"          "$CLIENTBIN -c 'data load -f traces/lf_AWID-15-259.pm3;lf search -1'" "AWID ID found"; then break; fi
+      if ! CheckExecute "lf EM410x test"        "$CLIENTBIN -c 'data load -f traces/lf_EM4102-1.pm3;lf search -1'" "EM410x ID found"; then break; fi
+      if ! CheckExecute "lf EM4x05 test"        "$CLIENTBIN -c 'data load -f traces/lf_EM4x05.pm3;lf search -1'" "FDX-B ID found"; then break; fi
+      if ! CheckExecute "lf FDX-A FECAVA test"  "$CLIENTBIN -c 'data load -f traces/lf_EM4305_fdxa_destron.pm3;lf search -1'" "FDX-A FECAVA Destron ID found"; then break; fi
+      if ! CheckExecute "lf FDX-B test"         "$CLIENTBIN -c 'data load -f traces/lf_HomeAgain1600.pm3;lf search -1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute "lf FDX/BioThermo test" "$CLIENTBIN -c 'data load -f traces/lf_FDXB_Bio-Thermo.pm3; lf fdxb demod'" "95.2 F / 35.1 C"; then break; fi
-      if ! CheckExecute "lf GPROXII test"       "$CLIENTBIN -c 'data load -f traces/lf_GProx_36_30_14489.pm3; lf search 1'" "Guardall G-Prox II ID found"; then break; fi
-      if ! CheckExecute "lf HID Prox test"      "$CLIENTBIN -c 'data load -f traces/lf_HID-proxCardII-05512-11432784-1.pm3;lf search 1'" "HID Prox ID found"; then break; fi
-      if ! CheckExecute "lf IDTECK test"        "$CLIENTBIN -c 'data load -f traces/lf_IDTECK_4944544BAC40E069.pm3; lf search 1'" "Idteck ID found"; then break; fi
-      if ! CheckExecute "lf INDALA test"        "$CLIENTBIN -c 'data load -f traces/lf_Indala-504278295.pm3;lf search 1'" "Indala ID found"; then break; fi
-      if ! CheckExecute "lf KERI test"          "$CLIENTBIN -c 'data load -f traces/lf_Keri.pm3;lf search 1'" "Pyramid ID found"; then break; fi
-      if ! CheckExecute "lf NEXWATCH test"      "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Quadrakey-521512301.pm3;lf search 1 '" "NexWatch ID found"; then break; fi
-      if ! CheckExecute "lf SECURAKEY test"     "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Securakey-64169.pm3;lf search 1 '" "Securakey ID found"; then break; fi
-      if ! CheckExecute "lf PAC test"           "$CLIENTBIN -c 'data load -f traces/lf_PAC-8E4C058E.pm3;lf search 1'" "PAC/Stanley ID found"; then break; fi
-      if ! CheckExecute "lf PARADOX test"       "$CLIENTBIN -c 'data load -f traces/lf_Paradox-96_40426-APJN08.pm3;lf search 1'" "Paradox ID found"; then break; fi
-      if ! CheckExecute "lf VIKING test"        "$CLIENTBIN -c 'data load -f traces/lf_Transit999-best.pm3;lf search 1'" "Viking ID found"; then break; fi
-      if ! CheckExecute "lf VISA2000 test"      "$CLIENTBIN -c 'data load -f traces/lf_VISA2000.pm3;lf search 1'" "Visa2000 ID found"; then break; fi
+      if ! CheckExecute "lf GPROXII test"       "$CLIENTBIN -c 'data load -f traces/lf_GProx_36_30_14489.pm3; lf search -1'" "Guardall G-Prox II ID found"; then break; fi
+      if ! CheckExecute "lf HID Prox test"      "$CLIENTBIN -c 'data load -f traces/lf_HID-proxCardII-05512-11432784-1.pm3;lf search -1'" "HID Prox ID found"; then break; fi
+      if ! CheckExecute "lf IDTECK test"        "$CLIENTBIN -c 'data load -f traces/lf_IDTECK_4944544BAC40E069.pm3; lf search -1'" "Idteck ID found"; then break; fi
+      if ! CheckExecute "lf INDALA test"        "$CLIENTBIN -c 'data load -f traces/lf_Indala-504278295.pm3;lf search -1'" "Indala ID found"; then break; fi
+      if ! CheckExecute "lf KERI test"          "$CLIENTBIN -c 'data load -f traces/lf_Keri.pm3;lf search -1'" "Pyramid ID found"; then break; fi
+      if ! CheckExecute "lf NEXWATCH test"      "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Quadrakey-521512301.pm3;lf search -1 '" "NexWatch ID found"; then break; fi
+      if ! CheckExecute "lf SECURAKEY test"     "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Securakey-64169.pm3;lf search -1 '" "Securakey ID found"; then break; fi
+      if ! CheckExecute "lf PAC test"           "$CLIENTBIN -c 'data load -f traces/lf_PAC-8E4C058E.pm3;lf search -1'" "PAC/Stanley ID found"; then break; fi
+      if ! CheckExecute "lf PARADOX test"       "$CLIENTBIN -c 'data load -f traces/lf_Paradox-96_40426-APJN08.pm3;lf search -1'" "Paradox ID found"; then break; fi
+      if ! CheckExecute "lf VIKING test"        "$CLIENTBIN -c 'data load -f traces/lf_Transit999-best.pm3;lf search -1'" "Viking ID found"; then break; fi
+      if ! CheckExecute "lf VISA2000 test"      "$CLIENTBIN -c 'data load -f traces/lf_VISA2000.pm3;lf search -1'" "Visa2000 ID found"; then break; fi
 
-      if ! CheckExecute slow "lf T55 awid 26 test"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_awid_26.pm3; lf search 1'" "AWID ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 awid 26 test"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_awid_26.pm3; lf search -1'" "AWID ID found"; then break; fi
       if ! CheckExecute slow "lf T55 awid 26 test2"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_awid_26.pm3; lf awid demod'" \
                                                                      "AWID - len: 26 FC: 224 Card: 1337 - Wiegand: 3c00a73"; then break; fi
-      if ! CheckExecute slow "lf T55 awid 50 test"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_awid_50.pm3; lf search 1'" "AWID ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 awid 50 test"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_awid_50.pm3; lf search -1'" "AWID ID found"; then break; fi
       if ! CheckExecute slow "lf T55 awid 50 test2"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_awid_50.pm3; lf awid demod'" \
                                                                      "AWID - len: 50 FC: 2001 Card: 13371337 - Wiegand: 20fa201980f92, Raw: 0128b12eb1811d7117e22111"; then break; fi
-      if ! CheckExecute slow "lf T55 em410x test"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_em410x.pm3; lf search 1'" "EM410x ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 em410x test"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_em410x.pm3; lf search -1'" "EM410x ID found"; then break; fi
       if ! CheckExecute slow "lf T55 em410x test2"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_em410x.pm3; lf em 410x demod'" \
                                                                      "EM 410x ID 0F0368568B"; then break; fi
-      if ! CheckExecute slow "lf T55 fdxb_animal test"           "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_animal.pm3; lf search 1'" "FDX-B ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 fdxb_animal test"           "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_animal.pm3; lf search -1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute slow "lf T55 fdxb_animal test2"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_animal.pm3; lf fdxb demod'" \
                                                                      "Animal ID          999-000000112233"; then break; fi
-      if ! CheckExecute slow "lf T55 fdxb_extended test"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_extended.pm3; lf search 1'" "FDX-B ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 fdxb_extended test"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_extended.pm3; lf search -1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute slow "lf T55 fdxb_extended test2"        "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_extended.pm3; lf fdxb demod'" \
                                                                      "temperature     95.2 F / 35.1 C"; then break; fi
-      if ! CheckExecute slow "lf T55 gallagher test"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gallagher.pm3; lf search 1'" "GALLAGHER ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 gallagher test"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gallagher.pm3; lf search -1'" "GALLAGHER ID found"; then break; fi
       if ! CheckExecute slow "lf T55 gallagher test2"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gallagher.pm3; lf gallagher demod'" \
                                                                      "GALLAGHER - Region: 0 FC: 27865 CN: 682758 Issue Level: 13"; then break; fi
-      if ! CheckExecute slow "lf T55 gproxii test"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gproxii.pm3; lf search 1'" "Guardall G-Prox II ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 gproxii test"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gproxii.pm3; lf search -1'" "Guardall G-Prox II ID found"; then break; fi
       if ! CheckExecute slow "lf T55 gproxii test2"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gproxii.pm3; lf gproxii demod'" \
                                                                      "G-Prox-II - len: 26 FC: 123 Card: 11223, Raw: f98c7038c63356c7ac26398c"; then break; fi
-      if ! CheckExecute slow "lf T55 hid test"                   "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_hid.pm3; lf search 1'" "HID Prox ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 hid test"                   "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_hid.pm3; lf search -1'" "HID Prox ID found"; then break; fi
       if ! CheckExecute slow "lf T55 hid test2"                  "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_hid.pm3; lf hid demod'" \
                                                                      "HID H10301 26-bit;  FC: 118  CN: 1603"; then break; fi
-      if ! CheckExecute slow "lf T55 hid_48 test"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_hid_48.pm3; lf search 1'" "HID Prox ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 hid_48 test"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_hid_48.pm3; lf search -1'" "HID Prox ID found"; then break; fi
       if ! CheckExecute slow "lf T55 hid_48 test2"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_hid_48.pm3; lf hid demod'" \
                                                                      "HID Corporate 1000 48-bit"; then break; fi
-      if ! CheckExecute slow "lf T55 indala_hedem test"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_hedem.pm3; lf search 1'" "Indala ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 indala_hedem test"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_hedem.pm3; lf search -1'" "Indala ID found"; then break; fi
       if ! CheckExecute slow "lf T55 indala_hedem test2"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_hedem.pm3; lf indala demod'" \
                                                                      "Heden-2L    \| 888"; then break; fi
-      if ! CheckExecute slow "lf T55 indala test"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala.pm3; lf search 1'" "Indala ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 indala test"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala.pm3; lf search -1'" "Indala ID found"; then break; fi
       if ! CheckExecute slow "lf T55 indala test2"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala.pm3; lf indala demod'" \
                                                                      "Fmt 26 FC: 123 Card: 1337 checksum: 10"; then break; fi
-      if ! CheckExecute slow "lf T55 indala_224 test"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_224.pm3; lf search 1'" "Indala ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 indala_224 test"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_224.pm3; lf search -1'" "Indala ID found"; then break; fi
       if ! CheckExecute slow "lf T55 indala_224 test2"           "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_224.pm3; lf indala demod'" \
                                                                      "Indala (len 224)  Raw: 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"; then break; fi
-      if ! CheckExecute slow "lf T55 io test"                    "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_io.pm3; lf search 1'" "IO Prox ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 io test"                    "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_io.pm3; lf search -1'" "IO Prox ID found"; then break; fi
       if ! CheckExecute slow "lf T55 io test2"                   "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_io.pm3; lf io demod'" \
                                                                      "IO Prox - XSF(01)01:01337, Raw: 007840603059cf3f (ok)"; then break; fi
-      if ! CheckExecute slow "lf T55 jablotron test"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_jablotron.pm3; lf search 1'" "Jablotron ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 jablotron test"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_jablotron.pm3; lf search -1'" "Jablotron ID found"; then break; fi
       if ! CheckExecute slow "lf T55 jablotron test2"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_jablotron.pm3; lf jablotron demod'" \
                                                                      "Printed: 1410-00-0011-2233"; then break; fi
-      if ! CheckExecute slow "lf T55 keri test"                  "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri.pm3; lf search 1'" "KERI ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 keri test"                  "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri.pm3; lf search -1'" "KERI ID found"; then break; fi
       if ! CheckExecute slow "lf T55 keri test2"                 "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri.pm3; lf keri demod'" \
                                                                      "KERI - Internal ID: 112233, Raw: E00000008001B669"; then break; fi
-      if ! CheckExecute slow "lf T55 keri_internalid test"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri_internalid.pm3; lf search 1'" "KERI ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 keri_internalid test"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri_internalid.pm3; lf search -1'" "KERI ID found"; then break; fi
       if ! CheckExecute slow "lf T55 keri_internalid test2"      "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri_internalid.pm3; lf keri demod'" \
                                                                      "KERI - Internal ID: 12345, Raw: E000000080003039"; then break; fi
-      if ! CheckExecute slow "lf T55 keri_msid test"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri_msid.pm3; lf search 1'" "KERI ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 keri_msid test"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri_msid.pm3; lf search -1'" "KERI ID found"; then break; fi
       if ! CheckExecute slow "lf T55 keri_msid test2"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri_msid.pm3; lf keri demod'" \
                                                                      "Descrambled MS - FC: 6 Card: 12345"; then break; fi
-#      if ! CheckExecute slow "lf T55 motorola test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_motorola.pm3; lf search 1'" "Indala ID found"; then break; fi
+#      if ! CheckExecute slow "lf T55 motorola test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_motorola.pm3; lf search -1'" "Indala ID found"; then break; fi
       if ! CheckExecute slow "lf T55 motorola test2"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_motorola.pm3; lf motorola demod'" \
                                                                      "Motorola - fmt: 26 FC: 258 Card: 2, Raw: A0000000A0002021"; then break; fi
-      if ! CheckExecute slow "lf T55 nedap test"                 "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nedap.pm3; lf search 1'" "NEDAP ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 nedap test"                 "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nedap.pm3; lf search -1'" "NEDAP ID found"; then break; fi
       if ! CheckExecute slow "lf T55 nedap test2"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nedap.pm3; lf nedap demod'" \
                                                                      "NEDAP (64b) - ID: 12345 subtype: 1 customer code: 291 / 0x123 Raw: FF82246508209953"; then break; fi
-      if ! CheckExecute slow "lf T55 nexwatch test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch.pm3; lf search 1'" "NexWatch ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 nexwatch test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch.pm3; lf search -1'" "NexWatch ID found"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch test2"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch.pm3; lf nexwatch demod'" \
                                                                      "Raw : 5600000000213C9F8F150C00"; then break; fi
-      if ! CheckExecute slow "lf T55 nexwatch_nexkey test"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch_nexkey.pm3; lf search 1'" "NexWatch ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 nexwatch_nexkey test"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch_nexkey.pm3; lf search -1'" "NexWatch ID found"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch_nexkey test2"      "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch_nexkey.pm3; lf nexwatch demod'" \
                                                                      "88bit id : 521512301 (0x1f15a56d)"; then break; fi
-      if ! CheckExecute slow "lf T55 nexwatch_quadrakey test"    "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch_quadrakey.pm3; lf search 1'" "NexWatch ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 nexwatch_quadrakey test"    "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch_quadrakey.pm3; lf search -1'" "NexWatch ID found"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch_quadrakey test2"   "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch_quadrakey.pm3; lf nexwatch demod'" \
                                                                      "88bit id : 521512301 (0x1f15a56d)"; then break; fi
-      if ! CheckExecute slow "lf T55 noralsy test"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_noralsy.pm3; lf search 1'" "Noralsy ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 noralsy test"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_noralsy.pm3; lf search -1'" "Noralsy ID found"; then break; fi
       if ! CheckExecute slow "lf T55 noralsy test2"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_noralsy.pm3; lf noralsy demod'" \
                                                                      "Noralsy - Card: 112233, Year: 2000, Raw: BB0214FF0110002233070000"; then break; fi
-      if ! CheckExecute slow "lf T55 pac test"                   "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_pac.pm3; lf search 1'" "PAC/Stanley ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 pac test"                   "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_pac.pm3; lf search -1'" "PAC/Stanley ID found"; then break; fi
       if ! CheckExecute slow "lf T55 pac test2"                  "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_pac.pm3; lf pac demod'" \
                                                                      "PAC/Stanley - Card: CD4F5552, Raw: FF2049906D8511C593155B56D5B2649F"; then break; fi
-      if ! CheckExecute slow "lf T55 paradox test"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_paradox.pm3; lf search 1'" "Paradox ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 paradox test"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_paradox.pm3; lf search -1'" "Paradox ID found"; then break; fi
       if ! CheckExecute slow "lf T55 paradox test2"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_paradox.pm3; lf paradox demod'" \
                                                                      "Paradox - ID: 004209dea FC: 96 Card: 40426, Checksum: b2, Raw: 0f55555695596a6a9999a59a"; then break; fi
-      if ! CheckExecute slow "lf T55 presco test"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_presco.pm3; lf search 1'" "Presco ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 presco test"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_presco.pm3; lf search -1'" "Presco ID found"; then break; fi
       if ! CheckExecute slow "lf T55 presco test2"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_presco.pm3; lf presco demod'" \
                                                                      "Presco Site code: 30 User code: 8665 Full code: 1E8021D9 Raw: 10D0000000000000000000001E8021D9"; then break; fi
-      if ! CheckExecute slow "lf T55 pyramid test"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_pyramid.pm3; lf search 1'" "Pyramid ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 pyramid test"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_pyramid.pm3; lf search -1'" "Pyramid ID found"; then break; fi
       if ! CheckExecute slow "lf T55 pyramid test2"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_pyramid.pm3; lf pyramid demod'" \
                                                                      "Pyramid - len: 26, FC: 123 Card: 11223 - Wiegand: 2f657ae, Raw: 00010101010101010101016eb35e5da4"; then break; fi
-      if ! CheckExecute slow "lf T55 securakey test"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_securakey.pm3; lf search 1'" "Securakey ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 securakey test"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_securakey.pm3; lf search -1'" "Securakey ID found"; then break; fi
       if ! CheckExecute slow "lf T55 securakey test2"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_securakey.pm3; lf securakey demod'" \
                                                                      "Securakey - len: 26 FC: 0x35 Card: 64169, Raw: 7FCB400001ADEA5344300000"; then break; fi
-      if ! CheckExecute slow "lf T55 viking test"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_viking.pm3; lf search 1'" "Viking ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 viking test"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_viking.pm3; lf search -1'" "Viking ID found"; then break; fi
       if ! CheckExecute slow "lf T55 viking test2"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_viking.pm3; lf viking demod'" \
                                                                      "Viking - Card 0001A337, Raw: F200000001A337CF"; then break; fi
-      if ! CheckExecute slow "lf T55 visa2000 test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_visa2000.pm3; lf search 1'" "Visa2000 ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 visa2000 test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_visa2000.pm3; lf search -1'" "Visa2000 ID found"; then break; fi
       if ! CheckExecute slow "lf T55 visa2000 test2"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_visa2000.pm3; lf visa2000 demod'" \
                                                                      "Visa2000 - Card 112233, Raw: 564953320001B66900000183"; then break; fi
 

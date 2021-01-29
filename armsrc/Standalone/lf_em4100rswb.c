@@ -53,8 +53,8 @@
 #include "flashmem.h"
 #endif
 
-#define LF_CLOCK 64 //for 125kHz
-#define LF_RWSB_T55XX_TYPE 1 //Tag type: 0 - T5555, 1-T55x7
+#define LF_CLOCK 64 // for 125kHz
+#define LF_RWSB_T55XX_TYPE 1 // Tag type: 0 - T5555, 1-T55x7
 
 #define LF_RWSB_UNKNOWN_RESULT 0
 #define LF_RWSB_BRUTE_STOPED 1
@@ -76,14 +76,13 @@ static int bruteforceSpeed[] = {10, 12, 14, 16};
 // In high[] must be nulls
 static uint64_t low[] = {0, 0, 0, 0};
 static uint32_t high[] = {0, 0, 0, 0};
-static uint8_t *bba;
 static int buflen;
 
 void ModInfo(void) {
     DbpString("  LF EM4100 read/sim/write/brute mode");
 }
 
-static uint64_t ReversQuads(uint64_t bits) {
+static uint64_t rev_quads(uint64_t bits) {
     uint64_t result = 0;
     for (int i = 0; i < 16; i++) {
         result += ((bits >> (60 - 4 * i)) & 0xf) << (4 * i);
@@ -91,33 +90,39 @@ static uint64_t ReversQuads(uint64_t bits) {
     return result >> 24;
 }
 
-static void FillBuff(uint8_t bit) {
+static void fill_buff(uint8_t bit) {
+    uint8_t *bba = BigBuf_get_addr();
     memset(bba + buflen, bit, LF_CLOCK / 2);
     buflen += (LF_CLOCK / 2);
     memset(bba + buflen, bit ^ 1, LF_CLOCK / 2);
     buflen += (LF_CLOCK / 2);
 }
 
-static void ConstructEM410xEmulBuf(uint64_t id) {
-    bba = BigBuf_get_addr();
-
-    int i, j, binary[4], parity[4];
+static void construct_EM410x_emul(uint64_t id) {
+    int i, j;
+    int binary[4] = {0,0,0,0};
+    int parity[4] = {0,0,0,0};
     buflen = 0;
+
     for (i = 0; i < 9; i++)
-        FillBuff(1);
-    parity[0] = parity[1] = parity[2] = parity[3] = 0;
+        fill_buff(1);
+
     for (i = 0; i < 10; i++) {
         for (j = 3; j >= 0; j--, id /= 2)
             binary[j] = id % 2;
+
         for (j = 0; j < 4; j++)
-            FillBuff(binary[j]);
-        FillBuff(binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
+            fill_buff(binary[j]);
+
+        fill_buff(binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
         for (j = 0; j < 4; j++)
             parity[j] ^= binary[j];
     }
+
     for (j = 0; j < 4; j++)
-        FillBuff(parity[j]);
-    FillBuff(0);
+        fill_buff(parity[j]);
+
+    fill_buff(0);
 }
 
 static void LED_Update(int mode, int slot) {
@@ -197,7 +202,6 @@ static uint64_t PackEmID(uint64_t original, int newCardNum) {
     return buf;
 }
 
-
 static void PrintFcAndCardNum(uint64_t lowData) {
     // Calculate Facility Code and Card Number from high and low
     uint32_t fc = (lowData >> 17) & 0xFF;
@@ -222,7 +226,7 @@ static int BruteEMTag(uint64_t originalCard, int slot) {
         cardnum = cardnum + direction;
         uint64_t currentCard = PackEmID(originalCard, cardnum);
         Dbprintf("[=] >>  Simulating card id %"PRIx64" <<", currentCard);
-        ConstructEM410xEmulBuf(ReversQuads(currentCard));
+        construct_EM410x_emul(rev_quads(currentCard));
         SimulateTagLowFrequencyEx(buflen, 0, 1, bruteforceSpeed[bruteforceSpeedCurrent] * 10000);
 
         int button_pressed = BUTTON_CLICKED(1000);
@@ -267,7 +271,7 @@ static int ExecuteMode(int mode, int slot) {
             return LF_RWSB_UNKNOWN_RESULT;
         case LF_RWSB_MODE_SIM:
             Dbprintf("[=] >>  Sim mode started  <<");
-            ConstructEM410xEmulBuf(ReversQuads(low[slot]));
+            construct_EM410x_emul(rev_quads(low[slot]));
             SimulateTagLowFrequency(buflen, 0, 1);
             return LF_RWSB_UNKNOWN_RESULT;
         case LF_RWSB_MODE_WRITE:
@@ -310,7 +314,6 @@ void RunMod() {
     int slot = 0;
     mode = SwitchMode(mode, slot);
 
-    bba = BigBuf_get_addr();
     for (;;) {
         WDT_HIT();
         if (data_available()) break;

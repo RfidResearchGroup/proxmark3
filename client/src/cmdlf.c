@@ -216,20 +216,6 @@ static int usage_lf_simpsk(void) {
     PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
     return PM3_SUCCESS;
 }
-static int usage_lf_find(void) {
-    PrintAndLogEx(NORMAL, "Usage:  lf search [h] <0|1> [u]");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h             This help");
-    PrintAndLogEx(NORMAL, "       <0|1>         Use data from Graphbuffer, if not set, try reading data from tag.");
-    PrintAndLogEx(NORMAL, "       u             Search for Unknown tags, if not set, reads only known tags.");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL,  _YELLOW_("      lf search") "      - try reading data from tag & search for known tags");
-    PrintAndLogEx(NORMAL,  _YELLOW_("      lf search 1") "    - use data from GraphBuffer & search for known tags");
-    PrintAndLogEx(NORMAL,  _YELLOW_("      lf search u") "    - try reading data from tag & search for known and unknown tags");
-    PrintAndLogEx(NORMAL,  _YELLOW_("      lf search 1 u") "  - use data from GraphBuffer & search for known and unknown tags");
-    return PM3_SUCCESS;
-}
 
 static int CmdLFTune(const char *Cmd) {
 
@@ -1263,7 +1249,20 @@ int CmdLFpskSim(const char *Cmd) {
 }
 
 int CmdLFSimBidir(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf simbidir",
+                  "Simulate LF tag with bidirectional data transmission between reader and tag",
+                  "lf simbidir"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
     // Set ADC to twice the carrier for a slight supersampling
     // HACK: not implemented in ARMSRC.
     PrintAndLogEx(INFO, "Not implemented yet.");
@@ -1405,22 +1404,33 @@ out:
 }
 
 int CmdLFfind(const char *Cmd) {
-    int retval = PM3_SUCCESS;
-    int ans = 0;
-    size_t minLength = 2000;
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    char testRaw = param_getchar(Cmd, 1);
 
-    if (strlen(Cmd) > 3 || cmdp == 'h') return usage_lf_find();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf search",
+                  "Read and search for valid known tag. For offline mode, you can `data load` first then search.",
+                  "lf search       -> try reading data from tag & search for known tag\n"
+                  "lf search -1    -> use data from GraphBuffer & search for known tag\n"
+                  "lf search -u    -> try reading data from tag & search for known and unknown tag\n"
+                  "lf search -1u   -> use data from GraphBuffer & search for known and unknown tag\n"
+                 );
 
-    if (cmdp == 'u') testRaw = 'u';
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("1", NULL, "Use data from Graphbuffer to search"),
+        arg_lit0("u", NULL, "Search for unknown tags, if not set, reads only known tags"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool use_gb = arg_get_lit(ctx, 1);
+    bool search_unk = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
 
-    bool isOnline = (session.pm3_present && (cmdp != '1'));
-
-    if (isOnline)
+    bool is_online = (session.pm3_present && (use_gb == false));
+    if (is_online)
         lf_read(false, 30000);
 
-    if (GraphTraceLen < minLength) {
+    size_t min_length = 2000;
+    if (GraphTraceLen < min_length) {
         PrintAndLogEx(FAILED, "Data in Graphbuffer was too small.");
         return PM3_ESOFT;
     }
@@ -1434,7 +1444,7 @@ int CmdLFfind(const char *Cmd) {
     PrintAndLogEx(INFO, "");
 
     // only run these tests if device is online
-    if (isOnline) {
+    if (is_online) {
 
         if (IfPm3Hitag()) {
             if (readHitagUid()) {
@@ -1474,6 +1484,8 @@ int CmdLFfind(const char *Cmd) {
         }
     }
 
+    int retval = PM3_SUCCESS;
+
     if (demodVisa2k(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") " found!"); goto out;}
     if (demodDestron(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-A FECAVA Destron ID") " found!"); goto out;} // to do before HID
     if (demodHID(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
@@ -1502,10 +1514,10 @@ int CmdLFfind(const char *Cmd) {
 
     PrintAndLogEx(FAILED, _RED_("No known 125/134 kHz tags found!"));
 
-    if (testRaw == 'u') {
+    if (search_unk) {
         //test unknown tag formats (raw mode)
         PrintAndLogEx(INFO, "\nChecking for unknown tags:\n");
-        ans = AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, 8000, false, false);
+        int ans = AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, 8000, false, false);
         if (ans > 0) {
 
             PrintAndLogEx(INFO, "Possible auto correlation of %d repeating samples", ans);
@@ -1544,7 +1556,7 @@ int CmdLFfind(const char *Cmd) {
 
 out:
     // identify chipset
-    if (CheckChipType(isOnline) == false) {
+    if (CheckChipType(is_online) == false) {
         PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
         retval = false;
     }
@@ -1586,12 +1598,12 @@ static command_t CommandTable[] = {
     {"config",      CmdLFConfig,        IfPm3Lf,         "Get/Set config for LF sampling, bit/sample, decimation, frequency"},
     {"cmdread",     CmdLFCommandRead,   IfPm3Lf,         "Modulate LF reader field to send command before read (all periods in microseconds)"},
     {"read",        CmdLFRead,          IfPm3Lf,         "Read LF tag"},
-    {"search",      CmdLFfind,          AlwaysAvailable, "Read and Search for valid known tag (in offline mode it you can load first then search)"},
+    {"search",      CmdLFfind,          AlwaysAvailable, "Read and Search for valid known tag"},
     {"sim",         CmdLFSim,           IfPm3Lf,         "Simulate LF tag from buffer with optional GAP (in microseconds)"},
     {"simask",      CmdLFaskSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF ASK tag") " from demodbuffer or input"},
     {"simfsk",      CmdLFfskSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF FSK tag") " from demodbuffer or input"},
     {"simpsk",      CmdLFpskSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF PSK tag") " from demodbuffer or input"},
-//    {"simpsk",      CmdLFnrzSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF NRZ tag") " from demodbuffer or input"},
+//    {"simnrz",      CmdLFnrzSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF NRZ tag") " from demodbuffer or input"},
     {"simbidir",    CmdLFSimBidir,      IfPm3Lf,         "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
     {"sniff",       CmdLFSniff,         IfPm3Lf,         "Sniff LF traffic between reader and tag"},
     {"tune",        CmdLFTune,          IfPm3Lf,         "Continuously measure LF antenna tuning"},

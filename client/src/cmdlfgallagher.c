@@ -277,7 +277,6 @@ static int CmdGallagherSim(const char *Cmd) {
         return resp.status;
 
     return PM3_SUCCESS;
-    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {

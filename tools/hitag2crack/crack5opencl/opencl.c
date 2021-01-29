@@ -40,8 +40,7 @@ bool plat_dev_enabled(unsigned int id, unsigned int *sel, unsigned int cnt, unsi
     return false;
 }
 
-unsigned int get_smallest_profile (compute_platform_ctx_t *cd_ctx, size_t ocl_platform_cnt)
-{
+unsigned int get_smallest_profile(compute_platform_ctx_t *cd_ctx, size_t ocl_platform_cnt) {
     unsigned int profile = 0xff;
 
     size_t x = 0, y = 0;
@@ -68,8 +67,7 @@ unsigned int get_smallest_profile (compute_platform_ctx_t *cd_ctx, size_t ocl_pl
     return profile;
 }
 
-int discoverDevices(unsigned int profile_selected, uint32_t device_types_selected, cl_uint *platform_detected_cnt, size_t *selected_platforms_cnt, size_t *selected_devices_cnt, compute_platform_ctx_t **cd_ctx, unsigned int *plat_sel, unsigned int plat_cnt, unsigned int *dev_sel, unsigned int dev_cnt, bool verbose, bool show)
-{
+int discoverDevices(unsigned int profile_selected, uint32_t device_types_selected, cl_uint *platform_detected_cnt, size_t *selected_platforms_cnt, size_t *selected_devices_cnt, compute_platform_ctx_t **cd_ctx, unsigned int *plat_sel, unsigned int plat_cnt, unsigned int *dev_sel, unsigned int dev_cnt, bool verbose, bool show) {
     int err = 0;
     unsigned int ocl_platform_max = MAX_OPENCL_DEVICES; // 16
     cl_uint ocl_platform_cnt;
@@ -84,13 +82,13 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
     err = clGetPlatformIDs(ocl_platform_max, ocl_platforms, &ocl_platform_cnt);
     if (err != CL_SUCCESS) {
         printf("Error: clGetPlatformIDs() failed (%d)\n", err);
-        free (ocl_platforms);
+        free(ocl_platforms);
         return -3;
     }
 
     if (ocl_platform_cnt == 0) {
         printf("No platforms found, exit\n");
-        free (ocl_platforms);
+        free(ocl_platforms);
         return -4;
     }
 
@@ -98,7 +96,7 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
     *cd_ctx = (compute_platform_ctx_t *) calloc(ocl_platform_cnt, sizeof(compute_platform_ctx_t));
     if (*cd_ctx == NULL) {
         printf("Error: calloc (compute_platform_ctx_t) failed (%d): %s\n", errno, strerror(errno));
-        free (ocl_platforms);
+        free(ocl_platforms);
         return -5;
     }
 
@@ -120,7 +118,7 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
         (*cd_ctx)[platform_idx].platform_id = ocl_platforms[platform_idx];
         (*cd_ctx)[platform_idx].selected = plat_dev_enabled(platform_idx, plat_sel, plat_cnt, 0, 0);
 
-        if ((*cd_ctx)[platform_idx].selected) (*selected_platforms_cnt)++;
+        if ((*cd_ctx)[platform_idx].selected)(*selected_platforms_cnt)++;
 
         if (verbose) printf("\n-- Platform ID: %d\n", platform_idx + 1);
 
@@ -130,33 +128,33 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
             err = clGetPlatformInfo((*cd_ctx)[platform_idx].platform_id, ocl_info, 0, NULL, &tmp_len);
             if (err != CL_SUCCESS) {
                 printf("Error: clGetPlatformInfo(param size) failed (%d)\n", err);
-                free (*cd_ctx);
-                free (ocl_platforms);
+                free(*cd_ctx);
+                free(ocl_platforms);
                 return -6;
             }
 
             if (tmp_len > 0) {
                 if (!(tmp_buf = (char *) calloc(tmp_len, sizeof(char)))) {
                     printf("Error: calloc (ocl_info %u) failed (%d): %s\n", info_idx, errno, strerror(errno));
-                    free (*cd_ctx);
-                    free (ocl_platforms);
+                    free(*cd_ctx);
+                    free(ocl_platforms);
                     return -7;
                 }
 
                 err = clGetPlatformInfo((*cd_ctx)[platform_idx].platform_id, ocl_info, tmp_len, tmp_buf, 0);
                 if (err != CL_SUCCESS) {
                     printf("Error: clGetPlatformInfo(param) failed (%d)\n", err);
-                    free (tmp_buf);
-                    free (*cd_ctx);
-                    free (ocl_platforms);
+                    free(tmp_buf);
+                    free(*cd_ctx);
+                    free(ocl_platforms);
                     return -8;
                 }
             } else {
                 tmp_len = 4;
                 if (!(tmp_buf = (char *) calloc(tmp_len, sizeof(char)))) {
                     printf("Error: calloc (ocl_info %u) failed (%d): %s\n", info_idx, errno, strerror(errno));
-                    free (*cd_ctx);
-                    free (ocl_platforms);
+                    free(*cd_ctx);
+                    free(ocl_platforms);
                     return -7;
                 }
 
@@ -182,13 +180,13 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
             }
 
             if (info_idx == 1) {
-                if (!strncmp(tmp_buf, "NVIDIA", 6)) (*cd_ctx)[platform_idx].is_nv = true;
+                if (!strncmp(tmp_buf, "NVIDIA", 6))(*cd_ctx)[platform_idx].is_nv = true;
                 else if (!strncmp(tmp_buf, "Apple", 5)) { (*cd_ctx)[platform_idx].is_apple = true; (*cd_ctx)[platform_idx].warning = true; }
-                else if (!strncmp(tmp_buf, "Intel", 5)) (*cd_ctx)[platform_idx].is_intel = true;
-                else if (!strncmp(tmp_buf, "The pocl project", 16)) (*cd_ctx)[platform_idx].is_pocl = true;
+                else if (!strncmp(tmp_buf, "Intel", 5))(*cd_ctx)[platform_idx].is_intel = true;
+                else if (!strncmp(tmp_buf, "The pocl project", 16))(*cd_ctx)[platform_idx].is_pocl = true;
             }
 
-            free (tmp_buf);
+            free(tmp_buf);
         }
 
         if (!show && verbose) {
@@ -203,8 +201,8 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
         cl_device_id *ocl_devices = (cl_device_id *) calloc(ocl_device_max, sizeof(cl_device_id));
         if (!ocl_devices) {
             printf("Error: calloc (ocl_devices) failed (%d): %s\n", errno, strerror(errno));
-            free (*cd_ctx);
-            free (ocl_platforms);
+            free(*cd_ctx);
+            free(ocl_platforms);
             return -7;
         }
 
@@ -217,9 +215,9 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
 
         if (err != CL_SUCCESS) {
             printf("Error: clGetDeviceIDs(cnt) failed (%d)\n", err);
-            free (ocl_devices);
-            free (*cd_ctx);
-            free (ocl_platforms);
+            free(ocl_devices);
+            free(*cd_ctx);
+            free(ocl_platforms);
             return -9;
         }
 
@@ -243,13 +241,13 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                     err = clGetDeviceInfo(ocl_device, ocl_dev_info, sizeof(cl_device_type), &device_type, 0);
                     if (err != CL_SUCCESS) {
                         printf("Error: clGetDeviceInfo(device_type) failed (%d)\n", err);
-                        free (ocl_devices);
-                        free (*cd_ctx);
-                        free (ocl_platforms);
+                        free(ocl_devices);
+                        free(*cd_ctx);
+                        free(ocl_platforms);
                         return -10;
                     }
 
-                    if (device_type & CL_DEVICE_TYPE_GPU) (*cd_ctx)[platform_idx].device[device_idx].is_gpu = 1;
+                    if (device_type & CL_DEVICE_TYPE_GPU)(*cd_ctx)[platform_idx].device[device_idx].is_gpu = 1;
                     else if ((device_type & CL_DEVICE_TYPE_CPU) && (*cd_ctx)[platform_idx].is_pocl) {
                         (*cd_ctx)[platform_idx].device[device_idx].profile = (profile_selected > 1) ? 0 : profile_selected;
                     }
@@ -258,7 +256,7 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
 
                     (*cd_ctx)[platform_idx].device[device_idx].selected = plat_dev_enabled(global_device_id, dev_sel, dev_cnt, (unsigned int) device_type, device_types_selected);
                     global_device_id++;
-                    if ((*cd_ctx)[platform_idx].device[device_idx].selected) (*selected_devices_cnt)++;
+                    if ((*cd_ctx)[platform_idx].device[device_idx].selected)(*selected_devices_cnt)++;
                     continue;
                 } else if (info_idx == 5) {
                     cl_device_local_mem_type local_mem_type;
@@ -266,9 +264,9 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                     err = clGetDeviceInfo(ocl_device, ocl_dev_info, sizeof(cl_device_local_mem_type), &local_mem_type, 0);
                     if (err != CL_SUCCESS) {
                         printf("Error: clGetDeviceInfo(local_mem_type) failed (%d)\n", err);
-                        free (ocl_devices);
-                        free (*cd_ctx);
-                        free (ocl_platforms);
+                        free(ocl_devices);
+                        free(*cd_ctx);
+                        free(ocl_platforms);
                         return -10;
                     }
 
@@ -279,9 +277,9 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                                 (*cd_ctx)[platform_idx].device[device_idx].have_local_memory = true;
 
                                 if ((*cd_ctx)[platform_idx].device[device_idx].is_gpu) {
-                                    if (profile_selected > 2) (*cd_ctx)[platform_idx].device[device_idx].profile = PROFILE_DEFAULT; // Apple-Intel GPU's
+                                    if (profile_selected > 2)(*cd_ctx)[platform_idx].device[device_idx].profile = PROFILE_DEFAULT;  // Apple-Intel GPU's
                                 } else {
-                                    if (profile_selected > 3) (*cd_ctx)[platform_idx].device[device_idx].profile = PROFILE_DEFAULT; // Apple-Intel CPU's
+                                    if (profile_selected > 3)(*cd_ctx)[platform_idx].device[device_idx].profile = PROFILE_DEFAULT;  // Apple-Intel CPU's
                                 }
                             }
                         } else if ((*cd_ctx)[platform_idx].is_nv) {
@@ -299,9 +297,9 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                     err = clGetDeviceInfo(ocl_device, ocl_dev_info, sizeof(size_t) * 3, wis, 0);
                     if (err != CL_SUCCESS) {
                         printf("Error: clGetDeviceInfo(work_items_size) failed (%d)\n", err);
-                        free (ocl_devices);
-                        free (*cd_ctx);
-                        free (ocl_platforms);
+                        free(ocl_devices);
+                        free(*cd_ctx);
+                        free(ocl_platforms);
                         return -10;
                     }
 
@@ -318,9 +316,9 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                     err = clGetDeviceInfo(ocl_device, ocl_dev_info, sizeof(cl_uint), &cores, 0);
                     if (err != CL_SUCCESS) {
                         printf("Error: clGetDeviceInfo(compute_units) failed (%d)\n", err);
-                        free (ocl_devices);
-                        free (*cd_ctx);
-                        free (ocl_platforms);
+                        free(ocl_devices);
+                        free(*cd_ctx);
+                        free(ocl_platforms);
                         return -10;
                     }
 
@@ -336,37 +334,37 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                 err = clGetDeviceInfo(ocl_device, ocl_dev_info, 0, NULL, &tmp_len);
                 if (err != CL_SUCCESS) {
                     printf("Error: clGetDeviceInfo(param size) failed (%d)\n", err);
-                    free (ocl_devices);
-                    free (*cd_ctx);
-                    free (ocl_platforms);
+                    free(ocl_devices);
+                    free(*cd_ctx);
+                    free(ocl_platforms);
                     return -10;
                 }
 
                 if (tmp_len > 0) {
                     if (!(tmp_buf = (char *) calloc(tmp_len, sizeof(char)))) {
                         printf("Error: calloc (ocl_dev_info %u) failed (%d): %s\n", info_idx, errno, strerror(errno));
-                        free (ocl_devices);
-                        free (*cd_ctx);
-                        free (ocl_platforms);
+                        free(ocl_devices);
+                        free(*cd_ctx);
+                        free(ocl_platforms);
                         return -7;
                     }
 
                     err = clGetDeviceInfo(ocl_device, ocl_dev_info, tmp_len, tmp_buf, 0);
                     if (err != CL_SUCCESS) {
                         printf("Error: clGetDeviceInfo(param) failed (%d)\n", err);
-                        free (tmp_buf);
-                        free (ocl_devices);
-                        free (*cd_ctx);
-                        free (ocl_platforms);
+                        free(tmp_buf);
+                        free(ocl_devices);
+                        free(*cd_ctx);
+                        free(ocl_platforms);
                         return -10;
                     }
                 } else {
                     tmp_len = 4;
                     if (!(tmp_buf = (char *) calloc(tmp_len, sizeof(char)))) {
                         printf("Error: calloc (ocl_dev_info %u) failed (%d): %s\n", info_idx, errno, strerror(errno));
-                        free (ocl_devices);
-                        free (*cd_ctx);
-                        free (ocl_platforms);
+                        free(ocl_devices);
+                        free(*cd_ctx);
+                        free(ocl_platforms);
                         return -7;
                     }
 
@@ -395,10 +393,10 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                 }
 
                 if (info_idx == 1) {
-                   // force profile to 0-1 with Jetson Nano
-                   if (strstr(tmp_buf, "Tegra") && (*cd_ctx)[platform_idx].is_pocl) {
-                       (*cd_ctx)[platform_idx].device[device_idx].profile = (profile_selected > 1) ? 0 : profile_selected;
-                   }
+                    // force profile to 0-1 with Jetson Nano
+                    if (strstr(tmp_buf, "Tegra") && (*cd_ctx)[platform_idx].is_pocl) {
+                        (*cd_ctx)[platform_idx].device[device_idx].profile = (profile_selected > 1) ? 0 : profile_selected;
+                    }
                 } else if (info_idx == 4) {
                     if (!strncmp(tmp_buf, "Intel", 5)) {
                         if ((*cd_ctx)[platform_idx].is_apple) {
@@ -410,7 +408,7 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                             if ((*cd_ctx)[platform_idx].device[device_idx].is_gpu) {
                                 (*cd_ctx)[platform_idx].device[device_idx].profile = 0; // Intel GPU's, work better with a very slow profile
                             } else {
-                                 (*cd_ctx)[platform_idx].device[device_idx].profile = (profile_selected > 2) ? PROFILE_DEFAULT : profile_selected; // Intel CPU's
+                                (*cd_ctx)[platform_idx].device[device_idx].profile = (profile_selected > 2) ? PROFILE_DEFAULT : profile_selected; // Intel CPU's
                             }
                         }
                     }
@@ -423,10 +421,10 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
 
                         if (err != CL_SUCCESS) {
                             printf("Error: clGetDeviceInfo(sm_maj/sm_min) failed (%d)\n", err);
-                            free (tmp_buf);
-                            free (ocl_devices);
-                            free (*cd_ctx);
-                            free (ocl_platforms);
+                            free(tmp_buf);
+                            free(ocl_devices);
+                            free(*cd_ctx);
+                            free(ocl_platforms);
                             return -10;
                         }
 
@@ -456,7 +454,7 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                     }
                 }
 
-                free (tmp_buf);
+                free(tmp_buf);
             }
 
             if (!show && verbose) printf("%14s: %s\n", "Selected", ((*cd_ctx)[platform_idx].device[device_idx].selected) ? "yes" : "no");
@@ -472,16 +470,16 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
 
             (*cd_ctx)[platform_idx].device[device_idx].device_id = ocl_device;
         }
-        free (ocl_devices);
+        free(ocl_devices);
         ocl_devices = NULL;
     }
 
-    free (ocl_platforms);
+    free(ocl_platforms);
     ocl_platforms = NULL;
 
     *platform_detected_cnt = ocl_platform_cnt;
 
-    if (show) free (*cd_ctx);
+    if (show) free(*cd_ctx);
 
     return 0;
 }

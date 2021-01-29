@@ -676,7 +676,7 @@ static bool brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
 void em4x50_login(uint32_t *password) {
     em4x50_setup_read();
 
-    uint8_t status = PM3_EFAILED;
+    int status = PM3_EFAILED;
     LED_C_ON();
     if (get_signalproperties() && find_em4x50_tag()) {
         LED_C_OFF();
@@ -1232,7 +1232,7 @@ static int em4x50_sim_read_bit(void) {
                 if (timeout <= 0) {
                     return PM3_ETIMEOUT;
                 }
-                timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
+                // timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
                 // now we have a reference "position", from here it will take
                 // slightly less than 32 cycles until the end of the bit period
@@ -1432,7 +1432,7 @@ static int em4x50_sim_handle_standard_read_command(uint32_t *tag) {
 
         WDT_HIT();
 
-        command = em4x50_sim_send_listen_window(tag);
+        int command = em4x50_sim_send_listen_window(tag);
         if (command != PM3_SUCCESS) {
             return command;
         }
@@ -1488,7 +1488,7 @@ static int em4x50_sim_handle_selective_read_command(uint32_t *tag) {
 
         WDT_HIT();
 
-        command = em4x50_sim_send_listen_window(tag);
+        int command = em4x50_sim_send_listen_window(tag);
         if (command != PM3_SUCCESS) {
             return command;
         }

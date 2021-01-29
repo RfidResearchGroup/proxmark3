@@ -60,6 +60,9 @@ TCK | 23
 GND | 6
 3.3 | 1
 
+# Where to find more information?
+There has been lots of articles and blogposts about recoving, debricking, JTAG your Proxmark3 and you find here below a sortiment of resources that will be of help.
+
 ## Third party notes on using a BusPirate
 
 * https://github.com/Proxmark/proxmark3/wiki/Debricking-Proxmark3-with-buspirate
@@ -84,3 +87,6 @@ GND | 6
 ## Stack Overflow write up article.
 https://stackoverflow.com/questions/48794076/error-halt-timed-out-wake-up-gdb/64291913#64291913
 
+## Old original doc,  
+Describes the SEGGER JLINK, JTAG process but be warned,  this document is old.
+https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/original_proxmark3/Compiling%20Proxmark%20source%20and%20firmware%20upgrading%20v1.pdf

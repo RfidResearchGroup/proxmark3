@@ -26,7 +26,7 @@
 #include "mifare/ndef.h"   // NDEFRecordsDecodeAndPrint
 #include "aidsearch.h"
 
-
+#define MAX_14B_TIMEOUT    (uint32_t)40542464 // = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
 #define TIMEOUT 2000
 #define APDU_TIMEOUT 2000
 
@@ -202,7 +202,6 @@ static bool wait_cmd_14b(bool verbose, bool is_select) {
                               (crc) ? _GREEN_("ok") : _RED_("fail")
                              );
             } else if (len == 0) {
-                if (verbose)
                     PrintAndLogEx(INFO, "no response from tag");
             } else {
                 PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, len));
@@ -300,7 +299,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
         arg_lit0(NULL, "sr",            "activate field, use SRx ST select"),
         arg_lit0(NULL, "cts",           "activate field, use ASK C-ticket select"),
         arg_lit0("c", "crc",            "calculate and append CRC"),
-        arg_lit0("r", "noresponse",         "do not read response from card"),
+        arg_lit0(NULL, "noresponse", "do not read response from card"),
         arg_int0("t", "timeout",   "<dec>", "timeout in ms"),
         arg_lit0("v", "verbose",            "verbose"),
         arg_strx0("d", "data",     "<hex>", "data, bytes to send"),
@@ -347,13 +346,12 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     uint32_t time_wait = 0;
     if (user_timeout > 0) {
 
-#define MAX_14B_TIMEOUT 40542464 // = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
         flags |= ISO14B_SET_TIMEOUT;
         if (user_timeout > MAX_14B_TIMEOUT) {
             user_timeout = MAX_14B_TIMEOUT;
             PrintAndLogEx(INFO, "set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
         }
-        time_wait = 13560000 / 1000 / (8 * 16) * user_timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
+        time_wait = (uint32_t)((13560000 / 1000 / (8 * 16)) * user_timeout); // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
         if (verbose)
             PrintAndLogEx(INFO, "using timeout %u", user_timeout);
     }
@@ -408,8 +406,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
     if (card == NULL)
         return false;
 
-    int status = 0;
-
+    int status;
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
@@ -1544,13 +1541,13 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool
 
     uint32_t time_wait = 0;
     if (user_timeout > 0) {
-#define MAX_14B_TIMEOUT 40542464 // = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
+
         flags |= ISO14B_SET_TIMEOUT;
         if (user_timeout > MAX_14B_TIMEOUT) {
             user_timeout = MAX_14B_TIMEOUT;
             PrintAndLogEx(INFO, "set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
         }
-        time_wait = 13560000 / 1000 / (8 * 16) * user_timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
+        time_wait = (uint32_t)((13560000 / 1000 / (8 * 16)) * user_timeout); // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
     }
 
     // "Command APDU" length should be 5+255+1, but javacard's APDU buffer might be smaller - 133 bytes

@@ -191,12 +191,10 @@ static int emrtd_exchange_commands_noout(const char *cmd, bool activate_field, b
 
 static char emrtd_calculate_check_digit(char *data) {
     int mrz_weight[] = {7, 3, 1};
-    int cd = 0;
-    int value = 0;
-    char d;
+    int value, cd = 0;
 
     for (int i = 0; i < strlen(data); i++) {
-        d = data[i];
+        char d = data[i];
         if ('A' <= d && d <= 'Z') {
             value = d - 55;
         } else if ('a' <= d && d <= 'z') {
@@ -652,19 +650,16 @@ static bool emrtd_lds_get_data_by_tag(uint8_t *datain, size_t datainlen, uint8_t
         offset += emrtd_get_asn1_field_length(datain, datainlen, offset);
     }
 
-    int e_idlen = 0;
-    int e_datalen = 0;
-    int e_fieldlen = 0;
     while (offset < datainlen) {
         PrintAndLogEx(DEBUG, "emrtd_lds_get_data_by_tag, offset: %i, data: %X", offset, *(datain + offset));
         // Determine element ID length to set as offset on asn1datalength
-        e_idlen = emrtd_lds_determine_tag_length(*(datain + offset));
+        int e_idlen = emrtd_lds_determine_tag_length(*(datain + offset));
 
         // Get the length of the element
-        e_datalen = emrtd_get_asn1_data_length(datain + offset, datainlen - offset, e_idlen);
+        int e_datalen = emrtd_get_asn1_data_length(datain + offset, datainlen - offset, e_idlen);
 
         // Get the length of the element's length
-        e_fieldlen = emrtd_get_asn1_field_length(datain + offset, datainlen - offset, e_idlen);
+        int e_fieldlen = emrtd_get_asn1_field_length(datain + offset, datainlen - offset, e_idlen);
 
         PrintAndLogEx(DEBUG, "emrtd_lds_get_data_by_tag, e_idlen: %02X, e_datalen: %02X, e_fieldlen: %02X", e_idlen, e_datalen, e_fieldlen);
 
@@ -718,8 +713,8 @@ static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length, const c
     // Note: Doing file_length - 6 to account for the longest data we're checking.
     // Checks first byte before the rest to reduce overhead
     for (offset = 0; offset < file_length - 6; offset++) {
-        if ((file_contents[offset] == 0xFF && memcmp(jpeg_header, file_contents + offset, 4) != 0) ||
-                (file_contents[offset] == 0x00 && memcmp(jpeg2k_header, file_contents + offset, 6) != 0)) {
+        if ((file_contents[offset] == 0xFF && memcmp(jpeg_header, file_contents + offset, 4) == 0) ||
+                (file_contents[offset] == 0x00 && memcmp(jpeg2k_header, file_contents + offset, 6) == 0)) {
             datalen = file_length - offset;
             break;
         }
@@ -828,7 +823,8 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, cons
 
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
     if (filepath == NULL)
-        return PM3_EMALLOC;
+        return false;
+
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
     strcat(filepath, name);
@@ -1649,8 +1645,6 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
 
     size_t emrtdsiglen = 0;
     size_t hashlistlen = 0;
-    size_t e_datalen = 0;
-    size_t e_fieldlen = 0;
     size_t offset = 0;
 
     if (emrtd_ef_sod_extract_signatures(data, datalen, emrtdsig, &emrtdsiglen) != PM3_SUCCESS) {
@@ -1670,10 +1664,10 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
 
     while (offset < hashlistlen) {
         // Get the length of the element
-        e_datalen = emrtd_get_asn1_data_length(hashlist + offset, hashlistlen - offset, 1);
+        int e_datalen = emrtd_get_asn1_data_length(hashlist + offset, hashlistlen - offset, 1);
 
         // Get the length of the element's length
-        e_fieldlen = emrtd_get_asn1_field_length(hashlist + offset, hashlistlen - offset, 1);
+        int e_fieldlen = emrtd_get_asn1_field_length(hashlist + offset, hashlistlen - offset, 1);
 
         switch (hashlist[offset]) {
             case 0x30:
@@ -1703,11 +1697,10 @@ static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_s
         PrintAndLogEx(SUCCESS, "Hash algorithm: " _YELLOW_("%s"), hashalg_table[hash_algo].name);
 
         uint8_t all_zeroes[64] = { 0x00 };
-        bool calc_all_zero, sod_all_zero, hash_matches;
         for (int i = 1; i <= 16; i++) {
-            calc_all_zero = (memcmp(dg_hashes_calc + (i * 64), all_zeroes, hashalg_table[hash_algo].hashlen) == 0);
-            sod_all_zero = (memcmp(dg_hashes_sod + (i * 64), all_zeroes, hashalg_table[hash_algo].hashlen) == 0);
-            hash_matches = (memcmp(dg_hashes_sod + (i * 64), dg_hashes_calc + (i * 64), hashalg_table[hash_algo].hashlen) == 0);
+            bool calc_all_zero = (memcmp(dg_hashes_calc + (i * 64), all_zeroes, hashalg_table[hash_algo].hashlen) == 0);
+            bool sod_all_zero = (memcmp(dg_hashes_sod + (i * 64), all_zeroes, hashalg_table[hash_algo].hashlen) == 0);
+            bool hash_matches = (memcmp(dg_hashes_sod + (i * 64), dg_hashes_calc + (i * 64), hashalg_table[hash_algo].hashlen) == 0);
             // Ignore files we don't haven't read and lack hashes to
             if (calc_all_zero == true && sod_all_zero == true) {
                 continue;

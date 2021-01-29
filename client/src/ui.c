@@ -106,7 +106,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
         pathlen += strlen(subdir);
         char *tmp = realloc(path, pathlen * sizeof(char));
         if (tmp == NULL) {
-            free(path);
+            //free(path);
             return PM3_EMALLOC;
         }
         path = tmp;
@@ -146,7 +146,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
     pathlen += strlen(filename);
     char *tmp = realloc(path, pathlen * sizeof(char));
     if (tmp == NULL) {
-        free(path);
+        //free(path);
         return PM3_EMALLOC;
     }
     path = tmp;
@@ -474,7 +474,7 @@ static bool emojify_token(const char *token, uint8_t token_length, const char **
                 case EMO_ALTTEXT: {
                     int j = 0;
                     *emojified_token_length = 0;
-                    while (EmojiAltTable[j].alias && EmojiAltTable[i].alttext) {
+                    while (EmojiAltTable[j].alias && EmojiAltTable[j].alttext) {
                         if ((strlen(EmojiAltTable[j].alias) == token_length) && (0 == memcmp(EmojiAltTable[j].alias, token, token_length))) {
                             *emojified_token = EmojiAltTable[j].alttext;
                             *emojified_token_length = strlen(EmojiAltTable[j].alttext);
@@ -642,9 +642,12 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
     prev_cols = cols;
 #endif
     int width = cols - 35;
+    if (width < 1)
+        return;
+
 #define PERCENTAGE(V, T)   ((V * width) / T)
     // x/8 fractional part of the percentage
-#define PERCENTAGEFRAC(V, T)   ((int)(((((float)V * width) / T) - ((V * width) / T)) * 8))
+#define PERCENTAGEFRAC(V, T)   ((uint8_t)(((((float)V * width) / T) - ((V * width) / T)) * 8))
 
     const char *smoothtable[] = {
         "\xe2\x80\x80",
@@ -658,14 +661,15 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
         "\xe2\x96\x88",
     };
 
-    uint8_t mode = (session.emoji_mode == EMO_EMOJI);
+    int mode = (session.emoji_mode == EMO_EMOJI);
 
     const char *block[] = {"#", "\xe2\x96\x88"};
     // use a 3-byte space in emoji mode to ease computations
     const char *space[] = {" ", "\xe2\x80\x80"};
-    uint8_t unit = strlen(block[mode]);
+
+    size_t unit = strlen(block[mode]);
     // +1 for \0
-    char *bar = calloc(unit * width + 1, sizeof(uint8_t));
+    char *bar = (char *)calloc(unit * width + 1, sizeof(uint8_t));
 
     uint8_t value = PERCENTAGE(count, max);
 
@@ -687,7 +691,7 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
     }
     // color buffer
     size_t collen = strlen(bar) + 40;
-    char *cbar = calloc(collen, sizeof(uint8_t));
+    char *cbar = (char *)calloc(collen, sizeof(uint8_t));
 
     // Add colors
     if (session.supports_colors) {
@@ -695,23 +699,23 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
         int p20 = unit * (width * 20 / 100);
         snprintf(cbar,  collen,  _GREEN_("%.*s"), p60, bar);
         snprintf(cbar + strlen(cbar), collen - strlen(cbar), _CYAN_("%.*s"), p20,  bar + p60);
-        snprintf(cbar + strlen(cbar), collen - strlen(cbar), _YELLOW_("%.*s"), unit * width - p60 - p20, bar + p60 + p20);
+        snprintf(cbar + strlen(cbar), collen - strlen(cbar), _YELLOW_("%.*s"), (int)(unit * width - p60 - p20), bar + p60 + p20);
     } else {
         snprintf(cbar,  collen,  "%s", bar);
     }
 
-    size_t len = strlen(cbar) + 32;
-    char *buffer = calloc(len, sizeof(uint8_t));
+    size_t olen = strlen(cbar) + 40;
+    char *out = (char *)calloc(olen, sizeof(uint8_t));
 
     switch (style) {
         case STYLE_BAR: {
-            sprintf(buffer, "%s", cbar);
-            printf("\b%c[2K\r[" _YELLOW_("=")"] %s", 27, buffer);
+            sprintf(out, "%s", cbar);
+            printf("\b%c[2K\r[" _YELLOW_("=")"] %s", 27, out);
             break;
         }
         case STYLE_MIXED: {
-            sprintf(buffer, "%s [ %zu mV / %2u V / %2u Vmax ]   ", cbar, count, (uint32_t)(count / 1000), (uint32_t)(max / 1000));
-            printf("\b%c[2K\r[" _YELLOW_("=")"] %s ", 27, buffer);
+            sprintf(out, "%s [ %zu mV / %2u V / %2u Vmax ]", cbar, count, (uint32_t)(count / 1000), (uint32_t)(max / 1000));
+            printf("\b%c[2K\r[" _YELLOW_("=")"] %s", 27, out);
             break;
         }
         case STYLE_VALUE: {
@@ -719,9 +723,8 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
             break;
         }
     }
-
     fflush(stdout);
-    free(buffer);
+    free(out);
     free(bar);
     free(cbar);
 }

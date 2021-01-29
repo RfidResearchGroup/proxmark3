@@ -19,6 +19,7 @@
 #include "ui.h"           // PrintAndLog
 #include "crc.h"
 #include "crc16.h"        // crc16 ccitt
+#include "crc32.h"        // crc32_ex
 #include "tea.h"
 #include "legic_prng.h"
 #include "cmddata.h"      // demodbuffer
@@ -169,6 +170,14 @@ static uint16_t calcBSDchecksum4(uint8_t *bytes, uint8_t len, uint32_t mask) {
     sum &= mask;
     return sum;
 }
+
+// 0xFF - ( n1 ^ n... )
+static uint16_t calcXORchecksum(uint8_t *bytes, uint8_t len, uint32_t mask) {
+    return 0xFF - calcSumByteXor(bytes, len, mask);
+}
+
+
+//2148050707DB0A0E000001C4000000
 
 // measuring LFSR maximum length
 static int CmdAnalyseLfsr(const char *Cmd) {
@@ -353,6 +362,12 @@ static int CmdAnalyseCRC(const char *Cmd) {
     uint16_t crcEE = b1 << 8 | b2;
     PrintAndLogEx(INFO, "FeliCa          | %04x or %04x (31C3 expected)\n", crcEE, Crc16ex(CRC_FELICA, dataStr, sizeof(dataStr)));
 
+
+    uint32_t crc32 = 0;
+    crc32_ex(dataStr, sizeof(dataStr), (uint8_t *)&crc32);
+    PrintAndLogEx(INFO, "CRC32 (desfire) | %08x ( expected)", crc32);
+    PrintAndLogEx(INFO, "---------------------------------------------------------------\n\n\n");
+
     return PM3_SUCCESS;
 }
 
@@ -421,11 +436,12 @@ static int CmdAnalyseCHKSUM(const char *Cmd) {
     PrintAndLogEx(INFO, "Mask value 0x%x", mask);
 
     if (verbose) {
-        PrintAndLogEx(INFO, "     add          | sub         | add 1's compl    | sub 1's compl   | xor");
-        PrintAndLogEx(INFO, "byte nibble crumb | byte nibble | byte nibble cumb | byte nibble     | byte nibble cumb |  BSD       |");
-        PrintAndLogEx(INFO, "------------------+-------------+------------------+-----------------+--------------------");
+        PrintAndLogEx(INFO, "------------------+-------------+------------------+-----------------+------------------+-----------+-------------");
+        PrintAndLogEx(INFO, "     add          | sub         | add 1's compl    | sub 1's compl   | xor              |           |");
+        PrintAndLogEx(INFO, "byte nibble crumb | byte nibble | byte nibble cumb | byte nibble     | byte nibble cumb |  BSD      | 0xFF - (n^n)");
+        PrintAndLogEx(INFO, "------------------+-------------+------------------+-----------------+------------------+-----------+-------------");
     }
-    PrintAndLogEx(INFO, "0x%X 0x%X   0x%X  | 0x%X 0x%X   | 0x%X 0x%X   0x%X | 0x%X 0x%X       | 0x%X 0x%X   0x%X  | 0x%X  0x%X |\n",
+    PrintAndLogEx(INFO, "0x%X 0x%X   0x%X  | 0x%X 0x%X   | 0x%X 0x%X   0x%X | 0x%X 0x%X       | 0x%X 0x%X   0x%X   | 0x%X  0x%X | 0x%X\n",
                   calcSumByteAdd(data, dlen, mask)
                   , calcSumNibbleAdd(data, dlen, mask)
                   , calcSumCrumbAdd(data, dlen, mask)
@@ -441,6 +457,7 @@ static int CmdAnalyseCHKSUM(const char *Cmd) {
                   , calcSumCrumbXor(data, dlen, mask)
                   , calcBSDchecksum8(data, dlen, mask)
                   , calcBSDchecksum4(data, dlen, mask)
+                  , calcXORchecksum(data, dlen, mask)
                  );
     return PM3_SUCCESS;
 }
@@ -921,19 +938,14 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     const char *s = arg_get_str(ctx, 1)->sval[0];
-    CLIParserFree(ctx);
-
-    if (s == NULL) {
-        PrintAndLogEx(FAILED, "Must provide a binary string");
-        return PM3_EINVARG;
-    }
-
     int len = MIN(strlen(s), MAX_DEMOD_BUF_LEN);
 
     // add 1 for null terminator.
     uint8_t *data = calloc(len + 1,  sizeof(uint8_t));
-    if (data == NULL)
+    if (data == NULL) {
+        CLIParserFree(ctx);
         return PM3_EMALLOC;
+    }
 
     for (int i = 0; i <= strlen(s); i++) {
         char c = s[i];
@@ -944,6 +956,9 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
 
         PrintAndLogEx(NORMAL, "%c" NOLF, c);
     }
+
+    CLIParserFree(ctx);
+
     PrintAndLogEx(NORMAL, "");
     DemodBufferLen = len;
     free(data);

@@ -371,7 +371,7 @@ static inline void sm_left_mask(const uint8_t *ks, uint8_t *mask, uint64_t rstat
 
 std::atomic<bool> key_found{0};
 std::atomic<uint64_t> key{0};
-std::atomic<size_t> topbits{0};
+std::atomic<size_t> g_topbits{0};
 std::mutex g_ice_mtx;
 static uint32_t g_num_cpus = std::thread::hardware_concurrency();
 
@@ -421,9 +421,9 @@ static void ice_sm_right_thread(
         }
 
         g_ice_mtx.lock();
-        if (bits > topbits.load(std::memory_order_relaxed)) {
+        if (bits > g_topbits.load(std::memory_order_relaxed)) {
             // Copy the winning mask
-            topbits = bits;
+            g_topbits = bits;
             memcpy(mask, tmp_mask, 16);
         }
         g_ice_mtx.unlock();
@@ -450,7 +450,7 @@ static void ice_sm_right_thread(
 static uint32_t ice_sm_right(const uint8_t *ks, uint8_t *mask, vector<uint64_t> *pcrstates) {
 
     map<uint64_t, uint64_t> bincstates;
-    topbits = ATOMIC_VAR_INIT(0);
+    g_topbits = ATOMIC_VAR_INIT(0);
 
     std::vector<std::thread> threads(g_num_cpus);
     for (uint8_t m = 0; m < g_num_cpus; m++) {
@@ -474,7 +474,7 @@ static uint32_t ice_sm_right(const uint8_t *ks, uint8_t *mask, vector<uint64_t> 
     // Reverse the vector order (so the higest bin comes first)
     reverse(pcrstates->begin(), pcrstates->end());
 
-    return topbits;
+    return g_topbits;
 }
 
 static void ice_sm_left_thread(
@@ -899,7 +899,7 @@ void combine_valid_left_right_states(vector<cs_t> *plcstates, vector<cs_t> *prcs
         inner = *plcstates;
     }
 
-    printf("Outer  " _YELLOW_("%lu")" , inner " _YELLOW_("%lu") "\n", outer.size(), inner.size());
+    printf("Outer  " _YELLOW_("%zu")" , inner " _YELLOW_("%zu") "\n", outer.size(), inner.size());
 
     // Clean up the candidate list
     pgc_candidates->clear();
@@ -928,7 +928,7 @@ void combine_valid_left_right_states(vector<cs_t> *plcstates, vector<cs_t> *prcs
         }
     }
     printf("Found a total of " _YELLOW_("%llu")" combinations, ", ((unsigned long long)plcstates->size()) * prcstates->size());
-    printf("but only " _GREEN_("%lu")" were valid!\n", pgc_candidates->size());
+    printf("but only " _GREEN_("%zu")" were valid!\n", pgc_candidates->size());
 }
 
 static void ice_compare(
@@ -1080,8 +1080,8 @@ int main(int argc, const char *argv[]) {
     //rbits = sm_right(ks, mask, &rstates);
     rbits = ice_sm_right(ks, mask, &rstates);
 
-    printf("Top-bin for the right state contains " _GREEN_("%d")" correct bits\n", rbits);
-    printf("Total count of right bins: " _YELLOW_("%lu") "\n", (unsigned long)rstates.size());
+    printf("Top-bin for the right state contains " _GREEN_("%u")" correct bits\n", rbits);
+    printf("Total count of right bins: " _YELLOW_("%zu") "\n", (unsigned long)rstates.size());
 
     if (rbits < 96) {
         printf(_RED_("\n  WARNING!!! Better find another trace, the right top-bin is < 96 bits\n\n"));
@@ -1093,19 +1093,19 @@ int main(int argc, const char *argv[]) {
         printf("Using the state from the top-right bin: " _YELLOW_("0x%07" PRIx64)"\n", rstate_after_gc);
 
         search_gc_candidates_right(rstate_before_gc, rstate_after_gc, Q, &crstates);
-        printf("Found " _YELLOW_("%lu")" right candidates using the meet-in-the-middle attack\n", crstates.size());
+        printf("Found " _YELLOW_("%zu")" right candidates using the meet-in-the-middle attack\n", crstates.size());
         if (crstates.size() == 0) continue;
 
         printf("Calculating left states using the (unknown bits) mask from the top-right state\n");
         //sm_left(ks, mask, &clstates);
         ice_sm_left(ks, mask, &clstates);
 
-        printf("Found a total of " _YELLOW_("%lu")" left cipher states, recovering left candidates...\n", clstates.size());
+        printf("Found a total of " _YELLOW_("%zu")" left cipher states, recovering left candidates...\n", clstates.size());
         if (clstates.size() == 0) continue;
         search_gc_candidates_left(lstate_before_gc, Q, &clstates);
 
 
-        printf("The meet-in-the-middle attack returned " _YELLOW_("%lu")" left cipher candidates\n", clstates.size());
+        printf("The meet-in-the-middle attack returned " _YELLOW_("%zu")" left cipher candidates\n", clstates.size());
         if (clstates.size() == 0) continue;
 
         printf("Combining left and right states, disposing invalid combinations\n");
