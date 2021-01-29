@@ -19,6 +19,7 @@
 #include "ui.h"           // PrintAndLog
 #include "crc.h"
 #include "crc16.h"        // crc16 ccitt
+#include "crc32.h"        // crc32_ex
 #include "tea.h"
 #include "legic_prng.h"
 #include "cmddata.h"      // demodbuffer
@@ -360,6 +361,12 @@ static int CmdAnalyseCRC(const char *Cmd) {
     compute_crc(CRC_FELICA, dataStr, sizeof(dataStr), &b1, &b2);
     uint16_t crcEE = b1 << 8 | b2;
     PrintAndLogEx(INFO, "FeliCa          | %04x or %04x (31C3 expected)\n", crcEE, Crc16ex(CRC_FELICA, dataStr, sizeof(dataStr)));
+
+
+    uint32_t crc32 = 0;
+    crc32_ex(dataStr, sizeof(dataStr), (uint8_t *)&crc32);
+    PrintAndLogEx(INFO, "CRC32 (desfire) | %08x ( expected)", crc32);
+    PrintAndLogEx(INFO, "---------------------------------------------------------------\n\n\n");
 
     return PM3_SUCCESS;
 }
