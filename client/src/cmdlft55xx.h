@@ -196,7 +196,7 @@ bool testKnownConfigBlock(uint32_t block0);
 
 bool tryDetectP1(bool getData);
 bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5);
-int  special(const char *Cmd);
+int  CmdT55xxSpecial(const char *Cmd);
 bool AcquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, uint8_t downlink_mode);
 uint8_t t55xx_try_one_password(uint32_t password, uint8_t downlink_mode, bool try_all_dl_modes);
 

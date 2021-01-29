@@ -1504,8 +1504,20 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
     return false;
 }
 
-int special(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+int CmdT55xxSpecial(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx special",
+                  "Show block changes with 64 different offsets,  data taken from Demod buffer.",
+                  "lf t55xx special\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     uint8_t bits[32] = {0x00};
 
@@ -4216,7 +4228,7 @@ static command_t CommandTable[] = {
     {"protect",      CmdT55xxProtect,         IfPm3Lf,         "Password protect tag"},
     {"recoverpw",    CmdT55xxRecoverPW,       IfPm3Lf,         "Try to recover from bad password write from a cloner"},
     {"sniff",        CmdT55xxSniff,           AlwaysAvailable, "Attempt to recover T55xx commands from sample buffer"},
-    {"special",      special,                 IfPm3Lf,         "Show block changes with 64 different offsets"},
+    {"special",      CmdT55xxSpecial,         IfPm3Lf,         "Show block changes with 64 different offsets"},
     {"wipe",         CmdT55xxWipe,            IfPm3Lf,         "Wipe a T55xx tag and set defaults (will destroy any data on tag)"},
     {NULL, NULL, NULL, NULL}
 };
