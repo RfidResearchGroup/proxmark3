@@ -662,9 +662,10 @@ void em4x70_write(em4x70_data_t *etd) {
 
         if (status) {
             // Read Tag after writing
-            em4x70_read_id();
-            em4x70_read_um1();
-            em4x70_read_um2();
+            if (em4x70_read_id()) {
+                em4x70_read_um1();
+                em4x70_read_um2();
+            }
         }
 
     }
