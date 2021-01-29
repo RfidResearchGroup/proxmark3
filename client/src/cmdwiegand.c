@@ -49,7 +49,8 @@ int CmdWiegandEncode(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "wiegand encode",
                   "Encode wiegand formatted number to raw hex",
-                  "wiegand encode -w H10301 --fc 101 --cn 1337"
+                  "wiegand encode --fc 101 --cn 1337               ->  show all formats\n"
+                  "wiegand encode -w H10301 --fc 101 --cn 1337     ->  H10301 format "
                  );
 
     void *argtable[] = {
