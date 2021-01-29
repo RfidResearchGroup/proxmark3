@@ -931,19 +931,14 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     const char *s = arg_get_str(ctx, 1)->sval[0];
-    CLIParserFree(ctx);
-
-    if (s == NULL) {
-        PrintAndLogEx(FAILED, "Must provide a binary string");
-        return PM3_EINVARG;
-    }
-
     int len = MIN(strlen(s), MAX_DEMOD_BUF_LEN);
 
     // add 1 for null terminator.
     uint8_t *data = calloc(len + 1,  sizeof(uint8_t));
-    if (data == NULL)
+    if (data == NULL) {
+        CLIParserFree(ctx);
         return PM3_EMALLOC;
+    }
 
     for (int i = 0; i <= strlen(s); i++) {
         char c = s[i];
@@ -954,6 +949,9 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
 
         PrintAndLogEx(NORMAL, "%c" NOLF, c);
     }
+
+    CLIParserFree(ctx);
+
     PrintAndLogEx(NORMAL, "");
     DemodBufferLen = len;
     free(data);
