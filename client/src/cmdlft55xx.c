@@ -3581,6 +3581,7 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
     int res = arg_get_u32_hexstr_def(ctx, 2, 0, &password);
     if (res == 2) {
         PrintAndLogEx(INFO, "Password should be 4 hex bytes");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     } else if (res == 1) {
         usepwd = true;
