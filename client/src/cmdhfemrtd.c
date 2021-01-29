@@ -713,8 +713,8 @@ static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length, const c
     // Note: Doing file_length - 6 to account for the longest data we're checking.
     // Checks first byte before the rest to reduce overhead
     for (offset = 0; offset < file_length - 6; offset++) {
-        if ((file_contents[offset] == 0xFF && memcmp(jpeg_header, file_contents + offset, 4) != 0) ||
-                (file_contents[offset] == 0x00 && memcmp(jpeg2k_header, file_contents + offset, 6) != 0)) {
+        if ((file_contents[offset] == 0xFF && memcmp(jpeg_header, file_contents + offset, 4) == 0) ||
+                (file_contents[offset] == 0x00 && memcmp(jpeg2k_header, file_contents + offset, 6) == 0)) {
             datalen = file_length - offset;
             break;
         }
