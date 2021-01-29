@@ -18,17 +18,18 @@ static void crc32_byte(uint32_t *crc, const uint8_t value) {
     }
 }
 
-void crc32_ex(const uint8_t *data, const size_t len, uint8_t *crc) {
-    uint32_t desfire_crc = CRC32_PRESET;
-    for (size_t i = 0; i < len; i++) {
-        crc32_byte(&desfire_crc, data[i]);
+void crc32_ex(const uint8_t *d, const size_t n, uint8_t *crc) {
+    uint32_t c = CRC32_PRESET;
+    for (size_t i = 0; i < n; i++) {
+        crc32_byte(&c, d[i]);
     }
-    uint32_t crctmp = htole32(desfire_crc);
-    for (size_t i = 0; i < sizeof(uint32_t); i++) {
-        crc[i] = ((uint8_t *) &crctmp)[i];
-    }
+    crc[0] = (uint8_t) c;
+    crc[1] = (uint8_t)(c >> 8);
+    crc[2] = (uint8_t)(c >> 16);
+    crc[3] = (uint8_t)(c >> 24);
 }
 
-void crc32_append(uint8_t *data, const size_t len) {
-    crc32_ex(data, len, data + len);
+
+void crc32_append(uint8_t *d, const size_t n) {
+    crc32_ex(d, n, d + n);
 }
