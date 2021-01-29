@@ -3546,8 +3546,6 @@ static int CmdHF14AMfSim(const char *Cmd) {
         }
         showSectorTable(k_sector, k_sectorsCount);
     }
-
-    k_sectorsCount = MIFARE_4K_MAXSECTOR;
     return PM3_SUCCESS;
 }
 
