@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `LF_THAREXDE` standalone mode which simulates and reads EM4x50 cards (@tharexde)
  - Added support for bidirectional communication for `lf em 4x50 sim` (@tharexde)
  - Added `tools/hitag2crack/crack5opencl`, an optimized version of `crack5gpu` (@matrix)
  - Fixed Makefile to account for changes when running on Apple Silicon (@tcprst)

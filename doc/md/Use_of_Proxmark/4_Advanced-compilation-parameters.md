@@ -79,6 +79,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 |-----------------|----------------------------------------|
 |                 | No standalone mode
 | LF_SKELETON     | standalone mode skeleton - Iceman1001
+| LF_THAREXDE     | LF EM4x50 simulator/read standalone mode - tharexde
 | LF_EM4100EMUL   | LF EM4100 simulator standalone mode - temskiy
 | LF_EM4100RSWB   | LF EM4100 read/write/clone/brute mode - Monster1024
 | LF_EM4100RWC    | LF EM4100 read/write/clone mode - temskiy
