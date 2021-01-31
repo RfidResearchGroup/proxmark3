@@ -50,7 +50,7 @@
 #include "crc16.h"
 
 #ifdef WITH_LCD
-#include "LCD.h"
+#include "LCD_disabled.h"
 #endif
 
 #ifdef WITH_SMARTCARD
