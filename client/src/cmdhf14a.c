@@ -1422,7 +1422,8 @@ typedef enum {
     MTDESFIRE = 4,
     MTPLUS = 8,
     MTULTRALIGHT = 16,
-    MTOTHER = 32
+    HID_SEOS = 32,
+    MTOTHER = 64
 } nxp_mifare_type_t;
 
 // Based on NXP AN10833 Rev 3.6 and NXP AN10834 Rev 4.1
@@ -1525,11 +1526,17 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
                         type |= MTPLUS;
                     }
                 } else {
-                    printTag("MIFARE Plus EV1 2K/4K in SL3");
-                    printTag("MIFARE Plus S 2K/4K in SL3");
-                    printTag("MIFARE Plus X 2K/4K in SL3");
-                    printTag("MIFARE Plus SE 1K");
-                    type |= MTPLUS;
+
+                    if ((atqa & 0x0001) == 0x0001) {
+                        printTag("HID SEOS (smartmx / javacard)");
+                        type |= HID_SEOS;
+                    } else {
+                        printTag("MIFARE Plus EV1 2K/4K in SL3");
+                        printTag("MIFARE Plus S 2K/4K in SL3");
+                        printTag("MIFARE Plus X 2K/4K in SL3");
+                        printTag("MIFARE Plus SE 1K");
+                        type |= MTPLUS;
+                    }
                 }
 
                 printTag("NTAG 4xx");
