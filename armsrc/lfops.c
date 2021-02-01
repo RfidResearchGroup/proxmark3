@@ -1009,7 +1009,7 @@ void CmdFSKsimTAGEx(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t cl
 
     WDT_HIT();
 
-    Dbprintf("FSK simulating with FC/%d, fcHigh: %d, fcLow: %d, STT: %d, n: %d", clk, fchigh, fclow, separator, n);
+    Dbprintf("FSK simulating with FC/%d, fcHigh %d, fcLow %d, STT %d, n %d", clk, fchigh, fclow, separator, n);
 
     if (ledcontrol) LED_A_ON();
     SimulateTagLowFrequencyEx(n, 0, ledcontrol, numcycles);
@@ -1122,7 +1122,7 @@ void CmdASKsimTAG(uint8_t encoding, uint8_t invert, uint8_t separator, uint8_t c
 
     WDT_HIT();
 
-    Dbprintf("ASK simulating with FC/ %d, invert: %d, encoding: %s (%d), separator: %d, n: %d"
+    Dbprintf("ASK simulating with FC/%d, invert %d, encoding %s (%d), separator %d, n %d"
              , clk
              , invert
              , (encoding == 2) ? "BI" : (encoding == 1) ? "ASK/MAN" : "RAW/MAN"
@@ -1176,7 +1176,7 @@ void CmdPSKsimTAG(uint8_t carrier, uint8_t invert, uint8_t clk, uint16_t size, u
 
     WDT_HIT();
 
-    Dbprintf("PSK simulating with FC/%d , RC/%d, invert %d, n %d", clk, carrier, invert, n);
+    Dbprintf("PSK simulating with FC/%d, RC/%d, invert %d, n %d", clk, carrier, invert, n);
 
     if (ledcontrol) LED_A_ON();
     SimulateTagLowFrequency(n, 0, ledcontrol);
@@ -1220,7 +1220,7 @@ void CmdNRZsimTAG(uint8_t invert, uint8_t separator, uint8_t clk, uint16_t size,
 
     WDT_HIT();
 
-    Dbprintf("NRZ simulating with FC/%d, invert: %d, separator: %d, n: %d"
+    Dbprintf("NRZ simulating with FC/%d, invert %d, separator %d, n %d"
              , clk
              , invert
              , separator
