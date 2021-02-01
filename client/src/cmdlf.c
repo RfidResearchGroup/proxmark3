@@ -203,19 +203,7 @@ static int usage_lf_simask(void) {
     PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
     return PM3_SUCCESS;
 }
-static int usage_lf_simpsk(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf simpsk [1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h              This help");
-    PrintAndLogEx(NORMAL, "       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
-    PrintAndLogEx(NORMAL, "       i              invert data");
-    PrintAndLogEx(NORMAL, "       1              set PSK1 (default)");
-    PrintAndLogEx(NORMAL, "       2              set PSK2");
-    PrintAndLogEx(NORMAL, "       3              set PSK3");
-    PrintAndLogEx(NORMAL, "       r <carrier>    2|4|8 are valid carriers: default = 2");
-    PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
-    return PM3_SUCCESS;
-}
+
 
 static int CmdLFTune(const char *Cmd) {
 
@@ -865,8 +853,6 @@ int CmdLFSim(const char *Cmd) {
 
     PrintAndLogEx(DEBUG, "DEBUG: Uploading %zu bytes", GraphTraceLen);
 
-    PacketResponseNG resp;
-
     struct pupload {
         uint8_t flag;
         uint16_t offset;
@@ -880,6 +866,8 @@ int CmdLFSim(const char *Cmd) {
 
     // fast push mode
     conn.block_after_ACK = true;
+
+    PacketResponseNG resp;
 
     //can send only 512 bits at a time (1 byte sent per bit...)
     for (uint16_t i = 0; i < GraphTraceLen; i += PM3_CMD_DATA_SIZE - 3) {
@@ -903,8 +891,6 @@ int CmdLFSim(const char *Cmd) {
 
     // Disable fast mode before last command
     conn.block_after_ACK = false;
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Simulating");
 
     struct p {
         uint16_t len;
@@ -916,11 +902,24 @@ int CmdLFSim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));
 
-    WaitForResponse(CMD_LF_SIMULATE, &resp);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to exit");
 
+    for (;;) {
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "User aborted");
+            break;
+        }
+
+        if (WaitForResponseTimeout(CMD_LF_SIMULATE, &resp, 1000)) {
+            if (resp.status == PM3_EOPABORTED) {
+                PrintAndLogEx(DEBUG, "Button pressed, user aborted");
+                break;
+            }
+        }
+    }
     PrintAndLogEx(INFO, "Done");
-    if (resp.status != PM3_EOPABORTED)
-        return resp.status;
     return PM3_SUCCESS;
 }
 
@@ -1012,19 +1011,31 @@ int CmdLFfskSim(const char *Cmd) {
     payload->clock = clk;
     memcpy(payload->data, DemodBuffer, size);
 
-    PrintAndLogEx(INFO, "Simulating");
-
     clearCommandBuffer();
     SendCommandNG(CMD_LF_FSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_fsksim_t) + size);
     free(payload);
 
     setClockGrid(clk, 0);
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_FSK_SIMULATE, &resp);
 
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to exit");
+
+    for (;;) {
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "User aborted");
+            break;
+        }
+
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_LF_FSK_SIMULATE, &resp, 1000)) {
+            if (resp.status == PM3_EOPABORTED) {
+                PrintAndLogEx(DEBUG, "Button pressed, user aborted");
+                break;
+            }
+        }
+    }
     PrintAndLogEx(INFO, "Done");
-    if (resp.status != PM3_EOPABORTED)
-        return resp.status;
     return PM3_SUCCESS;
 }
 
@@ -1114,113 +1125,140 @@ int CmdLFaskSim(const char *Cmd) {
     payload->clock = clk;
     memcpy(payload->data, DemodBuffer, size);
 
-    PrintAndLogEx(INFO, "Simulating");
-
     clearCommandBuffer();
     SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + size);
     free(payload);
 
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to exit");
 
+    for (;;) {
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "User aborted");
+            break;
+        }
+
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_LF_ASK_SIMULATE, &resp, 1000)) {
+            if (resp.status == PM3_EOPABORTED) {
+                PrintAndLogEx(DEBUG, "Button pressed, user aborted");
+                break;
+            }
+        }
+    }
     PrintAndLogEx(INFO, "Done");
-    if (resp.status != PM3_EOPABORTED)
-        return resp.status;
     return PM3_SUCCESS;
 }
 
 // sim psk data given carrier, clock, invert
 // - allow pull data from DemodBuffer or parameters
 int CmdLFpskSim(const char *Cmd) {
-    //might be able to autodetect FC and clock from Graphbuffer if using demod buffer
-    //will need carrier, Clock, and bitstream
-    uint8_t carrier = 0, clk = 0;
-    uint8_t invert = 0;
-    bool errors = false;
-    char hexData[64] = {0x00}; // store entered hex data
-    uint8_t data[255] = {0x00};
-    int dataLen = 0;
-    uint8_t cmdp = 0;
-    uint8_t pskType = 1;
+ 
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf simpsk",
+                  "Simulate LF PSK tag from demodbuffer or input",
+                  "lf simpsk -1 --clk 32 --rc 2 -d a0000000bd989a11   --> simulate a indala tag manually\n"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_simpsk();
-            case 'i':
-                invert = 1;
-                cmdp++;
-                break;
-            case 'c':
-                errors |= param_getdec(Cmd, cmdp + 1, &clk);
-                cmdp += 2;
-                break;
-            case 'r':
-                errors |= param_getdec(Cmd, cmdp + 1, &carrier);
-                cmdp += 2;
-                break;
-            case '1':
-                pskType = 1;
-                cmdp++;
-                break;
-            case '2':
-                pskType = 2;
-                cmdp++;
-                break;
-            case '3':
-                pskType = 3;
-                cmdp++;
-                break;
-            case 'd':
-                dataLen = param_getstr(Cmd, cmdp + 1, hexData, sizeof(hexData));
-                if (dataLen == 0)
-                    errors = true;
-                else
-                    dataLen = hextobinarray((char *)data, hexData);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("1", "psk1", "set PSK1 (default)"),
+        arg_lit0("2", "psk2", "set PSK2"),
+        arg_lit0("3", "psk3", "set PSK3"),        
+        arg_lit0("i", "inv", "invert data"),
+        arg_u64_0("c", "clk", "<dec>", "manually set clock - can autodetect if using DemodBuffer (default 32)"),
+        arg_u64_0(NULL, "rc", "<dec>", "2|4|8 are valid carriers (default 2)"),
+        arg_str0("d", "data", "<hex>", "data to sim - omit to use DemodBuffer"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool use_psk1 = arg_get_lit(ctx, 1);
+    bool use_psk2 = arg_get_lit(ctx, 2);
+    bool use_psk3 = arg_get_lit(ctx, 3);
+    bool invert = arg_get_lit(ctx, 4);
+    uint8_t clk = arg_get_u32_def(ctx, 5, 0);
+    uint8_t carrier = arg_get_u32_def(ctx, 6, 2);
+    int raw_len = 64;
+    char raw[64] = {0};
+    CLIGetStrWithReturn(ctx, 7, (uint8_t*)raw, &raw_len);
+    bool verbose = arg_get_lit(ctx, 8);
+    CLIParserFree(ctx);
 
-                if (dataLen == 0) errors = true;
-                if (errors) PrintAndLogEx(ERR, "Error getting hex data");
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    if ((use_psk1 + use_psk2 + use_psk3) > 1) {
+        PrintAndLogEx(ERR, "only one PSK mode can be set");
+        return PM3_EINVARG;
     }
+    
+    if (carrier != 2 && carrier != 4 && carrier != 8) {
+        PrintAndLogEx(ERR, "Wrong carrier given, expected <2|4|8>");
+        return PM3_EINVARG;
+    }
+
+    uint8_t psk_type = 1;
+    if (use_psk2)
+        psk_type = 2;
+    if (use_psk3)
+        psk_type = 3;
+
+
+    uint8_t bs[256] = {0x00};
+    int bs_len = hextobinarray((char *)bs, raw);
+    if (bs_len == 0) {
+        PrintAndLogEx(ERR, "Failed to convert to binary string array");
+        return PM3_EINVARG;
+    }
+
     // No args
-    if (cmdp == 0 && DemodBufferLen == 0)
-        errors = true;
+    //if (DemodBufferLen == 0)
+    //    errors = true;
 
-    //Validations
-    if (errors) return usage_lf_simpsk();
 
-    if (dataLen == 0) { //using DemodBuffer
+    if (bs_len == 0) { 
+        // Using data from DemodBuffer
+        // might be able to autodetect FC and clock from Graphbuffer if using demod buffer
+        // will need carrier, clock, and bitstream
         PrintAndLogEx(INFO, "Getting Clocks");
 
-        if (clk == 0) clk = GetPskClock("", false);
-        PrintAndLogEx(INFO, "clk: %d", clk);
+        int res = 0;
+        if (clk == 0) {
+            res = GetPskClock("", verbose);
+            if ( res < 1) {
+                clk = 32;
+            } else {
+                clk = (uint8_t)res;
+            }
+        }
 
-        if (!carrier) carrier = GetPskCarrier(false);
-        PrintAndLogEx(INFO, "carrier: %d", carrier);
+        if (carrier == 0) {
+             res = GetPskCarrier(verbose);
+             if (res < 1 ) {
+                 carrier = 2;
+             } else {
+                 carrier = (uint8_t)res;
+             }
+        }
+        PrintAndLogEx(INFO, "Using clk: %u,  carrier: %u", clk, carrier);
 
     } else {
-        setDemodBuff(data, dataLen, 0);
+        setDemodBuff(bs, bs_len, 0);
     }
 
-    if (clk == 0) clk = 32;
-
-    if (carrier != 2 && carrier != 4 && carrier != 8)
-        carrier = 2;
-
-    if (pskType != 1) {
-        if (pskType == 2) {
-            //need to convert psk2 to psk1 data before sim
-            psk2TOpsk1(DemodBuffer, DemodBufferLen);
-        } else {
-            PrintAndLogEx(WARNING, "Sorry, PSK3 not yet available");
-        }
+    if (clk == 0) {
+        PrintAndLogEx(INFO, "Autodetection of clock failed, falling back to FC/32");
+        clk = 32;
     }
+
+
+    if (psk_type == 2) {
+        //need to convert psk2 to psk1 data before sim
+        psk2TOpsk1(DemodBuffer, DemodBufferLen);
+    } else if (psk_type == 3) {
+        PrintAndLogEx(WARNING, "PSK3 not yet available. Falling back to PSK1");
+        psk_type = 1;
+    }
+
     size_t size = DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t))) {
         PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t));
@@ -1232,19 +1270,29 @@ int CmdLFpskSim(const char *Cmd) {
     payload->invert = invert;
     payload->clock = clk;
     memcpy(payload->data, DemodBuffer, size);
-
-    PrintAndLogEx(INFO, "Simulating");
-
     clearCommandBuffer();
     SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + size);
     free(payload);
 
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_PSK_SIMULATE, &resp);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to exit");
 
+    for (;;) {
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "User aborted");
+            break;
+        }
+
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_LF_PSK_SIMULATE, &resp, 1000)) {
+            if (resp.status == PM3_EOPABORTED) {
+                PrintAndLogEx(DEBUG, "Button pressed, user aborted");
+                break;
+            }
+        }
+    }
     PrintAndLogEx(INFO, "Done");
-    if (resp.status != PM3_EOPABORTED)
-        return resp.status;
     return PM3_SUCCESS;
 }
 
