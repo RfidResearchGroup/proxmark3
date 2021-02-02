@@ -1202,24 +1202,23 @@ int CmdLFpskSim(const char *Cmd) {
     if (use_psk3)
         psk_type = 3;
 
+    // to detect if raw_hex was supplied  or of 
 
-    uint8_t bs[256] = {0x00};
-    int bs_len = hextobinarray((char *)bs, raw);
-    if (bs_len == 0) {
-        PrintAndLogEx(ERR, "Failed to convert to binary string array");
+    // No args
+    if (raw_len == 0 && DemodBufferLen == 0) {
+        PrintAndLogEx(ERR, "No user supplied nor any data to found inside Demodbuffer");
         return PM3_EINVARG;
     }
 
-    // No args
-    //if (DemodBufferLen == 0)
-    //    errors = true;
 
+    uint8_t bs[256] = {0x00};
+    int bs_len = hextobinarray((char *)bs, raw);
 
     if (bs_len == 0) { 
         // Using data from DemodBuffer
         // might be able to autodetect FC and clock from Graphbuffer if using demod buffer
         // will need carrier, clock, and bitstream
-        PrintAndLogEx(INFO, "Getting Clocks");
+        PrintAndLogEx(INFO, "No user supplied data, using Demodbuffer...");
 
         int res = 0;
         if (clk == 0) {
@@ -1239,29 +1238,30 @@ int CmdLFpskSim(const char *Cmd) {
                  carrier = (uint8_t)res;
              }
         }
-        PrintAndLogEx(INFO, "Using clk: %u,  carrier: %u", clk, carrier);
+
+        PrintAndLogEx(DEBUG, "Detected FC/%u, RC/%u, n %zu ", clk, carrier, DemodBufferLen);
 
     } else {
         setDemodBuff(bs, bs_len, 0);
     }
 
     if (clk == 0) {
-        PrintAndLogEx(INFO, "Autodetection of clock failed, falling back to FC/32");
+        PrintAndLogEx(DEBUG, "Autodetection of clock failed, falling back to FC/32");
         clk = 32;
     }
-
 
     if (psk_type == 2) {
         //need to convert psk2 to psk1 data before sim
         psk2TOpsk1(DemodBuffer, DemodBufferLen);
     } else if (psk_type == 3) {
-        PrintAndLogEx(WARNING, "PSK3 not yet available. Falling back to PSK1");
+        PrintAndLogEx(INFO, "PSK3 not yet available. Falling back to PSK1");
         psk_type = 1;
     }
 
     size_t size = DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t))) {
         PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t));
+        PrintAndLogEx(INFO, "Continuing with trimmed down data");
         size = PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t);
     }
 
