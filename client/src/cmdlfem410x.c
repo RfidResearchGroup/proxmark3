@@ -320,11 +320,11 @@ static int CmdEM410xDemod(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_0(NULL, "clk", "<dec>", "optional - clock (default autodetect)"),
-        arg_u64_0(NULL, "err", "<dec>", "optional - maximum allowed errors (default 100)"),
-        arg_u64_0(NULL, "len", "<dec>", "optional - maximum length"),
-        arg_lit0("i", "invert", "optional - invert output"),
-        arg_lit0("a", "amp", "optional - amplify signal"),
+        arg_u64_0(NULL, "clk", "<dec>", "clock (default autodetect)"),
+        arg_u64_0(NULL, "err", "<dec>", "maximum allowed errors (default 100)"),
+        arg_u64_0(NULL, "len", "<dec>", "maximum length"),
+        arg_lit0("i", "invert", "invert output"),
+        arg_lit0("a", "amp", "amplify signal"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -359,12 +359,13 @@ static int CmdEM410xReader(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_0(NULL, "clk", "<dec>", "optional - clock (default autodetect)"),
-        arg_u64_0(NULL, "err", "<dec>", "optional - maximum allowed errors (default 100)"),
-        arg_u64_0(NULL, "len", "<dec>", "optional - maximum length"),
-        arg_lit0("i", "invert", "optional - invert output"),
-        arg_lit0("a", "amp", "optional - amplify signal"),
-        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_u64_0(NULL, "clk", "<dec>", "clock (default autodetect)"),
+        arg_u64_0(NULL, "err", "<dec>", "maximum allowed errors (default 100)"),
+        arg_u64_0(NULL, "len", "<dec>", "maximum length"),
+        arg_lit0("i", "invert", "invert output"),
+        arg_lit0("a", "amp", "amplify signal"),
+        arg_lit0("b", NULL, "break on first found"),
+        arg_lit0("@", NULL, "continuous reader mode"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
@@ -375,8 +376,9 @@ static int CmdEM410xReader(const char *Cmd) {
     size_t max_len = arg_get_u32_def(ctx, 3, 0);
     bool invert = arg_get_lit(ctx, 4);
     bool amplify = arg_get_lit(ctx, 5);
-    bool cm = arg_get_lit(ctx, 6);
-    bool verbose = arg_get_lit(ctx, 7);
+    bool break_first = arg_get_lit(ctx, 6);
+    bool cm = arg_get_lit(ctx, 7);
+    bool verbose = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     if (cm) {
@@ -388,6 +390,10 @@ static int CmdEM410xReader(const char *Cmd) {
         uint64_t lo = 0;
         lf_read(false, 12288);
         AskEm410xDemod(clk, invert, max_err, max_len, amplify, &hi, &lo, verbose);
+
+        if (break_first && g_em410xid != 0) {
+            break;
+        }
     } while (cm && !kbd_enter_pressed());
 
     return PM3_SUCCESS;
@@ -406,8 +412,8 @@ static int CmdEM410xSim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_0(NULL, "clk", "<dec>", "optional - clock [32|64] (default 64)"),
-        arg_str1("i", "id", "<hex>", "ID number (5 hex bytes)"),
+        arg_u64_0(NULL, "clk", "<dec>", "<32|64> clock (default 64)"),
+        arg_str1(NULL, "id", "<hex>", "ID number (5 hex bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -425,11 +431,8 @@ static int CmdEM410xSim(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Starting simulating UID "_YELLOW_("%s")" clock: "_YELLOW_("%d"), sprint_hex_inrow(uid, sizeof(uid)), clk);
-    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation");
-
     em410x_construct_emul_graph(uid, clk);
-
-    CmdLFSim("0"); // 240 start_gap.
+    CmdLFSim("");
     return PM3_SUCCESS;
 }
 
@@ -445,8 +448,8 @@ static int CmdEM410xBrute(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_1(NULL, "clk", "<dec>", "optional - clock [32|64] (default 64)"),
-        arg_u64_1(NULL, "delay", "<dec>", "optional - pause delay in milliseconds between UIDs simulation (default 1000ms)"),
+        arg_u64_0(NULL, "clk", "<dec>", "<32|64> clock (default 64)"),
+        arg_u64_0(NULL, "delay", "<dec>", "pause delay in milliseconds between UIDs simulation (default 1000ms)"),
         arg_str1("f", "file", "<hex>", "file with UIDs in HEX format, one per line"),
         arg_param_end
     };
@@ -536,7 +539,8 @@ static int CmdEM410xBrute(const char *Cmd) {
     uint8_t testuid[5];
     for (uint32_t c = 0; c < uidcnt; ++c) {
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "\nAborted via keyboard!\n");
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(INFO, "\nAborted via keyboard!\n");
             free(uidblock);
             return PM3_EOPABORTED;
         }
@@ -549,9 +553,7 @@ static int CmdEM410xBrute(const char *Cmd) {
                      );
 
         em410x_construct_emul_graph(testuid, clk);
-
-        CmdLFSim("0"); //240 start_gap.
-
+        CmdLFSim(""); //240 start_gap.
         msleep(delay);
     }
     free(uidblock);
@@ -575,9 +577,10 @@ static int CmdEM410xSpoof(const char *Cmd) {
     CLIParserFree(ctx);
 
     // loops if the captured ID was in XL-format.
-    CmdEM410xReader("-@");
-    PrintAndLogEx(SUCCESS, "# Replaying captured ID: "_YELLOW_("%010" PRIx64), g_em410xid);
-    CmdLFaskSim("");
+    g_em410xid = 0;
+    CmdEM410xReader("-b@");
+    PrintAndLogEx(SUCCESS, "Replaying captured ID "_YELLOW_("%010" PRIx64), g_em410xid);
+    CmdLFSim("");
     return PM3_SUCCESS;
 }
 
@@ -585,15 +588,15 @@ static int CmdEM410xClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x clone",
                   "Writes EM410x ID to a T55x7 or Q5/T5555 tag",
-                  "lf em 410x clone --uid 0F0368568B        -> write id to T55x7 tag\n"
-                  "lf em 410x clone --uid 0F0368568B --q5   -> write id to Q5/T5555 tag"
+                  "lf em 410x clone --id 0F0368568B        -> write id to T55x7 tag\n"
+                  "lf em 410x clone --id 0F0368568B --q5   -> write id to Q5/T5555 tag"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_0(NULL, "clk", "<dec>", "optional - clock <16|32|40|64> (default 64)"),
-        arg_str1("u", "uid", "<hex>", "ID number (5 hex bytes)"),
-        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_u64_0(NULL, "clk", "<dec>", "<16|32|40|64> clock (default 64)"),
+        arg_str1(NULL, "id", "<hex>", "ID number (5 hex bytes)"),
+        arg_lit0(NULL, "q5", "specify writing to Q5/T5555 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
