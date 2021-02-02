@@ -287,13 +287,9 @@ static int CmdEM410xWatch(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(SUCCESS, "Watching for EM410x cards - place tag on antenna");
-    PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM410X_WATCH, NULL, 0);
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_EM410X_WATCH, &resp);
-    PrintAndLogEx(INFO, "Done");
-    return resp.status;
+    return lfsim_wait_check(CMD_LF_EM410X_WATCH);
 }
 
 //by marshmellow

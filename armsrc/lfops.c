@@ -1251,20 +1251,13 @@ int lf_hid_watch(int findone, uint32_t *high, uint32_t *low) {
     BigBuf_Clear_keep_EM();
 
     int res = PM3_SUCCESS;
-    uint16_t interval = 0;
-    while (BUTTON_PRESS() == false) {
+    for (;;) {
 
         WDT_HIT();
 
-        // cancel w usb command.
-        if (interval == 4000) {
-            if (data_available()) {
-                res = PM3_EOPABORTED;
-                break;
-            }
-            interval = 0;
-        } else {
-            interval++;
+        if (data_available() || BUTTON_PRESS()) {
+            res = PM3_EOPABORTED;
+            break;
         }
 
         DoAcquisition_default(-1, false);
@@ -1360,20 +1353,13 @@ int lf_awid_watch(int findone, uint32_t *high, uint32_t *low) {
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
     int res = PM3_SUCCESS;
-    uint16_t interval = 0;
-    while (BUTTON_PRESS() == false) {
+    for (;;) {
 
         WDT_HIT();
 
-        // cancel w usb command.
-        if (interval == 4000) {
-            if (data_available()) {
-                res = PM3_EOPABORTED;
-                break;
-            }
-            interval = 0;
-        } else {
-            interval++;
+        if (data_available() || BUTTON_PRESS()) {
+            res = PM3_EOPABORTED;
+            break;
         }
 
         DoAcquisition_default(-1, false);
@@ -1465,19 +1451,12 @@ int lf_em410x_watch(int findone, uint32_t *high, uint64_t *low) {
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
     int res = PM3_SUCCESS;
-    uint16_t interval = 0;
-    while (BUTTON_PRESS() == false) {
+    for (;;) {
         WDT_HIT();
 
-        // cancel w usb command.
-        if (interval == 4000) {
-            if (data_available()) {
-                res = PM3_EOPABORTED;
-                break;
-            }
-            interval = 0;
-        } else {
-            interval++;
+        if (data_available() || BUTTON_PRESS()) {
+            res = PM3_EOPABORTED;
+            break;
         }
 
         DoAcquisition_default(-1, false);
@@ -1541,20 +1520,13 @@ int lf_io_watch(int findone, uint32_t *high, uint32_t *low) {
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
     int res = PM3_SUCCESS;
-    uint16_t interval = 0;
-    while (BUTTON_PRESS() == false) {
+    for (;;) {
 
         WDT_HIT();
 
-        // cancel w usb command.
-        if (interval == 4000) {
-            if (data_available()) {
-                res = PM3_EOPABORTED;
-                break;
-            }
-            interval = 0;
-        } else {
-            interval++;
+        if (data_available() || BUTTON_PRESS()) {
+            res = PM3_EOPABORTED;
+            break;
         }
 
         DoAcquisition_default(-1, false);

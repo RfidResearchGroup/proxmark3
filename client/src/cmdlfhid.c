@@ -223,10 +223,7 @@ static int CmdHIDWatch(const char *Cmd) {
     PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HID_WATCH, NULL, 0);
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_HID_WATCH, &resp);
-    PrintAndLogEx(INFO, "Done");
-    return resp.status;
+    return lfsim_wait_check(CMD_LF_HID_WATCH);
 }
 
 static int CmdHIDSim(const char *Cmd) {
