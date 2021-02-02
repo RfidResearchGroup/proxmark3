@@ -2895,9 +2895,10 @@ static int CmdT55xxWipe(const char *Cmd) {
     res = arg_get_u32_hexstr_def(ctx, 2, 0x51243648, &password);
     if (res) {
         usepwd = true;
+    }
 
-        if (usepwd && res == 2)
-            PrintAndLogEx(WARNING, "Password should be 4 bytes, using default pwd");
+    if (res == 2) {
+        PrintAndLogEx(WARNING, "Password should be 4 bytes, using default pwd");
     }
 
     bool Q5 = arg_get_lit(ctx, 3);
