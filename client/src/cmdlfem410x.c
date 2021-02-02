@@ -286,7 +286,7 @@ static int CmdEM410xWatch(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(SUCCESS, "Watching for EM410x cards - place tag on antenna");
+    PrintAndLogEx(SUCCESS, "Watching for EM410x cards - place tag on Proxmark3 antenna");
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM410X_WATCH, NULL, 0);
     return lfsim_wait_check(CMD_LF_EM410X_WATCH);
@@ -542,14 +542,14 @@ static int CmdEM410xBrute(const char *Cmd) {
         }
 
         memcpy(testuid, uidblock + 5 * c, 5);
-        PrintAndLogEx(INFO, "Bruteforce %d / %d: simulating UID " _YELLOW_("%s")
+        PrintAndLogEx(INFO, "Bruteforce %d / %u: simulating UID " _YELLOW_("%s")
                       , c + 1
                       , uidcnt
                       , sprint_hex_inrow(testuid, sizeof(testuid))
                      );
 
         em410x_construct_emul_graph(testuid, clk);
-        CmdLFSim(""); //240 start_gap.
+        CmdLFSim("");
         msleep(delay);
     }
     free(uidblock);

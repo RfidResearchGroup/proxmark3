@@ -60,6 +60,7 @@ int CmdWiegandEncode(const char *Cmd) {
         arg_u64_0(NULL, "issue", "<dec>", "issue level"),
         arg_u64_0(NULL, "oem", "<dec>", "OEM code"),
         arg_str0("w", "wiegand", "<format>", "see `wiegand list` for available formats"),
+        arg_lit0(NULL, "pre", "add HID preamble to wiegand"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -75,6 +76,7 @@ int CmdWiegandEncode(const char *Cmd) {
     int len = 0;
     char format[16] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)format, sizeof(format), &len);
+    bool preamble = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     int idx = -1;
@@ -89,14 +91,14 @@ int CmdWiegandEncode(const char *Cmd) {
     if (idx != -1) {
         wiegand_message_t packed;
         memset(&packed, 0, sizeof(wiegand_message_t));
-        if (HIDPack(idx, &data, &packed) == false) {
+        if (HIDPack(idx, &data, &packed, preamble) == false) {
             PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
             return PM3_ESOFT;
         }
         print_wiegand_code(&packed);
     } else {
         // try all formats and print only the ones that work.
-        HIDPackTryAll(&data);
+        HIDPackTryAll(&data, preamble);
     }
     return PM3_SUCCESS;
 }

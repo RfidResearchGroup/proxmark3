@@ -58,7 +58,7 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
     wiegand_message_t packed;
     memset(&packed, 0, sizeof(wiegand_message_t));
 
-    if (HIDPack(format_idx, card, &packed) == false) {
+    if (HIDPack(format_idx, card, &packed, true) == false) {
         PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
         return PM3_ESOFT;
     }
@@ -284,7 +284,7 @@ static int CmdHIDSim(const char *Cmd) {
         packed.Mid = mid;
         packed.Bot = bot;
     } else {
-        if (HIDPack(format_idx, &card, &packed) == false) {
+        if (HIDPack(format_idx, &card, &packed, true) == false) {
             PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
             return PM3_ESOFT;
         }
@@ -390,7 +390,7 @@ static int CmdHIDClone(const char *Cmd) {
         packed.Mid = mid;
         packed.Bot = bot;
     } else {
-        if (HIDPack(format_idx, &card, &packed) == false) {
+        if (HIDPack(format_idx, &card, &packed, true) == false) {
             PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
             return PM3_ESOFT;
         }
