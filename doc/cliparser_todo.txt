@@ -96,10 +96,6 @@ hf mf ice
 lf config
 lf cmdread
 lf read
-lf sim
-lf simask
-lf simfsk
-lf simpsk
 lf sniff
 lf em 410x
 lf em 4x05
@@ -121,5 +117,4 @@ lf t55xx restore
 lf t55xx trace
 lf t55xx wakeup
 lf t55xx write
-lf t55xx special
 script run
