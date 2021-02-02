@@ -25,12 +25,12 @@
 #include <inttypes.h>
 #include "cmdparser.h"    // command_t
 #include "comms.h"
-#include "commonutil.h"  // ARRAYLEN
+#include "commonutil.h"   // ARRAYLEN
 #include "cliparser.h"
 #include "ui.h"
 #include "graph.h"
-#include "cmddata.h"  //for g_debugMode, demodbuff cmds
-#include "cmdlf.h"    // lf_read
+#include "cmddata.h"      // g_debugMode, demodbuff cmds
+#include "cmdlf.h"        // lf_read, lfsim_wait_check
 #include "util_posix.h"
 #include "lfdemod.h"
 #include "wiegand_formats.h"
@@ -300,8 +300,6 @@ static int CmdHIDSim(const char *Cmd) {
         PrintAndLogEx(INFO, "Simulating HID tag using raw " _GREEN_("%s"),  raw);
     }
 
-    PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
-
     lf_hidsim_t payload;
     payload.hi2 = packed.Top;
     payload.hi = packed.Mid;
@@ -310,13 +308,7 @@ static int CmdHIDSim(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HID_SIMULATE, (uint8_t *)&payload,  sizeof(payload));
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_HID_SIMULATE, &resp);
-    PrintAndLogEx(INFO, "Done");
-    if (resp.status != PM3_EOPABORTED)
-        return resp.status;
-
-    return PM3_SUCCESS;
+    return lfsim_wait_check(CMD_LF_HID_SIMULATE);
 }
 
 static int CmdHIDClone(const char *Cmd) {

@@ -37,4 +37,5 @@ int lf_sniff(bool verbose, uint32_t samples);
 int lf_config(sample_config *config);
 int lf_getconfig(sample_config *config);
 
+int lfsim_wait_check(uint32_t cmd);
 #endif

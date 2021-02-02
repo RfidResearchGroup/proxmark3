@@ -352,7 +352,6 @@ bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
 
     if (*rf1 == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Clock detect error");
-
         return false;
     }
     return true;

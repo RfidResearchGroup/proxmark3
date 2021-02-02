@@ -112,19 +112,6 @@ static int usage_lf_read(void) {
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
     return PM3_SUCCESS;
 }
-static int usage_lf_sim(void) {
-    PrintAndLogEx(NORMAL, "Simulate low frequency tag from graphbuffer.");
-    PrintAndLogEx(NORMAL, "Usage: lf sim [h] <gap>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h         This help");
-    PrintAndLogEx(NORMAL, "       <gap>     Start gap (in microseconds)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("         lf sim 240") "     - start simulating with 240ms gap");
-    PrintAndLogEx(NORMAL, _YELLOW_("         lf sim"));
-    PrintAndLogEx(NORMAL, "Extras:");
-    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
-    return PM3_SUCCESS;
-}
 static int usage_lf_sniff(void) {
     PrintAndLogEx(NORMAL, "Sniff low frequency signal.");
     PrintAndLogEx(NORMAL, "Usage: lf sniff [h] [q] [s #samples] [@]");
@@ -165,45 +152,32 @@ static int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("      lf sniff") "               - performs a sniff (no active field)");
     return PM3_SUCCESS;
 }
-static int usage_lf_simfsk(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf simfsk [h] [c <clock>] [H <fcHigh>] [L <fcLow>] [d <hexdata>]");
-    PrintAndLogEx(NORMAL, "there are about four FSK modulations to know of.");
-    PrintAndLogEx(NORMAL, "FSK1  -  where fc/8 = high  and fc/5 = low");
-    PrintAndLogEx(NORMAL, "FSK1a -  is inverted FSK1,  ie:   fc/5 = high and fc/8 = low");
-    PrintAndLogEx(NORMAL, "FSK2  -  where fc/10 = high  and fc/8 = low");
-    PrintAndLogEx(NORMAL, "FSK2a -  is inverted FSK2,  ie:   fc/10 = high and fc/8 = low");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h              This help");
-    PrintAndLogEx(NORMAL, "       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
-    PrintAndLogEx(NORMAL, "       H <fcHigh>     Manually set the larger Field Clock");
-    PrintAndLogEx(NORMAL, "       L <fcLow>      Manually set the smaller Field Clock");
-    //PrintAndLogEx(NORMAL, "       s              TBD- -STT to enable a gap between playback repetitions - default: no gap");
-    PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
-    PrintAndLogEx(NORMAL, "\n  NOTE: if you set one clock manually set them all manually");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 40 H 8 L 5 d 010203") "      -  FSK1  rf/40  data 010203");
-    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 40 H 5 L 8 d 010203") "      -  FSK1a rf/40  data 010203");
-    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 64 H 10 L 8 d 010203") "     -  FSK2  rf/64  data 010203");
-    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 64 H 8 L 10 d 010203") "     -  FSK2a rf/64  data 010203");
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-static int usage_lf_simask(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf simask [c <clock>] [i] [b|m|r] [s] [d <raw hex to sim>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h              This help");
-    PrintAndLogEx(NORMAL, "       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
-    PrintAndLogEx(NORMAL, "       i              invert data");
-    PrintAndLogEx(NORMAL, "       b              sim ask/biphase");
-    PrintAndLogEx(NORMAL, "       m              sim ask/manchester - Default");
-    PrintAndLogEx(NORMAL, "       r              sim ask/raw");
-    PrintAndLogEx(NORMAL, "       s              add t55xx Sequence Terminator gap - default: no gaps (only manchester)");
-    PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
-    return PM3_SUCCESS;
-}
 
+// Informative user function.
+// loop and wait for either keyboard press or pm3 button to exit
+// if key event, send break loop cmd to Pm3
+int lfsim_wait_check(uint32_t cmd) {
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
+
+    for (;;) {
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "User aborted");
+            break;
+        }
+
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(cmd, &resp, 1000)) {
+            if (resp.status == PM3_EOPABORTED) {
+                PrintAndLogEx(DEBUG, "Button pressed, user aborted");
+                break;
+            }
+        }
+    }
+    PrintAndLogEx(INFO, "Done");
+    return PM3_SUCCESS;
+}
 
 static int CmdLFTune(const char *Cmd) {
 
@@ -834,19 +808,33 @@ static void ChkBitstream(void) {
 //Attempt to simulate any wave in buffer (one bit per output sample)
 // converts GraphBuffer to bitstream (based on zero crossings) if needed.
 int CmdLFSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf sim",
+                  "Simulate low frequency tag from graphbuffer\n"
+                  "Use " _YELLOW_("`lf config`") _CYAN_(" to set parameters"),
+                  "lf sim\n"
+                  "lf sim --gap 240 --> start simulating with 240ms gap"
+                 );
 
-    if (!session.pm3_present) return PM3_ENOTTY;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("g", "gap", "<ms>", "start gap in microseconds"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint16_t gap = arg_get_u32_def(ctx, 1, 0);
+    CLIParserFree(ctx); 
+
+    if (session.pm3_present == false) {
+        PrintAndLogEx(DEBUG, "DEBUG: no proxmark present");
+        return PM3_ENOTTY;
+    }
 
     // sanity check
     if (GraphTraceLen < 20) {
         PrintAndLogEx(ERR, "No data in Graphbuffer");
         return PM3_ENODATA;
     }
-
-    uint8_t cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_lf_sim();
-
-    uint16_t gap = param_get32ex(Cmd, 0, 0, 10) & 0xFFFF;
 
     // convert to bitstream if necessary
     ChkBitstream();
@@ -870,6 +858,7 @@ int CmdLFSim(const char *Cmd) {
     PacketResponseNG resp;
 
     //can send only 512 bits at a time (1 byte sent per bit...)
+    PrintAndLogEx(INFO, "." NOLF);
     for (uint16_t i = 0; i < GraphTraceLen; i += PM3_CMD_DATA_SIZE - 3) {
 
         size_t len = MIN((GraphTraceLen - i), PM3_CMD_DATA_SIZE - 3);
@@ -882,7 +871,7 @@ int CmdLFSim(const char *Cmd) {
         SendCommandNG(CMD_LF_UPLOAD_SIM_SAMPLES, (uint8_t *)&payload_up, sizeof(struct pupload));
         WaitForResponse(CMD_LF_UPLOAD_SIM_SAMPLES, &resp);
         if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Bigbuf is full.");
+            PrintAndLogEx(INFO, "Bigbuf is full");
             break;
         }
         PrintAndLogEx(NORMAL, "." NOLF);
@@ -900,113 +889,111 @@ int CmdLFSim(const char *Cmd) {
     payload.gap = gap;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));
-
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to exit");
-
-    for (;;) {
-        if (kbd_enter_pressed()) {
-            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(DEBUG, "User aborted");
-            break;
-        }
-
-        if (WaitForResponseTimeout(CMD_LF_SIMULATE, &resp, 1000)) {
-            if (resp.status == PM3_EOPABORTED) {
-                PrintAndLogEx(DEBUG, "Button pressed, user aborted");
-                break;
-            }
-        }
-    }
-    PrintAndLogEx(INFO, "Done");
-    return PM3_SUCCESS;
+    SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));   
+    return lfsim_wait_check(CMD_LF_SIMULATE);
 }
 
 // sim fsk data given clock, fcHigh, fcLow, invert
 // - allow pull data from DemodBuffer
 int CmdLFfskSim(const char *Cmd) {
-    //might be able to autodetect FCs and clock from Graphbuffer if using demod buffer
-    // otherwise will need FChigh, FClow, Clock, and bitstream
-    uint8_t fcHigh = 0, fcLow = 0, clk = 0;
-    bool errors = false, separator = false;
-    char hexData[64] = {0x00}; // store entered hex data
-    uint8_t data[255] = {0x00};
-    int dataLen = 0;
-    uint8_t cmdp = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf simfsk",
+                  "Simulate FSK tag from demodbuffer or input. There are about four FSK modulations to know of.\n"
+                  "FSK1  -  where fc/8 = high  and fc/5 = low\n"
+                  "FSK1a -  is inverted FSK1,  ie:   fc/5 = high and fc/8 = low\n"
+                  "FSK2  -  where fc/10 = high  and fc/8 = low\n"
+                  "FSK2a -  is inverted FSK2,  ie:   fc/10 = high and fc/8 = low\n\n"
+                  "NOTE: if you set one clock manually set them all manually",
+                  "lf simfsk -c 40 --high 8 --low 5 -d 010203  --> FSK1  rf/40  data 010203\n"
+                  "lf simfsk -c 40 --high 5 --low 8 -d 010203  --> FSK1a rf/40  data 010203\n"
+                  "lf simfsk -c 64 --high 10 --low 8 -d 010203 --> FSK2  rf/64  data 010203\n"
+                  "lf simfsk -c 64 --high 8 --low 10 -d 010203 --> FSK2a rf/64  data 010203\n\n"
+                  "lf simfsk -c 50 --high 10 --low 8 -d 1D5559555569A9A555A59569        --> simulate HID Prox tag manually\n"
+                  "lf simfsk -c 50 --high 10 --low 8 --stt -d 011DB2487E8D811111111111  --> simulate AWID tag manually"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (param_getchar(Cmd, cmdp)) {
-            case 'h':
-                return usage_lf_simfsk();
-            case 'c':
-                errors |= param_getdec(Cmd, cmdp + 1, &clk);
-                cmdp += 2;
-                break;
-            case 'H':
-                errors |= param_getdec(Cmd, cmdp + 1, &fcHigh);
-                cmdp += 2;
-                break;
-            case 'L':
-                errors |= param_getdec(Cmd, cmdp + 1, &fcLow);
-                cmdp += 2;
-                break;
-            case 's':
-                separator = true;
-                cmdp++;
-                break;
-            case 'd':
-                dataLen = param_getstr(Cmd, cmdp + 1, hexData, sizeof(hexData));
-                if (dataLen == 0)
-                    errors = true;
-                else
-                    dataLen = hextobinarray((char *)data, hexData);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("c", "clk", "<dec>", "manually set clock - can autodetect if using DemodBuffer (default 64)"),
+        arg_u64_0(NULL, "low", "<dec>", "manually set larger Field Clock"),
+        arg_u64_0(NULL, "high", "<dec>", "manually set smaller Field Clock"),        
+        arg_lit0(NULL, "stt", "TBD! - STT to enable a gap between playback repetitions (default: no gap)"),
+        arg_str0("d", "data", "<hex>", "data to sim - omit to use DemodBuffer"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint8_t clk = arg_get_u32_def(ctx, 1, 0);
+    uint8_t fclow = arg_get_u32_def(ctx, 2, 0);
+    uint8_t fchigh = arg_get_u32_def(ctx, 3, 0);
+    bool separator = arg_get_lit(ctx, 4);
 
-                if (dataLen == 0) errors = true;
-                if (errors) PrintAndLogEx(ERR, "Error getting hex data");
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
+    int raw_len = 64;
+    char raw[64] = {0};
+    CLIGetStrWithReturn(ctx, 5, (uint8_t*)raw, &raw_len);
+    bool verbose = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx); 
 
     // No args
-    if (cmdp == 0 && DemodBufferLen == 0) return usage_lf_simfsk();
+    if (raw_len == 0 && DemodBufferLen == 0) {
+        PrintAndLogEx(ERR, "No user supplied data nor inside Demodbuffer");
+        return PM3_EINVARG;
+    }
 
-    //Validations
-    if (errors) return usage_lf_simfsk();
+    if (verbose && separator) {
+        PrintAndLogEx(INFO, "STT gap isn't implemented yet. Skipping...");
+        separator = 0;
+    }
 
-    int firstClockEdge = 0;
-    if (dataLen == 0) { //using DemodBuffer
-        if (clk == 0 || fcHigh == 0 || fcLow == 0) { //manual settings must set them all
-            uint8_t ans = fskClocks(&fcHigh, &fcLow, &clk, &firstClockEdge);
-            if (ans == 0) {
-                if (!fcHigh) fcHigh = 10;
-                if (!fcLow) fcLow = 8;
-                if (!clk) clk = 50;
+    uint8_t bs[256] = {0x00};
+    int bs_len = hextobinarray((char *)bs, raw);
+    if (bs_len == 0) {
+        // Using data from DemodBuffer
+        // might be able to autodetect FC and clock from Graphbuffer if using demod buffer
+        // will need clock, fchigh, fclow and bitstream
+        PrintAndLogEx(INFO, "No user supplied data, using Demodbuffer...");
+
+        if (clk == 0 || fchigh == 0 || fclow == 0) {
+            int firstClockEdge = 0;
+            bool res = fskClocks(&fchigh, &fclow, &clk, &firstClockEdge);
+            if (res == false) {
+                clk = 0;
+                fchigh = 0;
+                fclow = 0;
             }
         }
+        PrintAndLogEx(DEBUG, "Detected rf/%u, High fc/%u, Low fc/%u, n %zu ", clk, fchigh, fclow, DemodBufferLen);
+
     } else {
-        setDemodBuff(data, dataLen, 0);
+        setDemodBuff(bs, bs_len, 0);
     }
 
     //default if not found
-    if (clk == 0) clk = 50;
-    if (fcHigh == 0) fcHigh = 10;
-    if (fcLow == 0) fcLow = 8;
+    if (clk == 0) {
+        clk = 50;
+        PrintAndLogEx(DEBUG, "Autodetection of clock failed, falling back to rf/%u", clk);
+    }
+
+    if (fchigh == 0) {
+        fchigh = 10;
+        PrintAndLogEx(DEBUG, "Autodetection of larger clock failed, falling back to fc/%u", fchigh);
+    }
+
+    if (fclow == 0) {
+        fclow = 8;
+        PrintAndLogEx(DEBUG, "Autodetection of smaller clock failed, falling back to fc/%u", fclow);
+    }
 
     size_t size = DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t))) {
         PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t));
+        PrintAndLogEx(INFO, "Continuing with trimmed down data");
         size = PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t);
     }
 
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + size);
-    payload->fchigh = fcHigh;
-    payload->fclow =  fcLow;
+    payload->fchigh = fchigh;
+    payload->fclow =  fclow;
     payload->separator = separator;
     payload->clock = clk;
     memcpy(payload->data, DemodBuffer, size);
@@ -1014,112 +1001,110 @@ int CmdLFfskSim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_FSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_fsksim_t) + size);
     free(payload);
-
     setClockGrid(clk, 0);
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to exit");
-
-    for (;;) {
-        if (kbd_enter_pressed()) {
-            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(DEBUG, "User aborted");
-            break;
-        }
-
-        PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_LF_FSK_SIMULATE, &resp, 1000)) {
-            if (resp.status == PM3_EOPABORTED) {
-                PrintAndLogEx(DEBUG, "Button pressed, user aborted");
-                break;
-            }
-        }
-    }
-    PrintAndLogEx(INFO, "Done");
-    return PM3_SUCCESS;
+    return lfsim_wait_check(CMD_LF_FSK_SIMULATE);
 }
 
 // sim ask data given clock, invert, manchester or raw, separator
 // - allow pull data from DemodBuffer
 int CmdLFaskSim(const char *Cmd) {
-    // autodetect clock from Graphbuffer if using demod buffer
-    // needs clock, invert, manchester/raw as m or r, separator as s, and bitstream
-    uint8_t encoding = 1, separator = 0, clk = 0, invert = 0;
-    bool errors = false;
-    char hexData[64] = {0x00};
-    uint8_t data[255] = {0x00}; // store entered hex data
-    int dataLen = 0;
-    uint8_t cmdp = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf simask",
+                  "Simulate ASK tag from demodbuffer or input",
+                  "lf simask --clk 32 --am -d 0102030405   --> simulate ASK/MAN rf/32\n"
+                  "lf simask --clk 32 --bi -d 0102030405   --> simulate ASK/BIPHASE rf/32\n\n"
+                  "lf simask --clk 64 --am -d ffbd8001686f1924               --> simulate a EM410x tag\n"
+                  "lf simask --clk 64 --am --stt -d 5649533200003F340000001B --> simulate a VISA2K tag"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_simask();
-            case 'i':
-                invert = 1;
-                cmdp++;
-                break;
-            case 'c':
-                errors |= param_getdec(Cmd, cmdp + 1, &clk);
-                cmdp += 2;
-                break;
-            case 'b':
-                encoding = 2; //biphase
-                cmdp++;
-                break;
-            case 'm':
-                encoding = 1; //manchester
-                cmdp++;
-                break;
-            case 'r':
-                encoding = 0; //raw
-                cmdp++;
-                break;
-            case 's':
-                separator = 1;
-                cmdp++;
-                break;
-            case 'd':
-                dataLen = param_getstr(Cmd, cmdp + 1, hexData, sizeof(hexData));
-                if (dataLen == 0)
-                    errors = true;
-                else
-                    dataLen = hextobinarray((char *)data, hexData);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("i", "inv", "invert data"),
+        arg_u64_0("c", "clk", "<dec>", "manually set clock - can autodetect if using DemodBuffer (default 64)"),
+        arg_lit0(NULL, "bi", "ask/biphase encoding"),
+        arg_lit0(NULL, "am", "ask/manchester encoding (default)"),
+        arg_lit0(NULL, "ar", "ask/raw encoding"),
+        arg_lit0(NULL, "stt", "add t55xx Sequence Terminator gap - default: no gaps (only manchester)"),
+        arg_str0("d", "data", "<hex>", "data to sim - omit to use DemodBuffer"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool invert = arg_get_lit(ctx, 1);
+    uint8_t clk = arg_get_u32_def(ctx, 2, 0);
+    bool use_bi = arg_get_lit(ctx, 3);
+    bool use_am = arg_get_lit(ctx, 4);
+    bool use_ar = arg_get_lit(ctx, 5);
+    bool separator = arg_get_lit(ctx, 6);
 
-                if (dataLen == 0) errors = true;
-                if (errors) PrintAndLogEx(ERR, "Error getting hex data, datalen: %d", dataLen);
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    int raw_len = 64;
+    char raw[64] = {0};
+    CLIGetStrWithReturn(ctx, 7, (uint8_t*)raw, &raw_len);
+    bool verbose = arg_get_lit(ctx, 8);
+    CLIParserFree(ctx); 
+
+    if ((use_bi + use_am + use_ar) > 1) {
+        PrintAndLogEx(ERR, "only one encoding can be set");
+        return PM3_EINVARG;
     }
+
+    uint8_t encoding = 1;
+    if (use_bi)
+        encoding = 2;
+    else if (use_ar)
+        encoding = 0;
 
     // No args
-    if (cmdp == 0 && DemodBufferLen == 0) return usage_lf_simask();
-
-    //Validations
-    if (errors) return usage_lf_simask();
-
-    if (dataLen == 0) { //using DemodBuffer
-        if (clk == 0)
-            clk = GetAskClock("0", false);
-    } else {
-        setDemodBuff(data, dataLen, 0);
+    if (raw_len == 0 && DemodBufferLen == 0) {
+        PrintAndLogEx(ERR, "No user supplied data nor any inside Demodbuffer");
+        return PM3_EINVARG;
     }
-    if (clk == 0) clk = 64;
-    if (encoding == 0) clk /= 2; //askraw needs to double the clock speed
+
+    uint8_t bs[256] = {0x00};
+    int bs_len = hextobinarray((char *)bs, raw);
+    if (bs_len == 0) { 
+        // Using data from DemodBuffer
+        // might be able to autodetect FC and clock from Graphbuffer if using demod buffer
+        // will need carrier, clock, and bitstream
+        PrintAndLogEx(INFO, "No user supplied data, using Demodbuffer...");
+
+        int res = 0;
+        if (clk == 0) {
+            res = GetAskClock("0", verbose);
+            if (res < 1) {
+                clk = 64;
+            } else {
+                clk = (uint8_t)res;
+            }
+        }
+
+        PrintAndLogEx(DEBUG, "Detected rf/%u, n %zu ", clk, DemodBufferLen);
+
+    } else {
+        setDemodBuff(bs, bs_len, 0);
+    }
+
+
+    if (clk == 0) {
+        clk = 32;
+        PrintAndLogEx(DEBUG, "Autodetection of clock failed, falling back to rf/%u", clk);
+    }
+
+    if (encoding == 0) {
+        clk /= 2; // askraw needs to double the clock speed
+        PrintAndLogEx(DEBUG, "ASK/RAW needs half rf. Using rf/%u", clk);
+    }
 
     size_t size = DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t))) {
         PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t));
+        PrintAndLogEx(INFO, "Continuing with trimmed down data");
         size = PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t);
     }
 
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + size);
-    payload->encoding =  encoding;
+    payload->encoding = encoding;
     payload->invert = invert;
     payload->separator = separator;
     payload->clock = clk;
@@ -1128,27 +1113,9 @@ int CmdLFaskSim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + size);
     free(payload);
+    setClockGrid(clk, 0);
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to exit");
-
-    for (;;) {
-        if (kbd_enter_pressed()) {
-            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(DEBUG, "User aborted");
-            break;
-        }
-
-        PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_LF_ASK_SIMULATE, &resp, 1000)) {
-            if (resp.status == PM3_EOPABORTED) {
-                PrintAndLogEx(DEBUG, "Button pressed, user aborted");
-                break;
-            }
-        }
-    }
-    PrintAndLogEx(INFO, "Done");
-    return PM3_SUCCESS;
+    return lfsim_wait_check(CMD_LF_ASK_SIMULATE);
 }
 
 // sim psk data given carrier, clock, invert
@@ -1157,8 +1124,9 @@ int CmdLFpskSim(const char *Cmd) {
  
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf simpsk",
-                  "Simulate LF PSK tag from demodbuffer or input",
-                  "lf simpsk -1 --clk 32 --rc 2 -d a0000000bd989a11   --> simulate a indala tag manually\n"
+                  "Simulate PSK tag from demodbuffer or input",
+                  "lf simpsk -1 --clk 40 --fc 4 -d 01020304   --> simulate PSK1 rf/40 psksub fc/4, data 01020304\n\n"
+                  "lf simpsk -1 --clk 32 --fc 2 -d a0000000bd989a11   --> simulate a indala tag manually"
                  );
 
     void *argtable[] = {
@@ -1168,7 +1136,7 @@ int CmdLFpskSim(const char *Cmd) {
         arg_lit0("3", "psk3", "set PSK3"),        
         arg_lit0("i", "inv", "invert data"),
         arg_u64_0("c", "clk", "<dec>", "manually set clock - can autodetect if using DemodBuffer (default 32)"),
-        arg_u64_0(NULL, "rc", "<dec>", "2|4|8 are valid carriers (default 2)"),
+        arg_u64_0(NULL, "fc", "<dec>", "2|4|8 are valid carriers (default 2)"),
         arg_str0("d", "data", "<hex>", "data to sim - omit to use DemodBuffer"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
@@ -1202,14 +1170,11 @@ int CmdLFpskSim(const char *Cmd) {
     if (use_psk3)
         psk_type = 3;
 
-    // to detect if raw_hex was supplied  or of 
-
     // No args
     if (raw_len == 0 && DemodBufferLen == 0) {
-        PrintAndLogEx(ERR, "No user supplied nor any data to found inside Demodbuffer");
+        PrintAndLogEx(ERR, "No user supplied data nor any inside Demodbuffer");
         return PM3_EINVARG;
     }
-
 
     uint8_t bs[256] = {0x00};
     int bs_len = hextobinarray((char *)bs, raw);
@@ -1239,15 +1204,15 @@ int CmdLFpskSim(const char *Cmd) {
              }
         }
 
-        PrintAndLogEx(DEBUG, "Detected FC/%u, RC/%u, n %zu ", clk, carrier, DemodBufferLen);
+        PrintAndLogEx(DEBUG, "Detected rf/%u, fc/%u, n %zu ", clk, carrier, DemodBufferLen);
 
     } else {
         setDemodBuff(bs, bs_len, 0);
     }
 
     if (clk == 0) {
-        PrintAndLogEx(DEBUG, "Autodetection of clock failed, falling back to FC/32");
         clk = 32;
+        PrintAndLogEx(DEBUG, "Autodetection of clock failed, falling back to rf/%u", clk);
     }
 
     if (psk_type == 2) {
@@ -1273,27 +1238,9 @@ int CmdLFpskSim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + size);
     free(payload);
+    setClockGrid(clk, 0);
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to exit");
-
-    for (;;) {
-        if (kbd_enter_pressed()) {
-            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(DEBUG, "User aborted");
-            break;
-        }
-
-        PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_LF_PSK_SIMULATE, &resp, 1000)) {
-            if (resp.status == PM3_EOPABORTED) {
-                PrintAndLogEx(DEBUG, "Button pressed, user aborted");
-                break;
-            }
-        }
-    }
-    PrintAndLogEx(INFO, "Done");
-    return PM3_SUCCESS;
+    return lfsim_wait_check(CMD_LF_PSK_SIMULATE);
 }
 
 int CmdLFSimBidir(const char *Cmd) {
@@ -1612,6 +1559,7 @@ out:
 }
 
 static command_t CommandTable[] = {
+    {"help",        CmdHelp,            AlwaysAvailable, "This help"},
     {"-----------", CmdHelp,            AlwaysAvailable, "-------------- " _CYAN_("Low Frequency") " --------------"},
     {"awid",        CmdLFAWID,          AlwaysAvailable, "{ AWID RFIDs...              }"},
     {"cotag",       CmdLFCOTAG,         AlwaysAvailable, "{ COTAG CHIPs...             }"},
@@ -1642,20 +1590,19 @@ static command_t CommandTable[] = {
     {"viking",      CmdLFViking,        AlwaysAvailable, "{ Viking RFIDs...            }"},
     {"visa2000",    CmdLFVisa2k,        AlwaysAvailable, "{ Visa2000 RFIDs...          }"},
     {"-----------", CmdHelp,            AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
-    {"help",        CmdHelp,            AlwaysAvailable, "This help"},
     {"config",      CmdLFConfig,        IfPm3Lf,         "Get/Set config for LF sampling, bit/sample, decimation, frequency"},
     {"cmdread",     CmdLFCommandRead,   IfPm3Lf,         "Modulate LF reader field to send command before read (all periods in microseconds)"},
     {"read",        CmdLFRead,          IfPm3Lf,         "Read LF tag"},
     {"search",      CmdLFfind,          AlwaysAvailable, "Read and Search for valid known tag"},
-    {"sim",         CmdLFSim,           IfPm3Lf,         "Simulate LF tag from buffer with optional GAP (in microseconds)"},
-    {"simask",      CmdLFaskSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF ASK tag") " from demodbuffer or input"},
-    {"simfsk",      CmdLFfskSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF FSK tag") " from demodbuffer or input"},
-    {"simpsk",      CmdLFpskSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF PSK tag") " from demodbuffer or input"},
-//    {"simnrz",      CmdLFnrzSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF NRZ tag") " from demodbuffer or input"},
+    {"sim",         CmdLFSim,           IfPm3Lf,         "Simulate LF tag from buffer"},
+    {"simask",      CmdLFaskSim,        IfPm3Lf,         "Simulate " _YELLOW_("ASK") " tag"},
+    {"simfsk",      CmdLFfskSim,        IfPm3Lf,         "Simulate " _YELLOW_("FSK") " tag"},
+    {"simpsk",      CmdLFpskSim,        IfPm3Lf,         "Simulate " _YELLOW_("PSK") " tag"},
+//    {"simnrz",      CmdLFnrzSim,        IfPm3Lf,         "Simulate " _YELLOW_("NRZ") " tag"},
     {"simbidir",    CmdLFSimBidir,      IfPm3Lf,         "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
     {"sniff",       CmdLFSniff,         IfPm3Lf,         "Sniff LF traffic between reader and tag"},
     {"tune",        CmdLFTune,          IfPm3Lf,         "Continuously measure LF antenna tuning"},
-//    {"vchdemod",    CmdVchDemod,        AlwaysAvailable, "['clone'] -- Demodulate samples for VeriChip"},
+//    {"vchdemod",    CmdVchDemod,        AlwaysAvailable, "Demodulate samples for VeriChip"},
 //    {"flexdemod",   CmdFlexdemod,       AlwaysAvailable, "Demodulate samples for Motorola FlexPass"},
     {NULL, NULL, NULL, NULL}
 };
