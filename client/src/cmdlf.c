@@ -112,24 +112,7 @@ static int usage_lf_read(void) {
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
     return PM3_SUCCESS;
 }
-static int usage_lf_sniff(void) {
-    PrintAndLogEx(NORMAL, "Sniff low frequency signal.");
-    PrintAndLogEx(NORMAL, "Usage: lf sniff [h] [q] [s #samples] [@]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h         This help");
-    PrintAndLogEx(NORMAL, "       q            silent (optional)");
-    PrintAndLogEx(NORMAL, "       s #samples   number of samples to collect (optional)");
-    PrintAndLogEx(NORMAL, "       @            run continuously until a key is pressed (optional)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf sniff");
-    PrintAndLogEx(NORMAL, _CYAN_(" oscilloscope style") ":");
-    PrintAndLogEx(NORMAL, _YELLOW_("      data plot"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf sniff q s 3000 @"));
-    PrintAndLogEx(NORMAL, "Extras:");
-    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
-    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'data plot'")" to look at it");
-    return PM3_SUCCESS;
-}
+
 static int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "Usage: lf config [h] [L | H | q <divisor> | f <freq>] [b <bps>] [d <decim>] [a 0|1]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -748,49 +731,38 @@ int lf_sniff(bool verbose, uint32_t samples) {
 }
 
 int CmdLFSniff(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf sniff",
+                  "Sniff low frequency signal.\n"
+                  " - use " _YELLOW_("`lf config`") _CYAN_(" to set parameters.\n")
+                  _CYAN_(" - use ") _YELLOW_("`data plot`") _CYAN_(" to look at it"),
+                  "lf sniff -v\n"
+                  "lf sniff -s 3000 -@    --> oscilloscope style \n"
+                 );
 
-    if (!session.pm3_present) return PM3_ENOTTY;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("s", "samples", "<dec>", "number of samples to collect"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("@", NULL, "continuous sniffing mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t samples = arg_get_u32_def(ctx, 1, 0);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool cm = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
 
-    bool errors = false;
-    bool verbose = true;
-    bool continuous = false;
-    uint32_t samples = 0;
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_sniff();
-            case 's':
-                samples = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'q':
-                verbose = false;
-                cmdp++;
-                break;
-            case '@':
-                continuous = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
+    if (session.pm3_present == false)
+        return PM3_ENOTTY;
 
-    //Validations
-    if (errors) return usage_lf_sniff();
-    if (continuous) {
-        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
     int ret = PM3_SUCCESS;
     do {
         ret = lf_sniff(verbose, samples);
-        if (kbd_enter_pressed()) {
-            break;
-        }
-    } while (continuous);
+    } while (cm && !kbd_enter_pressed());
     return ret;
 }
 
