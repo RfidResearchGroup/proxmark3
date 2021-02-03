@@ -93,28 +93,6 @@ static int usage_lf_cmdread(void) {
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
     return PM3_SUCCESS;
 }
-static int usage_lf_config(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf config [h] [L | H | q <divisor> | f <freq>] [b <bps>] [d <decim>] [a 0|1]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h                 This help");
-    PrintAndLogEx(NORMAL, "       L                 Low frequency (125 kHz)");
-    PrintAndLogEx(NORMAL, "       H                 High frequency (134 kHz)");
-    PrintAndLogEx(NORMAL, "       q <divisor>       Manually set freq divisor. %d -> 134 kHz, %d -> 125 kHz", LF_DIVISOR_134, LF_DIVISOR_125);
-    PrintAndLogEx(NORMAL, "       f <freq>          Manually set frequency in kHz");
-    PrintAndLogEx(NORMAL, "       b <bps>           Sets resolution of bits per sample. Default (max): 8");
-    PrintAndLogEx(NORMAL, "       d <decimate>      Sets decimation. A value of N saves only 1 in N samples. Default: 1");
-    PrintAndLogEx(NORMAL, "       a [0|1]           Averaging - if set, will average the stored sample value when decimating. Default: 1");
-    PrintAndLogEx(NORMAL, "       t <threshold>     Sets trigger threshold. 0 means no threshold (range: 0-128)");
-    PrintAndLogEx(NORMAL, "       s <samplestoskip> Sets a number of samples to skip before capture. Default: 0");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf config") "              - shows current config");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf config b 8 L") "        - samples at 125 kHz, 8bps.");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf config H b 4 d 3") "    - samples at 134 kHz, averages three samples into one, stored with ");
-    PrintAndLogEx(NORMAL, "                                a resolution of 4 bits per sample.");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf read") "                - performs a read (active field)");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf sniff") "               - performs a sniff (no active field)");
-    return PM3_SUCCESS;
-}
 
 // Informative user function.
 // loop and wait for either keyboard press or pm3 button to exit
@@ -501,12 +479,57 @@ int lf_config(sample_config *config) {
 }
 
 int CmdLFConfig(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf config",
+                  "Get/Set config for LF sampling, bit/sample, decimation, frequency\n"
+                  "These changes are temporary, will be reset after a power cycle.\n\n"
+                  " - use " _YELLOW_("`lf read`") _CYAN_(" performs a read (active field)\n")
+                  _CYAN_(" - use ") _YELLOW_("`lf sniff`") _CYAN_(" performs a sniff (no active field)"),
+                  "lf config                    --> shows current config\n"
+                  "lf config -b 8 --125         --> samples at 125 kHz, 8 bps\n"
+                  "lf config -b 4 --134 --dec 3 --> samples at 134 kHz, averages three samples into one, stored with a resolution of 4 bits per sample"
+                  "lf config --trig 20 -s 10000 --> trigger sampling when above 20, skip 10 000 first samples after triggered\n"
+                 );
 
-    if (!session.pm3_present) return PM3_ENOTTY;
+    char div_str[70] = {0};
+    sprintf(div_str, "Manually set freq divisor. %d -> 134 kHz, %d -> 125 kHz", LF_DIVISOR_134, LF_DIVISOR_125);
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "125", "125 kHz frequency"),
+        arg_lit0(NULL, "134", "134 kHz frequency"),
+        arg_int0("a", "avg", "<0|1>", "averaging - if set, will average the stored sample value when decimating (default 1)"),
+        arg_int0("b", "bps", "<1-8>", "sets resolution of bits per sample (default 8)"),
+        arg_int0(NULL, "dec", "<1-8>", "sets decimation. A value of N saves only 1 in N samples (default 1)"),
+        arg_int0(NULL, "divisor", "<19-255>", div_str),
+        arg_int0("f", "freq", "<47-600>", "manually set frequency in kHz"),
+        arg_int0("s", "skip", "<dec>", "sets a number of samples to skip before capture (default 0)"),
+        arg_int0("t", "trig", "<0-128>", "sets trigger threshold. 0 means no threshold"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool use_125 = arg_get_lit(ctx, 1);
+    bool use_134 = arg_get_lit(ctx, 2);
+    int8_t avg = arg_get_int_def(ctx, 3, 0);
+    int8_t bps = arg_get_int_def(ctx, 4, -1);
+    int8_t dec = arg_get_int_def(ctx, 5, -1);
+    int16_t div = arg_get_int_def(ctx, 6, -1);
+    int16_t freq = arg_get_int_def(ctx, 7, -1);
+    int32_t skip = arg_get_int_def(ctx, 8, -1);
+    int16_t trigg = arg_get_int_def(ctx, 9, -1);
+    CLIParserFree(ctx);  
+
+    if (session.pm3_present == false) 
+        return PM3_ENOTTY;
 
     // if called with no params, just print the device config
     if (strlen(Cmd) == 0) {
         return lf_config(NULL);
+    }
+
+    if (use_125 + use_134 > 1) {
+        PrintAndLogEx(ERR,"use only one of 125 or 134 params");
+        return PM3_EINVARG;
     }
 
     sample_config config = {
@@ -519,87 +542,56 @@ int CmdLFConfig(const char *Cmd) {
         .verbose = true
     };
 
-    bool errors = false;
+    /*
+    int8_t bps = arg_get_int_def(ctx, 4, 8);
+    int8_t dec = arg_get_int_def(ctx, 5, 1);
+    int16_t div = arg_get_int_def(ctx, 6, 95);
+    int16_t freq = arg_get_int_def(ctx, 7, 125);
+*/
+    if (use_125)
+        config.divisor = LF_DIVISOR_125;
 
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (param_getchar(Cmd, cmdp)) {
-            case 'h':
-                return usage_lf_config();
-            case 'H':
-                config.divisor = LF_DIVISOR_134;
-                cmdp++;
-                break;
-            case 'L':
-                config.divisor = LF_DIVISOR_125;
-                cmdp++;
-                break;
-            case 'q':
-                config.divisor = param_get8ex(Cmd, cmdp + 1, 95, 10);
-                if (config.divisor < 19) {
-                    PrintAndLogEx(ERR, "divisor must be between 19 and 255");
-                    return PM3_EINVARG;
-                }
-                cmdp += 2;
-                break;
-            case 'f': {
-                int freq = param_get32ex(Cmd, cmdp + 1, 125, 10);
-                config.divisor = LF_FREQ2DIV(freq);
-                if (config.divisor < 19) {
-                    PrintAndLogEx(ERR, "freq must be between 47 and 600");
-                    return PM3_EINVARG;
-                }
-                cmdp += 2;
-                break;
-            }
-            case 't': {
-                uint8_t trigg = 0;
-                errors |= param_getdec(Cmd, cmdp + 1, &trigg);
-                cmdp += 2;
-                if (!errors) {
-                    config.trigger_threshold = trigg;
-                    g_lf_threshold_set = (config.trigger_threshold > 0);
-                }
-                break;
-            }
-            case 'b': {
-                config.bits_per_sample = param_get8ex(Cmd, cmdp + 1, 8, 10);
+    if (use_134)
+        config.divisor = LF_DIVISOR_134;
 
-                // bps is limited to 8
-                if (config.bits_per_sample >> 4)
-                    config.bits_per_sample = 8;
+    config.averaging = (avg == 1);
 
-                cmdp += 2;
-                break;
-            }
-            case 'd': {
-                config.decimation = param_get8ex(Cmd, cmdp + 1, 1, 10);
+    if (bps > -1) {
+        // bps is limited to 8
+        config.bits_per_sample = (bps & 0x0F);
+        if (config.bits_per_sample > 8)
+            config.bits_per_sample = 8;
+    }
 
-                // decimation is limited to 255
-                if (config.decimation >> 4)
-                    config.decimation = 8;
+    if ( dec > -1 ) {
+        // decimation is limited to 8
+        config.decimation = (dec & 0x0F);
+        if (config.decimation > 8)
+            config.decimation = 8;
+    }
 
-                cmdp += 2;
-                break;
-            }
-            case 'a':
-                config.averaging = (param_getchar(Cmd, cmdp + 1) == '1');
-                cmdp += 2;
-                break;
-            case 's':
-                config.samples_to_skip = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = 1;
-                break;
+    if ( div > -1 ) {
+        config.divisor = div;
+        if (config.divisor < 19) {
+            PrintAndLogEx(ERR, "divisor must be between 19 and 255");
+            return PM3_EINVARG;
         }
     }
 
-    // validations
-    if (errors) return usage_lf_config();
+    if (freq > -1 ) {
+        config.divisor = LF_FREQ2DIV(freq);
+        if (config.divisor < 19) {
+            PrintAndLogEx(ERR, "freq must be between 47 and 600");
+            return PM3_EINVARG;
+        }
+    }
 
+    if (trigg > -1) {
+        config.trigger_threshold = trigg;
+        g_lf_threshold_set = (config.trigger_threshold > 0);
+    }
+
+    config.samples_to_skip = skip;
     return lf_config(&config);
 }
 
