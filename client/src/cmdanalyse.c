@@ -13,6 +13,7 @@
 #include <string.h>
 #include <ctype.h>        // tolower
 #include <math.h>
+#include <inttypes.h>     // PRIx64 macro
 #include "commonutil.h"   // reflect...
 #include "comms.h"        // clearCommandBuffer
 #include "cmdparser.h"    // command_t
@@ -550,6 +551,13 @@ static int CmdAnalyseA(const char *Cmd) {
         PrintAndLogEx(FAILED, "Error parsing bytes");
         return PM3_EINVARG;
     }
+
+    uint64_t key = 0;
+    res = mfc_algo_touch_one(data, 0, 0, &key);
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "KEY A | %012" PRIx64, key);
+    }
+
     CLIParserFree(ctx);
     return PM3_SUCCESS;
 
