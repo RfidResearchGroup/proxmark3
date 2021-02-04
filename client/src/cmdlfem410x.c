@@ -536,7 +536,7 @@ static int CmdEM410xBrute(const char *Cmd) {
     for (uint32_t c = 0; c < uidcnt; ++c) {
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(INFO, "\nAborted via keyboard!\n");
+            PrintAndLogEx(INFO, "Aborted via keyboard!\n");
             free(uidblock);
             return PM3_EOPABORTED;
         }
@@ -549,8 +549,28 @@ static int CmdEM410xBrute(const char *Cmd) {
                      );
 
         em410x_construct_emul_graph(testuid, clk);
-        CmdLFSim("");
-        msleep(delay);
+
+        lfsim_upload_gb();
+
+        struct p {
+            uint16_t len;
+            uint16_t gap;
+        } PACKED payload;
+        payload.len = GraphTraceLen;
+        payload.gap = 0;
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));   
+        
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_LF_SIMULATE, &resp, delay)) {
+            if (resp.status == PM3_EOPABORTED) {
+                PrintAndLogEx(INFO, "Button pressed, user aborted");
+                break;
+            }
+        }
+
+//        msleep(delay);
     }
     free(uidblock);
     return PM3_SUCCESS;

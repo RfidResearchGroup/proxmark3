@@ -730,40 +730,8 @@ static void ChkBitstream(void) {
     }
 }
 
-//Attempt to simulate any wave in buffer (one bit per output sample)
-// converts GraphBuffer to bitstream (based on zero crossings) if needed.
-int CmdLFSim(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf sim",
-                  "Simulate low frequency tag from graphbuffer\n"
-                  "Use " _YELLOW_("`lf config`") _CYAN_(" to set parameters"),
-                  "lf sim\n"
-                  "lf sim --gap 240 --> start simulating with 240ms gap"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_u64_0("g", "gap", "<ms>", "start gap in microseconds"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint16_t gap = arg_get_u32_def(ctx, 1, 0);
-    CLIParserFree(ctx); 
-
-    if (session.pm3_present == false) {
-        PrintAndLogEx(DEBUG, "DEBUG: no proxmark present");
-        return PM3_ENOTTY;
-    }
-
-    // sanity check
-    if (GraphTraceLen < 20) {
-        PrintAndLogEx(ERR, "No data in Graphbuffer");
-        return PM3_ENODATA;
-    }
-
-    // convert to bitstream if necessary
-    ChkBitstream();
-
+// Uploads GraphBuffer to device, in order to be used for LF SIM.
+int lfsim_upload_gb(void) {
     PrintAndLogEx(DEBUG, "DEBUG: Uploading %zu bytes", GraphTraceLen);
 
     struct pupload {
@@ -802,9 +770,48 @@ int CmdLFSim(const char *Cmd) {
         PrintAndLogEx(NORMAL, "." NOLF);
         payload_up.flag = 0;
     }
+    PrintAndLogEx(NORMAL, "");
 
     // Disable fast mode before last command
     conn.block_after_ACK = false;
+    return PM3_SUCCESS;
+}
+
+//Attempt to simulate any wave in buffer (one bit per output sample)
+// converts GraphBuffer to bitstream (based on zero crossings) if needed.
+int CmdLFSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf sim",
+                  "Simulate low frequency tag from graphbuffer\n"
+                  "Use " _YELLOW_("`lf config`") _CYAN_(" to set parameters"),
+                  "lf sim\n"
+                  "lf sim --gap 240 --> start simulating with 240ms gap"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("g", "gap", "<ms>", "start gap in microseconds"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint16_t gap = arg_get_u32_def(ctx, 1, 0);
+    CLIParserFree(ctx); 
+
+    if (session.pm3_present == false) {
+        PrintAndLogEx(DEBUG, "DEBUG: no proxmark present");
+        return PM3_ENOTTY;
+    }
+
+    // sanity check
+    if (GraphTraceLen < 20) {
+        PrintAndLogEx(ERR, "No data in Graphbuffer");
+        return PM3_ENODATA;
+    }
+
+    // convert to bitstream if necessary
+    ChkBitstream();
+
+    lfsim_upload_gb();
 
     struct p {
         uint16_t len;
