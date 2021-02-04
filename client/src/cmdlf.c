@@ -64,36 +64,6 @@ static bool g_lf_threshold_set = false;
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_lf_cmdread(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf cmdread d <delay duration> z <zero duration> o <one duration> [e <symbol> <duration>] c <cmd symbols> [q] [s #samples] [@]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h             This help");
-    PrintAndLogEx(NORMAL, "       d <duration>  delay OFF period, (0 for bitbang mode)");
-    PrintAndLogEx(NORMAL, "       z <duration>  ZERO time period");
-    PrintAndLogEx(NORMAL, "       o <duration>  ONE time period");
-    PrintAndLogEx(NORMAL, "       e <symbol> <duration> Extra symbol definition and duration (up to %i)", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
-    PrintAndLogEx(NORMAL, "       b <duration>  B period");
-    PrintAndLogEx(NORMAL, "       c <cmd>       Command symbols (0/1/...)");
-    PrintAndLogEx(NORMAL, "       q             silent (optional)");
-    PrintAndLogEx(NORMAL, "       s #samples    number of samples to collect (optional)");
-    PrintAndLogEx(NORMAL, "       @             run continuously until a key is pressed (optional)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "       ************* " _YELLOW_("All periods in decimal and in microseconds (us)"));
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag 1/Hitag S") ":");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 50 z 116 o 166 e W 3000 c W00110"));
-    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag 2") ":");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 50 z 116 o 166 e W 3000 c W11000"));
-    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag 2, oscilloscope style") ":");
-    PrintAndLogEx(NORMAL, _YELLOW_("      data plot"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 50 z 116 o 166 e W 3000 c W11000 q s 2000 @"));
-    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag (us)") ":");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 48 z 112 o 176 e W 3000 e S 240 e E 336 c W0S00000010000E"));
-    PrintAndLogEx(NORMAL, "Extras:");
-    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
-    return PM3_SUCCESS;
-}
-
 // Informative user function.
 // loop and wait for either keyboard press or pm3 button to exit
 // if key event, send break loop cmd to Pm3
@@ -239,14 +209,51 @@ static int CmdLFTune(const char *Cmd) {
 
 /* send a LF command before reading */
 int CmdLFCommandRead(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf cmdread",
+                  "Modulate LF reader field to send command before read. All periods in microseconds.\n"
+                  " - use " _YELLOW_("`lf config`") _CYAN_(" to set parameters"),
+                  "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110                           --> probing for Hitag 1/S\n"
+                  "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000                           --> probing for Hitag 2\n"
+                  "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -q -s 2000 -@             --> probing for Hitag 2, oscilloscope style\n"
+                  "lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -c W0S00000010000E  --> probing for Hitag (us)\n"
+                 );
 
-    if (!session.pm3_present) return PM3_ENOTTY;
+    char div_str[70] = {0};
+    sprintf(div_str, "Extra symbol definition and duration (up to %i)", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
 
-    bool errors = false;
-    bool verbose = true;
-    bool continuous = false;
-    uint32_t samples = 0;
-    uint16_t datalen = 0;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("d", "duration", "<us>", "delay OFF period, (0 for bitbang mode)"),
+        arg_str0("c", "cmd", "<0|1|...>", "command symbols"),
+        arg_strx0("e", "extra", "<us>", div_str),
+        arg_u64_0("o", "one", "<us>", "ONE time period"),
+        arg_u64_0("z", "zero", "<us>", "ZERO time period"),
+        arg_u64_0("s", "samples", "<dec>", "number of samples to collect"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("@", NULL, "continuous mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint32_t delay = arg_get_u32_def(ctx, 1, 0);
+
+    int cmd_len = 128;
+    char cmd[128] = {0};
+    CLIGetStrWithReturn(ctx, 2, (uint8_t*)cmd, &cmd_len);
+
+    int extra_arg_len = 250;
+    char extra_arg[250] = {0};
+    CLIGetStrWithReturn(ctx, 3, (uint8_t*)extra_arg, &extra_arg_len);
+
+    uint16_t period_1 = arg_get_u32_def(ctx, 4, 0);
+    uint16_t period_0 = arg_get_u32_def(ctx, 5, 0);
+    uint32_t samples = arg_get_u32_def(ctx, 6, 0);
+    bool verbose = arg_get_lit(ctx, 7);
+    bool cm = arg_get_lit(ctx, 8);
+    CLIParserFree(ctx);  
+
+    if (session.pm3_present == false)
+        return PM3_ENOTTY;
 
     const uint8_t payload_header_size = 12 + (3 * LF_CMDREAD_MAX_EXTRA_SYMBOLS);
     struct p {
@@ -259,76 +266,57 @@ int CmdLFCommandRead(const char *Cmd) {
         bool     verbose : 1;
         uint8_t data[PM3_CMD_DATA_SIZE - payload_header_size];
     } PACKED payload;
+    payload.delay = delay;
+    payload.period_1 = period_1;
+    payload.period_0 = period_0;
     payload.samples = samples;
     payload.verbose = verbose;
-    uint8_t index_extra = 0;
+    memcpy(payload.data, cmd, cmd_len);
 
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_cmdread();
-            case 'c':  // cmd bytes 1010
-                datalen = param_getstr(Cmd, cmdp + 1, (char *)&payload.data, sizeof(payload.data));
-                cmdp += 2;
-                break;
-            case 'd':  // delay
-                payload.delay = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'z':  // zero
-                payload.period_0 = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
-                cmdp += 2;
-                break;
-            case 'o':  // ones
-                payload.period_1 = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
-                cmdp += 2;
-                break;
-            case 'e':  // extra symbol definition
-                if (index_extra < LF_CMDREAD_MAX_EXTRA_SYMBOLS - 1) {
-                    payload.symbol_extra[index_extra] = param_getchar(Cmd, cmdp + 1);
-                    payload.period_extra[index_extra] = param_get32ex(Cmd, cmdp + 2, 0, 10) & 0xFFFF;
-                    index_extra++;
-                    cmdp += 3;
-                } else {
-                    PrintAndLogEx(WARNING, "Too many extra symbols, please define up to %i symbols", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
-                    errors = true;
-                }
-                break;
-            case 's':
-                samples = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                payload.samples = samples;
-                cmdp += 2;
-                break;
-            case 'q':
-                verbose = false;
-                payload.verbose = verbose;
-                cmdp++;
-                break;
-            case '@':
-                continuous = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+    // extra symbol definition
+    uint8_t index_extra = 0;
+    int i = 0;
+    for (; i < extra_arg_len; ) {
+
+        if (index_extra < LF_CMDREAD_MAX_EXTRA_SYMBOLS - 1) {
+            payload.symbol_extra[index_extra] = extra_arg[i];
+            int tmp = atoi(extra_arg + (i + 1));
+            payload.period_extra[index_extra] = tmp;
+            index_extra++;
+            i++;
+            while (extra_arg[i] >= 0x30 && extra_arg[i] <= 0x39)
+                i++;
+
+        } else {
+            PrintAndLogEx(WARNING, "Too many extra symbols, please define up to %i symbols", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
         }
     }
 
     // bitbang mode
     if (payload.delay == 0) {
         if (payload.period_0 < 7 || payload.period_1 < 7) {
-            PrintAndLogEx(WARNING, "warning periods cannot be less than 7us in bit bang mode");
+            PrintAndLogEx(WARNING, "periods cannot be less than 7us in bit bang mode");
             return PM3_EINVARG;
         }
     }
 
-    //Validations
-    if (errors || cmdp == 0)  return usage_lf_cmdread();
-    if (continuous) {
-        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
+    PrintAndLogEx(DEBUG, "Cmd read - settings");
+    PrintAndLogEx(DEBUG, "-------------------");
+    PrintAndLogEx(DEBUG, "delay: %u ,  zero %u , one %u , samples %u", payload.delay, payload.period_0,  payload.period_1, payload.samples);
+    PrintAndLogEx(DEBUG, "Extra symbols");
+    PrintAndLogEx(DEBUG, "-------------");
+    for (i = 0; i < LF_CMDREAD_MAX_EXTRA_SYMBOLS; i++) {
+        if (payload.symbol_extra[i] == 0x00)
+            continue;
+
+        PrintAndLogEx(DEBUG, "  %c - %u", payload.symbol_extra[i], payload.period_extra[i]);
     }
+    PrintAndLogEx(DEBUG, "data: %s", payload.data);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
     if (verbose) {
         PrintAndLogEx(SUCCESS, "Sending command...");
     }
@@ -336,11 +324,11 @@ int CmdLFCommandRead(const char *Cmd) {
     int ret = PM3_SUCCESS;
     do {
         clearCommandBuffer();
-        SendCommandNG(CMD_LF_MOD_THEN_ACQ_RAW_ADC, (uint8_t *)&payload, payload_header_size + datalen);
+        SendCommandNG(CMD_LF_MOD_THEN_ACQ_RAW_ADC, (uint8_t *)&payload, payload_header_size + cmd_len);
 
         PacketResponseNG resp;
 
-        uint8_t i = 10;
+        i = 10;
         // 20sec wait loop
         while (!WaitForResponseTimeout(CMD_LF_MOD_THEN_ACQ_RAW_ADC, &resp, 2000) && i != 0) {
             if (verbose) {
@@ -351,25 +339,23 @@ int CmdLFCommandRead(const char *Cmd) {
         if (verbose) {
             PrintAndLogEx(NORMAL, "");
         }
-        if (resp.status == PM3_SUCCESS) {
-            if (i) {
-                if (verbose) {
-                    PrintAndLogEx(SUCCESS, "downloading response signal data");
-                }
-                getSamples(samples, false);
-                ret = PM3_SUCCESS;
-            } else {
-                PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-                return PM3_ETIMEOUT;
-            }
-        } else {
+        if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "command failed.");
             return PM3_ESOFT;
         }
-        if (kbd_enter_pressed()) {
-            break;
+
+        if (i) {
+            if (verbose) {
+                PrintAndLogEx(SUCCESS, "downloading response signal data");
+            }
+            getSamples(samples, false);
+            ret = PM3_SUCCESS;
+        } else {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
         }
-    } while (continuous);
+
+    } while (cm && kbd_enter_pressed() == false);
     return ret;
 }
 
@@ -487,7 +473,7 @@ int CmdLFConfig(const char *Cmd) {
                   _CYAN_(" - use ") _YELLOW_("`lf sniff`") _CYAN_(" performs a sniff (no active field)"),
                   "lf config                    --> shows current config\n"
                   "lf config -b 8 --125         --> samples at 125 kHz, 8 bps\n"
-                  "lf config -b 4 --134 --dec 3 --> samples at 134 kHz, averages three samples into one, stored with a resolution of 4 bits per sample"
+                  "lf config -b 4 --134 --dec 3 --> samples at 134 kHz, averages three samples into one, stored with a resolution of 4 bits per sample\n"
                   "lf config --trig 20 -s 10000 --> trigger sampling when above 20, skip 10 000 first samples after triggered\n"
                  );
 
@@ -503,6 +489,7 @@ int CmdLFConfig(const char *Cmd) {
         arg_int0(NULL, "dec", "<1-8>", "sets decimation. A value of N saves only 1 in N samples (default 1)"),
         arg_int0(NULL, "divisor", "<19-255>", div_str),
         arg_int0("f", "freq", "<47-600>", "manually set frequency in kHz"),
+        arg_lit0("r", "reset", "reset values to defaults"),
         arg_int0("s", "skip", "<dec>", "sets a number of samples to skip before capture (default 0)"),
         arg_int0("t", "trig", "<0-128>", "sets trigger threshold. 0 means no threshold"),
         arg_param_end
@@ -515,8 +502,9 @@ int CmdLFConfig(const char *Cmd) {
     int8_t dec = arg_get_int_def(ctx, 5, -1);
     int16_t div = arg_get_int_def(ctx, 6, -1);
     int16_t freq = arg_get_int_def(ctx, 7, -1);
-    int32_t skip = arg_get_int_def(ctx, 8, -1);
-    int16_t trigg = arg_get_int_def(ctx, 9, -1);
+    bool reset = arg_get_lit(ctx, 8);
+    int32_t skip = arg_get_int_def(ctx, 9, -1);
+    int16_t trigg = arg_get_int_def(ctx, 10, -1);
     CLIParserFree(ctx);  
 
     if (session.pm3_present == false) 
@@ -542,12 +530,16 @@ int CmdLFConfig(const char *Cmd) {
         .verbose = true
     };
 
-    /*
-    int8_t bps = arg_get_int_def(ctx, 4, 8);
-    int8_t dec = arg_get_int_def(ctx, 5, 1);
-    int16_t div = arg_get_int_def(ctx, 6, 95);
-    int16_t freq = arg_get_int_def(ctx, 7, 125);
-*/
+    if (reset) {
+        config.decimation = 1;
+        config.bits_per_sample = 8;
+        config.averaging = 1,
+        config.divisor = LF_DIVISOR_125;
+        config.samples_to_skip = 0;        
+        config.trigger_threshold = 0;
+        g_lf_threshold_set = false;
+    }
+
     if (use_125)
         config.divisor = LF_DIVISOR_125;
 
@@ -657,7 +649,7 @@ int CmdLFRead(const char *Cmd) {
     int ret = PM3_SUCCESS;
     do {
         ret = lf_read(verbose, samples);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && kbd_enter_pressed() == false);
     return ret;
 }
 
@@ -1524,7 +1516,7 @@ static command_t CommandTable[] = {
     {"visa2000",    CmdLFVisa2k,        AlwaysAvailable, "{ Visa2000 RFIDs...          }"},
     {"-----------", CmdHelp,            AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"config",      CmdLFConfig,        IfPm3Lf,         "Get/Set config for LF sampling, bit/sample, decimation, frequency"},
-    {"cmdread",     CmdLFCommandRead,   IfPm3Lf,         "Modulate LF reader field to send command before read (all periods in microseconds)"},
+    {"cmdread",     CmdLFCommandRead,   IfPm3Lf,         "Modulate LF reader field to send command before read"},
     {"read",        CmdLFRead,          IfPm3Lf,         "Read LF tag"},
     {"search",      CmdLFfind,          AlwaysAvailable, "Read and Search for valid known tag"},
     {"sim",         CmdLFSim,           IfPm3Lf,         "Simulate LF tag from buffer"},
