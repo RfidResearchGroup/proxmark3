@@ -93,10 +93,6 @@ hf mf gen3uid
 hf mf gen3blk
 hf mf gen3freeze
 hf mf ice
-lf config
-lf cmdread
-lf read
-lf sniff
 lf em 410x
 lf em 4x05
 lf em 4x50

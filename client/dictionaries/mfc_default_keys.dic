@@ -1286,8 +1286,10 @@ AABAFFCC7612
 534f4c303232
 #
 # Nespresso, smart card
-# 
+# key-gen algo, these keys are for one card
 ff9a84635bd2
 6f30126ee7e4
 6039abb101bb
 f1a1239a4487
+#
+b882fd4a9f78
