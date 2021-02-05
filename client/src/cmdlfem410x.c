@@ -569,8 +569,6 @@ static int CmdEM410xBrute(const char *Cmd) {
                 break;
             }
         }
-
-//        msleep(delay);
     }
     free(uidblock);
     return PM3_SUCCESS;
