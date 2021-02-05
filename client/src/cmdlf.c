@@ -719,12 +719,12 @@ int CmdLFSniff(const char *Cmd) {
     return ret;
 }
 
-static void ChkBitstream(void) {
+static void lf_chk_bitstream(void) {
     // convert to bitstream if necessary
     for (int i = 0; i < (int)(GraphTraceLen / 2); i++) {
         if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
             CmdGetBitStream("");
-            PrintAndLogEx(INFO, "Converted to bitstream");
+            PrintAndLogEx(INFO, "converted Graphbuffer to bitstream values (0|1)");
             break;
         }
     }
@@ -809,7 +809,7 @@ int CmdLFSim(const char *Cmd) {
     }
 
     // convert to bitstream if necessary
-    ChkBitstream();
+    lf_chk_bitstream();
 
     lfsim_upload_gb();
 
