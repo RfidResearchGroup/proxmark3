@@ -103,14 +103,11 @@ lf hitag writer
 lf hitag dump
 lf hitag cc
 lf t55xx config
-lf t55xx dangerraw
-lf t55xx detect
 lf t55xx dump
 lf t55xx info
 lf t55xx read
 lf t55xx resetread
 lf t55xx restore
 lf t55xx trace
-lf t55xx wakeup
 lf t55xx write
 script run
