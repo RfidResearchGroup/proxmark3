@@ -235,21 +235,7 @@ static int usage_t55xx_restore(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_t55xx_dangerraw(void) {
-    PrintAndLogEx(NORMAL, "This command allows to emit arbitrary raw commands on T5577 and cut the field after arbitrary duration.");
-    PrintAndLogEx(NORMAL, _RED_("WARNING:") " this may lock definitively the tag in an unusable state!");
-    PrintAndLogEx(NORMAL, "Uncontrolled usage can easily write an invalid configuration, activate lock bits,");
-    PrintAndLogEx(NORMAL, "OTP bit, password protection bit, deactivate test-mode, lock your card forever.");
-    PrintAndLogEx(NORMAL, "Uncontrolled usage is known to the State of California to cause cancer.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf t55xx dangerraw [h] [b <bitstream> t <timing>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     h                 - This help");
-    PrintAndLogEx(NORMAL, "     b <bitstream>     - raw bitstream");
-    PrintAndLogEx(NORMAL, "     t <timing>        - time in microseconds before dropping the field");
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
+
 static int usage_t55xx_clonehelp(void) {
     PrintAndLogEx(NORMAL, "For cloning specific techs on T55xx tags, see commands available in corresponding LF sub-menus, e.g.:");
     PrintAndLogEx(NORMAL, _GREEN_("lf awid clone"));
@@ -1698,59 +1684,48 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
 }
 
 static int CmdT55xxDangerousRaw(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx dangerraw",
+                  "This command allows to emit arbitrary raw commands on T5577 and cut the field after arbitrary duration.\n"
+                  "Uncontrolled usage can easily write an invalid configuration, activate lock bits,\n"
+                  "OTP bit, password protection bit, deactivate test-mode, lock your card forever.\n"
+                  _RED_("WARNING:") _CYAN_(" this may lock definitively the tag in an unusable state!"),
+                  "lf t55xx dangerraw -d 01000000000000010000100000000100000000 -t 3200\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", NULL, "raw bit string"),
+        arg_int1("t", "time", "<us>", "<0 - 200000> time in microseconds before dropping the field"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
     // supports only default downlink mode
     t55xx_test_block_t ng;
     ng.time = 0;
     ng.bitlen = 0;
     memset(ng.data, 0x00, sizeof(ng.data));
-    bool errors = false;
-    uint8_t cmdp = 0;
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_t55xx_dangerraw();
-            case 't':
-                ng.time = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                if (ng.time == 0 || ng.time > 200000) {
-                    PrintAndLogEx(ERR, "Timing off 1..200000 limits, got %i", ng.time);
-                    errors = true;
-                    break;
-                }
-                cmdp += 2;
-                break;
-            case 'b': {
-                uint32_t n = param_getlength(Cmd, cmdp + 1);
-                if (n > 128) {
-                    PrintAndLogEx(ERR, "Bitstream too long, max 128 bits, got %i", n);
-                    errors = true;
-                    break;
-                }
-                for (uint8_t i = 0; i < n; i++) {
-                    char c = param_getchar_indx(Cmd, i, cmdp + 1);
-                    if (c == '0')
-                        ng.data[i] = 0;
-                    else if (c == '1')
-                        ng.data[i] = 1;
-                    else {
-                        PrintAndLogEx(ERR, "Unknown bit char '%c'", c);
-                        errors = true;
-                        break;
-                    }
-                }
-                ng.bitlen = n;
-                cmdp += 2;
-                break;
-            }
-            default:
-                PrintAndLogEx(ERR, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    int bin_len = 127;
+    uint8_t bin[128] = {0};
+    CLIGetStrWithReturn(ctx, 1, bin, &bin_len);
+
+    ng.time = arg_get_int_def(ctx, 2, 0);
+    CLIParserFree(ctx);
+
+    if (ng.time == 0 || ng.time > 200000) {
+        PrintAndLogEx(ERR, "Timing off 1..200000 limits, got %i", ng.time);
+        return PM3_EINVARG;
     }
-    if (errors || ng.bitlen == 0 || ng.time == 0) {
-        return usage_t55xx_dangerraw();
+
+    int bs_len = binstring2binarray(ng.data, (char*)bin, bin_len);
+    if (bs_len == 0) {
+        return PM3_EINVARG;
     }
+
+    ng.bitlen = bs_len;
+    
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_DANGERRAW, (uint8_t *)&ng, sizeof(ng));
