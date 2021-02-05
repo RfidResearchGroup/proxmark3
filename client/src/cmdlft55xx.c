@@ -250,18 +250,7 @@ static int usage_t55xx_detect(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_t55xx_wakup(void) {
-    PrintAndLogEx(NORMAL, "Usage:  lf t55xx wakeup [h] [r <mode>] p <password>");
-    PrintAndLogEx(NORMAL, "This commands sends the Answer-On-Request command and leaves the readerfield ON afterwards.");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     h            - this help");
-    PrintAndLogEx(NORMAL, "     p <password> - password 4bytes (8 hex symbols)");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE, config.downlink_mode);
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx wakeup p 11223344") "  - send wakeup password");
-    return PM3_SUCCESS;
-}
+
 
 static int usage_t55xx_dangerraw(void) {
     PrintAndLogEx(NORMAL, "This command allows to emit arbitrary raw commands on T5577 and cut the field after arbitrary duration.");
@@ -1554,40 +1543,51 @@ int printConfiguration(t55xx_conf_block_t b) {
 }
 
 static int CmdT55xxWakeUp(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx wakeup",
+                  "This commands sends the Answer-On-Request command and leaves the readerfield ON afterwards",
+                  "lf t55xx wakeup -p 11223344   --> send wakeup with password\n"
+                 );
+
+    // 3 + (5 or 6)
+    void *argtable[8] = {
+        arg_param_begin,
+        arg_str1("p", "pwd", "<hex>", "password (4 hex bytes)"),
+        arg_lit0("v", "verbose", "verbose output"),
+    };
+    uint8_t idx = 3;
+    arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_SINGLE, config.downlink_mode);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     uint32_t password = 0;
-    uint8_t cmdp = 0;
-    bool errors = false;
-    uint8_t downlink_mode = config.downlink_mode;
-    bool quiet = false;
-
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_t55xx_wakup();
-            case 'p':
-                password = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                cmdp += 2;
-                break;
-            case 'r':
-                downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode > 3)
-                    downlink_mode = 0;
-
-                cmdp += 2;
-                break;
-            case 'q':
-                quiet = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    int res = arg_get_u32_hexstr_def(ctx, 1, 0, &password);
+    if (res == 0 || res == 2) {
+        PrintAndLogEx(ERR, "Password should be 4 hex bytes");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
 
-    if (errors) return usage_t55xx_wakup();
+    bool verbose = arg_get_lit(ctx, 2);    
+    bool r0 = arg_get_lit(ctx, 3);
+    bool r1 = arg_get_lit(ctx, 4);
+    bool r2 = arg_get_lit(ctx, 5);
+    bool r3 = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx);
+
+    if ((r0 + r1 + r2 + r3) > 1) {
+        PrintAndLogEx(FAILED, "Error multiple downlink encoding");
+        return PM3_EINVARG;
+    }
+
+    uint8_t downlink_mode = config.downlink_mode;
+    if (r0)
+        downlink_mode = refFixedBit;
+    else if (r1)
+        downlink_mode = refLongLeading;
+    else if (r2)
+        downlink_mode = refLeading0;
+    else if (r3)
+        downlink_mode = ref1of4;
 
     struct p {
         uint32_t password;
@@ -1595,16 +1595,16 @@ static int CmdT55xxWakeUp(const char *Cmd) {
     } PACKED payload;
 
     payload.password = password;
-    payload.flags = (downlink_mode & 3) << 3;
+    payload.flags = (downlink_mode << 3);
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_WAKEUP, (uint8_t *)&payload, sizeof(payload));
-    if (!WaitForResponseTimeout(CMD_LF_T55XX_WAKEUP, NULL, 1000)) {
+    if (WaitForResponseTimeout(CMD_LF_T55XX_WAKEUP, NULL, 1000) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
-    if (!quiet)
+    if (verbose)
         PrintAndLogEx(SUCCESS, "Wake up command sent. Try read now");
 
     return PM3_SUCCESS;
