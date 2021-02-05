@@ -98,14 +98,13 @@ static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, u
     at[n++] = arg_lit0(NULL, "r3", r3);
 
     if (show == T55XX_DLMODE_ALL) {
-        char *r4 = (char *)calloc(50, sizeof(uint8_t));
+        char *r4 = (char *)calloc(56, sizeof(uint8_t));
         sprintf(r4, "try all downlink modes %s", (dl_mode_def == 4) ? "(def)" : "");
         at[n++] = arg_lit0(NULL, "all", r4);
     }
     at[n++] = arg_param_end;
     *idx = n;
 }
-
 
 static int usage_t55xx_config(void) {
     PrintAndLogEx(NORMAL, "Usage: lf t55xx config [c <blk0>] [d <demodulation>] [i [0/1]] [o <offset>] [Q5 [0/1]] [ST [0/1]]");
@@ -3565,8 +3564,8 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
                   "lf t55xx p1detect -p 11223344 --r3\n"
                  );
 
-    // 2 + (5 or 6)
-    void *argtable[7] = {
+     // 1 (help) + 2 (two user specified params) + ( 5  T55XX_DLMODE_SINGLE)
+    void *argtable[8] = {
         arg_param_begin,
         arg_lit0("1", NULL, "extract using data from graphbuffer"),
         arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
