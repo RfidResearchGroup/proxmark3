@@ -254,7 +254,6 @@ static bool invalid_bit(void) {
 
 static uint32_t get_pulse_length(void) {
 
-    //int32_t timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD), tval = 0;
     int32_t timeout = EM4X50_TIMEOUT_PULSE_EVAL, tval = 0;
 
     // iterates pulse length (low -> high -> low)
@@ -915,7 +914,7 @@ void em4x50_reader(void) {
     int now = 0;
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
-    em4x50_setup_read();
+     em4x50_setup_read();
 
     LED_C_ON();
     if (get_signalproperties() && find_em4x50_tag()) {
