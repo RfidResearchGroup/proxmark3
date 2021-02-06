@@ -6,7 +6,7 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Martin Holst Swende'
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc = [[
 This script takes a dumpfile from 'hf mf dump' and converts it to a format that can be used
 by the emulator
@@ -46,7 +46,7 @@ end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print('ERROR:', err)
+    print('[!!] ERROR:', err)
     core.clearCommandBuffer()
     return nil, err
 end
@@ -134,7 +134,7 @@ local function main(args)
 
     outfile:write(dumpdata:lower())
     io.close(outfile)
-    print(('Wrote an emulator-dump to the file %s'):format(output))
+    print(('[+] Wrote an emulator-dump to the file %s'):format(output))
 end
 
 

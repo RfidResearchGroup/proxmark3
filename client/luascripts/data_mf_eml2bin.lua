@@ -5,7 +5,7 @@ local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc =[[
 This script takes an dumpfile in EML (ASCII) format and converts it to the PM3 dumpbin file to be used with `hf mf restore`
 ]]
@@ -40,7 +40,7 @@ end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print('ERROR:', err)
+    print('[!!] ERROR:', err)
     core.clearCommandBuffer()
     return nil, err
 end
@@ -82,7 +82,7 @@ local function main(args)
     local filename, err = dumplib.convert_eml_to_bin(input,output)
     if err then return oops(err) end
 
-    ExitMsg(('Wrote a BIN dump to the file %s'):format(filename))
+    ExitMsg(('[+] Wrote a BIN dump to the file %s'):format(filename))
 end
 
 main(args)
