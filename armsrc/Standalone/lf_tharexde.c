@@ -13,6 +13,7 @@
 #include "proxmark3_arm.h"
 #include "appmain.h"
 #include "BigBuf.h"
+#include "commonutil.h"
 #include "fpgaloader.h"
 #include "util.h"
 #include "dbprint.h"
@@ -58,10 +59,12 @@
 #define STATE_READ                      1
 #define EM4X50_TAG_WORD                 45
 #define LF_EM4X50_INPUTFILE_SIM         "lf_em4x50_simulate.eml"
+#define LF_EM4X50_LOGFILE_SIM           "lf_em4x50_tag_data.log"
 #define LF_EM4X50_LOGFILE_COLLECT       "lf_em4x50_collect.log"
 
 bool input_exists;
 bool log_exists;
+uint32_t gPassword;
 
 static void LoadDataInstructions(const char *inputfile) {
     Dbprintf("");
@@ -188,6 +191,25 @@ void RunMod(void) {
 
             em4x50_handle_commands(&command, tag);
 
+            // check if new password was found
+            if (gPassword != reflect32(tag[0])) {
+                
+                // save password to tag
+                tag[0] = reflect32(gPassword);
+                Dbprintf("received password: %08"PRIx32"", gPassword);
+                
+                // overwrite inputfile in flash memory
+                memset(entry, 0, sizeof(entry));
+
+                for (int i = 0; i < EM4X50_NO_WORDS; i++) {
+                    sprintf((char *)entry + strlen((char *)entry), "%08"PRIx32"\n", tag[i]);
+                }
+                log_exists = exists_in_spiffs(LF_EM4X50_LOGFILE_SIM);
+                Dbprintf("log_exists = %i", log_exists);
+                //append(LF_EM4X50_LOGFILE_SIM, entry, strlen((char *)entry));
+
+            }
+            
             // stop if key (pm3 button or enter key) has been pressed
             if (command == PM3_EOPABORTED) {
                 break;
