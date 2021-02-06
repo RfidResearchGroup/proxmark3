@@ -61,6 +61,7 @@
 // div
 #define EM4X50_TAG_WORD                     45
 #define EM4X50_TAG_MAX_NO_BYTES             136
+#define EM4X50_TIMEOUT_PULSE_EVAL           2500
 
 int gHigh = 190;
 int gLow = 60;
@@ -72,6 +73,8 @@ bool gLogin = false;
 // compared to operations like read, write, login, so it is necessary to
 // to be able to identfiy it
 bool gWritePasswordProcess = false;
+// if reader sends a different password than "expected" -> save it
+uint32_t gPassword = 0;
 
 // extract and check parities
 // return result of parity check and extracted plain data
@@ -251,7 +254,8 @@ static bool invalid_bit(void) {
 
 static uint32_t get_pulse_length(void) {
 
-    int32_t timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD), tval = 0;
+    //int32_t timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD), tval = 0;
+    int32_t timeout = EM4X50_TIMEOUT_PULSE_EVAL, tval = 0;
 
     // iterates pulse length (low -> high -> low)
 
@@ -260,23 +264,25 @@ static uint32_t get_pulse_length(void) {
     while (sample > gLow && (timeout--))
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
-    if (timeout == 0)
+    if (timeout <= 0)
         return 0;
 
     tval = GetTicks();
-    timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
+    //timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
+    timeout = EM4X50_TIMEOUT_PULSE_EVAL;
 
     while (sample < gHigh && (timeout--))
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
-    if (timeout == 0)
+    if (timeout <= 0)
         return 0;
 
-    timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
+    //timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
+    timeout = EM4X50_TIMEOUT_PULSE_EVAL;
     while (sample > gLow && (timeout--))
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
-    if (timeout == 0)
+    if (timeout <= 0)
         return 0;
 
     return GetTicks() - tval;
@@ -857,16 +863,16 @@ void em4x50_read(em4x50_data_t *etd) {
     LED_C_ON();
     if (get_signalproperties() && find_em4x50_tag()) {
 
-        LED_C_OFF();
-        LED_D_ON();
+            LED_C_OFF();
+            LED_D_ON();
 
-        // try to login with given password
-        if (etd->pwd_given)
-            blogin = (login(etd->password1) == PM3_SUCCESS);
+            // try to login with given password
+            if (etd->pwd_given)
+                blogin = (login(etd->password1) == PM3_SUCCESS);
 
-        // only one word has to be read -> first word read = last word read
-        if (blogin)
-            status = selective_read(etd->addresses, words);
+            // only one word has to be read -> first word read = last word read
+            if (blogin)
+                status = selective_read(etd->addresses, words);
     }
 
     LEDsoff();
@@ -1417,8 +1423,6 @@ static void em4x50_sim_send_nak(void) {
 // standard read mode process (simulation mode)
 static int em4x50_sim_handle_standard_read_command(uint32_t *tag) {
 
-    int command = 0;
-
     // extract control data
     int fwr = reflect32(tag[EM4X50_CONTROL]) & 0xFF;        // first word read
     int lwr = (reflect32(tag[EM4X50_CONTROL]) >> 8) & 0xFF; // last word read
@@ -1457,8 +1461,6 @@ static int em4x50_sim_handle_standard_read_command(uint32_t *tag) {
 
 // selective read mode process (simulation mode)
 static int em4x50_sim_handle_selective_read_command(uint32_t *tag) {
-
-    int command = 0;
 
     // read password
     uint32_t address = 0;
@@ -1530,6 +1532,9 @@ static int em4x50_sim_handle_login_command(uint32_t *tag) {
         em4x50_sim_send_nak();
         gLogin = false;
         LED_D_OFF();
+        
+        // save transmitted password for future use (e.g. standalone mode)
+        gPassword = password;
     }
     // continue with standard read mode
     return EM4X50_COMMAND_STANDARD_READ;
