@@ -42,7 +42,7 @@
 #define EM4X50_COMMAND_STANDARD_READ        0x02 // virtual command
 
 // misc
-#define TIMEOUT                     2000
+#define TIMEOUT_CMD                 3000
 #define DUMP_FILESIZE               136
 
 #define BYTES2UINT32(x) ((x[0] << 24) | (x[1] << 16) | (x[2] << 8) | (x[3]))
@@ -62,5 +62,6 @@ typedef struct {
 
 extern bool gLogin;
 extern bool gWritePasswordProcess;
+extern uint32_t gPassword;
 
 #endif /* EM4X50_H__ */
