@@ -42,18 +42,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hf14_dump(void) {
-    PrintAndLogEx(NORMAL, "Usage:   hf mf dump [card memory] [k <name>] [f <name>]");
-    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-    PrintAndLogEx(NORMAL, "  k <name>     : key filename, if no <name> given, UID will be used as filename");
-    PrintAndLogEx(NORMAL, "  f <name>     : data filename, if no <name> given, UID will be used as filename");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("         hf mf dump"));
-    PrintAndLogEx(NORMAL, _YELLOW_("         hf mf dump 4"));
-    return PM3_SUCCESS;
-}
-
 static int usage_hf14_mifare(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf darkside <block number> <A|B>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -650,6 +638,21 @@ static uint8_t NumOfSectors(char card) {
     }
 }
 
+static uint8_t NewNumOfSectors(uint8_t card) {
+    switch (card) {
+        case 0 :
+            return MIFARE_MINI_MAXSECTOR;
+        case 1 :
+            return MIFARE_1K_MAXSECTOR;
+        case 2 :
+            return MIFARE_2K_MAXSECTOR;
+        case 4 :
+            return MIFARE_4K_MAXSECTOR;
+        default  :
+            return 0;
+    }
+}
+
 static uint8_t FirstBlockOfSector(uint8_t sectorNo) {
     if (sectorNo < 32) {
         return sectorNo * 4;
@@ -942,6 +945,36 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
 
 static int CmdHF14AMfDump(const char *Cmd) {
 
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf dump",
+                  "Dump MIFARE Classic tag to binary file\n"
+                  "If no <name> given, UID will be used as filename",
+                  "hf mf dump -t 0                     -> MIFARE Mini\n"
+                  "hf mf dump -t 1                     -> MIFARE Classic 1k (default)\n"
+                  "hf mf dump -t 2                     -> MIFARE 2k\n"
+                  "hf mf dump -t 4                     -> MIFARE 4k\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("t", "type", "<0-4> ", "MIFARE Classic type"),
+        arg_str0("f", "file", "<filename>", "filename of dump"),
+        arg_str0("k", "keys", "<filename>", "filename of keys"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t numSectors = NewNumOfSectors(arg_get_u32_def(ctx, 1, 1));
+
+    int datafnlen = 0;
+    char dataFilename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)dataFilename, FILE_PATH_SIZE, &datafnlen);
+
+    int keyfnlen = 0;
+    char keyFilename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)keyFilename, FILE_PATH_SIZE, &keyfnlen);
+
+    CLIParserFree(ctx);
+
     uint64_t t1 = msclock();
 
     uint8_t sectorNo, blockNo;
@@ -949,42 +982,16 @@ static int CmdHF14AMfDump(const char *Cmd) {
     uint8_t keyB[40][6];
     uint8_t rights[40][4];
     uint8_t carddata[256][16];
-    uint8_t numSectors = 16;
-    uint8_t cmdp = 0;
-
-    char keyFilename[FILE_PATH_SIZE] = {0};
-    char dataFilename[FILE_PATH_SIZE];
-    char *fptr;
-
-    memset(keyFilename, 0, sizeof(keyFilename));
-    memset(dataFilename, 0, sizeof(dataFilename));
-
+    
     FILE *f;
     PacketResponseNG resp;
 
-    while (param_getchar(Cmd, cmdp) != 0x00) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf14_dump();
-            case 'k':
-                param_getstr(Cmd, cmdp + 1, keyFilename, FILE_PATH_SIZE);
-                cmdp += 2;
-                break;
-            case 'f':
-                param_getstr(Cmd, cmdp + 1, dataFilename, FILE_PATH_SIZE);
-                cmdp += 2;
-                break;
-            default:
-                if (cmdp == 0) {
-                    numSectors = NumOfSectors(param_getchar(Cmd, cmdp));
-                    if (numSectors == 0) return usage_hf14_dump();
-                    cmdp++;
-                } else {
-                    PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                    return usage_hf14_dump();
-                }
-        }
+    if (numSectors == 0) {
+        PrintAndLogEx(ERR, "Invalid MIFARE Classic type");
+        return PM3_EINVARG;
     }
+
+    char *fptr;
 
     if (keyFilename[0] == 0x00) {
         fptr = GenerateFilename("hf-mf-", "-key.bin");
