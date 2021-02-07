@@ -123,7 +123,7 @@ local function dump_tag(uid, numsectors)
 
         local dumpfile = 'hf-mf-'..uid..'-dump'
 
-        local dmp = ('hf mf dump %s f %s'):format(typ, dumpfile)
+        local dmp = ('hf mf dump -t %s -f %s'):format(typ, dumpfile)
         core.console(dmp)
 
         -- Save the global args, those are *our* arguments

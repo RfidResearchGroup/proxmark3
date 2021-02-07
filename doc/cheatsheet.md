@@ -244,14 +244,19 @@ pm3 --> hf mf fchk 1 m
 
 Dump MIFARE card contents
 ```
-Options
----
-<card memory> : 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K
-k <name>      : key filename, if no <name> given, UID will be used as filename"
-f <name>      : data filename, if no <name> given, UID will be used as filename
+options:
+    -t, --type <0-4>               MIFARE Classic type
+    -f, --file <filename>          filename of dump
+    -k, --keys <filename>          filename of keys
 
-pm3 --> hf mf dump 1
-pm3 --> hf mf dump 1 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-dump.bin
+examples/notes:
+    hf mf dump -t 0                          -> MIFARE Mini
+    hf mf dump -t 1                          -> MIFARE Classic 1k (default)
+    hf mf dump -t 2                          -> MIFARE 2k
+    hf mf dump -t 4                          -> MIFARE 4k
+
+pm3 --> hf mf dump -t 1
+pm3 --> hf mf dump -t 1 -k hf-mf-A29558E4-key.bin -f hf-mf-A29558E4-dump.bin
 ```
 
 Convert .bin to .eml
