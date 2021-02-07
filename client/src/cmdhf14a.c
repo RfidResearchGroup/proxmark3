@@ -1641,6 +1641,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     bool isMifarePlus = false;
     bool isMifareUltralight = false;
     bool isST = false;
+    bool isEMV = false;
     int nxptype = MTNONE;
 
     if (card.uidlen <= 4) {
@@ -2055,6 +2056,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
                         if (verbose) PrintAndLogEx(SUCCESS, "----------------------------------------------------");
                         found = true;
+                        isEMV = true;
                     }
 
                 }
@@ -2104,14 +2106,17 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     if (isMifareUltralight)
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu info`"));
 
-    if (isMifarePlus && isMagic == 0)
+    if (isMifarePlus && isMagic == 0 && isEMV == false)
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfp info`"));
 
-    if (isMifareDESFire && isMagic == 0)
+    if (isMifareDESFire && isMagic == 0 && isEMV == false)
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes info`"));
 
     if (isST)
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf st info`"));
+    
+    if (isEMV)
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`emv search -sk`"));
 
     PrintAndLogEx(NORMAL, "");
     DropField();
