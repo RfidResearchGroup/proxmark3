@@ -310,7 +310,7 @@ Simulate MIFARE
 ```
 u     : (Optional) UID 4,7 or 10 bytes. If not specified, the UID 4B from emulator memory will be used
 
-pm3 --> hf mf sim u 353c2aa6
+pm3 --> hf mf sim -u 353c2aa6
 ```
 
 Simulate MIFARE Sequence
@@ -319,7 +319,7 @@ pm3 --> hf mf chk *1 ? d mfc_default_keys
 pm3 --> hf mf dump 1
 pm3 --> script run data_mf_bin2eml -i dumpdata.bin
 pm3 --> hf mf eload 353C2AA6
-pm3 --> hf mf sim u 353c2aa6
+pm3 --> hf mf sim -u 353c2aa6
 ```
 
 Clone MIFARE 1K Sequence

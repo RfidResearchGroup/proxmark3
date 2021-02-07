@@ -496,7 +496,7 @@ local function main(args)
         err = LoadEmulator(uid, blocks)
         if err then return oops(err) end
         core.clearCommandBuffer()
-        print('The simulation is now prepared.\n --> run \"hf mf sim u '..uid..'\" <--')
+        print('The simulation is now prepared.\n --> run \"hf mf sim -u '..uid..'\" <--')
     end
 end
 main(args)

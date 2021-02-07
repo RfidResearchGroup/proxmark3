@@ -42,30 +42,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hf14_mfsim(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mf sim [u <uid>] [n <numreads>] [t] [a <ATQA>] [s <SAK>] [i] [x] [e] [v]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h    this help");
-    PrintAndLogEx(NORMAL, "      u    (Optional) UID 4,7 or 10bytes. If not specified, the UID 4b/7b from emulator memory will be used");
-    PrintAndLogEx(NORMAL, "      t    (Optional)   Enforce ATQA/SAK:");
-    PrintAndLogEx(NORMAL, "                        0 = MIFARE Mini");
-    PrintAndLogEx(NORMAL, "                        1 = MIFARE Classic 1k (Default)");
-    PrintAndLogEx(NORMAL, "                        2 = MIFARE Classic 2k plus in SL0 mode");
-    PrintAndLogEx(NORMAL, "                        4 = MIFARE Classic 4k");
-    PrintAndLogEx(NORMAL, "      a    (Optional)   Provide explicitly ATQA (2 bytes, override option t)");
-    PrintAndLogEx(NORMAL, "      s    (Optional)   Provide explicitly SAK (1 byte, override option t)");
-    PrintAndLogEx(NORMAL, "      n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
-    PrintAndLogEx(NORMAL, "      i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
-    PrintAndLogEx(NORMAL, "      x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a reader");
-    PrintAndLogEx(NORMAL, "      e    (Optional) Fill simulator keys from found keys");
-    PrintAndLogEx(NORMAL, "      v    (Optional) Verbose");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf sim u 0a0a0a0a"));
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf sim u 11223344556677"));
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf sim u 112233445566778899AA"));
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf sim u 11223344 i x"));
-    return PM3_SUCCESS;
-}
 /*
  * static int usage_hf14_sniff(void) {
     PrintAndLogEx(NORMAL, "It continuously gets data from the field and saves it to: log, emulator, emulator file.");
@@ -946,7 +922,6 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
 }
 
 static int CmdHF14AMfDump(const char *Cmd) {
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf dump",
                   "Dump MIFARE Classic tag to binary file\n"
@@ -3376,125 +3351,132 @@ void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, boo
 }
 
 static int CmdHF14AMfSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf sim",
+                  "Simulate MIFARE card",
+                  "hf mf sim -t 0                        -> MIFARE Mini\n"
+                  "hf mf sim -t 1                        -> MIFARE Classic 1k (default)\n"
+                  "hf mf sim -t 1 -u 0a0a0a0a            -> MIFARE Classic 1k with 4b UID\n"
+                  "hf mf sim -t 1 -u 11223344556677      -> MIFARE Classic 1k with 7b UID\n"
+                  "hf mf sim -t 1 -u 11223344 -i --crack -> Perform reader attack in interactive mode\n"
+                  "hf mf sim -t 2                        -> MIFARE 2k\n"
+                  "hf mf sim -t 4                        -> MIFARE 4k");
 
-    uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t atqa[2] = {0, 0};
-    int atqalen = 0;
-    uint8_t sak[1] = {0};
-    int saklen = 0;
-    uint8_t exitAfterNReads = 0;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("u", "uid", "<hex>", "UID 4,7 or 10bytes. If not specified, the UID 4b/7b from emulator memory will be used"),
+        arg_int0("t", "type", "<0-4> ", "MIFARE Classic type for ATQA/SAK"),
+        arg_str0(NULL, "atqa", "<hex>", "Provide explicit ATQA (2 bytes, overrides option t)"),
+        arg_str0(NULL, "sak", "<hex>", "Provide explicit SAK (1 bytes, overrides option t)"),
+        arg_int0("n", "num", "<dec> ", "Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite"),
+        arg_lit0("i", "interactive", "Console will not be returned until simulation finishes or is aborted"),
+        arg_lit0(NULL, "crack", "Performs the 'reader attack', nr/ar attack against a reader"),
+        arg_lit0("e", "emukeys", "Fill simulator keys from found keys"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
     uint16_t flags = 0;
-    int uidlen = 0;
-    uint8_t cmdp = 0;
-    bool errors = false, verbose = false, setEmulatorMem = false;
-    nonces_t data[1];
-    char csize[13] = { 0 };
-    char uidsize[8] = { 0 };
-    sector_t *k_sector = NULL;
-    uint8_t k_sectorsCount = 40;
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'e':
-                setEmulatorMem = true;
-                cmdp++;
+    int uidlen = 0;
+    uint8_t uid[10] = {0};
+    CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+
+    char uidsize[8] = {0};
+    if (uidlen > 0) {
+        switch (uidlen) {
+            case 10:
+                flags |= FLAG_10B_UID_IN_DATA;
+                snprintf(uidsize, sizeof(uidsize), "10 byte");
                 break;
-            case 'h':
-                return usage_hf14_mfsim();
-            case 'i':
-                flags |= FLAG_INTERACTIVE;
-                cmdp++;
+            case 7:
+                flags |= FLAG_7B_UID_IN_DATA;
+                snprintf(uidsize, sizeof(uidsize), "7 byte");
                 break;
-            case 'n':
-                exitAfterNReads = param_get8(Cmd, cmdp + 1);
-                cmdp += 2;
-                break;
-            case 't':
-                switch (param_get8(Cmd, cmdp + 1)) {
-                    case 0:
-                        flags |= FLAG_MF_MINI;
-                        snprintf(csize, sizeof(csize), "MINI");
-                        k_sectorsCount = MIFARE_MINI_MAXSECTOR;
-                        break;
-                    case 1:
-                        flags |= FLAG_MF_1K;
-                        snprintf(csize, sizeof(csize), "1K");
-                        k_sectorsCount = MIFARE_1K_MAXSECTOR;
-                        break;
-                    case 2:
-                        flags |= FLAG_MF_2K;
-                        snprintf(csize, sizeof(csize), "2K with RATS");
-                        k_sectorsCount = MIFARE_2K_MAXSECTOR;
-                        break;
-                    case 4:
-                        flags |= FLAG_MF_4K;
-                        snprintf(csize, sizeof(csize), "4K");
-                        k_sectorsCount = MIFARE_4K_MAXSECTOR;
-                        break;
-                    default:
-                        PrintAndLogEx(WARNING, "Unknown parameter for option t");
-                        errors = true;
-                        break;
-                }
-                cmdp += 2;
-                break;
-            case 'a':
-                param_gethex_ex(Cmd, cmdp + 1, atqa, &atqalen);
-                if (atqalen >> 1 != 2) {
-                    PrintAndLogEx(WARNING, "Wrong ATQA length");
-                    errors = true;
-                    break;
-                }
-                flags |= FLAG_FORCED_ATQA;
-                cmdp += 2;
-                break;
-            case 's':
-                param_gethex_ex(Cmd, cmdp + 1, sak, &saklen);
-                if (saklen >> 1 != 1) {
-                    PrintAndLogEx(WARNING, "Wrong SAK length");
-                    errors = true;
-                    break;
-                }
-                flags |= FLAG_FORCED_SAK;
-                cmdp += 2;
-                break;
-            case 'u':
-                param_gethex_ex(Cmd, cmdp + 1, uid, &uidlen);
-                uidlen >>= 1;
-                switch (uidlen) {
-                    case 10:
-                        flags |= FLAG_10B_UID_IN_DATA;
-                        snprintf(uidsize, sizeof(uidsize), "10 byte");
-                        break;
-                    case 7:
-                        flags |= FLAG_7B_UID_IN_DATA;
-                        snprintf(uidsize, sizeof(uidsize), "7 byte");
-                        break;
-                    case 4:
-                        flags |= FLAG_4B_UID_IN_DATA;
-                        snprintf(uidsize, sizeof(uidsize), "4 byte");
-                        break;
-                    default:
-                        return usage_hf14_mfsim();
-                }
-                cmdp += 2;
-                break;
-            case 'v':
-                verbose = true;
-                cmdp++;
-                break;
-            case 'x':
-                flags |= FLAG_NR_AR_ATTACK;
-                cmdp++;
+            case 4:
+                flags |= FLAG_4B_UID_IN_DATA;
+                snprintf(uidsize, sizeof(uidsize), "4 byte");
                 break;
             default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+                PrintAndLogEx(WARNING, "Invalid parameter for UID");
+                return PM3_EINVARG;
         }
     }
+
+    uint8_t k_sectorsCount = 40;
+    char csize[13] = { 0 };
+    
+    switch (arg_get_u32_def(ctx, 2, 1)) {
+        case 0:
+            flags |= FLAG_MF_MINI;
+            snprintf(csize, sizeof(csize), "MINI");
+            k_sectorsCount = MIFARE_MINI_MAXSECTOR;
+            break;
+        case 1:
+            flags |= FLAG_MF_1K;
+            snprintf(csize, sizeof(csize), "1K");
+            k_sectorsCount = MIFARE_1K_MAXSECTOR;
+            break;
+        case 2:
+            flags |= FLAG_MF_2K;
+            snprintf(csize, sizeof(csize), "2K with RATS");
+            k_sectorsCount = MIFARE_2K_MAXSECTOR;
+            break;
+        case 4:
+            flags |= FLAG_MF_4K;
+            snprintf(csize, sizeof(csize), "4K");
+            k_sectorsCount = MIFARE_4K_MAXSECTOR;
+            break;
+        default:
+            PrintAndLogEx(WARNING, "Unknown parameter for option t");
+            return PM3_EINVARG;
+    }
+
+    int atqalen = 0;
+    uint8_t atqa[2] = {0};
+    CLIGetHexWithReturn(ctx, 3, atqa, &atqalen);
+
+    int saklen = 0;
+    uint8_t sak[1] = {0};
+    CLIGetHexWithReturn(ctx, 4, sak, &saklen);
+
+    uint8_t exitAfterNReads = arg_get_u32_def(ctx, 5, 0);
+
+    if (arg_get_lit(ctx, 6)) {
+        flags |= FLAG_INTERACTIVE;
+    }
+
+    if (arg_get_lit(ctx, 7)) {
+        flags |= FLAG_NR_AR_ATTACK;
+    }
+
+    bool setEmulatorMem = arg_get_lit(ctx, 8);
+    bool verbose = arg_get_lit(ctx, 9);
+
+    CLIParserFree(ctx);
+    
+    nonces_t data[1];
+ 
+    sector_t *k_sector = NULL;
+
     //Validations
-    if (errors) return usage_hf14_mfsim();
+    if (atqalen > 0) {
+        if (atqalen != 2) {
+            PrintAndLogEx(WARNING, "Wrong ATQA length");
+            return PM3_EINVARG;
+
+        }
+        flags |= FLAG_FORCED_ATQA;
+    }
+    if (saklen > 0) {
+        if (saklen != 1) {
+            PrintAndLogEx(WARNING, "Wrong SAK length");
+            return PM3_EINVARG;
+
+        }
+        flags |= FLAG_FORCED_SAK;
+    }
 
     // Use UID, SAK, ATQA from EMUL, if uid not defined
     if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
@@ -3834,7 +3816,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
             return PM3_SUCCESS;
         }
     } else {
-        PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf mf sim h`"));
+        PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf mf sim -h`"));
         // MFC
         if ((blockNum != numBlocks)) {
             PrintAndLogEx(WARNING, "Error, file content, Only loaded %d blocks, must be %d blocks into emulator memory", blockNum, numBlocks);
