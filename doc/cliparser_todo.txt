@@ -70,7 +70,6 @@ hf mf rdsc
 hf mf restore
 hf mf setmod
 hf mf wrbl
-hf mf sim
 hf mf ecfill
 hf mf eclr
 hf mf egetblk
