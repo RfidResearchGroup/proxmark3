@@ -58,7 +58,6 @@ hf felica resetmode
 hf felica litesim
 hf felica litedump
 hf mf hardnested
-hf mf staticnested
 hf mf autopwn
 hf mf nack
 hf mf chk
