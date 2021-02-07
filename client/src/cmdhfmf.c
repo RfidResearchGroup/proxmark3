@@ -42,18 +42,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hf14_mifare(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mf darkside <block number> <A|B>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h               this help");
-    PrintAndLogEx(NORMAL, "      <block number>  (Optional) target other block");
-    PrintAndLogEx(NORMAL, "      <A|B>           (optional) target key type");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf darkside"));
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf darkside 16"));
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf darkside 16 B"));
-    return PM3_SUCCESS;
-}
 static int usage_hf14_mfsim(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf sim [u <uid>] [n <numreads>] [t] [a <ATQA>] [s <SAK>] [i] [x] [e] [v]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -692,17 +680,31 @@ static char GetFormatFromSector(uint8_t sectorNo) {
 }
 
 static int CmdHF14AMfDarkside(const char *Cmd) {
-    uint8_t blockno = 0, key_type = MIFARE_AUTH_KEYA;
-    uint64_t key = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf darkside",
+                  "Darkside attack",
+                  "hf mf darkside\n"
+                  "hf mf darkside -b 16\n"
+                  "hf mf darkside -b 16 --keyb\n");
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_hf14_mifare();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("b", "block", "<dec> ", "Simulation type to use"),
+        arg_lit0(NULL, "keyb", "Target key B instead of default key A"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    blockno = param_get8(Cmd, 0);
+    uint8_t blockno = arg_get_u32_def(ctx, 1, 0);
 
-    cmdp = tolower(param_getchar(Cmd, 1));
-    if (cmdp == 'b')
+    uint8_t key_type = MIFARE_AUTH_KEYA;
+
+    if (arg_get_lit(ctx, 2)) {
+        PrintAndLogEx(INFO, "Targeting key B");
         key_type = MIFARE_AUTH_KEYB;
+    }
+
+    uint64_t key = 0;
 
     int isOK = mfDarkside(blockno, key_type, &key);
     PrintAndLogEx(NORMAL, "");
