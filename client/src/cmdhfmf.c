@@ -57,23 +57,6 @@ static int CmdHelp(const char *Cmd);
     return PM3_SUCCESS;
 }
 */
-static int usage_hf14_nested(void) {
-    PrintAndLogEx(NORMAL, "Usage:");
-    PrintAndLogEx(NORMAL, " all sectors:  hf mf nested  <card memory> <block> <key A/B> <key (12 hex symbols)> [t,d]");
-    PrintAndLogEx(NORMAL, " one sector:   hf mf nested  o <block> <key A/B> <key (12 hex symbols)> <target block> <target key A/B> [t]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h    this help");
-    PrintAndLogEx(NORMAL, "      card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
-    PrintAndLogEx(NORMAL, "      t    transfer keys into emulator memory");
-    PrintAndLogEx(NORMAL, "      d    write keys to binary file `hf-mf-<UID>-key.bin`");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf nested 1 0 A FFFFFFFFFFFF")"        -- key recovery against 1K, block 0, Key A using key FFFFFFFFFFFF");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf nested 1 0 A FFFFFFFFFFFF t")"      -- and transfer keys into emulator memory");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf nested 1 0 A FFFFFFFFFFFF d")"      -- or write keys to binary file ");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf nested o 0 A FFFFFFFFFFFF 4 A")"    -- one sector key recovery. Use block 0 Key A to find block 4 Key A");
-    return PM3_SUCCESS;
-}
 static int usage_hf14_staticnested(void) {
     PrintAndLogEx(NORMAL, "Usage:");
     PrintAndLogEx(NORMAL, " all sectors:  hf mf staticnested  <card memory> <block> <key A/B> <key (12 hex symbols)> [t,d]");
@@ -679,6 +662,8 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
         PrintAndLogEx(INFO, "Targeting key B");
         key_type = MIFARE_AUTH_KEYB;
     }
+
+    CLIParserFree(ctx);
 
     uint64_t key = 0;
 
@@ -1294,61 +1279,85 @@ static int CmdHF14AMfRestore(const char *Cmd) {
 }
 
 static int CmdHF14AMfNested(const char *Cmd) {
-    sector_t *e_sector = NULL;
-    uint8_t keyType = 0;
-    uint8_t trgBlockNo = 0;
-    uint8_t trgKeyType = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf nested",
+                  "Execute Nested attack against MIFARE Classic card for key recovery",
+                  "hf mf nested -t 0 -b 0 --keya -k FFFFFFFFFFFF                     -> Key recovery against MIFARE Mini\n"
+                  "hf mf nested -t 1 -b 0 --keya -k FFFFFFFFFFFF                     -> Key recovery against MIFARE Classic 1k\n"
+                  "hf mf nested -t 2 -b 0 --keya -k FFFFFFFFFFFF                     -> Key recovery against MIFARE 2k\n"
+                  "hf mf nested -t 4 -b 0 --keya -k FFFFFFFFFFFF                     -> Key recovery against MIFARE 4k\n"
+                  "hf mf nested --single -b 0 --keya FFFFFFFFFFFF --tblock 4 --tkeya -> Single sector key recovery. Use block 0 Key A to find block 4 Key A");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("k", "key", "<hex>", "Key specified as 12 hex symbols"),
+        arg_int0("t", "type", "<0-4>", "MIFARE Classic type"),
+        arg_int0("b", "block", "<dec>", "Input block number"),
+        arg_lit0(NULL, "keya", "Input key specified is A key (default)"),
+        arg_lit0(NULL, "keyb", "Input key specified is B key"),
+        arg_int0(NULL, "tblock", "<dec>", "Target block number"),
+        arg_lit0(NULL, "tkeya", "Target A key (default)"),
+        arg_lit0(NULL, "tkeyb", "Target B key"),
+        arg_lit0("e", "emukeys", "Fill simulator keys from found keys"),
+        arg_lit0(NULL, "dumpkeys", "Dump found keys to file"),
+        arg_lit0(NULL, "single", "Single sector (defaults to All)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int keylen = 0;
+    uint8_t key[6] = {0};
+    CLIGetHexWithReturn(ctx, 1, key, &keylen);
+
     uint8_t SectorsCnt = 0;
-    uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-    uint8_t keyBlock[(ARRAYLEN(g_mifare_default_keys) + 1) * 6];
-    uint64_t key64 = 0;
-    bool transferToEml = false;
-    bool createDumpFile = false;
+    SectorsCnt = NewNumOfSectors(arg_get_u32_def(ctx, 2, 1));
 
-    if (strlen(Cmd) < 3) return usage_hf14_nested();
+    uint8_t blockNo = arg_get_u32_def(ctx, 3, 0);
 
-    char cmdp, ctmp;
-    cmdp = tolower(param_getchar(Cmd, 0));
-    uint8_t blockNo = param_get8(Cmd, 1);
-    ctmp = tolower(param_getchar(Cmd, 2));
+    uint8_t keyType = 0;
 
-    if (ctmp != 'a' && ctmp != 'b') {
-        PrintAndLogEx(WARNING, "key type must be A or B");
+    if (arg_get_lit(ctx, 4) && arg_get_lit(ctx, 5)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Input key type must be A or B");
         return PM3_EINVARG;
-    }
-
-    if (ctmp != 'a')
+    } else if (arg_get_lit(ctx, 5)) {
         keyType = 1;
-
-    if (param_gethex(Cmd, 3, key, 12)) {
-        PrintAndLogEx(WARNING, "key must include 12 HEX symbols");
-        return PM3_EINVARG;
     }
 
-    if (cmdp == 'o') {
-        trgBlockNo = param_get8(Cmd, 4);
-        ctmp = tolower(param_getchar(Cmd, 5));
-        if (ctmp != 'a' && ctmp != 'b') {
-            PrintAndLogEx(WARNING, "target key type must be A or B");
+    uint8_t trgBlockNo = arg_get_u32_def(ctx, 6, 0);
+
+    uint8_t trgKeyType = 0;
+
+    if (arg_get_lit(ctx, 7) && arg_get_lit(ctx, 8)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Target key type must be A or B");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 7)) {
+        trgKeyType = 1;
+    }
+
+    bool transferToEml = arg_get_lit(ctx, 9);
+    bool createDumpFile = arg_get_lit(ctx, 10);
+    bool singleSector = arg_get_lit(ctx, 11);
+
+    CLIParserFree(ctx);
+
+    //validations
+    if (singleSector == false) {
+        if (SectorsCnt == 0) {
+            PrintAndLogEx(WARNING, "Invalid MIFARE Type");    
             return PM3_EINVARG;
         }
-        if (ctmp != 'a') {
-            trgKeyType = 1;
-        }
-    } else {
-        SectorsCnt = NumOfSectors(cmdp);
-        if (SectorsCnt == 0) return usage_hf14_nested();
     }
 
-    uint8_t j = 4;
-    while (ctmp != 0x00) {
-
-        ctmp = tolower(param_getchar(Cmd, j));
-        transferToEml |= (ctmp == 't');
-        createDumpFile |= (ctmp == 'd');
-
-        j++;
+    if (keylen != 6) {
+        PrintAndLogEx(WARNING, "Input key must include 12 HEX symbols");
+        return PM3_EINVARG;
     }
+
+    sector_t *e_sector = NULL;
+    uint8_t keyBlock[(ARRAYLEN(g_mifare_default_keys) + 1) * 6];
+    uint64_t key64 = 0;
 
     // check if tag doesn't have static nonce
     if (detect_classic_static_nonce() == NONCE_STATIC) {
@@ -1363,7 +1372,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         return PM3_EOPABORTED;
     }
 
-    if (cmdp == 'o') {
+    if (singleSector) {
         int16_t isOK = mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, true);
         switch (isOK) {
             case PM3_ETIMEOUT:

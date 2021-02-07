@@ -99,7 +99,7 @@ local function nested(key,sak)
     else
         print("I don't know how many sectors there are on this type of card, defaulting to 16")
     end
-    local cmd = string.format('hf mf nested %d 0 A %s d', typ, key)
+    local cmd = string.format('hf mf nested -t %d -b 0 --keya -k %s --dumpkeys', typ, key)
     core.console(cmd)
 end
 
