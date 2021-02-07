@@ -1102,7 +1102,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (ak_len) {
-        if (ak_len != 16 && ak_len != 8) {
+        if (ak_len != 16 && ak_len != 4) {
             PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
             return PM3_EINVARG;
         }
