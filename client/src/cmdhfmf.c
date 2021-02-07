@@ -42,18 +42,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hf14_ice(void) {
-    PrintAndLogEx(NORMAL, "Usage:   hf mf ice [l <limit>] [f <name>]");
-    PrintAndLogEx(NORMAL, "  h            this help");
-    PrintAndLogEx(NORMAL, "  l <limit>    nonces to be collected");
-    PrintAndLogEx(NORMAL, "  f <name>     save nonces to <name> instead of hf-mf-<UID>-nonces.bin");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("         hf mf ice"));
-    PrintAndLogEx(NORMAL, _YELLOW_("         hf mf ice f nonces.bin"));
-    return PM3_SUCCESS;
-}
-
 static int usage_hf14_dump(void) {
     PrintAndLogEx(NORMAL, "Usage:   hf mf dump [card memory] [k <name>] [f <name>]");
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
@@ -4709,44 +4697,30 @@ static int CmdHf14AMfNack(const char *Cmd) {
 }
 
 static int CmdHF14AMfice(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf ice",
+                  "Collect MIFARE Classic nonces to file",
+                  "hf mf ice\n"
+                  "hf mf ice -f nonces.bin");
 
-    uint8_t blockNo = 0;
-    uint8_t keyType = 0;
-    uint8_t trgBlockNo = 0;
-    uint8_t trgKeyType = 1;
-    bool slow = false;
-    bool initialize = true;
-    bool acquisition_completed = false;
-    uint8_t cmdp = 0;
-    uint32_t flags = 0;
-    uint32_t total_num_nonces = 0;
-    char ctmp;
-    char filename[FILE_PATH_SIZE], *fptr;
-    FILE *fnonces = NULL;
-    PacketResponseNG resp;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<filename>", "filename of nonce dump"),
+        arg_u64_0(NULL, "limit", "<dec>", "nonces to be collected"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint32_t part_limit = 3000;
-    uint32_t limit = 50000;
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    while ((ctmp = param_getchar(Cmd, cmdp))) {
-        switch (tolower(ctmp)) {
-            case 'h':
-                return usage_hf14_ice();
-            case 'f':
-                param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                cmdp++;
-                break;
-            case 'l':
-                limit = param_get32ex(Cmd, cmdp + 1, 50000, 10);
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", ctmp);
-                usage_hf14_ice();
-                return PM3_ESOFT;
-        }
-        cmdp++;
-    }
+    uint32_t limit = arg_get_u32_def(ctx, 2, 50000);
+
+    CLIParserFree(ctx);
+
+    // Validations
+    char *fptr;
 
     if (filename[0] == '\0') {
         fptr = GenerateFilename("hf-mf-", "-nonces.bin");
@@ -4756,6 +4730,20 @@ static int CmdHF14AMfice(const char *Cmd) {
         free(fptr);
     }
 
+    uint8_t blockNo = 0;
+    uint8_t keyType = 0;
+    uint8_t trgBlockNo = 0;
+    uint8_t trgKeyType = 1;
+    bool slow = false;
+    bool initialize = true;
+    bool acquisition_completed = false;
+    uint32_t flags = 0;
+    uint32_t total_num_nonces = 0;
+    FILE *fnonces = NULL;
+    PacketResponseNG resp;
+
+    uint32_t part_limit = 3000;
+    
     PrintAndLogEx(NORMAL, "Collecting "_YELLOW_("%u")" nonces \n", limit);
 
     if ((fnonces = fopen(filename, "wb")) == NULL) {
