@@ -3907,7 +3907,26 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     dfname_t dfnames[255];
     uint8_t dfname_count = 0;
 
-    if (handler_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
+    int resAID = handler_desfire_appids(app_ids, &app_ids_len);
+    if (resAID == PM3_EAPDU_FAIL && bruteforce) {
+        PrintAndLogEx(WARNING, "Tag doesn't allow listing AIDs");
+        PrintAndLogEx(INFO, "Enumerating through all AIDs manually, this will take a while!");
+        for (uint32_t id = 0; id <= 0xFFFFFF; id++) {
+            uint8_t appId[3] = {(id & 0xFF), (id >> 8 & 0xFF), (id >> 16 & 0xFF)};
+            sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, appId}; //0x5a
+            uint16_t sw = 0;
+            uint8_t data[255 * 5]  = {0x00};
+            uint32_t resplen = 0;
+            DESFIRESendApdu(!tag->rf_field_on, true, apdu, data, sizeof(data), &resplen, &sw);
+            if (sw == status(MFDES_S_OPERATION_OK)) {
+                PrintAndLogEx(DEBUG, "Got new APPID 0x%02X%02X%02X\n", appId[2], appId[1], appId[0]);
+                app_ids[app_ids_len] = appId[0];
+                app_ids[app_ids_len+1] = appId[1];
+                app_ids[app_ids_len+2] = appId[2];
+                app_ids_len+=3;
+            }
+        }
+    } else if (resAID != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
         DropFieldDesfire();
         return PM3_ESOFT;
