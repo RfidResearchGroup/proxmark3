@@ -3890,9 +3890,11 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("b", "bruteforce", "Bruteforce AIDs if tag doesn't allow listing"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool bruteforce = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
     DropFieldDesfire();
