@@ -2757,11 +2757,6 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     if (selftest)
         return generator_selftest();
 
-    if (u_len != 7) {
-        PrintAndLogEx(WARNING, "Key must be 7 hex bytes");
-        return PM3_EINVARG;
-    }
-
     if (use_tag) {
         // read uid from tag
         clearCommandBuffer();
@@ -2785,6 +2780,11 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
             return PM3_ESOFT;
         }
         memcpy(uid, card.uid, sizeof(uid));
+    } else {
+        if (u_len != 7) {
+            PrintAndLogEx(WARNING, "Key must be 7 hex bytes");
+            return PM3_EINVARG;
+        }
     }
 
     PrintAndLogEx(INFO, "---------------------------------");
