@@ -811,7 +811,7 @@ void binarraytobinstring(char *target, char *source,  int length) {
     *target = '\0';
 }
 
-int binstring2binarray(uint8_t* target, char *source, int length) {
+int binstring2binarray(uint8_t *target, char *source, int length) {
     int count = 0;
     char *start = source;
     while (length--) {

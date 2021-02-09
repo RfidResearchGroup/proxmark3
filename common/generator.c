@@ -485,13 +485,13 @@ int mfc_algo_touch_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *
     if (key == NULL) return PM3_EINVARG;
 
     *key = (
-        (uint64_t)(uid[1] ^ uid[2] ^ uid[3]) << 40 |
-        (uint64_t)uid[1] << 32 |
-        (uint64_t)uid[2] << 24 |
-        (uint64_t)(((uid[0] + uid[1] + uid[2] + uid[3]) % 0x100) ^ uid[3]) << 16 |
-        (uint64_t)0  << 8 |
-        (uint64_t)0 
-    );
+               (uint64_t)(uid[1] ^ uid[2] ^ uid[3]) << 40 |
+               (uint64_t)uid[1] << 32 |
+               (uint64_t)uid[2] << 24 |
+               (uint64_t)(((uid[0] + uid[1] + uid[2] + uid[3]) % 0x100) ^ uid[3]) << 16 |
+               (uint64_t)0  << 8 |
+               (uint64_t)0
+           );
     return PM3_SUCCESS;
 }
 

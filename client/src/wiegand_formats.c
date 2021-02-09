@@ -586,22 +586,22 @@ static bool Pack_HGeneric37(wiegand_card_t *card, wiegand_message_t *packed, boo
 
     // even1
     set_bit_by_position(packed,
-        evenparity32(
-            get_nonlinear_field(packed, 8, (uint8_t[]) {4, 8, 12, 16, 20, 24, 28, 32}))
-            , 0
-            );
+                        evenparity32(
+    get_nonlinear_field(packed, 8, (uint8_t[]) {4, 8, 12, 16, 20, 24, 28, 32}))
+    , 0
+                       );
     // odd1
     set_bit_by_position(packed,
-        oddparity32(
-            get_nonlinear_field(packed, 8, (uint8_t[]) {6, 10, 14, 18, 22, 26, 30, 34}))
-            , 2
-            );
+                        oddparity32(
+    get_nonlinear_field(packed, 8, (uint8_t[]) {6, 10, 14, 18, 22, 26, 30, 34}))
+    , 2
+                       );
     // even2
     set_bit_by_position(packed,
-        evenparity32(
-            get_nonlinear_field(packed, 8, (uint8_t[]) {7, 11, 15, 19, 23, 27, 31, 35}))
-            , 3
-            );
+                        evenparity32(
+    get_nonlinear_field(packed, 8, (uint8_t[]) {7, 11, 15, 19, 23, 27, 31, 35}))
+    , 3
+                       );
     if (preamble)
         return add_HID_header(packed);
     return true;

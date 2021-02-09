@@ -254,7 +254,7 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
 
                     if (verbose) printf("%14s: %s\n", "Device Type", (device_type & CL_DEVICE_TYPE_GPU) ? "GPU" : (device_type & CL_DEVICE_TYPE_CPU) ? "CPU" : "Other");
 
-                    if ((*cd_ctx)[platform_idx].selected == false) (*cd_ctx)[platform_idx].device[device_idx].selected = false;
+                    if ((*cd_ctx)[platform_idx].selected == false)(*cd_ctx)[platform_idx].device[device_idx].selected = false;
                     else (*cd_ctx)[platform_idx].device[device_idx].selected = plat_dev_enabled(global_device_id, dev_sel, dev_cnt, (unsigned int) device_type, device_types_selected);
                     global_device_id++;
                     if ((*cd_ctx)[platform_idx].device[device_idx].selected)(*selected_devices_cnt)++;
