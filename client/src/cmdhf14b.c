@@ -202,7 +202,7 @@ static bool wait_cmd_14b(bool verbose, bool is_select) {
                               (crc) ? _GREEN_("ok") : _RED_("fail")
                              );
             } else if (len == 0) {
-                    PrintAndLogEx(INFO, "no response from tag");
+                PrintAndLogEx(INFO, "no response from tag");
             } else {
                 PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, len));
             }

@@ -584,7 +584,7 @@ static int CmdIndalaSim(const char *Cmd) {
     }
 
     // a0 00 00 00 bd 98 9a 11
-    
+
     // indala PSK
     // It has to send either 64bits (8bytes) or 224bits (28bytes).  Zero padding needed if not.
     // lf simpsk 1 c 32 r 2 d 0102030405060708

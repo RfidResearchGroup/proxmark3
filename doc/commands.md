@@ -534,13 +534,13 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf help                `|Y       |`This help`
 |`lf config              `|N       |`Get/Set config for LF sampling, bit/sample, decimation, frequency`
-|`lf cmdread             `|N       |`Modulate LF reader field to send command before read (all periods in microseconds)`
+|`lf cmdread             `|N       |`Modulate LF reader field to send command before read`
 |`lf read                `|N       |`Read LF tag`
-|`lf search              `|Y       |`Read and Search for valid known tag (in offline mode it you can load first then search)`
-|`lf sim                 `|N       |`Simulate LF tag from buffer with optional GAP (in microseconds)`
-|`lf simask              `|N       |`Simulate LF ASK tag from demodbuffer or input`
-|`lf simfsk              `|N       |`Simulate LF FSK tag from demodbuffer or input`
-|`lf simpsk              `|N       |`Simulate LF PSK tag from demodbuffer or input`
+|`lf search              `|Y       |`Read and Search for valid known tag`
+|`lf sim                 `|N       |`Simulate LF tag from buffer`
+|`lf simask              `|N       |`Simulate ASK tag`
+|`lf simfsk              `|N       |`Simulate FSK tag`
+|`lf simpsk              `|N       |`Simulate PSK tag`
 |`lf simbidir            `|N       |`Simulate LF tag (with bidirectional data transmission between reader and tag)`
 |`lf sniff               `|N       |`Sniff LF traffic between reader and tag`
 |`lf tune                `|N       |`Continuously measure LF antenna tuning`

@@ -121,10 +121,10 @@ bool set_nonlinear_field(wiegand_message_t *data, uint64_t value, uint8_t numBit
 }
 
 static uint8_t get_length_from_header(wiegand_message_t *data) {
-/**
- * detect if message has "preamble" / "sentinel bit"
- * 
- */
+    /**
+     * detect if message has "preamble" / "sentinel bit"
+     *
+     */
 
 
     uint8_t len = 0;

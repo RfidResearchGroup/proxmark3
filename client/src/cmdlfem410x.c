@@ -560,8 +560,8 @@ static int CmdEM410xBrute(const char *Cmd) {
         payload.gap = 0;
 
         clearCommandBuffer();
-        SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));   
-        
+        SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));
+
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_LF_SIMULATE, &resp, delay)) {
             if (resp.status == PM3_EOPABORTED) {

@@ -267,10 +267,10 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
     }
 
     PrintAndLogEx(NORMAL, "  --= Nonvolatile program memory: " _YELLOW_("%uK") " bytes %s ( " _YELLOW_("%2.0f%%") " used )"
-                , mem_avail
-                , asBuff
-                , mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100
-                );
+                  , mem_avail
+                  , asBuff
+                  , mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100
+                 );
 
     switch ((iChipID & 0xF000) >> 12) {
         case 0:

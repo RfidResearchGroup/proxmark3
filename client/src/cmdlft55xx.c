@@ -897,7 +897,7 @@ static int CmdT55xxWakeUp(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    bool verbose = arg_get_lit(ctx, 2);    
+    bool verbose = arg_get_lit(ctx, 2);
     bool r0 = arg_get_lit(ctx, 3);
     bool r1 = arg_get_lit(ctx, 4);
     bool r2 = arg_get_lit(ctx, 5);
@@ -951,7 +951,7 @@ static int CmdT55xxDetect(const char *Cmd) {
 
     // 1 (help) + 2 (two user specified params) + (6 T55XX_DLMODE_ALL)
     void *argtable[3 + 6] = {
-        arg_param_begin,        
+        arg_param_begin,
         arg_lit0("1", NULL, "extract using data from graphbuffer"),
         arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
     };
@@ -1719,13 +1719,13 @@ static int CmdT55xxDangerousRaw(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    int bs_len = binstring2binarray(ng.data, (char*)bin, bin_len);
+    int bs_len = binstring2binarray(ng.data, (char *)bin, bin_len);
     if (bs_len == 0) {
         return PM3_EINVARG;
     }
 
     ng.bitlen = bs_len;
-    
+
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_DANGERRAW, (uint8_t *)&ng, sizeof(ng));
@@ -2963,8 +2963,8 @@ static int CmdT55xxChkPwds(const char *Cmd) {
       start index to call arg_add_t55xx_downloadlink() is 4 (1 + 3) given the above sample
     */
 
-   // 1 (help) + 3 (three user specified params) + (6 T55XX_DLMODE_ALL)
-   void *argtable[4 + 6] = {
+    // 1 (help) + 3 (three user specified params) + (6 T55XX_DLMODE_ALL)
+    void *argtable[4 + 6] = {
         arg_param_begin,
         arg_lit0("m", "fm", "use dictionary from flash memory (RDV4)"),
         arg_str0("f", "file", "<filename>", "file name"),
@@ -2980,7 +2980,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, sizeof(filename), &fnlen);
 
-                // White cloner password based on EM4100 ID
+    // White cloner password based on EM4100 ID
     bool use_calc_password = false;
     uint32_t card_password = 0x00;
     uint64_t cardid = 0;
@@ -3087,7 +3087,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     }
 
     // to try each downlink mode for each password
-    int dl_mode; 
+    int dl_mode;
 
     // try calculated password
     if (use_calc_password) {
@@ -3180,7 +3180,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
                   "lf t55xx bruteforce --r2 -s aaaaaa77 -e aaaaaa99\n"
                  );
 
-     // 1 (help) + 2 (two user specified params) + (6 T55XX_DLMODE_ALL)
+    // 1 (help) + 2 (two user specified params) + (6 T55XX_DLMODE_ALL)
     void *argtable[3 + 6] = {
         arg_param_begin,
         arg_str1("s", "start", "<hex>", "search start password (4 hex bytes)"),
@@ -3307,7 +3307,7 @@ static int CmdT55xxRecoverPW(const char *Cmd) {
                   "lf t55xx recoverpw -p 11223344 --r3\n"
                  );
 
-     // 1 (help) + 1 (one user specified params) + (6 T55XX_DLMODE_ALL)
+    // 1 (help) + 1 (one user specified params) + (6 T55XX_DLMODE_ALL)
     void *argtable[2 + 6] = {
         arg_param_begin,
         arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
@@ -3547,7 +3547,7 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
                   "lf t55xx p1detect -p 11223344 --r3\n"
                  );
 
-     // 1 (help) + 2 (two user specified params) + (5 T55XX_DLMODE_SINGLE)
+    // 1 (help) + 2 (two user specified params) + (5 T55XX_DLMODE_SINGLE)
     void *argtable[3 + 5] = {
         arg_param_begin,
         arg_lit0("1", NULL, "extract using data from graphbuffer"),
@@ -3645,7 +3645,7 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
                   "lf t55xx deviceconfig -a 55 -b 14 -c 21 -d 30          -> default EM4305"
                  );
 
-     // 1 (help) + 9 (nine user specified params) + (5 T55XX_DLMODE_SINGLE)
+    // 1 (help) + 9 (nine user specified params) + (5 T55XX_DLMODE_SINGLE)
     void *argtable[10 + 5] = {
         arg_param_begin,
         arg_int0("a", NULL, "<8..255>", "Set start gap"),
@@ -3911,10 +3911,10 @@ static int CmdT55xxSniff(const char *Cmd) {
     uint8_t width1 = 0;
     uint8_t width0 = 0;
 
-    if (opt_width0 > -1) 
+    if (opt_width0 > -1)
         width0 = (uint8_t)opt_width0 & 0xFF;
 
-    if (opt_width1 > -1) 
+    if (opt_width1 > -1)
         width1 = (uint8_t)opt_width1 & 0xFF;
 
 
