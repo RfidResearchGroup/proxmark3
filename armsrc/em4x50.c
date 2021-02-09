@@ -1222,11 +1222,19 @@ static int em4x50_sim_read_bit(void) {
     while (cycles < EM4X50_T_TAG_FULL_PERIOD) {
 
         // wait until reader field disappears
-        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
+        while ((timeout--) && !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
+        if (timeout <= 0) {
+            return PM3_ETIMEOUT;
+        }
+        timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
         // now check until reader switches on carrier field
         tval = GetTicks();
-        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+        while ((timeout--) && (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
+
+            if (timeout <= 0) {
+                return PM3_ETIMEOUT;
+            }
 
             // check if current cycle takes longer than "usual""
             if (GetTicks() - tval > EM4X50_T_ZERO_DETECTION * CYCLES2TICKS) {
@@ -1237,7 +1245,7 @@ static int em4x50_sim_read_bit(void) {
                 if (timeout <= 0) {
                     return PM3_ETIMEOUT;
                 }
-                // timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
+                //timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
                 // now we have a reference "position", from here it will take
                 // slightly less than 32 cycles until the end of the bit period
@@ -1248,6 +1256,7 @@ static int em4x50_sim_read_bit(void) {
                 return 0;
             }
         }
+        timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
         // no gap detected, i.e. reader field is still up;
         // continue with counting cycles
@@ -1431,11 +1440,14 @@ static int em4x50_sim_handle_standard_read_command(uint32_t *tag) {
     // last word read protected
     int lwrp = (reflect32(tag[EM4X50_PROTECTION]) >> 8) & 0xFF;
 
+    int command = PM3_SUCCESS;
+
     while ((BUTTON_PRESS() == false) && (data_available() == false)) {
 
         WDT_HIT();
 
-        int command = em4x50_sim_send_listen_window(tag);
+        command = em4x50_sim_send_listen_window(tag);
+        
         if (command != PM3_SUCCESS) {
             return command;
         }
@@ -1737,19 +1749,19 @@ void em4x50_handle_commands(int *command, uint32_t *tag) {
             break;
 
         case EM4X50_COMMAND_RESET:
-            *command =  em4x50_sim_handle_reset_command(tag);
+            *command = em4x50_sim_handle_reset_command(tag);
             break;
 
         case EM4X50_COMMAND_WRITE:
-            *command =  em4x50_sim_handle_write_command(tag);
+            *command = em4x50_sim_handle_write_command(tag);
             break;
 
         case EM4X50_COMMAND_WRITE_PASSWORD:
-            *command =  em4x50_sim_handle_writepwd_command(tag);
+            *command = em4x50_sim_handle_writepwd_command(tag);
             break;
 
         case EM4X50_COMMAND_SELECTIVE_READ:
-            *command =  em4x50_sim_handle_selective_read_command(tag);
+            *command = em4x50_sim_handle_selective_read_command(tag);
             break;
 
         case EM4X50_COMMAND_STANDARD_READ:

@@ -133,6 +133,7 @@ void RunMod(void) {
 
     rdv40_spiffs_lazy_mount();
     StandAloneMode();
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     Dbprintf(_YELLOW_("Standalone mode THAREXDE started"));
 
     for (;;) {
@@ -204,10 +205,11 @@ void RunMod(void) {
                 for (int i = 0; i < EM4X50_NO_WORDS; i++) {
                     sprintf((char *)entry + strlen((char *)entry), "%08"PRIx32"\n", tag[i]);
                 }
-                log_exists = exists_in_spiffs(LF_EM4X50_LOGFILE_SIM);
-                Dbprintf("log_exists = %i", log_exists);
-                //append(LF_EM4X50_LOGFILE_SIM, entry, strlen((char *)entry));
 
+                if (exists_in_spiffs(LF_EM4X50_LOGFILE_SIM)) {
+                    rdv40_spiffs_remove(LF_EM4X50_LOGFILE_SIM, RDV40_SPIFFS_SAFETY_SAFE);
+                }
+                rdv40_spiffs_write(LF_EM4X50_LOGFILE_SIM, entry, strlen((char *)entry), RDV40_SPIFFS_SAFETY_SAFE);
             }
             
             // stop if key (pm3 button or enter key) has been pressed
@@ -253,13 +255,13 @@ void RunMod(void) {
                 sprintf((char *)entry + strlen((char *)entry), "\n");
                 append(LF_EM4X50_LOGFILE_COLLECT, entry, strlen((char *)entry));
             }
-
-            // reset timer
-            AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; // re-enable timer and wait for TC0
-            AT91C_BASE_TC0->TC_RC  = 0; // set TIOA (carry bit) on overflow, return to zero
-            AT91C_BASE_TC0->TC_RA  = 1; // clear carry bit on next clock cycle
-            AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; // reset and re-enable timer
         }
+        
+        // reset timer
+        AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; // re-enable timer and wait for TC0
+        AT91C_BASE_TC0->TC_RC  = 0; // set TIOA (carry bit) on overflow, return to zero
+        AT91C_BASE_TC0->TC_RA  = 1; // clear carry bit on next clock cycle
+        AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; // reset and re-enable timer
     }
 
     if (state == STATE_READ) {
