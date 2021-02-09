@@ -3890,11 +3890,9 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("b", "bruteforce", "Bruteforce AIDs if tag doesn't allow listing"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool bruteforce = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
     DropFieldDesfire();
@@ -3909,26 +3907,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     dfname_t dfnames[255];
     uint8_t dfname_count = 0;
 
-    int resAID = handler_desfire_appids(app_ids, &app_ids_len);
-    if (resAID == PM3_EAPDU_FAIL && bruteforce) {
-        PrintAndLogEx(WARNING, "Tag doesn't allow listing AIDs");
-        PrintAndLogEx(INFO, "Enumerating through all AIDs manually, this will take a while!");
-        for (uint32_t id = 0; id <= 0xFFFFFF; id++) {
-            uint8_t appId[3] = {(id & 0xFF), (id >> 8 & 0xFF), (id >> 16 & 0xFF)};
-            sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, appId}; //0x5a
-            uint16_t sw = 0;
-            uint8_t data[255 * 5]  = {0x00};
-            uint32_t resplen = 0;
-            DESFIRESendApdu(!tag->rf_field_on, true, apdu, data, sizeof(data), &resplen, &sw);
-            if (sw == status(MFDES_S_OPERATION_OK)) {
-                PrintAndLogEx(DEBUG, "Got new APPID 0x%02X%02X%02X\n", appId[2], appId[1], appId[0]);
-                app_ids[app_ids_len] = appId[0];
-                app_ids[app_ids_len+1] = appId[1];
-                app_ids[app_ids_len+2] = appId[2];
-                app_ids_len+=3;
-            }
-        }
-    } else if (resAID != PM3_SUCCESS) {
+    if (handler_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
         DropFieldDesfire();
         return PM3_ESOFT;
@@ -4000,6 +3979,69 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 
     }
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    DropFieldDesfire();
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesBruteApps(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes bruteaid",
+                  "Recover AIDs by bruteforce.\n"
+                  "WARNING: This command takes a long time",
+                  "hf mfdes bruteaid                    -> Search all apps\n"
+                  "hf mfdes bruteaid -s F0000F -i 16    -> Search MAD range manually");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("s",  "start",    "<aid>", "Starting App ID as hex bytes (3 bytes,big endian)"),
+        arg_strx0("e",  "end",      "<aid>", "Last App ID as hex bytes (3 bytes,big endian)"),
+        arg_int0("i",  "step", "<step>", "Increment step when bruteforcing (decimal integer)"),
+        arg_lit0("m", "mad", "Only bruteforce the MAD range"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint8_t startAid[3] = {0};
+    uint8_t endAid[3] = {0xFF, 0xFF, 0xFF};
+    int startLen = 0;
+    int endLen = 0;
+    CLIGetHexWithReturn(ctx, 1, startAid, &startLen);
+    CLIGetHexWithReturn(ctx, 2, endAid, &endLen);
+    uint32_t idIncrement = arg_get_int_def(ctx, 3, 1);
+    bool mad = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+    // TODO: We need to check the tag version, EV1 should stop after 26 apps are found
+    
+    // uint8_t app_ids[32*3] = {0}; // we are hoping to find less than 32 apps, this can backfire spectacularly
+    // uint8_t app_ids_len = 0;
+    if (mad) {
+        idIncrement = 0x10;
+        startAid[0] = 0xF0;
+        startAid[1] = 0x00;
+        startAid[2] = 0x0F;
+    }
+    uint32_t idStart = (startAid[0] << 16) + (startAid[1] << 8) + startAid[2];
+    uint32_t idEnd = (endAid[0] << 16) + (endAid[1] << 8) + endAid[2];
+    PrintAndLogEx(INFO, "Enumerating through all AIDs manually, this will take a while!");
+    for (uint32_t id = idStart; id <= idEnd && id >= idStart; id += idIncrement) {
+        if (kbd_enter_pressed()) break;
+        int progress = ((id - idStart)*100) / ((idEnd - idStart));
+        PrintAndLogEx(INPLACE, "Progress: %d %%, current AID: %06X", progress, id);
+        uint8_t appId[3] = {(id & 0xFF), (id >> 8 & 0xFF), (id >> 16 & 0xFF)};
+        sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, appId}; //0x5a
+        uint16_t sw = 0;
+        uint8_t data[255 * 5]  = {0x00};
+        uint32_t resplen = 0;
+        DESFIRESendApdu(!tag->rf_field_on, true, apdu, data, sizeof(data), &resplen, &sw);
+        if (sw == status(MFDES_S_OPERATION_OK)) {
+            printf("\33[2K\r"); // clear current line before printing
+            PrintAndLogEx(SUCCESS, "Got new APPID %06X", id);
+            // app_ids[app_ids_len] = appId[0];
+            // app_ids[app_ids_len+1] = appId[1];
+            // app_ids[app_ids_len+2] = appId[2];
+            // app_ids_len+=3;
+        }
+    }
+    PrintAndLogEx(SUCCESS, "Done");
     DropFieldDesfire();
     return PM3_SUCCESS;
 }
@@ -4945,6 +4987,7 @@ static command_t CommandTable[] = {
 //    {"ndef",             CmdHF14aDesNDEF,             IfPm3Iso14443a,  "Prints NDEF records from card"},
 //    {"mad",             CmdHF14aDesMAD,             IfPm3Iso14443a,  "Prints MAD records from card"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("AID") " -----------------------"},
+    {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
     {"createaid",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},
     {"deleteaid",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application ID"},
     {"selectaid",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
