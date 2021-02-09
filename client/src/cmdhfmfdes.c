@@ -3993,9 +3993,9 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("s",  "start",    "<aid>", "Starting App ID as hex bytes (3 bytes,big endian)"),
-        arg_strx0("e",  "end",      "<aid>", "Last App ID as hex bytes (3 bytes,big endian)"),
-        arg_int0("i",  "step", "<step>", "Increment step when bruteforcing (decimal integer)"),
+        arg_strx0("s",  "start",    "<hex>", "Starting App ID as hex bytes (3 bytes,big endian)"),
+        arg_strx0("e",  "end",      "<hex>", "Last App ID as hex bytes (3 bytes,big endian)"),
+        arg_int0("i",  "step", "<dec>", "Increment step when bruteforcing (decimal integer)"),
         arg_lit0("m", "mad", "Only bruteforce the MAD range"),
         arg_param_end
     };
@@ -4010,23 +4010,21 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
     bool mad = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
     // TODO: We need to check the tag version, EV1 should stop after 26 apps are found
-    
-    // uint8_t app_ids[32*3] = {0}; // we are hoping to find less than 32 apps, this can backfire spectacularly
-    // uint8_t app_ids_len = 0;
     if (mad) {
         idIncrement = 0x10;
         startAid[0] = 0xF0;
         startAid[1] = 0x00;
         startAid[2] = 0x0F;
     }
-    uint32_t idStart = (startAid[0] << 16) + (startAid[1] << 8) + startAid[2];
-    uint32_t idEnd = (endAid[0] << 16) + (endAid[1] << 8) + endAid[2];
+    uint32_t idStart = le24toh(startAid);
+    uint32_t idEnd = le24toh(endAid);
     PrintAndLogEx(INFO, "Enumerating through all AIDs manually, this will take a while!");
     for (uint32_t id = idStart; id <= idEnd && id >= idStart; id += idIncrement) {
         if (kbd_enter_pressed()) break;
         int progress = ((id - idStart)*100) / ((idEnd - idStart));
         PrintAndLogEx(INPLACE, "Progress: %d %%, current AID: %06X", progress, id);
-        uint8_t appId[3] = {(id & 0xFF), (id >> 8 & 0xFF), (id >> 16 & 0xFF)};
+        uint8_t appId[3] = {0};
+        htole24(id, appId);
         sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, appId}; //0x5a
         uint16_t sw = 0;
         uint8_t data[255 * 5]  = {0x00};
@@ -4035,10 +4033,6 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
         if (sw == status(MFDES_S_OPERATION_OK)) {
             printf("\33[2K\r"); // clear current line before printing
             PrintAndLogEx(SUCCESS, "Got new APPID %06X", id);
-            // app_ids[app_ids_len] = appId[0];
-            // app_ids[app_ids_len+1] = appId[1];
-            // app_ids[app_ids_len+2] = appId[2];
-            // app_ids_len+=3;
         }
     }
     PrintAndLogEx(SUCCESS, "Done");
