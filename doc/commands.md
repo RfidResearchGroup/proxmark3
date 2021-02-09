@@ -433,6 +433,7 @@ Check column "offline" for their availability.
 |`hf mfdes getuid        `|N       |`Get random uid`
 |`hf mfdes info          `|N       |`Tag information`
 |`hf mfdes list          `|Y       |`List DESFire (ISO 14443A) history`
+|`hf mfdes bruteaid      `|N       |`Recover AIDs by bruteforce`
 |`hf mfdes createaid     `|N       |`Create Application ID`
 |`hf mfdes deleteaid     `|N       |`Delete Application ID`
 |`hf mfdes selectaid     `|N       |`Select Application ID`

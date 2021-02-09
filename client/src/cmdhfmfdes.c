@@ -4021,7 +4021,7 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
     PrintAndLogEx(INFO, "Enumerating through all AIDs manually, this will take a while!");
     for (uint32_t id = idStart; id <= idEnd && id >= idStart; id += idIncrement) {
         if (kbd_enter_pressed()) break;
-        int progress = ((id - idStart)*100) / ((idEnd - idStart));
+        int progress = ((id - idStart) * 100) / ((idEnd - idStart));
         PrintAndLogEx(INPLACE, "Progress: %d %%, current AID: %06X", progress, id);
         uint8_t appId[3] = {0};
         htole24(id, appId);
