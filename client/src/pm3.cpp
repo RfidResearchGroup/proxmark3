@@ -2,7 +2,7 @@
 // User API
 //-----------------------------------------------------------------------------
 
-#include "pm3.h"
+#include "pm3.hpp"
 
 #include <stdlib.h>
 
@@ -44,6 +44,23 @@ int pm3_console(pm3_device *dev, char *Cmd) {
     // For now, there is no real device context:
     (void) dev;
     return CommandReceived(Cmd);
+}
+
+static ConsoleHandler *console_handler_ptr = NULL;
+static int console_handler_helper(char *string) {
+  return console_handler_ptr->handle_output(string);
+}
+int pm3_console_async_wrapper(pm3_device *dev, char *Cmd, ConsoleHandler *console_handler) {
+    console_handler_ptr = console_handler;
+    int result = pm3_console_async(dev, Cmd, &console_handler_helper);
+    console_handler = NULL; // ?? console_handler_ptr = NULL cf http://www.swig.org/Doc4.0/SWIGPlus.html#SWIGPlus_target_language_callbacks
+    return result;
+}
+
+int pm3_console_async(pm3_device *dev, char *Cmd, int (*callback)(char*)) {
+    // For now, there is no real device context:
+    (void) dev;
+    return CommandReceivedCB(Cmd, callback);
 }
 
 const char *pm3_name_get(pm3_device *dev) {
