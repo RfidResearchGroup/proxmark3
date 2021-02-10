@@ -192,7 +192,7 @@ function get_pm3_list_WSL {
     fi
 
     # Normal SERIAL PORTS (COM)
-    for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {$_.PNPDeviceID -like '*VID_9AC4&PID_4B8F*' -or $_.PNPDeviceID -like '*VID_2D2D&PID_504D*'} | Select DeviceID" 2>/dev/null | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p'); do
+    for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.PNPDeviceID -like '*VID_9AC4&PID_4B8F*' -or \$_.PNPDeviceID -like '*VID_2D2D&PID_504D*'} | Select DeviceID" 2>/dev/null | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p'); do
         # ttyS counterpart takes some more time to appear
         if [ -e "$DEV" ]; then
             PM3LIST+=("$DEV")
