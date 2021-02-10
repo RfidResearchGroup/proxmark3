@@ -204,7 +204,7 @@ static void createBlocks(uint32_t *blocks, uint8_t rc, uint16_t fc, uint32_t cn,
 
     // every byte has a 9th bit which is the inverse of the last bit
     uint8_t bonus_bit[8] = {0};
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < ARRAYLEN(bonus_bit); i++) {
         bonus_bit[i] = !(arr[i] & 0x1);
     }
 
