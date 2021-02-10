@@ -113,12 +113,12 @@ int demodGallagher(bool verbose) {
     // bytes
     uint8_t arr[8] = {0};
     for (int i = 0, pos = 0; i < ARRAYLEN(arr); i++) {
-        pos = 16 + 9*i;
+        pos = 16 + (9 * i);
         arr[i] = bytebits_to_byte(DemodBuffer + pos, 8);
     }
 
     // crc
-    uint8_t crc = bytebits_to_byte(DemodBuffer + 16 + 9*8, 8);
+    uint8_t crc = bytebits_to_byte(DemodBuffer + 16 + (9 * 8), 8);
     uint8_t calc_crc =  CRC8Cardx(arr, ARRAYLEN(arr));
 
     PrintAndLogEx(INFO, " Before:  %s", sprint_hex(arr, 8));
@@ -213,17 +213,17 @@ static void createBlocks(uint32_t *blocks, uint8_t rc, uint16_t fc, uint32_t cn,
 
     // magic prefix, then the 9-bit bytes, then the CRC
     blocks[0] = (0x7fea << 16)
-            | (arr[0] << 8) | (bonus_bit[0] << 7)
-            | (arr[1] >> 1);
+                | (arr[0] << 8) | (bonus_bit[0] << 7)
+                | (arr[1] >> 1);
     blocks[1] = ((arr[1] & 0x1) << 31) | (bonus_bit[1] << 30)
-            | (arr[2] << 22) | (bonus_bit[2] << 21)
-            | (arr[3] << 13) | (bonus_bit[3] << 12)
-            | (arr[4] << 4)  | (bonus_bit[4] << 3)
-            | (arr[5] >> 5);
+                | (arr[2] << 22) | (bonus_bit[2] << 21)
+                | (arr[3] << 13) | (bonus_bit[3] << 12)
+                | (arr[4] << 4)  | (bonus_bit[4] << 3)
+                | (arr[5] >> 5);
     blocks[2] = ((arr[5] & 0x1f) << 27) | (bonus_bit[5] << 26)
-            | (arr[6] << 18) | (bonus_bit[6] << 17)
-            | (arr[7] << 9)  | (bonus_bit[7] << 8)
-            | crc;
+                | (arr[6] << 18) | (bonus_bit[6] << 17)
+                | (arr[7] << 9)  | (bonus_bit[7] << 8)
+                | crc;
 }
 
 static int CmdGallagherClone(const char *Cmd) {
@@ -254,7 +254,7 @@ static int CmdGallagherClone(const char *Cmd) {
     // skip first block,  3*4 = 12 bytes left
     uint8_t raw[12] = {0};
     CLIParamHexToBuf(arg_get_str(ctx, 1), raw, sizeof raw, &raw_len);
-    
+
     bool q5 = arg_get_lit(ctx, 2);
     bool em = arg_get_lit(ctx, 3);
     int16_t region_code = arg_get_int_def(ctx, 4, -1);
@@ -275,8 +275,7 @@ static int CmdGallagherClone(const char *Cmd) {
             PrintAndLogEx(FAILED, "Must specify either raw data to clone, or rc/fc/cn/il");
             return PM3_EINVARG;
         }
-    }
-    else {
+    } else {
         // --raw and --rc/fc/cn/il are mutually exclusive
         if (use_raw) {
             PrintAndLogEx(FAILED, "Can't specify both raw and rc/fc/cn/il at the same time");
@@ -311,8 +310,7 @@ static int CmdGallagherClone(const char *Cmd) {
         for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
             blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
         }
-    }
-    else {
+    } else {
         // fill blocks 1 to 3 with Gallagher data
         createBlocks(blocks + 1, region_code, facility_code, card_number, issue_level);
     }
@@ -333,7 +331,7 @@ static int CmdGallagherClone(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Preparing to clone Gallagher to " _YELLOW_("%s") " from %s.",
-            cardtype, use_raw ? "raw hex" : "specified data");
+                  cardtype, use_raw ? "raw hex" : "specified data");
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res;
