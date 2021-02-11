@@ -187,6 +187,16 @@ static int CmdGallagherReader(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static void setBitsInBlocks(uint32_t *blocks, uint8_t *pos, uint32_t data, uint8_t data_len) {
+    for (int i = data_len - 1; i >= 0; i--) {
+        uint8_t blk = *pos / 32;
+        uint8_t bitPos = 31 - *pos % 32; // fill from left
+        uint8_t bit = (data >> i) & 1;
+        blocks[blk] |= bit << bitPos;
+        (*pos)++;
+    }
+}
+
 static void createBlocks(uint32_t *blocks, uint8_t rc, uint16_t fc, uint32_t cn, uint8_t il) {
     // put data into the correct places (Gallagher obfuscation)
     uint8_t arr[8] = {0};
@@ -202,7 +212,7 @@ static void createBlocks(uint32_t *blocks, uint8_t rc, uint16_t fc, uint32_t cn,
     // more obfuscation
     scramble(arr, ARRAYLEN(arr));
 
-    // every byte has a 9th bit which is the inverse of the last bit
+    // every byte is followed by a bit which is the inverse of the last bit
     uint8_t bonus_bit[8] = {0};
     for (int i = 0; i < ARRAYLEN(bonus_bit); i++) {
         bonus_bit[i] = !(arr[i] & 0x1);
@@ -211,19 +221,16 @@ static void createBlocks(uint32_t *blocks, uint8_t rc, uint16_t fc, uint32_t cn,
     // calculate checksum
     uint8_t crc = CRC8Cardx(arr, ARRAYLEN(arr));
 
-    // magic prefix, then the 9-bit bytes, then the CRC
-    blocks[0] = (0x7fea << 16)
-                | (arr[0] << 8) | (bonus_bit[0] << 7)
-                | (arr[1] >> 1);
-    blocks[1] = ((arr[1] & 0x1) << 31) | (bonus_bit[1] << 30)
-                | (arr[2] << 22) | (bonus_bit[2] << 21)
-                | (arr[3] << 13) | (bonus_bit[3] << 12)
-                | (arr[4] << 4)  | (bonus_bit[4] << 3)
-                | (arr[5] >> 5);
-    blocks[2] = ((arr[5] & 0x1f) << 27) | (bonus_bit[5] << 26)
-                | (arr[6] << 18) | (bonus_bit[6] << 17)
-                | (arr[7] << 9)  | (bonus_bit[7] << 8)
-                | crc;
+    blocks[0] = blocks[1] = blocks[2] = 0;
+    uint8_t pos = 0;
+
+    // magic prefix, then the bytes with their extra bit, then the CRC
+    setBitsInBlocks(blocks, &pos, 0x7fea, 16);
+    for (int i = 0; i < ARRAYLEN(arr); i++) {
+        setBitsInBlocks(blocks, &pos, arr[i], 8);
+        setBitsInBlocks(blocks, &pos, bonus_bit[i], 1);
+    }
+    setBitsInBlocks(blocks, &pos, crc, 8);
 }
 
 static int CmdGallagherClone(const char *Cmd) {
