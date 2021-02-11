@@ -115,6 +115,36 @@ static char *getUlev1CardSizeStr(uint8_t fsize) {
     return buf;
 }
 
+int ul_read_uid(uint8_t *uid) {
+    if (uid == NULL) {
+        PrintAndLogEx(WARNING, "NUll parameter UID");
+        return PM3_ESOFT;
+    }
+    // read uid from tag
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    WaitForResponse(CMD_ACK, &resp);
+    iso14a_card_select_t card;
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    uint64_t select_status = resp.oldarg[0];
+    // 0: couldn't read
+    // 1: OK with ATS
+    // 2: OK, no ATS
+    // 3: proprietary Anticollision
+    if (select_status == 0) {
+        PrintAndLogEx(WARNING, "iso14443a card select failed");
+        return PM3_ESOFT;
+    }
+    if (card.uidlen != 7) {
+        PrintAndLogEx(WARNING, "Wrong sized UID, expected 7bytes got %d", card.uidlen);
+        return PM3_ESOFT;
+    }
+    memcpy(uid, card.uid, 7);
+    return PM3_SUCCESS;
+}
+
 static void ul_switch_on_field(void) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
@@ -2759,27 +2789,11 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
 
     if (use_tag) {
         // read uid from tag
-        clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
-        PacketResponseNG resp;
-        WaitForResponse(CMD_ACK, &resp);
-        iso14a_card_select_t card;
-        memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+        int res = ul_read_uid(uid);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
 
-        uint64_t select_status = resp.oldarg[0];
-        // 0: couldn't read
-        // 1: OK with ATS
-        // 2: OK, no ATS
-        // 3: proprietary Anticollision
-        if (select_status == 0) {
-            PrintAndLogEx(WARNING, "iso14443a card select failed");
-            return PM3_ESOFT;
-        }
-        if (card.uidlen != 7) {
-            PrintAndLogEx(WARNING, "Wrong sized UID, expected 7bytes got %d", card.uidlen);
-            return PM3_ESOFT;
-        }
-        memcpy(uid, card.uid, sizeof(uid));
     } else {
         if (u_len != 7) {
             PrintAndLogEx(WARNING, "Key must be 7 hex bytes");
@@ -3539,7 +3553,27 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
     }
 
     DropField();
-    status = NDEFDecodeAndPrint(records, (size_t)maxsize, true);
+    status = NDEFRecordsDecodeAndPrint(records, (size_t)maxsize);
+    if ( status != PM3_SUCCESS) {
+        status = NDEFDecodeAndPrint(records, (size_t)maxsize, true);
+    }
+
+    char *jooki = strstr(records, "s.jooki.rocks/s/?s=");
+    if (jooki) {
+        jooki += 17;
+        while(jooki) {
+            if ((*jooki) != '=')
+                jooki++;
+            else  {
+                jooki++;
+                char s[17] = {0};
+                strncpy(s, jooki, 16);
+                PrintAndLogEx(HINT, "Use `" _YELLOW_("hf jooki decode -d %s") "` to decode", s);
+                break;
+            }
+        }
+    }
+
     free(records);
     return status;
 }
