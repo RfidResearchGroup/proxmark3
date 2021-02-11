@@ -29,7 +29,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-/*
 static void scramble(uint8_t *arr, uint8_t len) {
     uint8_t lut[] = {
         0xa3, 0xb0, 0x80, 0xc6, 0xb2, 0xf4, 0x5c, 0x6c, 0x81, 0xf1, 0xbb, 0xeb, 0x55, 0x67, 0x3c, 0x05,
@@ -54,7 +53,6 @@ static void scramble(uint8_t *arr, uint8_t len) {
         arr[i] = lut[arr[i]];
     }
 }
-*/
 
 static void descramble(uint8_t *arr, uint8_t len) {
     uint8_t lut[] = {
@@ -115,12 +113,12 @@ int demodGallagher(bool verbose) {
     // bytes
     uint8_t arr[8] = {0};
     for (int i = 0, pos = 0; i < ARRAYLEN(arr); i++) {
-        pos = 16 + 9*i;
+        pos = 16 + (9 * i);
         arr[i] = bytebits_to_byte(DemodBuffer + pos, 8);
     }
 
     // crc
-    uint8_t crc = bytebits_to_byte(DemodBuffer + 16 + 9*8, 8);
+    uint8_t crc = bytebits_to_byte(DemodBuffer + 16 + (9 * 8), 8);
     uint8_t calc_crc =  CRC8Cardx(arr, ARRAYLEN(arr));
 
     PrintAndLogEx(INFO, " Before:  %s", sprint_hex(arr, 8));
@@ -189,6 +187,50 @@ static int CmdGallagherReader(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static void setBitsInBlocks(uint32_t *blocks, uint8_t *pos, uint32_t data, uint8_t data_len) {
+    for (int i = data_len - 1; i >= 0; i--) {
+        uint8_t blk = *pos / 32;
+        uint8_t bitPos = 31 - *pos % 32; // fill from left
+        uint8_t bit = (data >> i) & 1;
+        blocks[blk] |= bit << bitPos;
+        (*pos)++;
+    }
+}
+
+static void createBlocks(uint32_t *blocks, uint8_t rc, uint16_t fc, uint32_t cn, uint8_t il) {
+    // put data into the correct places (Gallagher obfuscation)
+    uint8_t arr[8] = {0};
+    arr[0] = (cn & 0xffffff) >> 16;
+    arr[1] = (fc & 0xfff) >> 4;
+    arr[2] = (cn & 0x7ff) >> 3;
+    arr[3] = (cn & 0x7) << 5 | (rc & 0xf) << 1;
+    arr[4] = (cn & 0xffff) >> 11;
+    arr[5] = (fc & 0xffff) >> 12;
+    arr[6] = 0;
+    arr[7] = (fc & 0xf) << 4 | (il & 0xf);
+
+    // more obfuscation
+    scramble(arr, ARRAYLEN(arr));
+
+    blocks[0] = blocks[1] = blocks[2] = 0;
+    uint8_t pos = 0;
+
+    // magic prefix
+    setBitsInBlocks(blocks, &pos, 0x7fea, 16);
+
+    for (int i = 0; i < ARRAYLEN(arr); i++) {
+        // data byte
+        setBitsInBlocks(blocks, &pos, arr[i], 8);
+
+        // every byte is followed by a bit which is the inverse of the last bit
+        setBitsInBlocks(blocks, &pos, !(arr[i] & 0x1), 1);
+    }
+
+    // checksum
+    uint8_t crc = CRC8Cardx(arr, ARRAYLEN(arr));
+    setBitsInBlocks(blocks, &pos, crc, 8);
+}
+
 static int CmdGallagherClone(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -196,14 +238,19 @@ static int CmdGallagherClone(const char *Cmd) {
                   "clone a GALLAGHER tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
                   "lf gallagher clone --raw 0FFD5461A9DA1346B2D1AC32\n"
                   "lf gallagher clone --q5 --raw 0FFD5461A9DA1346B2D1AC32 -> encode for Q5/T5555 tag\n"
-                  "lf gallagher clone --em --raw 0FFD5461A9DA1346B2D1AC32 -> encode for EM4305/4469"
+                  "lf gallagher clone --em --raw 0FFD5461A9DA1346B2D1AC32 -> encode for EM4305/4469\n"
+                  "lf gallagher clone --rc 0 --fc 9876 --cn 1234 --il 1"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("r", "raw", "<hex>", "raw hex data. 12 bytes max"),
+        arg_str0("r", "raw", "<hex>", "raw hex data. 12 bytes max"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_int0(NULL, "rc", "<decimal>", "Region code. 4 bits max"),
+        arg_int0(NULL, "fc", "<decimal>", "Facility code. 2 bytes max"),
+        arg_int0(NULL, "cn", "<decimal>", "Card number. 3 bytes max"),
+        arg_int0(NULL, "il", "<decimal>", "Issue level. 4 bits max"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -211,19 +258,66 @@ static int CmdGallagherClone(const char *Cmd) {
     int raw_len = 0;
     // skip first block,  3*4 = 12 bytes left
     uint8_t raw[12] = {0};
-    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+    CLIParamHexToBuf(arg_get_str(ctx, 1), raw, sizeof raw, &raw_len);
+
     bool q5 = arg_get_lit(ctx, 2);
     bool em = arg_get_lit(ctx, 3);
+    int16_t region_code = arg_get_int_def(ctx, 4, -1);
+    int32_t facility_code = arg_get_int_def(ctx, 5, -1);
+    uint64_t card_number = arg_get_int_def(ctx, 6, -1);
+    uint32_t issue_level = arg_get_int_def(ctx, 7, -1);
     CLIParserFree(ctx);
+
+    bool use_raw = raw_len > 0;
 
     if (q5 && em) {
         PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
         return PM3_EINVARG;
     }
 
+    if (region_code == -1 && facility_code == -1 && card_number == -1 && issue_level == -1) {
+        if (!use_raw) {
+            PrintAndLogEx(FAILED, "Must specify either raw data to clone, or rc/fc/cn/il");
+            return PM3_EINVARG;
+        }
+    } else {
+        // --raw and --rc/fc/cn/il are mutually exclusive
+        if (use_raw) {
+            PrintAndLogEx(FAILED, "Can't specify both raw and rc/fc/cn/il at the same time");
+            return PM3_EINVARG;
+        }
+        // if one is set, all must be set
+        if (region_code == -1 || facility_code == -1 || card_number == -1 || issue_level == -1) {
+            PrintAndLogEx(FAILED, "If rc/fc/cn/il is specified, all must be set");
+            return PM3_EINVARG;
+        }
+        // validate input
+        if (region_code > 0x0f) {
+            PrintAndLogEx(FAILED, "Region code must be less than 16 (4 bits)");
+            return PM3_EINVARG;
+        }
+        if (facility_code > 0xffff) {
+            PrintAndLogEx(FAILED, "Facility code must be less than 65536 (2 bytes)");
+            return PM3_EINVARG;
+        }
+        if (card_number > 0xffffff) {
+            PrintAndLogEx(FAILED, "Card number must be less than 16777216 (3 bytes)");
+            return PM3_EINVARG;
+        }
+        if (issue_level > 0x0f) {
+            PrintAndLogEx(FAILED, "Issue level must be less than 16 (4 bits)");
+            return PM3_EINVARG;
+        }
+    }
+
     uint32_t blocks[4];
-    for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
-        blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
+    if (use_raw) {
+        for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+            blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
+        }
+    } else {
+        // fill blocks 1 to 3 with Gallagher data
+        createBlocks(blocks + 1, region_code, facility_code, card_number, issue_level);
     }
 
     //Pac - compat mode, NRZ, data rate 40, 3 data blocks
@@ -241,7 +335,8 @@ static int CmdGallagherClone(const char *Cmd) {
         snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
     }
 
-    PrintAndLogEx(INFO, "Preparing to clone Gallagher to " _YELLOW_("%s") " with raw hex", cardtype);
+    PrintAndLogEx(INFO, "Preparing to clone Gallagher to " _YELLOW_("%s") " from %s.",
+                  cardtype, use_raw ? "raw hex" : "specified data");
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res;
