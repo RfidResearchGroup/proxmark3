@@ -2321,7 +2321,7 @@ static command_t CommandTable[] = {
     {"raw",         CmdHF14ACmdRaw,       IfPm3Iso14443a,  "Send raw hex data to tag"},
     {"antifuzz",    CmdHF14AAntiFuzz,     IfPm3Iso14443a,  "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
     {"config",      CmdHf14AConfig,       IfPm3Iso14443a,  "Configure 14a settings (use with caution)"},
-    {"apdufind",    CmdHf14AFindapdu,     IfPm3Iso14443a,  "Enuerate APDUs - CLA/INS/P1P2"},
+    {"apdufind",    CmdHf14AFindapdu,     IfPm3Iso14443a,  "Enumerate APDUs - CLA/INS/P1P2"},
     {NULL, NULL, NULL, NULL}
 };
 
