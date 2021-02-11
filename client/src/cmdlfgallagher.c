@@ -212,24 +212,22 @@ static void createBlocks(uint32_t *blocks, uint8_t rc, uint16_t fc, uint32_t cn,
     // more obfuscation
     scramble(arr, ARRAYLEN(arr));
 
-    // every byte is followed by a bit which is the inverse of the last bit
-    uint8_t bonus_bit[8] = {0};
-    for (int i = 0; i < ARRAYLEN(bonus_bit); i++) {
-        bonus_bit[i] = !(arr[i] & 0x1);
-    }
-
-    // calculate checksum
-    uint8_t crc = CRC8Cardx(arr, ARRAYLEN(arr));
-
     blocks[0] = blocks[1] = blocks[2] = 0;
     uint8_t pos = 0;
 
-    // magic prefix, then the bytes with their extra bit, then the CRC
+    // magic prefix
     setBitsInBlocks(blocks, &pos, 0x7fea, 16);
+
     for (int i = 0; i < ARRAYLEN(arr); i++) {
+        // data byte
         setBitsInBlocks(blocks, &pos, arr[i], 8);
-        setBitsInBlocks(blocks, &pos, bonus_bit[i], 1);
+
+        // every byte is followed by a bit which is the inverse of the last bit
+        setBitsInBlocks(blocks, &pos, !(arr[i] & 0x1), 1);
     }
+
+    // checksum
+    uint8_t crc = CRC8Cardx(arr, ARRAYLEN(arr));
     setBitsInBlocks(blocks, &pos, crc, 8);
 }
 
