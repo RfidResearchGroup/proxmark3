@@ -308,11 +308,12 @@ static int CmdHF14AJookiWrite(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("d", "data", "<hex>", "bytes"),
+        arg_str0("p", "pwd", "<hex>", "password for authentication (EV1/NTAG 4 bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int dlen = 0;
-    uint8_t data[100] = {0x00};
+    uint8_t data[52] = {0x00};
     memset(data, 0x0, sizeof(data));
     int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
     if (res) {
@@ -321,7 +322,50 @@ static int CmdHF14AJookiWrite(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+
+    int plen = 0;
+    uint8_t pwd[4] = {0x00};
+    CLIGetHexWithReturn(ctx, 2, pwd, &plen);
+
     CLIParserFree(ctx);
+
+    if (dlen != 52) {
+        PrintAndLogEx(ERR, "Wrong data length. Expected 52 got %d", dlen);
+        return PM3_EINVARG;
+    }
+
+    bool has_pwd = false;
+    if (plen == 4) {
+        has_pwd = true;
+    }
+
+    // 0 - no authentication
+    // 2 - pwd  (4 bytes)
+    uint8_t keytype = 0, blockno = 4, i = 0;
+
+    while ((i * 4) < dlen) {
+
+        uint8_t cmddata[8] = {0};
+        memcpy(cmddata, data + (i * 4), 4);
+        if (has_pwd) {
+            memcpy(cmddata + 4, pwd, 4);
+            keytype = 2;
+        }
+        clearCommandBuffer();
+        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockno, keytype, 0, cmddata, sizeof(cmddata));
+
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+            uint8_t isOK  = resp.oldarg[0] & 0xff;
+            PrintAndLogEx(SUCCESS, "block %d,  data %s  ( %s )", blockno,  sprint_hex_inrow(cmddata, sizeof(cmddata)), isOK ? _GREEN_("ok") : _RED_("fail"));
+        } else {
+            PrintAndLogEx(WARNING, "Command execute timeout");
+        }
+
+        blockno++;
+        i++;
+    }
+
     return PM3_SUCCESS;
 }
 
