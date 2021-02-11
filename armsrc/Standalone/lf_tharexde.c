@@ -27,20 +27,25 @@
  * It requires RDV4 hardware (for flash and battery).
  *
  * On entering stand-alone mode, this module will start simulating EM4x50 data.
- * Data is read from eml dump file uploaded to flash memory.
+ * Data is read from eml dump file uploaded to flash memory (lf_em4x50_simulate.eml).
+ * If reader sends password different from dump file password, 'new' password
+ * is saved in file lf_em4x50_passwords.log in flash memory.
  *
  * On switching to read/record mode by pressing pm3 button, module will start
  * reading EM4x50 data. Each collected data set will be written/appended to the
- * logfile in flash as a text string.
+ * logfile in flash (lf_em4x50_collect.log) as a text string.
  *
  * LEDs:
  * - LED A: simulating
+ * - LED A blinking: no simulation data or read error
  * - LED B: reading/recording
- * - LED C: writing to flash
  * - LED D: unmounting/sync'ing flash (normally < 100ms)
  *
  * To upload input file (eml format) to flash:
  * - mem spiffs load f <filename> o lf_em4x50_simulate.eml
+ *
+ * To retrieve password file from flash:
+ * - mem spiffs dump o lf_em4x50_passwords.log f <filename>
  *
  * To retrieve log file from flash:
  * - mem spiffs dump o lf_em4x50_collect.log f <filename>
@@ -52,6 +57,9 @@
  * - mem spiffs remove lf_em4x50_simulate.eml
  *
  * To delete the log file from flash:
+ * - mem spiffs remove lf_em4x50_passwords.log
+ *
+ * To delete the log file from flash:
  * - mem spiffs remove lf_em4x50_collect.log
  */
 
@@ -59,11 +67,9 @@
 #define STATE_READ                      1
 #define EM4X50_TAG_WORD                 45
 #define LF_EM4X50_INPUTFILE_SIM         "lf_em4x50_simulate.eml"
-#define LF_EM4X50_LOGFILE_SIM           "lf_em4x50_tag_data.log"
+#define LF_EM4X50_LOGFILE_SIM           "lf_em4x50_passwords.log"
 #define LF_EM4X50_LOGFILE_COLLECT       "lf_em4x50_collect.log"
 
-bool input_exists;
-bool log_exists;
 uint32_t gPassword;
 
 static void LoadDataInstructions(const char *inputfile) {
@@ -86,6 +92,8 @@ static void DownloadLogInstructions(const char *logfile) {
 static bool get_input_data_from_file(uint32_t *tag, char *inputfile) {
 
     size_t now = 0;
+
+#ifdef WITH_FLASH
     if (exists_in_spiffs(inputfile)) {
 
         uint32_t size = size_in_spiffs(inputfile);
@@ -106,18 +114,20 @@ static bool get_input_data_from_file(uint32_t *tag, char *inputfile) {
     }
 
     BigBuf_free();
-
+#endif
+    
     return ((now == EM4X50_NO_WORDS) && (tag[EM4X50_DEVICE_SERIAL] != tag[EM4X50_DEVICE_ID]));
 }
 
 static void append(const char *filename, uint8_t *entry, size_t entry_len) {
 
-    if (log_exists == false) {
-        rdv40_spiffs_write(filename, entry, entry_len, RDV40_SPIFFS_SAFETY_SAFE);
-        log_exists = true;
-    } else {
+#ifdef WITH_FLASH
+    if (exists_in_spiffs(filename)) {
         rdv40_spiffs_append(filename, entry, entry_len, RDV40_SPIFFS_SAFETY_SAFE);
+    } else {
+        rdv40_spiffs_write(filename, entry, entry_len, RDV40_SPIFFS_SAFETY_SAFE);
     }
+#endif
 }
 
 void ModInfo(void) {
@@ -126,14 +136,16 @@ void ModInfo(void) {
 
 void RunMod(void) {
 
-    bool state_change = true;
+    bool state_change = true, read_ok = false;
     int no_words = 0, command = 0;
     uint8_t entry[400], state = STATE_SIM;
     uint32_t tag[EM4X50_NO_WORDS] = {0x0};
 
+#ifdef WITH_FLASH
     rdv40_spiffs_lazy_mount();
+#endif
+    
     StandAloneMode();
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     Dbprintf(_YELLOW_("Standalone mode THAREXDE started"));
 
     for (;;) {
@@ -174,7 +186,8 @@ void RunMod(void) {
                 Dbprintf("");
                 Dbprintf(_YELLOW_("switched to EM4x50 simulating mode"));
 
-                if (get_input_data_from_file(tag, LF_EM4X50_INPUTFILE_SIM)) {
+                read_ok = get_input_data_from_file(tag, LF_EM4X50_INPUTFILE_SIM);
+                if (read_ok) {
                     Dbprintf(_YELLOW_("tag data ok"));
                 } else {
                     Dbprintf(_RED_("error in tag data"));
@@ -184,39 +197,34 @@ void RunMod(void) {
                 em4x50_setup_sim();
                 gLogin = false;
                 LED_D_OFF();
+                gPassword = reflect32(tag[0]);
                 gWritePasswordProcess = false;
                 command = EM4X50_COMMAND_STANDARD_READ;
 
                 state_change = false;
             }
 
+            // if no data or read error -> blink
+            if (read_ok == false) {
+                LED(LED_A, 200);
+                SpinDelay(200);
+            }
+            
             em4x50_handle_commands(&command, tag);
 
             // check if new password was found
             if (gPassword != reflect32(tag[0])) {
                 
-                // save password to tag
-                tag[0] = reflect32(gPassword);
                 Dbprintf("received password: %08"PRIx32"", gPassword);
                 
-                // overwrite inputfile in flash memory
+                // append password to logfile in flash memory
                 memset(entry, 0, sizeof(entry));
-
-                for (int i = 0; i < EM4X50_NO_WORDS; i++) {
-                    sprintf((char *)entry + strlen((char *)entry), "%08"PRIx32"\n", tag[i]);
-                }
-
-                if (exists_in_spiffs(LF_EM4X50_LOGFILE_SIM)) {
-                    rdv40_spiffs_remove(LF_EM4X50_LOGFILE_SIM, RDV40_SPIFFS_SAFETY_SAFE);
-                }
-                rdv40_spiffs_write(LF_EM4X50_LOGFILE_SIM, entry, strlen((char *)entry), RDV40_SPIFFS_SAFETY_SAFE);
+                sprintf((char *)entry, "%08"PRIx32"\n", gPassword);
+                append(LF_EM4X50_LOGFILE_SIM, entry, strlen((char *)entry));
+                
+                gPassword = reflect32(tag[0]);
             }
             
-            // stop if key (pm3 button or enter key) has been pressed
-            if (command == PM3_EOPABORTED) {
-                break;
-            }
-
             // if timeout (e.g. no reader field) continue with standard read
             // mode and reset former authentication
             if (command == PM3_ETIMEOUT) {
@@ -234,7 +242,6 @@ void RunMod(void) {
                 Dbprintf("");
                 Dbprintf(_YELLOW_("switched to EM4x50 reading mode\n"));
 
-                log_exists = exists_in_spiffs(LF_EM4X50_LOGFILE_COLLECT);
                 em4x50_setup_read();
                 state_change = false;
             }
@@ -264,6 +271,7 @@ void RunMod(void) {
         AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; // reset and re-enable timer
     }
 
+#ifdef WITH_FLASH
     if (state == STATE_READ) {
         DownloadLogInstructions(LF_EM4X50_LOGFILE_COLLECT);
     } else {
@@ -273,6 +281,7 @@ void RunMod(void) {
     LED_D_ON();
     rdv40_spiffs_lazy_unmount();
     LED_D_OFF();
+#endif
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
