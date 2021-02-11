@@ -357,7 +357,7 @@ static int CmdHF14AJookiWrite(const char *Cmd) {
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             uint8_t isOK  = resp.oldarg[0] & 0xff;
-            PrintAndLogEx(SUCCESS, "block %d,  data %s  ( %s )", blockno,  sprint_hex_inrow(cmddata, sizeof(cmddata)), isOK ? _GREEN_("ok") : _RED_("fail"));
+            PrintAndLogEx(SUCCESS, "Write block %d ( %s )", blockno, isOK ? _GREEN_("ok") : _RED_("fail"));
         } else {
             PrintAndLogEx(WARNING, "Command execute timeout");
         }
