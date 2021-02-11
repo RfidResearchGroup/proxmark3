@@ -2116,7 +2116,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf st info`"));
 
     if (isEMV)
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`emv search -sk`"));
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`emv search -s`"));
 
     PrintAndLogEx(NORMAL, "");
     DropField();
