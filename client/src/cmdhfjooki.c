@@ -50,7 +50,7 @@ const uint8_t NFC_SECRET[] = { 0x03, 0x9c, 0x25, 0x6f, 0xb9, 0x2e, 0xe8, 0x08, 0
 #define JOOKI_B64_LEN (16 + 1)
 #define JOOKI_PLAIN_LEN 12
 
-static int jooki_encode(uint8_t *iv, uint8_t tagtype, uint8_t *uid, char *out) {
+static int jooki_encode(uint8_t *iv, uint8_t tagtype, uint8_t *uid, uint8_t *out) {
     if (out == NULL) {
         PrintAndLogEx(ERR, "(encode jooki) base64ndef param is NULL");
         return PM3_EINVARG;
@@ -82,16 +82,10 @@ static int jooki_encode(uint8_t *iv, uint8_t tagtype, uint8_t *uid, char *out) {
     return PM3_SUCCESS;
 }
 
-static int jooki_decode(uint8_t *b64ndef, uint8_t *result) {
-    size_t nlen = strlen(b64ndef);
-    if (nlen != 16) {
-        PrintAndLogEx(ERR, "Invalid input length expected 16, got %zu", nlen);
-        return PM3_EINVARG;
-    }
-
+static int jooki_decode(uint8_t *b64, uint8_t *result) {
     uint8_t ndef[JOOKI_PLAIN_LEN] = {0};
     size_t outputlen = 0;
-    mbedtls_base64_decode(ndef, sizeof(ndef), &outputlen, (const unsigned char*)b64ndef, strlen(b64ndef));
+    mbedtls_base64_decode(ndef, sizeof(ndef), &outputlen, (const unsigned char*)b64, 16);
 
     PrintAndLogEx(DEBUG, "(decode_jooki) raw encoded... " _GREEN_("%s"), sprint_hex(ndef, sizeof(ndef)));
 
@@ -106,13 +100,7 @@ static int jooki_decode(uint8_t *b64ndef, uint8_t *result) {
 }
 
 static int jooki_create_ndef(uint8_t *b64ndef, uint8_t *ndefrecord) {
-// sample of url:   https://s.jooki.rocks/s/?s=ONrsVf7jX6IaSNV6
-
-    size_t nlen = strlen(b64ndef);
-    if (nlen != 16) {
-        PrintAndLogEx(ERR, "(jooki_create_ndef) Invalid input length expected 16, got %zu", nlen);
-        return PM3_EINVARG;
-    }
+    // sample of url:   https://s.jooki.rocks/s/?s=ONrsVf7jX6IaSNV6
     if (ndefrecord == NULL) {
         PrintAndLogEx(ERR, "(jooki_create_ndef) ndefrecord param is NULL");
         return PM3_EINVARG;
