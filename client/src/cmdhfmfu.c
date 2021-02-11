@@ -3558,7 +3558,7 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
         status = NDEFDecodeAndPrint(records, (size_t)maxsize, true);
     }
 
-    char *jooki = strstr(records, "s.jooki.rocks/s/?s=");
+    char *jooki = strstr((char*)records, "s.jooki.rocks/s/?s=");
     if (jooki) {
         jooki += 17;
         while(jooki) {
