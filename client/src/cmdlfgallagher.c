@@ -187,6 +187,34 @@ static int CmdGallagherReader(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static bool isValidGallagherParams(int8_t rc, int32_t fc, int32_t cn, int8_t il) {
+    bool isValid = true;
+
+    // if one is set, all must be set
+    if (rc < 0 || fc < 0 || cn < 0 || il < 0) {
+        PrintAndLogEx(FAILED, "If rc/fc/cn/il is specified, all must be set");
+        isValid = false;
+    }
+    // validate input
+    if (rc > 0x0f) {
+        PrintAndLogEx(FAILED, "Region code must be less than 16 (4 bits)");
+        isValid = false;
+    }
+    if (fc > 0xffff) {
+        PrintAndLogEx(FAILED, "Facility code must be less than 65536 (2 bytes)");
+        isValid = false;
+    }
+    if (cn > 0xffffff) {
+        PrintAndLogEx(FAILED, "Card number must be less than 16777216 (3 bytes)");
+        isValid = false;
+    }
+    if (il > 0x0f) {
+        PrintAndLogEx(FAILED, "Issue level must be less than 16 (4 bits)");
+        isValid = false;
+    }
+    return isValid;
+}
+
 static void setBitsInBlocks(uint32_t *blocks, uint8_t *pos, uint32_t data, uint8_t data_len) {
     for (int i = data_len - 1; i >= 0; i--) {
         uint8_t blk = *pos / 32;
@@ -286,26 +314,7 @@ static int CmdGallagherClone(const char *Cmd) {
             PrintAndLogEx(FAILED, "Can't specify both raw and rc/fc/cn/il at the same time");
             return PM3_EINVARG;
         }
-        // if one is set, all must be set
-        if (region_code == -1 || facility_code == -1 || card_number == -1 || issue_level == -1) {
-            PrintAndLogEx(FAILED, "If rc/fc/cn/il is specified, all must be set");
-            return PM3_EINVARG;
-        }
-        // validate input
-        if (region_code > 0x0f) {
-            PrintAndLogEx(FAILED, "Region code must be less than 16 (4 bits)");
-            return PM3_EINVARG;
-        }
-        if (facility_code > 0xffff) {
-            PrintAndLogEx(FAILED, "Facility code must be less than 65536 (2 bytes)");
-            return PM3_EINVARG;
-        }
-        if (card_number > 0xffffff) {
-            PrintAndLogEx(FAILED, "Card number must be less than 16777216 (3 bytes)");
-            return PM3_EINVARG;
-        }
-        if (issue_level > 0x0f) {
-            PrintAndLogEx(FAILED, "Issue level must be less than 16 (4 bits)");
+        if (!isValidGallagherParams(region_code, facility_code, card_number, issue_level)) {
             return PM3_EINVARG;
         }
     }
@@ -356,20 +365,64 @@ static int CmdGallagherSim(const char *Cmd) {
     CLIParserInit(&ctx, "lf gallagher sim",
                   "Enables simulation of GALLAGHER card with specified card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.\n",
-                  "lf gallagher sim --raw 0FFD5461A9DA1346B2D1AC32"
+                  "lf gallagher sim --raw 0FFD5461A9DA1346B2D1AC32\n"
+                  "lf gallagher sim --rc 0 --fc 9876 --cn 1234 --il 1"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("r", "raw", "<hex>", "raw hex data. 12 bytes max"),
+        arg_str0("r", "raw", "<hex>", "raw hex data. 12 bytes max"),
+        arg_int0(NULL, "rc", "<decimal>", "Region code. 4 bits max"),
+        arg_int0(NULL, "fc", "<decimal>", "Facility code. 2 bytes max"),
+        arg_int0(NULL, "cn", "<decimal>", "Card number. 3 bytes max"),
+        arg_int0(NULL, "il", "<decimal>", "Issue level. 4 bits max"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
+
     int raw_len = 0;
     // skip first block,  3*4 = 12 bytes left
     uint8_t raw[12] = {0};
     CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+    CLIParamHexToBuf(arg_get_str(ctx, 1), raw, sizeof raw, &raw_len);
+
+    int16_t region_code = arg_get_int_def(ctx, 2, -1);
+    int32_t facility_code = arg_get_int_def(ctx, 3, -1);
+    uint64_t card_number = arg_get_int_def(ctx, 4, -1);
+    uint32_t issue_level = arg_get_int_def(ctx, 5, -1);
     CLIParserFree(ctx);
+
+    bool use_raw = raw_len > 0;
+
+    if (region_code == -1 && facility_code == -1 && card_number == -1 && issue_level == -1) {
+        if (!use_raw) {
+            PrintAndLogEx(FAILED, "Must specify either raw data to clone, or rc/fc/cn/il");
+            return PM3_EINVARG;
+        }
+    } else {
+        // --raw and --rc/fc/cn/il are mutually exclusive
+        if (use_raw) {
+            PrintAndLogEx(FAILED, "Can't specify both raw and rc/fc/cn/il at the same time");
+            return PM3_EINVARG;
+        }
+        if (!isValidGallagherParams(region_code, facility_code, card_number, issue_level)) {
+            return PM3_EINVARG;
+        }
+    }
+
+    if (!use_raw) {
+        // generate Gallagher data
+        uint32_t blocks[3];
+        createBlocks(blocks, region_code, facility_code, card_number, issue_level);
+
+        // convert to the normal 'raw' format
+        for (int i = 0; i < ARRAYLEN(blocks); i++) {
+            raw[(4 * i) + 0] = (blocks[i] >> 24) & 0xff;
+            raw[(4 * i) + 1] = (blocks[i] >> 16) & 0xff;
+            raw[(4 * i) + 2] = (blocks[i] >> 8) & 0xff;
+            raw[(4 * i) + 3] = (blocks[i]) & 0xff;
+        }
+    }
 
     // ASK/MAN sim.
     PrintAndLogEx(SUCCESS, "Simulating Gallagher - raw " _YELLOW_("%s"), sprint_hex_inrow(raw, sizeof(raw)));
