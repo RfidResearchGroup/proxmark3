@@ -249,7 +249,7 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
     if (tt_whale)
         tt = 5;
     
-    uint8_t iv[JOOKI_IV_LEN] = {0x31, 0x43, 0x33, 0};
+    uint8_t iv[JOOKI_IV_LEN] = {0x80, 0x77, 0x51, 1};
     if (use_tag) {
         int res = ul_read_uid(uid);
         if (res != PM3_SUCCESS) {
