@@ -21,10 +21,10 @@ get_xorsearch:
 
 # Python impl of NDEF FORUM 1-5 protocol
 get_nfcpy:
-    $(MKDIR) nfcpy
-    $(WGET) https://github.com/nfcpy/nfcpy.git
+	$(MKDIR) nfcpy
+	$(GIT) https://github.com/nfcpy/nfcpy.git
 
 # Python tool to create, modify and print NDEF records
 get_ndeftool:
-    $(MKDIR) ndeftool
-    $(WGET) https://github.com/nfcpy/ndeftool.git
+	$(MKDIR) ndeftool
+	$(GIT) https://github.com/nfcpy/ndeftool.git
