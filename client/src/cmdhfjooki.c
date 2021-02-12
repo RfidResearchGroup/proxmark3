@@ -356,7 +356,8 @@ static int CmdHF14AJookiSim(const char *Cmd) {
 
     mfu_dump_t *mfu_dump = (mfu_dump_t *)data;
 
-    memcpy(mfu_dump->version, "\x00\x04\x04\x02\x01\x00\x11\x03", 8);
+
+    memcpy(mfu_dump->version, "\x00\x04\x04\x02\x01\x00\x0F\x03", 8);
     mfu_dump->counter_tearing[2][3] = 0xBD;
     mfu_dump->pages = 0x2c;
 
