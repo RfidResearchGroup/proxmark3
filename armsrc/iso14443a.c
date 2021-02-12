@@ -920,18 +920,19 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
     uint16_t checker = 0;
     for (;;) {
         WDT_HIT();
-        if (flip) {
+        if (flip == 2) {
             if (data_available())
                 return false;
 
-            checker = 0;
             flip = 0;
         }
 
         if (checker >= 4000) {
             if (BUTTON_PRESS())
                 return false;
-            flip = 1;
+
+            flip++;
+            checker = 0;
         }
         ++checker;
 
