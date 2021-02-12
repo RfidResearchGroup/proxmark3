@@ -19,6 +19,7 @@
 #include "cliparser.h"
 #include "cmdhfmfu.h"
 #include "cmdmain.h"
+#include "fileutils.h"    // convert_mfu..
 
 
 static int CmdHelp(const char *Cmd);
@@ -327,12 +328,12 @@ static int CmdHF14AJookiSim(const char *Cmd) {
     jooki_print(b64, result, false);
 
     // hf mfu sim...
-    uint8_t data[144] = {0};
+    uint8_t *data = calloc(144, sizeof(uint8_t));
 
     // copy UID from base64 url parameter
     memcpy(data, result + 5, 3);
     // bbc0
-    data[3] = data[0] ^ data[1] ^ data[2];
+    data[3] = 0x88 ^ data[0] ^ data[1] ^ data[2];
 
     memcpy(data + (1*4), result + 8, 4);
     // bbc1
@@ -344,13 +345,25 @@ static int CmdHF14AJookiSim(const char *Cmd) {
     // copy raw NDEF
     jooki_create_ndef(b64, data + (4 * 4));
 
+    // convert plain or old mfu format to new format
+    size_t datalen = 144;
+    res = convert_mfu_dump_format(&data, &datalen, true);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Failed convert on load to new Ultralight/NTAG format");
+        free(data);
+        return res;
+    }
+
+    mfu_dump_t *mfu_dump = (mfu_dump_t *)data;
+    printMFUdumpEx(mfu_dump, mfu_dump->pages + 1, 0);
+
     // upload to emulator memory
     PrintAndLogEx(INFO, "Uploading to emulator memory");
 
     PrintAndLogEx(INFO, "." NOLF);
     // fast push mode
     conn.block_after_ACK = true;
-    uint8_t blockwidth = 4, counter = 0, blockno = 0, datalen = sizeof(data);
+    uint8_t blockwidth = 4, counter = 0, blockno = 0;
     while (datalen) {
         if (datalen == blockwidth) {
             // Disable fast mode on last packet
@@ -359,6 +372,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
 
         if (mfEmlSetMem_xt(data + counter, blockno, 1, blockwidth) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Cant set emul block: %3d", blockno);
+            free(data);
             return PM3_ESOFT;
         }
         PrintAndLogEx(NORMAL, "." NOLF);
@@ -368,7 +382,6 @@ static int CmdHF14AJookiSim(const char *Cmd) {
         datalen -= blockwidth;
     }
     PrintAndLogEx(NORMAL, "\n");
-
 
     struct {
         uint8_t tagtype;
@@ -400,6 +413,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
         if (resp.status != PM3_SUCCESS) 
             break;
     }
+    free(data);
     PrintAndLogEx(INFO, "Done");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 14a list") "` to view trace log" );
     return PM3_SUCCESS;
