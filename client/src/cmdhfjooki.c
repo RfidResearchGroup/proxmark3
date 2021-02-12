@@ -340,7 +340,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
     data[8] = data[4] ^ data[5] ^ data[6] ^ data[7];
 
     // copy NDEF magic firs, skip BBC1 
-    memcpy(data + (2*4) + 1, "\x48\x1f\x00\xE1\x10\x12\x00", 7);
+    memcpy(data + (2*4) + 1, "\x48\x00\x00\xE1\x10\x12\x00", 7);
 
     // copy raw NDEF
     jooki_create_ndef(b64, data + (4 * 4));
