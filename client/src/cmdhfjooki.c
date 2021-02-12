@@ -15,9 +15,11 @@
 #include "generator.h"
 #include "base64.h"
 #include "mifare/ndef.h"  // print decode ndef
+#include "mifare/mifarehost.h"  // mfemlsetmem_xt
 #include "cliparser.h"
 #include "cmdhfmfu.h"
 #include "cmdmain.h"
+
 
 static int CmdHelp(const char *Cmd);
 
@@ -146,12 +148,6 @@ static void jooki_print(uint8_t *b64, uint8_t *result, bool verbose) {
     jooki_printEx(b64, iv, tt, uid, verbose);
 }
 
-/*
-static int jooki_write(void) {
-    return PM3_SUCCESS;
-}
-*/
-
 static int jooki_selftest(void) {
     
     PrintAndLogEx(INFO, "======== " _CYAN_("selftest") " ==========================================="); 
@@ -195,7 +191,7 @@ static int jooki_selftest(void) {
 
 static int CmdHF14AJookiEncode(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf jooki Encode",
+    CLIParserInit(&ctx, "hf jooki encode",
                   "Encode a Jooki token to base64 NDEF URI format",
                   "hf jooki encode -t            --> selftest\n"
                   "hf jooki encode -r --dragon   --> read uid from tag and use for encoding\n"
@@ -219,7 +215,11 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
     int ulen = 0;
     uint8_t uid[JOOKI_UID_LEN] = {0x00};
     memset(uid, 0x0, sizeof(uid));
-    CLIParamHexToBuf(arg_get_str(ctx, 1), uid, sizeof(uid), &ulen);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), uid, sizeof(uid), &ulen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
     bool use_tag = arg_get_lit(ctx, 2);
     bool selftest = arg_get_lit(ctx, 3);
@@ -251,7 +251,7 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
     
     uint8_t iv[JOOKI_IV_LEN] = {0x80, 0x77, 0x51, 1};
     if (use_tag) {
-        int res = ul_read_uid(uid);
+        res = ul_read_uid(uid);
         if (res != PM3_SUCCESS) {
             return res;
         }
@@ -298,11 +298,118 @@ static int CmdHF14AJookiDecode(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AJookiSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf jooki sim",
+                  "Simulate a Jooki token.  Either `hf mfu eload` before or use `-d` param",
+                  "hf jooki sim     --> using eload before\n"
+                  "hf jooki sim -d 7WzlgEzqLgwTnWNy"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("d", "data", "<hex>", "base64 url parameter"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int dlen = 16;
+    uint8_t b64[JOOKI_B64_LEN] = {0x00};
+    memset(b64, 0x0, sizeof(b64));
+    CLIGetStrWithReturn(ctx, 1, b64, &dlen);
+    CLIParserFree(ctx);
+
+    uint8_t result[JOOKI_PLAIN_LEN] = {0};
+    int res = jooki_decode(b64, result);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    jooki_print(b64, result, false);
+
+    // hf mfu sim...
+    uint8_t data[144] = {0};
+
+    // copy UID from base64 url parameter
+    memcpy(data, result + 5, 3);
+    // bbc0
+    data[3] = data[0] ^ data[1] ^ data[2];
+
+    memcpy(data + (1*4), result + 8, 4);
+    // bbc1
+    data[8] = data[4] ^ data[5] ^ data[6] ^ data[7];
+
+    // copy NDEF magic firs, skip BBC1 
+    memcpy(data + (2*4) + 1, "\x48\x1f\x00\xE1\x10\x12\x00", 7);
+
+    // copy raw NDEF
+    jooki_create_ndef(b64, data + (4 * 4));
+
+    // upload to emulator memory
+    PrintAndLogEx(INFO, "Uploading to emulator memory");
+
+    PrintAndLogEx(INFO, "." NOLF);
+    // fast push mode
+    conn.block_after_ACK = true;
+    uint8_t blockwidth = 4, counter = 0, blockno = 0, datalen = sizeof(data);
+    while (datalen) {
+        if (datalen == blockwidth) {
+            // Disable fast mode on last packet
+            conn.block_after_ACK = false;
+        }
+
+        if (mfEmlSetMem_xt(data + counter, blockno, 1, blockwidth) != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Cant set emul block: %3d", blockno);
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
+        blockno++;
+        counter += blockwidth;
+        datalen -= blockwidth;
+    }
+    PrintAndLogEx(NORMAL, "\n");
+
+
+    struct {
+        uint8_t tagtype;
+        uint8_t flags;
+        uint8_t uid[10];
+        uint8_t exitAfter;
+    } PACKED payload;
+
+    // MF Ultralight ,  7 byte UID in eloaded data.
+    payload.tagtype = 2;
+    payload.flags = FLAG_7B_UID_IN_DATA;
+    payload.exitAfter = 0;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443A_SIMULATE, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
+    for (;;) {
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "User aborted");
+            break;
+        }
+
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0)
+            continue;
+
+        if (resp.status != PM3_SUCCESS) 
+            break;
+    }
+    PrintAndLogEx(INFO, "Done");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 14a list") "` to view trace log" );
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14AJookiWrite(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf jooki write",
                   "Write a Jooki token to a Ultralight or NTAG tag",
-                  "hf jooki write"
+                  "hf jooki write -d  xxxxxxxx   ->  where x is raw NDEF from encode command"
                  );
 
     void *argtable[] = {
@@ -373,7 +480,9 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,             AlwaysAvailable, "This help"},
     {"encode", CmdHF14AJookiEncode,  AlwaysAvailable, "Encode Jooki token"},
     {"decode", CmdHF14AJookiDecode,  AlwaysAvailable, "Decode Jooki token"},
-    {"write",  CmdHF14AJookiWrite,   IfPm3Iso14443a,   "Write a Jooki token"},
+    {"sim",    CmdHF14AJookiSim,     IfPm3Iso14443a,  "Simulate Jooki token"},
+    {"write",  CmdHF14AJookiWrite,   IfPm3Iso14443a,  "Write a Jooki token"},
+
     {NULL, NULL, NULL, NULL}
 };
 

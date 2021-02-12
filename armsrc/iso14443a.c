@@ -916,18 +916,24 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     (void)b;
 
-    uint16_t check = 0;
-
+    uint8_t flip = 0;
+    uint16_t checker = 0;
     for (;;) {
-        if (check == 4000) {
-//            if (BUTTON_PRESS() || data_available())
-            if (BUTTON_PRESS())
+        WDT_HIT();
+        if (flip) {
+            if (data_available())
                 return false;
 
-            check = 0;
-            WDT_HIT();
+            checker = 0;
+            flip = 0;
         }
-        ++check;
+
+        if (checker >= 4000) {
+            if (BUTTON_PRESS())
+                return false;
+            flip = 1;
+        }
+        ++checker;
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -1335,7 +1341,6 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data, uint8_t
     LED_A_ON();
 
     // main loop
-    //for (;;) {
     bool finished = false;
     bool button_pushed = BUTTON_PRESS();
     while (!button_pushed && !finished) {
