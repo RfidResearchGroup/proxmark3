@@ -8,7 +8,7 @@ The RDV4 repository contains helper scripts for JTAG flashing.
 
 * Get OpenOCD, e.g.: `apt-get install openocd`
 * Create `tools/jtag_openocd/openocd_configuration` by copying [`tools/jtag_openocd/openocd_configuration.sample`](/tools/jtag_openocd/openocd_configuration.sample)
-* Tune it to fit your JTAG tool: adapt `CONFIG_IF` to refer to the `interface-*.cfg` file corresponding to your JTAG tool. By default `openocd_configuration.sample` is set up to work with the J-Link.
+* Tune it to fit your JTAG tool: adapt `CONFIG_IF` to refer to your JTAG tool. `openocd_configuration.sample` contains several examples and is set up by default to work with the J-Link.
 * Wire the Proxmark3 to the JTAG tool. How to do it depends on the tool. See below for examples. **Warning:** don't plug the Proxmark3 on USB if the tool delivers already the voltage to the Proxmark3, which is most probably the case.
 * Then just run
 
@@ -25,7 +25,7 @@ For advanced usages there are also `openocd_flash_dump.sh` for dumping the conte
 
 The RDV4 JTAG header is quite smaller compared to other Proxmark3 platforms.  
 If you're using a J-Link, there is a [convenient adapter](https://github.com/RfidResearchGroup/proxmark3/wiki/Tools#jtag-adapter) made by Proxgrind.  
-You can also make yours with some 1.27mm headers (look for `1.27mm header` on Aliexpress) or Pogo pins.
+You can also make yours with some 1.27mm headers (look for `1.27mm header` on Aliexpress) or Pogo pins or buy an already made clip, e.g. search `dykb clamp` on Aliexpress and take a 1.27mm single-row 6P version.
 
 ## JLink pinout
 

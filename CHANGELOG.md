@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Added `LF_THAREXDE` standalone mode which simulates and reads EM4x50 cards (@tharexde)
+ - Added `hf jooki` commands (@iceman1001)
  - Changed `wiegand encode` - format param is now optional, w/o it will try encode all formats (@iceman1001)
  - Fix cppchecker warnings (@iceman1001)
  - Added `trace list -t mf` - now can use external dictionary keys file
@@ -132,6 +133,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Change, use system Whereami library if available (@doegox)
  - Change, use system Zlib library if available (@doegox)
  - Fix release version information (@doegox)
+ - Fix `lf gallagher read` - now correctly decodes card data
+ - Add support to `lf gallagher clone` and `lf gallagher sim` for writing specific card region, facility, card & issue numbers (@DarkMatterMatt)
 
 ## [ice coffee.4.9237][2020-05-21]
  - Updated documentation (@doegox, @iceman1001)

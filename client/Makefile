@@ -474,6 +474,7 @@ SRCS =  aiddesfire.c \
 		cmdhffido.c \
 		cmdhficlass.c \
 		cmdhflegic.c \
+		cmdhfjooki.c \
 		cmdhflist.c \
 		cmdhflto.c \
 		cmdhfmf.c \

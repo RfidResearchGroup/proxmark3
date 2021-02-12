@@ -93,14 +93,6 @@ hf mf gen3uid
 hf mf gen3blk
 hf mf gen3freeze
 hf mf ice
-lf config
-lf cmdread
-lf read
-lf sim
-lf simask
-lf simfsk
-lf simpsk
-lf sniff
 lf em 410x
 lf em 4x05
 lf em 4x50
@@ -111,15 +103,11 @@ lf hitag writer
 lf hitag dump
 lf hitag cc
 lf t55xx config
-lf t55xx dangerraw
-lf t55xx detect
 lf t55xx dump
 lf t55xx info
 lf t55xx read
 lf t55xx resetread
 lf t55xx restore
 lf t55xx trace
-lf t55xx wakeup
 lf t55xx write
-lf t55xx special
 script run

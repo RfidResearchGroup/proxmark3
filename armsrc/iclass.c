@@ -1489,7 +1489,7 @@ bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr *hdr, uint
         memcpy(cmd_check + 1, payload->key, 8);
 
     } else {
-        
+
         uint8_t div_key[8] = {0};
         if (payload->use_raw)
             memcpy(div_key, payload->key, 8);
@@ -1885,7 +1885,7 @@ void iClass_WriteBlock(uint8_t *msg) {
             res = false;
             switch_off();
             if (payload->req.send_reply)
-                reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_ETEAROFF, (uint8_t*)&res, sizeof(uint8_t));
+                reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_ETEAROFF, (uint8_t *)&res, sizeof(uint8_t));
             return;
         } else {
 
@@ -1927,7 +1927,7 @@ out:
     switch_off();
 
     if (payload->req.send_reply)
-        reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_SUCCESS, (uint8_t*)&res, sizeof(uint8_t));
+        reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_SUCCESS, (uint8_t *)&res, sizeof(uint8_t));
 }
 
 void iClass_Restore(iclass_restore_req_t *msg) {

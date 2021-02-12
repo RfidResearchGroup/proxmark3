@@ -129,10 +129,7 @@ static int CmdAWIDWatch(const char *Cmd) {
     PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
     clearCommandBuffer();
     SendCommandNG(CMD_LF_AWID_WATCH, NULL, 0);
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_AWID_WATCH, &resp);
-    PrintAndLogEx(INFO, "Done");
-    return resp.status;
+    return lfsim_wait_check(CMD_LF_AWID_WATCH);
 }
 
 //by marshmellow
@@ -438,8 +435,7 @@ static int CmdAWIDSim(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating AWID %u -- FC: " _YELLOW_("%u") " CN: " _YELLOW_("%u"), fmtlen, fc, cn);
-    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
+    PrintAndLogEx(SUCCESS, "Simulating "_YELLOW_("AWID %u") " -- FC: " _YELLOW_("%u") " CN: " _YELLOW_("%u"), fmtlen, fc, cn);
 
     // AWID uses: FSK2a fcHigh: 10, fcLow: 8, clk: 50, invert: 1
     // arg1 --- fcHigh<<8 + fcLow
@@ -456,13 +452,7 @@ static int CmdAWIDSim(const char *Cmd) {
     SendCommandNG(CMD_LF_FSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
     free(payload);
 
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_FSK_SIMULATE, &resp);
-
-    PrintAndLogEx(INFO, "Done");
-    if (resp.status != PM3_EOPABORTED)
-        return resp.status;
-    return PM3_SUCCESS;
+    return lfsim_wait_check(CMD_LF_FSK_SIMULATE);
 }
 
 static int CmdAWIDBrute(const char *Cmd) {
@@ -630,7 +620,7 @@ int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
     if (bitLen != 88)
         return PM3_ESOFT;
 
-    PrintAndLogEx(SUCCESS, "awid raw bits:\n %s \n", sprint_bin(bits, bitLen));
+    PrintAndLogEx(DEBUG, "awid raw bits:\n %s \n", sprint_bin(bits, bitLen));
 
     return PM3_SUCCESS;
 }

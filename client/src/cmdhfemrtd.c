@@ -1338,19 +1338,26 @@ static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen) {
 
     // Determine and print the document type
     if (mrz[0] == 'I' && mrz[1] == 'P') {
-        td_variant = 1;
         PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Passport Card"));
     } else if (mrz[0] == 'I') {
-        td_variant = 1;
         PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("ID Card"));
     } else if (mrz[0] == 'P') {
-        td_variant = 3;
         PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Passport"));
+    } else if (mrz[0] == 'A') {
+        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("German Residency Permit"));
     } else {
-        td_variant = 1;
         PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Unknown"));
-        PrintAndLogEx(INFO, "Assuming ID-style MRZ.");
     }
+
+    if (mrzlen == 90) {
+        td_variant = 1;
+    } else if (mrzlen == 88) {
+        td_variant = 3;
+    } else {
+        PrintAndLogEx(ERR, "MRZ length (%zu) is wrong.", mrzlen);
+        return PM3_ESOFT;
+    }
+
     PrintAndLogEx(SUCCESS, "Document Form Factor..: " _YELLOW_("TD%i"), td_variant);
 
     // Print the MRZ

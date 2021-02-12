@@ -55,10 +55,14 @@ It will also add the `-h --help` option automatic.
     -h --help       : help
     --cn            : card number
     --fn            : facility number
-    --q5            : target is lf q5 card
+    --q5            : target is LF T5555/Q5 card
+    --em            : target is LF EM4305/4469 card
     --raw           : raw data
+    -d --data       : hex data supplied
+    -f --file       : filename supplied
     -k --key        : key supplied
     -n --keyno      : key number to use
+    -p --pwd        : password supplied
     -v --verbose    : flag when output should provide more information, not considered debug.
     -1 --buffer     : use the sample buffer
 

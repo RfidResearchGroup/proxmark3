@@ -88,7 +88,8 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
             sprintf(asBuff, "AT91SAM7S16 Rev A");
             break;
     }
-    PrintAndLogEx(NORMAL, "  --= uC: %s", asBuff);
+    PrintAndLogEx(NORMAL, "  --= uC: " _YELLOW_("%s"), asBuff);
+
     switch ((iChipID & 0xE0) >> 5) {
         case 1:
             sprintf(asBuff, "ARM946ES");
@@ -104,84 +105,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
             break;
     }
     PrintAndLogEx(NORMAL, "  --= Embedded Processor: %s", asBuff);
-    switch ((iChipID & 0xF00) >> 8) {
-        case 0:
-            mem_avail = 0;
-            break;
-        case 1:
-            mem_avail = 8;
-            break;
-        case 2:
-            mem_avail = 16;
-            break;
-        case 3:
-            mem_avail = 32;
-            break;
-        case 5:
-            mem_avail = 64;
-            break;
-        case 7:
-            mem_avail = 128;
-            break;
-        case 9:
-            mem_avail = 256;
-            break;
-        case 10:
-            mem_avail = 512;
-            break;
-        case 12:
-            mem_avail = 1024;
-            break;
-        case 14:
-            mem_avail = 2048;
-            break;
-    }
 
-    uint32_t mem_left = 0;
-    if (mem_avail > 0)
-        mem_left = (mem_avail * 1024) - mem_used;
-
-    PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Size: %uK bytes, Used: %u bytes (%2.0f%%) Free: %u bytes (%2.0f%%)",
-                  mem_avail,
-                  mem_used,
-                  mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100,
-                  mem_left,
-                  mem_avail == 0 ? 0.0f : (float)mem_left / (mem_avail * 1024) * 100
-                 );
-
-    switch ((iChipID & 0xF000) >> 12) {
-        case 0:
-            sprintf(asBuff, "None");
-            break;
-        case 1:
-            sprintf(asBuff, "8K bytes");
-            break;
-        case 2:
-            sprintf(asBuff, "16K bytes");
-            break;
-        case 3:
-            sprintf(asBuff, "32K bytes");
-            break;
-        case 5:
-            sprintf(asBuff, "64K bytes");
-            break;
-        case 7:
-            sprintf(asBuff, "128K bytes");
-            break;
-        case 9:
-            sprintf(asBuff, "256K bytes");
-            break;
-        case 10:
-            sprintf(asBuff, "512K bytes");
-            break;
-        case 12:
-            sprintf(asBuff, "1024K bytes");
-            break;
-        case 14:
-            sprintf(asBuff, "2048K bytes");
-            break;
-    }
-    PrintAndLogEx(NORMAL, "  --= Second Nonvolatile Program Memory Size: %s", asBuff);
     switch ((iChipID & 0xF0000) >> 16) {
         case 1:
             sprintf(asBuff, "1K bytes");
@@ -229,7 +153,8 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
             sprintf(asBuff, "512K bytes");
             break;
     }
-    PrintAndLogEx(NORMAL, "  --= Internal SRAM Size: %s", asBuff);
+    PrintAndLogEx(NORMAL, "  --= Internal SRAM size: %s", asBuff);
+
     switch ((iChipID & 0xFF00000) >> 20) {
         case 0x19:
             sprintf(asBuff, "AT91SAM9xx Series");
@@ -289,7 +214,8 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
             sprintf(asBuff, "AT75Cxx Series");
             break;
     }
-    PrintAndLogEx(NORMAL, "  --= Architecture Identifier: %s", asBuff);
+    PrintAndLogEx(NORMAL, "  --= Architecture identifier: %s", asBuff);
+
     switch ((iChipID & 0x70000000) >> 28) {
         case 0:
             sprintf(asBuff, "ROM");
@@ -307,7 +233,78 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
             sprintf(asBuff, "SRAM emulating ROM");
             break;
     }
-    PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Type: %s", asBuff);
+    switch ((iChipID & 0xF00) >> 8) {
+        case 0:
+            mem_avail = 0;
+            break;
+        case 1:
+            mem_avail = 8;
+            break;
+        case 2:
+            mem_avail = 16;
+            break;
+        case 3:
+            mem_avail = 32;
+            break;
+        case 5:
+            mem_avail = 64;
+            break;
+        case 7:
+            mem_avail = 128;
+            break;
+        case 9:
+            mem_avail = 256;
+            break;
+        case 10:
+            mem_avail = 512;
+            break;
+        case 12:
+            mem_avail = 1024;
+            break;
+        case 14:
+            mem_avail = 2048;
+            break;
+    }
+
+    PrintAndLogEx(NORMAL, "  --= Nonvolatile program memory: " _YELLOW_("%uK") " bytes %s ( " _YELLOW_("%2.0f%%") " used )"
+                  , mem_avail
+                  , asBuff
+                  , mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100
+                 );
+
+    switch ((iChipID & 0xF000) >> 12) {
+        case 0:
+            sprintf(asBuff, "None");
+            break;
+        case 1:
+            sprintf(asBuff, "8K bytes");
+            break;
+        case 2:
+            sprintf(asBuff, "16K bytes");
+            break;
+        case 3:
+            sprintf(asBuff, "32K bytes");
+            break;
+        case 5:
+            sprintf(asBuff, "64K bytes");
+            break;
+        case 7:
+            sprintf(asBuff, "128K bytes");
+            break;
+        case 9:
+            sprintf(asBuff, "256K bytes");
+            break;
+        case 10:
+            sprintf(asBuff, "512K bytes");
+            break;
+        case 12:
+            sprintf(asBuff, "1024K bytes");
+            break;
+        case 14:
+            sprintf(asBuff, "2048K bytes");
+            break;
+    }
+    PrintAndLogEx(NORMAL, "  --= Second nonvolatile program memory size: %s", asBuff);
 }
 
 static int CmdDbg(const char *Cmd) {

@@ -1422,7 +1422,8 @@ typedef enum {
     MTDESFIRE = 4,
     MTPLUS = 8,
     MTULTRALIGHT = 16,
-    MTOTHER = 32
+    HID_SEOS = 32,
+    MTOTHER = 64
 } nxp_mifare_type_t;
 
 // Based on NXP AN10833 Rev 3.6 and NXP AN10834 Rev 4.1
@@ -1525,11 +1526,17 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
                         type |= MTPLUS;
                     }
                 } else {
-                    printTag("MIFARE Plus EV1 2K/4K in SL3");
-                    printTag("MIFARE Plus S 2K/4K in SL3");
-                    printTag("MIFARE Plus X 2K/4K in SL3");
-                    printTag("MIFARE Plus SE 1K");
-                    type |= MTPLUS;
+
+                    if ((atqa & 0x0001) == 0x0001) {
+                        printTag("HID SEOS (smartmx / javacard)");
+                        type |= HID_SEOS;
+                    } else {
+                        printTag("MIFARE Plus EV1 2K/4K in SL3");
+                        printTag("MIFARE Plus S 2K/4K in SL3");
+                        printTag("MIFARE Plus X 2K/4K in SL3");
+                        printTag("MIFARE Plus SE 1K");
+                        type |= MTPLUS;
+                    }
                 }
 
                 printTag("NTAG 4xx");
@@ -1634,6 +1641,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     bool isMifarePlus = false;
     bool isMifareUltralight = false;
     bool isST = false;
+    bool isEMV = false;
     int nxptype = MTNONE;
 
     if (card.uidlen <= 4) {
@@ -2048,6 +2056,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
                         if (verbose) PrintAndLogEx(SUCCESS, "----------------------------------------------------");
                         found = true;
+                        isEMV = true;
                     }
 
                 }
@@ -2097,14 +2106,17 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     if (isMifareUltralight)
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu info`"));
 
-    if (isMifarePlus && isMagic == 0)
+    if (isMifarePlus && isMagic == 0 && isEMV == false)
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfp info`"));
 
-    if (isMifareDESFire && isMagic == 0)
+    if (isMifareDESFire && isMagic == 0 && isEMV == false)
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes info`"));
 
     if (isST)
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf st info`"));
+
+    if (isEMV)
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`emv search -s`"));
 
     PrintAndLogEx(NORMAL, "");
     DropField();
@@ -2309,7 +2321,7 @@ static command_t CommandTable[] = {
     {"raw",         CmdHF14ACmdRaw,       IfPm3Iso14443a,  "Send raw hex data to tag"},
     {"antifuzz",    CmdHF14AAntiFuzz,     IfPm3Iso14443a,  "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
     {"config",      CmdHf14AConfig,       IfPm3Iso14443a,  "Configure 14a settings (use with caution)"},
-    {"apdufind",    CmdHf14AFindapdu,     IfPm3Iso14443a,  "Enuerate APDUs - CLA/INS/P1P2"},
+    {"apdufind",    CmdHf14AFindapdu,     IfPm3Iso14443a,  "Enumerate APDUs - CLA/INS/P1P2"},
     {NULL, NULL, NULL, NULL}
 };
 

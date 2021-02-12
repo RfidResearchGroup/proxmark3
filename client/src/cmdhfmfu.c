@@ -115,6 +115,36 @@ static char *getUlev1CardSizeStr(uint8_t fsize) {
     return buf;
 }
 
+int ul_read_uid(uint8_t *uid) {
+    if (uid == NULL) {
+        PrintAndLogEx(WARNING, "NUll parameter UID");
+        return PM3_ESOFT;
+    }
+    // read uid from tag
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    WaitForResponse(CMD_ACK, &resp);
+    iso14a_card_select_t card;
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    uint64_t select_status = resp.oldarg[0];
+    // 0: couldn't read
+    // 1: OK with ATS
+    // 2: OK, no ATS
+    // 3: proprietary Anticollision
+    if (select_status == 0) {
+        PrintAndLogEx(WARNING, "iso14443a card select failed");
+        return PM3_ESOFT;
+    }
+    if (card.uidlen != 7) {
+        PrintAndLogEx(WARNING, "Wrong sized UID, expected 7bytes got %d", card.uidlen);
+        return PM3_ESOFT;
+    }
+    memcpy(uid, card.uid, 7);
+    return PM3_SUCCESS;
+}
+
 static void ul_switch_on_field(void) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
@@ -1102,7 +1132,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (ak_len) {
-        if (ak_len != 16 && ak_len != 8) {
+        if (ak_len != 16 && ak_len != 4) {
             PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
             return PM3_EINVARG;
         }
@@ -2253,7 +2283,7 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(HINT, "Hint: See " _YELLOW_("`script run hf_mfu_dumptoemulator`") " to convert the .bin to .eml");
+    PrintAndLogEx(HINT, "Hint: See " _YELLOW_("`script run data_mfu_bin2eml`") " to convert the .bin to .eml");
     return CmdHF14AMfELoad(Cmd);
 }
 //
@@ -2264,7 +2294,8 @@ static int CmdHF14AMfUSim(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfu sim",
                   "Simulate MIFARE Ultralight family type based upon\n"
                   "ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n"
-                  "from emulator memory.  See `hf mfu eload` first",
+                  "from emulator memory.  See `hf mfu eload` first. \n"
+                  "See `hf 14a sim -h` to see available types. You want 2 or 7 usually.",
                   "hf mfu sim -t 2 --uid 1122344556677        -> MIFARE Ultralight\n"
                   "hf mfu sim -t 7 --uid 1122344556677 -n 5   -> AMIIBO (NTAG 215),  pack 0x8080"
                  );
@@ -2598,7 +2629,7 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("u", "uid", "<hex>", "4|7 hex byte UID"),
+        arg_str0("u", "uid", "<hex>", "<4|7> hex byte UID"),
         arg_lit0("r", NULL, "read UID from tag"),
         arg_param_end
     };
@@ -2636,6 +2667,11 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
         }
         ulen = card.uidlen;
         memcpy(uid, card.uid, card.uidlen);
+    } else {
+        if (ulen != 4 && ulen != 7) {
+            PrintAndLogEx(ERR, "Must supply 4 or 7 hex byte uid");
+            return PM3_EINVARG;
+        }
     }
 
     uint8_t iv[8] = { 0x00 };
@@ -2757,34 +2793,18 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     if (selftest)
         return generator_selftest();
 
-    if (u_len != 7) {
-        PrintAndLogEx(WARNING, "Key must be 7 hex bytes");
-        return PM3_EINVARG;
-    }
-
     if (use_tag) {
         // read uid from tag
-        clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
-        PacketResponseNG resp;
-        WaitForResponse(CMD_ACK, &resp);
-        iso14a_card_select_t card;
-        memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+        int res = ul_read_uid(uid);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
 
-        uint64_t select_status = resp.oldarg[0];
-        // 0: couldn't read
-        // 1: OK with ATS
-        // 2: OK, no ATS
-        // 3: proprietary Anticollision
-        if (select_status == 0) {
-            PrintAndLogEx(WARNING, "iso14443a card select failed");
-            return PM3_ESOFT;
+    } else {
+        if (u_len != 7) {
+            PrintAndLogEx(WARNING, "Key must be 7 hex bytes");
+            return PM3_EINVARG;
         }
-        if (card.uidlen != 7) {
-            PrintAndLogEx(WARNING, "Wrong sized UID, expected 7bytes got %d", card.uidlen);
-            return PM3_ESOFT;
-        }
-        memcpy(uid, card.uid, sizeof(uid));
     }
 
     PrintAndLogEx(INFO, "---------------------------------");
@@ -3539,7 +3559,27 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
     }
 
     DropField();
-    status = NDEFDecodeAndPrint(records, (size_t)maxsize, true);
+    status = NDEFRecordsDecodeAndPrint(records, (size_t)maxsize);
+    if ( status != PM3_SUCCESS) {
+        status = NDEFDecodeAndPrint(records, (size_t)maxsize, true);
+    }
+
+    char *jooki = strstr((char*)records, "s.jooki.rocks/s/?s=");
+    if (jooki) {
+        jooki += 17;
+        while(jooki) {
+            if ((*jooki) != '=')
+                jooki++;
+            else  {
+                jooki++;
+                char s[17] = {0};
+                strncpy(s, jooki, 16);
+                PrintAndLogEx(HINT, "Use `" _YELLOW_("hf jooki decode -d %s") "` to decode", s);
+                break;
+            }
+        }
+    }
+
     free(records);
     return status;
 }

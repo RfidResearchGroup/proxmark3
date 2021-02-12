@@ -25,12 +25,12 @@
 #include <inttypes.h>
 #include "cmdparser.h"    // command_t
 #include "comms.h"
-#include "commonutil.h"  // ARRAYLEN
+#include "commonutil.h"   // ARRAYLEN
 #include "cliparser.h"
 #include "ui.h"
 #include "graph.h"
-#include "cmddata.h"  //for g_debugMode, demodbuff cmds
-#include "cmdlf.h"    // lf_read
+#include "cmddata.h"      // g_debugMode, demodbuff cmds
+#include "cmdlf.h"        // lf_read, lfsim_wait_check
 #include "util_posix.h"
 #include "lfdemod.h"
 #include "wiegand_formats.h"
@@ -58,7 +58,7 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
     wiegand_message_t packed;
     memset(&packed, 0, sizeof(wiegand_message_t));
 
-    if (HIDPack(format_idx, card, &packed) == false) {
+    if (HIDPack(format_idx, card, &packed, true) == false) {
         PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
         return PM3_ESOFT;
     }
@@ -223,10 +223,7 @@ static int CmdHIDWatch(const char *Cmd) {
     PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HID_WATCH, NULL, 0);
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_HID_WATCH, &resp);
-    PrintAndLogEx(INFO, "Done");
-    return resp.status;
+    return lfsim_wait_check(CMD_LF_HID_WATCH);
 }
 
 static int CmdHIDSim(const char *Cmd) {
@@ -287,7 +284,7 @@ static int CmdHIDSim(const char *Cmd) {
         packed.Mid = mid;
         packed.Bot = bot;
     } else {
-        if (HIDPack(format_idx, &card, &packed) == false) {
+        if (HIDPack(format_idx, &card, &packed, true) == false) {
             PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
             return PM3_ESOFT;
         }
@@ -300,8 +297,6 @@ static int CmdHIDSim(const char *Cmd) {
         PrintAndLogEx(INFO, "Simulating HID tag using raw " _GREEN_("%s"),  raw);
     }
 
-    PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
-
     lf_hidsim_t payload;
     payload.hi2 = packed.Top;
     payload.hi = packed.Mid;
@@ -310,13 +305,7 @@ static int CmdHIDSim(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HID_SIMULATE, (uint8_t *)&payload,  sizeof(payload));
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_HID_SIMULATE, &resp);
-    PrintAndLogEx(INFO, "Done");
-    if (resp.status != PM3_EOPABORTED)
-        return resp.status;
-
-    return PM3_SUCCESS;
+    return lfsim_wait_check(CMD_LF_HID_SIMULATE);
 }
 
 static int CmdHIDClone(const char *Cmd) {
@@ -401,7 +390,7 @@ static int CmdHIDClone(const char *Cmd) {
         packed.Mid = mid;
         packed.Bot = bot;
     } else {
-        if (HIDPack(format_idx, &card, &packed) == false) {
+        if (HIDPack(format_idx, &card, &packed, true) == false) {
             PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
             return PM3_ESOFT;
         }

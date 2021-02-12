@@ -191,7 +191,7 @@ void RunMod(void) {
                         read_successful = false;
                         break;
                     }
-                    // We're skipping 14 blocks (56 bytes) here, as that "[...] has version/signature/counter data here" according to comments on hf_mfu_dumptoemulator
+                    // We're skipping 14 blocks (56 bytes) here, as that "[...] has version/signature/counter data here" according to comments on data_mfu_bin2eml
                     // When converting a bin, it's almost all 0 other than one 0x0F byte, and functionality seems to be unaffected if that byte is set to 0x00.
                     emlSetMem_xt(dataout, 14 + i, 1, 4);
                     Dbhexdump(4, dataout, 0);

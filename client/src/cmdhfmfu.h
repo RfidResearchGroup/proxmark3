@@ -23,6 +23,7 @@ typedef struct {
 uint32_t GetHF14AMfU_Type(void);
 int ul_print_type(uint32_t tagtype, uint8_t spaces);
 void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage);
+int ul_read_uid(uint8_t *uid);
 
 int CmdHFMFUltra(const char *Cmd);
 

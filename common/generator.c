@@ -465,7 +465,6 @@ int mfdes_kdf_input_gallagher(uint8_t *uid, uint8_t uidLen, uint8_t keyNo, uint3
     return PM3_SUCCESS;
 }
 
-
 int mfc_generate4b_nuid(uint8_t *uid, uint8_t *nuid) {
     uint16_t crc;
     uint8_t b1, b2;
@@ -478,6 +477,21 @@ int mfc_generate4b_nuid(uint8_t *uid, uint8_t *nuid) {
     crc = crc16_fast(&uid[3], 4, reflect16(crc), true, true);
     nuid[2] = (crc >> 8) & 0xFF ;
     nuid[3] = crc & 0xFF;
+    return PM3_SUCCESS;
+}
+
+int mfc_algo_touch_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
+    if (uid == NULL) return PM3_EINVARG;
+    if (key == NULL) return PM3_EINVARG;
+
+    *key = (
+               (uint64_t)(uid[1] ^ uid[2] ^ uid[3]) << 40 |
+               (uint64_t)uid[1] << 32 |
+               (uint64_t)uid[2] << 24 |
+               (uint64_t)(((uid[0] + uid[1] + uid[2] + uid[3]) % 0x100) ^ uid[3]) << 16 |
+               (uint64_t)0  << 8 |
+               (uint64_t)0
+           );
     return PM3_SUCCESS;
 }
 

@@ -73,11 +73,11 @@ void printSamples(void) {
 void setSamplingConfig(sample_config *sc) {
 
     // decimation (1-8) how many bits of adc sample value to save
-    if (sc->decimation > 0 && sc->decimation < 8)
+    if (sc->decimation > 0 && sc->decimation < 9)
         config.decimation = sc->decimation;
 
     // bits per sample (1-8)
-    if (sc->bits_per_sample > 0 && sc->bits_per_sample < 8)
+    if (sc->bits_per_sample > 0 && sc->bits_per_sample < 9)
         config.bits_per_sample = sc->bits_per_sample;
 
     //

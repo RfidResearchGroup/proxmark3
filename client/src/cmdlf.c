@@ -64,156 +64,29 @@ static bool g_lf_threshold_set = false;
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_lf_cmdread(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf cmdread d <delay duration> z <zero duration> o <one duration> [e <symbol> <duration>] c <cmd symbols> [q] [s #samples] [@]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h             This help");
-    PrintAndLogEx(NORMAL, "       d <duration>  delay OFF period, (0 for bitbang mode)");
-    PrintAndLogEx(NORMAL, "       z <duration>  ZERO time period");
-    PrintAndLogEx(NORMAL, "       o <duration>  ONE time period");
-    PrintAndLogEx(NORMAL, "       e <symbol> <duration> Extra symbol definition and duration (up to %i)", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
-    PrintAndLogEx(NORMAL, "       b <duration>  B period");
-    PrintAndLogEx(NORMAL, "       c <cmd>       Command symbols (0/1/...)");
-    PrintAndLogEx(NORMAL, "       q             silent (optional)");
-    PrintAndLogEx(NORMAL, "       s #samples    number of samples to collect (optional)");
-    PrintAndLogEx(NORMAL, "       @             run continuously until a key is pressed (optional)");
+// Informative user function.
+// loop and wait for either keyboard press or pm3 button to exit
+// if key event, send break loop cmd to Pm3
+int lfsim_wait_check(uint32_t cmd) {
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "       ************* " _YELLOW_("All periods in decimal and in microseconds (us)"));
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag 1/Hitag S") ":");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 50 z 116 o 166 e W 3000 c W00110"));
-    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag 2") ":");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 50 z 116 o 166 e W 3000 c W11000"));
-    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag 2, oscilloscope style") ":");
-    PrintAndLogEx(NORMAL, _YELLOW_("      data plot"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 50 z 116 o 166 e W 3000 c W11000 q s 2000 @"));
-    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag (us)") ":");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 48 z 112 o 176 e W 3000 e S 240 e E 336 c W0S00000010000E"));
-    PrintAndLogEx(NORMAL, "Extras:");
-    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
-    return PM3_SUCCESS;
-}
-static int usage_lf_read(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf read [h] [q] [s #samples] [@]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h            This help");
-    PrintAndLogEx(NORMAL, "       q            silent (optional)");
-    PrintAndLogEx(NORMAL, "       s #samples   number of samples to collect (optional)");
-    PrintAndLogEx(NORMAL, "       @            run continuously until a key is pressed (optional)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf read");
-    PrintAndLogEx(NORMAL, "- collecting quietly 12000 samples:");
-    PrintAndLogEx(NORMAL, "      lf read q s 12000     - ");
-    PrintAndLogEx(NORMAL, "- oscilloscope style:");
-    PrintAndLogEx(NORMAL, "      data plot");
-    PrintAndLogEx(NORMAL, "      lf read q s 3000 @");
-    PrintAndLogEx(NORMAL, "Extras:");
-    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
-    return PM3_SUCCESS;
-}
-static int usage_lf_sim(void) {
-    PrintAndLogEx(NORMAL, "Simulate low frequency tag from graphbuffer.");
-    PrintAndLogEx(NORMAL, "Usage: lf sim [h] <gap>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h         This help");
-    PrintAndLogEx(NORMAL, "       <gap>     Start gap (in microseconds)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("         lf sim 240") "     - start simulating with 240ms gap");
-    PrintAndLogEx(NORMAL, _YELLOW_("         lf sim"));
-    PrintAndLogEx(NORMAL, "Extras:");
-    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
-    return PM3_SUCCESS;
-}
-static int usage_lf_sniff(void) {
-    PrintAndLogEx(NORMAL, "Sniff low frequency signal.");
-    PrintAndLogEx(NORMAL, "Usage: lf sniff [h] [q] [s #samples] [@]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h         This help");
-    PrintAndLogEx(NORMAL, "       q            silent (optional)");
-    PrintAndLogEx(NORMAL, "       s #samples   number of samples to collect (optional)");
-    PrintAndLogEx(NORMAL, "       @            run continuously until a key is pressed (optional)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf sniff");
-    PrintAndLogEx(NORMAL, _CYAN_(" oscilloscope style") ":");
-    PrintAndLogEx(NORMAL, _YELLOW_("      data plot"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf sniff q s 3000 @"));
-    PrintAndLogEx(NORMAL, "Extras:");
-    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
-    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'data plot'")" to look at it");
-    return PM3_SUCCESS;
-}
-static int usage_lf_config(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf config [h] [L | H | q <divisor> | f <freq>] [b <bps>] [d <decim>] [a 0|1]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h                 This help");
-    PrintAndLogEx(NORMAL, "       L                 Low frequency (125 kHz)");
-    PrintAndLogEx(NORMAL, "       H                 High frequency (134 kHz)");
-    PrintAndLogEx(NORMAL, "       q <divisor>       Manually set freq divisor. %d -> 134 kHz, %d -> 125 kHz", LF_DIVISOR_134, LF_DIVISOR_125);
-    PrintAndLogEx(NORMAL, "       f <freq>          Manually set frequency in kHz");
-    PrintAndLogEx(NORMAL, "       b <bps>           Sets resolution of bits per sample. Default (max): 8");
-    PrintAndLogEx(NORMAL, "       d <decimate>      Sets decimation. A value of N saves only 1 in N samples. Default: 1");
-    PrintAndLogEx(NORMAL, "       a [0|1]           Averaging - if set, will average the stored sample value when decimating. Default: 1");
-    PrintAndLogEx(NORMAL, "       t <threshold>     Sets trigger threshold. 0 means no threshold (range: 0-128)");
-    PrintAndLogEx(NORMAL, "       s <samplestoskip> Sets a number of samples to skip before capture. Default: 0");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf config") "              - shows current config");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf config b 8 L") "        - samples at 125 kHz, 8bps.");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf config H b 4 d 3") "    - samples at 134 kHz, averages three samples into one, stored with ");
-    PrintAndLogEx(NORMAL, "                                a resolution of 4 bits per sample.");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf read") "                - performs a read (active field)");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf sniff") "               - performs a sniff (no active field)");
-    return PM3_SUCCESS;
-}
-static int usage_lf_simfsk(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf simfsk [h] [c <clock>] [H <fcHigh>] [L <fcLow>] [d <hexdata>]");
-    PrintAndLogEx(NORMAL, "there are about four FSK modulations to know of.");
-    PrintAndLogEx(NORMAL, "FSK1  -  where fc/8 = high  and fc/5 = low");
-    PrintAndLogEx(NORMAL, "FSK1a -  is inverted FSK1,  ie:   fc/5 = high and fc/8 = low");
-    PrintAndLogEx(NORMAL, "FSK2  -  where fc/10 = high  and fc/8 = low");
-    PrintAndLogEx(NORMAL, "FSK2a -  is inverted FSK2,  ie:   fc/10 = high and fc/8 = low");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h              This help");
-    PrintAndLogEx(NORMAL, "       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
-    PrintAndLogEx(NORMAL, "       H <fcHigh>     Manually set the larger Field Clock");
-    PrintAndLogEx(NORMAL, "       L <fcLow>      Manually set the smaller Field Clock");
-    //PrintAndLogEx(NORMAL, "       s              TBD- -STT to enable a gap between playback repetitions - default: no gap");
-    PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
-    PrintAndLogEx(NORMAL, "\n  NOTE: if you set one clock manually set them all manually");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 40 H 8 L 5 d 010203") "      -  FSK1  rf/40  data 010203");
-    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 40 H 5 L 8 d 010203") "      -  FSK1a rf/40  data 010203");
-    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 64 H 10 L 8 d 010203") "     -  FSK2  rf/64  data 010203");
-    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 64 H 8 L 10 d 010203") "     -  FSK2a rf/64  data 010203");
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-static int usage_lf_simask(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf simask [c <clock>] [i] [b|m|r] [s] [d <raw hex to sim>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h              This help");
-    PrintAndLogEx(NORMAL, "       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
-    PrintAndLogEx(NORMAL, "       i              invert data");
-    PrintAndLogEx(NORMAL, "       b              sim ask/biphase");
-    PrintAndLogEx(NORMAL, "       m              sim ask/manchester - Default");
-    PrintAndLogEx(NORMAL, "       r              sim ask/raw");
-    PrintAndLogEx(NORMAL, "       s              add t55xx Sequence Terminator gap - default: no gaps (only manchester)");
-    PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
-    return PM3_SUCCESS;
-}
-static int usage_lf_simpsk(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf simpsk [1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h              This help");
-    PrintAndLogEx(NORMAL, "       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
-    PrintAndLogEx(NORMAL, "       i              invert data");
-    PrintAndLogEx(NORMAL, "       1              set PSK1 (default)");
-    PrintAndLogEx(NORMAL, "       2              set PSK2");
-    PrintAndLogEx(NORMAL, "       3              set PSK3");
-    PrintAndLogEx(NORMAL, "       r <carrier>    2|4|8 are valid carriers: default = 2");
-    PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
+
+    for (;;) {
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "User aborted");
+            break;
+        }
+
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(cmd, &resp, 1000)) {
+            if (resp.status == PM3_EOPABORTED) {
+                PrintAndLogEx(DEBUG, "Button pressed, user aborted");
+                break;
+            }
+        }
+    }
+    PrintAndLogEx(INFO, "Done");
     return PM3_SUCCESS;
 }
 
@@ -336,14 +209,51 @@ static int CmdLFTune(const char *Cmd) {
 
 /* send a LF command before reading */
 int CmdLFCommandRead(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf cmdread",
+                  "Modulate LF reader field to send command before read. All periods in microseconds.\n"
+                  " - use " _YELLOW_("`lf config`") _CYAN_(" to set parameters"),
+                  "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110                           --> probing for Hitag 1/S\n"
+                  "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000                           --> probing for Hitag 2\n"
+                  "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -q -s 2000 -@             --> probing for Hitag 2, oscilloscope style\n"
+                  "lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -c W0S00000010000E  --> probing for Hitag (us)\n"
+                 );
 
-    if (!session.pm3_present) return PM3_ENOTTY;
+    char div_str[70] = {0};
+    sprintf(div_str, "Extra symbol definition and duration (up to %i)", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
 
-    bool errors = false;
-    bool verbose = true;
-    bool continuous = false;
-    uint32_t samples = 0;
-    uint16_t datalen = 0;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("d", "duration", "<us>", "delay OFF period, (0 for bitbang mode)"),
+        arg_str0("c", "cmd", "<0|1|...>", "command symbols"),
+        arg_strx0("e", "extra", "<us>", div_str),
+        arg_u64_0("o", "one", "<us>", "ONE time period"),
+        arg_u64_0("z", "zero", "<us>", "ZERO time period"),
+        arg_u64_0("s", "samples", "<dec>", "number of samples to collect"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("@", NULL, "continuous mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint32_t delay = arg_get_u32_def(ctx, 1, 0);
+
+    int cmd_len = 128;
+    char cmd[128] = {0};
+    CLIGetStrWithReturn(ctx, 2, (uint8_t *)cmd, &cmd_len);
+
+    int extra_arg_len = 250;
+    char extra_arg[250] = {0};
+    CLIGetStrWithReturn(ctx, 3, (uint8_t *)extra_arg, &extra_arg_len);
+
+    uint16_t period_1 = arg_get_u32_def(ctx, 4, 0);
+    uint16_t period_0 = arg_get_u32_def(ctx, 5, 0);
+    uint32_t samples = arg_get_u32_def(ctx, 6, 0);
+    bool verbose = arg_get_lit(ctx, 7);
+    bool cm = arg_get_lit(ctx, 8);
+    CLIParserFree(ctx);
+
+    if (session.pm3_present == false)
+        return PM3_ENOTTY;
 
     const uint8_t payload_header_size = 12 + (3 * LF_CMDREAD_MAX_EXTRA_SYMBOLS);
     struct p {
@@ -356,76 +266,57 @@ int CmdLFCommandRead(const char *Cmd) {
         bool     verbose : 1;
         uint8_t data[PM3_CMD_DATA_SIZE - payload_header_size];
     } PACKED payload;
+    payload.delay = delay;
+    payload.period_1 = period_1;
+    payload.period_0 = period_0;
     payload.samples = samples;
     payload.verbose = verbose;
-    uint8_t index_extra = 0;
+    memcpy(payload.data, cmd, cmd_len);
 
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_cmdread();
-            case 'c':  // cmd bytes 1010
-                datalen = param_getstr(Cmd, cmdp + 1, (char *)&payload.data, sizeof(payload.data));
-                cmdp += 2;
-                break;
-            case 'd':  // delay
-                payload.delay = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'z':  // zero
-                payload.period_0 = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
-                cmdp += 2;
-                break;
-            case 'o':  // ones
-                payload.period_1 = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
-                cmdp += 2;
-                break;
-            case 'e':  // extra symbol definition
-                if (index_extra < LF_CMDREAD_MAX_EXTRA_SYMBOLS - 1) {
-                    payload.symbol_extra[index_extra] = param_getchar(Cmd, cmdp + 1);
-                    payload.period_extra[index_extra] = param_get32ex(Cmd, cmdp + 2, 0, 10) & 0xFFFF;
-                    index_extra++;
-                    cmdp += 3;
-                } else {
-                    PrintAndLogEx(WARNING, "Too many extra symbols, please define up to %i symbols", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
-                    errors = true;
-                }
-                break;
-            case 's':
-                samples = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                payload.samples = samples;
-                cmdp += 2;
-                break;
-            case 'q':
-                verbose = false;
-                payload.verbose = verbose;
-                cmdp++;
-                break;
-            case '@':
-                continuous = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+    // extra symbol definition
+    uint8_t index_extra = 0;
+    int i = 0;
+    for (; i < extra_arg_len;) {
+
+        if (index_extra < LF_CMDREAD_MAX_EXTRA_SYMBOLS - 1) {
+            payload.symbol_extra[index_extra] = extra_arg[i];
+            int tmp = atoi(extra_arg + (i + 1));
+            payload.period_extra[index_extra] = tmp;
+            index_extra++;
+            i++;
+            while (extra_arg[i] >= 0x30 && extra_arg[i] <= 0x39)
+                i++;
+
+        } else {
+            PrintAndLogEx(WARNING, "Too many extra symbols, please define up to %i symbols", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
         }
     }
 
     // bitbang mode
     if (payload.delay == 0) {
         if (payload.period_0 < 7 || payload.period_1 < 7) {
-            PrintAndLogEx(WARNING, "warning periods cannot be less than 7us in bit bang mode");
+            PrintAndLogEx(WARNING, "periods cannot be less than 7us in bit bang mode");
             return PM3_EINVARG;
         }
     }
 
-    //Validations
-    if (errors || cmdp == 0)  return usage_lf_cmdread();
-    if (continuous) {
-        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
+    PrintAndLogEx(DEBUG, "Cmd read - settings");
+    PrintAndLogEx(DEBUG, "-------------------");
+    PrintAndLogEx(DEBUG, "delay: %u ,  zero %u , one %u , samples %u", payload.delay, payload.period_0,  payload.period_1, payload.samples);
+    PrintAndLogEx(DEBUG, "Extra symbols");
+    PrintAndLogEx(DEBUG, "-------------");
+    for (i = 0; i < LF_CMDREAD_MAX_EXTRA_SYMBOLS; i++) {
+        if (payload.symbol_extra[i] == 0x00)
+            continue;
+
+        PrintAndLogEx(DEBUG, "  %c - %u", payload.symbol_extra[i], payload.period_extra[i]);
     }
+    PrintAndLogEx(DEBUG, "data: %s", payload.data);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
     if (verbose) {
         PrintAndLogEx(SUCCESS, "Sending command...");
     }
@@ -433,11 +324,11 @@ int CmdLFCommandRead(const char *Cmd) {
     int ret = PM3_SUCCESS;
     do {
         clearCommandBuffer();
-        SendCommandNG(CMD_LF_MOD_THEN_ACQ_RAW_ADC, (uint8_t *)&payload, payload_header_size + datalen);
+        SendCommandNG(CMD_LF_MOD_THEN_ACQ_RAW_ADC, (uint8_t *)&payload, payload_header_size + cmd_len);
 
         PacketResponseNG resp;
 
-        uint8_t i = 10;
+        i = 10;
         // 20sec wait loop
         while (!WaitForResponseTimeout(CMD_LF_MOD_THEN_ACQ_RAW_ADC, &resp, 2000) && i != 0) {
             if (verbose) {
@@ -448,25 +339,23 @@ int CmdLFCommandRead(const char *Cmd) {
         if (verbose) {
             PrintAndLogEx(NORMAL, "");
         }
-        if (resp.status == PM3_SUCCESS) {
-            if (i) {
-                if (verbose) {
-                    PrintAndLogEx(SUCCESS, "downloading response signal data");
-                }
-                getSamples(samples, false);
-                ret = PM3_SUCCESS;
-            } else {
-                PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-                return PM3_ETIMEOUT;
-            }
-        } else {
+        if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "command failed.");
             return PM3_ESOFT;
         }
-        if (kbd_enter_pressed()) {
-            break;
+
+        if (i) {
+            if (verbose) {
+                PrintAndLogEx(SUCCESS, "downloading response signal data");
+            }
+            getSamples(samples, false);
+            ret = PM3_SUCCESS;
+        } else {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
         }
-    } while (continuous);
+
+    } while (cm && kbd_enter_pressed() == false);
     return ret;
 }
 
@@ -576,12 +465,59 @@ int lf_config(sample_config *config) {
 }
 
 int CmdLFConfig(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf config",
+                  "Get/Set config for LF sampling, bit/sample, decimation, frequency\n"
+                  "These changes are temporary, will be reset after a power cycle.\n\n"
+                  " - use " _YELLOW_("`lf read`") _CYAN_(" performs a read (active field)\n")
+                  _CYAN_(" - use ") _YELLOW_("`lf sniff`") _CYAN_(" performs a sniff (no active field)"),
+                  "lf config                    --> shows current config\n"
+                  "lf config -b 8 --125         --> samples at 125 kHz, 8 bps\n"
+                  "lf config -b 4 --134 --dec 3 --> samples at 134 kHz, averages three samples into one, stored with a resolution of 4 bits per sample\n"
+                  "lf config --trig 20 -s 10000 --> trigger sampling when above 20, skip 10 000 first samples after triggered\n"
+                 );
 
-    if (!session.pm3_present) return PM3_ENOTTY;
+    char div_str[70] = {0};
+    sprintf(div_str, "Manually set freq divisor. %d -> 134 kHz, %d -> 125 kHz", LF_DIVISOR_134, LF_DIVISOR_125);
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "125", "125 kHz frequency"),
+        arg_lit0(NULL, "134", "134 kHz frequency"),
+        arg_int0("a", "avg", "<0|1>", "averaging - if set, will average the stored sample value when decimating (default 1)"),
+        arg_int0("b", "bps", "<1-8>", "sets resolution of bits per sample (default 8)"),
+        arg_int0(NULL, "dec", "<1-8>", "sets decimation. A value of N saves only 1 in N samples (default 1)"),
+        arg_int0(NULL, "divisor", "<19-255>", div_str),
+        arg_int0("f", "freq", "<47-600>", "manually set frequency in kHz"),
+        arg_lit0("r", "reset", "reset values to defaults"),
+        arg_int0("s", "skip", "<dec>", "sets a number of samples to skip before capture (default 0)"),
+        arg_int0("t", "trig", "<0-128>", "sets trigger threshold. 0 means no threshold"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool use_125 = arg_get_lit(ctx, 1);
+    bool use_134 = arg_get_lit(ctx, 2);
+    int8_t avg = arg_get_int_def(ctx, 3, 0);
+    int8_t bps = arg_get_int_def(ctx, 4, -1);
+    int8_t dec = arg_get_int_def(ctx, 5, -1);
+    int16_t div = arg_get_int_def(ctx, 6, -1);
+    int16_t freq = arg_get_int_def(ctx, 7, -1);
+    bool reset = arg_get_lit(ctx, 8);
+    int32_t skip = arg_get_int_def(ctx, 9, -1);
+    int16_t trigg = arg_get_int_def(ctx, 10, -1);
+    CLIParserFree(ctx);
+
+    if (session.pm3_present == false)
+        return PM3_ENOTTY;
 
     // if called with no params, just print the device config
     if (strlen(Cmd) == 0) {
         return lf_config(NULL);
+    }
+
+    if (use_125 + use_134 > 1) {
+        PrintAndLogEx(ERR, "use only one of 125 or 134 params");
+        return PM3_EINVARG;
     }
 
     sample_config config = {
@@ -594,87 +530,60 @@ int CmdLFConfig(const char *Cmd) {
         .verbose = true
     };
 
-    bool errors = false;
+    if (reset) {
+        config.decimation = 1;
+        config.bits_per_sample = 8;
+        config.averaging = 1,
+        config.divisor = LF_DIVISOR_125;
+        config.samples_to_skip = 0;
+        config.trigger_threshold = 0;
+        g_lf_threshold_set = false;
+    }
 
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (param_getchar(Cmd, cmdp)) {
-            case 'h':
-                return usage_lf_config();
-            case 'H':
-                config.divisor = LF_DIVISOR_134;
-                cmdp++;
-                break;
-            case 'L':
-                config.divisor = LF_DIVISOR_125;
-                cmdp++;
-                break;
-            case 'q':
-                config.divisor = param_get8ex(Cmd, cmdp + 1, 95, 10);
-                if (config.divisor < 19) {
-                    PrintAndLogEx(ERR, "divisor must be between 19 and 255");
-                    return PM3_EINVARG;
-                }
-                cmdp += 2;
-                break;
-            case 'f': {
-                int freq = param_get32ex(Cmd, cmdp + 1, 125, 10);
-                config.divisor = LF_FREQ2DIV(freq);
-                if (config.divisor < 19) {
-                    PrintAndLogEx(ERR, "freq must be between 47 and 600");
-                    return PM3_EINVARG;
-                }
-                cmdp += 2;
-                break;
-            }
-            case 't': {
-                uint8_t trigg = 0;
-                errors |= param_getdec(Cmd, cmdp + 1, &trigg);
-                cmdp += 2;
-                if (!errors) {
-                    config.trigger_threshold = trigg;
-                    g_lf_threshold_set = (config.trigger_threshold > 0);
-                }
-                break;
-            }
-            case 'b': {
-                config.bits_per_sample = param_get8ex(Cmd, cmdp + 1, 8, 10);
+    if (use_125)
+        config.divisor = LF_DIVISOR_125;
 
-                // bps is limited to 8
-                if (config.bits_per_sample >> 4)
-                    config.bits_per_sample = 8;
+    if (use_134)
+        config.divisor = LF_DIVISOR_134;
 
-                cmdp += 2;
-                break;
-            }
-            case 'd': {
-                config.decimation = param_get8ex(Cmd, cmdp + 1, 1, 10);
+    config.averaging = (avg == 1);
 
-                // decimation is limited to 255
-                if (config.decimation >> 4)
-                    config.decimation = 8;
+    if (bps > -1) {
+        // bps is limited to 8
+        config.bits_per_sample = (bps & 0x0F);
+        if (config.bits_per_sample > 8)
+            config.bits_per_sample = 8;
+    }
 
-                cmdp += 2;
-                break;
-            }
-            case 'a':
-                config.averaging = (param_getchar(Cmd, cmdp + 1) == '1');
-                cmdp += 2;
-                break;
-            case 's':
-                config.samples_to_skip = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = 1;
-                break;
+    if (dec > -1) {
+        // decimation is limited to 8
+        config.decimation = (dec & 0x0F);
+        if (config.decimation > 8)
+            config.decimation = 8;
+    }
+
+    if (div > -1) {
+        config.divisor = div;
+        if (config.divisor < 19) {
+            PrintAndLogEx(ERR, "divisor must be between 19 and 255");
+            return PM3_EINVARG;
         }
     }
 
-    // validations
-    if (errors) return usage_lf_config();
+    if (freq > -1) {
+        config.divisor = LF_FREQ2DIV(freq);
+        if (config.divisor < 19) {
+            PrintAndLogEx(ERR, "freq must be between 47 and 600");
+            return PM3_EINVARG;
+        }
+    }
 
+    if (trigg > -1) {
+        config.trigger_threshold = trigg;
+        g_lf_threshold_set = (config.trigger_threshold > 0);
+    }
+
+    config.samples_to_skip = skip;
     return lf_config(&config);
 }
 
@@ -709,49 +618,38 @@ int lf_read(bool verbose, uint32_t samples) {
 }
 
 int CmdLFRead(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf read",
+                  "Sniff low frequency signal.\n"
+                  " - use " _YELLOW_("`lf config`") _CYAN_(" to set parameters.\n")
+                  _CYAN_(" - use ") _YELLOW_("`data plot`") _CYAN_(" to look at it"),
+                  "lf read -v -s 12000   --> collect 12000 samples\n"
+                  "lf read -s 3000 -@    --> oscilloscope style \n"
+                 );
 
-    if (!session.pm3_present) return PM3_ENOTTY;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("s", "samples", "<dec>", "number of samples to collect"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("@", NULL, "continuous reading mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t samples = arg_get_u32_def(ctx, 1, 0);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool cm = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
 
-    bool errors = false;
-    bool verbose = true;
-    bool continuous = false;
-    uint32_t samples = 0;
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_read();
-            case 's':
-                samples = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'q':
-                verbose = false;
-                cmdp++;
-                break;
-            case '@':
-                continuous = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
+    if (session.pm3_present == false)
+        return PM3_ENOTTY;
 
-    //Validations
-    if (errors) return usage_lf_read();
-    if (continuous) {
-        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
     int ret = PM3_SUCCESS;
     do {
         ret = lf_read(verbose, samples);
-        if (kbd_enter_pressed()) {
-            break;
-        }
-    } while (continuous);
+    } while (cm && kbd_enter_pressed() == false);
     return ret;
 }
 
@@ -786,86 +684,55 @@ int lf_sniff(bool verbose, uint32_t samples) {
 }
 
 int CmdLFSniff(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf sniff",
+                  "Sniff low frequency signal.\n"
+                  " - use " _YELLOW_("`lf config`") _CYAN_(" to set parameters.\n")
+                  _CYAN_(" - use ") _YELLOW_("`data plot`") _CYAN_(" to look at it"),
+                  "lf sniff -v\n"
+                  "lf sniff -s 3000 -@    --> oscilloscope style \n"
+                 );
 
-    if (!session.pm3_present) return PM3_ENOTTY;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("s", "samples", "<dec>", "number of samples to collect"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("@", NULL, "continuous sniffing mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t samples = arg_get_u32_def(ctx, 1, 0);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool cm = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
 
-    bool errors = false;
-    bool verbose = true;
-    bool continuous = false;
-    uint32_t samples = 0;
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_sniff();
-            case 's':
-                samples = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'q':
-                verbose = false;
-                cmdp++;
-                break;
-            case '@':
-                continuous = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
+    if (session.pm3_present == false)
+        return PM3_ENOTTY;
 
-    //Validations
-    if (errors) return usage_lf_sniff();
-    if (continuous) {
-        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
     int ret = PM3_SUCCESS;
     do {
         ret = lf_sniff(verbose, samples);
-        if (kbd_enter_pressed()) {
-            break;
-        }
-    } while (continuous);
+    } while (cm && !kbd_enter_pressed());
     return ret;
 }
 
-static void ChkBitstream(void) {
+static void lf_chk_bitstream(void) {
     // convert to bitstream if necessary
     for (int i = 0; i < (int)(GraphTraceLen / 2); i++) {
         if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
             CmdGetBitStream("");
-            PrintAndLogEx(INFO, "Converted to bitstream");
+            PrintAndLogEx(INFO, "converted Graphbuffer to bitstream values (0|1)");
             break;
         }
     }
 }
 
-//Attempt to simulate any wave in buffer (one bit per output sample)
-// converts GraphBuffer to bitstream (based on zero crossings) if needed.
-int CmdLFSim(const char *Cmd) {
-
-    if (!session.pm3_present) return PM3_ENOTTY;
-
-    // sanity check
-    if (GraphTraceLen < 20) {
-        PrintAndLogEx(ERR, "No data in Graphbuffer");
-        return PM3_ENODATA;
-    }
-
-    uint8_t cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_lf_sim();
-
-    uint16_t gap = param_get32ex(Cmd, 0, 0, 10) & 0xFFFF;
-
-    // convert to bitstream if necessary
-    ChkBitstream();
-
+// Uploads GraphBuffer to device, in order to be used for LF SIM.
+int lfsim_upload_gb(void) {
     PrintAndLogEx(DEBUG, "DEBUG: Uploading %zu bytes", GraphTraceLen);
-
-    PacketResponseNG resp;
 
     struct pupload {
         uint8_t flag;
@@ -881,7 +748,10 @@ int CmdLFSim(const char *Cmd) {
     // fast push mode
     conn.block_after_ACK = true;
 
+    PacketResponseNG resp;
+
     //can send only 512 bits at a time (1 byte sent per bit...)
+    PrintAndLogEx(INFO, "." NOLF);
     for (uint16_t i = 0; i < GraphTraceLen; i += PM3_CMD_DATA_SIZE - 3) {
 
         size_t len = MIN((GraphTraceLen - i), PM3_CMD_DATA_SIZE - 3);
@@ -894,17 +764,54 @@ int CmdLFSim(const char *Cmd) {
         SendCommandNG(CMD_LF_UPLOAD_SIM_SAMPLES, (uint8_t *)&payload_up, sizeof(struct pupload));
         WaitForResponse(CMD_LF_UPLOAD_SIM_SAMPLES, &resp);
         if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Bigbuf is full.");
+            PrintAndLogEx(INFO, "Bigbuf is full");
             break;
         }
         PrintAndLogEx(NORMAL, "." NOLF);
         payload_up.flag = 0;
     }
+    PrintAndLogEx(NORMAL, "");
 
     // Disable fast mode before last command
     conn.block_after_ACK = false;
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Simulating");
+    return PM3_SUCCESS;
+}
+
+//Attempt to simulate any wave in buffer (one bit per output sample)
+// converts GraphBuffer to bitstream (based on zero crossings) if needed.
+int CmdLFSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf sim",
+                  "Simulate low frequency tag from graphbuffer\n"
+                  "Use " _YELLOW_("`lf config`") _CYAN_(" to set parameters"),
+                  "lf sim\n"
+                  "lf sim --gap 240 --> start simulating with 240ms gap"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("g", "gap", "<ms>", "start gap in microseconds"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint16_t gap = arg_get_u32_def(ctx, 1, 0);
+    CLIParserFree(ctx);
+
+    if (session.pm3_present == false) {
+        PrintAndLogEx(DEBUG, "DEBUG: no proxmark present");
+        return PM3_ENOTTY;
+    }
+
+    // sanity check
+    if (GraphTraceLen < 20) {
+        PrintAndLogEx(ERR, "No data in Graphbuffer");
+        return PM3_ENODATA;
+    }
+
+    // convert to bitstream if necessary
+    lf_chk_bitstream();
+
+    lfsim_upload_gb();
 
     struct p {
         uint16_t len;
@@ -915,315 +822,343 @@ int CmdLFSim(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));
-
-    WaitForResponse(CMD_LF_SIMULATE, &resp);
-
-    PrintAndLogEx(INFO, "Done");
-    if (resp.status != PM3_EOPABORTED)
-        return resp.status;
-    return PM3_SUCCESS;
+    return lfsim_wait_check(CMD_LF_SIMULATE);
 }
 
 // sim fsk data given clock, fcHigh, fcLow, invert
 // - allow pull data from DemodBuffer
 int CmdLFfskSim(const char *Cmd) {
-    //might be able to autodetect FCs and clock from Graphbuffer if using demod buffer
-    // otherwise will need FChigh, FClow, Clock, and bitstream
-    uint8_t fcHigh = 0, fcLow = 0, clk = 0;
-    bool errors = false, separator = false;
-    char hexData[64] = {0x00}; // store entered hex data
-    uint8_t data[255] = {0x00};
-    int dataLen = 0;
-    uint8_t cmdp = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf simfsk",
+                  "Simulate FSK tag from demodbuffer or input. There are about four FSK modulations to know of.\n"
+                  "FSK1  -  where fc/8 = high  and fc/5 = low\n"
+                  "FSK1a -  is inverted FSK1,  ie:   fc/5 = high and fc/8 = low\n"
+                  "FSK2  -  where fc/10 = high  and fc/8 = low\n"
+                  "FSK2a -  is inverted FSK2,  ie:   fc/10 = high and fc/8 = low\n\n"
+                  "NOTE: if you set one clock manually set them all manually",
+                  "lf simfsk -c 40 --high 8 --low 5 -d 010203  --> FSK1  rf/40  data 010203\n"
+                  "lf simfsk -c 40 --high 5 --low 8 -d 010203  --> FSK1a rf/40  data 010203\n"
+                  "lf simfsk -c 64 --high 10 --low 8 -d 010203 --> FSK2  rf/64  data 010203\n"
+                  "lf simfsk -c 64 --high 8 --low 10 -d 010203 --> FSK2a rf/64  data 010203\n\n"
+                  "lf simfsk -c 50 --high 10 --low 8 -d 1D5559555569A9A555A59569        --> simulate HID Prox tag manually\n"
+                  "lf simfsk -c 50 --high 10 --low 8 --stt -d 011DB2487E8D811111111111  --> simulate AWID tag manually"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (param_getchar(Cmd, cmdp)) {
-            case 'h':
-                return usage_lf_simfsk();
-            case 'c':
-                errors |= param_getdec(Cmd, cmdp + 1, &clk);
-                cmdp += 2;
-                break;
-            case 'H':
-                errors |= param_getdec(Cmd, cmdp + 1, &fcHigh);
-                cmdp += 2;
-                break;
-            case 'L':
-                errors |= param_getdec(Cmd, cmdp + 1, &fcLow);
-                cmdp += 2;
-                break;
-            case 's':
-                separator = true;
-                cmdp++;
-                break;
-            case 'd':
-                dataLen = param_getstr(Cmd, cmdp + 1, hexData, sizeof(hexData));
-                if (dataLen == 0)
-                    errors = true;
-                else
-                    dataLen = hextobinarray((char *)data, hexData);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("c", "clk", "<dec>", "manually set clock - can autodetect if using DemodBuffer (default 64)"),
+        arg_u64_0(NULL, "low", "<dec>", "manually set larger Field Clock"),
+        arg_u64_0(NULL, "high", "<dec>", "manually set smaller Field Clock"),
+        arg_lit0(NULL, "stt", "TBD! - STT to enable a gap between playback repetitions (default: no gap)"),
+        arg_str0("d", "data", "<hex>", "data to sim - omit to use DemodBuffer"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint8_t clk = arg_get_u32_def(ctx, 1, 0);
+    uint8_t fclow = arg_get_u32_def(ctx, 2, 0);
+    uint8_t fchigh = arg_get_u32_def(ctx, 3, 0);
+    bool separator = arg_get_lit(ctx, 4);
 
-                if (dataLen == 0) errors = true;
-                if (errors) PrintAndLogEx(ERR, "Error getting hex data");
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
+    int raw_len = 64;
+    char raw[64] = {0};
+    CLIGetStrWithReturn(ctx, 5, (uint8_t *)raw, &raw_len);
+    bool verbose = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx);
 
     // No args
-    if (cmdp == 0 && DemodBufferLen == 0) return usage_lf_simfsk();
+    if (raw_len == 0 && DemodBufferLen == 0) {
+        PrintAndLogEx(ERR, "No user supplied data nor inside Demodbuffer");
+        return PM3_EINVARG;
+    }
 
-    //Validations
-    if (errors) return usage_lf_simfsk();
+    if (verbose && separator) {
+        PrintAndLogEx(INFO, "STT gap isn't implemented yet. Skipping...");
+        separator = 0;
+    }
 
-    int firstClockEdge = 0;
-    if (dataLen == 0) { //using DemodBuffer
-        if (clk == 0 || fcHigh == 0 || fcLow == 0) { //manual settings must set them all
-            uint8_t ans = fskClocks(&fcHigh, &fcLow, &clk, &firstClockEdge);
-            if (ans == 0) {
-                if (!fcHigh) fcHigh = 10;
-                if (!fcLow) fcLow = 8;
-                if (!clk) clk = 50;
+    uint8_t bs[256] = {0x00};
+    int bs_len = hextobinarray((char *)bs, raw);
+    if (bs_len == 0) {
+        // Using data from DemodBuffer
+        // might be able to autodetect FC and clock from Graphbuffer if using demod buffer
+        // will need clock, fchigh, fclow and bitstream
+        PrintAndLogEx(INFO, "No user supplied data, using Demodbuffer...");
+
+        if (clk == 0 || fchigh == 0 || fclow == 0) {
+            int firstClockEdge = 0;
+            bool res = fskClocks(&fchigh, &fclow, &clk, &firstClockEdge);
+            if (res == false) {
+                clk = 0;
+                fchigh = 0;
+                fclow = 0;
             }
         }
+        PrintAndLogEx(DEBUG, "Detected rf/%u, High fc/%u, Low fc/%u, n %zu ", clk, fchigh, fclow, DemodBufferLen);
+
     } else {
-        setDemodBuff(data, dataLen, 0);
+        setDemodBuff(bs, bs_len, 0);
     }
 
     //default if not found
-    if (clk == 0) clk = 50;
-    if (fcHigh == 0) fcHigh = 10;
-    if (fcLow == 0) fcLow = 8;
+    if (clk == 0) {
+        clk = 50;
+        PrintAndLogEx(DEBUG, "Autodetection of clock failed, falling back to rf/%u", clk);
+    }
+
+    if (fchigh == 0) {
+        fchigh = 10;
+        PrintAndLogEx(DEBUG, "Autodetection of larger clock failed, falling back to fc/%u", fchigh);
+    }
+
+    if (fclow == 0) {
+        fclow = 8;
+        PrintAndLogEx(DEBUG, "Autodetection of smaller clock failed, falling back to fc/%u", fclow);
+    }
 
     size_t size = DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t))) {
         PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t));
+        PrintAndLogEx(INFO, "Continuing with trimmed down data");
         size = PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t);
     }
 
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + size);
-    payload->fchigh = fcHigh;
-    payload->fclow =  fcLow;
+    payload->fchigh = fchigh;
+    payload->fclow =  fclow;
     payload->separator = separator;
     payload->clock = clk;
     memcpy(payload->data, DemodBuffer, size);
 
-    PrintAndLogEx(INFO, "Simulating");
-
     clearCommandBuffer();
     SendCommandNG(CMD_LF_FSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_fsksim_t) + size);
     free(payload);
-
     setClockGrid(clk, 0);
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_FSK_SIMULATE, &resp);
 
-    PrintAndLogEx(INFO, "Done");
-    if (resp.status != PM3_EOPABORTED)
-        return resp.status;
-    return PM3_SUCCESS;
+    return lfsim_wait_check(CMD_LF_FSK_SIMULATE);
 }
 
 // sim ask data given clock, invert, manchester or raw, separator
 // - allow pull data from DemodBuffer
 int CmdLFaskSim(const char *Cmd) {
-    // autodetect clock from Graphbuffer if using demod buffer
-    // needs clock, invert, manchester/raw as m or r, separator as s, and bitstream
-    uint8_t encoding = 1, separator = 0, clk = 0, invert = 0;
-    bool errors = false;
-    char hexData[64] = {0x00};
-    uint8_t data[255] = {0x00}; // store entered hex data
-    int dataLen = 0;
-    uint8_t cmdp = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf simask",
+                  "Simulate ASK tag from demodbuffer or input",
+                  "lf simask --clk 32 --am -d 0102030405   --> simulate ASK/MAN rf/32\n"
+                  "lf simask --clk 32 --bi -d 0102030405   --> simulate ASK/BIPHASE rf/32\n\n"
+                  "lf simask --clk 64 --am -d ffbd8001686f1924               --> simulate a EM410x tag\n"
+                  "lf simask --clk 64 --am --stt -d 5649533200003F340000001B --> simulate a VISA2K tag"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_simask();
-            case 'i':
-                invert = 1;
-                cmdp++;
-                break;
-            case 'c':
-                errors |= param_getdec(Cmd, cmdp + 1, &clk);
-                cmdp += 2;
-                break;
-            case 'b':
-                encoding = 2; //biphase
-                cmdp++;
-                break;
-            case 'm':
-                encoding = 1; //manchester
-                cmdp++;
-                break;
-            case 'r':
-                encoding = 0; //raw
-                cmdp++;
-                break;
-            case 's':
-                separator = 1;
-                cmdp++;
-                break;
-            case 'd':
-                dataLen = param_getstr(Cmd, cmdp + 1, hexData, sizeof(hexData));
-                if (dataLen == 0)
-                    errors = true;
-                else
-                    dataLen = hextobinarray((char *)data, hexData);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("i", "inv", "invert data"),
+        arg_u64_0("c", "clk", "<dec>", "manually set clock - can autodetect if using DemodBuffer (default 64)"),
+        arg_lit0(NULL, "bi", "ask/biphase encoding"),
+        arg_lit0(NULL, "am", "ask/manchester encoding (default)"),
+        arg_lit0(NULL, "ar", "ask/raw encoding"),
+        arg_lit0(NULL, "stt", "add t55xx Sequence Terminator gap - default: no gaps (only manchester)"),
+        arg_str0("d", "data", "<hex>", "data to sim - omit to use DemodBuffer"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool invert = arg_get_lit(ctx, 1);
+    uint8_t clk = arg_get_u32_def(ctx, 2, 0);
+    bool use_bi = arg_get_lit(ctx, 3);
+    bool use_am = arg_get_lit(ctx, 4);
+    bool use_ar = arg_get_lit(ctx, 5);
+    bool separator = arg_get_lit(ctx, 6);
 
-                if (dataLen == 0) errors = true;
-                if (errors) PrintAndLogEx(ERR, "Error getting hex data, datalen: %d", dataLen);
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    int raw_len = 64;
+    char raw[64] = {0};
+    CLIGetStrWithReturn(ctx, 7, (uint8_t *)raw, &raw_len);
+    bool verbose = arg_get_lit(ctx, 8);
+    CLIParserFree(ctx);
+
+    if ((use_bi + use_am + use_ar) > 1) {
+        PrintAndLogEx(ERR, "only one encoding can be set");
+        return PM3_EINVARG;
     }
+
+    uint8_t encoding = 1;
+    if (use_bi)
+        encoding = 2;
+    else if (use_ar)
+        encoding = 0;
 
     // No args
-    if (cmdp == 0 && DemodBufferLen == 0) return usage_lf_simask();
-
-    //Validations
-    if (errors) return usage_lf_simask();
-
-    if (dataLen == 0) { //using DemodBuffer
-        if (clk == 0)
-            clk = GetAskClock("0", false);
-    } else {
-        setDemodBuff(data, dataLen, 0);
+    if (raw_len == 0 && DemodBufferLen == 0) {
+        PrintAndLogEx(ERR, "No user supplied data nor any inside Demodbuffer");
+        return PM3_EINVARG;
     }
-    if (clk == 0) clk = 64;
-    if (encoding == 0) clk /= 2; //askraw needs to double the clock speed
+
+    uint8_t bs[256] = {0x00};
+    int bs_len = hextobinarray((char *)bs, raw);
+    if (bs_len == 0) {
+        // Using data from DemodBuffer
+        // might be able to autodetect FC and clock from Graphbuffer if using demod buffer
+        // will need carrier, clock, and bitstream
+        PrintAndLogEx(INFO, "No user supplied data, using Demodbuffer...");
+
+        int res = 0;
+        if (clk == 0) {
+            res = GetAskClock("0", verbose);
+            if (res < 1) {
+                clk = 64;
+            } else {
+                clk = (uint8_t)res;
+            }
+        }
+
+        PrintAndLogEx(DEBUG, "Detected rf/%u, n %zu ", clk, DemodBufferLen);
+
+    } else {
+        setDemodBuff(bs, bs_len, 0);
+    }
+
+
+    if (clk == 0) {
+        clk = 32;
+        PrintAndLogEx(DEBUG, "Autodetection of clock failed, falling back to rf/%u", clk);
+    }
+
+    if (encoding == 0) {
+        clk /= 2; // askraw needs to double the clock speed
+        PrintAndLogEx(DEBUG, "ASK/RAW needs half rf. Using rf/%u", clk);
+    }
 
     size_t size = DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t))) {
         PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t));
+        PrintAndLogEx(INFO, "Continuing with trimmed down data");
         size = PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t);
     }
 
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + size);
-    payload->encoding =  encoding;
+    payload->encoding = encoding;
     payload->invert = invert;
     payload->separator = separator;
     payload->clock = clk;
     memcpy(payload->data, DemodBuffer, size);
 
-    PrintAndLogEx(INFO, "Simulating");
-
     clearCommandBuffer();
     SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + size);
     free(payload);
+    setClockGrid(clk, 0);
 
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
-
-    PrintAndLogEx(INFO, "Done");
-    if (resp.status != PM3_EOPABORTED)
-        return resp.status;
-    return PM3_SUCCESS;
+    return lfsim_wait_check(CMD_LF_ASK_SIMULATE);
 }
 
 // sim psk data given carrier, clock, invert
 // - allow pull data from DemodBuffer or parameters
 int CmdLFpskSim(const char *Cmd) {
-    //might be able to autodetect FC and clock from Graphbuffer if using demod buffer
-    //will need carrier, Clock, and bitstream
-    uint8_t carrier = 0, clk = 0;
-    uint8_t invert = 0;
-    bool errors = false;
-    char hexData[64] = {0x00}; // store entered hex data
-    uint8_t data[255] = {0x00};
-    int dataLen = 0;
-    uint8_t cmdp = 0;
-    uint8_t pskType = 1;
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_simpsk();
-            case 'i':
-                invert = 1;
-                cmdp++;
-                break;
-            case 'c':
-                errors |= param_getdec(Cmd, cmdp + 1, &clk);
-                cmdp += 2;
-                break;
-            case 'r':
-                errors |= param_getdec(Cmd, cmdp + 1, &carrier);
-                cmdp += 2;
-                break;
-            case '1':
-                pskType = 1;
-                cmdp++;
-                break;
-            case '2':
-                pskType = 2;
-                cmdp++;
-                break;
-            case '3':
-                pskType = 3;
-                cmdp++;
-                break;
-            case 'd':
-                dataLen = param_getstr(Cmd, cmdp + 1, hexData, sizeof(hexData));
-                if (dataLen == 0)
-                    errors = true;
-                else
-                    dataLen = hextobinarray((char *)data, hexData);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf simpsk",
+                  "Simulate PSK tag from demodbuffer or input",
+                  "lf simpsk -1 --clk 40 --fc 4 -d 01020304   --> simulate PSK1 rf/40 psksub fc/4, data 01020304\n\n"
+                  "lf simpsk -1 --clk 32 --fc 2 -d a0000000bd989a11   --> simulate a indala tag manually"
+                 );
 
-                if (dataLen == 0) errors = true;
-                if (errors) PrintAndLogEx(ERR, "Error getting hex data");
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("1", "psk1", "set PSK1 (default)"),
+        arg_lit0("2", "psk2", "set PSK2"),
+        arg_lit0("3", "psk3", "set PSK3"),
+        arg_lit0("i", "inv", "invert data"),
+        arg_u64_0("c", "clk", "<dec>", "manually set clock - can autodetect if using DemodBuffer (default 32)"),
+        arg_u64_0(NULL, "fc", "<dec>", "2|4|8 are valid carriers (default 2)"),
+        arg_str0("d", "data", "<hex>", "data to sim - omit to use DemodBuffer"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool use_psk1 = arg_get_lit(ctx, 1);
+    bool use_psk2 = arg_get_lit(ctx, 2);
+    bool use_psk3 = arg_get_lit(ctx, 3);
+    bool invert = arg_get_lit(ctx, 4);
+    uint8_t clk = arg_get_u32_def(ctx, 5, 0);
+    uint8_t carrier = arg_get_u32_def(ctx, 6, 2);
+    int raw_len = 64;
+    char raw[64] = {0};
+    CLIGetStrWithReturn(ctx, 7, (uint8_t *)raw, &raw_len);
+    bool verbose = arg_get_lit(ctx, 8);
+    CLIParserFree(ctx);
+
+    if ((use_psk1 + use_psk2 + use_psk3) > 1) {
+        PrintAndLogEx(ERR, "only one PSK mode can be set");
+        return PM3_EINVARG;
     }
+
+    if (carrier != 2 && carrier != 4 && carrier != 8) {
+        PrintAndLogEx(ERR, "Wrong carrier given, expected <2|4|8>");
+        return PM3_EINVARG;
+    }
+
+    uint8_t psk_type = 1;
+    if (use_psk2)
+        psk_type = 2;
+    if (use_psk3)
+        psk_type = 3;
+
     // No args
-    if (cmdp == 0 && DemodBufferLen == 0)
-        errors = true;
+    if (raw_len == 0 && DemodBufferLen == 0) {
+        PrintAndLogEx(ERR, "No user supplied data nor any inside Demodbuffer");
+        return PM3_EINVARG;
+    }
 
-    //Validations
-    if (errors) return usage_lf_simpsk();
+    uint8_t bs[256] = {0x00};
+    int bs_len = hextobinarray((char *)bs, raw);
 
-    if (dataLen == 0) { //using DemodBuffer
-        PrintAndLogEx(INFO, "Getting Clocks");
+    if (bs_len == 0) {
+        // Using data from DemodBuffer
+        // might be able to autodetect FC and clock from Graphbuffer if using demod buffer
+        // will need carrier, clock, and bitstream
+        PrintAndLogEx(INFO, "No user supplied data, using Demodbuffer...");
 
-        if (clk == 0) clk = GetPskClock("", false);
-        PrintAndLogEx(INFO, "clk: %d", clk);
+        int res = 0;
+        if (clk == 0) {
+            res = GetPskClock("", verbose);
+            if (res < 1) {
+                clk = 32;
+            } else {
+                clk = (uint8_t)res;
+            }
+        }
 
-        if (!carrier) carrier = GetPskCarrier(false);
-        PrintAndLogEx(INFO, "carrier: %d", carrier);
+        if (carrier == 0) {
+            res = GetPskCarrier(verbose);
+            if (res < 1) {
+                carrier = 2;
+            } else {
+                carrier = (uint8_t)res;
+            }
+        }
+
+        PrintAndLogEx(DEBUG, "Detected rf/%u, fc/%u, n %zu ", clk, carrier, DemodBufferLen);
 
     } else {
-        setDemodBuff(data, dataLen, 0);
+        setDemodBuff(bs, bs_len, 0);
     }
 
-    if (clk == 0) clk = 32;
-
-    if (carrier != 2 && carrier != 4 && carrier != 8)
-        carrier = 2;
-
-    if (pskType != 1) {
-        if (pskType == 2) {
-            //need to convert psk2 to psk1 data before sim
-            psk2TOpsk1(DemodBuffer, DemodBufferLen);
-        } else {
-            PrintAndLogEx(WARNING, "Sorry, PSK3 not yet available");
-        }
+    if (clk == 0) {
+        clk = 32;
+        PrintAndLogEx(DEBUG, "Autodetection of clock failed, falling back to rf/%u", clk);
     }
+
+    if (psk_type == 2) {
+        //need to convert psk2 to psk1 data before sim
+        psk2TOpsk1(DemodBuffer, DemodBufferLen);
+    } else if (psk_type == 3) {
+        PrintAndLogEx(INFO, "PSK3 not yet available. Falling back to PSK1");
+        psk_type = 1;
+    }
+
     size_t size = DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t))) {
         PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t));
+        PrintAndLogEx(INFO, "Continuing with trimmed down data");
         size = PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t);
     }
 
@@ -1232,20 +1167,12 @@ int CmdLFpskSim(const char *Cmd) {
     payload->invert = invert;
     payload->clock = clk;
     memcpy(payload->data, DemodBuffer, size);
-
-    PrintAndLogEx(INFO, "Simulating");
-
     clearCommandBuffer();
     SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + size);
     free(payload);
+    setClockGrid(clk, 0);
 
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_PSK_SIMULATE, &resp);
-
-    PrintAndLogEx(INFO, "Done");
-    if (resp.status != PM3_EOPABORTED)
-        return resp.status;
-    return PM3_SUCCESS;
+    return lfsim_wait_check(CMD_LF_PSK_SIMULATE);
 }
 
 int CmdLFSimBidir(const char *Cmd) {
@@ -1564,6 +1491,7 @@ out:
 }
 
 static command_t CommandTable[] = {
+    {"help",        CmdHelp,            AlwaysAvailable, "This help"},
     {"-----------", CmdHelp,            AlwaysAvailable, "-------------- " _CYAN_("Low Frequency") " --------------"},
     {"awid",        CmdLFAWID,          AlwaysAvailable, "{ AWID RFIDs...              }"},
     {"cotag",       CmdLFCOTAG,         AlwaysAvailable, "{ COTAG CHIPs...             }"},
@@ -1594,20 +1522,19 @@ static command_t CommandTable[] = {
     {"viking",      CmdLFViking,        AlwaysAvailable, "{ Viking RFIDs...            }"},
     {"visa2000",    CmdLFVisa2k,        AlwaysAvailable, "{ Visa2000 RFIDs...          }"},
     {"-----------", CmdHelp,            AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
-    {"help",        CmdHelp,            AlwaysAvailable, "This help"},
     {"config",      CmdLFConfig,        IfPm3Lf,         "Get/Set config for LF sampling, bit/sample, decimation, frequency"},
-    {"cmdread",     CmdLFCommandRead,   IfPm3Lf,         "Modulate LF reader field to send command before read (all periods in microseconds)"},
+    {"cmdread",     CmdLFCommandRead,   IfPm3Lf,         "Modulate LF reader field to send command before read"},
     {"read",        CmdLFRead,          IfPm3Lf,         "Read LF tag"},
     {"search",      CmdLFfind,          AlwaysAvailable, "Read and Search for valid known tag"},
-    {"sim",         CmdLFSim,           IfPm3Lf,         "Simulate LF tag from buffer with optional GAP (in microseconds)"},
-    {"simask",      CmdLFaskSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF ASK tag") " from demodbuffer or input"},
-    {"simfsk",      CmdLFfskSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF FSK tag") " from demodbuffer or input"},
-    {"simpsk",      CmdLFpskSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF PSK tag") " from demodbuffer or input"},
-//    {"simnrz",      CmdLFnrzSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF NRZ tag") " from demodbuffer or input"},
+    {"sim",         CmdLFSim,           IfPm3Lf,         "Simulate LF tag from buffer"},
+    {"simask",      CmdLFaskSim,        IfPm3Lf,         "Simulate " _YELLOW_("ASK") " tag"},
+    {"simfsk",      CmdLFfskSim,        IfPm3Lf,         "Simulate " _YELLOW_("FSK") " tag"},
+    {"simpsk",      CmdLFpskSim,        IfPm3Lf,         "Simulate " _YELLOW_("PSK") " tag"},
+//    {"simnrz",      CmdLFnrzSim,        IfPm3Lf,         "Simulate " _YELLOW_("NRZ") " tag"},
     {"simbidir",    CmdLFSimBidir,      IfPm3Lf,         "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
     {"sniff",       CmdLFSniff,         IfPm3Lf,         "Sniff LF traffic between reader and tag"},
     {"tune",        CmdLFTune,          IfPm3Lf,         "Continuously measure LF antenna tuning"},
-//    {"vchdemod",    CmdVchDemod,        AlwaysAvailable, "['clone'] -- Demodulate samples for VeriChip"},
+//    {"vchdemod",    CmdVchDemod,        AlwaysAvailable, "Demodulate samples for VeriChip"},
 //    {"flexdemod",   CmdFlexdemod,       AlwaysAvailable, "Demodulate samples for Motorola FlexPass"},
     {NULL, NULL, NULL, NULL}
 };

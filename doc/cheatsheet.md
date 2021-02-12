@@ -332,9 +332,9 @@ pm3 --> hf mfu info
 Clone MIFARE Ultralight EV1 Sequence
 ```
 pm3 --> hf mfu dump -k FFFFFFFF
-pm3 --> script run hf_mfu_dumptoemulator -i hf-mfu-XXXX-dump.bin -o hf-mfu-XXXX-dump.eml
+pm3 --> script run data_mfu_bin2eml -i hf-mfu-XXXX-dump.bin -o hf-mfu-XXXX-dump.eml
 pm3 --> hf mfu eload -u -f hf-mfu-XXXX-dump.eml
-pm3 --> hf mfu sim -t 7 -f hf-mfu-XXXX-dump.eml
+pm3 --> hf mfu sim -t 7
 ```
 
 Bruteforce MIFARE Classic card numbers from 11223344 to 11223346
