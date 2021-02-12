@@ -2283,7 +2283,7 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(HINT, "Hint: See " _YELLOW_("`script run hf_mfu_dumptoemulator`") " to convert the .bin to .eml");
+    PrintAndLogEx(HINT, "Hint: See " _YELLOW_("`script run data_mfu_bin2eml`") " to convert the .bin to .eml");
     return CmdHF14AMfELoad(Cmd);
 }
 //
@@ -2294,7 +2294,8 @@ static int CmdHF14AMfUSim(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfu sim",
                   "Simulate MIFARE Ultralight family type based upon\n"
                   "ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n"
-                  "from emulator memory.  See `hf mfu eload` first",
+                  "from emulator memory.  See `hf mfu eload` first. \n"
+                  "See `hf 14a sim -h` to see available types. You want 2 or 7 usually.",
                   "hf mfu sim -t 2 --uid 1122344556677        -> MIFARE Ultralight\n"
                   "hf mfu sim -t 7 --uid 1122344556677 -n 5   -> AMIIBO (NTAG 215),  pack 0x8080"
                  );
