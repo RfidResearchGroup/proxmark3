@@ -121,9 +121,7 @@ int demodGallagher(bool verbose) {
     uint8_t crc = bytebits_to_byte(DemodBuffer + 16 + (9 * 8), 8);
     uint8_t calc_crc =  CRC8Cardx(arr, ARRAYLEN(arr));
 
-    PrintAndLogEx(INFO, " Before:  %s", sprint_hex(arr, 8));
     descramble(arr, ARRAYLEN(arr));
-    PrintAndLogEx(INFO, " After :  %s", sprint_hex(arr, 8));
 
     // 4bit region code
     uint8_t rc = (arr[3] & 0x1E) >> 1;
