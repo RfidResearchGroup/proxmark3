@@ -2629,7 +2629,7 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("u", "uid", "<hex>", "4|7 hex byte UID"),
+        arg_str0("u", "uid", "<hex>", "<4|7> hex byte UID"),
         arg_lit0("r", NULL, "read UID from tag"),
         arg_param_end
     };
@@ -2667,6 +2667,11 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
         }
         ulen = card.uidlen;
         memcpy(uid, card.uid, card.uidlen);
+    } else {
+        if (ulen != 4 && ulen != 7) {
+            PrintAndLogEx(ERR, "Must supply 4 or 7 hex byte uid");
+            return PM3_EINVARG;
+        }
     }
 
     uint8_t iv[8] = { 0x00 };
