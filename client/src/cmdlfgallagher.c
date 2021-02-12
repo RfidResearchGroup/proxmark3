@@ -286,7 +286,11 @@ static int CmdGallagherClone(const char *Cmd) {
     int raw_len = 0;
     // skip first block,  3*4 = 12 bytes left
     uint8_t raw[12] = {0};
-    CLIParamHexToBuf(arg_get_str(ctx, 1), raw, sizeof raw, &raw_len);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), raw, sizeof raw, &raw_len);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
     bool q5 = arg_get_lit(ctx, 2);
     bool em = arg_get_lit(ctx, 3);
@@ -348,7 +352,6 @@ static int CmdGallagherClone(const char *Cmd) {
                   cardtype, use_raw ? "raw hex" : "specified data");
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    int res;
     if (em) {
         res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
     } else {
@@ -384,7 +387,11 @@ static int CmdGallagherSim(const char *Cmd) {
     // skip first block,  3*4 = 12 bytes left
     uint8_t raw[12] = {0};
     CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
-    CLIParamHexToBuf(arg_get_str(ctx, 1), raw, sizeof raw, &raw_len);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), raw, sizeof raw, &raw_len);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
     int16_t region_code = arg_get_int_def(ctx, 2, -1);
     int32_t facility_code = arg_get_int_def(ctx, 3, -1);
@@ -441,14 +448,7 @@ static int CmdGallagherSim(const char *Cmd) {
     SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
     free(payload);
 
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
-
-    PrintAndLogEx(INFO, "Done");
-    if (resp.status != PM3_EOPABORTED)
-        return resp.status;
-
-    return PM3_SUCCESS;
+    return lfsim_wait_check(CMD_LF_ASK_SIMULATE);
 }
 
 static command_t CommandTable[] = {
