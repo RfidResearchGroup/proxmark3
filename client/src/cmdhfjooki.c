@@ -278,7 +278,7 @@ static int CmdHF14AJookiDecode(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("d", "data", "<hex>", "base64 url parameter"),
+        arg_str1("d", "data", "<base64>", "base64 url parameter"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
@@ -308,7 +308,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("d", "data", "<hex>", "base64 url parameter"),
+        arg_str0("d", "data", "<base64>", "base64 url parameter"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
