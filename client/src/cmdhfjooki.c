@@ -355,6 +355,11 @@ static int CmdHF14AJookiSim(const char *Cmd) {
     }
 
     mfu_dump_t *mfu_dump = (mfu_dump_t *)data;
+
+    memcpy(mfu_dump->version, "\x00\x04\x04\x02\x01\x00\x11\x03", 8);
+    mfu_dump->counter_tearing[2][3] = 0xBD;
+    mfu_dump->pages = 0x2c;
+
     printMFUdumpEx(mfu_dump, mfu_dump->pages + 1, 0);
 
     // upload to emulator memory
@@ -390,8 +395,8 @@ static int CmdHF14AJookiSim(const char *Cmd) {
         uint8_t exitAfter;
     } PACKED payload;
 
-    // MF Ultralight ,  7 byte UID in eloaded data.
-    payload.tagtype = 2;
+    // NTAG,  7 byte UID in eloaded data.
+    payload.tagtype = 7;
     payload.flags = FLAG_7B_UID_IN_DATA;
     payload.exitAfter = 0;
 
