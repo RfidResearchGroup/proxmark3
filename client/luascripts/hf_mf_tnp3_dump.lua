@@ -147,7 +147,7 @@ local function main(args)
 
     --Trying to find the other keys
     if useNested then
-      core.console( ('hf mf nested 1 0 A %s d'):format(keyA) )
+      core.console( ('hf mf nested -t 1 -b 0 --keya -k %s --dumpkeys'):format(keyA) )
     end
 
     core.clearCommandBuffer()
