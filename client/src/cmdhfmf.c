@@ -551,21 +551,6 @@ static uint8_t NumOfSectors(char card) {
     }
 }
 
-static uint8_t NewNumOfSectors(uint8_t card) {
-    switch (card) {
-        case 0 :
-            return MIFARE_MINI_MAXSECTOR;
-        case 1 :
-            return MIFARE_1K_MAXSECTOR;
-        case 2 :
-            return MIFARE_2K_MAXSECTOR;
-        case 4 :
-            return MIFARE_4K_MAXSECTOR;
-        default  :
-            return 0;
-    }
-}
-
 static uint8_t FirstBlockOfSector(uint8_t sectorNo) {
     if (sectorNo < 32) {
         return sectorNo * 4;
@@ -609,13 +594,13 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf darkside",
                   "Darkside attack",
                   "hf mf darkside\n"
-                  "hf mf darkside -b 16\n"
-                  "hf mf darkside -b 16 --keyb\n");
+                  "hf mf darkside --blk 16\n"
+                  "hf mf darkside --blk 16 -b\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("b", "block", "<dec> ", "Simulation type to use"),
-        arg_lit0(NULL, "keyb", "Target key B instead of default key A"),
+        arg_int0(NULL, "blk", "<dec> ", "Simulation type to use"),
+        arg_lit0("b", NULL, "Target key B instead of default key A"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -877,29 +862,35 @@ static int CmdHF14AMfDump(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf dump",
                   "Dump MIFARE Classic tag to binary file\n"
                   "If no <name> given, UID will be used as filename",
-                  "hf mf dump -t 0                     -> MIFARE Mini\n"
-                  "hf mf dump -t 1                     -> MIFARE Classic 1k (default)\n"
-                  "hf mf dump -t 2                     -> MIFARE 2k\n"
-                  "hf mf dump -t 4                     -> MIFARE 4k\n");
+                  "hf mf dump --mini                   --> MIFARE Mini\n"
+                  "hf mf dump --1k                     --> MIFARE Classic 1k\n"
+                  "hf mf dump --2k                     --> MIFARE 2k\n"
+                  "hf mf dump --4k                     --> MIFARE 4k\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("t", "type", "<0-4> ", "MIFARE Classic type"),
         arg_str0("f", "file", "<filename>", "filename of dump"),
         arg_str0("k", "keys", "<filename>", "filename of keys"),
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t numSectors = NewNumOfSectors(arg_get_u32_def(ctx, 1, 1));
-
     int datafnlen = 0;
     char dataFilename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)dataFilename, FILE_PATH_SIZE, &datafnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)dataFilename, FILE_PATH_SIZE, &datafnlen);
 
     int keyfnlen = 0;
     char keyFilename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)keyFilename, FILE_PATH_SIZE, &keyfnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)keyFilename, FILE_PATH_SIZE, &keyfnlen);
+
+    bool m0 = arg_get_lit(ctx, 3);
+    bool m1 = arg_get_lit(ctx, 4);
+    bool m2 = arg_get_lit(ctx, 5);
+    bool m4 = arg_get_lit(ctx, 6);
 
     CLIParserFree(ctx);
 
@@ -914,8 +905,24 @@ static int CmdHF14AMfDump(const char *Cmd) {
     FILE *f;
     PacketResponseNG resp;
 
-    if (numSectors == 0) {
-        PrintAndLogEx(ERR, "Invalid MIFARE Classic type");
+    // validations
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    }
+
+    uint8_t numSectors = 1;
+
+    if (m0) {
+        numSectors = MIFARE_MINI_MAXSECTOR;
+    } else if (m1) {
+        numSectors = MIFARE_1K_MAXSECTOR;
+    } else if (m2) {
+        numSectors = MIFARE_2K_MAXSECTOR;
+    } else if (m4) {
+        numSectors = MIFARE_4K_MAXSECTOR;
+    } else {
+        PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
         return PM3_EINVARG;
     }
 
@@ -1248,24 +1255,27 @@ static int CmdHF14AMfNested(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf nested",
                   "Execute Nested attack against MIFARE Classic card for key recovery",
-                  "hf mf nested -t 0 -b 0 --keya -k FFFFFFFFFFFF                     -> Key recovery against MIFARE Mini\n"
-                  "hf mf nested -t 1 -b 0 --keya -k FFFFFFFFFFFF                     -> Key recovery against MIFARE Classic 1k\n"
-                  "hf mf nested -t 2 -b 0 --keya -k FFFFFFFFFFFF                     -> Key recovery against MIFARE 2k\n"
-                  "hf mf nested -t 4 -b 0 --keya -k FFFFFFFFFFFF                     -> Key recovery against MIFARE 4k\n"
-                  "hf mf nested --single -b 0 --keya FFFFFFFFFFFF --tblock 4 --tkeya -> Single sector key recovery. Use block 0 Key A to find block 4 Key A");
+                  "hf mf nested --single --blk 0 -a FFFFFFFFFFFF --tblk 4 --tkeya     --> Single sector key recovery. Use block 0 Key A to find block 4 Key A\n"
+                  "hf mf nested --mini --blk 0 -a -k FFFFFFFFFFFF                     --> Key recovery against MIFARE Mini\n"
+                  "hf mf nested --1k --blk 0 -a -k FFFFFFFFFFFF                       --> Key recovery against MIFARE Classic 1k\n"
+                  "hf mf nested --2k --blk 0 -a -k FFFFFFFFFFFF                       --> Key recovery against MIFARE 2k\n"
+                  "hf mf nested --4k --blk 0 -a -k FFFFFFFFFFFF                       --> Key recovery against MIFARE 4k");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "Key specified as 12 hex symbols"),
-        arg_int0("t", "type", "<0-4>", "MIFARE Classic type"),
-        arg_int0("b", "block", "<dec>", "Input block number"),
-        arg_lit0(NULL, "keya", "Input key specified is A key (default)"),
-        arg_lit0(NULL, "keyb", "Input key specified is B key"),
-        arg_int0(NULL, "tblock", "<dec>", "Target block number"),
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_int0(NULL, "blk", "<dec>", "Input block number"),
+        arg_lit0("a", NULL, "Input key specified is A key (default)"),
+        arg_lit0("b", NULL, "Input key specified is B key"),
+        arg_int0(NULL, "tblk", "<dec>", "Target block number"),
         arg_lit0(NULL, "tkeya", "Target A key (default)"),
         arg_lit0(NULL, "tkeyb", "Target B key"),
-        arg_lit0("e", "emukeys", "Fill simulator keys from found keys"),
-        arg_lit0(NULL, "dumpkeys", "Dump found keys to file"),
+        arg_lit0(NULL, "emu", "Fill simulator keys from found keys"),
+        arg_lit0(NULL, "dump", "Dump found keys to file"),
         arg_lit0(NULL, "single", "Single sector (defaults to All)"),
         arg_param_end
     };
@@ -1275,39 +1285,58 @@ static int CmdHF14AMfNested(const char *Cmd) {
     uint8_t key[6] = {0};
     CLIGetHexWithReturn(ctx, 1, key, &keylen);
 
-    uint8_t SectorsCnt = NewNumOfSectors(arg_get_u32_def(ctx, 2, 1));
+    bool m0 = arg_get_lit(ctx, 2);
+    bool m1 = arg_get_lit(ctx, 3);
+    bool m2 = arg_get_lit(ctx, 4);
+    bool m4 = arg_get_lit(ctx, 5);
 
-    uint8_t blockNo = arg_get_u32_def(ctx, 3, 0);
+    uint8_t blockNo = arg_get_u32_def(ctx, 6, 0);
 
     uint8_t keyType = 0;
 
-    if (arg_get_lit(ctx, 4) && arg_get_lit(ctx, 5)) {
+    if (arg_get_lit(ctx, 7) && arg_get_lit(ctx, 8)) {
         CLIParserFree(ctx);
         PrintAndLogEx(WARNING, "Input key type must be A or B");
         return PM3_EINVARG;
-    } else if (arg_get_lit(ctx, 5)) {
+    } else if (arg_get_lit(ctx, 8)) {
         keyType = 1;
     }
 
-    uint8_t trgBlockNo = arg_get_u32_def(ctx, 6, 0);
+    uint8_t trgBlockNo = arg_get_u32_def(ctx, 9, 0);
 
     uint8_t trgKeyType = 0;
 
-    if (arg_get_lit(ctx, 7) && arg_get_lit(ctx, 8)) {
+    if (arg_get_lit(ctx, 10) && arg_get_lit(ctx, 11)) {
         CLIParserFree(ctx);
         PrintAndLogEx(WARNING, "Target key type must be A or B");
         return PM3_EINVARG;
-    } else if (arg_get_lit(ctx, 7)) {
+    } else if (arg_get_lit(ctx, 11)) {
         trgKeyType = 1;
     }
 
-    bool transferToEml = arg_get_lit(ctx, 9);
-    bool createDumpFile = arg_get_lit(ctx, 10);
-    bool singleSector = arg_get_lit(ctx, 11);
+    bool transferToEml = arg_get_lit(ctx, 12);
+    bool createDumpFile = arg_get_lit(ctx, 13);
+    bool singleSector = arg_get_lit(ctx, 14);
 
     CLIParserFree(ctx);
 
     //validations
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    }
+
+    uint8_t SectorsCnt = 1;
+    if (m0) {
+        SectorsCnt = MIFARE_MINI_MAXSECTOR;
+    } else if (m1) {
+        SectorsCnt = MIFARE_1K_MAXSECTOR;
+    } else if (m2) {
+        SectorsCnt = MIFARE_2K_MAXSECTOR;
+    } else if (m4) {
+        SectorsCnt = MIFARE_4K_MAXSECTOR;
+    }
+
     if (singleSector == false) {
         if (SectorsCnt == 0) {
             PrintAndLogEx(WARNING, "Invalid MIFARE Type");
@@ -1536,18 +1565,21 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf staticnested",
                   "Execute Nested attack against MIFARE Classic card with static nonce for key recovery",
-                  "hf mf staticnested -t 0 -b 0 --keya -k FFFFFFFFFFFF                     -> Key recovery against MIFARE Mini\n"
-                  "hf mf staticnested -t 1 -b 0 --keya -k FFFFFFFFFFFF                     -> Key recovery against MIFARE Classic 1k\n"
-                  "hf mf staticnested -t 2 -b 0 --keya -k FFFFFFFFFFFF                     -> Key recovery against MIFARE 2k\n"
-                  "hf mf staticnested -t 4 -b 0 --keya -k FFFFFFFFFFFF                     -> Key recovery against MIFARE 4k\n");
+                  "hf mf staticnested --mini --blk 0 -a -k FFFFFFFFFFFF                   --> Key recovery against MIFARE Mini\n"
+                  "hf mf staticnested --1k --blk 0 -a -k FFFFFFFFFFFF                     --> Key recovery against MIFARE Classic 1k\n"
+                  "hf mf staticnested --2k --blk 0 -a -k FFFFFFFFFFFF                     --> Key recovery against MIFARE 2k\n"
+                  "hf mf staticnested --4k --blk 0 -a -k FFFFFFFFFFFF                     --> Key recovery against MIFARE 4k\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "Key specified as 12 hex symbols"),
-        arg_int0("t", "type", "<0-4>", "MIFARE Classic type"),
-        arg_int0("b", "block", "<dec>", "Input block number"),
-        arg_lit0(NULL, "keya", "Input key specified is A key (default)"),
-        arg_lit0(NULL, "keyb", "Input key specified is B key"),
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),        
+        arg_int0(NULL, "blk", "<dec>", "Input block number"),
+        arg_lit0("a", NULL, "Input key specified is A key (default)"),
+        arg_lit0("b", NULL, "Input key specified is B key"),
         arg_lit0("e", "emukeys", "Fill simulator keys from found keys"),
         arg_lit0(NULL, "dumpkeys", "Dump found keys to file"),
         arg_param_end
@@ -1558,29 +1590,46 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     uint8_t key[6] = {0};
     CLIGetHexWithReturn(ctx, 1, key, &keylen);
 
-    uint8_t SectorsCnt = NewNumOfSectors(arg_get_u32_def(ctx, 2, 1));
+    bool m0 = arg_get_lit(ctx, 2);
+    bool m1 = arg_get_lit(ctx, 3);
+    bool m2 = arg_get_lit(ctx, 4);
+    bool m4 = arg_get_lit(ctx, 5);
 
-    uint8_t blockNo = arg_get_u32_def(ctx, 3, 0);
+    uint8_t blockNo = arg_get_u32_def(ctx, 6, 0);
 
     uint8_t keyType = 0;
 
-    if (arg_get_lit(ctx, 4) && arg_get_lit(ctx, 5)) {
+    if (arg_get_lit(ctx, 7) && arg_get_lit(ctx, 8)) {
         CLIParserFree(ctx);
         PrintAndLogEx(WARNING, "Input key type must be A or B");
         return PM3_EINVARG;
-    } else if (arg_get_lit(ctx, 5)) {
+    } else if (arg_get_lit(ctx, 8)) {
         keyType = 1;
     }
 
-    bool transferToEml = arg_get_lit(ctx, 6);
-    bool createDumpFile = arg_get_lit(ctx, 7);
+    bool transferToEml = arg_get_lit(ctx, 9);
+    bool createDumpFile = arg_get_lit(ctx, 10);
 
     CLIParserFree(ctx);
 
     //validations
-    if (SectorsCnt == 0) {
-        PrintAndLogEx(WARNING, "Invalid MIFARE Type");
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
         return PM3_EINVARG;
+    }
+
+    uint8_t SectorsCnt = 1;
+    if (m0) {
+        SectorsCnt = MIFARE_MINI_MAXSECTOR;
+    } else if (m1) {
+        SectorsCnt = MIFARE_1K_MAXSECTOR;
+    } else if (m2) {
+        SectorsCnt = MIFARE_2K_MAXSECTOR;
+    } else if (m4) {
+        SectorsCnt = MIFARE_4K_MAXSECTOR;
+    } else {
+        PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
+        return PM3_EINVARG;        
     }
 
     if (keylen != 6) {
@@ -3385,18 +3434,21 @@ static int CmdHF14AMfSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf sim",
                   "Simulate MIFARE card",
-                  "hf mf sim -t 0                        -> MIFARE Mini\n"
-                  "hf mf sim -t 1                        -> MIFARE Classic 1k (default)\n"
-                  "hf mf sim -t 1 -u 0a0a0a0a            -> MIFARE Classic 1k with 4b UID\n"
-                  "hf mf sim -t 1 -u 11223344556677      -> MIFARE Classic 1k with 7b UID\n"
-                  "hf mf sim -t 1 -u 11223344 -i --crack -> Perform reader attack in interactive mode\n"
-                  "hf mf sim -t 2                        -> MIFARE 2k\n"
-                  "hf mf sim -t 4                        -> MIFARE 4k");
+                  "hf mf sim --mini                         --> MIFARE Mini\n"
+                  "hf mf sim --1k                           --> MIFARE Classic 1k (default)\n"
+                  "hf mf sim --1k -u 0a0a0a0a               --> MIFARE Classic 1k with 4b UID\n"
+                  "hf mf sim --1k -u 11223344556677         --> MIFARE Classic 1k with 7b UID\n"
+                  "hf mf sim --1k -u 11223344 -i --crack    --> Perform reader attack in interactive mode\n"
+                  "hf mf sim --2k                           --> MIFARE 2k\n"
+                  "hf mf sim --4k                           --> MIFARE 4k");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("u", "uid", "<hex>", "UID 4,7 or 10bytes. If not specified, the UID 4b/7b from emulator memory will be used"),
-        arg_int0("t", "type", "<0-4> ", "MIFARE Classic type for ATQA/SAK"),
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_str0(NULL, "atqa", "<hex>", "Provide explicit ATQA (2 bytes, overrides option t)"),
         arg_str0(NULL, "sak", "<hex>", "Provide explicit SAK (1 bytes, overrides option t)"),
         arg_int0("n", "num", "<dec> ", "Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite"),
@@ -3435,55 +3487,31 @@ static int CmdHF14AMfSim(const char *Cmd) {
         }
     }
 
-    uint8_t k_sectorsCount = 40;
-    char csize[13] = { 0 };
-
-    switch (arg_get_u32_def(ctx, 2, 1)) {
-        case 0:
-            flags |= FLAG_MF_MINI;
-            snprintf(csize, sizeof(csize), "MINI");
-            k_sectorsCount = MIFARE_MINI_MAXSECTOR;
-            break;
-        case 1:
-            flags |= FLAG_MF_1K;
-            snprintf(csize, sizeof(csize), "1K");
-            k_sectorsCount = MIFARE_1K_MAXSECTOR;
-            break;
-        case 2:
-            flags |= FLAG_MF_2K;
-            snprintf(csize, sizeof(csize), "2K with RATS");
-            k_sectorsCount = MIFARE_2K_MAXSECTOR;
-            break;
-        case 4:
-            flags |= FLAG_MF_4K;
-            snprintf(csize, sizeof(csize), "4K");
-            k_sectorsCount = MIFARE_4K_MAXSECTOR;
-            break;
-        default:
-            PrintAndLogEx(WARNING, "Unknown parameter for option t");
-            return PM3_EINVARG;
-    }
+    bool m0 = arg_get_lit(ctx, 2);
+    bool m1 = arg_get_lit(ctx, 3);
+    bool m2 = arg_get_lit(ctx, 4);
+    bool m4 = arg_get_lit(ctx, 5);    
 
     int atqalen = 0;
     uint8_t atqa[2] = {0};
-    CLIGetHexWithReturn(ctx, 3, atqa, &atqalen);
+    CLIGetHexWithReturn(ctx, 6, atqa, &atqalen);
 
     int saklen = 0;
     uint8_t sak[1] = {0};
-    CLIGetHexWithReturn(ctx, 4, sak, &saklen);
+    CLIGetHexWithReturn(ctx, 7, sak, &saklen);
 
-    uint8_t exitAfterNReads = arg_get_u32_def(ctx, 5, 0);
+    uint8_t exitAfterNReads = arg_get_u32_def(ctx, 8, 0);
 
-    if (arg_get_lit(ctx, 6)) {
+    if (arg_get_lit(ctx, 9)) {
         flags |= FLAG_INTERACTIVE;
     }
 
-    if (arg_get_lit(ctx, 7)) {
+    if (arg_get_lit(ctx, 10)) {
         flags |= FLAG_NR_AR_ATTACK;
     }
 
-    bool setEmulatorMem = arg_get_lit(ctx, 8);
-    bool verbose = arg_get_lit(ctx, 9);
+    bool setEmulatorMem = arg_get_lit(ctx, 11);
+    bool verbose = arg_get_lit(ctx, 12);
 
     CLIParserFree(ctx);
 
@@ -3512,6 +3540,35 @@ static int CmdHF14AMfSim(const char *Cmd) {
     // Use UID, SAK, ATQA from EMUL, if uid not defined
     if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
         flags |= FLAG_UID_IN_EMUL;
+    }
+
+    uint8_t k_sectorsCount = 40;
+    char csize[13] = { 0 };
+
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    }
+
+    if (m0) {
+        flags |= FLAG_MF_MINI;
+        snprintf(csize, sizeof(csize), "MINI");
+        k_sectorsCount = MIFARE_MINI_MAXSECTOR;
+    } else if (m1) {
+        flags |= FLAG_MF_1K;
+        snprintf(csize, sizeof(csize), "1K");
+        k_sectorsCount = MIFARE_1K_MAXSECTOR;
+    } else if (m2) {
+        flags |= FLAG_MF_2K;
+        snprintf(csize, sizeof(csize), "2K with RATS");
+        k_sectorsCount = MIFARE_2K_MAXSECTOR;
+    } else if (m4) {
+        flags |= FLAG_MF_4K;
+        snprintf(csize, sizeof(csize), "4K");
+        k_sectorsCount = MIFARE_4K_MAXSECTOR;
+    } else {
+        PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
+        return PM3_EINVARG;        
     }
 
     PrintAndLogEx(INFO, _YELLOW_("MIFARE %s") " | %s UID  " _YELLOW_("%s") ""
@@ -4151,8 +4208,8 @@ static int CmdHF14AMfCWipe(const char *cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf cwipe",
                   "Wipe gen1 magic chinese card. Set UID/ATQA/SAK/Data/Keys/Access to default values.",
-                  "hf mf cwipe -> wipe card\n"
-                  "hf mf cwipe -u 09080706 -a 0004 -s 18 -> set UID, ATQA and SAK and wipe card");
+                  "hf mf cwipe                           --> wipe card\n"
+                  "hf mf cwipe -u 09080706 -a 0004 -s 18 --> set UID, ATQA and SAK and wipe card");
 
     void *argtable[] = {
         arg_param_begin,
