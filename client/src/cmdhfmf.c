@@ -1581,7 +1581,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     if (SectorsCnt == 0) {
         PrintAndLogEx(WARNING, "Invalid MIFARE Type");
         return PM3_EINVARG;
-    }
+    } 
 
     if (keylen != 6) {
         PrintAndLogEx(WARNING, "Input key must include 12 HEX symbols");
