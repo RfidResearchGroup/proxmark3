@@ -910,7 +910,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     uint8_t keyB[40][6];
     uint8_t rights[40][4];
     uint8_t carddata[256][16];
-    
+
     FILE *f;
     PacketResponseNG resp;
 
@@ -1310,7 +1310,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
     //validations
     if (singleSector == false) {
         if (SectorsCnt == 0) {
-            PrintAndLogEx(WARNING, "Invalid MIFARE Type");    
+            PrintAndLogEx(WARNING, "Invalid MIFARE Type");
             return PM3_EINVARG;
         }
     }
@@ -1579,7 +1579,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
 
     //validations
     if (SectorsCnt == 0) {
-        PrintAndLogEx(WARNING, "Invalid MIFARE Type");    
+        PrintAndLogEx(WARNING, "Invalid MIFARE Type");
         return PM3_EINVARG;
     }
 
@@ -1589,9 +1589,9 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     }
 
     sector_t *e_sector = NULL;
-    
+
     uint8_t trgKeyType = 0;
-    
+
     uint8_t keyBlock[(ARRAYLEN(g_mifare_default_keys) + 1) * 6];
     uint64_t key64 = 0;
 
@@ -3025,7 +3025,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
         keyType = 2;
     } else if (arg_get_lit(ctx, 5)) {
         keyType = 1;
-    } 
+    }
     bool m0 = arg_get_lit(ctx, 7);
     bool m1 = arg_get_lit(ctx, 8);
     bool m2 = arg_get_lit(ctx, 9);
@@ -3043,7 +3043,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
     //validations
 
     if ((m0 + m1 + m2 + m4) > 1) {
-        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");    
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
         return PM3_EINVARG;
     }
 
@@ -3060,7 +3060,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
     if (allBlocks) {
         if (SectorsCnt == 0) {
-            PrintAndLogEx(WARNING, "Invalid MIFARE Type");    
+            PrintAndLogEx(WARNING, "Invalid MIFARE Type");
             return PM3_EINVARG;
         }
         blockNo = 3;
@@ -3086,8 +3086,8 @@ static int CmdHF14AMfChk(const char *Cmd) {
         // }
         int numKeys = keylen / 6;
 
-        
-        
+
+
         p = realloc(keyBlock, 6 * (keyitems + numKeys));
         if (!p) {
             PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
@@ -3095,13 +3095,13 @@ static int CmdHF14AMfChk(const char *Cmd) {
             return PM3_EMALLOC;
         }
         keyBlock = p;
-        
+
         memcpy(keyBlock + 6 * keycnt, key, 6 * numKeys);
-        
+
         for (int i = 0; i < numKeys; i++) {
             PrintAndLogEx(NORMAL, "[%2d] key %s", keycnt, sprint_hex((keyBlock + 6 * keycnt), 6));
             keycnt++;
-        }        
+        }
 
     }
 
@@ -3437,7 +3437,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
 
     uint8_t k_sectorsCount = 40;
     char csize[13] = { 0 };
-    
+
     switch (arg_get_u32_def(ctx, 2, 1)) {
         case 0:
             flags |= FLAG_MF_MINI;
@@ -3486,9 +3486,9 @@ static int CmdHF14AMfSim(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 9);
 
     CLIParserFree(ctx);
-    
+
     nonces_t data[1];
- 
+
     sector_t *k_sector = NULL;
 
     //Validations
@@ -4765,7 +4765,7 @@ static int CmdHF14AMfice(const char *Cmd) {
     PacketResponseNG resp;
 
     uint32_t part_limit = 3000;
-    
+
     PrintAndLogEx(NORMAL, "Collecting "_YELLOW_("%u")" nonces \n", limit);
 
     if ((fnonces = fopen(filename, "wb")) == NULL) {
