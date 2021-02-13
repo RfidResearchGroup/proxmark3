@@ -136,25 +136,6 @@ static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("      hf mf autopwn k 0 A FFFFFFFFFFFF * 1 f mfc_default_keys")"   -- this command combines the two above (reduce the need for nested / hardnested attacks, by using a dictionary)");
     return PM3_SUCCESS;
 }
-static int usage_hf14_chk(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mf chk [h] <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h    this help");
-    PrintAndLogEx(NORMAL, "      *    all sectors based on card memory, other values then below defaults to 1k");
-    PrintAndLogEx(NORMAL, "                0 - MINI(320 bytes)");
-    PrintAndLogEx(NORMAL, "                1 - 1K");
-    PrintAndLogEx(NORMAL, "                2 - 2K");
-    PrintAndLogEx(NORMAL, "                4 - 4K");
-    PrintAndLogEx(NORMAL, "      d    write keys to binary file");
-    PrintAndLogEx(NORMAL, "      t    write keys to emulator memory\n");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf chk 0 A 1234567890ab")"          -- target block 0, Key A using key 1234567890ab");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf chk 0 A mfc_default_keys.dic")"  -- target block 0, Key A using default dictionary file");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf chk *1 ? t")"                    -- target all blocks, all keys, 1K, write to emulator memory");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf chk *1 ? d")"                    -- target all blocks, all keys, 1K, write to file");
-    return PM3_SUCCESS;
-}
 static int usage_hf14_chk_fast(void) {
     PrintAndLogEx(NORMAL, "This is a improved checkkeys method speedwise. It checks MIFARE Classic tags sector keys against a dictionary file with keys");
     PrintAndLogEx(NORMAL, "Usage:  hf mf fchk [h] <card memory> [t|d|f] [<key (12 hex symbols)>] [<dic (*.dic)>]");
@@ -3000,55 +2981,95 @@ out:
 }
 
 static int CmdHF14AMfChk(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf chk",
+                  "Check keys on MIFARE Classic card",
+                  "hf mf chk -* --mini --all -k FFFFFFFFFFFF              --> Key recovery against MIFARE Mini\n"
+                  "hf mf chk -* --1k --all -k FFFFFFFFFFFF                --> Key recovery against MIFARE Classic 1k\n"
+                  "hf mf chk -* --2k --all -k FFFFFFFFFFFF                --> Key recovery against MIFARE 2k\n"
+                  "hf mf chk -* --4k --all -k FFFFFFFFFFFF                --> Key recovery against MIFARE 4k\n"
+                  "hf mf chk -* --1k --all --emu                          --> Check all sectors, all keys, 1K, and write to emulator memory\n"
+                  "hf mf chk -* --1k --all --dump                         --> Check all sectors, all keys, 1K, and write to file\n"
+                  "hf mf chk -a --blk 0 -f mfc_default_keys.dic           --> Check dictionary against block 0 key A");
 
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 3 || ctmp == 'h') return usage_hf14_chk();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("k", "key", "<hex>", "Key specified as 12 hex symbols"),
+        arg_int0(NULL, "blk", "<dec>", "Input block number"),
+        arg_lit0("*", NULL, "Target all blocks"),
+        arg_lit0("a", NULL, "Input key specified is A key (default)"),
+        arg_lit0("b", NULL, "Input key specified is B key"),
+        arg_lit0(NULL, "all", "Target all keys"),
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_lit0(NULL, "emu", "Fill simulator keys from found keys"),
+        arg_lit0(NULL, "dump", "Dump found keys to file"),
+        arg_str0("f", "file", "<filename>", "filename of dictionary"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    FILE *f;
-    char filename[FILE_PATH_SIZE] = {0};
-    char buf[13];
-    uint8_t *keyBlock, *p;
-    sector_t *e_sector = NULL;
+    int keylen = 0;
+    uint8_t key[255 * 6] = {0};
+    CLIGetHexWithReturn(ctx, 1, key, &keylen);
 
-    uint8_t blockNo = 0;
-    uint8_t SectorsCnt = 1;
+    uint8_t blockNo = arg_get_u32_def(ctx, 2, 0);
+
+    bool allBlocks = arg_get_lit(ctx, 3);
+
     uint8_t keyType = 0;
-    uint32_t keyitems = ARRAYLEN(g_mifare_default_keys);
-    uint64_t key64 = 0;
-    int clen = 0;
-    int transferToEml = 0;
-    int createDumpFile = 0;
-    int i, keycnt = 0;
 
-    if (param_getchar(Cmd, 0) == '*') {
-        blockNo = 3;
-        SectorsCnt = NumOfSectors(param_getchar(Cmd + 1, 0));
+    if ((arg_get_lit(ctx, 4) && arg_get_lit(ctx, 5)) || arg_get_lit(ctx, 6)) {
+        keyType = 2;
+    } else if (arg_get_lit(ctx, 5)) {
+        keyType = 1;
+    } 
+    bool m0 = arg_get_lit(ctx, 7);
+    bool m1 = arg_get_lit(ctx, 8);
+    bool m2 = arg_get_lit(ctx, 9);
+    bool m4 = arg_get_lit(ctx, 10);
+
+    bool transferToEml = arg_get_lit(ctx, 11);
+    bool createDumpFile = arg_get_lit(ctx, 12);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 13), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    CLIParserFree(ctx);
+
+    //validations
+
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");    
+        return PM3_EINVARG;
+    }
+
+    uint8_t SectorsCnt = 1;
+    if (m0) {
+        SectorsCnt = MIFARE_MINI_MAXSECTOR;
+    } else if (m1) {
+        SectorsCnt = MIFARE_1K_MAXSECTOR;
+    } else if (m2) {
+        SectorsCnt = MIFARE_2K_MAXSECTOR;
+    } else if (m4) {
+        SectorsCnt = MIFARE_4K_MAXSECTOR;
+    }
+
+    if (allBlocks) {
         if (SectorsCnt == 0) {
-            return usage_hf14_chk();
+            PrintAndLogEx(WARNING, "Invalid MIFARE Type");    
+            return PM3_EINVARG;
         }
-    } else {
-        blockNo = param_get8(Cmd, 0);
+        blockNo = 3;
     }
 
-    ctmp = tolower(param_getchar(Cmd, 1));
-    clen = param_getlength(Cmd, 1);
-    if (clen == 1) {
-        switch (ctmp) {
-            case 'a':
-                keyType = 0;
-                break;
-            case 'b':
-                keyType = 1;
-                break;
-            case '?':
-                keyType = 2;
-                break;
-            default:
-                PrintAndLogEx(FAILED, "Key type must be A , B or ?");
-                return PM3_ESOFT;
-        };
-    }
-
+    // Handle Keys
+    int keycnt = 0;
+    uint32_t keyitems = ARRAYLEN(g_mifare_default_keys);
+    uint8_t *keyBlock, *p;
     // Allocate memory for keys to be tested
     keyBlock = calloc(ARRAYLEN(g_mifare_default_keys), 6);
     if (keyBlock == NULL) return PM3_EMALLOC;
@@ -3057,92 +3078,89 @@ static int CmdHF14AMfChk(const char *Cmd) {
     for (int cnt = 0; cnt < ARRAYLEN(g_mifare_default_keys); cnt++)
         num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t *)(keyBlock + cnt * 6));
 
-    for (i = 2; param_getchar(Cmd, i); i++) {
+    // Handle user supplied key
+    if (keylen > 6) {
+        // if (keylen != 6) {
+        //     PrintAndLogEx(WARNING, "Input key must include 12 HEX symbols");
+        //     return PM3_EINVARG;
+        // }
+        int numKeys = keylen / 6;
 
-        ctmp = tolower(param_getchar(Cmd, i));
-        clen = param_getlength(Cmd, i);
+        
+        
+        p = realloc(keyBlock, 6 * (keyitems + numKeys));
+        if (!p) {
+            PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
+            free(keyBlock);
+            return PM3_EMALLOC;
+        }
+        keyBlock = p;
+        
+        memcpy(keyBlock + 6 * keycnt, key, 6 * numKeys);
+        
+        for (int i = 0; i < numKeys; i++) {
+            PrintAndLogEx(NORMAL, "[%2d] key %s", keycnt, sprint_hex((keyBlock + 6 * keycnt), 6));
+            keycnt++;
+        }        
 
-        if (clen == 12) {
+    }
 
-            if (param_gethex(Cmd, i, keyBlock + 6 * keycnt, 12)) {
-                PrintAndLogEx(FAILED, "not hex, skipping");
+    // Handle user supplied dictionary file
+    FILE *f;
+    char buf[13];
+    if (fnlen > 0) {
+        char *dict_path;
+        int res = searchFile(&dict_path, DICTIONARIES_SUBDIR, filename, ".dic", false);
+        if (res != PM3_SUCCESS) {
+            free(keyBlock);
+            return PM3_EFILE;
+        }
+        f = fopen(dict_path, "r");
+        if (!f) {
+            PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", dict_path);
+            free(dict_path);
+            free(keyBlock);
+            return PM3_EFILE;
+        }
+        free(dict_path);
+        // load keys from dictionary file
+        while (fgets(buf, sizeof(buf), f)) {
+            if (strlen(buf) < 12 || buf[11] == '\n')
+                continue;
+
+            while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
+
+            if (buf[0] == '#') continue; //The line start with # is comment, skip
+
+            // codesmell, only checks first char?
+            if (!isxdigit(buf[0])) {
+                PrintAndLogEx(FAILED, "File content error. '" _YELLOW_("%s")"' must include 12 HEX symbols", buf);
                 continue;
             }
+
+            buf[12] = 0;
 
             if (keyitems - keycnt < 2) {
                 p = realloc(keyBlock, 6 * (keyitems += 64));
                 if (!p) {
-                    PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
+                    PrintAndLogEx(FAILED, "Cannot allocate memory for defKeys");
                     free(keyBlock);
+                    fclose(f);
                     return PM3_EMALLOC;
                 }
                 keyBlock = p;
             }
-            PrintAndLogEx(NORMAL, "[%2d] key %s", keycnt, sprint_hex((keyBlock + 6 * keycnt), 6));
+            memset(keyBlock + 6 * keycnt, 0, 6);
+            num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6 * keycnt);
+            //PrintAndLogEx(NORMAL, "check key[%2d] %012" PRIx64, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
             keycnt++;
-        } else if (clen == 1) {
-            if (ctmp == 't') { transferToEml = 1; continue; }
-            if (ctmp == 'd') { createDumpFile = 1; continue; }
-        } else {
-            // May be a dic file
-            if (param_getstr(Cmd, i, filename, sizeof(filename)) >= FILE_PATH_SIZE) {
-                PrintAndLogEx(FAILED, "File name too long");
-                free(keyBlock);
-                return PM3_EINVARG;
-            }
-
-            char *dict_path;
-            int res = searchFile(&dict_path, DICTIONARIES_SUBDIR, filename, ".dic", false);
-            if (res != PM3_SUCCESS) {
-                free(keyBlock);
-                return PM3_EFILE;
-            }
-            f = fopen(dict_path, "r");
-            if (!f) {
-                PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", dict_path);
-                free(dict_path);
-                free(keyBlock);
-                return PM3_EFILE;
-            }
-            free(dict_path);
-
-            // load keys from dictionary file
-            while (fgets(buf, sizeof(buf), f)) {
-                if (strlen(buf) < 12 || buf[11] == '\n')
-                    continue;
-
-                while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
-
-                if (buf[0] == '#') continue; //The line start with # is comment, skip
-
-                // codesmell, only checks first char?
-                if (!isxdigit(buf[0])) {
-                    PrintAndLogEx(FAILED, "File content error. '" _YELLOW_("%s")"' must include 12 HEX symbols", buf);
-                    continue;
-                }
-
-                buf[12] = 0;
-
-                if (keyitems - keycnt < 2) {
-                    p = realloc(keyBlock, 6 * (keyitems += 64));
-                    if (!p) {
-                        PrintAndLogEx(FAILED, "Cannot allocate memory for defKeys");
-                        free(keyBlock);
-                        fclose(f);
-                        return PM3_EMALLOC;
-                    }
-                    keyBlock = p;
-                }
-                memset(keyBlock + 6 * keycnt, 0, 6);
-                num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6 * keycnt);
-                //PrintAndLogEx(NORMAL, "check key[%2d] %012" PRIx64, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
-                keycnt++;
-                memset(buf, 0, sizeof(buf));
-            }
-            fclose(f);
-            PrintAndLogEx(SUCCESS, "Loaded %2d keys from " _YELLOW_("%s"), keycnt, filename);
+            memset(buf, 0, sizeof(buf));
         }
+        fclose(f);
+        PrintAndLogEx(SUCCESS, "Loaded %2d keys from " _YELLOW_("%s"), keycnt, filename);
     }
+
+    uint64_t key64 = 0;
 
     if (keycnt == 0) {
         PrintAndLogEx(INFO, "No key specified, trying default keys");
@@ -3158,6 +3176,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
     }
 
     // create/initialize key storage structure
+    sector_t *e_sector = NULL;
     int32_t res = initSectorTable(&e_sector, SectorsCnt);
     if (res != SectorsCnt) {
         free(keyBlock);
@@ -3181,7 +3200,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
         // loop sectors but block is used as to keep track of from which blocks to test
         int b = blockNo;
-        for (i = 0; i < SectorsCnt; ++i) {
+        for (int i = 0; i < SectorsCnt; ++i) {
 
             // skip already found keys.
             if (e_sector[i].foundKey[trgKeyType]) continue;
@@ -3218,7 +3237,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
         // loop sectors but block is used as to keep track of from which blocks to test
         int b = blockNo;
-        for (i = 0; i < SectorsCnt; i++) {
+        for (int i = 0; i < SectorsCnt; i++) {
 
             // KEY A but not KEY B
             if (e_sector[i].foundKey[0] && !e_sector[i].foundKey[1]) {
@@ -3269,7 +3288,7 @@ out:
         // fast push mode
         conn.block_after_ACK = true;
         uint8_t block[16] = {0x00};
-        for (i = 0; i < SectorsCnt; ++i) {
+        for (int i = 0; i < SectorsCnt; ++i) {
             uint8_t blockno = FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1;
             mfEmlGetMem(block, blockno, 1);
 

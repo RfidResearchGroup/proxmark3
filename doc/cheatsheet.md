@@ -224,12 +224,22 @@ Check for default keys
 ```
 Options
 ---
-<*card memory> <key type (A/B/?)> [t|d|s|ss] <dic (*.dic)>
-*              : all sectors
-card memory    : 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K
-d              : write keys to binary file
+    -h, --help                     This help
+    -k, --key <hex>                Key specified as 12 hex symbols
+    --blk <dec>                    Input block number
+    -*                             Target all blocks
+    -a                             Input key specified is A key (default)
+    -b                             Input key specified is B key
+    --all                          Target all keys
+    --mini                         MIFARE Classic Mini / S20
+    --1k                           MIFARE Classic 1k / S50
+    --2k                           MIFARE Classic/Plus 2k
+    --4k                           MIFARE Classic 4k / S70
+    --emu                          Fill simulator keys from found keys
+    --dump                         Dump found keys to file
+    -f, --file <filename>          filename of dictionary
 
-pm3 --> hf mf chk *1 ? d mfc_default_keys
+pm3 --> hf mf chk -* --1k --all -f mfc_default_keys
 ```
 
 Check for default keys from local memory
@@ -315,7 +325,7 @@ pm3 --> hf mf sim -u 353c2aa6
 
 Simulate MIFARE Sequence
 ```
-pm3 --> hf mf chk *1 ? d mfc_default_keys
+pm3 --> hf mf chk -* --1k --all -f mfc_default_keys
 pm3 --> hf mf dump 1
 pm3 --> script run data_mf_bin2eml -i dumpdata.bin
 pm3 --> hf mf eload 353C2AA6
@@ -324,7 +334,7 @@ pm3 --> hf mf sim -u 353c2aa6
 
 Clone MIFARE 1K Sequence
 ```
-pm3 --> hf mf chk *1 ? d mfc_default_keys
+pm3 --> hf mf chk -* --1k --all -f mfc_default_keys
 pm3 --> hf mf dump
 pm3 --> hf mf restore 1 u 4A6CE843 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-dump.bin
 ```
