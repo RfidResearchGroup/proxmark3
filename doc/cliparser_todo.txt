@@ -60,7 +60,6 @@ hf felica litedump
 hf mf hardnested
 hf mf autopwn
 hf mf nack
-hf mf fchk
 hf mf decrypt
 hf mf rdbl
 hf mf rdsc

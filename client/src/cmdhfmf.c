@@ -136,29 +136,7 @@ static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("      hf mf autopwn k 0 A FFFFFFFFFFFF * 1 f mfc_default_keys")"   -- this command combines the two above (reduce the need for nested / hardnested attacks, by using a dictionary)");
     return PM3_SUCCESS;
 }
-static int usage_hf14_chk_fast(void) {
-    PrintAndLogEx(NORMAL, "This is a improved checkkeys method speedwise. It checks MIFARE Classic tags sector keys against a dictionary file with keys");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf fchk [h] <card memory> [t|d|f] [<key (12 hex symbols)>] [<dic (*.dic)>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h    this help");
-    PrintAndLogEx(NORMAL, "      <cardmem> all sectors based on card memory, other values than below defaults to 1k");
-    PrintAndLogEx(NORMAL, "                 0 - MINI(320 bytes)");
-    PrintAndLogEx(NORMAL, "                 1 - 1K   <default>");
-    PrintAndLogEx(NORMAL, "                 2 - 2K");
-    PrintAndLogEx(NORMAL, "                 4 - 4K");
-    PrintAndLogEx(NORMAL, "      d    write keys to binary file");
-    PrintAndLogEx(NORMAL, "      t    write keys to emulator memory");
-    PrintAndLogEx(NORMAL, "      m    use dictionary from flashmemory\n");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf fchk 1 1234567890ab")"          -- target 1K using key 1234567890ab");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf fchk 1 mfc_default_keys.dic")"  -- target 1K using default dictionary file");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf fchk 1 t")"                     -- target 1K, write to emulator memory");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf fchk 1 d")"                     -- target 1K, write to file");
-    if (IfPm3Flash())
-        PrintAndLogEx(NORMAL, _YELLOW_("      hf mf fchk 1 m")"                     -- target 1K, use dictionary from flashmemory");
-    return PM3_SUCCESS;
-}
+
 /*
 static int usage_hf14_keybrute(void) {
     PrintAndLogEx(NORMAL, "J_Run's 2nd phase of multiple sector nested authentication key recovery");
@@ -862,17 +840,18 @@ static int CmdHF14AMfDump(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf dump",
                   "Dump MIFARE Classic tag to binary file\n"
                   "If no <name> given, UID will be used as filename",
-                  "hf mf dump --mini                   --> MIFARE Mini\n"
-                  "hf mf dump --1k                     --> MIFARE Classic 1k\n"
-                  "hf mf dump --2k                     --> MIFARE 2k\n"
-                  "hf mf dump --4k                     --> MIFARE 4k\n");
+                  "hf mf dump --mini                      --> MIFARE Mini\n"
+                  "hf mf dump --1k                        --> MIFARE Classic 1k\n"
+                  "hf mf dump --2k                        --> MIFARE 2k\n"
+                  "hf mf dump --4k                        --> MIFARE 4k\n"
+                  "hf mf dump -f hf-mf-066C8B78-key-5.bin --> MIFARE 1k with keys from specified file\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<filename>", "filename of dump"),
         arg_str0("k", "keys", "<filename>", "filename of keys"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_param_end
@@ -909,6 +888,8 @@ static int CmdHF14AMfDump(const char *Cmd) {
     if ((m0 + m1 + m2 + m4) > 1) {
         PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
         return PM3_EINVARG;
+    } else if ((m0 + m1 + m2 + m4) == 0) {
+        m1 = true;
     }
 
     uint8_t numSectors = 1;
@@ -1576,7 +1557,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
-        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),        
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_int0(NULL, "blk", "<dec>", "Input block number"),
         arg_lit0("a", NULL, "Input key specified is A key (default)"),
         arg_lit0("b", NULL, "Input key specified is B key"),
@@ -1629,7 +1610,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
         SectorsCnt = MIFARE_4K_MAXSECTOR;
     } else {
         PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
-        return PM3_EINVARG;        
+        return PM3_EINVARG;
     }
 
     if (keylen != 6) {
@@ -2770,132 +2751,161 @@ static void shuffle(uint8_t *array, uint16_t len) {
 */
 
 static int CmdHF14AMfChk_fast(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf fchk",
+                  "This is a improved checkkeys method speedwise. It checks MIFARE Classic tags sector keys against a dictionary file with keys",
+                  "hf mf fchk --mini -k FFFFFFFFFFFF              --> Key recovery against MIFARE Mini\n"
+                  "hf mf fchk --1k -k FFFFFFFFFFFF                --> Key recovery against MIFARE Classic 1k\n"
+                  "hf mf fchk --2k -k FFFFFFFFFFFF                --> Key recovery against MIFARE 2k\n"
+                  "hf mf fchk --4k -k FFFFFFFFFFFF                --> Key recovery against MIFARE 4k\n"
+                  "hf mf fchk --1k -f mfc_default_keys.dic        --> Target 1K using default dictionary file\n"
+                  "hf mf fchk --1k --emu                          --> Target 1K, write to emulator memory\n"
+                  "hf mf fchk --1k --dump                         --> Target 1K, write to file\n"
+                  "hf mf fchk --1k --mem                          --> Target 1K, use dictionary from flashmemory");
 
-    char ctmp = 0x00;
-    ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_chk_fast();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("k", "key", "<hex>", "Key specified as 12 hex symbols"),
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_lit0(NULL, "emu", "Fill simulator keys from found keys"),
+        arg_lit0(NULL, "dump", "Dump found keys to binary file"),
+        arg_lit0(NULL, "mem", "Use dictionary from flashmemory"),
+        arg_str0("f", "file", "<filename>", "filename of dictionary"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    FILE *f;
+    int keylen = 0;
+    uint8_t key[255 * 6] = {0};
+    CLIGetHexWithReturn(ctx, 1, key, &keylen);
+
+    bool m0 = arg_get_lit(ctx, 2);
+    bool m1 = arg_get_lit(ctx, 3);
+    bool m2 = arg_get_lit(ctx, 4);
+    bool m4 = arg_get_lit(ctx, 5);
+
+    bool transferToEml = arg_get_lit(ctx, 6);
+    bool createDumpFile = arg_get_lit(ctx, 7);
+    bool use_flashmemory = arg_get_lit(ctx, 8);
+
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    char buf[13];
-    uint8_t *keyBlock, *p;
+    CLIParamStrToBuf(arg_get_str(ctx, 9), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    CLIParserFree(ctx);
+
+    //validations
+
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    } else if ((m0 + m1 + m2 + m4) == 0) {
+        m1 = true;
+    }
+
     uint8_t sectorsCnt = 1;
-    int i, keycnt = 0;
-    int clen = 0;
-    int transferToEml = 0, createDumpFile = 0;
+    if (m0) {
+        sectorsCnt = MIFARE_MINI_MAXSECTOR;
+    } else if (m1) {
+        sectorsCnt = MIFARE_1K_MAXSECTOR;
+    } else if (m2) {
+        sectorsCnt = MIFARE_2K_MAXSECTOR;
+    } else if (m4) {
+        sectorsCnt = MIFARE_4K_MAXSECTOR;
+    } else {
+        PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
+        return PM3_EINVARG;
+    }
+
+    // Handle Keys
+    int keycnt = 0;
     uint32_t keyitems = ARRAYLEN(g_mifare_default_keys);
-    bool use_flashmemory = false;
-
-    sector_t *e_sector = NULL;
-
+    uint8_t *keyBlock, *p;
+    // Allocate memory for keys to be tested
     keyBlock = calloc(ARRAYLEN(g_mifare_default_keys), 6);
     if (keyBlock == NULL) return PM3_EMALLOC;
 
+    // Copy default keys to list
     for (int cnt = 0; cnt < ARRAYLEN(g_mifare_default_keys); cnt++)
-        num_to_bytes(g_mifare_default_keys[cnt], 6, keyBlock + cnt * 6);
+        num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t *)(keyBlock + cnt * 6));
 
-    // sectors
-    switch (ctmp) {
-        case '0':
-            sectorsCnt =  MIFARE_MINI_MAXSECTOR;
-            break;
-        case '1':
-            sectorsCnt = MIFARE_1K_MAXSECTOR;
-            break;
-        case '2':
-            sectorsCnt = MIFARE_2K_MAXSECTOR;
-            break;
-        case '4':
-            sectorsCnt = MIFARE_4K_MAXSECTOR;
-            break;
-        default:
-            sectorsCnt = MIFARE_1K_MAXSECTOR;
+    // Handle user supplied key
+    if (keylen >= 6) {
+        int numKeys = keylen / 6;
+
+        p = realloc(keyBlock, 6 * (keyitems + numKeys));
+        if (!p) {
+            PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
+            free(keyBlock);
+            return PM3_EMALLOC;
+        }
+        keyBlock = p;
+
+        memcpy(keyBlock + 6 * keycnt, key, 6 * numKeys);
+
+        for (int i = 0; i < numKeys; i++) {
+            PrintAndLogEx(NORMAL, "[%2d] key %s", keycnt, sprint_hex((keyBlock + 6 * keycnt), 6));
+            keycnt++;
+        }
+
     }
 
-    for (i = 1; param_getchar(Cmd, i); i++) {
+    // Handle user supplied dictionary file
+    FILE *f;
+    char buf[13];
+    if (fnlen > 0) {
+        char *dict_path;
+        int res = searchFile(&dict_path, DICTIONARIES_SUBDIR, filename, ".dic", false);
+        if (res != PM3_SUCCESS) {
+            free(keyBlock);
+            return PM3_EFILE;
+        }
+        f = fopen(dict_path, "r");
+        if (!f) {
+            PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", dict_path);
+            free(dict_path);
+            free(keyBlock);
+            return PM3_EFILE;
+        }
+        free(dict_path);
+        // load keys from dictionary file
+        while (fgets(buf, sizeof(buf), f)) {
+            if (strlen(buf) < 12 || buf[11] == '\n')
+                continue;
 
-        ctmp = tolower(param_getchar(Cmd, i));
-        clen = param_getlength(Cmd, i);
+            while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
 
-        if (clen == 12) {
+            if (buf[0] == '#') continue; //The line start with # is comment, skip
 
-            if (param_gethex(Cmd, i, keyBlock + 6 * keycnt, 12)) {
-                PrintAndLogEx(FAILED, "not hex, skipping");
+            // codesmell, only checks first char?
+            if (!isxdigit(buf[0])) {
+                PrintAndLogEx(FAILED, "File content error. '" _YELLOW_("%s")"' must include 12 HEX symbols", buf);
                 continue;
             }
+
+            buf[12] = 0;
 
             if (keyitems - keycnt < 2) {
                 p = realloc(keyBlock, 6 * (keyitems += 64));
                 if (!p) {
-                    PrintAndLogEx(FAILED, "Cannot allocate memory for Keys");
+                    PrintAndLogEx(FAILED, "Cannot allocate memory for defKeys");
                     free(keyBlock);
+                    fclose(f);
                     return PM3_EMALLOC;
                 }
                 keyBlock = p;
             }
-            PrintAndLogEx(NORMAL, "[%2d] key %s", keycnt, sprint_hex((keyBlock + 6 * keycnt), 6));
+            memset(keyBlock + 6 * keycnt, 0, 6);
+            num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6 * keycnt);
+            //PrintAndLogEx(NORMAL, "check key[%2d] %012" PRIx64, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
             keycnt++;
-        } else if (clen == 1) {
-            if (ctmp == 't') { transferToEml = 1; continue; }
-            if (ctmp == 'd') { createDumpFile = 1; continue; }
-            if ((ctmp == 'm') && (IfPm3Flash())) { use_flashmemory = true; continue; }
-        } else {
-            // May be a dic file
-            if (param_getstr(Cmd, i, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
-                PrintAndLogEx(FAILED, "Filename too long");
-                free(keyBlock);
-                return PM3_EINVARG;
-            }
-
-            char *dict_path;
-            int res = searchFile(&dict_path, DICTIONARIES_SUBDIR, filename, ".dic", false);
-            if (res != PM3_SUCCESS) {
-                free(keyBlock);
-                return res;
-            }
-            f = fopen(dict_path, "r");
-            if (!f) {
-                PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", dict_path);
-                free(dict_path);
-                free(keyBlock);
-                return PM3_EFILE;
-            }
-            free(dict_path);
-
-            // read file
-            while (fgets(buf, sizeof(buf), f)) {
-                if (strlen(buf) < 12 || buf[11] == '\n')
-                    continue;
-
-                while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
-
-                if (buf[0] == '#') continue; //The line start with # is comment, skip
-
-                if (!isxdigit(buf[0])) {
-                    PrintAndLogEx(FAILED, "File content error. '" _YELLOW_("%s")"' must include 12 HEX symbols", buf);
-                    continue;
-                }
-
-                buf[12] = 0;
-                if (keyitems - keycnt < 2) {
-                    p = realloc(keyBlock, 6 * (keyitems += 64));
-                    if (!p) {
-                        PrintAndLogEx(FAILED, "Cannot allocate memory for default keys");
-                        free(keyBlock);
-                        fclose(f);
-                        return PM3_EMALLOC;
-                    }
-                    keyBlock = p;
-                }
-                int pos = 6 * keycnt;
-                memset(keyBlock + pos, 0, 6);
-                num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + pos);
-                keycnt++;
-                memset(buf, 0, sizeof(buf));
-            }
-            fclose(f);
-            PrintAndLogEx(SUCCESS, "Loaded %2d keys from " _YELLOW_("%s"), keycnt, filename);
+            memset(buf, 0, sizeof(buf));
         }
+        fclose(f);
+        PrintAndLogEx(SUCCESS, "Loaded %2d keys from " _YELLOW_("%s"), keycnt, filename);
     }
 
     if (keycnt == 0 && !use_flashmemory) {
@@ -2907,15 +2917,18 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     }
 
     // create/initialize key storage structure
+    sector_t *e_sector = NULL;
     int32_t res = initSectorTable(&e_sector, sectorsCnt);
     if (res != sectorsCnt) {
         free(keyBlock);
         return PM3_EMALLOC;
     }
 
+
     uint32_t chunksize = keycnt > (PM3_CMD_DATA_SIZE / 6) ? (PM3_CMD_DATA_SIZE / 6) : keycnt;
     bool firstChunk = true, lastChunk = false;
 
+    int i = 0;
     // time
     uint64_t t1 = msclock();
 
@@ -3033,59 +3046,59 @@ static int CmdHF14AMfChk(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf chk",
                   "Check keys on MIFARE Classic card",
-                  "hf mf chk -* --mini --all -k FFFFFFFFFFFF              --> Key recovery against MIFARE Mini\n"
-                  "hf mf chk -* --1k --all -k FFFFFFFFFFFF                --> Key recovery against MIFARE Classic 1k\n"
-                  "hf mf chk -* --2k --all -k FFFFFFFFFFFF                --> Key recovery against MIFARE 2k\n"
-                  "hf mf chk -* --4k --all -k FFFFFFFFFFFF                --> Key recovery against MIFARE 4k\n"
-                  "hf mf chk -* --1k --all --emu                          --> Check all sectors, all keys, 1K, and write to emulator memory\n"
-                  "hf mf chk -* --1k --all --dump                         --> Check all sectors, all keys, 1K, and write to file\n"
-                  "hf mf chk -a --blk 0 -f mfc_default_keys.dic           --> Check dictionary against block 0 key A");
+                  "hf mf chk --mini -k FFFFFFFFFFFF              --> Check all sectors, all keys against MIFARE Mini\n"
+                  "hf mf chk --1k -k FFFFFFFFFFFF                --> Check all sectors, all keys against MIFARE Classic 1k\n"
+                  "hf mf chk --2k -k FFFFFFFFFFFF                --> Check all sectors, all keys against MIFARE 2k\n"
+                  "hf mf chk --4k -k FFFFFFFFFFFF                --> Check all sectors, all keys against MIFARE 4k\n"
+                  "hf mf chk --1k --emu                          --> Check all sectors, all keys, 1K, and write to emulator memory\n"
+                  "hf mf chk --1k --dump                         --> Check all sectors, all keys, 1K, and write to file\n"
+                  "hf mf chk -a --blk 0 -f mfc_default_keys.dic  --> Check dictionary against block 0, key A");
 
     void *argtable[] = {
         arg_param_begin,
         arg_strx0("k", "key", "<hex>", "Key specified as 12 hex symbols"),
         arg_int0(NULL, "blk", "<dec>", "Input block number"),
-        arg_lit0("*", NULL, "Target all blocks"),
-        arg_lit0("a", NULL, "Input key specified is A key (default)"),
-        arg_lit0("b", NULL, "Input key specified is B key"),
-        arg_lit0(NULL, "all", "Target all keys"),
+        arg_lit0("a", NULL, "Target Key A, if found also check Key B for duplicate"),
+        arg_lit0("b", NULL, "Target Key B"),
+        arg_lit0("*", "all", "Target both key A & B (default)"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "emu", "Fill simulator keys from found keys"),
-        arg_lit0(NULL, "dump", "Dump found keys to file"),
+        arg_lit0(NULL, "dump", "Dump found keys to binary file"),
         arg_str0("f", "file", "<filename>", "filename of dictionary"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int keylen = 0;
     uint8_t key[255 * 6] = {0};
     CLIGetHexWithReturn(ctx, 1, key, &keylen);
 
-    uint8_t blockNo = arg_get_u32_def(ctx, 2, 0);
+    int blockNo = arg_get_int_def(ctx, 2, -1);
 
-    bool allBlocks = arg_get_lit(ctx, 3);
+    uint8_t keyType = 2;
 
-    uint8_t keyType = 0;
-
-    if ((arg_get_lit(ctx, 4) && arg_get_lit(ctx, 5)) || arg_get_lit(ctx, 6)) {
+    if ((arg_get_lit(ctx, 3) && arg_get_lit(ctx, 4)) || arg_get_lit(ctx, 5)) {
         keyType = 2;
-    } else if (arg_get_lit(ctx, 5)) {
+    } else if (arg_get_lit(ctx, 3)) {
+        keyType = 0;
+    } else if (arg_get_lit(ctx, 4)) {
         keyType = 1;
     }
-    bool m0 = arg_get_lit(ctx, 7);
-    bool m1 = arg_get_lit(ctx, 8);
-    bool m2 = arg_get_lit(ctx, 9);
-    bool m4 = arg_get_lit(ctx, 10);
 
-    bool transferToEml = arg_get_lit(ctx, 11);
-    bool createDumpFile = arg_get_lit(ctx, 12);
+    bool m0 = arg_get_lit(ctx, 6);
+    bool m1 = arg_get_lit(ctx, 7);
+    bool m2 = arg_get_lit(ctx, 8);
+    bool m4 = arg_get_lit(ctx, 9);
+
+    bool transferToEml = arg_get_lit(ctx, 10);
+    bool createDumpFile = arg_get_lit(ctx, 11);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 13), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 12), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     CLIParserFree(ctx);
 
@@ -3107,11 +3120,17 @@ static int CmdHF14AMfChk(const char *Cmd) {
         SectorsCnt = MIFARE_4K_MAXSECTOR;
     }
 
-    if (allBlocks) {
+    if ((blockNo == -1) && (SectorsCnt == 1)) {
+        // Default to 1K if block number not specified
+        SectorsCnt = MIFARE_1K_MAXSECTOR;
+    }
+
+    if (blockNo > -1) {
         if (SectorsCnt == 0) {
             PrintAndLogEx(WARNING, "Invalid MIFARE Type");
             return PM3_EINVARG;
         }
+    } else {
         blockNo = 3;
     }
 
@@ -3128,14 +3147,8 @@ static int CmdHF14AMfChk(const char *Cmd) {
         num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t *)(keyBlock + cnt * 6));
 
     // Handle user supplied key
-    if (keylen > 6) {
-        // if (keylen != 6) {
-        //     PrintAndLogEx(WARNING, "Input key must include 12 HEX symbols");
-        //     return PM3_EINVARG;
-        // }
+    if (keylen >= 6) {
         int numKeys = keylen / 6;
-
-
 
         p = realloc(keyBlock, 6 * (keyitems + numKeys));
         if (!p) {
@@ -3490,7 +3503,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
     bool m0 = arg_get_lit(ctx, 2);
     bool m1 = arg_get_lit(ctx, 3);
     bool m2 = arg_get_lit(ctx, 4);
-    bool m4 = arg_get_lit(ctx, 5);    
+    bool m4 = arg_get_lit(ctx, 5);
 
     int atqalen = 0;
     uint8_t atqa[2] = {0};
@@ -3568,7 +3581,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
         k_sectorsCount = MIFARE_4K_MAXSECTOR;
     } else {
         PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
-        return PM3_EINVARG;        
+        return PM3_EINVARG;
     }
 
     PrintAndLogEx(INFO, _YELLOW_("MIFARE %s") " | %s UID  " _YELLOW_("%s") ""
