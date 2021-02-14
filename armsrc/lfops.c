@@ -2227,6 +2227,9 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
         data[0] = (EM4x05_SET_BITRATE(50) | EM4x05_MODULATION_FSK2 | EM4x05_INVERT | EM4x05_SET_NUM_BLOCKS(last_block));
     }
 
+    if (DBGLEVEL >= DBG_DEBUG)
+        Dbprintf("Block 0: %08lx",data[0]);
+
     LED_D_ON();
     if (em) {
         Dbprintf("Clone HID Prox to EM4x05 is untested and disabled until verified");
