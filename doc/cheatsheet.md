@@ -224,49 +224,58 @@ Check for default keys
 ```
 Options
 ---
-    -h, --help                     This help
     -k, --key <hex>                Key specified as 12 hex symbols
     --blk <dec>                    Input block number
-    -*                             Target all blocks
-    -a                             Input key specified is A key (default)
-    -b                             Input key specified is B key
-    --all                          Target all keys
+    -a                             Target Key A, if found also check Key B for duplicate
+    -b                             Target Key B
+    -*, --all                      Target both key A & B (default)
     --mini                         MIFARE Classic Mini / S20
-    --1k                           MIFARE Classic 1k / S50
+    --1k                           MIFARE Classic 1k / S50 (default)
     --2k                           MIFARE Classic/Plus 2k
     --4k                           MIFARE Classic 4k / S70
     --emu                          Fill simulator keys from found keys
-    --dump                         Dump found keys to file
+    --dump                         Dump found keys to binary file
     -f, --file <filename>          filename of dictionary
 
-pm3 --> hf mf chk -* --1k --all -f mfc_default_keys
+pm3 --> hf mf chk --1k -f mfc_default_keys
 ```
 
 Check for default keys from local memory
 ```
 Options
 ---
-card memory   : 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K
-m             : use dictionary from flashmemory
+    -k, --key <hex>                Key specified as 12 hex symbols
+    --mini                         MIFARE Classic Mini / S20
+    --1k                           MIFARE Classic 1k / S50 (default)
+    --2k                           MIFARE Classic/Plus 2k
+    --4k                           MIFARE Classic 4k / S70
+    --emu                          Fill simulator keys from found keys
+    --dump                         Dump found keys to binary file
+    --mem                          Use dictionary from flashmemory
+    -f, --file <filename>          filename of dictionary
 
-pm3 --> hf mf fchk 1 m
+pm3 --> hf mf fchk --1k --mem
 ```
 
 Dump MIFARE card contents
 ```
 options:
-    -t, --type <0-4>               MIFARE Classic type
     -f, --file <filename>          filename of dump
     -k, --keys <filename>          filename of keys
+    --mini                         MIFARE Classic Mini / S20
+    --1k                           MIFARE Classic 1k / S50 (default)
+    --2k                           MIFARE Classic/Plus 2k
+    --4k                           MIFARE Classic 4k / S70
 
 examples/notes:
-    hf mf dump -t 0                          -> MIFARE Mini
-    hf mf dump -t 1                          -> MIFARE Classic 1k (default)
-    hf mf dump -t 2                          -> MIFARE 2k
-    hf mf dump -t 4                          -> MIFARE 4k
+    hf mf dump --mini                            -> MIFARE Mini
+    hf mf dump --1k                              -> MIFARE Classic 1k
+    hf mf dump --2k                              -> MIFARE 2k
+    hf mf dump --4k                              -> MIFARE 4k
+    hf mf dump -f hf-mf-066C8B78-key-5.bin       -> MIFARE 1k with keys from specified file
 
-pm3 --> hf mf dump -t 1
-pm3 --> hf mf dump -t 1 -k hf-mf-A29558E4-key.bin -f hf-mf-A29558E4-dump.bin
+pm3 --> hf mf dump
+pm3 --> hf mf dump --1k -k hf-mf-A29558E4-key.bin -f hf-mf-A29558E4-dump.bin
 ```
 
 Convert .bin to .eml
