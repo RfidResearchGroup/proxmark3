@@ -256,7 +256,7 @@ static uint32_t get_pulse_length(void) {
 
     int32_t timeout = EM4X50_TIMEOUT_PULSE_EVAL, tval = 0;
 
-    // iterates pulse length (low -> high -> low)
+    // iterates pulse lengths (low -> high -> low)
 
     volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
@@ -267,7 +267,6 @@ static uint32_t get_pulse_length(void) {
         return 0;
 
     tval = GetTicks();
-    //timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
     timeout = EM4X50_TIMEOUT_PULSE_EVAL;
 
     while (sample < gHigh && (timeout--))
@@ -276,7 +275,6 @@ static uint32_t get_pulse_length(void) {
     if (timeout <= 0)
         return 0;
 
-    //timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
     timeout = EM4X50_TIMEOUT_PULSE_EVAL;
     while (sample > gLow && (timeout--))
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -305,7 +303,6 @@ static void em4x50_reader_send_bit(int bit) {
         // disable modulation (activate the field) for 7 cycles of carrier
         // period (Opt64)
         LOW(GPIO_SSC_DOUT);
-        //while (AT91C_BASE_TC0->TC_CV < T0 * 7);
         while (GetTicks() - tval < 7 * CYCLES2TICKS);
 
         // enable modulation (drop the field) for remaining first
@@ -862,16 +859,16 @@ void em4x50_read(em4x50_data_t *etd) {
     LED_C_ON();
     if (get_signalproperties() && find_em4x50_tag()) {
 
-            LED_C_OFF();
-            LED_D_ON();
+        LED_C_OFF();
+        LED_D_ON();
 
-            // try to login with given password
-            if (etd->pwd_given)
-                blogin = (login(etd->password1) == PM3_SUCCESS);
+        // try to login with given password
+        if (etd->pwd_given)
+            blogin = (login(etd->password1) == PM3_SUCCESS);
 
-            // only one word has to be read -> first word read = last word read
-            if (blogin)
-                status = selective_read(etd->addresses, words);
+        // only one word has to be read -> first word read = last word read
+        if (blogin)
+            status = selective_read(etd->addresses, words);
     }
 
     LEDsoff();
@@ -914,7 +911,7 @@ void em4x50_reader(void) {
     int now = 0;
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
-     em4x50_setup_read();
+    em4x50_setup_read();
 
     LED_C_ON();
     if (get_signalproperties() && find_em4x50_tag()) {
@@ -1245,7 +1242,6 @@ static int em4x50_sim_read_bit(void) {
                 if (timeout <= 0) {
                     return PM3_ETIMEOUT;
                 }
-                //timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
                 // now we have a reference "position", from here it will take
                 // slightly less than 32 cycles until the end of the bit period
@@ -1447,7 +1443,7 @@ static int em4x50_sim_handle_standard_read_command(uint32_t *tag) {
         WDT_HIT();
 
         command = em4x50_sim_send_listen_window(tag);
-        
+
         if (command != PM3_SUCCESS) {
             return command;
         }
@@ -1543,7 +1539,7 @@ static int em4x50_sim_handle_login_command(uint32_t *tag) {
         em4x50_sim_send_nak();
         gLogin = false;
         LED_D_OFF();
-        
+
         // save transmitted password for future use (e.g. standalone mode)
         gPassword = password;
     }
@@ -1782,7 +1778,7 @@ void em4x50_handle_commands(int *command, uint32_t *tag) {
 // LED D -> operations that require authentication are possible
 void em4x50_sim(uint32_t *password) {
 
-    int command = 0;
+    int command = PM3_ENODATA;
 
     uint8_t *em4x50_mem = BigBuf_get_EM_addr();
     uint32_t tag[EM4X50_NO_WORDS] = {0x0};

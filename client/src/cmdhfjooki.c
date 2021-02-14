@@ -327,15 +327,19 @@ static int CmdHF14AJookiSim(const char *Cmd) {
 
     jooki_print(b64, result, false);
 
+    // copy UID from base64 url parameter
+    uint8_t uid[7] = {0};
+    memcpy(uid, result + 5, 7);
+
     // hf mfu sim...
     uint8_t *data = calloc(144, sizeof(uint8_t));
 
-    // copy UID from base64 url parameter
-    memcpy(data, result + 5, 3);
+    memcpy(data, uid, 3);
+    memcpy(data + (1*4), uid + 3, 4);
+
     // bbc0
     data[3] = 0x88 ^ data[0] ^ data[1] ^ data[2];
 
-    memcpy(data + (1*4), result + 8, 4);
     // bbc1
     data[8] = data[4] ^ data[5] ^ data[6] ^ data[7];
 
@@ -398,8 +402,9 @@ static int CmdHF14AJookiSim(const char *Cmd) {
 
     // NTAG,  7 byte UID in eloaded data.
     payload.tagtype = 7;
-    payload.flags = FLAG_7B_UID_IN_DATA;
+    payload.flags = FLAG_UID_IN_EMUL;
     payload.exitAfter = 0;
+    memcpy(payload.uid, uid, sizeof(uid));
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443A_SIMULATE, (uint8_t *)&payload, sizeof(payload));
