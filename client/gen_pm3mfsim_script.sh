@@ -32,4 +32,4 @@ rm $2
 echo "hf mf eclr" >> $2
 echo "hf mf eload" $1 >> $2
 echo "hf mf ekeyprn" >> $2
-echo "hf mf sim u" `cat $1.eml | (read -n 8 uid; echo $uid)` >> $2
+echo "hf mf sim -u" `cat $1.eml | (read -n 8 uid; echo $uid)` >> $2
