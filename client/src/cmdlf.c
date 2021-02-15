@@ -1456,27 +1456,27 @@ int CmdLFfind(const char *Cmd) {
         //fsk
         if (GetFskClock("", false)) {
             if (FSKrawDemod(0, 0, 0, 0, true) == PM3_SUCCESS) {
-                PrintAndLogEx(NORMAL, "\nUnknown FSK Modulated Tag found!");
+                PrintAndLogEx(INFO, "Unknown FSK Modulated Tag found!");
                 goto out;
             }
         }
 
         bool st = true;
         if (ASKDemod_ext(0, 0, 0, 0, false, true, false, 1, &st) == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "\nUnknown ASK Modulated and Manchester encoded Tag found!");
-            PrintAndLogEx(NORMAL, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod ab'"));
+            PrintAndLogEx(INFO, "Unknown ASK Modulated and Manchester encoded Tag found!");
+            PrintAndLogEx(INFO, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod ab'"));
             goto out;
         }
 
         if (CmdPSK1rawDemod("") == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "Possible unknown PSK1 Modulated Tag found above!");
-            PrintAndLogEx(NORMAL, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod p2'"));
-            PrintAndLogEx(NORMAL, "    Could also be PSK3 - [currently not supported]");
-            PrintAndLogEx(NORMAL, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod nr"));
+            PrintAndLogEx(INFO, "Possible unknown PSK1 Modulated Tag found above!");
+            PrintAndLogEx(INFO, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod p2'"));
+            PrintAndLogEx(INFO, "    Could also be PSK3 - [currently not supported]");
+            PrintAndLogEx(INFO, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod nr"));
             goto out;
         }
 
-        PrintAndLogEx(FAILED, _RED_("\nNo data found!"));
+        PrintAndLogEx(FAILED, _RED_("No data found!"));
     }
 
     retval = PM3_ESOFT;
