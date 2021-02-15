@@ -24,11 +24,18 @@
 // TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
 // EM4x50 units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
 // T0 = TIMER_CLOCK1 / 125000 = 192
-
 #ifndef T0
 #define T0                                  192
 #endif
 
+// conversions (carrier frequency 125 kHz):
+// 1 us = 1.5 ticks
+// 1 cycle = 1 period = 8 us = 12 ticks
+// 1 bit = 64 cycles = 768 ticks = 512 us (for Opt64)
+#define CYCLES2TICKS                        12
+#define CYCLES2MUSEC                        8
+
+// given in cycles/periods
 #define EM4X50_T_TAG_QUARTER_PERIOD         16
 #define EM4X50_T_TAG_HALF_PERIOD            32
 #define EM4X50_T_TAG_THREE_QUARTER_PERIOD   48
@@ -40,26 +47,21 @@
 #define EM4X50_T_TAG_WAITING_FOR_SIGNAL     75
 #define EM4X50_T_WAITING_FOR_DBLLIW         1550
 #define EM4X50_T_WAITING_FOR_ACK            4
+#define EM4X50_T_TOLERANCE                  8
+#define EM4X50_T_ZERO_DETECTION             3
 
-// timeout values for simulation mode (may vary with regard to reader)
+// timeout values (empirical) for simulation mode (may vary with regard to reader)
 #define EM4X50_T_SIMULATION_TIMEOUT_READ    600
 #define EM4X50_T_SIMULATION_TIMEOUT_WAIT    50
 
-// the following value seems to be critical; if it's too low (e.g. < 120)
-// some cards are no longer readable although they're ok
+// the following value (pulses) seems to be critical; if it's too low
+//(e.g. < 120) some cards are no longer readable although they're ok
 #define EM4X50_T_WAITING_FOR_SNGLLIW        140
 
-#define EM4X50_TAG_TOLERANCE                8
-#define EM4X50_ZERO_DETECTION               3
+// div
 #define EM4X50_TAG_WORD                     45
 #define EM4X50_TAG_MAX_NO_BYTES             136
-
-#define EM4X50_COMMAND_LOGIN                0x01
-#define EM4X50_COMMAND_RESET                0x80
-#define EM4X50_COMMAND_WRITE                0x12
-#define EM4X50_COMMAND_WRITE_PASSWORD       0x11
-#define EM4X50_COMMAND_SELECTIVE_READ       0x0A
-#define EM4X50_COMMAND_STANDARD_READ        0x02 // virtual command
+#define EM4X50_TIMEOUT_PULSE_EVAL           2500
 
 int gHigh = 190;
 int gLow = 60;
@@ -71,13 +73,8 @@ bool gLogin = false;
 // compared to operations like read, write, login, so it is necessary to
 // to be able to identfiy it
 bool gWritePasswordProcess = false;
-
-// do nothing for <period> using timer0
-static void wait_timer(uint32_t period) {
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV < period);
-}
-
+// if reader sends a different password than "expected" -> save it
+uint32_t gPassword = 0;
 
 // extract and check parities
 // return result of parity check and extracted plain data
@@ -130,13 +127,15 @@ static bool extract_parities(uint64_t word, uint32_t *data) {
     return false;
 }
 
-static void em4x50_setup_read(void) {
+void em4x50_setup_read(void) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
+    StartTicks();
+
     // 50ms for the resonant antenna to settle.
-    SpinDelay(50);
+    WaitMS(50);
 
     // Now set up the SSC to get the ADC samples that are now streaming at us.
     FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER);
@@ -154,30 +153,11 @@ static void em4x50_setup_read(void) {
     // Disable modulation at default, which means enable the field
     LOW(GPIO_SSC_DOUT);
 
-    // Enable Peripheral Clock for
-    //   TIMER_CLOCK0, used to measure exact timing before answering
-    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0);// | (1 << AT91C_ID_TC1);
-    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
-
-    // Disable timer during configuration
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-
-    // TC0: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
-
-    // TC1: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
-
-    // Enable and reset counters
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-
-    // synchronized startup procedure
-    while (AT91C_BASE_TC0->TC_CV > 0) {}; // wait until TC1 returned to zero
-
     // Watchdog hit
     WDT_HIT();
 }
 
-static void em4x50_setup_sim(void) {
+void em4x50_setup_sim(void) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
@@ -186,16 +166,10 @@ static void em4x50_setup_sim(void) {
     AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
     AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 
-    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0);
-    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    StartTicks();
 
     // Watchdog hit
     WDT_HIT();
-
-    LEDsoff();
 }
 
 // calculate signal properties (mean amplitudes) from measured data:
@@ -208,9 +182,8 @@ static bool get_signalproperties(void) {
     uint8_t sample_max_mean = 0;
     uint8_t sample_max[no_periods];
     uint32_t sample_max_sum = 0;
+    uint32_t tval = 0;
     memset(sample_max, 0x00, sizeof(sample_max));
-
-    LED_A_ON();
 
     // wait until signal/noise > 1 (max. 32 periods)
     for (int i = 0; i < EM4X50_T_TAG_WAITING_FOR_SIGNAL; i++) {
@@ -218,7 +191,7 @@ static bool get_signalproperties(void) {
         if (BUTTON_PRESS()) return false;
 
         // about 2 samples per bit period
-        wait_timer(T0 * EM4X50_T_TAG_HALF_PERIOD);
+        WaitUS(EM4X50_T_TAG_HALF_PERIOD * CYCLES2MUSEC);
 
         // ignore first samples
         if ((i > SIGNAL_IGNORE_FIRST_SAMPLES) && (AT91C_BASE_SSC->SSC_RHR > noise)) {
@@ -228,7 +201,6 @@ static bool get_signalproperties(void) {
     }
 
     if (signal_found == false) {
-        LED_A_OFF();
         return false;
     }
 
@@ -236,8 +208,8 @@ static bool get_signalproperties(void) {
     // 3 single "full periods" to eliminate the influence of a listen window
     for (int i = 0; i < no_periods; i++) {
 
-        AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-        while (AT91C_BASE_TC0->TC_CV < T0 * 3 * EM4X50_T_TAG_FULL_PERIOD) {
+        tval = GetTicks();
+        while (GetTicks() - tval < 12 * 3 * EM4X50_T_TAG_FULL_PERIOD) {
 
             if (BUTTON_PRESS()) return false;
 
@@ -256,8 +228,6 @@ static bool get_signalproperties(void) {
     gHigh = sample_ref + pct * (sample_max_mean - sample_ref) / 100;
     gLow = sample_ref - pct * (sample_max_mean - sample_ref) / 100;
 
-    LED_A_OFF();
-
     return true;
 }
 
@@ -268,12 +238,12 @@ static bool get_signalproperties(void) {
 static bool invalid_bit(void) {
 
     // get sample at 3/4 of bit period
-    wait_timer(T0 * EM4X50_T_TAG_THREE_QUARTER_PERIOD);
+    WaitUS(EM4X50_T_TAG_THREE_QUARTER_PERIOD * CYCLES2MUSEC);
 
     uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
     // wait until end of bit period
-    wait_timer(T0 * EM4X50_T_TAG_QUARTER_PERIOD);
+    WaitUS(EM4X50_T_TAG_QUARTER_PERIOD * CYCLES2MUSEC);
 
     // bit in "undefined" state?
     if (sample <= gHigh && sample >= gLow)
@@ -284,69 +254,71 @@ static bool invalid_bit(void) {
 
 static uint32_t get_pulse_length(void) {
 
-    int32_t timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
+    int32_t timeout = EM4X50_TIMEOUT_PULSE_EVAL, tval = 0;
 
-    // iterates pulse length (low -> high -> low)
+    // iterates pulse lengths (low -> high -> low)
 
     volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
     while (sample > gLow && (timeout--))
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
-    if (timeout == 0)
+    if (timeout <= 0)
         return 0;
 
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
+    tval = GetTicks();
+    timeout = EM4X50_TIMEOUT_PULSE_EVAL;
 
     while (sample < gHigh && (timeout--))
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
-    if (timeout == 0)
+    if (timeout <= 0)
         return 0;
 
-    timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
+    timeout = EM4X50_TIMEOUT_PULSE_EVAL;
     while (sample > gLow && (timeout--))
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
-    if (timeout == 0)
+    if (timeout <= 0)
         return 0;
 
-    return (uint32_t)AT91C_BASE_TC0->TC_CV;
+    return GetTicks() - tval;
 
 }
 
 // check if pulse length <pl> corresponds to given length <length>
 static bool check_pulse_length(uint32_t pl, int length) {
-    return ((pl >= T0 * (length - EM4X50_TAG_TOLERANCE)) && (pl <= T0 * (length + EM4X50_TAG_TOLERANCE)));
+    return ((pl >= (length - EM4X50_T_TOLERANCE) * CYCLES2TICKS) &&
+            (pl <= (length + EM4X50_T_TOLERANCE) * CYCLES2TICKS));
 }
 
 // send single bit according to EM4x50 application note and datasheet
 static void em4x50_reader_send_bit(int bit) {
+
     // reset clock for the next bit
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+    uint32_t tval = GetTicks();
 
     if (bit == 0) {
 
         // disable modulation (activate the field) for 7 cycles of carrier
         // period (Opt64)
         LOW(GPIO_SSC_DOUT);
-        while (AT91C_BASE_TC0->TC_CV < T0 * 7);
+        while (GetTicks() - tval < 7 * CYCLES2TICKS);
 
         // enable modulation (drop the field) for remaining first
         // half of bit period
         HIGH(GPIO_SSC_DOUT);
-        while (AT91C_BASE_TC0->TC_CV < T0 * EM4X50_T_TAG_HALF_PERIOD);
+        while (GetTicks() - tval < EM4X50_T_TAG_HALF_PERIOD * CYCLES2TICKS);
 
         // disable modulation for second half of bit period
         LOW(GPIO_SSC_DOUT);
-        while (AT91C_BASE_TC0->TC_CV < T0 * EM4X50_T_TAG_FULL_PERIOD);
+        while (GetTicks() - tval < EM4X50_T_TAG_FULL_PERIOD * CYCLES2TICKS);
 
     } else {
 
         // bit = "1" means disable modulation for full bit period
         LOW(GPIO_SSC_DOUT);
-        while (AT91C_BASE_TC0->TC_CV < T0 * EM4X50_T_TAG_FULL_PERIOD);
+        while (GetTicks() - tval < EM4X50_T_TAG_FULL_PERIOD * CYCLES2TICKS);
     }
 }
 
@@ -391,8 +363,6 @@ static void em4x50_reader_send_word(const uint32_t word) {
 static bool find_single_listen_window(void) {
     int cnt_pulses = 0;
 
-    LED_B_ON();
-
     while (cnt_pulses < EM4X50_T_WAITING_FOR_SNGLLIW) {
 
         // identification of listen window is done via evaluation of
@@ -402,14 +372,12 @@ static bool find_single_listen_window(void) {
             if (check_pulse_length(get_pulse_length(), 2 * EM4X50_T_TAG_FULL_PERIOD)) {
 
                 // found listen window
-                LED_B_OFF();
                 return true;
             }
         }
         cnt_pulses++;
     }
 
-    LED_B_OFF();
     return false;
 }
 
@@ -421,12 +389,11 @@ static bool find_single_listen_window(void) {
 static int find_double_listen_window(bool bcommand) {
     int cnt_pulses = 0;
 
-    LED_B_ON();
-
     while (cnt_pulses < EM4X50_T_WAITING_FOR_DBLLIW) {
 
-        if (BUTTON_PRESS())
+        if (BUTTON_PRESS()) {
             return PM3_EOPABORTED;
+        }
 
         // identification of listen window is done via evaluation of
         // pulse lengths
@@ -446,7 +413,7 @@ static int find_double_listen_window(bool bcommand) {
                     // second window follows - sync on this to issue a command
 
                     // skip the next bit...
-                    wait_timer(T0 * EM4X50_T_TAG_FULL_PERIOD);
+                    WaitUS(EM4X50_T_TAG_FULL_PERIOD * CYCLES2MUSEC);
 
                     // ...and check if the following bit does make sense
                     // (if not it is the correct position within the second
@@ -457,16 +424,12 @@ static int find_double_listen_window(bool bcommand) {
                         em4x50_reader_send_bit(0);
                         em4x50_reader_send_bit(0);
 
-                        LED_B_OFF();
-
                         return PM3_SUCCESS;
                     }
 
                 }
 
                 if (check_pulse_length(get_pulse_length(), 3 * EM4X50_T_TAG_FULL_PERIOD)) {
-
-                    LED_B_OFF();
 
                     // return although second listen window consists of one
                     // more bit period but this period is necessary for
@@ -478,7 +441,6 @@ static int find_double_listen_window(bool bcommand) {
         cnt_pulses++;
     }
 
-    LED_B_OFF();
     return PM3_EFAILED;
 }
 
@@ -524,7 +486,7 @@ static bool check_ack(bool bliw) {
 
                     // wait for 2 bits (remaining "bit" of ACK signal + first
                     // "bit" of listen window)
-                    wait_timer(T0 * 2 * EM4X50_T_TAG_FULL_PERIOD);
+                    WaitUS(2 * EM4X50_T_TAG_FULL_PERIOD * CYCLES2MUSEC);
 
                     // check for listen window (if first bit cannot be interpreted
                     // as a valid bit it must belong to a listen window)
@@ -557,8 +519,6 @@ static int get_word_from_bitstream(uint32_t *data) {
     int cnt = 0;
     uint32_t pl = 0;
     uint64_t word = 0x0;
-
-    LED_C_ON();
 
     *data = 0x0;
 
@@ -630,16 +590,12 @@ static int get_word_from_bitstream(uint32_t *data) {
 
         } else if (check_pulse_length(pl, 3 * EM4X50_T_TAG_FULL_PERIOD)) {
 
-            LED_C_OFF();
-
             // pulse length of 3 indicates listen window -> clear last
             // bit (= 0) and return (without parities)
             word >>= 2;
             return (extract_parities(word, data)) ? --cnt : 0;
         }
     }
-
-    LED_C_OFF();
 
     return PM3_EOPABORTED;
 }
@@ -655,7 +611,7 @@ static int login(uint32_t password) {
         // send password
         em4x50_reader_send_word(password);
 
-        wait_timer(T0 * EM4X50_T_TAG_TPP);
+        WaitUS(EM4X50_T_TAG_TPP * CYCLES2MUSEC);
 
         // check if ACK is returned
         if (check_ack(false))
@@ -723,9 +679,14 @@ void em4x50_login(uint32_t *password) {
     em4x50_setup_read();
 
     int status = PM3_EFAILED;
-    if (get_signalproperties() && find_em4x50_tag())
+    LED_C_ON();
+    if (get_signalproperties() && find_em4x50_tag()) {
+        LED_C_OFF();
+        LED_D_ON();
         status = login(*password);
+    }
 
+    LEDsoff();
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_LOGIN, status, NULL, 0);
 }
@@ -736,9 +697,14 @@ void em4x50_brute(em4x50_data_t *etd) {
 
     bool bsuccess = false;
     uint32_t pwd = 0x0;
-    if (get_signalproperties() && find_em4x50_tag())
+    LED_C_ON();
+    if (get_signalproperties() && find_em4x50_tag()) {
+        LED_C_OFF();
+        LED_D_ON();
         bsuccess = brute(etd->password1, etd->password2, &pwd);
+    }
 
+    LEDsoff();
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_BRUTE, bsuccess ? PM3_SUCCESS : PM3_EFAILED, (uint8_t *)(&pwd), sizeof(pwd));
 }
@@ -766,7 +732,11 @@ void em4x50_chk(uint8_t *filename) {
     em4x50_setup_read();
 
     // set gHigh and gLow
+    LED_C_ON();
     if (get_signalproperties() && find_em4x50_tag()) {
+
+        LED_C_OFF();
+        LED_D_ON();
 
         // try to login with current password
         for (int i = 0; i < pwd_count; i++) {
@@ -782,8 +752,11 @@ void em4x50_chk(uint8_t *filename) {
             for (int j = 0; j < 4; j++)
                 pwd |= (*(pwds + 4 * i + j)) << ((3 - j) * 8);
 
-            if ((status = login(pwd)) == PM3_SUCCESS)
+            if ((status = login(pwd)) == PM3_SUCCESS) {
+                SpinUp(50);
+                SpinDown(50);
                 break;
+            }
         }
     }
 
@@ -791,6 +764,7 @@ void em4x50_chk(uint8_t *filename) {
 
 #endif
 
+    LEDsoff();
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_CHK, status, (uint8_t *)&pwd, sizeof(pwd));
 }
@@ -815,7 +789,7 @@ static int reset(void) {
 
 // reads data that tag transmits when exposed to reader field
 // (standard read mode); number of read words is saved in <now>
-static int standard_read(int *now, uint32_t *words) {
+int standard_read(int *now, uint32_t *words) {
 
     int fwr = *now, res = PM3_EFAILED;
 
@@ -823,8 +797,11 @@ static int standard_read(int *now, uint32_t *words) {
     if ((res = find_double_listen_window(false)) == PM3_SUCCESS) {
 
         // read and save words until following double listen window is detected
-        while ((res = get_word_from_bitstream(&words[*now])) == EM4X50_TAG_WORD)
+        res = get_word_from_bitstream(&words[*now]);
+        while (res == EM4X50_TAG_WORD) {
             (*now)++;
+            res = get_word_from_bitstream(&words[*now]);
+        }
 
         // number of detected words
         *now -= fwr;
@@ -879,7 +856,11 @@ void em4x50_read(em4x50_data_t *etd) {
     em4x50_setup_read();
 
     // set gHigh and gLow
+    LED_C_ON();
     if (get_signalproperties() && find_em4x50_tag()) {
+
+        LED_C_OFF();
+        LED_D_ON();
 
         // try to login with given password
         if (etd->pwd_given)
@@ -890,9 +871,9 @@ void em4x50_read(em4x50_data_t *etd) {
             status = selective_read(etd->addresses, words);
     }
 
+    LEDsoff();
     LOW(GPIO_SSC_DOUT);
     lf_finalize();
-
     reply_ng(CMD_LF_EM4X50_READ, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
 
@@ -906,7 +887,10 @@ void em4x50_info(em4x50_data_t *etd) {
 
     em4x50_setup_read();
 
+    LED_C_ON();
     if (get_signalproperties() && find_em4x50_tag()) {
+        LED_C_OFF();
+        LED_D_ON();
 
         // login with given password
         if (etd->pwd_given)
@@ -916,8 +900,8 @@ void em4x50_info(em4x50_data_t *etd) {
             status = selective_read(addresses, words);
     }
 
+    LEDsoff();
     lf_finalize();
-
     reply_ng(CMD_LF_EM4X50_INFO, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
 
@@ -929,9 +913,14 @@ void em4x50_reader(void) {
 
     em4x50_setup_read();
 
-    if (get_signalproperties() && find_em4x50_tag())
+    LED_C_ON();
+    if (get_signalproperties() && find_em4x50_tag()) {
+        LED_C_OFF();
+        LED_D_ON();
         standard_read(&now, words);
+    }
 
+    LEDsoff();
     LOW(GPIO_SSC_DOUT);
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_READER, now, (uint8_t *)words, 4 * now);
@@ -957,7 +946,7 @@ static int write(uint32_t word, uint32_t addresses) {
         } else {
 
             // wait for T0 * EM4X50_T_TAG_TWA (write access time)
-            wait_timer(T0 * EM4X50_T_TAG_TWA);
+            WaitUS(EM4X50_T_TAG_TWA * CYCLES2MUSEC);
 
             // look for ACK sequence
             if (check_ack(false)) {
@@ -965,7 +954,7 @@ static int write(uint32_t word, uint32_t addresses) {
                 // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time = 3.2ms = 50 * 64 periods)
                 // for saving data and should return with ACK
                 for (int i = 0; i < 50; i++) {
-                    wait_timer(T0 * EM4X50_T_TAG_FULL_PERIOD);
+                    WaitUS(EM4X50_T_TAG_FULL_PERIOD * CYCLES2MUSEC);
                 }
 
                 if (check_ack(false))
@@ -996,7 +985,7 @@ static int write_password(uint32_t password, uint32_t new_password) {
         } else {
 
             // wait for T0 * EM4x50_T_TAG_TPP (processing pause time)
-            wait_timer(T0 * EM4X50_T_TAG_TPP);
+            WaitUS(EM4X50_T_TAG_TPP * CYCLES2MUSEC);
 
             // look for ACK sequence and send rm request
             // during following listen window
@@ -1006,14 +995,14 @@ static int write_password(uint32_t password, uint32_t new_password) {
                 em4x50_reader_send_word(new_password);
 
                 // wait for T0 * EM4X50_T_TAG_TWA (write access time)
-                wait_timer(T0 * EM4X50_T_TAG_TWA);
+                WaitUS(EM4X50_T_TAG_TWA * CYCLES2MUSEC);
 
                 if (check_ack(false)) {
 
                     // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time = 3.2ms = 50 * 64 periods)
                     // for saving data and should return with ACK
                     for (int i = 0; i < 50; i++) {
-                        wait_timer(T0 * EM4X50_T_TAG_FULL_PERIOD);
+                        WaitUS(EM4X50_T_TAG_FULL_PERIOD * CYCLES2MUSEC);
                     }
 
                     if (check_ack(false))
@@ -1038,7 +1027,11 @@ void em4x50_write(em4x50_data_t *etd) {
 
     em4x50_setup_read();
 
+    LED_C_ON();
     if (get_signalproperties() && find_em4x50_tag()) {
+
+        LED_C_OFF();
+        LED_D_ON();
 
         // if password is given try to login first
         status = PM3_SUCCESS;
@@ -1080,6 +1073,7 @@ void em4x50_write(em4x50_data_t *etd) {
         }
     }
 
+    LEDsoff();
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_WRITE, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
@@ -1090,7 +1084,11 @@ void em4x50_writepwd(em4x50_data_t *etd) {
 
     em4x50_setup_read();
 
+    LED_C_ON();
     if (get_signalproperties() && find_em4x50_tag()) {
+
+        LED_C_OFF();
+        LED_D_ON();
 
         // login and change password
         if (login(etd->password1) == PM3_SUCCESS) {
@@ -1103,6 +1101,7 @@ void em4x50_writepwd(em4x50_data_t *etd) {
         }
     }
 
+    LEDsoff();
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_WRITEPWD, status, NULL, 0);
 }
@@ -1110,8 +1109,7 @@ void em4x50_writepwd(em4x50_data_t *etd) {
 // send bit in receive mode by counting carrier cycles
 static void em4x50_sim_send_bit(uint8_t bit) {
 
-    //uint16_t timeout = EM4X50_T_TAG_FULL_PERIOD;
-    int16_t timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
+    uint16_t timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
     for (int t = 0; t < EM4X50_T_TAG_FULL_PERIOD; t++) {
 
@@ -1216,19 +1214,27 @@ static int em4x50_sim_read_bit(void) {
 
     int cycles = 0;
     int timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
+    uint32_t tval = 0;
 
     while (cycles < EM4X50_T_TAG_FULL_PERIOD) {
 
         // wait until reader field disappears
-        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
-
-        AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+        while ((timeout--) && !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
+        if (timeout <= 0) {
+            return PM3_ETIMEOUT;
+        }
+        timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
         // now check until reader switches on carrier field
-        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+        tval = GetTicks();
+        while ((timeout--) && (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
 
-            // check if cycle (i.e. off -> on -> off) takes longer than T0
-            if (AT91C_BASE_TC0->TC_CV > T0 * EM4X50_ZERO_DETECTION) {
+            if (timeout <= 0) {
+                return PM3_ETIMEOUT;
+            }
+
+            // check if current cycle takes longer than "usual""
+            if (GetTicks() - tval > EM4X50_T_ZERO_DETECTION * CYCLES2TICKS) {
 
                 // gap detected; wait until reader field is switched on again
                 while ((timeout--) && (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
@@ -1236,7 +1242,6 @@ static int em4x50_sim_read_bit(void) {
                 if (timeout <= 0) {
                     return PM3_ETIMEOUT;
                 }
-                // timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
                 // now we have a reference "position", from here it will take
                 // slightly less than 32 cycles until the end of the bit period
@@ -1247,6 +1252,7 @@ static int em4x50_sim_read_bit(void) {
                 return 0;
             }
         }
+        timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
         // no gap detected, i.e. reader field is still up;
         // continue with counting cycles
@@ -1280,7 +1286,6 @@ static bool em4x50_sim_read_byte(uint8_t *byte, bool paritycheck) {
     }
 
     return true;
-
 }
 
 // read complete word in simulation mode
@@ -1327,6 +1332,8 @@ static int check_rm_request(uint32_t *tag) {
         // look for second zero
         bit = em4x50_sim_read_bit();
         if (bit == 0) {
+
+            LED_C_ON();
 
             // if command before was EM4X50_COMMAND_WRITE_PASSWORD
             // switch to separate process
@@ -1429,11 +1436,14 @@ static int em4x50_sim_handle_standard_read_command(uint32_t *tag) {
     // last word read protected
     int lwrp = (reflect32(tag[EM4X50_PROTECTION]) >> 8) & 0xFF;
 
+    int command = PM3_SUCCESS;
+
     while ((BUTTON_PRESS() == false) && (data_available() == false)) {
 
         WDT_HIT();
 
-        int command = em4x50_sim_send_listen_window(tag);
+        command = em4x50_sim_send_listen_window(tag);
+
         if (command != PM3_SUCCESS) {
             return command;
         }
@@ -1524,11 +1534,14 @@ static int em4x50_sim_handle_login_command(uint32_t *tag) {
     if (pwd && (password == reflect32(tag[EM4X50_DEVICE_PASSWORD]))) {
         em4x50_sim_send_ack();
         gLogin = true;
-        LED_A_ON();
+        LED_D_ON();
     } else {
         em4x50_sim_send_nak();
         gLogin = false;
-        LED_A_OFF();
+        LED_D_OFF();
+
+        // save transmitted password for future use (e.g. standalone mode)
+        gPassword = password;
     }
     // continue with standard read mode
     return EM4X50_COMMAND_STANDARD_READ;
@@ -1543,7 +1556,7 @@ static int em4x50_sim_handle_reset_command(uint32_t *tag) {
     // send ACK
     em4x50_sim_send_ack();
     gLogin = false;
-    LED_A_OFF();
+    LED_D_OFF();
 
     // wait for initialization (tinit)
     wait_cycles(EM4X50_T_TAG_TINIT);
@@ -1723,10 +1736,46 @@ static int em4x50_sim_handle_writepwd_command(uint32_t *tag) {
     return EM4X50_COMMAND_WRITE_PASSWORD;
 }
 
+void em4x50_handle_commands(int *command, uint32_t *tag) {
+
+    switch (*command) {
+
+        case EM4X50_COMMAND_LOGIN:
+            *command = em4x50_sim_handle_login_command(tag);
+            break;
+
+        case EM4X50_COMMAND_RESET:
+            *command = em4x50_sim_handle_reset_command(tag);
+            break;
+
+        case EM4X50_COMMAND_WRITE:
+            *command = em4x50_sim_handle_write_command(tag);
+            break;
+
+        case EM4X50_COMMAND_WRITE_PASSWORD:
+            *command = em4x50_sim_handle_writepwd_command(tag);
+            break;
+
+        case EM4X50_COMMAND_SELECTIVE_READ:
+            *command = em4x50_sim_handle_selective_read_command(tag);
+            break;
+
+        case EM4X50_COMMAND_STANDARD_READ:
+            LED_C_OFF();
+            *command = em4x50_sim_handle_standard_read_command(tag);
+            break;
+
+        // bit errors during reading may lead to unknown commands
+        // -> continue with standard read mode
+        default:
+            *command = EM4X50_COMMAND_STANDARD_READ;
+            break;
+    }
+}
+
 // simulate uploaded data in emulator memory
-// LED A -> operations that require authentication are possible
-// LED B -> standard read mode is active
-// LED C -> command has been transmitted by reader
+// LED C -> reader command has been detected
+// LED D -> operations that require authentication are possible
 void em4x50_sim(uint32_t *password) {
 
     int command = PM3_ENODATA;
@@ -1746,6 +1795,7 @@ void em4x50_sim(uint32_t *password) {
     if (tag[EM4X50_DEVICE_SERIAL] != tag[EM4X50_DEVICE_ID]) {
 
         // init
+        LEDsoff();
         em4x50_setup_sim();
         gLogin = false;
         gWritePasswordProcess = false;
@@ -1755,50 +1805,7 @@ void em4x50_sim(uint32_t *password) {
 
         for (;;) {
 
-            switch (command) {
-
-                case EM4X50_COMMAND_LOGIN:
-                    LED_B_OFF();
-                    LED_C_OFF();
-                    command = em4x50_sim_handle_login_command(tag);
-                    break;
-
-                case EM4X50_COMMAND_RESET:
-                    LED_B_OFF();
-                    LED_C_OFF();
-                    command =  em4x50_sim_handle_reset_command(tag);
-                    break;
-
-                case EM4X50_COMMAND_WRITE:
-                    LED_B_OFF();
-                    LED_C_OFF();
-                    command =  em4x50_sim_handle_write_command(tag);
-                    break;
-
-                case EM4X50_COMMAND_WRITE_PASSWORD:
-                    LED_B_OFF();
-                    LED_C_OFF();
-                    command =  em4x50_sim_handle_writepwd_command(tag);
-                    break;
-
-                case EM4X50_COMMAND_SELECTIVE_READ:
-                    LED_B_OFF();
-                    LED_C_ON();
-                    command =  em4x50_sim_handle_selective_read_command(tag);
-                    break;
-
-                case EM4X50_COMMAND_STANDARD_READ:
-                    LED_B_ON();
-                    LED_C_OFF();
-                    command = em4x50_sim_handle_standard_read_command(tag);
-                    break;
-
-                // bit errors during reading may lead to unknown commands
-                // -> continue with standard read mode
-                default:
-                    command = EM4X50_COMMAND_STANDARD_READ;
-                    break;
-            }
+            em4x50_handle_commands(&command, tag);
 
             // stop if key (pm3 button or enter key) has been pressed
             if (command == PM3_EOPABORTED) {
@@ -1810,7 +1817,7 @@ void em4x50_sim(uint32_t *password) {
             if (command == PM3_ETIMEOUT) {
                 command = EM4X50_COMMAND_STANDARD_READ;
                 gLogin = false;
-                LED_A_OFF();
+                LED_D_OFF();
             }
         }
     }
