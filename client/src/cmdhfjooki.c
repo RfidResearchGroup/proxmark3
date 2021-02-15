@@ -52,12 +52,12 @@ jooki_test_t jooks[] = {
 };
 
 jooki_figure_t jooks_figures[] = {
-    {0x01, 0x00, "龙 Dragon", "Figurine"},
-    {0x01, 0x01, "狐狸 Fox", "Figurine"},
-    {0x01, 0x02, "鬼 Ghost", "Figurine"},
-    {0x01, 0x03, "骑士 Knight", "Figurine"},
+    {0x01, 0x00, "Dragon", "Figurine"},
+    {0x01, 0x01, "Fox", "Figurine"},
+    {0x01, 0x02, "Ghost", "Figurine"},
+    {0x01, 0x03, "Knight", "Figurine"},
     {0x01, 0x04, "ThankYou", "Figurine"},
-    {0x01, 0x05, "鲸 Whale", "Figurine"},
+    {0x01, 0x05, "Whale", "Figurine"},
     {0x01, 0x06, "Black Dragon", "Figurine"},
     {0x01, 0x07, "Black Fox", "Figurine"}, 
     {0x01, 0x08, "Black Knight", "Figurine"},
@@ -67,7 +67,7 @@ jooki_figure_t jooks_figures[] = {
     {0x01, 0x0C, "White Knight", "Figurine"},
     {0x01, 0x0D, "White Whale", "Figurine"},
 
-    {0x02, 0x01, "圆盘 Generic Flat", "Stone"},
+    {0x02, 0x01, "Generic Flat", "Stone"},
 
     {0x03, 0x00, "record", "Sys"},
     {0x03, 0x01, "factory_mode_on", "Sys"},
