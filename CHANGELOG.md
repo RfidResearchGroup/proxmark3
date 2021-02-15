@@ -3,7 +3,6 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Added `LF_THAREXDE` standalone mode which simulates and reads EM4x50 cards (@tharexde)
  - Added `hf jooki` commands (@iceman1001)
  - Changed `wiegand encode` - format param is now optional, w/o it will try encode all formats (@iceman1001)
  - Fix cppchecker warnings (@iceman1001)
