@@ -35,6 +35,9 @@ define KNOWN_STANDALONE_DEFINITIONS
 | LF_SAMYRUN      | HID26 read/clone/sim                   |
 |                 | - Samy Kamkar                          |
 +----------------------------------------------------------+
+| LF_THAREXDE     | Simulate/read EM4x50 tags              |
+| (RDV4 only)     | storing in flashmem                    |
++----------------------------------------------------------+
 | HF_14ASNIFF     | 14a sniff to flashmem                  |
 | (RDV4 only)     |                                        |
 +----------------------------------------------------------+
@@ -67,10 +70,10 @@ define KNOWN_STANDALONE_DEFINITIONS
 +----------------------------------------------------------+
 endef
 
-STANDALONE_MODES := LF_SKELETON LF_EM4100EMUL LF_EM4100RSWB LF_EM4100RWC LF_HIDBRUTE LF_ICEHID LF_PROXBRUTE LF_SAMYRUN
+STANDALONE_MODES := LF_SKELETON LF_EM4100EMUL LF_EM4100RSWB LF_EM4100RWC LF_HIDBRUTE LF_ICEHID LF_PROXBRUTE LF_SAMYRUN LF_THAREXDE
 STANDALONE_MODES += HF_14ASNIFF HF_AVEFUL HF_BOG HF_COLIN HF_ICECLASS HF_LEGIC HF_MATTYRUN HF_MSDSAL HF_TCPRST HF_YOUNG
 STANDALONE_MODES_REQ_SMARTCARD :=
-STANDALONE_MODES_REQ_FLASH := LF_ICEHID HF_14ASNIFF HF_BOG HF_COLIN HF_ICECLASS
+STANDALONE_MODES_REQ_FLASH := LF_ICEHID LF_THAREXDE HF_14ASNIFF HF_BOG HF_COLIN HF_ICECLASS
 ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES)),)
     STANDALONE_PLATFORM_DEFS += -DWITH_STANDALONE_$(STANDALONE)
     ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES_REQ_SMARTCARD)),)
