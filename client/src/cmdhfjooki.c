@@ -280,7 +280,7 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
                   "hf jooki encode -t            --> selftest\n"
                   "hf jooki encode -r --dragon   --> read uid from tag and use for encoding\n"
                   "hf jooki encode --uid 04010203040506 --dragon\n"
-						"hf jooki encode --uid 04010203040506 -y 1 -f 1"
+						"hf jooki encode --uid 04010203040506 --tid 1 --fid 1"
                  );
 
     void *argtable[] = {
@@ -302,8 +302,8 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
         arg_lit0(NULL, "whitefox", "figurine type"),
         arg_lit0(NULL, "whiteknight", "figurine type"),
         arg_lit0(NULL, "whitewhale", "figurine type"),
-		  arg_u64_0("y", "tid", "<dec>", "figurine type id"),
-		  arg_u64_0("f", "fid", "<dec>", "figurine id"),
+		  arg_u64_0(NULL, "tid", "<dec>", "figurine type id"),
+		  arg_u64_0(NULL, "fid", "<dec>", "figurine id"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -333,10 +333,10 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
     bool tc = arg_get_lit(ctx, 16);
     bool td = arg_get_lit(ctx, 17);
 
-	 bool figure_abbr = true;
-
 	 uint8_t ftid = arg_get_u32_def(ctx, 18, 0);
 	 uint8_t ffid = arg_get_u32_def(ctx, 19, 0); 
+
+	 bool figure_abbr = true;
 
     CLIParserFree(ctx);
     
@@ -346,26 +346,34 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
 
 	 uint8_t tid, fid;
 
-	 if( ftid && ffid ) {
-		 figure_abbr = true;
+	 if( ftid || ffid ) {
+		 figure_abbr = false;
 	 }
 
 	 if ( ftid > 0x04 || ffid > 0x20 ) {
         PrintAndLogEx(ERR, "Use a valid Figure Type ID and Figure ID");
         return PM3_EINVARG;
-    } else {
-		 figure_abbr = false;
-	 }
+    } 
+	 
+	 uint8_t figure_abbr_val = t0 + t1 + t2 + t3 + t5 + t6 + t7 + t8 + t9 + ta + tb + tc + td;
 
-    if ((t0 + t1 + t2 + t3 + t5 + t6 + t7 + t8 + t9 + ta + tb + tc + td) > 1 && !figure_abbr) {
+    if (figure_abbr_val > 1) {
         PrintAndLogEx(ERR, "Select one tag type or use figurine type id and figurine id");
         return PM3_EINVARG;
-    } else {
-    	tid = 0x01;
-    	fid = ffid;
-	 }
+	 } 
 
-	 PrintAndLogEx(INFO, "Figurine Type ID %u and Figurine ID %u ", ftid, ffid);
+	 if (figure_abbr_val == 1 && !figure_abbr) {
+        PrintAndLogEx(ERR, "Use either --tid and --fid or one of the figurine types");
+        return PM3_EINVARG;
+    } 
+
+	 if (figure_abbr) {
+		  tid = 0x01;
+	 } else {
+		  tid = ftid;
+	 }
+	 fid = ffid;
+
     if (t1)
         fid = 0x01;
     if (t2)
