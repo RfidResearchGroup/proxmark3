@@ -1385,17 +1385,17 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             }
             if (len < 1) {
                 PrintAndLogEx(WARNING, _YELLOW_("password not known"));
-                PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen r`") " to get see known pwd gen algo suggestions");
+                PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
             }
         } else {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen r`") " to get see known pwd gen algo suggestions");
+            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
         }
     }
 out:
     DropField();
     if (locked) {
         PrintAndLogEx(INFO, "\nTag appears to be locked, try using a key to get more info");
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen r`") " to get see known pwd gen algo suggestions");
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
     }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
