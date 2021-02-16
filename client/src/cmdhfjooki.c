@@ -348,8 +348,6 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
 
 	 if( ftid && ffid ) {
 		 figure_abbr = true;
-		 tid = 0x01;
-		 fid = 0x00;
 	 }
 
 	 if ( ftid > 0x04 || ffid > 0x20 ) {
@@ -363,7 +361,7 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
         PrintAndLogEx(ERR, "Select one tag type or use figurine type id and figurine id");
         return PM3_EINVARG;
     } else {
-    	tid = ftid;
+    	tid = 0x01;
     	fid = ffid;
 	 }
 
