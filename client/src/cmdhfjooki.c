@@ -336,7 +336,7 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
 	 bool figure_abbr = true;
 
 	 uint8_t ftid = arg_get_u32_def(ctx, 18, 0);
-	 uint8_t ffid = arg_get_u32_def(ctx, 19, 0); //default 0 ist schlecht
+	 uint8_t ffid = arg_get_u32_def(ctx, 19, 0); 
 
     CLIParserFree(ctx);
     
