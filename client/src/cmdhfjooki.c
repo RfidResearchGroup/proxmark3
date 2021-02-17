@@ -581,7 +581,7 @@ static int CmdHF14AJookiClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf jooki clone",
                   "Write a Jooki token to a Ultralight or NTAG tag",
-                  "hf jooki clone -d <hex bytes>         --> where hex is raw NDEF"
+                  "hf jooki clone -d <hex bytes>         --> where hex is raw NDEF\n"
                   "hf jooki clone --b64 7WzlgEzqLgwTnWNy --> using base64 url parameter"
                  );
 
