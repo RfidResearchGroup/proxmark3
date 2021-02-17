@@ -23,6 +23,8 @@
 #include "cmddata.h"
 #include "commonutil.h"
 #include "pm3_cmd.h"
+#include "pmflash.h"      // rdv40validation_t
+#include "cmdflashmem.h"  // get_signature..
 
 static int CmdHelp(const char *Cmd);
 
@@ -959,17 +961,29 @@ void pm3_version(bool verbose, bool oneliner) {
         PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
 
         PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3") " ]");
-        if (IfPm3Rdv4Fw() == false) {
-            PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3GENERIC"));
-            if (IfPm3FpcUsartHost()) {
-                PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", _GREEN_("present"));
+        if (IfPm3Rdv4Fw()) {
+
+            bool is_genuine_rdv4 = false;
+            // validate signature data
+            rdv40_validation_t mem;
+            if (rdv4_get_signature(&mem) == PM3_SUCCESS) {
+                if (rdv4_validate(&mem) == PM3_SUCCESS) {
+                    is_genuine_rdv4 = true;
+                }
             }
-        } else {
-            PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3RDV4"));
+
+            PrintAndLogEx(NORMAL, "  device.................... %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _RED_("device / fw mismatch"));
+            PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("RDV4"));
             PrintAndLogEx(NORMAL, "  external flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
             PrintAndLogEx(NORMAL, "  smartcard reader.......... %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
             PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
+        } else {
+            PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3 GENERIC"));
+            if (IfPm3FpcUsartHost()) {
+                PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", _GREEN_("present"));
+            }
         }
+
         if (IfPm3FpcUsartDevFromUsb()) {
             PrintAndLogEx(NORMAL, "  FPC USART for developer... %s", _GREEN_("present"));
         }
