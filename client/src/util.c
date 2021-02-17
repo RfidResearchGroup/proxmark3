@@ -951,13 +951,13 @@ char *str_ndup(const char *src, size_t len) {
 }
 
 /**
- * Converts a hex string to component "hi2", "hi" and "lo" 32-bit integers, one nibble
- * at a time.
+ * Converts a hex string to component "hi2", "hi" and "lo" 32-bit integers
+ * one nibble at a time.
  *
  * Returns the number of nibbles (4 bits) entered.
  */
 int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str) {
-    unsigned int n = 0, i = 0;
+    uint32_t n = 0, i = 0;
 
     while (sscanf(&str[i++], "%1x", &n) == 1) {
         *hi2 = (*hi2 << 4) | (*hi >> 28);
@@ -965,6 +965,30 @@ int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str)
         *lo = (*lo << 4) | (n & 0xf);
     }
     return i - 1;
+}
+
+/**
+ * Converts a binary string to component "hi2", "hi" and "lo" 32-bit integers,
+ * one bit at a time.
+ *
+ * Returns the number of bits entered.
+ */
+int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str) {
+    uint32_t n = 0, i = 0;
+
+    for(;;) {
+
+        int res = sscanf(&str[i], "%1u", &n);
+        if ((res != 1) || (n > 1))
+            break;
+
+        *hi2 = (*hi2 << 1) | (*hi >> 31);
+        *hi = (*hi << 1) | (*lo >> 31);
+        *lo = (*lo << 1) | (n & 0x1);
+
+        i++;
+    }
+    return i;
 }
 
 inline uint32_t bitcount32(uint32_t a) {
