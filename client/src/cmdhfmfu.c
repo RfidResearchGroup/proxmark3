@@ -3560,14 +3560,14 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
 
     DropField();
     status = NDEFRecordsDecodeAndPrint(records, (size_t)maxsize);
-    if ( status != PM3_SUCCESS) {
+    if (status != PM3_SUCCESS) {
         status = NDEFDecodeAndPrint(records, (size_t)maxsize, true);
     }
 
-    char *jooki = strstr((char*)records, "s.jooki.rocks/s/?s=");
+    char *jooki = strstr((char *)records, "s.jooki.rocks/s/?s=");
     if (jooki) {
         jooki += 17;
-        while(jooki) {
+        while (jooki) {
             if ((*jooki) != '=')
                 jooki++;
             else  {
