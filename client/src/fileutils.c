@@ -90,7 +90,7 @@ DumpFileType_t getfiletype(const char *filename) {
     }
 
     size_t len = strlen(filename);
-    if (len > 4) { 
+    if (len > 4) {
         //  check if valid file extension and attempt to load data
         char s[FILE_PATH_SIZE];
         memset(s, 0, sizeof(s));

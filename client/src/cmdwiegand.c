@@ -60,7 +60,7 @@ int CmdWiegandEncode(const char *Cmd) {
         arg_u64_0(NULL, "issue", "<dec>", "issue level"),
         arg_u64_0(NULL, "oem", "<dec>", "OEM code"),
         arg_str0("w", "wiegand", "<format>", "see `wiegand list` for available formats"),
-        arg_lit0(NULL, "pre", "add HID preamble to wiegand"),
+        arg_lit0(NULL, "pre", "add HID ProxII preamble to wiegand output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
