@@ -67,7 +67,7 @@ jooki_figure_t jooks_figures[] = {
     {0x01, 0x0C, "White Knight", "Figurine"},
     {0x01, 0x0D, "White Whale", "Figurine"},
 
-    {0x02, 0x01, "Generic Flat", "Stone"},
+    {0x02, 0x00, "Generic Flat", "Stone"},
 
     {0x03, 0x00, "record", "Sys"},
     {0x03, 0x01, "factory_mode_on", "Sys"},
@@ -77,9 +77,10 @@ jooki_figure_t jooks_figures[] = {
     {0x03, 0x05, "toy_safe_on", "Sys"},
     {0x03, 0x06, "toy_safe_off", "Sys"},
     {0x03, 0x07, "wifi_on", "Sys"},
-    {0x03, 0x08, "bt_on", "Sys"},
-    {0x03, 0x0a, "bt_off", "Sys"},
-    {0x03, 0x0b, "production_finished", "Sys"},
+    {0x03, 0x08, "wifi_off", "Sys"},
+    {0x03, 0x09, "bt_on", "Sys"},
+    {0x03, 0x0A, "bt_off", "Sys"},
+    {0x03, 0x0B, "production_finished", "Sys"},
 
     {0x04, 0x00, "test.0", "Test"},
     {0x04, 0x01, "test.1", "Test"},
@@ -278,7 +279,8 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
                   "Encode a Jooki token to base64 NDEF URI format",
                   "hf jooki encode -t            --> selftest\n"
                   "hf jooki encode -r --dragon   --> read uid from tag and use for encoding\n"
-                  "hf jooki encode --uid 04010203040506 --dragon"
+                  "hf jooki encode --uid 04010203040506 --dragon\n"
+						"hf jooki encode --uid 04010203040506 --tid 1 --fid 1"
                  );
 
     void *argtable[] = {
@@ -300,6 +302,8 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
         arg_lit0(NULL, "whitefox", "figurine type"),
         arg_lit0(NULL, "whiteknight", "figurine type"),
         arg_lit0(NULL, "whitewhale", "figurine type"),
+		  arg_u64_0(NULL, "tid", "<dec>", "figurine type id"),
+		  arg_u64_0(NULL, "fid", "<dec>", "figurine id"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -328,18 +332,48 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
     bool tb = arg_get_lit(ctx, 15);
     bool tc = arg_get_lit(ctx, 16);
     bool td = arg_get_lit(ctx, 17);
+
+	 uint8_t ftid = arg_get_u32_def(ctx, 18, 0);
+	 uint8_t ffid = arg_get_u32_def(ctx, 19, 0); 
+
+	 bool figure_abbr = true;
+
     CLIParserFree(ctx);
     
     if (selftest) {
         return jooki_selftest();
     }
 
-    if ((t0 + t1 + t2 + t3 + t5 + t6 + t7 + t8 + t9 + ta + tb + tc + td) > 1) {
-        PrintAndLogEx(ERR, "Select one tag type");
+	 uint8_t tid, fid;
+
+	 if( ftid || ffid ) {
+		 figure_abbr = false;
+	 }
+
+	 if ( ftid > 0x04 || ffid > 0x20 ) {
+        PrintAndLogEx(ERR, "Use a valid Figure Type ID and Figure ID");
         return PM3_EINVARG;
-    }
-    uint8_t tid = 0x01;
-    uint8_t fid = 0x00;
+    } 
+	 
+	 uint8_t figure_abbr_val = t0 + t1 + t2 + t3 + t5 + t6 + t7 + t8 + t9 + ta + tb + tc + td;
+
+    if (figure_abbr_val > 1) {
+        PrintAndLogEx(ERR, "Select one tag type or use figurine type id and figurine id");
+        return PM3_EINVARG;
+	 } 
+
+	 if (figure_abbr_val == 1 && !figure_abbr) {
+        PrintAndLogEx(ERR, "Use either --tid and --fid or one of the figurine types");
+        return PM3_EINVARG;
+    } 
+
+	 if (figure_abbr) {
+		  tid = 0x01;
+	 } else {
+		  tid = ftid;
+	 }
+	 fid = ffid;
+
     if (t1)
         fid = 0x01;
     if (t2)
