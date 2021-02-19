@@ -745,13 +745,13 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
     // ref: AN11350 NTAG 21x Originality Signature Validation
     // ref: AN11341 MIFARE Ultralight EV1 Originality Signature Validation
     const ecdsa_publickey_t nxp_mfu_public_keys[] = {
-        {"NXP Mifare Classic MFC1C14_x", "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
-        {"Manufacturer Mifare Classic MFC1C14_x", "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
-        {"NXP ICODE DNA, ICODE SLIX2", "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
-        {"NXP Public key", "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
-        {"NXP Ultralight Ev1", "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
-        {"NXP NTAG21x (2013)", "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
-        {"MIKRON Public key", "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
+        {"NXP MIFARE Classic MFC1C14_x",          "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
+        {"Manufacturer MIFARE Classic MFC1C14_x", "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
+        {"NXP ICODE DNA, ICODE SLIX2",            "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
+        {"NXP Public key",                        "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
+        {"NXP Ultralight Ev1",                    "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
+        {"NXP NTAG21x (2013)",                    "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
+        {"MIKRON Public key",                     "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
     };
 
     /*
@@ -805,7 +805,7 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
     for (i = 0; i < ARRAYLEN(nxp_mfu_public_keys); i++) {
 
         int dl = 0;
-        uint8_t key[PUBLIC_ECDA_KEYLEN];
+        uint8_t key[PUBLIC_ECDA_KEYLEN] = {0};
         param_gethex_to_eol(nxp_mfu_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);
 
         int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 7, signature, signature_len, false);
@@ -939,6 +939,249 @@ static char *GenerateFilename(const char *prefix, const char *suffix) {
     strcpy(fptr, prefix);
     FillFileNameByUID(fptr, card.uid, suffix, card.uidlen);
     return fptr;
+}
+
+//------------------------------------
+/*
+static int mfu_decrypt_amiibo(uint8_t *encrypted, uint16_t elen, uint8_t *decrypted, uint16_t *dlen) {
+
+    if (elen < NFC3D_AMIIBO_SIZE / 4) {
+        PrintAndLogEx(ERR, "ERR,  data wrong length, got %zu , expected %zu", elen,  (NFC3D_AMIIBO_SIZE / 4));
+        return PM3_ESOFT;        
+    }
+
+    nfc3d_amiibo_keys amiibo_keys = {0};
+    if (nfc3d_amiibo_load_keys(&amiibo_keys) == false) {
+        return PM3_ESOFT;
+    }
+
+    if (nfc3d_amiibo_unpack(&amiibo_keys, encrypted, decrypted) == false) {
+        PrintAndLogEx(ERR, "WARNING, Tag signature was NOT valid");
+    }
+
+    *dlen = NFC3D_AMIIBO_SIZE;    
+    return PM3_SUCCESS;
+}
+static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
+
+    int res = PM3_SUCCESS;
+    uint16_t maxbytes = (pages * 4);
+
+    *pdata = calloc(maxbytes, sizeof(uint8_t));
+    if (*pdata == NULL) {
+        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        res = PM3_EMALLOC;
+        goto out;
+    }
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "Command execute time-out");
+        free(*pdata);
+        res = PM3_ETIMEOUT;
+        goto out;
+    }
+
+    if (resp.oldarg[0] != 1) {
+        PrintAndLogEx(WARNING, "Failed reading card");
+        free(*pdata);
+        res = PM3_ESOFT;
+        goto out;
+    }
+
+    // read all memory
+    uint32_t startindex = resp.oldarg[2];
+    uint32_t buffer_size = resp.oldarg[1];
+    if (buffer_size > maxbytes) {
+        PrintAndLogEx(FAILED, "Data exceeded buffer size!");
+        buffer_size = maxbytes;
+    }
+
+    if (!GetFromDevice(BIG_BUF, *pdata, buffer_size, startindex, NULL, 0, NULL, 2500, false)) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        free(*pdata);
+        res = PM3_ETIMEOUT;
+        goto out;
+    }
+
+    if (len)
+        *len = buffer_size;
+
+out:
+    return res;
+}
+*/
+/*
+Lego Dimensions, 
+  Version: 00 04 04 02 01 00 0F 03
+  
+  matching bytes: 
+  index 12  ( 3 * 4 )
+   E1 10 12 00 01 03 A0 0C 34 03 13 D1 01 0F 54 02 65 6E
+*/
+
+typedef struct {
+    const char *desc;
+    const char *version;
+    uint8_t mpos;
+    uint8_t mlen;
+    const char *match;
+    uint32_t (*Pwd)(uint8_t *uid);
+    uint16_t (*Pack)(uint8_t *uid);
+    const char *hint;
+} PACKED mfu_identify_t;
+
+static mfu_identify_t mfu_ident_table[] = {
+    {
+        "Jooki", "0004040201000F03",
+        12, 32, "E11012000103A00C340329D101255504732E6A6F6F6B692E726F636B732F732F",
+        NULL, NULL,
+        "hf jooki decode -r"
+    },
+    {
+        "Lego Dimensions", "0004040201000F03",
+        12, 18, "E11012000103A00C340313D1010F5402656E",
+        ul_ev1_pwdgenC, ul_ev1_packgenC,
+        "hf mfu dump -k %08x"
+    },
+    {
+        "Amiibo", "0004040201001103",
+        9, 9, "480FE0F110FFEEA500",
+        ul_ev1_pwdgenB, ul_ev1_packgenB,
+        "hf mfu dump -k %08x"
+    },
+    {NULL, NULL, 0, 0, NULL, NULL, NULL, NULL}
+};
+
+static mfu_identify_t* mfu_match_fingerprint(uint8_t *version, uint8_t *data) {
+    uint8_t i = 0;
+    do {
+
+        int vl = 0;
+        uint8_t vtmp[10] = {0};
+        param_gethex_to_eol(mfu_ident_table[i].version, 0, vtmp, sizeof(vtmp), &vl);
+
+        bool m1 = (memcmp(vtmp, version, vl) == 0);
+        if (m1 == false) {
+            PrintAndLogEx(DEBUG, "(fingerprint) wrong version");
+            continue;
+        }
+
+        int ml = 0;
+        uint8_t mtmp[40] = {0};
+        param_gethex_to_eol(mfu_ident_table[i].match, 0, mtmp, sizeof(mtmp), &ml);
+
+        bool m2 = (memcmp(mtmp, data + mfu_ident_table[i].mpos, mfu_ident_table[i].mlen) == 0);
+        if (m2) {
+            PrintAndLogEx(DEBUG, "(fingerprint) found %s", mfu_ident_table[i].desc);
+            return &mfu_ident_table[i];
+        }
+    } while (mfu_ident_table[++i].desc);
+    return NULL;
+}
+
+static uint8_t mfu_max_len(void) {
+    uint8_t n = 0, i = 0;
+    do {
+        uint8_t tmp = mfu_ident_table[i].mpos + mfu_ident_table[i].mlen;
+        if (tmp > n) {
+            n = tmp;
+        }
+    } while (mfu_ident_table[++i].desc);
+    return n;
+}
+
+static int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
+    iso14a_card_select_t card;
+    if (ul_select(&card) == false)
+        return PM3_ESOFT;
+
+    uint8_t v[10] = {0x00};
+    int len  = ulev1_getVersion(v, sizeof(v));
+    DropField();
+    if (len != sizeof(v))
+        return PM3_ESOFT;
+
+    memcpy(version, v, 8);
+    memcpy(uid, card.uid, 7);
+    return PM3_SUCCESS;
+}
+
+static int mfu_fingerprint(void) {
+
+    uint8_t *data = NULL;
+    int res = PM3_SUCCESS;
+    PrintAndLogEx(INFO, "------------------------ " _CYAN_("Fingerprint") " -----------------------");
+    uint8_t maxbytes = mfu_max_len();
+    if (maxbytes == 0) {
+        PrintAndLogEx(ERR, "fingerprint table wrong");
+        res = PM3_ESOFT;
+        goto out;
+    }
+    
+    maxbytes = ((maxbytes / 4) + 1) * 4;
+    data = calloc(maxbytes, sizeof(uint8_t));
+    if (data == NULL) {
+        PrintAndLogEx(ERR, "failed to allocate memory");
+        res = PM3_EMALLOC;
+        goto out;
+    }
+
+    uint8_t pages = (maxbytes / 4);
+    PrintAndLogEx(INFO, "Reading tag memory...");
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+        PrintAndLogEx(WARNING, "Command execute time-out");
+        res = PM3_ETIMEOUT;
+        goto out;
+    }
+
+    if (resp.oldarg[0] != 1) {
+        PrintAndLogEx(WARNING, "Failed reading card");
+        res = PM3_ESOFT;
+        goto out;
+    }
+
+    // read all memory
+    uint32_t startindex = resp.oldarg[2];
+    uint32_t buffer_size = resp.oldarg[1];
+    if (buffer_size > maxbytes) {
+        PrintAndLogEx(FAILED, "Data exceeded buffer size!");
+        buffer_size = maxbytes;
+    }
+
+    if (!GetFromDevice(BIG_BUF, data, buffer_size, startindex, NULL, 0, NULL, 2500, false)) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        res = PM3_ETIMEOUT;
+        goto out;
+    }
+
+    uint8_t version[8] = {0};
+    uint8_t uid[7] = {0};
+    if (mfu_get_version_uid(version, uid) == PM3_SUCCESS) {
+        mfu_identify_t* item = mfu_match_fingerprint(version, data);
+        if (item) {
+            PrintAndLogEx(SUCCESS, "Found " _GREEN_("%s"), item->desc);
+
+            if (item->Pwd) {
+                char s[40] = {0};
+                sprintf(s, item->hint, item->Pwd(uid));
+                PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", s);
+            } else {
+                PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", item->hint);
+            }
+        }
+    }
+
+out:
+    free(data);
+    PrintAndLogEx(INFO, "------------------------------------------------------------");
+    return res;
 }
 
 uint32_t GetHF14AMfU_Type(void) {
@@ -1391,6 +1634,9 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
         }
     }
+
+    mfu_fingerprint();
+
 out:
     DropField();
     if (locked) {
@@ -2223,6 +2469,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Restoring data blocks.");
+    PrintAndLogEx(INFO, "." NOLF);
     // write all other data
     // Skip block 0,1,2,3 (only magic tags can write to them)
     // Skip last 5 blocks usually is configuration
@@ -2234,6 +2481,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
         wait4response(b);
         PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
     }
     PrintAndLogEx(NORMAL, "");
 
@@ -2810,15 +3058,15 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     PrintAndLogEx(INFO, "---------------------------------");
     PrintAndLogEx(INFO, " Using UID : %s", sprint_hex(uid, 7));
     PrintAndLogEx(INFO, "---------------------------------");
-    PrintAndLogEx(INFO, " algo | pwd      | pack");
-    PrintAndLogEx(INFO, "------+----------+-----");
-    PrintAndLogEx(INFO, " EV1  | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
-    PrintAndLogEx(INFO, " Ami  | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
-    PrintAndLogEx(INFO, " LD   | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
-    PrintAndLogEx(INFO, " XYZ  | %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
-    PrintAndLogEx(INFO, "------+----------+-----");
+    PrintAndLogEx(INFO, " algo           | pwd      | pack");
+    PrintAndLogEx(INFO, "----------------+----------+-----");
+    PrintAndLogEx(INFO, " EV1            | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
+    PrintAndLogEx(INFO, " Amiibo         | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
+    PrintAndLogEx(INFO, " Lego Dimension | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
+    PrintAndLogEx(INFO, " XYZ 3D printer | %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
+    PrintAndLogEx(INFO, "----------------+----------+-----");
     PrintAndLogEx(INFO, " Vingcard algo");
-    PrintAndLogEx(INFO, "--------------------");
+    PrintAndLogEx(INFO, "---------------------------------");
     return PM3_SUCCESS;
 }
 
