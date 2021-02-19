@@ -11,7 +11,6 @@
 #include "commonutil.h"
 #include "../src/fileutils.h"
 
-#pragma endregion
 #define HMAC_POS_DATA 0x008
 #define HMAC_POS_TAG 0x1B4
 
