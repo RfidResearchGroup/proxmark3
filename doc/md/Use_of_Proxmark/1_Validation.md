@@ -4,7 +4,6 @@ If all went well you should get some information about the firmware and memory u
 
 ```
 [=] Session log /home/iceman/.proxmark3/log_20200521.txt
-[=] Loading Preferences...
 [+] loaded from JSON file /home/iceman/.proxmark3/preferences.json
 [=] Using UART port /dev/ttyS7
 [=] Communicating with PM3 over USB-CDC
@@ -13,10 +12,11 @@ If all went well you should get some information about the firmware and memory u
 ██████╗ ███╗   ███╗ ████╗  
 ██╔══██╗████╗ ████║   ══█║ 
 ██████╔╝██╔████╔██║ ████╔╝ 
-██╔═══╝ ██║╚██╔╝██║   ══█║    iceman@icesql.net
-██║     ██║ ╚═╝ ██║ ████╔╝    https://github.com/rfidresearchgroup/proxmark3/
-╚═╝     ╚═╝     ╚═╝ ╚═══╝  Release v4.9237 - Ice Coffee
-
+██╔═══╝ ██║╚██╔╝██║   ══█║ 
+██║     ██║ ╚═╝ ██║ ████╔╝     Iceman ☕
+╚═╝     ╚═╝     ╚═╝ ╚═══╝  ❄️ bleeding edge
+ 
+ https://github.com/rfidresearchgroup/proxmark3/
 
  [ Proxmark3 RFID instrument ] 
 
@@ -25,30 +25,28 @@ If all went well you should get some information about the firmware and memory u
   compiled with GCC 9.3.0 OS:Linux ARCH:x86_64
  
  [ PROXMARK RDV4 ]
-  external flash:                  present 
-  smartcard reader:                present 
-
- [ PROXMARK RDV4 Extras ]
-  FPC USART for BT add-on support: absent 
+  device.................... RDV4
+  firmware.................. RDV4
+  external flash............ present
+  smartcard reader.......... present
+  FPC USART for BT add-on... absent
 
  [ ARM ]
  bootrom: RRG/Iceman/master/v4.9237-2-g2cb19874 2020-05-21 22:00:10
       os: RRG/Iceman/master/v4.9237-2-g2cb19874 2019-05-21 22:00:26
- compiled with GCC 8.3.1 20190703 (release) [gcc-8-branch revision 273027]
+ compiled with GCC 9.2.1 20191025 (release) [ARM/arm-9-branch revision 277599]
 
  [ FPGA ]
- LF image built for 2s30vq100 on 2020/02/22 at 12:51:14
- HF image built for 2s30vq100 on 2020/01/12 at 15:31:16
+  LF image built for 2s30vq100 on 2020-07-08 at 23: 8: 7
+  HF image built for 2s30vq100 on 2020-07-08 at 23: 8:19
+  HF FeliCa image built for 2s30vq100 on 2020-07-08 at 23: 8:30
 
  [ Hardware ] 
-  --= uC: AT91SAM7S512 Rev B
+  --= uC: AT91SAM7S512 Rev A
   --= Embedded Processor: ARM7TDMI
-  --= Nonvolatile Program Memory Size: 512K bytes, Used: 291382 bytes (56%) Free: 232906 bytes (44%)
-  --= Second Nonvolatile Program Memory Size: None
-  --= Internal SRAM Size: 64K bytes
-  --= Architecture Identifier: AT91SAM7Sxx Series
-  --= Nonvolatile Program Memory Type: Embedded Flash Memory
-
+  --= Internal SRAM size: 64K bytes
+  --= Architecture identifier: AT91SAM7Sxx Series
+  --= Embedded flash memory 512K bytes ( 59% used )
 
 [usb] pm3 --> 
 ```
