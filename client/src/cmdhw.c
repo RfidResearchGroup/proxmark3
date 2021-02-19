@@ -226,10 +226,10 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
             sprintf(asBuff, "ROMless or on-chip Flash");
             break;
         case 2:
-            sprintf(asBuff, "Embedded Flash Memory");
+            sprintf(asBuff, "Embedded flash memory");
             break;
         case 3:
-            sprintf(asBuff, "ROM and Embedded Flash Memory\nNVPSIZ is ROM size\nNVPSIZ2 is Flash size");
+            sprintf(asBuff, "ROM and Embedded flash memory\nNVPSIZ is ROM size\nNVPSIZ2 is Flash size");
             break;
         case 4:
             sprintf(asBuff, "SRAM emulating ROM");
@@ -268,12 +268,13 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
             break;
     }
 
-    PrintAndLogEx(NORMAL, "  --= Nonvolatile program memory: " _YELLOW_("%uK") " bytes %s ( " _YELLOW_("%2.0f%%") " used )"
-                  , mem_avail
+    PrintAndLogEx(NORMAL, "  --= %s " _YELLOW_("%uK") " bytes ( " _YELLOW_("%2.0f%%") " used )"
                   , asBuff
+                  , mem_avail
                   , mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100
                  );
 
+    /*
     switch ((iChipID & 0xF000) >> 12) {
         case 0:
             sprintf(asBuff, "None");
@@ -307,6 +308,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
             break;
     }
     PrintAndLogEx(NORMAL, "  --= Second nonvolatile program memory size: %s", asBuff);
+    */
 }
 
 static int CmdDbg(const char *Cmd) {
@@ -1003,5 +1005,5 @@ void pm3_version(bool verbose, bool oneliner) {
 
         lookupChipID(payload->id, payload->section_size);
     }
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
 }
