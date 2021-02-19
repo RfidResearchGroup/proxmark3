@@ -748,7 +748,6 @@ int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data)
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFARE_READSC, sectorNo, keyType, 0, key, 6);
-
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
@@ -760,10 +759,33 @@ int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data)
             return PM3_EUNDEF;
         }
     } else {
-        PrintAndLogEx(ERR, "Command execute timeout");
+        PrintAndLogEx(DEBUG, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
+    return PM3_SUCCESS;
+}
 
+int mfReadBlock(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t *data) {
+    mf_readblock_t payload = {
+        .blockno = blockNo,
+        .keytype = keyType
+    };   
+    memcpy(payload.key, key, sizeof(payload.key));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500)) {
+        memcpy(data, resp.data.asBytes, 16);
+
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(DEBUG, "failed reading block");
+            return PM3_ESOFT;
+        }
+    } else {
+        PrintAndLogEx(DEBUG, "Command execute timeout");
+        return PM3_ETIMEOUT;
+    }
     return PM3_SUCCESS;
 }
 
@@ -1195,4 +1217,20 @@ int detect_mf_magic(bool is_mfc) {
             break;
     }
     return isGeneration;
+}
+
+int detect_mfc_ev1_signature(uint8_t *signature) {
+    if (signature == NULL) {
+        return PM3_EINVARG;
+    }
+    uint8_t sign[32] = {0};
+    uint8_t key[] = {0x4b, 0x79, 0x1b, 0xea, 0x7b, 0xcc};    
+    int res = mfReadBlock(69, 1, key, sign);
+    if ( res == PM3_SUCCESS) {
+        res = mfReadBlock(70, 1, key, sign + 16);
+        if (res ==  PM3_SUCCESS) {
+            memcpy(signature, sign, sizeof(sign));
+        }
+    }
+    return res;
 }
