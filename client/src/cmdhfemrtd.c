@@ -139,6 +139,25 @@ static emrtd_pacealg_t pacealg_table[] = {
     {NULL, NULL, {}}
 };
 
+static emrtd_pacesdp_t pacesdp_table[] = {
+//   id  name                                                     size
+    {0,  "1024-bit MODP Group with 160-bit Prime Order Subgroup", 1024},
+    {1,  "2048-bit MODP Group with 224-bit Prime Order Subgroup", 2048},
+    {2,  "2048-bit MODP Group with 256-bit Prime Order Subgroup", 2048},
+    {8,  "NIST P-192 (secp192r1)",                                192},
+    {10, "NIST P-224 (secp224r1)",                                224},
+    {12, "NIST P-256 (secp256r1)",                                256},
+    {15, "NIST P-384 (secp384r1)",                                384},
+    {18, "NIST P-521 (secp521r1)",                                521},
+    {9,  "BrainpoolP192r1",                                       192},
+    {11, "BrainpoolP224r1",                                       224},
+    {13, "BrainpoolP256r1",                                       256},
+    {14, "BrainpoolP320r1",                                       320},
+    {16, "BrainpoolP384r1",                                       384},
+    {17, "BrainpoolP521r1",                                       521},
+    {32, NULL, 0}
+};
+
 static emrtd_dg_t *emrtd_tag_to_dg(uint8_t tag) {
     for (int dgi = 0; dg_table[dgi].filename != NULL; dgi++) {
         if (dg_table[dgi].tag == tag) {
@@ -1751,8 +1770,9 @@ static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_s
 static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen) {
     uint8_t dataset[100] = { 0x00 };
     size_t datasetlen = 0;
-    uint8_t pacealgorithm[100] = { 0x00 };
-    size_t pacealgorithmlen = 0;
+    uint8_t datafromtag[100] = { 0x00 };
+    size_t datafromtaglen = 0;
+    uint8_t parsednum = 0;
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "----------------- " _CYAN_("EF_CardAccess") " ----------------");
@@ -1762,7 +1782,17 @@ static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen) {
         return PM3_ESOFT;
     }
 
-    if (!emrtd_lds_get_data_by_tag(dataset, datasetlen, pacealgorithm, &pacealgorithmlen, 0x06, 0x00, false, false, 0)) {
+    // Get PACE version
+    if (!emrtd_lds_get_data_by_tag(dataset, datasetlen, datafromtag, &datafromtaglen, 0x02, 0x00, false, false, 0)) {
+        PrintAndLogEx(ERR, "Failed to read PACE version from EF_CardAccess.");
+        return PM3_ESOFT;
+    }
+    // TODO: hack!!!
+    memcpy(&parsednum, datafromtag, datafromtaglen);
+    PrintAndLogEx(SUCCESS, "PACE version..........: " _YELLOW_("%i"), parsednum);
+
+    // Get PACE algorithm
+    if (!emrtd_lds_get_data_by_tag(dataset, datasetlen, datafromtag, &datafromtaglen, 0x06, 0x00, false, false, 0)) {
         PrintAndLogEx(ERR, "Failed to read PACE algorithm from EF_CardAccess.");
         return PM3_ESOFT;
     }
@@ -1770,10 +1800,26 @@ static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen) {
     for (int pacei = 0; pacealg_table[pacei].name != NULL; pacei++) {
         PrintAndLogEx(DEBUG, "Trying: %s", hashalg_table[pacei].name);
 
-        if (memcmp(pacealg_table[pacei].descriptor, pacealgorithm, pacealgorithmlen) == 0) {
+        if (memcmp(pacealg_table[pacei].descriptor, datafromtag, datafromtaglen) == 0) {
             PrintAndLogEx(SUCCESS, "PACE algorithm........: " _YELLOW_("%s"), pacealg_table[pacei].name);
-            return PM3_SUCCESS;
         }
+    }
+
+    // Get PACE parameter ID
+    if (!emrtd_lds_get_data_by_tag(dataset, datasetlen, datafromtag, &datafromtaglen, 0x02, 0x00, false, false, 1)) {
+        PrintAndLogEx(ERR, "Failed to read PACE parameter ID from EF_CardAccess.");
+        return PM3_ESOFT;
+    }
+
+    // TODO: hack!!!
+    memcpy(&parsednum, datafromtag, datafromtaglen);
+    for (int pacepari = 0; pacesdp_table[pacepari].id != 32; pacepari++) {
+        PrintAndLogEx(DEBUG, "Trying: %s", hashalg_table[pacepari].name);
+
+        if (pacesdp_table[pacepari].id == parsednum) {
+            PrintAndLogEx(SUCCESS, "PACE parameter........: " _YELLOW_("%s"), pacesdp_table[pacepari].name);
+        }
+        // TODO: account for RFU
     }
 
     return PM3_SUCCESS;
