@@ -4,7 +4,7 @@ local ac = require('ansicolors')
 
 copyright = ''
 author = "Christian Herrmann"
-version = 'v1.0.0'
+version = 'v1.0.1'
 desc = [[
 Perform bulk EM410x enrollment of T5577 RFID tags.  It keeps track of last card id used.
 If called with -s,  this value resets "session".
@@ -84,20 +84,21 @@ local function readfile()
     end
     local t = f:read("*all")
     f:close()
-    local cn = tonumber(t, 16)
-    print(('Using EM4100 ID '..ac.green..'%010X'..ac.reset..' from `'..ac.yellow..'%s'..ac.reset..'`'):format(cn, ENROLL_STATUS_FN))
-    return cn
+    local cn_hi  = tonumber(t:sub(1, 2), 16)
+    local cn_low = tonumber(t:sub(3, 10), 16)
+    print(('Using EM4100 ID '..ac.green..'%02X%08X'..ac.reset..' from `'..ac.yellow..'%s'..ac.reset..'`'):format(cn_hi, cn_low, ENROLL_STATUS_FN))
+    return cn_hi, cn_low
 end
 ---
 --
-local function writefile(cn)
+local function writefile(cn_hi, cn_low)
     local f = io.open(ENROLL_STATUS_FN, "w")
     if f == nil then
         return nil, string.format("Could not write to file %s", ENROLL_STATUS_FN)
     end
-    f:write(("%010X\n"):format(cn))
+    f:write(("%02X%08X\n"):format(cn_hi, cn_low))
     f:close()
-    print(('Wrote EM4100 ID '..ac.green..'%010X'..ac.reset..' to `'..ac.yellow..'%s'..ac.reset..'`'):format(cn, ENROLL_STATUS_FN))
+    print(('Wrote EM4100 ID '..ac.green..'%02X%08X'..ac.reset..' to `'..ac.yellow..'%s'..ac.reset..'`'):format(cn_hi, cn_low, ENROLL_STATUS_FN))
     return true, 'Ok'
 end
 
@@ -134,32 +135,32 @@ local function main(args)
     core.console('pref set hint --off')
     print('')
     
-    local sid = tonumber(startid, 16)    
+    local hi  = tonumber(startid:sub(1, 2), 16)
+    local low = tonumber(startid:sub(3, 10), 16)
+    
     if shall_continue then
         print('Continue enrolling from last save')
-        sid = readfile()
+        hi, low = readfile()
     else
         print('reset & starting enrolling from refresh')
     end
    
-    local template = 'EM4100 ID '..ac.green..'%010X'..ac.reset
-    local curr = sid
-    for i = sid, sid + 10000, 1 do
-        curr = i
-
+    local template = 'EM4100 ID '..ac.green..'%02X%08X'..ac.reset
+    for i = low, low + 10000, 1 do
         print('')
         print( string.rep('--',20) )
-        local msg = (template):format(curr)
+        local msg = (template):format(hi, i)
         local ans = utils.input(msg, 'y'):lower()
         if ans == 'y' then
-            core.console( ('lf em 410x clone --id %010X'):format(curr) )
-            --        print ( ('lf em 410x clone --id %010X'):format(curr) )
+            core.console( ('lf em 410x clone --id %02X%08X'):format(hi, i) )
+            --        print ( ('lf em 410x clone --id %02X%08X'):format(hi, i) )
         else
             print(ac.red..'User aborted'..ac.reset)
+            low = i
             break
         end
     end
-    writefile(curr)
+    writefile(hi, low)
 
     print('enabling hints again')
     core.console('pref set hint --on')
