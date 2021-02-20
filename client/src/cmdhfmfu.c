@@ -1037,13 +1037,31 @@ static mfu_identify_t mfu_ident_table[] = {
     {
         "Jooki", "0004040201000F03",
         12, 32, "E11012000103A00C340329D101255504732E6A6F6F6B692E726F636B732F732F",
-        NULL, NULL,
+        ul_ev1_pwdgen_def, ul_ev1_packgen_def,
         "hf jooki decode -r"
     },
     {
         "Lego Dimensions", "0004040201000F03",
         12, 18, "E11012000103A00C340313D1010F5402656E",
         ul_ev1_pwdgenC, ul_ev1_packgenC,
+        "hf mfu dump -k %08x"
+    },
+    {
+        "Hotwheels", "0004040201000F03",
+        9, 9, "E110120F",
+        ul_ev1_pwdgen_def, ul_ev1_packgen_def,
+        "hf mfu dump -k %08x"
+    },
+    {
+        "Minecraft Earth", "0004040201000F03",
+        9, 26, "48F6FFE1101200037C91012C55027069642E6D617474656C2F4167",
+        ul_ev1_pwdgen_def, ul_ev1_packgen_def,
+        "hf mfu dump -k %08x"
+    },
+    {
+        "Snackworld", "0004040101000B03",
+        9, 7, "483000E1100600",
+        NULL, NULL,
         "hf mfu dump -k %08x"
     },
     {
