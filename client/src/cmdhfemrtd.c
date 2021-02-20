@@ -992,7 +992,7 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     // Select EF_COM
     if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, dg_table[EF_COM].fileid, *use_14b) == false) {
         *BAC = true;
-        PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
+        PrintAndLogEx(INFO, "Authentication is enforced. Will attempt external authentication.");
     } else {
         *BAC = false;
         // Select EF_DG1
@@ -1000,7 +1000,7 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
 
         if (emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, *use_14b) == false) {
             *BAC = true;
-            PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
+            PrintAndLogEx(INFO, "Authentication is enforced. Will attempt external authentication.");
         } else {
             *BAC = false;
         }
@@ -1010,7 +1010,7 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     if (*BAC) {
         // If BAC isn't available, exit out and warn user.
         if (!BAC_available) {
-            PrintAndLogEx(ERR, "This eMRTD enforces Basic Access Control, but you didn't supply MRZ data. Cannot proceed.");
+            PrintAndLogEx(ERR, "This eMRTD enforces authentication, but you didn't supply MRZ data. Cannot proceed.");
             PrintAndLogEx(HINT, "Check out hf emrtd info/dump --help, supply data with -n -d and -e.");
             return false;
         }
@@ -1733,6 +1733,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     uint8_t ks_enc[16] = { 0x00 };
     uint8_t ks_mac[16] = { 0x00 };
     bool BAC = false;
+    bool PACE_available = true;
     bool use_14b = false;
 
     // Select the eMRTD
@@ -1741,13 +1742,20 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         return PM3_ESOFT;
     }
 
+    // Read EF_CardAccess
+    if (!emrtd_select_and_read(response, &resplen, dg_table[EF_CardAccess].fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+        PACE_available = false;
+        PrintAndLogEx(HINT, "The error above this is normal. It just means that your eMRTD lacks PACE.");
+    }
+
     // Select and authenticate with the eMRTD
     bool auth_result = emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac, &use_14b);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------------------ " _CYAN_("Basic Info") " ------------------");
     PrintAndLogEx(SUCCESS, "Communication standard: %s", use_14b ? _YELLOW_("ISO/IEC 14443(B)") : _YELLOW_("ISO/IEC 14443(A)"));
-    PrintAndLogEx(SUCCESS, "BAC...................: %s", BAC ? _GREEN_("Enforced") : _RED_("Not enforced"));
+    PrintAndLogEx(SUCCESS, "Authentication........: %s", BAC ? _GREEN_("Enforced") : _RED_("Not enforced"));
+    PrintAndLogEx(SUCCESS, "PACE..................: %s", PACE_available ? _GREEN_("Available") : _YELLOW_("Not available"));
     PrintAndLogEx(SUCCESS, "Authentication result.: %s", auth_result ? _GREEN_("Successful") : _RED_("Failed"));
 
     if (!auth_result) {
@@ -1755,6 +1763,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         return PM3_ESOFT;
     }
 
+    // Read EF_COM to get file list
     if (!emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
         PrintAndLogEx(ERR, "Failed to read EF_COM.");
         DropField();
@@ -1776,7 +1785,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         return PM3_ESOFT;
     }
 
-    // Grab the hash list
+    // Grab the hash list from EF_SOD
     uint8_t dg_hashes_sod[17][64] = { { 0 } };
     uint8_t dg_hashes_calc[17][64] = { { 0 } };
     int hash_algo = 0;
