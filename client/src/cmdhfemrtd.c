@@ -1974,6 +1974,16 @@ int infoHF_EMRTD_offline(const char *path) {
 
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
+    strcat(filepath, dg_table[EF_CardAccess].filename);
+
+    if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS) {
+        emrtd_print_ef_cardaccess_info(data, datalen);
+    } else {
+        PrintAndLogEx(HINT, "The error above this is normal. It just means that your eMRTD lacks PACE.");
+    }
+
+    strcpy(filepath, path);
+    strncat(filepath, PATHSEP, 2);
     strcat(filepath, dg_table[EF_SOD].filename);
 
     if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS) {
