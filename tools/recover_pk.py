@@ -5,6 +5,9 @@
 import binascii
 import sys
 import hashlib
+from colors import *
+
+# pip3 install ansicolors
 
 debug = False
 
@@ -460,7 +463,6 @@ def recover_multiple(uids, sigs, curvename, alghash=None):
             recovered &= recovered_tmp
     return recovered
 
-
 def selftests():
     tests = [
         {'name': "Mifare Ultralight EV1",
@@ -556,14 +558,17 @@ if __name__ == "__main__":
         print("Example: \n%s 04ee45daa34084 ebb6102bff74b087d18a57a54bc375159a04ea9bc61080b7f4a85afe1587d73b" % sys.argv[0])
         exit(1)
     uids, sigs = sys.argv[1:][::2], sys.argv[1:][1::2]
+    once = True
     curvenames = guess_curvename(sigs[0])
     for c in curvenames:
-        print("\nAssuming curve=%s" % c)
-        print("========================")
         for h in [None, "md5", "sha1", "sha256", "sha512"]:
-            print("Assuming hash=%s" % h)
             recovered = recover_multiple(uids, sigs, c, alghash=h)
             if recovered:
+                if once:
+                    print(color('curve=%s', fg='yellow') % c)
+                    once = False
+                print(color('hash=%s', fg='yellow') % h)
                 print("Possible uncompressed Pk(s):")
                 for pk in list(recovered):
                     print(binascii.hexlify(pk).decode('utf8'))
+        once = True
