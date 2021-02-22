@@ -575,6 +575,10 @@ bool readHF15Uid(bool loop, bool verbose) {
  *  **cmd   command line
  */
 static bool prepareHF15Cmd(char **cmd, uint16_t *reqlen, uint8_t *arg1, uint8_t *req, uint8_t iso15cmd) { // reqlen arg0
+
+    if (*cmd == NULL || strlen(*cmd) == 0)
+        return false;
+
     int temp;
     uint8_t uid[8] = {0x00};
     uint32_t tmpreqlen = 0;
@@ -598,13 +602,12 @@ static bool prepareHF15Cmd(char **cmd, uint16_t *reqlen, uint8_t *arg1, uint8_t 
     // strip
     while (**cmd == ' ' || **cmd == '\t')(*cmd)++;
 
-    switch (**cmd) {
+    char c = tolower(**cmd);
+    switch (c) {
         case 0:
             PrintAndLogEx(WARNING, "missing addr");
             return false;
-            break;
         case 'u':
-        case 'U':
             // unaddressed mode may not be supported by all vendors
             req[tmpreqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY;
             req[tmpreqlen++] = iso15cmd;
@@ -637,9 +640,9 @@ static bool prepareHF15Cmd(char **cmd, uint16_t *reqlen, uint8_t *arg1, uint8_t 
             break;
     }
     // skip to next space
-    while (**cmd != ' ' && **cmd != '\t')(*cmd)++;
+    while (**cmd != NULL && **cmd != ' ' && **cmd != '\t')(*cmd)++;
     // skip over the space
-    while (**cmd == ' ' || **cmd == '\t')(*cmd)++;
+    while (**cmd != NULL && **cmd == ' ' || **cmd == '\t')(*cmd)++;
 
     *reqlen = tmpreqlen;
     return true;
