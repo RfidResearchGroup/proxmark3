@@ -4,13 +4,18 @@ local ac = require('ansicolors')
 
 copyright = ''
 author = "Christian Herrmann"
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 Perform bulk EM410x enrollment of T5577 RFID tags.  It keeps track of last card id used.
 If called with -s,  this value resets "session".
 
 if press <enter>  it defaults to Y,  which writes a ID.
 Any other input char will exit the script.
+
+You can supply a password, which will set the config block / block 7 on the T5577.
+
+The verify option will issue a 'lf em 410x reader' command,  so you can manually verify 
+that the write worked.
 
 ]]
 example = [[
@@ -19,14 +24,21 @@ example = [[
 
     -- continue enrolling from where last iteration
     script run lf_em4100_bulk.lua -c
+
+    -- reset and start enrolling from 11223344,
+    -- protecting the tag with password 010203
+    -- and verify the em id write.
+    script run lf_em4100_bulk.lua -s 1122334455 -p 01020304 -v  
 ]]
 usage = [[
-script run lf_en4100_bulk.lua [-h] [-c] [-s <start cn>]
+script run lf_en4100_bulk.lua [-h] [-c] [-p password] [-s <start cn>] [-v]
 ]]
 arguments = [[
     -h      : this help
     -c      : continue from last card number used
+    -p      : Password protecting the T5577.
     -s      : starting card number
+    -v      : verify write by executing a `lf em 410x reader`
     ]]
 
     -- Some globals
@@ -112,22 +124,35 @@ local function main(args)
 
     if #args == 0 then return help() end
 
+    local shall_verify = false
     local shall_continue = false
+    local got_pwd = false
     local startid = ''
+    local ipwd = ''
 
-    for o, a in getopt.getopt(args, 'cs:h') do
+
+    for o, a in getopt.getopt(args, 'cp:s:hv') do
         if o == 'h' then return help() end
-        if o == 'c' then
-            shall_continue = true
-        end
+        if o == 'c' then shall_continue = true end
         if o == 's' then startid = a end
+        if o == 'p' then
+            ipwd = a
+            got_pwd = true
+        end
+        if o == 'v' then shall_verify = true end
     end
 
     -- if reset/start over, check -s
     if not shall_continue then 
         if startid == nil then return oops('empty card number string') end
         if #startid == 0 then return oops('empty card number string') end
-        if #startid ~= 10 then return oops('card number wrong length. Should be 5 hex bytes') end
+        if #startid ~= 10 then return oops('card number wrong length. Must be 5 hex bytes') end
+    end
+
+    if got_pwd then
+        if ipwd == nil then return oops('empty password') end
+        if #ipwd == 0 then return oops('empty password') end
+        if #ipwd ~= 8 then return oops('password wrong length. Must be 4 hex bytes') end
     end
 
     core.console('clear')
@@ -137,7 +162,16 @@ local function main(args)
     
     local hi  = tonumber(startid:sub(1, 2), 16)
     local low = tonumber(startid:sub(3, 10), 16)
-    
+    local pwd = tonumber(ipwd, 16)
+
+    if got_pwd then
+        print(('Will protect T5577 with password '..ac.green..'%08X'..ac.reset):format(pwd))
+    end
+
+    if shall_verify then
+        print('Will verify write afterwards')
+    end
+
     if shall_continue then
         print('Continue enrolling from last save')
         hi, low = readfile()
@@ -152,8 +186,17 @@ local function main(args)
         local msg = (template):format(hi, i)
         local ans = utils.input(msg, 'y'):lower()
         if ans == 'y' then
-            core.console( ('lf em 410x clone --id %02X%08X'):format(hi, i) )
+            core.console( ('lf em 410x clone --id %02X%08X'):format(hi, i) )            
             --        print ( ('lf em 410x clone --id %02X%08X'):format(hi, i) )
+
+            if got_pwd then
+                core.console('lf t55 detect')
+                core.console(('lf t55 protect -n %08x'):format(pwd))
+            end
+
+            if shall_verify then
+                core.console('lf em 410x reader')
+            end
         else
             print(ac.red..'User aborted'..ac.reset)
             low = i
