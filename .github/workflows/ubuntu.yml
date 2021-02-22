@@ -17,9 +17,9 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-        python -m pip install --upgrade pip
-        python -m pip install ansicolors
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          python -m pip install --upgrade pip
+          pip install ansicolors
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: make clean
         run: make clean
@@ -48,9 +48,9 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-        python -m pip install --upgrade pip
-        python -m pip install ansicolors
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          python -m pip install --upgrade pip
+          pip install ansicolors
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: make clean
         run: make clean
@@ -80,9 +80,9 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-        python -m pip install --upgrade pip
-        python -m pip install ansicolors
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          python -m pip install --upgrade pip
+          pip install ansicolors
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Prepare Build Folders
         run: mkdir -p client/build
