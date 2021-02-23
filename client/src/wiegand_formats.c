@@ -23,8 +23,8 @@ static bool Pack_H10301(wiegand_card_t *card, wiegand_message_t *packed, bool pr
     packed->Length = 26; // Set number of bits
     packed->Bot |= (card->CardNumber & 0xFFFF) << 1;
     packed->Bot |= (card->FacilityCode & 0xFF) << 17;
-    packed->Bot |= oddparity32((packed->Bot >> 1) & 0xFFF) & 1;
-    packed->Bot |= (evenparity32((packed->Bot >> 13) & 0xFFF) & 1) << 25;
+    packed->Bot |= oddparity32((packed->Bot >> 1) & 0xFFF);
+    packed->Bot |= (evenparity32((packed->Bot >> 13) & 0xFFF)) << 25;
     if (preamble)
         return add_HID_header(packed);
     return true;
@@ -38,7 +38,7 @@ static bool Unpack_H10301(wiegand_message_t *packed, wiegand_card_t *card) {
     card->FacilityCode = (packed->Bot >> 17) & 0xFF;
     card->ParityValid =
         (oddparity32((packed->Bot >> 1) & 0xFFF) == (packed->Bot & 1)) &&
-        ((evenparity32((packed->Bot >> 13) & 0xFFF) & 1) == ((packed->Bot >> 25) & 1));
+        ((evenparity32((packed->Bot >> 13) & 0xFFF)) == ((packed->Bot >> 25) & 1));
     return true;
 }
 
@@ -271,8 +271,8 @@ static bool Pack_H10306(wiegand_card_t *card, wiegand_message_t *packed, bool pr
     packed->Bot |= (card->CardNumber & 0xFFFF) << 1;
     packed->Bot |= (card->FacilityCode & 0x7FFF) << 17;
     packed->Mid |= (card->FacilityCode & 0x8000) >> 15;
-    packed->Mid |= (evenparity32((packed->Mid & 0x00000001) ^ (packed->Bot & 0xFFFE0000)) & 1) << 1;
-    packed->Bot |= (oddparity32(packed->Bot & 0x0001FFFE) & 1);
+    packed->Mid |= (evenparity32((packed->Mid & 0x00000001) ^ (packed->Bot & 0xFFFE0000))) << 1;
+    packed->Bot |= (oddparity32(packed->Bot & 0x0001FFFE));
     if (preamble)
         return add_HID_header(packed);
     return true;
@@ -331,9 +331,9 @@ static bool Pack_C1k35s(wiegand_card_t *card, wiegand_message_t *packed, bool pr
     packed->Bot |= (card->CardNumber & 0x000FFFFF) << 1;
     packed->Bot |= (card->FacilityCode & 0x000007FF) << 21;
     packed->Mid |= (card->FacilityCode & 0x00000800) >> 11;
-    packed->Mid |= (evenparity32((packed->Mid & 0x00000001) ^ (packed->Bot & 0xB6DB6DB6)) & 1) << 1;
-    packed->Bot |= (oddparity32((packed->Mid & 0x00000003) ^ (packed->Bot & 0x6DB6DB6C)) & 1);
-    packed->Mid |= (oddparity32((packed->Mid & 0x00000003) ^ (packed->Bot & 0xFFFFFFFF)) & 1) << 2;
+    packed->Mid |= (evenparity32((packed->Mid & 0x00000001) ^ (packed->Bot & 0xB6DB6DB6))) << 1;
+    packed->Bot |= (oddparity32((packed->Mid & 0x00000003) ^ (packed->Bot & 0x6DB6DB6C)));
+    packed->Mid |= (oddparity32((packed->Mid & 0x00000003) ^ (packed->Bot & 0xFFFFFFFF))) << 2;
     if (preamble)
         return add_HID_header(packed);
     return true;
@@ -711,9 +711,9 @@ static bool Pack_C1k48s(wiegand_card_t *card, wiegand_message_t *packed, bool pr
     packed->Bot |= (card->CardNumber & 0x007FFFFF) << 1;
     packed->Bot |= (card->FacilityCode & 0x000000FF) << 24;
     packed->Mid |= (card->FacilityCode & 0x003FFF00) >> 8;
-    packed->Mid |= (evenparity32((packed->Mid & 0x00001B6D) ^ (packed->Bot & 0xB6DB6DB6)) & 1) << 14;
-    packed->Bot |= (oddparity32((packed->Mid & 0x000036DB) ^ (packed->Bot & 0x6DB6DB6C)) & 1);
-    packed->Mid |= (oddparity32((packed->Mid & 0x00007FFF) ^ (packed->Bot & 0xFFFFFFFF)) & 1) << 15;
+    packed->Mid |= (evenparity32((packed->Mid & 0x00001B6D) ^ (packed->Bot & 0xB6DB6DB6))) << 14;
+    packed->Bot |= (oddparity32((packed->Mid & 0x000036DB) ^ (packed->Bot & 0x6DB6DB6C)));
+    packed->Mid |= (oddparity32((packed->Mid & 0x00007FFF) ^ (packed->Bot & 0xFFFFFFFF))) << 15;
     if (preamble)
         return add_HID_header(packed);
     return true;

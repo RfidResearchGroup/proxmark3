@@ -193,8 +193,8 @@ static uint64_t PackEmID(uint64_t original, int newCardNum) {
         buf &= ~(1 << i);
     }
     buf |= (newCardNum & 0xFFFF) << 1;
-    buf |= oddparity32((buf >> 1) & 0xFFF) & 1;
-    buf |= (evenparity32((buf >> 13) & 0xFFF) & 1) << 25;
+    buf |= oddparity32((buf >> 1) & 0xFFF);
+    buf |= (evenparity32((buf >> 13) & 0xFFF)) << 25;
 
     uint32_t cardnumNew = (buf >> 1) & 0xFFFF;
     uint32_t fcNew = (buf >> 17) & 0xFF;
