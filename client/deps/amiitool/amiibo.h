@@ -25,7 +25,7 @@ typedef struct {
 
 bool nfc3d_amiibo_unpack(const nfc3d_amiibo_keys *amiiboKeys, const uint8_t *tag, uint8_t *plain);
 void nfc3d_amiibo_pack(const nfc3d_amiibo_keys *amiiboKeys, const uint8_t *plain, uint8_t *tag);
-bool nfc3d_amiibo_load_keys(nfc3d_amiibo_keys *amiiboKeys, const char *path);
+bool nfc3d_amiibo_load_keys(nfc3d_amiibo_keys *amiiboKeys);
 void nfc3d_amiibo_copy_app_data(const uint8_t *src, uint8_t *dst);
 
 #endif

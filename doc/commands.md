@@ -143,7 +143,7 @@ Check column "offline" for their availability.
 |`hf 14a raw             `|N       |`Send raw hex data to tag`
 |`hf 14a antifuzz        `|N       |`Fuzzing the anticollision phase.  Warning! Readers may react strange`
 |`hf 14a config          `|N       |`Configure 14a settings (use with caution)`
-|`hf 14a apdufind        `|N       |`Enuerate APDUs - CLA/INS/P1P2`
+|`hf 14a apdufind        `|N       |`Enumerate APDUs - CLA/INS/P1P2`
 
 
 ### hf 14b
@@ -253,6 +253,19 @@ Check column "offline" for their availability.
 |`hf fido auth           `|N       |`FIDO U2F Authentication Message.`
 |`hf fido make           `|N       |`FIDO2 MakeCredential command.`
 |`hf fido assert         `|N       |`FIDO2 GetAssertion command.`
+
+
+### hf jooki
+
+ { Jooki RFIDs...                      }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf jooki help          `|Y       |`This help`
+|`hf jooki clone         `|N       |`Write a Jooki token`
+|`hf jooki decode        `|Y       |`Decode Jooki token`
+|`hf jooki encode        `|Y       |`Encode Jooki token`
+|`hf jooki sim           `|N       |`Simulate Jooki token`
 
 
 ### hf iclass

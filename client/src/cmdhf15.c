@@ -575,6 +575,10 @@ bool readHF15Uid(bool loop, bool verbose) {
  *  **cmd   command line
  */
 static bool prepareHF15Cmd(char **cmd, uint16_t *reqlen, uint8_t *arg1, uint8_t *req, uint8_t iso15cmd) { // reqlen arg0
+
+    if (*cmd == NULL || strlen(*cmd) == 0)
+        return false;
+
     int temp;
     uint8_t uid[8] = {0x00};
     uint32_t tmpreqlen = 0;
@@ -598,13 +602,12 @@ static bool prepareHF15Cmd(char **cmd, uint16_t *reqlen, uint8_t *arg1, uint8_t 
     // strip
     while (**cmd == ' ' || **cmd == '\t')(*cmd)++;
 
-    switch (**cmd) {
+    char c = tolower(**cmd);
+    switch (c) {
         case 0:
             PrintAndLogEx(WARNING, "missing addr");
             return false;
-            break;
         case 'u':
-        case 'U':
             // unaddressed mode may not be supported by all vendors
             req[tmpreqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY;
             req[tmpreqlen++] = iso15cmd;
@@ -637,9 +640,9 @@ static bool prepareHF15Cmd(char **cmd, uint16_t *reqlen, uint8_t *arg1, uint8_t 
             break;
     }
     // skip to next space
-    while (**cmd != ' ' && **cmd != '\t')(*cmd)++;
+    while (**cmd != '\0' && **cmd != ' ' && **cmd != '\t')(*cmd)++;
     // skip over the space
-    while (**cmd == ' ' || **cmd == '\t')(*cmd)++;
+    while (**cmd != '\0' && (**cmd == ' ' || **cmd == '\t'))(*cmd)++;
 
     *reqlen = tmpreqlen;
     return true;
@@ -1352,7 +1355,8 @@ static int CmdHF15Dump(const char *Cmd) {
 
     // copy uid to read command
     memcpy(req + 2, uid, sizeof(uid));
-
+    
+    PrintAndLogEx(INFO, "." NOLF);
     for (int retry = 0; retry < 5; retry++) {
 
         req[10] = blocknum;
@@ -1368,6 +1372,7 @@ static int CmdHF15Dump(const char *Cmd) {
                 continue;
             }
             if (len < 2) {
+                PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(FAILED, "iso15693 command failed");
                 continue;
             }
@@ -1375,11 +1380,13 @@ static int CmdHF15Dump(const char *Cmd) {
             recv = resp.data.asBytes;
 
             if (CheckCrc15(recv, len) == false) {
+                PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(FAILED, "crc (" _RED_("fail") ")");
                 continue;
             }
 
             if ((recv[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
+                PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(FAILED, "Tag returned Error %i: %s", recv[1], TagErrorStr(recv[1]));
                 break;
             }
@@ -1399,12 +1406,12 @@ static int CmdHF15Dump(const char *Cmd) {
     DropField();
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "block#   | data         |lck| ascii");
-    PrintAndLogEx(NORMAL, "---------+--------------+---+----------");
+    PrintAndLogEx(INFO, "block#   | data         |lck| ascii");
+    PrintAndLogEx(INFO, "---------+--------------+---+----------");
     for (int i = 0; i < blocknum; i++) {
-        PrintAndLogEx(NORMAL, "%3d/0x%02X | %s | %d | %s", i, i, sprint_hex(mem[i].block, 4), mem[i].lock, sprint_ascii(mem[i].block, 4));
+        PrintAndLogEx(INFO, "%3d/0x%02X | %s | %d | %s", i, i, sprint_hex(mem[i].block, 4), mem[i].lock, sprint_ascii(mem[i].block, 4));
     }
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
 
     size_t datalen = blocknum * 4;
     saveFile(filename, ".bin", data, datalen);
@@ -1595,14 +1602,15 @@ static int CmdHF15Readmulti(const char *Cmd) {
 
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "block#   | data         |lck| ascii");
-    PrintAndLogEx(NORMAL, "---------+--------------+---+----------");
+    PrintAndLogEx(INFO, "block#   | data         |lck| ascii");
+    PrintAndLogEx(INFO, "---------+--------------+---+----------");
 
     for (int i = start; i < stop; i += 5) {
-        PrintAndLogEx(NORMAL, "%3d/0x%02X | %s | %d | %s", currblock, currblock, sprint_hex(data + i + 1, 4), data[i], sprint_ascii(data + i + 1, 4));
+        PrintAndLogEx(INFO, "%3d/0x%02X | %s | %d | %s", currblock, currblock, sprint_hex(data + i + 1, 4), data[i], sprint_ascii(data + i + 1, 4));
         currblock++;
     }
 
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -1676,9 +1684,9 @@ static int CmdHF15Read(const char *Cmd) {
 
     // print response
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "block #%3d  |lck| ascii", blocknum);
-    PrintAndLogEx(NORMAL, "------------+---+------");
-    PrintAndLogEx(NORMAL, "%s| %d | %s", sprint_hex(data + 2, status - 4), data[1], sprint_ascii(data + 2, status - 4));
+    PrintAndLogEx(INFO, "block #%3d  |lck| ascii", blocknum);
+    PrintAndLogEx(INFO, "------------+---+------");
+    PrintAndLogEx(INFO, "%s| %d | %s", sprint_hex(data + 2, status - 4), data[1], sprint_ascii(data + 2, status - 4));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }

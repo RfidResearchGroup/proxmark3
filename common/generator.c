@@ -182,6 +182,13 @@ uint16_t ul_ev1_packgenD(uint8_t *uid) {
     return BSWAP_16(p & 0xFFFF);
 }
 
+uint32_t ul_ev1_pwdgen_def(uint8_t *uid) {
+    return 0xFFFFFFFF;
+}
+uint16_t ul_ev1_packgen_def(uint8_t *uid) {
+    return 0x0000;
+}
+
 //------------------------------------
 // MFC key generation stuff
 // Each algo implementation should offer two key generation functions.

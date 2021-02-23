@@ -11,7 +11,7 @@
 #include <ctype.h>
 #include "cmdparser.h"         // command_t
 #include "cliparser.h"
-#include "pmflash.h"
+#include "pmflash.h"           // rdv40validation_t
 #include "fileutils.h"         // saveFile
 #include "comms.h"             // getfromdevice
 #include "cmdflashmemspiffs.h" // spiffs commands
@@ -25,6 +25,123 @@
 #define FLASH_MINBAUD FLASH_FASTBAUD
 
 static int CmdHelp(const char *Cmd);
+
+//-------------------------------------------------------------------------------------
+// RRG Public RSA Key
+#define RRG_RSA_KEY_LEN 128
+
+// public key Exponent E
+#define RRG_RSA_E "010001"
+
+// public key modulus N
+#define RRG_RSA_N "E28D809BF323171D11D1ACA4C32A5B7E0A8974FD171E75AD120D60E9B76968FF" \
+                  "4B0A6364AE50583F9555B8EE1A725F279E949246DF0EFCE4C02B9F3ACDCC623F" \
+                  "9337F21C0C066FFB703D8BFCB5067F309E056772096642C2B1A8F50305D5EC33" \
+                  "DB7FB5A3C8AC42EB635AE3C148C910750ABAA280CE82DC2F180F49F30A1393B5"
+
+// Following example RSA-1024 keypair, for test purposes  (from common/polarssl/rsa.c)
+// private key - Exponent D
+#define RSA_D   "24BF6185468786FDD303083D25E64EFC" \
+    "66CA472BC44D253102F8B4A9D3BFA750" \
+    "91386C0077937FE33FA3252D28855837" \
+    "AE1B484A8A9A45F7EE8C0C634F99E8CD" \
+    "DF79C5CE07EE72C7F123142198164234" \
+    "CABB724CF78B8173B9F880FC86322407" \
+    "AF1FEDFDDE2BEB674CA15F3E81A1521E" \
+    "071513A1E85B5DFA031F21ECAE91A34D"
+
+// prime P
+#define RSA_P   "C36D0EB7FCD285223CFB5AABA5BDA3D8" \
+    "2C01CAD19EA484A87EA4377637E75500" \
+    "FCB2005C5C7DD6EC4AC023CDA285D796" \
+    "C3D9E75E1EFC42488BB4F1D13AC30A57"
+
+// prime Q
+#define RSA_Q   "C000DF51A7C77AE8D7C7370C1FF55B69" \
+    "E211C2B9E5DB1ED0BF61D0D9899620F4" \
+    "910E4168387E3C30AA1E00C339A79508" \
+    "8452DD96A9A5EA5D9DCA68DA636032AF"
+
+#define RSA_DP  "C1ACF567564274FB07A0BBAD5D26E298" \
+    "3C94D22288ACD763FD8E5600ED4A702D" \
+    "F84198A5F06C2E72236AE490C93F07F8" \
+    "3CC559CD27BC2D1CA488811730BB5725"
+
+#define RSA_DQ  "4959CBF6F8FEF750AEE6977C155579C7" \
+    "D8AAEA56749EA28623272E4F7D0592AF" \
+    "7C1F1313CAC9471B5C523BFE592F517B" \
+    "407A1BD76C164B93DA2D32A383E58357"
+
+#define RSA_QP  "9AE7FBC99546432DF71896FC239EADAE" \
+    "F38D18D2B2F0E2DD275AA977E2BF4411" \
+    "F5A3B2A5D33605AEBBCCBA7FEB9F2D2F" \
+    "A74206CEC169D74BF5A8C50D6F48EA08"
+
+int rdv4_get_signature(rdv40_validation_t *out) {
+    if (out == NULL) {        
+        return PM3_EINVARG;
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_FLASHMEM_INFO, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
+    }
+
+    uint8_t isok = resp.oldarg[0] & 0xFF;
+    if (isok == false) {
+        PrintAndLogEx(FAILED, "fail reading from flashmemory");
+        return PM3_EFLASH;
+    }
+
+    //rdv40_validation_t mem;
+    memcpy(out, (rdv40_validation_t *)resp.data.asBytes, sizeof(rdv40_validation_t));
+    return PM3_SUCCESS;
+}
+
+// validate signature
+int rdv4_validate(rdv40_validation_t *mem) {
+
+    // Flash ID hash (sha1)
+    uint8_t sha_hash[20] = {0};
+    mbedtls_sha1(mem->flashid, sizeof(mem->flashid), sha_hash);
+
+    // set up RSA
+    mbedtls_rsa_context rsa;
+    mbedtls_rsa_init(&rsa, MBEDTLS_RSA_PKCS_V15, 0);
+    rsa.len = RRG_RSA_KEY_LEN;
+    mbedtls_mpi_read_string(&rsa.N, 16, RRG_RSA_N);
+    mbedtls_mpi_read_string(&rsa.E, 16, RRG_RSA_E);
+
+    // Verify (public key)
+    int is_verified = mbedtls_rsa_pkcs1_verify(&rsa, NULL, NULL, MBEDTLS_RSA_PUBLIC, MBEDTLS_MD_SHA1, 20, sha_hash, mem->signature);
+    mbedtls_rsa_free(&rsa);
+
+    if (is_verified == 0) {
+        return PM3_SUCCESS;
+    }
+    return PM3_EFAILED;
+}
+
+static int rdv4_sign_write(uint8_t *signature, uint8_t slen){
+    // save to mem
+    clearCommandBuffer();
+    PacketResponseNG resp;
+    SendCommandOLD(CMD_FLASHMEM_WRITE, FLASH_MEM_SIGNATURE_OFFSET, FLASH_MEM_SIGNATURE_LEN, 0, signature, slen);
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+    } else {
+        if (!resp.oldarg[0]) {
+            PrintAndLogEx(FAILED, "Writing signature ( "_RED_("fail") ")");
+        } else {
+            PrintAndLogEx(SUCCESS, "Writing signature ( "_GREEN_("ok") " ) at offset %u", FLASH_MEM_SIGNATURE_OFFSET);
+            return PM3_SUCCESS;
+        }
+    }
+    return PM3_EFAILED;
+}
 
 static int CmdFlashmemSpiBaudrate(const char *Cmd) {
 
@@ -344,23 +461,14 @@ static int CmdFlashMemInfo(const char *Cmd) {
 //    shall_write = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_FLASHMEM_INFO, NULL, 0);
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply");
-        return PM3_ETIMEOUT;
-    }
-
-    uint8_t isok = resp.oldarg[0] & 0xFF;
-    if (isok == false) {
-        PrintAndLogEx(FAILED, "failed");
-        return PM3_EFLASH;
-    }
-
-    // validate signature here
+    // validate signature data
     rdv40_validation_t mem;
-    memcpy(&mem, (rdv40_validation_t *)resp.data.asBytes, sizeof(rdv40_validation_t));
+    int res = rdv4_get_signature(&mem);
+    if (res != PM3_SUCCESS) {        
+        return res;
+    }
+
+    res = rdv4_validate(&mem);
 
     // Flash ID hash (sha1)
     uint8_t sha_hash[20] = {0};
@@ -369,7 +477,6 @@ static int CmdFlashMemInfo(const char *Cmd) {
     // print header
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Flash memory Information") " ---------");
-//    PrintAndLogEx(INFO, "-----------------------------------------------------------------");
     PrintAndLogEx(INFO, "ID................... %s", sprint_hex_inrow(mem.flashid, sizeof(mem.flashid)));
     PrintAndLogEx(INFO, "SHA1................. %s", sprint_hex_inrow(sha_hash, sizeof(sha_hash)));
     PrintAndLogEx(NORMAL, "");
@@ -378,77 +485,22 @@ static int CmdFlashMemInfo(const char *Cmd) {
         PrintAndLogEx(INFO, " %s", sprint_hex_inrow(mem.signature + (i * 32), 32));
     }
 
-//-------------------------------------------------------------------------------
-// RRG Public RSA Key
-//
-
-// public key Exponent E
-#define RSA_E "010001"
-
-// public key modulus N
-#define RSA_N "E28D809BF323171D11D1ACA4C32A5B7E0A8974FD171E75AD120D60E9B76968FF" \
-              "4B0A6364AE50583F9555B8EE1A725F279E949246DF0EFCE4C02B9F3ACDCC623F" \
-              "9337F21C0C066FFB703D8BFCB5067F309E056772096642C2B1A8F50305D5EC33" \
-              "DB7FB5A3C8AC42EB635AE3C148C910750ABAA280CE82DC2F180F49F30A1393B5"
-
-//-------------------------------------------------------------------------------
-// Example RSA-1024 keypair, for test purposes  (from common/polarssl/rsa.c)
-//
-
-// private key  Exponent D
-#define RSA_D   "24BF6185468786FDD303083D25E64EFC" \
-    "66CA472BC44D253102F8B4A9D3BFA750" \
-    "91386C0077937FE33FA3252D28855837" \
-    "AE1B484A8A9A45F7EE8C0C634F99E8CD" \
-    "DF79C5CE07EE72C7F123142198164234" \
-    "CABB724CF78B8173B9F880FC86322407" \
-    "AF1FEDFDDE2BEB674CA15F3E81A1521E" \
-    "071513A1E85B5DFA031F21ECAE91A34D"
-
-// prime P
-#define RSA_P   "C36D0EB7FCD285223CFB5AABA5BDA3D8" \
-    "2C01CAD19EA484A87EA4377637E75500" \
-    "FCB2005C5C7DD6EC4AC023CDA285D796" \
-    "C3D9E75E1EFC42488BB4F1D13AC30A57"
-
-// prime Q
-#define RSA_Q   "C000DF51A7C77AE8D7C7370C1FF55B69" \
-    "E211C2B9E5DB1ED0BF61D0D9899620F4" \
-    "910E4168387E3C30AA1E00C339A79508" \
-    "8452DD96A9A5EA5D9DCA68DA636032AF"
-
-#define RSA_DP  "C1ACF567564274FB07A0BBAD5D26E298" \
-    "3C94D22288ACD763FD8E5600ED4A702D" \
-    "F84198A5F06C2E72236AE490C93F07F8" \
-    "3CC559CD27BC2D1CA488811730BB5725"
-
-#define RSA_DQ  "4959CBF6F8FEF750AEE6977C155579C7" \
-    "D8AAEA56749EA28623272E4F7D0592AF" \
-    "7C1F1313CAC9471B5C523BFE592F517B" \
-    "407A1BD76C164B93DA2D32A383E58357"
-
-#define RSA_QP  "9AE7FBC99546432DF71896FC239EADAE" \
-    "F38D18D2B2F0E2DD275AA977E2BF4411" \
-    "F5A3B2A5D33605AEBBCCBA7FEB9F2D2F" \
-    "A74206CEC169D74BF5A8C50D6F48EA08"
-
-#define KEY_LEN 128
-
     mbedtls_rsa_context rsa;
     mbedtls_rsa_init(&rsa, MBEDTLS_RSA_PKCS_V15, 0);
 
-    rsa.len = KEY_LEN;
+    rsa.len = RRG_RSA_KEY_LEN;
 
-    mbedtls_mpi_read_string(&rsa.N, 16, RSA_N);
-    mbedtls_mpi_read_string(&rsa.E, 16, RSA_E);
+    // add public key 
+    mbedtls_mpi_read_string(&rsa.N, 16, RRG_RSA_N);
+    mbedtls_mpi_read_string(&rsa.E, 16, RRG_RSA_E);
+
+    // add private key
     mbedtls_mpi_read_string(&rsa.D, 16, RSA_D);
     mbedtls_mpi_read_string(&rsa.P, 16, RSA_P);
     mbedtls_mpi_read_string(&rsa.Q, 16, RSA_Q);
     mbedtls_mpi_read_string(&rsa.DP, 16, RSA_DP);
     mbedtls_mpi_read_string(&rsa.DQ, 16, RSA_DQ);
     mbedtls_mpi_read_string(&rsa.QP, 16, RSA_QP);
-
-    bool is_keyok = (mbedtls_rsa_check_pubkey(&rsa) == 0 || mbedtls_rsa_check_privkey(&rsa) == 0);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("RDV4 RSA Public key") " --------------");
@@ -466,48 +518,35 @@ static int CmdFlashMemInfo(const char *Cmd) {
     PrintAndLogEx(INFO, " %.64s", str_pk + 64);
     PrintAndLogEx(INFO, " %.64s", str_pk + 128);
     PrintAndLogEx(INFO, " %.64s", str_pk + 192);
-
     PrintAndLogEx(NORMAL, "");
-    const char *msgkey = "RSA key validation... ";
-    if (is_keyok)
-        PrintAndLogEx(SUCCESS, "%s( " _GREEN_("ok") " )", msgkey);
-    else
-        PrintAndLogEx(FAILED, "%s( " _RED_("failed") " )", msgkey);
 
-    //
-    uint8_t from_device[KEY_LEN];
-    uint8_t sign[KEY_LEN];
+    bool is_keyok = (mbedtls_rsa_check_pubkey(&rsa) == 0 || mbedtls_rsa_check_privkey(&rsa) == 0);
+    PrintAndLogEx(
+        (is_keyok) ? SUCCESS : FAILED,
+        "RSA key validation...  ( %s )",
+        (is_keyok) ?  _GREEN_("ok") : _RED_("fail")
+    );
 
     // to be verified
-    memcpy(from_device, mem.signature, KEY_LEN);
+    uint8_t from_device[RRG_RSA_KEY_LEN];
+    memcpy(from_device, mem.signature, RRG_RSA_KEY_LEN);
 
-    // to be signed (all zeros
-    memset(sign, 0, KEY_LEN);
+    // to be signed
+    uint8_t sign[RRG_RSA_KEY_LEN];
+    memset(sign, 0, RRG_RSA_KEY_LEN);
 
     // Signing (private key)
     if (shall_sign) {
 
         int is_signed = mbedtls_rsa_pkcs1_sign(&rsa, NULL, NULL, MBEDTLS_RSA_PRIVATE, MBEDTLS_MD_SHA1, 20, sha_hash, sign);
-        const char *msgsign = "RSA signing.......... ";
-        if (is_signed == 0)
-            PrintAndLogEx(SUCCESS, "%s( " _GREEN_("ok") " )", msgsign);
-        else
-            PrintAndLogEx(FAILED, "%s( " _RED_("failed") " )", msgsign);
-
+        PrintAndLogEx(
+            (is_signed == 0) ? SUCCESS : FAILED,
+            "RSA signing.......... ( %s )",
+            (is_signed == 0) ?  _GREEN_("ok") : _RED_("fail")
+        );
+        
         if (shall_write) {
-            // save to mem
-            clearCommandBuffer();
-            SendCommandOLD(CMD_FLASHMEM_WRITE, FLASH_MEM_SIGNATURE_OFFSET, FLASH_MEM_SIGNATURE_LEN, 0, sign, sizeof(sign));
-            if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-                PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-            } else {
-
-                if (!resp.oldarg[0])
-                    PrintAndLogEx(FAILED, "Writing signature failed");
-                else
-                    PrintAndLogEx(SUCCESS, "Writing signature ok [offset: %u]", FLASH_MEM_SIGNATURE_OFFSET);
-
-            }
+            rdv4_sign_write(sign, RRG_RSA_KEY_LEN);
         }
         PrintAndLogEx(INFO, "Signed");
         for (int i = 0; i < (sizeof(sign) / 32); i++) {
@@ -517,14 +556,15 @@ static int CmdFlashMemInfo(const char *Cmd) {
 
     // Verify (public key)
     int is_verified = mbedtls_rsa_pkcs1_verify(&rsa, NULL, NULL, MBEDTLS_RSA_PUBLIC, MBEDTLS_MD_SHA1, 20, sha_hash, from_device);
-    const char *msgverify = "RSA verification..... ";
-    if (is_verified == 0)
-        PrintAndLogEx(SUCCESS, "%s( " _GREEN_("ok") " )", msgverify);
-    else
-        PrintAndLogEx(FAILED, "%s( " _RED_("failed") " )", msgverify);
+    mbedtls_rsa_free(&rsa);
+
+    PrintAndLogEx(
+        (is_verified == 0) ? SUCCESS : FAILED,
+        "RSA verification.....  ( %s )",
+        (is_verified == 0) ?  _GREEN_("ok") : _RED_("fail")
+    );
 
     PrintAndLogEx(NORMAL, "");
-    mbedtls_rsa_free(&rsa);
     return PM3_SUCCESS;
 }
 

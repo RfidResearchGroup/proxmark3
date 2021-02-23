@@ -3869,8 +3869,8 @@ static int CmdT55xxSniff(const char *Cmd) {
                   "Sniff LF t55xx based trafic and decode possible cmd / blocks.\n"
                   "Lower tolerance means tighter pulses. ",
                   "lf t55xx sniff\n"
-                  "lf t55xx sniff -1 -t 2               -> use buffer with tolernace of 2\n"
-                  "lf t55xx sniff -1 --zero 7 --one 14  -> use buffer, zero pulse width 7,  one pulse width 15"
+                  "lf t55xx sniff -1 -t 2               -> use buffer with tolerance of 2\n"
+                  "lf t55xx sniff -1 --zero 7 --one 14  -> use buffer, zero pulse width 7, one pulse width 15"
                  );
 
     void *argtable[] = {

@@ -23,6 +23,8 @@
 #include "cmddata.h"
 #include "commonutil.h"
 #include "pm3_cmd.h"
+#include "pmflash.h"      // rdv40validation_t
+#include "cmdflashmem.h"  // get_signature..
 
 static int CmdHelp(const char *Cmd);
 
@@ -224,10 +226,10 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
             sprintf(asBuff, "ROMless or on-chip Flash");
             break;
         case 2:
-            sprintf(asBuff, "Embedded Flash Memory");
+            sprintf(asBuff, "Embedded flash memory");
             break;
         case 3:
-            sprintf(asBuff, "ROM and Embedded Flash Memory\nNVPSIZ is ROM size\nNVPSIZ2 is Flash size");
+            sprintf(asBuff, "ROM and Embedded flash memory\nNVPSIZ is ROM size\nNVPSIZ2 is Flash size");
             break;
         case 4:
             sprintf(asBuff, "SRAM emulating ROM");
@@ -266,12 +268,13 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
             break;
     }
 
-    PrintAndLogEx(NORMAL, "  --= Nonvolatile program memory: " _YELLOW_("%uK") " bytes %s ( " _YELLOW_("%2.0f%%") " used )"
-                  , mem_avail
+    PrintAndLogEx(NORMAL, "  --= %s " _YELLOW_("%uK") " bytes ( " _YELLOW_("%2.0f%%") " used )"
                   , asBuff
+                  , mem_avail
                   , mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100
                  );
 
+    /*
     switch ((iChipID & 0xF000) >> 12) {
         case 0:
             sprintf(asBuff, "None");
@@ -305,6 +308,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
             break;
     }
     PrintAndLogEx(NORMAL, "  --= Second nonvolatile program memory size: %s", asBuff);
+    */
 }
 
 static int CmdDbg(const char *Cmd) {
@@ -959,17 +963,29 @@ void pm3_version(bool verbose, bool oneliner) {
         PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
 
         PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3") " ]");
-        if (IfPm3Rdv4Fw() == false) {
-            PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3GENERIC"));
-            if (IfPm3FpcUsartHost()) {
-                PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", _GREEN_("present"));
+        if (IfPm3Rdv4Fw()) {
+
+            bool is_genuine_rdv4 = false;
+            // validate signature data
+            rdv40_validation_t mem;
+            if (rdv4_get_signature(&mem) == PM3_SUCCESS) {
+                if (rdv4_validate(&mem) == PM3_SUCCESS) {
+                    is_genuine_rdv4 = true;
+                }
             }
-        } else {
-            PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3RDV4"));
+
+            PrintAndLogEx(NORMAL, "  device.................... %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _RED_("device / fw mismatch"));
+            PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("RDV4"));
             PrintAndLogEx(NORMAL, "  external flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
             PrintAndLogEx(NORMAL, "  smartcard reader.......... %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
             PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
+        } else {
+            PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3 GENERIC"));
+            if (IfPm3FpcUsartHost()) {
+                PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", _GREEN_("present"));
+            }
         }
+
         if (IfPm3FpcUsartDevFromUsb()) {
             PrintAndLogEx(NORMAL, "  FPC USART for developer... %s", _GREEN_("present"));
         }
@@ -989,5 +1005,5 @@ void pm3_version(bool verbose, bool oneliner) {
 
         lookupChipID(payload->id, payload->section_size);
     }
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
 }

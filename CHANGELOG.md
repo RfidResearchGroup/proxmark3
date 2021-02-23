@@ -3,11 +3,20 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added parsing of EF_CardAccess to display PACE algorithm, version and parameter in `hf emrtd info` (@aveao)
+ - Change, numerous commands more uses cliparser (@tcprst, @iceman1001)
+ - Added more originality public keys (@anon)
+ - Added `hf 14a info` - now also verify MFC Ev1 signatures (@iceman1001)
  - Added `LF_THAREXDE` standalone mode which simulates and reads EM4x50 cards (@tharexde)
  - Added `hf jooki` commands (@iceman1001)
+ - Changed `lf hid clone` - also accepts binary wiegand (@iceman1001)
  - Changed `wiegand encode` - format param is now optional, w/o it will try encode all formats (@iceman1001)
  - Fix cppchecker warnings (@iceman1001)
- - Added `trace list -t mf` - now can use external dictionary keys file
+ - Added `trace list -t mf` - now can use external dictionary keys file (@McEloff)
+ - Fix `lf gallagher read` - now correctly decodes card data
+ - Add support to `lf gallagher clone` and `lf gallagher sim` for writing specific card region, facility, card & issue numbers (@DarkMatterMatt)
+ - Added support for older vid/pid detection (@Gator96100)
+ - Added `hf mfdes bruteaid` - proper bruteforce of DESFire AID when no reading of files is possible (@craftbyte)
  - Added support for bidirectional communication for `lf em 4x50 sim` (@tharexde)
  - Change `PLATFORM=PM3OTHER` to `PLATFORM=PM3GENERIC` (@iceman1001)
  - Added `tools/hitag2crack/crack5opencl`, an optimized version of `crack5gpu` (@matrix)
@@ -133,8 +142,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Change, use system Whereami library if available (@doegox)
  - Change, use system Zlib library if available (@doegox)
  - Fix release version information (@doegox)
- - Fix `lf gallagher read` - now correctly decodes card data
- - Add support to `lf gallagher clone` and `lf gallagher sim` for writing specific card region, facility, card & issue numbers (@DarkMatterMatt)
 
 ## [ice coffee.4.9237][2020-05-21]
  - Updated documentation (@doegox, @iceman1001)

@@ -276,7 +276,7 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
 /**
  * @brief detects if file is of a supported filetype based on extension
  * @param filename
- * @return 
+ * @return
  */
 DumpFileType_t getfiletype(const char *filename);
 #endif // FILEUTILS_H

@@ -1658,7 +1658,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     } else {
 
         // Double & triple sized UID, can be mapped to a manufacturer.
-        PrintAndLogEx(SUCCESS, "MANUFACTURER:    " _YELLOW_("%s"), getTagInfo(card.uid[0]));
+        PrintAndLogEx(SUCCESS, "MANUFACTURER: " _YELLOW_("%s"), getTagInfo(card.uid[0]));
 
         switch (card.uid[0]) {
             case 0x02: // ST
@@ -2101,6 +2101,14 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             if (do_nack_test)
                 detect_classic_nackbug(false);
         }
+
+        uint8_t signature[32] = {0};
+        res = detect_mfc_ev1_signature(signature);
+        if (res == PM3_SUCCESS) {
+            mfc_ev1_print_signature(card.uid, card.uidlen, signature, sizeof(signature));            
+        }
+
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mf`") " commands");
     }
 
     if (isMifareUltralight)

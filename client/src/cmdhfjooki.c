@@ -40,7 +40,7 @@ typedef struct {
 // sample set for selftest.
 jooki_test_t jooks[] = {
     { {0x04, 0xDA, 0xB7, 0x6A, 0xE7, 0x4C, 0x80}, "ruxow8lnn88uyeX+", 0x01, 0x00},
-    { {0x04, 0xf0, 0x22, 0xc2, 0x33, 0x5e, 0x80}, "\0", 0x01 , 0x00},
+    { {0x04, 0xf0, 0x22, 0xc2, 0x33, 0x5e, 0x80}, "\0", 0x01, 0x00},
     { {0x04, 0x8C, 0xEC, 0xDA, 0xF0, 0x4A, 0x80}, "ONrsVf7jX6IaSNV6", 0x01, 0x01},
     { {0x04, 0x92, 0xA7, 0x6A, 0xE7, 0x4C, 0x81}, "Hjjpcx/mZwuveTF+", 0x01, 0x02},
     { {0x04, 0xD0, 0xB0, 0x3A, 0xD3, 0x63, 0x80}, "\0", 0x01, 0x02},
@@ -59,15 +59,15 @@ jooki_figure_t jooks_figures[] = {
     {0x01, 0x04, "ThankYou", "Figurine"},
     {0x01, 0x05, "Whale", "Figurine"},
     {0x01, 0x06, "Black Dragon", "Figurine"},
-    {0x01, 0x07, "Black Fox", "Figurine"}, 
+    {0x01, 0x07, "Black Fox", "Figurine"},
     {0x01, 0x08, "Black Knight", "Figurine"},
     {0x01, 0x09, "Black Whale", "Figurine"},
     {0x01, 0x0A, "White Dragon", "Figurine"},
-    {0x01, 0x0B, "White Fox", "Figurine"}, 
+    {0x01, 0x0B, "White Fox", "Figurine"},
     {0x01, 0x0C, "White Knight", "Figurine"},
     {0x01, 0x0D, "White Whale", "Figurine"},
 
-    {0x02, 0x01, "Generic Flat", "Stone"},
+    {0x02, 0x00, "Generic Flat", "Stone"},
 
     {0x03, 0x00, "record", "Sys"},
     {0x03, 0x01, "factory_mode_on", "Sys"},
@@ -77,9 +77,10 @@ jooki_figure_t jooks_figures[] = {
     {0x03, 0x05, "toy_safe_on", "Sys"},
     {0x03, 0x06, "toy_safe_off", "Sys"},
     {0x03, 0x07, "wifi_on", "Sys"},
-    {0x03, 0x08, "bt_on", "Sys"},
-    {0x03, 0x0a, "bt_off", "Sys"},
-    {0x03, 0x0b, "production_finished", "Sys"},
+    {0x03, 0x08, "wifi_off", "Sys"},
+    {0x03, 0x09, "bt_on", "Sys"},
+    {0x03, 0x0A, "bt_off", "Sys"},
+    {0x03, 0x0B, "production_finished", "Sys"},
 
     {0x04, 0x00, "test.0", "Test"},
     {0x04, 0x01, "test.1", "Test"},
@@ -105,7 +106,7 @@ jooki_figure_t jooks_figures[] = {
 };
 
 static int jooki_lookup(uint8_t tid, uint8_t fid) {
-    for (int i=0; i < ARRAYLEN(jooks_figures); i++) {
+    for (int i = 0; i < ARRAYLEN(jooks_figures); i++) {
         jooki_figure_t tmp = jooks_figures[i];
         if (tmp.typeid == tid && tmp.figureid == fid) {
             return i;
@@ -126,7 +127,7 @@ static int jooki_encode(uint8_t *iv, uint8_t tid, uint8_t fid, uint8_t *uid, uin
     if (out == NULL) {
         PrintAndLogEx(ERR, "(encode jooki) base64ndef param is NULL");
         return PM3_EINVARG;
-    }    
+    }
 
     out[0] = 0x00;
     if (iv == NULL || uid == NULL) {
@@ -134,7 +135,7 @@ static int jooki_encode(uint8_t *iv, uint8_t tid, uint8_t fid, uint8_t *uid, uin
         return PM3_EINVARG;
     }
 
-    uint8_t d[JOOKI_PLAIN_LEN] = {iv[0], iv[1],iv[2], tid, fid, uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6]};
+    uint8_t d[JOOKI_PLAIN_LEN] = {iv[0], iv[1], iv[2], tid, fid, uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6]};
     uint8_t enc[JOOKI_PLAIN_LEN] = {0};
     for (uint8_t i = 0; i < JOOKI_PLAIN_LEN; i++) {
 
@@ -149,7 +150,7 @@ static int jooki_encode(uint8_t *iv, uint8_t tid, uint8_t fid, uint8_t *uid, uin
     size_t b64len = 0;
     uint8_t b64[20];
     memset(b64, 0, 20);
-    mbedtls_base64_encode(b64, sizeof(b64), &b64len, (const unsigned char*)enc, sizeof(enc));
+    mbedtls_base64_encode(b64, sizeof(b64), &b64len, (const unsigned char *)enc, sizeof(enc));
     memcpy(out, b64, b64len);
     return PM3_SUCCESS;
 }
@@ -157,7 +158,7 @@ static int jooki_encode(uint8_t *iv, uint8_t tid, uint8_t fid, uint8_t *uid, uin
 static int jooki_decode(uint8_t *b64, uint8_t *result) {
     uint8_t ndef[JOOKI_PLAIN_LEN] = {0};
     size_t outputlen = 0;
-    mbedtls_base64_decode(ndef, sizeof(ndef), &outputlen, (const unsigned char*)b64, 16);
+    mbedtls_base64_decode(ndef, sizeof(ndef), &outputlen, (const unsigned char *)b64, 16);
 
     PrintAndLogEx(DEBUG, "(decode_jooki) raw encoded... " _GREEN_("%s"), sprint_hex(ndef, sizeof(ndef)));
 
@@ -177,11 +178,11 @@ static int jooki_create_ndef(uint8_t *b64ndef, uint8_t *ndefrecord) {
         PrintAndLogEx(ERR, "(jooki_create_ndef) ndefrecord param is NULL");
         return PM3_EINVARG;
     }
-    memcpy(ndefrecord, 
-        "\x01\x03\xa0\x0c\x34\x03\x29\xd1"
-        "\x01\x25\x55\x04\x73\x2e\x6a\x6f"
-        "\x6f\x6b\x69\x2e\x72\x6f\x63\x6b"
-        "\x73\x2f\x73\x2f\x3f\x73\x3d", 31);
+    memcpy(ndefrecord,
+           "\x01\x03\xa0\x0c\x34\x03\x29\xd1"
+           "\x01\x25\x55\x04\x73\x2e\x6a\x6f"
+           "\x6f\x6b\x69\x2e\x72\x6f\x63\x6b"
+           "\x73\x2f\x73\x2f\x3f\x73\x3d", 31);
     memcpy(ndefrecord + 31, b64ndef, 16);
     memcpy(ndefrecord + 47, "\x0a\xFE\x00\x00\x00", 5);
     return PM3_SUCCESS;
@@ -192,13 +193,13 @@ static void jooki_printEx(uint8_t *b64, uint8_t *iv, uint8_t tid, uint8_t fid, u
 
     PrintAndLogEx(INFO, "Encoded URL.. %s ( %s )", sprint_hex(b64, 12), b64);
     PrintAndLogEx(INFO, "Figurine..... %02x %02x - " _GREEN_("%s, %s")
-        , tid
-        , fid
-        , (idx != -1) ?  jooks_figures[idx].typedesc : "n/a" 
-        , (idx != -1) ?  jooks_figures[idx].figdesc : "n/a"
-        );
-    PrintAndLogEx(INFO, "iv........... %s", sprint_hex(iv, JOOKI_IV_LEN));  
-    PrintAndLogEx(INFO, "uid.......... %s", sprint_hex(uid, JOOKI_UID_LEN));  
+                  , tid
+                  , fid
+                  , (idx != -1) ?  jooks_figures[idx].typedesc : "n/a"
+                  , (idx != -1) ?  jooks_figures[idx].figdesc : "n/a"
+                 );
+    PrintAndLogEx(INFO, "iv........... %s", sprint_hex(iv, JOOKI_IV_LEN));
+    PrintAndLogEx(INFO, "uid.......... %s", sprint_hex(uid, JOOKI_UID_LEN));
 
     uint8_t ndefmsg[52] = {0};
     jooki_create_ndef(b64, ndefmsg);
@@ -227,8 +228,8 @@ static void jooki_print(uint8_t *b64, uint8_t *result, bool verbose) {
 }
 
 static int jooki_selftest(void) {
-    
-    PrintAndLogEx(INFO, "======== " _CYAN_("selftest") " ==========================================="); 
+
+    PrintAndLogEx(INFO, "======== " _CYAN_("selftest") " ===========================================");
     for (int i = 0; i < ARRAYLEN(jooks); i++) {
         if (strlen(jooks[i].b64) == 0)
             continue;
@@ -236,38 +237,38 @@ static int jooki_selftest(void) {
         uint8_t iv[JOOKI_IV_LEN] = {0};
         uint8_t uid[JOOKI_UID_LEN] = {0};
         uint8_t result[JOOKI_PLAIN_LEN] = {0};
-        jooki_decode((uint8_t*)jooks[i].b64, result);
+        jooki_decode((uint8_t *)jooks[i].b64, result);
 
         memcpy(iv, result, JOOKI_IV_LEN);
         uint8_t tid = result[3];
         uint8_t fid = result[4];
         memcpy(uid, result + 5, sizeof(uid));
 
-        bool tid_ok = (tid == jooks[i].typeid); 
-        bool fid_ok = (fid == jooks[i].figureid); 
+        bool tid_ok = (tid == jooks[i].typeid);
+        bool fid_ok = (fid == jooks[i].figureid);
         bool uid_ok = (memcmp(uid, jooks[i].uid, sizeof(uid)) == 0);
 
         int idx = jooki_lookup(tid, fid);
 
-        PrintAndLogEx(INFO, "Encoded URL.. %s ( %s )", sprint_hex((const uint8_t*)jooks[i].b64, 12), jooks[i].b64);
-        PrintAndLogEx(INFO, "Type......... %02x - " _GREEN_("%s") " ( %s )", tid, (idx != -1) ? jooks_figures[idx].typedesc : "n/a", tid_ok ? _GREEN_("ok") : _RED_("fail"));  
-        PrintAndLogEx(INFO, "Figurine..... %02x - " _GREEN_("%s") " ( %s )", fid, (idx != -1) ? jooks_figures[idx].figdesc : "n/a", fid_ok ? _GREEN_("ok") : _RED_("fail"));  
-        PrintAndLogEx(INFO, "iv........... %s", sprint_hex(iv, sizeof(iv)));  
-        PrintAndLogEx(INFO, "uid.......... %s ( %s )", sprint_hex(uid, sizeof(uid)), uid_ok ? _GREEN_("ok") : _RED_("fail"));          
+        PrintAndLogEx(INFO, "Encoded URL.. %s ( %s )", sprint_hex((const uint8_t *)jooks[i].b64, 12), jooks[i].b64);
+        PrintAndLogEx(INFO, "Type......... %02x - " _GREEN_("%s") " ( %s )", tid, (idx != -1) ? jooks_figures[idx].typedesc : "n/a", tid_ok ? _GREEN_("ok") : _RED_("fail"));
+        PrintAndLogEx(INFO, "Figurine..... %02x - " _GREEN_("%s") " ( %s )", fid, (idx != -1) ? jooks_figures[idx].figdesc : "n/a", fid_ok ? _GREEN_("ok") : _RED_("fail"));
+        PrintAndLogEx(INFO, "iv........... %s", sprint_hex(iv, sizeof(iv)));
+        PrintAndLogEx(INFO, "uid.......... %s ( %s )", sprint_hex(uid, sizeof(uid)), uid_ok ? _GREEN_("ok") : _RED_("fail"));
 
         uint8_t b64[JOOKI_B64_LEN] = {0};
-        memset(b64, 0, sizeof(b64));        
+        memset(b64, 0, sizeof(b64));
         jooki_encode(iv, tid, fid, uid, b64);
 
         uint8_t ndefmsg[52] = {0};
         jooki_create_ndef(b64, ndefmsg);
         PrintAndLogEx(INFO, "NDEF raw .... %s", sprint_hex(ndefmsg, sizeof(ndefmsg)));
-        
+
         int status = NDEFRecordsDecodeAndPrint(ndefmsg, sizeof(ndefmsg));
-        if ( status != PM3_SUCCESS) {
+        if (status != PM3_SUCCESS) {
             status = NDEFDecodeAndPrint(ndefmsg, sizeof(ndefmsg), true);
         }
-        PrintAndLogEx(INFO, "==================================================================");     
+        PrintAndLogEx(INFO, "==================================================================");
     }
     return PM3_SUCCESS;
 }
@@ -278,7 +279,8 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
                   "Encode a Jooki token to base64 NDEF URI format",
                   "hf jooki encode -t            --> selftest\n"
                   "hf jooki encode -r --dragon   --> read uid from tag and use for encoding\n"
-                  "hf jooki encode --uid 04010203040506 --dragon"
+                  "hf jooki encode --uid 04010203040506 --dragon\n"
+                  "hf jooki encode --uid 04010203040506 --tid 1 --fid 1"
                  );
 
     void *argtable[] = {
@@ -300,6 +302,8 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
         arg_lit0(NULL, "whitefox", "figurine type"),
         arg_lit0(NULL, "whiteknight", "figurine type"),
         arg_lit0(NULL, "whitewhale", "figurine type"),
+        arg_u64_0(NULL, "tid", "<dec>", "figurine type id"),
+        arg_u64_0(NULL, "fid", "<dec>", "figurine id"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -328,18 +332,48 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
     bool tb = arg_get_lit(ctx, 15);
     bool tc = arg_get_lit(ctx, 16);
     bool td = arg_get_lit(ctx, 17);
+
+    uint8_t ftid = arg_get_u32_def(ctx, 18, 0);
+    uint8_t ffid = arg_get_u32_def(ctx, 19, 0);
+
+    bool figure_abbr = true;
+
     CLIParserFree(ctx);
-    
+
     if (selftest) {
         return jooki_selftest();
     }
 
-    if ((t0 + t1 + t2 + t3 + t5 + t6 + t7 + t8 + t9 + ta + tb + tc + td) > 1) {
-        PrintAndLogEx(ERR, "Select one tag type");
+    uint8_t tid, fid;
+
+    if (ftid || ffid) {
+        figure_abbr = false;
+    }
+
+    if (ftid > 0x04 || ffid > 0x20) {
+        PrintAndLogEx(ERR, "Use a valid Figure Type ID and Figure ID");
         return PM3_EINVARG;
     }
-    uint8_t tid = 0x01;
-    uint8_t fid = 0x00;
+
+    uint8_t figure_abbr_val = t0 + t1 + t2 + t3 + t5 + t6 + t7 + t8 + t9 + ta + tb + tc + td;
+
+    if (figure_abbr_val > 1) {
+        PrintAndLogEx(ERR, "Select one tag type or use figurine type id and figurine id");
+        return PM3_EINVARG;
+    }
+
+    if (figure_abbr_val == 1 && !figure_abbr) {
+        PrintAndLogEx(ERR, "Use either --tid and --fid or one of the figurine types");
+        return PM3_EINVARG;
+    }
+
+    if (figure_abbr) {
+        tid = 0x01;
+    } else {
+        tid = ftid;
+    }
+    fid = ffid;
+
     if (t1)
         fid = 0x01;
     if (t2)
@@ -379,8 +413,8 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
     }
 
     uint8_t b64[JOOKI_B64_LEN] = {0};
-    memset(b64, 0, sizeof(b64));        
-    jooki_encode(iv, tid, fid, uid, b64);  
+    memset(b64, 0, sizeof(b64));
+    jooki_encode(iv, tid, fid, uid, b64);
     jooki_printEx(b64, iv, tid, fid, uid, verbose);
     return PM3_SUCCESS;
 }
@@ -450,7 +484,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
     uint8_t *data = calloc(144, sizeof(uint8_t));
 
     memcpy(data, uid, 3);
-    memcpy(data + (1*4), uid + 3, 4);
+    memcpy(data + (1 * 4), uid + 3, 4);
 
     // bbc0
     data[3] = 0x88 ^ data[0] ^ data[1] ^ data[2];
@@ -458,8 +492,8 @@ static int CmdHF14AJookiSim(const char *Cmd) {
     // bbc1
     data[8] = data[4] ^ data[5] ^ data[6] ^ data[7];
 
-    // copy NDEF magic firs, skip BBC1 
-    memcpy(data + (2*4) + 1, "\x48\x00\x00\xE1\x10\x12\x00", 7);
+    // copy NDEF magic firs, skip BBC1
+    memcpy(data + (2 * 4) + 1, "\x48\x00\x00\xE1\x10\x12\x00", 7);
 
     // copy raw NDEF
     jooki_create_ndef(b64, data + (4 * 4));
@@ -534,12 +568,12 @@ static int CmdHF14AJookiSim(const char *Cmd) {
         if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0)
             continue;
 
-        if (resp.status != PM3_SUCCESS) 
+        if (resp.status != PM3_SUCCESS)
             break;
     }
     free(data);
     PrintAndLogEx(INFO, "Done");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 14a list") "` to view trace log" );
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 14a list") "` to view trace log");
     return PM3_SUCCESS;
 }
 
@@ -547,7 +581,7 @@ static int CmdHF14AJookiClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf jooki clone",
                   "Write a Jooki token to a Ultralight or NTAG tag",
-                  "hf jooki clone -d <hex bytes>         --> where hex is raw NDEF"
+                  "hf jooki clone -d <hex bytes>         --> where hex is raw NDEF\n"
                   "hf jooki clone --b64 7WzlgEzqLgwTnWNy --> using base64 url parameter"
                  );
 
@@ -617,7 +651,7 @@ static int CmdHF14AJookiClone(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Done");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf mfu ndef") "` to view" );
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf mfu ndef") "` to view");
     return PM3_SUCCESS;
 }
 

@@ -77,7 +77,7 @@ quite a lot, see the [Changelog file](CHANGELOG.md) which we try to keep updated
 
 This repo compiles nicely on 
    - Proxspace v3.x
-     - [latest release v3.7.2](https://github.com/Gator96100/ProxSpace/releases)
+     - [latest release v3.7.3](https://github.com/Gator96100/ProxSpace/releases)
    - Windows/mingw environment with Qt5.6.1 & GCC 4.9
    - Ubuntu 16.04 -> 20.04
    - ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora, Debian

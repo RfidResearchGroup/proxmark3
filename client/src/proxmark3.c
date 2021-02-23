@@ -673,6 +673,8 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
     }
 
 finish:
+    if (ret != PM3_SUCCESS)
+        PrintAndLogEx(INFO, "The flashing procedure failed, follow the suggested steps!");
     ret = flash_stop_flashing();
     CloseProxmark(session.current_device);
 finish2:
@@ -684,7 +686,7 @@ finish2:
         PrintAndLogEx(SUCCESS, _CYAN_("All done"));
     else
         PrintAndLogEx(ERR, "Aborted on error");
-    PrintAndLogEx(NORMAL, "\nHave a nice day!");
+    PrintAndLogEx(INFO, "\nHave a nice day!");
     return ret;
 }
 #endif //LIBPM3

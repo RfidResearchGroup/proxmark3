@@ -940,22 +940,28 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     }
 
     bool verbose = arg_get_lit(clictx, 4);
-
     CLIParserFree(clictx);
 
-    size_t keylen = 0;
     uint8_t dec_data[8] = {0};
-
-    bool use_sc = IsCryptoHelperPresent(verbose);
-
-    if (have_key == false && use_sc == false) {
-        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Couldn't find any decryption methods");
-            return PM3_EINVARG;
+    bool use_sc = false;
+    if (have_key == false) {
+        use_sc = IsCryptoHelperPresent(verbose);
+        if (use_sc == false) {
+            size_t keylen = 0;
+            int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(INFO, "Couldn't find any decryption methods");
+                return PM3_EINVARG;
+            }
+    
+            if (keylen != 16) {
+                PrintAndLogEx(ERR, "Failed to load transport key from file");
+                free(keyptr);
+                return PM3_EINVARG;
+            }
+            memcpy(key, keyptr, sizeof(key));
+            free(keyptr);
         }
-        memcpy(key, keyptr, sizeof(key));
-        free(keyptr);
     }
 
     // tripledes
@@ -1157,18 +1163,25 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 
     CLIParserFree(clictx);
 
-    bool use_sc = IsCryptoHelperPresent(verbose);
+    bool use_sc = false;
+    if (have_key == false) {
+        use_sc = IsCryptoHelperPresent(verbose);
+        if (use_sc == false) {
+            size_t keylen = 0;
+            int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Failed to find any encryption methods");
+                return PM3_EINVARG;
+            }
 
-    if (have_key == false && use_sc == false) {
-        size_t keylen = 0;
-        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Failed to find the transport key");
-            return PM3_EINVARG;
+            if (keylen != 16) {
+                PrintAndLogEx(ERR, "Failed to load transport key from file");
+                free(keyptr);
+                return PM3_EINVARG;
+            }
+            memcpy(key, keyptr, sizeof(key));
+            free(keyptr);
         }
-
-        memcpy(key, keyptr, sizeof(key));
-        free(keyptr);
     }
 
     if (use_sc) {

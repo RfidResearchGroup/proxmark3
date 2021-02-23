@@ -27,6 +27,7 @@
 #include "des.h"                // des ecb
 #include "crapto1/crapto1.h"    // prng_successor
 #include "cmdhf14a.h"           // exchange APDU
+#include "crypto/libpcrypto.h"
 
 #define MFBLOCK_SIZE 16
 
@@ -425,6 +426,46 @@ static int usage_hf14_gen3freeze(void) {
     return PM3_SUCCESS;
 }
 
+int mfc_ev1_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
+
+    // ref:  MIFARE Classic EV1 Originality Signature Validation
+#define PUBLIC_MFCEV1_ECDA_KEYLEN 33
+    const ecdsa_publickey_t nxp_mfc_public_keys[] = {
+        {"NXP Mifare Classic MFC1C14_x", "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
+    };
+
+    uint8_t i;
+    bool is_valid = false;
+
+    for (i = 0; i < ARRAYLEN(nxp_mfc_public_keys); i++) {
+
+        int dl = 0;
+        uint8_t key[PUBLIC_MFCEV1_ECDA_KEYLEN];
+        param_gethex_to_eol(nxp_mfc_public_keys[i].value, 0, key, PUBLIC_MFCEV1_ECDA_KEYLEN, &dl);
+
+        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, uidlen, signature, signature_len, false);
+        is_valid = (res == 0);
+        if (is_valid)
+            break;
+    }
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
+    if (is_valid == false || i == ARRAYLEN(nxp_mfc_public_keys)) {
+        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
+        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
+        PrintAndLogEx(SUCCESS, "       Signature verification: " _RED_("failed"));
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, " IC signature public key name: %s", nxp_mfc_public_keys[i].desc);
+    PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfc_public_keys[i].value);
+    PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
+    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
+    PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
+    return PM3_SUCCESS;
+}
+
 static int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
@@ -634,14 +675,14 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Usage:  hf mf wrbl    <block number> <key A/B> <key (12 hex symbols)> <block data (32 hex symbols)>");
         PrintAndLogEx(NORMAL, "Examples:");
         PrintAndLogEx(NORMAL, "        hf mf wrbl 1 A FFFFFFFFFFFF 000102030405060708090A0B0C0D0E0F");
-        return 0;
+        return PM3_SUCCESS;
     }
 
     blockNo = param_get8(Cmd, 0);
     cmdp = tolower(param_getchar(Cmd, 1));
     if (cmdp == 0x00) {
         PrintAndLogEx(NORMAL, "Key type must be A or B");
-        return 1;
+        return PM3_EINVARG;
     }
 
     if (cmdp != 'a')
@@ -649,12 +690,12 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
 
     if (param_gethex(Cmd, 2, key, 12)) {
         PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
-        return 1;
+        return PM3_EINVARG;
     }
 
     if (param_gethex(Cmd, 3, bldata, 32)) {
         PrintAndLogEx(NORMAL, "Block data must include 32 HEX symbols");
-        return 1;
+        return PM3_EINVARG;
     }
 
     PrintAndLogEx(NORMAL, "--block no %d, key %c - %s", blockNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
@@ -674,7 +715,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Command execute timeout");
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfRdBl(const char *Cmd) {
@@ -706,34 +747,15 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "--block no %d, key %c - %s", blockNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
 
-    mf_readblock_t payload;
-    payload.blockno = blockNo;
-    payload.keytype = keyType;
-    memcpy(payload.key, key, sizeof(payload.key));
-
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
-
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500)) {
-        uint8_t *data = resp.data.asBytes;
-
-        if (resp.status == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "data: %s", sprint_hex(data, 16));
-        } else {
-            PrintAndLogEx(FAILED, "failed reading block");
-            return PM3_ESOFT;
-        }
-
+    uint8_t data[16] = {0};
+    int res =  mfReadBlock(blockNo, keyType, key, data);
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "data: %s", sprint_hex(data, 16));
         if ((data[6] || data[7] || data[8])) {
             decode_print_st(blockNo, data);
         }
-    } else {
-        PrintAndLogEx(WARNING, "Command execute timeout");
-        return PM3_ETIMEOUT;
     }
-
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfRdSc(const char *Cmd) {
@@ -769,30 +791,26 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "--sector no %d, key %c - %s ", sectorNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
 
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_READSC, sectorNo, keyType, 0, key, 6);
-    PrintAndLogEx(NORMAL, "");
-
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.oldarg[0] & 0xff;
-        uint8_t *data  = resp.data.asBytes;
-
-        PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
-        if (isOK) {
-
-            uint8_t blocks = NumBlocksPerSector(sectorNo);
-            uint8_t start = FirstBlockOfSector(sectorNo);
-
-            for (int i = 0; i < blocks; i++) {
-                PrintAndLogEx(NORMAL, "%3d | %s", start + i, sprint_hex(data + (i * 16), 16));
-            }
-            decode_print_st(start + blocks - 1, data + ((blocks - 1) * 16));
-        }
-    } else {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+    uint8_t sc_size = mfNumBlocksPerSector(sectorNo) * 16;
+    uint8_t *data = calloc(sc_size, sizeof(uint8_t));
+    if (data == NULL) {
+        PrintAndLogEx(ERR, "failed to allocate memory");
+        return PM3_EMALLOC;
     }
 
+    int res =  mfReadSector(sectorNo, keyType, key, data);
+    if (res == PM3_SUCCESS) {
+
+        uint8_t blocks = NumBlocksPerSector(sectorNo);
+        uint8_t start = FirstBlockOfSector(sectorNo);
+
+        for (int i = 0; i < blocks; i++) {
+            PrintAndLogEx(NORMAL, "%3d | %s", start + i, sprint_hex(data + (i * 16), 16));
+        }
+        decode_print_st(start + blocks - 1, data + ((blocks - 1) * 16));
+
+    }
+    free(data);
     return PM3_SUCCESS;
 }
 
