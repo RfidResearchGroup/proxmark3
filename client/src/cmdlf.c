@@ -500,7 +500,7 @@ int CmdLFConfig(const char *Cmd) {
     int8_t avg = arg_get_int_def(ctx, 3, 0);
     int8_t bps = arg_get_int_def(ctx, 4, -1);
     int8_t dec = arg_get_int_def(ctx, 5, -1);
-    int16_t div = arg_get_int_def(ctx, 6, -1);
+    int16_t divisor = arg_get_int_def(ctx, 6, -1);
     int16_t freq = arg_get_int_def(ctx, 7, -1);
     bool reset = arg_get_lit(ctx, 8);
     int32_t skip = arg_get_int_def(ctx, 9, -1);
@@ -562,8 +562,8 @@ int CmdLFConfig(const char *Cmd) {
             config.decimation = 8;
     }
 
-    if (div > -1) {
-        config.divisor = div;
+    if (divisor> -1) {
+        config.divisor = divisor;
         if (config.divisor < 19) {
             PrintAndLogEx(ERR, "divisor must be between 19 and 255");
             return PM3_EINVARG;
@@ -1001,9 +1001,8 @@ int CmdLFaskSim(const char *Cmd) {
         // will need carrier, clock, and bitstream
         PrintAndLogEx(INFO, "No user supplied data, using Demodbuffer...");
 
-        int res = 0;
         if (clk == 0) {
-            res = GetAskClock("0", verbose);
+            int res = GetAskClock("0", verbose);
             if (res < 1) {
                 clk = 64;
             } else {
@@ -1117,7 +1116,7 @@ int CmdLFpskSim(const char *Cmd) {
         // will need carrier, clock, and bitstream
         PrintAndLogEx(INFO, "No user supplied data, using Demodbuffer...");
 
-        int res = 0;
+        int res;
         if (clk == 0) {
             res = GetPskClock("", verbose);
             if (res < 1) {
@@ -1152,7 +1151,6 @@ int CmdLFpskSim(const char *Cmd) {
         psk2TOpsk1(DemodBuffer, DemodBufferLen);
     } else if (psk_type == 3) {
         PrintAndLogEx(INFO, "PSK3 not yet available. Falling back to PSK1");
-        psk_type = 1;
     }
 
     size_t size = DemodBufferLen;
