@@ -28,7 +28,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install ansicolors
+          python3 -m pip install ansicolors sslcrypto
           if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
 
       - name: make clean
@@ -69,7 +69,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install ansicolors
+          python3 -m pip install ansicolors sslcrypto
           if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
 
       - name: make clean
@@ -111,7 +111,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install ansicolors
+          python3 -m pip install ansicolors sslcrypto
           if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
 
       - name: Prepare Build Folders
