@@ -106,7 +106,7 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
     cl_device_info ocl_devices_info[8] = { CL_DEVICE_TYPE, CL_DEVICE_NAME, CL_DEVICE_VERSION, CL_DRIVER_VERSION, CL_DEVICE_VENDOR, CL_DEVICE_LOCAL_MEM_TYPE, CL_DEVICE_MAX_WORK_ITEM_SIZES, CL_DEVICE_MAX_COMPUTE_UNITS };
     unsigned int ocl_devices_info_cnt = sizeof(ocl_devices_info) / sizeof(cl_device_info);
 
-    unsigned int info_idx = 0;
+    unsigned int info_idx;
     size_t tmp_len = 0;
     char *tmp_buf = NULL;
 
@@ -120,7 +120,7 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
 
         if ((*cd_ctx)[platform_idx].selected)(*selected_platforms_cnt)++;
 
-        if (verbose) printf("\n-- Platform ID: %d\n", platform_idx + 1);
+        if (verbose) printf("\n-- Platform ID: %u\n", platform_idx + 1);
 
         for (info_idx = 0; info_idx < ocl_platforms_info_cnt; info_idx++) {
             cl_platform_info ocl_info = ocl_platforms_info[info_idx];
