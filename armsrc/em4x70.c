@@ -200,7 +200,7 @@ static uint32_t get_pulse_length(edge_detection_t edge) {
 
 static bool check_pulse_length(uint32_t pl, uint32_t length) {
     // check if pulse length <pl> corresponds to given length <length>
-    return ((pl >= (length - EM4X70_T_TAG_TOLERANCE)) & (pl <= (length + EM4X70_T_TAG_TOLERANCE)));
+    return ((pl >= (length - EM4X70_T_TAG_TOLERANCE)) && (pl <= (length + EM4X70_T_TAG_TOLERANCE)));
 }
 
 static void em4x70_send_bit(bool bit) {
