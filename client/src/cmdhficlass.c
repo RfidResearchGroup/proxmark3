@@ -956,6 +956,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     
             if (keylen != 16) {
                 PrintAndLogEx(ERR, "Failed to load transport key from file");
+                free(keyptr);
                 return PM3_EINVARG;
             }
             memcpy(key, keyptr, sizeof(key));
@@ -1175,6 +1176,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 
             if (keylen != 16) {
                 PrintAndLogEx(ERR, "Failed to load transport key from file");
+                free(keyptr);
                 return PM3_EINVARG;
             }
             memcpy(key, keyptr, sizeof(key));
