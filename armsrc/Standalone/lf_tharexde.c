@@ -68,6 +68,7 @@
 #define LF_EM4X50_INPUTFILE_SIM         "lf_em4x50_simulate.eml"
 #define LF_EM4X50_LOGFILE_SIM           "lf_em4x50_passwords.log"
 #define LF_EM4X50_LOGFILE_COLLECT       "lf_em4x50_collect.log"
+#define MAX_NO_PWDS_TO_SAVE             50
 
 uint32_t gPassword;
 
@@ -126,6 +127,19 @@ static void append(const char *filename, uint8_t *entry, size_t entry_len) {
     }
 }
 
+static void save_pwds(uint32_t *pwdlist, size_t no_pwd) {
+    uint8_t entry[10] = {0};
+
+    if (no_pwd > 0) {
+        Dbprintf("");
+        for (int i = 0; i < no_pwd; i++) {
+            sprintf((char *)entry, "%08"PRIx32"\n", pwdlist[i]);
+            append(LF_EM4X50_LOGFILE_SIM, entry, strlen((char *)entry));
+            Dbprintf("received password: %08"PRIx32"", pwdlist[i]);
+        }
+    }
+}
+
 void ModInfo(void) {
     DbpString(_YELLOW_("  LF EM4x50 sim/collector mode") " - a.k.a tharexde");
 }
@@ -133,12 +147,11 @@ void ModInfo(void) {
 void RunMod(void) {
 
     bool state_change = true, read_ok = false;
-    int no_words = 0, command = 0;
+    int no_words = 0, command = 0, no_pwd = 0;
     uint8_t entry[400], state = STATE_SIM;
-    uint32_t tag[EM4X50_NO_WORDS] = {0x0};
+    uint32_t tag[EM4X50_NO_WORDS] = {0x0}, pwdlist[MAX_NO_PWDS_TO_SAVE];
 
     rdv40_spiffs_lazy_mount();
-
     StandAloneMode();
     Dbprintf(_YELLOW_("Standalone mode THAREXDE started"));
 
@@ -156,6 +169,8 @@ void RunMod(void) {
 
             switch (state) {
                 case STATE_SIM:
+                    // save and display passwords
+                    save_pwds(pwdlist, no_pwd);
                     state = STATE_READ;
                     break;
                 case STATE_READ:
@@ -175,6 +190,7 @@ void RunMod(void) {
 
             if (state_change) {
 
+                // initialize simulation mode
                 LEDsoff();
                 LED_A_ON();
                 Dbprintf("");
@@ -188,14 +204,15 @@ void RunMod(void) {
                     LoadDataInstructions(LF_EM4X50_INPUTFILE_SIM);
                 }
 
-                // init; start with command = standard read mode
-                em4x50_setup_sim();
-                gLogin = false;
                 LED_D_OFF();
+                gLogin = false;
                 gPassword = reflect32(tag[0]);
                 gWritePasswordProcess = false;
                 command = EM4X50_COMMAND_STANDARD_READ;
+                no_pwd = 0;
+                memset(pwdlist, 0, sizeof(pwdlist));
 
+                em4x50_setup_sim();
                 state_change = false;
             }
 
@@ -209,14 +226,10 @@ void RunMod(void) {
 
             // check if new password was found
             if (gPassword != reflect32(tag[EM4X50_DEVICE_PASSWORD])) {
-
-                Dbprintf("received password: %08"PRIx32"", gPassword);
-
-                // append password to logfile in flash memory
-                memset(entry, 0, sizeof(entry));
-                sprintf((char *)entry, "%08"PRIx32"\n", gPassword);
-                append(LF_EM4X50_LOGFILE_SIM, entry, strlen((char *)entry));
-
+                if (no_pwd < MAX_NO_PWDS_TO_SAVE) {
+                    pwdlist[no_pwd] = gPassword;
+                    no_pwd++;
+                }
                 gPassword = reflect32(tag[EM4X50_DEVICE_PASSWORD]);
             }
 
@@ -232,10 +245,11 @@ void RunMod(void) {
 
             if (state_change) {
 
+                // initialize read mode
                 LEDsoff();
                 LED_B_ON();
                 Dbprintf("");
-                Dbprintf(_YELLOW_("switched to EM4x50 reading mode\n"));
+                Dbprintf(_YELLOW_("switched to EM4x50 reading mode"));
 
                 em4x50_setup_read();
                 state_change = false;
@@ -269,6 +283,8 @@ void RunMod(void) {
     if (state == STATE_READ) {
         DownloadLogInstructions(LF_EM4X50_LOGFILE_COLLECT);
     } else {
+        // save and display passwords
+        save_pwds(pwdlist, no_pwd);
         DownloadLogInstructions(LF_EM4X50_LOGFILE_SIM);
     }
 
@@ -277,6 +293,7 @@ void RunMod(void) {
     LED_D_OFF();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
     LEDsoff();
     Dbprintf("");
     Dbprintf(_YELLOW_("[=] Standalone mode THAREXDE stopped"));

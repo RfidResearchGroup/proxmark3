@@ -1540,7 +1540,7 @@ static int em4x50_sim_handle_login_command(uint32_t *tag) {
         gLogin = false;
         LED_D_OFF();
 
-        // save transmitted password for future use (e.g. standalone mode)
+        // save transmitted password (to be used in standalone mode)
         gPassword = password;
     }
     // continue with standard read mode
@@ -1676,64 +1676,61 @@ static int em4x50_sim_handle_writepwd_command(uint32_t *tag) {
 
     bool pwd = false;
 
-    if (gWritePasswordProcess == false) {
+    gWritePasswordProcess = true;
 
-        gWritePasswordProcess = true;
+    // read password
+    uint32_t act_password = 0;
+    pwd = em4x50_sim_read_word(&act_password);
 
-        // read password
-        uint32_t act_password = 0;
-        pwd = em4x50_sim_read_word(&act_password);
+    // processing pause time tpp (corresponds to a "1" bit)
+    em4x50_sim_send_bit(1);
 
-        // processing pause time (corresponds to a "1" bit)
-        em4x50_sim_send_bit(1);
-
-        if (pwd && (act_password == reflect32(tag[EM4X50_DEVICE_PASSWORD]))) {
-            em4x50_sim_send_ack();
-            gLogin = true;
-        } else {
-            em4x50_sim_send_nak();
-            gLogin = false;
-            return EM4X50_COMMAND_STANDARD_READ;
-        }
-
-        int command = em4x50_sim_send_listen_window(tag);
-        if (command != PM3_SUCCESS) {
-            return command;
-        }
-
+    if (pwd && (act_password == reflect32(tag[EM4X50_DEVICE_PASSWORD]))) {
+        em4x50_sim_send_ack();
+        gLogin = true;
     } else {
-
+        em4x50_sim_send_nak();
+        gLogin = false;
         gWritePasswordProcess = false;
 
-        // read new password
-        uint32_t new_password = 0;
-        pwd = em4x50_sim_read_word(&new_password);
+        // save transmitted password (to be used in standalone mode)
+        gPassword = act_password;
 
-        // write access time
-        wait_cycles(EM4X50_T_TAG_TWA);
-
-        if (pwd) {
-            em4x50_sim_send_ack();
-            tag[EM4X50_DEVICE_PASSWORD] = reflect32(new_password);
-        } else {
-            em4x50_sim_send_ack();
-            return EM4X50_COMMAND_STANDARD_READ;
-        }
-
-        // EEPROM write time
-        // strange: need some sort of 'waveform correction', otherwise ack signal
-        // will not be detected; sending a single "1" as last part of Twee
-        // seems to solve the problem
-        wait_cycles(EM4X50_T_TAG_TWEE - EM4X50_T_TAG_FULL_PERIOD);
-        em4x50_sim_send_bit(1);
-        em4x50_sim_send_ack();
-
-        // continue with standard read mode
         return EM4X50_COMMAND_STANDARD_READ;
     }
 
-    // call writepwd function again for else branch
-    return EM4X50_COMMAND_WRITE_PASSWORD;
+    int command = em4x50_sim_send_listen_window(tag);
+    gWritePasswordProcess = false;
+    if (command != EM4X50_COMMAND_WRITE_PASSWORD) {
+        return command;
+    }
+
+    // read new password
+    uint32_t new_password = 0;
+    pwd = em4x50_sim_read_word(&new_password);
+
+    // write access time twa
+    wait_cycles(EM4X50_T_TAG_TWA);
+
+    if (pwd) {
+        em4x50_sim_send_ack();
+        tag[EM4X50_DEVICE_PASSWORD] = reflect32(new_password);
+        gPassword = new_password;
+    } else {
+        em4x50_sim_send_nak();
+        return EM4X50_COMMAND_STANDARD_READ;
+    }
+
+    // EEPROM write time
+    // strange: need some sort of 'waveform correction', otherwise ack signal
+    // will not be detected; sending a single "1" as last part of Twee
+    // seems to solve the problem
+    wait_cycles(EM4X50_T_TAG_TWEE - EM4X50_T_TAG_FULL_PERIOD);
+    em4x50_sim_send_bit(1);
+    em4x50_sim_send_ack();
+
+    // continue with standard read mode
+    return EM4X50_COMMAND_STANDARD_READ;
 }
 
 void em4x50_handle_commands(int *command, uint32_t *tag) {
