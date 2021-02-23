@@ -967,6 +967,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     fclose(f);
 
     PrintAndLogEx(INFO, "Reading sector access bits...");
+    PrintAndLogEx(INFO, "." NOLF);
 
     uint8_t tries;
     mf_readblock_t payload;
@@ -2297,6 +2298,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     if (verbose) PrintAndLogEx(INFO, "======================= " _YELLOW_("START DICTIONARY ATTACK") " =======================");
 
     if (legacy_mfchk) {
+        PrintAndLogEx(INFO, "." NOLF);
         // Check all the sectors
         for (int i = 0; i < sectors_cnt; i++) {
             for (int j = 0; j < 2; j++) {
@@ -3266,14 +3268,17 @@ static int CmdHF14AMfChk(const char *Cmd) {
     uint8_t trgKeyType = 0;
     uint16_t max_keys = keycnt > KEYS_IN_BLOCK ? KEYS_IN_BLOCK : keycnt;
 
-    // time
-    uint64_t t1 = msclock();
+    PrintAndLogEx(INFO, "Start check for keys...");
+    PrintAndLogEx(INFO, "." NOLF);
 
     // fast push mode
     conn.block_after_ACK = true;
 
     // clear trace log by first check keys call only
     bool clearLog = true;
+
+    // time
+    uint64_t t1 = msclock();
 
     // check keys.
     for (trgKeyType = (keyType == 2) ? 0 : keyType; trgKeyType < 2; (keyType == 2) ? (++trgKeyType) : (trgKeyType = 2)) {
@@ -3896,12 +3901,11 @@ int CmdHF14AMfELoad(const char *Cmd) {
         printMFUdumpEx(mfu_dump, mfu_dump->pages + 1, 0);
 
         // update expected blocks to match converted data.
-        if (numBlocks != datalen / 4) {
-            numBlocks = datalen / 4;
-        }
+        numBlocks = datalen / 4;
     }
 
     PrintAndLogEx(INFO, "Uploading to emulator memory");
+    PrintAndLogEx(INFO, "." NOLF);
 
     // fast push mode
     conn.block_after_ACK = true;
@@ -4326,6 +4330,10 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
 
     if (fillFromEmulator) {
+
+        PrintAndLogEx(INFO, "Start upload to emulator memory");
+        PrintAndLogEx(INFO, "." NOLF);
+
         for (int blockNum = 0; blockNum < 16 * 4; blockNum += 1) {
             int flags = 0;
             uint8_t buf8[16] = {0x00};
@@ -4381,6 +4389,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Copying to magic card");
+    PrintAndLogEx(INFO, "." NOLF);
 
     int blockNum = 0;
     int flags = 0;
@@ -4594,6 +4603,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
 
     if (fillEmulator) {
         PrintAndLogEx(INFO, "uploading to emulator memory");
+        PrintAndLogEx(INFO, "." NOLF);
         // fast push mode
         conn.block_after_ACK = true;
         for (i = 0; i < numblocks; i += 5) {
@@ -4650,6 +4660,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
     if (errors) return usage_hf14_cview();
 
     PrintAndLogEx(SUCCESS, "View magic MIFARE " _GREEN_("%cK"), ctmp);
+    PrintAndLogEx(INFO, "." NOLF);
 
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (!dump) {
