@@ -660,10 +660,14 @@ static double p_hypergeometric(uint16_t i_K, uint16_t n, uint16_t k) {
         if (n - k == N - K) { // special case. The published recursion below would fail with a divide by zero exception
             double log_result = 0.0;
             for (int16_t i = k + 1; i <= n; i++) {
-                log_result += log(i);
+                if (i) {
+                    log_result += log(i);
+                }
             }
             for (int16_t i = K + 1; i <= N; i++) {
-                log_result -= log(i);
+                if (i) {
+                    log_result -= log(i);
+                }
             }
             return exp(log_result);
         } else {          // recursion
