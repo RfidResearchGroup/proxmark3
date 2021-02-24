@@ -64,7 +64,7 @@ clone_script:
         WSLExec "WSL update..." "sudo apt-get update 1>/dev/null"
         WSLExec "WSL upgrade..." "sudo apt-get upgrade -y 1>/dev/null" 
         WSLExec "WSL cleanup..." "sudo apt-get auto-remove -y 1>/dev/null" 
-        WSLExec "WSL install..." "sudo apt-get -y install --reinstall --no-install-recommends git ca-certificates build-essential pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev cmake libpython3-dev python3 python3-dev libpython3-all-dev 1>/dev/null" 
+        WSLExec "WSL install..." "sudo apt-get -y install --reinstall --no-install-recommends git ca-certificates build-essential pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev cmake libpython3-dev python3 python3-pip python3-dev libpython3-all-dev 1>/dev/null" 
         WSLExec "WSL QT fix..." "sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5"
         WSLExec "WSL install python dependencies..." "sudo python3 -m pip install --upgrade pip 1>/dev/null"
         WSLExec "WSL install pip..." "sudo python3 -m pip install setuptools 1>/dev/null"
@@ -283,12 +283,6 @@ build_script:
     cd $env:proxspace_path
     
     ./runme64.bat -c "yes | pacman -Sc > /dev/null 2>&1"
-
-    ./runme64.bat -c "yes | pacman -S mingw-w64-x86_64-python-pip > /dev/null 2>&1"
-
-    ./runme64.bat -c "yes | pacman -S mingw-w64-x86_64-python-setuptools > /dev/null 2>&1"
-    
-    ./runme64.bat -c "yes | python3 -m pip ansicolors sslcrypto > /dev/null 2>&1"
 
     Remove-Item -Recurse -Force -Path "$env:proxspace_cache_path" -ErrorAction SilentlyContinue
     
