@@ -66,6 +66,10 @@ clone_script:
         WSLExec "WSL cleanup..." "sudo apt-get auto-remove -y 1>/dev/null" 
         WSLExec "WSL install..." "sudo apt-get -y install --reinstall --no-install-recommends git ca-certificates build-essential pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev cmake 1>/dev/null" 
         WSLExec "WSL QT fix..." "sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5"
+        WSLExec "WSL install python dependencies..." "python3 -m pip install --upgrade pip 1>/dev/null"
+        WSLExec "WSL install pip..." "python3 -m pip install setuptools 1>/dev/null"
+        WSLExec "WSL install pip continue..." "python3 -m pip install ansicolors sslcrypto 1>/dev/null"
+
         Add-AppveyorMessage -Message "WSL setup took $(([System.Environment]::TickCount-$WSLInstallTime) / 1000) sec" -Category Information
         New-Item -ItemType "file" -Path "C:\WSL-Finished.txt" -Force | Out-Null
     }
