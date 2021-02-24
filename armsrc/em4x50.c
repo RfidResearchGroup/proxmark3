@@ -182,7 +182,6 @@ static bool get_signalproperties(void) {
     uint8_t sample_max_mean = 0;
     uint8_t sample_max[no_periods];
     uint32_t sample_max_sum = 0;
-    uint32_t tval = 0;
     memset(sample_max, 0x00, sizeof(sample_max));
 
     // wait until signal/noise > 1 (max. 32 periods)
@@ -208,7 +207,7 @@ static bool get_signalproperties(void) {
     // 3 single "full periods" to eliminate the influence of a listen window
     for (int i = 0; i < no_periods; i++) {
 
-        tval = GetTicks();
+        uint32_t tval = GetTicks();
         while (GetTicks() - tval < 12 * 3 * EM4X50_T_TAG_FULL_PERIOD) {
 
             if (BUTTON_PRESS()) return false;
@@ -331,10 +330,10 @@ static void em4x50_reader_send_byte(uint8_t byte) {
 
 // send byte followed by its (even) parity bit
 static void em4x50_reader_send_byte_with_parity(uint8_t byte) {
-    int parity = 0, bit = 0;
+    int parity = 0;
 
     for (int i = 0; i < 8; i++) {
-        bit = (byte >> (7 - i)) & 1;
+        int bit = (byte >> (7 - i)) & 1;
         em4x50_reader_send_bit(bit);
         parity ^= bit;
     }
@@ -849,7 +848,6 @@ static int selective_read(uint32_t addresses, uint32_t *words) {
 
 // reads by using "selective read mode" -> bidirectional communication
 void em4x50_read(em4x50_data_t *etd) {
-    bool blogin = true;
     int status = PM3_EFAILED;
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
@@ -861,6 +859,8 @@ void em4x50_read(em4x50_data_t *etd) {
 
         LED_C_OFF();
         LED_D_ON();
+
+        bool blogin = true;
 
         // try to login with given password
         if (etd->pwd_given)
@@ -879,10 +879,7 @@ void em4x50_read(em4x50_data_t *etd) {
 
 // collects as much information as possible via selective read mode
 void em4x50_info(em4x50_data_t *etd) {
-
-    bool blogin = true;
     int status = PM3_EFAILED;
-    uint32_t addresses = 0x00002100; // read from fwr = 0 to lwr = 33 (0x21)
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
     em4x50_setup_read();
@@ -892,12 +889,15 @@ void em4x50_info(em4x50_data_t *etd) {
         LED_C_OFF();
         LED_D_ON();
 
+        bool blogin = true;
         // login with given password
         if (etd->pwd_given)
             blogin = (login(etd->password1) == PM3_SUCCESS);
 
-        if (blogin)
-            status = selective_read(addresses, words);
+        if (blogin) {
+            // read addresses from fwr = 0 to lwr = 33 (0x21)
+            status = selective_read(0x00002100, words);
+        }
     }
 
     LEDsoff();
@@ -1117,7 +1117,7 @@ static void em4x50_sim_send_bit(uint8_t bit) {
         // used as a simple detection of a reader field?
         while ((timeout--) && !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
 
-        if (timeout <= 0) {
+        if (timeout == 0) {
             return;
         }
         timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
@@ -1129,7 +1129,7 @@ static void em4x50_sim_send_bit(uint8_t bit) {
 
         //wait until SSC_CLK goes LOW
         while ((timeout--) && (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
-        if (timeout <= 0) {
+        if (timeout == 0) {
             return;
         }
         timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
@@ -1214,7 +1214,6 @@ static int em4x50_sim_read_bit(void) {
 
     int cycles = 0;
     int timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
-    uint32_t tval = 0;
 
     while (cycles < EM4X50_T_TAG_FULL_PERIOD) {
 
@@ -1226,7 +1225,7 @@ static int em4x50_sim_read_bit(void) {
         timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
         // now check until reader switches on carrier field
-        tval = GetTicks();
+        uint32_t tval = GetTicks();
         while ((timeout--) && (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
 
             if (timeout <= 0) {
@@ -1436,23 +1435,21 @@ static int em4x50_sim_handle_standard_read_command(uint32_t *tag) {
     // last word read protected
     int lwrp = (reflect32(tag[EM4X50_PROTECTION]) >> 8) & 0xFF;
 
-    int command = PM3_SUCCESS;
-
     while ((BUTTON_PRESS() == false) && (data_available() == false)) {
 
         WDT_HIT();
 
-        command = em4x50_sim_send_listen_window(tag);
+        int res = em4x50_sim_send_listen_window(tag);
 
-        if (command != PM3_SUCCESS) {
-            return command;
+        if (res != PM3_SUCCESS) {
+            return res;
         }
 
         for (int i = fwr; i <= lwr; i++) {
 
-            command = em4x50_sim_send_listen_window(tag);
-            if (command != PM3_SUCCESS) {
-                return command;
+            res = em4x50_sim_send_listen_window(tag);
+            if (res != PM3_SUCCESS) {
+                return res;
             }
 
             if ((gLogin == false) && (i >= fwrp) && (i <= lwrp)) {
