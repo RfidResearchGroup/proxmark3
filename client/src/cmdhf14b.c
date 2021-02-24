@@ -26,7 +26,7 @@
 #include "mifare/ndef.h"   // NDEFRecordsDecodeAndPrint
 #include "aidsearch.h"
 
-#define MAX_14B_TIMEOUT    (uint32_t)40542464 // = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
+#define MAX_14B_TIMEOUT    40542464U // = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
 #define TIMEOUT 2000
 #define APDU_TIMEOUT 2000
 
@@ -343,17 +343,20 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     }
     CLIParserFree(ctx);
 
+
     uint32_t time_wait = 0;
     if (user_timeout > 0) {
 
         flags |= ISO14B_SET_TIMEOUT;
-        if (user_timeout > MAX_14B_TIMEOUT) {
-            user_timeout = MAX_14B_TIMEOUT;
+
+        uint32_t max_timeout = user_timeout;
+        if (max_timeout > MAX_14B_TIMEOUT) {
+            max_timeout = MAX_14B_TIMEOUT;
             PrintAndLogEx(INFO, "set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
         }
-        time_wait = (uint32_t)((13560000 / 1000 / (8 * 16)) * user_timeout); // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
+        time_wait = ((13560000 / 1000 / (8 * 16)) * max_timeout); // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
         if (verbose)
-            PrintAndLogEx(INFO, "using timeout %u", user_timeout);
+            PrintAndLogEx(INFO, "using timeout %u", max_timeout);
     }
 
     if (keep_field_on == 0)
