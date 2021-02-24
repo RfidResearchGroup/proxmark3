@@ -285,8 +285,11 @@ build_script:
     ./runme64.bat -c "yes | pacman -Sc > /dev/null 2>&1"
 
     ./runme64.bat -c "yes | pacman -S mingw-w64-x86_64-python-pip > /dev/null 2>&1"
+
     ./runme64.bat -c "yes | pacman -S mingw-w64-x86_64-python-setuptools > /dev/null 2>&1"
     
+    ./runme64.bat -c "yes | python3 -m pip ansicolors sslcrypto > /dev/null 2>&1"
+
     Remove-Item -Recurse -Force -Path "$env:proxspace_cache_path" -ErrorAction SilentlyContinue
     
     Move-Item -Path "$env:proxspace_path\msys2\var\cache" -Destination "$env:proxspace_cache_path" -Force
