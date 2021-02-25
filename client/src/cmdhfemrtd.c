@@ -1798,7 +1798,7 @@ static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen) {
     }
 
     for (int pacei = 0; pacealg_table[pacei].name != NULL; pacei++) {
-        PrintAndLogEx(DEBUG, "Trying: %s", hashalg_table[pacei].name);
+        PrintAndLogEx(DEBUG, "Trying: %s", pacealg_table[pacei].name);
 
         if (memcmp(pacealg_table[pacei].descriptor, datafromtag, datafromtaglen) == 0) {
             PrintAndLogEx(SUCCESS, "PACE algorithm........: " _YELLOW_("%s"), pacealg_table[pacei].name);
@@ -1814,7 +1814,7 @@ static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen) {
     // TODO: hack!!!
     memcpy(&parsednum, datafromtag, datafromtaglen);
     for (int pacepari = 0; pacesdp_table[pacepari].id != 32; pacepari++) {
-        PrintAndLogEx(DEBUG, "Trying: %s", hashalg_table[pacepari].name);
+        PrintAndLogEx(DEBUG, "Trying: %s", pacesdp_table[pacepari].name);
 
         if (pacesdp_table[pacepari].id == parsednum) {
             PrintAndLogEx(SUCCESS, "PACE parameter........: " _YELLOW_("%s"), pacesdp_table[pacepari].name);
