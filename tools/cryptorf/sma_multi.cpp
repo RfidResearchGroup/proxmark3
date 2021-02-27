@@ -660,7 +660,7 @@ static inline void previous_all_input(vector<cs_t> *pcstates, uint32_t gc_byte_i
     uint8_t btGc, in;
     vector<cs_t> ncstates;
     vector<cs_t> prev_ncstates;
-    vector<cs_t>::iterator it, itnew;
+    vector<cs_t>::iterator itnew;
 
     // Loop through the complete entryphy of 5 bits for each candidate
     // We ignore zero (xor 0x00) to avoid duplicates
@@ -967,13 +967,10 @@ static void ice_compare(
 int main(int argc, const char *argv[]) {
     size_t pos;
     crypto_state_t ostate;
-    uint64_t rstate_before_gc, rstate_after_gc;
-    uint64_t lstate_before_gc;
-    vector<uint64_t> rstates, lstates_after_gc, pgc_candidates;
-    vector<uint64_t>::iterator itrstates, itgc;
-    vector<cs_t> crstates;
-    vector<cs_t> clcandidates, clstates;
-    vector<cs_t>::iterator it;
+    uint64_t rstate_before_gc, lstate_before_gc;
+    vector<uint64_t> rstates, pgc_candidates;
+    vector<uint64_t>::iterator itrstates;
+    vector<cs_t> crstates, clstates;
     uint32_t rbits;
 
     //  uint8_t   Gc[ 8] = {0x4f,0x79,0x4a,0x46,0x3f,0xf8,0x1d,0x81};
@@ -1081,14 +1078,14 @@ int main(int argc, const char *argv[]) {
     rbits = ice_sm_right(ks, mask, &rstates);
 
     printf("Top-bin for the right state contains " _GREEN_("%u")" correct bits\n", rbits);
-    printf("Total count of right bins: " _YELLOW_("%zu") "\n", (unsigned long)rstates.size());
+    printf("Total count of right bins: " _YELLOW_("%zu") "\n", rstates.size());
 
     if (rbits < 96) {
         printf(_RED_("\n  WARNING!!! Better find another trace, the right top-bin is < 96 bits\n\n"));
     }
 
     for (itrstates = rstates.begin(); itrstates != rstates.end(); ++itrstates) {
-        rstate_after_gc = *itrstates;
+        uint64_t rstate_after_gc = *itrstates;
         sm_left_mask(ks, mask, rstate_after_gc);
         printf("Using the state from the top-right bin: " _YELLOW_("0x%07" PRIx64)"\n", rstate_after_gc);
 
