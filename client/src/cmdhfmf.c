@@ -4376,8 +4376,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
     }
 
     if (res) {
-        if (data)
-            free(data);
+        free(data);
         return PM3_EFILE;
     }
 
