@@ -1158,7 +1158,7 @@ static int CmdHFMFPChk(const char *Cmd) {
     int vpatternlen = 0;
     CLIGetHexWithReturn(ctx, 9, vpattern, &vpatternlen);
     if (vpatternlen > 0) {
-        if (vpatternlen > 0 && vpatternlen <= 2) {
+        if (vpatternlen <= 2) {
             startPattern = (vpattern[0] << 8) + vpattern[1];
         } else {
             PrintAndLogEx(ERR, "Pattern must be 2-byte length.");
