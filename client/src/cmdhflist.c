@@ -58,10 +58,11 @@ void ClearAuthData(void) {
 uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
     if (n < 3) return 2;
     if (isResponse && (n < 6)) return 2;
-    if (n > 2 && d[1] == 0x50 &&
-            d[0] >= ISO14443A_CMD_ANTICOLL_OR_SELECT &&
-            d[0] <= ISO14443A_CMD_ANTICOLL_OR_SELECT_3)
+    if (d[1] == 0x50 &&
+        d[0] >= ISO14443A_CMD_ANTICOLL_OR_SELECT &&
+        d[0] <= ISO14443A_CMD_ANTICOLL_OR_SELECT_3) {
         return 2;
+    }
     return check_crc(CRC_14443_A, d, n);
 }
 
