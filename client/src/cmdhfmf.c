@@ -4857,15 +4857,14 @@ static int CmdHF14AMfice(const char *Cmd) {
     bool slow = false;
     bool initialize = true;
     bool acquisition_completed = false;
-    uint32_t flags = 0;
     uint32_t total_num_nonces = 0;
-    FILE *fnonces = NULL;
     PacketResponseNG resp;
 
     uint32_t part_limit = 3000;
 
     PrintAndLogEx(NORMAL, "Collecting "_YELLOW_("%u")" nonces \n", limit);
 
+    FILE *fnonces = NULL;
     if ((fnonces = fopen(filename, "wb")) == NULL) {
         PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), filename);
         return PM3_EFILE;
@@ -4881,7 +4880,7 @@ static int CmdHF14AMfice(const char *Cmd) {
             break;
         }
 
-        flags = 0;
+        uint32_t flags = 0;
         flags |= initialize ? 0x0001 : 0;
         flags |= slow ? 0x0002 : 0;
         clearCommandBuffer();
