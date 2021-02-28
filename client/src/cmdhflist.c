@@ -311,7 +311,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case MIFARE_ULNANO_WRITESIG:
             snprintf(exp, size, "WRITE SIG");
             break;
-        case MIFARE_ULNANO_LOCKSIF: {
+        case MIFARE_ULNANO_LOCKSIG: {
             if (cmd[1] == 0)
                 snprintf(exp, size, "UNLOCK SIG");
             else if (cmd[1] == 2)
