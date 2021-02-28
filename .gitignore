@@ -33,6 +33,7 @@ version.c
 *.json.bak
 *.pyc
 *.bmp
+originalitysig.csv
 
 # new build file for add-ons.
 Makefile.platform

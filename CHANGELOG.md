@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added a script to dump originality signatures from MFU EV1s and NTAGs (@aveao)
  - Added parsing of EF_CardAccess to display PACE algorithm, version and parameter in `hf emrtd info` (@aveao)
  - Change, numerous commands more uses cliparser (@tcprst, @iceman1001)
  - Added more originality public keys (@anon)
