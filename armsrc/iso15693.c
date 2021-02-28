@@ -1602,7 +1602,7 @@ void ReaderIso15693(uint32_t parameter) {
         reply_mix(CMD_ACK, recvlen, 0, 0, NULL, 0);
     } else {
 
-        start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+        //start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
 
         // we should do a better check than this
         if (recvlen >= 12) {
@@ -1686,7 +1686,7 @@ void SimTagIso15693(uint8_t *uid) {
     enum { NO_FIELD, IDLE, ACTIVATED, SELECTED, HALTED } chip_state = NO_FIELD;
 
     bool button_pressed = false;
-    int vHf = 0; // in mV
+    int vHf; // in mV
 
     bool exit_loop = false;
     while (exit_loop == false) {
@@ -1719,7 +1719,6 @@ void SimTagIso15693(uint8_t *uid) {
         int cmd_len = GetIso15693CommandFromReader(cmd, sizeof(cmd), &reader_eof_time);
         if (cmd_len < 0) {
             button_pressed = true;
-            exit_loop = true;
             break;
         }
 
