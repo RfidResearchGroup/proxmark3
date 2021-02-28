@@ -105,8 +105,6 @@ Ci+1: de c2 ee 1b 1c 92 76 e9
   7c90849f8 (77)
   7cc847482 (87)
 
-*/
-
 const uint64_t left_candidates[43] = {
     0x6221539d9ull, 0x1ddeac626ull, 0x7cc847482ull, 0x0337b8b7dull,
     0x159d1687eull, 0x7bade8a41ull, 0x4c51c6463ull, 0x4e3d88bf9ull,
@@ -120,6 +118,7 @@ const uint64_t left_candidates[43] = {
     0x0f78aac5bull, 0x3770cdaf3ull, 0x205078bbaull, 0x04445c715ull,
     0x004df8a64ull, 0x6f696e09eull, 0x109691f61ull
 };
+*/
 
 typedef struct {
     uint64_t l;
