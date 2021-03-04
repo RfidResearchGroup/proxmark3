@@ -24,4 +24,6 @@ void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, boo
 void printKeyTable(uint8_t sectorscnt, sector_t *e_sector);
 void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_sector);
 void printKeyTable_fast(uint8_t sectorscnt, icesector_t *e_sector, uint64_t bar, uint64_t foo);
+
+int mfc_ev1_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len);
 #endif

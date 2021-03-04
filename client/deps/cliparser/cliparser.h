@@ -68,4 +68,13 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
 int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
 
 uint64_t arg_get_u64_hexstr_def(CLIParserContext *ctx, uint8_t paramnum, uint64_t def);
+int arg_get_u64_hexstr_def_nlen(CLIParserContext *ctx, uint8_t paramnum, uint64_t def, uint64_t *out, uint8_t nlen, bool optional);
+int arg_get_u32_hexstr_def(CLIParserContext *ctx, uint8_t paramnum, uint32_t def, uint32_t *out);
+int arg_get_u32_hexstr_def_nlen(CLIParserContext *ctx, uint8_t paramnum, uint32_t def, uint32_t *out, uint8_t nlen, bool optional);
+
+#define CP_SUCCESS_OPTIONAL  1
+#define CP_SUCCESS           0
+#define CP_ENOPARAM         -1
+#define CP_WRONGLEN         -2
+
 #endif

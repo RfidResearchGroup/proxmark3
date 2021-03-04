@@ -183,8 +183,6 @@ static void dither_chan_inplace(int16_t *chan, uint16_t width, uint16_t height) 
             }
             if (Y < height - 1) {
                 chan[X - 1 + (Y + 1) * width] = chan[X - 1 + (Y + 1) * width] + m[1] / 16 * err;
-            }
-            if (Y < height - 1) {
                 chan[X     + (Y + 1) * width] = chan[X     + (Y + 1) * width] + m[2] / 16 * err;
             }
             if ((X < width - 1) && (Y < height - 1)) {
@@ -250,8 +248,6 @@ static void dither_rgb_inplace(int16_t *chanR, int16_t *chanG, int16_t *chanB, u
                     chanR[XX - 1 + (Y + 1) * width] = (chanR[XX - 1 + (Y + 1) * width] + m[3] / 16 * errR);
                     chanG[XX - 1 + (Y + 1) * width] = (chanG[XX - 1 + (Y + 1) * width] + m[3] / 16 * errG);
                     chanB[XX - 1 + (Y + 1) * width] = (chanB[XX - 1 + (Y + 1) * width] + m[3] / 16 * errB);
-                }
-                if (Y < height - 1) {
                     chanR[XX     + (Y + 1) * width] = (chanR[XX     + (Y + 1) * width] + m[2] / 16 * errR);
                     chanG[XX     + (Y + 1) * width] = (chanG[XX     + (Y + 1) * width] + m[2] / 16 * errG);
                     chanB[XX     + (Y + 1) * width] = (chanB[XX     + (Y + 1) * width] + m[2] / 16 * errB);
@@ -271,8 +267,6 @@ static void dither_rgb_inplace(int16_t *chanR, int16_t *chanG, int16_t *chanB, u
                     chanR[XX - 1 + (Y + 1) * width] = (chanR[XX - 1 + (Y + 1) * width] + m[1] / 16 * errR);
                     chanG[XX - 1 + (Y + 1) * width] = (chanG[XX - 1 + (Y + 1) * width] + m[1] / 16 * errG);
                     chanB[XX - 1 + (Y + 1) * width] = (chanB[XX - 1 + (Y + 1) * width] + m[1] / 16 * errB);
-                }
-                if (Y < height - 1) {
                     chanR[XX     + (Y + 1) * width] = (chanR[XX     + (Y + 1) * width] + m[2] / 16 * errR);
                     chanG[XX     + (Y + 1) * width] = (chanG[XX     + (Y + 1) * width] + m[2] / 16 * errG);
                     chanB[XX     + (Y + 1) * width] = (chanB[XX     + (Y + 1) * width] + m[2] / 16 * errB);
@@ -1004,7 +998,7 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
                  );
 
     char modeldesc[40];
-    snprintf(modeldesc, sizeof(modeldesc), "model number [0 - %u] of your tag", MEND - 1);
+    snprintf(modeldesc, sizeof(modeldesc), "model number [0 - %d] of your tag", MEND - 1);
 
     void *argtable[] = {
         arg_param_begin,

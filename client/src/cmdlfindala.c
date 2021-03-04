@@ -250,7 +250,7 @@ static int CmdIndalaDemod(const char *Cmd) {
                   "lf indala demod --clock 32      -> demod a Indala tag from GraphBuffer using a clock of RF/32\n"
                   "lf indala demod --clock 32 -i    -> demod a Indala tag from GraphBuffer using a clock of RF/32 and inverting data\n"
                   "lf indala demod --clock 64 -i --maxerror 0  -> demod a Indala tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -281,7 +281,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
                   "It's now considered obsolete but remains because it has sometimes its advantages.",
                   "lf indala altdemod\n"
                   "lf indala altdemod --long     -> demod a Indala tag from GraphBuffer as 224 bit long format"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -544,7 +544,8 @@ static int CmdIndalaSim(const char *Cmd) {
 
     // raw param
     int raw_len = 0;
-    uint8_t raw[(7 * 4) + 1 ];
+    uint8_t raw[(7 * 4) + 1];
+    memset(raw, 0, sizeof(raw));
     CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
 
     bool is_long_uid = (raw_len == 28);
@@ -569,23 +570,29 @@ static int CmdIndalaSim(const char *Cmd) {
     uint8_t bs[224];
     memset(bs, 0x00, sizeof(bs));
 
-    uint8_t counter = 223;
-    for (uint8_t i = 0; i < raw_len; i++) {
+    uint8_t counter = 0;
+    for (int8_t i = 0; i < raw_len; i++) {
         uint8_t tmp = raw[i];
-        for (uint8_t j = 0; j < 8; j++) {
-            bs[counter--] = tmp & 1;
-            tmp >>= 1;
-        }
+        bs[counter++] = (tmp >> 7) & 1;
+        bs[counter++] = (tmp >> 6) & 1;
+        bs[counter++] = (tmp >> 5) & 1;
+        bs[counter++] = (tmp >> 4) & 1;
+        bs[counter++] = (tmp >> 3) & 1;
+        bs[counter++] = (tmp >> 2) & 1;
+        bs[counter++] = (tmp >> 1) & 1;
+        bs[counter++] = tmp & 1;
     }
+
+    // a0 00 00 00 bd 98 9a 11
 
     // indala PSK
     // It has to send either 64bits (8bytes) or 224bits (28bytes).  Zero padding needed if not.
     // lf simpsk 1 c 32 r 2 d 0102030405060708
 
     PrintAndLogEx(SUCCESS, "Simulating " _YELLOW_("%s") " Indala raw " _YELLOW_("%s")
-        , (is_long_uid) ? "224b" : "64b"
-        , sprint_hex_inrow(raw, raw_len)
-        );
+                  , (is_long_uid) ? "224b" : "64b"
+                  , sprint_hex_inrow(raw, raw_len)
+                 );
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 
     // indala PSK,  clock 32, carrier 0
@@ -593,10 +600,10 @@ static int CmdIndalaSim(const char *Cmd) {
     payload->carrier =  2;
     payload->invert = 0;
     payload->clock = 32;
-    memcpy(payload->data, bs, sizeof(bs));
+    memcpy(payload->data, bs, raw_len * 8);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + (raw_len * 8));
     free(payload);
 
     PacketResponseNG resp;
@@ -665,7 +672,7 @@ static int CmdIndalaClone(const char *Cmd) {
     uint8_t max = 0;
     uint32_t blocks[8] = {0};
     char cardtype[16] = {"T55x7"};
-    
+
     if (is_long_uid) {
 
         blocks[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK2 | (7 << T55x7_MAXBLOCK_SHIFT);
@@ -673,7 +680,7 @@ static int CmdIndalaClone(const char *Cmd) {
             blocks[0] = T5555_FIXED | T5555_SET_BITRATE(32) | T5555_MODULATION_PSK2 | (7 << T5555_MAXBLOCK_SHIFT);
             snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
         }
-        
+
         if (em) {
             blocks[0] = EM4305_INDALA_224_CONFIG_BLOCK;
             snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
@@ -691,9 +698,9 @@ static int CmdIndalaClone(const char *Cmd) {
         // 224 BIT UID
         // config for Indala (RF/32;PSK2 with RF/2;Maxblock=7)
         PrintAndLogEx(INFO, "Preparing to clone Indala 224bit to " _YELLOW_("%s") " raw " _GREEN_("%s")
-            , cardtype
-            , sprint_hex_inrow(raw, raw_len)
-            );
+                      , cardtype
+                      , sprint_hex_inrow(raw, raw_len)
+                     );
 
 
     } else {
@@ -737,7 +744,7 @@ static int CmdIndalaClone(const char *Cmd) {
             blocks[0] = T5555_FIXED | T5555_SET_BITRATE(32) | T5555_MODULATION_PSK1 | (2 << T5555_MAXBLOCK_SHIFT);
             snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
         }
-        
+
         if (em) {
             blocks[0] = EM4305_INDALA_64_CONFIG_BLOCK;
             snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
@@ -749,9 +756,9 @@ static int CmdIndalaClone(const char *Cmd) {
 
         // config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
         PrintAndLogEx(INFO, "Preparing to clone Indala 64bit to " _YELLOW_("%s") " raw " _GREEN_("%s")
-                , cardtype
-                , sprint_hex_inrow(raw, raw_len)
-                );
+                      , cardtype
+                      , sprint_hex_inrow(raw, raw_len)
+                     );
     }
 
     print_blocks(blocks, max);

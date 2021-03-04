@@ -8,16 +8,16 @@ You will need to run these commands to make sure your rdv4 is prepared
 
 The lua script actually executes the following commands below.  These are here because of documentation, you can jump down to *Verify sim module firmware version* part.
 ```
-[usb] pm3 --> mem load f mfc_default_keys m
-[usb] pm3 --> mem load f t55xx_default_pwds t
-[usb] pm3 --> mem load f iclass_default_keys i
-[usb] pm3 --> lf t55xx deviceconfig a 29 b 17 c 15 d 47 e 15 p
-[usb] pm3 --> lf t55xx deviceconfig r 1 a 31 b 20 c 18 d 50 e 15 p
-[usb] pm3 --> lf t55xx deviceconfig r 2 a 31 b 20 c 18 d 40 e 15 p
-[usb] pm3 --> lf t55xx deviceconfig r 3 a 29 b 17 c 15 d 31 e 15 f 47 g 63 p
+[usb] pm3 --> mem load -f mfc_default_keys -m
+[usb] pm3 --> mem load -f t55xx_default_pwds -t
+[usb] pm3 --> mem load -f iclass_default_keys -i
+[usb] pm3 --> lf t55xx deviceconfig --r0 -a 29 -b 17 -c 15 -d 47 -e 15 -p
+[usb] pm3 --> lf t55xx deviceconfig --r1 -a 31 -b 20 -c 18 -d 50 -e 15 -p
+[usb] pm3 --> lf t55xx deviceconfig --r2 -a 31 -b 20 -c 18 -d 40 -e 15 -p
+[usb] pm3 --> lf t55xx deviceconfig --r3 -a 29 -b 17 -c 15 -d 31 -e 15 -f 47 -g 63 -p
 
 Set all t55xx settings to defaults (will set all 4 at once)
-[usb] pm3 --> lf t55xx deviceconfig z p
+[usb] pm3 --> lf t55xx deviceconfig -z -p
 ```
 
 
@@ -54,26 +54,34 @@ Don't not turn off your device during the execution of this command!!
 Even its a quite fast command you should be warned.  You may brick it if you interrupt it.
 
 ```
-[usb] pm3 --> smart upgrade f /usr/local/share/proxmark3/firmware/sim011.bin
+[usb] pm3 --> smart upgrade -f /usr/local/share/proxmark3/firmware/sim011.bin
 # or if from local repo
-[usb] pm3 --> smart upgrade f tools/simmodule/sim011.bin
+[usb] pm3 --> smart upgrade -f sim011.bin
 ```
 
 You get the following output if the execution was successful:
 
 ```
-[!] WARNING - Smartcard socket firmware upgrade.
-[!] A dangerous command, do wrong and you will brick the smart card socket
-[+] Smartcard socket firmware uploading to PM3
-..
-[+] Smartcard socket firmware updating,  don't turn off your PM3!
-#db# FW 0000
-#db# FW 0080
-#db# FW 0100
-#db# FW 0180
-#db# FW 0200
-#db# FW 0280
-[+] Smartcard socket firmware upgraded successful        
+[=] -------------------------------------------------------------------
+[!] ⚠️  WARNING - sim module firmware upgrade
+[!] ⚠️  A dangerous command, do wrong and you could brick the sim module
+[=] -------------------------------------------------------------------
+
+[=] firmware file       sim011.bin
+[=] Checking integrity  sim011.sha512.txt
+[+] loaded 733 bytes from binary file sim011.bin
+[+] loaded 141 bytes from binary file sim011.sha512.txt
+[=] Don't turn off your PM3!
+[+] Sim module firmware uploading to PM3...
+ 🕑 733 bytes sent
+[+] Sim module firmware updating...
+[#] FW 0000
+[#] FW 0080
+[#] FW 0100
+[#] FW 0180
+[#] FW 0200
+[#] FW 0280
+[+] Sim module firmware upgrade successful    
 ```
 
 Run hw status command to verify that the upgrade went well.

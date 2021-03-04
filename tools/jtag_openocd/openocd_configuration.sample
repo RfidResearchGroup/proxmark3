@@ -1,7 +1,34 @@
 CONFIG_GEN=general.cfg
-CONFIG_CHIP=chip-at91sam7s.cfg
+CONFIG_BOARD=board-at91sam7s.cfg
 IMAGE=../../recovery/proxmark3_recovery.bin
 DUMP="dump_$(date +'%Y%m%d-%H%M%S').bin"
 
-# Example using Segger Jlink:
-CONFIG_IF=interface-jlink.cfg
+# One can use openocd-provided interfaces or local interface files
+# Here are a few examples
+
+# Segger Jlink:
+CONFIG_IF=interface/jlink.cfg
+
+# Raspberry Pi models Pi1, Pi2 and Pi Zero (read interface-raspberrypi.cfg for pinout)
+#CONFIG_IF=interface-raspberrypi.cfg
+
+# Raspberry Pi models 2+ and above (read interface-raspberrypi2.cfg for pinout)
+#CONFIG_IF=interface-raspberrypi2.cfg
+
+# DP BusBlaster:
+#CONFIG_IF=interface/ftdi/dp_busblaster.cfg
+
+# BusPirate:
+#CONFIG_IF=interface-buspirate.cfg
+
+# C232HM-DDHSL-0 and C232HM-EDSL-0 (beware! read interface-c232hm.cfg instructions)
+#CONFIG_IF=interface-c232hm.cfg
+
+# Olimex ARM-USB-OCD Dongle:
+#CONFIG_IF=interface/ftdi/olimex-arm-usb-ocd.cfg
+
+# Amontec JTAGKey:
+#CONFIG_IF=interface/ftdi/jtagkey.cfg
+
+# Wiggler:
+#CONFIG_IF=interface/parport.cfg

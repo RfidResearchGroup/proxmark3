@@ -6,7 +6,7 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Martin Holst Swende'
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc = [[
 This script takes a dumpfile from 'hf mf dump' and converts it to a format that can be used
 by the emulator
@@ -46,7 +46,7 @@ end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print('ERROR:', err)
+    print('[!!] ERROR:', err)
     core.clearCommandBuffer()
     return nil, err
 end
@@ -115,8 +115,7 @@ local function main(args)
 
    local dumpdata = readdump(infile)
     -- The hex-data is now in ascii-format,
-   if dumpdata == NIL then return oops('Dumpfle not loaded') end
-
+   if dumpdata == nil then return oops('Dumpfle not loaded') end
 
     -- But first, check the uid
     local uid = string.sub(dumpdata, 1, 8)
@@ -124,8 +123,7 @@ local function main(args)
 
     -- Format some linebreaks
     dumpdata = convert_to_emulform(dumpdata)
-   if dumpdata == NIL then return oops('Dumpfle not loaded') end
-
+   if dumpdata == nil then return oops('Dumpfle not loaded') end
 
     local outfile = io.open(output, 'w')
     if outfile == nil then
@@ -134,7 +132,7 @@ local function main(args)
 
     outfile:write(dumpdata:lower())
     io.close(outfile)
-    print(('Wrote an emulator-dump to the file %s'):format(output))
+    print(('[+] Wrote an emulator-dump to the file %s'):format(output))
 end
 
 

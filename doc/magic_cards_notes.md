@@ -45,12 +45,12 @@ Here are some tips if the card doesn't react or gives error on a simple `hf 14a 
 
 Let's force a 4b UID anticollision and see what happens:
 ```
-hf 14a config a 1 b 2 2 2 r 2
+hf 14a config --atqa force --bcc ignore --cl2 skip --rats skip
 hf 14a reader
 ```
 It it responds, we know it's a TypeA card. But maybe it's a 7b UID, so let's force a 7b UID anticollision:
 ```
-hf 14a config a 1 b 2 2 1 3 2 r 2
+hf 14a config --atqa force --bcc ignore --cl2 force --cl3 skip --rats skip
 hf 14a reader
 ```
 At this stage, you know if it's a TypeA 4b or 7b card and you can check further on this page how to reconfigure different types of cards.
@@ -58,7 +58,7 @@ At this stage, you know if it's a TypeA 4b or 7b card and you can check further 
 To restore anticollision config of the Proxmark3:
 
 ```
-hf 14a config a 0 b 0 2 0 3 0 r 0
+hf 14a config --std
 ```
 # MIFARE Classic
 
@@ -335,26 +335,26 @@ hf mf wrbl 0 A FFFFFFFFFFFF 11223344440804006263646566676869
 When "soft-bricked" (by writing invalid data in block0), these ones may help:
 
 ```
-hf 14a config h
+hf 14a config -h
 ```
 
 e.g. for 4b UID:
 
 ```
-hf 14a config a 1 b 2 2 2 r 2
+hf 14a config --atqa force --bcc ignore --cl2 skip --rats skip
 hf mf wrbl 0 A FFFFFFFFFFFF 11223344440804006263646566676869 # for 1k
 hf mf wrbl 0 A FFFFFFFFFFFF 11223344441802006263646566676869 # for 4k
-hf 14a config a 0 b 0 2 0 r 0
+hf 14a config --std
 hf 14a reader
 ```
 
 e.g. for 7b UID:
 
 ```
-hf 14a config a 1 b 2 2 1 3 2 r 2
+hf 14a config --atqa force --bcc ignore --cl2 force --cl3 skip --rats skip
 hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566084400626364656667 # for 1k
 hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566184200626364656667 # for 4k
-hf 14a config a 0 b 0 2 0 3 0 r 0
+hf 14a config --std
 hf 14a reader
 ```
 ## MIFARE Classic DirectWrite, FUID version aka 1-write
@@ -426,6 +426,12 @@ Note: it seems some cards only accept the "change UID" command.
 
 It accepts direct read of block0 (and only block0) without prior auth.
 
+Writing to block 0 has some side-effects:
+
+* It changes also the UID. Changing the UID *does not* change block 0.
+* ATQA and SAK bytes are automatically replaced by fixed values.
+* On 4-byte UID cards, BCC byte is automatically corrected.
+
 ### Characteristics
 
 * UID: 4b and 7b versions
@@ -452,6 +458,8 @@ Equivalent:
 ```
 # change just UID:
 hf 14a raw -s -c  -t 2000  90FBCCCC07 11223344556677
+# read block0:
+hf 14a raw -s -c 3000
 # write block0:
 hf 14a raw -s -c  -t 2000  90F0CCCC10 041219c3219316984200e32000000000
 # lock (uid/block0?) forever:
@@ -529,7 +537,7 @@ script run hf_mfu_setuid -h
 When "soft-bricked" (by writing invalid data in block0), these ones may help:
 
 ```
-hf 14a config h
+hf 14a config -h
 script run run hf_mf_magicrevive -u
 ```
 
@@ -591,14 +599,14 @@ hf 14a raw    -c    a2 02 44480000
 When "soft-bricked" (by writing invalid data in block0), these ones may help:
 
 ```
-hf 14a config h
+hf 14a config -h
 ```
 
 E.g.:
 ```
-hf 14a config a 1 b 2 2 1 3 2 r 2
+hf 14a config --atqa force --bcc ignore --cl2 force --cl3 skip --rats skip
 hf mfu setuid 04112233445566
-hf 14a config a 0 b 0 2 0 3 0 r 0
+hf 14a config --std
 hf 14a reader
 ```
 

@@ -133,35 +133,30 @@ static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0 } ;
 
 void printHf14aConfig(void) {
     DbpString(_CYAN_("HF 14a config"));
-    Dbprintf("  [a] Anticol override....%i %s%s%s",
-             hf14aconfig.forceanticol,
-             (hf14aconfig.forceanticol == 0) ? "( " _GREEN_("No") " ) follow standard " : "",
-             (hf14aconfig.forceanticol == 1) ? "( " _RED_("Yes") " ) always do anticol" : "",
-             (hf14aconfig.forceanticol == 2) ? "( " _RED_("Yes") " ) always skip anticol" : ""
+    Dbprintf("  [a] Anticol override....%s%s%s",
+             (hf14aconfig.forceanticol == 0) ? _GREEN_("std") "    : follow standard " : "",
+             (hf14aconfig.forceanticol == 1) ? _RED_("force") "  : always do anticol" : "",
+             (hf14aconfig.forceanticol == 2) ? _RED_("skip") "   : always skip anticol" : ""
             );
-    Dbprintf("  [b] BCC override........%i %s%s%s",
-             hf14aconfig.forcebcc,
-             (hf14aconfig.forcebcc == 0) ? "( " _GREEN_("No") " ) follow standard" : "",
-             (hf14aconfig.forcebcc == 1) ? "( " _RED_("Yes") " ) always do CL2" : "",
-             (hf14aconfig.forcebcc == 2) ? "( " _RED_("Yes") " ) always use card BCC" : ""
+    Dbprintf("  [b] BCC override........%s%s%s",
+             (hf14aconfig.forcebcc == 0) ? _GREEN_("std") "    : follow standard" : "",
+             (hf14aconfig.forcebcc == 1) ? _RED_("fix") "    : fix bad BCC" : "",
+             (hf14aconfig.forcebcc == 2) ? _RED_("ignore") " : ignore bad BCC, always use card BCC" : ""
             );
-    Dbprintf("  [2] CL2 override........%i %s%s%s",
-             hf14aconfig.forcecl2,
-             (hf14aconfig.forcecl2 == 0) ? "( " _GREEN_("No") " ) follow standard" : "",
-             (hf14aconfig.forcecl2 == 1) ? "( " _RED_("Yes") " ) always do CL2" : "",
-             (hf14aconfig.forcecl2 == 2) ? "( " _RED_("Yes") " ) always skip CL2" : ""
+    Dbprintf("  [2] CL2 override........%s%s%s",
+             (hf14aconfig.forcecl2 == 0) ? _GREEN_("std") "    : follow standard" : "",
+             (hf14aconfig.forcecl2 == 1) ? _RED_("force") "  : always do CL2" : "",
+             (hf14aconfig.forcecl2 == 2) ? _RED_("skip") "   : always skip CL2" : ""
             );
-    Dbprintf("  [3] CL3 override........%i %s%s%s",
-             hf14aconfig.forcecl3,
-             (hf14aconfig.forcecl3 == 0) ? "( " _GREEN_("No") " ) follow standard" : "",
-             (hf14aconfig.forcecl3 == 1) ? "( " _RED_("Yes") " ) always do CL3" : "",
-             (hf14aconfig.forcecl3 == 2) ? "( " _RED_("Yes") " ) always skip CL3" : ""
+    Dbprintf("  [3] CL3 override........%s%s%s",
+             (hf14aconfig.forcecl3 == 0) ? _GREEN_("std") "    : follow standard" : "",
+             (hf14aconfig.forcecl3 == 1) ? _RED_("force") "  : always do CL3" : "",
+             (hf14aconfig.forcecl3 == 2) ? _RED_("skip") "   : always skip CL3" : ""
             );
-    Dbprintf("  [r] RATS override.......%i %s%s%s",
-             hf14aconfig.forcerats,
-             (hf14aconfig.forcerats == 0) ? "( " _GREEN_("No") " ) follow standard " : "",
-             (hf14aconfig.forcerats == 1) ? "( " _RED_("Yes") " ) always do RATS" : "",
-             (hf14aconfig.forcerats == 2) ? "( " _RED_("Yes") " ) always skip RATS" : ""
+    Dbprintf("  [r] RATS override.......%s%s%s",
+             (hf14aconfig.forcerats == 0) ? _GREEN_("std") "    : follow standard " : "",
+             (hf14aconfig.forcerats == 1) ? _RED_("force") "  : always do RATS" : "",
+             (hf14aconfig.forcerats == 2) ? _RED_("skip") "   : always skip RATS" : ""
             );
 }
 
@@ -921,18 +916,25 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     (void)b;
 
-    uint16_t check = 0;
-
+    uint8_t flip = 0;
+    uint16_t checker = 0;
     for (;;) {
-        if (check == 4000) {
-//            if (BUTTON_PRESS() || data_available())
+        WDT_HIT();
+        if (flip == 3) {
+            if (data_available())
+                return false;
+
+            flip = 0;
+        }
+
+        if (checker >= 3000) {
             if (BUTTON_PRESS())
                 return false;
 
-            check = 0;
-            WDT_HIT();
+            flip++;
+            checker = 0;
         }
-        ++check;
+        ++checker;
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -1340,7 +1342,6 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data, uint8_t
     LED_A_ON();
 
     // main loop
-    //for (;;) {
     bool finished = false;
     bool button_pushed = BUTTON_PRESS();
     while (!button_pushed && !finished) {

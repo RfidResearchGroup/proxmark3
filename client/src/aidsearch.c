@@ -36,7 +36,7 @@ static int openAIDFile(json_t **root, bool verbose) {
         goto out;
     }
 
-    if (verbose) PrintAndLogEx(SUCCESS, "Loaded file (%s) OK. %zu records.", path, json_array_size(*root));
+    PrintAndLogEx(DEBUG, "Loaded file " _YELLOW_("%s") " " _GREEN_("%zu") " records ( " _GREEN_("ok") " )", path, json_array_size(*root));
 out:
     free(path);
     return retval;
@@ -145,22 +145,22 @@ int PrintAIDDescription(json_t *xroot, char *aid, bool verbose) {
     const char *description = jsonStrGet(elm, "Description");
     const char *type = jsonStrGet(elm, "Type");
 
-    if (!verbose) {
-        PrintAndLogEx(SUCCESS, "AID %s | %s | %s", vaid, vendor, name);
+    if (verbose == false) {
+        PrintAndLogEx(SUCCESS, "AID : " _YELLOW_("%s") " | %s | %s", vaid, vendor, name);
     } else {
-        PrintAndLogEx(SUCCESS, "Input AID: %s", aid);
+        PrintAndLogEx(SUCCESS, "Input AID..... " _YELLOW_("%s"), aid);
         if (aid)
-            PrintAndLogEx(SUCCESS, "Found AID: %s", vaid);
+            PrintAndLogEx(SUCCESS, "Found AID..... " _YELLOW_("%s"), vaid);
         if (vendor)
-            PrintAndLogEx(SUCCESS, "Vendor: %s", vendor);
+            PrintAndLogEx(SUCCESS, "Vendor........ " _YELLOW_("%s"), vendor);
         if (type)
-            PrintAndLogEx(SUCCESS, "Type: %s", type);
+            PrintAndLogEx(SUCCESS, "Type.......... " _YELLOW_("%s"), type);
         if (name)
-            PrintAndLogEx(SUCCESS, "Name: %s", name);
+            PrintAndLogEx(SUCCESS, "Name.......... " _YELLOW_("%s"), name);
         if (country)
-            PrintAndLogEx(SUCCESS, "Country: %s", country);
+            PrintAndLogEx(SUCCESS, "Country....... %s", country);
         if (description)
-            PrintAndLogEx(SUCCESS, "Description: %s", description);
+            PrintAndLogEx(SUCCESS, "Description... %s", description);
     }
 
 out:

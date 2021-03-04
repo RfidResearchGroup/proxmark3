@@ -15,14 +15,15 @@
 // uid[]     the UID in transmission order
 // return: ptr to string
 char *iso15693_sprintUID(char *dest, uint8_t *uid) {
-
     static char tempbuf[3 * 8 + 1] = {0};
     if (dest == NULL)
         dest = tempbuf;
 
-    sprintf(dest, "%02X %02X %02X %02X %02X %02X %02X %02X",
-            uid[7], uid[6], uid[5], uid[4],
-            uid[3], uid[2], uid[1], uid[0]
-           );
+    if (uid) {
+        sprintf(dest, "%02X %02X %02X %02X %02X %02X %02X %02X",
+                uid[7], uid[6], uid[5], uid[4],
+                uid[3], uid[2], uid[1], uid[0]
+               );
+    }
     return dest;
 }

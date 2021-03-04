@@ -12,12 +12,16 @@
 #define CMDLFEM4X70_H__
 
 #include "common.h"
-#include "em4x50.h"
 
 #define TIMEOUT                     2000
 
 int CmdLFEM4X70(const char *Cmd);
 int CmdEM4x70Info(const char *Cmd);
+int CmdEM4x70Write(const char *Cmd);
+int CmdEM4x70Unlock(const char *Cmd);
+int CmdEM4x70Auth(const char *Cmd);
+int CmdEM4x70WritePIN(const char *Cmd);
+int CmdEM4x70WriteKey(const char *Cmd);
 
 int em4x70_info(void);
 bool detect_4x70_block(void);

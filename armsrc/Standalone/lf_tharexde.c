@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Tharexde, 2020
+// tharexde, 2021
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -8,10 +8,12 @@
 // main code for EM4x50 simulator and collector aka THAREXDE
 //-----------------------------------------------------------------------------
 #include <inttypes.h>
+#include "ticks.h"
 #include "standalone.h"
 #include "proxmark3_arm.h"
 #include "appmain.h"
 #include "BigBuf.h"
+#include "commonutil.h"
 #include "fpgaloader.h"
 #include "util.h"
 #include "dbprint.h"
@@ -19,68 +21,75 @@
 #include "../em4x50.h"
 
 /*
- * `lf_tharexde` simulates hardcoded words/blocks, reads words of standard read
- * mode of EM4x50 tags and stores them in internal flash.
+ * `lf_tharexde` simulates EM4x50 dumps uploaded to flash, reads words
+ * transmitted by EM4x50 tags in standard read mode and stores them in
+ * internal flash.
  * It requires RDV4 hardware (for flash and battery).
  *
- * On entering stand-alone mode, this module will start reading/record EM4x50 data.
- * Every found / collected data will be written/appended to the logfile in flash
- * as a text string.
+ * On entering stand-alone mode, this module will start simulating EM4x50 data.
+ * Data is read from eml dump file uploaded to flash memory (lf_em4x50_simulate.eml).
+ * If reader sends password different from dump file password, it is saved in
+ * file lf_em4x50_passwords.log in flash memory.
+ *
+ * On switching to read/record mode by pressing pm3 button, module will start
+ * reading EM4x50 data. Each collected data set will be written/appended to the
+ * logfile in flash (lf_em4x50_collect.log) as a text string.
  *
  * LEDs:
  * - LED A: simulating
- * - LED B: reading / record
- * - LED C: writing to flash
+ * - LED A blinking: no simulation data or read error
+ * - LED B: reading/recording
  * - LED D: unmounting/sync'ing flash (normally < 100ms)
  *
+ * To upload input file (eml format) to flash:
+ * - mem spiffs load f <filename> o lf_em4x50_simulate.eml
+ *
+ * To retrieve password file from flash:
+ * - mem spiffs dump o lf_em4x50_passwords.log f <filename>
+ *
  * To retrieve log file from flash:
- *
- * 1. mem spiffs dump o lf_em4x50collect.log f lf_em4x50collect.log
- *    Copies log file from flash to your client.
- *
- * 2. exit the Proxmark3 client
- *
- * 3. more lf_tharexdecollect.log
+ * - mem spiffs dump o lf_em4x50_collect.log f <filename>
  *
  * This module emits debug strings during normal operation -- so try it out in
  * the lab connected to PM3 client before taking it into the field.
  *
- * To delete the log file from flash:
+ * To delete the input file from flash:
+ * - mem spiffs remove lf_em4x50_simulate.eml
  *
- * 1. mem spiffs remove lf_tharexdecollect.log
+ * To delete the log file from flash:
+ * - mem spiffs remove lf_em4x50_passwords.log
+ *
+ * To delete the log file from flash:
+ * - mem spiffs remove lf_em4x50_collect.log
  */
 
-#define STATE_SIM                   0
-#define STATE_READ                  1
-#define STATE_BRUTE                 2
-#define EM4X50_TAG_WORD             45
-#define EM4X50_PWD_SPEED            27
-#define LF_EM4X50SIMULATE_INPUTFILE "lf_em4x50simulate.eml"
-#define LF_EM4X50COLLECT_LOGFILE    "lf_em4x50collect.log"
-#define LF_EM4X50BRUTE_INPUTFILE    "lf_em4x50brute.eml"
-#define LF_EM4X50BRUTE_LOGFILE      "lf_em4x50brute.log"
+#define STATE_SIM                       0
+#define STATE_READ                      1
+#define LF_EM4X50_INPUTFILE_SIM         "lf_em4x50_simulate.eml"
+#define LF_EM4X50_LOGFILE_SIM           "lf_em4x50_passwords.log"
+#define LF_EM4X50_LOGFILE_COLLECT       "lf_em4x50_collect.log"
+#define MAX_NO_PWDS_TO_SAVE             50
 
-bool input_exists;
-bool log_exists;
+uint32_t gPassword;
 
 static void LoadDataInstructions(const char *inputfile) {
     Dbprintf("");
-    Dbprintf("To load datafile into flash and display it:");
-    Dbprintf(_YELLOW_("1.") " edit inputfile %s", inputfile);
-    Dbprintf(_YELLOW_("2.") " start proxmark3 client");
-    Dbprintf(_YELLOW_("3.") " mem spiffs load f %s o %s", inputfile, inputfile);
-    Dbprintf(_YELLOW_("4.") " start standalone mode");
+    Dbprintf("To load datafile to flash and display it:");
+    Dbprintf("1. edit input file %s", inputfile);
+    Dbprintf("2. start proxmark3 client");
+    Dbprintf("3. mem spiffs load f <filename> o %s", inputfile);
+    Dbprintf("4. start standalone mode");
 }
 
 static void DownloadLogInstructions(const char *logfile) {
     Dbprintf("");
     Dbprintf("To get the logfile from flash and display it:");
-    Dbprintf(_YELLOW_("1.") " mem spiffs dump o %s f %s", logfile, logfile);
-    Dbprintf(_YELLOW_("2.") " exit proxmark3 client");
-    Dbprintf(_YELLOW_("3.") " cat %s", logfile);
+    Dbprintf("1. mem spiffs dump o %s f <filename>", logfile);
+    Dbprintf("2. exit proxmark3 client");
+    Dbprintf("3. cat <filename>");
 }
 
-static int get_input_data_from_file(uint32_t *words, char *inputfile) {
+static bool get_input_data_from_file(uint32_t *tag, char *inputfile) {
 
     size_t now = 0;
 
@@ -88,92 +97,92 @@ static int get_input_data_from_file(uint32_t *words, char *inputfile) {
 
         uint32_t size = size_in_spiffs(inputfile);
         uint8_t *mem = BigBuf_malloc(size);
-        
+
         Dbprintf(_YELLOW_("found input file %s"), inputfile);
 
         rdv40_spiffs_read_as_filetype(inputfile, mem, size, RDV40_SPIFFS_SAFETY_SAFE);
 
         now = size / 9;
-        for (int i = 0; i < now; i++)
-            for (int j = 0; j < 4; j++)
-                words[i] |= (hex2int(mem[2 * j + 9 * i]) << 4 | hex2int(mem[2 * j + 1 + 9 * i])) << ((3 - j) * 8);
+        for (int i = 0; i < now; i++) {
+            for (int j = 0; j < 4; j++) {
+                tag[i] |= (hex2int(mem[2 * j + 9 * i]) << 4 | hex2int(mem[2 * j + 1 + 9 * i])) << ((3 - j) * 8);
+            }
+        }
 
-        Dbprintf(_YELLOW_("read data from input file"));
+        Dbprintf(_YELLOW_("read tag data from input file"));
+    } else {
+        Dbprintf(_RED_("no input file %s"), inputfile);
     }
 
     BigBuf_free();
 
-    return (now > 0) ? now : 0;
+    return ((now == EM4X50_NO_WORDS) && (tag[EM4X50_DEVICE_SERIAL] != tag[EM4X50_DEVICE_ID]));
 }
 
 static void append(const char *filename, uint8_t *entry, size_t entry_len) {
-
-    LED_D_ON();
-    if (log_exists == false) {
-        rdv40_spiffs_write(filename, entry, entry_len, RDV40_SPIFFS_SAFETY_SAFE);
-        log_exists = true;
-    } else {
+    if (exists_in_spiffs(filename)) {
         rdv40_spiffs_append(filename, entry, entry_len, RDV40_SPIFFS_SAFETY_SAFE);
+    } else {
+        rdv40_spiffs_write(filename, entry, entry_len, RDV40_SPIFFS_SAFETY_SAFE);
     }
-    LED_D_OFF();
+}
+
+static void save_pwds(uint32_t *pwdlist, size_t no_pwd) {
+    uint8_t entry[10] = {0};
+
+    if (no_pwd > 0) {
+        Dbprintf("");
+        for (int i = 0; i < no_pwd; i++) {
+            sprintf((char *)entry, "%08"PRIx32"\n", pwdlist[i]);
+            append(LF_EM4X50_LOGFILE_SIM, entry, strlen((char *)entry));
+            Dbprintf("received password: %08"PRIx32"", pwdlist[i]);
+        }
+    }
 }
 
 void ModInfo(void) {
-    DbpString(_YELLOW_("  LF EM4x50 sim/collector/bruteforce mode") " - a.k.a tharexde");
+    DbpString(_YELLOW_("  LF EM4x50 sim/collector mode") " - a.k.a tharexde");
 }
 
 void RunMod(void) {
 
-    bool state_change = true;//, password_found = false;
-    int pwd_found = false;
-    uint8_t state = STATE_SIM;
-    // declarations for simulating
-    uint32_t words[33] = {0x0};
-    uint32_t pwd = 0x0;
-    uint32_t passwords[2] = {0x0};
-    size_t now = 0;
-    // declarations for reading
-    int no_words = 0;
-    //uint32_t words[EM4X50_TAG_WORD];
-    uint8_t entry[81];
+    bool state_change = true, read_ok = false;
+    int no_words = 0, command = 0, no_pwd = 0;
+    uint8_t entry[400], state = STATE_SIM;
+    uint32_t tag[EM4X50_NO_WORDS] = {0x0}, pwdlist[MAX_NO_PWDS_TO_SAVE];
 
     rdv40_spiffs_lazy_mount();
-
     StandAloneMode();
     Dbprintf(_YELLOW_("Standalone mode THAREXDE started"));
 
     for (;;) {
 
         WDT_HIT();
-        if (data_available()) break;
+        if (data_available()) {
+            break;
+        }
 
-        // press button - toggle between SIM, READ and BRUTE
+        // press button - toggle between SIM and READ
         // hold button - exit
         int button_pressed = BUTTON_CLICKED(1000);
         if (button_pressed == BUTTON_SINGLE_CLICK) {
 
-            SpinUp(100);
-            
             switch (state) {
-
                 case STATE_SIM:
+                    // save and display passwords
+                    save_pwds(pwdlist, no_pwd);
                     state = STATE_READ;
                     break;
                 case STATE_READ:
-                    state = STATE_BRUTE;
-                    break;
-                case STATE_BRUTE:
                     state = STATE_SIM;
                     break;
                 default:
                     break;
             }
-            
+
             state_change = true;
 
         } else if (button_pressed == BUTTON_HOLD) {
-
-            SpinDown(100);
             break;
         }
 
@@ -181,170 +190,102 @@ void RunMod(void) {
 
             if (state_change) {
 
-                FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-                FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-                FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
-
-                AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
-                AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-                AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
-
+                // initialize simulation mode
                 LEDsoff();
                 LED_A_ON();
                 Dbprintf("");
                 Dbprintf(_YELLOW_("switched to EM4x50 simulating mode"));
 
-                now = get_input_data_from_file(words, LF_EM4X50SIMULATE_INPUTFILE);
-                if (now > 0) {
-                    Dbprintf(_YELLOW_("simulating %i blocks"), now);
-                    for (int i = 0; i < now; i++)
-                        Dbprintf("%2i -> %lx", i + 1, words[i]);
-
+                read_ok = get_input_data_from_file(tag, LF_EM4X50_INPUTFILE_SIM);
+                if (read_ok) {
+                    Dbprintf(_YELLOW_("tag data ok"));
                 } else {
-                    Dbprintf(_RED_("error in input data"));
+                    Dbprintf(_RED_("error in tag data"));
+                    LoadDataInstructions(LF_EM4X50_INPUTFILE_SIM);
                 }
 
+                LED_D_OFF();
+                gLogin = false;
+                gPassword = reflect32(tag[0]);
+                gWritePasswordProcess = false;
+                command = EM4X50_COMMAND_STANDARD_READ;
+                no_pwd = 0;
+                memset(pwdlist, 0, sizeof(pwdlist));
+
+                em4x50_setup_sim();
                 state_change = false;
             }
 
-            em4x50_sim_send_listen_window();
-            for (int i = 0; i < now; i++) {
-                em4x50_sim_send_listen_window();
-                em4x50_sim_send_word(words[i]);
+            // if no data or read error -> blink
+            if (read_ok == false) {
+                LED(LED_A, 200);
+                SpinDelay(200);
+            }
+
+            em4x50_handle_commands(&command, tag);
+
+            // check if new password was found
+            if (gPassword != reflect32(tag[EM4X50_DEVICE_PASSWORD])) {
+                if (no_pwd < MAX_NO_PWDS_TO_SAVE) {
+                    pwdlist[no_pwd] = gPassword;
+                    no_pwd++;
+                }
+                gPassword = reflect32(tag[EM4X50_DEVICE_PASSWORD]);
+            }
+
+            // if timeout (e.g. no reader field) continue with standard read
+            // mode and reset former authentication
+            if (command == PM3_ETIMEOUT) {
+                command = EM4X50_COMMAND_STANDARD_READ;
+                gLogin = false;
+                LED_D_OFF();
             }
 
         } else if (state == STATE_READ) {
 
             if (state_change) {
 
+                // initialize read mode
                 LEDsoff();
                 LED_B_ON();
                 Dbprintf("");
                 Dbprintf(_YELLOW_("switched to EM4x50 reading mode"));
 
-                memset(entry, 0, sizeof(entry));
-                memset(words, 0, sizeof(words));
-
-                log_exists = exists_in_spiffs(LF_EM4X50COLLECT_LOGFILE);
-
+                em4x50_setup_read();
                 state_change = false;
             }
 
-            no_words = em4x50_standalone_read(words);
+            no_words = 0;
+            memset(tag, 0, sizeof(tag));
+            standard_read(&no_words, tag);
 
             if (no_words > 0) {
 
                 memset(entry, 0, sizeof(entry));
 
-                sprintf((char *)entry, "found new EM4x50 tag:");
-                Dbprintf("%s", entry);
-                strcat((char *)entry, "\n");
-                append(LF_EM4X50COLLECT_LOGFILE, entry, strlen((char *)entry));
-
+                sprintf((char *)entry, "found EM4x50 tag:\n");
                 for (int i = 0; i < no_words; i++) {
-
-                    sprintf((char *)entry, "  %2i -> 0x%08"PRIx32"", i + 1, words[i]);
-                    Dbprintf("%s", entry);
-                    strcat((char *)entry, "\n");
-                    append(LF_EM4X50COLLECT_LOGFILE, entry, strlen((char *)entry));
+                    sprintf((char *)entry + strlen((char *)entry), "%08"PRIx32"\n", tag[i]);
                 }
-            }
-
-        } else if (state == STATE_BRUTE) {
-
-            if (state_change) {
-
-                LEDsoff();
-                LED_C_ON();
-                Dbprintf("");
-                Dbprintf(_YELLOW_("switched to EM4x50 brute force mode"));
-
-                log_exists = exists_in_spiffs(LF_EM4X50BRUTE_LOGFILE);
-                now = get_input_data_from_file(passwords, LF_EM4X50BRUTE_INPUTFILE);
-                
-                if (now == 2) {
-                    
-                    // print some information
-                    int no_iter = passwords[1] - passwords[0] + 1;
-                    int dur_s = no_iter / EM4X50_PWD_SPEED;
-                    int dur_h = dur_s / 3600;
-                    int dur_m = (dur_s - dur_h * 3600) / 60;
-                    dur_s -= dur_h * 3600 + dur_m * 60;
-
-                    //iterprint = no_iter/10;
-
-                    Dbprintf(_YELLOW_("trying %i passwords in range [0x%08x, 0x%08x]"),
-                             no_iter, passwords[0], passwords[1]);
-                    Dbprintf(_YELLOW_("estimated duration: %ih%im%is"),
-                             dur_h, dur_m, dur_s);
-                   
-                } else {
-                    Dbprintf(_RED_("error in input data"));
-                    break;
-                }
-
-                state_change = false;
-            }
-
-            pwd_found = em4x50_standalone_brute(passwords[0], passwords[1], &pwd);
-            
-            if (pwd_found == PM3_ETIMEOUT) {
-
-                // timeout -> no EM4x50 tag on reader?
-                Dbprintf(_YELLOW_("timeout - no EM4x50 tag detected"));
-
-            } else if (pwd_found == true) {
-
-                // password found -> write to logfile
-                sprintf((char *)entry, "password found: 0x%08"PRIx32, pwd);
-                Dbprintf(_YELLOW_("%s"), entry);
-                strcat((char *)entry, "\n");
-                append(LF_EM4X50BRUTE_LOGFILE, entry, strlen((char *)entry));
-
-                break;
-
-            } else {
-
-                if (pwd == passwords[1] + 1) {
-
-                    // finished without success -> write to logfile
-                    sprintf((char *)entry, "no password found");
-                    Dbprintf(_YELLOW_("%s"), entry);
-                    strcat((char *)entry, "\n");
-                    append(LF_EM4X50BRUTE_LOGFILE, entry, strlen((char *)entry));
-
-                    
-                } else {
-                    
-                    // stopped -> write to logfile
-                    sprintf((char *)entry, "stopped search - last password: 0x%08"PRIx32, pwd);
-                    Dbprintf(_YELLOW_("%s"), entry);
-                    strcat((char *)entry, "\n");
-                    append(LF_EM4X50BRUTE_LOGFILE, entry, strlen((char *)entry));
-                    
-                    // replace start password by last tested password in
-                    // inputfile (spiffs) so that brute forcing process will
-                    // be continued when envoking brute force mode again
-                    sprintf((char *)entry, "%08"PRIx32"\n%08"PRIx32"\n", pwd, passwords[1]);
-                    rdv40_spiffs_write(LF_EM4X50BRUTE_INPUTFILE,
-                                       entry,
-                                       strlen((char *)entry),
-                                       RDV40_SPIFFS_SAFETY_SAFE);
-
-                }
-
-                break;
+                Dbprintf("%s", entry);
+                sprintf((char *)entry + strlen((char *)entry), "\n");
+                append(LF_EM4X50_LOGFILE_COLLECT, entry, strlen((char *)entry));
             }
         }
+
+        // reset timer
+        AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; // re-enable timer and wait for TC0
+        AT91C_BASE_TC0->TC_RC  = 0; // set TIOA (carry bit) on overflow, return to zero
+        AT91C_BASE_TC0->TC_RA  = 1; // clear carry bit on next clock cycle
+        AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; // reset and re-enable timer
     }
 
     if (state == STATE_READ) {
-        DownloadLogInstructions(LF_EM4X50COLLECT_LOGFILE);
-    } else if (state == STATE_BRUTE) {
-        LoadDataInstructions(LF_EM4X50BRUTE_INPUTFILE);
-        DownloadLogInstructions(LF_EM4X50BRUTE_LOGFILE);
+        DownloadLogInstructions(LF_EM4X50_LOGFILE_COLLECT);
     } else {
-        LoadDataInstructions(LF_EM4X50SIMULATE_INPUTFILE);
+        // save and display passwords
+        save_pwds(pwdlist, no_pwd);
+        DownloadLogInstructions(LF_EM4X50_LOGFILE_SIM);
     }
 
     LED_D_ON();
@@ -352,8 +293,8 @@ void RunMod(void) {
     LED_D_OFF();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
     LEDsoff();
     Dbprintf("");
     Dbprintf(_YELLOW_("[=] Standalone mode THAREXDE stopped"));
-
 }

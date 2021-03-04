@@ -1201,7 +1201,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, int timeo
 
         if (Handle14443bSamplesFromTag(ci, cq)) {
 
-            *eof_time = dma_start_time + (samples) - DELAY_TAG_TO_ARM;  // end of EOF
+            *eof_time = GetCountSspClkDelta(dma_start_time) - (DELAY_TAG_TO_ARM * 128);  // end of EOF
 
             if (Demod.len > Demod.max_len) {
                 ret = -2; // overflow
@@ -1209,7 +1209,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, int timeo
             break;
         }
 
-        if (samples > timeout && Demod.state < DEMOD_PHASE_REF_TRAINING) {
+        if (((GetCountSspClkDelta(dma_start_time) >> 7) > timeout) && Demod.state < DEMOD_PHASE_REF_TRAINING) {
             ret = -1;
             break;
         }
@@ -1225,7 +1225,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, int timeo
                             - (Demod.len * (8 + 2)) // time for byte transfers
                             - (12)  // time for SOF transfer
                             - (12); // time for EOF transfer
-        LogTrace(Demod.output, Demod.len, (sof_time * 4), (*eof_time * 4), NULL, false);
+        LogTrace(Demod.output, Demod.len, sof_time, *eof_time, NULL, false);
     }
     return Demod.len;
 }
@@ -1400,7 +1400,7 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
     CodeAndTransmit14443bAsReader(real_cmd, msg_len + 3, &start_time, &eof_time);
 
     eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
-    int len = Get14443bAnswerFromTag(rxdata, rxmaxlen, ISO14443B_READER_TIMEOUT, &eof_time);
+    int len = Get14443bAnswerFromTag(rxdata, rxmaxlen, iso14b_timeout, &eof_time);
     FpgaDisableTracing();
 
     uint8_t *data_bytes = (uint8_t *) rxdata;

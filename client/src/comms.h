@@ -21,9 +21,7 @@ extern "C" {
 #endif
 
 #ifndef DropField
-#define DropField() { \
-        clearCommandBuffer(); SendCommandNG(CMD_HF_DROPFIELD, NULL, 0); \
-    }
+#define DropField() { clearCommandBuffer(); SendCommandNG(CMD_HF_DROPFIELD, NULL, 0); }
 #endif
 
 #ifndef DropFieldEx
@@ -47,7 +45,6 @@ typedef enum {
     SPIFFS,
     FPGA_MEM,
 } DeviceMemType_t;
-
 
 typedef struct {
     bool run; // If TRUE, continue running the uart_communication thread

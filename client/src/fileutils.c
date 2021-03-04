@@ -78,6 +78,44 @@ struct wave_info_t {
 } PACKED;
 
 /**
+ * @brief detects if file is of a supported filetype based on extension
+ * @param filename
+ * @return o
+ */
+DumpFileType_t getfiletype(const char *filename) {
+    // assume unknown file is BINARY
+    DumpFileType_t o = BIN;
+    if (filename == NULL) {
+        return o;
+    }
+
+    size_t len = strlen(filename);
+    if (len > 4) {
+        //  check if valid file extension and attempt to load data
+        char s[FILE_PATH_SIZE];
+        memset(s, 0, sizeof(s));
+        memcpy(s, filename, len);
+        str_lower(s);
+
+        if (str_endswith(s, "bin")) {
+            o = BIN;
+        } else if (str_endswith(s, "eml")) {
+            o = EML;
+        } else if (str_endswith(s, "json")) {
+            o = JSON;
+        } else if (str_endswith(s, "dic")) {
+            o = DICTIONARY;
+        } else {
+            // mfd, trc, trace is binary
+            o = BIN;
+            // log is text
+            // .pm3 is text values of signal data
+        }
+    }
+    return o;
+}
+
+/**
  * @brief checks if a file exists
  * @param filename
  * @return
@@ -195,12 +233,12 @@ bool create_path(const char *dirname) {
     return true;
 }
 */
-/*
-bool setDefaultPath (savePaths_t pathIndex,const char *Path) {
+
+bool setDefaultPath(savePaths_t pathIndex, const char *Path) {
 
     if (pathIndex < spItemCount) {
         if ((Path == NULL) && (session.defaultPaths[pathIndex] != NULL)) {
-            free (session.defaultPaths[pathIndex]);
+            free(session.defaultPaths[pathIndex]);
             session.defaultPaths[pathIndex] = NULL;
         }
 
@@ -208,13 +246,11 @@ bool setDefaultPath (savePaths_t pathIndex,const char *Path) {
             session.defaultPaths[pathIndex] = (char *)realloc(session.defaultPaths[pathIndex], strlen(Path) + 1);
             strcpy(session.defaultPaths[pathIndex], Path);
         }
-    } else {
-        return false;
+        return true;
     }
-
-    return true;
+    return false;
 }
-*/
+
 static char *filenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
@@ -735,7 +771,7 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
     fflush(f);
     fclose(f);
     PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s"), fileName);
-    PrintAndLogEx(INFO, " OBS! --> 0xFFFFFFFFFFFF <-- has been inserted for unknown keys.");
+    PrintAndLogEx(INFO, "FYI! --> " _YELLOW_("0xFFFFFFFFFFFF") " <-- has been inserted for unknown keys where " _YELLOW_("res") " is " _YELLOW_("0"));
     free(fileName);
     return PM3_SUCCESS;
 }

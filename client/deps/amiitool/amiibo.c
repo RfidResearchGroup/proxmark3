@@ -9,6 +9,7 @@
 #include "md.h"
 #include "aes.h"
 #include "commonutil.h"
+#include "../src/fileutils.h"
 
 #define HMAC_POS_DATA 0x008
 #define HMAC_POS_TAG 0x1B4
@@ -131,24 +132,29 @@ void nfc3d_amiibo_pack(const nfc3d_amiibo_keys *amiiboKeys, const uint8_t *plain
     nfc3d_amiibo_internal_to_tag(cipher, tag);
 }
 
-bool nfc3d_amiibo_load_keys(nfc3d_amiibo_keys *amiiboKeys, const char *path) {
-    FILE *f = fopen(path, "rb");
-    if (!f) {
+bool nfc3d_amiibo_load_keys(nfc3d_amiibo_keys *amiiboKeys) {
+
+#define amiboo_key_fn "key_retail.bin"
+
+    uint8_t *dump = NULL;
+    size_t bytes_read = 0;
+    if (loadFile_safe(amiboo_key_fn, "", (void **)&dump, &bytes_read) != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", amiboo_key_fn);
         return false;
     }
 
-    size_t len = fread(amiiboKeys, sizeof(*amiiboKeys), 1, f);
-    fclose(f);
-
-    if (len != sizeof(*amiiboKeys)) {
+    if (bytes_read != sizeof(*amiiboKeys)) {
+        free(dump);
         return false;
     }
 
-    if ((amiiboKeys->data.magicBytesSize > 16) ||
-            (amiiboKeys->tag.magicBytesSize > 16)) {
+    if ((amiiboKeys->data.magicBytesSize > 16) ||  (amiiboKeys->tag.magicBytesSize > 16)) {
+        free(dump);
         return false;
     }
 
+    memcpy(amiiboKeys, dump, bytes_read);
+    free(dump);
     return true;
 }
 

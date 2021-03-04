@@ -7,7 +7,7 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Martin Holst Swende'
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc = [[
 This script takes a dumpfile on EML (ASCII) format and produces a html based dump, which is a
 bit more easily analyzed.
@@ -44,7 +44,7 @@ end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print('ERROR:', err)
+    print('[!!] ERROR:', err)
     core.clearCommandBuffer()
     return nil, err
 end
@@ -75,7 +75,7 @@ local function main(args)
     local filename, err = dumplib.convert_eml_to_html(input,output)
     if err then return oops(err) end
 
-    print(('Wrote a HTML dump to the file %s'):format(filename))
+    print(('[+] Wrote a HTML dump to the file %s'):format(filename))
 end
 
 --[[

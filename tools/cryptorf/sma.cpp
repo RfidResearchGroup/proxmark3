@@ -102,7 +102,6 @@ Ci+1: de c2 ee 1b 1c 92 76 e9
   7c90849f8 (77)
   7cc847482 (87)
 
-*/
 
 const uint64_t left_candidates[43] = {
     0x6221539d9ull, 0x1ddeac626ull, 0x7cc847482ull, 0x0337b8b7dull,
@@ -117,6 +116,7 @@ const uint64_t left_candidates[43] = {
     0x0f78aac5bull, 0x3770cdaf3ull, 0x205078bbaull, 0x04445c715ull,
     0x004df8a64ull, 0x6f696e09eull, 0x109691f61ull
 };
+*/
 
 typedef struct {
     uint64_t l;
@@ -186,16 +186,13 @@ static lookup_entry lookup_right[0x8000];
 static uint8_t left_addition[0x100000];
 
 static inline void init_lookup_left() {
-    uint8_t b3, b6, temp;
-    int i, index;
-
-    for (i = 0; i < 0x400; i++) {
-        b6 = i & 0x1f;
-        b3 = (i >> 5) & 0x1f;
-        index = (b3 << 15) | b6;
+    for (int i = 0; i < 0x400; i++) {
+        int b6 = i & 0x1f;
+        int b3 = (i >> 5) & 0x1f;
+        int index = (b3 << 15) | b6;
         b6 = bit_rotate_l(b6, 5);
 
-        temp = mod(b3 + b6, 0x1f);
+        int temp = mod(b3 + b6, 0x1f);
         left_addition[index] = temp;
         lookup_left[index].addition = temp;
         lookup_left[index].out = ((temp ^ b3) & 0x0f);
@@ -203,15 +200,12 @@ static inline void init_lookup_left() {
 }
 
 static inline void init_lookup_right() {
-    uint8_t b16, b18, temp;
-    int i, index;
+    for (int i = 0; i < 0x400; i++) {
+        int b18 = i & 0x1f;
+        int b16 = (i >> 5) & 0x1f;
+        int index = (b16 << 10) | b18;
 
-    for (i = 0; i < 0x400; i++) {
-        b18 = i & 0x1f;
-        b16 = (i >> 5) & 0x1f;
-        index = (b16 << 10) | b18;
-
-        temp = mod(b18 + b16, 0x1f);
+        int temp = mod(b18 + b16, 0x1f);
         lookup_right[index].addition = temp;
         lookup_right[index].out = ((temp ^ b16) & 0x0f);
     }
@@ -311,6 +305,7 @@ static inline uint8_t next_left_fast(uint8_t in, uint64_t *left) {
     return lookup->out;
 }
 
+/*
 static inline uint8_t next_left_ksbyte(uint64_t *left) {
     lookup_entry *lookup;
     uint8_t bt;
@@ -325,6 +320,7 @@ static inline uint8_t next_left_ksbyte(uint64_t *left) {
     bt |= lookup->out;
     return bt;
 }
+*/
 
 static inline uint8_t next_right_fast(uint8_t in, uint64_t *right) {
     if (in) *right ^= ((in & 0xf8) << 12);
@@ -422,7 +418,7 @@ static inline void previous_all_input(vector<cs_t> *pcstates, uint32_t gc_byte_i
     uint8_t btGc, in;
     vector<cs_t> ncstates;
     vector<cs_t> prev_ncstates;
-    vector<cs_t>::iterator it, itnew;
+    vector<cs_t>::iterator itnew;
 
     // Loop through the complete entryphy of 5 bits for each candidate
     // We ignore zero (xor 0x00) to avoid duplicates
@@ -701,19 +697,17 @@ void combine_valid_left_right_states(vector<cs_t> *plcstates, vector<cs_t> *prcs
         }
     }
     printf("Found a total of " _YELLOW_("%llu")" combinations, ", ((unsigned long long)plcstates->size()) * prcstates->size());
-    printf("but only " _GREEN_("%lu")" were valid!\n", pgc_candidates->size());
+    printf("but only " _GREEN_("%zu")" were valid!\n", pgc_candidates->size());
 }
 
 int main(int argc, const char *argv[]) {
     size_t pos;
     crypto_state_t ostate;
-    uint64_t rstate_before_gc, rstate_after_gc;
-    uint64_t lstate_before_gc;
-    vector<uint64_t> rstates, lstates_after_gc, pgc_candidates;
+    uint64_t rstate_before_gc, lstate_before_gc;
+    vector<uint64_t> rstates, pgc_candidates;
     vector<uint64_t>::iterator itrstates, itgc;
     vector<cs_t> crstates;
-    vector<cs_t> clcandidates, clstates;
-    vector<cs_t>::iterator it;
+    vector<cs_t> clstates;
     uint32_t rbits;
 
 //  uint8_t   Gc[ 8] = {0x4f,0x79,0x4a,0x46,0x3f,0xf8,0x1d,0x81};
@@ -814,7 +808,7 @@ int main(int argc, const char *argv[]) {
 
     printf("Determing the right states that correspond to the keystream\n");
     rbits = sm_right(ks, mask, &rstates);
-    printf("Top-bin for the right state contains " _GREEN_("%d")" correct bits\n", rbits);
+    printf("Top-bin for the right state contains " _GREEN_("%u")" correct bits\n", rbits);
     printf("Total count of right bins: " _YELLOW_("%lu") "\n", (unsigned long)rstates.size());
 
     if (rbits < 96) {
@@ -822,21 +816,21 @@ int main(int argc, const char *argv[]) {
     }
 
     for (itrstates = rstates.begin(); itrstates != rstates.end(); ++itrstates) {
-        rstate_after_gc = *itrstates;
+        uint64_t rstate_after_gc = *itrstates;
         sm_left_mask(ks, mask, rstate_after_gc);
         printf("Using the state from the top-right bin: " _YELLOW_("0x%07" PRIx64)"\n", rstate_after_gc);
 
         search_gc_candidates_right(rstate_before_gc, rstate_after_gc, Q, &crstates);
-        printf("Found " _YELLOW_("%lu")" right candidates using the meet-in-the-middle attack\n", crstates.size());
+        printf("Found " _YELLOW_("%zu")" right candidates using the meet-in-the-middle attack\n", crstates.size());
         if (crstates.size() == 0) continue;
 
         printf("Calculating left states using the (unknown bits) mask from the top-right state\n");
         sm_left(ks, mask, &clstates);
-        printf("Found a total of " _YELLOW_("%lu")" left cipher states, recovering left candidates...\n", clstates.size());
+        printf("Found a total of " _YELLOW_("%zu")" left cipher states, recovering left candidates...\n", clstates.size());
         if (clstates.size() == 0) continue;
 
         search_gc_candidates_left(lstate_before_gc, Q, &clstates);
-        printf("The meet-in-the-middle attack returned " _YELLOW_("%lu")" left cipher candidates\n", clstates.size());
+        printf("The meet-in-the-middle attack returned " _YELLOW_("%zu")" left cipher candidates\n", clstates.size());
         if (clstates.size() == 0) continue;
 
         printf("Combining left and right states, disposing invalid combinations\n");

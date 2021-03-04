@@ -50,10 +50,7 @@ static int CmdIOProxWatch(const char *Cmd) {
     PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
     clearCommandBuffer();
     SendCommandNG(CMD_LF_IO_WATCH, NULL, 0);
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_IO_WATCH, &resp);
-    PrintAndLogEx(INFO, "Done");
-    return resp.status;
+    return lfsim_wait_check(CMD_LF_IO_WATCH);
 }
 
 //IO-Prox demod - FSK RF/64 with preamble of 000000001
@@ -318,12 +315,12 @@ static int CmdIOProxClone(const char *Cmd) {
     blocks[2] = bytebits_to_byte(bits + 32, 32);
 
     PrintAndLogEx(INFO, "Preparing to clone ioProx to " _YELLOW_("%s") " with Version: " _GREEN_("%u") " FC: " _GREEN_("%u (0x%02x)") " CN: " _GREEN_("%u")
-            , cardtype
-            , version
-            , fc
-            , fc
-            , cn
-            );
+                  , cardtype
+                  , version
+                  , fc
+                  , fc
+                  , cn
+                 );
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res;

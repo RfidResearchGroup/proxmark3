@@ -15,6 +15,8 @@
 
 int CmdHF14B(const char *Cmd);
 
-int infoHF14B(bool verbose);
+int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field, bool leave_signal_on, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, int user_timeout);
+
+int infoHF14B(bool verbose, bool do_aid_search);
 int readHF14B(bool verbose);
 #endif

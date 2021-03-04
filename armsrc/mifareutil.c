@@ -68,9 +68,12 @@ uint8_t mf_crypto1_encrypt4bit(struct Crypto1State *pcs, uint8_t data) {
 
 // send X byte basic commands
 int mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing) {
+
     uint8_t dcmd[data_size + 3];
     dcmd[0] = cmd;
-    memcpy(dcmd + 1, data, data_size);
+    if (data_size > 0)
+        memcpy(dcmd + 1, data, data_size);
+
     AddCrc14A(dcmd, data_size + 1);
     ReaderTransmit(dcmd, sizeof(dcmd), timing);
     int len = ReaderReceive(answer, answer_parity);

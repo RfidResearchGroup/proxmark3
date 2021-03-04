@@ -586,7 +586,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -w                    -- wait for serial port", exec_name);
         PrintAndLogEx(NORMAL, "      %s                                    -- runs the pm3 client in OFFLINE mode", exec_name);
         PrintAndLogEx(NORMAL, "\n  to execute different commands from terminal:\n");
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -c \"hf mf chk 1* ?\"   -- execute cmd and quit client", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -c \"hf mf chk --1k\"   -- execute cmd and quit client", exec_name);
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -l hf_read            -- execute lua script " _YELLOW_("`hf_read`")" and quit client", exec_name);
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -s mycmds.txt         -- execute each pm3 cmd in file and quit client", exec_name);
         PrintAndLogEx(NORMAL, "\n  to flash fullimage and bootloader:\n");
@@ -673,6 +673,8 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
     }
 
 finish:
+    if (ret != PM3_SUCCESS)
+        PrintAndLogEx(INFO, "The flashing procedure failed, follow the suggested steps!");
     ret = flash_stop_flashing();
     CloseProxmark(session.current_device);
 finish2:
@@ -684,7 +686,7 @@ finish2:
         PrintAndLogEx(SUCCESS, _CYAN_("All done"));
     else
         PrintAndLogEx(ERR, "Aborted on error");
-    PrintAndLogEx(NORMAL, "\nHave a nice day!");
+    PrintAndLogEx(INFO, "\nHave a nice day!");
     return ret;
 }
 #endif //LIBPM3
@@ -711,7 +713,7 @@ void pm3_init(void) {
     session.help_dump_mode = false;
     session.incognito = false;
     session.supports_colors = false;
-    session.emoji_mode = ALTTEXT;
+    session.emoji_mode = EMO_ALTTEXT;
     session.stdinOnTTY = false;
     session.stdoutOnTTY = false;
 
@@ -769,14 +771,14 @@ int main(int argc, char *argv[]) {
     session.stdinOnTTY = isatty(STDIN_FILENO);
     session.stdoutOnTTY = isatty(STDOUT_FILENO);
     session.supports_colors = false;
-    session.emoji_mode = ALTTEXT;
+    session.emoji_mode = EMO_ALTTEXT;
     if (session.stdinOnTTY && session.stdoutOnTTY) {
 #if defined(__linux__) || defined(__APPLE__)
         session.supports_colors = true;
-        session.emoji_mode = EMOJI;
+        session.emoji_mode = EMO_EMOJI;
 #elif defined(_WIN32)
         session.supports_colors = DetectWindowsAnsiSupport();
-        session.emoji_mode = ALTTEXT;
+        session.emoji_mode = EMO_ALTTEXT;
 #endif
     }
     for (int i = 1; i < argc; i++) {
@@ -976,7 +978,7 @@ int main(int argc, char *argv[]) {
     // even if prefs, we disable colors if stdin or stdout is not a TTY
     if ((! session.stdinOnTTY) || (! session.stdoutOnTTY)) {
         session.supports_colors = false;
-        session.emoji_mode = ALTTEXT;
+        session.emoji_mode = EMO_ALTTEXT;
     }
 
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway

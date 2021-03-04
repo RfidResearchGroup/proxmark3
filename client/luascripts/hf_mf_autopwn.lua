@@ -99,7 +99,7 @@ local function nested(key,sak)
     else
         print("I don't know how many sectors there are on this type of card, defaulting to 16")
     end
-    local cmd = string.format('hf mf nested %d 0 A %s d', typ, key)
+    local cmd = string.format('hf mf nested -t %d -b 0 --keya -k %s --dumpkeys', typ, key)
     core.console(cmd)
 end
 
@@ -123,7 +123,7 @@ local function dump_tag(uid, numsectors)
 
         local dumpfile = 'hf-mf-'..uid..'-dump'
 
-        local dmp = ('hf mf dump %s f %s'):format(typ, dumpfile)
+        local dmp = ('hf mf dump -t %s -f %s'):format(typ, dumpfile)
         core.console(dmp)
 
         -- Save the global args, those are *our* arguments

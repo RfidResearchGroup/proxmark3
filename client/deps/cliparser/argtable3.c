@@ -830,7 +830,7 @@ static void arg_date_errorfn(
     /* make argval NULL safe */
     argval = argval ? argval : "";
 
-    fprintf(fp, "%s: ", progname);
+    fprintf(fp, "[!] %s: ", progname);
     switch (errorcode) {
         case EMINCOUNT:
             fputs("missing option ", fp);
@@ -846,11 +846,11 @@ static void arg_date_errorfn(
             struct tm tm;
             char buff[200];
 
-            fprintf(fp, "illegal timestamp format \"%s\"\n", argval);
+            fprintf(fp, "[!] illegal timestamp format \"%s\"\n", argval);
             memset(&tm, 0, sizeof(tm));
             arg_strptime("1999-12-31 23:59:59", "%F %H:%M:%S", &tm);
             strftime(buff, sizeof(buff), parent->format, &tm);
-            printf("correct format is \"%s\"\n", buff);
+            printf("[+] correct format is \"%s\"\n", buff);
             break;
         }
     }
@@ -1442,7 +1442,7 @@ static void arg_dbl_errorfn(
     /* make argval NULL safe */
     argval = argval ? argval : "";
 
-    fprintf(fp, "%s: ", progname);
+    fprintf(fp, "[!] %s: ", progname);
     switch (errorcode) {
         case EMINCOUNT:
             fputs("missing option ", fp);
@@ -1455,7 +1455,7 @@ static void arg_dbl_errorfn(
             break;
 
         case EBADDOUBLE:
-            fprintf(fp, "invalid argument \"%s\" to option ", argval);
+            fprintf(fp, "[!] invalid argument \"%s\" to option ", argval);
             arg_print_option(fp, shortopts, longopts, datatype, "\n");
             break;
     }
@@ -1805,7 +1805,7 @@ static void arg_file_errorfn(
     /* make argval NULL safe */
     argval = argval ? argval : "";
 
-    fprintf(fp, "%s: ", progname);
+    fprintf(fp, "[!] %s: ", progname);
     switch (errorcode) {
         case EMINCOUNT:
             fputs("missing option ", fp);
@@ -1818,7 +1818,7 @@ static void arg_file_errorfn(
             break;
 
         default:
-            fprintf(fp, "unknown error at \"%s\"\n", argval);
+            fprintf(fp, "[!] unknown error at \"%s\"\n", argval);
     }
 }
 
@@ -2136,7 +2136,7 @@ static void arg_int_errorfn(
     /* make argval NULL safe */
     argval = argval ? argval : "";
 
-    fprintf(fp, "%s: ", progname);
+    fprintf(fp, "[!] %s: ", progname);
     switch (errorcode) {
         case EMINCOUNT:
             fputs("missing option ", fp);
@@ -2149,7 +2149,7 @@ static void arg_int_errorfn(
             break;
 
         case EBADINT:
-            fprintf(fp, "invalid argument \"%s\" to option ", argval);
+            fprintf(fp, "[!] invalid argument \"%s\" to option ", argval);
             arg_print_option(fp, shortopts, longopts, datatype, "\n");
             break;
 
@@ -2394,7 +2394,7 @@ static void arg_u64_errorfn(
     /* make argval NULL safe */
     argval = argval ? argval : "";
 
-    fprintf(fp, "%s: ", progname);
+    fprintf(fp, "[!] %s: ", progname);
     switch (errorcode) {
         case EMINCOUNT:
             fputs("missing option ", fp);
@@ -2407,7 +2407,7 @@ static void arg_u64_errorfn(
             break;
 
         case EBADINT:
-            fprintf(fp, "invalid argument \"%s\" to option ", argval);
+            fprintf(fp, "[!] invalid argument \"%s\" to option ", argval);
             arg_print_option(fp, shortopts, longopts, datatype, "\n");
             break;
 
@@ -2554,18 +2554,18 @@ static void arg_lit_errorfn(
 
     switch (errorcode) {
         case EMINCOUNT:
-            fprintf(fp, "%s: missing option ", progname);
+            fprintf(fp, "[!] %s: missing option ", progname);
             arg_print_option(fp, shortopts, longopts, datatype, "\n");
             fprintf(fp, "\n");
             break;
 
         case EMAXCOUNT:
-            fprintf(fp, "%s: extraneous option ", progname);
+            fprintf(fp, "[!] %s: extraneous option ", progname);
             arg_print_option(fp, shortopts, longopts, datatype, "\n");
             break;
     }
 
-    ARG_TRACE(("%s:errorfn(%p, %p, %d, %s, %s)\n", __FILE__, parent, fp,
+    ARG_TRACE(("[!] %s:errorfn(%p, %p, %d, %s, %s)\n", __FILE__, parent, fp,
                errorcode, argval, progname));
 }
 
@@ -2859,7 +2859,7 @@ static void arg_rex_errorfn(struct arg_rex *parent,
     /* make argval NULL safe */
     argval = argval ? argval : "";
 
-    fprintf(fp, "%s: ", progname);
+    fprintf(fp, "[!] %s: ", progname);
     switch (errorcode) {
         case EMINCOUNT:
             fputs("missing option ", fp);
@@ -3790,7 +3790,7 @@ static void arg_str_errorfn(
     /* make argval NULL safe */
     argval = argval ? argval : "";
 
-    fprintf(fp, "%s: ", progname);
+    fprintf(fp, "[!] %s: ", progname);
     switch (errorcode) {
         case EMINCOUNT:
             fputs("missing option ", fp);

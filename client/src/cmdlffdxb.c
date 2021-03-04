@@ -653,16 +653,10 @@ static int CmdFdxBReader(const char *Cmd) {
         return res;
     }
 
-    int16_t tmp_div = config.divisor;
-    if (tmp_div != LF_DIVISOR_134) {
-        config.divisor = LF_DIVISOR_134;
-        config.verbose = false;
-        res = lf_config(&config);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "failed to change LF configuration");
-            return res;
-        }
-    }
+    config.verbose = false;
+
+    int16_t old_div = config.divisor;
+    int16_t curr_div = config.divisor;
 
     if (cm) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
@@ -670,13 +664,32 @@ static int CmdFdxBReader(const char *Cmd) {
 
     int ret = PM3_SUCCESS;
     do {
+
+        if (curr_div == LF_DIVISOR_125) {
+            config.divisor = LF_DIVISOR_134;
+            res = lf_config(&config);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "failed to change to 134 KHz LF configuration");
+                return res;
+            }
+        } else {
+            config.divisor = LF_DIVISOR_125;
+            res = lf_config(&config);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "failed to change to 125 KHz LF configuration");
+                return res;
+            }
+        }
+        curr_div = config.divisor;
+
         lf_read(false, 10000);
         ret = demodFDXB(!cm); // be verbose only if not in continuous mode
-        //PrintAndLogEx(INPLACE, "");
+
     } while (cm && !kbd_enter_pressed());
 
-    if (tmp_div != LF_DIVISOR_134) {
-        config.divisor = tmp_div;
+
+    if (old_div != curr_div) {
+        config.divisor = old_div;
         res = lf_config(&config);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "failed to restore LF configuration");
@@ -727,7 +740,7 @@ static int CmdFdxBClone(const char *Cmd) {
     }
 
     uint32_t extended = 0;
-    bool has_extended = false; 
+    bool has_extended = false;
     if (extended_len) {
         extended = bytes_to_num(edata, extended_len);
         has_extended = true;
@@ -773,10 +786,10 @@ static int CmdFdxBClone(const char *Cmd) {
     free(bs);
 
     PrintAndLogEx(INFO, "Preparing to clone FDX-B to " _YELLOW_("%s") " with animal ID: " _GREEN_("%04u-%"PRIu64)
-            , cardtype
-            , country_code
-            , national_code
-            );
+                  , cardtype
+                  , country_code
+                  , national_code
+                 );
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res;
@@ -820,7 +833,7 @@ static int CmdFdxBSim(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint32_t extended = 0;
-    bool has_extended = false; 
+    bool has_extended = false;
     if (extended_len) {
         extended = bytes_to_num(edata, extended_len);
         has_extended = true;

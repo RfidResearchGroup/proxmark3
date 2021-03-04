@@ -118,7 +118,7 @@ int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargta
     if (nerrors > 0) {
         /* Display the error details contained in the arg_end struct.*/
         arg_print_errors(stdout, ((struct arg_end *)(ctx->argtable)[vargtableLen - 1]), ctx->programName);
-        PrintAndLogEx(WARNING, "Try '%s --help' for more information.\n", ctx->programName);
+        PrintAndLogEx(WARNING, "Try " _YELLOW_("'%s --help'") " for more information.\n", ctx->programName);
         fflush(stdout);
         return 3;
     }
@@ -269,15 +269,19 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     return 0;
 }
 
+// hexstr ->  u64,  w optional len input and default value fallback.
+// 0 = failed
+// 1 = OK
+// 3 = optional param - not set
 uint64_t arg_get_u64_hexstr_def(CLIParserContext *ctx, uint8_t paramnum, uint64_t def) {
     uint64_t rv = 0;
-    uint8_t data[8];
-    int datalen = 0;
-    int res = CLIParamHexToBuf(arg_get_str(ctx, paramnum), data, sizeof(data), &datalen);
-    if (res == 0 && datalen > 0) {
-        for (uint8_t i = 0; i < datalen; i++) {
+    uint8_t d[8];
+    int dlen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, paramnum), d, sizeof(d), &dlen);
+    if (res == 0 && dlen > 0) {
+        for (uint8_t i = 0; i < dlen; i++) {
             rv <<= 8;
-            rv |= data[i];
+            rv |= d[i];
         }
     } else  {
         rv = def;
@@ -285,4 +289,56 @@ uint64_t arg_get_u64_hexstr_def(CLIParserContext *ctx, uint8_t paramnum, uint64_
     return rv;
 }
 
+// hexstr ->  u64,  w optional len input and default value fallback.
+// 0 = failed
+// 1 = OK
+// 2 = wrong len param, use default
+// 3 = optional param,  if fail, use default.
+int arg_get_u64_hexstr_def_nlen(CLIParserContext *ctx, uint8_t paramnum, uint64_t def, uint64_t *out, uint8_t nlen, bool optional) {
+    int n = 0;
+    uint8_t d[nlen];
+    int res = CLIParamHexToBuf(arg_get_str(ctx, paramnum), d, sizeof(d), &n);
+    if (res == 0 && n == nlen) {
+        uint64_t rv = 0;
+        for (uint8_t i = 0; i < n; i++) {
+            rv <<= 8;
+            rv |= d[i];
+        }
+        *out = rv;
+        return 1;
+    } else if (res == 0 && n) {
+        *out = def;
+        return 2;
+    } else if (res == 0 && n == 0 && optional) {
+        *out = def;
+        return 3;
+    }
+    return 0;
+}
+
+int arg_get_u32_hexstr_def(CLIParserContext *ctx, uint8_t paramnum, uint32_t def, uint32_t *out) {
+    return arg_get_u32_hexstr_def_nlen(ctx, paramnum, def, out, 4, false);
+}
+
+int arg_get_u32_hexstr_def_nlen(CLIParserContext *ctx, uint8_t paramnum, uint32_t def, uint32_t *out, uint8_t nlen, bool optional) {
+    int n = 0;
+    uint8_t d[nlen];
+    int res = CLIParamHexToBuf(arg_get_str(ctx, paramnum), d, sizeof(d), &n);
+    if (res == 0 && n == nlen) {
+        uint32_t rv = 0;
+        for (uint8_t i = 0; i < n; i++) {
+            rv <<= 8;
+            rv |= d[i];
+        }
+        *out = rv;
+        return 1;
+    } else if (res == 0 && n) {
+        *out = def;
+        return 2;
+    } else if (res == 0 && n == 0 && optional) {
+        *out = def;
+        return 3;
+    }
+    return 0;
+}
 

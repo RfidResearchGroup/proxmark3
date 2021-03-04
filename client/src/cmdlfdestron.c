@@ -190,9 +190,9 @@ static int CmdDestronClone(const char *Cmd) {
     blocks[1] = (blocks[1] & 0xFFFF) | 0xAAE20000;
 
     PrintAndLogEx(INFO, "Preparing to clone Destron tag to " _YELLOW_("%s") " with ID: " _YELLOW_("%s")
-            , cardtype
-            , sprint_hex_inrow(data, datalen)
-            );
+                  , cardtype
+                  , sprint_hex_inrow(data, datalen)
+                 );
 
 
     print_blocks(blocks, ARRAYLEN(blocks));

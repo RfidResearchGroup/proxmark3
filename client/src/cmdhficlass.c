@@ -18,7 +18,6 @@
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"  // ARRAYLEN
 #include "cmdtrace.h"
-#include "cliparser.h"
 #include "util_posix.h"
 #include "comms.h"
 #include "des.h"
@@ -69,7 +68,7 @@ bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t *rmac, uint8_t *
 
     iclass_prekey_t *prekey = calloc(ICLASS_KEYS_MAX, sizeof(iclass_prekey_t));
     if (prekey == false) {
-        return PM3_EMALLOC;
+        return false;
     }
 
     uint8_t ccnr[12];
@@ -624,7 +623,7 @@ static int CmdHFiClassReader(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass reader",
                   "Act as a iCLASS reader. Look for iCLASS tags until Enter or the pm3 button is pressed",
                   "hf iclass reader -@   -> continuous reader mode"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -941,22 +940,28 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     }
 
     bool verbose = arg_get_lit(clictx, 4);
-
     CLIParserFree(clictx);
 
-    size_t keylen = 0;
     uint8_t dec_data[8] = {0};
-
-    bool use_sc = IsCryptoHelperPresent(verbose);
-
-    if (have_key == false && use_sc == false) {
-        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Couldn't find any decryption methods");
-            return PM3_EINVARG;
+    bool use_sc = false;
+    if (have_key == false) {
+        use_sc = IsCryptoHelperPresent(verbose);
+        if (use_sc == false) {
+            size_t keylen = 0;
+            int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(INFO, "Couldn't find any decryption methods");
+                return PM3_EINVARG;
+            }
+    
+            if (keylen != 16) {
+                PrintAndLogEx(ERR, "Failed to load transport key from file");
+                free(keyptr);
+                return PM3_EINVARG;
+            }
+            memcpy(key, keyptr, sizeof(key));
+            free(keyptr);
         }
-        memcpy(key, keyptr, sizeof(key));
-        free(keyptr);
     }
 
     // tripledes
@@ -1076,10 +1081,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(INFO, "Block 9 decoder");
-                uint8_t pinsize = 0;
                 if (use_sc) {
-                    pinsize = GetPinSize(decrypted + (8 * 6));
-
+                    uint8_t pinsize = GetPinSize(decrypted + (8 * 6));
                     if (pinsize > 0) {
 
                         uint64_t pin = bytes_to_num(decrypted + (8 * 9), 5);
@@ -1149,7 +1152,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 
     if (key_len > 0) {
         if (key_len != 16) {
-            PrintAndLogEx(ERR, "Transport key must be 16 hex ytes (32 HEX characters)");
+            PrintAndLogEx(ERR, "Transport key must be 16 hex bytes (32 HEX characters)");
             CLIParserFree(clictx);
             return PM3_EINVARG;
         }
@@ -1160,16 +1163,25 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 
     CLIParserFree(clictx);
 
-    bool use_sc = IsCryptoHelperPresent(verbose);
+    bool use_sc = false;
+    if (have_key == false) {
+        use_sc = IsCryptoHelperPresent(verbose);
+        if (use_sc == false) {
+            size_t keylen = 0;
+            int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Failed to find any encryption methods");
+                return PM3_EINVARG;
+            }
 
-    if (have_key == false && use_sc == false) {
-        size_t keylen = 0;
-        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
-        if (res != PM3_SUCCESS)
-            return PM3_EINVARG;
-
-        memcpy(key, keyptr, sizeof(key));
-        free(keyptr);
+            if (keylen != 16) {
+                PrintAndLogEx(ERR, "Failed to load transport key from file");
+                free(keyptr);
+                return PM3_EINVARG;
+            }
+            memcpy(key, keyptr, sizeof(key));
+            free(keyptr);
+        }
     }
 
     if (use_sc) {
@@ -1698,7 +1710,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
                   "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 --ki 0\n"
                   "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 --ki 0 --elite\n"
                   "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 -k 1122334455667788 --elite\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -2075,7 +2087,7 @@ static int CmdHFiClass_loclass(const char *Cmd) {
                   "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>\n"
                   "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>\n"
                   "   ... totalling N*24 bytes",
-                  "hf iclass loclass -f iclass-dump.bin\n"
+                  "hf iclass loclass -f iclass_dump.bin\n"
                   "hf iclass loclass --test");
 
     void *argtable[] = {
@@ -3314,6 +3326,153 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFiClassEncode(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass encode",
+                  "Encode binary wiegand to block 7",
+                  "hf iclass encode --bin 10001111100000001010100011 --ki 0            -> FC 31 CN 337\n"
+                  "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite    -> FC 31 CN 337,  writing w elite key"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
+        arg_int1(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
+        arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
+        arg_lit0(NULL, "elite", "elite computations applied to key"),
+        arg_lit0(NULL, "raw", "no computations applied to key"),
+        arg_str0(NULL, "enckey", "<hex>", "3DES transport key, 16 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int bin_len = 63;
+    uint8_t bin[70] = {0};
+    CLIGetStrWithReturn(ctx, 1, bin, &bin_len);
+
+    int key_nr = arg_get_int_def(ctx, 2, -1);
+    bool auth = false;
+
+    uint8_t key[8] = {0};
+    if (key_nr >= 0) {
+        if (key_nr < ICLASS_KEYS_MAX) {
+            auth = true;
+            memcpy(key, iClass_Key_Table[key_nr], 8);
+            PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex(iClass_Key_Table[key_nr], 8));
+        } else {
+            PrintAndLogEx(ERR, "Key number is invalid");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    bool use_credit_key = arg_get_lit(ctx, 3);
+    bool elite = arg_get_lit(ctx, 4);
+    bool rawkey = arg_get_lit(ctx, 5);
+
+    int enc_key_len = 0;
+    uint8_t enc_key[16] = {0};
+    uint8_t *enckeyptr = NULL;
+    bool have_enc_key = false;
+    bool use_sc = false;
+    CLIGetHexWithReturn(ctx, 6, enc_key, &enc_key_len);
+
+    CLIParserFree(ctx);
+
+    if ((rawkey + elite) > 1) {
+        PrintAndLogEx(ERR, "Can not use a combo of 'elite', 'raw'");
+        return PM3_EINVARG;
+    }
+
+    if (enc_key_len > 0) {
+        if (enc_key_len != 16) {
+            PrintAndLogEx(ERR, "Transport key must be 16 hex bytes (32 HEX characters)");
+            return PM3_EINVARG;
+        }
+        have_enc_key = true;
+    }
+
+    if (bin_len > 127) {
+        PrintAndLogEx(ERR, "Binary wiegand string must be less than 128 bits");
+        return PM3_EINVARG;
+    }
+
+    if (have_enc_key == false) {
+        use_sc = IsCryptoHelperPresent(false);
+        if (use_sc == false) {
+            size_t keylen = 0;
+            int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&enckeyptr, &keylen);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Failed to find the transport key");
+                return PM3_EINVARG;
+            }
+            if (keylen != 16) {
+                PrintAndLogEx(ERR, "Failed to load transport key from file");
+                return PM3_EINVARG;
+            }
+            memcpy(enc_key, enckeyptr, sizeof(enc_key));
+            free(enckeyptr);
+        }
+    }
+
+    uint8_t credential[] = {
+        0x03, 0x03, 0x03, 0x03, 0x00, 0x03, 0xE0, 0x17,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    };
+
+    uint8_t data[8];
+    memset(data, 0, sizeof(data));
+    BitstreamOut bout = {data, 0, 0 };
+
+    for (int i = 0; i < 64 - bin_len - 1; i++) {
+        pushBit(&bout, 0);
+    }
+    // add binary sentinel bit.
+    pushBit(&bout, 1);
+
+    // convert binary string to hex bytes
+    for (int i = 0; i < bin_len; i++) {
+        char c = bin[i];
+        if (c == '1')
+            pushBit(&bout, 1);
+        else if (c == '0')
+            pushBit(&bout, 0);
+        else {
+            PrintAndLogEx(WARNING, "Ignoring '%c'", c);
+        }
+    }
+    memcpy(credential + 8, data, sizeof(data));
+
+    // encrypt with transport key
+    if (use_sc) {
+        Encrypt(credential + 8, credential + 8);
+        Encrypt(credential + 16, credential + 16);
+        Encrypt(credential + 24, credential + 24);
+    } else {
+        iclass_encrypt_block_data(credential + 8, enc_key);
+        iclass_encrypt_block_data(credential + 16, enc_key);
+        iclass_encrypt_block_data(credential + 24, enc_key);
+    }
+
+    int isok = PM3_SUCCESS;
+    // write
+    for (uint8_t i = 0; i < 4; i++) {
+        isok = iclass_write_block(6 + i, credential + (i * 8), key, use_credit_key, elite, rawkey, false, false, auth);
+        switch (isok) {
+            case PM3_SUCCESS:
+                PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _GREEN_("ok") " )  --> " _YELLOW_("%s"), 6 + i, 6 + i, sprint_hex_inrow(credential + (i * 8), 8));
+                break;
+            default:
+                PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _RED_("fail") " )", 6 + i, 6 + i);
+                break;
+        }
+    }
+    return isok;
+}
+
 /*
 static int CmdHFiClassAutopwn(const char *Cmd) {
 
@@ -3341,34 +3500,35 @@ static int CmdHFiClassAutopwn(const char *Cmd) {
 static command_t CommandTable[] = {
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
     {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
-//    {"clone",       CmdHFiClassClone,           IfPm3Iclass,     "[options..] Create a HID credential to Picopass / iCLASS tag"},
-    {"dump",        CmdHFiClassDump,            IfPm3Iclass,     "[options..] Dump Picopass / iCLASS tag to file"},
-    {"info",        CmdHFiClassInfo,            AlwaysAvailable, "            Tag information"},
-    {"list",        CmdHFiClassList,            AlwaysAvailable, "            List iclass history"},
-    {"rdbl",        CmdHFiClass_ReadBlock,      IfPm3Iclass,     "[options..] Read Picopass / iCLASS block"},
-    {"reader",      CmdHFiClassReader,          IfPm3Iclass,     "            Act like an Picopass / iCLASS reader"},
-    {"restore",     CmdHFiClassRestore,        IfPm3Iclass,      "[options..] Restore a dump file onto a Picopass / iCLASS tag"},
-    {"sniff",       CmdHFiClassSniff,           IfPm3Iclass,     "            Eavesdrop Picopass / iCLASS communication"},
-    {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "[options..] Write Picopass / iCLASS block"},
+//    {"clone",       CmdHFiClassClone,           IfPm3Iclass,     "Create a HID credential to Picopass / iCLASS tag"},
+    {"dump",        CmdHFiClassDump,            IfPm3Iclass,     "Dump Picopass / iCLASS tag to file"},
+    {"info",        CmdHFiClassInfo,            AlwaysAvailable, "Tag information"},
+    {"list",        CmdHFiClassList,            AlwaysAvailable, "List iclass history"},
+    {"rdbl",        CmdHFiClass_ReadBlock,      IfPm3Iclass,     "Read Picopass / iCLASS block"},
+    {"reader",      CmdHFiClassReader,          IfPm3Iclass,     "Act like an Picopass / iCLASS reader"},
+    {"restore",     CmdHFiClassRestore,        IfPm3Iclass,      "Restore a dump file onto a Picopass / iCLASS tag"},
+    {"sniff",       CmdHFiClassSniff,           IfPm3Iclass,     "Eavesdrop Picopass / iCLASS communication"},
+    {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "Write Picopass / iCLASS block"},
 
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("recovery") " ---------------------"},
-//    {"autopwn",     CmdHFiClassAutopwn,         IfPm3Iclass,     "[options..] Automatic key recovery tool for iCLASS"},
-    {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "[options..] Check keys"},
-    {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "[options..] Use loclass to perform bruteforce reader attack"},
-    {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "[options..] Uses authentication trace to check for key in dictionary file"},
+//    {"autopwn",     CmdHFiClassAutopwn,         IfPm3Iclass,     "Automatic key recovery tool for iCLASS"},
+    {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "Check keys"},
+    {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "Use loclass to perform bruteforce reader attack"},
+    {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "Uses authentication trace to check for key in dictionary file"},
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("simulation") " ---------------------"},
-    {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "[options..] Simulate iCLASS tag"},
-    {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "[f <fn>   ] Load Picopass / iCLASS dump file into emulator memory"},
-    {"esave",       CmdHFiClassESave,           IfPm3Iclass,     "[f <fn>   ] Save emulator memory to file"},
-    {"eview",       CmdHFiClassEView,           IfPm3Iclass,     "[options..] View emulator memory"},
+    {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "Simulate iCLASS tag"},
+    {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "Load Picopass / iCLASS dump file into emulator memory"},
+    {"esave",       CmdHFiClassESave,           IfPm3Iclass,     "Save emulator memory to file"},
+    {"eview",       CmdHFiClassEView,           IfPm3Iclass,     "View emulator memory"},
 
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("utils") " ---------------------"},
-    {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "[options..] Calc diversified keys (blocks 3 & 4) to write new keys"},
-    {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "[options..] Encrypt given block data"},
-    {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "[options..] Decrypt given block data or tag dump file" },
-    {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "[options..] Manage keys to use with iclass commands"},
-    {"permutekey",  CmdHFiClassPermuteKey,      IfPm3Iclass,     "            Permute function from 'heart of darkness' paper"},
-    {"view",        CmdHFiClassView,            AlwaysAvailable, "[options..] Display content from tag dump file"},
+    {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "Calc diversified keys (blocks 3 & 4) to write new keys"},
+    {"encode",      CmdHFiClassEncode,          AlwaysAvailable, "Encode binary wiegand to block 7"},
+    {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "Encrypt given block data"},
+    {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "Decrypt given block data or tag dump file" },
+    {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "Manage keys to use with iclass commands"},
+    {"permutekey",  CmdHFiClassPermuteKey,      IfPm3Iclass,     "Permute function from 'heart of darkness' paper"},
+    {"view",        CmdHFiClassView,            AlwaysAvailable, "Display content from tag dump file"},
     {NULL, NULL, NULL, NULL}
 };
 

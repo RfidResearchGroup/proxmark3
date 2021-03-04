@@ -14,17 +14,18 @@
 #include "cmdhf.h"
 
 #include <ctype.h>          // tolower
-
 #include "cmdparser.h"      // command_t
-#include "cliparser.h"  // parse
+#include "cliparser.h"      // parse
 #include "comms.h"          // clearCommandBuffer
 #include "lfdemod.h"        // computeSignalProperties
 #include "cmdhf14a.h"       // ISO14443-A
 #include "cmdhf14b.h"       // ISO14443-B
 #include "cmdhf15.h"        // ISO15693
 #include "cmdhfepa.h"
+#include "cmdhfemrtd.h"     // eMRTD
 #include "cmdhflegic.h"     // LEGIC
 #include "cmdhficlass.h"    // ICLASS
+#include "cmdhfjooki.h"     // MFU based Jooki
 #include "cmdhfmf.h"        // CLASSIC
 #include "cmdhfmfu.h"       // ULTRALIGHT/NTAG etc
 #include "cmdhfmfp.h"       // Mifare Plus
@@ -46,50 +47,20 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hf_search(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf search");
-    PrintAndLogEx(NORMAL, "Will try to find a HF read out of the unknown tag.");
-    PrintAndLogEx(NORMAL, "Continues to search for all different HF protocols");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h               - This help");
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
-static int usage_hf_sniff(void) {
-    PrintAndLogEx(NORMAL, "The high frequency sniffer will assign all available memory on device for sniffed data");
-    PrintAndLogEx(NORMAL, "Use " _YELLOW_("'data samples'")" command to download from device,  and " _YELLOW_("'data plot'")" to look at it");
-    PrintAndLogEx(NORMAL, "Press button to quit the sniffing.\n");
-    PrintAndLogEx(NORMAL, "Usage: hf sniff <skip pairs> <skip triggers>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h               - This help");
-    PrintAndLogEx(NORMAL, "       <skip pairs>    - skip sample pairs");
-    PrintAndLogEx(NORMAL, "       <skip triggers> - skip number of triggers");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf sniff"));
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf sniff 1000 0"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
-static int usage_hf_tune(void) {
-    PrintAndLogEx(NORMAL, "Continuously measure HF antenna tuning.");
-    PrintAndLogEx(NORMAL, "Press button or `enter` to interrupt.");
-    PrintAndLogEx(NORMAL, "Usage: hf tune [h] [<iter>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h             - This help");
-    PrintAndLogEx(NORMAL, "       <iter>        - number of iterations (default: 0=infinite)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf tune 1"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
 int CmdHFSearch(const char *Cmd) {
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_hf_search();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf search",
+                  "Will try to find a HF read out of the unknown tag.\n"
+                  "Continues to search for all different HF protocols.",
+                  "hf search"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     int res = PM3_ESOFT;
 
@@ -141,7 +112,7 @@ int CmdHFSearch(const char *Cmd) {
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for LEGIC tag...");
     if (IfPm3Legicrf()) {
-        if (readLegicUid(false) == PM3_SUCCESS) {
+        if (readLegicUid(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC Prime tag") " found\n");
             res = PM3_SUCCESS;
         }
@@ -189,18 +160,51 @@ int CmdHFSearch(const char *Cmd) {
 
     PROMPT_CLEARLINE;
     if (res != PM3_SUCCESS) {
-
         PrintAndLogEx(WARNING, _RED_("No known/supported 13.56 MHz tags found"));
         res = PM3_ESOFT;
     }
 
+    DropField();
     return res;
 }
 
 int CmdHFTune(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_hf_tune();
-    int iter = param_get32ex(Cmd, 0, 0, 10);
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf tune",
+                  "Continuously measure HF antenna tuning.\n"
+                  "Press button or <Enter> to interrupt.",
+                  "hf tune\n"
+                  "hf tune --mix"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("n", "iter", "<dec>", "number of iterations (default: 0=infinite)"),
+        arg_lit0(NULL, "bar", "bar style"),
+        arg_lit0(NULL, "mix", "mixed style"),
+        arg_lit0(NULL, "value", "values style"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t iter = arg_get_u32_def(ctx, 1, 0);
+    bool is_bar = arg_get_lit(ctx, 2);
+    bool is_mix = arg_get_lit(ctx, 3);
+    bool is_value = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    if ((is_bar + is_mix + is_value) > 1) {
+        PrintAndLogEx(ERR, "Select only one output style");
+        return PM3_EINVARG;
+    }
+
+    barMode_t style = session.bar_mode;
+    if (is_bar)
+        style = STYLE_BAR;
+    if (is_mix)
+        style = STYLE_MIXED;
+    if (is_value)
+        style = STYLE_VALUE;
 
     PrintAndLogEx(INFO, "Measuring HF antenna, click " _GREEN_("pm3 button") " or press " _GREEN_("Enter") " to exit");
     PacketResponseNG resp;
@@ -214,6 +218,12 @@ int CmdHFTune(const char *Cmd) {
     }
 
     mode[0] = 2;
+
+    uint32_t max = 0xFFFF;
+    bool first = true;
+
+    print_progress(0, max, style);
+
     // loop forever (till button pressed) if iter = 0 (default)
     for (uint8_t i = 0; iter == 0 || i < iter; i++) {
         if (kbd_enter_pressed()) {
@@ -224,15 +234,23 @@ int CmdHFTune(const char *Cmd) {
         if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF measure, aborting");
-            return PM3_ETIMEOUT;
+            break;
         }
 
         if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint16_t))) {
+            PrintAndLogEx(NORMAL, "");
             break;
         }
 
         uint16_t volt = resp.data.asDwords[0] & 0xFFFF;
-        PrintAndLogEx(INPLACE, " %u mV / %2u V", volt, (uint16_t)(volt / 1000));
+        if (first) {
+            max = (volt * 1.03);
+            first = false;
+        }
+        if (volt > max) {
+            max = (volt * 1.03);
+        }
+        print_progress(volt, max, style);
     }
     mode[0] = 3;
 
@@ -241,7 +259,7 @@ int CmdHFTune(const char *Cmd) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF shutdown, aborting");
         return PM3_ETIMEOUT;
     }
-    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "\x1b%c[2K\r", 30);
     PrintAndLogEx(INFO, "Done.");
     return PM3_SUCCESS;
 }
@@ -251,16 +269,31 @@ int CmdHFTune(const char *Cmd) {
 // Takes all available bigbuff memory
 // data sample to download?   Not sure what we can do with the data.
 int CmdHFSniff(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_hf_sniff();
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf sniff",
+                  "The high frequency sniffer will assign all available memory on device for sniffed data.\n"
+                  "Use `data samples` to download from device and `data plot` to visualize it.\n"
+                  "Press button to quit the sniffing.",
+                  "hf sniff\n"
+                  "hf sniff --sp 1000 --st 0   -> skip 1000 pairs, skip 0 triggers"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0(NULL, "sp", "<dec>", "skip sample pairs"),
+        arg_u64_0(NULL, "st", "<dec>", "skip number of triggers"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     struct {
         uint32_t samplesToSkip;
         uint32_t triggersToSkip;
     } PACKED params;
 
-    params.samplesToSkip = param_get32ex(Cmd, 0, 0, 10);
-    params.triggersToSkip = param_get32ex(Cmd, 1, 0, 10);
+    params.samplesToSkip = arg_get_u32_def(ctx, 1, 0);
+    params.triggersToSkip = arg_get_u32_def(ctx, 2, 0);
+    CLIParserFree(ctx);
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_SNIFF, (uint8_t *)&params, sizeof(params));
@@ -357,31 +390,33 @@ int CmdHFPlot(const char *Cmd) {
 static command_t CommandTable[] = {
 
     {"--------",    CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("High Frequency") " -----------------------"},
-    {"14a",         CmdHF14A,         AlwaysAvailable, "{ ISO14443A RFIDs...               }"},
-    {"14b",         CmdHF14B,         AlwaysAvailable, "{ ISO14443B RFIDs...               }"},
-    {"15",          CmdHF15,          AlwaysAvailable, "{ ISO15693 RFIDs...                }"},
-//    {"cryptorf",    CmdHFCryptoRF,    AlwaysAvailable, "{ CryptoRF RFIDs...                }"},
-    {"epa",         CmdHFEPA,         AlwaysAvailable, "{ German Identification Card...    }"},
-    {"felica",      CmdHFFelica,      AlwaysAvailable, "{ ISO18092 / FeliCa RFIDs...       }"},
-    {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators... }"},
-    {"iclass",      CmdHFiClass,      AlwaysAvailable, "{ ICLASS RFIDs...                  }"},
-    {"legic",       CmdHFLegic,       AlwaysAvailable, "{ LEGIC RFIDs...                   }"},
-    {"lto",         CmdHFLTO,         AlwaysAvailable, "{ LTO Cartridge Memory RFIDs...    }"},
-    {"mf",          CmdHFMF,          AlwaysAvailable, "{ MIFARE RFIDs...                  }"},
-    {"mfp",         CmdHFMFP,         AlwaysAvailable, "{ MIFARE Plus RFIDs...             }"},
-    {"mfu",         CmdHFMFUltra,     AlwaysAvailable, "{ MIFARE Ultralight RFIDs...       }"},
-    {"mfdes",       CmdHFMFDes,       AlwaysAvailable, "{ MIFARE Desfire RFIDs...          }"},
-    {"st",          CmdHF_ST,         AlwaysAvailable, "{ ST Rothult RFIDs...              }"},
-    {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                }"},
-    {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...      }"},
-    {"waveshare",   CmdHFWaveshare,   AlwaysAvailable, "{ Waveshare NFC ePaper...          }"},
+    {"14a",         CmdHF14A,         AlwaysAvailable, "{ ISO14443A RFIDs...                  }"},
+    {"14b",         CmdHF14B,         AlwaysAvailable, "{ ISO14443B RFIDs...                  }"},
+    {"15",          CmdHF15,          AlwaysAvailable, "{ ISO15693 RFIDs...                   }"},
+//    {"cryptorf",    CmdHFCryptoRF,    AlwaysAvailable, "{ CryptoRF RFIDs...                   }"},
+    {"epa",         CmdHFEPA,         AlwaysAvailable, "{ German Identification Card...       }"},
+    {"emrtd",       CmdHFeMRTD,       AlwaysAvailable, "{ Machine Readable Travel Document... }"},
+    {"felica",      CmdHFFelica,      AlwaysAvailable, "{ ISO18092 / FeliCa RFIDs...          }"},
+    {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators...    }"},
+    {"jooki",       CmdHF_Jooki,      AlwaysAvailable, "{ Jooki RFIDs...                      }"},
+    {"iclass",      CmdHFiClass,      AlwaysAvailable, "{ ICLASS RFIDs...                     }"},
+    {"legic",       CmdHFLegic,       AlwaysAvailable, "{ LEGIC RFIDs...                      }"},
+    {"lto",         CmdHFLTO,         AlwaysAvailable, "{ LTO Cartridge Memory RFIDs...       }"},
+    {"mf",          CmdHFMF,          AlwaysAvailable, "{ MIFARE RFIDs...                     }"},
+    {"mfp",         CmdHFMFP,         AlwaysAvailable, "{ MIFARE Plus RFIDs...                }"},
+    {"mfu",         CmdHFMFUltra,     AlwaysAvailable, "{ MIFARE Ultralight RFIDs...          }"},
+    {"mfdes",       CmdHFMFDes,       AlwaysAvailable, "{ MIFARE Desfire RFIDs...             }"},
+    {"st",          CmdHF_ST,         AlwaysAvailable, "{ ST Rothult RFIDs...                 }"},
+    {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                   }"},
+    {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...         }"},
+    {"waveshare",   CmdHFWaveshare,   AlwaysAvailable, "{ Waveshare NFC ePaper...             }"},
     {"-----------", CmdHelp,          AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},
-    {"list",        CmdTraceList,     AlwaysAvailable,    "List protocol data in trace buffer"},
+    {"list",        CmdTraceList,     AlwaysAvailable, "List protocol data in trace buffer"},
     {"plot",        CmdHFPlot,        IfPm3Hfplot,     "Plot signal"},
     {"tune",        CmdHFTune,        IfPm3Present,    "Continuously measure HF antenna tuning"},
     {"search",      CmdHFSearch,      AlwaysAvailable, "Search for known HF tags"},
-    {"sniff",       CmdHFSniff,       IfPm3Hfsniff,    "<samples to skip (10000)> <triggers to skip (1)> Generic HF Sniff"},
+    {"sniff",       CmdHFSniff,       IfPm3Hfsniff,    "Generic HF Sniff"},
     {NULL, NULL, NULL, NULL}
 };
 

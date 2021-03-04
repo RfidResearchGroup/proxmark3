@@ -456,7 +456,7 @@ local function writeToTag(plainBytes)
     -- write data to file
     if (writeOutputBytes(bytes, "hf-legic-UID-dump.bin")) then
         -- write pm3-buffer to Tag
-        cmd = ('hf legic restore f hf-legic-UID-dump')
+        cmd = ('hf legic restore -f hf-legic-UID-dump')
         core.console(cmd)
     end
 end
@@ -530,13 +530,13 @@ local function main(args)
                 res = res .."\ncreated clone_dump from\n\t"..infile.." crc: "..oldcrc.."\ndump_file:"
                 res = res .."\n\t"..outfile.." crc: "..string.sub(newcrc, -2)
                 res = res .."\nyou may load the new file with:"
-                res = res ..ansicolors.yellow.."hf legic eload f "..outfile..ansicolors.reset
+                res = res ..ansicolors.yellow.."hf legic eload -f "..outfile..ansicolors.reset
                 res = res .."\n\nif you don't write to tag immediately ('-w' switch) you will need to recalculate each segmentCRC"
                 res = res .."\nafter writing this dump to a tag!"
                 res = res .."\n\na segmentCRC gets calculated over MCD,MSN0..3, Segment-Header0..3"
                 res = res .."\ne.g. (based on Segment00 of the data from "..infile.."):"
                 res = res .."\n"
-                res = res ..ansicolors.yellow.."hf legic crc d "..bytes[1]..bytes[2]..bytes[3]..bytes[4]..bytes[23]..bytes[24]..bytes[25]..bytes[26].." u "..newcrc.." c 8"..ansicolors.reset
+                res = res ..ansicolors.yellow.."hf legic crc -d "..bytes[1]..bytes[2]..bytes[3]..bytes[4]..bytes[23]..bytes[24]..bytes[25]..bytes[26].." --mcc "..newcrc.." -t 8"..ansicolors.reset
                 -- this can not be calculated without knowing the new MCD, MSN0..2
                 print(res)
             end

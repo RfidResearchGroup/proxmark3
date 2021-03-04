@@ -57,6 +57,11 @@ else
   RANLIB= ranlib
 endif
 
+# For detection of Apple Silicon
+ifeq ($(platform),Darwin)
+  BREW_PREFIX = $(shell brew --prefix)
+endif
+
 ifeq ($(DEBUG),1)
   DEFCXXFLAGS = -g -O0 -pipe
   DEFCFLAGS = -g -O0 -fstrict-aliasing -pipe
@@ -65,6 +70,11 @@ else
   DEFCXXFLAGS = -Wall -Werror -O3 -pipe
   DEFCFLAGS = -Wall -Werror -O3 -fstrict-aliasing -pipe
   DEFLDFLAGS =
+endif
+
+ifeq ($(DEBUG_ARM),1)
+  APP_CFLAGS += -g
+  SKIP_COMPRESSION=1
 endif
 # Next ones are activated only if SANITIZE=1
 ifeq ($(SANITIZE),1)

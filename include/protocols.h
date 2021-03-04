@@ -188,7 +188,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 // New Mifare UL Nano commands.  Ref:: (https://www.nxp.com/docs/en/data-sheet/MF0UN_H_00.pdf)
 #define MIFARE_ULNANO_WRITESIG      0xA9
-#define MIFARE_ULNANO_LOCKSIF       0xAC
+#define MIFARE_ULNANO_LOCKSIG       0xAC
 
 // mifare 4bit card answers
 #define CARD_ACK      0x0A  // 1010 - ACK

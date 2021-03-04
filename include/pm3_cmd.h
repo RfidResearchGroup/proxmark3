@@ -517,6 +517,11 @@ typedef struct {
 #define CMD_LF_EM4X50_ESET                                                0x0252
 #define CMD_LF_EM4X50_CHK                                                 0x0253
 #define CMD_LF_EM4X70_INFO                                                0x0260
+#define CMD_LF_EM4X70_WRITE                                               0x0261
+#define CMD_LF_EM4X70_UNLOCK                                              0x0262
+#define CMD_LF_EM4X70_AUTH                                                0x0263
+#define CMD_LF_EM4X70_WRITEPIN                                            0x0264
+#define CMD_LF_EM4X70_WRITEKEY                                            0x0265
 // Sampling configuration for LF reader/sniffer
 #define CMD_LF_SAMPLING_SET_CONFIG                                        0x021D
 #define CMD_LF_FSK_SIMULATE                                               0x021E
@@ -588,7 +593,6 @@ typedef struct {
 #define CMD_HF_ICLASS_READBL                                              0x0396
 #define CMD_HF_ICLASS_WRITEBL                                             0x0397
 #define CMD_HF_ICLASS_EML_MEMSET                                          0x0398
-#define CMD_HF_ICLASS_AUTH                                                0x0399
 #define CMD_HF_ICLASS_CHKKEYS                                             0x039A
 #define CMD_HF_ICLASS_RESTORE                                             0x039B
 

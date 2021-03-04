@@ -769,22 +769,22 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
 int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
     //ask raw demod GraphBuffer first
 
-    uint8_t BitStream[MAX_DEMOD_BUF_LEN];
-    size_t size = getFromGraphBuf(BitStream);
+    uint8_t bs[MAX_DEMOD_BUF_LEN];
+    size_t size = getFromGraphBuf(bs);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: no data in graphbuf");
         return PM3_ESOFT;
     }
     int startIdx = 0;
     //invert here inverts the ask raw demoded bits which has no effect on the demod, but we need the pointer
-    int errCnt = askdemod_ext(BitStream, &size, &clk, &invert, maxErr, 0, 0, &startIdx);
+    int errCnt = askdemod_ext(bs, &size, &clk, &invert, maxErr, 0, 0, &startIdx);
     if (errCnt < 0 || errCnt > maxErr) {
         PrintAndLogEx(DEBUG, "DEBUG: no data or error found %d, clock: %d", errCnt, clk);
         return PM3_ESOFT;
     }
 
     //attempt to Biphase decode BitStream
-    errCnt = BiphaseRawDecode(BitStream, &size, &offset, invert);
+    errCnt = BiphaseRawDecode(bs, &size, &offset, invert);
     if (errCnt < 0) {
         if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: Error BiphaseRawDecode: %d", errCnt);
         return PM3_ESOFT;
@@ -795,7 +795,7 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
     }
 
     //success set DemodBuffer and return
-    setDemodBuff(BitStream, size, 0);
+    setDemodBuff(bs, size, 0);
     setClockGrid(clk, startIdx + clk * offset / 2);
     if (g_debugMode || verbose) {
         PrintAndLogEx(DEBUG, "Biphase Decoded using offset %d | clock %d | #errors %d | start index %d\ndata\n", offset, clk, errCnt, (startIdx + clk * offset / 2));
@@ -1428,7 +1428,7 @@ static int CmdRawDemod(const char *Cmd) {
     else if (str_startswith(Cmd, "am")) ans = Cmdaskmandemod(Cmd + 2);
     else if (str_startswith(Cmd, "ar")) ans = Cmdaskrawdemod(Cmd + 2);
     else if (str_startswith(Cmd, "nr") || Cmd[0] == 'n') ans = CmdNRZrawDemod(Cmd + 2);
-    else if (str_startswith(Cmd, "p1") || Cmd[0] == 'p') ans = CmdPSK1rawDemod(Cmd + 2);
+    else if (str_startswith(Cmd, "p1")) ans = CmdPSK1rawDemod(Cmd + 2);
     else if (str_startswith(Cmd, "p2")) ans = CmdPSK2rawDemod(Cmd + 2);
     else PrintAndLogEx(WARNING, "Unknown modulation entered - see help ('h') for parameter structure");
 
@@ -1576,7 +1576,7 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose) {
 
     uint32_t n = end - start;
 
-    if (n <= 0 || n > pm3_capabilities.bigbuf_size - 1)
+    if (n == 0 || n > pm3_capabilities.bigbuf_size - 1)
         n = pm3_capabilities.bigbuf_size - 1;
 
     if (verbose)

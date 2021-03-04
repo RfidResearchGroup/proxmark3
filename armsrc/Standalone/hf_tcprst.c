@@ -248,11 +248,9 @@ void RunMod(void) {
                         dynamic_response_info.response[0] = receivedCmd[0];
 
                         if (memcmp("\x02\xa2\xb0\x00\x00\x1d\x51\x69", receivedCmd, 8) == 0) {
-                            dynamic_response_info.response[0] = receivedCmd[0];
                             memcpy(dynamic_response_info.response + 1, ndef, 31);
                             dynamic_response_info.response_n = 32;
                         } else if (memcmp("\x02\x00\x20\x00\x01\x00\x6e\xa9", receivedCmd, 8) == 0) {
-                            dynamic_response_info.response[0] = receivedCmd[0];
                             dynamic_response_info.response[1] = 0x63;
                             dynamic_response_info.response[2] = 0x00;
                             dynamic_response_info.response_n = 3;
@@ -260,14 +258,12 @@ void RunMod(void) {
                             memcpy(verify_pwd + 5, receivedCmd + 6, 16);
                             DbpString("Reader sent password: ");
                             Dbhexdump(16, verify_pwd + 5, 0);
-                            dynamic_response_info.response[0] = receivedCmd[0];
                             dynamic_response_info.response[1] = 0x90;
                             dynamic_response_info.response[2] = 0x00;
                             dynamic_response_info.response_n = 3;
                             gotkey = true;
                             state = STATE_DUMP;
                         } else {
-                            dynamic_response_info.response[0] = receivedCmd[0];
                             dynamic_response_info.response[1] = 0x90;
                             dynamic_response_info.response[2] = 0x00;
                             dynamic_response_info.response_n = 3;
@@ -321,7 +317,7 @@ void RunMod(void) {
                     LED_B_ON();
                     uint8_t apdulen = iso14_apdu(apdus[i], (uint16_t) apdusLen[i], false, apdubuffer, NULL);
 
-                    if (apdulen > 0) {
+                    if (apdulen > 2) {
                         DbpString(_YELLOW_("[ ") "Proxmark command" _YELLOW_(" ]"));
                         Dbhexdump(apdusLen[i], apdus[i], false);
                         DbpString(_GREEN_("[ ") "Card answer" _GREEN_(" ]"));
@@ -429,11 +425,9 @@ void RunMod(void) {
                         dynamic_response_info.response[0] = receivedCmd[0];
 
                         if (memcmp("\x02\xa2\xb0\x00\x00\x1d\x51\x69", receivedCmd, 8) == 0) {
-                            dynamic_response_info.response[0] = receivedCmd[0];
                             memcpy(dynamic_response_info.response + 1, ndef, 31);
                             dynamic_response_info.response_n = 32;
                         } else if (memcmp("\x02\x00\x20\x00\x01\x00\x6e\xa9", receivedCmd, 8) == 0) {
-                            dynamic_response_info.response[0] = receivedCmd[0];
                             dynamic_response_info.response[1] = 0x63;
                             dynamic_response_info.response[2] = 0x00;
                             dynamic_response_info.response_n = 3;
@@ -441,12 +435,10 @@ void RunMod(void) {
                             memcpy(verify_pwd + 5, receivedCmd + 6, 16);
                             DbpString("Reader sent password: ");
                             Dbhexdump(16, verify_pwd + 5, 0);
-                            dynamic_response_info.response[0] = receivedCmd[0];
                             dynamic_response_info.response[1] = 0x90;
                             dynamic_response_info.response[2] = 0x00;
                             dynamic_response_info.response_n = 3;
                         } else {
-                            dynamic_response_info.response[0] = receivedCmd[0];
                             dynamic_response_info.response[1] = 0x90;
                             dynamic_response_info.response[2] = 0x00;
                             dynamic_response_info.response_n = 3;

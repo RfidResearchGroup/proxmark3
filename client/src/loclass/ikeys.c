@@ -91,12 +91,12 @@ uint8_t pi[35] = {
  * @param n bitnumber
  * @return
  */
-#define getSixBitByte(c, n)  ((uint8_t)(((c) >> (42 - 6 * (n))) & 0x3F))
-/*
+//#define getSixBitByte(c, n)  ((uint8_t)(((c) >> (42 - 6 * (n))) & 0x3F))
+
 static inline uint8_t getSixBitByte(uint64_t c, int n) {
     return (c >> (42 - 6 * n)) & 0x3F;
 }
-*/
+
 /**
  * @brief Puts back a six-bit 'byte' into a uint64_t.
  * @param c buffer

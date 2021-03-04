@@ -17,8 +17,7 @@ vpath %.dic dictionaries
 OBJDIR = obj
 
 ifeq ($(platform),Darwin)
-    # cf brew info qt: qt not symlinked anymore
-    PKG_CONFIG_ENV := PKG_CONFIG_PATH=/usr/local/opt/qt/lib/pkgconfig
+	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt/lib/pkgconfig
 endif
 
 ###################
@@ -115,21 +114,6 @@ STATICLIBS += $(HARDNESTEDLIB)
 LDLIBS +=$(HARDNESTEDLIBLD)
 INCLUDES += $(HARDNESTEDLIBINC)
 
-## Jansson
-ifneq ($(SKIPJANSSONSYSTEM),1)
-    JANSSONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags jansson 2>/dev/null)
-    JANSSONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs jansson 2>/dev/null)
-    ifneq ($(JANSSONLDLIBS),)
-        JANSSONLIB =
-        JANSSONLIBLD = $(JANSSONLDLIBS)
-        JANSSONLIBINC = $(JANSSONINCLUDES)
-        JANSSON_FOUND = 1
-    endif
-endif
-STATICLIBS += $(JANSSONLIB)
-LDLIBS += $(JANSSONLIBLD)
-INCLUDES += $(JANSSONLIBINC)
-
 ## Lua
 ifneq ($(SKIPLUASYSTEM),1)
     LUAINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags lua5.2 2>/dev/null)
@@ -144,6 +128,22 @@ endif
 STATICLIBS += $(LUALIB)
 LDLIBS += $(LUALIBLD)
 INCLUDES += $(LUALIBINC)
+
+## Jansson
+# Jansson section needs to be after Lua to avoid interferences on macOS if a locally incompatible Lua was available, see PR 1155
+ifneq ($(SKIPJANSSONSYSTEM),1)
+    JANSSONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags jansson 2>/dev/null)
+    JANSSONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs jansson 2>/dev/null)
+    ifneq ($(JANSSONLDLIBS),)
+        JANSSONLIB =
+        JANSSONLIBLD = $(JANSSONLDLIBS)
+        JANSSONLIBINC = $(JANSSONINCLUDES)
+        JANSSON_FOUND = 1
+    endif
+endif
+STATICLIBS += $(JANSSONLIB)
+LDLIBS += $(JANSSONLIBLD)
+INCLUDES += $(JANSSONLIBINC)
 
 ## mbed TLS
 # system library cannot be used because it is compiled by default without CMAC support
@@ -278,8 +278,8 @@ CXXINCLUDES += $(QTINCLUDES)
 ## Readline
 ifneq ($(SKIPREADLINE),1)
     ifeq ($(platform),Darwin)
-        LDLIBS += -L/usr/local/opt/readline/lib
-        INCLUDES += -I/usr/local/opt/readline/include
+		LDLIBS += -L$(BREW_PREFIX)/opt/readline/lib
+		INCLUDES += -I$(BREW_PREFIX)/opt/readline/include
     endif
     LDLIBS += -lreadline
     READLINE_FOUND = 1
@@ -469,10 +469,12 @@ SRCS =  aiddesfire.c \
 		cmdhf15.c \
 		cmdhfcryptorf.c \
 		cmdhfepa.c \
+		cmdhfemrtd.c \
 		cmdhffelica.c \
 		cmdhffido.c \
 		cmdhficlass.c \
 		cmdhflegic.c \
+		cmdhfjooki.c \
 		cmdhflist.c \
 		cmdhflto.c \
 		cmdhfmf.c \

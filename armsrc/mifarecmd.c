@@ -662,9 +662,11 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
 
 // Return 1 if the nonce is invalid else return 0
 static int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, uint8_t *parity) {
-    return ((oddparity8((Nt >> 24) & 0xFF) == ((parity[0]) ^ oddparity8((NtEnc >> 24) & 0xFF) ^ BIT(Ks1, 16))) & \
-            (oddparity8((Nt >> 16) & 0xFF) == ((parity[1]) ^ oddparity8((NtEnc >> 16) & 0xFF) ^ BIT(Ks1, 8))) & \
-            (oddparity8((Nt >> 8) & 0xFF) == ((parity[2]) ^ oddparity8((NtEnc >> 8) & 0xFF) ^ BIT(Ks1, 0)))) ? 1 : 0;
+    return (
+        (oddparity8((Nt >> 24) & 0xFF) == ((parity[0]) ^ oddparity8((NtEnc >> 24) & 0xFF) ^ BIT(Ks1, 16))) && \
+        (oddparity8((Nt >> 16) & 0xFF) == ((parity[1]) ^ oddparity8((NtEnc >> 16) & 0xFF) ^ BIT(Ks1, 8))) && \
+        (oddparity8((Nt >> 8) & 0xFF) == ((parity[2]) ^ oddparity8((NtEnc >> 8) & 0xFF) ^ BIT(Ks1, 0)))
+        ) ? 1 : 0;
 }
 
 void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
@@ -696,7 +698,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
 
     LED_C_ON();
 
-    for (uint16_t i = 0; i <= PM3_CMD_DATA_SIZE - 4; i += 4) {
+    while (num_nonces < PM3_CMD_DATA_SIZE / 4) {
 
         // Test if the action was cancelled
         if (BUTTON_PRESS()) {
@@ -746,18 +748,14 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
             continue;
         }
 
-        num_nonces++;
-
         // Save the tag nonce (nt)
-        buf[i]   = answer[0];
-        buf[i + 1] = answer[1];
-        buf[i + 2] = answer[2];
-        buf[i + 3] = answer[3];
+        memcpy(buf + num_nonces * 4, answer, 4);
+        num_nonces++;
     }
 
     LED_C_OFF();
     LED_B_ON();
-    reply_old(CMD_ACK, isOK, cuid, num_nonces - 1, buf, sizeof(buf));
+    reply_old(CMD_ACK, isOK, cuid, num_nonces, buf, sizeof(buf));
     LED_B_OFF();
 
     if (DBGLEVEL >= 3) DbpString("AcquireNonces finished");
@@ -826,7 +824,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
         if (!have_uid) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
             if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
-                if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireNonces: Can't select card (ALL)");
+                if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireEncryptedNonces: Can't select card (ALL)");
                 continue;
             }
             switch (card_info.uidlen) {
@@ -845,7 +843,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
             have_uid = true;
         } else { // no need for anticollision. We can directly select the card
             if (!iso14443a_fast_select_card(uid, cascade_levels)) {
-                if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireNonces: Can't select card (UID)");
+                if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireEncryptedNonces: Can't select card (UID)");
                 continue;
             }
         }
@@ -855,7 +853,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 
         uint32_t nt1;
         if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, NULL)) {
-            if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireNonces: Auth1 error");
+            if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireEncryptedNonces: Auth1 error");
             continue;
         }
 
@@ -866,7 +864,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
         CHK_TIMEOUT();
 
         if (len != 4) {
-            if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireNonces: Auth2 error len=%d", len);
+            if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireEncryptedNonces: Auth2 error len=%d", len);
             continue;
         }
 
@@ -1015,7 +1013,8 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
             }
         }
 
-        davg = (davg + (rtr - 1) / 2) / (rtr - 1);
+        if (rtr > 1)
+            davg = (davg + (rtr - 1) / 2) / (rtr - 1);
 
         if (DBGLEVEL >= DBG_DEBUG) Dbprintf("rtr=%d isOK=%d min=%d max=%d avg=%d, delta_time=%d", rtr, isOK, dmin, dmax, davg, delta_time);
 
@@ -2714,8 +2713,8 @@ void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain) {
 //
 // Tear-off attack against MFU.
 // - Moebius et al
-void MifareU_Otp_Tearoff(uint8_t arg0, uint32_t tearoff_time, uint8_t *datain) {
-    uint8_t blockNo = arg0;
+void MifareU_Otp_Tearoff(uint8_t blno, uint32_t tearoff_time, uint8_t *datain) {
+    uint8_t blockNo = blno;
     uint8_t data_fullwrite[4] = {0x00};
     uint8_t data_testwrite[4] = {0x00};
     memcpy(data_fullwrite, datain, 4);

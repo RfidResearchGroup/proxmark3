@@ -129,7 +129,7 @@ typedef struct {
         notSet     = 0x00,
         autoDetect = 0x01,
         userSet    = 0x02,
-        tagRead    = 0x03, 
+        tagRead    = 0x03,
     } block0Status;
     enum {
         RF_8 = 0x00,
@@ -196,9 +196,9 @@ bool testKnownConfigBlock(uint32_t block0);
 
 bool tryDetectP1(bool getData);
 bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5);
-int  special(const char *Cmd);
+int  CmdT55xxSpecial(const char *Cmd);
 bool AcquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, uint8_t downlink_mode);
-uint8_t  tryOnePassword(uint32_t password, uint8_t downlink_mode);
+uint8_t t55xx_try_one_password(uint32_t password, uint8_t downlink_mode, bool try_all_dl_modes);
 
 void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat);
 void printT5555Trace(t5555_tracedata_t data, uint8_t repeat);

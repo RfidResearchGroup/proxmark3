@@ -33,15 +33,6 @@ void amiitool_usage(void) {
            );
 }
 
-static bool LoadAmiikey(nfc3d_amiibo_keys keys, char *keyfile) {
-
-    if (!nfc3d_amiibo_load_keys(&keys, keyfile)) {
-        PrintAndLogEx(ERR, "Could not load keys from '%s'", keyfile);
-        return false;
-    }
-    return true;
-}
-
 int main(int argc, char **argv) {
     self = argv[0];
 

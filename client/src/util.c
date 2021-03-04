@@ -208,7 +208,9 @@ void print_buffer(const uint8_t *data, const size_t len, int level) {
     char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
     int i;
     for (i = 0; i < len; i += 16) {
-
+        if (len - i < 16) { // incomplete block, will be treated out of the loop
+            break;
+        }
         // (16 * 3) + (16) +  + 1
         memset(buf, 0, sizeof(buf));
         sprintf(buf, "%*s%02x: ", (level * 4), " ", i);
@@ -804,11 +806,27 @@ int binarraytohex(char *target, const size_t targetlen, char *source, size_t src
 
 // convert binary array to human readable binary
 void binarraytobinstring(char *target, char *source,  int length) {
-    int i;
-
-    for (i = 0 ; i < length ; ++i)
+    for (int i = 0 ; i < length; ++i)
         *(target++) = *(source++) + '0';
     *target = '\0';
+}
+
+int binstring2binarray(uint8_t *target, char *source, int length) {
+    int count = 0;
+    char *start = source;
+    while (length--) {
+        char x = *(source++);
+        // convert from binary value
+        if (x >= '0' && x <= '1')
+            x -= '0';
+        else {
+            PrintAndLogEx(WARNING, "(binstring2binarray) discovered unknown character %c %d at idx %d of %s", x, x, (int16_t)(source - start), start);
+            return 0;
+        }
+        *(target++) = x;
+        count++;
+    }
+    return count;
 }
 
 // return parity bit required to match type
@@ -933,13 +951,13 @@ char *str_ndup(const char *src, size_t len) {
 }
 
 /**
- * Converts a hex string to component "hi2", "hi" and "lo" 32-bit integers, one nibble
- * at a time.
+ * Converts a hex string to component "hi2", "hi" and "lo" 32-bit integers
+ * one nibble at a time.
  *
  * Returns the number of nibbles (4 bits) entered.
  */
 int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str) {
-    unsigned int n = 0, i = 0;
+    uint32_t n = 0, i = 0;
 
     while (sscanf(&str[i++], "%1x", &n) == 1) {
         *hi2 = (*hi2 << 4) | (*hi >> 28);
@@ -947,6 +965,30 @@ int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str)
         *lo = (*lo << 4) | (n & 0xf);
     }
     return i - 1;
+}
+
+/**
+ * Converts a binary string to component "hi2", "hi" and "lo" 32-bit integers,
+ * one bit at a time.
+ *
+ * Returns the number of bits entered.
+ */
+int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str) {
+    uint32_t n = 0, i = 0;
+
+    for(;;) {
+
+        int res = sscanf(&str[i], "%1u", &n);
+        if ((res != 1) || (n > 1))
+            break;
+
+        *hi2 = (*hi2 << 1) | (*hi >> 31);
+        *hi = (*hi << 1) | (*lo >> 31);
+        *lo = (*lo << 1) | (n & 0x1);
+
+        i++;
+    }
+    return i;
 }
 
 inline uint32_t bitcount32(uint32_t a) {

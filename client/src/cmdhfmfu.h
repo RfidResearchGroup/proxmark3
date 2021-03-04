@@ -23,6 +23,7 @@ typedef struct {
 uint32_t GetHF14AMfU_Type(void);
 int ul_print_type(uint32_t tagtype, uint8_t spaces);
 void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage);
+int ul_read_uid(uint8_t *uid);
 
 int CmdHFMFUltra(const char *Cmd);
 
@@ -59,6 +60,9 @@ typedef enum TAGTYPE_UL {
     UL_NANO_40       = 0x2000000,
     NTAG_213_TT      = 0x4000000,
     NTAG_213_C       = 0x8000000,
+    MAGIC_1A         = 0x10000000 | MAGIC,
+    MAGIC_1B         = 0x20000000 | MAGIC,
+    MAGIC_NTAG       = 0x40000000 | MAGIC,
     UL_MAGIC         = UL | MAGIC,
     UL_C_MAGIC       = UL_C | MAGIC,
     UL_ERROR         = 0xFFFFFF,

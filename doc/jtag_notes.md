@@ -8,7 +8,7 @@ The RDV4 repository contains helper scripts for JTAG flashing.
 
 * Get OpenOCD, e.g.: `apt-get install openocd`
 * Create `tools/jtag_openocd/openocd_configuration` by copying [`tools/jtag_openocd/openocd_configuration.sample`](/tools/jtag_openocd/openocd_configuration.sample)
-* Tune it to fit your JTAG tool: adapt `CONFIG_IF` to refer to the `interface-*.cfg` file corresponding to your JTAG tool. By default `openocd_configuration.sample` is set up to work with the J-Link.
+* Tune it to fit your JTAG tool: adapt `CONFIG_IF` to refer to your JTAG tool. `openocd_configuration.sample` contains several examples and is set up by default to work with the J-Link.
 * Wire the Proxmark3 to the JTAG tool. How to do it depends on the tool. See below for examples. **Warning:** don't plug the Proxmark3 on USB if the tool delivers already the voltage to the Proxmark3, which is most probably the case.
 * Then just run
 
@@ -25,7 +25,7 @@ For advanced usages there are also `openocd_flash_dump.sh` for dumping the conte
 
 The RDV4 JTAG header is quite smaller compared to other Proxmark3 platforms.  
 If you're using a J-Link, there is a [convenient adapter](https://github.com/RfidResearchGroup/proxmark3/wiki/Tools#jtag-adapter) made by Proxgrind.  
-You can also make yours with some 1.27mm headers (look for `1.27mm header` on Aliexpress) or Pogo pins.
+You can also make yours with some 1.27mm headers (look for `1.27mm header` on Aliexpress) or Pogo pins or buy an already made clip, e.g. search `dykb clamp` on Aliexpress and take a 1.27mm single-row 6P version.
 
 ## JLink pinout
 
@@ -60,6 +60,9 @@ TCK | 23
 GND | 6
 3.3 | 1
 
+# Where to find more information?
+There has been lots of articles and blogposts about recoving, debricking, JTAG your Proxmark3 and you find here below a sortiment of resources that will be of help.
+
 ## Third party notes on using a BusPirate
 
 * https://github.com/Proxmark/proxmark3/wiki/Debricking-Proxmark3-with-buspirate
@@ -74,7 +77,16 @@ GND | 6
 ## Third party notes on using a RaspBerry Pi
 
 * http://www.lucasoldi.com/2017/01/17/unbrick-proxmark3-with-a-raspberry-pi-and-openocd/
+* https://wiki.elvis.science/index.php?title=Proxmark3:_Debricking
+* https://github.com/synthetos/PiOCD/wiki/Using-a-Raspberry-Pi-as-a-JTAG-Dongle
 
 ## Third party notes on using a J-Link on Windows
 
 * https://github.com/Proxmark/proxmark3/wiki/De-Bricking-Segger
+
+## Stack Overflow write up article.
+https://stackoverflow.com/questions/48794076/error-halt-timed-out-wake-up-gdb/64291913#64291913
+
+## Old original doc,  
+Describes the SEGGER JLINK, JTAG process but be warned,  this document is old.
+https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/original_proxmark3/Compiling%20Proxmark%20source%20and%20firmware%20upgrading%20v1.pdf

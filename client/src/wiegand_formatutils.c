@@ -15,12 +15,12 @@
 #include "wiegand_formatutils.h"
 #include "ui.h"
 
-bool get_bit_by_position(wiegand_message_t *data, uint8_t pos) {
+uint8_t get_bit_by_position(wiegand_message_t *data, uint8_t pos) {
     if (pos >= data->Length) return false;
     pos = (data->Length - pos) - 1; // invert ordering; Indexing goes from 0 to 1. Subtract 1 for weight of bit.
-    bool result = false;
+    uint8_t result = 0;
     if (pos > 95)
-        result = false;
+        result = 0;
     else if (pos > 63)
         result = (data->Top >> (pos - 64)) & 1;
     else if (pos > 31)
@@ -80,7 +80,7 @@ static void message_datacopy(wiegand_message_t *src, wiegand_message_t *dest) {
 uint64_t get_linear_field(wiegand_message_t *data, uint8_t firstBit, uint8_t length) {
     uint64_t result = 0;
     for (uint8_t i = 0; i < length; i++) {
-        result = (result << 1) | (get_bit_by_position(data, firstBit + i));
+        result = (result << 1) | get_bit_by_position(data, firstBit + i);
     }
     return result;
 }
@@ -100,7 +100,7 @@ bool set_linear_field(wiegand_message_t *data, uint64_t value, uint8_t firstBit,
 uint64_t get_nonlinear_field(wiegand_message_t *data, uint8_t numBits, uint8_t *bits) {
     uint64_t result = 0;
     for (int i = 0; i < numBits; i++) {
-        result = (result << 1) | (get_bit_by_position(data, *(bits + i)) & 1);
+        result = (result << 1) | get_bit_by_position(data, *(bits + i));
     }
     return result;
 }
@@ -121,6 +121,12 @@ bool set_nonlinear_field(wiegand_message_t *data, uint64_t value, uint8_t numBit
 }
 
 static uint8_t get_length_from_header(wiegand_message_t *data) {
+    /**
+     * detect if message has "preamble" / "sentinel bit"
+     *
+     */
+
+
     uint8_t len = 0;
     uint32_t hfmt = 0; // for calculating card length
 

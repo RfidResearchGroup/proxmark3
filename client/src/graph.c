@@ -149,7 +149,7 @@ void convertGraphFromBitstreamEx(int hi, int low) {
 }
 
 // Get or auto-detect ask clock rate
-int GetAskClock(const char *str, bool printAns) {
+int GetAskClock(const char *str, bool verbose) {
     if (getSignalProperties()->isnoise)
         return -1;
 
@@ -183,7 +183,7 @@ int GetAskClock(const char *str, bool printAns) {
         setClockGrid(clock1, idx);
     }
     // Only print this message if we're not looping something
-    if (printAns || g_debugMode)
+    if (verbose || g_debugMode)
         PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d, Best Starting Position: %d", clock1, idx);
 
     free(bits);
@@ -352,7 +352,6 @@ bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
 
     if (*rf1 == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Clock detect error");
-
         return false;
     }
     return true;

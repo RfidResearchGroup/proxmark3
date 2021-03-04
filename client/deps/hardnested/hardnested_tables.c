@@ -372,10 +372,11 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
         count[odd_even] = count_states(test_bitarray[odd_even]);
         if (count[odd_even] != 1 << 24) {
-            printf("Writing %u possible %s states for bitflip property %03x (%d (%1.2f%%) states eliminated)\n",
+            printf("Writing %u possible %s states for bitflip property %03x (%u (%1.2f%%) states eliminated)\n",
                    count[odd_even],
                    odd_even == EVEN_STATE ? "even" : "odd",
-                   bitflip, (1 << 24) - count[odd_even],
+                   bitflip,
+                    (1 << 24) - count[odd_even],
                    (float)((1 << 24) - count[odd_even]) / (1 << 24) * 100.0);
 #ifndef TEST_RUN
             write_bitflips_file(odd_even, bitflip, sum_a0, test_bitarray[odd_even], count[odd_even]);
@@ -399,10 +400,11 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
             }
             count[odd_even] = count_states(test_bitarray_2nd);
             if (count[odd_even] != 1 << 24) {
-                printf("Writing %u possible %s states for bitflip property %03x (%d (%1.2f%%) states eliminated)\n",
+                printf("Writing %u possible %s states for bitflip property %03x (%u (%1.2f%%) states eliminated)\n",
                        count[odd_even],
                        odd_even == EVEN_STATE ? "even" : "odd",
-                       bitflip | BITFLIP_2ND_BYTE, (1 << 24) - count[odd_even],
+                       bitflip | BITFLIP_2ND_BYTE,
+                        (1 << 24) - count[odd_even],
                        (float)((1 << 24) - count[odd_even]) / (1 << 24) * 100.0);
 #ifndef TEST_RUN
                 write_bitflips_file(odd_even, bitflip | BITFLIP_2ND_BYTE, sum_a0, test_bitarray_2nd, count[odd_even]);
@@ -484,10 +486,11 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
         count[odd_even] = count_states(test_not_bitarray[odd_even]);
         if (count[odd_even] != 1 << 24) {
-            printf("Writing %u possible %s states for bitflip property %03x (%d (%1.2f%%) states eliminated)\n",
+            printf("Writing %u possible %s states for bitflip property %03x (%u (%1.2f%%) states eliminated)\n",
                    count[odd_even],
                    odd_even == EVEN_STATE ? "even" : "odd",
-                   bitflip | 0x100, (1 << 24) - count[odd_even],
+                   bitflip | 0x100,
+                    (1 << 24) - count[odd_even],
                    (float)((1 << 24) - count[odd_even]) / (1 << 24) * 100.0);
 #ifndef TEST_RUN
             write_bitflips_file(odd_even, bitflip | 0x100, sum_a0, test_not_bitarray[odd_even], count[odd_even]);
@@ -511,10 +514,11 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
             }
             count[odd_even] = count_states(test_bitarray_2nd);
             if (count[odd_even] != 1 << 24) {
-                printf("Writing %u possible %s states for bitflip property %03x (%d (%1.2f%%) states eliminated)\n",
+                printf("Writing %u possible %s states for bitflip property %03x (%u (%1.2f%%) states eliminated)\n",
                        count[odd_even],
                        odd_even == EVEN_STATE ? "even" : "odd",
-                       bitflip | 0x100 | BITFLIP_2ND_BYTE, (1 << 24) - count[odd_even],
+                       bitflip | 0x100 | BITFLIP_2ND_BYTE, 
+                       (1 << 24) - count[odd_even],
                        (float)((1 << 24) - count[odd_even]) / (1 << 24) * 100.0);
 #ifndef TEST_RUN
                 write_bitflips_file(odd_even, bitflip | 0x100 | BITFLIP_2ND_BYTE, sum_a0, test_bitarray_2nd, count[odd_even]);
@@ -532,7 +536,6 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
     free_bitarray(test_not_bitarray[EVEN_STATE]);
     free_bitarray(test_bitarray[ODD_STATE]);
     free_bitarray(test_bitarray[EVEN_STATE]);
-
     exit(0);
 }
 

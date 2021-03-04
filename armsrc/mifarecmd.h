@@ -63,6 +63,6 @@ void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain);
 void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain);
 
 // Tear-off test for MFU
-void MifareU_Otp_Tearoff(uint8_t arg0, uint32_t arg1, uint8_t *datain);
+void MifareU_Otp_Tearoff(uint8_t blno, uint32_t tearoff_time, uint8_t *datain);
 void MifareU_Counter_Tearoff(uint8_t counter, uint32_t tearoff_time, uint8_t *datain);
 #endif

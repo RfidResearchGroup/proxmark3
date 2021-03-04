@@ -78,7 +78,7 @@ typedef enum {
 
 int fileExists(const char *filename);
 //bool create_path(const char *dirname);
-//bool setDefaultPath (savePaths_t pathIndex,const char *Path);  // set a path in the path list session.defaultPaths
+bool setDefaultPath(savePaths_t pathIndex, const char *Path);  // set a path in the path list session.defaultPaths
 
 char *newfilenamemcopy(const char *preferredName, const char *suffix);
 
@@ -272,4 +272,11 @@ mfu_df_e detect_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
 int searchAndList(const char *pm3dir, const char *ext);
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent);
 
+
+/**
+ * @brief detects if file is of a supported filetype based on extension
+ * @param filename
+ * @return
+ */
+DumpFileType_t getfiletype(const char *filename);
 #endif // FILEUTILS_H
