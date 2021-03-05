@@ -130,7 +130,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             portstr = colon + 1;
             *colon = '\0';
         } else {
-            portstr = "7901";
+            portstr = "18888";
         }
 
         struct addrinfo info;
