@@ -412,7 +412,7 @@ static void flash_suggest_update_bootloader(void) {
     PrintAndLogEx(ERR, _RED_("reboot the Proxmark3 then only update the main firmware") "\n");
     PrintAndLogEx(ERR, "Follow these steps :");
     PrintAndLogEx(ERR, " 1)   ./pm3-flash-bootrom");
-    PrintAndLogEx(ERR, " 2)   ./pm3-flash-flash-all");
+    PrintAndLogEx(ERR, " 2)   ./pm3-flash-all");
     PrintAndLogEx(ERR, " 3)   ./pm3");
     PrintAndLogEx(INFO, "--------------------------------------------------------");
     g_printed_msg = true;
