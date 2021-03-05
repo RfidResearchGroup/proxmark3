@@ -50,7 +50,7 @@ typedef struct {
 } PACKED rht2d_crypto;
 
 typedef struct {
-    bool key_no;
+    uint8_t key_no;
     uint8_t logdata_0[4];
     uint8_t logdata_1[4];
     uint8_t nonce[4];
