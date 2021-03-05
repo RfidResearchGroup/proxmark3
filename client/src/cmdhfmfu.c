@@ -23,6 +23,8 @@
 #include "mifare/ndef.h"
 #include "cliparser.h"
 #include "cmdmain.h"
+#include "amiibo.h"     // amiiboo fcts
+#include "base64.h"
 
 #define MAX_UL_BLOCKS       0x0F
 #define MAX_ULC_BLOCKS      0x2F
@@ -3717,6 +3719,13 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
 */
 
+// 
+// name, identifying bytes,  decode function,  hints text 
+// identifying bits
+// 1. getversion data must match.
+// 2. magic bytes in the readable payload
+
+
 static int CmdHF14MfuNDEF(const char *Cmd) {
 
     int keylen;
@@ -3845,6 +3854,25 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
             }
         }
     }
+    char *mattel = strstr((char*)records, ".pid.mattel/");
+    if (mattel) {
+        mattel += 12;
+        while (mattel) {
+            if ((*mattel) != '/')
+                mattel++;
+            else  {
+                mattel++;
+                char b64[33] = {0};
+                strncpy(b64, mattel, 32);
+                uint8_t arr[24] = {0};
+                size_t arrlen = 0;
+                mbedtls_base64_decode(arr, sizeof(arr), &arrlen, (const unsigned char *)b64, 32);
+
+                PrintAndLogEx(INFO, "decoded... %s", sprint_hex(arr, arrlen));
+                break;
+            }
+        }        
+    }
 
     free(records);
     return status;
@@ -3893,17 +3921,57 @@ static int CmdHF14AMfuEView(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+/*
+static int CmdHF14AMfUCDecryptAmiibo(const char *Cmd){
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu decrypt",
+                  "Tries to read all memory from amiibo tag and decrypt it",
+                  "hf mfu decrypt"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    uint16_t elen = 0, dlen = 0;
+    uint8_t *encrypted = NULL;
+
+    int res = mfu_dump_tag( MAX_NTAG_215, (void **)&encrypted, &elen);
+    if (res == PM3_SUCCESS) {
+
+        PrintAndLogEx(INFO, "32 first bytes of tag dump");
+        PrintAndLogEx(INFO, "%s", sprint_hex(encrypted, 32));
+        PrintAndLogEx(INFO, "-----------------------");
+
+        uint8_t decrypted[NFC3D_AMIIBO_SIZE] = {0};
+        res = mfu_decrypt_amiibo(encrypted, elen, decrypted, &dlen);
+        if ( res == PM3_SUCCESS) {
+
+            for (uint8_t i = 0; i < dlen/16; i++ ) {
+                PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex_ascii(decrypted + (i * 16), 16));
+            }
+        }
+        free(encrypted);
+    }
+    return PM3_SUCCESS;
+}
+*/
+
 //------------------------------------
 // Menu Stuff
 //------------------------------------
 static command_t CommandTable[] = {
     {"help",    CmdHelp,                   AlwaysAvailable, "This help"},
-    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("recovery") " -----------------------"},
+    {"-----------", CmdHelp,               IfPm3Iso14443a,  "----------------------- " _CYAN_("recovery") " -------------------------"},
     {"keygen",  CmdHF14AMfUGenDiverseKeys, AlwaysAvailable, "Generate 3DES MIFARE diversified keys"},
     {"pwdgen",  CmdHF14AMfUPwdGen,         AlwaysAvailable, "Generate pwd from known algos"},
     {"otptear", CmdHF14AMfuOtpTearoff,     IfPm3Iso14443a,  "Tear-off test on OTP bits"},
 //    {"tear_cnt", CmdHF14AMfuEv1CounterTearoff,     IfPm3Iso14443a,  "Tear-off test on Ev1/NTAG Counter bits"},
-    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
+    {"-----------", CmdHelp,               IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
     {"cauth",   CmdHF14AMfUCAuth,          IfPm3Iso14443a,  "Authentication - Ultralight-C"},
     {"dump",    CmdHF14AMfUDump,           IfPm3Iso14443a,  "Dump MIFARE Ultralight family tag to binary file"},
     {"info",    CmdHF14AMfUInfo,           IfPm3Iso14443a,  "Tag information"},
@@ -3911,12 +3979,15 @@ static command_t CommandTable[] = {
     {"rdbl",    CmdHF14AMfURdBl,           IfPm3Iso14443a,  "Read block"},
     {"restore", CmdHF14AMfURestore,        IfPm3Iso14443a,  "Restore a dump onto a MFU MAGIC tag"},
     {"wrbl",    CmdHF14AMfUWrBl,           IfPm3Iso14443a,  "Write block"},
-    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
+    {"-----------", CmdHelp,               IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
     {"eload",   CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "load Ultralight .eml dump file into emulator memory"},
     {"eview",   CmdHF14AMfuEView,          IfPm3Iso14443a,  "View emulator memory"},
     {"sim",     CmdHF14AMfUSim,            IfPm3Iso14443a,  "Simulate MIFARE Ultralight from emulator memory"},
+    {"-----------", CmdHelp,               IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " ----------------------------"},
     {"setpwd",  CmdHF14AMfUCSetPwd,        IfPm3Iso14443a,  "Set 3DES key - Ultralight-C"},
     {"setuid",  CmdHF14AMfUCSetUid,        IfPm3Iso14443a,  "Set UID - MAGIC tags only"},
+    {"-----------", CmdHelp,               IfPm3Iso14443a,  "----------------------- " _CYAN_("amiibo") " ----------------------------"},
+//    {"decrypt",  CmdHF14AMfUCDecryptAmiibo, IfPm3Iso14443a, "Decrypt a amiibo tag"},
     {NULL, NULL, NULL, NULL}
 };
 
