@@ -77,3 +77,7 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_LF_THAREXDE,$(APP_CFLAGS)))
     SRC_STANDALONE = lf_tharexde.c
 endif
+# WITH_STANDALONE_HF_EMULDES
+ifneq (,$(findstring WITH_STANDALONE_HF_EMULDES,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_emuldes.c
+endif
