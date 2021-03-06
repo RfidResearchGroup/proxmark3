@@ -997,9 +997,11 @@ static int CmdT55xxDetect(const char *Cmd) {
         downlink_mode = refLeading0;
     else if (r3)
         downlink_mode = ref1of4;
-
-    if (ra)
+    else // This will set the default to user all d/l modes which will cover the ra flag as well.
         try_all_dl_modes = true;
+
+    // if (ra)
+    //    try_all_dl_modes = true;
 
     bool try_with_pwd = false;
     bool found = false;
@@ -1026,9 +1028,9 @@ static int CmdT55xxDetect(const char *Cmd) {
         do {
             // do ... while to check without password then loop back if password supplied
             do {
-
                 if (try_all_dl_modes) {
-                    for (uint8_t m = downlink_mode; m < 4; m++) {
+                    // Loop from 1st d/l mode refFixedBit to the last d/l mode ref1of4
+                    for (uint8_t m = refFixedBit; m <= ref1of4; m++) {
                         if (usewake) {
                             // call wake
                             if (try_with_pwd)
