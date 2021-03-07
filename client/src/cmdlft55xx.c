@@ -4193,8 +4193,12 @@ static int CmdT55xxSniff(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"-----------",  CmdHelp,                 AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
+    {"-----------",  CmdHelp,                 AlwaysAvailable, "---------------------------- " _CYAN_("notice") " -----------------------------"},
+    {"",             CmdHelp,                 AlwaysAvailable, "Remember to run `" _YELLOW_("lf t55xx detect") "` first whenever "},
+    {"",             CmdHelp,                 AlwaysAvailable, "a new card is placed on the Proxmark3 or the config block changed."},
+    {"",             CmdHelp,                 AlwaysAvailable, ""},
     {"help",         CmdHelp,                 AlwaysAvailable, "This help"},
+    {"-----------",  CmdHelp,                 AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
     {"clonehelp",    CmdT55xxCloneHelp,       IfPm3Lf,         "Shows the available clone commands"},
     {"config",       CmdT55xxSetConfig,       AlwaysAvailable, "Set/Get T55XX configuration (modulation, inverted, offset, rate)"},
     {"dangerraw",    CmdT55xxDangerousRaw,    IfPm3Lf,         "Sends raw bitstream. Dangerous, do not use!!"},
