@@ -159,7 +159,7 @@ can see the card)
 
     We use the d option to supply the data ‘12345678’
     ```
-    [usb] pm3 --> lf t55xx write b 1 d 12345678
+    [usb] pm3 --> lf t55xx write -b 1 -d 12345678
     ```
     result:
     ```
@@ -205,7 +205,7 @@ can see the card)
 
     Lets try and write 89ABCDEF
     ```
-    [usb] pm3 --> lf t55xx write b 1 d 89abcdef
+    [usb] pm3 --> lf t55xx write -b 1 -d 89abcdef
     ```
     result:
     ```
@@ -314,7 +314,7 @@ required, please do not proceed.
 
     The password is saved in block 7 of page 0.
     ```
-    [usb] pm3 --> lf t55xx write b 7 d 12345678
+    [usb] pm3 --> lf t55xx write -b 7 -d 12345678
     ```
     result:
     ```
@@ -394,7 +394,7 @@ required, please do not proceed.
     If you have completed all steps and have the exact same results, we are
     ready to apply the new configuration.
     ```
-    [usb] pm3 --> lf t55xx write b 0 d 00088050
+    [usb] pm3 --> lf t55xx write -b 0 -d 00088050
     ```
     result:
     ```
@@ -435,7 +435,7 @@ required, please do not proceed.
     
 7)  Write a block of data with a password
     ```
-    [usb] pm3 --> lf t55xx write b 1 d 1234abcd p 12345678
+    [usb] pm3 --> lf t55xx write -b 1 -d 1234abcd -p 12345678
     ```
     result:
     ```
@@ -494,7 +494,7 @@ required, please do not proceed.
     
     In our examples we know what it should be : 00088040
     ```
-    [usb] pm3 --> lf t55xx write b 0 d 00088040 p 12345678
+    [usb] pm3 --> lf t55xx write -b 0 -d 00088040 -p 12345678
     ```
     result:
     ```

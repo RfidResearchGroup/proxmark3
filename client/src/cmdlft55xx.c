@@ -68,19 +68,6 @@ void Set_t55xx_Config(t55xx_conf_block_t conf) {
 
 static int CmdHelp(const char *Cmd);
 
-static void print_usage_t55xx_downloadlink(uint8_t ShowAll, uint8_t dl_mode_default) {
-    if (ShowAll == T55XX_DLMODE_ALL)
-        PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding 0|1|2|3|4");
-    else
-        PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding 0|1|2|3");
-    PrintAndLogEx(NORMAL, "                       0 - fixed bit length%s", (dl_mode_default == 0) ? " (detected default)" : ""); // default will be whats in config struct
-    PrintAndLogEx(NORMAL, "                       1 - long leading reference%s", (dl_mode_default == 1) ? " (detected default)" : "");
-    PrintAndLogEx(NORMAL, "                       2 - leading zero%s", (dl_mode_default == 2) ? " (detected default)" : "");
-    PrintAndLogEx(NORMAL, "                       3 - 1 of 4 coding reference%s", (dl_mode_default == 3) ? " (detected default)" : "");
-    if (ShowAll == T55XX_DLMODE_ALL)
-        PrintAndLogEx(NORMAL, "                       4 - Try all downlink modes%s", (dl_mode_default == 4) ? " (default)" : "");
-}
-
 static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, uint8_t dl_mode_def) {
 
     char *r0 = (char *)calloc(56, sizeof(uint8_t));
@@ -106,25 +93,6 @@ static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, u
     }
     at[n++] = arg_param_end;
     *idx = n;
-}
-
-static int usage_t55xx_write(void) {
-    PrintAndLogEx(NORMAL, "Usage:  lf t55xx write [r <mode>] b <block> d <data> [p <password>] [1] [t] [v]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     b <block>    - block number to write. Between 0-7");
-    PrintAndLogEx(NORMAL, "     d <data>     - 4 bytes of data to write (8 hex characters)");
-    PrintAndLogEx(NORMAL, "     p <password> - OPTIONAL password 4bytes (8 hex characters)");
-    PrintAndLogEx(NORMAL, "     1            - OPTIONAL write Page 1 instead of Page 0");
-    PrintAndLogEx(NORMAL, "     t            - OPTIONAL test mode write - ****DANGER****");
-    PrintAndLogEx(NORMAL, "     v            - OPTIONAL validate data afterwards");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE, config.downlink_mode);
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx write b 3 d 11223344") "            - write 11223344 to block 3");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx write b 3 d 11223344 p feedbeef") " - write 11223344 to block 3 password feedbeef");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx write b 3 d 11223344 v") "          - write 11223344 to block 3 and try to validate data");
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
 }
 
 static int CmdT55xxCloneHelp(const char *Cmd) {
@@ -1544,74 +1512,86 @@ int printConfiguration(t55xx_conf_block_t b) {
 }
 
 static int CmdT55xxWriteBlock(const char *Cmd) {
-    uint8_t block = 0xFF;    // default to invalid block
-    uint32_t data = 0;       // default to blank Block
-    uint32_t password = 0;   // default to blank Block 7
-    bool usepwd = false;
-    bool page1 = false;
-    bool gotdata = false;
-    bool testMode = false;
-    bool errors = false;
-    bool validate = false;
-    uint8_t cmdp = 0;
-    uint32_t downlink_mode = config.downlink_mode;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx write",
+                  "Write T55xx block data",
+                  "lf t55xx write -b 3 -d 11223344                         --> write 11223344 to block 3\n"
+                  "lf t55xx write -b 3 -d 11223344 --pwd 01020304          --> write 11223344 to block 3, pwd 01020304\n"
+                  "lf t55xx write -b 3 -d 11223344 --pwd 01020304 --verify --> write 11223344 to block 3 and try validating write"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_t55xx_write();
-            case 'b':
-                errors |= param_getdec(Cmd, cmdp + 1, &block);
-                cmdp += 2;
+    // 1 (help) + 6 (six user specified params) + (5 T55XX_DLMODE_SINGLE)
+    void *argtable[7 + 5] = {
+        arg_param_begin,
+        arg_int1("b", "blk", "<0-7>", "block number to write"),
+        arg_str0("d", "data", "<hex>", "data to write (4 hex bytes)"),
+        arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
+        arg_lit0("t", "tm", "test mode write ( " _RED_("danger") " )"),
+        arg_lit0(NULL, "pg1", "write page 1"),
+        arg_lit0(NULL, "verify", "try validate data afterward"),
+    };
+    uint8_t idx = 7;
+    arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_SINGLE, config.downlink_mode);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-                if (block > 7) {
-                    PrintAndLogEx(WARNING, "Block number must be between 0 and 7");
-                    errors = true;
-                }
-                break;
-            case 'd':
-                data = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                gotdata = true;
-                cmdp += 2;
-                break;
-            case 'p':
-                password = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                usepwd = true;
-                cmdp += 2;
-                break;
-            case 't':
-                testMode = true;
-                cmdp++;
-                break;
-            case '1':
-                page1 = true;
-                cmdp++;
-                break;
-            case 'r':
-                downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode > 3)
-                    downlink_mode = 0;
+    int block = arg_get_int_def(ctx, 1, REGULAR_READ_MODE_BLOCK);
 
-                cmdp += 2;
-                break;
-            case 'v':
-                validate = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    uint32_t data = 0; // default to blank Block
+    int res = arg_get_u32_hexstr_def_nlen(ctx, 2, 0, &data, 4, true);
+    if (res == 0 || res == 2) {
+        PrintAndLogEx(ERR, "data must be 4 hex bytes");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
-    if (errors || !gotdata) return usage_t55xx_write();
 
-    char pwdStr[16] = {0};
-    snprintf(pwdStr, sizeof(pwdStr), "pwd: 0x%08X", password);
+    bool usepwd = false;
+    uint32_t password = 0; // default to blank Block 7
+    res = arg_get_u32_hexstr_def_nlen(ctx, 3, 0, &password, 4, true);
+    if (res == 0 || res == 2) {
+        PrintAndLogEx(ERR, "Password should be 4 hex bytes");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (res == 1) {
+        usepwd = true;
+    }
 
-    PrintAndLogEx(INFO, "Writing page %d  block: %02d  data: 0x%08X %s", page1, block, data, (usepwd) ? pwdStr : "");
+    bool testmode = arg_get_lit(ctx, 4);
+    bool page1 = arg_get_lit(ctx, 5);
+    bool validate = arg_get_lit(ctx, 6);
 
-    if (t55xxWrite(block, page1, usepwd, testMode, password, downlink_mode, data) != PM3_SUCCESS) {
+    bool r0 = arg_get_lit(ctx, 7);
+    bool r1 = arg_get_lit(ctx, 8);
+    bool r2 = arg_get_lit(ctx, 9);
+    bool r3 = arg_get_lit(ctx, 10);
+    CLIParserFree(ctx);
+
+    if ((r0 + r1 + r2 + r3) > 1) {
+        PrintAndLogEx(FAILED, "Error multiple downlink encoding");
+        return PM3_EINVARG;
+    }
+
+    uint8_t downlink_mode = config.downlink_mode;
+    if (r0)
+        downlink_mode = refFixedBit;
+    else if (r1)
+        downlink_mode = refLongLeading;
+    else if (r2)
+        downlink_mode = refLeading0;
+    else if (r3)
+        downlink_mode = ref1of4;
+
+    if (block > 7 && block != REGULAR_READ_MODE_BLOCK) {
+        PrintAndLogEx(NORMAL, "Block must be between 0 and 7");
+        return PM3_ESOFT;
+    }
+
+    char pwdstr[16] = {0};
+    snprintf(pwdstr, sizeof(pwdstr), "pwd: 0x%08X", password);
+
+    PrintAndLogEx(INFO, "Writing page %d  block: %02d  data: 0x%08X %s", page1, block, data, (usepwd) ? pwdstr : "");
+
+    if (t55xxWrite(block, page1, usepwd, testmode, password, downlink_mode, data) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Write failed");
         return PM3_ESOFT;
     }
@@ -2387,7 +2367,7 @@ static int CmdT55xxRestore(const char *Cmd) {
         char pwdOpt [11] = {0}; // p XXXXXXXX
 
         if (usepwd)
-            snprintf(pwdOpt, sizeof(pwdOpt), "p %08X", password);
+            snprintf(pwdOpt, sizeof(pwdOpt), "-p %08X", password);
 
         uint8_t idx;
         // Restore endien for writing to card
@@ -2406,7 +2386,7 @@ static int CmdT55xxRestore(const char *Cmd) {
 
         // write out blocks 1-7 page 0
         for (idx = 1; idx <= 7; idx++) {
-            snprintf(writeCmdOpt, sizeof(writeCmdOpt), "b %d d %08X %s", idx, data[idx], pwdOpt);
+            snprintf(writeCmdOpt, sizeof(writeCmdOpt), "-b %d -d %08X %s", idx, data[idx], pwdOpt);
 
             if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
@@ -2415,12 +2395,12 @@ static int CmdT55xxRestore(const char *Cmd) {
 
         // if password was set on the "blank" update as we may have just changed it
         if (usepwd) {
-            snprintf(pwdOpt, sizeof(pwdOpt), "p %08X", data[7]);
+            snprintf(pwdOpt, sizeof(pwdOpt), "-p %08X", data[7]);
         }
 
         // write out blocks 1-3 page 1
         for (idx = 9; idx <= 11; idx++) {
-            snprintf(writeCmdOpt, sizeof(writeCmdOpt), "b %d 1 d %08X %s", idx - 8, data[idx], pwdOpt);
+            snprintf(writeCmdOpt, sizeof(writeCmdOpt), "-b %d --pg1 -d %08X %s", idx - 8, data[idx], pwdOpt);
 
             if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
@@ -2431,7 +2411,7 @@ static int CmdT55xxRestore(const char *Cmd) {
         config.downlink_mode = downlink_mode;
 
         // Write the page 0 config
-        snprintf(writeCmdOpt, sizeof(writeCmdOpt), "b 0 d %08X %s", data[0], pwdOpt);
+        snprintf(writeCmdOpt, sizeof(writeCmdOpt), "-b 0 -d %08X %s", data[0], pwdOpt);
         if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Warning: error writing blk 0");
         }
@@ -2961,7 +2941,7 @@ static int CmdT55xxWipe(const char *Cmd) {
     // Creating cmd string for write block :)
     char writeData[36] = {0};
     char *ptrData = writeData;
-    snprintf(ptrData, sizeof(writeData), "b 0 ");
+    snprintf(ptrData, sizeof(writeData), "-b 0 ");
 
     if (usepwd) {
         snprintf(ptrData + strlen(writeData), sizeof(writeData) - strlen(writeData), "p %08x ", password);
@@ -2973,7 +2953,7 @@ static int CmdT55xxWipe(const char *Cmd) {
 
     for (uint8_t blk = 1; blk < 8; blk++) {
 
-        snprintf(ptrData, sizeof(writeData), "b %d d 0", blk);
+        snprintf(ptrData, sizeof(writeData), "-b %d -d 0", blk);
 
         if (CmdT55xxWriteBlock(ptrData) != PM3_SUCCESS)
             PrintAndLogEx(WARNING, "Warning: error writing blk %d", blk);
@@ -2983,7 +2963,7 @@ static int CmdT55xxWipe(const char *Cmd) {
 
     // Check and rest t55xx downlink mode.
     if (config.downlink_mode != T55XX_DLMODE_FIXED) { // Detect found a different mode so card must support
-        snprintf(ptrData, sizeof(writeData), "b 3 1 d 00000000");
+        snprintf(ptrData, sizeof(writeData), "-b 3 --pg1 -d 00000000");
         if (CmdT55xxWriteBlock(ptrData) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Warning: failed writing block 3 page 1 (config)");
         }

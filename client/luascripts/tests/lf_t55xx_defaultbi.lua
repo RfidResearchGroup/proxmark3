@@ -14,7 +14,7 @@ The outlined procedure is as following:
 --BIPHASE 00010040
 --
 
-"lf t55xx write b 0 d 00010040"
+"lf t55xx write -b 0 -d 00010040"
 "lf t55xx detect"
 "lf t55xx info"
 
@@ -112,7 +112,7 @@ local function test()
             elseif _ == 1 then
 
                 local config = pcmd:format(config1, y, config2)
-                dbg(('lf t55xx write b 0 d %s'):format(config))
+                dbg(('lf t55xx write -b 0 -d %s'):format(config))
 
                 local data = ('%s%s%s%s'):format(utils.SwapEndiannessStr(config, 32), password, block, flags)
 
