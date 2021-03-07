@@ -208,20 +208,7 @@ static int usage_t55xx_info(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_t55xx_dump(void) {
-    PrintAndLogEx(NORMAL, "Usage:  lf t55xx dump [r <mode>] [p <password> [o]]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     p <password> - OPTIONAL password 4bytes (8 hex symbols)");
-    PrintAndLogEx(NORMAL, "     o            - OPTIONAL override, force pwd read despite danger to card");
-    PrintAndLogEx(NORMAL, "     f <prefix>   - override filename prefix (optional).  Default is based on blk 0");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE, config.downlink_mode);
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx dump"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx dump p feedbeef o"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
+
 static int usage_t55xx_restore(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx restore f <filename> [p password]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -2198,48 +2185,66 @@ static int CmdT55xxInfo(const char *Cmd) {
 
 static int CmdT55xxDump(const char *Cmd) {
 
-    uint32_t password = 0;
-    uint8_t override = 0;
-    uint8_t downlink_mode = config.downlink_mode;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx dump",
+                  "This command dumps a T55xx card Page 0 block 0-7.\n"
+                  "It will create three files (bin/eml/json)",
+                  "lf t55xx dump\n"
+                  "lf t55xx dump -p aabbccdd --override\n"
+                  "lf t55xx dump -f my_lf_dump"
+                 );
+
+    // 1 (help) + 3 (two user specified params) + (5 T55XX_DLMODE_SINGLE)
+    void *argtable[4 + 5] = {
+        arg_param_begin,
+        arg_str0("f", "filename", "<fn>", "filename (default is generated on blk 0"),
+        arg_lit0("o", "override", "override, force pwd read despite danger to card"),
+        arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
+    };
+    uint8_t idx = 4;
+    arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_SINGLE, T55XX_DLMODE_SINGLE);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, sizeof(filename), &fnlen);
+
+    uint8_t override = arg_get_lit(ctx, 2) ? 1 : 0;
+
     bool usepwd = false;
-    bool errors = false;
-    uint8_t cmdp = 0;
-    char preferredName[FILE_PATH_SIZE] = {0};
-    bool success = true;
-
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_t55xx_dump();
-            case 'r':
-                downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode > 3)
-                    downlink_mode = 0;
-
-                cmdp += 2;
-                break;
-            case 'p':
-                password = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                usepwd = true;
-                cmdp += 2;
-                break;
-            case 'o':
-                override = 1;
-                cmdp++;
-                break;
-            case 'f':
-                param_getstr(Cmd, cmdp + 1, preferredName, FILE_PATH_SIZE);
-                cmdp += 2;
-                if (strlen(preferredName) == 0)
-                    errors = true;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    uint32_t password = 0;
+    int res = arg_get_u32_hexstr_def_nlen(ctx, 3, 0, &password, 4, true);
+    if (res == 0 || res == 2) {
+        PrintAndLogEx(ERR, "Password should be 4 hex bytes");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
-    if (errors) return usage_t55xx_dump();
+    if (res == 1) {
+        usepwd = true;
+    }
+
+    bool r0 = arg_get_lit(ctx, 4);
+    bool r1 = arg_get_lit(ctx, 5);
+    bool r2 = arg_get_lit(ctx, 6);
+    bool r3 = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
+    if ((r0 + r1 + r2 + r3) > 1) {
+        PrintAndLogEx(FAILED, "Error multiple downlink encoding");
+        return PM3_EINVARG;
+    }
+
+    uint8_t downlink_mode = config.downlink_mode;
+    if (r0)
+        downlink_mode = refFixedBit;
+    else if (r1)
+        downlink_mode = refLongLeading;
+    else if (r2)
+        downlink_mode = refLeading0;
+    else if (r3)
+        downlink_mode = ref1of4;
+
+    bool success = true;
 
     // Due to the few different T55xx cards and number of blocks supported
     // will save the dump file if ALL page 0 is OK
@@ -2247,39 +2252,45 @@ static int CmdT55xxDump(const char *Cmd) {
     for (uint8_t i = 0; i < 8; ++i) {
         if (T55xxReadBlock(i, 0, usepwd, override, password, downlink_mode) != PM3_SUCCESS)
             success = false;
-        // idea for better user experience and display.
+
         // only show override warning on the first block read
-        if (override == 1) override++; // flag not to show safty for 2nd and on.
+        if (override == 1) {
+            override++;
+        }
     }
     printT5xxHeader(1);
     for (uint8_t i = 0; i < 4; i++)
         if (T55xxReadBlock(i, 1, usepwd, override, password, downlink_mode) != PM3_SUCCESS)
             T55x7_SaveBlockData(8 + i, 0x00);
 
+    // all ok, save dump to file
+    if (success) {
 
-    if (success) { // all ok save dump to file
-        // saveFileEML will add .eml extension to filename
-        // saveFile (binary) passes in the .bin extension.
-        if (strcmp(preferredName, "") == 0) { // Set default filename, if not set by user
-            strcpy(preferredName, "lf-t55xx");
+        // set default filename, if not set by user
+        if (strlen(filename) == 0) {
+            strcpy(filename, "lf-t55xx");
             for (uint8_t i = 1; i <= 7; i++) {
-                if ((cardmem[i].blockdata != 0x00) && (cardmem[i].blockdata != 0xFFFFFFFF))
-                    snprintf(preferredName + strlen(preferredName), sizeof(preferredName) - strlen(preferredName), "-%08X", cardmem[i].blockdata);
-                else
+                if ((cardmem[i].blockdata != 0x00) && (cardmem[i].blockdata != 0xFFFFFFFF)) {
+                    snprintf(filename + strlen(filename), sizeof(filename) - strlen(filename), "-%08X", cardmem[i].blockdata);
+                } else {
                     break;
+                }
             }
-            strcat(preferredName, "-dump");
+            strcat(filename, "-dump");
         }
 
         // Swap endian so the files match the txt display
         uint32_t data[T55x7_BLOCK_COUNT];
 
-        for (int i = 0; i < T55x7_BLOCK_COUNT; i++)
+        for (int i = 0; i < T55x7_BLOCK_COUNT; i++) {
             data[i] = BSWAP_32(cardmem[i].blockdata);
+        }
 
-        saveFileJSON(preferredName, jsfT55x7, (uint8_t *)data, T55x7_BLOCK_COUNT * sizeof(uint32_t), NULL);
-        saveFileEML(preferredName, (uint8_t *)data, T55x7_BLOCK_COUNT * sizeof(uint32_t), sizeof(uint32_t));
-        saveFile(preferredName, ".bin", data, sizeof(data));
+        // saveFileEML will add .eml extension to filename
+        // saveFile (binary) passes in the .bin extension.
+        saveFileJSON(filename, jsfT55x7, (uint8_t *)data, T55x7_BLOCK_COUNT * sizeof(uint32_t), NULL);
+        saveFileEML(filename, (uint8_t *)data, T55x7_BLOCK_COUNT * sizeof(uint32_t), sizeof(uint32_t));
+        saveFile(filename, ".bin", data, sizeof(data));
     }
 
     return PM3_SUCCESS;
@@ -4194,8 +4205,8 @@ static int CmdT55xxSniff(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"-----------",  CmdHelp,                 AlwaysAvailable, "---------------------------- " _CYAN_("notice") " -----------------------------"},
-    {"",             CmdHelp,                 AlwaysAvailable, "Remember to run `" _YELLOW_("lf t55xx detect") "` first whenever "},
-    {"",             CmdHelp,                 AlwaysAvailable, "a new card is placed on the Proxmark3 or the config block changed."},
+    {"",             CmdHelp,                 AlwaysAvailable, "Remember to run `" _YELLOW_("lf t55xx detect") "` first whenever a new card"},
+    {"",             CmdHelp,                 AlwaysAvailable, "is placed on the Proxmark3 or the config block changed."},
     {"",             CmdHelp,                 AlwaysAvailable, ""},
     {"help",         CmdHelp,                 AlwaysAvailable, "This help"},
     {"-----------",  CmdHelp,                 AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
