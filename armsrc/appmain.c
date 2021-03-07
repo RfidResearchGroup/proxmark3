@@ -73,8 +73,8 @@ extern uint32_t _stack_start, _stack_end;
 struct common_area common_area __attribute__((section(".commonarea")));
 static int button_status = BUTTON_NO_CLICK;
 static bool allow_send_wtx = false;
-static uint16_t tearoff_delay_us = 0;
-static bool tearoff_enabled = false;
+uint16_t tearoff_delay_us = 0;
+bool tearoff_enabled = false;
 
 int tearoff_hook(void) {
     if (tearoff_enabled) {

@@ -1881,7 +1881,7 @@ void iClass_WriteBlock(uint8_t *msg) {
 
         iclass_send_as_reader(write, write_len, &start_time, &eof_time);
 
-        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
             res = false;
             switch_off();
             if (payload->req.send_reply)

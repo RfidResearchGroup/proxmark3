@@ -3102,7 +3102,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                   "hf mfu otptear -b 3 -i 100 -s 1000\n"
                   "hf mfu otptear -b 3 -i 1 -e 200\n"
                   "hf mfu otptear -b 3 -i 100 -s 200 -e 2500 -d FFFFFFFF -t EEEEEEEE\n"
-                  "hf mfu otptear -b 3 -i 100 -s 200 -e 2500 -d FFFFFFFF -t EEEEEEEE -m 00000000    -> quite when OTP is reset"
+                  "hf mfu otptear -b 3 -i 100 -s 200 -e 2500 -d FFFFFFFF -t EEEEEEEE -m 00000000    -> quit when OTP is reset"
                  );
 
     void *argtable[] = {
@@ -3112,7 +3112,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         arg_u64_0("e", "end", "<dec>", "end time (def 3000 us)"),
         arg_u64_0("s", "start", "<dec>", "start time (def 0 us)"),
         arg_str0("d", "data", "<hex>", "initialise data before run (4 bytes)"),
-        arg_str0("t", "test", "<hex>", "test write data (4 bytes)"),
+        arg_str0("t", "test", "<hex>", "test write data (4 bytes, 00000000 by default)"),
         arg_str0("m", "match", "<hex>", "exit criteria, if block matches this value (4 bytes)"),
         arg_param_end
     };
@@ -3126,6 +3126,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     int d_len = 0;
     uint8_t data[4] = {0x00};
     CLIGetHexWithReturn(ctx, 5, data, &d_len);
+    bool use_data = (d_len > 0);
 
     int t_len = 0;
     uint8_t test[4] = {0x00};
@@ -3150,7 +3151,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         return PM3_EINVARG;
     }
     if (start > (end - steps)) {
-        PrintAndLogEx(WARNING, "Start time larger then (end time + steps)");
+        PrintAndLogEx(WARNING, "Start time larger than (end time + steps)");
         return PM3_EINVARG;
     }
 
@@ -3169,26 +3170,34 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t teardata[8] = {0x00};
-    memcpy(teardata, data, sizeof(data));
-    memcpy(teardata + sizeof(data), test, sizeof(test));
+    uint8_t teardata[4] = {0x00};
+    memcpy(teardata, test, sizeof(test));
 
     PrintAndLogEx(INFO, "----------------- " _CYAN_("MFU Tear off") " ---------------------");
     PrintAndLogEx(INFO, "Starting Tear-off test");
     PrintAndLogEx(INFO, "Target block no: %u", blockno);
-    PrintAndLogEx(INFO, "Target inital block data : %s", sprint_hex_inrow(teardata, 4));
-    PrintAndLogEx(INFO, "Target write block data  : %s", sprint_hex_inrow(teardata + 4, 4));
+    if (use_data) {
+        PrintAndLogEx(INFO, "Target inital block data : %s", sprint_hex_inrow(data, 4));
+    }
+    PrintAndLogEx(INFO, "Target write block data  : %s", sprint_hex_inrow(teardata, 4));
+    if (use_match) {
+        PrintAndLogEx(INFO, "Target match block data  : %s", sprint_hex_inrow(match, 4));
+    }
     PrintAndLogEx(INFO, "----------------------------------------------------");
     uint8_t isOK;
-    bool got_pre = false, got_post = false, lock_on = false;
+    bool lock_on = false;
     uint8_t pre[4] = {0};
     uint8_t post[4] = {0};
     uint32_t current = start;
-    int phase_clear = -1;
-    int phase_newwr = -1;
+    int phase_begin_clear = -1;
+    int phase_end_clear = -1;
+    int phase_begin_newwr = -1;
+    int phase_end_newwr = -1;
+    bool skip_phase1 = false;
     uint8_t retries = 0;
+    uint8_t error_retries = 0;
 
-    while (current <= (end - steps)) {
+    while ((current <= (end - steps)) && (error_retries < 10)) {
 
         if (kbd_enter_pressed()) {
             PrintAndLogEx(INFO, "\naborted via keyboard!\n");
@@ -3198,10 +3207,27 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         PrintAndLogEx(INFO, "Using tear-off delay " _GREEN_("%" PRIu32) " us", current);
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREU_READBL, blockno, 0, 0, NULL, 0);
         PacketResponseNG resp;
 
-        got_pre = false;
+        if (use_data) {
+            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockno, 0, 0, data, d_len);
+            bool got_written = false;
+            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+                isOK  = resp.oldarg[0] & 0xff;
+                if (isOK) {
+                    got_written = true;
+                }
+            }
+            if (! got_written) {
+                PrintAndLogEx(FAILED, "Failed to write block BEFORE");
+                error_retries++;
+                continue; // try again
+            }
+        }
+
+        SendCommandMIX(CMD_HF_MIFAREU_READBL, blockno, 0, 0, NULL, 0);
+
+        bool got_pre = false;
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             isOK = resp.oldarg[0] & 0xFF;
             if (isOK) {
@@ -3209,9 +3235,13 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 got_pre = true;
             }
         }
-
+        if (! got_pre) {
+            PrintAndLogEx(FAILED, "Failed to read block BEFORE");
+            error_retries++;
+            continue; // try again
+        }
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MFU_OTP_TEAROFF, blockno, current, 0, teardata, 8);
+        SendCommandMIX(CMD_HF_MFU_OTP_TEAROFF, blockno, current, 0, teardata, sizeof(teardata));
 
         // we be getting ACK that we are silently ignoring here..
 
@@ -3222,10 +3252,11 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
 
         if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Tear off reporting failure to select tag");
+            error_retries++;
             continue;
         }
 
-        got_post = false;
+        bool got_post = false;
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_MIFAREU_READBL, blockno, 0, 0, NULL, 0);
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -3235,55 +3266,53 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 got_post = true;
             }
         }
+        if (! got_post) {
+            PrintAndLogEx(FAILED, "Failed to read block BEFORE");
+            error_retries++;
+            continue; // try again
+        }
+        error_retries = 0;
+        char prestr[20] = {0};
+        snprintf(prestr, sizeof(prestr), "%s", sprint_hex_inrow(pre, sizeof(pre)));
+        char poststr[20] = {0};
+        snprintf(poststr, sizeof(poststr), "%s", sprint_hex_inrow(post, sizeof(post)));
 
-        if (got_pre && got_post) {
+        if (memcmp(pre, post, sizeof(pre)) == 0) {
 
-            char prestr[20] = {0};
-            snprintf(prestr, sizeof(prestr), "%s", sprint_hex_inrow(pre, sizeof(pre)));
-            char poststr[20] = {0};
-            snprintf(poststr, sizeof(poststr), "%s", sprint_hex_inrow(post, sizeof(post)));
-
-            if (memcmp(pre, post, sizeof(pre)) == 0) {
-
-                PrintAndLogEx(INFO, "Current %02d (0x%02X) %s"
-                              , blockno
-                              , blockno
-                              , poststr
-                             );
-            } else {
-
-                // skip first message, since its the reset write.
-                if (current == start) {
-                    PrintAndLogEx(INFO, "Inital write");
-                } else {
-                    PrintAndLogEx(INFO, _CYAN_("Tear off occured") " : %02d (0x%02X) %s vs " _RED_("%s")
-                                  , blockno
-                                  , blockno
-                                  , prestr
-                                  , poststr
-                                 );
-
-                    lock_on = true;
-
-                    if (phase_clear == -1)
-                        phase_clear = current;
-
-                    // new write phase must be atleast 100us later..
-                    if (phase_clear > -1 && phase_newwr == -1 && current > (phase_clear + 100))
-                        phase_newwr = current;
-                }
-            }
-
-            if (use_match && memcmp(pre, match, sizeof(pre)) == 0) {
-                PrintAndLogEx(SUCCESS, "Block matches!\n");
-                break;
-            }
-
+            PrintAndLogEx(INFO, "Current :           %02d (0x%02X) %s"
+                            , blockno
+                            , blockno
+                            , poststr
+                            );
         } else {
-            if (got_pre == false)
-                PrintAndLogEx(FAILED, "Failed to read block BEFORE");
-            if (got_post == false)
-                PrintAndLogEx(FAILED, "Failed to read block AFTER");
+            PrintAndLogEx(INFO, _CYAN_("Tear off occurred") " : %02d (0x%02X) %s => " _RED_("%s")
+                            , blockno
+                            , blockno
+                            , prestr
+                            , poststr
+                            );
+
+            lock_on = true;
+
+            if ((phase_begin_clear == -1) && (bitcount32(*(uint32_t*)pre) > bitcount32(*(uint32_t*)post)))
+                phase_begin_clear = current;
+
+            if ((phase_begin_clear > -1) && (phase_end_clear == -1) && (bitcount32(*(uint32_t*)post) == 0))
+                phase_end_clear = current;
+            
+            if ((current == start) && (phase_end_clear > -1))
+                skip_phase1 = true;
+            // new write phase must be atleast 100us later..
+            if (((bitcount32(*(uint32_t*)pre) == 0) || (phase_end_clear > -1)) && (phase_begin_newwr == -1) && (bitcount32(*(uint32_t*)post) != 0) && (skip_phase1 || (current > (phase_end_clear + 100))))
+                phase_begin_newwr = current;
+
+            if ((phase_begin_newwr > -1) && (phase_end_newwr == -1) && (memcmp(post, teardata, sizeof(teardata)) == 0))
+                phase_end_newwr = current;
+        }
+
+        if (use_match && memcmp(post, match, sizeof(post)) == 0) {
+            PrintAndLogEx(SUCCESS, "Block matches stop condition!\n");
+            break;
         }
 
         /*  TEMPORALLY DISABLED
@@ -3314,11 +3343,17 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "----------------------------------------------------");
-    if (phase_clear > - 1) {
-        PrintAndLogEx(INFO, "New phase boundary around " _YELLOW_("%d") " us", phase_clear);
+    if ((phase_begin_clear > - 1) && (phase_begin_clear != start)) {
+        PrintAndLogEx(INFO, "Erase phase start boundary around " _YELLOW_("%5d") " us", phase_begin_clear);
     }
-    if (phase_newwr > - 1) {
-        PrintAndLogEx(INFO, "New phase boundary around " _YELLOW_("%d") " us", phase_newwr);
+    if ((phase_end_clear > - 1) && (phase_end_clear != start)){
+        PrintAndLogEx(INFO, "Erase phase end boundary around   " _YELLOW_("%5d") " us", phase_end_clear);
+    }
+    if (phase_begin_newwr > - 1) {
+        PrintAndLogEx(INFO, "Write phase start boundary around " _YELLOW_("%5d") " us", phase_begin_newwr);
+    }
+    if (phase_end_newwr > - 1) {
+        PrintAndLogEx(INFO, "Write phase end boundary around   " _YELLOW_("%5d") " us", phase_end_newwr);
     }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;

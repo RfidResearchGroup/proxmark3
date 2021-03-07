@@ -447,7 +447,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
         arg_lit0(NULL, "st", "set/reset Sequence Terminator on"),
         arg_int0(NULL, "rate", "<dec>", "set bitrate <8|16|32|40|50|64|100|128>"),
         arg_str0("c", "blk0", "<hex>", "set configuration from a block0 (4 hex bytes)"),
-        arg_int0("o", "offset", "<dec>", "set offset, where data should start decode in bitstream"),
+        arg_int0("o", "offset", "<0-255>", "set offset, where data should start decode in bitstream "),
     };
 
     uint8_t idx = 19;
@@ -467,7 +467,8 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     bool use_q5 = arg_get_lit(ctx, idx++);
     bool use_st = arg_get_lit(ctx, idx++);
 
-    int bitrate = arg_get_int_def(ctx, idx++, -1);
+    int bitrate = arg_get_int_def(ctx, idx, -1);
+    idx++;
 
     bool gotconf = false;
     uint32_t block0 = 0;
@@ -481,7 +482,8 @@ static int CmdT55xxSetConfig(const char *Cmd) {
         gotconf = true;
     }
 
-    int offset = arg_get_int_def(ctx, idx++, -1);
+    int offset = arg_get_int_def(ctx, idx, -1);
+    idx++;
 
     bool r0 = arg_get_lit(ctx, idx++);
     bool r1 = arg_get_lit(ctx, idx++);
@@ -519,7 +521,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     }
 
     // validate user specified offset
-    if (offset > -1) {
+    if (offset > -1 && offset < 0x100) {
         config.offset = offset;
     }
 
@@ -2939,35 +2941,36 @@ static int CmdT55xxWipe(const char *Cmd) {
     PrintAndLogEx(INFO, "Begin wiping...");
 
     // Creating cmd string for write block :)
-    char writeData[36] = {0};
-    char *ptrData = writeData;
-    snprintf(ptrData, sizeof(writeData), "-b 0 ");
+    char wcmd[36] = {0};
+    char *pwcmd = wcmd;
+
+    snprintf(pwcmd, sizeof(wcmd), "-b 0 ");
 
     if (usepwd) {
-        snprintf(ptrData + strlen(writeData), sizeof(writeData) - strlen(writeData), "p %08x ", password);
+        snprintf(pwcmd + strlen(wcmd), sizeof(wcmd) - strlen(wcmd), "-p %08x ", password);
     }
-    snprintf(ptrData + strlen(writeData), sizeof(writeData) - strlen(writeData), "d %08X", block0);
+    snprintf(pwcmd + strlen(wcmd), sizeof(wcmd) - strlen(wcmd), "-d %08X", block0);
 
-    if (CmdT55xxWriteBlock(ptrData) != PM3_SUCCESS)
+    if (CmdT55xxWriteBlock(pwcmd) != PM3_SUCCESS)
         PrintAndLogEx(WARNING, "Warning: error writing blk 0");
 
     for (uint8_t blk = 1; blk < 8; blk++) {
 
-        snprintf(ptrData, sizeof(writeData), "-b %d -d 0", blk);
+        snprintf(pwcmd, sizeof(wcmd), "-b %d -d 00000000", blk);
 
-        if (CmdT55xxWriteBlock(ptrData) != PM3_SUCCESS)
+        if (CmdT55xxWriteBlock(pwcmd) != PM3_SUCCESS)
             PrintAndLogEx(WARNING, "Warning: error writing blk %d", blk);
 
-        memset(writeData, 0x00, sizeof(writeData));
+        memset(wcmd, 0x00, sizeof(wcmd));
     }
 
     // Check and rest t55xx downlink mode.
     if (config.downlink_mode != T55XX_DLMODE_FIXED) { // Detect found a different mode so card must support
-        snprintf(ptrData, sizeof(writeData), "-b 3 --pg1 -d 00000000");
-        if (CmdT55xxWriteBlock(ptrData) != PM3_SUCCESS) {
+        snprintf(pwcmd, sizeof(wcmd), "-b 3 --pg1 -d 00000000");
+        if (CmdT55xxWriteBlock(pwcmd) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Warning: failed writing block 3 page 1 (config)");
         }
-        memset(writeData, 0x00, sizeof(writeData));
+        memset(wcmd, 0x00, sizeof(wcmd));
     }
     return PM3_SUCCESS;
 }
