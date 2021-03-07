@@ -104,14 +104,6 @@ static inline uint32_t leadingzeros(uint64_t a) {
     return 0;
 #endif
 }
-static inline uint32_t countones(uint64_t a) {
-#if defined __GNUC__
-    return __builtin_popcountll(a);
-#else
-    return 0;
-#endif
-
-}
 
 const char *card_types[] = {
     "PicoPass 16K / 16",                       // 000
@@ -2034,7 +2026,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
 
             uint64_t a = bytes_to_num(data, 8);
             bool starts = (leadingzeros(a) < 12);
-            bool ones = (countones(a) > 16 && countones(a) < 48);
+            bool ones = (bitcount64(a) > 16 && bitcount64(a) < 48);
 
             if (starts && ones) {
                 PrintAndLogEx(INFO, "data looks encrypted, False Positives " _YELLOW_("ARE") " possible");
