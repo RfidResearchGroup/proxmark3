@@ -127,10 +127,10 @@ typedef struct {
     uint8_t offset;
     uint32_t block0;
     enum {
-        notSet     = 0x00,
-        autoDetect = 0x01,
-        userSet    = 0x02,
-        tagRead    = 0x03,
+        NOTSET     = 0x00,
+        AUTODETECT = 0x01,
+        USERSET    = 0x02,
+        TAGREAD    = 0x03,
     } block0Status;
     enum {
         RF_8 = 0x00,

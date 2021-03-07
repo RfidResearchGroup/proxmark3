@@ -50,7 +50,7 @@ t55xx_conf_block_t config = {
     .inverted = false,
     .offset = 0x00,
     .block0 = 0x00,
-    .block0Status = notSet,
+    .block0Status = NOTSET,
     .Q5 = false,
     .usepwd = false,
     .downlink_mode = refFixedBit
@@ -106,27 +106,7 @@ static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, u
     *idx = n;
 }
 
-static int usage_t55xx_config(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf t55xx config [c <blk0>] [d <demodulation>] [i [0/1]] [o <offset>] [Q5 [0/1]] [ST [0/1]]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     h                                - This help");
-    PrintAndLogEx(NORMAL, "     c <block0>                       - set configuration from a block0");
-    PrintAndLogEx(NORMAL, "     b <8|16|32|40|50|64|100|128>     - Set bitrate");
-    PrintAndLogEx(NORMAL, "     d <FSK|FSK1|FSK1a|FSK2|FSK2a|ASK|PSK1|PSK2|NRZ|BI|BIa>  - Set demodulation FSK / ASK / PSK / NRZ / Biphase / Biphase A");
-    PrintAndLogEx(NORMAL, "     i [0/1]                          - Set/reset data signal inversion");
-    PrintAndLogEx(NORMAL, "     o [offset]                       - Set offset, where data should start decode in bitstream");
-    PrintAndLogEx(NORMAL, "     Q5 [0/1]                         - Set/reset as Q5/T5555 chip instead of T55x7");
-    PrintAndLogEx(NORMAL, "     ST [0/1]                         - Set/reset Sequence Terminator on");
-    PrintAndLogEx(NORMAL, ""); // layout is a little differnet, so seperate until a better fix
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE, config.downlink_mode);
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx config d FSK") "          - FSK demodulation");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx config d FSK i 1") "      - FSK demodulation, inverse data");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx config d FSK i 1 o 3") "  - FSK demodulation, inverse data, offset=3,start from position 3 to decode data");
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
+
 static int usage_t55xx_read(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx read [r <mode>] b <block> [p <password>] [o] <page1>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -489,141 +469,183 @@ void SetConfigWithBlock0Ex(uint32_t block0, uint8_t offset, bool Q5) {
 }
 
 static int CmdT55xxSetConfig(const char *Cmd) {
-
     // No args
-    if (strlen(Cmd) == 0) return printConfiguration(config);
+    if (strlen(Cmd) == 0) {
+        PrintAndLogEx(INFO, "--- " _CYAN_("current t55xx config") " --------------------------");
+        return printConfiguration(config);
+    }
 
-    uint8_t offset = 0, bitRate = 0;
-    char modulation[6] = {0x00};
-    uint8_t rates[9] = {8, 16, 32, 40, 50, 64, 100, 128, 0};
-    uint8_t cmdp = 0;
-    uint8_t downlink_mode = 0;
-    bool errors = false;
-    uint32_t block0 = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx config",
+                  "Set/Get T55XX configuration of the pm3 client. Like modulation, inverted, offset, rate etc.\n"
+                  "Offset is start position to decode data.",
+                  "lf t55xx config --FSK         --> FSK demodulation\n"
+                  "lf t55xx config --FSK -i      --> FSK demodulation, inverse data\n"
+                  "lf t55xx config --FSK -i -o 3 --> FSK demodulation, inverse data, offset 3\n"
+                 );
+
+    // 1 (help) + 19 (user specified params) + (5 T55XX_DLMODE_SINGLE)
+    void *argtable[1 + 12 + 6 + 5] = {
+        arg_param_begin,
+        arg_lit0(NULL, "FSK",   "set demodulation FSK"),
+        arg_lit0(NULL, "FSK1",  "set demodulation FSK 1"),
+        arg_lit0(NULL, "FSK1A", "set demodulation FSK 1a (inv)"),
+        arg_lit0(NULL, "FSK2",  "set demodulation FSK 2"),
+        arg_lit0(NULL, "FSK2A", "set demodulation FSK 2a (inv)"),
+        arg_lit0(NULL, "ASK",   "set demodulation ASK"),
+        arg_lit0(NULL, "PSK1",  "set demodulation PSK 1"),
+        arg_lit0(NULL, "PSK2",  "set demodulation PSK 2"),
+        arg_lit0(NULL, "PSK3",  "set demodulation PSK 3"),
+        arg_lit0(NULL, "NRZ",   "set demodulation NRZ"),
+        arg_lit0(NULL, "BI",    "set demodulation Biphase"),        
+        arg_lit0(NULL, "BIA",   "set demodulation Diphase (inverted biphase)"),                        
+        arg_lit0("i", "inv", "set/reset data signal inversion"),
+        arg_lit0(NULL, "q5", "set/reset as Q5/T5555 chip instead of T55x7"),
+        arg_lit0(NULL, "st", "set/reset Sequence Terminator on"),
+        arg_int0(NULL, "rate", "<dec>", "set bitrate <8|16|32|40|50|64|100|128>"),
+        arg_str0("c", "blk0", "<hex>", "set configuration from a block0 (4 hex bytes)"),
+        arg_int0("o", "offset", "<dec>", "set offset, where data should start decode in bitstream"),
+    };
+
+    uint8_t idx = 19;
+    arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_SINGLE, config.downlink_mode);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    idx = 1;
+    bool mods[12];
+    int verify_mods = 0;
+    while (idx - 1 < sizeof(mods)) {
+       mods[idx - 1] = arg_get_lit(ctx, idx);
+       verify_mods += mods[idx - 1];
+       idx++;
+    }
+
+    bool invert = arg_get_lit(ctx, idx++);
+    bool use_q5 = arg_get_lit(ctx, idx++);
+    bool use_st = arg_get_lit(ctx, idx++);
+
+    int bitrate = arg_get_int_def(ctx, idx++, -1);
+
     bool gotconf = false;
+    uint32_t block0 = 0;
+    int res = arg_get_u32_hexstr_def_nlen(ctx, idx++, 0, &block0, 4, true);
+    if (res == 0 || res == 2) {
+        PrintAndLogEx(ERR, "block0 data must be 4 hex bytes");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (res == 1) {
+        gotconf = true;
+    }
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        char tmp = tolower(param_getchar(Cmd, cmdp));
-        switch (tmp) {
-            case 'h':
-                return usage_t55xx_config();
-            case 'b':
-                errors |= param_getdec(Cmd, cmdp + 1, &bitRate);
-                if (!errors) {
-                    uint8_t i = 0;
-                    for (; i < 9; i++) {
-                        if (rates[i] == bitRate) {
-                            config.bitrate = i;
-                            config.block0 = ((config.block0 & ~(0x1c0000)) | (i << 18));
-                            break;
-                        }
-                    }
-                    if (i == 9) errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'c':
-                block0 = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                gotconf = true;
-                cmdp += 2;
-                break;
-            case 'd':
-                param_getstr(Cmd, cmdp + 1, modulation, sizeof(modulation));
-                cmdp += 2;
+    int offset = arg_get_int_def(ctx, idx++, -1);
 
-                if (strcmp(modulation, "FSK") == 0) {
-                    config.modulation = DEMOD_FSK;
-                } else if (strcmp(modulation, "FSK1") == 0) {
-                    config.modulation = DEMOD_FSK1;
-                    config.inverted = 1;
-                } else if (strcmp(modulation, "FSK1a") == 0) {
-                    config.modulation = DEMOD_FSK1a;
-                    config.inverted = 0;
-                } else if (strcmp(modulation, "FSK2") == 0) {
-                    config.modulation = DEMOD_FSK2;
-                    config.inverted = 0;
-                } else if (strcmp(modulation, "FSK2a") == 0) {
-                    config.modulation = DEMOD_FSK2a;
-                    config.inverted = 1;
-                } else if (strcmp(modulation, "ASK") == 0) {
-                    config.modulation = DEMOD_ASK;
-                } else if (strcmp(modulation, "NRZ") == 0) {
-                    config.modulation = DEMOD_NRZ;
-                } else if (strcmp(modulation, "PSK1") == 0) {
-                    config.modulation = DEMOD_PSK1;
-                } else if (strcmp(modulation, "PSK2") == 0) {
-                    config.modulation = DEMOD_PSK2;
-                } else if (strcmp(modulation, "PSK3") == 0) {
-                    config.modulation = DEMOD_PSK3;
-                } else if (strcmp(modulation, "BIa") == 0) {
-                    config.modulation = DEMOD_BIa;
-                    config.inverted = 1;
-                } else if (strcmp(modulation, "BI") == 0) {
-                    config.modulation = DEMOD_BI;
-                    config.inverted = 0;
-                } else {
-                    PrintAndLogEx(WARNING, "Unknown modulation '%s'", modulation);
-                    errors = true;
-                }
-                config.block0 = ((config.block0 & ~(0x1f000)) | (config.modulation << 12));
+    bool r0 = arg_get_lit(ctx, idx++);
+    bool r1 = arg_get_lit(ctx, idx++);
+    bool r2 = arg_get_lit(ctx, idx++);
+    bool r3 = arg_get_lit(ctx, idx++);
+    CLIParserFree(ctx);
+
+    // validate user specified downlink mode
+    if ((r0 + r1 + r2 + r3) > 1) {
+        PrintAndLogEx(FAILED, "Error multiple downlink encoding");
+        return PM3_EINVARG;
+    }
+
+    // validate user specified modulation FSK,FSK1,...BIA
+    if (verify_mods > 1) {
+        PrintAndLogEx(FAILED, "Error multiple demodulations, select one");
+        return PM3_EINVARG;
+    }
+
+    // validate user specified bitrate
+    uint8_t rates[9] = {8, 16, 32, 40, 50, 64, 100, 128, 0};
+    if (bitrate != -1) {
+        uint8_t i = 0;
+        for (; i < ARRAYLEN(rates); i++) {
+            if (rates[i] == bitrate) {
+                config.bitrate = i;
+                config.block0 = ((config.block0 & ~(0x1c0000)) | (i << 18));
                 break;
-            case 'i':
-                if ((param_getchar(Cmd, cmdp + 1) == '0') || (param_getchar(Cmd, cmdp + 1) == '1')) {
-                    config.inverted = param_getchar(Cmd, cmdp + 1) == '1';
-                    cmdp += 2;
-                } else {
-                    config.inverted = true;
-                    cmdp += 1;
-                }
-                break;
-            case 'o':
-                errors |= param_getdec(Cmd, cmdp + 1, &offset);
-                if (!errors)
-                    config.offset = offset;
-                cmdp += 2;
-                break;
-            case 'q':
-                if ((param_getchar(Cmd, cmdp + 1) == '0') || (param_getchar(Cmd, cmdp + 1) == '1')) {
-                    config.Q5 = param_getchar(Cmd, cmdp + 1) == '1';
-                    cmdp += 2;
-                } else {
-                    config.Q5 = true;
-                    cmdp += 1;
-                }
-                break;
-            case 's':
-                if ((param_getchar(Cmd, cmdp + 1) == '0') || (param_getchar(Cmd, cmdp + 1) == '1')) {
-                    config.ST = param_getchar(Cmd, cmdp + 1) == '1';
-                    cmdp += 2;
-                } else {
-                    config.ST = true;
-                    cmdp += 1;
-                }
-                config.block0 = ((config.block0 & ~(0x8)) | (config.ST << 3));
-                break;
-            case 'r':
-                errors = param_getdec(Cmd, cmdp + 1, &downlink_mode);
-                if (downlink_mode > 3)
-                    downlink_mode = 0;
-                if (!errors)
-                    config.downlink_mode = downlink_mode;
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+            }
+        }
+        if (i == 9){
+            PrintAndLogEx(FAILED, "Error select a valid bitrate");
+            return PM3_EINVARG;
         }
     }
 
-    //Validations
-    if (errors) return usage_t55xx_config();
+    // validate user specified offset
+    if (offset > -1) {
+        config.offset = offset;
+    }
 
-    config.block0Status = userSet;
+    // validate user specific T5555 / Q5 
+    config.Q5 = use_q5;
+
+    // validate user specific sequence terminator
+    config.ST = use_st;
+    if (use_st) {
+        config.block0 = ((config.block0 & ~(0x8)) | (config.ST << 3));
+    }
+
+    // validate user specific invert
+    config.inverted = invert;
+
+    // validate user specific downlink mode
+    uint8_t downlink_mode = config.downlink_mode;
+    if (r0)
+        downlink_mode = refFixedBit;
+    else if (r1)
+        downlink_mode = refLongLeading;
+    else if (r2)
+        downlink_mode = refLeading0;
+    else if (r3)
+        downlink_mode = ref1of4;
+
+    config.downlink_mode = downlink_mode;
+
+    // validate user specific modulation
+    if (mods[0]){
+        config.modulation = DEMOD_FSK;
+    } else if (mods[1]) {
+        config.modulation = DEMOD_FSK1;
+        config.inverted = 0;
+    } else if (mods[2]) {
+        config.modulation = DEMOD_FSK1a;
+        config.inverted = 1;
+    } else if (mods[3]) {
+        config.modulation = DEMOD_FSK2;
+        config.inverted = 0;
+    } else if (mods[4]) {
+        config.modulation = DEMOD_FSK2a;
+        config.inverted = 1;
+    } else if (mods[5]) {
+        config.modulation = DEMOD_ASK;
+    } else if (mods[6]) {
+        config.modulation = DEMOD_PSK1;
+    } else if (mods[7]) {
+        config.modulation = DEMOD_PSK2;
+    } else if (mods[8]) {
+        config.modulation = DEMOD_PSK3;
+    } else if (mods[9]) {
+        config.modulation = DEMOD_NRZ;
+    } else if (mods[10]) {
+        config.modulation = DEMOD_BI;
+        config.inverted = 0;
+    } else if (mods[11]) {
+        config.modulation = DEMOD_BIa;
+        config.inverted = 1;
+    }   
+
+    config.block0 = ((config.block0 & ~(0x1f000)) | (config.modulation << 12));
+
+    config.block0Status = USERSET;
     if (gotconf) {
         SetConfigWithBlock0Ex(block0, config.offset, config.Q5);
     }
 
+    PrintAndLogEx(INFO, "--- " _CYAN_("current t55xx config") " --------------------------");
     return printConfiguration(config);
 }
 int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode) {
@@ -1201,7 +1223,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
             config.pwd = pwd & 0xffffffff;
         }
 
-        config.block0Status = autoDetect;
+        config.block0Status = AUTODETECT;
         if (print_config)
             printConfiguration(config);
 
@@ -1237,7 +1259,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 PrintAndLogEx(NORMAL, "--[%d]---------------", i + 1);
             }
 
-            config.block0Status = autoDetect;
+            config.block0Status = AUTODETECT;
             if (print_config)
                 printConfiguration(tests[i]);
         }
@@ -1514,17 +1536,17 @@ int CmdT55xxSpecial(const char *Cmd) {
 }
 
 int printConfiguration(t55xx_conf_block_t b) {
-    PrintAndLogEx(INFO, "     Chip Type      : " _GREEN_("%s"), (b.Q5) ? "Q5/T5555" : "T55x7");
-    PrintAndLogEx(INFO, "     Modulation     : " _GREEN_("%s"), GetSelectedModulationStr(b.modulation));
-    PrintAndLogEx(INFO, "     Bit Rate       : %s", GetBitRateStr(b.bitrate, (b.block0 & T55x7_X_MODE && (b.block0 >> 28 == 6 || b.block0 >> 28 == 9))));
-    PrintAndLogEx(INFO, "     Inverted       : %s", (b.inverted) ? _GREEN_("Yes") : "No");
-    PrintAndLogEx(INFO, "     Offset         : %d", b.offset);
-    PrintAndLogEx(INFO, "     Seq. Term.     : %s", (b.ST) ? _GREEN_("Yes") : "No");
-    PrintAndLogEx(INFO, "     Block0         : 0x%08X %s", b.block0, GetConfigBlock0Source(b.block0Status));
-    PrintAndLogEx(INFO, "     Downlink Mode  : %s", GetDownlinkModeStr(b.downlink_mode));
-    PrintAndLogEx(INFO, "     Password Set   : %s", (b.usepwd) ? _RED_("Yes") : _GREEN_("No"));
+    PrintAndLogEx(INFO, " Chip type......... " _GREEN_("%s"), (b.Q5) ? "Q5/T5555" : "T55x7");
+    PrintAndLogEx(INFO, " Modulation........ " _GREEN_("%s"), GetSelectedModulationStr(b.modulation));
+    PrintAndLogEx(INFO, " Bit rate.......... %s", GetBitRateStr(b.bitrate, (b.block0 & T55x7_X_MODE && (b.block0 >> 28 == 6 || b.block0 >> 28 == 9))));
+    PrintAndLogEx(INFO, " Inverted.......... %s", (b.inverted) ? _GREEN_("Yes") : "No");
+    PrintAndLogEx(INFO, " Offset............ %d", b.offset);
+    PrintAndLogEx(INFO, " Seq. terminator... %s", (b.ST) ? _GREEN_("Yes") : "No");
+    PrintAndLogEx(INFO, " Block0............ %08X %s", b.block0, GetConfigBlock0Source(b.block0Status));
+    PrintAndLogEx(INFO, " Downlink mode..... %s", GetDownlinkModeStr(b.downlink_mode));
+    PrintAndLogEx(INFO, " Password set...... %s", (b.usepwd) ? _RED_("Yes") : _GREEN_("No"));
     if (b.usepwd) {
-        PrintAndLogEx(INFO, "     Password       : %08X", b.pwd);
+        PrintAndLogEx(INFO, " Password.......... %08X", b.pwd);
     }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -2714,17 +2736,17 @@ char *GetConfigBlock0Source(uint8_t id) {
     char *retStr = buf;
 
     switch (id) {
-        case autoDetect:
-            snprintf(retStr, sizeof(buf), _YELLOW_("(Auto detect)"));
+        case AUTODETECT:
+            snprintf(retStr, sizeof(buf), _YELLOW_("(auto detect)"));
             break;
-        case userSet:
-            snprintf(retStr, sizeof(buf), _YELLOW_("(User set)"));
+        case USERSET:
+            snprintf(retStr, sizeof(buf), _YELLOW_("(user set)"));
             break;
-        case tagRead:
-            snprintf(retStr, sizeof(buf), _GREEN_("(Tag read)"));
+        case TAGREAD:
+            snprintf(retStr, sizeof(buf), _GREEN_("(tag read)"));
             break;
         default:
-            snprintf(retStr, sizeof(buf), _RED_("(Unknown)"));
+            snprintf(retStr, sizeof(buf), _RED_("(n/a)"));
             break;
     }
     return buf;
@@ -4249,7 +4271,7 @@ static command_t CommandTable[] = {
     {"info",         CmdT55xxInfo,            AlwaysAvailable, "Show T55x7 configuration data (page 0/ blk 0)"},
     {"p1detect",     CmdT55xxDetectPage1,     IfPm3Lf,         "Try detecting if this is a t55xx tag by reading page 1"},
     {"read",         CmdT55xxReadBlock,       IfPm3Lf,         "Read T55xx block data"},
-    {"resetread",    CmdResetRead,            IfPm3Lf,         "Send Reset Cmd then lf read the stream to attempt to identify the start of it (needs a demod and/or plot after)"},
+    {"resetread",    CmdResetRead,            IfPm3Lf,         "Send Reset Cmd then lf read the stream to attempt to identify the start of it"},
     {"restore",      CmdT55xxRestore,         IfPm3Lf,         "Restore T55xx card Page 0 / Page 1 blocks"},
     {"trace",        CmdT55xxReadTrace,       AlwaysAvailable, "Show T55x7 traceability data (page 1/ blk 0-1)"},
     {"wakeup",       CmdT55xxWakeUp,          IfPm3Lf,         "Send AOR wakeup command"},
