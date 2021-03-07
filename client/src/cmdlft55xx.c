@@ -66,6 +66,8 @@ void Set_t55xx_Config(t55xx_conf_block_t conf) {
     config = conf;
 }
 
+static int CmdHelp(const char *Cmd);
+
 static void print_usage_t55xx_downloadlink(uint8_t ShowAll, uint8_t dl_mode_default) {
     if (ShowAll == T55XX_DLMODE_ALL)
         PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding 0|1|2|3|4");
@@ -106,28 +108,6 @@ static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, u
     *idx = n;
 }
 
-
-static int usage_t55xx_read(void) {
-    PrintAndLogEx(NORMAL, "Usage:  lf t55xx read [r <mode>] b <block> [p <password>] [o] <page1>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     b <block>    - block number to read. Between 0-7");
-    PrintAndLogEx(NORMAL, "     p <password> - OPTIONAL password (8 hex characters)");
-    PrintAndLogEx(NORMAL, "     o            - OPTIONAL override safety check");
-    PrintAndLogEx(NORMAL, "     1            - OPTIONAL 0|1  read Page 1 instead of Page 0");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE, config.downlink_mode);
-    PrintAndLogEx(NORMAL, "     " _RED_("**** WARNING ****"));
-    PrintAndLogEx(NORMAL, "     Use of read with password on a tag not configured");
-    PrintAndLogEx(NORMAL, "     for a password can damage the tag");
-    PrintAndLogEx(NORMAL, "     " _RED_("*****************"));
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx read b 0") "                 - read data from block 0");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx read b 0 p feedbeef") "      - read data from block 0 password feedbeef");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx read b 0 p feedbeef o") "    - read data from block 0 password feedbeef safety check");
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
 static int usage_t55xx_write(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx write [r <mode>] b <block> d <data> [p <password>] [1] [t] [v]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -147,7 +127,8 @@ static int usage_t55xx_write(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_t55xx_clonehelp(void) {
+static int CmdT55xxCloneHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     PrintAndLogEx(NORMAL, "For cloning specific techs on T55xx tags, see commands available in corresponding LF sub-menus, e.g.:");
     PrintAndLogEx(NORMAL, _GREEN_("lf awid clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf destron clone"));
@@ -175,13 +156,6 @@ static int usage_t55xx_clonehelp(void) {
     PrintAndLogEx(NORMAL, _GREEN_("lf viking clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf visa2000 clone"));
     return PM3_SUCCESS;
-}
-
-static int CmdHelp(const char *Cmd);
-
-static int CmdT55xxCloneHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return usage_t55xx_clonehelp();
 }
 
 static void T55x7_SaveBlockData(uint8_t idx, uint32_t data) {
@@ -665,6 +639,7 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
 
             if (t55xxTryDetectModulationEx(downlink_mode, false, 0, password) == false) {
                 PrintAndLogEx(WARNING, "Safety check: Could not detect if PWD bit is set in config block. Exits.");
+                PrintAndLogEx(HINT, "Consider using the override parameter to force read.");
                 return PM3_EWRONGANSWER;
             } else {
                 PrintAndLogEx(WARNING, "Safety check: PWD bit is NOT set in config block. Reading without password...");
@@ -689,51 +664,67 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
 }
 
 static int CmdT55xxReadBlock(const char *Cmd) {
-    uint8_t block = REGULAR_READ_MODE_BLOCK;
-    uint8_t override = 0;
-    uint8_t cmdp = 0;
-    uint8_t downlink_mode = config.downlink_mode;
-    uint32_t password = 0; //default to blank Block 7
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx read",
+                  "Read T55xx block data.  This commands defaults to page 0.\n\n"
+                   _RED_("           * * * WARNING * * *") "\n"
+                  _CYAN_("Use of read with password on a tag not configured") "\n"
+                  _CYAN_("for a password can damage the tag") "\n"
+                   _RED_("           * * * * * * * * * *"),
+                  "lf t55xx read -b 0                   --> read data from block 0\n"
+                  "lf t55xx read -b 0 --pwd 01020304    --> read data from block 0, pwd 01020304\n"
+                  "lf t55xx read -b 0 --pwd 01020304 -o --> read data from block 0, pwd 01020304, override\n"
+                 );
+
+    // 1 (help) + 4(four user specified params) + (5 T55XX_DLMODE_SINGLE)
+    void *argtable[5 + 5] = {
+        arg_param_begin,
+        arg_int1("b", "blk", "<0-7>", "block number to read"),
+        arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
+        arg_lit0("o", "override", "override safety check"),    
+        arg_lit0(NULL, "pg1", "read page 1"),
+    };
+    uint8_t idx = 5;
+    arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_SINGLE, config.downlink_mode);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int block = arg_get_int_def(ctx, 1, REGULAR_READ_MODE_BLOCK);
+
     bool usepwd = false;
-    bool page1 = false;
-    bool errors = false;
-
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_t55xx_read();
-            case 'b':
-                errors |= param_getdec(Cmd, cmdp + 1, &block);
-                cmdp += 2;
-                break;
-            case 'o':
-                override = 1;
-                cmdp++;
-                break;
-            case 'p':
-                password = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                usepwd = true;
-                cmdp += 2;
-                break;
-            case '1':
-                page1 = true;
-                cmdp++;
-                break;
-            case 'r':
-                downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode > 3)
-                    downlink_mode = 0;
-
-                cmdp += 2;
-                break;
-
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    uint32_t password = 0;
+    int res = arg_get_u32_hexstr_def_nlen(ctx, 2, 0, &password, 4, true);
+    if (res == 0 || res == 2) {
+        PrintAndLogEx(ERR, "Password should be 4 hex bytes");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
-    if (errors || cmdp == 0) return usage_t55xx_read();
+    if (res == 1) {
+        usepwd = true;
+    }
+
+    uint8_t override = arg_get_lit(ctx, 3);
+    bool page1 = arg_get_lit(ctx, 4);
+
+    bool r0 = arg_get_lit(ctx, 5);
+    bool r1 = arg_get_lit(ctx, 6);
+    bool r2 = arg_get_lit(ctx, 7);
+    bool r3 = arg_get_lit(ctx, 8);
+    CLIParserFree(ctx);
+
+    if ((r0 + r1 + r2 + r3) > 1) {
+        PrintAndLogEx(FAILED, "Error multiple downlink encoding");
+        return PM3_EINVARG;
+    }
+
+    uint8_t downlink_mode = config.downlink_mode;
+    if (r0)
+        downlink_mode = refFixedBit;
+    else if (r1)
+        downlink_mode = refLongLeading;
+    else if (r2)
+        downlink_mode = refLeading0;
+    else if (r3)
+        downlink_mode = ref1of4;
 
     if (block > 7 && block != REGULAR_READ_MODE_BLOCK) {
         PrintAndLogEx(NORMAL, "Block must be between 0 and 7");
@@ -1316,17 +1307,16 @@ bool GetT55xxBlockData(uint32_t *blockdata) {
 
 void printT55xxBlock(uint8_t blockNum, bool page1) {
 
-    uint32_t blockData = 0;
-    uint8_t bytes[4] = {0};
-
-    if (GetT55xxBlockData(&blockData) == false)
+    uint32_t val = 0;
+    if (GetT55xxBlockData(&val) == false)
         return;
 
-    num_to_bytes(blockData, 4, bytes);
+    uint8_t bytes[4] = {0};
+    num_to_bytes(val, 4, bytes);
 
-    T55x7_SaveBlockData((page1) ? blockNum + 8 : blockNum, blockData);
+    T55x7_SaveBlockData((page1) ? blockNum + 8 : blockNum, val);
 
-    PrintAndLogEx(SUCCESS, " %02d | %08X | %s | %s", blockNum, blockData, sprint_bin(DemodBuffer + config.offset, 32), sprint_ascii(bytes, 4));
+    PrintAndLogEx(SUCCESS, " %02d | %08X | %s | %s", blockNum, val, sprint_bin(DemodBuffer + config.offset, 32), sprint_ascii(bytes, 4));
 }
 
 static bool testModulation(uint8_t mode, uint8_t modread) {
