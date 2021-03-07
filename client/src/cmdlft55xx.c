@@ -151,10 +151,10 @@ static int usage_t55xx_clonehelp(void) {
     PrintAndLogEx(NORMAL, "For cloning specific techs on T55xx tags, see commands available in corresponding LF sub-menus, e.g.:");
     PrintAndLogEx(NORMAL, _GREEN_("lf awid clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf destron clone"));
-    PrintAndLogEx(NORMAL, _GREEN_("lf em 410x_clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf em 410x clone"));
 // todo:  implement restore
-//    PrintAndLogEx(NORMAL, _GREEN_("lf em 4x05_write"));
-//    PrintAndLogEx(NORMAL, _GREEN_("lf em 4x50_write"));
+//    PrintAndLogEx(NORMAL, _GREEN_("lf em 4x05 write"));
+//    PrintAndLogEx(NORMAL, _GREEN_("lf em 4x50 write"));
     PrintAndLogEx(NORMAL, _GREEN_("lf fdxb clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf gallagher clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf gproxii clone"));
@@ -163,9 +163,10 @@ static int usage_t55xx_clonehelp(void) {
     PrintAndLogEx(NORMAL, _GREEN_("lf io clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf jablotron clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf keri clone"));
-    PrintAndLogEx(NORMAL, _GREEN_("lf nedap clone"));
-    PrintAndLogEx(NORMAL, _GREEN_("lf noralsy clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf motorola clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf nedap clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf nexwatch clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf noralsy clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf pac clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf paradox clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf presco clone"));
