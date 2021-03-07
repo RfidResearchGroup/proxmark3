@@ -139,7 +139,7 @@ static int rdv4_sign_write(uint8_t *signature, uint8_t slen){
         if (!resp.oldarg[0]) {
             PrintAndLogEx(FAILED, "Writing signature ( "_RED_("fail") ")");
         } else {
-            PrintAndLogEx(SUCCESS, "Writing signature ( "_GREEN_("ok") " ) at offset %u", FLASH_MEM_SIGNATURE_OFFSET);
+            PrintAndLogEx(SUCCESS, "Writing signature at offset %u ( "_GREEN_("ok") " )", FLASH_MEM_SIGNATURE_OFFSET);
             return PM3_SUCCESS;
         }
     }
