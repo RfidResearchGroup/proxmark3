@@ -2092,7 +2092,7 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
         uint32_t eof_time = 0;
         CodeAndTransmit14443bAsReader(cmd, len, &start_time, &eof_time);
 
-        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
             FpgaDisableTracing();
             reply_mix(CMD_HF_ISO14443B_COMMAND, -2, 0, 0, NULL, 0);
         } else {
