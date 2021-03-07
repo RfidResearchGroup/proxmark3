@@ -209,20 +209,6 @@ static int usage_t55xx_info(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_t55xx_restore(void) {
-    PrintAndLogEx(NORMAL, "Usage:  lf t55xx restore f <filename> [p password]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     f <filename> - filename of the dump file (.bin/.eml)");
-    PrintAndLogEx(NORMAL, "     p <password> - optional password if target card has password set");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, _YELLOW_("     Assumes lf t55 detect has been run first!"));
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx restore f lf-t55xx-00148040-dump.bin"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
 static int usage_t55xx_clonehelp(void) {
     PrintAndLogEx(NORMAL, "For cloning specific techs on T55xx tags, see commands available in corresponding LF sub-menus, e.g.:");
     PrintAndLogEx(NORMAL, _GREEN_("lf awid clone"));
@@ -2197,7 +2183,7 @@ static int CmdT55xxDump(const char *Cmd) {
     // 1 (help) + 3 (two user specified params) + (5 T55XX_DLMODE_SINGLE)
     void *argtable[4 + 5] = {
         arg_param_begin,
-        arg_str0("f", "filename", "<fn>", "filename (default is generated on blk 0"),
+        arg_str0("f", "filename", "<fn>", "filename (default is generated on blk 0)"),
         arg_lit0("o", "override", "override, force pwd read despite danger to card"),
         arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
     };
@@ -2297,118 +2283,130 @@ static int CmdT55xxDump(const char *Cmd) {
 }
 
 static int CmdT55xxRestore(const char *Cmd) {
-    bool errors = false;
-    uint8_t cmdp = 0;
-    char preferredName[FILE_PATH_SIZE] = {0};
-    char ext[FILE_PATH_SIZE] = {0};
-    int success = PM3_ESOFT;
-    uint32_t password = 0x00;
-    bool usepwd = false;
-    uint32_t data[12] = {0};
-    size_t datalen = 0;
-    uint8_t blockidx;
-    uint8_t downlink_mode;
-    char writeCmdOpt[100];
-    char pwdOpt [11] = {0}; // p XXXXXXXX
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx restore",
+                  "This command restores T55xx card page 0/1 n blocks",
+                  "lf t55xx restore -f lf-t55xx-00148040-dump.bin"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_t55xx_restore();
-            case 'f':
-                param_getstr(Cmd, cmdp + 1, preferredName, FILE_PATH_SIZE);
-                if (strlen(preferredName) == 0)
-                    errors = true;
-                cmdp += 2;
-                break;
-            case 'p':
-                password = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                usepwd = true;
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "filename", "<fn>", "filename of the dump file (bin|eml)"),
+        arg_str0("p", "pwd", "<hex>", "password if target card has password set (4 hex bytes)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, sizeof(filename), &fnlen);
+
+    bool usepwd = false;
+    uint32_t password = 0;
+    int res = arg_get_u32_hexstr_def_nlen(ctx, 2, 0, &password, 4, true);
+    if (res == 0 || res == 2) {
+        PrintAndLogEx(ERR, "Password should be 4 hex bytes");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (res == 1) {
+        usepwd = true;
+    }
+    CLIParserFree(ctx);
+
+    if (fnlen == 0) {
+        PrintAndLogEx(ERR, "Must specify a filename");
+        return PM3_EINVARG;
     }
 
-    // File name expected to be .eml .bin or .json so sould be at least 4
-    if (errors || (strlen(preferredName) == 0)) return usage_t55xx_restore();
+    char ext[FILE_PATH_SIZE] = {0};
+    uint32_t data[12] = {0};
+    size_t datalen = 0;
 
-    // split file name into prefix and ext.
-    int fnLength;
-
-    fnLength = strlen(preferredName);
-
-    success = PM3_ESOFT;
-    if (fnLength > 4) { // Holds extension [.bin|.eml]
-        memcpy(ext, &preferredName[fnLength - 4], 4);
+    int retval = PM3_ESOFT;
+    if (fnlen > 4) { // Holds extension [.bin|.eml]
+        memcpy(ext, &filename[fnlen - 4], 4);
         ext[5] = 0x00;
 
         //  check if valid file extension and attempt to load data
-
         if (memcmp(ext, ".bin", 4) == 0) {
-            preferredName[fnLength - 4] = 0x00;
-            success = loadFile(preferredName, ".bin", data, sizeof(data), &datalen);
+            filename[fnlen - 4] = 0x00;
+            retval = loadFile(filename, ".bin", data, sizeof(data), &datalen);
 
         } else if (memcmp(ext, ".eml", 4) == 0) {
-            preferredName[fnLength - 4] = 0x00;
+            filename[fnlen - 4] = 0x00;
             datalen = 12;
-            success = loadFileEML(preferredName, (uint8_t *)data, &datalen);
+            retval = loadFileEML(filename, (uint8_t *)data, &datalen);
 
-        } else
-            PrintAndLogEx(WARNING, "\nWarning: invalid dump filename "_YELLOW_("%s")" to restore!\n", preferredName);
-    }
-
-    if (success == PM3_SUCCESS) { // Got data, so write to cards
-        if (datalen == T55x7_BLOCK_COUNT * 4) { // 12 blocks * 4 bytes per block
-            if (usepwd)
-                snprintf(pwdOpt, sizeof(pwdOpt), "p %08X", password);
-
-            // Restore endien for writing to card
-            for (blockidx = 0; blockidx < 12; blockidx++)
-                data[blockidx] = BSWAP_32(data[blockidx]);
-
-            // Have data ready, lets write
-            // Order
-            //    write blocks 1..7 page 0
-            //    write blocks 1..3 page 1
-            //    update downlink mode (if needed) and write b 0
-            downlink_mode = 0;
-            if ((((data[11] >> 28) & 0xf) == 6) || (((data[11] >> 28) & 0xf) == 9))
-                downlink_mode = (data[11] >> 10) & 3;
-
-            // write out blocks 1-7 page 0
-            for (blockidx = 1; blockidx <= 7; blockidx++) {
-                snprintf(writeCmdOpt, sizeof(writeCmdOpt), "b %d d %08X %s", blockidx, data[blockidx], pwdOpt);
-
-                if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS)
-                    PrintAndLogEx(WARNING, "Warning: error writing blk %d", blockidx);
-            }
-
-            // if password was set on the "blank" update as we may have just changed it
-            if (usepwd)
-                snprintf(pwdOpt, sizeof(pwdOpt), "p %08X", data[7]);
-
-            // write out blocks 1-3 page 1
-            for (blockidx = 9; blockidx <= 11; blockidx++) {
-                snprintf(writeCmdOpt, sizeof(writeCmdOpt), "b %d 1 d %08X %s", blockidx - 8, data[blockidx], pwdOpt);
-
-                if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS)
-                    PrintAndLogEx(WARNING, "Warning: error writing blk %d", blockidx);
-            }
-
-            // Update downlink mode for the page 0 config write.
-            config.downlink_mode = downlink_mode;
-
-            // Write the page 0 config
-            snprintf(writeCmdOpt, sizeof(writeCmdOpt), "b 0 d %08X %s", data[0], pwdOpt);
-            if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS)
-                PrintAndLogEx(WARNING, "Warning: error writing blk 0");
+        } else {
+            PrintAndLogEx(WARNING, "\nWarning: invalid dump filename "_YELLOW_("%s")" to restore!\n", filename);
         }
     }
 
+    if (retval != PM3_SUCCESS) { 
+        return retval;
+    }
+
+    if (datalen == T55x7_BLOCK_COUNT * 4) {
+        // 12 blocks * 4 bytes per block
+        
+        // this fct creats strings to call "lf t55 write" command.
+        //
+        //
+        uint8_t downlink_mode;
+        char writeCmdOpt[100];
+        char pwdOpt [11] = {0}; // p XXXXXXXX
+
+        if (usepwd)
+            snprintf(pwdOpt, sizeof(pwdOpt), "p %08X", password);
+
+        uint8_t idx;
+        // Restore endien for writing to card
+        for (idx = 0; idx < 12; idx++) {
+            data[idx] = BSWAP_32(data[idx]);
+        }
+
+        // Have data ready, lets write
+        // Order
+        //    write blocks 1..7 page 0
+        //    write blocks 1..3 page 1
+        //    update downlink mode (if needed) and write b 0
+        downlink_mode = 0;
+        if ((((data[11] >> 28) & 0xf) == 6) || (((data[11] >> 28) & 0xf) == 9))
+            downlink_mode = (data[11] >> 10) & 3;
+
+        // write out blocks 1-7 page 0
+        for (idx = 1; idx <= 7; idx++) {
+            snprintf(writeCmdOpt, sizeof(writeCmdOpt), "b %d d %08X %s", idx, data[idx], pwdOpt);
+
+            if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
+            }
+        }
+
+        // if password was set on the "blank" update as we may have just changed it
+        if (usepwd) {
+            snprintf(pwdOpt, sizeof(pwdOpt), "p %08X", data[7]);
+        }
+
+        // write out blocks 1-3 page 1
+        for (idx = 9; idx <= 11; idx++) {
+            snprintf(writeCmdOpt, sizeof(writeCmdOpt), "b %d 1 d %08X %s", idx - 8, data[idx], pwdOpt);
+
+            if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
+            }
+        }
+
+        // Update downlink mode for the page 0 config write.
+        config.downlink_mode = downlink_mode;
+
+        // Write the page 0 config
+        snprintf(writeCmdOpt, sizeof(writeCmdOpt), "b 0 d %08X %s", data[0], pwdOpt);
+        if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Warning: error writing blk 0");
+        }
+    }
     return PM3_SUCCESS;
 }
 /*
