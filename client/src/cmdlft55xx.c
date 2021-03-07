@@ -176,38 +176,6 @@ static int usage_t55xx_write(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_t55xx_trace(void) {
-    PrintAndLogEx(NORMAL, "Usage:  lf t55xx trace [1] [r mode]");
-    PrintAndLogEx(NORMAL, "Options:");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE, config.downlink_mode);
-    PrintAndLogEx(NORMAL, "     1            - if set, use Graphbuffer otherwise read data from tag.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx trace"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx trace 1"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-static int usage_t55xx_info(void) {
-    PrintAndLogEx(NORMAL, "Usage:  lf t55xx info [1] [r <mode>] [c <blk0> [q]]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     (default)    - read data from tag.");
-    PrintAndLogEx(NORMAL, "     p <password> - OPTIONAL password 4bytes (8 hex symbols)");
-    PrintAndLogEx(NORMAL, "     1            - if set, use Graphbuffer instead of reading tag.");
-    PrintAndLogEx(NORMAL, "     c <block0>   - set configuration from a block0");
-    PrintAndLogEx(NORMAL, "                    if set, use these data instead of reading tag.");
-    PrintAndLogEx(NORMAL, "     q            - if set, provided data are interpreted as Q5 config.");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE, config.downlink_mode);
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx info"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx info 1"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx info d 00083040"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx info d 6001805A q"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx info p 11223344"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 
 static int usage_t55xx_clonehelp(void) {
     PrintAndLogEx(NORMAL, "For cloning specific techs on T55xx tags, see commands available in corresponding LF sub-menus, e.g.:");
@@ -973,8 +941,6 @@ static int CmdT55xxDetect(const char *Cmd) {
     else // This will set the default to user all d/l modes which will cover the ra flag as well.
         try_all_dl_modes = true;
 
-    // if (ra)
-    //    try_all_dl_modes = true;
 
     bool try_with_pwd = false;
     bool found = false;
@@ -1713,36 +1679,46 @@ static int CmdT55xxDangerousRaw(const char *Cmd) {
 
 static int CmdT55xxReadTrace(const char *Cmd) {
 
-    bool frombuff = false;
-    uint8_t downlink_mode = config.downlink_mode;
-    uint8_t cmdp = 0;
-    bool errors = false;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx trace",
+                  "Show T55x7 configuration data (page 0/ blk 0) from reading the configuration block",
+                  "lf t55xx trace\n"
+                  "lf t55xx trace -1"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_t55xx_trace();
-            case 'r':
-                downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode > 3)
-                    downlink_mode = 0;
+    // 1 (help) + 1 (one user specified params) + (5 T55XX_DLMODE_SINGLE)
+    void *argtable[2 + 5] = {
+        arg_param_begin,
+        arg_lit0("1", NULL, "extract using data from graphbuffer"),        
+    };
+    uint8_t idx = 2;
+    arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_SINGLE, config.downlink_mode);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-                cmdp += 2;
-                break;
-            case '1':
-                frombuff = true;
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    bool use_gb = arg_get_lit(ctx, 1);
+
+    bool r0 = arg_get_lit(ctx, 2);
+    bool r1 = arg_get_lit(ctx, 3);
+    bool r2 = arg_get_lit(ctx, 4);
+    bool r3 = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx);
+
+    if ((r0 + r1 + r2 + r3) > 1) {
+        PrintAndLogEx(FAILED, "Error multiple downlink encoding");
+        return PM3_EINVARG;
     }
 
-    if (errors) return usage_t55xx_trace();
+    uint8_t downlink_mode = config.downlink_mode;
+    if (r0)
+        downlink_mode = refFixedBit;
+    else if (r1)
+        downlink_mode = refLongLeading;
+    else if (r2)
+        downlink_mode = refLeading0;
+    else if (r3)
+        downlink_mode = ref1of4;
 
-    if (!frombuff) {
+    if (use_gb == false) {
         // sanity check.
         if (SanityOfflineCheck(false) != PM3_SUCCESS) return PM3_ENODATA;
 
@@ -1755,12 +1731,18 @@ static int CmdT55xxReadTrace(const char *Cmd) {
     }
 
     if (config.Q5) {
-        if (!DecodeT5555TraceBlock()) return PM3_ESOFT;
+        if (DecodeT5555TraceBlock() == false) {
+            return PM3_ESOFT;
+        }
     } else {
-        if (!DecodeT55xxBlock()) return PM3_ESOFT;
+        if (DecodeT55xxBlock() == false) {
+            return PM3_ESOFT;
+        }
     }
 
-    if (!DemodBufferLen) return PM3_ESOFT;
+    if (DemodBufferLen == 0){
+        return PM3_ESOFT;
+    }
 
     RepaintGraphWindow();
     uint8_t repeat = (config.offset > 5) ? 32 : 0;
@@ -1865,22 +1847,21 @@ static int CmdT55xxReadTrace(const char *Cmd) {
 }
 
 void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat) {
-    PrintAndLogEx(NORMAL, "--- " _CYAN_("T55x7 Trace Information") " ----------------------------------");
-    PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-    PrintAndLogEx(NORMAL, " ACL Allocation class (ISO/IEC 15963-1)  : 0x%02X (%d)", data.acl, data.acl);
-    PrintAndLogEx(NORMAL, " MFC Manufacturer ID (ISO/IEC 7816-6)    : 0x%02X (%d) - %s", data.mfc, data.mfc, getTagInfo(data.mfc));
-    PrintAndLogEx(NORMAL, " CID                                     : 0x%02X (%d) - %s", data.cid, data.cid, GetModelStrFromCID(data.cid));
-    PrintAndLogEx(NORMAL, " ICR IC Revision                         : %d", data.icr);
-    PrintAndLogEx(NORMAL, " Manufactured");
-    PrintAndLogEx(NORMAL, "     Year/Quarter : %d/%d", data.year, data.quarter);
-    PrintAndLogEx(NORMAL, "     Lot ID       : %d", data.lotid);
-    PrintAndLogEx(NORMAL, "     Wafer number : %d", data.wafer);
-    PrintAndLogEx(NORMAL, "     Die Number   : %d", data.dw);
-    PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-    PrintAndLogEx(NORMAL, " Raw Data - Page 1");
-    PrintAndLogEx(NORMAL, "     Block 1  : 0x%08X  %s", data.bl1, sprint_bin(DemodBuffer + config.offset + repeat, 32));
-    PrintAndLogEx(NORMAL, "     Block 2  : 0x%08X  %s", data.bl2, sprint_bin(DemodBuffer + config.offset + repeat + 32, 32));
-    PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("T55x7 Trace Information") " ----------------------------------");
+    PrintAndLogEx(INFO, " ACL Allocation class (ISO/IEC 15963-1)  : 0x%02X ( %d )", data.acl, data.acl);
+    PrintAndLogEx(INFO, " MFC Manufacturer ID (ISO/IEC 7816-6)    : 0x%02X ( %d ) - %s", data.mfc, data.mfc, getTagInfo(data.mfc));
+    PrintAndLogEx(INFO, " CID                                     : 0x%02X ( %d ) - %s", data.cid, data.cid, GetModelStrFromCID(data.cid));
+    PrintAndLogEx(INFO, " ICR IC Revision                         : %d", data.icr);
+    PrintAndLogEx(INFO, " Manufactured");
+    PrintAndLogEx(INFO, "     Year/Quarter... %d/%d", data.year, data.quarter);
+    PrintAndLogEx(INFO, "     Lot ID......... %d", data.lotid);
+    PrintAndLogEx(INFO, "     Wafer number... %d", data.wafer);
+    PrintAndLogEx(INFO, "     Die Number..... %d", data.dw);
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(INFO, " Raw Data - Page 1");
+    PrintAndLogEx(INFO, "     Block 1... %08X - %s", data.bl1, sprint_bin(DemodBuffer + config.offset + repeat, 32));
+    PrintAndLogEx(INFO, "     Block 2... %08X - %s", data.bl2, sprint_bin(DemodBuffer + config.offset + repeat + 32, 32));
+    PrintAndLogEx(NORMAL, "");
 
     /*
     Trace info.
@@ -1912,16 +1893,15 @@ void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat) {
 }
 
 void printT5555Trace(t5555_tracedata_t data, uint8_t repeat) {
-    PrintAndLogEx(NORMAL, "--- " _CYAN_("Q5/T5555 Trace Information") " ---------------------------");
-    PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-    PrintAndLogEx(NORMAL, " ICR IC Revision  : %d", data.icr);
-    PrintAndLogEx(NORMAL, "     Lot          : %c%d", data.lotidc, data.lotid);
-    PrintAndLogEx(NORMAL, "     Wafer number : %d", data.wafer);
-    PrintAndLogEx(NORMAL, "     Die Number   : %d", data.dw);
-    PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-    PrintAndLogEx(NORMAL, " Raw Data - Page 1");
-    PrintAndLogEx(NORMAL, "     Block 1  : 0x%08X  %s", data.bl1, sprint_bin(DemodBuffer + config.offset + repeat, 32));
-    PrintAndLogEx(NORMAL, "     Block 2  : 0x%08X  %s", data.bl2, sprint_bin(DemodBuffer + config.offset + repeat + 32, 32));
+    PrintAndLogEx(INFO, "--- " _CYAN_("Q5/T5555 Trace Information") " ---------------------------");
+    PrintAndLogEx(INFO, " ICR IC Revision.... %d", data.icr);
+    PrintAndLogEx(INFO, "     Lot ID......... %c%d", data.lotidc, data.lotid);
+    PrintAndLogEx(INFO, "     Wafer number... %d", data.wafer);
+    PrintAndLogEx(INFO, "     Die Number..... %d", data.dw);
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(INFO, " Raw Data - Page 1");
+    PrintAndLogEx(INFO, "     Block 1... %08X - %s", data.bl1, sprint_bin(DemodBuffer + config.offset + repeat, 32));
+    PrintAndLogEx(INFO, "     Block 2... %08X - %s", data.bl2, sprint_bin(DemodBuffer + config.offset + repeat + 32, 32));
 
     /*
         ** Q5 **
@@ -2015,75 +1995,121 @@ static void printT5x7KnownBlock0(uint32_t b0) {
             break;
     }
 
-    if (strlen(s) > 0)
-        PrintAndLogEx(SUCCESS, "\nConfig block match        : " _YELLOW_("%s"), s);
+    if (strlen(s) > 0) {
+        PrintAndLogEx(SUCCESS, "Config block match        : " _YELLOW_("%s"), s);
+    }
 }
 
 static int CmdT55xxInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx info",
+                  "Show T55x7 configuration data (page 0/ blk 0) from reading the configuration block\n"
+                  "from tag. Use `-c` to specify a config block data to be used instead of reading tag.",
+                  "lf t55xx info\n"
+                  "lf t55xx info -1\n"
+                  "lf t55xx info -p 11223344\n"
+                  "lf t55xx info -c 00083040\n"
+                  "lf t55xx info -c 6001805A --q5"
+                 );
+
+    // 1 (help) + 4 (four user specified params) + (5 T55XX_DLMODE_SINGLE)
+    void *argtable[5 + 5] = {
+        arg_param_begin,
+        arg_lit0("1", NULL, "extract using data from graphbuffer"),
+        arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
+        arg_str0("c", "blk0", "<hex>", "use these data instead (4 hex bytes)"),
+        arg_lit0(NULL, "q5", "interprete provided data as T5555/Q5 config"),
+    };
+    uint8_t idx = 5;
+    arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_SINGLE, config.downlink_mode);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool use_gb = arg_get_lit(ctx, 1);
+
+    bool usepwd = false;
+    uint32_t password = 0;
+    int res = arg_get_u32_hexstr_def_nlen(ctx, 2, 0, &password, 4, true);
+    if (res == 0 || res == 2) {
+        PrintAndLogEx(ERR, "Password must be 4 hex bytes");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (res == 1) {
+        usepwd = true;
+    }
+
+    bool gotdata = false;
+    uint32_t block0 = 0;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 3, 0, &block0, 4, true);
+    if (res == 0 || res == 2) {
+        PrintAndLogEx(ERR, "block0 data must be 4 hex bytes");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (res == 1) {
+        gotdata = true;
+    }
+
+    bool dataasq5 = arg_get_lit(ctx, 4);
+
+    bool r0 = arg_get_lit(ctx, 5);
+    bool r1 = arg_get_lit(ctx, 6);
+    bool r2 = arg_get_lit(ctx, 7);
+    bool r3 = arg_get_lit(ctx, 8);
+    CLIParserFree(ctx);
+
+    if (gotdata && use_gb) {
+        PrintAndLogEx(FAILED, "Must select one of user supplied data and use graphbuffer");
+        return PM3_EINVARG;
+    }
+
+    if (dataasq5 && gotdata == false) {
+        PrintAndLogEx(FAILED, "Must specify user supplied Q5 data");
+        return PM3_EINVARG;
+    }
+
+    if ((r0 + r1 + r2 + r3) > 1) {
+        PrintAndLogEx(FAILED, "Error multiple downlink encoding");
+        return PM3_EINVARG;
+    }
+
+    uint8_t downlink_mode = config.downlink_mode;
+    if (r0)
+        downlink_mode = refFixedBit;
+    else if (r1)
+        downlink_mode = refLongLeading;
+    else if (r2)
+        downlink_mode = refLeading0;
+    else if (r3)
+        downlink_mode = ref1of4;
+
+
     /*
         Page 0 Block 0 Configuration data.
         Normal mode
         Extended mode
     */
-    bool frombuff = false, gotdata = false, dataasq5 = false, usepwd = false;
-    uint8_t cmdp = 0;
-    uint8_t downlink_mode = config.downlink_mode;
-    uint32_t block0 = 0, password = 0;
 
-    while (param_getchar(Cmd, cmdp) != 0x00) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_t55xx_info();
-            case 'c':
-                block0 = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                gotdata = true;
-                cmdp += 2;
-                break;
-            case 'p':
-                password = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                usepwd = true;
-                cmdp += 2;
-                break;
-            case '1':
-                frombuff = true;
-                cmdp += 2;
-                break;
-            case 'q':
-                dataasq5 = true;
-                cmdp += 2;
-                break;
-            case 'r':
-                downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode > 3)
-                    downlink_mode = 0;
+    if (use_gb == false && gotdata == false) {
+        // sanity check.
+        if (SanityOfflineCheck(false) != PM3_SUCCESS)  {
+            return PM3_ENODATA;
+        }
 
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                return usage_t55xx_info();
+        if (!AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode)) {
+            return PM3_ENODATA;
         }
     }
 
-    if (gotdata && frombuff)
-        return usage_t55xx_info();
-
-    if (dataasq5 && !gotdata)
-        return usage_t55xx_info();
-
-    if (!frombuff && !gotdata) {
-        // sanity check.
-        if (SanityOfflineCheck(false) != PM3_SUCCESS) return PM3_ENODATA;
-
-        if (!AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode))
-            return PM3_ENODATA;
-    }
-
-    if (!gotdata) {
-        if (!DecodeT55xxBlock()) return PM3_ESOFT;
+    if (gotdata == false) {
+        if (DecodeT55xxBlock() == false) {
+            return PM3_ESOFT;
+        }
 
         // too little space to start with
-        if (DemodBufferLen < 32 + config.offset) return PM3_ESOFT;
+        if (DemodBufferLen < 32 + config.offset) {
+            return PM3_ESOFT;
+        }
 
         //PrintAndLogEx(NORMAL, "Offset+32 ==%d\n DemodLen == %d", config.offset + 32, DemodBufferLen);
         block0 = PackBits(config.offset, 32, DemodBuffer);
@@ -2102,19 +2128,18 @@ static int CmdT55xxInfo(const char *Cmd) {
         uint32_t datamod  = (block0 >> (32 - 28)) & 0x07;
         uint32_t maxblk   = (block0 >> (32 - 31)) & 0x07;
         uint32_t st       = block0 & 0x01;
-        PrintAndLogEx(NORMAL, "--- " _CYAN_("Q5 Configuration & Information") " ------------");
-        PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-        PrintAndLogEx(NORMAL, " Header                    : 0x%03X%s", header, (header != 0x600) ? _RED_(" - Warning") : "");
-        PrintAndLogEx(NORMAL, " Page select               : %d", ps);
-        PrintAndLogEx(NORMAL, " Fast Write                : %s", (fw)  ? _GREEN_("Yes") : "No");
-        PrintAndLogEx(NORMAL, " Data bit rate             : %s", GetBitRateStr(dbr, 1));
-        PrintAndLogEx(NORMAL, " AOR - Answer on Request   : %s", (aor) ? _GREEN_("Yes") : "No");
-        PrintAndLogEx(NORMAL, " Password mode             : %s", (pwd) ? _GREEN_("Yes") : "No");
-        PrintAndLogEx(NORMAL, " PSK clock frequency       : %s", GetPskCfStr(pskcf, 1));
-        PrintAndLogEx(NORMAL, " Inverse data              : %s", (inv) ? _GREEN_("Yes") : "No");
-        PrintAndLogEx(NORMAL, " Modulation                : %s", GetQ5ModulationStr(datamod));
-        PrintAndLogEx(NORMAL, " Max block                 : %d", maxblk);
-        PrintAndLogEx(NORMAL, " Sequence Terminator       : %s", (st) ? _GREEN_("Yes") : "No");
+        PrintAndLogEx(INFO, "--- " _CYAN_("Q5 Configuration & Information") " ------------");
+        PrintAndLogEx(INFO, " Header                    : 0x%03X%s", header, (header != 0x600) ? _RED_(" - Warning") : "");
+        PrintAndLogEx(INFO, " Page select               : %d", ps);
+        PrintAndLogEx(INFO, " Fast Write                : %s", (fw)  ? _GREEN_("Yes") : "No");
+        PrintAndLogEx(INFO, " Data bit rate             : %s", GetBitRateStr(dbr, 1));
+        PrintAndLogEx(INFO, " AOR - Answer on Request   : %s", (aor) ? _GREEN_("Yes") : "No");
+        PrintAndLogEx(INFO, " Password mode             : %s", (pwd) ? _GREEN_("Yes") : "No");
+        PrintAndLogEx(INFO, " PSK clock frequency       : %s", GetPskCfStr(pskcf, 1));
+        PrintAndLogEx(INFO, " Inverse data              : %s", (inv) ? _GREEN_("Yes") : "No");
+        PrintAndLogEx(INFO, " Modulation                : %s", GetQ5ModulationStr(datamod));
+        PrintAndLogEx(INFO, " Max block                 : %d", maxblk);
+        PrintAndLogEx(INFO, " Sequence Terminator       : %s", (st) ? _GREEN_("Yes") : "No");
     } else {
         uint32_t safer    = (block0 >> (32 -  4)) & 0x0F;
         uint32_t extend   = (block0 >> (32 - 15)) & 0x01;
@@ -2137,35 +2162,36 @@ static int CmdT55xxInfo(const char *Cmd) {
         uint32_t inv      = (block0 >> (32 - 31)) & 0x01;
         uint32_t por      = (block0 >> (32 - 32)) & 0x01;
 
-        PrintAndLogEx(NORMAL, "--- " _CYAN_("T55x7 Configuration & Information") " ---------");
-        PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-        PrintAndLogEx(NORMAL, " Safer key                 : %s", GetSaferStr(safer));
-        PrintAndLogEx(NORMAL, " reserved                  : %d", resv);
-        PrintAndLogEx(NORMAL, " Data bit rate             : %s", GetBitRateStr(dbr, extend));
-        PrintAndLogEx(NORMAL, " eXtended mode             : %s", (extend) ? _YELLOW_("Yes - Warning") : "No");
-        PrintAndLogEx(NORMAL, " Modulation                : %s", GetModulationStr(datamod, extend));
-        PrintAndLogEx(NORMAL, " PSK clock frequency       : %s", GetPskCfStr(pskcf, 0));
-        PrintAndLogEx(NORMAL, " AOR - Answer on Request   : %s", (aor) ? _GREEN_("Yes") : "No");
-        PrintAndLogEx(NORMAL, " OTP - One Time Pad        : %s", (otp) ? ((extend) ? _YELLOW_("Yes - Warning") : _RED_("Yes - Warning")) : "No");
-        PrintAndLogEx(NORMAL, " Max block                 : %d", maxblk);
-        PrintAndLogEx(NORMAL, " Password mode             : %s", (pwd) ? _GREEN_("Yes") : "No");
-        PrintAndLogEx(NORMAL, " Sequence %-12s     : %s", (extend) ? "Start Marker" : "Terminator", (sst) ? _GREEN_("Yes") : "No");
-        PrintAndLogEx(NORMAL, " Fast Write                : %s", (fw)  ? ((extend) ? _GREEN_("Yes") : _RED_("Yes - Warning")) : "No");
-        PrintAndLogEx(NORMAL, " Inverse data              : %s", (inv) ? ((extend) ? _GREEN_("Yes") : _RED_("Yes - Warning")) : "No");
-        PrintAndLogEx(NORMAL, " POR-Delay                 : %s", (por) ? _GREEN_("Yes") : "No");
+        PrintAndLogEx(INFO, "--- " _CYAN_("T55x7 Configuration & Information") " ---------");
+        PrintAndLogEx(INFO, " Safer key                 : %s", GetSaferStr(safer));
+        PrintAndLogEx(INFO, " reserved                  : %d", resv);
+        PrintAndLogEx(INFO, " Data bit rate             : %s", GetBitRateStr(dbr, extend));
+        PrintAndLogEx(INFO, " eXtended mode             : %s", (extend) ? _YELLOW_("Yes - Warning") : "No");
+        PrintAndLogEx(INFO, " Modulation                : %s", GetModulationStr(datamod, extend));
+        PrintAndLogEx(INFO, " PSK clock frequency       : %s", GetPskCfStr(pskcf, 0));
+        PrintAndLogEx(INFO, " AOR - Answer on Request   : %s", (aor) ? _GREEN_("Yes") : "No");
+        PrintAndLogEx(INFO, " OTP - One Time Pad        : %s", (otp) ? ((extend) ? _YELLOW_("Yes - Warning") : _RED_("Yes - Warning")) : "No");
+        PrintAndLogEx(INFO, " Max block                 : %d", maxblk);
+        PrintAndLogEx(INFO, " Password mode             : %s", (pwd) ? _GREEN_("Yes") : "No");
+        PrintAndLogEx(INFO, " Sequence %-12s     : %s", (extend) ? "Start Marker" : "Terminator", (sst) ? _GREEN_("Yes") : "No");
+        PrintAndLogEx(INFO, " Fast Write                : %s", (fw)  ? ((extend) ? _GREEN_("Yes") : _RED_("Yes - Warning")) : "No");
+        PrintAndLogEx(INFO, " Inverse data              : %s", (inv) ? ((extend) ? _GREEN_("Yes") : _RED_("Yes - Warning")) : "No");
+        PrintAndLogEx(INFO, " POR-Delay                 : %s", (por) ? _GREEN_("Yes") : "No");
     }
-    PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-    PrintAndLogEx(NORMAL, " Raw Data - Page 0,  block 0");
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(INFO, " Raw Data - Page 0, block 0");
     if (gotdata)
-        PrintAndLogEx(NORMAL, "    0x" _GREEN_("%08X"), block0);
+        PrintAndLogEx(INFO, " " _GREEN_("%08X"), block0);
     else
-        PrintAndLogEx(NORMAL, "    0x" _GREEN_("%08X") " %s", block0, sprint_bin(DemodBuffer + config.offset, 32));
+        PrintAndLogEx(INFO, " " _GREEN_("%08X") " - %s", block0, sprint_bin(DemodBuffer + config.offset, 32));
 
-    if (((!gotdata) && (!config.Q5)) || (gotdata && (!dataasq5)))
+    if (((!gotdata) && (!config.Q5)) || (gotdata && (!dataasq5))) {
+        PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint") " ------------");
         printT5x7KnownBlock0(block0);
+    }
 
-    PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-
+    PrintAndLogEx(NORMAL, "");
+    //PrintAndLogEx(INFO, "-------------------------------------------------------------");
     return PM3_SUCCESS;
 }
 
