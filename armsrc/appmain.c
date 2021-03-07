@@ -2202,6 +2202,10 @@ static void PacketReceived(PacketCommandNG *packet) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0xB);
+            } else if (startidx == FLASH_MEM_SIGNATURE_OFFSET) {
+                Flash_CheckBusy(BUSY_TIMEOUT);
+                Flash_WriteEnable();
+                Flash_Erase4k(3, 0xF);
             }
 
             res = Flash_Write(startidx, data, len);

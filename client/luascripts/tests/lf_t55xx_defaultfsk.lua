@@ -17,7 +17,7 @@ The outlined procedure is as following:
 --        FSK1
 --     bit rate
 
-"lf t55xx write b 0 d 00007040"
+"lf t55xx write -b 0 -d 00007040"
 "lf t55xx detect"
 "lf t55xx info"
 
@@ -114,7 +114,7 @@ local function test(modulation)
             elseif _ == 1 then
 
                 local config = pcmd:format(config1, y, modulation, config2)
-                dbg(('lf t55xx write b 0 d %s'):format(config))
+                dbg(('lf t55xx write -b 0 -d %s'):format(config))
                 local data = ('%s%s%s%s'):format(utils.SwapEndiannessStr(config, 32), password, block, flags)
 
                 local wc = Command:newNG{cmd = cmds.CMD_LF_T55XX_WRITEBL, data = data}

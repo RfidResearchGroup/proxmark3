@@ -483,6 +483,9 @@ static bool Pack_C15001(wiegand_card_t *card, wiegand_message_t *packed, bool pr
     if (card->IssueLevel > 0) return false; // Not used in this format
     if (card->OEM > 0x000003FF) return false; // Can't encode OEM.
 
+    if (card->OEM == 0)
+        card->OEM = 900;
+
     packed->Length = 36; // Set number of bits
     set_linear_field(packed, card->OEM, 1, 10);
     set_linear_field(packed, card->FacilityCode, 11, 8);

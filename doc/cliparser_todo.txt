@@ -32,7 +32,6 @@ data print
 data samples
 data setdebugmode
 data tune
-hf 14b sriwrite
 hf 15 dump
 hf 15 info
 hf 15 raw
@@ -94,12 +93,4 @@ lf hitag sim
 lf hitag writer
 lf hitag dump
 lf hitag cc
-lf t55xx config
-lf t55xx dump
-lf t55xx info
-lf t55xx read
-lf t55xx resetread
-lf t55xx restore
-lf t55xx trace
-lf t55xx write
 script run

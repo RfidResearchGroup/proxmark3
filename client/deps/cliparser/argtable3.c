@@ -4639,11 +4639,13 @@ void arg_print_syntax(FILE *fp, void * *argtable, const char *suffix) {
     /* print GNU style [OPTION] string */
     arg_print_gnuswitch(fp, table);
 
+    size_t len = 0;
+
     /* print remaining options in abbreviated style */
     for (tabindex = 0;
             table[tabindex] && !(table[tabindex]->flag & ARG_TERMINATOR);
             tabindex++) {
-        char syntax[200] = "";
+        char syntax[400] = "";
         const char *shortopts, *longopts, *datatype;
 
         /* skip short options without arg values (they were printed by arg_print_gnu_switch) */
@@ -4680,6 +4682,12 @@ void arg_print_syntax(FILE *fp, void * *argtable, const char *suffix) {
                     fprintf(fp, " [%s]...", syntax);
                     break;
             }
+        }
+
+        len += strlen(syntax);
+        if (len > 60) {
+            fprintf(fp, "\n                   ");
+            len = 0;
         }
     }
 

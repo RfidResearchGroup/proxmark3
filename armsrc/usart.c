@@ -146,9 +146,9 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
         }
         len -= packetSize;
         while (packetSize--) {
-            data[bytes_rcv++] = us_rxfifo[us_rxfifo_low++];
             if (us_rxfifo_low == sizeof(us_rxfifo))
                 us_rxfifo_low = 0;
+            data[bytes_rcv++] = us_rxfifo[us_rxfifo_low++];
         }
         if (try++ == maxtry) {
 //            Dbprintf_usb("Dbg USART TIMEOUT");
