@@ -39,8 +39,8 @@ Page 3:
 * used by Proxmark3 RDV4 specific functions: flash signature and keys dictionaries, see below for details
 * to dump it: `mem dump f page3_dump o 196608 l 65536`
 * to erase it:
-  * **Beware** it will erase your flash signature (see below) so better to back it up first as you won't be able to regenerate it by yourself!
-  * It's possible to erase completely page 3 by erase the entire flash memory with the voluntarily undocumented command `mem wipe i`.
+  * **Beware** it will erase your flash signature so better to back it up first as you won't be able to regenerate it by yourself!
+  * edit the source code to enable Page 3 as a valid input in the `mem wipe` command.
   * Updating keys dictionaries doesn't require to erase page 3.
 
 ## Page3 Layout
@@ -64,7 +64,7 @@ Page3 is used as follows by the Proxmark3 RDV4 firmware:
   * length: 1 sector (actually only a few bytes are used to store `t55xx_config` structure)
 
 * **RSA SIGNATURE**, see below for details
-  * offset: page 3 sector 15 (0xF) offset 0xF7F @ 3*0x10000+15*0x1000+0xF7F=0x3FF7F
+  * offset: page 3 sector 15 (0xF) offset 0xF7F @ 3*0x10000+15*0x1000+0xF7F=0x3FF7F  (decimal 262015)
   * length: 128 bytes
   * offset should have been 0x3FF80 but historically it's one byte off and therefore the last byte of the flash is unused
 
@@ -91,5 +91,6 @@ You can verify it with: `mem info`
 [+] RSA Verification ok          
 ```
 
-For a backup of the signature: `mem dump p f flash_signature_dump o 262015 l 128`
+To make a backup of the signature to file:
+`mem dump p f flash_signature_dump o 262015 l 128`
 
