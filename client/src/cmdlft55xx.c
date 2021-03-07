@@ -447,7 +447,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
         arg_lit0(NULL, "st", "set/reset Sequence Terminator on"),
         arg_int0(NULL, "rate", "<dec>", "set bitrate <8|16|32|40|50|64|100|128>"),
         arg_str0("c", "blk0", "<hex>", "set configuration from a block0 (4 hex bytes)"),
-        arg_int0("o", "offset", "<dec>", "set offset, where data should start decode in bitstream"),
+        arg_int0("o", "offset", "<0-255>", "set offset, where data should start decode in bitstream "),
     };
 
     uint8_t idx = 19;
@@ -467,7 +467,8 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     bool use_q5 = arg_get_lit(ctx, idx++);
     bool use_st = arg_get_lit(ctx, idx++);
 
-    int bitrate = arg_get_int_def(ctx, idx++, -1);
+    int bitrate = arg_get_int_def(ctx, idx, -1);
+    idx++;
 
     bool gotconf = false;
     uint32_t block0 = 0;
@@ -481,7 +482,8 @@ static int CmdT55xxSetConfig(const char *Cmd) {
         gotconf = true;
     }
 
-    int offset = arg_get_int_def(ctx, idx++, -1);
+    int offset = arg_get_int_def(ctx, idx, -1);
+    idx++;
 
     bool r0 = arg_get_lit(ctx, idx++);
     bool r1 = arg_get_lit(ctx, idx++);
@@ -519,7 +521,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     }
 
     // validate user specified offset
-    if (offset > -1) {
+    if (offset > -1 && offset < 0x100) {
         config.offset = offset;
     }
 
@@ -2941,7 +2943,7 @@ static int CmdT55xxWipe(const char *Cmd) {
     // Creating cmd string for write block :)
     char wcmd[36] = {0};
     char *pwcmd = wcmd;
-    
+
     snprintf(pwcmd, sizeof(wcmd), "-b 0 ");
 
     if (usepwd) {
