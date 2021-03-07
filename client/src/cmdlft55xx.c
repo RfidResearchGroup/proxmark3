@@ -2363,11 +2363,11 @@ static int CmdT55xxRestore(const char *Cmd) {
         //
         //
         uint8_t downlink_mode;
-        char writeCmdOpt[100];
-        char pwdOpt [11] = {0}; // p XXXXXXXX
+        char wcmd[100];
+        char pwdopt [14] = {0}; // p XXXXXXXX
 
         if (usepwd)
-            snprintf(pwdOpt, sizeof(pwdOpt), "-p %08X", password);
+            snprintf(pwdopt, sizeof(pwdopt), "-p %08X", password);
 
         uint8_t idx;
         // Restore endien for writing to card
@@ -2386,23 +2386,23 @@ static int CmdT55xxRestore(const char *Cmd) {
 
         // write out blocks 1-7 page 0
         for (idx = 1; idx <= 7; idx++) {
-            snprintf(writeCmdOpt, sizeof(writeCmdOpt), "-b %d -d %08X %s", idx, data[idx], pwdOpt);
+            snprintf(wcmd, sizeof(wcmd), "-b %d -d %08X %s", idx, data[idx], pwdopt);
 
-            if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS) {
+            if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
             }
         }
 
         // if password was set on the "blank" update as we may have just changed it
         if (usepwd) {
-            snprintf(pwdOpt, sizeof(pwdOpt), "-p %08X", data[7]);
+            snprintf(pwdopt, sizeof(pwdopt), "-p %08X", data[7]);
         }
 
         // write out blocks 1-3 page 1
         for (idx = 9; idx <= 11; idx++) {
-            snprintf(writeCmdOpt, sizeof(writeCmdOpt), "-b %d --pg1 -d %08X %s", idx - 8, data[idx], pwdOpt);
+            snprintf(wcmd, sizeof(wcmd), "-b %d --pg1 -d %08X %s", idx - 8, data[idx], pwdopt);
 
-            if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS) {
+            if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
             }
         }
@@ -2411,8 +2411,8 @@ static int CmdT55xxRestore(const char *Cmd) {
         config.downlink_mode = downlink_mode;
 
         // Write the page 0 config
-        snprintf(writeCmdOpt, sizeof(writeCmdOpt), "-b 0 -d %08X %s", data[0], pwdOpt);
-        if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS) {
+        snprintf(wcmd, sizeof(wcmd), "-b 0 -d %08X %s", data[0], pwdopt);
+        if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Warning: error writing blk 0");
         }
     }
