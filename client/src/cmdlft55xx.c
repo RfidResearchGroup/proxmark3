@@ -147,17 +147,7 @@ static int usage_t55xx_read(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_t55xx_resetread(void) {
-    PrintAndLogEx(NORMAL, "Send Reset Cmd then lf read the stream to attempt to identify the start of it (needs a demod and/or plot after)");
-    PrintAndLogEx(NORMAL, "Usage:  lf t55xx resetread [r <mode>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE, config.downlink_mode);
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx resetread"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
+
 static int usage_t55xx_write(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx write [r <mode>] b <block> d <data> [p <password>] [1] [t] [v]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -2818,38 +2808,51 @@ static void t55x7_create_config_block(int tagtype) {
 
 static int CmdResetRead(const char *Cmd) {
 
-    uint8_t downlink_mode = config.downlink_mode;
-    uint8_t flags = 0;
-    uint8_t cmdp = 0;
-    bool errors = false;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx resetread",
+                  "Send Reset Cmd then `lf read` the stream to attempt\n"
+                  "to identify the start of it (needs a demod and/or plot after)",
+                  "lf t55xx resetread"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_t55xx_resetread();
-            case 'r':
-                downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode > 3)
-                    downlink_mode = 0;
+    // 1 (help) + 0(one user specified params) + (5 T55XX_DLMODE_SINGLE)
+    void *argtable[0 + 5] = {
+        arg_param_begin,
+        arg_lit0("1", NULL, "extract using data from graphbuffer"),
+    };
+    uint8_t idx = 1;
+    arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_SINGLE, config.downlink_mode);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    bool r0 = arg_get_lit(ctx, 1);
+    bool r1 = arg_get_lit(ctx, 2);
+    bool r2 = arg_get_lit(ctx, 3);
+    bool r3 = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    if ((r0 + r1 + r2 + r3) > 1) {
+        PrintAndLogEx(FAILED, "Error multiple downlink encoding");
+        return PM3_EINVARG;
     }
 
-    if (errors) return usage_t55xx_resetread();
+    uint8_t downlink_mode = config.downlink_mode;
+    if (r0)
+        downlink_mode = refFixedBit;
+    else if (r1)
+        downlink_mode = refLongLeading;
+    else if (r2)
+        downlink_mode = refLeading0;
+    else if (r3)
+        downlink_mode = ref1of4;
 
-    flags = downlink_mode << 3;
+    uint8_t flags = downlink_mode << 3;
+
+    PrintAndLogEx(INFO, "Sending reset command...");
 
     PacketResponseNG resp;
-
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_RESET_READ, &flags, sizeof(flags));
-    if (!WaitForResponseTimeout(CMD_LF_T55XX_RESET_READ, &resp, 2500)) {
+    if (WaitForResponseTimeout(CMD_LF_T55XX_RESET_READ, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
@@ -2863,6 +2866,7 @@ static int CmdResetRead(const char *Cmd) {
             return PM3_EMALLOC;
         }
 
+        PrintAndLogEx(INFO, "Downloading samples...");
         if (!GetFromDevice(BIG_BUF, got, gotsize, 0, NULL, 0, NULL, 2500, false)) {
             PrintAndLogEx(WARNING, "command execution time out");
             free(got);
@@ -2871,6 +2875,8 @@ static int CmdResetRead(const char *Cmd) {
         setGraphBuf(got, gotsize);
         free(got);
     }
+
+    PrintAndLogEx(INFO, "Done");
     return PM3_SUCCESS;
 }
 
