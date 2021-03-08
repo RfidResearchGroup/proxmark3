@@ -526,16 +526,18 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     }
 
     // validate user specific T5555 / Q5 
-    config.Q5 = use_q5;
+    config.Q5 = use_q5 ^ config.Q5;
 
     // validate user specific sequence terminator
-    config.ST = use_st;
-    if (use_st) {
+    if (use_st) { 
+        config.ST ^= use_st;
         config.block0 = ((config.block0 & ~(0x8)) | (config.ST << 3));
     }
 
     // validate user specific invert
-    config.inverted = invert;
+    // In theory this should also be set in the config block 0; butit requries the extend mode config, which will change other things.
+    // as such, leave in user config for decoding the data until a full fix can be added.
+    config.inverted = invert ^ config.inverted ;
 
     // validate user specific downlink mode
     uint8_t downlink_mode = config.downlink_mode;
@@ -3052,7 +3054,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     }
 
     uint8_t downlink_mode = config.downlink_mode;
-    if (r0)
+    if (r0 || ra) // ra should start downlink mode ad fixed bit to loop through all modes correctly
         downlink_mode = refFixedBit;
     else if (r1)
         downlink_mode = refLongLeading;
@@ -3062,7 +3064,9 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         downlink_mode = ref1of4;
 
     bool use_pwd_file = false;
-    if (strlen(filename) == 0) {
+    if (strlen(filename) != 0) 
+        use_pwd_file = true;
+    else if (strlen(filename) == 0) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
         use_pwd_file = true;
     }
@@ -3181,18 +3185,14 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
             PrintAndLogEx(INFO, "testing %08"PRIX32, curr_password);
             for (dl_mode = downlink_mode; dl_mode <= 3; dl_mode++) {
-
-                if (!AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr_password, dl_mode)) {
-                    continue;
+                if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr_password, dl_mode)) {
+                    found = t55xxTryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, curr_password);
+                    if (found) {
+                        PrintAndLogEx(SUCCESS, "found valid password: [ " _GREEN_("%08"PRIX32) " ]", curr_password);
+                        break;
+                    }
                 }
-
-                found = t55xxTryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, curr_password);
-                if (found) {
-                    PrintAndLogEx(SUCCESS, "found valid password: [ " _GREEN_("%08"PRIX32) " ]", curr_password);
-                    break;
-                }
-
-                if (ra == false) // Exit loop if not trying all downlink modes
+                if (!ra) // Exit loop if not trying all downlink modes
                     break;
             }
         }
@@ -3258,7 +3258,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
     }
 
     uint8_t downlink_mode = config.downlink_mode;
-    if (r0)
+    if (r0 || ra) // if try all (ra) then start at fixed bit for correct try all
         downlink_mode = refFixedBit;
     else if (r1)
         downlink_mode = refLongLeading;
@@ -3266,6 +3266,8 @@ static int CmdT55xxBruteForce(const char *Cmd) {
         downlink_mode = refLeading0;
     else if (r3)
         downlink_mode = ref1of4;
+    else // no downlink mode so try default fixedbit only (as most likly)
+        downlink_mode = refFixedBit;
 
     uint32_t curr = 0;
     uint8_t found = 0; // > 0 if found xx1 xx downlink needed, 1 found
