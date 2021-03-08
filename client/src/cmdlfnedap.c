@@ -242,25 +242,25 @@ static int CmdLFNedapDemod(const char *Cmd) {
 
 
 configuration
-lf t55xx wr b 0 d 00170082
+lf t55xx wr -b 0 -d 00170082
 
 1) uid 049033
-lf t55 wr b 1 d FF8B4168
-lf t55 wr b 2 d C90B5359
-lf t55 wr b 3 d 19A40087
-lf t55 wr b 4 d 120115CF
+lf t55xx wr -b 1 -d FF8B4168
+lf t55xx wr -b 2 -d C90B5359
+lf t55xx wr -b 3 -d 19A40087
+lf t55xx wr -b 4 -d 120115CF
 
 2) uid 001630
-lf t55 wr b 1 d FF8B6B20
-lf t55 wr b 2 d F19B84A3
-lf t55 wr b 3 d 18058007
-lf t55 wr b 4 d 1200857C
+lf t55xx wr -b 1 -d FF8B6B20
+lf t55xx wr -b 2 -d F19B84A3
+lf t55xx wr -b 3 -d 18058007
+lf t55xx wr -b 4 -d 1200857C
 
 3) uid 39feff
-lf t55xx wr b 1 d ffbfa73e
-lf t55xx wr b 2 d 4c0003ff
-lf t55xx wr b 3 d ffbfa73e
-lf t55xx wr b 4 d 4c0003ff
+lf t55xx wr -b 1 -d ffbfa73e
+lf t55xx wr -b 2 -d 4c0003ff
+lf t55xx wr -b 3 -d ffbfa73e
+lf t55xx wr -b 4 -d 4c0003ff
 
 */
 
@@ -459,7 +459,7 @@ static int CmdLFNedapClone(const char *Cmd) {
 
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(INFO, "The block 0 was changed (eXtended) which can be hard to detect.");
-        PrintAndLogEx(INFO,  "Configure it manually " _YELLOW_("`lf t55xx config b 64 d BI i 1 o 32`"));
+        PrintAndLogEx(INFO,  "Configure it manually " _YELLOW_("`lf t55xx config -b 64 --BI -i -o 32`"));
     } else {
         PrintAndLogEx(NORMAL, "");
     }

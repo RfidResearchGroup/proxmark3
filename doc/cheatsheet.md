@@ -561,7 +561,7 @@ EM is ASK
 HID Prox is FSK
 Indala is PSK
 
-pm3 --> lf t55xx config FSK
+pm3 --> lf t55xx config --FSK
 ```
 
 Set timings to default
@@ -579,7 +579,7 @@ Write to T55xx block
 b <block>    : block number to write. Between 0-7
 d <data>     : 4 bytes of data to write (8 hex characters)
 
-pm3 --> lf t55xx wr b 0 d 00081040
+pm3 --> lf t55xx wr -b 0 -d 00081040
 ```
 
 Wipe a T55xx tag and set defaults
