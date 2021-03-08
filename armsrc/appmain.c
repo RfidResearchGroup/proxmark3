@@ -2097,29 +2097,39 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_SPIFFS_REMOVE: {
             LED_B_ON();
-            uint8_t filename[32];
-            uint8_t *pfilename = packet->data.asBytes;
-            memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
-            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Filename received for spiffs REMOVE : %s", filename);
-            rdv40_spiffs_remove((char *) filename, RDV40_SPIFFS_SAFETY_SAFE);
+
+            struct p {
+                uint8_t len;
+                uint8_t fn[32];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+
+            if (DBGLEVEL >= DBG_DEBUG) {
+                Dbprintf("Filename received for spiffs REMOVE : %s", payload->fn);
+            }
+
+            rdv40_spiffs_remove((char *)payload->fn, RDV40_SPIFFS_SAFETY_SAFE);
+            reply_ng(CMD_SPIFFS_REMOVE, PM3_SUCCESS, NULL, 0);
             LED_B_OFF();
             break;
         }
         case CMD_SPIFFS_RENAME: {
             LED_B_ON();
-            uint8_t src[32];
-            uint8_t dest[32];
-            uint8_t *pfilename = packet->data.asBytes;
-            char *token;
-            token = strtok((char *)pfilename, ",");
-            strncpy((char *)src, token, sizeof(src) - 1);
-            token = strtok(NULL, ",");
-            strncpy((char *)dest, token, sizeof(dest) - 1);
+            struct p {
+                uint8_t slen;
+                uint8_t src[32];
+                uint8_t dlen;
+                uint8_t dest[32];
+            } PACKED;
+
+            struct p *payload = (struct p *) packet->data.asBytes;
+
             if (DBGLEVEL >= DBG_DEBUG) {
-                Dbprintf("Filename received as source for spiffs RENAME : %s", src);
-                Dbprintf("Filename received as destination for spiffs RENAME : %s", dest);
+                Dbprintf("Filename received as source for spiffs RENAME : %s", payload->src);
+                Dbprintf("Filename received as destination for spiffs RENAME : %s", payload->dest);
             }
-            rdv40_spiffs_rename((char *) src, (char *)dest, RDV40_SPIFFS_SAFETY_SAFE);
+            rdv40_spiffs_rename((char *)payload->src, (char *)payload->dest, RDV40_SPIFFS_SAFETY_SAFE);
+            reply_ng(CMD_SPIFFS_RENAME, PM3_SUCCESS, NULL, 0);
             LED_B_OFF();
             break;
         }
