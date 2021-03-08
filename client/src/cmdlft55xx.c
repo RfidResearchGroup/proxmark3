@@ -463,6 +463,8 @@ static int CmdT55xxSetConfig(const char *Cmd) {
        idx++;
     }
 
+    // Not these flags are used to Toggle the values.
+    // If not flag then dont set or reset, leave as is since the call may just be be setting a different value.
     bool invert = arg_get_lit(ctx, idx++);
     bool use_q5 = arg_get_lit(ctx, idx++);
     bool use_st = arg_get_lit(ctx, idx++);
@@ -525,10 +527,11 @@ static int CmdT55xxSetConfig(const char *Cmd) {
         config.offset = offset;
     }
 
-    // validate user specific T5555 / Q5 
-    config.Q5 = use_q5 ^ config.Q5;
+    // validate user specific T5555 / Q5 - use the flag to toggle between T5577 and Q5
+    config.Q5 ^= use_q5;
 
     // validate user specific sequence terminator
+    // if use_st flag was supplied, then toggle and update the config block0; if not supplied skip the config block0 update.
     if (use_st) { 
         config.ST ^= use_st;
         config.block0 = ((config.block0 & ~(0x8)) | (config.ST << 3));
@@ -537,7 +540,8 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     // validate user specific invert
     // In theory this should also be set in the config block 0; butit requries the extend mode config, which will change other things.
     // as such, leave in user config for decoding the data until a full fix can be added.
-    config.inverted = invert ^ config.inverted ;
+    // use the flag to toggle if invert is on or off.
+    config.inverted ^= invert;
 
     // validate user specific downlink mode
     uint8_t downlink_mode = config.downlink_mode;
@@ -3053,22 +3057,21 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t downlink_mode = config.downlink_mode;
-    if (r0 || ra) // ra should start downlink mode ad fixed bit to loop through all modes correctly
-        downlink_mode = refFixedBit;
-    else if (r1)
+    uint8_t downlink_mode = refFixedBit; // Password checks should always start with default/fixed bit unluess requested by user for specific mode
+  //  if (r0 || ra) // ra should start downlink mode ad fixed bit to loop through all modes correctly
+  //      downlink_mode = refFixedBit;
+  //  else 
+    if (r1)
         downlink_mode = refLongLeading;
     else if (r2)
         downlink_mode = refLeading0;
     else if (r3)
         downlink_mode = ref1of4;
 
-    bool use_pwd_file = false;
-    if (strlen(filename) != 0) 
-        use_pwd_file = true;
-    else if (strlen(filename) == 0) {
+    bool use_pwd_file = true; // Assume we are going to use a file, unless turned off later.
+    
+    if (strlen(filename) == 0) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
-        use_pwd_file = true;
     }
 
     PrintAndLogEx(INFO, "press " _GREEN_("'enter'") " to cancel the command");
@@ -3089,6 +3092,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     uint8_t flags = downlink_mode << 3;
 
     if (from_flash) {
+        use_pwd_file = false; // turn of local password file since we are checking from flash.
         clearCommandBuffer();
         SendCommandNG(CMD_LF_T55XX_CHK_PWDS, &flags, sizeof(flags));
         PacketResponseNG resp;
@@ -3185,6 +3189,9 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
             PrintAndLogEx(INFO, "testing %08"PRIX32, curr_password);
             for (dl_mode = downlink_mode; dl_mode <= 3; dl_mode++) {
+                // If aquire fails, then we still need to check if we are only trying a single downlink mode.
+                // If we continue on fail, it will skip that test and try the next downlink mode; thus slowing down the check
+                // when on a single downlink mode is wanted.
                 if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr_password, dl_mode)) {
                     found = t55xxTryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, curr_password);
                     if (found) {
@@ -3192,7 +3199,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
                         break;
                     }
                 }
-                if (!ra) // Exit loop if not trying all downlink modes
+                if (ra == false) // Exit loop if not trying all downlink modes
                     break;
             }
         }
@@ -3257,17 +3264,17 @@ static int CmdT55xxBruteForce(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t downlink_mode = config.downlink_mode;
-    if (r0 || ra) // if try all (ra) then start at fixed bit for correct try all
-        downlink_mode = refFixedBit;
-    else if (r1)
+    uint8_t downlink_mode = refFixedBit; // if no downlink mode suppliled use fixed bit/default as the is the most common
+                                         // Since we dont know the password the config.downlink mode is of little value.
+//   if (r0 || ra) // if try all (ra) then start at fixed bit for correct try all
+//       downlink_mode = refFixedBit;
+//    else 
+    if (r1)
         downlink_mode = refLongLeading;
     else if (r2)
         downlink_mode = refLeading0;
     else if (r3)
         downlink_mode = ref1of4;
-    else // no downlink mode so try default fixedbit only (as most likly)
-        downlink_mode = refFixedBit;
 
     uint32_t curr = 0;
     uint8_t found = 0; // > 0 if found xx1 xx downlink needed, 1 found
