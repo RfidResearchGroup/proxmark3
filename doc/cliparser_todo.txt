@@ -86,12 +86,3 @@ hf mf gen3freeze
 lf hitag reader
 lf hitag writer
 lf hitag dump
-pref show
-pref get barmode
-pref get clientdebug
-pref get color
-pref get savepaths
-pref get emoji
-pref get hints
-pref get plotsliders
-pref set savepaths
