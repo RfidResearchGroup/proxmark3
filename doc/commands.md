@@ -12,10 +12,9 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`auto                   `|N       |`Automated detection process for unknown tags`
 |`clear                  `|Y       |`Clear screen`
-|`help                   `|Y       |`This help. Use '<command> help' for details of a particular command.`
+|`help                   `|Y       |`Use '<command> help' for details of a particular command.`
 |`hints                  `|Y       |`Turn hints on / off`
 |`msleep                 `|Y       |`Add a pause in milliseconds`
-|`pref                   `|Y       |`Edit preferences`
 |`rem                    `|Y       |`Add a text line in log file`
 |`quit                   `|Y       |``
 |`exit                   `|Y       |`Exit program`
@@ -606,10 +605,80 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf em help             `|Y       |`This help`
-|`lf em 410x             `|Y       |`EM 4102 commands...`
-|`lf em 4x05             `|Y       |`EM 4205 / 4305 / 4369 / 4469 commands...`
-|`lf em 4x50             `|Y       |`EM 4350 / 4450 commands...`
-|`lf em 4x70             `|Y       |`EM 4070 / 4170 commands...`
+
+
+### lf em 410x
+
+ { EM 4102 commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf em 410x help        `|Y       |`This help`
+|`lf em 410x demod       `|Y       |`demodulate a EM410x tag from the GraphBuffer`
+|`lf em 410x reader      `|N       |`attempt to read and extract tag data`
+|`lf em 410x sim         `|N       |`simulate EM410x tag`
+|`lf em 410x brute       `|N       |`reader bruteforce attack by simulating EM410x tags`
+|`lf em 410x watch       `|N       |`watches for EM410x 125/134 kHz tags (option 'h' for 134)`
+|`lf em 410x spoof       `|N       |`watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)`
+|`lf em 410x clone       `|N       |`write EM410x UID to T55x7 or Q5/T5555 tag`
+
+
+### lf em 4x05
+
+ { EM 4205 / 4305 / 4369 / 4469 commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf em 4x05 help        `|Y       |`This help`
+|`lf em 4x05 brute       `|N       |`Bruteforce password`
+|`lf em 4x05 chk         `|N       |`Check passwords from dictionary`
+|`lf em 4x05 demod       `|Y       |`demodulate a EM4x05/EM4x69 tag from the GraphBuffer`
+|`lf em 4x05 dump        `|N       |`dump EM4x05/EM4x69 tag`
+|`lf em 4x05 info        `|N       |`tag information EM4x05/EM4x69`
+|`lf em 4x05 read        `|N       |`read word data from EM4x05/EM4x69`
+|`lf em 4x05 sniff       `|Y       |`Attempt to recover em4x05 commands from sample buffer`
+|`lf em 4x05 unlock      `|N       |`execute tear off against EM4x05/EM4x69`
+|`lf em 4x05 wipe        `|N       |`wipe EM4x05/EM4x69 tag`
+|`lf em 4x05 write       `|N       |`write word data to EM4x05/EM4x69`
+
+
+### lf em 4x50
+
+ { EM 4350 / 4450 commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf em 4x50 help        `|Y       |`This help`
+|`lf em 4x50 brute       `|N       |`guess password of EM4x50`
+|`lf em 4x50 chk         `|N       |`check passwords from dictionary`
+|`lf em 4x50 dump        `|N       |`dump EM4x50 tag`
+|`lf em 4x50 info        `|N       |`tag information EM4x50`
+|`lf em 4x50 login       `|N       |`login into EM4x50`
+|`lf em 4x50 rdbl        `|N       |`read word data from EM4x50`
+|`lf em 4x50 wrbl        `|N       |`write word data to EM4x50`
+|`lf em 4x50 writepwd    `|N       |`change password of EM4x50`
+|`lf em 4x50 wipe        `|N       |`wipe EM4x50 tag`
+|`lf em 4x50 reader      `|N       |`show standard read mode data of EM4x50`
+|`lf em 4x50 restore     `|N       |`restore EM4x50 dump to tag`
+|`lf em 4x50 sim         `|N       |`simulate EM4x50 tag`
+|`lf em 4x50 eload       `|N       |`upload dump of EM4x50 to emulator memory`
+|`lf em 4x50 esave       `|N       |`save emulator memory to file`
+|`lf em 4x50 eview       `|N       |`view EM4x50 content in emulator memory`
+
+
+### lf em 4x70
+
+ { EM 4070 / 4170 commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf em 4x70 help        `|Y       |`This help`
+|`lf em 4x70 info        `|N       |`Tag information EM4x70`
+|`lf em 4x70 write       `|N       |`Write EM4x70`
+|`lf em 4x70 unlock      `|N       |`Unlock EM4x70 for writing`
+|`lf em 4x70 auth        `|N       |`Authenticate EM4x70`
+|`lf em 4x70 writepin    `|N       |`Write PIN`
+|`lf em 4x70 writekey    `|N       |`Write Crypt Key`
 
 
 ### lf fdxb
@@ -673,6 +742,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf hitag help          `|Y       |`This help`
+|`lf hitag eload         `|N       |`Load Hitag dump file into emulator memory`
 |`lf hitag list          `|N       |`List Hitag trace history`
 |`lf hitag info          `|N       |`Tag information`
 |`lf hitag reader        `|N       |`Act like a Hitag Reader`
@@ -953,11 +1023,32 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`mem help               `|Y       |`This help`
 |`mem baudrate           `|N       |`Set Flash memory Spi baudrate`
-|`mem spiffs             `|N       |`High level SPI FileSystem Flash manipulation`
-|`mem info               `|N       |`Flash memory information`
-|`mem load               `|N       |`Load data into flash memory`
 |`mem dump               `|N       |`Dump data from flash memory`
+|`mem info               `|N       |`Flash memory information`
+|`mem load               `|N       |`Load data to flash memory`
 |`mem wipe               `|N       |`Wipe data from flash memory`
+
+
+### mem spiffs
+
+ { SPI File system }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`mem spiffs help        `|Y       |`This help`
+|`mem spiffs copy        `|N       |`Copy a file to another (destructively) in SPIFFS file system`
+|`mem spiffs check       `|N       |`Check/try to defrag faulty/fragmented file system`
+|`mem spiffs dump        `|N       |`Dump a file from SPIFFS file system`
+|`mem spiffs info        `|N       |`Print file system info and usage statistics`
+|`mem spiffs mount       `|N       |`Mount the SPIFFS file system if not already mounted`
+|`mem spiffs remove      `|N       |`Remove a file from SPIFFS file system`
+|`mem spiffs rename      `|N       |`Rename/move a file in SPIFFS file system`
+|`mem spiffs test        `|N       |`Test SPIFFS Operations`
+|`mem spiffs tree        `|N       |`Print the Flash memory file system tree`
+|`mem spiffs unmount     `|N       |`Un-mount the SPIFFS file system`
+|`mem spiffs upload      `|N       |`Upload file into SPIFFS file system`
+|`mem spiffs view        `|N       |`View file on SPIFFS file system`
+|`mem spiffs wipe        `|N       |`Wipe all files from SPIFFS file system   * dangerous *`
 
 
 ### reveng
@@ -988,9 +1079,9 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`script help            `|Y       |`Usage info`
+|`script help            `|Y       |`This help`
 |`script list            `|Y       |`List available scripts`
-|`script run             `|Y       |`<name> -- execute a script`
+|`script run             `|Y       |`<name> - execute a script`
 
 
 ### trace
@@ -1032,5 +1123,46 @@ Check column "offline" for their availability.
 |`wiegand list           `|Y       |`List available wiegand formats`
 |`wiegand encode         `|Y       |`Encode to wiegand raw hex (currently for HID Prox)`
 |`wiegand decode         `|Y       |`Convert raw hex to decoded wiegand format (currently for HID Prox)`
+
+
+### pref
+
+ { Edit preferences... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`pref help              `|Y       |`This help`
+|`pref show              `|Y       |`Show all preferences`
+
+
+### pref get
+
+ { Get a preference }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`pref get barmode       `|Y       |`Get bar mode preference`
+|`pref get clientdebug   `|Y       |`Get client debug level preference`
+|`pref get color         `|Y       |`Get color support preference`
+|`pref get savepaths     `|Y       |`Get file folder  `
+|`pref get emoji         `|Y       |`Get emoji display preference`
+|`pref get hints         `|Y       |`Get hint display preference`
+|`pref get plotsliders   `|Y       |`Get plot slider display preference`
+
+
+### pref set
+
+ { Set a preference }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`pref set help          `|Y       |`This help`
+|`pref set barmode       `|Y       |`Set bar mode`
+|`pref set clientdebug   `|Y       |`Set client debug level`
+|`pref set color         `|Y       |`Set color support`
+|`pref set emoji         `|Y       |`Set emoji display`
+|`pref set hints         `|Y       |`Set hint display`
+|`pref set savepaths     `|Y       |`... to be adjusted next ... `
+|`pref set plotsliders   `|Y       |`Set plot slider display`
 
 
