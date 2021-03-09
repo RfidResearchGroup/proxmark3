@@ -186,7 +186,7 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
     if (data == NULL || len == 0) return;
 
     int rownum = 0;
-    PrintAndLogEx(NORMAL, "[%02d] | " NOLF, rownum);
+    PrintAndLogEx(INFO, "%02d | " NOLF, rownum);
     for (size_t i = 0; i < len; ++i) {
 
         PrintAndLogEx(NORMAL, "%02X " NOLF, data[i]);
@@ -194,7 +194,8 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
         // check if a line break is needed
         if (breaks > 0 && !((i + 1) % breaks) && (i + 1 < len)) {
             ++rownum;
-            PrintAndLogEx(NORMAL, "\n[%02d] | " NOLF, rownum);
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "%02d | " NOLF, rownum);
         }
     }
     PrintAndLogEx(NORMAL, "");
