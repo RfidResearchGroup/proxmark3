@@ -146,7 +146,7 @@ static int rdv4_sign_write(uint8_t *signature, uint8_t slen){
     return PM3_EFAILED;
 }
 
-static int CmdFlashmemSpiBaudrate(const char *Cmd) {
+static int CmdFlashmemSpiBaud(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "mem baudrate",
@@ -605,13 +605,13 @@ static int CmdFlashMemInfo(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,            AlwaysAvailable, "This help"},
-    {"baudrate", CmdFlashmemSpiBaudrate, IfPm3Flash,  "Set Flash memory Spi baudrate"},
-    {"spiffs",  CmdFlashMemSpiFFS,  IfPm3Flash,      "High level SPI FileSystem Flash manipulation"},
-    {"info",    CmdFlashMemInfo,    IfPm3Flash,      "Flash memory information"},
-    {"load",    CmdFlashMemLoad,    IfPm3Flash,      "Load data into flash memory"},
-    {"dump",    CmdFlashMemDump,    IfPm3Flash,      "Dump data from flash memory"},
-    {"wipe",    CmdFlashMemWipe,    IfPm3Flash,      "Wipe data from flash memory"},
+    {"spiffs",   CmdFlashMemSpiFFS,  IfPm3Flash,  "{ SPI File system }"},
+    {"help",     CmdHelp,            AlwaysAvailable, "This help"},
+    {"baudrate", CmdFlashmemSpiBaud, IfPm3Flash,  "Set Flash memory Spi baudrate"},
+    {"dump",     CmdFlashMemDump,    IfPm3Flash,  "Dump data from flash memory"},
+    {"info",     CmdFlashMemInfo,    IfPm3Flash,  "Flash memory information"},
+    {"load",     CmdFlashMemLoad,    IfPm3Flash,  "Load data to flash memory"},
+    {"wipe",     CmdFlashMemWipe,    IfPm3Flash,  "Wipe data from flash memory"},
     {NULL, NULL, NULL, NULL}
 };
 

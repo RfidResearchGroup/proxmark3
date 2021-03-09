@@ -520,7 +520,7 @@ static int CmdFlashMemSpiFFSView(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help", CmdHelp, AlwaysAvailable, "This help"},
+    {"help",    CmdHelp,                  AlwaysAvailable, "This help"},
     {"copy",    CmdFlashMemSpiFFSCopy,    IfPm3Flash, "Copy a file to another (destructively) in SPIFFS file system"},
     {"check",   CmdFlashMemSpiFFSCheck,   IfPm3Flash, "Check/try to defrag faulty/fragmented file system"},
     {"dump",    CmdFlashMemSpiFFSDump,    IfPm3Flash, "Dump a file from SPIFFS file system"},

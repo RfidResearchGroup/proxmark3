@@ -1043,8 +1043,8 @@ static int CmdPrefSave (const char *Cmd) {
 */
 static command_t CommandTable[] = {
     {"help",         CmdHelp,            AlwaysAvailable, "This help"},
-    {"get",          CmdPrefGet,         AlwaysAvailable, "Get a preference"},
-    {"set",          CmdPrefSet,         AlwaysAvailable, "Set a preference"},
+    {"get",          CmdPrefGet,         AlwaysAvailable, "{ Get a preference }"},
+    {"set",          CmdPrefSet,         AlwaysAvailable, "{ Set a preference }"},
     {"show",         CmdPrefShow,        AlwaysAvailable, "Show all preferences"},
     {NULL, NULL, NULL, NULL}
 };

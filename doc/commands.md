@@ -905,7 +905,7 @@ Check column "offline" for their availability.
 |`lf t55xx info          `|Y       |`Show T55x7 configuration data (page 0/ blk 0)`
 |`lf t55xx p1detect      `|N       |`Try detecting if this is a t55xx tag by reading page 1`
 |`lf t55xx read          `|N       |`Read T55xx block data`
-|`lf t55xx resetread     `|N       |`Send Reset Cmd then lf read the stream to attempt to identify the start of it (needs a demod and/or plot after)`
+|`lf t55xx resetread     `|N       |`Send Reset Cmd then lf read the stream to attempt to identify the start of it`
 |`lf t55xx restore       `|N       |`Restore T55xx card Page 0 / Page 1 blocks`
 |`lf t55xx trace         `|Y       |`Show T55x7 traceability data (page 1/ blk 0-1)`
 |`lf t55xx wakeup        `|N       |`Send AOR wakeup command`

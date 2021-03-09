@@ -91,4 +91,4 @@ lf em 4x70
 lf hitag reader
 lf hitag writer
 lf hitag dump
-script run
+mem spiffs

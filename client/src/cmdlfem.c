@@ -24,10 +24,10 @@ static int CmdHelp(const char *Cmd);
 
 static command_t CommandTable[] = {
     {"help",  CmdHelp,      AlwaysAvailable, "This help"},
-    {"410x",  CmdLFEM410X,  AlwaysAvailable, "EM 4102 commands..."},
-    {"4x05",  CmdLFEM4X05,  AlwaysAvailable, "EM 4205 / 4305 / 4369 / 4469 commands..."},
-    {"4x50",  CmdLFEM4X50,  AlwaysAvailable, "EM 4350 / 4450 commands..."},
-    {"4x70",  CmdLFEM4X70,  AlwaysAvailable, "EM 4070 / 4170 commands..."},
+    {"410x",  CmdLFEM410X,  AlwaysAvailable, "{ EM 4102 commands... }"},
+    {"4x05",  CmdLFEM4X05,  AlwaysAvailable, "{ EM 4205 / 4305 / 4369 / 4469 commands... }"},
+    {"4x50",  CmdLFEM4X50,  AlwaysAvailable, "{ EM 4350 / 4450 commands... }"},
+    {"4x70",  CmdLFEM4X70,  AlwaysAvailable, "{ EM 4070 / 4170 commands... }"},
     {NULL, NULL, NULL, NULL}
 };
 
