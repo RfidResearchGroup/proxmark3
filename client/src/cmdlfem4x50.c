@@ -568,7 +568,7 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out) {
 
 int CmdEM4x50Read(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50 read",
+    CLIParserInit(&ctx, "lf em 4x50 rdbl",
                   "Reads single EM4x50 block/word.",
                   "lf em 4x50 rdbl -b 3\n"
                   "lf em 4x50 rdbl -b 32 -p 12345678   -> reads block 32 with pwd 0x12345678\n"
