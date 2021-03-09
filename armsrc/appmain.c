@@ -2078,7 +2078,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
             }
             // Trigger a finish downloading signal with an ACK frame
-            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_SUCCESS, NULL, 0);
             LED_B_OFF();
             break;
         }
@@ -2087,11 +2087,17 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t filename[32];
             uint8_t *pfilename = packet->data.asBytes;
             memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
-            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Filename received for spiffs STAT : %s", filename);
+            if (DBGLEVEL >= DBG_DEBUG) {
+                Dbprintf("Filename received for spiffs STAT : %s", filename);
+            }
+
             int changed = rdv40_spiffs_lazy_mount();
             uint32_t size = size_in_spiffs((char *)filename);
-            if (changed) rdv40_spiffs_lazy_unmount();
-            reply_mix(CMD_ACK, size, 0, 0, 0, 0);
+            if (changed) {
+                rdv40_spiffs_lazy_unmount();
+            }
+
+            reply_ng(CMD_SPIFFS_STAT, PM3_SUCCESS, (uint8_t *)&size, sizeof(uint32_t));
             LED_B_OFF();
             break;
         }
@@ -2121,12 +2127,12 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t dlen;
                 uint8_t dest[32];
             } PACKED;
-
             struct p *payload = (struct p *) packet->data.asBytes;
 
             if (DBGLEVEL >= DBG_DEBUG) {
-                Dbprintf("Filename received as source for spiffs RENAME : %s", payload->src);
-                Dbprintf("Filename received as destination for spiffs RENAME : %s", payload->dest);
+                Dbprintf("SPIFFS RENAME");
+                Dbprintf("Source........ %s", payload->src);
+                Dbprintf("Destination... %s", payload->dest);
             }
             rdv40_spiffs_rename((char *)payload->src, (char *)payload->dest, RDV40_SPIFFS_SAFETY_SAFE);
             reply_ng(CMD_SPIFFS_RENAME, PM3_SUCCESS, NULL, 0);
@@ -2135,40 +2141,40 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_SPIFFS_COPY: {
             LED_B_ON();
-            uint8_t src[32];
-            uint8_t dest[32];
-            uint8_t *pfilename = packet->data.asBytes;
-            char *token;
-            token = strtok((char *)pfilename, ",");
-            strncpy((char *)src, token, sizeof(src) - 1);
-            token = strtok(NULL, ",");
-            strncpy((char *)dest, token, sizeof(dest) - 1);
+            struct p {
+                uint8_t slen;
+                uint8_t src[32];
+                uint8_t dlen;
+                uint8_t dest[32];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+
             if (DBGLEVEL >= DBG_DEBUG) {
-                Dbprintf("Filename received as source for spiffs COPY : %s", src);
-                Dbprintf("Filename received as destination for spiffs COPY : %s", dest);
+                Dbprintf("SPIFFS COPY");
+                Dbprintf("Source........ %s", payload->src);
+                Dbprintf("Destination... %s", payload->dest);
             }
-            rdv40_spiffs_copy((char *) src, (char *)dest, RDV40_SPIFFS_SAFETY_SAFE);
+            rdv40_spiffs_copy((char *)payload->src, (char *)payload->dest, RDV40_SPIFFS_SAFETY_SAFE);
+            reply_ng(CMD_SPIFFS_COPY, PM3_SUCCESS, NULL, 0);
             LED_B_OFF();
             break;
         }
         case CMD_SPIFFS_WRITE: {
             LED_B_ON();
-            uint8_t filename[32];
-            uint32_t append = packet->oldarg[0];
-            uint32_t size = packet->oldarg[1];
-            uint8_t *data = packet->data.asBytes;
-            uint8_t *pfilename = packet->data.asBytes;
-            memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
-            data += SPIFFS_OBJ_NAME_LEN;
 
-            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("> Filename received for spiffs WRITE : %s with APPEND SET TO : %d", filename, append);
+            flashmem_write_t *payload = (flashmem_write_t *)packet->data.asBytes;
 
-            if (!append) {
-                rdv40_spiffs_write((char *) filename, (uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
-            } else {
-                rdv40_spiffs_append((char *) filename, (uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
+            if (DBGLEVEL >= DBG_DEBUG) {
+                Dbprintf("SPIFFS WRITE, dest `%s` with APPEND set to: %c", payload->fn, payload->append ? 'Y' : 'N');
             }
-            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
+
+            if (payload->append) {
+                rdv40_spiffs_append((char *) payload->fn, payload->data, payload->bytes_in_packet, RDV40_SPIFFS_SAFETY_SAFE);
+            } else {
+                rdv40_spiffs_write((char *) payload->fn, payload->data, payload->bytes_in_packet, RDV40_SPIFFS_SAFETY_SAFE);
+            }
+
+            reply_ng(CMD_SPIFFS_WRITE, PM3_SUCCESS, NULL, 0);
             LED_B_OFF();
             break;
         }

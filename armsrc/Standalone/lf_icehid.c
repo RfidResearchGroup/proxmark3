@@ -48,7 +48,7 @@
  *
  * To delete the log file from flash:
  *
- * 1. mem spiffs remove lf_hidcollect.log
+ * 1. mem spiffs remove -f lf_hidcollect.log
  */
 
 #define LF_HIDCOLLECT_LOGFILE "lf_hidcollect.log"

@@ -42,7 +42,7 @@
  * - LED D: unmounting/sync'ing flash (normally < 100ms)
  *
  * To upload input file (eml format) to flash:
- * - mem spiffs load f <filename> o lf_em4x50_simulate.eml
+ * - mem spiffs upload -s <filename> -d lf_em4x50_simulate.eml
  *
  * To retrieve password file from flash:
  * - mem spiffs dump o lf_em4x50_passwords.log f <filename>
@@ -54,13 +54,13 @@
  * the lab connected to PM3 client before taking it into the field.
  *
  * To delete the input file from flash:
- * - mem spiffs remove lf_em4x50_simulate.eml
+ * - mem spiffs remove -f lf_em4x50_simulate.eml
  *
  * To delete the log file from flash:
- * - mem spiffs remove lf_em4x50_passwords.log
+ * - mem spiffs remove -f lf_em4x50_passwords.log
  *
  * To delete the log file from flash:
- * - mem spiffs remove lf_em4x50_collect.log
+ * - mem spiffs remove -f lf_em4x50_collect.log
  */
 
 #define STATE_SIM                       0
@@ -77,7 +77,7 @@ static void LoadDataInstructions(const char *inputfile) {
     Dbprintf("To load datafile to flash and display it:");
     Dbprintf("1. edit input file %s", inputfile);
     Dbprintf("2. start proxmark3 client");
-    Dbprintf("3. mem spiffs load f <filename> o %s", inputfile);
+    Dbprintf("3. mem spiffs upload -f <filename> o %s", inputfile);
     Dbprintf("4. start standalone mode");
 }
 

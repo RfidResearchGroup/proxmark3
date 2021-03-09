@@ -39,7 +39,7 @@
  *
  * To delete a dump file from flash:
  *
- * 1. mem spiffs remove hf-legic-XXYYZZWW-dump.bin
+ * 1. mem spiffs remove -f hf-legic-XXYYZZWW-dump.bin
  *
 */
 

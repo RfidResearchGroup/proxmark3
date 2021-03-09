@@ -471,7 +471,7 @@ int CmdEM4x50Chk(const char *Cmd) {
 
         // upload to flash.
         datalen = MIN(bytes_remaining, keyblock);
-        res = flashmem_spiffs_load(destfn, keys, datalen);
+        res = flashmem_spiffs_load((char*)destfn, keys, datalen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "SPIFFS upload failed");
             return res;
