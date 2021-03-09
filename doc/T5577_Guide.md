@@ -78,7 +78,7 @@ examples shown, it will be assumed you have run the detect command.
 ```
 [usb] pm3 --> lf t55xx detect
 ```
-You should see a results simular to the following:
+You should see a results similar to the following:
 ```
     [=]  Chip type......... T55x7                    
     [=]  Modulation........ ASK                      
@@ -256,7 +256,7 @@ result:
 Practice reading and writing to blocks 1 to 6 until you are happy you
 can do it and get the results you wanted (i.e. the data you want stored
 is written to the block you want it stored in).  I recommend staying
-away from block 7 as this is where the password is stored, if uesed.
+away from block 7 as this is where the password is stored, if used.
 If you forget this data/password, you wont be able to read or write
 to the card.
 
@@ -465,7 +465,7 @@ required, please do not proceed.
     [!] Safety check: Could not detect if PWD bit is set in config block. Exits.
     ```
     
-    Note that the proxmark3 did not read the block, the safty kicked in
+    Note that the proxmark3 did not read the block, the safety kicked in
     and wants us to confirm by supply the override option ‘-o’.
 
     Lets try again with the ‘-o’ option as we know the password is set.
