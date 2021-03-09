@@ -89,8 +89,6 @@ lf em 4x05
 lf em 4x50
 lf em 4x70
 lf hitag reader
-lf hitag sim
 lf hitag writer
 lf hitag dump
-lf hitag cc
 script run
