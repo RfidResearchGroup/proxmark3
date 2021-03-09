@@ -355,6 +355,7 @@ static int CmdFlashMemDump(const char *Cmd) {
         arg_int0("l", "len", "<dec>", "length"),
         arg_lit0("v", "view", "view dump"),
         arg_strx0("f", "file", "<filename>", "file name"),
+        arg_int0("c", "cols", "<dec>", "column breaks (def 32)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -365,6 +366,7 @@ static int CmdFlashMemDump(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    int breaks = arg_get_int_def(ctx, 5, 32);
     CLIParserFree(ctx);
 
     uint8_t *dump = calloc(len, sizeof(uint8_t));
@@ -382,7 +384,7 @@ static int CmdFlashMemDump(const char *Cmd) {
 
     if (view) {
         PrintAndLogEx(INFO, "---- " _CYAN_("data") " ---------------");
-        print_hex_break(dump, len, 32);
+        print_hex_break(dump, len, breaks);
     }
 
     if (filename[0] != '\0') {
