@@ -45,10 +45,10 @@
  * - mem spiffs upload -s <filename> -d lf_em4x50_simulate.eml
  *
  * To retrieve password file from flash:
- * - mem spiffs dump o lf_em4x50_passwords.log f <filename>
+ * - mem spiffs dump -s lf_em4x50_passwords.log
  *
  * To retrieve log file from flash:
- * - mem spiffs dump o lf_em4x50_collect.log f <filename>
+ * - mem spiffs dump -s lf_em4x50_collect.log
  *
  * This module emits debug strings during normal operation -- so try it out in
  * the lab connected to PM3 client before taking it into the field.
@@ -77,14 +77,14 @@ static void LoadDataInstructions(const char *inputfile) {
     Dbprintf("To load datafile to flash and display it:");
     Dbprintf("1. edit input file %s", inputfile);
     Dbprintf("2. start proxmark3 client");
-    Dbprintf("3. mem spiffs upload -f <filename> o %s", inputfile);
+    Dbprintf("3. mem spiffs upload -s <filename> -d %s", inputfile);
     Dbprintf("4. start standalone mode");
 }
 
 static void DownloadLogInstructions(const char *logfile) {
     Dbprintf("");
     Dbprintf("To get the logfile from flash and display it:");
-    Dbprintf("1. mem spiffs dump o %s f <filename>", logfile);
+    Dbprintf("1. mem spiffs dump -s %s", logfile);
     Dbprintf("2. exit proxmark3 client");
     Dbprintf("3. cat <filename>");
 }

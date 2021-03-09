@@ -50,7 +50,7 @@ static void DownloadLogInstructions(void) {
     Dbprintf("[=]   " _YELLOW_("-") " mem spiffs tree");
     Dbprintf("");
     Dbprintf("[=] To save a dump file from flash to client:");
-    Dbprintf("[=]   " _YELLOW_("-") " mem spiffs dump o hf-legic-UID-dump.bin f hf-legic-UID-dump.bin");
+    Dbprintf("[=]   " _YELLOW_("-") " mem spiffs dump -s hf-legic-UID-dump.bin -d hf-legic-UID-dump.bin");
 }
 #endif
 
