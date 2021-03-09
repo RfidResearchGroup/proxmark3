@@ -1,5 +1,4 @@
 clear
-pref
 analyse foo
 data biphaserawdecode
 data detectclock
@@ -84,11 +83,17 @@ hf mf cview
 hf mf gen3uid
 hf mf gen3blk
 hf mf gen3freeze
-lf em 410x
-lf em 4x05
-lf em 4x50
-lf em 4x70
+lf em 4x05 sniff
+lf em 4x50 rdbl
 lf hitag reader
 lf hitag writer
 lf hitag dump
-mem spiffs
+pref show
+pref get barmode
+pref get clientdebug
+pref get color
+pref get savepaths
+pref get emoji
+pref get hints
+pref get plotsliders
+pref set savepaths
