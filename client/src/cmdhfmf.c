@@ -522,21 +522,22 @@ static int32_t initSectorTable(sector_t **src, int32_t items) {
 
 static void decode_print_st(uint16_t blockno, uint8_t *data) {
     if (mfIsSectorTrailer(blockno)) {
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(NORMAL, "Sector trailer decoded:");
-        PrintAndLogEx(NORMAL, "----------------------------------------------");
-        PrintAndLogEx(NORMAL, "Key A      " _GREEN_("%s"), sprint_hex_inrow(data, 6));
-        PrintAndLogEx(NORMAL, "Key B      " _GREEN_("%s"), sprint_hex_inrow(data + 10, 6));
-        PrintAndLogEx(NORMAL, "Access rights");
+
+        PrintAndLogEx(INFO, "--------- " _CYAN_("Sector trailer") " -------------");
+        PrintAndLogEx(INFO, "key A........ " _GREEN_("%s"), sprint_hex_inrow(data, 6));
+        PrintAndLogEx(INFO, "acr.......... " _GREEN_("%s"), sprint_hex_inrow(data + 6, 3));
+        PrintAndLogEx(INFO, "user / gdb... " _GREEN_("%02x"), data[9]);
+        PrintAndLogEx(INFO, "key B........ " _GREEN_("%s"), sprint_hex_inrow(data + 10, 6));
+        PrintAndLogEx(INFO, "Access rights decoded");
 
         int bln = mfFirstBlockOfSector(mfSectorNum(blockno));
         int blinc = (mfNumBlocksPerSector(mfSectorNum(blockno)) > 4) ? 5 : 1;
         for (int i = 0; i < 4; i++) {
-            PrintAndLogEx(NORMAL, "  block %d%s  " _YELLOW_("%s"), bln, ((blinc > 1) && (i < 3) ? "+" : ""), mfGetAccessConditionsDesc(i, &data[6]));
+            PrintAndLogEx(INFO, "  block %d%s  " _YELLOW_("%s"), bln, ((blinc > 1) && (i < 3) ? "+" : ""), mfGetAccessConditionsDesc(i, &data[6]));
             bln += blinc;
         }
-        PrintAndLogEx(NORMAL, "UserData   " _YELLOW_("0x%02x"), data[9]);
-        PrintAndLogEx(NORMAL, "----------------------------------------------");
+
+        PrintAndLogEx(INFO, "--------------------------------------");
     }
 }
 
@@ -789,7 +790,8 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
         return PM3_ESOFT;
     }
-    PrintAndLogEx(NORMAL, "--sector no %d, key %c - %s ", sectorNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
+    PrintAndLogEx(INFO, "reading sector no %d, key %c, " _YELLOW_("%s"), sectorNo, keyType ? 'B' : 'A', sprint_hex_inrow(key, 6));
+    PrintAndLogEx(NORMAL, "");
 
     uint8_t sc_size = mfNumBlocksPerSector(sectorNo) * 16;
     uint8_t *data = calloc(sc_size, sizeof(uint8_t));
@@ -804,8 +806,10 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
         uint8_t blocks = NumBlocksPerSector(sectorNo);
         uint8_t start = FirstBlockOfSector(sectorNo);
 
+        PrintAndLogEx(INFO, "blk | data");
+        PrintAndLogEx(INFO, "----+------------------------------------------------");
         for (int i = 0; i < blocks; i++) {
-            PrintAndLogEx(NORMAL, "%3d | %s", start + i, sprint_hex(data + (i * 16), 16));
+            PrintAndLogEx(INFO, "%3d | %s", start + i, sprint_hex(data + (i * 16), 16));
         }
         decode_print_st(start + blocks - 1, data + ((blocks - 1) * 16));
 
