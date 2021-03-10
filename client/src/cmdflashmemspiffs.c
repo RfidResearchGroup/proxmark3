@@ -497,6 +497,11 @@ static int CmdFlashMemSpiFFSView(const char *Cmd) {
     }
 
     uint32_t len = resp.data.asDwords[0];
+    if (len == 0) {
+        PrintAndLogEx(ERR, "error, failed to retrieve file stats on SPIFFSS");
+        return PM3_EFAILED;
+    }
+
     uint8_t *dump = calloc(len, sizeof(uint8_t));
     if (!dump) {
         PrintAndLogEx(ERR, "error, cannot allocate memory ");
