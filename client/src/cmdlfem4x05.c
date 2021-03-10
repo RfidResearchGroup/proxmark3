@@ -1692,11 +1692,8 @@ int CmdEM4x05Unlock(const char *Cmd) {
         }
 
         // write
-        res = unlock_write_protect(use_pwd, pwd, write_value, verbose);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "failed unlock write");
-            return PM3_ESOFT;
-        }
+        // don't check the return value. As a tear-off occurred, the write failed.
+        unlock_write_protect(use_pwd, pwd, write_value, verbose);
 
         // read after trigger
         res = em4x05_read_word_ext(14, pwd, use_pwd, &word14);
