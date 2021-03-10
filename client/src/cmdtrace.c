@@ -279,9 +279,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (markCRCBytes) {
         //CRC-command
         if (crcStatus == 0 || crcStatus == 1) {
-            char *pos1 = line[(data_len - 2) / 18] + (((data_len - 2) % 18) * 4);
+            char *pos1 = line[(data_len - 2) / 18] + (((data_len - 2) % 18) * 4) - 1;
             (*pos1) = '[';
-            char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4);
+            char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4) - 1;
             sprintf(pos2, "%c", ']');
         }
     }
