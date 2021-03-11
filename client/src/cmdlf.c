@@ -1321,7 +1321,7 @@ static bool CheckChipType(bool getDeviceData) {
         goto out;
     }
 
-    PrintAndLogEx(NORMAL, "Couldn't identify a chipset");
+    PrintAndLogEx(INFO, "Couldn't identify a chipset");
 out:
     save_restoreGB(GRAPH_RESTORE);
     save_restoreDB(GRAPH_RESTORE);
