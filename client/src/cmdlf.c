@@ -768,6 +768,7 @@ int lfsim_upload_gb(void) {
             break;
         }
         PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
         payload_up.flag = 0;
     }
     PrintAndLogEx(NORMAL, "");
