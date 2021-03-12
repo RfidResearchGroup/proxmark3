@@ -614,7 +614,7 @@ int main(int argc, char *argv[]) {
         pthread_join(threads[i], NULL);
 
     t1 = clock() - t1;
-    printf("execution time %.0f ticks\n", (float)t1);
+    printf("execution time %.2f sec\n", (float)t1 / 1000000.0);
 
         
     if (!global_found && !global_found_candidate) {
@@ -622,15 +622,18 @@ int main(int argc, char *argv[]) {
         goto out;
     } 
 
+    if (global_found) {
+        goto out;
+    }
+
     if (enc_len < 4) {
-        printf("skipping phase 2\n");
+        printf("Too few next cmd bytes, skipping phase 2\n");
         goto out;
     }
 
     // reset thread signals
     __sync_fetch_and_add(&global_found, 0);
     __sync_fetch_and_add(&global_found_candidate, 0);
-    t1 = clock();
 
     printf("\n----------- Phase 2 ------------------------\n");
     printf("uid.......... %08x\n", uid);
@@ -662,9 +665,6 @@ int main(int argc, char *argv[]) {
     if (!global_found && !global_found_candidate) {
         printf("\nFailed to find a key\n\n");
     }
-
-    t1 = clock() - t1;
-    printf("execution time %.0f ticks\n", (float)t1);
 
 out:
     // clean up mutex
