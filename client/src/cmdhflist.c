@@ -1290,9 +1290,10 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8
                 MifareAuthState = masNrAr;
                 if (AuthData.first_auth) {
                     AuthData.nt = bytes_to_num(cmd, 4);
+                    AuthData.nt_enc_par = 0;
                 } else {
                     AuthData.nt_enc = bytes_to_num(cmd, 4);
-                    AuthData.nt_enc_par = parity[0];
+                    AuthData.nt_enc_par = parity[0] & 0xF0;
                 }
                 return;
             } else {
@@ -1304,6 +1305,7 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8
                 snprintf(exp, size, "AUTH: nr ar (enc)");
                 MifareAuthState = masAt;
                 AuthData.nr_enc = bytes_to_num(cmd, 4);
+                AuthData.nr_enc_par = parity[0] & 0xF0;
                 AuthData.ar_enc = bytes_to_num(&cmd[4], 4);
                 AuthData.ar_enc_par = parity[0] << 4;
                 return;
@@ -1316,7 +1318,7 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8
                 snprintf(exp, size, "AUTH: at (enc)");
                 MifareAuthState = masAuthComplete;
                 AuthData.at_enc = bytes_to_num(cmd, 4);
-                AuthData.at_enc_par = parity[0];
+                AuthData.at_enc_par = parity[0] & 0xF0;
                 return;
             } else {
                 MifareAuthState = masError;
@@ -1333,6 +1335,17 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8
     if (!isResponse && ((MifareAuthState == masNone) || (MifareAuthState == masError)))
         annotateIso14443a(exp, size, cmd, cmdsize);
 
+}
+
+static void mf_get_paritybinstr(char *s, uint32_t val, uint8_t par) {    
+    uint8_t foo[4] = {0,0,0,0};
+    num_to_bytes(val, sizeof(uint32_t), foo);
+    for (uint8_t i = 0; i < 4; i++) {
+        if (oddparity8(foo[i]) != ((par >> (7 - (i & 0x0007))) & 0x01))
+            sprintf(s++, "1");
+        else 
+            sprintf(s++, "0");
+    }
 }
 
 bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen, const uint64_t *dicKeys, uint32_t dicKeysCount) {
@@ -1428,7 +1441,29 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
 
             //hardnested
             if (!traceCrypto1) {
-                PrintAndLogEx(NORMAL, "hardnested not implemented. uid:%x nt:%x ar_enc:%x at_enc:%x\n", AuthData.uid, AuthData.nt, AuthData.ar_enc, AuthData.at_enc);
+
+                //PrintAndLogEx(NORMAL, "hardnested not implemented. uid:%x nt:%x ar_enc:%x at_enc:%x\n", AuthData.uid, AuthData.nt, AuthData.ar_enc, AuthData.at_enc);
+
+                char snt[5] = {0,0,0,0,0};
+                mf_get_paritybinstr(snt, AuthData.nt_enc, AuthData.nt_enc_par);
+                char sar[5] = {0,0,0,0,0};
+                mf_get_paritybinstr(sar, AuthData.ar_enc, AuthData.ar_enc_par);
+                char sat[5] = {0,0,0,0,0};
+                mf_get_paritybinstr(sat, AuthData.at_enc, AuthData.at_enc_par);
+
+                PrintAndLogEx(NORMAL, "Nested authentication detected. ");
+                PrintAndLogEx(NORMAL, "tools/mf_nonce_brute/mf_nonce_brute %x %x %s %x %x %s %x %s %s\n"
+                    , AuthData.uid
+                    , AuthData.nt_enc
+                    , snt
+                    , AuthData.nr_enc
+                    , AuthData.ar_enc
+                    , sar
+                    , AuthData.at_enc
+                    , sat
+                    , sprint_hex_inrow(cmd, cmdsize)
+                    );
+
                 MifareAuthState = masError;
 
                 /* TOO SLOW( needs to have more strong filter. with this filter - aprox 4 mln tests
