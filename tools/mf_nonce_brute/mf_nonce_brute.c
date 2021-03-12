@@ -75,7 +75,6 @@ uint8_t cmds[8][2] = {
 };
 
 int global_counter = 0;
-int global_fin_flag = 0;
 int global_found = 0;
 int global_found_candidate = 0;
 uint64_t global_candiate_key = 0;
@@ -380,14 +379,12 @@ static void *brute_thread(void *arguments) {
 
     uint32_t p64 = 0;
     uint32_t count;
-    int found = 0;
     // TC == 4  (
     // threads calls 0 ev1 == false
     // threads calls 0,1,2  ev1 == true
     for (count = args->idx; count < 0xFFFF; count += thread_count - 1) {
 
-        found = global_found;
-        if (found) {
+        if (__atomic_load_n(&global_found, __ATOMIC_ACQUIRE) == 1) {
             break;
         }
 
@@ -446,16 +443,17 @@ static void *brute_thread(void *arguments) {
             free(revstate);
 
             if (args->ev1) {
-                printf("\nKey candidate [ " _YELLOW_("%012" PRIx64 )" ]\n\n", key);
+                // if it was EV1,  we know for sure xxxAAAAAAAA recovery
+                printf("\nKey candidate [ " _YELLOW_("....%08" PRIx64 )" ]\n\n", key & 0xFFFFFFFF);
                 __sync_fetch_and_add(&global_found_candidate, 1);
-                __sync_fetch_and_add(&global_candiate_key, key);
             } else {
-                printf("\nValid Key found [ " _GREEN_("%012" PRIx64) " ]\n\n", key);
+                printf("\nKey candidate [ " _GREEN_("....%08" PRIx64) " ]\n\n", key & 0xFFFFFFFF);
                 __sync_fetch_and_add(&global_found, 1);
-                __sync_fetch_and_add(&global_candiate_key, key);
             }
+                __sync_fetch_and_add(&global_candiate_key, key);
             //release lock
             pthread_mutex_unlock(&print_lock);
+            break;
         }
     }
     free(args);
@@ -465,26 +463,20 @@ static void *brute_thread(void *arguments) {
 static void *brute_key_thread(void *arguments) {
 
     struct thread_key_args *args = (struct thread_key_args *) arguments;
-
-    uint64_t key;     // recovered key candidate
-    int found = 0;
-    struct Crypto1State mpcs = {0, 0};
-    struct Crypto1State *pcs = &mpcs;
-
+    uint64_t key;
     uint8_t local_enc[args->enc_len];
     memcpy(local_enc, args->enc, args->enc_len);
 
     for (uint64_t count = args->idx; count < 0xFFFF; count += thread_count) {
 
-        found = global_found;
-        if (found) {
+        if (__atomic_load_n(&global_found, __ATOMIC_ACQUIRE) == 1) {
             break;
         }
 
         key = (count << 32 | args->part_key);
 
         // Init cipher with key
-        pcs = crypto1_create(key);
+        struct Crypto1State *pcs = crypto1_create(key);
 
         // NESTED decrypt nt with help of new key
         crypto1_word(pcs, args->nt_enc ^ args->uid, 1);
@@ -504,7 +496,7 @@ static void *brute_key_thread(void *arguments) {
         if (isOK == false) {        
             continue;
         } 
-        
+
         // lock this section to avoid interlacing prints from different threats
         pthread_mutex_lock(&print_lock);
         printf("\nenc:  %s\n", sprint_hex_inrow_ex(local_enc, args->enc_len, 0));
@@ -512,6 +504,7 @@ static void *brute_key_thread(void *arguments) {
         printf("\nValid Key found [ " _GREEN_("%012" PRIx64) " ]\n\n", key);
         pthread_mutex_unlock(&print_lock);
         __sync_fetch_and_add(&global_found, 1);
+        break;
     }
     free(args);
     return NULL;
@@ -572,7 +565,7 @@ int main(int argc, char *argv[]) {
     printf("at parity err........ %04x\n", at_par_err);
 
     if (argc > 9) {
-    printf("next encrypted cmd... %s\n", sprint_hex_inrow_ex(enc, enc_len ,0));
+        printf("next encrypted cmd... %s\n", sprint_hex_inrow_ex(enc, enc_len ,0));
     }
 
     clock_t t1 = clock();
@@ -627,18 +620,14 @@ int main(int argc, char *argv[]) {
         goto out;
     } 
 
-    if (global_found) {
-        goto out;
-    }
-
     if (enc_len < 4) {
         printf("Too few next cmd bytes, skipping phase 2\n");
         goto out;
     }
 
     // reset thread signals
-    __sync_fetch_and_add(&global_found, 0);
-    __sync_fetch_and_add(&global_found_candidate, 0);
+    global_found = 0;
+    global_found_candidate = 0;
 
     printf("\n----------- " _CYAN_("Phase 2") " ------------------------\n");
     printf("uid.......... %08x\n", uid);
