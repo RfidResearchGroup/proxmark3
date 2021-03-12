@@ -225,6 +225,29 @@ function get_pm3_list_WSL {
     fi
 }
 
+function check_interfering_packages() {
+    # Check for package modemmanager
+    compatible=1
+    package="modemmanager"
+    arch_file=/etc/arch-release
+
+    if [[ -f $arch_file ]]; then
+        if pacman -Qi $package > /dev/null ; then
+            compatible=0
+            echo -e "\e[1;31m[!!] WARNING \e[0m"
+            echo -e "The package \e[1;34m$package\e[0m is installed"
+            echo "Please remove or disable it"
+        fi
+    else
+        if dpkg --get-selections | grep -q "$package[[:space:]]*install$" > /dev/null ; then
+            compatible=0
+            echo -e "\e[1;31m[!!] WARNING \e[0m"
+            echo -e "The package \e[1;34m$package\e[0m is installed"
+            echo "Please remove or disable it"
+        fi
+    fi
+}
+
 SCRIPT=$(basename -- "$0")
 
 if [ "$SCRIPT" = "pm3" ]; then
@@ -478,5 +501,10 @@ EOF
     exit 1
 fi
 
-CMD "${PM3LIST[$((N-1))]}" "$@"
-exit $?
+check_interfering_packages
+if [ ${compatible} -eq 1 ]; then
+    CMD "${PM3LIST[$((N-1))]}" "$@"
+    exit $?
+else
+    exit 1
+fi
