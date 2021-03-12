@@ -19,6 +19,12 @@
 #include "protocol.h"
 #include "iso14443crc.h"
 
+#define AEND  "\x1b[0m"
+#define _RED_(s) "\x1b[31m" s AEND
+#define _GREEN_(s) "\x1b[32m" s AEND
+#define _YELLOW_(s) "\x1b[33m" s AEND
+#define _CYAN_(s) "\x1b[36m" s AEND
+
 #define odd_parity(i) (( (i) ^ (i)>>1 ^ (i)>>2 ^ (i)>>3 ^ (i)>>4 ^ (i)>>5 ^ (i)>>6 ^ (i)>>7 ^ 1) & 0x01)
 
 // a global mutex to prevent interlaced printing from different threads
@@ -412,8 +418,8 @@ static void *brute_thread(void *arguments) {
 #endif
             if (cmd_enc) {
                 uint32_t decrypted = ks4 ^ cmd_enc;
-                printf("CMD enc(%08x)\n", cmd_enc);
-                printf("    dec(%08x)\t", decrypted);
+                printf("CMD enc( %08x )\n", cmd_enc);
+                printf("    dec( %08x )    ", decrypted);
 
                 // check if cmd exists
                 uint8_t isOK = checkValidCmd(decrypted);
@@ -422,12 +428,12 @@ static void *brute_thread(void *arguments) {
                 // Add a crc-check.
                 isOK = checkCRC(decrypted);
                 if (isOK == false) {
-                    printf("<-- not a valid cmd\n");
+                    printf(_RED_("<-- not a valid cmd\n"));
                     pthread_mutex_unlock(&print_lock);
                     free(revstate);
                     continue;
                 } else {
-                    printf("<-- Valid cmd\n");
+                    printf("<-- valid cmd\n");
                 }
             }
 
@@ -440,11 +446,11 @@ static void *brute_thread(void *arguments) {
             free(revstate);
 
             if (args->ev1) {
-                printf("\nKey candidate [ %012" PRIx64 " ]\n\n", key);
+                printf("\nKey candidate [ " _YELLOW_("%012" PRIx64 )" ]\n\n", key);
                 __sync_fetch_and_add(&global_found_candidate, 1);
                 __sync_fetch_and_add(&global_candiate_key, key);
             } else {
-                printf("\nValid Key found [ %012" PRIx64 " ]\n\n", key);
+                printf("\nValid Key found [ " _GREEN_("%012" PRIx64) " ]\n\n", key);
                 __sync_fetch_and_add(&global_found, 1);
                 __sync_fetch_and_add(&global_candiate_key, key);
             }
@@ -503,7 +509,7 @@ static void *brute_key_thread(void *arguments) {
         pthread_mutex_lock(&print_lock);
         printf("\nenc:  %s\n", sprint_hex_inrow_ex(local_enc, args->enc_len, 0));
         printf("dec:  %s\n", sprint_hex_inrow_ex(dec, args->enc_len, 0));                   
-        printf("\nValid Key found [ %012" PRIx64 " ]\n\n", key);
+        printf("\nValid Key found [ " _GREEN_("%012" PRIx64) " ]\n\n", key);
         pthread_mutex_unlock(&print_lock);
         __sync_fetch_and_add(&global_found, 1);
     }
@@ -555,19 +561,18 @@ int main(int argc, char *argv[]) {
         cmd_enc = (enc[0] << 24 | enc[1] << 16 | enc[2] << 8 | enc[3]);
     }
 
-    printf("----------- Phase 1 ------------------------\n");
-    printf("uid............. %08x\n", uid);
-    printf("nt encrypted.... %08x\n", nt_enc);
-    printf("nt parity err... %04x\n", nt_par_err);
-    printf("nr encrypted.... %08x\n", nr_enc);
-    printf("ar encrypted.... %08x\n", ar_enc);
-    printf("ar parity err... %04x\n", ar_par_err);
-    printf("at encrypted.... %08x\n", at_enc);
-    printf("at parity err... %04x\n", at_par_err);
+    printf("----------- " _CYAN_("Phase 1") " ------------------------\n");
+    printf("uid.................. %08x\n", uid);
+    printf("nt encrypted......... %08x\n", nt_enc);
+    printf("nt parity err........ %04x\n", nt_par_err);
+    printf("nr encrypted......... %08x\n", nr_enc);
+    printf("ar encrypted......... %08x\n", ar_enc);
+    printf("ar parity err........ %04x\n", ar_par_err);
+    printf("at encrypted......... %08x\n", at_enc);
+    printf("at parity err........ %04x\n", at_par_err);
 
     if (argc > 9) {
-//        printf("next cmd enc:\t%08x\n\n", cmd_enc);
-        printf("next encrypted cmd: %s\n", sprint_hex_inrow_ex(enc, enc_len ,0));
+    printf("next encrypted cmd... %s\n", sprint_hex_inrow_ex(enc, enc_len ,0));
     }
 
     clock_t t1 = clock();
@@ -584,7 +589,7 @@ int main(int argc, char *argv[]) {
         thread_count = 2;
 #endif  /* _WIN32 */
 
-    printf("\nBruteforce using %zu threads to find encrypted tagnonce last bytes\n", thread_count);
+    printf("\nBruteforce using " _YELLOW_("%zu") " threads to find encrypted tagnonce last bytes\n", thread_count);
 
     pthread_t threads[thread_count];
 
@@ -635,13 +640,13 @@ int main(int argc, char *argv[]) {
     __sync_fetch_and_add(&global_found, 0);
     __sync_fetch_and_add(&global_found_candidate, 0);
 
-    printf("\n----------- Phase 2 ------------------------\n");
+    printf("\n----------- " _CYAN_("Phase 2") " ------------------------\n");
     printf("uid.......... %08x\n", uid);
     printf("partial key.. %08x\n", (uint32_t)(global_candiate_key & 0xFFFFFFFF));
     printf("nt enc....... %08x\n", nt_enc);
     printf("nr enc....... %08x\n", nr_enc);
     printf("next encrypted cmd: %s\n", sprint_hex_inrow_ex(enc, enc_len ,0));
-    printf("\nBruteforce using %zu threads to find upper 16 bits of key\n", thread_count);
+    printf("\nStart bruteforce to find upper 16 bits of key\n");
     fflush(stdout);
 
     // threads
