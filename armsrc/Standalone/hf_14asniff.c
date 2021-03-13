@@ -71,13 +71,13 @@
 static void DownloadTraceInstructions(void) {
     Dbprintf("");
     Dbprintf("To get the trace from flash and display it:");
-    Dbprintf("1. mem spiffs dump o "HF_14ASNIFF_LOGFILE" f trace.trc");
-    Dbprintf("2. trace load trace.trc");
-    Dbprintf("3. trace list 14a 1");
+    Dbprintf("1. mem spiffs dump -s "HF_14ASNIFF_LOGFILE" -d trace.trc");
+    Dbprintf("2. trace load -f trace.trc");
+    Dbprintf("3. trace list -t 14a -1");
 }
 
 void ModInfo(void) {
-    DbpString("hf_14asniff: standalone 'hf 14a sniff', storing in flashmem");
+    DbpString(" ISO14443a sniff, storing in flashmem");
     DownloadTraceInstructions();
 }
 

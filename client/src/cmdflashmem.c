@@ -39,7 +39,10 @@ static int CmdHelp(const char *Cmd);
                   "9337F21C0C066FFB703D8BFCB5067F309E056772096642C2B1A8F50305D5EC33" \
                   "DB7FB5A3C8AC42EB635AE3C148C910750ABAA280CE82DC2F180F49F30A1393B5"
 
+//-------------------------------------------------------------------------------------
+// Sample private RSA Key
 // Following example RSA-1024 keypair, for test purposes  (from common/polarssl/rsa.c)
+
 // private key - Exponent D
 #define RSA_D   "24BF6185468786FDD303083D25E64EFC" \
     "66CA472BC44D253102F8B4A9D3BFA750" \
@@ -136,14 +139,14 @@ static int rdv4_sign_write(uint8_t *signature, uint8_t slen){
         if (!resp.oldarg[0]) {
             PrintAndLogEx(FAILED, "Writing signature ( "_RED_("fail") ")");
         } else {
-            PrintAndLogEx(SUCCESS, "Writing signature ( "_GREEN_("ok") " ) at offset %u", FLASH_MEM_SIGNATURE_OFFSET);
+            PrintAndLogEx(SUCCESS, "Writing signature at offset %u ( "_GREEN_("ok") " )", FLASH_MEM_SIGNATURE_OFFSET);
             return PM3_SUCCESS;
         }
     }
     return PM3_EFAILED;
 }
 
-static int CmdFlashmemSpiBaudrate(const char *Cmd) {
+static int CmdFlashmemSpiBaud(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "mem baudrate",
@@ -352,6 +355,7 @@ static int CmdFlashMemDump(const char *Cmd) {
         arg_int0("l", "len", "<dec>", "length"),
         arg_lit0("v", "view", "view dump"),
         arg_strx0("f", "file", "<filename>", "file name"),
+        arg_int0("c", "cols", "<dec>", "column breaks (def 32)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -362,6 +366,7 @@ static int CmdFlashMemDump(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    int breaks = arg_get_int_def(ctx, 5, 32);
     CLIParserFree(ctx);
 
     uint8_t *dump = calloc(len, sizeof(uint8_t));
@@ -379,7 +384,7 @@ static int CmdFlashMemDump(const char *Cmd) {
 
     if (view) {
         PrintAndLogEx(INFO, "---- " _CYAN_("data") " ---------------");
-        print_hex_break(dump, len, 32);
+        print_hex_break(dump, len, breaks);
     }
 
     if (filename[0] != '\0') {
@@ -445,29 +450,39 @@ static int CmdFlashMemInfo(const char *Cmd) {
     CLIParserInit(&ctx, "mem info",
                   "Collect signature and verify it from flash memory",
                   "mem info"
-//                  "mem info -s"
+//                  "mem info -s -d 0102030405060708"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-//        arg_lit0("s", NULL, "create a signature"),
-//        arg_lit0("w", NULL, "write signature to flash memory"),
+        arg_lit0("s", "sign", "create a signature"),
+        arg_str0("d", NULL, "<hex>", "flash memory id, 8 hex bytes"),
+//        arg_lit0("w", "write", "write signature to flash memory"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool shall_sign = false, shall_write = false;
-//    shall_sign = arg_get_lit(ctx, 1);
-//    shall_write = arg_get_lit(ctx, 2);
+    shall_sign = arg_get_lit(ctx, 1);
+
+    int dlen = 0;
+    uint8_t id[8] = {0};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), id, sizeof(id), &dlen);
+
+//    shall_write = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    // validate signature data
+    if (dlen > 0 && dlen < sizeof(id) ) {
+        PrintAndLogEx(FAILED, "Error parsing flash memory id, expect 8, got %d", dlen);
+        return PM3_EINVARG;
+    }
+
+    // validate devicesignature data
     rdv40_validation_t mem;
-    int res = rdv4_get_signature(&mem);
+    res = rdv4_get_signature(&mem);
     if (res != PM3_SUCCESS) {        
         return res;
     }
-
     res = rdv4_validate(&mem);
 
     // Flash ID hash (sha1)
@@ -479,6 +494,11 @@ static int CmdFlashMemInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "--- " _CYAN_("Flash memory Information") " ---------");
     PrintAndLogEx(INFO, "ID................... %s", sprint_hex_inrow(mem.flashid, sizeof(mem.flashid)));
     PrintAndLogEx(INFO, "SHA1................. %s", sprint_hex_inrow(sha_hash, sizeof(sha_hash)));
+    PrintAndLogEx(
+        (res == PM3_SUCCESS) ? SUCCESS : FAILED,
+        "Signature............ ( %s )",
+        (res == PM3_SUCCESS) ?  _GREEN_("ok") : _RED_("fail")
+    );
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("RDV4 RSA signature") " ---------------");
     for (int i = 0; i < (sizeof(mem.signature) / 32); i++) {
@@ -520,12 +540,20 @@ static int CmdFlashMemInfo(const char *Cmd) {
     PrintAndLogEx(INFO, " %.64s", str_pk + 192);
     PrintAndLogEx(NORMAL, "");
 
-    bool is_keyok = (mbedtls_rsa_check_pubkey(&rsa) == 0 || mbedtls_rsa_check_privkey(&rsa) == 0);
+    bool is_keyok = (mbedtls_rsa_check_pubkey(&rsa) == 0);
     PrintAndLogEx(
         (is_keyok) ? SUCCESS : FAILED,
-        "RSA key validation...  ( %s )",
+        "RSA public key validation.... ( %s )",
         (is_keyok) ?  _GREEN_("ok") : _RED_("fail")
     );
+
+    is_keyok = (mbedtls_rsa_check_privkey(&rsa) == 0);
+    PrintAndLogEx(
+        (is_keyok) ? SUCCESS : FAILED,
+        "RSA private key validation... ( %s )",
+        (is_keyok) ?  _GREEN_("ok") : _RED_("fail")
+    );
+
 
     // to be verified
     uint8_t from_device[RRG_RSA_KEY_LEN];
@@ -537,6 +565,13 @@ static int CmdFlashMemInfo(const char *Cmd) {
 
     // Signing (private key)
     if (shall_sign) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("Enter signing") " --------------------");
+
+        if (dlen == 8) {
+           mbedtls_sha1(id, sizeof(id), sha_hash);
+        }
+        PrintAndLogEx(INFO, "Signing %s", sprint_hex_inrow(sha_hash, sizeof(sha_hash)));
 
         int is_signed = mbedtls_rsa_pkcs1_sign(&rsa, NULL, NULL, MBEDTLS_RSA_PRIVATE, MBEDTLS_MD_SHA1, 20, sha_hash, sign);
         PrintAndLogEx(
@@ -555,27 +590,30 @@ static int CmdFlashMemInfo(const char *Cmd) {
     }
 
     // Verify (public key)
-    int is_verified = mbedtls_rsa_pkcs1_verify(&rsa, NULL, NULL, MBEDTLS_RSA_PUBLIC, MBEDTLS_MD_SHA1, 20, sha_hash, from_device);
+    bool is_verified = (mbedtls_rsa_pkcs1_verify(&rsa, NULL, NULL, MBEDTLS_RSA_PUBLIC, MBEDTLS_MD_SHA1, 20, sha_hash, from_device) == 0);
     mbedtls_rsa_free(&rsa);
 
     PrintAndLogEx(
-        (is_verified == 0) ? SUCCESS : FAILED,
-        "RSA verification.....  ( %s )",
-        (is_verified == 0) ?  _GREEN_("ok") : _RED_("fail")
+        (is_verified) ? SUCCESS : FAILED,
+        "RSA verification..... ( %s )",
+        (is_verified) ?  _GREEN_("ok") : _RED_("fail")
     );
+    if (is_verified) {
+        PrintAndLogEx(SUCCESS, "Genuine Proxmark3 RDV4 signature detected");
+    }
 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,            AlwaysAvailable, "This help"},
-    {"baudrate", CmdFlashmemSpiBaudrate, IfPm3Flash,  "Set Flash memory Spi baudrate"},
-    {"spiffs",  CmdFlashMemSpiFFS,  IfPm3Flash,      "High level SPI FileSystem Flash manipulation"},
-    {"info",    CmdFlashMemInfo,    IfPm3Flash,      "Flash memory information"},
-    {"load",    CmdFlashMemLoad,    IfPm3Flash,      "Load data into flash memory"},
-    {"dump",    CmdFlashMemDump,    IfPm3Flash,      "Dump data from flash memory"},
-    {"wipe",    CmdFlashMemWipe,    IfPm3Flash,      "Wipe data from flash memory"},
+    {"spiffs",   CmdFlashMemSpiFFS,  IfPm3Flash,  "{ SPI File system }"},
+    {"help",     CmdHelp,            AlwaysAvailable, "This help"},
+    {"baudrate", CmdFlashmemSpiBaud, IfPm3Flash,  "Set Flash memory Spi baudrate"},
+    {"dump",     CmdFlashMemDump,    IfPm3Flash,  "Dump data from flash memory"},
+    {"info",     CmdFlashMemInfo,    IfPm3Flash,  "Flash memory information"},
+    {"load",     CmdFlashMemLoad,    IfPm3Flash,  "Load data to flash memory"},
+    {"wipe",     CmdFlashMemWipe,    IfPm3Flash,  "Wipe data from flash memory"},
     {NULL, NULL, NULL, NULL}
 };
 

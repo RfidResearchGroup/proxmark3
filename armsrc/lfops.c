@@ -2639,7 +2639,7 @@ void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
 
     SendForward(len, false);
 
-    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
         StopTicks();
         reply_ng(CMD_LF_EM4X_WRITEWORD, PM3_ETEAROFF, NULL, 0);
     } else {
@@ -2681,7 +2681,7 @@ void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd) {
 
     SendForward(len, false);
 
-    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
         StopTicks();
         reply_ng(CMD_LF_EM4X_PROTECTWORD, PM3_ETEAROFF, NULL, 0);
     } else {

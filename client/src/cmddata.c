@@ -251,15 +251,7 @@ static int usage_data_buffclear(void) {
     PrintAndLogEx(NORMAL, "       h              This help");
     return PM3_SUCCESS;
 }
-static int usage_data_fsktonrz(void) {
-    PrintAndLogEx(NORMAL, "Usage: data fsktonrz c <clock> l <fc_low> f <fc_high>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h            This help");
-    PrintAndLogEx(NORMAL, "       c <clock>    enter the a clock (omit to autodetect)");
-    PrintAndLogEx(NORMAL, "       l <fc_low>   enter a field clock (omit to autodetect)");
-    PrintAndLogEx(NORMAL, "       f <fc_high>  enter a field clock (omit to autodetect)");
-    return PM3_SUCCESS;
-}
+
 
 //set the demod buffer with given array of binary (one bit per byte)
 //by marshmellow
@@ -2295,36 +2287,27 @@ static int FSKToNRZ(int *data, size_t *dataLen, uint8_t clk, uint8_t LowToneFC, 
 }
 
 static int CmdFSKToNRZ(const char *Cmd) {
-    // take clk, fc_low, fc_high
-    //   blank = auto;
-    bool errors = false;
-    char cmdp = 0;
-    int  clk = 0, fc_low = 10, fc_high = 8;
-    while (param_getchar(Cmd, cmdp) != 0x00) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_data_fsktonrz();
-            case 'c':
-                clk = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'f':
-                fc_high = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'l':
-                fc_low = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-        if (errors) break;
-    }
-    //Validations
-    if (errors) return usage_data_fsktonrz();
+ 
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data fsktonrz",
+                  "Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)\n"
+                  "Omitted values are autodetect instead",
+                  "data fsktonrz\n"
+                  "data fsktonrz -c 32 --low 8 --hi 10");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("c", "clk", "<dec>", "clock"),
+        arg_int0(NULL, "low", "<dec>", "low field clock"),
+        arg_int0(NULL, "hi", "<dec>", "high field clock"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int clk = arg_get_int_def(ctx, 1, 0);
+    int fc_low = arg_get_int_def(ctx, 2, 0);
+    int fc_high = arg_get_int_def(ctx, 3, 0);
+    CLIParserFree(ctx);
 
     setClockGrid(0, 0);
     DemodBufferLen = 0;
@@ -2567,10 +2550,8 @@ static command_t CommandTable[] = {
     {"shiftgraphzero",  CmdGraphShiftZero,       AlwaysAvailable,  "<shift> -- Shift 0 for Graphed wave + or - shift value"},
     {"timescale",       CmdTimeScale,            AlwaysAvailable,  "Set a timescale to get a differential reading between the yellow and purple markers as time duration\n"},
     {"zerocrossings",   CmdZerocrossings,        AlwaysAvailable,  "Count time between zero-crossings"},
-
     {"convertbitstream", CmdConvertBitStream,    AlwaysAvailable,  "Convert GraphBuffer's 0/1 values to 127 / -127"},
     {"getbitstream",    CmdGetBitStream,         AlwaysAvailable,  "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
-
 
     {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},
     {"bin2hex",         Cmdbin2hex,              AlwaysAvailable,  "Converts binary to hexadecimal"},

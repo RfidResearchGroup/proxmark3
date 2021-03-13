@@ -85,7 +85,7 @@ Example with parity (from this trace http://www.proxmark.org/forum/viewtopic.php
 ```
 =>
 ```
-./mf_nonce_brute 9c599b32 82a4166c 0000 a1e458ce 6eea41e0 0101 5cadf439 1001 3e709c8a
+./mf_nonce_brute 9c599b32 82a4166c 0000 a1e458ce 6eea41e0 0101 5cadf439 1001 8e0e5db9  
                  |        |        |    |        |        |    |        |    |
                  +UID     +nt_enc  |    +nr_enc  +ar_enc  |    +at_enc  |    +encrypted next cmd
                                    +nt_par_err            +at_par_err   +at_par_err

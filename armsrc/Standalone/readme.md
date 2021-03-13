@@ -77,6 +77,7 @@ If your mode is using one of the unique features of the RDV4, add it to the prop
 ```
 STANDALONE_MODES_REQ_SMARTCARD :=
 STANDALONE_MODES_REQ_FLASH :=
+STANDALONE_MODES_REQ_BT :=
 ```
 
 ## Update MAKEFILE.INC

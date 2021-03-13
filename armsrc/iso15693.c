@@ -1477,7 +1477,7 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
     tosend_t *ts = get_tosend();
     TransmitTo15693Tag(ts->buf, ts->max, &start_time);
 
-    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
 
         res = PM3_ETEAROFF;
 
@@ -1598,7 +1598,7 @@ void ReaderIso15693(uint32_t parameter) {
     uint32_t eof_time;
     int recvlen = SendDataTag(cmd, sizeof(cmd), true, true, answer, ISO15693_MAX_RESPONSE_LENGTH, start_time, ISO15693_READER_TIMEOUT, &eof_time);
 
-    if (recvlen == PM3_ETEAROFF) { // tearoff occured
+    if (recvlen == PM3_ETEAROFF) { // tearoff occurred
         reply_mix(CMD_ACK, recvlen, 0, 0, NULL, 0);
     } else {
 
@@ -1928,7 +1928,7 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
     uint32_t start_time = 0;
     int recvlen = SendDataTag(data, datalen, true, speed, (recv ? recvbuf : NULL), sizeof(recvbuf), start_time, timeout, &eof_time);
 
-    if (recvlen == PM3_ETEAROFF) { // tearoff occured
+    if (recvlen == PM3_ETEAROFF) { // tearoff occurred
         reply_mix(CMD_ACK, recvlen, 0, 0, NULL, 0);
     } else {
 

@@ -118,16 +118,6 @@ static void verify_values(uint64_t *animalid, uint32_t *countryid, uint32_t *ext
     }
 }
 
-static inline uint32_t bitcount(uint32_t a) {
-#if defined __GNUC__
-    return __builtin_popcountl(a);
-#else
-    a = a - ((a >> 1) & 0x55555555);
-    a = (a & 0x33333333) + ((a >> 2) & 0x33333333);
-    return (((a + (a >> 4)) & 0x0f0f0f0f) * 0x01010101) >> 24;
-#endif
-}
-
 // FDX-B ISO11784/85 demod  (aka animal tag)  BIPHASE, inverted, rf/32,  with preamble of 00000000001 (128bits)
 // 8 databits + 1 parity (1)
 // CIITT 16 chksum
@@ -594,7 +584,7 @@ int demodFDXB(bool verbose) {
 
     uint8_t bt_par = (extended & 0x100) >> 8;
     uint8_t bt_temperature = extended & 0xff;
-    uint8_t bt_calc_parity = (bitcount(bt_temperature) & 0x1) ? 0 : 1;
+    uint8_t bt_calc_parity = (bitcount32(bt_temperature) & 0x1) ? 0 : 1;
     uint8_t is_bt_temperature = (bt_calc_parity == bt_par) && !(extended & 0xe00) ;
 
     if (is_bt_temperature) {

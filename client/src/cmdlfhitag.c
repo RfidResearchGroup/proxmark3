@@ -113,19 +113,6 @@ static int usage_hitag_writer(void) {
     PrintAndLogEx(NORMAL, "      27  <password> <page> <byte0...byte3>  Write page, password mode. Default: 4D494B52 (\"MIKR\")");
     return PM3_SUCCESS;
 }
-static int usage_hitag_checkchallenges(void) {
-    PrintAndLogEx(NORMAL, "Check challenges, load a file with save hitag crypto challenges and test them all.");
-    PrintAndLogEx(NORMAL, "The file should be 8 * 60 bytes long,  the file extension defaults to " _YELLOW_("`.cc`"));
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:   lf hitag cc [h] f <filename w/o extension>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h              This help");
-    PrintAndLogEx(NORMAL, "       f <filename>   Load data from BIN file");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         lf hitag cc f lf-hitag-challenges");
-    return PM3_SUCCESS;
-}
 
 static int CmdLFHitagList(const char *Cmd) {
     char args[128] = {0};
@@ -614,50 +601,46 @@ static int CmdLFHitagReader(const char *Cmd) {
 
 static int CmdLFHitagCheckChallenges(const char *Cmd) {
 
-    char filename[FILE_PATH_SIZE] = { 0x00 };
-    size_t datalen = 0;
-    int res = 0;
-    bool file_given = false;
-    bool errors = false;
-    uint8_t cmdp = 0;
-    uint8_t *data = calloc(8 * 60, sizeof(uint8_t));
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hitag cc",
+                  "Check challenges, load a file with saved hitag crypto challenges and test them all.\n"
+                  "The file should be 8 * 60 bytes long, the file extension defaults to " _YELLOW_("`.cc`") " ",
+                  "lf hitag cc -f my_hitag_challenges"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                free(data);
-                return usage_hitag_checkchallenges();
-            case 'f':
-                //file with all the challenges to try
-                param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                res = loadFile(filename, ".cc", data, 8 * 60, &datalen);
-                if (res > 0) {
-                    errors = true;
-                    break;
-                }
-                file_given = true;
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "filename", "<fn w/o ext>", "filename to load from"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    //Validations
-    if (errors || strlen(Cmd) == 0) {
-        free(data);
-        return usage_hitag_checkchallenges();
-    }
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    CLIParserFree(ctx);
 
     clearCommandBuffer();
-    if (file_given)
-        SendCommandOLD(CMD_LF_HITAGS_TEST_TRACES, 1, 0, 0, data, datalen);
-    else
-        SendCommandMIX(CMD_LF_HITAGS_TEST_TRACES, 0, 0, 0, NULL, 0);
 
-    free(data);
+    if (fnlen > 0) {
+        uint8_t *data = NULL;
+        size_t datalen = 0;
+        int res = loadFile_safe(filename, ".cc", (void **)&data, &datalen);
+        if (res == PM3_SUCCESS) {
+            if (datalen == (8 * 60) ) {
+                SendCommandOLD(CMD_LF_HITAGS_TEST_TRACES, 1, 0, 0, data, datalen);
+            } else {
+                PrintAndLogEx(ERR, "Error, file length mismatch. Expected %d, got %d", 8*60, datalen);
+            }                   
+        }
+        if (data) {
+            free(data);
+        }
+    } else {
+        SendCommandMIX(CMD_LF_HITAGS_TEST_TRACES, 0, 0, 0, NULL, 0);
+    }
+
     return PM3_SUCCESS;
 }
 

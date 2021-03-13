@@ -2972,7 +2972,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
             }
         }
 
-        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
             FpgaDisableTracing();
             reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
         } else {

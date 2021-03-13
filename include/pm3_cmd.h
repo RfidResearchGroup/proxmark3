@@ -384,6 +384,15 @@ typedef struct {
     bool off;
 } PACKED tearoff_params_t;
 
+// when writing to SPIFFS
+typedef struct {
+    bool append : 1;
+    uint16_t bytes_in_packet : 15;
+    uint8_t fnlen;
+    uint8_t fn[32];
+    uint8_t data[];
+} PACKED flashmem_write_t;
+
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
 //#define CMD_SETUP_WRITE                                                   0x0001
@@ -564,6 +573,8 @@ typedef struct {
 #define CMD_LF_HITAGS_SIMULATE                                            0x0368
 #define CMD_LF_HITAGS_READ                                                0x0373
 #define CMD_LF_HITAGS_WRITE                                               0x0375
+
+#define CMD_LF_HITAG_ELOAD                                                0x0376
 
 #define CMD_HF_ISO14443A_ANTIFUZZ                                         0x0380
 #define CMD_HF_ISO14443B_SIMULATE                                         0x0381

@@ -1,5 +1,4 @@
 clear
-pref
 analyse foo
 data biphaserawdecode
 data detectclock
@@ -32,7 +31,6 @@ data print
 data samples
 data setdebugmode
 data tune
-hf 14b sriwrite
 hf 15 dump
 hf 15 info
 hf 15 raw
@@ -85,21 +83,6 @@ hf mf cview
 hf mf gen3uid
 hf mf gen3blk
 hf mf gen3freeze
-lf em 410x
-lf em 4x05
-lf em 4x50
-lf em 4x70
 lf hitag reader
-lf hitag sim
 lf hitag writer
 lf hitag dump
-lf hitag cc
-lf t55xx config
-lf t55xx dump
-lf t55xx info
-lf t55xx read
-lf t55xx resetread
-lf t55xx restore
-lf t55xx trace
-lf t55xx write
-script run

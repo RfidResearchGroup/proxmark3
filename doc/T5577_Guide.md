@@ -1,8 +1,9 @@
 # T5577 Introduction Guide
 
-### Based on RRG proxmark3 fork.
+### Based on RRG/Iceman Proxmark3 repo
 
 ### Ver.1 8 Sep 2019
+### Ver.2 7 March 2021
 
 | Contents                                                                            |
 | ----------------------------------------------------------------------------------- |
@@ -23,17 +24,17 @@
 
 ## Introduction
 
-The T5577 is a generic LF (Low Frequency) RFID card the is used in the
+The T5577 is a generic LF (Low Frequency) RFID card that is used in the
 125 Khz frequency space. It is a good card to use to learn about RFID and
 learn how to use the proxmark3.
 
-It is highly recommend that when learning about RFID that learning how
+It is highly recommended that when learning about RFID that learning how
 to read the data sheets be near the top of the list. It can be very hard
 as the data sheet will hold the information you need, but you don’t yet
 know what it means. As such, I will attempt to point to sections of the
 data sheet and would highly advise that you look at the data sheet as
 you go. Overtime the data sheet may change, as a result things may not
-always be reference correctly.
+always be referenced correctly.
 
 As at writing this guide, the data sheet can be found at :
 
@@ -63,9 +64,9 @@ the chip how to behave.
 
 ## What data is on my T5577
 
-Let’s have a look and see what a card might look in the proxmark3
+Let’s have a look and see what a card might look like in the proxmark3
 software. Since we can change the configuration of how the T5577 will
-output data, the proxmark3 software need to work out how to interpreted
+output data, the proxmark3 software needs to work out how to interpret
 the data it receives, we do this with the following command.
 
 It should be noted that the T5577 has many clones. As such the default
@@ -77,16 +78,18 @@ examples shown, it will be assumed you have run the detect command.
 ```
 [usb] pm3 --> lf t55xx detect
 ```
-You should see a results simular to the following:
+You should see a results similar to the following:
 ```
-    Chip Type      : T55x7
-    Modulation     : ASK
-    Bit Rate       : 2 - RF/32
-    Inverted       : No
-    Offset         : 32
-    Seq. Term.     : Yes
-    Block0         : 0x000880E0
-    Downlink Mode  : default/fixed bit length
+    [=]  Chip type......... T55x7                    
+    [=]  Modulation........ ASK                      
+    [=]  Bit rate.......... 2 - RF/32                
+    [=]  Inverted.......... No                       
+    [=]  Offset............ 33                       
+    [=]  Seq. terminator... Yes                      
+    [=]  Block0............ 000880E0 (auto detect)   
+    [=]  Downlink mode..... default/fixed bit length 
+    [=]  Password set...... No                       
+
 ```
 Now that the proxmark3 has detected a T55x7 chip, and found some
 information about it, we should be able to see all the data on the chip.
@@ -99,20 +102,20 @@ Your results should look similar to the following:
 [+] blk | hex data | binary                           | ascii
 [+] ----+----------+----------------------------------+-------
 [+]  00 | 000880E0 | 00000000000010001000000011100000 | ....
-[+]  01 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  02 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  03 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  04 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  05 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  06 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  07 | FFFFFFFF | 11111111111111111111111111111111 | ....
+[+]  01 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  02 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  03 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  04 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  05 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  06 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  07 | 00000000 | 00000000000000000000000000000000 | ....
 [+] Reading Page 1:
 [+] blk | hex data | binary                           | ascii
 [+] ----+----------+----------------------------------+-------
 [+]  00 | 000880E0 | 00000000000010001000000011100000 | ....
-[+]  01 | E0150A48 | 11100000000101010000101001001000 | ...H
-[+]  02 | 2D782308 | 00101101011110000010001100001000 | -x#.
-[+]  03 | FFFFFFFF | 11111111111111111111111111111111 | ....
+[+]  01 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  02 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  03 | 00000000 | 00000000000000000000000000000000 | ....
 ```
 I will cover the meaning of this data as we go, but for now, lets keep
 it simple.
@@ -123,7 +126,7 @@ The basic function of using the proxmark3 with rfid cards is to read and
 write data. This reading and writing must be done in the correct way
 needed for the chip (and its configuration). Lucky for us, the
 developers have done a great job and gave us commands. What we need to
-know is that with the T5577 data is read/written one complete block at a
+know is that with the T5577, data is read/written one complete block at a
 time. Each block holds 32 bits of data (hence the binary output shown)  
   
 Since we know that the card has data and configuration blocks, lets say
@@ -140,23 +143,23 @@ can see the card)
     as, run a low frequency (lf) command for the T55xx chip (t55xx) and
     read block (b) number 1.
     ```
-    [usb] pm3 --> lf t55xx read b 1
+    [usb] pm3 --> lf t55xx read -b 1
     ```
     result:
     ```
     [+] Reading Page 0:
     [+] blk | hex data | binary                           | ascii
     [+] ----+----------+----------------------------------+-------
-    [+]  01 | FFFFFFFF | 11111111111111111111111111111111 | ....
+    [+]  01 | 00000000 | 00000000000000000000000000000000 | ....
     ```
-    Note: Depending on the history of your card your data may vary, but
+    Note: Depending on the history of your card, your data may vary, but
     should match the dump data.
 
 2)  Write some new data into block 1 on the card.
 
-    We use the d option to supply the data ‘12345678’
+    We use the -d option to supply the data ‘12345678’
     ```
-    [usb] pm3 --> lf t55xx write b 1 d 12345678
+    [usb] pm3 --> lf t55xx write -b 1 -d 12345678
     ```
     result:
     ```
@@ -164,7 +167,7 @@ can see the card)
     ```
 3)  Now, lets check if the data was written.
     ```
-    [usb] pm3 --> lf t55xx read b 1
+    [usb] pm3 --> lf t55xx read -b 1
     ```
     result:
     ```
@@ -174,8 +177,8 @@ can see the card)
     [+]  01 | 12345678 | 00010010001101000101011001111000 | .4Vx
     ```
 4)  The data is written in Hexadecimal. A single hex digit holds 4 bits
-    of data. So to store 32 bits in a block we need to supply 8 hex
-    digits (8 \* 4 = 32). If you are familiar with hex and binary do a
+    of data. So to store 32 bits in a block, we need to supply 8 hex
+    digits (8 \* 4 = 32). If you are not familiar with hex and binary do a
     little bit of home work to learn. The following is a quick start.
     
     | Hex | Binary | Decimal |
@@ -202,7 +205,7 @@ can see the card)
 
     Lets try and write 89ABCDEF
     ```
-    [usb] pm3 --> lf t55xx write b 1 d 89abcdef
+    [usb] pm3 --> lf t55xx write -b 1 -d 89abcdef
     ```
     result:
     ```
@@ -210,7 +213,7 @@ can see the card)
     ```
     and check
     ```
-    [usb] pm3 --> lf t55xx read b 1
+    [usb] pm3 --> lf t55xx read -b 1
     ```
     result:
     ```
@@ -235,31 +238,34 @@ result:
 [+] ----+----------+----------------------------------+-------
 [+]  00 | 000880E0 | 00000000000010001000000011100000 | ....
 [+]  01 | 89ABCDEF | 10001001101010111100110111101111 | ....
-[+]  02 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  03 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  04 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  05 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  06 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  07 | FFFFFFFF | 11111111111111111111111111111111 | ....
+[+]  02 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  03 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  04 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  05 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  06 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  07 | 00000000 | 00000000000000000000000000000000 | ....
 [+] Reading Page 1:
 [+] blk | hex data | binary                           | ascii
 [+] ----+----------+----------------------------------+-------
 [+]  00 | 000880E0 | 00000000000010001000000011100000 | ....
-[+]  01 | E0150A48 | 11100000000101010000101001001000 | ...H
-[+]  02 | 2D782308 | 00101101011110000010001100001000 | -x#.
-[+]  03 | FFFFFFFF | 11111111111111111111111111111111 | ....
+[+]  01 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  02 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  03 | 00000000 | 00000000000000000000000000000000 | ....
 ```
 
-Practice reading and writing to blocks 1 to 7 until you are happy you
+Practice reading and writing to blocks 1 to 6 until you are happy you
 can do it and get the results you wanted (i.e. the data you want stored
-is written to the block you want it stored in).
+is written to the block you want it stored in).  I recommend staying
+away from block 7 as this is where the password is stored, if used.
+If you forget this data/password, you wont be able to read or write
+to the card.
 
 ## How do I use a password
 
 This can be a little tricky for beginners. 
 ***If you forget your password you will lose access to your card***.
 
-To tell the T5577 to use a password we have to change the data in the
+To tell the T5577 to use a password, we have to change the data in the
 configuration block (0). To help learn this and make it as simple as I
 can, please read and follow exactly. If your results DON’T match 100% as
 required, please do not proceed.
@@ -272,9 +278,10 @@ required, please do not proceed.
     ```
     Result:
     ```
-    [=] Begin wiping T55x7 tag
+    [=] Target T55x7 tag
+    [=] Default configuration block 000880E0
 
-    [=] Default configation block 000880E0
+    [=] Begin wiping...
     [=] Writing page 0  block: 00  data: 0x000880E0
     [=] Writing page 0  block: 01  data: 0x00000000
     [=] Writing page 0  block: 02  data: 0x00000000
@@ -291,14 +298,15 @@ required, please do not proceed.
     ```
     result:
     ```
-        Chip Type      : T55x7
-        Modulation     : ASK
-        Bit Rate       : 2 - RF/32
-        Inverted       : No
-        Offset         : 32
-        Seq. Term.     : Yes
-        Block0         : 0x000880E0
-        Downlink Mode  : default/fixed bit length
+    [=]  Chip type......... T55x7                   
+    [=]  Modulation........ ASK                     
+    [=]  Bit rate.......... 2 - RF/32               
+    [=]  Inverted.......... No                      
+    [=]  Offset............ 33                      
+    [=]  Seq. terminator... Yes                     
+    [=]  Block0............ 000880E0 (auto detect)  
+    [=]  Downlink mode..... default/fixed bit length
+    [=]  Password set...... No                      
     ```
     
     If block 0 does not hold the hex data **0x00088040 resolve this
@@ -309,7 +317,7 @@ required, please do not proceed.
 
     The password is saved in block 7 of page 0.
     ```
-    [usb] pm3 --> lf t55xx write b 7 d 12345678
+    [usb] pm3 --> lf t55xx write -b 7 -d 12345678
     ```
     result:
     ```
@@ -326,20 +334,20 @@ required, please do not proceed.
     [+] blk | hex data | binary                           | ascii
     [+] ----+----------+----------------------------------+-------
     [+]  00 | 000880E0 | 00000000000010001000000011100000 | ....
-    [+]  01 | FFFFFFFF | 11111111111111111111111111111111 | ....
-    [+]  02 | FFFFFFFF | 11111111111111111111111111111111 | ....
-    [+]  03 | FFFFFFFF | 11111111111111111111111111111111 | ....
-    [+]  04 | FFFFFFFF | 11111111111111111111111111111111 | ....
-    [+]  05 | FFFFFFFF | 11111111111111111111111111111111 | ....
-    [+]  06 | FFFFFFFF | 11111111111111111111111111111111 | ....
+    [+]  01 | 00000000 | 00000000000000000000000000000000 | ....
+    [+]  02 | 00000000 | 00000000000000000000000000000000 | ....
+    [+]  03 | 00000000 | 00000000000000000000000000000000 | ....
+    [+]  04 | 00000000 | 00000000000000000000000000000000 | ....
+    [+]  05 | 00000000 | 00000000000000000000000000000000 | ....
+    [+]  06 | 00000000 | 00000000000000000000000000000000 | ....
     [+]  07 | 12345678 | 00010010001101000101011001111000 | .4Vx
     [+] Reading Page 1:
     [+] blk | hex data | binary                           | ascii
     [+] ----+----------+----------------------------------+-------
     [+]  00 | 000880E0 | 00000000000010001000000011100000 | ....
-    [+]  01 | E0150A48 | 11100000000101010000101001001000 | ...H
-    [+]  02 | 2D782308 | 00101101011110000010001100001000 | -x#.
-    [+]  03 | FFFFFFFF | 11111111111111111111111111111111 | ....
+    [+]  01 | 00000000 | 00000000000000000000000000000000 | ....
+    [+]  02 | 00000000 | 00000000000000000000000000000000 | ....
+    [+]  03 | 00000000 | 00000000000000000000000000000000 | ....
     ```
     ***Important : If block 0 and block 7 don’t match exactly, do not continue.***
 
@@ -353,7 +361,7 @@ required, please do not proceed.
     ![](./t55xx_block0.png)
     
     We will cover other things in the configuration later. But the key
-    note here is we ONLY want to change bit 28 and nothing else.
+    note here, is we ONLY want to change bit 28 and nothing else.
     
     Current Block 0 : ***00088040***  
     New Block 0     : ***00088050***
@@ -361,7 +369,7 @@ required, please do not proceed.
     To understand what happened to get from 00088040 to 00088050 we need
     to look at the binary data.
     
-    While this can be confusing it is important to understand this as we
+    While this can be confusing, it is important to understand this as we
     do more advanced things.
     
     Bit Location (28)  
@@ -375,7 +383,7 @@ required, please do not proceed.
     
     
 
-    See how in the above we change the bit in location 28 from a 0 to 1  
+    See how in the above we changed the bit in location 28 from a 0 to 1  
     0 = No Password, 1 = Use Password
 
     Note how we did NOT change any other part of the configuration, only bit 28.
@@ -389,7 +397,7 @@ required, please do not proceed.
     If you have completed all steps and have the exact same results, we are
     ready to apply the new configuration.
     ```
-    [usb] pm3 --> lf t55xx write b 0 d 00088050
+    [usb] pm3 --> lf t55xx write -b 0 -d 00088050
     ```
     result:
     ```
@@ -410,25 +418,27 @@ required, please do not proceed.
     card.
     
     Lets try again, but this time supply the password. We use the option
-    p followed by the password.
+    -p followed by the password.
     ```
-    [usb] pm3 --> lf t55 detect p 12345678
+    [usb] pm3 --> lf t55 detect -p 12345678
     ```
     result:
     ```
-        Chip Type      : T55x7
-        Modulation     : ASK
-        Bit Rate       : 2 - RF/32
-        Inverted       : No
-        Offset         : 32
-        Seq. Term.     : Yes
-        Block0         : 0x00088050
-        Downlink Mode  : default/fixed bit length
+    [=]  Chip type......... T55x7
+    [=]  Modulation........ ASK
+    [=]  Bit rate.......... 2 - RF/32
+    [=]  Inverted.......... No
+    [=]  Offset............ 33
+    [=]  Seq. terminator... Yes
+    [=]  Block0............ 00088050 (auto detect)
+    [=]  Downlink mode..... default/fixed bit length
+    [=]  Password set...... Yes
+    [=]  Password.......... 12345678
     ```
     
 7)  Write a block of data with a password
     ```
-    [usb] pm3 --> lf t55xx write b 1 d 1234abcd p 12345678
+    [usb] pm3 --> lf t55xx write -b 1 -d 1234abcd -p 12345678
     ```
     result:
     ```
@@ -445,7 +455,7 @@ required, please do not proceed.
     
     The proxmark3 has a safety check\!
     ```
-    [usb] pm3 --> lf t55xx read b 1 p 12345678
+    [usb] pm3 --> lf t55xx read -b 1 -p 12345678
     ```
     result:
     ```
@@ -455,12 +465,12 @@ required, please do not proceed.
     [!] Safety check: Could not detect if PWD bit is set in config block. Exits.
     ```
     
-    Note that the proxmark3 did not read the block, the safty kicked in
-    and wants us to confirm by supply the override option ‘o’.
+    Note that the proxmark3 did not read the block, the safety kicked in
+    and wants us to confirm by supply the override option ‘-o’.
 
-    Lets try again with the ‘o’ option as we know the password is set.
+    Lets try again with the ‘-o’ option as we know the password is set.
     ```
-    [usb] pm3 --> lf t55xx read b 1 p 12345678 o
+    [usb] pm3 --> lf t55xx read -b 1 -p 12345678 -o
     ```
     result:
     ```
@@ -479,14 +489,14 @@ required, please do not proceed.
     this from above.
     
     Remember if we don’t know the config and write this config to the
-    card, it will over write all other settings. This can recoved the
+    card, it will overwrite all other settings. This can recover the
     card, but will lose any settings you may want. So it’s a good idea
     to read the config, and set bit 28 to 0, rather than just overwrite
     the config and change the way the card works.
     
     In our examples we know what it should be : 00088040
     ```
-    [usb] pm3 --> lf t55xx write b 0 d 00088040 p 12345678
+    [usb] pm3 --> lf t55xx write -b 0 -d 00088040 -p 12345678
     ```
     result:
     ```
@@ -498,16 +508,17 @@ required, please do not proceed.
     ```
     result:
     ```
-        Chip Type      : T55x7
-        Modulation     : ASK
-        Bit Rate       : 2 - RF/32
-        Inverted       : No
-        Offset         : 32
-        Seq. Term.     : Yes
-        Block0         : 0x00088040
-        Downlink Mode  : default/fixed bit length
+    [=]  Chip type......... T55x7                    
+    [=]  Modulation........ ASK                      
+    [=]  Bit rate.......... 2 - RF/32                
+    [=]  Inverted.......... No                       
+    [=]  Offset............ 33                       
+    [=]  Seq. terminator... Yes                      
+    [=]  Block0............ 00088040 (auto detect)   
+    [=]  Downlink mode..... default/fixed bit length 
+    [=]  Password set...... No                       
     ```
-    Yes we can and we can see Block 0 is the correct config 00088040
+    Yes we can!  We can see Block 0 is the correct config 00088040
 
 # Part 2 – Configuration Blocks
 
@@ -523,7 +534,7 @@ from Block 0 in Page 0. It will use this in both default read mode
 (where is sends out the blocks from 1 to x on power up), as well as when
 it responds to commands.
 
-In the Read To Card, the T5577 will encode the data using the settings
+In the Reader To Card, the T5577 will encode the data using the settings
 from Block 3 Page 1. If the command is not encoded correctly it will
 ignore the command and revert back to default read mode.
 
@@ -533,10 +544,10 @@ For this configuration the settings chosen will be for the purpose of
 the card when used in production. E.G. If you want the card to act like
 an EM4100, then we need to choose the settings that work like the
 EM4100; same goes for others like HID. I am not going to cover these
-here, rather use an example. Others have collect these and posted on the
-forum.
+here, rather use an example. Others have collected these and posted on the
+forum or can be found by searching the web.
 
-To get started lets look back at the tech sheet.
+To get started lets look back at the data sheet.
 
 ![](./t55xx_clock0_cfg.png)
 
@@ -571,14 +582,15 @@ password set (if not, review and get you card back to this state).
 
 1)  Lets turn you T5577 into an EM4100 with ID 1122334455
     ```
-    [usb] pm3 --> lf em 410x_write 1122334455 1
+    [usb] pm3 --> lf em 410x clone --id 1122334455
     ```
     result:
     ```
-    [+] Writing T55x7 tag with UID 0x1122334455 (clock rate: 64)
-    #db# Started writing T55x7 tag ...
-    #db# Clock rate: 64
-    #db# Tag T55x7 written with 0xff8c65298c94a940
+    [+] Preparing to clone EM4102 to T55x7 tag with ID 1122334455 (RF/64)
+    [#] Clock rate: 64
+    [#] Tag T55x7 written with 0xff8c65298c94a940
+
+    [+] Done
     ```
     
 2)  Check this has work.
@@ -586,89 +598,84 @@ password set (if not, review and get you card back to this state).
     [usb] pm3 --> lf search
     ```
     result:
-    ```
-    [=] NOTE: some demods output possible binary
-    [=] if it finds something that looks like a tag
-    [=] False Positives ARE possible
-    [=]
-    [=] Checking for known tags...
-
-    [+] EM410x pattern found
-
-    EM TAG ID      : 1122334455
-
-    Possible de-scramble patterns
-
-    Unique TAG ID  : 8844CC22AA
-    HoneyWell IdentKey {
-    DEZ 8          : 03359829
-    DEZ 10         : 0573785173
-    DEZ 5.5        : 08755.17493
-    DEZ 3.5A       : 017.17493
-    DEZ 3.5B       : 034.17493
-    DEZ 3.5C       : 051.17493
-    DEZ 14/IK2     : 00073588229205
-    DEZ 15/IK3     : 000585269781162
-    DEZ 20/ZK      : 08080404121202021010
-    }
-    Other          : 17493_051_03359829
-    Pattern Paxton : 289899093 [0x11478255]
-    Pattern 1      : 5931804 [0x5A831C]
-    Pattern Sebury : 17493 51 3359829  [0x4455 0x33 0x334455]
-
-    [+] Valid EM410x ID found!
-
-
-    [+] Chipset detection : T55xx found
-
-    [+] Try `lf t55xx` commands
+    ```                                                             
+    [=] NOTE: some demods output possible binary                         
+    [=] if it finds something that looks like a tag                      
+    [=] False Positives ARE possible                                     
+    [=]                                                                  
+    [=] Checking for known tags...                                       
+    [=]                                                                  
+    [+] EM 410x ID 0F0368568B                                            
+    [+] EM410x ( RF/64 )                                                 
+    [=] -------- Possible de-scramble patterns ---------                 
+    [+] Unique TAG ID      : F0C0166AD1                                  
+    [=] HoneyWell IdentKey                                               
+    [+]     DEZ 8          : 06837899                                    
+    [+]     DEZ 10         : 0057169547                                  
+    [+]     DEZ 5.5        : 00872.22155                                 
+    [+]     DEZ 3.5A       : 015.22155                                   
+    [+]     DEZ 3.5B       : 003.22155                                   
+    [+]     DEZ 3.5C       : 104.22155                                   
+    [+]     DEZ 14/IK2     : 00064481678987                              
+    [+]     DEZ 15/IK3     : 001034014845649                             
+    [+]     DEZ 20/ZK      : 15001200010606101301                        
+    [=]                                                                  
+    [+] Other              : 22155_104_06837899                          
+    [+] Pattern Paxton     : 259822731 [0xF7C948B]                       
+    [+] Pattern 1          : 9750181 [0x94C6A5]                          
+    [+] Pattern Sebury     : 22155 104 6837899  [0x568B 0x68 0x68568B]   
+    [=] ------------------------------------------------                 
+                                                                     
+    [+] Valid EM410x ID found!                                           
+                                                                     
+    [+] Chipset detection: T55xx                                         
+    [?] Hint: try `lf t55xx` commands                                    
     ```
     Looks good.
 
-3)  Now lest see what the T5577 detect and info shows
+3)  Now lets see what the T5577 detect and info shows
     ```
     [usb] pm3 --> lf t55 detect
     ```
     result:
     ```
-        [usb] pm3 --> lf t55 detect
-        Chip Type      : T55x7
-        Modulation     : ASK
-        Bit Rate       : 5 - RF/64
-        Inverted       : No
-        Offset         : 32
-        Seq. Term.     : Yes
-        Block0         : 0x00148040
-        Downlink Mode  : default/fixed bit length
+    [=]  Chip type......... T55x7                   
+    [=]  Modulation........ ASK                     
+    [=]  Bit rate.......... 5 - RF/64               
+    [=]  Inverted.......... No                      
+    [=]  Offset............ 33                      
+    [=]  Seq. terminator... Yes                     
+    [=]  Block0............ 00148040 (auto detect)  
+    [=]  Downlink mode..... default/fixed bit length
+    [=]  Password set...... No                      
     ```
     ```
     [usb] pm3 --> lf t55xx info
     ```
     result:
     ```
-    
-    -- T55x7 Configuration & Tag Information --------------------
-    -------------------------------------------------------------
-     Safer key                 : 0
-     reserved                  : 0
-     Data bit rate             : 5 - RF/64
-     eXtended mode             : No
-     Modulation                : 8 - Manchester
-     PSK clock frequency       : 0 - RF/2
-     AOR - Answer on Request   : No
-     OTP - One Time Pad        : No
-     Max block                 : 2
-     Password mode             : No
-     Sequence Terminator       : No
-     Fast Write                : No
-     Inverse data              : No
-     POR-Delay                 : No
-    -------------------------------------------------------------
-     Raw Data - Page 0
-         Block 0  : 0x00148040  00000000000101001000000001000000
-
-     Config block match        : EM unique, Paxton
-    -------------------------------------------------------------
+                                                                 
+    [=] --- T55x7 Configuration & Information ---------              
+    [=]  Safer key                 : 0                               
+    [=]  reserved                  : 0                               
+    [=]  Data bit rate             : 5 - RF/64                       
+    [=]  eXtended mode             : No                              
+    [=]  Modulation                : 8 - Manchester                  
+    [=]  PSK clock frequency       : 0 - RF/2                        
+    [=]  AOR - Answer on Request   : No                              
+    [=]  OTP - One Time Pad        : No                              
+    [=]  Max block                 : 2                               
+    [=]  Password mode             : No                              
+    [=]  Sequence Terminator       : No                              
+    [=]  Fast Write                : No                              
+    [=]  Inverse data              : No                              
+    [=]  POR-Delay                 : No                              
+    [=] -------------------------------------------------------------
+    [=]  Raw Data - Page 0, block 0                                  
+    [=]  00148040 - 00000000000101001000000001000000                 
+    [=] --- Fingerprint ------------                                 
+    [+] Config block match        : EM unique, Paxton                
+                                                                 
     ```
     We can see that the info gave us more information and confirmed what
     we decoded by hand. But remember, the detect is still needed so the

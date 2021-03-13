@@ -11,7 +11,7 @@ desc = [[
 This script will program a T55x7 TAG with the configuration: block 0x00 data 0x00088040
 The outlined procedure is as following:
 
-"lf t55xx write b 0 d 00088040"
+"lf t55xx write -b 0 -d 00088040"
 "lf t55xx detect"
 "lf t55xx info"
 
@@ -118,7 +118,7 @@ local function test(modulation)
                     dbg('Writing to T55x7 TAG')
 
                     local config = cmd:format(bitrate, modulation, clockrate)
-                    dbg(('lf t55xx write b 0 d %s'):format(config))
+                    dbg(('lf t55xx write -b 0 -d %s'):format(config))
 
                     local data = ('%s%s%s%s'):format(utils.SwapEndiannessStr(config, 32), password, block, flags)
 

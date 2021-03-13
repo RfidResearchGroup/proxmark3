@@ -39,8 +39,8 @@ Page 3:
 * used by Proxmark3 RDV4 specific functions: flash signature and keys dictionaries, see below for details
 * to dump it: `mem dump f page3_dump o 196608 l 65536`
 * to erase it:
-  * **Beware** it will erase your flash signature (see below) so better to back it up first as you won't be able to regenerate it by yourself!
-  * It's possible to erase completely page 3 by erase the entire flash memory with the voluntarily undocumented command `mem wipe i`.
+  * **Beware** it will erase your flash signature so better to back it up first as you won't be able to regenerate it by yourself!
+  * edit the source code to enable Page 3 as a valid input in the `mem wipe` command.
   * Updating keys dictionaries doesn't require to erase page 3.
 
 ## Page3 Layout
@@ -64,7 +64,7 @@ Page3 is used as follows by the Proxmark3 RDV4 firmware:
   * length: 1 sector (actually only a few bytes are used to store `t55xx_config` structure)
 
 * **RSA SIGNATURE**, see below for details
-  * offset: page 3 sector 15 (0xF) offset 0xF7F @ 3*0x10000+15*0x1000+0xF7F=0x3FF7F
+  * offset: page 3 sector 15 (0xF) offset 0xF7F @ 3*0x10000+15*0x1000+0xF7F=0x3FF7F  (decimal 262015)
   * length: 128 bytes
   * offset should have been 0x3FF80 but historically it's one byte off and therefore the last byte of the flash is unused
 
@@ -73,23 +73,39 @@ Page3 is used as follows by the Proxmark3 RDV4 firmware:
 To ensure your Proxmark3 RDV4 is not a counterfeit product, its external flash contains a RSA signature of the flash unique ID.
 You can verify it with: `mem info`
 
+
+Here below is a sample output of a RDV4 device.
 ```
-[usb] pm3 --> mem info
-          
-[=] --- Flash memory Information ---------
-          
-[=] -------------------------------------------------------------          
-[=] ID            | xx xx xx xx xx xx xx xx           
-[=] SHA1          | xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx           
-[=] RSA SIGNATURE |          
-[00] | xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx 
-[01] | xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx 
-[02] | xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx 
-[03] | xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx 
-[=] KEY length   | 128          
-[+] RSA key validation ok          
-[+] RSA Verification ok          
+[usb] pm3 --> mem info                                                
+                                                                      
+[=] --- Flash memory Information ---------                            
+[=] ID................... 25AD99A782A867D5                            
+[=] SHA1................. 67C3B9BA2FA90AD4B283926B70017066C082C156    
+[+] Signature............ ( ok )                                      
+                                                                      
+[=] --- RDV4 RSA signature ---------------                            
+[=]  C7C7DF7FA3A2391A2B36E97D227C746ED8BB475E8766F54A13BAA9AAB29299BE 
+[=]  37546AACCC29157ABF8AFBF3A1CFB24275442D565F7E996C6B08090528ADE25E 
+[=]  ED1498E3089C72C68348D83CBD13F1247327BDBC9D75B09ECE3E051E19FE19BB 
+[=]  98CB038757F2EDFD2DC5060D05C3296BC19A6F768290D555DFD50407E0E13A70 
+                                                                      
+[=] --- RDV4 RSA Public key --------------                            
+[=] Len.................. 128                                         
+[=] Exponent............. 010001                                      
+[=] Public key modulus N                                              
+[=]  E28D809BF323171D11D1ACA4C32A5B7E0A8974FD171E75AD120D60E9B76968FF 
+[=]  4B0A6364AE50583F9555B8EE1A725F279E949246DF0EFCE4C02B9F3ACDCC623F 
+[=]  9337F21C0C066FFB703D8BFCB5067F309E056772096642C2B1A8F50305D5EC33 
+[=]  DB7FB5A3C8AC42EB635AE3C148C910750ABAA280CE82DC2F180F49F30A1393B5 
+                                                                      
+[+] RSA public key validation.... ( ok )                              
+[+] RSA private key validation... ( ok )                              
+[+] RSA verification..... ( ok )                                      
+[+] Genuine Proxmark3 RDV4 signature detected                         
 ```
 
-For a backup of the signature: `mem dump p f flash_signature_dump o 262015 l 128`
+# backup first!
+To make a backup of the signature to file:
+
+`mem dump p f flash_signature_dump o 262015 l 128`
 
