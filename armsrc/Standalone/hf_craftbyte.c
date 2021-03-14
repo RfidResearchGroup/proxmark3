@@ -36,12 +36,12 @@ typedef struct {
 } PACKED card_clone_t;
 
 void ModInfo(void) {
-    DbpString("hf_craftbyte: standalone DESfire that scans a card and then emulates UID, SAK and ATQA");
+    DbpString("hf_craftbyte: standalone UID Stealer - Scans and emulates 14a UID");
 }
 
 void RunMod(void) {
     StandAloneMode();
-    Dbprintf("HF DESfire emulator started");
+    Dbprintf("HF UID emulator started");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     // the main loop for your standalone mode
