@@ -78,6 +78,6 @@ ifneq (,$(findstring WITH_STANDALONE_LF_THAREXDE,$(APP_CFLAGS)))
     SRC_STANDALONE = lf_tharexde.c
 endif
 # WITH_STANDALONE_HF_CRAFTBYTE
-ifneq (,$(findstring HF_CRAFTBYTE,$(APP_CFLAGS)))
+ifneq (,$(findstring WITH_STANDALONE_HF_CRAFTBYTE,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_craftbyte.c
 endif
