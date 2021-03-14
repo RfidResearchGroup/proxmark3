@@ -50,7 +50,7 @@ define KNOWN_STANDALONE_DEFINITIONS
 | HF_COLIN        | Mifare ultra fast sniff/sim/clone      |
 | (RDV4 only)     | - Colin Brigato                        |
 +----------------------------------------------------------+
-| HF_CRAFTBYTE    | UID stealer                            |
+| HF_CRAFTBYTE    | UID stealer - Emulates scanned 14a UID |
 |                 | - Anze Jensterle                       |
 +----------------------------------------------------------+
 | HF_ICECLASS     | Simulate HID iCLASS legacy ags         |

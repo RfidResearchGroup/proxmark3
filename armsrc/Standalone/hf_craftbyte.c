@@ -36,7 +36,7 @@ typedef struct {
 } PACKED card_clone_t;
 
 void ModInfo(void) {
-    DbpString("hf_emuldes: standalone DESfire that scans a card and then emulates UID, SAK and ATQA");
+    DbpString("hf_craftbyte: standalone DESfire that scans a card and then emulates UID, SAK and ATQA");
 }
 
 void RunMod(void) {
