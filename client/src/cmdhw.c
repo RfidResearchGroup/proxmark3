@@ -851,9 +851,30 @@ static int CmdConnect(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdBreak(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw break",
+                  "send break loop package",
+                  "hw break\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    clearCommandBuffer();
+    SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+
 static command_t CommandTable[] = {
     {"-------------", CmdHelp,         AlwaysAvailable, "----------------------- " _CYAN_("Hardware") " -----------------------"},
     {"help",          CmdHelp,         AlwaysAvailable, "This help"},
+    {"break",         CmdBreak,        IfPm3Present,    "Send break loop usb command"},
     {"connect",       CmdConnect,      AlwaysAvailable, "Connect Proxmark3 to serial port"},
     {"dbg",           CmdDbg,          IfPm3Present,    "Set Proxmark3 debug level"},
     {"detectreader",  CmdDetectReader, IfPm3Present,    "Detect external reader field"},
