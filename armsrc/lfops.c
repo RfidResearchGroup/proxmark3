@@ -874,8 +874,8 @@ void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycl
         //wait until SSC_CLK goes LOW
         while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
             WDT_HIT();
-            if (check == 1000) {
-                if (data_available() || BUTTON_PRESS())
+            if (check == 2000) {
+                if (BUTTON_PRESS() || data_available())
                     goto OUT;
                 check = 0;
             }
