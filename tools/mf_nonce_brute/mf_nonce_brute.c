@@ -582,7 +582,8 @@ int main(int argc, char *argv[]) {
         thread_count = 2;
 #endif  /* _WIN32 */
 
-    printf("\nBruteforce using " _YELLOW_("%zu") " threads to find encrypted tagnonce last bytes\n", thread_count);
+    printf("\nBruteforce using " _YELLOW_("%zu") " threads\n", thread_count);
+    printf("looking for the last bytes of the encrypted tagnonce\n");
 
     pthread_t threads[thread_count];
 
@@ -635,7 +636,7 @@ int main(int argc, char *argv[]) {
     printf("nt enc....... %08x\n", nt_enc);
     printf("nr enc....... %08x\n", nr_enc);
     printf("next encrypted cmd: %s\n", sprint_hex_inrow_ex(enc, enc_len ,0));
-    printf("\nStart bruteforce to find upper 16 bits of key\n");
+    printf("\nlooking for the upper 16 bits of key\n");
     fflush(stdout);
 
     // threads
@@ -657,7 +658,7 @@ int main(int argc, char *argv[]) {
         pthread_join(threads[i], NULL);
 
     if (!global_found && !global_found_candidate) {
-        printf("\nFailed to find a key\n\n");
+        printf("\nfailed to find a key\n\n");
     }
 
 out:
