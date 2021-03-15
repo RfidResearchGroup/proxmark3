@@ -5,12 +5,12 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// main code for standalone HF/iso14a emulator
+// main code for hf_craftbyte 
 //-----------------------------------------------------------------------------
-
-/*
- * `hf_craftyte` scans a card's UID and then emulates it in 14a
- */
+//
+//
+// `hf_craftyte` continuesly scans for ISO14443a card UID and then emulates it.
+//
 
 #include "standalone.h"
 #include "proxmark3_arm.h"
@@ -28,20 +28,13 @@
 #define STATE_READ 0
 #define STATE_EMUL 1
 
-typedef struct {
-    uint8_t uid[10];
-    uint8_t uidlen;
-    uint8_t atqa[2];
-    uint8_t sak;
-} PACKED card_clone_t;
-
 void ModInfo(void) {
-    DbpString("hf_craftbyte: standalone UID Stealer - Scans and emulates 14a UID");
+    DbpString("HF CRAFTBYTE mode - scans and emulates ISO14443a UID (craftbyte)");
 }
 
 void RunMod(void) {
     StandAloneMode();
-    Dbprintf("HF UID emulator started");
+    Dbprintf(_YELLOW_("HF CRAFTBYTE mode started"));
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     // the main loop for your standalone mode
@@ -100,6 +93,6 @@ void RunMod(void) {
             break;
     }
 
-    DbpString("exiting");
+    Dbprintf("-=[ exit ]=-");
     LEDsoff();
 }
