@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------------
 
 /*
- * `hf_basicbreak` scans a card
+ * `hf_craftyte` scans a card's UID and then emulates it in 14a
  */
 
 #include "standalone.h"
@@ -52,7 +52,6 @@ void RunMod(void) {
         if (data_available()) break;
 
         iso14a_card_select_t card;
-        card_clone_t clone;
 
         SpinDelay(500);
 
@@ -77,18 +76,13 @@ void RunMod(void) {
                 } else {
                     Dbprintf("Found card with SAQ: %02X, ATQA: %02X %02X, UID: ", card.sak, card.atqa[0], card.atqa[1]);
                     Dbhexdump(card.uidlen, card.uid, 0);
-                    clone.uidlen = card.uidlen;
-                    clone.sak = card.sak;
-                    clone.atqa[0] = card.atqa[0];
-                    clone.atqa[1] = card.atqa[1];
-                    memcpy(clone.uid, card.uid, card.uidlen);
                     state = STATE_EMUL;
                 }
             } else if (state == STATE_EMUL) {
                 uint8_t flags;
-                if (clone.uidlen == 4) flags |= FLAG_4B_UID_IN_DATA;
-                else if (clone.uidlen == 7) flags |= FLAG_7B_UID_IN_DATA;
-                else if (clone.uidlen == 10) flags |= FLAG_10B_UID_IN_DATA;
+                if (card.uidlen == 4) flags |= FLAG_4B_UID_IN_DATA;
+                else if (card.uidlen == 7) flags |= FLAG_7B_UID_IN_DATA;
+                else if (card.uidlen == 10) flags |= FLAG_10B_UID_IN_DATA;
                 else {
                     Dbprintf("Unusual UID length, something is wrong. Try again please.");
                     state = STATE_READ;
