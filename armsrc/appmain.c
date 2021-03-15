@@ -940,7 +940,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
             // length, start gap, led control
-            SimulateTagLowFrequency(payload->len, payload->gap, 1);
+            SimulateTagLowFrequency(payload->len, payload->gap, true);
             reply_ng(CMD_LF_SIMULATE, PM3_EOPABORTED, NULL, 0);
             LED_A_OFF();
             break;
