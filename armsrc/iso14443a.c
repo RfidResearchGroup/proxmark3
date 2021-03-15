@@ -2006,7 +2006,7 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
 
             analogCnt++;
 
-            analogAVG += AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF_RDV40];
+            analogAVG += (AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF_RDV40] & 0x3FF);
 
             AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
 
@@ -2034,7 +2034,7 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
 
             analogCnt++;
 
-            analogAVG += AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF];
+            analogAVG += (AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF] & 0x3FF);
 
             AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
 
