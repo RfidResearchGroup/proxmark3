@@ -74,7 +74,7 @@ void RunMod(void) {
                     SpinDelay(500);
                     continue;
                 } else {
-                    Dbprintf("Found card with SAQ: %02X, ATQA: %02X %02X, UID: ", card.sak, card.atqa[0], card.atqa[1]);
+                    Dbprintf("Found card with SAK: %02X, ATQA: %02X %02X, UID: ", card.sak, card.atqa[0], card.atqa[1]);
                     Dbhexdump(card.uidlen, card.uid, 0);
                     state = STATE_EMUL;
                 }
