@@ -77,14 +77,14 @@ static void DownloadTraceInstructions(void) {
 }
 
 void ModInfo(void) {
-    DbpString(" ISO14443a sniff, storing in flashmem");
+    DbpString(" HF 14A SNIFF,  a ISO14443a sniffer with storing in flashmem");
     DownloadTraceInstructions();
 }
 
 void RunMod(void) {
     StandAloneMode();
 
-    Dbprintf("Starting standalone mode: hf_14asniff");
+    Dbprintf(_YELLOW_("HF 14A SNIFF started"));
     rdv40_spiffs_lazy_mount();
 
     SniffIso14443a(0);
@@ -118,7 +118,7 @@ void RunMod(void) {
     SpinErr(LED_A, 200, 5);
     SpinDelay(100);
 
+    Dbprintf("-=[ exit ]=-");
     LEDsoff();
-    SpinDelay(300);
     DownloadTraceInstructions();
 }
