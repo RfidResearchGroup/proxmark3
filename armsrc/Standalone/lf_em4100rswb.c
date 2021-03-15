@@ -272,7 +272,7 @@ static int ExecuteMode(int mode, int slot) {
         case LF_RWSB_MODE_SIM:
             Dbprintf("[=] >>  Sim mode started  <<");
             construct_EM410x_emul(rev_quads(low[slot]));
-            SimulateTagLowFrequency(buflen, 0, 1);
+            SimulateTagLowFrequency(buflen, 0, true);
             return LF_RWSB_UNKNOWN_RESULT;
         case LF_RWSB_MODE_WRITE:
             Dbprintf("[!!] >>  Write mode started  <<");
