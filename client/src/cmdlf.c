@@ -239,18 +239,18 @@ int CmdLFCommandRead(const char *Cmd) {
 
     int cmd_len = 128;
     char cmd[128] = {0};
-    CLIGetStrWithReturn(ctx, 2, (uint8_t*)cmd, &cmd_len);
+    CLIGetStrWithReturn(ctx, 2, (uint8_t *)cmd, &cmd_len);
 
     int extra_arg_len = 250;
     char extra_arg[250] = {0};
-    CLIGetStrWithReturn(ctx, 3, (uint8_t*)extra_arg, &extra_arg_len);
+    CLIGetStrWithReturn(ctx, 3, (uint8_t *)extra_arg, &extra_arg_len);
 
     uint16_t period_1 = arg_get_u32_def(ctx, 4, 0);
     uint16_t period_0 = arg_get_u32_def(ctx, 5, 0);
     uint32_t samples = arg_get_u32_def(ctx, 6, 0);
     bool verbose = arg_get_lit(ctx, 7);
     bool cm = arg_get_lit(ctx, 8);
-    CLIParserFree(ctx);  
+    CLIParserFree(ctx);
 
     if (session.pm3_present == false)
         return PM3_ENOTTY;
@@ -276,7 +276,7 @@ int CmdLFCommandRead(const char *Cmd) {
     // extra symbol definition
     uint8_t index_extra = 0;
     int i = 0;
-    for (; i < extra_arg_len; ) {
+    for (; i < extra_arg_len;) {
 
         if (index_extra < LF_CMDREAD_MAX_EXTRA_SYMBOLS - 1) {
             payload.symbol_extra[index_extra] = extra_arg[i];
@@ -500,14 +500,14 @@ int CmdLFConfig(const char *Cmd) {
     int8_t avg = arg_get_int_def(ctx, 3, 0);
     int8_t bps = arg_get_int_def(ctx, 4, -1);
     int8_t dec = arg_get_int_def(ctx, 5, -1);
-    int16_t div = arg_get_int_def(ctx, 6, -1);
+    int16_t divisor = arg_get_int_def(ctx, 6, -1);
     int16_t freq = arg_get_int_def(ctx, 7, -1);
     bool reset = arg_get_lit(ctx, 8);
     int32_t skip = arg_get_int_def(ctx, 9, -1);
     int16_t trigg = arg_get_int_def(ctx, 10, -1);
-    CLIParserFree(ctx);  
+    CLIParserFree(ctx);
 
-    if (session.pm3_present == false) 
+    if (session.pm3_present == false)
         return PM3_ENOTTY;
 
     // if called with no params, just print the device config
@@ -516,7 +516,7 @@ int CmdLFConfig(const char *Cmd) {
     }
 
     if (use_125 + use_134 > 1) {
-        PrintAndLogEx(ERR,"use only one of 125 or 134 params");
+        PrintAndLogEx(ERR, "use only one of 125 or 134 params");
         return PM3_EINVARG;
     }
 
@@ -535,7 +535,7 @@ int CmdLFConfig(const char *Cmd) {
         config.bits_per_sample = 8;
         config.averaging = 1,
         config.divisor = LF_DIVISOR_125;
-        config.samples_to_skip = 0;        
+        config.samples_to_skip = 0;
         config.trigger_threshold = 0;
         g_lf_threshold_set = false;
     }
@@ -555,22 +555,22 @@ int CmdLFConfig(const char *Cmd) {
             config.bits_per_sample = 8;
     }
 
-    if ( dec > -1 ) {
+    if (dec > -1) {
         // decimation is limited to 8
         config.decimation = (dec & 0x0F);
         if (config.decimation > 8)
             config.decimation = 8;
     }
 
-    if ( div > -1 ) {
-        config.divisor = div;
+    if (divisor> -1) {
+        config.divisor = divisor;
         if (config.divisor < 19) {
             PrintAndLogEx(ERR, "divisor must be between 19 and 255");
             return PM3_EINVARG;
         }
     }
 
-    if (freq > -1 ) {
+    if (freq > -1) {
         config.divisor = LF_FREQ2DIV(freq);
         if (config.divisor < 19) {
             PrintAndLogEx(ERR, "freq must be between 47 and 600");
@@ -768,6 +768,7 @@ int lfsim_upload_gb(void) {
             break;
         }
         PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
         payload_up.flag = 0;
     }
     PrintAndLogEx(NORMAL, "");
@@ -795,7 +796,7 @@ int CmdLFSim(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     uint16_t gap = arg_get_u32_def(ctx, 1, 0);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     if (session.pm3_present == false) {
         PrintAndLogEx(DEBUG, "DEBUG: no proxmark present");
@@ -821,7 +822,7 @@ int CmdLFSim(const char *Cmd) {
     payload.gap = gap;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));   
+    SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     return lfsim_wait_check(CMD_LF_SIMULATE);
 }
 
@@ -848,7 +849,7 @@ int CmdLFfskSim(const char *Cmd) {
         arg_param_begin,
         arg_u64_0("c", "clk", "<dec>", "manually set clock - can autodetect if using DemodBuffer (default 64)"),
         arg_u64_0(NULL, "low", "<dec>", "manually set larger Field Clock"),
-        arg_u64_0(NULL, "high", "<dec>", "manually set smaller Field Clock"),        
+        arg_u64_0(NULL, "high", "<dec>", "manually set smaller Field Clock"),
         arg_lit0(NULL, "stt", "TBD! - STT to enable a gap between playback repetitions (default: no gap)"),
         arg_str0("d", "data", "<hex>", "data to sim - omit to use DemodBuffer"),
         arg_lit0("v", "verbose", "verbose output"),
@@ -862,9 +863,9 @@ int CmdLFfskSim(const char *Cmd) {
 
     int raw_len = 64;
     char raw[64] = {0};
-    CLIGetStrWithReturn(ctx, 5, (uint8_t*)raw, &raw_len);
+    CLIGetStrWithReturn(ctx, 5, (uint8_t *)raw, &raw_len);
     bool verbose = arg_get_lit(ctx, 6);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     // No args
     if (raw_len == 0 && DemodBufferLen == 0) {
@@ -972,9 +973,9 @@ int CmdLFaskSim(const char *Cmd) {
 
     int raw_len = 64;
     char raw[64] = {0};
-    CLIGetStrWithReturn(ctx, 7, (uint8_t*)raw, &raw_len);
+    CLIGetStrWithReturn(ctx, 7, (uint8_t *)raw, &raw_len);
     bool verbose = arg_get_lit(ctx, 8);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     if ((use_bi + use_am + use_ar) > 1) {
         PrintAndLogEx(ERR, "only one encoding can be set");
@@ -995,15 +996,14 @@ int CmdLFaskSim(const char *Cmd) {
 
     uint8_t bs[256] = {0x00};
     int bs_len = hextobinarray((char *)bs, raw);
-    if (bs_len == 0) { 
+    if (bs_len == 0) {
         // Using data from DemodBuffer
         // might be able to autodetect FC and clock from Graphbuffer if using demod buffer
         // will need carrier, clock, and bitstream
         PrintAndLogEx(INFO, "No user supplied data, using Demodbuffer...");
 
-        int res = 0;
         if (clk == 0) {
-            res = GetAskClock("0", verbose);
+            int res = GetAskClock("0", verbose);
             if (res < 1) {
                 clk = 64;
             } else {
@@ -1053,7 +1053,7 @@ int CmdLFaskSim(const char *Cmd) {
 // sim psk data given carrier, clock, invert
 // - allow pull data from DemodBuffer or parameters
 int CmdLFpskSim(const char *Cmd) {
- 
+
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf simpsk",
                   "Simulate PSK tag from demodbuffer or input",
@@ -1065,7 +1065,7 @@ int CmdLFpskSim(const char *Cmd) {
         arg_param_begin,
         arg_lit0("1", "psk1", "set PSK1 (default)"),
         arg_lit0("2", "psk2", "set PSK2"),
-        arg_lit0("3", "psk3", "set PSK3"),        
+        arg_lit0("3", "psk3", "set PSK3"),
         arg_lit0("i", "inv", "invert data"),
         arg_u64_0("c", "clk", "<dec>", "manually set clock - can autodetect if using DemodBuffer (default 32)"),
         arg_u64_0(NULL, "fc", "<dec>", "2|4|8 are valid carriers (default 2)"),
@@ -1082,7 +1082,7 @@ int CmdLFpskSim(const char *Cmd) {
     uint8_t carrier = arg_get_u32_def(ctx, 6, 2);
     int raw_len = 64;
     char raw[64] = {0};
-    CLIGetStrWithReturn(ctx, 7, (uint8_t*)raw, &raw_len);
+    CLIGetStrWithReturn(ctx, 7, (uint8_t *)raw, &raw_len);
     bool verbose = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
@@ -1090,7 +1090,7 @@ int CmdLFpskSim(const char *Cmd) {
         PrintAndLogEx(ERR, "only one PSK mode can be set");
         return PM3_EINVARG;
     }
-    
+
     if (carrier != 2 && carrier != 4 && carrier != 8) {
         PrintAndLogEx(ERR, "Wrong carrier given, expected <2|4|8>");
         return PM3_EINVARG;
@@ -1111,16 +1111,16 @@ int CmdLFpskSim(const char *Cmd) {
     uint8_t bs[256] = {0x00};
     int bs_len = hextobinarray((char *)bs, raw);
 
-    if (bs_len == 0) { 
+    if (bs_len == 0) {
         // Using data from DemodBuffer
         // might be able to autodetect FC and clock from Graphbuffer if using demod buffer
         // will need carrier, clock, and bitstream
         PrintAndLogEx(INFO, "No user supplied data, using Demodbuffer...");
 
-        int res = 0;
+        int res;
         if (clk == 0) {
             res = GetPskClock("", verbose);
-            if ( res < 1) {
+            if (res < 1) {
                 clk = 32;
             } else {
                 clk = (uint8_t)res;
@@ -1128,12 +1128,12 @@ int CmdLFpskSim(const char *Cmd) {
         }
 
         if (carrier == 0) {
-             res = GetPskCarrier(verbose);
-             if (res < 1 ) {
-                 carrier = 2;
-             } else {
-                 carrier = (uint8_t)res;
-             }
+            res = GetPskCarrier(verbose);
+            if (res < 1) {
+                carrier = 2;
+            } else {
+                carrier = (uint8_t)res;
+            }
         }
 
         PrintAndLogEx(DEBUG, "Detected rf/%u, fc/%u, n %zu ", clk, carrier, DemodBufferLen);
@@ -1152,7 +1152,6 @@ int CmdLFpskSim(const char *Cmd) {
         psk2TOpsk1(DemodBuffer, DemodBufferLen);
     } else if (psk_type == 3) {
         PrintAndLogEx(INFO, "PSK3 not yet available. Falling back to PSK1");
-        psk_type = 1;
     }
 
     size_t size = DemodBufferLen;
@@ -1323,7 +1322,7 @@ static bool CheckChipType(bool getDeviceData) {
         goto out;
     }
 
-    PrintAndLogEx(NORMAL, "Couldn't identify a chipset");
+    PrintAndLogEx(INFO, "Couldn't identify a chipset");
 out:
     save_restoreGB(GRAPH_RESTORE);
     save_restoreDB(GRAPH_RESTORE);
@@ -1413,28 +1412,37 @@ int CmdLFfind(const char *Cmd) {
 
     int retval = PM3_SUCCESS;
 
-    if (demodVisa2k(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") " found!"); goto out;}
+    // ask / man
+    if (demodEM410x(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!"); goto out;}
     if (demodDestron(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-A FECAVA Destron ID") " found!"); goto out;} // to do before HID
+    if (demodGallagher(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("GALLAGHER ID") " found!"); goto out;}
+    if (demodNoralsy(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Noralsy ID") " found!"); goto out;}
+    if (demodPresco(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Presco ID") " found!"); goto out;}
+    if (demodSecurakey(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Securakey ID") " found!"); goto out;}
+    if (demodViking(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Viking ID") " found!"); goto out;}
+    if (demodVisa2k(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") " found!"); goto out;}
+
+    // ask / bi
+    if (demodFDXB(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
+    if (demodJablotron(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Jablotron ID") " found!"); goto out;}
+    if (demodGuard(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!"); goto out; }
+    if (demodNedap(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NEDAP ID") " found!"); goto out;}
+
+    // nrz
+    if (demodPac(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("PAC/Stanley ID") " found!"); goto out;}
+
+    // fsk
     if (demodHID(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
     if (demodAWID(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("AWID ID") " found!"); goto out;}
     if (demodIOProx(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!"); goto out;}
+    if (demodPyramid(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Pyramid ID") " found!"); goto out;}
     if (demodParadox(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!"); goto out;}
+    
+    // psk
+    if (demodIdteck(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
+    if (demodKeri(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("KERI ID") " found!"); goto out;}
     if (demodNexWatch(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NexWatch ID") " found!"); goto out;}
     if (demodIndala(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");  goto out;}
-    if (demodEM410x(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!"); goto out;}
-    if (demodFDXB(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
-    if (demodGuard(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!"); goto out; }
-    if (demodIdteck(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
-    if (demodJablotron(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Jablotron ID") " found!"); goto out;}
-    if (demodNedap(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NEDAP ID") " found!"); goto out;}
-    if (demodNoralsy(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Noralsy ID") " found!"); goto out;}
-    if (demodKeri(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("KERI ID") " found!"); goto out;}
-    if (demodPac(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("PAC/Stanley ID") " found!"); goto out;}
-    if (demodPresco(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Presco ID") " found!"); goto out;}
-    if (demodPyramid(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Pyramid ID") " found!"); goto out;}
-    if (demodSecurakey(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Securakey ID") " found!"); goto out;}
-    if (demodViking(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Viking ID") " found!"); goto out;}
-    if (demodGallagher(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("GALLAGHER ID") " found!"); goto out;}
 
 //    if (demodTI() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Texas Instrument ID") " found!"); goto out;}
 //    if (demodFermax() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fermax ID") " found!"); goto out;}
@@ -1456,27 +1464,27 @@ int CmdLFfind(const char *Cmd) {
         //fsk
         if (GetFskClock("", false)) {
             if (FSKrawDemod(0, 0, 0, 0, true) == PM3_SUCCESS) {
-                PrintAndLogEx(NORMAL, "\nUnknown FSK Modulated Tag found!");
+                PrintAndLogEx(INFO, "Unknown FSK Modulated Tag found!");
                 goto out;
             }
         }
 
         bool st = true;
         if (ASKDemod_ext(0, 0, 0, 0, false, true, false, 1, &st) == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "\nUnknown ASK Modulated and Manchester encoded Tag found!");
-            PrintAndLogEx(NORMAL, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod ab'"));
+            PrintAndLogEx(INFO, "Unknown ASK Modulated and Manchester encoded Tag found!");
+            PrintAndLogEx(INFO, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod ab'"));
             goto out;
         }
 
         if (CmdPSK1rawDemod("") == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "Possible unknown PSK1 Modulated Tag found above!");
-            PrintAndLogEx(NORMAL, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod p2'"));
-            PrintAndLogEx(NORMAL, "    Could also be PSK3 - [currently not supported]");
-            PrintAndLogEx(NORMAL, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod nr"));
+            PrintAndLogEx(INFO, "Possible unknown PSK1 Modulated Tag found above!");
+            PrintAndLogEx(INFO, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod p2'"));
+            PrintAndLogEx(INFO, "    Could also be PSK3 - [currently not supported]");
+            PrintAndLogEx(INFO, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod nr"));
             goto out;
         }
 
-        PrintAndLogEx(FAILED, _RED_("\nNo data found!"));
+        PrintAndLogEx(FAILED, _RED_("No data found!"));
     }
 
     retval = PM3_ESOFT;

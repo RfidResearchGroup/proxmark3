@@ -13,6 +13,12 @@
 
 #include "../include/em4x50.h"
 
+void em4x50_setup_read(void);
+int standard_read(int *now, uint32_t *words);
+
+void em4x50_setup_sim(void);
+void em4x50_handle_commands(int *command, uint32_t *tag);
+
 void em4x50_info(em4x50_data_t *etd);
 void em4x50_write(em4x50_data_t *etd);
 void em4x50_writepwd(em4x50_data_t *etd);

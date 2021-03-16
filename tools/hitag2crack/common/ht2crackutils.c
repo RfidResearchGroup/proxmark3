@@ -3,16 +3,12 @@
 #include "ht2crackutils.h"
 
 // writes a value into a buffer as a series of bytes
-void writebuf(unsigned char *buf, uint64_t val, unsigned int len) {
-    int i;
-    char c;
-
-    for (i = len - 1; i >= 0; i--) {
-        c = val & 0xff;
+void writebuf(unsigned char *buf, uint64_t val, uint16_t len) {
+    for (int i = len - 1; i >= 0; i--) {
+        char c = val & 0xff;
         buf[i] = c;
-        val = val >> 8;
+        val >>= 8;
     }
-
 }
 
 
@@ -39,17 +35,13 @@ void shexdump(unsigned char *data, int data_len) {
 
 
 void printbin(unsigned char *c) {
-    int i, j;
-    unsigned char x;
-
     if (!c) {
         printf("printbin: invalid params\n");
         return;
     }
-
-    for (i = 0; i < 6; i++) {
-        x = c[i];
-        for (j = 0; j < 8; j++) {
+    for (int i = 0; i < 6; i++) {
+        unsigned char x = c[i];
+        for (int j = 0; j < 8; j++) {
             printf("%d", (x & 0x80) >> 7);
             x = x << 1;
         }
@@ -57,32 +49,26 @@ void printbin(unsigned char *c) {
     printf("\n");
 }
 
-
 void printbin2(uint64_t val, unsigned int size) {
-    int i;
-    uint64_t mask = 1;
 
+    uint64_t mask = 1;
     mask = mask << (size - 1);
 
-    for (i = 0; i < size; i++) {
+    for (int i = 0; i < size; i++) {
         if (val & mask) {
             printf("1");
         } else {
             printf("0");
         }
-        val = val << 1;
+        val <<= 1;
     }
 }
-
 
 void printstate(Hitag_State *hstate) {
     printf("shiftreg =\t");
     printbin2(hstate->shiftreg, 48);
     printf("\n");
 }
-
-
-
 
 // convert hex char to binary
 unsigned char hex2bin(unsigned char c) {
@@ -100,7 +86,6 @@ unsigned char hex2bin(unsigned char c) {
 // return a single bit from a value
 int bitn(uint64_t x, int bit) {
     uint64_t bitmask = 1;
-
     bitmask = bitmask << bit;
 
     if (x & bitmask) {
@@ -121,14 +106,10 @@ int fnR(uint64_t x) {
 
 // the rollback function that lets us go backwards in time
 void rollback(Hitag_State *hstate, unsigned int steps) {
-    int i;
-
-    for (i = 0; i < steps; i++) {
+    for (int i = 0; i < steps; i++) {
         hstate->shiftreg = ((hstate->shiftreg << 1) & 0xffffffffffff) | fnR(hstate->shiftreg);
     }
-
 }
-
 
 // the three filter sub-functions that feed fnf
 int fa(unsigned int i) {
@@ -161,9 +142,7 @@ int fnf(uint64_t s) {
 // builds the lfsr for the prng (quick calcs for hitag2_nstep())
 void buildlfsr(Hitag_State *hstate) {
     uint64_t state = hstate->shiftreg;
-    uint64_t temp;
-
-    temp = state ^ (state >> 1);
+    uint64_t temp = state ^ (state >> 1);
     hstate->lfsr = state ^ (state >>  6) ^ (state >> 16)
                    ^ (state >> 26) ^ (state >> 30) ^ (state >> 41)
                    ^ (temp >>  2) ^ (temp >>  7) ^ (temp >> 22)
@@ -180,8 +159,9 @@ unsigned long hexreversetoulong(char *hex) {
         return 0L;
 
     for (i = 0 ; i < 4 ; ++i) {
-        if (sscanf(hex, "%2X", &x) != 1)
+        if (sscanf(hex, "%2X", &x) != 1) {
             return 0L;
+        }
         ret += ((unsigned long) x) << i * 8;
         hex += 2;
     }

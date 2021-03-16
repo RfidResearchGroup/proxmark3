@@ -874,8 +874,8 @@ void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycl
         //wait until SSC_CLK goes LOW
         while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
             WDT_HIT();
-            if (check == 1000) {
-                if (data_available() || BUTTON_PRESS())
+            if (check == 2000) {
+                if (BUTTON_PRESS() || data_available())
                     goto OUT;
                 check = 0;
             }
@@ -2639,7 +2639,7 @@ void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
 
     SendForward(len, false);
 
-    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
         StopTicks();
         reply_ng(CMD_LF_EM4X_WRITEWORD, PM3_ETEAROFF, NULL, 0);
     } else {
@@ -2681,7 +2681,7 @@ void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd) {
 
     SendForward(len, false);
 
-    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
         StopTicks();
         reply_ng(CMD_LF_EM4X_PROTECTWORD, PM3_ETEAROFF, NULL, 0);
     } else {

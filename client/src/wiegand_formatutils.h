@@ -33,7 +33,7 @@ typedef struct {
     bool ParityValid; // Only valid for responses
 } wiegand_card_t;
 
-bool get_bit_by_position(wiegand_message_t *data, uint8_t pos);
+uint8_t get_bit_by_position(wiegand_message_t *data, uint8_t pos);
 bool set_bit_by_position(wiegand_message_t *data, bool value, uint8_t pos);
 
 uint64_t get_linear_field(wiegand_message_t *data, uint8_t firstBit, uint8_t length);

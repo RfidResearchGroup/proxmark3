@@ -403,9 +403,19 @@ static int wait_for_ack(PacketResponseNG *ack) {
     return PM3_SUCCESS;
 }
 
+static bool g_printed_msg = false;
 static void flash_suggest_update_bootloader(void) {
+    if (g_printed_msg)
+        return;
+
     PrintAndLogEx(ERR, _RED_("It is recommended that you first" _YELLOW_(" update your bootloader") _RED_(" alone,")));
     PrintAndLogEx(ERR, _RED_("reboot the Proxmark3 then only update the main firmware") "\n");
+    PrintAndLogEx(ERR, "Follow these steps :");
+    PrintAndLogEx(ERR, " 1)   ./pm3-flash-bootrom");
+    PrintAndLogEx(ERR, " 2)   ./pm3-flash-all");
+    PrintAndLogEx(ERR, " 3)   ./pm3");
+    PrintAndLogEx(INFO, "--------------------------------------------------------");
+    g_printed_msg = true;
 }
 
 static void flash_suggest_update_flasher(void) {
@@ -532,6 +542,7 @@ const char ice[] =
     "        !!: :!!      !!:      !!:     !!: !!:  !!! !!:  !!!\n        :    :: :: : : :: :::  :      :    :   : : ::    : \n"
     _RED_("        .    .. .. . . .. ...  .      .    .   . . ..    . ")
     "\n...................................................................\n"
+    "...................................................................\n"
     ;
 
 // Write a file's segments to Flash

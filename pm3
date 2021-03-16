@@ -148,7 +148,7 @@ function get_pm3_list_Windows {
     fi
 
     # Normal SERIAL PORTS (COM)
-    for DEV in $(wmic /locale:ms_409 path Win32_SerialPort Where "PNPDeviceID LIKE '%VID_9AC4&PID_4B8F%'" Get DeviceID 2>/dev/null | awk -b '/^COM/{print $1}'); do
+    for DEV in $(wmic /locale:ms_409 path Win32_SerialPort Where "PNPDeviceID LIKE '%VID_9AC4&PID_4B8F%' Or PNPDeviceID LIKE '%VID_2D2D&PID_504D%'" Get DeviceID 2>/dev/null | awk -b '/^COM/{print $1}'); do
         DEV=${DEV/ */}
         PM3LIST+=("$DEV")
         if [ ${#PM3LIST[*]} -ge "$N" ]; then
@@ -192,7 +192,7 @@ function get_pm3_list_WSL {
     fi
 
     # Normal SERIAL PORTS (COM)
-    for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_9AC4&PID_4B8F*' | Select DeviceID" 2>/dev/null | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p'); do
+    for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.PNPDeviceID -like '*VID_9AC4&PID_4B8F*' -or \$_.PNPDeviceID -like '*VID_2D2D&PID_504D*'} | Select DeviceID" 2>/dev/null | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p'); do
         # ttyS counterpart takes some more time to appear
         if [ -e "$DEV" ]; then
             PM3LIST+=("$DEV")

@@ -586,7 +586,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -w                    -- wait for serial port", exec_name);
         PrintAndLogEx(NORMAL, "      %s                                    -- runs the pm3 client in OFFLINE mode", exec_name);
         PrintAndLogEx(NORMAL, "\n  to execute different commands from terminal:\n");
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -c \"hf mf chk 1* ?\"   -- execute cmd and quit client", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -c \"hf mf chk --1k\"   -- execute cmd and quit client", exec_name);
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -l hf_read            -- execute lua script " _YELLOW_("`hf_read`")" and quit client", exec_name);
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -s mycmds.txt         -- execute each pm3 cmd in file and quit client", exec_name);
         PrintAndLogEx(NORMAL, "\n  to flash fullimage and bootloader:\n");
@@ -673,6 +673,8 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
     }
 
 finish:
+    if (ret != PM3_SUCCESS)
+        PrintAndLogEx(INFO, "The flashing procedure failed, follow the suggested steps!");
     ret = flash_stop_flashing();
     CloseProxmark(session.current_device);
 finish2:
@@ -684,7 +686,7 @@ finish2:
         PrintAndLogEx(SUCCESS, _CYAN_("All done"));
     else
         PrintAndLogEx(ERR, "Aborted on error");
-    PrintAndLogEx(NORMAL, "\nHave a nice day!");
+    PrintAndLogEx(INFO, "\nHave a nice day!");
     return ret;
 }
 #endif //LIBPM3

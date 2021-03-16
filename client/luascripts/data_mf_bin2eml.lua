@@ -115,8 +115,7 @@ local function main(args)
 
    local dumpdata = readdump(infile)
     -- The hex-data is now in ascii-format,
-   if dumpdata == NIL then return oops('Dumpfle not loaded') end
-
+   if dumpdata == nil then return oops('Dumpfle not loaded') end
 
     -- But first, check the uid
     local uid = string.sub(dumpdata, 1, 8)
@@ -124,8 +123,7 @@ local function main(args)
 
     -- Format some linebreaks
     dumpdata = convert_to_emulform(dumpdata)
-   if dumpdata == NIL then return oops('Dumpfle not loaded') end
-
+   if dumpdata == nil then return oops('Dumpfle not loaded') end
 
     local outfile = io.open(output, 'w')
     if outfile == nil then

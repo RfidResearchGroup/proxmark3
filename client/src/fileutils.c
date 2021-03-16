@@ -78,6 +78,44 @@ struct wave_info_t {
 } PACKED;
 
 /**
+ * @brief detects if file is of a supported filetype based on extension
+ * @param filename
+ * @return o
+ */
+DumpFileType_t getfiletype(const char *filename) {
+    // assume unknown file is BINARY
+    DumpFileType_t o = BIN;
+    if (filename == NULL) {
+        return o;
+    }
+
+    size_t len = strlen(filename);
+    if (len > 4) {
+        //  check if valid file extension and attempt to load data
+        char s[FILE_PATH_SIZE];
+        memset(s, 0, sizeof(s));
+        memcpy(s, filename, len);
+        str_lower(s);
+
+        if (str_endswith(s, "bin")) {
+            o = BIN;
+        } else if (str_endswith(s, "eml")) {
+            o = EML;
+        } else if (str_endswith(s, "json")) {
+            o = JSON;
+        } else if (str_endswith(s, "dic")) {
+            o = DICTIONARY;
+        } else {
+            // mfd, trc, trace is binary
+            o = BIN;
+            // log is text
+            // .pm3 is text values of signal data
+        }
+    }
+    return o;
+}
+
+/**
  * @brief checks if a file exists
  * @param filename
  * @return

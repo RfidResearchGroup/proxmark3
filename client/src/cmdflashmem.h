@@ -12,6 +12,7 @@
 #define CMDFLASHMEM_H__
 
 #include "common.h"
+#include "pmflash.h"           // rdv40validation_t
 
 typedef enum {
     DICTIONARY_NONE = 0,
@@ -21,5 +22,6 @@ typedef enum {
 } Dictionary_t;
 
 int CmdFlashMem(const char *Cmd);
-
+int rdv4_get_signature(rdv40_validation_t *out);
+int rdv4_validate(rdv40_validation_t *mem);
 #endif

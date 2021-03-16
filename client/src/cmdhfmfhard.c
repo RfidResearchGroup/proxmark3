@@ -660,10 +660,14 @@ static double p_hypergeometric(uint16_t i_K, uint16_t n, uint16_t k) {
         if (n - k == N - K) { // special case. The published recursion below would fail with a divide by zero exception
             double log_result = 0.0;
             for (int16_t i = k + 1; i <= n; i++) {
-                log_result += log(i);
+                if (i) {
+                    log_result += log(i);
+                }
             }
             for (int16_t i = K + 1; i <= N; i++) {
-                log_result -= log(i);
+                if (i) {
+                    log_result -= log(i);
+                }
             }
             return exp(log_result);
         } else {          // recursion
@@ -1145,7 +1149,7 @@ __attribute__((force_align_arg_pointer))
         // for (uint16_t bitflip = 0x001; bitflip < 0x200; bitflip++) {
         for (uint16_t bitflip_idx = 0; bitflip_idx < num_1st_byte_effective_bitflips; bitflip_idx++) {
             uint16_t bitflip = all_effective_bitflip[bitflip_idx];
-            if (time_budget & timeout()) {
+            if (time_budget && timeout()) {
 #if defined (DEBUG_REDUCTION)
                 PrintAndLogEx(NORMAL, "break at bitflip_idx %d...", bitflip_idx);
 #endif
@@ -1187,7 +1191,7 @@ __attribute__((force_align_arg_pointer))
     if (hardnested_stage & CHECK_2ND_BYTES) {
         for (uint16_t bitflip_idx = num_1st_byte_effective_bitflips; bitflip_idx < num_all_effective_bitflips; bitflip_idx++) {
             uint16_t bitflip = all_effective_bitflip[bitflip_idx];
-            if (time_budget & timeout()) {
+            if (time_budget && timeout()) {
 #if defined (DEBUG_REDUCTION)
                 PrintAndLogEx(NORMAL, "break at bitflip_idx %d...", bitflip_idx);
 #endif

@@ -185,45 +185,54 @@ void print_hex(const uint8_t *data, const size_t len) {
 }
 
 void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
-    if (data == NULL || len == 0) return;
+    if (data == NULL || len == 0 || breaks == 0) return;
 
-    int rownum = 0;
-    PrintAndLogEx(NORMAL, "[%02d] | " NOLF, rownum);
-    for (size_t i = 0; i < len; ++i) {
-
-        PrintAndLogEx(NORMAL, "%02X " NOLF, data[i]);
-
-        // check if a line break is needed
-        if (breaks > 0 && !((i + 1) % breaks) && (i + 1 < len)) {
-            ++rownum;
-            PrintAndLogEx(NORMAL, "\n[%02d] | " NOLF, rownum);
+    uint16_t rownum = 0;
+    int i;
+    for (i = 0; i < len; i += breaks, rownum++) {
+        if (len - i < breaks) { // incomplete block, will be treated out of the loop
+            break;
         }
+        PrintAndLogEx(INFO, "%02u | %s", rownum, sprint_hex_ascii(data + i, breaks));
     }
-    PrintAndLogEx(NORMAL, "");
+
+    // the last odd bytes
+    uint8_t mod = len % breaks;
+
+    if (mod) {
+        char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
+        memset(buf, 0, sizeof(buf));
+        hex_to_buffer((uint8_t *)buf, data + i, mod, (sizeof(buf) - 1), 0, 1, true);
+
+        // add the spaces...
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%*s", ((breaks - mod) * 3), " ");
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, mod));
+        PrintAndLogEx(INFO, "%02u | %s", rownum, buf);
+    }
 }
 
-void print_buffer(const uint8_t *data, const size_t len, int level) {
+static void print_buffer_ex(const uint8_t *data, const size_t len, int level, uint8_t breaks) {
 
     if (len < 1)
         return;
 
     char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
     int i;
-    for (i = 0; i < len; i += 16) {
-        if (len - i < 16) { // incomplete block, will be treated out of the loop
+    for (i = 0; i < len; i += breaks) {
+        if (len - i < breaks) { // incomplete block, will be treated out of the loop
             break;
         }
         // (16 * 3) + (16) +  + 1
         memset(buf, 0, sizeof(buf));
         sprintf(buf, "%*s%02x: ", (level * 4), " ", i);
 
-        hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, 16, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);
-        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, 16));
+        hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, breaks, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, breaks));
         PrintAndLogEx(INFO, "%s", buf);
     }
 
     // the last odd bytes
-    uint8_t mod = len % 16;
+    uint8_t mod = len % breaks;
 
     if (mod) {
         memset(buf, 0, sizeof(buf));
@@ -231,11 +240,15 @@ void print_buffer(const uint8_t *data, const size_t len, int level) {
         hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, mod, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);
 
         // add the spaces...
-        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%*s", ((16 - mod) * 3), " ");
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%*s", ((breaks - mod) * 3), " ");
 
         snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, mod));
         PrintAndLogEx(INFO, "%s", buf);
     }
+}
+
+void print_buffer(const uint8_t *data, const size_t len, int level) {
+    print_buffer_ex(data, len, level, 16);
 }
 
 void print_blocks(uint32_t *data, size_t len) {
@@ -813,7 +826,7 @@ void binarraytobinstring(char *target, char *source,  int length) {
     *target = '\0';
 }
 
-int binstring2binarray(uint8_t* target, char *source, int length) {
+int binstring2binarray(uint8_t *target, char *source, int length) {
     int count = 0;
     char *start = source;
     while (length--) {
@@ -953,13 +966,13 @@ char *str_ndup(const char *src, size_t len) {
 }
 
 /**
- * Converts a hex string to component "hi2", "hi" and "lo" 32-bit integers, one nibble
- * at a time.
+ * Converts a hex string to component "hi2", "hi" and "lo" 32-bit integers
+ * one nibble at a time.
  *
  * Returns the number of nibbles (4 bits) entered.
  */
 int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str) {
-    unsigned int n = 0, i = 0;
+    uint32_t n = 0, i = 0;
 
     while (sscanf(&str[i++], "%1x", &n) == 1) {
         *hi2 = (*hi2 << 4) | (*hi >> 28);
@@ -967,6 +980,30 @@ int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str)
         *lo = (*lo << 4) | (n & 0xf);
     }
     return i - 1;
+}
+
+/**
+ * Converts a binary string to component "hi2", "hi" and "lo" 32-bit integers,
+ * one bit at a time.
+ *
+ * Returns the number of bits entered.
+ */
+int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str) {
+    uint32_t n = 0, i = 0;
+
+    for(;;) {
+
+        int res = sscanf(&str[i], "%1u", &n);
+        if ((res != 1) || (n > 1))
+            break;
+
+        *hi2 = (*hi2 << 1) | (*hi >> 31);
+        *hi = (*hi << 1) | (*lo >> 31);
+        *lo = (*lo << 1) | (n & 0x1);
+
+        i++;
+    }
+    return i;
 }
 
 inline uint32_t bitcount32(uint32_t a) {

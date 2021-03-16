@@ -53,13 +53,21 @@ static bool bCollision;
 static bool bPwd;
 static bool bSuccessful;
 
+/*
+Password Mode : 0x06 - 0000 0110
+Crypto Mode   : 0x0E - 0000 1110
+Public Mode A : 0x02 - 0000 0010
+Public Mode B : 0x00 - 0000 0000
+Public Mode C : 0x04 - 0000 0100
+*/
+
 static struct hitag2_tag tag = {
     .state = TAG_STATE_RESET,
-    .sectors = {                         // Password mode:               | Crypto mode:
+    .sectors = {                          // Password mode:               | Crypto mode:
         [0]  = { 0x02, 0x4e, 0x02, 0x20}, // UID                          | UID
         [1]  = { 0x4d, 0x49, 0x4b, 0x52}, // Password RWD                 | 32 bit LSB key
         [2]  = { 0x20, 0xf0, 0x4f, 0x4e}, // Reserved                     | 16 bit MSB key, 16 bit reserved
-        [3]  = { 0x0e, 0xaa, 0x48, 0x54}, // Configuration, password TAG  | Configuration, password TAG
+        [3]  = { 0x06, 0xaa, 0x48, 0x54}, // Configuration, password TAG  | Configuration, password TAG
         [4]  = { 0x46, 0x5f, 0x4f, 0x4b}, // Data: F_OK
         [5]  = { 0x55, 0x55, 0x55, 0x55}, // Data: UUUU
         [6]  = { 0xaa, 0xaa, 0xaa, 0xaa}, // Data: ....
@@ -91,7 +99,7 @@ static uint8_t key[8];
 static uint8_t writedata[4];
 static uint8_t logdata_0[4], logdata_1[4];
 static uint8_t nonce[4];
-static bool key_no;
+static uint8_t key_no;
 static uint64_t cipher_state;
 
 static int16_t blocknr;
@@ -375,16 +383,15 @@ static uint32_t hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) 
     return wait;
 }
 
-static uint8_t hitag_crc(uint8_t *data, size_t length) {
-    uint8_t crc = 0xff;
-    unsigned int byte, bit;
-    for (byte = 0; byte < ((length + 7) / 8); byte++) {
-        crc ^= *(data + byte);
-        bit = length < (8 * (byte + 1)) ? (length % 8) : 8;
+static uint8_t hitag_crc(uint8_t *data, size_t n) {
+    uint8_t crc = 0xFF;
+    for (size_t i = 0; i < ((n + 7) / 8); i++) {
+        crc ^= *(data + i);
+        uint8_t bit = n < (8 * (i + 1)) ? (n % 8) : 8;
         while (bit--) {
             if (crc & 0x80) {
                 crc <<= 1;
-                crc ^= 0x1d;
+                crc ^= 0x1D;
             } else {
                 crc <<= 1;
             }
@@ -414,7 +421,6 @@ void fix_ac_decoding(uint8_t *input, size_t len) {
 // 0 = collision?
 // 32 =  good response
 static bool hitag_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen, bool hitag_s) {
-    uint8_t crc;
     *txlen = 0;
     switch (rxlen) {
         case 0: {
@@ -435,6 +441,7 @@ static bool hitag_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *tx
             return true;
         }
         case 32: {
+            uint8_t crc;
             if (bCollision) {
                 // Select card by serial from response
                 tx[0] = 0x00 | rx[0] >> 5;
@@ -1001,7 +1008,6 @@ void SniffHitag2(void) {
 
     g_logging = false;
 
-    size_t periods = 0;
     uint8_t periods_bytes[4];
 
 //   int16_t checked = 0;
@@ -1010,7 +1016,7 @@ void SniffHitag2(void) {
     LED_C_ON();
 
     uint32_t signal_size = 10000;
-    while (!BUTTON_PRESS()) {
+    while (BUTTON_PRESS() == false) {
 
         // use malloc
         initSampleBufferEx(&signal_size, false);
@@ -1035,7 +1041,7 @@ void SniffHitag2(void) {
 //        lf_reset_counter();
 
         // Wait "infinite" for reader modulation
-        periods = lf_detect_gap(10000);
+        size_t periods = lf_detect_gap(10000);
 
         // Test if we detected the first reader modulation edge
         if (periods != 0) {
@@ -1070,9 +1076,7 @@ void SimulateHitag2(bool tag_mem_supplied, uint8_t *data) {
 
     int response = 0;
     uint8_t rx[HITAG_FRAME_LEN] = {0};
-    size_t rxlen = 0;
     uint8_t tx[HITAG_FRAME_LEN] = {0};
-    size_t txlen = 0;
 
     auth_table_len = 0;
     auth_table_pos = 0;
@@ -1106,10 +1110,8 @@ void SimulateHitag2(bool tag_mem_supplied, uint8_t *data) {
         Dbprintf("| %d | %08x |", i, block);
     }
 
-    uint8_t reader_modulation;
     size_t max_nrzs = 8 * HITAG_FRAME_LEN + 5;
     uint8_t nrz_samples[max_nrzs];
-    size_t nrzs = 0, periods = 0;
 
 //    uint32_t command_start = 0, command_duration = 0;
     //  int16_t checked = 0;
@@ -1139,8 +1141,7 @@ void SimulateHitag2(bool tag_mem_supplied, uint8_t *data) {
                 }
                 ++checked;
         */
-
-        rxlen = 0;
+        size_t rxlen = 0, txlen = 0;
 
         // Keep administration of the first edge detection
         bool waiting_for_first_edge = true;
@@ -1149,14 +1150,14 @@ void SimulateHitag2(bool tag_mem_supplied, uint8_t *data) {
         bool detected_modulation = false;
 
         // Use the current modulation state as starting point
-        reader_modulation = lf_get_reader_modulation();
+        uint8_t reader_modulation = lf_get_reader_modulation();
 
         // Receive frame, watch for at most max_nrzs periods
         // Reset the number of NRZ samples and use edge detection to detect them
-        nrzs = 0;
+        size_t nrzs = 0;
         while (nrzs < max_nrzs) {
             // Get the timing of the next edge in number of wave periods
-            periods = lf_count_edge_periods(128);
+            size_t periods = lf_count_edge_periods(128);
 
             // Just break out of loop after an initial time-out (tag is probably not available)
             // The function lf_count_edge_periods() returns 0 when a time-out occurs
@@ -1336,7 +1337,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             memset(logdata_1, 0x00, 4);
             byte_value = 0;
             key_no = htd->ht1auth.key_no;
-            DBG Dbprintf("Authenticating using key #%d:", key_no);
+            DBG Dbprintf("Authenticating using key #%u :", key_no);
             DBG Dbhexdump(4, key, false);
             DBG DbpString("Nonce:");
             DBG Dbhexdump(4, nonce, false);

@@ -68,11 +68,11 @@ uint16_t get_ev1_version(iso14a_card_select_t card, uint8_t *version) {
     return mifare_sendcmd(MIFARE_ULEV1_VERSION, NULL, 0, version, NULL, NULL);
 }
 
-uint16_t get_ev1_signature(iso14a_card_select_t card, uint8_t *response) {
+uint16_t get_ev1_signature(iso14a_card_select_t card, uint8_t *signature) {
     uint8_t cmd[4] = {MIFARE_ULEV1_READSIG, 0x00, 0x00, 0x00};
     AddCrc14A(cmd, 2);
     ReaderTransmit(cmd, sizeof(cmd), NULL);
-    return ReaderReceive(response, NULL);
+    return ReaderReceive(signature, NULL);
 }
 
 uint16_t get_ev1_counter(iso14a_card_select_t card, uint8_t counter, uint8_t *response) {
@@ -114,7 +114,6 @@ int get_block_count(iso14a_card_select_t card, uint8_t version[], uint16_t versi
             else if (memcmp(version, "\x00\x04\x03\x01\x01\x00\x0E", 7) == 0) { block_count = MAX_ULEV1b_BLOCKS; }
             else if (memcmp(version, "\x00\x04\x03\x02\x01\x00\x0E", 7) == 0) { block_count = MAX_ULEV1b_BLOCKS; }
             else if (memcmp(version, "\x00\x34\x21\x01\x01\x00\x0E", 7) == 0) { block_count = MAX_ULEV1b_BLOCKS; } // Mikron JSC Russia EV1 41 pages tag
-            else if (memcmp(version, "\x00\x34\x21\x01\x01\x00\x0E", 7) == 0) { block_count = MAX_UL_BLOCKS; }
             else if (version[2] == 0x03) { block_count = MAX_ULEV1a_BLOCKS; }
         }
     }
@@ -191,7 +190,7 @@ void RunMod(void) {
                         read_successful = false;
                         break;
                     }
-                    // We're skipping 14 blocks (56 bytes) here, as that "[...] has version/signature/counter data here" according to comments on hf_mfu_dumptoemulator
+                    // We're skipping 14 blocks (56 bytes) here, as that "[...] has version/signature/counter data here" according to comments on data_mfu_bin2eml
                     // When converting a bin, it's almost all 0 other than one 0x0F byte, and functionality seems to be unaffected if that byte is set to 0x00.
                     emlSetMem_xt(dataout, 14 + i, 1, 4);
                     Dbhexdump(4, dataout, 0);

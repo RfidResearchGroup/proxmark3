@@ -105,8 +105,6 @@ Ci+1: de c2 ee 1b 1c 92 76 e9
   7c90849f8 (77)
   7cc847482 (87)
 
-*/
-
 const uint64_t left_candidates[43] = {
     0x6221539d9ull, 0x1ddeac626ull, 0x7cc847482ull, 0x0337b8b7dull,
     0x159d1687eull, 0x7bade8a41ull, 0x4c51c6463ull, 0x4e3d88bf9ull,
@@ -120,6 +118,7 @@ const uint64_t left_candidates[43] = {
     0x0f78aac5bull, 0x3770cdaf3ull, 0x205078bbaull, 0x04445c715ull,
     0x004df8a64ull, 0x6f696e09eull, 0x109691f61ull
 };
+*/
 
 typedef struct {
     uint64_t l;
@@ -660,7 +659,7 @@ static inline void previous_all_input(vector<cs_t> *pcstates, uint32_t gc_byte_i
     uint8_t btGc, in;
     vector<cs_t> ncstates;
     vector<cs_t> prev_ncstates;
-    vector<cs_t>::iterator it, itnew;
+    vector<cs_t>::iterator itnew;
 
     // Loop through the complete entryphy of 5 bits for each candidate
     // We ignore zero (xor 0x00) to avoid duplicates
@@ -967,13 +966,10 @@ static void ice_compare(
 int main(int argc, const char *argv[]) {
     size_t pos;
     crypto_state_t ostate;
-    uint64_t rstate_before_gc, rstate_after_gc;
-    uint64_t lstate_before_gc;
-    vector<uint64_t> rstates, lstates_after_gc, pgc_candidates;
-    vector<uint64_t>::iterator itrstates, itgc;
-    vector<cs_t> crstates;
-    vector<cs_t> clcandidates, clstates;
-    vector<cs_t>::iterator it;
+    uint64_t rstate_before_gc, lstate_before_gc;
+    vector<uint64_t> rstates, pgc_candidates;
+    vector<uint64_t>::iterator itrstates;
+    vector<cs_t> crstates, clstates;
     uint32_t rbits;
 
     //  uint8_t   Gc[ 8] = {0x4f,0x79,0x4a,0x46,0x3f,0xf8,0x1d,0x81};
@@ -1081,14 +1077,14 @@ int main(int argc, const char *argv[]) {
     rbits = ice_sm_right(ks, mask, &rstates);
 
     printf("Top-bin for the right state contains " _GREEN_("%u")" correct bits\n", rbits);
-    printf("Total count of right bins: " _YELLOW_("%zu") "\n", (unsigned long)rstates.size());
+    printf("Total count of right bins: " _YELLOW_("%zu") "\n", rstates.size());
 
     if (rbits < 96) {
         printf(_RED_("\n  WARNING!!! Better find another trace, the right top-bin is < 96 bits\n\n"));
     }
 
     for (itrstates = rstates.begin(); itrstates != rstates.end(); ++itrstates) {
-        rstate_after_gc = *itrstates;
+        uint64_t rstate_after_gc = *itrstates;
         sm_left_mask(ks, mask, rstate_after_gc);
         printf("Using the state from the top-right bin: " _YELLOW_("0x%07" PRIx64)"\n", rstate_after_gc);
 

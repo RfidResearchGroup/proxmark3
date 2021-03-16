@@ -356,11 +356,9 @@ static int CmdHIDClone(const char *Cmd) {
     bool q5 = arg_get_lit(ctx, 7);
     bool em = arg_get_lit(ctx, 8);
 
-
     int bin_len = 63;
     uint8_t bin[70] = {0};
     CLIGetStrWithReturn(ctx, 9, bin, &bin_len);
-
     CLIParserFree(ctx);
 
     if (q5 && em) {
@@ -383,9 +381,18 @@ static int CmdHIDClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    uint32_t top = 0, mid = 0, bot = 0;
     if (raw_len) {
-        uint32_t top = 0, mid = 0, bot = 0;
         hexstring_to_u96(&top, &mid, &bot, raw);
+        packed.Top = top;
+        packed.Mid = mid;
+        packed.Bot = bot;
+    } else if (bin_len) {
+        int res = binstring_to_u96(&top, &mid, &bot, (const char*)bin);
+        if (res != bin_len) {
+            PrintAndLogEx(ERR, "Binary string contains none <0|1> chars");
+            return PM3_EINVARG;
+        }
         packed.Top = top;
         packed.Mid = mid;
         packed.Bot = bot;

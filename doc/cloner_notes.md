@@ -60,8 +60,8 @@ Standard password is normally (for T55xx):  AA55BBBB
 
 # Restore page1 data
 ```
-lf t55xx write b 1 d E0150A48 1
-If t55xx write b 2 d 2D782308 1
+lf t55xx write -b 1 -d E0150A48 --pg1
+If t55xx write -b 2 -d 2D782308 --pg1
 ```
 
 # Sniffing the comms
@@ -69,12 +69,12 @@ The T55x7 protocol uses a pwm based protocol for writing to tags.  In order to m
 
 ```
 -- after threshold limit 20 is triggered, skip 10000 samples before collecting samples.
-lf config s 10000 t 20
+lf config -s 10000 -t 20
 lf t55xx sniff
 
 -- if you have a save trace from before, try
 data load -f xxxxxxx.pm3
-lf t55xx sniff 1
+lf t55xx sniff -1
 ```
 
 It uses the existing `lf sniff` command to collect the data, so setting that first as per normal sniffing is recommended. Once you have a sniff, you can "re-sniff" from the stored sniffed data and try different settings, if you think the data is not clean.

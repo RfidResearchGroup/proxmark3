@@ -56,6 +56,10 @@ struct version_information {
 #define DBG_EXTENDED      4 // errors + info + debug + breaking debug messages
 extern int DBGLEVEL;
 
+// tear-off
+extern uint16_t tearoff_delay_us;
+extern bool tearoff_enabled;
+
 // reader voltage field detector
 #define MF_MINFIELDV      4000
 

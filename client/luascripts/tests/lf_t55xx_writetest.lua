@@ -17,10 +17,10 @@ It will then try to detect and read back those block data and compare if read da
 
 lf t55xx wipe
 lf t55xx detect
-lf t55xx write b 1 d 00000000
-lf t55xx write b 2 d ffffffff
-lf t55xx write b 3 d 80000000
-lf t55xx write b 4 d 00000001
+lf t55xx write -b 1 -d 00000000
+lf t55xx write -b 2 -d ffffffff
+lf t55xx write -b 3 -d 80000000
+lf t55xx write -b 4 -d 00000001
 
 Loop:
 
@@ -278,7 +278,7 @@ local function WipeCard()
         core.console('rem [ERR:DETECT:WIPED] Failed to detect after wipe')
         return false
     else
-        local wipe_data_cmd = 'lf t55xx write b %s d %s'
+        local wipe_data_cmd = 'lf t55xx write -b %s -d %s'
         for _ = 1, #data_blocks_cmds do
             local val = data_blocks_cmds[_]
             local c = string.format(wipe_data_cmd, _, val)
@@ -321,7 +321,7 @@ local function test(modulation)
         core.clearCommandBuffer()
 
         -- Write Config block
-        dbg(('lf t55xx write b 0 d %s'):format(p_config_cmd))
+        dbg(('lf t55xx write -b 0 -d %s'):format(p_config_cmd))
 
         local data = ('%s%s%s%s'):format(utils.SwapEndiannessStr(p_config_cmd, 32), password, block, flags)
 

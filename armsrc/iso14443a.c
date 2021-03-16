@@ -916,18 +916,25 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     (void)b;
 
-    uint16_t check = 0;
-
+    uint8_t flip = 0;
+    uint16_t checker = 0;
     for (;;) {
-        if (check == 4000) {
-//            if (BUTTON_PRESS() || data_available())
+        WDT_HIT();
+        if (flip == 3) {
+            if (data_available())
+                return false;
+
+            flip = 0;
+        }
+
+        if (checker >= 3000) {
             if (BUTTON_PRESS())
                 return false;
 
-            check = 0;
-            WDT_HIT();
+            flip++;
+            checker = 0;
         }
-        ++check;
+        ++checker;
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -1335,7 +1342,6 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data, uint8_t
     LED_A_ON();
 
     // main loop
-    //for (;;) {
     bool finished = false;
     bool button_pushed = BUTTON_PRESS();
     while (!button_pushed && !finished) {
@@ -2000,7 +2006,7 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
 
             analogCnt++;
 
-            analogAVG += AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF_RDV40];
+            analogAVG += (AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF_RDV40] & 0x3FF);
 
             AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
 
@@ -2028,7 +2034,7 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
 
             analogCnt++;
 
-            analogAVG += AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF];
+            analogAVG += (AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF] & 0x3FF);
 
             AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
 
@@ -2966,7 +2972,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
             }
         }
 
-        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
             FpgaDisableTracing();
             reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
         } else {

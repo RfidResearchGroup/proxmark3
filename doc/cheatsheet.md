@@ -224,34 +224,58 @@ Check for default keys
 ```
 Options
 ---
-<*card memory> <key type (A/B/?)> [t|d|s|ss] <dic (*.dic)>
-*              : all sectors
-card memory    : 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K
-d              : write keys to binary file
+    -k, --key <hex>                Key specified as 12 hex symbols
+    --blk <dec>                    Input block number
+    -a                             Target Key A, if found also check Key B for duplicate
+    -b                             Target Key B
+    -*, --all                      Target both key A & B (default)
+    --mini                         MIFARE Classic Mini / S20
+    --1k                           MIFARE Classic 1k / S50 (default)
+    --2k                           MIFARE Classic/Plus 2k
+    --4k                           MIFARE Classic 4k / S70
+    --emu                          Fill simulator keys from found keys
+    --dump                         Dump found keys to binary file
+    -f, --file <filename>          filename of dictionary
 
-pm3 --> hf mf chk *1 ? d mfc_default_keys
+pm3 --> hf mf chk --1k -f mfc_default_keys
 ```
 
 Check for default keys from local memory
 ```
 Options
 ---
-card memory   : 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K
-m             : use dictionary from flashmemory
+    -k, --key <hex>                Key specified as 12 hex symbols
+    --mini                         MIFARE Classic Mini / S20
+    --1k                           MIFARE Classic 1k / S50 (default)
+    --2k                           MIFARE Classic/Plus 2k
+    --4k                           MIFARE Classic 4k / S70
+    --emu                          Fill simulator keys from found keys
+    --dump                         Dump found keys to binary file
+    --mem                          Use dictionary from flashmemory
+    -f, --file <filename>          filename of dictionary
 
-pm3 --> hf mf fchk 1 m
+pm3 --> hf mf fchk --1k --mem
 ```
 
 Dump MIFARE card contents
 ```
-Options
----
-<card memory> : 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K
-k <name>      : key filename, if no <name> given, UID will be used as filename"
-f <name>      : data filename, if no <name> given, UID will be used as filename
+options:
+    -f, --file <filename>          filename of dump
+    -k, --keys <filename>          filename of keys
+    --mini                         MIFARE Classic Mini / S20
+    --1k                           MIFARE Classic 1k / S50 (default)
+    --2k                           MIFARE Classic/Plus 2k
+    --4k                           MIFARE Classic 4k / S70
 
-pm3 --> hf mf dump 1
-pm3 --> hf mf dump 1 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-dump.bin
+examples/notes:
+    hf mf dump --mini                            -> MIFARE Mini
+    hf mf dump --1k                              -> MIFARE Classic 1k
+    hf mf dump --2k                              -> MIFARE 2k
+    hf mf dump --4k                              -> MIFARE 4k
+    hf mf dump -f hf-mf-066C8B78-key-5.bin       -> MIFARE 1k with keys from specified file
+
+pm3 --> hf mf dump
+pm3 --> hf mf dump --1k -k hf-mf-A29558E4-key.bin -f hf-mf-A29558E4-dump.bin
 ```
 
 Convert .bin to .eml
@@ -305,21 +329,21 @@ Simulate MIFARE
 ```
 u     : (Optional) UID 4,7 or 10 bytes. If not specified, the UID 4B from emulator memory will be used
 
-pm3 --> hf mf sim u 353c2aa6
+pm3 --> hf mf sim -u 353c2aa6
 ```
 
 Simulate MIFARE Sequence
 ```
-pm3 --> hf mf chk *1 ? d mfc_default_keys
+pm3 --> hf mf chk -* --1k --all -f mfc_default_keys
 pm3 --> hf mf dump 1
 pm3 --> script run data_mf_bin2eml -i dumpdata.bin
 pm3 --> hf mf eload 353C2AA6
-pm3 --> hf mf sim u 353c2aa6
+pm3 --> hf mf sim -u 353c2aa6
 ```
 
 Clone MIFARE 1K Sequence
 ```
-pm3 --> hf mf chk *1 ? d mfc_default_keys
+pm3 --> hf mf chk -* --1k --all -f mfc_default_keys
 pm3 --> hf mf dump
 pm3 --> hf mf restore 1 u 4A6CE843 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-dump.bin
 ```
@@ -332,9 +356,9 @@ pm3 --> hf mfu info
 Clone MIFARE Ultralight EV1 Sequence
 ```
 pm3 --> hf mfu dump -k FFFFFFFF
-pm3 --> script run hf_mfu_dumptoemulator -i hf-mfu-XXXX-dump.bin -o hf-mfu-XXXX-dump.eml
+pm3 --> script run data_mfu_bin2eml -i hf-mfu-XXXX-dump.bin -o hf-mfu-XXXX-dump.eml
 pm3 --> hf mfu eload -u -f hf-mfu-XXXX-dump.eml
-pm3 --> hf mfu sim -t 7 -f hf-mfu-XXXX-dump.eml
+pm3 --> hf mfu sim -t 7
 ```
 
 Bruteforce MIFARE Classic card numbers from 11223344 to 11223346
@@ -537,7 +561,7 @@ EM is ASK
 HID Prox is FSK
 Indala is PSK
 
-pm3 --> lf t55xx config FSK
+pm3 --> lf t55xx config --FSK
 ```
 
 Set timings to default
@@ -555,7 +579,7 @@ Write to T55xx block
 b <block>    : block number to write. Between 0-7
 d <data>     : 4 bytes of data to write (8 hex characters)
 
-pm3 --> lf t55xx wr b 0 d 00081040
+pm3 --> lf t55xx wr -b 0 -d 00081040
 ```
 
 Wipe a T55xx tag and set defaults

@@ -121,7 +121,7 @@ uint16_t usart_rxdata_available(void) {
 
 uint32_t usart_read_ng(uint8_t *data, size_t len) {
     if (len == 0) return 0;
-    uint32_t nbBytesRcv = 0;
+    uint32_t bytes_rcv = 0;
     uint32_t try = 0;
 //    uint32_t highest_observed_try = 0;
     // Empirical max try observed: 3000000 / USART_BAUD_RATE
@@ -146,9 +146,9 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
         }
         len -= packetSize;
         while (packetSize--) {
-            data[nbBytesRcv++] = us_rxfifo[us_rxfifo_low++];
             if (us_rxfifo_low == sizeof(us_rxfifo))
                 us_rxfifo_low = 0;
+            data[bytes_rcv++] = us_rxfifo[us_rxfifo_low++];
         }
         if (try++ == maxtry) {
 //            Dbprintf_usb("Dbg USART TIMEOUT");
@@ -157,7 +157,7 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
     }
 //    highest_observed_try = MAX(highest_observed_try, try);
 //    Dbprintf_usb("Dbg USART max observed try %i", highest_observed_try);
-    return nbBytesRcv;
+    return bytes_rcv;
 }
 
 // transfer from device to client

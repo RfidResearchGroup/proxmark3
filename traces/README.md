@@ -89,4 +89,5 @@
 |hf_14a_mfu.trace                         |Reading of a password-protected MFU|
 |hf_14a_mfu-sim.trace                     |Trace seen from a Proxmark3 simulating a MFU|
 |hf_14b_reader.trace                      |Execution of `hf 14b reader` against a card|
+|hf_14b_cryptorf_select.trace             |Sniff of libnfc select / anticollision ofa cryptoRF tag|
 |hf_15_reader.trace                       |Execution of `hf 15 reader` against a card|

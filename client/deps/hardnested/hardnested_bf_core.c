@@ -579,7 +579,7 @@ static SIMDExecInstr GetSIMDInstr(void) {
             instr = SIMD_MMX;
         else
 #endif
-        instr = SIMD_NONE;
+            instr = SIMD_NONE;
 
     return instr;
 }

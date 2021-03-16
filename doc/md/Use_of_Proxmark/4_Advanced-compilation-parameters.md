@@ -79,6 +79,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 |-----------------|----------------------------------------|
 |                 | No standalone mode
 | LF_SKELETON     | standalone mode skeleton - Iceman1001
+| LF_THAREXDE     | LF EM4x50 simulator/read standalone mode - tharexde
 | LF_EM4100EMUL   | LF EM4100 simulator standalone mode - temskiy
 | LF_EM4100RSWB   | LF EM4100 read/write/clone/brute mode - Monster1024
 | LF_EM4100RWC    | LF EM4100 read/write/clone mode - temskiy
@@ -89,6 +90,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_14ASNIFF     | 14a sniff storing to flashmem - Micolous
 | HF_AVEFUL       | MIFARE Ultralight read/simulation - Ave Ozkal
 | HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth storing in flashmem - Bogito
+| HF_CRAFTBYTE    | UID stealer - Emulates scanned 14a UID - Anze Jensterle
 | HF_COLIN        | Mifare ultra fast sniff/sim/clone - Colin Brigato
 | HF_ICECLASS     | iCLASS 4-1 mode  sim/read & dump/loclass/glitch & config to flashmem - Iceman1001
 | HF_LEGIC        | HF Legic Prime standalone - uhei

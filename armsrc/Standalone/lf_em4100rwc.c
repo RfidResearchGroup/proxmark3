@@ -67,8 +67,8 @@ static void fill_buff(uint8_t bit) {
 static void construct_EM410x_emul(uint64_t id) {
 
     int i, j;
-    int binary[4] = {0,0,0,0};
-    int parity[4] = {0,0,0,0};
+    int binary[4] = {0, 0, 0, 0};
+    int parity[4] = {0, 0, 0, 0};
     buflen = 0;
 
     for (i = 0; i < 9; i++)
@@ -194,7 +194,7 @@ void RunMod(void) {
                     construct_EM410x_emul(rev_quads(low[selected]));
                     flash_leds(100, 5);
 
-                    SimulateTagLowFrequency(buflen, 0, 1);
+                    SimulateTagLowFrequency(buflen, 0, true);
                     led_slot(selected);
                     state = 0; // Switch to select mode
                 }

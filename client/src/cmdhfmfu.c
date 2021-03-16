@@ -23,6 +23,8 @@
 #include "mifare/ndef.h"
 #include "cliparser.h"
 #include "cmdmain.h"
+#include "amiibo.h"     // amiiboo fcts
+#include "base64.h"
 
 #define MAX_UL_BLOCKS       0x0F
 #define MAX_ULC_BLOCKS      0x2F
@@ -113,6 +115,36 @@ static char *getUlev1CardSizeStr(uint8_t fsize) {
     else
         sprintf(retStr, "%02X, (%u bytes)", fsize, lsize);
     return buf;
+}
+
+int ul_read_uid(uint8_t *uid) {
+    if (uid == NULL) {
+        PrintAndLogEx(WARNING, "NUll parameter UID");
+        return PM3_ESOFT;
+    }
+    // read uid from tag
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    WaitForResponse(CMD_ACK, &resp);
+    iso14a_card_select_t card;
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    uint64_t select_status = resp.oldarg[0];
+    // 0: couldn't read
+    // 1: OK with ATS
+    // 2: OK, no ATS
+    // 3: proprietary Anticollision
+    if (select_status == 0) {
+        PrintAndLogEx(WARNING, "iso14443a card select failed");
+        return PM3_ESOFT;
+    }
+    if (card.uidlen != 7) {
+        PrintAndLogEx(WARNING, "Wrong sized UID, expected 7bytes got %d", card.uidlen);
+        return PM3_ESOFT;
+    }
+    memcpy(uid, card.uid, 7);
+    return PM3_SUCCESS;
 }
 
 static void ul_switch_on_field(void) {
@@ -715,13 +747,13 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
     // ref: AN11350 NTAG 21x Originality Signature Validation
     // ref: AN11341 MIFARE Ultralight EV1 Originality Signature Validation
     const ecdsa_publickey_t nxp_mfu_public_keys[] = {
-        {"NXP Mifare Classic MFC1C14_x", "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
-        {"Manufacturer Mifare Classic MFC1C14_x", "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
-        {"NXP ICODE DNA, ICODE SLIX2", "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
-        {"NXP Public key", "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
-        {"NXP Ultralight Ev1", "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
-        {"NXP NTAG21x (2013)", "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
-        {"MIKRON Public key", "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
+        {"NXP MIFARE Classic MFC1C14_x",          "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
+        {"Manufacturer MIFARE Classic MFC1C14_x", "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
+        {"NXP ICODE DNA, ICODE SLIX2",            "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
+        {"NXP Public key",                        "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
+        {"NXP Ultralight Ev1",                    "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
+        {"NXP NTAG21x (2013)",                    "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
+        {"MIKRON Public key",                     "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
     };
 
     /*
@@ -775,7 +807,7 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
     for (i = 0; i < ARRAYLEN(nxp_mfu_public_keys); i++) {
 
         int dl = 0;
-        uint8_t key[PUBLIC_ECDA_KEYLEN];
+        uint8_t key[PUBLIC_ECDA_KEYLEN] = {0};
         param_gethex_to_eol(nxp_mfu_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);
 
         int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 7, signature, signature_len, false);
@@ -909,6 +941,267 @@ static char *GenerateFilename(const char *prefix, const char *suffix) {
     strcpy(fptr, prefix);
     FillFileNameByUID(fptr, card.uid, suffix, card.uidlen);
     return fptr;
+}
+
+//------------------------------------
+/*
+static int mfu_decrypt_amiibo(uint8_t *encrypted, uint16_t elen, uint8_t *decrypted, uint16_t *dlen) {
+
+    if (elen < NFC3D_AMIIBO_SIZE / 4) {
+        PrintAndLogEx(ERR, "ERR,  data wrong length, got %zu , expected %zu", elen,  (NFC3D_AMIIBO_SIZE / 4));
+        return PM3_ESOFT;        
+    }
+
+    nfc3d_amiibo_keys amiibo_keys = {0};
+    if (nfc3d_amiibo_load_keys(&amiibo_keys) == false) {
+        return PM3_ESOFT;
+    }
+
+    if (nfc3d_amiibo_unpack(&amiibo_keys, encrypted, decrypted) == false) {
+        PrintAndLogEx(ERR, "WARNING, Tag signature was NOT valid");
+    }
+
+    *dlen = NFC3D_AMIIBO_SIZE;    
+    return PM3_SUCCESS;
+}
+static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
+
+    int res = PM3_SUCCESS;
+    uint16_t maxbytes = (pages * 4);
+
+    *pdata = calloc(maxbytes, sizeof(uint8_t));
+    if (*pdata == NULL) {
+        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        res = PM3_EMALLOC;
+        goto out;
+    }
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "Command execute time-out");
+        free(*pdata);
+        res = PM3_ETIMEOUT;
+        goto out;
+    }
+
+    if (resp.oldarg[0] != 1) {
+        PrintAndLogEx(WARNING, "Failed reading card");
+        free(*pdata);
+        res = PM3_ESOFT;
+        goto out;
+    }
+
+    // read all memory
+    uint32_t startindex = resp.oldarg[2];
+    uint32_t buffer_size = resp.oldarg[1];
+    if (buffer_size > maxbytes) {
+        PrintAndLogEx(FAILED, "Data exceeded buffer size!");
+        buffer_size = maxbytes;
+    }
+
+    if (!GetFromDevice(BIG_BUF, *pdata, buffer_size, startindex, NULL, 0, NULL, 2500, false)) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        free(*pdata);
+        res = PM3_ETIMEOUT;
+        goto out;
+    }
+
+    if (len)
+        *len = buffer_size;
+
+out:
+    return res;
+}
+*/
+/*
+Lego Dimensions, 
+  Version: 00 04 04 02 01 00 0F 03
+  
+  matching bytes: 
+  index 12  ( 3 * 4 )
+   E1 10 12 00 01 03 A0 0C 34 03 13 D1 01 0F 54 02 65 6E
+*/
+
+typedef struct {
+    const char *desc;
+    const char *version;
+    uint8_t mpos;
+    uint8_t mlen;
+    const char *match;
+    uint32_t (*Pwd)(uint8_t *uid);
+    uint16_t (*Pack)(uint8_t *uid);
+    const char *hint;
+} PACKED mfu_identify_t;
+
+static mfu_identify_t mfu_ident_table[] = {
+    {
+        "Jooki", "0004040201000F03",
+        12, 32, "E11012000103A00C340329D101255504732E6A6F6F6B692E726F636B732F732F",
+        ul_ev1_pwdgen_def, ul_ev1_packgen_def,
+        "hf jooki decode -r"
+    },
+    {
+        "Lego Dimensions", "0004040201000F03",
+        12, 18, "E11012000103A00C340313D1010F5402656E",
+        ul_ev1_pwdgenC, ul_ev1_packgenC,
+        "hf mfu dump -k %08x"
+    },
+    {
+        "Hotwheels", "0004040201000F03",
+        9, 9, "E110120F",
+        ul_ev1_pwdgen_def, ul_ev1_packgen_def,
+        "hf mfu dump -k %08x"
+    },
+    {
+        "Minecraft Earth", "0004040201000F03",
+        9, 26, "48F6FFE1101200037C91012C55027069642E6D617474656C2F4167",
+        ul_ev1_pwdgen_def, ul_ev1_packgen_def,
+        "hf mfu dump -k %08x"
+    },
+    {
+        "Snackworld", "0004040101000B03",
+        9, 7, "483000E1100600",
+        NULL, NULL,
+        "hf mfu dump -k %08x"
+    },
+    {
+        "Amiibo", "0004040201001103",
+        9, 9, "480FE0F110FFEEA500",
+        ul_ev1_pwdgenB, ul_ev1_packgenB,
+        "hf mfu dump -k %08x"
+    },
+    {NULL, NULL, 0, 0, NULL, NULL, NULL, NULL}
+};
+
+static mfu_identify_t* mfu_match_fingerprint(uint8_t *version, uint8_t *data) {
+    uint8_t i = 0;
+    do {
+
+        int vl = 0;
+        uint8_t vtmp[10] = {0};
+        param_gethex_to_eol(mfu_ident_table[i].version, 0, vtmp, sizeof(vtmp), &vl);
+
+        bool m1 = (memcmp(vtmp, version, vl) == 0);
+        if (m1 == false) {
+            PrintAndLogEx(DEBUG, "(fingerprint) wrong version");
+            continue;
+        }
+
+        int ml = 0;
+        uint8_t mtmp[40] = {0};
+        param_gethex_to_eol(mfu_ident_table[i].match, 0, mtmp, sizeof(mtmp), &ml);
+
+        bool m2 = (memcmp(mtmp, data + mfu_ident_table[i].mpos, mfu_ident_table[i].mlen) == 0);
+        if (m2) {
+            PrintAndLogEx(DEBUG, "(fingerprint) found %s", mfu_ident_table[i].desc);
+            return &mfu_ident_table[i];
+        }
+    } while (mfu_ident_table[++i].desc);
+    return NULL;
+}
+
+static uint8_t mfu_max_len(void) {
+    uint8_t n = 0, i = 0;
+    do {
+        uint8_t tmp = mfu_ident_table[i].mpos + mfu_ident_table[i].mlen;
+        if (tmp > n) {
+            n = tmp;
+        }
+    } while (mfu_ident_table[++i].desc);
+    return n;
+}
+
+static int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
+    iso14a_card_select_t card;
+    if (ul_select(&card) == false)
+        return PM3_ESOFT;
+
+    uint8_t v[10] = {0x00};
+    int len  = ulev1_getVersion(v, sizeof(v));
+    DropField();
+    if (len != sizeof(v))
+        return PM3_ESOFT;
+
+    memcpy(version, v, 8);
+    memcpy(uid, card.uid, 7);
+    return PM3_SUCCESS;
+}
+
+static int mfu_fingerprint(void) {
+
+    uint8_t *data = NULL;
+    int res = PM3_SUCCESS;
+    PrintAndLogEx(INFO, "------------------------ " _CYAN_("Fingerprint") " -----------------------");
+    uint8_t maxbytes = mfu_max_len();
+    if (maxbytes == 0) {
+        PrintAndLogEx(ERR, "fingerprint table wrong");
+        res = PM3_ESOFT;
+        goto out;
+    }
+    
+    maxbytes = ((maxbytes / 4) + 1) * 4;
+    data = calloc(maxbytes, sizeof(uint8_t));
+    if (data == NULL) {
+        PrintAndLogEx(ERR, "failed to allocate memory");
+        res = PM3_EMALLOC;
+        goto out;
+    }
+
+    uint8_t pages = (maxbytes / 4);
+    PrintAndLogEx(INFO, "Reading tag memory...");
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+        PrintAndLogEx(WARNING, "Command execute time-out");
+        res = PM3_ETIMEOUT;
+        goto out;
+    }
+
+    if (resp.oldarg[0] != 1) {
+        PrintAndLogEx(WARNING, "Failed reading card");
+        res = PM3_ESOFT;
+        goto out;
+    }
+
+    // read all memory
+    uint32_t startindex = resp.oldarg[2];
+    uint32_t buffer_size = resp.oldarg[1];
+    if (buffer_size > maxbytes) {
+        PrintAndLogEx(FAILED, "Data exceeded buffer size!");
+        buffer_size = maxbytes;
+    }
+
+    if (!GetFromDevice(BIG_BUF, data, buffer_size, startindex, NULL, 0, NULL, 2500, false)) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        res = PM3_ETIMEOUT;
+        goto out;
+    }
+
+    uint8_t version[8] = {0};
+    uint8_t uid[7] = {0};
+    if (mfu_get_version_uid(version, uid) == PM3_SUCCESS) {
+        mfu_identify_t* item = mfu_match_fingerprint(version, data);
+        if (item) {
+            PrintAndLogEx(SUCCESS, "Found " _GREEN_("%s"), item->desc);
+
+            if (item->Pwd) {
+                char s[40] = {0};
+                sprintf(s, item->hint, item->Pwd(uid));
+                PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", s);
+            } else {
+                PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", item->hint);
+            }
+        }
+    }
+
+out:
+    free(data);
+    PrintAndLogEx(INFO, "------------------------------------------------------------");
+    return res;
 }
 
 uint32_t GetHF14AMfU_Type(void) {
@@ -1355,17 +1648,20 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             }
             if (len < 1) {
                 PrintAndLogEx(WARNING, _YELLOW_("password not known"));
-                PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen r`") " to get see known pwd gen algo suggestions");
+                PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
             }
         } else {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen r`") " to get see known pwd gen algo suggestions");
+            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
         }
     }
+
+    mfu_fingerprint();
+
 out:
     DropField();
     if (locked) {
         PrintAndLogEx(INFO, "\nTag appears to be locked, try using a key to get more info");
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen r`") " to get see known pwd gen algo suggestions");
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
     }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -2193,6 +2489,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Restoring data blocks.");
+    PrintAndLogEx(INFO, "." NOLF);
     // write all other data
     // Skip block 0,1,2,3 (only magic tags can write to them)
     // Skip last 5 blocks usually is configuration
@@ -2204,6 +2501,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
         wait4response(b);
         PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
     }
     PrintAndLogEx(NORMAL, "");
 
@@ -2253,7 +2551,7 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(HINT, "Hint: See " _YELLOW_("`script run hf_mfu_dumptoemulator`") " to convert the .bin to .eml");
+    PrintAndLogEx(HINT, "Hint: See " _YELLOW_("`script run data_mfu_bin2eml`") " to convert the .bin to .eml");
     return CmdHF14AMfELoad(Cmd);
 }
 //
@@ -2264,7 +2562,8 @@ static int CmdHF14AMfUSim(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfu sim",
                   "Simulate MIFARE Ultralight family type based upon\n"
                   "ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n"
-                  "from emulator memory.  See `hf mfu eload` first",
+                  "from emulator memory.  See `hf mfu eload` first. \n"
+                  "See `hf 14a sim -h` to see available types. You want 2 or 7 usually.",
                   "hf mfu sim -t 2 --uid 1122344556677        -> MIFARE Ultralight\n"
                   "hf mfu sim -t 7 --uid 1122344556677 -n 5   -> AMIIBO (NTAG 215),  pack 0x8080"
                  );
@@ -2598,7 +2897,7 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("u", "uid", "<hex>", "4|7 hex byte UID"),
+        arg_str0("u", "uid", "<hex>", "<4|7> hex byte UID"),
         arg_lit0("r", NULL, "read UID from tag"),
         arg_param_end
     };
@@ -2636,6 +2935,11 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
         }
         ulen = card.uidlen;
         memcpy(uid, card.uid, card.uidlen);
+    } else {
+        if (ulen != 4 && ulen != 7) {
+            PrintAndLogEx(ERR, "Must supply 4 or 7 hex byte uid");
+            return PM3_EINVARG;
+        }
     }
 
     uint8_t iv[8] = { 0x00 };
@@ -2757,48 +3061,32 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     if (selftest)
         return generator_selftest();
 
-    if (u_len != 7) {
-        PrintAndLogEx(WARNING, "Key must be 7 hex bytes");
-        return PM3_EINVARG;
-    }
-
     if (use_tag) {
         // read uid from tag
-        clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
-        PacketResponseNG resp;
-        WaitForResponse(CMD_ACK, &resp);
-        iso14a_card_select_t card;
-        memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+        int res = ul_read_uid(uid);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
 
-        uint64_t select_status = resp.oldarg[0];
-        // 0: couldn't read
-        // 1: OK with ATS
-        // 2: OK, no ATS
-        // 3: proprietary Anticollision
-        if (select_status == 0) {
-            PrintAndLogEx(WARNING, "iso14443a card select failed");
-            return PM3_ESOFT;
+    } else {
+        if (u_len != 7) {
+            PrintAndLogEx(WARNING, "Key must be 7 hex bytes");
+            return PM3_EINVARG;
         }
-        if (card.uidlen != 7) {
-            PrintAndLogEx(WARNING, "Wrong sized UID, expected 7bytes got %d", card.uidlen);
-            return PM3_ESOFT;
-        }
-        memcpy(uid, card.uid, sizeof(uid));
     }
 
     PrintAndLogEx(INFO, "---------------------------------");
     PrintAndLogEx(INFO, " Using UID : %s", sprint_hex(uid, 7));
     PrintAndLogEx(INFO, "---------------------------------");
-    PrintAndLogEx(INFO, " algo | pwd      | pack");
-    PrintAndLogEx(INFO, "------+----------+-----");
-    PrintAndLogEx(INFO, " EV1  | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
-    PrintAndLogEx(INFO, " Ami  | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
-    PrintAndLogEx(INFO, " LD   | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
-    PrintAndLogEx(INFO, " XYZ  | %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
-    PrintAndLogEx(INFO, "------+----------+-----");
+    PrintAndLogEx(INFO, " algo           | pwd      | pack");
+    PrintAndLogEx(INFO, "----------------+----------+-----");
+    PrintAndLogEx(INFO, " EV1            | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
+    PrintAndLogEx(INFO, " Amiibo         | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
+    PrintAndLogEx(INFO, " Lego Dimension | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
+    PrintAndLogEx(INFO, " XYZ 3D printer | %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
+    PrintAndLogEx(INFO, "----------------+----------+-----");
     PrintAndLogEx(INFO, " Vingcard algo");
-    PrintAndLogEx(INFO, "--------------------");
+    PrintAndLogEx(INFO, "---------------------------------");
     return PM3_SUCCESS;
 }
 
@@ -2814,7 +3102,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                   "hf mfu otptear -b 3 -i 100 -s 1000\n"
                   "hf mfu otptear -b 3 -i 1 -e 200\n"
                   "hf mfu otptear -b 3 -i 100 -s 200 -e 2500 -d FFFFFFFF -t EEEEEEEE\n"
-                  "hf mfu otptear -b 3 -i 100 -s 200 -e 2500 -d FFFFFFFF -t EEEEEEEE -m 00000000    -> quite when OTP is reset"
+                  "hf mfu otptear -b 3 -i 100 -s 200 -e 2500 -d FFFFFFFF -t EEEEEEEE -m 00000000    -> quit when OTP is reset"
                  );
 
     void *argtable[] = {
@@ -2824,7 +3112,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         arg_u64_0("e", "end", "<dec>", "end time (def 3000 us)"),
         arg_u64_0("s", "start", "<dec>", "start time (def 0 us)"),
         arg_str0("d", "data", "<hex>", "initialise data before run (4 bytes)"),
-        arg_str0("t", "test", "<hex>", "test write data (4 bytes)"),
+        arg_str0("t", "test", "<hex>", "test write data (4 bytes, 00000000 by default)"),
         arg_str0("m", "match", "<hex>", "exit criteria, if block matches this value (4 bytes)"),
         arg_param_end
     };
@@ -2838,6 +3126,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     int d_len = 0;
     uint8_t data[4] = {0x00};
     CLIGetHexWithReturn(ctx, 5, data, &d_len);
+    bool use_data = (d_len > 0);
 
     int t_len = 0;
     uint8_t test[4] = {0x00};
@@ -2862,7 +3151,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         return PM3_EINVARG;
     }
     if (start > (end - steps)) {
-        PrintAndLogEx(WARNING, "Start time larger then (end time + steps)");
+        PrintAndLogEx(WARNING, "Start time larger than (end time + steps)");
         return PM3_EINVARG;
     }
 
@@ -2881,26 +3170,34 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t teardata[8] = {0x00};
-    memcpy(teardata, data, sizeof(data));
-    memcpy(teardata + sizeof(data), test, sizeof(test));
+    uint8_t teardata[4] = {0x00};
+    memcpy(teardata, test, sizeof(test));
 
     PrintAndLogEx(INFO, "----------------- " _CYAN_("MFU Tear off") " ---------------------");
     PrintAndLogEx(INFO, "Starting Tear-off test");
     PrintAndLogEx(INFO, "Target block no: %u", blockno);
-    PrintAndLogEx(INFO, "Target inital block data : %s", sprint_hex_inrow(teardata, 4));
-    PrintAndLogEx(INFO, "Target write block data  : %s", sprint_hex_inrow(teardata + 4, 4));
+    if (use_data) {
+        PrintAndLogEx(INFO, "Target inital block data : %s", sprint_hex_inrow(data, 4));
+    }
+    PrintAndLogEx(INFO, "Target write block data  : %s", sprint_hex_inrow(teardata, 4));
+    if (use_match) {
+        PrintAndLogEx(INFO, "Target match block data  : %s", sprint_hex_inrow(match, 4));
+    }
     PrintAndLogEx(INFO, "----------------------------------------------------");
     uint8_t isOK;
-    bool got_pre = false, got_post = false, lock_on = false;
+    bool lock_on = false;
     uint8_t pre[4] = {0};
     uint8_t post[4] = {0};
     uint32_t current = start;
-    int phase_clear = -1;
-    int phase_newwr = -1;
+    int phase_begin_clear = -1;
+    int phase_end_clear = -1;
+    int phase_begin_newwr = -1;
+    int phase_end_newwr = -1;
+    bool skip_phase1 = false;
     uint8_t retries = 0;
+    uint8_t error_retries = 0;
 
-    while (current <= (end - steps)) {
+    while ((current <= (end - steps)) && (error_retries < 10)) {
 
         if (kbd_enter_pressed()) {
             PrintAndLogEx(INFO, "\naborted via keyboard!\n");
@@ -2910,10 +3207,27 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         PrintAndLogEx(INFO, "Using tear-off delay " _GREEN_("%" PRIu32) " us", current);
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREU_READBL, blockno, 0, 0, NULL, 0);
         PacketResponseNG resp;
 
-        got_pre = false;
+        if (use_data) {
+            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockno, 0, 0, data, d_len);
+            bool got_written = false;
+            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+                isOK  = resp.oldarg[0] & 0xff;
+                if (isOK) {
+                    got_written = true;
+                }
+            }
+            if (! got_written) {
+                PrintAndLogEx(FAILED, "Failed to write block BEFORE");
+                error_retries++;
+                continue; // try again
+            }
+        }
+
+        SendCommandMIX(CMD_HF_MIFAREU_READBL, blockno, 0, 0, NULL, 0);
+
+        bool got_pre = false;
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             isOK = resp.oldarg[0] & 0xFF;
             if (isOK) {
@@ -2921,9 +3235,13 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 got_pre = true;
             }
         }
-
+        if (! got_pre) {
+            PrintAndLogEx(FAILED, "Failed to read block BEFORE");
+            error_retries++;
+            continue; // try again
+        }
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MFU_OTP_TEAROFF, blockno, current, 0, teardata, 8);
+        SendCommandMIX(CMD_HF_MFU_OTP_TEAROFF, blockno, current, 0, teardata, sizeof(teardata));
 
         // we be getting ACK that we are silently ignoring here..
 
@@ -2934,10 +3252,11 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
 
         if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Tear off reporting failure to select tag");
+            error_retries++;
             continue;
         }
 
-        got_post = false;
+        bool got_post = false;
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_MIFAREU_READBL, blockno, 0, 0, NULL, 0);
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -2947,55 +3266,53 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 got_post = true;
             }
         }
+        if (! got_post) {
+            PrintAndLogEx(FAILED, "Failed to read block BEFORE");
+            error_retries++;
+            continue; // try again
+        }
+        error_retries = 0;
+        char prestr[20] = {0};
+        snprintf(prestr, sizeof(prestr), "%s", sprint_hex_inrow(pre, sizeof(pre)));
+        char poststr[20] = {0};
+        snprintf(poststr, sizeof(poststr), "%s", sprint_hex_inrow(post, sizeof(post)));
 
-        if (got_pre && got_post) {
+        if (memcmp(pre, post, sizeof(pre)) == 0) {
 
-            char prestr[20] = {0};
-            snprintf(prestr, sizeof(prestr), "%s", sprint_hex_inrow(pre, sizeof(pre)));
-            char poststr[20] = {0};
-            snprintf(poststr, sizeof(poststr), "%s", sprint_hex_inrow(post, sizeof(post)));
-
-            if (memcmp(pre, post, sizeof(pre)) == 0) {
-
-                PrintAndLogEx(INFO, "Current %02d (0x%02X) %s"
-                              , blockno
-                              , blockno
-                              , poststr
-                             );
-            } else {
-
-                // skip first message, since its the reset write.
-                if (current == start) {
-                    PrintAndLogEx(INFO, "Inital write");
-                } else {
-                    PrintAndLogEx(INFO, _CYAN_("Tear off occured") " : %02d (0x%02X) %s vs " _RED_("%s")
-                                  , blockno
-                                  , blockno
-                                  , prestr
-                                  , poststr
-                                 );
-
-                    lock_on = true;
-
-                    if (phase_clear == -1)
-                        phase_clear = current;
-
-                    // new write phase must be atleast 100us later..
-                    if (phase_clear > -1 && phase_newwr == -1 && current > (phase_clear + 100))
-                        phase_newwr = current;
-                }
-            }
-
-            if (use_match && memcmp(pre, match, sizeof(pre)) == 0) {
-                PrintAndLogEx(SUCCESS, "Block matches!\n");
-                break;
-            }
-
+            PrintAndLogEx(INFO, "Current :           %02d (0x%02X) %s"
+                            , blockno
+                            , blockno
+                            , poststr
+                            );
         } else {
-            if (got_pre == false)
-                PrintAndLogEx(FAILED, "Failed to read block BEFORE");
-            if (got_post == false)
-                PrintAndLogEx(FAILED, "Failed to read block AFTER");
+            PrintAndLogEx(INFO, _CYAN_("Tear off occurred") " : %02d (0x%02X) %s => " _RED_("%s")
+                            , blockno
+                            , blockno
+                            , prestr
+                            , poststr
+                            );
+
+            lock_on = true;
+
+            if ((phase_begin_clear == -1) && (bitcount32(*(uint32_t*)pre) > bitcount32(*(uint32_t*)post)))
+                phase_begin_clear = current;
+
+            if ((phase_begin_clear > -1) && (phase_end_clear == -1) && (bitcount32(*(uint32_t*)post) == 0))
+                phase_end_clear = current;
+            
+            if ((current == start) && (phase_end_clear > -1))
+                skip_phase1 = true;
+            // new write phase must be atleast 100us later..
+            if (((bitcount32(*(uint32_t*)pre) == 0) || (phase_end_clear > -1)) && (phase_begin_newwr == -1) && (bitcount32(*(uint32_t*)post) != 0) && (skip_phase1 || (current > (phase_end_clear + 100))))
+                phase_begin_newwr = current;
+
+            if ((phase_begin_newwr > -1) && (phase_end_newwr == -1) && (memcmp(post, teardata, sizeof(teardata)) == 0))
+                phase_end_newwr = current;
+        }
+
+        if (use_match && memcmp(post, match, sizeof(post)) == 0) {
+            PrintAndLogEx(SUCCESS, "Block matches stop condition!\n");
+            break;
         }
 
         /*  TEMPORALLY DISABLED
@@ -3026,11 +3343,17 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "----------------------------------------------------");
-    if (phase_clear > - 1) {
-        PrintAndLogEx(INFO, "New phase boundary around " _YELLOW_("%d") " us", phase_clear);
+    if ((phase_begin_clear > - 1) && (phase_begin_clear != start)) {
+        PrintAndLogEx(INFO, "Erase phase start boundary around " _YELLOW_("%5d") " us", phase_begin_clear);
     }
-    if (phase_newwr > - 1) {
-        PrintAndLogEx(INFO, "New phase boundary around " _YELLOW_("%d") " us", phase_newwr);
+    if ((phase_end_clear > - 1) && (phase_end_clear != start)){
+        PrintAndLogEx(INFO, "Erase phase end boundary around   " _YELLOW_("%5d") " us", phase_end_clear);
+    }
+    if (phase_begin_newwr > - 1) {
+        PrintAndLogEx(INFO, "Write phase start boundary around " _YELLOW_("%5d") " us", phase_begin_newwr);
+    }
+    if (phase_end_newwr > - 1) {
+        PrintAndLogEx(INFO, "Write phase end boundary around   " _YELLOW_("%5d") " us", phase_end_newwr);
     }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -3431,6 +3754,13 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
 */
 
+// 
+// name, identifying bytes,  decode function,  hints text 
+// identifying bits
+// 1. getversion data must match.
+// 2. magic bytes in the readable payload
+
+
 static int CmdHF14MfuNDEF(const char *Cmd) {
 
     int keylen;
@@ -3539,7 +3869,46 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
     }
 
     DropField();
-    status = NDEFDecodeAndPrint(records, (size_t)maxsize, true);
+    status = NDEFRecordsDecodeAndPrint(records, (size_t)maxsize);
+    if (status != PM3_SUCCESS) {
+        status = NDEFDecodeAndPrint(records, (size_t)maxsize, true);
+    }
+
+    char *jooki = strstr((char *)records, "s.jooki.rocks/s/?s=");
+    if (jooki) {
+        jooki += 17;
+        while (jooki) {
+            if ((*jooki) != '=')
+                jooki++;
+            else  {
+                jooki++;
+                char s[17] = {0};
+                strncpy(s, jooki, 16);
+                PrintAndLogEx(HINT, "Use `" _YELLOW_("hf jooki decode -d %s") "` to decode", s);
+                break;
+            }
+        }
+    }
+    char *mattel = strstr((char*)records, ".pid.mattel/");
+    if (mattel) {
+        mattel += 12;
+        while (mattel) {
+            if ((*mattel) != '/')
+                mattel++;
+            else  {
+                mattel++;
+                char b64[33] = {0};
+                strncpy(b64, mattel, 32);
+                uint8_t arr[24] = {0};
+                size_t arrlen = 0;
+                mbedtls_base64_decode(arr, sizeof(arr), &arrlen, (const unsigned char *)b64, 32);
+
+                PrintAndLogEx(INFO, "decoded... %s", sprint_hex(arr, arrlen));
+                break;
+            }
+        }        
+    }
+
     free(records);
     return status;
 }
@@ -3587,17 +3956,57 @@ static int CmdHF14AMfuEView(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+/*
+static int CmdHF14AMfUCDecryptAmiibo(const char *Cmd){
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu decrypt",
+                  "Tries to read all memory from amiibo tag and decrypt it",
+                  "hf mfu decrypt"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    uint16_t elen = 0, dlen = 0;
+    uint8_t *encrypted = NULL;
+
+    int res = mfu_dump_tag( MAX_NTAG_215, (void **)&encrypted, &elen);
+    if (res == PM3_SUCCESS) {
+
+        PrintAndLogEx(INFO, "32 first bytes of tag dump");
+        PrintAndLogEx(INFO, "%s", sprint_hex(encrypted, 32));
+        PrintAndLogEx(INFO, "-----------------------");
+
+        uint8_t decrypted[NFC3D_AMIIBO_SIZE] = {0};
+        res = mfu_decrypt_amiibo(encrypted, elen, decrypted, &dlen);
+        if ( res == PM3_SUCCESS) {
+
+            for (uint8_t i = 0; i < dlen/16; i++ ) {
+                PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex_ascii(decrypted + (i * 16), 16));
+            }
+        }
+        free(encrypted);
+    }
+    return PM3_SUCCESS;
+}
+*/
+
 //------------------------------------
 // Menu Stuff
 //------------------------------------
 static command_t CommandTable[] = {
     {"help",    CmdHelp,                   AlwaysAvailable, "This help"},
-    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("recovery") " -----------------------"},
+    {"-----------", CmdHelp,               IfPm3Iso14443a,  "----------------------- " _CYAN_("recovery") " -------------------------"},
     {"keygen",  CmdHF14AMfUGenDiverseKeys, AlwaysAvailable, "Generate 3DES MIFARE diversified keys"},
     {"pwdgen",  CmdHF14AMfUPwdGen,         AlwaysAvailable, "Generate pwd from known algos"},
     {"otptear", CmdHF14AMfuOtpTearoff,     IfPm3Iso14443a,  "Tear-off test on OTP bits"},
 //    {"tear_cnt", CmdHF14AMfuEv1CounterTearoff,     IfPm3Iso14443a,  "Tear-off test on Ev1/NTAG Counter bits"},
-    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
+    {"-----------", CmdHelp,               IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
     {"cauth",   CmdHF14AMfUCAuth,          IfPm3Iso14443a,  "Authentication - Ultralight-C"},
     {"dump",    CmdHF14AMfUDump,           IfPm3Iso14443a,  "Dump MIFARE Ultralight family tag to binary file"},
     {"info",    CmdHF14AMfUInfo,           IfPm3Iso14443a,  "Tag information"},
@@ -3605,12 +4014,15 @@ static command_t CommandTable[] = {
     {"rdbl",    CmdHF14AMfURdBl,           IfPm3Iso14443a,  "Read block"},
     {"restore", CmdHF14AMfURestore,        IfPm3Iso14443a,  "Restore a dump onto a MFU MAGIC tag"},
     {"wrbl",    CmdHF14AMfUWrBl,           IfPm3Iso14443a,  "Write block"},
-    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
+    {"-----------", CmdHelp,               IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
     {"eload",   CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "load Ultralight .eml dump file into emulator memory"},
     {"eview",   CmdHF14AMfuEView,          IfPm3Iso14443a,  "View emulator memory"},
     {"sim",     CmdHF14AMfUSim,            IfPm3Iso14443a,  "Simulate MIFARE Ultralight from emulator memory"},
+    {"-----------", CmdHelp,               IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " ----------------------------"},
     {"setpwd",  CmdHF14AMfUCSetPwd,        IfPm3Iso14443a,  "Set 3DES key - Ultralight-C"},
     {"setuid",  CmdHF14AMfUCSetUid,        IfPm3Iso14443a,  "Set UID - MAGIC tags only"},
+    {"-----------", CmdHelp,               IfPm3Iso14443a,  "----------------------- " _CYAN_("amiibo") " ----------------------------"},
+//    {"decrypt",  CmdHF14AMfUCDecryptAmiibo, IfPm3Iso14443a, "Decrypt a amiibo tag"},
     {NULL, NULL, NULL, NULL}
 };
 

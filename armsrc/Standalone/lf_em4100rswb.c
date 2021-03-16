@@ -100,8 +100,8 @@ static void fill_buff(uint8_t bit) {
 
 static void construct_EM410x_emul(uint64_t id) {
     int i, j;
-    int binary[4] = {0,0,0,0};
-    int parity[4] = {0,0,0,0};
+    int binary[4] = {0, 0, 0, 0};
+    int parity[4] = {0, 0, 0, 0};
     buflen = 0;
 
     for (i = 0; i < 9; i++)
@@ -193,8 +193,8 @@ static uint64_t PackEmID(uint64_t original, int newCardNum) {
         buf &= ~(1 << i);
     }
     buf |= (newCardNum & 0xFFFF) << 1;
-    buf |= oddparity32((buf >> 1) & 0xFFF) & 1;
-    buf |= (evenparity32((buf >> 13) & 0xFFF) & 1) << 25;
+    buf |= oddparity32((buf >> 1) & 0xFFF);
+    buf |= (evenparity32((buf >> 13) & 0xFFF)) << 25;
 
     uint32_t cardnumNew = (buf >> 1) & 0xFFFF;
     uint32_t fcNew = (buf >> 17) & 0xFF;
@@ -272,7 +272,7 @@ static int ExecuteMode(int mode, int slot) {
         case LF_RWSB_MODE_SIM:
             Dbprintf("[=] >>  Sim mode started  <<");
             construct_EM410x_emul(rev_quads(low[slot]));
-            SimulateTagLowFrequency(buflen, 0, 1);
+            SimulateTagLowFrequency(buflen, 0, true);
             return LF_RWSB_UNKNOWN_RESULT;
         case LF_RWSB_MODE_WRITE:
             Dbprintf("[!!] >>  Write mode started  <<");

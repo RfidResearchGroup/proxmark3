@@ -208,15 +208,12 @@ static void remove_from_spiffs(const char *filename) {
         Dbprintf("errno %i\n", SPIFFS_errno(&fs));
 }
 
-static spiffs_stat stat_in_spiffs(const char *filename) {
-    spiffs_stat s;
-    if (SPIFFS_stat(&fs, filename, &s) < 0)
-        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
-    return s;
-}
-
 uint32_t size_in_spiffs(const char *filename) {
-    spiffs_stat s = stat_in_spiffs(filename);
+    spiffs_stat s;
+    if (SPIFFS_stat(&fs, filename, &s) < 0) {
+        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+        return 0;
+    } 
     return s.size;
 }
 

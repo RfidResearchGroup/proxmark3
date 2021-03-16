@@ -58,6 +58,7 @@ static int emrtd_print_ef_com_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen);
+static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen);
 
 typedef enum  { // list must match dg_table
     EF_COM = 0,
@@ -83,27 +84,27 @@ typedef enum  { // list must match dg_table
 } emrtd_dg_enum;
 
 static emrtd_dg_t dg_table[] = {
-//  tag    dg# fileid  filename           desc                                                  pace   eac    req    fast   parser                    dumper
-    {0x60, 0,  "011E", "EF_COM",          "Header and Data Group Presence Information",         false, false, true,  true,  emrtd_print_ef_com_info,  NULL},
-    {0x61, 1,  "0101", "EF_DG1",          "Details recorded in MRZ",                            false, false, true,  true,  emrtd_print_ef_dg1_info,  NULL},
-    {0x75, 2,  "0102", "EF_DG2",          "Encoded Face",                                       false, false, true,  false, NULL,                     emrtd_dump_ef_dg2},
-    {0x63, 3,  "0103", "EF_DG3",          "Encoded Finger(s)",                                  false, true,  false, false, NULL,                     NULL},
-    {0x76, 4,  "0104", "EF_DG4",          "Encoded Eye(s)",                                     false, true,  false, false, NULL,                     NULL},
-    {0x65, 5,  "0105", "EF_DG5",          "Displayed Portrait",                                 false, false, false, false, NULL,                     emrtd_dump_ef_dg5},
-    {0x66, 6,  "0106", "EF_DG6",          "Reserved for Future Use",                            false, false, false, false, NULL,                     NULL},
-    {0x67, 7,  "0107", "EF_DG7",          "Displayed Signature or Usual Mark",                  false, false, false, false, NULL,                     emrtd_dump_ef_dg7},
-    {0x68, 8,  "0108", "EF_DG8",          "Data Feature(s)",                                    false, false, false, true,  NULL,                     NULL},
-    {0x69, 9,  "0109", "EF_DG9",          "Structure Feature(s)",                               false, false, false, true,  NULL,                     NULL},
-    {0x6a, 10, "010A", "EF_DG10",         "Substance Feature(s)",                               false, false, false, true,  NULL,                     NULL},
-    {0x6b, 11, "010B", "EF_DG11",         "Additional Personal Detail(s)",                      false, false, false, true,  emrtd_print_ef_dg11_info, NULL},
-    {0x6c, 12, "010C", "EF_DG12",         "Additional Document Detail(s)",                      false, false, false, true,  emrtd_print_ef_dg12_info, NULL},
-    {0x6d, 13, "010D", "EF_DG13",         "Optional Detail(s)",                                 false, false, false, true,  NULL,                     NULL},
-    {0x6e, 14, "010E", "EF_DG14",         "Security Options",                                   false, false, false, true,  NULL,                     NULL},
-    {0x6f, 15, "010F", "EF_DG15",         "Active Authentication Public Key Info",              false, false, false, true,  NULL,                     NULL},
-    {0x70, 16, "0110", "EF_DG16",         "Person(s) to Notify",                                false, false, false, true,  NULL,                     NULL},
-    {0x77, 0,  "011D", "EF_SOD",          "Document Security Object",                           false, false, false, false, NULL,                     emrtd_dump_ef_sod},
-    {0xff, 0,  "011C", "EF_CardAccess",   "PACE SecurityInfos",                                 true,  false, true,  true,  NULL,                     NULL},
-    {0xff, 0,  "011D", "EF_CardSecurity", "PACE SecurityInfos for Chip Authentication Mapping", true,  false, false, true,  NULL,                     NULL},
+//  tag    dg# fileid  filename           desc                                                  pace   eac    req    fast   parser                          dumper
+    {0x60, 0,  "011E", "EF_COM",          "Header and Data Group Presence Information",         false, false, true,  true,  emrtd_print_ef_com_info,        NULL},
+    {0x61, 1,  "0101", "EF_DG1",          "Details recorded in MRZ",                            false, false, true,  true,  emrtd_print_ef_dg1_info,        NULL},
+    {0x75, 2,  "0102", "EF_DG2",          "Encoded Face",                                       false, false, true,  false, NULL,                           emrtd_dump_ef_dg2},
+    {0x63, 3,  "0103", "EF_DG3",          "Encoded Finger(s)",                                  false, true,  false, false, NULL,                           NULL},
+    {0x76, 4,  "0104", "EF_DG4",          "Encoded Eye(s)",                                     false, true,  false, false, NULL,                           NULL},
+    {0x65, 5,  "0105", "EF_DG5",          "Displayed Portrait",                                 false, false, false, false, NULL,                           emrtd_dump_ef_dg5},
+    {0x66, 6,  "0106", "EF_DG6",          "Reserved for Future Use",                            false, false, false, false, NULL,                           NULL},
+    {0x67, 7,  "0107", "EF_DG7",          "Displayed Signature or Usual Mark",                  false, false, false, false, NULL,                           emrtd_dump_ef_dg7},
+    {0x68, 8,  "0108", "EF_DG8",          "Data Feature(s)",                                    false, false, false, true,  NULL,                           NULL},
+    {0x69, 9,  "0109", "EF_DG9",          "Structure Feature(s)",                               false, false, false, true,  NULL,                           NULL},
+    {0x6a, 10, "010A", "EF_DG10",         "Substance Feature(s)",                               false, false, false, true,  NULL,                           NULL},
+    {0x6b, 11, "010B", "EF_DG11",         "Additional Personal Detail(s)",                      false, false, false, true,  emrtd_print_ef_dg11_info,       NULL},
+    {0x6c, 12, "010C", "EF_DG12",         "Additional Document Detail(s)",                      false, false, false, true,  emrtd_print_ef_dg12_info,       NULL},
+    {0x6d, 13, "010D", "EF_DG13",         "Optional Detail(s)",                                 false, false, false, true,  NULL,                           NULL},
+    {0x6e, 14, "010E", "EF_DG14",         "Security Options",                                   false, false, false, true,  NULL,                           NULL},
+    {0x6f, 15, "010F", "EF_DG15",         "Active Authentication Public Key Info",              false, false, false, true,  NULL,                           NULL},
+    {0x70, 16, "0110", "EF_DG16",         "Person(s) to Notify",                                false, false, false, true,  NULL,                           NULL},
+    {0x77, 0,  "011D", "EF_SOD",          "Document Security Object",                           false, false, false, false, NULL,                           emrtd_dump_ef_sod},
+    {0xff, 0,  "011C", "EF_CardAccess",   "PACE SecurityInfos",                                 true,  false, true,  true,  emrtd_print_ef_cardaccess_info, NULL},
+    {0xff, 0,  "011D", "EF_CardSecurity", "PACE SecurityInfos for Chip Authentication Mapping", true,  false, false, true,  NULL,                           NULL},
     {0x00, 0,  NULL, NULL, NULL, false, false, false, false, NULL, NULL}
 };
 
@@ -115,6 +116,46 @@ static emrtd_hashalg_t hashalg_table[] = {
     {"SHA-256", sha256hash, 32, 11, {0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01}},
     {"SHA-512", sha512hash, 64, 11, {0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03}},
     {NULL,      NULL,       0,  0,  {}}
+};
+
+static emrtd_pacealg_t pacealg_table[] = {
+//  name                                       keygen descriptor
+    {"DH, Generic Mapping, 3DES-CBC-CBC",      NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x01, 0x01}},
+    {"DH, Generic Mapping, AES-CMAC-128",      NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x01, 0x02}},
+    {"DH, Generic Mapping, AES-CMAC-192",      NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x01, 0x03}},
+    {"DH, Generic Mapping, AES-CMAC-256",      NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x01, 0x04}},
+    {"ECDH, Generic Mapping, 3DES-CBC-CBC",    NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x02, 0x01}},
+    {"ECDH, Generic Mapping, AES-CMAC-128",    NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x02, 0x02}},
+    {"ECDH, Generic Mapping, AES-CMAC-192",    NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x02, 0x03}},
+    {"ECDH, Generic Mapping, AES-CMAC-256",    NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x02, 0x04}},
+    {"DH, Integrated Mapping, 3DES-CBC-CBC",   NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x03, 0x01}},
+    {"DH, Integrated Mapping, AES-CMAC-128",   NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x03, 0x02}},
+    {"DH, Integrated Mapping, AES-CMAC-192",   NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x03, 0x03}},
+    {"DH, Integrated Mapping, AES-CMAC-256",   NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x03, 0x04}},
+    {"ECDH, Integrated Mapping, 3DES-CBC-CBC", NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x04, 0x01}},
+    {"ECDH, Integrated Mapping, AES-CMAC-128", NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x04, 0x02}},
+    {"ECDH, Integrated Mapping, AES-CMAC-192", NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x04, 0x03}},
+    {"ECDH, Integrated Mapping, AES-CMAC-256", NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x04, 0x04}},
+    {NULL, NULL, {}}
+};
+
+static emrtd_pacesdp_t pacesdp_table[] = {
+//   id  name                                                     size
+    {0,  "1024-bit MODP Group with 160-bit Prime Order Subgroup", 1024},
+    {1,  "2048-bit MODP Group with 224-bit Prime Order Subgroup", 2048},
+    {2,  "2048-bit MODP Group with 256-bit Prime Order Subgroup", 2048},
+    {8,  "NIST P-192 (secp192r1)",                                192},
+    {10, "NIST P-224 (secp224r1)",                                224},
+    {12, "NIST P-256 (secp256r1)",                                256},
+    {15, "NIST P-384 (secp384r1)",                                384},
+    {18, "NIST P-521 (secp521r1)",                                521},
+    {9,  "BrainpoolP192r1",                                       192},
+    {11, "BrainpoolP224r1",                                       224},
+    {13, "BrainpoolP256r1",                                       256},
+    {14, "BrainpoolP320r1",                                       320},
+    {16, "BrainpoolP384r1",                                       384},
+    {17, "BrainpoolP521r1",                                       521},
+    {32, NULL, 0}
 };
 
 static emrtd_dg_t *emrtd_tag_to_dg(uint8_t tag) {
@@ -992,7 +1033,7 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     // Select EF_COM
     if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, dg_table[EF_COM].fileid, *use_14b) == false) {
         *BAC = true;
-        PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
+        PrintAndLogEx(INFO, "Authentication is enforced. Will attempt external authentication.");
     } else {
         *BAC = false;
         // Select EF_DG1
@@ -1000,7 +1041,7 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
 
         if (emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, *use_14b) == false) {
             *BAC = true;
-            PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
+            PrintAndLogEx(INFO, "Authentication is enforced. Will attempt external authentication.");
         } else {
             *BAC = false;
         }
@@ -1010,7 +1051,7 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     if (*BAC) {
         // If BAC isn't available, exit out and warn user.
         if (!BAC_available) {
-            PrintAndLogEx(ERR, "This eMRTD enforces Basic Access Control, but you didn't supply MRZ data. Cannot proceed.");
+            PrintAndLogEx(ERR, "This eMRTD enforces authentication, but you didn't supply MRZ data. Cannot proceed.");
             PrintAndLogEx(HINT, "Check out hf emrtd info/dump --help, supply data with -n -d and -e.");
             return false;
         }
@@ -1726,6 +1767,64 @@ static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_s
     return PM3_SUCCESS;
 }
 
+static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen) {
+    uint8_t dataset[100] = { 0x00 };
+    size_t datasetlen = 0;
+    uint8_t datafromtag[100] = { 0x00 };
+    size_t datafromtaglen = 0;
+    uint8_t parsednum = 0;
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "----------------- " _CYAN_("EF_CardAccess") " ----------------");
+
+    if (!emrtd_lds_get_data_by_tag(data, datalen, dataset, &datasetlen, 0x30, 0x00, false, true, 0)) {
+        PrintAndLogEx(ERR, "Failed to read set from EF_CardAccess.");
+        return PM3_ESOFT;
+    }
+
+    // Get PACE version
+    if (!emrtd_lds_get_data_by_tag(dataset, datasetlen, datafromtag, &datafromtaglen, 0x02, 0x00, false, false, 0)) {
+        PrintAndLogEx(ERR, "Failed to read PACE version from EF_CardAccess.");
+        return PM3_ESOFT;
+    }
+    // TODO: hack!!!
+    memcpy(&parsednum, datafromtag, datafromtaglen);
+    PrintAndLogEx(SUCCESS, "PACE version..........: " _YELLOW_("%i"), parsednum);
+
+    // Get PACE algorithm
+    if (!emrtd_lds_get_data_by_tag(dataset, datasetlen, datafromtag, &datafromtaglen, 0x06, 0x00, false, false, 0)) {
+        PrintAndLogEx(ERR, "Failed to read PACE algorithm from EF_CardAccess.");
+        return PM3_ESOFT;
+    }
+
+    for (int pacei = 0; pacealg_table[pacei].name != NULL; pacei++) {
+        PrintAndLogEx(DEBUG, "Trying: %s", pacealg_table[pacei].name);
+
+        if (memcmp(pacealg_table[pacei].descriptor, datafromtag, datafromtaglen) == 0) {
+            PrintAndLogEx(SUCCESS, "PACE algorithm........: " _YELLOW_("%s"), pacealg_table[pacei].name);
+        }
+    }
+
+    // Get PACE parameter ID
+    if (!emrtd_lds_get_data_by_tag(dataset, datasetlen, datafromtag, &datafromtaglen, 0x02, 0x00, false, false, 1)) {
+        PrintAndLogEx(ERR, "Failed to read PACE parameter ID from EF_CardAccess.");
+        return PM3_ESOFT;
+    }
+
+    // TODO: hack!!!
+    memcpy(&parsednum, datafromtag, datafromtaglen);
+    for (int pacepari = 0; pacesdp_table[pacepari].id != 32; pacepari++) {
+        PrintAndLogEx(DEBUG, "Trying: %s", pacesdp_table[pacepari].name);
+
+        if (pacesdp_table[pacepari].id == parsednum) {
+            PrintAndLogEx(SUCCESS, "PACE parameter........: " _YELLOW_("%s"), pacesdp_table[pacepari].name);
+        }
+        // TODO: account for RFU
+    }
+
+    return PM3_SUCCESS;
+}
+
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     int resplen = 0;
@@ -1733,6 +1832,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     uint8_t ks_enc[16] = { 0x00 };
     uint8_t ks_mac[16] = { 0x00 };
     bool BAC = false;
+    bool PACE_available = true;
     bool use_14b = false;
 
     // Select the eMRTD
@@ -1741,20 +1841,32 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         return PM3_ESOFT;
     }
 
+    // Read EF_CardAccess
+    if (!emrtd_select_and_read(response, &resplen, dg_table[EF_CardAccess].fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+        PACE_available = false;
+        PrintAndLogEx(HINT, "The error above this is normal. It just means that your eMRTD lacks PACE.");
+    }
+
     // Select and authenticate with the eMRTD
     bool auth_result = emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac, &use_14b);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------------------ " _CYAN_("Basic Info") " ------------------");
     PrintAndLogEx(SUCCESS, "Communication standard: %s", use_14b ? _YELLOW_("ISO/IEC 14443(B)") : _YELLOW_("ISO/IEC 14443(A)"));
-    PrintAndLogEx(SUCCESS, "BAC...................: %s", BAC ? _GREEN_("Enforced") : _RED_("Not enforced"));
+    PrintAndLogEx(SUCCESS, "Authentication........: %s", BAC ? _GREEN_("Enforced") : _RED_("Not enforced"));
+    PrintAndLogEx(SUCCESS, "PACE..................: %s", PACE_available ? _GREEN_("Available") : _YELLOW_("Not available"));
     PrintAndLogEx(SUCCESS, "Authentication result.: %s", auth_result ? _GREEN_("Successful") : _RED_("Failed"));
+
+    if (PACE_available) {
+        emrtd_print_ef_cardaccess_info(response, resplen);
+    }
 
     if (!auth_result) {
         DropField();
         return PM3_ESOFT;
     }
 
+    // Read EF_COM to get file list
     if (!emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
         PrintAndLogEx(ERR, "Failed to read EF_COM.");
         DropField();
@@ -1776,7 +1888,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         return PM3_ESOFT;
     }
 
-    // Grab the hash list
+    // Grab the hash list from EF_SOD
     uint8_t dg_hashes_sod[17][64] = { { 0 } };
     uint8_t dg_hashes_calc[17][64] = { { 0 } };
     int hash_algo = 0;
@@ -1859,6 +1971,16 @@ int infoHF_EMRTD_offline(const char *path) {
     uint8_t dg_hashes_sod[17][64] = { { 0 } };
     uint8_t dg_hashes_calc[17][64] = { { 0 } };
     int hash_algo = 0;
+
+    strcpy(filepath, path);
+    strncat(filepath, PATHSEP, 2);
+    strcat(filepath, dg_table[EF_CardAccess].filename);
+
+    if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS) {
+        emrtd_print_ef_cardaccess_info(data, datalen);
+    } else {
+        PrintAndLogEx(HINT, "The error above this is normal. It just means that your eMRTD lacks PACE.");
+    }
 
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);

@@ -37,22 +37,21 @@ static int CmdKeriMSScramble(KeriMSScramble_t Action, uint32_t *FC, uint32_t *ID
                             255, 255,  2, 255, 255, 255,  3, 255,  4, 255, 255, 255, 255, 255,  1, 255
                           };
 
-    uint8_t CardIdx; // 0 - 31
-    bool BitState;
+    uint8_t card_idx; // 0 - 31
 
     if (Action == Descramble) {
         *FC = 0;
         *ID = 0;
-        for (CardIdx = 0; CardIdx < 32; CardIdx++) {
+        for (card_idx = 0; card_idx < 32; card_idx++) {
             // Get Bit State
-            BitState = (*CardID >> CardIdx) & 1;
+            bool BitState = (*CardID >> card_idx) & 1;
             // Card ID
-            if (CardToID[CardIdx] < 32) {
-                *ID = *ID | (BitState << CardToID[CardIdx]);
+            if (CardToID[card_idx] < 32) {
+                *ID = *ID | (BitState << CardToID[card_idx]);
             }
             // Card FC
-            if (CardToFC[CardIdx] < 32) {
-                *FC = *FC | (BitState << CardToFC[CardIdx]);
+            if (CardToFC[card_idx] < 32) {
+                *FC = *FC | (BitState << CardToFC[card_idx]);
             }
         }
     }
@@ -60,16 +59,16 @@ static int CmdKeriMSScramble(KeriMSScramble_t Action, uint32_t *FC, uint32_t *ID
     if (Action == Scramble) {
         *CardID = 0; // set to 0
 
-        for (CardIdx = 0; CardIdx < 32; CardIdx++) {
+        for (card_idx = 0; card_idx < 32; card_idx++) {
             // Card ID
-            if (CardToID[CardIdx] < 32) {
-                if ((*ID & (1 << CardToID[CardIdx])) > 0)
-                    *CardID |= (1 << CardIdx);
+            if (CardToID[card_idx] < 32) {
+                if ((*ID & (1U << CardToID[card_idx])) > 0)
+                    *CardID |= (1U << card_idx);
             }
             // Card FC
-            if (CardToFC[CardIdx] < 32) {
-                if ((*FC & (1 << CardToFC[CardIdx])) > 0)
-                    *CardID |= (1 << CardIdx);
+            if (CardToFC[card_idx] < 32) {
+                if ((*FC & (1U << CardToFC[card_idx])) > 0)
+                    *CardID |= (1U << card_idx);
             }
         }
 
@@ -83,11 +82,11 @@ static int CmdKeriMSScramble(KeriMSScramble_t Action, uint32_t *FC, uint32_t *ID
         *CardID |= (1 <<  3);
 
         // Check/Parity Bits
-        int Parity = 1;
-        for (CardIdx = 4; CardIdx <= 31; CardIdx += 2) {
-            Parity = Parity ^ ((*CardID >> CardIdx) & 11);
+        int parity = 1;
+        for (card_idx = 4; card_idx <= 31; card_idx += 2) {
+            parity ^= ((*CardID >> card_idx) & 11);
         }
-        *CardID = *CardID | Parity;
+        *CardID = *CardID | parity;
 
         // Bit 31 was fixed but not in check/parity bits
         *CardID |= 1UL << 31;

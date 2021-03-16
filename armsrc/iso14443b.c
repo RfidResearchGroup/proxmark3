@@ -41,7 +41,7 @@
 
 // defaults to 2000ms
 #ifndef FWT_TIMEOUT_14B
-# define FWT_TIMEOUT_14B  35312
+# define FWT_TIMEOUT_14B  35312U
 #endif
 
 // 1 tick == 1/13.56 mhz
@@ -178,7 +178,7 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
 
     // Send TR1.
     // 10-11 ETU * 4times samples ONES
-    for (i = 0; i < 20; i++) {
+    for (i = 0; i < 10; i++) {
         SEND4STUFFBIT(1);
     }
 
@@ -321,7 +321,7 @@ static void Demod14bInit(uint8_t *data, uint16_t max_len) {
 * @param timeout is in frame wait time, fwt, measured in ETUs
 */
 static void iso14b_set_timeout(uint32_t timeout) {
-#define MAX_TIMEOUT 40542464  // 13560000Hz * 1000ms / (2^32-1) * (8*16)
+#define MAX_TIMEOUT 40542464U  // 13560000Hz * 1000ms / (2^32-1) * (8*16)
     if (timeout > MAX_TIMEOUT)
         timeout = MAX_TIMEOUT;
 
@@ -2092,7 +2092,7 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
         uint32_t eof_time = 0;
         CodeAndTransmit14443bAsReader(cmd, len, &start_time, &eof_time);
 
-        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
             FpgaDisableTracing();
             reply_mix(CMD_HF_ISO14443B_COMMAND, -2, 0, 0, NULL, 0);
         } else {

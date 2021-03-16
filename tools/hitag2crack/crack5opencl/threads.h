@@ -123,7 +123,7 @@ typedef struct thread_arg {
 } thread_args_t;
 
 int thread_init(thread_ctx_t *ctx, short type, size_t thread_count);
-int thread_start(thread_ctx_t *ctx, thread_args_t *args);
+int thread_start(thread_ctx_t *ctx, thread_args_t *t_arg);
 int thread_stop(thread_ctx_t *ctx);
 int thread_start_scheduler(thread_ctx_t *ctx, thread_args_t *t_arg, wu_queue_ctx_t *queue_ctx);
 bool thread_setEnd(thread_ctx_t *ctx, thread_args_t *t_arg);

@@ -1692,11 +1692,8 @@ int CmdEM4x05Unlock(const char *Cmd) {
         }
 
         // write
-        res = unlock_write_protect(use_pwd, pwd, write_value, verbose);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "failed unlock write");
-            return PM3_ESOFT;
-        }
+        // don't check the return value. As a tear-off occurred, the write failed.
+        unlock_write_protect(use_pwd, pwd, write_value, verbose);
 
         // read after trigger
         res = em4x05_read_word_ext(14, pwd, use_pwd, &word14);
@@ -1962,11 +1959,11 @@ int CmdEM4x05Sniff(const char *Cmd) {
     bool haveData, sampleData = true;
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x05_sniff",
+    CLIParserInit(&ctx, "lf em 4x05 sniff",
                   "Sniff EM4x05 commands sent from a programmer",
-                  "lf em 4x05_sniff -> sniff via lf sniff\n"
-                  "lf em 4x05_sniff -1 -> sniff from data loaded into the buffer\n"
-                  "lf em 4x05_sniff -r -> reverse the bit order when showing block data"
+                  "lf em 4x05 sniff     --> sniff via lf sniff\n"
+                  "lf em 4x05 sniff -1  --> sniff from data loaded into the buffer\n"
+                  "lf em 4x05 sniff -r  --> reverse the bit order when showing block data"
                  );
 
     void *argtable[] = {

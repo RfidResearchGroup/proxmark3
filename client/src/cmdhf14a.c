@@ -1658,7 +1658,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     } else {
 
         // Double & triple sized UID, can be mapped to a manufacturer.
-        PrintAndLogEx(SUCCESS, "MANUFACTURER:    " _YELLOW_("%s"), getTagInfo(card.uid[0]));
+        PrintAndLogEx(SUCCESS, "MANUFACTURER: " _YELLOW_("%s"), getTagInfo(card.uid[0]));
 
         switch (card.uid[0]) {
             case 0x02: // ST
@@ -2101,6 +2101,14 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             if (do_nack_test)
                 detect_classic_nackbug(false);
         }
+
+        uint8_t signature[32] = {0};
+        res = detect_mfc_ev1_signature(signature);
+        if (res == PM3_SUCCESS) {
+            mfc_ev1_print_signature(card.uid, card.uidlen, signature, sizeof(signature));            
+        }
+
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mf`") " commands");
     }
 
     if (isMifareUltralight)
@@ -2114,9 +2122,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     if (isST)
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf st info`"));
-    
+
     if (isEMV)
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`emv search -sk`"));
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`emv search -s`"));
 
     PrintAndLogEx(NORMAL, "");
     DropField();
@@ -2321,7 +2329,7 @@ static command_t CommandTable[] = {
     {"raw",         CmdHF14ACmdRaw,       IfPm3Iso14443a,  "Send raw hex data to tag"},
     {"antifuzz",    CmdHF14AAntiFuzz,     IfPm3Iso14443a,  "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
     {"config",      CmdHf14AConfig,       IfPm3Iso14443a,  "Configure 14a settings (use with caution)"},
-    {"apdufind",    CmdHf14AFindapdu,     IfPm3Iso14443a,  "Enuerate APDUs - CLA/INS/P1P2"},
+    {"apdufind",    CmdHf14AFindapdu,     IfPm3Iso14443a,  "Enumerate APDUs - CLA/INS/P1P2"},
     {NULL, NULL, NULL, NULL}
 };
 

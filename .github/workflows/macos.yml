@@ -25,6 +25,12 @@ jobs:
       - name: Install dependencies
         run: brew install readline qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc
 
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install setuptools ansicolors sslcrypto
+          if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
+
       - name: make clean
         run: make clean
 
@@ -59,6 +65,12 @@ jobs:
 
       - name: Install dependencies
         run: brew install readline qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install setuptools ansicolors sslcrypto
+          if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
 
       - name: make clean
         run: make clean
@@ -95,6 +107,12 @@ jobs:
 
       - name: Install dependencies
         run: brew install readline qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install setuptools ansicolors sslcrypto
+          if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
 
       - name: Prepare Build Folders
         run: mkdir -p client/build

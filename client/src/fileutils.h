@@ -272,4 +272,11 @@ mfu_df_e detect_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
 int searchAndList(const char *pm3dir, const char *ext);
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent);
 
+
+/**
+ * @brief detects if file is of a supported filetype based on extension
+ * @param filename
+ * @return
+ */
+DumpFileType_t getfiletype(const char *filename);
 #endif // FILEUTILS_H
