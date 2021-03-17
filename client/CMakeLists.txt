@@ -32,7 +32,7 @@ find_package(PkgConfig)
 if (NOT SKIPQT EQUAL 1)
     if(APPLE AND EXISTS /usr/local/opt/qt5)
         # Homebrew installs Qt5 (up to at least 5.11.0) in
-        # /usr/local/qt5. Ensure that it can be found by CMake
+        # /usr/local/opt/qt5. Ensure that it can be found by CMake
         # since it is not in the default /usr/local prefix.
         # Add it to PATHS so that it doesn't override the
         # CMAKE_PREFIX_PATH environment variable.
@@ -40,6 +40,16 @@ if (NOT SKIPQT EQUAL 1)
         # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
         list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /usr/local/opt/qt5)
     endif(APPLE AND EXISTS /usr/local/opt/qt5)
+    if(APPLE AND EXISTS /opt/homebrew/opt/qt5)
+        # Homebrew on Apple Silicon installs Qt5 in
+        # /opt/homebrew/opt/qt5. Ensure that it can be found by CMake
+        # since it is not in the default /usr/local prefix.
+        # Add it to PATHS so that it doesn't override the
+        # CMAKE_PREFIX_PATH environment variable.
+        # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
+        # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
+        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt5)
+    endif(APPLE AND EXISTS /opt/homebrew/opt/qt5)
     set(QT_PACKAGELIST
         Qt5Core
         Qt5Widgets
@@ -77,12 +87,12 @@ endif (EMBED_READLINE OR EMBED_BZIP2)
 
 if (NOT SKIPREADLINE EQUAL 1)
     if (APPLE)
-      find_path(READLINE_INCLUDE_DIRS readline/readline.h /usr/local/opt/readline/include /opt/local/include /opt/include /usr/local/include /usr/include NO_DEFAULT_PATH)
-      find_library(READLINE_LIBRARIES readline /usr/local/opt/readline/lib /opt/local/lib /opt/lib /usr/local/lib /usr/lib NO_DEFAULT_PATH)
+      find_path(READLINE_INCLUDE_DIRS readline/readline.h /usr/local/opt/readline/include /opt/local/include /opt/include /usr/local/include /usr/include /opt/homebrew/opt/readline/include NO_DEFAULT_PATH)
+      find_library(READLINE_LIBRARIES readline /usr/local/opt/readline/lib /opt/local/lib /opt/lib /usr/local/lib /usr/lib /opt/homebrew/opt/readline/lib NO_DEFAULT_PATH)
     endif (APPLE)
     if (EMBED_READLINE)
         ExternalProject_Add(ncurses
-            URL                   http://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.0.tar.gz
+            URL                   http://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.1.tar.gz
             PREFIX                deps/ncurses
             DOWNLOAD_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/deps/ncurses
             CONFIGURE_COMMAND     ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} --host=arm --disable-database  --with-fallbacks=ansi-generic,ansi-mini,color_xterm,dtterm,dumb,Eterm,Eterm-256color,Eterm-88color,eterm-color,gnome,gnome-256color,guru,hurd,iTerm.app,konsole,konsole-16color,konsole-256color,konsole-base,konsole-linux,konsole-solaris,konsole-vt100,kterm,kterm-color,linux,linux-16color,linux-basic,mac,mlterm,mlterm-256color,mrxvt,mrxvt-256color,mterm,mterm-ansi,mvterm,nsterm,nsterm-16color,nsterm-256color,pty,putty,putty-256color,putty-vt100,rxvt,rxvt-16color,rxvt-256color,rxvt-88color,rxvt-basic,rxvt-color,screen,screen-16color,screen-256color,simpleterm,st-16color,st-256color,st52,st52-color,stv52,tt,tt52,unknown,vt100,vt102,vte,vte-256color,xterm,xterm-16color,xterm-256color,xterm-88color,xterm-basic,xterm-bold,xterm-color,xterm-utf8,xterm-vt220,xterm-vt52,xterm1,xtermc,xtermm   --enable-termcap --without-ada --without-debug --without-dlsym --without-gpm --without-develop --without-tests --without-cxx-binding --with-termlib
@@ -94,7 +104,7 @@ if (NOT SKIPREADLINE EQUAL 1)
         ExternalProject_Add_StepTargets(ncurses configure build install)
 
         ExternalProject_Add(readline
-            URL                   ftp://ftp.gnu.org/gnu/readline/readline-7.0.tar.gz
+            URL                   ftp://ftp.gnu.org/gnu/readline/readline-8.1.tar.gz
             PREFIX                deps/readline
             DOWNLOAD_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/deps/readline
             CONFIGURE_COMMAND     ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} --host=arm --enable-static

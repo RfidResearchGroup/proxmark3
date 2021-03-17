@@ -576,6 +576,9 @@ static int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
 }
 
 static char *GenerateFilename(const char *prefix, const char *suffix) {
+    if (! IfPm3Iso14443a()) {
+        return NULL;
+    }
     uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     int uidlen = 0;
     char *fptr = calloc(sizeof(char) * (strlen(prefix) + strlen(suffix)) + sizeof(uid) * 2 + 1,  sizeof(uint8_t));
@@ -1972,8 +1975,9 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     uint64_t foundkey = 0;
     int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key ? trgkey : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey, filename);
 
-    if (tests == 0)
+    if ((tests == 0) && IfPm3Iso14443a()) {
         DropField();
+    }
 
     if (isOK) {
         switch (isOK) {
@@ -3542,8 +3546,6 @@ static int CmdHF14AMfSim(const char *Cmd) {
         }
         showSectorTable(k_sector, k_sectorsCount);
     }
-
-    k_sectorsCount = MIFARE_4K_MAXSECTOR;
     return PM3_SUCCESS;
 }
 
@@ -4869,25 +4871,41 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool verbose = arg_get_lit(ctx, 1);
     uint8_t aid[2] = {0};
-    int aidlen;
+    int aidlen = 0;
     CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
-    uint8_t key[6] = {0};
-    int keylen;
-    CLIGetHexWithReturn(ctx, 3, key, &keylen);
+    uint8_t userkey[6] = {0};
+    int keylen = 0;
+    CLIGetHexWithReturn(ctx, 3, userkey, &keylen);
     bool keyB = arg_get_lit(ctx, 4);
     bool swapmad = arg_get_lit(ctx, 5);
     bool decodeholder = arg_get_lit(ctx, 6);
 
     CLIParserFree(ctx);
 
-    if (aidlen != 2 && !decodeholder && keylen > 0) {
-        PrintAndLogEx(WARNING, "Using default MAD keys instead");
-    }
-
     uint8_t sector0[16 * 4] = {0};
     uint8_t sector10[16 * 4] = {0};
-    if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector0)) {
-        PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
+
+    bool got_first = true;
+    if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector0) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
+        got_first = false;
+    } else {
+        PrintAndLogEx(INFO, "Authentication ( " _GREEN_("OK") " )");
+    }
+
+    // User supplied key
+    if (got_first == false && keylen == 6) {
+        PrintAndLogEx(INFO, "Trying user specified key...");
+        if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, userkey, sector0) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't the custom key is wrong");
+        } else {
+            PrintAndLogEx(INFO, "Authentication ( " _GREEN_("OK") " )");
+            got_first = true;
+        }
+    }
+
+    // Both default and user supplied key failed
+    if (got_first == false) {
         return PM3_ESOFT;
     }
 
@@ -4921,7 +4939,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
         // user specified key
         if (keylen == 6) {
-            memcpy(akey, key, 6);
+            memcpy(akey, userkey, 6);
         }
 
         uint16_t aaid = 0x0004;

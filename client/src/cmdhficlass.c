@@ -18,7 +18,6 @@
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"  // ARRAYLEN
 #include "cmdtrace.h"
-#include "cliparser.h"
 #include "util_posix.h"
 #include "comms.h"
 #include "des.h"
@@ -69,7 +68,7 @@ bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t *rmac, uint8_t *
 
     iclass_prekey_t *prekey = calloc(ICLASS_KEYS_MAX, sizeof(iclass_prekey_t));
     if (prekey == false) {
-        return PM3_EMALLOC;
+        return false;
     }
 
     uint8_t ccnr[12];
@@ -1076,10 +1075,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(INFO, "Block 9 decoder");
-                uint8_t pinsize = 0;
                 if (use_sc) {
-                    pinsize = GetPinSize(decrypted + (8 * 6));
-
+                    uint8_t pinsize = GetPinSize(decrypted + (8 * 6));
                     if (pinsize > 0) {
 
                         uint64_t pin = bytes_to_num(decrypted + (8 * 9), 5);
@@ -2077,7 +2074,7 @@ static int CmdHFiClass_loclass(const char *Cmd) {
                   "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>\n"
                   "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>\n"
                   "   ... totalling N*24 bytes",
-                  "hf iclass loclass -f iclass-dump.bin\n"
+                  "hf iclass loclass -f iclass_dump.bin\n"
                   "hf iclass loclass --test");
 
     void *argtable[] = {
@@ -3489,36 +3486,36 @@ static int CmdHFiClassAutopwn(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
-    {"help",        CmdHelp,                    AlwaysAvailable, "    This help"},
-//    {"clone",       CmdHFiClassClone,           IfPm3Iclass,     "[*] Create a HID credential to Picopass / iCLASS tag"},
-    {"dump",        CmdHFiClassDump,            IfPm3Iclass,     "[*] Dump Picopass / iCLASS tag to file"},
-    {"info",        CmdHFiClassInfo,            AlwaysAvailable, "    Tag information"},
-    {"list",        CmdHFiClassList,            AlwaysAvailable, "    List iclass history"},
-    {"rdbl",        CmdHFiClass_ReadBlock,      IfPm3Iclass,     "[*] Read Picopass / iCLASS block"},
-    {"reader",      CmdHFiClassReader,          IfPm3Iclass,     "    Act like an Picopass / iCLASS reader"},
-    {"restore",     CmdHFiClassRestore,        IfPm3Iclass,      "[*] Restore a dump file onto a Picopass / iCLASS tag"},
-    {"sniff",       CmdHFiClassSniff,           IfPm3Iclass,     "    Eavesdrop Picopass / iCLASS communication"},
-    {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "[*] Write Picopass / iCLASS block"},
+    {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
+//    {"clone",       CmdHFiClassClone,           IfPm3Iclass,     "Create a HID credential to Picopass / iCLASS tag"},
+    {"dump",        CmdHFiClassDump,            IfPm3Iclass,     "Dump Picopass / iCLASS tag to file"},
+    {"info",        CmdHFiClassInfo,            AlwaysAvailable, "Tag information"},
+    {"list",        CmdHFiClassList,            AlwaysAvailable, "List iclass history"},
+    {"rdbl",        CmdHFiClass_ReadBlock,      IfPm3Iclass,     "Read Picopass / iCLASS block"},
+    {"reader",      CmdHFiClassReader,          IfPm3Iclass,     "Act like an Picopass / iCLASS reader"},
+    {"restore",     CmdHFiClassRestore,        IfPm3Iclass,      "Restore a dump file onto a Picopass / iCLASS tag"},
+    {"sniff",       CmdHFiClassSniff,           IfPm3Iclass,     "Eavesdrop Picopass / iCLASS communication"},
+    {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "Write Picopass / iCLASS block"},
 
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("recovery") " ---------------------"},
-//    {"autopwn",     CmdHFiClassAutopwn,         IfPm3Iclass,     "[*] Automatic key recovery tool for iCLASS"},
-    {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "[*] Check keys"},
-    {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "[*] Use loclass to perform bruteforce reader attack"},
-    {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "[*] Uses authentication trace to check for key in dictionary file"},
+//    {"autopwn",     CmdHFiClassAutopwn,         IfPm3Iclass,     "Automatic key recovery tool for iCLASS"},
+    {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "Check keys"},
+    {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "Use loclass to perform bruteforce reader attack"},
+    {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "Uses authentication trace to check for key in dictionary file"},
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("simulation") " ---------------------"},
-    {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "[*] Simulate iCLASS tag"},
-    {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "[*] Load Picopass / iCLASS dump file into emulator memory"},
-    {"esave",       CmdHFiClassESave,           IfPm3Iclass,     "[*] Save emulator memory to file"},
-    {"eview",       CmdHFiClassEView,           IfPm3Iclass,     "[.] View emulator memory"},
+    {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "Simulate iCLASS tag"},
+    {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "Load Picopass / iCLASS dump file into emulator memory"},
+    {"esave",       CmdHFiClassESave,           IfPm3Iclass,     "Save emulator memory to file"},
+    {"eview",       CmdHFiClassEView,           IfPm3Iclass,     "View emulator memory"},
 
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("utils") " ---------------------"},
-    {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "[*] Calc diversified keys (blocks 3 & 4) to write new keys"},
-    {"encode",      CmdHFiClassEncode,          AlwaysAvailable, "[*] Encode binary wiegand to block 7"},
-    {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "[*] Encrypt given block data"},
-    {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "[*] Decrypt given block data or tag dump file" },
-    {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "[*] Manage keys to use with iclass commands"},
-    {"permutekey",  CmdHFiClassPermuteKey,      IfPm3Iclass,     "    Permute function from 'heart of darkness' paper"},
-    {"view",        CmdHFiClassView,            AlwaysAvailable, "[*] Display content from tag dump file"},
+    {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "Calc diversified keys (blocks 3 & 4) to write new keys"},
+    {"encode",      CmdHFiClassEncode,          AlwaysAvailable, "Encode binary wiegand to block 7"},
+    {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "Encrypt given block data"},
+    {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "Decrypt given block data or tag dump file" },
+    {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "Manage keys to use with iclass commands"},
+    {"permutekey",  CmdHFiClassPermuteKey,      IfPm3Iclass,     "Permute function from 'heart of darkness' paper"},
+    {"view",        CmdHFiClassView,            AlwaysAvailable, "Display content from tag dump file"},
     {NULL, NULL, NULL, NULL}
 };
 

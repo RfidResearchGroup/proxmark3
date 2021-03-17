@@ -3,6 +3,20 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `wiegand encode` - format param is now optional, w/o it will try encode all formats (@iceman1001)
+ - Fix cppchecker warnings (@iceman1001)
+ - Added `trace list -t mf` - now can use external dictionary keys file
+ - Added support for bidirectional communication for `lf em 4x50 sim` (@tharexde)
+ - Change `PLATFORM=PM3OTHER` to `PLATFORM=PM3GENERIC` (@iceman1001)
+ - Added `tools/hitag2crack/crack5opencl`, an optimized version of `crack5gpu` (@matrix)
+ - Fixed Makefile to account for changes when running on Apple Silicon (@tcprst)
+ - Added support for debugging ARM with JTAG & VSCode (@Gator96100)
+ - Added MFUL "Gen1b" suport to `hf_mfu_setuid.lua` (@iceman1001)
+ - Added possibility to get bargraph in `lf tune` and `hf tune` (@iceman1001, @doegox)
+ - Added `hf emrtd` ePassport dumping and parsing (@aveao)
+ - Added `aidsearch` to `hf 14b info` (@iceman1001)
+ - Added `ICE_STATE_DUMP_SIM` - standalone mode for dumping/simming one iClass tag (@iconicsec)
+ - Added  `lf em 4x50 eview` - show uploaded EM4x50 data in emul memory (@tharexde) 
  - Fix `data rawdemod` parsing for psk2 and user defined clock (@cyberpunk-re)
  - Added `hf iclass encode` - encode a wiegand binary to a encrypted credential (@iceman1001)
  - Changed `recoverpk.py` - now tests more ECDSA curves (@doegox)

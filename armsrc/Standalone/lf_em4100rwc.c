@@ -41,7 +41,7 @@
 // In high[] must be nulls
 static uint64_t low[] = {0x565AF781C7, 0x540053E4E2, 0x1234567890, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static uint32_t high[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-static uint8_t *bba, slots_count;
+static uint8_t slots_count;
 static int buflen;
 
 void ModInfo(void) {
@@ -56,7 +56,8 @@ static uint64_t rev_quads(uint64_t bits) {
     return result >> 24;
 }
 
-static void fillbuff(uint8_t bit) {
+static void fill_buff(uint8_t bit) {
+    uint8_t *bba = BigBuf_get_addr();
     memset(bba + buflen, bit, LF_CLOCK / 2);
     buflen += (LF_CLOCK / 2);
     memset(bba + buflen, bit ^ 1, LF_CLOCK / 2);
@@ -66,29 +67,29 @@ static void fillbuff(uint8_t bit) {
 static void construct_EM410x_emul(uint64_t id) {
 
     int i, j;
-    int binary[4] = {0};
-    int parity[4] = {0};
+    int binary[4] = {0,0,0,0};
+    int parity[4] = {0,0,0,0};
     buflen = 0;
 
     for (i = 0; i < 9; i++)
-        fillbuff(1);
+        fill_buff(1);
 
     for (i = 0; i < 10; i++) {
         for (j = 3; j >= 0; j--, id /= 2)
             binary[j] = id % 2;
 
         for (j = 0; j < 4; j++)
-            fillbuff(binary[j]);
+            fill_buff(binary[j]);
 
-        fillbuff(binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
+        fill_buff(binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
         for (j = 0; j < 4; j++)
             parity[j] ^= binary[j];
     }
 
     for (j = 0; j < 4; j++)
-        fillbuff(parity[j]);
+        fill_buff(parity[j]);
 
-    fillbuff(0);
+    fill_buff(0);
 }
 
 static void led_slot(int i) {
@@ -138,7 +139,6 @@ void RunMod(void) {
     //      3 - write to T5555 tag
     uint8_t state = 0;
     slots_count = ARRAYLEN(low);
-    bba = BigBuf_get_addr();
     led_slot(selected);
     for (;;) {
 

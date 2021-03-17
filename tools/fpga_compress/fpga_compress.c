@@ -115,7 +115,7 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
     }
     LZ4_freeStreamHC(lz4_streamhc);
 
-    fprintf(stdout, "compressed %u input bytes to %u output bytes\n", total_size, current_out);
+    fprintf(stdout, "compressed %u input bytes to %d output bytes\n", total_size, current_out);
 
     if (current_out == 0) {
         fprintf(stderr, "Error in lz4");
@@ -399,9 +399,6 @@ int main(int argc, char **argv) {
             int ret = generate_fpga_version_info(infiles, infile_names, num_input_files, outfile);
             free(infile_names);
             free(infiles);
-            if (ret) {
-                return (EXIT_FAILURE);
-            }
             return (ret);
         } else {
             int ret = zlib_compress(infiles, num_input_files, outfile);

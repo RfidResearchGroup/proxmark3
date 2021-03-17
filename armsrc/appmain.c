@@ -50,7 +50,7 @@
 #include "crc16.h"
 
 #ifdef WITH_LCD
-#include "LCD.h"
+#include "LCD_disabled.h"
 #endif
 
 #ifdef WITH_SMARTCARD
@@ -257,6 +257,9 @@ void ReadMem(int addr) {
 /* osimage version information is linked in, cf commonutil.h */
 /* bootrom version information is pointed to from _bootphase1_version_pointer */
 extern char *_bootphase1_version_pointer, _flash_start, _flash_end, __data_src_start__;
+#ifdef WITH_NO_COMPRESSION
+extern char *_bootrom_end, _bootrom_start, __os_size__;
+#endif
 static void SendVersion(void) {
     char temp[PM3_CMD_DATA_SIZE - 12]; /* Limited data payload in USB packets */
     char VersionString[PM3_CMD_DATA_SIZE - 12] = { '\0' };
@@ -295,9 +298,11 @@ static void SendVersion(void) {
             strncat(VersionString, "\n ", sizeof(VersionString) - strlen(VersionString) - 1);
         }
     }
+#ifndef WITH_NO_COMPRESSION
     // Send Chip ID and used flash memory
     uint32_t text_and_rodata_section_size = (uint32_t)&__data_src_start__ - (uint32_t)&_flash_start;
     uint32_t compressed_data_section_size = common_area.arg1;
+#endif
 
     struct p {
         uint32_t id;
@@ -308,7 +313,11 @@ static void SendVersion(void) {
 
     struct p payload;
     payload.id = *(AT91C_DBGU_CIDR);
+#ifdef WITH_NO_COMPRESSION
+    payload.section_size = (uint32_t)&_bootrom_end - (uint32_t)&_bootrom_start + (uint32_t)&__os_size__;
+#else
     payload.section_size = text_and_rodata_section_size + compressed_data_section_size;
+#endif
     payload.versionstr_len = strlen(VersionString) + 1;
     memcpy(payload.versionstr, VersionString, payload.versionstr_len);
 
@@ -1136,7 +1145,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             // destroy the Emulator Memory.
             //-----------------------------------------------------------------------------
             FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-            em4x50_sim((uint8_t *)packet->data.asBytes);
+            em4x50_sim((uint32_t *)packet->data.asBytes);
             break;
         }
         case CMD_LF_EM4X50_READER: {
@@ -1655,10 +1664,6 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_ICLASS_READBL: {
             iClass_ReadBlock(packet->data.asBytes);
-            break;
-        }
-        case CMD_HF_ICLASS_AUTH: { //check
-            iClass_Authentication(packet->data.asBytes);
             break;
         }
         case CMD_HF_ICLASS_CHKKEYS: {

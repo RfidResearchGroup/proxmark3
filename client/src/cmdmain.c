@@ -175,7 +175,7 @@ int CmdRem(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    struct arg_str* foo = arg_get_str(ctx, 1);
+    struct arg_str *foo = arg_get_str(ctx, 1);
     size_t count = 0;
     size_t len = 0;
     do {

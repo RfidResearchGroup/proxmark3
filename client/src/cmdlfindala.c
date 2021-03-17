@@ -544,7 +544,8 @@ static int CmdIndalaSim(const char *Cmd) {
 
     // raw param
     int raw_len = 0;
-    uint8_t raw[(7 * 4) + 1 ];
+    uint8_t raw[(7 * 4) + 1];
+    memset(raw, 0, sizeof(raw));
     CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
 
     bool is_long_uid = (raw_len == 28);
@@ -569,15 +570,21 @@ static int CmdIndalaSim(const char *Cmd) {
     uint8_t bs[224];
     memset(bs, 0x00, sizeof(bs));
 
-    uint8_t counter = 223;
-    for (uint8_t i = 0; i < raw_len; i++) {
+    uint8_t counter = 0;
+    for (int8_t i = 0; i < raw_len; i++) {
         uint8_t tmp = raw[i];
-        for (uint8_t j = 0; j < 8; j++) {
-            bs[counter--] = tmp & 1;
-            tmp >>= 1;
-        }
+        bs[counter++] = (tmp >> 7) & 1;
+        bs[counter++] = (tmp >> 6) & 1;
+        bs[counter++] = (tmp >> 5) & 1;
+        bs[counter++] = (tmp >> 4) & 1;
+        bs[counter++] = (tmp >> 3) & 1;
+        bs[counter++] = (tmp >> 2) & 1;
+        bs[counter++] = (tmp >> 1) & 1;
+        bs[counter++] = tmp & 1;
     }
 
+    // a0 00 00 00 bd 98 9a 11
+    
     // indala PSK
     // It has to send either 64bits (8bytes) or 224bits (28bytes).  Zero padding needed if not.
     // lf simpsk 1 c 32 r 2 d 0102030405060708
@@ -593,10 +600,10 @@ static int CmdIndalaSim(const char *Cmd) {
     payload->carrier =  2;
     payload->invert = 0;
     payload->clock = 32;
-    memcpy(payload->data, bs, sizeof(bs));
+    memcpy(payload->data, bs, raw_len * 8);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + (raw_len * 8));
     free(payload);
 
     PacketResponseNG resp;

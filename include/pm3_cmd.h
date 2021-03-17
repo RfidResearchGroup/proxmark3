@@ -593,7 +593,6 @@ typedef struct {
 #define CMD_HF_ICLASS_READBL                                              0x0396
 #define CMD_HF_ICLASS_WRITEBL                                             0x0397
 #define CMD_HF_ICLASS_EML_MEMSET                                          0x0398
-#define CMD_HF_ICLASS_AUTH                                                0x0399
 #define CMD_HF_ICLASS_CHKKEYS                                             0x039A
 #define CMD_HF_ICLASS_RESTORE                                             0x039B
 

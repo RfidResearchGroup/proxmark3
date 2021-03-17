@@ -2,6 +2,9 @@ MYSRCPATHS = ../common
 MYSRCS = ht2crackutils.c hitagcrypto.c
 MYCFLAGS =
 MYDEFS =
+
+platform = $(shell uname)
+
 ifeq ($(platform),Darwin)
     MYLDLIBS ?= -framework OpenCL
 else
@@ -11,6 +14,7 @@ else
     MYLDLIBS ?= -L/opt/nvidia/cuda/lib64 -lOpenCL
 endif
 MYINCLUDES +=-I ../common
+MYINCLUDES +=-I ../common/OpenCL-Headers
 
 BINS = ht2crack5gpu
 INSTALLTOOLS = $(BINS)

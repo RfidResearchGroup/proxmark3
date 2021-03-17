@@ -36,5 +36,6 @@ int lf_read(bool verbose, uint32_t samples);
 int lf_sniff(bool verbose, uint32_t samples);
 int lf_config(sample_config *config);
 int lf_getconfig(sample_config *config);
-
+int lfsim_upload_gb(void);
+int lfsim_wait_check(uint32_t cmd);
 #endif

@@ -1,15 +1,5 @@
 clear
 pref
-analyse lcr
-analyse crc
-analyse chksum
-analyse dates
-analyse tea
-analyse lfsr
-analyse a
-analyse nuid
-analyse demodbuff
-analyse freq
 analyse foo
 data biphaserawdecode
 data detectclock
@@ -42,14 +32,6 @@ data print
 data samples
 data setdebugmode
 data tune
-hf tune
-hf search
-hf sniff
-hf 14a reader
-hf 14a cuids
-hf 14a sim
-hf 14a sniff
-hf 14a config
 hf 14b sriwrite
 hf 15 dump
 hf 15 info
@@ -60,8 +42,6 @@ hf 15 restore
 hf 15 wrbl
 hf 15 writeafi
 hf 15 writedsfid
-hf epa cnonces
-hf epa preplay
 hf felica reader
 hf felica sniff
 hf felica raw
@@ -77,18 +57,6 @@ hf felica rqspecver
 hf felica resetmode
 hf felica litesim
 hf felica litedump
-hf fido info
-hf legic reader
-hf legic info
-hf legic dump
-hf legic restore
-hf legic rdbl
-hf legic sim
-hf legic wrbl
-hf legic crc
-hf legic eload
-hf legic esave
-hf legic wipe
 hf mf darkside
 hf mf nested
 hf mf hardnested
@@ -125,91 +93,21 @@ hf mf gen3uid
 hf mf gen3blk
 hf mf gen3freeze
 hf mf ice
-hf mfu info
-hf mfu dump
-hf mfu restore
-hf mfu eload
-hf mfu rdbl
-hf mfu wrbl
-hf mfu cauth
-hf mfu setpwd
-hf mfu setuid
-hf mfu sim
-hf mfu gen
-hf mfu pwdgen
-hf mfu otptear
-hf mfdes enum
-hf mfdes getuid
-hf mfdes info
-hw connect
-hw dbg
-hw detectreader
-hw fpgaoff
-hw lcd
-hw lcdreset
-hw ping
-hw readmem
-hw reset
-hw setlfdivisor
-hw setmux
-hw standalone
-hw status
-hw tia
-hw tune
-hw version
-lf config
-lf cmdread
-lf read
-lf search
-lf sim
-lf simask
-lf simfsk
-lf simpsk
-lf simbidir
-lf sniff
-lf tune
 lf em 410x
 lf em 4x05
 lf em 4x50
-lf hitag info
+lf em 4x70
 lf hitag reader
 lf hitag sim
-lf hitag sniff
 lf hitag writer
 lf hitag dump
 lf hitag cc
 lf t55xx config
-lf t55xx dangerraw
-lf t55xx detect
-lf t55xx deviceconfig
 lf t55xx dump
 lf t55xx info
-lf t55xx p1detect
 lf t55xx read
 lf t55xx resetread
 lf t55xx restore
 lf t55xx trace
-lf t55xx wakeup
 lf t55xx write
-lf t55xx bruteforce
-lf t55xx chk
-lf t55xx protect
-lf t55xx recoverpw
-lf t55xx sniff
-lf t55xx special
-lf t55xx wipe
-smart info
-smart reader
-smart raw
-smart upgrade
-smart setclock
-smart brute
 script run
-usart btpin
-usart btfactory
-usart tx
-usart rx
-usart txrx
-usart txhex
-usart rxhex
-usart config

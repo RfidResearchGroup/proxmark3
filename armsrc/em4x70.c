@@ -190,9 +190,9 @@ static uint32_t get_rising_pulse_length(void) {
 
 static uint32_t get_pulse_length(edge_detection_t edge) {
 
-    if(edge == RISING_EDGE)
+    if (edge == RISING_EDGE)
         return get_rising_pulse_length();
-    else if(edge == FALLING_EDGE)
+    else if (edge == FALLING_EDGE)
         return get_falling_pulse_length();
 
     return 0;
@@ -292,11 +292,11 @@ static bool check_ack(void) {
     // ACK  64 + 64
     // NACK 64 + 48
     if (check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD) &&
-        check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
+            check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
         // ACK
         return true;
-    } 
-    
+    }
+
     // Othewise it was a NACK or Listen Window
     return false;
 }
@@ -426,10 +426,10 @@ static bool find_listen_window(bool command) {
         96 ( 64 + 32 )
         64 ( 32 + 16 +16 )*/
 
-        if (check_pulse_length(get_pulse_length(RISING_EDGE),     (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
-                check_pulse_length(get_pulse_length(RISING_EDGE), (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
-                check_pulse_length(get_pulse_length(FALLING_EDGE),        (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_FULL_PERIOD) &&
-                check_pulse_length(get_pulse_length(FALLING_EDGE),         EM4X70_T_TAG_FULL_PERIOD + (2*EM4X70_T_TAG_HALF_PERIOD))) {
+        if (check_pulse_length(get_pulse_length(RISING_EDGE), (2 * EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
+                check_pulse_length(get_pulse_length(RISING_EDGE), (2 * EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
+                check_pulse_length(get_pulse_length(FALLING_EDGE), (2 * EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_FULL_PERIOD) &&
+                check_pulse_length(get_pulse_length(FALLING_EDGE),         EM4X70_T_TAG_FULL_PERIOD + (2 * EM4X70_T_TAG_HALF_PERIOD))) {
 
             if (command) {
                 /* Here we are after the 64 duration edge.
@@ -438,7 +438,7 @@ static bool find_listen_window(bool command) {
                     *
                     *   I've found between 4-5 quarter periods (32-40) works best
                     */
-                WaitTicks( 4 * EM4X70_T_TAG_QUARTER_PERIOD );
+                WaitTicks(4 * EM4X70_T_TAG_QUARTER_PERIOD);
                 // Send RM Command
                 em4x70_send_bit(0);
                 em4x70_send_bit(0);
@@ -559,7 +559,7 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
     WaitTicks(6 * EM4X70_T_TAG_FULL_PERIOD);
 
     // wait until we get the transition from 1's to 0's which is 1.5 full windows
-    for(int i = 0; i < EM4X70_T_READ_HEADER_LEN; i++) {
+    for (int i = 0; i < EM4X70_T_READ_HEADER_LEN; i++) {
         pl = get_pulse_length(edge);
         if (check_pulse_length(pl, 3 * EM4X70_T_TAG_HALF_PERIOD)) {
             foundheader = true;
@@ -575,7 +575,7 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
     // Skip next 3 0's, header check consumes the first 0
     for (int i = 0; i < 3; i++) {
         // If pulse length is not 1 bit, then abort early
-        if(!check_pulse_length(get_pulse_length(edge), EM4X70_T_TAG_FULL_PERIOD)) {
+        if (!check_pulse_length(get_pulse_length(edge), EM4X70_T_TAG_FULL_PERIOD)) {
             return 0;
         }
     }
@@ -662,9 +662,10 @@ void em4x70_write(em4x70_data_t *etd) {
 
         if (status) {
             // Read Tag after writing
-            em4x70_read_id();
-            em4x70_read_um1();
-            em4x70_read_um2();
+            if (em4x70_read_id()) {
+                em4x70_read_um1();
+                em4x70_read_um2();
+            }
         }
 
     }
@@ -745,8 +746,8 @@ void em4x70_write_pin(em4x70_data_t *etd) {
         if (em4x70_read_id()) {
 
             // Write new PIN
-            if( (write( etd->pin & 0xFFFF,        EM4X70_PIN_WORD_UPPER) == PM3_SUCCESS) &&
-                (write((etd->pin >> 16) & 0xFFFF, EM4X70_PIN_WORD_LOWER) == PM3_SUCCESS)) {
+            if ((write(etd->pin & 0xFFFF,        EM4X70_PIN_WORD_UPPER) == PM3_SUCCESS) &&
+                    (write((etd->pin >> 16) & 0xFFFF, EM4X70_PIN_WORD_LOWER) == PM3_SUCCESS)) {
 
                 // Now Try to authenticate using the new PIN
 
@@ -784,13 +785,13 @@ void em4x70_write_key(em4x70_data_t *etd) {
         // Read ID to ensure we can write to card
         if (em4x70_read_id()) {
             status = 1;
-            
-            // Write each crypto block
-            for(int i = 0; i < 6; i++) {
 
-                uint16_t key_word = (etd->crypt_key[(i*2)+1] << 8) + etd->crypt_key[i*2];
+            // Write each crypto block
+            for (int i = 0; i < 6; i++) {
+
+                uint16_t key_word = (etd->crypt_key[(i * 2) + 1] << 8) + etd->crypt_key[i * 2];
                 // Write each word, abort if any failure occurs
-                if (write(key_word, 9-i) != PM3_SUCCESS) {
+                if (write(key_word, 9 - i) != PM3_SUCCESS) {
                     status = 0;
                     break;
                 }

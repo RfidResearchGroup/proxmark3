@@ -44,8 +44,8 @@ arguments = [[
     -c      read magic configuration
     -u      UID (14 hexsymbols), set UID on tag
     -t      tag type to impersonate
-                 1 = UL_EV1 48k
-                 2 = UL_EV1 128k
+                 1 = UL EV1 48b
+                 2 = UL EV1 128b
                  3 = NTAG 210
                  4 = NTAG 212
                  5 = NTAG 213 (true)
@@ -60,7 +60,7 @@ arguments = [[
     -p      password (8 hexsymbols),  set password on tag.
     -a      pack ( 4 hexsymbols), set pack on tag.
     -s      signature data (64 hexsymbols), set signature data on tag.
-    -o      OTP data (8 hexsymbols), set one-time-pad data on tag.
+    -o      OTP data (8 hexsymbols), set `One-Time Programmable` data on tag.
     -v      version data (16 hexsymbols), set version data on tag.
     -w      wipe tag. You can specify password if the tag has been locked down. Fills tag with zeros and put default values for NTAG213 (like -t 5)
     -k      pwd to use with the wipe option

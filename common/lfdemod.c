@@ -41,6 +41,8 @@
 #include <stdlib.h>  // qsort
 #include "parity.h"  // for parity test
 #include "pm3_cmd.h" // error codes
+#include "commonutil.h"  // Arraylen
+
 // **********************************************************************************************
 // ---------------------------------Utilities Section--------------------------------------------
 // **********************************************************************************************
@@ -768,6 +770,22 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
             }
         }
         //if (g_debugMode == 2) prnt("DEBUG ASK: clk %d, # Errors %d, Current Best Clk %d, bestStart %d", clk[k], bestErr[k], clk[best], bestStart[best]);
+    }
+
+    bool chg = false;
+    for (i = 0; i < ARRAYLEN(bestErr); i++) {
+        chg = (bestErr[i] != 1000);
+        if (chg)
+            break;
+        chg = (bestStart[i] != 0);
+        if (chg)
+            break;
+    }
+
+    // just noise - no super good detection. good enough
+    if (chg == false) {
+        if (g_debugMode == 2) prnt("DEBUG DetectASKClock: no good values detected - aborting");
+        return -2;
     }
 
     if (!found_clk)
@@ -1671,12 +1689,12 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
     *startIdx = start - (*clk / 2);
     if (g_debugMode == 2) prnt("DEBUG: (askdemod_ext) Weak wave detected: startIdx %i", *startIdx);
 
-    int lastBit;  //set first clock check - can go negative
-    size_t i, bitnum = 0;     //output counter
+    int lastBit;              // set first clock check - can go negative
+    size_t i, bitnum = 0;     // output counter
     uint8_t midBit = 0;
-    uint8_t tol = 0;  //clock tolerance adjust - waves will be accepted as within the clock if they fall + or - this value + clock from last valid wave
-    if (*clk <= 32) tol = 1;    //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely
-    size_t MaxBits = 3072;    //max bits to collect
+    uint8_t tol = 0;          // clock tolerance adjust - waves will be accepted as within the clock if they fall + or - this value + clock from last valid wave
+    if (*clk <= 32) tol = 1;  // clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely
+    size_t MaxBits = 3072;    // max bits to collect
     lastBit = start - *clk;
 
     for (i = start; i < *size; ++i) {

@@ -17,7 +17,6 @@
 
 #include "commonutil.h"  // ARRAYLEN
 #include "mifare/mifarehost.h"
-#include "mifare/mifaredefault.h"
 #include "parity.h"         // oddparity
 #include "ui.h"
 #include "crc16.h"
@@ -1335,7 +1334,7 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8
 
 }
 
-bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen) {
+bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen, const uint64_t *dicKeys, uint32_t dicKeysCount) {
     static struct Crypto1State *traceCrypto1;
 
     *mfDataLen = 0;
@@ -1383,12 +1382,12 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
             }
 
             // check default keys
-            if (!traceCrypto1) {
-                for (int i = 0; i < ARRAYLEN(g_mifare_default_keys); i++) {
-                    if (NestedCheckKey(g_mifare_default_keys[i], &AuthData, cmd, cmdsize, parity)) {
-                        PrintAndLogEx(NORMAL, "            |            |  *  |%61s " _GREEN_("%012" PRIX64) "|     |", "key", g_mifare_default_keys[i]);
+            if (!traceCrypto1 && dicKeys != NULL && dicKeysCount > 0) {
+                for (int i = 0; i < dicKeysCount; i++) {
+                    if (NestedCheckKey(dicKeys[i], &AuthData, cmd, cmdsize, parity)) {
+                        PrintAndLogEx(NORMAL, "            |            |  *  |%60s " _GREEN_("%012" PRIX64) "|     |", "key", dicKeys[i]);
 
-                        mfLastKey = g_mifare_default_keys[i];
+                        mfLastKey = dicKeys[i];
                         traceCrypto1 = lfsr_recovery64(AuthData.ks2, AuthData.ks3);
                         break;
                     };

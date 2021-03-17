@@ -34,17 +34,17 @@ E.g. you might need to move the documentation elsewhere according to your distro
 make install PREFIX=/usr INSTALLDOCSRELPATH=share/doc/proxmark3-${version}
 ```
 
-It's possible to add other firmwares as well with tagged names (`FWTAG=<mytag>`), e.g. here we're compiling another image for non-RDV4 devices:
+It's possible to add other firmwares as well with tagged names (`FWTAG=<mytag>`), e.g. here we're compiling another image for generic Proxmark3 devices:
 
 ```
-make -j fullimage PLATFORM=PM3OTHER PLATFORM_EXTRAS=
-make fullimage/install PLATFORM=PM3OTHER PLATFORM_EXTRAS= DESTDIR=build PREFIX=/usr FWTAG=other
+make -j fullimage PLATFORM=PM3GENERIC PLATFORM_EXTRAS=
+make fullimage/install PLATFORM=PM3GENERIC PLATFORM_EXTRAS= DESTDIR=build PREFIX=/usr FWTAG=generic
 ```
 
-and it will be added along the other firmware as:
+and it will be added along the other firmwares as:
 
 ```
-./build/usr/share/proxmark3/firmware/fullimage-other.elf
+./build/usr/share/proxmark3/firmware/fullimage-generic.elf
 ```
 
 For verbose usage and see the actual commands being executed, add `V=1`.

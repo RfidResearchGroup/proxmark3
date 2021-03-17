@@ -696,7 +696,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
 
     LED_C_ON();
 
-    for (uint16_t i = 0; i <= PM3_CMD_DATA_SIZE - 4; i += 4) {
+    while (num_nonces < PM3_CMD_DATA_SIZE / 4) {
 
         // Test if the action was cancelled
         if (BUTTON_PRESS()) {
@@ -746,18 +746,14 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
             continue;
         }
 
-        num_nonces++;
-
         // Save the tag nonce (nt)
-        buf[i]   = answer[0];
-        buf[i + 1] = answer[1];
-        buf[i + 2] = answer[2];
-        buf[i + 3] = answer[3];
+        memcpy(buf + num_nonces * 4, answer, 4);
+        num_nonces++;
     }
 
     LED_C_OFF();
     LED_B_ON();
-    reply_old(CMD_ACK, isOK, cuid, num_nonces - 1, buf, sizeof(buf));
+    reply_old(CMD_ACK, isOK, cuid, num_nonces, buf, sizeof(buf));
     LED_B_OFF();
 
     if (DBGLEVEL >= 3) DbpString("AcquireNonces finished");
@@ -826,7 +822,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
         if (!have_uid) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
             if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
-                if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireNonces: Can't select card (ALL)");
+                if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireEncryptedNonces: Can't select card (ALL)");
                 continue;
             }
             switch (card_info.uidlen) {
@@ -845,7 +841,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
             have_uid = true;
         } else { // no need for anticollision. We can directly select the card
             if (!iso14443a_fast_select_card(uid, cascade_levels)) {
-                if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireNonces: Can't select card (UID)");
+                if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireEncryptedNonces: Can't select card (UID)");
                 continue;
             }
         }
@@ -855,7 +851,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 
         uint32_t nt1;
         if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, NULL)) {
-            if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireNonces: Auth1 error");
+            if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireEncryptedNonces: Auth1 error");
             continue;
         }
 
@@ -866,7 +862,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
         CHK_TIMEOUT();
 
         if (len != 4) {
-            if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireNonces: Auth2 error len=%d", len);
+            if (DBGLEVEL >= DBG_ERROR) Dbprintf("AcquireEncryptedNonces: Auth2 error len=%d", len);
             continue;
         }
 

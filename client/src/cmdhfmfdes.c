@@ -2256,7 +2256,17 @@ static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, 
 }
 
 static int CmdHF14ADesGetUID(const char *Cmd) {
-    (void)Cmd;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes getuid",
+                  "Get UID from a MIFARE DESfire tag",
+                  "hf mfdes getuid");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     uint8_t uid[16] = {0};
     int res = handler_desfire_getuid(uid);
@@ -3438,7 +3448,18 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
 }
 
 static int CmdHF14ADesInfo(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes info",
+                  "Get info from MIFARE DESfire tags",
+                  "hf mfdes info");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
     DropFieldDesfire();
 
     mfdes_info_res_t info;
@@ -3862,8 +3883,18 @@ static int CmdHF14ADesDump(const char *Cmd) {
 }
 
 static int CmdHF14ADesEnumApplications(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes enum",
+                  "Enumerate all AID's on MIFARE DESfire tag",
+                  "hf mfdes enum");
 
-    (void)Cmd; // Cmd is not used so far
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
     DropFieldDesfire();
 
     uint8_t aid[3] = {0};

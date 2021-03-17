@@ -307,10 +307,10 @@ static void cm_crypt(const CryptoAction ca, const uint8_t offset, const uint8_t 
     }
 }
 
-void cm_encrypt(const uint8_t offset, const uint8_t len, const uint8_t *ct, uint8_t *pt, crypto_state s) {
+void cm_encrypt(const uint8_t offset, const uint8_t len, const uint8_t *pt, uint8_t *ct, crypto_state s) {
     next_n(true, 5, 0, s);
     next(true, 0, s);
-    cm_crypt(CA_ENCRYPT, offset, len, ct, pt, s);
+    cm_crypt(CA_ENCRYPT, offset, len, pt, ct, s);
 }
 
 void cm_decrypt(const uint8_t offset, const uint8_t len, const uint8_t *ct, uint8_t *pt, crypto_state s) {

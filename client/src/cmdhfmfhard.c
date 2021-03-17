@@ -575,7 +575,7 @@ static void init_nonce_memory(void) {
         nonces[i].num = 0;
         nonces[i].Sum = 0;
         nonces[i].first = NULL;
-        for (uint16_t j = 0; j < NUM_SUMS; j++) {
+        for (uint8_t j = 0; j < NUM_SUMS; j++) {
             nonces[i].sum_a8_guess[j].sum_a8_idx = j;
             nonces[i].sum_a8_guess[j].prob = 0.0;
         }
@@ -679,7 +679,7 @@ static float sum_probability(uint16_t i_K, uint16_t n, uint16_t k) {
     double p_T_is_k_when_S_is_K = p_hypergeometric(i_K, n, k);
     double p_S_is_K = p_K[i_K];
     double p_T_is_k = 0;
-    for (uint16_t i = 0; i < NUM_SUMS; i++) {
+    for (uint8_t i = 0; i < NUM_SUMS; i++) {
         p_T_is_k += p_K[i] * p_hypergeometric(i, n, k);
     }
     return (p_T_is_k_when_S_is_K * p_S_is_K / p_T_is_k);
@@ -1044,7 +1044,7 @@ static void estimate_sum_a8(void) {
     if (first_byte_num == 256) {
         for (uint16_t i = 0; i < 256; i++) {
             if (nonces[i].sum_a8_guess_dirty) {
-                for (uint16_t j = 0; j < NUM_SUMS; j++) {
+                for (uint8_t j = 0; j < NUM_SUMS; j++) {
                     uint16_t sum_a8_idx = nonces[i].sum_a8_guess[j].sum_a8_idx;
                     nonces[i].sum_a8_guess[j].prob = sum_probability(sum_a8_idx, nonces[i].num, nonces[i].Sum);
                 }
@@ -1102,7 +1102,7 @@ static int read_nonce_file(char *filename) {
     sprintf(progress_string, "Target Block=%d, Keytype=%c", trgBlockNo, trgKeyType == 0 ? 'A' : 'B');
     hardnested_print_progress(num_acquired_nonces, progress_string, (float)(1LL << 47), 0);
 
-    for (uint16_t i = 0; i < NUM_SUMS; i++) {
+    for (uint8_t i = 0; i < NUM_SUMS; i++) {
         if (first_byte_Sum == sums[i]) {
             first_byte_Sum = i;
             break;
@@ -1152,14 +1152,20 @@ __attribute__((force_align_arg_pointer))
                 return NULL;
             }
             for (uint16_t i = first_byte; i <= last_byte; i++) {
+
                 if (nonces[i].BitFlips[bitflip] == 0 && nonces[i].BitFlips[bitflip ^ 0x100] == 0
                         && nonces[i].first != NULL && nonces[i ^ (bitflip & 0xff)].first != NULL) {
+
                     uint8_t parity1 = (nonces[i].first->par_enc) >> 3;                  // parity of first byte
                     uint8_t parity2 = (nonces[i ^ (bitflip & 0xff)].first->par_enc) >> 3; // parity of nonce with bits flipped
+
                     if ((parity1 == parity2 && !(bitflip & 0x100))          // bitflip
                             || (parity1 != parity2 && (bitflip & 0x100))) {     // not bitflip
+
                         nonces[i].BitFlips[bitflip] = 1;
+
                         for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
+
                             if (bitflip_bitarrays[odd_even][bitflip] != NULL) {
                                 uint32_t old_count = nonces[i].num_states_bitarray[odd_even];
                                 nonces[i].num_states_bitarray[odd_even] = count_bitarray_AND(nonces[i].states_bitarray[odd_even], bitflip_bitarrays[odd_even][bitflip]);
@@ -1344,7 +1350,7 @@ static void simulate_acquire_nonces(void) {
 
         if (first_byte_num == 256) {
             if (hardnested_stage == CHECK_1ST_BYTES) {
-                for (uint16_t i = 0; i < NUM_SUMS; i++) {
+                for (uint8_t i = 0; i < NUM_SUMS; i++) {
                     if (first_byte_Sum == sums[i]) {
                         first_byte_Sum = i;
                         break;
@@ -1471,7 +1477,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 
             if (first_byte_num == 256) {
                 if (hardnested_stage == CHECK_1ST_BYTES) {
-                    for (uint16_t i = 0; i < NUM_SUMS; i++) {
+                    for (uint8_t i = 0; i < NUM_SUMS; i++) {
                         if (first_byte_Sum == sums[i]) {
                             first_byte_Sum = i;
                             break;
@@ -1662,7 +1668,7 @@ static inline bool bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_e
     if (!possible) {
 #ifdef DEBUG_KEY_ELIMINATION
         if (!quiet && known_target_key != -1 && state == test_state[odd_even]) {
-            PrintAndLogEx(NORMAL, "Initial state lists: %s test state eliminated by bitflip property.\n", odd_even == EVEN_STATE ? "even" : "odd");
+            PrintAndLogEx(INFO, "Initial state lists: %s test state eliminated by bitflip property.", odd_even == EVEN_STATE ? "even" : "odd");
             sprintf(failstr, "Initial %s Byte Bitflip property", odd_even == EVEN_STATE ? "even" : "odd");
         }
 #endif
@@ -1785,14 +1791,14 @@ static void add_matching_states(statelist_t *cands, uint8_t part_sum_a0, uint8_t
 static statelist_t *add_more_candidates(void) {
     statelist_t *new_candidates;
     if (candidates == NULL) {
-        candidates = (statelist_t *)malloc(sizeof(statelist_t));
+        candidates = (statelist_t *)calloc(sizeof(statelist_t), sizeof(uint8_t));
         new_candidates = candidates;
     } else {
         new_candidates = candidates;
         while (new_candidates->next != NULL) {
             new_candidates = new_candidates->next;
         }
-        new_candidates = new_candidates->next = (statelist_t *)malloc(sizeof(statelist_t));
+        new_candidates = new_candidates->next = (statelist_t *)calloc(sizeof(statelist_t), sizeof(uint8_t));
     }
     new_candidates->next = NULL;
     new_candidates->len[ODD_STATE] = 0;
@@ -1807,14 +1813,15 @@ static void add_bitflip_candidates(uint8_t byte) {
 
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
         uint32_t worstcase_size = nonces[byte].num_states_bitarray[odd_even] + 1;
-        candidates1->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
+        candidates1->states[odd_even] = (uint32_t *)calloc(worstcase_size, sizeof(uint32_t));
         if (candidates1->states[odd_even] == NULL) {
-            PrintAndLogEx(ERR, "Out of memory error in add_bitflip_candidates().\n");
+            PrintAndLogEx(ERR, "Out of memory error in add_bitflip_candidates()");
             exit(4);
         }
 
         bitarray_to_list(byte, nonces[byte].states_bitarray[odd_even], candidates1->states[odd_even], &(candidates1->len[odd_even]), odd_even);
 
+        // slim down the allocated memory.
         if (candidates1->len[odd_even] + 1 < worstcase_size) {
             candidates1->states[odd_even] = realloc(candidates1->states[odd_even], sizeof(uint32_t) * (candidates1->len[odd_even] + 1));
         }
@@ -2073,6 +2080,8 @@ static void free_candidates_memory(statelist_t *sl) {
         return;
 
     free_candidates_memory(sl->next);
+    sl->len[0] = 0;
+    sl->len[1] = 0;
     free(sl);
 }
 
@@ -2169,6 +2178,9 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 
     get_SIMD_instruction_set(instr_set);
     PrintAndLogEx(SUCCESS, "Using %s SIMD core.", instr_set);
+
+    memset(part_sum_count, 0, sizeof(part_sum_count));
+    real_sum_a8 = 0;
 
     srand((unsigned) time(NULL));
     brute_force_per_second = brute_force_benchmark();

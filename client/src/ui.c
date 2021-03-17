@@ -14,13 +14,17 @@
 #if !defined(_WIN32)
 #define _POSIX_C_SOURCE 200112L
 #endif
-
 #include "ui.h"
 #include "commonutil.h"  // ARRAYLEN
 
 #include <stdio.h> // for Mingw readline
 #include <stdarg.h>
 #include <stdlib.h>
+
+#ifdef HAVE_READLINE
+//Load readline after stdio.h
+#include <readline/readline.h>
+#endif
 
 #include <complex.h>
 #include "util.h"
@@ -102,7 +106,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
         pathlen += strlen(subdir);
         char *tmp = realloc(path, pathlen * sizeof(char));
         if (tmp == NULL) {
-            free(path);
+            //free(path);
             return PM3_EMALLOC;
         }
         path = tmp;
@@ -142,7 +146,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
     pathlen += strlen(filename);
     char *tmp = realloc(path, pathlen * sizeof(char));
     if (tmp == NULL) {
-        free(path);
+        //free(path);
         return PM3_EMALLOC;
     }
     path = tmp;
@@ -198,14 +202,14 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
                                   };
     switch (level) {
         case ERR:
-            if (session.emoji_mode == EMOJI)
+            if (session.emoji_mode == EMO_EMOJI)
                 strncpy(prefix,  "[" _RED_("!!") "] :rotating_light: ", sizeof(prefix) - 1);
             else
                 strncpy(prefix, "[" _RED_("!!") "] ", sizeof(prefix) - 1);
             stream = stderr;
             break;
         case FAILED:
-            if (session.emoji_mode == EMOJI)
+            if (session.emoji_mode == EMO_EMOJI)
                 strncpy(prefix, "[" _RED_("-") "] :no_entry: ", sizeof(prefix) - 1);
             else
                 strncpy(prefix, "[" _RED_("-") "] ", sizeof(prefix) - 1);
@@ -220,7 +224,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
             strncpy(prefix, "[" _GREEN_("+") "] ", sizeof(prefix) - 1);
             break;
         case WARNING:
-            if (session.emoji_mode == EMOJI)
+            if (session.emoji_mode == EMO_EMOJI)
                 strncpy(prefix, "[" _CYAN_("!") "] :warning:  ", sizeof(prefix) - 1);
             else
                 strncpy(prefix, "[" _CYAN_("!") "] ", sizeof(prefix) - 1);
@@ -229,7 +233,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
             strncpy(prefix, "[" _YELLOW_("=") "] ", sizeof(prefix) - 1);
             break;
         case INPLACE:
-            if (session.emoji_mode == EMOJI) {
+            if (session.emoji_mode == EMO_EMOJI) {
                 strncpy(prefix, spinner_emoji[PrintAndLogEx_spinidx], sizeof(prefix) - 1);
                 PrintAndLogEx_spinidx++;
                 if (PrintAndLogEx_spinidx >= ARRAYLEN(spinner_emoji))
@@ -390,7 +394,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
 #endif
 
     if ((g_printAndLog & PRINTANDLOG_LOG) && logging && logfile) {
-        memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), ALTTEXT);
+        memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), EMO_ALTTEXT);
         if (filter_ansi) { // already done
             fprintf(logfile, "%s", buffer3);
         } else {
@@ -468,15 +472,15 @@ static bool emojify_token(const char *token, uint8_t token_length, const char **
     while (EmojiTable[i].alias && EmojiTable[i].emoji) {
         if ((strlen(EmojiTable[i].alias) == token_length) && (0 == memcmp(EmojiTable[i].alias, token, token_length))) {
             switch (mode) {
-                case EMOJI: {
+                case EMO_EMOJI: {
                     *emojified_token = EmojiTable[i].emoji;
                     *emojified_token_length = strlen(EmojiTable[i].emoji);
                     break;
                 }
-                case ALTTEXT: {
+                case EMO_ALTTEXT: {
                     int j = 0;
                     *emojified_token_length = 0;
-                    while (EmojiAltTable[j].alias && EmojiAltTable[i].alttext) {
+                    while (EmojiAltTable[j].alias && EmojiAltTable[j].alttext) {
                         if ((strlen(EmojiAltTable[j].alias) == token_length) && (0 == memcmp(EmojiAltTable[j].alias, token, token_length))) {
                             *emojified_token = EmojiAltTable[j].alttext;
                             *emojified_token_length = strlen(EmojiAltTable[j].alttext);
@@ -486,11 +490,11 @@ static bool emojify_token(const char *token, uint8_t token_length, const char **
                     }
                     break;
                 }
-                case ERASE: {
+                case EMO_NONE: {
                     *emojified_token_length = 0;
                     break;
                 }
-                case ALIAS: { // should never happen
+                case EMO_ALIAS: { // should never happen
                     return false;
                 }
             }
@@ -510,7 +514,7 @@ static bool token_charset(uint8_t c) {
 }
 
 void memcpy_filter_emoji(void *dest, const void *src, size_t n, emojiMode_t mode) {
-    if (mode == ALIAS) {
+    if (mode == EMO_ALIAS) {
         memcpy(dest, src, n);
     } else {
         // tokenize emoji
@@ -630,4 +634,103 @@ void iceSimple_Filter(int *data, const size_t len, uint8_t k) {
     }
 }
 
+void print_progress(size_t count, uint64_t max, barMode_t style) {
+    int cols = 100 + 35;
+#ifdef HAVE_READLINE
+    static int prev_cols = 0;
+    int rows;
+    rl_reset_screen_size(); // refresh Readline idea of the actual screen width
+    rl_get_screen_size(&rows, &cols);
+    (void) rows;
+    if (prev_cols > cols) {
+        PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ "");
+    }
+    prev_cols = cols;
+#endif
+    int width = cols - 35;
+    if (width < 1)
+        return;
 
+#define PERCENTAGE(V, T)   ((V * width) / T)
+    // x/8 fractional part of the percentage
+#define PERCENTAGEFRAC(V, T)   ((uint8_t)(((((float)V * width) / T) - ((V * width) / T)) * 8))
+
+    const char *smoothtable[] = {
+        "\xe2\x80\x80",
+        "\xe2\x96\x8F",
+        "\xe2\x96\x8E",
+        "\xe2\x96\x8D",
+        "\xe2\x96\x8C",
+        "\xe2\x96\x8B",
+        "\xe2\x96\x8A",
+        "\xe2\x96\x89",
+        "\xe2\x96\x88",
+    };
+
+    int mode = (session.emoji_mode == EMO_EMOJI);
+
+    const char *block[] = {"#", "\xe2\x96\x88"};
+    // use a 3-byte space in emoji mode to ease computations
+    const char *space[] = {" ", "\xe2\x80\x80"};
+
+    size_t unit = strlen(block[mode]);
+    // +1 for \0
+    char *bar = (char *)calloc(unit * width + 1, sizeof(uint8_t));
+
+    uint8_t value = PERCENTAGE(count, max);
+
+    int i = 0;
+    // prefix is added already.
+    for (; i < unit * value; i += unit) {
+        memcpy(bar + i, block[mode], unit);
+    }
+    // add last block
+    if (mode == 1) {
+        memcpy(bar + i, smoothtable[PERCENTAGEFRAC(count, max)], unit);
+    } else {
+        memcpy(bar + i, space[mode], unit);
+    }
+    i += unit;
+    // add spaces
+    for (; i < unit * width; i += unit) {
+        memcpy(bar + i, space[mode], unit);
+    }
+    // color buffer
+    size_t collen = strlen(bar) + 40;
+    char *cbar = (char *)calloc(collen, sizeof(uint8_t));
+
+    // Add colors
+    if (session.supports_colors) {
+        int p60 = unit * (width * 60 / 100);
+        int p20 = unit * (width * 20 / 100);
+        snprintf(cbar,  collen,  _GREEN_("%.*s"), p60, bar);
+        snprintf(cbar + strlen(cbar), collen - strlen(cbar), _CYAN_("%.*s"), p20,  bar + p60);
+        snprintf(cbar + strlen(cbar), collen - strlen(cbar), _YELLOW_("%.*s"), (int)(unit * width - p60 - p20), bar + p60 + p20);
+    } else {
+        snprintf(cbar,  collen,  "%s", bar);
+    }
+
+    size_t olen = strlen(cbar) + 40;
+    char *out = (char *)calloc(olen, sizeof(uint8_t));
+
+    switch (style) {
+        case STYLE_BAR: {
+            sprintf(out, "%s", cbar);
+            printf("\b%c[2K\r[" _YELLOW_("=")"] %s", 27, out);
+            break;
+        }
+        case STYLE_MIXED: {
+            sprintf(out, "%s [ %zu mV / %2u V / %2u Vmax ]", cbar, count, (uint32_t)(count / 1000), (uint32_t)(max / 1000));
+            printf("\b%c[2K\r[" _YELLOW_("=")"] %s", 27, out);
+            break;
+        }
+        case STYLE_VALUE: {
+            printf("[" _YELLOW_("=")"] %zu mV / %2u V / %2u Vmax   \r", count, (uint32_t)(count / 1000), (uint32_t)(max / 1000));
+            break;
+        }
+    }
+    fflush(stdout);
+    free(out);
+    free(bar);
+    free(cbar);
+}

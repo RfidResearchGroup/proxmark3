@@ -9,7 +9,7 @@ Please make sure you've gone through the following pages firstly:
 
 ## To get interactive help
 
-As seen before, for basic help type `help`. Or for help on a set of sub commands type the command followed by `help`. For example `hf mf help`.  Many commands uses the `h` parameter to show a help text.
+As seen before, for basic help type `help`. Or for help on a set of sub commands type the command followed by `help`. For example `hf mf help`.  Many commands uses the `h` / `-h` parameter to show a help text.
 
 ## New Features in RDV4
 

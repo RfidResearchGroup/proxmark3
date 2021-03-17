@@ -459,6 +459,10 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
 // uid[8] tag uid
 // returns description of the best match
 static const char *getTagInfo_15(uint8_t *uid) {
+    if (uid == NULL) {
+        return "";
+    }
+
     uint64_t myuid, mask;
     int i = 0, best = -1;
     memcpy(&myuid, uid, sizeof(uint64_t));

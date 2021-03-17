@@ -7,11 +7,11 @@ local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.3'
+version = 'v1.0.4'
 desc = [[
 This script will load several traces files in current working directory/traces/ folder and do
 "data load"
-"lf search 1 u"
+"lf search -1u"
 
 The following tracefiles will be loaded:
    em*.pm3
@@ -109,7 +109,7 @@ local function main(args)
     end
     p.close();
 
-    local cmdLFSEARCH = 'lf search 1 u'
+    local cmdLFSEARCH = 'lf search -1u'
 
     -- main loop
     io.write('Starting to test traces > ')

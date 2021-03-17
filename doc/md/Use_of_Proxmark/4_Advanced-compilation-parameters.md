@@ -29,8 +29,8 @@ make SKIPBT=1
 
 ## Firmware
 
-By default, the firmware is of course tuned for the Proxmark3 Rdv4.0 device, which has built-in support for 256kb onboard flash SPI memory, Sim module (smart card support), FPC connector.
-These features make it very different from all other devices, there is non other like this one.
+By default, the firmware is of course tuned for the Proxmark3 RDV4 device, which has built-in support for 256kb onboard flash SPI memory, Sim module (smart card support), FPC connector.
+These features make it very different from all other Proxmark3 devices, there is non other like this one.
 
 **Recommendation**: if you don't have a RDV4, we strongly recommend your device to have at least a 512kb arm chip, since this repo is crossing 256kb limit. There is still a way to skip parts to make it fit on a 256kb device, see below.
 
@@ -43,8 +43,8 @@ Here are the supported values you can assign to `PLATFORM` in `Makefile.platform
 
 | PLATFORM        | DESCRIPTION              |
 |-----------------|--------------------------|
-| PM3RDV4 (def)   | Proxmark3 rdv4           |
-| PM3OTHER        | Proxmark3 generic target |
+| PM3RDV4 (def)   | Proxmark3 RDV4           |
+| PM3GENERIC      | Proxmark3 generic target |
 
 By default `PLATFORM=PM3RDV4`.
 
@@ -103,7 +103,7 @@ By default `STANDALONE=HF_MSDSAL`.
 
 If you own a Proxmark3 Easy with only 256kb, you can use a few definitions to help you getting a smaller firmware.
 
-First thing is of course to use the `PLATFORM=PM3OTHER`.
+First thing is of course to use the `PLATFORM=PM3GENERIC`.
 Adding `PLATFORM_SIZE=256` will provoke an error during compilation of the recovery image if your image is too big, so you can detect the problem before trying to flash the Proxmark3, e.g.
 ```
 [=] GEN proxmark3_recovery.bin
@@ -133,10 +133,10 @@ a series of `SKIP_*` allow to skip some of the functionalities and to get a smal
 
 So for example, at the time of writing, this is a valid `Makefile.platform` compiling an image for 256k:
 ```
-PLATFORM=PM3OTHER
+PLATFORM=PM3GENERIC
 PLATFORM_SIZE=256
 STANDALONE=
-SKIP_LEGICRF=1
+SKIP_HITAG=1
 SKIP_FELICA=1
 ```
 Situation might change when the firmware is growing of course, requiring to skip more elements.

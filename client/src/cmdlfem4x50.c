@@ -81,7 +81,7 @@ static void print_result(const em4x50_word_t *words, int fwr, int lwr) {
     PrintAndLogEx(INFO, "----+-------------+-------------+--------------------");
 }
 
-static void print_info_result(uint8_t *data) {
+static void print_info_result(uint8_t *data, bool verbose) {
 
     // display all information of info result in structured format
     em4x50_word_t words[EM4X50_NO_WORDS];
@@ -104,7 +104,11 @@ static void print_info_result(uint8_t *data) {
     // data section
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, _YELLOW_("EM4x50 data:"));
-    print_result(words, 0, EM4X50_NO_WORDS - 1);
+    if (verbose) {
+        print_result(words, 0, EM4X50_NO_WORDS - 1);
+    } else {
+        print_result(words, EM4X50_DEVICE_SERIAL, EM4X50_DEVICE_ID);
+    }
 
     // configuration section
     PrintAndLogEx(NORMAL, "");
@@ -256,6 +260,48 @@ int CmdEM4x50ESave(const char *Cmd) {
     saveFile(filename, ".bin", data, DUMP_FILESIZE);
     saveFileEML(filename, data, DUMP_FILESIZE, 4);
     saveFileJSON(filename, jsfEM4x50, data, DUMP_FILESIZE, NULL);
+    return PM3_SUCCESS;
+}
+
+int CmdEM4x50EView(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x50 eview",
+                  "Displays em4x50 content of emulator memory.",
+                  "lf em 4x50 eview\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    // download emulator memory
+    PrintAndLogEx(SUCCESS, "Reading emulator memory...");
+    uint8_t data[DUMP_FILESIZE] = {0x0};
+    if (GetFromDevice(BIG_BUF_EML, data, DUMP_FILESIZE, 0, NULL, 0, NULL, 2500, false) == false) {
+        PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+        return PM3_ETIMEOUT;
+    }
+
+    // valid em4x50 data?
+    uint32_t serial = bytes_to_num(data + 4 * EM4X50_DEVICE_SERIAL, 4);
+    uint32_t device_id = bytes_to_num(data + 4 * EM4X50_DEVICE_ID, 4);
+    if (serial == device_id) {
+        PrintAndLogEx(WARNING, "No valid em4x50 data in emulator memory.");
+        return PM3_ENODATA;
+    }
+
+    em4x50_word_t words[EM4X50_NO_WORDS];
+    for (int i = 0; i < EM4X50_NO_WORDS; i++) {
+        memcpy(words[i].byte, data + i * 4, 4);
+    }
+    print_result(words, 0, EM4X50_NO_WORDS - 1);
+    PrintAndLogEx(NORMAL, "");
+
     return PM3_SUCCESS;
 }
 
@@ -466,7 +512,7 @@ bool detect_4x50_block(void) {
     em4x50_data_t etd = {
         .pwd_given = false,
         .addr_given = true,
-        .addresses = (EM4X50_DEVICE_ID << 8) | EM4X50_DEVICE_ID,
+        .addresses = (EM4X50_DEVICE_SERIAL << 8) | EM4X50_DEVICE_SERIAL,
     };
     em4x50_word_t words[EM4X50_NO_WORDS];
     return (em4x50_read(&etd, words) == PM3_SUCCESS);
@@ -576,12 +622,14 @@ int CmdEM4x50Info(const char *Cmd) {
     CLIParserInit(&ctx, "lf em 4x50 info",
                   "Tag information EM4x50.",
                   "lf em 4x50 info\n"
+                  "lf em 4x50 info -v -> show data section\n"
                   "lf em 4x50 info -p 12345678   -> uses pwd 0x12345678\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
+        arg_lit0("v", "verbose", "additional output of data section"),
         arg_param_end
     };
 
@@ -589,6 +637,7 @@ int CmdEM4x50Info(const char *Cmd) {
     int pwd_len = 0;
     uint8_t pwd[4] = {0x0};
     CLIGetHexWithReturn(ctx, 1, pwd, &pwd_len);
+    bool verb = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     em4x50_data_t etd = {.pwd_given = false};
@@ -611,7 +660,7 @@ int CmdEM4x50Info(const char *Cmd) {
     }
 
     if (resp.status == PM3_SUCCESS)
-        print_info_result(resp.data.asBytes);
+        print_info_result(resp.data.asBytes, verb);
     else
         PrintAndLogEx(FAILED, "Reading tag " _RED_("failed"));
 
@@ -1080,31 +1129,66 @@ int CmdEM4x50Restore(const char *Cmd) {
 }
 
 int CmdEM4x50Sim(const char *Cmd) {
+
+    int status = PM3_EFAILED;
+    uint32_t password = 0;
+
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 sim",
                   "Simulates a EM4x50 tag.\n"
                   "Upload using `lf em 4x50 eload`",
                   "lf em 4x50 sim"
+                  "lf em 4x50 sim -p 27182818   -> uses password for eload data"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_str0("p", "passsword", "<hex>", "password, 4 bytes, lsb"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int pwd_len = 0;
+    uint8_t pwd[4] = {0};
+    CLIGetHexWithReturn(ctx, 1, pwd, &pwd_len);
+    CLIParserFree(ctx);
+
+    if (pwd_len) {
+        if (pwd_len != 4) {
+            PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwd_len);
+            return PM3_EINVARG;
+        } else {
+            password = BYTES2UINT32(pwd);
+        }
+    }
     CLIParserFree(ctx);
 
     PrintAndLogEx(INFO, "Simulating data from emulator memory");
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_SIM, NULL, 0);
+    SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&password, sizeof(password));
     PacketResponseNG resp;
-    WaitForResponse(CMD_LF_EM4X50_SIM, &resp);
-    if (resp.status == PM3_SUCCESS)
+
+    PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
+    bool keypress = kbd_enter_pressed();
+    while (keypress == false) {
+        keypress = kbd_enter_pressed();
+
+        if (WaitForResponseTimeout(CMD_LF_EM4X50_SIM, &resp, 1500)) {
+            status = resp.status;
+            break;
+        }
+
+    }
+    if (keypress) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        status = PM3_EOPABORTED;
+    }
+
+    if ((status == PM3_SUCCESS) || (status == PM3_EOPABORTED))
         PrintAndLogEx(INFO, "Done");
     else
-        PrintAndLogEx(FAILED, "No valid em4x50 data in memory.");
+        PrintAndLogEx(FAILED, "No valid em4x50 data in memory");
 
     return resp.status;
 }
@@ -1123,8 +1207,9 @@ static command_t CommandTable[] = {
     {"reader", CmdEM4x50Reader,      IfPm3EM4x50,     "show standard read mode data of EM4x50"},
     {"restore", CmdEM4x50Restore,     IfPm3EM4x50,     "restore EM4x50 dump to tag"},
     {"sim",    CmdEM4x50Sim,         IfPm3EM4x50,     "simulate EM4x50 tag"},
-    {"eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "upload dump of EM4x50 to flash memory"},
-    {"esave",  CmdEM4x50ESave,       IfPm3EM4x50,     "save flash memory to file"},
+    {"eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "upload dump of EM4x50 to emulator memory"},
+    {"esave",  CmdEM4x50ESave,       IfPm3EM4x50,     "save emulator memory to file"},
+    {"eview",  CmdEM4x50EView,       IfPm3EM4x50,     "view EM4x50 content in emulator memory"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -1138,3 +1223,4 @@ int CmdLFEM4X50(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
+

@@ -1,0 +1,70 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Client: (gdb) Build & Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${cwd}/client/proxmark3",
+            "args": ["${SerialPort}"], 
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "client: Debug: clean & make",
+            "miDebuggerPath": "${DebuggerPath}"
+        },{
+            "name": "Client: (gdb) Attach",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "${cwd}/client/proxmark3",
+            //"processId": "${command:pickProcess}",
+            "processId": "${input:ProcessID}",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },{
+            "name": "Firmware: (J-Link) Build & Launch",
+            "type": "cortex-debug",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
+            "preLaunchTask": "fullimage: clean & make debug",
+            "executable": "${workspaceRoot}/armsrc/obj/fullimage.elf",
+            "serverpath": "${JLinkServerPath}", 
+            "servertype": "jlink",
+            "device": "AT91SAM7S${DeviceMem}",
+            "interface": "jtag",
+            "serialNumber": "", //If you have more than one J-Link probe, add the serial number here.
+            "runToMain": false,
+            "armToolchainPath": "/usr/bin/"
+        }
+    ],
+    "inputs": [
+        {
+            // Using Extension "Tasks Shell Input" https://marketplace.visualstudio.com/items?itemName=augustocdias.tasks-shell-input
+            "id": "ProcessID",
+            "type": "command",
+            "command": "shellCommand.execute",
+            "args": {
+                "command": "pgrep -n proxmark3",
+            }
+            
+        }
+    ]
+}

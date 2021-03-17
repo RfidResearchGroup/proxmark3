@@ -5,6 +5,7 @@ Authors:
 
 * Attacks 1, 2, 3, 4 : Kevin Sheldrake <kev@headhacking.com>
 * Attacks 5, 5gpu : anonymous, based on https://github.com/factoritbv/hitag2hell by FactorIT B.V.
+* Attack  5opencl : Gabriele Gristina <gabriele.gristina@gmail.com>, based on 5gpu
 
 Introduction
 ------------
@@ -107,6 +108,12 @@ Attack 5gpu
 Attack 5gpu is identical to attack 5, simply the code has been ported to OpenCL
 to run on GPUs and is therefore much faster than attack 5.
 
+Attack 5opencl
+--------------
+
+Attack 5opencl is an optimized OpenCL version based on 5gpu.
+It runs on multi GPUs/CPUs and is faster than 5gpu.
+
 Usage details: Attack 1
 -----------------------
 
@@ -205,10 +212,10 @@ Stop once you got two pairs.
 $ ./ht2crack5 <UID> <nR1> <aR1> <nR2> <aR2>
 ```
 
-Usage details: Attack 5gpu
---------------------------
+Usage details: Attack 5gpu/5opencl
+----------------------------------
 
-Attack 5gpu requires two encrypted nonce and challenge
+Attacks 5gpu and 5opencl require two encrypted nonce and challenge
 response value pairs (nR, aR) for the tag's UID.
 
 ```
@@ -219,6 +226,14 @@ Stop once you got two pairs.
 ```
 $ ./ht2crack5gpu <UID> <nR1> <aR1> <nR2> <aR2>
 ```
+
+or
+
+```
+$ ./ht2crack5opencl <UID> <nR1> <aR1> <nR2> <aR2>
+```
+
+5opencl supports a number of additional parameters, see crack5opencl/README.md for details.
 
 Usage details: Next steps
 -------------------------
