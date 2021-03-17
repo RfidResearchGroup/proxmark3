@@ -1497,11 +1497,10 @@ static int desfire_print_piccmk_keysetting(uint8_t key_settings, uint8_t num_key
                   (key_settings & (1 << 0)) ? '1' : '0'
                  );
 
-    PrintAndLogEx(SUCCESS, "   [1...] CMK Configuration changeable   : %s", (key_settings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
-    PrintAndLogEx(SUCCESS, "   [.1..] CMK required for create/delete : %s", (key_settings & (1 << 2)) ? _GREEN_("NO") : "YES");
-    PrintAndLogEx(SUCCESS, "   [..1.] Directory list access with CMK : %s", (key_settings & (1 << 1)) ? _GREEN_("NO") : "YES");
-    PrintAndLogEx(SUCCESS, "   [...1] CMK is changeable              : %s", (key_settings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
-
+    PrintAndLogEx(SUCCESS, "   [%c...] CMK Configuration changeable   : %s", (key_settings & (1 << 3)) ? '1' : '0', (key_settings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "   [.%c..] CMK required for create/delete : %s", (key_settings & (1 << 2)) ? '1' : '0', (key_settings & (1 << 2)) ? _GREEN_("NO") : "YES");
+    PrintAndLogEx(SUCCESS, "   [..%c.] Directory list access with CMK : %s", (key_settings & (1 << 1)) ? '1' : '0', (key_settings & (1 << 1)) ? _GREEN_("NO") : "YES");
+    PrintAndLogEx(SUCCESS, "   [...%c] CMK is changeable              : %s", (key_settings & (1 << 0)) ? '1' : '0', (key_settings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
     return PM3_SUCCESS;
 }
 
