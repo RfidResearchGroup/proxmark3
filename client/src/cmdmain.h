@@ -13,9 +13,18 @@
 
 #include "common.h"
 #include "cmdparser.h"    // command_t
+#include "util.h"         // print_cb_t
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 int CommandReceived(char *Cmd);
 int CmdRem(const char *Cmd);
 command_t *getTopLevelCommandTable(void);
+int CommandReceivedCB(char *Cmd, print_cb_t callback);
 
+#ifdef __cplusplus
+}
+#endif
 #endif
