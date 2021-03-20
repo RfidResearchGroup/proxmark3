@@ -150,6 +150,12 @@ function get_pm3_list_Windows {
     # Normal SERIAL PORTS (COM)
     for DEV in $(wmic /locale:ms_409 path Win32_SerialPort Where "PNPDeviceID LIKE '%VID_9AC4&PID_4B8F%' Or PNPDeviceID LIKE '%VID_2D2D&PID_504D%'" Get DeviceID 2>/dev/null | awk -b '/^COM/{print $1}'); do
         DEV=${DEV/ */}
+		if [ ! $(wmic /locale:ms_409 path Win32_SerialPort Where "DeviceID='$DEV'" Get PNPDeviceID 2>/dev/null | awk -b '/^USB/{print $1}') = "USB\VID_9AC4&PID_4B8F\ICEMAN" ]; then
+			if [ $(basename -- "$0") = "pm3-flash-all" ]; then
+				echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
+				exit 1
+			fi
+		fi
         PM3LIST+=("$DEV")
         if [ ${#PM3LIST[*]} -ge "$N" ]; then
             return
