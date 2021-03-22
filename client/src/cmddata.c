@@ -223,24 +223,12 @@ static int usage_data_detectclock(void) {
     PrintAndLogEx(NORMAL, "            data detectclock n    = detect the clock of an nrz/direct modulated wave in the GraphBuffer");
     return PM3_SUCCESS;
 }
-static int usage_data_hex2bin(void) {
-    PrintAndLogEx(NORMAL, "Usage: data hex2bin <hex_digits>");
-    PrintAndLogEx(NORMAL, "       This function will ignore all non-hexadecimal characters (but stop reading on whitespace)");
-    return PM3_SUCCESS;
-}
+
 static int usage_data_bin2hex(void) {
     PrintAndLogEx(NORMAL, "Usage: data bin2hex <binary_digits>");
     PrintAndLogEx(NORMAL, "       This function will ignore all characters not 1 or 0 (but stop reading on whitespace)");
     return PM3_SUCCESS;
 }
-static int usage_data_buffclear(void) {
-    PrintAndLogEx(NORMAL, "This function clears the bigbuff on deviceside");
-    PrintAndLogEx(NORMAL, "Usage: data clear [h]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h              This help");
-    return PM3_SUCCESS;
-}
-
 
 //set the demod buffer with given array of binary (one bit per byte)
 //by marshmellow
@@ -971,7 +959,19 @@ static int CmdAutoCorr(const char *Cmd) {
 }
 
 static int CmdBitsamples(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data bitsamples",
+                "Get raw samples from device as bitstring",
+                "data bitsamples"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
     int cnt = 0;
     uint8_t got[12288];
 
@@ -994,9 +994,18 @@ static int CmdBitsamples(const char *Cmd) {
 }
 
 static int CmdBuffClear(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_data_buffclear();
-
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data clear",
+                "This function clears the bigbuff on deviceside\n"
+                "and graph window",
+                "data clear"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     clearCommandBuffer();
     SendCommandNG(CMD_BUFF_CLEAR, NULL, 0);
     ClearGraph(true);
@@ -2245,24 +2254,34 @@ static int Cmdbin2hex(const char *Cmd) {
 }
 
 static int Cmdhex2bin(const char *Cmd) {
-    int bg = 0, en = 0;
-    if (param_getptr(Cmd, &bg, &en, 0)) return usage_data_hex2bin();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data hex2bin",
+                "This function will ignore all non-hexadecimal characters\n"
+                "but stop reading on whitespace",
+                "data hex2bin -d 01020304"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("d", "data", "<hex>", "bytes to convert"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int dlen = 0;
+    uint8_t data[200] = {0x00};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
+    CLIParserFree(ctx);
 
-    while (bg <= en) {
-        char x = Cmd[bg++];
-        // capitalize
-        if (x >= 'a' && x <= 'f')
-            x -= 32;
-        // convert to numeric value
-        if (x >= '0' && x <= '9')
-            x -= '0';
-        else if (x >= 'A' && x <= 'F')
-            x -= 'A' - 10;
-        else
-            continue;
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
 
-        for (int i = 0 ; i < 4 ; ++i)
-            PrintAndLogEx(NORMAL, "%d" NOLF, (x >> (3 - i)) & 1);
+    PrintAndLogEx(SUCCESS, "" NOLF);
+    for (int i = 0; i < dlen; i++) {
+        char x = data[i];
+        for (int j = 0 ; j < 4 ; ++j) {
+            PrintAndLogEx(NORMAL, "%d" NOLF, (x >> (3 - j)) & 1);
+        }
     }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
