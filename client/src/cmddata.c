@@ -1676,8 +1676,24 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose) {
 }
 
 static int CmdSamples(const char *Cmd) {
-    int n = strtol(Cmd, NULL, 0);
-    return getSamples(n, false);
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data samples",
+                "Get raw samples for graph window (GraphBuffer) from device.\n"
+                "If 0, then get whole big buffer from device.",
+                "data samples"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("n","", "<dec>", "num of samples (512 - 40000)"),
+        arg_lit0("v", "verbose", "verbose"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int n = arg_get_int_def(ctx, 1, 0);
+    bool verbose = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+    return getSamples(n, verbose);
 }
 
 int CmdTuneSamples(const char *Cmd) {
@@ -2641,7 +2657,7 @@ static command_t CommandTable[] = {
     {"load",            CmdLoad,                 AlwaysAvailable,  "Load contents of file into graph window"},
     {"ndef",            CmdDataNDEF,             AlwaysAvailable,  "Decode NDEF records"},
     {"print",           CmdPrintDemodBuff,       AlwaysAvailable,  "print the data in the DemodBuffer"},
-    {"samples",         CmdSamples,              IfPm3Present,     "[512 - 40000] -- Get raw samples for graph window (GraphBuffer)"},
+    {"samples",         CmdSamples,              IfPm3Present,     "Get raw samples for graph window (GraphBuffer)"},
     {"save",            CmdSave,                 AlwaysAvailable,  "Save signal trace data  (from graph window)"},
     {"setdebugmode",    CmdSetDebugMode,         AlwaysAvailable,  "<0|1|2> -- Set Debugging Level on client side"},
     {"tune",            CmdTuneSamples,          IfPm3Present,     "Measure tuning of device antenna. Results shown in graph window"},

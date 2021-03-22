@@ -592,7 +592,7 @@ pm3 --> lf t55xx wipe
 
 Get raw samples [512-40000]
 ```
-pm3 --> data samples <size>
+pm3 --> data samples -n <size>
 ```
 
 Save samples to file
