@@ -182,7 +182,7 @@ static uint8_t PrintAndLogEx_spinidx = 0;
 
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
 
-    // skip debug messages if client debugging is turned off i.e. 'DATA SETDEBUG 0'
+    // skip debug messages if client debugging is turned off i.e. 'DATA SETDEBUG -0'
     if (g_debugMode == 0 && level == DEBUG)
         return;
 

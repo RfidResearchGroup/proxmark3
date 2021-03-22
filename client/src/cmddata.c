@@ -395,9 +395,9 @@ static int CmdSetDebugMode(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool dg_0 = arg_get_lit(ctx, 0);
-    bool dg_1 = arg_get_lit(ctx, 1);
-    bool dg_2 = arg_get_lit(ctx, 2);
+    bool dg_0 = arg_get_lit(ctx, 1);
+    bool dg_1 = arg_get_lit(ctx, 2);
+    bool dg_2 = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     if (dg_0 + dg_1 + dg_2 > 1 ) {
@@ -412,6 +412,20 @@ static int CmdSetDebugMode(const char *Cmd) {
 
     if (dg_2)
         g_debugMode = 2;
+
+    switch(g_debugMode) {
+        case 0:
+            PrintAndLogEx(INFO, "client debug level... %u ( no debug messages )", g_debugMode);
+            break;
+        case 1:
+            PrintAndLogEx(INFO, "client debug level... %u ( debug messages )", g_debugMode);
+            break;
+        case 2:
+            PrintAndLogEx(INFO, "client debug level... %u ( verbose debug messages )", g_debugMode);
+            break;
+        default:
+            break;
+    }
     return PM3_SUCCESS;
 }
 
