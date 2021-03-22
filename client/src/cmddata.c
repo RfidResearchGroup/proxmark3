@@ -1918,11 +1918,25 @@ static int CmdLoad(const char *Cmd) {
 
 // trim graph from the end
 int CmdLtrim(const char *Cmd) {
-
-    uint32_t ds = strtoul(Cmd, NULL, 10);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data ltrim",
+                "Trim samples from left of trace",
+                "data ltrim -i 300   --> keep 300 - end"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1("i", "idx", "<dec>", "from index to beginning trace"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint32_t ds = arg_get_u32(ctx, 1);
+    CLIParserFree(ctx);
 
     // sanitycheck
-    if (GraphTraceLen <= ds) return PM3_ESOFT;
+    if (GraphTraceLen <= ds) {
+        PrintAndLogEx(WARNING, "index out of bounds");
+        return PM3_EINVARG;
+    }
 
     for (uint32_t i = ds; i < GraphTraceLen; ++i)
         GraphBuffer[i - ds] = GraphBuffer[i];
@@ -1936,10 +1950,25 @@ int CmdLtrim(const char *Cmd) {
 // trim graph from the beginning
 static int CmdRtrim(const char *Cmd) {
 
-    uint32_t ds = strtoul(Cmd, NULL, 10);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data rtrim",
+                "Trim samples from right of trace",
+                "data rtrim -i 4000    --> keep 0 - 4000"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1("i", "idx", "<dec>", "from index to end trace"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint32_t ds = arg_get_u32(ctx, 1);
+    CLIParserFree(ctx);
 
     // sanitycheck
-    if (GraphTraceLen <= ds) return PM3_ESOFT;
+    if (GraphTraceLen <= ds) {
+        PrintAndLogEx(WARNING, "index out of bounds");
+        return PM3_EINVARG;
+    }
 
     GraphTraceLen = ds;
     RepaintGraphWindow();
@@ -1948,24 +1977,53 @@ static int CmdRtrim(const char *Cmd) {
 
 // trim graph (middle) piece
 static int CmdMtrim(const char *Cmd) {
-    uint32_t start = 0, stop = 0;
-    sscanf(Cmd, "%u %u", &start, &stop);
 
-    if (start > GraphTraceLen || stop > GraphTraceLen || start >= stop)
-        return PM3_ESOFT;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data mtrim",
+                "Trim out samples from the specified start to the specified end point",
+                "data mtrim -s 1000 -e 2000  -->  keep between 1000 and 2000"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1("s", "start", "<dec>", "start point"),
+        arg_u64_1("e", "end", "<dec>", "end point"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint32_t start = arg_get_u32(ctx, 1);
+    uint32_t stop = arg_get_u32(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (start > GraphTraceLen || stop > GraphTraceLen || start >= stop) {
+        PrintAndLogEx(WARNING, "start and end points doesn't align");
+        return PM3_EINVARG;
+    }
 
     // leave start position sample
     start++;
 
     GraphTraceLen = stop - start;
-    for (uint32_t i = 0; i < GraphTraceLen; i++)
+    for (uint32_t i = 0; i < GraphTraceLen; i++) {
         GraphBuffer[i] = GraphBuffer[start + i];
+    }
 
     return PM3_SUCCESS;
 }
 
 int CmdNorm(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data norm",
+                "Normalize max/min to +/-128",
+                "data norm"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
     int max = INT_MIN, min = INT_MAX;
 
     // Find local min, max
@@ -2605,11 +2663,11 @@ static command_t CommandTable[] = {
     {"hpf",             CmdHpf,                  AlwaysAvailable,  "Remove DC offset from trace"},
     {"iir",             CmdDataIIR,              AlwaysAvailable,  "Apply IIR buttersworth filter on plotdata"},
     {"grid",            CmdGrid,                 AlwaysAvailable,  "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
-    {"ltrim",           CmdLtrim,                AlwaysAvailable,  "<samples> -- Trim samples from left of trace"},
-    {"mtrim",           CmdMtrim,                AlwaysAvailable,  "<start> <stop> -- Trim out samples from the specified start to the specified stop"},
+    {"ltrim",           CmdLtrim,                AlwaysAvailable,  "Trim samples from left of trace"},
+    {"mtrim",           CmdMtrim,                AlwaysAvailable,  "Trim out samples from the specified start to the specified stop"},
     {"norm",            CmdNorm,                 AlwaysAvailable,  "Normalize max/min to +/-128"},
     {"plot",            CmdPlot,                 AlwaysAvailable,  "Show graph window"},
-    {"rtrim",           CmdRtrim,                AlwaysAvailable,  "<location to end trace> -- Trim samples from right of trace"},
+    {"rtrim",           CmdRtrim,                AlwaysAvailable,  "Trim samples from right of trace"},
     {"setgraphmarkers", CmdSetGraphMarkers,      AlwaysAvailable,  "[orange_marker] [blue_marker] (in graph window)"},
     {"shiftgraphzero",  CmdGraphShiftZero,       AlwaysAvailable,  "<shift> -- Shift 0 for Graphed wave + or - shift value"},
     {"timescale",       CmdTimeScale,            AlwaysAvailable,  "Set a timescale to get a differential reading between the yellow and purple markers as time duration\n"},
