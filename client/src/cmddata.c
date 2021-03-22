@@ -381,9 +381,37 @@ void save_restoreDB(uint8_t saveOpt) {
 }
 
 static int CmdSetDebugMode(const char *Cmd) {
-    int demod = 0;
-    sscanf(Cmd, "%i", &demod);
-    g_debugMode = (uint8_t)demod;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data setdebugmode",
+                "Set debugging level on client side",
+                "data setdebugmode"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("0", NULL, "no debug messages"),
+        arg_lit0("1", NULL, "debug"),
+        arg_lit0("2", NULL, "verbose debugging"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool dg_0 = arg_get_lit(ctx, 0);
+    bool dg_1 = arg_get_lit(ctx, 1);
+    bool dg_2 = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (dg_0 + dg_1 + dg_2 > 1 ) {
+        PrintAndLogEx(INFO, "Select only one option");
+        return PM3_EINVARG;
+    }
+    if (dg_0)
+        g_debugMode = 0;
+
+    if (dg_1)
+        g_debugMode = 1;
+
+    if (dg_2)
+        g_debugMode = 2;
     return PM3_SUCCESS;
 }
 
@@ -1629,7 +1657,21 @@ static int CmdSamples(const char *Cmd) {
 }
 
 int CmdTuneSamples(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data tune",
+                "Measure tuning of device antenna. Results shown in graph window.\n"
+                "This command doesn't actively tune your antennas, \n"
+                "it's only informative by measuring voltage that the antennas will generate",
+                "data tune"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
 #define NON_VOLTAGE     1000
 #define LF_UNUSABLE_V   2000
 #define LF_MARGINAL_V   10000
@@ -1644,7 +1686,8 @@ int CmdTuneSamples(const char *Cmd) {
 
     int timeout = 0;
     int timeout_max = 20;
-    PrintAndLogEx(INFO, "REMINDER: " _YELLOW_("'hw tune' doesn't actively tune your antennas") ", it's only informative");
+    PrintAndLogEx(INFO, "Reminder: `" _YELLOW_("hw tune") "` doesn't actively tune your antennas,");
+    PrintAndLogEx(INFO, "it's only informative.");
     PrintAndLogEx(INFO, "Measuring antenna characteristics, please wait...");
 
     clearCommandBuffer();
@@ -1938,7 +1981,18 @@ int CmdNorm(const char *Cmd) {
 }
 
 int CmdPlot(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data plot",
+                "Show graph window \n"
+                "hit 'h' in window for detail keystroke help available",
+                "data plot"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     ShowGraphWindow();
     return PM3_SUCCESS;
 }
@@ -2544,7 +2598,7 @@ static command_t CommandTable[] = {
     {"ltrim",           CmdLtrim,                AlwaysAvailable,  "<samples> -- Trim samples from left of trace"},
     {"mtrim",           CmdMtrim,                AlwaysAvailable,  "<start> <stop> -- Trim out samples from the specified start to the specified stop"},
     {"norm",            CmdNorm,                 AlwaysAvailable,  "Normalize max/min to +/-128"},
-    {"plot",            CmdPlot,                 AlwaysAvailable,  "Show graph window (hit 'h' in window for keystroke help)"},
+    {"plot",            CmdPlot,                 AlwaysAvailable,  "Show graph window"},
     {"rtrim",           CmdRtrim,                AlwaysAvailable,  "<location to end trace> -- Trim samples from right of trace"},
     {"setgraphmarkers", CmdSetGraphMarkers,      AlwaysAvailable,  "[orange_marker] [blue_marker] (in graph window)"},
     {"shiftgraphzero",  CmdGraphShiftZero,       AlwaysAvailable,  "<shift> -- Shift 0 for Graphed wave + or - shift value"},
