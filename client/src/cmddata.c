@@ -1542,7 +1542,17 @@ static int CmdHexsamples(const char *Cmd) {
 }
 
 static int CmdHide(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data hide",
+                "Show graph window",
+                "data hide"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     HideGraphWindow();
     return PM3_SUCCESS;
 }
@@ -1686,7 +1696,8 @@ int CmdTuneSamples(const char *Cmd) {
 
     int timeout = 0;
     int timeout_max = 20;
-    PrintAndLogEx(INFO, "Reminder: `" _YELLOW_("hw tune") "` doesn't actively tune your antennas,");
+    PrintAndLogEx(INFO, "---------- " _CYAN_("Reminder") " ------------------------");
+    PrintAndLogEx(INFO, "`" _YELLOW_("hw tune") "` doesn't actively tune your antennas,");
     PrintAndLogEx(INFO, "it's only informative.");
     PrintAndLogEx(INFO, "Measuring antenna characteristics, please wait...");
 
