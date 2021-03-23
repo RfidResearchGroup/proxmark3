@@ -7,15 +7,11 @@ data rawdemod
 data askedgedetect
 data autocorr
 data dirthreshold
-data hpf
 data iir
 data grid
 data setgraphmarkers
 data shiftgraphzero
 data zerocrossings
-data convertbitstream
-data getbitstream
-data hexsamples
 hf 15 dump
 hf 15 info
 hf 15 raw
