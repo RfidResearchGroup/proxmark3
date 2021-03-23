@@ -211,18 +211,6 @@ static int usage_data_autocorr(void) {
     PrintAndLogEx(NORMAL, "       g              save back to GraphBuffer (overwrite)");
     return PM3_SUCCESS;
 }
-static int usage_data_detectclock(void) {
-    PrintAndLogEx(NORMAL, "Usage:  data detectclock [modulation] <clock>");
-    PrintAndLogEx(NORMAL, "     [modulation as char], specify the modulation type you want to detect the clock of");
-    PrintAndLogEx(NORMAL, "     <clock>             , specify the clock (optional - to get best start position only)");
-    PrintAndLogEx(NORMAL, "       'a' = ask, 'f' = fsk, 'n' = nrz/direct, 'p' = psk");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "   Example: data detectclock a    = detect the clock of an ask modulated wave in the GraphBuffer");
-    PrintAndLogEx(NORMAL, "            data detectclock f    = detect the clock of an fsk modulated wave in the GraphBuffer");
-    PrintAndLogEx(NORMAL, "            data detectclock p    = detect the clock of an psk modulated wave in the GraphBuffer");
-    PrintAndLogEx(NORMAL, "            data detectclock n    = detect the clock of an nrz/direct modulated wave in the GraphBuffer");
-    return PM3_SUCCESS;
-}
 
 //set the demod buffer with given array of binary (one bit per byte)
 //by marshmellow
@@ -1164,30 +1152,49 @@ static int CmdAskEdgeDetect(const char *Cmd) {
 // uses data from graphbuffer
 // adjusted to take char parameter for type of modulation to find the clock - by marshmellow.
 static int CmdDetectClockRate(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) > 6 || strlen(Cmd) == 0 || cmdp == 'h')
-        return usage_data_detectclock();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data detectclock",
+                "Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer",
+                "data detectclock -A   --> detect clock of an ask wave in GraphBuffer\n"
+                "data detectclock -F   --> detect clock of an fsk wave in GraphBuffer\n"
+                "data detectclock -N   --> detect clock of an psk wave in GraphBuffer\n"
+                "data detectclock -P   --> detect clock of an nrz/direct wave in GraphBuffer"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("A", "ASK", "specify ASK modulation clock detection"),
+        arg_lit0("F", "FSK", "specify FSK modulation clock detection"),
+        arg_lit0("N", "NZR", "specify NZR/DIRECT modulation clock detection"),
+        arg_lit0("P", "PSK", "specify PSK modulation clock detection"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    bool a = arg_get_lit(ctx, 1);
+    bool f = arg_get_lit(ctx, 2);
+    bool n = arg_get_lit(ctx, 3);
+    bool p = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
 
-    int clock1 = 0;
-    switch (cmdp) {
-        case 'a' :
-            clock1 = GetAskClock(Cmd + 1, true);
-            break;
-        case 'f' :
-            clock1 = GetFskClock("", true);
-            break;
-        case 'n' :
-            clock1 = GetNrzClock("", true);
-            break;
-        case 'p' :
-            clock1 = GetPskClock("", true);
-            break;
-        default :
-            PrintAndLogEx(NORMAL, "Please specify a valid modulation to detect the clock of - see option h for help");
-            break;
+    int tmp = (a + f + n + p);
+    if (tmp > 1) {
+        PrintAndLogEx(WARNING, "Only specify one modulation");
+        return PM3_EINVARG;
     }
+
+    if (a)
+        GetAskClock("", true);
+
+    if (f)
+        GetFskClock("", true);
+
+    if (n)
+        GetNrzClock("", true);
+
+    if (p)
+        GetPskClock("", true);
+
     RepaintGraphWindow();
-    return clock1;
+    return PM3_SUCCESS;
 }
 
 static char *GetFSKType(uint8_t fchigh, uint8_t fclow, uint8_t invert) {
