@@ -1483,22 +1483,38 @@ static int CmdSetGraphMarkers(const char *Cmd) {
 }
 
 static int CmdHexsamples(const char *Cmd) {
-    uint32_t requested = 0;
-    uint32_t offset = 0;
-    char string_buf[25];
-    char *string_ptr = string_buf;
-    uint8_t got[pm3_capabilities.bigbuf_size];
 
-    sscanf(Cmd, "%u %u", &requested, &offset);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data hexsamples",
+                "Dump big buffer as hex bytes",
+                "data hexsamples -n 128  -->  dumps 128 bytes from offset 0"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("b", "breaks", "<dec>", "row break, def 16"),
+        arg_u64_0("n", NULL, "<dec>", "num of bytes to download"),
+        arg_u64_0("o", "offset", "<hex>", "offset in big buffer"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint32_t breaks = arg_get_u32_def(ctx, 1, 16);
+    uint32_t requested = arg_get_u32_def(ctx, 2, 8);
+    uint32_t offset = arg_get_u32_def(ctx, 3, 0);
+    CLIParserFree(ctx);
 
-    /* if no args send something */
-    if (requested == 0)
-        requested = 8;
-    if (requested > pm3_capabilities.bigbuf_size)
+    // sanity checks
+    if (requested > pm3_capabilities.bigbuf_size) {        
         requested = pm3_capabilities.bigbuf_size;
+        PrintAndLogEx(INFO, "n is larger than big buffer size, will use %u", requested);
+    }
 
+    uint8_t got[pm3_capabilities.bigbuf_size];
     if (offset + requested > sizeof(got)) {
-        PrintAndLogEx(NORMAL, "Tried to read past end of buffer, <bytes> + <offset> > %d", pm3_capabilities.bigbuf_size);
+        PrintAndLogEx(NORMAL, "Tried to read past end of buffer, <bytes %u> + <offset %u> > %d"
+            , requested
+            , offset
+            , pm3_capabilities.bigbuf_size
+        );
         return PM3_EINVARG;
     }
 
@@ -1507,23 +1523,7 @@ static int CmdHexsamples(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t i = 0;
-    for (uint32_t j = 0; j < requested; j++) {
-        i++;
-        string_ptr += sprintf(string_ptr, "%02x ", got[j]);
-        if (i == 8) {
-            *(string_ptr - 1) = '\0';    // remove the trailing space
-            PrintAndLogEx(NORMAL, "%s", string_buf);
-            string_buf[0] = '\0';
-            string_ptr = string_buf;
-            i = 0;
-        }
-        if (j == requested - 1 && string_buf[0] != '\0') { // print any remaining bytes
-            *(string_ptr - 1) = '\0';
-            PrintAndLogEx(NORMAL, "%s", string_buf);
-            string_buf[0] = '\0';
-        }
-    }
+    print_hex_break(got, requested, breaks);
     return PM3_SUCCESS;
 }
 
@@ -2710,7 +2710,7 @@ static command_t CommandTable[] = {
     {"bin2hex",         Cmdbin2hex,              AlwaysAvailable,  "Converts binary to hexadecimal"},
     {"bitsamples",      CmdBitsamples,           IfPm3Present,     "Get raw samples as bitstring"},
     {"clear",           CmdBuffClear,            AlwaysAvailable,  "Clears bigbuf on deviceside and graph window"},
-    {"hexsamples",      CmdHexsamples,           IfPm3Present,     "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
+    {"hexsamples",      CmdHexsamples,           IfPm3Present,     "Dump big buffer as hex bytes"},
     {"hex2bin",         Cmdhex2bin,              AlwaysAvailable,  "Converts hexadecimal to binary"},
     {"load",            CmdLoad,                 AlwaysAvailable,  "Load contents of file into graph window"},
     {"ndef",            CmdDataNDEF,             AlwaysAvailable,  "Decode NDEF records"},
