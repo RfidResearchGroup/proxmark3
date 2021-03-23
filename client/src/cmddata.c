@@ -1533,7 +1533,23 @@ int CmdGrid(const char *Cmd) {
 }
 
 static int CmdSetGraphMarkers(const char *Cmd) {
-    sscanf(Cmd, "%i %i", &CursorCPos, &CursorDPos);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data setgraphmarkers",
+                "Set blue and orange marker in graph window",
+                "data setgraphmarkers               --> turn off\n"
+                "data setgraphmarkers -a 64 -b 50"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("a", NULL, "<dec>", "orange marker"),
+        arg_u64_0("b", NULL, "<dec>", "blue marker"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CursorCPos = arg_get_u32_def(ctx, 1, 0);
+    CursorDPos = arg_get_u32_def(ctx, 2, 0);
+    CLIParserFree(ctx);
+    PrintAndLogEx(INFO, "Setting orange %u blue %u", CursorCPos, CursorDPos);
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -2560,7 +2576,7 @@ static int CmdDataIIR(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    uint8_t k = arg_get_u32_def(ctx, 1, 0);
+    uint8_t k = (arg_get_u32_def(ctx, 1, 0) & 0xFF);
     CLIParserFree(ctx);
 
     iceSimple_Filter(GraphBuffer, GraphTraceLen, k);
@@ -2789,8 +2805,8 @@ static command_t CommandTable[] = {
     {"norm",            CmdNorm,                 AlwaysAvailable,  "Normalize max/min to +/-128"},
     {"plot",            CmdPlot,                 AlwaysAvailable,  "Show graph window"},
     {"rtrim",           CmdRtrim,                AlwaysAvailable,  "Trim samples from right of trace"},
-    {"setgraphmarkers", CmdSetGraphMarkers,      AlwaysAvailable,  "[orange_marker] [blue_marker] (in graph window)"},
-    {"shiftgraphzero",  CmdGraphShiftZero,       AlwaysAvailable,  "<shift> -- Shift 0 for Graphed wave + or - shift value"},
+    {"setgraphmarkers", CmdSetGraphMarkers,      AlwaysAvailable,  "Set blue and orange marker in graph window"},
+    {"shiftgraphzero",  CmdGraphShiftZero,       AlwaysAvailable,  "Shift 0 for Graphed wave + or - shift value"},
     {"timescale",       CmdTimeScale,            AlwaysAvailable,  "Set a timescale to get a differential reading between the yellow and purple markers as time duration\n"},
     {"zerocrossings",   CmdZerocrossings,        AlwaysAvailable,  "Count time between zero-crossings"},
     {"convertbitstream", CmdConvertBitStream,    AlwaysAvailable,  "Convert GraphBuffer's 0/1 values to 127 / -127"},
