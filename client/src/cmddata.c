@@ -1129,13 +1129,26 @@ int AskEdgeDetect(const int *in, int *out, int len, int threshold) {
 // similar to dirtheshold, threshold commands
 // takes a threshold length which is the measured length between two samples then determines an edge
 static int CmdAskEdgeDetect(const char *Cmd) {
-    int thresLen = 25;
-    int ans = 0;
-    sscanf(Cmd, "%i", &thresLen);
 
-    ans = AskEdgeDetect(GraphBuffer, GraphBuffer, GraphTraceLen, thresLen);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data askedgedetect",
+                "Adjust Graph for manual ASK demod using the length of sample differences\n"
+                "to detect the edge of a wave",
+                "data askedgedetect -t 20"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("t", "thres", "<dec>", "threshold, use 20 - 45 (def 25)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int threshold = arg_get_int_def(ctx, 1, 25);
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(INFO, "using threshold " _YELLOW_("%i"), threshold);
+    int res = AskEdgeDetect(GraphBuffer, GraphBuffer, GraphTraceLen, threshold);
     RepaintGraphWindow();
-    return ans;
+    return res;
 }
 
 // Print our clock rate
