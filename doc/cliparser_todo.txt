@@ -1,6 +1,4 @@
-clear
 analyse foo
-data biphaserawdecode
 data manrawdecode
 data rawdemod
 hf 15 dump
