@@ -1007,7 +1007,7 @@ static int CmdAnalyseFreq(const char *Cmd) {
 static int CmdAnalyseFoo(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "analyze foo",
+    CLIParserInit(&ctx, "analyse foo",
                   "experiments of cliparse",
                   "analyse foo -r a0000000a0002021"
                  );

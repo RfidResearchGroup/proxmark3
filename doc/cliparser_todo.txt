@@ -1,4 +1,3 @@
-analyse foo
 data rawdemod
 hf 15 dump
 hf 15 info
