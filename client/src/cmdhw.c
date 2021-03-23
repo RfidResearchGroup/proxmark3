@@ -1023,6 +1023,9 @@ void pm3_version(bool verbose, bool oneliner) {
         struct p *payload = (struct p *)&resp.data.asBytes;
 
         PrintAndLogEx(NORMAL,  payload->versionstr);
+        if (strstr(payload->versionstr, "2s30vq100") == NULL) {
+            PrintAndLogEx(NORMAL, "  FPGA firmware... %s", _RED_("chip mismatch"));
+        }
 
         lookupChipID(payload->id, payload->section_size);
     }
