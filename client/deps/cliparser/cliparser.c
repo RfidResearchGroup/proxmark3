@@ -231,6 +231,31 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     return res;
 }
 
+int CLIParamBinToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen) {
+    *datalen = 0;
+
+    int tmplen = 0;
+    uint8_t tmpstr[(256 * 2) + 1] = {0};
+
+    // concat all strings in argstr into tmpstr[]
+    //
+    int res = CLIParamStrToBuf(argstr, tmpstr, sizeof(tmpstr), &tmplen);
+    if (res || tmplen == 0) {
+        return res;
+    }
+
+    res = param_getbin_to_eol((char *)tmpstr, 0, data, maxdatalen, datalen);
+    switch (res) {
+        case 1:
+            PrintAndLogEx(ERR, "Parameter error: Invalid BINARY value\n");
+            break;
+        case 2:
+            PrintAndLogEx(ERR, "Parameter error: parameter too large\n");
+            break;
+    }
+    return res;
+}
+
 int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen) {
     *datalen = 0;
     if (!argstr->count)

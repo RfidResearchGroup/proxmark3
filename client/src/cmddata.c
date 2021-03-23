@@ -224,12 +224,6 @@ static int usage_data_detectclock(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_data_bin2hex(void) {
-    PrintAndLogEx(NORMAL, "Usage: data bin2hex <binary_digits>");
-    PrintAndLogEx(NORMAL, "       This function will ignore all characters not 1 or 0 (but stop reading on whitespace)");
-    return PM3_SUCCESS;
-}
-
 //set the demod buffer with given array of binary (one bit per byte)
 //by marshmellow
 void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx) {
@@ -2224,31 +2218,49 @@ static int CmdZerocrossings(const char *Cmd) {
  * @return
  */
 static int Cmdbin2hex(const char *Cmd) {
-    int bg = 0, en = 0;
-    if (param_getptr(Cmd, &bg, &en, 0))
-        return usage_data_bin2hex();
 
-    //Number of digits supplied as argument
-    size_t length = en - bg + 1;
-    size_t bytelen = (length + 7) / 8;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data bin2hex",
+                "This function converts binary to hexadecimal. It will ignore all\n"
+                 "characters not 1 or 0 but stop reading on whitespace",
+                "data bin2hex -d 0101111001010"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("d", "data", "<bin>", "binary string to convert"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int blen = 0;
+    uint8_t binarr[400] = {0x00};
+    int res = CLIParamBinToBuf(arg_get_str(ctx, 1), binarr, sizeof(binarr), &blen);
+    CLIParserFree(ctx);
+
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing binary string");
+        return PM3_EINVARG;
+    }
+    
+   // Number of digits supplied as argument
+    size_t bytelen = (blen + 7) / 8;
     uint8_t *arr = (uint8_t *) calloc(bytelen, sizeof(uint8_t));
     memset(arr, 0, bytelen);
     BitstreamOut bout = { arr, 0, 0 };
 
-    for (; bg <= en; bg++) {
-        char c = Cmd[bg];
-        if (c == '1')
+    for (int i = 0; i < blen; i++) {
+        uint8_t c = binarr[i];
+        if (c == 1)
             pushBit(&bout, 1);
-        else if (c == '0')
+        else if (c == 0)
             pushBit(&bout, 0);
         else
-            PrintAndLogEx(NORMAL, "Ignoring '%c'", c);
+            PrintAndLogEx(INFO, "Ignoring '%d' at pos %d", c, i);
     }
 
     if (bout.numbits % 8 != 0)
-        PrintAndLogEx(NORMAL, "[padded with %d zeroes]", 8 - (bout.numbits % 8));
+        PrintAndLogEx(INFO, "[right padded with %d zeroes]", 8 - (bout.numbits % 8));
 
-    PrintAndLogEx(NORMAL, "%s", sprint_hex(arr, bytelen));
+    PrintAndLogEx(SUCCESS, _YELLOW_("%s"), sprint_hex(arr, bytelen));
     free(arr);
     return PM3_SUCCESS;
 }
@@ -2256,8 +2268,8 @@ static int Cmdbin2hex(const char *Cmd) {
 static int Cmdhex2bin(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data hex2bin",
-                "This function will ignore all non-hexadecimal characters\n"
-                "but stop reading on whitespace",
+                "This function converts hexadecimal to binary. It will ignore all\n"
+                "non-hexadecimal characters but stop reading on whitespace",
                 "data hex2bin -d 01020304"
                 );
     void *argtable[] = {

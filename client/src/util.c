@@ -285,36 +285,33 @@ char *sprint_hex_inrow_spaces(const uint8_t *data, const size_t len, size_t spac
 char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks) {
 
     // make sure we don't go beyond our char array memory
-    size_t in_index = 0, out_index = 0;
-
     size_t rowlen = (len > MAX_BIN_BREAK_LENGTH) ? MAX_BIN_BREAK_LENGTH : len;
 
-    if (breaks > 0 && len % breaks != 0)
-        rowlen = (len + (len / breaks) > MAX_BIN_BREAK_LENGTH) ? MAX_BIN_BREAK_LENGTH : len + (len / breaks);
-
-    //PrintAndLogEx(NORMAL, "(sprint_bin_break) rowlen %d", rowlen);
-
-    static char buf[MAX_BIN_BREAK_LENGTH]; // 3072 + end of line characters if broken at 8 bits
-    //clear memory
+    // 3072 + end of line characters if broken at 8 bits
+    static char buf[MAX_BIN_BREAK_LENGTH];
     memset(buf, 0x00, sizeof(buf));
     char *tmp = buf;
 
     // loop through the out_index to make sure we don't go too far
-    for (out_index = 0; out_index < rowlen; out_index++) {
-        // set character
-        if (data[in_index] == 7) // Manchester wrong bit marker
-            sprintf(tmp++, ".");
-        else
-            sprintf(tmp++, "%u", data[in_index]);
+    for (int i = 0; i < rowlen; i++) {
+
+        char c = data[i];
+        // manchester wrong bit marker
+        if (c == 7)
+            c = '.';
+        else 
+            c += '0';
+
+        *(tmp++) = c;
 
         // check if a line break is needed and we have room to print it in our array
-        if ((breaks > 0) && !((in_index + 1) % breaks) && (out_index + 1 != rowlen)) {
-            sprintf(tmp++, "%s", "\n");
+        if (breaks) {
+            if (((i + 1) % breaks) == 0) {
+
+                 *(tmp++) = '\n';
+            }
         }
-
-        in_index++;
     }
-
     return buf;
 }
 /*
@@ -714,6 +711,48 @@ int param_gethex_to_eol(const char *line, int paramnum, uint8_t *data, int maxda
     return 0;
 }
 
+int param_getbin_to_eol(const char *line, int paramnum, uint8_t *data, int maxdatalen, int *datalen) {
+    int bg, en;
+    if (param_getptr(line, &bg, &en, paramnum)) {
+        return 1;
+    }
+
+    *datalen = 0;
+    char buf[5] = {0};
+    int indx = bg;
+    while (line[indx]) {
+        if (line[indx] == '\t' || line[indx] == ' ') {
+            indx++;
+            continue;
+        }
+
+        if (line[indx] == '0' || line[indx] == '1') {
+            buf[strlen(buf) + 1] = 0x00;
+            buf[strlen(buf)] = line[indx];
+        } else {
+            // if we have symbols other than spaces and 0/1
+            return 1;
+        }
+
+        if (*datalen >= maxdatalen) {
+            // if we dont have space in buffer and have symbols to translate
+            return 2;
+        }
+
+        if (strlen(buf) > 0) {
+            uint32_t temp = 0;
+            sscanf(buf, "%d", &temp);
+            data[*datalen] = (uint8_t)(temp & 0xff);
+            *buf = 0;
+            (*datalen)++;
+        }
+
+        indx++;
+    }
+    return 0;
+}
+
+
 int param_getstr(const char *line, int paramnum, char *str, size_t buffersize) {
     int bg, en;
 
@@ -768,9 +807,8 @@ int hextobinarray(char *target, char *source) {
 
 // convert hex to human readable binary string
 int hextobinstring(char *target, char *source) {
-    int length;
-
-    if (!(length = hextobinarray(target, source)))
+    int length = hextobinarray(target, source);
+    if (length == 0)
         return 0;
     binarraytobinstring(target, target, length);
     return length;
