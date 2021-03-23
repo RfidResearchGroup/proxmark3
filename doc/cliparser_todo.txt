@@ -1,5 +1,4 @@
 analyse foo
-data manrawdecode
 data rawdemod
 hf 15 dump
 hf 15 info

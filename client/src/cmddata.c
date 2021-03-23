@@ -36,16 +36,6 @@ int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_data_manrawdecode(void) {
-    PrintAndLogEx(NORMAL, "Usage:  data manrawdecode [invert] [maxErr]");
-    PrintAndLogEx(NORMAL, "     Takes 10 and 01 and converts to 0 and 1 respectively");
-    PrintAndLogEx(NORMAL, "     --must have binary sequence in demodbuffer (run data askrawdemod first)");
-    PrintAndLogEx(NORMAL, "  [invert]  invert output");
-    PrintAndLogEx(NORMAL, "  [maxErr]  set number of errors allowed (default = 20)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "   Example: data manrawdecode   = decode manchester bitstream from the demodbuffer");
-    return PM3_SUCCESS;
-}
 static int usage_data_rawdemod(void) {
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod [modulation] <help>|<options>");
     PrintAndLogEx(NORMAL, "   [modulation] as 2 char,");
@@ -650,18 +640,34 @@ static int Cmdaskmandemod(const char *Cmd) {
 // manchester decode
 // strictly take 10 and 01 and convert to 0 and 1
 static int Cmdmandecoderaw(const char *Cmd) {
-    size_t size = 0;
-    int high = 0, low = 0;
-    size_t i = 0;
-    uint16_t errCnt = 0;
-    int invert = 0, maxErr = 20;
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) > 5 || cmdp == 'h') return usage_data_manrawdecode();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data manrawdecode",
+                "Manchester decode binary stream in DemodBuffer\n"
+                "Converts 10 and 01 and converts to 0 and 1 respectively\n"
+                " - must have binary sequence in demodbuffer (run `data rawdemod ar` before)",
+                "data manrawdecode"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("i", "inv", "invert output"),
+        arg_int0(NULL, "err", "<dec>", "set max errors tolerated (def 20)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool invert = arg_get_lit(ctx, 1);
+    int max_err = arg_get_int_def(ctx, 2, 20);
+    CLIParserFree(ctx); 
 
-    if (DemodBufferLen == 0) return PM3_ESOFT;
+    if (DemodBufferLen == 0) {
+        PrintAndLogEx(WARNING, "DemodBuffer empty, run " _YELLOW_("`data rawdemod ar`"));
+        return PM3_ESOFT;
+    }
 
     uint8_t bits[MAX_DEMOD_BUF_LEN] = {0};
 
+    // make sure its just binary data 0|1|7 in buffer
+    int high = 0, low = 0;
+    size_t i = 0;
     for (; i < DemodBufferLen; ++i) {
         if (DemodBuffer[i] > high)
             high = DemodBuffer[i];
@@ -671,23 +677,27 @@ static int Cmdmandecoderaw(const char *Cmd) {
     }
 
     if (high > 7 || low < 0) {
-        PrintAndLogEx(ERR, "Error: please raw demod the wave first then manchester raw decode");
+        PrintAndLogEx(ERR, "Error: please first raw demod then manchester raw decode");
         return PM3_ESOFT;
     }
 
-    sscanf(Cmd, "%i %i", &invert, &maxErr);
-    size = i;
-    uint8_t alignPos = 0;
-    errCnt = manrawdecode(bits, &size, invert, &alignPos);
-    if (errCnt >= maxErr) {
-        PrintAndLogEx(ERR, "Too many errors: %u", errCnt);
+    size_t size = i;
+    uint8_t offset = 0;
+    uint16_t err_cnt = manrawdecode(bits, &size, invert, &offset);
+    if (err_cnt > max_err) {
+        PrintAndLogEx(ERR, "Too many errors attempting to decode " _RED_("%i"), err_cnt);
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL, "Manchester Decoded - # errors:%d - data:", errCnt);
-    PrintAndLogEx(NORMAL, "%s", sprint_bin_break(bits, size, 32));
+    if (err_cnt > 0) {
+        PrintAndLogEx(WARNING, "# %i errors found during demod (shown as " _YELLOW_(".")" in bit stream) ", err_cnt);
+    }
 
-    if (errCnt == 0) {
+    PrintAndLogEx(INFO, "Manchester decoded %s", (invert) ? "( inverted )" : "");
+    PrintAndLogEx(INFO, "%s", sprint_bin_break(bits, size, 32));
+
+    // try decode EM410x
+    if (err_cnt == 0) {
         uint64_t id = 0;
         uint32_t hi = 0;
         size_t idx = 0;
@@ -697,6 +707,8 @@ static int Cmdmandecoderaw(const char *Cmd) {
             printEM410x(hi, id, false);
         }
     }
+
+    setClockGrid(g_DemodClock, g_DemodStartIdx + g_DemodClock / 2);
     return PM3_SUCCESS;
 }
 
@@ -712,9 +724,9 @@ static int Cmdmandecoderaw(const char *Cmd) {
 static int CmdBiphaseDecodeRaw(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data biphaserawdecode",
-                "Biphase decode bin stream in DemodBuffer\n"
+                "Biphase decode binary stream in DemodBuffer\n"
                 "Converts 10 or 01 -> 1 and 11 or 00 -> 0\n"
-                " - must have binary sequence in demodbuffer (run `data askrawdemod` before)\n"
+                " - must have binary sequence in demodbuffer (run `data rawdemod ar` before)\n"
                 " - invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester",
                 "data biphaserawdecode      --> decode biphase bitstream from the demodbuffer\n"
                 "data biphaserawdecode -oi  --> decode biphase bitstream from the demodbuffer, adjust offset, and invert output"
@@ -733,7 +745,7 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
     CLIParserFree(ctx); 
 
     if (DemodBufferLen == 0) {
-        PrintAndLogEx(WARNING, "DemodBuffer Empty - run " _YELLOW_("'data rawdemod ar'")" first");
+        PrintAndLogEx(WARNING, "DemodBuffer empty, run " _YELLOW_("`data rawdemod ar`"));
         return PM3_ESOFT;
     }
 
@@ -755,7 +767,7 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
         PrintAndLogEx(WARNING, "# %i errors found during demod (shown as " _YELLOW_(".")" in bit stream) ", err_cnt);
     }
 
-    PrintAndLogEx(INFO, "Biphase decoded using offset: %d%s", offset, (invert) ? ", inverted" : "");
+    PrintAndLogEx(INFO, "Biphase decoded using offset %d%s", offset, (invert) ? "( inverted )" : "");
     PrintAndLogEx(INFO, "%s", sprint_bin_break(bits, size, 32));
 
     //remove first bit from raw demod
