@@ -274,6 +274,17 @@ static int CmdPref(const char *Cmd) {
 }
 
 static int CmdClear(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "clear",
+                "Clear the Proxmark3 client terminal screen",
+                "clear"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ "");
     return PM3_SUCCESS;
 }
