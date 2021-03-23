@@ -1106,9 +1106,21 @@ static int CmdUndecimate(const char *Cmd) {
 
 // shift graph zero up or down based on input + or -
 static int CmdGraphShiftZero(const char *Cmd) {
-    int shift = 0;
-    //set options from parameters entered with the command
-    sscanf(Cmd, "%i", &shift);
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data shiftgraphzero",
+                "Shift 0 for Graphed wave + or - shift value",
+                "data shiftgraphzero -n 10   --> shift 10 points\n"
+                "data shiftgraphzero -n -22  --> shift negative 22 points"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("n", NULL, "<dec>", "shift + or -"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int shift = arg_get_int_def(ctx, 1, 0);
+    CLIParserFree(ctx);
 
     for (size_t i = 0; i < GraphTraceLen; i++) {
         int shiftedVal = GraphBuffer[i] + shift;
@@ -2536,8 +2548,21 @@ static int CmdFSKToNRZ(const char *Cmd) {
 }
 
 static int CmdDataIIR(const char *Cmd) {
-    uint8_t k = param_get8(Cmd, 0);
-    //iceIIR_Butterworth(GraphBuffer, GraphTraceLen);
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data iir",
+                "Apply IIR buttersworth filter on plot data",
+                "data iir -n 2"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1("n", NULL, "<dec>", "factor n"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint8_t k = arg_get_u32_def(ctx, 1, 0);
+    CLIParserFree(ctx);
+
     iceSimple_Filter(GraphBuffer, GraphTraceLen, k);
 
     uint8_t bits[GraphTraceLen];
@@ -2757,7 +2782,7 @@ static command_t CommandTable[] = {
     {"undecimate",      CmdUndecimate,           AlwaysAvailable,  "Un-decimate samples"},
     {"hide",            CmdHide,                 AlwaysAvailable,  "Hide graph window"},
     {"hpf",             CmdHpf,                  AlwaysAvailable,  "Remove DC offset from trace"},
-    {"iir",             CmdDataIIR,              AlwaysAvailable,  "Apply IIR buttersworth filter on plotdata"},
+    {"iir",             CmdDataIIR,              AlwaysAvailable,  "Apply IIR buttersworth filter on plot data"},
     {"grid",            CmdGrid,                 AlwaysAvailable,  "overlay grid on graph window"},
     {"ltrim",           CmdLtrim,                AlwaysAvailable,  "Trim samples from left of trace"},
     {"mtrim",           CmdMtrim,                AlwaysAvailable,  "Trim out samples from the specified start to the specified stop"},

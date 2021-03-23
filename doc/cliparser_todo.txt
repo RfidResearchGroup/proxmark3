@@ -7,9 +7,7 @@ data rawdemod
 data askedgedetect
 data autocorr
 data dirthreshold
-data iir
 data setgraphmarkers
-data shiftgraphzero
 hf 15 dump
 hf 15 info
 hf 15 raw
