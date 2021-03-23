@@ -2,35 +2,20 @@ clear
 analyse foo
 data biphaserawdecode
 data detectclock
-data fsktonrz
 data manrawdecode
 data rawdemod
 data askedgedetect
 data autocorr
 data dirthreshold
-data hide
 data hpf
 data iir
 data grid
-data ltrim
-data mtrim
-data norm
-data plot
-data rtrim
 data setgraphmarkers
 data shiftgraphzero
 data zerocrossings
 data convertbitstream
 data getbitstream
-data bin2hex
-data bitsamples
-data clear
 data hexsamples
-data hex2bin
-data print
-data samples
-data setdebugmode
-data tune
 hf 15 dump
 hf 15 info
 hf 15 raw
