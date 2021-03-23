@@ -1496,7 +1496,24 @@ void setClockGrid(uint32_t clk, int offset) {
 }
 
 int CmdGrid(const char *Cmd) {
-    sscanf(Cmd, "%lf %lf", &PlotGridX, &PlotGridY);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data grid",
+                "This function overlay grid on graph plot window.\n"
+                "use zero value to turn off either",
+                "data grid               --> turn off\n"
+                "data grid -x 64 -y 50"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_dbl0("x", NULL, "<dec>", "plot grid X coord"),
+        arg_dbl0("y", NULL, "<dec>", "plot grid Y coord"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    PlotGridX = arg_get_dbl_def(ctx, 1, 0);
+    PlotGridY = arg_get_dbl_def(ctx, 2, 0);
+    CLIParserFree(ctx);
+    PrintAndLogEx(INFO, "Setting X %.0f  Y %.0f", PlotGridX, PlotGridY);
     PlotGridXdefault = PlotGridX;
     PlotGridYdefault = PlotGridY;
     RepaintGraphWindow();
@@ -2219,7 +2236,18 @@ static int CmdDirectionalThreshold(const char *Cmd) {
 }
 
 static int CmdZerocrossings(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data zerocrossings",
+                "Count time between zero-crossings",
+                "data zerocrossings"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
     // Zero-crossings aren't meaningful unless the signal is zero-mean.
     CmdHpf("");
 
@@ -2245,7 +2273,6 @@ static int CmdZerocrossings(const char *Cmd) {
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
-
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -2731,7 +2758,7 @@ static command_t CommandTable[] = {
     {"hide",            CmdHide,                 AlwaysAvailable,  "Hide graph window"},
     {"hpf",             CmdHpf,                  AlwaysAvailable,  "Remove DC offset from trace"},
     {"iir",             CmdDataIIR,              AlwaysAvailable,  "Apply IIR buttersworth filter on plotdata"},
-    {"grid",            CmdGrid,                 AlwaysAvailable,  "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
+    {"grid",            CmdGrid,                 AlwaysAvailable,  "overlay grid on graph window"},
     {"ltrim",           CmdLtrim,                AlwaysAvailable,  "Trim samples from left of trace"},
     {"mtrim",           CmdMtrim,                AlwaysAvailable,  "Trim out samples from the specified start to the specified stop"},
     {"norm",            CmdNorm,                 AlwaysAvailable,  "Normalize max/min to +/-128"},
