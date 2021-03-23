@@ -46,20 +46,6 @@ static int usage_data_manrawdecode(void) {
     PrintAndLogEx(NORMAL, "   Example: data manrawdecode   = decode manchester bitstream from the demodbuffer");
     return PM3_SUCCESS;
 }
-static int usage_data_biphaserawdecode(void) {
-    PrintAndLogEx(NORMAL, "Usage:  data biphaserawdecode [offset] [invert] [maxErr]");
-    PrintAndLogEx(NORMAL, "     Converts 10 or 01 to 1 and 11 or 00 to 0");
-    PrintAndLogEx(NORMAL, "     --must have binary sequence in demodbuffer (run data askrawdemod first)");
-    PrintAndLogEx(NORMAL, "     --invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "     [offset <0|1>], set to 0 not to adjust start position or to 1 to adjust decode start position");
-    PrintAndLogEx(NORMAL, "     [invert <0|1>], set to 1 to invert output");
-    PrintAndLogEx(NORMAL, "     [maxErr int],   set max errors tolerated - default=20");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "   Example: data biphaserawdecode     = decode biphase bitstream from the demodbuffer");
-    PrintAndLogEx(NORMAL, "   Example: data biphaserawdecode 1 1 = decode biphase bitstream from the demodbuffer, set offset, and invert output");
-    return PM3_SUCCESS;
-}
 static int usage_data_rawdemod(void) {
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod [modulation] <help>|<options>");
     PrintAndLogEx(NORMAL, "   [modulation] as 2 char,");
@@ -724,40 +710,58 @@ static int Cmdmandecoderaw(const char *Cmd) {
  * param masxErr maximum tolerated errors
  */
 static int CmdBiphaseDecodeRaw(const char *Cmd) {
-    size_t size = 0;
-    int offset = 0, invert = 0, maxErr = 20, errCnt = 0;
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) > 5 || cmdp == 'h') return usage_data_biphaserawdecode();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data biphaserawdecode",
+                "Biphase decode bin stream in DemodBuffer\n"
+                "Converts 10 or 01 -> 1 and 11 or 00 -> 0\n"
+                " - must have binary sequence in demodbuffer (run `data askrawdemod` before)\n"
+                " - invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester",
+                "data biphaserawdecode      --> decode biphase bitstream from the demodbuffer\n"
+                "data biphaserawdecode -oi  --> decode biphase bitstream from the demodbuffer, adjust offset, and invert output"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("o", "offset", "set to adjust decode start position"),
+        arg_lit0("i", "inv", "invert output"),
+        arg_int0(NULL, "err", "<dec>", "set max errors tolerated (def 20)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int offset = arg_get_lit(ctx, 1);
+    bool invert = arg_get_lit(ctx, 2);
+    int max_err = arg_get_int_def(ctx, 3, 20);
+    CLIParserFree(ctx); 
 
-    sscanf(Cmd, "%i %i %i", &offset, &invert, &maxErr);
     if (DemodBufferLen == 0) {
         PrintAndLogEx(WARNING, "DemodBuffer Empty - run " _YELLOW_("'data rawdemod ar'")" first");
         return PM3_ESOFT;
     }
 
     uint8_t bits[MAX_DEMOD_BUF_LEN] = {0};
-    size = sizeof(bits);
+    size_t size = sizeof(bits);
     if (!getDemodBuff(bits, &size)) return PM3_ESOFT;
 
-    errCnt = BiphaseRawDecode(bits, &size, &offset, invert);
-    if (errCnt < 0) {
-        PrintAndLogEx(ERR, "Error during decode:%d", errCnt);
+    int err_cnt = BiphaseRawDecode(bits, &size, &offset, invert);
+    if (err_cnt < 0) {
+        PrintAndLogEx(ERR, "Error during decode " _RED_("%i"), err_cnt);
         return PM3_ESOFT;
     }
-    if (errCnt > maxErr) {
-        PrintAndLogEx(ERR, "Too many errors attempting to decode: %d", errCnt);
+    if (err_cnt > max_err) {
+        PrintAndLogEx(ERR, "Too many errors attempting to decode " _RED_("%i"), err_cnt);
         return PM3_ESOFT;
     }
 
-    if (errCnt > 0)
-        PrintAndLogEx(WARNING, "# Errors found during Demod (shown as " _YELLOW_("7")" in bit stream): %d", errCnt);
+    if (err_cnt > 0) {
+        PrintAndLogEx(WARNING, "# %i errors found during demod (shown as " _YELLOW_(".")" in bit stream) ", err_cnt);
+    }
 
-    PrintAndLogEx(NORMAL, "Biphase Decoded using offset: %d - # invert:%d - data:", offset, invert);
-    PrintAndLogEx(NORMAL, "%s", sprint_bin_break(bits, size, 32));
+    PrintAndLogEx(INFO, "Biphase decoded using offset: %d%s", offset, (invert) ? ", inverted" : "");
+    PrintAndLogEx(INFO, "%s", sprint_bin_break(bits, size, 32));
 
     //remove first bit from raw demod
-    if (offset)
+    if (offset) {
         setDemodBuff(DemodBuffer, DemodBufferLen - offset, offset);
+    }
 
     setClockGrid(g_DemodClock, g_DemodStartIdx + g_DemodClock * offset / 2);
     return PM3_SUCCESS;
@@ -2814,7 +2818,7 @@ static command_t CommandTable[] = {
     {"rawdemod",        CmdRawDemod,             AlwaysAvailable,  "Demodulate the data in the GraphBuffer and output binary"},
 
     {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Graph") "-------------------------"},
-    {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable,  "[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)"},
+    {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable,  "Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave"},
     {"autocorr",        CmdAutoCorr,             AlwaysAvailable,  "Autocorrelation over window"},
     {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable,  "Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
     {"decimate",        CmdDecimate,             AlwaysAvailable,  "Decimate samples"},

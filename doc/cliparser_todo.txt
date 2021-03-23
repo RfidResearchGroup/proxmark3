@@ -3,7 +3,6 @@ analyse foo
 data biphaserawdecode
 data manrawdecode
 data rawdemod
-data askedgedetect
 hf 15 dump
 hf 15 info
 hf 15 raw
