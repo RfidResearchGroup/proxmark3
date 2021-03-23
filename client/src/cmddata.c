@@ -499,14 +499,41 @@ int CmdPrintDemodBuff(const char *Cmd) {
 
 // this function strictly converts >1 to 1 and <1 to 0 for each sample in the graphbuffer
 int CmdGetBitStream(const char *Cmd) {
-    CmdHpf(Cmd);
-    for (uint32_t i = 0; i < GraphTraceLen; i++)
-        GraphBuffer[i] = (GraphBuffer[i] >= 1) ? 1 : 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data getbitstream",
+                "Convert GraphBuffer's value accordingly\n"
+                "   - larger or equal to ONE becomes ONE\n"
+                "   - less than ONE becomes ZERO",
+                "data getbitstream"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
+    CmdHpf("");
+    for (uint32_t i = 0; i < GraphTraceLen; i++) {
+        GraphBuffer[i] = (GraphBuffer[i] >= 1) ? 1 : 0;
+    }
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
+
 static int CmdConvertBitStream(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data convertbitstream",
+                "Convert GraphBuffer's 0|1 values to 127|-127",
+                "data convertbitstream"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     if (isGraphBitstream()) {
         convertGraphFromBitstream();
@@ -1545,7 +1572,18 @@ static int CmdHide(const char *Cmd) {
 
 // zero mean GraphBuffer
 int CmdHpf(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data hpf",
+                "Remove DC offset from trace. It should centralize around 0",
+                "data hpf"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
     uint8_t bits[GraphTraceLen];
     size_t size = getFromGraphBuf(bits);
     removeSignalOffset(bits, size);
