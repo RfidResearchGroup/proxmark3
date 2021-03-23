@@ -202,15 +202,6 @@ static int usage_data_rawdemod_p2(void) {
     PrintAndLogEx(NORMAL, "       data rawdemod p2 64 1 0  = demod a psk2 tag from GraphBuffer using a clock of RF/64, inverting output and allowing 0 demod errors");
     return PM3_SUCCESS;
 }
-static int usage_data_autocorr(void) {
-    PrintAndLogEx(NORMAL, "Autocorrelate is used to detect repeating sequences. We use it as detection of length in bits a message inside the signal is");
-    PrintAndLogEx(NORMAL, "Usage: data autocorr w <window> [g]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h              This help");
-    PrintAndLogEx(NORMAL, "       w <window>     window length for correlation - default = 4000");
-    PrintAndLogEx(NORMAL, "       g              save back to GraphBuffer (overwrite)");
-    return PM3_SUCCESS;
-}
 
 //set the demod buffer with given array of binary (one bit per byte)
 //by marshmellow
@@ -931,39 +922,38 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
 }
 
 static int CmdAutoCorr(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data autocorr",
+                "Autocorrelate over window is used to detect repeating sequences.\n"
+                "We use it as detection of how long in bits a message inside the signal is",
+                "data autocorr -w 4000\n"
+                "data autocorr -w 4000 -g"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("g", NULL, "save back to GraphBuffer (overwrite)"),
+        arg_u64_0("w", "win", "<dec>", "window length for correlation. def 4000"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool updateGrph = arg_get_lit(ctx, 1);
+    uint32_t window = arg_get_u32_def(ctx, 2, 4000);
+    CLIParserFree(ctx);
 
-    uint32_t window = 4000;
-    uint8_t cmdp = 0;
-    bool updateGrph = false;
-    bool errors = false;
+    PrintAndLogEx(INFO, "Using window size " _YELLOW_("%u"), window);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_data_autocorr();
-            case 'g':
-                updateGrph = true;
-                cmdp++;
-                break;
-            case 'w':
-                window = param_get32ex(Cmd, cmdp + 1, 4000, 10);
-                if (window >= GraphTraceLen) {
-                    PrintAndLogEx(WARNING, "window must be smaller than trace (%zu samples)", GraphTraceLen);
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    if (GraphTraceLen == 0) {
+        PrintAndLogEx(WARNING, "GraphBuffer is empty");
+        PrintAndLogEx(HINT, "Try `" _YELLOW_("lf read") "` to collect samples");
+        return PM3_ESOFT;
     }
-    //Validations
-    if (errors || cmdp == 0) return usage_data_autocorr();
+
+    if (window >= GraphTraceLen) {
+        PrintAndLogEx(WARNING, "window must be smaller than trace (" _YELLOW_("%zu") " samples)", GraphTraceLen);
+        return PM3_EINVARG;
+    }
 
     AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, window, updateGrph, true);
-
     return PM3_SUCCESS;
 }
 
