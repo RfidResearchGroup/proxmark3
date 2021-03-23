@@ -1,13 +1,9 @@
 clear
 analyse foo
 data biphaserawdecode
-data detectclock
 data manrawdecode
 data rawdemod
 data askedgedetect
-data autocorr
-data dirthreshold
-data setgraphmarkers
 hf 15 dump
 hf 15 info
 hf 15 raw

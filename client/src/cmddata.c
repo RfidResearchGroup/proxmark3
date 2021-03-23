@@ -2243,10 +2243,23 @@ int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t 
 }
 
 static int CmdDirectionalThreshold(const char *Cmd) {
-    int8_t up = param_get8(Cmd, 0);
-    int8_t down = param_get8(Cmd, 1);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data dirthreshold",
+                "Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev.",
+                "data dirthreshold -u 10 -d -10"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("d", "down", "<dec>", "threshold down"),
+        arg_int1("u", "up", "<dec>", "threshold up"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int8_t down = arg_get_int(ctx, 1);
+    int8_t up = arg_get_int(ctx, 2);
+    CLIParserFree(ctx);
 
-    PrintAndLogEx(INFO, "Applying Up Threshold: %d, Down Threshold: %d\n", up, down);
+    PrintAndLogEx(INFO, "Applying up threshold: " _YELLOW_("%i") ", down threshold: " _YELLOW_("%i") "\n", up, down);
 
     directionalThreshold(GraphBuffer, GraphBuffer, GraphTraceLen, up, down);
 
@@ -2790,7 +2803,7 @@ static command_t CommandTable[] = {
     {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Graph") "-------------------------"},
     {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable,  "[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)"},
     {"autocorr",        CmdAutoCorr,             AlwaysAvailable,  "Autocorrelation over window"},
-    {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable,  "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
+    {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable,  "Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
     {"decimate",        CmdDecimate,             AlwaysAvailable,  "Decimate samples"},
     {"undecimate",      CmdUndecimate,           AlwaysAvailable,  "Un-decimate samples"},
     {"hide",            CmdHide,                 AlwaysAvailable,  "Hide graph window"},
