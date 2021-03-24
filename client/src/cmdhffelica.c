@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2017 October, Satsuoni
-// 2017 iceman
+// 2017,2021 iceman
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
@@ -23,6 +23,8 @@
 #include "ui.h"
 #include "iso18.h"     // felica_card_select_t struct
 #include "des.h"
+#include "cliparser.h" // cliparser
+
 #define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
 
 static int CmdHelp(const char *Cmd);
@@ -32,17 +34,90 @@ static void set_last_known_card(felica_card_select_t card) {
     last_known_card = card;
 }
 
+
+static void print_status_flag1_interpretation(void) {
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Status Flag1:");
+    PrintAndLogEx(INFO, "  - 00h : Indicates the successful completion of a command.");
+    PrintAndLogEx(INFO, "  - FFh : If an error occurs during the processing of a command that includes no list in the command packet, or if "
+                  "an error occurs independently of any list, the card returns a response by setting FFh to Status Flag1.");
+    PrintAndLogEx(INFO, "  - XXh : If an error occurs while processing a command that includes Service Code List or Block List "
+                  "in the command packet, the card returns a response by setting a number in the list to Status Flag1, "
+                  "indicating the location of the error.");
+}
+
+static void print_status_flag2_interpration(void) {
+    PrintAndLogEx(INFO, "\nStatus Flag2:");
+    PrintAndLogEx(INFO, "  - 00h : Indicates the successful completion of a command.");
+    PrintAndLogEx(INFO, "  - 01h : The calculated result is either less than zero when the purse data is decremented, or exceeds 4"
+                  "Bytes when the purse data is incremented.");
+    PrintAndLogEx(INFO, "  - 02h : The specified data exceeds the value of cashback data at cashback of purse.");
+    PrintAndLogEx(INFO, "  - 70h : Memory error (fatal error).");
+    PrintAndLogEx(INFO, "  - 71h : The number of memory rewrites exceeds the upper limit (this is only a warning; data writing is "
+                  "performed as normal). The maximum number of rewrites can differ, depending on the product being used.");
+    PrintAndLogEx(INFO, "          In addition, Status Flag1 is either 00h or FFh depending on the product being used.");
+    PrintAndLogEx(INFO, "  - A1h : Illegal Number of Service: Number of Service or Number of Node specified by the command falls outside the range of the prescribed value.");
+    PrintAndLogEx(INFO, "  - A2h : Illegal command packet (specified Number of Block): Number of Block specified by the command falls outside the range of the prescribed values for the product.");
+    PrintAndLogEx(INFO, "  - A3h : Illegal Block List (specified order of Service): Service Code List Order specified by Block List Element falls outside the Number of Service specified by the "
+                  "command (or the Number of Service specified at the times of mutual authentication).");
+    PrintAndLogEx(INFO, "  - A4h : Illegal Service type: Area Attribute specified by the command or Service Attribute of Service Code is incorrect.");
+    PrintAndLogEx(INFO, "  - A5h : Access is not allowed: Area or Service specified by the command cannot be accessed. "
+                  "The parameter specified by the command does not satisfy the conditions for success.");
+    PrintAndLogEx(INFO, "  - A6h : Illegal Service Code List: Target to be accessed, identified by Service Code List Order, specified by Block "
+                  "List Element does not exist. Or, Node specified by Node Code List does not exist.");
+    PrintAndLogEx(INFO, "  - A7h : Illegal Block List (Access Mode): Access Mode specified by Block List Element is incorrect.");
+    PrintAndLogEx(INFO, "  - A8h : Illegal Block Number Block Number (access to the specified data is inhibited): specified by Block List Element exceeds the number of Blocks assigned to Service.");
+    PrintAndLogEx(INFO, "  - A9h : Data write failure: This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, "  - AAh : Key-change failure: Key change failed.");
+    PrintAndLogEx(INFO, "  - ABh : Illegal Package Parity or illegal Package MAC: This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, "  - ACh : Illegal parameter: This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, "  - ADh : Service exists already: This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, "  - AEh : Illegal System Code: This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, "  - AFh : Too many simultaneous cyclic write operations: Number of simultaneous write Blocks specified by the command to Cyclic Service "
+                  "exceeds the number of Blocks assigned to Service.");
+    PrintAndLogEx(INFO, "  - C0h : Illegal Package Identifier: This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, "  - C1h : Discrepancy of parameters inside and outside Package: This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, "  - C2h : Command is disabled already: This is the error that occurs in issuance commands.");
+}
+
+static void print_block_list_element_constraints(void) {
+    PrintAndLogEx(INFO, "       - Each Block List Element shall satisfy the following conditions:");
+    PrintAndLogEx(INFO, "              - The value of Service Code List Order shall not exceed Number of Service.");
+    PrintAndLogEx(INFO, "              - Access Mode shall be 000b.");
+    PrintAndLogEx(INFO, "              - The target specified by Service Code shall not be Area or System.");
+    PrintAndLogEx(INFO, "              - Service specified in Service Code List shall exist in System.");
+    PrintAndLogEx(INFO, "              - Service Attribute of Service specified in Service Code List shall be authentication-not-required Service.");
+    PrintAndLogEx(INFO, "              - Block Number shall be in the range of the number of Blocks assigned to the specified Service.");
+}
+
+static void print_number_of_service_constraints(void) {
+    PrintAndLogEx(INFO, "       - Number of Service: shall be a positive integer in the range of 1 to 16, inclusive.");
+}
+
+static void print_number_of_block_constraints(void) {
+    PrintAndLogEx(INFO, "       - Number of Block: shall be less than or equal to the maximum number of Blocks that can be read simultaneously. \n"
+                  "The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used. Use as default 01");
+}
+
+static void print_service_code_list_constraints(void) {
+    PrintAndLogEx(INFO, "       - Service Code List: For Service Code List, only Service Code existing in the product shall be specified:");
+    PrintAndLogEx(INFO, "              - Even when Service Code exists in the product, Service Code not referenced from Block List shall not be specified to Service Code List.");
+    PrintAndLogEx(INFO, "              - For existence or nonexistence of Service in a product, please check using the Request Service (or Request Service v2) command.");
+}
+
+
+
 /*
 static int usage_hf_felica_sim(void) {
-    PrintAndLogEx(NORMAL, "\n Emulating ISO/18092 FeliCa tag \n");
-    PrintAndLogEx(NORMAL, "Usage: hf felica sim [h] t <type> [v]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h     : This help");
-    PrintAndLogEx(NORMAL, "    t     : 1 = FeliCa");
-    PrintAndLogEx(NORMAL, "          : 2 = FeliCaLiteS");
-    PrintAndLogEx(NORMAL, "    v     : (Optional) Verbose");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "          hf felica sim t 1 ");
+    PrintAndLogEx(INFO, "\n Emulating ISO/18092 FeliCa tag \n");
+    PrintAndLogEx(INFO, "Usage: hf felica sim [h] t <type> [v]");
+    PrintAndLogEx(INFO, "Options:");
+    PrintAndLogEx(INFO, "    h     : This help");
+    PrintAndLogEx(INFO, "    t     : 1 = FeliCa");
+    PrintAndLogEx(INFO, "          : 2 = FeliCaLiteS");
+    PrintAndLogEx(INFO, "    v     : (Optional) Verbose");
+    PrintAndLogEx(INFO, "Examples:");
+    PrintAndLogEx(INFO, "          hf felica sim t 1 ");
     return PM3_SUCCESS;
 }
 */
@@ -83,17 +158,6 @@ static int usage_hf_felica_dumplite(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_hf_felica_raw(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf felica raw [-h] [-r] [-c] [-k] [-a] <0A 0B 0C ... hex>");
-    PrintAndLogEx(NORMAL, "       -h    this help");
-    PrintAndLogEx(NORMAL, "       -r    do not read response");
-    PrintAndLogEx(NORMAL, "       -c    calculate and append CRC");
-    PrintAndLogEx(NORMAL, "       -k    keep signal field ON after receive");
-    PrintAndLogEx(NORMAL, "       -a    active signal field ON without select");
-    PrintAndLogEx(NORMAL, "       -s    active signal field ON with select");
-    return PM3_SUCCESS;
-}
-
 static int usage_hf_felica_request_service(void) {
     PrintAndLogEx(NORMAL, "\nInfo: Use this command to verify the existence of Area and Service, and to acquire Key Version:");
     PrintAndLogEx(NORMAL, "       - When the specified Area or Service exists, the card returns Key Version.");
@@ -121,75 +185,6 @@ static int usage_hf_felica_request_response(void) {
     PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
     PrintAndLogEx(NORMAL, " hf felica rqresponse -i 01100910c11bc407");
     return PM3_SUCCESS;
-}
-
-static void print_status_flag1_interpretation(void) {
-    PrintAndLogEx(NORMAL, "\nStatus Flag1:");
-    PrintAndLogEx(NORMAL, "  - 00h : Indicates the successful completion of a command.");
-    PrintAndLogEx(NORMAL, "  - FFh : If an error occurs during the processing of a command that includes no list in the command packet, or if "
-                  "an error occurs independently of any list, the card returns a response by setting FFh to Status Flag1.");
-    PrintAndLogEx(NORMAL, "  - XXh : If an error occurs while processing a command that includes Service Code List or Block List "
-                  "in the command packet, the card returns a response by setting a number in the list to Status Flag1, "
-                  "indicating the location of the error.");
-}
-
-static void print_status_flag2_interpration(void) {
-    PrintAndLogEx(NORMAL, "\nStatus Flag2:");
-    PrintAndLogEx(NORMAL, "  - 00h : Indicates the successful completion of a command.");
-    PrintAndLogEx(NORMAL, "  - 01h : The calculated result is either less than zero when the purse data is decremented, or exceeds 4"
-                  "Bytes when the purse data is incremented.");
-    PrintAndLogEx(NORMAL, "  - 02h : The specified data exceeds the value of cashback data at cashback of purse.");
-    PrintAndLogEx(NORMAL, "  - 70h : Memory error (fatal error).");
-    PrintAndLogEx(NORMAL, "  - 71h : The number of memory rewrites exceeds the upper limit (this is only a warning; data writing is "
-                  "performed as normal). The maximum number of rewrites can differ, depending on the product being used.");
-    PrintAndLogEx(NORMAL, "          In addition, Status Flag1 is either 00h or FFh depending on the product being used.");
-    PrintAndLogEx(NORMAL, "  - A1h : Illegal Number of Service: Number of Service or Number of Node specified by the command falls outside the range of the prescribed value.");
-    PrintAndLogEx(NORMAL, "  - A2h : Illegal command packet (specified Number of Block): Number of Block specified by the command falls outside the range of the prescribed values for the product.");
-    PrintAndLogEx(NORMAL, "  - A3h : Illegal Block List (specified order of Service): Service Code List Order specified by Block List Element falls outside the Number of Service specified by the "
-                  "command (or the Number of Service specified at the times of mutual authentication).");
-    PrintAndLogEx(NORMAL, "  - A4h : Illegal Service type: Area Attribute specified by the command or Service Attribute of Service Code is incorrect.");
-    PrintAndLogEx(NORMAL, "  - A5h : Access is not allowed: Area or Service specified by the command cannot be accessed. "
-                  "The parameter specified by the command does not satisfy the conditions for success.");
-    PrintAndLogEx(NORMAL, "  - A6h : Illegal Service Code List: Target to be accessed, identified by Service Code List Order, specified by Block "
-                  "List Element does not exist. Or, Node specified by Node Code List does not exist.");
-    PrintAndLogEx(NORMAL, "  - A7h : Illegal Block List (Access Mode): Access Mode specified by Block List Element is incorrect.");
-    PrintAndLogEx(NORMAL, "  - A8h : Illegal Block Number Block Number (access to the specified data is inhibited): specified by Block List Element exceeds the number of Blocks assigned to Service.");
-    PrintAndLogEx(NORMAL, "  - A9h : Data write failure: This is the error that occurs in issuance commands.");
-    PrintAndLogEx(NORMAL, "  - AAh : Key-change failure: Key change failed.");
-    PrintAndLogEx(NORMAL, "  - ABh : Illegal Package Parity or illegal Package MAC: This is the error that occurs in issuance commands.");
-    PrintAndLogEx(NORMAL, "  - ACh : Illegal parameter: This is the error that occurs in issuance commands.");
-    PrintAndLogEx(NORMAL, "  - ADh : Service exists already: This is the error that occurs in issuance commands.");
-    PrintAndLogEx(NORMAL, "  - AEh : Illegal System Code: This is the error that occurs in issuance commands.");
-    PrintAndLogEx(NORMAL, "  - AFh : Too many simultaneous cyclic write operations: Number of simultaneous write Blocks specified by the command to Cyclic Service "
-                  "exceeds the number of Blocks assigned to Service.");
-    PrintAndLogEx(NORMAL, "  - C0h : Illegal Package Identifier: This is the error that occurs in issuance commands.");
-    PrintAndLogEx(NORMAL, "  - C1h : Discrepancy of parameters inside and outside Package: This is the error that occurs in issuance commands.");
-    PrintAndLogEx(NORMAL, "  - C2h : Command is disabled already: This is the error that occurs in issuance commands.");
-}
-
-static void print_block_list_element_constraints(void) {
-    PrintAndLogEx(NORMAL, "       - Each Block List Element shall satisfy the following conditions:");
-    PrintAndLogEx(NORMAL, "              - The value of Service Code List Order shall not exceed Number of Service.");
-    PrintAndLogEx(NORMAL, "              - Access Mode shall be 000b.");
-    PrintAndLogEx(NORMAL, "              - The target specified by Service Code shall not be Area or System.");
-    PrintAndLogEx(NORMAL, "              - Service specified in Service Code List shall exist in System.");
-    PrintAndLogEx(NORMAL, "              - Service Attribute of Service specified in Service Code List shall be authentication-not-required Service.");
-    PrintAndLogEx(NORMAL, "              - Block Number shall be in the range of the number of Blocks assigned to the specified Service.");
-}
-
-static void print_number_of_service_constraints(void) {
-    PrintAndLogEx(NORMAL, "       - Number of Service: shall be a positive integer in the range of 1 to 16, inclusive.");
-}
-
-static void print_number_of_block_constraints(void) {
-    PrintAndLogEx(NORMAL, "       - Number of Block: shall be less than or equal to the maximum number of Blocks that can be read simultaneously. "
-                  "The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used. Use as default 01");
-}
-
-static void print_service_code_list_constraints(void) {
-    PrintAndLogEx(NORMAL, "       - Service Code List: For Service Code List, only Service Code existing in the product shall be specified:");
-    PrintAndLogEx(NORMAL, "              - Even when Service Code exists in the product, Service Code not referenced from Block List shall not be specified to Service Code List.");
-    PrintAndLogEx(NORMAL, "              - For existence or nonexistence of Service in a product, please check using the Request Service (or Request Service v2) command.");
 }
 
 static int usage_hf_felica_read_without_encryption(void) {
@@ -334,6 +329,7 @@ static int usage_hf_felica_authentication2(void) {
 
     return PM3_SUCCESS;
 }
+
 
 /**
  * Wait for response from pm3 or timeout.
@@ -1689,79 +1685,37 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
 }
 
 static int CmdHFFelicaCmdRaw(const char *Cmd) {
-    bool reply = 1;
-    bool crc = false;
-    bool keep_field_on = false;
-    bool active = false;
-    bool active_select = false;
-    uint16_t numbits = 0;
-    char buf[5] = "";
-    int i = 0;
+ 
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica raw ",
+                "Send raw hex data to tag",
+                "hf felica raw -s 20"
+                );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  NULL, "active signal field ON without select"),
+        arg_lit0("c",  NULL, "calculate and append CRC"),
+        arg_lit0("k",  NULL, "keep signal field ON after receive"),
+        arg_u64_0("n", NULL, "<dec>", "number of bits"),
+        arg_lit0("r",  NULL, "do not read response"),
+        arg_lit0("s",  NULL, "active signal field ON with select"),
+        arg_strx1(NULL, NULL, "<hex>", "raw bytes to send"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool active = arg_get_lit(ctx, 1);
+    bool crc = arg_get_lit(ctx, 2);
+    bool keep_field_on = arg_get_lit(ctx, 3);
+    uint16_t numbits = arg_get_u32_def(ctx, 4, 0) &0xFFFF;
+    bool reply = (arg_get_lit(ctx, 5) == false);
+    bool active_select = arg_get_lit(ctx, 6);
+
+    int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE];
-    uint16_t datalen = 0;
-    uint32_t temp;
-
-    if (strlen(Cmd) < 2) return usage_hf_felica_raw();
-
-    // strip
-    while (*Cmd == ' ' || *Cmd == '\t') Cmd++;
-
-    while (Cmd[i] != '\0') {
-        if (Cmd[i] == ' ' || Cmd[i] == '\t') { i++; continue; }
-        if (Cmd[i] == '-') {
-            switch (tolower(Cmd[i + 1])) {
-                case 'h':
-                    return usage_hf_felica_raw();
-                case 'r':
-                    reply = false;
-                    break;
-                case 'c':
-                    crc = true;
-                    break;
-                case 'k':
-                    keep_field_on = true;
-                    break;
-                case 'a':
-                    active = true;
-                    break;
-                case 's':
-                    active_select = true;
-                    break;
-                case 'b':
-                    sscanf(Cmd + i + 2, "%d", &temp);
-                    numbits = temp & 0xFFFF;
-                    i += 3;
-                    while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }
-                    i -= 2;
-                    break;
-                default:
-                    return usage_hf_felica_raw();
-            }
-            i += 2;
-            continue;
-        }
-        if ((Cmd[i] >= '0' && Cmd[i] <= '9') ||
-                (Cmd[i] >= 'a' && Cmd[i] <= 'f') ||
-                (Cmd[i] >= 'A' && Cmd[i] <= 'F')) {
-            buf[strlen(buf) + 1] = 0;
-            buf[strlen(buf)] = Cmd[i];
-            i++;
-
-            if (strlen(buf) >= 2) {
-                sscanf(buf, "%x", &temp);
-                data[datalen] = (uint8_t)(temp & 0xff);
-                *buf = 0;
-                if (++datalen >= (sizeof(data) - 2)) {
-                    if (crc)
-                        PrintAndLogEx(WARNING, "Buffer is full, we can't add CRC to your data");
-                    break;
-                }
-            }
-            continue;
-        }
-        PrintAndLogEx(WARNING, "Invalid char on input");
-        return PM3_EINVARG;
-    }
+    CLIGetHexWithReturn(ctx, 6, data, &datalen);
+    CLIParserFree(ctx);
 
     if (crc) {
         AddCrc(data, datalen);
@@ -1788,6 +1742,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
 
     clearCommandBuffer();
     PrintAndLogEx(SUCCESS, "Data: %s", sprint_hex(data, datalen));
+
     SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
 
     if (reply) {
