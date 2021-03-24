@@ -351,5 +351,13 @@
         "Name": "Access control",
         "Description": "Cardax Card Data Application",
         "Type": ""
-    }
+    },
+    {
+        "AID": "6F706C",
+        "Vendor": "Openpath",
+        "Country": "US",
+        "Name": "Access control",
+        "Description": "Openpath PACS Application",
+        "Type": ""
+    }   
 ]
