@@ -1311,7 +1311,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_FELICALITE_SIMULATE: {
-            felica_sim_lite(packet->oldarg[0]);
+            struct p {
+                uint8_t uid[8];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            felica_sim_lite(payload->uid);
             break;
         }
         case CMD_HF_FELICA_SNIFF: {

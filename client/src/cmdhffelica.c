@@ -8,22 +8,21 @@
 // High frequency ISO18092 / FeliCa commands
 //-----------------------------------------------------------------------------
 #include "cmdhffelica.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <inttypes.h>
-
-#include "cmdparser.h"    // command_t
+#include "cmdparser.h"   // command_t
 #include "comms.h"
 #include "cmdtrace.h"
 #include "crc16.h"
 #include "util.h"
 #include "ui.h"
-#include "iso18.h"     // felica_card_select_t struct
+#include "iso18.h"       // felica_card_select_t struct
 #include "des.h"
-#include "cliparser.h" // cliparser
+#include "cliparser.h"   // cliparser
+#include "util_posix.h"  // msleep
 
 #define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
 
@@ -133,28 +132,6 @@ static int usage_hf_felica_sniff(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "          hf felica sniff");
     PrintAndLogEx(NORMAL, "          hf felica sniff -s 10 -t 10");
-    return PM3_SUCCESS;
-}
-
-static int usage_hf_felica_simlite(void) {
-    PrintAndLogEx(NORMAL, "\n Emulating ISO/18092 FeliCa Lite tag \n");
-    PrintAndLogEx(NORMAL, "Usage: hf felica litesim [h] u <uid>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h     : This help");
-    PrintAndLogEx(NORMAL, "    uid   : UID in hexsymbol");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "          hf felica litesim 11223344556677");
-    return PM3_SUCCESS;
-}
-
-static int usage_hf_felica_dumplite(void) {
-    PrintAndLogEx(NORMAL, "\n Dump ISO/18092 FeliCa Lite tag \n");
-    PrintAndLogEx(NORMAL, "press button to abort run, otherwise it will loop for 200sec.");
-    PrintAndLogEx(NORMAL, "Usage: hf felica litedump [h]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h     : This help");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "          hf felica litedump");
     return PM3_SUCCESS;
 }
 
@@ -1455,13 +1432,48 @@ static int CmdHFFelicaSniff(const char *Cmd) {
 
 // uid  hex
 static int CmdHFFelicaSimLite(const char *Cmd) {
-    uint64_t uid = param_get64ex(Cmd, 0, 0, 16);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica litesim",
+                "Emulating ISO/18092 FeliCa Lite tag",
+                "hf felica litesim -u 1122334455667788"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("u", "uid", "<hex>", "UID/NDEF2 8 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int uid_len = 0;
+    struct p {
+        uint8_t uid[8];
+    } PACKED payload;
+    CLIGetHexWithReturn(ctx, 1, payload.uid, &uid_len);
+    CLIParserFree(ctx); 
 
-    if (!uid)
-        return usage_hf_felica_simlite();
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_FELICALITE_SIMULATE, uid, 0, 0, NULL, 0);
+    SendCommandNG(CMD_HF_FELICALITE_SIMULATE, payload.uid, sizeof(payload));
+    PacketResponseNG resp;
+
+    for (;;) {
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "User aborted");
+            msleep(300);
+            break;
+        }
+
+        if (WaitForResponseTimeout(CMD_HF_FELICALITE_SIMULATE, &resp, 1000)) {
+            if (resp.status == PM3_EOPABORTED) {
+                PrintAndLogEx(DEBUG, "Button pressed, user aborted");
+                break;
+            }
+        }
+    }
+
+    PrintAndLogEx(INFO, "Done");
     return PM3_SUCCESS;
 }
 
@@ -1618,19 +1630,46 @@ static uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t trac
 
 static int CmdHFFelicaDumpLite(const char *Cmd) {
 
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_hf_felica_dumplite();
+/*
+iceman 2021,
+Why does this command say it dumps a FeliCa lite card
+and then tries to print a trace?!?  
+Is this a trace list or a feclia dump cmd?
+*/
 
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica litedump",
+                "Dump ISO/18092 FeliCa Lite tag.  It will timeout after 200sec",
+                "hf felica litedump"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx); 
+ 
     PrintAndLogEx(SUCCESS, "FeliCa lite - dump started");
-    PrintAndLogEx(SUCCESS, "press pm3-button to cancel");
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_FELICALITE_DUMP, NULL, 0);
     PacketResponseNG resp;
 
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort dumping");
+
     uint8_t timeout = 0;
-    while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+    while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "User aborted");
+            return PM3_EOPABORTED;
+        }
+
         timeout++;
-        PrintAndLogEx(NORMAL, "." NOLF);
+        PrintAndLogEx(INPLACE, "% 3i", timeout);
+
         fflush(stdout);
         if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
@@ -1659,7 +1698,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
 
     uint8_t *trace = calloc(tracelen, sizeof(uint8_t));
     if (trace == NULL) {
-        PrintAndLogEx(WARNING, "Cannot allocate memory for trace");
+        PrintAndLogEx(WARNING, "failed to allocate memory ");
         return PM3_EMALLOC;
     }
 
@@ -1669,8 +1708,8 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %"PRIu32" bytes)", tracelen);
 
+    PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %"PRIu32" bytes)", tracelen);
     print_hex_break(trace, tracelen, 32);
     printSep();
 
@@ -1791,7 +1830,7 @@ int readFelicaUid(bool verbose) {
         }
         case 0: {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, "FeliCa tag info");
+            PrintAndLogEx(SUCCESS, "-------- " _CYAN_("FeliCa tag info") " -------------------");
 
             PrintAndLogEx(SUCCESS, "IDm  %s", sprint_hex(card.IDm, sizeof(card.IDm)));
             PrintAndLogEx(SUCCESS, "  - CODE    %s", sprint_hex(card.code, sizeof(card.code)));
@@ -1839,7 +1878,7 @@ static command_t CommandTable[] = {
     //{"writev2",       CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "write Block Data to authentication-required Service."},
     //{"uprandomid",    CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "update Random ID (IDr)."},
     {"-----------",     CmdHelp,               AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Light") " -----------------------"},
-    {"litesim",         CmdHFFelicaSimLite,   IfPm3Felica,     "<NDEF2> - only reply to poll request"},
+    {"litesim",         CmdHFFelicaSimLite,   IfPm3Felica,     "Emulating ISO/18092 FeliCa Lite tag"},
     {"litedump",        CmdHFFelicaDumpLite,  IfPm3Felica,     "Wait for and try dumping FelicaLite"},
     //    {"sim",       CmdHFFelicaSim,       IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"}
     {NULL, NULL, NULL, NULL}
