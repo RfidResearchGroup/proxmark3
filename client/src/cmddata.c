@@ -2774,7 +2774,7 @@ static int try_detect_modulation(void) {
             // allow undo
             save_restoreGB(GRAPH_SAVE);
             // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
-            CmdLtrim("160");
+            CmdLtrim("-i 160");
             if ((PSKDemod(0, 0, 6, false) == PM3_SUCCESS)) {
                 tests[hits].modulation = DEMOD_PSK1;
                 tests[hits].bitrate = clk;
