@@ -2411,15 +2411,14 @@ static int Cmdhex2bin(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int dlen = 0;
-    uint8_t data[200] = {0x00};
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
+    char data[200] = {0x00};
+    int res = CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)data, sizeof(data), &dlen);
     CLIParserFree(ctx);
 
     if (res) {
         PrintAndLogEx(FAILED, "Error parsing bytes");
         return PM3_EINVARG;
     }
-
     PrintAndLogEx(SUCCESS, "" NOLF);
     for (int i = 0; i < dlen; i++) {
         char x = data[i];
