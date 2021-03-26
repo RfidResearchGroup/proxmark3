@@ -519,6 +519,10 @@ static void set_my_user_directory(void) {
 
         uint16_t pathLen = FILENAME_MAX; // should be a good starting point
         char *cwd_buffer = (char *)calloc(pathLen, sizeof(uint8_t));
+        if (cwd_buffer == NULL) {
+            PrintAndLogEx(WARNING, "failed to allocate memory");
+            return;            
+        }
 
         while (GetCurrentDir(cwd_buffer, pathLen) == NULL) {
             if (errno == ERANGE) {  // Need bigger buffer
