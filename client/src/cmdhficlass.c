@@ -2314,9 +2314,9 @@ static void HFiClassCalcNewKey(uint8_t *CSN, uint8_t *OLDKEY, uint8_t *NEWKEY, u
         xor_div_key[i] = old_div_key[i] ^ new_div_key[i];
     }
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "Old div key : %s", sprint_hex(old_div_key, 8));
-        PrintAndLogEx(SUCCESS, "New div key : %s", sprint_hex(new_div_key, 8));
-        PrintAndLogEx(SUCCESS, "Xor div key : " _YELLOW_("%s") "\n", sprint_hex(xor_div_key, 8));
+        PrintAndLogEx(SUCCESS, "Old div key......... %s", sprint_hex(old_div_key, 8));
+        PrintAndLogEx(SUCCESS, "New div key......... %s", sprint_hex(new_div_key, 8));
+        PrintAndLogEx(SUCCESS, "Xor div key......... " _YELLOW_("%s") "\n", sprint_hex(xor_div_key, 8));
     }
 }
 
@@ -2362,7 +2362,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
     } else if (old_key_nr >= 0) {
         if (old_key_nr < ICLASS_KEYS_MAX) {
             memcpy(old_key, iClass_Key_Table[old_key_nr], 8);
-            PrintAndLogEx(SUCCESS, "Using old key[%d] " _GREEN_("%s"), old_key_nr, sprint_hex(iClass_Key_Table[old_key_nr], 8));
+            PrintAndLogEx(SUCCESS, "Using old key[%d]... " _GREEN_("%s"), old_key_nr, sprint_hex(iClass_Key_Table[old_key_nr], 8));
         } else {
             PrintAndLogEx(ERR, "Key number is invalid");
             CLIParserFree(ctx);
@@ -2395,7 +2395,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
     } else if (new_key_nr >= 0) {
         if (new_key_nr < ICLASS_KEYS_MAX) {
             memcpy(new_key, iClass_Key_Table[new_key_nr], 8);
-            PrintAndLogEx(SUCCESS, "Using new key[%d] " _GREEN_("%s"), new_key_nr, sprint_hex(iClass_Key_Table[new_key_nr], 8));
+            PrintAndLogEx(SUCCESS, "Using new key[%d]... " _GREEN_("%s"), new_key_nr, sprint_hex(iClass_Key_Table[new_key_nr], 8));
         } else {
             PrintAndLogEx(ERR, "Key number is invalid");
             CLIParserFree(ctx);
