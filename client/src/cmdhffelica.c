@@ -104,8 +104,6 @@ static void print_service_code_list_constraints(void) {
     PrintAndLogEx(INFO, "              - For existence or nonexistence of Service in a product, please check using the Request Service (or Request Service v2) command.");
 }
 
-
-
 /*
 static int usage_hf_felica_sim(void) {
     PrintAndLogEx(INFO, "\n Emulating ISO/18092 FeliCa tag \n");
@@ -1233,24 +1231,26 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
     flags |= FELICA_APPEND_CRC;
     flags |= FELICA_RAW;
     clear_and_send_command(flags, datalen, data, 0);
+
     PacketResponseNG resp;
-    if (!waitCmdFelica(0, &resp, 1)) {
+    if (waitCmdFelica(0, &resp, true) == false) {
         PrintAndLogEx(ERR, "\nGot no response from card");
         return PM3_ERFTRANS;
-    } else {
-        felica_syscode_response_t rq_syscode_response;
-        memcpy(&rq_syscode_response, (felica_syscode_response_t *)resp.data.asBytes, sizeof(felica_syscode_response_t));
+    }
 
-        if (rq_syscode_response.frame_response.IDm[0] != 0) {
-            PrintAndLogEx(SUCCESS, "\nGot Request Response:");
-            PrintAndLogEx(SUCCESS, "IDm: %s", sprint_hex(rq_syscode_response.frame_response.IDm, sizeof(rq_syscode_response.frame_response.IDm)));
-            PrintAndLogEx(SUCCESS, "  - Number of Systems: %s", sprint_hex(rq_syscode_response.number_of_systems, sizeof(rq_syscode_response.number_of_systems)));
-            PrintAndLogEx(SUCCESS, "  - System Codes: enumerated in ascending order starting from System 0.");
-            for (i = 0; i < rq_syscode_response.number_of_systems[0]; i++) {
-                PrintAndLogEx(SUCCESS, "    - %s", sprint_hex(rq_syscode_response.system_code_list + i * 2, sizeof(uint8_t) * 2));
-            }
+    felica_syscode_response_t rq_syscode_response;
+    memcpy(&rq_syscode_response, (felica_syscode_response_t *)resp.data.asBytes, sizeof(felica_syscode_response_t));
+
+    if (rq_syscode_response.frame_response.IDm[0] != 0) {
+        PrintAndLogEx(SUCCESS, "\nGot Request Response:");
+        PrintAndLogEx(SUCCESS, "IDm: %s", sprint_hex(rq_syscode_response.frame_response.IDm, sizeof(rq_syscode_response.frame_response.IDm)));
+        PrintAndLogEx(SUCCESS, "  - Number of Systems: %s", sprint_hex(rq_syscode_response.number_of_systems, sizeof(rq_syscode_response.number_of_systems)));
+        PrintAndLogEx(SUCCESS, "  - System Codes: enumerated in ascending order starting from System 0.");
+        for (i = 0; i < rq_syscode_response.number_of_systems[0]; i++) {
+            PrintAndLogEx(SUCCESS, "    - %s", sprint_hex(rq_syscode_response.system_code_list + i * 2, sizeof(uint8_t) * 2));
         }
     }
+
     return PM3_SUCCESS;
 }
 
@@ -1784,11 +1784,15 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
         if (active_select) {
             PrintAndLogEx(SUCCESS, "Active select wait for FeliCa.");
             PacketResponseNG resp_IDm;
-            waitCmdFelica(1, &resp_IDm, 1);
+            if (waitCmdFelica(1, &resp_IDm, true) == false) {
+                return PM3_ERFTRANS;
+            }
         }
         if (datalen > 0) {
             PacketResponseNG resp_frame;
-            waitCmdFelica(0, &resp_frame, 1);
+            if (waitCmdFelica(0, &resp_frame, true) == false) {
+                return PM3_ERFTRANS;
+            }
         }
     }
     return PM3_SUCCESS;
