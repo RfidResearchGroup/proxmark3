@@ -1,4 +1,3 @@
-data rawdemod
 hf 15 dump
 hf 15 info
 hf 15 raw
@@ -9,8 +8,6 @@ hf 15 wrbl
 hf 15 writeafi
 hf 15 writedsfid
 hf felica reader
-hf felica sniff
-hf felica raw
 hf felica rdunencrypted
 hf felica wrunencrypted
 hf felica rqservice
@@ -21,8 +18,6 @@ hf felica auth1
 hf felica auth2
 hf felica rqspecver
 hf felica resetmode
-hf felica litesim
-hf felica litedump
 hf mf hardnested
 hf mf autopwn
 hf mf nack
