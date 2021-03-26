@@ -518,10 +518,9 @@ static void set_my_user_directory(void) {
     if (my_user_directory == NULL) {
 
         uint16_t pathLen = FILENAME_MAX; // should be a good starting point
-        bool error = false;
         char *cwd_buffer = (char *)calloc(pathLen, sizeof(uint8_t));
 
-        while (!error && (GetCurrentDir(cwd_buffer, pathLen) == NULL)) {
+        while (GetCurrentDir(cwd_buffer, pathLen) == NULL) {
             if (errno == ERANGE) {  // Need bigger buffer
                 pathLen += 10;      // if buffer was too small add 10 characters and try again
                 char *tmp = realloc(cwd_buffer, pathLen);
@@ -537,16 +536,13 @@ static void set_my_user_directory(void) {
             }
         }
 
-        if (!error) {
-
-            for (int i = 0; i < strlen(cwd_buffer); i++) {
-                if (cwd_buffer[i] == '\\') {
-                    cwd_buffer[i] = '/';
-                }
+        for (int i = 0; i < strlen(cwd_buffer); i++) {
+            if (cwd_buffer[i] == '\\') {
+                cwd_buffer[i] = '/';
             }
-
-            my_user_directory = cwd_buffer;
         }
+
+        my_user_directory = cwd_buffer;
     }
 }
 
