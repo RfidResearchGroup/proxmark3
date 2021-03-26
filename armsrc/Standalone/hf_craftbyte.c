@@ -61,7 +61,7 @@ void RunMod(void) {
                 break;
             else if (state == STATE_READ) {
                 iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
-                if (!iso14443a_select_card(NULL, &card, NULL, true, 0, true)) {
+                if (iso14443a_select_card(NULL, &card, NULL, true, 0, true) == false) {
                     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
                     LED_D_OFF();
                     SpinDelay(500);
@@ -72,11 +72,14 @@ void RunMod(void) {
                     state = STATE_EMUL;
                 }
             } else if (state == STATE_EMUL) {
-                uint8_t flags;
-                if (card.uidlen == 4) flags |= FLAG_4B_UID_IN_DATA;
-                else if (card.uidlen == 7) flags |= FLAG_7B_UID_IN_DATA;
-                else if (card.uidlen == 10) flags |= FLAG_10B_UID_IN_DATA;
-                else {
+                uint8_t flags = 0;
+                if (card.uidlen == 4) {
+                    flags |= FLAG_4B_UID_IN_DATA;
+                } else if (card.uidlen == 7) {
+                    flags |= FLAG_7B_UID_IN_DATA;
+                } else if (card.uidlen == 10){
+                    flags |= FLAG_10B_UID_IN_DATA;
+                } else {
                     Dbprintf("Unusual UID length, something is wrong. Try again please.");
                     state = STATE_READ;
                     continue;
