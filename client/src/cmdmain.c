@@ -129,27 +129,31 @@ static int CmdAuto(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("a", "all", ""),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool exit_first = (arg_get_lit(ctx, 1) == false);
     CLIParserFree(ctx);
 
     PrintAndLogEx(INFO, "lf search");
     int ret = CmdLFfind("");
-    if (ret == PM3_SUCCESS)
+    if (ret == PM3_SUCCESS && exit_first)
         return ret;
 
     PrintAndLogEx(INFO, "hf search");
     ret = CmdHFSearch("");
-    if (ret == PM3_SUCCESS)
+    if (ret == PM3_SUCCESS && exit_first)
         return ret;
 
     PrintAndLogEx(INFO, "lf search - unknown");
     ret = lf_search_plus("");
-    if (ret == PM3_SUCCESS)
+    if (ret == PM3_SUCCESS && exit_first)
         return ret;
 
-    PrintAndLogEx(INFO, "Failed both LF / HF SEARCH,");
+    if (ret != PM3_SUCCESS)
+        PrintAndLogEx(INFO, "Failed both LF / HF SEARCH,");
+
     PrintAndLogEx(INFO, "Trying " _YELLOW_("`lf read`") " and save a trace for you");
 
     CmdPlot("");
