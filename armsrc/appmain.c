@@ -1319,8 +1319,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_FELICA_SNIFF: {
-            felica_sniff(packet->oldarg[0], packet->oldarg[1]);
-            reply_ng(CMD_HF_FELICA_SNIFF, PM3_SUCCESS, NULL, 0);
+            struct p {
+                uint32_t samples;
+                uint32_t triggers;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            felica_sniff(payload->samples, payload->triggers);
             break;
         }
         case CMD_HF_FELICALITE_DUMP: {

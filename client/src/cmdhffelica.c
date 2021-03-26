@@ -121,20 +121,6 @@ static int usage_hf_felica_sim(void) {
 }
 */
 
-static int usage_hf_felica_sniff(void) {
-    PrintAndLogEx(NORMAL, "\nInfo: It get data from the field and saves it into command buffer. ");
-    PrintAndLogEx(NORMAL, "        Buffer accessible from command 'hf felica list'");
-    PrintAndLogEx(NORMAL, "\nUsage:  hf felica sniff [-h] [-s] [-t]");
-    PrintAndLogEx(NORMAL, "       -h    this help");
-    PrintAndLogEx(NORMAL, "       -s    samples to skip (decimal) max 9999");
-    PrintAndLogEx(NORMAL, "       -t    triggers to skip (decimal) max 9999");
-
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "          hf felica sniff");
-    PrintAndLogEx(NORMAL, "          hf felica sniff -s 10 -t 10");
-    return PM3_SUCCESS;
-}
-
 static int usage_hf_felica_request_service(void) {
     PrintAndLogEx(NORMAL, "\nInfo: Use this command to verify the existence of Area and Service, and to acquire Key Version:");
     PrintAndLogEx(NORMAL, "       - When the specified Area or Service exists, the card returns Key Version.");
@@ -1376,57 +1362,67 @@ static int CmdHFFelicaNotImplementedYet(const char *Cmd) {
 }
 
 static int CmdHFFelicaSniff(const char *Cmd) {
-    uint8_t paramCount = 0;
-    uint64_t samples2skip = 0;
-    uint64_t triggers2skip = 0;
-    strip_cmds(Cmd);
-    int i = 0;
-    while (Cmd[i] != '\0') {
-        if (Cmd[i] == '-') {
-            switch (tolower(Cmd[i + 1])) {
-                case 'H':
-                    return usage_hf_felica_sniff();
-                case 's':
-                    paramCount++;
-                    if (param_getlength(Cmd, paramCount) < 5) {
-                        samples2skip = param_get32ex(Cmd, paramCount++, 0, 10);
-                    } else {
-                        PrintAndLogEx(ERR, "Invalid samples number!");
-                        return PM3_EINVARG;
-                    }
-                    break;
-                case 't':
-                    paramCount++;
-                    if (param_getlength(Cmd, paramCount) < 5) {
-                        triggers2skip = param_get32ex(Cmd, paramCount++, 0, 10);
-                    } else {
-                        PrintAndLogEx(ERR, "Invalid triggers number!");
-                        return PM3_EINVARG;
-                    }
-                    break;
-                default:
-                    PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, paramCount));
-                    return usage_hf_felica_sniff();
-            }
-            i += 2;
-        }
-        i++;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica sniff",
+                "Collect data from the field and save into command buffer.\n"
+                "Buffer accessible from `hf felica list`",
+                "hf felica sniff\n"
+                "hf felica sniff -s 10 -t 19"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("s", "samples", "<dec>", "samples to skip"),
+        arg_u64_0("t", "trig", "<dec>", "triggers to skip "),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    struct p {
+        uint32_t samples;
+        uint32_t triggers;
+    } PACKED payload;
+
+    payload.samples = arg_get_u32_def(ctx, 1, 10);
+    payload.triggers = arg_get_u32_def(ctx, 2, 5000);
+    CLIParserFree(ctx);
+
+    if (payload.samples > 9999 ){
+        payload.samples = 9999;
+        PrintAndLogEx(INFO, "Too large samples to skip value, using max value 9999");
+        return PM3_EINVARG;
     }
 
-    if (samples2skip == 0) {
-        samples2skip = 10;
-        PrintAndLogEx(INFO, "Set default samples2skip: %" PRIu64, samples2skip);
+    if (payload.triggers  > 9999 ){
+        payload.triggers  = 9999;
+        PrintAndLogEx(INFO, "Too large trigger to skip value, using max value 9999");
+        return PM3_EINVARG;
     }
 
-    if (triggers2skip == 0) {
-        triggers2skip = 5000;
-        PrintAndLogEx(INFO, "Set default triggers2skip: %" PRIu64, triggers2skip);
-    }
 
-    PrintAndLogEx(INFO, "Start Sniffing now. You can stop sniffing with clicking the PM3 Button");
-    PrintAndLogEx(INFO, "During sniffing, other pm3 commands may not response.");
+    PrintAndLogEx(INFO, "Sniff Felica,  getting first %" PRIu32 " frames, skipping after %" PRIu32 " triggers", payload.samples,   payload.triggers );
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort sniffing");
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_FELICA_SNIFF, samples2skip, triggers2skip, 0, NULL, 0);
+    SendCommandNG(CMD_HF_FELICA_SNIFF, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+
+    for (;;) {
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "User aborted");
+            msleep(300);
+            break;
+        }
+
+        if (WaitForResponseTimeout(CMD_HF_FELICA_SNIFF, &resp, 1000)) {
+            if (resp.status == PM3_EOPABORTED) {
+                PrintAndLogEx(DEBUG, "Button pressed, user aborted");
+                break;
+            }
+        }
+    }
+
+    PrintAndLogEx(HINT, "try `" _YELLOW_("hf felica list") "` to view");
+    PrintAndLogEx(INFO, "Done");
     return PM3_SUCCESS;
 }
 

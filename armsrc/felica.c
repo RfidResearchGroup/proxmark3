@@ -572,23 +572,53 @@ void felica_sendraw(PacketCommandNG *c) {
 }
 
 void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
-    int remFrames = (samplesToSkip) ? samplesToSkip : 0;
-    Dbprintf("Sniff Felica: Getting first %d frames, Skipping after %d triggers.\n", samplesToSkip, triggersToSkip);
+
     clear_trace();
     set_tracing(true);
     iso18092_setup(FPGA_HF_ISO18092_FLAG_NOMOD);
+
     LED_D_ON();
-    uint16_t numbts = 0;
+
+    int retval = PM3_SUCCESS;
+    int remFrames = (samplesToSkip) ? samplesToSkip : 0;
     int trigger_cnt = 0;
     uint32_t timeout = iso18092_get_timeout();
     bool isReaderFrame = true;
-    while (!BUTTON_PRESS()) {
+
+    uint8_t flip = 0;
+    uint16_t checker = 0;
+    for (;;) {
+
         WDT_HIT();
+
+        // since simulation is a tight time critical loop,
+        // we only check for user request to end at iteration 3000, 9000. 
+        if (flip == 3) {
+            if (data_available()) {
+                retval = PM3_EOPABORTED;
+                break;
+            }
+            flip = 0;
+        }
+
+        if (checker >= 3000) {
+
+            if (BUTTON_PRESS())  {
+                retval = PM3_EOPABORTED;
+                break;
+            }
+            flip++;
+            checker = 0;
+        }
+        ++checker;
+
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+
             uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
             Process18092Byte(dist);
+
             if ((dist >= 178) && (++trigger_cnt > triggersToSkip)) {
-                Dbprintf("triggersToSkip kicked %d", dist);
+                Dbprintf("triggers To skip kicked %d", dist);
                 break;
             }
             if (FelicaFrame.state == STATE_FULL) {
@@ -599,7 +629,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
                 }
                 remFrames--;
                 if (remFrames <= 0) {
-                    Dbprintf("Stop Sniffing - samplesToSkip reached!");
+                    Dbprintf("Stop Sniffing - samples To skip reached!");
                     break;
                 }
                 LogTrace(FelicaFrame.framebytes,
@@ -609,7 +639,6 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
                          NULL,
                          isReaderFrame
                         );
-                numbts += FelicaFrame.len;
                 FelicaFrameReset();
             }
         }
@@ -617,11 +646,9 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
     switch_off();
     //reset framing
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
-    set_tracelen(numbts);
-    set_tracelen(BigBuf_max_traceLen());
 
-    Dbprintf("Felica sniffing done, tracelen: %i, use " _YELLOW_("`hf felica list`") " for annotations", BigBuf_get_traceLen());
-    reply_mix(CMD_ACK, 1, numbts, 0, 0, 0);
+    Dbprintf("Felica sniffing done, tracelen: %i", BigBuf_get_traceLen());
+    reply_ng(CMD_HF_FELICA_SNIFF, retval, NULL, 0);
     LED_D_OFF();
 }
 
