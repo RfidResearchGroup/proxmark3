@@ -411,6 +411,8 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
         char hex[512] = {0x00};
         int num_bits = binarraytohex(hex, sizeof(hex), (char *)p, len);
         if (num_bits == 0) {
+            p = NULL;
+            free(buf);
             return PM3_ESOFT;
         }
         PrintAndLogEx(SUCCESS, "DemodBuffer:\n%s", hex);
