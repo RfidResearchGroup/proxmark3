@@ -899,12 +899,10 @@ void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect,
  * function with tag, key and ivect defined.
  */
 void mifare_cypher_blocks_chained(desfiretag_t tag, desfirekey_t key, uint8_t *ivect, uint8_t *data, size_t data_size, MifareCryptoDirection direction, MifareCryptoOperation operation) {
-    size_t block_size;
-
     if (tag) {
-        if (!key)
+        if (key == NULL)
             key = DESFIRE(tag)->session_key;
-        if (!ivect)
+        if (ivect == NULL)
             ivect = DESFIRE(tag)->ivect;
 
         switch (DESFIRE(tag)->authentication_scheme) {
@@ -916,8 +914,7 @@ void mifare_cypher_blocks_chained(desfiretag_t tag, desfirekey_t key, uint8_t *i
         }
     }
 
-    block_size = key_block_size(key);
-
+    size_t block_size = key_block_size(key);
     size_t offset = 0;
     while (offset < data_size) {
         mifare_cypher_single_block(key, data + offset, ivect, direction, operation, block_size);
