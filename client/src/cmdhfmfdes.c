@@ -2932,13 +2932,13 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         res = handler_desfire_readdata(&ft, type, cs);
         if (res == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "Successfully read data from file %d:", ft.fileno);
-            PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
-            PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
+            PrintAndLogEx(INFO, "\nOffset  | Data                                            | Ascii");
+            PrintAndLogEx(INFO, "----------------------------------------------------------------------------");
 
             uint32_t len = le24toh(ft.length);
             for (uint32_t i = 0; i < len; i += 16) {
                 uint32_t l = len - i;
-                PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", i, i, sprint_hex(&ft.data[i], l > 16 ? 16 : l), sprint_ascii(&ft.data[i], l > 16 ? 16 : l));
+                PrintAndLogEx(INFO, "%02d/0x%02X | %s| %s", i, i, sprint_hex(&ft.data[i], l > 16 ? 16 : l), sprint_ascii(&ft.data[i], l > 16 ? 16 : l));
             }
         } else {
             PrintAndLogEx(ERR, "Couldn't read data. Error %d", res);
