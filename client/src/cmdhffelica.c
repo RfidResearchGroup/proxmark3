@@ -373,9 +373,129 @@ static int CmdHFFelicaList(const char *Cmd) {
     return CmdTraceList(args);
 }
 
+int read_felica_uid(bool loop, bool verbose) {
+
+    int res = PM3_SUCCESS;
+
+    do {
+        clearCommandBuffer();
+        SendCommandMIX(CMD_HF_FELICA_COMMAND, FELICA_CONNECT, 0, 0, NULL, 0);
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+
+            uint8_t status = resp.oldarg[0] & 0xFF;
+
+            if (loop) {
+                if (status != 0) {
+                    continue;
+                }
+            } else {
+                if (status != 0) {
+                    if (verbose) PrintAndLogEx(WARNING, "FeliCa card select failed");
+                    res = PM3_EOPABORTED;
+                    break;
+                }
+            }
+
+            felica_card_select_t card;
+            memcpy(&card, (felica_card_select_t *)resp.data.asBytes, sizeof(felica_card_select_t));
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, "IDm: " _GREEN_("%s"), sprint_hex_inrow(card.IDm, sizeof(card.IDm)));
+            set_last_known_card(card);
+        }
+    } while (loop && kbd_enter_pressed() == false);
+
+    DropField();
+    return res;
+}
+
 static int CmdHFFelicaReader(const char *Cmd) {
-    bool verbose = !(tolower(Cmd[0]) == 's');
-    return readFelicaUid(verbose);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica reader",
+                  "Reader for FeliCa based tags",
+                  "hf felica reader -@    -> Continuous mode");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("s", "silent", "silent (no messages)"),
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = (arg_get_lit(ctx, 1) == false);
+    bool cm = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    CLIParserFree(ctx);
+    return read_felica_uid(cm, verbose);
+}
+
+static int info_felica(bool verbose) {
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_FELICA_COMMAND, FELICA_CONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        if (verbose) PrintAndLogEx(WARNING, "FeliCa card select failed");
+        return PM3_ESOFT;
+    }
+
+    felica_card_select_t card;
+    memcpy(&card, (felica_card_select_t *)resp.data.asBytes, sizeof(felica_card_select_t));
+    uint64_t status = resp.oldarg[0];
+
+    switch (status) {
+        case 1: {
+            if (verbose)
+                PrintAndLogEx(WARNING, "card timeout");
+            return PM3_ETIMEOUT;
+        }
+        case 2: {
+            if (verbose)
+                PrintAndLogEx(WARNING, "card answered wrong");
+            return PM3_ESOFT;
+        }
+        case 3: {
+            if (verbose)
+                PrintAndLogEx(WARNING, "CRC check failed");
+            return PM3_ESOFT;
+        }
+        case 0: {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, "-------- " _CYAN_("FeliCa tag info") " -------------------");
+            PrintAndLogEx(SUCCESS, "IDm............ " _GREEN_("%s"), sprint_hex_inrow(card.IDm, sizeof(card.IDm)));
+            PrintAndLogEx(SUCCESS, "Code........... %s ", sprint_hex_inrow(card.code, sizeof(card.code)));
+            PrintAndLogEx(SUCCESS, "NFCID2......... %s", sprint_hex_inrow(card.uid, sizeof(card.uid)));
+            PrintAndLogEx(SUCCESS, "Parameter");
+            PrintAndLogEx(SUCCESS, "PAD............ " _YELLOW_("%s"), sprint_hex_inrow(card.PMm, sizeof(card.PMm)));
+            PrintAndLogEx(SUCCESS, "IC code........ %s", sprint_hex_inrow(card.iccode, sizeof(card.iccode)));
+            PrintAndLogEx(SUCCESS, "MRT............ %s", sprint_hex_inrow(card.mrt, sizeof(card.mrt)));
+            PrintAndLogEx(SUCCESS, "Service code... " _YELLOW_("%s"), sprint_hex(card.servicecode, sizeof(card.servicecode)));
+            PrintAndLogEx(NORMAL, "");
+            set_last_known_card(card);
+            break;
+        }
+    }
+    return PM3_SUCCESS;
+}
+
+static int CmdHFFelicaInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica info",
+                  "Reader for FeliCa based tags",
+                  "hf felica info");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    return info_felica(false);
 }
 
 /**
@@ -1234,7 +1354,7 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
 
     PacketResponseNG resp;
     if (waitCmdFelica(0, &resp, true) == false) {
-        PrintAndLogEx(ERR, "\nGot no response from card");
+        PrintAndLogEx(ERR, "Got no response from card");
         return PM3_ERFTRANS;
     }
 
@@ -1246,6 +1366,7 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "IDm: %s", sprint_hex(rq_syscode_response.frame_response.IDm, sizeof(rq_syscode_response.frame_response.IDm)));
         PrintAndLogEx(SUCCESS, "  - Number of Systems: %s", sprint_hex(rq_syscode_response.number_of_systems, sizeof(rq_syscode_response.number_of_systems)));
         PrintAndLogEx(SUCCESS, "  - System Codes: enumerated in ascending order starting from System 0.");
+
         for (i = 0; i < rq_syscode_response.number_of_systems[0]; i++) {
             PrintAndLogEx(SUCCESS, "    - %s", sprint_hex(rq_syscode_response.system_code_list + i * 2, sizeof(uint8_t) * 2));
         }
@@ -1798,67 +1919,17 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int readFelicaUid(bool verbose) {
-
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_FELICA_COMMAND, FELICA_CONNECT, 0, 0, NULL, 0);
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-        if (verbose) PrintAndLogEx(WARNING, "FeliCa card select failed");
-        return PM3_ESOFT;
-    }
-
-    felica_card_select_t card;
-    memcpy(&card, (felica_card_select_t *)resp.data.asBytes, sizeof(felica_card_select_t));
-    uint64_t status = resp.oldarg[0];
-
-    switch (status) {
-        case 1: {
-            if (verbose)
-                PrintAndLogEx(WARNING, "card timeout");
-            return PM3_ETIMEOUT;
-        }
-        case 2: {
-            if (verbose)
-                PrintAndLogEx(WARNING, "card answered wrong");
-            return PM3_ESOFT;
-        }
-        case 3: {
-            if (verbose)
-                PrintAndLogEx(WARNING, "CRC check failed");
-            return PM3_ESOFT;
-        }
-        case 0: {
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, "-------- " _CYAN_("FeliCa tag info") " -------------------");
-
-            PrintAndLogEx(SUCCESS, "IDm  %s", sprint_hex(card.IDm, sizeof(card.IDm)));
-            PrintAndLogEx(SUCCESS, "  - CODE    %s", sprint_hex(card.code, sizeof(card.code)));
-            PrintAndLogEx(SUCCESS, "  - NFCID2  %s", sprint_hex(card.uid, sizeof(card.uid)));
-
-            PrintAndLogEx(SUCCESS, "Parameter (PAD) | %s", sprint_hex(card.PMm, sizeof(card.PMm)));
-            PrintAndLogEx(SUCCESS, "  - IC CODE %s", sprint_hex(card.iccode, sizeof(card.iccode)));
-            PrintAndLogEx(SUCCESS, "  - MRT     %s", sprint_hex(card.mrt, sizeof(card.mrt)));
-
-            PrintAndLogEx(SUCCESS, "SERVICE CODE %s", sprint_hex(card.servicecode, sizeof(card.servicecode)));
-            set_last_known_card(card);
-            break;
-        }
-    }
-    return PM3_SUCCESS;
-}
-
 static command_t CommandTable[] = {
-
-    {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",            CmdHelp,                          AlwaysAvailable, "This help"},
-    {"list",            CmdHFFelicaList,                  AlwaysAvailable,     "List ISO 18092/FeliCa history"},
+    {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
+    {"list",            CmdHFFelicaList,                  AlwaysAvailable, "List ISO 18092/FeliCa history"},
     {"reader",          CmdHFFelicaReader,                IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
+    {"info",            CmdHFFelicaInfo,                  IfPm3Felica,     "Tag information"},
     {"sniff",           CmdHFFelicaSniff,                 IfPm3Felica,     "Sniff ISO 18092/FeliCa traffic"},
     {"raw",             CmdHFFelicaCmdRaw,                IfPm3Felica,     "Send raw hex data to tag"},
     {"rdunencrypted",   CmdHFFelicaReadWithoutEncryption, IfPm3Felica,     "read Block Data from authentication-not-required Service."},
-    {"wrunencrypted",   CmdHFFelicaWriteWithoutEncryption, IfPm3Felica,     "write Block Data to an authentication-not-required Service."},
-    {"-----------",     CmdHelp,               AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Standard") " -----------------------"},
+    {"wrunencrypted",   CmdHFFelicaWriteWithoutEncryption, IfPm3Felica,    "write Block Data to an authentication-not-required Service."},
+    {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Standard") " -----------------------"},
     //{"dump",          CmdHFFelicaDump,                    IfPm3Felica,     "Wait for and try dumping FeliCa"},
     {"rqservice",       CmdHFFelicaRequestService,        IfPm3Felica,     "verify the existence of Area and Service, and to acquire Key Version."},
     {"rqresponse",      CmdHFFelicaRequestResponse,       IfPm3Felica,     "verify the existence of a card and its Mode."},
@@ -1870,17 +1941,17 @@ static command_t CommandTable[] = {
     //{"write",         CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "write Block Data to an authentication-required Service."},
     //{"scsvcodev2",    CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "verify the existence of Area or Service, and to acquire Key Version."},
     //{"getsysstatus",  CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "acquire the setup information in System."},
-    {"rqspecver",       CmdHFFelicaRequestSpecificationVersion, IfPm3Felica,     "acquire the version of card OS."},
+    {"rqspecver",       CmdHFFelicaRequestSpecificationVersion, IfPm3Felica,  "acquire the version of card OS."},
     {"resetmode",       CmdHFFelicaResetMode,             IfPm3Felica,     "reset Mode to Mode 0."},
     //{"auth1v2",       CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "authenticate a card."},
     //{"auth2v2",       CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "allow a card to authenticate a Reader/Writer."},
     //{"readv2",        CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "read Block Data from authentication-required Service."},
     //{"writev2",       CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "write Block Data to authentication-required Service."},
     //{"uprandomid",    CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "update Random ID (IDr)."},
-    {"-----------",     CmdHelp,               AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Light") " -----------------------"},
-    {"litesim",         CmdHFFelicaSimLite,   IfPm3Felica,     "Emulating ISO/18092 FeliCa Lite tag"},
-    {"litedump",        CmdHFFelicaDumpLite,  IfPm3Felica,     "Wait for and try dumping FelicaLite"},
-    //    {"sim",       CmdHFFelicaSim,       IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"}
+    {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Light") " -----------------------"},
+    {"litesim",         CmdHFFelicaSimLite,               IfPm3Felica,     "Emulating ISO/18092 FeliCa Lite tag"},
+    {"litedump",        CmdHFFelicaDumpLite,              IfPm3Felica,     "Wait for and try dumping FelicaLite"},
+    //    {"sim",       CmdHFFelicaSim,                   IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"}
     {NULL, NULL, NULL, NULL}
 };
 
