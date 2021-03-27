@@ -390,9 +390,9 @@ static int CmdLegicRdbl(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic rdbl",
                   "Read data from a LEGIC Prime tag",
-                  "hf legic rdbl -o 0 -l 16  <- reads from byte[0] 16 bytes(system header)\n"
-                  "hf legic rdbl -o 0 -l 4 --iv 55  <- reads from byte[0] 4 bytes with IV 0x55\n"
-                  "hf legic rdbl -o 0 -l 256 --iv 55  <- reads from byte[0] 256 bytes with IV 0x55");
+                  "hf legic rdbl -o 0 -l 16           -> reads from byte[0] 16 bytes(system header)\n"
+                  "hf legic rdbl -o 0 -l 4 --iv 55    -> reads from byte[0] 4 bytes with IV 0x55\n"
+                  "hf legic rdbl -o 0 -l 256 --iv 55  -> reads from byte[0] 256 bytes with IV 0x55");
 
     void *argtable[] = {
         arg_param_begin,
@@ -444,9 +444,9 @@ static int CmdLegicSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic sim",
                   "Simulates a LEGIC Prime tag. MIM22, MIM256, MIM1024 types can be emulated",
-                  "hf legic sim -t 0  <- Simulate Type MIM22\n"
-                  "hf legic sim -t 1  <- Simulate Type MIM256 (default)\n"
-                  "hf legic sim -t 2  <- Simulate Type MIM1024");
+                  "hf legic sim -t 0   -> Simulate Type MIM22\n"
+                  "hf legic sim -t 1   -> Simulate Type MIM256 (default)\n"
+                  "hf legic sim -t 2   -> Simulate Type MIM1024");
 
     void *argtable[] = {
         arg_param_begin,
@@ -495,8 +495,8 @@ static int CmdLegicWrbl(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic wrbl",
                   "Write data to a LEGIC Prime tag. It autodetects tagsize to ensure proper write",
-                  "hf legic wrbl -o 0 -d 11223344  <- Write 0x11223344 starting from offset 0)\n"
-                  "hf legic wrbl -o 10 -d DEADBEEF  <- Write 0xdeadbeef starting from offset 10");
+                  "hf legic wrbl -o 0 -d 11223344    -> Write 0x11223344 starting from offset 0)\n"
+                  "hf legic wrbl -o 10 -d DEADBEEF   -> Write 0xdeadbeef starting from offset 10");
 
     void *argtable[] = {
         arg_param_begin,
@@ -599,7 +599,7 @@ static int CmdLegicCalcCrc(const char *Cmd) {
     CLIParserInit(&ctx, "hf legic crc",
                   "Calculates the legic crc8/crc16 on the given data",
                   "hf legic crc -d deadbeef1122\n"
-                  "hf legic crc -d deadbeef1122 --mcc 9A -t 16  <- CRC Type 16");
+                  "hf legic crc -d deadbeef1122 --mcc 9A -t 16    -> CRC Type 16");
 
     void *argtable[] = {
         arg_param_begin,
@@ -758,9 +758,9 @@ static int CmdLegicDump(const char *Cmd) {
     CLIParserInit(&ctx, "hf legic dump",
                   "Read all memory from LEGIC Prime MIM22, MIM256, MIM1024 and saves bin/eml/json dump file\n"
                   "It autodetects card type.",
-                  "hf legic dump                <-- use UID as filename\n"
-                  "hf legic dump -f myfile      <-- use user specified filename\n"
-                  "hf legic dump --deobfuscate  <-- use UID as filename and deobfuscate data");
+                  "hf legic dump                --> use UID as filename\n"
+                  "hf legic dump -f myfile      --> use user specified filename\n"
+                  "hf legic dump --deobfuscate  --> use UID as filename and deobfuscate data");
 
     void *argtable[] = {
         arg_param_begin,
@@ -852,8 +852,8 @@ static int CmdLegicRestore(const char *Cmd) {
     CLIParserInit(&ctx, "hf legic restore",
                   "Reads binary file and it autodetects card type and verifies that the file has the same size\n"
                   "Then write the data back to card. All bytes except the first 7bytes [UID(4) MCC(1) DCF(2)]",
-                  "hf legic restore -f myfile              <-- use user specified filename\n"
-                  "hf legic restore -f myfile --obfuscate  <-- use UID as filename and deobfuscate data");
+                  "hf legic restore -f myfile              --> use user specified filename\n"
+                  "hf legic restore -f myfile --obfuscate  --> use UID as filename and deobfuscate data");
 
     void *argtable[] = {
         arg_param_begin,
@@ -951,9 +951,9 @@ static int CmdLegicELoad(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic eload",
                   "Loads a LEGIC binary dump into emulator memory",
-                  "hf legic eload -f myfile -t 0  <- Simulate Type MIM22\n"
-                  "hf legic eload -f myfile -t 1  <- Simulate Type MIM256 (default)\n"
-                  "hf legic eload -f myfile -t 2  <- Simulate Type MIM1024");
+                  "hf legic eload -f myfile -t 0  -> Simulate Type MIM22\n"
+                  "hf legic eload -f myfile -t 1  -> Simulate Type MIM256 (default)\n"
+                  "hf legic eload -f myfile -t 2  -> Simulate Type MIM1024");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1019,10 +1019,10 @@ static int CmdLegicESave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic esave",
                   "Saves bin/eml/json dump file of emulator memory",
-                  "hf legic esave                 <- uses UID as filename\n"
-                  "hf legic esave -f myfile -t 0  <- Type MIM22\n"
-                  "hf legic esave -f myfile -t 1  <- Type MIM256 (default)\n"
-                  "hf legic esave -f myfile -t 2  <- Type MIM1024");
+                  "hf legic esave                  --> uses UID as filename\n"
+                  "hf legic esave -f myfile -t 0   --> Type MIM22\n"
+                  "hf legic esave -f myfile -t 1   --> Type MIM256 (default)\n"
+                  "hf legic esave -f myfile -t 2   --> Type MIM1024");
 
     void *argtable[] = {
         arg_param_begin,
