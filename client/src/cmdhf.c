@@ -150,7 +150,7 @@ int CmdHFSearch(const char *Cmd) {
         PROMPT_CLEARLINE;
         PrintAndLogEx(INPLACE, " Searching for CryptoRF tag...");
         if (IfPm3Iso14443b()) {
-            if (readHFCryptoRF(false) == PM3_SUCCESS) {
+            if (readHFCryptoRF(false, false) == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") " found\n");
                 res = PM3_SUCCESS;
             }
