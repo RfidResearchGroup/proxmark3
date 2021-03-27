@@ -404,7 +404,7 @@ static int CmdHF14AReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a reader",
                   "Reader for ISO 14443A based tags",
-                  "hf 14a reader -@ <- Continuous mode");
+                  "hf 14a reader -@   -> Continuous mode");
 
     void *argtable[] = {
         arg_param_begin,
@@ -557,7 +557,7 @@ static int CmdHF14ACUIDs(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a cuids",
                   "Collect n>0 ISO14443-a UIDs in one go",
-                  "hf 14a cuids -n 5 <-- Collect 5 UIDs");
+                  "hf 14a cuids -n 5   --> Collect 5 UIDs");
 
     void *argtable[] = {
         arg_param_begin,
