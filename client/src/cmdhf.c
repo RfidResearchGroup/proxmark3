@@ -137,16 +137,15 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
-    /*
-        PROMPT_CLEARLINE;
-        PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
-        if (IfPm3Felica()) {
-            if (readFelicaUid(false) == PM3_SUCCESS) {
-                PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
-                res = PM3_SUCCESS;
-            }
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
+    if (IfPm3Felica()) {
+        if (read_felica_uid(false, false) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
+            res = PM3_SUCCESS;
         }
-    */
+    }
+
     /*
         PROMPT_CLEARLINE;
         PrintAndLogEx(INPLACE, " Searching for CryptoRF tag...");
