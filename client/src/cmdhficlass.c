@@ -1329,7 +1329,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     CLIParserFree(ctx);
 
     if ((use_replay + rawkey + elite) > 1) {
-        PrintAndLogEx(FAILED, "Can not use a combo of 'e', 'r', 'n'");
+        PrintAndLogEx(ERR, "Can not use a combo of 'elite', 'raw', 'nr'");
         return PM3_EINVARG;
     }
 
@@ -1983,7 +1983,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     CLIParserFree(ctx);
 
     if ((use_replay + rawkey + elite) > 1) {
-        PrintAndLogEx(ERR, "Can not use a combo of 'e', 'r', 'n'");
+        PrintAndLogEx(ERR, "Can not use a combo of 'elite', 'raw', 'nr'");
         return PM3_EINVARG;
     }
 
