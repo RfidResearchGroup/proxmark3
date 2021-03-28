@@ -2421,9 +2421,30 @@ static int Cmdhex2bin(const char *Cmd) {
         PrintAndLogEx(FAILED, "Error parsing bytes");
         return PM3_EINVARG;
     }
+
+    for (int i = 0; i < dlen; i++) {
+            char x = data[i];
+            if (isxdigit(x) == false) {
+                PrintAndLogEx(ERR, "Non hex digit found");
+                return PM3_EINVARG;
+            }
+    }
+
     PrintAndLogEx(SUCCESS, "" NOLF);
     for (int i = 0; i < dlen; i++) {
         char x = data[i];
+
+        // capitalize
+        if (x >= 'a' && x <= 'f')
+            x -= 32;
+        // convert to numeric value
+        if (x >= '0' && x <= '9')
+            x -= '0';
+        else if (x >= 'A' && x <= 'F')
+            x -= 'A' - 10;
+        else
+            continue;
+
         for (int j = 0 ; j < 4 ; ++j) {
             PrintAndLogEx(NORMAL, "%d" NOLF, (x >> (3 - j)) & 1);
         }
