@@ -160,6 +160,9 @@ The official PM3-GUI from Gaucho will not work. Not to mention is quite old and 
 
 The new [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) will work more or less. Change is needed in order to show helptext when client isn't connected to a device.  We don't know how active the maintainers are.  There has been brought to our attention that there is quite a few Chinese Windows GUI available. Usually you find them on alibaba / taobao ads but we have no idea which fw/client they are compatible with.  Proceed with caution if you decide to go down that road.
 
+Another new [Proxmark3 GUI crosscompiled](https://github.com/wh201906/Proxmark3GUI/) which is recently updated and claims to support latest source of this repo. Give it a spin and let us know how it works for you.
+
+
 # Donations
 
 Nothing says thank you as much as a donation. So if you feel the love, do feel free to become a iceman patron. For some tiers it comes with rewards.
