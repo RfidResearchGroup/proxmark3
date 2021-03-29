@@ -2697,20 +2697,21 @@ typedef struct {
 } lf_modulation_t;
 
 static int print_modulation(lf_modulation_t b) {
-    PrintAndLogEx(INFO, " Modulation.... " _GREEN_("%s"), GetSelectedModulationStr(b.modulation));
-    PrintAndLogEx(INFO, " Bit clock..... " _GREEN_("RF/%d"), b.bitrate);
+    PrintAndLogEx(INFO, " Modulation........ " _GREEN_("%s"), GetSelectedModulationStr(b.modulation));
+    PrintAndLogEx(INFO, " Bit clock......... " _GREEN_("RF/%d"), b.bitrate);
+    PrintAndLogEx(INFO, " Approx baudrate... " _GREEN_("%.f") "bauds", (125000 / (float)b.bitrate) );
     switch (b.modulation) {
         case DEMOD_PSK1:
         case DEMOD_PSK2:
         case DEMOD_PSK3:
-            PrintAndLogEx(SUCCESS, " Carrier rate.. %d", b.carrier);
+            PrintAndLogEx(SUCCESS, " Carrier rate...... %d", b.carrier);
             break;
         case DEMOD_FSK:
         case DEMOD_FSK1:
         case DEMOD_FSK1a:
         case DEMOD_FSK2:
         case DEMOD_FSK2a:
-            PrintAndLogEx(SUCCESS, " Field Clocks.. FC/%u, FC/%u", b.fc1, b.fc2);
+            PrintAndLogEx(SUCCESS, " Field Clocks...... FC/%u, FC/%u", b.fc1, b.fc2);
             break;
         case DEMOD_NRZ:
         case DEMOD_ASK:

@@ -159,9 +159,10 @@ int infoLTO(bool verbose) {
 
     if (ret_val == PM3_SUCCESS) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(SUCCESS, "UID......... " _YELLOW_("%s"), sprint_hex_inrow(serial_number, sizeof(serial_number)));
-        PrintAndLogEx(SUCCESS, "Type info... " _YELLOW_("%s"), sprint_hex_inrow(type_info, sizeof(type_info)));
-        PrintAndLogEx(SUCCESS, "Memory...... " _YELLOW_("%s"), lto_print_size(type_info[1]));
+        PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
+        PrintAndLogEx(INFO, "UID......... " _YELLOW_("%s"), sprint_hex_inrow(serial_number, sizeof(serial_number)));
+        PrintAndLogEx(INFO, "Type info... " _YELLOW_("%s"), sprint_hex_inrow(type_info, sizeof(type_info)));
+        PrintAndLogEx(INFO, "Memory...... " _YELLOW_("%s"), lto_print_size(type_info[1]));
         if (type_info[1] > 3) {
             PrintAndLogEx(INFO, "Unknown LTO tag, report to @iceman!");
         }

@@ -3571,7 +3571,6 @@ int info_iclass(void) {
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--------------------- " _CYAN_("Tag Information") " ----------------------");
-        PrintAndLogEx(INFO, "------------------------------------------------------------");
 
         if (readStatus & FLAG_ICLASS_CSN) {
             PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s") " uid", sprint_hex(hdr->csn, sizeof(hdr->csn)));

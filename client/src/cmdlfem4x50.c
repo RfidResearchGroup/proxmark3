@@ -99,7 +99,6 @@ static void print_info_result(uint8_t *data, bool verbose) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
     // data section
     PrintAndLogEx(NORMAL, "");

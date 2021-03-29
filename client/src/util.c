@@ -752,7 +752,6 @@ int param_getbin_to_eol(const char *line, int paramnum, uint8_t *data, int maxda
     return 0;
 }
 
-
 int param_getstr(const char *line, int paramnum, char *str, size_t buffersize) {
     int bg, en;
 
