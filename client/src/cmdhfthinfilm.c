@@ -124,6 +124,8 @@ int infoThinFilm(bool verbose) {
 
     if (resp.status == PM3_SUCCESS) {
         if (resp.length == 16 || resp.length == 32)  {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
             print_barcode(resp.data.asBytes, resp.length, verbose);
         } else {
             if (verbose)
