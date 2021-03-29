@@ -107,6 +107,7 @@ char *str_dup(const char *src);
 char *str_ndup(const char *src, size_t len);
 int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
 int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
+int binarray_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, uint8_t *arr, int arrlen);
 
 uint32_t bitcount32(uint32_t a);
 uint64_t bitcount64(uint64_t a);

@@ -114,28 +114,47 @@ int CmdWiegandDecode(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("p", "parity", "ignore invalid parity"),
-        arg_strx1("r", "raw", "<hex>", "raw hex to be decoded"),
+        arg_strx0("r", "raw", "<hex>", "raw hex to be decoded"),
+        arg_str0("b", "bin", "<bin>", "binary string to be decoded"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool ignore_parity = arg_get_lit(ctx, 1);
-    int len = 0;
+    int hlen = 0;
     char hex[40] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)hex, sizeof(hex), &len);
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)hex, sizeof(hex), &hlen);
+
+    int blen = 0;
+    uint8_t binarr[100] = {0x00};
+    int res = CLIParamBinToBuf(arg_get_str(ctx, 3), binarr, sizeof(binarr), &blen);
     CLIParserFree(ctx);
 
-    if (len == 0) {
-        PrintAndLogEx(ERR, "empty input");
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing binary string");
         return PM3_EINVARG;
     }
 
     uint32_t top = 0, mid = 0, bot = 0;
-    hexstring_to_u96(&top, &mid, &bot, hex);
 
+    if (hlen) { 
+        res = hexstring_to_u96(&top, &mid, &bot, hex);
+        if (res != hlen) {
+            PrintAndLogEx(ERR, "hex string contains none hex chars");
+            return PM3_EINVARG;
+        }
+    } else if (blen) {
+        uint16_t n = binarray_to_u96(&top, &mid, &bot, binarr, blen);
+        if (n != blen) {
+            PrintAndLogEx(ERR, "Binary string contains none <0|1> chars");
+            return PM3_EINVARG;
+        }
+    } else {
+        PrintAndLogEx(ERR, "empty input");
+        return PM3_EINVARG;
+    }
     wiegand_message_t packed = initialize_message_object(top, mid, bot);
     HIDTryUnpack(&packed, ignore_parity);
-
     return PM3_SUCCESS;
 }
 
