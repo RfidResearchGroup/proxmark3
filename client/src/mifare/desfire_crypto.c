@@ -862,7 +862,7 @@ void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect,
                     mbedtls_aes_context actx;
                     mbedtls_aes_init(&actx);
                     mbedtls_aes_setkey_enc(&actx, key->data, 128);
-                    mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_ENCRYPT, sizeof(edata), ivect, data, edata);
+                    mbedtls_aes_crypt_ecb(&actx, MBEDTLS_AES_ENCRYPT, data, edata);
                     mbedtls_aes_free(&actx);
                     break;
                 }
@@ -870,7 +870,7 @@ void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect,
                     mbedtls_aes_context actx;
                     mbedtls_aes_init(&actx);
                     mbedtls_aes_setkey_dec(&actx, key->data, 128);
-                    mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_DECRYPT, sizeof(edata), ivect, edata, data);
+                    mbedtls_aes_crypt_ecb(&actx, MBEDTLS_AES_DECRYPT, edata, data);
                     mbedtls_aes_free(&actx);
                     break;
                 }
