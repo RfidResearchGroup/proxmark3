@@ -267,9 +267,9 @@ int infoHF_ST(void) {
         DropField();
         return PM3_ESOFT;
     }
-
-    print_st_cc_info(response, resplen - 2);
-
+    // store st cc data for later
+    uint8_t st_cc_data[resplen - 2];
+    memcpy(st_cc_data, response, sizeof(st_cc_data));
 
     // ---------------  System file reading ----------------
     uint8_t aSELECT_FILE_SYS[30];
@@ -305,8 +305,14 @@ int infoHF_ST(void) {
         DropField();
         return PM3_ESOFT;
     }
+
+
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
+    PrintAndLogEx(NORMAL, "");
+    print_st_cc_info(st_cc_data, sizeof(st_cc_data));
     print_st_system_info(response, resplen - 2);
-//    PrintAndLogEx(NORMAL, "<<<< %s", sprint_hex(response, resplen));
     return PM3_SUCCESS;
 }
 
