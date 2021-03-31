@@ -1230,19 +1230,21 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                 return 2;
             }
 
-            if (blockNo == NumBlocksPerSector(sectorNo) - 1) { // sector trailer
-                bldata[0]  = (keyA[sectorNo][0]);
-                bldata[1]  = (keyA[sectorNo][1]);
-                bldata[2]  = (keyA[sectorNo][2]);
-                bldata[3]  = (keyA[sectorNo][3]);
-                bldata[4]  = (keyA[sectorNo][4]);
-                bldata[5]  = (keyA[sectorNo][5]);
-                bldata[10] = (keyB[sectorNo][0]);
-                bldata[11] = (keyB[sectorNo][1]);
-                bldata[12] = (keyB[sectorNo][2]);
-                bldata[13] = (keyB[sectorNo][3]);
-                bldata[14] = (keyB[sectorNo][4]);
-                bldata[15] = (keyB[sectorNo][5]);
+            if (use_keyfile_for_auth == false) {
+                if (blockNo == NumBlocksPerSector(sectorNo) - 1) { // sector trailer
+                    bldata[0]  = (keyA[sectorNo][0]);
+                    bldata[1]  = (keyA[sectorNo][1]);
+                    bldata[2]  = (keyA[sectorNo][2]);
+                    bldata[3]  = (keyA[sectorNo][3]);
+                    bldata[4]  = (keyA[sectorNo][4]);
+                    bldata[5]  = (keyA[sectorNo][5]);
+                    bldata[10] = (keyB[sectorNo][0]);
+                    bldata[11] = (keyB[sectorNo][1]);
+                    bldata[12] = (keyB[sectorNo][2]);
+                    bldata[13] = (keyB[sectorNo][3]);
+                    bldata[14] = (keyB[sectorNo][4]);
+                    bldata[15] = (keyB[sectorNo][5]);
+                }
             }
 
             memcpy(data + 10, bldata, 16);
