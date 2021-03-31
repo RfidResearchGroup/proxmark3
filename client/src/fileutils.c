@@ -1805,7 +1805,7 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
     int res = searchFinalFile(foundpath, pm3dir, filename, silent);
     if (res != PM3_SUCCESS) {
         if ((res == PM3_EFILE) && (!silent))
-            PrintAndLogEx(FAILED, "Error - can't find %s", filename);
+            PrintAndLogEx(FAILED, "Error - can't find `" _YELLOW_("%s") "`", filename);
         free(filename);
         return res;
     }
