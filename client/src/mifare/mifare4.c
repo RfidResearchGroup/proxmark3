@@ -194,7 +194,7 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
     }
 
     if (data[0] != 0x90) {
-        if (!silentMode) PrintAndLogEx(ERR, "Card response error: %02x", data[2]);
+        if (!silentMode) PrintAndLogEx(ERR, "Card response error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
         if (dropFieldIfError) DropField();
         return 3;
     }
