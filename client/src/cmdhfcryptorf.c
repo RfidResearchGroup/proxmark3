@@ -403,14 +403,13 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParserFree(ctx);
 
-    if (strlen(filename) == 0) {
+    if (fnlen == 0) {
         PrintAndLogEx(ERR, "Error: Please specify a filename");
-        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
