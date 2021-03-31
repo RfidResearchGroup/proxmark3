@@ -1258,7 +1258,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
 
                     PrintAndLogEx(NORMAL, "Writing to block %3d: %s", FirstBlockOfSector(sectorNo) + blockNo, sprint_hex(bldata, 16));
                     clearCommandBuffer();
-                    SendCommandMIX(CMD_HF_MIFARE_WRITEBL, FirstBlockOfSector(sectorNo) + blockNo, keyType, 0, data, sizeof(data));
+                    SendCommandMIX(CMD_HF_MIFARE_WRITEBL, FirstBlockOfSector(sectorNo) + blockNo, kt, 0, data, sizeof(data));
                     PacketResponseNG resp;
 
                     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
