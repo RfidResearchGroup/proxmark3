@@ -158,12 +158,13 @@ static int usage_hf14_keybrute(void) {
 }
 */
 static int usage_hf14_restore(void) {
-    PrintAndLogEx(NORMAL, "Usage:   hf mf restore [card memory] u <UID> k <name> f <name>");
+    PrintAndLogEx(NORMAL, "Usage:   hf mf restore [card memory] u <UID> k <name> f <name> [w]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
     PrintAndLogEx(NORMAL, "  u <UID>      : uid, try to restore from hf-mf-<UID>-key.bin and hf-mf-<UID>-dump.bin");
     PrintAndLogEx(NORMAL, "  k <name>     : key filename, specific the full filename of key file");
     PrintAndLogEx(NORMAL, "  f <name>     : data filename, specific the full filename of data file");
+    PrintAndLogEx(NORMAL, "  w            : use specified keyfile to authenticate with");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("         hf mf restore") "                            -- read the UID from tag first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-dump.bin");
@@ -1131,6 +1132,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     char *fptr;
     FILE *fdump, *fkeys;
 
+    bool use_keyfile_for_auth = false;
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
@@ -1150,6 +1152,10 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             case 'f':
                 param_getstr(Cmd, cmdp + 1, dataFilename, FILE_PATH_SIZE);
                 cmdp += 2;
+                break;
+            case 'w':
+                use_keyfile_for_auth = true;
+                cmdp++;
                 break;
             default:
                 if (cmdp == 0) {
@@ -1216,7 +1222,6 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         for (blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
             uint8_t data[26];
-            memcpy(data, key, 6);
             bytes_read = fread(bldata, 1, 16, fdump);
             if (bytes_read != 16) {
                 PrintAndLogEx(ERR, "File reading error " _YELLOW_("%s"), dataFilename);
@@ -1240,18 +1245,49 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                 bldata[15] = (keyB[sectorNo][5]);
             }
 
-            PrintAndLogEx(NORMAL, "Writing to block %3d: %s", FirstBlockOfSector(sectorNo) + blockNo, sprint_hex(bldata, 16));
-
             memcpy(data + 10, bldata, 16);
-            clearCommandBuffer();
-            SendCommandMIX(CMD_HF_MIFARE_WRITEBL, FirstBlockOfSector(sectorNo) + blockNo, keyType, 0, data, sizeof(data));
 
-            PacketResponseNG resp;
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-                uint8_t isOK  = resp.oldarg[0] & 0xff;
-                PrintAndLogEx(SUCCESS, "isOk:%02x", isOK);
+
+            if (use_keyfile_for_auth) {
+                for (uint8_t kt=0; kt < 2; kt++) {
+
+                    if (kt == 0)
+                        memcpy(data, keyA[sectorNo], 6);
+                    else
+                        memcpy(data, keyB[sectorNo], 6);
+
+                    PrintAndLogEx(NORMAL, "Writing to block %3d: %s", FirstBlockOfSector(sectorNo) + blockNo, sprint_hex(bldata, 16));
+                    clearCommandBuffer();
+                    SendCommandMIX(CMD_HF_MIFARE_WRITEBL, FirstBlockOfSector(sectorNo) + blockNo, keyType, 0, data, sizeof(data));
+                    PacketResponseNG resp;
+
+                    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+                        uint8_t isOK  = resp.oldarg[0] & 0xff;
+                        if (isOK == 0) {
+                            PrintAndLogEx(FAILED, "isOk: %02x", isOK);
+                        } else {
+                            break;
+                        }
+                    } else {
+                        PrintAndLogEx(WARNING, "Command execute timeout");
+                    }
+                }
+
             } else {
-                PrintAndLogEx(WARNING, "Command execute timeout");
+                memcpy(data, key, 6);
+                PrintAndLogEx(NORMAL, "Writing to block %3d: %s", FirstBlockOfSector(sectorNo) + blockNo, sprint_hex(bldata, 16));
+                clearCommandBuffer();
+                SendCommandMIX(CMD_HF_MIFARE_WRITEBL, FirstBlockOfSector(sectorNo) + blockNo, keyType, 0, data, sizeof(data));
+
+                PacketResponseNG resp;
+                if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+                    uint8_t isOK  = resp.oldarg[0] & 0xff;
+                    if (isOK == 0) {
+                        PrintAndLogEx(FAILED, "isOk: %02x", isOK);
+                    }
+                } else {
+                    PrintAndLogEx(WARNING, "Command execute timeout");
+                }
             }
         }
     }
