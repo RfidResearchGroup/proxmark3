@@ -79,28 +79,27 @@ This repo compiles nicely on
    - Proxspace v3.x
      - [latest release v3.8](https://github.com/Gator96100/ProxSpace/releases)
    - Windows/mingw environment with Qt5.6.1 & GCC 4.9
-   - Ubuntu 16.04 -> 20.04
-   - ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora, Debian
+   - Ubuntu, ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora, Debian
    - Rasbian
    - Android / Termux
-   - Mac OS X / Homebrew / Apple Silicon
-   - WSL1  (Windows subsystem linux) on Windows 10
+   - Mac OS X / Homebrew / Apple Silicon M1
+   - WSL1 on Windows 10
    - Docker container
       - [ RRG / Iceman repo based ubuntu 18.04 container ](https://hub.docker.com/r/secopsconsult/proxmark3)
       - [ Iceman fork based container v1.7 ](https://hub.docker.com/r/iceman1001/proxmark3/)
 
 Hardware to run client on
    - PC
-   - Android
+   - Android Phone
    - Raspberry Pi, Raspberry Pi Zero
    - Nvidia Jetson Nano
 
 ## Precompiled binaries
 We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where [@gator96100](https://github.com/gator96100) has set up a AWS bucket with precompiled Proxspace (Mingw) binaries which is recompiled every night and with that also up-to-date. We link to these files here as to make it easier for users.
 
-_If you use his pre-compiled Proxspace binaries do consider buy him a coffee for his efforts. Remember nothing says thank you as good as a donation._
+_If you use his pre-compiled Proxspace binaries do consider buy him a coffee for his efforts. Remember nothing says thank you as much as a donation._
 
-If you are having troubles with these files, contact the package maintainer [@gator96100](https://github.com/gator96100) and read the [homepage of his proxmark builds](https://www.proxmarkbuilds.org/) or read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) where known issues has been documented with regards to the precompiled builds.  
+If you are having troubles with these files, contact package maintainer [@gator96100](https://github.com/gator96100) and read the [homepage of his proxmark builds](https://www.proxmarkbuilds.org/) or read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) where known issues has been documented with regards to the precompiled builds.  
 
 ### Proxmark3 RDV4 devices
 - [Precompiled builds for RDV40 dedicated x64](https://www.proxmarkbuilds.org/#rdv40-64/)
@@ -121,16 +120,14 @@ We usually merge your contributions fast since we do like the idea of getting a 
 Please search the [issues](https://github.com/rfidresearchgroup/proxmark3/issues) page here and see if your issue is listed in the first instance.
 Read the [Troubleshooting guide](/doc/md/Installation_Instructions/Troubleshooting.md) to weed out most known problems.
 
-Next place to visit is the [Proxmark3 Forum](http://www.proxmark.org/forum/index.php). Learn to search it well and finally Google / duckduckgo is your friend :) 
-You will find many blogposts, youtube videos, tweets, reddit
+Next place to visit is the [Proxmark3 Forum](http://www.proxmark.org/forum/index.php).
+
 
 ### Offical channels
    - [RFID Hacking community discord server](https://discord.gg/QfPvGFRQxH)
    - [Proxmark3 IRC channel](http://webchat.freenode.net/?channels=#proxmark3)
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
-   - [Proxmark3 Twitter](https://twitter.com/proxmark3/)   
    - [Proxmark3 forum](http://www.proxmark.org/forum/index.php)
-   -  _no slack channel_
 
 
 ### Youtube channels
@@ -158,14 +155,12 @@ To all distro, package maintainers, we tried to make your life easier.
 
 The official PM3-GUI from Gaucho will not work. Not to mention is quite old and not maintained any longer.
 
-The new [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) will work more or less. Change is needed in order to show helptext when client isn't connected to a device.  We don't know how active the maintainers are.  There has been brought to our attention that there is quite a few Chinese Windows GUI available. Usually you find them on alibaba / taobao ads but we have no idea which fw/client they are compatible with.  Proceed with caution if you decide to go down that road.
+- [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) will work more or less.
 
-Another new [Proxmark3 GUI crosscompiled](https://github.com/wh201906/Proxmark3GUI/) which is recently updated and claims to support latest source of this repo. Give it a spin and let us know how it works for you.
+- [Proxmark3 GUI crosscompiled](https://github.com/wh201906/Proxmark3GUI/) which is recently updated and claims to support latest source of this repo. Give it a spin and let us know how it works for you.
 
 
 # Donations
 
-Nothing says thank you as much as a donation. So if you feel the love, do feel free to become a iceman patron. For some tiers it comes with rewards.
-
-https://www.patreon.com/iceman1001
+Nothing says thank you as much as a donation. So if you feel the love, do feel free to become a [Iceman patron](https://www.patreon.com/iceman1001)
 
