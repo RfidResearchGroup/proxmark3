@@ -868,16 +868,16 @@ static int CmdHF14AMfDump(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf dump",
                   "Dump MIFARE Classic tag to binary file\n"
                   "If no <name> given, UID will be used as filename",
-                  "hf mf dump --mini                      --> MIFARE Mini\n"
-                  "hf mf dump --1k                        --> MIFARE Classic 1k\n"
-                  "hf mf dump --2k                        --> MIFARE 2k\n"
-                  "hf mf dump --4k                        --> MIFARE 4k\n"
-                  "hf mf dump -f hf-mf-066C8B78-key-5.bin --> MIFARE 1k with keys from specified file\n");
+                  "hf mf dump --mini                        --> MIFARE Mini\n"
+                  "hf mf dump --1k                          --> MIFARE Classic 1k\n"
+                  "hf mf dump --2k                          --> MIFARE 2k\n"
+                  "hf mf dump --4k                          --> MIFARE 4k\n"
+                  "hf mf dump --keys hf-mf-066C8B78-key.bin --> MIFARE 1k with keys from specified file\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<filename>", "filename of dump"),
-        arg_str0("k", "keys", "<filename>", "filename of keys"),
+        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_str0("k", "keys", "<fn>", "filename of keys"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
@@ -1294,7 +1294,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
         }
     }
     fclose(fdump);
-    PrintAndLogEx(INFO, "Finish restore");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -5441,7 +5441,6 @@ static int CmdHf14AGen3Freeze(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-
 static void des_decrypt(void *out, const void *in, const void *key) {
     mbedtls_des_context ctx;
     mbedtls_des_setkey_dec(&ctx, key);
@@ -5582,6 +5581,127 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfWipe(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf wipe",
+                  "Wipe card to zeros and default keys/acc.  This command taks a key file to wipe card\n"
+                  "New A/B keys  FF FF FF FF FF FF\n"
+                  "New acc       FF 07 80\n"
+                  "New GDB       69",
+                  "hf mf wipe"
+            );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f",  "file", "<fn>", "key filename"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int keyfnlen = 0;
+    char keyFilename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)keyFilename, FILE_PATH_SIZE, &keyfnlen);
+
+    CLIParserFree(ctx);
+
+    char *fptr;
+    if (keyfnlen == 0) {
+        fptr = GenerateFilename("hf-mf-", "-key.bin");
+        if (fptr == NULL)
+            return PM3_ESOFT;
+
+        strcpy(keyFilename, fptr);
+        free(fptr);
+    }
+
+    uint8_t *keys;
+    size_t keyslen = 0;
+    if (loadFile_safeEx(keyFilename, ".bin", (void **)&keys, (size_t *)&keyslen, false) != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "failed to load key file");
+        return PM3_ESOFT;
+    }
+
+    uint8_t keyA[MIFARE_4K_MAXSECTOR * 6];
+    uint8_t keyB[MIFARE_4K_MAXSECTOR * 6];
+    uint8_t num_sectors = 0;
+
+    switch (keyslen) {
+        case (MIFARE_MINI_MAXSECTOR * 2 * 6): {
+            PrintAndLogEx(INFO, "Loaded keys matching MIFARE Classic Mini 320b");
+            memcpy(keyA, keys, (MIFARE_MINI_MAXSECTOR * 6));
+            memcpy(keyB, keys + (MIFARE_MINI_MAXSECTOR * 6), (MIFARE_MINI_MAXSECTOR * 6));
+            num_sectors = NumOfSectors('0');
+            break;
+        }
+        case (MIFARE_1K_MAXSECTOR * 2 * 6): {
+            PrintAndLogEx(INFO, "Loaded keys matching MIFARE Classic 1K");
+            memcpy(keyA, keys, (MIFARE_1K_MAXSECTOR * 6));
+            memcpy(keyB, keys + (MIFARE_1K_MAXSECTOR * 6), (MIFARE_1K_MAXSECTOR * 6));
+            num_sectors = NumOfSectors('1');
+            break;
+        }
+        case (MIFARE_4K_MAXSECTOR * 2 * 6): {
+            PrintAndLogEx(INFO, "Loaded keys matching MIFARE Classic 4K");
+            memcpy(keyA, keys, (MIFARE_4K_MAXSECTOR * 6));
+            memcpy(keyB, keys + (MIFARE_4K_MAXSECTOR * 6), (MIFARE_4K_MAXSECTOR * 6));
+            num_sectors = NumOfSectors('4');
+            break;
+        }
+        default: {
+            PrintAndLogEx(INFO, "wrong key file size");
+            goto out;
+        }
+    }
+
+   uint8_t zeros[MFBLOCK_SIZE] = {0};
+   memset(zeros, 0x00, sizeof(zeros));
+   uint8_t st[MFBLOCK_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x07, 0x80, 0x69, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+    // time to wipe card
+  for (uint8_t s = 0; s < num_sectors; s++) {
+
+        for (uint8_t b = 0; b < NumBlocksPerSector(s); b++) {
+
+            uint8_t data[26];
+            memset(data, 0, sizeof(data));
+            if (mfIsSectorTrailer(b)) {
+                memcpy(data + 10, st, sizeof(st));
+            } else {
+                memcpy(data + 10, zeros, sizeof(zeros));
+            }
+
+            // try both A/B keys, start with B key first
+            for (int8_t kt = 1; kt > -1; kt--) {
+
+                if (kt == 0)
+                    memcpy(data, keyA + (s * 6), 6);
+                else
+                    memcpy(data, keyB + (s * 6), 6);
+
+                PrintAndLogEx(INFO, "Writing to block %3d: %s", FirstBlockOfSector(s) + b, sprint_hex(data + 10, MFBLOCK_SIZE));
+                clearCommandBuffer();
+                SendCommandMIX(CMD_HF_MIFARE_WRITEBL, FirstBlockOfSector(s) + b, kt, 0, data, sizeof(data));
+                PacketResponseNG resp;
+
+                if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+                    uint8_t isOK  = resp.oldarg[0] & 0xff;
+                    if (isOK == 0) {
+                        PrintAndLogEx(FAILED, "isOk: %02x", isOK);
+                    } else {
+                        break;
+                    }
+                } else {
+                    PrintAndLogEx(WARNING, "Command execute timeout");
+                }
+            }
+        }
+    }
+
+    PrintAndLogEx(INFO, "Done!");
+out:
+    free(keys);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                AlwaysAvailable, "This help"},
     {"list",        CmdHF14AMfList,         AlwaysAvailable,  "List MIFARE history"},
@@ -5607,7 +5727,9 @@ static command_t CommandTable[] = {
     {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE Classic sector"},
     {"restore",     CmdHF14AMfRestore,      IfPm3Iso14443a,  "Restore MIFARE Classic binary file to BLANK tag"},
     {"setmod",      CmdHf14AMfSetMod,       IfPm3Iso14443a,  "Set MIFARE Classic EV1 load modulation strength"},
+    {"wipe",        CmdHF14AMfWipe,         IfPm3Iso14443a,  "Wipe card to zeros and default keys/acc"},
     {"wrbl",        CmdHF14AMfWrBl,         IfPm3Iso14443a,  "Write MIFARE Classic block"},
+
 //    {"sniff",       CmdHF14AMfSniff,        0, "Sniff card-reader communication"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
     {"sim",         CmdHF14AMfSim,          IfPm3Iso14443a,  "Simulate MIFARE card"},
