@@ -157,7 +157,8 @@ function get_pm3_list_Windows {
 				exit 1
 			fi
 		fi
-        PM3LIST+=("$DEV")
+        #Prioritise USB connections 
+		PM3LIST=("$DEV" "${PM3LIST[@]}")
         if [ ${#PM3LIST[*]} -ge "$N" ]; then
             return
         fi
@@ -211,7 +212,8 @@ function get_pm3_list_WSL {
 					exit 1
 				fi
 			fi
-            PM3LIST+=("$DEV")
+            #Prioritise USB connections 
+			PM3LIST=("$DEV" "${PM3LIST[@]}")
             if [ ! -w "$DEV" ]; then
                 echo "[!] Let's give users read/write access to $DEV"
                 sudo chmod 666 "$DEV"
