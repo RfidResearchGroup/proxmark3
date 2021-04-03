@@ -1903,11 +1903,15 @@ int CmdTuneSamples(const char *Cmd) {
             const double approx_vdd_other_max = 8840;
 
             // 1% over threshold and supposedly non-RDV4
-            if ((approx_vdd > approx_vdd_other_max * 1.01) && (! IfPm3Rdv4Fw()))
-                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_OTHER firmware on a RDV4") ", please check your setup");
+            if ((approx_vdd > approx_vdd_other_max * 1.01) && (!IfPm3Rdv4Fw())) {
+                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_GENERIC firmware on a RDV4"));
+                PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
+            }
             // 1% below threshold and supposedly RDV4
-            if ((approx_vdd < approx_vdd_other_max * 0.99) && (IfPm3Rdv4Fw()))
-                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_RDV4 firmware on a non-RDV4") ", please check your setup");
+            if ((approx_vdd < approx_vdd_other_max * 0.99) && (IfPm3Rdv4Fw())) {
+                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_RDV4 firmware on a generic device"));
+                PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
+            }
         }
     }
 
