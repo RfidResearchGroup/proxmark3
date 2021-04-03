@@ -137,6 +137,7 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
+    /*
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
     if (IfPm3Felica()) {
@@ -146,7 +147,6 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
-    /*
         PROMPT_CLEARLINE;
         PrintAndLogEx(INPLACE, " Searching for CryptoRF tag...");
         if (IfPm3Iso14443b()) {
