@@ -622,7 +622,7 @@ static int CmdSmartInfo(const char *Cmd) {
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_SMART_ATR, &resp, 2500)) {
         if (verbose) {
-            PrintAndLogEx(WARNING, "smart card select failed");
+            PrintAndLogEx(WARNING, "smart card timeout");
         }
         return PM3_ETIMEOUT;
     }
