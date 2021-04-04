@@ -433,7 +433,7 @@ static int info_felica(bool verbose) {
         }
         case 0: {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");           
+            PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
             PrintAndLogEx(INFO, "IDm............ " _GREEN_("%s"), sprint_hex_inrow(card.IDm, sizeof(card.IDm)));
             PrintAndLogEx(INFO, "Code........... %s ", sprint_hex_inrow(card.code, sizeof(card.code)));
             PrintAndLogEx(INFO, "NFCID2......... %s", sprint_hex_inrow(card.uid, sizeof(card.uid)));

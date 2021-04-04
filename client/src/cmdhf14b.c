@@ -279,15 +279,15 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("k", "keep",           "leave the signal field ON after receive response"),
-        arg_lit0("s", "std",            "activate field, use ISO14B select"),
-        arg_lit0(NULL, "sr",            "activate field, use SRx ST select"),
-        arg_lit0(NULL, "cts",           "activate field, use ASK C-ticket select"),
-        arg_lit0("c", "crc",            "calculate and append CRC"),
-        arg_lit0(NULL, "noresponse", "do not read response from card"),
-        arg_int0("t", "timeout",   "<dec>", "timeout in ms"),
-        arg_lit0("v", "verbose",            "verbose"),
-        arg_strx0("d", "data",     "<hex>", "data, bytes to send"),
+        arg_lit0("k", "keep",  "leave the signal field ON after receive response"),
+        arg_lit0("s", "std",   "activate field, use ISO14B select"),
+        arg_lit0(NULL, "sr",   "activate field, use SRx ST select"),
+        arg_lit0(NULL, "cts",  "activate field, use ASK C-ticket select"),
+        arg_lit0("c", "crc",   "calculate and append CRC"),
+        arg_lit0("-r", NULL,   "do not read response from card"),
+        arg_int0("t", "timeout", "<dec>", "timeout in ms"),
+        arg_lit0("v", "verbose", "verbose"),
+        arg_strx0("d", "data", "<hex>", "data, bytes to send"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -297,7 +297,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     bool select_sr = arg_get_lit(ctx, 3);
     bool select_cts = arg_get_lit(ctx, 4);
     bool add_crc = arg_get_lit(ctx, 5);
-    bool read_reply = !arg_get_lit(ctx, 6);
+    bool read_reply = (arg_get_lit(ctx, 6) == false);
     int user_timeout = arg_get_int_def(ctx, 7, -1);
     bool verbose = arg_get_lit(ctx, 8);
 
