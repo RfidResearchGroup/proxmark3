@@ -51,20 +51,6 @@ static size_t nbytes(size_t nbits) {
 }
 */
 
-static int usage_hitag_sim(void) {
-    PrintAndLogEx(NORMAL, "Simulate " _YELLOW_("Hitag2 / HitagS")" transponder");
-    PrintAndLogEx(NORMAL, "Usage:   lf hitag sim [h] [2|s] e|j|b <filename w/o extension>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h             This help");
-    PrintAndLogEx(NORMAL, "       [2|s]         2 = hitag2,  s = hitagS");
-    PrintAndLogEx(NORMAL, "       e <filename>  Load data from EML file");
-    PrintAndLogEx(NORMAL, "       j <filename>  Load data from JSON file");
-    PrintAndLogEx(NORMAL, "       b <filename>  Load data from BIN file");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         lf hitag sim 2 b lf-hitag-dump");
-    return PM3_SUCCESS;
-}
 /*
 static int usage_hitag_dump(void) {
     PrintAndLogEx(NORMAL, "Usage:   lf hitag dump [h] p <pwd> f <name>");
@@ -273,84 +259,128 @@ static int CmdLFHitagSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdLFHitagSim(const char *Cmd) {
 
-    bool errors = false;
-    bool tag_mem_supplied = false;
-    uint8_t cmdp = 0;
-    size_t maxdatalen = 48;
-    uint8_t *data = calloc(4 * 64, sizeof(uint8_t));
-    size_t datalen = 0;
+// eload ,  to be implemented
+static int CmdLFHitagEload(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hitag eload",
+                  "Loads hitag tag dump into emulator memory on device",
+                  "lf hitag eload -f lf-hitag-11223344-dump.bin\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<filename>", "filename of dump"),
+        arg_lit0("1", NULL, "simulate Hitag1"),
+        arg_lit0("2", NULL, "simulate Hitag2"),
+        arg_lit0("s", NULL, "simulate HitagS"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool use_ht1 = arg_get_lit(ctx, 2);
+    bool use_ht2 = arg_get_lit(ctx, 3);
+    bool use_hts = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    uint8_t n = (use_ht1 + use_ht2 + use_hts);
+    if (n != 1) {
+        PrintAndLogEx(ERR, "error, only specify one Hitag type");
+        return PM3_EINVARG;
+    }
+
+    DumpFileType_t dftype = getfiletype(filename); 
+    size_t dumplen = 0;
+    uint8_t *dump = NULL;
     int res = 0;
-    char filename[FILE_PATH_SIZE] = { 0x00 };
-
-    uint16_t cmd = CMD_LF_HITAG_SIMULATE;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                free(data);
-                return usage_hitag_sim();
-            case '2':
-                maxdatalen = 48;
-                cmdp++;
-                break;
-            case 's':
-                cmd = CMD_LF_HITAGS_SIMULATE;
-                maxdatalen = 4 * 64;
-                cmdp++;
-                break;
-            case 'e':
-                param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                res = loadFileEML(filename, data, &datalen);
-                if (res > 0 || datalen != maxdatalen) {
-                    PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
-                    errors = true;
-                    break;
-                }
-                tag_mem_supplied = true;
-                cmdp += 2;
-                break;
-            case 'j':
-                param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                res = loadFileJSON(filename, data, maxdatalen, &datalen, NULL);
-                if (res > 0) {
-                    errors = true;
-                    break;
-                }
-                tag_mem_supplied = true;
-                cmdp += 2;
-                break;
-            case 'b':
-                param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                res = loadFile(filename, ".bin", data, maxdatalen, &datalen);
-                if (res > 0) {
-                    errors = true;
-                    break;
-                }
-                tag_mem_supplied = true;
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+    switch (dftype) {
+        case BIN: {
+            res = loadFile_safe(filename, ".bin", (void **)&dump, &dumplen);
+            break;
+        }
+        case EML: {
+            res = loadFileEML_safe(filename, (void **)&dump, &dumplen);
+            break;
+        }
+        case JSON: {
+            dumplen = 4 * 64;
+            dump = calloc(dumplen, sizeof(uint8_t));
+            if (dump == NULL) {
+                PrintAndLogEx(ERR, "error, cannot allocate memory");
+                return PM3_EMALLOC;
+            }
+            res = loadFileJSON(filename, dump, dumplen, &dumplen, NULL);
+            break;
+        }
+        case DICTIONARY: {
+            PrintAndLogEx(ERR, "error, only BIN/JSON/EML formats allowed");
+            return PM3_EINVARG;
         }
     }
 
-    //Validations
-    if (errors || cmdp == 0) {
-        free(data);
-        return usage_hitag_sim();
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "error, something went wrong when loading file");
+        free(dump);
+        return PM3_EFILE;
     }
+
+    // check dump len..  
+    if (dumplen == 48 ||  dumplen == 4 * 64) {
+        struct {
+            uint16_t len;
+            uint8_t *data;
+        } PACKED payload;
+        payload.len = dumplen;
+        memcpy(payload.data, dump, dumplen);
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_HITAG_ELOAD,  (uint8_t *)&payload, 2 + dumplen);
+    } else {
+        PrintAndLogEx(ERR, "error, wrong dump file size. got %u", dumplen);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int CmdLFHitagSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hitag sim",
+                  "Simulate Hitag2 / HitagS transponder\n"
+                  "You need to `lf hitag eload` first",
+                  "lf hitag sim -2"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("1", NULL, "simulate Hitag1"),
+        arg_lit0("2", NULL, "simulate Hitag2"),
+        arg_lit0("s", NULL, "simulate HitagS"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool use_ht1 = arg_get_lit(ctx, 1);
+    bool use_ht2 = arg_get_lit(ctx, 2);
+    bool use_hts = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if ((use_ht1 + use_ht2 + use_hts) > 1 ) {
+        PrintAndLogEx(ERR, "error, Only specify one Hitag type");
+        return PM3_EINVARG;
+    }
+
+    uint16_t cmd = CMD_LF_HITAG_SIMULATE;
+//    if (use_ht1)
+//        cmd = CMD_LF_HITAG1_SIMULATE;
+
+    if (use_hts)
+        cmd = CMD_LF_HITAGS_SIMULATE;
 
     clearCommandBuffer();
-    if (tag_mem_supplied) {
-        SendCommandMIX(cmd, 1, 0, 0, data, datalen);
-    } else {
-        SendCommandMIX(cmd, 0, 0, 0, NULL, 0);
-    }
-
-    free(data);
+    SendCommandMIX(cmd, 0, 0, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -631,7 +661,7 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
             if (datalen == (8 * 60) ) {
                 SendCommandOLD(CMD_LF_HITAGS_TEST_TRACES, 1, 0, 0, data, datalen);
             } else {
-                PrintAndLogEx(ERR, "Error, file length mismatch. Expected %d, got %d", 8*60, datalen);
+                PrintAndLogEx(ERR, "Error, file length mismatch. Expected %d, got %zu", 8*60, datalen);
             }                   
         }
         if (data) {
@@ -780,15 +810,16 @@ void annotateHitagS(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
 }
 
 static command_t CommandTable[] = {
-    {"help",   CmdHelp,               AlwaysAvailable, "This help" },
-    {"list",   CmdLFHitagList,        IfPm3Hitag,      "List Hitag trace history" },
-    {"info",   CmdLFHitagInfo,        IfPm3Hitag,      "Tag information" },
-    {"reader", CmdLFHitagReader,      IfPm3Hitag,      "Act like a Hitag Reader" },
-    {"sim",    CmdLFHitagSim,         IfPm3Hitag,      "Simulate Hitag transponder" },
-    {"sniff",  CmdLFHitagSniff,       IfPm3Hitag,      "Eavesdrop Hitag communication" },
-    {"writer", CmdLFHitagWriter,      IfPm3Hitag,      "Act like a Hitag Writer" },
-    {"dump",   CmdLFHitag2Dump,       IfPm3Hitag,      "Dump Hitag2 tag" },
-    {"cc",     CmdLFHitagCheckChallenges, IfPm3Hitag,  "Test all challenges" },
+    {"help",   CmdHelp,               AlwaysAvailable, "This help"},
+    {"eload",  CmdLFHitagEload,       IfPm3Hitag,      "Load Hitag dump file into emulator memory"},
+    {"list",   CmdLFHitagList,        IfPm3Hitag,      "List Hitag trace history"},
+    {"info",   CmdLFHitagInfo,        IfPm3Hitag,      "Tag information"},
+    {"reader", CmdLFHitagReader,      IfPm3Hitag,      "Act like a Hitag Reader"},
+    {"sim",    CmdLFHitagSim,         IfPm3Hitag,      "Simulate Hitag transponder"},
+    {"sniff",  CmdLFHitagSniff,       IfPm3Hitag,      "Eavesdrop Hitag communication"},
+    {"writer", CmdLFHitagWriter,      IfPm3Hitag,      "Act like a Hitag Writer"},
+    {"dump",   CmdLFHitag2Dump,       IfPm3Hitag,      "Dump Hitag2 tag"},
+    {"cc",     CmdLFHitagCheckChallenges, IfPm3Hitag,  "Test all challenges"},
     { NULL, NULL, 0, NULL }
 };
 
