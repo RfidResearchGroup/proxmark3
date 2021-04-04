@@ -219,7 +219,7 @@ static bool I2C_WaitForSim(void) {
     // 8051 speaks with smart card.
     // 1000*50*3.07 = 153.5ms
     // 1byte transfer == 1ms  with max frame being 256bytes
-    if (!WaitSCL_H_delay(10 * 1000 * 50))
+    if (!WaitSCL_H_delay(10 * 1000 * 30))
         return false;
 
     return true;
@@ -626,14 +626,13 @@ int I2C_get_version(uint8_t *maj, uint8_t *min) {
 // Will read response from smart card module,  retries 3 times to get the data.
 bool sc_rx_bytes(uint8_t *dest, uint8_t *destlen) {
 
-    uint8_t i = 3;
+    uint8_t i = 5;
     int16_t len = 0;
     while (i--) {
 
         I2C_WaitForSim();
 
         len = I2C_BufferRead(dest, *destlen, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
-
 
         LED_C_ON();
 
