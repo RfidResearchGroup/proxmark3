@@ -35,6 +35,7 @@
 #define ICLASS_KEYS_MAX 8
 #define ICLASS_AUTH_RETRY 10
 #define ICLASS_DECRYPTION_BIN  "iclass_decryptionkey.bin"
+
 static uint8_t empty[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 static int CmdHelp(const char *Cmd);
@@ -126,6 +127,89 @@ uint8_t card_app2_limit[] = {
     0xff,
     0xff,
 };
+
+iclass_config_card_item_t iclass_config_types[14]=  {
+    {"", "", ""},
+    {"", "", ""},
+    {"", "", ""},
+    {"", "", ""},
+    {"", "", ""},
+    {"", "", ""},
+    {"", "", ""},
+    {"", "", ""},
+    {"", "", ""},
+    {"", "", ""},
+    {"", "", ""},
+    {"", "", ""},
+    {"", "", ""},
+    // must be the last entry 
+    {"no config card info available", "", ""}
+};
+
+static bool check_config_card(const iclass_config_card_item_t *o) {
+    if (o == NULL || strlen(o->desc) == 0) {
+        PrintAndLogEx(INFO, "No data available");
+        PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass config -l") "` to download from cardhelper");
+        return false;
+    }
+    return true;
+}
+
+static int load_config_cards(void) {
+    PrintAndLogEx(INFO, "Detecting cardhelper...");
+
+    if (IsCardHelperPresent(false) == false)
+        return PM3_ENODATA;
+    
+    for (int i = 0; i < ARRAYLEN(iclass_config_types); ++i) {
+
+        PrintAndLogEx(INPLACE, "loading idx %i", i);
+        iclass_config_card_item_t *ret = &iclass_config_types[i];
+
+        uint8_t desc[70] = {0};
+        if (GetConfigCardStrByIdx(i, desc) == PM3_SUCCESS) {
+            memcpy(ret->desc, desc, sizeof(desc));
+        }
+
+        uint8_t blocks[16] = {0};
+        if (GetConfigCardByIdx(i, blocks) == PM3_SUCCESS) {
+            memcpy(ret->blk6, blocks, sizeof(ret->blk6));
+            memcpy(ret->blk7, blocks + sizeof(ret->blk6), sizeof(ret->blk7));
+        }
+    }
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass configcard -p") "` to list all");
+    return PM3_SUCCESS;
+}
+
+static const iclass_config_card_item_t *get_config_card_item(uint8_t idx) {
+    iclass_config_card_item_t *ret = &iclass_config_types[idx];
+    return ret;
+}
+
+static void print_config_cards(void) {
+    if (check_config_card(&iclass_config_types[0])) {
+        PrintAndLogEx(INFO, "---- " _CYAN_("Config cards available") " ------------");
+        for (int i = 0; i < ARRAYLEN(iclass_config_types); ++i) {        
+            PrintAndLogEx(INFO, "%2d, %s", i, iclass_config_types[i].desc);
+        }
+        PrintAndLogEx(NORMAL, "");
+    }
+}
+
+static void print_config_card(const iclass_config_card_item_t *o) {
+    if (check_config_card(o)) {
+        PrintAndLogEx(INFO, "description... %s", o->desc);
+        PrintAndLogEx(INFO, "block 6....... " _YELLOW_("%s"), sprint_hex_inrow(o->blk6, sizeof(o->blk6)));
+        PrintAndLogEx(INFO, "block 7....... " _YELLOW_("%s"), sprint_hex_inrow(o->blk7, sizeof(o->blk7)));
+    }
+}
+
+static void generate_config_card(const iclass_config_card_item_t *o) {
+    if (check_config_card(o)) {
+
+    }
+}
 
 static uint8_t isset(uint8_t val, uint8_t mask) {
     return (val & mask);
@@ -937,7 +1021,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     uint8_t dec_data[8] = {0};
     bool use_sc = false;
     if (have_key == false) {
-        use_sc = IsCryptoHelperPresent(verbose);
+        use_sc = IsCardHelperPresent(verbose);
         if (use_sc == false) {
             size_t keylen = 0;
             int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
@@ -1047,7 +1131,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
             PrintAndLogEx(INFO, "Block 7 decoder");
 
-            char hexstr[8 + 1] = {0};
+            char hexstr[16 + 1] = {0};
             hex_to_buffer((uint8_t *)hexstr, decrypted + (8 * 7), 8, sizeof(hexstr) - 1, 0, 0, true);
 
             char binstr[8 * 8 + 1] = {0};
@@ -1157,7 +1241,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 
     bool use_sc = false;
     if (have_key == false) {
-        use_sc = IsCryptoHelperPresent(verbose);
+        use_sc = IsCardHelperPresent(verbose);
         if (use_sc == false) {
             size_t keylen = 0;
             int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
@@ -2008,7 +2092,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     if (memcmp(data, empty, 8) == 0)
         return PM3_SUCCESS;
 
-    bool use_sc = IsCryptoHelperPresent(verbose);
+    bool use_sc = IsCardHelperPresent(verbose);
     if (use_sc == false)
         return PM3_SUCCESS;
 
@@ -3391,7 +3475,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
     }
 
     if (have_enc_key == false) {
-        use_sc = IsCryptoHelperPresent(false);
+        use_sc = IsCardHelperPresent(false);
         if (use_sc == false) {
             size_t keylen = 0;
             int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&enckeyptr, &keylen);
@@ -3489,6 +3573,55 @@ static int CmdHFiClassAutopwn(const char *Cmd) {
 }
 */
 
+static int CmdHFiClassConfigCard(const char * Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass configcard",
+                  "Manage reader configuration card via Cardhelper",
+                  "hf iclass configcard -l          --> download config cards "
+                  "hf iclass configcard -p          --> print config card"
+                  "hf iclass configcard -g --ki 1   --> generate config dump file based on idx 1"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "ki", "<dec>", "select index in list"),
+        arg_lit0("g", NULL, "generate card dump file"),
+        arg_lit0("l", NULL, "load available cards"),
+        arg_lit0("p", NULL, "print available cards"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int idx = arg_get_int_def(ctx, 1, -1);
+    bool generate = arg_get_lit(ctx, 2);
+    bool load = arg_get_lit(ctx, 3);
+    bool print = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    if (load) {
+        if (load_config_cards() != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "failed to load, check your cardhelper");            
+        }
+    }
+
+    if (print) {
+        print_config_cards();
+    }
+
+    if (idx >= 0) {
+        const iclass_config_card_item_t *item = get_config_card_item(idx);
+        print_config_card(item);
+    }
+
+    if (generate) {
+        const iclass_config_card_item_t *item = get_config_card_item(idx);
+        generate_config_card(item);
+    }
+
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
     {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
@@ -3514,6 +3647,7 @@ static command_t CommandTable[] = {
     {"eview",       CmdHFiClassEView,           IfPm3Iclass,     "View emulator memory"},
 
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("utils") " ---------------------"},
+    {"configcard",  CmdHFiClassConfigCard,      AlwaysAvailable, "Reader configuration card"},
     {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "Calc diversified keys (blocks 3 & 4) to write new keys"},
     {"encode",      CmdHFiClassEncode,          AlwaysAvailable, "Encode binary wiegand to block 7"},
     {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "Encrypt given block data"},

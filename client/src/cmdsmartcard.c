@@ -255,31 +255,43 @@ static void PrintATR(uint8_t *atr, size_t atrlen) {
     }
 }
 
-static int smart_wait(uint8_t *data, bool silent) {
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-        if (!silent) PrintAndLogEx(WARNING, "smart card response timeout");
-        return -1;
-    }
+static int smart_wait(uint8_t *data, bool verbose) {
+    int i = 5;
+    uint32_t len = 0;
+    do {
+        clearCommandBuffer();
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
-    uint32_t len = resp.oldarg[0];
-    if (!len) {
-        if (!silent) PrintAndLogEx(WARNING, "smart card response failed");
-        return -2;
-    }
-    memcpy(data, resp.data.asBytes, len);
-    if (len >= 2) {
-        if (!silent) PrintAndLogEx(SUCCESS, "%02X%02X | %s", data[len - 2], data[len - 1], GetAPDUCodeDescription(data[len - 2], data[len - 1]));
-    } else {
-        if (!silent) PrintAndLogEx(SUCCESS, " %d | %s", len, sprint_hex_inrow_ex(data,  len, 8));
-    }
+            len = resp.oldarg[0];
+            if (len == 0) {
+                if (verbose) PrintAndLogEx(WARNING, "smart card response failed");
+                return -2;
+            }
 
-    return len;
+            memcpy(data, resp.data.asBytes, len);
+            if (len >= 2) {
+                if (verbose) {
+                    PrintAndLogEx(SUCCESS, "%02X%02X | %s", data[len - 2], data[len - 1], GetAPDUCodeDescription(data[len - 2], data[len - 1]));
+                }
+            } else {
+                if (verbose) {
+                    PrintAndLogEx(SUCCESS, " %d | %s", len, sprint_hex_inrow_ex(data,  len, 8));
+                }
+            }
+            return len;
+        }
+    } while (i--);
+
+    if (verbose) { 
+        PrintAndLogEx(WARNING, "smart card response timeout");
+    }
+    return -1;
 }
 
-static int smart_responseEx(uint8_t *data, bool silent) {
+static int smart_responseEx(uint8_t *data, bool verbose) {
 
-    int datalen = smart_wait(data, silent);
+    int datalen = smart_wait(data, verbose);
     bool needGetData = false;
 
     if (datalen < 2) {
@@ -293,13 +305,13 @@ static int smart_responseEx(uint8_t *data, bool silent) {
     if (needGetData) {
         int len = data[datalen - 1];
 
-        if (!silent) PrintAndLogEx(INFO, "Requesting 0x%02X bytes response", len);
+        if (verbose) PrintAndLogEx(INFO, "Requesting 0x%02X bytes response", len);
 
         uint8_t getstatus[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, len};
         clearCommandBuffer();
         SendCommandMIX(CMD_SMART_RAW, SC_RAW, sizeof(getstatus), 0, getstatus, sizeof(getstatus));
 
-        datalen = smart_wait(data, silent);
+        datalen = smart_wait(data, verbose);
 
         if (datalen < 2) {
             goto out;
@@ -310,7 +322,7 @@ static int smart_responseEx(uint8_t *data, bool silent) {
             // data with ACK
             if (datalen == len + 2 + 1) { // 2 - response, 1 - ACK
                 if (data[0] != ISO7816_GET_RESPONSE) {
-                    if (!silent) {
+                    if (verbose) {
                         PrintAndLogEx(ERR, "GetResponse ACK error. len 0x%x | data[0] %02X", len, data[0]);
                     }
                     datalen = 0;
@@ -321,7 +333,7 @@ static int smart_responseEx(uint8_t *data, bool silent) {
                 memmove(data, &data[1], datalen);
             } else {
                 // wrong length
-                if (!silent) {
+                if (verbose) {
                     PrintAndLogEx(WARNING, "GetResponse wrong length. Must be 0x%02X got 0x%02X", len, datalen - 3);
                 }
             }
@@ -333,7 +345,7 @@ out:
 }
 
 static int smart_response(uint8_t *data) {
-    return smart_responseEx(data, false);
+    return smart_responseEx(data, true);
 }
 
 static int CmdSmartRaw(const char *Cmd) {
@@ -358,7 +370,7 @@ static int CmdSmartRaw(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool reply = arg_get_lit(ctx, 1);
+    bool reply = (arg_get_lit(ctx, 1) == false);
     bool active = arg_get_lit(ctx, 2);
     bool active_select = arg_get_lit(ctx, 3);
     bool decode_tlv = arg_get_lit(ctx, 4);
@@ -807,7 +819,7 @@ static void smart_brute_prim(void) {
         clearCommandBuffer();
         SendCommandMIX(CMD_SMART_RAW, SC_RAW_T0, 5, 0, get_card_data + i, 5);
 
-        int len = smart_responseEx(buf, true);
+        int len = smart_responseEx(buf, false);
 
         if (len > 2) {
             // if ( decodeTLV ) {
@@ -849,14 +861,14 @@ static int smart_brute_sfi(bool decodeTLV) {
             clearCommandBuffer();
             SendCommandMIX(CMD_SMART_RAW, SC_RAW_T0, sizeof(READ_RECORD), 0, READ_RECORD, sizeof(READ_RECORD));
 
-            len = smart_responseEx(buf, true);
+            len = smart_responseEx(buf, false);
 
             if (buf[0] == 0x6C) {
                 READ_RECORD[4] = buf[1];
 
                 clearCommandBuffer();
                 SendCommandMIX(CMD_SMART_RAW, SC_RAW_T0, sizeof(READ_RECORD), 0, READ_RECORD, sizeof(READ_RECORD));
-                len = smart_responseEx(buf, true);
+                len = smart_responseEx(buf, false);
 
                 READ_RECORD[4] = 0;
             }
@@ -892,7 +904,7 @@ static void smart_brute_options(bool decodeTLV) {
     clearCommandBuffer();
     SendCommandMIX(CMD_SMART_RAW, SC_RAW_T0, sizeof(GET_PROCESSING_OPTIONS), 0, GET_PROCESSING_OPTIONS, sizeof(GET_PROCESSING_OPTIONS));
 
-    int len = smart_responseEx(buf, true);
+    int len = smart_responseEx(buf, false);
     if (len > 4) {
         PrintAndLogEx(SUCCESS, "Got processing options");
         if (decodeTLV) {
@@ -988,7 +1000,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         clearCommandBuffer();
         SendCommandOLD(CMD_SMART_RAW, SC_RAW_T0, hexlen, 0, cmddata, hexlen);
 
-        int len = smart_responseEx(buf, true);
+        int len = smart_responseEx(buf, false);
         if (len < 3)
             continue;
 
@@ -1056,12 +1068,16 @@ int CmdSmartcard(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-int ExchangeAPDUSC(bool silent, uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
 
     *dataoutlen = 0;
 
-    if (activateCard)
-        smart_select(true, NULL);
+    if (activateCard) {
+        if (smart_select(false, NULL) == false) {
+            PrintAndLogEx(DEBUG, "APDU SC - select card failed");
+            return 1;
+        }
+    }
 
     PrintAndLogEx(DEBUG, "APDU SC");
 
@@ -1073,7 +1089,7 @@ int ExchangeAPDUSC(bool silent, uint8_t *datain, int datainlen, bool activateCar
     clearCommandBuffer();
     SendCommandOLD(CMD_SMART_RAW, flags, datainlen, 0, datain, datainlen);
 
-    int len = smart_responseEx(dataout, silent);
+    int len = smart_responseEx(dataout, verbose);
     if (len < 0) {
         return 1;
     }
@@ -1090,14 +1106,14 @@ int ExchangeAPDUSC(bool silent, uint8_t *datain, int datainlen, bool activateCar
         // something fishy: we have only 5 bytes but we put datainlen in arg1?
         SendCommandMIX(CMD_SMART_RAW, SC_RAW_T0, datainlen, 0, data, sizeof(data));
 
-        len = smart_responseEx(dataout, silent);
+        len = smart_responseEx(dataout, verbose);
     }
 
     *dataoutlen = len;
     return 0;
 }
 
-bool smart_select(bool silent, smart_card_atr_t *atr) {
+bool smart_select(bool verbose, smart_card_atr_t *atr) {
     if (atr)
         memset(atr, 0, sizeof(smart_card_atr_t));
 
@@ -1106,12 +1122,12 @@ bool smart_select(bool silent, smart_card_atr_t *atr) {
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_SMART_ATR, &resp, 2500)) {
 
-        if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
+        if (verbose) PrintAndLogEx(WARNING, "smart card select failed");
         return false;
     }
 
     if (resp.status != PM3_SUCCESS) {
-        if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
+        if (verbose) PrintAndLogEx(WARNING, "smart card select failed");
         return false;
     }
 
@@ -1121,7 +1137,7 @@ bool smart_select(bool silent, smart_card_atr_t *atr) {
     if (atr)
         memcpy(atr, &card, sizeof(smart_card_atr_t));
 
-    if (!silent)
+    if (verbose)
         PrintAndLogEx(INFO, "ISO7816-3 ATR : %s", sprint_hex(card.atr, card.atr_len));
 
     return true;

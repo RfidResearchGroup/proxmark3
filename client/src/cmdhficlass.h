@@ -28,6 +28,12 @@ typedef struct iclass_prekey {
     uint8_t key[8];
 } iclass_prekey_t;
 
+typedef struct {
+    char desc[70];
+    uint8_t blk6[8];
+    uint8_t blk7[8];
+} iclass_config_card_item_t;
+
 int CmdHFiClass(const char *Cmd);
 
 int info_iclass(void);

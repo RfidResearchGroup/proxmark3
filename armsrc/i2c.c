@@ -32,7 +32,7 @@
 
 #define I2C_ERROR  "I2C_WaitAck Error"
 
-static volatile uint32_t c;
+//static 
 
 // Direct use the loop to delay. 6 instructions loop, Masterclock 48MHz,
 // delay=1 is about 200kbps
@@ -40,6 +40,7 @@ static volatile uint32_t c;
 // I2CSpinDelayClk(4) = 12.31us
 // I2CSpinDelayClk(1) = 3.07us
 static void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
+    volatile uint32_t c;
     for (c = delay * 2; c; c--) {};
 }
 
@@ -160,7 +161,7 @@ static bool WaitSCL_H_delay(uint32_t delay) {
 // 5000 * 3.07us = 15350us. 15.35ms
 // 15000 * 3.07us = 46050us. 46.05ms
 static bool WaitSCL_H(void) {
-    return WaitSCL_H_delay(15000);
+    return WaitSCL_H_delay(10000);
 }
 
 static bool WaitSCL_L_delay(uint32_t delay) {
@@ -174,7 +175,7 @@ static bool WaitSCL_L_delay(uint32_t delay) {
 }
 // 5000 * 3.07us = 15350us. 15.35ms
 static bool WaitSCL_L(void) {
-    return WaitSCL_L_delay(15000);
+    return WaitSCL_L_delay(10000);
 }
 
 // Wait max 1800ms or until SCL goes LOW.
@@ -219,10 +220,7 @@ static bool I2C_WaitForSim(void) {
     // 8051 speaks with smart card.
     // 1000*50*3.07 = 153.5ms
     // 1byte transfer == 1ms  with max frame being 256bytes
-    if (!WaitSCL_H_delay(10 * 1000 * 30))
-        return false;
-
-    return true;
+    return WaitSCL_H_delay(10 * 1000 * 50);
 }
 
 // send i2c STOP
@@ -713,6 +711,9 @@ void SmartCardAtr(void) {
     I2C_Reset_EnterMainProgram();
     smart_card_atr_t card;
     int res = GetATR(&card, true) ? PM3_SUCCESS : PM3_ETIMEOUT;
+    if (res == PM3_ETIMEOUT) {
+        I2C_Reset_EnterMainProgram();
+    }
     reply_ng(CMD_SMART_ATR, res, (uint8_t *)&card, sizeof(smart_card_atr_t));
     set_tracing(false);
     LEDsoff();

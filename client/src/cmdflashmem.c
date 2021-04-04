@@ -17,7 +17,7 @@
 #include "cmdflashmemspiffs.h" // spiffs commands
 #include "rsa.h"
 #include "sha1.h"
-#include "pk.h"            // PEM key load functions
+#include "pk.h"                // PEM key load functions
 
 #define MCK 48000000
 #define FLASH_MINFAST 24000000 //33000000
@@ -41,45 +41,6 @@ static int CmdHelp(const char *Cmd);
                   "DB7FB5A3C8AC42EB635AE3C148C910750ABAA280CE82DC2F180F49F30A1393B5"
 
 //-------------------------------------------------------------------------------------
-// Sample private RSA Key
-// Following example RSA-1024 keypair, for test purposes  (from common/polarssl/rsa.c)
-
-// private key - Exponent D
-#define RSA_D   "24BF6185468786FDD303083D25E64EFC" \
-    "66CA472BC44D253102F8B4A9D3BFA750" \
-    "91386C0077937FE33FA3252D28855837" \
-    "AE1B484A8A9A45F7EE8C0C634F99E8CD" \
-    "DF79C5CE07EE72C7F123142198164234" \
-    "CABB724CF78B8173B9F880FC86322407" \
-    "AF1FEDFDDE2BEB674CA15F3E81A1521E" \
-    "071513A1E85B5DFA031F21ECAE91A34D"
-
-// prime P
-#define RSA_P   "C36D0EB7FCD285223CFB5AABA5BDA3D8" \
-    "2C01CAD19EA484A87EA4377637E75500" \
-    "FCB2005C5C7DD6EC4AC023CDA285D796" \
-    "C3D9E75E1EFC42488BB4F1D13AC30A57"
-
-// prime Q
-#define RSA_Q   "C000DF51A7C77AE8D7C7370C1FF55B69" \
-    "E211C2B9E5DB1ED0BF61D0D9899620F4" \
-    "910E4168387E3C30AA1E00C339A79508" \
-    "8452DD96A9A5EA5D9DCA68DA636032AF"
-
-#define RSA_DP  "C1ACF567564274FB07A0BBAD5D26E298" \
-    "3C94D22288ACD763FD8E5600ED4A702D" \
-    "F84198A5F06C2E72236AE490C93F07F8" \
-    "3CC559CD27BC2D1CA488811730BB5725"
-
-#define RSA_DQ  "4959CBF6F8FEF750AEE6977C155579C7" \
-    "D8AAEA56749EA28623272E4F7D0592AF" \
-    "7C1F1313CAC9471B5C523BFE592F517B" \
-    "407A1BD76C164B93DA2D32A383E58357"
-
-#define RSA_QP  "9AE7FBC99546432DF71896FC239EADAE" \
-    "F38D18D2B2F0E2DD275AA977E2BF4411" \
-    "F5A3B2A5D33605AEBBCCBA7FEB9F2D2F" \
-    "A74206CEC169D74BF5A8C50D6F48EA08"
 
 int rdv4_get_signature(rdv40_validation_t *out) {
     if (out == NULL) {        
@@ -107,7 +68,6 @@ int rdv4_get_signature(rdv40_validation_t *out) {
 
 // validate signature
 int rdv4_validate(rdv40_validation_t *mem) {
-
     // Flash ID hash (sha1)
     uint8_t sha_hash[20] = {0};
     mbedtls_sha1(mem->flashid, sizeof(mem->flashid), sha_hash);
@@ -128,7 +88,6 @@ int rdv4_validate(rdv40_validation_t *mem) {
     }
     return PM3_EFAILED;
 }
-
 
 static int rdv4_sign_write(uint8_t *signature, uint8_t slen){
     // save to mem
@@ -485,7 +444,6 @@ static int CmdFlashMemInfo(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-
     // set up PK key context now.
     mbedtls_pk_context pkctx;
     mbedtls_pk_init( &pkctx );
@@ -536,6 +494,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
     if (res != PM3_SUCCESS) {        
         return res;
     }
+
     res = rdv4_validate(&mem);
 
     // Flash ID hash (sha1)
