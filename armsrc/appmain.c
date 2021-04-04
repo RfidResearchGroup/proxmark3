@@ -49,6 +49,7 @@
 #include "commonutil.h"
 #include "crc16.h"
 
+
 #ifdef WITH_LCD
 #include "LCD_disabled.h"
 #endif
@@ -1084,7 +1085,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HITAG_SIMULATE: { // Simulate Hitag tag, args = memory content
-            SimulateHitag2((bool)packet->oldarg[0], packet->data.asBytes);
+            SimulateHitag2();
             break;
         }
         case CMD_LF_HITAG_READER: { // Reader for Hitag tags, args = type and function
@@ -1109,6 +1110,18 @@ static void PacketReceived(PacketCommandNG *packet) {
             } else {
                 WriterHitag((hitag_function)packet->oldarg[0], (hitag_data *)packet->data.asBytes, packet->oldarg[2]);
             }
+            break;
+        }
+        case CMD_LF_HITAG_ELOAD: { 
+            /*
+            struct p {
+                uint16_t len;
+                uint8_t *data;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            uint8_t *mem = BigBuf_get_EM_addr();
+            memcpy((uint8_t *)mem.sectors, payload->data, payload->len);
+            */
             break;
         }
 #endif
