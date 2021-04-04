@@ -126,7 +126,7 @@ typedef struct {
 //-----------------------------------------------------------------------------
 typedef struct {
     uint8_t atr_len;
-    uint8_t atr[30];
+    uint8_t atr[50];
 } PACKED smart_card_atr_t;
 
 typedef enum SMARTCARD_COMMAND {
