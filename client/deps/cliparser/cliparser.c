@@ -261,7 +261,7 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     if (!argstr->count)
         return 0;
 
-    uint8_t tmpstr[(256 * 2) + 1] = {0};
+    uint8_t tmpstr[(512 * 2) + 1] = {0};
     int ibuf = 0;
 
     for (int i = 0; i < argstr->count; i++) {
