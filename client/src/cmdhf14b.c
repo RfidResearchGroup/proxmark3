@@ -279,12 +279,12 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("k", "keep",  "leave the signal field ON after receive response"),
-        arg_lit0("s", "std",   "activate field, use ISO14B select"),
-        arg_lit0(NULL, "sr",   "activate field, use SRx ST select"),
-        arg_lit0(NULL, "cts",  "activate field, use ASK C-ticket select"),
-        arg_lit0("c", "crc",   "calculate and append CRC"),
-        arg_lit0("-r", NULL,   "do not read response from card"),
+        arg_lit0("k", "keep", "leave the signal field ON after receive response"),
+        arg_lit0("s", "std", "activate field, use ISO14B select"),
+        arg_lit0(NULL, "sr", "activate field, use SRx ST select"),
+        arg_lit0(NULL, "cts", "activate field, use ASK C-ticket select"),
+        arg_lit0("c", "crc", "calculate and append CRC"),
+        arg_lit0("r", NULL, "do not read response from card"),
         arg_int0("t", "timeout", "<dec>", "timeout in ms"),
         arg_lit0("v", "verbose", "verbose"),
         arg_strx0("d", "data", "<hex>", "data, bytes to send"),
