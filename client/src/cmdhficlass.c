@@ -3609,7 +3609,7 @@ static int CmdHFiClassConfigCard(const char * Cmd) {
         print_config_cards();
     }
 
-    if (idx >= 0) {
+    if (idx > -1 && idx < 14) {
         const iclass_config_card_item_t *item = get_config_card_item(idx);
         print_config_card(item);
     }
