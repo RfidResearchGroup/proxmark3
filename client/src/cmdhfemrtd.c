@@ -262,13 +262,22 @@ static int emrtd_get_asn1_data_length(uint8_t *datain, int datainlen, int offset
         // https://wf.lavatech.top/ave-but-random/emrtd-data-quirks#EF_SOD
         return datainlen;
     } else if (lenfield == 0x81) {
-        return ((int) * (datain + offset + 1));
+        int tmp = (*(datain + offset + 1) << 8);
+        return tmp;
+        //return ((int) * (datain + offset + 1));
     } else if (lenfield == 0x82) {
-        return ((int) * (datain + offset + 1) << 8) | ((int) * (datain + offset + 2));
+        int tmp = (*(datain + offset + 1) << 8);
+        tmp |= *(datain + offset + 2);
+        return tmp;
+        //return ((int) * (datain + offset + 1) << 8) | ((int) * (datain + offset + 2));
     } else if (lenfield == 0x83) {
-        return (((int) * (datain + offset + 1) << 16) | ((int) * (datain + offset + 2)) << 8) | ((int) * (datain + offset + 3));
+        int tmp = (*(datain + offset + 1) << 16);
+        tmp |= (*(datain + offset + 2) << 8);
+        tmp |= *(datain + offset + 3);
+        return tmp;
+        //return (((int) * (datain + offset + 1) << 16) | ((int) * (datain + offset + 2)) << 8) | ((int) * (datain + offset + 3));
     }
-    return false;
+    return 0;
 }
 
 static int emrtd_get_asn1_field_length(uint8_t *datain, int datainlen, int offset) {
@@ -284,7 +293,7 @@ static int emrtd_get_asn1_field_length(uint8_t *datain, int datainlen, int offse
     } else if (lenfield == 0x83) {
         return 4;
     }
-    return false;
+    return 0;
 }
 
 static void des_encrypt_ecb(uint8_t *key, uint8_t *input, uint8_t *output) {
@@ -839,12 +848,13 @@ static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length, const c
 
     if (fieldlen + 1 > EMRTD_MAX_FILE_SIZE) {
         PrintAndLogEx(ERR, "error (emrtd_dump_ef_sod) fieldlen out-of-bounds");
-        return PM3_SUCCESS;
+        return PM3_EOUTOFBOUND;
     }
 
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
     if (filepath == NULL)
         return PM3_EMALLOC;
+
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
     strcat(filepath, dg_table[EF_SOD].filename);
