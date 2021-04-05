@@ -1668,7 +1668,7 @@ static int emrtd_parse_ef_sod_hash_algo(uint8_t *data, size_t datalen, int *hash
         PrintAndLogEx(DEBUG, "trying: %s", hashalg_table[hashi].name);
         // We're only interested in checking if the length matches to avoid memory shenanigans
         if (hashalg_table[hashi].descriptorlen != hashalgosetlen) {
-            PrintAndLogEx(DEBUG, "len mismatch: %i", hashalgosetlen);
+            PrintAndLogEx(DEBUG, "len mismatch: %zu", hashalgosetlen);
             continue;
         }
 
