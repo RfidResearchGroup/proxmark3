@@ -1557,16 +1557,16 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
             // ...and I doubt many states are using them.
             switch (taglist[i + 1]) {
                 case 0x19:
-                    PrintAndLogEx(SUCCESS, "Issuing Authority.....: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Issuing Authority.....: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x26:
                     emrtd_print_issuance((char *) tagdata, tagdatalen != 4);
                     break;
                 case 0x1b:
-                    PrintAndLogEx(SUCCESS, "Endorsements & Observations: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Endorsements & Observations: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x1c:
-                    PrintAndLogEx(SUCCESS, "Tax/Exit Requirements.: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Tax/Exit Requirements.: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x1d:
                     saveFile("FrontOfDocument", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
@@ -1578,7 +1578,7 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
                     emrtd_print_personalization_timestamp(tagdata);
                     break;
                 case 0x56:
-                    PrintAndLogEx(SUCCESS, "Serial of Personalization System: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Serial of Personalization System: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x85:
                     emrtd_print_unknown_timestamp_5f85(tagdata);
