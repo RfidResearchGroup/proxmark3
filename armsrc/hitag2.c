@@ -130,8 +130,7 @@ static void hitag2_init(void) {
 #define HITAG_T_0        20 /* T[0] should be 18..22 */
 #define HITAG_T_1_MIN    25 /* T[1] should be 26..30 */
 #define HITAG_T_1        30 /* T[1] should be 26..30 */
-//#define HITAG_T_EOF      40 /* T_EOF should be > 36 */
-#define HITAG_T_EOF      40 /* T_EOF should be > 36 */
+#define HITAG_T_EOF      80 /* T_EOF should be > 36    and must be larger than HITAG_T_TAG_CAPTURE_FOUR_HALF */
 #define HITAG_T_WAIT_1_MIN   199 /* T_wresp should be 199..206 */
 #define HITAG_T_WAIT_2_MIN   90 /* T_wait2 should be at least 90 */
 #define HITAG_T_WAIT_MAX 300 /* bit more than HITAG_T_WAIT_1 + HITAG_T_WAIT_2 */
