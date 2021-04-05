@@ -207,7 +207,7 @@ static void print_config_card(const iclass_config_card_item_t *o) {
 
 static void generate_config_card(const iclass_config_card_item_t *o) {
     if (check_config_card(o)) {
-
+        PrintAndLogEx(INFO, "to be implemented...");
     }
 }
 
