@@ -45,7 +45,7 @@ int rdv40_spiffs_read_as_symlink(char *filename, uint8_t *dst, uint32_t size, RD
 void write_to_spiffs(const char *filename, uint8_t *src, uint32_t size);
 void read_from_spiffs(const char *filename, uint8_t *dst, uint32_t size);
 void test_spiffs(void);
-void rdv40_spiffs_safe_print_tree(uint8_t banner);
+void rdv40_spiffs_safe_print_tree(void);
 int rdv40_spiffs_unmount(void);
 int rdv40_spiffs_mount(void);
 int rdv40_spiffs_is_symlink(const char *s);

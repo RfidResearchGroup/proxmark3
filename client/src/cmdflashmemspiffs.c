@@ -39,8 +39,11 @@ int flashmem_spiffs_load(char *destfn, uint8_t *data, size_t datalen) {
         flashmem_write_t *payload = calloc(1, sizeof(flashmem_write_t) + bytes_in_packet);
 
         payload->append = (bytes_sent > 0);
-        payload->fnlen = strlen(destfn);
-        memcpy(payload->fn, destfn, strlen(destfn));
+
+        uint8_t fnlen = MIN(sizeof(payload->fn), strlen(destfn));
+
+        payload->fnlen = fnlen;
+        memcpy(payload->fn, destfn, fnlen);
 
         payload->bytes_in_packet = bytes_in_packet;
         memset(payload->data, 0, bytes_in_packet);
@@ -158,6 +161,8 @@ static int CmdFlashMemSpiFFSTree(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("Flash Memory tree (SPIFFS)") " -----------------");
     clearCommandBuffer();
     SendCommandNG(CMD_SPIFFS_PRINT_TREE, NULL, 0);
     return PM3_SUCCESS;
@@ -175,6 +180,8 @@ static int CmdFlashMemSpiFFSInfo(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("Flash Memory info (SPIFFS)") " -----------------");
     clearCommandBuffer();
     SendCommandNG(CMD_SPIFFS_PRINT_FSINFO, NULL, 0);
     return PM3_SUCCESS;
