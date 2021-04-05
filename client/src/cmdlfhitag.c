@@ -339,9 +339,10 @@ static int CmdLFHitagEload(const char *Cmd) {
         clearCommandBuffer();
         SendCommandNG(CMD_LF_HITAG_ELOAD,  (uint8_t *)&payload, 2 + dumplen);
     } else {
-        PrintAndLogEx(ERR, "error, wrong dump file size. got %u", dumplen);
+        PrintAndLogEx(ERR, "error, wrong dump file size. got %zu", dumplen);
     }
 
+    free(dump);
     return PM3_SUCCESS;
 }
 
