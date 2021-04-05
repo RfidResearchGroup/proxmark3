@@ -2069,7 +2069,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_SPIFFS_PRINT_TREE: {
-            rdv40_spiffs_safe_print_tree(false);
+            rdv40_spiffs_safe_print_tree();
             break;
         }
         case CMD_SPIFFS_PRINT_FSINFO: {
