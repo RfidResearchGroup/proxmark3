@@ -35,6 +35,7 @@
 #include "cmddata.h"           // getsamples
 #include "fileutils.h"         // savefileEML
 #include "cliparser.h"
+#include "util_posix.h"        // msleep
 
 #define FrameSOF                Iso15693FrameSOF
 #define Logic0                  Iso15693Logic0
@@ -1151,28 +1152,43 @@ static int CmdHF15FindAfi(const char *Cmd) {
         arg_param_begin,
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(SUCCESS, "press pm3-button to cancel");
-
+    PrintAndLogEx(INFO, "click " _GREEN_("pm3 button") " or press " _GREEN_("Enter") " to exit");
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandMIX(CMD_HF_ISO15693_FINDAFI, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
 
-    uint32_t timeout = 0;
-    while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-        timeout++;
+    for (;;) {
 
-        // should be done in about 2 minutes
-        if (timeout > 180) {
-            PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
-            DropField();
-            return PM3_ETIMEOUT;
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "User aborted");
+            msleep(300);
+            break;
+        }
+
+        uint32_t timeout = 0;
+        if (WaitForResponseTimeout(CMD_HF_ISO15693_FINDAFI, &resp, 2000)){
+            if (resp.status == PM3_EOPABORTED) {
+                PrintAndLogEx(DEBUG, "Button pressed, user aborted");
+                break;
+            }
+        } else {
+            timeout++;
+
+            // should be done in about 2 minutes
+            if (timeout > 180) {
+                PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
+                break;
+            }
+
         }
     }
 
     DropField();
+    PrintAndLogEx(INFO, "Done");
     return resp.status; // PM3_EOPABORTED or PM3_SUCCESS
 }
 

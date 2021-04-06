@@ -1853,7 +1853,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
         Dbprintf("NoAFI UID = %s", iso15693_sprintUID(NULL, recv + 2));
     } else {
         DbpString("Failed to select card");
-        reply_ng(CMD_ACK, PM3_ESOFT, NULL, 0);
+        reply_ng(CMD_HF_ISO15693_FINDAFI, PM3_ESOFT, NULL, 0);
         switch_off();
         return;
     }
@@ -1881,10 +1881,8 @@ void BruteforceIso15693Afi(uint32_t speed) {
             Dbprintf("AFI = %i  UID = %s", i, iso15693_sprintUID(NULL, recv + 2));
         }
 
-        aborted = BUTTON_PRESS();
-
+        aborted = BUTTON_PRESS() && data_available();
         if (aborted) {
-            DbpString("button pressed, aborting..");
             break;
         }
     }
@@ -1893,9 +1891,9 @@ void BruteforceIso15693Afi(uint32_t speed) {
     switch_off();
 
     if (aborted) {
-        reply_ng(CMD_ACK, PM3_EOPABORTED, NULL, 0);
+        reply_ng(CMD_HF_ISO15693_FINDAFI, PM3_EOPABORTED, NULL, 0);
     } else {
-        reply_ng(CMD_ACK, PM3_SUCCESS, NULL, 0);
+        reply_ng(CMD_HF_ISO15693_FINDAFI, PM3_SUCCESS, NULL, 0);
     }
 }
 
