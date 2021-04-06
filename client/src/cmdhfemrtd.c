@@ -1187,11 +1187,12 @@ static void emrtd_print_legal_sex(char *legal_sex) {
 
 static int emrtd_mrz_determine_length(char *mrz, int offset, int max_length) {
     int i;
-    for (i = max_length; i >= 0; i--) {
-        if (mrz[offset + i - 1] != '<') {
+    for (i = max_length - 1; i >= 0; i--) {
+        if (mrz[offset + i] != '<') {
             break;
         }
     }
+    // if not found,  it will return -1
     return i;
 }
 
@@ -1216,6 +1217,9 @@ static void emrtd_mrz_replace_pad(char *data, int datalen, char newchar) {
 
 static void emrtd_print_optional_elements(char *mrz, int offset, int length, bool verify_check_digit) {
     int i = emrtd_mrz_determine_length(mrz, offset, length);
+    if (i == -1){
+        return;
+    }
 
     // Only print optional elements if they're available
     if (i != 0) {
@@ -1229,6 +1233,9 @@ static void emrtd_print_optional_elements(char *mrz, int offset, int length, boo
 
 static void emrtd_print_document_number(char *mrz, int offset) {
     int i = emrtd_mrz_determine_length(mrz, offset, 9);
+    if (i == -1) {
+        return;
+    }
 
     PrintAndLogEx(SUCCESS, "Document Number.......: " _YELLOW_("%.*s"), i, mrz + offset);
 
@@ -1240,6 +1247,9 @@ static void emrtd_print_document_number(char *mrz, int offset) {
 static void emrtd_print_name(char *mrz, int offset, int max_length, bool localized) {
     char final_name[100] = { 0x00 };
     int namelen = emrtd_mrz_determine_length(mrz, offset, max_length);
+    if (namelen == -1) {
+        return;
+    }
     int sep = emrtd_mrz_determine_separator(mrz, offset, namelen);
 
     // Account for mononyms
