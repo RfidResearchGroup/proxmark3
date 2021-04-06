@@ -1502,37 +1502,37 @@ static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen) {
                     emrtd_print_name((char *) tagdata, 0, tagdatalen, false);
                     break;
                 case 0x10:
-                    PrintAndLogEx(SUCCESS, "Personal Number.......: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Personal Number.......: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x11:
                     // TODO: acc for < separation
-                    PrintAndLogEx(SUCCESS, "Place of Birth........: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Place of Birth........: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x42:
                     // TODO: acc for < separation
-                    PrintAndLogEx(SUCCESS, "Permanent Address.....: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Permanent Address.....: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x12:
-                    PrintAndLogEx(SUCCESS, "Telephone.............: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Telephone.............: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x13:
-                    PrintAndLogEx(SUCCESS, "Profession............: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Profession............: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x14:
-                    PrintAndLogEx(SUCCESS, "Title.................: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Title.................: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x15:
-                    PrintAndLogEx(SUCCESS, "Personal Summary......: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Personal Summary......: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x16:
                     saveFile("ProofOfCitizenship", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
                     break;
                 case 0x17:
                     // TODO: acc for < separation
-                    PrintAndLogEx(SUCCESS, "Other valid TDs nums..: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Other valid TDs nums..: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x18:
-                    PrintAndLogEx(SUCCESS, "Custody Information...: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Custody Information...: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x2b:
                     emrtd_print_dob((char *) tagdata, 0, true, tagdatalen != 4);
