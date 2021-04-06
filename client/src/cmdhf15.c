@@ -1160,6 +1160,7 @@ static int CmdHF15FindAfi(const char *Cmd) {
     PacketResponseNG resp;
     SendCommandMIX(CMD_HF_ISO15693_FINDAFI, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
 
+    uint32_t timeout = 0;
     for (;;) {
 
         if (kbd_enter_pressed()) {
@@ -1169,7 +1170,6 @@ static int CmdHF15FindAfi(const char *Cmd) {
             break;
         }
 
-        uint32_t timeout = 0;
         if (WaitForResponseTimeout(CMD_HF_ISO15693_FINDAFI, &resp, 2000)){
             if (resp.status == PM3_EOPABORTED) {
                 PrintAndLogEx(DEBUG, "Button pressed, user aborted");
@@ -1189,7 +1189,7 @@ static int CmdHF15FindAfi(const char *Cmd) {
 
     DropField();
     PrintAndLogEx(INFO, "Done");
-    return resp.status; // PM3_EOPABORTED or PM3_SUCCESS
+    return PM3_SUCCESS;
 }
 
 // Writes the AFI (Application Family Identifier) of a card
