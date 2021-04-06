@@ -47,9 +47,7 @@ See the instruction links in the tables above to build, flash and run for your P
 In order to build this repo for generic Proxmark3 platforms we urge you to read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
 
 With generic Proxmark3 platforms we mean: 
-  - RDV1
-  - RDV2
-  - RDV3 easy
+  - RDV1, RDV2, RDV3 easy
   - Proxmark Evolution (needs extra care)
   - Radiowar black PCB version
   - Ryscorp green PCB version
@@ -68,8 +66,7 @@ On the hardware side:
   * added FPC connector
 
 On the software side:
-
-quite a lot, see the [Changelog file](CHANGELOG.md) which we try to keep updated.
+see the [Changelog file](CHANGELOG.md) which we try to keep updated.
 
 ## Development
 
@@ -88,18 +85,13 @@ This repo compiles nicely on
       - [ RRG / Iceman repo based ubuntu 18.04 container ](https://hub.docker.com/r/secopsconsult/proxmark3)
       - [ Iceman fork based container v1.7 ](https://hub.docker.com/r/iceman1001/proxmark3/)
 
-Hardware to run client on
-   - PC
-   - Android Phone
-   - Raspberry Pi, Raspberry Pi Zero
-   - Nvidia Jetson Nano
 
 ## Precompiled binaries
 We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where [@gator96100](https://github.com/gator96100) has set up a AWS bucket with precompiled Proxspace (Mingw) binaries which is recompiled every night and with that also up-to-date. We link to these files here as to make it easier for users.
 
 _If you use his pre-compiled Proxspace binaries do consider buy him a coffee for his efforts. Remember nothing says thank you as much as a donation._
 
-If you are having troubles with these files, contact package maintainer [@gator96100](https://github.com/gator96100) and read the [homepage of his proxmark builds](https://www.proxmarkbuilds.org/) or read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) where known issues has been documented with regards to the precompiled builds.  
+If you are having troubles with these files, contact package maintainer [@gator96100](https://github.com/gator96100) and read the [homepage of his proxmark builds](https://www.proxmarkbuilds.org/) or read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) 
 
 ### Proxmark3 RDV4 devices
 - [Precompiled builds for RDV40 dedicated x64](https://www.proxmarkbuilds.org/#rdv40-64/)
@@ -129,20 +121,6 @@ Next place to visit is the [Proxmark3 Forum](http://www.proxmark.org/forum/index
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
    - [Proxmark3 forum](http://www.proxmark.org/forum/index.php)
 
-
-### Youtube channels
-Iceman has quite a few videos on his channel and Quentyn has risen up the last year with good informative videos. We suggest you check them out and smash that subscribe buttons!
-
- - [Iceman channel](https://www.youtube.com/c/ChrisHerrmann1001)
- - [Quentyn Taylor](https://www.youtube.com/channel/UCL91C3IZDv3wfj2ABhdRIrw)
- - [Hacker warehouse channel](https://www.youtube.com/channel/UCimS6P854cQ23j6c_xst7EQ)
-
-_if you think of some more good youtube channels to be on this list, let us know!_
-
-## Cheat sheet
-
-You can enjoy a [command cheat sheet](/doc/cheatsheet.md) and we are trying to keep it updated. 
-[Thanks to Alex Dib!](https://github.com/scund00r)
 
 ## Maintainers ( package, distro )
 
