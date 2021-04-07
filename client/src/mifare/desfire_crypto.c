@@ -652,8 +652,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
             free(edata);
 
             break;
-        case MDCM_ENCIPHERED:
-            (*nbytes)--;
+        case MDCM_ENCIPHERED: {
             bool verified = false;
             int crc_pos = 0x00;
             int end_crc_pos = 0x00;
@@ -702,11 +701,13 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
                     if (res != NULL) {
                         memcpy(res, data, *nbytes);
 
-                        crc_pos = (*nbytes) - 16 - 3;
-                        if (crc_pos < 0) {
-                            /* Single block */
-                            crc_pos = 0;
+                        size_t padding_start_pos = *nbytes - 1;
+                        while (padding_start_pos > 0 && ((uint8_t *) res)[padding_start_pos] == 0x00) {
+                            padding_start_pos--;
                         }
+                        //TODO: Add support for cases where there is no padding. Uncommon but possible.
+                        crc_pos = padding_start_pos - 4;
+
                         memcpy((uint8_t *) res + crc_pos + 1, (uint8_t *) res + crc_pos, *nbytes - crc_pos);
                         ((uint8_t *) res)[crc_pos] = 0x00;
                         crc_pos++;
@@ -747,6 +748,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
                             ((uint8_t *)data)[(*nbytes)++] = 0x00;
                             break;
                         case AS_NEW:
+                            *nbytes = crc_pos - 1;
                             /* The status byte was already before the CRC */
                             break;
                     }
@@ -775,6 +777,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
             }
 
             break;
+        }
         default:
             PrintAndLogEx(ERR, "Unknown communication settings");
             *nbytes = -1;
