@@ -1145,7 +1145,8 @@ static int CmdHF15Sim(const char *Cmd) {
 static int CmdHF15FindAfi(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 findafi",
-                  "This command attempts to brute force AFI of an ISO15693 tag\n",
+                  "This command attempts to brute force AFI of an ISO15693 tag\n"
+                  "Estimated execution time is around 2 minutes",
                   "hf 15 findafi");
 
     void *argtable[] = {
@@ -1173,18 +1174,16 @@ static int CmdHF15FindAfi(const char *Cmd) {
         if (WaitForResponseTimeout(CMD_HF_ISO15693_FINDAFI, &resp, 2000)){
             if (resp.status == PM3_EOPABORTED) {
                 PrintAndLogEx(DEBUG, "Button pressed, user aborted");
-                break;
             }
-        } else {
-            timeout++;
-
-            // should be done in about 2 minutes
-            if (timeout > 180) {
-                PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
-                break;
-            }
-
+            break;
         }
+
+        // should be done in about 2 minutes
+        if (timeout > 180) {
+            PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
+            break;
+        }
+        timeout++;
     }
 
     DropField();
