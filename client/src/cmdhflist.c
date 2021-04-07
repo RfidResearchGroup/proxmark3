@@ -743,10 +743,10 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         // S-block 11xxx010
         if ((cmd[0] & 0xC0) && (cmdsize == 3)) {
             switch ((cmd[0] & 0x30)) {
-                case 0x30:
+                case 0x00:
                     snprintf(exp, size, "S-block DESELECT");
                     break;
-                case 0x00:
+                case 0x30:
                     snprintf(exp, size, "S-block WTX");
                     break;
                 default:
