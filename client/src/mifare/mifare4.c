@@ -179,7 +179,7 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
     uint8_t cmd1[] = {0x70, keyn[1], keyn[0], 0x00};
     int res = ExchangeRAW14a(cmd1, sizeof(cmd1), activateField, true, data, sizeof(data), &datalen, silentMode);
     if (res) {
-        if (!silentMode) PrintAndLogEx(ERR, "Exchande raw error: %d", res);
+        if (!silentMode) PrintAndLogEx(ERR, "Exchange raw error: %d", res);
         if (dropFieldIfError) DropField();
         return 2;
     }
@@ -223,7 +223,7 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
 
     res = ExchangeRAW14a(cmd2, sizeof(cmd2), false, true, data, sizeof(data), &datalen, silentMode);
     if (res) {
-        if (!silentMode) PrintAndLogEx(ERR, "Exchande raw error: %d", res);
+        if (!silentMode) PrintAndLogEx(ERR, "Exchange raw error: %d", res);
         if (dropFieldIfError) DropField();
         return 4;
     }
