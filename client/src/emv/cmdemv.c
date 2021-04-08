@@ -52,6 +52,8 @@ static void ParamLoadDefaults(struct tlvdb *tlvRoot) {
     //95:(Terminal Verification Results) len:5
     // all OK TVR
     TLV_ADD(0x95,   "\x00\x00\x00\x00\x00");
+    // 9F4E Merchant Name and Location len:x
+    TLV_ADD(0x9F4E, "proxmrk3rdv\x00");
 }
 
 static void PrintChannel(EMVCommandChannel channel) {
