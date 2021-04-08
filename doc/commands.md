@@ -10,14 +10,55 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
+|`help                   `|Y       |`Use `<command> help` for details of a command`
 |`auto                   `|N       |`Automated detection process for unknown tags`
 |`clear                  `|Y       |`Clear screen`
-|`help                   `|Y       |`Use '<command> help' for details of a particular command.`
 |`hints                  `|Y       |`Turn hints on / off`
 |`msleep                 `|Y       |`Add a pause in milliseconds`
 |`rem                    `|Y       |`Add a text line in log file`
 |`quit                   `|Y       |``
 |`exit                   `|Y       |`Exit program`
+
+
+### preferences
+
+ { Edit client/device preferences... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`preferences help       `|Y       |`This help`
+|`preferences show       `|Y       |`Show all preferences`
+
+
+### preferences get
+
+ { Get a preference }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`preferences get barmode`|Y       |`Get bar mode preference`
+|`preferences get clientdebug`|Y       |`Get client debug level preference`
+|`preferences get color  `|Y       |`Get color support preference`
+|`preferences get savepaths`|Y       |`Get file folder  `
+|`preferences get emoji  `|Y       |`Get emoji display preference`
+|`preferences get hints  `|Y       |`Get hint display preference`
+|`preferences get plotsliders`|Y       |`Get plot slider display preference`
+
+
+### preferences set
+
+ { Set a preference }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`preferences set help   `|Y       |`This help`
+|`preferences set barmode`|Y       |`Set bar mode`
+|`preferences set clientdebug`|Y       |`Set client debug level`
+|`preferences set color  `|Y       |`Set color support`
+|`preferences set emoji  `|Y       |`Set emoji display`
+|`preferences set hints  `|Y       |`Set hint display`
+|`preferences set savepaths`|Y       |`... to be adjusted next ... `
+|`preferences set plotsliders`|Y       |`Set plot slider display`
 
 
 ### analyse
@@ -53,38 +94,37 @@ Check column "offline" for their availability.
 |`data manrawdecode      `|Y       |`Manchester decode binary stream in DemodBuffer`
 |`data modulation        `|Y       |`Identify LF signal for clock and modulation`
 |`data rawdemod          `|Y       |`Demodulate the data in the GraphBuffer and output binary`
-|`data askedgedetect     `|Y       |`[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)`
+|`data askedgedetect     `|Y       |`Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave`
 |`data autocorr          `|Y       |`Autocorrelation over window`
-|`data dirthreshold      `|Y       |`<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev.`
+|`data dirthreshold      `|Y       |`Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev.`
 |`data decimate          `|Y       |`Decimate samples`
 |`data undecimate        `|Y       |`Un-decimate samples`
 |`data hide              `|Y       |`Hide graph window`
 |`data hpf               `|Y       |`Remove DC offset from trace`
-|`data iir               `|Y       |`apply IIR buttersworth filter on plotdata`
-|`data grid              `|Y       |`<x> <y> -- overlay grid on graph window, use zero value to turn off either`
-|`data ltrim             `|Y       |`<samples> -- Trim samples from left of trace`
-|`data mtrim             `|Y       |`<start> <stop> -- Trim out samples from the specified start to the specified stop`
+|`data iir               `|Y       |`Apply IIR buttersworth filter on plot data`
+|`data grid              `|Y       |`overlay grid on graph window`
+|`data ltrim             `|Y       |`Trim samples from left of trace`
+|`data mtrim             `|Y       |`Trim out samples from the specified start to the specified stop`
 |`data norm              `|Y       |`Normalize max/min to +/-128`
-|`data plot              `|Y       |`Show graph window (hit 'h' in window for keystroke help)`
-|`data rtrim             `|Y       |`<location to end trace> -- Trim samples from right of trace`
-|`data setgraphmarkers   `|Y       |`[orange_marker] [blue_marker] (in graph window)`
-|`data shiftgraphzero    `|Y       |`<shift> -- Shift 0 for Graphed wave + or - shift value`
-|`data timescale         `|Y       |`Set a timescale to get a differential reading between the yellow and purple markers as time duration
-`
+|`data plot              `|Y       |`Show graph window`
+|`data rtrim             `|Y       |`Trim samples from right of trace`
+|`data setgraphmarkers   `|Y       |`Set blue and orange marker in graph window`
+|`data shiftgraphzero    `|Y       |`Shift 0 for Graphed wave + or - shift value`
+|`data timescale         `|Y       |`Set a timescale to get a differential reading between the yellow and purple markers as time duration`
 |`data zerocrossings     `|Y       |`Count time between zero-crossings`
 |`data convertbitstream  `|Y       |`Convert GraphBuffer's 0/1 values to 127 / -127`
 |`data getbitstream      `|Y       |`Convert GraphBuffer's >=1 values to 1 and <1 to 0`
 |`data bin2hex           `|Y       |`Converts binary to hexadecimal`
 |`data bitsamples        `|N       |`Get raw samples as bitstring`
 |`data clear             `|Y       |`Clears bigbuf on deviceside and graph window`
-|`data hexsamples        `|N       |`<bytes> [<offset>] -- Dump big buffer as hex bytes`
+|`data hexsamples        `|N       |`Dump big buffer as hex bytes`
 |`data hex2bin           `|Y       |`Converts hexadecimal to binary`
 |`data load              `|Y       |`Load contents of file into graph window`
 |`data ndef              `|Y       |`Decode NDEF records`
-|`data print             `|Y       |`print the data in the DemodBuffer`
-|`data samples           `|N       |`[512 - 40000] -- Get raw samples for graph window (GraphBuffer)`
+|`data print             `|Y       |`Print the data in the DemodBuffer`
+|`data samples           `|N       |`Get raw samples for graph window (GraphBuffer)`
 |`data save              `|Y       |`Save signal trace data  (from graph window)`
-|`data setdebugmode      `|Y       |`<0|1|2> -- Set Debugging Level on client side`
+|`data setdebugmode      `|Y       |`Set Debugging Level on client side`
 |`data tune              `|N       |`Measure tuning of device antenna. Results shown in graph window`
 
 
@@ -223,6 +263,7 @@ Check column "offline" for their availability.
 |`hf felica help         `|Y       |`This help`
 |`hf felica list         `|Y       |`List ISO 18092/FeliCa history`
 |`hf felica reader       `|N       |`Act like an ISO18092/FeliCa reader`
+|`hf felica info         `|N       |`Tag information`
 |`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
 |`hf felica raw          `|N       |`Send raw hex data to tag`
 |`hf felica rdunencrypted`|N       |`read Block Data from authentication-not-required Service.`
@@ -235,7 +276,7 @@ Check column "offline" for their availability.
 |`hf felica auth2        `|N       |`allow a card to authenticate a Reader/Writer. Complete mutual authentication`
 |`hf felica rqspecver    `|N       |`acquire the version of card OS.`
 |`hf felica resetmode    `|N       |`reset Mode to Mode 0.`
-|`hf felica litesim      `|N       |`<NDEF2> - only reply to poll request`
+|`hf felica litesim      `|N       |`Emulating ISO/18092 FeliCa Lite tag`
 |`hf felica litedump     `|N       |`Wait for and try dumping FelicaLite`
 
 
@@ -289,6 +330,7 @@ Check column "offline" for their availability.
 |`hf iclass eload        `|N       |`Load Picopass / iCLASS dump file into emulator memory`
 |`hf iclass esave        `|N       |`Save emulator memory to file`
 |`hf iclass eview        `|N       |`View emulator memory`
+|`hf iclass configcard   `|Y       |`Reader configuration card`
 |`hf iclass calcnewkey   `|Y       |`Calc diversified keys (blocks 3 & 4) to write new keys`
 |`hf iclass encode       `|Y       |`Encode binary wiegand to block 7`
 |`hf iclass encrypt      `|Y       |`Encrypt given block data`
@@ -361,6 +403,7 @@ Check column "offline" for their availability.
 |`hf mf rdsc             `|N       |`Read MIFARE Classic sector`
 |`hf mf restore          `|N       |`Restore MIFARE Classic binary file to BLANK tag`
 |`hf mf setmod           `|N       |`Set MIFARE Classic EV1 load modulation strength`
+|`hf mf wipe             `|N       |`Wipe card to zeros and default keys/acc`
 |`hf mf wrbl             `|N       |`Write MIFARE Classic block`
 |`hf mf sim              `|N       |`Simulate MIFARE card`
 |`hf mf ecfill           `|N       |`Fill simulator memory with help of keys from simulator`
@@ -520,6 +563,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hw help                `|Y       |`This help`
+|`hw break               `|N       |`Send break loop usb command`
 |`hw connect             `|Y       |`Connect Proxmark3 to serial port`
 |`hw dbg                 `|N       |`Set Proxmark3 debug level`
 |`hw detectreader        `|N       |`Detect external reader field`
@@ -1123,46 +1167,5 @@ Check column "offline" for their availability.
 |`wiegand list           `|Y       |`List available wiegand formats`
 |`wiegand encode         `|Y       |`Encode to wiegand raw hex (currently for HID Prox)`
 |`wiegand decode         `|Y       |`Convert raw hex to decoded wiegand format (currently for HID Prox)`
-
-
-### pref
-
- { Edit preferences... }
-
-|command                  |offline |description
-|-------                  |------- |-----------
-|`pref help              `|Y       |`This help`
-|`pref show              `|Y       |`Show all preferences`
-
-
-### pref get
-
- { Get a preference }
-
-|command                  |offline |description
-|-------                  |------- |-----------
-|`pref get barmode       `|Y       |`Get bar mode preference`
-|`pref get clientdebug   `|Y       |`Get client debug level preference`
-|`pref get color         `|Y       |`Get color support preference`
-|`pref get savepaths     `|Y       |`Get file folder  `
-|`pref get emoji         `|Y       |`Get emoji display preference`
-|`pref get hints         `|Y       |`Get hint display preference`
-|`pref get plotsliders   `|Y       |`Get plot slider display preference`
-
-
-### pref set
-
- { Set a preference }
-
-|command                  |offline |description
-|-------                  |------- |-----------
-|`pref set help          `|Y       |`This help`
-|`pref set barmode       `|Y       |`Set bar mode`
-|`pref set clientdebug   `|Y       |`Set client debug level`
-|`pref set color         `|Y       |`Set color support`
-|`pref set emoji         `|Y       |`Set emoji display`
-|`pref set hints         `|Y       |`Set hint display`
-|`pref set savepaths     `|Y       |`... to be adjusted next ... `
-|`pref set plotsliders   `|Y       |`Set plot slider display`
 
 
