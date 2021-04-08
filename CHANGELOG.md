@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix RESTORE mis-annotation (@VortixDev)
  - Changed `smart raw` - now uses NG (@iceman1001)
  - Added `hf iclass configcard` - now can download / generate config card dumps with a cardhelper [WIP] (@iceman1001)
  - Fix swapped DESELECT and WTX annotations (@VortixDev)

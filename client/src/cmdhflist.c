@@ -228,7 +228,10 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "DEC(%d)", cmd[1]);
             break;
         case MIFARE_CMD_RESTORE:
-            snprintf(exp, size, "RESTORE(%d)", cmd[1]);
+            if (cmdsize == 4)
+                snprintf(exp, size, "RESTORE(%d)", cmd[1]);
+            else
+                return 0;
             break;
         case MIFARE_CMD_TRANSFER:
             snprintf(exp, size, "TRANSFER(%d)", cmd[1]);
