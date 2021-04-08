@@ -970,17 +970,21 @@ int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, st
                   sprint_hex(icc_pk->serial, 3)
                  );
 
-    struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
-    if (dac_db) {
-        const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);
-        PrintAndLogEx(SUCCESS, "SSAD verified (%s) (%02hhx:%02hhx)", _GREEN_("ok"), dac_tlv->value[0], dac_tlv->value[1]);
-        tlvdb_add(tlv, dac_db);
-    } else {
-        PrintAndLogEx(ERR, "Error: SSAD verify error");
-        emv_pk_free(pk);
-        emv_pk_free(issuer_pk);
-        emv_pk_free(icc_pk);
-        return 4;
+    // Signed Static Application Data (SSAD) check
+    const struct tlv *ssad_tlv = tlvdb_get(tlv, 0x93, NULL);
+    if (ssad_tlv && ssad_tlv->len > 1) {
+        struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
+        if (dac_db) {
+            const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);
+            PrintAndLogEx(SUCCESS, "Signed Static Application Data (SSAD) verified (%s) (%02hhx:%02hhx)", _GREEN_("ok"), dac_tlv->value[0], dac_tlv->value[1]);
+            tlvdb_add(tlv, dac_db);
+        } else {
+            PrintAndLogEx(ERR, "Error: Signed Static Application Data (SSAD) verify error");
+            emv_pk_free(pk);
+            emv_pk_free(issuer_pk);
+            emv_pk_free(icc_pk);
+            return 4;
+        }
     }
 
     PrintAndLogEx(INFO, "* * Check Signed Dynamic Application Data (SDAD)");

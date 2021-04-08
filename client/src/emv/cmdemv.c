@@ -1143,9 +1143,13 @@ static int CmdEMVExec(const char *Cmd) {
             // CDA
             PrintAndLogEx(NORMAL, "\n* CDA:");
             struct tlvdb *ac_tlv = tlvdb_parse_multi(buf, len);
-            res = trCDA(tlvRoot, ac_tlv, pdol_data_tlv, cdol_data_tlv);
-            if (res) {
-                PrintAndLogEx(NORMAL, "CDA error (%d)", res);
+            if (tlvdb_get(ac_tlv, 0x9f4b, NULL)) {
+                res = trCDA(tlvRoot, ac_tlv, pdol_data_tlv, cdol_data_tlv);
+                if (res) {
+                    PrintAndLogEx(NORMAL, "CDA error (%d)", res);
+                }
+            } else {
+                PrintAndLogEx(NORMAL, "\n* Signed Dynamic Application Data (0x9f4b) not present");
             }
 
             free(ac_tlv);
