@@ -434,6 +434,7 @@ static int CmdSmartRaw(const char *Cmd) {
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (buf == NULL) {
         PrintAndLogEx(DEBUG, "failed to allocate memory");
+        free(payload);
         return PM3_EMALLOC;
     }
 
@@ -447,6 +448,7 @@ static int CmdSmartRaw(const char *Cmd) {
     // reading response from smart card
     int len = smart_response(buf, PM3_CMD_DATA_SIZE);
     if (len < 0) {
+        free(payload);
         free(buf);
         return PM3_ESOFT;
     }
@@ -1140,6 +1142,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
 
     int len = smart_responseEx(dataout, maxdataoutlen, verbose);
     if (len < 0) {
+        free(payload);
         return 1;
     }
 
@@ -1158,7 +1161,6 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
     }
 
     free(payload);
-
     *dataoutlen = len;
     return 0;
 }
