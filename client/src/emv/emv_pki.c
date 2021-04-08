@@ -349,7 +349,7 @@ unsigned char *emv_pki_sdatl_fill(const struct tlvdb *db, size_t *sdatl_len) {
 }
 
 struct tlvdb *emv_pki_recover_dac_ex(const struct emv_pk *enc_pk, const struct tlvdb *db, const struct tlv *sda_tlv, bool showData) {
-    size_t data_len;
+    size_t data_len = 0;
 
     // Static Data Authentication Tag List
     size_t sdatl_len;
