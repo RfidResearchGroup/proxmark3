@@ -368,14 +368,14 @@ typedef struct {
     uint8_t key_d[8];
     uint8_t key_c[8];
     uint8_t app_issuer_area[8];
-} PACKED picopass_hdr;
+} PACKED picopass_hdr_t;
 
 // iCLASS non-secure mode memory mapping
 typedef struct {
     uint8_t csn[8];
     picopass_conf_block_t conf;
     uint8_t app_issuer_area[8];
-} PACKED picopass_ns_hdr;
+} PACKED picopass_ns_hdr_t;
 
 
 typedef struct {
@@ -392,6 +392,31 @@ typedef struct {
     uint8_t fn[32];
     uint8_t data[];
 } PACKED flashmem_write_t;
+
+//-----------------------------------------------------------------------------
+// ISO 7618  Smart Card
+//-----------------------------------------------------------------------------
+typedef struct {
+    uint8_t atr_len;
+    uint8_t atr[50];
+} PACKED smart_card_atr_t;
+
+typedef enum SMARTCARD_COMMAND {
+    SC_CONNECT = (1 << 0),
+    SC_NO_DISCONNECT = (1 << 1),
+    SC_RAW = (1 << 2),
+    SC_SELECT = (1 << 3),
+    SC_RAW_T0 = (1 << 4),
+    SC_CLEARLOG = (1 << 5),
+    SC_LOG = (1 << 6),
+} smartcard_command_t;
+
+typedef struct {
+    uint8_t flags;
+    uint16_t len;
+    uint8_t data[];
+} PACKED smart_card_raw_t;
+
 
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000

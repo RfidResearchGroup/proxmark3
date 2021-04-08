@@ -109,7 +109,7 @@ static bool have_aa2(void) {
     return memcmp(aa2_key, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8);
 }
 
-static uint8_t get_pagemap(const picopass_hdr *hdr) {
+static uint8_t get_pagemap(const picopass_hdr_t *hdr) {
     return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
 }
 
@@ -322,7 +322,7 @@ static int reader_dump_mode(void) {
         set_tracing(false);
 
 
-        picopass_hdr *hdr = (picopass_hdr *)card_data;
+        picopass_hdr_t *hdr = (picopass_hdr_t *)card_data;
 
         // select tag.
         uint32_t eof_time = 0;
@@ -458,7 +458,7 @@ static int dump_sim_mode(void) {
         set_tracing(false);
 
 
-        picopass_hdr *hdr = (picopass_hdr *)card_data;
+        picopass_hdr_t *hdr = (picopass_hdr_t *)card_data;
 
         // select tag.
         uint32_t eof_time = 0;

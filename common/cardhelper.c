@@ -23,7 +23,6 @@
 #define CARD_INS_PINSIZE    0x08
 #define CARD_INS_CC         0x81
 #define CARD_INS_CC_DESC    0x82
-static uint8_t cmd[] = {0x96, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 // look for CardHelper
 bool IsCardHelperPresent(bool verbose) {
@@ -31,7 +30,7 @@ bool IsCardHelperPresent(bool verbose) {
     if (IfPm3Smartcard()) {
         int resp_len = 0;
         uint8_t version[] = {0x96, 0x69, 0x00, 0x00, 0x00};
-        uint8_t resp[20] = {0};
+        uint8_t resp[30] = {0};
         ExchangeAPDUSC(verbose, version, sizeof(version), true, true, resp, sizeof(resp), &resp_len);
 
         if (resp_len < 8) {
@@ -49,14 +48,12 @@ bool IsCardHelperPresent(bool verbose) {
 }
 
 static bool executeCrypto(uint8_t ins, uint8_t *src, uint8_t *dest) {
-    int resp_len = 0;
-    uint8_t dec[11] = {0};
-
-    cmd[1] = ins;
+    uint8_t cmd[] = {0x96, ins, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     memcpy(cmd + 5, src, 8);
 
-    ExchangeAPDUSC(false, cmd, sizeof(cmd), false, false, dec, sizeof(dec), &resp_len);
-
+    int resp_len = 0;
+    uint8_t dec[11] = {0};
+    ExchangeAPDUSC(false, cmd, sizeof(cmd), false, true, dec, sizeof(dec), &resp_len);
     if (resp_len == 10) {
         memcpy(dest, dec, 8);
         return true;

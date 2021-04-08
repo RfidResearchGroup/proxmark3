@@ -466,13 +466,13 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
         case jsfIclass: {
             JsonSaveStr(root, "FileType", "iclass");
 
-            picopass_hdr *hdr = (picopass_hdr *)data;
+            picopass_hdr_t *hdr = (picopass_hdr_t *)data;
             JsonSaveBufAsHexCompact(root, "$.Card.CSN", hdr->csn, sizeof(hdr->csn));
             JsonSaveBufAsHexCompact(root, "$.Card.Configuration", (uint8_t *)&hdr->conf, sizeof(hdr->conf));
 
             uint8_t pagemap = get_pagemap(hdr);
             if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
-                picopass_ns_hdr *ns_hdr = (picopass_ns_hdr *)data;
+                picopass_ns_hdr_t *ns_hdr = (picopass_ns_hdr_t *)data;
                 JsonSaveBufAsHexCompact(root, "$.Card.AIA", ns_hdr->app_issuer_area, sizeof(ns_hdr->app_issuer_area));
             } else {
                 JsonSaveBufAsHexCompact(root, "$.Card.Epurse", hdr->epurse, sizeof(hdr->epurse));

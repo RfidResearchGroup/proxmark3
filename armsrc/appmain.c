@@ -1746,7 +1746,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_SMART_RAW: {
-            SmartCardRaw(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            SmartCardRaw((smart_card_raw_t*)packet->data.asBytes);
             break;
         }
         case CMD_SMART_UPLOAD: {

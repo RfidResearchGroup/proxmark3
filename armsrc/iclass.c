@@ -35,7 +35,7 @@
 #include "ticks.h"
 #include "iso15693.h"
 
-static uint8_t get_pagemap(const picopass_hdr *hdr) {
+static uint8_t get_pagemap(const picopass_hdr_t *hdr) {
     return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
 }
 
@@ -217,7 +217,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
 
         //This is 'full sim' mode, where we use the emulator storage for data.
         //ie:  BigBuf_get_EM_addr should be previously filled with data from the "eload" command
-        picopass_hdr *hdr = (picopass_hdr *)BigBuf_get_EM_addr();
+        picopass_hdr_t *hdr = (picopass_hdr_t *)BigBuf_get_EM_addr();
         uint8_t pagemap = get_pagemap(hdr);
         if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
             do_iclass_simulation_nonsec();
@@ -1275,7 +1275,7 @@ static bool iclass_send_cmd_with_retries(uint8_t *cmd, size_t cmdsize, uint8_t *
  * @return false = fail
  *         true = Got all.
  */
-static bool select_iclass_tag_ex(picopass_hdr *hdr, bool use_credit_key, uint32_t *eof_time, uint8_t *status) {
+static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time, uint8_t *status) {
 
     static uint8_t act_all[] = { ICLASS_CMD_ACTALL };
     static uint8_t identify[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x00, 0x73, 0x33 };
@@ -1393,7 +1393,7 @@ static bool select_iclass_tag_ex(picopass_hdr *hdr, bool use_credit_key, uint32_
     return true;
 }
 
-bool select_iclass_tag(picopass_hdr *hdr, bool use_credit_key, uint32_t *eof_time) {
+bool select_iclass_tag(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time) {
     uint8_t result = 0;
     return select_iclass_tag_ex(hdr, use_credit_key, eof_time, &result);
 }
@@ -1402,7 +1402,7 @@ bool select_iclass_tag(picopass_hdr *hdr, bool use_credit_key, uint32_t *eof_tim
 // turn off afterwards
 void ReaderIClass(uint8_t flags) {
 
-    picopass_hdr hdr = {0};
+    picopass_hdr_t hdr = {0};
 //    uint8_t last_csn[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
     memset(resp, 0xFF, sizeof(resp));
@@ -1470,7 +1470,7 @@ void ReaderIClass(uint8_t flags) {
     switch_off();
 }
 
-bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr *hdr, uint32_t *start_time, uint32_t *eof_time, uint8_t *mac_out) {
+bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr_t *hdr, uint32_t *start_time, uint32_t *eof_time, uint8_t *mac_out) {
 
     uint8_t cmd_check[9] = { ICLASS_CMD_CHECK };
     uint8_t mac[4] = {0};
@@ -1538,7 +1538,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
         readcheck_cc[0] = 0x10 | ICLASS_CMD_READCHECK;
 
     // select card / e-purse
-    picopass_hdr hdr = {0};
+    picopass_hdr_t hdr = {0};
 
     iclass_premac_t *keys = (iclass_premac_t *)datain;
 
@@ -1628,7 +1628,7 @@ void iClass_ReadBlock(uint8_t *msg) {
 
     // select tag.
     uint32_t eof_time = 0;
-    picopass_hdr hdr = {0};
+    picopass_hdr_t hdr = {0};
     bool res = select_iclass_tag(&hdr, payload->use_credit_key, &eof_time);
     if (res == false) {
         if (payload->send_reply) {
@@ -1701,7 +1701,7 @@ void iClass_Dump(uint8_t *msg) {
 
     // select tag.
     uint32_t eof_time = 0;
-    picopass_hdr hdr = {0};
+    picopass_hdr_t hdr = {0};
     bool res = select_iclass_tag(&hdr, req->use_credit_key, &eof_time);
     if (res == false) {
         if (req->send_reply) {
@@ -1828,7 +1828,7 @@ void iClass_WriteBlock(uint8_t *msg) {
 
     // select tag.
     uint32_t eof_time = 0;
-    picopass_hdr hdr = {0};
+    picopass_hdr_t hdr = {0};
     uint8_t res = select_iclass_tag(&hdr, payload->req.use_credit_key, &eof_time);
     if (res == false) {
         goto out;
@@ -1950,7 +1950,7 @@ void iClass_Restore(iclass_restore_req_t *msg) {
 
     uint16_t written = 0;
     uint32_t eof_time = 0;
-    picopass_hdr hdr = {0};
+    picopass_hdr_t hdr = {0};
 
     // select
     bool res = select_iclass_tag(&hdr, msg->req.use_credit_key, &eof_time);

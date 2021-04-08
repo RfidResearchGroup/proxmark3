@@ -12,7 +12,7 @@
 #define CMDSMARTCARD_H__
 
 #include "common.h"
-#include "mifare.h" // structs
+#include "pm3_cmd.h" // structs
 
 int CmdSmartcard(const char *Cmd);
 
