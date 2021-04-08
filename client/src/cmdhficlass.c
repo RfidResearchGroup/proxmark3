@@ -189,10 +189,10 @@ static int load_config_cards(void) {
 }
 
 static const iclass_config_card_item_t *get_config_card_item(int idx) {
-    if (idx < 0 && idx > 13) {
-        idx = 13;
+    if (idx > -1 && idx < 14) {
+        return &iclass_config_types[idx];
     }
-    return &iclass_config_types[idx];
+    return &iclass_config_types[13];
 }
 
 static void print_config_cards(void) {
