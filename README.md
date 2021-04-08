@@ -20,7 +20,7 @@
 |[Development](#development) | **[Important notes on ModemManager for Linux users](/doc/md/Installation_Instructions/ModemManager-Must-Be-Discarded.md)** | [Validating proxmark client functionality](/doc/md/Use_of_Proxmark/1_Validation.md) |
 |[Maintainers](#maintainers--package-distro-)| **[Homebrew (Mac OS X) & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md)** | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
 |[Proxmark3 GUI](#proxmark3-gui)|**[Setup and build for Windows](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md)**|[Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
-|[Precompiled binaries](#precompiled-binaries)|[Blue shark manual](/doc/bt_manual_v10.md) ||
+|[Pre-compiled binaries](#precompiled-binaries)|[Blue shark manual](/doc/bt_manual_v10.md) ||
 |[Donations](#donations)||[Command Cheat sheet](/doc/cheatsheet.md)|
 ||[Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)|[More cheat sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
 ||**[Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md)**|[Complete client command set](/doc/commands.md)|
@@ -39,19 +39,18 @@
 |[Notes on Color usage](/doc/colors_notes.md)|[Makefile vs CMake](/doc/md/Development/Makefile-vs-CMake.md)|[Notes on Cloner guns](/doc/cloner_notes.md)|
 |[Notes on cliparser usage](/doc/cliparser.md)|[Notes on clocks](/doc/clocks.md)||
 
-
-## Build for Proxmark3 RDV4
+# How to build?
+## Proxmark3 RDV4
 See the instruction links in the tables above to build, flash and run for your Proxmark3 RDV4 device.
 
-## Build for generic Proxmark3 platforms
+## Generic Proxmark3 platforms
 In order to build this repo for generic Proxmark3 platforms we urge you to read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
 
 With generic Proxmark3 platforms we mean: 
   - RDV1, RDV2, RDV3 easy
   - Proxmark Evolution (needs extra care)
+  - Ryscorp green PCB version, Pm3 Pro
   - Radiowar black PCB version
-  - Ryscorp green PCB version
-  - Ryscorp Pm3Pro
   - VX
   - numerous Chinese adapted versions of the RDV3 easy (kkmoon, pisworks etc)
 
@@ -63,7 +62,10 @@ Proxmark3 RDV4 hardware modifications:
   * added flash memory 256kb
   * added smart card module
   * added FPC connector
-  * improved antennas, swappable, multi Q factor for LF
+  * improved antennas
+    * swappable
+    * LF Q factor switch
+    * LF 125/134 freqency switch
   * tiny PCB form factor
   * ABS case
 
@@ -79,7 +81,6 @@ see the [Changelog file](CHANGELOG.md) which we try to keep updated. In short th
     * CLANG
   * auto detection of serial ports and seamless intergration with bluetooth addon
   * reconnect to device 
-  * 
 
 
 ## Development
@@ -106,11 +107,7 @@ This repo compiles nicely on
 
 
 ## Precompiled binaries
-We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where package maintainer [@gator96100](https://github.com/gator96100) has set up a AWS bucket with precompiled Proxspace (Mingw) binaries which is recompiled every night and with that also up-to-date. We link to these files here as to make it easier for users.
-
-_If you use his pre-compiled Proxspace binaries do consider buy him a coffee for his efforts. Remember nothing says thank you as much as a donation._
-
-If you are having troubles with these files, we suggest to read the [homepage of his proxmark builds](https://www.proxmarkbuilds.org/) or read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) 
+We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where package maintainer [@gator96100](https://github.com/gator96100) has set up a AWS bucket with precompiled Proxspace (Mingw) binaries which is recompiled every night and with that also up-to-date. We link to these files here as to make it easier for users. If you are having troubles with these files, we suggest to read the [homepage of his proxmark builds](https://www.proxmarkbuilds.org/) or read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) 
 
 ### Proxmark3 RDV4 devices
 - [Precompiled builds for RDV40 dedicated x64](https://www.proxmarkbuilds.org/#rdv40-64/)
@@ -146,5 +143,8 @@ The official PM3-GUI from Gaucho will not work. Not to mention is quite old and 
 
 # Donations
 
-Nothing says thank you as much as a donation. So if you feel the love, do feel free to become a [Iceman patron](https://www.patreon.com/iceman1001)
+Nothing says thank you as much as a donation. 
 
+If you feel the love, do feel free to become a [Iceman patron](https://www.patreon.com/iceman1001).
+
+If you are using @gator96100 's Proxspace with pre-compiled binaries do consider buy him a coffee for his efforts.
