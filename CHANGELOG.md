@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix swapped DESELECT and WTX annotations (@VortixDev)
  - Fixed `hf 15 findafi` - cliparser bug, and loop is user interruptable (@iceman1001)
  - Added `hf mf wipe` - takes a keyfile and wipes a MFC to default values (@iceman1001)
  - Changed `pm3 shell` - now prioritise USB connections in WSL1 (@gator96100)
