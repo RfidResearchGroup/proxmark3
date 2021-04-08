@@ -202,7 +202,7 @@ Check column "offline" for their availability.
 |`hf 14b sim             `|N       |`Fake ISO 14443B tag`
 |`hf 14b sniff           `|N       |`Eavesdrop ISO 14443B`
 |`hf 14b rdbl            `|N       |`Read SRI512/SRIX4x block`
-|`hf 14b sriwrite        `|N       |`Write data to a SRI512 | SRIX4K tag`
+|`hf 14b sriwrite        `|N       |`Write data to a SRI512 or SRIX4K tag`
 
 
 ### hf 15
