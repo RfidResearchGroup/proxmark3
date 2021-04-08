@@ -268,11 +268,10 @@ static int CmdHF14BSniff(const char *Cmd) {
 }
 
 static int CmdHF14BCmdRaw(const char *Cmd) {
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b raw",
                   "Sends raw bytes to card",
-                  "hf 14b raw -cks      --data 0200a40400    -> standard select\n"
+                  "hf 14b raw -cks      --data 0200a40400    -> standard select, apdu 0200a4000 (7816)\n"
                   "hf 14b raw -ck --sr  --data 0200a40400    -> SRx select\n"
                   "hf 14b raw -ck --cts --data 0200a40400    -> C-ticket select\n"
                  );
@@ -457,7 +456,7 @@ static int print_atqb_resp(uint8_t *data, uint8_t cid) {
     PrintAndLogEx(SUCCESS, " Protocol Type: Protocol is %scompliant with ISO/IEC 14443-4", (protocolT) ? "" : "not ");
 
     uint8_t fwt = data[6] >> 4;
-    if (fwt < 16) {
+    if (fwt < 15) {
         uint32_t etus = (32 << fwt);
         uint32_t fwt_time = (302 << fwt);
         PrintAndLogEx(SUCCESS, "Frame Wait Integer: %u - %u ETUs | %u us", fwt, etus, fwt_time);
@@ -1126,7 +1125,7 @@ static int CmdHF14BWriteSri(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b sriwrite",
-                  "Write data to a SRI512 | SRIX4K block",
+                  "Write data to a SRI512 or SRIX4K block",
                   "hf 14b sriwrite --4k -b 100 -d 11223344\n"
                   "hf 14b sriwrite --4k --sb -d 11223344    --> special block write\n"
                   "hf 14b sriwrite --512 -b 15 -d 11223344\n"
