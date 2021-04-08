@@ -1,11 +1,11 @@
-// 
+//
 //  bruteforce the upper 16bits of a partial key recovered from  mf_nonce_brute.
 //  J-run's original idea was a two part recovery vector with first a offline trace and then online for 2 bytes.
-//  
+//
 //  This idea is two use only offline, to recover a nested authentication key.
 //  Assumption,  we get a read/write command after a nested auth,  we need 22 bytes of data.
 //  Iceman, 2021,
-//  
+//
 
 #define __STDC_FORMAT_MACROS
 
@@ -41,7 +41,7 @@ typedef struct thread_args {
     uint32_t part_key;
     uint32_t nt_enc;
     uint32_t nr_enc;
-    uint8_t enc[ENC_LEN];  // next encrypted command + a full read/write 
+    uint8_t enc[ENC_LEN];  // next encrypted command + a full read/write
 } targs;
 
 //------------------------------------------------------------------
@@ -137,7 +137,7 @@ static int param_gethex_to_eol(const char *line, int paramnum, uint8_t *data, in
 }
 
 static void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, const size_t hex_max_len,
-                   const size_t min_str_len, const size_t spaces_between, bool uppercase) {
+                          const size_t min_str_len, const size_t spaces_between, bool uppercase) {
 
     if (buf == NULL) return;
 
@@ -216,10 +216,10 @@ static void *brute_thread(void *arguments) {
 
         crypto1_deinit(pcs);
 
-        if (CheckCrc14443(CRC_14443_A, dec , 4)) {
+        if (CheckCrc14443(CRC_14443_A, dec, 4)) {
 
             // check crc-16 in the end
-        
+
             if (CheckCrc14443(CRC_14443_A, dec + 4, 18)) {
 
                 // lock this section to avoid interlacing prints from different threats
@@ -259,7 +259,7 @@ int main(int argc, char *argv[]) {
     sscanf(argv[4], "%x", &nr_enc);
 
     int enc_len = 0;
-    uint8_t enc[ENC_LEN] = {0};  // next encrypted command + a full read/write 
+    uint8_t enc[ENC_LEN] = {0};  // next encrypted command + a full read/write
     param_gethex_to_eol(argv[5], 0, enc, sizeof(enc), &enc_len);
 
     printf("-------------------------------------------------\n");
@@ -267,7 +267,7 @@ int main(int argc, char *argv[]) {
     printf("partial key.. %08x\n", part_key);
     printf("nt enc....... %08x\n", nt_enc);
     printf("nr enc....... %08x\n", nr_enc);
-    printf("next encrypted cmd: %s\n", sprint_hex_inrow_ex(enc, ENC_LEN ,0));
+    printf("next encrypted cmd: %s\n", sprint_hex_inrow_ex(enc, ENC_LEN, 0));
 
     clock_t t1 = clock();
 

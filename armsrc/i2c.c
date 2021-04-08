@@ -735,7 +735,7 @@ void SmartCardRaw(smart_card_raw_t *p) {
 
     if ((flags & SC_LOG) == SC_LOG)
         set_tracing(true);
-    else 
+    else
         set_tracing(false);
 
     if ((flags & SC_CONNECT) == SC_CONNECT) {
@@ -758,11 +758,11 @@ void SmartCardRaw(smart_card_raw_t *p) {
         LogTrace(p->data, p->len, 0, 0, NULL, true);
 
         bool res = I2C_BufferWrite(
-                p->data,
-                p->len,
-                ((flags & SC_RAW_T0) ? I2C_DEVICE_CMD_SEND_T0 : I2C_DEVICE_CMD_SEND),
-                I2C_DEVICE_ADDRESS_MAIN
-            );
+                       p->data,
+                       p->len,
+                       ((flags & SC_RAW_T0) ? I2C_DEVICE_CMD_SEND_T0 : I2C_DEVICE_CMD_SEND),
+                       I2C_DEVICE_ADDRESS_MAIN
+                   );
         if (res == false && DBGLEVEL > 3) {
             DbpString(I2C_ERROR);
             reply_ng(CMD_SMART_RAW, PM3_ESOFT, NULL, 0);

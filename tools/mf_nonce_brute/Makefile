@@ -1,6 +1,6 @@
-MYSRCPATHS = ../../common ../../common/crapto1 
+MYSRCPATHS = ../../common ../../common/crapto1
 MYSRCS = crypto1.c crapto1.c bucketsort.c iso14443crc.c sleep.c
-MYINCLUDES = -I../../include -I../../common 
+MYINCLUDES = -I../../include -I../../common
 MYCFLAGS =
 MYDEFS =
 MYLDLIBS =

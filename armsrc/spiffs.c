@@ -213,7 +213,7 @@ uint32_t size_in_spiffs(const char *filename) {
     if (SPIFFS_stat(&fs, filename, &s) < 0) {
         Dbprintf("errno %i\n", SPIFFS_errno(&fs));
         return 0;
-    } 
+    }
     return s.size;
 }
 

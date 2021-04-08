@@ -998,311 +998,311 @@ void SniffHitag2(void) {
     DbpString("Starting Hitag2 sniffing");
     LED_D_ON();
 
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
     BigBuf_free();
     BigBuf_Clear_ext(false);
     clear_trace();
     set_tracing(true);
 
-/*
-    lf_init(false, false);
+    /*
+        lf_init(false, false);
 
-    // no logging of the raw signal 
-    g_logging = lf_get_reader_modulation();
-    uint32_t total_count = 0;
+        // no logging of the raw signal
+        g_logging = lf_get_reader_modulation();
+        uint32_t total_count = 0;
 
-    uint8_t rx[20 * 8 * 2];
-    while (BUTTON_PRESS() == false) {
+        uint8_t rx[20 * 8 * 2];
+        while (BUTTON_PRESS() == false) {
 
-        lf_reset_counter();
+            lf_reset_counter();
 
-        WDT_HIT();
+            WDT_HIT();
 
-        size_t periods = 0;
-        uint16_t rxlen = 0;
-        memset(rx, 0x00, sizeof(rx));
+            size_t periods = 0;
+            uint16_t rxlen = 0;
+            memset(rx, 0x00, sizeof(rx));
 
-        // Use the current modulation state as starting point
-        uint8_t mod_state = lf_get_reader_modulation();
+            // Use the current modulation state as starting point
+            uint8_t mod_state = lf_get_reader_modulation();
 
-        while (rxlen < sizeof(rx)) {
-            periods = lf_count_edge_periods(64);
-            // Evaluate the number of periods before the next edge
-            if (periods >= 24 && periods < 64) {
-                // Detected two sequential equal bits and a modulation switch
-                // NRZ modulation: (11 => --|) or (11 __|)
-                rx[rxlen++] = mod_state;
-                rx[rxlen++] = mod_state;
-                // toggle tag modulation state
-                mod_state ^= 1;
-            } else if (periods > 0 && periods < 24) {
-                // Detected one bit and a modulation switch
-                // NRZ modulation: (1 => -|) or (0 _|)
-                rx[rxlen++] = mod_state;
-                mod_state ^= 1;
-            } else {
-                mod_state ^= 1;
-                break;
-            }
-        }
-        
-        if (rxlen == 0) 
-            continue;
-
-        // tag sends 11111 + uid,  
-        bool got_tag = ((memcmp(rx, "\x01\x00\x01\x00\x01\x00\x01\x00\x01\x00", 10) == 0));
-
-        if (got_tag) {
-            // mqnchester decode 
-            bool bad_man = false;
-            uint16_t bitnum = 0;
-            for (uint16_t i = 0; i < rxlen; i += 2) {
-                if (rx[i] == 1 && (rx[i + 1] == 0)) {
-                    rx[bitnum++] = 0;
-                } else if ((rx[i] == 0) && rx[i + 1] == 1) {
-                    rx[bitnum++] = 1;
+            while (rxlen < sizeof(rx)) {
+                periods = lf_count_edge_periods(64);
+                // Evaluate the number of periods before the next edge
+                if (periods >= 24 && periods < 64) {
+                    // Detected two sequential equal bits and a modulation switch
+                    // NRZ modulation: (11 => --|) or (11 __|)
+                    rx[rxlen++] = mod_state;
+                    rx[rxlen++] = mod_state;
+                    // toggle tag modulation state
+                    mod_state ^= 1;
+                } else if (periods > 0 && periods < 24) {
+                    // Detected one bit and a modulation switch
+                    // NRZ modulation: (1 => -|) or (0 _|)
+                    rx[rxlen++] = mod_state;
+                    mod_state ^= 1;
                 } else {
-                    bad_man = true;
+                    mod_state ^= 1;
+                    break;
                 }
             }
 
-            if (bad_man) {
-                DBG DbpString("bad manchester");
-                continue;
-            }
-
-            if (bitnum < 5) {
-                DBG DbpString("too few bits");
-                continue;
-            }
-
-            // skip header 11111
-            uint16_t i = 0;
-            if (got_tag) {
-                i = 5;
-            }
-
-            // Pack the response into a byte array
-            rxlen = 0;
-            for (; i < bitnum; i++) {
-                uint8_t b = rx[i];
-                rx[rxlen >> 3] |= b << (7 - (rxlen % 8));
-                rxlen++;
-            }
-
-            // skip spurious bit
-            if (rxlen % 8 == 1) {
-                rxlen--;
-            }
-
-            // nothing to log
             if (rxlen == 0)
                 continue;
 
-            LogTrace(rx, nbytes(rxlen), 0, 0, NULL, false);
-            total_count += nbytes(rxlen);
-        } else {
-            // decode reader comms
-            LogTrace(rx, rxlen, 0, 0, NULL, true);
-            total_count += rxlen;
-            // Pack the response into a byte array
+            // tag sends 11111 + uid,
+            bool got_tag = ((memcmp(rx, "\x01\x00\x01\x00\x01\x00\x01\x00\x01\x00", 10) == 0));
 
-            // LogTrace(rx, nbytes(rdr), 0, 0, NULL, true);
-            // total_count += nbytes(rdr);
+            if (got_tag) {
+                // mqnchester decode
+                bool bad_man = false;
+                uint16_t bitnum = 0;
+                for (uint16_t i = 0; i < rxlen; i += 2) {
+                    if (rx[i] == 1 && (rx[i + 1] == 0)) {
+                        rx[bitnum++] = 0;
+                    } else if ((rx[i] == 0) && rx[i + 1] == 1) {
+                        rx[bitnum++] = 1;
+                    } else {
+                        bad_man = true;
+                    }
+                }
+
+                if (bad_man) {
+                    DBG DbpString("bad manchester");
+                    continue;
+                }
+
+                if (bitnum < 5) {
+                    DBG DbpString("too few bits");
+                    continue;
+                }
+
+                // skip header 11111
+                uint16_t i = 0;
+                if (got_tag) {
+                    i = 5;
+                }
+
+                // Pack the response into a byte array
+                rxlen = 0;
+                for (; i < bitnum; i++) {
+                    uint8_t b = rx[i];
+                    rx[rxlen >> 3] |= b << (7 - (rxlen % 8));
+                    rxlen++;
+                }
+
+                // skip spurious bit
+                if (rxlen % 8 == 1) {
+                    rxlen--;
+                }
+
+                // nothing to log
+                if (rxlen == 0)
+                    continue;
+
+                LogTrace(rx, nbytes(rxlen), 0, 0, NULL, false);
+                total_count += nbytes(rxlen);
+            } else {
+                // decode reader comms
+                LogTrace(rx, rxlen, 0, 0, NULL, true);
+                total_count += rxlen;
+                // Pack the response into a byte array
+
+                // LogTrace(rx, nbytes(rdr), 0, 0, NULL, true);
+                // total_count += nbytes(rdr);
+            }
+            LED_A_INV();
         }
-        LED_A_INV();
-    }
 
-    lf_finalize();
+        lf_finalize();
 
-    Dbprintf("Collected %u bytes", total_count);
+        Dbprintf("Collected %u bytes", total_count);
 
-    */
+        */
 
-	// Set up eavesdropping mode, frequency divisor which will drive the FPGA
-	// and analog mux selection.
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); // 125Khz
-	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-	RELAY_OFF();
+    // Set up eavesdropping mode, frequency divisor which will drive the FPGA
+    // and analog mux selection.
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); // 125Khz
+    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+    RELAY_OFF();
 
- 	// Configure output pin that is connected to the FPGA (for modulating)
-	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+    // Configure output pin that is connected to the FPGA (for modulating)
+    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
 
-	// Disable modulation, we are going to eavesdrop, not modulate ;)
-	LOW(GPIO_SSC_DOUT);
-	
-	// Enable Peripheral Clock for TIMER_CLOCK1, used to capture edges of the reader frames
-	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
-	AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
-	
-	// Disable timer during configuration	
-	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
-	
-	// Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
-	// external trigger rising edge, load RA on rising edge of TIOA.
-	AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_ETRGEDG_BOTH | AT91C_TC_ABETRG | AT91C_TC_LDRA_BOTH;
-	
-	// Enable and reset counter
-	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-	
+    // Disable modulation, we are going to eavesdrop, not modulate ;)
+    LOW(GPIO_SSC_DOUT);
+
+    // Enable Peripheral Clock for TIMER_CLOCK1, used to capture edges of the reader frames
+    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
+    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
+
+    // Disable timer during configuration
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+
+    // Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
+    // external trigger rising edge, load RA on rising edge of TIOA.
+    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_ETRGEDG_BOTH | AT91C_TC_ABETRG | AT91C_TC_LDRA_BOTH;
+
+    // Enable and reset counter
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+
     int frame_count = 0, response = 0, overflow = 0, lastbit = 1, tag_sof = 4;
-	bool rising_edge = false, reader_frame = false, bSkip = true;
-	uint8_t rx[HITAG_FRAME_LEN];
-	size_t rxlen = 0;
-	
-	auth_table_len = 0;
-	auth_table_pos = 0;
+    bool rising_edge = false, reader_frame = false, bSkip = true;
+    uint8_t rx[HITAG_FRAME_LEN];
+    size_t rxlen = 0;
 
-	// Reset the received frame, frame count and timing info
-	memset(rx, 0x00, sizeof(rx));
-	    
+    auth_table_len = 0;
+    auth_table_pos = 0;
+
+    // Reset the received frame, frame count and timing info
+    memset(rx, 0x00, sizeof(rx));
+
     auth_table = (uint8_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
-	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
+    memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 
-	while(BUTTON_PRESS() == false) {
+    while (BUTTON_PRESS() == false) {
 
-		WDT_HIT();
+        WDT_HIT();
         memset(rx, 0x00, sizeof(rx));
 
-		// Receive frame, watch for at most T0 * EOF periods
-		while (AT91C_BASE_TC1->TC_CV < (HITAG_T0 * HITAG_T_EOF) ) {
-			// Check if rising edge in modulation is detected
-			if(AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
-				// Retrieve the new timing values 
-				int ra = (AT91C_BASE_TC1->TC_RA / HITAG_T0);
-				
-				// Find out if we are dealing with a rising or falling edge
-				rising_edge = (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME) > 0;
+        // Receive frame, watch for at most T0 * EOF periods
+        while (AT91C_BASE_TC1->TC_CV < (HITAG_T0 * HITAG_T_EOF)) {
+            // Check if rising edge in modulation is detected
+            if (AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
+                // Retrieve the new timing values
+                int ra = (AT91C_BASE_TC1->TC_RA / HITAG_T0);
 
-				// Shorter periods will only happen with reader frames
-				if (reader_frame == false && rising_edge && ra < HITAG_T_TAG_CAPTURE_ONE_HALF) {
-					// Switch from tag to reader capture
-					LED_C_OFF();
-					reader_frame = true;
-					rxlen = 0;
-				}
-				
-				// Only handle if reader frame and rising edge, or tag frame and falling edge
-				if (reader_frame == rising_edge) {
+                // Find out if we are dealing with a rising or falling edge
+                rising_edge = (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME) > 0;
+
+                // Shorter periods will only happen with reader frames
+                if (reader_frame == false && rising_edge && ra < HITAG_T_TAG_CAPTURE_ONE_HALF) {
+                    // Switch from tag to reader capture
+                    LED_C_OFF();
+                    reader_frame = true;
+                    rxlen = 0;
+                }
+
+                // Only handle if reader frame and rising edge, or tag frame and falling edge
+                if (reader_frame == rising_edge) {
                     overflow += ra;
-					continue;
-				}
-				
-				// Add the buffered timing values of earlier captured edges which were skipped
-				ra += overflow;
-				overflow = 0;
-				
-				if (reader_frame) {
-					LED_B_ON();
-					// Capture reader frame
-					if(ra >= HITAG_T_STOP) {
+                    continue;
+                }
+
+                // Add the buffered timing values of earlier captured edges which were skipped
+                ra += overflow;
+                overflow = 0;
+
+                if (reader_frame) {
+                    LED_B_ON();
+                    // Capture reader frame
+                    if (ra >= HITAG_T_STOP) {
 //						if (rxlen != 0) {
-							//DbpString("wierd0?");
+                        //DbpString("wierd0?");
 //						}
-						// Capture the T0 periods that have passed since last communication or field drop (reset)
-						response = (ra - HITAG_T_LOW);
-					} else if(ra >= HITAG_T_1_MIN ) {
-						// '1' bit 
-						rx[rxlen / 8] |= 1 << (7 - (rxlen % 8));
-						rxlen++;
-					} else if(ra >= HITAG_T_0_MIN) {
-						// '0' bit 
-						rx[rxlen / 8] |= 0 << (7-(rxlen%8));
-						rxlen++;
-					}
+                        // Capture the T0 periods that have passed since last communication or field drop (reset)
+                        response = (ra - HITAG_T_LOW);
+                    } else if (ra >= HITAG_T_1_MIN) {
+                        // '1' bit
+                        rx[rxlen / 8] |= 1 << (7 - (rxlen % 8));
+                        rxlen++;
+                    } else if (ra >= HITAG_T_0_MIN) {
+                        // '0' bit
+                        rx[rxlen / 8] |= 0 << (7 - (rxlen % 8));
+                        rxlen++;
+                    }
 
-				} else {
-					LED_C_ON();
-					// Capture tag frame (manchester decoding using only falling edges)
-					if(ra >= HITAG_T_EOF) {
+                } else {
+                    LED_C_ON();
+                    // Capture tag frame (manchester decoding using only falling edges)
+                    if (ra >= HITAG_T_EOF) {
 //						if (rxlen != 0) {
-							//DbpString("wierd1?");
+                        //DbpString("wierd1?");
 //						}
-						// Capture the T0 periods that have passed since last communication or field drop (reset)
-						// We always recieve a 'one' first, which has the falling edge after a half period |-_|
-						response = ra - HITAG_T_TAG_HALF_PERIOD;
+                        // Capture the T0 periods that have passed since last communication or field drop (reset)
+                        // We always recieve a 'one' first, which has the falling edge after a half period |-_|
+                        response = ra - HITAG_T_TAG_HALF_PERIOD;
 
-					} else if(ra >= HITAG_T_TAG_CAPTURE_FOUR_HALF) {
-						// Manchester coding example |-_|_-|-_| (101)
-						rx[rxlen / 8] |= 0 << (7 - (rxlen % 8));
-						rxlen++;
-						rx[rxlen / 8] |= 1 << (7 - (rxlen % 8));
-						rxlen++;
+                    } else if (ra >= HITAG_T_TAG_CAPTURE_FOUR_HALF) {
+                        // Manchester coding example |-_|_-|-_| (101)
+                        rx[rxlen / 8] |= 0 << (7 - (rxlen % 8));
+                        rxlen++;
+                        rx[rxlen / 8] |= 1 << (7 - (rxlen % 8));
+                        rxlen++;
 
-					} else if(ra >= HITAG_T_TAG_CAPTURE_THREE_HALF) {
-						// Manchester coding example |_-|...|_-|-_| (0...01)
-						rx[rxlen / 8] |= 0 << (7 - (rxlen % 8));
-						rxlen++;
-						// We have to skip this half period at start and add the 'one' the second time 
-						if (bSkip == false) {
-							rx[rxlen / 8] |= 1 << (7 - (rxlen % 8));
-							rxlen++;
-						}
-						lastbit = !lastbit;
-						bSkip = !bSkip;
+                    } else if (ra >= HITAG_T_TAG_CAPTURE_THREE_HALF) {
+                        // Manchester coding example |_-|...|_-|-_| (0...01)
+                        rx[rxlen / 8] |= 0 << (7 - (rxlen % 8));
+                        rxlen++;
+                        // We have to skip this half period at start and add the 'one' the second time
+                        if (bSkip == false) {
+                            rx[rxlen / 8] |= 1 << (7 - (rxlen % 8));
+                            rxlen++;
+                        }
+                        lastbit = !lastbit;
+                        bSkip = !bSkip;
 
-					} else if(ra >= HITAG_T_TAG_CAPTURE_TWO_HALF) {
-						// Manchester coding example |_-|_-| (00) or |-_|-_| (11)
-						if (tag_sof) {
-							// Ignore bits that are transmitted during SOF
-							tag_sof--;
-						} else {
-							// bit is same as last bit
-							rx[rxlen / 8] |= lastbit << (7 - (rxlen % 8));
-							rxlen++;
-						}
-					}
-				}
-			}
-		}
-		
-		// Check if frame was captured
-		if(rxlen) {
-			frame_count++;
-			LogTrace(rx, nbytes(rxlen), response, 0, NULL, reader_frame);
-			
-			// Check if we recognize a valid authentication attempt
-			if (nbytes(rxlen) == 8) {
-				// Store the authentication attempt
-				if (auth_table_len < (AUTH_TABLE_LENGTH - 8)) {
-					memcpy(auth_table + auth_table_len, rx, 8);
-					auth_table_len += 8;
-				}
-			}
-			
-			// Reset the received frame and response timing info
-			memset(rx, 0x00, sizeof(rx));
-			response = 0;
-			reader_frame = false;
-			lastbit = 1;
-			bSkip = true;
-			tag_sof = 4;
-			overflow = 0;
-			
-			LED_B_OFF();
-			LED_C_OFF();
-		} else {
-			// Save the timer overflow, will be 0 when frame was received
-			overflow += (AT91C_BASE_TC1->TC_CV / HITAG_T0);
-		}
-		// Reset the frame length
-		rxlen = 0;
-		// Reset the timer to restart while-loop that receives frames
-		AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+                    } else if (ra >= HITAG_T_TAG_CAPTURE_TWO_HALF) {
+                        // Manchester coding example |_-|_-| (00) or |-_|-_| (11)
+                        if (tag_sof) {
+                            // Ignore bits that are transmitted during SOF
+                            tag_sof--;
+                        } else {
+                            // bit is same as last bit
+                            rx[rxlen / 8] |= lastbit << (7 - (rxlen % 8));
+                            rxlen++;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check if frame was captured
+        if (rxlen) {
+            frame_count++;
+            LogTrace(rx, nbytes(rxlen), response, 0, NULL, reader_frame);
+
+            // Check if we recognize a valid authentication attempt
+            if (nbytes(rxlen) == 8) {
+                // Store the authentication attempt
+                if (auth_table_len < (AUTH_TABLE_LENGTH - 8)) {
+                    memcpy(auth_table + auth_table_len, rx, 8);
+                    auth_table_len += 8;
+                }
+            }
+
+            // Reset the received frame and response timing info
+            memset(rx, 0x00, sizeof(rx));
+            response = 0;
+            reader_frame = false;
+            lastbit = 1;
+            bSkip = true;
+            tag_sof = 4;
+            overflow = 0;
+
+            LED_B_OFF();
+            LED_C_OFF();
+        } else {
+            // Save the timer overflow, will be 0 when frame was received
+            overflow += (AT91C_BASE_TC1->TC_CV / HITAG_T0);
+        }
+        // Reset the frame length
+        rxlen = 0;
+        // Reset the timer to restart while-loop that receives frames
         AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
-	}
+        AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+    }
 
     LEDsoff();
-	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	set_tracing(false);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    set_tracing(false);
 
-	Dbprintf("frame received: %d",frame_count);
-	Dbprintf("Authentication Attempts: %d",(auth_table_len / 8));
+    Dbprintf("frame received: %d", frame_count);
+    Dbprintf("Authentication Attempts: %d", (auth_table_len / 8));
 
 }
 

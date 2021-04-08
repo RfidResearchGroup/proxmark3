@@ -147,7 +147,7 @@ def selftests():
         for c in curvenames:
             for h in [None, "md5", "sha1", "sha256", "sha512"]:
                 recovered |= recover_multiple(t['samples'][::2], t['samples'][1::2], c, alghash=h)
-                
+
         if (len(recovered) == 1):
             pk = recovered.pop()
             pk = binascii.hexlify(pk).decode('utf8')

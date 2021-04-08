@@ -592,7 +592,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
         WDT_HIT();
 
         // since simulation is a tight time critical loop,
-        // we only check for user request to end at iteration 3000, 9000. 
+        // we only check for user request to end at iteration 3000, 9000.
         if (flip == 3) {
             if (data_available()) {
                 retval = PM3_EOPABORTED;
@@ -689,7 +689,7 @@ void felica_sim_lite(uint8_t *uid) {
     uint8_t *curresp = NULL;
     bool listenmode = true;
     // uint32_t frtm = GetCountSspClk();
-    
+
     uint8_t flip = 0;
     uint16_t checker = 0;
     for (;;) {
@@ -697,7 +697,7 @@ void felica_sim_lite(uint8_t *uid) {
         WDT_HIT();
 
         // since simulation is a tight time critical loop,
-        // we only check for user request to end at iteration 3000, 9000. 
+        // we only check for user request to end at iteration 3000, 9000.
         if (flip == 3) {
             if (data_available()) {
                 retval = PM3_EOPABORTED;

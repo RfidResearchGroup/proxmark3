@@ -91,7 +91,7 @@ void DecodeBlock6(uint8_t *src) {
     c[5] = 0x02;
     ExchangeAPDUSC(false, c, sizeof(c), false, false, resp, sizeof(resp), &resp_len);
 
-    
+
     if (resp_len < 11) {
         return;
     }
@@ -137,7 +137,7 @@ int GetConfigCardByIdx(uint8_t typ, uint8_t *blocks) {
 
     int resp_len = 0;
     uint8_t resp[254] = {0};
-    uint8_t c[] = {0x96, CARD_INS_CC, 0x00, 0x00, 17, typ, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    uint8_t c[] = {0x96, CARD_INS_CC, 0x00, 0x00, 17, typ, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     ExchangeAPDUSC(false, c, sizeof(c), false, true, resp, sizeof(resp), &resp_len);
 
     if (resp_len < 2) {

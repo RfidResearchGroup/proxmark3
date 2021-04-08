@@ -79,7 +79,7 @@ static size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
 
 #define LIMIT_DEV  20
 
-    // timeout limit to 100 000 w/o 
+    // timeout limit to 100 000 w/o
     uint32_t timeout = 100000;
     size_t periods = 0;
     uint8_t avg_peak = adc_avg + LIMIT_DEV;
@@ -135,7 +135,7 @@ static size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
                         }
 
                     }
-                }                
+                }
             }
 
             previous_adc_val = adc_val;
@@ -220,8 +220,8 @@ void lf_init(bool reader, bool simulate) {
     // When in reader mode, give the field a bit of time to settle.
     // 313T0 = 313 * 8us = 2504us = 2.5ms  Hitag2 tags needs to be fully powered.
 //    if (reader) {
-        // 10 ms
-        SpinDelay(10);
+    // 10 ms
+    SpinDelay(10);
 //    }
 
     // Steal this pin from the SSP (SPI communication channel with fpga) and use it to control the modulation

@@ -1112,7 +1112,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
             break;
         }
-        case CMD_LF_HITAG_ELOAD: { 
+        case CMD_LF_HITAG_ELOAD: {
             /*
             struct p {
                 uint16_t len;
@@ -1746,7 +1746,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_SMART_RAW: {
-            SmartCardRaw((smart_card_raw_t*)packet->data.asBytes);
+            SmartCardRaw((smart_card_raw_t *)packet->data.asBytes);
             break;
         }
         case CMD_SMART_UPLOAD: {

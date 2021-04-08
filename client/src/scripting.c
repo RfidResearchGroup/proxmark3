@@ -1281,7 +1281,7 @@ static int l_cwd(lua_State *L) {
     uint16_t path_len = FILENAME_MAX; // should be a good starting point
     char *cwd = (char *)calloc(path_len, sizeof(uint8_t));
     if (cwd == NULL) {
-        return returnToLuaWithError(L, "Failed to allocate memory");        
+        return returnToLuaWithError(L, "Failed to allocate memory");
     }
 
     while (GetCurrentDir(cwd, path_len) == NULL) {

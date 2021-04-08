@@ -376,7 +376,7 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
                    count[odd_even],
                    odd_even == EVEN_STATE ? "even" : "odd",
                    bitflip,
-                    (1 << 24) - count[odd_even],
+                   (1 << 24) - count[odd_even],
                    (float)((1 << 24) - count[odd_even]) / (1 << 24) * 100.0);
 #ifndef TEST_RUN
             write_bitflips_file(odd_even, bitflip, sum_a0, test_bitarray[odd_even], count[odd_even]);
@@ -404,7 +404,7 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
                        count[odd_even],
                        odd_even == EVEN_STATE ? "even" : "odd",
                        bitflip | BITFLIP_2ND_BYTE,
-                        (1 << 24) - count[odd_even],
+                       (1 << 24) - count[odd_even],
                        (float)((1 << 24) - count[odd_even]) / (1 << 24) * 100.0);
 #ifndef TEST_RUN
                 write_bitflips_file(odd_even, bitflip | BITFLIP_2ND_BYTE, sum_a0, test_bitarray_2nd, count[odd_even]);
@@ -490,7 +490,7 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
                    count[odd_even],
                    odd_even == EVEN_STATE ? "even" : "odd",
                    bitflip | 0x100,
-                    (1 << 24) - count[odd_even],
+                   (1 << 24) - count[odd_even],
                    (float)((1 << 24) - count[odd_even]) / (1 << 24) * 100.0);
 #ifndef TEST_RUN
             write_bitflips_file(odd_even, bitflip | 0x100, sum_a0, test_not_bitarray[odd_even], count[odd_even]);
@@ -517,7 +517,7 @@ static void precalculate_bit0_bitflip_bitarrays(uint8_t const bitflip, uint16_t 
                 printf("Writing %u possible %s states for bitflip property %03x (%u (%1.2f%%) states eliminated)\n",
                        count[odd_even],
                        odd_even == EVEN_STATE ? "even" : "odd",
-                       bitflip | 0x100 | BITFLIP_2ND_BYTE, 
+                       bitflip | 0x100 | BITFLIP_2ND_BYTE,
                        (1 << 24) - count[odd_even],
                        (float)((1 << 24) - count[odd_even]) / (1 << 24) * 100.0);
 #ifndef TEST_RUN

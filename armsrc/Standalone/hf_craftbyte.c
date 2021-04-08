@@ -5,7 +5,7 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// main code for hf_craftbyte 
+// main code for hf_craftbyte
 //-----------------------------------------------------------------------------
 //
 //
@@ -77,7 +77,7 @@ void RunMod(void) {
                     flags |= FLAG_4B_UID_IN_DATA;
                 } else if (card.uidlen == 7) {
                     flags |= FLAG_7B_UID_IN_DATA;
-                } else if (card.uidlen == 10){
+                } else if (card.uidlen == 10) {
                     flags |= FLAG_10B_UID_IN_DATA;
                 } else {
                     Dbprintf("Unusual UID length, something is wrong. Try again please.");

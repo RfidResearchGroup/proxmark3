@@ -299,7 +299,7 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
         // manchester wrong bit marker
         if (c == 7)
             c = '.';
-        else 
+        else
             c += '0';
 
         *(tmp++) = c;
@@ -308,7 +308,7 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
         if (breaks) {
             if (((i + 1) % breaks) == 0) {
 
-                 *(tmp++) = '\n';
+                *(tmp++) = '\n';
             }
         }
     }
@@ -1026,7 +1026,7 @@ int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str)
 int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str) {
     uint32_t n = 0, i = 0;
 
-    for(;;) {
+    for (;;) {
 
         int res = sscanf(&str[i], "%1u", &n);
         if ((res != 1) || (n > 1))
@@ -1050,7 +1050,7 @@ int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str)
  */
 int binarray_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, uint8_t *arr, int arrlen) {
     int i = 0;
-    for(; i < arrlen; i++) {
+    for (; i < arrlen; i++) {
         uint8_t n = arr[i];
         if (n > 1)
             break;

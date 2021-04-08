@@ -545,24 +545,24 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
             counter++;
         }
 
-/*
-        // find reader field
-        if (cardSTATE == MFEMUL_NOFIELD) {
+        /*
+                // find reader field
+                if (cardSTATE == MFEMUL_NOFIELD) {
 
-#if defined RDV4
-            vHf = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
-#else
-            vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
-#endif
+        #if defined RDV4
+                    vHf = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
+        #else
+                    vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
+        #endif
 
-            if (vHf > MF_MINFIELDV) {
-                cardSTATE_TO_IDLE();
-                LED_A_ON();
-            }
-            button_pushed = BUTTON_PRESS();
-            continue;
-        }
-        */
+                    if (vHf > MF_MINFIELDV) {
+                        cardSTATE_TO_IDLE();
+                        LED_A_ON();
+                    }
+                    button_pushed = BUTTON_PRESS();
+                    continue;
+                }
+                */
 
         FpgaEnableTracing();
         //Now, get data

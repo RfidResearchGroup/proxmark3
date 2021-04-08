@@ -440,15 +440,15 @@ static void showSavePathState(savePaths_t path_index, prefShowOpt_t opt) {
     if (path_index < spItemCount) {
         if ((session.defaultPaths[path_index] == NULL) || (strcmp(session.defaultPaths[path_index], "") == 0)) {
             PrintAndLogEx(INFO, "   %s %s "_WHITE_("not set"),
-                        prefShowMsg(opt),
-                        s
-                        );
+                          prefShowMsg(opt),
+                          s
+                         );
         } else {
             PrintAndLogEx(INFO, "   %s %s "_GREEN_("%s"),
-                        prefShowMsg(opt),
-                        s,
-                        session.defaultPaths[path_index]
-                        );
+                          prefShowMsg(opt),
+                          s,
+                          session.defaultPaths[path_index]
+                         );
         }
     }
 }

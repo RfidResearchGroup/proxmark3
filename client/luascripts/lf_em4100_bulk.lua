@@ -14,12 +14,12 @@ Any other input char will exit the script.
 
 You can supply a password, which will set the config block / block 7 on the T5577.
 
-The verify option will issue a 'lf em 410x reader' command,  so you can manually verify 
+The verify option will issue a 'lf em 410x reader' command,  so you can manually verify
 that the write worked.
 
 ]]
 example = [[
-    -- resets and start enrolling EM410x id 11CC334455    
+    -- resets and start enrolling EM410x id 11CC334455
     script run lf_em4100_bulk.lua -s 11CC334455
 
     -- continue enrolling from where last iteration
@@ -28,7 +28,7 @@ example = [[
     -- reset and start enrolling from 11223344,
     -- protecting the tag with password 010203
     -- and verify the em id write.
-    script run lf_em4100_bulk.lua -s 1122334455 -p 01020304 -v  
+    script run lf_em4100_bulk.lua -s 1122334455 -p 01020304 -v
 ]]
 usage = [[
 script run lf_en4100_bulk.lua [-h] [-c] [-p password] [-s <start cn>] [-v]
@@ -143,7 +143,7 @@ local function main(args)
     end
 
     -- if reset/start over, check -s
-    if not shall_continue then 
+    if not shall_continue then
         if startid == nil then return oops('empty card number string') end
         if #startid == 0 then return oops('empty card number string') end
         if #startid ~= 10 then return oops('card number wrong length. Must be 5 hex bytes') end
@@ -159,7 +159,7 @@ local function main(args)
     print(ac.red..'disable hints for less output'..ac.reset)
     core.console('pref set hint --off')
     print('')
-    
+
     local hi  = tonumber(startid:sub(1, 2), 16)
     local low = tonumber(startid:sub(3, 10), 16)
     local pwd = tonumber(ipwd, 16)
@@ -178,7 +178,7 @@ local function main(args)
     else
         print('reset & starting enrolling from refresh')
     end
-   
+
     local template = 'EM4100 ID '..ac.green..'%02X%08X'..ac.reset
     for i = low, low + 10000, 1 do
         print('')
@@ -186,7 +186,7 @@ local function main(args)
         local msg = (template):format(hi, i)
         local ans = utils.input(msg, 'y'):lower()
         if ans == 'y' then
-            core.console( ('lf em 410x clone --id %02X%08X'):format(hi, i) )            
+            core.console( ('lf em 410x clone --id %02X%08X'):format(hi, i) )
             --        print ( ('lf em 410x clone --id %02X%08X'):format(hi, i) )
 
             if got_pwd then
