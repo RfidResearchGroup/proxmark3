@@ -243,6 +243,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
 
         if (got_kr == false) {
             PrintAndLogEx(ERR, "please specifiy KEYROLL key!");
+            free(data);
             return PM3_EINVARG;
         }
        
@@ -269,6 +270,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         PrintAndLogEx(INFO, "Detecting cardhelper...");
         if (IsCardHelperPresent(false) == false) {
             PrintAndLogEx(FAILED, "failed to detect cardhelper");
+            free(data);
             return PM3_ENODATA;
         }
 
@@ -335,6 +337,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
     saveFileJSON(filename, jsfIclass, data, tot_bytes, NULL);
 
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view -f %s.bin") "` to view dump file", filename);
+    free(data);
     return PM3_SUCCESS;
 }
 
