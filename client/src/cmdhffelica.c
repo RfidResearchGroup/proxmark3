@@ -1351,24 +1351,24 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
 static int CmdHFFelicaRequestService(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica rqservice",
-                "Use this command to verify the existence of Area and Service, and to acquire Key Version:\n"
-                "       - When the specified Area or Service exists, the card returns Key Version.\n"
-                "       - When the specified Area or Service does not exist, the card returns FFFFh as Key Version.\n"
-                "For Node Code List of a command packet, Area Code or Service Code of the target\n"
-                "of acquisition of Key Version shall be enumerated in Little Endian format.\n"
-                "If Key Version of System is the target of acquisition, FFFFh shall be specified\n"
-                "in the command packet.",
-                "hf felcia rqservice --node 01 --code FFFF\n"
-                "hf felcia rqservice -a --code FFFF\n"
-                "hf felica rqservice -i 011204126417E405 --node 01 --code FFFF"
-                );
+                  "Use this command to verify the existence of Area and Service, and to acquire Key Version:\n"
+                  "       - When the specified Area or Service exists, the card returns Key Version.\n"
+                  "       - When the specified Area or Service does not exist, the card returns FFFFh as Key Version.\n"
+                  "For Node Code List of a command packet, Area Code or Service Code of the target\n"
+                  "of acquisition of Key Version shall be enumerated in Little Endian format.\n"
+                  "If Key Version of System is the target of acquisition, FFFFh shall be specified\n"
+                  "in the command packet.",
+                  "hf felcia rqservice --node 01 --code FFFF\n"
+                  "hf felcia rqservice -a --code FFFF\n"
+                  "hf felica rqservice -i 011204126417E405 --node 01 --code FFFF"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a", "all", "auto node number mode, iterates through all possible nodes 1 < n < 32"),
         arg_str0("n", "node", "<hex>", "Number of Node"),
         arg_str0("c", "code", "<hex>", "Node Code List (little endian)"),
-        arg_str0("i", "idm", "<hex>", "use custom IDm"), 
+        arg_str0("i", "idm", "<hex>", "use custom IDm"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1383,41 +1383,41 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     bool custom_IDm = false;
     uint16_t datalen = 13; // length (1) + CMD (1) + IDm(8) + Node Number (1) + Node Code List (2)
 
-/*
-    case 'i':
+    /*
+        case 'i':
 
-        custom_IDm = true;
-        if (!add_param(Cmd, paramCount, data, 2, 16)) {
-            return PM3_EINVARG;
-        }
-
-
-    if (!all_nodes) {
-        // Node Number
-        if (param_getlength(Cmd, paramCount) == 2) {
-
-            if (param_gethex(Cmd, paramCount++, data + 10, 2) == 1) {
-                PrintAndLogEx(ERR, "Failed param key");
+            custom_IDm = true;
+            if (!add_param(Cmd, paramCount, data, 2, 16)) {
                 return PM3_EINVARG;
             }
 
+
+        if (!all_nodes) {
+            // Node Number
+            if (param_getlength(Cmd, paramCount) == 2) {
+
+                if (param_gethex(Cmd, paramCount++, data + 10, 2) == 1) {
+                    PrintAndLogEx(ERR, "Failed param key");
+                    return PM3_EINVARG;
+                }
+
+            } else {
+                PrintAndLogEx(ERR, "Incorrect Node number length!");
+                return PM3_EINVARG;
+            }
+        }
+
+        if (param_getlength(Cmd, paramCount) == 4) {
+
+            if (param_gethex(Cmd, paramCount++, data + 11, 4) == 1) {
+                PrintAndLogEx(ERR, "Failed param key");
+                return PM3_EINVARG;
+            }
         } else {
-            PrintAndLogEx(ERR, "Incorrect Node number length!");
+            PrintAndLogEx(ERR, "Incorrect parameter length!");
             return PM3_EINVARG;
         }
-    }
-
-    if (param_getlength(Cmd, paramCount) == 4) {
-
-        if (param_gethex(Cmd, paramCount++, data + 11, 4) == 1) {
-            PrintAndLogEx(ERR, "Failed param key");
-            return PM3_EINVARG;
-        }
-    } else {
-        PrintAndLogEx(ERR, "Incorrect parameter length!");
-        return PM3_EINVARG;
-    }
-*/
+    */
 
     uint8_t flags = FELICA_APPEND_CRC;
     if (custom_IDm) {
@@ -1458,11 +1458,11 @@ static int CmdHFFelicaNotImplementedYet(const char *Cmd) {
 static int CmdHFFelicaSniff(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica sniff",
-                "Collect data from the field and save into command buffer.\n"
-                "Buffer accessible from `hf felica list`",
-                "hf felica sniff\n"
-                "hf felica sniff -s 10 -t 19"
-                );
+                  "Collect data from the field and save into command buffer.\n"
+                  "Buffer accessible from `hf felica list`",
+                  "hf felica sniff\n"
+                  "hf felica sniff -s 10 -t 19"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0("s", "samples", "<dec>", "samples to skip"),
@@ -1480,20 +1480,20 @@ static int CmdHFFelicaSniff(const char *Cmd) {
     payload.triggers = arg_get_u32_def(ctx, 2, 5000);
     CLIParserFree(ctx);
 
-    if (payload.samples > 9999 ){
+    if (payload.samples > 9999) {
         payload.samples = 9999;
         PrintAndLogEx(INFO, "Too large samples to skip value, using max value 9999");
         return PM3_EINVARG;
     }
 
-    if (payload.triggers  > 9999 ){
+    if (payload.triggers  > 9999) {
         payload.triggers  = 9999;
         PrintAndLogEx(INFO, "Too large trigger to skip value, using max value 9999");
         return PM3_EINVARG;
     }
 
 
-    PrintAndLogEx(INFO, "Sniff Felica,  getting first %" PRIu32 " frames, skipping after %" PRIu32 " triggers", payload.samples,   payload.triggers );
+    PrintAndLogEx(INFO, "Sniff Felica,  getting first %" PRIu32 " frames, skipping after %" PRIu32 " triggers", payload.samples,   payload.triggers);
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort sniffing");
     clearCommandBuffer();
     SendCommandNG(CMD_HF_FELICA_SNIFF, (uint8_t *)&payload, sizeof(payload));
@@ -1524,9 +1524,9 @@ static int CmdHFFelicaSniff(const char *Cmd) {
 static int CmdHFFelicaSimLite(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica litesim",
-                "Emulating ISO/18092 FeliCa Lite tag",
-                "hf felica litesim -u 1122334455667788"
-                );
+                  "Emulating ISO/18092 FeliCa Lite tag",
+                  "hf felica litesim -u 1122334455667788"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_str1("u", "uid", "<hex>", "UID/NDEF2 8 hex bytes"),
@@ -1538,7 +1538,7 @@ static int CmdHFFelicaSimLite(const char *Cmd) {
         uint8_t uid[8];
     } PACKED payload;
     CLIGetHexWithReturn(ctx, 1, payload.uid, &uid_len);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
@@ -1720,26 +1720,26 @@ static uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t trac
 
 static int CmdHFFelicaDumpLite(const char *Cmd) {
 
-/*
-iceman 2021,
-Why does this command say it dumps a FeliCa lite card
-and then tries to print a trace?!?  
-Is this a trace list or a feclia dump cmd?
-*/
+    /*
+    iceman 2021,
+    Why does this command say it dumps a FeliCa lite card
+    and then tries to print a trace?!?
+    Is this a trace list or a feclia dump cmd?
+    */
 
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica litedump",
-                "Dump ISO/18092 FeliCa Lite tag.  It will timeout after 200sec",
-                "hf felica litedump"
-                );
+                  "Dump ISO/18092 FeliCa Lite tag.  It will timeout after 200sec",
+                  "hf felica litedump"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx); 
- 
+    CLIParserFree(ctx);
+
     PrintAndLogEx(SUCCESS, "FeliCa lite - dump started");
 
     clearCommandBuffer();
@@ -1814,12 +1814,12 @@ Is this a trace list or a feclia dump cmd?
 }
 
 static int CmdHFFelicaCmdRaw(const char *Cmd) {
- 
+
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica raw ",
-                "Send raw hex data to tag",
-                "hf felica raw -s 20"
-                );
+                  "Send raw hex data to tag",
+                  "hf felica raw -s 20"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1837,7 +1837,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     bool active = arg_get_lit(ctx, 1);
     bool crc = arg_get_lit(ctx, 2);
     bool keep_field_on = arg_get_lit(ctx, 3);
-    uint16_t numbits = arg_get_u32_def(ctx, 4, 0) &0xFFFF;
+    uint16_t numbits = arg_get_u32_def(ctx, 4, 0) & 0xFFFF;
     bool reply = (arg_get_lit(ctx, 5) == false);
     bool active_select = arg_get_lit(ctx, 6);
 

@@ -440,8 +440,8 @@ static int CmdT55xxSetConfig(const char *Cmd) {
         arg_lit0(NULL, "PSK2",  "set demodulation PSK 2"),
         arg_lit0(NULL, "PSK3",  "set demodulation PSK 3"),
         arg_lit0(NULL, "NRZ",   "set demodulation NRZ"),
-        arg_lit0(NULL, "BI",    "set demodulation Biphase"),        
-        arg_lit0(NULL, "BIA",   "set demodulation Diphase (inverted biphase)"),                        
+        arg_lit0(NULL, "BI",    "set demodulation Biphase"),
+        arg_lit0(NULL, "BIA",   "set demodulation Diphase (inverted biphase)"),
         arg_lit0("i", "inv", "set/reset data signal inversion"),
         arg_lit0(NULL, "q5", "set/reset as Q5/T5555 chip instead of T55x7"),
         arg_lit0(NULL, "st", "set/reset Sequence Terminator on"),
@@ -458,9 +458,9 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     bool mods[12];
     int verify_mods = 0;
     while (idx - 1 < sizeof(mods)) {
-       mods[idx - 1] = arg_get_lit(ctx, idx);
-       verify_mods += mods[idx - 1];
-       idx++;
+        mods[idx - 1] = arg_get_lit(ctx, idx);
+        verify_mods += mods[idx - 1];
+        idx++;
     }
 
     // Not these flags are used to Toggle the values.
@@ -516,7 +516,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
                 break;
             }
         }
-        if (i == 9){
+        if (i == 9) {
             PrintAndLogEx(FAILED, "Error select a valid bitrate");
             return PM3_EINVARG;
         }
@@ -532,7 +532,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
 
     // validate user specific sequence terminator
     // if use_st flag was supplied, then toggle and update the config block0; if not supplied skip the config block0 update.
-    if (use_st) { 
+    if (use_st) {
         config.ST ^= use_st;
         config.block0 = ((config.block0 & ~(0x8)) | (config.ST << 3));
     }
@@ -557,7 +557,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     config.downlink_mode = downlink_mode;
 
     // validate user specific modulation
-    if (mods[0]){
+    if (mods[0]) {
         config.modulation = DEMOD_FSK;
     } else if (mods[1]) {
         config.modulation = DEMOD_FSK1;
@@ -587,7 +587,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     } else if (mods[11]) {
         config.modulation = DEMOD_BIa;
         config.inverted = 1;
-    }   
+    }
 
     config.block0 = ((config.block0 & ~(0x1f000)) | (config.modulation << 12));
 
@@ -643,10 +643,10 @@ static int CmdT55xxReadBlock(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf t55xx read",
                   "Read T55xx block data.  This commands defaults to page 0.\n\n"
-                   _RED_("           * * * WARNING * * *") "\n"
+                  _RED_("           * * * WARNING * * *") "\n"
                   _CYAN_("Use of read with password on a tag not configured") "\n"
                   _CYAN_("for a password can damage the tag") "\n"
-                   _RED_("           * * * * * * * * * *"),
+                  _RED_("           * * * * * * * * * *"),
                   "lf t55xx read -b 0                   --> read data from block 0\n"
                   "lf t55xx read -b 0 --pwd 01020304    --> read data from block 0, pwd 01020304\n"
                   "lf t55xx read -b 0 --pwd 01020304 -o --> read data from block 0, pwd 01020304, override\n"
@@ -657,7 +657,7 @@ static int CmdT55xxReadBlock(const char *Cmd) {
         arg_param_begin,
         arg_int1("b", "blk", "<0-7>", "block number to read"),
         arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
-        arg_lit0("o", "override", "override safety check"),    
+        arg_lit0("o", "override", "override safety check"),
         arg_lit0(NULL, "pg1", "read page 1"),
     };
     uint8_t idx = 5;
@@ -1680,7 +1680,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
     // 1 (help) + 1 (one user specified params) + (5 T55XX_DLMODE_SINGLE)
     void *argtable[2 + 5] = {
         arg_param_begin,
-        arg_lit0("1", NULL, "extract using data from graphbuffer"),        
+        arg_lit0("1", NULL, "extract using data from graphbuffer"),
     };
     uint8_t idx = 2;
     arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_SINGLE, config.downlink_mode);
@@ -1731,7 +1731,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         }
     }
 
-    if (DemodBufferLen == 0){
+    if (DemodBufferLen == 0) {
         return PM3_ESOFT;
     }
 
@@ -2360,13 +2360,13 @@ static int CmdT55xxRestore(const char *Cmd) {
         }
     }
 
-    if (retval != PM3_SUCCESS) { 
+    if (retval != PM3_SUCCESS) {
         return retval;
     }
 
     if (datalen == T55x7_BLOCK_COUNT * 4) {
         // 12 blocks * 4 bytes per block
-        
+
         // this fct creats strings to call "lf t55 write" command.
         //
         //
@@ -3058,9 +3058,9 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     }
 
     uint8_t downlink_mode = refFixedBit; // Password checks should always start with default/fixed bit unluess requested by user for specific mode
-  //  if (r0 || ra) // ra should start downlink mode ad fixed bit to loop through all modes correctly
-  //      downlink_mode = refFixedBit;
-  //  else 
+    //  if (r0 || ra) // ra should start downlink mode ad fixed bit to loop through all modes correctly
+    //      downlink_mode = refFixedBit;
+    //  else
     if (r1)
         downlink_mode = refLongLeading;
     else if (r2)
@@ -3069,7 +3069,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         downlink_mode = ref1of4;
 
     bool use_pwd_file = true; // Assume we are going to use a file, unless turned off later.
-    
+
     if (strlen(filename) == 0) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
     }
@@ -3265,10 +3265,10 @@ static int CmdT55xxBruteForce(const char *Cmd) {
     }
 
     uint8_t downlink_mode = refFixedBit; // if no downlink mode suppliled use fixed bit/default as the is the most common
-                                         // Since we dont know the password the config.downlink mode is of little value.
+    // Since we dont know the password the config.downlink mode is of little value.
 //   if (r0 || ra) // if try all (ra) then start at fixed bit for correct try all
 //       downlink_mode = refFixedBit;
-//    else 
+//    else
     if (r1)
         downlink_mode = refLongLeading;
     else if (r2)

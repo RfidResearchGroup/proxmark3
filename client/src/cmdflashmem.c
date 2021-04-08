@@ -43,7 +43,7 @@ static int CmdHelp(const char *Cmd);
 //-------------------------------------------------------------------------------------
 
 int rdv4_get_signature(rdv40_validation_t *out) {
-    if (out == NULL) {        
+    if (out == NULL) {
         return PM3_EINVARG;
     }
 
@@ -89,7 +89,7 @@ int rdv4_validate(rdv40_validation_t *mem) {
     return PM3_EFAILED;
 }
 
-static int rdv4_sign_write(uint8_t *signature, uint8_t slen){
+static int rdv4_sign_write(uint8_t *signature, uint8_t slen) {
     // save to mem
     clearCommandBuffer();
     PacketResponseNG resp;
@@ -439,14 +439,14 @@ static int CmdFlashMemInfo(const char *Cmd) {
 //    shall_write = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
-    if (res || (dlen > 0 && dlen < sizeof(id)) ) {
+    if (res || (dlen > 0 && dlen < sizeof(id))) {
         PrintAndLogEx(FAILED, "Error parsing flash memory id, expect 8, got %d", dlen);
         return PM3_EINVARG;
     }
 
     // set up PK key context now.
     mbedtls_pk_context pkctx;
-    mbedtls_pk_init( &pkctx );
+    mbedtls_pk_init(&pkctx);
     bool got_private = false;
     // PEM
     if (pemlen) {
@@ -472,7 +472,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
             return PM3_EFILE;
         }
 
-        mbedtls_rsa_context *rsa = (mbedtls_rsa_context*)pkctx.pk_ctx;
+        mbedtls_rsa_context *rsa = (mbedtls_rsa_context *)pkctx.pk_ctx;
         if (rsa == NULL) {
             PrintAndLogEx(FAILED, "failed to allocate rsa context memory");
             return PM3_EMALLOC;
@@ -482,7 +482,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
     } else {
 
         // it not loaded,  we need to setup the context manually
-        if (mbedtls_pk_setup( &pkctx,  mbedtls_pk_info_from_type( (mbedtls_pk_type_t) MBEDTLS_PK_RSA ) ) != 0 ) {
+        if (mbedtls_pk_setup(&pkctx,  mbedtls_pk_info_from_type((mbedtls_pk_type_t) MBEDTLS_PK_RSA)) != 0) {
             PrintAndLogEx(FAILED, "failed, mbedtls_pk_setup returned ");
             return PM3_ESOFT;
         }
@@ -491,7 +491,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
     // validate devicesignature data
     rdv40_validation_t mem;
     res = rdv4_get_signature(&mem);
-    if (res != PM3_SUCCESS) {        
+    if (res != PM3_SUCCESS) {
         return res;
     }
 
@@ -521,7 +521,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
     mbedtls_rsa_context *rsa = NULL;
 
     if (got_private) {
-        rsa = mbedtls_pk_rsa( pkctx );
+        rsa = mbedtls_pk_rsa(pkctx);
         rsa->padding = MBEDTLS_RSA_PKCS_V15;
         rsa->hash_id = 0;
         rsa->len = RRG_RSA_KEY_LEN;
@@ -531,7 +531,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
         mbedtls_rsa_init(rsa, MBEDTLS_RSA_PKCS_V15, 0);
         rsa->len = RRG_RSA_KEY_LEN;
 
-        // add public key 
+        // add public key
         mbedtls_mpi_read_string(&rsa->N, 16, RRG_RSA_N);
         mbedtls_mpi_read_string(&rsa->E, 16, RRG_RSA_E);
     }
@@ -587,7 +587,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
             PrintAndLogEx(INFO, "--- " _CYAN_("Enter signing") " --------------------");
 
             if (dlen == 8) {
-            mbedtls_sha1(id, sizeof(id), sha_hash);
+                mbedtls_sha1(id, sizeof(id), sha_hash);
             }
             PrintAndLogEx(INFO, "Signing....... %s", sprint_hex_inrow(sha_hash, sizeof(sha_hash)));
 

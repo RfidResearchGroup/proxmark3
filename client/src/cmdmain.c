@@ -280,9 +280,9 @@ static int CmdPref(const char *Cmd) {
 static int CmdClear(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "clear",
-                "Clear the Proxmark3 client terminal screen",
-                "clear"
-                );
+                  "Clear the Proxmark3 client terminal screen",
+                  "clear"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -296,7 +296,7 @@ static int CmdClear(const char *Cmd) {
 static command_t CommandTable[] = {
 
     {"help",         CmdHelp,      AlwaysAvailable,         "Use `" _YELLOW_("<command> help") "` for details of a command"},
-     {"preferences", CmdPref,      AlwaysAvailable,         "{ Edit client/device preferences... }"},
+    {"preferences", CmdPref,      AlwaysAvailable,         "{ Edit client/device preferences... }"},
     {"--------",     CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("Technology") " -----------------------"},
     {"analyse",      CmdAnalyse,   AlwaysAvailable,         "{ Analyse utils... }"},
     {"data",         CmdData,      AlwaysAvailable,         "{ Plot window / data buffer manipulation... }"},

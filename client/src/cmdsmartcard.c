@@ -262,7 +262,7 @@ static int smart_wait(uint8_t *out, int maxoutlen, bool verbose) {
         clearCommandBuffer();
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_SMART_RAW, &resp, 1000)) {
-            
+
             if (resp.status != PM3_SUCCESS) {
                 if (verbose) PrintAndLogEx(WARNING, "smart card response status failed");
                 return -3;
@@ -283,7 +283,7 @@ static int smart_wait(uint8_t *out, int maxoutlen, bool verbose) {
             if (len >= 2) {
                 if (verbose) {
 
-                     
+
                     if (out[len - 2] == 0x90 && out[len - 1] == 0x00)  {
                         PrintAndLogEx(SUCCESS, _GREEN_("%02X%02X") " | %s", out[len - 2], out[len - 1], GetAPDUCodeDescription(out[len - 2], out[len - 1]));
                     } else {
@@ -299,7 +299,7 @@ static int smart_wait(uint8_t *out, int maxoutlen, bool verbose) {
         }
     } while (i--);
 
-    if (verbose) { 
+    if (verbose) {
         PrintAndLogEx(WARNING, "smart card response timeout");
     }
     return -1;
@@ -330,7 +330,7 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
         memcpy(payload->data, cmd_getresp, sizeof(cmd_getresp));
 
         clearCommandBuffer();
-        SendCommandNG(CMD_SMART_RAW, (uint8_t*)payload, sizeof(smart_card_raw_t) + sizeof(cmd_getresp));
+        SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + sizeof(cmd_getresp));
         free(payload);
 
         datalen = smart_wait(out, maxoutlen, verbose);
@@ -424,7 +424,7 @@ static int CmdSmartRaw(const char *Cmd) {
             payload->flags |= SC_SELECT;
     }
 
-    if (dlen > 0) {        
+    if (dlen > 0) {
         if (use_t0)
             payload->flags |= SC_RAW_T0;
         else
@@ -439,9 +439,9 @@ static int CmdSmartRaw(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_SMART_RAW, (uint8_t*)payload, sizeof(smart_card_raw_t) + dlen);
+    SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + dlen);
 
-    if (reply == false) {        
+    if (reply == false) {
         goto out;
     }
 
@@ -459,7 +459,7 @@ static int CmdSmartRaw(const char *Cmd) {
         data[4] = buf[1];
         memcpy(payload->data, data, dlen);
         clearCommandBuffer();
-        SendCommandNG(CMD_SMART_RAW, (uint8_t*)payload, sizeof(smart_card_raw_t) + dlen);
+        SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + dlen);
 
         len = smart_response(buf, PM3_CMD_DATA_SIZE);
 
@@ -858,7 +858,7 @@ static void smart_brute_prim(void) {
         memcpy(payload->data, get_card_data + i, 5);
 
         clearCommandBuffer();
-        SendCommandNG(CMD_SMART_RAW, (uint8_t*)payload, sizeof(smart_card_raw_t) + 5);
+        SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + 5);
         free(payload);
 
         int len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false);
@@ -901,7 +901,7 @@ static int smart_brute_sfi(bool decodeTLV) {
             memcpy(payload->data, READ_RECORD, sizeof(READ_RECORD));
 
             clearCommandBuffer();
-            SendCommandNG(CMD_SMART_RAW, (uint8_t*)payload, sizeof(smart_card_raw_t) +  sizeof(READ_RECORD));
+            SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) +  sizeof(READ_RECORD));
 
             len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false);
 
@@ -910,7 +910,7 @@ static int smart_brute_sfi(bool decodeTLV) {
 
                 memcpy(payload->data, READ_RECORD, sizeof(READ_RECORD));
                 clearCommandBuffer();
-                SendCommandNG(CMD_SMART_RAW, (uint8_t*)payload, sizeof(smart_card_raw_t) +  sizeof(READ_RECORD));
+                SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) +  sizeof(READ_RECORD));
                 len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false);
 
                 READ_RECORD[4] = 0;
@@ -952,7 +952,7 @@ static void smart_brute_options(bool decodeTLV) {
     memcpy(payload->data, GET_PROCESSING_OPTIONS, sizeof(GET_PROCESSING_OPTIONS));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_SMART_RAW, (uint8_t*)payload, sizeof(smart_card_raw_t) + sizeof(GET_PROCESSING_OPTIONS));
+    SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + sizeof(GET_PROCESSING_OPTIONS));
     free(payload);
 
     int len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false);
@@ -1054,7 +1054,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 
         memcpy(payload->data, cmddata, hexlen);
         clearCommandBuffer();
-        SendCommandNG(CMD_SMART_RAW, (uint8_t*)payload, sizeof(smart_card_raw_t) + hexlen);
+        SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + hexlen);
         free(payload);
 
         int len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false);
@@ -1138,7 +1138,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
     memcpy(payload->data, datain, datainlen);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_SMART_RAW, (uint8_t*)payload, sizeof(smart_card_raw_t) + datainlen);
+    SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + datainlen);
 
     int len = smart_responseEx(dataout, maxdataoutlen, verbose);
     if (len < 0) {
@@ -1155,7 +1155,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
         datain[4] = dataout[len - 1];
         memcpy(payload->data, datain, 5);
         clearCommandBuffer();
-        SendCommandNG(CMD_SMART_RAW, (uint8_t*)payload, sizeof(smart_card_raw_t) + 5);
+        SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + 5);
         datain[4] = 0;
         len = smart_responseEx(dataout, maxdataoutlen, verbose);
     }

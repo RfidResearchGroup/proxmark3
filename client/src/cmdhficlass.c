@@ -37,7 +37,7 @@
 #define ICLASS_AUTH_RETRY 10
 #define ICLASS_DECRYPTION_BIN  "iclass_decryptionkey.bin"
 
-static picopass_hdr_t iclass_last_known_card; 
+static picopass_hdr_t iclass_last_known_card;
 static void iclass_set_last_known_card(picopass_hdr_t *card) {
     memcpy(&iclass_last_known_card, card, sizeof(picopass_hdr_t));
 }
@@ -134,7 +134,7 @@ uint8_t card_app2_limit[] = {
     0xff,
 };
 
-iclass_config_card_item_t iclass_config_types[14]=  {
+iclass_config_card_item_t iclass_config_types[14] =  {
     {"", ""},
     {"", ""},
     {"", ""},
@@ -148,7 +148,7 @@ iclass_config_card_item_t iclass_config_types[14]=  {
     {"", ""},
     {"", ""},
     {"", ""},
-    // must be the last entry 
+    // must be the last entry
     {"no config card info available", ""}
 };
 
@@ -167,7 +167,7 @@ static int load_config_cards(void) {
         PrintAndLogEx(FAILED, "failed to detect cardhelper");
         return PM3_ENODATA;
     }
-    
+
     for (int i = 0; i < ARRAYLEN(iclass_config_types); ++i) {
 
         PrintAndLogEx(INPLACE, "loading setting %i", i);
@@ -198,7 +198,7 @@ static const iclass_config_card_item_t *get_config_card_item(int idx) {
 static void print_config_cards(void) {
     if (check_config_card(&iclass_config_types[0])) {
         PrintAndLogEx(INFO, "---- " _CYAN_("Config cards available") " ------------");
-        for (int i = 0; i < ARRAYLEN(iclass_config_types); ++i) {        
+        for (int i = 0; i < ARRAYLEN(iclass_config_types); ++i) {
             PrintAndLogEx(INFO, "%2d, %s", i, iclass_config_types[i].desc);
         }
         PrintAndLogEx(NORMAL, "");
@@ -225,7 +225,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         return res;
     }
 
-    // generate dump file    
+    // generate dump file
     uint8_t app1_limit = iclass_last_known_card.conf.app_limit;
     uint8_t old_limit = app1_limit;
     uint8_t tot_bytes = (app1_limit + 1) * 8;
@@ -246,16 +246,16 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
             free(data);
             return PM3_EINVARG;
         }
-       
+
         if (app1_limit < 0x16) {
             // if card wasn't large enough before,  adapt to new size
             PrintAndLogEx(WARNING, "Adapting applimit1 for KEY rolling..");
-            
+
             app1_limit = 0x16;
             iclass_last_known_card.conf.app_limit = 0x16;
             tot_bytes = (app1_limit + 1) * 8;
 
-            uint8_t *p; 
+            uint8_t *p;
             p = realloc(data, tot_bytes);
             if (p == NULL) {
                 PrintAndLogEx(FAILED, "failed to allocate memory");
@@ -265,8 +265,8 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
             data = p;
             memset(data, 0xFF,  tot_bytes);
         }
-        
-        // need to encrypt 
+
+        // need to encrypt
         PrintAndLogEx(INFO, "Detecting cardhelper...");
         if (IsCardHelperPresent(false) == false) {
             PrintAndLogEx(FAILED, "failed to detect cardhelper");
@@ -274,7 +274,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
             return PM3_ENODATA;
         }
 
-        uint8_t ffs[8] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+        uint8_t ffs[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
         if (Encrypt(ffs, ffs) == false) {
             PrintAndLogEx(WARNING, "failed to encrypt FF");
         }
@@ -291,7 +291,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         memcpy(data + (0xD * 8), enckey1, sizeof(enckey1));
         // encrypted 0xFF
         for (uint8_t i = 0xe; i < 0x14; i++) {
-            memcpy(data + (i*8), ffs, sizeof(ffs));
+            memcpy(data + (i * 8), ffs, sizeof(ffs));
         }
 
         // encrypted partial keyroll key 14
@@ -320,10 +320,10 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         // revert potential modified app1_limit
         iclass_last_known_card.conf.app_limit = old_limit;
 
-    } else {   
+    } else {
         memcpy(data, &iclass_last_known_card, sizeof(picopass_hdr_t));
-        memcpy(data + (6*8), o->data, sizeof(o->data));
-   }
+        memcpy(data + (6 * 8), o->data, sizeof(o->data));
+    }
 
     // create filename
     char filename[FILE_PATH_SIZE] = {0};
@@ -1167,7 +1167,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                 PrintAndLogEx(INFO, "Couldn't find any decryption methods");
                 return PM3_EINVARG;
             }
-    
+
             if (keylen != 16) {
                 PrintAndLogEx(ERR, "Failed to load transport key from file");
                 free(keyptr);
@@ -3711,7 +3711,7 @@ static int CmdHFiClassAutopwn(const char *Cmd) {
 }
 */
 
-static int CmdHFiClassConfigCard(const char * Cmd) {
+static int CmdHFiClassConfigCard(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass configcard",
@@ -3756,7 +3756,7 @@ static int CmdHFiClassConfigCard(const char * Cmd) {
 
     if (load) {
         if (load_config_cards() != PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "failed to load, check your cardhelper");            
+            PrintAndLogEx(INFO, "failed to load, check your cardhelper");
         }
     }
 

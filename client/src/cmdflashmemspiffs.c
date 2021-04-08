@@ -334,7 +334,7 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
         arg_param_begin,
         arg_str1("s", "src", "<fn>", "SPIFFS file to save"),
         arg_str0("d", "dest", "<fn>", "file name to save to <w/o .bin>"),
-        arg_lit0("e", "eml", "also save in EML format"),        
+        arg_lit0("e", "eml", "also save in EML format"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -351,7 +351,7 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
     CLIParserFree(ctx);
 
     // get size from spiffs itself !
-    clearCommandBuffer();    
+    clearCommandBuffer();
     SendCommandNG(CMD_SPIFFS_STAT, (uint8_t *)src, slen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_SPIFFS_STAT, &resp, 2000) == false) {
@@ -495,7 +495,7 @@ static int CmdFlashMemSpiFFSView(const char *Cmd) {
     CLIParserFree(ctx);
 
     // get size from spiffs itself !
-    clearCommandBuffer();    
+    clearCommandBuffer();
     SendCommandNG(CMD_SPIFFS_STAT, (uint8_t *)src, slen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_SPIFFS_STAT, &resp, 2000) == false) {

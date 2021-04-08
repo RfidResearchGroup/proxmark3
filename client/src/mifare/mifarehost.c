@@ -695,7 +695,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
             mem[4] = (chunk & 0xFF);
 
             // upload to flash.
-            res = flashmem_spiffs_load((char*)destfn, mem, 5 + (chunk * 6));
+            res = flashmem_spiffs_load((char *)destfn, mem, 5 + (chunk * 6));
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "\nSPIFFS upload failed");
                 free(mem);
@@ -769,7 +769,7 @@ int mfReadBlock(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t *data) {
     mf_readblock_t payload = {
         .blockno = blockNo,
         .keytype = keyType
-    };   
+    };
     memcpy(payload.key, key, sizeof(payload.key));
 
     clearCommandBuffer();
@@ -1224,9 +1224,9 @@ int detect_mfc_ev1_signature(uint8_t *signature) {
         return PM3_EINVARG;
     }
     uint8_t sign[32] = {0};
-    uint8_t key[] = {0x4b, 0x79, 0x1b, 0xea, 0x7b, 0xcc};    
+    uint8_t key[] = {0x4b, 0x79, 0x1b, 0xea, 0x7b, 0xcc};
     int res = mfReadBlock(69, 1, key, sign);
-    if ( res == PM3_SUCCESS) {
+    if (res == PM3_SUCCESS) {
         res = mfReadBlock(70, 1, key, sign + 16);
         if (res ==  PM3_SUCCESS) {
             memcpy(signature, sign, sizeof(sign));

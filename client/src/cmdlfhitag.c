@@ -292,7 +292,7 @@ static int CmdLFHitagEload(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    DumpFileType_t dftype = getfiletype(filename); 
+    DumpFileType_t dftype = getfiletype(filename);
     size_t dumplen = 0;
     uint8_t *dump = NULL;
     int res = 0;
@@ -327,7 +327,7 @@ static int CmdLFHitagEload(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    // check dump len..  
+    // check dump len..
     if (dumplen == 48 ||  dumplen == 4 * 64) {
         struct {
             uint16_t len;
@@ -337,7 +337,7 @@ static int CmdLFHitagEload(const char *Cmd) {
         memcpy(payload.data, dump, dumplen);
 
         clearCommandBuffer();
-        SendCommandNG(CMD_LF_HITAG_ELOAD,  (uint8_t *)&payload, 2 + dumplen);
+        SendCommandNG(CMD_LF_HITAG_ELOAD, (uint8_t *)&payload, 2 + dumplen);
     } else {
         PrintAndLogEx(ERR, "error, wrong dump file size. got %zu", dumplen);
     }
@@ -368,7 +368,7 @@ static int CmdLFHitagSim(const char *Cmd) {
     bool use_hts = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    if ((use_ht1 + use_ht2 + use_hts) > 1 ) {
+    if ((use_ht1 + use_ht2 + use_hts) > 1) {
         PrintAndLogEx(ERR, "error, Only specify one Hitag type");
         return PM3_EINVARG;
     }
@@ -659,11 +659,11 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
         size_t datalen = 0;
         int res = loadFile_safe(filename, ".cc", (void **)&data, &datalen);
         if (res == PM3_SUCCESS) {
-            if (datalen == (8 * 60) ) {
+            if (datalen == (8 * 60)) {
                 SendCommandOLD(CMD_LF_HITAGS_TEST_TRACES, 1, 0, 0, data, datalen);
             } else {
-                PrintAndLogEx(ERR, "Error, file length mismatch. Expected %d, got %zu", 8*60, datalen);
-            }                   
+                PrintAndLogEx(ERR, "Error, file length mismatch. Expected %d, got %zu", 8 * 60, datalen);
+            }
         }
         if (data) {
             free(data);

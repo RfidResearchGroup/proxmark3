@@ -1251,7 +1251,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
 
 
             if (use_keyfile_for_auth) {
-                for (uint8_t kt=0; kt < 2; kt++) {
+                for (uint8_t kt = 0; kt < 2; kt++) {
 
                     if (kt == 0)
                         memcpy(data, keyA[sectorNo], 6);
@@ -5589,7 +5589,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
                   "New acc       FF 07 80\n"
                   "New GDB       69",
                   "hf mf wipe"
-            );
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f",  "file", "<fn>", "key filename"),
@@ -5652,12 +5652,12 @@ static int CmdHF14AMfWipe(const char *Cmd) {
         }
     }
 
-   uint8_t zeros[MFBLOCK_SIZE] = {0};
-   memset(zeros, 0x00, sizeof(zeros));
-   uint8_t st[MFBLOCK_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x07, 0x80, 0x69, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint8_t zeros[MFBLOCK_SIZE] = {0};
+    memset(zeros, 0x00, sizeof(zeros));
+    uint8_t st[MFBLOCK_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x07, 0x80, 0x69, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
     // time to wipe card
-  for (uint8_t s = 0; s < num_sectors; s++) {
+    for (uint8_t s = 0; s < num_sectors; s++) {
 
         for (uint8_t b = 0; b < NumBlocksPerSector(s); b++) {
 

@@ -59,8 +59,8 @@ uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
     if (n < 3) return 2;
     if (isResponse && (n < 6)) return 2;
     if (d[1] == 0x50 &&
-        d[0] >= ISO14443A_CMD_ANTICOLL_OR_SELECT &&
-        d[0] <= ISO14443A_CMD_ANTICOLL_OR_SELECT_3) {
+            d[0] >= ISO14443A_CMD_ANTICOLL_OR_SELECT &&
+            d[0] <= ISO14443A_CMD_ANTICOLL_OR_SELECT_3) {
         return 2;
     }
     return check_crc(CRC_14443_A, d, n);
@@ -1337,13 +1337,13 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8
 
 }
 
-static void mf_get_paritybinstr(char *s, uint32_t val, uint8_t par) {    
-    uint8_t foo[4] = {0,0,0,0};
+static void mf_get_paritybinstr(char *s, uint32_t val, uint8_t par) {
+    uint8_t foo[4] = {0, 0, 0, 0};
     num_to_bytes(val, sizeof(uint32_t), foo);
     for (uint8_t i = 0; i < 4; i++) {
         if (oddparity8(foo[i]) != ((par >> (7 - (i & 0x0007))) & 0x01))
             sprintf(s++, "1");
-        else 
+        else
             sprintf(s++, "0");
     }
 }
@@ -1444,25 +1444,25 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
 
                 //PrintAndLogEx(NORMAL, "hardnested not implemented. uid:%x nt:%x ar_enc:%x at_enc:%x\n", AuthData.uid, AuthData.nt, AuthData.ar_enc, AuthData.at_enc);
 
-                char snt[5] = {0,0,0,0,0};
+                char snt[5] = {0, 0, 0, 0, 0};
                 mf_get_paritybinstr(snt, AuthData.nt_enc, AuthData.nt_enc_par);
-                char sar[5] = {0,0,0,0,0};
+                char sar[5] = {0, 0, 0, 0, 0};
                 mf_get_paritybinstr(sar, AuthData.ar_enc, AuthData.ar_enc_par);
-                char sat[5] = {0,0,0,0,0};
+                char sat[5] = {0, 0, 0, 0, 0};
                 mf_get_paritybinstr(sat, AuthData.at_enc, AuthData.at_enc_par);
 
                 PrintAndLogEx(NORMAL, "Nested authentication detected. ");
                 PrintAndLogEx(NORMAL, "tools/mf_nonce_brute/mf_nonce_brute %x %x %s %x %x %s %x %s %s\n"
-                    , AuthData.uid
-                    , AuthData.nt_enc
-                    , snt
-                    , AuthData.nr_enc
-                    , AuthData.ar_enc
-                    , sar
-                    , AuthData.at_enc
-                    , sat
-                    , sprint_hex_inrow(cmd, cmdsize)
-                    );
+                              , AuthData.uid
+                              , AuthData.nt_enc
+                              , snt
+                              , AuthData.nr_enc
+                              , AuthData.ar_enc
+                              , sar
+                              , AuthData.at_enc
+                              , sat
+                              , sprint_hex_inrow(cmd, cmdsize)
+                             );
 
                 MifareAuthState = masError;
 

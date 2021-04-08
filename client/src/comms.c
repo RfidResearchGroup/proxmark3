@@ -839,7 +839,7 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
             if (response->cmd == CMD_ACK)
                 return true;
-            // Spiffs download is converted to NG,  
+            // Spiffs download is converted to NG,
             if (response->cmd == CMD_SPIFFS_DOWNLOAD)
                 return true;
 

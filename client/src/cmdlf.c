@@ -562,7 +562,7 @@ int CmdLFConfig(const char *Cmd) {
             config.decimation = 8;
     }
 
-    if (divisor> -1) {
+    if (divisor > -1) {
         config.divisor = divisor;
         if (config.divisor < 19) {
             PrintAndLogEx(ERR, "divisor must be between 19 and 255");
@@ -1437,7 +1437,7 @@ int CmdLFfind(const char *Cmd) {
     if (demodIOProx(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!"); goto out;}
     if (demodPyramid(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Pyramid ID") " found!"); goto out;}
     if (demodParadox(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!"); goto out;}
-    
+
     // psk
     if (demodIdteck(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
     if (demodKeri(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("KERI ID") " found!"); goto out;}

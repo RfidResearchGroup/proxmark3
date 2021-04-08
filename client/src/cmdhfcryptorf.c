@@ -26,7 +26,7 @@
 
 #ifndef CRYPTORF_MEM_SIZE
 # define CRYPTORF_MEM_SIZE 1024
-#endif 
+#endif
 
 static int CmdHelp(const char *Cmd);
 
@@ -85,7 +85,7 @@ static int CmdHFCryptoRFSniff(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_SNIFF, NULL, 0);
-    
+
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf cryptorf list") "` to view captured tracelog");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -f hf_cryptorf_mytrace") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
@@ -247,9 +247,9 @@ static int CmdHFCryptoRFReader(const char *Cmd) {
 static int CmdHFCryptoRFDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cryptorf dump",
-                "Dump all memory from a CryptoRF tag (512/4096 bit size)",
-                "hf cryptorf dump\n"                
-                );
+                  "Dump all memory from a CryptoRF tag (512/4096 bit size)",
+                  "hf cryptorf dump\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -393,9 +393,9 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cryptorf eload",
-                "Loads CryptoRF tag dump into emulator memory on device",
-                "hf cryptorf eload -f hf-cryptorf-0102030405-dump.bin\n"
-                );
+                  "Loads CryptoRF tag dump into emulator memory on device",
+                  "hf cryptorf eload -f hf-cryptorf-0102030405-dump.bin\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -455,11 +455,11 @@ static int CmdHFCryptoRFESave(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cryptorf esave",
-                "Save emulator memory to bin/eml/json file\n"
-                "if filename is not supplied, UID will be used.",
-                "hf cryptorf esave\n"
-                "hf cryptorf esave -f filename"
-                );
+                  "Save emulator memory to bin/eml/json file\n"
+                  "if filename is not supplied, UID will be used.",
+                  "hf cryptorf esave\n"
+                  "hf cryptorf esave -f filename"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<filename>", "filename of dumpfile"),

@@ -1171,7 +1171,7 @@ static int CmdHF15FindAfi(const char *Cmd) {
             break;
         }
 
-        if (WaitForResponseTimeout(CMD_HF_ISO15693_FINDAFI, &resp, 2000)){
+        if (WaitForResponseTimeout(CMD_HF_ISO15693_FINDAFI, &resp, 2000)) {
             if (resp.status == PM3_EOPABORTED) {
                 PrintAndLogEx(DEBUG, "Button pressed, user aborted");
             }
@@ -1370,7 +1370,7 @@ static int CmdHF15Dump(const char *Cmd) {
 
     // copy uid to read command
     memcpy(req + 2, uid, sizeof(uid));
-    
+
     PrintAndLogEx(INFO, "." NOLF);
     for (int retry = 0; retry < 5; retry++) {
 

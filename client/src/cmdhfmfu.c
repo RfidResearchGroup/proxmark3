@@ -949,7 +949,7 @@ static int mfu_decrypt_amiibo(uint8_t *encrypted, uint16_t elen, uint8_t *decryp
 
     if (elen < NFC3D_AMIIBO_SIZE / 4) {
         PrintAndLogEx(ERR, "ERR,  data wrong length, got %zu , expected %zu", elen,  (NFC3D_AMIIBO_SIZE / 4));
-        return PM3_ESOFT;        
+        return PM3_ESOFT;
     }
 
     nfc3d_amiibo_keys amiibo_keys = {0};
@@ -961,7 +961,7 @@ static int mfu_decrypt_amiibo(uint8_t *encrypted, uint16_t elen, uint8_t *decryp
         PrintAndLogEx(ERR, "WARNING, Tag signature was NOT valid");
     }
 
-    *dlen = NFC3D_AMIIBO_SIZE;    
+    *dlen = NFC3D_AMIIBO_SIZE;
     return PM3_SUCCESS;
 }
 static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
@@ -1016,10 +1016,10 @@ out:
 }
 */
 /*
-Lego Dimensions, 
+Lego Dimensions,
   Version: 00 04 04 02 01 00 0F 03
-  
-  matching bytes: 
+
+  matching bytes:
   index 12  ( 3 * 4 )
    E1 10 12 00 01 03 A0 0C 34 03 13 D1 01 0F 54 02 65 6E
 */
@@ -1075,7 +1075,7 @@ static mfu_identify_t mfu_ident_table[] = {
     {NULL, NULL, 0, 0, NULL, NULL, NULL, NULL}
 };
 
-static mfu_identify_t* mfu_match_fingerprint(uint8_t *version, uint8_t *data) {
+static mfu_identify_t *mfu_match_fingerprint(uint8_t *version, uint8_t *data) {
     uint8_t i = 0;
     do {
 
@@ -1140,7 +1140,7 @@ static int mfu_fingerprint(void) {
         res = PM3_ESOFT;
         goto out;
     }
-    
+
     maxbytes = ((maxbytes / 4) + 1) * 4;
     data = calloc(maxbytes, sizeof(uint8_t));
     if (data == NULL) {
@@ -1184,7 +1184,7 @@ static int mfu_fingerprint(void) {
     uint8_t version[8] = {0};
     uint8_t uid[7] = {0};
     if (mfu_get_version_uid(version, uid) == PM3_SUCCESS) {
-        mfu_identify_t* item = mfu_match_fingerprint(version, data);
+        mfu_identify_t *item = mfu_match_fingerprint(version, data);
         if (item) {
             PrintAndLogEx(SUCCESS, "Found " _GREEN_("%s"), item->desc);
 
@@ -3280,30 +3280,30 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         if (memcmp(pre, post, sizeof(pre)) == 0) {
 
             PrintAndLogEx(INFO, "Current :           %02d (0x%02X) %s"
-                            , blockno
-                            , blockno
-                            , poststr
-                            );
+                          , blockno
+                          , blockno
+                          , poststr
+                         );
         } else {
             PrintAndLogEx(INFO, _CYAN_("Tear off occurred") " : %02d (0x%02X) %s => " _RED_("%s")
-                            , blockno
-                            , blockno
-                            , prestr
-                            , poststr
-                            );
+                          , blockno
+                          , blockno
+                          , prestr
+                          , poststr
+                         );
 
             lock_on = true;
 
-            if ((phase_begin_clear == -1) && (bitcount32(*(uint32_t*)pre) > bitcount32(*(uint32_t*)post)))
+            if ((phase_begin_clear == -1) && (bitcount32(*(uint32_t *)pre) > bitcount32(*(uint32_t *)post)))
                 phase_begin_clear = current;
 
-            if ((phase_begin_clear > -1) && (phase_end_clear == -1) && (bitcount32(*(uint32_t*)post) == 0))
+            if ((phase_begin_clear > -1) && (phase_end_clear == -1) && (bitcount32(*(uint32_t *)post) == 0))
                 phase_end_clear = current;
-            
+
             if ((current == start) && (phase_end_clear > -1))
                 skip_phase1 = true;
             // new write phase must be atleast 100us later..
-            if (((bitcount32(*(uint32_t*)pre) == 0) || (phase_end_clear > -1)) && (phase_begin_newwr == -1) && (bitcount32(*(uint32_t*)post) != 0) && (skip_phase1 || (current > (phase_end_clear + 100))))
+            if (((bitcount32(*(uint32_t *)pre) == 0) || (phase_end_clear > -1)) && (phase_begin_newwr == -1) && (bitcount32(*(uint32_t *)post) != 0) && (skip_phase1 || (current > (phase_end_clear + 100))))
                 phase_begin_newwr = current;
 
             if ((phase_begin_newwr > -1) && (phase_end_newwr == -1) && (memcmp(post, teardata, sizeof(teardata)) == 0))
@@ -3346,7 +3346,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     if ((phase_begin_clear > - 1) && (phase_begin_clear != start)) {
         PrintAndLogEx(INFO, "Erase phase start boundary around " _YELLOW_("%5d") " us", phase_begin_clear);
     }
-    if ((phase_end_clear > - 1) && (phase_end_clear != start)){
+    if ((phase_end_clear > - 1) && (phase_end_clear != start)) {
         PrintAndLogEx(INFO, "Erase phase end boundary around   " _YELLOW_("%5d") " us", phase_end_clear);
     }
     if (phase_begin_newwr > - 1) {
@@ -3754,8 +3754,8 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
 */
 
-// 
-// name, identifying bytes,  decode function,  hints text 
+//
+// name, identifying bytes,  decode function,  hints text
 // identifying bits
 // 1. getversion data must match.
 // 2. magic bytes in the readable payload
@@ -3889,7 +3889,7 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
             }
         }
     }
-    char *mattel = strstr((char*)records, ".pid.mattel/");
+    char *mattel = strstr((char *)records, ".pid.mattel/");
     if (mattel) {
         mattel += 12;
         while (mattel) {
@@ -3906,7 +3906,7 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
                 PrintAndLogEx(INFO, "decoded... %s", sprint_hex(arr, arrlen));
                 break;
             }
-        }        
+        }
     }
 
     free(records);

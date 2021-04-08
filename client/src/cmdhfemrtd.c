@@ -1217,7 +1217,7 @@ static void emrtd_mrz_replace_pad(char *data, int datalen, char newchar) {
 
 static void emrtd_print_optional_elements(char *mrz, int offset, int length, bool verify_check_digit) {
     int i = emrtd_mrz_determine_length(mrz, offset, length);
-    if (i == -1){
+    if (i == -1) {
         return;
     }
 
