@@ -6,7 +6,9 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
-#include <sys/mman.h>
+#ifndef (__MINGW64__)
+# include <sys/mman.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
