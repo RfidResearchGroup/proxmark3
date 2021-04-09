@@ -128,7 +128,6 @@ int thread_stop(thread_ctx_t *ctx);
 int thread_start_scheduler(thread_ctx_t *ctx, thread_args_t *t_arg, wu_queue_ctx_t *queue_ctx);
 bool thread_setEnd(thread_ctx_t *ctx, thread_args_t *t_arg);
 
-void tprintf(const char *restrict format, ...);
 const char *thread_strerror(int error);
 const char *thread_status_strdesc(thread_status_t s);
 
