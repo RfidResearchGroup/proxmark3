@@ -233,7 +233,7 @@ or
 $ ./ht2crack5opencl <UID> <nR1> <aR1> <nR2> <aR2>
 ```
 
-5opencl supports a number of additional parameters, see crack5opencl/README.md for details.
+5opencl supports a number of additional parameters, see [crack5opencl/README.md](/tools/hitag2crack/crack5opencl/README.md) for details.
 
 Usage details: Next steps
 -------------------------
