@@ -188,13 +188,6 @@ static int usage_hf14_decryptbytes(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_hf14_eclr(void) {
-    PrintAndLogEx(NORMAL, "It set card emulator memory to empty data blocks and key A/B FFFFFFFFFFFF \n");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf eclr");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf eclr"));
-    return PM3_SUCCESS;
-}
 static int usage_hf14_eset(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf eset <block number> <block data (32 hex symbols)>");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -243,19 +236,7 @@ static int usage_hf14_ecfill(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("        hf mf ecfill A 4"));
     return PM3_SUCCESS;
 }
-static int usage_hf14_ekeyprn(void) {
-    PrintAndLogEx(NORMAL, "Download and print the keys from emulator memory");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf ekeyprn [card memory] [d]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h    this help");
-    PrintAndLogEx(NORMAL, "      card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
-    PrintAndLogEx(NORMAL, "      d    write keys to binary file `hf-mf-<UID>-key.bin`");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf ekeyprn 1"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf ekeyprn d"));
-    return PM3_SUCCESS;
-}
+
 
 static int usage_hf14_csetuid(void) {
     PrintAndLogEx(NORMAL, "Set UID, ATQA, and SAK for magic Chinese card. Only works with magic cards");
@@ -333,17 +314,7 @@ static int usage_hf14_cview(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("       hf mf cview 1"));
     return PM3_SUCCESS;
 }
-static int usage_hf14_nack(void) {
-    PrintAndLogEx(NORMAL, "Test a MIFARE Classic based card for the NACK bug.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf nack [h] [v]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h             this help");
-    PrintAndLogEx(NORMAL, "       v             verbose");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf nack"));
-    return PM3_SUCCESS;
-}
+
 static int usage_hf14_gen3uid(void) {
     PrintAndLogEx(NORMAL, "Set UID for magic GEN 3 card without manufacturer block changing");
     PrintAndLogEx(NORMAL, "");
@@ -868,7 +839,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
         arg_str0("f", "file", "<fn>", "filename of dump"),
         arg_str0("k", "keys", "<fn>", "filename of keys"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_param_end
@@ -909,7 +880,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
         m1 = true;
     }
 
-    uint8_t numSectors = 1;
+    uint8_t numSectors = MIFARE_1K_MAXSECTOR;
 
     if (m0) {
         numSectors = MIFARE_MINI_MAXSECTOR;
@@ -3727,6 +3698,7 @@ void printKeyTable(uint8_t sectorscnt, sector_t *e_sector) {
 void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_sector) {
     char strA[12 + 1] = {0};
     char strB[12 + 1] = {0};
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "|-----|----------------|---|----------------|---|");
     PrintAndLogEx(SUCCESS, "| Sec | key A          |res| key B          |res|");
     PrintAndLogEx(SUCCESS, "|-----|----------------|---|----------------|---|");
@@ -3778,6 +3750,7 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
     } else {
         PrintAndLogEx(SUCCESS, "( " _YELLOW_("0") ":Failed / " _YELLOW_("1") ":Success)");
     }
+    PrintAndLogEx(NORMAL, "");
 }
 
 
@@ -3872,9 +3845,17 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
 }
 
 static int CmdHF14AMfEClear(const char *Cmd) {
-    char c = tolower(param_getchar(Cmd, 0));
-    if (c == 'h') return usage_hf14_eclr();
-
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf eclr",
+                  "It set card emulator memory to empty data blocks and key A/B FFFFFFFFFFFF",
+                  "hf mf eclr"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx); 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_MEMCLR, NULL, 0);
     return PM3_SUCCESS;
@@ -4163,37 +4144,52 @@ static int CmdHF14AMfECFill(const char *Cmd) {
 
 static int CmdHF14AMfEKeyPrn(const char *Cmd) {
 
-    uint8_t sectors_cnt = MIFARE_1K_MAXSECTOR;
-    uint8_t data[16];
-    uint8_t uid[4];
-    uint8_t cmdp = 0;
-    bool errors = false, createDumpFile = false;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf ekeyprn",
+                  "Download and print the keys from emulator memory",
+                  "hf mf ekeyprn --1k --> print MFC 1K keyset\n"
+                  "hf mf ekeyprn -w   --> write keys to binary file"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("w", "write", "write keys to binary file `hf-mf-<UID>-key.bin`"),
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        char ctmp = tolower(param_getchar(Cmd, cmdp));
-        switch (ctmp) {
-            case 'd':
-                createDumpFile = true;
-                cmdp++;
-                break;
-            case 'h':
-                return usage_hf14_ekeyprn();
-            case '0':
-            case '1':
-            case '2':
-            case '4':
-                sectors_cnt = NumOfSectors(ctmp);
-                if (sectors_cnt == 0) return usage_hf14_ekeyprn();
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
+    bool create_dumpfile = arg_get_lit(ctx, 1);
+    bool m0 = arg_get_lit(ctx, 2);
+    bool m1 = arg_get_lit(ctx, 3);
+    bool m2 = arg_get_lit(ctx, 4);
+    bool m4 = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx); 
+
     // validations
-    if (errors) return usage_hf14_ekeyprn();
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    } else if ((m0 + m1 + m2 + m4) == 0) {
+        m1 = true;
+    }
+
+    uint8_t sectors_cnt = MIFARE_1K_MAXSECTOR;
+
+    if (m0) {
+        sectors_cnt = MIFARE_MINI_MAXSECTOR;
+    } else if (m1) {
+        sectors_cnt = MIFARE_1K_MAXSECTOR;
+    } else if (m2) {
+        sectors_cnt = MIFARE_2K_MAXSECTOR;
+    } else if (m4) {
+        sectors_cnt = MIFARE_4K_MAXSECTOR;
+    } else {
+        PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
+        return PM3_EINVARG;
+    }
 
     sector_t *e_sector = NULL;
 
@@ -4205,12 +4201,15 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     }
 
     // read UID from EMUL
+    uint8_t data[16];
     if (mfEmlGetMem(data, 0, 1) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "error get block %d", 0);
+        PrintAndLogEx(WARNING, "error get block 0");
         free(e_sector);
         return PM3_ESOFT;
     }
 
+    // assuming 4byte UID.
+    uint8_t uid[4];
     memcpy(uid, data, sizeof(uid));
 
     // download keys from EMUL
@@ -4232,7 +4231,7 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     printKeyTable(sectors_cnt, e_sector);
 
     // dump the keys
-    if (createDumpFile) {
+    if (create_dumpfile) {
 
         char filename[FILE_PATH_SIZE] = {0};
         char *fptr = filename;
@@ -4925,10 +4924,19 @@ static int CmdHf14AMfSetMod(const char *Cmd) {
 
 // MIFARE NACK bug detection
 static int CmdHf14AMfNack(const char *Cmd) {
-
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_hf14_nack();
-    bool verbose = (ctmp == 'v');
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf nack",
+                  "Test a MIFARE Classic based card for the NACK bug",
+                  "hf mf nack"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose", "verbose output`"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx); 
 
     if (verbose)
         PrintAndLogEx(INFO, "Started testing card for NACK bug. Press Enter to abort");
