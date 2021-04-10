@@ -215,16 +215,7 @@ static int usage_hf14_esave(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("        hf mf esave 4 filename"));
     return PM3_SUCCESS;
 }
-static int usage_hf14_eview(void) {
-    PrintAndLogEx(NORMAL, "It displays emul memory");
-    PrintAndLogEx(NORMAL, " Usage:  hf mf eview [card memory]");
-    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf eview"));
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf eview 4"));
-    return PM3_SUCCESS;
-}
+
 static int usage_hf14_ecfill(void) {
     PrintAndLogEx(NORMAL, "Read card and transfer its data to emulator memory.");
     PrintAndLogEx(NORMAL, "Keys must be laid in the emulator memory. \n");
@@ -542,6 +533,28 @@ static char GetFormatFromSector(uint8_t sectorNo) {
             return ' ';
     }
 }
+
+static void mf_print_block(uint8_t blockno, uint8_t *d) {
+    if (blockno == 0) {
+        PrintAndLogEx(INFO, "%3d | " _RED_("%s"), blockno, sprint_hex_ascii(d + (blockno * 16), 16));
+    } else if (mfIsSectorTrailer(blockno)) {
+        PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), blockno, sprint_hex_ascii(d + (blockno * 16), 16));
+    } else {
+        PrintAndLogEx(INFO, "%3d | %s ", blockno, sprint_hex_ascii(d + (blockno * 16), 16));
+    }
+}
+static void mf_print_blocks(uint16_t n, uint8_t *d) {
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+    PrintAndLogEx(INFO, "blk | data                                            | ascii");
+    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+    for (uint16_t i = 0; i < n; i++) {
+        mf_print_block(i, d);
+    }
+    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+    PrintAndLogEx(NORMAL, "");
+}
+
 
 static int CmdHF14AMfDarkside(const char *Cmd) {
     CLIParserContext *ctx;
@@ -4060,50 +4073,67 @@ static int CmdHF14AMfESave(const char *Cmd) {
 
 static int CmdHF14AMfEView(const char *Cmd) {
 
-    uint8_t *dump;
-    int bytes;
-    uint16_t blocks;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf eview",
+                  "It displays emulator memory",
+                  "hf mf eview\n"
+                  "hf mf eview --4k"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool m0 = arg_get_lit(ctx, 1);
+    bool m1 = arg_get_lit(ctx, 2);
+    bool m2 = arg_get_lit(ctx, 3);
+    bool m4 = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx); 
 
-    char c = tolower(param_getchar(Cmd, 0));
-    if (c == 'h') return usage_hf14_eview();
-
-    if (c != 0) {
-        blocks = NumOfBlocks(c);
-        if (blocks == 0) return usage_hf14_eview();
-    } else {
-        blocks = MIFARE_1K_MAXBLOCK;
+    // validations
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    } else if ((m0 + m1 + m2 + m4) == 0) {
+        m1 = true;
     }
-    bytes = blocks * MFBLOCK_SIZE;
 
-    dump = calloc(bytes, sizeof(uint8_t));
-    if (!dump) {
+    uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
+
+    if (m0) {
+        block_cnt = MIFARE_MINI_MAXBLOCK;
+    } else if (m1) {
+        block_cnt = MIFARE_1K_MAXBLOCK;
+    } else if (m2) {
+        block_cnt = MIFARE_2K_MAXBLOCK;
+    } else if (m4) {
+        block_cnt = MIFARE_4K_MAXBLOCK;
+    } else {
+        PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
+        return PM3_EINVARG;
+    }
+
+    int bytes = block_cnt * MFBLOCK_SIZE;
+
+    uint8_t *dump = calloc(bytes, sizeof(uint8_t));
+    if (dump == NULL) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
         return PM3_EMALLOC;
     }
     memset(dump, 0, bytes);
 
-    PrintAndLogEx(INFO, "downloading from emulator memory");
+    PrintAndLogEx(INFO, "downloading emulator memory");
     if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(dump);
         return PM3_ETIMEOUT;
     }
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
-    PrintAndLogEx(INFO, "blk | data                                            | ascii");
-    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
-    for (uint16_t i = 0; i < blocks; i++) {
-        if (i == 0) {
-            PrintAndLogEx(INFO, "%03d | " _RED_("%s"), i, sprint_hex_ascii(dump + (i * 16), 16));
-        } else if (mfIsSectorTrailer(i)) {
-            PrintAndLogEx(INFO, "%03d | " _YELLOW_("%s"), i, sprint_hex_ascii(dump + (i * 16), 16));
-        } else {
-            PrintAndLogEx(INFO, "%03d | %s ", i, sprint_hex_ascii(dump + (i * 16), 16));
-        }
-    }
-    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
-    PrintAndLogEx(NORMAL, "");
+    mf_print_blocks(block_cnt, dump);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -4782,7 +4812,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
     PrintAndLogEx(INFO, "." NOLF);
 
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
-    if (!dump) {
+    if (dump == NULL) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
         return PM3_EMALLOC;
     }
@@ -4824,27 +4854,11 @@ static int CmdHF14AMfCView(const char *Cmd) {
             free(dump);
             return PM3_ESOFT;
         }
-
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
     }
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
-    PrintAndLogEx(INFO, "blk | data                                            | ascii");
-    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
-    for (uint16_t i = 0; i < numblocks; i++) {
-
-        if (i == 0) {
-            PrintAndLogEx(INFO, "%03d | " _RED_("%s"), i, sprint_hex_ascii(dump + (i * 16), 16));
-        } else if (mfIsSectorTrailer(i)) {
-            PrintAndLogEx(INFO, "%03d | " _YELLOW_("%s"), i, sprint_hex_ascii(dump + (i * 16), 16));
-        } else {
-            PrintAndLogEx(INFO, "%03d | %s ", i, sprint_hex_ascii(dump + (i * 16), 16));
-        }
-    }
-    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
-    PrintAndLogEx(NORMAL, "");
+    mf_print_blocks(numblocks, dump);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -5780,6 +5794,51 @@ out:
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfView(const char *Cmd) {
+    
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf view",
+                  "Print a MIFARE Classic dump file",
+                  "hf mf view -f hf-mf-01020304-dump.bin"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "filename of dump"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool verbose = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx); 
+
+    uint8_t *dump = NULL;
+    size_t bytes_read = 0;
+    if (loadFile_safe(filename, "", (void **)&dump, &bytes_read) != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
+        return PM3_EFILE;
+    }
+    uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
+    if (bytes_read == 320)
+        block_cnt = MIFARE_MINI_MAXBLOCK;
+    else if (bytes_read == 2048)
+        block_cnt = MIFARE_2K_MAXBLOCK;
+    else if (bytes_read == 4096)
+        block_cnt = MIFARE_4K_MAXBLOCK;
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
+        PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
+    }
+
+    mf_print_blocks(block_cnt, dump);
+    free(dump);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                AlwaysAvailable, "This help"},
     {"list",        CmdHF14AMfList,         AlwaysAvailable,  "List MIFARE history"},
@@ -5805,6 +5864,7 @@ static command_t CommandTable[] = {
     {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE Classic sector"},
     {"restore",     CmdHF14AMfRestore,      IfPm3Iso14443a,  "Restore MIFARE Classic binary file to BLANK tag"},
     {"setmod",      CmdHf14AMfSetMod,       IfPm3Iso14443a,  "Set MIFARE Classic EV1 load modulation strength"},
+    {"view",        CmdHF14AMfView,         IfPm3Iso14443a,  "Display content from tag dump file"},
     {"wipe",        CmdHF14AMfWipe,         IfPm3Iso14443a,  "Wipe card to zeros and default keys/acc"},
     {"wrbl",        CmdHF14AMfWrBl,         IfPm3Iso14443a,  "Write MIFARE Classic block"},
 
@@ -5819,7 +5879,7 @@ static command_t CommandTable[] = {
     {"eload",       CmdHF14AMfELoad,        IfPm3Iso14443a,  "Load from file emul dump"},
     {"esave",       CmdHF14AMfESave,        IfPm3Iso14443a,  "Save to file emul dump"},
     {"eset",        CmdHF14AMfESet,         IfPm3Iso14443a,  "Set emulator memory block"},
-    {"eview",       CmdHF14AMfEView,        IfPm3Iso14443a,  "View emul memory"},
+    {"eview",       CmdHF14AMfEView,        IfPm3Iso14443a,  "View emulator memory"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic gen1") " -----------------------"},
     {"cgetblk",     CmdHF14AMfCGetBlk,      IfPm3Iso14443a,  "Read block"},
     {"cgetsc",      CmdHF14AMfCGetSc,       IfPm3Iso14443a,  "Read sector"},
