@@ -188,22 +188,6 @@ static int usage_hf14_decryptbytes(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_hf14_eset(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mf eset <block number> <block data (32 hex symbols)>");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf eset 1 000102030405060708090a0b0c0d0e0f"));
-    return PM3_SUCCESS;
-}
-static int usage_hf14_eload(void) {
-    PrintAndLogEx(NORMAL, "It loads emul dump from the file `filename.eml`");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf eload [card memory] <file name w/o `.eml`> [numblocks]");
-    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K, u = UL");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf eload filename"));
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf eload 4 filename"));
-    return PM3_SUCCESS;
-}
 static int usage_hf14_esave(void) {
     PrintAndLogEx(NORMAL, "It saves emul dump into the file `filename.eml` or `cardID.eml`");
     PrintAndLogEx(NORMAL, " Usage:  hf mf esave [card memory] [file name w/o `.eml`]");
@@ -215,7 +199,6 @@ static int usage_hf14_esave(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("        hf mf esave 4 filename"));
     return PM3_SUCCESS;
 }
-
 static int usage_hf14_ecfill(void) {
     PrintAndLogEx(NORMAL, "Read card and transfer its data to emulator memory.");
     PrintAndLogEx(NORMAL, "Keys must be laid in the emulator memory. \n");
@@ -274,7 +257,6 @@ static int usage_hf14_cload(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("       hf mf cload e"));
     return PM3_SUCCESS;
 }
-
 static int usage_hf14_csave(void) {
     PrintAndLogEx(NORMAL, "It saves `magic Chinese` card dump into the file `filename.eml` or `cardID.eml`");
     PrintAndLogEx(NORMAL, "or into emulator memory");
@@ -536,20 +518,21 @@ static char GetFormatFromSector(uint8_t sectorNo) {
 
 static void mf_print_block(uint8_t blockno, uint8_t *d) {
     if (blockno == 0) {
-        PrintAndLogEx(INFO, "%3d | " _RED_("%s"), blockno, sprint_hex_ascii(d + (blockno * 16), 16));
+        PrintAndLogEx(INFO, "%3d | " _RED_("%s"), blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
     } else if (mfIsSectorTrailer(blockno)) {
-        PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), blockno, sprint_hex_ascii(d + (blockno * 16), 16));
+        PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
     } else {
-        PrintAndLogEx(INFO, "%3d | %s ", blockno, sprint_hex_ascii(d + (blockno * 16), 16));
+        PrintAndLogEx(INFO, "%3d | %s ", blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
     }
 }
+
 static void mf_print_blocks(uint16_t n, uint8_t *d) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
     PrintAndLogEx(INFO, "blk | data                                            | ascii");
     PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
     for (uint16_t i = 0; i < n; i++) {
-        mf_print_block(i, d);
+        mf_print_block(i, d + (i * MFBLOCK_SIZE));
     }
     PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
     PrintAndLogEx(NORMAL, "");
@@ -697,7 +680,6 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
     int keylen = 0;
     uint8_t key[6] = {0};
     CLIGetHexWithReturn(ctx, 4, key, &keylen);
-
     bool verbose = arg_get_lit(ctx, 5);
     CLIParserFree(ctx); 
 
@@ -714,15 +696,9 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
         PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
-        if (blockno == 0) {
-            PrintAndLogEx(INFO, "%3d | " _RED_("%s"), blockno, sprint_hex_ascii(data, sizeof(data)));
-        } else if (mfIsSectorTrailer(blockno)) {
-            PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), blockno, sprint_hex_ascii(data, sizeof(data)));
-            if (verbose) {
-                decode_print_st(blockno, data);
-            }
-        } else {
-            PrintAndLogEx(INFO, "%3d | %s ", blockno, sprint_hex_ascii(data, sizeof(data)));
+        mf_print_block(blockno, data);
+        if (verbose) {
+            decode_print_st(blockno, data);
         }
     }
     PrintAndLogEx(NORMAL, "");
@@ -742,6 +718,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
         arg_lit0("b", NULL, "input key specified is B key"),
         arg_str0("k", "key", "<hex>", "key specified as 6 hex bytes"),
         arg_int1("s", "sec", "<dec>", "sector number"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -759,6 +736,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
 
     int s = arg_get_int_def(ctx, 4, 0);
+    bool verbose = arg_get_lit(ctx, 5);
     CLIParserFree(ctx); 
 
     if (s > MIFARE_4K_MAXSECTOR) {
@@ -766,7 +744,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
         return PM3_EINVARG;
     }
     uint8_t sector = (uint8_t)s;
-    uint8_t sc_size = mfNumBlocksPerSector(sector) * 16;
+    uint8_t sc_size = mfNumBlocksPerSector(sector) * MFBLOCK_SIZE;
     uint8_t *data = calloc(sc_size, sizeof(uint8_t));
     if (data == NULL) {
         PrintAndLogEx(ERR, "failed to allocate memory");
@@ -783,17 +761,15 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
         PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
         PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
         for (int i = 0; i < blocks; i++) {
-            if (start + i == 0) {
-                PrintAndLogEx(INFO, "%3d | " _RED_("%s"), start + i, sprint_hex_ascii(data + (i * 16), 16));
-            } else if (mfIsSectorTrailer(i)) {
-                PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), start + i, sprint_hex_ascii(data + (i * 16), 16));
-            } else {
-                PrintAndLogEx(INFO, "%3d | %s ", start + i, sprint_hex_ascii(data + (i * 16), 16));
-            }
+            mf_print_block(start + i, data + (i * MFBLOCK_SIZE));
         }
-        decode_print_st(start + blocks - 1, data + ((blocks - 1) * 16));
+
+        if (verbose) {
+            decode_print_st(start + blocks - 1, data + ((blocks - 1) * MFBLOCK_SIZE));
+        }       
     }
     free(data);
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -3772,8 +3748,8 @@ static int CmdHF14AMfEGetBlk(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf egetblk",
                   "Get emulator memory block",
-                  "hf mf egetblk -b 0      -> get block 0 (manufacturer)\n"
-                  "hf mf egetblk -b 3 -v   -> get block 3, decode sector trailer\n"
+                  "hf mf egetblk --blk 0      -> get block 0 (manufacturer)\n"
+                  "hf mf egetblk --blk 3 -v   -> get block 3, decode sector trailer\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -3798,20 +3774,16 @@ static int CmdHF14AMfEGetBlk(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
         PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
-        if (blockno == 0) {
-            PrintAndLogEx(INFO, "%3d | " _RED_("%s"), blockno, sprint_hex_ascii(data, sizeof(data)));
-        } else if (mfIsSectorTrailer(blockno)) {
-            PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), blockno, sprint_hex_ascii(data, sizeof(data)));
-            if (verbose) {
-                decode_print_st(blockno, data);
-            }
-        } else {
-            PrintAndLogEx(INFO, "%3d | %s ", blockno, sprint_hex_ascii(data, sizeof(data)));
-        }
-
+        mf_print_block(blockno, data);
+    }
+    if (verbose) {
+        decode_print_st(blockno, data);
+    } else {
+        PrintAndLogEx(NORMAL, "");
     }
     return PM3_SUCCESS;
 }
+
 static int CmdHF14AMfEGetSc(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf egetsc",
@@ -3821,11 +3793,14 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int1("s",  "sec", "<dec>", "sector number"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int s = arg_get_int_def(ctx, 1, 0);
+    bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx); 
+
     if (s > 39) {
         PrintAndLogEx(WARNING, "Sector number must be less then 40");
         return PM3_EINVARG;
@@ -3844,16 +3819,14 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
     for (int i = 0; i < blocks; i++) {
         int res = mfEmlGetMem(data, start + i, 1);
         if (res == PM3_SUCCESS) {
-            if (start + i == 0) {
-                PrintAndLogEx(INFO, "%3d | " _RED_("%s"), start + i, sprint_hex_ascii(data, sizeof(data)));
-            } else if (mfIsSectorTrailer(i)) {
-                PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), start + i, sprint_hex_ascii(data, sizeof(data)));
-            } else {
-                PrintAndLogEx(INFO, "%3d | %s ", start + i, sprint_hex_ascii(data, sizeof(data)));
-            }
+            mf_print_block(start + i, data);
         }
     }
-    decode_print_st(start + blocks - 1, data);
+    if (verbose) {
+        decode_print_st(start + blocks - 1, data);
+    } else {
+        PrintAndLogEx(NORMAL, "");
+    }
     return PM3_SUCCESS;
 }
 
@@ -3875,66 +3848,114 @@ static int CmdHF14AMfEClear(const char *Cmd) {
 }
 
 static int CmdHF14AMfESet(const char *Cmd) {
-    char c = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 3 || c == 'h')
-        return usage_hf14_eset();
 
-    uint8_t memBlock[16];
-    memset(memBlock, 0x00, sizeof(memBlock));
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf esetblk",
+                  "Set emulator memory block",
+                  "hf mf esetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("b", "blk", "<dec>", "block number"),
+        arg_str0("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t blockNo = param_get8(Cmd, 0);
+    int b = arg_get_int_def(ctx, 1, 0);
 
-    if (param_gethex(Cmd, 1, memBlock, 32)) {
-        PrintAndLogEx(WARNING, "block data must include 32 HEX symbols");
-        return PM3_ESOFT;
+    uint8_t data[16] = {0x00};
+    int datalen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), data, sizeof(data), &datalen);
+    CLIParserFree(ctx); 
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
+
+    if (b > 255) {
+        return PM3_EINVARG;
+    }
+
+    if (datalen != sizeof(data)) {
+        PrintAndLogEx(WARNING, "block data must include 16 HEX bytes. Got %i", datalen);
+        return PM3_EINVARG;
     }
 
     //  1 - blocks count
-    return mfEmlSetMem(memBlock, blockNo, 1);
+    return mfEmlSetMem(data, b, 1);
 }
 
 int CmdHF14AMfELoad(const char *Cmd) {
 
-    size_t counter = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf eload",
+                  "Load emulator memory with data from `filename.eml` dump file",
+                  "hf mf eload -f hf-mf-01020304.eml\n"
+                  "hf mf eload --4k -f hf-mf-01020304.eml\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "filename of dump"),
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_lit0(NULL, "ul", "MIFARE Ultralight family"),
+        arg_int0(NULL, "blks", "<dec>", "manually set number of blocks (overrides)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE];
-    int blockNum, numBlocks, nameParamNo = 1;
-    uint8_t blockWidth = 16;
-    char c = tolower(param_getchar(Cmd, 0));
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    if (strlen(Cmd) < 2 &&  c == 'h')
-        return usage_hf14_eload();
+    bool m0 = arg_get_lit(ctx, 2);
+    bool m1 = arg_get_lit(ctx, 3);
+    bool m2 = arg_get_lit(ctx, 4);
+    bool m4 = arg_get_lit(ctx, 5);
+    bool mu = arg_get_lit(ctx, 6);
 
-    switch (c) {
-        case '0' :
-            numBlocks = MIFARE_MINI_MAXBLOCK;
-            break;
-        case '1' :
-        case '\0':
-            numBlocks = MIFARE_1K_MAXBLOCK;
-            break;
-        case '2' :
-            numBlocks = MIFARE_2K_MAXBLOCK;
-            break;
-        case '4' :
-            numBlocks = MIFARE_4K_MAXBLOCK;
-            break;
-        case 'u' :
-            numBlocks = 255;
-            blockWidth = 4;
-            break;
-        default:  {
-            numBlocks = MIFARE_1K_MAXBLOCK;
-            nameParamNo = 0;
-        }
+    int numblks = arg_get_int_def(ctx, 7, -1);
+
+    CLIParserFree(ctx); 
+
+    // validations
+    if ((m0 + m1 + m2 + m4 + mu) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    } else if ((m0 + m1 + m2 + m4 + mu) == 0) {
+        m1 = true;
     }
-    uint32_t numblk2 = param_get32ex(Cmd, 2, 0, 10);
-    if (numblk2 > 0)
-        numBlocks = numblk2;
 
-    if (0 == param_getstr(Cmd, nameParamNo, filename, sizeof(filename)))
-        return usage_hf14_eload();
+    uint8_t block_width = 16;
+    uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
 
-    uint8_t *data = calloc(4096, sizeof(uint8_t));
+    if (m0) {
+        block_cnt = MIFARE_MINI_MAXBLOCK;
+    } else if (m1) {
+        block_cnt = MIFARE_1K_MAXBLOCK;
+    } else if (m2) {
+        block_cnt = MIFARE_2K_MAXBLOCK;
+    } else if (m4) {
+        block_cnt = MIFARE_4K_MAXBLOCK;
+    } else if (mu) {
+        block_cnt = 255;
+        block_width = 4;
+    } else {
+        PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, "%d blocks ( %u bytes ) to upload", block_cnt, block_cnt * block_width);
+
+    if (numblks > 0) {
+        block_cnt = MIN(numblks, block_cnt);
+        PrintAndLogEx(INFO, "overriding number of blocks, will use %d blocks ( %u bytes )", block_cnt, block_cnt * block_width);
+    }
+
+    uint8_t *data = calloc(MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK, sizeof(uint8_t));
     if (data == NULL) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
         return PM3_EMALLOC;
@@ -3949,15 +3970,14 @@ int CmdHF14AMfELoad(const char *Cmd) {
     }
 
     // 64 or 256 blocks.
-    if ((datalen % blockWidth) != 0) {
+    if ((datalen % block_width) != 0) {
         PrintAndLogEx(FAILED, "File content error. Size doesn't match blockwidth ");
         free(data);
         return PM3_ESOFT;
     }
 
     // convert plain or old mfu format to new format
-    if (blockWidth == 4) {
-
+    if (block_width == 4) {
         res = convert_mfu_dump_format(&data, &datalen, true);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Failed convert on load to new Ultralight/NTAG format");
@@ -3969,7 +3989,8 @@ int CmdHF14AMfELoad(const char *Cmd) {
         printMFUdumpEx(mfu_dump, mfu_dump->pages + 1, 0);
 
         // update expected blocks to match converted data.
-        numBlocks = datalen / 4;
+        block_cnt = datalen / 4;
+        PrintAndLogEx(INFO, "MIFARE Ultralight override, will use %d ( %u bytes )", block_cnt, block_cnt * block_width);
     }
 
     PrintAndLogEx(INFO, "Uploading to emulator memory");
@@ -3977,46 +3998,47 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
     // fast push mode
     conn.block_after_ACK = true;
-    blockNum = 0;
-    while (datalen) {
-        if (datalen == blockWidth) {
+
+    size_t offset = 0;
+    int cnt = 0;
+
+    while (datalen && cnt < block_cnt) {
+        if (datalen == block_width) {
             // Disable fast mode on last packet
             conn.block_after_ACK = false;
         }
 
-        if (mfEmlSetMem_xt(data + counter, blockNum, 1, blockWidth) != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "Cant set emul block: %3d", blockNum);
+        if (mfEmlSetMem_xt(data + offset, cnt, 1, block_width) != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Can't set emulator mem at block: %3d", cnt);
             free(data);
             return PM3_ESOFT;
         }
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
 
-        blockNum++;
-        counter += blockWidth;
-        datalen -= blockWidth;
+        cnt++;
+        offset += block_width;
+        datalen -= block_width;
     }
     free(data);
     PrintAndLogEx(NORMAL, "\n");
 
-    if (blockWidth == 4) {
+    if (block_width == 4) {
         PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf mfu sim h`"));
         // MFU / NTAG
-        if ((blockNum != numBlocks)) {
-            PrintAndLogEx(WARNING, "Warning, Ultralight/Ntag file content, Loaded %d blocks of expected %d blocks into emulator memory", blockNum, numBlocks);
+        if ((cnt != block_cnt)) {
+            PrintAndLogEx(WARNING, "Warning, Ultralight/Ntag file content, Loaded %d blocks of expected %d blocks into emulator memory", cnt, block_cnt);
             return PM3_SUCCESS;
         }
     } else {
         PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf mf sim -h`"));
         // MFC
-        if ((blockNum != numBlocks)) {
-            PrintAndLogEx(WARNING, "Error, file content, Only loaded %d blocks, must be %d blocks into emulator memory", blockNum, numBlocks);
-
+        if ((cnt != block_cnt)) {
+            PrintAndLogEx(WARNING, "Error, file content, Only loaded %d blocks, must be %d blocks into emulator memory", cnt, block_cnt);
             return PM3_SUCCESS;
         }
-
     }
-    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(SUCCESS, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -4541,8 +4563,8 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf cgetblk",
                   "Get block data from magic Chinese card.\n"
                   "Only works with magic gen1a cards",
-                  "hf mf cgetblk -b 0      -> get block 0 (manufacturer)\n"
-                  "hf mf cgetblk -b 3 -v   -> get block 3, decode sector trailer\n"
+                  "hf mf cgetblk --blk 0      --> get block 0 (manufacturer)\n"
+                  "hf mf cgetblk --blk 3 -v   --> get block 3, decode sector trailer\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -4567,22 +4589,17 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-
     uint8_t sector = GetSectorFromBlockNo(blockno);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
     PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
-    if (blockno == 0) {
-        PrintAndLogEx(INFO, "%3d | " _RED_("%s"), blockno, sprint_hex_ascii(data, sizeof(data)));
-    } else if (mfIsSectorTrailer(blockno)) {
-        PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), blockno, sprint_hex_ascii(data, sizeof(data)));
-        if (verbose) {
-            decode_print_st(blockno, data);
-        }
+    mf_print_block(blockno, data);
+   
+    if (verbose) {
+        decode_print_st(blockno, data);
     } else {
-        PrintAndLogEx(INFO, "%3d | %s ", blockno, sprint_hex_ascii(data, sizeof(data)));
+        PrintAndLogEx(NORMAL, "");
     }
-
     return PM3_SUCCESS;
 }
 
@@ -4596,10 +4613,12 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int1("s",  "sec", "<dec>", "sector number"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int s = arg_get_int_def(ctx, 1, 0);
+    bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx); 
     if (s > 39) {
         PrintAndLogEx(WARNING, "Sector number must be less then 40");
@@ -4630,16 +4649,13 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
             PrintAndLogEx(ERR, "Can't read block. %d error=%d", start + i, res);
             return PM3_ESOFT;
         }
-
-        if (start + i == 0) {
-            PrintAndLogEx(INFO, "%3d | " _RED_("%s"), start + i, sprint_hex_ascii(data, sizeof(data)));
-        } else if (mfIsSectorTrailer(i)) {
-            PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), start + i, sprint_hex_ascii(data, sizeof(data)));
-        } else {
-            PrintAndLogEx(INFO, "%3d | %s ", start + i, sprint_hex_ascii(data, sizeof(data)));
-        }
+        mf_print_block(start + i, data);
     }
-    decode_print_st(start + blocks - 1, data);
+    if (verbose) {
+        decode_print_st(start + blocks - 1, data);
+    } else {
+        PrintAndLogEx(NORMAL, "");
+    }
     return PM3_SUCCESS;
 }
 
@@ -4858,6 +4874,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
         fflush(stdout);
     }
 
+    PrintAndLogEx(NORMAL, "");
     mf_print_blocks(numblocks, dump);
     free(dump);
     return PM3_SUCCESS;
@@ -5864,7 +5881,7 @@ static command_t CommandTable[] = {
     {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE Classic sector"},
     {"restore",     CmdHF14AMfRestore,      IfPm3Iso14443a,  "Restore MIFARE Classic binary file to BLANK tag"},
     {"setmod",      CmdHf14AMfSetMod,       IfPm3Iso14443a,  "Set MIFARE Classic EV1 load modulation strength"},
-    {"view",        CmdHF14AMfView,         IfPm3Iso14443a,  "Display content from tag dump file"},
+    {"view",        CmdHF14AMfView,         AlwaysAvailable,  "Display content from tag dump file"},
     {"wipe",        CmdHF14AMfWipe,         IfPm3Iso14443a,  "Wipe card to zeros and default keys/acc"},
     {"wrbl",        CmdHF14AMfWrBl,         IfPm3Iso14443a,  "Write MIFARE Classic block"},
 
@@ -5878,16 +5895,16 @@ static command_t CommandTable[] = {
     {"ekeyprn",     CmdHF14AMfEKeyPrn,      IfPm3Iso14443a,  "Print keys from emulator memory"},
     {"eload",       CmdHF14AMfELoad,        IfPm3Iso14443a,  "Load from file emul dump"},
     {"esave",       CmdHF14AMfESave,        IfPm3Iso14443a,  "Save to file emul dump"},
-    {"eset",        CmdHF14AMfESet,         IfPm3Iso14443a,  "Set emulator memory block"},
+    {"esetblk",     CmdHF14AMfESet,         IfPm3Iso14443a,  "Set emulator memory block"},
     {"eview",       CmdHF14AMfEView,        IfPm3Iso14443a,  "View emulator memory"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic gen1") " -----------------------"},
-    {"cgetblk",     CmdHF14AMfCGetBlk,      IfPm3Iso14443a,  "Read block"},
-    {"cgetsc",      CmdHF14AMfCGetSc,       IfPm3Iso14443a,  "Read sector"},
-    {"cload",       CmdHF14AMfCLoad,        IfPm3Iso14443a,  "Load dump"},
+    {"cgetblk",     CmdHF14AMfCGetBlk,      IfPm3Iso14443a,  "Read block from card"},
+    {"cgetsc",      CmdHF14AMfCGetSc,       IfPm3Iso14443a,  "Read sector from card"},
+    {"cload",       CmdHF14AMfCLoad,        IfPm3Iso14443a,  "Load dump to card"},
     {"csave",       CmdHF14AMfCSave,        IfPm3Iso14443a,  "Save dump from card into file or emulator"},
-    {"csetblk",     CmdHF14AMfCSetBlk,      IfPm3Iso14443a,  "Write block"},
-    {"csetuid",     CmdHF14AMfCSetUID,      IfPm3Iso14443a,  "Set UID"},
-    {"cview",       CmdHF14AMfCView,        IfPm3Iso14443a,  "view card"},
+    {"csetblk",     CmdHF14AMfCSetBlk,      IfPm3Iso14443a,  "Write block to card"},
+    {"csetuid",     CmdHF14AMfCSetUID,      IfPm3Iso14443a,  "Set UID on card"},
+    {"cview",       CmdHF14AMfCView,        IfPm3Iso14443a,  "View card"},
     {"cwipe",       CmdHF14AMfCWipe,        IfPm3Iso14443a,  "Wipe card to default UID/Sectors/Keys"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic gen3") " -----------------------"},
     {"gen3uid",     CmdHf14AGen3UID,        IfPm3Iso14443a,  "Set UID without manufacturer block"},
