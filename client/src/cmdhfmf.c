@@ -188,18 +188,6 @@ static int usage_hf14_decryptbytes(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_hf14_esave(void) {
-    PrintAndLogEx(NORMAL, "It saves emul dump into the file `filename.eml` or `cardID.eml`");
-    PrintAndLogEx(NORMAL, " Usage:  hf mf esave [card memory] [file name w/o `.eml`]");
-    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf esave"));
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf esave 4"));
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf esave 4 filename"));
-    return PM3_SUCCESS;
-}
-
 static int usage_hf14_csetuid(void) {
     PrintAndLogEx(NORMAL, "Set UID, ATQA, and SAK for magic Chinese card. Only works with magic cards");
     PrintAndLogEx(NORMAL, "");
@@ -4032,46 +4020,76 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
 static int CmdHF14AMfESave(const char *Cmd) {
 
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf esave",
+                  "Save emulator memory into three files (BIN/EML/JSON) ",
+                  "hf mf esave\n"
+                  "hf mf esave --4k\n"
+                  "hf mf esave --4k -f hf-mf-01020304.eml"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE];
-    char *fnameptr = filename;
-    uint8_t *dump;
-    int len, bytes, nameParamNo = 1;
-    uint16_t blocks;
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    memset(filename, 0, sizeof(filename));
+    bool m0 = arg_get_lit(ctx, 2);
+    bool m1 = arg_get_lit(ctx, 3);
+    bool m2 = arg_get_lit(ctx, 4);
+    bool m4 = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx); 
 
-    char c = tolower(param_getchar(Cmd, 0));
-    if (c == 'h') return usage_hf14_esave();
-
-    if (c != 0) {
-        blocks = NumOfBlocks(c);
-        if (blocks == 0) return usage_hf14_esave();
-    } else {
-        blocks = MIFARE_1K_MAXBLOCK;
+    // validations
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    } else if ((m0 + m1 + m2 + m4) == 0) {
+        m1 = true;
     }
-    bytes = blocks * MFBLOCK_SIZE;
 
-    dump = calloc(bytes, sizeof(uint8_t));
-    if (!dump) {
+   uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
+
+    if (m0) {
+        block_cnt = MIFARE_MINI_MAXBLOCK;
+    } else if (m1) {
+        block_cnt = MIFARE_1K_MAXBLOCK;
+    } else if (m2) {
+        block_cnt = MIFARE_2K_MAXBLOCK;
+    } else if (m4) {
+        block_cnt = MIFARE_4K_MAXBLOCK;
+    }
+
+    int bytes = block_cnt * MFBLOCK_SIZE;
+
+    // reserv memory
+    uint8_t *dump = calloc(bytes, sizeof(uint8_t));
+    if (dump == NULL) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
         return PM3_EMALLOC;
     }
     memset(dump, 0, bytes);
 
-    PrintAndLogEx(INFO, "downloading from emulator memory");
+    PrintAndLogEx(INFO, "downloading %u bytes from emulator memory", bytes);
     if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(dump);
         return PM3_ETIMEOUT;
     }
 
-    len = param_getstr(Cmd, nameParamNo, filename, sizeof(filename));
-    if (len > FILE_PATH_SIZE - 5) len = FILE_PATH_SIZE - 5;
-
     // user supplied filename?
-    if (len < 1) {
-        fnameptr += snprintf(fnameptr, sizeof(filename), "hf-mf-");
-        FillFileNameByUID(fnameptr, dump, "-dump", 4);
+    if (fnlen < 1) {
+        char *fptr = filename;
+        fptr += snprintf(fptr, sizeof(filename), "hf-mf-");
+        FillFileNameByUID(fptr, dump, "-dump", 4);
     }
 
     saveFile(filename, ".bin", dump, bytes);

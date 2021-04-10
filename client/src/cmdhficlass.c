@@ -985,8 +985,6 @@ static int CmdHFiClassESave(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    char *fnameptr = filename;
-
     uint16_t bytes = arg_get_int_def(ctx, 2, 256);
 
     if (bytes > 4096) {
@@ -1011,8 +1009,9 @@ static int CmdHFiClassESave(const char *Cmd) {
 
     // user supplied filename?
     if (fnlen < 1) {
-        fnameptr += snprintf(fnameptr, sizeof(filename), "hf-iclass-");
-        FillFileNameByUID(fnameptr, dump, "-dump", 8);
+        char *fptr = filename;
+        fptr += snprintf(fptr, sizeof(filename), "hf-iclass-");
+        FillFileNameByUID(fptr, dump, "-dump", 8);
     }
 
     saveFile(filename, ".bin", dump, bytes);
