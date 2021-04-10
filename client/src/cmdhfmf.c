@@ -188,25 +188,8 @@ static int usage_hf14_decryptbytes(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_hf14_egetblk(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mf egetblk <block number>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h          this help");
-    PrintAndLogEx(NORMAL, "      <block>    block number");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf egetblk 0"));
-    return PM3_SUCCESS;
-}
-static int usage_hf14_egetsc(void) {
-    PrintAndLogEx(NORMAL, "Get sector data from emulator memory.\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf egetsc [h] <sector number>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h          this help");
-    PrintAndLogEx(NORMAL, "      <sector>   sector number");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf egetsc 0"));
-    return PM3_SUCCESS;
-}
+
+
 static int usage_hf14_eclr(void) {
     PrintAndLogEx(NORMAL, "It set card emulator memory to empty data blocks and key A/B FFFFFFFFFFFF \n");
     PrintAndLogEx(NORMAL, "Usage:  hf mf eclr");
@@ -321,28 +304,7 @@ static int usage_hf14_cload(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("       hf mf cload e"));
     return PM3_SUCCESS;
 }
-static int usage_hf14_cgetblk(void) {
-    PrintAndLogEx(NORMAL, "Get block data from magic Chinese card. Only works with magic cards\n");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf cgetblk [h] <block number>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h         this help");
-    PrintAndLogEx(NORMAL, "      <block>   block number");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf cgetblk 1"));
-    return PM3_SUCCESS;
-}
-static int usage_hf14_cgetsc(void) {
-    PrintAndLogEx(NORMAL, "Get sector data from magic Chinese card. Only works with magic cards\n");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf cgetsc [h] <sector number>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h          this help");
-    PrintAndLogEx(NORMAL, "      <sector>   sector number");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf cgetsc 0"));
-    return PM3_SUCCESS;
-}
+
 static int usage_hf14_csave(void) {
     PrintAndLogEx(NORMAL, "It saves `magic Chinese` card dump into the file `filename.eml` or `cardID.eml`");
     PrintAndLogEx(NORMAL, "or into emulator memory");
@@ -524,21 +486,22 @@ static int32_t initSectorTable(sector_t **src, int32_t items) {
 static void decode_print_st(uint16_t blockno, uint8_t *data) {
     if (mfIsSectorTrailer(blockno)) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "--------- " _CYAN_("Sector trailer") " -------------");
+        PrintAndLogEx(INFO, "----------------------- " _CYAN_("Sector trailer decoder") " -----------------------");
         PrintAndLogEx(INFO, "key A........ " _GREEN_("%s"), sprint_hex_inrow(data, 6));
         PrintAndLogEx(INFO, "acr.......... " _GREEN_("%s"), sprint_hex_inrow(data + 6, 3));
         PrintAndLogEx(INFO, "user / gdb... " _GREEN_("%02x"), data[9]);
         PrintAndLogEx(INFO, "key B........ " _GREEN_("%s"), sprint_hex_inrow(data + 10, 6));
-        PrintAndLogEx(INFO, "Access rights decoded");
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "  # | Access rights");
+        PrintAndLogEx(INFO, "----+-----------------------------------------------------------------");
 
         int bln = mfFirstBlockOfSector(mfSectorNum(blockno));
         int blinc = (mfNumBlocksPerSector(mfSectorNum(blockno)) > 4) ? 5 : 1;
         for (int i = 0; i < 4; i++) {
-            PrintAndLogEx(INFO, "  block %d%s  " _YELLOW_("%s"), bln, ((blinc > 1) && (i < 3) ? "+" : ""), mfGetAccessConditionsDesc(i, &data[6]));
+            PrintAndLogEx(INFO, "%3d%c| " _YELLOW_("%s"), bln, ((blinc > 1) && (i < 3) ? '+' : ' '), mfGetAccessConditionsDesc(i, &data[6]));
             bln += blinc;
         }
-
-        PrintAndLogEx(INFO, "--------------------------------------");
+        PrintAndLogEx(INFO, "----------------------------------------------------------------------");
     }
 }
 
@@ -3794,29 +3757,69 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
 
 // EMULATOR COMMANDS
 static int CmdHF14AMfEGetBlk(const char *Cmd) {
-    char c = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || c == 'h') return usage_hf14_egetblk();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf egetblk",
+                  "Get emulator memory block",
+                  "hf mf egetblk -b 0      -> get block 0 (manufacturer)\n"
+                  "hf mf egetblk -b 3 -v   -> get block 3, decode sector trailer\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("b",  "blk", "<dec>", "block number"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int b = arg_get_int_def(ctx, 1, 0);
+    bool verbose = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx); 
+
+    if (b > 255) {
+        return PM3_EINVARG;
+    }
+    uint8_t blockno = (uint8_t)b;
 
     uint8_t data[16] = {0x00};
-    uint8_t blockNo = param_get8(Cmd, 0);
+    if (mfEmlGetMem(data, blockno, 1) == PM3_SUCCESS) {
 
-    PrintAndLogEx(NORMAL, "");
-    if (mfEmlGetMem(data, blockNo, 1) == PM3_SUCCESS) {
-        PrintAndLogEx(NORMAL, "data[%3d]:%s", blockNo, sprint_hex(data, sizeof(data)));
+        uint8_t sector = GetSectorFromBlockNo(blockno);
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
+        PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+        if (blockno == 0) {
+            PrintAndLogEx(INFO, "%3d | " _RED_("%s"), blockno, sprint_hex_ascii(data, sizeof(data)));
+        } else if (mfIsSectorTrailer(blockno)) {
+            PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), blockno, sprint_hex_ascii(data, sizeof(data)));
+            if (verbose) {
+                decode_print_st(blockno, data);
+            }
+        } else {
+            PrintAndLogEx(INFO, "%3d | %s ", blockno, sprint_hex_ascii(data, sizeof(data)));
+        }
+
     }
     return PM3_SUCCESS;
 }
 static int CmdHF14AMfEGetSc(const char *Cmd) {
-    uint8_t data[16] = {0};
-
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_egetsc();
-
-    uint8_t sector = param_get8(Cmd, 0);
-    if (sector > 39) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf egetsc",
+                  "Get emulator memory sector",
+                  "hf mf egetsc -s 0"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("s",  "sec", "<dec>", "sector number"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int s = arg_get_int_def(ctx, 1, 0);
+    CLIParserFree(ctx); 
+    if (s > 39) {
         PrintAndLogEx(WARNING, "Sector number must be less then 40");
-        return PM3_ESOFT;
+        return PM3_EINVARG;
     }
+
+    uint8_t sector = (uint8_t)s;
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
@@ -3829,8 +3832,8 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
         start = 128 + (sector - 32) * 16;
     }
 
+    uint8_t data[16] = {0};
     for (int i = 0; i < blocks; i++) {
-
         int res = mfEmlGetMem(data, start + i, 1);
         if (res == PM3_SUCCESS) {
             if (start + i == 0) {
@@ -4483,38 +4486,76 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 }
 
 static int CmdHF14AMfCGetBlk(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf cgetblk",
+                  "Get block data from magic Chinese card.\n"
+                  "Only works with magic gen1a cards",
+                  "hf mf cgetblk -b 0      -> get block 0 (manufacturer)\n"
+                  "hf mf cgetblk -b 3 -v   -> get block 3, decode sector trailer\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("b",  "blk", "<dec>", "block number"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int b = arg_get_int_def(ctx, 1, 0);
+    bool verbose = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx); 
+
+    if (b > 255) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t blockno = (uint8_t)b;
     uint8_t data[16] = {0};
-
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_cgetblk();
-
-    uint8_t blockNo = param_get8(Cmd, 0);
-
-    PrintAndLogEx(NORMAL, "--block number:%2d ", blockNo);
-
-    int res = mfCGetBlock(blockNo, data, MAGIC_SINGLE);
+    int res = mfCGetBlock(blockno, data, MAGIC_SINGLE);
     if (res) {
         PrintAndLogEx(ERR, "Can't read block. error=%d", res);
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL, "data: %s", sprint_hex(data, sizeof(data)));
 
-    decode_print_st(blockNo, data);
+    uint8_t sector = GetSectorFromBlockNo(blockno);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
+    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+    if (blockno == 0) {
+        PrintAndLogEx(INFO, "%3d | " _RED_("%s"), blockno, sprint_hex_ascii(data, sizeof(data)));
+    } else if (mfIsSectorTrailer(blockno)) {
+        PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), blockno, sprint_hex_ascii(data, sizeof(data)));
+        if (verbose) {
+            decode_print_st(blockno, data);
+        }
+    } else {
+        PrintAndLogEx(INFO, "%3d | %s ", blockno, sprint_hex_ascii(data, sizeof(data)));
+    }
+
     return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfCGetSc(const char *Cmd) {
-    uint8_t data[16] = {0};
-
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_cgetsc();
-
-    uint8_t sector = param_get8(Cmd, 0);
-    if (sector > 39) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf cgetsc",
+                  "Get sector data from magic Chinese card.\n"
+                  "Only works with magic gen1a cards",
+                  "hf mf cgetsc -s 0"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("s",  "sec", "<dec>", "sector number"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int s = arg_get_int_def(ctx, 1, 0);
+    CLIParserFree(ctx); 
+    if (s > 39) {
         PrintAndLogEx(WARNING, "Sector number must be less then 40");
-        return PM3_ESOFT;
+        return PM3_EINVARG;
     }
+
+    uint8_t sector = (uint8_t)s;
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
@@ -4528,7 +4569,7 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
     }
 
     int flags = MAGIC_INIT + MAGIC_WUPC;
-
+    uint8_t data[16] = {0};
     for (int i = 0; i < blocks; i++) {
         if (i == 1) flags = 0;
         if (i == blocks - 1) flags = MAGIC_HALT + MAGIC_OFF;
@@ -4538,7 +4579,14 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
             PrintAndLogEx(ERR, "Can't read block. %d error=%d", start + i, res);
             return PM3_ESOFT;
         }
-        PrintAndLogEx(INFO, "%3d | %s ", start + i, sprint_hex_ascii(data, sizeof(data)));
+
+        if (start + i == 0) {
+            PrintAndLogEx(INFO, "%3d | " _RED_("%s"), start + i, sprint_hex_ascii(data, sizeof(data)));
+        } else if (mfIsSectorTrailer(i)) {
+            PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), start + i, sprint_hex_ascii(data, sizeof(data)));
+        } else {
+            PrintAndLogEx(INFO, "%3d | %s ", start + i, sprint_hex_ascii(data, sizeof(data)));
+        }
     }
     decode_print_st(start + blocks - 1, data);
     return PM3_SUCCESS;
@@ -5733,14 +5781,14 @@ static command_t CommandTable[] = {
 //    {"sniff",       CmdHF14AMfSniff,        0, "Sniff card-reader communication"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
     {"sim",         CmdHF14AMfSim,          IfPm3Iso14443a,  "Simulate MIFARE card"},
-    {"ecfill",      CmdHF14AMfECFill,       IfPm3Iso14443a,  "Fill simulator memory with help of keys from simulator"},
-    {"eclr",        CmdHF14AMfEClear,       IfPm3Iso14443a,  "Clear simulator memory"},
-    {"egetblk",     CmdHF14AMfEGetBlk,      IfPm3Iso14443a,  "Get simulator memory block"},
-    {"egetsc",      CmdHF14AMfEGetSc,       IfPm3Iso14443a,  "Get simulator memory sector"},
-    {"ekeyprn",     CmdHF14AMfEKeyPrn,      IfPm3Iso14443a,  "Print keys from simulator memory"},
+    {"ecfill",      CmdHF14AMfECFill,       IfPm3Iso14443a,  "Fill emulator memory with help of keys from emulator"},
+    {"eclr",        CmdHF14AMfEClear,       IfPm3Iso14443a,  "Clear emulator memory"},
+    {"egetblk",     CmdHF14AMfEGetBlk,      IfPm3Iso14443a,  "Get emulator memory block"},
+    {"egetsc",      CmdHF14AMfEGetSc,       IfPm3Iso14443a,  "Get emulator memory sector"},
+    {"ekeyprn",     CmdHF14AMfEKeyPrn,      IfPm3Iso14443a,  "Print keys from emulator memory"},
     {"eload",       CmdHF14AMfELoad,        IfPm3Iso14443a,  "Load from file emul dump"},
     {"esave",       CmdHF14AMfESave,        IfPm3Iso14443a,  "Save to file emul dump"},
-    {"eset",        CmdHF14AMfESet,         IfPm3Iso14443a,  "Set simulator memory block"},
+    {"eset",        CmdHF14AMfESet,         IfPm3Iso14443a,  "Set emulator memory block"},
     {"eview",       CmdHF14AMfEView,        IfPm3Iso14443a,  "View emul memory"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic gen1") " -----------------------"},
     {"cgetblk",     CmdHF14AMfCGetBlk,      IfPm3Iso14443a,  "Read block"},
