@@ -403,6 +403,7 @@ Check column "offline" for their availability.
 |`hf mf rdsc             `|N       |`Read MIFARE Classic sector`
 |`hf mf restore          `|N       |`Restore MIFARE Classic binary file to BLANK tag`
 |`hf mf setmod           `|N       |`Set MIFARE Classic EV1 load modulation strength`
+|`hf mf view             `|Y       |`Display content from tag dump file`
 |`hf mf wipe             `|N       |`Wipe card to zeros and default keys/acc`
 |`hf mf wrbl             `|N       |`Write MIFARE Classic block`
 |`hf mf sim              `|N       |`Simulate MIFARE card`
@@ -414,7 +415,7 @@ Check column "offline" for their availability.
 |`hf mf eload            `|N       |`Load from file emul dump`
 |`hf mf esave            `|N       |`Save to file emul dump`
 |`hf mf eset             `|N       |`Set emulator memory block`
-|`hf mf eview            `|N       |`View emul memory`
+|`hf mf eview            `|N       |`View emulator memory`
 |`hf mf cgetblk          `|N       |`Read block`
 |`hf mf cgetsc           `|N       |`Read sector`
 |`hf mf cload            `|N       |`Load dump`
