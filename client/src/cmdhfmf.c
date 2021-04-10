@@ -188,8 +188,6 @@ static int usage_hf14_decryptbytes(void) {
     return PM3_SUCCESS;
 }
 
-
-
 static int usage_hf14_eclr(void) {
     PrintAndLogEx(NORMAL, "It set card emulator memory to empty data blocks and key A/B FFFFFFFFFFFF \n");
     PrintAndLogEx(NORMAL, "Usage:  hf mf eclr");
@@ -502,6 +500,7 @@ static void decode_print_st(uint16_t blockno, uint8_t *data) {
             bln += blinc;
         }
         PrintAndLogEx(INFO, "----------------------------------------------------------------------");
+        PrintAndLogEx(NORMAL, "");
     }
 }
 
@@ -684,92 +683,120 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
 }
 
 static int CmdHF14AMfRdBl(const char *Cmd) {
-    uint8_t blockNo = 0;
-    uint8_t keyType = 0;
-    uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-    char cmdp = 0x00;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf rdbl",
+                  "Read MIFARE Classic block",
+                  "hf mf rdbl --blk 0 -k FFFFFFFFFFFF\n"
+                  "hf mf rdbl -b 3 -v   -> get block 3, decode sector trailer\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1(NULL, "blk", "<dec>", "block number"),
+        arg_lit0("a", NULL, "input key specified is A key (def)"),
+        arg_lit0("b", NULL, "input key specified is B key"),
+        arg_str0("k", "key", "<hex>", "key specified as 6 hex bytes"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int b = arg_get_int_def(ctx, 1, 0);
 
-    if (strlen(Cmd) < 3) {
-        PrintAndLogEx(NORMAL, "Usage:  hf mf rdbl    <block number> <key A/B> <key (12 hex symbols)>");
-        PrintAndLogEx(NORMAL, "Examples:");
-        PrintAndLogEx(NORMAL, "        hf mf rdbl 0 A FFFFFFFFFFFF ");
-        return PM3_SUCCESS;
+    uint8_t keytype = 0;
+    if (arg_get_lit(ctx, 2) && arg_get_lit(ctx, 3)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 3)) {
+        keytype = 1;
     }
 
-    blockNo = param_get8(Cmd, 0);
-    cmdp = tolower(param_getchar(Cmd, 1));
-    if (cmdp == 0x00) {
-        PrintAndLogEx(NORMAL, "Key type must be A or B");
-        return PM3_ESOFT;
-    }
+    int keylen = 0;
+    uint8_t key[6] = {0};
+    CLIGetHexWithReturn(ctx, 4, key, &keylen);
 
-    if (cmdp != 'a')
-        keyType = 1;
+    bool verbose = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx); 
 
-    if (param_gethex(Cmd, 2, key, 12)) {
-        PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
-        return PM3_ESOFT;
+    if (b > 255) {
+        return PM3_EINVARG;
     }
-    PrintAndLogEx(NORMAL, "--block no %d, key %c - %s", blockNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
+    uint8_t blockno = (uint8_t)b;
 
     uint8_t data[16] = {0};
-    int res =  mfReadBlock(blockNo, keyType, key, data);
+    int res =  mfReadBlock(blockno, keytype, key, data);
     if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "data: %s", sprint_hex(data, 16));
-        if ((data[6] || data[7] || data[8])) {
-            decode_print_st(blockNo, data);
+
+        uint8_t sector = GetSectorFromBlockNo(blockno);
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
+        PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+        if (blockno == 0) {
+            PrintAndLogEx(INFO, "%3d | " _RED_("%s"), blockno, sprint_hex_ascii(data, sizeof(data)));
+        } else if (mfIsSectorTrailer(blockno)) {
+            PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), blockno, sprint_hex_ascii(data, sizeof(data)));
+            if (verbose) {
+                decode_print_st(blockno, data);
+            }
+        } else {
+            PrintAndLogEx(INFO, "%3d | %s ", blockno, sprint_hex_ascii(data, sizeof(data)));
         }
     }
-    return PM3_SUCCESS;
+    PrintAndLogEx(NORMAL, "");
+    return res;
 }
 
 static int CmdHF14AMfRdSc(const char *Cmd) {
-    uint8_t sectorNo = 0, keyType = 0;
-    uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-    char cmdp = 0x00;
 
-    if (strlen(Cmd) < 3) {
-        PrintAndLogEx(NORMAL, "Usage:  hf mf rdsc    <sector number> <key A/B> <key (12 hex symbols)>");
-        PrintAndLogEx(NORMAL, "Examples:");
-        PrintAndLogEx(NORMAL, "        hf mf rdsc 0 A FFFFFFFFFFFF ");
-        return PM3_SUCCESS;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf rdbl",
+                  "Read MIFARE Classic sector",
+                  "hf mf rdbl -s 0 -k FFFFFFFFFFFF\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a", NULL, "input key specified is A key (def)"),
+        arg_lit0("b", NULL, "input key specified is B key"),
+        arg_str0("k", "key", "<hex>", "key specified as 6 hex bytes"),
+        arg_int1("s", "sec", "<dec>", "sector number"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint8_t keytype = 0;
+    if (arg_get_lit(ctx, 1) && arg_get_lit(ctx, 2)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 2)) {
+        keytype = 1;
     }
 
-    sectorNo = param_get8(Cmd, 0);
-    if (sectorNo > MIFARE_4K_MAXSECTOR) {
-        PrintAndLogEx(NORMAL, "Sector number must be less than 40");
-        return PM3_ESOFT;
+    int keylen = 0;
+    uint8_t key[6] = {0};
+    CLIGetHexWithReturn(ctx, 3, key, &keylen);
+
+    int s = arg_get_int_def(ctx, 4, 0);
+    CLIParserFree(ctx); 
+
+    if (s > MIFARE_4K_MAXSECTOR) {
+        PrintAndLogEx(WARNING, "Sector number must be less then 40");
+        return PM3_EINVARG;
     }
-
-    cmdp = tolower(param_getchar(Cmd, 1));
-    if (cmdp != 'a' && cmdp != 'b') {
-        PrintAndLogEx(NORMAL, "Key type must be A or B");
-        return PM3_ESOFT;
-    }
-
-    if (cmdp != 'a')
-        keyType = 1;
-
-    if (param_gethex(Cmd, 2, key, 12)) {
-        PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
-        return PM3_ESOFT;
-    }
-    PrintAndLogEx(NORMAL, "");
-
-    uint8_t sc_size = mfNumBlocksPerSector(sectorNo) * 16;
+    uint8_t sector = (uint8_t)s;
+    uint8_t sc_size = mfNumBlocksPerSector(sector) * 16;
     uint8_t *data = calloc(sc_size, sizeof(uint8_t));
     if (data == NULL) {
         PrintAndLogEx(ERR, "failed to allocate memory");
         return PM3_EMALLOC;
     }
 
-    int res =  mfReadSector(sectorNo, keyType, key, data);
+    int res =  mfReadSector(sector, keytype, key, data);
     if (res == PM3_SUCCESS) {
 
-        uint8_t blocks = NumBlocksPerSector(sectorNo);
-        uint8_t start = FirstBlockOfSector(sectorNo);
+        uint8_t blocks = NumBlocksPerSector(sector);
+        uint8_t start = FirstBlockOfSector(sector);
 
-        PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sectorNo, sectorNo);
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
         PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
         for (int i = 0; i < blocks; i++) {
             if (start + i == 0) {
@@ -781,7 +808,6 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
             }
         }
         decode_print_st(start + blocks - 1, data + ((blocks - 1) * 16));
-
     }
     free(data);
     return PM3_SUCCESS;
@@ -3825,12 +3851,8 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
     PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
     PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
 
-    uint8_t blocks = 4;
-    uint8_t start = sector * 4;
-    if (sector >= 32) {
-        blocks = 16;
-        start = 128 + (sector - 32) * 16;
-    }
+    uint8_t blocks = NumBlocksPerSector(sector);
+    uint8_t start = FirstBlockOfSector(sector);
 
     uint8_t data[16] = {0};
     for (int i = 0; i < blocks; i++) {
