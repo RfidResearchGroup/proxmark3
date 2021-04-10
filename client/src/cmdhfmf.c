@@ -3902,7 +3902,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "ul", "MIFARE Ultralight family"),
-        arg_int0(NULL, "blks", "<dec>", "manually set number of blocks (overrides)"),
+        arg_int0("q", "qty", "<dec>", "manually set number of blocks (overrides)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3990,7 +3990,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
         // update expected blocks to match converted data.
         block_cnt = datalen / 4;
-        PrintAndLogEx(INFO, "MIFARE Ultralight override, will use %d ( %u bytes )", block_cnt, block_cnt * block_width);
+        PrintAndLogEx(INFO, "MIFARE Ultralight override, will use %d blocks ( %u bytes )", block_cnt, block_cnt * block_width);
     }
 
     PrintAndLogEx(INFO, "Uploading to emulator memory");

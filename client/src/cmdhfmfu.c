@@ -2536,22 +2536,21 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu eload",
-                  "It loads emul dump from the file `filename.eml`",
-                  "hf mfu eload -u -f myfile\n"
-                  "hf mfu eload -u -f myfile -q 57   -> load 57 blocks from myfile"
+                  "Load emulator memory with data from `filename.eml` dump file\n"
+                  "\nSee `script run data_mfu_bin2eml` to convert the .bin to .eml",
+                  "hf mfu eload --ul -f hf-mfu-04010203040506.eml\n"
+                  "hf mfu eload --ul -f hf-mfu-04010203040506.eml -q 57   -> load 57 blocks from myfile"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "specify a filename w/o `.eml` to load"),
-        arg_lit1("u", NULL, "Ultralight Family type"),
+        arg_str1("f", "file", "<fn>", "filename of dump"),
+        arg_lit1(NULL, "ul", "MIFARE Ultralight family"),
         arg_int0("q", "qty", "<dec>", "number of blocks to load from eml file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     CLIParserFree(ctx);
-
-    PrintAndLogEx(HINT, "Hint: See " _YELLOW_("`script run data_mfu_bin2eml`") " to convert the .bin to .eml");
     return CmdHF14AMfELoad(Cmd);
 }
 //
