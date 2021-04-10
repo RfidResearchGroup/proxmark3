@@ -251,18 +251,6 @@ static int usage_hf14_csave(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("       hf mf csave 4 o filename"));
     return PM3_SUCCESS;
 }
-static int usage_hf14_cview(void) {
-    PrintAndLogEx(NORMAL, "View `magic Chinese` card ");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf cview [h] [card memory]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h             this help");
-    PrintAndLogEx(NORMAL, "       card memory   0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf cview 1"));
-    return PM3_SUCCESS;
-}
 
 static int usage_hf14_gen3uid(void) {
     PrintAndLogEx(NORMAL, "Set UID for magic GEN 3 card without manufacturer block changing");
@@ -4837,38 +4825,59 @@ static int CmdHF14AMfCSave(const char *Cmd) {
 
 static int CmdHF14AMfCView(const char *Cmd) {
 
-    bool errors = false;
-    int flags;
-    char ctmp = '1';
-    uint8_t cmdp = 0;
-    uint16_t numblocks = NumOfBlocks(ctmp);
-    uint16_t bytes = numblocks * MFBLOCK_SIZE;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf cview",
+                  "View `magic gen1a` card memory",
+                  "hf mf cview\n"
+                  "hf mf cview --4k"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool m0 = arg_get_lit(ctx, 1);
+    bool m1 = arg_get_lit(ctx, 2);
+    bool m2 = arg_get_lit(ctx, 3);
+    bool m4 = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx); 
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        ctmp = tolower(param_getchar(Cmd, cmdp));
-        switch (ctmp) {
-            case 'h':
-                return usage_hf14_cview();
-            case '0':
-            case '1':
-            case '2':
-            case '4':
-                numblocks = NumOfBlocks(ctmp);
-                bytes =  numblocks * MFBLOCK_SIZE;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    // validations
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    } else if ((m0 + m1 + m2 + m4) == 0) {
+        m1 = true;
     }
 
-    if (errors) return usage_hf14_cview();
+    char s[6];
+    memset(s, 0, sizeof(s));
 
-    PrintAndLogEx(SUCCESS, "View magic MIFARE " _GREEN_("%cK"), ctmp);
+    uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
+    if (m0) {
+        block_cnt = MIFARE_MINI_MAXBLOCK;
+        strncpy(s, "Mini", 5);
+    } else if (m1) {
+        block_cnt = MIFARE_1K_MAXBLOCK;
+        strncpy(s, "1K", 3);
+    } else if (m2) {
+        block_cnt = MIFARE_2K_MAXBLOCK;
+        strncpy(s, "2K", 3);
+    } else if (m4) {
+        block_cnt = MIFARE_4K_MAXBLOCK;
+        strncpy(s, "4K", 3);
+    } else {
+        PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
+        return PM3_EINVARG;
+    }
+    PrintAndLogEx(SUCCESS, "View magic Gen1a MIFARE Classic " _GREEN_("%s"), s);
     PrintAndLogEx(INFO, "." NOLF);
 
+    int bytes = block_cnt * MFBLOCK_SIZE;
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
@@ -4879,8 +4888,8 @@ static int CmdHF14AMfCView(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "iso14443a card select failed");
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "iso14443a card select timeout");
         free(dump);
         return PM3_ESOFT;
     }
@@ -4902,13 +4911,14 @@ static int CmdHF14AMfCView(const char *Cmd) {
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-    flags = MAGIC_INIT + MAGIC_WUPC;
-    for (uint16_t i = 0; i < numblocks; i++) {
+    uint8_t flags = MAGIC_INIT + MAGIC_WUPC;
+    for (uint16_t i = 0; i < block_cnt; i++) {
         if (i == 1) flags = 0;
-        if (i == numblocks - 1) flags = MAGIC_HALT + MAGIC_OFF;
+        if (i == block_cnt - 1) flags = MAGIC_HALT + MAGIC_OFF;
 
         if (mfCGetBlock(i, dump + (i * MFBLOCK_SIZE), flags)) {
-            PrintAndLogEx(WARNING, "Cant get block: %d", i);
+            PrintAndLogEx(WARNING, "Can't get block: %d", i);
+            PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             free(dump);
             return PM3_ESOFT;
         }
@@ -4917,7 +4927,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    mf_print_blocks(numblocks, dump);
+    mf_print_blocks(block_cnt, dump);
     free(dump);
     return PM3_SUCCESS;
 }
