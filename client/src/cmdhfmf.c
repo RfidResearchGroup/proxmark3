@@ -199,18 +199,6 @@ static int usage_hf14_esave(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("        hf mf esave 4 filename"));
     return PM3_SUCCESS;
 }
-static int usage_hf14_ecfill(void) {
-    PrintAndLogEx(NORMAL, "Read card and transfer its data to emulator memory.");
-    PrintAndLogEx(NORMAL, "Keys must be laid in the emulator memory. \n");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf ecfill <key A/B> [card memory]");
-    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf ecfill A"));
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf ecfill A 4"));
-    return PM3_SUCCESS;
-}
-
 
 static int usage_hf14_csetuid(void) {
     PrintAndLogEx(NORMAL, "Set UID, ATQA, and SAK for magic Chinese card. Only works with magic cards");
@@ -659,8 +647,8 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int1(NULL, "blk", "<dec>", "block number"),
-        arg_lit0("a", NULL, "input key specified is A key (def)"),
-        arg_lit0("b", NULL, "input key specified is B key"),
+        arg_lit0("a", NULL, "input key type is key A (def)"),
+        arg_lit0("b", NULL, "input key type is key B"),
         arg_str0("k", "key", "<hex>", "key specified as 6 hex bytes"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
@@ -4161,36 +4149,72 @@ static int CmdHF14AMfEView(const char *Cmd) {
 }
 
 static int CmdHF14AMfECFill(const char *Cmd) {
-    uint8_t keyType = 0;
-    uint8_t numSectors = 16;
-    char c = tolower(param_getchar(Cmd, 0));
 
-    if (strlen(Cmd) < 1 || c == 'h')
-        return usage_hf14_ecfill();
-
-    if (c != 'a' &&  c != 'b') {
-        PrintAndLogEx(WARNING, "Key type must be A or B");
-        return PM3_ESOFT;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf ecfill",
+                  "Dump card and transfer the data to emulator memory.\n"
+                  "Keys must be laid in the emulator memory",
+                  "hf mf ecfill          --> use key type A\n"
+                  "hf mf ecfill --4k -b  --> target 4K card with key type B"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a", NULL, "input key type is key A(def)"),
+        arg_lit0("b", NULL, "input key type is key B"),
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint8_t keytype = 0;
+    if (arg_get_lit(ctx, 1) && arg_get_lit(ctx, 2)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 2)) {
+        keytype = 1;
     }
-    if (c != 'a')
-        keyType = 1;
 
-    c = tolower(param_getchar(Cmd, 1));
-    if (c != 0) {
-        numSectors = NumOfSectors(c);
-        if (numSectors == 0) return usage_hf14_ecfill();
+    bool m0 = arg_get_lit(ctx, 3);
+    bool m1 = arg_get_lit(ctx, 4);
+    bool m2 = arg_get_lit(ctx, 5);
+    bool m4 = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx); 
+
+    // validations
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    } else if ((m0 + m1 + m2 + m4) == 0) {
+        m1 = true;
+    }
+
+    uint8_t sectors_cnt = MIFARE_1K_MAXSECTOR;
+
+    if (m0) {
+        sectors_cnt = MIFARE_MINI_MAXSECTOR;
+    } else if (m1) {
+        sectors_cnt = MIFARE_1K_MAXSECTOR;
+    } else if (m2) {
+        sectors_cnt = MIFARE_2K_MAXSECTOR;
+    } else if (m4) {
+        sectors_cnt = MIFARE_4K_MAXSECTOR;
     } else {
-        numSectors = MIFARE_1K_MAXSECTOR;
+        PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
+        return PM3_EINVARG;
     }
 
-    PrintAndLogEx(NORMAL, "--params: numSectors: %d, keyType: %c\n", numSectors, (keyType == 0) ? 'A' : 'B');
-
-    mfc_eload_t payload;
-    payload.sectorcnt = numSectors;
-    payload.keytype = keyType;
+    mfc_eload_t payload = {
+        .sectorcnt = sectors_cnt,
+        .keytype = keytype
+    };
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
+
+    // 2021, iceman:  should get a response from device when its done.
     return PM3_SUCCESS;
 }
 
