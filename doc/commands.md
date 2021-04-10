@@ -414,15 +414,15 @@ Check column "offline" for their availability.
 |`hf mf ekeyprn          `|N       |`Print keys from emulator memory`
 |`hf mf eload            `|N       |`Load from file emul dump`
 |`hf mf esave            `|N       |`Save to file emul dump`
-|`hf mf eset             `|N       |`Set emulator memory block`
+|`hf mf esetblk          `|N       |`Set emulator memory block`
 |`hf mf eview            `|N       |`View emulator memory`
-|`hf mf cgetblk          `|N       |`Read block`
-|`hf mf cgetsc           `|N       |`Read sector`
-|`hf mf cload            `|N       |`Load dump`
+|`hf mf cgetblk          `|N       |`Read block from card`
+|`hf mf cgetsc           `|N       |`Read sector from card`
+|`hf mf cload            `|N       |`Load dump to card`
 |`hf mf csave            `|N       |`Save dump from card into file or emulator`
-|`hf mf csetblk          `|N       |`Write block`
-|`hf mf csetuid          `|N       |`Set UID`
-|`hf mf cview            `|N       |`view card`
+|`hf mf csetblk          `|N       |`Write block to card`
+|`hf mf csetuid          `|N       |`Set UID on card`
+|`hf mf cview            `|N       |`View card`
 |`hf mf cwipe            `|N       |`Wipe card to default UID/Sectors/Keys`
 |`hf mf gen3uid          `|N       |`Set UID without manufacturer block`
 |`hf mf gen3blk          `|N       |`Overwrite full manufacturer block`

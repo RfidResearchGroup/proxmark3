@@ -24,9 +24,7 @@ hf mf restore
 hf mf setmod
 hf mf wrbl
 hf mf ecfill
-hf mf eload
 hf mf esave
-hf mf eset
 hf mf cload
 hf mf csave
 hf mf csetblk
