@@ -20,45 +20,45 @@ Check column "offline" for their availability.
 |`exit                   `|Y       |`Exit program`
 
 
-### preferences
+### prefs
 
  { Edit client/device preferences... }
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`preferences help       `|Y       |`This help`
-|`preferences show       `|Y       |`Show all preferences`
+|`prefs help             `|Y       |`This help`
+|`prefs show             `|Y       |`Show all preferences`
 
 
-### preferences get
+### prefs get
 
  { Get a preference }
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`preferences get barmode`|Y       |`Get bar mode preference`
-|`preferences get clientdebug`|Y       |`Get client debug level preference`
-|`preferences get color  `|Y       |`Get color support preference`
-|`preferences get savepaths`|Y       |`Get file folder  `
-|`preferences get emoji  `|Y       |`Get emoji display preference`
-|`preferences get hints  `|Y       |`Get hint display preference`
-|`preferences get plotsliders`|Y       |`Get plot slider display preference`
+|`prefs get barmode      `|Y       |`Get bar mode preference`
+|`prefs get clientdebug  `|Y       |`Get client debug level preference`
+|`prefs get color        `|Y       |`Get color support preference`
+|`prefs get savepaths    `|Y       |`Get file folder  `
+|`prefs get emoji        `|Y       |`Get emoji display preference`
+|`prefs get hints        `|Y       |`Get hint display preference`
+|`prefs get plotsliders  `|Y       |`Get plot slider display preference`
 
 
-### preferences set
+### prefs set
 
  { Set a preference }
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`preferences set help   `|Y       |`This help`
-|`preferences set barmode`|Y       |`Set bar mode`
-|`preferences set clientdebug`|Y       |`Set client debug level`
-|`preferences set color  `|Y       |`Set color support`
-|`preferences set emoji  `|Y       |`Set emoji display`
-|`preferences set hints  `|Y       |`Set hint display`
-|`preferences set savepaths`|Y       |`... to be adjusted next ... `
-|`preferences set plotsliders`|Y       |`Set plot slider display`
+|`prefs set help         `|Y       |`This help`
+|`prefs set barmode      `|Y       |`Set bar mode`
+|`prefs set clientdebug  `|Y       |`Set client debug level`
+|`prefs set color        `|Y       |`Set color support`
+|`prefs set emoji        `|Y       |`Set emoji display`
+|`prefs set hints        `|Y       |`Set hint display`
+|`prefs set savepaths    `|Y       |`... to be adjusted next ... `
+|`prefs set plotsliders  `|Y       |`Set plot slider display`
 
 
 ### analyse
@@ -406,14 +406,14 @@ Check column "offline" for their availability.
 |`hf mf wipe             `|N       |`Wipe card to zeros and default keys/acc`
 |`hf mf wrbl             `|N       |`Write MIFARE Classic block`
 |`hf mf sim              `|N       |`Simulate MIFARE card`
-|`hf mf ecfill           `|N       |`Fill simulator memory with help of keys from simulator`
-|`hf mf eclr             `|N       |`Clear simulator memory`
-|`hf mf egetblk          `|N       |`Get simulator memory block`
-|`hf mf egetsc           `|N       |`Get simulator memory sector`
-|`hf mf ekeyprn          `|N       |`Print keys from simulator memory`
+|`hf mf ecfill           `|N       |`Fill emulator memory with help of keys from emulator`
+|`hf mf eclr             `|N       |`Clear emulator memory`
+|`hf mf egetblk          `|N       |`Get emulator memory block`
+|`hf mf egetsc           `|N       |`Get emulator memory sector`
+|`hf mf ekeyprn          `|N       |`Print keys from emulator memory`
 |`hf mf eload            `|N       |`Load from file emul dump`
 |`hf mf esave            `|N       |`Save to file emul dump`
-|`hf mf eset             `|N       |`Set simulator memory block`
+|`hf mf eset             `|N       |`Set emulator memory block`
 |`hf mf eview            `|N       |`View emul memory`
 |`hf mf cgetblk          `|N       |`Read block`
 |`hf mf cgetsc           `|N       |`Read sector`

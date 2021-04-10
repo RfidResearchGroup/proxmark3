@@ -1,18 +1,3 @@
-preferences show
-preferences get barmode
-preferences get clientdebug
-preferences get color
-preferences get savepaths
-preferences get emoji
-preferences get hints
-preferences get plotsliders
-preferences set barmode
-preferences set clientdebug
-preferences set color
-preferences set emoji
-preferences set hints
-preferences set savepaths
-preferences set plotsliders
 hf 15 dump
 hf 15 info
 hf 15 raw

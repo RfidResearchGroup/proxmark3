@@ -296,7 +296,7 @@ static int CmdClear(const char *Cmd) {
 static command_t CommandTable[] = {
 
     {"help",         CmdHelp,      AlwaysAvailable,         "Use `" _YELLOW_("<command> help") "` for details of a command"},
-    {"preferences", CmdPref,      AlwaysAvailable,         "{ Edit client/device preferences... }"},
+    {"prefs",        CmdPref,      AlwaysAvailable,         "{ Edit client/device preferences... }"},
     {"--------",     CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("Technology") " -----------------------"},
     {"analyse",      CmdAnalyse,   AlwaysAvailable,         "{ Analyse utils... }"},
     {"data",         CmdData,      AlwaysAvailable,         "{ Plot window / data buffer manipulation... }"},
