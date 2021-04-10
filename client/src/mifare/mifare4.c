@@ -45,25 +45,25 @@ const char *mfpGetErrorDescription(uint8_t errorCode) {
 }
 
 AccessConditions_t MFAccessConditions[] = {
-    {0x00, "rdAB wrAB incAB dectrAB"},
-    {0x01, "rdAB dectrAB"},
-    {0x02, "rdAB"},
-    {0x03, "rdB wrB"},
-    {0x04, "rdAB wrB"},
-    {0x05, "rdB"},
-    {0x06, "rdAB wrB incB dectrAB"},
-    {0x07, "none"}
+	{0x00, "read AB; write AB; increment AB; decrement transfer restore AB"},
+	{0x01, "read AB; decrement transfer restore AB"},
+	{0x02, "read AB"},
+	{0x03, "read B; write B"},
+	{0x04, "read AB; writeB"},
+	{0x05, "read B"},
+	{0x06, "read AB; write B; increment B; decrement transfer restore AB"},
+	{0x07, "none"}
 };
 
 AccessConditions_t MFAccessConditionsTrailer[] = {
-    {0x00, "rdAbyA rdCbyA rdBbyA wrBbyA"},
-    {0x01, "wrAbyA rdCbyA wrCbyA rdBbyA wrBbyA"},
-    {0x02, "rdCbyA rdBbyA"},
-    {0x03, "wrAbyB rdCbyAB wrCbyB wrBbyB"},
-    {0x04, "wrAbyB rdCbyAB wrBbyB"},
-    {0x05, "rdCbyAB wrCbyB"},
-    {0x06, "rdCbyAB"},
-    {0x07, "rdCbyAB"}
+	{0x00, "read A by A; read ACCESS by A; read B by A; write B by A"},
+	{0x01, "write A by A; read ACCESS by A write ACCESS by A; read B by A; write B by A"},
+	{0x02, "read ACCESS by A; read B by A"},
+	{0x03, "write A by B; read ACCESS by AB; write ACCESS by B; write B by B"},
+	{0x04, "write A by B; read ACCESS by AB; write B by B"},
+	{0x05, "read ACCESS by AB; write ACCESS by B"},
+	{0x06, "read ACCESS by AB"},
+	{0x07, "read ACCESS by AB"}
 };
 
 const char *mfGetAccessConditionsDesc(uint8_t blockn, uint8_t *data) {
