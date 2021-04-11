@@ -444,56 +444,78 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
 }
 
 static int CmdHF14AMfWrBl(const char *Cmd) {
-    uint8_t blockNo = 0;
-    uint8_t keyType = 0;
-    uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-    uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    char cmdp = 0x00;
 
-    if (strlen(Cmd) < 3) {
-        PrintAndLogEx(NORMAL, "Usage:  hf mf wrbl    <block number> <key A/B> <key (12 hex symbols)> <block data (32 hex symbols)>");
-        PrintAndLogEx(NORMAL, "Examples:");
-        PrintAndLogEx(NORMAL, "        hf mf wrbl 1 A FFFFFFFFFFFF 000102030405060708090A0B0C0D0E0F");
-        return PM3_SUCCESS;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf wrbl",
+                  "Write MIFARE Classic block",
+                  "hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 000102030405060708090a0b0c0d0e0f"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1(NULL, "blk", "<dec>", "block number"),
+        arg_lit0("a", NULL, "input key type is key A (def)"),
+        arg_lit0("b", NULL, "input key type is key B"),
+        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
+        arg_str0("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
+
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int b = arg_get_int_def(ctx, 1, 0);
+
+    uint8_t keytype = MF_KEY_A;
+    if (arg_get_lit(ctx, 2) && arg_get_lit(ctx, 3)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 3)) {
+        keytype = MF_KEY_B;;
     }
 
-    blockNo = param_get8(Cmd, 0);
-    cmdp = tolower(param_getchar(Cmd, 1));
-    if (cmdp == 0x00) {
-        PrintAndLogEx(NORMAL, "Key type must be A or B");
+    int keylen = 0;
+    uint8_t key[6] = {0};
+    CLIGetHexWithReturn(ctx, 4, key, &keylen);
+
+    uint8_t block[MFBLOCK_SIZE] = {0x00};
+    int blen = 0;
+    CLIGetHexWithReturn(ctx, 5, block, &blen);
+    CLIParserFree(ctx); 
+
+    if (blen != MFBLOCK_SIZE) {
+        PrintAndLogEx(WARNING, "block data must include 16 HEX bytes. Got %i", blen);
         return PM3_EINVARG;
     }
 
-    if (cmdp != 'a')
-        keyType = 1;
-
-    if (param_gethex(Cmd, 2, key, 12)) {
-        PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
+    if (b > 255) {
         return PM3_EINVARG;
     }
+    uint8_t blockno = (uint8_t)b;
 
-    if (param_gethex(Cmd, 3, bldata, 32)) {
-        PrintAndLogEx(NORMAL, "Block data must include 32 HEX symbols");
-        return PM3_EINVARG;
-    }
-
-    PrintAndLogEx(NORMAL, "--block no %d, key %c - %s", blockNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
-    PrintAndLogEx(NORMAL, "--data: %s", sprint_hex(bldata, 16));
+    PrintAndLogEx(INFO, "--block no %d, key %c - %s", blockno, keytype ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
+    PrintAndLogEx(INFO, "--data: %s", sprint_hex(block, sizeof(block)));
 
     uint8_t data[26];
-    memcpy(data, key, 6);
-    memcpy(data + 10, bldata, 16);
+    memcpy(data, key, sizeof(key));
+    memcpy(data + 10, block, sizeof(block));
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockNo, keyType, 0, data, sizeof(data));
+    SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, keytype, 0, data, sizeof(data));
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.oldarg[0] & 0xff;
-        PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
-    } else {
-        PrintAndLogEx(NORMAL, "Command execute timeout");
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(FAILED, "Command execute timeout");
+        return PM3_ETIMEOUT;
     }
 
+    uint8_t isok  = resp.oldarg[0] & 0xff;
+    if (isok) {
+        PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
+        PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf rdbl") "` to verify");
+    } else {
+        PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
+        // suggest the opposite keytype than what was used.
+        PrintAndLogEx(HINT, "Maybe access rights? Try specify keytype " _YELLOW_("%c") " instead", (keytype == 0) ? 'B' : 'A' );
+    }
     return PM3_SUCCESS;
 }
 
