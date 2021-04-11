@@ -424,9 +424,9 @@ Check column "offline" for their availability.
 |`hf mf csetuid          `|N       |`Set UID on card`
 |`hf mf cview            `|N       |`View card`
 |`hf mf cwipe            `|N       |`Wipe card to default UID/Sectors/Keys`
-|`hf mf gen3uid          `|N       |`Set UID without manufacturer block`
-|`hf mf gen3blk          `|N       |`Overwrite full manufacturer block`
-|`hf mf gen3freeze       `|N       |`Perma lock further UID changes`
+|`hf mf gen3uid          `|N       |`Set UID without changing manufacturer block`
+|`hf mf gen3blk          `|N       |`Overwrite manufacturer block`
+|`hf mf gen3freeze       `|N       |`Perma lock UID changes. irreversible`
 
 
 ### hf mfp

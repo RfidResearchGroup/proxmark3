@@ -524,7 +524,7 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
         arg_int1(NULL, "blk", "<dec>", "block number"),
         arg_lit0("a", NULL, "input key type is key A (def)"),
         arg_lit0("b", NULL, "input key type is key B"),
-        arg_str0("k", "key", "<hex>", "key specified as 6 hex bytes"),
+        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
@@ -569,9 +569,9 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
 static int CmdHF14AMfRdSc(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mf rdbl",
+    CLIParserInit(&ctx, "hf mf rdsc",
                   "Read MIFARE Classic sector",
-                  "hf mf rdbl -s 0 -k FFFFFFFFFFFF\n"
+                  "hf mf rdsc -s 0 -k FFFFFFFFFFFF\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -4975,43 +4975,56 @@ static int CmdHf14AMfDecryptBytes(const char *Cmd) {
 }
 
 static int CmdHf14AMfSetMod(const char *Cmd) {
-    uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-    uint8_t mod = 2;
 
-    char ctmp = param_getchar(Cmd, 0);
-    if (ctmp == '0') {
-        mod = 0;
-    } else if (ctmp == '1') {
-        mod = 1;
-    }
-    int gethexfail = param_gethex(Cmd, 1, key, 12);
-    if (mod == 2 || gethexfail) {
-        PrintAndLogEx(NORMAL, "Sets the load modulation strength of a MIFARE Classic EV1 card.");
-        PrintAndLogEx(NORMAL, "Usage: hf mf setmod <0|1> <block 0 key A>");
-        PrintAndLogEx(NORMAL, "       0 = normal modulation");
-        PrintAndLogEx(NORMAL, "       1 = strong modulation (default)");
-        return PM3_ESOFT;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf setmod",
+                  "Sets the load modulation strength of a MIFARE Classic EV1 card",
+                  "hf mf setmod -k ffffffffffff -0"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("0", NULL, "normal modulation"),
+        arg_lit0("1", NULL, "strong modulation (def)"),
+        arg_str0("k", "key", "<hex>", "key A, Sector 0,  6 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool m0 = arg_get_lit(ctx, 1);
+    bool m1 = arg_get_lit(ctx, 2); 
+
+    int keylen = 0;
+    uint8_t key[6] = {0};
+    CLIGetHexWithReturn(ctx, 3, key, &keylen);
+    CLIParserFree(ctx); 
+
+    if (m0 + m1 > 1) {
+        PrintAndLogEx(WARNING, "please select one modulation");
+        return PM3_EINVARG;
     }
 
-    uint8_t data[7];
-    data[0] = mod;
+    uint8_t data[7] = {0};
     memcpy(data + 1, key, 6);
+
+    if (m1) {
+        data[0] = 1;
+    } else {
+        data[0] = 0;
+    }
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_SETMOD, data, sizeof(data));
-
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_SETMOD, &resp, 1500)) {
-
-        if (resp.status == PM3_SUCCESS)
-            PrintAndLogEx(SUCCESS, "Success");
-        else
-            PrintAndLogEx(FAILED, "Failed");
-
-    } else {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_SETMOD, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
+        return PM3_ETIMEOUT;
     }
-    return PM3_SUCCESS;
+
+    if (resp.status == PM3_SUCCESS)
+        PrintAndLogEx(SUCCESS, "Change ( " _GREEN_("ok") " )");
+    else
+        PrintAndLogEx(FAILED, "Change (" _GREEN_("fail") " )");
+
+    return resp.status;
 }
 
 // MIFARE NACK bug detection

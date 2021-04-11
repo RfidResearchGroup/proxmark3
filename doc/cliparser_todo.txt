@@ -19,9 +19,7 @@ hf felica resetmode
 hf mf hardnested
 hf mf autopwn
 hf mf decrypt
-hf mf rdsc
 hf mf restore
-hf mf setmod
 hf mf wrbl
 lf hitag reader
 lf hitag writer
