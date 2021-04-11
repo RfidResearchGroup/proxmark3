@@ -188,48 +188,6 @@ static int usage_hf14_decryptbytes(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_hf14_gen3uid(void) {
-    PrintAndLogEx(NORMAL, "Set UID for magic GEN 3 card without manufacturer block changing");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf gen3uid [h] <uid>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h        this help");
-    PrintAndLogEx(NORMAL, "       <uid>    UID 8/14 hex symbols");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf gen3uid 01020304"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf gen3uid 01020304050607"));
-    return PM3_SUCCESS;
-}
-static int usage_hf14_gen3block(void) {
-    PrintAndLogEx(NORMAL, "Overwrite full manufacturer block for magic GEN 3 card");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf gen3blk [h] [block data (up to 32 hex symbols)]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h        this help");
-    PrintAndLogEx(NORMAL, "       [block]  manufacturer block data up to 32 hex symbols to write");
-    PrintAndLogEx(NORMAL, "                - If block data not specified, it prints current");
-    PrintAndLogEx(NORMAL, "                  data without changes");
-    PrintAndLogEx(NORMAL, "                - You can specify part of manufacturer block as");
-    PrintAndLogEx(NORMAL, "                  4/7-bytes for UID change only for example");
-    PrintAndLogEx(NORMAL, "                NOTE: BCC, SAK, ATQA will be calculated automatically");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf gen3blk 01020304FFFFFFFF0102030405060708"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf gen3blk 01020304"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf gen3blk 01020304050607"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf gen3blk"));
-    return PM3_SUCCESS;
-}
-static int usage_hf14_gen3freeze(void) {
-    PrintAndLogEx(NORMAL, "Perma lock further UID changes. No more UID changes available after operation completed");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf gen3freeze [h] <y>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h        this help");
-    PrintAndLogEx(NORMAL, "       <y>      confirm UID locks operation");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf gen3freeze y"));
-    return PM3_SUCCESS;
-}
 
 int mfc_ev1_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
 
@@ -5079,6 +5037,7 @@ static int CmdHf14AMfNack(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+/*
 static int CmdHF14AMfice(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf ice",
@@ -5180,6 +5139,7 @@ out:
     SendCommandMIX(CMD_HF_MIFARE_ACQ_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4, NULL, 0);
     return PM3_SUCCESS;
 }
+*/
 
 static int CmdHF14AMfAuth4(const char *Cmd) {
     uint8_t keyn[20] = {0};
@@ -5592,65 +5552,110 @@ static int CmdHF14AMfList(const char *Cmd) {
 }
 
 static int CmdHf14AGen3UID(const char *Cmd) {
-    uint8_t uid[7] = {0x00};
-    uint8_t oldUid[10] = {0x00};
-    uint8_t uidlen;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf gen3uid",
+                  "Set UID for magic Gen3 card _without_ changes to manufacturer block 0",
+                  "hf mf gen3uid --uid 01020304       --> set 4 byte uid\n"
+                  "hf mf gen3uid --uid 01020304050607 --> set 7 byte uid"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("u", "uid", "<hex>", "UID 4/7 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    uint8_t uid[7] = {0};
+    int uidlen = 0;
+    CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    CLIParserFree(ctx); 
 
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_hf14_gen3uid();
+    // sanity checks
+    if (uidlen != 4 && uidlen != 7) {
+        PrintAndLogEx(FAILED, "UID must be 4 or 7 hex bytes. Got %d", uidlen);
+        return PM3_EINVARG;
+    }
 
-    if (param_gethex(Cmd, 0, uid, 8))
-        if (param_gethex(Cmd, 0, uid, 14))
-            return usage_hf14_gen3uid();
-        else
-            uidlen = 7;
-    else
-        uidlen = 4;
+    uint8_t old_uid[10] = {0};
 
-    int res = mfGen3UID(uid, uidlen, oldUid);
-    if (res) {
-        PrintAndLogEx(ERR, "Can't set UID. Error=%d", res);
+    int res = mfGen3UID(uid, uidlen, old_uid);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Can't set UID");
+        PrintAndLogEx(HINT, "Are you sure your card is a Gen3 ?");
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Old UID : %s", sprint_hex(oldUid, uidlen));
-    PrintAndLogEx(SUCCESS, "New UID : %s", sprint_hex(uid, uidlen));
+    PrintAndLogEx(SUCCESS, "Old UID... %s", sprint_hex(old_uid, uidlen));
+    PrintAndLogEx(SUCCESS, "New UID... %s", sprint_hex(uid, uidlen));
     return PM3_SUCCESS;
 }
 
 static int CmdHf14AGen3Block(const char *Cmd) {
-    uint8_t block[16] = {0x00};
-    int blocklen = 0;
-    uint8_t newBlock[16] = {0x00};
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf gen3blk",
+                  "Overwrite full manufacturer block for magic Gen3 card\n"
+                  " - You can specify part of manufacturer block as\n"
+                  "   4/7-bytes for UID change only\n"
+                  "\n"
+                  "NOTE: BCC, SAK, ATQA will be calculated automatically"
+                  ,
+                  "hf mf gen3blk                      --> print current data\n"
+                  "hf mf gen3blk -d 01020304          --> set 4 byte uid\n"
+                  "hf mf gen3blk -d 01020304050607    --> set 7 byte uid \n"
+                  "hf mf gen3blk -d 01020304FFFFFFFF0102030405060708"
 
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_hf14_gen3block();
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("d", "data", "<hex>", "manufacturer block data up to 16 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    uint8_t data[MFBLOCK_SIZE] = {0x00};
+    int datalen = 0;
+    CLIGetHexWithReturn(ctx, 1, data, &datalen);
+    CLIParserFree(ctx); 
 
-    if (ctmp != '\0' && param_gethex_to_eol(Cmd, 0, block, sizeof(block), &blocklen))
-        return usage_hf14_gen3block();
-
-    int res = mfGen3Block(block, blocklen, newBlock);
+    uint8_t new_block[MFBLOCK_SIZE] = {0x00};
+    int res = mfGen3Block(data, datalen, new_block);
     if (res) {
-        PrintAndLogEx(ERR, "Can't change manufacturer block data. Error=%d", res);
+        PrintAndLogEx(ERR, "Can't change manufacturer block data. error %d", res);
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Current Block : %s", sprint_hex(newBlock, 16));
+    PrintAndLogEx(SUCCESS, "Current block... %s", sprint_hex_inrow(new_block, sizeof(new_block)));
     return PM3_SUCCESS;
 }
 
 static int CmdHf14AGen3Freeze(const char *Cmd) {
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_hf14_gen3freeze();
-    if (ctmp != 'y') return usage_hf14_gen3freeze();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf gen3freeze",
+                  "Perma lock further UID changes. No more UID changes available after operation completed\n"
+                  "\nNote: operation is " _RED_("! irreversible !"),
+
+                  "hf mf gen3freeze -y"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit1("y", "yes", "confirm UID lock operation"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    bool confirm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx); 
+    if (confirm == false) {
+        PrintAndLogEx(INFO, "please confirm that you want to perma lock the card");
+        return PM3_SUCCESS;
+    }
 
     int res = mfGen3Freeze();
-    if (res) {
-        PrintAndLogEx(ERR, "Can't lock UID changes. Error=%d", res);
-        return PM3_ESOFT;
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Can't lock UID changes. error %d", res);
+    } else {
+        PrintAndLogEx(SUCCESS, "MFC Gen3 UID card is now perma-locked");
     }
-    PrintAndLogEx(SUCCESS, "MFC Gen3 UID permalocked");
-    return PM3_SUCCESS;
+    return res;
 }
 
 static void des_decrypt(void *out, const void *in, const void *key) {
@@ -6038,12 +6043,12 @@ static command_t CommandTable[] = {
     {"cview",       CmdHF14AMfCView,        IfPm3Iso14443a,  "View card"},
     {"cwipe",       CmdHF14AMfCWipe,        IfPm3Iso14443a,  "Wipe card to default UID/Sectors/Keys"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic gen3") " -----------------------"},
-    {"gen3uid",     CmdHf14AGen3UID,        IfPm3Iso14443a,  "Set UID without manufacturer block"},
-    {"gen3blk",     CmdHf14AGen3Block,      IfPm3Iso14443a,  "Overwrite full manufacturer block"},
-    {"gen3freeze",  CmdHf14AGen3Freeze,     IfPm3Iso14443a,  "Perma lock further UID changes"},
+    {"gen3uid",     CmdHf14AGen3UID,        IfPm3Iso14443a,  "Set UID without changing manufacturer block"},
+    {"gen3blk",     CmdHf14AGen3Block,      IfPm3Iso14443a,  "Overwrite manufacturer block"},
+    {"gen3freeze",  CmdHf14AGen3Freeze,     IfPm3Iso14443a,  "Perma lock UID changes. irreversible"},
 
-    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("i") " -----------------------"},
-    {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},
+//    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("i") " -----------------------"},
+//    {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},
     {NULL, NULL, NULL, NULL}
 };
 

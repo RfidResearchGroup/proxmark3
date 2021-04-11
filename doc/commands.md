@@ -427,7 +427,6 @@ Check column "offline" for their availability.
 |`hf mf gen3uid          `|N       |`Set UID without manufacturer block`
 |`hf mf gen3blk          `|N       |`Overwrite full manufacturer block`
 |`hf mf gen3freeze       `|N       |`Perma lock further UID changes`
-|`hf mf ice              `|N       |`collect MIFARE Classic nonces to file`
 
 
 ### hf mfp

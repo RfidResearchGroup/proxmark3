@@ -2485,8 +2485,7 @@ void MifareGen3UID(uint8_t uidlen, uint8_t *uid) {
     clear_trace();
     set_tracing(true);
 
-    if (!iso14443a_select_card(old_uid, card_info, NULL, true, 0, true)) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Card not selected");
+    if (iso14443a_select_card(old_uid, card_info, NULL, true, 0, true) == false) {
         retval = PM3_ESOFT;
         goto OUT;
     }
@@ -2521,8 +2520,7 @@ void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
     clear_trace();
     set_tracing(true);
 
-    if (!iso14443a_select_card(uid, card_info, NULL, true, 0, true)) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Card not selected");
+    if (iso14443a_select_card(uid, card_info, NULL, true, 0, true) == false) {
         retval = PM3_ESOFT;
         goto OUT;
     }
@@ -2558,7 +2556,6 @@ void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
 
         if (doReselect) {
             if (!iso14443a_select_card(uid, NULL, NULL, true, 0, true)) {
-                if (DBGLEVEL >= DBG_ERROR) Dbprintf("Card not selected");
                 retval = PM3_ESOFT;
                 goto OUT;
             }
@@ -2575,16 +2572,15 @@ OUT:
 }
 
 void MifareGen3Freez(void) {
-    int retval = PM3_SUCCESS;
-    uint8_t freeze_cmd[7] = { 0x90, 0xfd, 0x11, 0x11, 0x00, 0xe7, 0x91 };
-    uint8_t *uid = BigBuf_malloc(10);
-
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     clear_trace();
     set_tracing(true);
 
-    if (!iso14443a_select_card(uid, NULL, NULL, true, 0, true)) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Card not selected");
+    int retval = PM3_SUCCESS;
+    uint8_t freeze_cmd[7] = { 0x90, 0xfd, 0x11, 0x11, 0x00, 0xe7, 0x91 };
+    uint8_t *uid = BigBuf_malloc(10);
+
+    if (iso14443a_select_card(uid, NULL, NULL, true, 0, true) == false) {
         retval = PM3_ESOFT;
         goto OUT;
     }
