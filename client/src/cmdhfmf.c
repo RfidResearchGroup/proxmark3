@@ -173,21 +173,6 @@ static int usage_hf14_restore(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("         hf mf restore 4") "                          -- read the UID from tag with 4K memory first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-dump.bin");
     return PM3_SUCCESS;
 }
-static int usage_hf14_decryptbytes(void) {
-    PrintAndLogEx(NORMAL, "Decrypt Crypto-1 encrypted bytes given some known state of crypto. See tracelog to gather needed values\n");
-    PrintAndLogEx(NORMAL, "Usage:   hf mf decrypt [h] <nt> <ar_enc> <at_enc> <data>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h            this help");
-    PrintAndLogEx(NORMAL, "      <nt>         tag nonce");
-    PrintAndLogEx(NORMAL, "      <ar_enc>     encrypted reader response");
-    PrintAndLogEx(NORMAL, "      <at_enc>     encrypted tag response");
-    PrintAndLogEx(NORMAL, "      <data>       encrypted data, taken directly after at_enc and forward");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("         hf mf decrypt b830049b 9248314a 9280e203 41e586f9"));
-    PrintAndLogEx(NORMAL, "\n  this sample decrypts 41e586f9 -> 3003999a  Annotated: 30 03 [99 9a]  read block 3 [crc]");
-    return PM3_SUCCESS;
-}
-
 
 int mfc_ev1_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
 
@@ -4375,7 +4360,7 @@ static int CmdHF14AMfCSetBlk(const char *Cmd) {
         arg_param_begin,
         arg_int1("b", "blk", "<dec>", "block number"),
         arg_str0("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
-        arg_lit0("w", "wipe", "wipes card with backdoor cmd before writing`"),
+        arg_lit0("w", "wipe", "wipes card with backdoor cmd before writing"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4943,35 +4928,54 @@ static int CmdHF14AMfCView(const char *Cmd) {
 
 //needs nt, ar, at, Data to decrypt
 static int CmdHf14AMfDecryptBytes(const char *Cmd) {
+   CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf decrypt",
+                  "Decrypt Crypto-1 encrypted bytes given some known state of crypto. See tracelog to gather needed values",
+                  "hf mf decrypt --nt b830049b --ar 9248314a --at 9280e203 -d 41e586f9\n"
+                  " -> 41e586f9 becomes 3003999a\n"
+                  " -> which annotates 30 03 [99 9a] read block 3 [crc]"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "nt",  "<hex>", "tag nonce"),
+        arg_str1(NULL, "ar",  "<hex>", "ar_enc, encrypted reader response"),
+        arg_str1(NULL, "at",  "<hex>", "at_enc, encrypted tag response"),
+        arg_str1("d", "data", "<hex>", "encrypted data, taken directly after at_enc and forward"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_decryptbytes();
-
-    uint32_t nt     = param_get32ex(Cmd, 0, 0, 16);
-    uint32_t ar_enc = param_get32ex(Cmd, 1, 0, 16);
-    uint32_t at_enc = param_get32ex(Cmd, 2, 0, 16);
-
-    int len = param_getlength(Cmd, 3);
-    if (len & 1) {
-        PrintAndLogEx(WARNING, "Uneven hex string length. LEN=%d", len);
-        return PM3_ESOFT;
+    uint32_t nt = 0;
+    int res = arg_get_u32_hexstr_def(ctx, 1, 0, &nt);
+    if (res != 1) {
+        PrintAndLogEx(WARNING, "check `nt` parameter");
+        return PM3_EINVARG;
     }
 
-    PrintAndLogEx(NORMAL, "nt\t%08X", nt);
-    PrintAndLogEx(NORMAL, "ar enc\t%08X", ar_enc);
-    PrintAndLogEx(NORMAL, "at enc\t%08X", at_enc);
-
-    uint8_t *data = calloc(len, sizeof(uint8_t));
-    if (!data) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-        return PM3_EMALLOC;
+    uint32_t ar_enc = 0;
+    res = arg_get_u32_hexstr_def(ctx, 2, 0, &ar_enc);
+    if (res != 1) {
+        PrintAndLogEx(WARNING, "check `ar` parameter");
+        return PM3_EINVARG;
     }
 
-    param_gethex_ex(Cmd, 3, data, &len);
-    len >>= 1;
-    tryDecryptWord(nt, ar_enc, at_enc, data, len);
-    free(data);
-    return PM3_SUCCESS;
+    uint32_t at_enc = 0;
+    res = arg_get_u32_hexstr_def(ctx, 3, 0, &at_enc);
+    if (res != 1) {
+        PrintAndLogEx(WARNING, "check `at` parameter");
+        return PM3_EINVARG;
+    }
+
+    int datalen = 0;
+    uint8_t data[512] = {0x00};
+    CLIGetHexWithReturn(ctx, 4, data, &datalen);
+    CLIParserFree(ctx); 
+
+    PrintAndLogEx(INFO, "nt....... %08X", nt);
+    PrintAndLogEx(INFO, "ar enc... %08X", ar_enc);
+    PrintAndLogEx(INFO, "at enc... %08X", at_enc);
+
+    return tryDecryptWord(nt, ar_enc, at_enc, data, datalen);
 }
 
 static int CmdHf14AMfSetMod(const char *Cmd) {

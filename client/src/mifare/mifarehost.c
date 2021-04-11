@@ -1060,13 +1060,14 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool i
 }
 
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len) {
-    PrintAndLogEx(SUCCESS, "\nencrypted data: [%s]", sprint_hex(data, len));
+    PrintAndLogEx(SUCCESS, "encrypted data... %s", sprint_hex(data, len));
     struct Crypto1State *s;
     uint32_t ks2 = ar_enc ^ prng_successor(nt, 64);
     uint32_t ks3 = at_enc ^ prng_successor(nt, 96);
     s = lfsr_recovery64(ks2, ks3);
     mf_crypto1_decrypt(s, data, len, false);
-    PrintAndLogEx(SUCCESS, "decrypted data: [%s]", sprint_hex(data, len));
+    PrintAndLogEx(SUCCESS, "decrypted data... " _YELLOW_("%s"), sprint_hex(data, len));
+    PrintAndLogEx(NORMAL, "");
     crypto1_destroy(s);
     return PM3_SUCCESS;
 }
