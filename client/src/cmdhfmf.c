@@ -218,25 +218,6 @@ static int usage_hf14_csetblk(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_hf14_csave(void) {
-    PrintAndLogEx(NORMAL, "It saves `magic Chinese` card dump into the file `filename.eml` or `cardID.eml`");
-    PrintAndLogEx(NORMAL, "or into emulator memory");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf csave [h] [e] [u] [card memory] o <file name w/o `.eml`>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h             this help");
-    PrintAndLogEx(NORMAL, "       e             save data to emulator memory");
-    PrintAndLogEx(NORMAL, "       u             save data to file, use carduid as filename");
-    PrintAndLogEx(NORMAL, "       card memory   0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-    PrintAndLogEx(NORMAL, "       o <filename>  save data to file");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf csave u 1"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf csave e 1"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf csave 4 o filename"));
-    return PM3_SUCCESS;
-}
-
 static int usage_hf14_gen3uid(void) {
     PrintAndLogEx(NORMAL, "Set UID for magic GEN 3 card without manufacturer block changing");
     PrintAndLogEx(NORMAL, "");
@@ -4593,7 +4574,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
             flags = 0;
         }
 
-        // Switch off field.
+        // switch off field
         if (blockno == MFBLOCK_SIZE * 4 - 1) {
             flags = MAGIC_HALT + MAGIC_OFF;
         }
@@ -4735,76 +4716,74 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
 }
 
 static int CmdHF14AMfCSave(const char *Cmd) {
-
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf csave",
+                  "Save magic gen1a card memory into three files (BIN/EML/JSON)"
+                  "or into emulator memory",
+                  "hf mf csave\n"
+                  "hf mf csave --4k"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_lit0(NULL, "emu", "from emulator memory"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE];
-    char *fnameptr = filename;
-    uint8_t *dump;
-    bool fillEmulator = false;
-    bool errors = false, hasname = false, useuid = false;
-    int i, len, flags;
-    uint16_t numblocks = 0, cmdp = 0;
-    uint16_t bytes = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        char ctmp = tolower(param_getchar(Cmd, cmdp));
-        switch (ctmp) {
-            case 'e':
-                useuid = true;
-                fillEmulator = true;
-                cmdp++;
-                break;
-            case 'h':
-                return usage_hf14_csave();
-            case '0':
-            case '1':
-            case '2':
-            case '4':
-                numblocks = NumOfBlocks(ctmp);
-                bytes =  numblocks * MFBLOCK_SIZE;
-                PrintAndLogEx(SUCCESS, "Saving magic MIFARE %cK", ctmp);
-                cmdp++;
-                break;
-            case 'u':
-                useuid = true;
-                hasname = true;
-                cmdp++;
-                break;
-            case 'o':
-                len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (len < 1) {
-                    errors = true;
-                    break;
-                }
+    bool m0 = arg_get_lit(ctx, 2);
+    bool m1 = arg_get_lit(ctx, 3);
+    bool m2 = arg_get_lit(ctx, 4);
+    bool m4 = arg_get_lit(ctx, 5);
+    bool fill_emulator = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx); 
 
-                useuid = false;
-                hasname = true;
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    // validations
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    } else if ((m0 + m1 + m2 + m4) == 0) {
+        m1 = true;
     }
 
-    if (!hasname && !fillEmulator) errors = true;
-
-    if (errors || cmdp == 0) return usage_hf14_csave();
-
-    dump = calloc(bytes, sizeof(uint8_t));
-    if (!dump) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-        return PM3_EMALLOC;
+    char s[6];
+    memset(s, 0, sizeof(s));
+    uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
+    if (m0) {
+        block_cnt = MIFARE_MINI_MAXBLOCK;
+        strncpy(s, "Mini", 5);
+    } else if (m1) {
+        block_cnt = MIFARE_1K_MAXBLOCK;
+        strncpy(s, "1K", 3);
+    } else if (m2) {
+        block_cnt = MIFARE_2K_MAXBLOCK;
+        strncpy(s, "2K", 3);
+    } else if (m4) {
+        block_cnt = MIFARE_4K_MAXBLOCK;
+        strncpy(s, "4K", 3);
+    } else {
+        PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
+        return PM3_EINVARG;
     }
+
+    PrintAndLogEx(SUCCESS, "Dumping magic Gen1a MIFARE Classic " _GREEN_("%s") " card memory", s);
+    PrintAndLogEx(INFO, "." NOLF);
 
     // Select card to get UID/UIDLEN information
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "iso14443a card select failed");
-        free(dump);
-        return PM3_ESOFT;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "iso14443a card select timeout");
+        return PM3_ETIMEOUT;
     }
 
     /*
@@ -4814,51 +4793,72 @@ static int CmdHF14AMfCSave(const char *Cmd) {
         3: proprietary Anticollision
     */
     uint64_t select_status = resp.oldarg[0];
-
     if (select_status == 0) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
-        free(dump);
         return select_status;
     }
 
+    // store card info
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-    flags = MAGIC_INIT + MAGIC_WUPC;
-    for (i = 0; i < numblocks; i++) {
-        if (i == 1) flags = 0;
-        if (i == numblocks - 1) flags = MAGIC_HALT + MAGIC_OFF;
+    // reserve memory
+    uint16_t bytes = block_cnt * MFBLOCK_SIZE;
+    uint8_t *dump = calloc(bytes, sizeof(uint8_t));
+    if (dump == NULL) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // switch on field and send magic sequence
+    uint8_t flags = MAGIC_INIT + MAGIC_WUPC;
+    for (uint16_t i = 0; i < block_cnt; i++) {
+
+        // read
+        if (i == 1) {
+            flags = 0;
+        }
+        // switch off field
+        if (i == block_cnt - 1) {
+            flags = MAGIC_HALT + MAGIC_OFF;
+        }
 
         if (mfCGetBlock(i, dump + (i * MFBLOCK_SIZE), flags)) {
-            PrintAndLogEx(WARNING, "Cant get block: %d", i);
+            PrintAndLogEx(WARNING, "Can't get magic card block: %d", i);
+            PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             free(dump);
             return PM3_ESOFT;
         }
+        PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
     }
+    PrintAndLogEx(NORMAL, "");
 
-    if (useuid) {
-        fnameptr += snprintf(fnameptr, sizeof(filename), "hf-mf-");
-        FillFileNameByUID(fnameptr, card.uid, "-dump", card.uidlen);
-    }
-
-    if (fillEmulator) {
+    if (fill_emulator) {
         PrintAndLogEx(INFO, "uploading to emulator memory");
         PrintAndLogEx(INFO, "." NOLF);
         // fast push mode
         conn.block_after_ACK = true;
-        for (i = 0; i < numblocks; i += 5) {
-            if (i == numblocks - 1) {
+        for (int i = 0; i < block_cnt; i += 5) {
+            if (i == block_cnt - 1) {
                 // Disable fast mode on last packet
                 conn.block_after_ACK = false;
             }
             if (mfEmlSetMem(dump + (i * MFBLOCK_SIZE), i, 5) != PM3_SUCCESS) {
-                PrintAndLogEx(WARNING, "Cant set emul block: %d", i);
+                PrintAndLogEx(WARNING, "Can't set emul block: %d", i);
             }
             PrintAndLogEx(NORMAL, "." NOLF);
             fflush(stdout);
         }
-        PrintAndLogEx(NORMAL, "\n");
+        PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, "uploaded %d bytes to emulator memory", bytes);
+    }
+
+    // user supplied filename?
+    if (fnlen < 1) {
+        char *fptr = filename;
+        fptr += snprintf(fptr, sizeof(filename), "hf-mf-");
+        FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
     }
 
     saveFile(filename, ".bin", dump, bytes);
@@ -4901,7 +4901,6 @@ static int CmdHF14AMfCView(const char *Cmd) {
 
     char s[6];
     memset(s, 0, sizeof(s));
-
     uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
     if (m0) {
         block_cnt = MIFARE_MINI_MAXBLOCK;
@@ -4922,21 +4921,13 @@ static int CmdHF14AMfCView(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "View magic Gen1a MIFARE Classic " _GREEN_("%s"), s);
     PrintAndLogEx(INFO, "." NOLF);
 
-    int bytes = block_cnt * MFBLOCK_SIZE;
-    uint8_t *dump = calloc(bytes, sizeof(uint8_t));
-    if (dump == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-        return PM3_EMALLOC;
-    }
-
     // Select card to get UID/UIDLEN information
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "iso14443a card select timeout");
-        free(dump);
-        return PM3_ESOFT;
+        return PM3_ETIMEOUT;
     }
 
     /*
@@ -4949,20 +4940,34 @@ static int CmdHF14AMfCView(const char *Cmd) {
 
     if (select_status == 0) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
-        free(dump);
         return select_status;
     }
 
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
+    // reserve memory
+    uint16_t bytes = block_cnt * MFBLOCK_SIZE;
+    uint8_t *dump = calloc(bytes, sizeof(uint8_t));
+    if (dump == NULL) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // switch on field and send magic sequence
     uint8_t flags = MAGIC_INIT + MAGIC_WUPC;
     for (uint16_t i = 0; i < block_cnt; i++) {
-        if (i == 1) flags = 0;
-        if (i == block_cnt - 1) flags = MAGIC_HALT + MAGIC_OFF;
+        // read
+        if (i == 1) {
+            flags = 0;
+        }
+        // switch off field
+        if (i == block_cnt - 1) {
+            flags = MAGIC_HALT + MAGIC_OFF;
+        }
 
         if (mfCGetBlock(i, dump + (i * MFBLOCK_SIZE), flags)) {
-            PrintAndLogEx(WARNING, "Can't get block: %d", i);
+            PrintAndLogEx(WARNING, "Can't get magic card block: %u", i);
             PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             free(dump);
             return PM3_ESOFT;
@@ -5912,7 +5917,7 @@ static int CmdHF14AMfView(const char *Cmd) {
     
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf view",
-                  "Print a MIFARE Classic dump file",
+                  "Print a MIFARE Classic dump file (bin/eml/json)",
                   "hf mf view -f hf-mf-01020304-dump.bin"
                  );
     void *argtable[] = {
@@ -5921,21 +5926,49 @@ static int CmdHF14AMfView(const char *Cmd) {
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+    CLIExecWithReturn(ctx, Cmd, argtable, false);    
     int fnlen = 0;
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx); 
 
-    uint8_t *dump = NULL;
+    // reserve memory
+    uint8_t *dump = calloc(MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK, sizeof(uint8_t));
+    if (dump == NULL) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
     size_t bytes_read = 0;
-    if (loadFile_safe(filename, "", (void **)&dump, &bytes_read) != PM3_SUCCESS) {
+    int res = 0;
+    DumpFileType_t dftype = getfiletype(filename);
+    switch (dftype) {
+        case BIN: {
+            res = loadFile_safe(filename, ".bin", (void **)&dump, &bytes_read);
+            break;
+        }
+        case EML: {
+            res = loadFileEML_safe(filename, (void **)&dump, &bytes_read);
+            break;
+        }
+        case JSON: {
+            res = loadFileJSON(filename, dump, MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, &bytes_read, NULL);
+            break;
+        }
+        case DICTIONARY: {
+            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+            return PM3_EINVARG;
+        }
+    }
+
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
+        free(dump);
         return PM3_EFILE;
     }
-    uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
+
+    uint16_t block_cnt = MIN(MIFARE_1K_MAXBLOCK, (bytes_read / MFBLOCK_SIZE));
     if (bytes_read == 320)
         block_cnt = MIFARE_MINI_MAXBLOCK;
     else if (bytes_read == 2048)
