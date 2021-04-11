@@ -23,7 +23,6 @@ hf mf rdsc
 hf mf restore
 hf mf setmod
 hf mf wrbl
-hf mf csetblk
 hf mf gen3uid
 hf mf gen3blk
 hf mf gen3freeze
