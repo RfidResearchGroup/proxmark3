@@ -460,7 +460,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     }
     uint8_t blockno = (uint8_t)b;
 
-    PrintAndLogEx(INFO, "--block no %d, key %c - %s", blockno, keytype ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
+    PrintAndLogEx(INFO, "--block no %d, key %c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
     PrintAndLogEx(INFO, "--data: %s", sprint_hex(block, sizeof(block)));
 
     uint8_t data[26];
@@ -482,7 +482,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     } else {
         PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
         // suggest the opposite keytype than what was used.
-        PrintAndLogEx(HINT, "Maybe access rights? Try specify keytype " _YELLOW_("%c") " instead", (keytype == 0) ? 'B' : 'A' );
+        PrintAndLogEx(HINT, "Maybe access rights? Try specify keytype " _YELLOW_("%c") " instead", (keytype == MF_KEY_A) ? 'B' : 'A' );
     }
     return PM3_SUCCESS;
 }
@@ -506,13 +506,13 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int b = arg_get_int_def(ctx, 1, 0);
 
-    uint8_t keytype = 0;
+    uint8_t keytype = MF_KEY_A;
     if (arg_get_lit(ctx, 2) && arg_get_lit(ctx, 3)) {
         CLIParserFree(ctx);
         PrintAndLogEx(WARNING, "Input key type must be A or B");
         return PM3_EINVARG;
     } else if (arg_get_lit(ctx, 3)) {
-        keytype = 1;
+        keytype = MF_KEY_B;
     }
 
     int keylen = 0;
@@ -558,13 +558,13 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    uint8_t keytype = 0;
+    uint8_t keytype = MF_KEY_A;
     if (arg_get_lit(ctx, 1) && arg_get_lit(ctx, 2)) {
         CLIParserFree(ctx);
         PrintAndLogEx(WARNING, "Input key type must be A or B");
         return PM3_EINVARG;
     } else if (arg_get_lit(ctx, 2)) {
-        keytype = 1;
+        keytype = MF_KEY_B;
     }
 
     int keylen = 0;
@@ -612,7 +612,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
 
     mfc_eload_t payload;
     payload.sectorcnt = numsectors;
-    payload.keytype = 0;
+    payload.keytype = MF_KEY_A;
 
     // ecfill key A
     clearCommandBuffer();
@@ -628,7 +628,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
         PrintAndLogEx(INFO, "fast dump reported back failure w KEY A,  swapping to KEY B");
 
         // ecfill key B
-        payload.keytype = 1;
+        payload.keytype = MF_KEY_B;
 
         clearCommandBuffer();
         SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
@@ -770,7 +770,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
             fflush(stdout);
 
             payload.blockno = FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1;
-            payload.keytype = 0;
+            payload.keytype = MF_KEY_A;
             memcpy(payload.key, keyA[sectorNo], sizeof(payload.key));
 
             clearCommandBuffer();
@@ -809,7 +809,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
                 if (blockNo == NumBlocksPerSector(sectorNo) - 1) { // sector trailer. At least the Access Conditions can always be read with key A.
 
                     payload.blockno = FirstBlockOfSector(sectorNo) + blockNo;
-                    payload.keytype = 0;
+                    payload.keytype = MF_KEY_A;
                     memcpy(payload.key, keyA[sectorNo], sizeof(payload.key));
 
                     clearCommandBuffer();
@@ -833,7 +833,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     } else {                                                                              // key A would work
 
                         payload.blockno = FirstBlockOfSector(sectorNo) + blockNo;
-                        payload.keytype = 0;
+                        payload.keytype = MF_KEY_A;
                         memcpy(payload.key, keyA[sectorNo], sizeof(payload.key));
 
                         clearCommandBuffer();
@@ -1090,7 +1090,6 @@ static int CmdHF14AMfRestore(const char *Cmd) {
 
             if (use_keyfile_for_auth) {
                 for (int8_t kt = MF_KEY_B; kt > -1; kt--) {
-                //for (uint8_t kt = MF_KEY_A; kt <= MF_KEY_B; kt++) {
 
                     if (kt == MF_KEY_A)
                         memcpy(data, keyA[s], 6);
@@ -1186,26 +1185,26 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
     uint8_t blockNo = arg_get_u32_def(ctx, 6, 0);
 
-    uint8_t keyType = 0;
+    uint8_t keyType = MF_KEY_A;
 
     if (arg_get_lit(ctx, 7) && arg_get_lit(ctx, 8)) {
         CLIParserFree(ctx);
         PrintAndLogEx(WARNING, "Input key type must be A or B");
         return PM3_EINVARG;
     } else if (arg_get_lit(ctx, 8)) {
-        keyType = 1;
+        keyType = MF_KEY_B;
     }
 
     uint8_t trgBlockNo = arg_get_u32_def(ctx, 9, 0);
 
-    uint8_t trgKeyType = 0;
+    uint8_t trgKeyType = MF_KEY_A;
 
     if (arg_get_lit(ctx, 10) && arg_get_lit(ctx, 11)) {
         CLIParserFree(ctx);
         PrintAndLogEx(WARNING, "Target key type must be A or B");
         return PM3_EINVARG;
     } else if (arg_get_lit(ctx, 11)) {
-        trgKeyType = 1;
+        trgKeyType = MF_KEY_B;
     }
 
     bool transferToEml = arg_get_lit(ctx, 12);
@@ -1289,7 +1288,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
                     }
                     mfEmlGetMem(keyBlock, sectortrailer, 1);
 
-                    if (!trgKeyType)
+                    if (trgKeyType == MF_KEY_A)
                         num_to_bytes(key64, 6, keyBlock);
                     else
                         num_to_bytes(key64, 6, &keyBlock[10]);
@@ -1334,7 +1333,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         // nested sectors
         bool calibrate = true;
 
-        for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) {
+        for (trgKeyType = MF_KEY_A; trgKeyType <= MF_KEY_B; ++trgKeyType) {
             for (uint8_t sectorNo = 0; sectorNo < SectorsCnt; ++sectorNo) {
                 for (int i = 0; i < MIFARE_SECTOR_RETRY; i++) {
 
@@ -1387,7 +1386,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
                 mf_readblock_t payload;
                 payload.blockno = sectrail;
-                payload.keytype = 0;
+                payload.keytype = MF_KEY_A;
 
                 num_to_bytes(e_sector[i].Key[0], 6, payload.key); // KEY A
 
@@ -1491,14 +1490,14 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
 
     uint8_t blockNo = arg_get_u32_def(ctx, 6, 0);
 
-    uint8_t keyType = 0;
+    uint8_t keyType = MF_KEY_A;
 
     if (arg_get_lit(ctx, 7) && arg_get_lit(ctx, 8)) {
         CLIParserFree(ctx);
         PrintAndLogEx(WARNING, "Input key type must be A or B");
         return PM3_EINVARG;
     } else if (arg_get_lit(ctx, 8)) {
-        keyType = 1;
+        keyType = MF_KEY_B;
     }
 
     bool transferToEml = arg_get_lit(ctx, 9);
@@ -1533,7 +1532,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
 
     sector_t *e_sector = NULL;
 
-    uint8_t trgKeyType = 0;
+    uint8_t trgKeyType = MF_KEY_A;
 
     uint8_t keyBlock[(ARRAYLEN(g_mifare_default_keys) + 1) * 6];
     uint64_t key64 = 0;
@@ -1585,7 +1584,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "enter static nested key recovery");
 
     // nested sectors
-    for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) {
+    for (trgKeyType = MF_KEY_A; trgKeyType <= MF_KEY_B; ++trgKeyType) {
         for (uint8_t sectorNo = 0; sectorNo < SectorsCnt; ++sectorNo) {
 
             for (int i = 0; i < 1; i++) {
@@ -1633,7 +1632,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
 
             mf_readblock_t payload;
             payload.blockno = sectrail;
-            payload.keytype = 0;
+            payload.keytype = MF_KEY_A;
 
             num_to_bytes(e_sector[i].Key[0], 6, payload.key); // KEY A
 
@@ -1703,9 +1702,9 @@ jumptoend:
 
 static int CmdHF14AMfNestedHard(const char *Cmd) {
     uint8_t blockNo = 0;
-    uint8_t keyType = 0;
+    uint8_t keyType = MF_KEY_A;
     uint8_t trgBlockNo = 0;
-    uint8_t trgKeyType = 0;
+    uint8_t trgKeyType = MF_KEY_A;
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
     uint8_t trgkey[6] = {0, 0, 0, 0, 0, 0};
     uint8_t cmdp = 0;
@@ -1758,7 +1757,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
             }
 
             if (ctmp != 'a') {
-                keyType = 1;
+                keyType = MF_KEY_B;
             }
 
             if (param_gethex(Cmd, cmdp + 2, key, 12)) {
@@ -1779,7 +1778,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
                 return 1;
             }
             if (ctmp != 'a') {
-                trgKeyType = 1;
+                trgKeyType = MF_KEY_B;
             }
             cmdp += 5;
     }
@@ -1864,14 +1863,14 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         uint64_t key64 = 0;
         // check if we can authenticate to sector
         if (mfCheckKeys(blockNo, keyType, true, 1, key, &key64) != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Key is wrong. Can't authenticate to block: %3d  key type: %c", blockNo, keyType ? 'B' : 'A');
+            PrintAndLogEx(WARNING, "Key is wrong. Can't authenticate to block: %3d  key type: %c", blockNo, (keyType == MF_KEY_B) ? 'B' : 'A');
             return 3;
         }
     }
 
     PrintAndLogEx(INFO, "Target block no:%3d, target key type:%c, known target key: 0x%02x%02x%02x%02x%02x%02x%s",
                   trgBlockNo,
-                  trgKeyType ? 'B' : 'A',
+                  (trgKeyType == MF_KEY_B)? 'B' : 'A',
                   trgkey[0], trgkey[1], trgkey[2], trgkey[3], trgkey[4], trgkey[5],
                   know_target_key ? "" : " (not set)"
                  );
@@ -1906,7 +1905,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
 static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Nested and Hardnested parameter
     uint8_t blockNo = 0;
-    uint8_t keyType = 0;
+    uint8_t keyType = MF_KEY_A;
     uint8_t key[6] = {0};
     uint64_t key64 = 0;
     bool calibrate = true;
@@ -1988,7 +1987,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 }
 
                 if (ctmp != 'a') {
-                    keyType = 1;
+                    keyType = MF_KEY_B;
                 }
 
                 // Get the known block key
@@ -2074,7 +2073,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         PrintAndLogEx(INFO, " card sectors .. " _YELLOW_("%d"), sectors_cnt);
         PrintAndLogEx(INFO, " key supplied .. " _YELLOW_("%s"), know_target_key ? "True" : "False");
         PrintAndLogEx(INFO, " known sector .. " _YELLOW_("%d"), blockNo);
-        PrintAndLogEx(INFO, " keytype ....... " _YELLOW_("%c"), keyType ? 'B' : 'A');
+        PrintAndLogEx(INFO, " keytype ....... " _YELLOW_("%c"), (keyType == MF_KEY_B) ? 'B' : 'A');
         PrintAndLogEx(INFO, " known key ..... " _YELLOW_("%s"), sprint_hex(key, sizeof(key)));
 
         if (has_staticnonce == NONCE_STATIC)
@@ -2104,7 +2103,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         if (mfCheckKeys(FirstBlockOfSector(blockNo), keyType, true, 1, key, &key64) == PM3_SUCCESS) {
             PrintAndLogEx(INFO, "target sector:%3u key type: %c -- using valid key [ " _GREEN_("%s") "] (used for nested / hardnested attack)",
                           blockNo,
-                          keyType ? 'B' : 'A',
+                          (keyType == MF_KEY_B) ? 'B' : 'A',
                           sprint_hex(key, sizeof(key))
                          );
 
@@ -2117,7 +2116,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             know_target_key = false;
             PrintAndLogEx(FAILED, "Key is wrong. Can't authenticate to sector:"_RED_("%3d") " key type: "_RED_("%c") " key: " _RED_("%s"),
                           blockNo,
-                          keyType ? 'B' : 'A',
+                          (keyType == MF_KEY_B) ? 'B' : 'A',
                           sprint_hex(key, sizeof(key))
                          );
             PrintAndLogEx(WARNING, "falling back to dictionary");
@@ -2125,7 +2124,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
         // Check if the user supplied key is used by other sectors
         for (int i = 0; i < sectors_cnt; i++) {
-            for (int j = 0; j < 2; j++) {
+            for (int j = MF_KEY_A; j <= MF_KEY_B; j++) {
                 if (e_sector[i].foundKey[j] == 0) {
                     if (mfCheckKeys(FirstBlockOfSector(i), j, true, 1, key, &key64) == PM3_SUCCESS) {
                         e_sector[i].Key[j] = bytes_to_num(key, 6);
@@ -2251,7 +2250,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     // Analyse the dictionary attack
     for (int i = 0; i < sectors_cnt; i++) {
-        for (int j = 0; j < 2; j++) {
+        for (int j = MF_KEY_A; j <= MF_KEY_B; j++) {
             if (e_sector[i].foundKey[j] == 1) {
                 e_sector[i].foundKey[j] = 'D';
                 num_to_bytes(e_sector[i].Key[j], 6, tmp_key);
@@ -2315,7 +2314,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             e_sector[blockNo].foundKey[keyType] = 'S';
             PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _GREEN_("%012" PRIx64) " ] (used for nested / hardnested attack)",
                           blockNo,
-                          keyType ? 'B' : 'A',
+                          (keyType == MF_KEY_B) ? 'B' : 'A',
                           key64
                          );
         } else {
@@ -2378,7 +2377,7 @@ noValidKeyFound:
 
                         mf_readblock_t payload;
                         payload.blockno = sectrail;
-                        payload.keytype = 0;
+                        payload.keytype = MF_KEY_A;
 
                         num_to_bytes(e_sector[current_sector_i].Key[0], 6, payload.key); // KEY A
 
@@ -2974,9 +2973,9 @@ static int CmdHF14AMfChk(const char *Cmd) {
     if ((arg_get_lit(ctx, 3) && arg_get_lit(ctx, 4)) || arg_get_lit(ctx, 5)) {
         keyType = 2;
     } else if (arg_get_lit(ctx, 3)) {
-        keyType = 0;
+        keyType = MF_KEY_A;
     } else if (arg_get_lit(ctx, 4)) {
-        keyType = 1;
+        keyType = MF_KEY_B;
     }
 
     bool m0 = arg_get_lit(ctx, 6);
@@ -2994,7 +2993,6 @@ static int CmdHF14AMfChk(const char *Cmd) {
     CLIParserFree(ctx);
 
     //validations
-
     if ((m0 + m1 + m2 + m4) > 1) {
         PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
         return PM3_EINVARG;
@@ -3136,7 +3134,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    uint8_t trgKeyType = 0;
+    uint8_t trgKeyType = MF_KEY_A;
     uint16_t max_keys = keycnt > KEYS_IN_BLOCK ? KEYS_IN_BLOCK : keycnt;
 
     PrintAndLogEx(INFO, "Start check for keys...");
@@ -3188,7 +3186,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
     PrintAndLogEx(INFO, "\ntime in checkkeys " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
 
     // 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
-    if (keyType != 1) {
+    if (keyType != MF_KEY_B) {
         PrintAndLogEx(INFO, "testing to read key B...");
 
         // loop sectors but block is used as to keep track of from which blocks to test
@@ -3205,7 +3203,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
                 mf_readblock_t payload;
                 payload.blockno = sectrail;
-                payload.keytype = 0;
+                payload.keytype = MF_KEY_A;
 
                 // Use key A
                 num_to_bytes(e_sector[i].Key[0], 6, payload.key);
@@ -3312,7 +3310,7 @@ void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, boo
         uint8_t keytype = data.keytype;
 
         PrintAndLogEx(INFO, "Reader is trying authenticate with: Key %s, sector %02d: [%012" PRIx64 "]"
-                      , keytype ? "B" : "A"
+                      , (keytype == MF_KEY_B) ? "B" : "A"
                       , sector
                       , key
                      );
@@ -3526,7 +3524,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
 /*
 static int CmdHF14AMfKeyBrute(const char *Cmd) {
 
-    uint8_t blockNo = 0, keytype = 0;
+    uint8_t blockNo = 0, keytype = MF_KEY_A;
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
     uint64_t foundkey = 0;
 
@@ -3538,7 +3536,7 @@ static int CmdHF14AMfKeyBrute(const char *Cmd) {
 
     // keytype
     cmdp = tolower(param_getchar(Cmd, 1));
-    if (cmdp == 'b') keytype = 1;
+    if (cmdp == 'b') keytype = MF_KEY_B;
 
     // key
     if (param_gethex(Cmd, 2, key, 12)) return usage_hf14_keybrute();
@@ -4099,13 +4097,13 @@ static int CmdHF14AMfECFill(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint8_t keytype = 0;
+    uint8_t keytype = MF_KEY_A;
     if (arg_get_lit(ctx, 1) && arg_get_lit(ctx, 2)) {
         CLIParserFree(ctx);
         PrintAndLogEx(WARNING, "Input key type must be A or B");
         return PM3_EINVARG;
     } else if (arg_get_lit(ctx, 2)) {
-        keytype = 1;
+        keytype = MF_KEY_B;
     }
 
     bool m0 = arg_get_lit(ctx, 3);
@@ -5121,9 +5119,9 @@ static int CmdHF14AMfice(const char *Cmd) {
     }
 
     uint8_t blockNo = 0;
-    uint8_t keyType = 0;
+    uint8_t keyType = MF_KEY_A;
     uint8_t trgBlockNo = 0;
-    uint8_t trgKeyType = 1;
+    uint8_t trgKeyType = MF_KEY_B;
     bool slow = false;
     bool initialize = true;
     bool acquisition_completed = false;
@@ -5935,9 +5933,9 @@ static int CmdHF14AMfWipe(const char *Cmd) {
             }
 
             // try both A/B keys, start with B key first
-            for (int8_t kt = 1; kt > -1; kt--) {
+            for (int8_t kt = MF_KEY_B; kt > -1; kt--) {
 
-                if (kt == 0)
+                if (kt == MF_KEY_A)
                     memcpy(data, keyA + (s * 6), 6);
                 else
                     memcpy(data, keyB + (s * 6), 6);
