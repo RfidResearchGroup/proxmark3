@@ -96,7 +96,7 @@ The [public roadmap](https://github.com/RfidResearchGroup/proxmark3/wiki/Public-
 ## Supported operative systems 
 This repo compiles nicely on 
    - WSL1 on Windows 10
-   - Proxspace v3.8 [release v3.8](https://github.com/Gator96100/ProxSpace/releases)
+   - Proxspace v3.9 [release v3.9](https://github.com/Gator96100/ProxSpace/releases)
    - Windows/mingw environment
    - Ubuntu, ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora, Debian, Rasbian
    - Android / Termux
