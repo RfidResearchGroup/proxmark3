@@ -18,7 +18,6 @@ hf felica rqspecver
 hf felica resetmode
 hf mf hardnested
 hf mf autopwn
-hf mf restore
 lf hitag reader
 lf hitag writer
 lf hitag dump
