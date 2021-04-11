@@ -217,22 +217,7 @@ static int usage_hf14_csetblk(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("       hf mf csetblk 1 01020304050607080910111213141516 w"));
     return PM3_SUCCESS;
 }
-static int usage_hf14_cload(void) {
-    PrintAndLogEx(NORMAL, "It loads magic Chinese card from the file `filename.eml`");
-    PrintAndLogEx(NORMAL, "or from emulator memory");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf cload [h] [e] <file name w/o `.eml`>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h            this help");
-    PrintAndLogEx(NORMAL, "       e            load card with data from emulator memory");
-    PrintAndLogEx(NORMAL, "       j <filename> load card with data from json file");
-    PrintAndLogEx(NORMAL, "       b <filename> load card with data from binary file");
-    PrintAndLogEx(NORMAL, "       <filename>   load card with data from eml file");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf cload mydump"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf cload e"));
-    return PM3_SUCCESS;
-}
+
 static int usage_hf14_csave(void) {
     PrintAndLogEx(NORMAL, "It saves `magic Chinese` card dump into the file `filename.eml` or `cardID.eml`");
     PrintAndLogEx(NORMAL, "or into emulator memory");
@@ -3854,8 +3839,8 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf eload",
-                  "Load emulator memory with data from `filename.eml` dump file",
-                  "hf mf eload -f hf-mf-01020304.eml\n"
+                  "Load emulator memory with data from (bin/eml/json) dump file",
+                  "hf mf eload -f hf-mf-01020304.bin\n"
                   "hf mf eload --4k -f hf-mf-01020304.eml\n"
                  );
     void *argtable[] = {
@@ -3926,8 +3911,27 @@ int CmdHF14AMfELoad(const char *Cmd) {
     }
 
     size_t datalen = 0;
-    //int res = loadFile(filename, ".bin", data, maxdatalen, &datalen);
-    int res = loadFileEML(filename, data, &datalen);
+    int res = PM3_SUCCESS;
+    DumpFileType_t dftype = getfiletype(filename);
+    switch (dftype) {
+        case BIN: {
+            res = loadFile_safe(filename, ".bin", (void **)&data, &datalen);
+            break;
+        }
+        case EML: {
+            res = loadFileEML_safe(filename, (void **)&data, &datalen);
+            break;
+        }
+        case JSON: {
+            res = loadFileJSON(filename, data, MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, &datalen, NULL);
+            break;
+        }
+        case DICTIONARY: {
+            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+            return PM3_EINVARG;
+        }
+    }
+
     if (res != PM3_SUCCESS) {
         free(data);
         return PM3_EFILE;
@@ -4002,7 +4006,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
             return PM3_SUCCESS;
         }
     }
-    PrintAndLogEx(SUCCESS, "Done!");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -4467,124 +4471,165 @@ static int CmdHF14AMfCSetBlk(const char *Cmd) {
 
 static int CmdHF14AMfCLoad(const char *Cmd) {
 
-    uint8_t fillFromEmulator = 0;
-    bool fillFromJson = false;
-    bool fillFromBin = false;
-    char fileName[50] = {0};
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf cload",
+                  "Load magic gen1a card with data from (bin/eml/json) dump file\n"
+                  "or from emulator memory.",
+                  "hf mf cload --emu\n"
+                  "hf mf cload -f hf-mf-01020304.eml\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "filename of dump"),
+        arg_lit0(NULL, "emu", "from emulator memory"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (param_getlength(Cmd, 0) == 1) {
-        if (ctmp == 'h' || ctmp == 0x00) return usage_hf14_cload();
-        if (ctmp == 'e') fillFromEmulator = 1;
-        if (ctmp == 'j') fillFromJson = true;
-        if (ctmp == 'b') fillFromBin = true;
-    }
+    bool fill_from_emulator = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx); 
 
-    if (fillFromJson || fillFromBin)
-        param_getstr(Cmd, 1, fileName, sizeof(fileName));
-
-
-    if (fillFromEmulator) {
+    if (fill_from_emulator) {
 
         PrintAndLogEx(INFO, "Start upload to emulator memory");
         PrintAndLogEx(INFO, "." NOLF);
 
-        for (int blockNum = 0; blockNum < 16 * 4; blockNum += 1) {
+        for (int b = 0; b < MIFARE_1K_MAXBLOCK; b++) {
             int flags = 0;
-            uint8_t buf8[16] = {0x00};
-            if (mfEmlGetMem(buf8, blockNum, 1)) {
-                PrintAndLogEx(WARNING, "Cant get block: %d", blockNum);
-                return 2;
-            }
-            if (blockNum == 0) flags = MAGIC_INIT + MAGIC_WUPC;             // switch on field and send magic sequence
-            if (blockNum == 1) flags = 0;                                   // just write
-            if (blockNum == 16 * 4 - 1) flags = MAGIC_HALT + MAGIC_OFF;     // Done. Magic Halt and switch off field.
+            uint8_t buf8[MFBLOCK_SIZE] = {0x00};
 
-            if (mfCSetBlock(blockNum, buf8, NULL, flags)) {
-                PrintAndLogEx(WARNING, "Cant set magic card block: %d", blockNum);
+            // read from emul memory
+            if (mfEmlGetMem(buf8, b, 1)) {
+                PrintAndLogEx(WARNING, "Can't read from emul block: %d", b);
+                return PM3_ESOFT;
+            }
+
+            // switch on field and send magic sequence
+            if (b == 0) {
+                flags = MAGIC_INIT + MAGIC_WUPC;
+            }
+
+            // just write
+            if (b == 1) {
+                flags = 0;
+            }
+
+            // Done. Magic Halt and switch off field.
+            if (b == ((MFBLOCK_SIZE * 4) - 1)) {
+                flags = MAGIC_HALT + MAGIC_OFF;
+            }
+
+            // write to card
+            if (mfCSetBlock(b, buf8, NULL, flags)) {
+                PrintAndLogEx(WARNING, "Can't set magic card block: %d", b);
                 return PM3_ESOFT;
             }
             PrintAndLogEx(NORMAL, "." NOLF);
             fflush(stdout);
         }
-        PrintAndLogEx(NORMAL, "\n");
+        PrintAndLogEx(NORMAL, "");
         return PM3_SUCCESS;
     }
 
-    size_t maxdatalen = 4096;
-    uint8_t *data = calloc(maxdatalen, sizeof(uint8_t));
-    if (!data) {
+    uint8_t *data = calloc(MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK, sizeof(uint8_t));
+    if (data == NULL) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
         return PM3_EMALLOC;
     }
 
-    size_t datalen = 0;
+    size_t bytes_read = 0;
     int res = 0;
-    if (fillFromBin) {
-        res = loadFile(fileName, ".bin", data, maxdatalen, &datalen);
-    } else {
-        if (fillFromJson) {
-            res = loadFileJSON(fileName, data, maxdatalen, &datalen, NULL);
-        } else {
-            res = loadFileEML(Cmd, data, &datalen);
+    DumpFileType_t dftype = getfiletype(filename);
+    switch (dftype) {
+        case BIN: {
+            res = loadFile_safe(filename, ".bin", (void **)&data, &bytes_read);
+            break;
+        }
+        case EML: {
+            res = loadFileEML_safe(filename, (void **)&data, &bytes_read);
+            break;
+        }
+        case JSON: {
+            res = loadFileJSON(filename, data, MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, &bytes_read, NULL);
+            break;
+        }
+        case DICTIONARY: {
+            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+            return PM3_EINVARG;
         }
     }
 
-    if (res) {
+    if (res != PM3_SUCCESS) {
         free(data);
         return PM3_EFILE;
     }
 
     // 64 or 256blocks.
-    if (datalen != 1024 && datalen != 4096) {
-        PrintAndLogEx(ERR, "File content error. ");
+    if (bytes_read != (MIFARE_1K_MAXBLOCK * MFBLOCK_SIZE) &&
+        bytes_read != (MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE)) {
+        PrintAndLogEx(ERR, "File content error. Read %zu bytes", bytes_read);
         free(data);
         return PM3_EFILE;
     }
 
-    PrintAndLogEx(INFO, "Copying to magic card");
+    PrintAndLogEx(INFO, "Copying to magic gen1a card");
     PrintAndLogEx(INFO, "." NOLF);
 
-    int blockNum = 0;
+    int blockno = 0;
     int flags = 0;
-    while (datalen) {
+    while (bytes_read) {
 
         // switch on field and send magic sequence
-        if (blockNum == 0) flags = MAGIC_INIT + MAGIC_WUPC;
+        if (blockno == 0) {
+            flags = MAGIC_INIT + MAGIC_WUPC;
+        }
 
         // write
-        if (blockNum == 1) flags = 0;
+        if (blockno == 1) {
+            flags = 0;
+        }
 
         // Switch off field.
-        if (blockNum == 16 * 4 - 1) flags = MAGIC_HALT + MAGIC_OFF;
+        if (blockno == MFBLOCK_SIZE * 4 - 1) {
+            flags = MAGIC_HALT + MAGIC_OFF;
+        }
 
-        if (mfCSetBlock(blockNum, data + (16 * blockNum), NULL, flags)) {
-            PrintAndLogEx(WARNING, "Can't set magic card block: %d", blockNum);
+        if (mfCSetBlock(blockno, data + (MFBLOCK_SIZE * blockno), NULL, flags)) {
+            PrintAndLogEx(WARNING, "Can't set magic card block: %d", blockno);
             free(data);
             return PM3_ESOFT;
         }
 
-        datalen -= 16;
+        bytes_read -= MFBLOCK_SIZE;
 
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
 
-        blockNum++;
+        blockno++;
 
         // magic card type - mifare 1K
-        if (blockNum >= MIFARE_1K_MAXBLOCK) break;
+        if (blockno >= MIFARE_1K_MAXBLOCK) break;
     }
     PrintAndLogEx(NORMAL, "\n");
 
-    // 64 or 256blocks.
-    if (blockNum != 16 * 4 && blockNum != 32 * 4 + 8 * 16) {
-        PrintAndLogEx(ERR, "File content error. There must be 64 blocks");
-        free(data);
+    free(data);
+
+    // confirm number written blocks. Must be 64 or 256 blocks
+    if (blockno != MIFARE_1K_MAXBLOCK) {
+         if (blockno != MIFARE_4K_MAXBLOCK) {
+            PrintAndLogEx(ERR, "File content error. There must be %u blocks", MIFARE_4K_MAXBLOCK);
+            return PM3_EFILE;
+        }
+        PrintAndLogEx(ERR, "File content error. There must be %d blocks", MIFARE_1K_MAXBLOCK);
         return PM3_EFILE;
     }
 
-    PrintAndLogEx(SUCCESS, "Card loaded %d blocks from file", blockNum);
-    free(data);
+    PrintAndLogEx(SUCCESS, "Card loaded %d blocks from file", blockno);
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
