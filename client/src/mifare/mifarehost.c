@@ -853,37 +853,69 @@ int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidt
 }
 
 // "MAGIC" CARD
-int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_t wipecard) {
+int mfCSetUID(uint8_t *uid, uint8_t uidlen, uint8_t *atqa, uint8_t *sak, uint8_t *old_uid, uint8_t *verifed_uid, uint8_t wipecard) {
 
     uint8_t params = MAGIC_SINGLE;
     uint8_t block0[16];
     memset(block0, 0x00, sizeof(block0));
 
-    int old = mfCGetBlock(0, block0, params);
-    if (old == 0)
-        PrintAndLogEx(SUCCESS, "old block 0:  %s", sprint_hex(block0, sizeof(block0)));
-    else
-        PrintAndLogEx(FAILED, "couldn't get old data. Will write over the last bytes of Block 0.");
+    int res = mfCGetBlock(0, block0, params);
+    if (res == 0) {
+        PrintAndLogEx(SUCCESS, "old block 0... %s", sprint_hex_inrow(block0, sizeof(block0)));
+        if (old_uid) {
+            memcpy(old_uid, block0, uidlen);
+        }
+    } else {
+        PrintAndLogEx(INFO, "couldn't get old data. Will write over the last bytes of block 0");
+    }
 
     // fill in the new values
     // UID
-    memcpy(block0, uid, 4);
+    memcpy(block0, uid, uidlen);
     // Mifare UID BCC
-    block0[4] = block0[0] ^ block0[1] ^ block0[2] ^ block0[3];
-    // mifare classic SAK(byte 5) and ATQA(byte 6 and 7, reversed)
-    if (sak != NULL)
-        block0[5] = sak[0];
+    if (uidlen == 4) {
+        block0[4] = block0[0] ^ block0[1] ^ block0[2] ^ block0[3];
 
-    if (atqa != NULL) {
-        block0[6] = atqa[1];
-        block0[7] = atqa[0];
+        // mifare classic SAK(byte 5) and ATQA(byte 6 and 7, reversed)
+        if (sak)
+            block0[5] = sak[0];
+
+        if (atqa) {
+            block0[6] = atqa[1];
+            block0[7] = atqa[0];
+        }
+
+    } else if (uidlen == 7) {
+        block0[7] = block0[0] ^ block0[1] ^ block0[2] ^ block0[3] ^ block0[4] ^ block0[5] ^ block0[6];
+
+        // mifare classic SAK(byte 8) and ATQA(byte 9 and 10, reversed)
+        if (sak)
+            block0[8] = sak[0];
+
+        if (atqa) {
+            block0[9] = atqa[1];
+            block0[10] = atqa[0];
+        }
     }
-    PrintAndLogEx(SUCCESS, "new block 0:  %s", sprint_hex(block0, 16));
 
-    if (wipecard)      params |= MAGIC_WIPE;
-    if (oldUID != NULL) params |= MAGIC_UID;
+    PrintAndLogEx(SUCCESS, "new block 0... %s", sprint_hex_inrow(block0, 16));
 
-    return mfCSetBlock(0, block0, oldUID, params);
+    if (wipecard) {
+        params |= MAGIC_WIPE;
+    }
+
+    res = mfCSetBlock(0, block0, NULL, params);
+    if (res == PM3_SUCCESS) {
+        params = MAGIC_SINGLE;
+        memset(block0, 0, sizeof(block0));
+        res = mfCGetBlock(0, block0, params);
+        if (res == 0) {
+            if (verifed_uid) {
+                memcpy(verifed_uid, block0, uidlen);
+            }
+        }
+    }
+    return res;
 }
 
 int mfCWipe(uint8_t *uid, uint8_t *atqa, uint8_t *sak) {

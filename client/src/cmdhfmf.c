@@ -188,21 +188,6 @@ static int usage_hf14_decryptbytes(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_hf14_csetuid(void) {
-    PrintAndLogEx(NORMAL, "Set UID, ATQA, and SAK for magic Chinese card. Only works with magic cards");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf csetuid [h] <UID 8 hex symbols> [ATQA 4 hex symbols] [SAK 2 hex symbols] [w]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h        this help");
-    PrintAndLogEx(NORMAL, "       w        wipe card before writing");
-    PrintAndLogEx(NORMAL, "       <uid>    UID 8 hex symbols");
-    PrintAndLogEx(NORMAL, "       <atqa>   ATQA 4 hex symbols");
-    PrintAndLogEx(NORMAL, "       <sak>    SAK 2 hex symbols");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf csetuid 01020304"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf csetuid 01020304 0004 08 w"));
-    return PM3_SUCCESS;
-}
 static int usage_hf14_csetblk(void) {
     PrintAndLogEx(NORMAL, "Set block data for magic Chinese card. Only works with magic cards");
     PrintAndLogEx(NORMAL, "");
@@ -4313,109 +4298,126 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
 
 // CHINESE MAGIC COMMANDS
 static int CmdHF14AMfCSetUID(const char *Cmd) {
-    uint8_t wipeCard = 0;
-    uint8_t uid[8] = {0x00};
-    uint8_t oldUid[8] = {0x00};
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf csetuid",
+                  "Set UID, ATQA, and SAK for magic gen1a card",
+                  "hf mf csetuid -u 01020304\n"
+                  "hf mf csetuid -w -u 01020304 --atqa 0004 --sak 08"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("w", "wipe", "wipes card with backdoor cmd`"),
+        arg_str0("u", "uid",  "<hex>", "UID, 4/7 hex bytes"),
+        arg_str0("a", "atqa", "<hex>", "ATQA, 2 hex bytes"),
+        arg_str0("s", "sak",  "<hex>", "SAK, 1 hex byte"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t wipe_card = arg_get_lit(ctx, 1);
+
+    int uidlen = 0;
+    uint8_t uid[7] = {0x00};
+    CLIGetHexWithReturn(ctx, 2, uid, &uidlen);
+
+    int alen = 0;
     uint8_t atqa[2] = {0x00};
+    CLIGetHexWithReturn(ctx, 3, atqa, &alen);
+
+    int slen = 0;
     uint8_t sak[1] = {0x00};
-    uint8_t atqaPresent = 1;
-    int res, argi = 0;
-    char ctmp;
+    CLIGetHexWithReturn(ctx, 4, sak, &slen);
+    CLIParserFree(ctx); 
 
-    if (strlen(Cmd) < 1 || param_getchar(Cmd, argi) == 'h')
-        return usage_hf14_csetuid();
-
-    if (param_getchar(Cmd, argi) && param_gethex(Cmd, argi, uid, 8))
-        return usage_hf14_csetuid();
-
-    argi++;
-
-    ctmp = tolower(param_getchar(Cmd, argi));
-    if (ctmp == 'w') {
-        wipeCard = 1;
-        atqaPresent = 0;
+    // sanity checks
+    if (uidlen != 4 && uidlen != 7) {
+        PrintAndLogEx(FAILED, "UID must be 4 or 7 hex bytes. Got %d", uidlen);
+        return PM3_EINVARG;
+    }
+    if (alen && alen != 2) {
+        PrintAndLogEx(FAILED, "ATQA must be 2 hex bytes. Got %d", alen);
+        return PM3_EINVARG;
+    }
+    if (slen && slen != 1) {
+        PrintAndLogEx(FAILED, "SAK must be 1 hex byte. Got %d", slen);
+        return PM3_EINVARG;
     }
 
-    if (atqaPresent) {
-        if (param_getchar(Cmd, argi)) {
-            if (param_gethex(Cmd, argi, atqa, 4)) {
-                PrintAndLogEx(WARNING, "ATQA must include 4 HEX symbols");
-                return PM3_ESOFT;
-            }
-            argi++;
-            if (!param_getchar(Cmd, argi) || param_gethex(Cmd, argi, sak, 2)) {
-                PrintAndLogEx(WARNING, "SAK must include 2 HEX symbols");
-                return PM3_ESOFT;
-            }
-            argi++;
-        } else
-            atqaPresent = 0;
-    }
+    uint8_t old_uid[7] = {0};
+    uint8_t verify_uid[7] = {0};
 
-    if (!wipeCard) {
-        ctmp = tolower(param_getchar(Cmd, argi));
-        if (ctmp == 'w') {
-            wipeCard = 1;
-        }
-    }
+    int res = mfCSetUID(
+            uid,
+            uidlen,
+            (alen) ? atqa : NULL,
+            (slen) ? sak : NULL,
+            old_uid,
+            verify_uid,
+            wipe_card
+        );
 
-    PrintAndLogEx(NORMAL, "--wipe card:%s  uid:%s", (wipeCard) ? "YES" : "NO", sprint_hex(uid, 4));
-
-    res = mfCSetUID(uid, (atqaPresent) ? atqa : NULL, (atqaPresent) ? sak : NULL, oldUid, wipeCard);
     if (res) {
-        PrintAndLogEx(ERR, "Can't set UID. error=%d", res);
+        PrintAndLogEx(ERR, "Can't set UID. error %d", res);
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Old UID : %s", sprint_hex(oldUid, 4));
-    PrintAndLogEx(SUCCESS, "New UID : %s", sprint_hex(uid, 4));
+    res = memcmp(uid, verify_uid, uidlen);
+
+    PrintAndLogEx(SUCCESS, "Old UID... %s", sprint_hex(old_uid, uidlen));
+    PrintAndLogEx(SUCCESS, "New UID... %s ( %s )",
+        sprint_hex(verify_uid, uidlen),
+        (res == 0) ? _GREEN_("verified") : _RED_("fail")
+        );
     return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfCWipe(const char *cmd) {
-    uint8_t uid[8] = {0x00};
-    int uidLen = 0;
-    uint8_t atqa[2] = {0x00};
-    int atqaLen = 0;
-    uint8_t sak[1] = {0x00};
-    int sakLen = 0;
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf cwipe",
-                  "Wipe gen1 magic chinese card. Set UID/ATQA/SAK/Data/Keys/Access to default values.",
-                  "hf mf cwipe                           --> wipe card\n"
+                  "Wipe gen1 magic chinese card.\n"
+                  "Set UID / ATQA / SAK / Data / Keys / Access to default values",
+                  "hf mf cwipe\n"
                   "hf mf cwipe -u 09080706 -a 0004 -s 18 --> set UID, ATQA and SAK and wipe card");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("u",  "uid",     "<UID (hex 4b)>",  "UID for card"),
-        arg_str0("a",  "atqa",    "<ATQA (hex 2b)>", "ATQA for card"),
-        arg_str0("s",  "sak",     "<SAK (hex 1b)>",  "SAK for card"),
+        arg_str0("u", "uid",  "<hex>", "UID, 4 hex bytes"),
+        arg_str0("a", "atqa", "<hex>", "ATQA, 2 hex bytes"),
+        arg_str0("s", "sak",  "<hex>", "SAK, 1 hex byte"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
 
-    CLIGetHexWithReturn(ctx, 1, uid, &uidLen);
-    CLIGetHexWithReturn(ctx, 2, atqa, &atqaLen);
-    CLIGetHexWithReturn(ctx, 3, sak, &sakLen);
+    int uidlen = 0;
+    uint8_t uid[8] = {0x00};
+    CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    
+    int alen = 0;
+    uint8_t atqa[2] = {0x00};
+    CLIGetHexWithReturn(ctx, 2, atqa, &alen);
+    
+    int slen = 0;
+    uint8_t sak[1] = {0x00};
+    CLIGetHexWithReturn(ctx, 3, sak, &slen);
     CLIParserFree(ctx);
 
-    if (uidLen && uidLen != 4) {
-        PrintAndLogEx(ERR, "UID length must be 4 bytes instead of: %d", uidLen);
+    if (uidlen && uidlen != 4) {
+        PrintAndLogEx(ERR, "UID length must be 4 bytes, got %d", uidlen);
         return PM3_EINVARG;
     }
-    if (atqaLen && atqaLen != 2) {
-        PrintAndLogEx(ERR, "ATQA length must be 2 bytes instead of: %d", atqaLen);
+    if (alen && alen != 2) {
+        PrintAndLogEx(ERR, "ATQA length must be 2 bytes, got %d", alen);
         return PM3_EINVARG;
     }
-    if (sakLen && sakLen != 1) {
-        PrintAndLogEx(ERR, "SAK length must be 1 byte instead of: %d", sakLen);
+    if (slen && slen != 1) {
+        PrintAndLogEx(ERR, "SAK length must be 1 byte, got %d", slen);
         return PM3_EINVARG;
     }
 
-    int res = mfCWipe((uidLen) ? uid : NULL, (atqaLen) ? atqa : NULL, (sakLen) ? sak : NULL);
+    int res = mfCWipe((uidlen) ? uid : NULL, (alen) ? atqa : NULL, (slen) ? sak : NULL);
     if (res) {
-        PrintAndLogEx(ERR, "Can't wipe card. error=%d", res);
+        PrintAndLogEx(ERR, "Can't wipe card. error %d", res);
         return PM3_ESOFT;
     }
 
