@@ -173,11 +173,11 @@ Options
 -t, --type <int>               Simulation type to use
     --csn <hex>                Specify CSN as 8 bytes (16 hex symbols) to use with sim type 0
 Types:
-0           simulate the given CSN
-1           simulate default CSN
-2           Runs online part of LOCLASS attack
-3           Full simulation using emulator memory (see 'hf iclass eload')
-4           Runs online part of LOCLASS attack against reader in keyroll mode
+    0    simulate the given CSN
+    1    simulate default CSN
+    2    runs online part of LOCLASS attack
+    3    full simulation using emulator memory (see 'hf iclass eload')
+    4    runs online part of LOCLASS attack against reader in keyroll mode
 
 pm3 --> hf iclass sim -t 3
 ```
@@ -224,18 +224,18 @@ Check for default keys
 ```
 Options
 ---
-    -k, --key <hex>                Key specified as 12 hex symbols
-    --blk <dec>                    Input block number
-    -a                             Target Key A, if found also check Key B for duplicate
-    -b                             Target Key B
-    -*, --all                      Target both key A & B (default)
-    --mini                         MIFARE Classic Mini / S20
-    --1k                           MIFARE Classic 1k / S50 (default)
-    --2k                           MIFARE Classic/Plus 2k
-    --4k                           MIFARE Classic 4k / S70
-    --emu                          Fill simulator keys from found keys
-    --dump                         Dump found keys to binary file
-    -f, --file <filename>          filename of dictionary
+-k, --key <hex>                Key specified as 12 hex symbols
+    --blk <dec>                Input block number
+-a                             Target Key A, if found also check Key B for duplicate
+-b                             Target Key B
+-*, --all                      Target both key A & B (default)
+    --mini                     MIFARE Classic Mini / S20
+    --1k                       MIFARE Classic 1k / S50 (default)
+    --2k                       MIFARE Classic/Plus 2k
+    --4k                       MIFARE Classic 4k / S70
+    --emu                      Fill simulator keys from found keys
+    --dump                     Dump found keys to binary file
+-f, --file <filename>          filename of dictionary
 
 pm3 --> hf mf chk --1k -f mfc_default_keys
 ```
@@ -244,15 +244,15 @@ Check for default keys from local memory
 ```
 Options
 ---
-    -k, --key <hex>                Key specified as 12 hex symbols
-    --mini                         MIFARE Classic Mini / S20
-    --1k                           MIFARE Classic 1k / S50 (default)
-    --2k                           MIFARE Classic/Plus 2k
-    --4k                           MIFARE Classic 4k / S70
-    --emu                          Fill simulator keys from found keys
-    --dump                         Dump found keys to binary file
-    --mem                          Use dictionary from flashmemory
-    -f, --file <filename>          filename of dictionary
+-k, --key <hex>                Key specified as 12 hex symbols
+    --mini                     MIFARE Classic Mini / S20
+    --1k                       MIFARE Classic 1k / S50 (default)
+    --2k                       MIFARE Classic/Plus 2k
+    --4k                       MIFARE Classic 4k / S70
+    --emu                      Fill simulator keys from found keys
+    --dump                     Dump found keys to binary file
+    --mem                      Use dictionary from flashmemory
+-f, --file <filename>          filename of dictionary
 
 pm3 --> hf mf fchk --1k --mem
 ```
@@ -260,12 +260,12 @@ pm3 --> hf mf fchk --1k --mem
 Dump MIFARE card contents
 ```
 options:
-    -f, --file <filename>          filename of dump
-    -k, --keys <filename>          filename of keys
-    --mini                         MIFARE Classic Mini / S20
-    --1k                           MIFARE Classic 1k / S50 (default)
-    --2k                           MIFARE Classic/Plus 2k
-    --4k                           MIFARE Classic 4k / S70
+-f, --file <filename>          filename of dump
+-k, --keys <filename>          filename of keys
+    --mini                     MIFARE Classic Mini / S20
+    --1k                       MIFARE Classic 1k / S50 (default)
+    --2k                       MIFARE Classic/Plus 2k
+    --4k                       MIFARE Classic 4k / S70
 
 examples/notes:
     hf mf dump --mini                            -> MIFARE Mini
@@ -282,9 +282,10 @@ Convert .bin to .eml
 ```
 Options
 ---
-i <file>     : Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
+-i <file>                      dump-file (input). If omitted, 'dumpdata.bin' is used
+-o <filename>                  output file, if omitted, <uid>.eml is use
 
-pm3 --> script run data_mf_bin2eml -i dumpdata.bin
+pm3 --> script run data_mf_bin2eml -i dumpdata.bin -o hf-mf-myfile.bin
 ```
 
 Write to MIFARE block
@@ -314,15 +315,21 @@ w          : Acquire nonces and write them to binary file nonces.bin
 pm3 --> hf mf hardnested 0 A 8829da9daf76 0 A w
 ```
 
-Load MIFARE emul dump file into memory for simulation
+Load MIFARE Classic dump file into emulator memory for simulation
+Accepts (BIN/EML/JSON)
 ```
 Options
 ---
-<card memory> <file name w/o `.eml`>
-[card memory]: 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K, u = UL
+-f, --file <fn>                filename of dump
+    --mini                     MIFARE Classic Mini / S20
+    --1k                       MIFARE Classic 1k / S50 (def)
+    --2k                       MIFARE Classic/Plus 2k
+    --4k                       MIFARE Classic 4k / S70
+    --ul                       MIFARE Ultralight family
+-q, --qty <dec>                manually set number of blocks (overrides)
 
-pm3 --> hf mf eload hf-mf-353C2AA6
-pm3 --> hf mf eload 1 hf-mf-353C2AA6
+pm3 --> hf mf eload -f hf-mf-353C2AA6-dump.bin
+pm3 --> hf mf eload --1k -f hf-mf-353C2AA6-dump.bin
 ```
 
 Simulate MIFARE
@@ -334,16 +341,15 @@ pm3 --> hf mf sim -u 353c2aa6
 
 Simulate MIFARE Sequence
 ```
-pm3 --> hf mf chk -* --1k --all -f mfc_default_keys
-pm3 --> hf mf dump 1
-pm3 --> script run data_mf_bin2eml -i dumpdata.bin
-pm3 --> hf mf eload 353C2AA6
+pm3 --> hf mf fchk -1k -f mfc_default_keys.dic
+pm3 --> hf mf dump
+pm3 --> hf mf eload -f hf-mf-<UID>-dump.bin
 pm3 --> hf mf sim -u 353c2aa6
 ```
 
 Clone MIFARE 1K Sequence
 ```
-pm3 --> hf mf chk -* --1k --all -f mfc_default_keys
+pm3 --> hf mf fchk --1k -f mfc_default_keys.dic
 pm3 --> hf mf dump
 pm3 --> hf mf restore 1 u 4A6CE843 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-dump.bin
 ```
@@ -356,8 +362,7 @@ pm3 --> hf mfu info
 Clone MIFARE Ultralight EV1 Sequence
 ```
 pm3 --> hf mfu dump -k FFFFFFFF
-pm3 --> script run data_mfu_bin2eml -i hf-mfu-XXXX-dump.bin -o hf-mfu-XXXX-dump.eml
-pm3 --> hf mfu eload -u -f hf-mfu-XXXX-dump.eml
+pm3 --> hf mfu eload -u -f hf-mfu-XXXX-dump.bin
 pm3 --> hf mfu sim -t 7
 ```
 
@@ -383,23 +388,24 @@ Convert Site & Facility code to Wiegand raw hex
 ```
 Options
 ---
--w <format> --oem <OEM> --fc <FC> --cn <CN> --issue <issuelevel>
+    --fc <dec>                 facility number
+    --cn <dec>                 card number
+    --issue <dec>              issue level
+    --oem <dec>                OEM code
+-w, --wiegand <format>         see `wiegand list` for available formats
+    --pre                      add HID ProxII preamble to wiegand output
 
--w                             wiegand format to use
-    --oem                      OEM number / site code
-    --fc                       facility code
-    --cn                       card number
-    --issue                    issue level
-
-pm3 --> wiegand encode -w H10301 --oem 0 --fc 56  --cn 150
+pm3 --> wiegand encode -w H10301 --oem 0 --fc 101 --cn 1337
+pm3 --> wiegand encode --fc 101 --cn 1337
 ```
 
 Convert Site & Facility code from Wiegand raw hex to numbers
 ```
 Options
 ---
--p                             ignore parity errors
-    --raw                      raw hex to be decoded
+-p, --parity                   ignore invalid parity
+-r, --raw <hex>                raw hex to be decoded
+-b, --bin <bin>                binary string to be decoded
 
 pm3 --> wiegand decode --raw 2006f623ae
 ```
