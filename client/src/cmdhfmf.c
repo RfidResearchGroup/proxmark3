@@ -188,21 +188,6 @@ static int usage_hf14_decryptbytes(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_hf14_csetblk(void) {
-    PrintAndLogEx(NORMAL, "Set block data for magic Chinese card. Only works with magic cards");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf csetblk [h] <block number> <block data (32 hex symbols)> [w]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h         this help");
-    PrintAndLogEx(NORMAL, "       w         wipe card before writing");
-    PrintAndLogEx(NORMAL, "       <block>   block number");
-    PrintAndLogEx(NORMAL, "       <data>    block data to write (32 hex symbols)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf csetblk 1 01020304050607080910111213141516"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf csetblk 1 01020304050607080910111213141516 w"));
-    return PM3_SUCCESS;
-}
-
 static int usage_hf14_gen3uid(void) {
     PrintAndLogEx(NORMAL, "Set UID for magic GEN 3 card without manufacturer block changing");
     PrintAndLogEx(NORMAL, "");
@@ -453,6 +438,11 @@ static void mf_print_blocks(uint16_t n, uint8_t *d) {
     PrintAndLogEx(NORMAL, "");
 }
 
+static void mf_print_sector_hdr(uint8_t sector) {
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "  # | sector " _GREEN_("%02d") " / " _GREEN_("0x%02X") "                                | ascii", sector, sector);
+    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+}
 
 static int CmdHF14AMfDarkside(const char *Cmd) {
     CLIParserContext *ctx;
@@ -608,9 +598,7 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
     if (res == PM3_SUCCESS) {
 
         uint8_t sector = GetSectorFromBlockNo(blockno);
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
-        PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+        mf_print_sector_hdr(sector);
         mf_print_block(blockno, data);
         if (verbose) {
             decode_print_st(blockno, data);
@@ -672,9 +660,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
         uint8_t blocks = NumBlocksPerSector(sector);
         uint8_t start = FirstBlockOfSector(sector);
 
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
-        PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+        mf_print_sector_hdr(sector);
         for (int i = 0; i < blocks; i++) {
             mf_print_block(start + i, data + (i * MFBLOCK_SIZE));
         }
@@ -3686,9 +3672,7 @@ static int CmdHF14AMfEGetBlk(const char *Cmd) {
     if (mfEmlGetMem(data, blockno, 1) == PM3_SUCCESS) {
 
         uint8_t sector = GetSectorFromBlockNo(blockno);
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
-        PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+        mf_print_sector_hdr(sector);
         mf_print_block(blockno, data);
     }
     if (verbose) {
@@ -3722,10 +3706,7 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
     }
 
     uint8_t sector = (uint8_t)s;
-
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
-    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+    mf_print_sector_hdr(sector);
 
     uint8_t blocks = NumBlocksPerSector(sector);
     uint8_t start = FirstBlockOfSector(sector);
@@ -4426,25 +4407,48 @@ static int CmdHF14AMfCWipe(const char *cmd) {
 }
 
 static int CmdHF14AMfCSetBlk(const char *Cmd) {
-    uint8_t block[16] = {0x00};
-    uint8_t blockNo = 0;
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf csetblk",
+                  "Set block data on a magic gen1a card",
+                  "hf mf csetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("b", "blk", "<dec>", "block number"),
+        arg_str0("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
+        arg_lit0("w", "wipe", "wipes card with backdoor cmd before writing`"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int b = arg_get_int_def(ctx, 1, -1);
+
+    uint8_t data[MFBLOCK_SIZE] = {0x00};
+    int datalen = 0;
+    CLIGetHexWithReturn(ctx, 2, data, &datalen);
+
+    uint8_t wipe_card = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx); 
+
+    if (b < 0 ||  b >= MIFARE_1K_MAXBLOCK ) {
+        PrintAndLogEx(FAILED, "target block number out-of-range, got %i", b);
+        return PM3_EINVARG;
+    }
+
+    if (datalen != MFBLOCK_SIZE) {
+        PrintAndLogEx(FAILED, "expected 16 bytes data, got %i", datalen);
+        return PM3_EINVARG;
+    }
+
     uint8_t params = MAGIC_SINGLE;
-    int res;
-    char ctmp = tolower(param_getchar(Cmd, 0));
-
-    if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_csetblk();
-
-    blockNo = param_get8(Cmd, 0);
-
-    if (param_gethex(Cmd, 1, block, 32)) return usage_hf14_csetblk();
-
-    ctmp = tolower(param_getchar(Cmd, 2));
-    if (ctmp == 'w')
+    if (wipe_card) {
         params |= MAGIC_WIPE;
+    }
 
-    PrintAndLogEx(NORMAL, "--block number:%2d data:%s", blockNo, sprint_hex(block, 16));
+    PrintAndLogEx(INFO, "Writing block number:%2d data:%s", b, sprint_hex_inrow(data, sizeof(data)));
 
-    res = mfCSetBlock(blockNo, block, NULL, params);
+    int res = mfCSetBlock(b, data, NULL, params);
     if (res) {
         PrintAndLogEx(ERR, "Can't write block. error=%d", res);
         return PM3_ESOFT;
@@ -4648,9 +4652,7 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
     }
 
     uint8_t sector = GetSectorFromBlockNo(blockno);
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
-    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+    mf_print_sector_hdr(sector);
     mf_print_block(blockno, data);
    
     if (verbose) {
@@ -4684,10 +4686,7 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
     }
 
     uint8_t sector = (uint8_t)s;
-
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "  # | data  - sector %02d / 0x%02X                        | ascii", sector, sector);
-    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+    mf_print_sector_hdr(sector);
 
     uint8_t blocks = 4;
     uint8_t start = sector * 4;
