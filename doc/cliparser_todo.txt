@@ -16,4 +16,3 @@ hf felica auth1
 hf felica auth2
 hf felica rqspecver
 hf felica resetmode
-lf hitag dump

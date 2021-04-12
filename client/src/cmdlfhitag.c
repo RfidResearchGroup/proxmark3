@@ -49,19 +49,6 @@ static const char *getHitagTypeStr(uint32_t uid) {
 static size_t nbytes(size_t nbits) {
     return (nbits / 8) + ((nbits % 8) > 0);
 }
-
-static int usage_hitag_dump(void) {
-    PrintAndLogEx(NORMAL, "Usage:   lf hitag dump [h] p <pwd> f <name>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h          This help");
-//    PrintAndLogEx(NORMAL, "       p <pwd>    password");
-//    PrintAndLogEx(NORMAL, "       f <name>   data filename, if no <name> given, UID will be used as filename");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         lf hitag dump f mydump");
-    PrintAndLogEx(NORMAL, "         lf hitag dump p 4D494B52 f mydump");
-    return PM3_SUCCESS;
-}
 */
 
 static int CmdLFHitagList(const char *Cmd) {
@@ -807,25 +794,57 @@ static int CmdLFHitagWriter(const char *Cmd) {
 }
 
 static int CmdLFHitag2Dump(const char *Cmd) {
-    PrintAndLogEx(INFO, "Dumping of tag memory");
 
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return 0; // usage_hitag_dump();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hitag dump",
+                  "Read all card memory and save to file"
+                  "In password mode the default key is 4D494B52 (MIKR)\n"
+                  "In crypto mode the default key is 4F4E4D494B52 (ONMIKR)  format: ISK high + ISK low.",
+                  "lf hitag dump -k 4F4E4D494B52\n"
+                  "lf hitag dump -k 4D494B52\n"
+                );
 
-    PacketResponseNG resp;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "file name"),
+        arg_str0("k","key", "<hex>", "key, 4 or 6 hex bytes"),
+        arg_str0(NULL,"nrar", "<hex>", "nonce / answer reader, 8 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint8_t filename[FILE_PATH_SIZE] = {0};
+    int fnlen = 0;
+    CLIParamHexToBuf(arg_get_str(ctx, 1), filename, sizeof(filename), &fnlen);
 
+    uint8_t key[6];
+    int keylen = 0;
+    CLIParamHexToBuf(arg_get_str(ctx, 2), key, sizeof(key), &keylen);
+
+    uint8_t nrar[8];
+    int nalen = 0;
+    CLIParamHexToBuf(arg_get_str(ctx, 3), nrar, sizeof(nrar), &nalen);
+    CLIParserFree(ctx);
+
+
+    PrintAndLogEx(WARNING, "to be implememted...");
+
+/*
     PrintAndLogEx(SUCCESS, "Dumping tag memory...");
-    uint8_t *data = resp.data.asBytes;
 
-    char filename[FILE_PATH_SIZE];
-    char *fnameptr = filename;
-    fnameptr += sprintf(fnameptr, "lf-hitag-");
-    FillFileNameByUID(fnameptr, data, "-dump", 4);
+    clearCommandBuffer();
+    //SendCommandNG(CMD_LF_HITAG_DUMP, &htd, sizeof(htd));
+    PacketResponseNG resp;
+    uint8_t *data = resp.data.asBytes;
+    if (fnlen < 1) {
+        char *fptr = filename;
+        fptr += sprintf(fptr, "lf-hitag-");
+        FillFileNameByUID(fptr, data, "-dump", 4);
+    }
 
     saveFile(filename, ".bin", data, 48);
     saveFileEML(filename, data, 48, 4);
     saveFileJSON(filename, jsfHitag, data, 48, NULL);
-
+*/
     return PM3_SUCCESS;
 }
 
