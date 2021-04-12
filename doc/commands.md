@@ -789,10 +789,10 @@ Check column "offline" for their availability.
 |`lf hitag eload         `|N       |`Load Hitag dump file into emulator memory`
 |`lf hitag list          `|N       |`List Hitag trace history`
 |`lf hitag info          `|N       |`Tag information`
-|`lf hitag reader        `|N       |`Act like a Hitag Reader`
+|`lf hitag reader        `|N       |`Act like a Hitag reader`
 |`lf hitag sim           `|N       |`Simulate Hitag transponder`
 |`lf hitag sniff         `|N       |`Eavesdrop Hitag communication`
-|`lf hitag writer        `|N       |`Act like a Hitag Writer`
+|`lf hitag writer        `|N       |`Act like a Hitag writer`
 |`lf hitag dump          `|N       |`Dump Hitag2 tag`
 |`lf hitag cc            `|N       |`Test all challenges`
 
