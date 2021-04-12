@@ -3776,6 +3776,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         }
         case DICTIONARY: {
             PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+            free(data);
             return PM3_EINVARG;
         }
     }
@@ -4447,6 +4448,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
         }
         case DICTIONARY: {
             PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+            free(data);
             return PM3_EINVARG;
         }
     }
@@ -4886,7 +4888,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
 
 //needs nt, ar, at, Data to decrypt
 static int CmdHf14AMfDecryptBytes(const char *Cmd) {
-   CLIParserContext *ctx;
+    CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf decrypt",
                   "Decrypt Crypto-1 encrypted bytes given some known state of crypto. See tracelog to gather needed values",
                   "hf mf decrypt --nt b830049b --ar 9248314a --at 9280e203 -d 41e586f9\n"
@@ -4906,6 +4908,7 @@ static int CmdHf14AMfDecryptBytes(const char *Cmd) {
     uint32_t nt = 0;
     int res = arg_get_u32_hexstr_def(ctx, 1, 0, &nt);
     if (res != 1) {
+        CLIParserFree(ctx); 
         PrintAndLogEx(WARNING, "check `nt` parameter");
         return PM3_EINVARG;
     }
@@ -4913,6 +4916,7 @@ static int CmdHf14AMfDecryptBytes(const char *Cmd) {
     uint32_t ar_enc = 0;
     res = arg_get_u32_hexstr_def(ctx, 2, 0, &ar_enc);
     if (res != 1) {
+        CLIParserFree(ctx); 
         PrintAndLogEx(WARNING, "check `ar` parameter");
         return PM3_EINVARG;
     }
@@ -4920,6 +4924,7 @@ static int CmdHf14AMfDecryptBytes(const char *Cmd) {
     uint32_t at_enc = 0;
     res = arg_get_u32_hexstr_def(ctx, 3, 0, &at_enc);
     if (res != 1) {
+        CLIParserFree(ctx); 
         PrintAndLogEx(WARNING, "check `at` parameter");
         return PM3_EINVARG;
     }
@@ -5939,6 +5944,7 @@ static int CmdHF14AMfView(const char *Cmd) {
         }
         case DICTIONARY: {
             PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+            free(dump);
             return PM3_EINVARG;
         }
     }

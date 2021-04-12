@@ -550,12 +550,19 @@ static int CmdLFHitagReader(const char *Cmd) {
 
     uint8_t key[6];
     int keylen = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 8), key, sizeof(key), &keylen);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 8), key, sizeof(key), &keylen);
+    if (res != 0) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
     uint8_t nrar[8];
     int nalen = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 9), nrar, sizeof(nrar), &nalen);
+    res = CLIParamHexToBuf(arg_get_str(ctx, 9), nrar, sizeof(nrar), &nalen);
     CLIParserFree(ctx);
+    if (res != 0) {
+        return PM3_EINVARG;
+    }
 
     // sanity checks
     if (keylen != 0 && keylen != 6) {
@@ -719,16 +726,29 @@ static int CmdLFHitagWriter(const char *Cmd) {
 
     uint8_t data[4];
     int dlen = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 6), data, sizeof(data), &dlen);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 6), data, sizeof(data), &dlen);
+    if (res != 0) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
     uint8_t key[6];
     int keylen = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 7), key, sizeof(key), &keylen);
+    res = CLIParamHexToBuf(arg_get_str(ctx, 7), key, sizeof(key), &keylen);
+    if (res != 0) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
     uint8_t nrar[8];
     int nalen = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 8), nrar, sizeof(nrar), &nalen);
+    res = CLIParamHexToBuf(arg_get_str(ctx, 8), nrar, sizeof(nrar), &nalen);
+    
     CLIParserFree(ctx);
+
+    if (res != 0) {
+        return PM3_EINVARG;
+    }
 
     // sanity checks
     if (dlen != sizeof(data)) {
@@ -814,17 +834,27 @@ static int CmdLFHitag2Dump(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     uint8_t filename[FILE_PATH_SIZE] = {0};
     int fnlen = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 1), filename, sizeof(filename), &fnlen);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), filename, sizeof(filename), &fnlen);
+    if (res != 0) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
     uint8_t key[6];
     int keylen = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 2), key, sizeof(key), &keylen);
+    res = CLIParamHexToBuf(arg_get_str(ctx, 2), key, sizeof(key), &keylen);
+    if (res != 0) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
     uint8_t nrar[8];
     int nalen = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 3), nrar, sizeof(nrar), &nalen);
+    res = CLIParamHexToBuf(arg_get_str(ctx, 3), nrar, sizeof(nrar), &nalen);
     CLIParserFree(ctx);
-
+    if (res != 0) {
+        return PM3_EINVARG;
+    }
 
     PrintAndLogEx(WARNING, "to be implememted...");
 
