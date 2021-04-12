@@ -49,9 +49,7 @@ static const char *getHitagTypeStr(uint32_t uid) {
 static size_t nbytes(size_t nbits) {
     return (nbits / 8) + ((nbits % 8) > 0);
 }
-*/
 
-/*
 static int usage_hitag_dump(void) {
     PrintAndLogEx(NORMAL, "Usage:   lf hitag dump [h] p <pwd> f <name>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -65,24 +63,6 @@ static int usage_hitag_dump(void) {
     return PM3_SUCCESS;
 }
 */
-static int usage_hitag_reader(void) {
-    PrintAndLogEx(NORMAL, "Hitag reader functions");
-    PrintAndLogEx(NORMAL, "Usage: lf hitag reader [h] <reader function #>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h               This help");
-    PrintAndLogEx(NORMAL, "   HitagS (0*)");
-    PrintAndLogEx(NORMAL, "      01 <nr> <ar>     Read all pages, challenge mode");
-    PrintAndLogEx(NORMAL, "      02 <key>         Read all pages, crypto mode. Set key=0 for no auth");
-    PrintAndLogEx(NORMAL, "   Hitag1 (1*)");
-    PrintAndLogEx(NORMAL, "      Not implemented");
-    PrintAndLogEx(NORMAL, "   Hitag2 (2*)");
-    PrintAndLogEx(NORMAL, "      21 <password>    Read all pages, password mode. Default: " _YELLOW_("4D494B52") " (\"MIKR\")");
-    PrintAndLogEx(NORMAL, "      22 <nr> <ar>     Read all pages, challenge mode");
-    PrintAndLogEx(NORMAL, "      23 <key>         Read all pages, crypto mode. Key format: ISK high + ISK low. Default: " _YELLOW_("4F4E4D494B52") " (\"ONMIKR\")");
-    PrintAndLogEx(NORMAL, "      25               Test recorded authentications");
-    PrintAndLogEx(NORMAL, "      26               Just read UID");
-    return PM3_SUCCESS;
-}
 static int usage_hitag_writer(void) {
     PrintAndLogEx(NORMAL, "Hitag writer functions");
     PrintAndLogEx(NORMAL, "Usage: lf hitag write [h] <reader function #>");
@@ -558,57 +538,123 @@ static int CmdLFHitagInfo(const char *Cmd) {
 //
 static int CmdLFHitagReader(const char *Cmd) {
 
-    uint16_t cmd = CMD_LF_HITAG_READER;
-    hitag_data htd;
-    hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hitag reader",
+                  "Act like a Hitag Reader",
+                  "Hitag S\n"
+                  "  lf hitag reader --01 --nr 01020304 --ar 11223344\n"
+                  "  lf hitag reader --02 -k 4F4E4D494B52\n"
+                  "Hitag 2\n"
+                  "  lf hitag reader --21 -k 4D494B52\n"
+                  "  lf hitag reader --22 --nr 01020304 --ar 11223344\n"
+                  "  lf hitag reader --23 -k 4F4E4D494B52\n"
+                  "  lf hitag reader --26\n"
+                );
 
-    switch (htf) {
-        case RHTSF_CHALLENGE: {
-            cmd = CMD_LF_HITAGS_READ;
-            num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd.auth.NrAr);
-            num_to_bytes(param_get32ex(Cmd, 2, 0, 16), 4, htd.auth.NrAr + 4);
-            break;
-        }
-        case RHTSF_KEY: {
-            cmd = CMD_LF_HITAGS_READ;
-            num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd.crypto.key);
-            break;
-        }
-        case RHT2F_PASSWORD: {
-            num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd.pwd.password);
-            break;
-        }
-        case RHT2F_AUTHENTICATE: {
-            num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd.auth.NrAr);
-            num_to_bytes(param_get32ex(Cmd, 2, 0, 16), 4, htd.auth.NrAr + 4);
-            break;
-        }
-        case RHT2F_CRYPTO: {
-            num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd.crypto.key);
-            break;
-        }
-        case RHT2F_TEST_AUTH_ATTEMPTS: {
-            // No additional parameters needed
-            break;
-        }
-        case RHT2F_UID_ONLY: {
-            // No additional parameters needed
-            break;
-        }
-        default:
-        case RHT1F_PLAIN:
-        case RHT1F_AUTHENTICATE:
-        case WHTSF_CHALLENGE:
-        case WHTSF_KEY:
-        case WHT2F_PASSWORD:
-        case WHT2F_CRYPTO:
-            return usage_hitag_reader();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "01", "HitagS, read all pages, challenge mode"),
+        arg_lit0(NULL, "02", "HitagS, read all pages, crypto mode. Set key=0 for no auth"),
+        arg_lit0(NULL, "21", "Hitag2, read all pages, password mode. def 4D494B52 (MIKR)"),
+        arg_lit0(NULL, "22", "Hitag2, read all pages, challenge mode"),
+        arg_lit0(NULL, "23", "Hitag2, read all pages, crypto mode. Key format: ISK high + ISK low. def 4F4E4D494B52 (ONMIKR)"),
+        arg_lit0(NULL, "25", "Hitag2, test recorded authentications (replay?)"),
+        arg_lit0(NULL, "26", "Hitag2, read UID"),
+        arg_str0("k","key", "<hex>", "4 or 6 hex bytes"),
+        arg_str0(NULL,"nr", "<hex>", "nonce reader, 4 hex bytes"),
+        arg_str0(NULL,"ar", "<hex>", "answer reader, 4 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    // Hitag S
+    bool s01 = arg_get_lit(ctx, 1);
+    bool s02 = arg_get_lit(ctx, 2);
+
+    // Hitag 2
+    bool h21 = arg_get_lit(ctx, 3);
+    bool h22 = arg_get_lit(ctx, 4);
+    bool h23 = arg_get_lit(ctx, 5);
+    bool h25 = arg_get_lit(ctx, 6);
+    bool h26 = arg_get_lit(ctx, 7);
+
+    uint8_t key[6];
+    int keylen = 0;
+    CLIParamHexToBuf(arg_get_str(ctx, 8), key, sizeof(key), &keylen);
+
+    uint8_t nr[4];
+    int nlen = 0;
+    CLIParamHexToBuf(arg_get_str(ctx, 9), nr, sizeof(nr), &nlen);
+
+    uint8_t ar[4];
+    int alen = 0;
+    CLIParamHexToBuf(arg_get_str(ctx, 10), ar, sizeof(ar), &alen);
+    CLIParserFree(ctx);
+
+
+    // sanity checks
+    if (keylen != 0 && keylen != 6) {
+        PrintAndLogEx(WARNING, "Wrong KEY len expected 0 or 6,  got %d", keylen);
+        return PM3_EINVARG;
     }
 
+    if (nlen != 0 && nlen != 4) {
+        PrintAndLogEx(WARNING, "Wrong NR len expected 0 or 4,  got %d", nlen);
+        return PM3_EINVARG;
+    }
+
+    if (alen != 0 && alen != 4) {
+        PrintAndLogEx(WARNING, "Wrong AR len expected 0 or 4,  got %d", alen);
+        return PM3_EINVARG;
+    }
+
+    uint8_t foo = (s01 + s02 + h21 + h22 + h23 + h25 + h26);
+    if (foo > 1) {
+        PrintAndLogEx(WARNING, "Only specify one HITAG reader call");
+        return PM3_EINVARG;
+    } else if (foo == 0) {
+        PrintAndLogEx(WARNING, "Specify one HITAG reader call");
+        return PM3_EINVARG;
+    }
+
+    hitag_function htf;
+    hitag_data htd;
+    uint16_t cmd = CMD_LF_HITAG_READER;
+    if (s01) {
+        cmd = CMD_LF_HITAGS_READ;
+        htf = RHTSF_CHALLENGE;
+        memcpy(htd.auth.NrAr, nr, sizeof(nr));
+        memcpy(htd.auth.NrAr + 4, ar, sizeof(ar));
+    }
+    if (s02){
+        cmd = CMD_LF_HITAGS_READ;
+        htf = RHTSF_KEY;
+        memcpy(htd.crypto.key, key, sizeof(key));
+    }
+    if (h21) {
+        htf = RHT2F_PASSWORD;
+        memcpy(htd.pwd.password, key, 4);
+    }
+    if (h22) {
+        htf = RHT2F_AUTHENTICATE;
+        memcpy(htd.auth.NrAr, nr, sizeof(nr));
+        memcpy(htd.auth.NrAr + 4, ar, sizeof(ar));
+    }
+    if (h23) {
+        htf = RHT2F_CRYPTO;
+        memcpy(htd.crypto.key, key, sizeof(key));
+    }
+    if (h25) {
+        htf = RHT2F_TEST_AUTH_ATTEMPTS;
+    }
+    if (h26) {
+        htf = RHT2F_UID_ONLY;
+    }
+    
     clearCommandBuffer();
     SendCommandMIX(cmd, htf, 0, 0, &htd, sizeof(htd));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
