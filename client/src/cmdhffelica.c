@@ -131,16 +131,6 @@ static int usage_hf_felica_sim(void) {
 }
 */
 
-static int usage_hf_felica_request_response(void) {
-    PrintAndLogEx(NORMAL, "\nInfo: Use this command to verify the existence of a card and its Mode.");
-    PrintAndLogEx(NORMAL, "       - Current Mode of the card is returned.");
-    PrintAndLogEx(NORMAL, "\nUsage: hf felica rqresponse [-h]");
-    PrintAndLogEx(NORMAL, "       -h    this help");
-    PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
-    PrintAndLogEx(NORMAL, " hf felica rqresponse -i 01100910c11bc407");
-    return PM3_SUCCESS;
-}
-
 static int usage_hf_felica_read_without_encryption(void) {
     PrintAndLogEx(NORMAL, "\nInfo: Use this command to read Block Data from authentication-not-required Service.");
     PrintAndLogEx(NORMAL, "       - Mode shall be Mode0.");
@@ -1023,59 +1013,67 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
  * @return client result code.
  */
 static int CmdHFFelicaRequestResponse(const char *Cmd) {
-    uint8_t data[PM3_CMD_DATA_SIZE];
-    bool custom_IDm = false;
-    strip_cmds(Cmd);
-    uint16_t datalen = 10; // Length (1), Command ID (1), IDm (8)
-    uint8_t paramCount = 0;
-    uint8_t flags = 0;
-    int i = 0;
-    while (Cmd[i] != '\0') {
-        if (Cmd[i] == '-') {
-            switch (tolower(Cmd[i + 1])) {
-                case 'h':
-                    return usage_hf_felica_request_response();
-                case 'i':
-                    paramCount++;
-                    custom_IDm = true;
-                    if (!add_param(Cmd, paramCount, data, 2, 16)) {
-                        return PM3_EINVARG;
-                    }
-                    paramCount++;
-                    i += 16;
-                    break;
-                default:
-                    return usage_hf_felica_request_response();
-            }
-        }
-        i++;
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica rqresponse",
+                  "Use this command to verify the existence of a card and its Mode.\n"
+                  " - current mode of the card is returned",
+                  "hf felica rqresponse -i 11100910C11BC407\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t idm[8] = {0};
+    int ilen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), idm, sizeof(idm), &ilen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
+
+    CLIParserFree(ctx);
+
+    uint8_t data[PM3_CMD_DATA_SIZE];
     data[0] = 0x0A; // Static length
     data[1] = 0x04; // Command ID
+
+    bool custom_IDm = false;
+    if (ilen) {
+        custom_IDm = true;
+        memcpy(data + 2, idm, sizeof(idm));
+    }
+
+    uint8_t datalen = 10; // Length (1), Command ID (1), IDm (8)
     if (!custom_IDm && !check_last_idm(data, datalen)) {
         return PM3_EINVARG;
     }
+
     AddCrc(data, datalen);
     datalen += 2;
-    flags |= FELICA_APPEND_CRC;
-    flags |= FELICA_RAW;
+
+    uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
     clear_and_send_command(flags, datalen, data, 0);
+
     PacketResponseNG resp;
-    if (!waitCmdFelica(0, &resp, 1)) {
-        PrintAndLogEx(ERR, "\nGot no response from card");
+    if (waitCmdFelica(0, &resp, 1) == false) {
+        PrintAndLogEx(ERR, "Got no response from card");
         return PM3_ERFTRANS;
-    } else {
-        felica_request_request_response_t rq_response;
-        memcpy(&rq_response, (felica_request_request_response_t *)resp.data.asBytes, sizeof(felica_request_request_response_t));
-        if (rq_response.frame_response.IDm[0] != 0) {
-            PrintAndLogEx(SUCCESS, "\nGot Request Response:");
-            PrintAndLogEx(SUCCESS, "IDm: %s", sprint_hex(rq_response.frame_response.IDm, sizeof(rq_response.frame_response.IDm)));
-            PrintAndLogEx(SUCCESS, "  -Mode: %s\n\n", sprint_hex(rq_response.mode, sizeof(rq_response.mode)));
-        }
     }
+
+    felica_request_request_response_t rq_response;
+    memcpy(&rq_response, (felica_request_request_response_t *)resp.data.asBytes, sizeof(felica_request_request_response_t));
+    if (rq_response.frame_response.IDm[0] != 0) {
+        PrintAndLogEx(SUCCESS, "Request Response");
+        PrintAndLogEx(SUCCESS, "IDm...... %s", sprint_hex(rq_response.frame_response.IDm, sizeof(rq_response.frame_response.IDm)));
+        PrintAndLogEx(SUCCESS, "  Mode... %s", sprint_hex(rq_response.mode, sizeof(rq_response.mode)));
+    }
+
     return PM3_SUCCESS;
 }
-
 
 /**
  * Command parser for rqspecver
@@ -1191,7 +1189,6 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
     }
     return PM3_SUCCESS;
 }
-
 
 /**
  * Command parser for resetmode

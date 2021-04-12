@@ -9,7 +9,6 @@ hf 15 writeafi
 hf 15 writedsfid
 hf felica rdunencrypted
 hf felica wrunencrypted
-hf felica rqresponse
 hf felica scsvcode
 hf felica auth1
 hf felica auth2
