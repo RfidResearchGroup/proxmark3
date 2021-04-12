@@ -43,43 +43,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hf14_hardnested(void) {
-    PrintAndLogEx(NORMAL, "Usage:");
-    PrintAndLogEx(NORMAL, "      hf mf hardnested <block number> <key A|B> <key (12 hex symbols)>");
-    PrintAndLogEx(NORMAL, "                       <target block number> <target key A|B> [known target key (12 hex symbols)] [w] [s]");
-    PrintAndLogEx(NORMAL, "  or  hf mf hardnested r [known target key]");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h         this help");
-    PrintAndLogEx(NORMAL, "      w         acquire nonces and UID, and write them to binary file with default name hf-mf-<UID>-nonces.bin");
-    PrintAndLogEx(NORMAL, "      s         slower acquisition (required by some non standard cards)");
-    PrintAndLogEx(NORMAL, "      r         read hf-mf-<UID>-nonces.bin if tag present, otherwise read nonces.bin, then start attack");
-    PrintAndLogEx(NORMAL, "      u <UID>   read/write hf-mf-<UID>-nonces.bin instead of default name");
-    PrintAndLogEx(NORMAL, "      f <name>  read/write <name> instead of default name");
-    PrintAndLogEx(NORMAL, "      t         tests?");
-    PrintAndLogEx(NORMAL, "      i <X>     set type of SIMD instructions. Without this flag programs autodetect it.");
-#if defined(COMPILER_HAS_SIMD_AVX512)
-    PrintAndLogEx(NORMAL, "        i 5   = AVX512");
-#endif
-#if defined(COMPILER_HAS_SIMD)
-    PrintAndLogEx(NORMAL, "        i 2   = AVX2");
-    PrintAndLogEx(NORMAL, "        i a   = AVX");
-    PrintAndLogEx(NORMAL, "        i s   = SSE2");
-    PrintAndLogEx(NORMAL, "        i m   = MMX");
-#endif
-    PrintAndLogEx(NORMAL, "        i n   = none (use CPU regular instruction set)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A w"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A f nonces.bin w s"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf hardnested r"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf hardnested r a0a1a2a3a4a5"));
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Add the known target key to check if it is present in the remaining key space:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf hardnested 0 A A0A1A2A3A4A5 4 A FFFFFFFFFFFF"));
-    return PM3_SUCCESS;
-}
 static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "Usage:");
     PrintAndLogEx(NORMAL, "      hf mf autopwn [k] <sector number> <key A|B> <key (12 hex symbols)>");
@@ -1148,11 +1111,11 @@ static int CmdHF14AMfNested(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf nested",
                   "Execute Nested attack against MIFARE Classic card for key recovery",
-                  "hf mf nested --single --blk 0 -a FFFFFFFFFFFF --tblk 4 --tkeya     --> Single sector key recovery. Use block 0 Key A to find block 4 Key A\n"
-                  "hf mf nested --mini --blk 0 -a -k FFFFFFFFFFFF                     --> Key recovery against MIFARE Mini\n"
-                  "hf mf nested --1k --blk 0 -a -k FFFFFFFFFFFF                       --> Key recovery against MIFARE Classic 1k\n"
-                  "hf mf nested --2k --blk 0 -a -k FFFFFFFFFFFF                       --> Key recovery against MIFARE 2k\n"
-                  "hf mf nested --4k --blk 0 -a -k FFFFFFFFFFFF                       --> Key recovery against MIFARE 4k");
+                  "hf mf nested --single --blk 0 -a FFFFFFFFFFFF --tblk 4 --ta     --> Single sector key recovery. Use block 0 Key A to find block 4 Key A\n"
+                  "hf mf nested --mini --blk 0 -a -k FFFFFFFFFFFF                  --> Key recovery against MIFARE Mini\n"
+                  "hf mf nested --1k --blk 0 -a -k FFFFFFFFFFFF                    --> Key recovery against MIFARE Classic 1k\n"
+                  "hf mf nested --2k --blk 0 -a -k FFFFFFFFFFFF                    --> Key recovery against MIFARE 2k\n"
+                  "hf mf nested --4k --blk 0 -a -k FFFFFFFFFFFF                    --> Key recovery against MIFARE 4k");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1165,8 +1128,8 @@ static int CmdHF14AMfNested(const char *Cmd) {
         arg_lit0("a", NULL, "Input key specified is A key (default)"),
         arg_lit0("b", NULL, "Input key specified is B key"),
         arg_int0(NULL, "tblk", "<dec>", "Target block number"),
-        arg_lit0(NULL, "tkeya", "Target A key (default)"),
-        arg_lit0(NULL, "tkeyb", "Target B key"),
+        arg_lit0(NULL, "ta", "Target A key (default)"),
+        arg_lit0(NULL, "tb", "Target B key"),
         arg_lit0(NULL, "emu", "Fill simulator keys from found keys"),
         arg_lit0(NULL, "dump", "Dump found keys to file"),
         arg_lit0(NULL, "single", "Single sector (defaults to All)"),
@@ -1701,157 +1664,163 @@ jumptoend:
 }
 
 static int CmdHF14AMfNestedHard(const char *Cmd) {
-    uint8_t blockNo = 0;
-    uint8_t keyType = MF_KEY_A;
-    uint8_t trgBlockNo = 0;
-    uint8_t trgKeyType = MF_KEY_A;
-    uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-    uint8_t trgkey[6] = {0, 0, 0, 0, 0, 0};
-    uint8_t cmdp = 0;
-    char filename[FILE_PATH_SIZE] = {0};
-    char szTemp[FILE_PATH_SIZE - 20];
-    char ctmp;
 
-    bool know_target_key = false;
-    bool nonce_file_read = false;
-    bool nonce_file_write = false;
-    bool slow = false;
-    int tests = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf hardnested",
+                  "Nested attack for hardened MIFARE Classic cards.\n"
+                  "`--i<X>`  set type of SIMD instructions. Without this flag programs autodetect it.\n"
+                  " or \n"
+                  "    hf mf hardnested -r --tk [known target key]\n"
+                  "Add the known target key to check if it is present in the remaining key space\n"
+                  "    hf mf hardnested --blk 0 -a -k A0A1A2A3A4A5 --tblk 4 --ta --tk FFFFFFFFFFFF\n"
+                  ,
+                  "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta\n"
+                  "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta -w\n"
+                  "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta -f nonces.bin -w -s\n"
+                  "hf mf hardnested -r\n"
+                  "hf mf hardnested -r --tk a0a1a2a3a4a5\n"
+                  "hf mf hardnested -t --tk a0a1a2a3a4a5\n"
+                  "hf mf hardnested --blk 0 -a -k a0a1a2a3a4a5 --tblk 4 --ta --tk FFFFFFFFFFFF"
+                  );
 
-    switch (tolower(param_getchar(Cmd, cmdp))) {
-        case 'h':
-            return usage_hf14_hardnested();
-        case 'r': {
-            char *fptr = GenerateFilename("hf-mf-", "-nonces.bin");
-            if (fptr == NULL)
-                strncpy(filename, "nonces.bin", FILE_PATH_SIZE - 1);
-            else
-                strncpy(filename, fptr, FILE_PATH_SIZE - 1);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("k",  "key",   "<hex>", "Key, 12 hex bytes"),      // 1
+        arg_int0(NULL, "blk",   "<dec>", "Input block number"),     // 2
+        arg_lit0("a",   NULL,            "Input key A (def)"),      // 3
+        arg_lit0("b",   NULL,            "Input key B"),
+        arg_int0(NULL, "tblk",  "<dec>", "Target block number"),
+        arg_lit0(NULL, "ta",             "Target key A"),
+        arg_lit0(NULL, "tb",             "Target key B"),
+        arg_str0(NULL, "tk",    "<hex>", "Target key, 12 hex bytes"), // 8
+        arg_str0("u",  "uid",   "<hex>", "R/W `hf-mf-<UID>-nonces.bin` instead of default name"),
+        arg_str0("f",  "file",  "<fn>",  "R/W <name> instead of default name"), 
+        arg_lit0("r",  "read",           "Read `hf-mf-<UID>-nonces.bin` if tag present, otherwise `nonces.bin`, and start attack"),
+        arg_lit0("s",  "slow",           "Slower acquisition (required by some non standard cards)"),
+        arg_lit0("t",  "tests",          "Run tests"),
+        arg_lit0("w",  "wr",             "Acquire nonces and UID, and write them to file `hf-mf-<UID>-nonces.bin`"),
 
-            free(fptr);
-            nonce_file_read = true;
-            if (!param_gethex(Cmd, cmdp + 1, trgkey, 12)) {
-                know_target_key = true;
-            }
-            cmdp++;
-            break;
-        }
-        case 't':
-            tests = param_get32ex(Cmd, cmdp + 1, 100, 10);
-            if (!param_gethex(Cmd, cmdp + 2, trgkey, 12)) {
-                know_target_key = true;
-            }
-            cmdp += 2;
-            break;
-        default:
-            if (param_getchar(Cmd, cmdp) == 0x00) {
-                PrintAndLogEx(WARNING, "Block number is missing");
-                return usage_hf14_hardnested();
-            }
-
-            blockNo = param_get8(Cmd, cmdp);
-            ctmp = tolower(param_getchar(Cmd, cmdp + 1));
-            if (ctmp != 'a' && ctmp != 'b') {
-                PrintAndLogEx(WARNING, "Key type must be A or B");
-                return 1;
-            }
-
-            if (ctmp != 'a') {
-                keyType = MF_KEY_B;
-            }
-
-            if (param_gethex(Cmd, cmdp + 2, key, 12)) {
-                PrintAndLogEx(WARNING, "Key must include 12 HEX symbols");
-                return 1;
-            }
-
-            if (param_getchar(Cmd, cmdp + 3) == 0x00) {
-                PrintAndLogEx(WARNING, "Target block number is missing");
-                return 1;
-            }
-
-            trgBlockNo = param_get8(Cmd, cmdp + 3);
-
-            ctmp = tolower(param_getchar(Cmd, cmdp + 4));
-            if (ctmp != 'a' && ctmp != 'b') {
-                PrintAndLogEx(WARNING, "Target key type must be A or B");
-                return 1;
-            }
-            if (ctmp != 'a') {
-                trgKeyType = MF_KEY_B;
-            }
-            cmdp += 5;
-    }
-    if (!param_gethex(Cmd, cmdp, trgkey, 12)) {
-        know_target_key = true;
-        cmdp++;
-    }
-
-    while ((ctmp = param_getchar(Cmd, cmdp))) {
-        switch (tolower(ctmp)) {
-            case 's':
-                slow = true;
-                break;
-            case 'w': {
-                nonce_file_write = true;
-                char *fptr = GenerateFilename("hf-mf-", "-nonces.bin");
-                if (fptr == NULL)
-                    return 1;
-                strncpy(filename, fptr, FILE_PATH_SIZE - 1);
-                free(fptr);
-                break;
-            }
-            case 'u':
-                param_getstr(Cmd, cmdp + 1, szTemp, FILE_PATH_SIZE - 20);
-                snprintf(filename, FILE_PATH_SIZE, "hf-mf-%s-nonces.bin", szTemp);
-                cmdp++;
-                break;
-            case 'f':
-                param_getstr(Cmd, cmdp + 1, szTemp, FILE_PATH_SIZE - 20);
-                strncpy(filename, szTemp, FILE_PATH_SIZE - 20);
-                cmdp++;
-                break;
-            case 'i':
-                SetSIMDInstr(SIMD_AUTO);
-                ctmp = tolower(param_getchar(Cmd, cmdp + 1));
-                switch (ctmp) {
-#if defined(COMPILER_HAS_SIMD_AVX512)
-                    case '5':
-                        SetSIMDInstr(SIMD_AVX512);
-                        break;
-#endif
+        arg_lit0(NULL, "in", "None (use CPU regular instruction set)"),
 #if defined(COMPILER_HAS_SIMD)
-                    case '2':
-                        SetSIMDInstr(SIMD_AVX2);
-                        break;
-                    case 'a':
-                        SetSIMDInstr(SIMD_AVX);
-                        break;
-                    case 's':
-                        SetSIMDInstr(SIMD_SSE2);
-                        break;
-                    case 'm':
-                        SetSIMDInstr(SIMD_MMX);
-                        break;
+        arg_lit0(NULL, "im", "MMX"),
+        arg_lit0(NULL, "is", "SSE2"),
+        arg_lit0(NULL, "ia", "AVX"),
+        arg_lit0(NULL, "i2", "AVX2"),
 #endif
-                    case 'n':
-                        SetSIMDInstr(SIMD_NONE);
-                        break;
-                    default:
-                        PrintAndLogEx(WARNING, "Unknown SIMD type. %c", ctmp);
-                        return 1;
-                }
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", ctmp);
-                usage_hf14_hardnested();
-                return 1;
-        }
-        cmdp++;
+#if defined(COMPILER_HAS_SIMD_AVX512)
+        arg_lit0(NULL, "i5", "AVX512"),
+#endif
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int keylen = 0;
+    uint8_t key[6] = {0};
+    CLIGetHexWithReturn(ctx, 1, key, &keylen);
+
+    uint8_t blockno = arg_get_u32_def(ctx, 2, 0);
+
+    uint8_t keytype = MF_KEY_A;
+    if (arg_get_lit(ctx, 3) && arg_get_lit(ctx, 4)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 4)) {
+        keytype = MF_KEY_B;
     }
 
-    if (!know_target_key && nonce_file_read == false) {
+    uint8_t trg_blockno = arg_get_u32_def(ctx, 5, 0);
+
+    uint8_t trg_keytype = MF_KEY_A;
+    if (arg_get_lit(ctx, 6) && arg_get_lit(ctx, 7)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 7)) {
+        trg_keytype = MF_KEY_B;
+    }
+
+    int trg_keylen = 0;
+    uint8_t trg_key[6] = {0};
+    CLIGetHexWithReturn(ctx, 8, trg_key, &trg_keylen);
+
+    int uidlen = 0;
+    char uid[14] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 9), (uint8_t *)uid, sizeof(uid), &uidlen);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 10), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool nonce_file_read = arg_get_lit(ctx, 11);
+    bool slow = arg_get_lit(ctx, 12);
+    bool tests = arg_get_lit(ctx, 13);
+    bool nonce_file_write = arg_get_lit(ctx, 14);
+
+    bool in = arg_get_lit(ctx, 15);
+    bool im = false;
+    bool is = false;
+    bool ia = false;
+    bool i2 = false;
+    bool i5 = false;
+
+#if defined(COMPILER_HAS_SIMD)
+    im = arg_get_lit(ctx, 16);
+    is = arg_get_lit(ctx, 17);
+    ia = arg_get_lit(ctx, 18);
+    i2 = arg_get_lit(ctx, 19);
+#endif
+#if defined(COMPILER_HAS_SIMD_AVX512)
+    i5 = arg_get_lit(ctx, 20);
+#endif
+    CLIParserFree(ctx);
+
+    // set SIM instructions
+    SetSIMDInstr(SIMD_AUTO);
+
+#if defined(COMPILER_HAS_SIMD_AVX512)
+    if (i5)
+        SetSIMDInstr(SIMD_AVX512);
+#endif
+
+#if defined(COMPILER_HAS_SIMD)
+    if (i2)
+        SetSIMDInstr(SIMD_AVX2);
+    if (ia)
+        SetSIMDInstr(SIMD_AVX);
+    if (is)
+        SetSIMDInstr(SIMD_SSE2);
+    if (im)
+        SetSIMDInstr(SIMD_MMX);
+#endif
+    if (in)
+        SetSIMDInstr(SIMD_NONE);
+
+
+    bool know_target_key = (trg_keylen);
+
+    if (nonce_file_read) {
+        char *fptr = GenerateFilename("hf-mf-", "-nonces.bin");
+        if (fptr == NULL)
+            strncpy(filename, "nonces.bin", FILE_PATH_SIZE - 1);
+        else
+            strncpy(filename, fptr, FILE_PATH_SIZE - 1);
+        free(fptr);
+    }
+
+    if (nonce_file_write) {
+        char *fptr = GenerateFilename("hf-mf-", "-nonces.bin");
+        if (fptr == NULL)
+            return 1;
+        strncpy(filename, fptr, FILE_PATH_SIZE - 1);
+        free(fptr);
+    }
+
+    if (uidlen) { 
+        snprintf(filename, FILE_PATH_SIZE, "hf-mf-%s-nonces.bin", uid);
+    }
+
+    if (know_target_key == false && nonce_file_read == false) {
 
         // check if tag doesn't have static nonce
         if (detect_classic_static_nonce() == NONCE_STATIC) {
@@ -1862,25 +1831,25 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
 
         uint64_t key64 = 0;
         // check if we can authenticate to sector
-        if (mfCheckKeys(blockNo, keyType, true, 1, key, &key64) != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Key is wrong. Can't authenticate to block: %3d  key type: %c", blockNo, (keyType == MF_KEY_B) ? 'B' : 'A');
-            return 3;
+        if (mfCheckKeys(blockno, keytype, true, 1, key, &key64) != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Key is wrong. Can't authenticate to block: %3d  key type: %c", blockno, (keytype == MF_KEY_B) ? 'B' : 'A');
+            return PM3_EWRONGANSWER;
         }
     }
 
-    PrintAndLogEx(INFO, "Target block no:%3d, target key type:%c, known target key: 0x%02x%02x%02x%02x%02x%02x%s",
-                  trgBlockNo,
-                  (trgKeyType == MF_KEY_B)? 'B' : 'A',
-                  trgkey[0], trgkey[1], trgkey[2], trgkey[3], trgkey[4], trgkey[5],
+    PrintAndLogEx(INFO, "Target block no " _YELLOW_("%3d") ", target key type: " _YELLOW_("%c") ", known target key: " _YELLOW_("%02x%02x%02x%02x%02x%02x%s"),
+                  trg_blockno,
+                  (trg_keytype == MF_KEY_B)? 'B' : 'A',
+                  trg_key[0], trg_key[1], trg_key[2], trg_key[3], trg_key[4], trg_key[5],
                   know_target_key ? "" : " (not set)"
                  );
-    PrintAndLogEx(INFO, "File action: %s, Slow: %s, Tests: %d ",
+    PrintAndLogEx(INFO, "File action: " _YELLOW_("%s") ", Slow: " _YELLOW_("%s") ", Tests: " _YELLOW_("%d"),
                   nonce_file_write ? "write" : nonce_file_read ? "read" : "none",
                   slow ? "Yes" : "No",
                   tests);
 
     uint64_t foundkey = 0;
-    int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key ? trgkey : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey, filename);
+    int16_t isOK = mfnestedhard(blockno, keytype, key, trg_blockno, trg_keytype, know_target_key ? trg_key : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey, filename);
 
     if ((tests == 0) && IfPm3Iso14443a()) {
         DropField();
