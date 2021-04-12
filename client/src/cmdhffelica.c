@@ -33,75 +33,87 @@ static void set_last_known_card(felica_card_select_t card) {
     last_known_card = card;
 }
 
-
 static void print_status_flag1_interpretation(void) {
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Status Flag1:");
-    PrintAndLogEx(INFO, "  - 00h : Indicates the successful completion of a command.");
-    PrintAndLogEx(INFO, "  - FFh : If an error occurs during the processing of a command that includes no list in the command packet, or if "
-                  "an error occurs independently of any list, the card returns a response by setting FFh to Status Flag1.");
-    PrintAndLogEx(INFO, "  - XXh : If an error occurs while processing a command that includes Service Code List or Block List "
-                  "in the command packet, the card returns a response by setting a number in the list to Status Flag1, "
-                  "indicating the location of the error.");
+    PrintAndLogEx(INFO, _CYAN_("Status Flag 1"));
+    PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
+    PrintAndLogEx(INFO, " 00 | Indicates the successful completion of a command.");
+    PrintAndLogEx(INFO, " FF | If an error occurs during the processing of a command that includes no list in the command packet, \n"
+                        "    | or if an error occurs independently of any list, the card returns a response by setting FFh to Status Flag1.");
+    PrintAndLogEx(INFO, " XX | If an error occurs while processing a command that includes Service Code List or Block List \n"
+                        "    | in the command packet, the card returns a response by setting a number in the list to Status Flag1,\n"
+                        "    | indicating the location of the error.");
+    PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
 }
 
 static void print_status_flag2_interpration(void) {
-    PrintAndLogEx(INFO, "\nStatus Flag2:");
-    PrintAndLogEx(INFO, "  - 00h : Indicates the successful completion of a command.");
-    PrintAndLogEx(INFO, "  - 01h : The calculated result is either less than zero when the purse data is decremented, or exceeds 4"
-                  "Bytes when the purse data is incremented.");
-    PrintAndLogEx(INFO, "  - 02h : The specified data exceeds the value of cashback data at cashback of purse.");
-    PrintAndLogEx(INFO, "  - 70h : Memory error (fatal error).");
-    PrintAndLogEx(INFO, "  - 71h : The number of memory rewrites exceeds the upper limit (this is only a warning; data writing is "
-                  "performed as normal). The maximum number of rewrites can differ, depending on the product being used.");
-    PrintAndLogEx(INFO, "          In addition, Status Flag1 is either 00h or FFh depending on the product being used.");
-    PrintAndLogEx(INFO, "  - A1h : Illegal Number of Service: Number of Service or Number of Node specified by the command falls outside the range of the prescribed value.");
-    PrintAndLogEx(INFO, "  - A2h : Illegal command packet (specified Number of Block): Number of Block specified by the command falls outside the range of the prescribed values for the product.");
-    PrintAndLogEx(INFO, "  - A3h : Illegal Block List (specified order of Service): Service Code List Order specified by Block List Element falls outside the Number of Service specified by the "
-                  "command (or the Number of Service specified at the times of mutual authentication).");
-    PrintAndLogEx(INFO, "  - A4h : Illegal Service type: Area Attribute specified by the command or Service Attribute of Service Code is incorrect.");
-    PrintAndLogEx(INFO, "  - A5h : Access is not allowed: Area or Service specified by the command cannot be accessed. "
-                  "The parameter specified by the command does not satisfy the conditions for success.");
-    PrintAndLogEx(INFO, "  - A6h : Illegal Service Code List: Target to be accessed, identified by Service Code List Order, specified by Block "
-                  "List Element does not exist. Or, Node specified by Node Code List does not exist.");
-    PrintAndLogEx(INFO, "  - A7h : Illegal Block List (Access Mode): Access Mode specified by Block List Element is incorrect.");
-    PrintAndLogEx(INFO, "  - A8h : Illegal Block Number Block Number (access to the specified data is inhibited): specified by Block List Element exceeds the number of Blocks assigned to Service.");
-    PrintAndLogEx(INFO, "  - A9h : Data write failure: This is the error that occurs in issuance commands.");
-    PrintAndLogEx(INFO, "  - AAh : Key-change failure: Key change failed.");
-    PrintAndLogEx(INFO, "  - ABh : Illegal Package Parity or illegal Package MAC: This is the error that occurs in issuance commands.");
-    PrintAndLogEx(INFO, "  - ACh : Illegal parameter: This is the error that occurs in issuance commands.");
-    PrintAndLogEx(INFO, "  - ADh : Service exists already: This is the error that occurs in issuance commands.");
-    PrintAndLogEx(INFO, "  - AEh : Illegal System Code: This is the error that occurs in issuance commands.");
-    PrintAndLogEx(INFO, "  - AFh : Too many simultaneous cyclic write operations: Number of simultaneous write Blocks specified by the command to Cyclic Service "
-                  "exceeds the number of Blocks assigned to Service.");
-    PrintAndLogEx(INFO, "  - C0h : Illegal Package Identifier: This is the error that occurs in issuance commands.");
-    PrintAndLogEx(INFO, "  - C1h : Discrepancy of parameters inside and outside Package: This is the error that occurs in issuance commands.");
-    PrintAndLogEx(INFO, "  - C2h : Command is disabled already: This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, _CYAN_("Status Flag 2"));
+    PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
+    PrintAndLogEx(INFO, " 00 | Indicates the successful completion of a command.");
+    PrintAndLogEx(INFO, " 01 | The calculated result is either less than zero when the purse data is decremented, or exceeds 4\n"
+                        "    | Bytes when the purse data is incremented.");
+    PrintAndLogEx(INFO, " 02 | The specified data exceeds the value of cashback data at cashback of purse.");
+    PrintAndLogEx(INFO, " 70 | Memory error (fatal error).");
+    PrintAndLogEx(INFO, " 71 | The number of memory rewrites exceeds the upper limit (this is only a warning; data writing is performed as normal).\n"
+                        "    | The maximum number of rewrites can differ, depending on the product being used.\n"
+                        "    | In addition, Status Flag1 is either 00h or FFh depending on the product being used.");
+
+    PrintAndLogEx(INFO, " A1 | Illegal Number of Service| Number of Service or Number of Node specified by the command \n"
+                        "    | falls outside the range of the prescribed value.");
+    PrintAndLogEx(INFO, " A2 | Illegal command packet (specified Number of Block) : Number of Block specified by the \n"
+                        "    | command falls outside the range of the prescribed values for the product.");
+    PrintAndLogEx(INFO, " A3 | Illegal Block List (specified order of Service) : Service Code List Order specified by \n"
+                        "    | Block List Element falls outside the Number of Service specified by the command \n"
+                        "    | (or the Number of Service specified at the times of mutual authentication).");
+    PrintAndLogEx(INFO, " A4 | Illegal Service type : Area Attribute specified by the command or Service Attribute of Service Code is incorrect.");
+    PrintAndLogEx(INFO, " A5 | Access is not allowed : Area or Service specified by the command cannot be accessed.\n"
+                        "    | The parameter specified by the command does not satisfy the conditions for success.");
+    PrintAndLogEx(INFO, " A6 | Illegal Service Code List : Target to be accessed, identified by Service Code List Order, specified by Block\n"
+                        "    | List Element does not exist. Or, Node specified by Node Code List does not exist.");
+    PrintAndLogEx(INFO, " A7 | Illegal Block List (Access Mode) : Access Mode specified by Block List Element is incorrect.");
+    PrintAndLogEx(INFO, " A8 | Illegal Block Number Block Number (access to the specified data is inhibited) :\n"
+                        "    | specified by Block List Element exceeds the number of Blocks assigned to Service.");
+    PrintAndLogEx(INFO, " A9 | Data write failure : This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, " AA | Key-change failure : Key change failed.");
+    PrintAndLogEx(INFO, " AB | Illegal Package Parity or illegal Package MAC : This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, " AC | Illegal parameter : This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, " AD | Service exists already : This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, " AE | Illegal System Code : This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, " AF | Too many simultaneous cyclic write operations : Number of simultaneous write Blocks\n"
+                        "    | specified by the command to Cyclic Service exceeds the number of Blocks assigned to Service.");
+    PrintAndLogEx(INFO, " C0 | Illegal Package Identifier : This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, " C1 | Discrepancy of parameters inside and outside Package : This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, " C2 | Command is disabled already : This is the error that occurs in issuance commands.");
+    PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
+    PrintAndLogEx(NORMAL, "");
 }
 
 static void print_block_list_element_constraints(void) {
-    PrintAndLogEx(INFO, "       - Each Block List Element shall satisfy the following conditions:");
-    PrintAndLogEx(INFO, "              - The value of Service Code List Order shall not exceed Number of Service.");
-    PrintAndLogEx(INFO, "              - Access Mode shall be 000b.");
-    PrintAndLogEx(INFO, "              - The target specified by Service Code shall not be Area or System.");
-    PrintAndLogEx(INFO, "              - Service specified in Service Code List shall exist in System.");
-    PrintAndLogEx(INFO, "              - Service Attribute of Service specified in Service Code List shall be authentication-not-required Service.");
-    PrintAndLogEx(INFO, "              - Block Number shall be in the range of the number of Blocks assigned to the specified Service.");
+    PrintAndLogEx(INFO, "    - Each Block List Element shall satisfy the following conditions:");
+    PrintAndLogEx(INFO, "        - The value of Service Code List Order shall not exceed Number of Service.");
+    PrintAndLogEx(INFO, "        - Access Mode shall be 000b.");
+    PrintAndLogEx(INFO, "        - The target specified by Service Code shall not be Area or System.");
+    PrintAndLogEx(INFO, "        - Service specified in Service Code List shall exist in System.");
+    PrintAndLogEx(INFO, "        - Service Attribute of Service specified in Service Code List shall be authentication-not-required Service.");
+    PrintAndLogEx(INFO, "        - Block Number shall be in the range of the number of Blocks assigned to the specified Service.");
 }
 
 static void print_number_of_service_constraints(void) {
-    PrintAndLogEx(INFO, "       - Number of Service: shall be a positive integer in the range of 1 to 16, inclusive.");
+    PrintAndLogEx(INFO, "    - Number of Service: shall be a positive integer in the range of 1 to 16, inclusive.");
 }
 
 static void print_number_of_block_constraints(void) {
-    PrintAndLogEx(INFO, "       - Number of Block: shall be less than or equal to the maximum number of Blocks that can be read simultaneously. \n"
-                  "The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used. Use as default 01");
+    PrintAndLogEx(INFO, "    - Number of Block: shall be less than or equal to the maximum number of Blocks that can be read simultaneously.\n"
+                  "            The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used.\n"
+                  "            Use as default 01");
 }
 
 static void print_service_code_list_constraints(void) {
-    PrintAndLogEx(INFO, "       - Service Code List: For Service Code List, only Service Code existing in the product shall be specified:");
-    PrintAndLogEx(INFO, "              - Even when Service Code exists in the product, Service Code not referenced from Block List shall not be specified to Service Code List.");
-    PrintAndLogEx(INFO, "              - For existence or nonexistence of Service in a product, please check using the Request Service (or Request Service v2) command.");
+    PrintAndLogEx(INFO, "    - Service Code List: For Service Code List, only Service Code existing in the product shall be specified:");
+    PrintAndLogEx(INFO, "        - Even when Service Code exists in the product, Service Code not referenced from Block List shall not \n"
+                        "          be specified to Service Code List.");
+    PrintAndLogEx(INFO, "        - For existence or nonexistence of Service in a product, please check using the Request Service \n"
+                        "          (or Request Service v2) command.");
 }
 
 /*
@@ -118,8 +130,6 @@ static int usage_hf_felica_sim(void) {
     return PM3_SUCCESS;
 }
 */
-
-
 
 static int usage_hf_felica_request_response(void) {
     PrintAndLogEx(NORMAL, "\nInfo: Use this command to verify the existence of a card and its Mode.");
@@ -182,21 +192,6 @@ static int usage_hf_felica_request_system_code(void) {
     PrintAndLogEx(NORMAL, "\nExamples: ");
     PrintAndLogEx(NORMAL, "  hf felica rqsyscode ");
     PrintAndLogEx(NORMAL, "  hf felica rqsyscode -i 11100910C11BC407\n\n");
-    return PM3_SUCCESS;
-}
-
-static int usage_hf_felica_reset_mode(void) {
-    PrintAndLogEx(NORMAL, "\nInfo: Use this command to reset Mode to Mode 0.");
-    print_status_flag1_interpretation();
-    print_status_flag2_interpration();
-    PrintAndLogEx(NORMAL, "\nUsage: hf felica resetmode [-h][-i][-r]");
-    PrintAndLogEx(NORMAL, "       -h    this help");
-    PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
-    PrintAndLogEx(NORMAL, "       -r    <0A0B hex> set custom reserve to use");
-    PrintAndLogEx(NORMAL, "\nExamples: ");
-    PrintAndLogEx(NORMAL, "  hf felica resetmode ");
-    PrintAndLogEx(NORMAL, "  hf felica resetmode -r 0001");
-    PrintAndLogEx(NORMAL, "  hf felica resetmode -i 11100910C11BC407\n\n");
     return PM3_SUCCESS;
 }
 
@@ -366,7 +361,9 @@ int read_felica_uid(bool loop, bool verbose) {
 
             felica_card_select_t card;
             memcpy(&card, (felica_card_select_t *)resp.data.asBytes, sizeof(felica_card_select_t));
-            PrintAndLogEx(NORMAL, "");
+            if (loop == false) {
+                PrintAndLogEx(NORMAL, "");
+            }
             PrintAndLogEx(SUCCESS, "IDm: " _GREEN_("%s"), sprint_hex_inrow(card.IDm, sizeof(card.IDm)));
             set_last_known_card(card);
         }
@@ -581,12 +578,12 @@ int send_rd_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool ver
  * @return
  */
 static bool check_last_idm(uint8_t *data, uint16_t datalen) {
-    if (!add_last_IDm(2, data)) {
-        PrintAndLogEx(ERR, "No last known card! Use reader first or set a custom IDm!");
-        return 0;
+    if (add_last_IDm(2, data) == false) {
+        PrintAndLogEx(WARNING, "No last known card! Use `" _YELLOW_("hf felica reader") "` first or set a custom IDm");
+        return false;
     } else {
-        PrintAndLogEx(INFO, "Used last known IDm. %s", sprint_hex(data, datalen));
-        return 1;
+        PrintAndLogEx(INFO, "Using last known IDm... " _GREEN_("%s"), sprint_hex_inrow(data, datalen));
+        return true;
     }
 }
 
@@ -1208,69 +1205,85 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
  * @return client result code.
  */
 static int CmdHFFelicaResetMode(const char *Cmd) {
-    uint8_t data[PM3_CMD_DATA_SIZE];
-    bool custom_IDm = false;
-    bool custom_reserve = false;
-    strip_cmds(Cmd);
-    uint16_t datalen = 12; // Length (1), Command ID (1), IDm (8), Reserved (2)
-    uint8_t paramCount = 0;
-    uint8_t flags = 0;
-    int i = 0;
-    while (Cmd[i] != '\0') {
-        if (Cmd[i] == '-') {
-            switch (tolower(Cmd[i + 1])) {
-                case 'h':
-                    return usage_hf_felica_reset_mode();
-                case 'i':
-                    paramCount++;
-                    custom_IDm = true;
-                    if (!add_param(Cmd, paramCount, data, 2, 16)) {
-                        return PM3_EINVARG;
-                    }
-                    paramCount++;
-                    i += 16;
-                    break;
-                case 'r':
-                    paramCount++;
-                    custom_reserve = true;
-                    if (!add_param(Cmd, paramCount, data, 10, 4)) {
-                        return PM3_EINVARG;
-                    }
-                    paramCount++;
-                    i += 4;
-                    break;
-                default:
-                    return usage_hf_felica_reset_mode();
-            }
-        }
-        i++;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica resetmode",
+                  "Use this command to reset Mode to Mode 0.",
+                  "hf felica resetmode\n"
+                  "hf felica resetmode -r 0001\n"
+                  "hf felica resetmode -i 11100910C11BC407 \n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0("r", NULL, "<hex>", "set custom reserve"),
+        arg_lit0("v", "verbose", "verbose helptext"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t idm[8] = {0};
+    int ilen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), idm, sizeof(idm), &ilen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
+
+    uint8_t reserved[2] = {0,0};
+    int rlen = 0;
+    res = CLIParamHexToBuf(arg_get_str(ctx, 2), reserved, sizeof(reserved), &rlen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool verbose = arg_get_lit(ctx, 3);
+    if (verbose) {
+        print_status_flag1_interpretation();
+        print_status_flag2_interpration();
+    }
+    CLIParserFree(ctx);
+
+    uint8_t data[PM3_CMD_DATA_SIZE];
     data[0] = 0x0C; // Static length
     data[1] = 0x3E; // Command ID
-    if (!custom_reserve) {
+
+    bool custom_IDm = false;
+
+    if (ilen) {
+        custom_IDm = true;
+        memcpy(data + 2, idm, 8);
+    }
+    if (rlen) {
+        memcpy(data + 10, reserved, 2);
+    } else {
         data[10] = 0x00; // Reserved Value
         data[11] = 0x00; // Reserved Value
     }
-    if (!custom_IDm && !check_last_idm(data, datalen)) {
+
+    uint16_t datalen = 12; // Length (1), Command ID (1), IDm (8), Reserved (2)
+    if (custom_IDm == false && !check_last_idm(data, datalen)) {
         return PM3_EINVARG;
     }
+
     AddCrc(data, datalen);
     datalen += 2;
-    flags |= FELICA_APPEND_CRC;
-    flags |= FELICA_RAW;
+    uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
+
     clear_and_send_command(flags, datalen, data, 0);
+
     PacketResponseNG resp;
-    if (!waitCmdFelica(0, &resp, 1)) {
+    if (waitCmdFelica(0, &resp, 1) == false) {
         PrintAndLogEx(ERR, "\nGot no response from card");
         return PM3_ERFTRANS;
     } else {
         felica_status_response_t reset_mode_response;
         memcpy(&reset_mode_response, (felica_status_response_t *)resp.data.asBytes, sizeof(felica_status_response_t));
         if (reset_mode_response.frame_response.IDm[0] != 0) {
-            PrintAndLogEx(SUCCESS, "\nGot Request Response:");
-            PrintAndLogEx(SUCCESS, "\nIDm: %s", sprint_hex(reset_mode_response.frame_response.IDm, sizeof(reset_mode_response.frame_response.IDm)));
+            PrintAndLogEx(SUCCESS, "Got Request Response:");
+            PrintAndLogEx(SUCCESS, "IDm: %s", sprint_hex(reset_mode_response.frame_response.IDm, sizeof(reset_mode_response.frame_response.IDm)));
             PrintAndLogEx(SUCCESS, "Status Flag1: %s", sprint_hex(reset_mode_response.status_flags.status_flag1, sizeof(reset_mode_response.status_flags.status_flag1)));
-            PrintAndLogEx(SUCCESS, "Status Flag2: %s\n", sprint_hex(reset_mode_response.status_flags.status_flag2, sizeof(reset_mode_response.status_flags.status_flag2)));
+            PrintAndLogEx(SUCCESS, "Status Flag2: %s", sprint_hex(reset_mode_response.status_flags.status_flag2, sizeof(reset_mode_response.status_flags.status_flag2)));
         }
     }
     return PM3_SUCCESS;
