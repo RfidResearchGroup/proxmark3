@@ -1262,7 +1262,7 @@ static int CmdHFFelicaResetMode(const char *Cmd) {
     }
 
     uint16_t datalen = 12; // Length (1), Command ID (1), IDm (8), Reserved (2)
-    if (custom_IDm == false && !check_last_idm(data, datalen)) {
+    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
         return PM3_EINVARG;
     }
 
@@ -1378,7 +1378,7 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a", "all", "auto node number mode, iterates through all possible nodes 1 < n < 32"),
+        arg_lit0("a", "all", "auto node number mode, iterates through all nodes 1 < n < 32"),
         arg_str0("n", "node", "<hex>", "Number of Node"),
         arg_str0("c", "code", "<hex>", "Node Code List (little endian)"),
         arg_str0("i", "idm", "<hex>", "use custom IDm"),
@@ -1387,50 +1387,52 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool all_nodes = arg_get_lit(ctx, 1);
 
-//    int dlen = 0;
-//    int res = 0;
+    uint8_t node[1] = {0};
+    int nlen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), node, sizeof(node), &nlen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
+    uint8_t code[2] = {0,0};
+    int clen = 0;
+    res = CLIParamHexToBuf(arg_get_str(ctx, 3), code, sizeof(code), &clen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t idm[8] = {0};
+    int ilen = 0;
+    res = CLIParamHexToBuf(arg_get_str(ctx, 4), idm, sizeof(idm), &ilen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
     CLIParserFree(ctx);
 
     uint8_t data[PM3_CMD_DATA_SIZE];
     bool custom_IDm = false;
-    uint16_t datalen = 13; // length (1) + CMD (1) + IDm(8) + Node Number (1) + Node Code List (2)
 
-    /*
-        case 'i':
+    if (ilen) {
+        custom_IDm = true;
+        memcpy(data + 2, idm, 8);
+    }
 
-            custom_IDm = true;
-            if (!add_param(Cmd, paramCount, data, 2, 16)) {
-                return PM3_EINVARG;
-            }
-
-
-        if (!all_nodes) {
-            // Node Number
-            if (param_getlength(Cmd, paramCount) == 2) {
-
-                if (param_gethex(Cmd, paramCount++, data + 10, 2) == 1) {
-                    PrintAndLogEx(ERR, "Failed param key");
-                    return PM3_EINVARG;
-                }
-
-            } else {
-                PrintAndLogEx(ERR, "Incorrect Node number length!");
-                return PM3_EINVARG;
-            }
+    if (all_nodes == false) {
+        // Node Number
+        if (nlen == 1) {
+            memcpy(data + 10, node, sizeof(node)); 
         }
 
-        if (param_getlength(Cmd, paramCount) == 4) {
-
-            if (param_gethex(Cmd, paramCount++, data + 11, 4) == 1) {
-                PrintAndLogEx(ERR, "Failed param key");
-                return PM3_EINVARG;
-            }
-        } else {
-            PrintAndLogEx(ERR, "Incorrect parameter length!");
-            return PM3_EINVARG;
+        // code 
+        if (clen == 2) {
+            memcpy(data + 11, code, sizeof(code));
         }
-    */
+    }
+
+    uint8_t datalen = 13; // length (1) + CMD (1) + IDm(8) + Node Number (1) + Node Code List (2)
 
     uint8_t flags = FELICA_APPEND_CRC;
     if (custom_IDm) {
@@ -1440,20 +1442,22 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     if (datalen > 0) {
         flags |= FELICA_RAW;
     }
-
-// Todo activate once datalen isn't hardcoded anymore...
-    if (!custom_IDm && !check_last_idm(data, datalen)) {
+    // Todo activate once datalen isn't hardcoded anymore...
+    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
         return PM3_EINVARG;
     }
 
     data[0] = (datalen & 0xFF);
     data[1] = 0x02; // Service Request Command ID
     if (all_nodes) {
+
+        // send 32 calls
         for (uint8_t i = 1; i < 32; i++) {
             data[10] = i;
             AddCrc(data, datalen);
             send_request_service(flags, datalen + 2, data, 1);
         }
+
     } else {
         AddCrc(data, datalen);
         send_request_service(flags, datalen + 2, data, 1);
