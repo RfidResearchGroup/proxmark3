@@ -860,7 +860,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
         } else if (cmd == ICLASS_CMD_DETECT) { // 0x0F
             // not supported yet, ignore
-        } else if (cmd == 0x26 && len == 5) {
+//        } else if (cmd == 0x26 && len == 5) {
             // standard ISO15693 INVENTORY command. Ignore.
         } else {
             // Never seen this command before
@@ -1021,7 +1021,7 @@ int do_iclass_simulation_nonsec(void) {
 
     bool button_pressed = false;
     uint8_t cmd, options, block;
-    int len = 0;
+    int len;
 
     bool exit_loop = false;
     while (exit_loop == false) {
@@ -1213,7 +1213,7 @@ int do_iclass_simulation_nonsec(void) {
             goto send;
 
 //            } else if(cmd == ICLASS_CMD_DETECT) {  // 0x0F
-        } else if (cmd == 0x26 && len == 5) {
+//        } else if (cmd == 0x26 && len == 5) {
             // standard ISO15693 INVENTORY command. Ignore.
         } else {
             // Never seen this command before

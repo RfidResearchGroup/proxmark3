@@ -2107,7 +2107,7 @@ void T55xx_ChkPwds(uint8_t flags) {
 
 #endif
 
-    uint64_t curr = 0, prev = 0;
+    uint64_t curr, prev = 0;
     int32_t idx = -1;
 
     for (uint32_t i = 0; i < pwd_count; i++) {

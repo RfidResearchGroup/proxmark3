@@ -430,7 +430,7 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
                         break;
                     // Append MAC
                     size_t bla = maced_data_length(DESFIRE(tag)->session_key, *nbytes - offset) + offset;
-                    bla++;
+                    (void)bla++;
 
                     memcpy(res + *nbytes, mac, 4);
 
@@ -443,7 +443,7 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
 
                     if (append_mac) {
                         size_t len = maced_data_length(key, *nbytes);
-                        ++len;
+                        (void)++len;
                         memcpy(res, data, *nbytes);
                         memcpy(res + *nbytes, DESFIRE(tag)->cmac, CMAC_LENGTH);
                         *nbytes += CMAC_LENGTH;
