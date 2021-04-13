@@ -17,6 +17,6 @@
 int CmdHFFelica(const char *Cmd);
 int read_felica_uid(bool loop, bool verbose);
 int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose);
-int send_rd_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_read_without_encryption_response_t *rd_noCry_resp);
+int send_rd_plain(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_read_without_encryption_response_t *rd_noCry_resp);
 
 #endif
