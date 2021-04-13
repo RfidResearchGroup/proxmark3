@@ -53,7 +53,7 @@ With generic Proxmark3 platforms we mean:
   - VX
   - numerous Chinese adapted versions of the RDV3 easy (kkmoon, pisworks etc)
 
-> ⚠ **Note**: *Ryscorp green PCB version, Pm3 Pro* has different and unknown hardware components and therefore is not supported.
+> ⚠ **Note**: *Ryscorp green PCB version, Pm3 Pro* has different fpga and unknown pin assignments and therefore is not supported.
 
 > ⚠ **Note**: About flash memory size of other Proxmark3 platforms. You need to keep a eye on how large your ARM chip built-in flash memory is. With 512kb you are fine but if its 256kb you need to compile this repo with even less functionality.  When running the `./pm3-flash-all` you can see which size your device have if you have the bootloader from this repo installed. Otherwise you will find the size reported in the start message when running the Proxmark3 client `./pm3`.
 
@@ -62,25 +62,25 @@ With generic Proxmark3 platforms we mean:
 Proxmark3 RDV4 hardware modifications:
   * added flash memory 256kb
   * added smart card module
-  * added FPC connector
+  * added FPC connector for peripherals such as Bluetooth+battery addon
   * improved antennas
     * swappable
     * LF Q factor switch
-    * LF 125/134 freqency switch
+    * LF 125/134 frequency switch
   * tiny PCB form factor
   * ABS case
 
 This repo vs official Proxmark3 repo:
-see the [Changelog file](CHANGELOG.md) which we try to keep updated. In short this repo gives you an complete different user experience when it comes to Proxmark3.
+see the [Changelog file](CHANGELOG.md) which we try to keep updated. In short this repo gives you a completely different user experience when it comes to Proxmark3.
   * richer CLI with use of colors / emojis
   * help text system implemented everywhere
   * hints system
   * user preference settings
-  * extensive testing with continues built systems and static analyse tools like 
-    * [coverity scan](https://scan.coverity.com/projects/proxmark3-rrg-iceman-repo/)
-    * cppchecker
-    * CLANG
-  * auto detection of serial ports and seamless intergration with bluetooth addon
+  * extensive testing with continuous integration build systems on Linux, OSX and Windows, and regular usage of static analysis tools like 
+    * [Coverity Scan](https://scan.coverity.com/projects/proxmark3-rrg-iceman-repo/)
+    * Cppcheck
+    * GCC and Clang aggressive enforcement of diagnostic flags
+  * auto detection of serial ports and seamless integration with Bluetooth addon
   * reconnect to device 
 
 
@@ -108,7 +108,7 @@ This repo compiles nicely on
 
 
 ## Precompiled binaries
-We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where package maintainer [@gator96100](https://github.com/gator96100) has set up a AWS bucket with precompiled Proxspace (Mingw) binaries which is recompiled every night and with that also up-to-date. We link to these files here as to make it easier for users. If you are having troubles with these files, we suggest to read the [homepage of his proxmark builds](https://www.proxmarkbuilds.org/) or read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) 
+We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where package maintainer [@gator96100](https://github.com/gator96100) has set up a AWS bucket with precompiled Proxspace (Mingw) binaries which are recompiled every night and with that also up-to-date. We link to these files here as to make it easier for users. If you are having troubles with these files, we suggest to read the [homepage of his proxmark builds](https://www.proxmarkbuilds.org/) or read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) 
 
 ### Proxmark3 RDV4 devices
 - [Precompiled builds for RDV40 dedicated x64](https://www.proxmarkbuilds.org/#rdv40-64/)
