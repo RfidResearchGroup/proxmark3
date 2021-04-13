@@ -506,8 +506,9 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     }
 
     // validate user specified bitrate
-    uint8_t rates[9] = {8, 16, 32, 40, 50, 64, 100, 128, 0};
+
     if (bitrate != -1) {
+        uint8_t rates[9] = {8, 16, 32, 40, 50, 64, 100, 128, 0};
         uint8_t i = 0;
         for (; i < ARRAYLEN(rates); i++) {
             if (rates[i] == bitrate) {
@@ -921,10 +922,7 @@ static int CmdT55xxDetect(const char *Cmd) {
     else // This will set the default to user all d/l modes which will cover the ra flag as well.
         try_all_dl_modes = true;
 
-
-    bool try_with_pwd = false;
     bool found = false;
-    bool usewake = false;
 
     // Setup the 90ms time value to sleep for after the wake, to allow delay init to complete (~70ms)
     struct timespec sleepperiod;
@@ -943,6 +941,8 @@ static int CmdT55xxDetect(const char *Cmd) {
         char wakecmd[20] = { 0x00 };
         sprintf(wakecmd, "-p %08" PRIx64, password);
 
+        bool usewake = false;
+        bool try_with_pwd = false;
         // do ... while not found and not yet tried with wake (for AOR or Init Delay)
         do {
             // do ... while to check without password then loop back if password supplied
