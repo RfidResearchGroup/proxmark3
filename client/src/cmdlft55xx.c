@@ -2302,13 +2302,13 @@ static int CmdT55xxDump(const char *Cmd) {
 static int CmdT55xxRestore(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf t55xx restore",
-                  "This command restores T55xx card page 0/1 n blocks",
+                  "Restore T55xx card page 0/1 n blocks from (bin/eml/json) dump file",
                   "lf t55xx restore -f lf-t55xx-00148040-dump.bin"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "filename", "<fn>", "filename of the dump file (bin|eml)"),
+        arg_str0("f", "file", "<fn>", "filename of dump file"),
         arg_str0("p", "pwd", "<hex>", "password if target card has password set (4 hex bytes)"),
         arg_param_end
     };
@@ -2336,94 +2336,104 @@ static int CmdT55xxRestore(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    char ext[FILE_PATH_SIZE] = {0};
-    uint32_t data[12] = {0};
-    size_t datalen = 0;
+    size_t dlen = 0;  
+    uint8_t *dump = calloc(T55x7_BLOCK_COUNT * 4, sizeof(uint8_t));
+    if (dump == NULL) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
 
-    int retval = PM3_ESOFT;
-    if (fnlen > 4) { // Holds extension [.bin|.eml]
-        memcpy(ext, &filename[fnlen - 4], 4);
-        ext[5] = 0x00;
-
-        //  check if valid file extension and attempt to load data
-        if (memcmp(ext, ".bin", 4) == 0) {
-            filename[fnlen - 4] = 0x00;
-            retval = loadFile(filename, ".bin", data, sizeof(data), &datalen);
-
-        } else if (memcmp(ext, ".eml", 4) == 0) {
-            filename[fnlen - 4] = 0x00;
-            datalen = 12;
-            retval = loadFileEML(filename, (uint8_t *)data, &datalen);
-
-        } else {
-            PrintAndLogEx(WARNING, "\nWarning: invalid dump filename "_YELLOW_("%s")" to restore!\n", filename);
+    DumpFileType_t dftype = getfiletype(filename);
+    switch (dftype) {
+        case BIN: {
+            res = loadFile_safe(filename, ".bin", (void **)&dump, &dlen);
+            break;
+        }
+        case EML: {
+            res = loadFileEML_safe(filename, (void **)&dump, &dlen);
+            break;
+        }
+        case JSON: {
+            res = loadFileJSON(filename, dump, T55x7_BLOCK_COUNT * 4, &dlen, NULL);
+            break;
+        }
+        case DICTIONARY: {
+            PrintAndLogEx(ERR, "Error: Only BIN/EML/JSON formats allowed");
+            free(dump);
+            return PM3_EINVARG;
         }
     }
 
-    if (retval != PM3_SUCCESS) {
-        return retval;
+    //sanity checks of file processing
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
-    if (datalen == T55x7_BLOCK_COUNT * 4) {
-        // 12 blocks * 4 bytes per block
+    if (dlen != T55x7_BLOCK_COUNT * 4) {
+        free(dump);
+        PrintAndLogEx(FAILED, "wrong length of dump file. Expected 48 bytes, got %zu", dlen);
+        return PM3_EFILE;
+    }
 
-        // this fct creats strings to call "lf t55 write" command.
-        //
-        //
-        uint8_t downlink_mode;
-        char wcmd[100];
-        char pwdopt [14] = {0}; // p XXXXXXXX
+    // 12 blocks * 4 bytes per block
+    // this part creates strings to call "lf t55 write" command.
+    PrintAndLogEx(INFO, "Starting to write...");
 
-        if (usepwd)
-            snprintf(pwdopt, sizeof(pwdopt), "-p %08X", password);
+    uint8_t downlink_mode;
+    char wcmd[100];
+    char pwdopt [14] = {0}; // p XXXXXXXX
 
-        uint8_t idx;
-        // Restore endien for writing to card
-        for (idx = 0; idx < 12; idx++) {
-            data[idx] = BSWAP_32(data[idx]);
-        }
+    if (usepwd)
+        snprintf(pwdopt, sizeof(pwdopt), "-p %08X", password);
 
-        // Have data ready, lets write
-        // Order
-        //    write blocks 1..7 page 0
-        //    write blocks 1..3 page 1
-        //    update downlink mode (if needed) and write b 0
-        downlink_mode = 0;
-        if ((((data[11] >> 28) & 0xf) == 6) || (((data[11] >> 28) & 0xf) == 9))
-            downlink_mode = (data[11] >> 10) & 3;
+    uint32_t *data = (uint32_t*) dump;
+    uint8_t idx;
+    // Restore endien for writing to card
+    for (idx = 0; idx < 12; idx++) {
+        data[idx] = BSWAP_32(data[idx]);
+    }
 
-        // write out blocks 1-7 page 0
-        for (idx = 1; idx <= 7; idx++) {
-            snprintf(wcmd, sizeof(wcmd), "-b %d -d %08X %s", idx, data[idx], pwdopt);
+    // Have data ready, lets write
+    // Order
+    //    write blocks 1..7 page 0
+    //    write blocks 1..3 page 1
+    //    update downlink mode (if needed) and write b 0
+    downlink_mode = 0;
+    if ((((data[11] >> 28) & 0xf) == 6) || (((data[11] >> 28) & 0xf) == 9))
+        downlink_mode = (data[11] >> 10) & 3;
 
-            if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
-                PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
-            }
-        }
+    // write out blocks 1-7 page 0
+    for (idx = 1; idx <= 7; idx++) {
+        snprintf(wcmd, sizeof(wcmd), "-b %d -d %08X %s", idx, data[idx], pwdopt);
 
-        // if password was set on the "blank" update as we may have just changed it
-        if (usepwd) {
-            snprintf(pwdopt, sizeof(pwdopt), "-p %08X", data[7]);
-        }
-
-        // write out blocks 1-3 page 1
-        for (idx = 9; idx <= 11; idx++) {
-            snprintf(wcmd, sizeof(wcmd), "-b %d --pg1 -d %08X %s", idx - 8, data[idx], pwdopt);
-
-            if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
-                PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
-            }
-        }
-
-        // Update downlink mode for the page 0 config write.
-        config.downlink_mode = downlink_mode;
-
-        // Write the page 0 config
-        snprintf(wcmd, sizeof(wcmd), "-b 0 -d %08X %s", data[0], pwdopt);
         if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Warning: error writing blk 0");
+            PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
         }
     }
+
+    // if password was set on the "blank" update as we may have just changed it
+    if (usepwd) {
+        snprintf(pwdopt, sizeof(pwdopt), "-p %08X", data[7]);
+    }
+
+    // write out blocks 1-3 page 1
+    for (idx = 9; idx <= 11; idx++) {
+        snprintf(wcmd, sizeof(wcmd), "-b %d --pg1 -d %08X %s", idx - 8, data[idx], pwdopt);
+
+        if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
+        }
+    }
+
+    // Update downlink mode for the page 0 config write.
+    config.downlink_mode = downlink_mode;
+
+    // Write the page 0 config
+    snprintf(wcmd, sizeof(wcmd), "-b 0 -d %08X %s", data[0], pwdopt);
+    if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Warning: error writing blk 0");
+    }
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 /*
@@ -2546,7 +2556,7 @@ char *GetBitRateStr(uint32_t id, bool xmode) {
 
     char *retStr = buf;
     if (xmode) { //xmode bitrate calc is same as em4x05 calc
-        snprintf(retStr, sizeof(buf), "%u - RF/%d", id, EM4x05_GET_BITRATE(id));
+        snprintf(retStr, sizeof(buf), "%u - RF/%u", id, EM4x05_GET_BITRATE(id));
     } else {
         switch (id) {
             case 0:
@@ -3012,7 +3022,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     void *argtable[4 + 6] = {
         arg_param_begin,
         arg_lit0("m", "fm", "use dictionary from flash memory (RDV4)"),
-        arg_str0("f", "file", "<filename>", "file name"),
+        arg_str0("f", "file", "<fn>", "file name"),
         arg_str0(NULL, "em", "<hex>", "EM4100 ID (5 hex bytes)"),
     };
     uint8_t idx = 4;
@@ -3937,6 +3947,15 @@ static int CmdT55xxSniff(const char *Cmd) {
     int opt_width0 = arg_get_int_def(ctx, 4, -1);
     CLIParserFree(ctx);
 
+    if (opt_width0 == 0) {
+        PrintAndLogEx(ERR, "Must call with --zero larger than 0");
+        return PM3_EINVARG;
+    }
+    if ((opt_width0 == 0) || (opt_width1 == 0)) {
+        PrintAndLogEx(ERR, "Must call with --one larger than 0");
+        return PM3_EINVARG;
+    }
+
     if (opt_width0 > 0  && opt_width1 == -1) {
         PrintAndLogEx(ERR, _RED_("Missing sample width for ONE"));
         return PM3_EINVARG;
@@ -3944,15 +3963,6 @@ static int CmdT55xxSniff(const char *Cmd) {
 
     if (opt_width1 > 0 && opt_width0 == -1) {
         PrintAndLogEx(ERR, _RED_("Missing sample width for ZERO"));
-        return PM3_EINVARG;
-    }
-
-    if (opt_width0 == 0) {
-        PrintAndLogEx(ERR, "Must call with --zero larger than 0");
-        return PM3_EINVARG;
-    }
-    if ((opt_width0 == 0) || (opt_width1 == 0)) {
-        PrintAndLogEx(ERR, "Must call with --one larger than 0");
         return PM3_EINVARG;
     }
 
@@ -3993,18 +4003,13 @@ static int CmdT55xxSniff(const char *Cmd) {
                                                              00 01 10 11
     */
 
-    bool have_data = false;
     uint8_t page, blockAddr;
-    uint16_t dataLen = 0;
     size_t idx = 0;
     uint32_t usedPassword, blockData;
-    int pulseSamples = 0;
-    int pulseIdx = 0;
-    int minWidth = 1000;
-    int maxWidth = 0;
-    char modeText [100];
-    char pwdText  [100];
-    char dataText [100];
+    int pulseSamples = 0, pulseIdx = 0;
+    char modeText[100];
+    char pwdText[100];
+    char dataText[100];
     int pulseBuffer[80] = { 0 }; // max should be 73 +/- - Holds Pulse widths
     char data[80]; //  linked to pulseBuffer. - Holds 0/1 from pulse widths
 
@@ -4024,11 +4029,11 @@ static int CmdT55xxSniff(const char *Cmd) {
     // loop though sample buffer
     while (idx < GraphTraceLen) {
 
-        minWidth = 1000;
-        maxWidth = 0;
-        dataLen = 0;
+        int minWidth = 1000;
+        int maxWidth = 0;
+        uint16_t dataLen = 0;
         data[0] = 0;
-        have_data = false;
+        bool have_data = false;
         sprintf(modeText, "Default");
         sprintf(pwdText, " ");
         sprintf(dataText, " ");
@@ -4110,7 +4115,6 @@ static int CmdT55xxSniff(const char *Cmd) {
                 //           printf ("Fixed | Data end of 80 samples | offset : %llu - datalen %-2d - data : %s  --- - Bit 0 width : %d\n",idx,dataLen,data,pulseBuffer[0]);
 
                 if (data[0] == '0') { // should never get here..
-                    dataLen = 0;
                     data[0] = 0;
                 } else {
 
