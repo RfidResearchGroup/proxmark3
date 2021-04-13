@@ -2366,6 +2366,7 @@ static int CmdT55xxRestore(const char *Cmd) {
 
     //sanity checks of file processing
     if (res != PM3_SUCCESS) {
+        free(dump);
         return res;
     }
 
