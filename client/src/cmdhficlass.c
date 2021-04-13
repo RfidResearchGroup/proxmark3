@@ -255,11 +255,10 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
             iclass_last_known_card.conf.app_limit = 0x16;
             tot_bytes = (app1_limit + 1) * 8;
 
-            uint8_t *p;
-            p = realloc(data, tot_bytes);
+            uint8_t *p = realloc(data, tot_bytes);
             if (p == NULL) {
                 PrintAndLogEx(FAILED, "failed to allocate memory");
-                free(data);
+                //free(data);
                 return PM3_EMALLOC;
             }
             data = p;
@@ -1155,7 +1154,6 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     bool verbose = arg_get_lit(clictx, 4);
     CLIParserFree(clictx);
 
-    uint8_t dec_data[8] = {0};
     bool use_sc = false;
     if (have_key == false) {
         use_sc = IsCardHelperPresent(verbose);
@@ -1180,6 +1178,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     // tripledes
     mbedtls_des3_context ctx;
     mbedtls_des3_set2key_dec(&ctx, key);
+
+    uint8_t dec_data[8] = {0};
 
     if (have_data) {
 
@@ -3735,9 +3735,9 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
 
     int ccidx = arg_get_int_def(ctx, 1, -1);
     int kidx = arg_get_int_def(ctx, 2, -1);
-    bool generate = arg_get_lit(ctx, 3);
-    bool load = arg_get_lit(ctx, 4);
-    bool print = arg_get_lit(ctx, 5);
+    bool do_generate = arg_get_lit(ctx, 3);
+    bool do_load = arg_get_lit(ctx, 4);
+    bool do_print = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     bool got_kr = false;
@@ -3753,13 +3753,13 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
         }
     }
 
-    if (load) {
+    if (do_load) {
         if (load_config_cards() != PM3_SUCCESS) {
             PrintAndLogEx(INFO, "failed to load, check your cardhelper");
         }
     }
 
-    if (print) {
+    if (do_print) {
         print_config_cards();
     }
 
@@ -3768,7 +3768,7 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
         print_config_card(item);
     }
 
-    if (generate) {
+    if (do_generate) {
         const iclass_config_card_item_t *item = get_config_card_item(ccidx);
         if (strstr(item->desc, "Keyroll") != NULL) {
             if (got_kr == false) {
