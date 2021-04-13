@@ -131,29 +131,6 @@ static int usage_hf_felica_sim(void) {
 }
 */
 
-static int usage_hf_felica_read_without_encryption(void) {
-    PrintAndLogEx(NORMAL, "\nInfo: Use this command to read Block Data from authentication-not-required Service.");
-    PrintAndLogEx(NORMAL, "       - Mode shall be Mode0.");
-    print_number_of_service_constraints();
-    print_number_of_block_constraints();
-    print_service_code_list_constraints();
-    print_block_list_element_constraints();
-    PrintAndLogEx(NORMAL, "       - Successful read: Card responses the block data");
-    PrintAndLogEx(NORMAL, "       - Unsuccessful read: Card responses with Status Flag1 and Flag2");
-    print_status_flag1_interpretation();
-    print_status_flag2_interpration();
-    PrintAndLogEx(NORMAL, "\nUsage: hf felica rdunencrypted [-h] <01 Number of Service hex> <0A0B Service Code List (Little Endian) hex> <01 Number of Block hex> <0A0B Block List Element hex>");
-    PrintAndLogEx(NORMAL, "       -h    this help");
-    PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
-    PrintAndLogEx(NORMAL, "       -b    get all Block List Elements starting from 00 to FF - stops when a block return an error status flags");
-    PrintAndLogEx(NORMAL, "       -l    use 3-byte block list element block number");
-    PrintAndLogEx(NORMAL, "\nExamples: ");
-    PrintAndLogEx(NORMAL, "  hf felica rdunencrypted 01 8B00 01 8000");
-    PrintAndLogEx(NORMAL, "  hf felica rdunencrypted -i 01100910c11bc407 01 8B00 01 8000");
-    PrintAndLogEx(NORMAL, "  hf felica rdunencrypted -b 01 4B18 01 8000\n\n");
-    return PM3_SUCCESS;
-}
-
 static int usage_hf_felica_write_without_encryption(void) {
     PrintAndLogEx(NORMAL, "\nInfo: Use this command to write Block Data to authentication-not-required Service.");
     PrintAndLogEx(NORMAL, "       - Mode shall be Mode0.");
@@ -471,11 +448,11 @@ static void print_rd_noEncrpytion_response(felica_read_without_encryption_respon
         temp = sprint_hex(rd_noCry_resp->block_element_number, sizeof(rd_noCry_resp->block_element_number));
         strncpy(bl_element_number, temp, sizeof(bl_element_number) - 1);
 
-        PrintAndLogEx(INFO, "\t%s\t|  %s  ", bl_element_number, bl_data);
+        PrintAndLogEx(INFO, " %s | %s  ", bl_element_number, bl_data);
     } else {
-        PrintAndLogEx(SUCCESS, "IDm: %s", sprint_hex_inrow(rd_noCry_resp->frame_response.IDm, sizeof(rd_noCry_resp->frame_response.IDm)));
-        PrintAndLogEx(SUCCESS, "  Status flag 1: %s", sprint_hex(rd_noCry_resp->status_flags.status_flag1, sizeof(rd_noCry_resp->status_flags.status_flag1)));
-        PrintAndLogEx(SUCCESS, "  Status flag 2: %s", sprint_hex(rd_noCry_resp->status_flags.status_flag1, sizeof(rd_noCry_resp->status_flags.status_flag1)));
+        PrintAndLogEx(SUCCESS, "IDm... %s", sprint_hex_inrow(rd_noCry_resp->frame_response.IDm, sizeof(rd_noCry_resp->frame_response.IDm)));
+        PrintAndLogEx(SUCCESS, "  Status flag 1... %s", sprint_hex(rd_noCry_resp->status_flags.status_flag1, sizeof(rd_noCry_resp->status_flags.status_flag1)));
+        PrintAndLogEx(SUCCESS, "  Status flag 2... %s", sprint_hex(rd_noCry_resp->status_flags.status_flag1, sizeof(rd_noCry_resp->status_flags.status_flag1)));
     }
 }
 
@@ -914,80 +891,139 @@ static int CmdHFFelicaWriteWithoutEncryption(const char *Cmd) {
  * @return client result code.
  */
 static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
-    if (strlen(Cmd) < 4)
-        return usage_hf_felica_read_without_encryption();
-    uint8_t data[PM3_CMD_DATA_SIZE];
-    bool custom_IDm = false;
-    strip_cmds(Cmd);
-    uint16_t datalen = 16; // Length (1), Command ID (1), IDm (8), Number of Service (1), Service Code List(2), Number of Block(1), Block List(3)
-    uint8_t paramCount = 0;
-    uint8_t flags = 0;
-    uint8_t all_block_list_elements = false;
-    uint8_t long_block_numbers = false;
-    int i = 0;
-    while (Cmd[i] != '\0') {
-        if (Cmd[i] == '-') {
-            switch (tolower(Cmd[i + 1])) {
-                case 'h':
-                    return usage_hf_felica_read_without_encryption();
-                case 'i':
-                    paramCount++;
-                    custom_IDm = true;
-                    if (!add_param(Cmd, paramCount, data, 2, 16)) {
-                        return PM3_EINVARG;
-                    }
-                    paramCount++;
-                    i += 16;
-                    break;
-                case 'b':
-                    paramCount++;
-                    all_block_list_elements = true;
-                    break;
-                case 'l':
-                    paramCount++;
-                    long_block_numbers = true;
-                    break;
-                default:
-                    return usage_hf_felica_read_without_encryption();
-            }
-        }
-        i++;
-    }
-    data[0] = 0x10; // Static length
-    data[1] = 0x06; // Command ID
-    if (!custom_IDm && !check_last_idm(data, datalen)) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica rdunencrypted",
+                  "Use this command to read block data from authentication-not-required Service.\n\n"
+                  " - Mode shall be Mode0.\n"
+                  " - Successful == block data\n"
+                  " - Unsuccessful == Status Flag1 and Flag2",
+                  "hf felica rdunencrypted --sn 01 --scl 8B00 --bn 01 --ble 8000\n"
+                  "hf felica rdunencrypted --sn 01 --scl 4B18 --bn 01 --ble 8000 -b\n"
+                  "hf felica rdunencrypted -i 01100910c11bc407 --sn 01 --scl 8B00 --bn 01 --ble 8000\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("b", NULL, "get all block list elements 00 -> FF"),
+        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_lit0("l", "long", "use 3 byte block list element block number"),
+        arg_str0(NULL, "sn",  "<hex>", "number of service"),
+        arg_str0(NULL, "scl", "<hex>", "service code list"),
+        arg_str0(NULL, "bn",  "<hex>", "number of block"),
+        arg_str0(NULL, "ble", "<hex>", "block list element (def 2|3 bytes)"),
+        arg_lit0("v", "verbose", "verbose helptext"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool all_block_list_elements = arg_get_lit(ctx, 1);
+
+    uint8_t idm[8] = {0};
+    int ilen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), idm, sizeof(idm), &ilen);
+    if (res) {
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    // Number of Service 2, Service Code List 4, Number of Block 2, Block List Element 4
-    uint8_t lengths[] = {2, 4, 2, 4};
-    uint8_t dataPositions[] = {10, 11, 13, 14};
-    if (long_block_numbers) {
-        datalen += 1;
-        lengths[3] = 6;
-    }
-    for (i = 0; i < 4; i++) {
-        if (add_param(Cmd, paramCount, data, dataPositions[i], lengths[i])) {
-            paramCount++;
-        } else {
-            return PM3_EINVARG;
-        }
+
+    uint8_t long_block_numbers = arg_get_lit(ctx, 3);
+
+    uint8_t sn[1] = {0};
+    int snlen = 0;
+    res = CLIParamHexToBuf(arg_get_str(ctx, 4), sn, sizeof(sn), &snlen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
 
-    flags |= FELICA_APPEND_CRC;
-    flags |= FELICA_RAW;
+    uint8_t scl[2] = {0};
+    int scllen = 0;
+    res = CLIParamHexToBuf(arg_get_str(ctx, 5), scl, sizeof(scl), &scllen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t bn[1] = {0};
+    int bnlen = 0;
+    res = CLIParamHexToBuf(arg_get_str(ctx, 6), bn, sizeof(bn), &bnlen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t ble[3] = {0};
+    int blelen = 0;
+    res = CLIParamHexToBuf(arg_get_str(ctx, 7), ble, sizeof(ble), &blelen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool verbose = arg_get_lit(ctx, 8);
+    CLIParserFree(ctx);
+    if (verbose) {
+        print_number_of_service_constraints();
+        print_number_of_block_constraints();
+        print_service_code_list_constraints();
+        print_block_list_element_constraints();
+        print_status_flag1_interpretation();
+        print_status_flag2_interpration();
+        return PM3_SUCCESS;
+    }
+
+    uint8_t data[PM3_CMD_DATA_SIZE];
+    data[0] = 0x10; // Static length
+    data[1] = 0x06; // Command ID
+
+    bool custom_IDm = false;
+    if (ilen) {
+        custom_IDm = true;
+        memcpy(data + 2, idm, sizeof(idm));
+    }
+
+    uint16_t datalen = 16; // Length (1), Command ID (1), IDm (8), Number of Service (1), Service Code List(2), Number of Block(1), Block List(3)
+    if (custom_IDm  == false && check_last_idm(data, datalen) == false) {
+        return PM3_EINVARG;
+    }
+
+    if (long_block_numbers) {
+        datalen++;
+    }
+
+    // Number of Service 1, Service Code List 2, Number of Block 1, Block List Element 2|3
+    if (snlen) {
+        data[10] = sn[0];
+    }
+    if (scllen) {
+        data[11] = scl[0];
+        data[12] = scl[1];
+    }
+    if (bnlen) {
+        data[13] = bn[0];
+    }
+    if (blelen)
+        memcpy(data + 14, ble, blelen);
+
+    uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
+
+    PrintAndLogEx(INFO, "block | data  ");
+    PrintAndLogEx(INFO, "------+----------------------------------------");
+    
+    // main loop block reads
     if (all_block_list_elements) {
-        uint16_t last_block_number = 0xFF;
+
+        uint16_t last_blockno = 0xFF;
         if (long_block_numbers) {
-            last_block_number = 0xFFFF;
+            last_blockno = 0xFFFF;
         }
-        PrintAndLogEx(INFO, "Block Nr.\t|  Data  ");
-        for (i = 0x00; i < last_block_number; i++) {
+
+        for (uint16_t i = 0x00; i < last_blockno; i++) {
             data[15] = i;
             AddCrc(data, datalen);
             datalen += 2;
             felica_read_without_encryption_response_t rd_noCry_resp;
             if ((send_rd_unencrypted(flags, datalen, data, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
-                if (rd_noCry_resp.status_flags.status_flag1[0] == 00 && rd_noCry_resp.status_flags.status_flag2[0] == 00) {
+                if (rd_noCry_resp.status_flags.status_flag1[0] == 0 && rd_noCry_resp.status_flags.status_flag2[0] == 0) {
                     print_rd_noEncrpytion_response(&rd_noCry_resp);
                 }
             } else {
@@ -1000,7 +1036,6 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
         datalen += 2;
         felica_read_without_encryption_response_t rd_noCry_resp;
         if (send_rd_unencrypted(flags, datalen, data, 1, &rd_noCry_resp) == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Block Nr.\t|  Data  ");
             print_rd_noEncrpytion_response(&rd_noCry_resp);
         }
     }
@@ -1467,8 +1502,17 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
 }
 
 static int CmdHFFelicaNotImplementedYet(const char *Cmd) {
-    PrintAndLogEx(INFO, "Feature not implemented yet.");
-    PrintAndLogEx(INFO, "Feel free to contribute!");
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica scsvcode",
+                  "Feature not implemented yet.  Feel free to contribute!",
+                  "hf felica scsvcode"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIParserFree(ctx);
     return PM3_SUCCESS;
 }
 
