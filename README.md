@@ -98,8 +98,8 @@ The [public roadmap](https://github.com/RfidResearchGroup/proxmark3/wiki/Public-
 This repo compiles nicely on 
    - WSL1 on Windows 10
    - Proxspace v3.9 [release v3.9](https://github.com/Gator96100/ProxSpace/releases)
-   - Windows/mingw environment
-   - Ubuntu, ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora, Debian, Rasbian
+   - Windows/MinGW environment
+   - Ubuntu, ParrotOS, Gentoo, Pentoo, Kali, NetHunter, Arch Linux, Fedora, Debian, Raspbian
    - Android / Termux
    - Mac OS X / Homebrew / Apple Silicon M1
    - Docker container
@@ -108,7 +108,7 @@ This repo compiles nicely on
 
 
 ## Precompiled binaries
-We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where package maintainer [@gator96100](https://github.com/gator96100) has set up a AWS bucket with precompiled Proxspace (Mingw) binaries which are recompiled every night and with that also up-to-date. We link to these files here as to make it easier for users. If you are having troubles with these files, we suggest to read the [homepage of his proxmark builds](https://www.proxmarkbuilds.org/) or read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) 
+We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where package maintainer [@gator96100](https://github.com/gator96100) has set up a AWS bucket with precompiled Proxspace (MinGW) binaries which are recompiled every night and with that also up-to-date. We link to these files here as to make it easier for users. If you are having troubles with these files, we suggest to read the [homepage of his proxmark builds](https://www.proxmarkbuilds.org/) or read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) 
 
 ### Proxmark3 RDV4 devices
 - [Precompiled builds for RDV40 dedicated x64](https://www.proxmarkbuilds.org/#rdv40-64/)
@@ -118,7 +118,7 @@ We don't maintain any precompiled binaries in this repo. There is community effo
 - [Precompiled builds for RRG / Iceman repository x64](https://www.proxmarkbuilds.org/#rrg_other-64/)
 
 
-## Offical channels
+## Official channels
 Where do you find the community?
    - [RFID Hacking community discord server](https://discord.gg/QfPvGFRQxH)
    - [Proxmark3 IRC channel](http://webchat.freenode.net/?channels=#proxmark3)
@@ -139,7 +139,7 @@ The official PM3-GUI from Gaucho will not work. Not to mention is quite old and 
 
 - [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) will work more or less.
 
-- [Proxmark3 GUI crosscompiled](https://github.com/wh201906/Proxmark3GUI/) which is recently updated and claims to support latest source of this repo.
+- [Proxmark3 GUI cross-compiled](https://github.com/wh201906/Proxmark3GUI/) which is recently updated and claims to support latest source of this repo.
 
 
 # Donations
