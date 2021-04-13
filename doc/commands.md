@@ -266,8 +266,8 @@ Check column "offline" for their availability.
 |`hf felica info         `|N       |`Tag information`
 |`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
 |`hf felica raw          `|N       |`Send raw hex data to tag`
-|`hf felica rdunencrypted`|N       |`read Block Data from authentication-not-required Service.`
-|`hf felica wrunencrypted`|N       |`write Block Data to an authentication-not-required Service.`
+|`hf felica rdbl         `|N       |`read block data from authentication-not-required Service.`
+|`hf felica wrbl         `|N       |`write block data to an authentication-not-required Service.`
 |`hf felica rqservice    `|N       |`verify the existence of Area and Service, and to acquire Key Version.`
 |`hf felica rqresponse   `|N       |`verify the existence of a card and its Mode.`
 |`hf felica scsvcode     `|N       |`acquire Area Code and Service Code.`
