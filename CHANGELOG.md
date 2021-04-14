@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change `lf t55xx restore` - now also support JSON (@iceman1001)
+ - Change `hf mf csetuid` - adapted to accept 7byte uids. ~untested~  (@iceman1001)
+ - Added `hf mf view/eload/cload` - now accepts bin/eml/json  (@iceman1001)
+ - Added `hf mf eload/cload' - now accepts bin/eml/json  (@iceman1001)
  - Fix RESTORE mis-annotation (@VortixDev)
  - Changed `smart raw` - now uses NG (@iceman1001)
  - Added `hf iclass configcard` - now can download / generate config card dumps with a cardhelper [WIP] (@iceman1001)
