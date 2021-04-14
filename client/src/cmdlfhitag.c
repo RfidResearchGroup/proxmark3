@@ -693,11 +693,11 @@ static int CmdLFHitagWriter(const char *Cmd) {
                   "In password mode the default key is 4D494B52 (MIKR)\n"
                   "In crypto mode the default key is 4F4E4D494B52 (ONMIKR)  format: ISK high + ISK low.",
                   "Hitag S\n"
-                  "  lf hitag reader --03 --nrar 0102030411223344 -p 3 -d 01020304\n"
-                  "  lf hitag reader --04 -k 4F4E4D494B52 -p 3 -d 01020304\n"
+                  "  lf hitag writer --03 --nrar 0102030411223344 -p 3 -d 01020304\n"
+                  "  lf hitag writer --04 -k 4F4E4D494B52 -p 3 -d 01020304\n"
                   "Hitag 2\n"
-                  "  lf hitag reader --24 -k 4F4E4D494B52 -p 3 -d 01020304\n"
-                  "  lf hitag reader --27 -k 4D494B52 -p 3 -d 01020304\n"
+                  "  lf hitag writer --24 -k 4F4E4D494B52 -p 3 -d 01020304\n"
+                  "  lf hitag writer --27 -k 4D494B52 -p 3 -d 01020304\n"
                 );
 
     void *argtable[] = {
@@ -709,7 +709,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
         arg_int1("p", "page", "<dec>", "page address to write to"),
         arg_str0("d", "data", "<hex>", "data, 4 hex bytes"),
         arg_str0("k","key", "<hex>", "key, 4 or 6 hex bytes"),
-        arg_str0(NULL,"nrar", "<hex>", "nonce / answer reader, 8 hex bytes"),
+        arg_str0(NULL,"nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -963,5 +963,5 @@ int CmdLFHitag(const char *Cmd) {
 }
 
 int readHitagUid(void) {
-    return (CmdLFHitagReader("26") == PM3_SUCCESS);
+    return (CmdLFHitagReader("--26") == PM3_SUCCESS);
 }
