@@ -98,7 +98,19 @@ see the [Changelog file](CHANGELOG.md) which we try to keep updated. In short th
     * Cppcheck
     * GCC and Clang aggressive enforcement of diagnostic flags
   * auto detection of serial ports and seamless integration with Bluetooth addon
-  * reconnect to device 
+  * reconnect to device from inside client
+  * the most comprehensive compiled known keys dictionaries
+  * Slimed down usb communications with NG-frames
+  * the most compiled public known key recovery software
+  * the fastest implementations of said software
+  * support multiple fileformats for dump files (BIN/EML/JSON) 
+  * interoperability of said fileformats with libnfc, MFC tool app etc
+  * Supports more RFID based protocols than ever
+  * Easy install for package maintainers, distro maintainers
+  * More documentation 
+
+  
+All of this and more is what makes this repo different from any other Proxmark3 firmware / client software. It is truely bleeding edge in that sense of available functionality and experience with it. With all extensive testing its also quite more stable than any other Proxmark3 repo.
 
 
 ## Development
