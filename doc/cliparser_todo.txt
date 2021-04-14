@@ -7,5 +7,3 @@ hf 15 restore
 hf 15 wrbl
 hf 15 writeafi
 hf 15 writedsfid
-hf felica auth1
-hf felica auth2

@@ -131,55 +131,40 @@ static int usage_hf_felica_sim(void) {
 }
 */
 
-static int usage_hf_felica_authentication1(void) {
-    PrintAndLogEx(NORMAL, "\nInfo: Initiate mutual authentication. This command must always be executed before Authentication2 command"
-                  ", and mutual authentication is achieve only after Authentication2 command has succeeded.");
-    PrintAndLogEx(NORMAL, "  - Auth1 Parameters:");
-    PrintAndLogEx(NORMAL, "    - Number of Areas n: 1-byte (1 <= n <= 8)");
-    PrintAndLogEx(NORMAL, "    - Area Code List: 2n byte");
-    PrintAndLogEx(NORMAL, "    - Number of Services m: 1-byte (1 <= n <= 8)");
-    PrintAndLogEx(NORMAL, "    - Service Code List: 2n byte");
-    PrintAndLogEx(NORMAL, "    - 3DES-Key: 128-bit master secret used for the encryption");
-    PrintAndLogEx(NORMAL, "    - M1c: Encrypted random number - challenge for tag authentication (8-byte)");
-    PrintAndLogEx(NORMAL, "  - Response:");
-    PrintAndLogEx(NORMAL, "    - Response Code: 11h 1-byte");
-    PrintAndLogEx(NORMAL, "    - Manufacture ID(IDm): 8-byte");
-    PrintAndLogEx(NORMAL, "    - M2c: 8-byte");
-    PrintAndLogEx(NORMAL, "    - M3c: 8-byte");
-    PrintAndLogEx(NORMAL, "  - Success: Card Mode switches to Mode1. You can check this with the request response command.");
-    PrintAndLogEx(NORMAL, "  - Unsuccessful: Card should not respond at all.");
-
-    PrintAndLogEx(NORMAL, "\nUsage: hf felica auth1 [-h][-i] <01 Number of Areas hex> <0A0B... Area Code List hex> <01 Number of Services hex> <0A0B... Service Code List hex> <0x0102030405060809... 3DES-key hex (16-byte)>");
-    PrintAndLogEx(NORMAL, "       -h    this help");
-    PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
-    PrintAndLogEx(NORMAL, "\nExamples: ");
-    PrintAndLogEx(NORMAL, "  hf felica auth1 01 0000 01 8B00 AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB ");
-    PrintAndLogEx(NORMAL, "  hf felica auth1 01 0000 01 8B00 AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBAAAAAAAAAAAAAAAA ");
-    PrintAndLogEx(NORMAL, "  hf felica auth1 -i 11100910C11BC407 01 0000 01 8B00 AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n\n");
+static int print_authentication1(void) {
+    PrintAndLogEx(INFO, "Initiate mutual authentication. This command must always be executed before Auth2 command");
+    PrintAndLogEx(INFO, "and mutual authentication is achieve only after Auth2 command has succeeded.");
+    PrintAndLogEx(INFO, "  - Auth1 Parameters:");
+    PrintAndLogEx(INFO, "    - Number of Areas n: 1-byte (1 <= n <= 8)");
+    PrintAndLogEx(INFO, "    - Area Code List: 2n byte");
+    PrintAndLogEx(INFO, "    - Number of Services m: 1-byte (1 <= n <= 8)");
+    PrintAndLogEx(INFO, "    - Service Code List: 2n byte");
+    PrintAndLogEx(INFO, "    - 3DES-Key: 128-bit master secret used for the encryption");
+    PrintAndLogEx(INFO, "    - M1c: Encrypted random number - challenge for tag authentication (8-byte)");
+    PrintAndLogEx(INFO, "  - Response:");
+    PrintAndLogEx(INFO, "    - Response Code: 11h 1-byte");
+    PrintAndLogEx(INFO, "    - Manufacture ID(IDm): 8-byte");
+    PrintAndLogEx(INFO, "    - M2c: 8-byte");
+    PrintAndLogEx(INFO, "    - M3c: 8-byte");
+    PrintAndLogEx(INFO, "  - Success: Card Mode switches to Mode1. You can check this with the request response command.");
+    PrintAndLogEx(INFO, "  - Unsuccessful: Card should not respond at all.");
     return PM3_SUCCESS;
 }
 
-static int usage_hf_felica_authentication2(void) {
-    PrintAndLogEx(NORMAL, "\nInfo: Complete mutual authentication. This command can only be executed subsquent to Authentication1"
-                  " command.");
-    PrintAndLogEx(NORMAL, "  - Auth2 Parameters:");
-    PrintAndLogEx(NORMAL, "    - Manufacturer IDm: (8-byte)");
-    PrintAndLogEx(NORMAL, "    - M3c: card challenge (8-byte)");
-    PrintAndLogEx(NORMAL, "    - 3DES Key: key used for decryption of M3c (16-byte)");
-    PrintAndLogEx(NORMAL, "  - Response (encrypted):");
-    PrintAndLogEx(NORMAL, "    - Response Code: 13h (1-byte)");
-    PrintAndLogEx(NORMAL, "    - IDtc:  (8-byte)");
-    PrintAndLogEx(NORMAL, "    - IDi (encrypted):  (8-byte)");
-    PrintAndLogEx(NORMAL, "    - PMi (encrypted):  (8-byte)");
-    PrintAndLogEx(NORMAL, "  - Success: Card switches to mode2 and sends response frame.");
-    PrintAndLogEx(NORMAL, "  - Unsuccessful: Card should not respond at all.");
-    PrintAndLogEx(NORMAL, "\nUsage: hf felica auth2 [-h][-i] <0102030405060708 M3c hex> <0x0102030405060809... 3DES-key hex (16-byte)>");
-    PrintAndLogEx(NORMAL, "       -h    this help");
-    PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
-    PrintAndLogEx(NORMAL, "\nExamples: ");
-    PrintAndLogEx(NORMAL, "  hf felica auth2 0102030405060708 AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB");
-    PrintAndLogEx(NORMAL, "  hf felica auth2 -i 11100910C11BC407 0102030405060708 AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n\n");
-
+static int print_authentication2(void) {
+    PrintAndLogEx(INFO, "Complete mutual authentication.");
+    PrintAndLogEx(INFO, "This command can only be executed subsquent to Auth1 command.");
+    PrintAndLogEx(INFO, "  - Auth2 Parameters:");
+    PrintAndLogEx(INFO, "    - Manufacturer IDm: (8-byte)");
+    PrintAndLogEx(INFO, "    - M3c: card challenge (8-byte)");
+    PrintAndLogEx(INFO, "    - 3DES Key: key used for decryption of M3c (16-byte)");
+    PrintAndLogEx(INFO, "  - Response (encrypted):");
+    PrintAndLogEx(INFO, "    - Response Code: 13h (1-byte)");
+    PrintAndLogEx(INFO, "    - IDtc:  (8-byte)");
+    PrintAndLogEx(INFO, "    - IDi (encrypted):  (8-byte)");
+    PrintAndLogEx(INFO, "    - PMi (encrypted):  (8-byte)");
+    PrintAndLogEx(INFO, "  - Success: Card switches to mode2 and sends response frame.");
+    PrintAndLogEx(INFO, "  - Unsuccessful: Card should not respond at all.");
     return PM3_SUCCESS;
 }
 
@@ -213,14 +198,6 @@ static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp, bool verbose)
     return false;
 }
 
-/*
- * Counts and sets the number of parameters.
- */
-static void strip_cmds(const char *Cmd) {
-    while (*Cmd == ' ' || *Cmd == '\t') {
-        Cmd++;
-    }
-}
 
 /**
  * Adds the last known IDm (8-Byte) to the data frame.
@@ -387,30 +364,6 @@ static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *dat
 }
 
 /**
- * Adds a parameter to the frame and checks if the parameter has the specific length.
- * @param Cmd User input with the parameter.
- * @param paramCount number of the parameter within the user input.
- * @param data frame in which the data is stored.
- * @param dataPosition position within frame where the data will be stored.
- * @param length which the parameter should have and will be tested against.
- * @return true if parameters was added.
- */
-static bool add_param(const char *Cmd, uint8_t paramCount, uint8_t *data, uint8_t dataPosition, uint8_t length) {
-    if (param_getlength(Cmd, paramCount) == length) {
-
-        if (param_gethex(Cmd, paramCount, data + dataPosition, length) == 1)
-            return false;
-        else
-            return true;
-
-    } else {
-        PrintAndLogEx(ERR, "Param %s", Cmd);
-        PrintAndLogEx(ERR, "Incorrect Parameter length! Param %i should be %i", paramCount, length);
-        return false;
-    }
-}
-
-/**
  * Prints read-without-encryption response.
  * @param rd_noCry_resp Response frame.
  */
@@ -538,144 +491,211 @@ static void reverse_3des_key(uint8_t *master_key, int length, uint8_t *reverse_m
  * @return client result code.
  */
 static int CmdHFFelicaAuthentication1(const char *Cmd) {
-    if (strlen(Cmd) < 4) {
-        return usage_hf_felica_authentication1();
-    }
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica auth1",
+            "Initiate mutual authentication. This command must always be executed before Auth2 command\n"
+            "and mutual authentication is achieve only after Auth2 command has succeeded.\n"
+            _RED_("INCOMPLETE / EXPERIMENTAL COMMAND!!!"),
+            "hf felica auth1 --an 01 --acl 0000 --sn 01 --scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
+            "hf felica auth1 --an 01 --acl 0000 --sn 01 --scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBAAAAAAAAAAAAAAAA\n"
+            "hf felica auth1 -i 11100910C11BC407 --an 01 --acl 0000 --sn 01 ..scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
+        );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "an",  "<hex>", "number of areas, 1 byte"),
+        arg_str0(NULL, "acl", "<hex>", "area code list, 2 bytes"),
+        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0(NULL, "sn",  "<hex>", "number of service, 1 byte"),
+        arg_str0(NULL, "scl", "<hex>", "service code list, 2 bytes"),
+        arg_str0("k", "key",  "<hex>", "3des key, 16 bytes"),
+        arg_lit0("v", "verbose", "verbose helptext"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    PrintAndLogEx(INFO, "INCOMPLETE / EXPERIMENTAL COMMAND!!!");
-    uint8_t data[PM3_CMD_DATA_SIZE];
-    memset(data, 0 , sizeof(data));
-
-    bool custom_IDm = false;
-    strip_cmds(Cmd);
-    uint16_t datalen = 24; // Length (1), Command ID (1), IDm (8), Number of Area (1), Area Code List (2), Number of Service (1), Service Code List (2), M1c (8)
-    uint8_t paramCount = 0;
-    uint8_t flags = 0;
-    int i = 0;
-    while (Cmd[i] != '\0') {
-        if (Cmd[i] == '-') {
-            switch (tolower(Cmd[i + 1])) {
-                case 'h':
-                    return usage_hf_felica_authentication1();
-                case 'i':
-                    paramCount++;
-                    custom_IDm = true;
-                    if (!add_param(Cmd, paramCount, data, 2, 16)) {
-                        return PM3_EINVARG;
-                    }
-                    paramCount++;
-                    i += 16;
-                    break;
-                default:
-                    return usage_hf_felica_authentication1();
-            }
-        }
-        i++;
-    }
-    data[0] = (datalen & 0xFF);
-    data[1] = 0x10; // Command ID
-    if (!custom_IDm && !check_last_idm(data, datalen)) {
+    uint8_t an[1] = {0};
+    int anlen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), an, sizeof(an), &anlen);
+    if (res) {
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    // Number of Area (1), Area Code List (2), Number of Service (1), Service Code List (2), M1c (8)
-    uint8_t lengths[] = {2, 4, 2, 4};
-    uint8_t dataPositions[] = {10, 11, 13, 14};
-    for (i = 0; i < 4; i++) {
-        if (add_param(Cmd, paramCount, data, dataPositions[i], lengths[i])) {
-            paramCount++;
-        } else {
-            return PM3_EINVARG;
-        }
+
+    uint8_t acl[2] = {0};
+    int acllen = 0;
+    res = CLIParamHexToBuf(arg_get_str(ctx, 2), acl, sizeof(acl), &acllen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t idm[8] = {0};
+    int ilen = 0;
+    res = CLIParamHexToBuf(arg_get_str(ctx, 3), idm, sizeof(idm), &ilen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t sn[1] = {0};
+    int snlen = 0;
+    res = CLIParamHexToBuf(arg_get_str(ctx, 4), sn, sizeof(sn), &snlen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t scl[2] = {0};
+    int scllen = 0;
+    res = CLIParamHexToBuf(arg_get_str(ctx, 5), scl, sizeof(scl), &scllen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t key[24] = {0};
+    int keylen = 0;
+    res = CLIParamHexToBuf(arg_get_str(ctx, 6), key, sizeof(key), &keylen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool verbose = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+    if (verbose) {
+        print_authentication1();
+        return PM3_SUCCESS;
+    }
+
+    uint8_t data[PM3_CMD_DATA_SIZE];
+    memset(data, 0 , sizeof(data));
+    data[0] = 0x0C; // Static length
+    data[1] = 0x3E; // Command ID
+
+    bool custom_IDm = false;
+
+    if (ilen) {
+        custom_IDm = true;
+        memcpy(data + 2, idm, 8);
+    }
+
+     // Length (1),
+     // Command ID (1), 
+     // IDm (8), 
+     // Number of Area (1),
+     // Area Code List (2), 
+     // Number of Service (1), 
+     // Service Code List (2),
+     // M1c (16)
+    uint16_t datalen = 32;
+    data[0] = (datalen & 0xFF);
+    data[1] = 0x10; // Command ID
+
+    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
+        return PM3_EINVARG;
+    }
+
+    if (anlen) {
+        data[10] = an[0]; 
+    }
+    if (acllen) {
+        data[11] = acl[0];
+        data[12] = acl[1];
+    }
+    if (snlen) {
+        data[13] = sn[0];      
+    }
+    if (scllen) {
+        data[14] = scl[0];
+        data[15] = scl[1];
+    }
+    if (keylen) {
+        memcpy(data + 16, key, keylen);
     }
 
     // READER CHALLENGE - (RANDOM To Encrypt = Rac)
-    unsigned char input[8];
-    input[0] = 0x1;
-    input[1] = 0x2;
-    input[2] = 0x3;
-    input[3] = 0x4;
-    input[4] = 0x5;
-    input[5] = 0x6;
-    input[6] = 0x7;
-    input[7] = 0x8;
-    PrintAndLogEx(INFO, "Reader challenge (unencrypted): %s", sprint_hex(input, 8));
-    unsigned char output[8];
+    uint8_t nonce[8] = {1,2,3,4,5,6,7,8};
+    PrintAndLogEx(INFO, "Reader challenge (unencrypted): %s", sprint_hex(nonce, 8));
+
     // Create M1c Challenge with 3DES (3 Keys = 24, 2 Keys = 16)
-    uint8_t master_key[PM3_CMD_DATA_SIZE];
+    uint8_t master_key[24];
     mbedtls_des3_context des3_ctx;
     mbedtls_des3_init(&des3_ctx);
-    if (param_getlength(Cmd, paramCount) == 48) {
-        if (param_gethex(Cmd, paramCount, master_key, 48) == 1) {
-            PrintAndLogEx(ERR, "Failed param key");
-            return PM3_EINVARG;
-        }
-        mbedtls_des3_set3key_enc(&des3_ctx, master_key);
-        PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, 24));
-    } else if (param_getlength(Cmd, paramCount) == 32) {
 
-        if (param_gethex(Cmd, paramCount, master_key, 32) == 1) {
-            PrintAndLogEx(ERR, "Failed param key");
-            return PM3_EINVARG;
-        }
+    if (keylen == 24) {
+       
+        mbedtls_des3_set3key_enc(&des3_ctx, master_key);
+        PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, keylen));
+
+    } else if (keylen == 16) {
 
         // Assumption: Master secret split in half for Kac, Kbc
         mbedtls_des3_set2key_enc(&des3_ctx, master_key);
-        PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, 16));
+        PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, keylen));
     } else {
         PrintAndLogEx(ERR, "Invalid key length");
+        mbedtls_des3_free(&des3_ctx);
         return PM3_EINVARG;
     }
 
-    mbedtls_des3_crypt_ecb(&des3_ctx, input, output);
-    PrintAndLogEx(INFO, "3DES ENCRYPTED M1c: %s", sprint_hex(output, 8));
+    uint8_t output[8];
+    mbedtls_des3_crypt_ecb(&des3_ctx, nonce, output);
+    mbedtls_des3_free(&des3_ctx);
+
+    PrintAndLogEx(INFO, "3DES ENCRYPTED M1c: %s", sprint_hex(output, sizeof(output)));
+
     // Add M1c Challenge to frame
-    int frame_position = 16;
-    for (i = 0; i < 8; i++) {
-        data[frame_position++] = output[i];
-    }
+    memcpy(data + 16, output, sizeof(output));
 
     AddCrc(data, datalen);
     datalen += 2;
-    flags |= FELICA_APPEND_CRC;
-    flags |= FELICA_RAW;
+    uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
 
-    PrintAndLogEx(INFO, "Client Send AUTH1 Frame: %s", sprint_hex(data, datalen));
+    PrintAndLogEx(INFO, "Client send AUTH1 frame: %s", sprint_hex(data, datalen));
     clear_and_send_command(flags, datalen, data, 0);
 
     PacketResponseNG resp;
-    if (!waitCmdFelica(0, &resp, 1)) {
-        PrintAndLogEx(ERR, "\nGot no Response from card");
+    if (waitCmdFelica(0, &resp, 1) == false) {
+        PrintAndLogEx(ERR, "no response from card");
         return PM3_ERFTRANS;
-    } else {
-        felica_auth1_response_t auth1_response;
-        memcpy(&auth1_response, (felica_auth1_response_t *)resp.data.asBytes, sizeof(felica_auth1_response_t));
-        if (auth1_response.frame_response.IDm[0] != 0) {
-            PrintAndLogEx(SUCCESS, "\nGot auth1 response:");
-            PrintAndLogEx(SUCCESS, "IDm: %s", sprint_hex(auth1_response.frame_response.IDm, sizeof(auth1_response.frame_response.IDm)));
-            PrintAndLogEx(SUCCESS, "M2C: %s", sprint_hex(auth1_response.m2c, sizeof(auth1_response.m2c)));
-            PrintAndLogEx(SUCCESS, "M3C: %s", sprint_hex(auth1_response.m3c, sizeof(auth1_response.m3c)));
-            // Assumption: Key swap method used
-            uint8_t reverse_master_key[PM3_CMD_DATA_SIZE];
-            reverse_3des_key(master_key, 16, reverse_master_key);
-            mbedtls_des3_set2key_dec(&des3_ctx, reverse_master_key);
-            bool isKeyCorrect = false;
-            unsigned char p2c[8];
-            mbedtls_des3_crypt_ecb(&des3_ctx, auth1_response.m2c, p2c);
-            for (i = 0; i < 8; i++) {
-                if (p2c[i] != input[i]) {
-                    isKeyCorrect = false;
-                    break;
-                } else {
-                    isKeyCorrect = true;
-                }
-            }
-            if (isKeyCorrect) {
-                PrintAndLogEx(SUCCESS, "\nAuth1 done with correct key material! Use Auth2 now with M3C and same key");
+    } 
+    
+    felica_auth1_response_t auth1_response;
+    memcpy(&auth1_response, (felica_auth1_response_t *)resp.data.asBytes, sizeof(felica_auth1_response_t));
+
+    if (auth1_response.frame_response.IDm[0]) {
+        PrintAndLogEx(SUCCESS, "Auth1 response:");
+        PrintAndLogEx(SUCCESS, "IDm... %s", sprint_hex(auth1_response.frame_response.IDm, sizeof(auth1_response.frame_response.IDm)));
+        PrintAndLogEx(SUCCESS, "M2C... %s", sprint_hex(auth1_response.m2c, sizeof(auth1_response.m2c)));
+        PrintAndLogEx(SUCCESS, "M3C... %s", sprint_hex(auth1_response.m3c, sizeof(auth1_response.m3c)));
+
+        // Assumption: Key swap method used
+        uint8_t rev_master_key[PM3_CMD_DATA_SIZE];
+        reverse_3des_key(master_key, 16, rev_master_key);
+        mbedtls_des3_set2key_dec(&des3_ctx, rev_master_key);
+
+        bool is_key_correct = false;
+        unsigned char p2c[8];
+        mbedtls_des3_crypt_ecb(&des3_ctx, auth1_response.m2c, p2c);
+
+        for (uint8_t i = 0; i < 8; i++) {
+            if (p2c[i] != nonce[i]) {
+                is_key_correct = false;
+                break;
             } else {
-                PrintAndLogEx(INFO, "3DES secret (swapped decryption): %s", sprint_hex(reverse_master_key, 16));
-                PrintAndLogEx(INFO, "P2c: %s", sprint_hex(p2c, 8));
-                PrintAndLogEx(ERR, "Can't decrypt M2C with master secret (P1c != P2c)! Probably wrong keys or wrong decryption method");
+                is_key_correct = true;
             }
+        }
+
+        if (is_key_correct) {
+            PrintAndLogEx(SUCCESS, "Auth1 done with correct key material!");
+            PrintAndLogEx(SUCCESS, "Use Auth2 now with M3C and same key");
+        } else {
+            PrintAndLogEx(INFO, "3DES secret (swapped decryption): %s", sprint_hex(rev_master_key, 16));
+            PrintAndLogEx(INFO, "P2c: %s", sprint_hex(p2c, 8));
+            PrintAndLogEx(ERR, "Can't decrypt M2C with master secret (P1c != P2c)!");
+            PrintAndLogEx(ERR, "Probably wrong keys or wrong decryption method");
         }
     }
     return PM3_SUCCESS;
@@ -687,115 +707,158 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
  * @return client result code.
  */
 static int CmdHFFelicaAuthentication2(const char *Cmd) {
-    if (strlen(Cmd) < 2) {
-        return usage_hf_felica_authentication2();
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica auth2",
+            "Complete mutual authentication. This command can only be executed subsquent to Auth1\n"
+            _RED_("INCOMPLETE / EXPERIMENTAL COMMAND!!!\n")
+            _RED_("EXPERIMENTAL COMMAND - M2c/P2c will be not checked"),
+            "hf felica auth2 --cc 0102030405060708 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
+            "hf felica auth2 -i 11100910C11BC407 --cc 0102030405060708 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
+        );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0("c", "cc", "<hex>", "M3c card challenge, 8 bytes"),
+        arg_str0("k", "key",  "<hex>", "3des M3c decryption key, 16 bytes"),
+        arg_lit0("v", "verbose", "verbose helptext"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t idm[8] = {0};
+    int ilen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), idm, sizeof(idm), &ilen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
-    PrintAndLogEx(INFO, "INCOMPLETE / EXPERIMENTAL COMMAND!!!");
-    PrintAndLogEx(INFO, "EXPERIMENTAL COMMAND - M2c/P2c will be not checked");
+
+    uint8_t cc[1] = {0};
+    int cclen = 0;
+    res = CLIParamHexToBuf(arg_get_str(ctx, 2), cc, sizeof(cc), &cclen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t key[16] = {0};
+    int keylen = 0;
+    res = CLIParamHexToBuf(arg_get_str(ctx, 3), key, sizeof(key), &keylen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool verbose = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+    if (verbose) {
+        print_authentication2();
+        return PM3_SUCCESS;
+    }
+
     uint8_t data[PM3_CMD_DATA_SIZE];
     memset(data, 0 , sizeof(data));
 
     bool custom_IDm = false;
-    strip_cmds(Cmd);
+
+    if (ilen) {
+        custom_IDm = true;
+        memcpy(data + 2, idm, 8);
+    }
+
     uint16_t datalen = 18; // Length (1), Command ID (1), IDm (8), M4c (8)
-    uint8_t paramCount = 0;
-    uint8_t flags = 0;
-    int i = 0;
-    while (Cmd[i] != '\0') {
-        if (Cmd[i] == '-') {
-            switch (tolower(Cmd[i + 1])) {
-                case 'h':
-                    return usage_hf_felica_authentication2();
-                case 'i':
-                    paramCount++;
-                    custom_IDm = true;
-                    if (!add_param(Cmd, paramCount, data, 2, 16)) {
-                        return PM3_EINVARG;
-                    }
-                    paramCount++;
-                    i += 16;
-                    break;
-                default:
-                    return usage_hf_felica_authentication1();
-            }
-        }
-        i++;
-    }
-
     data[0] = (datalen & 0xFF);
-
     data[1] = 0x12; // Command ID
-    if (!custom_IDm && !check_last_idm(data, datalen)) {
+
+    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
         return PM3_EINVARG;
     }
 
-    // M3c (8)
-    unsigned char m3c[8];
-    if (add_param(Cmd, paramCount, m3c, 0, 16)) {
-        paramCount++;
-    } else {
+    if (cclen) {
+        memcpy(data + 16, cc, cclen);            
+    }
+
+    if (keylen) {
+        memcpy(data + 16, key, keylen);
+    }
+
+
+    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
         return PM3_EINVARG;
     }
 
-    // Create M4c challenge response with 3DES
-    uint8_t master_key[PM3_CMD_DATA_SIZE];
-    uint8_t reverse_master_key[PM3_CMD_DATA_SIZE];
-    mbedtls_des3_context des3_ctx;
-    mbedtls_des3_init(&des3_ctx);
-    unsigned char p3c[8];
-    if (param_getlength(Cmd, paramCount) == 32) {
+    // M3c (8) == cc
+//    unsigned char m3c[8];  == cc
 
-        if (param_gethex(Cmd, paramCount, master_key, 32) == 1) {
-            PrintAndLogEx(ERR, "Failed param key");
-            return PM3_EINVARG;
-        }
-        reverse_3des_key(master_key, 16, reverse_master_key);
-        mbedtls_des3_set2key_dec(&des3_ctx, reverse_master_key);
-        mbedtls_des3_set2key_enc(&des3_ctx, master_key);
+  
+    mbedtls_des3_context des3_ctx_enc;
+    mbedtls_des3_context des3_ctx_dec;
+
+    mbedtls_des3_init(&des3_ctx_enc);
+    mbedtls_des3_init(&des3_ctx_dec);
+
+    if (keylen == 16) {
+
+        // set encryption context
+        mbedtls_des3_set2key_enc(&des3_ctx_enc, key);
+
+        // Create M4c challenge response with 3DES
+        uint8_t rev_key[16];
+        reverse_3des_key(key, sizeof(key), rev_key);
+
+        // set decryption context
+        mbedtls_des3_set2key_dec(&des3_ctx_dec, rev_key);
+
         // Assumption: Key swap method used for E2
-        PrintAndLogEx(INFO, "3DES Master Secret (encryption): %s", sprint_hex(master_key, 16));
-        PrintAndLogEx(INFO, "3DES Master Secret (decryption): %s", sprint_hex(reverse_master_key, 16));
+        PrintAndLogEx(INFO, "3DES Master Secret (encryption)... %s", sprint_hex_inrow(key, sizeof(key)));
+        PrintAndLogEx(INFO, "3DES Master Secret (decryption)... %s", sprint_hex_inrow(rev_key, sizeof(rev_key)));
     } else {
         PrintAndLogEx(ERR, "Invalid key length");
+        mbedtls_des3_free(&des3_ctx_enc);
+        mbedtls_des3_free(&des3_ctx_dec);
         return PM3_EINVARG;
     }
+
     // Decrypt m3c with reverse_master_key
-    mbedtls_des3_crypt_ecb(&des3_ctx, m3c, p3c);
-    PrintAndLogEx(INFO, "3DES decrypted M3c = P3c: %s", sprint_hex(p3c, 8));
+    unsigned char p3c[8];
+    mbedtls_des3_crypt_ecb(&des3_ctx_dec, cc, p3c);
+    PrintAndLogEx(INFO, "3DES decrypted M3c = P3c... %s", sprint_hex_inrow(p3c, sizeof(p3c)));
+    
     // Encrypt p3c with master_key
     unsigned char m4c[8];
-    mbedtls_des3_crypt_ecb(&des3_ctx, p3c, m4c);
-    PrintAndLogEx(INFO, "3DES encrypted M4c: %s", sprint_hex(m4c, 8));
+    mbedtls_des3_crypt_ecb(&des3_ctx_enc, p3c, m4c);
+    PrintAndLogEx(INFO, "3DES encrypted M4c......... %s", sprint_hex_inrow(m4c, sizeof(m4c)));
+
+    // free contexts
+    mbedtls_des3_free(&des3_ctx_enc);
+    mbedtls_des3_free(&des3_ctx_dec);
 
     // Add M4c Challenge to frame
-    int frame_position = 10;
-    for (i = 0; i < 8; i++) {
-        data[frame_position++] = m4c[i];
-    }
+    memcpy(data + 10, m4c, sizeof(m4c));
 
     AddCrc(data, datalen);
     datalen += 2;
-    flags |= FELICA_APPEND_CRC;
-    flags |= FELICA_RAW;
+    uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
 
     PrintAndLogEx(INFO, "Client Send AUTH2 Frame: %s", sprint_hex(data, datalen));
     clear_and_send_command(flags, datalen, data, 0);
 
     PacketResponseNG resp;
-    if (!waitCmdFelica(0, &resp, 1)) {
-        PrintAndLogEx(ERR, "\nGot no response from card");
+    if (waitCmdFelica(0, &resp, 1) == false) {
+        PrintAndLogEx(ERR, "no response from card");
         return PM3_ERFTRANS;
+    } 
+
+    felica_auth2_response_t auth2_response;
+    memcpy(&auth2_response, (felica_auth2_response_t *)resp.data.asBytes, sizeof(felica_auth2_response_t));
+    if (auth2_response.code[0] != 0x12) {
+        PrintAndLogEx(SUCCESS, "Auth2 response:");
+        PrintAndLogEx(SUCCESS, "IDtc.............. %s", sprint_hex(auth2_response.IDtc, sizeof(auth2_response.IDtc)));
+        PrintAndLogEx(SUCCESS, "IDi (encrypted)... %s", sprint_hex(auth2_response.IDi, sizeof(auth2_response.IDi)));
+        PrintAndLogEx(SUCCESS, "PMi (encrypted)... %s", sprint_hex(auth2_response.PMi, sizeof(auth2_response.PMi)));
     } else {
-        felica_auth2_response_t auth2_response;
-        memcpy(&auth2_response, (felica_auth2_response_t *)resp.data.asBytes, sizeof(felica_auth2_response_t));
-        if (auth2_response.code[0] != 0x12) {
-            PrintAndLogEx(SUCCESS, "\nGot auth2 response:");
-            PrintAndLogEx(SUCCESS, "IDtc: %s", sprint_hex(auth2_response.IDtc, sizeof(auth2_response.IDtc)));
-            PrintAndLogEx(SUCCESS, "IDi (encrypted): %s", sprint_hex(auth2_response.IDi, sizeof(auth2_response.IDi)));
-            PrintAndLogEx(SUCCESS, "PMi (encrypted): %s", sprint_hex(auth2_response.PMi, sizeof(auth2_response.PMi)));
-        } else {
-            PrintAndLogEx(ERR, "\nGot wrong frame format.");
-        }
+        PrintAndLogEx(ERR, "Got wrong frame format");
     }
     return PM3_SUCCESS;
 }
