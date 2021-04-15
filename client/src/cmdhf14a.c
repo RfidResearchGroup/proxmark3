@@ -412,7 +412,7 @@ static int CmdHF14AReader(const char *Cmd) {
         arg_lit0("s", "silent", "silent (no messages)"),
         arg_lit0(NULL, "drop", "just drop the signal field"),
         arg_lit0(NULL, "skip", "ISO14443-3 select only (skip RATS)"),
-        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_lit0("@", NULL, "continuous reader mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
