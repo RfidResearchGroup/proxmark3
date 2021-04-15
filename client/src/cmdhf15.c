@@ -1726,10 +1726,15 @@ static int CmdHF15Readmulti(const char *Cmd) {
     PrintAndLogEx(INFO, "---------+--------------+---+----------");
 
     for (int i = start; i < stop; i += 5) {
-        PrintAndLogEx(INFO, "%3d/0x%02X | %s | %d | %s", currblock, currblock, sprint_hex(data + i + 1, 4), data[i], sprint_ascii(data + i + 1, 4));
+        char lck[16] = {0};
+        if (data[i]) {
+            sprintf(lck, _RED_("%d"), data[i]);
+        } else {
+            sprintf(lck, "%d", data[i]);
+        }
+        PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s", currblock, currblock, sprint_hex(data + i + 1, 4), lck, sprint_ascii(data + i + 1, 4));
         currblock++;
     }
-
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -1839,10 +1844,16 @@ static int CmdHF15Readblock(const char *Cmd) {
     }
 
     // print response
+    char lck[16] = {0};
+    if (data[1]) {
+        sprintf(lck, _RED_("%d"), data[1]);
+    } else {
+        sprintf(lck, "%d", data[1]);
+    }
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "      #%3d  |lck| ascii", block);
     PrintAndLogEx(INFO, "------------+---+------");
-    PrintAndLogEx(INFO, "%s| %d | %s", sprint_hex(data + 2, status - 4), data[1], sprint_ascii(data + 2, status - 4));
+    PrintAndLogEx(INFO, "%s| %s | %s", sprint_hex(data + 2, status - 4), lck, sprint_ascii(data + 2, status - 4));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
