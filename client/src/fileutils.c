@@ -1210,6 +1210,10 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         *datalen = sptr;
     }
 
+    if (!strcmp(ctype, "15693")) {
+        JsonLoadBufAsHex(root, "$.raw", udata, maxdatalen, datalen);
+    }
+
 out:
 
     if (callback != NULL) {

@@ -1982,10 +1982,38 @@ static int CmdHF15Restore(const char *Cmd) {
     }
     PrintAndLogEx(INFO, "Using block size... %zu", blocksize);
 
+    // 4bytes * 256 blocks.  Should be enough..
+    uint8_t *data = calloc(4 * 256, sizeof(uint8_t));
+    if (data == NULL) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
     size_t datalen = 0;
-    uint8_t *data = NULL;
-    if (loadFile_safe(filename, ".bin", (void **)&data, &datalen) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "could not find file " _YELLOW_("%s"), filename);
+    int res = PM3_SUCCESS;
+    DumpFileType_t dftype = getfiletype(filename);
+    switch (dftype) {
+        case BIN: {
+            res = loadFile_safe(filename, ".bin", (void **)&data, &datalen);
+            break;
+        }
+        case EML: {
+            res = loadFileEML_safe(filename, (void **)&data, &datalen);
+            break;
+        }
+        case JSON: {
+            res = loadFileJSON(filename, data, 256 * 4, &datalen, NULL);
+            break;
+        }
+        case DICTIONARY: {
+            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+            free(data);
+            return PM3_EINVARG;
+        }
+    }
+
+    if (res != PM3_SUCCESS) {
+        free(data);
         return PM3_EFILE;
     }
 
