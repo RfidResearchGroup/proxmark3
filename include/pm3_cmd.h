@@ -860,10 +860,10 @@ typedef struct {
 
 // Receiving from USART need more than 30ms as we used on USB
 // else we get errors about partial packet reception
-// FTDI   9600 hw status        -> we need 20ms
-// FTDI 115200 hw status        -> we need 50ms
-// FTDI 460800 hw status        -> we need 30ms
-// BT   115200 hf mf fchk 1 dic -> we need 140ms
+// FTDI   9600 hw status                    -> we need 20ms
+// FTDI 115200 hw status                    -> we need 50ms
+// FTDI 460800 hw status                    -> we need 30ms
+// BT   115200  hf mf fchk --1k -f file.dic -> we need 140ms
 // all zero's configure: no timeout for read/write used.
 // took settings from libnfc/buses/uart.c
 

@@ -72,7 +72,7 @@ local function read15693(slow, dont_readresponse)
     We start by trying this command:
     MANDATORY (present in ALL iso15693 tags) command (the example below is sent to a tag different from the above one):
 
-        pm3> hf 15 info u
+        pm3> hf 15 info --ua
         UID=E007C1A257394244
         Tag Info: Texas Instrument; Tag-it HF-I Standard; 8x32bit
         pm3>

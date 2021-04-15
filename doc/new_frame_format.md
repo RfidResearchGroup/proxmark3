@@ -288,10 +288,10 @@ USART_BAUD_RATE defined there
 Receiving from USART need more than 30ms as we used on USB
 else we get errors about partial packet reception
 
-    FTDI   9600 hw status        ⇒ we need 20ms
-    FTDI 115200 hw status        ⇒ we need 50ms
-    FTDI 460800 hw status        ⇒ we need 30ms
-    BT   115200 hf mf fchk 1 dic ⇒ we need 140ms
+    FTDI   9600 hw status                   ⇒ we need 20ms
+    FTDI 115200 hw status                   ⇒ we need 50ms
+    FTDI 460800 hw status                   ⇒ we need 30ms
+    BT   115200 hf mf fchk --1k -f file.dic ⇒ we need 140ms
 
     # define UART_FPC_CLIENT_RX_TIMEOUT_MS  170
     # define UART_USB_CLIENT_RX_TIMEOUT_MS  20
@@ -307,7 +307,7 @@ it's reduced to UART_USB_CLIENT_RX_TIMEOUT_MS.
 
 Add automatically some communication delay in the `WaitForResponseTimeout` & `dl_it` timeouts.  
 Only when using FPC, timeout = 2* empirically measured delay (FTDI cable).  
-Empirically measured delay (FTDI cable) with "hw ping 512" :
+Empirically measured delay (FTDI cable) with "hw ping -l 512" :
 
        usb ⇒    6..  32ms
     460800 ⇒   40..  70ms
@@ -453,7 +453,7 @@ On linux UART (FTDI)
     CMD_PING reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);
     <-12=504d33620080000009016233                                           <- NG
 
-`hw ping 512` (NG)
+`hw ping -l 512` (NG)
 
     CmdPing  SendCommandNG(CMD_PING, data, len);
     ->522=504d336100820901000102030405060708090a0b0c0d0e0f1011121314151617  -> NG
