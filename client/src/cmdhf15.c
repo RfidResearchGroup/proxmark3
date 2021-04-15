@@ -210,21 +210,6 @@ const productName_t uidmapping[] = {
 };
 
 static int CmdHF15Help(const char *Cmd);
-
-static int usage_15_restore(void) {
-    const char *options[][2] = {
-        {"h", "this help"},
-        {"-2", "use slower '1 out of 256' mode"},
-        {"-o", "set OPTION Flag (needed for TI)"},
-        {"a", "use addressed mode"},
-        {"r <NUM>", "numbers of retries on error, default is 3"},
-        {"f <filename>", "load <filename>"},
-        {"b <block size>", "block size, default is 4"}
-    };
-    PrintAndLogEx(NORMAL, "Usage: hf 15 restore [-2] [-o] [h] [r <NUM>] [u <UID>] [f <filename>] [b <block size>]");
-    PrintAndLogOptions(options, 7, 3);
-    return PM3_SUCCESS;
-}
 static int usage_15_raw(void) {
     const char *options[][2] = {
         {"-r", "do not read response" },
@@ -1133,7 +1118,7 @@ static int CmdHF15WriteAfi(const char *Cmd) {
 
     // request to be sent to device/card
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[PM3_CMD_DATA_SIZE] = {flags, ISO15_CMD_WRITEAFI};
+    uint8_t req[16] = {flags, ISO15_CMD_WRITEAFI};
     uint16_t reqlen = 2;
 
     if (unaddressed == false) {
@@ -1230,7 +1215,9 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
 
     // request to be sent to device/card
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[PM3_CMD_DATA_SIZE] = {flags, ISO15_CMD_WRITEDSFID};
+    uint8_t req[16] = {flags, ISO15_CMD_WRITEDSFID};
+    // enforce, since we are writing
+    req[0] |= ISO15_REQ_OPTION;
     uint16_t reqlen = 2;
 
     if (unaddressed == false) {
@@ -1249,9 +1236,6 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
         }
         PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));    
     }
-
-    // enforce, since we are writing
-    req[0] |= ISO15_REQ_OPTION;
 
     // dsfid
     req[reqlen++] = (uint8_t)dsfid;
@@ -1813,6 +1797,48 @@ static int CmdHF15Readblock(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int hf_15_write_blk(bool verbose, bool fast, uint8_t *req, uint8_t reqlen) {
+
+    uint8_t read_response = 1;
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, read_response, req, reqlen);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+        PrintAndLogEx(FAILED, "iso15693 card timeout, data may be written anyway");
+        DropField();
+        return PM3_ETIMEOUT;
+    }
+
+    DropField();
+    int status = resp.oldarg[0];
+    if (status == PM3_ETEAROFF) {
+        return status;
+    }
+
+    if (status < 2) {
+        if (verbose) {
+            PrintAndLogEx(FAILED, "iso15693 command failed");
+        }
+        return PM3_EWRONGANSWER;
+    }
+
+    uint8_t *recv = resp.data.asBytes;
+    if (CheckCrc15(recv, status) == false) {
+        if (verbose) {
+            PrintAndLogEx(FAILED, "crc (" _RED_("fail") ")");
+        }
+        return PM3_ESOFT;
+    }
+
+    if ((recv[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
+        }
+        return PM3_EWRONGANSWER;
+    }
+    return PM3_SUCCESS;
+}
+
 /**
  * Commandline handling: HF15 CMD WRITE
  * Writes a single Block - might run into timeout, even when successful
@@ -1825,10 +1851,11 @@ static int CmdHF15Write(const char *Cmd) {
                   "hf 15 wrbl -u E011223344556677 -b 12 -d AABBCCDD"
                   );
 
-    void *argtable[6+3] = {};
+    void *argtable[6+4] = {};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", "blk", "<dec>", "page number (0-255)");
     argtable[arglen++] = arg_str1("d", "data", "<hex>", "data, 4 bytes");
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
@@ -1845,6 +1872,7 @@ static int CmdHF15Write(const char *Cmd) {
     int dlen = 0;
     CLIGetHexWithReturn(ctx, 7, d, &dlen);
 
+    bool verbose = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     // sanity checks
@@ -1858,9 +1886,18 @@ static int CmdHF15Write(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+      // default fallback to scan for tag.
+    // overriding unaddress parameter :)
+    if (uidlen != 8) {
+        scan = true;
+    }
+
     // request to be sent to device/card
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[PM3_CMD_DATA_SIZE] = {flags, ISO15_CMD_WRITE};
+    uint8_t req[17] = {flags, ISO15_CMD_WRITE};
+
+    // enforce, since we are writing
+    req[0] |= ISO15_REQ_OPTION;
     uint16_t reqlen = 2;
 
     if (unaddressed == false) {
@@ -1880,6 +1917,7 @@ static int CmdHF15Write(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));    
     }
 
+
     req[reqlen++] = (uint8_t)block;
     memcpy(req + reqlen, d, sizeof(d));
     reqlen += sizeof(d);
@@ -1889,105 +1927,91 @@ static int CmdHF15Write(const char *Cmd) {
 
     PrintAndLogEx(INFO, "iso15693 writing to page %02d (0x%02X) | data [ %s ] ", block, block, sprint_hex(req, reqlen));
 
-    uint8_t read_response = 1;
-    PacketResponseNG resp;
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, read_response, req, reqlen);
+    int res = hf_15_write_blk(verbose, fast, req, reqlen);
+    if (res == PM3_SUCCESS)
+        PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
+    else
+        PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
-        PrintAndLogEx(FAILED, "iso15693 card timeout, data may be written anyway");
-        DropField();
-        return PM3_ETIMEOUT;
-    }
-
-    DropField();
-
-    int status = resp.oldarg[0];
-    if (status == PM3_ETEAROFF) {
-        return status;
-    }
-
-    if (status < 2) {
-        PrintAndLogEx(FAILED, "iso15693 command failed");
-        return PM3_EWRONGANSWER;
-    }
-
-    uint8_t *data = resp.data.asBytes;
-
-    if (CheckCrc15(data, status) == false) {
-        PrintAndLogEx(FAILED, "crc (" _RED_("fail") ")");
-        return PM3_ESOFT;
-    }
-
-    if ((data[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
-        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", data[0], TagErrorStr(data[0]));
-        return PM3_EWRONGANSWER;
-    }
-
-    PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
     return PM3_SUCCESS;
 }
 
 static int CmdHF15Restore(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 restore",
+                  "This command restore the contents of a dump file onto a ISO-15693 tag",
+                  "hf 15 restore\n"
+                  "hf 15 restore -*\n"
+                  "hf 15 restore -u E011223344556677 -f hf-15-my-dump.bin"
+                  );
 
-    char newPrefix[60] = {0x00};
-    char filename[FILE_PATH_SIZE] = {0x00};
-    size_t blocksize = 4;
-    uint8_t cmdp = 0, retries = 3;
-    bool addressed_mode = false;
+    void *argtable[6+5] = {};
+    uint8_t arglen = arg_add_default(argtable);
+    argtable[arglen++] = arg_str0("f", "file", "<fn>", "filename of dump"),
+    argtable[arglen++] = arg_int0("r", "retry", "<dec>", "number of retries (def 3)"),
+    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+    argtable[arglen++] = arg_param_end;
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    while (param_getchar(Cmd, cmdp) != 0x00) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case '-': {
-                char param[3] = "";
-                param_getstr(Cmd, cmdp, param, sizeof(param));
-                switch (param[1]) {
-                    case '2':
-                    case 'o':
-                        sprintf(newPrefix, " %s", param);
-                        break;
-                    default:
-                        PrintAndLogEx(WARNING, "11 unknown parameter " _YELLOW_("'%s'"), param);
-                        return usage_15_restore();
-                }
-                break;
-            }
-            case 'f':
-                param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                cmdp++;
-                break;
-            case 'r':
-                retries = param_get8ex(Cmd, cmdp + 1, 3, 10);
-                cmdp++;
-                break;
-            case 'b':
-                blocksize = param_get8ex(Cmd, cmdp + 1, 4, 10);
-                cmdp++;
-                break;
-            case 'a':
-                addressed_mode = true;
-                break;
-            case 'h':
-                return usage_15_restore();
-            default:
-                PrintAndLogEx(WARNING, "unknown parameter " _YELLOW_("'%c'"), param_getchar(Cmd, cmdp));
-                return usage_15_restore();
-        }
-        cmdp++;
+    uint8_t uid[8];
+    int uidlen = 0;
+    CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    bool unaddressed = arg_get_lit(ctx, 2);
+    bool scan = arg_get_lit(ctx, 3);
+    int fast = (arg_get_lit(ctx, 4) == false);
+    bool add_option = arg_get_lit(ctx, 5);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    int retries = arg_get_int_def(ctx, 7, 3);
+    int blocksize = arg_get_int_def(ctx, 8, 4);
+    bool verbose = arg_get_lit(ctx, 9);
+    CLIParserFree(ctx);
+
+    // sanity checks
+    if ((scan + unaddressed + uidlen) > 1) {
+        PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
+        return PM3_EINVARG;
     }
-
-    PrintAndLogEx(INFO, "blocksize: %zu", blocksize);
-
-    if (!strlen(filename)) {
+    if (fnlen == 0) {
         PrintAndLogEx(WARNING, "please provide a filename");
-        return usage_15_restore();
+        return PM3_EINVARG;
     }
 
-    uint8_t uid[8] = {0x00};
-    if (getUID(false, uid) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "no tag found");
-        return PM3_ESOFT;
+   // default fallback to scan for tag.
+    // overriding unaddress parameter :)
+    if (uidlen != 8) {
+        scan = true;
     }
+
+    // request to be sent to device/card
+    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+    uint8_t req[17] = {flags, ISO15_CMD_WRITE};
+    // enforce, since we are writing
+    req[0] |= ISO15_REQ_OPTION;
+    uint16_t reqlen = 2;
+
+    if (unaddressed == false) {
+        if (scan) {
+            if (getUID(false, uid) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "no tag found");
+                return PM3_EINVARG;
+            } 
+            uidlen = 8;
+        }
+
+        if (uidlen == 8) {
+            // add UID (scan, uid)
+            memcpy(req + reqlen, uid, sizeof(uid));
+            reqlen += sizeof(uid);
+        }
+        PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));    
+    } else {
+        PrintAndLogEx(SUCCESS, "Using unaddressed mode");    
+    }
+    PrintAndLogEx(INFO, "Using block size... %zu", blocksize);
 
     size_t datalen = 0;
     uint8_t *data = NULL;
@@ -2003,37 +2027,33 @@ static int CmdHF15Restore(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "restoring data blocks");
+    PrintAndLogEx(INFO, "." NOLF);
+    fflush(stdout);
 
     int retval = PM3_SUCCESS;
     size_t bytes = 0;
     uint16_t i = 0;
     while (bytes < datalen) {
 
+        req[reqlen + 1] = i;
+        // copy over the data to the request
+        memcpy(req + reqlen + 1, data + bytes, blocksize);
+        AddCrc15(req, reqlen + 1 + blocksize);
+
         uint8_t tried = 0;
-        char hex[40] = {0x00};
-        char tmpCmd[200] = {0x00};
-
-        if (addressed_mode) {
-            char uidhex[17] = {0x00};
-            hex_to_buffer((uint8_t *)uidhex, uid, sizeof(uid), sizeof(uidhex) - 1, 0, false, true);
-            hex_to_buffer((uint8_t *)hex, data + bytes, blocksize, sizeof(hex) - 1, 0, false, true);
-            snprintf(tmpCmd, sizeof(tmpCmd), "%s %s %u %s", newPrefix, uidhex, i, hex);
-        } else {
-            hex_to_buffer((uint8_t *)hex, data + bytes, blocksize, sizeof(hex) - 1, 0, false, true);
-            snprintf(tmpCmd, sizeof(tmpCmd), "%s u %u %s", newPrefix, i, hex);
-        }
-
-        PrintAndLogEx(DEBUG, "hf 15 write %s", tmpCmd);
-
         for (tried = 0; tried < retries; tried++) {
-            retval = CmdHF15Write(tmpCmd);
-            if (retval == false) {
+
+            retval = hf_15_write_blk(verbose, fast, req, (reqlen + 1 + blocksize + 2));
+            if (retval == PM3_SUCCESS) {
+                PrintAndLogEx(NORMAL, "." NOLF);
+                fflush(stdout);
                 break;
             }
         }
 
         if (tried >= retries) {
             free(data);
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(FAILED, "restore failed. Too many retries.");
             return retval;
         }
@@ -2041,6 +2061,8 @@ static int CmdHF15Restore(const char *Cmd) {
         i++;
     }
     free(data);
+
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "done");
     PrintAndLogEx(HINT, "try `" _YELLOW_("hf 15 dump") "` to read your card to verify");
     return PM3_SUCCESS;
