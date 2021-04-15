@@ -3,11 +3,13 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change `hf 14b reader` - now supports continous mode (@iceman1001)
+ - Fix `hf search` - now doesn't false identify ISO15693 (@iceman1001)
  - Change emv commands now works with tokenized cards (@merlokk) 
  - Change `hf 15 restore` - now also support EML/JSON (@iceman1001) 
  - Change - all commands now use cliparser (@iceman1001)
  - Change `lf t55xx restore` - now also support JSON (@iceman1001)
- - Change `hf mf csetuid` - adapted to accept 7byte uids. ~untested~  (@iceman1001)
+ - Change `hf mf csetuid` - adapted to accept 7byte uids ~untested~  (@iceman1001)
  - Added `hf mf view/eload/cload` - now accepts bin/eml/json  (@iceman1001)
  - Added `hf mf eload/cload' - now accepts bin/eml/json  (@iceman1001)
  - Fix RESTORE mis-annotation (@VortixDev)
