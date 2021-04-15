@@ -678,7 +678,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
                 if (_mac[0] != receivedCmd[5] || _mac[1] != receivedCmd[6] || _mac[2] != receivedCmd[7] || _mac[3] != receivedCmd[8]) {
                     Dbprintf("reader auth " _RED_("failed"));
-                    Dbprintf("hf iclass lookup u %02x%02x%02x%02x%02x%02x%02x%02x p %02x%02x%02x%02x%02x%02x%02x%02x m %02x%02x%02x%02x%02x%02x%02x%02x f iclass_default_keys.dic",
+                    Dbprintf("hf iclass lookup --csn %02x%02x%02x%02x%02x%02x%02x%02x --epurse %02x%02x%02x%02x%02x%02x%02x%02x --macs %02x%02x%02x%02x%02x%02x%02x%02x f iclass_default_keys.dic",
                              csn_data[0], csn_data[1], csn_data[2], csn_data[3], csn_data[4], csn_data[5], csn_data[6], csn_data[7],
                              card_challenge_data[0], card_challenge_data[1], card_challenge_data[2], card_challenge_data[3],
                              card_challenge_data[4], card_challenge_data[5], card_challenge_data[6], card_challenge_data[7],
