@@ -26,10 +26,10 @@ The unit for this time information depends on the protocol in use:
  * Reader Mode: Timings are in ticks (1us == 1.5ticks)
  * Tag Mode: Timings are in sub carrier periods (1/212 kHz == 4.7us)
 * Hitag1 / Hitag2 / HitagS: Elementary Time Unit (ETU) is 8µs
-* iClass, ISO15693, ISO18092 and FeliCa have no accurate timing information at the moment
+* iCLASS, ISO15693, ISO18092 and FeliCa have no accurate timing information at the moment
 * For others timing is not available
 
-By specifying the option ```f``` (e.g. ```trace list 14a f```) the frame delay times are shown. (So you don't have to do the math by your own).
+By specifying the option ```f``` (e.g. ```trace list -t 14a -f```) the frame delay times are shown. (So you don't have to do the math by your own).
 
 ### Sources
 ^[Top](#top)
@@ -88,14 +88,14 @@ To get a more detailed explanation of the transmitted data for ISO14443A traces 
 
 To do so
 
-* use `trace list 14a x`
+* use `trace list -t 14a -x`
 * copy the output (starting with the timestamp) into a textfile
 * run `text2pcap -t "%S." -l 264 -n <input-text-file> <output-pcapng-file>`
 * now open your pcapng file in Wireshark or read it with the CLI version `tshark`
 
 An example frame
 
-with `trace list 14a`:
+with `trace list -t 14a`:
 
 ```
 19072 |      29536 | Rdr |93  70  88  04  cf  ff  bc  7f  bb  |  ok | SELECT_UID

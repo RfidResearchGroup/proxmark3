@@ -4,7 +4,7 @@
 ## Table of Contents
  * [style/color](#style_color)
  * [Proxspace](#proxspace)
- * [](#)
+ * [help texts](#help-texts)
 
 The client should autodetect color support when starting.
 
@@ -48,3 +48,7 @@ Most commands doesn't use a header yet. We added it to make it standout (ie: yel
 ^[Top](#top)
 Proxspace has support for colors.
 
+
+## Help texts
+^[Top](#top)
+The help text uses a hard coded template deep inside the cliparser.c file.
