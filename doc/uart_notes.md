@@ -34,7 +34,7 @@ This USART can be reached from the host client (if connected via USB-CDC) throug
 * `usart config`, to configure the baudrate and the parity of the Proxmark3 USART
 * `usart txrx/tx/rx/txhex/rxhex` to transmit and receive bytes
 
-So, `usart config` changes the Proxmark3 USART baudrate and parity, while e.g. `usart txrx d AT+Px` and `usart txrx d AT+BAUDx` changes the BT add-on parity and baudrate.
+So, `usart config` changes the Proxmark3 USART baudrate and parity, while e.g. `usart txrx -d "AT+Px"` and `usart txrx -d "AT+BAUDx"` changes the BT add-on parity and baudrate.
 And for things to work fine, both sets have to match!
 
 Internally, the desired baudrate is converted to UART settings: a BRGR and a FP. The resulting baudrate will be close to but not always equal to the desired baudrate. Serial ports typically have some error tolerance in the actual baudrates. Theoretically < 2.5% on each side (so 5% in total), < 2% to be on the safe side. In the current firmware configuration, the Proxmark3 can provide any baudrate up to 2Mbauds with an error of max 2%, and selected baudrates up to 6Mbauds (tested with a FTDI C232HM DDHSL-0 cable).
@@ -51,7 +51,7 @@ Some specific commands are available when you add `BTADDON` to `PLATFORM_EXTRAS`
 
 `usart btfactory` changes several times the Proxmark3 USART baudrate and parity till it matches the BT add-on settings, then changes the baudrate and parity of the add-on to a default value, then changes the Proxmark USART to the same default values, so everything should be back in order. (`btfactory` does more but we're only interested in baudrate in this discussion)
 
-Manual configuration is also possible with `usart txrx d AT+Px` and `usart txrx d AT+BAUDx`.
+Manual configuration is also possible with `usart txrx -d "AT+Px"` and `usart txrx -d "AT+BAUDx"`.
 
 ### BT add-on connected mode
 
