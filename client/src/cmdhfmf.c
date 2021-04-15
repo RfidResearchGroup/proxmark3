@@ -3267,7 +3267,7 @@ void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, boo
 static int CmdHF14AMfSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf sim",
-                  "Simulate MIFARE card",
+                  "Simulate MIFARE Classic card",
                   "hf mf sim --mini                         --> MIFARE Mini\n"
                   "hf mf sim --1k                           --> MIFARE Classic 1k (default)\n"
                   "hf mf sim --1k -u 0a0a0a0a               --> MIFARE Classic 1k with 4b UID\n"
@@ -3287,7 +3287,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
         arg_str0(NULL, "sak", "<hex>", "Provide explicit SAK (1 bytes, overrides option t)"),
         arg_int0("n", "num", "<dec> ", "Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite"),
         arg_lit0("i", "interactive", "Console will not be returned until simulation finishes or is aborted"),
-        arg_lit0(NULL, "crack", "Performs the 'reader attack', nr/ar attack against a reader"),
+        arg_lit0("x", NULL, "Performs the 'reader attack', nr/ar attack against a reader"),
         arg_lit0("e", "emukeys", "Fill simulator keys from found keys"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end

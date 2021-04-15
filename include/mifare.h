@@ -101,7 +101,7 @@ typedef enum {
 } mifare_des_kdf_algo_t;
 
 //-----------------------------------------------------------------------------
-// "hf 14a sim x", "hf mf sim x" attacks
+// "hf 14a sim -x", "hf mf sim -x" attacks
 //-----------------------------------------------------------------------------
 typedef struct {
     uint32_t cuid;

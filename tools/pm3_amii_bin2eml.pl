@@ -6,7 +6,7 @@
 #
 # -samy kamkar 05/28/2017
 #
-# hf mf eload u FILENAME_MINUS_EML
+# hf mf eload --ul FILENAME_MINUS_EML
 # hf 14a sim -t 7 -u UID
 
 # perl -lne 'chomp; s/\s+(\S+)$//;$f=$1;if($f=~s/-(\S+)//){$g=hex($1);}else{$g=hex($f)}$f=hex($f); for$m($f..$g){print "0x" . substr(unpack("H4",pack("n",$m)),1) ." => \"$_\","}' /tmp/game  >> game2

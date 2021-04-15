@@ -627,7 +627,7 @@ int CmdHF14ASim(const char *Cmd) {
         arg_int1("t", "type", "<1-10> ", "Simulation type to use"),
         arg_str0("u", "uid", "<hex>", "4, 7 or 10 byte UID"),
         arg_int0("n", "num", "<dec>", "Exit simulation after <numreads> blocks have been read by reader. 0 = infinite"),
-        arg_lit0(NULL, "nr", "Performs the 'reader attack', nr/ar attack against a reader"),
+        arg_lit0("x",  NULL, "Performs the 'reader attack', nr/ar attack against a reader"),
         arg_lit0(NULL, "sk", "Fill simulator keys from found keys"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
