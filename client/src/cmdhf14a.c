@@ -1198,7 +1198,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a raw",
-                  "Sends an raw bytes over ISO14443a. With option to use TOPAZ 14a mode.",
+                  "Sends raw bytes over ISO14443a. With option to use TOPAZ 14a mode.",
                   "hf 14a raw -sc 3000     -> select, crc, where 3000 == 'read block 00'\n"
                   "hf 14a raw -ak -b 7 40  -> send 7 bit byte 0x40\n"
                  );
