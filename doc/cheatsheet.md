@@ -356,7 +356,7 @@ pm3 --> hf mf sim -u 353c2aa6
 
 Simulate MIFARE Sequence
 ```
-pm3 --> hf mf fchk -1k -f mfc_default_keys.dic
+pm3 --> hf mf fchk --1k -f mfc_default_keys.dic
 pm3 --> hf mf dump
 pm3 --> hf mf eload -f hf-mf-<UID>-dump.bin
 pm3 --> hf mf sim -u 353c2aa6
@@ -366,7 +366,7 @@ Clone MIFARE 1K Sequence
 ```
 pm3 --> hf mf fchk --1k -f mfc_default_keys.dic
 pm3 --> hf mf dump
-pm3 --> hf mf restore 1 u 4A6CE843 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-dump.bin
+pm3 --> hf mf restore --1k --uid 4A6CE843 -k hf-mf-A29558E4-key.bin -f hf-mf-A29558E4-dump.bin
 ```
 
 Read MIFARE Ultralight EV1
