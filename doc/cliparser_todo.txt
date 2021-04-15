@@ -1,7 +1,6 @@
 hf 15 dump
 hf 15 info
 hf 15 raw
-hf 15 rdbl
 hf 15 readmulti
 hf 15 restore
 hf 15 wrbl

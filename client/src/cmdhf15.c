@@ -267,17 +267,6 @@ static int usage_15_raw(void) {
     PrintAndLogOptions(options, 4, 3);
     return PM3_SUCCESS;
 }
-static int usage_15_read(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf 15 rdbl    [options] <uid|s|u|*> <page>\n"
-                  "Options:\n"
-                  "\t-2        use slower '1 out of 256' mode\n"
-                  "\tuid (either): \n"
-                  "\t   <8B hex>  full UID eg E011223344556677\n"
-                  "\t   u         unaddressed mode\n"
-                  "\t   *         scan for tag\n"
-                  "\t   <page>    page number 0-255");
-    return PM3_SUCCESS;
-}
 static int usage_15_write(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 15 wrbl    [options] <uid|s|u|*> <page> <hexdata>\n"
                   "Options:\n"
@@ -1723,42 +1712,79 @@ static int CmdHF15Readmulti(const char *Cmd) {
  * Commandline handling: HF15 CMD READ
  * Reads a single Block
  */
-static int CmdHF15Read(const char *Cmd) {
+static int CmdHF15Readblock(const char *Cmd) {
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 3 || cmdp == 'h')  return usage_15_read();
+ CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 rdbl",
+                  "Read page on ISO15693 card",
+                  "hf 15 rdbl -* -b 12\n"
+                  "hf 15 rdbl -u E011223344556677 -b 12"
+                  );
+
+    void *argtable[6+2] = {};
+    uint8_t arglen = arg_add_default(argtable);
+    argtable[arglen++] = arg_int1("b", "blk", "<dec>", "page number (0-255)");
+    argtable[arglen++] = arg_param_end;
+
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint8_t uid[8];
+    int uidlen = 0;
+    CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    bool unaddressed = arg_get_lit(ctx, 2);
+    bool scan = arg_get_lit(ctx, 3);
+    int fast = (arg_get_lit(ctx, 4) == false);
+    bool add_option = arg_get_lit(ctx, 5);
+
+    int block = arg_get_int_def(ctx, 6, 0);
+    CLIParserFree(ctx);
+
+    // sanity checks
+    if ((scan + unaddressed + uidlen) > 1) {
+        PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
+        return PM3_EINVARG;
+    }
+
+    // request to be sent to device/card
+    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+    uint8_t req[PM3_CMD_DATA_SIZE] = {flags, ISO15_CMD_READ};
+    uint16_t reqlen = 2;
+
+    if (unaddressed == false) {
+        if (scan) {
+            if (getUID(false, uid) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "no tag found");
+                return PM3_EINVARG;
+            } else {
+                uidlen = 8;
+            }
+        }
+
+        if (uidlen == 8) {
+            // add UID (scan, uid)
+            memcpy(req + reqlen, uid, sizeof(uid));
+            reqlen += sizeof(uid);
+        }
+        PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));    
+    }
+    // add OPTION flag, in order to get lock-info
+    req[0] |= ISO15_REQ_OPTION;
+
+    req[reqlen++] = (uint8_t)block;
+
+    AddCrc15(req, reqlen);
+    reqlen += 2;
 
     // arg: len, speed, recv?
     // arg0 (datalen,  cmd len?  .arg0 == crc?)
     // arg1 (speed == 0 == 1 of 256,  == 1 == 1 of 4 )
     // arg2 (recv == 1 == expect a response)
-    uint8_t req[PM3_CMD_DATA_SIZE] = {0};
-    uint16_t reqlen = 0;
-    uint8_t fast = 1;
-    uint8_t reply = 1;
-    int blocknum;
-    char cmdbuf[100] = {0};
-    char *cmd = cmdbuf;
-    strncpy(cmd, Cmd, sizeof(cmdbuf) - 1);
-
-    if (prepareHF15Cmd(&cmd, &reqlen, &fast, req, ISO15_CMD_READ) == false)
-        return PM3_SUCCESS;
-
-    // add OPTION flag, in order to get lock-info
-    req[0] |= ISO15_REQ_OPTION;
-
-    blocknum = strtol(cmd, NULL, 0);
-
-    req[reqlen++] = (uint8_t)blocknum;
-
-    AddCrc15(req, reqlen);
-    reqlen += 2;
-
+    uint8_t read_respone = 1;
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
+    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, read_respone, req, reqlen);
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
         PrintAndLogEx(ERR, "iso15693 timeout");
         DropField();
         return PM3_ETIMEOUT;
@@ -1789,7 +1815,7 @@ static int CmdHF15Read(const char *Cmd) {
 
     // print response
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "block #%3d  |lck| ascii", blocknum);
+    PrintAndLogEx(INFO, "      #%3d  |lck| ascii", block);
     PrintAndLogEx(INFO, "------------+---+------");
     PrintAndLogEx(INFO, "%s| %d | %s", sprint_hex(data + 2, status - 4), data[1], sprint_ascii(data + 2, status - 4));
     PrintAndLogEx(NORMAL, "");
@@ -2089,7 +2115,7 @@ static command_t CommandTable[] = {
     {"info",        CmdHF15Info,        IfPm3Iso15693,   "Tag information"},
     {"sniff",       CmdHF15Sniff,       IfPm3Iso15693,   "Sniff ISO15693 traffic"},
     {"raw",         CmdHF15Raw,         IfPm3Iso15693,   "Send raw hex data to tag"},
-    {"rdbl",        CmdHF15Read,        IfPm3Iso15693,   "Read a block"},
+    {"rdbl",        CmdHF15Readblock,   IfPm3Iso15693,   "Read a block"},
     {"reader",      CmdHF15Reader,      IfPm3Iso15693,   "Act like an ISO15693 reader"},
     {"readmulti",   CmdHF15Readmulti,   IfPm3Iso15693,   "Reads multiple Blocks"},
     {"restore",     CmdHF15Restore,     IfPm3Iso15693,   "Restore from file to all memory pages of an ISO15693 tag"},
