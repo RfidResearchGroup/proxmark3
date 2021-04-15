@@ -2796,7 +2796,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("uk", "uid", "<hex>", "new uid (7 bytes)"),
+        arg_str0("u", "uid", "<hex>", "new uid (7 bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
