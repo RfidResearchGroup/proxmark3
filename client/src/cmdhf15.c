@@ -1303,10 +1303,10 @@ static int CmdHF15WriteAfi(const char *Cmd) {
 // Writes the DSFID (Data Storage Format Identifier) of a card
 static int CmdHF15WriteDsfid(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf 15 writedsfi",
+    CLIParserInit(&ctx, "hf 15 writedsfid",
                   "Write DSFID on card",
-                  "hf 15 writedsfi -* --dsfid 12\n"
-                  "hf 15 writedsfi -u E011223344556677 --dsfid 12"
+                  "hf 15 writedsfid -* --dsfid 12\n"
+                  "hf 15 writedsfid -u E011223344556677 --dsfid 12"
                   );
 
     void *argtable[6+2] = {};
