@@ -13,7 +13,7 @@ local band = bit32.band
 
 copyright = ''
 author = "Iceman"
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc = [[
 This script will try to make a barebones clone of a tnp3 tag on to a magic generation1 card.
 ]]
@@ -160,7 +160,7 @@ local function main(args)
     core.clearCommandBuffer()
 
     -- wipe card.
-    local cmd  = (csetuid..'%s %s %s w'):format(card.uid, atqa, sak)
+    local cmd  = (csetuid..' -u %s -a %s -s %s -w'):format(card.uid, atqa, sak)
     core.console(cmd)
     core.clearCommandBuffer()
 
@@ -169,7 +169,7 @@ local function main(args)
     local calc = utils.Crc16(b0..b1)
     local calcEndian = bor(rsh(calc,8), lsh(band(calc, 0xff), 8))
 
-    local cmd  = (cset..'1 %s%04x'):format( b1, calcEndian)
+    local cmd  = (cset..'--blk 1 -d %s%04x'):format( b1, calcEndian)
     core.console(cmd)
     core.clearCommandBuffer()
 
@@ -178,14 +178,14 @@ local function main(args)
         pos = (math.floor( blockNo / 4 ) * 12)+1
         key = akeys:sub(pos, pos + 11 )
         if  blockNo%4 == 3 then
-            cmd =  ('%s %d %s%s'):format(cset,blockNo,key,AccAndKeyB)
+            cmd =  ('%s --blk %d -d %s%s'):format(cset,blockNo,key,AccAndKeyB)
             core.console(cmd)
         end
     end
     core.clearCommandBuffer()
 
     -- Set sector trailer S0, since it has different access rights
-    cmd = ('%s 3 %s0f0f0f69000000000000'):format(cset, keyA)
+    cmd = ('%s --blk 3 -d %s0f0f0f69000000000000'):format(cset, keyA)
     core.console(cmd)
     core.clearCommandBuffer()
 end
