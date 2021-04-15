@@ -31,7 +31,7 @@
  *
  * To retrieve trace data from flash:
  *
- * 1. mem spiffs dump o hf_14asniff.trc f trace.trc
+ * 1. mem spiffs dump -s hf_14asniff.trc -d trace.trc
  *    Copies trace data file from flash to your PC.
  *
  * 2. trace load trace.trc

@@ -30,7 +30,7 @@
  *
  * To retrieve dump files from flash:
  *
- * 1. mem spiffs dump o hf-legic-XXYYZZWW-dump.bin f hf-legic-XXYYZZWW-dump.bin
+ * 1. mem spiffs dump -s hf-legic-XXYYZZWW-dump.bin -d hf-legic-XXYYZZWW-dump.bin
  *    Copies log file from flash to your client.
  *
  *
