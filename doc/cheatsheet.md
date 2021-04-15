@@ -205,7 +205,7 @@ pm3 --> hf iclass dump --ki 7 --elite
 
 Verify custom iCLASS key
 ```
-Options
+options
 ---
 -f, --file <filename>          Dictionary file with default iclass keys
     --csn <hex>                Specify CSN as 8 bytes (16 hex symbols)
@@ -222,7 +222,7 @@ pm3 --> hf iclass lookup --csn 010a0ffff7ff12e0 --epurse feffffffffffffff --macs
 
 Check for default keys
 ```
-Options
+options
 ---
 -k, --key <hex>                Key specified as 12 hex symbols
     --blk <dec>                Input block number
@@ -257,9 +257,10 @@ Options
 pm3 --> hf mf fchk --1k --mem
 ```
 
-Dump MIFARE card contents
+Dump MIFARE Classic card contents
 ```
-options:
+Options:
+---
 -f, --file <filename>          filename of dump
 -k, --keys <filename>          filename of keys
     --mini                     MIFARE Classic Mini / S20
@@ -267,52 +268,66 @@ options:
     --2k                       MIFARE Classic/Plus 2k
     --4k                       MIFARE Classic 4k / S70
 
-examples/notes:
-    hf mf dump --mini                            -> MIFARE Mini
-    hf mf dump --1k                              -> MIFARE Classic 1k
-    hf mf dump --2k                              -> MIFARE 2k
-    hf mf dump --4k                              -> MIFARE 4k
-    hf mf dump -f hf-mf-066C8B78-key-5.bin       -> MIFARE 1k with keys from specified file
-
 pm3 --> hf mf dump
 pm3 --> hf mf dump --1k -k hf-mf-A29558E4-key.bin -f hf-mf-A29558E4-dump.bin
 ```
 
-Convert .bin to .eml
+Write to MIFARE Classic block
 ```
-Options
+Options:
 ---
--i <file>                      dump-file (input). If omitted, 'dumpdata.bin' is used
--o <filename>                  output file, if omitted, <uid>.eml is use
+    --blk <dec>                block number
+-a                             input key type is key A (def)
+-b                             input key type is key B
+-k, --key <hex>                key, 6 hex bytes
+-d, --data <hex>               bytes to write, 16 hex bytes
 
-pm3 --> script run data_mf_bin2eml -i dumpdata.bin -o hf-mf-myfile.bin
+pm3 --> hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d d3a2859f6b880400c801002000000016
 ```
 
-Write to MIFARE block
+Run autopwn, to extract all keys and backup a MIFARE Classic tag
 ```
-Options
----
-<block number> <key A/B> <key (12 hex symbols)> <block data (32 hex symbols)>
-
-pm3 --> hf mf wrbl 0 A FFFFFFFFFFFF d3a2859f6b880400c801002000000016
-```
-
-Run autopwn, to backup a MIFARE tag
-```
-Options
----
+Options:                                                                                                            
+---                                                
+-k, --key <hex>                Known key, 12 hex bytes                                                          
+-s, --sector <dec>             Input sector number                                                              
+-a                             Input key A (def)                                                                
+-b                             Input key B                                                                      
+-f, --file <fn>                filename of dictionary                                                           
+-s, --slow                     Slower acquisition (required by some non standard cards)                         
+-l, --legacy                   legacy mode (use the slow `hf mf chk`)                                           
+-v, --verbose                  verbose output (statistics)                                                      
+    --mini                     MIFARE Classic Mini / S20                                                        
+    --1k                       MIFARE Classic 1k / S50 (default)                                                
+    --2k                       MIFARE Classic/Plus 2k                                                           
+    --4k                       MIFARE Classic 4k / S70                                                          
 
 pm3 --> hf mf autopwn
+
+// target MFC 1K card, Sector 0 with known key A 'FFFFFFFFFFFF' 
+pm3 --> hf mf autopwn -s 0 -a -k FFFFFFFFFFFF
+
+// target MFC 1K card, default dictionary
+pm3 --> hf mf autopwn --1k -f mfc_default_keys
 ```
 
 Run hardnested attack
 ```
 Options
 ---
-<block number> <key A|B> <key (12 hex symbols)> <target block number> <target key A|B> [known target key (12 hex symbols)] [w] [s]
-w          : Acquire nonces and write them to binary file nonces.bin
+-k, --key <hex>                Key, 12 hex bytes                                                                       
+    --blk <dec>                Input block number                                                                      
+-a                             Input key A (def)                                                                       
+-b                             Input key B                                                                             
+    --tblk <dec>               Target block number                                                                     
+    --ta                       Target key A                                                                            
+    --tb                       Target key B                                                                            
+    --tk <hex>                 Target key, 12 hex bytes                                                                
+-f, --file <fn>                R/W <name> instead of default name                                                      
+-s, --slow                     Slower acquisition (required by some non standard cards)                                
+-w, --wr                       Acquire nonces and UID, and write them to file `hf-mf-<UID>-nonces.bin`                 
 
-pm3 --> hf mf hardnested 0 A 8829da9daf76 0 A w
+pm3 --> hf mf hardnested --blk 0 -a -k 8829da9daf76 --tblk 4 --ta -w  
 ```
 
 Load MIFARE Classic dump file into emulator memory for simulation
@@ -503,19 +518,20 @@ Act as Hitag reader
 ```
 Options
 ---
-HitagS:
-01 <nr> <ar>    : Read all pages, challenge mode
-02 <key>        : Read all pages, crypto mode. Set key=0 for no auth
+    --01                       HitagS, read all pages, challenge mode                                                         
+    --02                       HitagS, read all pages, crypto mode. Set key=0 for no auth                                     
 
-Hitag2:
-21 <password>   : Read all pages, password mode. Default: 4D494B52 ("MIKR")
-22 <nr> <ar>    : Read all pages, challenge mode
-23 <key>        : Read all pages, crypto mode. Key format: ISK high + ISK low. Default: 4F4E4D494B52 ("ONMIKR")
-25              : Test recorded authentications
-26              : Just read UID
-
-pm3 --> lf hitag 26
-pm3 --> lf hitag 21 4D494B52
+    --21                       Hitag2, read all pages, password mode. def 4D494B52 (MIKR)                                     
+    --22                       Hitag2, read all pages, challenge mode                                                         
+    --23                       Hitag2, read all pages, crypto mode. Key ISK high + ISK low. def 4F4E4D494B52 (ONMIKR)         
+    --25                       Hitag2, test recorded authentications (replay?)                                                
+    --26                       Hitag2, read UID                                                                               
+-k, --key <hex>                key, 4 or 6 hex bytes                                                                          
+    --nrar <hex>               nonce / answer reader, 8 hex bytes                                                             
+                                                                                                                                 
+pm3 --> lf hitag --26
+pm3 --> lf hitag --21 -k 4D494B52
+pm3 --> lf hitag reader --23 -k 4F4E4D494B52  
 ```
 
 Sniff Hitag traffic
@@ -524,30 +540,32 @@ pm3 --> lf hitag sniff
 pm3 --> lf hitag list
 ```
 
-Simulate Hitag
+Simulate Hitag2
 ```
-pm3 --> lf hitag sim c378181c_a8f7.ht2
+pm3 --> lf hitag sim -2
 ```
 
 Write to Hitag block
 ```
 Options
 ---
-HitagS:
-03 <nr,ar> <page> <byte0...byte3>     : Write page, challenge mode
-04 <key> <page> <byte0...byte3>       : Write page, crypto mode. Set key=0 for no auth
+    --03                       HitagS, write page, challenge mode                     
+    --04                       HitagS, write page, crypto mode. Set key=0 for no auth 
 
-Hitag2:
-24  <key> <page> <byte0...byte3>      : Write page, crypto mode. Key format: ISK high + ISK low.
-27  <password> <page> <byte0...byte3> : Write page, password mode. Default: 4D494B52 ("MIKR")
+    --24                       Hitag2, write page, crypto mode.                       
+    --27                       Hitag2, write page, password mode                      
+-p, --page <dec>               page address to write to                               
+-d, --data <hex>               data, 4 hex bytes                                      
+-k, --key <hex>                key, 4 or 6 hex bytes                                  
+    --nrar <hex>               nonce / answer writer, 8 hex bytes                     
 
-pm3 --> lf hitag writer 24 499602D2 1 00000000
+pm3 --> lf hitag writer --24 -k 499602D2 -p 1 -d 00000000
 ```
 
 Simulate Hitag2 sequence
 ```
-pm3 --> lf hitag reader 21 56713368
-pm3 --> lf hitag sim c378181c_a8f7.ht2
+pm3 --> lf hitag reader --21 -k 56713368
+pm3 --> lf hitag sim -2
 ```
 
 ## T55XX
@@ -562,7 +580,19 @@ Configure modulation
 ```
 Options
 ---
-<FSK|FSK1|FSK1a|FSK2|FSK2a|ASK|PSK1|PSK2|NRZ|BI|BIa>  : Set modulation
+    --FSK                      set demodulation FSK                        
+    --FSK1                     set demodulation FSK 1                      
+    --FSK1A                    set demodulation FSK 1a (inv)               
+    --FSK2                     set demodulation FSK 2                      
+    --FSK2A                    set demodulation FSK 2a (inv)               
+    --ASK                      set demodulation ASK                        
+    --PSK1                     set demodulation PSK 1                      
+    --PSK2                     set demodulation PSK 2                      
+    --PSK3                     set demodulation PSK 3                      
+    --NRZ                      set demodulation NRZ                        
+    --BI                       set demodulation Biphase                    
+    --BIA                      set demodulation Diphase (inverted biphase) 
+
 EM is ASK
 HID Prox is FSK
 Indala is PSK
@@ -574,18 +604,19 @@ Set timings to default
 ```
 Options
 ---
--p            : persist to flash memory (RDV4)
--z            : Set default t55x7 timings (use `-p` to save if required)
 
-pm3 --> lf t55xx deviceconfig -z -p
+-p, --persist                  persist to flash memory (RDV4)                             
+-z                             Set default t55x7 timings (use `-p` to save if required)   
+pm3 --> lf t55xx deviceconfig -zp
 ```
 
 Write to T55xx block
 ```
-b <block>    : block number to write. Between 0-7
-d <data>     : 4 bytes of data to write (8 hex characters)
+-b, --blk <0-7>                block number to write
+-d, --data <hex>               data to write (4 hex bytes)
+-p, --pwd <hex>                password (4 hex bytes)
 
-pm3 --> lf t55xx wr -b 0 -d 00081040
+pm3 --> lf t55xx write -b 0 -d 00081040
 ```
 
 Wipe a T55xx tag and set defaults
@@ -631,8 +662,8 @@ Convert .bin to .eml
 ```
 Options
 ---
--i <file>       Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
--o <filename>   Specifies the output file. If omitted, <uid>.eml is used
+-i <file>                      Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
+-o <filename>                  Specifies the output file. If omitted, <uid>.eml is used
 
 pm3 --> script run data_mf_bin2eml -i xxxxxxxxxxxxxx.bin
 ```
@@ -641,8 +672,8 @@ Convert .eml to .bin
 ```
 Options
 ---
--i <filename>   Specifies the dump-file (input). If omitted, 'dumpdata.eml' is used
--o <filename>   Specifies the output file. If omitted, <currdate>.bin is used
+-i <filename>                  Specifies the dump-file (input). If omitted, 'dumpdata.eml' is used
+-o <filename>                  Specifies the output file. If omitted, <currdate>.bin is used
 
 pm3 --> script run data_mf_eml2bin -i myfile.eml -o myfile.bin
 ```
@@ -651,10 +682,10 @@ Format Mifare card
 ```
 Options
 ---
--k <key>        The current six byte key with write access
--n <key>        The new key that will be written to the card
--a <access>     The new access bytes that will be written to the card
--x              Execute the commands as well
+-k <key>                       The current six byte key with write access
+-n <key>                       The new key that will be written to the card
+-a <access>                    The new access bytes that will be written to the card
+-x                             Execute the commands as well
 
 pm3 --> script run hf_mf_format -k FFFFFFFFFFFF -n FFFFFFFFFFFF -x
 ```
