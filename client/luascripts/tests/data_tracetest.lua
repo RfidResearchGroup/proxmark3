@@ -7,7 +7,7 @@ local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.4'
+version = 'v1.0.5'
 desc = [[
 This script will load several traces files in current working directory/traces/ folder and do
 "data load"
@@ -115,7 +115,7 @@ local function main(args)
     io.write('Starting to test traces > ')
     for _,file in pairs(files) do
 
-        local x = 'data load '..file
+        local x = 'data load -f '..file
         dbg(x)
         core.console(x)
 
