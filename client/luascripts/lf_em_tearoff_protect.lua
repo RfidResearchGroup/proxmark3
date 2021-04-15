@@ -6,7 +6,7 @@ author =  [[
 'Author   Iceman
  CoAuthor Doegox
 ]]
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This is scripts loops though a tear attack and reads expected value.
 ]]
@@ -37,7 +37,7 @@ arguments = [[
 ]]
 
 local set_tearoff_delay = 'hw tearoff --on --delay %d'
-local wr_template = 'lf em 4x05_write %s %s %s'
+local wr_template = 'lf em 4x05 write --po -d %s -p %s'
 
 ---
 -- This is only meant to be used when errors occur
@@ -71,7 +71,7 @@ end
 
 local function reset(wr_value, password)
     print('[=] '..ansicolors.red..'resetting the active lock block'..ansicolors.reset)
-    core.console(wr_template:format(99, wr_value, password))
+    core.console(wr_template:format(wr_value, password))
 end
 
 local function main(args)
@@ -201,7 +201,7 @@ local function main(args)
         local c = set_tearoff_delay:format(sd)
         core.console(c);
 
-        c = wr_template:format(99, wr_value, password)
+        c = wr_template:format(wr_value, password)
         core.console(c)
 
         word14, err14 =  core.em4x05_read(14, password)
