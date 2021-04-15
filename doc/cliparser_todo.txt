@@ -5,5 +5,4 @@ hf 15 rdbl
 hf 15 readmulti
 hf 15 restore
 hf 15 wrbl
-hf 15 writeafi
 hf 15 writedsfid
