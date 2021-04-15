@@ -1542,7 +1542,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
         //check for valid input
         if (page == 0) {
             Dbprintf(
-                "usage: lf hitag writer [03 | 04] [CHALLENGE | KEY] [page] [byte0] [byte1] [byte2] [byte3]");
+                "usage: lf hitag writer [--03 | --04] [--nrar CHALLENGE | -k KEY] [-p page] -d [4 hex bytes]");
             bStop = !false;
         }
 
