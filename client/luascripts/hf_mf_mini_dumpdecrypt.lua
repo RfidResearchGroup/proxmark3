@@ -10,7 +10,7 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc = [[
 This is a script to dump and decrypt the data of a specific type of Mifare Mini token.
 The dump is decrypted. If a raw dump is wanted, use the -r parameter
@@ -557,9 +557,9 @@ end
 local function setdevicedebug( status )
     local c = 'hw dbg '
     if status then
-        c = c..'1'
+        c = c..'-1'
     else
-        c = c..'0'
+        c = c..'-0'
     end
     core.console(c)
 end

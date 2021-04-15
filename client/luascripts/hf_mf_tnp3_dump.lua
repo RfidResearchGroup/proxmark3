@@ -10,7 +10,7 @@ local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc = [[
 This script will try to dump the contents of a Mifare TNP3xxx card.
 It will need a valid KeyA in order to find the other keys and decode the card.
@@ -112,7 +112,7 @@ local function main(args)
     local keyA, cmd, err
     local useNested = false
     local usePreCalc = false
-    local cmdReadBlockString = 'hf mf rdbl %d A %s'
+    local cmdReadBlockString = 'hf mf rdbl --blk %d -k %s'
     local outputTemplate = os.date("toydump_%Y-%m-%d_%H%M%S");
 
     -- Arguments for the script
@@ -131,7 +131,7 @@ local function main(args)
     end
 
     -- Turn off Debug
-    local cmdSetDbgOff = "hw dbg 0"
+    local cmdSetDbgOff = "hw dbg -0"
     core.console( cmdSetDbgOff)
     utils.Sleep(0.5)
 
