@@ -79,7 +79,7 @@ UID 4b: (actually NUID as there are no more "unique" IDs on 4b)
 ```
 
  
-Computing BCC on UID 11223344: `hf analyse lcr 11223344` = `44`
+Computing BCC on UID 11223344: `hf analyse lcr -d 11223344` = `44`
 
 UID 7b:
 
