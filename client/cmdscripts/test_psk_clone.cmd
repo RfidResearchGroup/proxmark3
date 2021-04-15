@@ -2,13 +2,13 @@ clear
 
 rem  Test of Motorola clone & read
 lf t55xx wipe
-lf motorola clone a0000000a0002021
+lf motorola clone --raw a0000000a0002021
 lf motorola read
 lf search
 
 rem  Test of Nexwatch clone & read
 lf t55xx wipe
-lf nexwatch clone c 1337 m 1 n
+lf nexwatch clone --cn 1337 -m 1 -n
 lf nexwatch read
 lf search
 
