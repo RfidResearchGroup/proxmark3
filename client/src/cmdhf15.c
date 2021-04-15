@@ -280,18 +280,6 @@ static int usage_15_write(void) {
                   "\t   <hexdata>  data to be written eg AA BB CC DD");
     return PM3_SUCCESS;
 }
-static int usage_15_readmulti(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf 15 readmulti  [options] <uid|s|u|*> <start> <count>\n"
-                  "Options:\n"
-                  "\t-2        use slower '1 out of 256' mode\n"
-                  "\tuid (either): \n"
-                  "\t   <8B hex>  full UID eg E011223344556677\n"
-                  "\t   u         unaddressed mode\n"
-                  "\t   *         scan for tag\n"
-                  "\t   <start>   0-255, page number to start\n"
-                  "\t   <count>   1-6, number of pages");
-    return PM3_SUCCESS;
-}
 
 static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
 
@@ -1619,47 +1607,86 @@ static int CmdHF15Raw(const char *Cmd) {
  */
 static int CmdHF15Readmulti(const char *Cmd) {
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 3 || cmdp == 'h') return usage_15_readmulti();
+ CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 rdmulti",
+                  "Read multiple pages on a ISO15693 card",
+                  "hf 15 rdmulti -* -b 1 --cnt 6                   -> read 6 blocks\n"
+                  "hf 15 rdmulti -u E011223344556677 -b 12 --cnt 3 -> read three blocks"
+                  );
 
-    uint8_t req[PM3_CMD_DATA_SIZE] = {0};
-    uint16_t reqlen = 0;
-    uint8_t fast = 1;
-    uint8_t reply = 1;
+    void *argtable[6+3] = {};
+    uint8_t arglen = arg_add_default(argtable);
+    argtable[arglen++] = arg_int1("b", NULL, "<dec>", "first page number (0-255)");
+    argtable[arglen++] = arg_int1(NULL, "cnt", "<dec>", "number of pages (1-6)");
+    argtable[arglen++] = arg_param_end;
 
-    char cmdbuf[100] = {0};
-    char *cmd = cmdbuf;
-    strncpy(cmd, Cmd, sizeof(cmdbuf) - 1);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    if (!prepareHF15Cmd(&cmd, &reqlen, &fast, req, ISO15_CMD_READMULTI))
-        return PM3_SUCCESS;
+    uint8_t uid[8];
+    int uidlen = 0;
+    CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    bool unaddressed = arg_get_lit(ctx, 2);
+    bool scan = arg_get_lit(ctx, 3);
+    int fast = (arg_get_lit(ctx, 4) == false);
+    bool add_option = arg_get_lit(ctx, 5);
 
-    // add OPTION flag, in order to get lock-info
-    req[0] |= ISO15_REQ_OPTION;
+    int block = arg_get_int_def(ctx, 6, 0);
+    int blockcnt = arg_get_int_def(ctx, 7, 0);
 
-    // decimal
-    uint8_t pagenum = param_get8ex(cmd, 0, 0, 10);
-    uint8_t pagecount = param_get8ex(cmd, 1, 0, 10);
+    CLIParserFree(ctx);
 
-    if (pagecount > 6) {
-        PrintAndLogEx(WARNING, "Page count must be 6 or less (%d)", pagecount);
+    // sanity checks
+    if (blockcnt > 6) {
+        PrintAndLogEx(WARNING, "Page count must be 6 or less (%d)", blockcnt);
         return PM3_EINVARG;
     }
 
+    if ((scan + unaddressed + uidlen) > 1) {
+        PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
+        return PM3_EINVARG;
+    }
+
+    // request to be sent to device/card
+    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+    uint8_t req[PM3_CMD_DATA_SIZE] = {flags, ISO15_CMD_READMULTI};
+    uint16_t reqlen = 2;
+
+    if (unaddressed == false) {
+        if (scan) {
+            if (getUID(false, uid) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "no tag found");
+                return PM3_EINVARG;
+            } else {
+                uidlen = 8;
+            }
+        }
+
+        if (uidlen == 8) {
+            // add UID (scan, uid)
+            memcpy(req + reqlen, uid, sizeof(uid));
+            reqlen += sizeof(uid);
+        }
+        PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));    
+    }
+    // add OPTION flag, in order to get lock-info
+    req[0] |= ISO15_REQ_OPTION;
+
     // 0 means 1 page,
     // 1 means 2 pages, ...
-    if (pagecount > 0) pagecount--;
+    if (blockcnt > 0) blockcnt--;
 
-    req[reqlen++] = pagenum;
-    req[reqlen++] = pagecount;
+    req[reqlen++] = block;
+    req[reqlen++] = blockcnt;
+
     AddCrc15(req, reqlen);
     reqlen += 2;
 
+    uint8_t read_respone = 1;
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
+    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, read_respone, req, reqlen);
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
         PrintAndLogEx(FAILED, "iso15693 card timeout");
         DropField();
         return PM3_ETIMEOUT;
@@ -1691,12 +1718,11 @@ static int CmdHF15Readmulti(const char *Cmd) {
 
     // skip status byte
     int start = 1;
-    int stop = (pagecount + 1) * 5;
-    int currblock = pagenum;
-
+    int stop = (blockcnt + 1) * 5;
+    int currblock = block;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "block#   | data         |lck| ascii");
+    PrintAndLogEx(INFO, " #       | data         |lck| ascii");
     PrintAndLogEx(INFO, "---------+--------------+---+----------");
 
     for (int i = start; i < stop; i += 5) {
@@ -1713,8 +1739,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
  * Reads a single Block
  */
 static int CmdHF15Readblock(const char *Cmd) {
-
- CLIParserContext *ctx;
+    CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 rdbl",
                   "Read page on ISO15693 card",
                   "hf 15 rdbl -* -b 12\n"
@@ -2116,8 +2141,8 @@ static command_t CommandTable[] = {
     {"sniff",       CmdHF15Sniff,       IfPm3Iso15693,   "Sniff ISO15693 traffic"},
     {"raw",         CmdHF15Raw,         IfPm3Iso15693,   "Send raw hex data to tag"},
     {"rdbl",        CmdHF15Readblock,   IfPm3Iso15693,   "Read a block"},
+    {"rdmulti",     CmdHF15Readmulti,   IfPm3Iso15693,   "Reads multiple blocks"},
     {"reader",      CmdHF15Reader,      IfPm3Iso15693,   "Act like an ISO15693 reader"},
-    {"readmulti",   CmdHF15Readmulti,   IfPm3Iso15693,   "Reads multiple Blocks"},
     {"restore",     CmdHF15Restore,     IfPm3Iso15693,   "Restore from file to all memory pages of an ISO15693 tag"},
     {"samples",     CmdHF15Samples,     IfPm3Iso15693,   "Acquire Samples as Reader (enables carrier, sends inquiry)"},
     {"sim",         CmdHF15Sim,         IfPm3Iso15693,   "Fake an ISO15693 tag"},

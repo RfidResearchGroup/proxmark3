@@ -219,8 +219,8 @@ Check column "offline" for their availability.
 |`hf 15 sniff            `|N       |`Sniff ISO15693 traffic`
 |`hf 15 raw              `|N       |`Send raw hex data to tag`
 |`hf 15 rdbl             `|N       |`Read a block`
+|`hf 15 rdmulti          `|N       |`Reads multiple blocks`
 |`hf 15 reader           `|N       |`Act like an ISO15693 reader`
-|`hf 15 readmulti        `|N       |`Reads multiple Blocks`
 |`hf 15 restore          `|N       |`Restore from file to all memory pages of an ISO15693 tag`
 |`hf 15 samples          `|N       |`Acquire Samples as Reader (enables carrier, sends inquiry)`
 |`hf 15 sim              `|N       |`Fake an ISO15693 tag`
