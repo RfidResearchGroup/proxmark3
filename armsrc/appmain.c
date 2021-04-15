@@ -195,7 +195,7 @@ static void MeasureAntennaTuning(void) {
             payload.v_lf134 = adcval; // voltage at 134kHz
 
         if (i == sc->divisor)
-            payload.v_lfconf = adcval; // voltage at `lf config q`
+            payload.v_lfconf = adcval; // voltage at `lf config --divisor`
 
         payload.results[i] = adcval >> 9; // scale int to fit in byte for graphing purposes
 
