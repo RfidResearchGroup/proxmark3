@@ -7,9 +7,9 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc = [[
-This script will generate 'hf mf wrbl' commands for each block to format a Mifare card.
+This script will generate 'hf mf wrbl' commands for each block to format a Mifare Classic card.
 
 Alla datablocks gets 0x00
 As default the script sets the keys A/B to 0xFFFFFFFFFFFF
@@ -41,7 +41,7 @@ arguments = [[
 
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = true -- the debug flag
-local CmdString = 'hf mf wrbl %d B %s %s'
+local CmdString = 'hf mf wrbl --blk %d -b -k %s -d %s'
 local numBlocks = 64
 local numSectors = 16
 ---
@@ -89,7 +89,7 @@ local function ExitMsg(msg)
 end
 --
 -- Read information from a card
-function GetCardInfo()
+local function GetCardInfo()
     result, err = lib14a.read(false, true)
     if not result then
         print(err)
@@ -200,9 +200,9 @@ local function main(args)
         local reminder = (block+1) % 4
         local cmd
         if reminder == 0 then
-            cmd = CmdString:format(block, OldKey , EMPTY_SECTORTRAIL)
+            cmd = CmdString:format(block, OldKey, EMPTY_SECTORTRAIL)
         else
-            cmd = CmdString:format(block, OldKey , EMPTY_BL)
+            cmd = CmdString:format(block, OldKey, EMPTY_BL)
         end
 
         if block ~= 0 then
