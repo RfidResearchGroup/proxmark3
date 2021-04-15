@@ -212,23 +212,23 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf 15 help             `|Y       |`This help`
-|`hf 15 list             `|Y       |`List ISO15693 history`
-|`hf 15 demod            `|Y       |`Demodulate ISO15693 from tag`
-|`hf 15 dump             `|N       |`Read all memory pages of an ISO15693 tag, save to file`
+|`hf 15 list             `|Y       |`List ISO-15693 history`
+|`hf 15 demod            `|Y       |`Demodulate ISO-15693 from tag`
+|`hf 15 dump             `|N       |`Read all memory pages of an ISO-15693 tag, save to file`
 |`hf 15 info             `|N       |`Tag information`
-|`hf 15 sniff            `|N       |`Sniff ISO15693 traffic`
+|`hf 15 sniff            `|N       |`Sniff ISO-15693 traffic`
 |`hf 15 raw              `|N       |`Send raw hex data to tag`
 |`hf 15 rdbl             `|N       |`Read a block`
 |`hf 15 rdmulti          `|N       |`Reads multiple blocks`
-|`hf 15 reader           `|N       |`Act like an ISO15693 reader`
-|`hf 15 restore          `|N       |`Restore from file to all memory pages of an ISO15693 tag`
-|`hf 15 samples          `|N       |`Acquire Samples as Reader (enables carrier, sends inquiry)`
-|`hf 15 sim              `|N       |`Fake an ISO15693 tag`
+|`hf 15 reader           `|N       |`Act like an ISO-15693 reader`
+|`hf 15 restore          `|N       |`Restore from file to all memory pages of an ISO-15693 tag`
+|`hf 15 samples          `|N       |`Acquire samples as reader (enables carrier, sends inquiry)`
+|`hf 15 sim              `|N       |`Fake an ISO-15693 tag`
 |`hf 15 wrbl             `|N       |`Write a block`
-|`hf 15 findafi          `|N       |`Brute force AFI of an ISO15693 tag`
-|`hf 15 writeafi         `|N       |`Writes the AFI on an ISO15693 tag`
-|`hf 15 writedsfid       `|N       |`Writes the DSFID on an ISO15693 tag`
-|`hf 15 csetuid          `|N       |`Set UID for magic Chinese card`
+|`hf 15 findafi          `|N       |`Brute force AFI of an ISO-15693 tag`
+|`hf 15 writeafi         `|N       |`Writes the AFI on an ISO-15693 tag`
+|`hf 15 writedsfid       `|N       |`Writes the DSFID on an ISO-15693 tag`
+|`hf 15 csetuid          `|N       |`Set UID for magic card`
 
 
 ### hf epa

@@ -1,3 +1,2 @@
-hf 15 dump
 hf 15 raw
 hf 15 restore

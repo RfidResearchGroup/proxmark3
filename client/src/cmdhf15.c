@@ -211,19 +211,6 @@ const productName_t uidmapping[] = {
 
 static int CmdHF15Help(const char *Cmd);
 
-static int usage_15_dump(void) {
-    PrintAndLogEx(NORMAL, "This command dumps the contents of a ISO-15693 tag and save it to file\n"
-                  "\n"
-                  "Usage: hf 15 dump [h] <f filename> \n"
-                  "Options:\n"
-                  "\th             this help\n"
-                  "\tf <name>      filename,  if no <name> UID will be used as filename\n"
-                  "\n"
-                  "Example:\n"
-                  _YELLOW_("\thf 15 dump f\n")
-                  _YELLOW_("\thf 15 dump f mydump"));
-    return PM3_SUCCESS;
-}
 static int usage_15_restore(void) {
     const char *options[][2] = {
         {"h", "this help"},
@@ -532,7 +519,7 @@ static int CmdHF15Demod(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 demod",
-                  "Tries to demodulate / decode ISO15693, from downloaded samples.\n"
+                  "Tries to demodulate / decode ISO-15693, from downloaded samples.\n"
                   "Gather samples with 'hf 15 samples' / 'hf 15 sniff'",
                   "hf 15 demod\n");
 
@@ -1000,7 +987,7 @@ static int CmdHF15Sniff(const char *Cmd) {
 static int CmdHF15Reader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 reader",
-                  "Act as a ISO15693 reader.  Look for ISO15693 tags until Enter or the pm3 button is pressed\n",
+                  "Act as a ISO-15693 reader.  Look for ISO-15693 tags until Enter or the pm3 button is pressed\n",
                   "hf 15 reader\n"
                   "hf 15 reader -@   -> Continuous mode");
 
@@ -1026,7 +1013,7 @@ static int CmdHF15Sim(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 sim",
-                  "Simulate a ISO15693 tag\n",
+                  "Simulate a ISO-15693 tag\n",
                   "hf 15 sim -u E011223344556677");
 
     void *argtable[] = {
@@ -1065,7 +1052,7 @@ static int CmdHF15Sim(const char *Cmd) {
 static int CmdHF15FindAfi(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 findafi",
-                  "This command attempts to brute force AFI of an ISO15693 tag\n"
+                  "This command attempts to brute force AFI of an ISO-15693 tag\n"
                   "Estimated execution time is around 2 minutes",
                   "hf 15 findafi");
 
@@ -1311,62 +1298,77 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
 // Reads all memory pages
 // need to write to file
 static int CmdHF15Dump(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 dump",
+                  "This command dumps the contents of a ISO-15693 tag and save it to file",
+                  "hf 15 dump\n"
+                  "hf 15 dump -*\n"
+                  "hf 15 dump -u E011223344556677 -f hf-15-my-dump.bin"
+                  );
 
-    uint8_t fileNameLen = 0;
+    void *argtable[6+2] = {};
+    uint8_t arglen = arg_add_default(argtable);
+    argtable[arglen++] = arg_str0("f", "file", "<fn>", "filename of dump"),
+    argtable[arglen++] = arg_param_end;
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t uid[8];
+    int uidlen = 0;
+    CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    bool unaddressed = arg_get_lit(ctx, 2);
+    bool scan = arg_get_lit(ctx, 3);
+    int fast = (arg_get_lit(ctx, 4) == false);
+    bool add_option = arg_get_lit(ctx, 5);
+
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    char *fptr = filename;
-    bool errors = false;
-    uint8_t cmdp = 0;
-    uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_15_dump();
-            case 'f':
-                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    CLIParserFree(ctx);
+
+    // sanity checks
+    if ((scan + unaddressed + uidlen) > 1) {
+        PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
+        return PM3_EINVARG;
     }
 
-    //Validations
-    if (errors) return usage_15_dump();
-
-    if (getUID(false, uid) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "no tag found");
-        return PM3_ESOFT;
+    // default fallback to scan for tag.
+    // overriding unaddress parameter :)
+    if (uidlen != 8) {
+        scan = true;
     }
 
-    if (fileNameLen < 1) {
-        PrintAndLogEx(INFO, "Using UID as filename");
-        fptr += sprintf(fptr, "hf-15-");
-        FillFileNameByUID(fptr, SwapEndian64(uid, sizeof(uid), 8), "-dump", sizeof(uid));
+    // request to be sent to device/card
+    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+    uint8_t req[13] = {flags, ISO15_CMD_READ};
+    uint16_t reqlen = 2;
+
+    if (scan) {
+        if (getUID(false, uid) != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "no tag found");
+            return PM3_EINVARG;
+        } 
+        uidlen = 8;
     }
+
+    if (uidlen == 8) {
+        // add UID (scan, uid)
+        memcpy(req + reqlen, uid, sizeof(uid));
+        reqlen += sizeof(uid);
+    }
+    PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));    
+
     // detect blocksize from card :)
 
     PrintAndLogEx(SUCCESS, "Reading memory from tag UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, uid));
 
     int blocknum = 0;
-    uint8_t *recv = NULL;
-
     // memory.
     t15memory_t mem[256];
 
     uint8_t data[256 * 4] = {0};
     memset(data, 0, sizeof(data));
-
-    PacketResponseNG resp;
-    uint8_t req[13];
-    req[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
-    req[1] = ISO15_CMD_READ;
-
-    // copy uid to read command
-    memcpy(req + 2, uid, sizeof(uid));
 
     PrintAndLogEx(INFO, "." NOLF);
     for (int retry = 0; retry < 5; retry++) {
@@ -1374,8 +1376,14 @@ static int CmdHF15Dump(const char *Cmd) {
         req[10] = blocknum;
         AddCrc15(req, 11);
 
+        // arg: len, speed, recv?
+        // arg0 (datalen,  cmd len?  .arg0 == crc?)
+        // arg1 (speed == 0 == 1 of 256,  == 1 == 1 of 4 )
+        // arg2 (recv == 1 == expect a response)
+        uint8_t read_respone = 1;
+        PacketResponseNG resp;
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO15693_COMMAND, sizeof(req), 1, 1, req, sizeof(req));
+        SendCommandMIX(CMD_HF_ISO15693_COMMAND, sizeof(req), fast, read_respone, req, sizeof(req));
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
@@ -1389,7 +1397,7 @@ static int CmdHF15Dump(const char *Cmd) {
                 continue;
             }
 
-            recv = resp.data.asBytes;
+            uint8_t *recv = resp.data.asBytes;
 
             if (CheckCrc15(recv, len) == false) {
                 PrintAndLogEx(NORMAL, "");
@@ -1421,9 +1429,29 @@ static int CmdHF15Dump(const char *Cmd) {
     PrintAndLogEx(INFO, "block#   | data         |lck| ascii");
     PrintAndLogEx(INFO, "---------+--------------+---+----------");
     for (int i = 0; i < blocknum; i++) {
-        PrintAndLogEx(INFO, "%3d/0x%02X | %s | %d | %s", i, i, sprint_hex(mem[i].block, 4), mem[i].lock, sprint_ascii(mem[i].block, 4));
+        char lck[16] = {0};
+        if (mem[i].lock) {
+            sprintf(lck, _RED_("%d"), mem[i].lock);
+        } else {
+            sprintf(lck, "%d", mem[i].lock);
+        }
+        PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s"
+            , i
+            , i
+            , sprint_hex(mem[i].block, 4)
+            , lck
+            , sprint_ascii(mem[i].block, 4)
+        );
     }
     PrintAndLogEx(NORMAL, "");
+
+    // user supplied filename ?
+    if (strlen(filename) < 1) {
+        char *fptr = filename;
+        PrintAndLogEx(INFO, "Using UID as filename");
+        fptr += snprintf(fptr, sizeof(filename), "hf-15-");
+        FillFileNameByUID(fptr, SwapEndian64(uid, sizeof(uid), 8), "-dump", sizeof(uid));
+    }
 
     size_t datalen = blocknum * 4;
     saveFile(filename, ".bin", data, datalen);
@@ -1536,10 +1564,9 @@ static int CmdHF15Raw(const char *Cmd) {
  * Read multiple blocks at once (not all tags support this)
  */
 static int CmdHF15Readmulti(const char *Cmd) {
-
- CLIParserContext *ctx;
+    CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 rdmulti",
-                  "Read multiple pages on a ISO15693 card",
+                  "Read multiple pages on a ISO-15693 tag ",
                   "hf 15 rdmulti -* -b 1 --cnt 6                   -> read 6 blocks\n"
                   "hf 15 rdmulti -u E011223344556677 -b 12 --cnt 3 -> read three blocks"
                   );
@@ -1675,7 +1702,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
 static int CmdHF15Readblock(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 rdbl",
-                  "Read page on ISO15693 card",
+                  "Read page on ISO-15693 tag",
                   "hf 15 rdbl -* -b 12\n"
                   "hf 15 rdbl -u E011223344556677 -b 12"
                   );
@@ -1793,7 +1820,7 @@ static int CmdHF15Readblock(const char *Cmd) {
 static int CmdHF15Write(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 wrbl",
-                  "Write block on ISO15693 card",
+                  "Write block on ISO-15693 tag",
                   "hf 15 wrbl -* -b 12 -d AABBCCDD\n"
                   "hf 15 wrbl -u E011223344556677 -b 12 -d AABBCCDD"
                   );
@@ -2102,25 +2129,25 @@ static int CmdHF15CSetUID(const char *Cmd) {
 static command_t CommandTable[] = {
     {"-----------", CmdHF15Help,        AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",        CmdHF15Help,        AlwaysAvailable, "This help"},
-    {"list",        CmdHF15List,        AlwaysAvailable, "List ISO15693 history"},
-    {"demod",       CmdHF15Demod,       AlwaysAvailable, "Demodulate ISO15693 from tag"},
-    {"dump",        CmdHF15Dump,        IfPm3Iso15693,   "Read all memory pages of an ISO15693 tag, save to file"},
+    {"list",        CmdHF15List,        AlwaysAvailable, "List ISO-15693 history"},
+    {"demod",       CmdHF15Demod,       AlwaysAvailable, "Demodulate ISO-15693 from tag"},
+    {"dump",        CmdHF15Dump,        IfPm3Iso15693,   "Read all memory pages of an ISO-15693 tag, save to file"},
     {"info",        CmdHF15Info,        IfPm3Iso15693,   "Tag information"},
-    {"sniff",       CmdHF15Sniff,       IfPm3Iso15693,   "Sniff ISO15693 traffic"},
+    {"sniff",       CmdHF15Sniff,       IfPm3Iso15693,   "Sniff ISO-15693 traffic"},
     {"raw",         CmdHF15Raw,         IfPm3Iso15693,   "Send raw hex data to tag"},
     {"rdbl",        CmdHF15Readblock,   IfPm3Iso15693,   "Read a block"},
     {"rdmulti",     CmdHF15Readmulti,   IfPm3Iso15693,   "Reads multiple blocks"},
-    {"reader",      CmdHF15Reader,      IfPm3Iso15693,   "Act like an ISO15693 reader"},
-    {"restore",     CmdHF15Restore,     IfPm3Iso15693,   "Restore from file to all memory pages of an ISO15693 tag"},
-    {"samples",     CmdHF15Samples,     IfPm3Iso15693,   "Acquire Samples as Reader (enables carrier, sends inquiry)"},
-    {"sim",         CmdHF15Sim,         IfPm3Iso15693,   "Fake an ISO15693 tag"},
+    {"reader",      CmdHF15Reader,      IfPm3Iso15693,   "Act like an ISO-15693 reader"},
+    {"restore",     CmdHF15Restore,     IfPm3Iso15693,   "Restore from file to all memory pages of an ISO-15693 tag"},
+    {"samples",     CmdHF15Samples,     IfPm3Iso15693,   "Acquire samples as reader (enables carrier, sends inquiry)"},
+    {"sim",         CmdHF15Sim,         IfPm3Iso15693,   "Fake an ISO-15693 tag"},
     {"wrbl",        CmdHF15Write,       IfPm3Iso15693,   "Write a block"},
     {"-----------", CmdHF15Help,        IfPm3Iso15693,  "----------------------- " _CYAN_("afi") " -----------------------"},
-    {"findafi",     CmdHF15FindAfi,     IfPm3Iso15693,   "Brute force AFI of an ISO15693 tag"},
-    {"writeafi",    CmdHF15WriteAfi,    IfPm3Iso15693,   "Writes the AFI on an ISO15693 tag"},
-    {"writedsfid",  CmdHF15WriteDsfid,  IfPm3Iso15693,   "Writes the DSFID on an ISO15693 tag"},
+    {"findafi",     CmdHF15FindAfi,     IfPm3Iso15693,   "Brute force AFI of an ISO-15693 tag"},
+    {"writeafi",    CmdHF15WriteAfi,    IfPm3Iso15693,   "Writes the AFI on an ISO-15693 tag"},
+    {"writedsfid",  CmdHF15WriteDsfid,  IfPm3Iso15693,   "Writes the DSFID on an ISO-15693 tag"},
     {"-----------", CmdHF15Help,        IfPm3Iso15693,  "----------------------- " _CYAN_("magic") " -----------------------"},
-    {"csetuid",     CmdHF15CSetUID,     IfPm3Iso15693,   "Set UID for magic Chinese card"},
+    {"csetuid",     CmdHF15CSetUID,     IfPm3Iso15693,   "Set UID for magic card"},
     {NULL, NULL, NULL, NULL}
 };
 
