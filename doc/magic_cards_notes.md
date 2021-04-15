@@ -195,7 +195,7 @@ hf mf csetuid -u 11223344 -a 0044 -s 18
 ```
 
 ```
-script run run hf_mf_magicrevive
+script run hf_mf_magicrevive
 ```
 
 To execute commands manually:
@@ -538,7 +538,7 @@ When "soft-bricked" (by writing invalid data in block0), these ones may help:
 
 ```
 hf 14a config -h
-script run run hf_mf_magicrevive -u
+script run hf_mf_magicrevive -u
 ```
 
 ## MIFARE Ultralight DirectWrite
