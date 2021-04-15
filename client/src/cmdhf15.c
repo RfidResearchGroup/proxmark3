@@ -210,18 +210,6 @@ const productName_t uidmapping[] = {
 };
 
 static int CmdHF15Help(const char *Cmd);
-static int usage_15_raw(void) {
-    const char *options[][2] = {
-        {"-r", "do not read response" },
-        {"-2", "use slower '1 out of 256' mode" },
-        {"-c", "calculate and append CRC" },
-        {"-k", "keep signal field ON after receive" },
-        {"", "Tip: turn on debugging for verbose output"},
-    };
-    PrintAndLogEx(NORMAL, "Usage: hf 15 raw  [-r] [-2] [-k] [-c] <0A 0B 0C ... hex>\n");
-    PrintAndLogOptions(options, 4, 3);
-    return PM3_SUCCESS;
-}
 
 static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
 
@@ -1455,71 +1443,46 @@ static int CmdHF15List(const char *Cmd) {
 }
 
 static int CmdHF15Raw(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 raw",
+                  "Sends raw bytes over ISO-15693 to card",
+                  "hf 15 raw -c -d 260100    --> add crc\n"
+                  "hf 15 raw -krc -d 260100  --> add crc, keep field on, skip response"
+                  );
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 3 || cmdp == 'h') return usage_15_raw();
-
-    int reply = 1, fast = 1, i = 0;
-    bool crc = false, keep_field_on = false;
-    char buf[5] = "";
-    uint8_t data[100];
-    uint32_t datalen = 0, temp;
-
-    // strip
-    while (*Cmd == ' ' || *Cmd == '\t') Cmd++;
-
-    while (Cmd[i] != '\0') {
-        if (Cmd[i] == ' ' || Cmd[i] == '\t') { i++; continue; }
-        if (Cmd[i] == '-') {
-            switch (tolower(Cmd[i + 1])) {
-                case 'r':
-                    reply = 0;
-                    break;
-                case '2':
-                    fast = 0;
-                    break;
-                case 'c':
-                    crc = true;
-                    break;
-                case 'k':
-                    keep_field_on = true;
-                    break;
-                default:
-                    PrintAndLogEx(WARNING, "Invalid option");
-                    return PM3_EINVARG;
-            }
-            i += 2;
-            continue;
-        }
-        if ((Cmd[i] >= '0' && Cmd[i] <= '9') ||
-                (Cmd[i] >= 'a' && Cmd[i] <= 'f') ||
-                (Cmd[i] >= 'A' && Cmd[i] <= 'F')) {
-            buf[strlen(buf) + 1] = 0;
-            buf[strlen(buf)] = Cmd[i];
-            i++;
-
-            if (strlen(buf) >= 2) {
-                sscanf(buf, "%x", &temp);
-                data[datalen] = (uint8_t)(temp & 0xff);
-                datalen++;
-                *buf = 0;
-            }
-            continue;
-        }
-        PrintAndLogEx(WARNING, "Invalid char on input");
-        return PM3_EINVARG;
-    }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("2", NULL, "use slower '1 out of 256' mode"),
+        arg_lit0("c",  "crc", "calculate and append CRC"),
+        arg_lit0("k",  NULL, "keep signal field ON after receive"),
+        arg_lit0("r",  NULL, "do not read response"),
+        arg_strx1("d", "data", "<hex>", "raw bytes to send"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int fast = (arg_get_lit(ctx, 1) == false);
+    bool crc = arg_get_lit(ctx, 2);
+    bool keep_field_on = arg_get_lit(ctx, 3);
+    bool read_respone = (arg_get_lit(ctx, 4) == false);
+    int datalen = 0;
+    uint8_t data[300];
+    CLIGetHexWithReturn(ctx, 5, data, &datalen);
+    CLIParserFree(ctx);
 
     if (crc) {
         AddCrc15(data, datalen);
         datalen += 2;
     }
 
+    // arg: len, speed, recv?
+    // arg0 (datalen,  cmd len?  .arg0 == crc?)
+    // arg1 (speed == 0 == 1 of 256,  == 1 == 1 of 4 )
+    // arg2 (recv == 1 == expect a response)
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, datalen, fast, reply, data, datalen);
+    SendCommandMIX(CMD_HF_ISO15693_COMMAND, datalen, fast, read_respone, data, datalen);
 
-    if (reply) {
+    if (read_respone) {
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             int len = resp.oldarg[0];
             if (len == PM3_ETEAROFF) {
@@ -1537,9 +1500,9 @@ static int CmdHF15Raw(const char *Cmd) {
         }
     }
 
-    if (keep_field_on == false)
+    if (keep_field_on == false) {
         DropField();
-
+    }
     return PM3_SUCCESS;
 }
 
@@ -1713,6 +1676,12 @@ static int CmdHF15Readblock(const char *Cmd) {
     if ((scan + unaddressed + uidlen) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
         return PM3_EINVARG;
+    }
+
+      // default fallback to scan for tag.
+    // overriding unaddress parameter :)
+    if (uidlen != 8) {
+        scan = true;
     }
 
     // request to be sent to device/card
