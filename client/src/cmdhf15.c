@@ -211,23 +211,6 @@ const productName_t uidmapping[] = {
 
 static int CmdHF15Help(const char *Cmd);
 
-static int usage_15_info(void) {
-    PrintAndLogEx(NORMAL, "Uses the optional command 'get_systeminfo' 0x2B to try and extract information\n"
-                  "command may fail, depending on tag.\n"
-                  "defaults to '1 out of 4' mode\n"
-                  "\n"
-                  "Usage:  hf 15 info    [options] <uid|s|u|*>\n"
-                  "Options:\n"
-                  "\t-2        use slower '1 out of 256' mode\n"
-                  "\tuid (either): \n"
-                  "\t  <8B hex>  full UID eg E011223344556677\n"
-                  "\t  u         unaddressed mode\n"
-                  "\t  *         scan for tag\n"
-                  "Examples:\n"
-                  _YELLOW_("\thf 15 info u"));
-    return PM3_SUCCESS;
-}
-
 static int usage_15_dump(void) {
     PrintAndLogEx(NORMAL, "This command dumps the contents of a ISO-15693 tag and save it to file\n"
                   "\n"
@@ -948,29 +931,70 @@ static int NxpSysInfo(uint8_t *uid) {
  */
 static int CmdHF15Info(const char *Cmd) {
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_15_info();
+   CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 info",
+                  "Uses the optional command `get_systeminfo` 0x2B to try and extract information",
+                  "hf 15 info\n"
+                  "hf 15 info -*\n"
+                  "hf 15 info -u E011223344556677"
+                  );
 
-    PacketResponseNG resp;
-    uint8_t req[PM3_CMD_DATA_SIZE] = {0};
-    uint16_t reqlen;
-    uint8_t fast = 1;
-    uint8_t reply = 1;
-    uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    void *argtable[6+1] = {};
+    uint8_t arglen = arg_add_default(argtable);
+    argtable[arglen++] = arg_param_end;
 
-    char cmdbuf[100] = {0};
-    char *cmd = cmdbuf;
-    strncpy(cmd, Cmd, sizeof(cmdbuf) - 1);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    if (prepareHF15Cmd(&cmd, &reqlen, &fast, req, ISO15_CMD_SYSINFO) == false)
-        return PM3_SUCCESS;
+    uint8_t uid[8];
+    int uidlen = 0;
+    CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    bool unaddressed = arg_get_lit(ctx, 2);
+    bool scan = arg_get_lit(ctx, 3);
+    int fast = (arg_get_lit(ctx, 4) == false);
+    bool add_option = arg_get_lit(ctx, 5);
+
+    CLIParserFree(ctx);
+
+    // sanity checks
+    if ((scan + unaddressed + uidlen) > 1) {
+        PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
+        return PM3_EINVARG;
+    }
+
+    // default fallback to scan for tag.
+    if (unaddressed == false && uidlen != 8) {
+        scan = true;
+    }
+
+    // request to be sent to device/card
+    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+    uint8_t req[PM3_CMD_DATA_SIZE] = {flags, ISO15_CMD_SYSINFO};
+    uint16_t reqlen = 2;
+
+    if (scan) {
+        if (getUID(false, uid) != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "no tag found");
+            return PM3_EINVARG;
+        } 
+        uidlen = 8;
+    }
+
+    if (uidlen == 8) {
+        // add UID (scan, uid)
+        memcpy(req + reqlen, uid, sizeof(uid));
+        reqlen += sizeof(uid);
+    }
+    PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));    
+
 
     AddCrc15(req,  reqlen);
     reqlen += 2;
 
+    uint8_t read_response = 1;
+    PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, read_response, req, reqlen);
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "iso15693 timeout");
         DropField();
         return PM3_ETIMEOUT;
@@ -1222,9 +1246,8 @@ static int CmdHF15WriteAfi(const char *Cmd) {
             if (getUID(false, uid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
-            } else {
-                uidlen = 8;
             }
+            uidlen = 8;
         }
 
         if (uidlen == 8) {
@@ -1320,9 +1343,8 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
             if (getUID(false, uid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
-            } else {
-                uidlen = 8;
             }
+            uidlen = 8;
         }
 
         if (uidlen == 8) {
@@ -1656,9 +1678,8 @@ static int CmdHF15Readmulti(const char *Cmd) {
             if (getUID(false, uid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
-            } else {
-                uidlen = 8;
             }
+            uidlen = 8;
         }
 
         if (uidlen == 8) {
@@ -1785,9 +1806,8 @@ static int CmdHF15Readblock(const char *Cmd) {
             if (getUID(false, uid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
-            } else {
-                uidlen = 8;
             }
+            uidlen = 8;
         }
 
         if (uidlen == 8) {
