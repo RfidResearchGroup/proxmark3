@@ -417,7 +417,7 @@ static int getUID(bool loop, uint8_t *buf) {
     uint8_t fast = 1;
     uint8_t reply = 1;
 
-    int res = PM3_SUCCESS;
+    int res = PM3_ESOFT;
 
     do {
         clearCommandBuffer();
@@ -437,11 +437,12 @@ static int getUID(bool loop, uint8_t *buf) {
                 PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), iso15693_sprintUID(NULL, buf));
                 PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("%s"), getTagInfo_15(buf));
 
+                res = PM3_SUCCESS;
+
                 if (loop == false) {
-                    res = PM3_SUCCESS;
                     break;
                 }
-            }
+            }  
         }
     } while (loop && kbd_enter_pressed() == false);
 
