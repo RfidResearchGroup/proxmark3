@@ -1047,13 +1047,20 @@ static int CmdHF14BReader(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v", "verbose", "verbose"),
+        arg_lit0("s", "silent", "silent (no messages)"),
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool verbose = arg_get_lit(ctx, 1);
+    bool verbose = (arg_get_lit(ctx, 1) == false);
+    bool cm = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
-    return readHF14B(verbose);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    return readHF14B(cm, verbose);
 }
 
 // Read SRI512|SRIX4K block
@@ -1965,25 +1972,30 @@ int infoHF14B(bool verbose, bool do_aid_search) {
 }
 
 // get and print general info about all known 14b chips
-int readHF14B(bool verbose) {
+int readHF14B(bool loop, bool verbose) {
 
-    // try std 14b (atqb)
-    if (HF14B_std_reader(verbose))
-        return 1;
+    do {
+        // try std 14b (atqb)
+        if (HF14B_std_reader(verbose))
+            return PM3_SUCCESS;
 
-    // try ST Microelectronics 14b
-    if (HF14B_st_reader(verbose))
-        return 1;
+        // try ST Microelectronics 14b
+        if (HF14B_st_reader(verbose))
+            return PM3_SUCCESS;
 
-    // try ASK CT 14b
-    if (HF14B_ask_ct_reader(verbose))
-        return 1;
+        // try ASK CT 14b
+        if (HF14B_ask_ct_reader(verbose))
+            return PM3_SUCCESS;
 
-    // try unknown 14b read commands (to be identified later)
-    // could be read of calypso, CEPAS, moneo, or pico pass.
-    if (HF14B_other_reader(verbose))
-        return 1;
+        // try unknown 14b read commands (to be identified later)
+        // could be read of calypso, CEPAS, moneo, or pico pass.
+        if (HF14B_other_reader(verbose))
+            return PM3_SUCCESS;
 
-    if (verbose) PrintAndLogEx(FAILED, "no 14443-B tag found");
-    return 0;
+    } while (loop && kbd_enter_pressed() == false);
+
+    if (verbose) {
+        PrintAndLogEx(FAILED, "no ISO 14443-B tag found");
+    }
+    return PM3_EOPABORTED;
 }
