@@ -1079,26 +1079,26 @@ static int CmdEMVExec(const char *Cmd) {
                     
                     // https://mst-company.ru/blog/ekvajring-emv-tranzaktsiya-emv-transaction-flow-chast-4-pdol-i-beskontaktnye-karty-osobennosti-qvsdc-i-quics
                     if (IAD->value[0] == 0x1f) {
-                        PrintAndLogEx(NORMAL, "\tKey index:  0x%02x", IAD->value[2]);
-                        PrintAndLogEx(NORMAL, "\tCrypto ver: 0x%02x(%03d)", IAD->value[1], IAD->value[1]);
-                        PrintAndLogEx(NORMAL, "\tCVR: %s", sprint_hex(&IAD->value[3], 5));
+                        PrintAndLogEx(NORMAL, "    Key index:  0x%02x", IAD->value[2]);
+                        PrintAndLogEx(NORMAL, "    Crypto ver: 0x%02x(%03d)", IAD->value[1], IAD->value[1]);
+                        PrintAndLogEx(NORMAL, "    CVR: %s", sprint_hex(&IAD->value[3], 5));
                         struct tlvdb *cvr = tlvdb_fixed(0x20, 5, &IAD->value[3]);
                         TLVPrintFromTLVLev(cvr, 1);
-                        PrintAndLogEx(NORMAL, "\tIDD option id: 0x%02x", IAD->value[8]);
-                        PrintAndLogEx(NORMAL, "\tIDD: %s", sprint_hex(&IAD->value[9], 23));
+                        PrintAndLogEx(NORMAL, "    IDD option id: 0x%02x", IAD->value[8]);
+                        PrintAndLogEx(NORMAL, "    IDD: %s", sprint_hex(&IAD->value[9], 23));
                     } else if (IAD->len >= IAD->value[0] + 1) {
-                        PrintAndLogEx(NORMAL, "\tKey index:  0x%02x", IAD->value[1]);
-                        PrintAndLogEx(NORMAL, "\tCrypto ver: 0x%02x(%03d)", IAD->value[2], IAD->value[2]);
-                        PrintAndLogEx(NORMAL, "\tCVR: %s", sprint_hex(&IAD->value[3], IAD->value[0] - 2));
+                        PrintAndLogEx(NORMAL, "    Key index:  0x%02x", IAD->value[1]);
+                        PrintAndLogEx(NORMAL, "    Crypto ver: 0x%02x(%03d)", IAD->value[2], IAD->value[2]);
+                        PrintAndLogEx(NORMAL, "    CVR: %s", sprint_hex(&IAD->value[3], IAD->value[0] - 2));
                         struct tlvdb *cvr = tlvdb_fixed(0x20, IAD->value[0] - 2, &IAD->value[3]);
                         TLVPrintFromTLVLev(cvr, 1);
                         if (IAD->len >= 8) {
                             int iddLen = IAD->value[7];
-                            PrintAndLogEx(NORMAL, "\tIDD length: %d", iddLen);
+                            PrintAndLogEx(NORMAL, "    IDD length: %d", iddLen);
                             if (iddLen >= 1)
-                                PrintAndLogEx(NORMAL, "\tIDD option id: 0x%02x", IAD->value[8]);
+                                PrintAndLogEx(NORMAL, "    IDD option id: 0x%02x", IAD->value[8]);
                             if (iddLen >= 2)
-                                PrintAndLogEx(NORMAL, "\tIDD: %s", sprint_hex(&IAD->value[9], iddLen - 1));
+                                PrintAndLogEx(NORMAL, "    IDD: %s", sprint_hex(&IAD->value[9], iddLen - 1));
                         }
                     }
                 } else {
