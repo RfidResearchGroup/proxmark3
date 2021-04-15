@@ -208,9 +208,9 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
     // 0x00 = timeslot
     // 0x09 0x21 = crc
     static uint8_t poll[10] = {0xb2, 0x4d, 0x06, FELICA_POLL_REQ, 0xFF, 0xFF, 0x00, 0x00, 0x09, 0x21};
-    int len = 20;
+    int len = 10;
 
-    // We try 20 times, or if answer was received.
+    // We try 10 times, or if answer was received.
     do {
         // end-of-reception response packet data, wait approx. 501μs
         // end-of-transmission command packet data, wait approx. 197μs
