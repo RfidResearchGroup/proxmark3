@@ -195,7 +195,7 @@ hf mf csetuid -u 11223344 -a 0044 -s 18
 ```
 
 ```
-script run run hf_mf_magicrevive
+script run hf_mf_magicrevive
 ```
 
 To execute commands manually:
@@ -499,9 +499,9 @@ BCC1 Int  LCK0 LCK1
 
 UID is made of SN0..SN6 bytes
 
-Computing BCC0 on UID 04112233445566: `analyse lcr 88041122` = `bf`
+Computing BCC0 on UID 04112233445566: `analyse lcr -d 88041122` = `bf`
 
-Computing BCC1 on UID 04112233445566: `analyse lcr 33445566` = `44`
+Computing BCC1 on UID 04112233445566: `analyse lcr -d 33445566` = `44`
 
 Int is internal, typically 0x48
 
@@ -538,7 +538,7 @@ When "soft-bricked" (by writing invalid data in block0), these ones may help:
 
 ```
 hf 14a config -h
-script run run hf_mf_magicrevive -u
+script run hf_mf_magicrevive -u
 ```
 
 ## MIFARE Ultralight DirectWrite

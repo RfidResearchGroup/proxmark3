@@ -1897,7 +1897,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
             LogTrace(rx, nbytes(rxlen), response_start, response_start + response_duration, NULL, false);
 
-// TODO when using cumulative time for command_start, pm3 doesn't reply anymore, e.g. on lf hitag read 23 4F4E4D494B52
+// TODO when using cumulative time for command_start, pm3 doesn't reply anymore, e.g. on lf hitag reader --23 -k 4F4E4D494B52
 // Use delta time?
 //            command_start = response_start + response_duration;
             command_start = 0;

@@ -79,4 +79,4 @@ lf t55xx sniff -1
 
 It uses the existing `lf sniff` command to collect the data, so setting that first as per normal sniffing is recommended. Once you have a sniff, you can "re-sniff" from the stored sniffed data and try different settings, if you think the data is not clean.
 
-As normal, the cloner may write data past the end of the 40K sample buffer. So using the `lf config s <x bytes>` then re-run the sniff to see if there is more data.
+As normal, the cloner may write data past the end of the 40K sample buffer. So using the `lf config -s <x bytes>` then re-run the sniff to see if there is more data.

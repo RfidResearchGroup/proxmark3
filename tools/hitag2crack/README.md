@@ -167,7 +167,7 @@ response pairs for the same tag UID.
 **TODO** will be ht2 sim or sniff with actual tag ?
 
 ```
-pm3 --> lf hitag sniff l 
+pm3 --> lf hitag sniff
 ```
 
 It creates a file `Hitag2_<UID>_<nR>_<aR>_collection.txt`.
@@ -184,7 +184,7 @@ Attack 4 requires the same information as attack 3, but only 16-32 encrypted
 nonce and challenge response pairs are required.
 
 ```
-pm3 --> lf hitag sniff l 
+pm3 --> lf hitag sniff
 ```
 
 It creates a file `Hitag2_<UID>_<nR>_<aR>_collection.txt`.
