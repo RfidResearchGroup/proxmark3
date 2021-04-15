@@ -684,7 +684,7 @@ print STDERR "\n";
 $uid = uc $uid;
 #print STDERR "amiitool -d -k ../client/amiitool/key_retail.bin -i $input -o $input.decrypted\n";
 $input =~ s/\....$//;
-print STDERR "hf mf eload u $input\n";
+print STDERR "hf mfu eload --u $input\n";
 print STDERR "hf 14a sim -t 7 -u $uid\n";
 
 

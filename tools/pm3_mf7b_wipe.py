@@ -27,11 +27,11 @@
 #
 # Get first line from EML file (block0) and write it down using command
 #
-#                             Place it here
-#                                    |
-#                                    |
-#                                    v
-# hf mf wrbl 0 B FFFFFFFFFFFF 046E46AAA53480084400120111003113
+#                                      Place it here
+#                                            |
+#                                            |
+#                                            v
+# hf mf wrbl --blk 0 -b -k FFFFFFFFFFFF -d 046E46AAA53480084400120111003113
 #
 # Now restore all the data using built-in restore command
 #
@@ -73,15 +73,12 @@
 #
 #
 
-
-
-
 import subprocess
 
 # EML data var te get keys of
 EML_FILE_DATA = """PLACE RAW hf-mf-CARD_UID-dump.eml FILE CONTENT OF CURRENTLY LOADED CARD HERE"""
 # Change your device name here if it differs from the default Proxmark3 RDV4.0
-PROXMARK_BIN_EXEC_STRING = 'proxmark3 -c "%s" /dev/tty.usbmodemiceman1'
+PROXMARK_BIN_EXEC_STRING = './pm3 -c "%s"'
 # Constants
 DEFAULT_ACCESS_BLOCK = "FFFFFFFFFFFFFF078000FFFFFFFFFFFF"
 F12_KEY = "FFFFFFFFFFFF"
@@ -95,7 +92,7 @@ def exec_proxmark_cmd(command, retry = 2, input=""):
 
         proxmark_reply = rst.stdout.decode("utf-8")
         proxmark_status = proxmark_reply.splitlines()[-1:][0].strip()
-        if proxmark_status == "isOk:01":
+        if proxmark_status == "ok":
             return True, "Success: " + proxmark_status
         retry_c += 1
     return False, "Error: %s , status %s" % (proxmark_reply.splitlines()[-2:][0], proxmark_status)
@@ -128,19 +125,19 @@ for sector in sector_array:
     key_B = sector[3][-12:]
     for _block in range(0,4):
         if sector_array.index(sector) == 0 and block == 0:
-            write_status, verbose = exec_proxmark_cmd("hf mf wrbl %s B %s %s" % (block, key_B, sector[0]))
+            write_status, verbose = exec_proxmark_cmd("hf mf wrbl --blk %s -b -k %s -d %s" % (block, key_B, sector[0]))
             if not write_status:
-                write_status, verbose = exec_proxmark_cmd("hf mf wrbl %s A %s %s" % (block, key_A, sector[0]))
+                write_status, verbose = exec_proxmark_cmd("hf mf wrbl --blk %s -a -k %s -d %s" % (block, key_A, sector[0]))
             if not write_status:
-                write_status, verbose = exec_proxmark_cmd("hf mf wrbl %s A %s %s" % (block, F12_KEY, sector[0]))
+                write_status, verbose = exec_proxmark_cmd("hf mf wrbl --blk %s -a -k %s -d %s" % (block, F12_KEY, sector[0]))
             block_success[block] = verbose
 
         elif _block == 3:
-            write_status, verbose = exec_proxmark_cmd("hf mf wrbl %s B %s %s" % (block, key_B, DEFAULT_ACCESS_BLOCK))
+            write_status, verbose = exec_proxmark_cmd("hf mf wrbl --blk %s -b -k %s -d %s" % (block, key_B, DEFAULT_ACCESS_BLOCK))
             if not write_status:
-                write_status, verbose = exec_proxmark_cmd("hf mf wrbl %s A %s %s" % (block, key_A, DEFAULT_ACCESS_BLOCK))
+                write_status, verbose = exec_proxmark_cmd("hf mf wrbl --blk %s -a -k %s -d %s" % (block, key_A, DEFAULT_ACCESS_BLOCK))
             if not write_status:
-                write_status, verbose = exec_proxmark_cmd("hf mf wrbl %s A %s %s" % (block, F12_KEY, DEFAULT_ACCESS_BLOCK))
+                write_status, verbose = exec_proxmark_cmd("hf mf wrbl --blk %s -a -k %s -d %s" % (block, F12_KEY, DEFAULT_ACCESS_BLOCK))
             block_success[block] = verbose
 
         _block += 1
