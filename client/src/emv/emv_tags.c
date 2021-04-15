@@ -557,7 +557,7 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, i
         return;
     }
 
-    if (tlv->len != tlv->value[0] + 1) {
+    if (tlv->len != 5 && tlv->len != tlv->value[0] + 1) {
         PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
         PrintAndLogEx(NORMAL, "    INVALID length!");
         return;
@@ -581,6 +581,14 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, i
         PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
         PrintAndLogEx(NORMAL, "    PIN try: %x", tlv->value[2] >> 4);
     }
+    if (tlv->len >= 3 && (tlv->value[2] & 0x40)) {
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    PIN try exceeded");
+    }
+    if (tlv->len >= 4 && (tlv->value[3] >> 4)) {
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    Issuer script counter: %x", tlv->value[3] >> 4);
+    }
     if (tlv->len >= 4 && (tlv->value[3] & 0x0F)) {
         PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
         PrintAndLogEx(NORMAL, "    Issuer discretionary bits: %x", tlv->value[3] & 0x0F);
@@ -588,6 +596,10 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, i
     if (tlv->len >= 5 && (tlv->value[4] >> 4)) {
         PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
         PrintAndLogEx(NORMAL, "    Successfully processed issuer script commands: %x", tlv->value[4] >> 4);
+    }
+    if (tlv->len >= 5 && (tlv->value[4] & 0x02)) {
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    CDCVM OK");
     }
 
     // mask 0F 0F F0 0F
