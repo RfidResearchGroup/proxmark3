@@ -37,8 +37,8 @@
  * 2. trace load trace.trc
  *    Loads trace data from a file into PC-side buffers.
  *
- * 3. For ISO14a: trace list 14a 1
- *    For MIFARE Classic: trace list mf 1
+ * 3. For ISO14a: trace list -t 14a -1
+ *    For MIFARE Classic: trace list -t mf -1
  *
  *    Lists trace data from buffer without requesting it from PM3.
  *

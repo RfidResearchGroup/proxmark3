@@ -1935,7 +1935,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     iceman 2021,
     Why does this command say it dumps a FeliCa lite card
     and then tries to print a trace?!?
-    Is this a trace list or a feclia dump cmd?
+    Is this a trace list or a FeliCa dump cmd?
     */
 
 

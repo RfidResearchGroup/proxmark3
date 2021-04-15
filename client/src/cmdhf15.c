@@ -954,7 +954,7 @@ static int CmdHF15Sniff(const char *Cmd) {
     WaitForResponse(CMD_HF_ISO15693_SNIFF, &resp);
 
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 15 list") "` to view captured tracelog");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save h") "` to save tracelog for later analysing");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
 }
 
