@@ -526,7 +526,7 @@ static int CmdHFiClassSniff(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass sniff",
                   "Sniff the communication reader and tag",
                   "hf iclass sniff\n"
-                  "hf iclass sniff -j -> jam e-purse updates\n"
+                  "hf iclass sniff -j    --> jam e-purse updates\n"
                  );
 
     void *argtable[] = {
@@ -566,12 +566,11 @@ static int CmdHFiClassSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass sim",
                   "Simulate a iCLASS legacy/standard tag",
-                  "hf iclass sim -t 0 --csn 031FEC8AF7FF12E0                -> simulate with specficied CSN\n"
-                  "hf iclass sim -t 1                                       -> simulate with default CSN\n"
-                  "hf iclass sim -t 2                                       -> execute loclass attack online part\n"
-                  "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin   -> simulate full iCLASS 2k tag\n"
-                  "hf iclass sim -t 3                                       -> simulate full iCLASS 2k tag\n"
-                  "hf iclass sim -t 4                                       -> Reader-attack, adapted for KeyRoll mode, gather reader responses to extract elite key");
+                  "hf iclass sim -t 0 --csn 031FEC8AF7FF12E0   --> simulate with specficied CSN\n"
+                  "hf iclass sim -t 1                          --> simulate with default CSN\n"
+                  "hf iclass sim -t 2                          --> execute loclass attack online part\n"
+                  "hf iclass sim -t 3                          --> simulate full iCLASS 2k tag\n"
+                  "hf iclass sim -t 4                          --> Reader-attack, adapted for KeyRoll mode, gather reader responses to extract elite key");
 
     void *argtable[] = {
         arg_param_begin,
@@ -857,14 +856,14 @@ static int CmdHFiClassReader(const char *Cmd) {
 static int CmdHFiClassELoad(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass eload",
-                  "Loads iCLASS tag dump into emulator memory on device",
-                  "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin\n");
+                  "Load emulator memory with data from (bin/eml/json) iCLASS dump file",
+                  "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
+                  "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.eml\n"
+                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>", "filename of dump"),
-        arg_lit0(NULL, "json",              "load JSON type dump"),
-        arg_lit0(NULL, "eml",               "load EML type dump"),
+        arg_str1("f", "file", "<fn>", "filename of dump (bin/eml/json)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -879,32 +878,17 @@ static int CmdHFiClassELoad(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    DumpFileType_t dftype = BIN;
-
-    bool use_json = arg_get_lit(ctx, 2);
-    bool use_eml = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
-
-    if (use_json && use_eml) {
-        PrintAndLogEx(ERR, "Error: can't specify both JSON & EML");
-        return PM3_EINVARG;
-    }
-
-    if (use_json) {
-        dftype = JSON;
-    } else if (use_eml) {
-        dftype = EML;
-    }
 
     size_t bytes_read = 2048;
     uint8_t *dump = calloc(2048, sizeof(uint8_t));
-    if (!dump) {
+    if (dump == NULL) {
         PrintAndLogEx(ERR, "error, cannot allocate memory ");
         return PM3_EMALLOC;
     }
 
     int res = 0;
-
+    DumpFileType_t dftype = getfiletype(filename);
     switch (dftype) {
         case BIN: {
             res = loadFile_safe(filename, ".bin", (void **)&dump, &bytes_read);
@@ -975,7 +959,7 @@ static int CmdHFiClassESave(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<filename>", "filename of dumpfile"),
+        arg_str0("f", "file", "<fn>", "filename of dump file"),
         arg_int0("s", "size", "<256|2048>", "number of bytes to save (default 256)"),
         arg_param_end
     };
@@ -1088,15 +1072,18 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                   "This is a naive implementation, it tries to decrypt every block after block 6.\n"
                   "Correct behaviour would be to decrypt only the application areas where the key is valid,\n"
                   "which is defined by the configuration block.\n"
-                  "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside\n"
-                  "in the resources directory. The file should be 16 bytes binary data",
+                  "\nOBS!\n"
+                  "In order to use this function, the file `iclass_decryptionkey.bin` must reside\n"
+                  "in the resources directory. The file should be 16 bytes binary data\n"
+                  "or...\n"
+                  "make sure your cardhelper is placed in the sim module",
                   "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
                   "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin -k 000102030405060708090a0b0c0d0e0f\n"
                   "hf iclass decrypt -d 1122334455667788 -k 000102030405060708090a0b0c0d0e0f");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<filename>", "filename of dumpfile"),
+        arg_str0("f", "file", "<fn>", "filename of dump file (bin/eml/json)"),
         arg_str0("d", "data", "<hex>", "3DES encrypted data"),
         arg_str0("k", "key", "<hex>", "3DES transport key"),
         arg_lit0("v", "verbose", "verbose output"),
@@ -1108,32 +1095,11 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(clictx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    size_t decryptedlen = 0;
-    uint8_t *decrypted = NULL;
-    bool have_file = false;
-
-    if (fnlen > 0) {
-        if (loadFile_safe(filename, "", (void **)&decrypted, &decryptedlen) != PM3_SUCCESS) {
-            CLIParserFree(clictx);
-            return PM3_EINVARG;
-        }
-        have_file = true;
-    }
-
     int enc_data_len = 0;
     uint8_t enc_data[8] = {0};
     bool have_data = false;
 
     CLIGetHexWithReturn(clictx, 2, enc_data, &enc_data_len);
-
-    if (enc_data_len > 0) {
-        if (enc_data_len != 8) {
-            PrintAndLogEx(ERR, "Data must be 8 hex bytes (16 HEX symbols)");
-            CLIParserFree(clictx);
-            return PM3_EINVARG;
-        }
-        have_data = true;
-    }
 
     int key_len = 0;
     uint8_t key[16] = {0};
@@ -1142,24 +1108,74 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     CLIGetHexWithReturn(clictx, 3, key, &key_len);
 
+    bool verbose = arg_get_lit(clictx, 4);
+    CLIParserFree(clictx);
+
+    // sanity checks
+    if (enc_data_len > 0) {
+        if (enc_data_len != 8) {
+            PrintAndLogEx(ERR, "Data must be 8 hex bytes (16 HEX symbols)");
+            return PM3_EINVARG;
+        }
+        have_data = true;
+    }
+
     if (key_len > 0) {
         if (key_len != 16) {
             PrintAndLogEx(ERR, "Transport key must be 16 hex bytes (32 HEX characters)");
-            CLIParserFree(clictx);
             return PM3_EINVARG;
         }
         have_key = true;
     }
 
-    bool verbose = arg_get_lit(clictx, 4);
-    CLIParserFree(clictx);
+    size_t decryptedlen = 2048;
+    uint8_t *decrypted =  calloc(2048, sizeof(uint8_t));
+    bool have_file = false;
+    if (decrypted == NULL) {
+        PrintAndLogEx(ERR, "error, cannot allocate memory ");
+        return PM3_EMALLOC;
+    }
 
+    int res = PM3_SUCCESS;
+
+    // if user supplied dump file,  time to load it
+    if (fnlen > 0) {
+
+        DumpFileType_t dftype = getfiletype(filename);
+        switch (dftype) {
+            case BIN: {
+                res = loadFile_safe(filename, ".bin", (void **)&decrypted, &decryptedlen);
+                break;
+            }
+            case EML: {
+                res = loadFileEML_safe(filename, (void **)&decrypted, &decryptedlen);
+                break;
+            }
+            case JSON: {
+                res = loadFileJSON(filename, decrypted, 2048, &decryptedlen, NULL);
+                break;
+            }
+            case DICTIONARY: {
+                PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+                return PM3_EINVARG;
+            }
+        }
+
+        if (res != PM3_SUCCESS) {
+            free(decrypted);
+            return PM3_EFILE;
+        }
+
+        have_file = true;
+    }
+
+    // load transport key
     bool use_sc = false;
     if (have_key == false) {
         use_sc = IsCardHelperPresent(verbose);
         if (use_sc == false) {
             size_t keylen = 0;
-            int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
+            res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(INFO, "Couldn't find any decryption methods");
                 return PM3_EINVARG;
@@ -1181,6 +1197,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     uint8_t dec_data[8] = {0};
 
+    // decrypt user supplied data
     if (have_data) {
 
         if (use_sc) {
@@ -1191,6 +1208,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Data: %s", sprint_hex(dec_data, sizeof(dec_data)));
     }
 
+    // decrypt dump file data
     if (have_file) {
 
         picopass_hdr_t *hdr = (picopass_hdr_t *)decrypted;
@@ -1455,7 +1473,7 @@ static int CmdHFiClassDump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<filename>", "filename to save dump to"),
+        arg_str0("f", "file", "<fn>", "save filename"),
         arg_str0("k", "key", "<hex>", "debit key or NR/MAC for replay as 8 hex bytes"),
         arg_int0(NULL, "ki", "<dec>", "debit key index to select key from memory 'hf iclass managekeys'"),
         arg_str0(NULL, "credit", "<hex>", "credit key as 8 hex bytes"),
@@ -1927,7 +1945,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>", "specify a filename to restore"),
+        arg_str1("f", "file", "<fn>", "specify a filename to restore (bin/eml/json)"),
         arg_str0("k", "key", "<hex>", "Access key as 8 hex bytes"),
         arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
         arg_int1(NULL, "first", "<dec>", "The first block number to restore"),
@@ -2005,10 +2023,36 @@ static int CmdHFiClassRestore(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t *dump = NULL;
-    size_t bytes_read = 0;
-    if (loadFile_safe(filename, "", (void **)&dump, &bytes_read) != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
+    size_t bytes_read = 2048;
+    uint8_t *dump =  calloc(2048, sizeof(uint8_t));
+    if (dump == NULL) {
+        PrintAndLogEx(ERR, "error, cannot allocate memory ");
+        return PM3_EMALLOC;
+    }
+
+    int res = PM3_SUCCESS;
+    DumpFileType_t dftype = getfiletype(filename);
+    switch (dftype) {
+        case BIN: {
+            res = loadFile_safe(filename, ".bin", (void **)&dump, &bytes_read);
+            break;
+        }
+        case EML: {
+            res = loadFileEML_safe(filename, (void **)&dump, &bytes_read);
+            break;
+        }
+        case JSON: {
+            res = loadFileJSON(filename, dump, 2048, &bytes_read, NULL);
+            break;
+        }
+        case DICTIONARY: {
+            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+            return PM3_EINVARG;
+        }
+    }
+
+    if (res != PM3_SUCCESS) {
+        free(dump);
         return PM3_EFILE;
     }
 
@@ -2305,9 +2349,9 @@ static int CmdHFiClass_loclass(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<filename>", "filename of Bruteforce iclass dumpfile"),
-        arg_lit0(NULL, "test",              "Perform self-test"),
-        arg_lit0(NULL, "long",              "Perform self-test, including long ones"),
+        arg_str0("f", "file", "<fn>", "filename with nr/mac data from `hf iclass sim -t 2` "),
+        arg_lit0(NULL, "test",        "Perform self-test"),
+        arg_lit0(NULL, "long",        "Perform self-test, including long ones"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2456,13 +2500,13 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 static int CmdHFiClassView(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass view",
-                  "Print a iCLASS tag dump file",
+                  "Print a iCLASS tag dump file (bin/eml/json)",
                   "hf iclass view -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
                   "hf iclass view --first 1 -f hf-iclass-AA162D30F8FF12F1-dump.bin\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>",  "filename of dump"),
+        arg_str1("f", "file", "<fn>",  "filename of dump (bin/eml/json)"),
         arg_int0(NULL, "first", "<dec>", "Begin printing from this block (default block 6)"),
         arg_int0(NULL, "last", "<dec>", "End printing at this block (default 0, ALL)"),
         arg_lit0("v", "verbose", "verbose output"),
@@ -2480,10 +2524,36 @@ static int CmdHFiClassView(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    uint8_t *dump = NULL;
-    size_t bytes_read = 0;
-    if (loadFile_safe(filename, "", (void **)&dump, &bytes_read) != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
+    size_t bytes_read = 2048;
+    uint8_t *dump = calloc(2048, sizeof(uint8_t));
+    if (dump == NULL) {
+        PrintAndLogEx(ERR, "error, cannot allocate memory ");
+        return PM3_EMALLOC;
+    }
+
+    int res = 0;
+    DumpFileType_t dftype = getfiletype(filename);
+    switch (dftype) {
+        case BIN: {
+            res = loadFile_safe(filename, ".bin", (void **)&dump, &bytes_read);
+            break;
+        }
+        case EML: {
+            res = loadFileEML_safe(filename, (void **)&dump, &bytes_read);
+            break;
+        }
+        case JSON: {
+            res = loadFileJSON(filename, dump, 2048, &bytes_read, NULL);
+            break;
+        }
+        case DICTIONARY: {
+            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+            return PM3_EINVARG;
+        }
+    }
+
+    if (res != PM3_SUCCESS) {
+        free(dump);
         return PM3_EFILE;
     }
 
@@ -2726,14 +2796,14 @@ static int CmdHFiClassManageKeys(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass managekeys",
                   "Manage iCLASS Keys in client memory",
-                  "hf iclass managekeys --ki 0 -k 1122334455667788 -> set key 1122334455667788 at index 0\n"
-                  "hf iclass managekeys -f mykeys.bin --save       -> save key file\n"
-                  "hf iclass managekeys -f mykeys.bin --load       -> load key file\n"
-                  "hf iclass managekeys -p                         -> print keys");
+                  "hf iclass managekeys --ki 0 -k 1122334455667788 --> set key 1122334455667788 at index 0\n"
+                  "hf iclass managekeys -f mykeys.bin --save       --> save key file\n"
+                  "hf iclass managekeys -f mykeys.bin --load       --> load key file\n"
+                  "hf iclass managekeys -p                         --> print keys");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<filename>", "Specify a filename to use with load or save operations"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for load / save operations"),
         arg_str0("k", "key", "<hex>", "Access key as 8 hex bytes"),
         arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
         arg_lit0(NULL, "save", "Save keys in memory to file specified by filename"),
@@ -2947,7 +3017,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>", "Dictionary file with default iclass keys"),
+        arg_str1("f", "file", "<fn>", "Dictionary file with default iclass keys"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
@@ -3133,7 +3203,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>", "Dictionary file with default iclass keys"),
+        arg_str1("f", "file", "<fn>", "Dictionary file with default iclass keys"),
         arg_str1(NULL, "csn", "<hex>", "Specify CSN as 8 hex bytes"),
         arg_str1(NULL, "epurse", "<hex>", "Specify ePurse as 8 hex bytes"),
         arg_str1(NULL, "macs", "<hex>", "MACs"),
