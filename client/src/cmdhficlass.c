@@ -903,6 +903,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
             break;
         }
         case DICTIONARY: {
+            free(dump);
             PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
             return PM3_EINVARG;
         }
@@ -1156,6 +1157,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                 break;
             }
             case DICTIONARY: {
+                free(decrypted);
                 PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
                 return PM3_EINVARG;
             }
@@ -2046,7 +2048,8 @@ static int CmdHFiClassRestore(const char *Cmd) {
             break;
         }
         case DICTIONARY: {
-            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+            free(dump);
+            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");            
             return PM3_EINVARG;
         }
     }
@@ -2547,6 +2550,7 @@ static int CmdHFiClassView(const char *Cmd) {
             break;
         }
         case DICTIONARY: {
+            free(dump);
             PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
             return PM3_EINVARG;
         }
