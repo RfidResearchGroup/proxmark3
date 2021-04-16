@@ -2434,6 +2434,7 @@ static int CmdT55xxRestore(const char *Cmd) {
     if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Warning: error writing blk 0");
     }
+    free(dump);
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }

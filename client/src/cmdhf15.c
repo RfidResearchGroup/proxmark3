@@ -1981,7 +1981,7 @@ static int CmdHF15Restore(const char *Cmd) {
     } else {
         PrintAndLogEx(SUCCESS, "Using unaddressed mode");    
     }
-    PrintAndLogEx(INFO, "Using block size... %zu", blocksize);
+    PrintAndLogEx(INFO, "Using block size... %d", blocksize);
 
     // 4bytes * 256 blocks.  Should be enough..
     uint8_t *data = calloc(4 * 256, sizeof(uint8_t));
@@ -2019,7 +2019,7 @@ static int CmdHF15Restore(const char *Cmd) {
     }
 
     if ((datalen % blocksize) != 0) {
-        PrintAndLogEx(WARNING, "datalen %zu isn't dividable with blocksize %zu", datalen, blocksize);
+        PrintAndLogEx(WARNING, "datalen %zu isn't dividable with blocksize %d", datalen, blocksize);
         free(data);
         return PM3_ESOFT;
     }
