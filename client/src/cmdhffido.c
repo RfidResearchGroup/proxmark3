@@ -181,7 +181,7 @@ static int cmd_hf_fido_register(const char *cmd) {
                   "hf fido reg          -> execute command with 2 parameters, filled 0x00\n"
                   "hf fido reg -p s0 s1 -> execute command with plain parameters\n"
                   "hf fido reg --cp 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f --ap 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f\n"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -693,7 +693,7 @@ static int cmd_hf_fido_2make_credential(const char *cmd) {
                   "Sample file `fido2.json` in `client/resources/`.",
                   "hf fido make              -> default parameters file `fido2.json`\n"
                   "hf fido make -f test.json -> use parameters file `text.json`"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,

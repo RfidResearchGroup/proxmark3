@@ -2336,7 +2336,7 @@ static int CmdT55xxRestore(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    size_t dlen = 0;  
+    size_t dlen = 0;
     uint8_t *dump = calloc(T55x7_BLOCK_COUNT * 4, sizeof(uint8_t));
     if (dump == NULL) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
@@ -2387,7 +2387,7 @@ static int CmdT55xxRestore(const char *Cmd) {
     if (usepwd)
         snprintf(pwdopt, sizeof(pwdopt), "-p %08X", password);
 
-    uint32_t *data = (uint32_t*) dump;
+    uint32_t *data = (uint32_t *) dump;
     uint8_t idx;
     // Restore endien for writing to card
     for (idx = 0; idx < 12; idx++) {

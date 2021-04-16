@@ -58,7 +58,7 @@ typedef struct thread_key_args {
     uint32_t nt_enc;
     uint32_t nr_enc;
     uint16_t enc_len;
-    uint8_t enc[ENC_LEN];  // next encrypted command + a full read/write 
+    uint8_t enc[ENC_LEN];  // next encrypted command + a full read/write
 } targs_key;
 
 //------------------------------------------------------------------
@@ -155,7 +155,7 @@ static int param_gethex_to_eol(const char *line, int paramnum, uint8_t *data, in
 }
 
 static void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, const size_t hex_max_len,
-                   const size_t min_str_len, const size_t spaces_between, bool uppercase) {
+                          const size_t min_str_len, const size_t spaces_between, bool uppercase) {
 
     if (buf == NULL) return;
 
@@ -444,13 +444,13 @@ static void *brute_thread(void *arguments) {
 
             if (args->ev1) {
                 // if it was EV1,  we know for sure xxxAAAAAAAA recovery
-                printf("\nKey candidate [ " _YELLOW_("....%08" PRIx64 )" ]\n\n", key & 0xFFFFFFFF);
+                printf("\nKey candidate [ " _YELLOW_("....%08" PRIx64)" ]\n\n", key & 0xFFFFFFFF);
                 __sync_fetch_and_add(&global_found_candidate, 1);
             } else {
                 printf("\nKey candidate [ " _GREEN_("....%08" PRIx64) " ]\n\n", key & 0xFFFFFFFF);
                 __sync_fetch_and_add(&global_found, 1);
             }
-                __sync_fetch_and_add(&global_candiate_key, key);
+            __sync_fetch_and_add(&global_candiate_key, key);
             //release lock
             pthread_mutex_unlock(&print_lock);
             break;
@@ -493,14 +493,14 @@ static void *brute_key_thread(void *arguments) {
 
         // check if cmd exists
         uint8_t isOK = checkValidCmdByte(dec, args->enc_len);
-        if (isOK == false) {        
+        if (isOK == false) {
             continue;
-        } 
+        }
 
         // lock this section to avoid interlacing prints from different threats
         pthread_mutex_lock(&print_lock);
         printf("\nenc:  %s\n", sprint_hex_inrow_ex(local_enc, args->enc_len, 0));
-        printf("dec:  %s\n", sprint_hex_inrow_ex(dec, args->enc_len, 0));                   
+        printf("dec:  %s\n", sprint_hex_inrow_ex(dec, args->enc_len, 0));
         printf("\nValid Key found [ " _GREEN_("%012" PRIx64) " ]\n\n", key);
         pthread_mutex_unlock(&print_lock);
         __sync_fetch_and_add(&global_found, 1);
@@ -547,7 +547,7 @@ int main(int argc, char *argv[]) {
     sscanf(argv[8], "%x", &at_par_err);
 
     int enc_len = 0;
-    uint8_t enc[ENC_LEN] = {0};  // next encrypted command + a full read/write 
+    uint8_t enc[ENC_LEN] = {0};  // next encrypted command + a full read/write
     if (argc > 9) {
 //        sscanf(argv[9], "%x", &cmd_enc);
         param_gethex_to_eol(argv[9], 0, enc, sizeof(enc), &enc_len);
@@ -565,7 +565,7 @@ int main(int argc, char *argv[]) {
     printf("at parity err........ %04x\n", at_par_err);
 
     if (argc > 9) {
-        printf("next encrypted cmd... %s\n", sprint_hex_inrow_ex(enc, enc_len ,0));
+        printf("next encrypted cmd... %s\n", sprint_hex_inrow_ex(enc, enc_len, 0));
     }
 
     clock_t t1 = clock();
@@ -615,11 +615,11 @@ int main(int argc, char *argv[]) {
     t1 = clock() - t1;
     printf("execution time %.2f sec\n", (float)t1 / 1000000.0);
 
-        
+
     if (!global_found && !global_found_candidate) {
         printf("\nFailed to find a key\n\n");
         goto out;
-    } 
+    }
 
     if (enc_len < 4) {
         printf("Too few next cmd bytes, skipping phase 2\n");
@@ -635,7 +635,7 @@ int main(int argc, char *argv[]) {
     printf("partial key.. %08x\n", (uint32_t)(global_candiate_key & 0xFFFFFFFF));
     printf("nt enc....... %08x\n", nt_enc);
     printf("nr enc....... %08x\n", nr_enc);
-    printf("next encrypted cmd: %s\n", sprint_hex_inrow_ex(enc, enc_len ,0));
+    printf("next encrypted cmd: %s\n", sprint_hex_inrow_ex(enc, enc_len, 0));
     printf("\nlooking for the upper 16 bits of key\n");
     fflush(stdout);
 

@@ -1083,7 +1083,7 @@ static int CmdEMVExec(const char *Cmd) {
                 PrintAndLogEx(NORMAL, "AC: %s", sprint_hex(AC->value, AC->len));
                 if (IAD) {
                     PrintAndLogEx(NORMAL, "IAD: %s", sprint_hex(IAD->value, IAD->len));
-                    
+
                     // https://mst-company.ru/blog/ekvajring-emv-tranzaktsiya-emv-transaction-flow-chast-4-pdol-i-beskontaktnye-karty-osobennosti-qvsdc-i-quics
                     if (IAD->value[0] == 0x1f) {
                         PrintAndLogEx(NORMAL, "    Key index:  0x%02x", IAD->value[2]);
@@ -1421,7 +1421,7 @@ static int CmdEMVScan(const char *Cmd) {
                   "It executes EMV contactless transaction and saves result to a file which can be used for emulation\n",
                   "emv scan -at -> scan MSD transaction mode and show APDU and TLV\n"
                   "emv scan -c -> scan CDA transaction mode\n"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1818,7 +1818,7 @@ static int CmdEMVTest(const char *Cmd) {
                   "Executes tests\n",
                   "emv test -i\n"
                   "emv test --long"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,

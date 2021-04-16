@@ -352,7 +352,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     uint8_t block[MFBLOCK_SIZE] = {0x00};
     int blen = 0;
     CLIGetHexWithReturn(ctx, 5, block, &blen);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     if (blen != MFBLOCK_SIZE) {
         PrintAndLogEx(WARNING, "block data must include 16 HEX bytes. Got %i", blen);
@@ -386,7 +386,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     } else {
         PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
         // suggest the opposite keytype than what was used.
-        PrintAndLogEx(HINT, "Maybe access rights? Try specify keytype " _YELLOW_("%c") " instead", (keytype == MF_KEY_A) ? 'B' : 'A' );
+        PrintAndLogEx(HINT, "Maybe access rights? Try specify keytype " _YELLOW_("%c") " instead", (keytype == MF_KEY_A) ? 'B' : 'A');
     }
     return PM3_SUCCESS;
 }
@@ -423,7 +423,7 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
     uint8_t key[6] = {0};
     CLIGetHexWithReturn(ctx, 4, key, &keylen);
     bool verbose = arg_get_lit(ctx, 5);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     if (b > 255) {
         return PM3_EINVARG;
@@ -477,7 +477,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
 
     int s = arg_get_int_def(ctx, 4, 0);
     bool verbose = arg_get_lit(ctx, 5);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     if (s > MIFARE_4K_MAXSECTOR) {
         PrintAndLogEx(WARNING, "Sector number must be less then 40");
@@ -504,7 +504,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
 
         if (verbose) {
             decode_print_st(start + blocks - 1, data + ((blocks - 1) * MFBLOCK_SIZE));
-        }       
+        }
     }
     free(data);
     PrintAndLogEx(NORMAL, "");
@@ -813,7 +813,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                   "The key file and data file will program the card sector trailers.\n"
                   "By default we authenticate to card with key B 0xFFFFFFFFFFFF.\n"
                   "\n"
-                  "`--uid` param is used for filename templates `hf-mf-<uid>-dump.bin` and `hf-mf-<uid>-key.bin.\n" 
+                  "`--uid` param is used for filename templates `hf-mf-<uid>-dump.bin` and `hf-mf-<uid>-key.bin.\n"
                   "        If not specified, it will read the card uid instead.\n"
                   "   `-w` param you can indicate that the key file should be used for authentication instead.\n"
                   "        if so we also try both B/A keys",
@@ -821,7 +821,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                   "hf mf restore --1k --uid 04010203\n"
                   "hf mf restore --1k --uid 04010203 -k hf-mf-AABBCCDD-key.bin\n"
                   "hf mf restore --4k"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -952,7 +952,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    // default authentication key 
+    // default authentication key
     uint8_t default_key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", datafilename);
@@ -974,7 +974,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             if (use_keyfile_for_auth == false) {
 
                 // sector trailer
-                if (b == NumBlocksPerSector(s) - 1) { 
+                if (b == NumBlocksPerSector(s) - 1) {
                     bldata[0]  = (keyA[s][0]);
                     bldata[1]  = (keyA[s][1]);
                     bldata[2]  = (keyA[s][2]);
@@ -1622,7 +1622,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
                   "hf mf hardnested -r --tk a0a1a2a3a4a5\n"
                   "hf mf hardnested -t --tk a0a1a2a3a4a5\n"
                   "hf mf hardnested --blk 0 -a -k a0a1a2a3a4a5 --tblk 4 --ta --tk FFFFFFFFFFFF"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1635,7 +1635,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         arg_lit0(NULL, "tb",             "Target key B"),
         arg_str0(NULL, "tk",    "<hex>", "Target key, 12 hex bytes"), // 8
         arg_str0("u",  "uid",   "<hex>", "R/W `hf-mf-<UID>-nonces.bin` instead of default name"),
-        arg_str0("f",  "file",  "<fn>",  "R/W <name> instead of default name"), 
+        arg_str0("f",  "file",  "<fn>",  "R/W <name> instead of default name"),
         arg_lit0("r",  "read",           "Read `hf-mf-<UID>-nonces.bin` if tag present, otherwise `nonces.bin`, and start attack"),
         arg_lit0("s",  "slow",           "Slower acquisition (required by some non standard cards)"),
         arg_lit0("t",  "tests",          "Run tests"),
@@ -1751,7 +1751,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         free(fptr);
     }
 
-    if (uidlen) { 
+    if (uidlen) {
         snprintf(filename, FILE_PATH_SIZE, "hf-mf-%s-nonces.bin", uid);
     }
 
@@ -1774,7 +1774,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Target block no " _YELLOW_("%3d") ", target key type: " _YELLOW_("%c") ", known target key: " _YELLOW_("%02x%02x%02x%02x%02x%02x%s"),
                   trg_blockno,
-                  (trg_keytype == MF_KEY_B)? 'B' : 'A',
+                  (trg_keytype == MF_KEY_B) ? 'B' : 'A',
                   trg_key[0], trg_key[1], trg_key[2], trg_key[3], trg_key[4], trg_key[5],
                   know_target_key ? "" : " (not set)"
                  );
@@ -1808,7 +1808,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
 
 static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
-   CLIParserContext *ctx;
+    CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf autopwn",
                   "This command automates the key recovery process on MIFARE Classic cards.\n"
                   "It uses the fchk, chk, darkside, nested, hardnested and staticnested to recover keys.\n"
@@ -1817,7 +1817,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                   "hf mf autopwn -s 0 -a -k FFFFFFFFFFFF     --> target MFC 1K card, Sector 0 with known key A 'FFFFFFFFFFFF'\n"
                   "hf mf autopwn --1k -f mfc_default_keys    --> target MFC 1K card, default dictionary\n"
                   "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -f mfc_default_keys  --> combo of the two above samples"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1825,7 +1825,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         arg_int0("s",  "sector", "<dec>", "Input sector number"),
         arg_lit0("a",   NULL,             "Input key A (def)"),
         arg_lit0("b",   NULL,             "Input key B"),
-        arg_str0("f", "file",    "<fn>",  "filename of dictionary"), 
+        arg_str0("f", "file",    "<fn>",  "filename of dictionary"),
         arg_lit0("s",  "slow",            "Slower acquisition (required by some non standard cards)"),
         arg_lit0("l",  "legacy",          "legacy mode (use the slow `hf mf chk`)"),
         arg_lit0("v",  "verbose",         "verbose output (statistics)"),
@@ -2197,7 +2197,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 } else {
                     PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ]",
                                   i,
-                                  (j == MF_KEY_B)? 'B' : 'A',
+                                  (j == MF_KEY_B) ? 'B' : 'A',
                                   sprint_hex_inrow(tmp_key, sizeof(tmp_key))
                                  );
                 }
@@ -3560,7 +3560,7 @@ static int CmdHF14AMfEGetBlk(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int b = arg_get_int_def(ctx, 1, 0);
     bool verbose = arg_get_lit(ctx, 2);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     if (b > 255) {
         return PM3_EINVARG;
@@ -3597,7 +3597,7 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int s = arg_get_int_def(ctx, 1, 0);
     bool verbose = arg_get_lit(ctx, 2);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     if (s > 39) {
         PrintAndLogEx(WARNING, "Sector number must be less then 40");
@@ -3636,7 +3636,7 @@ static int CmdHF14AMfEClear(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_MEMCLR, NULL, 0);
     return PM3_SUCCESS;
@@ -3662,7 +3662,7 @@ static int CmdHF14AMfESet(const char *Cmd) {
     uint8_t data[16] = {0x00};
     int datalen = 0;
     int res = CLIParamHexToBuf(arg_get_str(ctx, 2), data, sizeof(data), &datalen);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
     if (res) {
         PrintAndLogEx(FAILED, "Error parsing bytes");
         return PM3_EINVARG;
@@ -3701,7 +3701,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    
+
     int fnlen = 0;
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
@@ -3714,7 +3714,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
     int numblks = arg_get_int_def(ctx, 7, -1);
 
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     // validations
     if ((m0 + m1 + m2 + m4 + mu) > 1) {
@@ -3876,7 +3876,7 @@ static int CmdHF14AMfESave(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     int fnlen = 0;
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
@@ -3885,7 +3885,7 @@ static int CmdHF14AMfESave(const char *Cmd) {
     bool m1 = arg_get_lit(ctx, 3);
     bool m2 = arg_get_lit(ctx, 4);
     bool m4 = arg_get_lit(ctx, 5);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     // validations
     if ((m0 + m1 + m2 + m4) > 1) {
@@ -3895,7 +3895,7 @@ static int CmdHF14AMfESave(const char *Cmd) {
         m1 = true;
     }
 
-   uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
+    uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
 
     if (m0) {
         block_cnt = MIFARE_MINI_MAXBLOCK;
@@ -3959,7 +3959,7 @@ static int CmdHF14AMfEView(const char *Cmd) {
     bool m1 = arg_get_lit(ctx, 2);
     bool m2 = arg_get_lit(ctx, 3);
     bool m4 = arg_get_lit(ctx, 4);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     // validations
     if ((m0 + m1 + m2 + m4) > 1) {
@@ -4038,7 +4038,7 @@ static int CmdHF14AMfECFill(const char *Cmd) {
     bool m1 = arg_get_lit(ctx, 4);
     bool m2 = arg_get_lit(ctx, 5);
     bool m4 = arg_get_lit(ctx, 6);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     // validations
     if ((m0 + m1 + m2 + m4) > 1) {
@@ -4099,7 +4099,7 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     bool m1 = arg_get_lit(ctx, 3);
     bool m2 = arg_get_lit(ctx, 4);
     bool m4 = arg_get_lit(ctx, 5);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     // validations
     if ((m0 + m1 + m2 + m4) > 1) {
@@ -4209,7 +4209,7 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
     int slen = 0;
     uint8_t sak[1] = {0x00};
     CLIGetHexWithReturn(ctx, 4, sak, &slen);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     // sanity checks
     if (uidlen != 4 && uidlen != 7) {
@@ -4229,14 +4229,14 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
     uint8_t verify_uid[7] = {0};
 
     int res = mfCSetUID(
-            uid,
-            uidlen,
-            (alen) ? atqa : NULL,
-            (slen) ? sak : NULL,
-            old_uid,
-            verify_uid,
-            wipe_card
-        );
+                  uid,
+                  uidlen,
+                  (alen) ? atqa : NULL,
+                  (slen) ? sak : NULL,
+                  old_uid,
+                  verify_uid,
+                  wipe_card
+              );
 
     if (res) {
         PrintAndLogEx(ERR, "Can't set UID. error %d", res);
@@ -4247,9 +4247,9 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Old UID... %s", sprint_hex(old_uid, uidlen));
     PrintAndLogEx(SUCCESS, "New UID... %s ( %s )",
-        sprint_hex(verify_uid, uidlen),
-        (res == 0) ? _GREEN_("verified") : _RED_("fail")
-        );
+                  sprint_hex(verify_uid, uidlen),
+                  (res == 0) ? _GREEN_("verified") : _RED_("fail")
+                 );
     return PM3_SUCCESS;
 }
 
@@ -4273,11 +4273,11 @@ static int CmdHF14AMfCWipe(const char *cmd) {
     int uidlen = 0;
     uint8_t uid[8] = {0x00};
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
-    
+
     int alen = 0;
     uint8_t atqa[2] = {0x00};
     CLIGetHexWithReturn(ctx, 2, atqa, &alen);
-    
+
     int slen = 0;
     uint8_t sak[1] = {0x00};
     CLIGetHexWithReturn(ctx, 3, sak, &slen);
@@ -4329,9 +4329,9 @@ static int CmdHF14AMfCSetBlk(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 2, data, &datalen);
 
     uint8_t wipe_card = arg_get_lit(ctx, 3);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
-    if (b < 0 ||  b >= MIFARE_1K_MAXBLOCK ) {
+    if (b < 0 ||  b >= MIFARE_1K_MAXBLOCK) {
         PrintAndLogEx(FAILED, "target block number out-of-range, got %i", b);
         return PM3_EINVARG;
     }
@@ -4372,13 +4372,13 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    
+
     int fnlen = 0;
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     bool fill_from_emulator = arg_get_lit(ctx, 2);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     if (fill_from_emulator) {
 
@@ -4458,7 +4458,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
     // 64 or 256blocks.
     if (bytes_read != (MIFARE_1K_MAXBLOCK * MFBLOCK_SIZE) &&
-        bytes_read != (MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE)) {
+            bytes_read != (MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE)) {
         PrintAndLogEx(ERR, "File content error. Read %zu bytes", bytes_read);
         free(data);
         return PM3_EFILE;
@@ -4508,7 +4508,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
     // confirm number written blocks. Must be 64 or 256 blocks
     if (blockno != MIFARE_1K_MAXBLOCK) {
-         if (blockno != MIFARE_4K_MAXBLOCK) {
+        if (blockno != MIFARE_4K_MAXBLOCK) {
             PrintAndLogEx(ERR, "File content error. There must be %u blocks", MIFARE_4K_MAXBLOCK);
             return PM3_EFILE;
         }
@@ -4538,7 +4538,7 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int b = arg_get_int_def(ctx, 1, 0);
     bool verbose = arg_get_lit(ctx, 2);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     if (b > 255) {
         return PM3_EINVARG;
@@ -4555,7 +4555,7 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
     uint8_t sector = GetSectorFromBlockNo(blockno);
     mf_print_sector_hdr(sector);
     mf_print_block(blockno, data);
-   
+
     if (verbose) {
         decode_print_st(blockno, data);
     } else {
@@ -4580,7 +4580,7 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int s = arg_get_int_def(ctx, 1, 0);
     bool verbose = arg_get_lit(ctx, 2);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
     if (s > 39) {
         PrintAndLogEx(WARNING, "Sector number must be less then 40");
         return PM3_EINVARG;
@@ -4636,7 +4636,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     int fnlen = 0;
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
@@ -4646,7 +4646,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     bool m2 = arg_get_lit(ctx, 4);
     bool m4 = arg_get_lit(ctx, 5);
     bool fill_emulator = arg_get_lit(ctx, 6);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     // validations
     if ((m0 + m1 + m2 + m4) > 1) {
@@ -4791,7 +4791,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
     bool m1 = arg_get_lit(ctx, 2);
     bool m2 = arg_get_lit(ctx, 3);
     bool m4 = arg_get_lit(ctx, 4);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     // validations
     if ((m0 + m1 + m2 + m4) > 1) {
@@ -4906,7 +4906,7 @@ static int CmdHf14AMfDecryptBytes(const char *Cmd) {
     uint32_t nt = 0;
     int res = arg_get_u32_hexstr_def(ctx, 1, 0, &nt);
     if (res != 1) {
-        CLIParserFree(ctx); 
+        CLIParserFree(ctx);
         PrintAndLogEx(WARNING, "check `nt` parameter");
         return PM3_EINVARG;
     }
@@ -4914,7 +4914,7 @@ static int CmdHf14AMfDecryptBytes(const char *Cmd) {
     uint32_t ar_enc = 0;
     res = arg_get_u32_hexstr_def(ctx, 2, 0, &ar_enc);
     if (res != 1) {
-        CLIParserFree(ctx); 
+        CLIParserFree(ctx);
         PrintAndLogEx(WARNING, "check `ar` parameter");
         return PM3_EINVARG;
     }
@@ -4922,7 +4922,7 @@ static int CmdHf14AMfDecryptBytes(const char *Cmd) {
     uint32_t at_enc = 0;
     res = arg_get_u32_hexstr_def(ctx, 3, 0, &at_enc);
     if (res != 1) {
-        CLIParserFree(ctx); 
+        CLIParserFree(ctx);
         PrintAndLogEx(WARNING, "check `at` parameter");
         return PM3_EINVARG;
     }
@@ -4930,7 +4930,7 @@ static int CmdHf14AMfDecryptBytes(const char *Cmd) {
     int datalen = 0;
     uint8_t data[512] = {0x00};
     CLIGetHexWithReturn(ctx, 4, data, &datalen);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     PrintAndLogEx(INFO, "nt....... %08X", nt);
     PrintAndLogEx(INFO, "ar enc... %08X", ar_enc);
@@ -4955,12 +4955,12 @@ static int CmdHf14AMfSetMod(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool m0 = arg_get_lit(ctx, 1);
-    bool m1 = arg_get_lit(ctx, 2); 
+    bool m1 = arg_get_lit(ctx, 2);
 
     int keylen = 0;
     uint8_t key[6] = {0};
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     if (m0 + m1 > 1) {
         PrintAndLogEx(WARNING, "please select one modulation");
@@ -5006,7 +5006,7 @@ static int CmdHf14AMfNack(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool verbose = arg_get_lit(ctx, 1);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     if (verbose)
         PrintAndLogEx(INFO, "Started testing card for NACK bug. Press Enter to abort");
@@ -5439,7 +5439,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
                   "hf mf personalize -f2                    -> single size random ID\n"
                   "hf mf personalize -f3                    -> single size NUID\n"
                   "hf mf personalize -b -k B0B1B2B3B4B5 -f3 -> use key B = 0xB0B1B2B3B4B5"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -5449,7 +5449,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
         arg_lit0(NULL, "f0", "UIDFO, double size UID"),
         arg_lit0(NULL, "f1", "UIDF1, double size UID, optional usage of selection process shortcut"),
         arg_lit0(NULL, "f2", "UIDF2, single size random ID"),
-        arg_lit0(NULL, "f3", "UIDF3, single size NUID"),                
+        arg_lit0(NULL, "f3", "UIDF3, single size NUID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
@@ -5462,7 +5462,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    
+
     uint8_t keytype = 0;
     if (use_b) {
         keytype = 1;
@@ -5500,7 +5500,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
         pers_option = MIFARE_EV1_UIDF1;
     } else if (f2) {
         pers_option = MIFARE_EV1_UIDF2;
-    } 
+    }
 
     CLIParserFree(ctx);
 
@@ -5520,7 +5520,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
         return PM3_ETIMEOUT;
     }
 
-    if ( resp.status == PM3_SUCCESS) {
+    if (resp.status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Personalization ( %s )", _GREEN_("ok"));
     } else {
         PrintAndLogEx(FAILED, "Personalization ( %s )",  _RED_("fail"));
@@ -5551,11 +5551,11 @@ static int CmdHf14AGen3UID(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     uint8_t uid[7] = {0};
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     // sanity checks
     if (uidlen != 4 && uidlen != 7) {
@@ -5598,11 +5598,11 @@ static int CmdHf14AGen3Block(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     uint8_t data[MFBLOCK_SIZE] = {0x00};
     int datalen = 0;
     CLIGetHexWithReturn(ctx, 1, data, &datalen);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     uint8_t new_block[MFBLOCK_SIZE] = {0x00};
     int res = mfGen3Block(data, datalen, new_block);
@@ -5630,7 +5630,7 @@ static int CmdHf14AGen3Freeze(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     bool confirm = arg_get_lit(ctx, 1);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
     if (confirm == false) {
         PrintAndLogEx(INFO, "please confirm that you want to perma lock the card");
         return PM3_SUCCESS;
@@ -5907,7 +5907,7 @@ out:
 }
 
 static int CmdHF14AMfView(const char *Cmd) {
-    
+
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf view",
                   "Print a MIFARE Classic dump file (bin/eml/json)",
@@ -5919,12 +5919,12 @@ static int CmdHF14AMfView(const char *Cmd) {
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);    
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     // reserve memory
     uint8_t *dump = calloc(MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK, sizeof(uint8_t));

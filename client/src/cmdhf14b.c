@@ -1151,7 +1151,7 @@ static int CmdHF14BWriteSri(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int blockno = arg_get_int_def(ctx, 1, -1);
     int dlen = 0;
-    uint8_t data[4] = {0,0,0,0};
+    uint8_t data[4] = {0, 0, 0, 0};
     int res = CLIParamHexToBuf(arg_get_str(ctx, 2), data, sizeof(data), &dlen);
     if (res) {
         CLIParserFree(ctx);
@@ -1170,7 +1170,7 @@ static int CmdHF14BWriteSri(const char *Cmd) {
 
     if (use_sri512 + use_srix4k > 1) {
         PrintAndLogEx(FAILED, "Select only one card type");
-        return PM3_EINVARG;        
+        return PM3_EINVARG;
     }
 
     if (use_srix4k && blockno > 0x7F) {

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
-// modified Marshmellow, 
+// modified Marshmellow,
 // modified Iceman 2019, 2020, 2021
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
@@ -309,9 +309,9 @@ void save_restoreDB(uint8_t saveOpt) {
 static int CmdSetDebugMode(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data setdebugmode",
-                "Set debugging level on client side",
-                "data setdebugmode"
-                );
+                  "Set debugging level on client side",
+                  "data setdebugmode"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("0", NULL, "no debug messages"),
@@ -326,7 +326,7 @@ static int CmdSetDebugMode(const char *Cmd) {
     bool dg_2 = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    if (dg_0 + dg_1 + dg_2 > 1 ) {
+    if (dg_0 + dg_1 + dg_2 > 1) {
         PrintAndLogEx(INFO, "Select only one option");
         return PM3_EINVARG;
     }
@@ -339,7 +339,7 @@ static int CmdSetDebugMode(const char *Cmd) {
     if (dg_2)
         g_debugMode = 2;
 
-    switch(g_debugMode) {
+    switch (g_debugMode) {
         case 0:
             PrintAndLogEx(INFO, "client debug level... %u ( no debug messages )", g_debugMode);
             break;
@@ -428,15 +428,15 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
 int CmdPrintDemodBuff(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data print",
-                "Print the data in the DemodBuffer as hex or binary.\n"
-                "Defaults to binary output",
-                "data print"
-                );
+                  "Print the data in the DemodBuffer as hex or binary.\n"
+                  "Defaults to binary output",
+                  "data print"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("i", "inv", "invert Demodbuffer before printing"),
 //        arg_int0("l","len", "<dec>", "length to print in # of bits or hex characters respectively"),
-        arg_int0("o","offset", "<dec>", "offset in # of bits"),
+        arg_int0("o", "offset", "<dec>", "offset in # of bits"),
         arg_lit0("s", "strip", "strip leading zeroes, i.e. set offset to first bit equal to one"),
         arg_lit0("x", "hex", "output in hex (omit for binary output)"),
         arg_param_end
@@ -458,11 +458,11 @@ int CmdPrintDemodBuff(const char *Cmd) {
 int CmdGetBitStream(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data getbitstream",
-                "Convert GraphBuffer's value accordingly\n"
-                "   - larger or equal to ONE becomes ONE\n"
-                "   - less than ONE becomes ZERO",
-                "data getbitstream"
-                );
+                  "Convert GraphBuffer's value accordingly\n"
+                  "   - larger or equal to ONE becomes ONE\n"
+                  "   - less than ONE becomes ZERO",
+                  "data getbitstream"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -482,9 +482,9 @@ static int CmdConvertBitStream(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data convertbitstream",
-                "Convert GraphBuffer's 0|1 values to 127|-127",
-                "data convertbitstream"
-                );
+                  "Convert GraphBuffer's 0|1 values to 127|-127",
+                  "data convertbitstream"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -644,11 +644,11 @@ static int Cmdaskmandemod(const char *Cmd) {
 static int Cmdmandecoderaw(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data manrawdecode",
-                "Manchester decode binary stream in DemodBuffer\n"
-                "Converts 10 and 01 and converts to 0 and 1 respectively\n"
-                " - must have binary sequence in demodbuffer (run `data rawdemod ar` before)",
-                "data manrawdecode"
-                );
+                  "Manchester decode binary stream in DemodBuffer\n"
+                  "Converts 10 and 01 and converts to 0 and 1 respectively\n"
+                  " - must have binary sequence in demodbuffer (run `data rawdemod ar` before)",
+                  "data manrawdecode"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("i", "inv", "invert output"),
@@ -658,7 +658,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool invert = arg_get_lit(ctx, 1);
     int max_err = arg_get_int_def(ctx, 2, 20);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     if (DemodBufferLen == 0) {
         PrintAndLogEx(WARNING, "DemodBuffer empty, run " _YELLOW_("`data rawdemod ar`"));
@@ -726,13 +726,13 @@ static int Cmdmandecoderaw(const char *Cmd) {
 static int CmdBiphaseDecodeRaw(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data biphaserawdecode",
-                "Biphase decode binary stream in DemodBuffer\n"
-                "Converts 10 or 01 -> 1 and 11 or 00 -> 0\n"
-                " - must have binary sequence in demodbuffer (run `data rawdemod ar` before)\n"
-                " - invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester",
-                "data biphaserawdecode      --> decode biphase bitstream from the demodbuffer\n"
-                "data biphaserawdecode -oi  --> decode biphase bitstream from the demodbuffer, adjust offset, and invert output"
-                );
+                  "Biphase decode binary stream in DemodBuffer\n"
+                  "Converts 10 or 01 -> 1 and 11 or 00 -> 0\n"
+                  " - must have binary sequence in demodbuffer (run `data rawdemod ar` before)\n"
+                  " - invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester",
+                  "data biphaserawdecode      --> decode biphase bitstream from the demodbuffer\n"
+                  "data biphaserawdecode -oi  --> decode biphase bitstream from the demodbuffer, adjust offset, and invert output"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("o", "offset", "set to adjust decode start position"),
@@ -744,7 +744,7 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
     int offset = arg_get_lit(ctx, 1);
     bool invert = arg_get_lit(ctx, 2);
     int max_err = arg_get_int_def(ctx, 3, 20);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     if (DemodBufferLen == 0) {
         PrintAndLogEx(WARNING, "DemodBuffer empty, run " _YELLOW_("`data rawdemod ar`"));
@@ -942,11 +942,11 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
 static int CmdAutoCorr(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data autocorr",
-                "Autocorrelate over window is used to detect repeating sequences.\n"
-                "We use it as detection of how long in bits a message inside the signal is",
-                "data autocorr -w 4000\n"
-                "data autocorr -w 4000 -g"
-                );
+                  "Autocorrelate over window is used to detect repeating sequences.\n"
+                  "We use it as detection of how long in bits a message inside the signal is",
+                  "data autocorr -w 4000\n"
+                  "data autocorr -w 4000 -g"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("g", NULL, "save back to GraphBuffer (overwrite)"),
@@ -979,9 +979,9 @@ static int CmdBitsamples(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data bitsamples",
-                "Get raw samples from device as bitstring",
-                "data bitsamples"
-                );
+                  "Get raw samples from device as bitstring",
+                  "data bitsamples"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -1013,10 +1013,10 @@ static int CmdBitsamples(const char *Cmd) {
 static int CmdBuffClear(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data clear",
-                "This function clears the bigbuff on deviceside\n"
-                "and graph window",
-                "data clear"
-                );
+                  "This function clears the bigbuff on deviceside\n"
+                  "and graph window",
+                  "data clear"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -1105,10 +1105,10 @@ static int CmdGraphShiftZero(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data shiftgraphzero",
-                "Shift 0 for Graphed wave + or - shift value",
-                "data shiftgraphzero -n 10   --> shift 10 points\n"
-                "data shiftgraphzero -n -22  --> shift negative 22 points"
-                );
+                  "Shift 0 for Graphed wave + or - shift value",
+                  "data shiftgraphzero -n 10   --> shift 10 points\n"
+                  "data shiftgraphzero -n -22  --> shift negative 22 points"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_int1("n", NULL, "<dec>", "shift + or -"),
@@ -1150,10 +1150,10 @@ static int CmdAskEdgeDetect(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data askedgedetect",
-                "Adjust Graph for manual ASK demod using the length of sample differences\n"
-                "to detect the edge of a wave",
-                "data askedgedetect -t 20"
-                );
+                  "Adjust Graph for manual ASK demod using the length of sample differences\n"
+                  "to detect the edge of a wave",
+                  "data askedgedetect -t 20"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_int0("t", "thres", "<dec>", "threshold, use 20 - 45 (def 25)"),
@@ -1175,12 +1175,12 @@ static int CmdAskEdgeDetect(const char *Cmd) {
 static int CmdDetectClockRate(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data detectclock",
-                "Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer",
-                "data detectclock -A   --> detect clock of an ask wave in GraphBuffer\n"
-                "data detectclock -F   --> detect clock of an fsk wave in GraphBuffer\n"
-                "data detectclock -N   --> detect clock of an psk wave in GraphBuffer\n"
-                "data detectclock -P   --> detect clock of an nrz/direct wave in GraphBuffer"
-                );
+                  "Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer",
+                  "data detectclock -A   --> detect clock of an ask wave in GraphBuffer\n"
+                  "data detectclock -F   --> detect clock of an fsk wave in GraphBuffer\n"
+                  "data detectclock -N   --> detect clock of an psk wave in GraphBuffer\n"
+                  "data detectclock -P   --> detect clock of an nrz/direct wave in GraphBuffer"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("A", "ASK", "specify ASK modulation clock detection"),
@@ -1538,11 +1538,11 @@ void setClockGrid(uint32_t clk, int offset) {
 int CmdGrid(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data grid",
-                "This function overlay grid on graph plot window.\n"
-                "use zero value to turn off either",
-                "data grid               --> turn off\n"
-                "data grid -x 64 -y 50"
-                );
+                  "This function overlay grid on graph plot window.\n"
+                  "use zero value to turn off either",
+                  "data grid               --> turn off\n"
+                  "data grid -x 64 -y 50"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_dbl0("x", NULL, "<dec>", "plot grid X coord"),
@@ -1563,10 +1563,10 @@ int CmdGrid(const char *Cmd) {
 static int CmdSetGraphMarkers(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data setgraphmarkers",
-                "Set blue and orange marker in graph window",
-                "data setgraphmarkers               --> turn off\n"
-                "data setgraphmarkers -a 64 -b 50"
-                );
+                  "Set blue and orange marker in graph window",
+                  "data setgraphmarkers               --> turn off\n"
+                  "data setgraphmarkers -a 64 -b 50"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0("a", NULL, "<dec>", "orange marker"),
@@ -1586,9 +1586,9 @@ static int CmdHexsamples(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data hexsamples",
-                "Dump big buffer as hex bytes",
-                "data hexsamples -n 128  -->  dumps 128 bytes from offset 0"
-                );
+                  "Dump big buffer as hex bytes",
+                  "data hexsamples -n 128  -->  dumps 128 bytes from offset 0"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0("b", "breaks", "<dec>", "row break, def 16"),
@@ -1603,7 +1603,7 @@ static int CmdHexsamples(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity checks
-    if (requested > pm3_capabilities.bigbuf_size) {        
+    if (requested > pm3_capabilities.bigbuf_size) {
         requested = pm3_capabilities.bigbuf_size;
         PrintAndLogEx(INFO, "n is larger than big buffer size, will use %u", requested);
     }
@@ -1611,10 +1611,10 @@ static int CmdHexsamples(const char *Cmd) {
     uint8_t got[pm3_capabilities.bigbuf_size];
     if (offset + requested > sizeof(got)) {
         PrintAndLogEx(NORMAL, "Tried to read past end of buffer, <bytes %u> + <offset %u> > %d"
-            , requested
-            , offset
-            , pm3_capabilities.bigbuf_size
-        );
+                      , requested
+                      , offset
+                      , pm3_capabilities.bigbuf_size
+                     );
         return PM3_EINVARG;
     }
 
@@ -1630,9 +1630,9 @@ static int CmdHexsamples(const char *Cmd) {
 static int CmdHide(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data hide",
-                "Show graph window",
-                "data hide"
-                );
+                  "Show graph window",
+                  "data hide"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -1647,9 +1647,9 @@ static int CmdHide(const char *Cmd) {
 int CmdHpf(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data hpf",
-                "Remove DC offset from trace. It should centralize around 0",
-                "data hpf"
-                );
+                  "Remove DC offset from trace. It should centralize around 0",
+                  "data hpf"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -1762,13 +1762,13 @@ static int CmdSamples(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data samples",
-                "Get raw samples for graph window (GraphBuffer) from device.\n"
-                "If 0, then get whole big buffer from device.",
-                "data samples"
-                );
+                  "Get raw samples for graph window (GraphBuffer) from device.\n"
+                  "If 0, then get whole big buffer from device.",
+                  "data samples"
+                 );
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("n","", "<dec>", "num of samples (512 - 40000)"),
+        arg_int0("n", "", "<dec>", "num of samples (512 - 40000)"),
         arg_lit0("v", "verbose", "verbose"),
         arg_param_end
     };
@@ -1783,11 +1783,11 @@ int CmdTuneSamples(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data tune",
-                "Measure tuning of device antenna. Results shown in graph window.\n"
-                "This command doesn't actively tune your antennas, \n"
-                "it's only informative by measuring voltage that the antennas will generate",
-                "data tune"
-                );
+                  "Measure tuning of device antenna. Results shown in graph window.\n"
+                  "This command doesn't actively tune your antennas, \n"
+                  "it's only informative by measuring voltage that the antennas will generate",
+                  "data tune"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -2038,9 +2038,9 @@ static int CmdLoad(const char *Cmd) {
 int CmdLtrim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data ltrim",
-                "Trim samples from left of trace",
-                "data ltrim -i 300   --> keep 300 - end"
-                );
+                  "Trim samples from left of trace",
+                  "data ltrim -i 300   --> keep 300 - end"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_u64_1("i", "idx", "<dec>", "from index to beginning trace"),
@@ -2070,9 +2070,9 @@ static int CmdRtrim(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data rtrim",
-                "Trim samples from right of trace",
-                "data rtrim -i 4000    --> keep 0 - 4000"
-                );
+                  "Trim samples from right of trace",
+                  "data rtrim -i 4000    --> keep 0 - 4000"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_u64_1("i", "idx", "<dec>", "from index to end trace"),
@@ -2098,9 +2098,9 @@ static int CmdMtrim(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data mtrim",
-                "Trim out samples from the specified start to the specified end point",
-                "data mtrim -s 1000 -e 2000  -->  keep between 1000 and 2000"
-                );
+                  "Trim out samples from the specified start to the specified end point",
+                  "data mtrim -s 1000 -e 2000  -->  keep between 1000 and 2000"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_u64_1("s", "start", "<dec>", "start point"),
@@ -2132,9 +2132,9 @@ int CmdNorm(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data norm",
-                "Normalize max/min to +/-128",
-                "data norm"
-                );
+                  "Normalize max/min to +/-128",
+                  "data norm"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -2169,10 +2169,10 @@ int CmdNorm(const char *Cmd) {
 int CmdPlot(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data plot",
-                "Show graph window \n"
-                "hit 'h' in window for detail keystroke help available",
-                "data plot"
-                );
+                  "Show graph window \n"
+                  "hit 'h' in window for detail keystroke help available",
+                  "data plot"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -2280,9 +2280,9 @@ int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t 
 static int CmdDirectionalThreshold(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data dirthreshold",
-                "Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev.",
-                "data dirthreshold -u 10 -d -10"
-                );
+                  "Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev.",
+                  "data dirthreshold -u 10 -d -10"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_int1("d", "down", "<dec>", "threshold down"),
@@ -2311,9 +2311,9 @@ static int CmdDirectionalThreshold(const char *Cmd) {
 static int CmdZerocrossings(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data zerocrossings",
-                "Count time between zero-crossings",
-                "data zerocrossings"
-                );
+                  "Count time between zero-crossings",
+                  "data zerocrossings"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -2359,10 +2359,10 @@ static int Cmdbin2hex(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data bin2hex",
-                "This function converts binary to hexadecimal. It will ignore all\n"
-                 "characters not 1 or 0 but stop reading on whitespace",
-                "data bin2hex -d 0101111001010"
-                );
+                  "This function converts binary to hexadecimal. It will ignore all\n"
+                  "characters not 1 or 0 but stop reading on whitespace",
+                  "data bin2hex -d 0101111001010"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_strx0("d", "data", "<bin>", "binary string to convert"),
@@ -2378,8 +2378,8 @@ static int Cmdbin2hex(const char *Cmd) {
         PrintAndLogEx(FAILED, "Error parsing binary string");
         return PM3_EINVARG;
     }
-    
-   // Number of digits supplied as argument
+
+    // Number of digits supplied as argument
     size_t bytelen = (blen + 7) / 8;
     uint8_t *arr = (uint8_t *) calloc(bytelen, sizeof(uint8_t));
     memset(arr, 0, bytelen);
@@ -2406,10 +2406,10 @@ static int Cmdbin2hex(const char *Cmd) {
 static int Cmdhex2bin(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data hex2bin",
-                "This function converts hexadecimal to binary. It will ignore all\n"
-                "non-hexadecimal characters but stop reading on whitespace",
-                "data hex2bin -d 01020304"
-                );
+                  "This function converts hexadecimal to binary. It will ignore all\n"
+                  "non-hexadecimal characters but stop reading on whitespace",
+                  "data hex2bin -d 01020304"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_str0("d", "data", "<hex>", "bytes to convert"),
@@ -2427,11 +2427,11 @@ static int Cmdhex2bin(const char *Cmd) {
     }
 
     for (int i = 0; i < dlen; i++) {
-            char x = data[i];
-            if (isxdigit(x) == false) {
-                PrintAndLogEx(ERR, "Non hex digit found");
-                return PM3_EINVARG;
-            }
+        char x = data[i];
+        if (isxdigit(x) == false) {
+            PrintAndLogEx(ERR, "Non hex digit found");
+            return PM3_EINVARG;
+        }
     }
 
     PrintAndLogEx(SUCCESS, "" NOLF);
@@ -2598,7 +2598,7 @@ static int FSKToNRZ(int *data, size_t *dataLen, uint8_t clk, uint8_t LowToneFC, 
 }
 
 static int CmdFSKToNRZ(const char *Cmd) {
- 
+
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data fsktonrz",
                   "Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)\n"
@@ -2632,9 +2632,9 @@ static int CmdDataIIR(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data iir",
-                "Apply IIR buttersworth filter on plot data",
-                "data iir -n 2"
-                );
+                  "Apply IIR buttersworth filter on plot data",
+                  "data iir -n 2"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_u64_1("n", NULL, "<dec>", "factor n"),
@@ -2703,7 +2703,7 @@ typedef struct {
 static int print_modulation(lf_modulation_t b) {
     PrintAndLogEx(INFO, " Modulation........ " _GREEN_("%s"), GetSelectedModulationStr(b.modulation));
     PrintAndLogEx(INFO, " Bit clock......... " _GREEN_("RF/%d"), b.bitrate);
-    PrintAndLogEx(INFO, " Approx baudrate... " _GREEN_("%.f") "bauds", (125000 / (float)b.bitrate) );
+    PrintAndLogEx(INFO, " Approx baudrate... " _GREEN_("%.f") "bauds", (125000 / (float)b.bitrate));
     switch (b.modulation) {
         case DEMOD_PSK1:
         case DEMOD_PSK2:

@@ -39,10 +39,10 @@ static void print_status_flag1_interpretation(void) {
     PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
     PrintAndLogEx(INFO, " 00 | Indicates the successful completion of a command.");
     PrintAndLogEx(INFO, " FF | If an error occurs during the processing of a command that includes no list in the command packet, \n"
-                        "    | or if an error occurs independently of any list, the card returns a response by setting FFh to Status Flag1.");
+                  "    | or if an error occurs independently of any list, the card returns a response by setting FFh to Status Flag1.");
     PrintAndLogEx(INFO, " XX | If an error occurs while processing a command that includes Service Code List or Block List \n"
-                        "    | in the command packet, the card returns a response by setting a number in the list to Status Flag1,\n"
-                        "    | indicating the location of the error.");
+                  "    | in the command packet, the card returns a response by setting a number in the list to Status Flag1,\n"
+                  "    | indicating the location of the error.");
     PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
 }
 
@@ -51,28 +51,28 @@ static void print_status_flag2_interpration(void) {
     PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
     PrintAndLogEx(INFO, " 00 | Indicates the successful completion of a command.");
     PrintAndLogEx(INFO, " 01 | The calculated result is either less than zero when the purse data is decremented, or exceeds 4\n"
-                        "    | Bytes when the purse data is incremented.");
+                  "    | Bytes when the purse data is incremented.");
     PrintAndLogEx(INFO, " 02 | The specified data exceeds the value of cashback data at cashback of purse.");
     PrintAndLogEx(INFO, " 70 | Memory error (fatal error).");
     PrintAndLogEx(INFO, " 71 | The number of memory rewrites exceeds the upper limit (this is only a warning; data writing is performed as normal).\n"
-                        "    | The maximum number of rewrites can differ, depending on the product being used.\n"
-                        "    | In addition, Status Flag1 is either 00h or FFh depending on the product being used.");
+                  "    | The maximum number of rewrites can differ, depending on the product being used.\n"
+                  "    | In addition, Status Flag1 is either 00h or FFh depending on the product being used.");
 
     PrintAndLogEx(INFO, " A1 | Illegal Number of Service| Number of Service or Number of Node specified by the command \n"
-                        "    | falls outside the range of the prescribed value.");
+                  "    | falls outside the range of the prescribed value.");
     PrintAndLogEx(INFO, " A2 | Illegal command packet (specified Number of Block) : Number of Block specified by the \n"
-                        "    | command falls outside the range of the prescribed values for the product.");
+                  "    | command falls outside the range of the prescribed values for the product.");
     PrintAndLogEx(INFO, " A3 | Illegal Block List (specified order of Service) : Service Code List Order specified by \n"
-                        "    | Block List Element falls outside the Number of Service specified by the command \n"
-                        "    | (or the Number of Service specified at the times of mutual authentication).");
+                  "    | Block List Element falls outside the Number of Service specified by the command \n"
+                  "    | (or the Number of Service specified at the times of mutual authentication).");
     PrintAndLogEx(INFO, " A4 | Illegal Service type : Area Attribute specified by the command or Service Attribute of Service Code is incorrect.");
     PrintAndLogEx(INFO, " A5 | Access is not allowed : Area or Service specified by the command cannot be accessed.\n"
-                        "    | The parameter specified by the command does not satisfy the conditions for success.");
+                  "    | The parameter specified by the command does not satisfy the conditions for success.");
     PrintAndLogEx(INFO, " A6 | Illegal Service Code List : Target to be accessed, identified by Service Code List Order, specified by Block\n"
-                        "    | List Element does not exist. Or, Node specified by Node Code List does not exist.");
+                  "    | List Element does not exist. Or, Node specified by Node Code List does not exist.");
     PrintAndLogEx(INFO, " A7 | Illegal Block List (Access Mode) : Access Mode specified by Block List Element is incorrect.");
     PrintAndLogEx(INFO, " A8 | Illegal Block Number Block Number (access to the specified data is inhibited) :\n"
-                        "    | specified by Block List Element exceeds the number of Blocks assigned to Service.");
+                  "    | specified by Block List Element exceeds the number of Blocks assigned to Service.");
     PrintAndLogEx(INFO, " A9 | Data write failure : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " AA | Key-change failure : Key change failed.");
     PrintAndLogEx(INFO, " AB | Illegal Package Parity or illegal Package MAC : This is the error that occurs in issuance commands.");
@@ -80,7 +80,7 @@ static void print_status_flag2_interpration(void) {
     PrintAndLogEx(INFO, " AD | Service exists already : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " AE | Illegal System Code : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " AF | Too many simultaneous cyclic write operations : Number of simultaneous write Blocks\n"
-                        "    | specified by the command to Cyclic Service exceeds the number of Blocks assigned to Service.");
+                  "    | specified by the command to Cyclic Service exceeds the number of Blocks assigned to Service.");
     PrintAndLogEx(INFO, " C0 | Illegal Package Identifier : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " C1 | Discrepancy of parameters inside and outside Package : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " C2 | Command is disabled already : This is the error that occurs in issuance commands.");
@@ -111,9 +111,9 @@ static void print_number_of_block_constraints(void) {
 static void print_service_code_list_constraints(void) {
     PrintAndLogEx(INFO, "    - Service Code List: For Service Code List, only Service Code existing in the product shall be specified:");
     PrintAndLogEx(INFO, "        - Even when Service Code exists in the product, Service Code not referenced from Block List shall not \n"
-                        "          be specified to Service Code List.");
+                  "          be specified to Service Code List.");
     PrintAndLogEx(INFO, "        - For existence or nonexistence of Service in a product, please check using the Request Service \n"
-                        "          (or Request Service v2) command.");
+                  "          (or Request Service v2) command.");
 }
 
 /*
@@ -209,7 +209,7 @@ static bool add_last_IDm(uint8_t position, uint8_t *data) {
     if (last_known_card.IDm[0] != 0 && last_known_card.IDm[1] != 0) {
         memcpy(data + position, last_known_card.IDm, sizeof(last_known_card.IDm));
         return true;
-    } 
+    }
     return false;
 }
 
@@ -447,7 +447,7 @@ static bool check_last_idm(uint8_t *data, uint16_t datalen) {
         PrintAndLogEx(WARNING, "No last known card! Use `" _YELLOW_("hf felica reader") "` first or set a custom IDm");
         return false;
     }
-    
+
     PrintAndLogEx(INFO, "Using last known IDm... " _GREEN_("%s"), sprint_hex_inrow(data, datalen));
     return true;
 }
@@ -467,7 +467,7 @@ static int send_wr_plain(uint8_t flags, uint16_t datalen, uint8_t *data, bool ve
     if (waitCmdFelica(0, &resp, verbose) == false) {
         PrintAndLogEx(ERR, "no response from card");
         return PM3_ERFTRANS;
-    } 
+    }
 
     memcpy(wr_noCry_resp, (felica_status_response_t *)resp.data.asBytes, sizeof(felica_status_response_t));
     return PM3_SUCCESS;
@@ -493,13 +493,13 @@ static void reverse_3des_key(uint8_t *master_key, int length, uint8_t *reverse_m
 static int CmdHFFelicaAuthentication1(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica auth1",
-            "Initiate mutual authentication. This command must always be executed before Auth2 command\n"
-            "and mutual authentication is achieve only after Auth2 command has succeeded.\n"
-            _RED_("INCOMPLETE / EXPERIMENTAL COMMAND!!!"),
-            "hf felica auth1 --an 01 --acl 0000 --sn 01 --scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
-            "hf felica auth1 --an 01 --acl 0000 --sn 01 --scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBAAAAAAAAAAAAAAAA\n"
-            "hf felica auth1 -i 11100910C11BC407 --an 01 --acl 0000 --sn 01 ..scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
-        );
+                  "Initiate mutual authentication. This command must always be executed before Auth2 command\n"
+                  "and mutual authentication is achieve only after Auth2 command has succeeded.\n"
+                  _RED_("INCOMPLETE / EXPERIMENTAL COMMAND!!!"),
+                  "hf felica auth1 --an 01 --acl 0000 --sn 01 --scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
+                  "hf felica auth1 --an 01 --acl 0000 --sn 01 --scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBAAAAAAAAAAAAAAAA\n"
+                  "hf felica auth1 -i 11100910C11BC407 --an 01 --acl 0000 --sn 01 ..scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "an",  "<hex>", "number of areas, 1 byte"),
@@ -569,7 +569,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     }
 
     uint8_t data[PM3_CMD_DATA_SIZE];
-    memset(data, 0 , sizeof(data));
+    memset(data, 0, sizeof(data));
     data[0] = 0x0C; // Static length
     data[1] = 0x3E; // Command ID
 
@@ -580,14 +580,14 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
         memcpy(data + 2, idm, 8);
     }
 
-     // Length (1),
-     // Command ID (1), 
-     // IDm (8), 
-     // Number of Area (1),
-     // Area Code List (2), 
-     // Number of Service (1), 
-     // Service Code List (2),
-     // M1c (16)
+    // Length (1),
+    // Command ID (1),
+    // IDm (8),
+    // Number of Area (1),
+    // Area Code List (2),
+    // Number of Service (1),
+    // Service Code List (2),
+    // M1c (16)
     uint16_t datalen = 32;
     data[0] = (datalen & 0xFF);
     data[1] = 0x10; // Command ID
@@ -597,14 +597,14 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     }
 
     if (anlen) {
-        data[10] = an[0]; 
+        data[10] = an[0];
     }
     if (acllen) {
         data[11] = acl[0];
         data[12] = acl[1];
     }
     if (snlen) {
-        data[13] = sn[0];      
+        data[13] = sn[0];
     }
     if (scllen) {
         data[14] = scl[0];
@@ -615,7 +615,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     }
 
     // READER CHALLENGE - (RANDOM To Encrypt = Rac)
-    uint8_t nonce[8] = {1,2,3,4,5,6,7,8};
+    uint8_t nonce[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     PrintAndLogEx(INFO, "Reader challenge (unencrypted): %s", sprint_hex(nonce, 8));
 
     // Create M1c Challenge with 3DES (3 Keys = 24, 2 Keys = 16)
@@ -624,7 +624,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     mbedtls_des3_init(&des3_ctx);
 
     if (keylen == 24) {
-       
+
         mbedtls_des3_set3key_enc(&des3_ctx, master_key);
         PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, keylen));
 
@@ -659,8 +659,8 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     if (waitCmdFelica(0, &resp, 1) == false) {
         PrintAndLogEx(ERR, "no response from card");
         return PM3_ERFTRANS;
-    } 
-    
+    }
+
     felica_auth1_response_t auth1_response;
     memcpy(&auth1_response, (felica_auth1_response_t *)resp.data.asBytes, sizeof(felica_auth1_response_t));
 
@@ -710,12 +710,12 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica auth2",
-            "Complete mutual authentication. This command can only be executed subsquent to Auth1\n"
-            _RED_("INCOMPLETE / EXPERIMENTAL COMMAND!!!\n")
-            _RED_("EXPERIMENTAL COMMAND - M2c/P2c will be not checked"),
-            "hf felica auth2 --cc 0102030405060708 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
-            "hf felica auth2 -i 11100910C11BC407 --cc 0102030405060708 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
-        );
+                  "Complete mutual authentication. This command can only be executed subsquent to Auth1\n"
+                  _RED_("INCOMPLETE / EXPERIMENTAL COMMAND!!!\n")
+                  _RED_("EXPERIMENTAL COMMAND - M2c/P2c will be not checked"),
+                  "hf felica auth2 --cc 0102030405060708 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
+                  "hf felica auth2 -i 11100910C11BC407 --cc 0102030405060708 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_str0("i", NULL, "<hex>", "set custom IDm"),
@@ -758,7 +758,7 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
     }
 
     uint8_t data[PM3_CMD_DATA_SIZE];
-    memset(data, 0 , sizeof(data));
+    memset(data, 0, sizeof(data));
 
     bool custom_IDm = false;
 
@@ -776,7 +776,7 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
     }
 
     if (cclen) {
-        memcpy(data + 16, cc, cclen);            
+        memcpy(data + 16, cc, cclen);
     }
 
     if (keylen) {
@@ -791,7 +791,7 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
     // M3c (8) == cc
 //    unsigned char m3c[8];  == cc
 
-  
+
     mbedtls_des3_context des3_ctx_enc;
     mbedtls_des3_context des3_ctx_dec;
 
@@ -824,7 +824,7 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
     unsigned char p3c[8];
     mbedtls_des3_crypt_ecb(&des3_ctx_dec, cc, p3c);
     PrintAndLogEx(INFO, "3DES decrypted M3c = P3c... %s", sprint_hex_inrow(p3c, sizeof(p3c)));
-    
+
     // Encrypt p3c with master_key
     unsigned char m4c[8];
     mbedtls_des3_crypt_ecb(&des3_ctx_enc, p3c, m4c);
@@ -848,7 +848,7 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
     if (waitCmdFelica(0, &resp, 1) == false) {
         PrintAndLogEx(ERR, "no response from card");
         return PM3_ERFTRANS;
-    } 
+    }
 
     felica_auth2_response_t auth2_response;
     memcpy(&auth2_response, (felica_auth2_response_t *)resp.data.asBytes, sizeof(felica_auth2_response_t));
@@ -954,7 +954,7 @@ static int CmdHFFelicaWritePlain(const char *Cmd) {
     }
 
     uint8_t data[PM3_CMD_DATA_SIZE];
-    memset(data, 0 , sizeof(data));
+    memset(data, 0, sizeof(data));
     data[0] = 0x20; // Static length
     data[1] = 0x08; // Command ID
 
@@ -1115,7 +1115,7 @@ static int CmdHFFelicaReadPlain(const char *Cmd) {
     }
 
     uint8_t data[PM3_CMD_DATA_SIZE];
-    memset(data, 0 , sizeof(data));
+    memset(data, 0, sizeof(data));
     data[0] = 0x10; // Static length
     data[1] = 0x06; // Command ID
 
@@ -1152,7 +1152,7 @@ static int CmdHFFelicaReadPlain(const char *Cmd) {
 
     PrintAndLogEx(INFO, "block | data  ");
     PrintAndLogEx(INFO, "------+----------------------------------------");
-    
+
     // main loop block reads
     if (all_block_list_elements) {
 
@@ -1217,7 +1217,7 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint8_t data[PM3_CMD_DATA_SIZE];
-    memset(data, 0 , sizeof(data));
+    memset(data, 0, sizeof(data));
     data[0] = 0x0A; // Static length
     data[1] = 0x04; // Command ID
 
@@ -1294,7 +1294,7 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t reserved[2] = {0,0};
+    uint8_t reserved[2] = {0, 0};
     int rlen = 0;
     res = CLIParamHexToBuf(arg_get_str(ctx, 2), reserved, sizeof(reserved), &rlen);
     if (res) {
@@ -1310,7 +1310,7 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint8_t data[PM3_CMD_DATA_SIZE];
-    memset(data, 0 , sizeof(data));
+    memset(data, 0, sizeof(data));
     data[0] = 0x0C; // Static length
     data[1] = 0x3C; // Command ID
 
@@ -1322,9 +1322,9 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
         memcpy(data + 2, idm, sizeof(idm));
     }
 
-    // add custom reserved 
-    if (rlen ) {
-        memcpy(data +10, reserved, sizeof(reserved));
+    // add custom reserved
+    if (rlen) {
+        memcpy(data + 10, reserved, sizeof(reserved));
     } else {
         data[10] = 0x00; // Reserved Value
         data[11] = 0x00; // Reserved Value
@@ -1337,7 +1337,7 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
 
     AddCrc(data, datalen);
     datalen += 2;
-    uint8_t flags = (FELICA_APPEND_CRC |FELICA_RAW);
+    uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
 
     clear_and_send_command(flags, datalen, data, 0);
 
@@ -1346,7 +1346,7 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
         PrintAndLogEx(FAILED, "Got no response from card");
         return PM3_ERFTRANS;
     }
-    
+
     felica_request_spec_response_t spec_response;
     memcpy(&spec_response, (felica_request_spec_response_t *)resp.data.asBytes, sizeof(felica_request_spec_response_t));
 
@@ -1401,7 +1401,7 @@ static int CmdHFFelicaResetMode(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t reserved[2] = {0,0};
+    uint8_t reserved[2] = {0, 0};
     int rlen = 0;
     res = CLIParamHexToBuf(arg_get_str(ctx, 2), reserved, sizeof(reserved), &rlen);
     if (res) {
@@ -1417,7 +1417,7 @@ static int CmdHFFelicaResetMode(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint8_t data[PM3_CMD_DATA_SIZE];
-    memset(data, 0 , sizeof(data));
+    memset(data, 0, sizeof(data));
     data[0] = 0x0C; // Static length
     data[1] = 0x3E; // Command ID
 
@@ -1495,7 +1495,7 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
 
 
     uint8_t data[PM3_CMD_DATA_SIZE];
-    memset(data, 0 , sizeof(data));
+    memset(data, 0, sizeof(data));
     data[0] = 0x0A; // Static length
     data[1] = 0x0C; // Command ID
 
@@ -1578,7 +1578,7 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t code[2] = {0,0};
+    uint8_t code[2] = {0, 0};
     int clen = 0;
     res = CLIParamHexToBuf(arg_get_str(ctx, 3), code, sizeof(code), &clen);
     if (res) {
@@ -1596,7 +1596,7 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint8_t data[PM3_CMD_DATA_SIZE];
-    memset(data, 0 , sizeof(data));
+    memset(data, 0, sizeof(data));
 
     bool custom_IDm = false;
 
@@ -1608,10 +1608,10 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     if (all_nodes == false) {
         // Node Number
         if (nlen == 1) {
-            memcpy(data + 10, node, sizeof(node)); 
+            memcpy(data + 10, node, sizeof(node));
         }
 
-        // code 
+        // code
         if (clen == 2) {
             memcpy(data + 11, code, sizeof(code));
         }
@@ -2055,7 +2055,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
 
     int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE];
-    memset(data, 0 , sizeof(data));
+    memset(data, 0, sizeof(data));
 
     CLIGetHexWithReturn(ctx, 7, data, &datalen);
     CLIParserFree(ctx);

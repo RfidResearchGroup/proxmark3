@@ -2203,7 +2203,7 @@ static void init_it_all(void) {
     known_target_key = 0;
     test_state[0] = 0;
     test_state[1] = 0;
-    brute_force_per_second=0;
+    brute_force_per_second = 0;
     init_book_of_work();
     real_sum_a8 = 0;
 

@@ -137,7 +137,7 @@ int CmdWiegandDecode(const char *Cmd) {
 
     uint32_t top = 0, mid = 0, bot = 0;
 
-    if (hlen) { 
+    if (hlen) {
         res = hexstring_to_u96(&top, &mid, &bot, hex);
         if (res != hlen) {
             PrintAndLogEx(ERR, "hex string contains none hex chars");

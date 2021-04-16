@@ -14,7 +14,7 @@ copyright = ''
 author = '0xdrrb'
 version = 'v0.1.2'
 desc = [[
-This is a script that tries to dump and decrypt the data of a specific type of Mifare laundromat token. 
+This is a script that tries to dump and decrypt the data of a specific type of Mifare laundromat token.
 OBS! Tag must be on the antenna.
 ]]
 example = [[

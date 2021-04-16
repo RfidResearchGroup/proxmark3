@@ -8,8 +8,8 @@ author = 'Mosci'
 version = 'v1.0.3'
 desc =
 [[
-This is a script which writes value 0x01 to bytes from 
-position 0x07 until 0xFF on a Legic Prime Tag (MIM256 or MIM1024) 
+This is a script which writes value 0x01 to bytes from
+position 0x07 until 0xFF on a Legic Prime Tag (MIM256 or MIM1024)
 -- (created with 'hf legic dump -f my_dump.hex') --
 ]]
 example = [[

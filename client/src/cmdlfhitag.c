@@ -520,7 +520,7 @@ static int CmdLFHitagReader(const char *Cmd) {
                   "  lf hitag reader --22 --nrar 0102030411223344\n"
                   "  lf hitag reader --23 -k 4F4E4D494B52\n"
                   "  lf hitag reader --26\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -531,8 +531,8 @@ static int CmdLFHitagReader(const char *Cmd) {
         arg_lit0(NULL, "23", "Hitag2, read all pages, crypto mode. Key ISK high + ISK low. def 4F4E4D494B52 (ONMIKR)"),
         arg_lit0(NULL, "25", "Hitag2, test recorded authentications (replay?)"),
         arg_lit0(NULL, "26", "Hitag2, read UID"),
-        arg_str0("k","key", "<hex>", "key, 4 or 6 hex bytes"),
-        arg_str0(NULL,"nrar", "<hex>", "nonce / answer reader, 8 hex bytes"),
+        arg_str0("k", "key", "<hex>", "key, 4 or 6 hex bytes"),
+        arg_str0(NULL, "nrar", "<hex>", "nonce / answer reader, 8 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -592,7 +592,7 @@ static int CmdLFHitagReader(const char *Cmd) {
         htf = RHTSF_CHALLENGE;
         memcpy(htd.auth.NrAr, nrar, sizeof(nrar));
     }
-    if (s02){
+    if (s02) {
         cmd = CMD_LF_HITAGS_READ;
         htf = RHTSF_KEY;
         memcpy(htd.crypto.key, key, sizeof(key));
@@ -615,7 +615,7 @@ static int CmdLFHitagReader(const char *Cmd) {
     if (h26) {
         htf = RHT2F_UID_ONLY;
     }
-    
+
     clearCommandBuffer();
     SendCommandMIX(cmd, htf, 0, 0, &htd, sizeof(htd));
     PacketResponseNG resp;
@@ -698,7 +698,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
                   "Hitag 2\n"
                   "  lf hitag writer --24 -k 4F4E4D494B52 -p 3 -d 01020304\n"
                   "  lf hitag writer --27 -k 4D494B52 -p 3 -d 01020304\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -708,8 +708,8 @@ static int CmdLFHitagWriter(const char *Cmd) {
         arg_lit0(NULL, "27", "Hitag2, write page, password mode"),
         arg_int1("p", "page", "<dec>", "page address to write to"),
         arg_str0("d", "data", "<hex>", "data, 4 hex bytes"),
-        arg_str0("k","key", "<hex>", "key, 4 or 6 hex bytes"),
-        arg_str0(NULL,"nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
+        arg_str0("k", "key", "<hex>", "key, 4 or 6 hex bytes"),
+        arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -743,7 +743,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
     uint8_t nrar[8];
     int nalen = 0;
     res = CLIParamHexToBuf(arg_get_str(ctx, 8), nrar, sizeof(nrar), &nalen);
-    
+
     CLIParserFree(ctx);
 
     if (res != 0) {
@@ -782,7 +782,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
         memcpy(htd.auth.NrAr, nrar, sizeof(nrar));
         memcpy(htd.auth.data, data, sizeof(data));
     }
-    if (s04){
+    if (s04) {
         htf = WHTSF_KEY;
         memcpy(htd.crypto.key, key, sizeof(key));
         memcpy(htd.crypto.data, data, sizeof(data));
@@ -822,13 +822,13 @@ static int CmdLFHitag2Dump(const char *Cmd) {
                   "In crypto mode the default key is 4F4E4D494B52 (ONMIKR)  format: ISK high + ISK low.",
                   "lf hitag dump -k 4F4E4D494B52\n"
                   "lf hitag dump -k 4D494B52\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "file name"),
-        arg_str0("k","key", "<hex>", "key, 4 or 6 hex bytes"),
-        arg_str0(NULL,"nrar", "<hex>", "nonce / answer reader, 8 hex bytes"),
+        arg_str0("k", "key", "<hex>", "key, 4 or 6 hex bytes"),
+        arg_str0(NULL, "nrar", "<hex>", "nonce / answer reader, 8 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -858,23 +858,23 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
     PrintAndLogEx(WARNING, "to be implememted...");
 
-/*
-    PrintAndLogEx(SUCCESS, "Dumping tag memory...");
+    /*
+        PrintAndLogEx(SUCCESS, "Dumping tag memory...");
 
-    clearCommandBuffer();
-    //SendCommandNG(CMD_LF_HITAG_DUMP, &htd, sizeof(htd));
-    PacketResponseNG resp;
-    uint8_t *data = resp.data.asBytes;
-    if (fnlen < 1) {
-        char *fptr = filename;
-        fptr += sprintf(fptr, "lf-hitag-");
-        FillFileNameByUID(fptr, data, "-dump", 4);
-    }
+        clearCommandBuffer();
+        //SendCommandNG(CMD_LF_HITAG_DUMP, &htd, sizeof(htd));
+        PacketResponseNG resp;
+        uint8_t *data = resp.data.asBytes;
+        if (fnlen < 1) {
+            char *fptr = filename;
+            fptr += sprintf(fptr, "lf-hitag-");
+            FillFileNameByUID(fptr, data, "-dump", 4);
+        }
 
-    saveFile(filename, ".bin", data, 48);
-    saveFileEML(filename, data, 48, 4);
-    saveFileJSON(filename, jsfHitag, data, 48, NULL);
-*/
+        saveFile(filename, ".bin", data, 48);
+        saveFileEML(filename, data, 48, 4);
+        saveFileJSON(filename, jsfHitag, data, 48, NULL);
+    */
     return PM3_SUCCESS;
 }
 

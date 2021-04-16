@@ -460,13 +460,13 @@ static int CmdHFMFPWritePerso(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     bool verbose = arg_get_lit(ctx, 1);
 
     uint8_t keyNum[64] = {0};
     int keyNumLen = 0;
     CLIGetHexWithReturn(ctx, 2, keyNum, &keyNumLen);
-    
+
     uint8_t key[64] = {0};
     int keyLen = 0;
     CLIGetHexWithReturn(ctx, 3, key, &keyLen);
@@ -546,7 +546,7 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
     uint8_t data[250] = {0};
     int datalen = 0;
     int res;
-    
+
     mfpSetVerboseMode(verbose2);
     for (uint16_t sn = 0x4000; sn < 0x4050; sn++) {
         keyNum[0] = sn >> 8;
@@ -590,8 +590,8 @@ static int CmdHFMFPCommitPerso(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfp commitp",
                   "Executes Commit Perso command. Can be used in SL0 mode only.",
                   "hf mfp commitp\n"
-  //                "hf mfp commitp --sl 1"
-                );
+                  //                "hf mfp commitp --sl 1"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -601,7 +601,7 @@ static int CmdHFMFPCommitPerso(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool verbose = arg_get_lit(ctx, 1);
-//    int slmode = arg_get_int(ctx, 2);  
+//    int slmode = arg_get_int(ctx, 2);
     CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
@@ -677,7 +677,7 @@ static int CmdHFMFPRdbl(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v", "verbose", "show internal data"),
-        arg_int0("n", "count", "<dec>","blocks count (by default 1)"),
+        arg_int0("n", "count", "<dec>", "blocks count (by default 1)"),
         arg_lit0("b", "keyb", "use key B (by default keyA)"),
         arg_lit0("p", "plain", "plain communication mode between reader and card"),
         arg_int1(NULL, "blk", "<dec>", "block number (0..255)"),
@@ -882,7 +882,7 @@ static int CmdHFMFPWrbl(const char *Cmd) {
                   "Writes one block to Mifare Plus card",
                   "hf mfp wrbl --blk 1 -d ff0000000000000000000000000000ff --key 000102030405060708090a0b0c0d0e0f -> writes block 1 data\n"
                   "hf mfp wrbl --blk 2 -d ff0000000000000000000000000000ff -v -> writes block 2 data with default key 0xFF..0xFF"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
