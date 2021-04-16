@@ -245,7 +245,7 @@ void CodeIso15693AsTag(uint8_t *cmd, size_t len) {
     ts->buf[++ts->max] = 0x1D;  // 00011101
 
     // data
-    for (int i = 0; i < len; i += 2) {
+    for (size_t i = 0; i < len; i += 2) {
         ts->buf[++ts->max] = encode_4bits[cmd[i] & 0xF];
         ts->buf[++ts->max] = encode_4bits[cmd[i] >> 4];
         ts->buf[++ts->max] = encode_4bits[cmd[i + 1] & 0xF];
@@ -515,7 +515,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                         tag->shiftReg |= 0x80;
                         tag->bitCount++;
                         if (tag->bitCount == 8) {
-                            tag->output[tag->len] = tag->shiftReg;
+                            tag->output[tag->len] = tag->shiftReg & 0xFF;
                             tag->len++;
 
                             if (tag->len > tag->max_len) {
@@ -540,7 +540,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                         tag->bitCount++;
 
                         if (tag->bitCount == 8) {
-                            tag->output[tag->len] = tag->shiftReg;
+                            tag->output[tag->len] = (tag->shiftReg & 0xFF);
                             tag->len++;
 
                             if (tag->len > tag->max_len) {
