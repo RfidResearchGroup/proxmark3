@@ -859,7 +859,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
                   "Load emulator memory with data from (bin/eml/json) iCLASS dump file",
                   "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
                   "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.eml\n"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -2049,7 +2049,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
         }
         case DICTIONARY: {
             free(dump);
-            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");            
+            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
             return PM3_EINVARG;
         }
     }
