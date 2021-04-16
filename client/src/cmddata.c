@@ -1035,12 +1035,12 @@ static int CmdDecimate(const char *Cmd) {
     CLIParserInit(&ctx, "data decimate",
                   "Performs decimation, by reducing samples N times in the grapbuf. Good for PSK\n",
                   "data decimate\n"
-                  "data decimate 4"
+                  "data decimate -n 4"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0(NULL, NULL, "<dec>", "factor to reduce sample set (default 2)"),
+        arg_int0("n", NULL, "<dec>", "factor to reduce sample set (default 2)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1067,12 +1067,12 @@ static int CmdUndecimate(const char *Cmd) {
     CLIParserInit(&ctx, "data undecimate",
                   "Performs un-decimation, by repeating each sample N times in the graphbuf",
                   "data undecimate\n"
-                  "data undecimate 4\n"
+                  "data undecimate -n 4\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0(NULL, NULL, "<dec>", "factor to repeat each sample (default 2)"),
+        arg_int0("n", NULL, "<dec>", "factor to repeat each sample (default 2)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
