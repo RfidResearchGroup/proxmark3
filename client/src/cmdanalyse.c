@@ -32,10 +32,10 @@
 static int CmdHelp(const char *Cmd);
 
 static uint8_t calculateLRC(uint8_t *bytes, uint8_t len) {
-    uint8_t LRC = 0;
+    uint8_t lcr = 0;
     for (uint8_t i = 0; i < len; i++)
-        LRC ^= bytes[i];
-    return LRC;
+        lcr ^= bytes[i];
+    return lcr;
 }
 /*
 static uint16_t matrixadd ( uint8_t* bytes, uint8_t len){
@@ -56,7 +56,7 @@ static uint16_t shiftadd ( uint8_t* bytes, uint8_t len){
 }
 */
 static uint16_t calcSumCrumbAdd(uint8_t *bytes, uint8_t len, uint32_t mask) {
-    uint16_t sum = 0;
+    uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum += CRUMB(bytes[i], 0);
         sum += CRUMB(bytes[i], 2);
@@ -64,25 +64,25 @@ static uint16_t calcSumCrumbAdd(uint8_t *bytes, uint8_t len, uint32_t mask) {
         sum += CRUMB(bytes[i], 6);
     }
     sum &= mask;
-    return sum;
+    return (sum & 0xFFFF);
 }
 static uint16_t calcSumCrumbAddOnes(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return (~calcSumCrumbAdd(bytes, len, mask) & mask);
 }
 static uint16_t calcSumNibbleAdd(uint8_t *bytes, uint8_t len, uint32_t mask) {
-    uint16_t sum = 0;
+    uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum += NIBBLE_LOW(bytes[i]);
         sum += NIBBLE_HIGH(bytes[i]);
     }
     sum &= mask;
-    return sum;
+    return (sum & 0xFFFF);
 }
 static uint16_t calcSumNibbleAddOnes(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return (~calcSumNibbleAdd(bytes, len, mask) & mask);
 }
 static uint16_t calcSumCrumbXor(uint8_t *bytes, uint8_t len, uint32_t mask) {
-    uint16_t sum = 0;
+    uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum ^= CRUMB(bytes[i], 0);
         sum ^= CRUMB(bytes[i], 2);
@@ -90,32 +90,32 @@ static uint16_t calcSumCrumbXor(uint8_t *bytes, uint8_t len, uint32_t mask) {
         sum ^= CRUMB(bytes[i], 6);
     }
     sum &= mask;
-    return sum;
+    return (sum & 0xFFFF);
 }
 static uint16_t calcSumNibbleXor(uint8_t *bytes, uint8_t len, uint32_t mask) {
-    uint16_t sum = 0;
+    uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum ^= NIBBLE_LOW(bytes[i]);
         sum ^= NIBBLE_HIGH(bytes[i]);
     }
     sum &= mask;
-    return sum;
+    return (sum & 0xFFFF);
 }
 static uint16_t calcSumByteXor(uint8_t *bytes, uint8_t len, uint32_t mask) {
-    uint16_t sum = 0;
+    uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum ^= bytes[i];
     }
     sum &= mask;
-    return sum;
+    return (sum & 0xFFFF);
 }
 static uint16_t calcSumByteAdd(uint8_t *bytes, uint8_t len, uint32_t mask) {
-    uint16_t sum = 0;
+    uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum += bytes[i];
     }
     sum &= mask;
-    return sum;
+    return (sum & 0xFFFF);
 }
 // Ones complement
 static uint16_t calcSumByteAddOnes(uint8_t *bytes, uint8_t len, uint32_t mask) {
@@ -123,24 +123,24 @@ static uint16_t calcSumByteAddOnes(uint8_t *bytes, uint8_t len, uint32_t mask) {
 }
 
 static uint16_t calcSumByteSub(uint8_t *bytes, uint8_t len, uint32_t mask) {
-    uint8_t sum = 0;
+    uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum -= bytes[i];
     }
     sum &= mask;
-    return sum;
+    return (sum & 0xFFFF);
 }
 static uint16_t calcSumByteSubOnes(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return (~calcSumByteSub(bytes, len, mask) & mask);
 }
 static uint16_t calcSumNibbleSub(uint8_t *bytes, uint8_t len, uint32_t mask) {
-    uint8_t sum = 0;
+    uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum -= NIBBLE_LOW(bytes[i]);
         sum -= NIBBLE_HIGH(bytes[i]);
     }
     sum &= mask;
-    return sum;
+    return (sum & 0xFFFF);
 }
 static uint16_t calcSumNibbleSubOnes(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return (~calcSumNibbleSub(bytes, len, mask) & mask);
@@ -148,18 +148,18 @@ static uint16_t calcSumNibbleSubOnes(uint8_t *bytes, uint8_t len, uint32_t mask)
 
 // BSD shift checksum 8bit version
 static uint16_t calcBSDchecksum8(uint8_t *bytes, uint8_t len, uint32_t mask) {
-    uint16_t sum = 0;
+    uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum = ((sum & 0xFF) >> 1) | ((sum & 0x1) << 7);   // rotate accumulator
         sum += bytes[i];  // add next byte
         sum &= 0xFF;  //
     }
     sum &= mask;
-    return sum;
+    return (sum & 0xFFFF);
 }
 // BSD shift checksum 4bit version
 static uint16_t calcBSDchecksum4(uint8_t *bytes, uint8_t len, uint32_t mask) {
-    uint16_t sum = 0;
+    uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum = ((sum & 0xF) >> 1) | ((sum & 0x1) << 3);   // rotate accumulator
         sum += NIBBLE_HIGH(bytes[i]);  // add high nibble
@@ -169,7 +169,7 @@ static uint16_t calcBSDchecksum4(uint8_t *bytes, uint8_t len, uint32_t mask) {
         sum &= 0xF;  //
     }
     sum &= mask;
-    return sum;
+    return (sum & 0xFFFF);
 }
 
 // 0xFF - ( n1 ^ n... )
