@@ -101,7 +101,9 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t
         // overwrite status
         txBufferNG.pre.status = PM3_EOVFLOW;
     }
-    txBufferNG.pre.length = len;
+
+    // length is only 15bit (32768)
+    txBufferNG.pre.length = (len & 0x7FFF);
 
     // Add the (optional) content to the frame, with a maximum size of PM3_CMD_DATA_SIZE
     if (data && len) {
@@ -115,7 +117,7 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t
     if ((g_reply_via_fpc && g_reply_with_crc_on_fpc) || ((g_reply_via_usb) && g_reply_with_crc_on_usb)) {
         uint8_t first, second;
         compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(PacketResponseNGPreamble) + len, &first, &second);
-        tx_post->crc = (first << 8) + second;
+        tx_post->crc = ((first << 8) | second);
     } else {
         tx_post->crc = RESPONSENG_POSTAMBLE_MAGIC;
     }
@@ -150,7 +152,7 @@ int reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
 }
 
 int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
-    uint16_t status = PM3_SUCCESS;
+    int16_t status = PM3_SUCCESS;
     uint64_t arg[3] = {arg0, arg1, arg2};
     if (len > PM3_CMD_DATA_SIZE - sizeof(arg)) {
         len = PM3_CMD_DATA_SIZE - sizeof(arg);
@@ -159,9 +161,9 @@ int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *d
     uint8_t cmddata[PM3_CMD_DATA_SIZE];
     memcpy(cmddata, arg, sizeof(arg));
     if (len && data)
-        memcpy(cmddata + sizeof(arg), data, len);
+        memcpy(cmddata + sizeof(arg), data, (int)len);
 
-    return reply_ng_internal(cmd, status, cmddata, len + sizeof(arg), false);
+    return reply_ng_internal((cmd & 0xFFFF), status, cmddata, len + sizeof(arg), false);
 }
 
 static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *data, size_t len), bool usb, bool fpc) {
@@ -230,7 +232,7 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
         rx->ng = false;
         rx->magic = 0;
         rx->crc = 0;
-        rx->cmd = rx_old.cmd;
+        rx->cmd = (rx_old.cmd & 0xFFFF);
         rx->oldarg[0] = rx_old.arg[0];
         rx->oldarg[1] = rx_old.arg[1];
         rx->oldarg[2] = rx_old.arg[2];

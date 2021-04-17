@@ -29,7 +29,7 @@ static inline uint8_t evenparity32(uint32_t x) {
     x ^= x >> 8;
     return evenparity8(x);
 #else
-    return __builtin_parity(x);
+    return (__builtin_parity(x) & 0xFF);
 #endif
 }
 
