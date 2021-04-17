@@ -227,7 +227,7 @@ static int CmdAnalyseLfsr(const char *Cmd) {
     for (uint8_t i = 0x01; i < 0x30; i += 1) {
         legic_prng_init(iv);
         legic_prng_forward(i);
-        uint16_t lfsr = legic_prng_get_bits(12);  /* Any nonzero start state will work. */
+        uint32_t lfsr = legic_prng_get_bits(12);  /* Any nonzero start state will work. */
         PrintAndLogEx(INFO, " %02X |  %03X |  %03X  | %03X", i, lfsr, 0x40 ^ lfsr, find ^ lfsr);
     }
     PrintAndLogEx(INFO, "----+------+-------+--------------");
@@ -258,7 +258,7 @@ static int CmdAnalyseLCR(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t finalXor = calculateLRC(data, dlen);
+    uint8_t finalXor = calculateLRC(data, (uint8_t)dlen);
     PrintAndLogEx(SUCCESS, "Target [%02X] requires final LRC XOR byte value: " _YELLOW_("0x%02X"), data[dlen - 1], finalXor);
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -288,15 +288,15 @@ static int CmdAnalyseCRC(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, "\nTests with (%d) | %s", dlen, sprint_hex(data, dlen));
+    PrintAndLogEx(INFO, "\nTests with (%d) | %s", dlen, sprint_hex(data, (size_t)dlen));
 
     // 51  f5  7a  d6
     uint8_t uid[] = {0x51, 0xf5, 0x7a, 0xd6}; //12 34 56
     init_table(CRC_LEGIC);
-    uint8_t legic8 = CRC8Legic(uid, sizeof(uid));
-    PrintAndLogEx(INFO, "Legic 16 | %X (EF6F expected) [legic8 = %02x]", crc16_legic(data, dlen, legic8), legic8);
+    uint8_t legic8 = CRC8Legic(uid, sizeof(uid)) & 0xFF;
+    PrintAndLogEx(INFO, "Legic 16 | %X (EF6F expected) [legic8 = %02x]", crc16_legic(data, (size_t)dlen, legic8), legic8);
     init_table(CRC_FELICA);
-    PrintAndLogEx(INFO, "FeliCa | %X ", crc16_xmodem(data, dlen));
+    PrintAndLogEx(INFO, "FeliCa | %X ", crc16_xmodem(data, (size_t)dlen));
 
     PrintAndLogEx(INFO, "\nTests of reflection. Current methods in source code");
     PrintAndLogEx(INFO, "   reflect(0x3e23L,3) is %04X == 0x3e26", reflect(0x3e23L, 3));
@@ -305,9 +305,9 @@ static int CmdAnalyseCRC(const char *Cmd) {
 
     uint8_t b1, b2;
     // ISO14443 crc B
-    compute_crc(CRC_14443_B, data, dlen, &b1, &b2);
+    compute_crc(CRC_14443_B, data, (size_t)dlen, &b1, &b2);
     uint16_t crcBB_1 = b1 << 8 | b2;
-    uint16_t bbb = Crc16ex(CRC_14443_B, data, dlen);
+    uint16_t bbb = Crc16ex(CRC_14443_B, data, (size_t)dlen);
     PrintAndLogEx(INFO, "ISO14443 crc B  | %04x == %04x \n", crcBB_1, bbb);
 
 
@@ -316,7 +316,7 @@ static int CmdAnalyseCRC(const char *Cmd) {
 
     PrintAndLogEx(INFO, "\n\nStandard test with 31 32 33 34 35 36 37 38 39  '123456789'\n\n");
     uint8_t dataStr[] = { 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39 };
-    legic8 = CRC8Legic(dataStr, sizeof(dataStr));
+    legic8 = CRC8Legic(dataStr, sizeof(dataStr)) & 0xFF;
 
     //these below has been tested OK.
     PrintAndLogEx(INFO, "Confirmed CRC Implementations");
@@ -340,27 +340,27 @@ static int CmdAnalyseCRC(const char *Cmd) {
 
     // ISO14443 crc A
     compute_crc(CRC_14443_A, dataStr, sizeof(dataStr), &b1, &b2);
-    uint16_t crcAA = b1 << 8 | b2;
+    uint16_t crcAA = (uint16_t)(b1 << 8 | b2);
     PrintAndLogEx(INFO, "ISO14443 crc A  | %04x or %04x (BF05 expected)\n", crcAA, Crc16ex(CRC_14443_A, dataStr, sizeof(dataStr)));
 
     // ISO14443 crc B
     compute_crc(CRC_14443_B, dataStr, sizeof(dataStr), &b1, &b2);
-    uint16_t crcBB = b1 << 8 | b2;
+    uint16_t crcBB = (uint16_t)(b1 << 8 | b2);
     PrintAndLogEx(INFO, "ISO14443 crc B  | %04x or %04x (906E expected)\n", crcBB, Crc16ex(CRC_14443_B, dataStr, sizeof(dataStr)));
 
     // ISO15693 crc  (x.25)
     compute_crc(CRC_15693, dataStr, sizeof(dataStr), &b1, &b2);
-    uint16_t crcCC = b1 << 8 | b2;
+    uint16_t crcCC = (uint16_t)(b1 << 8 | b2);
     PrintAndLogEx(INFO, "ISO15693 crc X25| %04x or %04x (906E expected)\n", crcCC, Crc16ex(CRC_15693, dataStr, sizeof(dataStr)));
 
     // ICLASS
     compute_crc(CRC_ICLASS, dataStr, sizeof(dataStr), &b1, &b2);
-    uint16_t crcDD = b1 << 8 | b2;
+    uint16_t crcDD = (uint16_t)(b1 << 8 | b2);
     PrintAndLogEx(INFO, "ICLASS crc      | %04x or %04x\n", crcDD, Crc16ex(CRC_ICLASS, dataStr, sizeof(dataStr)));
 
     // FeliCa
     compute_crc(CRC_FELICA, dataStr, sizeof(dataStr), &b1, &b2);
-    uint16_t crcEE = b1 << 8 | b2;
+    uint16_t crcEE = (uint16_t)(b1 << 8 | b2);
     PrintAndLogEx(INFO, "FeliCa          | %04x or %04x (31C3 expected)\n", crcEE, Crc16ex(CRC_FELICA, dataStr, sizeof(dataStr)));
 
 
@@ -430,7 +430,7 @@ static int CmdAnalyseCHKSUM(const char *Cmd) {
                 continue;
 
             mask <<= 4;
-            mask |= c;
+            mask |= (uint8_t)c;
         }
     }
 
@@ -443,22 +443,22 @@ static int CmdAnalyseCHKSUM(const char *Cmd) {
         PrintAndLogEx(INFO, "------------------+-------------+------------------+-----------------+------------------+-----------+-------------");
     }
     PrintAndLogEx(INFO, "0x%X 0x%X   0x%X  | 0x%X 0x%X   | 0x%X 0x%X   0x%X | 0x%X 0x%X       | 0x%X 0x%X   0x%X   | 0x%X  0x%X | 0x%X\n",
-                  calcSumByteAdd(data, dlen, mask)
-                  , calcSumNibbleAdd(data, dlen, mask)
-                  , calcSumCrumbAdd(data, dlen, mask)
-                  , calcSumByteSub(data, dlen, mask)
-                  , calcSumNibbleSub(data, dlen, mask)
-                  , calcSumByteAddOnes(data, dlen, mask)
-                  , calcSumNibbleAddOnes(data, dlen, mask)
-                  , calcSumCrumbAddOnes(data, dlen, mask)
-                  , calcSumByteSubOnes(data, dlen, mask)
-                  , calcSumNibbleSubOnes(data, dlen, mask)
-                  , calcSumByteXor(data, dlen, mask)
-                  , calcSumNibbleXor(data, dlen, mask)
-                  , calcSumCrumbXor(data, dlen, mask)
-                  , calcBSDchecksum8(data, dlen, mask)
-                  , calcBSDchecksum4(data, dlen, mask)
-                  , calcXORchecksum(data, dlen, mask)
+                  calcSumByteAdd(data, (uint8_t)dlen, mask)
+                  , calcSumNibbleAdd(data, (uint8_t)dlen, mask)
+                  , calcSumCrumbAdd(data, (uint8_t)dlen, mask)
+                  , calcSumByteSub(data, (uint8_t)dlen, mask)
+                  , calcSumNibbleSub(data, (uint8_t)dlen, mask)
+                  , calcSumByteAddOnes(data, (uint8_t)dlen, mask)
+                  , calcSumNibbleAddOnes(data, (uint8_t)dlen, mask)
+                  , calcSumCrumbAddOnes(data, (uint8_t)dlen, mask)
+                  , calcSumByteSubOnes(data, (uint8_t)dlen, mask)
+                  , calcSumNibbleSubOnes(data, (uint8_t)dlen, mask)
+                  , calcSumByteXor(data, (uint8_t)dlen, mask)
+                  , calcSumNibbleXor(data, (uint8_t)dlen, mask)
+                  , calcSumCrumbXor(data, (uint8_t)dlen, mask)
+                  , calcBSDchecksum8(data, (uint8_t)dlen, mask)
+                  , calcBSDchecksum4(data, (uint8_t)dlen, mask)
+                  , calcXORchecksum(data, (uint8_t)dlen, mask)
                  );
     return PM3_SUCCESS;
 }
