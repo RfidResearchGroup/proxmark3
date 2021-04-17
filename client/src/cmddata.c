@@ -36,150 +36,7 @@ int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_data_rawdemod(void) {
-    PrintAndLogEx(NORMAL, "Usage:  data rawdemod [modulation] <help>|<options>");
-    PrintAndLogEx(NORMAL, "   [modulation] as 2 char,");
-    PrintAndLogEx(NORMAL, "       "_YELLOW_("ab")" - ask/biphase");
-    PrintAndLogEx(NORMAL, "       "_YELLOW_("am")" - ask/manchester");
-    PrintAndLogEx(NORMAL, "       "_YELLOW_("ar")" - ask/raw");
-    PrintAndLogEx(NORMAL, "       "_YELLOW_("fs")" - fsk");
-    PrintAndLogEx(NORMAL, "       "_YELLOW_("nr")" - nrz/direct");
-    PrintAndLogEx(NORMAL, "       "_YELLOW_("p1")" - psk1");
-    PrintAndLogEx(NORMAL, "       "_YELLOW_("p2")" - psk2");
-    PrintAndLogEx(NORMAL, "   <help> as 'h', prints the help for the specific modulation");
-    PrintAndLogEx(NORMAL, "   <options> see specific modulation help for optional parameters");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "       data rawdemod fs h         = print help specific to fsk demod");
-    PrintAndLogEx(NORMAL, "       data rawdemod fs           = demod GraphBuffer using: fsk - autodetect");
-    PrintAndLogEx(NORMAL, "       data rawdemod ab           = demod GraphBuffer using: ask/biphase - autodetect");
-    PrintAndLogEx(NORMAL, "       data rawdemod am           = demod GraphBuffer using: ask/manchester - autodetect");
-    PrintAndLogEx(NORMAL, "       data rawdemod ar           = demod GraphBuffer using: ask/raw - autodetect");
-    PrintAndLogEx(NORMAL, "       data rawdemod nr           = demod GraphBuffer using: nrz/direct - autodetect");
-    PrintAndLogEx(NORMAL, "       data rawdemod p1           = demod GraphBuffer using: psk1 - autodetect");
-    PrintAndLogEx(NORMAL, "       data rawdemod p2           = demod GraphBuffer using: psk2 - autodetect");
-    return PM3_SUCCESS;
-}
-static int usage_data_rawdemod_am(void) {
-    PrintAndLogEx(NORMAL, "Usage:  data rawdemod am <s> [clock] <invert> [maxError] [maxLen] [amplify]");
-    PrintAndLogEx(NORMAL, "     ['s'] optional, check for Sequence Terminator");
-    PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect");
-    PrintAndLogEx(NORMAL, "     <invert>, 1 to invert output");
-    PrintAndLogEx(NORMAL, "     [set maximum allowed errors], default = 100");
-    PrintAndLogEx(NORMAL, "     [set maximum Samples to read], default = 32768 (512 bits at rf/64)");
-    PrintAndLogEx(NORMAL, "     <amplify>, 'a' to attempt demod with ask amplification, default = no amp");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "       data rawdemod am        = demod an ask/manchester tag from GraphBuffer");
-    PrintAndLogEx(NORMAL, "       data rawdemod am 32     = demod an ask/manchester tag from GraphBuffer using a clock of RF/32");
-    PrintAndLogEx(NORMAL, "       data rawdemod am 32 1   = demod an ask/manchester tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLogEx(NORMAL, "       data rawdemod am 1      = demod an ask/manchester tag from GraphBuffer while inverting data");
-    PrintAndLogEx(NORMAL, "       data rawdemod am 64 1 0 = demod an ask/manchester tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
-    return PM3_SUCCESS;
-}
-static int usage_data_rawdemod_ab(void) {
-    PrintAndLogEx(NORMAL, "Usage:  data rawdemod ab [offset] [clock] <invert> [maxError] [maxLen] <amplify>");
-    PrintAndLogEx(NORMAL, "     [offset], offset to begin biphase, default=0");
-    PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect");
-    PrintAndLogEx(NORMAL, "     <invert>, 1 to invert output");
-    PrintAndLogEx(NORMAL, "     [set maximum allowed errors], default = 100");
-    PrintAndLogEx(NORMAL, "     [set maximum Samples to read], default = 32768 (512 bits at rf/64)");
-    PrintAndLogEx(NORMAL, "     <amplify>, 'a' to attempt demod with ask amplification, default = no amp");
-    PrintAndLogEx(NORMAL, "     NOTE: <invert>  can be entered as second or third argument");
-    PrintAndLogEx(NORMAL, "     NOTE: <amplify> can be entered as first, second or last argument");
-    PrintAndLogEx(NORMAL, "     NOTE: any other arg must have previous args set to work");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "     NOTE: --invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "       data rawdemod ab              = demod an ask/biph tag from GraphBuffer");
-    PrintAndLogEx(NORMAL, "       data rawdemod ab 0 a          = demod an ask/biph tag from GraphBuffer, amplified");
-    PrintAndLogEx(NORMAL, "       data rawdemod ab 1 32         = demod an ask/biph tag from GraphBuffer using an offset of 1 and a clock of RF/32");
-    PrintAndLogEx(NORMAL, "       data rawdemod ab 0 32 1       = demod an ask/biph tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLogEx(NORMAL, "       data rawdemod ab 0 1          = demod an ask/biph tag from GraphBuffer while inverting data");
-    PrintAndLogEx(NORMAL, "       data rawdemod ab 0 64 1 0     = demod an ask/biph tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
-    PrintAndLogEx(NORMAL, "       data rawdemod ab 0 64 1 0 0 a = demod an ask/biph tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
-    return PM3_SUCCESS;
-}
-static int usage_data_rawdemod_ar(void) {
-    PrintAndLogEx(NORMAL, "Usage:  data rawdemod ar [clock] <invert> [maxError] [maxLen] [amplify]");
-    PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect");
-    PrintAndLogEx(NORMAL, "     <invert>, 1 to invert output");
-    PrintAndLogEx(NORMAL, "     [set maximum allowed errors], default = 100");
-    PrintAndLogEx(NORMAL, "     [set maximum Samples to read], default = 32768 (1024 bits at rf/64)");
-    PrintAndLogEx(NORMAL, "     <amplify>, 'a' to attempt demod with ask amplification, default = no amp");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "       data rawdemod ar            = demod an ask tag from GraphBuffer");
-    PrintAndLogEx(NORMAL, "       data rawdemod ar a          = demod an ask tag from GraphBuffer, amplified");
-    PrintAndLogEx(NORMAL, "       data rawdemod ar 32         = demod an ask tag from GraphBuffer using a clock of RF/32");
-    PrintAndLogEx(NORMAL, "       data rawdemod ar 32 1       = demod an ask tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLogEx(NORMAL, "       data rawdemod ar 1          = demod an ask tag from GraphBuffer while inverting data");
-    PrintAndLogEx(NORMAL, "       data rawdemod ar 64 1 0     = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
-    PrintAndLogEx(NORMAL, "       data rawdemod ar 64 1 0 0 a = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
-    return PM3_SUCCESS;
-}
-static int usage_data_rawdemod_fs(void) {
-    PrintAndLogEx(NORMAL, "Usage:  data rawdemod fs [clock] <invert> [fchigh] [fclow]");
-    PrintAndLogEx(NORMAL, "     [set clock as integer] optional, omit for autodetect.");
-    PrintAndLogEx(NORMAL, "     <invert>, 1 for invert output, can be used even if the clock is omitted");
-    PrintAndLogEx(NORMAL, "     [fchigh], larger field clock length, omit for autodetect");
-    PrintAndLogEx(NORMAL, "     [fclow], small field clock length, omit for autodetect");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "       data rawdemod fs           = demod an fsk tag from GraphBuffer using autodetect");
-    PrintAndLogEx(NORMAL, "       data rawdemod fs 32        = demod an fsk tag from GraphBuffer using a clock of RF/32, autodetect fc");
-    PrintAndLogEx(NORMAL, "       data rawdemod fs 1         = demod an fsk tag from GraphBuffer using autodetect, invert output");
-    PrintAndLogEx(NORMAL, "       data rawdemod fs 32 1      = demod an fsk tag from GraphBuffer using a clock of RF/32, invert output, autodetect fc");
-    PrintAndLogEx(NORMAL, "       data rawdemod fs 64 0 8 5  = demod an fsk1 RF/64 tag from GraphBuffer");
-    PrintAndLogEx(NORMAL, "       data rawdemod fs 50 0 10 8 = demod an fsk2 RF/50 tag from GraphBuffer");
-    PrintAndLogEx(NORMAL, "       data rawdemod fs 50 1 10 8 = demod an fsk2a RF/50 tag from GraphBuffer");
-    return PM3_SUCCESS;
-}
-static int usage_data_rawdemod_nr(void) {
-    PrintAndLogEx(NORMAL, "Usage:  data rawdemod nr [clock] <0|1> [maxError]");
-    PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect.");
-    PrintAndLogEx(NORMAL, "     <invert>, 1 for invert output");
-    PrintAndLogEx(NORMAL, "     [set maximum allowed errors], default = 100.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "       data rawdemod nr        = demod a nrz/direct tag from GraphBuffer");
-    PrintAndLogEx(NORMAL, "       data rawdemod nr 32     = demod a nrz/direct tag from GraphBuffer using a clock of RF/32");
-    PrintAndLogEx(NORMAL, "       data rawdemod nr 32 1   = demod a nrz/direct tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLogEx(NORMAL, "       data rawdemod nr 1      = demod a nrz/direct tag from GraphBuffer while inverting data");
-    PrintAndLogEx(NORMAL, "       data rawdemod nr 64 1 0 = demod a nrz/direct tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
-    return PM3_SUCCESS;
-}
-static int usage_data_rawdemod_p1(void) {
-    PrintAndLogEx(NORMAL, "Usage:  data rawdemod p1 [clock] <0|1> [maxError]");
-    PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect.");
-    PrintAndLogEx(NORMAL, "     <invert>, 1 for invert output");
-    PrintAndLogEx(NORMAL, "     [set maximum allowed errors], default = 100.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "       data rawdemod p1        = demod a psk1 tag from GraphBuffer");
-    PrintAndLogEx(NORMAL, "       data rawdemod p1 32     = demod a psk1 tag from GraphBuffer using a clock of RF/32");
-    PrintAndLogEx(NORMAL, "       data rawdemod p1 32 1   = demod a psk1 tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLogEx(NORMAL, "       data rawdemod p1 1      = demod a psk1 tag from GraphBuffer while inverting data");
-    PrintAndLogEx(NORMAL, "       data rawdemod p1 64 1 0 = demod a psk1 tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
-    return PM3_SUCCESS;
-}
-static int usage_data_rawdemod_p2(void) {
-    PrintAndLogEx(NORMAL, "Usage:  data rawdemod p2 [clock] <0|1> [maxError]");
-    PrintAndLogEx(NORMAL, "     [set clock as integer] optional, if not set, autodetect.");
-    PrintAndLogEx(NORMAL, "     <invert>, 1 for invert output");
-    PrintAndLogEx(NORMAL, "     [set maximum allowed errors], default = 100.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "       data rawdemod p2         = demod a psk2 tag from GraphBuffer, autodetect clock");
-    PrintAndLogEx(NORMAL, "       data rawdemod p2 32      = demod a psk2 tag from GraphBuffer using a clock of RF/32");
-    PrintAndLogEx(NORMAL, "       data rawdemod p2 32 1    = demod a psk2 tag from GraphBuffer using a clock of RF/32 and inverting output");
-    PrintAndLogEx(NORMAL, "       data rawdemod p2 1       = demod a psk2 tag from GraphBuffer, autodetect clock and invert output");
-    PrintAndLogEx(NORMAL, "       data rawdemod p2 64 1 0  = demod a psk2 tag from GraphBuffer using a clock of RF/64, inverting output and allowing 0 demod errors");
-    return PM3_SUCCESS;
-}
-
-//set the demod buffer with given array of binary (one bit per byte)
+//set the demod buffer with given array ofq binary (one bit per byte)
 //by marshmellow
 void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx) {
     if (buff == NULL) return;
@@ -506,38 +363,50 @@ static int CmdConvertBitStream(const char *Cmd) {
 // verbose will print results and demoding messages
 // emSearch will auto search for EM410x format in bitstream
 // askType switches decode: ask/raw = 0, ask/manchester = 1
-int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxLen, bool amplify, bool verbose, bool emSearch, uint8_t askType, bool *stCheck) {
-    PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) clk %i invert %i maxErr %i maxLen %zu amplify %i verbose %i emSearch %i askType %i ", clk, invert, maxErr, maxLen, amplify, verbose, emSearch, askType);
+int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, bool verbose, bool emSearch, uint8_t askType, bool *stCheck) {
+    PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) clk %i invert %i maxErr %i maxLen %zu amplify %i verbose %i emSearch %i askType %i "
+            , clk
+            , invert
+            , maxErr
+            , maxlen
+            , amplify
+            , verbose
+            , emSearch
+            , askType
+    );
     uint8_t askamp = 0;
 
-    if (!maxLen) maxLen = pm3_capabilities.bigbuf_size;
+    if (maxlen == 0) 
+        maxlen = pm3_capabilities.bigbuf_size;
 
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
+        PrintAndLogEx(INFO, "failed to allocate memory");
         return PM3_EMALLOC;
     }
 
-    size_t BitLen = getFromGraphBuf(bits);
+    size_t bitlen = getFromGraphBuf(bits);
 
-    PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) #samples from graphbuff: %zu", BitLen);
+    PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) #samples from graphbuff: %zu", bitlen);
 
-    if (BitLen < 255) {
+    if (bitlen < 255) {
         free(bits);
         return PM3_ESOFT;
     }
 
-    if (maxLen < BitLen && maxLen != 0) BitLen = maxLen;
+    if (maxlen < bitlen && maxlen != 0)
+        bitlen = maxlen;
 
     int foundclk = 0;
 
     //amplify signal before ST check
     if (amplify) {
-        askAmp(bits, BitLen);
+        askAmp(bits, bitlen);
     }
 
     size_t ststart = 0, stend = 0;
 //    if (*stCheck)
-    bool st = DetectST(bits, &BitLen, &foundclk, &ststart, &stend);
+    bool st = DetectST(bits, &bitlen, &foundclk, &ststart, &stend);
 
     if (clk == 0) {
         if (foundclk == 32 || foundclk == 64) {
@@ -553,34 +422,54 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxLen, bool amplify, b
             PrintAndLogEx(DEBUG, "Found Sequence Terminator - First one is shown by orange / blue graph markers");
     }
 
-    int startIdx = 0;
-    int errCnt = askdemod_ext(bits, &BitLen, &clk, &invert, maxErr, askamp, askType, &startIdx);
+    int start_idx = 0;
+    int errCnt = askdemod_ext(bits, &bitlen, &clk, &invert, maxErr, askamp, askType, &start_idx);
 
-    if (errCnt < 0 || BitLen < 16) { //if fatal error (or -1)
-        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, invert:%c, bitlen:%zu, clock:%d", errCnt, (invert) ? 'Y' : 'N', BitLen, clk);
+    if (errCnt < 0 || bitlen < 16) { //if fatal error (or -1)
+        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, %s bitlen:%zu, clock:%d"
+            , errCnt
+            , (invert) ? "inverted," : ""
+            , bitlen
+            , clk
+        );
         free(bits);
         return PM3_ESOFT;
     }
 
     if (errCnt > maxErr) {
-        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Too many errors found, errors:%d, bits:%zu, clock:%d", errCnt, BitLen, clk);
+        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Too many errors found, errors:%d, bits:%zu, clock:%d"
+            , errCnt
+            , bitlen
+            , clk
+        );
         free(bits);
         return PM3_ESOFT;
     }
 
-    if (verbose) PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Using clock:%d, invert:%d, bits found:%zu, start index %d", clk, invert, BitLen, startIdx);
+    if (verbose) {
+        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) using clock:%d, %sbits found:%zu, start index %d"
+            , clk
+            , (invert) ? "inverted, " : ""
+            , bitlen
+            , start_idx
+        );
+    }
 
     //output
-    setDemodBuff(bits, BitLen, 0);
-    setClockGrid(clk, startIdx);
+    setDemodBuff(bits, bitlen, 0);
+    setClockGrid(clk, start_idx);
 
     if (verbose) {
         if (errCnt > 0)
-            PrintAndLogEx(DEBUG, "# Errors during Demoding (shown as 7 in bit stream): %d", errCnt);
-        if (askType)
-            PrintAndLogEx(DEBUG, "ASK/Manchester - Clock: %d - Decoded bitstream:", clk);
-        else
-            PrintAndLogEx(DEBUG, "ASK/Raw - Clock: %d - Decoded bitstream:", clk);
+            PrintAndLogEx(DEBUG, "# Errors during demoding (shown as 7 in bit stream): %d", errCnt);
+
+        if (askType) {
+            PrintAndLogEx(SUCCESS, _YELLOW_("ASK/Manchester") " - clock %d - decoded bitstream", clk);
+            PrintAndLogEx(INFO,"---------------------------------------------");
+        } else {
+            PrintAndLogEx(SUCCESS, _YELLOW_("ASK/Raw") " - clock %d - decoded bitstream", clk);
+            PrintAndLogEx(INFO,"--------------------------------------");
+        }
 
         printDemodBuff(0, false, false, false);
     }
@@ -592,51 +481,46 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxLen, bool amplify, b
     free(bits);
     return PM3_SUCCESS;
 }
-int ASKDemod(int clk, int invert, int maxErr, size_t maxLen, bool amplify, bool verbose, bool emSearch, uint8_t askType) {
+
+int ASKDemod(int clk, int invert, int maxErr, size_t maxlen, bool amplify, bool verbose, bool emSearch, uint8_t askType) {
     bool st = false;
-    return ASKDemod_ext(clk, invert, maxErr, maxLen, amplify, verbose, emSearch, askType, &st);
+    return ASKDemod_ext(clk, invert, maxErr, maxlen, amplify, verbose, emSearch, askType, &st);
 }
 
 // takes 5 arguments - clock, invert, maxErr, maxLen as integers and amplify as char == 'a'
 // attempts to demodulate ask while decoding manchester
 // prints binary found and saves in graphbuffer for further commands
 static int Cmdaskmandemod(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data rawdemod --am",
+                "ASK/MANCHESTER demodulate the data in the GraphBuffer and output binary",
+                "data rawdemod --am                    --> demod a ask/manchester tag, using autodetect\n"
+                "data rawdemod --am -c 32              --> demod a ask/manchester tag, using a clock of RF/32\n"
+                "data rawdemod --am -i                 --> demod a ask/manchester tag, using autodetect, invert output\n"
+                "data rawdemod --am -c 32 -i           --> demod a ask/manchester tag, using a clock of RF/32, invert output\n"
+                "data rawdemod --am -c 64 -i --max 0   --> demod a ask/manchester tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a", "amp", "try attempt demod with ask amplification (def no amp)"),
+        arg_int0("c", "clk", "<dec>", "set clock manually (def autodetect)"),
+        arg_lit0("i","inv", "invert output"),
+        arg_lit0("s", "st", "check for sequence terminator"),
+        arg_int0(NULL, "max", "<dec>", "maximum allowed errors (def 100)"),
+        arg_int0(NULL, "samples", "<dec>", "maximum samples to read (def 32768) [512 bits at RF/64]"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    size_t slen = strlen(Cmd);
+    bool amplify = arg_get_lit(ctx, 1);
+    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 2, 0) & 0xFF;
+    bool invert = arg_get_lit(ctx, 3);
+    bool st = arg_get_lit(ctx, 4);
+    uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 5, 100) & 0xFF;
+    size_t max_len = (size_t)arg_get_int_def(ctx, 6, 0) & 0xFF;
+    CLIParserFree(ctx);
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (slen > 45 || cmdp == 'h') return usage_data_rawdemod_am();
-
-    bool st = false, amplify = false;
-    int clk = 0, invert = 0, maxErr = 100;
-    size_t maxLen = 0;
-
-    if (slen) {
-
-        if (Cmd[0] == 's') {
-            st = true;
-            Cmd++;
-        } else if (slen > 1 && Cmd[1] == 's') {
-            st = true;
-            Cmd += 2;
-        }
-
-        char amp = tolower(param_getchar(Cmd, 0));
-        sscanf(Cmd, "%i %i %i %zu %c", &clk, &invert, &maxErr, &maxLen, &amp);
-
-        amplify = (amp == 'a');
-    }
-
-    if (clk == 1) {
-        invert = 1;
-        clk = 0;
-    }
-
-    if (invert != 0 && invert != 1) {
-        PrintAndLogEx(WARNING, "Invalid value for invert: %i", invert);
-        return PM3_EINVARG;
-    }
-    return ASKDemod_ext(clk, invert, maxErr, maxLen, amplify, true, true, 1, &st);
+    return ASKDemod_ext(clk, invert, max_err, max_len, amplify, true, true, 1, &st);
 }
 
 // manchester decode
@@ -822,35 +706,67 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
 
 // see ASKbiphaseDemod
 static int Cmdaskbiphdemod(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) > 25 || cmdp == 'h') return usage_data_rawdemod_ab();
-    int offset = 0, clk = 0, invert = 0, maxErr = 50;
-    sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
-    return ASKbiphaseDemod(offset, clk, invert, maxErr, true);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data rawdemod --ab",
+                "ASK/BIPHASE demodulate the data in the GraphBuffer and output binary\n"
+                "NOTE, `--invert` for Conditional Dephase Encoding (CDP) AKA Differential Manchester\n",
+                "data rawdemod --ab                    --> demod a ask/biphase tag, using autodetect\n"
+                "data rawdemod --ab -c 32              --> demod a ask/biphase tag, using a clock of RF/32\n"
+                "data rawdemod --ab -i                 --> demod a ask/biphase tag, using autodetect, invert output\n"
+                "data rawdemod --ab -c 32 -i           --> demod a ask/biphase tag, using a clock of RF/32, invert output\n"
+                "data rawdemod --ab -c 64 -i --max 0   --> demod a ask/biphase tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("c", "clk", "<dec>", "set clock manually (def autodetect)"),
+        arg_lit0("i","inv", "invert output"),
+        arg_int0("o", "offset", "<dec>", "offset to begin biphase (def 0)"),
+        arg_int0(NULL, "max", "<dec>", "maximum allowed errors (def 50)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 1, 0) & 0xFF;
+    bool invert = arg_get_lit(ctx, 2);
+    int offset = arg_get_int_def(ctx, 3, 0);
+    uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 4, 50) & 0xFF;
+    CLIParserFree(ctx);
+
+    return ASKbiphaseDemod(offset, clk, invert, max_err, true);
 }
 
 // see ASKDemod
 static int Cmdaskrawdemod(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) > 25 || cmdp == 'h') return usage_data_rawdemod_ar();
-    bool st = false;
-    int clk = 0;
-    int invert = 0;
-    int maxErr = 100;
-    size_t maxLen = 0;
-    bool amplify = false;
-    char amp = tolower(param_getchar(Cmd, 0));
-    sscanf(Cmd, "%i %i %i %zu %c", &clk, &invert, &maxErr, &maxLen, &amp);
-    amplify = amp == 'a';
-    if (clk == 1) {
-        invert = 1;
-        clk = 0;
-    }
-    if (invert != 0 && invert != 1) {
-        PrintAndLogEx(WARNING, "Invalid value for invert: %i", invert);
-        return PM3_EINVARG;
-    }
-    return ASKDemod_ext(clk, invert, maxErr, maxLen, amplify, true, false, 0, &st);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data rawdemod --ar",
+                "ASK/RAW demodulate the data in the GraphBuffer and output binary",
+                "data rawdemod --ar -a                 --> demod a ask tag, using autodetect, amplified\n"
+                "data rawdemod --ar -c 32              --> demod a ask tag, using a clock of RF/32\n"
+                "data rawdemod --ar -i                 --> demod a ask tag, using autodetect, invert output\n"
+                "data rawdemod --ar -c 32 -i           --> demod a ask tag, using a clock of RF/32, invert output\n"
+                "data rawdemod --ar -c 64 -i --max 0   --> demod a ask tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a", "amp", "try attempt demod with ask amplification (def no amp)"),
+        arg_int0("c", "clk", "<dec>", "set clock manually (def autodetect)"),
+        arg_lit0("i","inv", "invert output"),
+        arg_lit0("s", "st", "check for sequence terminator"),
+        arg_int0(NULL, "max", "<dec>", "maximum allowed errors (def 100)"),
+        arg_int0(NULL, "samples", "<dec>", "maximum samples to read (def 32768) [512 bits at RF/64]"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool amplify = arg_get_lit(ctx, 1);
+    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 2, 0) & 0xFF;
+    bool invert = arg_get_lit(ctx, 3);
+    bool st = arg_get_lit(ctx, 4);
+    uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 5, 100) & 0xFF;
+    size_t max_len = (size_t)arg_get_int_def(ctx, 6, 0) & 0xFF;
+    CLIParserFree(ctx);
+
+    return ASKDemod_ext(clk, invert, max_err, max_len, amplify, true, false, 0, &st);
 }
 
 int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveGrph, bool verbose) {
@@ -1248,23 +1164,29 @@ static char *GetFSKType(uint8_t fchigh, uint8_t fclow, uint8_t invert) {
 // defaults: clock = 50, invert=1, fchigh=10, fclow=8 (RF/10 RF/8 (fsk2a))
 int FSKrawDemod(uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, bool verbose) {
     //raw fsk demod  no manchester decoding no start bit finding just get binary from wave
-    if (getSignalProperties()->isnoise)
+    if (getSignalProperties()->isnoise) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "signal looks like noise");
+        }
         return PM3_ESOFT;
+    }
 
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
     }
 
-    size_t BitLen = getFromGraphBuf(bits);
-    if (BitLen == 0) {
+    size_t bitlen = getFromGraphBuf(bits);
+    if (bitlen == 0) {
+        PrintAndLogEx(DEBUG, "DEBUG: no data in graphbuf");        
         free(bits);
         return PM3_ESOFT;
     }
 
     //get field clock lengths
     if (!fchigh || !fclow) {
-        uint16_t fcs = countFC(bits, BitLen, true);
+        uint16_t fcs = countFC(bits, bitlen, true);
         if (!fcs) {
             fchigh = 10;
             fclow = 8;
@@ -1276,19 +1198,27 @@ int FSKrawDemod(uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, bo
     //get bit clock length
     if (!rfLen) {
         int firstClockEdge = 0; //todo - align grid on graph with this...
-        rfLen = detectFSKClk(bits, BitLen, fchigh, fclow, &firstClockEdge);
+        rfLen = detectFSKClk(bits, bitlen, fchigh, fclow, &firstClockEdge);
         if (!rfLen) rfLen = 50;
     }
-    int startIdx = 0;
-    int size = fskdemod(bits, BitLen, rfLen, invert, fchigh, fclow, &startIdx);
+
+    int start_idx = 0;
+    int size = fskdemod(bits, bitlen, rfLen, invert, fchigh, fclow, &start_idx);
     if (size > 0) {
         setDemodBuff(bits, size, 0);
-        setClockGrid(rfLen, startIdx);
+        setClockGrid(rfLen, start_idx);
 
         // Now output the bitstream to the scrollback by line of 16 bits
         if (verbose || g_debugMode) {
-            PrintAndLogEx(DEBUG, "DEBUG: (FSKrawDemod) Using Clock:%u, invert:%u, fchigh:%u, fclow:%u", rfLen, invert, fchigh, fclow);
-            PrintAndLogEx(NORMAL, "%s decoded bitstream:", GetFSKType(fchigh, fclow, invert));
+            PrintAndLogEx(DEBUG, "DEBUG: (FSKrawDemod) using clock:%u, %sfc high:%u, fc low:%u"
+                , rfLen
+                , (invert) ? "inverted, " : ""
+                , fchigh
+                , fclow
+                );
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, _YELLOW_("%s") " decoded bitstream", GetFSKType(fchigh, fclow, invert));
+            PrintAndLogEx(INFO,"-----------------------");
             printDemodBuff(0, false, invert, false);
         }
         goto out;
@@ -1305,33 +1235,48 @@ out:
 // takes 4 arguments - Clock, invert, fchigh, fclow
 // defaults: clock = 50, invert=1, fchigh=10, fclow=8 (RF/10 RF/8 (fsk2a))
 static int CmdFSKrawdemod(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) > 20 || cmdp == 'h') return usage_data_rawdemod_fs();
-    uint8_t rfLen, invert, fchigh, fclow;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data rawdemod --fs",
+                "FSK demodulate the data in the GraphBuffer and output binary",
+                "data rawdemod --fs                         --> demod an fsk tag, using autodetect\n"
+                "data rawdemod --fs -c 32                   --> demod an fsk tag, using a clock of RF/32, autodetect fc\n"
+                "data rawdemod --fs -i                      --> demod an fsk tag, using autodetect, invert output\n"
+                "data rawdemod --fs -c 32 -i                --> demod an fsk tag, using a clock of RF/32, invert output, autodetect fc\n"
+                "data rawdemod --fs -c 64    --hi 8  --lo 5 --> demod an fsk1 RF/64 tag\n"
+                "data rawdemod --fs -c 50    --hi 10 --lo 8 --> demod an fsk2 RF/50 tag\n"
+                "data rawdemod --fs -c 50 -i --hi 10 --lo 8 --> demod an fsk2a RF/50 tag\n"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("c", "clk", "<dec>", "set clock manually (def: autodetect)"),
+        arg_lit0("i","inv", "invert output"),
+        arg_int0(NULL, "hi", "<dec>", "larger field clock length (def: autodetect)"),
+        arg_int0(NULL, "lo", "<dec>", "small field clock length (def: autodetect)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    //set defaults
-    //set options from parameters entered with the command
-    rfLen = param_get8(Cmd, 0);
-    invert = param_get8(Cmd, 1);
-    fchigh = param_get8(Cmd, 2);
-    fclow = param_get8(Cmd, 3);
+    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 1, 0) & 0xFF;
+    bool invert = arg_get_lit(ctx, 2);
+    uint8_t fchigh = (uint8_t)arg_get_int_def(ctx, 3, 0) & 0xFF;
+    uint8_t fclow = (uint8_t)arg_get_int_def(ctx, 4, 0) & 0xFF;
+    CLIParserFree(ctx);
 
-    if (strlen(Cmd) > 0 && strlen(Cmd) <= 2) {
-        if (rfLen == 1) {
-            invert = 1;   //if invert option only is used
-            rfLen = 0;
-        }
-    }
-    return FSKrawDemod(rfLen, invert, fchigh, fclow, true);
+    return FSKrawDemod(clk, invert, fchigh, fclow, true);
 }
 
 // attempt to psk1 demod graph buffer
 int PSKDemod(int clk, int invert, int maxErr, bool verbose) {
-    if (getSignalProperties()->isnoise)
+    if (getSignalProperties()->isnoise) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "signal looks like noise");
+        }
         return PM3_ESOFT;
+    }
 
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
     }
     size_t bitlen = getFromGraphBuf(bits);
@@ -1372,36 +1317,41 @@ int NRZrawDemod(int clk, int invert, int maxErr, bool verbose) {
 
     int errCnt = 0, clkStartIdx = 0;
 
-    if (getSignalProperties()->isnoise)
+    if (getSignalProperties()->isnoise) {
+            if (verbose) {
+            PrintAndLogEx(INFO, "signal looks like noise");
+        }
         return PM3_ESOFT;
+    }
 
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
     }
 
-    size_t BitLen = getFromGraphBuf(bits);
+    size_t bitlen = getFromGraphBuf(bits);
 
-    if (BitLen == 0) {
+    if (bitlen == 0) {
         free(bits);
         return PM3_ESOFT;
     }
 
-    errCnt = nrzRawDemod(bits, &BitLen, &clk, &invert, &clkStartIdx);
+    errCnt = nrzRawDemod(bits, &bitlen, &clk, &invert, &clkStartIdx);
     if (errCnt > maxErr) {
-        PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Too many errors found, clk: %d, invert: %d, numbits: %zu, errCnt: %d", clk, invert, BitLen, errCnt);
+        PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Too many errors found, clk: %d, invert: %d, numbits: %zu, errCnt: %d", clk, invert, bitlen, errCnt);
         free(bits);
         return PM3_ESOFT;
     }
-    if (errCnt < 0 || BitLen < 16) { //throw away static - allow 1 and -1 (in case of threshold command first)
-        PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) no data found, clk: %d, invert: %d, numbits: %zu, errCnt: %d", clk, invert, BitLen, errCnt);
+    if (errCnt < 0 || bitlen < 16) { //throw away static - allow 1 and -1 (in case of threshold command first)
+        PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) no data found, clk: %d, invert: %d, numbits: %zu, errCnt: %d", clk, invert, bitlen, errCnt);
         free(bits);
         return PM3_ESOFT;
     }
 
-    if (verbose || g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Tried NRZ Demod using Clock: %d - invert: %d - Bits Found: %zu", clk, invert, BitLen);
+    if (verbose || g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Tried NRZ Demod using Clock: %d - invert: %d - Bits Found: %zu", clk, invert, bitlen);
     //prime demod buffer for output
-    setDemodBuff(bits, BitLen, 0);
+    setDemodBuff(bits, bitlen, 0);
     setClockGrid(clk, clkStartIdx);
 
 
@@ -1417,45 +1367,67 @@ int NRZrawDemod(int clk, int invert, int maxErr, bool verbose) {
 }
 
 static int CmdNRZrawDemod(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) > 16 || cmdp == 'h') return usage_data_rawdemod_nr();
-    int invert = 0, clk = 0, maxErr = 100;
-    sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
-    if (clk == 1) {
-        invert = 1;
-        clk = 0;
-    }
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data rawdemod --nr",
+                "NRZ/DIRECT demodulate the data in the GraphBuffer and output binary",
+                "data rawdemod --nr                    --> demod a nrz/direct tag, using autodetect\n"
+                "data rawdemod --nr -c 32              --> demod a nrz/direct tag, using a clock of RF/32\n"
+                "data rawdemod --nr -i                 --> demod a nrz/direct tag, using autodetect, invert output\n"
+                "data rawdemod --nr -c 32 -i           --> demod a nrz/direct tag, using a clock of RF/32, invert output\n"
+                "data rawdemod --nr -c 64 -i --max 0   --> demod a nrz/direct tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("c", "clk", "<dec>", "set clock manually (def autodetect)"),
+        arg_lit0("i","inv", "invert output"),
+        arg_int0(NULL, "max", "<dec>", "maximum allowed errors (def 100)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    if (invert != 0 && invert != 1) {
-        PrintAndLogEx(WARNING, "(NRZrawDemod) Invalid argument: %s", Cmd);
-        return PM3_EINVARG;
-    }
-    return NRZrawDemod(clk, invert, maxErr, true);
+    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 1, 0) & 0xFF;
+    bool invert = arg_get_lit(ctx, 2);
+    uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 3, 100) & 0xFF;
+    CLIParserFree(ctx);
+
+    return NRZrawDemod(clk, invert, max_err, true);
 }
 
 // takes 3 arguments - clock, invert, max_err as integers
 // attempts to demodulate psk only
 // prints binary found and saves in demodbuffer for further commands
 int CmdPSK1rawDemod(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) > 16 || cmdp == 'h') return usage_data_rawdemod_p1();
-    int clk = 0, invert = 0, max_err = 100;
-    sscanf(Cmd, "%i %i %i", &clk, &invert, &max_err);
-    if (clk == 1) {
-        invert = 1;
-        clk = 0;
-    }
-    if (invert != 0 && invert != 1) {
-        PrintAndLogEx(WARNING, "Invalid value for invert: %i", invert);
-        return PM3_EINVARG;
-    }
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data rawdemod --p1",
+                "PSK1 demodulate the data in the GraphBuffer and output binary",
+                "data rawdemod --p1                    --> demod a psk1 tag, using autodetect\n"
+                "data rawdemod --p1 -c 32              --> demod a psk1 tag, using a clock of RF/32\n"
+                "data rawdemod --p1 -i                 --> demod a psk1 tag, using autodetect, invert output\n"
+                "data rawdemod --p1 -c 32 -i           --> demod a psk1 tag, using a clock of RF/32, invert output\n"
+                "data rawdemod --p1 -c 64 -i --max 0   --> demod a psk1 tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("c", "clk", "<dec>", "set clock manually (def autodetect)"),
+        arg_lit0("i","inv", "invert output"),
+        arg_int0(NULL, "max", "<dec>", "maximum allowed errors (def 100)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 1, 0) & 0xFF;
+    bool invert = arg_get_lit(ctx, 2);
+    uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 3, 100) & 0xFF;
+    CLIParserFree(ctx);
+
     int ans = PSKDemod(clk, invert, max_err, true);
     //output
     if (ans != PM3_SUCCESS) {
         if (g_debugMode) PrintAndLogEx(ERR, "Error demoding: %d", ans);
         return PM3_ESOFT;
     }
-    PrintAndLogEx(NORMAL, "PSK1 demoded bitstream:");
+    PrintAndLogEx(SUCCESS, _YELLOW_("PSK1") " demoded bitstream");
+    PrintAndLogEx(INFO, "----------------------");
     // Now output the bitstream to the scrollback by line of 16 bits
     printDemodBuff(0, false, invert, false);
     return PM3_SUCCESS;
@@ -1463,25 +1435,37 @@ int CmdPSK1rawDemod(const char *Cmd) {
 
 // takes same args as cmdpsk1rawdemod
 static int CmdPSK2rawDemod(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) > 16 || cmdp == 'h') return usage_data_rawdemod_p2();
-    int clk = 0, invert = 0, max_err = 100;
-    sscanf(Cmd, "%i %i %i", &clk, &invert, &max_err);
-    if (clk == 1) {
-        invert = 1;
-        clk = 0;
-    }
-    if (invert != 0 && invert != 1) {
-        PrintAndLogEx(WARNING, "Invalid value for invert: %i", invert);
-        return PM3_EINVARG;
-    }
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data rawdemod --p2",
+                "PSK2 demodulate the data in the GraphBuffer and output binary",
+                "data rawdemod --p2                    --> demod a psk2 tag, using autodetect\n"
+                "data rawdemod --p2 -c 32              --> demod a psk2 tag, using a clock of RF/32\n"
+                "data rawdemod --p2 -i                 --> demod a psk2 tag, using autodetect, invert output\n"
+                "data rawdemod --p2 -c 32 -i           --> demod a psk2 tag, using a clock of RF/32, invert output\n"
+                "data rawdemod --p2 -c 64 -i --max 0   --> demod a psk2 tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("c", "clk", "<dec>", "set clock manually (def autodetect)"),
+        arg_lit0("i","inv", "invert output"),
+        arg_int0(NULL, "max", "<dec>", "maximum allowed errors (def 100)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 1, 0) & 0xFF;
+    bool invert = arg_get_lit(ctx, 2);
+    uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 3, 100) & 0xFF;
+    CLIParserFree(ctx);
+
     int ans = PSKDemod(clk, invert, max_err, true);
     if (ans != PM3_SUCCESS) {
         if (g_debugMode) PrintAndLogEx(ERR, "Error demoding: %d", ans);
         return PM3_ESOFT;
     }
     psk1TOpsk2(DemodBuffer, DemodBufferLen);
-    PrintAndLogEx(NORMAL, "PSK2 demoded bitstream:");
+    PrintAndLogEx(SUCCESS, _YELLOW_("PSK2") " demoded bitstream");
+    PrintAndLogEx(INFO, "----------------------");
     // Now output the bitstream to the scrollback by line of 16 bits
     printDemodBuff(0, false, invert, false);
     return PM3_SUCCESS;
@@ -1489,21 +1473,73 @@ static int CmdPSK2rawDemod(const char *Cmd) {
 
 // combines all raw demod functions into one menu command
 static int CmdRawDemod(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data rawdemod",
+                "Demodulate the data in the GraphBuffer and output binary",
+                "data rawdemod --fs    --> demod FSK - autodetect\n"
+                "data rawdemod --ab    --> demod ASK/BIPHASE - autodetect\n"
+                "data rawdemod --am    --> demod ASK/MANCHESTER - autodetect\n"
+                "data rawdemod --ar    --> demod ASK/RAW - autodetect\n"
+                "data rawdemod --nr    --> demod NRZ/DIRECT - autodetect\n"
+                "data rawdemod --p1    --> demod PSK1 - autodetect\n"
+                "data rawdemod --p2    --> demod PSK2 - autodetect\n"
+                );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "ab", "ASK/Biphase demodulation"),
+        arg_lit0(NULL, "am", "ASK/Manchester demodulation"),
+        arg_lit0(NULL, "ar", "ASK/Raw demodulation"),
+        arg_lit0(NULL, "fs", "FSK demodulation"),
+        arg_lit0(NULL, "nr", "NRZ/Direct demodulation"),
+        arg_lit0(NULL, "p1", "PSK 1 demodulation"),
+        arg_lit0(NULL, "p2", "PSK 2 demodulation"),
+        arg_strn(NULL, NULL, "<params>", 0, 35, "params for sub command"),
+        arg_param_end
+    };
+
+    //
+    size_t n = MIN(strlen(Cmd), 4);
+    char tmp[7];
+    memset(tmp, 0, sizeof(tmp));
+    strncpy(tmp, Cmd, n);
+
+    CLIExecWithReturn(ctx, tmp, argtable, false);
+    bool ab = arg_get_lit(ctx, 1);
+    bool am = arg_get_lit(ctx, 2);
+    bool ar = arg_get_lit(ctx, 3);
+    bool fs = arg_get_lit(ctx, 4);
+    bool nr = arg_get_lit(ctx, 5);
+    bool p1 = arg_get_lit(ctx, 6);
+    bool p2 = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
+    int foo = (ab + am + ar + fs + nr + p1 + p2);
+    if ( foo > 1 ) {
+        PrintAndLogEx(WARNING, "please, select only one modulation");
+        return PM3_EINVARG;
+    }
+    if ( foo == 0 ) {
+        PrintAndLogEx(WARNING, "please, select a modulation");
+        return PM3_EINVARG;
+    }
+
     int ans = 0;
-
-    if (strlen(Cmd) > 35 || strlen(Cmd) < 2)
-        return usage_data_rawdemod();
-
-    str_lower((char *)Cmd);
-
-    if (str_startswith(Cmd, "fs") || Cmd[0] == 'f') ans = CmdFSKrawdemod(Cmd + 2);
-    else if (str_startswith(Cmd, "ab")) ans = Cmdaskbiphdemod(Cmd + 2);
-    else if (str_startswith(Cmd, "am")) ans = Cmdaskmandemod(Cmd + 2);
-    else if (str_startswith(Cmd, "ar")) ans = Cmdaskrawdemod(Cmd + 2);
-    else if (str_startswith(Cmd, "nr") || Cmd[0] == 'n') ans = CmdNRZrawDemod(Cmd + 2);
-    else if (str_startswith(Cmd, "p1")) ans = CmdPSK1rawDemod(Cmd + 2);
-    else if (str_startswith(Cmd, "p2")) ans = CmdPSK2rawDemod(Cmd + 2);
-    else PrintAndLogEx(WARNING, "Unknown modulation entered - see help ('h') for parameter structure");
+    const char *s = Cmd + n;
+    if (fs) 
+        ans = CmdFSKrawdemod(s);
+    else if (ab)
+        ans = Cmdaskbiphdemod(s);
+    else if (am)
+        ans = Cmdaskmandemod(s);
+    else if (ar)
+        ans = Cmdaskrawdemod(s);
+    else if (nr)
+        ans = CmdNRZrawDemod(s);
+    else if (p1)
+        ans = CmdPSK1rawDemod(s);
+    else if (p2)
+        ans = CmdPSK2rawDemod(s);
 
     return ans;
 }
@@ -1983,7 +2019,7 @@ static int CmdLoad(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("f", "file", "<filename>", "file to load"),
+        arg_str1("f", "file", "<fn>", "file to load"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
