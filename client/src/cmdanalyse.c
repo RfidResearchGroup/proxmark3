@@ -306,7 +306,7 @@ static int CmdAnalyseCRC(const char *Cmd) {
     uint8_t b1, b2;
     // ISO14443 crc B
     compute_crc(CRC_14443_B, data, (size_t)dlen, &b1, &b2);
-    uint16_t crcBB_1 = b1 << 8 | b2;
+    uint16_t crcBB_1 = (uint16_t)(b1 << 8 | b2);
     uint16_t bbb = Crc16ex(CRC_14443_B, data, (size_t)dlen);
     PrintAndLogEx(INFO, "ISO14443 crc B  | %04x == %04x \n", crcBB_1, bbb);
 
@@ -399,25 +399,25 @@ static int CmdAnalyseCHKSUM(const char *Cmd) {
         PrintAndLogEx(FAILED, "Error parsing bytes");
         return PM3_EINVARG;
     }
-    const char *s = arg_get_str(ctx, 2)->sval[0];
+    const char *m = arg_get_str(ctx, 2)->sval[0];
     bool verbose = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    uint32_t mlen = 0;
-    if (s)
-        mlen = strlen(s);
+    size_t mlen = 0;
+    if (m)
+        mlen = strlen(m);
 
     if (mlen > 8) {
         PrintAndLogEx(FAILED, "Mask value is max 4 hex bytes");
         return PM3_EINVARG;
     }
 
-    uint32_t mask = 0;
+    uint16_t mask = 0;
     if (mlen == 0) {
         mask = 0xFFFF;
     } else {
-        for (int i = 0; i < mlen; i++) {
-            char c = s[i];
+        for (size_t i = 0; i < mlen; i++) {
+            char c = m[i];
             // capitalize
             if (c >= 'a' && c <= 'f')
                 c -= 32;
@@ -946,7 +946,7 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     const char *s = arg_get_str(ctx, 1)->sval[0];
-    int len = MIN(strlen(s), MAX_DEMOD_BUF_LEN);
+    size_t len = MIN(strlen(s), MAX_DEMOD_BUF_LEN);
 
     // add 1 for null terminator.
     uint8_t *data = calloc(len + 1,  sizeof(uint8_t));
@@ -955,7 +955,7 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    for (int i = 0; i <= strlen(s); i++) {
+    for (size_t i = 0; i <= strlen(s); i++) {
         char c = s[i];
         if (c == '1')
             DemodBuffer[i] = 1;
@@ -1031,7 +1031,7 @@ static int CmdAnalyseFoo(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(INFO, "-r");
-    PrintAndLogEx(INFO, "Got:  %s", sprint_hex_inrow(data, datalen));
+    PrintAndLogEx(INFO, "Got:  %s", sprint_hex_inrow(data, (size_t)datalen));
     PrintAndLogEx(INFO, "Got:  %s", data3);
 
     ClearGraph(false);
