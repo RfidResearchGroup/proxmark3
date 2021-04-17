@@ -24,7 +24,7 @@ static int openAIDFile(json_t **root, bool verbose) {
 
     int retval = PM3_SUCCESS;
     *root = json_load_file(path, 0, &error);
-    if (!*root) {
+    if (!*root) {        
         PrintAndLogEx(ERR, "json (%s) error on line %d: %s", path, error.line, error.text);
         retval = PM3_ESOFT;
         goto out;
@@ -103,7 +103,7 @@ bool AIDGetFromElm(json_t *data, uint8_t *aid, size_t aidmaxlen, int *aidlen) {
     if (hexaid == NULL || strlen(hexaid) == 0)
         return false;
 
-    int res = param_gethex_to_eol(hexaid, 0, aid, aidmaxlen, aidlen);
+    int res = param_gethex_to_eol(hexaid, 0, aid, (int)aidmaxlen, aidlen);
     if (res)
         return false;
 
@@ -120,7 +120,7 @@ int PrintAIDDescription(json_t *xroot, char *aid, bool verbose) {
         goto out;
 
     json_t *elm = NULL;
-    uint32_t maxaidlen = 0;
+    size_t maxaidlen = 0;
     for (size_t elmindx = 0; elmindx < json_array_size(root); elmindx++) {
         json_t *data = AIDSearchGetElm(root, elmindx);
         if (data == NULL)
