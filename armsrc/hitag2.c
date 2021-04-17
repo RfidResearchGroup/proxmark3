@@ -1307,7 +1307,7 @@ void SniffHitag2(void) {
 }
 
 // Hitag2 simulation
-void SimulateHitag2() {
+void SimulateHitag2(void) {
 
     BigBuf_free();
     BigBuf_Clear_ext(false);
