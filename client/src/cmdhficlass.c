@@ -1180,12 +1180,14 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(INFO, "Couldn't find any decryption methods");
+                free(decrypted);
                 return PM3_EINVARG;
             }
 
             if (keylen != 16) {
                 PrintAndLogEx(ERR, "Failed to load transport key from file");
                 free(keyptr);
+                free(decrypted);
                 return PM3_EINVARG;
             }
             memcpy(key, keyptr, sizeof(key));
@@ -1328,7 +1330,6 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         }
 
         PrintAndLogEx(INFO, "-----------------------------------------------------------------");
-
         free(decrypted);
         free(fptr);
     }
