@@ -1472,15 +1472,15 @@ int CmdLFfind(const char *Cmd) {
         bool st = true;
         if (ASKDemod_ext(0, 0, 0, 0, false, true, false, 1, &st) == PM3_SUCCESS) {
             PrintAndLogEx(INFO, "Unknown ASK Modulated and Manchester encoded Tag found!");
-            PrintAndLogEx(INFO, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod ab'"));
+            PrintAndLogEx(INFO, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod --ab'"));
             goto out;
         }
 
         if (CmdPSK1rawDemod("") == PM3_SUCCESS) {
             PrintAndLogEx(INFO, "Possible unknown PSK1 Modulated Tag found above!");
-            PrintAndLogEx(INFO, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod p2'"));
+            PrintAndLogEx(INFO, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod --p2'"));
             PrintAndLogEx(INFO, "    Could also be PSK3 - [currently not supported]");
-            PrintAndLogEx(INFO, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod nr"));
+            PrintAndLogEx(INFO, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod --nr"));
             goto out;
         }
 

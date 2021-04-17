@@ -530,7 +530,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     CLIParserInit(&ctx, "data manrawdecode",
                   "Manchester decode binary stream in DemodBuffer\n"
                   "Converts 10 and 01 and converts to 0 and 1 respectively\n"
-                  " - must have binary sequence in demodbuffer (run `data rawdemod ar` before)",
+                  " - must have binary sequence in demodbuffer (run `data rawdemod --ar` before)",
                   "data manrawdecode"
                  );
     void *argtable[] = {
@@ -545,7 +545,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (DemodBufferLen == 0) {
-        PrintAndLogEx(WARNING, "DemodBuffer empty, run " _YELLOW_("`data rawdemod ar`"));
+        PrintAndLogEx(WARNING, "DemodBuffer empty, run " _YELLOW_("`data rawdemod --ar`"));
         return PM3_ESOFT;
     }
 
@@ -612,7 +612,7 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
     CLIParserInit(&ctx, "data biphaserawdecode",
                   "Biphase decode binary stream in DemodBuffer\n"
                   "Converts 10 or 01 -> 1 and 11 or 00 -> 0\n"
-                  " - must have binary sequence in demodbuffer (run `data rawdemod ar` before)\n"
+                  " - must have binary sequence in demodbuffer (run `data rawdemod --ar` before)\n"
                   " - invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester",
                   "data biphaserawdecode      --> decode biphase bitstream from the demodbuffer\n"
                   "data biphaserawdecode -oi  --> decode biphase bitstream from the demodbuffer, adjust offset, and invert output"
@@ -631,7 +631,7 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (DemodBufferLen == 0) {
-        PrintAndLogEx(WARNING, "DemodBuffer empty, run " _YELLOW_("`data rawdemod ar`"));
+        PrintAndLogEx(WARNING, "DemodBuffer empty, run " _YELLOW_("`data rawdemod --ar`"));
         return PM3_ESOFT;
     }
 
