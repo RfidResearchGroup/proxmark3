@@ -776,6 +776,8 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 pos++;
 
             for (uint8_t i = 0; i < 2; i++, pos++) {
+                bool found_annotation = true;
+                
                 switch (cmd[pos]) {
                     case MFDES_CREATE_APPLICATION:
                         snprintf(exp, size, "CREATE APPLICATION");
@@ -892,7 +894,12 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         snprintf(exp, size, "READ SIGNATURE");
                         break;
                     default:
+                        found_annotation = false;
                         break;
+                }
+                
+                if (found_annotation) {
+                    break;
                 }
             }
         } else {
