@@ -1989,7 +1989,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             PrintAndLogEx(INFO, "-------------------- " _CYAN_("AID Search") " --------------------");
 
             bool found = false;
-            int elmindx = 0;
+            size_t elmindx = 0;
             json_t *root = AIDSearchInit(verbose);
             if (root != NULL) {
                 bool ActivateField = true;

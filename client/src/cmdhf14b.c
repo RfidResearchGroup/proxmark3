@@ -53,7 +53,6 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
 
 static void hf14b_aid_search(bool verbose) {
 
-    int elmindx = 0;
     json_t *root = AIDSearchInit(verbose);
     if (root == NULL)  {
         switch_off_field_14b();
@@ -65,7 +64,7 @@ static void hf14b_aid_search(bool verbose) {
     bool found = false;
     bool leave_signal_on = true;
     bool activate_field = true;
-    for (elmindx = 0; elmindx < json_array_size(root); elmindx++) {
+    for (size_t elmindx = 0; elmindx < json_array_size(root); elmindx++) {
 
         if (kbd_enter_pressed()) {
             break;
