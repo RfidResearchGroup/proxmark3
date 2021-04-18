@@ -130,29 +130,51 @@ static void print_info_result(uint8_t *data, bool verbose) {
 
 static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len, size_t *bytes_read) {
 
-    // read data from dump file; file type is derived from file name extension
+    uint8_t *dump =  calloc(DUMP_FILESIZE, sizeof(uint8_t));
+    if (dump == NULL) {
+        PrintAndLogEx(ERR, "error, cannot allocate memory ");
+        return PM3_EMALLOC;
+    }
 
-    int res = 0;
-    uint32_t serial = 0x0, device_id = 0x0;
+    int res = PM3_SUCCESS;
+    DumpFileType_t dftype = getfiletype(filename);
+    switch (dftype) {
+        case BIN: {
+            res = loadFile_safe(filename, ".bin", (void **)&dump, bytes_read);
+            break;
+        }
+        case EML: {
+            res = loadFileEML_safe(filename, (void **)&dump, bytes_read);
+            break;
+        }
+        case JSON: {
+            res = loadFileJSON(filename, dump, DUMP_FILESIZE, bytes_read, NULL);
+            break;
+        }
+        case DICTIONARY: {
+            free(dump);
+            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+            return PM3_EINVARG;
+        }
+    }
 
-    if (str_endswith(filename, ".eml"))
-        res = loadFileEML(filename, data, bytes_read) != PM3_SUCCESS;
-    else if (str_endswith(filename, ".json"))
-        res = loadFileJSON(filename, data, data_len, bytes_read, NULL);
-    else
-        res = loadFile(filename, ".bin", data, data_len, bytes_read);
-
-    if ((res != PM3_SUCCESS) && (*bytes_read != DUMP_FILESIZE))
+    if ((res != PM3_SUCCESS) && (*bytes_read != DUMP_FILESIZE)) {
+        free(dump);
         return PM3_EFILE;
+    }
+
+    uint32_t serial = 0, device_id = 0;
 
     // valid em4x50 data?
     serial = bytes_to_num(data + 4 * EM4X50_DEVICE_SERIAL, 4);
     device_id = bytes_to_num(data + 4 * EM4X50_DEVICE_ID, 4);
     if (serial == device_id) {
-        PrintAndLogEx(WARNING, "No valid em4x50 data in file %s.", filename);
+        PrintAndLogEx(WARNING, "No valid EM4x50 data in file %s", filename);
         return PM3_ENODATA;
     }
 
+    memcpy(data, dump, *bytes_read);
+    free(dump);
     return PM3_SUCCESS;
 }
 
@@ -183,7 +205,7 @@ int CmdEM4x50ELoad(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "filename", "<filename>", "dump filename"),
+        arg_str1("f", "filename", "<fn>", "dump filename"),
         arg_param_end
     };
 
@@ -426,7 +448,7 @@ int CmdEM4x50Chk(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "filename", "<filename>", "dictionary filename"),
+        arg_str0("f", "filename", "<fn>", "dictionary filename"),
         arg_param_end
     };
 
@@ -734,7 +756,7 @@ int CmdEM4x50Dump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "filename", "<filename>", "dump filename (bin/eml/json)"),
+        arg_str0("f", "filename", "<fn>", "dump filename (bin/eml/json)"),
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
         arg_param_end
     };
@@ -1034,7 +1056,7 @@ int CmdEM4x50Wipe(const char *Cmd) {
 int CmdEM4x50Restore(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 restore",
-                  "Restores data from dumpfile onto a Em4x50 tag.\n"
+                  "Restores data from dumpfile (bin/eml/json) onto a EM4x50 tag.\n"
                   "if used with -u,  the filetemplate `lf-4x50-UID-dump.bin` is used as filename",
                   "lf em 4x50 restore -u 1b5aff5c           -> uses lf-4x50-1B5AFF5C-dump.bin\n"
                   "lf em 4x50 restore -f mydump.eml\n"
@@ -1045,7 +1067,7 @@ int CmdEM4x50Restore(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("u", "uid", "<hex>", "uid, 4 hex bytes, msb"),
-        arg_str0("f", "filename", "<filename>", "dump filename (bin/eml/json)"),
+        arg_str0("f", "filename", "<fn>", "dump filename (bin/eml/json)"),
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
         arg_param_end
     };
@@ -1128,14 +1150,10 @@ int CmdEM4x50Restore(const char *Cmd) {
 }
 
 int CmdEM4x50Sim(const char *Cmd) {
-
-    int status = PM3_EFAILED;
-    uint32_t password = 0;
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 sim",
-                  "Simulates a EM4x50 tag.\n"
-                  "Upload using `lf em 4x50 eload`",
+                  "Simulates a EM4x50 tag\n"
+                  "First upload to device using `lf em 4x50 eload`",
                   "lf em 4x50 sim"
                   "lf em 4x50 sim -p 27182818   -> uses password for eload data"
                  );
@@ -1152,25 +1170,26 @@ int CmdEM4x50Sim(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, pwd, &pwd_len);
     CLIParserFree(ctx);
 
+    uint32_t password = 0;
     if (pwd_len) {
         if (pwd_len != 4) {
-            PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwd_len);
+            PrintAndLogEx(FAILED, "password length must be 4 bytes, got %d", pwd_len);
             return PM3_EINVARG;
         } else {
             password = BYTES2UINT32(pwd);
         }
     }
-    CLIParserFree(ctx);
 
+    int status = PM3_EFAILED;
     PrintAndLogEx(INFO, "Simulating data from emulator memory");
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&password, sizeof(password));
     PacketResponseNG resp;
 
-    PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
-    bool keypress = kbd_enter_pressed();
-    while (keypress == false) {
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
+    bool keypress;
+    do {
         keypress = kbd_enter_pressed();
 
         if (WaitForResponseTimeout(CMD_LF_EM4X50_SIM, &resp, 1500)) {
@@ -1178,16 +1197,17 @@ int CmdEM4x50Sim(const char *Cmd) {
             break;
         }
 
-    }
+    } while (keypress == false);
+    
     if (keypress) {
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         status = PM3_EOPABORTED;
     }
 
     if ((status == PM3_SUCCESS) || (status == PM3_EOPABORTED))
-        PrintAndLogEx(INFO, "Done");
+        PrintAndLogEx(INFO, "Done!");
     else
-        PrintAndLogEx(FAILED, "No valid em4x50 data in memory");
+        PrintAndLogEx(FAILED, "No valid EM4x50 data in memory");
 
     return resp.status;
 }

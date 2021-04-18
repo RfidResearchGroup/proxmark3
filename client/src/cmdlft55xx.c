@@ -3086,7 +3086,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
     }
 
-    PrintAndLogEx(INFO, "press " _GREEN_("'enter'") " to cancel the command");
+    PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
     PrintAndLogEx(NORMAL, "");
     /*
     // block 7,  page1 = false, usepwd = false, override = false, pwd = 00000000
@@ -3182,7 +3182,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        PrintAndLogEx(INFO, "press " _GREEN_("'enter'") " to cancel the command");
+        PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
 
         for (uint32_t c = 0; c < keycount && found == false; ++c) {
 
@@ -3296,7 +3296,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, "press " _GREEN_("'enter'") " to cancel the command");
+    PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
     PrintAndLogEx(INFO, "Search password range [%08X -> %08X]", start_password, end_password);
 
     uint64_t t1 = msclock();
@@ -3404,7 +3404,7 @@ static int CmdT55xxRecoverPW(const char *Cmd) {
     else if (r3)
         downlink_mode = ref1of4;
 
-    PrintAndLogEx(NORMAL, "press " _GREEN_("'enter'") " to cancel the command");
+    PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
 
     int bit = 0;
     uint32_t curr_password = 0x0;

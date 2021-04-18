@@ -557,12 +557,12 @@ int CmdEM4x05Dump(const char *Cmd) {
         // Test first if the password is correct
         status = em4x05_login_ext(pwd);
         if (status == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Password is " _GREEN_("correct"));
+            PrintAndLogEx(INFO, "password is " _GREEN_("correct"));
         } else if (status == PM3_EFAILED) {
-            PrintAndLogEx(WARNING, "Password is " _RED_("incorrect") ", will try without password");
+            PrintAndLogEx(WARNING, "password is " _RED_("incorrect") ", will try without password");
             usePwd = false;
         } else if (status != PM3_EFAILED) {
-            PrintAndLogEx(WARNING, "Login attempt: No answer from tag");
+            PrintAndLogEx(WARNING, "Login attempt: no answer from tag");
             return status;
         }
     }
@@ -705,7 +705,6 @@ int CmdEM4x05Dump(const char *Cmd) {
         }
         PrintAndLogEx(NORMAL, "");
         saveFileJSON(filename, (card_type == EM_4369 || card_type == EM_4469) ? jsfEM4x69 : jsfEM4x05, (uint8_t *)data, 16 * sizeof(uint32_t), NULL);
-
         saveFileEML(filename, (uint8_t *)data, 16 * sizeof(uint32_t), sizeof(uint32_t));
         saveFile(filename, ".bin", data, sizeof(data));
     }
@@ -1376,7 +1375,7 @@ int CmdEM4x05Chk(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
+        PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
 
         for (uint32_t c = 0; c < keycount; ++c) {
 
@@ -1626,7 +1625,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
 
     PrintAndLogEx(INFO, "----------------------------------------------------------------------------\n");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
+    PrintAndLogEx(INFO, "press " _GREEN_("<Enter>'") " to exit");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------------\n");
 
