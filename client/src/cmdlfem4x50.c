@@ -170,6 +170,7 @@ static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len
     device_id = bytes_to_num(data + 4 * EM4X50_DEVICE_ID, 4);
     if (serial == device_id) {
         PrintAndLogEx(WARNING, "No valid EM4x50 data in file %s", filename);
+        free(dump);
         return PM3_ENODATA;
     }
 
