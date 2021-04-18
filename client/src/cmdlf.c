@@ -1446,7 +1446,7 @@ int CmdLFfind(const char *Cmd) {
         }
     }
     if (demodDestron(true) == PM3_SUCCESS) { // to do before HID
-        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-A FECAVA Destron ID") " found!"); if (! search_cont) goto out;
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-A FECAVA Destron ID") " found!");
         if (search_cont) {
             found++;
         } else {
@@ -1621,7 +1621,7 @@ int CmdLFfind(const char *Cmd) {
             goto out;
         }
     }
-/*
+    /*
     if (demodTI() == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Texas Instrument ID") " found!");
         if (search_cont) {
@@ -1638,7 +1638,7 @@ int CmdLFfind(const char *Cmd) {
             goto out;
         }
     }
-*/
+    */
     if (found == 0) {
         PrintAndLogEx(FAILED, _RED_("No known 125/134 kHz tags found!"));
     }
