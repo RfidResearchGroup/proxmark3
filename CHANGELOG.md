@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change `lf search` - add option `-c` to continue searching after first hit (@doegox)
  - Fix DESFire mis-annotation (@VortixDev)
  - Change `lf pac demod` - now also search for inverted bitstreams (@iceman1001)
  - Change `hf 14b reader` - now supports continous mode (@iceman1001)

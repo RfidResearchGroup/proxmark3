@@ -1343,14 +1343,16 @@ int CmdLFfind(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("1", NULL, "Use data from Graphbuffer to search"),
-        arg_lit0("u", NULL, "Search for unknown tags, if not set, reads only known tags"),
+        arg_lit0("c", NULL, "Continue searching even after a first hit"),
+        arg_lit0("u", NULL, "Search for unknown tags. If not set, reads only known tags"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool use_gb = arg_get_lit(ctx, 1);
-    bool search_unk = arg_get_lit(ctx, 2);
+    bool search_cont = arg_get_lit(ctx, 2);
+    bool search_unk = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
-
+    int found = 0;
     bool is_online = (session.pm3_present && (use_gb == false));
     if (is_online)
         lf_read(false, 30000);
@@ -1367,6 +1369,10 @@ int CmdLFfind(const char *Cmd) {
     PrintAndLogEx(INFO, "False Positives " _YELLOW_("ARE") " possible");
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "Checking for known tags...");
+    if (search_cont)
+        PrintAndLogEx(INFO, "We'll go over all possible demods");
+    else
+        PrintAndLogEx(INFO, "We'll stop at first hit");
     PrintAndLogEx(INFO, "");
 
     // only run these tests if device is online
@@ -1375,14 +1381,22 @@ int CmdLFfind(const char *Cmd) {
         if (IfPm3Hitag()) {
             if (readHitagUid()) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") " found!");
-                return PM3_SUCCESS;
+                if (search_cont) {
+                    found++;
+                } else {
+                    return PM3_SUCCESS;
+                }
             }
         }
 
         if (IfPm3EM4x50()) {
             if (read_em4x50_uid() == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM4x50 ID") " found!");
-                return PM3_SUCCESS;
+                if (search_cont) {
+                    found++;
+                } else {
+                    return PM3_SUCCESS;
+                }
             }
         }
 
@@ -1393,61 +1407,241 @@ int CmdLFfind(const char *Cmd) {
             PrintAndLogEx(INPLACE, "Searching for MOTOROLA tag...");
             if (readMotorolaUid()) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola FlexPass ID") " found!");
-                return PM3_SUCCESS;
+                if (search_cont) {
+                    found++;
+                } else {
+                    return PM3_SUCCESS;
+                }
             }
 
             PrintAndLogEx(INPLACE, "Searching for COTAG tag...");
             if (readCOTAGUid()) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") " found!");
-                return PM3_SUCCESS;
+                if (search_cont) {
+                    found++;
+                } else {
+                    return PM3_SUCCESS;
+                }
             }
 
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(FAILED, _RED_("No data found!"));
             PrintAndLogEx(INFO, "Signal looks like noise. Maybe not an LF tag?");
             PrintAndLogEx(NORMAL, "");
-            return PM3_ESOFT;
+            if (! search_cont) {
+                return PM3_ESOFT;
+            }
         }
     }
 
     int retval = PM3_SUCCESS;
 
     // ask / man
-    if (demodEM410x(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!"); goto out;}
-    if (demodDestron(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-A FECAVA Destron ID") " found!"); goto out;} // to do before HID
-    if (demodGallagher(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("GALLAGHER ID") " found!"); goto out;}
-    if (demodNoralsy(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Noralsy ID") " found!"); goto out;}
-    if (demodPresco(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Presco ID") " found!"); goto out;}
-    if (demodSecurakey(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Securakey ID") " found!"); goto out;}
-    if (demodViking(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Viking ID") " found!"); goto out;}
-    if (demodVisa2k(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") " found!"); goto out;}
+    if (demodEM410x(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodDestron(true) == PM3_SUCCESS) { // to do before HID
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-A FECAVA Destron ID") " found!"); if (! search_cont) goto out;
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodGallagher(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("GALLAGHER ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodNoralsy(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Noralsy ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodPresco(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Presco ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodSecurakey(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Securakey ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodViking(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Viking ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodVisa2k(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
 
     // ask / bi
-    if (demodFDXB(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
-    if (demodJablotron(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Jablotron ID") " found!"); goto out;}
-    if (demodGuard(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!"); goto out; }
-    if (demodNedap(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NEDAP ID") " found!"); goto out;}
+    if (demodFDXB(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodJablotron(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Jablotron ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodGuard(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodNedap(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NEDAP ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
 
     // nrz
-    if (demodPac(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("PAC/Stanley ID") " found!"); goto out;}
+    if (demodPac(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("PAC/Stanley ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
 
     // fsk
-    if (demodHID(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
-    if (demodAWID(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("AWID ID") " found!"); goto out;}
-    if (demodIOProx(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!"); goto out;}
-    if (demodPyramid(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Pyramid ID") " found!"); goto out;}
-    if (demodParadox(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!"); goto out;}
+    if (demodHID(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodAWID(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("AWID ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodIOProx(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodPyramid(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Pyramid ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodParadox(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
 
     // psk
-    if (demodIdteck(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
-    if (demodKeri(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("KERI ID") " found!"); goto out;}
-    if (demodNexWatch(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NexWatch ID") " found!"); goto out;}
-    if (demodIndala(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");  goto out;}
-
-//    if (demodTI() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Texas Instrument ID") " found!"); goto out;}
-//    if (demodFermax() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fermax ID") " found!"); goto out;}
-
-    PrintAndLogEx(FAILED, _RED_("No known 125/134 kHz tags found!"));
+    if (demodIdteck(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodKeri(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("KERI ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodNexWatch(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NexWatch ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodIndala(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+/*
+    if (demodTI() == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Texas Instrument ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodFermax() == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fermax ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+*/
+    if (found == 0) {
+        PrintAndLogEx(FAILED, _RED_("No known 125/134 kHz tags found!"));
+    }
 
     if (search_unk) {
         //test unknown tag formats (raw mode)
@@ -1465,7 +1659,11 @@ int CmdLFfind(const char *Cmd) {
         if (GetFskClock("", false)) {
             if (FSKrawDemod(0, 0, 0, 0, true) == PM3_SUCCESS) {
                 PrintAndLogEx(INFO, "Unknown FSK Modulated Tag found!");
-                goto out;
+                if (search_cont) {
+                    found++;
+                } else {
+                    goto out;
+                }
             }
         }
 
@@ -1473,7 +1671,11 @@ int CmdLFfind(const char *Cmd) {
         if (ASKDemod_ext(0, 0, 0, 0, false, true, false, 1, &st) == PM3_SUCCESS) {
             PrintAndLogEx(INFO, "Unknown ASK Modulated and Manchester encoded Tag found!");
             PrintAndLogEx(INFO, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod --ab'"));
-            goto out;
+            if (search_cont) {
+                found++;
+            } else {
+                goto out;
+            }
         }
 
         if (CmdPSK1rawDemod("") == PM3_SUCCESS) {
@@ -1481,19 +1683,26 @@ int CmdLFfind(const char *Cmd) {
             PrintAndLogEx(INFO, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod --p2'"));
             PrintAndLogEx(INFO, "    Could also be PSK3 - [currently not supported]");
             PrintAndLogEx(INFO, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod --nr"));
-            goto out;
+            if (search_cont) {
+                found++;
+            } else {
+                goto out;
+            }
         }
 
-        PrintAndLogEx(FAILED, _RED_("No data found!"));
+        if (found == 0) {
+            PrintAndLogEx(FAILED, _RED_("No data found!"));
+        }
     }
 
-    retval = PM3_ESOFT;
+    if (found == 0) {
+        retval = PM3_ESOFT;
+    }
 
 out:
     // identify chipset
     if (CheckChipType(is_online) == false) {
         PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
-        retval = false;
     }
     return retval;
 }
