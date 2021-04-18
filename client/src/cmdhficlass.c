@@ -3797,15 +3797,15 @@ static int CmdHFiClassAutopwn(const char *Cmd) {
 */
 
 static int CmdHFiClassConfigCard(const char *Cmd) {
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass configcard",
-                  "Manage reader configuration card via Cardhelper",
-                  "hf iclass configcard -l           --> download config cards\n"
-                  "hf iclass configcard -p           --> print config card\n"
-                  "hf iclass configcard --ci 1       --> use config card in slot 1\n"
+                  "Manage reader configuration card via Cardhelper,\n"
+                  "The generated config card will be uploaded to device emulator memory.\n"
+                  "You can start simulating `hf iclass sim -t 3` or use the emul commands",
+                  "hf iclass configcard -l           --> download config card settings\n"
+                  "hf iclass configcard -p           --> print all config cards\n"
+                  "hf iclass configcard --ci 1       --> view config card setting in slot 1\n"
                   "hf iclass configcard -g --ci 0    --> generate config file from slot 0"
-
                  );
 
     void *argtable[] = {
