@@ -1195,7 +1195,7 @@ int CmdEM4x50Sim(const char *Cmd) {
         }
 
     } while (keypress == false);
-    
+
     if (keypress) {
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         status = PM3_EOPABORTED;

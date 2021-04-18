@@ -244,12 +244,14 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     int tmplen = len;
     while (Cmd[tmplen] == ' ')
         ++tmplen;
-    bool request_help = (strcmp(Cmd+tmplen, "-h") == 0) || (strcmp(Cmd+tmplen, "--help") == 0);
+    bool request_help = (strcmp(Cmd + tmplen, "-h") == 0) || (strcmp(Cmd + tmplen, "--help") == 0);
 
     int i = 0;
     while (Commands[i].Name) {
         if (0 == strcmp(Commands[i].Name, cmd_name)) {
-            if (request_help || Commands[i].IsAvailable()) {
+            if ((Commands[i].Help[0] == '{') ||  // always allow parsing categories
+                    request_help ||              // always allow requesting help
+                    Commands[i].IsAvailable()) {
                 break;
             } else {
                 PrintAndLogEx(WARNING, "This command is " _YELLOW_("not available") " in this mode");
