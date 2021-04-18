@@ -4,9 +4,6 @@
 # the license.
 #-----------------------------------------------------------------------------
 
-# Must be called before any Makefile include
-ROOT_DIR:=$(dir $(realpath $(lastword $(MAKEFILE_LIST))))
-
 include ../Makefile.defs
 
 INSTALLBIN = proxmark3
@@ -91,6 +88,7 @@ WHEREAMILIBLD =
 MBEDTLSLIBPATH = ../common/mbedtls
 MBEDTLSLIBINC = -I$(MBEDTLSLIBPATH)
 MBEDTLSLIB = $(OBJDIR)/libmbedtls.a
+MBEDTLSLIBCLIENTRELPATH = ../../client
 
 ########################################################
 # optional system libraries to replace local libraries #
@@ -737,7 +735,7 @@ endif
 
 $(MBEDTLSLIB): .FORCE
 	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
+	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) OBJDIR=$(MBEDTLSLIBCLIENTRELPATH)/$(OBJDIR) BINDIR=$(MBEDTLSLIBCLIENTRELPATH)/$(OBJDIR) all
 
 $(REVENGLIB): .FORCE
 	$(info [*] MAKE $@)

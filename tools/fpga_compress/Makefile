@@ -12,8 +12,6 @@ MYCFLAGS += -DLZ4_MEMORY_USAGE=20  -Wno-redundant-decls -Wno-old-style-definitio
 
 BINS = fpga_compress
 
-ROOT_DIR:=$(dir $(realpath $(lastword $(MAKEFILE_LIST))))
-
 include ../../Makefile.host
 
 fpga_compress: $(OBJDIR)/fpga_compress.o $(MYOBJS)
