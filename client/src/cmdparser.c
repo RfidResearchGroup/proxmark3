@@ -240,10 +240,16 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     if (cmd_name[0] == '#')
         return PM3_SUCCESS;
 
+    // find args, check for -h / --help
+    int tmplen = len;
+    while (Cmd[tmplen] == ' ')
+        ++tmplen;
+    bool request_help = (strcmp(Cmd+tmplen, "-h") == 0) || (strcmp(Cmd+tmplen, "--help") == 0);
+
     int i = 0;
     while (Commands[i].Name) {
         if (0 == strcmp(Commands[i].Name, cmd_name)) {
-            if (Commands[i].IsAvailable()) {
+            if (request_help || Commands[i].IsAvailable()) {
                 break;
             } else {
                 PrintAndLogEx(WARNING, "This command is " _YELLOW_("not available") " in this mode");
