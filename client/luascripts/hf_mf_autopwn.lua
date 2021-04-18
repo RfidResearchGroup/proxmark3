@@ -113,7 +113,7 @@ end
 local function dump_tag(uid, sak)
     dbg('dumping tag memory')
 
-   
+
     if utils.confirm('Do you wish to create a memory dump of tag?') then
 
         local dumpfile = 'hf-mf-'..uid..'-dump'

@@ -403,7 +403,7 @@ int CmdLFPac(const char *Cmd) {
 // find PAC preamble in already demoded data
 int detectPac(uint8_t *dest, size_t *size, bool *invert) {
     // make sure buffer has data
-    if (*size < 128) 
+    if (*size < 128)
         return -1;
 
     size_t startIdx = 0;
@@ -422,7 +422,7 @@ int detectPac(uint8_t *dest, size_t *size, bool *invert) {
     // wrong demoded size
     if (*size != 128)
         return -3;
-    
+
     // return start position
     return (int)startIdx;
 }

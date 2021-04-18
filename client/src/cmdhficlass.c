@@ -114,7 +114,7 @@ static inline uint32_t leadingzeros(uint64_t a) {
 }
 
 static void iclass_upload_emul(uint8_t *d, uint32_t n, uint32_t *bytes_sent) {
-        // fast push mode
+    // fast push mode
     conn.block_after_ACK = true;
 
     //Send to device
@@ -265,7 +265,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
     HFiClassCalcDivKey(iclass_last_known_card.csn, iClass_Key_Table[0], iclass_last_known_card.key_d, false);
 
     memset(data, 0x00,  tot_bytes);
-    memcpy(data, (uint8_t*)&iclass_last_known_card, sizeof(picopass_hdr_t));
+    memcpy(data, (uint8_t *)&iclass_last_known_card, sizeof(picopass_hdr_t));
 
     // Keyrolling configuration cards are special.
     if (strstr(o->desc, "Keyroll") != NULL) {

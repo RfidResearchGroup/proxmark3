@@ -24,7 +24,7 @@ static int openAIDFile(json_t **root, bool verbose) {
 
     int retval = PM3_SUCCESS;
     *root = json_load_file(path, 0, &error);
-    if (!*root) {        
+    if (!*root) {
         PrintAndLogEx(ERR, "json (%s) error on line %d: %s", path, error.line, error.text);
         retval = PM3_ESOFT;
         goto out;

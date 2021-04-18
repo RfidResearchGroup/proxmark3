@@ -365,18 +365,18 @@ static int CmdConvertBitStream(const char *Cmd) {
 // askType switches decode: ask/raw = 0, ask/manchester = 1
 int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, bool verbose, bool emSearch, uint8_t askType, bool *stCheck) {
     PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) clk %i invert %i maxErr %i maxLen %zu amplify %i verbose %i emSearch %i askType %i "
-            , clk
-            , invert
-            , maxErr
-            , maxlen
-            , amplify
-            , verbose
-            , emSearch
-            , askType
-    );
+                  , clk
+                  , invert
+                  , maxErr
+                  , maxlen
+                  , amplify
+                  , verbose
+                  , emSearch
+                  , askType
+                 );
     uint8_t askamp = 0;
 
-    if (maxlen == 0) 
+    if (maxlen == 0)
         maxlen = pm3_capabilities.bigbuf_size;
 
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
@@ -427,32 +427,32 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, b
 
     if (errCnt < 0 || bitlen < 16) { //if fatal error (or -1)
         PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, %s bitlen:%zu, clock:%d"
-            , errCnt
-            , (invert) ? "inverted," : ""
-            , bitlen
-            , clk
-        );
+                      , errCnt
+                      , (invert) ? "inverted," : ""
+                      , bitlen
+                      , clk
+                     );
         free(bits);
         return PM3_ESOFT;
     }
 
     if (errCnt > maxErr) {
         PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Too many errors found, errors:%d, bits:%zu, clock:%d"
-            , errCnt
-            , bitlen
-            , clk
-        );
+                      , errCnt
+                      , bitlen
+                      , clk
+                     );
         free(bits);
         return PM3_ESOFT;
     }
 
     if (verbose) {
         PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) using clock:%d, %sbits found:%zu, start index %d"
-            , clk
-            , (invert) ? "inverted, " : ""
-            , bitlen
-            , start_idx
-        );
+                      , clk
+                      , (invert) ? "inverted, " : ""
+                      , bitlen
+                      , start_idx
+                     );
     }
 
     //output
@@ -465,10 +465,10 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, b
 
         if (askType) {
             PrintAndLogEx(SUCCESS, _YELLOW_("ASK/Manchester") " - clock %d - decoded bitstream", clk);
-            PrintAndLogEx(INFO,"---------------------------------------------");
+            PrintAndLogEx(INFO, "---------------------------------------------");
         } else {
             PrintAndLogEx(SUCCESS, _YELLOW_("ASK/Raw") " - clock %d - decoded bitstream", clk);
-            PrintAndLogEx(INFO,"--------------------------------------");
+            PrintAndLogEx(INFO, "--------------------------------------");
         }
 
         printDemodBuff(0, false, false, false);
@@ -493,18 +493,18 @@ int ASKDemod(int clk, int invert, int maxErr, size_t maxlen, bool amplify, bool 
 static int Cmdaskmandemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data rawdemod --am",
-                "ASK/MANCHESTER demodulate the data in the GraphBuffer and output binary",
-                "data rawdemod --am                    --> demod a ask/manchester tag, using autodetect\n"
-                "data rawdemod --am -c 32              --> demod a ask/manchester tag, using a clock of RF/32\n"
-                "data rawdemod --am -i                 --> demod a ask/manchester tag, using autodetect, invert output\n"
-                "data rawdemod --am -c 32 -i           --> demod a ask/manchester tag, using a clock of RF/32, invert output\n"
-                "data rawdemod --am -c 64 -i --max 0   --> demod a ask/manchester tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
-                );
+                  "ASK/MANCHESTER demodulate the data in the GraphBuffer and output binary",
+                  "data rawdemod --am                    --> demod a ask/manchester tag, using autodetect\n"
+                  "data rawdemod --am -c 32              --> demod a ask/manchester tag, using a clock of RF/32\n"
+                  "data rawdemod --am -i                 --> demod a ask/manchester tag, using autodetect, invert output\n"
+                  "data rawdemod --am -c 32 -i           --> demod a ask/manchester tag, using a clock of RF/32, invert output\n"
+                  "data rawdemod --am -c 64 -i --max 0   --> demod a ask/manchester tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a", "amp", "try attempt demod with ask amplification (def no amp)"),
         arg_int0("c", "clk", "<dec>", "set clock manually (def autodetect)"),
-        arg_lit0("i","inv", "invert output"),
+        arg_lit0("i", "inv", "invert output"),
         arg_lit0("s", "st", "check for sequence terminator"),
         arg_int0(NULL, "max", "<dec>", "maximum allowed errors (def 100)"),
         arg_int0(NULL, "samples", "<dec>", "maximum samples to read (def 32768) [512 bits at RF/64]"),
@@ -708,18 +708,18 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
 static int Cmdaskbiphdemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data rawdemod --ab",
-                "ASK/BIPHASE demodulate the data in the GraphBuffer and output binary\n"
-                "NOTE, `--invert` for Conditional Dephase Encoding (CDP) AKA Differential Manchester\n",
-                "data rawdemod --ab                    --> demod a ask/biphase tag, using autodetect\n"
-                "data rawdemod --ab -c 32              --> demod a ask/biphase tag, using a clock of RF/32\n"
-                "data rawdemod --ab -i                 --> demod a ask/biphase tag, using autodetect, invert output\n"
-                "data rawdemod --ab -c 32 -i           --> demod a ask/biphase tag, using a clock of RF/32, invert output\n"
-                "data rawdemod --ab -c 64 -i --max 0   --> demod a ask/biphase tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
-                );
+                  "ASK/BIPHASE demodulate the data in the GraphBuffer and output binary\n"
+                  "NOTE, `--invert` for Conditional Dephase Encoding (CDP) AKA Differential Manchester\n",
+                  "data rawdemod --ab                    --> demod a ask/biphase tag, using autodetect\n"
+                  "data rawdemod --ab -c 32              --> demod a ask/biphase tag, using a clock of RF/32\n"
+                  "data rawdemod --ab -i                 --> demod a ask/biphase tag, using autodetect, invert output\n"
+                  "data rawdemod --ab -c 32 -i           --> demod a ask/biphase tag, using a clock of RF/32, invert output\n"
+                  "data rawdemod --ab -c 64 -i --max 0   --> demod a ask/biphase tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_int0("c", "clk", "<dec>", "set clock manually (def autodetect)"),
-        arg_lit0("i","inv", "invert output"),
+        arg_lit0("i", "inv", "invert output"),
         arg_int0("o", "offset", "<dec>", "offset to begin biphase (def 0)"),
         arg_int0(NULL, "max", "<dec>", "maximum allowed errors (def 50)"),
         arg_param_end
@@ -739,18 +739,18 @@ static int Cmdaskbiphdemod(const char *Cmd) {
 static int Cmdaskrawdemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data rawdemod --ar",
-                "ASK/RAW demodulate the data in the GraphBuffer and output binary",
-                "data rawdemod --ar -a                 --> demod a ask tag, using autodetect, amplified\n"
-                "data rawdemod --ar -c 32              --> demod a ask tag, using a clock of RF/32\n"
-                "data rawdemod --ar -i                 --> demod a ask tag, using autodetect, invert output\n"
-                "data rawdemod --ar -c 32 -i           --> demod a ask tag, using a clock of RF/32, invert output\n"
-                "data rawdemod --ar -c 64 -i --max 0   --> demod a ask tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
-                );
+                  "ASK/RAW demodulate the data in the GraphBuffer and output binary",
+                  "data rawdemod --ar -a                 --> demod a ask tag, using autodetect, amplified\n"
+                  "data rawdemod --ar -c 32              --> demod a ask tag, using a clock of RF/32\n"
+                  "data rawdemod --ar -i                 --> demod a ask tag, using autodetect, invert output\n"
+                  "data rawdemod --ar -c 32 -i           --> demod a ask tag, using a clock of RF/32, invert output\n"
+                  "data rawdemod --ar -c 64 -i --max 0   --> demod a ask tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a", "amp", "try attempt demod with ask amplification (def no amp)"),
         arg_int0("c", "clk", "<dec>", "set clock manually (def autodetect)"),
-        arg_lit0("i","inv", "invert output"),
+        arg_lit0("i", "inv", "invert output"),
         arg_lit0("s", "st", "check for sequence terminator"),
         arg_int0(NULL, "max", "<dec>", "maximum allowed errors (def 100)"),
         arg_int0(NULL, "samples", "<dec>", "maximum samples to read (def 32768) [512 bits at RF/64]"),
@@ -1179,7 +1179,7 @@ int FSKrawDemod(uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, bo
 
     size_t bitlen = getFromGraphBuf(bits);
     if (bitlen == 0) {
-        PrintAndLogEx(DEBUG, "DEBUG: no data in graphbuf");        
+        PrintAndLogEx(DEBUG, "DEBUG: no data in graphbuf");
         free(bits);
         return PM3_ESOFT;
     }
@@ -1211,14 +1211,14 @@ int FSKrawDemod(uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, bo
         // Now output the bitstream to the scrollback by line of 16 bits
         if (verbose || g_debugMode) {
             PrintAndLogEx(DEBUG, "DEBUG: (FSKrawDemod) using clock:%u, %sfc high:%u, fc low:%u"
-                , rfLen
-                , (invert) ? "inverted, " : ""
-                , fchigh
-                , fclow
-                );
+                          , rfLen
+                          , (invert) ? "inverted, " : ""
+                          , fchigh
+                          , fclow
+                         );
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, _YELLOW_("%s") " decoded bitstream", GetFSKType(fchigh, fclow, invert));
-            PrintAndLogEx(INFO,"-----------------------");
+            PrintAndLogEx(INFO, "-----------------------");
             printDemodBuff(0, false, invert, false);
         }
         goto out;
@@ -1237,19 +1237,19 @@ out:
 static int CmdFSKrawdemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data rawdemod --fs",
-                "FSK demodulate the data in the GraphBuffer and output binary",
-                "data rawdemod --fs                         --> demod an fsk tag, using autodetect\n"
-                "data rawdemod --fs -c 32                   --> demod an fsk tag, using a clock of RF/32, autodetect fc\n"
-                "data rawdemod --fs -i                      --> demod an fsk tag, using autodetect, invert output\n"
-                "data rawdemod --fs -c 32 -i                --> demod an fsk tag, using a clock of RF/32, invert output, autodetect fc\n"
-                "data rawdemod --fs -c 64    --hi 8  --lo 5 --> demod an fsk1 RF/64 tag\n"
-                "data rawdemod --fs -c 50    --hi 10 --lo 8 --> demod an fsk2 RF/50 tag\n"
-                "data rawdemod --fs -c 50 -i --hi 10 --lo 8 --> demod an fsk2a RF/50 tag\n"
-                );
+                  "FSK demodulate the data in the GraphBuffer and output binary",
+                  "data rawdemod --fs                         --> demod an fsk tag, using autodetect\n"
+                  "data rawdemod --fs -c 32                   --> demod an fsk tag, using a clock of RF/32, autodetect fc\n"
+                  "data rawdemod --fs -i                      --> demod an fsk tag, using autodetect, invert output\n"
+                  "data rawdemod --fs -c 32 -i                --> demod an fsk tag, using a clock of RF/32, invert output, autodetect fc\n"
+                  "data rawdemod --fs -c 64    --hi 8  --lo 5 --> demod an fsk1 RF/64 tag\n"
+                  "data rawdemod --fs -c 50    --hi 10 --lo 8 --> demod an fsk2 RF/50 tag\n"
+                  "data rawdemod --fs -c 50 -i --hi 10 --lo 8 --> demod an fsk2a RF/50 tag\n"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_int0("c", "clk", "<dec>", "set clock manually (def: autodetect)"),
-        arg_lit0("i","inv", "invert output"),
+        arg_lit0("i", "inv", "invert output"),
         arg_int0(NULL, "hi", "<dec>", "larger field clock length (def: autodetect)"),
         arg_int0(NULL, "lo", "<dec>", "small field clock length (def: autodetect)"),
         arg_param_end
@@ -1318,7 +1318,7 @@ int NRZrawDemod(int clk, int invert, int maxErr, bool verbose) {
     int errCnt = 0, clkStartIdx = 0;
 
     if (getSignalProperties()->isnoise) {
-            if (verbose) {
+        if (verbose) {
             PrintAndLogEx(INFO, "signal looks like noise");
         }
         return PM3_ESOFT;
@@ -1369,17 +1369,17 @@ int NRZrawDemod(int clk, int invert, int maxErr, bool verbose) {
 static int CmdNRZrawDemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data rawdemod --nr",
-                "NRZ/DIRECT demodulate the data in the GraphBuffer and output binary",
-                "data rawdemod --nr                    --> demod a nrz/direct tag, using autodetect\n"
-                "data rawdemod --nr -c 32              --> demod a nrz/direct tag, using a clock of RF/32\n"
-                "data rawdemod --nr -i                 --> demod a nrz/direct tag, using autodetect, invert output\n"
-                "data rawdemod --nr -c 32 -i           --> demod a nrz/direct tag, using a clock of RF/32, invert output\n"
-                "data rawdemod --nr -c 64 -i --max 0   --> demod a nrz/direct tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
-                );
+                  "NRZ/DIRECT demodulate the data in the GraphBuffer and output binary",
+                  "data rawdemod --nr                    --> demod a nrz/direct tag, using autodetect\n"
+                  "data rawdemod --nr -c 32              --> demod a nrz/direct tag, using a clock of RF/32\n"
+                  "data rawdemod --nr -i                 --> demod a nrz/direct tag, using autodetect, invert output\n"
+                  "data rawdemod --nr -c 32 -i           --> demod a nrz/direct tag, using a clock of RF/32, invert output\n"
+                  "data rawdemod --nr -c 64 -i --max 0   --> demod a nrz/direct tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_int0("c", "clk", "<dec>", "set clock manually (def autodetect)"),
-        arg_lit0("i","inv", "invert output"),
+        arg_lit0("i", "inv", "invert output"),
         arg_int0(NULL, "max", "<dec>", "maximum allowed errors (def 100)"),
         arg_param_end
     };
@@ -1399,17 +1399,17 @@ static int CmdNRZrawDemod(const char *Cmd) {
 int CmdPSK1rawDemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data rawdemod --p1",
-                "PSK1 demodulate the data in the GraphBuffer and output binary",
-                "data rawdemod --p1                    --> demod a psk1 tag, using autodetect\n"
-                "data rawdemod --p1 -c 32              --> demod a psk1 tag, using a clock of RF/32\n"
-                "data rawdemod --p1 -i                 --> demod a psk1 tag, using autodetect, invert output\n"
-                "data rawdemod --p1 -c 32 -i           --> demod a psk1 tag, using a clock of RF/32, invert output\n"
-                "data rawdemod --p1 -c 64 -i --max 0   --> demod a psk1 tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
-                );
+                  "PSK1 demodulate the data in the GraphBuffer and output binary",
+                  "data rawdemod --p1                    --> demod a psk1 tag, using autodetect\n"
+                  "data rawdemod --p1 -c 32              --> demod a psk1 tag, using a clock of RF/32\n"
+                  "data rawdemod --p1 -i                 --> demod a psk1 tag, using autodetect, invert output\n"
+                  "data rawdemod --p1 -c 32 -i           --> demod a psk1 tag, using a clock of RF/32, invert output\n"
+                  "data rawdemod --p1 -c 64 -i --max 0   --> demod a psk1 tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_int0("c", "clk", "<dec>", "set clock manually (def autodetect)"),
-        arg_lit0("i","inv", "invert output"),
+        arg_lit0("i", "inv", "invert output"),
         arg_int0(NULL, "max", "<dec>", "maximum allowed errors (def 100)"),
         arg_param_end
     };
@@ -1437,17 +1437,17 @@ int CmdPSK1rawDemod(const char *Cmd) {
 static int CmdPSK2rawDemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data rawdemod --p2",
-                "PSK2 demodulate the data in the GraphBuffer and output binary",
-                "data rawdemod --p2                    --> demod a psk2 tag, using autodetect\n"
-                "data rawdemod --p2 -c 32              --> demod a psk2 tag, using a clock of RF/32\n"
-                "data rawdemod --p2 -i                 --> demod a psk2 tag, using autodetect, invert output\n"
-                "data rawdemod --p2 -c 32 -i           --> demod a psk2 tag, using a clock of RF/32, invert output\n"
-                "data rawdemod --p2 -c 64 -i --max 0   --> demod a psk2 tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
-                );
+                  "PSK2 demodulate the data in the GraphBuffer and output binary",
+                  "data rawdemod --p2                    --> demod a psk2 tag, using autodetect\n"
+                  "data rawdemod --p2 -c 32              --> demod a psk2 tag, using a clock of RF/32\n"
+                  "data rawdemod --p2 -i                 --> demod a psk2 tag, using autodetect, invert output\n"
+                  "data rawdemod --p2 -c 32 -i           --> demod a psk2 tag, using a clock of RF/32, invert output\n"
+                  "data rawdemod --p2 -c 64 -i --max 0   --> demod a psk2 tag, using a clock of RF/64, inverting and allowing 0 demod errors\n"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_int0("c", "clk", "<dec>", "set clock manually (def autodetect)"),
-        arg_lit0("i","inv", "invert output"),
+        arg_lit0("i", "inv", "invert output"),
         arg_int0(NULL, "max", "<dec>", "maximum allowed errors (def 100)"),
         arg_param_end
     };
@@ -1476,15 +1476,15 @@ static int CmdRawDemod(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data rawdemod",
-                "Demodulate the data in the GraphBuffer and output binary",
-                "data rawdemod --fs    --> demod FSK - autodetect\n"
-                "data rawdemod --ab    --> demod ASK/BIPHASE - autodetect\n"
-                "data rawdemod --am    --> demod ASK/MANCHESTER - autodetect\n"
-                "data rawdemod --ar    --> demod ASK/RAW - autodetect\n"
-                "data rawdemod --nr    --> demod NRZ/DIRECT - autodetect\n"
-                "data rawdemod --p1    --> demod PSK1 - autodetect\n"
-                "data rawdemod --p2    --> demod PSK2 - autodetect\n"
-                );
+                  "Demodulate the data in the GraphBuffer and output binary",
+                  "data rawdemod --fs    --> demod FSK - autodetect\n"
+                  "data rawdemod --ab    --> demod ASK/BIPHASE - autodetect\n"
+                  "data rawdemod --am    --> demod ASK/MANCHESTER - autodetect\n"
+                  "data rawdemod --ar    --> demod ASK/RAW - autodetect\n"
+                  "data rawdemod --nr    --> demod NRZ/DIRECT - autodetect\n"
+                  "data rawdemod --p1    --> demod PSK1 - autodetect\n"
+                  "data rawdemod --p2    --> demod PSK2 - autodetect\n"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0(NULL, "ab", "ASK/Biphase demodulation"),
@@ -1515,18 +1515,18 @@ static int CmdRawDemod(const char *Cmd) {
     CLIParserFree(ctx);
 
     int foo = (ab + am + ar + fs + nr + p1 + p2);
-    if ( foo > 1 ) {
+    if (foo > 1) {
         PrintAndLogEx(WARNING, "please, select only one modulation");
         return PM3_EINVARG;
     }
-    if ( foo == 0 ) {
+    if (foo == 0) {
         PrintAndLogEx(WARNING, "please, select a modulation");
         return PM3_EINVARG;
     }
 
     int ans = 0;
     const char *s = Cmd + n;
-    if (fs) 
+    if (fs)
         ans = CmdFSKrawdemod(s);
     else if (ab)
         ans = Cmdaskbiphdemod(s);
