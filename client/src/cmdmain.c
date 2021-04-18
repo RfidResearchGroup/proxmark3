@@ -263,7 +263,17 @@ static int CmdMsleep(const char *Cmd) {
 }
 
 static int CmdQuit(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "quit",
+                  "Quit the Proxmark3 client terminal",
+                  "quit"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return PM3_EFATAL;
 }
 

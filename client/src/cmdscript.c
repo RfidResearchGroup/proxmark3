@@ -30,6 +30,7 @@
 #include "proxmark3.h"
 #include "ui.h"
 #include "fileutils.h"
+#include "cliparser.h"    // cliparsing
 
 #ifdef HAVE_LUA_SWIG
 extern int luaopen_pm3(lua_State *L);
@@ -198,7 +199,17 @@ static void set_python_paths(void) {
 * ending with .lua
 */
 static int CmdScriptList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "script list",
+                  "List available Lua, Cmd and Python scripts",
+                  "script list"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     PrintAndLogEx(NORMAL, "\n" _YELLOW_("[ Lua scripts ]"));
     int ret = searchAndList(LUA_SCRIPTS_SUBDIR, ".lua");
     if (ret != PM3_SUCCESS)
@@ -223,7 +234,18 @@ static int CmdScriptList(const char *Cmd) {
  * @return
  */
 static int CmdScriptRun(const char *Cmd) {
-
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "script run",
+                  "Run a Lua, Cmd or Python script",
+                  "script run my_script.lua --my_script_args"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    // TODO possible to handle it with cliparser?
     char preferredName[128] = {0};
     char arguments[256] = {0};
 
