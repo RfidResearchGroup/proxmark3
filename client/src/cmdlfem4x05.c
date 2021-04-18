@@ -504,7 +504,7 @@ int CmdEM4x05Dump(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("p", "pwd", "<hex>", "password (00000000)"),
-        arg_str0("f", "file", "<filename>", "override filename prefix (optional).  Default is based on UID"),
+        arg_str0("f", "file", "<fn>", "override filename prefix (optional).  Default is based on UID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

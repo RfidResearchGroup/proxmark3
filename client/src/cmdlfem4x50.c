@@ -197,15 +197,13 @@ static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
 int CmdEM4x50ELoad(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 eload",
-                  "Loads EM4x50 tag dump into emulator memory on device.",
+                  "Loads EM4x50 tag dump (bin/eml/json) into emulator memory on device",
                   "lf em 4x50 eload -f mydump.bin\n"
-                  "lf em 4x50 eload -f mydump.eml\n"
-                  "lf em 4x50 eload -f mydump.json"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "filename", "<fn>", "dump filename"),
+        arg_str1("f", "filename", "<fn>", "dump filename (bin/eml/json)"),
         arg_param_end
     };
 
@@ -225,10 +223,10 @@ int CmdEM4x50ELoad(const char *Cmd) {
     }
 
     // upload to emulator memory
-    PrintAndLogEx(INFO, "Uploading dump " _YELLOW_("%s") " to emulator memory", filename);
+    PrintAndLogEx(INFO, "Uploading to emulator memory contents of " _YELLOW_("%s"), filename);
     em4x50_seteml(data, 0, DUMP_FILESIZE);
 
-    PrintAndLogEx(INFO, "Done");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -237,14 +235,12 @@ int CmdEM4x50ESave(const char *Cmd) {
     CLIParserInit(&ctx, "lf em 4x50 esave",
                   "Saves bin/eml/json dump file of emulator memory.",
                   "lf em 4x50 esave                    -> use UID as filename\n"
-                  "lf em 4x50 esave -f mydump.bin\n"
-                  "lf em 4x50 esave -f mydump.eml\n"
-                  "lf em 4x50 esave -f mydump.json\n"
+                  "lf em 4x50 esave -f mydump\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "filename", "<filename>", "data filename"),
+        arg_str0("f", "filename", "<fn>", "data filename"),
         arg_param_end
     };
 
@@ -747,11 +743,11 @@ int CmdEM4x50Reader(const char *Cmd) {
 int CmdEM4x50Dump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 dump",
-                  "Reads all blocks/words from EM4x50 tag and saves dump in bin/eml/json format.",
+                  "Reads all blocks/words from EM4x50 tag and saves dump in bin/eml/json format",
                   "lf em 4x50 dump\n"
-                  "lf em 4x50 dump -f mydump.eml\n"
+                  "lf em 4x50 dump -f mydump\n"
                   "lf em 4x50 dump -p 12345678\n"
-                  "lf em 4x50 dump -f mydump.eml -p 12345678"
+                  "lf em 4x50 dump -f mydump -p 12345678"
                  );
 
     void *argtable[] = {
