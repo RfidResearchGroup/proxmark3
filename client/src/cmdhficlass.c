@@ -43,6 +43,7 @@ static void iclass_set_last_known_card(picopass_hdr_t *card) {
 }
 
 static uint8_t empty[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+static uint8_t zeros[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static int CmdHelp(const char *Cmd);
 
@@ -1273,17 +1274,18 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
 
         // decode block 6
-        if (memcmp(decrypted + (8 * 6), empty, 8) != 0) {
+        bool has_values = (memcmp(decrypted + (8 * 6), empty, 8) != 0) && (memcmp(decrypted + (8 * 6), zeros, 8) != 0);
+        if (has_values) {
             if (use_sc) {
                 DecodeBlock6(decrypted + (8 * 6));
             }
         }
 
         // decode block 7-8-9
-        if (memcmp(decrypted + (8 * 7), empty, 8) != 0) {
+        has_values = (memcmp(decrypted + (8 * 7), empty, 8) != 0) && (memcmp(decrypted + (8 * 7), zeros, 8) != 0);
+        if (has_values) {
 
             //todo:  remove preamble/sentinal
-
             uint32_t top = 0, mid, bot;
             mid = bytes_to_num(decrypted + (8 * 7), 4);
             bot = bytes_to_num(decrypted + (8 * 7) + 4, 4);
@@ -1305,18 +1307,20 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             HIDTryUnpack(&packed, true);
 
         } else {
-            PrintAndLogEx(INFO, "No credential found.");
+            PrintAndLogEx(INFO, "No credential found");
         }
 
         // decode block 9
-        if (memcmp(decrypted + (8 * 9), empty, 8) != 0) {
+        has_values = (memcmp(decrypted + (8 * 9), empty, 8) != 0) && (memcmp(decrypted + (8 * 9), zeros, 8) != 0);
+        if (has_values) {
 
             uint8_t usr_blk_len = GetNumberBlocksForUserId(decrypted + (8 * 6));
             if (usr_blk_len < 3) {
-
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(INFO, "Block 9 decoder");
                 if (use_sc) {
+
+                    PrintAndLogEx(NORMAL, "");
+                    PrintAndLogEx(INFO, "Block 9 decoder");
+
                     uint8_t pinsize = GetPinSize(decrypted + (8 * 6));
                     if (pinsize > 0) {
 
