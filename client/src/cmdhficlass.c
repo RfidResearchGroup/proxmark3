@@ -113,6 +113,28 @@ static inline uint32_t leadingzeros(uint64_t a) {
 #endif
 }
 
+static void iclass_upload_emul(uint8_t *d, uint32_t n, uint32_t *bytes_sent) {
+        // fast push mode
+    conn.block_after_ACK = true;
+
+    //Send to device
+    *bytes_sent = 0;
+    uint32_t bytes_remaining  = n;
+
+    while (bytes_remaining > 0) {
+        uint32_t bytes_in_packet = MIN(PM3_CMD_DATA_SIZE, bytes_remaining);
+        if (bytes_in_packet == bytes_remaining) {
+            // Disable fast mode on last packet
+            conn.block_after_ACK = false;
+        }
+        clearCommandBuffer();
+        SendCommandOLD(CMD_HF_ICLASS_EML_MEMSET, *bytes_sent, bytes_in_packet, 0, d + *bytes_sent, bytes_in_packet);
+        bytes_remaining -= bytes_in_packet;
+        *bytes_sent += bytes_in_packet;
+    }
+}
+
+
 const char *card_types[] = {
     "PicoPass 16K / 16",                       // 000
     "PicoPass 32K with current book 16K / 16", // 001
@@ -199,7 +221,7 @@ static const iclass_config_card_item_t *get_config_card_item(int idx) {
 static void print_config_cards(void) {
     if (check_config_card(&iclass_config_types[0])) {
         PrintAndLogEx(INFO, "---- " _CYAN_("Config cards available") " ------------");
-        for (int i = 0; i < ARRAYLEN(iclass_config_types); ++i) {
+        for (int i = 0; i < ARRAYLEN(iclass_config_types) - 1   ; ++i) {
             PrintAndLogEx(INFO, "%2d, %s", i, iclass_config_types[i].desc);
         }
         PrintAndLogEx(NORMAL, "");
@@ -237,7 +259,13 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
     }
-    memset(data, 0xFF,  tot_bytes);
+
+
+    // calc diversified key for selected card
+    HFiClassCalcDivKey(iclass_last_known_card.csn, iClass_Key_Table[0], iclass_last_known_card.key_d, false);
+
+    memset(data, 0x00,  tot_bytes);
+    memcpy(data, (uint8_t*)&iclass_last_known_card, sizeof(picopass_hdr_t));
 
     // Keyrolling configuration cards are special.
     if (strstr(o->desc, "Keyroll") != NULL) {
@@ -325,19 +353,14 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         memcpy(data + (6 * 8), o->data, sizeof(o->data));
     }
 
-    // create filename
-    char filename[FILE_PATH_SIZE] = {0};
-    char *fptr = filename;
-    fptr += snprintf(fptr, sizeof(filename), "hf-iclass-");
-    FillFileNameByUID(fptr, data, "-dump", 8);
-
-    // save dump file
-    saveFile(filename, ".bin", data, tot_bytes);
-    saveFileEML(filename, data, tot_bytes, 8);
-    saveFileJSON(filename, jsfIclass, data, tot_bytes, NULL);
-
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view -f %s.bin") "` to view dump file", filename);
+    //Send to device
+    uint32_t bytes_sent = 0;
+    iclass_upload_emul(data, tot_bytes, &bytes_sent);
     free(data);
+
+    PrintAndLogEx(SUCCESS, "sent %d bytes of data to device emulator memory", bytes_sent);
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass eview") "` to view dump file");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass sim -t 3") "` to start simulating config card");
     return PM3_SUCCESS;
 }
 
@@ -926,26 +949,10 @@ static int CmdHFiClassELoad(const char *Cmd) {
     print_picopass_header((picopass_hdr_t *) dump);
     print_picopass_info((picopass_hdr_t *) dump);
 
-    // fast push mode
-    conn.block_after_ACK = true;
-
     //Send to device
     uint32_t bytes_sent = 0;
-    uint32_t bytes_remaining  = bytes_read;
-
-    while (bytes_remaining > 0) {
-        uint32_t bytes_in_packet = MIN(PM3_CMD_DATA_SIZE, bytes_remaining);
-        if (bytes_in_packet == bytes_remaining) {
-            // Disable fast mode on last packet
-            conn.block_after_ACK = false;
-        }
-        clearCommandBuffer();
-        SendCommandOLD(CMD_HF_ICLASS_EML_MEMSET, bytes_sent, bytes_in_packet, 0, dump + bytes_sent, bytes_in_packet);
-        bytes_remaining -= bytes_in_packet;
-        bytes_sent += bytes_in_packet;
-    }
+    iclass_upload_emul(dump, bytes_read, &bytes_sent);
     free(dump);
-
     PrintAndLogEx(SUCCESS, "sent %d bytes of data to device emulator memory", bytes_sent);
     return PM3_SUCCESS;
 }
@@ -1004,7 +1011,7 @@ static int CmdHFiClassESave(const char *Cmd) {
     saveFileJSON(filename, jsfIclass, dump, bytes, NULL);
     free(dump);
 
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view -f %s.bin") "` to view dump file", filename);
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view -f") "` to view dump file");
     return PM3_SUCCESS;
 }
 
@@ -1807,8 +1814,8 @@ write_dump:
     saveFileEML(filename, tag_data, bytes_got, 8);
     saveFileJSON(filename, jsfIclass, tag_data, bytes_got, NULL);
 
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass decrypt -f %s.bin") "` to decrypt dump file", filename);
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view -f %s.bin") "` to view dump file", filename);
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass decrypt -f") "` to decrypt dump file");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view -f") "` to view dump file");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
