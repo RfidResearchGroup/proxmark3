@@ -2839,11 +2839,11 @@ static int CmdResetRead(const char *Cmd) {
                  );
 
     // 1 (help) + 0(one user specified params) + (5 T55XX_DLMODE_SINGLE)
-    void *argtable[0 + 5] = {
+    void *argtable[2 + 5] = {
         arg_param_begin,
         arg_lit0("1", NULL, "extract using data from graphbuffer"),
     };
-    uint8_t idx = 1;
+    uint8_t idx = 2;
     arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_SINGLE, config.downlink_mode);
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
