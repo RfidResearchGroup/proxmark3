@@ -171,12 +171,13 @@ static uint16_t frameLength = 0;
 uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 
 static int CmdHF14AList(const char *Cmd) {
-    char args[128] = {0};
-    if (strlen(Cmd) == 0) {
-        snprintf(args, sizeof(args), "-t 14a");
-    } else {
-        strncpy(args, Cmd, sizeof(args) - 1);
+    int ret = CmdTraceListAlias(Cmd, "hf 14a list");
+    if (ret != PM3_SUCCESS) {
+        return ret;
     }
+    char args[128] = {0};
+    snprintf(args, sizeof(args), "-t 14a ");
+    strncat(args, Cmd, sizeof(args) - strlen(args));
     return CmdTraceList(args);
 }
 

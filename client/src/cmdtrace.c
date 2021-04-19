@@ -591,6 +591,37 @@ static int CmdTraceSave(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int CmdTraceListAlias(const char *Cmd, const char *alias) {
+    CLIParserContext *ctx;
+    char example[200] = {0};
+    sprintf(example,
+            "%s -f                          -> show frame delay times\n"
+            "%s -1                          -> use trace buffer ",
+            alias, alias);
+    CLIParserInit(&ctx, alias,
+                  "Alias of `trace list -t` with selected protocol data to annotate trace buffer\n"
+                  "You can load a trace from file (see `trace load -h`) or it be downloaded from device by default\n"
+                  "It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+                  example
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("1", "buffer", "use data from trace buffer"),
+        arg_lit0("f", NULL, "show frame delay times"),
+        arg_lit0("c", NULL, "mark CRC bytes"),
+        arg_lit0("r", NULL, "show relative times (gap and duration)"),
+        arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
+        arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
+                 "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
+        arg_strx0(NULL, "dict", "<file>", "use dictionary keys file"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    return PM3_SUCCESS;
+}
+
 int CmdTraceList(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "trace list",
