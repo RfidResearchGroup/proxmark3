@@ -308,9 +308,12 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 }
                 m--;
             }
-            line[(data_len - 1) / 16][((data_len - 1) % 16) * 4 + 2] = '(';
-            line[(data_len - 1) / 16][((data_len - 1) % 16) * 4 + 3] = m + 0x30;
-            line[(data_len - 1) / 16][((data_len - 1) % 16) * 4 + 4] = ')';
+
+            if (data_len) {
+                line[(data_len - 1) / 16][((data_len - 1) % 16) * 4 + 2] = '(';
+                line[(data_len - 1) / 16][((data_len - 1) % 16) * 4 + 3] = m + 0x30;
+                line[(data_len - 1) / 16][((data_len - 1) % 16) * 4 + 4] = ')';
+            }
         }
     }
 
@@ -400,32 +403,63 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 time2 = duration;
             }
 
-            if (use_us) {
-                PrintAndLogEx(NORMAL, " %10.1f | %10.1f | %s |%-72s | %s| %s",
-                              (float)time1 / 13.56,
-                              (float)time2 / 13.56,
-                              (hdr->isResponse ? "Tag" : _YELLOW_("Rdr")),
-                              line[j],
-                              (j == num_lines - 1) ? crc : "    ",
-                              (j == num_lines - 1) ? explanation : ""
-                             );
+            if (hdr->isResponse) {
+                // tag row
+                if (use_us) {
+                    PrintAndLogEx(NORMAL, " %10.1f | %10.1f | Tag |%-72s | %s| %s",
+                                (float)time1 / 13.56,
+                                (float)time2 / 13.56,
+                                line[j],
+                                (j == num_lines - 1) ? crc : "    ",
+                                (j == num_lines - 1) ? explanation : ""
+                                );
+                } else {
+                    PrintAndLogEx(NORMAL, " %10u | %10u | Tag |%-72s | %s| %s",
+                                (hdr->timestamp - first_hdr->timestamp),
+                                (end_of_transmission_timestamp - first_hdr->timestamp),
+                                line[j],
+                                (j == num_lines - 1) ? crc : "    ",
+                                (j == num_lines - 1) ? explanation : ""
+                                );
+                }
             } else {
-                PrintAndLogEx(NORMAL, " %10u | %10u | %s |%-72s | %s| %s",
-                              (hdr->timestamp - first_hdr->timestamp),
-                              (end_of_transmission_timestamp - first_hdr->timestamp),
-                              (hdr->isResponse ? "Tag" : _YELLOW_("Rdr")),
-                              line[j],
-                              (j == num_lines - 1) ? crc : "    ",
-                              (j == num_lines - 1) ? explanation : ""
-                             );
+                // reader row
+                if (use_us) {
+                    PrintAndLogEx(NORMAL, 
+                        _YELLOW_(" %10.1f") " | " _YELLOW_("%10.1f") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                        (float)time1 / 13.56,
+                        (float)time2 / 13.56,
+                        line[j],
+                        (j == num_lines - 1) ? crc : "    ",
+                        (j == num_lines - 1) ? explanation : ""
+                        );
+                } else {
+                    PrintAndLogEx(NORMAL,
+                        _YELLOW_(" %10u") " | " _YELLOW_("%10u") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                        (hdr->timestamp - first_hdr->timestamp),
+                        (end_of_transmission_timestamp - first_hdr->timestamp),
+                        line[j],
+                        (j == num_lines - 1) ? crc : "    ",
+                        (j == num_lines - 1) ? explanation : ""
+                        );
+                }
+
             }
 
         } else {
-            PrintAndLogEx(NORMAL, "            |            |     |%-72s | %s| %s",
-                          line[j],
-                          (j == num_lines - 1) ? crc : "    ",
-                          (j == num_lines - 1) ? explanation : ""
-                         );
+            if (hdr->isResponse) {
+                PrintAndLogEx(NORMAL, "            |            |     |%-72s | %s| %s",
+                        line[j],
+                        (j == num_lines - 1) ? crc : "    ",
+                        (j == num_lines - 1) ? explanation : ""
+                        );
+            } else {
+                PrintAndLogEx(NORMAL, "            |            |     |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                        line[j],
+                        (j == num_lines - 1) ? crc : "    ",
+                        (j == num_lines - 1) ? explanation : ""
+                        );
+            }
         }
     }
 
