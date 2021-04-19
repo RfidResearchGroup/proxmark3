@@ -455,14 +455,14 @@ check_script:
 }
 
 #ifndef LIBPM3
-static void dumpAllHelp(int markdown) {
+static void dumpAllHelp(int markdown, bool full_help) {
     session.help_dump_mode = true;
     PrintAndLogEx(NORMAL, "\n%sProxmark3 command dump%s\n\n", markdown ? "# " : "", markdown ? "" : "\n======================");
     PrintAndLogEx(NORMAL, "Some commands are available only if a Proxmark3 is actually connected.%s\n", markdown ? "  " : "");
     PrintAndLogEx(NORMAL, "Check column \"offline\" for their availability.\n");
     PrintAndLogEx(NORMAL, "\n");
     command_t *cmds = getTopLevelCommandTable();
-    dumpCommandsRecursive(cmds, markdown);
+    dumpCommandsRecursive(cmds, markdown, full_help);
     session.help_dump_mode = false;
 }
 #endif //LIBPM3
@@ -553,7 +553,7 @@ static void set_my_user_directory(void) {
 #ifndef LIBPM3
 static void show_help(bool showFullHelp, char *exec_name) {
 
-    PrintAndLogEx(NORMAL, "\nsyntax: %s [-h|-t|-m]", exec_name);
+    PrintAndLogEx(NORMAL, "\nsyntax: %s [-h|-t|-m|--fulltext]", exec_name);
     PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i] [-d <0|1|2>]", exec_name);
     PrintAndLogEx(NORMAL, "        %s [-p] <port> --flash [--unlock-bootloader] [--image <imagefile>]+ [-w] [-f] [-d <0|1|2>]", exec_name);
 
@@ -567,8 +567,9 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      -f/--flush                          output will be flushed after every print");
         PrintAndLogEx(NORMAL, "      -d/--debug <0|1|2>                  set debugmode");
         PrintAndLogEx(NORMAL, "\nOptions in client mode:");
-        PrintAndLogEx(NORMAL, "      -t/--text                           dump all interactive command's help at once");
-        PrintAndLogEx(NORMAL, "      -m/--markdown                       dump all interactive help at once in markdown syntax");
+        PrintAndLogEx(NORMAL, "      -t/--text                           dump all interactive command list at once");
+        PrintAndLogEx(NORMAL, "      --fulltext                          dump all interactive command's help at once");
+        PrintAndLogEx(NORMAL, "      -m/--markdown                       dump all interactive command list at once in markdown syntax");
         PrintAndLogEx(NORMAL, "      -b/--baud                           serial port speed (only needed for physical UART, not for USB-CDC or BT)");
         PrintAndLogEx(NORMAL, "      -c/--command <command>              execute one Proxmark3 command (or several separated by ';').");
         PrintAndLogEx(NORMAL, "      -l/--lua <lua script file>          execute lua script.");
@@ -823,14 +824,22 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--text") == 0) {
             g_printAndLog = PRINTANDLOG_PRINT;
             show_help(false, exec_name);
-            dumpAllHelp(0);
+            dumpAllHelp(0, false);
+            return 0;
+        }
+
+        // dump help
+        if (strcmp(argv[i], "--fulltext") == 0) {
+            g_printAndLog = PRINTANDLOG_PRINT;
+            show_help(false, exec_name);
+            dumpAllHelp(0, true);
             return 0;
         }
 
         // dump markup
         if (strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--markdown") == 0) {
             g_printAndLog = PRINTANDLOG_PRINT;
-            dumpAllHelp(1);
+            dumpAllHelp(1, false);
             return 0;
         }
         // print client version
