@@ -15,6 +15,6 @@
 
 int CmdTrace(const char *Cmd);
 int CmdTraceList(const char *Cmd);
-int CmdTraceListAlias(const char *Cmd, const char *alias);
+int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol);
 
 #endif

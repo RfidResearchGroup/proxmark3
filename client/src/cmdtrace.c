@@ -591,19 +591,22 @@ static int CmdTraceSave(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int CmdTraceListAlias(const char *Cmd, const char *alias) {
+int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) {
     CLIParserContext *ctx;
+    char desc[500] = {0};
+    snprintf(desc, sizeof(desc) - 1,
+            "Alias of `trace list -t %s` with selected protocol data to annotate trace buffer\n"
+            "You can load a trace from file (see `trace load -h`) or it be downloaded from device by default\n"
+            "It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            protocol);
     char example[200] = {0};
-    sprintf(example,
-            "%s -f                          -> show frame delay times\n"
-            "%s -1                          -> use trace buffer ",
+    snprintf(example, sizeof(example) - 1,
+            "%s list -f              -> show frame delay times\n"
+            "%s list -1              -> use trace buffer ",
             alias, alias);
-    CLIParserInit(&ctx, alias,
-                  "Alias of `trace list -t` with selected protocol data to annotate trace buffer\n"
-                  "You can load a trace from file (see `trace load -h`) or it be downloaded from device by default\n"
-                  "It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
-                  example
-                 );
+    char fullalias[100] = {0};
+    snprintf(fullalias, sizeof(fullalias) - 1, "%s list", alias);
+    CLIParserInit(&ctx, fullalias, desc, example);
 
     void *argtable[] = {
         arg_param_begin,
@@ -618,8 +621,10 @@ int CmdTraceListAlias(const char *Cmd, const char *alias) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-    return PM3_SUCCESS;
+    char args[128] = {0};
+    snprintf(args, sizeof(args), "-t %s ", protocol);
+    strncat(args, Cmd, sizeof(args) - strlen(args));
+    return CmdTraceList(args);
 }
 
 int CmdTraceList(const char *Cmd) {
