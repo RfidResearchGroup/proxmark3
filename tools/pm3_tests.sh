@@ -338,6 +338,7 @@ while true; do
       if ! CheckExecute "proxmark help"                    "$CLIENTBIN -h" "wait"; then break; fi
       if ! CheckExecute "proxmark help text ISO7816"       "$CLIENTBIN -t 2>&1" "ISO7816"; then break; fi
       if ! CheckExecute "proxmark help text hardnested"    "$CLIENTBIN -t 2>&1" "hardnested"; then break; fi
+      if ! CheckExecute "proxmark full help dump"          "$CLIENTBIN --fulltext 2>&1" "Full help dump done"; then break; fi
 
       echo -e "\n${C_BLUE}Testing data manipulation:${C_NC}"
       if ! CheckExecute "reveng readline test"    "$CLIENTBIN -c 'reveng -h;reveng -D'" "CRC-64/GO-ISO"; then break; fi

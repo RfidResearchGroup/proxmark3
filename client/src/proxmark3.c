@@ -464,6 +464,7 @@ static void dumpAllHelp(int markdown, bool full_help) {
     command_t *cmds = getTopLevelCommandTable();
     dumpCommandsRecursive(cmds, markdown, full_help);
     session.help_dump_mode = false;
+    PrintAndLogEx(NORMAL, "Full help dump done.");
 }
 #endif //LIBPM3
 
