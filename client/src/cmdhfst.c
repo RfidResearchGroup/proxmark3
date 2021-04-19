@@ -789,13 +789,6 @@ static int CmdHFSTPwd(const char *Cmd) {
 
 static int CmdHFSTList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf st", "7816");
-    char args[128] = {0};
-    if (strlen(Cmd) == 0) {
-        snprintf(args, sizeof(args), "-t 7816");
-    } else {
-        strncpy(args, Cmd, sizeof(args) - 1);
-    }
-    return CmdTraceList(args);
 }
 
 static command_t CommandTable[] = {
