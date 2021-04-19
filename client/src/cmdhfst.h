@@ -13,7 +13,7 @@
 
 #include "common.h"
 
-int CmdHF_ST(const char *Cmd);
+int CmdHFST(const char *Cmd);
 
-int infoHF_ST(void);
+int infoHFST(void);
 #endif

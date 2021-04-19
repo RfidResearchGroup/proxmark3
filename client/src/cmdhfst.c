@@ -203,7 +203,7 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
 }
 
 // ST rothult
-int infoHF_ST(void) {
+int infoHFST(void) {
 
     bool activate_field = true;
     bool keep_field_on = true;
@@ -317,7 +317,7 @@ int infoHF_ST(void) {
 }
 
 // menu command to get and print all info known about any known ST25TA tag
-static int cmd_hf_st_info(const char *Cmd) {
+static int CmdHFSTInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf st info",
                   "Get info about ST25TA tag",
@@ -330,10 +330,10 @@ static int cmd_hf_st_info(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
-    return infoHF_ST();
+    return infoHFST();
 }
 
-static int cmd_hf_st_sim(const char *Cmd) {
+static int CmdHFSTSim(const char *Cmd) {
     int uidlen = 0;
     uint8_t uid[7] = {0};
 
@@ -361,7 +361,7 @@ static int cmd_hf_st_sim(const char *Cmd) {
     return CmdHF14ASim(param);
 }
 
-static int cmd_hf_st_ndef(const char *Cmd) {
+static int CmdHFSTNdef(const char *Cmd) {
     int pwdlen = 0;
     uint8_t pwd[16] = {0};
     bool with_pwd = false;
@@ -489,7 +489,7 @@ static int cmd_hf_st_ndef(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int cmd_hf_st_protect(const char *Cmd) {
+static int CmdHFSTProtect(const char *Cmd) {
 
     int pwdlen = 0;
     uint8_t pwd[16] = {0};
@@ -644,7 +644,7 @@ static int cmd_hf_st_protect(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int cmd_hf_st_pwd(const char *Cmd) {
+static int CmdHFSTPwd(const char *Cmd) {
 
     int pwdlen = 0;
     uint8_t pwd[16] = {0};
@@ -787,7 +787,7 @@ static int cmd_hf_st_pwd(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int cmd_hf_st_list(const char *Cmd) {
+static int CmdHFSTList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf st", "7816");
     char args[128] = {0};
     if (strlen(Cmd) == 0) {
@@ -800,12 +800,12 @@ static int cmd_hf_st_list(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,           AlwaysAvailable, "This help"},
-    {"info",    cmd_hf_st_info,    IfPm3Iso14443a,  "Tag information"},
-    {"list",    cmd_hf_st_list,    AlwaysAvailable, "List ISO 14443A/7816 history"},
-    {"ndef",    cmd_hf_st_ndef,    AlwaysAvailable, "read NDEF file on tag"},
-    {"protect", cmd_hf_st_protect, IfPm3Iso14443a,  "change protection on tag"},
-    {"pwd",     cmd_hf_st_pwd,     IfPm3Iso14443a,  "change password on tag"},
-    {"sim",     cmd_hf_st_sim,     IfPm3Iso14443a,  "Fake ISO 14443A/ST tag"},
+    {"info",    CmdHFSTInfo,       IfPm3Iso14443a,  "Tag information"},
+    {"list",    CmdHFSTList,       AlwaysAvailable, "List ISO 14443A/7816 history"},
+    {"ndef",    CmdHFSTNdef,       AlwaysAvailable, "read NDEF file on tag"},
+    {"protect", CmdHFSTProtect,    IfPm3Iso14443a,  "change protection on tag"},
+    {"pwd",     CmdHFSTPwd,        IfPm3Iso14443a,  "change password on tag"},
+    {"sim",     CmdHFSTSim,        IfPm3Iso14443a,  "Fake ISO 14443A/ST tag"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -815,7 +815,7 @@ static int CmdHelp(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int CmdHF_ST(const char *Cmd) {
+int CmdHFST(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }

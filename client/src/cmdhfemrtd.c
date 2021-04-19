@@ -2075,7 +2075,7 @@ static bool validate_date(uint8_t *data, int datalen) {
     return !(day <= 0 || day > 31 || month <= 0 || month > 12);
 }
 
-static int cmd_hf_emrtd_dump(const char *Cmd) {
+static int CmdHFeMRTDDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf emrtd dump",
                   "Dump all files on an eMRTD",
@@ -2167,7 +2167,7 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
     return dumpHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC, (const char *)path);
 }
 
-static int cmd_hf_emrtd_info(const char *Cmd) {
+static int CmdHFeMRTDInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf emrtd info",
                   "Display info about an eMRTD",
@@ -2258,15 +2258,15 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
     }
 }
 
-static int cmd_hf_emrtd_list(const char *Cmd) {
+static int CmdHFeMRTDList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf emrtd", "7816");
 }
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,           AlwaysAvailable, "This help"},
-    {"dump",    cmd_hf_emrtd_dump, IfPm3Iso14443,   "Dump eMRTD files to binary files"},
-    {"info",    cmd_hf_emrtd_info, AlwaysAvailable, "Display info about an eMRTD"},
-    {"list",    cmd_hf_emrtd_list, AlwaysAvailable, "List ISO 14443A/7816 history"},
+    {"dump",    CmdHFeMRTDDump,    IfPm3Iso14443,   "Dump eMRTD files to binary files"},
+    {"info",    CmdHFeMRTDInfo,    AlwaysAvailable, "Display info about an eMRTD"},
+    {"list",    CmdHFeMRTDList,    AlwaysAvailable, "List ISO 14443A/7816 history"},
     {NULL, NULL, NULL, NULL}
 };
 
