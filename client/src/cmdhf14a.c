@@ -171,11 +171,19 @@ static uint16_t frameLength = 0;
 uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 
 static int CmdHF14AList(const char *Cmd) {
+    // leading space for when concatenated to other args
+    const char type[20] = " -t 14a";
+    if ((strcmp(Cmd, "-h") == 0) || (strcmp(Cmd, "--help") == 0)) {
+        PrintAndLogEx(NORMAL, _CYAN_("Alias for ") _RED_("trace list%s\n")
+            _CYAN_("See `trace list -h` for more options"), type);
+        return PM3_SUCCESS;
+    }
     char args[128] = {0};
     if (strlen(Cmd) == 0) {
-        snprintf(args, sizeof(args), "-t 14a");
+        snprintf(args, sizeof(args), type);
     } else {
         strncpy(args, Cmd, sizeof(args) - 1);
+        strncat(args, type, sizeof(args) - strlen(args));
     }
     return CmdTraceList(args);
 }
