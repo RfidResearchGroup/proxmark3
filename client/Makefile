@@ -15,6 +15,7 @@ OBJDIR = obj
 
 ifeq ($(platform),Darwin)
 	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt/lib/pkgconfig
+	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt5/lib/pkgconfig
 endif
 
 ###################
