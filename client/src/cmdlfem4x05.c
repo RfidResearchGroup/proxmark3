@@ -1533,7 +1533,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
         arg_int0("n", NULL, NULL, "steps to skip"),
         arg_int0("s", "start", "<us>", "start scan from delay (us)"),
         arg_int0("e", "end", "<us>", "end scan at delay (us)"),
-        arg_str0("p", "pwd", "", "password (00000000)"),
+        arg_str0("p", "pwd", "<hex>", "password (def 00000000)"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };

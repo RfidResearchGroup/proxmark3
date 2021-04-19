@@ -129,7 +129,7 @@ static int CmdAuto(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a", "all", ""),
+        arg_lit0("c", NULL, "Continue searching even after a first hit"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

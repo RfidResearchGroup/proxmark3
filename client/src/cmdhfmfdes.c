@@ -4820,7 +4820,7 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_litn("v",  "verbose",  0, 2, "show technical data"),
-        arg_str0("",    "aid",      "<aid>", "replace default aid for NDEF"),
+        arg_str0(NULL, "aid",      "<aid>", "replace default aid for NDEF"),
         arg_str0("k",  "key",      "<key>", "replace default key for NDEF"),
         arg_param_end
     };
@@ -4924,7 +4924,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_litn("v",  "verbose",  0, 2, "show technical data"),
-        arg_str0("",    "aid",      "<aid>", "replace default aid for MAD"),
+        arg_str0(NULL, "aid",      "<aid>", "replace default aid for MAD"),
         arg_str0("k",  "key",      "<key>", "replace default key for MAD"),
         arg_param_end
     };
