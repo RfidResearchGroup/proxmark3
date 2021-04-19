@@ -657,7 +657,7 @@ int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     char args[128] = {0};
     snprintf(args, sizeof(args), "-t %s ", protocol);
-    strncat(args, Cmd, sizeof(args) - strlen(args));
+    strncat(args, Cmd, sizeof(args) - strlen(args) - 1);
     return CmdTraceList(args);
 }
 
