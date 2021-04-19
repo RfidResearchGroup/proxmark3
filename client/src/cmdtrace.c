@@ -678,8 +678,11 @@ int CmdTraceList(const char *Cmd) {
     else if (strcmp(type, "cryptorf") == 0) protocol = PROTO_CRYPTORF;
     else if (strcmp(type, "raw") == 0)      protocol = -1;
 
-    if (use_buffer == false || (g_traceLen == 0)) {
+    if (use_buffer == false) {
         download_trace();
+    } else if (g_traceLen == 0) {
+        PrintAndLogEx(FAILED, "You requested a trace list in offline mode but there is no trace, consider using 'trace load' or removing parameter '1'");
+        return PM3_EINVARG;
     }
 
     PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%lu") " bytes)", g_traceLen);
