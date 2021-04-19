@@ -826,13 +826,7 @@ static int CmdSmartSetClock(const char *Cmd) {
 }
 
 static int CmdSmartList(const char *Cmd) {
-    char args[128] = {0};
-    if (strlen(Cmd) == 0) {
-        snprintf(args, sizeof(args), "-t 7816");
-    } else {
-        strncpy(args, Cmd, sizeof(args) - 1);
-    }
-    return CmdTraceList(args);
+    return CmdTraceListAlias(Cmd, "smart", "7816");
 }
 
 static void smart_brute_prim(void) {
@@ -1104,7 +1098,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",     CmdHelp,               AlwaysAvailable, "This help"},
-    {"list",     CmdSmartList,          IfPm3Smartcard,  "List ISO 7816 history"},
+    {"list",     CmdSmartList,          AlwaysAvailable, "List ISO 7816 history"},
     {"info",     CmdSmartInfo,          IfPm3Smartcard,  "Tag information"},
     {"reader",   CmdSmartReader,        IfPm3Smartcard,  "Act like an IS07816 reader"},
     {"raw",      CmdSmartRaw,           IfPm3Smartcard,  "Send raw hex data to tag"},

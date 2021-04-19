@@ -535,13 +535,7 @@ static void print_picopass_header(const picopass_hdr_t *hdr) {
 }
 
 static int CmdHFiClassList(const char *Cmd) {
-    char args[128] = {0};
-    if (strlen(Cmd) == 0) {
-        snprintf(args, sizeof(args), "-t iclass");
-    } else {
-        strncpy(args, Cmd, sizeof(args) - 1);
-    }
-    return CmdTraceList(args);
+    return CmdTraceListAlias(Cmd, "hf iclass", "iclass");
 }
 
 static int CmdHFiClassSniff(const char *Cmd) {

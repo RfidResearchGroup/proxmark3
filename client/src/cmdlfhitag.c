@@ -52,13 +52,7 @@ static size_t nbytes(size_t nbits) {
 */
 
 static int CmdLFHitagList(const char *Cmd) {
-    char args[128] = {0};
-    if (strlen(Cmd) == 0) {
-        snprintf(args, sizeof(args), "-t hitag2");
-    } else {
-        strncpy(args, Cmd, sizeof(args) - 1);
-    }
-    return CmdTraceList(args);
+    return CmdTraceListAlias(Cmd, "lf hitag", "hitag2");
 
 
     /*
@@ -940,7 +934,7 @@ void annotateHitagS(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
 static command_t CommandTable[] = {
     {"help",   CmdHelp,               AlwaysAvailable, "This help"},
     {"eload",  CmdLFHitagEload,       IfPm3Hitag,      "Load Hitag dump file into emulator memory"},
-    {"list",   CmdLFHitagList,        IfPm3Hitag,      "List Hitag trace history"},
+    {"list",   CmdLFHitagList,        AlwaysAvailable, "List Hitag trace history"},
     {"info",   CmdLFHitagInfo,        IfPm3Hitag,      "Tag information"},
     {"reader", CmdLFHitagReader,      IfPm3Hitag,      "Act like a Hitag reader"},
     {"sim",    CmdLFHitagSim,         IfPm3Hitag,      "Simulate Hitag transponder"},

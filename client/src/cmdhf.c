@@ -386,6 +386,10 @@ int CmdHFPlot(const char *Cmd) {
     return handle_hf_plot();
 }
 
+static int CmdHFList(const char *Cmd) {
+    return CmdTraceListAlias(Cmd, "hf", "raw");
+}
+
 static command_t CommandTable[] = {
 
     {"--------",    CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("High Frequency") " -----------------------"},
@@ -411,7 +415,7 @@ static command_t CommandTable[] = {
     {"waveshare",   CmdHFWaveshare,   AlwaysAvailable, "{ Waveshare NFC ePaper...             }"},
     {"-----------", CmdHelp,          AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},
-    {"list",        CmdTraceList,     AlwaysAvailable, "List protocol data in trace buffer"},
+    {"list",        CmdHFList,        AlwaysAvailable, "List protocol data in trace buffer"},
     {"plot",        CmdHFPlot,        IfPm3Hfplot,     "Plot signal"},
     {"tune",        CmdHFTune,        IfPm3Present,    "Continuously measure HF antenna tuning"},
     {"search",      CmdHFSearch,      AlwaysAvailable, "Search for known HF tags"},

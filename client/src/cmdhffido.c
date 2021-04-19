@@ -39,13 +39,7 @@
 static int CmdHelp(const char *Cmd);
 
 static int cmd_hf_fido_list(const char *Cmd) {
-    char args[128] = {0};
-    if (strlen(Cmd) == 0) {
-        snprintf(args, sizeof(args), "-t 14a");
-    } else {
-        strncpy(args, Cmd, sizeof(args) - 1);
-    }
-    return CmdTraceList(args);
+    return CmdTraceListAlias(Cmd, "hf fido", "14a");
 }
 
 static int cmd_hf_fido_info(const char *Cmd) {
@@ -941,7 +935,7 @@ static int cmd_hf_fido_2get_assertion(const char *cmd) {
 
 static command_t CommandTable[] = {
     {"help",      CmdHelp,                      AlwaysAvailable, "This help."},
-    {"list",      cmd_hf_fido_list,             IfPm3Iso14443a,  "List ISO 14443A history"},
+    {"list",      cmd_hf_fido_list,             AlwaysAvailable, "List ISO 14443A history"},
     {"info",      cmd_hf_fido_info,             IfPm3Iso14443a,  "Info about FIDO tag."},
     {"reg",       cmd_hf_fido_register,         IfPm3Iso14443a,  "FIDO U2F Registration Message."},
     {"auth",      cmd_hf_fido_authenticate,     IfPm3Iso14443a,  "FIDO U2F Authentication Message."},

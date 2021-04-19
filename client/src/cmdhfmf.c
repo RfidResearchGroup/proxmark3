@@ -5529,13 +5529,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
 }
 
 static int CmdHF14AMfList(const char *Cmd) {
-    char args[128] = {0};
-    if (strlen(Cmd) == 0) {
-        snprintf(args, sizeof(args), "-t mf");
-    } else {
-        strncpy(args, Cmd, sizeof(args) - 1);
-    }
-    return CmdTraceList(args);
+    return CmdTraceListAlias(Cmd, "hf mf", "mf");
 }
 
 static int CmdHf14AGen3UID(const char *Cmd) {

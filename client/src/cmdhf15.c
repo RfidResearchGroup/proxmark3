@@ -1434,13 +1434,7 @@ static int CmdHF15Dump(const char *Cmd) {
 }
 
 static int CmdHF15List(const char *Cmd) {
-    char args[128] = {0};
-    if (strlen(Cmd) == 0) {
-        snprintf(args, sizeof(args), "-t 15");
-    } else {
-        strncpy(args, Cmd, sizeof(args) - 1);
-    }
-    return CmdTraceList(args);
+    return CmdTraceListAlias(Cmd, "hf 15", "15");
 }
 
 static int CmdHF15Raw(const char *Cmd) {

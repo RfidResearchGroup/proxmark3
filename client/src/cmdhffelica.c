@@ -214,13 +214,7 @@ static bool add_last_IDm(uint8_t position, uint8_t *data) {
 }
 
 static int CmdHFFelicaList(const char *Cmd) {
-    char args[128] = {0};
-    if (strlen(Cmd) == 0) {
-        snprintf(args, sizeof(args), "-t felica");
-    } else {
-        strncpy(args, Cmd, sizeof(args) - 1);
-    }
-    return CmdTraceList(args);
+    return CmdTraceListAlias(Cmd, "hf felica", "felica");
 }
 
 int read_felica_uid(bool loop, bool verbose) {
