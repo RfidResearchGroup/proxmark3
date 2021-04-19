@@ -1428,7 +1428,7 @@ int CmdEM4x05Brute(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0("s", "start", "<pwd>", "Start bruteforce enumeration from this password value"),
-        arg_int0("n", "", "<digits>", "Stop after having found n candidates. Default: 0 => infinite"),
+        arg_int0("n", NULL, "<digits>", "Stop after having found n candidates. Default: 0 => infinite"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

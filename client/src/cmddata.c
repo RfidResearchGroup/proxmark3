@@ -1800,11 +1800,12 @@ static int CmdSamples(const char *Cmd) {
     CLIParserInit(&ctx, "data samples",
                   "Get raw samples for graph window (GraphBuffer) from device.\n"
                   "If 0, then get whole big buffer from device.",
-                  "data samples"
+                  "data samples\n"
+                  "data samples -n 10000"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("n", "", "<dec>", "num of samples (512 - 40000)"),
+        arg_int0("n", NULL, "<dec>", "num of samples (512 - 40000)"),
         arg_lit0("v", "verbose", "verbose"),
         arg_param_end
     };
