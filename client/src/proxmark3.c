@@ -21,6 +21,7 @@
 #include <signal.h>
 #endif
 #include <ctype.h>
+#include <libgen.h>        // basename
 
 #include "usart_defs.h"
 #include "util_posix.h"
@@ -745,15 +746,8 @@ int main(int argc, char *argv[]) {
 #endif // RL_STATE_READCMD
 #endif // HAVE_READLINE
 
-    char *exec_name = argv[0];
-#if defined(_WIN32)
-    for (int m = strlen(exec_name); m > 0; m--) {
-        if (exec_name[m] == '\\') {
-            exec_name += (++m);
-            break;
-        }
-    }
-#endif
+    char exec_name[100] = {0};
+    strncpy(exec_name, basename(argv[0]), sizeof(exec_name) - 1);
 
     bool flash_mode = false;
     bool flash_can_write_bl = false;
