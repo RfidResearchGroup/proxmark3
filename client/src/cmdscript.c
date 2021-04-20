@@ -236,13 +236,16 @@ static int CmdScriptList(const char *Cmd) {
 static int CmdScriptRun(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "script run",
-                  "Run a Lua, Cmd or Python script",
-                  "script run my_script.lua --my_script_args"
+                  "Run a Lua, Cmd or Python script. "
+                  "If no extension it will search for lua/cmd/py extensions\n"
+                  "Use `script list` to see available scripts",
+                  "script run my_script -h\n"
                  );
+
     void *argtable[] = {
         arg_param_begin,
-        arg_file1(NULL, NULL, "<filepath>", "script to run"),
-        arg_strx0(NULL, NULL, "<params>", "params for the script"),
+        arg_file1(NULL, NULL, "<filename>", "name of script to run"),
+        arg_strx0(NULL, NULL, "<params>", "script parameters"),
         arg_param_end
     };
 
@@ -252,7 +255,9 @@ static int CmdScriptRun(const char *Cmd) {
     int arg_len = 0;
     static uint8_t luascriptfile_idx = 0;
     sscanf(Cmd, "%127s%n %255[^\n\r]%n", preferredName, &name_len, arguments, &arg_len);
-    if ((strcmp(preferredName, "-h") == 0) || (strcmp(preferredName, "--help") == 0)) {
+    if ((strlen(preferredName) == 0) ||
+        (strcmp(preferredName, "-h") == 0) ||
+        (strcmp(preferredName, "--help") == 0)) {
         ctx->argtable = argtable;
         ctx->argtableLen = arg_getsize(argtable);
         CLIParserPrintHelp(ctx);
@@ -260,11 +265,6 @@ static int CmdScriptRun(const char *Cmd) {
         return PM3_ESOFT;
     }
     CLIParserFree(ctx);
-    if (strlen(preferredName) == 0) {
-        PrintAndLogEx(FAILED, "no script name provided");
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`script list`") " to see available scripts");
-        return PM3_EINVARG;
-    }
     char *extension_chk;
     extension_chk = str_dup(preferredName);
     str_lower(extension_chk);
