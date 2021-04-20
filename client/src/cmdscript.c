@@ -237,30 +237,29 @@ static int CmdScriptRun(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "script run",
                   "Run a Lua, Cmd or Python script",
-                  "script run my_script.lua -- --my_script_args"
+                  "script run my_script.lua --my_script_args"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_file1(NULL, NULL, "<filepath>", "script to run"),
-        arg_rem("--", "separator for script params"),
         arg_strx0(NULL, NULL, "<params>", "params for the script"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     char preferredName[128] = {0};
     char arguments[256] = {0};
     int name_len = 0;
     int arg_len = 0;
     static uint8_t luascriptfile_idx = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)preferredName, sizeof(preferredName), &name_len);
-// this one removes all spaces
-//    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)arguments, sizeof(arguments), &arg_len);
-    CLIParserFree(ctx);
-    sscanf(Cmd + name_len + 1, "-- %255[^\n\r]%n", arguments, &arg_len);
-    if (arg_len == 0) {
-        sscanf(Cmd + name_len + 1, "%255[^\n\r]%n", arguments, &arg_len);
+    sscanf(Cmd, "%127s%n %255[^\n\r]%n", preferredName, &name_len, arguments, &arg_len);
+    if ((strcmp(preferredName, "-h") == 0) || (strcmp(preferredName, "--help") == 0)) {
+        ctx->argtable = argtable;
+        ctx->argtableLen = arg_getsize(argtable);
+        CLIParserPrintHelp(ctx);
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
     }
+    CLIParserFree(ctx);
     if (strlen(preferredName) == 0) {
         PrintAndLogEx(FAILED, "no script name provided");
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`script list`") " to see available scripts");
