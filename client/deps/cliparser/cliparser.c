@@ -47,6 +47,55 @@ int CLIParserInit(CLIParserContext **ctx, const char *vprogramName, const char *
     return 0;
 }
 
+void CLIParserPrintHelp(CLIParserContext *ctx) {
+    if (ctx->programHint)
+        PrintAndLogEx(NORMAL, "\n"_DescriptionColor_("%s"), ctx->programHint);
+
+    PrintAndLogEx(NORMAL, "\n"_SectionTagColor_("usage:"));
+    PrintAndLogEx(NORMAL, "    "_CommandColor_("%s")NOLF, ctx->programName);
+    arg_print_syntax(stdout, ctx->argtable, "\n\n");
+
+    PrintAndLogEx(NORMAL, _SectionTagColor_("options:"));
+
+    arg_print_glossary(stdout, ctx->argtable, "    "_ArgColor_("%-30s")" "_ArgHelpColor_("%s")"\n");
+
+    PrintAndLogEx(NORMAL, "");
+    if (ctx->programHelp) {
+        PrintAndLogEx(NORMAL, _SectionTagColor_("examples/notes:"));
+        char *buf = NULL;
+        int idx = 0;
+        buf = realloc(buf, strlen(ctx->programHelp) + 1); // more then enough as we are splitting
+
+        char *p2; // pointer to split example from comment.
+        int egWidth = 30;
+        for (int i = 0; i <= strlen(ctx->programHelp); i++) {  // <= so to get string terminator.
+            buf[idx++] = ctx->programHelp[i];
+            if ((ctx->programHelp[i] == '\n') || (ctx->programHelp[i] == 0x00)) {
+                buf[idx - 1] = 0x00;
+                p2 = strstr(buf, "->"); // See if the example has a comment.
+                if (p2 != NULL) {
+                    *(p2 - 1) = 0x00;
+
+                    if (strlen(buf) > 28)
+                        egWidth = strlen(buf) + 5;
+                    else
+                        egWidth = 30;
+
+                    PrintAndLogEx(NORMAL, "    "_ExampleColor_("%-*s")" %s", egWidth, buf, p2);
+                } else {
+                    PrintAndLogEx(NORMAL, "    "_ExampleColor_("%-*s"), egWidth, buf);
+                }
+                idx = 0;
+            }
+        }
+
+        PrintAndLogEx(NORMAL, "");
+        free(buf);
+    }
+
+    fflush(stdout);
+}
+
 int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargtable[], size_t vargtableLen, bool allowEmptyExec) {
     int nerrors;
 
@@ -65,52 +114,7 @@ int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargta
 
     /* special case: '--help' takes precedence over error reporting */
     if ((argc < 2 && !allowEmptyExec) || ((struct arg_lit *)(ctx->argtable)[0])->count > 0) { // help must be the first record
-        if (ctx->programHint)
-            PrintAndLogEx(NORMAL, "\n"_DescriptionColor_("%s"), ctx->programHint);
-
-        PrintAndLogEx(NORMAL, "\n"_SectionTagColor_("usage:"));
-        PrintAndLogEx(NORMAL, "    "_CommandColor_("%s")NOLF, ctx->programName);
-        arg_print_syntax(stdout, ctx->argtable, "\n\n");
-
-        PrintAndLogEx(NORMAL, _SectionTagColor_("options:"));
-
-        arg_print_glossary(stdout, ctx->argtable, "    "_ArgColor_("%-30s")" "_ArgHelpColor_("%s")"\n");
-
-        PrintAndLogEx(NORMAL, "");
-        if (ctx->programHelp) {
-            PrintAndLogEx(NORMAL, _SectionTagColor_("examples/notes:"));
-            char *buf = NULL;
-            int idx = 0;
-            buf = realloc(buf, strlen(ctx->programHelp) + 1); // more then enough as we are splitting
-
-            char *p2; // pointer to split example from comment.
-            int egWidth = 30;
-            for (int i = 0; i <= strlen(ctx->programHelp); i++) {  // <= so to get string terminator.
-                buf[idx++] = ctx->programHelp[i];
-                if ((ctx->programHelp[i] == '\n') || (ctx->programHelp[i] == 0x00)) {
-                    buf[idx - 1] = 0x00;
-                    p2 = strstr(buf, "->"); // See if the example has a comment.
-                    if (p2 != NULL) {
-                        *(p2 - 1) = 0x00;
-
-                        if (strlen(buf) > 28)
-                            egWidth = strlen(buf) + 5;
-                        else
-                            egWidth = 30;
-
-                        PrintAndLogEx(NORMAL, "    "_ExampleColor_("%-*s")" %s", egWidth, buf, p2);
-                    } else {
-                        PrintAndLogEx(NORMAL, "    "_ExampleColor_("%-*s"), egWidth, buf);
-                    }
-                    idx = 0;
-                }
-            }
-
-            PrintAndLogEx(NORMAL, "");
-            free(buf);
-        }
-
-        fflush(stdout);
+        CLIParserPrintHelp(ctx);
         return 1;
     }
 
@@ -231,12 +235,37 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     return res;
 }
 
+int CLIParamBinToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen) {
+    *datalen = 0;
+
+    int tmplen = 0;
+    uint8_t tmpstr[(256 * 2) + 1] = {0};
+
+    // concat all strings in argstr into tmpstr[]
+    //
+    int res = CLIParamStrToBuf(argstr, tmpstr, sizeof(tmpstr), &tmplen);
+    if (res || tmplen == 0) {
+        return res;
+    }
+
+    res = param_getbin_to_eol((char *)tmpstr, 0, data, maxdatalen, datalen);
+    switch (res) {
+        case 1:
+            PrintAndLogEx(ERR, "Parameter error: Invalid BINARY value\n");
+            break;
+        case 2:
+            PrintAndLogEx(ERR, "Parameter error: parameter too large\n");
+            break;
+    }
+    return res;
+}
+
 int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen) {
     *datalen = 0;
     if (!argstr->count)
         return 0;
 
-    uint8_t tmpstr[(256 * 2) + 1] = {0};
+    uint8_t tmpstr[(512 * 2) + 1] = {0};
     int ibuf = 0;
 
     for (int i = 0; i < argstr->count; i++) {

@@ -96,7 +96,17 @@ static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, u
 }
 
 static int CmdT55xxCloneHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx clonehelp",
+                  "Display a list of available commands for cloning specific techs on T5xx tags",
+                  "lf t55xx clonehelp"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     PrintAndLogEx(NORMAL, "For cloning specific techs on T55xx tags, see commands available in corresponding LF sub-menus, e.g.:");
     PrintAndLogEx(NORMAL, _GREEN_("lf awid clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf destron clone"));
@@ -440,8 +450,8 @@ static int CmdT55xxSetConfig(const char *Cmd) {
         arg_lit0(NULL, "PSK2",  "set demodulation PSK 2"),
         arg_lit0(NULL, "PSK3",  "set demodulation PSK 3"),
         arg_lit0(NULL, "NRZ",   "set demodulation NRZ"),
-        arg_lit0(NULL, "BI",    "set demodulation Biphase"),        
-        arg_lit0(NULL, "BIA",   "set demodulation Diphase (inverted biphase)"),                        
+        arg_lit0(NULL, "BI",    "set demodulation Biphase"),
+        arg_lit0(NULL, "BIA",   "set demodulation Diphase (inverted biphase)"),
         arg_lit0("i", "inv", "set/reset data signal inversion"),
         arg_lit0(NULL, "q5", "set/reset as Q5/T5555 chip instead of T55x7"),
         arg_lit0(NULL, "st", "set/reset Sequence Terminator on"),
@@ -458,11 +468,13 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     bool mods[12];
     int verify_mods = 0;
     while (idx - 1 < sizeof(mods)) {
-       mods[idx - 1] = arg_get_lit(ctx, idx);
-       verify_mods += mods[idx - 1];
-       idx++;
+        mods[idx - 1] = arg_get_lit(ctx, idx);
+        verify_mods += mods[idx - 1];
+        idx++;
     }
 
+    // Not these flags are used to Toggle the values.
+    // If not flag then dont set or reset, leave as is since the call may just be be setting a different value.
     bool invert = arg_get_lit(ctx, idx++);
     bool use_q5 = arg_get_lit(ctx, idx++);
     bool use_st = arg_get_lit(ctx, idx++);
@@ -504,8 +516,9 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     }
 
     // validate user specified bitrate
-    uint8_t rates[9] = {8, 16, 32, 40, 50, 64, 100, 128, 0};
+
     if (bitrate != -1) {
+        uint8_t rates[9] = {8, 16, 32, 40, 50, 64, 100, 128, 0};
         uint8_t i = 0;
         for (; i < ARRAYLEN(rates); i++) {
             if (rates[i] == bitrate) {
@@ -514,7 +527,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
                 break;
             }
         }
-        if (i == 9){
+        if (i == 9) {
             PrintAndLogEx(FAILED, "Error select a valid bitrate");
             return PM3_EINVARG;
         }
@@ -525,17 +538,21 @@ static int CmdT55xxSetConfig(const char *Cmd) {
         config.offset = offset;
     }
 
-    // validate user specific T5555 / Q5 
-    config.Q5 = use_q5;
+    // validate user specific T5555 / Q5 - use the flag to toggle between T5577 and Q5
+    config.Q5 ^= use_q5;
 
     // validate user specific sequence terminator
-    config.ST = use_st;
+    // if use_st flag was supplied, then toggle and update the config block0; if not supplied skip the config block0 update.
     if (use_st) {
+        config.ST ^= use_st;
         config.block0 = ((config.block0 & ~(0x8)) | (config.ST << 3));
     }
 
     // validate user specific invert
-    config.inverted = invert;
+    // In theory this should also be set in the config block 0; butit requries the extend mode config, which will change other things.
+    // as such, leave in user config for decoding the data until a full fix can be added.
+    // use the flag to toggle if invert is on or off.
+    config.inverted ^= invert;
 
     // validate user specific downlink mode
     uint8_t downlink_mode = config.downlink_mode;
@@ -551,7 +568,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     config.downlink_mode = downlink_mode;
 
     // validate user specific modulation
-    if (mods[0]){
+    if (mods[0]) {
         config.modulation = DEMOD_FSK;
     } else if (mods[1]) {
         config.modulation = DEMOD_FSK1;
@@ -581,7 +598,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     } else if (mods[11]) {
         config.modulation = DEMOD_BIa;
         config.inverted = 1;
-    }   
+    }
 
     config.block0 = ((config.block0 & ~(0x1f000)) | (config.modulation << 12));
 
@@ -637,10 +654,10 @@ static int CmdT55xxReadBlock(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf t55xx read",
                   "Read T55xx block data.  This commands defaults to page 0.\n\n"
-                   _RED_("           * * * WARNING * * *") "\n"
+                  _RED_("           * * * WARNING * * *") "\n"
                   _CYAN_("Use of read with password on a tag not configured") "\n"
                   _CYAN_("for a password can damage the tag") "\n"
-                   _RED_("           * * * * * * * * * *"),
+                  _RED_("           * * * * * * * * * *"),
                   "lf t55xx read -b 0                   --> read data from block 0\n"
                   "lf t55xx read -b 0 --pwd 01020304    --> read data from block 0, pwd 01020304\n"
                   "lf t55xx read -b 0 --pwd 01020304 -o --> read data from block 0, pwd 01020304, override\n"
@@ -651,7 +668,7 @@ static int CmdT55xxReadBlock(const char *Cmd) {
         arg_param_begin,
         arg_int1("b", "blk", "<0-7>", "block number to read"),
         arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
-        arg_lit0("o", "override", "override safety check"),    
+        arg_lit0("o", "override", "override safety check"),
         arg_lit0(NULL, "pg1", "read page 1"),
     };
     uint8_t idx = 5;
@@ -915,10 +932,7 @@ static int CmdT55xxDetect(const char *Cmd) {
     else // This will set the default to user all d/l modes which will cover the ra flag as well.
         try_all_dl_modes = true;
 
-
-    bool try_with_pwd = false;
     bool found = false;
-    bool usewake = false;
 
     // Setup the 90ms time value to sleep for after the wake, to allow delay init to complete (~70ms)
     struct timespec sleepperiod;
@@ -937,6 +951,8 @@ static int CmdT55xxDetect(const char *Cmd) {
         char wakecmd[20] = { 0x00 };
         sprintf(wakecmd, "-p %08" PRIx64, password);
 
+        bool usewake = false;
+        bool try_with_pwd = false;
         // do ... while not found and not yet tried with wake (for AOR or Init Delay)
         do {
             // do ... while to check without password then loop back if password supplied
@@ -1121,7 +1137,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
             // allow undo
             save_restoreGB(GRAPH_SAVE);
             // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
-            CmdLtrim("160");
+            CmdLtrim("-i 160");
             if ((PSKDemod(0, 0, 6, false) == PM3_SUCCESS) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                 tests[hits].modulation = DEMOD_PSK1;
                 tests[hits].bitrate = bitRate;
@@ -1674,7 +1690,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
     // 1 (help) + 1 (one user specified params) + (5 T55XX_DLMODE_SINGLE)
     void *argtable[2 + 5] = {
         arg_param_begin,
-        arg_lit0("1", NULL, "extract using data from graphbuffer"),        
+        arg_lit0("1", NULL, "extract using data from graphbuffer"),
     };
     uint8_t idx = 2;
     arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_SINGLE, config.downlink_mode);
@@ -1725,7 +1741,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         }
     }
 
-    if (DemodBufferLen == 0){
+    if (DemodBufferLen == 0) {
         return PM3_ESOFT;
     }
 
@@ -2296,13 +2312,13 @@ static int CmdT55xxDump(const char *Cmd) {
 static int CmdT55xxRestore(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf t55xx restore",
-                  "This command restores T55xx card page 0/1 n blocks",
+                  "Restore T55xx card page 0/1 n blocks from (bin/eml/json) dump file",
                   "lf t55xx restore -f lf-t55xx-00148040-dump.bin"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "filename", "<fn>", "filename of the dump file (bin|eml)"),
+        arg_str0("f", "file", "<fn>", "filename of dump file"),
         arg_str0("p", "pwd", "<hex>", "password if target card has password set (4 hex bytes)"),
         arg_param_end
     };
@@ -2330,94 +2346,106 @@ static int CmdT55xxRestore(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    char ext[FILE_PATH_SIZE] = {0};
-    uint32_t data[12] = {0};
-    size_t datalen = 0;
+    size_t dlen = 0;
+    uint8_t *dump = calloc(T55x7_BLOCK_COUNT * 4, sizeof(uint8_t));
+    if (dump == NULL) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
 
-    int retval = PM3_ESOFT;
-    if (fnlen > 4) { // Holds extension [.bin|.eml]
-        memcpy(ext, &filename[fnlen - 4], 4);
-        ext[5] = 0x00;
-
-        //  check if valid file extension and attempt to load data
-        if (memcmp(ext, ".bin", 4) == 0) {
-            filename[fnlen - 4] = 0x00;
-            retval = loadFile(filename, ".bin", data, sizeof(data), &datalen);
-
-        } else if (memcmp(ext, ".eml", 4) == 0) {
-            filename[fnlen - 4] = 0x00;
-            datalen = 12;
-            retval = loadFileEML(filename, (uint8_t *)data, &datalen);
-
-        } else {
-            PrintAndLogEx(WARNING, "\nWarning: invalid dump filename "_YELLOW_("%s")" to restore!\n", filename);
+    DumpFileType_t dftype = getfiletype(filename);
+    switch (dftype) {
+        case BIN: {
+            res = loadFile_safe(filename, ".bin", (void **)&dump, &dlen);
+            break;
+        }
+        case EML: {
+            res = loadFileEML_safe(filename, (void **)&dump, &dlen);
+            break;
+        }
+        case JSON: {
+            res = loadFileJSON(filename, dump, T55x7_BLOCK_COUNT * 4, &dlen, NULL);
+            break;
+        }
+        case DICTIONARY: {
+            PrintAndLogEx(ERR, "Error: Only BIN/EML/JSON formats allowed");
+            free(dump);
+            return PM3_EINVARG;
         }
     }
 
-    if (retval != PM3_SUCCESS) { 
-        return retval;
+    //sanity checks of file processing
+    if (res != PM3_SUCCESS) {
+        free(dump);
+        return res;
     }
 
-    if (datalen == T55x7_BLOCK_COUNT * 4) {
-        // 12 blocks * 4 bytes per block
-        
-        // this fct creats strings to call "lf t55 write" command.
-        //
-        //
-        uint8_t downlink_mode;
-        char wcmd[100];
-        char pwdopt [14] = {0}; // p XXXXXXXX
+    if (dlen != T55x7_BLOCK_COUNT * 4) {
+        free(dump);
+        PrintAndLogEx(FAILED, "wrong length of dump file. Expected 48 bytes, got %zu", dlen);
+        return PM3_EFILE;
+    }
 
-        if (usepwd)
-            snprintf(pwdopt, sizeof(pwdopt), "-p %08X", password);
+    // 12 blocks * 4 bytes per block
+    // this part creates strings to call "lf t55 write" command.
+    PrintAndLogEx(INFO, "Starting to write...");
 
-        uint8_t idx;
-        // Restore endien for writing to card
-        for (idx = 0; idx < 12; idx++) {
-            data[idx] = BSWAP_32(data[idx]);
-        }
+    uint8_t downlink_mode;
+    char wcmd[100];
+    char pwdopt [14] = {0}; // p XXXXXXXX
 
-        // Have data ready, lets write
-        // Order
-        //    write blocks 1..7 page 0
-        //    write blocks 1..3 page 1
-        //    update downlink mode (if needed) and write b 0
-        downlink_mode = 0;
-        if ((((data[11] >> 28) & 0xf) == 6) || (((data[11] >> 28) & 0xf) == 9))
-            downlink_mode = (data[11] >> 10) & 3;
+    if (usepwd)
+        snprintf(pwdopt, sizeof(pwdopt), "-p %08X", password);
 
-        // write out blocks 1-7 page 0
-        for (idx = 1; idx <= 7; idx++) {
-            snprintf(wcmd, sizeof(wcmd), "-b %d -d %08X %s", idx, data[idx], pwdopt);
+    uint32_t *data = (uint32_t *) dump;
+    uint8_t idx;
+    // Restore endien for writing to card
+    for (idx = 0; idx < 12; idx++) {
+        data[idx] = BSWAP_32(data[idx]);
+    }
 
-            if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
-                PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
-            }
-        }
+    // Have data ready, lets write
+    // Order
+    //    write blocks 1..7 page 0
+    //    write blocks 1..3 page 1
+    //    update downlink mode (if needed) and write b 0
+    downlink_mode = 0;
+    if ((((data[11] >> 28) & 0xf) == 6) || (((data[11] >> 28) & 0xf) == 9))
+        downlink_mode = (data[11] >> 10) & 3;
 
-        // if password was set on the "blank" update as we may have just changed it
-        if (usepwd) {
-            snprintf(pwdopt, sizeof(pwdopt), "-p %08X", data[7]);
-        }
+    // write out blocks 1-7 page 0
+    for (idx = 1; idx <= 7; idx++) {
+        snprintf(wcmd, sizeof(wcmd), "-b %d -d %08X %s", idx, data[idx], pwdopt);
 
-        // write out blocks 1-3 page 1
-        for (idx = 9; idx <= 11; idx++) {
-            snprintf(wcmd, sizeof(wcmd), "-b %d --pg1 -d %08X %s", idx - 8, data[idx], pwdopt);
-
-            if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
-                PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
-            }
-        }
-
-        // Update downlink mode for the page 0 config write.
-        config.downlink_mode = downlink_mode;
-
-        // Write the page 0 config
-        snprintf(wcmd, sizeof(wcmd), "-b 0 -d %08X %s", data[0], pwdopt);
         if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Warning: error writing blk 0");
+            PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
         }
     }
+
+    // if password was set on the "blank" update as we may have just changed it
+    if (usepwd) {
+        snprintf(pwdopt, sizeof(pwdopt), "-p %08X", data[7]);
+    }
+
+    // write out blocks 1-3 page 1
+    for (idx = 9; idx <= 11; idx++) {
+        snprintf(wcmd, sizeof(wcmd), "-b %d --pg1 -d %08X %s", idx - 8, data[idx], pwdopt);
+
+        if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
+        }
+    }
+
+    // Update downlink mode for the page 0 config write.
+    config.downlink_mode = downlink_mode;
+
+    // Write the page 0 config
+    snprintf(wcmd, sizeof(wcmd), "-b 0 -d %08X %s", data[0], pwdopt);
+    if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Warning: error writing blk 0");
+    }
+    free(dump);
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 /*
@@ -2540,7 +2568,7 @@ char *GetBitRateStr(uint32_t id, bool xmode) {
 
     char *retStr = buf;
     if (xmode) { //xmode bitrate calc is same as em4x05 calc
-        snprintf(retStr, sizeof(buf), "%u - RF/%d", id, EM4x05_GET_BITRATE(id));
+        snprintf(retStr, sizeof(buf), "%u - RF/%u", id, EM4x05_GET_BITRATE(id));
     } else {
         switch (id) {
             case 0:
@@ -2811,11 +2839,11 @@ static int CmdResetRead(const char *Cmd) {
                  );
 
     // 1 (help) + 0(one user specified params) + (5 T55XX_DLMODE_SINGLE)
-    void *argtable[0 + 5] = {
+    void *argtable[2 + 5] = {
         arg_param_begin,
         arg_lit0("1", NULL, "extract using data from graphbuffer"),
     };
-    uint8_t idx = 1;
+    uint8_t idx = 2;
     arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_SINGLE, config.downlink_mode);
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
@@ -3006,7 +3034,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     void *argtable[4 + 6] = {
         arg_param_begin,
         arg_lit0("m", "fm", "use dictionary from flash memory (RDV4)"),
-        arg_str0("f", "file", "<filename>", "file name"),
+        arg_str0("f", "file", "<fn>", "file name"),
         arg_str0(NULL, "em", "<hex>", "EM4100 ID (5 hex bytes)"),
     };
     uint8_t idx = 4;
@@ -3051,23 +3079,24 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t downlink_mode = config.downlink_mode;
-    if (r0)
-        downlink_mode = refFixedBit;
-    else if (r1)
+    uint8_t downlink_mode = refFixedBit; // Password checks should always start with default/fixed bit unluess requested by user for specific mode
+    //  if (r0 || ra) // ra should start downlink mode ad fixed bit to loop through all modes correctly
+    //      downlink_mode = refFixedBit;
+    //  else
+    if (r1)
         downlink_mode = refLongLeading;
     else if (r2)
         downlink_mode = refLeading0;
     else if (r3)
         downlink_mode = ref1of4;
 
-    bool use_pwd_file = false;
+    bool use_pwd_file = true; // Assume we are going to use a file, unless turned off later.
+
     if (strlen(filename) == 0) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
-        use_pwd_file = true;
     }
 
-    PrintAndLogEx(INFO, "press " _GREEN_("'enter'") " to cancel the command");
+    PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
     PrintAndLogEx(NORMAL, "");
     /*
     // block 7,  page1 = false, usepwd = false, override = false, pwd = 00000000
@@ -3085,6 +3114,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     uint8_t flags = downlink_mode << 3;
 
     if (from_flash) {
+        use_pwd_file = false; // turn of local password file since we are checking from flash.
         clearCommandBuffer();
         SendCommandNG(CMD_LF_T55XX_CHK_PWDS, &flags, sizeof(flags));
         PacketResponseNG resp;
@@ -3162,7 +3192,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        PrintAndLogEx(INFO, "press " _GREEN_("'enter'") " to cancel the command");
+        PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
 
         for (uint32_t c = 0; c < keycount && found == false; ++c) {
 
@@ -3181,17 +3211,16 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
             PrintAndLogEx(INFO, "testing %08"PRIX32, curr_password);
             for (dl_mode = downlink_mode; dl_mode <= 3; dl_mode++) {
-
-                if (!AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr_password, dl_mode)) {
-                    continue;
+                // If aquire fails, then we still need to check if we are only trying a single downlink mode.
+                // If we continue on fail, it will skip that test and try the next downlink mode; thus slowing down the check
+                // when on a single downlink mode is wanted.
+                if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr_password, dl_mode)) {
+                    found = t55xxTryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, curr_password);
+                    if (found) {
+                        PrintAndLogEx(SUCCESS, "found valid password: [ " _GREEN_("%08"PRIX32) " ]", curr_password);
+                        break;
+                    }
                 }
-
-                found = t55xxTryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, curr_password);
-                if (found) {
-                    PrintAndLogEx(SUCCESS, "found valid password: [ " _GREEN_("%08"PRIX32) " ]", curr_password);
-                    break;
-                }
-
                 if (ra == false) // Exit loop if not trying all downlink modes
                     break;
             }
@@ -3257,10 +3286,12 @@ static int CmdT55xxBruteForce(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t downlink_mode = config.downlink_mode;
-    if (r0)
-        downlink_mode = refFixedBit;
-    else if (r1)
+    uint8_t downlink_mode = refFixedBit; // if no downlink mode suppliled use fixed bit/default as the is the most common
+    // Since we dont know the password the config.downlink mode is of little value.
+//   if (r0 || ra) // if try all (ra) then start at fixed bit for correct try all
+//       downlink_mode = refFixedBit;
+//    else
+    if (r1)
         downlink_mode = refLongLeading;
     else if (r2)
         downlink_mode = refLeading0;
@@ -3275,7 +3306,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, "press " _GREEN_("'enter'") " to cancel the command");
+    PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
     PrintAndLogEx(INFO, "Search password range [%08X -> %08X]", start_password, end_password);
 
     uint64_t t1 = msclock();
@@ -3383,7 +3414,7 @@ static int CmdT55xxRecoverPW(const char *Cmd) {
     else if (r3)
         downlink_mode = ref1of4;
 
-    PrintAndLogEx(NORMAL, "press " _GREEN_("'enter'") " to cancel the command");
+    PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
 
     int bit = 0;
     uint32_t curr_password = 0x0;
@@ -3546,7 +3577,7 @@ bool tryDetectP1(bool getData) {
         // allow undo
         // save_restoreGB(GRAPH_SAVE);
         // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
-        //CmdLtrim("160");
+        //CmdLtrim("-i 160");
         if ((PSKDemod(0, 0, 6, false) == PM3_SUCCESS) &&
                 preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
                 (DemodBufferLen == 32 || DemodBufferLen == 64)) {
@@ -3928,6 +3959,15 @@ static int CmdT55xxSniff(const char *Cmd) {
     int opt_width0 = arg_get_int_def(ctx, 4, -1);
     CLIParserFree(ctx);
 
+    if (opt_width0 == 0) {
+        PrintAndLogEx(ERR, "Must call with --zero larger than 0");
+        return PM3_EINVARG;
+    }
+    if ((opt_width0 == 0) || (opt_width1 == 0)) {
+        PrintAndLogEx(ERR, "Must call with --one larger than 0");
+        return PM3_EINVARG;
+    }
+
     if (opt_width0 > 0  && opt_width1 == -1) {
         PrintAndLogEx(ERR, _RED_("Missing sample width for ONE"));
         return PM3_EINVARG;
@@ -3935,15 +3975,6 @@ static int CmdT55xxSniff(const char *Cmd) {
 
     if (opt_width1 > 0 && opt_width0 == -1) {
         PrintAndLogEx(ERR, _RED_("Missing sample width for ZERO"));
-        return PM3_EINVARG;
-    }
-
-    if (opt_width0 == 0) {
-        PrintAndLogEx(ERR, "Must call with --zero larger than 0");
-        return PM3_EINVARG;
-    }
-    if ((opt_width0 == 0) || (opt_width1 == 0)) {
-        PrintAndLogEx(ERR, "Must call with --one larger than 0");
         return PM3_EINVARG;
     }
 
@@ -3984,18 +4015,13 @@ static int CmdT55xxSniff(const char *Cmd) {
                                                              00 01 10 11
     */
 
-    bool have_data = false;
     uint8_t page, blockAddr;
-    uint16_t dataLen = 0;
     size_t idx = 0;
     uint32_t usedPassword, blockData;
-    int pulseSamples = 0;
-    int pulseIdx = 0;
-    int minWidth = 1000;
-    int maxWidth = 0;
-    char modeText [100];
-    char pwdText  [100];
-    char dataText [100];
+    int pulseSamples = 0, pulseIdx = 0;
+    char modeText[100];
+    char pwdText[100];
+    char dataText[100];
     int pulseBuffer[80] = { 0 }; // max should be 73 +/- - Holds Pulse widths
     char data[80]; //  linked to pulseBuffer. - Holds 0/1 from pulse widths
 
@@ -4015,11 +4041,11 @@ static int CmdT55xxSniff(const char *Cmd) {
     // loop though sample buffer
     while (idx < GraphTraceLen) {
 
-        minWidth = 1000;
-        maxWidth = 0;
-        dataLen = 0;
+        int minWidth = 1000;
+        int maxWidth = 0;
+        uint16_t dataLen = 0;
         data[0] = 0;
-        have_data = false;
+        bool have_data = false;
         sprintf(modeText, "Default");
         sprintf(pwdText, " ");
         sprintf(dataText, " ");
@@ -4101,7 +4127,6 @@ static int CmdT55xxSniff(const char *Cmd) {
                 //           printf ("Fixed | Data end of 80 samples | offset : %llu - datalen %-2d - data : %s  --- - Bit 0 width : %d\n",idx,dataLen,data,pulseBuffer[0]);
 
                 if (data[0] == '0') { // should never get here..
-                    dataLen = 0;
                     data[0] = 0;
                 } else {
 

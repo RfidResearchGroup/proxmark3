@@ -183,45 +183,54 @@ void print_hex(const uint8_t *data, const size_t len) {
 }
 
 void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
-    if (data == NULL || len == 0) return;
+    if (data == NULL || len == 0 || breaks == 0) return;
 
-    int rownum = 0;
-    PrintAndLogEx(NORMAL, "[%02d] | " NOLF, rownum);
-    for (size_t i = 0; i < len; ++i) {
-
-        PrintAndLogEx(NORMAL, "%02X " NOLF, data[i]);
-
-        // check if a line break is needed
-        if (breaks > 0 && !((i + 1) % breaks) && (i + 1 < len)) {
-            ++rownum;
-            PrintAndLogEx(NORMAL, "\n[%02d] | " NOLF, rownum);
+    uint16_t rownum = 0;
+    int i;
+    for (i = 0; i < len; i += breaks, rownum++) {
+        if (len - i < breaks) { // incomplete block, will be treated out of the loop
+            break;
         }
+        PrintAndLogEx(INFO, "%02u | %s", rownum, sprint_hex_ascii(data + i, breaks));
     }
-    PrintAndLogEx(NORMAL, "");
+
+    // the last odd bytes
+    uint8_t mod = len % breaks;
+
+    if (mod) {
+        char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
+        memset(buf, 0, sizeof(buf));
+        hex_to_buffer((uint8_t *)buf, data + i, mod, (sizeof(buf) - 1), 0, 1, true);
+
+        // add the spaces...
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%*s", ((breaks - mod) * 3), " ");
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, mod));
+        PrintAndLogEx(INFO, "%02u | %s", rownum, buf);
+    }
 }
 
-void print_buffer(const uint8_t *data, const size_t len, int level) {
+static void print_buffer_ex(const uint8_t *data, const size_t len, int level, uint8_t breaks) {
 
     if (len < 1)
         return;
 
     char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
     int i;
-    for (i = 0; i < len; i += 16) {
-        if (len - i < 16) { // incomplete block, will be treated out of the loop
+    for (i = 0; i < len; i += breaks) {
+        if (len - i < breaks) { // incomplete block, will be treated out of the loop
             break;
         }
         // (16 * 3) + (16) +  + 1
         memset(buf, 0, sizeof(buf));
         sprintf(buf, "%*s%02x: ", (level * 4), " ", i);
 
-        hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, 16, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);
-        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, 16));
+        hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, breaks, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, breaks));
         PrintAndLogEx(INFO, "%s", buf);
     }
 
     // the last odd bytes
-    uint8_t mod = len % 16;
+    uint8_t mod = len % breaks;
 
     if (mod) {
         memset(buf, 0, sizeof(buf));
@@ -229,11 +238,15 @@ void print_buffer(const uint8_t *data, const size_t len, int level) {
         hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, mod, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);
 
         // add the spaces...
-        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%*s", ((16 - mod) * 3), " ");
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%*s", ((breaks - mod) * 3), " ");
 
         snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, mod));
         PrintAndLogEx(INFO, "%s", buf);
     }
+}
+
+void print_buffer(const uint8_t *data, const size_t len, int level) {
+    print_buffer_ex(data, len, level, 16);
 }
 
 void print_blocks(uint32_t *data, size_t len) {
@@ -272,36 +285,33 @@ char *sprint_hex_inrow_spaces(const uint8_t *data, const size_t len, size_t spac
 char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks) {
 
     // make sure we don't go beyond our char array memory
-    size_t in_index = 0, out_index = 0;
-
     size_t rowlen = (len > MAX_BIN_BREAK_LENGTH) ? MAX_BIN_BREAK_LENGTH : len;
 
-    if (breaks > 0 && len % breaks != 0)
-        rowlen = (len + (len / breaks) > MAX_BIN_BREAK_LENGTH) ? MAX_BIN_BREAK_LENGTH : len + (len / breaks);
-
-    //PrintAndLogEx(NORMAL, "(sprint_bin_break) rowlen %d", rowlen);
-
-    static char buf[MAX_BIN_BREAK_LENGTH]; // 3072 + end of line characters if broken at 8 bits
-    //clear memory
+    // 3072 + end of line characters if broken at 8 bits
+    static char buf[MAX_BIN_BREAK_LENGTH];
     memset(buf, 0x00, sizeof(buf));
     char *tmp = buf;
 
     // loop through the out_index to make sure we don't go too far
-    for (out_index = 0; out_index < rowlen; out_index++) {
-        // set character
-        if (data[in_index] == 7) // Manchester wrong bit marker
-            sprintf(tmp++, ".");
+    for (int i = 0; i < rowlen; i++) {
+
+        char c = data[i];
+        // manchester wrong bit marker
+        if (c == 7)
+            c = '.';
         else
-            sprintf(tmp++, "%u", data[in_index]);
+            c += '0';
+
+        *(tmp++) = c;
 
         // check if a line break is needed and we have room to print it in our array
-        if ((breaks > 0) && !((in_index + 1) % breaks) && (out_index + 1 != rowlen)) {
-            sprintf(tmp++, "%s", "\n");
+        if (breaks) {
+            if (((i + 1) % breaks) == 0) {
+
+                *(tmp++) = '\n';
+            }
         }
-
-        in_index++;
     }
-
     return buf;
 }
 /*
@@ -701,6 +711,47 @@ int param_gethex_to_eol(const char *line, int paramnum, uint8_t *data, int maxda
     return 0;
 }
 
+int param_getbin_to_eol(const char *line, int paramnum, uint8_t *data, int maxdatalen, int *datalen) {
+    int bg, en;
+    if (param_getptr(line, &bg, &en, paramnum)) {
+        return 1;
+    }
+
+    *datalen = 0;
+    char buf[5] = {0};
+    int indx = bg;
+    while (line[indx]) {
+        if (line[indx] == '\t' || line[indx] == ' ') {
+            indx++;
+            continue;
+        }
+
+        if (line[indx] == '0' || line[indx] == '1') {
+            buf[strlen(buf) + 1] = 0x00;
+            buf[strlen(buf)] = line[indx];
+        } else {
+            // if we have symbols other than spaces and 0/1
+            return 1;
+        }
+
+        if (*datalen >= maxdatalen) {
+            // if we dont have space in buffer and have symbols to translate
+            return 2;
+        }
+
+        if (strlen(buf) > 0) {
+            uint32_t temp = 0;
+            sscanf(buf, "%d", &temp);
+            data[*datalen] = (uint8_t)(temp & 0xff);
+            *buf = 0;
+            (*datalen)++;
+        }
+
+        indx++;
+    }
+    return 0;
+}
+
 int param_getstr(const char *line, int paramnum, char *str, size_t buffersize) {
     int bg, en;
 
@@ -755,9 +806,8 @@ int hextobinarray(char *target, char *source) {
 
 // convert hex to human readable binary string
 int hextobinstring(char *target, char *source) {
-    int length;
-
-    if (!(length = hextobinarray(target, source)))
+    int length = hextobinarray(target, source);
+    if (length == 0)
         return 0;
     binarraytobinstring(target, target, length);
     return length;
@@ -976,7 +1026,7 @@ int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str)
 int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str) {
     uint32_t n = 0, i = 0;
 
-    for(;;) {
+    for (;;) {
 
         int res = sscanf(&str[i], "%1u", &n);
         if ((res != 1) || (n > 1))
@@ -987,6 +1037,27 @@ int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str)
         *lo = (*lo << 1) | (n & 0x1);
 
         i++;
+    }
+    return i;
+}
+
+
+/**
+ * Converts a binary array to component "hi2", "hi" and "lo" 32-bit integers,
+ * one bit at a time.
+ *
+ * Returns the number of bits entered.
+ */
+int binarray_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, uint8_t *arr, int arrlen) {
+    int i = 0;
+    for (; i < arrlen; i++) {
+        uint8_t n = arr[i];
+        if (n > 1)
+            break;
+
+        *hi2 = (*hi2 << 1) | (*hi >> 31);
+        *hi = (*hi << 1) | (*lo >> 31);
+        *lo = (*lo << 1) | (n & 0x1);
     }
     return i;
 }

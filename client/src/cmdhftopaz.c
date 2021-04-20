@@ -494,7 +494,7 @@ static int CmdHFTopazSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf topaz sim",
                   "Simulate a Topaz tag",
-                  "hf topaz sim <- Not yet implemented");
+                  "hf topaz sim   -> Not yet implemented");
 
     void *argtable[] = {
         arg_param_begin,
@@ -510,7 +510,7 @@ static int CmdHFTopazCmdRaw(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf topaz raw",
                   "Send raw hex data to Topaz tags",
-                  "hf topaz raw <- Not yet implemented");
+                  "hf topaz raw   -> Not yet implemented");
 
     void *argtable[] = {
         arg_param_begin,
@@ -524,13 +524,7 @@ static int CmdHFTopazCmdRaw(const char *Cmd) {
 }
 
 static int CmdHFTopazList(const char *Cmd) {
-    char args[128] = {0};
-    if (strlen(Cmd) == 0) {
-        snprintf(args, sizeof(args), "-t topaz");
-    } else {
-        strncpy(args, Cmd, sizeof(args) - 1);
-    }
-    return CmdTraceList(args);
+    return CmdTraceListAlias(Cmd, "hf topaz", "topaz");
 }
 
 static int CmdHFTopazSniff(const char *Cmd) {
@@ -614,7 +608,6 @@ int readTopazUid(bool verbose) {
     // printing
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "  UID: %02x %02x %02x %02x %02x %02x %02x",
                   topaz_tag.uid[6],
                   topaz_tag.uid[5],

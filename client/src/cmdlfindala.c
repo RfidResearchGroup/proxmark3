@@ -238,7 +238,7 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
 }
 
 int demodIndala(bool verbose) {
-    return demodIndalaEx(32, 0, 100, verbose);
+    return demodIndalaEx(0, 0, 100, verbose);
 }
 
 static int CmdIndalaDemod(const char *Cmd) {
@@ -587,10 +587,10 @@ static int CmdIndalaSim(const char *Cmd) {
 
     // indala PSK
     // It has to send either 64bits (8bytes) or 224bits (28bytes).  Zero padding needed if not.
-    // lf simpsk 1 c 32 r 2 d 0102030405060708
+    // lf simpsk -1 -c 32 --fc 2 -d 0102030405060708
 
     PrintAndLogEx(SUCCESS, "Simulating " _YELLOW_("%s") " Indala raw " _YELLOW_("%s")
-                  , (is_long_uid) ? "224b" : "64b"
+                  , (is_long_uid) ? "224 bit" : "64 bit"
                   , sprint_hex_inrow(raw, raw_len)
                  );
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");

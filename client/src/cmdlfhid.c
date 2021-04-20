@@ -388,7 +388,7 @@ static int CmdHIDClone(const char *Cmd) {
         packed.Mid = mid;
         packed.Bot = bot;
     } else if (bin_len) {
-        int res = binstring_to_u96(&top, &mid, &bot, (const char*)bin);
+        int res = binstring_to_u96(&top, &mid, &bot, (const char *)bin);
         if (res != bin_len) {
             PrintAndLogEx(ERR, "Binary string contains none <0|1> chars");
             return PM3_EINVARG;
@@ -545,8 +545,7 @@ static int CmdHIDBrute(const char *Cmd) {
         }
     }
     PrintAndLogEx(INFO, "Started brute-forcing HID Prox reader");
-    PrintAndLogEx(INFO, "Press pm3-button to abort simulation or press " _GREEN_("`<enter>`") " to exit");
-
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
     // copy values to low.
     cn_low = cn_hi;
 

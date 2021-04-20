@@ -10,7 +10,7 @@ local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc = [[
 This script will try to load a binary datadump of a Mifare TNP3xxx card.
 It will try to validate all checksums and view some information stored in the dump
@@ -372,7 +372,7 @@ local function main(args)
     end
 
     -- Turn off Debug
-    local cmdSetDbgOff = 'hw dbg 0'
+    local cmdSetDbgOff = 'hw dbg -0'
     core.console( cmdSetDbgOff)
     utils.Sleep(0.5)
 

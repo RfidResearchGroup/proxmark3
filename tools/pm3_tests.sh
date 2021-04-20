@@ -263,7 +263,8 @@ while true; do
     if $TESTALL || $TESTMFNONCEBRUTE; then
       echo -e "\n${C_BLUE}Testing mf_nonce_brute:${C_NC} ${MFNONCEBRUTEBIN:=./tools/mf_nonce_brute/mf_nonce_brute}"
       if ! CheckFileExist "mf_nonce_brute exists"          "$MFNONCEBRUTEBIN"; then break; fi
-      if ! CheckExecute slow "mf_nonce_brute test"         "$MFNONCEBRUTEBIN 9c599b32 5a920d85 1011 98d76b77 d6c6e870 0000 ca7e0b63 0111 3e709c8a" "Key.*: \[ffffffffffff\]"; then break; fi
+#      if ! CheckExecute slow "mf_nonce_brute test"         "$MFNONCEBRUTEBIN 9c599b32 5a920d85 1011 98d76b77 d6c6e870 0000 ca7e0b63 0111 3e709c8a" "Key found \[.*ffffffffffff.*\]"; then break; fi
+      if ! CheckExecute slow "mf_nonce_brute test"         "$MFNONCEBRUTEBIN 96519578 d7e3c6ac 0011 cd311951 9da49e49 0010 2bb22e00 0100 a4f7f398" "Key found \[.*3b7e4fd575ad.*\]"; then break; fi
     fi
     # hitag2crack not yet part of "all"
     # if $TESTALL || $TESTHITAG2CRACK; then
@@ -337,6 +338,7 @@ while true; do
       if ! CheckExecute "proxmark help"                    "$CLIENTBIN -h" "wait"; then break; fi
       if ! CheckExecute "proxmark help text ISO7816"       "$CLIENTBIN -t 2>&1" "ISO7816"; then break; fi
       if ! CheckExecute "proxmark help text hardnested"    "$CLIENTBIN -t 2>&1" "hardnested"; then break; fi
+      if ! CheckExecute "proxmark full help dump"          "$CLIENTBIN --fulltext 2>&1" "Full help dump done"; then break; fi
 
       echo -e "\n${C_BLUE}Testing data manipulation:${C_NC}"
       if ! CheckExecute "reveng readline test"    "$CLIENTBIN -c 'reveng -h;reveng -D'" "CRC-64/GO-ISO"; then break; fi
@@ -460,7 +462,7 @@ while true; do
 
       echo -e "\n${C_BLUE}Testing HF:${C_NC}"
       if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "at_enc"; then break; fi
-      if ! CheckExecute slow retry ignore "hf mf hardnested long test"  "$CLIENTBIN -c 'hf mf hardnested t 1 000000000000'" "found:"; then break; fi
+      if ! CheckExecute slow retry ignore "hf mf hardnested long test"  "$CLIENTBIN -c 'hf mf hardnested -t --tk 000000000000'" "found:"; then break; fi
       if ! CheckExecute slow "hf iclass long test"         "$CLIENTBIN -c 'hf iclass loclass --long'" "verified (ok)"; then break; fi
       if ! CheckExecute slow "emv long test"               "$CLIENTBIN -c 'emv test -l'" "Test(s) \[ ok"; then break; fi
       if ! $SLOWTESTS; then

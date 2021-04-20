@@ -206,7 +206,7 @@ uint32_t BigBuf_get_traceLen(void) {
 /**
   This is a function to store traces. All protocols can use this generic tracer-function.
   The traces produced by calling this function can be fetched on the client-side
-  by 'hf list raw', alternatively 'hf list <proto>' for protocol-specific
+  by 'hf list -t raw', alternatively 'hf list -t <proto>' for protocol-specific
   annotation of commands/responses.
 **/
 bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag) {

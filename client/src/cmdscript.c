@@ -30,6 +30,7 @@
 #include "proxmark3.h"
 #include "ui.h"
 #include "fileutils.h"
+#include "cliparser.h"    // cliparsing
 
 #ifdef HAVE_LUA_SWIG
 extern int luaopen_pm3(lua_State *L);
@@ -198,7 +199,17 @@ static void set_python_paths(void) {
 * ending with .lua
 */
 static int CmdScriptList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "script list",
+                  "List available Lua, Cmd and Python scripts",
+                  "script list"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     PrintAndLogEx(NORMAL, "\n" _YELLOW_("[ Lua scripts ]"));
     int ret = searchAndList(LUA_SCRIPTS_SUBDIR, ".lua");
     if (ret != PM3_SUCCESS)
@@ -223,21 +234,46 @@ static int CmdScriptList(const char *Cmd) {
  * @return
  */
 static int CmdScriptRun(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "script run",
+                  "Run a Lua, Cmd or Python script. "
+                  "If no extension it will search for lua/cmd/py extensions\n"
+                  "Use `script list` to see available scripts",
+                  "script run my_script -h\n"
+                 );
 
-    char preferredName[128] = {0};
+    void *argtable[] = {
+        arg_param_begin,
+        arg_file1(NULL, NULL, "<filename>", "name of script to run"),
+        arg_strx0(NULL, NULL, "<params>", "script parameters"),
+        arg_param_end
+    };
+
+    int fnlen = 0;
+    char filename[128] = {0};
+    int arg_len = 0;
     char arguments[256] = {0};
 
-    int name_len = 0;
-    int arg_len = 0;
-    static uint8_t luascriptfile_idx = 0;
-    sscanf(Cmd, "%127s%n %255[^\n\r]%n", preferredName, &name_len, arguments, &arg_len);
-    if (strlen(preferredName) == 0) {
-        PrintAndLogEx(FAILED, "no script name provided");
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`script list`") " to see available scripts");
-        return PM3_EINVARG;
+    sscanf(Cmd, "%127s%n %255[^\n\r]%n", filename, &fnlen, arguments, &arg_len);
+
+    // hack
+    // since we don't want to use "-f"  for script filename, 
+    // and be able to send in parameters into script meanwhile
+    // being able to "-h" here too.  
+    if ((strlen(filename) == 0) ||
+        (strcmp(filename, "-h") == 0) ||
+        (strcmp(filename, "--help") == 0)) {
+        ctx->argtable = argtable;
+        ctx->argtableLen = arg_getsize(argtable);
+        CLIParserPrintHelp(ctx);
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
     }
+    CLIParserFree(ctx);
+
+    // try to detect a valid script file extention, case-insensitive
     char *extension_chk;
-    extension_chk = str_dup(preferredName);
+    extension_chk = str_dup(filename);
     str_lower(extension_chk);
 
     pm3_scriptfile_t ext = PM3_UNSPECIFIED;
@@ -253,8 +289,9 @@ static int CmdScriptRun(const char *Cmd) {
 #endif
     free(extension_chk);
 
+    static uint8_t luascriptfile_idx = 0;
     char *script_path = NULL;
-    if (((ext == PM3_LUA) || (ext == PM3_UNSPECIFIED)) && (searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", true) == PM3_SUCCESS)) {
+    if (((ext == PM3_LUA) || (ext == PM3_UNSPECIFIED)) && (searchFile(&script_path, LUA_SCRIPTS_SUBDIR, filename, ".lua", true) == PM3_SUCCESS)) {
         int error;
         if (luascriptfile_idx == MAX_NESTED_LUASCRIPT) {
             PrintAndLogEx(ERR, "too many nested scripts, skipping %s\n", script_path);
@@ -308,11 +345,11 @@ static int CmdScriptRun(const char *Cmd) {
         // close the Lua state
         lua_close(lua_state);
         luascriptfile_idx--;
-        PrintAndLogEx(SUCCESS, "\nfinished " _YELLOW_("%s"), preferredName);
+        PrintAndLogEx(SUCCESS, "\nfinished " _YELLOW_("%s"), filename);
         return PM3_SUCCESS;
     }
 
-    if (((ext == PM3_CMD) || (ext == PM3_UNSPECIFIED)) && (searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", true) == PM3_SUCCESS)) {
+    if (((ext == PM3_CMD) || (ext == PM3_UNSPECIFIED)) && (searchFile(&script_path, CMD_SCRIPTS_SUBDIR, filename, ".cmd", true) == PM3_SUCCESS)) {
 
         PrintAndLogEx(SUCCESS, "executing Cmd " _YELLOW_("%s"), script_path);
         PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
@@ -350,14 +387,14 @@ static int CmdScriptRun(const char *Cmd) {
 
 #ifdef HAVE_PYTHON
 
-    if (((ext == PM3_PY)  || (ext == PM3_UNSPECIFIED)) && (searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, preferredName, ".py", true) == PM3_SUCCESS)) {
+    if (((ext == PM3_PY)  || (ext == PM3_UNSPECIFIED)) && (searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, filename, ".py", true) == PM3_SUCCESS)) {
 
         PrintAndLogEx(SUCCESS, "executing python " _YELLOW_("%s"), script_path);
         PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
 
-        wchar_t *program = Py_DecodeLocale(preferredName, NULL);
+        wchar_t *program = Py_DecodeLocale(filename, NULL);
         if (program == NULL) {
-            PrintAndLogEx(ERR, "could not decode " _YELLOW_("%s"), preferredName);
+            PrintAndLogEx(ERR, "could not decode " _YELLOW_("%s"), filename);
             free(script_path);
             return PM3_ESOFT;
         }
@@ -374,7 +411,7 @@ static int CmdScriptRun(const char *Cmd) {
         char *argv[128];
         int argc = split(arguments, argv);
         wchar_t *py_args[argc];
-        py_args[0] = Py_DecodeLocale(preferredName, NULL);
+        py_args[0] = Py_DecodeLocale(filename, NULL);
         for (int i = 0; i < argc; i++) {
             py_args[i + 1] = Py_DecodeLocale(argv[i], NULL);
         }
@@ -395,15 +432,15 @@ static int CmdScriptRun(const char *Cmd) {
             free(script_path);
             return PM3_ESOFT;
         }
-        int ret = Pm3PyRun_SimpleFileNoExit(f, preferredName);
+        int ret = Pm3PyRun_SimpleFileNoExit(f, filename);
         Py_Finalize();
         PyMem_RawFree(program);
         free(script_path);
         if (ret) {
-            PrintAndLogEx(WARNING, "\nfinished " _YELLOW_("%s") " with exception", preferredName);
+            PrintAndLogEx(WARNING, "\nfinished " _YELLOW_("%s") " with exception", filename);
             return PM3_ESOFT;
         } else {
-            PrintAndLogEx(SUCCESS, "\nfinished " _YELLOW_("%s"), preferredName);
+            PrintAndLogEx(SUCCESS, "\nfinished " _YELLOW_("%s"), filename);
             return PM3_SUCCESS;
         }
     }
@@ -412,26 +449,26 @@ static int CmdScriptRun(const char *Cmd) {
     // file not found, let's search again to display the error messages
     int ret = PM3_EUNDEF;
     if (ext == PM3_LUA)
-        ret = searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", false);
+        ret = searchFile(&script_path, LUA_SCRIPTS_SUBDIR, filename, ".lua", false);
     else if (ext == PM3_CMD)
-        ret = searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", false);
+        ret = searchFile(&script_path, CMD_SCRIPTS_SUBDIR, filename, ".cmd", false);
 #ifdef HAVE_PYTHON
     else if (ext == PM3_PY)
-        ret = searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, preferredName, ".py", false);
+        ret = searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, filename, ".py", false);
     else if (ext == PM3_UNSPECIFIED)
-        PrintAndLogEx(FAILED, "Error - can't find %s.[lua|cmd|py]", preferredName);
+        PrintAndLogEx(FAILED, "Error - can't find %s.[lua|cmd|py]", filename);
 #else
     else if (ext == PM3_UNSPECIFIED)
-        PrintAndLogEx(FAILED, "Error - can't find %s.[lua|cmd]", preferredName);
+        PrintAndLogEx(FAILED, "Error - can't find %s.[lua|cmd]", filename);
 #endif
     free(script_path);
     return ret;
 }
 
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,          AlwaysAvailable, "Usage info"},
+    {"help",  CmdHelp,          AlwaysAvailable, "This help"},
     {"list",  CmdScriptList,    AlwaysAvailable, "List available scripts"},
-    {"run",   CmdScriptRun,     AlwaysAvailable, "<name> -- execute a script"},
+    {"run",   CmdScriptRun,     AlwaysAvailable, "<name> - execute a script"},
     {NULL, NULL, NULL, NULL}
 };
 

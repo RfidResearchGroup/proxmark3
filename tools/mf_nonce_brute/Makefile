@@ -8,7 +8,7 @@ ifneq ($(SKIPPTHREAD),1)
 MYLDLIBS += -lpthread
 endif
 
-BINS = mf_nonce_brute
+BINS = mf_nonce_brute mf_trace_brute
 INSTALLTOOLS = $(BINS)
 
 include ../../Makefile.host
@@ -21,3 +21,5 @@ ifneq (,$(findstring MINGW,$(platform)))
 endif
 
 mf_nonce_brute : $(OBJDIR)/mf_nonce_brute.o $(MYOBJS)
+
+mf_trace_brute : $(OBJDIR)/mf_trace_brute.o $(MYOBJS)

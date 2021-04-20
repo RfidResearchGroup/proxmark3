@@ -55,9 +55,9 @@ static iso14a_card_select_t p_card;
 
 // Pseudo-configuration block.
 static bool printKeys = false;         // Prints keys
-static bool transferToEml = true;      // Transfer keys to emulator memory
+//static bool transferToEml = true;      // Transfer keys to emulator memory
 static bool ecfill = true;             // Fill emulator memory with cards content.
-static bool simulation = true;         // Simulates an exact copy of the target tag
+//static bool simulation = true;         // Simulates an exact copy of the target tag
 static bool fillFromEmulator = false;  // Dump emulator memory.
 
 //-----------------------------------------------------------------------------
@@ -482,7 +482,8 @@ void RunMod(void) {
 
     // If enabled, transfers found keys to memory and loads target content in emulator memory. Then it simulates to be the tag it has basically cloned.
 
-    if ((transferToEml) && (allKeysFound)) {
+//    if ((transferToEml) && (allKeysFound)) {
+    if (allKeysFound) {
 
         emlClearMem();
 
@@ -517,7 +518,8 @@ void RunMod(void) {
                 }
             }
 
-            if ((filled == PM3_SUCCESS) && simulation) {
+//            if ((filled == PM3_SUCCESS) && simulation) {
+            if (filled == PM3_SUCCESS) {
                 Dbprintf("\t [✓] Emulator memory filled, simulation started.");
 
                 // This will tell the fpga to emulate using previous keys and current target tag content.

@@ -195,12 +195,22 @@ void CmdsHelp(const command_t Commands[]) {
 int CmdsParse(const command_t Commands[], const char *Cmd) {
     // Help dump children
     if (strcmp(Cmd, "XX_internal_command_dump_XX") == 0) {
-        dumpCommandsRecursive(Commands, 0);
+        dumpCommandsRecursive(Commands, 0, false);
+        return PM3_SUCCESS;
+    }
+    // Help dump children with help
+    if (strcmp(Cmd, "XX_internal_command_dump_full_XX") == 0) {
+        dumpCommandsRecursive(Commands, 0, true);
         return PM3_SUCCESS;
     }
     // Markdown help dump children
     if (strcmp(Cmd, "XX_internal_command_dump_markdown_XX") == 0) {
-        dumpCommandsRecursive(Commands, 1);
+        dumpCommandsRecursive(Commands, 1, false);
+        return PM3_SUCCESS;
+    }
+    // Markdown help dump children with help
+    if (strcmp(Cmd, "XX_internal_command_dump_markdown_help_XX") == 0) {
+        dumpCommandsRecursive(Commands, 1, true);
         return PM3_SUCCESS;
     }
 
@@ -240,10 +250,18 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     if (cmd_name[0] == '#')
         return PM3_SUCCESS;
 
+    // find args, check for -h / --help
+    int tmplen = len;
+    while (Cmd[tmplen] == ' ')
+        ++tmplen;
+    bool request_help = (strcmp(Cmd + tmplen, "-h") == 0) || (strcmp(Cmd + tmplen, "--help") == 0);
+
     int i = 0;
     while (Commands[i].Name) {
         if (0 == strcmp(Commands[i].Name, cmd_name)) {
-            if (Commands[i].IsAvailable()) {
+            if ((Commands[i].Help[0] == '{') ||  // always allow parsing categories
+                    request_help ||              // always allow requesting help
+                    Commands[i].IsAvailable()) {
                 break;
             } else {
                 PrintAndLogEx(WARNING, "This command is " _YELLOW_("not available") " in this mode");
@@ -282,7 +300,7 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
 static char pparent[512] = {0};
 static char *parent = pparent;
 
-void dumpCommandsRecursive(const command_t cmds[], int markdown) {
+void dumpCommandsRecursive(const command_t cmds[], int markdown, bool full_help) {
     if (cmds[0].Name == NULL) return;
 
     int i = 0;
@@ -293,7 +311,7 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
     if (markdown) {
         PrintAndLogEx(NORMAL, "|%-*s|%-*s|%s", w_cmd, "command", w_off, "offline", "description");
         PrintAndLogEx(NORMAL, "|%-*s|%-*s|%s", w_cmd, "-------", w_off, "-------", "-----------");
-    } else {
+    } else if (! full_help) {
         PrintAndLogEx(NORMAL, "%-*s|%-*s|%s", w_cmd, "command", w_off, "offline", "description");
         PrintAndLogEx(NORMAL, "%-*s|%-*s|%s", w_cmd, "-------", w_off, "-------", "-----------");
     }
@@ -309,8 +327,13 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
             cmd_offline = "Y";
         if (markdown)
             PrintAndLogEx(NORMAL, "|`%s%-*s`|%-*s|`%s`", parent, w_cmd - (int)strlen(parent) - 2, cmds[i].Name, w_off, cmd_offline, cmds[i].Help);
-        else
+        else if (full_help) {
+            PrintAndLogEx(NORMAL, "---------------------------------------------------------------------------------------");
+            PrintAndLogEx(NORMAL, _RED_("%s%-*s\n") "available offline: %s", parent, w_cmd - (int)strlen(parent), cmds[i].Name, cmds[i].IsAvailable()?_GREEN_("yes"):_RED_("no"));
+            cmds[i].Parse("--help");
+        } else {
             PrintAndLogEx(NORMAL, "%s%-*s|%-*s|%s", parent, w_cmd - (int)strlen(parent), cmds[i].Name, w_off, cmd_offline, cmds[i].Help);
+        }
         ++i;
     }
     PrintAndLogEx(NORMAL, "\n");
@@ -322,8 +345,12 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
         if ((cmds[i].Name[0] == '-' || strlen(cmds[i].Name) == 0) && ++i) continue;
         if (cmds[i].Help[0] != '{' && ++i)  continue;
 
-        PrintAndLogEx(NORMAL, "### %s%s\n\n %s\n", parent, cmds[i].Name, cmds[i].Help);
-
+        if (full_help) {
+            PrintAndLogEx(NORMAL, "=======================================================================================");
+            PrintAndLogEx(NORMAL, _RED_("%s%s\n\n ")_CYAN_("%s\n"), parent, cmds[i].Name, cmds[i].Help);
+        } else {
+            PrintAndLogEx(NORMAL, "### %s%s\n\n %s\n", parent, cmds[i].Name, cmds[i].Help);
+        }
         char currentparent[512] = {0};
         snprintf(currentparent, sizeof currentparent, "%s%s ", parent, cmds[i].Name);
         char *old_parent = parent;
@@ -332,8 +359,11 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
         // in turn calls the CmdsParse above.
         if (markdown)
             cmds[i].Parse("XX_internal_command_dump_markdown_XX");
-        else
+        else if (full_help) {
+            cmds[i].Parse("XX_internal_command_dump_full_XX");
+        } else {
             cmds[i].Parse("XX_internal_command_dump_XX");
+        }
 
         parent = old_parent;
         ++i;

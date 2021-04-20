@@ -76,7 +76,7 @@ local function main(args)
 
     if removeflag then
         print('Deleting file '..filename.. ' from SPIFFS if exists')
-        core.console("mem spiffs remove " ..filename)
+        core.console("mem spiffs remove -f " ..filename)
         return
     end
 

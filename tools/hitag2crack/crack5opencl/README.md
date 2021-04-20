@@ -44,11 +44,20 @@ Options:
 -V     : enable debug messages
 -v     : show the version
 -h     : show this help
+```
 
-Example, select devices 1, 2 and 3 using platform 1 and 2, with random queue engine:
+Example,
+
+```
+simple
+
+./ht2crack5opencl 2ab12bf2 4B71E49D 6A606453 D79BD94B 16A2255B
+
+select devices 1, 2 and 3 using platform 1 and 2, with random queue engine:
 
 ./ht2crack5opencl -D 2 -Q 2 -p 1,2 -d 1,2,3 2ab12bf2 4B71E49D 6A606453 D79BD94B 16A2255B
 ```
+
 
 You can find the correct OpenCL Platform ID (-p) and Device ID (-d) with:
 

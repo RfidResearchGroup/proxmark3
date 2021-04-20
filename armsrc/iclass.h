@@ -34,6 +34,6 @@ bool iclass_auth(iclass_auth_req_t *payload, uint8_t *out);
 void iClass_ReadBlock(uint8_t *msg);
 bool iclass_read_block(uint16_t blockno, uint8_t *data, uint32_t *start_time, uint32_t *eof_time);
 
-bool select_iclass_tag(picopass_hdr *hdr, bool use_credit_key, uint32_t *eof_time);
-bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr *hdr, uint32_t *start_time, uint32_t *eof_time, uint8_t *mac_out);
+bool select_iclass_tag(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time);
+bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr_t *hdr, uint32_t *start_time, uint32_t *eof_time, uint8_t *mac_out);
 #endif

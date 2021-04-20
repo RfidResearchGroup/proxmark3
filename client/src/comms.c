@@ -839,6 +839,9 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
             if (response->cmd == CMD_ACK)
                 return true;
+            // Spiffs download is converted to NG,
+            if (response->cmd == CMD_SPIFFS_DOWNLOAD)
+                return true;
 
             // sample_buf is a array pointer, located in data.c
             // arg0 = offset in transfer. Startindex of this chunk

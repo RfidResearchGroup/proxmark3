@@ -164,7 +164,7 @@ crack_states_thread(void *x) {
         statelist_t *bucket = buckets[current_bucket];
         if (bucket) {
 #if defined (DEBUG_BRUTE_FORCE)
-            PrintAndLogEx(INFO, "Thread %u starts working on bucket %u\n", thread_id, current_bucket);
+            PrintAndLogEx(INFO, "Thread " _YELLOW_("%u") " starts working on bucket " _YELLOW_("%u") "\n", thread_id, current_bucket);
 #endif
             const uint64_t key = crack_states_bitsliced(thread_arg->cuid, thread_arg->best_first_bytes, bucket, &keys_found, &num_keys_tested, nonces_to_bruteforce, bf_test_nonce_2nd_byte, thread_arg->nonces);
             if (key != -1) {
@@ -174,7 +174,7 @@ crack_states_thread(void *x) {
                 char progress_text[80];
                 char keystr[19];
                 sprintf(keystr, "%012" PRIx64 "  ", key);
-                sprintf(progress_text, "Brute force phase completed.  Key found: " _YELLOW_("%s"), keystr);
+                sprintf(progress_text, "Brute force phase completed.  Key found: " _GREEN_("%s"), keystr);
                 hardnested_print_progress(thread_arg->num_acquired_nonces, progress_text, 0.0, 0);
                 break;
             } else if (keys_found) {

@@ -123,8 +123,9 @@ int demodPac(bool verbose) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: NRZ Demod failed");
         return PM3_ESOFT;
     }
+    bool invert = false;
     size_t size = DemodBufferLen;
-    int ans = detectPac(DemodBuffer, &size);
+    int ans = detectPac(DemodBuffer, &size, &invert);
     if (ans < 0) {
         if (ans == -1)
             PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: too few bits found");
@@ -136,6 +137,12 @@ int demodPac(bool verbose) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: ans: %d", ans);
 
         return PM3_ESOFT;
+    }
+
+    if (invert) {
+        for (size_t i = ans; i < ans + 128; i++) {
+            DemodBuffer[i] ^= 1;
+        }
     }
     setDemodBuff(DemodBuffer, 128, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
@@ -394,14 +401,29 @@ int CmdLFPac(const char *Cmd) {
 }
 
 // find PAC preamble in already demoded data
-int detectPac(uint8_t *dest, size_t *size) {
-    if (*size < 128) return -1; //make sure buffer has data
+int detectPac(uint8_t *dest, size_t *size, bool *invert) {
+    // make sure buffer has data
+    if (*size < 128)
+        return -1;
+
     size_t startIdx = 0;
     uint8_t preamble[] = {1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0};
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
-        return -2; //preamble not found
-    if (*size != 128) return -3; //wrong demoded size
-    //return start position
+    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx)) {
+
+        // preamble not found
+        uint8_t pre_inv[] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1};
+        if (!preambleSearch(dest, pre_inv, sizeof(pre_inv), size, &startIdx)) {
+            return -2;
+        } else {
+            *invert = true;
+        }
+    }
+
+    // wrong demoded size
+    if (*size != 128)
+        return -3;
+
+    // return start position
     return (int)startIdx;
 }
 

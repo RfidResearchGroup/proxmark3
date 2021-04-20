@@ -5,10 +5,12 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Mosci'
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc =
 [[
-This is a script which writes value 0x01 to bytes from position 0x07 until 0xFF on a Legic Prime Tag (MIM256 or MIM1024)  -- (created with 'hf legic save my_dump.hex') --
+This is a script which writes value 0x01 to bytes from
+position 0x07 until 0xFF on a Legic Prime Tag (MIM256 or MIM1024)
+-- (created with 'hf legic dump -f my_dump.hex') --
 ]]
 example = [[
     script run hf_legic_buffer2card
@@ -53,7 +55,7 @@ function main()
     local cmd = ''
     local i
     for i = 7, 255 do
-        cmd = ('hf legic write o %02x d 01'):format(i)
+        cmd = ('hf legic wrbl -o %02x -d 01'):format(i)
         print(cmd)
         core.clearCommandBuffer()
         core.console(cmd)

@@ -14,6 +14,6 @@
 int CmdLFPac(const char *Cmd);
 
 int demodPac(bool verbose);
-int detectPac(uint8_t *dest, size_t *size);
+int detectPac(uint8_t *dest, size_t *size, bool *invert);
 #endif
 

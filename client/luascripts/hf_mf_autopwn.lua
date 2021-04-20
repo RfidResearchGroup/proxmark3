@@ -6,11 +6,13 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = "Martin Holst Swende"
-version = 'v1.0.3'
+version = 'v1.0.4'
 desc = [[
 This is a script which automates cracking and dumping mifare classic cards. It sets itself into
 'listening'-mode, after which it cracks and dumps any mifare classic card that you
 place by the device.
+
+Please consider using the native command `hf mf autopwn`
 ]]
 example = [[
     1. script run hf_mf_autopwn
@@ -84,46 +86,40 @@ local function wait_for_mifare()
     return nil, 'Aborted by user'
 end
 
-local function nested(key,sak)
-    local typ = 1
+local function get_mf_size(sak)
+    local foo = "--1k"
     if 0x18 == sak then --NXP MIFARE Classic 4k | Plus 4k | Ev1 4k
-        typ = 4
+        foo = "--4k"
     elseif 0x08 == sak then -- NXP MIFARE CLASSIC 1k | Plus 2k | Ev1 1K
-        typ = 1
+        foo = "--1k"
     elseif 0x09 == sak then -- NXP MIFARE Mini 0.3k
-        typ = 0
+        foo = "--mini"
     elseif 0x10 == sak then-- "NXP MIFARE Plus 2k"
-        typ = 2
+        foo = "--2k"
     elseif 0x01 == sak then-- "NXP MIFARE TNP3xxx 1K"
-        typ = 1
+        foo = "--1k"
     else
         print("I don't know how many sectors there are on this type of card, defaulting to 16")
     end
-    local cmd = string.format('hf mf nested -t %d -b 0 --keya -k %s --dumpkeys', typ, key)
+    return foo
+end
+
+local function nested(key, sak)
+    local mfs = get_mf_size(sak)
+    local cmd = string.format('hf mf nested %s --blk 0 -k %s --dump', mfs, key)
     core.console(cmd)
 end
 
-local function dump_tag(uid, numsectors)
+local function dump_tag(uid, sak)
     dbg('dumping tag memory')
 
-    local typ = 1
-    if 0x18 == sak then --NXP MIFARE Classic 4k | Plus 4k | Ev1 4k
-        typ = 4
-    elseif 0x08 == sak then -- NXP MIFARE CLASSIC 1k | Plus 2k | Ev1 1K
-        typ = 1
-    elseif 0x09 == sak then -- NXP MIFARE Mini 0.3k
-        typ = 0
-    elseif 0x10 == sak then-- "NXP MIFARE Plus 2k"
-        typ = 2
-    elseif 0x01 == sak then-- "NXP MIFARE TNP3xxx 1K"
-        typ = 1
-    end
 
     if utils.confirm('Do you wish to create a memory dump of tag?') then
 
         local dumpfile = 'hf-mf-'..uid..'-dump'
 
-        local dmp = ('hf mf dump -t %s -f %s'):format(typ, dumpfile)
+        local mfs = get_mf_size(sak)
+        local dmp = ('hf mf dump %s -f %s'):format(mfs, dumpfile)
         core.console(dmp)
 
         -- Save the global args, those are *our* arguments

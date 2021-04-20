@@ -86,7 +86,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, " Searching for ISO14443-A tag...");
     if (IfPm3Iso14443a()) {
         if (infoHF14A(false, false, false) > 0) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") " found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-A tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
@@ -95,7 +95,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, " Searching for ISO15693 tag...");
     if (IfPm3Iso15693()) {
         if (readHF15Uid(false, false)) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") " found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 15693 tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
@@ -127,35 +127,34 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
+    if (IfPm3Felica()) {
+        if (read_felica_uid(false, false) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 18092 / FeliCa tag") " found\n");
+            res = PM3_SUCCESS;
+        }
+    }
+
     // 14b  is the longest test (put last)
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for ISO14443-B tag...");
     if (IfPm3Iso14443b()) {
-        if (readHF14B(false) == 1) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") " found\n");
+        if (readHF14B(false, false) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-B tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
 
     /*
-        PROMPT_CLEARLINE;
-        PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
-        if (IfPm3Felica()) {
-            if (readFelicaUid(false) == PM3_SUCCESS) {
-                PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
-                res = PM3_SUCCESS;
-            }
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, " Searching for CryptoRF tag...");
+    if (IfPm3Iso14443b()) {
+        if (readHFCryptoRF(false, false) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") " found\n");
+            res = PM3_SUCCESS;
         }
-    */
-    /*
-        PROMPT_CLEARLINE;
-        PrintAndLogEx(INPLACE, " Searching for CryptoRF tag...");
-        if (IfPm3Iso14443b()) {
-            if (readHFCryptoRF(false) == PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") " found\n");
-                res = PM3_SUCCESS;
-            }
-        }
+    }
     */
 
     PROMPT_CLEARLINE;
@@ -387,6 +386,10 @@ int CmdHFPlot(const char *Cmd) {
     return handle_hf_plot();
 }
 
+static int CmdHFList(const char *Cmd) {
+    return CmdTraceListAlias(Cmd, "hf", "raw");
+}
+
 static command_t CommandTable[] = {
 
     {"--------",    CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("High Frequency") " -----------------------"},
@@ -406,13 +409,13 @@ static command_t CommandTable[] = {
     {"mfp",         CmdHFMFP,         AlwaysAvailable, "{ MIFARE Plus RFIDs...                }"},
     {"mfu",         CmdHFMFUltra,     AlwaysAvailable, "{ MIFARE Ultralight RFIDs...          }"},
     {"mfdes",       CmdHFMFDes,       AlwaysAvailable, "{ MIFARE Desfire RFIDs...             }"},
-    {"st",          CmdHF_ST,         AlwaysAvailable, "{ ST Rothult RFIDs...                 }"},
+    {"st",          CmdHFST,          AlwaysAvailable, "{ ST Rothult RFIDs...                 }"},
     {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                   }"},
     {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...         }"},
     {"waveshare",   CmdHFWaveshare,   AlwaysAvailable, "{ Waveshare NFC ePaper...             }"},
     {"-----------", CmdHelp,          AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},
-    {"list",        CmdTraceList,     AlwaysAvailable, "List protocol data in trace buffer"},
+    {"list",        CmdHFList,        AlwaysAvailable, "List protocol data in trace buffer"},
     {"plot",        CmdHFPlot,        IfPm3Hfplot,     "Plot signal"},
     {"tune",        CmdHFTune,        IfPm3Present,    "Continuously measure HF antenna tuning"},
     {"search",      CmdHFSearch,      AlwaysAvailable, "Search for known HF tags"},

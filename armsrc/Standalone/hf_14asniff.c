@@ -31,14 +31,14 @@
  *
  * To retrieve trace data from flash:
  *
- * 1. mem spiffs dump o hf_14asniff.trc f trace.trc
+ * 1. mem spiffs dump -s hf_14asniff.trc -d trace.trc
  *    Copies trace data file from flash to your PC.
  *
  * 2. trace load trace.trc
  *    Loads trace data from a file into PC-side buffers.
  *
- * 3. For ISO14a: trace list 14a 1
- *    For MIFARE Classic: trace list mf 1
+ * 3. For ISO14a: trace list -t 14a -1
+ *    For MIFARE Classic: trace list -t mf -1
  *
  *    Lists trace data from buffer without requesting it from PM3.
  *
@@ -71,20 +71,20 @@
 static void DownloadTraceInstructions(void) {
     Dbprintf("");
     Dbprintf("To get the trace from flash and display it:");
-    Dbprintf("1. mem spiffs dump o "HF_14ASNIFF_LOGFILE" f trace.trc");
-    Dbprintf("2. trace load trace.trc");
-    Dbprintf("3. trace list 14a 1");
+    Dbprintf("1. mem spiffs dump -s "HF_14ASNIFF_LOGFILE" -d trace.trc");
+    Dbprintf("2. trace load -f trace.trc");
+    Dbprintf("3. trace list -t 14a -1");
 }
 
 void ModInfo(void) {
-    DbpString("hf_14asniff: standalone 'hf 14a sniff', storing in flashmem");
+    DbpString(" HF 14A SNIFF,  a ISO14443a sniffer with storing in flashmem");
     DownloadTraceInstructions();
 }
 
 void RunMod(void) {
     StandAloneMode();
 
-    Dbprintf("Starting standalone mode: hf_14asniff");
+    Dbprintf(_YELLOW_("HF 14A SNIFF started"));
     rdv40_spiffs_lazy_mount();
 
     SniffIso14443a(0);
@@ -118,7 +118,7 @@ void RunMod(void) {
     SpinErr(LED_A, 200, 5);
     SpinDelay(100);
 
+    Dbprintf("-=[ exit ]=-");
     LEDsoff();
-    SpinDelay(300);
     DownloadTraceInstructions();
 }

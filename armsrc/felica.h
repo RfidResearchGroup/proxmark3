@@ -6,7 +6,7 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Definitions internal to the app source.
+// Definitions internal to the FeliCa functionality
 //-----------------------------------------------------------------------------
 #ifndef __FELICA_H
 #define __FELICA_H
@@ -16,7 +16,7 @@
 
 void felica_sendraw(PacketCommandNG *c);
 void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip);
-void felica_sim_lite(uint64_t uid);
+void felica_sim_lite(uint8_t *uid);
 void felica_dump_lite_s(void);
 
 #endif

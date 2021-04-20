@@ -652,8 +652,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
             free(edata);
 
             break;
-        case MDCM_ENCIPHERED:
-            (*nbytes)--;
+        case MDCM_ENCIPHERED: {
             bool verified = false;
             int crc_pos = 0x00;
             int end_crc_pos = 0x00;
@@ -702,11 +701,13 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
                     if (res != NULL) {
                         memcpy(res, data, *nbytes);
 
-                        crc_pos = (*nbytes) - 16 - 3;
-                        if (crc_pos < 0) {
-                            /* Single block */
-                            crc_pos = 0;
+                        size_t padding_start_pos = *nbytes - 1;
+                        while (padding_start_pos > 0 && ((uint8_t *) res)[padding_start_pos] == 0x00) {
+                            padding_start_pos--;
                         }
+                        //TODO: Add support for cases where there is no padding. Uncommon but possible.
+                        crc_pos = padding_start_pos - 4;
+
                         memcpy((uint8_t *) res + crc_pos + 1, (uint8_t *) res + crc_pos, *nbytes - crc_pos);
                         ((uint8_t *) res)[crc_pos] = 0x00;
                         crc_pos++;
@@ -747,6 +748,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
                             ((uint8_t *)data)[(*nbytes)++] = 0x00;
                             break;
                         case AS_NEW:
+                            *nbytes = crc_pos - 1;
                             /* The status byte was already before the CRC */
                             break;
                     }
@@ -775,6 +777,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
             }
 
             break;
+        }
         default:
             PrintAndLogEx(ERR, "Unknown communication settings");
             *nbytes = -1;
@@ -862,7 +865,7 @@ void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect,
                     mbedtls_aes_context actx;
                     mbedtls_aes_init(&actx);
                     mbedtls_aes_setkey_enc(&actx, key->data, 128);
-                    mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_ENCRYPT, sizeof(edata), ivect, data, edata);
+                    mbedtls_aes_crypt_ecb(&actx, MBEDTLS_AES_ENCRYPT, data, edata);
                     mbedtls_aes_free(&actx);
                     break;
                 }
@@ -870,7 +873,7 @@ void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect,
                     mbedtls_aes_context actx;
                     mbedtls_aes_init(&actx);
                     mbedtls_aes_setkey_dec(&actx, key->data, 128);
-                    mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_DECRYPT, sizeof(edata), ivect, edata, data);
+                    mbedtls_aes_crypt_ecb(&actx, MBEDTLS_AES_DECRYPT, data, edata);
                     mbedtls_aes_free(&actx);
                     break;
                 }
@@ -899,12 +902,10 @@ void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect,
  * function with tag, key and ivect defined.
  */
 void mifare_cypher_blocks_chained(desfiretag_t tag, desfirekey_t key, uint8_t *ivect, uint8_t *data, size_t data_size, MifareCryptoDirection direction, MifareCryptoOperation operation) {
-    size_t block_size;
-
     if (tag) {
-        if (!key)
+        if (key == NULL)
             key = DESFIRE(tag)->session_key;
-        if (!ivect)
+        if (ivect == NULL)
             ivect = DESFIRE(tag)->ivect;
 
         switch (DESFIRE(tag)->authentication_scheme) {
@@ -916,8 +917,7 @@ void mifare_cypher_blocks_chained(desfiretag_t tag, desfirekey_t key, uint8_t *i
         }
     }
 
-    block_size = key_block_size(key);
-
+    size_t block_size = key_block_size(key);
     size_t offset = 0;
     while (offset < data_size) {
         mifare_cypher_single_block(key, data + offset, ivect, direction, operation, block_size);

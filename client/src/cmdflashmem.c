@@ -17,6 +17,7 @@
 #include "cmdflashmemspiffs.h" // spiffs commands
 #include "rsa.h"
 #include "sha1.h"
+#include "pk.h"                // PEM key load functions
 
 #define MCK 48000000
 #define FLASH_MINFAST 24000000 //33000000
@@ -40,48 +41,9 @@ static int CmdHelp(const char *Cmd);
                   "DB7FB5A3C8AC42EB635AE3C148C910750ABAA280CE82DC2F180F49F30A1393B5"
 
 //-------------------------------------------------------------------------------------
-// Sample private RSA Key
-// Following example RSA-1024 keypair, for test purposes  (from common/polarssl/rsa.c)
-
-// private key - Exponent D
-#define RSA_D   "24BF6185468786FDD303083D25E64EFC" \
-    "66CA472BC44D253102F8B4A9D3BFA750" \
-    "91386C0077937FE33FA3252D28855837" \
-    "AE1B484A8A9A45F7EE8C0C634F99E8CD" \
-    "DF79C5CE07EE72C7F123142198164234" \
-    "CABB724CF78B8173B9F880FC86322407" \
-    "AF1FEDFDDE2BEB674CA15F3E81A1521E" \
-    "071513A1E85B5DFA031F21ECAE91A34D"
-
-// prime P
-#define RSA_P   "C36D0EB7FCD285223CFB5AABA5BDA3D8" \
-    "2C01CAD19EA484A87EA4377637E75500" \
-    "FCB2005C5C7DD6EC4AC023CDA285D796" \
-    "C3D9E75E1EFC42488BB4F1D13AC30A57"
-
-// prime Q
-#define RSA_Q   "C000DF51A7C77AE8D7C7370C1FF55B69" \
-    "E211C2B9E5DB1ED0BF61D0D9899620F4" \
-    "910E4168387E3C30AA1E00C339A79508" \
-    "8452DD96A9A5EA5D9DCA68DA636032AF"
-
-#define RSA_DP  "C1ACF567564274FB07A0BBAD5D26E298" \
-    "3C94D22288ACD763FD8E5600ED4A702D" \
-    "F84198A5F06C2E72236AE490C93F07F8" \
-    "3CC559CD27BC2D1CA488811730BB5725"
-
-#define RSA_DQ  "4959CBF6F8FEF750AEE6977C155579C7" \
-    "D8AAEA56749EA28623272E4F7D0592AF" \
-    "7C1F1313CAC9471B5C523BFE592F517B" \
-    "407A1BD76C164B93DA2D32A383E58357"
-
-#define RSA_QP  "9AE7FBC99546432DF71896FC239EADAE" \
-    "F38D18D2B2F0E2DD275AA977E2BF4411" \
-    "F5A3B2A5D33605AEBBCCBA7FEB9F2D2F" \
-    "A74206CEC169D74BF5A8C50D6F48EA08"
 
 int rdv4_get_signature(rdv40_validation_t *out) {
-    if (out == NULL) {        
+    if (out == NULL) {
         return PM3_EINVARG;
     }
 
@@ -106,7 +68,6 @@ int rdv4_get_signature(rdv40_validation_t *out) {
 
 // validate signature
 int rdv4_validate(rdv40_validation_t *mem) {
-
     // Flash ID hash (sha1)
     uint8_t sha_hash[20] = {0};
     mbedtls_sha1(mem->flashid, sizeof(mem->flashid), sha_hash);
@@ -128,7 +89,7 @@ int rdv4_validate(rdv40_validation_t *mem) {
     return PM3_EFAILED;
 }
 
-static int rdv4_sign_write(uint8_t *signature, uint8_t slen){
+static int rdv4_sign_write(uint8_t *signature, uint8_t slen) {
     // save to mem
     clearCommandBuffer();
     PacketResponseNG resp;
@@ -146,7 +107,7 @@ static int rdv4_sign_write(uint8_t *signature, uint8_t slen){
     return PM3_EFAILED;
 }
 
-static int CmdFlashmemSpiBaudrate(const char *Cmd) {
+static int CmdFlashmemSpiBaud(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "mem baudrate",
@@ -355,6 +316,7 @@ static int CmdFlashMemDump(const char *Cmd) {
         arg_int0("l", "len", "<dec>", "length"),
         arg_lit0("v", "view", "view dump"),
         arg_strx0("f", "file", "<filename>", "file name"),
+        arg_int0("c", "cols", "<dec>", "column breaks (def 32)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -365,6 +327,7 @@ static int CmdFlashMemDump(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    int breaks = arg_get_int_def(ctx, 5, 32);
     CLIParserFree(ctx);
 
     uint8_t *dump = calloc(len, sizeof(uint8_t));
@@ -382,7 +345,7 @@ static int CmdFlashMemDump(const char *Cmd) {
 
     if (view) {
         PrintAndLogEx(INFO, "---- " _CYAN_("data") " ---------------");
-        print_hex_break(dump, len, 32);
+        print_hex_break(dump, len, breaks);
     }
 
     if (filename[0] != '\0') {
@@ -399,9 +362,9 @@ static int CmdFlashMemWipe(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "mem wipe",
                   "Wipe flash memory on device, which fills it with 0xFF\n"
-                  _WHITE_("[ ") _RED_("!!! OBS") " ] use with caution",
-                  "mem wipe -p 0 -> wipes first page"
-//                  "mem wipe -i -> inital total wipe"
+                  _WHITE_("[ ") _RED_("!!! OBS") _WHITE_(" ] use with caution"),
+                  "mem wipe -p 0   -> wipes first page"
+//                  "mem wipe -i   -> inital total wipe"
                  );
 
     void *argtable[] = {
@@ -448,39 +411,90 @@ static int CmdFlashMemInfo(const char *Cmd) {
     CLIParserInit(&ctx, "mem info",
                   "Collect signature and verify it from flash memory",
                   "mem info"
-//                  "mem info -s -d 0102030405060708"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("s", "sign", "create a signature"),
         arg_str0("d", NULL, "<hex>", "flash memory id, 8 hex bytes"),
+        arg_str0("p", "pem",  "<fn>", "key in PEM format"),
+        arg_lit0("v", "verbose", "verbose output"),
 //        arg_lit0("w", "write", "write signature to flash memory"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool shall_sign = false, shall_write = false;
-    shall_sign = arg_get_lit(ctx, 1);
+    bool shall_sign = arg_get_lit(ctx, 1);
 
     int dlen = 0;
     uint8_t id[8] = {0};
     int res = CLIParamHexToBuf(arg_get_str(ctx, 2), id, sizeof(id), &dlen);
 
-//    shall_write = arg_get_lit(ctx, 3);
+    int pemlen = 0;
+    char pem_fn[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)pem_fn, FILE_PATH_SIZE, &pemlen);
+
+    bool verbose = arg_get_lit(ctx, 4);
+    bool shall_write = false;
+//    shall_write = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
-    if (dlen > 0 && dlen < sizeof(id) ) {
+    if (res || (dlen > 0 && dlen < sizeof(id))) {
         PrintAndLogEx(FAILED, "Error parsing flash memory id, expect 8, got %d", dlen);
         return PM3_EINVARG;
+    }
+
+    // set up PK key context now.
+    mbedtls_pk_context pkctx;
+    mbedtls_pk_init(&pkctx);
+    bool got_private = false;
+    // PEM
+    if (pemlen) {
+        // PEM file
+        char *path = NULL;
+        if (searchFile(&path, RESOURCES_SUBDIR, pem_fn, ".pem", true) != PM3_SUCCESS) {
+            if (searchFile(&path, RESOURCES_SUBDIR, pem_fn, "", false) != PM3_SUCCESS) {
+                return PM3_EFILE;
+            }
+        }
+
+        PrintAndLogEx(INFO, "loading file `" _YELLOW_("%s") "`" NOLF, path);
+
+        // load private
+        res = mbedtls_pk_parse_keyfile(&pkctx, path, NULL);
+        //res = mbedtls_pk_parse_public_keyfile(&pkctx, path);
+        if (res == 0) {
+            PrintAndLogEx(NORMAL, " ( " _GREEN_("ok") " )");
+        } else {
+            PrintAndLogEx(NORMAL, " ( " _RED_("fail") " )");
+            mbedtls_pk_free(&pkctx);
+            free(path);
+            return PM3_EFILE;
+        }
+
+        mbedtls_rsa_context *rsa = (mbedtls_rsa_context *)pkctx.pk_ctx;
+        if (rsa == NULL) {
+            PrintAndLogEx(FAILED, "failed to allocate rsa context memory");
+            return PM3_EMALLOC;
+        }
+        free(path);
+        got_private = true;
+    } else {
+
+        // it not loaded,  we need to setup the context manually
+        if (mbedtls_pk_setup(&pkctx,  mbedtls_pk_info_from_type((mbedtls_pk_type_t) MBEDTLS_PK_RSA)) != 0) {
+            PrintAndLogEx(FAILED, "failed, mbedtls_pk_setup returned ");
+            return PM3_ESOFT;
+        }
     }
 
     // validate devicesignature data
     rdv40_validation_t mem;
     res = rdv4_get_signature(&mem);
-    if (res != PM3_SUCCESS) {        
+    if (res != PM3_SUCCESS) {
         return res;
     }
+
     res = rdv4_validate(&mem);
 
     // Flash ID hash (sha1)
@@ -492,66 +506,69 @@ static int CmdFlashMemInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "--- " _CYAN_("Flash memory Information") " ---------");
     PrintAndLogEx(INFO, "ID................... %s", sprint_hex_inrow(mem.flashid, sizeof(mem.flashid)));
     PrintAndLogEx(INFO, "SHA1................. %s", sprint_hex_inrow(sha_hash, sizeof(sha_hash)));
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("RDV4 RSA signature") " ---------------");
+    for (int i = 0; i < (sizeof(mem.signature) / 32); i++) {
+        PrintAndLogEx(INFO, " %s", sprint_hex_inrow(mem.signature + (i * 32), 32));
+    }
     PrintAndLogEx(
         (res == PM3_SUCCESS) ? SUCCESS : FAILED,
         "Signature............ ( %s )",
         (res == PM3_SUCCESS) ?  _GREEN_("ok") : _RED_("fail")
     );
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("RDV4 RSA signature") " ---------------");
-    for (int i = 0; i < (sizeof(mem.signature) / 32); i++) {
-        PrintAndLogEx(INFO, " %s", sprint_hex_inrow(mem.signature + (i * 32), 32));
+
+    mbedtls_rsa_context *rsa = NULL;
+
+    if (got_private) {
+        rsa = mbedtls_pk_rsa(pkctx);
+        rsa->padding = MBEDTLS_RSA_PKCS_V15;
+        rsa->hash_id = 0;
+        rsa->len = RRG_RSA_KEY_LEN;
+    } else {
+
+        rsa = (mbedtls_rsa_context *)calloc(1, sizeof(mbedtls_rsa_context));
+        mbedtls_rsa_init(rsa, MBEDTLS_RSA_PKCS_V15, 0);
+        rsa->len = RRG_RSA_KEY_LEN;
+
+        // add public key
+        mbedtls_mpi_read_string(&rsa->N, 16, RRG_RSA_N);
+        mbedtls_mpi_read_string(&rsa->E, 16, RRG_RSA_E);
     }
 
-    mbedtls_rsa_context rsa;
-    mbedtls_rsa_init(&rsa, MBEDTLS_RSA_PKCS_V15, 0);
-
-    rsa.len = RRG_RSA_KEY_LEN;
-
-    // add public key 
-    mbedtls_mpi_read_string(&rsa.N, 16, RRG_RSA_N);
-    mbedtls_mpi_read_string(&rsa.E, 16, RRG_RSA_E);
-
-    // add private key
-    mbedtls_mpi_read_string(&rsa.D, 16, RSA_D);
-    mbedtls_mpi_read_string(&rsa.P, 16, RSA_P);
-    mbedtls_mpi_read_string(&rsa.Q, 16, RSA_Q);
-    mbedtls_mpi_read_string(&rsa.DP, 16, RSA_DP);
-    mbedtls_mpi_read_string(&rsa.DQ, 16, RSA_DQ);
-    mbedtls_mpi_read_string(&rsa.QP, 16, RSA_QP);
-
-    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("RDV4 RSA Public key") " --------------");
+    if (verbose) {
+        char str_exp[10];
+        char str_pk[261];
+        size_t exlen = 0, pklen = 0;
+        mbedtls_mpi_write_string(&rsa->E, 16, str_exp, sizeof(str_exp), &exlen);
+        mbedtls_mpi_write_string(&rsa->N, 16, str_pk, sizeof(str_pk), &pklen);
 
-    char str_exp[10];
-    char str_pk[261];
-    size_t exlen = 0, pklen = 0;
-    mbedtls_mpi_write_string(&rsa.E, 16, str_exp, sizeof(str_exp), &exlen);
-    mbedtls_mpi_write_string(&rsa.N, 16, str_pk, sizeof(str_pk), &pklen);
+        PrintAndLogEx(INFO, "Len.................. %"PRIu64, rsa->len);
+        PrintAndLogEx(INFO, "Exponent............. %s", str_exp);
+        PrintAndLogEx(INFO, "Public key modulus N");
+        PrintAndLogEx(INFO, " %.64s", str_pk);
+        PrintAndLogEx(INFO, " %.64s", str_pk + 64);
+        PrintAndLogEx(INFO, " %.64s", str_pk + 128);
+        PrintAndLogEx(INFO, " %.64s", str_pk + 192);
+        PrintAndLogEx(NORMAL, "");
+    }
 
-    PrintAndLogEx(INFO, "Len.................. %"PRIu64, rsa.len);
-    PrintAndLogEx(INFO, "Exponent............. %s", str_exp);
-    PrintAndLogEx(INFO, "Public key modulus N");
-    PrintAndLogEx(INFO, " %.64s", str_pk);
-    PrintAndLogEx(INFO, " %.64s", str_pk + 64);
-    PrintAndLogEx(INFO, " %.64s", str_pk + 128);
-    PrintAndLogEx(INFO, " %.64s", str_pk + 192);
-    PrintAndLogEx(NORMAL, "");
-
-    bool is_keyok = (mbedtls_rsa_check_pubkey(&rsa) == 0);
+    bool is_keyok = (mbedtls_rsa_check_pubkey(rsa) == 0);
     PrintAndLogEx(
         (is_keyok) ? SUCCESS : FAILED,
-        "RSA public key validation.... ( %s )",
+        "RRG/Iceman RSA public key check.... ( %s )",
         (is_keyok) ?  _GREEN_("ok") : _RED_("fail")
     );
 
-    is_keyok = (mbedtls_rsa_check_privkey(&rsa) == 0);
-    PrintAndLogEx(
-        (is_keyok) ? SUCCESS : FAILED,
-        "RSA private key validation... ( %s )",
-        (is_keyok) ?  _GREEN_("ok") : _RED_("fail")
-    );
-
+    is_keyok = (mbedtls_rsa_check_privkey(rsa) == 0);
+    if (verbose) {
+        PrintAndLogEx(
+            (is_keyok) ? SUCCESS : FAILED,
+            "RRG/Iceman RSA private key check... ( %s )",
+            (is_keyok) ?  _GREEN_("ok") : _YELLOW_("N/A")
+        );
+    }
 
     // to be verified
     uint8_t from_device[RRG_RSA_KEY_LEN];
@@ -563,55 +580,59 @@ static int CmdFlashMemInfo(const char *Cmd) {
 
     // Signing (private key)
     if (shall_sign) {
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "--- " _CYAN_("Enter signing") " --------------------");
 
-        if (dlen == 8) {
-           mbedtls_sha1(id, sizeof(id), sha_hash);
-        }
-        PrintAndLogEx(INFO, "Signing %s", sprint_hex_inrow(sha_hash, sizeof(sha_hash)));
+        if (is_keyok) {
 
-        int is_signed = mbedtls_rsa_pkcs1_sign(&rsa, NULL, NULL, MBEDTLS_RSA_PRIVATE, MBEDTLS_MD_SHA1, 20, sha_hash, sign);
-        PrintAndLogEx(
-            (is_signed == 0) ? SUCCESS : FAILED,
-            "RSA signing.......... ( %s )",
-            (is_signed == 0) ?  _GREEN_("ok") : _RED_("fail")
-        );
-        
-        if (shall_write) {
-            rdv4_sign_write(sign, RRG_RSA_KEY_LEN);
-        }
-        PrintAndLogEx(INFO, "Signed");
-        for (int i = 0; i < (sizeof(sign) / 32); i++) {
-            PrintAndLogEx(INFO, " %s", sprint_hex_inrow(sign + (i * 32), 32));
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "--- " _CYAN_("Enter signing") " --------------------");
+
+            if (dlen == 8) {
+                mbedtls_sha1(id, sizeof(id), sha_hash);
+            }
+            PrintAndLogEx(INFO, "Signing....... %s", sprint_hex_inrow(sha_hash, sizeof(sha_hash)));
+
+            int is_signed = mbedtls_rsa_pkcs1_sign(rsa, NULL, NULL, MBEDTLS_RSA_PRIVATE, MBEDTLS_MD_SHA1, 20, sha_hash, sign);
+            PrintAndLogEx(
+                (is_signed == 0) ? SUCCESS : FAILED,
+                "RSA signing... ( %s )",
+                (is_signed == 0) ?  _GREEN_("ok") : _RED_("fail")
+            );
+
+            if (shall_write) {
+                rdv4_sign_write(sign, RRG_RSA_KEY_LEN);
+            }
+            PrintAndLogEx(INFO, "New signature");
+            for (int i = 0; i < (sizeof(sign) / 32); i++) {
+                PrintAndLogEx(INFO, " %s", sprint_hex_inrow(sign + (i * 32), 32));
+            }
+        } else {
+            PrintAndLogEx(FAILED, "no private key available to sign");
         }
     }
 
     // Verify (public key)
-    bool is_verified = (mbedtls_rsa_pkcs1_verify(&rsa, NULL, NULL, MBEDTLS_RSA_PUBLIC, MBEDTLS_MD_SHA1, 20, sha_hash, from_device) == 0);
-    mbedtls_rsa_free(&rsa);
+    bool is_verified = (mbedtls_rsa_pkcs1_verify(rsa, NULL, NULL, MBEDTLS_RSA_PUBLIC, MBEDTLS_MD_SHA1, 20, sha_hash, from_device) == 0);
 
+    mbedtls_pk_free(&pkctx);
+
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(
         (is_verified) ? SUCCESS : FAILED,
-        "RSA verification..... ( %s )",
-        (is_verified) ?  _GREEN_("ok") : _RED_("fail")
+        "Genuine Proxmark3 RDV4 signature detected... %s",
+        (is_verified) ? ":heavy_check_mark:" : ":x:"
     );
-    if (is_verified) {
-        PrintAndLogEx(SUCCESS, "Genuine Proxmark3 RDV4 signature detected");
-    }
-
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,            AlwaysAvailable, "This help"},
-    {"baudrate", CmdFlashmemSpiBaudrate, IfPm3Flash,  "Set Flash memory Spi baudrate"},
-    {"spiffs",  CmdFlashMemSpiFFS,  IfPm3Flash,      "High level SPI FileSystem Flash manipulation"},
-    {"info",    CmdFlashMemInfo,    IfPm3Flash,      "Flash memory information"},
-    {"load",    CmdFlashMemLoad,    IfPm3Flash,      "Load data into flash memory"},
-    {"dump",    CmdFlashMemDump,    IfPm3Flash,      "Dump data from flash memory"},
-    {"wipe",    CmdFlashMemWipe,    IfPm3Flash,      "Wipe data from flash memory"},
+    {"spiffs",   CmdFlashMemSpiFFS,  IfPm3Flash,  "{ SPI File system }"},
+    {"help",     CmdHelp,            AlwaysAvailable, "This help"},
+    {"baudrate", CmdFlashmemSpiBaud, IfPm3Flash,  "Set Flash memory Spi baudrate"},
+    {"dump",     CmdFlashMemDump,    IfPm3Flash,  "Dump data from flash memory"},
+    {"info",     CmdFlashMemInfo,    IfPm3Flash,  "Flash memory information"},
+    {"load",     CmdFlashMemLoad,    IfPm3Flash,  "Load data to flash memory"},
+    {"wipe",     CmdFlashMemWipe,    IfPm3Flash,  "Wipe data from flash memory"},
     {NULL, NULL, NULL, NULL}
 };
 

@@ -28,6 +28,11 @@ typedef struct iclass_prekey {
     uint8_t key[8];
 } iclass_prekey_t;
 
+typedef struct {
+    char desc[70];
+    uint8_t data[16];
+} iclass_config_card_item_t;
+
 int CmdHFiClass(const char *Cmd);
 
 int info_iclass(void);
@@ -40,6 +45,6 @@ void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elit
 void PrintPreCalcMac(uint8_t *keys, uint32_t keycnt, iclass_premac_t *pre_list);
 void PrintPreCalc(iclass_prekey_t *list, uint32_t itemcnt);
 
-uint8_t get_pagemap(const picopass_hdr *hdr);
+uint8_t get_pagemap(const picopass_hdr_t *hdr);
 bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t *rmac, uint8_t *tmac, uint8_t *key);
 #endif

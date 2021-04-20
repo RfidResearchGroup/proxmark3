@@ -368,14 +368,14 @@ typedef struct {
     uint8_t key_d[8];
     uint8_t key_c[8];
     uint8_t app_issuer_area[8];
-} PACKED picopass_hdr;
+} PACKED picopass_hdr_t;
 
 // iCLASS non-secure mode memory mapping
 typedef struct {
     uint8_t csn[8];
     picopass_conf_block_t conf;
     uint8_t app_issuer_area[8];
-} PACKED picopass_ns_hdr;
+} PACKED picopass_ns_hdr_t;
 
 
 typedef struct {
@@ -383,6 +383,40 @@ typedef struct {
     bool on;
     bool off;
 } PACKED tearoff_params_t;
+
+// when writing to SPIFFS
+typedef struct {
+    bool append : 1;
+    uint16_t bytes_in_packet : 15;
+    uint8_t fnlen;
+    uint8_t fn[32];
+    uint8_t data[];
+} PACKED flashmem_write_t;
+
+//-----------------------------------------------------------------------------
+// ISO 7618  Smart Card
+//-----------------------------------------------------------------------------
+typedef struct {
+    uint8_t atr_len;
+    uint8_t atr[50];
+} PACKED smart_card_atr_t;
+
+typedef enum SMARTCARD_COMMAND {
+    SC_CONNECT = (1 << 0),
+    SC_NO_DISCONNECT = (1 << 1),
+    SC_RAW = (1 << 2),
+    SC_SELECT = (1 << 3),
+    SC_RAW_T0 = (1 << 4),
+    SC_CLEARLOG = (1 << 5),
+    SC_LOG = (1 << 6),
+} smartcard_command_t;
+
+typedef struct {
+    uint8_t flags;
+    uint16_t len;
+    uint8_t data[];
+} PACKED smart_card_raw_t;
+
 
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
@@ -564,6 +598,8 @@ typedef struct {
 #define CMD_LF_HITAGS_SIMULATE                                            0x0368
 #define CMD_LF_HITAGS_READ                                                0x0373
 #define CMD_LF_HITAGS_WRITE                                               0x0375
+
+#define CMD_LF_HITAG_ELOAD                                                0x0376
 
 #define CMD_HF_ISO14443A_ANTIFUZZ                                         0x0380
 #define CMD_HF_ISO14443B_SIMULATE                                         0x0381
@@ -824,10 +860,10 @@ typedef struct {
 
 // Receiving from USART need more than 30ms as we used on USB
 // else we get errors about partial packet reception
-// FTDI   9600 hw status        -> we need 20ms
-// FTDI 115200 hw status        -> we need 50ms
-// FTDI 460800 hw status        -> we need 30ms
-// BT   115200 hf mf fchk 1 dic -> we need 140ms
+// FTDI   9600 hw status                    -> we need 20ms
+// FTDI 115200 hw status                    -> we need 50ms
+// FTDI 460800 hw status                    -> we need 30ms
+// BT   115200  hf mf fchk --1k -f file.dic -> we need 140ms
 // all zero's configure: no timeout for read/write used.
 // took settings from libnfc/buses/uart.c
 

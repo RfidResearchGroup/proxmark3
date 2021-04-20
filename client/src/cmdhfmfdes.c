@@ -1447,10 +1447,10 @@ static int desfire_print_amk_keysetting(uint8_t key_settings, uint8_t num_keys, 
             break;
     }
 
-    PrintAndLogEx(SUCCESS, "   [1000] AMK Configuration changeable   : %s", (key_settings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
-    PrintAndLogEx(SUCCESS, "   [0100] AMK required for create/delete : %s", (key_settings & (1 << 2)) ? "NO" : "YES");
-    PrintAndLogEx(SUCCESS, "   [0010] Directory list access with AMK : %s", (key_settings & (1 << 1)) ? "NO" : "YES");
-    PrintAndLogEx(SUCCESS, "   [0001] AMK is changeable              : %s", (key_settings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "   [%c...] AMK Configuration changeable   : %s", (key_settings & (1 << 3)) ? '1' : '0', (key_settings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "   [.%c..] AMK required for create/delete : %s", (key_settings & (1 << 2)) ? '1' : '0', (key_settings & (1 << 2)) ? "NO" : "YES");
+    PrintAndLogEx(SUCCESS, "   [..%c.] Directory list access with AMK : %s", (key_settings & (1 << 1)) ? '1' : '0', (key_settings & (1 << 1)) ? "NO" : "YES");
+    PrintAndLogEx(SUCCESS, "   [...%c] AMK is changeable              : %s", (key_settings & (1 << 0)) ? '1' : '0', (key_settings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
     return PM3_SUCCESS;
 }
 
@@ -1497,11 +1497,10 @@ static int desfire_print_piccmk_keysetting(uint8_t key_settings, uint8_t num_key
                   (key_settings & (1 << 0)) ? '1' : '0'
                  );
 
-    PrintAndLogEx(SUCCESS, "   [1...] CMK Configuration changeable   : %s", (key_settings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
-    PrintAndLogEx(SUCCESS, "   [.1..] CMK required for create/delete : %s", (key_settings & (1 << 2)) ? _GREEN_("NO") : "YES");
-    PrintAndLogEx(SUCCESS, "   [..1.] Directory list access with CMK : %s", (key_settings & (1 << 1)) ? _GREEN_("NO") : "YES");
-    PrintAndLogEx(SUCCESS, "   [...1] CMK is changeable              : %s", (key_settings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
-
+    PrintAndLogEx(SUCCESS, "   [%c...] CMK Configuration changeable   : %s", (key_settings & (1 << 3)) ? '1' : '0', (key_settings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "   [.%c..] CMK required for create/delete : %s", (key_settings & (1 << 2)) ? '1' : '0', (key_settings & (1 << 2)) ? _GREEN_("NO") : "YES");
+    PrintAndLogEx(SUCCESS, "   [..%c.] Directory list access with CMK : %s", (key_settings & (1 << 1)) ? '1' : '0', (key_settings & (1 << 1)) ? _GREEN_("NO") : "YES");
+    PrintAndLogEx(SUCCESS, "   [...%c] CMK is changeable              : %s", (key_settings & (1 << 0)) ? '1' : '0', (key_settings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
     return PM3_SUCCESS;
 }
 
@@ -2933,13 +2932,13 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         res = handler_desfire_readdata(&ft, type, cs);
         if (res == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "Successfully read data from file %d:", ft.fileno);
-            PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
-            PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
+            PrintAndLogEx(INFO, "\nOffset  | Data                                            | Ascii");
+            PrintAndLogEx(INFO, "----------------------------------------------------------------------------");
 
             uint32_t len = le24toh(ft.length);
             for (uint32_t i = 0; i < len; i += 16) {
                 uint32_t l = len - i;
-                PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", i, i, sprint_hex(&ft.data[i], l > 16 ? 16 : l), sprint_ascii(&ft.data[i], l > 16 ? 16 : l));
+                PrintAndLogEx(INFO, "%02d/0x%02X | %s| %s", i, i, sprint_hex(&ft.data[i], l > 16 ? 16 : l), sprint_ascii(&ft.data[i], l > 16 ? 16 : l));
             }
         } else {
             PrintAndLogEx(ERR, "Couldn't read data. Error %d", res);
@@ -4804,13 +4803,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 }
 
 static int CmdHF14ADesList(const char *Cmd) {
-    char args[128] = {0};
-    if (strlen(Cmd) == 0) {
-        snprintf(args, sizeof(args), "-t des");
-    } else {
-        strncpy(args, Cmd, sizeof(args) - 1);
-    }
-    return CmdTraceList(args);
+    return CmdTraceListAlias(Cmd, "hf mfdes", "des");
 }
 
 /*
@@ -4827,7 +4820,7 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_litn("v",  "verbose",  0, 2, "show technical data"),
-        arg_str0("",    "aid",      "<aid>", "replace default aid for NDEF"),
+        arg_str0(NULL, "aid",      "<aid>", "replace default aid for NDEF"),
         arg_str0("k",  "key",      "<key>", "replace default key for NDEF"),
         arg_param_end
     };
@@ -4931,7 +4924,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_litn("v",  "verbose",  0, 2, "show technical data"),
-        arg_str0("",    "aid",      "<aid>", "replace default aid for MAD"),
+        arg_str0(NULL, "aid",      "<aid>", "replace default aid for MAD"),
         arg_str0("k",  "key",      "<key>", "replace default key for MAD"),
         arg_param_end
     };

@@ -1,6 +1,3 @@
-# Must be called before any Makefile include
-ROOT_DIR:=$(dir $(realpath $(lastword $(MAKEFILE_LIST))))
-
 include ../../Makefile.defs
 
 all clean install uninstall check: %: crack2/% crack3/% crack4/% crack5/%

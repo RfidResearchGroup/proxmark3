@@ -208,15 +208,12 @@ static void remove_from_spiffs(const char *filename) {
         Dbprintf("errno %i\n", SPIFFS_errno(&fs));
 }
 
-static spiffs_stat stat_in_spiffs(const char *filename) {
-    spiffs_stat s;
-    if (SPIFFS_stat(&fs, filename, &s) < 0)
-        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
-    return s;
-}
-
 uint32_t size_in_spiffs(const char *filename) {
-    spiffs_stat s = stat_in_spiffs(filename);
+    spiffs_stat s;
+    if (SPIFFS_stat(&fs, filename, &s) < 0) {
+        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+        return 0;
+    }
     return s.size;
 }
 
@@ -552,17 +549,13 @@ void rdv40_spiffs_safe_print_fsinfo(void) {
     rdv40_spiffs_fsinfo fsinfo;
     rdv40_spiffs_getfsinfo(&fsinfo, RDV40_SPIFFS_SAFETY_SAFE);
 
-    DbpString(_CYAN_("Flash Memory FileSystem Info (SPIFFS)"));
-
-
-    Dbprintf("  Logical Block Size........." _YELLOW_("%d")" bytes", fsinfo.blockSize);
-    Dbprintf("  Logical Page Size.........." _YELLOW_("%d")" bytes", fsinfo.pageSize);
-    Dbprintf("");
-    Dbprintf("  Max Open Files............." _YELLOW_("%d")" file descriptors", fsinfo.maxOpenFiles);
-    Dbprintf("  Max Path Length............" _YELLOW_("%d")" chars", fsinfo.maxPathLength);
+    Dbprintf("  Logical block size......... " _YELLOW_("%d")" bytes", fsinfo.blockSize);
+    Dbprintf("  Logical page size.......... " _YELLOW_("%d")" bytes", fsinfo.pageSize);
+    Dbprintf("  Max open files............. " _YELLOW_("%d")" file descriptors", fsinfo.maxOpenFiles);
+    Dbprintf("  Max path length............ " _YELLOW_("%d")" chars", fsinfo.maxPathLength);
     DbpString("");
-    Dbprintf("  filesystem    size      used        available    use%    mounted");
-    Dbprintf("  spiffs        %6d B %6d B    %6d B      " _YELLOW_("%2d%")"     /"
+    Dbprintf("  Filesystem    size       used      available    use%    mounted");
+    Dbprintf("  spiffs        %6d B %6d B    %6d B      " _YELLOW_("%2d%")"    /"
              , fsinfo.totalBytes
              , fsinfo.usedBytes
              , fsinfo.freeBytes
@@ -577,20 +570,13 @@ void rdv40_spiffs_safe_print_fsinfo(void) {
 // maintaining prefix list sorting, unique_checking, THEN outputing precomputed
 // tree Other solutio nwould be to add directory support to SPIFFS, but that we
 // dont want, as prefix are way easier and lighter in every aspect.
-void rdv40_spiffs_safe_print_tree(uint8_t banner) {
-
-    if (banner) {
-        DbpString(_CYAN_("Flash Memory FileSystem tree (SPIFFS)"));
-        Dbprintf("-------------------------------------");
-    }
-
+void rdv40_spiffs_safe_print_tree(void) {
     int changed = rdv40_spiffs_lazy_mount();
     spiffs_DIR d;
     struct spiffs_dirent e;
     struct spiffs_dirent *pe = &e;
 
     SPIFFS_opendir(&fs, "/", &d);
-    Dbprintf("    \t         \t/");
     while ((pe = SPIFFS_readdir(&d, pe))) {
 
         char resolvedlink[11 + SPIFFS_OBJ_NAME_LEN];
@@ -604,10 +590,9 @@ void rdv40_spiffs_safe_print_tree(uint8_t banner) {
             memset(resolvedlink, 0, sizeof(resolvedlink));
         }
 
-        Dbprintf("[%04x]\t %ibytes \t|-- %s%s", pe->obj_id, pe->size, pe->name, resolvedlink);
+        Dbprintf("[%04x]\t " _YELLOW_("%i") " B |-- %s%s", pe->obj_id, pe->size, pe->name, resolvedlink);
     }
     SPIFFS_closedir(&d);
-
     rdv40_spiffs_lazy_mount_rollback(changed);
 }
 
@@ -654,7 +639,7 @@ void test_spiffs(void) {
     int changed = rdv40_spiffs_lazy_mount();
 
     Dbprintf("  Printing tree..............");
-    rdv40_spiffs_safe_print_tree(false);
+    rdv40_spiffs_safe_print_tree();
 
     Dbprintf("  Writing 'I love Proxmark3 RDV4' in a testspiffs.txt");
 
@@ -663,13 +648,13 @@ void test_spiffs(void) {
     rdv40_spiffs_write((char *)"testspiffs.txt", (uint8_t *)"I love Proxmark3 RDV4", 21, RDV40_SPIFFS_SAFETY_SAFE);
 
     Dbprintf("  Printing tree again.......");
-    rdv40_spiffs_safe_print_tree(false);
+    rdv40_spiffs_safe_print_tree();
 
     Dbprintf("  Making a symlink to testspiffs.txt");
     rdv40_spiffs_make_symlink((char *)"testspiffs.txt", (char *)"linktotestspiffs.txt", RDV40_SPIFFS_SAFETY_SAFE);
 
     Dbprintf("  Printing tree again.......");
-    rdv40_spiffs_safe_print_tree(false);
+    rdv40_spiffs_safe_print_tree();
 
     // TODO READBACK, rename,print tree read back, remove, print tree;
     Dbprintf("  Rollbacking The mount status IF things have changed");

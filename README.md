@@ -18,13 +18,13 @@
 | ------------------- |:-------------------:| -------------------:|
 |[What has changed?](#what-has-changed)  | **[Setup and build for Linux](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md)** | [Compilation Instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md)|
 |[Development](#development) | **[Important notes on ModemManager for Linux users](/doc/md/Installation_Instructions/ModemManager-Must-Be-Discarded.md)** | [Validating proxmark client functionality](/doc/md/Use_of_Proxmark/1_Validation.md) |
-|[Why didn't you base it on official Proxmark3 Master?](#why-didnt-you-base-it-on-official-proxmark3-master)| **[Homebrew (Mac OS X) & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md)** | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
+|[Maintainers](#maintainers--package-distro-)| **[Homebrew (Mac OS X) & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md)** | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
 |[Proxmark3 GUI](#proxmark3-gui)|**[Setup and build for Windows](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md)**|[Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
-|[Issues](#issues)|[Blue shark manual](/doc/bt_manual_v10.md) ||
-|[Donations](#Donations)|[Maintainers](/doc/md/Development/Maintainers.md)|[Command Cheat sheet](/doc/cheatsheet.md)|
+|[Pre-compiled binaries](#precompiled-binaries)|[Blue shark manual](/doc/bt_manual_v10.md) ||
+|[Donations](#donations)||[Command Cheat sheet](/doc/cheatsheet.md)|
 ||[Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)|[More cheat sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
 ||**[Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md)**|[Complete client command set](/doc/commands.md)|
-||**[JTAG](/doc/jtag_notes.md)**|[T55xx Guide](/doc/T5577_Guide.md)|
+||**[JTAG](/doc/jtag_notes.md)**|[T5577 Introduction Guide](/doc/T5577_Guide.md)|
 
 
 ## Notes / helpful documents
@@ -39,68 +39,107 @@
 |[Notes on Color usage](/doc/colors_notes.md)|[Makefile vs CMake](/doc/md/Development/Makefile-vs-CMake.md)|[Notes on Cloner guns](/doc/cloner_notes.md)|
 |[Notes on cliparser usage](/doc/cliparser.md)|[Notes on clocks](/doc/clocks.md)||
 
-
-## Build for Proxmark3 RDV4
+# How to build?
+## Proxmark3 RDV4
 See the instruction links in the tables above to build, flash and run for your Proxmark3 RDV4 device.
 
-## Build for generic Proxmark3 platforms
+## Generic Proxmark3 platforms
 In order to build this repo for generic Proxmark3 platforms we urge you to read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
 
-With generic Proxmark3 platforms we mean: 
-  - RDV1
-  - RDV2
-  - RDV3 easy
-  - Proxmark Evolution (needs extra care)
-  - Radiowar black PCB version
+We define generic Proxmark3 platforms as following devices.
+
+**Supported**
+  - RDV1, RDV2, RDV3 easy
   - Ryscorp green PCB version
-  - Ryscorp Pm3Pro
-  - VX
+  - Radiowar black PCB version
   - numerous Chinese adapted versions of the RDV3 easy (kkmoon, pisworks etc)
 
-> ⚠ **Note**: About flash memory size of other Proxmark3 platforms. You need to keep a eye on how large your ARM chip built-in flash memory is. With 512kb you are fine but if its 256kb you need to compile this repo with even less functionality.  When running the `./pm3-flash-all` you can see which size your device have if you have the bootloader from this repo installed. Otherwise you will find the size reported in the start message when running the Proxmark3 client `./pm3`.
+**Not supported**
+ - ⚠  Proxmark Evolution (EVO) 
+   - **Note**: unknown pin assignments.
+ - ⚠  Ryscorp Proxmark3 Pro 
+   - **Note**: device has different fpga and unknown pin assignments.
+
+**Unknown support status**
+ - ⚠  VX
+
+**256kb flash memory size of generic Proxmark3 platforms**
+
+> ⚠ **Note**: 
+> You need to keep a eye on how large your ARM chip built-in flash memory is. 
+> With 512kb you are fine but if its 256kb you need to compile this repo with even less functionality.
+> When running the `./pm3-flash-all` you can see which size your device have if you have the bootloader from this repo installed. 
+> Otherwise you will find the size reported in the start message when running the Proxmark3 client `./pm3`.
+>
+> [OBS! Read the 256kb flash memory advisory](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#256kb-versions)
+
 
 ## What has changed?
 
-On the hardware side:
-
-  * added flash memory 256kb.
+Proxmark3 RDV4 hardware modifications:
+  * added flash memory 256kb
   * added smart card module
-  * added FPC connector
+  * added FPC connector for peripherals such as Bluetooth+battery addon
+  * improved antennas
+    * swappable
+    * LF Q factor switch
+    * LF 125/134 frequency switch
+  * tiny PCB form factor
+  * ABS case
 
-On the software side:
+This repo vs official Proxmark3 repo:
+see the [Changelog file](CHANGELOG.md) which we try to keep updated. In short this repo gives you a completely different user experience when it comes to Proxmark3.
+  * richer CLI with use of colors / emojis
+  * help text system implemented everywhere
+  * hints system
+  * user preference settings
+  * extensive testing with continuous integration build systems on Linux, OSX and Windows, and regular usage of static analysis tools like 
+    * [Coverity Scan](https://scan.coverity.com/projects/proxmark3-rrg-iceman-repo/)
+    * Cppcheck
+    * GCC and Clang aggressive enforcement of diagnostic flags
+  * auto detection of serial ports and seamless integration with Bluetooth addon
+  * reconnect to device from inside client
+  * Supports tearoff attacks
+  * the most comprehensive compiled known keys dictionaries
+  * Slimed down usb communications with NG-frames
+  * the most compiled public known key recovery software
+  * the fastest implementations of said software
+  * support multiple fileformats for dump files (BIN/EML/JSON) 
+  * interoperability of said fileformats with libnfc, MFC tool app etc
+  * Supports more RFID based protocols than ever
+  * Easy install for package maintainers, distro maintainers
+  * More documentation 
 
-quite a lot, see the [Changelog file](CHANGELOG.md) which we try to keep updated.
+
+  
+All of this and more is what makes this repo different from any other Proxmark3 firmware / client software. It is truely bleeding edge in that sense of available functionality and experience with it. With all extensive testing its also quite more stable than any other Proxmark3 repo.
+
 
 ## Development
 
 > ⚠ **Note**: This is a bleeding edge repository. The maintainers actively is working out of this repository and will be periodically re-structuring the code to make it easier to comprehend, navigate, build, test, and contribute to, so **DO expect significant changes to code layout on a regular basis**.
 
+> 👉 **Remember!** If you intend to contribute to the code, please read the [coding style notes](HACKING.md) first.
+We usually merge your contributions fast since we do like the idea of getting a functionality in the Proxmark3 and weed out the bugs afterwards.
+
+The [public roadmap](https://github.com/RfidResearchGroup/proxmark3/wiki/Public-Roadmap) is an excellent start to read if you are interesting in contributing.
+
+
+## Supported operative systems 
 This repo compiles nicely on 
-   - Proxspace v3.x
-     - [latest release v3.8](https://github.com/Gator96100/ProxSpace/releases)
-   - Windows/mingw environment with Qt5.6.1 & GCC 4.9
-   - Ubuntu 16.04 -> 20.04
-   - ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora, Debian
-   - Rasbian
+   - WSL1 on Windows 10
+   - Proxspace v3.9 [release v3.9](https://github.com/Gator96100/ProxSpace/releases)
+   - Windows/MinGW environment
+   - Ubuntu, ParrotOS, Gentoo, Pentoo, Kali, NetHunter, Arch Linux, Fedora, Debian, Raspbian
    - Android / Termux
-   - Mac OS X / Homebrew / Apple Silicon
-   - WSL1  (Windows subsystem linux) on Windows 10
+   - Mac OS X / Homebrew / Apple Silicon M1
    - Docker container
       - [ RRG / Iceman repo based ubuntu 18.04 container ](https://hub.docker.com/r/secopsconsult/proxmark3)
       - [ Iceman fork based container v1.7 ](https://hub.docker.com/r/iceman1001/proxmark3/)
 
-Hardware to run client on
-   - PC
-   - Android
-   - Raspberry Pi, Raspberry Pi Zero
-   - Nvidia Jetson Nano
 
 ## Precompiled binaries
-We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where [@gator96100](https://github.com/gator96100) has set up a AWS bucket with precompiled Proxspace (Mingw) binaries which is recompiled every night and with that also up-to-date. We link to these files here as to make it easier for users.
-
-_If you use his pre-compiled Proxspace binaries do consider buy him a coffee for his efforts. Remember nothing says thank you as good as a donation._
-
-If you are having troubles with these files, contact the package maintainer [@gator96100](https://github.com/gator96100) and read the [homepage of his proxmark builds](https://www.proxmarkbuilds.org/) or read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) where known issues has been documented with regards to the precompiled builds.  
+We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where package maintainer [@gator96100](https://github.com/gator96100) has set up a AWS bucket with precompiled Proxspace (MinGW) binaries which are recompiled every night and with that also up-to-date. We link to these files here as to make it easier for users. If you are having troubles with these files, we suggest to read the [homepage of his proxmark builds](https://www.proxmarkbuilds.org/) or read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) 
 
 ### Proxmark3 RDV4 devices
 - [Precompiled builds for RDV40 dedicated x64](https://www.proxmarkbuilds.org/#rdv40-64/)
@@ -110,42 +149,13 @@ If you are having troubles with these files, contact the package maintainer [@ga
 - [Precompiled builds for RRG / Iceman repository x64](https://www.proxmarkbuilds.org/#rrg_other-64/)
 
 
-## Roadmap
-The [public roadmap](https://github.com/RfidResearchGroup/proxmark3/wiki/Public-Roadmap) is an excellent start to read if you are interesting in contributing.
-
-> 👉 **Remember!** If you intend to contribute to the code, please read the [coding style notes](HACKING.md) first.
-We usually merge your contributions fast since we do like the idea of getting a functionality in the Proxmark3 and weed out the bugs afterwards.
-
-
-## Issues & Troubleshooting
-Please search the [issues](https://github.com/rfidresearchgroup/proxmark3/issues) page here and see if your issue is listed in the first instance.
-Read the [Troubleshooting guide](/doc/md/Installation_Instructions/Troubleshooting.md) to weed out most known problems.
-
-Next place to visit is the [Proxmark3 Forum](http://www.proxmark.org/forum/index.php). Learn to search it well and finally Google / duckduckgo is your friend :) 
-You will find many blogposts, youtube videos, tweets, reddit
-
-### Offical channels
+## Official channels
+Where do you find the community?
    - [RFID Hacking community discord server](https://discord.gg/QfPvGFRQxH)
    - [Proxmark3 IRC channel](http://webchat.freenode.net/?channels=#proxmark3)
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
-   - [Proxmark3 Twitter](https://twitter.com/proxmark3/)   
    - [Proxmark3 forum](http://www.proxmark.org/forum/index.php)
-   -  _no slack channel_
 
-
-### Youtube channels
-Iceman has quite a few videos on his channel and Quentyn has risen up the last year with good informative videos. We suggest you check them out and smash that subscribe buttons!
-
- - [Iceman channel](https://www.youtube.com/c/ChrisHerrmann1001)
- - [Quentyn Taylor](https://www.youtube.com/channel/UCL91C3IZDv3wfj2ABhdRIrw)
- - [Hacker warehouse channel](https://www.youtube.com/channel/UCimS6P854cQ23j6c_xst7EQ)
-
-_if you think of some more good youtube channels to be on this list, let us know!_
-
-## Cheat sheet
-
-You can enjoy a [command cheat sheet](/doc/cheatsheet.md) and we are trying to keep it updated. 
-[Thanks to Alex Dib!](https://github.com/scund00r)
 
 ## Maintainers ( package, distro )
 
@@ -154,19 +164,19 @@ To all distro, package maintainers, we tried to make your life easier.
 `make install` is now available and if you want to know more.
 - [Notes for maintainers](/doc/md/Development/Maintainers.md)
 
-## Why didn't you base it on official Proxmark3 Master?
-
-The separation from official Proxmark3 repo gives us a lot of freedom to create a firmware/client that suits the RDV40 features. We don't want to mess up the official Proxmark3 repo with RDV40 specific code.
-
 ## Proxmark3 GUI
 
 The official PM3-GUI from Gaucho will not work. Not to mention is quite old and not maintained any longer.
 
-The new [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) will work more or less. Change is needed in order to show helptext when client isn't connected to a device.  We don't know how active the maintainers are.  There has been brought to our attention that there is quite a few Chinese Windows GUI available. Usually you find them on alibaba / taobao ads but we have no idea which fw/client they are compatible with.  Proceed with caution if you decide to go down that road.
+- [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) will work more or less.
+
+- [Proxmark3 GUI cross-compiled](https://github.com/wh201906/Proxmark3GUI/) which is recently updated and claims to support latest source of this repo.
+
 
 # Donations
 
-Nothing says thank you as much as a donation. So if you feel the love, do feel free to become a iceman patron. For some tiers it comes with rewards.
+Nothing says thank you as much as a donation. 
 
-https://www.patreon.com/iceman1001
+If you feel the love, do feel free to become a [Iceman patron](https://www.patreon.com/iceman1001).
 
+If you are using @gator96100 's Proxspace with pre-compiled binaries do consider buy him a coffee for his efforts.

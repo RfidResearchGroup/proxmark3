@@ -14,7 +14,5 @@
 #include "common.h"
 
 int CmdHFCryptoRF(const char *Cmd);
-
-int infoHFCryptoRF(bool verbose);
-int readHFCryptoRF(bool verbose);
+int readHFCryptoRF(bool loop, bool verbose);
 #endif

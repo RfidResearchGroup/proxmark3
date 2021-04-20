@@ -129,27 +129,31 @@ static int CmdAuto(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("c", NULL, "Continue searching even after a first hit"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool exit_first = (arg_get_lit(ctx, 1) == false);
     CLIParserFree(ctx);
 
     PrintAndLogEx(INFO, "lf search");
     int ret = CmdLFfind("");
-    if (ret == PM3_SUCCESS)
+    if (ret == PM3_SUCCESS && exit_first)
         return ret;
 
     PrintAndLogEx(INFO, "hf search");
     ret = CmdHFSearch("");
-    if (ret == PM3_SUCCESS)
+    if (ret == PM3_SUCCESS && exit_first)
         return ret;
 
     PrintAndLogEx(INFO, "lf search - unknown");
     ret = lf_search_plus("");
-    if (ret == PM3_SUCCESS)
+    if (ret == PM3_SUCCESS && exit_first)
         return ret;
 
-    PrintAndLogEx(INFO, "Failed both LF / HF SEARCH,");
+    if (ret != PM3_SUCCESS)
+        PrintAndLogEx(INFO, "Failed both LF / HF SEARCH,");
+
     PrintAndLogEx(INFO, "Trying " _YELLOW_("`lf read`") " and save a trace for you");
 
     CmdPlot("");
@@ -259,7 +263,17 @@ static int CmdMsleep(const char *Cmd) {
 }
 
 static int CmdQuit(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "quit",
+                  "Quit the Proxmark3 client terminal",
+                  "quit"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return PM3_EFATAL;
 }
 
@@ -274,37 +288,47 @@ static int CmdPref(const char *Cmd) {
 }
 
 static int CmdClear(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "clear",
+                  "Clear the Proxmark3 client terminal screen",
+                  "clear"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ "");
     return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
 
-    {"--------", CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("Technology") " -----------------------"},
-
-    {"analyse", CmdAnalyse,   AlwaysAvailable,         "{ Analyse utils... }"},
-    {"data",    CmdData,      AlwaysAvailable,         "{ Plot window / data buffer manipulation... }"},
-    {"emv",     CmdEMV,       AlwaysAvailable,         "{ EMV ISO-14443 / ISO-7816... }"},
-    {"hf",      CmdHF,        AlwaysAvailable,         "{ High frequency commands... }"},
-    {"hw",      CmdHW,        AlwaysAvailable,         "{ Hardware commands... }"},
-    {"lf",      CmdLF,        AlwaysAvailable,         "{ Low frequency commands... }"},
-    {"mem",     CmdFlashMem,  IfPm3Flash,              "{ Flash memory manipulation... }"},
-    {"reveng",  CmdRev,       AlwaysAvailable,         "{ CRC calculations from RevEng software... }"},
-    {"smart",   CmdSmartcard, AlwaysAvailable,         "{ Smart card ISO-7816 commands... }"},
-    {"script",  CmdScript,    AlwaysAvailable,         "{ Scripting commands... }"},
-    {"trace",   CmdTrace,     AlwaysAvailable,         "{ Trace manipulation... }"},
-    {"usart",   CmdUsart,     IfPm3FpcUsartFromUsb,    "{ USART commands... }"},
-    {"wiegand", CmdWiegand,   AlwaysAvailable,         "{ Wiegand format manipulation... }"},
-    {"--------", CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("General") " -----------------------"},
-    {"auto",    CmdAuto,      IfPm3Present,            "Automated detection process for unknown tags"},
-    {"clear",   CmdClear,     AlwaysAvailable,         "Clear screen"},
-    {"help",    CmdHelp,      AlwaysAvailable,         "This help. Use " _YELLOW_("'<command> help'") " for details of a particular command."},
-    {"hints",   CmdHints,     AlwaysAvailable,         "Turn hints on / off"},
-    {"msleep",  CmdMsleep,    AlwaysAvailable,         "Add a pause in milliseconds"},
-    {"pref",    CmdPref,      AlwaysAvailable,         "Edit preferences"},
-    {"rem",     CmdRem,       AlwaysAvailable,         "Add a text line in log file"},
-    {"quit",    CmdQuit,      AlwaysAvailable,         ""},
-    {"exit",    CmdQuit,      AlwaysAvailable,         "Exit program"},
+    {"help",         CmdHelp,      AlwaysAvailable,         "Use `" _YELLOW_("<command> help") "` for details of a command"},
+    {"prefs",        CmdPref,      AlwaysAvailable,         "{ Edit client/device preferences... }"},
+    {"--------",     CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("Technology") " -----------------------"},
+    {"analyse",      CmdAnalyse,   AlwaysAvailable,         "{ Analyse utils... }"},
+    {"data",         CmdData,      AlwaysAvailable,         "{ Plot window / data buffer manipulation... }"},
+    {"emv",          CmdEMV,       AlwaysAvailable,         "{ EMV ISO-14443 / ISO-7816... }"},
+    {"hf",           CmdHF,        AlwaysAvailable,         "{ High frequency commands... }"},
+    {"hw",           CmdHW,        AlwaysAvailable,         "{ Hardware commands... }"},
+    {"lf",           CmdLF,        AlwaysAvailable,         "{ Low frequency commands... }"},
+    {"mem",          CmdFlashMem,  IfPm3Flash,              "{ Flash memory manipulation... }"},
+    {"reveng",       CmdRev,       AlwaysAvailable,         "{ CRC calculations from RevEng software... }"},
+    {"smart",        CmdSmartcard, AlwaysAvailable,         "{ Smart card ISO-7816 commands... }"},
+    {"script",       CmdScript,    AlwaysAvailable,         "{ Scripting commands... }"},
+    {"trace",        CmdTrace,     AlwaysAvailable,         "{ Trace manipulation... }"},
+    {"usart",        CmdUsart,     IfPm3FpcUsartFromUsb,    "{ USART commands... }"},
+    {"wiegand",      CmdWiegand,   AlwaysAvailable,         "{ Wiegand format manipulation... }"},
+    {"--------",     CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("General") " -----------------------"},
+    {"auto",         CmdAuto,      IfPm3Present,            "Automated detection process for unknown tags"},
+    {"clear",        CmdClear,     AlwaysAvailable,         "Clear screen"},
+    {"hints",        CmdHints,     AlwaysAvailable,         "Turn hints on / off"},
+    {"msleep",       CmdMsleep,    AlwaysAvailable,         "Add a pause in milliseconds"},
+    {"rem",          CmdRem,       AlwaysAvailable,         "Add a text line in log file"},
+    {"quit",         CmdQuit,      AlwaysAvailable,         ""},
+    {"exit",         CmdQuit,      AlwaysAvailable,         "Exit program"},
     {NULL, NULL, NULL, NULL}
 };
 

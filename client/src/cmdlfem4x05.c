@@ -504,7 +504,7 @@ int CmdEM4x05Dump(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("p", "pwd", "<hex>", "password (00000000)"),
-        arg_str0("f", "file", "<filename>", "override filename prefix (optional).  Default is based on UID"),
+        arg_str0("f", "file", "<fn>", "override filename prefix (optional).  Default is based on UID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -557,12 +557,12 @@ int CmdEM4x05Dump(const char *Cmd) {
         // Test first if the password is correct
         status = em4x05_login_ext(pwd);
         if (status == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Password is " _GREEN_("correct"));
+            PrintAndLogEx(INFO, "password is " _GREEN_("correct"));
         } else if (status == PM3_EFAILED) {
-            PrintAndLogEx(WARNING, "Password is " _RED_("incorrect") ", will try without password");
+            PrintAndLogEx(WARNING, "password is " _RED_("incorrect") ", will try without password");
             usePwd = false;
         } else if (status != PM3_EFAILED) {
-            PrintAndLogEx(WARNING, "Login attempt: No answer from tag");
+            PrintAndLogEx(WARNING, "Login attempt: no answer from tag");
             return status;
         }
     }
@@ -705,7 +705,6 @@ int CmdEM4x05Dump(const char *Cmd) {
         }
         PrintAndLogEx(NORMAL, "");
         saveFileJSON(filename, (card_type == EM_4369 || card_type == EM_4469) ? jsfEM4x69 : jsfEM4x05, (uint8_t *)data, 16 * sizeof(uint32_t), NULL);
-
         saveFileEML(filename, (uint8_t *)data, 16 * sizeof(uint32_t), sizeof(uint32_t));
         saveFile(filename, ".bin", data, sizeof(data));
     }
@@ -1376,7 +1375,7 @@ int CmdEM4x05Chk(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
+        PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
 
         for (uint32_t c = 0; c < keycount; ++c) {
 
@@ -1429,7 +1428,7 @@ int CmdEM4x05Brute(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0("s", "start", "<pwd>", "Start bruteforce enumeration from this password value"),
-        arg_int0("n", "", "<digits>", "Stop after having found n candidates. Default: 0 => infinite"),
+        arg_int0("n", NULL, "<digits>", "Stop after having found n candidates. Default: 0 => infinite"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1534,7 +1533,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
         arg_int0("n", NULL, NULL, "steps to skip"),
         arg_int0("s", "start", "<us>", "start scan from delay (us)"),
         arg_int0("e", "end", "<us>", "end scan at delay (us)"),
-        arg_str0("p", "pwd", "", "password (00000000)"),
+        arg_str0("p", "pwd", "<hex>", "password (def 00000000)"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
@@ -1626,7 +1625,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
 
     PrintAndLogEx(INFO, "----------------------------------------------------------------------------\n");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
+    PrintAndLogEx(INFO, "press " _GREEN_("<Enter>'") " to exit");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------------\n");
 
@@ -1692,11 +1691,8 @@ int CmdEM4x05Unlock(const char *Cmd) {
         }
 
         // write
-        res = unlock_write_protect(use_pwd, pwd, write_value, verbose);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "failed unlock write");
-            return PM3_ESOFT;
-        }
+        // don't check the return value. As a tear-off occurred, the write failed.
+        unlock_write_protect(use_pwd, pwd, write_value, verbose);
 
         // read after trigger
         res = em4x05_read_word_ext(14, pwd, use_pwd, &word14);
@@ -1962,11 +1958,11 @@ int CmdEM4x05Sniff(const char *Cmd) {
     bool haveData, sampleData = true;
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x05_sniff",
+    CLIParserInit(&ctx, "lf em 4x05 sniff",
                   "Sniff EM4x05 commands sent from a programmer",
-                  "lf em 4x05_sniff -> sniff via lf sniff\n"
-                  "lf em 4x05_sniff -1 -> sniff from data loaded into the buffer\n"
-                  "lf em 4x05_sniff -r -> reverse the bit order when showing block data"
+                  "lf em 4x05 sniff     --> sniff via lf sniff\n"
+                  "lf em 4x05 sniff -1  --> sniff from data loaded into the buffer\n"
+                  "lf em 4x05 sniff -r  --> reverse the bit order when showing block data"
                  );
 
     void *argtable[] = {

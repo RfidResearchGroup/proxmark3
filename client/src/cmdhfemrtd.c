@@ -262,13 +262,22 @@ static int emrtd_get_asn1_data_length(uint8_t *datain, int datainlen, int offset
         // https://wf.lavatech.top/ave-but-random/emrtd-data-quirks#EF_SOD
         return datainlen;
     } else if (lenfield == 0x81) {
-        return ((int) * (datain + offset + 1));
+        int tmp = (*(datain + offset + 1) << 8);
+        return tmp;
+        //return ((int) * (datain + offset + 1));
     } else if (lenfield == 0x82) {
-        return ((int) * (datain + offset + 1) << 8) | ((int) * (datain + offset + 2));
+        int tmp = (*(datain + offset + 1) << 8);
+        tmp |= *(datain + offset + 2);
+        return tmp;
+        //return ((int) * (datain + offset + 1) << 8) | ((int) * (datain + offset + 2));
     } else if (lenfield == 0x83) {
-        return (((int) * (datain + offset + 1) << 16) | ((int) * (datain + offset + 2)) << 8) | ((int) * (datain + offset + 3));
+        int tmp = (*(datain + offset + 1) << 16);
+        tmp |= (*(datain + offset + 2) << 8);
+        tmp |= *(datain + offset + 3);
+        return tmp;
+        //return (((int) * (datain + offset + 1) << 16) | ((int) * (datain + offset + 2)) << 8) | ((int) * (datain + offset + 3));
     }
-    return false;
+    return 0;
 }
 
 static int emrtd_get_asn1_field_length(uint8_t *datain, int datainlen, int offset) {
@@ -284,7 +293,7 @@ static int emrtd_get_asn1_field_length(uint8_t *datain, int datainlen, int offse
     } else if (lenfield == 0x83) {
         return 4;
     }
-    return false;
+    return 0;
 }
 
 static void des_encrypt_ecb(uint8_t *key, uint8_t *input, uint8_t *output) {
@@ -839,12 +848,13 @@ static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length, const c
 
     if (fieldlen + 1 > EMRTD_MAX_FILE_SIZE) {
         PrintAndLogEx(ERR, "error (emrtd_dump_ef_sod) fieldlen out-of-bounds");
-        return PM3_SUCCESS;
+        return PM3_EOUTOFBOUND;
     }
 
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
     if (filepath == NULL)
         return PM3_EMALLOC;
+
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
     strcat(filepath, dg_table[EF_SOD].filename);
@@ -1177,11 +1187,12 @@ static void emrtd_print_legal_sex(char *legal_sex) {
 
 static int emrtd_mrz_determine_length(char *mrz, int offset, int max_length) {
     int i;
-    for (i = max_length; i >= 0; i--) {
-        if (mrz[offset + i - 1] != '<') {
+    for (i = max_length - 1; i >= 0; i--) {
+        if (mrz[offset + i] != '<') {
             break;
         }
     }
+    // if not found,  it will return -1
     return i;
 }
 
@@ -1206,6 +1217,9 @@ static void emrtd_mrz_replace_pad(char *data, int datalen, char newchar) {
 
 static void emrtd_print_optional_elements(char *mrz, int offset, int length, bool verify_check_digit) {
     int i = emrtd_mrz_determine_length(mrz, offset, length);
+    if (i == -1) {
+        return;
+    }
 
     // Only print optional elements if they're available
     if (i != 0) {
@@ -1219,6 +1233,9 @@ static void emrtd_print_optional_elements(char *mrz, int offset, int length, boo
 
 static void emrtd_print_document_number(char *mrz, int offset) {
     int i = emrtd_mrz_determine_length(mrz, offset, 9);
+    if (i == -1) {
+        return;
+    }
 
     PrintAndLogEx(SUCCESS, "Document Number.......: " _YELLOW_("%.*s"), i, mrz + offset);
 
@@ -1230,6 +1247,9 @@ static void emrtd_print_document_number(char *mrz, int offset) {
 static void emrtd_print_name(char *mrz, int offset, int max_length, bool localized) {
     char final_name[100] = { 0x00 };
     int namelen = emrtd_mrz_determine_length(mrz, offset, max_length);
+    if (namelen == -1) {
+        return;
+    }
     int sep = emrtd_mrz_determine_separator(mrz, offset, namelen);
 
     // Account for mononyms
@@ -1482,37 +1502,37 @@ static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen) {
                     emrtd_print_name((char *) tagdata, 0, tagdatalen, false);
                     break;
                 case 0x10:
-                    PrintAndLogEx(SUCCESS, "Personal Number.......: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Personal Number.......: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x11:
                     // TODO: acc for < separation
-                    PrintAndLogEx(SUCCESS, "Place of Birth........: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Place of Birth........: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x42:
                     // TODO: acc for < separation
-                    PrintAndLogEx(SUCCESS, "Permanent Address.....: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Permanent Address.....: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x12:
-                    PrintAndLogEx(SUCCESS, "Telephone.............: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Telephone.............: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x13:
-                    PrintAndLogEx(SUCCESS, "Profession............: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Profession............: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x14:
-                    PrintAndLogEx(SUCCESS, "Title.................: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Title.................: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x15:
-                    PrintAndLogEx(SUCCESS, "Personal Summary......: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Personal Summary......: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x16:
                     saveFile("ProofOfCitizenship", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
                     break;
                 case 0x17:
                     // TODO: acc for < separation
-                    PrintAndLogEx(SUCCESS, "Other valid TDs nums..: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Other valid TDs nums..: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x18:
-                    PrintAndLogEx(SUCCESS, "Custody Information...: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Custody Information...: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x2b:
                     emrtd_print_dob((char *) tagdata, 0, true, tagdatalen != 4);
@@ -1557,16 +1577,16 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
             // ...and I doubt many states are using them.
             switch (taglist[i + 1]) {
                 case 0x19:
-                    PrintAndLogEx(SUCCESS, "Issuing Authority.....: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Issuing Authority.....: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x26:
                     emrtd_print_issuance((char *) tagdata, tagdatalen != 4);
                     break;
                 case 0x1b:
-                    PrintAndLogEx(SUCCESS, "Endorsements & Observations: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Endorsements & Observations: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x1c:
-                    PrintAndLogEx(SUCCESS, "Tax/Exit Requirements.: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Tax/Exit Requirements.: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x1d:
                     saveFile("FrontOfDocument", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
@@ -1578,7 +1598,7 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
                     emrtd_print_personalization_timestamp(tagdata);
                     break;
                 case 0x56:
-                    PrintAndLogEx(SUCCESS, "Serial of Personalization System: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Serial of Personalization System: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x85:
                     emrtd_print_unknown_timestamp_5f85(tagdata);
@@ -1668,7 +1688,7 @@ static int emrtd_parse_ef_sod_hash_algo(uint8_t *data, size_t datalen, int *hash
         PrintAndLogEx(DEBUG, "trying: %s", hashalg_table[hashi].name);
         // We're only interested in checking if the length matches to avoid memory shenanigans
         if (hashalg_table[hashi].descriptorlen != hashalgosetlen) {
-            PrintAndLogEx(DEBUG, "len mismatch: %i", hashalgosetlen);
+            PrintAndLogEx(DEBUG, "len mismatch: %zu", hashalgosetlen);
             continue;
         }
 
@@ -2055,7 +2075,7 @@ static bool validate_date(uint8_t *data, int datalen) {
     return !(day <= 0 || day > 31 || month <= 0 || month > 12);
 }
 
-static int cmd_hf_emrtd_dump(const char *Cmd) {
+static int CmdHFeMRTDDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf emrtd dump",
                   "Dump all files on an eMRTD",
@@ -2147,7 +2167,7 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
     return dumpHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC, (const char *)path);
 }
 
-static int cmd_hf_emrtd_info(const char *Cmd) {
+static int CmdHFeMRTDInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf emrtd info",
                   "Display info about an eMRTD",
@@ -2238,21 +2258,15 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
     }
 }
 
-static int cmd_hf_emrtd_list(const char *Cmd) {
-    char args[128] = {0};
-    if (strlen(Cmd) == 0) {
-        snprintf(args, sizeof(args), "-t 7816");
-    } else {
-        strncpy(args, Cmd, sizeof(args) - 1);
-    }
-    return CmdTraceList(args);
+static int CmdHFeMRTDList(const char *Cmd) {
+    return CmdTraceListAlias(Cmd, "hf emrtd", "7816");
 }
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,           AlwaysAvailable, "This help"},
-    {"dump",    cmd_hf_emrtd_dump, IfPm3Iso14443,   "Dump eMRTD files to binary files"},
-    {"info",    cmd_hf_emrtd_info, AlwaysAvailable, "Display info about an eMRTD"},
-    {"list",    cmd_hf_emrtd_list, AlwaysAvailable, "List ISO 14443A/7816 history"},
+    {"dump",    CmdHFeMRTDDump,    IfPm3Iso14443,   "Dump eMRTD files to binary files"},
+    {"info",    CmdHFeMRTDInfo,    AlwaysAvailable, "Display info about an eMRTD"},
+    {"list",    CmdHFeMRTDList,    AlwaysAvailable, "List ISO 14443A/7816 history"},
     {NULL, NULL, NULL, NULL}
 };
 

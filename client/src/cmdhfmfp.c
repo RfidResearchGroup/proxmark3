@@ -446,28 +446,29 @@ static int CmdHFMFPInfo(const char *Cmd) {
 }
 
 static int CmdHFMFPWritePerso(const char *Cmd) {
-    uint8_t keyNum[64] = {0};
-    int keyNumLen = 0;
-    uint8_t key[64] = {0};
-    int keyLen = 0;
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp wrp",
                   "Executes Write Perso command. Can be used in SL0 mode only.",
-                  "hf mfp wrp 4000 000102030405060708090a0b0c0d0e0f -> write key (00..0f) to key number 4000 \n"
-                  "hf mfp wrp 4000 -> write default key(0xff..0xff) to key number 4000");
+                  "hf mfp wrp --ki 4000 --key 000102030405060708090a0b0c0d0e0f -> write key (00..0f) to key number 4000 \n"
+                  "hf mfp wrp --ki 4000 -> write default key(0xff..0xff) to key number 4000");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "show internal data."),
-        arg_str1(NULL,  NULL,      "<HEX key number (2b)>", NULL),
-        arg_strx0(NULL,  NULL,     "<HEX key (16b)>", NULL),
+        arg_lit0("v", "verbose", "show internal data."),
+        arg_str1("i", "ki",  "<hex>", " key number, 2 hex bytes"),
+        arg_strx0(NULL, "key", "<hex>", " key, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool verbose = arg_get_lit(ctx, 1);
+
+    uint8_t keyNum[64] = {0};
+    int keyNumLen = 0;
     CLIGetHexWithReturn(ctx, 2, keyNum, &keyNumLen);
+
+    uint8_t key[64] = {0};
+    int keyLen = 0;
     CLIGetHexWithReturn(ctx, 3, key, &keyLen);
     CLIParserFree(ctx);
 
@@ -480,11 +481,11 @@ static int CmdHFMFPWritePerso(const char *Cmd) {
 
     if (keyNumLen != 2) {
         PrintAndLogEx(ERR, "Key number length must be 2 bytes instead of: %d", keyNumLen);
-        return 1;
+        return PM3_EINVARG;
     }
     if (keyLen != 16) {
         PrintAndLogEx(ERR, "Key length must be 16 bytes instead of: %d", keyLen);
-        return 1;
+        return PM3_EINVARG;
     }
 
     uint8_t data[250] = {0};
@@ -498,52 +499,53 @@ static int CmdHFMFPWritePerso(const char *Cmd) {
 
     if (datalen != 3) {
         PrintAndLogEx(ERR, "Command must return 3 bytes instead of: %d", datalen);
-        return 1;
+        return PM3_ESOFT;
     }
 
     if (data[0] != 0x90) {
         PrintAndLogEx(ERR, "Command error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
-        return 1;
+        return PM3_ESOFT;
     }
-    PrintAndLogEx(INFO, "Write OK.");
+    PrintAndLogEx(INFO, "Write (" _GREEN_("ok") " )");
 
     return PM3_SUCCESS;
 }
 
 static int CmdHFMFPInitPerso(const char *Cmd) {
-    int res;
-    uint8_t key[256] = {0};
-    int keyLen = 0;
-    uint8_t keyNum[2] = {0};
-    uint8_t data[250] = {0};
-    int datalen = 0;
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp initp",
                   "Executes Write Perso command for all card's keys. Can be used in SL0 mode only.",
-                  "hf mfp initp 000102030405060708090a0b0c0d0e0f -> fill all the keys with key (00..0f)\n"
+                  "hf mfp initp --key 000102030405060708090a0b0c0d0e0f -> fill all the keys with key (00..0f)\n"
                   "hf mfp initp -vv -> fill all the keys with default key(0xff..0xff) and show all the data exchange");
 
     void *argtable[] = {
         arg_param_begin,
         arg_litn("v",  "verbose", 0, 2, "show internal data."),
-        arg_strx0(NULL,  NULL,      "<HEX key (16b)>", NULL),
+        arg_strx0("k", "key", "<hex>", "key, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool verbose = arg_get_lit(ctx, 1);
     bool verbose2 = arg_get_lit(ctx, 1) > 1;
+
+    uint8_t key[256] = {0};
+    int keyLen = 0;
     CLIGetHexWithReturn(ctx, 2, key, &keyLen);
     CLIParserFree(ctx);
 
     if (keyLen && keyLen != 16) {
         PrintAndLogEx(ERR, "Key length must be 16 bytes instead of: %d", keyLen);
-        return 1;
+        return PM3_EINVARG;
     }
 
     if (!keyLen)
         memmove(key, DefaultKey, 16);
+
+    uint8_t keyNum[2] = {0};
+    uint8_t data[250] = {0};
+    int datalen = 0;
+    int res;
 
     mfpSetVerboseMode(verbose2);
     for (uint16_t sn = 0x4000; sn < 0x4050; sn++) {
@@ -551,7 +553,7 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
         keyNum[1] = sn & 0xff;
         res = MFPWritePerso(keyNum, key, (sn == 0x4000), true, data, sizeof(data), &datalen);
         if (!res && (datalen == 3) && data[0] == 0x09) {
-            PrintAndLogEx(INFO, "2k card detected.");
+            PrintAndLogEx(INFO, "2K card detected.");
             break;
         }
         if (res || (datalen != 3) || data[0] != 0x90) {
@@ -574,14 +576,12 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
             }
         }
     }
-
     DropField();
 
     if (res)
         return res;
 
-    PrintAndLogEx(INFO, "Done.");
-
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -589,17 +589,19 @@ static int CmdHFMFPCommitPerso(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp commitp",
                   "Executes Commit Perso command. Can be used in SL0 mode only.",
-                  "hf mfp commitp");
+                  "hf mfp commitp\n"
+                  //                "hf mfp commitp --sl 1"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v",  "verbose", "show internal data."),
-        arg_int0(NULL,  NULL,      "SL mode", NULL),
+//        arg_int0(NULL,  "sl", "<dec>", "SL mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-
     bool verbose = arg_get_lit(ctx, 1);
+//    int slmode = arg_get_int(ctx, 2);
     CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
@@ -615,15 +617,14 @@ static int CmdHFMFPCommitPerso(const char *Cmd) {
 
     if (datalen != 3) {
         PrintAndLogEx(ERR, "Command must return 3 bytes instead of: %d", datalen);
-        return 1;
+        return PM3_EINVARG;
     }
 
     if (data[0] != 0x90) {
         PrintAndLogEx(ERR, "Command error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
-        return 1;
+        return PM3_EINVARG;
     }
-    PrintAndLogEx(INFO, "Switch level OK.");
-
+    PrintAndLogEx(INFO, "Switch level ( " _GREEN_("ok") " )");
     return PM3_SUCCESS;
 }
 
@@ -636,14 +637,14 @@ static int CmdHFMFPAuth(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp auth",
                   "Executes AES authentication command for Mifare Plus card",
-                  "hf mfp auth 4000 000102030405060708090a0b0c0d0e0f -> executes authentication\n"
-                  "hf mfp auth 9003 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -v -> executes authentication and shows all the system data");
+                  "hf mfp auth --ki 4000 --key 000102030405060708090a0b0c0d0e0f -> executes authentication\n"
+                  "hf mfp auth --ki 9003 --key FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -v -> executes authentication and shows all the system data");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v",  "verbose", "show internal data."),
-        arg_str1(NULL,  NULL,     "<Key Num (HEX 2 bytes)>", NULL),
-        arg_str1(NULL,  NULL,     "<Key Value (HEX 16 bytes)>", NULL),
+        arg_str1(NULL, "ki", "<hex>", "key number, 2 hex bytes"),
+        arg_str1(NULL, "key", "<hex>", "key, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -654,37 +655,33 @@ static int CmdHFMFPAuth(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (keynlen != 2) {
-        PrintAndLogEx(ERR, "ERROR: <Key Num> must be 2 bytes long instead of: %d", keynlen);
-        return 1;
+        PrintAndLogEx(ERR, "ERROR: <key number> must be 2 bytes long instead of: %d", keynlen);
+        return PM3_EINVARG;
     }
 
     if (keylen != 16) {
-        PrintAndLogEx(ERR, "ERROR: <Key Value> must be 16 bytes long instead of: %d", keylen);
-        return 1;
+        PrintAndLogEx(ERR, "ERROR: <key> must be 16 bytes long instead of: %d", keylen);
+        return PM3_EINVARG;
     }
 
     return MifareAuth4(NULL, keyn, key, true, false, true, verbose, false);
 }
 
 static int CmdHFMFPRdbl(const char *Cmd) {
-    uint8_t keyn[2] = {0};
-    uint8_t key[250] = {0};
-    int keylen = 0;
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp rdbl",
-                  "Reads several blocks from Mifare Plus card.",
-                  "hf mfp rdbl 0 000102030405060708090a0b0c0d0e0f -> executes authentication and read block 0 data\n"
-                  "hf mfp rdbl 1 -v -> executes authentication and shows sector 1 data with default key 0xFF..0xFF and some additional data");
+                  "Reads several blocks from Mifare Plus card",
+                  "hf mfp rdbl --blk 0 --key 000102030405060708090a0b0c0d0e0f -> executes authentication and read block 0 data\n"
+                  "hf mfp rdbl --blk 1 -v -> executes authentication and shows sector 1 data with default key 0xFF..0xFF");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "show internal data."),
-        arg_int0("n",  "count",   "blocks count (by default 1).", NULL),
-        arg_lit0("b",  "keyb",    "use key B (by default keyA)."),
-        arg_lit0("p",  "plain",   "plain communication mode between reader and card."),
-        arg_int1(NULL,  NULL,      "<Block Num (0..255)>", NULL),
-        arg_str0(NULL,  NULL,      "<Key Value (HEX 16 bytes)>", NULL),
+        arg_lit0("v", "verbose", "show internal data"),
+        arg_int0("n", "count", "<dec>", "blocks count (by default 1)"),
+        arg_lit0("b", "keyb", "use key B (by default keyA)"),
+        arg_lit0("p", "plain", "plain communication mode between reader and card"),
+        arg_int1(NULL, "blk", "<dec>", "block number (0..255)"),
+        arg_str0(NULL, "key", "<hex>", "Key, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -694,6 +691,10 @@ static int CmdHFMFPRdbl(const char *Cmd) {
     bool keyB = arg_get_lit(ctx, 3);
     int plain = arg_get_lit(ctx, 4);
     uint32_t blockn = arg_get_int(ctx, 5);
+
+    uint8_t keyn[2] = {0};
+    uint8_t key[250] = {0};
+    int keylen = 0;
     CLIGetHexWithReturn(ctx, 6, key, &keylen);
     CLIParserFree(ctx);
 
@@ -705,19 +706,19 @@ static int CmdHFMFPRdbl(const char *Cmd) {
     }
 
     if (blockn > 255) {
-        PrintAndLogEx(ERR, "<Block Num> must be in range [0..255] instead of: %d", blockn);
-        return 1;
+        PrintAndLogEx(ERR, "<block number> must be in range [0..255] instead of: %d", blockn);
+        return PM3_EINVARG;
     }
 
     if (keylen != 16) {
-        PrintAndLogEx(ERR, "<Key Value> must be 16 bytes long instead of: %d", keylen);
-        return 1;
+        PrintAndLogEx(ERR, "<key> must be 16 bytes long instead of: %d", keylen);
+        return PM3_EINVARG;
     }
 
     // 3 blocks - wo iso14443-4 chaining
     if (blocksCount > 3) {
         PrintAndLogEx(ERR, "blocks count must be less than 3 instead of: %d", blocksCount);
-        return 1;
+        return PM3_EINVARG;
     }
 
     if (blocksCount > 1 && mfIsSectorTrailer(blockn)) {
@@ -749,12 +750,12 @@ static int CmdHFMFPRdbl(const char *Cmd) {
 
     if (datalen && data[0] != 0x90) {
         PrintAndLogEx(ERR, "Card read error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
-        return 6;
+        return PM3_ESOFT;
     }
 
     if (datalen != 1 + blocksCount * 16 + 8 + 2) {
         PrintAndLogEx(ERR, "Error return length:%d", datalen);
-        return 5;
+        return PM3_ESOFT;
     }
 
     int indx = blockn;
@@ -776,27 +777,23 @@ static int CmdHFMFPRdbl(const char *Cmd) {
             PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[blocksCount * 16 + 1], 8));
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHFMFPRdsc(const char *Cmd) {
-    uint8_t keyn[2] = {0};
-    uint8_t key[250] = {0};
-    int keylen = 0;
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp rdsc",
-                  "Reads one sector from Mifare Plus card.",
-                  "hf mfp rdsc 0 000102030405060708090a0b0c0d0e0f -> executes authentication and read sector 0 data\n"
-                  "hf mfp rdsc 1 -v -> executes authentication and shows sector 1 data with default key 0xFF..0xFF and some additional data");
+                  "Reads one sector from Mifare Plus card",
+                  "hf mfp rdsc --sn 0 --key 000102030405060708090a0b0c0d0e0f -> executes authentication and read sector 0 data\n"
+                  "hf mfp rdsc --sn 1 -v -> executes authentication and shows sector 1 data with default key");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "show internal data."),
-        arg_lit0("b",  "keyb",    "use key B (by default keyA)."),
-        arg_lit0("p",  "plain",   "plain communication mode between reader and card."),
-        arg_int1(NULL,  NULL,      "<Sector Num (0..255)>", NULL),
-        arg_str0(NULL,  NULL,      "<Key Value (HEX 16 bytes)>", NULL),
+        arg_lit0("v", "verbose", "show internal data."),
+        arg_lit0("b", "keyb", "use key B (by default keyA)."),
+        arg_lit0("p", "plain", "plain communication mode between reader and card."),
+        arg_int1(NULL, "sn", "<dec>", "sector number (0..255)"),
+        arg_str0("k", "key", "<hex>", "key, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -805,6 +802,9 @@ static int CmdHFMFPRdsc(const char *Cmd) {
     bool keyB = arg_get_lit(ctx, 2);
     bool plain = arg_get_lit(ctx, 3);
     uint32_t sectorNum = arg_get_int(ctx, 4);
+    uint8_t keyn[2] = {0};
+    uint8_t key[250] = {0};
+    int keylen = 0;
     CLIGetHexWithReturn(ctx, 5, key, &keylen);
     CLIParserFree(ctx);
 
@@ -816,13 +816,13 @@ static int CmdHFMFPRdsc(const char *Cmd) {
     }
 
     if (sectorNum > 39) {
-        PrintAndLogEx(ERR, "<Sector Num> must be in range [0..39] instead of: %d", sectorNum);
-        return 1;
+        PrintAndLogEx(ERR, "<sector number> must be in range [0..39] instead of: %d", sectorNum);
+        return PM3_EINVARG;
     }
 
     if (keylen != 16) {
-        PrintAndLogEx(ERR, "<Key Value> must be 16 bytes long instead of: %d", keylen);
-        return 1;
+        PrintAndLogEx(ERR, "<key> must be 16 bytes long instead of: %d", keylen);
+        return PM3_EINVARG;
     }
 
     uint16_t uKeyNum = 0x4000 + sectorNum * 2 + (keyB ? 1 : 0);
@@ -852,12 +852,12 @@ static int CmdHFMFPRdsc(const char *Cmd) {
         if (datalen && data[0] != 0x90) {
             PrintAndLogEx(ERR, "Card read error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
             DropField();
-            return 6;
+            return PM3_ESOFT;
         }
         if (datalen != 1 + 16 + 8 + 2) {
             PrintAndLogEx(ERR, "Error return length:%d", datalen);
             DropField();
-            return 5;
+            return PM3_ESOFT;
         }
 
         PrintAndLogEx(INFO, "data[%03d]: %s", n, sprint_hex(&data[1], 16));
@@ -877,25 +877,20 @@ static int CmdHFMFPRdsc(const char *Cmd) {
 }
 
 static int CmdHFMFPWrbl(const char *Cmd) {
-    uint8_t keyn[2] = {0};
-    uint8_t key[250] = {0};
-    int keylen = 0;
-    uint8_t datain[250] = {0};
-    int datainlen = 0;
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp wrbl",
-                  "Writes one block to Mifare Plus card.",
-                  "hf mfp wrbl 1 ff0000000000000000000000000000ff 000102030405060708090a0b0c0d0e0f -> writes block 1 data\n"
-                  "hf mfp wrbl 2 ff0000000000000000000000000000ff -v -> writes block 2 data with default key 0xFF..0xFF and some additional data");
+                  "Writes one block to Mifare Plus card",
+                  "hf mfp wrbl --blk 1 -d ff0000000000000000000000000000ff --key 000102030405060708090a0b0c0d0e0f -> writes block 1 data\n"
+                  "hf mfp wrbl --blk 2 -d ff0000000000000000000000000000ff -v -> writes block 2 data with default key 0xFF..0xFF"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "show internal data."),
-        arg_lit0("b",  "keyb",    "use key B (by default keyA)."),
-        arg_int1(NULL,  NULL,      "<Block Num (0..255)>", NULL),
-        arg_str1(NULL,  NULL,      "<Data (HEX 16 bytes)>", NULL),
-        arg_str0(NULL,  NULL,      "<Key (HEX 16 bytes)>", NULL),
+        arg_lit0("v", "verbose", "show internal data."),
+        arg_lit0("b", "keyb", "use key B (by default keyA)."),
+        arg_int1(NULL, "blk", "<dec>", "block number (0..255)"),
+        arg_str1("d", "data", "<hex>", "data, 16 hex bytes"),
+        arg_str0("k", "key", "<hex>", "key, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -903,9 +898,17 @@ static int CmdHFMFPWrbl(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 1);
     bool keyB = arg_get_lit(ctx, 2);
     uint32_t blockNum = arg_get_int(ctx, 3);
+
+    uint8_t datain[250] = {0};
+    int datainlen = 0;
     CLIGetHexWithReturn(ctx, 4, datain, &datainlen);
+
+    uint8_t key[250] = {0};
+    int keylen = 0;
     CLIGetHexWithReturn(ctx, 5, key, &keylen);
     CLIParserFree(ctx);
+
+    uint8_t keyn[2] = {0};
 
     mfpSetVerboseMode(verbose);
 
@@ -915,18 +918,18 @@ static int CmdHFMFPWrbl(const char *Cmd) {
     }
 
     if (blockNum > 255) {
-        PrintAndLogEx(ERR, "<Block Num> must be in range [0..255] instead of: %d", blockNum);
-        return 1;
+        PrintAndLogEx(ERR, "<block number> must be in range [0..255] instead of: %d", blockNum);
+        return PM3_EINVARG;
     }
 
     if (keylen != 16) {
-        PrintAndLogEx(ERR, "<Key> must be 16 bytes long instead of: %d", keylen);
-        return 1;
+        PrintAndLogEx(ERR, "<key> must be 16 bytes long instead of: %d", keylen);
+        return PM3_EINVARG;
     }
 
     if (datainlen != 16) {
-        PrintAndLogEx(ERR, "<Data> must be 16 bytes long instead of: %d", datainlen);
-        return 1;
+        PrintAndLogEx(ERR, "<data> must be 16 bytes long instead of: %d", datainlen);
+        return PM3_EINVARG;
     }
 
     uint8_t sectorNum = mfSectorNum(blockNum & 0xff);
@@ -956,13 +959,13 @@ static int CmdHFMFPWrbl(const char *Cmd) {
     if (datalen != 3 && (datalen != 3 + 8)) {
         PrintAndLogEx(ERR, "Error return length:%d", datalen);
         DropField();
-        return 5;
+        return PM3_ESOFT;
     }
 
     if (datalen && data[0] != 0x90) {
         PrintAndLogEx(ERR, "Card write error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
         DropField();
-        return 6;
+        return PM3_ESOFT;
     }
 
     if (memcmp(&data[1], mac, 8)) {
@@ -975,7 +978,7 @@ static int CmdHFMFPWrbl(const char *Cmd) {
     }
 
     DropField();
-    PrintAndLogEx(INFO, "Write OK.");
+    PrintAndLogEx(INFO, "Write ( " _GREEN_("ok") " )");
     return PM3_SUCCESS;
 }
 

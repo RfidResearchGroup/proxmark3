@@ -2,7 +2,7 @@
 #define __I2C_H
 
 #include "common.h"
-#include "mifare.h"
+#include "pm3_cmd.h"
 
 #define I2C_DEVICE_ADDRESS_BOOT     0xB0
 #define I2C_DEVICE_ADDRESS_MAIN     0xC0
@@ -39,7 +39,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose);
 
 // generice functions
 void SmartCardAtr(void);
-void SmartCardRaw(uint64_t arg0, uint64_t arg1, uint8_t *data);
+void SmartCardRaw(smart_card_raw_t *packet);
 void SmartCardUpgrade(uint64_t arg0);
 void SmartCardSetBaud(uint64_t arg0);
 void SmartCardSetClock(uint64_t arg0);

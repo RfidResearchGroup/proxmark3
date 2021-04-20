@@ -14,10 +14,14 @@
 #include <ctype.h>
 #include "common.h"
 
-bool IsCryptoHelperPresent(bool verbose);
+bool IsCardHelperPresent(bool verbose);
 bool Encrypt(uint8_t *src, uint8_t *dest);
 bool Decrypt(uint8_t *src, uint8_t *dest);
 void DecodeBlock6(uint8_t *src);
 uint8_t GetNumberBlocksForUserId(uint8_t *src);
 uint8_t GetPinSize(uint8_t *src);
+
+int GetConfigCardByIdx(uint8_t typ, uint8_t *blocks);
+int GetConfigCardStrByIdx(uint8_t typ, uint8_t *out);
+int VerifyRdv4Signature(uint8_t *memid, uint8_t *signature);
 #endif

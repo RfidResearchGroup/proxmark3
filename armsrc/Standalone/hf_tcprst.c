@@ -326,7 +326,8 @@ void RunMod(void) {
 
 
                         if (i == 4) {
-                            if (apdubuffer[1] == 0x1b && apdubuffer[2] == 0xd1 && !gotndef) { //Get NDEF Data
+                            // Get NDEF Data
+                            if (apdubuffer[1] == 0x1b && apdubuffer[2] == 0xd1) {
                                 gotndef = true;
                                 memcpy(&ndef, &apdubuffer, apdulen - 2);
                                 break;

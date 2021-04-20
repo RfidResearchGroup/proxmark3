@@ -851,9 +851,30 @@ static int CmdConnect(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdBreak(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw break",
+                  "send break loop package",
+                  "hw break\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    clearCommandBuffer();
+    SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+
 static command_t CommandTable[] = {
     {"-------------", CmdHelp,         AlwaysAvailable, "----------------------- " _CYAN_("Hardware") " -----------------------"},
     {"help",          CmdHelp,         AlwaysAvailable, "This help"},
+    {"break",         CmdBreak,        IfPm3Present,    "Send break loop usb command"},
     {"connect",       CmdConnect,      AlwaysAvailable, "Connect Proxmark3 to serial port"},
     {"dbg",           CmdDbg,          IfPm3Present,    "Set Proxmark3 debug level"},
     {"detectreader",  CmdDetectReader, IfPm3Present,    "Detect external reader field"},
@@ -975,7 +996,7 @@ void pm3_version(bool verbose, bool oneliner) {
             }
 
             PrintAndLogEx(NORMAL, "  device.................... %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _RED_("device / fw mismatch"));
-            PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("RDV4"));
+            PrintAndLogEx(NORMAL, "  firmware.................. %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _YELLOW_("RDV4"));
             PrintAndLogEx(NORMAL, "  external flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
             PrintAndLogEx(NORMAL, "  smartcard reader.......... %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
             PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
@@ -1002,6 +1023,9 @@ void pm3_version(bool verbose, bool oneliner) {
         struct p *payload = (struct p *)&resp.data.asBytes;
 
         PrintAndLogEx(NORMAL,  payload->versionstr);
+        if (strstr(payload->versionstr, "2s30vq100") == NULL) {
+            PrintAndLogEx(NORMAL, "  FPGA firmware... %s", _RED_("chip mismatch"));
+        }
 
         lookupChipID(payload->id, payload->section_size);
     }

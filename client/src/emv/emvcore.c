@@ -307,7 +307,7 @@ static int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool Lea
         case ECC_CONTACT:
             res = 1;
             if (IfPm3Smartcard())
-                res = ExchangeAPDUSC(true, data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
+                res = ExchangeAPDUSC(false, data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
 
             if (res) {
                 return res;
@@ -647,7 +647,12 @@ int EMVInternalAuthenticate(EMVCommandChannel channel, bool LeaveFieldON, uint8_
 }
 
 int MSCComputeCryptoChecksum(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *UDOL, uint8_t UDOLlen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
-    return EMVExchange(channel, LeaveFieldON, (sAPDU) {0x80, 0x2a, 0x8e, 0x80, UDOLlen, UDOL}, Result, MaxResultLen, ResultLen, sw, tlv);
+    int res = EMVExchangeEx(channel, false, LeaveFieldON, (sAPDU) {0x80, 0x2a, 0x8e, 0x80, UDOLlen, UDOL}, true, Result, MaxResultLen, ResultLen, sw, tlv);
+    if (*sw == 0x6700 || *sw == 0x6f00) {
+        PrintAndLogEx(INFO, ">>> trying to reissue command without Le...");
+        res = EMVExchangeEx(channel, false, LeaveFieldON, (sAPDU) {0x80, 0x2a, 0x8e, 0x80, UDOLlen, UDOL}, false, Result, MaxResultLen, ResultLen, sw, tlv);
+    }
+    return res;
 }
 
 // Authentication
@@ -965,17 +970,21 @@ int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, st
                   sprint_hex(icc_pk->serial, 3)
                  );
 
-    struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
-    if (dac_db) {
-        const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);
-        PrintAndLogEx(SUCCESS, "SSAD verified (%s) (%02hhx:%02hhx)", _GREEN_("ok"), dac_tlv->value[0], dac_tlv->value[1]);
-        tlvdb_add(tlv, dac_db);
-    } else {
-        PrintAndLogEx(ERR, "Error: SSAD verify error");
-        emv_pk_free(pk);
-        emv_pk_free(issuer_pk);
-        emv_pk_free(icc_pk);
-        return 4;
+    // Signed Static Application Data (SSAD) check
+    const struct tlv *ssad_tlv = tlvdb_get(tlv, 0x93, NULL);
+    if (ssad_tlv && ssad_tlv->len > 1) {
+        struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
+        if (dac_db) {
+            const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);
+            PrintAndLogEx(SUCCESS, "Signed Static Application Data (SSAD) verified (%s) (%02hhx:%02hhx)", _GREEN_("ok"), dac_tlv->value[0], dac_tlv->value[1]);
+            tlvdb_add(tlv, dac_db);
+        } else {
+            PrintAndLogEx(ERR, "Error: Signed Static Application Data (SSAD) verify error");
+            emv_pk_free(pk);
+            emv_pk_free(issuer_pk);
+            emv_pk_free(icc_pk);
+            return 4;
+        }
     }
 
     PrintAndLogEx(INFO, "* * Check Signed Dynamic Application Data (SDAD)");

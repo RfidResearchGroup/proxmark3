@@ -1279,10 +1279,12 @@ static int l_ewd(lua_State *L) {
 static int l_cwd(lua_State *L) {
 
     uint16_t path_len = FILENAME_MAX; // should be a good starting point
-    bool error = false;
     char *cwd = (char *)calloc(path_len, sizeof(uint8_t));
+    if (cwd == NULL) {
+        return returnToLuaWithError(L, "Failed to allocate memory");
+    }
 
-    while (!error && (GetCurrentDir(cwd, path_len) == NULL)) {
+    while (GetCurrentDir(cwd, path_len) == NULL) {
         if (errno == ERANGE) {  // Need bigger buffer
             path_len += 10;      // if buffer was too small add 10 characters and try again
             cwd = realloc(cwd, path_len);

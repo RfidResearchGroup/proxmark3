@@ -1720,8 +1720,13 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
             } else if (bits[i] <= low) {
                 bits[bitnum++] = *invert ^ 1;
             } else if (i - lastBit >= *clk / 2 + tol) {
-                bits[bitnum] = bits[bitnum - 1];
-                bitnum++;
+                if (bitnum > 0) {
+                    bits[bitnum] = bits[bitnum - 1];
+                    bitnum++;
+                } else {
+                    bits[bitnum] = 0;
+                    bitnum++;
+                }
             } else { //in tolerance - looking for peak
                 continue;
             }

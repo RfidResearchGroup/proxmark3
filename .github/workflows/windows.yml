@@ -27,7 +27,7 @@ jobs:
 
       - name: ProxSpace version
         run: |
-          $psversion = (Select-String -Pattern 'PSVERSION=' -SimpleMatch -Path "C:\ProxSpace\msys2\ps\09-proxspace_setup.post").Line.Split("""")[1]
+          $psversion = (Select-String -Pattern 'PSVERSION=' -SimpleMatch -Path "C:\ProxSpace\setup\09-proxspace_setup.post").Line.Split("""")[1]
           Write-Host "ProxSpace version: $psversion"
 
       - name: ProxSpace initial startup

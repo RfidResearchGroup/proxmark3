@@ -10,15 +10,55 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
+|`help                   `|Y       |`Use `<command> help` for details of a command`
 |`auto                   `|N       |`Automated detection process for unknown tags`
 |`clear                  `|Y       |`Clear screen`
-|`help                   `|Y       |`This help. Use '<command> help' for details of a particular command.`
 |`hints                  `|Y       |`Turn hints on / off`
 |`msleep                 `|Y       |`Add a pause in milliseconds`
-|`pref                   `|Y       |`Edit preferences`
 |`rem                    `|Y       |`Add a text line in log file`
 |`quit                   `|Y       |``
 |`exit                   `|Y       |`Exit program`
+
+
+### prefs
+
+ { Edit client/device preferences... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`prefs help             `|Y       |`This help`
+|`prefs show             `|Y       |`Show all preferences`
+
+
+### prefs get
+
+ { Get a preference }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`prefs get barmode      `|Y       |`Get bar mode preference`
+|`prefs get clientdebug  `|Y       |`Get client debug level preference`
+|`prefs get color        `|Y       |`Get color support preference`
+|`prefs get savepaths    `|Y       |`Get file folder  `
+|`prefs get emoji        `|Y       |`Get emoji display preference`
+|`prefs get hints        `|Y       |`Get hint display preference`
+|`prefs get plotsliders  `|Y       |`Get plot slider display preference`
+
+
+### prefs set
+
+ { Set a preference }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`prefs set help         `|Y       |`This help`
+|`prefs set barmode      `|Y       |`Set bar mode`
+|`prefs set clientdebug  `|Y       |`Set client debug level`
+|`prefs set color        `|Y       |`Set color support`
+|`prefs set emoji        `|Y       |`Set emoji display`
+|`prefs set hints        `|Y       |`Set hint display`
+|`prefs set savepaths    `|Y       |`... to be adjusted next ... `
+|`prefs set plotsliders  `|Y       |`Set plot slider display`
 
 
 ### analyse
@@ -54,38 +94,37 @@ Check column "offline" for their availability.
 |`data manrawdecode      `|Y       |`Manchester decode binary stream in DemodBuffer`
 |`data modulation        `|Y       |`Identify LF signal for clock and modulation`
 |`data rawdemod          `|Y       |`Demodulate the data in the GraphBuffer and output binary`
-|`data askedgedetect     `|Y       |`[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)`
+|`data askedgedetect     `|Y       |`Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave`
 |`data autocorr          `|Y       |`Autocorrelation over window`
-|`data dirthreshold      `|Y       |`<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev.`
+|`data dirthreshold      `|Y       |`Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev.`
 |`data decimate          `|Y       |`Decimate samples`
 |`data undecimate        `|Y       |`Un-decimate samples`
 |`data hide              `|Y       |`Hide graph window`
 |`data hpf               `|Y       |`Remove DC offset from trace`
-|`data iir               `|Y       |`apply IIR buttersworth filter on plotdata`
-|`data grid              `|Y       |`<x> <y> -- overlay grid on graph window, use zero value to turn off either`
-|`data ltrim             `|Y       |`<samples> -- Trim samples from left of trace`
-|`data mtrim             `|Y       |`<start> <stop> -- Trim out samples from the specified start to the specified stop`
+|`data iir               `|Y       |`Apply IIR buttersworth filter on plot data`
+|`data grid              `|Y       |`overlay grid on graph window`
+|`data ltrim             `|Y       |`Trim samples from left of trace`
+|`data mtrim             `|Y       |`Trim out samples from the specified start to the specified stop`
 |`data norm              `|Y       |`Normalize max/min to +/-128`
-|`data plot              `|Y       |`Show graph window (hit 'h' in window for keystroke help)`
-|`data rtrim             `|Y       |`<location to end trace> -- Trim samples from right of trace`
-|`data setgraphmarkers   `|Y       |`[orange_marker] [blue_marker] (in graph window)`
-|`data shiftgraphzero    `|Y       |`<shift> -- Shift 0 for Graphed wave + or - shift value`
-|`data timescale         `|Y       |`Set a timescale to get a differential reading between the yellow and purple markers as time duration
-`
+|`data plot              `|Y       |`Show graph window`
+|`data rtrim             `|Y       |`Trim samples from right of trace`
+|`data setgraphmarkers   `|Y       |`Set blue and orange marker in graph window`
+|`data shiftgraphzero    `|Y       |`Shift 0 for Graphed wave + or - shift value`
+|`data timescale         `|Y       |`Set a timescale to get a differential reading between the yellow and purple markers as time duration`
 |`data zerocrossings     `|Y       |`Count time between zero-crossings`
 |`data convertbitstream  `|Y       |`Convert GraphBuffer's 0/1 values to 127 / -127`
 |`data getbitstream      `|Y       |`Convert GraphBuffer's >=1 values to 1 and <1 to 0`
 |`data bin2hex           `|Y       |`Converts binary to hexadecimal`
 |`data bitsamples        `|N       |`Get raw samples as bitstring`
 |`data clear             `|Y       |`Clears bigbuf on deviceside and graph window`
-|`data hexsamples        `|N       |`<bytes> [<offset>] -- Dump big buffer as hex bytes`
+|`data hexsamples        `|N       |`Dump big buffer as hex bytes`
 |`data hex2bin           `|Y       |`Converts hexadecimal to binary`
 |`data load              `|Y       |`Load contents of file into graph window`
 |`data ndef              `|Y       |`Decode NDEF records`
-|`data print             `|Y       |`print the data in the DemodBuffer`
-|`data samples           `|N       |`[512 - 40000] -- Get raw samples for graph window (GraphBuffer)`
+|`data print             `|Y       |`Print the data in the DemodBuffer`
+|`data samples           `|N       |`Get raw samples for graph window (GraphBuffer)`
 |`data save              `|Y       |`Save signal trace data  (from graph window)`
-|`data setdebugmode      `|Y       |`<0|1|2> -- Set Debugging Level on client side`
+|`data setdebugmode      `|Y       |`Set Debugging Level on client side`
 |`data tune              `|N       |`Measure tuning of device antenna. Results shown in graph window`
 
 
@@ -163,7 +202,7 @@ Check column "offline" for their availability.
 |`hf 14b sim             `|N       |`Fake ISO 14443B tag`
 |`hf 14b sniff           `|N       |`Eavesdrop ISO 14443B`
 |`hf 14b rdbl            `|N       |`Read SRI512/SRIX4x block`
-|`hf 14b sriwrite        `|N       |`Write data to a SRI512 | SRIX4K tag`
+|`hf 14b sriwrite        `|N       |`Write data to a SRI512 or SRIX4K tag`
 
 
 ### hf 15
@@ -173,23 +212,23 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf 15 help             `|Y       |`This help`
-|`hf 15 list             `|Y       |`List ISO15693 history`
-|`hf 15 demod            `|Y       |`Demodulate ISO15693 from tag`
-|`hf 15 dump             `|N       |`Read all memory pages of an ISO15693 tag, save to file`
+|`hf 15 list             `|Y       |`List ISO-15693 history`
+|`hf 15 demod            `|Y       |`Demodulate ISO-15693 from tag`
+|`hf 15 dump             `|N       |`Read all memory pages of an ISO-15693 tag, save to file`
 |`hf 15 info             `|N       |`Tag information`
-|`hf 15 sniff            `|N       |`Sniff ISO15693 traffic`
+|`hf 15 sniff            `|N       |`Sniff ISO-15693 traffic`
 |`hf 15 raw              `|N       |`Send raw hex data to tag`
 |`hf 15 rdbl             `|N       |`Read a block`
-|`hf 15 reader           `|N       |`Act like an ISO15693 reader`
-|`hf 15 readmulti        `|N       |`Reads multiple Blocks`
-|`hf 15 restore          `|N       |`Restore from file to all memory pages of an ISO15693 tag`
-|`hf 15 samples          `|N       |`Acquire Samples as Reader (enables carrier, sends inquiry)`
-|`hf 15 sim              `|N       |`Fake an ISO15693 tag`
+|`hf 15 rdmulti          `|N       |`Reads multiple blocks`
+|`hf 15 reader           `|N       |`Act like an ISO-15693 reader`
+|`hf 15 restore          `|N       |`Restore from file to all memory pages of an ISO-15693 tag`
+|`hf 15 samples          `|N       |`Acquire samples as reader (enables carrier, sends inquiry)`
+|`hf 15 sim              `|N       |`Fake an ISO-15693 tag`
 |`hf 15 wrbl             `|N       |`Write a block`
-|`hf 15 findafi          `|N       |`Brute force AFI of an ISO15693 tag`
-|`hf 15 writeafi         `|N       |`Writes the AFI on an ISO15693 tag`
-|`hf 15 writedsfid       `|N       |`Writes the DSFID on an ISO15693 tag`
-|`hf 15 csetuid          `|N       |`Set UID for magic Chinese card`
+|`hf 15 findafi          `|N       |`Brute force AFI of an ISO-15693 tag`
+|`hf 15 writeafi         `|N       |`Writes the AFI on an ISO-15693 tag`
+|`hf 15 writedsfid       `|N       |`Writes the DSFID on an ISO-15693 tag`
+|`hf 15 csetuid          `|N       |`Set UID for magic card`
 
 
 ### hf epa
@@ -224,10 +263,11 @@ Check column "offline" for their availability.
 |`hf felica help         `|Y       |`This help`
 |`hf felica list         `|Y       |`List ISO 18092/FeliCa history`
 |`hf felica reader       `|N       |`Act like an ISO18092/FeliCa reader`
+|`hf felica info         `|N       |`Tag information`
 |`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
 |`hf felica raw          `|N       |`Send raw hex data to tag`
-|`hf felica rdunencrypted`|N       |`read Block Data from authentication-not-required Service.`
-|`hf felica wrunencrypted`|N       |`write Block Data to an authentication-not-required Service.`
+|`hf felica rdbl         `|N       |`read block data from authentication-not-required Service.`
+|`hf felica wrbl         `|N       |`write block data to an authentication-not-required Service.`
 |`hf felica rqservice    `|N       |`verify the existence of Area and Service, and to acquire Key Version.`
 |`hf felica rqresponse   `|N       |`verify the existence of a card and its Mode.`
 |`hf felica scsvcode     `|N       |`acquire Area Code and Service Code.`
@@ -236,7 +276,7 @@ Check column "offline" for their availability.
 |`hf felica auth2        `|N       |`allow a card to authenticate a Reader/Writer. Complete mutual authentication`
 |`hf felica rqspecver    `|N       |`acquire the version of card OS.`
 |`hf felica resetmode    `|N       |`reset Mode to Mode 0.`
-|`hf felica litesim      `|N       |`<NDEF2> - only reply to poll request`
+|`hf felica litesim      `|N       |`Emulating ISO/18092 FeliCa Lite tag`
 |`hf felica litedump     `|N       |`Wait for and try dumping FelicaLite`
 
 
@@ -290,6 +330,7 @@ Check column "offline" for their availability.
 |`hf iclass eload        `|N       |`Load Picopass / iCLASS dump file into emulator memory`
 |`hf iclass esave        `|N       |`Save emulator memory to file`
 |`hf iclass eview        `|N       |`View emulator memory`
+|`hf iclass configcard   `|Y       |`Reader configuration card`
 |`hf iclass calcnewkey   `|Y       |`Calc diversified keys (blocks 3 & 4) to write new keys`
 |`hf iclass encode       `|Y       |`Encode binary wiegand to block 7`
 |`hf iclass encrypt      `|Y       |`Encrypt given block data`
@@ -362,29 +403,30 @@ Check column "offline" for their availability.
 |`hf mf rdsc             `|N       |`Read MIFARE Classic sector`
 |`hf mf restore          `|N       |`Restore MIFARE Classic binary file to BLANK tag`
 |`hf mf setmod           `|N       |`Set MIFARE Classic EV1 load modulation strength`
+|`hf mf view             `|Y       |`Display content from tag dump file`
+|`hf mf wipe             `|N       |`Wipe card to zeros and default keys/acc`
 |`hf mf wrbl             `|N       |`Write MIFARE Classic block`
 |`hf mf sim              `|N       |`Simulate MIFARE card`
-|`hf mf ecfill           `|N       |`Fill simulator memory with help of keys from simulator`
-|`hf mf eclr             `|N       |`Clear simulator memory`
-|`hf mf egetblk          `|N       |`Get simulator memory block`
-|`hf mf egetsc           `|N       |`Get simulator memory sector`
-|`hf mf ekeyprn          `|N       |`Print keys from simulator memory`
+|`hf mf ecfill           `|N       |`Fill emulator memory with help of keys from emulator`
+|`hf mf eclr             `|N       |`Clear emulator memory`
+|`hf mf egetblk          `|N       |`Get emulator memory block`
+|`hf mf egetsc           `|N       |`Get emulator memory sector`
+|`hf mf ekeyprn          `|N       |`Print keys from emulator memory`
 |`hf mf eload            `|N       |`Load from file emul dump`
 |`hf mf esave            `|N       |`Save to file emul dump`
-|`hf mf eset             `|N       |`Set simulator memory block`
-|`hf mf eview            `|N       |`View emul memory`
-|`hf mf cgetblk          `|N       |`Read block`
-|`hf mf cgetsc           `|N       |`Read sector`
-|`hf mf cload            `|N       |`Load dump`
+|`hf mf esetblk          `|N       |`Set emulator memory block`
+|`hf mf eview            `|N       |`View emulator memory`
+|`hf mf cgetblk          `|N       |`Read block from card`
+|`hf mf cgetsc           `|N       |`Read sector from card`
+|`hf mf cload            `|N       |`Load dump to card`
 |`hf mf csave            `|N       |`Save dump from card into file or emulator`
-|`hf mf csetblk          `|N       |`Write block`
-|`hf mf csetuid          `|N       |`Set UID`
-|`hf mf cview            `|N       |`view card`
+|`hf mf csetblk          `|N       |`Write block to card`
+|`hf mf csetuid          `|N       |`Set UID on card`
+|`hf mf cview            `|N       |`View card`
 |`hf mf cwipe            `|N       |`Wipe card to default UID/Sectors/Keys`
-|`hf mf gen3uid          `|N       |`Set UID without manufacturer block`
-|`hf mf gen3blk          `|N       |`Overwrite full manufacturer block`
-|`hf mf gen3freeze       `|N       |`Perma lock further UID changes`
-|`hf mf ice              `|N       |`collect MIFARE Classic nonces to file`
+|`hf mf gen3uid          `|N       |`Set UID without changing manufacturer block`
+|`hf mf gen3blk          `|N       |`Overwrite manufacturer block`
+|`hf mf gen3freeze       `|N       |`Perma lock UID changes. irreversible`
 
 
 ### hf mfp
@@ -521,6 +563,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hw help                `|Y       |`This help`
+|`hw break               `|N       |`Send break loop usb command`
 |`hw connect             `|Y       |`Connect Proxmark3 to serial port`
 |`hw dbg                 `|N       |`Set Proxmark3 debug level`
 |`hw detectreader        `|N       |`Detect external reader field`
@@ -606,10 +649,80 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf em help             `|Y       |`This help`
-|`lf em 410x             `|Y       |`EM 4102 commands...`
-|`lf em 4x05             `|Y       |`EM 4205 / 4305 / 4369 / 4469 commands...`
-|`lf em 4x50             `|Y       |`EM 4350 / 4450 commands...`
-|`lf em 4x70             `|Y       |`EM 4070 / 4170 commands...`
+
+
+### lf em 410x
+
+ { EM 4102 commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf em 410x help        `|Y       |`This help`
+|`lf em 410x demod       `|Y       |`demodulate a EM410x tag from the GraphBuffer`
+|`lf em 410x reader      `|N       |`attempt to read and extract tag data`
+|`lf em 410x sim         `|N       |`simulate EM410x tag`
+|`lf em 410x brute       `|N       |`reader bruteforce attack by simulating EM410x tags`
+|`lf em 410x watch       `|N       |`watches for EM410x 125/134 kHz tags (option 'h' for 134)`
+|`lf em 410x spoof       `|N       |`watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)`
+|`lf em 410x clone       `|N       |`write EM410x UID to T55x7 or Q5/T5555 tag`
+
+
+### lf em 4x05
+
+ { EM 4205 / 4305 / 4369 / 4469 commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf em 4x05 help        `|Y       |`This help`
+|`lf em 4x05 brute       `|N       |`Bruteforce password`
+|`lf em 4x05 chk         `|N       |`Check passwords from dictionary`
+|`lf em 4x05 demod       `|Y       |`demodulate a EM4x05/EM4x69 tag from the GraphBuffer`
+|`lf em 4x05 dump        `|N       |`dump EM4x05/EM4x69 tag`
+|`lf em 4x05 info        `|N       |`tag information EM4x05/EM4x69`
+|`lf em 4x05 read        `|N       |`read word data from EM4x05/EM4x69`
+|`lf em 4x05 sniff       `|Y       |`Attempt to recover em4x05 commands from sample buffer`
+|`lf em 4x05 unlock      `|N       |`execute tear off against EM4x05/EM4x69`
+|`lf em 4x05 wipe        `|N       |`wipe EM4x05/EM4x69 tag`
+|`lf em 4x05 write       `|N       |`write word data to EM4x05/EM4x69`
+
+
+### lf em 4x50
+
+ { EM 4350 / 4450 commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf em 4x50 help        `|Y       |`This help`
+|`lf em 4x50 brute       `|N       |`guess password of EM4x50`
+|`lf em 4x50 chk         `|N       |`check passwords from dictionary`
+|`lf em 4x50 dump        `|N       |`dump EM4x50 tag`
+|`lf em 4x50 info        `|N       |`tag information EM4x50`
+|`lf em 4x50 login       `|N       |`login into EM4x50`
+|`lf em 4x50 rdbl        `|N       |`read word data from EM4x50`
+|`lf em 4x50 wrbl        `|N       |`write word data to EM4x50`
+|`lf em 4x50 writepwd    `|N       |`change password of EM4x50`
+|`lf em 4x50 wipe        `|N       |`wipe EM4x50 tag`
+|`lf em 4x50 reader      `|N       |`show standard read mode data of EM4x50`
+|`lf em 4x50 restore     `|N       |`restore EM4x50 dump to tag`
+|`lf em 4x50 sim         `|N       |`simulate EM4x50 tag`
+|`lf em 4x50 eload       `|N       |`upload dump of EM4x50 to emulator memory`
+|`lf em 4x50 esave       `|N       |`save emulator memory to file`
+|`lf em 4x50 eview       `|N       |`view EM4x50 content in emulator memory`
+
+
+### lf em 4x70
+
+ { EM 4070 / 4170 commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf em 4x70 help        `|Y       |`This help`
+|`lf em 4x70 info        `|N       |`Tag information EM4x70`
+|`lf em 4x70 write       `|N       |`Write EM4x70`
+|`lf em 4x70 unlock      `|N       |`Unlock EM4x70 for writing`
+|`lf em 4x70 auth        `|N       |`Authenticate EM4x70`
+|`lf em 4x70 writepin    `|N       |`Write PIN`
+|`lf em 4x70 writekey    `|N       |`Write Crypt Key`
 
 
 ### lf fdxb
@@ -673,12 +786,13 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf hitag help          `|Y       |`This help`
+|`lf hitag eload         `|N       |`Load Hitag dump file into emulator memory`
 |`lf hitag list          `|N       |`List Hitag trace history`
 |`lf hitag info          `|N       |`Tag information`
-|`lf hitag reader        `|N       |`Act like a Hitag Reader`
+|`lf hitag reader        `|N       |`Act like a Hitag reader`
 |`lf hitag sim           `|N       |`Simulate Hitag transponder`
 |`lf hitag sniff         `|N       |`Eavesdrop Hitag communication`
-|`lf hitag writer        `|N       |`Act like a Hitag Writer`
+|`lf hitag writer        `|N       |`Act like a Hitag writer`
 |`lf hitag dump          `|N       |`Dump Hitag2 tag`
 |`lf hitag cc            `|N       |`Test all challenges`
 
@@ -905,7 +1019,7 @@ Check column "offline" for their availability.
 |`lf t55xx info          `|Y       |`Show T55x7 configuration data (page 0/ blk 0)`
 |`lf t55xx p1detect      `|N       |`Try detecting if this is a t55xx tag by reading page 1`
 |`lf t55xx read          `|N       |`Read T55xx block data`
-|`lf t55xx resetread     `|N       |`Send Reset Cmd then lf read the stream to attempt to identify the start of it (needs a demod and/or plot after)`
+|`lf t55xx resetread     `|N       |`Send Reset Cmd then lf read the stream to attempt to identify the start of it`
 |`lf t55xx restore       `|N       |`Restore T55xx card Page 0 / Page 1 blocks`
 |`lf t55xx trace         `|Y       |`Show T55x7 traceability data (page 1/ blk 0-1)`
 |`lf t55xx wakeup        `|N       |`Send AOR wakeup command`
@@ -953,11 +1067,32 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`mem help               `|Y       |`This help`
 |`mem baudrate           `|N       |`Set Flash memory Spi baudrate`
-|`mem spiffs             `|N       |`High level SPI FileSystem Flash manipulation`
-|`mem info               `|N       |`Flash memory information`
-|`mem load               `|N       |`Load data into flash memory`
 |`mem dump               `|N       |`Dump data from flash memory`
+|`mem info               `|N       |`Flash memory information`
+|`mem load               `|N       |`Load data to flash memory`
 |`mem wipe               `|N       |`Wipe data from flash memory`
+
+
+### mem spiffs
+
+ { SPI File system }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`mem spiffs help        `|Y       |`This help`
+|`mem spiffs copy        `|N       |`Copy a file to another (destructively) in SPIFFS file system`
+|`mem spiffs check       `|N       |`Check/try to defrag faulty/fragmented file system`
+|`mem spiffs dump        `|N       |`Dump a file from SPIFFS file system`
+|`mem spiffs info        `|N       |`Print file system info and usage statistics`
+|`mem spiffs mount       `|N       |`Mount the SPIFFS file system if not already mounted`
+|`mem spiffs remove      `|N       |`Remove a file from SPIFFS file system`
+|`mem spiffs rename      `|N       |`Rename/move a file in SPIFFS file system`
+|`mem spiffs test        `|N       |`Test SPIFFS Operations`
+|`mem spiffs tree        `|N       |`Print the Flash memory file system tree`
+|`mem spiffs unmount     `|N       |`Un-mount the SPIFFS file system`
+|`mem spiffs upload      `|N       |`Upload file into SPIFFS file system`
+|`mem spiffs view        `|N       |`View file on SPIFFS file system`
+|`mem spiffs wipe        `|N       |`Wipe all files from SPIFFS file system   * dangerous *`
 
 
 ### reveng
@@ -988,9 +1123,9 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`script help            `|Y       |`Usage info`
+|`script help            `|Y       |`This help`
 |`script list            `|Y       |`List available scripts`
-|`script run             `|Y       |`<name> -- execute a script`
+|`script run             `|Y       |`<name> - execute a script`
 
 
 ### trace

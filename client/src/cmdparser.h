@@ -54,6 +54,6 @@ void CmdsHelp(const command_t Commands[]);
 void CmdsLS(const command_t Commands[]);
 // Parse a command line
 int CmdsParse(const command_t Commands[], const char *Cmd);
-void dumpCommandsRecursive(const command_t cmds[], int markdown);
+void dumpCommandsRecursive(const command_t cmds[], int markdown, bool full_help);
 
 #endif

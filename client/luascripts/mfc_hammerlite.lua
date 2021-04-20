@@ -5,7 +5,7 @@ local ansicolors = require('ansicolors')
 
 copyright = 'Copyright 2020 A. Ozkal, released under GPLv2+.'
 author = 'Ave'
-version = 'v0.1.1'
+version = 'v0.1.2'
 desc = [[
 This script writes a bunch of random blocks to a Mifare Classic card
  ]]
@@ -70,8 +70,8 @@ function main(args)
 	do
 	    if ((a + 1) % 4 ~= 0) and a ~= 0 then  -- :)
                 data = randhex(32)
-	        -- core.console('hf mf rdbl '..a..' A FFFFFFFFFFFF')
-	        core.console('hf mf wrbl '..a..' A '..key..' '..data)
+	        -- core.console('hf mf rdbl --blk '..a..' -k FFFFFFFFFFFF')
+	        core.console('hf mf wrbl --blk '..a..' -k '..key..' -d '..data)
 	    end
         end
     end

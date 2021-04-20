@@ -148,7 +148,7 @@ bool nfc3d_amiibo_load_keys(nfc3d_amiibo_keys *amiiboKeys) {
         return false;
     }
 
-    if ((amiiboKeys->data.magicBytesSize > 16) ||  (amiiboKeys->tag.magicBytesSize > 16)) {
+    if ((amiiboKeys->data.magicBytesSize > 16) || (amiiboKeys->tag.magicBytesSize > 16)) {
         free(dump);
         return false;
     }

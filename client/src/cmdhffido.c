@@ -38,17 +38,11 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int cmd_hf_fido_list(const char *Cmd) {
-    char args[128] = {0};
-    if (strlen(Cmd) == 0) {
-        snprintf(args, sizeof(args), "-t 14a");
-    } else {
-        strncpy(args, Cmd, sizeof(args) - 1);
-    }
-    return CmdTraceList(args);
+static int CmdHFFidoList(const char *Cmd) {
+    return CmdTraceListAlias(Cmd, "hf fido", "14a");
 }
 
-static int cmd_hf_fido_info(const char *Cmd) {
+static int CmdHFFidoInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fido info",
                   "Get info from Fido tags",
@@ -167,7 +161,7 @@ static json_t *OpenJson(CLIParserContext *ctx, int paramnum, char *fname, void *
     return root;
 }
 
-static int cmd_hf_fido_register(const char *cmd) {
+static int CmdHFFidoRegister(const char *cmd) {
     uint8_t data[64] = {0};
     int chlen = 0;
     uint8_t cdata[250] = {0};
@@ -176,10 +170,12 @@ static int cmd_hf_fido_register(const char *cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fido reg",
-                  "Initiate a U2F token registration. Needs two 32-byte hash numbers. \nchallenge parameter (32b) and application parameter (32b).",
-                  "hf fido reg -> execute command with 2 parameters, filled 0x00\n"
-                  "hf fido reg 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with parameters\n"
-                  "hf fido reg -p s0 s1 -> execute command with plain parameters");
+                  "Initiate a U2F token registration. Needs two 32-byte hash numbers.\n"
+                  "challenge parameter (32b) and application parameter (32b).",
+                  "hf fido reg          -> execute command with 2 parameters, filled 0x00\n"
+                  "hf fido reg -p s0 s1 -> execute command with plain parameters\n"
+                  "hf fido reg --cp 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f --ap 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -188,8 +184,8 @@ static int cmd_hf_fido_register(const char *cmd) {
         arg_lit0("p",  "plain",    "send plain ASCII to challenge and application parameters instead of HEX"),
         arg_lit0("t",  "tlv",      "Show DER certificate contents in TLV representation"),
         arg_str0("j",  "json",     "fido.json", "JSON input / output file name for parameters."),
-        arg_str0(NULL,  NULL,       "<HEX/ASCII challenge parameter (32b HEX/1..16 chars)>", NULL),
-        arg_str0(NULL,  NULL,       "<HEX/ASCII application parameter (32b HEX/1..16 chars)>", NULL),
+        arg_str0(NULL,  "cp",   "<hex/ascii>", "challenge parameter (32 bytes hex / 1..16 chars)"),
+        arg_str0(NULL,  "ap",   "<hex/ascii>",  "application parameter (32 bytes hex / 1..16 chars)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
@@ -408,7 +404,7 @@ static int cmd_hf_fido_register(const char *cmd) {
     return PM3_SUCCESS;
 }
 
-static int cmd_hf_fido_authenticate(const char *cmd) {
+static int CmdHFFidoAuthenticate(const char *cmd) {
     uint8_t data[512] = {0};
     uint8_t hdata[250] = {0};
     bool public_key_loaded = false;
@@ -418,10 +414,13 @@ static int cmd_hf_fido_authenticate(const char *cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fido auth",
-                  "Initiate a U2F token authentication. Needs key handle and two 32-byte hash numbers. \nkey handle(var 0..255), challenge parameter (32b) and application parameter (32b).",
-                  "hf fido auth 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with 2 parameters, filled 0x00 and key handle\n"
-                  "hf fido auth 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f "
-                  "000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with parameters");
+                  "Initiate a U2F token authentication. Needs key handle and two 32-byte hash numbers.\n"
+                  "key handle(var 0..255), challenge parameter (32b) and application parameter (32b)",
+                  "hf fido auth --kh 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with 2 parameters, filled 0x00 and key handle\n"
+                  "hf fido auth \n"
+                  "--kh 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f\n"
+                  "--cp 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f \n"
+                  "--ap 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with parameters");
 
     void *argtable[] = {
         arg_param_begin,
@@ -432,10 +431,10 @@ static int cmd_hf_fido_authenticate(const char *cmd) {
         arg_lit0("u",  "user",     "mode: enforce-user-presence-and-sign"),
         arg_lit0("c",  "check",    "mode: check-only"),
         arg_str0("j",  "json",     "fido.json", "JSON input / output file name for parameters."),
-        arg_str0("k",  "key",      "public key to verify signature", NULL),
-        arg_str0(NULL,  NULL,       "<HEX key handle (var 0..255b)>", NULL),
-        arg_str0(NULL,  NULL,       "<HEX/ASCII challenge parameter (32b HEX/1..16 chars)>", NULL),
-        arg_str0(NULL,  NULL,       "<HEX/ASCII application parameter (32b HEX/1..16 chars)>", NULL),
+        arg_str0("k",  "key", "<hex>", "public key to verify signature"),
+        arg_str0(NULL, "kh", "<hex>",  "key handle (var 0..255b)"),
+        arg_str0(NULL, "cp", "<hex/ascii>", "challenge parameter (32 bytes hex / 1..16 chars)"),
+        arg_str0(NULL, "ap", "<hex/ascii>", "application parameter (32 bytes hex / 1..16 chars)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
@@ -678,23 +677,25 @@ static int GetExistsFileNameJson(const char *prefixDir, const char *reqestedFile
     return PM3_SUCCESS;
 }
 
-static int cmd_hf_fido_2make_credential(const char *cmd) {
+static int CmdHFFido2MakeCredential(const char *cmd) {
     json_error_t error;
     char fname[FILE_PATH_SIZE] = {0};
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fido make",
-                  "Execute a FIDO2 Make Credential command. Needs json file with parameters. Sample file `fido2.json` in `resources/`.",
-                  "hf fido make -> execute command with default parameters file `fido2.json`\n"
-                  "hf fido make test.json -> execute command with parameters file `text.json`");
+                  "Execute a FIDO2 Make Credential command. Needs json file with parameters.\n"
+                  "Sample file `fido2.json` in `client/resources/`.",
+                  "hf fido make              -> default parameters file `fido2.json`\n"
+                  "hf fido make -f test.json -> use parameters file `text.json`"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a",  "apdu",     "show APDU reqests and responses"),
-        arg_litn("v",  "verbose",  0, 2, "show technical data. vv - show full certificates data"),
-        arg_lit0("t",  "tlv",      "Show DER certificate contents in TLV representation"),
-        arg_lit0("c",  "cbor",     "show CBOR decoded data"),
-        arg_str0(NULL,  NULL,       "<json file name>", "JSON input / output file name for parameters. Default `fido2.json`"),
+        arg_lit0("a", "apdu", "show APDU reqests and responses"),
+        arg_litn("v", "verbose", 0, 2, "show technical data. vv - show full certificates data"),
+        arg_lit0("t", "tlv", "Show DER certificate contents in TLV representation"),
+        arg_lit0("c", "cbor", "show CBOR decoded data"),
+        arg_str0("f", "file", "<fn>", "parameter JSON file name. (def `fido2.json`)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
@@ -804,23 +805,26 @@ static int cmd_hf_fido_2make_credential(const char *cmd) {
     return PM3_SUCCESS;
 }
 
-static int cmd_hf_fido_2get_assertion(const char *cmd) {
+static int CmdHFFido2GetAssertion(const char *cmd) {
     json_error_t error;
     char fname[FILE_PATH_SIZE] = {0};
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fido assert",
-                  "Execute a FIDO2 Get Assertion command. Needs json file with parameters. Sample file `fido2.json` in `resources/`.",
-                  "hf fido assert -> execute command with default parameters file `fido2.json`\n"
-                  "hf fido assert test.json -l -> execute command with parameters file `text.json` and add to request CredentialId");
+                  "Execute a FIDO2 Get Assertion command. Needs json file with parameters.\n"
+                  "Sample file `fido2.json` in `client/resources/`.\n"
+                  "- Needs if `rk` option is `false` (authenticator doesn't store credential to its memory)"
+                  ,
+                  "hf fido assert                 -> default parameters file `fido2.json`\n"
+                  "hf fido assert -f test.json -l -> use parameters file `text.json` and add to request CredentialId");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a",  "apdu",     "show APDU reqests and responses"),
-        arg_litn("v",  "verbose",  0, 2, "show technical data. vv - show full certificates data"),
-        arg_lit0("c",  "cbor",     "show CBOR decoded data"),
-        arg_lit0("l",  "list",     "add CredentialId from json to allowList. Needs if `rk` option is `false` (authenticator doesn't store credential to its memory)"),
-        arg_str0(NULL,  NULL,       "<json file name>", "JSON input / output file name for parameters. Default `fido2.json`"),
+        arg_lit0("a", "apdu", "show APDU reqests and responses"),
+        arg_litn("v", "verbose", 0, 2, "show technical data. vv - show full certificates data"),
+        arg_lit0("c", "cbor", "show CBOR decoded data"),
+        arg_lit0("l", "list", "add CredentialId from json to allowList."),
+        arg_str0("f", "file", "<fn>", "parameter JSON file name. (def `fido2.json`)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
@@ -931,12 +935,12 @@ static int cmd_hf_fido_2get_assertion(const char *cmd) {
 
 static command_t CommandTable[] = {
     {"help",      CmdHelp,                      AlwaysAvailable, "This help."},
-    {"list",      cmd_hf_fido_list,             IfPm3Iso14443a,  "List ISO 14443A history"},
-    {"info",      cmd_hf_fido_info,             IfPm3Iso14443a,  "Info about FIDO tag."},
-    {"reg",       cmd_hf_fido_register,         IfPm3Iso14443a,  "FIDO U2F Registration Message."},
-    {"auth",      cmd_hf_fido_authenticate,     IfPm3Iso14443a,  "FIDO U2F Authentication Message."},
-    {"make",      cmd_hf_fido_2make_credential, IfPm3Iso14443a,  "FIDO2 MakeCredential command."},
-    {"assert",    cmd_hf_fido_2get_assertion,   IfPm3Iso14443a,  "FIDO2 GetAssertion command."},
+    {"list",      CmdHFFidoList,                AlwaysAvailable, "List ISO 14443A history"},
+    {"info",      CmdHFFidoInfo,                IfPm3Iso14443a,  "Info about FIDO tag."},
+    {"reg",       CmdHFFidoRegister,            IfPm3Iso14443a,  "FIDO U2F Registration Message."},
+    {"auth",      CmdHFFidoAuthenticate,        IfPm3Iso14443a,  "FIDO U2F Authentication Message."},
+    {"make",      CmdHFFido2MakeCredential,     IfPm3Iso14443a,  "FIDO2 MakeCredential command."},
+    {"assert",    CmdHFFido2GetAssertion,       IfPm3Iso14443a,  "FIDO2 GetAssertion command."},
     {NULL, NULL, 0, NULL}
 };
 

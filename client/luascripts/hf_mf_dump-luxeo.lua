@@ -12,9 +12,10 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = '0xdrrb'
-version = 'v0.1.1'
+version = 'v0.1.2'
 desc = [[
-This is a script that tries to dump and decrypt the data of a specific type of Mifare laundromat token.  OBS! Tag must be on the antenna.
+This is a script that tries to dump and decrypt the data of a specific type of Mifare laundromat token.
+OBS! Tag must be on the antenna.
 ]]
 example = [[
     script run hf_mf_dump-luxeo
@@ -69,9 +70,9 @@ end
 local function setdevicedebug( status )
     local c = 'hw dbg '
     if status then
-        c = c..'1'
+        c = c..'-1'
     else
-        c = c..'0'
+        c = c..'-0'
     end
     core.console(c)
 end

@@ -1,5 +1,6 @@
 //-----------------------------------------------------------------------------
 // (c) 2012 Roel Verdult
+// modified 2021 Iceman
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -15,8 +16,8 @@
 #include "hitag.h"
 
 void SniffHitag2(void);
-void SimulateHitag2(bool tag_mem_supplied, uint8_t *data);
+void SimulateHitag2(void);
 void ReaderHitag(hitag_function htf, hitag_data *htd);
 void WriterHitag(hitag_function htf, hitag_data *htd, int page);
-
+void EloadHitag(uint8_t *data, uint16_t len);
 #endif

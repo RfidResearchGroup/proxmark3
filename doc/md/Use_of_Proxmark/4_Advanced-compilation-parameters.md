@@ -54,7 +54,7 @@ Known issues:
 
 * 256kb Arm chip devices: The compiled firmware image from this repo may/will be too large for your device. 
 * PM3 Evo: it has a different led/button pin assignment.  It tends to be messed up.
-* Proxmark Pro:  it has different fpga and unknown pin assignments.  Will most certainly mess up
+* Proxmark Pro:  it has different fpga and unknown pin assignments.  Unsupported.
 
 ## PLATFORM_EXTRAS
 
@@ -90,6 +90,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_14ASNIFF     | 14a sniff storing to flashmem - Micolous
 | HF_AVEFUL       | MIFARE Ultralight read/simulation - Ave Ozkal
 | HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth storing in flashmem - Bogito
+| HF_CRAFTBYTE    | UID stealer - Emulates scanned 14a UID - Anze Jensterle
 | HF_COLIN        | Mifare ultra fast sniff/sim/clone - Colin Brigato
 | HF_ICECLASS     | iCLASS 4-1 mode  sim/read & dump/loclass/glitch & config to flashmem - Iceman1001
 | HF_LEGIC        | HF Legic Prime standalone - uhei

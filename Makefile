@@ -249,14 +249,6 @@ endif
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*)
 
-cliparser:
-	# Get list of all commands
-	cat doc/commands.md | grep -e ^\|\` | cut -f 2 -d "\`" | grep -v 'help\|list\|mem spiffs\|quit\|exit' | awk '{$$1=$$1};1' > cliparser_all_commands.tmp
-	# Get list of cliparserized commands
-	grep -r CLIParserInit ./client/src/ | cut -f 2 -d "\"" | awk '{$$1=$$1};1' > cliparser_done.tmp
-	# Determine commands that still need cliparser conversion
-	grep -xvf cliparser_done.tmp cliparser_all_commands.tmp > ./doc/cliparser_todo.txt
-
 style:
 	# Make sure astyle is installed
 	@which astyle >/dev/null || ( echo "Please install 'astyle' package first" ; exit 1 )

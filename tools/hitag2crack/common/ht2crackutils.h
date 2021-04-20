@@ -6,7 +6,9 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
-#include <sys/mman.h>
+#ifndef __MINGW64__
+# include <sys/mman.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -16,7 +18,7 @@
 
 #define HEX_PER_ROW 16
 
-void writebuf(unsigned char *buf, uint64_t val, unsigned int len);
+void writebuf(unsigned char *buf, uint64_t val, uint16_t len);
 void shexdump(unsigned char *data, int data_len);
 void printbin(unsigned char *c);
 void printbin2(uint64_t val, unsigned int size);

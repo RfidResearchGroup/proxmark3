@@ -49,6 +49,7 @@
 #include "commonutil.h"
 #include "crc16.h"
 
+
 #ifdef WITH_LCD
 #include "LCD_disabled.h"
 #endif
@@ -194,7 +195,7 @@ static void MeasureAntennaTuning(void) {
             payload.v_lf134 = adcval; // voltage at 134kHz
 
         if (i == sc->divisor)
-            payload.v_lfconf = adcval; // voltage at `lf config q`
+            payload.v_lfconf = adcval; // voltage at `lf config --divisor`
 
         payload.results[i] = adcval >> 9; // scale int to fit in byte for graphing purposes
 
@@ -940,7 +941,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
             // length, start gap, led control
-            SimulateTagLowFrequency(payload->len, payload->gap, 1);
+            SimulateTagLowFrequency(payload->len, payload->gap, true);
             reply_ng(CMD_LF_SIMULATE, PM3_EOPABORTED, NULL, 0);
             LED_A_OFF();
             break;
@@ -1084,7 +1085,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HITAG_SIMULATE: { // Simulate Hitag tag, args = memory content
-            SimulateHitag2((bool)packet->oldarg[0], packet->data.asBytes);
+            SimulateHitag2();
             break;
         }
         case CMD_LF_HITAG_READER: { // Reader for Hitag tags, args = type and function
@@ -1109,6 +1110,18 @@ static void PacketReceived(PacketCommandNG *packet) {
             } else {
                 WriterHitag((hitag_function)packet->oldarg[0], (hitag_data *)packet->data.asBytes, packet->oldarg[2]);
             }
+            break;
+        }
+        case CMD_LF_HITAG_ELOAD: {
+            /*
+            struct p {
+                uint16_t len;
+                uint8_t *data;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            uint8_t *mem = BigBuf_get_EM_addr();
+            memcpy((uint8_t *)mem.sectors, payload->data, payload->len);
+            */
             break;
         }
 #endif
@@ -1311,12 +1324,20 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_FELICALITE_SIMULATE: {
-            felica_sim_lite(packet->oldarg[0]);
+            struct p {
+                uint8_t uid[8];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            felica_sim_lite(payload->uid);
             break;
         }
         case CMD_HF_FELICA_SNIFF: {
-            felica_sniff(packet->oldarg[0], packet->oldarg[1]);
-            reply_ng(CMD_HF_FELICA_SNIFF, PM3_SUCCESS, NULL, 0);
+            struct p {
+                uint32_t samples;
+                uint32_t triggers;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            felica_sniff(payload->samples, payload->triggers);
             break;
         }
         case CMD_HF_FELICALITE_DUMP: {
@@ -1725,7 +1746,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_SMART_RAW: {
-            SmartCardRaw(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            SmartCardRaw((smart_card_raw_t *)packet->data.asBytes);
             break;
         }
         case CMD_SMART_UPLOAD: {
@@ -2048,7 +2069,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_SPIFFS_PRINT_TREE: {
-            rdv40_spiffs_safe_print_tree(false);
+            rdv40_spiffs_safe_print_tree();
             break;
         }
         case CMD_SPIFFS_PRINT_FSINFO: {
@@ -2078,7 +2099,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
             }
             // Trigger a finish downloading signal with an ACK frame
-            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_SUCCESS, NULL, 0);
             LED_B_OFF();
             break;
         }
@@ -2087,78 +2108,94 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t filename[32];
             uint8_t *pfilename = packet->data.asBytes;
             memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
-            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Filename received for spiffs STAT : %s", filename);
+            if (DBGLEVEL >= DBG_DEBUG) {
+                Dbprintf("Filename received for spiffs STAT : %s", filename);
+            }
+
             int changed = rdv40_spiffs_lazy_mount();
             uint32_t size = size_in_spiffs((char *)filename);
-            if (changed) rdv40_spiffs_lazy_unmount();
-            reply_mix(CMD_ACK, size, 0, 0, 0, 0);
+            if (changed) {
+                rdv40_spiffs_lazy_unmount();
+            }
+
+            reply_ng(CMD_SPIFFS_STAT, PM3_SUCCESS, (uint8_t *)&size, sizeof(uint32_t));
             LED_B_OFF();
             break;
         }
         case CMD_SPIFFS_REMOVE: {
             LED_B_ON();
-            uint8_t filename[32];
-            uint8_t *pfilename = packet->data.asBytes;
-            memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
-            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Filename received for spiffs REMOVE : %s", filename);
-            rdv40_spiffs_remove((char *) filename, RDV40_SPIFFS_SAFETY_SAFE);
+
+            struct p {
+                uint8_t len;
+                uint8_t fn[32];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+
+            if (DBGLEVEL >= DBG_DEBUG) {
+                Dbprintf("Filename received for spiffs REMOVE : %s", payload->fn);
+            }
+
+            rdv40_spiffs_remove((char *)payload->fn, RDV40_SPIFFS_SAFETY_SAFE);
+            reply_ng(CMD_SPIFFS_REMOVE, PM3_SUCCESS, NULL, 0);
             LED_B_OFF();
             break;
         }
         case CMD_SPIFFS_RENAME: {
             LED_B_ON();
-            uint8_t src[32];
-            uint8_t dest[32];
-            uint8_t *pfilename = packet->data.asBytes;
-            char *token;
-            token = strtok((char *)pfilename, ",");
-            strncpy((char *)src, token, sizeof(src) - 1);
-            token = strtok(NULL, ",");
-            strncpy((char *)dest, token, sizeof(dest) - 1);
+            struct p {
+                uint8_t slen;
+                uint8_t src[32];
+                uint8_t dlen;
+                uint8_t dest[32];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+
             if (DBGLEVEL >= DBG_DEBUG) {
-                Dbprintf("Filename received as source for spiffs RENAME : %s", src);
-                Dbprintf("Filename received as destination for spiffs RENAME : %s", dest);
+                Dbprintf("SPIFFS RENAME");
+                Dbprintf("Source........ %s", payload->src);
+                Dbprintf("Destination... %s", payload->dest);
             }
-            rdv40_spiffs_rename((char *) src, (char *)dest, RDV40_SPIFFS_SAFETY_SAFE);
+            rdv40_spiffs_rename((char *)payload->src, (char *)payload->dest, RDV40_SPIFFS_SAFETY_SAFE);
+            reply_ng(CMD_SPIFFS_RENAME, PM3_SUCCESS, NULL, 0);
             LED_B_OFF();
             break;
         }
         case CMD_SPIFFS_COPY: {
             LED_B_ON();
-            uint8_t src[32];
-            uint8_t dest[32];
-            uint8_t *pfilename = packet->data.asBytes;
-            char *token;
-            token = strtok((char *)pfilename, ",");
-            strncpy((char *)src, token, sizeof(src) - 1);
-            token = strtok(NULL, ",");
-            strncpy((char *)dest, token, sizeof(dest) - 1);
+            struct p {
+                uint8_t slen;
+                uint8_t src[32];
+                uint8_t dlen;
+                uint8_t dest[32];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+
             if (DBGLEVEL >= DBG_DEBUG) {
-                Dbprintf("Filename received as source for spiffs COPY : %s", src);
-                Dbprintf("Filename received as destination for spiffs COPY : %s", dest);
+                Dbprintf("SPIFFS COPY");
+                Dbprintf("Source........ %s", payload->src);
+                Dbprintf("Destination... %s", payload->dest);
             }
-            rdv40_spiffs_copy((char *) src, (char *)dest, RDV40_SPIFFS_SAFETY_SAFE);
+            rdv40_spiffs_copy((char *)payload->src, (char *)payload->dest, RDV40_SPIFFS_SAFETY_SAFE);
+            reply_ng(CMD_SPIFFS_COPY, PM3_SUCCESS, NULL, 0);
             LED_B_OFF();
             break;
         }
         case CMD_SPIFFS_WRITE: {
             LED_B_ON();
-            uint8_t filename[32];
-            uint32_t append = packet->oldarg[0];
-            uint32_t size = packet->oldarg[1];
-            uint8_t *data = packet->data.asBytes;
-            uint8_t *pfilename = packet->data.asBytes;
-            memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
-            data += SPIFFS_OBJ_NAME_LEN;
 
-            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("> Filename received for spiffs WRITE : %s with APPEND SET TO : %d", filename, append);
+            flashmem_write_t *payload = (flashmem_write_t *)packet->data.asBytes;
 
-            if (!append) {
-                rdv40_spiffs_write((char *) filename, (uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
-            } else {
-                rdv40_spiffs_append((char *) filename, (uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
+            if (DBGLEVEL >= DBG_DEBUG) {
+                Dbprintf("SPIFFS WRITE, dest `%s` with APPEND set to: %c", payload->fn, payload->append ? 'Y' : 'N');
             }
-            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
+
+            if (payload->append) {
+                rdv40_spiffs_append((char *) payload->fn, payload->data, payload->bytes_in_packet, RDV40_SPIFFS_SAFETY_SAFE);
+            } else {
+                rdv40_spiffs_write((char *) payload->fn, payload->data, payload->bytes_in_packet, RDV40_SPIFFS_SAFETY_SAFE);
+            }
+
+            reply_ng(CMD_SPIFFS_WRITE, PM3_SUCCESS, NULL, 0);
             LED_B_OFF();
             break;
         }

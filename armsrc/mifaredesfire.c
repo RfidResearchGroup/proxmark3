@@ -271,7 +271,7 @@ void MifareDES_Auth1(uint8_t *datain) {
             memcpy(keybytes, PICC_MASTER_KEY8, 8);
         } else if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3DES) {
             memcpy(keybytes, PICC_MASTER_KEY16, 16);
-        } else if (payload->algo == MFDES_ALGO_3DES) {
+        } else if (payload->algo == MFDES_ALGO_3K3DES) {
             memcpy(keybytes, PICC_MASTER_KEY24, 24);
         }
     } else {

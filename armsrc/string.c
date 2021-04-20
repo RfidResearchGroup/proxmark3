@@ -35,7 +35,7 @@ void *memmove(void *dest, const void *src, size_t len) {
     return dest;
 }
 
-void *memset(void *dest, int c, int len) {
+void *memset(void *dest, uint8_t c, int len) {
     uint8_t *d = dest;
     while ((len--) > 0) {
         *d = c;
@@ -70,18 +70,19 @@ int strlen(const char *str) {
 }
 
 char *strncat(char *dest, const char *src, unsigned int n) {
-    unsigned int dest_len = strlen(dest);
+    int dest_len = strlen(dest);
     unsigned int i;
 
     for (i = 0 ; i < n && src[i] != '\0' ; i++)
         dest[dest_len + i] = src[i];
+
     dest[dest_len + i] = '\0';
 
     return dest;
 }
 
 char *strcat(char *dest, const char *src) {
-    unsigned int dest_len = strlen(dest);
+    int dest_len = strlen(dest);
     unsigned int i;
 
     for (i = 0 ; src[i] != '\0' ; i++)
@@ -97,7 +98,7 @@ void strreverse(char s[]) {
     int j = strlen(s) - 1;
 
     for (int i = 0; i < j; i++, j--) {
-        int c = s[i];
+        char c = s[i];
         s[i] = s[j];
         s[j] = c;
     }
@@ -105,11 +106,11 @@ void strreverse(char s[]) {
 
 /* itoa:  convert n to characters in s */
 void itoa(int n, char s[]) {
-    int i, sign;
-
+    int sign;
     if ((sign = n) < 0)  /* record sign */
         n = -n;          /* make n positive */
-    i = 0;
+
+    int i = 0;
     do {       /* generate digits in reverse order */
         s[i++] = n % 10 + '0';   /* get next digit */
     } while ((n /= 10) > 0);     /* delete it */

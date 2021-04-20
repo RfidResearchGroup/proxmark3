@@ -194,7 +194,7 @@ void RunMod(void) {
                     construct_EM410x_emul(rev_quads(low[selected]));
                     flash_leds(100, 5);
 
-                    SimulateTagLowFrequency(buflen, 0, 1);
+                    SimulateTagLowFrequency(buflen, 0, true);
                     led_slot(selected);
                     state = 0; // Switch to select mode
                 }

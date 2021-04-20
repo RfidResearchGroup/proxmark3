@@ -3,7 +3,7 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Kenzy Carey'
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc = [[
 
   .-----------------------------------------------------------------.
@@ -193,7 +193,7 @@ local function main(args)
         rfidtagname = 'Noralsy'
         facilityrequired = 0
     elseif rfidtag == 'presco' then
-        consolecommand = 'lf presco sim d'
+        consolecommand = 'lf presco sim -d'
         rfidtagname = 'Presco'
         facilityrequired = 0
     elseif rfidtag == 'visa2000' then
@@ -201,7 +201,7 @@ local function main(args)
         rfidtagname = 'Visa2000'
         facilityrequired = 0
     elseif rfidtag == '14a' then
-        consolecommand = 'hf 14a sim'
+        consolecommand = 'hf 14a sim -t'
         if facility == '1' then rfidtagname = 'MIFARE Classic' -- Here we use the -f option to read the 14a type instead of the facility code
         elseif facility == '2' then rfidtagname = 'MIFARE Ultralight'
         elseif facility == '3' then rfidtagname = 'MIFARE Desfire'

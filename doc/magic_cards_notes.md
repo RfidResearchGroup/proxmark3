@@ -79,7 +79,7 @@ UID 4b: (actually NUID as there are no more "unique" IDs on 4b)
 ```
 
  
-Computing BCC on UID 11223344: `hf analyse lcr 11223344` = `44`
+Computing BCC on UID 11223344: `hf analyse lcr -d 11223344` = `44`
 
 UID 7b:
 
@@ -189,13 +189,13 @@ hf mf cwipe -u 11223344 -a 0044 -s 18
 or just fixing block0:
 ```
 # MFC Gen1A 1k:
-hf mf csetuid 11223344 0004 08
+hf mf csetuid -u 11223344 -a 0004 -s 08
 # MFC Gen1A 4k:
-hf mf csetuid 11223344 0044 18
+hf mf csetuid -u 11223344 -a 0044 -s 18
 ```
 
 ```
-script run run hf_mf_magicrevive
+script run hf_mf_magicrevive
 ```
 
 To execute commands manually:
@@ -329,7 +329,7 @@ Android compatible
 ### Proxmark3 commands
 
 ```
-hf mf wrbl 0 A FFFFFFFFFFFF 11223344440804006263646566676869
+hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 11223344440804006263646566676869
 ```
 
 When "soft-bricked" (by writing invalid data in block0), these ones may help:
@@ -342,8 +342,8 @@ e.g. for 4b UID:
 
 ```
 hf 14a config --atqa force --bcc ignore --cl2 skip --rats skip
-hf mf wrbl 0 A FFFFFFFFFFFF 11223344440804006263646566676869 # for 1k
-hf mf wrbl 0 A FFFFFFFFFFFF 11223344441802006263646566676869 # for 4k
+hf mf wrbl --blk 0 -k FFFFFFFFFFFF -k 11223344440804006263646566676869 # for 1k
+hf mf wrbl --blk 0 -k FFFFFFFFFFFF -k 11223344441802006263646566676869 # for 4k
 hf 14a config --std
 hf 14a reader
 ```
@@ -352,8 +352,8 @@ e.g. for 7b UID:
 
 ```
 hf 14a config --atqa force --bcc ignore --cl2 force --cl3 skip --rats skip
-hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566084400626364656667 # for 1k
-hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566184200626364656667 # for 4k
+hf mf wrbl --blk 0 -k FFFFFFFFFFFF -k 04112233445566084400626364656667 # for 1k
+hf mf wrbl --blk 0 -k FFFFFFFFFFFF -k 04112233445566184200626364656667 # for 4k
 hf 14a config --std
 hf 14a reader
 ```
@@ -499,9 +499,9 @@ BCC1 Int  LCK0 LCK1
 
 UID is made of SN0..SN6 bytes
 
-Computing BCC0 on UID 04112233445566: `analyse lcr 88041122` = `bf`
+Computing BCC0 on UID 04112233445566: `analyse lcr -d 88041122` = `bf`
 
-Computing BCC1 on UID 04112233445566: `analyse lcr 33445566` = `44`
+Computing BCC1 on UID 04112233445566: `analyse lcr -d 33445566` = `44`
 
 Int is internal, typically 0x48
 
@@ -538,7 +538,7 @@ When "soft-bricked" (by writing invalid data in block0), these ones may help:
 
 ```
 hf 14a config -h
-script run run hf_mf_magicrevive -u
+script run hf_mf_magicrevive -u
 ```
 
 ## MIFARE Ultralight DirectWrite
@@ -585,7 +585,7 @@ Issue three regular MFU write commands in a row to write first three blocks.
 ### Proxmark3 commands
 
 ```
-hf mfu setuid
+hf mfu setuid -h
 ```
 
 Equivalent: don't use `hf mfu wrbl` as you need to write three blocks in a row, but do, with proper BCCx:
@@ -605,7 +605,7 @@ hf 14a config -h
 E.g.:
 ```
 hf 14a config --atqa force --bcc ignore --cl2 force --cl3 skip --rats skip
-hf mfu setuid 04112233445566
+hf mfu setuid --uid 04112233445566
 hf 14a config --std
 hf 14a reader
 ```
@@ -825,7 +825,7 @@ It accepts longer UID but that doesn't affect BCC/ATQA/SAK
 The same effect (with better ATQA!) can be obtained with a MFC Gen1A that uses SAK defined in block0:
 
 ```
-hf mf csetblk 0 1122334444204403A1A2A3A4A5A6A7A8
+hf mf csetblk --blk 0 -d 1122334444204403A1A2A3A4A5A6A7A8
 hf 14a info
 [+]  UID: 11 22 33 44 
 [+] ATQA: 03 44

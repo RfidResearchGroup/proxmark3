@@ -73,6 +73,7 @@ tools/cryptorf/sm
 tools/cryptorf/sma
 tools/cryptorf/sma_multi
 tools/mf_nonce_brute/mf_nonce_brute
+tools/mf_nonce_brute/mf_trace_brute
 
 fpga/*
 !fpga/tests

@@ -3,7 +3,7 @@ local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc = [[
 This is a script that tries to bring back a chinese magic card (1k generation1)
 from the dead when it's block 0 has been written with bad values.
@@ -84,7 +84,7 @@ local function cmdRestoreST()
     local arr = {}
     for i = 0, 15 do
         local blk = 3 + (4*i)
-        arr[i] = 'hf mf csetbl '..blk..' FFFFFFFFFFFFFF078000FFFFFFFFFFFF'
+        arr[i] = 'hf mf csetbl --blk '..blk..' -d FFFFFFFFFFFFFF078000FFFFFFFFFFFF'
     end
     return arr
 end

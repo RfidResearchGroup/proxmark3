@@ -18,6 +18,7 @@ typedef struct {
     uint32_t nt_enc;    // encrypted tag challenge
     uint8_t nt_enc_par; // encrypted tag challenge parity
     uint32_t nr_enc;    // encrypted reader challenge
+    uint8_t nr_enc_par; // encrypted reader challenge parity
     uint32_t ar_enc;    // encrypted reader response
     uint8_t ar_enc_par; // encrypted reader response parity
     uint32_t at_enc;    // encrypted tag response

@@ -60,12 +60,14 @@ typedef struct {
     char buf[1024 + 60];
 } CLIParserContext;
 int CLIParserInit(CLIParserContext **ctx, const char *vprogramName, const char *vprogramHint, const char *vprogramHelp);
+void CLIParserPrintHelp(CLIParserContext *ctx);
 int CLIParserParseString(CLIParserContext *ctx, const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
 int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData);
 int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
 
 int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
 int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
+int CLIParamBinToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
 
 uint64_t arg_get_u64_hexstr_def(CLIParserContext *ctx, uint8_t paramnum, uint64_t def);
 int arg_get_u64_hexstr_def_nlen(CLIParserContext *ctx, uint8_t paramnum, uint64_t def, uint64_t *out, uint8_t nlen, bool optional);

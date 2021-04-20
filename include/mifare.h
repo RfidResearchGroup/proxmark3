@@ -101,7 +101,7 @@ typedef enum {
 } mifare_des_kdf_algo_t;
 
 //-----------------------------------------------------------------------------
-// "hf 14a sim x", "hf mf sim x" attacks
+// "hf 14a sim -x", "hf mf sim -x" attacks
 //-----------------------------------------------------------------------------
 typedef struct {
     uint32_t cuid;
@@ -120,24 +120,6 @@ typedef struct {
         SECOND,
     } state;
 } PACKED nonces_t;
-
-//-----------------------------------------------------------------------------
-// ISO 7618  Smart Card
-//-----------------------------------------------------------------------------
-typedef struct {
-    uint8_t atr_len;
-    uint8_t atr[30];
-} PACKED smart_card_atr_t;
-
-typedef enum SMARTCARD_COMMAND {
-    SC_CONNECT = (1 << 0),
-    SC_NO_DISCONNECT = (1 << 1),
-    SC_RAW = (1 << 2),
-    SC_SELECT = (1 << 3),
-    SC_RAW_T0 = (1 << 4),
-    SC_CLEARLOG = (1 << 5),
-    SC_LOG = (1 << 6),
-} smartcard_command_t;
 
 
 #endif // _MIFARE_H_

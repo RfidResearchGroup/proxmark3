@@ -52,15 +52,17 @@ static void ParamLoadDefaults(struct tlvdb *tlvRoot) {
     //95:(Terminal Verification Results) len:5
     // all OK TVR
     TLV_ADD(0x95,   "\x00\x00\x00\x00\x00");
+    // 9F4E Merchant Name and Location len:x
+    TLV_ADD(0x9F4E, "proxmrk3rdv\x00");
 }
 
 static void PrintChannel(EMVCommandChannel channel) {
     switch (channel) {
         case ECC_CONTACTLESS:
-            PrintAndLogEx(INFO, "Selected channel : " _GREEN_("CONTACTLESS (T=CL)"));
+            PrintAndLogEx(INFO, "Selected channel... " _GREEN_("CONTACTLESS (T=CL)"));
             break;
         case ECC_CONTACT:
-            PrintAndLogEx(INFO, "Selected channel : " _GREEN_("CONTACT"));
+            PrintAndLogEx(INFO, "Selected channel... " _GREEN_("CONTACT"));
             break;
     }
 }
@@ -72,7 +74,8 @@ static int CmdEMVSelect(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv select",
                   "Executes select applet command",
-                  "Usage:\n\temv select -s a00000000101 -> select card, select applet\n\temv select -st a00000000101 -> select card, select applet, show result in TLV\n");
+                  "emv select -s a00000000101   -> select card, select applet\n"
+                  "emv select -st a00000000101   -> select card, select applet, show result in TLV\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -121,8 +124,9 @@ static int CmdEMVSearch(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv search",
-                  "Tries to select all applets from applet list:\n",
-                  "Usage:\n\temv search -s -> select card and search\n\temv search -st -> select card, search and show result in TLV\n");
+                  "Tries to select all applets from applet list\n",
+                  "emv search -s   -> select card and search\n"
+                  "emv search -st  -> select card, search and show result in TLV\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -172,7 +176,8 @@ static int CmdEMVPPSE(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv pse",
                   "Executes PSE/PPSE select command. It returns list of applet on the card:\n",
-                  "Usage:\n\temv pse -s1 -> select, get pse\n\temv pse -st2 -> select, get ppse, show result in TLV\n");
+                  "emv pse -s1   -> select, get pse\n"
+                  "emv pse -st2  -> select, get ppse, show result in TLV\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -228,10 +233,11 @@ static int CmdEMVGPO(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv gpo",
-                  "Executes Get Processing Options command. It returns data in TLV format (0x77 - format2) or plain format (0x80 - format1).\nNeeds a EMV applet to be selected.",
-                  "Usage:\n\temv gpo -k -> execute GPO\n"
-                  "\temv gpo -t 01020304 -> execute GPO with 4-byte PDOL data, show result in TLV\n"
-                  "\temv gpo -pmt 9F 37 04 -> load params from file, make PDOL data from PDOL, execute GPO with PDOL, show result in TLV\n");
+                  "Executes Get Processing Options command. It returns data in TLV format (0x77 - format2)\n"
+                  "or plain format (0x80 - format1). Needs a EMV applet to be selected.",
+                  "emv gpo -k              -> execute GPO\n"
+                  "emv gpo -t 01020304     -> execute GPO with 4-byte PDOL data, show result in TLV\n"
+                  "emv gpo -pmt 9F 37 04   -> load params from file, make PDOL data from PDOL, execute GPO with PDOL, show result in TLV\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -337,8 +343,10 @@ static int CmdEMVReadRecord(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv readrec",
-                  "Executes Read Record command. It returns data in TLV format.\nNeeds a bank applet to be selected and sometimes needs GPO to be executed.",
-                  "Usage:\n\temv readrec -k 0101 -> read file SFI=01, SFIrec=01\n\temv readrec -kt 0201-> read file 0201 and show result in TLV\n");
+                  "Executes Read Record command. It returns data in TLV format.\n"
+                  "Needs a bank applet to be selected and sometimes needs GPO to be executed.",
+                  "emv readrec -k 0101   -> read file SFI=01, SFIrec=01\n"
+                  "emv readrec -kt 0201  -> read file 0201 and show result in TLV\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -393,11 +401,12 @@ static int CmdEMVAC(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv genac",
-                  "Generate Application Cryptogram command. It returns data in TLV format .\nNeeds a EMV applet to be selected and GPO to be executed.",
-                  "Usage:\n\temv genac -k 0102 -> generate AC with 2-byte CDOLdata and keep field ON after command\n"
-                  "\temv genac -t 01020304 -> generate AC with 4-byte CDOL data, show result in TLV\n"
-                  "\temv genac -Daac 01020304 -> generate AC with 4-byte CDOL data and terminal decision 'declined'\n"
-                  "\temv genac -pmt 9F 37 04 -> load params from file, make CDOL data from CDOL, generate AC with CDOL, show result in TLV");
+                  "Generate Application Cryptogram command. It returns data in TLV format.\n"
+                  "Needs a EMV applet to be selected and GPO to be executed.",
+                  "emv genac -k 0102         -> generate AC with 2-byte CDOLdata and keep field ON after command\n"
+                  "emv genac -t 01020304     -> generate AC with 4-byte CDOL data, show result in TLV\n"
+                  "emv genac -Daac 01020304  -> generate AC with 4-byte CDOL data and terminal decision 'declined'\n"
+                  "emv genac -pmt 9F 37 04   -> load params from file, make CDOL data from CDOL, generate AC with CDOL, show result in TLV");
 
     void *argtable[] = {
         arg_param_begin,
@@ -516,8 +525,10 @@ static int CmdEMVGenerateChallenge(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv challenge",
-                  "Executes Generate Challenge command. It returns 4 or 8-byte random number from card.\nNeeds a EMV applet to be selected and GPO to be executed.",
-                  "Usage:\n\temv challenge -> get challenge\n\temv challenge -k -> get challenge, keep fileld ON\n");
+                  "Executes Generate Challenge command. It returns 4 or 8-byte random number from card.\n"
+                  "Needs a EMV applet to be selected and GPO to be executed.",
+                  "emv challenge     -> get challenge\n"
+                  "emv challenge -k  -> get challenge, keep fileld ON\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -567,10 +578,9 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
                   "Generate Internal Authenticate command. Usually needs 4-byte random number. It returns data in TLV format .\n"
                   "Needs a EMV applet to be selected and GPO to be executed.",
 
-                  "Usage:\n"
-                  "\temv intauth -k 01020304 -> execute Internal Authenticate with 4-byte DDOLdata and keep field ON after command\n"
-                  "\temv intauth -t 01020304 -> execute Internal Authenticate with 4-byte DDOL data, show result in TLV\n"
-                  "\temv intauth -pmt 9F 37 04 -> load params from file, make DDOL data from DDOL, Internal Authenticate with DDOL, show result in TLV");
+                  "emv intauth -k 01020304   -> execute Internal Authenticate with 4-byte DDOLdata and keep field ON after command\n"
+                  "emv intauth -t 01020304   -> execute Internal Authenticate with 4-byte DDOL data, show result in TLV\n"
+                  "emv intauth -pmt 9F 37 04 -> load params from file, make DDOL data from DDOL, Internal Authenticate with DDOL, show result in TLV");
 
     void *argtable[] = {
         arg_param_begin,
@@ -796,9 +806,8 @@ static int CmdEMVExec(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv exec",
                   "Executes EMV contactless transaction",
-                  "Usage:\n"
-                  "\temv exec -sat -> select card, execute MSD transaction, show APDU and TLV\n"
-                  "\temv exec -satc -> select card, execute CDA transaction, show APDU and TLV\n");
+                  "emv exec -sat    -> select card, execute MSD transaction, show APDU and TLV\n"
+                  "emv exec -satc   -> select card, execute CDA transaction, show APDU and TLV\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1075,12 +1084,29 @@ static int CmdEMVExec(const char *Cmd) {
                 if (IAD) {
                     PrintAndLogEx(NORMAL, "IAD: %s", sprint_hex(IAD->value, IAD->len));
 
-                    if (IAD->len >= IAD->value[0] + 1) {
-                        PrintAndLogEx(NORMAL, "\tKey index:  0x%02x", IAD->value[1]);
-                        PrintAndLogEx(NORMAL, "\tCrypto ver: 0x%02x(%03d)", IAD->value[2], IAD->value[2]);
-                        PrintAndLogEx(NORMAL, "\tCVR: %s", sprint_hex(&IAD->value[3], IAD->value[0] - 2));
+                    // https://mst-company.ru/blog/ekvajring-emv-tranzaktsiya-emv-transaction-flow-chast-4-pdol-i-beskontaktnye-karty-osobennosti-qvsdc-i-quics
+                    if (IAD->value[0] == 0x1f) {
+                        PrintAndLogEx(NORMAL, "    Key index:  0x%02x", IAD->value[2]);
+                        PrintAndLogEx(NORMAL, "    Crypto ver: 0x%02x(%03d)", IAD->value[1], IAD->value[1]);
+                        PrintAndLogEx(NORMAL, "    CVR: %s", sprint_hex(&IAD->value[3], 5));
+                        struct tlvdb *cvr = tlvdb_fixed(0x20, 5, &IAD->value[3]);
+                        TLVPrintFromTLVLev(cvr, 1);
+                        PrintAndLogEx(NORMAL, "    IDD option id: 0x%02x", IAD->value[8]);
+                        PrintAndLogEx(NORMAL, "    IDD: %s", sprint_hex(&IAD->value[9], 23));
+                    } else if (IAD->len >= IAD->value[0] + 1) {
+                        PrintAndLogEx(NORMAL, "    Key index:  0x%02x", IAD->value[1]);
+                        PrintAndLogEx(NORMAL, "    Crypto ver: 0x%02x(%03d)", IAD->value[2], IAD->value[2]);
+                        PrintAndLogEx(NORMAL, "    CVR: %s", sprint_hex(&IAD->value[3], IAD->value[0] - 2));
                         struct tlvdb *cvr = tlvdb_fixed(0x20, IAD->value[0] - 2, &IAD->value[3]);
                         TLVPrintFromTLVLev(cvr, 1);
+                        if (IAD->len >= 8) {
+                            int iddLen = IAD->value[7];
+                            PrintAndLogEx(NORMAL, "    IDD length: %d", iddLen);
+                            if (iddLen >= 1)
+                                PrintAndLogEx(NORMAL, "    IDD option id: 0x%02x", IAD->value[8]);
+                            if (iddLen >= 2)
+                                PrintAndLogEx(NORMAL, "    IDD: %s", sprint_hex(&IAD->value[9], iddLen - 1));
+                        }
                     }
                 } else {
                     PrintAndLogEx(WARNING, "WARNING: IAD not found.");
@@ -1141,9 +1167,13 @@ static int CmdEMVExec(const char *Cmd) {
             // CDA
             PrintAndLogEx(NORMAL, "\n* CDA:");
             struct tlvdb *ac_tlv = tlvdb_parse_multi(buf, len);
-            res = trCDA(tlvRoot, ac_tlv, pdol_data_tlv, cdol_data_tlv);
-            if (res) {
-                PrintAndLogEx(NORMAL, "CDA error (%d)", res);
+            if (tlvdb_get(ac_tlv, 0x9f4b, NULL)) {
+                res = trCDA(tlvRoot, ac_tlv, pdol_data_tlv, cdol_data_tlv);
+                if (res) {
+                    PrintAndLogEx(NORMAL, "CDA error (%d)", res);
+                }
+            } else {
+                PrintAndLogEx(NORMAL, "\n* Signed Dynamic Application Data (0x9f4b) not present");
             }
 
             free(ac_tlv);
@@ -1387,10 +1417,11 @@ static int CmdEMVScan(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv scan",
-                  "Scan EMV card and save it contents to a file.",
-                  "It executes EMV contactless transaction and saves result to a file which can be used for emulation\n"
-                  "Usage:\n\temv scan -at -> scan MSD transaction mode and show APDU and TLV\n"
-                  "\temv scan -c -> scan CDA transaction mode\n");
+                  "Scan EMV card and save it contents to a file.\n"
+                  "It executes EMV contactless transaction and saves result to a file which can be used for emulation\n",
+                  "emv scan -at -> scan MSD transaction mode and show APDU and TLV\n"
+                  "emv scan -c -> scan CDA transaction mode\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1772,25 +1803,21 @@ static int CmdEMVScan(const char *Cmd) {
 }
 
 static int CmdEMVList(const char *Cmd) {
-    char args[128] = {0};
-    if (strlen(Cmd) == 0) {
-        snprintf(args, sizeof(args), "-t 7816");
-    } else {
-        strncpy(args, Cmd, sizeof(args) - 1);
-    }
-    return CmdTraceList(args);
+    return CmdTraceListAlias(Cmd, "emv", "7816");
 }
 
 static int CmdEMVTest(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv test",
                   "Executes tests\n",
-                  "Usage:\n\temv test [l]\n");
+                  "emv test -i\n"
+                  "emv test --long"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("iI",  "ignore",  "ignore timing tests for VM"),
-        arg_lit0("lL",  "long",  "run long tests too"),
+        arg_lit0("i", "ignore", "ignore timing tests for VM"),
+        arg_lit0("l", "long", "run long tests too"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1815,9 +1842,8 @@ static int CmdEMVRoca(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv roca",
                   "Tries to extract public keys and run the ROCA test against them.\n",
-                  "Usage:\n"
-                  "\temv roca -w -> select --CONTACT-- card and run test\n"
-                  "\temv roca -> select --CONTACTLESS-- card and run test\n"
+                  "emv roca -w  -> select --CONTACT-- card and run test\n"
+                  "emv roca     -> select --CONTACTLESS-- card and run test\n"
                  );
 
     void *argtable[] = {

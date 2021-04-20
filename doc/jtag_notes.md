@@ -61,7 +61,7 @@ GND | 6
 3.3 | 1
 
 # Where to find more information?
-There has been lots of articles and blogposts about recoving, debricking, JTAG your Proxmark3 and you find here below a sortiment of resources that will be of help.
+There has been lots of articles and blogposts about recovering, debricking, JTAG your Proxmark3 and you find here below an assortiment of resources that will be of help.
 
 ## Third party notes on using a BusPirate
 

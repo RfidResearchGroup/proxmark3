@@ -56,10 +56,10 @@ json_t *AIDSearchInit(bool verbose) {
     return root;
 }
 
-json_t *AIDSearchGetElm(json_t *root, int elmindx) {
+json_t *AIDSearchGetElm(json_t *root, size_t elmindx) {
     json_t *data = json_array_get(root, elmindx);
     if (!json_is_object(data)) {
-        PrintAndLogEx(ERR, "data [%d] is not an object\n", elmindx);
+        PrintAndLogEx(ERR, "data [%zu] is not an object\n", elmindx);
         return NULL;
     }
     return data;
@@ -103,7 +103,7 @@ bool AIDGetFromElm(json_t *data, uint8_t *aid, size_t aidmaxlen, int *aidlen) {
     if (hexaid == NULL || strlen(hexaid) == 0)
         return false;
 
-    int res = param_gethex_to_eol(hexaid, 0, aid, aidmaxlen, aidlen);
+    int res = param_gethex_to_eol(hexaid, 0, aid, (int)aidmaxlen, aidlen);
     if (res)
         return false;
 
@@ -120,8 +120,8 @@ int PrintAIDDescription(json_t *xroot, char *aid, bool verbose) {
         goto out;
 
     json_t *elm = NULL;
-    uint32_t maxaidlen = 0;
-    for (uint32_t elmindx = 0; elmindx < json_array_size(root); elmindx++) {
+    size_t maxaidlen = 0;
+    for (size_t elmindx = 0; elmindx < json_array_size(root); elmindx++) {
         json_t *data = AIDSearchGetElm(root, elmindx);
         if (data == NULL)
             continue;

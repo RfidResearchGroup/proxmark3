@@ -50,6 +50,9 @@ define KNOWN_STANDALONE_DEFINITIONS
 | HF_COLIN        | Mifare ultra fast sniff/sim/clone      |
 | (RDV4 only)     | - Colin Brigato                        |
 +----------------------------------------------------------+
+| HF_CRAFTBYTE    | UID stealer - Emulates scanned 14a UID |
+|                 | - Anze Jensterle                       |
++----------------------------------------------------------+
 | HF_ICECLASS     | Simulate HID iCLASS legacy ags         |
 | (RDV4 only)     | storing in flashmem                    |
 +----------------------------------------------------------+
@@ -71,7 +74,7 @@ define KNOWN_STANDALONE_DEFINITIONS
 endef
 
 STANDALONE_MODES := LF_SKELETON LF_EM4100EMUL LF_EM4100RSWB LF_EM4100RWC LF_HIDBRUTE LF_ICEHID LF_PROXBRUTE LF_SAMYRUN LF_THAREXDE
-STANDALONE_MODES += HF_14ASNIFF HF_AVEFUL HF_BOG HF_COLIN HF_ICECLASS HF_LEGIC HF_MATTYRUN HF_MSDSAL HF_TCPRST HF_YOUNG
+STANDALONE_MODES += HF_14ASNIFF HF_AVEFUL HF_BOG HF_COLIN HF_CRAFTBYTE HF_ICECLASS HF_LEGIC HF_MATTYRUN HF_MSDSAL HF_TCPRST HF_YOUNG 
 STANDALONE_MODES_REQ_SMARTCARD :=
 STANDALONE_MODES_REQ_FLASH := LF_ICEHID LF_THAREXDE HF_14ASNIFF HF_BOG HF_COLIN HF_ICECLASS
 ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES)),)

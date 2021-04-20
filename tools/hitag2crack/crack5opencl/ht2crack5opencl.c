@@ -35,6 +35,18 @@
 #include "hitag2.h"
 #include "dolphin_macro.h"
 
+#if defined(__MINGW64__)
+#define	timersub(a, b, result) \
+  do { \
+    (result)->tv_sec = (a)->tv_sec - (b)->tv_sec; \
+    (result)->tv_usec = (a)->tv_usec - (b)->tv_usec; \
+    if ((result)->tv_usec < 0) { \
+      --(result)->tv_sec; \
+      (result)->tv_usec += 1000000;\
+    } \
+  } while (0)
+#endif
+
 #define MAX_BITSLICES 32
 #define VECTOR_SIZE (MAX_BITSLICES/8)
 
@@ -1140,12 +1152,12 @@ int main(int argc, char **argv) {
 
             if (thread_count > 1) printf("[%zu] ", y);
 
-            printf("Key found @ slice %zu/%zu: ", t_arg[y].slice, t_arg[y].max_slices);
+            printf("\nKey found @ slice %zu/%zu: [", t_arg[y].slice, t_arg[y].max_slices);
             for (int i = 0; i < 6; i++) {
                 printf("%02X", (uint8_t)(t_arg[y].key & 0xff));
                 t_arg[y].key = t_arg[y].key >> 8;
             }
-            printf("\n");
+            printf(" ]\n");
             fflush(stdout);
             break;
         }
@@ -1166,7 +1178,7 @@ int main(int argc, char **argv) {
 
     printf("\nAttack 5 - opencl - end");
 
-    if (show_overall_time) printf(" in %ld.%06ld second(s).\n\n", (long int)cpu_t_result.tv_sec, (long int)cpu_t_result.tv_usec);
+    if (show_overall_time) printf(" in %ld.%2ld second(s).\n\n", (long int)cpu_t_result.tv_sec, (long int)cpu_t_result.tv_usec);
     else printf("\n");
 
     fflush(stdout);

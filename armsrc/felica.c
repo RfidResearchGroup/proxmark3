@@ -208,9 +208,9 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
     // 0x00 = timeslot
     // 0x09 0x21 = crc
     static uint8_t poll[10] = {0xb2, 0x4d, 0x06, FELICA_POLL_REQ, 0xFF, 0xFF, 0x00, 0x00, 0x09, 0x21};
-    int len = 20;
+    int len = 10;
 
-    // We try 20 times, or if answer was received.
+    // We try 10 times, or if answer was received.
     do {
         // end-of-reception response packet data, wait approx. 501μs
         // end-of-transmission command packet data, wait approx. 197μs
@@ -572,23 +572,53 @@ void felica_sendraw(PacketCommandNG *c) {
 }
 
 void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
-    int remFrames = (samplesToSkip) ? samplesToSkip : 0;
-    Dbprintf("Sniff Felica: Getting first %d frames, Skipping after %d triggers.\n", samplesToSkip, triggersToSkip);
+
     clear_trace();
     set_tracing(true);
     iso18092_setup(FPGA_HF_ISO18092_FLAG_NOMOD);
+
     LED_D_ON();
-    uint16_t numbts = 0;
+
+    int retval = PM3_SUCCESS;
+    int remFrames = (samplesToSkip) ? samplesToSkip : 0;
     int trigger_cnt = 0;
     uint32_t timeout = iso18092_get_timeout();
     bool isReaderFrame = true;
-    while (!BUTTON_PRESS()) {
+
+    uint8_t flip = 0;
+    uint16_t checker = 0;
+    for (;;) {
+
         WDT_HIT();
+
+        // since simulation is a tight time critical loop,
+        // we only check for user request to end at iteration 3000, 9000.
+        if (flip == 3) {
+            if (data_available()) {
+                retval = PM3_EOPABORTED;
+                break;
+            }
+            flip = 0;
+        }
+
+        if (checker >= 3000) {
+
+            if (BUTTON_PRESS())  {
+                retval = PM3_EOPABORTED;
+                break;
+            }
+            flip++;
+            checker = 0;
+        }
+        ++checker;
+
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+
             uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
             Process18092Byte(dist);
+
             if ((dist >= 178) && (++trigger_cnt > triggersToSkip)) {
-                Dbprintf("triggersToSkip kicked %d", dist);
+                Dbprintf("triggers To skip kicked %d", dist);
                 break;
             }
             if (FelicaFrame.state == STATE_FULL) {
@@ -599,7 +629,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
                 }
                 remFrames--;
                 if (remFrames <= 0) {
-                    Dbprintf("Stop Sniffing - samplesToSkip reached!");
+                    Dbprintf("Stop Sniffing - samples To skip reached!");
                     break;
                 }
                 LogTrace(FelicaFrame.framebytes,
@@ -609,7 +639,6 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
                          NULL,
                          isReaderFrame
                         );
-                numbts += FelicaFrame.len;
                 FelicaFrameReset();
             }
         }
@@ -617,11 +646,9 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
     switch_off();
     //reset framing
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
-    set_tracelen(numbts);
-    set_tracelen(BigBuf_max_traceLen());
 
-    Dbprintf("Felica sniffing done, tracelen: %i, use " _YELLOW_("`hf felica list`") " for annotations", BigBuf_get_traceLen());
-    reply_mix(CMD_ACK, 1, numbts, 0, 0, 0);
+    Dbprintf("Felica sniffing done, tracelen: %i", BigBuf_get_traceLen());
+    reply_ng(CMD_HF_FELICA_SNIFF, retval, NULL, 0);
     LED_D_OFF();
 }
 
@@ -630,51 +657,74 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
 #define R_READBLK_LEN  0x21
 //simulate NFC Tag3 card - for now only poll response works
 // second half (4 bytes)  of NDEF2 goes into nfcid2_0, first into nfcid2_1
-void felica_sim_lite(uint64_t uid) {
+void felica_sim_lite(uint8_t *uid) {
 
-    int i, curlen = 0;
-    uint8_t *curresp = 0;
-
-    uint8_t ndef[8];
-    num_to_bytes(uid, 8, ndef);
-
-    //prepare our 3 responses...
+    // prepare our 3 responses...
     uint8_t resp_poll0[R_POLL0_LEN] = { 0xb2, 0x4d, 0x12, FELICA_POLL_ACK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf1, 0x00, 0x00, 0x00, 0x01, 0x43, 0x00, 0xb3, 0x7f};
     uint8_t resp_poll1[R_POLL1_LEN] = { 0xb2, 0x4d, 0x14, FELICA_POLL_ACK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf1, 0x00, 0x00, 0x00, 0x01, 0x43, 0x00, 0x88, 0xb4, 0xb3, 0x7f};
     uint8_t resp_readblk[R_READBLK_LEN] = { 0xb2, 0x4d, 0x1d, FELICA_RDBLK_ACK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x10, 0x04, 0x01, 0x00, 0x0d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x23, 0xcb, 0x6e};
 
-    //NFC tag 3/ ISo technically. Many overlapping standards
-    DbpString("Felica Lite-S sim start");
+    // NFC tag 3/ ISo technically. Many overlapping standards
+    DbpString("Felica Lite-S simulation start");
     Dbprintf("NDEF2 UID: %02x %02x %02x %02x %02x %02x %02x %02x",
-             ndef[0], ndef[1], ndef[2], ndef[3], ndef[4], ndef[5], ndef[6], ndef[7]
+             uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7]
             );
 
-    //fill in blanks
-    for (i = 0; i < 8; i++) {
-        resp_poll0[i + 4] = ndef[i];
-        resp_poll1[i + 4] = ndef[i];
-        resp_readblk[i + 4] = ndef[i];
+    // fill in blanks
+    for (uint8_t i = 0; i < 8; i++) {
+        resp_poll0[i + 4] = uid[i];
+        resp_poll1[i + 4] = uid[i];
+        resp_readblk[i + 4] = uid[i];
     }
 
-    //calculate and set CRC
+    // calculate and set CRC
     AddCrc(resp_poll0, resp_poll0[2]);
     AddCrc(resp_poll1, resp_poll1[2]);
     AddCrc(resp_readblk, resp_readblk[2]);
 
     iso18092_setup(FPGA_HF_ISO18092_FLAG_NOMOD);
 
+    int retval = PM3_SUCCESS;
+    int curlen = 0;
+    uint8_t *curresp = NULL;
     bool listenmode = true;
-    //uint32_t frtm = GetCountSspClk();
+    // uint32_t frtm = GetCountSspClk();
+
+    uint8_t flip = 0;
+    uint16_t checker = 0;
     for (;;) {
-        if (BUTTON_PRESS()) break;
+
+        WDT_HIT();
+
+        // since simulation is a tight time critical loop,
+        // we only check for user request to end at iteration 3000, 9000.
+        if (flip == 3) {
+            if (data_available()) {
+                retval = PM3_EOPABORTED;
+                break;
+            }
+            flip = 0;
+        }
+
+        if (checker >= 3000) {
+
+            if (BUTTON_PRESS())  {
+                retval = PM3_EOPABORTED;
+                break;
+            }
+            flip++;
+            checker = 0;
+        }
+        ++checker;
+
         WDT_HIT();
 
         if (listenmode) {
-            //waiting for request...
+            // waiting for request...
             if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 
                 uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
-                //frtm = GetCountSspClk();
+                // frtm = GetCountSspClk();
                 Process18092Byte(dist);
 
                 if (FelicaFrame.state == STATE_FULL) {
@@ -683,7 +733,7 @@ void felica_sim_lite(uint64_t uid) {
 
                         if (FelicaFrame.framebytes[2] == 6 && FelicaFrame.framebytes[3] == 0) {
 
-                            //polling... there are two types of polling we answer to
+                            // polling... there are two types of polling we answer to
                             if (FelicaFrame.framebytes[6] == 0) {
                                 curresp = resp_poll0;
                                 curlen = R_POLL0_LEN;
@@ -697,28 +747,30 @@ void felica_sim_lite(uint64_t uid) {
                         }
 
                         if (FelicaFrame.framebytes[2] > 5 && FelicaFrame.framebytes[3] == 0x06) {
-                            //we should rebuild it depending on page size, but...
-                            //Let's see first
+                            // we should rebuild it depending on page size, but...
+                            // Let's see first
                             curresp = resp_readblk;
                             curlen = R_READBLK_LEN;
                             listenmode = false;
                         }
-                        //clear frame
+                        // clear frame
                         FelicaFrameReset();
                     } else {
-                        //frame invalid, clear it out to allow for the next one
+                        // frame invalid, clear it out to allow for the next one
                         FelicaFrameReset();
                     }
                 }
             }
         }
-        if (!listenmode) {
-            //trying to answer... here to  start answering immediately.
-            //this one is a bit finicky. Seems that being a bit late is better than earlier
-            //TransmitFor18092_AsReader(curresp, curlen, frtm+512, 0, 0);
+
+
+        if (listenmode == false) {
+            // trying to answer... here to  start answering immediately.
+            // this one is a bit finicky. Seems that being a bit late is better than earlier
+            // TransmitFor18092_AsReader(curresp, curlen, frtm+512, 0, 0);
             TransmitFor18092_AsReader(curresp, curlen, NULL, 0, 0);
 
-            //switch back
+            // switch back
             FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO18092 | FPGA_HF_ISO18092_FLAG_NOMOD);
 
             FelicaFrameReset();
@@ -730,10 +782,11 @@ void felica_sim_lite(uint64_t uid) {
 
     switch_off();
 
-    //reset framing
+    // reset framing
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
 
-    DbpString("Felica Lite-S sim end");
+    Dbprintf("FeliCa Lite-S emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
+    reply_ng(CMD_HF_FELICALITE_SIMULATE, retval, NULL, 0);
 }
 
 #define RES_SVC_LEN 11 + 3

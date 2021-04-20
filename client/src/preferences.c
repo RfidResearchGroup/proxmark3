@@ -437,17 +437,19 @@ static void showSavePathState(savePaths_t path_index, prefShowOpt_t opt) {
             strcpy(s, _RED_("unknown")" save path......");
     }
 
-    if ((session.defaultPaths[path_index] == NULL) || (strcmp(session.defaultPaths[path_index], "") == 0)) {
-        PrintAndLogEx(INFO, "   %s %s "_WHITE_("not set"),
-                      prefShowMsg(opt),
-                      s
-                     );
-    } else {
-        PrintAndLogEx(INFO, "   %s %s "_GREEN_("%s"),
-                      prefShowMsg(opt),
-                      s,
-                      session.defaultPaths[path_index]
-                     );
+    if (path_index < spItemCount) {
+        if ((session.defaultPaths[path_index] == NULL) || (strcmp(session.defaultPaths[path_index], "") == 0)) {
+            PrintAndLogEx(INFO, "   %s %s "_WHITE_("not set"),
+                          prefShowMsg(opt),
+                          s
+                         );
+        } else {
+            PrintAndLogEx(INFO, "   %s %s "_GREEN_("%s"),
+                          prefShowMsg(opt),
+                          s,
+                          session.defaultPaths[path_index]
+                         );
+        }
     }
 }
 
@@ -502,9 +504,9 @@ static void showBarModeState(prefShowOpt_t opt) {
 
 static int setCmdEmoji(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "pref set emoji ",
+    CLIParserInit(&ctx, "prefs set emoji ",
                   "Set presistent preference of using emojis in the client",
-                  "pref set emoji --alias"
+                  "prefs set emoji --alias"
                  );
 
     void *argtable[] = {
@@ -556,9 +558,9 @@ static int setCmdEmoji(const char *Cmd) {
 
 static int setCmdColor(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "pref set color ",
+    CLIParserInit(&ctx, "prefs set color ",
                   "Set presistent preference of using colors in the client",
-                  "pref set color --ansi"
+                  "prefs set color --ansi"
                  );
 
     void *argtable[] = {
@@ -600,9 +602,9 @@ static int setCmdColor(const char *Cmd) {
 
 static int setCmdDebug(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "pref set clientdebug ",
+    CLIParserInit(&ctx, "prefs set clientdebug ",
                   "Set presistent preference of using clientside debug level",
-                  "pref set clientdebug --simple"
+                  "prefs set clientdebug --simple"
                  );
 
     void *argtable[] = {
@@ -651,9 +653,9 @@ static int setCmdDebug(const char *Cmd) {
 static int setCmdDeviceDebug (const char *Cmd)
 {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "pref set devicedebug ",
+    CLIParserInit(&ctx, "prefs set devicedebug ",
                   "Set presistent preference of device side debug level",
-                  "pref set devicedebug --on"
+                  "prefs set devicedebug --on"
                  );
 
     void *argtable[] = {
@@ -718,9 +720,9 @@ static int setCmdDeviceDebug (const char *Cmd)
 
 static int setCmdHint(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "pref set hints ",
+    CLIParserInit(&ctx, "prefs set hints ",
                   "Set presistent preference of showing hint messages in the client",
-                  "pref set hints --on"
+                  "prefs set hints --on"
                  );
 
     void *argtable[] = {
@@ -761,9 +763,9 @@ static int setCmdHint(const char *Cmd) {
 
 static int setCmdPlotSliders(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "pref set plotsliders ",
+    CLIParserInit(&ctx, "prefs set plotsliders",
                   "Set presistent preference of showing the plotslider control in the client",
-                  "pref set plotsliders --on"
+                  "prefs set plotsliders --on"
                  );
 
     void *argtable[] = {
@@ -803,10 +805,10 @@ static int setCmdPlotSliders(const char *Cmd) {
 
 static int setCmdSavePaths(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "pref set savepath",
+    CLIParserInit(&ctx, "prefs set savepaths",
                   "Set presistent preference of file paths in the client",
-                  "pref set savepaths --dump /home/mydumpfolder      -> all dump files will be saved into this folder\n"
-                  "pref set savepaths --def /home/myfolder -c    -> create if needed, all files will be saved into this folder"
+                  "prefs set savepaths --dump /home/mydumpfolder      -> all dump files will be saved into this folder\n"
+                  "prefs set savepaths --def /home/myfolder -c    -> create if needed, all files will be saved into this folder"
                  );
 
     void *argtable[] = {
@@ -884,9 +886,9 @@ static int setCmdSavePaths(const char *Cmd) {
 
 static int setCmdBarMode(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "pref set barmode",
+    CLIParserInit(&ctx, "prefs set barmode",
                   "Set presistent preference of HF/LF tune command styled output in the client",
-                  "pref set barmode --mix"
+                  "prefs set barmode --mix"
                  );
 
     void *argtable[] = {
@@ -930,36 +932,113 @@ static int setCmdBarMode(const char *Cmd) {
 }
 
 static int getCmdEmoji(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs get emoji",
+                  "Get preference of using emojis in the client",
+                  "prefs get emoji"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     showEmojiState(prefShowNone);
     return PM3_SUCCESS;
 }
 
 static int getCmdHint(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs get hints",
+                  "Get preference of showing hint messages in the client",
+                  "prefs get hints"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     showHintsState(prefShowNone);
     return PM3_SUCCESS;
 }
 
 static int getCmdColor(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs get color",
+                  "Get preference of using colors in the client",
+                  "prefs get color"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     showColorState(prefShowNone);
     return PM3_SUCCESS;
 }
 
 static int getCmdDebug(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs get clientdebug",
+                  "Get preference of using clientside debug level",
+                  "prefs get clientdebug"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     showClientDebugState(prefShowNone);
     return PM3_SUCCESS;
 }
 
 static int getCmdPlotSlider(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs get plotsliders",
+                  "Get preference of showing the plotslider control in the client",
+                  "prefs get plotsliders"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     showPlotSliderState(prefShowNone);
     return PM3_SUCCESS;
 }
 
 static int getCmdBarMode(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs get barmode",
+                  "Get preference of HF/LF tune command styled output in the client",
+                  "prefs get barmode"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     showBarModeState(prefShowNone);
     return PM3_SUCCESS;
 }
 
 static int getCmdSavePaths(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs get savepaths",
+                  "Get preference of file paths in the client",
+                  "prefs get savepaths"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     showSavePathState(spDefault, prefShowNone);
     showSavePathState(spDump, prefShowNone);
     showSavePathState(spTrace, prefShowNone);
@@ -1008,6 +1087,17 @@ static int CmdPrefSet(const char *Cmd) {
 }
 
 static int CmdPrefShow(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs show",
+                  "Show all persistent preferences",
+                  "prefs show"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     if (session.preferences_loaded) {
         char *fn = prefGetFilename();
@@ -1043,8 +1133,8 @@ static int CmdPrefSave (const char *Cmd) {
 */
 static command_t CommandTable[] = {
     {"help",         CmdHelp,            AlwaysAvailable, "This help"},
-    {"get",          CmdPrefGet,         AlwaysAvailable, "Get a preference"},
-    {"set",          CmdPrefSet,         AlwaysAvailable, "Set a preference"},
+    {"get",          CmdPrefGet,         AlwaysAvailable, "{ Get a preference }"},
+    {"set",          CmdPrefSet,         AlwaysAvailable, "{ Set a preference }"},
     {"show",         CmdPrefShow,        AlwaysAvailable, "Show all preferences"},
     {NULL, NULL, NULL, NULL}
 };

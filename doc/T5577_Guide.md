@@ -24,17 +24,17 @@
 
 ## Introduction
 
-The T5577 is a generic LF (Low Frequency) RFID card the is used in the
+The T5577 is a generic LF (Low Frequency) RFID card that is used in the
 125 Khz frequency space. It is a good card to use to learn about RFID and
 learn how to use the proxmark3.
 
-It is highly recommend that when learning about RFID that learning how
+It is highly recommended that when learning about RFID that learning how
 to read the data sheets be near the top of the list. It can be very hard
 as the data sheet will hold the information you need, but you don’t yet
 know what it means. As such, I will attempt to point to sections of the
 data sheet and would highly advise that you look at the data sheet as
 you go. Overtime the data sheet may change, as a result things may not
-always be reference correctly.
+always be referenced correctly.
 
 As at writing this guide, the data sheet can be found at :
 
@@ -64,9 +64,9 @@ the chip how to behave.
 
 ## What data is on my T5577
 
-Let’s have a look and see what a card might look in the proxmark3
+Let’s have a look and see what a card might look like in the proxmark3
 software. Since we can change the configuration of how the T5577 will
-output data, the proxmark3 software need to work out how to interpreted
+output data, the proxmark3 software needs to work out how to interpret
 the data it receives, we do this with the following command.
 
 It should be noted that the T5577 has many clones. As such the default
@@ -78,7 +78,7 @@ examples shown, it will be assumed you have run the detect command.
 ```
 [usb] pm3 --> lf t55xx detect
 ```
-You should see a results simular to the following:
+You should see a results similar to the following:
 ```
     [=]  Chip type......... T55x7                    
     [=]  Modulation........ ASK                      
@@ -102,20 +102,20 @@ Your results should look similar to the following:
 [+] blk | hex data | binary                           | ascii
 [+] ----+----------+----------------------------------+-------
 [+]  00 | 000880E0 | 00000000000010001000000011100000 | ....
-[+]  01 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  02 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  03 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  04 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  05 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  06 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  07 | FFFFFFFF | 11111111111111111111111111111111 | ....
+[+]  01 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  02 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  03 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  04 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  05 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  06 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  07 | 00000000 | 00000000000000000000000000000000 | ....
 [+] Reading Page 1:
 [+] blk | hex data | binary                           | ascii
 [+] ----+----------+----------------------------------+-------
 [+]  00 | 000880E0 | 00000000000010001000000011100000 | ....
-[+]  01 | E0150A48 | 11100000000101010000101001001000 | ...H
-[+]  02 | 2D782308 | 00101101011110000010001100001000 | -x#.
-[+]  03 | FFFFFFFF | 11111111111111111111111111111111 | ....
+[+]  01 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  02 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  03 | 00000000 | 00000000000000000000000000000000 | ....
 ```
 I will cover the meaning of this data as we go, but for now, lets keep
 it simple.
@@ -126,7 +126,7 @@ The basic function of using the proxmark3 with rfid cards is to read and
 write data. This reading and writing must be done in the correct way
 needed for the chip (and its configuration). Lucky for us, the
 developers have done a great job and gave us commands. What we need to
-know is that with the T5577 data is read/written one complete block at a
+know is that with the T5577, data is read/written one complete block at a
 time. Each block holds 32 bits of data (hence the binary output shown)  
   
 Since we know that the card has data and configuration blocks, lets say
@@ -150,14 +150,14 @@ can see the card)
     [+] Reading Page 0:
     [+] blk | hex data | binary                           | ascii
     [+] ----+----------+----------------------------------+-------
-    [+]  01 | FFFFFFFF | 11111111111111111111111111111111 | ....
+    [+]  01 | 00000000 | 00000000000000000000000000000000 | ....
     ```
-    Note: Depending on the history of your card your data may vary, but
+    Note: Depending on the history of your card, your data may vary, but
     should match the dump data.
 
 2)  Write some new data into block 1 on the card.
 
-    We use the d option to supply the data ‘12345678’
+    We use the -d option to supply the data ‘12345678’
     ```
     [usb] pm3 --> lf t55xx write -b 1 -d 12345678
     ```
@@ -177,8 +177,8 @@ can see the card)
     [+]  01 | 12345678 | 00010010001101000101011001111000 | .4Vx
     ```
 4)  The data is written in Hexadecimal. A single hex digit holds 4 bits
-    of data. So to store 32 bits in a block we need to supply 8 hex
-    digits (8 \* 4 = 32). If you are familiar with hex and binary do a
+    of data. So to store 32 bits in a block, we need to supply 8 hex
+    digits (8 \* 4 = 32). If you are not familiar with hex and binary do a
     little bit of home work to learn. The following is a quick start.
     
     | Hex | Binary | Decimal |
@@ -238,31 +238,34 @@ result:
 [+] ----+----------+----------------------------------+-------
 [+]  00 | 000880E0 | 00000000000010001000000011100000 | ....
 [+]  01 | 89ABCDEF | 10001001101010111100110111101111 | ....
-[+]  02 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  03 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  04 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  05 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  06 | FFFFFFFF | 11111111111111111111111111111111 | ....
-[+]  07 | FFFFFFFF | 11111111111111111111111111111111 | ....
+[+]  02 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  03 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  04 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  05 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  06 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  07 | 00000000 | 00000000000000000000000000000000 | ....
 [+] Reading Page 1:
 [+] blk | hex data | binary                           | ascii
 [+] ----+----------+----------------------------------+-------
 [+]  00 | 000880E0 | 00000000000010001000000011100000 | ....
-[+]  01 | E0150A48 | 11100000000101010000101001001000 | ...H
-[+]  02 | 2D782308 | 00101101011110000010001100001000 | -x#.
-[+]  03 | FFFFFFFF | 11111111111111111111111111111111 | ....
+[+]  01 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  02 | 00000000 | 00000000000000000000000000000000 | ....
+[+]  03 | 00000000 | 00000000000000000000000000000000 | ....
 ```
 
-Practice reading and writing to blocks 1 to 7 until you are happy you
+Practice reading and writing to blocks 1 to 6 until you are happy you
 can do it and get the results you wanted (i.e. the data you want stored
-is written to the block you want it stored in).
+is written to the block you want it stored in).  I recommend staying
+away from block 7 as this is where the password is stored, if used.
+If you forget this data/password, you wont be able to read or write
+to the card.
 
 ## How do I use a password
 
 This can be a little tricky for beginners. 
 ***If you forget your password you will lose access to your card***.
 
-To tell the T5577 to use a password we have to change the data in the
+To tell the T5577 to use a password, we have to change the data in the
 configuration block (0). To help learn this and make it as simple as I
 can, please read and follow exactly. If your results DON’T match 100% as
 required, please do not proceed.
@@ -331,20 +334,20 @@ required, please do not proceed.
     [+] blk | hex data | binary                           | ascii
     [+] ----+----------+----------------------------------+-------
     [+]  00 | 000880E0 | 00000000000010001000000011100000 | ....
-    [+]  01 | FFFFFFFF | 11111111111111111111111111111111 | ....
-    [+]  02 | FFFFFFFF | 11111111111111111111111111111111 | ....
-    [+]  03 | FFFFFFFF | 11111111111111111111111111111111 | ....
-    [+]  04 | FFFFFFFF | 11111111111111111111111111111111 | ....
-    [+]  05 | FFFFFFFF | 11111111111111111111111111111111 | ....
-    [+]  06 | FFFFFFFF | 11111111111111111111111111111111 | ....
+    [+]  01 | 00000000 | 00000000000000000000000000000000 | ....
+    [+]  02 | 00000000 | 00000000000000000000000000000000 | ....
+    [+]  03 | 00000000 | 00000000000000000000000000000000 | ....
+    [+]  04 | 00000000 | 00000000000000000000000000000000 | ....
+    [+]  05 | 00000000 | 00000000000000000000000000000000 | ....
+    [+]  06 | 00000000 | 00000000000000000000000000000000 | ....
     [+]  07 | 12345678 | 00010010001101000101011001111000 | .4Vx
     [+] Reading Page 1:
     [+] blk | hex data | binary                           | ascii
     [+] ----+----------+----------------------------------+-------
     [+]  00 | 000880E0 | 00000000000010001000000011100000 | ....
-    [+]  01 | E0150A48 | 11100000000101010000101001001000 | ...H
-    [+]  02 | 2D782308 | 00101101011110000010001100001000 | -x#.
-    [+]  03 | FFFFFFFF | 11111111111111111111111111111111 | ....
+    [+]  01 | 00000000 | 00000000000000000000000000000000 | ....
+    [+]  02 | 00000000 | 00000000000000000000000000000000 | ....
+    [+]  03 | 00000000 | 00000000000000000000000000000000 | ....
     ```
     ***Important : If block 0 and block 7 don’t match exactly, do not continue.***
 
@@ -358,7 +361,7 @@ required, please do not proceed.
     ![](./t55xx_block0.png)
     
     We will cover other things in the configuration later. But the key
-    note here is we ONLY want to change bit 28 and nothing else.
+    note here, is we ONLY want to change bit 28 and nothing else.
     
     Current Block 0 : ***00088040***  
     New Block 0     : ***00088050***
@@ -366,7 +369,7 @@ required, please do not proceed.
     To understand what happened to get from 00088040 to 00088050 we need
     to look at the binary data.
     
-    While this can be confusing it is important to understand this as we
+    While this can be confusing, it is important to understand this as we
     do more advanced things.
     
     Bit Location (28)  
@@ -380,7 +383,7 @@ required, please do not proceed.
     
     
 
-    See how in the above we change the bit in location 28 from a 0 to 1  
+    See how in the above we changed the bit in location 28 from a 0 to 1  
     0 = No Password, 1 = Use Password
 
     Note how we did NOT change any other part of the configuration, only bit 28.
@@ -415,22 +418,22 @@ required, please do not proceed.
     card.
     
     Lets try again, but this time supply the password. We use the option
-    p followed by the password.
+    -p followed by the password.
     ```
     [usb] pm3 --> lf t55 detect -p 12345678
     ```
     result:
     ```
-    [=]  Chip type......... T55x7                   
-    [=]  Modulation........ ASK                     
-    [=]  Bit rate.......... 2 - RF/32               
-    [=]  Inverted.......... No                      
-    [=]  Offset............ 33                      
-    [=]  Seq. terminator... Yes                     
-    [=]  Block0............ 00088050 (auto detect)  
+    [=]  Chip type......... T55x7
+    [=]  Modulation........ ASK
+    [=]  Bit rate.......... 2 - RF/32
+    [=]  Inverted.......... No
+    [=]  Offset............ 33
+    [=]  Seq. terminator... Yes
+    [=]  Block0............ 00088050 (auto detect)
     [=]  Downlink mode..... default/fixed bit length
     [=]  Password set...... Yes
-    [=]  Password.......... 00000000
+    [=]  Password.......... 12345678
     ```
     
 7)  Write a block of data with a password
@@ -460,13 +463,12 @@ required, please do not proceed.
     [+] blk | hex data | binary                           | ascii
     [+] ----+----------+----------------------------------+-------
     [!] Safety check: Could not detect if PWD bit is set in config block. Exits.
-    [?] Consider using the override parameter to force read.
     ```
     
-    Note that the proxmark3 did not read the block, the safty kicked in
-    and wants us to confirm by supply the override option ‘o’.
+    Note that the proxmark3 did not read the block, the safety kicked in
+    and wants us to confirm by supply the override option ‘-o’.
 
-    Lets try again with the ‘o’ option as we know the password is set.
+    Lets try again with the ‘-o’ option as we know the password is set.
     ```
     [usb] pm3 --> lf t55xx read -b 1 -p 12345678 -o
     ```
@@ -487,7 +489,7 @@ required, please do not proceed.
     this from above.
     
     Remember if we don’t know the config and write this config to the
-    card, it will over write all other settings. This can recoved the
+    card, it will overwrite all other settings. This can recover the
     card, but will lose any settings you may want. So it’s a good idea
     to read the config, and set bit 28 to 0, rather than just overwrite
     the config and change the way the card works.
@@ -516,7 +518,7 @@ required, please do not proceed.
     [=]  Downlink mode..... default/fixed bit length 
     [=]  Password set...... No                       
     ```
-    Yes we can and we can see Block 0 is the correct config 00088040
+    Yes we can!  We can see Block 0 is the correct config 00088040
 
 # Part 2 – Configuration Blocks
 
@@ -532,7 +534,7 @@ from Block 0 in Page 0. It will use this in both default read mode
 (where is sends out the blocks from 1 to x on power up), as well as when
 it responds to commands.
 
-In the Read To Card, the T5577 will encode the data using the settings
+In the Reader To Card, the T5577 will encode the data using the settings
 from Block 3 Page 1. If the command is not encoded correctly it will
 ignore the command and revert back to default read mode.
 
@@ -542,10 +544,10 @@ For this configuration the settings chosen will be for the purpose of
 the card when used in production. E.G. If you want the card to act like
 an EM4100, then we need to choose the settings that work like the
 EM4100; same goes for others like HID. I am not going to cover these
-here, rather use an example. Others have collect these and posted on the
-forum.
+here, rather use an example. Others have collected these and posted on the
+forum or can be found by searching the web.
 
-To get started lets look back at the tech sheet.
+To get started lets look back at the data sheet.
 
 ![](./t55xx_clock0_cfg.png)
 
@@ -584,12 +586,11 @@ password set (if not, review and get you card back to this state).
     ```
     result:
     ```
-   [+] Preparing to clone EM4102 to T55x7 tag with ID 0F0368568B (RF/64)   
-   [#] Clock rate: 64                                                      
-   [#] Tag T55x7 written with 0xff83c03322a646e4                           
-                                                                        
-   [+] Done                                                                
-   [?] Hint: try `lf em 410x reader` to verify                             
+    [+] Preparing to clone EM4102 to T55x7 tag with ID 1122334455 (RF/64)
+    [#] Clock rate: 64
+    [#] Tag T55x7 written with 0xff8c65298c94a940
+
+    [+] Done
     ```
     
 2)  Check this has work.
@@ -632,7 +633,7 @@ password set (if not, review and get you card back to this state).
     ```
     Looks good.
 
-3)  Now lest see what the T5577 detect and info shows
+3)  Now lets see what the T5577 detect and info shows
     ```
     [usb] pm3 --> lf t55 detect
     ```

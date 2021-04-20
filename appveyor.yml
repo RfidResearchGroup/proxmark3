@@ -106,7 +106,7 @@ clone_script:
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
     
-    $psversion = (Select-String -Pattern 'PSVERSION=' -SimpleMatch -Path "$env:proxspace_path\msys2\ps\09-proxspace_setup.post").Line.Split("""")[1]
+    $psversion = (Select-String -Pattern 'PSVERSION=' -SimpleMatch -Path "$env:proxspace_path\setup\09-proxspace_setup.post").Line.Split("""")[1]
     
     Write-Host "ProxSpace version: $psversion" -ForegroundColor Yellow
     

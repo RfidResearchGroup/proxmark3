@@ -29,7 +29,8 @@ static void calc_score(uint8_t *csn, uint8_t *k) {
 //            goodvals[k[i]] = 1;
 //        }
 
-        else if (k[i] >= 16) {
+//        else if (k[i] >= 16) {
+        else {
             badscore++;
             badval = k[i];
         }

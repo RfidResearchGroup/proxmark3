@@ -5,7 +5,7 @@ local ansicolors = require('ansicolors')
 
 copyright = 'Copyright (c) 2017 IceSQL AB. All rights reserved.'
 author = "Christian Herrmann"
-version = 'v1.0.5'
+version = 'v1.0.6'
 desc = [[
 This script writes a empty template for 3D printing system onto a empty NTAG213 or MAGIC NTAG21*
 
@@ -189,25 +189,25 @@ end
 local function write_tag(uid, t)
 
     print('Writing to tag')
-    core.console('hw dbg 0')
+    core.console('hw dbg -0')
     utils.Sleep(0.5)
 
     local cmd = ''
     local pwd, pack = core.keygen_algo_d(uid)
 
     for i= 8, 23 do
-        cmd = ('hf mfu wrbl b %02d d %s k %08X'):format(i, t[i], pwd)
+        cmd = ('hf mfu wrbl --blk %02d -d %s -k %08X'):format(i, t[i], pwd)
         core.console(cmd)
     end
 
     --cfg1
-    core.console(('hf mfu wrbl b 42 d %s k %08X'):format(t[42], pwd))
+    core.console(('hf mfu wrbl --blk 42 -d %s -k %08X'):format(t[42], pwd))
     --cfg0
-    core.console(('hf mfu wrbl b 41 d %s k %08X'):format(t[41], pwd))
+    core.console(('hf mfu wrbl --blk 41 -d %s -k %08X'):format(t[41], pwd))
     --dynamic
-    core.console(('hf mfu wrbl b 40 d %s k %08X'):format(t[40], pwd))
+    core.console(('hf mfu wrbl --blk 40 -d %s -k %08X'):format(t[40], pwd))
 
-    core.console('hw dbg 1')
+    core.console('hw dbg -1')
     utils.Sleep(0.5)
     print('Done')
 end

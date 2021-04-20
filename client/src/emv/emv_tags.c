@@ -261,6 +261,7 @@ static const struct emv_tag emv_tags[] = {
     { 0x9f16,   "Merchant Identifier",                                         EMV_TAG_STRING,   NULL },
     { 0x9f17,   "Personal Identification Number (PIN) Try Counter",            EMV_TAG_GENERIC,  NULL },
     { 0x9f18,   "Issuer Script Identifier",                                    EMV_TAG_GENERIC,  NULL },
+    { 0x9f19,   "Token Requestor ID",                                          EMV_TAG_GENERIC,  NULL },
     { 0x9f1a,   "Terminal Country Code",                                       EMV_TAG_GENERIC,  NULL },
     { 0x9f1b,   "Terminal Floor Limit",                                        EMV_TAG_GENERIC,  NULL },
     { 0x9f1c,   "Terminal Identification",                                     EMV_TAG_STRING,   NULL },
@@ -271,6 +272,8 @@ static const struct emv_tag emv_tags[] = {
     { 0x9f21,   "Transaction Time",                                            EMV_TAG_GENERIC,  NULL },
     { 0x9f22,   "Certification Authority Public Key Index - Terminal",         EMV_TAG_GENERIC,  NULL },
     { 0x9f23,   "Upper Consecutive Offline Limit",                             EMV_TAG_GENERIC,  NULL },
+    { 0x9f24,   "Payment Account Reference (PAR)",                             EMV_TAG_GENERIC,  NULL },
+    { 0x9f25,   "Last 4 Digits of PAN",                                        EMV_TAG_GENERIC,  NULL },
     { 0x9f26,   "Application Cryptogram",                                      EMV_TAG_GENERIC,  NULL },
     { 0x9f27,   "Cryptogram Information Data",                                 EMV_TAG_CID,      NULL },
     { 0x9f2a,   "Kernel Identifier",                                           EMV_TAG_GENERIC,  NULL },
@@ -339,7 +342,7 @@ static const struct emv_tag emv_tags[] = {
     { 0x9f66,   "PUNATC (Track2) / Terminal Transaction Qualifiers (TTQ)",     EMV_TAG_BITMASK,  &EMV_TTQ },
     { 0x9f67,   "NATC (Track2) / MSD Offset",                                  EMV_TAG_GENERIC,  NULL },
     { 0x9f68,   "Cardholder verification method list (PayPass)",               EMV_TAG_GENERIC,  NULL },
-    { 0x9f69,   "Card Authentication Related Data (UDOL)",                     EMV_TAG_GENERIC,  NULL },
+    { 0x9f69,   "Card Authentication Related Data (UDOL)",                     EMV_TAG_DOL,      NULL },
     { 0x9f6a,   "Unpredictable Number",                                        EMV_TAG_NUMERIC,  NULL },
     { 0x9f6b,   "Track 2 Data",                                                EMV_TAG_GENERIC,  NULL },
     { 0x9f6c,   "Card Transaction Qualifiers (CTQ)",                           EMV_TAG_BITMASK,  &EMV_CTQ },
@@ -359,6 +362,7 @@ static const struct emv_tag emv_tags[] = {
     { 0x9f79,   "Unprotected Data Envelope 5",                                 EMV_TAG_GENERIC,  NULL },
     { 0x9f7c,   "Merchant Custom Data / Customer Exclusive Data (CED)",        EMV_TAG_GENERIC,  NULL },
     { 0x9f7d,   "DS Summary 1",                                                EMV_TAG_GENERIC,  NULL },
+    { 0x9f7e,   "Application Life Cycle Data",                                 EMV_TAG_GENERIC,  NULL },
     { 0x9f7f,   "DS Unpredictable Number",                                     EMV_TAG_GENERIC,  NULL },
 
     { 0xa5,     "File Control Information (FCI) Proprietary Template",         EMV_TAG_GENERIC,  NULL },
@@ -392,7 +396,7 @@ static const struct emv_tag emv_tags[] = {
     { 0xdf8117, "Card Data Input Capability",                                  EMV_TAG_GENERIC,  NULL },
     { 0xdf8118, "CVM Capability - CVM Required",                               EMV_TAG_GENERIC,  NULL },
     { 0xdf8119, "CVM Capability - No CVM Required",                            EMV_TAG_GENERIC,  NULL },
-    { 0xdf811a, "Default UDOL",                                                EMV_TAG_GENERIC,  NULL },
+    { 0xdf811a, "Default UDOL",                                                EMV_TAG_DOL,      NULL },
     { 0xdf811b, "Kernel Configuration",                                        EMV_TAG_GENERIC,  NULL },
     { 0xdf811c, "Max Lifetime of Torn Transaction Log Record",                 EMV_TAG_GENERIC,  NULL },
     { 0xdf811d, "Max Number of Torn Transaction Log Records",                  EMV_TAG_GENERIC,  NULL },
@@ -553,7 +557,7 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, i
         return;
     }
 
-    if (tlv->len != tlv->value[0] + 1) {
+    if (tlv->len != 5 && tlv->len != tlv->value[0] + 1) {
         PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
         PrintAndLogEx(NORMAL, "    INVALID length!");
         return;
@@ -577,6 +581,14 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, i
         PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
         PrintAndLogEx(NORMAL, "    PIN try: %x", tlv->value[2] >> 4);
     }
+    if (tlv->len >= 3 && (tlv->value[2] & 0x40)) {
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    PIN try exceeded");
+    }
+    if (tlv->len >= 4 && (tlv->value[3] >> 4)) {
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    Issuer script counter: %x", tlv->value[3] >> 4);
+    }
     if (tlv->len >= 4 && (tlv->value[3] & 0x0F)) {
         PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
         PrintAndLogEx(NORMAL, "    Issuer discretionary bits: %x", tlv->value[3] & 0x0F);
@@ -584,6 +596,10 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, i
     if (tlv->len >= 5 && (tlv->value[4] >> 4)) {
         PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
         PrintAndLogEx(NORMAL, "    Successfully processed issuer script commands: %x", tlv->value[4] >> 4);
+    }
+    if (tlv->len >= 5 && (tlv->value[4] & 0x02)) {
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    CDCVM OK");
     }
 
     // mask 0F 0F F0 0F

@@ -242,7 +242,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     }
 
     for (int j = 0; j < data_len && j / 18 < 18; j++) {
-
         uint8_t parityBits = parityBytes[j >> 3];
         if (protocol != LEGIC
                 && protocol != ISO_14443B
@@ -256,7 +255,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && protocol != FELICA
                 && protocol != LTO
                 && protocol != PROTO_CRYPTORF
-                && (hdr->isResponse || protocol == ISO_14443A)
+                && (hdr->isResponse || protocol == ISO_14443A || protocol == PROTO_MIFARE)
                 && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 
             snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
@@ -280,9 +279,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (markCRCBytes) {
         //CRC-command
         if (crcStatus == 0 || crcStatus == 1) {
-            char *pos1 = line[(data_len - 2) / 18] + (((data_len - 2) % 18) * 4);
+            char *pos1 = line[(data_len - 2) / 18] + (((data_len - 2) % 18) * 4) - 1;
             (*pos1) = '[';
-            char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4);
+            char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4) - 1;
             sprintf(pos2, "%c", ']');
         }
     }
@@ -309,9 +308,12 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 }
                 m--;
             }
-            line[(data_len - 1) / 16][((data_len - 1) % 16) * 4 + 2] = '(';
-            line[(data_len - 1) / 16][((data_len - 1) % 16) * 4 + 3] = m + 0x30;
-            line[(data_len - 1) / 16][((data_len - 1) % 16) * 4 + 4] = ')';
+
+            if (data_len) {
+                line[(data_len - 1) / 16][((data_len - 1) % 16) * 4 + 2] = '(';
+                line[(data_len - 1) / 16][((data_len - 1) % 16) * 4 + 3] = m + 0x30;
+                line[(data_len - 1) / 16][((data_len - 1) % 16) * 4 + 4] = ')';
+            }
         }
     }
 
@@ -401,32 +403,63 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 time2 = duration;
             }
 
-            if (use_us) {
-                PrintAndLogEx(NORMAL, " %10.1f | %10.1f | %s |%-72s | %s| %s",
-                              (float)time1 / 13.56,
-                              (float)time2 / 13.56,
-                              (hdr->isResponse ? "Tag" : _YELLOW_("Rdr")),
-                              line[j],
-                              (j == num_lines - 1) ? crc : "    ",
-                              (j == num_lines - 1) ? explanation : ""
-                             );
+            if (hdr->isResponse) {
+                // tag row
+                if (use_us) {
+                    PrintAndLogEx(NORMAL, " %10.1f | %10.1f | Tag |%-72s | %s| %s",
+                                (float)time1 / 13.56,
+                                (float)time2 / 13.56,
+                                line[j],
+                                (j == num_lines - 1) ? crc : "    ",
+                                (j == num_lines - 1) ? explanation : ""
+                                );
+                } else {
+                    PrintAndLogEx(NORMAL, " %10u | %10u | Tag |%-72s | %s| %s",
+                                (hdr->timestamp - first_hdr->timestamp),
+                                (end_of_transmission_timestamp - first_hdr->timestamp),
+                                line[j],
+                                (j == num_lines - 1) ? crc : "    ",
+                                (j == num_lines - 1) ? explanation : ""
+                                );
+                }
             } else {
-                PrintAndLogEx(NORMAL, " %10u | %10u | %s |%-72s | %s| %s",
-                              (hdr->timestamp - first_hdr->timestamp),
-                              (end_of_transmission_timestamp - first_hdr->timestamp),
-                              (hdr->isResponse ? "Tag" : _YELLOW_("Rdr")),
-                              line[j],
-                              (j == num_lines - 1) ? crc : "    ",
-                              (j == num_lines - 1) ? explanation : ""
-                             );
+                // reader row
+                if (use_us) {
+                    PrintAndLogEx(NORMAL, 
+                        _YELLOW_(" %10.1f") " | " _YELLOW_("%10.1f") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                        (float)time1 / 13.56,
+                        (float)time2 / 13.56,
+                        line[j],
+                        (j == num_lines - 1) ? crc : "    ",
+                        (j == num_lines - 1) ? explanation : ""
+                        );
+                } else {
+                    PrintAndLogEx(NORMAL,
+                        _YELLOW_(" %10u") " | " _YELLOW_("%10u") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                        (hdr->timestamp - first_hdr->timestamp),
+                        (end_of_transmission_timestamp - first_hdr->timestamp),
+                        line[j],
+                        (j == num_lines - 1) ? crc : "    ",
+                        (j == num_lines - 1) ? explanation : ""
+                        );
+                }
+
             }
 
         } else {
-            PrintAndLogEx(NORMAL, "            |            |     |%-72s | %s| %s",
-                          line[j],
-                          (j == num_lines - 1) ? crc : "    ",
-                          (j == num_lines - 1) ? explanation : ""
-                         );
+            if (hdr->isResponse) {
+                PrintAndLogEx(NORMAL, "            |            |     |%-72s | %s| %s",
+                        line[j],
+                        (j == num_lines - 1) ? crc : "    ",
+                        (j == num_lines - 1) ? explanation : ""
+                        );
+            } else {
+                PrintAndLogEx(NORMAL, "            |            |     |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                        line[j],
+                        (j == num_lines - 1) ? crc : "    ",
+                        (j == num_lines - 1) ? explanation : ""
+                        );
+            }
         }
     }
 
@@ -592,6 +625,44 @@ static int CmdTraceSave(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) {
+    CLIParserContext *ctx;
+    char desc[500] = {0};
+    snprintf(desc, sizeof(desc) - 1,
+            "Alias of `trace list -t %s` with selected protocol data to annotate trace buffer\n"
+            "You can load a trace from file (see `trace load -h`) or it be downloaded from device by default\n"
+            "It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            protocol);
+    char example[200] = {0};
+    snprintf(example, sizeof(example) - 1,
+            "%s list -f              -> show frame delay times\n"
+            "%s list -1              -> use trace buffer ",
+            alias, alias);
+    char fullalias[100] = {0};
+    snprintf(fullalias, sizeof(fullalias) - 1, "%s list", alias);
+    CLIParserInit(&ctx, fullalias, desc, example);
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("1", "buffer", "use data from trace buffer"),
+        arg_lit0("f", NULL, "show frame delay times"),
+        arg_lit0("c", NULL, "mark CRC bytes"),
+        arg_lit0("r", NULL, "show relative times (gap and duration)"),
+        arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
+        arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
+                 "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
+        arg_strx0(NULL, "dict", "<file>", "use dictionary keys file"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    char args[128] = {0};
+    snprintf(args, sizeof(args), "-t %s ", protocol);
+    strncat(args, Cmd, sizeof(args) - strlen(args) - 1);
+    return CmdTraceList(args);
+}
+
 int CmdTraceList(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "trace list",
@@ -679,8 +750,11 @@ int CmdTraceList(const char *Cmd) {
     else if (strcmp(type, "cryptorf") == 0) protocol = PROTO_CRYPTORF;
     else if (strcmp(type, "raw") == 0)      protocol = -1;
 
-    if (use_buffer == false || (g_traceLen == 0)) {
+    if (use_buffer == false) {
         download_trace();
+    } else if (g_traceLen == 0) {
+        PrintAndLogEx(FAILED, "You requested a trace list in offline mode but there is no trace, consider using 'trace load' or removing parameter '1'");
+        return PM3_EINVARG;
     }
 
     PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%lu") " bytes)", g_traceLen);

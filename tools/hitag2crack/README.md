@@ -167,7 +167,7 @@ response pairs for the same tag UID.
 **TODO** will be ht2 sim or sniff with actual tag ?
 
 ```
-pm3 --> lf hitag sniff l 
+pm3 --> lf hitag sniff
 ```
 
 It creates a file `Hitag2_<UID>_<nR>_<aR>_collection.txt`.
@@ -184,7 +184,7 @@ Attack 4 requires the same information as attack 3, but only 16-32 encrypted
 nonce and challenge response pairs are required.
 
 ```
-pm3 --> lf hitag sniff l 
+pm3 --> lf hitag sniff
 ```
 
 It creates a file `Hitag2_<UID>_<nR>_<aR>_collection.txt`.
@@ -233,7 +233,7 @@ or
 $ ./ht2crack5opencl <UID> <nR1> <aR1> <nR2> <aR2>
 ```
 
-5opencl supports a number of additional parameters, see crack5opencl/README.md for details.
+5opencl supports a number of additional parameters, see [crack5opencl/README.md](/tools/hitag2crack/crack5opencl/README.md) for details.
 
 Usage details: Next steps
 -------------------------
