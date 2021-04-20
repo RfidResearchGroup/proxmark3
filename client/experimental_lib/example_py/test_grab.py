@@ -4,7 +4,7 @@ import pm3
 from output_grabber import OutputGrabber
 
 out = OutputGrabber()
-p=pm3.pm3("/dev/ttyACM1")
+p=pm3.pm3("/dev/ttyACM0")
 print("Device:", p.name)
 with out:
     p.console("hw status")
