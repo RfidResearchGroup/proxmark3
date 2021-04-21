@@ -1013,16 +1013,22 @@ static bool emrtd_connect(bool *use_14b) {
     }
 
     if (failed_14a || resp.oldarg[0] == 0) {
-        PrintAndLogEx(INFO, "No eMRTD spotted with 14a, trying 14b.");
+        PrintAndLogEx(INFO, "No eMRTD spotted with 14a, trying 14b");
         // If not 14a, try to 14b
-        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD, 0, 0, NULL, 0);
-        if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2500)) {
-            PrintAndLogEx(INFO, "No eMRTD spotted with 14b, exiting.");
+        iso14b_raw_cmd_t packet = {
+            .flags = (ISO14B_CONNECT | ISO14B_SELECT_STD),
+            .timeout = 0,
+            .rawlen = 0,
+        };
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
+        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2500) == false) {
+            PrintAndLogEx(INFO, "timeout, no eMRTD spotted with 14b, exiting");
             return false;
         }
 
         if (resp.oldarg[0] != 0) {
-            PrintAndLogEx(INFO, "No eMRTD spotted with 14b, exiting.");
+            PrintAndLogEx(INFO, "No eMRTD spotted with 14b, exiting");
             return false;
         }
         *use_14b = true;

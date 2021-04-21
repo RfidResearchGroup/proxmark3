@@ -94,6 +94,21 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 *
 * Elementary Time Unit (ETU) is
 * - 128 Carrier Cycles (9.4395 µS) = 8 Subcarrier Units
+
+* Definition
+* 1 ETU =  128 / ( D x fc )  
+* where
+*    D = divisor.  Which inital is 1
+*   fc = carrier frequency  
+* gives
+*   1 ETU = 128 / fc
+*   1 ETU = 128 / 13 560 000 = 9.4395 µS
+*   1 ETU = 9.4395 µS
+
+* It seems we are using the subcarrier as base for our time calculations,
+* rather than the field clock
+
+* - 1 ETU = 8 subcarrier units
 * - 1 ETU = 1 bit
 * - 10 ETU = 1 startbit, 8 databits, 1 stopbit (10bits length)
 * - startbit is a 0
@@ -115,13 +130,13 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 * FPGA doesn't seem to work with ETU.  It seems to work with pulse / duration instead.
 *
 * Card sends data ub 847.e kHz subcarrier
-* subcar |duration| FC division
-* -------+--------+------------
-* 106kHz | 9.44µS | FC/128
-* 212kHz | 4.72µS | FC/64
-* 424kHz | 2.36µS | FC/32
-* 848kHz | 1.18µS | FC/16
-* -------+--------+------------
+* subcar |duration| FC division| I/Q pairs
+* -------+--------+------------+--------
+* 106kHz | 9.44µS | FC/128     | 16
+* 212kHz | 4.72µS | FC/64      | 8
+* 424kHz | 2.36µS | FC/32      | 4
+* 848kHz | 1.18µS | FC/16      | 2
+* -------+--------+------------+--------
 *
 *  Reader data transmission:
 *   - no modulation ONES
@@ -143,12 +158,14 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 * things practical for the ARM (fc/32, 423.8 kbits/s, ~50 kbytes/s)
 *
 * Let us report a correlation every 64 samples. I.e.
-* one Q/I pair after 4 subcarrier cycles for the 848kHz subcarrier,
-* one Q/I pair after 2 subcarrier cycles for the 424kHz subcarrier,
-* one Q/I pair for each subcarrier cyle for the 212kHz subcarrier.
+* 1 I/Q pair after 4 subcarrier cycles for the 848kHz subcarrier,
+* 1 I/Q pair after 2 subcarrier cycles for the 424kHz subcarrier,
+* 1 I/Q pair for each subcarrier cyle for the 212kHz subcarrier.
+
+*  2 I/Q pairs for 1 ETU when 848kHz
+*  4 I/Q pairs for 1 ETU when 424kHz
+*  8 I/Q pairs for 1 ETU when 212kHz
 */
-
-
 
 //=============================================================================
 // An ISO 14443 Type B tag. We listen for commands from the reader, using
@@ -2021,29 +2038,37 @@ static void iso14b_set_trigger(bool enable) {
  * none
  *
  */
-void SendRawCommand14443B_Ex(PacketCommandNG *c) {
+void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *o) {
 
+    /*
     iso14b_command_t param = c->oldarg[0];
-    size_t len = c->oldarg[1] & 0xffff;
-    uint32_t timeout = c->oldarg[2];
-    uint8_t *cmd = c->data.asBytes;
-    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
+    size_t len = o->oldarg[1] & 0xffff;
+    uint32_t timeout = o->oldarg[2];
+    uint8_t *cmd = o->data.asBytes;
+    */
 
-    if (DBGLEVEL > DBG_DEBUG) Dbprintf("14b raw: param, %04x", param);
+    // receive buffer
+    uint8_t buf[PM3_CMD_DATA_SIZE];
+    memset(buf, 0 , sizeof(buf));
+
+
+    if (DBGLEVEL > DBG_DEBUG) {
+        Dbprintf("14b raw: param, %04x", o->flags);
+    }
 
     // turn on trigger (LED_A)
-    if ((param & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER)
+    if ((o->flags & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER)
         iso14b_set_trigger(true);
 
-    if ((param & ISO14B_CONNECT) == ISO14B_CONNECT) {
+    if ((o->flags & ISO14B_CONNECT) == ISO14B_CONNECT) {
         iso14443b_setup();
     }
 
-    if ((param & ISO14B_SET_TIMEOUT) == ISO14B_SET_TIMEOUT) {
-        iso14b_set_timeout(timeout);
+    if ((o->flags & ISO14B_SET_TIMEOUT) == ISO14B_SET_TIMEOUT) {
+        iso14b_set_timeout(o->timeout);
     }
 
-    if ((param & ISO14B_CLEARTRACE) == ISO14B_CLEARTRACE) {
+    if ((o->flags & ISO14B_CLEARTRACE) == ISO14B_CLEARTRACE) {
         clear_trace();
     }
     set_tracing(true);
@@ -2053,21 +2078,21 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
     iso14b_card_select_t card;
     memset((void *)&card, 0x00, sizeof(card));
 
-    if ((param & ISO14B_SELECT_STD) == ISO14B_SELECT_STD) {
+    if ((o->flags & ISO14B_SELECT_STD) == ISO14B_SELECT_STD) {
         status = iso14443b_select_card(&card);
         reply_mix(CMD_HF_ISO14443B_COMMAND, status, sendlen, 0, (uint8_t *)&card, sendlen);
         // 0: OK -1: attrib fail, -2:crc fail,
         if (status != 0) goto out;
     }
 
-    if ((param & ISO14B_SELECT_SR) == ISO14B_SELECT_SR) {
+    if ((o->flags & ISO14B_SELECT_SR) == ISO14B_SELECT_SR) {
         status = iso14443b_select_srx_card(&card);
         reply_mix(CMD_HF_ISO14443B_COMMAND, status, sendlen, 0, (uint8_t *)&card, sendlen);
         // 0: OK 2: demod fail, 3:crc fail,
         if (status > 0) goto out;
     }
 
-    if ((param & ISO14B_SELECT_CTS) == ISO14B_SELECT_CTS) {
+    if ((o->flags & ISO14B_SELECT_CTS) == ISO14B_SELECT_CTS) {
         iso14b_cts_card_select_t cts;
         sendlen = sizeof(iso14b_cts_card_select_t);
         status = iso14443b_select_cts_card(&cts);
@@ -2076,21 +2101,23 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
         if (status > 0) goto out;
     }
 
-    if ((param & ISO14B_APDU) == ISO14B_APDU) {
+    if ((o->flags & ISO14B_APDU) == ISO14B_APDU) {
         uint8_t res;
-        status = iso14443b_apdu(cmd, len, (param & ISO14B_SEND_CHAINING), buf, sizeof(buf), &res);
+        status = iso14443b_apdu(o->raw, o->rawlen, (o->flags & ISO14B_SEND_CHAINING), buf, sizeof(buf), &res);
         sendlen = MIN(Demod.len, PM3_CMD_DATA_SIZE);
         reply_mix(CMD_HF_ISO14443B_COMMAND, status, res, 0, buf, sendlen);
     }
 
-    if ((param & ISO14B_RAW) == ISO14B_RAW) {
-        if ((param & ISO14B_APPEND_CRC) == ISO14B_APPEND_CRC) {
-            AddCrc14B(cmd, len);
-            len += 2;
+    if ((o->flags & ISO14B_RAW) == ISO14B_RAW) {
+        if ((o->flags & ISO14B_APPEND_CRC) == ISO14B_APPEND_CRC) {
+            if (o->rawlen > 0) {
+                AddCrc14B(o->raw, o->rawlen);
+                o->rawlen += 2;
+            }
         }
         uint32_t start_time = 0;
         uint32_t eof_time = 0;
-        CodeAndTransmit14443bAsReader(cmd, len, &start_time, &eof_time);
+        CodeAndTransmit14443bAsReader(o->raw, o->rawlen, &start_time, &eof_time);
 
         if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
             FpgaDisableTracing();
@@ -2107,12 +2134,12 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
 
 out:
     // turn off trigger (LED_A)
-    if ((param & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER)
+    if ((o->flags & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER)
         iso14b_set_trigger(false);
 
     // turn off antenna et al
     // we don't send a HALT command.
-    if ((param & ISO14B_DISCONNECT) == ISO14B_DISCONNECT) {
+    if ((o->flags & ISO14B_DISCONNECT) == ISO14B_DISCONNECT) {
         switch_off(); // disconnect raw
         SpinDelay(20);
     }

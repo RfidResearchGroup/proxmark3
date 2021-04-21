@@ -190,7 +190,7 @@ Use this bibtex to cite this repository:
   author={Iceman1001},
   year={2019.08},
   publisher={Github},
-  keywords = {rfid nfc iceman proxmark3 125khz 134khz 13.56mhz},
+  keywords={rfid nfc iceman proxmark3 125khz 134khz 13.56mhz},
   journal={GitHub repository},
   howpublished={\url{https://github.com/rfidresearchgroup/proxmark3}},
 }

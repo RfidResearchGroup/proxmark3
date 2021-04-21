@@ -37,7 +37,7 @@ void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
 void ReadSTBlock(uint8_t blocknr);
 void SniffIso14443b(void);
 void SendRawCommand14443B(uint32_t, uint32_t, uint8_t, uint8_t[]);
-void SendRawCommand14443B_Ex(PacketCommandNG *c);
+void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *c);
 
 // States for 14B SIM command
 #define SIM_NOFIELD     0

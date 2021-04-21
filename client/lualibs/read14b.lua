@@ -27,6 +27,9 @@ local ISO14B_COMMAND = {
     ISO14B_SELECT_STD = 0x40,
     ISO14B_SELECT_SR = 0x80,
     ISO14B_SET_TIMEOUT = 0x100,
+    ISO14B_SEND_CHAINING = 0x200,
+    ISO14B_SELECT_CTS = 0x400,
+    ISO14B_CLEARTRACE = 0x800,
 }
 
 local function parse14443b(data)
@@ -60,7 +63,7 @@ end
 -- @return if unsuccessful : nil, error
 local function read14443b(disconnect)
 
-    local command, result, info, err, data
+    local result, info, err, data
 
     local flags = ISO14B_COMMAND.ISO14B_CONNECT +
                   ISO14B_COMMAND.ISO14B_SELECT_STD
@@ -69,15 +72,13 @@ local function read14443b(disconnect)
         print('DISCONNECT')
         flags = flags + ISO14B_COMMAND.ISO14B_DISCONNECT
     end
-
-    command = Command:newMIX{
-            cmd = cmds.CMD_HF_ISO14443B_COMMAND,
-            arg1 = flags
-            }
+    
+    local senddata = ('%04x%08x%04x'):format(flags, 0, 0)
+    local c = Command:newNG{cmd = cmds.CMD_HF_ISO14443B_COMMAND, data = senddata}
 
     info = nil
 
-    local result, err = command:sendMIX(false, TIMEOUT, true)
+    local result, err = c:sendNG(false, TIMEOUT)
     if result then
         local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL', result)
         if arg0 == 0 then
@@ -111,16 +112,18 @@ end
 ---
 -- turns on the HF field.
 local function connect14443b()
-    local c = Command:newMIX{cmd = cmds.CMD_HF_ISO14443B_COMMAND, arg1 = ISO14B_COMMAND.ISO14B_CONNECT}
-    return c:sendMIX(true)
+    local data = ('%04x%08x%04x'):format(ISO14B_COMMAND.ISO14B_CONNECT, 0, 0)
+    local c = Command:newNG{cmd = cmds.CMD_HF_ISO14443B_COMMAND, data = data}
+    return c:sendNG(true)
 end
 ---
 -- Sends an instruction to do nothing, only disconnect
 local function disconnect14443b()
-    local c = Command:newMIX{cmd = cmds.CMD_HF_ISO14443B_COMMAND, arg1 = ISO14B_COMMAND.ISO14B_DISCONNECT}
+    local data = ('%04x%08x%04x'):format(ISO14B_COMMAND.ISO14B_DISCONNECT, 0, 0)    
+    local c = Command:newNG{cmd = cmds.CMD_HF_ISO14443B_COMMAND, data = data}
     -- We can ignore the response here, no ACK is returned for this command
     -- Check /armsrc/iso14443b.c, ReaderIso14443b() for details
-    return c:sendMIX(true)
+    return c:sendNG(true)
 end
 
 local library = {

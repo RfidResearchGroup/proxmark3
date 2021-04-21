@@ -7,7 +7,7 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.0'
+version = 'v1.0.1'
 desc = [[
 This is a script to communicate with a MOBIB tag using the '14b raw' commands
 ]]
@@ -112,20 +112,18 @@ end
 -- Sends a usbpackage ,  "hf 14b raw"
 -- if it reads the response, it converts it to a lua object "Command" first and the Data is cut to correct length.
 local function calypso_send_cmd_raw(data, ignoreresponse )
+    local flags = lib14b.ISO14B_COMMAND.ISO14B_APDU
 
-    local command, flags, result, err
-    flags = lib14b.ISO14B_COMMAND.ISO14B_APDU
+    data = data or ""
+    -- LEN of data, half the length of the ASCII-string hex string
+    -- 2 bytes flags
+    -- 4 bytes timeout
+    -- 2 bytes raw len
+    -- n bytes raw
+    local senddata = ('%04x%08x%04x%s'):format(flags, 0, ( 8 + #data/2), data)
+    local c = Command:newNG{cmd = cmds.CMD_HF_ISO14443B_COMMAND, data = senddata}
 
-    data = data or "00"
-
-    command = Command:newMIX{
-            cmd = cmds.CMD_HF_ISO14443B_COMMAND,
-            arg1 = flags,
-            arg2 = #data/2, -- LEN of data, half the length of the ASCII-string hex string
-            data = data}    -- data bytes (commands etc)
-
-    local use_cmd_ack = true
-    result, err = command:sendMIX(ignoreresponse, 2000, use_cmd_ack)
+    local result, err = command:sendNG(ignoreresponse, 2000)
     if result then
         local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL', result)
         if arg0 >= 0 then

@@ -38,8 +38,13 @@ bool apdu_in_framing_enable = true;
 static int CmdHelp(const char *Cmd);
 
 static int switch_off_field_14b(void) {
+    iso14b_raw_cmd_t packet = {
+        .flags = ISO14B_DISCONNECT,
+        .timeout = 0,
+        .rawlen = 0,
+    };
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
     return PM3_SUCCESS;
 }
 
@@ -329,7 +334,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
         uint32_t max_timeout = user_timeout;
         if (max_timeout > MAX_14B_TIMEOUT) {
             max_timeout = MAX_14B_TIMEOUT;
-            PrintAndLogEx(INFO, "set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
+            PrintAndLogEx(INFO, "set timeout to 4.9 seconds. The max we can wait for response");
         }
         time_wait = ((13560000 / 1000 / (8 * 16)) * max_timeout); // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
         if (verbose)
@@ -345,8 +350,16 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     // Max buffer is PM3_CMD_DATA_SIZE
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
 
+    iso14b_raw_cmd_t packet = {
+        .flags = flags,
+        .timeout = time_wait,
+        .rawlen = datalen,
+    };
+    memcpy(packet.raw, data, datalen);
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, datalen, time_wait, data, datalen);
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(packet) + datalen);
+
     if (read_reply == false) {
         clearCommandBuffer();
         return PM3_SUCCESS;
@@ -386,32 +399,37 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
     if (card == NULL)
         return false;
 
-    int status;
+    iso14b_raw_cmd_t packet = {
+        .flags = (ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT),
+        .timeout = 0,
+        .rawlen = 0,
+    };
+
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
+
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
 
-        status = resp.oldarg[0];
-        if (status == 0) {
+        if (resp.oldarg[0] == 0) {
             memcpy(card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
             return true;
         }
     }
 
     // test 14b standard
+    packet.flags = (ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT);
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
 
-        status = resp.oldarg[0];
-        if (status == 0) {
+        if (resp.oldarg[0] == 0) {
             memcpy(card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
             return true;
         }
     }
 
-    PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+    PrintAndLogEx(WARNING, "timeout while waiting for reply");
     return false;
 }
 
@@ -727,25 +745,28 @@ static void print_ct_general_info(void *vcard) {
 
 // 14b get and print Full Info (as much as we know)
 static bool HF14B_Std_Info(bool verbose, bool do_aid_search) {
-
-    bool is_success = false;
-
     // 14b get and print UID only (general info)
+    iso14b_raw_cmd_t packet = {
+        .flags = (ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT),
+        .timeout = 0,
+        .rawlen = 0,
+    };
+
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
-
-    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
+        if (verbose) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        }
         switch_off_field_14b();
-        return is_success;
+        return false;
     }
 
     iso14b_card_select_t card;
     memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
 
     int status = resp.oldarg[0];
-
     switch (status) {
         case 0: {
             PrintAndLogEx(NORMAL, "");
@@ -759,8 +780,7 @@ static bool HF14B_Std_Info(bool verbose, bool do_aid_search) {
                 hf14b_aid_search(verbose);
             }
 
-            is_success = true;
-            break;
+            return true;
         }
         case -1:
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ATTRIB fail");
@@ -773,17 +793,25 @@ static bool HF14B_Std_Info(bool verbose, bool do_aid_search) {
             break;
     }
 
-    return is_success;
+    return false;
 }
 
 // SRx get and print full info (needs more info...)
 static bool HF14B_ST_Info(bool verbose, bool do_aid_search) {
+
+  iso14b_raw_cmd_t packet = {
+        .flags = (ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT),
+        .timeout = 0,
+        .rawlen = 0,
+    };
+
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
-
-    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
+        if (verbose) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        }
         return false;
     }
 
@@ -825,28 +853,31 @@ static int CmdHF14Binfo(const char *Cmd) {
 
 static bool HF14B_st_reader(bool verbose) {
 
-    bool is_success = false;
+  iso14b_raw_cmd_t packet = {
+        .flags = (ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT),
+        .timeout = 0,
+        .rawlen = 0,
+    };
 
     // SRx get and print general info about SRx chip from UID
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
-
-    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
-        return is_success;
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
+        if (verbose) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        }
+        return false;
     }
 
     iso14b_card_select_t card;
     memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
 
     int status = resp.oldarg[0];
-
     switch (status) {
         case 0:
             print_st_general_info(card.uid, card.uidlen);
-            is_success = true;
-            break;
+            return true;
         case -1:
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ST ATTRIB fail");
             break;
@@ -860,25 +891,28 @@ static bool HF14B_st_reader(bool verbose) {
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-b ST card select SRx failed");
             break;
     }
-    return is_success;
+    return false;
 }
 
 static bool HF14B_std_reader(bool verbose) {
-
-    bool is_success = false;
+    iso14b_raw_cmd_t packet = {
+        .flags = (ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT),
+        .timeout = 0,
+        .rawlen = 0,
+    };
 
     // 14b get and print UID only (general info)
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
-
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
-        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        if (verbose) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        }
         return false;
     }
 
     int status = resp.oldarg[0];
-
     switch (status) {
         case 0: {
             iso14b_card_select_t card;
@@ -888,8 +922,7 @@ static bool HF14B_std_reader(bool verbose) {
             PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
             PrintAndLogEx(SUCCESS, " CHIPID : %02X", card.chipid);
             print_atqb_resp(card.atqb, card.cid);
-            is_success = true;
-            break;
+            return true;
         }
         case -1: {
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ATTRIB fail");
@@ -904,17 +937,21 @@ static bool HF14B_std_reader(bool verbose) {
             break;
         }
     }
-    return is_success;
+    return false;
 }
 
 static bool HF14B_ask_ct_reader(bool verbose) {
 
-    bool is_success = false;
+    iso14b_raw_cmd_t packet = {
+        .flags = (ISO14B_CONNECT | ISO14B_SELECT_CTS | ISO14B_DISCONNECT),
+        .timeout = 0,
+        .rawlen = 0,
+    };
 
     // 14b get and print UID only (general info)
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_CTS | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
         if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return false;
@@ -925,8 +962,7 @@ static bool HF14B_ask_ct_reader(bool verbose) {
     switch (status) {
         case 0: {
             print_ct_general_info(resp.data.asBytes);
-            is_success = true;
-            break;
+            return true;
         }
         case -1: {
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 CTS wrong length");
@@ -941,24 +977,32 @@ static bool HF14B_ask_ct_reader(bool verbose) {
             break;
         }
     }
-    return is_success;
+    return false;
 }
 
 // test for other 14b type tags (mimic another reader - don't have tags to identify)
 static bool HF14B_other_reader(bool verbose) {
 
-    uint8_t data[] = {0x00, 0x0b, 0x3f, 0x80};
-    uint8_t datalen = 4;
+    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t*)calloc(1, sizeof(iso14b_raw_cmd_t) + 4);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    packet->flags = (ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_RAW | ISO14B_APPEND_CRC);
+    packet->timeout = 0;
+    packet->rawlen = 4;
+    memcpy(packet->raw, "\x00\x0b\x3f\x80", 4);
 
     // 14b get and print UID only (general info)
-    uint32_t flags = ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_RAW | ISO14B_APPEND_CRC;
 
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, datalen, 0, data, datalen);
-
-    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
+        if (verbose) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        }
+        free(packet);
         switch_off_field_14b();
         return false;
     }
@@ -969,21 +1013,27 @@ static bool HF14B_other_reader(bool verbose) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x000b3f80 command ans:");
         switch_off_field_14b();
+        free(packet);
         return true;
     } else if (status > 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x000b3f80 command ans:");
         PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, status));
         switch_off_field_14b();
+        free(packet);
         return true;
     }
 
-    data[0] = ISO14443B_AUTHENTICATE;
+    packet->rawlen = 1;
+    packet->raw[0] = ISO14443B_AUTHENTICATE;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
-    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
+        if (verbose) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        }
         switch_off_field_14b();
+        free(packet);
         return false;
     }
     status = resp.oldarg[0];
@@ -993,20 +1043,25 @@ static bool HF14B_other_reader(bool verbose) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "Unknown tag type answered to a 0x0A command ans:");
         switch_off_field_14b();
+        free(packet);
         return true;
     } else if (status > 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x0A command ans:");
         PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, status));
         switch_off_field_14b();
+        free(packet);
         return true;
     }
 
-    data[0] = ISO14443B_RESET;
+    packet->raw[0] = ISO14443B_RESET;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
-    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
+    free(packet);
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
+        if (verbose) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        }
         switch_off_field_14b();
         return false;
     }
@@ -1218,7 +1273,6 @@ static int CmdHF14BDump(const char *Cmd) {
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    char *fptr = filename;
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
@@ -1252,47 +1306,52 @@ static int CmdHF14BDump(const char *Cmd) {
             break;
     }
 
-    if (fnlen < 1) {
-        PrintAndLogEx(INFO, "using UID as filename");
-        fptr += sprintf(fptr, "hf-14b-");
-        FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
-    }
-
     uint8_t chipid = get_st_chipid(card.uid);
     PrintAndLogEx(SUCCESS, "found a " _GREEN_("%s") " tag", get_st_chip_model(chipid));
 
     // detect blocksize from card :)
     PrintAndLogEx(INFO, "reading tag memory from UID " _GREEN_("%s"), sprint_hex_inrow(SwapEndian64(card.uid, card.uidlen, 8), card.uidlen));
 
-    uint8_t data[cardsize];
-    memset(data, 0, sizeof(data));
-    uint8_t *recv = NULL;
-    int status = 0;
+    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t*)calloc(1, sizeof(iso14b_raw_cmd_t) + 2);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    packet->flags = (ISO14B_CONNECT | ISO14B_SELECT_SR);
+    packet->timeout = 0;
+    packet->rawlen = 0;
 
-    PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND,  ISO14B_CONNECT | ISO14B_SELECT_SR, 0, 0, NULL, 0);
-
-    //select
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND,  (uint8_t*)packet, sizeof(iso14b_raw_cmd_t));
+    PacketResponseNG resp;
+    
+    // select
+    int status = 0;
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
         status = resp.oldarg[0];
         if (status < 0) {
-            PrintAndLogEx(FAILED, "failed to select arg0[%" PRId64 "] arg1 [%" PRId64 "]", resp.oldarg[0], resp.oldarg[1]);
-            goto out;
+            PrintAndLogEx(FAILED, "failed to select arg0[%" PRId64 "]" , resp.oldarg[0]);
+            free(packet);
+            return switch_off_field_14b();
         }
     }
 
     PrintAndLogEx(INFO, "." NOLF);
 
-    uint8_t req[2] = {ISO14443B_READ_BLK};
-    int blocknum = 0;
+    uint8_t data[cardsize];
+    memset(data, 0, sizeof(data));
+    uint16_t blocknum = 0;
+
     for (int retry = 0; retry < 5; retry++) {
 
-        req[1] = blocknum;
+        // set up the read command
+        packet->flags = (ISO14B_APPEND_CRC | ISO14B_RAW);
+        packet->rawlen = 2;
+        packet->raw[0] = ISO14443B_READ_BLK;
+        packet->raw[1] = blocknum & 0xFF;
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_APPEND_CRC | ISO14B_RAW, 2, 0, req, sizeof(req));
-
+        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t) + 2);
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
 
             status = resp.oldarg[0];
@@ -1302,16 +1361,16 @@ static int CmdHF14BDump(const char *Cmd) {
             }
 
             uint16_t len = (resp.oldarg[1] & 0xFFFF);
-            recv = resp.data.asBytes;
+            uint8_t *recv = resp.data.asBytes;
 
             if (check_crc(CRC_14443_B, recv, len) == false) {
                 PrintAndLogEx(FAILED, "crc fail, retrying one more time");
                 continue;
             }
 
-            memcpy(data + (blocknum * 4), resp.data.asBytes, 4);
+            memcpy(data + (blocknum * 4), recv, 4);
 
-            // last read.
+            // last read
             if (blocknum == 0xFF) {
                 break;
             }
@@ -1327,11 +1386,13 @@ static int CmdHF14BDump(const char *Cmd) {
             fflush(stdout);
         }
     }
+    free(packet);
+
     PrintAndLogEx(NORMAL, "");
 
     if (blocknum != 0xFF) {
         PrintAndLogEx(FAILED, "dump failed");
-        goto out;
+        return switch_off_field_14b();
     }
 
     PrintAndLogEx(DEBUG, "systemblock : %s", sprint_hex(data + (blocknum * 4), 4));
@@ -1364,11 +1425,17 @@ static int CmdHF14BDump(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     // save to file
+    if (fnlen < 1) {
+        PrintAndLogEx(INFO, "using UID as filename");
+        char *fptr = filename;
+        fptr += sprintf(fptr, "hf-14b-");
+        FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
+    }
+
     size_t datalen = (blocks + 1) * 4;
     saveFileEML(filename, data, datalen, 4);
     saveFile(filename, ".bin", data, datalen);
     // JSON?
-out:
     return switch_off_field_14b();
 }
 /*
@@ -1480,25 +1547,31 @@ static int srix4kValid(const char *Cmd) {
 */
 
 static int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
-
-    PacketResponseNG resp;
     if (card)
         memset(card, 0, sizeof(iso14b_card_select_t));
 
     switch_off_field_14b();
 
+    iso14b_raw_cmd_t packet = {
+        .flags = (ISO14B_CONNECT | ISO14B_SELECT_STD),
+        .timeout = 0,
+        .rawlen = 0,
+    };
     // Anticollision + SELECT STD card
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
         PrintAndLogEx(INFO, "Trying 14B Select SRx");
 
         // Anticollision + SELECT SR card
-        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR, 0, 0, NULL, 0);
+        packet.flags = (ISO14B_CONNECT | ISO14B_SELECT_SR);
+        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
             PrintAndLogEx(INFO, "Trying 14B Select CTS");
 
             // Anticollision + SELECT ASK C-Ticket card
-            SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_CTS, 0, 0, NULL, 0);
+            packet.flags = (ISO14B_CONNECT | ISO14B_SELECT_CTS);
+            SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
             if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
                 PrintAndLogEx(ERR, "connection timeout");
                 switch_off_field_14b();
@@ -1543,78 +1616,83 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool
             return selres;
     }
 
-    uint16_t flags = 0;
+    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t*)calloc(1, sizeof(iso14b_raw_cmd_t) + datainlen);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "APDU: failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    packet->flags = (ISO14B_CONNECT | ISO14B_APDU);
+    packet->timeout = 0;
+    packet->rawlen = 0;
 
     if (chainingin)
-        flags = ISO14B_SEND_CHAINING;
+        packet->flags = (ISO14B_SEND_CHAINING | ISO14B_APDU);
 
-    uint32_t time_wait = 0;
     if (user_timeout > 0) {
-
-        flags |= ISO14B_SET_TIMEOUT;
+        packet->flags |= ISO14B_SET_TIMEOUT;
         if (user_timeout > MAX_14B_TIMEOUT) {
             user_timeout = MAX_14B_TIMEOUT;
-            PrintAndLogEx(INFO, "set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
+            PrintAndLogEx(INFO, "set timeout to 4.9 seconds. The max we can wait for response");
         }
-        time_wait = (uint32_t)((13560000 / 1000 / (8 * 16)) * user_timeout); // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
+        // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
+        packet->timeout = (uint32_t)((13560000 / 1000 / (8 * 16)) * user_timeout);
     }
 
     // "Command APDU" length should be 5+255+1, but javacard's APDU buffer might be smaller - 133 bytes
     // https://stackoverflow.com/questions/32994936/safe-max-java-card-apdu-data-command-and-respond-size
     // here length PM3_CMD_DATA_SIZE=512
-    if (datain)
-        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_APDU | flags, (datainlen & 0xFFFF), time_wait, datain, datainlen & 0xFFFF);
-    else
-        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_APDU | flags, 0, time_wait, NULL, 0);
-
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, MAX(APDU_TIMEOUT, user_timeout))) {
-        uint8_t *recv = resp.data.asBytes;
-        int rlen = resp.oldarg[0];
-        uint8_t res = resp.oldarg[1];
-
-        int dlen = rlen - 2;
-        if (dlen < 0) {
-            dlen = 0;
-        }
-
-        *dataoutlen += dlen;
-
-        if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
-            PrintAndLogEx(ERR, "APDU: Buffer too small(%d). Needs %d bytes", *dataoutlen, maxdataoutlen);
-            return PM3_ESOFT;
-        }
-
-        // I-block ACK
-        if ((res & 0xf2) == 0xa2) {
-            *dataoutlen = 0;
-            *chainingout = true;
-            return PM3_SUCCESS;
-        }
-
-        if (rlen < 0) {
-            PrintAndLogEx(ERR, "APDU: No APDU response.");
-            return PM3_ESOFT;
-        }
-
-        // check apdu length
-        if (rlen == 0 || rlen == 1) {
-            PrintAndLogEx(ERR, "APDU: Small APDU response. Len=%d", rlen);
-            return PM3_ESOFT;
-        }
-
-        memcpy(dataout, recv, dlen);
-
-        // chaining
-        if ((res & 0x10) != 0) {
-            *chainingout = true;
-        }
-
+    if (datain) {        
+        packet->rawlen = datainlen;
+        memcpy(packet->raw, datain, datainlen);
+        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
     } else {
-        PrintAndLogEx(ERR, "APDU: Reply timeout.");
+        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)packet, sizeof(iso14b_raw_cmd_t));
+    }
+    free(packet);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, MAX(APDU_TIMEOUT, user_timeout)) == false) {
+        PrintAndLogEx(ERR, "APDU: reply timeout");
         return PM3_ETIMEOUT;
     }
+    
+    int rlen = resp.oldarg[0];
+    int dlen = rlen - 2;
+    if (dlen < 0) {
+        dlen = 0;
+    }
 
+    *dataoutlen += dlen;
+
+    if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
+        PrintAndLogEx(ERR, "APDU: buffer too small(%d), needs %d bytes", *dataoutlen, maxdataoutlen);
+        return PM3_ESOFT;
+    }
+
+    // I-block ACK
+    uint8_t res = resp.oldarg[1];
+    if ((res & 0xF2) == 0xA2) {
+        *dataoutlen = 0;
+        *chainingout = true;
+        return PM3_SUCCESS;
+    }
+
+    if (rlen < 0) {
+        PrintAndLogEx(ERR, "APDU: no APDU response");
+        return PM3_ESOFT;
+    }
+
+    // check apdu length
+    if (rlen == 0 || rlen == 1) {
+        PrintAndLogEx(ERR, "APDU: small APDU response, len %d", rlen);
+        return PM3_ESOFT;
+    }
+
+    memcpy(dataout, resp.data.asBytes, dlen);
+
+    // chaining
+    if ((res & 0x10) != 0) {
+        *chainingout = true;
+    }
     return PM3_SUCCESS;
 }
 
@@ -1952,16 +2030,16 @@ int infoHF14B(bool verbose, bool do_aid_search) {
 
     // try std 14b (atqb)
     if (HF14B_Std_Info(verbose, do_aid_search))
-        return 1;
+        return PM3_SUCCESS;
 
     // try ST 14b
     if (HF14B_ST_Info(verbose, do_aid_search))
-        return 1;
+        return PM3_SUCCESS;
 
     // try unknown 14b read commands (to be identified later)
     //   could be read of calypso, CEPAS, moneo, or pico pass.
     if (verbose) PrintAndLogEx(FAILED, "no 14443-B tag found");
-    return 0;
+    return PM3_EOPABORTED;
 }
 
 // get and print general info about all known 14b chips
