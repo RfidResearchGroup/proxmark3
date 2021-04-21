@@ -180,3 +180,18 @@ Nothing says thank you as much as a donation.
 If you feel the love, do feel free to become a [Iceman patron](https://www.patreon.com/iceman1001).
 
 If you are using @gator96100 's Proxspace with pre-compiled binaries do consider buy him a coffee for his efforts.
+
+
+## Citation
+Use this bibtex to cite this repository:
+```
+@misc{Researching RFID using Proxmark3 tool,
+  title={Proxmark3, RRG/Iceman repo},
+  author={Iceman1001},
+  year={2019.08},
+  publisher={Github},
+  keywords = {rfid nfc iceman proxmark3 125khz 134khz 13.56mhz},
+  journal={GitHub repository},
+  howpublished={\url{https://github.com/rfidresearchgroup/proxmark3}},
+}
+```
