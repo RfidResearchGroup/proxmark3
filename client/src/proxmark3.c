@@ -915,13 +915,16 @@ int main(int argc, char *argv[]) {
 
         // execute lua script
         if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--lua") == 0) {
-            addLuaExec = true;
             if (i + 1 == argc || strlen(argv[i + 1]) == 0) {
                 PrintAndLogEx(ERR, _RED_("ERROR:") " missing lua script specification after -l\n");
                 show_help(false, exec_name);
                 return 1;
             }
             script_cmd = argv[++i];
+            if (script_cmd == NULL || strlen(script_cmd) == 0) {
+                return 1;
+            }
+            addLuaExec = true;
             continue;
         }
 
