@@ -127,6 +127,16 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
+    // 14b is the longest test
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, " Searching for ISO14443-B tag...");
+    if (IfPm3Iso14443b()) {
+        if (readHF14B(false, false) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-B tag") " found\n");
+            res = PM3_SUCCESS;
+        }
+    }
+
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
     if (IfPm3Felica()) {
@@ -136,15 +146,6 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
-    // 14b  is the longest test (put last)
-    PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for ISO14443-B tag...");
-    if (IfPm3Iso14443b()) {
-        if (readHF14B(false, false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-B tag") " found\n");
-            res = PM3_SUCCESS;
-        }
-    }
 
     /*
     PROMPT_CLEARLINE;

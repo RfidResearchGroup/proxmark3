@@ -28,6 +28,7 @@
 #include "proxgui.h"
 #include "cliparser.h"
 #include "generator.h"    // generate nuid
+#include "iso14b.h"       // defines for ETU conversions
 
 static int CmdHelp(const char *Cmd);
 
@@ -1078,6 +1079,81 @@ static int CmdAnalyseFoo(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdAnalyseUnits(const char* Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse units",
+                  "experiments of unit conversions found in HF. ETU (1/13.56mhz), US or SSP_CLK (1/3.39MHz)",
+                  "analyse uints --etu 10"
+                  "analyse uints --us 100"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "etu", "<dec>", "number in ETU"),
+        arg_int0(NULL, "us", "<dec>", "number in micro seconds (us)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int etu = arg_get_int_def(ctx, 1, -1);
+    int us = arg_get_int_def(ctx, 2, -1);
+    CLIParserFree(ctx);
+
+    if (etu == -1 && us == -1) {
+        PrintAndLogEx(INFO, "US to ETU conversions");
+        PrintAndLogEx(INFO, "  9 US = %u ETU (expect 1) " _GREEN_("ok"), US_TO_ETU(9));
+        PrintAndLogEx(INFO, "  10 US = %u ETU (expect 1) " _GREEN_("ok"), US_TO_ETU(10));
+        PrintAndLogEx(INFO, "  94 US = %u ETU (expect 10) " _GREEN_("ok"), US_TO_ETU(94));    
+        PrintAndLogEx(INFO, "  95 US = %u ETU (expect 10) " _GREEN_("ok"), US_TO_ETU(95));    
+        PrintAndLogEx(INFO, "  302 US = %u ETU (expect 32) " _GREEN_("ok"), US_TO_ETU(302));
+        PrintAndLogEx(NORMAL, "");
+
+        PrintAndLogEx(INFO, "ETU to US conversions");
+        PrintAndLogEx(INFO, "   1 ETU = %u US (expect 9.43) " _GREEN_("ok"), ETU_TO_US(1));
+        PrintAndLogEx(INFO, "  10 ETU = %u US (expect 94.39) " _GREEN_("ok"), ETU_TO_US(10));
+        PrintAndLogEx(INFO, "  32 ETU = %u US (expect 302) " _GREEN_("ok"), ETU_TO_US(32));
+        PrintAndLogEx(NORMAL, "");
+
+        PrintAndLogEx(INFO, "US to SSP CLK 3.39MHz conversions");
+        PrintAndLogEx(INFO, "   9 US = %u SSP (expect 32) ", US_TO_SSP(9));  
+        PrintAndLogEx(INFO, "  10 US = %u SSP (expect 32 or 48) ", US_TO_SSP(10));  
+        PrintAndLogEx(INFO, "  94 US = %u SSP (expect 320) ", US_TO_SSP(94));
+        PrintAndLogEx(INFO, "  95 US = %u SSP (expect 320 or 336) ", US_TO_SSP(95));
+        PrintAndLogEx(INFO, "  302 US = %u SSP (expect 1024) ", US_TO_SSP(302));
+
+        PrintAndLogEx(INFO, "  4949000 US = %u SSP ", US_TO_SSP(4949000));
+
+        PrintAndLogEx(NORMAL, "");
+
+        PrintAndLogEx(INFO, "SSP CLK 3.39MHz to US conversions");
+        PrintAndLogEx(INFO, "  32 SSP = %u US (expext 9 or 10) " _GREEN_("ok"), SSP_TO_US(32));
+        PrintAndLogEx(INFO, " 320 SSP = %u US (expext 94 or 95) " _GREEN_("ok"), SSP_TO_US(320));
+        PrintAndLogEx(INFO, "1024 SSP = %u US (expext 302) " _GREEN_("ok"), SSP_TO_US(1024));
+        PrintAndLogEx(NORMAL, "");
+
+        PrintAndLogEx(INFO, "ETU to SSP CLK 3.39MHz conversions");
+        PrintAndLogEx(INFO, "   1 ETU = %u SSP (expect 32) " _GREEN_("ok"), ETU_TO_SSP(1)); 
+        PrintAndLogEx(INFO, "  10 ETU = %u SSP (expect 320) " _GREEN_("ok"), ETU_TO_SSP(10)); 
+        PrintAndLogEx(INFO, "  32 ETU = %u SSP (expect 1024) " _GREEN_("ok"), ETU_TO_SSP(32)); 
+        PrintAndLogEx(NORMAL, "");
+
+        PrintAndLogEx(INFO, "SSP CLK 3.39MHz to ETU conversions");
+        PrintAndLogEx(INFO, "1024 SSP = %u ETU (expect 32) " _GREEN_("ok"), SSP_TO_ETU(1024));
+        PrintAndLogEx(INFO, " 320 SSP = %u ETU (expect 10) " _GREEN_("ok"), SSP_TO_ETU(320));
+        PrintAndLogEx(INFO, "  32 SSP = %u ETU (expect 1) " _GREEN_("ok"), SSP_TO_ETU(32));
+    } else if (etu) {
+
+        PrintAndLogEx(INFO, " %d ETU = %u us ", ETU_TO_US(etu));
+        PrintAndLogEx(INFO, " %d ETU = %u SSP ", ETU_TO_SSP(etu)); 
+    } else if (us) {
+        PrintAndLogEx(INFO, " %d us = %u ETU ", US_TO_ETU(us));
+        PrintAndLogEx(INFO, " %d us = %u SSP ", US_TO_SSP(us)); 
+    }
+
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable, "This help"},
     {"lcr",     CmdAnalyseLCR,      AlwaysAvailable, "Generate final byte for XOR LRC"},
@@ -1090,7 +1166,8 @@ static command_t CommandTable[] = {
     {"nuid",    CmdAnalyseNuid,     AlwaysAvailable, "create NUID from 7byte UID"},
     {"demodbuff", CmdAnalyseDemodBuffer, AlwaysAvailable, "Load binary string to demodbuffer"},
     {"freq",    CmdAnalyseFreq,     AlwaysAvailable, "Calc wave lengths"},
-    {"foo",    CmdAnalyseFoo,     AlwaysAvailable, "muxer"},
+    {"foo",     CmdAnalyseFoo,      AlwaysAvailable, "muxer"},
+    {"units",   CmdAnalyseUnits,    AlwaysAvailable, "convert ETU <> US <> SSP_CLK (3.39MHz)"},
     {NULL, NULL, NULL, NULL}
 };
 

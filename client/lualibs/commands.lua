@@ -181,7 +181,6 @@ function Command:sendNG( ignore_response, timeout )
     count, data, ng = bin.unpack('H'..length..'C', response, count)
 
 --[[  uncomment if you want to debug
-
     print('NG package received')
     print('CMD    ::', tostring(cmd))
     print('Length ::', tostring(length))

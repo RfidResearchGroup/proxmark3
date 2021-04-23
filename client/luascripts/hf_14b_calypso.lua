@@ -30,15 +30,14 @@ device-side.
 ]]
 
 local function calypso_parse(result)
-    local r = Command.parse(result)
-    if r.arg1 >= 0 then
-        local len = r.arg1 * 2
+    if result.Oldarg0 >= 0 then
+        local len = result.Oldarg0 * 2
         if len > 0 then
-            r.data = string.sub(r.data, 0, len);
-            return r, nil
-        end
+            local d = string.sub(result.Data, 0, len);
+            return d, nil
+        end        
     end
-    return nil,nil
+    return nil, "calypso_parse failed"
 end
 ---
 -- A debug printout-function
@@ -115,19 +114,22 @@ local function calypso_send_cmd_raw(data, ignoreresponse )
     local flags = lib14b.ISO14B_COMMAND.ISO14B_APDU
 --    flags = lib14b.ISO14B_COMMAND.ISO14B_RAW +
 --            lib14b.ISO14B_COMMAND.ISO14B_APPEND_CRC
-
+    local flags = lib14b.ISO14B_COMMAND.ISO14B_APDU
     data = data or ""
     -- LEN of data, half the length of the ASCII-string hex string
     -- 2 bytes flags
     -- 4 bytes timeout
     -- 2 bytes raw len
     -- n bytes raw
-    local senddata = ('%04x%08x%04x%s'):format(flags, 0, ( 8 + #data/2), data )
+
+    local flags_str  = ('%04x'):format(utils.SwapEndianness(('%04x'):format(flags), 16))
+    local time_str  =  ('%08x'):format(0)
+    local rawlen_str = ('%04x'):format(utils.SwapEndianness(('%04x'):format(( 8 + #data/2)), 16))
+    local senddata = ('%s%s%s%s'):format(flags_str, time_str, rawlen_str,data)
     local c = Command:newNG{cmd = cmds.CMD_HF_ISO14443B_COMMAND, data = senddata}
     local result, err = c:sendNG(ignoreresponse, 2000)
     if result then
-        local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL', result)
-        if arg0 >= 0 then
+        if result.Oldarg0 >= 0 then
             return calypso_parse(result)
         else
             err = 'card response failed'
@@ -248,13 +250,13 @@ function main(args)
         for i, apdu in spairs(_calypso_cmds) do
             print('>> '..ansicolors.yellow..i..ansicolors.reset)
             apdu = apdu:gsub('%s+', '')
-            result, err = calypso_send_cmd_raw(apdu , false)
+            data, err = calypso_send_cmd_raw(apdu , false)
             if err then
                 print('<< '..err)
             else
-                if result then
-                    local status, desc, err = calypso_apdu_status(result.data)
-                    local d = result.data:sub(3, (#result.data - 8))
+                if data then
+                    local status, desc, err = calypso_apdu_status(data)
+                    local d = data:sub(3, (#data - 8))
                     if status then
                         print('<< '..d..' ('..ansicolors.green..'ok'..ansicolors.reset..')')
                     else

@@ -24,78 +24,183 @@
 #include "commonutil.h"
 #include "dbprint.h"
 #include "ticks.h"
+#include "iso14b.h"       // defines for ETU conversions
 
-
-// Delays in SSP_CLK ticks.
-// SSP_CLK runs at 13,56MHz / 32 = 423.75kHz when simulating a tag
-#define DELAY_READER_TO_ARM               8
-#define DELAY_ARM_TO_READER               0
-
-//SSP_CLK runs at 13.56MHz / 4 = 3,39MHz when acting as reader. All values should be multiples of 16
-#define DELAY_ARM_TO_TAG                 16
-#define DELAY_TAG_TO_ARM                 32
-
-//SSP_CLK runs at 13.56MHz / 4 = 3,39MHz when sniffing. All values should be multiples of 16
-#define DELAY_TAG_TO_ARM_SNIFF           32
-#define DELAY_READER_TO_ARM_SNIFF        32
-
-// defaults to 2000ms
-#ifndef FWT_TIMEOUT_14B
-# define FWT_TIMEOUT_14B  35312U
-#endif
-
-// 1 tick == 1/13.56 mhz
-// 1 us = 1.5 tick
-
-// 330/848kHz = 1558us / 4 == 400us,
-#define ISO14443B_READER_TIMEOUT           10000 //330
-
-// 1024/3.39MHz = 302.1us between end of tag response and next reader cmd
-#define DELAY_ISO14443B_VICC_TO_VCD_READER (28*9) // 1024  ( counting from start of PICC EOF 14 ETU's)
-#define DELAY_ISO14443B_VCD_TO_VICC_READER (28*9) // 1056
+/* 
+* Current timing issues with ISO14443-b implementation
+* Proxmark3 
+* Carrier Frequency 13.56MHz 
+* SSP_CLK runs at 13.56MHz / 4 = 3,39MHz
+* 
+*
+* PROBLEM 1.
+* ----------
+* one way of calculating time, that relates both to PM3 ssp_clk 3.39MHz, ISO freq of 13.56Mhz and ETUs
+* convert from µS -> our SSP_CLK units which is used in the DEFINES..
+* convert from ms -> our SSP_CLK units...
+* convert from ETU -> our SSP_CLK units...
+* All ETU -> µS -> ms should be diveded by for to match Proxmark3 FPGA SSP_CLK :)
+*
+*
+* PROBLEM 2.
+* ----------
+* all DEFINES is in SSP_CLK ticks
+* all delays is in SSP_CLK ticks
+*/
 
 #ifndef RECEIVE_MASK
 # define RECEIVE_MASK  (DMA_BUFFER_SIZE - 1)
 #endif
 
-// Guard Time (per 14443-2)
-#ifndef TR0
-# define TR0 32 // TR0 max is 151/fs = 151/(848kHz) = 302us or 64 samples from FPGA
+// SSP_CLK runs at 13,56MHz / 32 = 423.75kHz when simulating a tag
+// All values should be multiples of 2 (?)
+#define DELAY_READER_TO_ARM               8
+#define DELAY_ARM_TO_READER               0
+
+// SSP_CLK runs at 13.56MHz / 4 = 3,39MHz when acting as reader.
+// All values should be multiples of 16
+#define DELAY_ARM_TO_TAG                 16
+#define DELAY_TAG_TO_ARM                 32
+
+// SSP_CLK runs at 13.56MHz / 4 = 3,39MHz when sniffing. 
+// All values should be multiples of 16
+#define DELAY_TAG_TO_ARM_SNIFF           32
+#define DELAY_READER_TO_ARM_SNIFF        32
+
+/* ISO14443-4
+*
+* Frame Waiting Time Integer (FWI)
+* can be between 0 and 14.
+* FWI_default = 4
+* FWI_max = 14
+*
+* Frame Waiting Time (FWT) formula
+* --------------------------------
+* FWT = (256 x 16 / fc) * 2 to the power for FWI
+*
+* sample:
+*                          ------- 2 to the power of FWI(4)
+* FWT = (256 x 16 / fc) * (2*2*2*2) == 4.833 ms
+
+* FTW(default) == FWT(4) == 4.822ms
+*
+* FWI_max == 2^14 = 16384
+* FWT(max) = (256 x 16 / fc) * 16384 == 4949
+* 
+* Which gives a maximum Frame Waiting time of FWT(max) == 4949 ms
+*   FWT(max) in ETU  4949000 / 9.4395 µS = 524286 ETU
+*
+* Simple calc to convert to ETU or µS
+* -----------------------------------
+*       uint32_t fwt_time_etu = (32 << fwt);
+*       uint32_t fwt_time_us = (302 << fwt);
+*
+*/
+
+#ifndef MAX_14B_TIMEOUT
+// FWT(max) = 4949 ms or 4.95 seconds.
+// SSP_CLK = 4949000 * 3.39 = 16777120
+# define MAX_14B_TIMEOUT (16777120U)
 #endif
 
-// Synchronization time (per 14443-2)
-#ifndef TR1
-# define TR1 0
+// Activation frame waiting time
+// 512 ETU?
+// 65536/fc == 4833 µS or 4.833ms
+// SSP_CLK =  4833 µS * 3.39 = 16384 
+#ifndef FWT_TIMEOUT_14B
+# define FWT_TIMEOUT_14B (16384)
+#endif  
+
+// ETU 14 * 9.4395 µS = 132 µS == 0.132ms 
+// TR2,  counting from start of PICC EOF 14 ETU.
+#define DELAY_ISO14443B_PICC_TO_PCD_READER  ETU_TO_SSP(14)
+#define DELAY_ISO14443B_PCD_TO_PICC_READER  ETU_TO_SSP(15)
+
+/* Guard Time (per 14443-2) in ETU
+*
+* Transition time. TR0 - guard time
+*   TR0 - 8 ETU's minimum.
+*   TR0 - 32 ETU's maximum for ATQB only
+*   TR0 - FWT for all other commands
+*       32,64,128,256,512, ... , 262144, 524288 ETU
+*   TR0 = FWT(1), FWT(2), FWT(3) .. FWT(14)
+*
+*
+*  TR0 
+*/
+#ifndef ISO14B_TR0
+# define ISO14B_TR0  ETU_TO_SSP(32)
 #endif
-// Frame Delay Time PICC to PCD  (per 14443-3 Amendment 1)
-#ifndef TR2
-# define TR2 0
+
+#ifndef ISO14B_TR0_MAX
+# define ISO14B_TR0_MAX ETU_TO_SSP(32)
+// *   TR0 - 32 ETU's maximum for ATQB only
+// *   TR0 - FWT for all other commands
+
+// TR0 max is 151/fsc = 151/848kHz = 302us or 64 samples from FPGA
+// 32 ETU * 9.4395 µS == 302 µS
+// 32 * 8 = 256 sub carrier cycles,
+// 256 / 4 = 64 I/Q pairs.   
+// since 1 I/Q pair after 4 subcarrier cycles at 848kHz subcarrier
+#endif
+
+// 8 ETU = 75 µS == 256 SSP_CLK
+#ifndef ISO14B_TR0_MIN
+# define ISO14B_TR0_MIN ETU_TO_SSP(8)
+#endif
+
+// Synchronization time (per 14443-2) in ETU
+// 10 ETU = 94,39 µS == 320 SSP_CLK
+#ifndef ISO14B_TR1_MIN
+# define ISO14B_TR1_MIN ETU_TO_SSP(10)
+#endif
+// Synchronization time (per 14443-2) in ETU
+// 25 ETU == 236 µS == 800 SSP_CLK
+#ifndef ISO14B_TR1_MAX
+# define ISO14B_TR1 ETU_TO_SSP(25)
+#endif
+
+// Frame Delay Time PICC to PCD  (per 14443-3 Amendment 1) in ETU
+// 14 ETU == 132 µS == 448 SSP_CLK
+#ifndef ISO14B_TR2
+# define ISO14B_TR2 ETU_TO_SSP(14)
 #endif
 
 // 4sample
 #define SEND4STUFFBIT(x) tosend_stuffbit(x);tosend_stuffbit(x);tosend_stuffbit(x);tosend_stuffbit(x);
 
-static void iso14b_set_timeout(uint32_t timeout);
+static void iso14b_set_timeout(uint32_t timeout_etu);
 static void iso14b_set_maxframesize(uint16_t size);
+static void iso14b_set_fwt(uint8_t fwt);
 
 // the block number for the ISO14443-4 PCB  (used with APDUs)
 static uint8_t iso14b_pcb_blocknum = 0;
+static uint8_t iso14b_fwt = 9;
 static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 
-/* ISO 14443 B
-*
+/*
+* ISO 14443-B communications
+* --------------------------
 * Reader to card | ASK  - Amplitude Shift Keying Modulation (PCD to PICC for Type B) (NRZ-L encodig)
 * Card to reader | BPSK - Binary Phase Shift Keying Modulation, (PICC to PCD for Type B)
+*
+* It uses half duplex with a 106 kbit per second data rate in each direction.
+* Data transmitted by the card is load modulated with a 847.5 kHz subcarrier.
 *
 * fc - carrier frequency 13.56 MHz
 * TR0 - Guard Time per 14443-2
 * TR1 - Synchronization Time per 14443-2
 * TR2 - PICC to PCD Frame Delay Time (per 14443-3 Amendment 1)
 *
-* Elementary Time Unit (ETU) is
-* - 128 Carrier Cycles (9.4395 µS) = 8 Subcarrier Units
-
+* Elementary Time Unit (ETU)
+* --------------------------
+* ETU is used to denotate 1 bit period i.e. how long one bit transfer takes.
+* 
+* - 128 Carrier cycles / 13.56MHz = 8 Subcarrier units / 848kHz = 1/106kHz = 9.4395 µS
+* - 16 Carrier cycles = 1 Subcarrier unit  = 1.17 µS
+*
 * Definition
+* ----------
 * 1 ETU =  128 / ( D x fc )  
 * where
 *    D = divisor.  Which inital is 1
@@ -104,13 +209,26 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 *   1 ETU = 128 / fc
 *   1 ETU = 128 / 13 560 000 = 9.4395 µS
 *   1 ETU = 9.4395 µS
-
-* It seems we are using the subcarrier as base for our time calculations,
-* rather than the field clock
-
-* - 1 ETU = 8 subcarrier units
-* - 1 ETU = 1 bit
-* - 10 ETU = 1 startbit, 8 databits, 1 stopbit (10bits length)
+*
+* (note: It seems we are using the subcarrier as base for our time calculations rather than the field clock)
+*
+* - 1 ETU = 1/106 KHz 
+* - 1 ETU = 8 subcarrier units ( 8 / 848kHz )
+* - 1 ETU = 1 bit period
+*
+*
+* Card sends data at 848kHz subcarrier
+* subcar |duration| FC division| I/Q pairs
+* -------+--------+------------+--------
+* 106kHz | 9.44µS | FC/128     | 16
+* 212kHz | 4.72µS | FC/64      | 8
+* 424kHz | 2.36µS | FC/32      | 4
+* 848kHz | 1.18µS | FC/16      | 2
+* -------+--------+------------+--------
+*
+*
+* One Character consists of 1 start, 1 stop, 8 databit with a total length of 10bits.
+* - 1 Character = 10 ETU = 1 startbit, 8 databits, 1 stopbit
 * - startbit is a 0
 * - stopbit is a 1
 *
@@ -121,51 +239,81 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 * End of frame (EOF) is
 * - [10-11] ETU of ZEROS, unmodulated time
 *
-*  -TO VERIFY THIS BELOW-
-* The mode FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK which we use to simulate tag
-* works like this:
-* - A 1-bit input to the FPGA becomes 8 pulses at 847.5kHz (1.18µS / pulse) == 9.44us
-* - A 0-bit input to the FPGA becomes an unmodulated time of 1.18µS  or does it become 8 nonpulses for 9.44us
-*
-* FPGA doesn't seem to work with ETU.  It seems to work with pulse / duration instead.
-*
-* Card sends data ub 847.e kHz subcarrier
-* subcar |duration| FC division| I/Q pairs
-* -------+--------+------------+--------
-* 106kHz | 9.44µS | FC/128     | 16
-* 212kHz | 4.72µS | FC/64      | 8
-* 424kHz | 2.36µS | FC/32      | 4
-* 848kHz | 1.18µS | FC/16      | 2
-* -------+--------+------------+--------
-*
-*  Reader data transmission:
+* Reader data transmission
+* ------------------------
 *   - no modulation ONES
 *   - SOF
-*   - Command, data and CRC_B
+*   - Command, data and CRC_B (1 Character)
 *   - EOF
 *   - no modulation ONES
 *
-*  Card data transmission
+* Card data transmission
+* ----------------------
 *   - TR1
 *   - SOF
-*   - data  (each bytes is:  1startbit, 8bits, 1stopbit)
+*   - data  (1 Character)
 *   - CRC_B
 *   - EOF
 *
-* FPGA implementation :
-* At this point only Type A is implemented. This means that we are using a
-* bit rate of 106 kbit/s, or fc/128. Oversample by 4, which ought to make
-* things practical for the ARM (fc/32, 423.8 kbits/s, ~50 kbytes/s)
+* Transfer times
+* --------------
+* let calc how long it takes the reader to send a message
+*  SOF 10 ETU + 4 data bytes + 2 crc bytes + EOF 2 ETU
+*  10 + (4+2 * 10) + 2 = 72 ETU
+*  72 * 9.4395 = 680 µS  or  0.68 ms 
+* 
 *
+* -> TO VERIFY THIS BELOW <-
+* --------------------------
+* The mode FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK which we use to simulate tag
+* works like this:  
+* Simulation per definition is "inversed" effect on the reader antenna. 
+* - A 1-bit input to the FPGA becomes 8 pulses at 847.5kHz (1.18µS / pulse) == 9.44us
+* - A 0-bit input to the FPGA becomes an unmodulated time of 1.18µS  or does it become 8 nonpulses for 9.44us
+*
+*
+* FPGA implementation
+* -------------------
+* Piwi implemented a I/Q sampling mode for the FPGA, where...
+*
+* FPGA doesn't seem to work with ETU.  It seems to work with pulse / duration instead.
+*
+* This means that we are using a bit rate of 106 kbit/s, or fc/128. 
+* Oversample by 4, which ought to make things practical for the ARM
+* (fc/32, 423.8 kbits/s, ~52 kbytes/s)
+*
+* We are sampling the signal at FC/32,  we are reporting over SSP to PM3 each 
+* 
+* Current I/Q pair sampling 
+* -------------------------
 * Let us report a correlation every 64 samples. I.e.
-* 1 I/Q pair after 4 subcarrier cycles for the 848kHz subcarrier,
-* 1 I/Q pair after 2 subcarrier cycles for the 424kHz subcarrier,
-* 1 I/Q pair for each subcarrier cyle for the 212kHz subcarrier.
-
-*  2 I/Q pairs for 1 ETU when 848kHz
-*  4 I/Q pairs for 1 ETU when 424kHz
-*  8 I/Q pairs for 1 ETU when 212kHz
+*  1 I/Q pair after 4 subcarrier cycles for the 848kHz subcarrier,
+*  1 I/Q pair after 2 subcarrier cycles for the 424kHz subcarrier,
 */
+
+
+/*
+* Formula to calculate FWT (in ETUs) by timeout (in ms):
+*
+* 1 tick is about 1.5µS
+* 1000 ms/s
+*
+* FWT = 13560000 * 1000 / (8*16) * timeout
+* FWT = 13560000 * 1000 / 128 * timeout
+*
+* sample: 3sec == 3000ms
+*
+*  13560000 * 1000 / 128 * 3000 == 13560000000 / 384000 == 
+*  13560000 / 384  = 35312 FWT
+*
+*  35312 * 9.4395 ==
+*
+* @param timeout is in frame wait time, fwt, measured in ETUs
+*
+*  However we need to compensate for SSP_CLK ...
+*/
+
+
 
 //=============================================================================
 // An ISO 14443 Type B tag. We listen for commands from the reader, using
@@ -237,10 +385,10 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
         SEND4STUFFBIT(0);
     }
 
-    // why this?
-    for (i = 0; i < 2; i++) {
-        SEND4STUFFBIT(1);
-    }
+    // why this? push out transfers between arm and fpga?
+    //for (i = 0; i < 2; i++) {
+    //    SEND4STUFFBIT(1);
+    //}
 
     tosend_t *ts = get_tosend();
     // Convert from last byte pos to length
@@ -278,6 +426,34 @@ static void Uart14bReset(void) {
 static void Uart14bInit(uint8_t *data) {
     Uart.output = data;
     Uart14bReset();
+}
+
+// param timeout accepts ETU  
+static void iso14b_set_timeout(uint32_t timeout_etu) {
+
+    uint32_t ssp = ETU_TO_SSP(timeout_etu);
+
+    if (ssp > MAX_14B_TIMEOUT)
+        ssp = MAX_14B_TIMEOUT;
+
+    iso14b_timeout = ssp;
+    if (DBGLEVEL >= DBG_DEBUG) {
+        Dbprintf("ISO14443B Timeout set to %ld fwt", iso14b_timeout);
+    }
+}
+
+// keep track of FWT,  also updates the timeout
+static void iso14b_set_fwt(uint8_t fwt) {
+    iso14b_fwt = fwt;
+    iso14b_set_timeout( 32 << fwt );
+}
+
+static void iso14b_set_maxframesize(uint16_t size) {
+    if (size > 256)
+        size = MAX_FRAME_SIZE;
+
+    Uart.byteCntMax = size;
+    if (DBGLEVEL >= DBG_DEBUG) Dbprintf("ISO14443B Max frame size set to %d bytes", Uart.byteCntMax);
 }
 
 //-----------------------------------------------------------------------------
@@ -322,36 +498,6 @@ static void Demod14bInit(uint8_t *data, uint16_t max_len) {
     Demod.output = data;
     Demod.max_len = max_len;
     Demod14bReset();
-}
-
-/*
-* 9.4395 us = 1 ETU  and clock is about 1.5 us
-* 13560000Hz
-* 1000ms/s
-* timeout in ETUs (time to transfer 1 bit, 9.4395 us)
-*
-* Formula to calculate FWT (in ETUs) by timeout (in ms):
-* fwt = 13560000 * 1000 / (8*16) * timeout;
-* Sample:  3sec == 3000ms
-*  13560000 * 1000 / (8*16) * 3000  ==
-*    13560000000 / 384000 = 35312 FWT
-* @param timeout is in frame wait time, fwt, measured in ETUs
-*/
-static void iso14b_set_timeout(uint32_t timeout) {
-#define MAX_TIMEOUT 40542464U  // 13560000Hz * 1000ms / (2^32-1) * (8*16)
-    if (timeout > MAX_TIMEOUT)
-        timeout = MAX_TIMEOUT;
-
-    iso14b_timeout = timeout;
-    if (DBGLEVEL >= DBG_DEBUG) Dbprintf("ISO14443B Timeout set to %ld fwt", iso14b_timeout);
-}
-
-static void iso14b_set_maxframesize(uint16_t size) {
-    if (size > 256)
-        size = MAX_FRAME_SIZE;
-
-    Uart.byteCntMax = size;
-    if (DBGLEVEL >= DBG_DEBUG) Dbprintf("ISO14443B Max frame size set to %d bytes", Uart.byteCntMax);
 }
 
 /* Receive & handle a bit coming from the reader.
@@ -522,7 +668,6 @@ static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
     }
     return false;
 }
-
 
 static void TransmitFor14443b_AsTag(uint8_t *response, uint16_t len) {
 
@@ -1148,9 +1293,7 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
 /*
  *  Demodulate the samples we received from the tag, also log to tracebuffer
  */
-static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, int timeout, uint32_t *eof_time) {
-
-    int samples = 0, ret = 0;
+static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t timeout, uint32_t *eof_time) {
 
     // Set up the demodulator for tag -> reader responses.
     Demod14bInit(response, max_len);
@@ -1167,6 +1310,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, int timeo
 
     uint32_t dma_start_time = 0;
     uint16_t *upTo = dma->buf;
+    int samples = 0, ret = 0;
 
     // Put FPGA in the appropriate mode
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_848_KHZ | FPGA_HF_READER_MODE_RECEIVE_IQ);
@@ -1218,7 +1362,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, int timeo
 
         if (Handle14443bSamplesFromTag(ci, cq)) {
 
-            *eof_time = GetCountSspClkDelta(dma_start_time) - (DELAY_TAG_TO_ARM * 128);  // end of EOF
+            *eof_time = GetCountSspClkDelta(dma_start_time) - DELAY_TAG_TO_ARM;  // end of EOF
 
             if (Demod.len > Demod.max_len) {
                 ret = -2; // overflow
@@ -1226,7 +1370,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, int timeo
             break;
         }
 
-        if (((GetCountSspClkDelta(dma_start_time) >> 7) > timeout) && Demod.state < DEMOD_PHASE_REF_TRAINING) {
+        if (((GetCountSspClkDelta(dma_start_time) ) > timeout) && Demod.state < DEMOD_PHASE_REF_TRAINING) {
             ret = -1;
             break;
         }
@@ -1240,8 +1384,9 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, int timeo
     if (Demod.len > 0) {
         uint32_t sof_time = *eof_time
                             - (Demod.len * (8 + 2)) // time for byte transfers
-                            - (12)  // time for SOF transfer
-                            - (12); // time for EOF transfer
+                            - (10)      // time for TR1
+                            - (10 + 2)  // time for SOF transfer
+                            - (10);     // time for EOF transfer
         LogTrace(Demod.output, Demod.len, sof_time, *eof_time, NULL, false);
     }
     return Demod.len;
@@ -1250,18 +1395,22 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, int timeo
 //-----------------------------------------------------------------------------
 // Transmit the command (to the tag) that was placed in ToSend[].
 //-----------------------------------------------------------------------------
+// param start_time in SSP_CLK
 static void TransmitFor14443b_AsReader(uint32_t *start_time) {
 
     tosend_t *ts = get_tosend();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
 
+    
     // TR2 minimum 14 ETUs
-    if (*start_time < DELAY_ARM_TO_TAG) {
-        *start_time = DELAY_ARM_TO_TAG;
+    if (*start_time < ISO14B_TR0) {
+//        *start_time = DELAY_ARM_TO_TAG;
+        *start_time = ISO14B_TR0;
     }
 
-    *start_time = (*start_time - DELAY_ARM_TO_TAG) & 0xfffffff0;
+//    *start_time = (*start_time - DELAY_ARM_TO_TAG) & 0xfffffff0;
+    *start_time = (*start_time & 0xfffffff0);
 
     if (GetCountSspClk() > *start_time) { // we may miss the intended time
         *start_time = (GetCountSspClk() + 32) & 0xfffffff0; // next possible time
@@ -1301,18 +1450,6 @@ static void TransmitFor14443b_AsReader(uint32_t *start_time) {
 //-----------------------------------------------------------------------------
 static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
     /*
-    *  Reader data transmission:
-    *   - no modulation ONES
-    *   - SOF
-    *   - Command, data and CRC_B
-    *   - EOF
-    *   - no modulation ONES
-    *
-    *   1 ETU == 1 BIT!
-    *   TR0 - 8 ETU's minimum.
-    *   TR0 - 32 ETU's maximum for ATQB only
-    *   TR0 - FWT for all other commands
-    *
     *   QUESTION:  how long is a 1 or 0 in pulses in the xcorr_848 mode?
     *              1 "stuffbit" = 1ETU (9us)
     *
@@ -1326,7 +1463,7 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
 
     // Send SOF
     // 10-11 ETUs of ZERO
-    for (i = 0; i < 11; i++) {
+    for (i = 0; i < 10; i++) {
         tosend_stuffbit(0);
     }
     // 2-3 ETUs of ONE
@@ -1359,20 +1496,15 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
 
     // Send EOF
     // 10-11 ETUs of ZERO
-    for (i = 0; i < 11; i++) {
+    for (i = 0; i < 10; i++) {
         tosend_stuffbit(0);
     }
 
-    /* Transition time. TR0 - guard time
-    *   TR0 - 8 ETU's minimum.
-    *   TR0 - 32 ETU's maximum for ATQB only
-    *   TR0 - FWT for all other commands
-    *       32,64,128,256,512, ... , 262144, 524288 ETU
-    */
-    int pad = (11 + 2 + (len * 10) + 11) & 0x7;
 
+    int pad = (10 + 2 + (len * 10) + 10) & 0x7;
     for (i = 0; i < 16 - pad; ++i)
         tosend_stuffbit(1);
+
 }
 
 /*
@@ -1416,7 +1548,7 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
     uint32_t eof_time = 0;
     CodeAndTransmit14443bAsReader(real_cmd, msg_len + 3, &start_time, &eof_time);
 
-    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
     int len = Get14443bAnswerFromTag(rxdata, rxmaxlen, iso14b_timeout, &eof_time);
     FpgaDisableTracing();
 
@@ -1427,12 +1559,22 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
     } else {
         // S-Block WTX
         while (len && ((data_bytes[0] & 0xF2) == 0xF2)) {
-            uint32_t save_iso14b_timeout = iso14b_timeout;
+
+            uint32_t save_iso14b_timeout_spp = iso14b_timeout;
+
+             // 2 high bits mandatory set to 0b
+             // byte1 - WTXM [1..59]. 
+            uint8_t wtxm = data_bytes[1] & 0x3F;
+
+            // command FWT = FWT * WTXM
+            uint32_t fwt_temp = iso14b_fwt * wtxm;
+            
             // temporarily increase timeout
-            iso14b_set_timeout(MAX((data_bytes[1] & 0x3f) * save_iso14b_timeout, ISO14443B_READER_TIMEOUT));
+            iso14b_set_timeout( (32 << fwt_temp));
+
             // Transmit WTX back
-            // byte1 - WTXM [1..59]. command FWT = FWT * WTXM
-            data_bytes[1] = data_bytes[1] & 0x3f; // 2 high bits mandatory set to 0b
+            data_bytes[1] = wtxm;
+
             // now need to fix CRC.
             AddCrc14B(data_bytes, len - 2);
 
@@ -1440,13 +1582,14 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
             CodeAndTransmit14443bAsReader(data_bytes, len, &start_time, &eof_time);
 
             // retrieve the result again (with increased timeout)
-            eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
-            len = Get14443bAnswerFromTag(rxdata, rxmaxlen, ISO14443B_READER_TIMEOUT, &eof_time);
+            eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+            len = Get14443bAnswerFromTag(rxdata, rxmaxlen, iso14b_timeout, &eof_time);
             FpgaDisableTracing();
 
             data_bytes = rxdata;
+
             // restore timeout
-            iso14b_set_timeout(save_iso14b_timeout);
+            iso14b_timeout = save_iso14b_timeout_spp;
         }
 
         // if we received an I- or R(ACK)-Block with a block number equal to the
@@ -1497,9 +1640,11 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
     uint32_t eof_time = 0;
     CodeAndTransmit14443bAsReader(cmdINIT, sizeof(cmdINIT), &start_time, &eof_time);
 
-    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
-    int retlen = Get14443bAnswerFromTag(r, sizeof(r), ISO14443B_READER_TIMEOUT, &eof_time);
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+    int retlen = Get14443bAnswerFromTag(r, sizeof(r), iso14b_timeout, &eof_time);
     FpgaDisableTracing();
+
+    Dbprintf("cts :  s %u  e %u", start_time, eof_time);
 
     if (retlen != 4) {
         return -1;
@@ -1514,11 +1659,11 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
         card->fc = r[1];
     }
 
-    start_time = eof_time + DELAY_ISO14443B_VICC_TO_VCD_READER;
+    start_time = eof_time + ISO14B_TR2;
     CodeAndTransmit14443bAsReader(cmdMSBUID, sizeof(cmdMSBUID), &start_time, &eof_time);
 
-    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
-    retlen = Get14443bAnswerFromTag(r, sizeof(r), ISO14443B_READER_TIMEOUT, &eof_time);
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+    retlen = Get14443bAnswerFromTag(r, sizeof(r), iso14b_timeout, &eof_time);
     FpgaDisableTracing();
 
     if (retlen != 4) {
@@ -1532,11 +1677,11 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
         memcpy(card->uid, r, 2);
     }
 
-    start_time = eof_time + DELAY_ISO14443B_VICC_TO_VCD_READER;
+    start_time = eof_time + ISO14B_TR2;
     CodeAndTransmit14443bAsReader(cmdLSBUID, sizeof(cmdLSBUID), &start_time, &eof_time);
 
-    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
-    retlen = Get14443bAnswerFromTag(r, sizeof(r), ISO14443B_READER_TIMEOUT, &eof_time);
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+    retlen = Get14443bAnswerFromTag(r, sizeof(r), iso14b_timeout, &eof_time);
     FpgaDisableTracing();
 
     if (retlen != 4) {
@@ -1566,10 +1711,11 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
     uint32_t eof_time = 0;
     CodeAndTransmit14443bAsReader(init_srx, sizeof(init_srx), &start_time, &eof_time);
 
-    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
-    int retlen = Get14443bAnswerFromTag(r_init, sizeof(r_init), ISO14443B_READER_TIMEOUT, &eof_time);
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+    int retlen = Get14443bAnswerFromTag(r_init, sizeof(r_init), iso14b_timeout, &eof_time);
     FpgaDisableTracing();
 
+    Dbprintf("srx :  s %u  e %u", start_time, eof_time);
     if (retlen <= 0) {
         return -1;
     }
@@ -1585,17 +1731,17 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
 
     AddCrc14B(select_srx, 2);
 
-    start_time = eof_time + DELAY_ISO14443B_VICC_TO_VCD_READER;
+    start_time = eof_time + ISO14B_TR2;
     CodeAndTransmit14443bAsReader(select_srx, sizeof(select_srx), &start_time, &eof_time);
 
-    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
-    retlen = Get14443bAnswerFromTag(r_select, sizeof(r_select), ISO14443B_READER_TIMEOUT, &eof_time);
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+    retlen = Get14443bAnswerFromTag(r_select, sizeof(r_select), iso14b_timeout, &eof_time);
     FpgaDisableTracing();
 
     if (retlen != 3) {
         return -1;
     }
-    if (!check_crc(CRC_14443_B, r_select, retlen)) {
+    if (check_crc(CRC_14443_B, r_select, retlen) == false) {
         return -2;
     }
 
@@ -1609,11 +1755,11 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
 
     AddCrc14B(select_srx, 1);
 
-    start_time = eof_time + DELAY_ISO14443B_VICC_TO_VCD_READER;
+    start_time = eof_time + ISO14B_TR2;
     CodeAndTransmit14443bAsReader(select_srx, 3, &start_time, &eof_time); // Only first three bytes for this one
 
-    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
-    retlen = Get14443bAnswerFromTag(r_papid, sizeof(r_papid), ISO14443B_READER_TIMEOUT, &eof_time);
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+    retlen = Get14443bAnswerFromTag(r_papid, sizeof(r_papid), iso14b_timeout, &eof_time);
     FpgaDisableTracing();
 
     if (retlen != 10) {
@@ -1654,8 +1800,8 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
     uint32_t eof_time = 0;
     CodeAndTransmit14443bAsReader(wupb, sizeof(wupb), &start_time, &eof_time);
 
-    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;;
-    int retlen = Get14443bAnswerFromTag(r_pupid, sizeof(r_pupid), ISO14443B_READER_TIMEOUT, &eof_time);
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+    int retlen = Get14443bAnswerFromTag(r_pupid, sizeof(r_pupid), iso14b_timeout, &eof_time);
     FpgaDisableTracing();
 
     // ATQB too short?
@@ -1664,7 +1810,7 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
     }
 
     // VALIDATE CRC
-    if (!check_crc(CRC_14443_B, r_pupid, retlen)) {
+    if (check_crc(CRC_14443_B, r_pupid, retlen) == false) {
         return -2;
     }
 
@@ -1680,11 +1826,11 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
     // copy the protocol info from ATQB (Protocol Info -> Protocol_Type) into ATTRIB (Param 3)
     attrib[7] = r_pupid[10] & 0x0F;
     AddCrc14B(attrib, 9);
-    start_time = eof_time + DELAY_ISO14443B_VICC_TO_VCD_READER;
+    start_time = eof_time + ISO14B_TR2;
     CodeAndTransmit14443bAsReader(attrib, sizeof(attrib), &start_time, &eof_time);
 
-    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
-    retlen = Get14443bAnswerFromTag(r_attrib, sizeof(r_attrib), ISO14443B_READER_TIMEOUT, &eof_time);
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+    retlen = Get14443bAnswerFromTag(r_attrib, sizeof(r_attrib), iso14b_timeout, &eof_time);
     FpgaDisableTracing();
 
     // Answer to ATTRIB too short?
@@ -1693,7 +1839,7 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
     }
 
     // VALIDATE CRC
-    if (!check_crc(CRC_14443_B, r_attrib, retlen)) {
+    if (check_crc(CRC_14443_B, r_attrib, retlen) == false) {
         return -2;
     }
 
@@ -1714,9 +1860,8 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
 
         // FWT
         uint8_t fwt = card->atqb[6] >> 4;
-        if (fwt < 16) {
-            uint32_t fwt_time = (302 << fwt);
-            iso14b_set_timeout(fwt_time);
+        if (fwt < 15) {
+            iso14b_set_fwt(fwt);
         }
     }
     // reset PCB block number
@@ -1751,6 +1896,9 @@ void iso14443b_setup(void) {
     // Start the timer
     StartCountSspClk();
 
+    // reset timeout
+    iso14b_set_fwt(9);
+
     LED_D_ON();
 }
 
@@ -1774,8 +1922,8 @@ static int read_srx_block(uint8_t blocknr, uint8_t *block) {
     uint32_t eof_time = 0;
     CodeAndTransmit14443bAsReader(cmd, sizeof(cmd), &start_time, &eof_time);
 
-    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
-    int retlen = Get14443bAnswerFromTag(r_block, sizeof(r_block), ISO14443B_READER_TIMEOUT, &eof_time);
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+    int retlen = Get14443bAnswerFromTag(r_block, sizeof(r_block), iso14b_timeout, &eof_time);
     FpgaDisableTracing();
 
     // Check if we got an answer from the tag
@@ -2027,31 +2175,11 @@ static void iso14b_set_trigger(bool enable) {
     g_trigger = enable;
 }
 
-/*
- * Send raw command to tag ISO14443B
- * @Input
- * param   flags enum ISO14B_COMMAND.  (mifare.h)
- * len     len of buffer data
- * data    buffer with bytes to send
- *
- * @Output
- * none
- *
- */
 void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *o) {
-
-    /*
-    iso14b_command_t param = c->oldarg[0];
-    size_t len = o->oldarg[1] & 0xffff;
-    uint32_t timeout = o->oldarg[2];
-    uint8_t *cmd = o->data.asBytes;
-    */
 
     // receive buffer
     uint8_t buf[PM3_CMD_DATA_SIZE];
     memset(buf, 0 , sizeof(buf));
-
-
     if (DBGLEVEL > DBG_DEBUG) {
         Dbprintf("14b raw: param, %04x", o->flags);
     }
@@ -2123,8 +2251,8 @@ void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *o) {
             FpgaDisableTracing();
             reply_mix(CMD_HF_ISO14443B_COMMAND, -2, 0, 0, NULL, 0);
         } else {
-            eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
-            status = Get14443bAnswerFromTag(buf, sizeof(buf), 5 * ISO14443B_READER_TIMEOUT, &eof_time); // raw
+            eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+            status = Get14443bAnswerFromTag(buf, sizeof(buf), iso14b_timeout, &eof_time); // raw
             FpgaDisableTracing();
 
             sendlen = MIN(Demod.len, PM3_CMD_DATA_SIZE);

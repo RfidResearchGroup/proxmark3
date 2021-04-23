@@ -197,7 +197,7 @@ static bool emrtd_exchange_commands(const char *cmd, uint8_t *dataout, int *data
     int res;
     if (use_14b) {
         // need to add a long timeout for passports with activated anti-bruteforce measure
-        res = exchange_14b_apdu(aCMD, aCMD_n, activate_field, keep_field_on, response, sizeof(response), &resplen, 15000);
+        res = exchange_14b_apdu(aCMD, aCMD_n, activate_field, keep_field_on, response, sizeof(response), &resplen, 4000);
     } else {
         res = ExchangeAPDU14a(aCMD, aCMD_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     }
@@ -657,6 +657,8 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
     int readlen = datalen - (3 - emrtd_get_asn1_field_length(response, resplen, 1));
     offset = 4;
 
+    uint8_t lnbreak = 32;
+    PrintAndLogEx(INFO, "." NOLF);
     while (readlen > 0) {
         toread = readlen;
         if (readlen > 118) {
@@ -665,10 +667,12 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
 
         if (use_secure) {
             if (_emrtd_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, tempresponse, &tempresplen, use_14b) == false) {
+                PrintAndLogEx(NORMAL, "");
                 return false;
             }
         } else {
             if (_emrtd_read_binary(offset, toread, tempresponse, &tempresplen, use_14b) == false) {
+                PrintAndLogEx(NORMAL, "");
                 return false;
             }
         }
@@ -677,7 +681,17 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
         offset += toread;
         readlen -= toread;
         resplen += tempresplen;
+
+        PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
+        lnbreak--;
+        if (lnbreak == 0) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "." NOLF);
+            lnbreak = 32;
+        } 
     }
+    PrintAndLogEx(NORMAL, "");
 
     memcpy(dataout, &response, resplen);
     *dataoutlen = resplen;
@@ -1007,7 +1021,7 @@ static bool emrtd_connect(bool *use_14b) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     bool failed_14a = false;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
         DropField();
         failed_14a = true;
     }
@@ -1022,7 +1036,7 @@ static bool emrtd_connect(bool *use_14b) {
         };
         clearCommandBuffer();
         SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
-        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2500) == false) {
+        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000) == false) {
             PrintAndLogEx(INFO, "timeout, no eMRTD spotted with 14b, exiting");
             return false;
         }
@@ -1090,7 +1104,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     bool use_14b = false;
 
     // Select the eMRTD
-    if (!emrtd_connect(&use_14b)) {
+    if (emrtd_connect(&use_14b) == false) {
         DropField();
         return PM3_ESOFT;
     }

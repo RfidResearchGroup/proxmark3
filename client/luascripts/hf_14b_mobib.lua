@@ -7,7 +7,7 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This is a script to communicate with a MOBIB tag using the '14b raw' commands
 ]]
@@ -30,16 +30,15 @@ Check there for details about data format and how commands are interpreted on th
 device-side.
 ]]
 
-local function calypso_parse(result)
-    local r = Command.parse(result)
-    if r.arg1 >= 0 then
-        local len = r.arg1 * 2
+local function mobib_parse(result)
+    if result.Oldarg0 >= 0 then
+        local len = result.Oldarg0 * 2
         if len > 0 then
-            r.data = string.sub(r.data, 0, len);
-            return r, nil
+            d = string.sub(result.Data, 0, len);
+            return d, nil
         end
     end
-    return nil,nil
+    return nil, "mobib_parse failed"
 end
 ---
 -- A debug printout-function
@@ -111,23 +110,24 @@ end
 ---
 -- Sends a usbpackage ,  "hf 14b raw"
 -- if it reads the response, it converts it to a lua object "Command" first and the Data is cut to correct length.
-local function calypso_send_cmd_raw(data, ignoreresponse )
+local function mobib_send_cmd_raw(data, ignoreresponse )
     local flags = lib14b.ISO14B_COMMAND.ISO14B_APDU
-
     data = data or ""
     -- LEN of data, half the length of the ASCII-string hex string
     -- 2 bytes flags
     -- 4 bytes timeout
     -- 2 bytes raw len
     -- n bytes raw
-    local senddata = ('%04x%08x%04x%s'):format(flags, 0, ( 8 + #data/2), data)
+    local flags_str  = ('%04x'):format(utils.SwapEndianness(('%04x'):format(flags), 16))
+    local time_str  =  ('%08x'):format(0)
+    local rawlen_str = ('%04x'):format(utils.SwapEndianness(('%04x'):format(( 8 + #data/2)), 16))
+    local senddata = ('%s%s%s%s'):format(flags_str, time_str, rawlen_str,data)
     local c = Command:newNG{cmd = cmds.CMD_HF_ISO14443B_COMMAND, data = senddata}
 
-    local result, err = command:sendNG(ignoreresponse, 2000)
+    local result, err = c:sendNG(ignoreresponse, 2000)
     if result then
-        local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL', result)
-        if arg0 >= 0 then
-            return calypso_parse(result)
+        if result.Oldarg0 >= 0 then
+            return mobib_parse(result)
         else
             err = 'card response failed'
         end
@@ -137,9 +137,9 @@ local function calypso_send_cmd_raw(data, ignoreresponse )
     return result, err
 end
 ---
--- calypso_card_num : Reads card number from ATR and
+-- mobib_card_num : Reads card number from ATR and
 -- writes it in the tree in decimal format.
-local function calypso_card_num(card)
+local function mobib_card_num(card)
     if not card then return end
     local card_num = tonumber( card.uid:sub(1,8),16 )
     print('')
@@ -149,7 +149,7 @@ local function calypso_card_num(card)
 end
 ---
 -- analyse CALYPSO apdu status bytes.
-local function calypso_apdu_status(apdu)
+local function mobib_apdu_status(apdu)
     -- last two is CRC
     -- next two is APDU status bytes.
     local mess = 'FAIL'
@@ -233,19 +233,19 @@ function main(args)
     card, err = lib14b.waitFor14443b()
     if not card then return oops(err) end
 
-    calypso_card_num(card)
+    mobib_card_num(card)
     cid = card.cid
 
     for i, apdu in spairs(_calypso_cmds) do
         print('>> '..ansicolors.yellow..i..ansicolors.reset)
         apdu = apdu:gsub('%s+', '')
-        result, err = calypso_send_cmd_raw(apdu , false)
+        data, err = mobib_send_cmd_raw(apdu , false)
         if err then
             print('<< '..err)
         else
-            if result then
-                local status, desc, err = calypso_apdu_status(result.data)
-                local d = result.data:sub(3, (#result.data - 8))
+            if data then
+                local status, desc, err = mobib_apdu_status(data)
+                local d = data:sub(3, (#data - 8))
                 if status then
                     print('<< '..d..' ('..ansicolors.green..'ok'..ansicolors.reset..')')
                 else
