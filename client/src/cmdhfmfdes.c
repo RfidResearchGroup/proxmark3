@@ -1156,6 +1156,20 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
     key_no &= 0x0F;
 
     /*
+        Desfire treats Des keys as TDes but with the first half = 2nd half
+        As such, we should be able to convert the Des to TDes then run the code as TDes
+    */
+    if (new_algo == MFDES_ALGO_DES) {
+        memcpy(&new_key[8],new_key,8);
+        new_algo = MFDES_ALGO_3DES;
+    }
+
+    if (old_algo == MFDES_ALGO_DES) {
+        memcpy(&old_key[8],old_key,8);
+        old_algo = MFDES_ALGO_3DES;
+    }
+
+    /*
      * Because new crypto methods can be setup only at application creation,
      * changing the card master key to one of them require a key_no tweak.
      */
@@ -1193,11 +1207,13 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
 
     uint8_t new_key_length = 16;
     switch (new_algo) {
+/*
+        // We have converted the DES to 3DES above,so this will never hit
         case MFDES_ALGO_DES:
-            // double
             memcpy(data + cmdcnt + 1, new_key, new_key_length);
             memcpy(data + cmdcnt + 1 + new_key_length, new_key, new_key_length);
             break;
+*/
         case MFDES_ALGO_3DES:
         case MFDES_ALGO_AES:
             new_key_length = 16;
@@ -1208,9 +1224,6 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
             memcpy(data + cmdcnt + 1, new_key, new_key_length);
             break;
     }
-
-
-
 
     if ((tag->authenticated_key_no & 0x0f) != (key_no & 0x0f)) {
         if (old_key) {
@@ -1232,7 +1245,10 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
             case AS_LEGACY:
                 iso14443a_crc_append(data + 1, cmdcnt);
                 cmdcnt += 2;
-                iso14443a_crc(new_key, new_key_length, data + cmdcnt);
+
+//              iso14443a_crc(new_key, new_key_length, data + cmdcnt);
+//              Add offset + 1 for key no. at start
+                iso14443a_crc(new_key, new_key_length, data + 1 + cmdcnt);
                 cmdcnt += 2;
                 break;
             case AS_NEW:
@@ -1258,11 +1274,19 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
 
     uint8_t *p = mifare_cryto_preprocess_data(tag, data + 1, (size_t *)&cmdcnt, 0, MDCM_ENCIPHERED | ENC_COMMAND | NO_CRC);
     apdu.Lc = (uint8_t)cmdcnt + 1;
-    apdu.data = p;
+//    apdu.data = p;
+//  the above data pointed to from p did not have the key no. at the start, so copy preprocessed data after the key no.
+    memcpy (&data[1], p, cmdcnt);
+    apdu.data = data;
+
 
     uint32_t recv_len = 0;
     uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, 0, true);
+    
+    //  If we call send_desfire with 2nd option (turn field on), it will turn off then on
+    //  leading to loosing the authentication on the aid, so lets not turn on here.
+    //    int res = send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, 0, true);
+    int res = send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0, true);
 
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("   Can't change key -> %s"), GetErrorString(res, &sw));
