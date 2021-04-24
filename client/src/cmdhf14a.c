@@ -929,7 +929,7 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
     // here length PM3_CMD_DATA_SIZE=512
     // timeout must be authomatically set by "get ATS"
     if (datain)
-        SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, (datainlen & 0xFFFF), 0, datain, datainlen & 0xFFFF);
+        SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, (datainlen & 0x1FF), 0, datain, datainlen & 0x1FF);
     else
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, 0, 0, NULL, 0);
 
