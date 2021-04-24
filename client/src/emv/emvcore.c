@@ -18,6 +18,7 @@
 #include "cmdsmartcard.h" // ExchangeAPDUSC
 #include "ui.h"
 #include "cmdhf14a.h"
+#include "cmdhf14b.h"
 #include "dol.h"
 #include "emv_tags.h"
 #include "emvjson.h"
@@ -301,7 +302,9 @@ static int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool Lea
         case ECC_CONTACTLESS:
             res = ExchangeAPDU14a(data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
             if (res) {
-                return res;
+                res = exchange_14b_apdu(data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen, 4000);
+                if (res)
+                    return res;
             }
             break;
         case ECC_CONTACT:
