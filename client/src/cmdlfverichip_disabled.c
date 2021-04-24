@@ -142,8 +142,8 @@ static int CmdVerichipSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",  CmdHelp,           AlwaysAvailable, "This help"},
-    {"demod", CmdVerichipDemod,  AlwaysAvailable, "Demodulate an VERICHIP tag from the GraphBuffer"},
-    {"read",  CmdVerichipRead,   IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
+    {"demod", CmdVerichipDemod,  AlwaysAvailable, "demodulate an VERICHIP tag from the GraphBuffer"},
+    {"read",  CmdVerichipRead,   IfPm3Lf,         "attempt to read and extract tag data"},
     {"clone", CmdVerichipClone,  IfPm3Lf,         "clone VERICHIP tag"},
     {"sim",   CmdVerichipSim,    IfPm3Lf,         "simulate VERICHIP tag"},
     {NULL, NULL, NULL, NULL}

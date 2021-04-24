@@ -231,8 +231,8 @@ static int CmdVikingSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "This help"},
-    {"demod",   CmdVikingDemod, AlwaysAvailable, "Demodulate a Viking tag from the GraphBuffer"},
-    {"reader",  CmdVikingReader,  IfPm3Lf,       "Attempt to read and Extract tag data from the antenna"},
+    {"demod",   CmdVikingDemod, AlwaysAvailable, "demodulate a Viking tag from the GraphBuffer"},
+    {"reader",  CmdVikingReader,  IfPm3Lf,       "attempt to read and extract tag data"},
     {"clone",   CmdVikingClone, IfPm3Lf,         "clone Viking tag to T55x7 or Q5/T5555"},
     {"sim",     CmdVikingSim,   IfPm3Lf,         "simulate Viking tag"},
     {NULL, NULL, NULL, NULL}

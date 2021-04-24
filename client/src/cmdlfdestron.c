@@ -226,10 +226,10 @@ static int CmdDestronSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",   CmdHelp,          AlwaysAvailable, "This help"},
-    {"demod",  CmdDestronDemod,  AlwaysAvailable, "Demodulate an Destron tag from the GraphBuffer"},
-    {"reader", CmdDestronReader, IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone",  CmdDestronClone,  IfPm3Lf,         "Clone Destron tag to T55x7"},
-    {"sim",    CmdDestronSim,    IfPm3Lf,         "Simulate Destron tag"},
+    {"demod",  CmdDestronDemod,  AlwaysAvailable, "demodulate an Destron tag from the GraphBuffer"},
+    {"reader", CmdDestronReader, IfPm3Lf,         "attempt to read and extract tag data"},
+    {"clone",  CmdDestronClone,  IfPm3Lf,         "clone Destron tag to T55x7"},
+    {"sim",    CmdDestronSim,    IfPm3Lf,         "simulate Destron tag"},
     {NULL, NULL, NULL, NULL}
 };
 

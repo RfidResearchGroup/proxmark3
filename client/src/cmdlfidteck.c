@@ -131,8 +131,8 @@ static int CmdIdteckReader(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,         AlwaysAvailable, "This help"},
-    {"demod",   CmdIdteckDemod,  AlwaysAvailable, "Demodulate an Idteck tag from the GraphBuffer"},
-    {"reader",  CmdIdteckReader, IfPm3Lf,         "Attempt to read and Extract tag data from the antenna"},
+    {"demod",   CmdIdteckDemod,  AlwaysAvailable, "demodulate an Idteck tag from the GraphBuffer"},
+    {"reader",  CmdIdteckReader, IfPm3Lf,         "attempt to read and extract tag data"},
     {NULL, NULL, NULL, NULL}
 };
 

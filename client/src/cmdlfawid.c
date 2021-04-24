@@ -554,7 +554,7 @@ static command_t CommandTable[] = {
     {"reader",  CmdAWIDReader,  IfPm3Lf,         "attempt to read and extract tag data"},
     {"clone",   CmdAWIDClone,   IfPm3Lf,         "clone AWID tag to T55x7 or Q5/T5555"},
     {"sim",     CmdAWIDSim,     IfPm3Lf,         "simulate AWID tag"},
-    {"brute",   CmdAWIDBrute,   IfPm3Lf,         "Bruteforce card number against reader"},
+    {"brute",   CmdAWIDBrute,   IfPm3Lf,         "bruteforce card number against reader"},
     {"watch",   CmdAWIDWatch,   IfPm3Lf,         "continuously watch for cards.  Reader mode"},
     {NULL, NULL, NULL, NULL}
 };

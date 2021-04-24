@@ -552,10 +552,10 @@ static int CmdLFNedapSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",   CmdHelp,          AlwaysAvailable, "This help"},
-    {"demod",  CmdLFNedapDemod,  AlwaysAvailable, "Demodulate Nedap tag from the GraphBuffer"},
-    {"reader", CmdLFNedapReader, IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone",  CmdLFNedapClone,  IfPm3Lf,         "Clone Nedap tag to T55x7 or Q5/T5555"},
-    {"sim",    CmdLFNedapSim,    IfPm3Lf,         "Simulate Nedap tag"},
+    {"demod",  CmdLFNedapDemod,  AlwaysAvailable, "demodulate Nedap tag from the GraphBuffer"},
+    {"reader", CmdLFNedapReader, IfPm3Lf,         "attempt to read and extract tag data"},
+    {"clone",  CmdLFNedapClone,  IfPm3Lf,         "clone Nedap tag to T55x7 or Q5/T5555"},
+    {"sim",    CmdLFNedapSim,    IfPm3Lf,         "simulate Nedap tag"},
     {NULL, NULL, NULL, NULL}
 };
 

@@ -483,8 +483,8 @@ static int CmdNexWatchSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",   CmdHelp,           AlwaysAvailable, "This help"},
-    {"demod",  CmdNexWatchDemod,  AlwaysAvailable, "Demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer"},
-    {"reader", CmdNexWatchReader, IfPm3Lf,         "Attempt to Read and Extract tag data from the antenna"},
+    {"demod",  CmdNexWatchDemod,  AlwaysAvailable, "demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer"},
+    {"reader", CmdNexWatchReader, IfPm3Lf,         "attempt to read and extract tag data"},
     {"clone",  CmdNexWatchClone,  IfPm3Lf,         "clone NexWatch tag to T55x7"},
     {"sim",    CmdNexWatchSim,    IfPm3Lf,         "simulate NexWatch tag"},
     {NULL, NULL, NULL, NULL}

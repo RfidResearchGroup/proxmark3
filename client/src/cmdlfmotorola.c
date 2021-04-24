@@ -273,8 +273,8 @@ static int CmdMotorolaSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",   CmdHelp,           AlwaysAvailable, "This help"},
-    {"demod",  CmdMotorolaDemod,  AlwaysAvailable, "Demodulate an MOTOROLA tag from the GraphBuffer"},
-    {"reader", CmdMotorolaReader, IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
+    {"demod",  CmdMotorolaDemod,  AlwaysAvailable, "demodulate an MOTOROLA tag from the GraphBuffer"},
+    {"reader", CmdMotorolaReader, IfPm3Lf,         "attempt to read and extract tag data"},
     {"clone",  CmdMotorolaClone,  IfPm3Lf,         "clone MOTOROLA tag to T55x7"},
     {"sim",    CmdMotorolaSim,    IfPm3Lf,         "simulate MOTOROLA tag"},
     {NULL, NULL, NULL, NULL}

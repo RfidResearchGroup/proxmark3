@@ -451,8 +451,8 @@ static int CmdGallagherSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",   CmdHelp,            AlwaysAvailable, "This help"},
-    {"demod",  CmdGallagherDemod,  AlwaysAvailable, "Demodulate an GALLAGHER tag from the GraphBuffer"},
-    {"reader", CmdGallagherReader, IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
+    {"demod",  CmdGallagherDemod,  AlwaysAvailable, "demodulate an GALLAGHER tag from the GraphBuffer"},
+    {"reader", CmdGallagherReader, IfPm3Lf,         "attempt to read and extract tag data"},
     {"clone",  CmdGallagherClone,  IfPm3Lf,         "clone GALLAGHER tag to T55x7"},
     {"sim",    CmdGallagherSim,    IfPm3Lf,         "simulate GALLAGHER tag"},
     {NULL, NULL, NULL, NULL}
