@@ -597,7 +597,7 @@ static int CmdIndalaSim(const char *Cmd) {
 
     // indala PSK,  clock 32, carrier 0
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
-    payload->carrier =  2;
+    payload->carrier = 2;
     payload->invert = 0;
     payload->clock = 32;
     memcpy(payload->data, bs, raw_len * 8);
