@@ -256,7 +256,8 @@ static int CmdIOProxClone(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf io clone",
-                  "Enables simulation of ioProx card with specified facility-code and card number.\n"
+                  "clone a ioProx card with specified facility-code and card number\n"
+                  "to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
                   "Tag must be on the antenna when issuing this command.",
                   "lf io clone --vn 1 --fc 101 --cn 1337"
                  );

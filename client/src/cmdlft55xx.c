@@ -1945,7 +1945,7 @@ static void printT5x7KnownBlock0(uint32_t b0) {
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Pyramid ");
             break;
         case T55X7_INDALA_64_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Indala 64, Motorola");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Indala 64, Motorola, Idteck");
             break;
         case T55X7_INDALA_224_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Indala 224 ");

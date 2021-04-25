@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `lf idteck clone` - now supports creating using raw values (@iceman1001)
  - Changed calypso scripts to work with NG (@iceman1001)
  - Changed HF 14b - fixed timings on device side (@iceman1001)
  - Changed `hf 14b raw` - now uses NG (@iceman1001)

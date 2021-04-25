@@ -52,6 +52,7 @@
 #define T55X7_MOTOROLA_CONFIG_BLOCK     0x00081040  // PSK1, data rate 32, 2 data blocks
 #define T55X7_NEXWATCH_CONFIG_BLOCK     0x00081060  // PSK1 data rate 16, psk carrier FC * 2, 3 data blocks
 #define T55X7_KERI_CONFIG_BLOCK         0x603E1040  // PSK1, 2 data blocks
+#define T55X7_IDTECK_CONFIG_BLOCK       0x00081040  // PSK1, data rate 32, 2 data blocks
 
 #define T55X7_JABLOTRON_CONFIG_BLOCK    0x00158040  // Biphase, data rate 64, 2 data blocks
 #define T55X7_GUARDPROXII_CONFIG_BLOCK  0x00150060  // Biphase, data rate 64, Direct modulation, 3 data blocks

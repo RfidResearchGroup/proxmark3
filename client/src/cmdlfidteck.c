@@ -13,15 +13,17 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include "common.h"
-#include "cmdparser.h"    // command_t
+#include "cmdparser.h"   // command_t
 #include "comms.h"
 #include "ui.h"
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "lfdemod.h"
-#include "commonutil.h"     // num_to_bytes
+#include "commonutil.h"  // num_to_bytes
 #include "cliparser.h"
-#include "cmdlfem4x05.h"  // EM defines
+#include "cmdlfem4x05.h" // EM defines
+#include "protocols.h"   // T55x7 defines
+#include "cmdlft55xx.h"  // verifywrite
 
 static int CmdHelp(const char *Cmd);
 
@@ -101,6 +103,71 @@ static int CmdIdteckDemod(const char *Cmd) {
     return demodIdteck(true);
 }
 
+static int CmdIdteckClone(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf idteck clone",
+                  "clone a Idteck tag to T55x7 or Q5/T5555 tag\n"
+                  "Tag must be on the antenna when issuing this command.",
+                  "lf idteck clone --raw 4944544B351FBE4B"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("r", "raw", "<hex>", "raw bytes"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int raw_len = 0;
+    uint8_t raw[8] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+
+    bool q5 = arg_get_lit(ctx, 2);
+    bool em = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
+
+    uint32_t blocks[3] = {T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_32 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
+    char cardtype[16] = {"T55x7"};
+
+    // Q5
+    if (q5) {
+        blocks[0] = T5555_FIXED | T55x7_MODULATION_PSK1 |  T5555_SET_BITRATE(32) | 2 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
+
+    if (em) {
+        blocks[0] = EM4305_IDTECK_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
+        
+    for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+        blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
+    }
+
+    // config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
+    PrintAndLogEx(INFO, "Preparing to clone Idteck to " _YELLOW_("%s") " raw " _GREEN_("%s")
+                    , cardtype
+                    , sprint_hex_inrow(raw, raw_len)
+                    );
+    print_blocks(blocks,  ARRAYLEN(blocks));
+
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf idteck reader`") " to verify");
+    return res;
+}
+
 static int CmdIdteckReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf idteck reader",
@@ -133,6 +200,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,         AlwaysAvailable, "This help"},
     {"demod",   CmdIdteckDemod,  AlwaysAvailable, "demodulate an Idteck tag from the GraphBuffer"},
     {"reader",  CmdIdteckReader, IfPm3Lf,         "attempt to read and extract tag data"},
+    {"clone",   CmdIdteckClone,  IfPm3Lf,         "clone ioProx tag to T55x7 or Q5/T5555"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -148,7 +216,6 @@ int CmdLFIdteck(const char *Cmd) {
 }
 
 // Find IDTEC PSK1, RF  Preamble == 0x4944544B, Demodsize 64bits
-// by iceman
 int detectIdteck(uint8_t *dest, size_t *size) {
     //make sure buffer has data
     if (*size < 64 * 2) return -1;
