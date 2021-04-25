@@ -6,7 +6,7 @@
 // the license.
 //-----------------------------------------------------------------------------
 // Low frequency Idteck tag commands
-// PSK
+// PSK1,  clk 32,  2 data blocks
 //-----------------------------------------------------------------------------
 #include "cmdlfidteck.h"
 #include <string.h>
@@ -168,6 +168,66 @@ static int CmdIdteckClone(const char *Cmd) {
     return res;
 }
 
+static int CmdIdteckSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf idteck sim",
+                  "Enables simulation of Idteck card.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.",
+                  "lf idteck sim --raw 4944544B351FBE4B"
+                );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("r", "raw", "<hex>", "raw bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int raw_len = 0;
+    uint8_t raw[8] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+    CLIParserFree(ctx);
+
+    // convert to binarray
+    uint8_t bs[64];
+    memset(bs, 0x00, sizeof(bs));
+
+    uint8_t counter = 0;
+    for (int8_t i = 0; i < raw_len; i++) {
+        uint8_t tmp = raw[i];
+        bs[counter++] = (tmp >> 7) & 1;
+        bs[counter++] = (tmp >> 6) & 1;
+        bs[counter++] = (tmp >> 5) & 1;
+        bs[counter++] = (tmp >> 4) & 1;
+        bs[counter++] = (tmp >> 3) & 1;
+        bs[counter++] = (tmp >> 2) & 1;
+        bs[counter++] = (tmp >> 1) & 1;
+        bs[counter++] = tmp & 1;
+    }
+
+    PrintAndLogEx(SUCCESS, "Simulating Idteck - raw " _YELLOW_("%s"), sprint_hex_inrow(raw, raw_len));
+    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
+    PrintAndLogEx(NORMAL, "");
+
+    lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
+    payload->carrier = 2;
+    payload->invert = 0;
+    payload->clock = 32;
+    memcpy(payload->data, bs, sizeof(bs));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + sizeof(bs));
+    free(payload);
+
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_PSK_SIMULATE, &resp);
+
+    PrintAndLogEx(INFO, "Done");
+    if (resp.status != PM3_EOPABORTED)
+        return resp.status;
+    return PM3_SUCCESS;
+}
+
 static int CmdIdteckReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf idteck reader",
@@ -200,7 +260,8 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,         AlwaysAvailable, "This help"},
     {"demod",   CmdIdteckDemod,  AlwaysAvailable, "demodulate an Idteck tag from the GraphBuffer"},
     {"reader",  CmdIdteckReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdIdteckClone,  IfPm3Lf,         "clone ioProx tag to T55x7 or Q5/T5555"},
+    {"clone",   CmdIdteckClone,  IfPm3Lf,         "clone Idteck tag to T55x7 or Q5/T5555"},
+    {"sim",     CmdIdteckSim,    IfPm3Lf,         "simulate Idteck tag"},
     {NULL, NULL, NULL, NULL}
 };
 
