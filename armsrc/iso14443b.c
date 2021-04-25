@@ -1644,8 +1644,6 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
     int retlen = Get14443bAnswerFromTag(r, sizeof(r), iso14b_timeout, &eof_time);
     FpgaDisableTracing();
 
-    Dbprintf("cts :  s %u  e %u", start_time, eof_time);
-
     if (retlen != 4) {
         return -1;
     }
@@ -1715,7 +1713,6 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
     int retlen = Get14443bAnswerFromTag(r_init, sizeof(r_init), iso14b_timeout, &eof_time);
     FpgaDisableTracing();
 
-    Dbprintf("srx :  s %u  e %u", start_time, eof_time);
     if (retlen <= 0) {
         return -1;
     }
