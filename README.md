@@ -52,7 +52,7 @@ We define generic Proxmark3 platforms as following devices.
   - RDV1, RDV2, RDV3 easy
   - Ryscorp green PCB version
   - Radiowar black PCB version
-  - numerous Chinese adapted versions of the RDV3 easy (kkmoon, pisworks etc)
+  - numerous Chinese adapted versions of the RDV3 easy (kkmoon, PiSwords etc)
 
 **Not supported**
  - ⚠  Proxmark Evolution (EVO) 
