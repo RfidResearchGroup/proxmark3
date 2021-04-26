@@ -262,7 +262,7 @@ static int emrtd_get_asn1_data_length(uint8_t *datain, int datainlen, int offset
         // https://wf.lavatech.top/ave-but-random/emrtd-data-quirks#EF_SOD
         return datainlen;
     } else if (lenfield == 0x81) {
-        int tmp = (*(datain + offset + 1) << 8);
+        int tmp = (*(datain + offset + 1));
         return tmp;
         //return ((int) * (datain + offset + 1));
     } else if (lenfield == 0x82) {
