@@ -42,11 +42,10 @@ static bool legic_xor(uint8_t *data, uint16_t cardsize) {
         return false;
     }
 
-
     for (uint16_t i = 22; i < cardsize; i++) {
         data[i] ^= crc;
     }
-    PrintAndLogEx(SUCCESS, "(De)Obsfuscation done");
+    PrintAndLogEx(SUCCESS, "applying xoring of data done!");
     return true;
 }
 
@@ -509,10 +508,9 @@ static int CmdLegicWrbl(const char *Cmd) {
 
     int offset = arg_get_int_def(ctx, 1, 0);
 
-    int data_len = 0;
+    int dlen = 0;
     uint8_t data[MAX_LENGTH] = {0};
-
-    CLIGetHexWithReturn(ctx, 2, data, &data_len);
+    CLIGetHexWithReturn(ctx, 2, data, &dlen);
 
     bool autoconfirm = arg_get_lit(ctx, 3);
 
@@ -536,15 +534,15 @@ static int CmdLegicWrbl(const char *Cmd) {
 
     legic_print_type(card.cardsize, 0);
 
-    if (data_len + offset > card.cardsize) {
-        PrintAndLogEx(WARNING, "Out-of-bounds, Cardsize = %d, [offset+len = %d ]", card.cardsize, data_len + offset);
+    if (dlen + offset > card.cardsize) {
+        PrintAndLogEx(WARNING, "Out-of-bounds, Cardsize = %d, [offset+len = %d ]", card.cardsize, dlen + offset);
         return PM3_EOUTOFBOUND;
     }
 
     if ((offset == 5 || offset == 6) && (! autoconfirm)) {
-        PrintAndLogEx(NORMAL, "############# DANGER ################");
-        PrintAndLogEx(NORMAL, "# changing the DCF is irreversible  #");
-        PrintAndLogEx(NORMAL, "#####################################");
+        PrintAndLogEx(INFO, "############# DANGER ################");
+        PrintAndLogEx(WARNING, "# changing the DCF is irreversible  #");
+        PrintAndLogEx(INFO, "#####################################");
         const char *confirm = "Do you really want to continue? y(es)/n(o) : ";
         bool overwrite = false;
 #ifdef HAVE_READLINE
@@ -572,7 +570,7 @@ static int CmdLegicWrbl(const char *Cmd) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_LEGIC_WRITER, offset, data_len, IV, data, data_len);
+    SendCommandOLD(CMD_HF_LEGIC_WRITER, offset, dlen, IV, data, dlen);
 
     uint8_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
@@ -758,14 +756,14 @@ static int CmdLegicDump(const char *Cmd) {
     CLIParserInit(&ctx, "hf legic dump",
                   "Read all memory from LEGIC Prime MIM22, MIM256, MIM1024 and saves bin/eml/json dump file\n"
                   "It autodetects card type.",
-                  "hf legic dump                --> use UID as filename\n"
-                  "hf legic dump -f myfile      --> use user specified filename\n"
-                  "hf legic dump --deobfuscate  --> use UID as filename and deobfuscate data");
+                  "hf legic dump             --> use UID as filename\n"
+                  "hf legic dump -f myfile   --> use user specified filename\n"
+                  "hf legic dump --de        --> use UID as filename and deobfuscate data");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<filename>", "specify a filename for dump file"),
-        arg_lit0(NULL, "deobfuscate", "deobfuscate dump data (xor with MCC)"),
+        arg_lit0(NULL, "de", "deobfuscate dump data (xor with MCC)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -775,7 +773,6 @@ static int CmdLegicDump(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     bool shall_deobsfuscate = arg_get_lit(ctx, 2);
-
     CLIParserFree(ctx);
 
     // tagtype
@@ -827,17 +824,22 @@ static int CmdLegicDump(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
+    if (shall_deobsfuscate) {
+        // Deobfuscate the whole dump. Unused data (after the last sector) will be MCC since
+        // 0x00 ^ MCC = MCC. Finding the end of used data is not part of this function.
+        if (legic_xor(data, dumplen) == false) {
+            PrintAndLogEx(FAILED, "Deobsfuscate failed, exiting...");
+            PrintAndLogEx(HINT, "Try running command without `--de` parameter");
+            free(data);
+            return PM3_EFAILED;
+        }
+    }
+
     // user supplied filename?
     if (fnlen < 1) {
         PrintAndLogEx(INFO, "Using UID as filename");
         strcat(filename, "hf-legic-");
         FillFileNameByUID(filename, data, "-dump", 4);
-    }
-
-    if (shall_deobsfuscate) {
-        // Deobfuscate the whole dump. Unused data (after the last sector) will be MCC since
-        // 0x00 ^ MCC = MCC. Finding the end of used data is not part of this function.
-        legic_xor(data, dumplen);
     }
 
     saveFile(filename, ".bin", data, readlen);
@@ -852,13 +854,13 @@ static int CmdLegicRestore(const char *Cmd) {
     CLIParserInit(&ctx, "hf legic restore",
                   "Reads binary file and it autodetects card type and verifies that the file has the same size\n"
                   "Then write the data back to card. All bytes except the first 7bytes [UID(4) MCC(1) DCF(2)]",
-                  "hf legic restore -f myfile              --> use user specified filename\n"
-                  "hf legic restore -f myfile --obfuscate  --> use UID as filename and deobfuscate data");
+                  "hf legic restore -f myfile        --> use user specified filename\n"
+                  "hf legic restore -f myfile --ob   --> use UID as filename and obfuscate data");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<filename>", "specify a filename to restore"),
-        arg_lit0(NULL, "obfuscate", "obfuscate dump data (xor with MCC)"),
+        arg_lit0(NULL, "ob", "obfuscate dump data (xor with MCC)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -868,7 +870,6 @@ static int CmdLegicRestore(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     bool shall_obsfuscate = arg_get_lit(ctx, 2);
-
     CLIParserFree(ctx);
 
     // tagtype
@@ -901,7 +902,12 @@ static int CmdLegicRestore(const char *Cmd) {
     }
 
     if (shall_obsfuscate) {
-        legic_xor(data, card.cardsize);
+        if (legic_xor(data, card.cardsize) == false){
+            PrintAndLogEx(FAILED, "Obsfuscate failed, exiting...");
+            PrintAndLogEx(HINT, "Try running command without `--ob` parameter");
+            free(data);
+            return PM3_EFAILED;
+        }
     }
 
     PrintAndLogEx(SUCCESS, "Restoring to card");
@@ -943,7 +949,7 @@ static int CmdLegicRestore(const char *Cmd) {
     }
 
     free(data);
-    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(SUCCESS, "Done!");
     return PM3_SUCCESS;
 }
 
