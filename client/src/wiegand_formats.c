@@ -505,14 +505,22 @@ static bool Unpack_H10306(wiegand_message_t *packed, wiegand_card_t *card) {
 static bool Pack_N10002(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFF) return false; // Can't encode FC.
+    if (card->FacilityCode > 0xFFFF) return false; // Can't encode FC.
     if (card->CardNumber > 0xFFFF) return false; // Can't encode CN.
     if (card->IssueLevel > 0) return false; // Not used in this format
     if (card->OEM > 0) return false; // Not used in this format
 
     packed->Length = 34; // Set number of bits
-    set_linear_field(packed, card->FacilityCode, 9, 8);
+    set_linear_field(packed, card->FacilityCode, 1, 16);
     set_linear_field(packed, card->CardNumber, 17, 16);
+
+    set_bit_by_position(packed,
+                        evenparity32(get_linear_field(packed, 1, 16))
+                        , 0);
+    set_bit_by_position(packed,
+                        oddparity32(get_linear_field(packed, 17, 16))
+                        , 33);
+
     if (preamble)
         return add_HID_header(packed);
     return true;
@@ -523,8 +531,13 @@ static bool Unpack_N10002(wiegand_message_t *packed, wiegand_card_t *card) {
 
     if (packed->Length != 34) return false; // Wrong length? Stop here.
 
+    card->FacilityCode = get_linear_field(packed, 1, 16);
     card->CardNumber = get_linear_field(packed, 17, 16);
-    card->FacilityCode = get_linear_field(packed, 9, 8);
+
+    card->ParityValid =
+        (get_bit_by_position(packed, 0) == evenparity32(get_linear_field(packed, 1, 16))) &&
+        (get_bit_by_position(packed, 33) == oddparity32(get_linear_field(packed, 17, 16)));
+   
     return true;
 }
 
@@ -1416,4 +1429,12 @@ bool HIDTryUnpack(wiegand_message_t *packed) {
     }
 
     return ((found_cnt - found_invalid_par) > 0);
+}
+
+void HIDUnpack(int idx, wiegand_message_t *packed) {
+    wiegand_card_t card;
+    memset(&card, 0, sizeof(wiegand_card_t));
+    if (FormatTable[idx].Unpack(packed, &card)) {
+        hid_print_card(&card, FormatTable[idx]);
+    }
 }

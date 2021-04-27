@@ -171,7 +171,9 @@ wiegand_message_t initialize_message_object(uint32_t top, uint32_t mid, uint32_t
 }
 
 bool add_HID_header(wiegand_message_t *data) {
-    if (data->Length > 84 || data->Length == 0) return false; // Invalid value
+    // Invalid value
+    if (data->Length > 84 || data->Length == 0)
+        return false;
 
     if (data->Length >= 64) {
         data->Top |= 1 << (data->Length - 64); // leading 1: start bit

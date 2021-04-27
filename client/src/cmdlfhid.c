@@ -416,7 +416,7 @@ static int CmdHIDClone(const char *Cmd) {
 
     if (raw_len == 0) {
         PrintAndLogEx(INFO, "Preparing to clone HID tag");
-        HIDTryUnpack(&packed);
+        HIDUnpack(format_idx, &packed);
     } else {
         PrintAndLogEx(INFO, "Preparing to clone HID tag using raw " _YELLOW_("%s"),  raw);
     }
