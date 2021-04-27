@@ -1090,6 +1090,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         arg_str0("d", "data", "<hex>", "3DES encrypted data"),
         arg_str0("k", "key", "<hex>", "3DES transport key"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "d6", "decode as block 6"),
         arg_param_end
     };
     CLIExecWithReturn(clictx, Cmd, argtable, false);
@@ -1112,6 +1113,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     CLIGetHexWithReturn(clictx, 3, key, &key_len);
 
     bool verbose = arg_get_lit(clictx, 4);
+    bool use_decode6 = arg_get_lit(clictx, 5);
     CLIParserFree(clictx);
 
     // sanity checks
@@ -1212,6 +1214,9 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             mbedtls_des3_crypt_ecb(&ctx, enc_data, dec_data);
         }
         PrintAndLogEx(SUCCESS, "Data: %s", sprint_hex(dec_data, sizeof(dec_data)));
+
+        if (use_sc && use_decode6)
+            DecodeBlock6(dec_data);
     }
 
     // decrypt dump file data
