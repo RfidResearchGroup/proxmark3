@@ -2191,7 +2191,7 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
     if (longFMT) {
         // Ensure no more than 84 bits supplied
         if (hi2 > 0xFFFFF) {
-            DbpString("Tags can only have 84 bits.");
+            DbpString("Tags can only have 84 bits");
             return;
         }
         // Build the 6 data blocks for supplied 84bit ID
@@ -2207,13 +2207,14 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
     } else {
         // Ensure no more than 44 bits supplied
         if (hi > 0xFFF) {
-            DbpString("Tags can only have 44 bits.");
+            DbpString("Tags can only have 44 bits, if you want more use long format");
             return;
         }
-        // Build the 3 data blocks for supplied 44bit ID
+        // Build the 3 data blocks for supplied 44bit
         last_block = 3;
         // load preamble
-        data[1] = 0x1D000000 | (manchesterEncode2Bytes(hi) & 0xFFFFFF);
+        //  24 bits left.  ie 12 bits of data, not 16..
+        data[1] = 0x1D000000 | (manchesterEncode2Bytes(hi & 0xFFF) & 0xFFFFFF);
         data[2] = manchesterEncode2Bytes(lo >> 16);
         data[3] = manchesterEncode2Bytes(lo & 0xFFFF);
     }
@@ -2230,6 +2231,15 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
     LED_D_ON();
     if (em) {
         Dbprintf("Clone HID Prox to EM4x05 is untested and disabled until verified");
+        if (DBGLEVEL == DBG_DEBUG) {
+            Dbprintf("# | data ( EM4x05 )");
+            Dbprintf("--+----------------");
+            Dbprintf("0 | ", data[0]);
+            Dbprintf("1 | ", data[1]);
+            Dbprintf("2 | ", data[2]);
+            Dbprintf("3 | ", data[3]);
+            Dbprintf("--+----------------");
+        }
         //WriteEM4x05(data, 0, last_block + 1);
     } else {
         WriteT55xx(data, 0, last_block + 1);
