@@ -481,8 +481,8 @@ void askAmp(uint8_t *bits, size_t size) {
 uint32_t manchesterEncode2Bytes(uint16_t datain) {
     uint32_t output = 0;
     for (uint8_t i = 0; i < 16; i++) {
-        uint8_t curBit = (datain >> (15 - i) & 1);
-        output |= (1 << (((15 - i) * 2) + curBit));
+        uint8_t b = (datain >> (15 - i) & 1);
+        output |= (1 << (((15 - i) * 2) + b));
     }
     return output;
 }
