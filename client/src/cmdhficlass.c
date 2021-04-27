@@ -3222,8 +3222,8 @@ static int CmdHFiClassLookUp(const char *Cmd) {
         arg_str1(NULL, "csn", "<hex>", "Specify CSN as 8 hex bytes"),
         arg_str1(NULL, "epurse", "<hex>", "Specify ePurse as 8 hex bytes"),
         arg_str1(NULL, "macs", "<hex>", "MACs"),
-        arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0(NULL, "elite", "Elite computations applied to key"),
+        arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
