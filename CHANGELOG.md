@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf iclass lookup` - fixed swapped args (@iceman1001)
+ - Changed `hf iclass decrypt` - added the possibility to decode the data as block6 if you have a cardhelper (@iceman1001)
+ - Changed `weigand decode` - removed -p param since we wanna see all encodings anyway (@iceman1001)
+ - Changed `wiegand decode` - when bin string is supplied, use that exact length instead (@iceman1001)
+ - Added a bunch more wiegand formats (@iceman1001)
  - Added `lf idteck clone` - now supports creating using raw values (@iceman1001)
  - Changed calypso scripts to work with NG (@iceman1001)
  - Changed HF 14b - fixed timings on device side (@iceman1001)
