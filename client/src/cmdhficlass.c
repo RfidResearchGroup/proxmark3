@@ -1309,8 +1309,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Binary..................... " _GREEN_("%s"), binstr + i);
 
             PrintAndLogEx(INFO, "Wiegand decode");
-            wiegand_message_t packed = initialize_message_object(top, mid, bot);
-            HIDTryUnpack(&packed, true);
+            wiegand_message_t packed = initialize_message_object(top, mid, bot, strlen(binstr + i));
+            HIDTryUnpack(&packed);
 
         } else {
             PrintAndLogEx(INFO, "No credential found");
@@ -2335,8 +2335,8 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "      bin : %s", binstr + i);
                 PrintAndLogEx(INFO, "");
                 PrintAndLogEx(INFO, "------------------------------ " _CYAN_("wiegand") " -------------------------------");
-                wiegand_message_t packed = initialize_message_object(top, mid, bot);
-                HIDTryUnpack(&packed, true);
+                wiegand_message_t packed = initialize_message_object(top, mid, bot, strlen(binstr + i));
+                HIDTryUnpack(&packed);
             } else {
                 PrintAndLogEx(INFO, "no credential found");
             }

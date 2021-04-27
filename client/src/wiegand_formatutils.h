@@ -42,7 +42,7 @@ bool set_linear_field(wiegand_message_t *data, uint64_t value, uint8_t firstBit,
 uint64_t get_nonlinear_field(wiegand_message_t *data, uint8_t numBits, uint8_t *bits);
 bool set_nonlinear_field(wiegand_message_t *data, uint64_t value, uint8_t numBits, uint8_t *bits);
 
-wiegand_message_t initialize_message_object(uint32_t top, uint32_t mid, uint32_t bot);
+wiegand_message_t initialize_message_object(uint32_t top, uint32_t mid, uint32_t bot, int n);
 
 bool add_HID_header(wiegand_message_t *data);
 

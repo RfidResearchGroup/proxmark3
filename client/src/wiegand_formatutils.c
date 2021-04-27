@@ -156,14 +156,17 @@ static uint8_t get_length_from_header(wiegand_message_t *data) {
     return len;
 }
 
-wiegand_message_t initialize_message_object(uint32_t top, uint32_t mid, uint32_t bot) {
+wiegand_message_t initialize_message_object(uint32_t top, uint32_t mid, uint32_t bot, int n) {
     wiegand_message_t result;
     memset(&result, 0, sizeof(wiegand_message_t));
 
     result.Top = top;
     result.Mid = mid;
     result.Bot = bot;
-    result.Length = get_length_from_header(&result);
+    if (n > 0)
+        result.Length = n;
+    else
+        result.Length = get_length_from_header(&result);
     return result;
 }
 

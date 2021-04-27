@@ -140,8 +140,8 @@ int demodHID(bool verbose) {
         return PM3_ESOFT;
     }
 
-    wiegand_message_t packed = initialize_message_object(hi2, hi, lo);
-    if (HIDTryUnpack(&packed, false) == false) {
+    wiegand_message_t packed = initialize_message_object(hi2, hi, lo, 0);
+    if (HIDTryUnpack(&packed) == false) {
         printDemodBuff(0, false, false, true);
     }
     PrintAndLogEx(INFO, "raw: " _GREEN_("%08x%08x%08x"), hi2, hi, lo);
@@ -292,7 +292,7 @@ static int CmdHIDSim(const char *Cmd) {
 
     if (raw_len == 0) {
         PrintAndLogEx(INFO, "Simulating HID tag");
-        HIDTryUnpack(&packed, false);
+        HIDTryUnpack(&packed);
     } else {
         PrintAndLogEx(INFO, "Simulating HID tag using raw " _GREEN_("%s"),  raw);
     }
@@ -416,7 +416,7 @@ static int CmdHIDClone(const char *Cmd) {
 
     if (raw_len == 0) {
         PrintAndLogEx(INFO, "Preparing to clone HID tag");
-        HIDTryUnpack(&packed, false);
+        HIDTryUnpack(&packed);
     } else {
         PrintAndLogEx(INFO, "Preparing to clone HID tag using raw " _YELLOW_("%s"),  raw);
     }
