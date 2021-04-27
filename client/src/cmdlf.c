@@ -1363,16 +1363,16 @@ int CmdLFfind(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    if (search_cont) {
+        PrintAndLogEx(INFO, "Continuous search enabled");
+    }
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "NOTE: some demods output possible binary");
     PrintAndLogEx(INFO, "if it finds something that looks like a tag");
     PrintAndLogEx(INFO, "False Positives " _YELLOW_("ARE") " possible");
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "Checking for known tags...");
-    if (search_cont)
-        PrintAndLogEx(INFO, "We'll go over all possible demods");
-    else
-        PrintAndLogEx(INFO, "We'll stop at first hit");
     PrintAndLogEx(INFO, "");
 
     // only run these tests if device is online
