@@ -1211,7 +1211,7 @@ static bool Unpack_pw39(wiegand_message_t *packed, wiegand_card_t *card) {
 void print_desc_wiegand(cardformat_t *fmt, wiegand_message_t *packed) {
 
     char *s = calloc(128, sizeof(uint8_t));
-    sprintf(s, _YELLOW_("%-10s")" %-30s",  fmt->Name, fmt->Descrp);
+    sprintf(s, _YELLOW_("%-10s")" %-32s",  fmt->Name, fmt->Descrp);
 
     if (packed->Top != 0) {
         PrintAndLogEx(SUCCESS, "%s -> " _GREEN_("%X%08X%08X"),
@@ -1285,7 +1285,7 @@ static void hid_print_card(wiegand_card_t *card, const cardformat_t format) {
     if (format.Fields.hasParity)
         snprintf(s + strlen(s), sizeof(s) - strlen(s), "  parity ( %s )", card->ParityValid ? _GREEN_("ok") : _RED_("fail"));
 
-    PrintAndLogEx(SUCCESS, "[%-8s] %-30s %s", format.Name, format.Descrp, s);
+    PrintAndLogEx(SUCCESS, "[%-8s] %-32s %s", format.Name, format.Descrp, s);
 }
 
 static const cardformat_t FormatTable[] = {
@@ -1305,7 +1305,7 @@ static const cardformat_t FormatTable[] = {
     {"WIE32",   Pack_wie32,   Unpack_wie32,   "Wiegand 32-bit",             {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au 
     {"D10202",  Pack_D10202,  Unpack_D10202,  "HID D10202 33-bit",          {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"H10306",  Pack_H10306,  Unpack_H10306,  "HID H10306 34-bit",          {1, 1, 0, 0, 1}}, // imported from old pack/unpack
-    {"N10002",  Pack_N10002,  Unpack_N10002,  "HID N10002 34-bit",          {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"N10002",  Pack_N10002,  Unpack_N10002,  "Honeywell/Northern N10002 34-bit", {1, 1, 0, 0, 0}}, // from proxclone.com
     {"Optus34", Pack_Optus,   Unpack_Optus,   "Indala Optus 34-bit",        {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"SMP34",   Pack_Smartpass, Unpack_Smartpass, "Cardkey Smartpass 34-bit", {1, 1, 1, 0, 0}}, // from cardinfo.barkweb.com.au
     {"BQT34",   Pack_bqt34,   Unpack_bqt34,   "BQT 34-bit",                 {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
