@@ -342,7 +342,7 @@
         "Country": "NZ",
         "Name": "Access control",
         "Description": "Card Application Directory (CAD)",
-        "Type": ""
+        "Type": "pacs"
     },
     {
         "AID": "2081F4",
@@ -350,7 +350,7 @@
         "Country": "NZ",
         "Name": "Access control",
         "Description": "Cardax Card Data Application",
-        "Type": ""
+        "Type": "pacs"
     },
     {
         "AID": "6F706C",
@@ -358,6 +358,14 @@
         "Country": "US",
         "Name": "Access control",
         "Description": "Openpath PACS Application",
-        "Type": ""
-    }   
+        "Type": "pacs"
+    },
+    {
+        "AID": "554E49",
+        "Vendor": "University of Ljubljana",
+        "Country": "SI",
+        "Name": "University of Ljubljana Student ID",
+        "Description": "",
+        "Type": "student"
+    }
 ]
