@@ -14,7 +14,6 @@
 
 #include "common.h"
 
-#define BIGBUF_SIZE             40000
 #define MAX_FRAME_SIZE          256 // maximum allowed ISO14443 frame
 #define MAX_PARITY_SIZE         ((MAX_FRAME_SIZE + 7) / 8)
 #define MAX_MIFARE_FRAME_SIZE   18  // biggest Mifare frame is answer to a read (one block = 16 Bytes) + 2 Bytes CRC
@@ -23,8 +22,10 @@
 #define DMA_BUFFER_SIZE         256 //128  (how big is the dma?!?
 
 uint8_t *BigBuf_get_addr(void);
+uint32_t BigBuf_get_size(void);
 uint8_t *BigBuf_get_EM_addr(void);
 uint16_t BigBuf_max_traceLen(void);
+void BigBuf_initialize(void);
 void BigBuf_Clear(void);
 void BigBuf_Clear_ext(bool verbose);
 void BigBuf_Clear_keep_EM(void);

@@ -190,7 +190,6 @@ unsigned long hexreversetoulong(char *hex) {
 
 // convert byte-reversed 12 digit hex to unsigned long
 unsigned long long hexreversetoulonglong(char *hex) {
-    unsigned long long ret = 0LL;
     char tmp[9];
 
     // this may seem an odd way to do it, but weird compiler issues were
@@ -199,7 +198,7 @@ unsigned long long hexreversetoulonglong(char *hex) {
     tmp[8] = '\0';
     memset(tmp + 4, '0', 4);
     memcpy(tmp, hex + 8, 4);
-    ret = hexreversetoulong(tmp);
+    unsigned long long ret = hexreversetoulong(tmp);
     ret <<= 32;
     memcpy(tmp, hex, 8);
     ret += hexreversetoulong(tmp);

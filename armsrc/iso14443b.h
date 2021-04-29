@@ -26,7 +26,7 @@
 # define AddCrc14B(data, len) compute_crc(CRC_14443_B, (data), (len), (data)+(len), (data)+(len)+1)
 #endif
 
-void iso14443b_setup();
+void iso14443b_setup(void);
 uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *response);
 uint8_t iso14443b_select_card(iso14b_card_select_t *card);
 uint8_t iso14443b_select_card_srx(iso14b_card_select_t *card);

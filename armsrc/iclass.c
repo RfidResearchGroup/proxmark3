@@ -520,7 +520,7 @@ static RAMFUNC int OutOfNDecoding(int bit) {
 // Manchester
 //=============================================================================
 static tDemodIc Demod;
-static void DemodIcReset() {
+static void DemodIcReset(void) {
     Demod.bitCount = 0;
     Demod.posCount = 0;
     Demod.syncBit = 0;
@@ -985,7 +985,7 @@ void RAMFUNC SniffIClass(void) {
     switch_off();
 }
 
-void rotateCSN(uint8_t *originalCSN, uint8_t *rotatedCSN) {
+static void rotateCSN(uint8_t *originalCSN, uint8_t *rotatedCSN) {
     int i;
     for (i = 0; i < 8; i++)
         rotatedCSN[i] = (originalCSN[i] >> 3) | (originalCSN[(i + 1) % 8] << 5);
@@ -1146,7 +1146,7 @@ static void CodeIClassTagAnswer(const uint8_t *cmd, int len) {
 }
 
 // Only SOF
-static void CodeIClassTagSOF() {
+static void CodeIClassTagSOF(void) {
     //So far a dummy implementation, not used
     //int lastProxToAirDuration =0;
 
@@ -1757,7 +1757,7 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *wait) {
 //-----------------------------------------------------------------------------
 // Prepare iClass reader command to send to FPGA
 //-----------------------------------------------------------------------------
-void CodeIClassCommand(const uint8_t *cmd, int len) {
+static void CodeIClassCommand(const uint8_t *cmd, int len) {
     int i, j, k;
 
     ToSendReset();
@@ -1793,7 +1793,7 @@ void CodeIClassCommand(const uint8_t *cmd, int len) {
     ToSendMax++;
 }
 
-void ReaderTransmitIClass_ext(uint8_t *frame, int len, int wait) {
+static void ReaderTransmitIClass_ext(uint8_t *frame, int len, int wait) {
 
     // This is tied to other size changes
     CodeIClassCommand(frame, len);
@@ -1802,9 +1802,9 @@ void ReaderTransmitIClass_ext(uint8_t *frame, int len, int wait) {
     TransmitIClassCommand(ToSend, ToSendMax, &wait);
     LED_A_ON();
 
-    LogTrace(frame, len, rsamples, rsamples, NULL, true);
+    LogTrace(frame, len, g_rsamples, g_rsamples, NULL, true);
 }
-void ReaderTransmitIClass(uint8_t *frame, int len) {
+static void ReaderTransmitIClass(uint8_t *frame, int len) {
     ReaderTransmitIClass_ext(frame, len, 330);
 }
 
@@ -1862,16 +1862,16 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *wait) {
     return false;
 }
 
-int ReaderReceiveIClass(uint8_t *receivedAnswer) {
+static int ReaderReceiveIClass(uint8_t *receivedAnswer) {
 
     if (GetIClassAnswer(receivedAnswer, 0, NULL) == false)
         return 0;
 
-    LogTrace(receivedAnswer, Demod.len, rsamples, rsamples, NULL, false);
+    LogTrace(receivedAnswer, Demod.len, g_rsamples, g_rsamples, NULL, false);
     return Demod.len;
 }
 
-void setupIclassReader() {
+static void setupIclassReader(void) {
 
     LEDsoff();
 
@@ -1898,7 +1898,7 @@ void setupIclassReader() {
     LED_A_ON();
 }
 
-bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *resp, uint8_t expected_size, int8_t retries) {
+static bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *resp, uint8_t expected_size, int8_t retries) {
     while (retries-- > 0) {
 
         ReaderTransmitIClass(command, cmdsize);
@@ -1935,7 +1935,7 @@ bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *re
  *         1 = Got CSN
  *         2 = Got CSN and CC
  */
-uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
+static uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
 
     // act_all...
     static uint8_t act_all[]      = { ICLASS_CMD_ACTALL };
@@ -2000,7 +2000,7 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
     // we got all data;
     return 2;
 }
-uint8_t handshakeIclassTag(uint8_t *card_data) {
+static uint8_t handshakeIclassTag(uint8_t *card_data) {
     return handshakeIclassTag_ext(card_data, false);
 }
 
@@ -2458,7 +2458,7 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks) {
     BigBuf_free();
 }
 
-bool iClass_WriteBlock_ext(uint8_t blockno, uint8_t *data) {
+static bool iClass_WriteBlock_ext(uint8_t blockno, uint8_t *data) {
     uint8_t resp[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t write[] = { 0x80 | ICLASS_CMD_UPDATE, blockno, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     memcpy(write + 2, data, 12); // data + mac

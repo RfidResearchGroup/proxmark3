@@ -12,6 +12,8 @@
 #ifndef __HFSNOOP_H
 #define __HFSNOOP_H
 
-void HfSniff(int, int);
+#include "proxmark3_arm.h"
+
+int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len);
 void HfPlotDownload(void);
 #endif

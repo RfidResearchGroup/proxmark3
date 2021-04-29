@@ -16,7 +16,7 @@ local ansicolors  = require('ansicolors')
     6. calculate new crc on each segment (needs to know the new MCD & MSN0..2)
 
   simplest usage:
-    Dump a legic tag with 'hf legic dump' 
+    Dump a legic tag with 'hf legic dump'
     place your 'empty' tag on the reader and run
         'script run legic_clone -i orig.bin -w'
 
@@ -359,7 +359,7 @@ local function displaySegments(bytes)
         pld = ''
         Seg = getSegmentData(bytes, start, index)
         if Seg == nil then return OOps("segment is nil") end
-        
+
         KGH = CheckKgh(bytes, start, (start + tonumber(Seg[4], 10)))
 
         printSegment(Seg)

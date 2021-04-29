@@ -15,10 +15,6 @@
 
 #include "pm3_cmd.h" // struct
 
-extern uint8_t decimation;
-extern uint8_t bits_per_sample ;
-extern bool averaging;
-
 void AcquireRawAdcSamples125k(int divisor);
 void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint32_t period_1, uint8_t *command);
 void ReadTItag(void);

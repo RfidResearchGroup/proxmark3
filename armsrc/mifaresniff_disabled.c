@@ -308,7 +308,7 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, ui
 }
 */
 
-void RAMFUNC MfSniffSend() {
+void RAMFUNC MfSniffSend(void) {
     uint16_t tracelen = BigBuf_get_traceLen();
     int packlen = tracelen; // total number of bytes to send
     uint8_t *data = BigBuf_get_addr();

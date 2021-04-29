@@ -1,3 +1,6 @@
+#ifndef HT2CRACKUTILS_H
+#define HT2CRACKUTILS_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -41,3 +44,5 @@ void buildlfsr(Hitag_State *hstate);
 #define rev64(X)  (rev32(X) + (rev32(X >> 32) << 32))
 unsigned long hexreversetoulong(char *hex);
 unsigned long long hexreversetoulonglong(char *hex);
+
+#endif /* HT2CRACKUTILS_H */

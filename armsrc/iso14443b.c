@@ -100,7 +100,7 @@ static struct {
     uint8_t  *output;
 } Uart;
 
-static void Uart14bReset() {
+static void Uart14bReset(void) {
     Uart.state = STATE_14B_UNSYNCD;
     Uart.shiftReg = 0;
     Uart.bitCnt = 0;
@@ -143,7 +143,7 @@ static struct {
 } Demod;
 
 // Clear out the state of the "UART" that receives from the tag.
-static void Demod14bReset() {
+static void Demod14bReset(void) {
     Demod.state = DEMOD_UNSYNCD;
     Demod.bitCount = 0;
     Demod.posCount = 0;
@@ -690,9 +690,9 @@ void SimulateIso14443bTag(uint32_t pupi) {
         if (cardSTATE == SIM_NOFIELD) {
 
 #if defined RDV4
-            vHf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+            vHf = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
 #else
-            vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+            vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
 #endif
             if (vHf > MF_MINFIELDV) {
                 cardSTATE = SIM_IDLE;
@@ -817,7 +817,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 
 // The soft decision on the bit uses an estimate of just the
 // quadrant of the reference angle, not the exact angle.
-#define MAKE_SOFT_DECISION() { \
+#define MAKE_SOFT_DECISION(void) { \
         if (Demod.sumI > 0) { \
             v = ci; \
         } else { \
@@ -832,7 +832,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 
 // Subcarrier amplitude v = sqrt(ci^2 + cq^2), approximated here by abs(ci) + abs(cq)
 // Subcarrier amplitude v = sqrt(ci^2 + cq^2), approximated here by max(abs(ci),abs(cq)) + 1/2*min(abs(ci),abs(cq)))
-#define CHECK_FOR_SUBCARRIER_old() { \
+#define CHECK_FOR_SUBCARRIER_old(void) { \
         if (ci < 0) { \
             if (cq < 0) { /* ci < 0, cq < 0 */ \
                 if (cq < ci) { \
@@ -865,7 +865,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
     }
 
 //note: couldn't we just use MAX(ABS(ci),ABS(cq)) + (MIN(ABS(ci),ABS(cq))/2) from common.h - marshmellow
-#define CHECK_FOR_SUBCARRIER() { v = MAX(myI, myQ) + (MIN(myI, myQ) >> 1); }
+#define CHECK_FOR_SUBCARRIER(void) { v = MAX(myI, myQ) + (MIN(myI, myQ) >> 1); }
 
     switch (Demod.state) {
         case DEMOD_UNSYNCD:
@@ -1016,7 +1016,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
  *  Demodulate the samples we received from the tag, also log to tracebuffer
  *  quiet: set to 'TRUE' to disable debug output
  */
-static void GetTagSamplesFor14443bDemod() {
+static void GetTagSamplesFor14443bDemod(void) {
     bool finished = false;
 //    int lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
     uint32_t time_0 = 0, time_stop = 0;
@@ -1202,9 +1202,9 @@ static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len) {
 
     TransmitFor14443b_AsReader();
 
-    if (trigger) LED_A_ON();
+    if (g_trigger) LED_A_ON();
 
-    LogTrace(cmd, len, time_start, GetCountSspClk() - time_start, NULL, true);
+    LogTrace(cmd, len, time_start, GetCountSspClk(), NULL, true);
 }
 
 /* Sends an APDU to the tag
@@ -1247,7 +1247,7 @@ uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *r
 /**
 * SRx Initialise.
 */
-uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card) {
+static uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card) {
     // INITIATE command: wake up the tag using the INITIATE
     static const uint8_t init_srx[] = { ISO14443B_INITIATE, 0x00, 0x97, 0x5b };
     // SELECT command (with space for CRC)
@@ -1384,7 +1384,7 @@ uint8_t iso14443b_select_card(iso14b_card_select_t *card) {
 
 // Set up ISO 14443 Type B communication (similar to iso14443a_setup)
 // field is setup for "Sending as Reader"
-void iso14443b_setup() {
+void iso14443b_setup(void) {
     LEDsoff();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
@@ -1629,8 +1629,8 @@ void RAMFUNC SniffIso14443b(void) {
     switch_off();
 }
 
-void iso14b_set_trigger(bool enable) {
-    trigger = enable;
+static void iso14b_set_trigger(bool enable) {
+    g_trigger = enable;
 }
 
 /*

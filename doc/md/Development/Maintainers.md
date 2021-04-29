@@ -49,9 +49,37 @@ and it will be added along the other firmware as:
 
 For verbose usage and see the actual commands being executed, add `V=1`.
 
-`CFLAGS` and `LDFLAGS` can be overriden by environment variables.
+`CFLAGS` and `LDFLAGS` can be overriden by environment variables for client-side components.
+
+`CROSS_CFLAGS` and `CROSS_LDFLAGS` can be overriden by environment variables for ARM-side components.
 
 Default compiler is gcc but you can use clang for the non-ARM parts with e.g. `make client CC=clang CXX=clang++ LD=clang++`.
+
+If your platform needs specific lib/include paths for the client, you can use `LDLIBS` and `INCLUDES_CLIENT` *as envvars*, e.g. `LDLIBS="-L/some/more/lib" INCLUDES_CLIENT="-I/some/more/include" make client ...`
+
+It's also possible to skip parts even if libraries are present in the compilation environment:
+
+* `make client SKIPQT=1` to skip GUI even if Qt is present
+* `make client SKIPBT=1` to skip native Bluetooth support even if libbluetooth is present
+* `make client SKIPPYTHON=1` to skip embedded Python 3 interpreter even if libpython3 is present
+* `make client SKIPLUASYSTEM=1` to skip system Lua lib even if liblua5.2 is present, use embedded Lua lib instead
+* `make client SKIPJANSSONSYSTEM=1` to skip system Jansson lib even if libjansson is present, use embedded Jansson lib instead
+* `make client SKIPWHEREAMISYSTEM=1` to skip system Whereami lib even if libwhereami is present, use embedded whereami lib instead
+
+If you're cross-compiling, these ones might be useful:
+
+* `make client SKIPREVENGTEST=1` to skip compilation and execution of a consistency test for reveng, which can be problematic in case of cross-compilation
+* `make client cpu_arch=generic` to skip Intel specialized hardnested components, which is required e.g. if cross-compilation host is Intel but not the target
+
+On some architectures, pthread library is not present:
+
+* `make client SKIPPTHREAD=1` to skip `-lpthread` at linker stage.
+
+One tool requires a CUDA compilation environment, it can be skipped as well:
+
+* `make hitag2crack SKIPGPU=1` to skip ht2crack5gpu tool when compiling the hitag2crack toolsuite.
+
+Some unittests are available via `make check`, which is actually triggering individual targets as for `make install`.
 
 `make install` is actually triggering the following individual targets which can be accessed individually:
 
@@ -70,4 +98,4 @@ Default compiler is gcc but you can use clang for the non-ARM parts with e.g. `m
   * SIM firmware
   * udev rule on Linux
 
-Same logic for `make all`, `make clean`, `make uninstall`
+Same logic for `make all`, `make clean`, `make uninstall` and `make check`.

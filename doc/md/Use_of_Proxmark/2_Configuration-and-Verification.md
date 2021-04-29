@@ -1,16 +1,16 @@
 ### First things on your RDV40
 You will need to run these commands to make sure your rdv4 is prepared
 ```
-pm3 --> mem load f mfc_default_keys m
-pm3 --> mem load f t55xx_default_pwds t
-pm3 --> mem load f iclass_default_keys i
-pm3 --> lf t55xx deviceconfig a 29 b 17 c 15 d 47 e 15 p
-pm3 --> lf t55xx deviceconfig r 1 a 31 b 20 c 18 d 50 e 15 p
-pm3 --> lf t55xx deviceconfig r 2 a 31 b 20 c 18 d 40 e 15 p
-pm3 --> lf t55xx deviceconfig r 3 a 29 b 17 c 15 d 31 e 15 f 47 g 63 p
+[usb] pm3 --> mem load f mfc_default_keys m
+[usb] pm3 --> mem load f t55xx_default_pwds t
+[usb] pm3 --> mem load f iclass_default_keys i
+[usb] pm3 --> lf t55xx deviceconfig a 29 b 17 c 15 d 47 e 15 p
+[usb] pm3 --> lf t55xx deviceconfig r 1 a 31 b 20 c 18 d 50 e 15 p
+[usb] pm3 --> lf t55xx deviceconfig r 2 a 31 b 20 c 18 d 40 e 15 p
+[usb] pm3 --> lf t55xx deviceconfig r 3 a 29 b 17 c 15 d 31 e 15 f 47 g 63 p
 
 Set all t55xx settings to defaults (will set all 4 at once)
-pm3 --> lf t55xx deviceconfig z p
+[usb] pm3 --> lf t55xx deviceconfig z p
 ```
 
 ### Verify sim module firmware version
@@ -20,7 +20,7 @@ To make sure you got the latest sim module firmware.
 _Lastest version is v3.11_
 
 ```
-pm3 --> hw status
+[usb] pm3 --> hw status
 ```
 
 Find version in the long output,  look for these two lines
@@ -46,9 +46,9 @@ Don't not turn off your device during the execution of this command!!
 Even its a quite fast command you should be warned.  You may brick it if you interrupt it.
 
 ```
-pm3 --> sc upgrade f /usr/local/share/proxmark3/firmware/sim011.bin
+[usb] pm3 --> sc upgrade f /usr/local/share/proxmark3/firmware/sim011.bin
 # or if from local repo
-pm3 --> sc upgrade f tools/simmodule/sim011.bin
+[usb] pm3 --> sc upgrade f tools/simmodule/sim011.bin
 ```
 
 You get the following output if the execution was successful:
@@ -71,7 +71,7 @@ You get the following output if the execution was successful:
 Run hw status command to verify that the upgrade went well.
 
 ```
-pm3 --> hw status
+[usb] pm3 --> hw status
 ```
 
 ## Next steps

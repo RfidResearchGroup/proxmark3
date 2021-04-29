@@ -18,8 +18,6 @@
 #include "string.h"
 #include "flashmem.h"
 
-void Dbprintf(const char *fmt, ...);
-
 //#include <stddef.h>
 //#include <unistd.h>
 // ----------- >8 ------------

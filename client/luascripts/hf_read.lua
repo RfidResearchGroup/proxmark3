@@ -59,7 +59,7 @@ local function main(args)
     for o, a in getopt.getopt(args, 'h') do
         if o == 'h' then return help() end
     end
-    
+
     print("WORK IN PROGRESS - not expected to be functional yet")
     info, err = reader.waitForTag()
 

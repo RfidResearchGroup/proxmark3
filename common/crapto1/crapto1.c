@@ -26,7 +26,7 @@
 
 #if !defined LOWMEM && defined __GNUC__
 static uint8_t filterlut[1 << 20];
-static void __attribute__((constructor)) fill_lut() {
+static void __attribute__((constructor)) fill_lut(void) {
     uint32_t i;
     for (i = 0; i < 1 << 20; ++i)
         filterlut[i] = filter(i);

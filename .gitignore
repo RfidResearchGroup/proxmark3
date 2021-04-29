@@ -30,16 +30,29 @@ version.c
 *.json
 *.old
 *.swp
+*.json.bak
+*.pyc
 
 # new build file for add-ons.
 Makefile.platform
 # Cache for detecting platform def changes
 .Makefile.options.cache
 
-!client/hardnested/*.bin
-!client/hardnested/tables/*.z
-client/ui/ui_overlays.h
-client/reveng/bmptst
+# cmake
+client/build/
+client/android/build/
+
+# Coverity
+cov-int/
+.coverity.conf
+
+# profiling
+*.gcno
+
+!client/resources/hardnested/*.bin
+!client/resources/hardnested_tables/*.z
+client/src/ui/ui_overlays.h
+client/deps/reveng/bmptst
 
 hardnested_stats.txt
 proxmark3
@@ -48,9 +61,9 @@ flasher
 !flasher/
 lua
 luac
-fpga_compress
-mfkey32
-mfkey64
+tools/fpga_compress/fpga_compress
+tools/mfkey/mfkey32
+tools/mfkey/mfkey64
 tools/nonce2key/nonce2key
 
 fpga/*
@@ -64,14 +77,18 @@ fpga/*
 !fpga/xst_hf.scr
 !fpga/go.bat
 !fpga/sim.tcl
+# offcial dumps folder
+dumps/*
 
 #client/*
 # my own traces folder
 client/traces/*
+# my own dumps folder
+client/dumps/*
 *.ice
 *.new
 armsrc/TEMP EMV/*
-tools/mf_nonce_brute/*
+tools/mf_nonce_brute/mf_nonce_brute
 tools/andrew/*
 tools/jtag_openocd/openocd_configuration
 ppls patches/*
@@ -83,3 +100,6 @@ client/lualibs/pm3_cmd.lua
 fpga_version_info.c
 
 .proxmark3/*
+
+# .tmp files are created during compilation
+*.tmp

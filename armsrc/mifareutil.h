@@ -75,7 +75,7 @@ int mifare_ultra_auth(uint8_t *keybytes);
 int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData);
 //int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData);
 int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData);
-int mifare_ultra_halt();
+int mifare_ultra_halt(void);
 
 // desfire
 int mifare_sendcmd_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t *data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing);

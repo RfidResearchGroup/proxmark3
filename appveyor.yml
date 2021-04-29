@@ -187,7 +187,7 @@ build_script:
 
     #make
 
-    bash -c -i 'pwd;make clean;make all'
+    bash -c -i 'pwd;make clean;make V=1'
 
 
     #some checks
@@ -204,7 +204,7 @@ build_script:
 
     }
 
-    if(!(Test-Path C:\ProxSpace\pm3\client\resources\hardnested_tables\*.bin.z)){
+    if(!(Test-Path C:\ProxSpace\pm3\client\resources\hardnested_tables\*.bin.bz2)){
 
     throw "Files in client\resources\hardnested_tables is not exists."
 
@@ -371,7 +371,7 @@ test_script:
 
     ExecTest "arm recovery image exists" "proxmark3_recovery.bin" {Test-Path C:\ProxSpace\pm3\Release\share\proxmark3\firmware\proxmark3_recovery.bin}
 
-    ExecTest "hardnested tables exists" "hardnested" {Test-Path C:\ProxSpace\pm3\Release\share\proxmark3\resources\hardnested_tables\*.z}
+    ExecTest "hardnested tables exists" "hardnested" {Test-Path C:\ProxSpace\pm3\Release\share\proxmark3\resources\hardnested_tables\*.bz2}
 
     ExecTest "release exists" "release.zip" {Test-Path C:\ProxSpace\release.zip}
 

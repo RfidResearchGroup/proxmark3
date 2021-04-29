@@ -18,9 +18,21 @@
     Copyright (C) 2008-2008 bla <blapost@gmail.com>
 */
 #include <stdlib.h>
-
 #include "crapto1.h"
 #include "parity.h"
+
+#ifdef __OPTIMIZE_SIZE__
+int filter(uint32_t const x) {
+    uint32_t f;
+
+    f  = 0xf22c0 >> (x       & 0xf) & 16;
+    f |= 0x6c9c0 >> (x >>  4 & 0xf) &  8;
+    f |= 0x3c8b0 >> (x >>  8 & 0xf) &  4;
+    f |= 0x1e458 >> (x >> 12 & 0xf) &  2;
+    f |= 0x0d938 >> (x >> 16 & 0xf) &  1;
+    return BIT(0xEC57E80A, f);
+}
+#endif
 
 #define SWAPENDIAN(x)\
     (x = (x >> 8 & 0xff00ff) | (x & 0xff00ff) << 8, x = x >> 16 | x << 16)
@@ -34,7 +46,6 @@ void crypto1_init(struct Crypto1State *state, uint64_t key) {
         state->odd  = state->odd  << 1 | BIT(key, (i - 1) ^ 7);
         state->even = state->even << 1 | BIT(key, i ^ 7);
     }
-    return;
 }
 
 void crypto1_deinit(struct Crypto1State *state) {
@@ -42,9 +53,9 @@ void crypto1_deinit(struct Crypto1State *state) {
     state->even = 0;
 }
 
-#if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks malloc()/free()
+#if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks calloc()/free()
 struct Crypto1State *crypto1_create(uint64_t key) {
-    struct Crypto1State *state = malloc(sizeof(*state));
+    struct Crypto1State *state = calloc(sizeof(*state), sizeof(uint8_t));
     if (!state) return NULL;
     crypto1_init(state, key);
     return state;

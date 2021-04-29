@@ -18,7 +18,7 @@
 #include "commonutil.h"
 #include "crc16.h"
 #include "protocols.h"
-#include "des.h"
+#include "desfire_crypto.h"
 
 int DBGLEVEL = DBG_ERROR;
 
@@ -296,7 +296,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     memcpy(enc_random_b, resp + 1, 8);
 
     // decrypt nonce.
-    tdes_2key_dec((void *)random_b, (void *)enc_random_b, sizeof(random_b), (const void *)key, IV);
+    tdes_nxp_receive((void *)enc_random_b, (void *)random_b, sizeof(random_b), (const void *)key, IV, 2);
     rol(random_b, 8);
     memcpy(rnd_ab, random_a, 8);
     memcpy(rnd_ab + 8, random_b, 8);
@@ -316,7 +316,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     }
 
     // encrypt    out, in, length, key, iv
-    tdes_2key_enc(rnd_ab, rnd_ab, sizeof(rnd_ab), key, enc_random_b);
+    tdes_nxp_send(rnd_ab, rnd_ab, sizeof(rnd_ab), key, enc_random_b, 2);
 
     len = mifare_sendcmd(MIFARE_ULC_AUTH_2, rnd_ab, sizeof(rnd_ab), resp, respPar, NULL);
     if (len != 11) {
@@ -329,7 +329,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     memcpy(enc_resp, resp + 1, 8);
 
     // decrypt    out, in, length, key, iv
-    tdes_2key_dec(resp_random_a, enc_resp, 8, key, enc_random_b);
+    tdes_nxp_receive(enc_resp, resp_random_a, 8, key, enc_random_b, 2);
     if (memcmp(resp_random_a, random_a, 8) != 0) {
         if (DBGLEVEL >= DBG_ERROR) Dbprintf("failed authentication");
         return 0;
@@ -355,7 +355,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     return 1;
 }
 
-int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
+static int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
     uint16_t len = 0;
     uint8_t bt[2] = {0x00, 0x00};
     uint8_t receivedAnswer[MAX_FRAME_SIZE] = {0x00};
@@ -509,7 +509,7 @@ int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid) {
     return mifare_classic_halt_ex(pcs);
 }
 
-int mifare_ultra_halt() {
+int mifare_ultra_halt(void) {
     uint16_t len = 0;
     uint8_t receivedAnswer[4] = {0x00, 0x00, 0x00, 0x00};
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_HALT, 0x00, receivedAnswer, NULL, NULL);
@@ -697,7 +697,7 @@ int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData) {
 int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData) {
 
     int len;
-    uint8_t data[17] = {MFDES_AUTHENTICATION_FRAME};
+    uint8_t data[17] = {MFDES_ADDITIONAL_FRAME};
     memcpy(data + 1, key, 16);
 
     uint8_t receivedAnswer[MAX_FRAME_SIZE] = {0x00};

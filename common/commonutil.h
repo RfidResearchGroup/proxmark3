@@ -41,6 +41,9 @@
 # define NTIME(n) for (int _index = 0; _index < n; _index++)
 #endif
 
+extern struct version_information version_information;
+void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_info);
+
 uint32_t reflect(uint32_t v, int b); // used in crc.c ...
 uint8_t reflect8(uint8_t b);         // dedicated 8bit reversal
 uint16_t reflect16(uint16_t b);      // dedicated 16bit reversal
@@ -50,7 +53,7 @@ uint64_t bytes_to_num(uint8_t *src, size_t len);
 
 void rol(uint8_t *data, const size_t len);
 void lsl(uint8_t *data, size_t len);
-int32_t le24toh(uint8_t data[3]);
+uint32_t le24toh(uint8_t data[3]);
 void htole24(uint32_t val, uint8_t data[3]);
 
 #endif

@@ -1,9 +1,9 @@
 # Generic standalone Mode injection of source code
 
 SRC_STANDALONE = placeholder.c
-# WITH_STANDALONE_LF_ICERUN
-ifneq (,$(findstring WITH_STANDALONE_LF_ICERUN,$(APP_CFLAGS)))
-    SRC_STANDALONE = lf_icerun.c
+# WITH_STANDALONE_LF_SKELETON
+ifneq (,$(findstring WITH_STANDALONE_LF_SKELETON,$(APP_CFLAGS)))
+    SRC_STANDALONE = lf_skeleton.c
 endif
 # WITH_STANDALONE_LF_SAMYRUN
 ifneq (,$(findstring WITH_STANDALONE_LF_SAMYRUN,$(APP_CFLAGS)))
@@ -45,6 +45,10 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_LF_EM4100EMUL,$(APP_CFLAGS)))
     SRC_STANDALONE = lf_em4100emul.c
 endif
+# WITH_STANDALONE_LF_EM4100RSWB
+ifneq (,$(findstring WITH_STANDALONE_LF_EM4100RSWB,$(APP_CFLAGS)))
+    SRC_STANDALONE = lf_em4100rswb.c
+endif
 # WITH_STANDALONE_LF_EM4100RWC
 ifneq (,$(findstring WITH_STANDALONE_LF_EM4100RWC,$(APP_CFLAGS)))
     SRC_STANDALONE = lf_em4100rwc.c
@@ -52,4 +56,8 @@ endif
 # WITH_STANDALONE_HF_LEGIC
 ifneq (,$(findstring WITH_STANDALONE_HF_LEGIC,$(APP_CFLAGS)))
    SRC_STANDALONE = hf_legic.c
+endif
+# WITH_STANDALONE_LF_MSDSAL
+ifneq (,$(findstring WITH_STANDALONE_HF_MSDSAL,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_msdsal.c
 endif

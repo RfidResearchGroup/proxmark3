@@ -37,7 +37,7 @@ void ModInfo(void) {
     DbpString("  HF Mifare sniff/simulation - (Craig Young)");
 }
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
     Dbprintf(">>  Craig Young Mifare sniff UID/clone uid 2 magic/sim  a.k.a YoungRun Started  <<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -151,10 +151,10 @@ void RunMod() {
             SpinDelay(500);
             // Begin clone function here:
             /* Example from client/mifarehost.c for commanding a block write for "magic Chinese" cards:
-                    SendCommandOLD(CMD_HF_MIFARE_CSETBL, params & (0xFE | (uid == NULL ? 0:1)), blockNo, 0, data, 16);
+                    SendCommandMIX(CMD_HF_MIFARE_CSETBL, params & (0xFE | (uid == NULL ? 0:1)), blockNo, 0, data, 16);
 
                 Block read is similar:
-                    SendCommandOLD(CMD_HF_MIFARE_CGETBL, params, blockNo, 0,...};
+                    SendCommandMIX(CMD_HF_MIFARE_CGETBL, params, blockNo, 0,...};
                 We need to imitate that call with blockNo 0 to set a uid.
 
                 The get and set commands are handled in this file:
@@ -222,8 +222,8 @@ void RunMod() {
                 // exit from Standalone Mode,   send a usbcommand.
                 if (data_available()) return;
 
-                int button_action = BUTTON_HELD(1000);
-                if (button_action == 0) {  // No button action, proceed with sim
+                int button_pressed = BUTTON_HELD(1000);
+                if (button_pressed == BUTTON_NO_CLICK) {  // No button action, proceed with sim
 
                     uint8_t flags = FLAG_4B_UID_IN_DATA;
                     uint8_t data[PM3_CMD_DATA_SIZE] = {0}; // in case there is a read command received we shouldn't break
@@ -259,12 +259,12 @@ void RunMod() {
                         SimulateIso14443aTag(1, flags, data);
                     }
 
-                } else if (button_action == BUTTON_SINGLE_CLICK) {
+                } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     selected = (selected + 1) % OPTS;
                     Dbprintf("Done playing. Switching to record mode on bank %d", selected);
                     iGotoRecord = 1;
                     break;
-                } else if (button_action == BUTTON_HOLD) {
+                } else if (button_pressed == BUTTON_HOLD) {
                     Dbprintf("Playtime over. Begin cloning...");
                     iGotoClone = 1;
                     break;
