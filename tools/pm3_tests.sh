@@ -116,6 +116,8 @@ C_GREEN='\033[0;32m'
 C_YELLOW='\033[0;33m'
 C_BLUE='\033[0;34m'
 C_NC='\033[0m' # No Color
+C_OK='\xe2\x9c\x94\xef\xb8\x8f'
+C_FAIL='\xe2\x9d\x8c'
 
 # title, file name or file wildcard to check
 function CheckFileExist() {
@@ -123,16 +125,16 @@ function CheckFileExist() {
   printf "%-40s" "$1 "
 
   if [ -f "$2" ]; then
-    echo -e "${C_GREEN}[OK]${C_NC}"
+    echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
     return 0
   fi
 
   if ls "$2" 1> /dev/null 2>&1; then
-    echo -e "${C_GREEN}[OK]${C_NC}"
+    echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
     return 0
   fi
 
-  echo -e "${C_RED}[FAIL]${C_NC}"
+  echo -e "$[{C_RED} FAIL ${C_NC}] ${C_FAIL}"
   return 1
 }
 
@@ -170,11 +172,11 @@ function CheckExecute() {
   printf "%-40s" "$1 "
 
   if $SLOWTEST && ! $SLOWTESTS; then
-    echo -e "${C_YELLOW}[SKIPPED]${C_NC} (slow)\n"
+    echo -e "[ ${C_YELLOW}SKIPPED${C_NC} ] ( slow )"
     return 0
   fi
   if $GPUTEST && ! $GPUTESTS; then
-    echo -e "${C_YELLOW}[SKIPPED]${C_NC} (gpu)\n"
+    echo -e "$[ {C_YELLOW}SKIPPED${C_NC} ] ( gpu )"
     return 0
   fi
 
@@ -182,18 +184,18 @@ function CheckExecute() {
   do
     RES=$(eval "$2")
     if echo "$RES" | grep -q "$3"; then
-      echo -e "${C_GREEN}[OK]${C_NC}"
+      echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
       return 0
     fi
     if [ ! $I == "e" ]; then echo "retry $I"; fi
   done
 
   if $IGNOREFAILURE; then
-    echo -e "${C_YELLOW}[IGNORED]${C_NC}"
+    echo -e "[ ${C_YELLOW}IGNORED${C_NC} ]"
     return 0
   fi
 
-  echo -e "${C_RED}[FAIL]${C_NC}"
+  echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
   echo -e "Execution trace:\n$RES"
   return 1
 }
@@ -392,7 +394,7 @@ while true; do
                                                                      "G-Prox-II - len: 26 FC: 123 Card: 11223, Raw: f98c7038c63356c7ac26398c"; then break; fi
       if ! CheckExecute slow "lf T55 hid test"                   "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_hid.pm3; lf search -1'" "HID Prox ID found"; then break; fi
       if ! CheckExecute slow "lf T55 hid test2"                  "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_hid.pm3; lf hid demod'" \
-                                                                     "HID H10301 26-bit;  FC: 118  CN: 1603"; then break; fi
+                                                                     "FC: 118  CN: 1603"; then break; fi
       if ! CheckExecute slow "lf T55 hid_48 test"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_hid_48.pm3; lf search -1'" "HID Prox ID found"; then break; fi
       if ! CheckExecute slow "lf T55 hid_48 test2"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_hid_48.pm3; lf hid demod'" \
                                                                      "HID Corporate 1000 48-bit"; then break; fi
@@ -470,8 +472,10 @@ while true; do
         if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Test(s) \[ ok"; then break; fi
       fi
     fi
-  echo -e "\n${C_GREEN}Tests [OK]${C_NC}\n"
+  echo -e "\n------------------------------------------------------------"
+  echo -e "Tests [ ${C_GREEN}OK${C_NC} ] ${C_OK}\n"
   exit 0
 done
-echo -e "\n${C_RED}Tests [FAIL]${C_NC}\n"
+echo -e "\n------------------------------------------------------------"
+echo -e "\nTests [ ${C_RED}FAIL${C_NC} ] ${C_FAIL}\n"
 exit 1
