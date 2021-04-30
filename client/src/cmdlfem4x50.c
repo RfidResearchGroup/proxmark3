@@ -130,12 +130,7 @@ static void print_info_result(uint8_t *data, bool verbose) {
 
 static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len, size_t *bytes_read) {
 
-    uint8_t *dump =  calloc(DUMP_FILESIZE, sizeof(uint8_t));
-    if (dump == NULL) {
-        PrintAndLogEx(ERR, "error, cannot allocate memory ");
-        return PM3_EMALLOC;
-    }
-
+    uint8_t *dump = NULL;
     int res = PM3_SUCCESS;
     DumpFileType_t dftype = getfiletype(filename);
     switch (dftype) {
@@ -148,7 +143,12 @@ static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len
             break;
         }
         case JSON: {
-            res = loadFileJSON(filename, dump, DUMP_FILESIZE, bytes_read, NULL);
+            dump =  calloc(DUMP_FILESIZE, sizeof(uint8_t));
+            if (dump == NULL) {
+                PrintAndLogEx(ERR, "error, cannot allocate memory ");
+                return PM3_EMALLOC;
+            }
+            res = loadFileJSON(filename, (void *)dump, DUMP_FILESIZE, bytes_read, NULL);
             break;
         }
         case DICTIONARY: {

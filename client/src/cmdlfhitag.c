@@ -257,7 +257,7 @@ static int CmdLFHitagEload(const char *Cmd) {
                 PrintAndLogEx(ERR, "error, cannot allocate memory");
                 return PM3_EMALLOC;
             }
-            res = loadFileJSON(filename, dump, dumplen, &dumplen, NULL);
+            res = loadFileJSON(filename, (void *)dump, dumplen, &dumplen, NULL);
             break;
         }
         case DICTIONARY: {

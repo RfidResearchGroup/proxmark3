@@ -899,12 +899,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     CLIParserFree(ctx);
 
     size_t bytes_read = 2048;
-    uint8_t *dump = calloc(2048, sizeof(uint8_t));
-    if (dump == NULL) {
-        PrintAndLogEx(ERR, "error, cannot allocate memory ");
-        return PM3_EMALLOC;
-    }
-
+    uint8_t *dump = NULL;
     int res = 0;
     DumpFileType_t dftype = getfiletype(filename);
     switch (dftype) {
@@ -917,7 +912,12 @@ static int CmdHFiClassELoad(const char *Cmd) {
             break;
         }
         case JSON: {
-            res = loadFileJSON(filename, dump, 2048, &bytes_read, NULL);
+            dump = calloc(2048, sizeof(uint8_t));
+            if (dump == NULL) {
+                PrintAndLogEx(ERR, "error, cannot allocate memory ");
+                return PM3_EMALLOC;
+            }
+            res = loadFileJSON(filename, (void *)dump, 2048, &bytes_read, NULL);
             break;
         }
         case DICTIONARY: {
@@ -1134,13 +1134,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     }
 
     size_t decryptedlen = 2048;
-    uint8_t *decrypted =  calloc(2048, sizeof(uint8_t));
+    uint8_t *decrypted = NULL;
     bool have_file = false;
-    if (decrypted == NULL) {
-        PrintAndLogEx(ERR, "error, cannot allocate memory ");
-        return PM3_EMALLOC;
-    }
-
     int res = PM3_SUCCESS;
 
     // if user supplied dump file,  time to load it
@@ -1157,7 +1152,12 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                 break;
             }
             case JSON: {
-                res = loadFileJSON(filename, decrypted, 2048, &decryptedlen, NULL);
+                decrypted =  calloc(2048, sizeof(uint8_t));
+                if (decrypted == NULL) {
+                    PrintAndLogEx(ERR, "error, cannot allocate memory ");
+                    return PM3_EMALLOC;
+                }
+                res = loadFileJSON(filename, (void *)decrypted, 2048, &decryptedlen, NULL);
                 break;
             }
             case DICTIONARY: {
@@ -2037,12 +2037,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     }
 
     size_t bytes_read = 2048;
-    uint8_t *dump =  calloc(2048, sizeof(uint8_t));
-    if (dump == NULL) {
-        PrintAndLogEx(ERR, "error, cannot allocate memory ");
-        return PM3_EMALLOC;
-    }
-
+    uint8_t *dump = NULL;
     int res = PM3_SUCCESS;
     DumpFileType_t dftype = getfiletype(filename);
     switch (dftype) {
@@ -2055,7 +2050,12 @@ static int CmdHFiClassRestore(const char *Cmd) {
             break;
         }
         case JSON: {
-            res = loadFileJSON(filename, dump, 2048, &bytes_read, NULL);
+            dump =  calloc(2048, sizeof(uint8_t));
+            if (dump == NULL) {
+                PrintAndLogEx(ERR, "error, cannot allocate memory ");
+                return PM3_EMALLOC;
+            }
+            res = loadFileJSON(filename, (void *)dump, 2048, &bytes_read, NULL);
             break;
         }
         case DICTIONARY: {
@@ -2539,12 +2539,7 @@ static int CmdHFiClassView(const char *Cmd) {
     CLIParserFree(ctx);
 
     size_t bytes_read = 2048;
-    uint8_t *dump = calloc(2048, sizeof(uint8_t));
-    if (dump == NULL) {
-        PrintAndLogEx(ERR, "error, cannot allocate memory ");
-        return PM3_EMALLOC;
-    }
-
+    uint8_t *dump = NULL;
     int res = 0;
     DumpFileType_t dftype = getfiletype(filename);
     switch (dftype) {
@@ -2557,7 +2552,12 @@ static int CmdHFiClassView(const char *Cmd) {
             break;
         }
         case JSON: {
-            res = loadFileJSON(filename, dump, 2048, &bytes_read, NULL);
+            dump = calloc(2048, sizeof(uint8_t));
+            if (dump == NULL) {
+                PrintAndLogEx(ERR, "error, cannot allocate memory ");
+                return PM3_EMALLOC;
+            }
+            res = loadFileJSON(filename, (void *)dump, 2048, &bytes_read, NULL);
             break;
         }
         case DICTIONARY: {

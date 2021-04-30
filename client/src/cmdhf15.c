@@ -1978,12 +1978,7 @@ static int CmdHF15Restore(const char *Cmd) {
     PrintAndLogEx(INFO, "Using block size... %d", blocksize);
 
     // 4bytes * 256 blocks.  Should be enough..
-    uint8_t *data = calloc(4 * 256, sizeof(uint8_t));
-    if (data == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-        return PM3_EMALLOC;
-    }
-
+    uint8_t *data = NULL;
     size_t datalen = 0;
     int res = PM3_SUCCESS;
     DumpFileType_t dftype = getfiletype(filename);
@@ -1997,7 +1992,12 @@ static int CmdHF15Restore(const char *Cmd) {
             break;
         }
         case JSON: {
-            res = loadFileJSON(filename, data, 256 * 4, &datalen, NULL);
+            data = calloc(4 * 256, sizeof(uint8_t));
+            if (data == NULL) {
+                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+                return PM3_EMALLOC;
+            }
+            res = loadFileJSON(filename, (void *)data, 256 * 4, &datalen, NULL);
             break;
         }
         case DICTIONARY: {

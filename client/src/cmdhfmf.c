@@ -3750,12 +3750,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         PrintAndLogEx(INFO, "overriding number of blocks, will use %d blocks ( %u bytes )", block_cnt, block_cnt * block_width);
     }
 
-    uint8_t *data = calloc(MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK, sizeof(uint8_t));
-    if (data == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-        return PM3_EMALLOC;
-    }
-
+    uint8_t *data = NULL;
     size_t datalen = 0;
     int res = PM3_SUCCESS;
     DumpFileType_t dftype = getfiletype(filename);
@@ -3769,7 +3764,12 @@ int CmdHF14AMfELoad(const char *Cmd) {
             break;
         }
         case JSON: {
-            res = loadFileJSON(filename, data, MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, &datalen, NULL);
+            data = calloc(MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK, sizeof(uint8_t));
+            if (data == NULL) {
+                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+                return PM3_EMALLOC;
+            }
+            res = loadFileJSON(filename, (void *)data, MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, &datalen, NULL);
             break;
         }
         case DICTIONARY: {
@@ -4422,12 +4422,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    uint8_t *data = calloc(MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK, sizeof(uint8_t));
-    if (data == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-        return PM3_EMALLOC;
-    }
-
+    uint8_t *data = NULL;
     size_t bytes_read = 0;
     int res = 0;
     DumpFileType_t dftype = getfiletype(filename);
@@ -4441,7 +4436,12 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
             break;
         }
         case JSON: {
-            res = loadFileJSON(filename, data, MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, &bytes_read, NULL);
+            data = calloc(MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK, sizeof(uint8_t));
+            if (data == NULL) {
+                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+                return PM3_EMALLOC;
+            }
+            res = loadFileJSON(filename, (void *)data, MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, &bytes_read, NULL);
             break;
         }
         case DICTIONARY: {
@@ -5921,12 +5921,7 @@ static int CmdHF14AMfView(const char *Cmd) {
     CLIParserFree(ctx);
 
     // reserve memory
-    uint8_t *dump = calloc(MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK, sizeof(uint8_t));
-    if (dump == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-        return PM3_EMALLOC;
-    }
-
+    uint8_t *dump = NULL;
     size_t bytes_read = 0;
     int res = 0;
     DumpFileType_t dftype = getfiletype(filename);
@@ -5940,7 +5935,12 @@ static int CmdHF14AMfView(const char *Cmd) {
             break;
         }
         case JSON: {
-            res = loadFileJSON(filename, dump, MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, &bytes_read, NULL);
+            dump = calloc(MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK, sizeof(uint8_t));
+            if (dump == NULL) {
+                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+                return PM3_EMALLOC;
+            }
+            res = loadFileJSON(filename, (void *)dump, MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, &bytes_read, NULL);
             break;
         }
         case DICTIONARY: {
