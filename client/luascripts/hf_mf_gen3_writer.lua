@@ -190,7 +190,7 @@ local function checkkey()
         cmd = Command:newNG{cmd = cmds.CMD_HF_MIFARE_READBL, data = ('%02x%02x%s'):format((i-1), default_key_type, default_key)}
         if (getblockdata(cmd:sendNG(false)) == true) then
             status = status + 1
-                print(('%s %02s %s %s %s'):format(' ', (i-1), KeyAB(), default_key, 'OK'))
+            print(('%s %02s %s %s %s'):format(' ', (i-1), KeyAB(), default_key, 'OK'))
         else
             break
         end
