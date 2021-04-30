@@ -3604,6 +3604,22 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         }
         PrintAndLogEx(INFO, "-------------------------------------------------------------");
     }
+
+
+    iso14a_card_select_t card;
+    res = SelectCard14443_4(true, &card);
+    if (res == PM3_SUCCESS) {
+        static const char STANDALONE_DESFIRE[] = { 0x75, 0x77, 0x81, 0x02};
+        static const char JCOP_DESFIRE[] = { 0x75, 0xf7, 0xb1, 0x02 };
+
+        if (str_startswith((const char*)card.ats + 1, STANDALONE_DESFIRE)) {
+            PrintAndLogEx(INFO, "Standalone DESFire");
+        }
+        if (str_startswith((const char*)card.ats + 1, JCOP_DESFIRE)) {
+            PrintAndLogEx(INFO, "JCOP DESFire");
+        }
+    }
+
     /*
         Card Master key (CMK)        0x00 AID = 00 00 00 (card level)
         Application Master Key (AMK) 0x00 AID != 00 00 00

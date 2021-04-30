@@ -843,7 +843,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     return 0;
 }
 
-static int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
+int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
     PacketResponseNG resp;
 
     frameLength = 0;
@@ -862,7 +862,7 @@ static int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
 
     // check result
     if (resp.oldarg[0] == 0) {
-        PrintAndLogEx(ERR, "No card in fiel.");
+        PrintAndLogEx(ERR, "No card in field");
         return PM3_ECARDEXCHANGE;
     }
 
