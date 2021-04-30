@@ -592,7 +592,9 @@ bool OpenProxmark(pm3_device **dev, char *port, bool wait_for_port, int timeout,
         session.pm3_present = true; // TODO support for multiple devices
 
         fflush(stdout);
-        *dev = malloc(sizeof(pm3_device));
+        if (*dev == NULL) {
+            *dev = calloc(sizeof(pm3_device), sizeof(uint8_t));
+        }
         (*dev)->conn = &conn; // TODO conn shouldn't be global
         return true;
     }
