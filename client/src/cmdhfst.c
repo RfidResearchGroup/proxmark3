@@ -215,7 +215,7 @@ int infoHFST(void) {
     int aSELECT_AID_n = 0;
     param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
     int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -240,7 +240,7 @@ int infoHFST(void) {
     int aSELECT_FILE_CC_n = 0;
     param_gethex_to_eol("00a4000c02e103", 0, aSELECT_FILE_CC, sizeof(aSELECT_FILE_CC), &aSELECT_FILE_CC_n);
     res = ExchangeAPDU14a(aSELECT_FILE_CC, aSELECT_FILE_CC_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -256,7 +256,7 @@ int infoHFST(void) {
     int aREAD_CC_n = 0;
     param_gethex_to_eol("00b000000f", 0, aREAD_CC, sizeof(aREAD_CC), &aREAD_CC_n);
     res = ExchangeAPDU14a(aREAD_CC, aREAD_CC_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -276,7 +276,7 @@ int infoHFST(void) {
     int aSELECT_FILE_SYS_n = 0;
     param_gethex_to_eol("00a4000c02e101", 0, aSELECT_FILE_SYS, sizeof(aSELECT_FILE_SYS), &aSELECT_FILE_SYS_n);
     res = ExchangeAPDU14a(aSELECT_FILE_SYS, aSELECT_FILE_SYS_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -294,7 +294,7 @@ int infoHFST(void) {
     int aREAD_SYS_n = 0;
     param_gethex_to_eol("00b0000012", 0, aREAD_SYS, sizeof(aREAD_SYS), &aREAD_SYS_n);
     res = ExchangeAPDU14a(aREAD_SYS, aREAD_SYS_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -400,7 +400,7 @@ static int CmdHFSTNdef(const char *Cmd) {
     int aSELECT_AID_n = 0;
     param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
     int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -425,7 +425,7 @@ static int CmdHFSTNdef(const char *Cmd) {
     int aSELECT_FILE_NDEF_n = 0;
     param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
     res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -443,7 +443,7 @@ static int CmdHFSTNdef(const char *Cmd) {
         int aVERIFY_n = 0;
         param_gethex_to_eol("0020000100", 0, aVERIFY, sizeof(aVERIFY), &aVERIFY_n);
         res = ExchangeAPDU14a(aVERIFY, aVERIFY_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-        if (res) {
+        if (res != PM3_SUCCESS) {
             DropField();
             return res;
         }
@@ -454,7 +454,7 @@ static int CmdHFSTNdef(const char *Cmd) {
             param_gethex_to_eol("0020000110", 0, aVERIFY, sizeof(aVERIFY), &aVERIFY_n);
             memcpy(aVERIFY + aVERIFY_n, pwd, pwdlen);
             res = ExchangeAPDU14a(aVERIFY, aVERIFY_n + pwdlen, activate_field, keep_field_on, response, sizeof(response), &resplen);
-            if (res) {
+            if (res != PM3_SUCCESS) {
                 DropField();
                 return res;
             }
@@ -473,7 +473,7 @@ static int CmdHFSTNdef(const char *Cmd) {
     int aREAD_NDEF_n = 0;
     param_gethex_to_eol("00b000001d", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
     res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -563,7 +563,7 @@ static int CmdHFSTProtect(const char *Cmd) {
     int aSELECT_AID_n = 0;
     param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
     int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -588,7 +588,7 @@ static int CmdHFSTProtect(const char *Cmd) {
     int aSELECT_FILE_NDEF_n = 0;
     param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
     res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -607,7 +607,7 @@ static int CmdHFSTProtect(const char *Cmd) {
     param_gethex_to_eol("0020000210", 0, aVERIFY, sizeof(aVERIFY), &aVERIFY_n);
     memcpy(aVERIFY + aVERIFY_n, pwd, pwdlen);
     res = ExchangeAPDU14a(aVERIFY, aVERIFY_n + pwdlen, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -626,7 +626,7 @@ static int CmdHFSTProtect(const char *Cmd) {
     param_gethex_to_eol("00", 0, aPROTECT, sizeof(aPROTECT), &aPROTECT_n);
     memcpy(aPROTECT + aPROTECT_n, state, statelen);
     res = ExchangeAPDU14a(aPROTECT, aPROTECT_n + statelen, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -707,7 +707,7 @@ static int CmdHFSTPwd(const char *Cmd) {
     int aSELECT_AID_n = 0;
     param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
     int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -732,7 +732,7 @@ static int CmdHFSTPwd(const char *Cmd) {
     int aSELECT_FILE_NDEF_n = 0;
     param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
     res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -751,7 +751,7 @@ static int CmdHFSTPwd(const char *Cmd) {
     param_gethex_to_eol("0020000210", 0, aVERIFY, sizeof(aVERIFY), &aVERIFY_n);
     memcpy(aVERIFY + aVERIFY_n, pwd, pwdlen);
     res = ExchangeAPDU14a(aVERIFY, aVERIFY_n + pwdlen, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -772,7 +772,7 @@ static int CmdHFSTPwd(const char *Cmd) {
     memcpy(aCHG_PWD + aCHG_PWD_n, changePwd, changePwdlen);
     memcpy(aCHG_PWD + aCHG_PWD_n + changePwdlen, newpwd, newpwdlen);
     res = ExchangeAPDU14a(aCHG_PWD, aCHG_PWD_n + changePwdlen + newpwdlen, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }

@@ -301,9 +301,9 @@ static int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool Lea
     switch (channel) {
         case ECC_CONTACTLESS:
             res = ExchangeAPDU14a(data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
-            if (res) {
+            if (res != PM3_SUCCESS) {
                 res = exchange_14b_apdu(data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen, 4000);
-                if (res)
+                if (res != PM3_SUCCESS)
                     return res;
             }
             break;

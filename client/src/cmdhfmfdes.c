@@ -473,7 +473,7 @@ static int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, 
         PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(data, datalen));
 
     res = ExchangeAPDU14a(data, datalen, activate_field, leavefield_on, result, max_result_len, (int *)result_len);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         return res;
     }
 

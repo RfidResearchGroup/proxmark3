@@ -3836,7 +3836,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         datalen -= block_width;
     }
     free(data);
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
 
     if (block_width == 4) {
         PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf mfu sim -h`"));
@@ -5674,7 +5674,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         // --------------- RESET CARD ----------------
         uint8_t aRESET[] = { 0x00, 0xa6, 0xc0,  0x00 };
         res = ExchangeAPDU14a(aRESET, sizeof(aRESET), activate_field, keep_field_on, response, sizeof(response), &resplen);
-        if (res) {
+        if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Super card reset [ " _RED_("fail") " ]");
             DropField();
             return res;
@@ -5692,7 +5692,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
     // --------------- First ----------------
     uint8_t aFIRST[] = { 0x00, 0xa6, 0xb0,  0x00,  0x10 };
     res = ExchangeAPDU14a(aFIRST, sizeof(aFIRST), activate_field, keep_field_on, responseA, sizeof(responseA), &respAlen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -5703,7 +5703,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
 
     uint8_t aSECOND[] = { 0x00, 0xa6, 0xb0,  0x01,  0x10 };
     res = ExchangeAPDU14a(aSECOND, sizeof(aSECOND), activate_field, keep_field_on, responseB, sizeof(responseB), &respBlen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }

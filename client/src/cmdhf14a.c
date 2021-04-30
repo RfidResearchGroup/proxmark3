@@ -855,34 +855,34 @@ static int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
 
     // Anticollision + SELECT card
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
-        return 1;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(ERR, "Proxmark3 connection timeout");
+        return PM3_ETIMEOUT;
     }
 
     // check result
     if (resp.oldarg[0] == 0) {
-        PrintAndLogEx(ERR, "No card in field.");
-        return 1;
+        PrintAndLogEx(ERR, "No card in fiel.");
+        return PM3_ECARDEXCHANGE;
     }
 
     if (resp.oldarg[0] != 1 && resp.oldarg[0] != 2) {
-        PrintAndLogEx(ERR, "Card not in iso14443-4. res=%" PRId64 ".", resp.oldarg[0]);
-        return 1;
+        PrintAndLogEx(ERR, "Card not in iso14443-4, res=%" PRId64 ".", resp.oldarg[0]);
+        return PM3_ECARDEXCHANGE;
     }
 
     if (resp.oldarg[0] == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
         // get ATS
         uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, sizeof(rats), 0, rats, sizeof(rats));
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
-            return 1;
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+            PrintAndLogEx(ERR, "Proxmark3 connection timeout");
+            return PM3_ETIMEOUT;
         }
 
         if (resp.oldarg[0] == 0) { // ats_len
-            PrintAndLogEx(ERR, "Can't get ATS.");
-            return 1;
+            PrintAndLogEx(ERR, "Can't get ATS");
+            return PM3_ECARDEXCHANGE;
         }
 
         // get frame length from ATS in data field
@@ -907,7 +907,7 @@ static int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
     if (disconnect)
         DropField();
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool activateField, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool *chainingout) {
@@ -916,7 +916,7 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
     if (activateField) {
         // select with no disconnect and set frameLength
         int selres = SelectCard14443_4(false, NULL);
-        if (selres)
+        if (selres != PM3_SUCCESS)
             return selres;
     }
 
@@ -946,32 +946,32 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
         *dataoutlen += dlen;
 
         if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
-            PrintAndLogEx(ERR, "APDU: Buffer too small(%d). Needs %d bytes", *dataoutlen, maxdataoutlen);
-            return 2;
+            PrintAndLogEx(ERR, "APDU: Buffer too small(%d), needs %d bytes", *dataoutlen, maxdataoutlen);
+            return PM3_EAPDU_FAIL;
         }
 
         // I-block ACK
         if ((res & 0xf2) == 0xa2) {
             *dataoutlen = 0;
             *chainingout = true;
-            return 0;
+            return PM3_SUCCESS;
         }
 
         if (!iLen) {
-            PrintAndLogEx(ERR, "APDU: No APDU response.");
-            return 1;
+            PrintAndLogEx(ERR, "APDU: No APDU response");
+            return PM3_EAPDU_FAIL;
         }
 
         // check apdu length
         if (iLen < 2 && iLen >= 0) {
-            PrintAndLogEx(ERR, "APDU: Small APDU response. Len=%d", iLen);
-            return 2;
+            PrintAndLogEx(ERR, "APDU: Small APDU response, len %d", iLen);
+            return PM3_EAPDU_FAIL;
         }
 
         // check block TODO
         if (iLen == -2) {
-            PrintAndLogEx(ERR, "APDU: Block type mismatch.");
-            return 2;
+            PrintAndLogEx(ERR, "APDU: Block type mismatch");
+            return PM3_EAPDU_FAIL;
         }
 
         memcpy(dataout, recv, dlen);
@@ -983,12 +983,12 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
 
         // CRC Check
         if (iLen == -1) {
-            PrintAndLogEx(ERR, "APDU: ISO 14443A CRC error.");
-            return 3;
+            PrintAndLogEx(ERR, "APDU: ISO 14443A CRC error");
+            return PM3_EAPDU_FAIL;
         }
     } else {
-        PrintAndLogEx(ERR, "APDU: Reply timeout.");
-        return 4;
+        PrintAndLogEx(ERR, "APDU: Reply timeout");
+        return PM3_EAPDU_FAIL;
     }
 
     return PM3_SUCCESS;
@@ -1012,8 +1012,8 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 
             *dataoutlen = 0;
             res = CmdExchangeAPDU(chainBlockNotLast, &datain[clen], vlen, vActivateField, dataout, maxdataoutlen, dataoutlen, &chaining);
-            if (res) {
-                if (!leaveSignalON)
+            if (res != PM3_SUCCESS) {
+                if (leaveSignalON == false)
                     DropField();
 
                 return 200;
@@ -1022,7 +1022,7 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
             // check R-block ACK
 //TODO check this one...
             if ((*dataoutlen == 0) && (*dataoutlen != 0 || chaining != chainBlockNotLast)) { // *dataoutlen!=0. 'A && (!A || B)' is equivalent to 'A && B'
-                if (!leaveSignalON)
+                if (leaveSignalON == false)
                     DropField();
 
                 return 201;
@@ -1038,8 +1038,8 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
         } while (clen < datainlen);
     } else {
         res = CmdExchangeAPDU(false, datain, datainlen, activateField, dataout, maxdataoutlen, dataoutlen, &chaining);
-        if (res) {
-            if (!leaveSignalON)
+        if (res != PM3_SUCCESS) {
+            if (leaveSignalON == false)
                 DropField();
 
             return res;
@@ -1049,9 +1049,8 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
     while (chaining) {
         // I-block with chaining
         res = CmdExchangeAPDU(false, NULL, 0, false, &dataout[*dataoutlen], maxdataoutlen, dataoutlen, &chaining);
-
-        if (res) {
-            if (!leaveSignalON)
+        if (res == PM3_SUCCESS) {
+            if (leaveSignalON == false)
                 DropField();
 
             return 100;
@@ -1061,7 +1060,7 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
     if (!leaveSignalON)
         DropField();
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // ISO14443-4. 7. Half-duplex block transmission protocol
@@ -1173,8 +1172,7 @@ static int CmdHF14AAPDU(const char *Cmd) {
     }
 
     int res = ExchangeAPDU14a(data, datalen, activateField, leaveSignalON, data, PM3_CMD_DATA_SIZE, &datalen);
-
-    if (res)
+    if (res != PM3_SUCCESS)
         return res;
 
     PrintAndLogEx(SUCCESS, "<<< %s | %s", sprint_hex_inrow(data, datalen), sprint_ascii(data, datalen));
@@ -2211,8 +2209,8 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     PrintAndLogEx(INFO, "Sending a test APDU (select file command) to check if the tag is responding to APDU");
     param_gethex_to_eol("00a404000aa000000440000101000100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
     int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, true, false, response, sizeof(response), &response_n);
-    if (res) {
-        PrintAndLogEx(FAILED, "Tag did not responde to a test APDU (select file command). Aborting");
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Tag did not respond to a test APDU (select file command). Aborting");
         return res;
     }
     PrintAndLogEx(SUCCESS, "Got response. Starting the APDU finder [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
@@ -2258,7 +2256,7 @@ retry_ins:
                 for (int i = 0; i < 1 + with_le; i++) {
                     // Send APDU.
                     res = ExchangeAPDU14a(command, command_n + i, activate_field, keep_field_on, response, sizeof(response), &response_n);
-                    if (res) {
+                    if (res != PM3_SUCCESS) {
                         DropField();
                         activate_field = true;
                         goto retry_ins;

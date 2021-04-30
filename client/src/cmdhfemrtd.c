@@ -201,7 +201,7 @@ static bool emrtd_exchange_commands(const char *cmd, uint8_t *dataout, int *data
     } else {
         res = ExchangeAPDU14a(aCMD, aCMD_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     }
-    if (res) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return false;
     }
