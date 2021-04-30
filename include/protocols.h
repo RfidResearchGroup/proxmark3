@@ -409,6 +409,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_AUTHENTICATE_ISO          0x1A  // AUTHENTICATE_STANDARD
 #define MFDES_AUTHENTICATE_AES          0xAA
 
+#define MFDES_AUTHENTICATE_EV2F         0x71
+#define MFDES_AUTHENTICATE_EV2NF        0x77
+
 #define MFDES_CREDIT                    0x0C
 #define MFDES_LIMITED_CREDIT            0x1C
 #define MFDES_WRITE_RECORD              0x3B
@@ -417,11 +420,15 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_GET_KEY_SETTINGS          0x45
 #define MFDES_GET_UID                   0x51
 #define MFDES_CHANGE_KEY_SETTINGS       0x54
+#define MFDES_ROLL_KEY_SETTINGS         0x55
+#define MFDES_INIT_KEY_SETTINGS         0x56
+#define MFDES_FINALIZE_KEY_SETTINGS     0x57
 #define MFDES_SELECT_APPLICATION        0x5A
 #define MFDES_CHANGE_FILE_SETTINGS      0x5F
 #define MFDES_GET_VERSION               0x60
 #define MFDES_GET_ISOFILE_IDS           0x61
 #define MFDES_GET_KEY_VERSION           0x64
+#define MFDES_GET_DELEGATE_INFO         0x69
 #define MFDES_GET_APPLICATION_IDS       0x6A
 #define MFDES_GET_VALUE                 0x6C
 #define MFDES_GET_FREE_MEMORY           0x6E
@@ -434,18 +441,24 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_CREATE_CYCLIC_RECORD_FILE 0xC0
 #define MFDES_CREATE_LINEAR_RECORD_FILE 0xC1
 #define MFDES_CHANGE_KEY                0xC4
+#define MFDES_CHANGE_KEY_EV2            0xC6
 #define MFDES_COMMIT_TRANSACTION        0xC7
+#define MFDES_COMMIT_READER_ID          0xC8
+#define MFDES_CREATE_DELEGATE_APP       0xC9
 #define MFDES_CREATE_APPLICATION        0xCA
 #define MFDES_CREATE_BACKUP_DATA_FILE   0xCB
 #define MFDES_CREATE_VALUE_FILE         0xCC
 #define MFDES_CREATE_STD_DATA_FILE      0xCD
+#define MFDES_CREATE_TRANS_MAC_FILE     0xCE
 #define MFDES_DELETE_APPLICATION        0xDA
 #define MFDES_DEBIT                     0xDC
 #define MFDES_DELETE_FILE               0xDF
 #define MFDES_CLEAR_RECORD_FILE         0xEB
+#define MFDES_PREPARE_PC                0xF0
+#define MFDES_PROXIMITY_CHECK           0xF2
 #define MFDES_GET_FILE_SETTINGS         0xF5
 #define MFDES_FORMAT_PICC               0xFC
-
+#define MFDES_VERIFY_PC                 0xFD
 
 // MIFARE DESFire status & error codes:
 #define MFDES_S_OPERATION_OK            0x00

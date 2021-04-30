@@ -863,6 +863,9 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                     case MFDES_CREATE_CYCLIC_RECORD_FILE:
                         snprintf(exp, size, "CREATE CYCLIC RECORD FILE");
                         break;
+                    case MFDES_CREATE_TRANS_MAC_FILE:
+                        snprintf(exp, size, "CREATE TRANSACTION MAC FILE");
+                        break;
                     case MFDES_DELETE_FILE:
                         snprintf(exp, size, "DELETE FILE");
                         break;
@@ -874,6 +877,12 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         break;  // AUTHENTICATE_STANDARD
                     case MFDES_AUTHENTICATE_AES:
                         snprintf(exp, size, "AUTH AES (keyNo %d)", cmd[pos + 1]);
+                        break;
+                    case MFDES_AUTHENTICATE_EV2F:
+                        snprintf(exp, size, "AUTH EV2 First");
+                        break;
+                    case MFDES_AUTHENTICATE_EV2NF:
+                        snprintf(exp, size, "AUTH EV2 Non First");
                         break;
                     case MFDES_CHANGE_KEY_SETTINGS:
                         snprintf(exp, size, "CHANGE KEY SETTINGS");
@@ -892,6 +901,36 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         break;
                     case MFDES_READSIG:
                         snprintf(exp, size, "READ SIGNATURE");
+                        break;
+                    case MFDES_ROLL_KEY_SETTINGS:
+                        snprintf(exp, size, "ROLL KEY SETTINGS");
+                        break;
+                    case MFDES_INIT_KEY_SETTINGS:
+                        snprintf(exp, size, "INIT KEY SETTINGS");
+                        break;
+                   case MFDES_FINALIZE_KEY_SETTINGS:
+                        snprintf(exp, size, "FINALIZE KEY SETTINGS");
+                        break;
+                    case MFDES_GET_DELEGATE_INFO:
+                        snprintf(exp, size, "GET DELEGATE INFO");
+                        break;
+                    case MFDES_CHANGE_KEY_EV2:
+                        snprintf(exp, size, "CHANGE KEY EV2");
+                        break;
+                    case MFDES_COMMIT_READER_ID:
+                        snprintf(exp, size, "COMMIT READER ID");
+                        break;
+                    case MFDES_CREATE_DELEGATE_APP:
+                        snprintf(exp, size, "CREATE DELEGATE APPLICATION");
+                        break;
+                    case MFDES_PREPARE_PC:
+                        snprintf(exp, size, "PREPARE PROXIMITY CHECK");
+                        break;
+                    case MFDES_PROXIMITY_CHECK:
+                        snprintf(exp, size, "PROXIMITY CHECK");
+                        break;
+                    case MFDES_VERIFY_PC:
+                        snprintf(exp, size, "VERIFY PROXIMITY CHECK");
                         break;
                     default:
                         found_annotation = false;
