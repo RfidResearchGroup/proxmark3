@@ -553,9 +553,9 @@ static bool Pack_C1k35s(wiegand_card_t *card, wiegand_message_t *packed, bool pr
     packed->Bot |= (card->CardNumber & 0x000FFFFF) << 1;
     packed->Bot |= (card->FacilityCode & 0x000007FF) << 21;
     packed->Mid |= (card->FacilityCode & 0x00000800) >> 11;
-    packed->Mid |= (evenparity32((packed->Mid & 0x00000001) ^ (packed->Bot & 0xB6DB6DB6))) << 1;
-    packed->Bot |= (oddparity32((packed->Mid & 0x00000003) ^ (packed->Bot & 0x6DB6DB6C)));
-    packed->Mid |= (oddparity32((packed->Mid & 0x00000003) ^ (packed->Bot & 0xFFFFFFFF))) << 2;
+    packed->Mid |= (evenparity32((packed->Mid & 0x1) ^ (packed->Bot & 0xB6DB6DB6))) << 1;
+    packed->Bot |= (oddparity32((packed->Mid & 0x3) ^ (packed->Bot & 0x6DB6DB6C)));
+    packed->Mid |= (oddparity32((packed->Mid & 0x3) ^ (packed->Bot & 0xFFFFFFFF))) << 2;
     if (preamble)
         return add_HID_header(packed);
     return true;
@@ -569,9 +569,9 @@ static bool Unpack_C1k35s(wiegand_message_t *packed, wiegand_card_t *card) {
     card->CardNumber = (packed->Bot >> 1) & 0x000FFFFF;
     card->FacilityCode = ((packed->Mid & 1) << 11) | ((packed->Bot >> 21));
     card->ParityValid =
-        (evenparity32((packed->Mid & 0x00000001) ^ (packed->Bot & 0xB6DB6DB6)) == ((packed->Mid >> 1) & 1)) &&
-        (oddparity32((packed->Mid & 0x00000003) ^ (packed->Bot & 0x6DB6DB6C)) == ((packed->Bot >> 0) & 1)) &&
-        (oddparity32((packed->Mid & 0x00000003) ^ (packed->Bot & 0xFFFFFFFF)) == ((packed->Mid >> 2) & 1));
+        (evenparity32((packed->Mid & 0x1) ^ (packed->Bot & 0xB6DB6DB6)) == ((packed->Mid >> 1) & 1)) &&
+        (oddparity32((packed->Mid & 0x3) ^ (packed->Bot & 0x6DB6DB6C)) == ((packed->Bot >> 0) & 1)) &&
+        (oddparity32((packed->Mid & 0x3) ^ (packed->Bot & 0xFFFFFFFF)) == ((packed->Mid >> 2) & 1));
     return true;
 }
 
@@ -1305,7 +1305,7 @@ static const cardformat_t FormatTable[] = {
     {"WIE32",   Pack_wie32,   Unpack_wie32,   "Wiegand 32-bit",             {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au 
     {"D10202",  Pack_D10202,  Unpack_D10202,  "HID D10202 33-bit",          {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"H10306",  Pack_H10306,  Unpack_H10306,  "HID H10306 34-bit",          {1, 1, 0, 0, 1}}, // imported from old pack/unpack
-    {"N10002",  Pack_N10002,  Unpack_N10002,  "Honeywell/Northern N10002 34-bit", {1, 1, 0, 0, 0}}, // from proxclone.com
+    {"N10002",  Pack_N10002,  Unpack_N10002,  "Honeywell/Northern N10002 34-bit", {1, 1, 0, 0, 1}}, // from proxclone.com
     {"Optus34", Pack_Optus,   Unpack_Optus,   "Indala Optus 34-bit",        {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"SMP34",   Pack_Smartpass, Unpack_Smartpass, "Cardkey Smartpass 34-bit", {1, 1, 1, 0, 0}}, // from cardinfo.barkweb.com.au
     {"BQT34",   Pack_bqt34,   Unpack_bqt34,   "BQT 34-bit",                 {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
