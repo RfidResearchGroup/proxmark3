@@ -124,9 +124,9 @@ static void hitag2_init(void) {
 #endif
 
 #define HITAG_FRAME_LEN  20
-#define HITAG_T_STOP     37 /* T_EOF should be > 36 */
-#define HITAG_T_LOW      4  /* T_LOW should be 4..10 */
-#define HITAG_T_0_MIN    17 /* T[0] should be 18..22 */
+#define HITAG_T_STOP     36 /* T_EOF should be > 36 */
+#define HITAG_T_LOW      8  /* T_LOW should be 4..10 */
+#define HITAG_T_0_MIN    15 /* T[0] should be 18..22 */
 #define HITAG_T_0        20 /* T[0] should be 18..22 */
 #define HITAG_T_1_MIN    25 /* T[1] should be 26..30 */
 #define HITAG_T_1        30 /* T[1] should be 26..30 */
