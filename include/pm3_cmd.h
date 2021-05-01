@@ -393,6 +393,14 @@ typedef struct {
     uint8_t data[];
 } PACKED flashmem_write_t;
 
+// when CMD_FLASHMEM_WRITE old flashmem commands
+typedef struct {
+    uint32_t startidx;
+    uint16_t len;
+    uint8_t data[PM3_CMD_DATA_SIZE - sizeof(uint32_t) - sizeof(uint16_t)];
+} PACKED flashmem_old_write_t;
+
+
 //-----------------------------------------------------------------------------
 // ISO 7618  Smart Card
 //-----------------------------------------------------------------------------

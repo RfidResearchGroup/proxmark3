@@ -2215,41 +2215,39 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_FLASHMEM_WRITE: {
             LED_B_ON();
-            uint8_t isok = 0;
-            uint16_t res = 0;
-            uint32_t startidx = packet->oldarg[0];
-            uint16_t len = packet->oldarg[1];
-            uint8_t *data = packet->data.asBytes;
 
-            if (!FlashInit()) {
+            flashmem_old_write_t *payload = (flashmem_old_write_t *)packet->data.asBytes;
+
+            if (FlashInit() == false) {
+                reply_ng(CMD_FLASHMEM_WRITE, PM3_EIO, NULL, 0);
+                LED_B_OFF();
                 break;
             }
 
-            if (startidx == DEFAULT_T55XX_KEYS_OFFSET) {
+            if (payload->startidx == DEFAULT_T55XX_KEYS_OFFSET) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0xC);
-            } else if (startidx ==  DEFAULT_MF_KEYS_OFFSET) {
+            } else if (payload->startidx ==  DEFAULT_MF_KEYS_OFFSET) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0x9);
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0xA);
-            } else if (startidx == DEFAULT_ICLASS_KEYS_OFFSET) {
+            } else if (payload->startidx == DEFAULT_ICLASS_KEYS_OFFSET) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0xB);
-            } else if (startidx == FLASH_MEM_SIGNATURE_OFFSET) {
+            } else if (payload->startidx == FLASH_MEM_SIGNATURE_OFFSET) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0xF);
             }
 
-            res = Flash_Write(startidx, data, len);
-            isok = (res == len) ? 1 : 0;
+            uint16_t res = Flash_Write(payload->startidx, payload->data, payload->len);
 
-            reply_mix(CMD_ACK, isok, 0, 0, 0, 0);
+            reply_ng(CMD_FLASHMEM_WRITE, (res == payload->len) ? PM3_SUCCESS : PM3_ESOFT, NULL, 0);
             LED_B_OFF();
             break;
         }
