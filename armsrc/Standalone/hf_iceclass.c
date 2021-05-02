@@ -170,9 +170,10 @@ static void save_to_flash(uint8_t *data, uint16_t datalen, char *filename) {
                 data[4], data[5], data[6], data[7]
                );
     } else {
-        int fnlen = MIN(strlen(filename), SPIFFS_OBJ_NAME_LEN);
+        int fnlen = MIN(strlen(filename) + 1, SPIFFS_OBJ_NAME_LEN);
         // if the given name len longer than buffer allows, cut it down to size
         memcpy(fn, filename, fnlen);
+        fn[fnlen-1] = '\0';
     }
 
     int res;
