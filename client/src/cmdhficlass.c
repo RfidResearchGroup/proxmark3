@@ -113,13 +113,20 @@ static inline uint32_t leadingzeros(uint64_t a) {
 #endif
 }
 
-static void iclass_upload_emul(uint8_t *d, uint32_t n, uint32_t *bytes_sent) {
+static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t *bytes_sent) {
+
+    struct p {
+        uint16_t offset;
+        uint16_t len;
+        uint8_t data[];
+    } PACKED;
+
     // fast push mode
     conn.block_after_ACK = true;
 
     //Send to device
     *bytes_sent = 0;
-    uint32_t bytes_remaining  = n;
+    uint16_t bytes_remaining = n;
 
     while (bytes_remaining > 0) {
         uint32_t bytes_in_packet = MIN(PM3_CMD_DATA_SIZE, bytes_remaining);
@@ -128,12 +135,19 @@ static void iclass_upload_emul(uint8_t *d, uint32_t n, uint32_t *bytes_sent) {
             conn.block_after_ACK = false;
         }
         clearCommandBuffer();
-        SendCommandOLD(CMD_HF_ICLASS_EML_MEMSET, *bytes_sent, bytes_in_packet, 0, d + *bytes_sent, bytes_in_packet);
+
+        struct p *payload = calloc(4 + bytes_in_packet, sizeof(uint8_t));
+        payload->offset = *bytes_sent;        
+        payload->len = bytes_in_packet;
+        memcpy(payload->data, d + *bytes_sent, bytes_in_packet);
+
+        SendCommandNG(CMD_HF_ICLASS_EML_MEMSET, (uint8_t*)payload, 4 + bytes_in_packet);
+        free(payload);
+
         bytes_remaining -= bytes_in_packet;
         *bytes_sent += bytes_in_packet;
     }
 }
-
 
 const char *card_types[] = {
     "PicoPass 16K / 16",                       // 000
@@ -354,11 +368,11 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
     }
 
     //Send to device
-    uint32_t bytes_sent = 0;
+    uint16_t bytes_sent = 0;
     iclass_upload_emul(data, tot_bytes, &bytes_sent);
     free(data);
 
-    PrintAndLogEx(SUCCESS, "sent %d bytes of data to device emulator memory", bytes_sent);
+    PrintAndLogEx(SUCCESS, "sent %u bytes of data to device emulator memory", bytes_sent);
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass eview") "` to view dump file");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass sim -t 3") "` to start simulating config card");
     return PM3_SUCCESS;
@@ -944,10 +958,10 @@ static int CmdHFiClassELoad(const char *Cmd) {
     print_picopass_info((picopass_hdr_t *) dump);
 
     //Send to device
-    uint32_t bytes_sent = 0;
+    uint16_t bytes_sent = 0;
     iclass_upload_emul(dump, bytes_read, &bytes_sent);
     free(dump);
-    PrintAndLogEx(SUCCESS, "sent %d bytes of data to device emulator memory", bytes_sent);
+    PrintAndLogEx(SUCCESS, "sent %u bytes of data to device emulator memory", bytes_sent);
     return PM3_SUCCESS;
 }
 

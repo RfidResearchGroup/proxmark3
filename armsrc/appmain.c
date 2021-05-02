@@ -1677,7 +1677,13 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HF_ICLASS_EML_MEMSET: {
             //iceman, should call FPGADOWNLOAD before, since it corrupts BigBuf
             FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-            emlSet(packet->data.asBytes, packet->oldarg[0], packet->oldarg[1]);
+            struct p {
+                uint16_t offset;
+                uint16_t len;
+                uint8_t data[];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            emlSet(payload->data, payload->offset, payload->len);
             break;
         }
         case CMD_HF_ICLASS_WRITEBL: {
