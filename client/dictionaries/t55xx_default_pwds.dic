@@ -25,6 +25,8 @@ A5B4C3D2
 1C0B5848
 # ref. http://www.proxmark.org/forum/viewtopic.php?pid=35075#p35075
 00434343
+# DNGR - DT default pwd
+444E4752
 44B44CAE
 88661858
 # MKF fobs
@@ -131,3 +133,4 @@ F1EA5EED # burtle
 57721566 # euler constant (dec)
 93C467E3 # euler constant (hex)
 27182818 # natural log
+50415353 # PASS
