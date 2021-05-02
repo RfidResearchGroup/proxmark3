@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed hf_iceclass standalone - correct null terminator filename (@metalauricle)
  - Changed `trace list -t mfdes - added annotations for EV2, EV3 (@iceman1001)`
  - Changed `hf iclass lookup` - fixed swapped args (@iceman1001)
  - Changed `hf iclass decrypt` - added the possibility to decode the data as block6 if you have a cardhelper (@iceman1001)
