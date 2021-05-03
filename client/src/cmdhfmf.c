@@ -2229,7 +2229,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                     PrintAndLogEx(FAILED, "generating polynomial with 16 effective bits only, but shows unexpected behaviour.");
                     goto noValidKeyFound;
                 case -5 :
-                    PrintAndLogEx(WARNING, "\nAborted via keyboard.");
+                    PrintAndLogEx(WARNING, "\naborted via keyboard.");
                     goto noValidKeyFound;
                 default :
                     PrintAndLogEx(SUCCESS, "\nFound valid key [ " _GREEN_("%012" PRIx64) " ]\n", key64);
@@ -3092,7 +3092,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
                 fflush(stdout);
 
                 if (kbd_enter_pressed()) {
-                    PrintAndLogEx(INFO, "\naborted via keyboard!\n");
+                    PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
                     goto out;
                 }
 
@@ -5076,7 +5076,7 @@ static int CmdHF14AMfice(const char *Cmd) {
 
     do {
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(INFO, "\naborted via keyboard!\n");
+            PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
             break;
         }
 

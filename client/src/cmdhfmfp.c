@@ -1004,7 +1004,7 @@ static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyA
                         PrintAndLogEx(NORMAL, "." NOLF);
 
                     if (kbd_enter_pressed()) {
-                        PrintAndLogEx(WARNING, "\nAborted via keyboard!\n");
+                        PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
                         DropField();
                         return PM3_EOPABORTED;
                     }

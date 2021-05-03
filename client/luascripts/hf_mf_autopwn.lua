@@ -192,7 +192,7 @@ local function main(args)
                     elseif err == -4 then return oops([[
         Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown
         generating polynomial with 16 effective bits only, but shows unexpected behaviour.]])
-                    elseif err == -5 then return oops('Aborted via keyboard.')
+                    elseif err == -5 then return oops('aborted via keyboard.')
                     end
                     -- The key is actually 8 bytes, so a
                     -- 6-byte key is sent as 00XXXXXX

@@ -536,7 +536,7 @@ static int CmdEM410xBrute(const char *Cmd) {
     for (uint32_t c = 0; c < uidcnt; ++c) {
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(INFO, "Aborted via keyboard!\n");
+            PrintAndLogEx(WARNING, "aborted via keyboard!\n");
             free(uidblock);
             return PM3_EOPABORTED;
         }

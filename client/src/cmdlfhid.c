@@ -562,7 +562,7 @@ static int CmdHIDBrute(const char *Cmd) {
         }
 
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(INFO, "aborted via keyboard!");
+            PrintAndLogEx(WARNING, "aborted via keyboard!");
             return sendPing();
         }
 

@@ -525,7 +525,7 @@ static int CmdAWIDBrute(const char *Cmd) {
             return PM3_ENODATA;
         }
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(INFO, "aborted via keyboard!");
+            PrintAndLogEx(WARNING, "aborted via keyboard!");
             return sendPing();
         }
 

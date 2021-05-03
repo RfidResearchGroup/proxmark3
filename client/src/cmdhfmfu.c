@@ -3199,7 +3199,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     while ((current <= (end - steps)) && (error_retries < 10)) {
 
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(INFO, "\naborted via keyboard!\n");
+            PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
             break;
         }
 
@@ -3368,7 +3368,7 @@ static int counter_reset_tear(iso14a_card_select_t *card, uint8_t cnt_no) {
     uint8_t resp[10] = {0};
 
     if (ul_select(card) == false) {
-        PrintAndLogEx(FAILED, "failed to select card,  exiting...");
+        PrintAndLogEx(FAILED, "failed to select card, exiting...");
         return PM3_ESOFT;
     }
     if (ul_send_cmd_raw(cw, sizeof(cw), resp, sizeof(resp)) < 0) {
@@ -3499,7 +3499,6 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
     while (actual_time <= (time_limit - interval)) {
 
-
         DropField();
 
         loop++;
@@ -3509,7 +3508,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
             break;
         }
 
-        PrintAndLogEx(INPLACE, "Using tear-off delay " _GREEN_("%" PRIu32) " us  (attempt %u)", actual_time, loop);
+        PrintAndLogEx(INPLACE, "Using tear-off delay " _GREEN_("%" PRIu32) " µs  (attempt %u)", actual_time, loop);
 
         if (ul_select(&card) == false) {
             PrintAndLogEx(FAILED, "BEFORE, failed to select card,  looping...");
@@ -4013,14 +4012,14 @@ static command_t CommandTable[] = {
     {"rdbl",    CmdHF14AMfURdBl,           IfPm3Iso14443a,  "Read block"},
     {"restore", CmdHF14AMfURestore,        IfPm3Iso14443a,  "Restore a dump onto a MFU MAGIC tag"},
     {"wrbl",    CmdHF14AMfUWrBl,           IfPm3Iso14443a,  "Write block"},
-    {"-----------", CmdHelp,               IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
+    {"---------", CmdHelp,                 IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
     {"eload",   CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "load Ultralight .eml dump file into emulator memory"},
     {"eview",   CmdHF14AMfuEView,          IfPm3Iso14443a,  "View emulator memory"},
     {"sim",     CmdHF14AMfUSim,            IfPm3Iso14443a,  "Simulate MIFARE Ultralight from emulator memory"},
-    {"-----------", CmdHelp,               IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " ----------------------------"},
+    {"---------", CmdHelp,                 IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " ----------------------------"},
     {"setpwd",  CmdHF14AMfUCSetPwd,        IfPm3Iso14443a,  "Set 3DES key - Ultralight-C"},
     {"setuid",  CmdHF14AMfUCSetUid,        IfPm3Iso14443a,  "Set UID - MAGIC tags only"},
-    {"-----------", CmdHelp,               IfPm3Iso14443a,  "----------------------- " _CYAN_("amiibo") " ----------------------------"},
+    {"---------", CmdHelp,                 IfPm3Iso14443a,  "----------------------- " _CYAN_("amiibo") " ----------------------------"},
 //    {"decrypt",  CmdHF14AMfUCDecryptAmiibo, IfPm3Iso14443a, "Decrypt a amiibo tag"},
     {NULL, NULL, NULL, NULL}
 };

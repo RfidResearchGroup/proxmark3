@@ -1525,7 +1525,6 @@ typedef struct iclass_premac {
 */
 void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
 
-    uint8_t i = 0, isOK = 0;
 //    uint8_t lastChunk = ((arg0 >> 8) & 0xFF);
     bool use_credit_key = ((arg0 >> 16) & 0xFF);
     uint8_t keyCount = arg1 & 0xFF;
@@ -1550,8 +1549,9 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
 
     Iso15693InitReader();
 
+    bool isOK = false;
+ 
     uint32_t start_time = 0, eof_time = 0;
-
     if (select_iclass_tag(&hdr, use_credit_key, &eof_time) == false)
         goto out;
 
@@ -1561,6 +1561,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     uint16_t checked = 0;
 
     // Keychunk loop
+    uint8_t i = 0;
     for (i = 0; i < keyCount; i++) {
 
         // Allow button press / usb cmd to interrupt device
@@ -1588,13 +1589,12 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
         // Auth Sequence MUST begin with reading e-purse. (block2)
         // Card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
         iclass_send_as_reader(readcheck_cc, sizeof(readcheck_cc), &start_time, &eof_time);
-
         LED_B_OFF();
     }
 
 out:
     // send keyindex.
-    reply_mix(CMD_HF_ICLASS_CHKKEYS, isOK, i, 0, 0, 0);
+    reply_ng(CMD_HF_ICLASS_CHKKEYS, (isOK) ? PM3_SUCCESS : PM3_ESOFT, (uint8_t *)&i, sizeof(i));
     switch_off();
 }
 

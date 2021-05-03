@@ -2940,103 +2940,6 @@ static void add_key(uint8_t *key) {
     }
 }
 
-
-/*
-static int iclass_chk_keys(uint8_t *keyBlock, uint32_t keycount) {
-
-    iclass_premac_t *pre = calloc(keycount, sizeof(iclass_premac_t));
-    if (pre == NULL) {
-        return PM3_EMALLOC;
-    }
-
-    // max 42 keys inside USB_COMMAND.  512/4 = 103 mac
-    uint32_t chunksize = keycount > (PM3_CMD_DATA_SIZE / 4) ? (PM3_CMD_DATA_SIZE / 4) : keycount;
-    bool lastChunk = false;
-
-    // fast push mode
-    conn.block_after_ACK = true;
-
-    // keep track of position of found key
-    uint8_t found_offset = 0;
-    uint32_t key_offset = 0;
-    // main keychunk loop
-    for (key_offset = 0; key_offset < keycount; key_offset += chunksize) {
-
-        uint64_t t2 = msclock();
-        uint8_t timeout = 0;
-
-        if (kbd_enter_pressed()) {
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(WARNING, "Aborted via keyboard!");
-            goto out;
-        }
-
-        uint32_t keys = ((keycount - key_offset)  > chunksize) ? chunksize : keycount - key_offset;
-
-        // last chunk?
-        if (keys == keycount - key_offset) {
-            lastChunk = true;
-            // Disable fast mode on last command
-            conn.block_after_ACK = false;
-        }
-        uint32_t flags = lastChunk << 8;
-        // bit 16
-        //   - 1 indicates credit key
-        //   - 0 indicates debit key (default)
-        flags |= (use_credit_key << 16);
-
-        clearCommandBuffer();
-        SendCommandOLD(CMD_HF_ICLASS_CHKKEYS, flags, keys, 0, pre + key_offset, 4 * keys);
-        PacketResponseNG resp;
-
-        bool looped = false;
-        while (!WaitForResponseTimeout(CMD_HF_ICLASS_CHKKEYS, &resp, 2000)) {
-            timeout++;
-            PrintAndLogEx(NORMAL, "." NOLF);
-            if (timeout > 120) {
-                PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
-                goto out;
-            }
-            looped = true;
-        }
-
-        if (looped)
-            PrintAndLogEx(NORMAL, "");
-
-        found_offset = resp.oldarg[1] & 0xFF;
-        uint8_t isOK = resp.oldarg[0] & 0xFF;
-
-        t2 = msclock() - t2;
-        switch (isOK) {
-            case 1: {
-                found_key = true;
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(SUCCESS, "Found valid key " _GREEN_("%s")
-                              , sprint_hex(keyBlock + (key_offset + found_offset) * 8, 8)
-                             );
-                break;
-            }
-            case 0: {
-                PrintAndLogEx(INPLACE, "Chunk [%d/%d]", key_offset, keycount);
-                break;
-            }
-            case 99: {
-            }
-            default: {
-                break;
-            }
-        }
-
-        // both keys found.
-        if (found_key) {
-            break;
-        }
-
-    }
-    return PM3_SUCCESS;
-}
-*/
-
 static int CmdHFiClassCheckKeys(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass chk",
@@ -3103,11 +3006,10 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-
     PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(CSN, sizeof(CSN)));
     PrintAndLogEx(SUCCESS, "   CCNR: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
 
-    PrintAndLogEx(SUCCESS, "Generating diversified keys %s", (use_elite || use_raw) ? NOLF : "");
+    PrintAndLogEx(INFO, "Generating diversified keys %s", (use_elite || use_raw) ? NOLF : "");
     if (use_elite)
         PrintAndLogEx(NORMAL, "using " _YELLOW_("elite algo"));
     if (use_raw)
@@ -3129,14 +3031,11 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     uint8_t found_offset = 0;
     uint32_t key_offset = 0;
     // main keychunk loop
-    for (key_offset = 0; key_offset < keycount; key_offset += chunksize) {
-
-        uint64_t t2 = msclock();
-        uint8_t timeout = 0;
+    for (key_offset = 0; key_offset < keycount && (found_key == false); key_offset += chunksize) {
 
         if (kbd_enter_pressed()) {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(WARNING, "Aborted via keyboard!");
+            PrintAndLogEx(WARNING, "aborted via keyboard!");
             goto out;
         }
 
@@ -3159,11 +3058,12 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         PacketResponseNG resp;
 
         bool looped = false;
-        while (!WaitForResponseTimeout(CMD_HF_ICLASS_CHKKEYS, &resp, 2000)) {
+        uint8_t timeout = 0;
+        while (WaitForResponseTimeout(CMD_HF_ICLASS_CHKKEYS, &resp, 2000) == false) {
             timeout++;
             PrintAndLogEx(NORMAL, "." NOLF);
-            if (timeout > 120) {
-                PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
+            if (timeout > 10) {
+                PrintAndLogEx(WARNING, "\nno response from device, aborting...");
                 goto out;
             }
             looped = true;
@@ -3171,34 +3071,18 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
 
         if (looped)
             PrintAndLogEx(NORMAL, "");
-
-        found_offset = resp.oldarg[1] & 0xFF;
-        uint8_t isOK = resp.oldarg[0] & 0xFF;
-
-        t2 = msclock() - t2;
-        switch (isOK) {
-            case 1: {
-                found_key = true;
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(SUCCESS, "Found valid key " _GREEN_("%s")
-                              , sprint_hex(keyBlock + (key_offset + found_offset) * 8, 8)
-                             );
-                break;
-            }
-            case 0: {
-                PrintAndLogEx(INPLACE, "Chunk [%d/%d]", key_offset, keycount);
-                break;
-            }
-            case 99: {
-            }
-            default: {
-                break;
-            }
-        }
-
-        // both keys found.
-        if (found_key) {
-            break;
+     
+        if (resp.status == PM3_SUCCESS) {
+            found_offset = resp.data.asBytes[0];
+            found_key = true;
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS,
+                     "Found valid key " _GREEN_("%s")
+                    , sprint_hex(keyBlock + (key_offset + found_offset) * 8, 8)
+                );
+        } else {
+            PrintAndLogEx(INPLACE, "Chunk [%d/%d]", key_offset, keycount);
+            fflush(stdout);
         }
     }
 
@@ -3321,15 +3205,15 @@ static int CmdHFiClassLookUp(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    PrintAndLogEx(SUCCESS, "Generating diversified keys...");
+    PrintAndLogEx(INFO, "Generating diversified keys...");
     GenerateMacKeyFrom(csn, CCNR, use_raw, use_elite, keyBlock, keycount, prekey);
 
     if (use_elite)
-        PrintAndLogEx(SUCCESS, "Using " _YELLOW_("elite algo"));
+        PrintAndLogEx(INFO, "Using " _YELLOW_("elite algo"));
     if (use_raw)
-        PrintAndLogEx(SUCCESS, "Using " _YELLOW_("raw mode"));
+        PrintAndLogEx(INFO, "Using " _YELLOW_("raw mode"));
 
-    PrintAndLogEx(SUCCESS, "Sorting...");
+    PrintAndLogEx(INFO, "Sorting...");
 
     // sort mac list.
     qsort(prekey, keycount, sizeof(iclass_prekey_t), cmp_uint32);
