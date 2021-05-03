@@ -350,7 +350,7 @@ typedef struct {
 
 typedef struct iclass_premac {
     uint8_t mac[4];
-} iclass_premac_t;
+} PACKED iclass_premac_t;
 
 typedef struct {
     bool use_credit_key;
