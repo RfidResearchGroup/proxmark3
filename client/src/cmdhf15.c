@@ -24,11 +24,12 @@
 // variant, but offers the possibility to analyze the waveforms directly.
 #include "cmdhf15.h"
 #include <ctype.h>
-#include "cmdparser.h"    // command_t
-#include "commonutil.h"   // ARRAYLEN
-#include "comms.h"        // clearCommandBuffer
+#include "cmdparser.h"         // command_t
+#include "commonutil.h"        // ARRAYLEN
+#include "comms.h"             // clearCommandBuffer
 #include "cmdtrace.h"
-#include "iso15693tools.h"
+#include "iso15693tools.h"     // ISO15693 error codes etc
+#include "protocols.h"         // ISO15693 command set
 #include "crypto/libpcrypto.h"
 #include "graph.h"
 #include "crc16.h"             // iso15 crc
@@ -408,7 +409,7 @@ static int getUID(bool loop, uint8_t *buf) {
 
     uint8_t data[5];
     data[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
-    data[1] = ISO15_CMD_INVENTORY;
+    data[1] = ISO15693_INVENTORY;
     data[2] = 0; // mask length
 
     AddCrc15(data, 3);
@@ -648,7 +649,7 @@ static int NxpSysInfo(uint8_t *uid) {
     uint16_t reqlen = 0;
 
     req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
-    req[reqlen++] = ISO15_CMD_GETNXPSYSTEMINFO;
+    req[reqlen++] = ISO15693_GET_SYSTEM_INFO;
     req[reqlen++] = 0x04; // IC manufacturer code
     memcpy(req + 3, uid, 8); // add UID
     reqlen += 8;
@@ -719,7 +720,7 @@ static int NxpSysInfo(uint8_t *uid) {
     if (support_easmode) {
         reqlen = 0;
         req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
-        req[reqlen++] = ISO15_CMD_EASALARM;
+        req[reqlen++] = ISO15693_EAS_ALARM;
         req[reqlen++] = 0x04; // IC manufacturer code
         memcpy(req + 3, uid, 8); // add UID
         reqlen += 8;
@@ -753,7 +754,7 @@ static int NxpSysInfo(uint8_t *uid) {
         // Check if we can also read the signature
         reqlen = 0;
         req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
-        req[reqlen++] = ISO15_CMD_READSIGNATURE;
+        req[reqlen++] = ISO15693_READ_SIGNATURE;
         req[reqlen++] = 0x04; // IC manufacturer code
         memcpy(req + 3, uid, 8); // add UID
         reqlen += 8;
@@ -764,7 +765,7 @@ static int NxpSysInfo(uint8_t *uid) {
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
 
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
             PrintAndLogEx(WARNING, "iso15693 timeout");
             DropField();
             return PM3_ETIMEOUT;
@@ -837,7 +838,7 @@ static int CmdHF15Info(const char *Cmd) {
 
     // request to be sent to device/card
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[PM3_CMD_DATA_SIZE] = {flags, ISO15_CMD_SYSINFO};
+    uint8_t req[PM3_CMD_DATA_SIZE] = {flags, ISO15693_GET_SYSTEM_INFO};
     uint16_t reqlen = 2;
 
     if (scan) {
@@ -1107,7 +1108,7 @@ static int CmdHF15WriteAfi(const char *Cmd) {
 
     // request to be sent to device/card
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[16] = {flags, ISO15_CMD_WRITEAFI};
+    uint8_t req[16] = {flags, ISO15693_WRITE_AFI};
     uint16_t reqlen = 2;
 
     if (unaddressed == false) {
@@ -1204,7 +1205,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
 
     // request to be sent to device/card
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[16] = {flags, ISO15_CMD_WRITEDSFID};
+    uint8_t req[16] = {flags, ISO15693_WRITE_DSFID};
     // enforce, since we are writing
     req[0] |= ISO15_REQ_OPTION;
     uint16_t reqlen = 2;
@@ -1314,7 +1315,7 @@ static int CmdHF15Dump(const char *Cmd) {
 
     // request to be sent to device/card
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[13] = {flags, ISO15_CMD_READ};
+    uint8_t req[13] = {flags, ISO15693_READBLOCK};
     uint16_t reqlen = 2;
 
     if (scan) {
@@ -1547,7 +1548,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
 
     // request to be sent to device/card
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[PM3_CMD_DATA_SIZE] = {flags, ISO15_CMD_READMULTI};
+    uint8_t req[PM3_CMD_DATA_SIZE] = {flags, ISO15693_READ_MULTI_BLOCK};
     uint16_t reqlen = 2;
 
     if (unaddressed == false) {
@@ -1681,7 +1682,7 @@ static int CmdHF15Readblock(const char *Cmd) {
 
     // request to be sent to device/card
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[PM3_CMD_DATA_SIZE] = {flags, ISO15_CMD_READ};
+    uint8_t req[PM3_CMD_DATA_SIZE] = {flags, ISO15693_READBLOCK};
     uint16_t reqlen = 2;
 
     if (unaddressed == false) {
@@ -1858,7 +1859,7 @@ static int CmdHF15Write(const char *Cmd) {
 
     // request to be sent to device/card
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[17] = {flags, ISO15_CMD_WRITE};
+    uint8_t req[17] = {flags, ISO15693_WRITEBLOCK};
 
     // enforce, since we are writing
     req[0] |= ISO15_REQ_OPTION;
@@ -1952,7 +1953,7 @@ static int CmdHF15Restore(const char *Cmd) {
 
     // request to be sent to device/card
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[17] = {flags, ISO15_CMD_WRITE};
+    uint8_t req[17] = {flags, ISO15693_WRITEBLOCK};
     // enforce, since we are writing
     req[0] |= ISO15_REQ_OPTION;
     uint16_t reqlen = 2;

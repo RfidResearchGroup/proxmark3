@@ -58,6 +58,7 @@
 #include "util.h"
 #include "string.h"
 #include "iso15693tools.h"
+#include "protocols.h"
 #include "cmd.h"
 #include "appmain.h"
 #include "dbprint.h"
@@ -1444,7 +1445,7 @@ static void BuildIdentifyRequest(uint8_t *cmd) {
     // flags
     cmd[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
     // inventory command code
-    cmd[1] = ISO15_CMD_INVENTORY;
+    cmd[1] = ISO15693_INVENTORY;
     // no mask
     cmd[2] = 0x00;
     // CRC
@@ -1723,7 +1724,7 @@ void SimTagIso15693(uint8_t *uid) {
         }
 
         // TODO: check more flags
-        if ((cmd_len >= 5) && (cmd[0] & ISO15_REQ_INVENTORY) && (cmd[1] == ISO15_CMD_INVENTORY)) {
+        if ((cmd_len >= 5) && (cmd[0] & ISO15_REQ_INVENTORY) && (cmd[1] == ISO15693_INVENTORY)) {
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
 
@@ -1756,7 +1757,7 @@ void SimTagIso15693(uint8_t *uid) {
         }
 
         // GET_SYSTEM_INFO
-        if ((cmd[1] == ISO15_CMD_SYSINFO)) {
+        if ((cmd[1] == ISO15693_GET_SYSTEM_INFO)) {
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
 
@@ -1794,7 +1795,7 @@ void SimTagIso15693(uint8_t *uid) {
         }
 
         // READ_BLOCK
-        if ((cmd[1] == ISO15_CMD_READ)) {
+        if ((cmd[1] == ISO15693_READBLOCK)) {
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
 
@@ -1838,7 +1839,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
     // Tags should respond wihtout AFI and with AFI=0 even when AFI is active
 
     data[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
-    data[1] = ISO15_CMD_INVENTORY;
+    data[1] = ISO15693_INVENTORY;
     data[2] = 0; // AFI
     AddCrc15(data, 3);
 
@@ -1909,13 +1910,13 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
     bool request_answer = false;
 
     switch (data[1]) {
-        case ISO15_CMD_WRITE:
-        case ISO15_CMD_LOCK:
-        case ISO15_CMD_WRITEMULTI:
-        case ISO15_CMD_WRITEAFI:
-        case ISO15_CMD_LOCKAFI:
-        case ISO15_CMD_WRITEDSFID:
-        case ISO15_CMD_LOCKDSFID:
+        case ISO15693_WRITEBLOCK:
+        case ISO15693_LOCKBLOCK:
+        case ISO15693_WRITE_MULTI_BLOCK:
+        case ISO15693_WRITE_AFI:
+        case ISO15693_LOCK_AFI:
+        case ISO15693_WRITE_DSFID:
+        case ISO15693_LOCK_DSFID:
             timeout = ISO15693_READER_TIMEOUT_WRITE;
             request_answer = data[0] & ISO15_REQ_OPTION;
             break;
@@ -2054,13 +2055,7 @@ void LockPassSlixIso15693(uint32_t pass_id, uint32_t password) {
     }
 
     Dbprintf("LockPass: Finishing");
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-
     cmd_send(CMD_ACK, recvlen, 0, 0, recvbuf, recvlen);
-    LED_A_OFF();
-    LED_B_OFF();
-    LED_C_OFF();
-    LED_D_OFF();
 }
 */
 
@@ -2075,10 +2070,10 @@ void SetTag15693Uid(uint8_t *uid) {
     LED_A_ON();
 
     uint8_t cmd[4][9] = {
-        {ISO15_REQ_DATARATE_HIGH, ISO15_CMD_WRITE, 0x3e, 0x00, 0x00, 0x00, 0x00},
-        {ISO15_REQ_DATARATE_HIGH, ISO15_CMD_WRITE, 0x3f, 0x69, 0x96, 0x00, 0x00},
-        {ISO15_REQ_DATARATE_HIGH, ISO15_CMD_WRITE, 0x38},
-        {ISO15_REQ_DATARATE_HIGH, ISO15_CMD_WRITE, 0x39}
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3e, 0x00, 0x00, 0x00, 0x00},
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3f, 0x69, 0x96, 0x00, 0x00},
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x38},
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x39}
     };
 
     // Command 3 : 02 21 38 u8u7u6u5 (where uX = uid byte X)
