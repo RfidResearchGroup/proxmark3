@@ -1695,14 +1695,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_CHKKEYS: {
-            iClass_Authentication_fast(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            iClass_Authentication_fast((iclass_chk_t*)packet->data.asBytes);
             break;
         }
         case CMD_HF_ICLASS_DUMP: {
             iClass_Dump(packet->data.asBytes);
             break;
         }
-        case CMD_HF_ICLASS_RESTORE: {
+        case CMD_HF_ICLASS_RESTORE: {            
             iClass_Restore((iclass_restore_req_t *)packet->data.asBytes);
             break;
         }

@@ -348,6 +348,16 @@ typedef struct {
     iclass_restore_item_t blocks[];
 } PACKED iclass_restore_req_t;
 
+typedef struct iclass_premac {
+    uint8_t mac[4];
+} iclass_premac_t;
+
+typedef struct {
+    bool use_credit_key;
+    uint8_t count;
+    iclass_premac_t items[];
+} PACKED iclass_chk_t;
+
 
 // iclass / picopass chip config structures and shared routines
 typedef struct {
@@ -593,6 +603,7 @@ typedef struct {
 #define CMD_HF_ISO15693_COMMAND                                           0x0313
 #define CMD_HF_ISO15693_FINDAFI                                           0x0315
 #define CMD_HF_ISO15693_CSETUID                                           0x0316
+#define CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY                            0x0317
 
 #define CMD_LF_SNIFF_RAW_ADC                                              0x0360
 
@@ -756,6 +767,8 @@ typedef struct {
 #define FLAG_MF_4K              0x400
 #define FLAG_FORCED_ATQA        0x800
 #define FLAG_FORCED_SAK         0x1000
+#define FLAG_CVE21_0430         0x2000
+
 
 // iCLASS reader flags
 #define FLAG_ICLASS_READER_INIT        0x01

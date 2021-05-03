@@ -1512,9 +1512,6 @@ bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr_t *hdr, ui
     return iclass_send_cmd_with_retries(cmd_check, sizeof(cmd_check), resp_auth, sizeof(resp_auth), 4, 2, start_time, ICLASS_READER_TIMEOUT_OTHERS, eof_time);
 }
 
-typedef struct iclass_premac {
-    uint8_t mac[4];
-} iclass_premac_t;
 
 /* this function works on the following assumptions.
 * - one select first, to get CSN / CC (e-purse)
@@ -1523,36 +1520,35 @@ typedef struct iclass_premac {
 * - key loop only test one type of authtication key. Ie two calls needed
 *   to cover debit and credit key. (AA1/AA2)
 */
-void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
-
-//    uint8_t lastChunk = ((arg0 >> 8) & 0xFF);
-    bool use_credit_key = ((arg0 >> 16) & 0xFF);
-    uint8_t keyCount = arg1 & 0xFF;
+void iClass_Authentication_fast(iclass_chk_t *p) {
+    // sanitation
+    if (p == NULL) {
+        reply_ng(CMD_HF_ICLASS_CHKKEYS, PM3_ESOFT, NULL, 0);
+        return;
+    }
 
     uint8_t check[9] = { ICLASS_CMD_CHECK };
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
     uint8_t readcheck_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
 
-    if (use_credit_key)
+    if (p->use_credit_key)
         readcheck_cc[0] = 0x10 | ICLASS_CMD_READCHECK;
 
     // select card / e-purse
     picopass_hdr_t hdr = {0};
-
-    iclass_premac_t *keys = (iclass_premac_t *)datain;
+    iclass_premac_t *keys = p->items;
 
     LED_A_ON();
 
     // fresh start
     switch_off();
     SpinDelay(20);
-
     Iso15693InitReader();
 
     bool isOK = false;
  
     uint32_t start_time = 0, eof_time = 0;
-    if (select_iclass_tag(&hdr, use_credit_key, &eof_time) == false)
+    if (select_iclass_tag(&hdr, p->use_credit_key, &eof_time) == false)
         goto out;
 
     start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
@@ -1562,7 +1558,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
 
     // Keychunk loop
     uint8_t i = 0;
-    for (i = 0; i < keyCount; i++) {
+    for (i = 0; i < p->count; i++) {
 
         // Allow button press / usb cmd to interrupt device
         if (checked == 1000) {

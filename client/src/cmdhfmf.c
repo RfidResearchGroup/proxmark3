@@ -3288,6 +3288,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
         arg_lit0("x", NULL, "Performs the 'reader attack', nr/ar attack against a reader"),
         arg_lit0("e", "emukeys", "Fill simulator keys from found keys"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "cve", "trigger CVE 2021_0430"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3345,6 +3346,9 @@ static int CmdHF14AMfSim(const char *Cmd) {
     bool setEmulatorMem = arg_get_lit(ctx, 11);
     bool verbose = arg_get_lit(ctx, 12);
 
+    if (arg_get_lit(ctx, 13)) {
+        flags |= FLAG_CVE21_0430;
+    }
     CLIParserFree(ctx);
 
     nonces_t data[1];

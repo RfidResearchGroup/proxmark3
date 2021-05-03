@@ -2970,39 +2970,47 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-    bool found_key = false;
-    //bool found_credit = false;
-    bool got_csn = false;
-
     uint64_t t1 = msclock();
 
+    // load keys
     uint8_t *keyBlock = NULL;
     uint32_t keycount = 0;
-
-    // load keys
     int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
     if (res != PM3_SUCCESS || keycount == 0) {
         free(keyBlock);
         return res;
     }
 
+    // limit size of keys that can be held in memory
+    if (keycount > 100000) {
+        PrintAndLogEx(FAILED, "File contains more than 100 000 keys, aborting...");
+        free(keyBlock);
+        return PM3_EFILE;
+    }
+
     // Get CSN / UID and CCNR
     PrintAndLogEx(SUCCESS, "Reading tag CSN / CCNR...");
-    for (uint8_t i = 0; i < ICLASS_AUTH_RETRY && !got_csn; i++) {
+
+    bool got_csn = false;
+    for (uint8_t i = 0; i < ICLASS_AUTH_RETRY; i++) {
         got_csn = select_only(CSN, CCNR, false);
         if (got_csn == false)
             PrintAndLogEx(WARNING, "one more try");
+        else
+            break;
     }
 
     if (got_csn == false) {
-        PrintAndLogEx(WARNING, "Tried 10 times. Can't select card, aborting...");
+        PrintAndLogEx(WARNING, "Tried %d times. Can't select card, aborting...", ICLASS_AUTH_RETRY);
         free(keyBlock);
         DropField();
         return PM3_ESOFT;
     }
 
+    // allocate memory for the pre calculated macs
     iclass_premac_t *pre = calloc(keycount, sizeof(iclass_premac_t));
     if (pre == NULL) {
+        PrintAndLogEx(WARNING, "failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -3019,19 +3027,28 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Searching for " _YELLOW_("%s") " key...", (use_credit_key) ? "CREDIT" : "DEBIT");
 
-
-    // max 42 keys inside USB_COMMAND.  512/4 = 103 mac
-    uint32_t chunksize = keycount > (PM3_CMD_DATA_SIZE / 4) ? (PM3_CMD_DATA_SIZE / 4) : keycount;
-    bool lastChunk = false;
+    // USB_COMMAND.  512/4 = 103 mac
+    uint32_t max_chunk_size = 0;
+    if (keycount > ((PM3_CMD_DATA_SIZE - sizeof(iclass_chk_t)) / 4))
+        max_chunk_size = (PM3_CMD_DATA_SIZE - sizeof(iclass_chk_t)) / 4;
+    else
+        max_chunk_size = keycount;
 
     // fast push mode
     conn.block_after_ACK = true;
 
     // keep track of position of found key
+    uint32_t chunk_offset = 0;
     uint8_t found_offset = 0;
-    uint32_t key_offset = 0;
+    bool found_key = false;
+
+    // We have
+    //  - a list of keys.
+    //  - a list of precalculated macs that corresponds to the key list
+    // We send a chunk of macs to the device each time
+    
     // main keychunk loop
-    for (key_offset = 0; key_offset < keycount && (found_key == false); key_offset += chunksize) {
+    for (chunk_offset = 0; chunk_offset < keycount; chunk_offset += max_chunk_size) {
 
         if (kbd_enter_pressed()) {
             PrintAndLogEx(NORMAL, "");
@@ -3039,31 +3056,40 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
             goto out;
         }
 
-        uint32_t keys = ((keycount - key_offset)  > chunksize) ? chunksize : keycount - key_offset;
+        uint32_t curr_chunk_cnt = keycount - chunk_offset;
+        if ((keycount - chunk_offset)  > max_chunk_size) {
+            curr_chunk_cnt = max_chunk_size;
+        }
 
         // last chunk?
-        if (keys == keycount - key_offset) {
-            lastChunk = true;
+        if (curr_chunk_cnt == keycount - chunk_offset) {
             // Disable fast mode on last command
             conn.block_after_ACK = false;
         }
-        uint32_t flags = lastChunk << 8;
-        // bit 16
-        //   - 1 indicates credit key
-        //   - 0 indicates debit key (default)
-        flags |= (use_credit_key << 16);
+
+        uint32_t tmp_plen = sizeof(iclass_chk_t) + (4 * curr_chunk_cnt);
+        iclass_chk_t *packet = calloc(tmp_plen,  sizeof(uint8_t) );
+        if (packet == NULL) {
+
+        }
+        packet->use_credit_key = use_credit_key;
+        packet->count = curr_chunk_cnt;
+        // copy chunk of pre calculated macs to packet
+        memcpy(packet->items, (pre + chunk_offset), (4 * curr_chunk_cnt));
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_HF_ICLASS_CHKKEYS, flags, keys, 0, pre + key_offset, 4 * keys);
-        PacketResponseNG resp;
+        SendCommandNG(CMD_HF_ICLASS_CHKKEYS, (uint8_t*)packet, tmp_plen);
+        free(packet);
 
         bool looped = false;
         uint8_t timeout = 0;
+
+        PacketResponseNG resp;
         while (WaitForResponseTimeout(CMD_HF_ICLASS_CHKKEYS, &resp, 2000) == false) {
             timeout++;
             PrintAndLogEx(NORMAL, "." NOLF);
             if (timeout > 10) {
-                PrintAndLogEx(WARNING, "\nno response from device, aborting...");
+                PrintAndLogEx(WARNING, "\ncommand execute timeout, aborting...");
                 goto out;
             }
             looped = true;
@@ -3078,10 +3104,11 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS,
                      "Found valid key " _GREEN_("%s")
-                    , sprint_hex(keyBlock + (key_offset + found_offset) * 8, 8)
+                    , sprint_hex(keyBlock + (chunk_offset + found_offset) * 8, 8)
                 );
+            break;
         } else {
-            PrintAndLogEx(INPLACE, "Chunk [%d/%d]", key_offset, keycount);
+            PrintAndLogEx(INPLACE, "Chunk [%d/%d]", chunk_offset, keycount);
             fflush(stdout);
         }
     }
@@ -3090,11 +3117,11 @@ out:
     t1 = msclock() - t1;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "time in iclass chk " _YELLOW_("%.3f") " seconds", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "time in iclass chk " _YELLOW_("%.1f") " seconds", (float)t1 / 1000.0);
     DropField();
 
     if (found_key) {
-        uint8_t *key = keyBlock + (key_offset + found_offset) * 8;
+        uint8_t *key = keyBlock + (chunk_offset + found_offset) * 8;
         add_key(key);
     }
 

@@ -28,7 +28,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf);
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_t *datain, uint8_t *dataout,  uint16_t *dataoutlen);
 
-void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain);
+void iClass_Authentication_fast(iclass_chk_t *p);
 bool iclass_auth(iclass_auth_req_t *payload, uint8_t *out);
 
 void iClass_ReadBlock(uint8_t *msg);

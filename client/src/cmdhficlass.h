@@ -19,10 +19,6 @@ typedef struct iclass_block {
     uint8_t d[8];
 } iclass_block_t;
 
-typedef struct iclass_premac {
-    uint8_t mac[4];
-} iclass_premac_t;
-
 typedef struct iclass_prekey {
     uint8_t mac[4];
     uint8_t key[8];

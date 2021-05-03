@@ -449,19 +449,10 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, uint16_t atqa, uint8_
 void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t atqa, uint8_t sak) {
     tag_response_info_t *responses;
     uint8_t cardSTATE = MFEMUL_NOFIELD;
-    uint8_t uid_len = 0; // 4,7, 10
-    uint32_t cuid = 0;
-
-//    int vHf = 0; // in mV
-
-    uint32_t selTimer = 0;
-    uint32_t authTimer = 0;
-
+    uint8_t uid_len = 0; // 4, 7, 10
+    uint32_t cuid = 0, selTimer = 0, authTimer = 0;
+    uint32_t nr, ar;
     uint8_t blockNo;
-
-    uint32_t nr;
-    uint32_t ar;
-
     bool encrypted_data;
 
     uint8_t cardWRBL = 0;
@@ -469,9 +460,9 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     uint8_t cardAUTHKEY = AUTHKEYNONE;  // no authentication
     uint32_t cardRr = 0;
     uint32_t ans = 0;
-
     uint32_t cardINTREG = 0;
     uint8_t cardINTBLOCK = 0;
+
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
     pcs = &mpcs;
@@ -849,7 +840,8 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                         EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
                         FpgaDisableTracing();
 
-                        if (DBGLEVEL >= DBG_ERROR) Dbprintf("[MFEMUL_WORK] Reader tried to operate (0x%02x) on block (0x%02x) not authenticated for (0x%02x), nacking", receivedCmd_dec[0], receivedCmd_dec[1], cardAUTHSC);
+                        if (DBGLEVEL >= DBG_ERROR)
+                            Dbprintf("[MFEMUL_WORK] Reader tried to operate (0x%02x) on block (0x%02x) not authenticated for (0x%02x), nacking", receivedCmd_dec[0], receivedCmd_dec[1], cardAUTHSC);
                         break;
                     }
                 }
@@ -883,20 +875,20 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                     // Check if selected Block is a Sector Trailer
                     if (IsSectorTrailer(blockNo)) {
 
-                        if (!IsAccessAllowed(blockNo, cardAUTHKEY, AC_KEYA_READ)) {
+                        if (IsAccessAllowed(blockNo, cardAUTHKEY, AC_KEYA_READ) == false) {
                             memset(response, 0x00, 6); // keyA can never be read
                             if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK - IsSectorTrailer] keyA can never be read - block %d (0x%02x)", blockNo, blockNo);
                         }
-                        if (!IsAccessAllowed(blockNo, cardAUTHKEY, AC_KEYB_READ)) {
+                        if (IsAccessAllowed(blockNo, cardAUTHKEY, AC_KEYB_READ) == false) {
                             memset(response + 10, 0x00, 6); // keyB cannot be read
                             if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK - IsSectorTrailer] keyB cannot be read - block %d (0x%02x)", blockNo, blockNo);
                         }
-                        if (!IsAccessAllowed(blockNo, cardAUTHKEY, AC_AC_READ)) {
+                        if (IsAccessAllowed(blockNo, cardAUTHKEY, AC_AC_READ) == false) {
                             memset(response + 6, 0x00, 4); // AC bits cannot be read
                             if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK - IsAccessAllowed] AC bits cannot be read - block %d (0x%02x)", blockNo, blockNo);
                         }
                     } else {
-                        if (!IsAccessAllowed(blockNo, cardAUTHKEY, AC_DATA_READ)) {
+                        if (IsAccessAllowed(blockNo, cardAUTHKEY, AC_DATA_READ) == false) {
                             memset(response, 0x00, 16); // datablock cannot be read
                             if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK - IsAccessAllowed] Data block %d (0x%02x) cannot be read", blockNo, blockNo);
                         }
