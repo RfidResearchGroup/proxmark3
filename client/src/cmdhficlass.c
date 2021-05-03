@@ -3108,7 +3108,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
                 );
             break;
         } else {
-            PrintAndLogEx(INPLACE, "Chunk [%d/%d]", chunk_offset, keycount);
+            PrintAndLogEx(INPLACE, "Chunk [%03d/%d]", chunk_offset, keycount);
             fflush(stdout);
         }
     }
@@ -3283,6 +3283,7 @@ typedef struct {
 
 static size_t iclass_tc = 1;
 
+static pthread_mutex_t generator_mutex = PTHREAD_MUTEX_INITIALIZER;
 static void *bf_generate_mac(void *thread_arg) {
 
     iclass_thread_arg_t *targ = (iclass_thread_arg_t *)thread_arg;
@@ -3306,12 +3307,14 @@ static void *bf_generate_mac(void *thread_arg) {
 
         memcpy(key, keys + 8 * i, 8);
 
+        pthread_mutex_lock(&generator_mutex);
         if (use_raw)
             memcpy(div_key, key, 8);
         else
             HFiClassCalcDivKey(csn, key, div_key, use_elite);
 
         doMAC(cc_nr, div_key, list[i].mac);
+        pthread_mutex_unlock(&generator_mutex);
     }
     return NULL;
 }
@@ -3319,6 +3322,8 @@ static void *bf_generate_mac(void *thread_arg) {
 // precalc diversified keys and their MAC
 void GenerateMacFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, uint8_t *keys, uint32_t keycnt, iclass_premac_t *list) {
 
+    pthread_mutex_init(&generator_mutex, NULL);
+    
     iclass_tc = num_CPUs();
     pthread_t threads[iclass_tc];
     iclass_thread_arg_t args[iclass_tc];
@@ -3370,18 +3375,21 @@ static void *bf_generate_mackey(void *thread_arg) {
 
         memcpy(list[i].key, keys + 8 * i, 8);
 
+        pthread_mutex_lock(&generator_mutex);
         if (use_raw)
             memcpy(div_key, list[i].key, 8);
         else
             HFiClassCalcDivKey(csn, list[i].key, div_key, use_elite);
 
         doMAC(cc_nr, div_key, list[i].mac);
+        pthread_mutex_unlock(&generator_mutex);
     }
     return NULL;
 }
 
 void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, uint8_t *keys, uint32_t keycnt, iclass_prekey_t *list) {
 
+    pthread_mutex_init(&generator_mutex, NULL);
     iclass_tc = num_CPUs();
     pthread_t threads[iclass_tc];
     iclass_thread_arg_t args[iclass_tc];
