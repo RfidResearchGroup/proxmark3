@@ -28,6 +28,8 @@
 #include "protocols.h"
 
 #define MAX_ISO14A_TIMEOUT 524288
+
+// this timeout is in MS
 static uint32_t iso14a_timeout;
 
 static uint8_t colpos = 0;
@@ -191,11 +193,11 @@ void iso14a_set_trigger(bool enable) {
 }
 
 void iso14a_set_timeout(uint32_t timeout) {
-    iso14a_timeout = timeout + (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / (16 * 8) + 2;
+    iso14a_timeout = timeout + (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 128 + 2;
 }
 
 uint32_t iso14a_get_timeout(void) {
-    return iso14a_timeout - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / (16 * 8) - 2;
+    return iso14a_timeout - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 128 - 2;
 }
 
 //-----------------------------------------------------------------------------
@@ -1823,7 +1825,7 @@ static void PrepareDelayedTransfer(uint16_t delay) {
 //-------------------------------------------------------------------------------------
 static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing) {
 
-    if (!g_hf_field_active) {
+    if (g_hf_field_active == false) {
         Dbprintf("Warning: HF field is off, ignoring TransmitFor14443a command");
         return;
     }
@@ -2273,9 +2275,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse,  uint8_t *rec
 //  If it takes too long return FALSE
 //-----------------------------------------------------------------------------
 static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receivedResponsePar, uint16_t offset) {
-    uint32_t c = 0;
-
-    if (!g_hf_field_active)
+    if (g_hf_field_active == false)
         return false;
 
     // Set FPGA mode to "reader listen mode", no modulation (listen
@@ -2291,6 +2291,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     (void)b;
 
+    volatile uint32_t c = 0;
     uint32_t timeout = iso14a_get_timeout();
     uint32_t receive_timer = GetTickCount();
     for (;;) {
@@ -2466,7 +2467,7 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par) {
     uint8_t wupa[] = { ISO14443A_CMD_WUPA };  // 0x26 - REQA  0x52 - WAKE-UP
 
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
-    iso14a_set_timeout(1236 / (16 * 8) + 1);  // response to WUPA is expected at exactly 1236/fc. No need to wait longer.
+    iso14a_set_timeout(1236 / 128 + 1);  // response to WUPA is expected at exactly 1236/fc. No need to wait longer.
 
     uint32_t start_time = GetTickCount();
     int len;
@@ -2668,7 +2669,9 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
         if ((sak & 0x20) != 0) Dbprintf("Skipping RATS according to hf 14a config");
         return 2;
     } // else force RATS
+
     if ((sak & 0x20) == 0) Dbprintf("Forcing RATS according to hf 14a config");
+    
     // RATS, Request for answer to select
     if (no_rats == false) {
         uint8_t rats[] = { ISO14443A_CMD_RATS, 0x80, 0x00, 0x00 }; // FSD=256, FSDI=8, CID=0
