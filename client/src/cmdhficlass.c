@@ -3070,7 +3070,8 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         uint32_t tmp_plen = sizeof(iclass_chk_t) + (4 * curr_chunk_cnt);
         iclass_chk_t *packet = calloc(tmp_plen,  sizeof(uint8_t) );
         if (packet == NULL) {
-
+            PrintAndLogEx(WARNING, "failed to allocate memory");
+            break;
         }
         packet->use_credit_key = use_credit_key;
         packet->count = curr_chunk_cnt;
