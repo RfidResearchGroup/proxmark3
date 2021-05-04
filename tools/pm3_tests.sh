@@ -134,7 +134,7 @@ function CheckFileExist() {
     return 0
   fi
 
-  echo -e "$[{C_RED} FAIL ${C_NC}] ${C_FAIL}"
+  echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
   return 1
 }
 
@@ -176,7 +176,7 @@ function CheckExecute() {
     return 0
   fi
   if $GPUTEST && ! $GPUTESTS; then
-    echo -e "$[ {C_YELLOW}SKIPPED${C_NC} ] ( gpu )"
+    echo -e "[ ${C_YELLOW}SKIPPED${C_NC} ] ( gpu )"
     return 0
   fi
 
@@ -224,6 +224,13 @@ while true; do
       echo -e "\n${C_BLUE}Testing common:${C_NC}"
       if ! CheckFileExist "hardnested tables exists"       "./client/resources/hardnested_tables/bitflip_0_001_states.bin.bz2"; then break; fi
       if ! CheckFileExist "simmodule fw file exists"       "./client/resources/sim011.bin"; then break; fi
+      if ! CheckFileExist "iCLASS dictionary exists"       "./client/dictionaries/iclass_default_keys.dic"; then break; fi
+      if ! CheckFileExist "MFC dictionary exists"          "./client/dictionaries/mfc_default_keys.dic"; then break; fi
+      if ! CheckFileExist "MFDES dictionary exists"        "./client/dictionaries/mfdes_default_keys.dic"; then break; fi
+      if ! CheckFileExist "MFP dictionary exists"          "./client/dictionaries/mfp_default_keys.dic"; then break; fi
+      if ! CheckFileExist "MFULC dictionary exists"        "./client/dictionaries/mfulc_default_keys.dic"; then break; fi
+      if ! CheckFileExist "T55XX dictionary exists"        "./client/dictionaries/t55xx_default_pwds.dic"; then break; fi
+
       echo -e "\n${C_BLUE}Testing tools:${C_NC}"
       if ! CheckExecute "xorcheck test"                    "tools/xorcheck.py 04 00 80 64 ba" "final LRC XOR byte value: 5A"; then break; fi
       if ! CheckExecute "findbits test"                    "tools/findbits.py 73 0110010101110011" "Match at bit 9: 011001010"; then break; fi
