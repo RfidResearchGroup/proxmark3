@@ -46,7 +46,9 @@ struct asn1_tag {
 
 static const struct asn1_tag asn1_tags[] = {
     // internal
-    { 0x00, "Unknown ???",       ASN1_TAG_GENERIC      },
+    { 0x00, "elem",              ASN1_TAG_GENERIC      },  // PRIMITIVE
+    { 0x20, "CONSTRUCTED",       ASN1_TAG_GENERIC      },  // CONSTRUCTED,  the sequence has multiple elements
+    { 0x80, "CONTEXT SPECIFIC",  ASN1_TAG_GENERIC      },
 
     // ASN.1
     { 0x01, "BOOLEAN",           ASN1_TAG_BOOLEAN      },
@@ -84,6 +86,7 @@ static const struct asn1_tag asn1_tags[] = {
     { 0xa4, "[4]",               ASN1_TAG_GENERIC      },
     { 0xa5, "[5]",               ASN1_TAG_GENERIC      },
 };
+
 
 static int asn1_sort_tag(tlv_tag_t tag) {
     return (int)(tag >= 0x100 ? tag : tag << 8);
@@ -311,7 +314,14 @@ bool asn1_tag_dump(const struct tlv *tlv, int level, bool *candump) {
 
     const struct asn1_tag *tag = asn1_get_tag(tlv);
 
-    PrintAndLogEx(INFO, "%*s--%2x[%02zx] '%s':" NOLF, (level * 4), " ", tlv->tag, tlv->len, tag->name);
+    PrintAndLogEx(INFO,
+         "%*s-- %2x [%02zx] '"_YELLOW_("%s") "' :" NOLF
+         , (level * 4)
+         , " "
+         , tlv->tag
+         , tlv->len
+         , tag->name
+    );
 
     switch (tag->type) {
         case ASN1_TAG_GENERIC:
