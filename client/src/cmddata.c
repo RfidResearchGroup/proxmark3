@@ -28,6 +28,7 @@
 #include "mifare/ndef.h"
 #include "cliparser.h"
 #include "cmdlft55xx.h"          // print...
+#include "crypto/asn1utils.h"     // ASN1 decode / print
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t DemodBufferLen = 0;
@@ -2882,6 +2883,33 @@ static int CmdDataModulationSearch(const char *Cmd) {
     return try_detect_modulation();
 }
 
+static int CmdAsn1Decoder(const char* Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data asn1",
+                  "Decode ASN1 bytearray\n"
+                  "",
+                  "data asn1 -d 303381050186922305a5020500a6088101010403030008a7188516eeee4facacf4fbde5e5c49d95e55bfbca74267b02407a9020500\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", NULL, "<hex>", "ASN1 encoded byte array"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int dlen = 256;
+    uint8_t data[256];
+    CLIGetHexWithReturn(ctx, 1, data, &dlen);
+    CLIParserFree(ctx);
+
+    // print ASN1 decoded array in TLV view
+    PrintAndLogEx(INFO, "---------------- " _CYAN_("ASN1 TLV") " -----------------");
+    asn1_print(data, dlen, "  ");
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",            CmdHelp,                 AlwaysAvailable,  "This help"},
 
@@ -2916,6 +2944,7 @@ static command_t CommandTable[] = {
     {"getbitstream",    CmdGetBitStream,         AlwaysAvailable,  "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
 
     {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},
+    {"asn1",            CmdAsn1Decoder,         AlwaysAvailable,  "asn1 decoder"},
     {"bin2hex",         Cmdbin2hex,              AlwaysAvailable,  "Converts binary to hexadecimal"},
     {"bitsamples",      CmdBitsamples,           IfPm3Present,     "Get raw samples as bitstring"},
     {"clear",           CmdBuffClear,            AlwaysAvailable,  "Clears bigbuf on deviceside and graph window"},

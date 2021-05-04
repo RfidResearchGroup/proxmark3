@@ -157,7 +157,7 @@ enum CardPSVendor GetCardPSVendor(uint8_t *AID, size_t AIDlen) {
     return CV_NA;
 }
 
-static void print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf) {
+static void emv_print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf) {
     emv_tag_dump(tlv, level);
     if (is_leaf) {
         print_buffer(tlv->value, tlv->len, level);
@@ -169,7 +169,7 @@ bool TLVPrintFromBuffer(uint8_t *data, int datalen) {
     if (t) {
         PrintAndLogEx(INFO, "-------------------- " _CYAN_("TLV decoded") " --------------------");
 
-        tlvdb_visit(t, print_cb, NULL, 0);
+        tlvdb_visit(t, emv_print_cb, NULL, 0);
         tlvdb_free(t);
         return true;
     } else {
@@ -182,7 +182,7 @@ void TLVPrintFromTLVLev(struct tlvdb *tlv, int level) {
     if (!tlv)
         return;
 
-    tlvdb_visit(tlv, print_cb, NULL, level);
+    tlvdb_visit(tlv, emv_print_cb, NULL, level);
 }
 
 void TLVPrintFromTLV(struct tlvdb *tlv) {

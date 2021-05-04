@@ -61,7 +61,7 @@ exit:
     return res;
 }
 
-static void print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf) {
+static void asn1_print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf) {
     bool candump = true;
     asn1_tag_dump(tlv, level, &candump);
     if (is_leaf && candump) {
@@ -73,7 +73,7 @@ int asn1_print(uint8_t *asn1buf, size_t asn1buflen, const char *indent) {
 
     struct tlvdb *t = tlvdb_parse_multi(asn1buf, asn1buflen);
     if (t) {
-        tlvdb_visit(t, print_cb, NULL, 0);
+        tlvdb_visit(t, asn1_print_cb, NULL, 0);
         tlvdb_free(t);
     } else {
         PrintAndLogEx(ERR, "Can't parse data as TLV tree");
