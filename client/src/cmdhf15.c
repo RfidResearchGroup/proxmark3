@@ -2141,6 +2141,56 @@ static int CmdHF15CSetUID(const char *Cmd) {
     }
 }
 
+static int CmdHF15SlixDisable(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 slixdisable",
+                  "Disable privacy mode on SLIX ISO-15693 tag",
+                  "hf 15 slixdisable -p 0F0F0F0F");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("p", "pwd", "<hex>", "password, 8 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    struct {
+        uint8_t pwd[4];
+    } PACKED payload;
+    int pwdlen = 0;
+    CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
+    CLIParserFree(ctx);
+
+	PrintAndLogEx(INFO, "Trying to disabling privacy mode using password " _GREEN_("%s")
+        , sprint_hex_inrow(payload.pwd, sizeof(payload.pwd))
+    );
+
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY, (uint8_t *)&payload, sizeof(payload));
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    switch(resp.status) {
+		case PM3_ETIMEOUT: {
+			PrintAndLogEx(WARNING, "no tag found");
+            break;
+        }
+		case PM3_EWRONGANSWER: {
+			PrintAndLogEx(WARNING, "password was not accepted");
+            break;
+        }
+        case PM3_SUCCESS: {
+            PrintAndLogEx(SUCCESS, "privacy mode is now disabled ( " _GREEN_("ok") " ) ");
+            break;
+        }
+	}
+	return resp.status;
+}
+
 static command_t CommandTable[] = {
     {"-----------", CmdHF15Help,        AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",        CmdHF15Help,        AlwaysAvailable, "This help"},
@@ -2156,6 +2206,7 @@ static command_t CommandTable[] = {
     {"restore",     CmdHF15Restore,     IfPm3Iso15693,   "Restore from file to all memory pages of an ISO-15693 tag"},
     {"samples",     CmdHF15Samples,     IfPm3Iso15693,   "Acquire samples as reader (enables carrier, sends inquiry)"},
     {"sim",         CmdHF15Sim,         IfPm3Iso15693,   "Fake an ISO-15693 tag"},
+    {"slixdisable", CmdHF15SlixDisable, IfPm3Iso15693,   "Disable privacy mode on SLIX ISO-15693 tag"},
     {"wrbl",        CmdHF15Write,       IfPm3Iso15693,   "Write a block"},
     {"-----------", CmdHF15Help,        IfPm3Iso15693,  "----------------------- " _CYAN_("afi") " -----------------------"},
     {"findafi",     CmdHF15FindAfi,     IfPm3Iso15693,   "Brute force AFI of an ISO-15693 tag"},

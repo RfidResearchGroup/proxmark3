@@ -1252,6 +1252,15 @@ static void PacketReceived(PacketCommandNG *packet) {
             SetTag15693Uid(payload->uid);
             break;
         }
+        case CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY: {
+            struct p {
+                uint8_t pwd[4];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+			DisablePrivacySlixLIso15693(payload->pwd);
+			break;
+        }
+
 #endif
 
 #ifdef WITH_LEGICRF

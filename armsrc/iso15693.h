@@ -48,4 +48,6 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
 int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time);
 
 void SetTag15693Uid(uint8_t *uid);
+
+void DisablePrivacySlixLIso15693(uint8_t *password);
 #endif
