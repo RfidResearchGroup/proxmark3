@@ -41,7 +41,7 @@ arguments = [[
     -v      : verify write by executing a `lf em 410x reader`
     ]]
 
-    -- Some globals
+-- Some globals
 local DEBUG = false
 local ENROLL_STATUS_FN = 'lf_em4100_status.txt'
 ---
