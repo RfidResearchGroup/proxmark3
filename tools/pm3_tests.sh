@@ -3,6 +3,9 @@
 PM3PATH="$(dirname "$0")/.."
 cd "$PM3PATH" || exit 1
 
+DICPATH="./client/dictionaries"
+RESOURCEPATH="./client/resources"
+
 SLOWTESTS=false
 GPUTESTS=false
 TESTALL=true
@@ -222,14 +225,14 @@ echo ""
 while true; do
     if $TESTALL || $TESTCOMMON; then
       echo -e "\n${C_BLUE}Testing common:${C_NC}"
-      if ! CheckFileExist "hardnested tables exists"       "./client/resources/hardnested_tables/bitflip_0_001_states.bin.bz2"; then break; fi
-      if ! CheckFileExist "simmodule fw file exists"       "./client/resources/sim011.bin"; then break; fi
-      if ! CheckFileExist "iCLASS dictionary exists"       "./client/dictionaries/iclass_default_keys.dic"; then break; fi
-      if ! CheckFileExist "MFC dictionary exists"          "./client/dictionaries/mfc_default_keys.dic"; then break; fi
-      if ! CheckFileExist "MFDES dictionary exists"        "./client/dictionaries/mfdes_default_keys.dic"; then break; fi
-      if ! CheckFileExist "MFP dictionary exists"          "./client/dictionaries/mfp_default_keys.dic"; then break; fi
-      if ! CheckFileExist "MFULC dictionary exists"        "./client/dictionaries/mfulc_default_keys.dic"; then break; fi
-      if ! CheckFileExist "T55XX dictionary exists"        "./client/dictionaries/t55xx_default_pwds.dic"; then break; fi
+      if ! CheckFileExist "hardnested tables exists"       "$RESOURCEPATH/hardnested_tables/bitflip_0_001_states.bin.bz2"; then break; fi
+      if ! CheckFileExist "simmodule fw file exists"       "$RESOURCEPATH/sim011.bin"; then break; fi
+      if ! CheckFileExist "iCLASS dictionary exists"       "$DICPATH/iclass_default_keys.dic"; then break; fi
+      if ! CheckFileExist "MFC dictionary exists"          "$DICPATH/mfc_default_keys.dic"; then break; fi
+      if ! CheckFileExist "MFDES dictionary exists"        "$DICPATH/mfdes_default_keys.dic"; then break; fi
+      if ! CheckFileExist "MFP dictionary exists"          "$DICPATH/mfp_default_keys.dic"; then break; fi
+      if ! CheckFileExist "MFULC dictionary exists"        "$DICPATH/mfulc_default_keys.dic"; then break; fi
+      if ! CheckFileExist "T55XX dictionary exists"        "$DICPATH/t55xx_default_pwds.dic"; then break; fi
 
       echo -e "\n${C_BLUE}Testing tools:${C_NC}"
       if ! CheckExecute "xorcheck test"                    "tools/xorcheck.py 04 00 80 64 ba" "final LRC XOR byte value: 5A"; then break; fi
@@ -474,7 +477,7 @@ while true; do
       if ! CheckExecute slow retry ignore "hf mf hardnested long test"  "$CLIENTBIN -c 'hf mf hardnested -t --tk 000000000000'" "found:"; then break; fi
       if ! CheckExecute slow "hf iclass loclass long test" "$CLIENTBIN -c 'hf iclass loclass --long'" "verified (ok)"; then break; fi
       if ! CheckExecute slow "emv long test"               "$CLIENTBIN -c 'emv test -l'" "Test(s) \[ ok"; then break; fi
-      if ! CheckExecute "hf iclass lookup test"            "$CLIENTBIN -c 'hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic'" \
+      if ! CheckExecute "hf iclass lookup test"            "$CLIENTBIN -c 'hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f $DICPATH/iclass_default_keys.dic'" \
                                                                       "valid key AE A6 84 A6 DA B2 32 78"; then break; fi
 
       if ! $SLOWTESTS; then
