@@ -318,21 +318,21 @@ bool asn1_tag_dump(const struct tlv *tlv, int level, bool *candump) {
 
     const struct asn1_tag *tag = asn1_get_tag(tlv);
 
-/*
-    if ((tlv->tag & 0x20) == 0x20 ) {
-    } else if ((tlv->tag & 0x80) == 0x80 ) {
-    } else {
-    }
-*/
+    /*
+        if ((tlv->tag & 0x20) == 0x20 ) {
+        } else if ((tlv->tag & 0x80) == 0x80 ) {
+        } else {
+        }
+    */
 
     PrintAndLogEx(INFO,
-        "%*s-- %2x [%02zx] '"_YELLOW_("%s") "'" NOLF
-        , (level * 4)
-        , " "
-        , tlv->tag
-        , tlv->len
-        , tag->name
-    );
+                  "%*s-- %2x [%02zx] '"_YELLOW_("%s") "'" NOLF
+                  , (level * 4)
+                  , " "
+                  , tlv->tag
+                  , tlv->len
+                  , tag->name
+                 );
 
     switch (tag->type) {
         case ASN1_TAG_GENERIC:

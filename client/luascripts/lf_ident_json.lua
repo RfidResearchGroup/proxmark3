@@ -10,7 +10,7 @@ version = 'v1.0.0'
 desc = [[
 This script loads a json format file,  with the field "data" and a hexbyte array of data. Ie t55x7 dump,
 it tries to identify which system based on block1,  and detect block0 settings.
-The script returns a file with the new identification added, in json format.  The output is save in 'dumpdata.json' 
+The script returns a file with the new identification added, in json format.  The output is save in 'dumpdata.json'
 ]]
 example = [[
     script run lf_ident_json -i lf_t55xx.json
@@ -20,18 +20,18 @@ script run lf_en4100_bulk.lua [-h] [-c] [-p password] [-s <start cn>] [-v]
 ]]
 arguments = [[
     -h      : this help
-    -i      : infile ( .json format ) 
+    -i      : infile ( .json format )
 
     ]]
 
 -- Some globals
 local DEBUG = false
 
-string.startswith = function(self, str) 
+string.startswith = function(self, str)
     return self:find('^' .. str) ~= nil
 end
 
---- 
+---
 -- A debug printout-function
 local function dbg(args)
 	if not DEBUG then return end
@@ -43,16 +43,16 @@ local function dbg(args)
 		end
 	else
         print('###', args)
-	end	
-end	
---- 
+	end
+end
+---
 -- This is only meant to be used when errors occur
 local function oops(err)
     print('ERROR:', err)
     core.clearCommandBuffer()
     return nil, errr
 end
---- 
+---
 -- Usage help
 local function help()
     print(copyright)
@@ -75,14 +75,14 @@ local function exitMsg(msg)
     print()
 end
 
---- loads a json formatted text file with 
+--- loads a json formatted text file with
 --
 -- @param input the file containing the json-dump  (defaults to dumpdata.json)
 local function load_json(input)
 	input = input or 'dumpdata.json'
 	local infile = io.open(input, "rb")
 	if not infile then return oops(string.format("Could not read file %s", tostring(input)))	end
-	
+
 	-- Read file
 	local t = infile:read("*all")
 	io.close(infile)
@@ -94,17 +94,17 @@ local function load_json(input)
 	return obj
 end
 --
--- Save 
+-- Save
 local function save_json(data, filename)
 	filename = filename or 'dumpdata.json'
 	local outfile = io.open(filename, "w")
-	if not outfile then return oops(string.format("Could not write to file %s", tostring(filename))) end	
+	if not outfile then return oops(string.format("Could not write to file %s", tostring(filename))) end
 	outfile:write(data)
 	io.close(outfile)
-	return filename   
+	return filename
 end
 
-local function encode(blocks)		
+local function encode(blocks)
 	return json.encode (blocks, { indent = true })
 end
 --
@@ -151,7 +151,7 @@ local function getDefault(block0)
 	elseif block0 == T55X7_IOPROX_CONFIG_BLOCK then return 'T55X7_IOPROX_CONFIG_BLOCK :: HID FSK2a, RF/64, 2 data blocks'
 	elseif block0 == T55X7_PRESCO_CONFIG_BLOCK then return 'T55X7_PRESCO_CONFIG_BLOCK :: manchester, RF/32, STT, 5 data blocks'
 	elseif block0 == T5555_DEFAULT_CONFIG_BLOCK then return 'T5555_DEFAULT_CONFIG_BLOCK :: ask, manchester, RF/64, 2 data blocks?'
-	elseif block0 == T55X7_STARPROX then return 'T55X7_STARPROX :: manchester, inverse, RF/32, 2 data blocks'	
+	elseif block0 == T55X7_STARPROX then return 'T55X7_STARPROX :: manchester, inverse, RF/32, 2 data blocks'
 	elseif block0 == T55X7_VISA2K_CONFIG_BLOCK then return 'T55X7_VISA2K_CONFIG_BLOCK :: manchester, RF/64, STT, 3 data blocks'
 	elseif block0 == T55X7_SECURAKEY_CONFIG_BLOCK then return 'T55X7_SECURAKEY_CONFIG_BLOCK :: manchester, RF/40, 3 data blocks'
 	else return 'unknown configblock'..'  '..block0
@@ -197,15 +197,15 @@ local function getConfigBlock(block)
 	end
 	if  block:startswith('10d00000') then
 		return '00088088', 'Card is Presco'
-	end 
+	end
 	if  block:startswith('00010101') then
 		return '00107080', 'Card is Pyramid'
 	end
-	
+
 	return result, 'unknown tag'
 end
 
--- 
+--
 -- The main entry point
 function main(args)
 
@@ -213,7 +213,7 @@ function main(args)
     print( string.rep('--',20) )
     print()
 
-    if #args == 0 then return help() end						  
+    if #args == 0 then return help() end
 
 
 	local lines
@@ -223,13 +223,13 @@ function main(args)
 		if o == "h" then return help() end
 		if o == "i" then lines = load_json(a) end
 	end
-	
+
 	--for i = 1, #data do
 	for _,i in pairs(lines) do
-	
+
 		local index = 0
 		local one = {}
-		for ix = 1, #i.data, 8 do		
+		for ix = 1, #i.data, 8 do
 			one['blk_'..index] = i.data:sub(ix,ix+7)
 			index = index + 1
 		end
@@ -237,13 +237,13 @@ function main(args)
 		local mconf, msg = getConfigBlock(one["blk_1"])
 		one["identification"] =  msg
 		one["config_desc"] = getDefault(one["blk_0"])
-		
+
 		if msg:find('badge') then
 			print (msg, i.data)
 		end
 		table.insert(out, one)
-	end	
-	save_json( encode(out) , nil)		
+	end
+	save_json( encode(out) , nil)
 end
 
 main(args)

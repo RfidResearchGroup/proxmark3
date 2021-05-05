@@ -2161,9 +2161,9 @@ static int CmdHF15SlixDisable(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
     CLIParserFree(ctx);
 
-	PrintAndLogEx(INFO, "Trying to disabling privacy mode using password " _GREEN_("%s")
-        , sprint_hex_inrow(payload.pwd, sizeof(payload.pwd))
-    );
+    PrintAndLogEx(INFO, "Trying to disabling privacy mode using password " _GREEN_("%s")
+                  , sprint_hex_inrow(payload.pwd, sizeof(payload.pwd))
+                 );
 
     PacketResponseNG resp;
     clearCommandBuffer();
@@ -2174,21 +2174,21 @@ static int CmdHF15SlixDisable(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    switch(resp.status) {
-		case PM3_ETIMEOUT: {
-			PrintAndLogEx(WARNING, "no tag found");
+    switch (resp.status) {
+        case PM3_ETIMEOUT: {
+            PrintAndLogEx(WARNING, "no tag found");
             break;
         }
-		case PM3_EWRONGANSWER: {
-			PrintAndLogEx(WARNING, "password was not accepted");
+        case PM3_EWRONGANSWER: {
+            PrintAndLogEx(WARNING, "password was not accepted");
             break;
         }
         case PM3_SUCCESS: {
             PrintAndLogEx(SUCCESS, "privacy mode is now disabled ( " _GREEN_("ok") " ) ");
             break;
         }
-	}
-	return resp.status;
+    }
+    return resp.status;
 }
 
 static command_t CommandTable[] = {

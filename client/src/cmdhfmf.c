@@ -5794,7 +5794,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
                   "hf mf wipe                --> reads card uid to generate file name\n"
                   "hf mf wipe --gen2         --> force write to S0, B0 manufacture block\n"
                   "hf mf wipe -f mykey.bin   --> use mykey.bin\n"
-);
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f",  "file", "<fn>", "key filename"),
@@ -5831,7 +5831,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
     uint8_t keyB[MIFARE_4K_MAXSECTOR * 6];
     uint8_t num_sectors = 0;
 
-    uint8_t mf[MFBLOCK_SIZE]; 
+    uint8_t mf[MFBLOCK_SIZE];
     switch (keyslen) {
         case (MIFARE_MINI_MAXSECTOR * 2 * 6): {
             PrintAndLogEx(INFO, "Loaded keys matching MIFARE Classic Mini 320b");
@@ -5864,7 +5864,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
         }
     }
 
-    if (gen2) 
+    if (gen2)
         PrintAndLogEx(INFO, "Forcing overwrite of sector 0 / block 0 ");
     else
         PrintAndLogEx(INFO, "Skipping sector 0 / block 0");

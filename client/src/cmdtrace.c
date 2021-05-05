@@ -407,41 +407,41 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 // tag row
                 if (use_us) {
                     PrintAndLogEx(NORMAL, " %10.1f | %10.1f | Tag |%-72s | %s| %s",
-                                (float)time1 / 13.56,
-                                (float)time2 / 13.56,
-                                line[j],
-                                (j == num_lines - 1) ? crc : "    ",
-                                (j == num_lines - 1) ? explanation : ""
-                                );
+                                  (float)time1 / 13.56,
+                                  (float)time2 / 13.56,
+                                  line[j],
+                                  (j == num_lines - 1) ? crc : "    ",
+                                  (j == num_lines - 1) ? explanation : ""
+                                 );
                 } else {
                     PrintAndLogEx(NORMAL, " %10u | %10u | Tag |%-72s | %s| %s",
-                                (hdr->timestamp - first_hdr->timestamp),
-                                (end_of_transmission_timestamp - first_hdr->timestamp),
-                                line[j],
-                                (j == num_lines - 1) ? crc : "    ",
-                                (j == num_lines - 1) ? explanation : ""
-                                );
+                                  (hdr->timestamp - first_hdr->timestamp),
+                                  (end_of_transmission_timestamp - first_hdr->timestamp),
+                                  line[j],
+                                  (j == num_lines - 1) ? crc : "    ",
+                                  (j == num_lines - 1) ? explanation : ""
+                                 );
                 }
             } else {
                 // reader row
                 if (use_us) {
-                    PrintAndLogEx(NORMAL, 
-                        _YELLOW_(" %10.1f") " | " _YELLOW_("%10.1f") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
-                        (float)time1 / 13.56,
-                        (float)time2 / 13.56,
-                        line[j],
-                        (j == num_lines - 1) ? crc : "    ",
-                        (j == num_lines - 1) ? explanation : ""
-                        );
+                    PrintAndLogEx(NORMAL,
+                                  _YELLOW_(" %10.1f") " | " _YELLOW_("%10.1f") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                                  (float)time1 / 13.56,
+                                  (float)time2 / 13.56,
+                                  line[j],
+                                  (j == num_lines - 1) ? crc : "    ",
+                                  (j == num_lines - 1) ? explanation : ""
+                                 );
                 } else {
                     PrintAndLogEx(NORMAL,
-                        _YELLOW_(" %10u") " | " _YELLOW_("%10u") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
-                        (hdr->timestamp - first_hdr->timestamp),
-                        (end_of_transmission_timestamp - first_hdr->timestamp),
-                        line[j],
-                        (j == num_lines - 1) ? crc : "    ",
-                        (j == num_lines - 1) ? explanation : ""
-                        );
+                                  _YELLOW_(" %10u") " | " _YELLOW_("%10u") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                                  (hdr->timestamp - first_hdr->timestamp),
+                                  (end_of_transmission_timestamp - first_hdr->timestamp),
+                                  line[j],
+                                  (j == num_lines - 1) ? crc : "    ",
+                                  (j == num_lines - 1) ? explanation : ""
+                                 );
                 }
 
             }
@@ -449,16 +449,16 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         } else {
             if (hdr->isResponse) {
                 PrintAndLogEx(NORMAL, "            |            |     |%-72s | %s| %s",
-                        line[j],
-                        (j == num_lines - 1) ? crc : "    ",
-                        (j == num_lines - 1) ? explanation : ""
-                        );
+                              line[j],
+                              (j == num_lines - 1) ? crc : "    ",
+                              (j == num_lines - 1) ? explanation : ""
+                             );
             } else {
                 PrintAndLogEx(NORMAL, "            |            |     |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
-                        line[j],
-                        (j == num_lines - 1) ? crc : "    ",
-                        (j == num_lines - 1) ? explanation : ""
-                        );
+                              line[j],
+                              (j == num_lines - 1) ? crc : "    ",
+                              (j == num_lines - 1) ? explanation : ""
+                             );
             }
         }
     }
@@ -629,15 +629,15 @@ int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) 
     CLIParserContext *ctx;
     char desc[500] = {0};
     snprintf(desc, sizeof(desc) - 1,
-            "Alias of `trace list -t %s` with selected protocol data to annotate trace buffer\n"
-            "You can load a trace from file (see `trace load -h`) or it be downloaded from device by default\n"
-            "It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
-            protocol);
+             "Alias of `trace list -t %s` with selected protocol data to annotate trace buffer\n"
+             "You can load a trace from file (see `trace load -h`) or it be downloaded from device by default\n"
+             "It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+             protocol);
     char example[200] = {0};
     snprintf(example, sizeof(example) - 1,
-            "%s list -f              -> show frame delay times\n"
-            "%s list -1              -> use trace buffer ",
-            alias, alias);
+             "%s list -f              -> show frame delay times\n"
+             "%s list -1              -> use trace buffer ",
+             alias, alias);
     char fullalias[100] = {0};
     snprintf(fullalias, sizeof(fullalias) - 1, "%s list", alias);
     CLIParserInit(&ctx, fullalias, desc, example);

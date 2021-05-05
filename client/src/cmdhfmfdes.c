@@ -1160,12 +1160,12 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
         As such, we should be able to convert the Des to TDes then run the code as TDes
     */
     if (new_algo == MFDES_ALGO_DES) {
-        memcpy(&new_key[8],new_key,8);
+        memcpy(&new_key[8], new_key, 8);
         new_algo = MFDES_ALGO_3DES;
     }
 
     if (old_algo == MFDES_ALGO_DES) {
-        memcpy(&old_key[8],old_key,8);
+        memcpy(&old_key[8], old_key, 8);
         old_algo = MFDES_ALGO_3DES;
     }
 
@@ -1208,13 +1208,13 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
 
     uint8_t new_key_length = 16;
     switch (new_algo) {
-/*
-        // We have converted the DES to 3DES above,so this will never hit
-        case MFDES_ALGO_DES:
-            memcpy(data + cmdcnt + 1, new_key, new_key_length);
-            memcpy(data + cmdcnt + 1 + new_key_length, new_key, new_key_length);
-            break;
-*/
+        /*
+                // We have converted the DES to 3DES above,so this will never hit
+                case MFDES_ALGO_DES:
+                    memcpy(data + cmdcnt + 1, new_key, new_key_length);
+                    memcpy(data + cmdcnt + 1 + new_key_length, new_key, new_key_length);
+                    break;
+        */
         case MFDES_ALGO_3DES:
         case MFDES_ALGO_AES:
             new_key_length = 16;
@@ -1259,8 +1259,8 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
                     // 19 bytes
                     //uint8_t csPkt[30] = {0x00};
                     csPkt[0] = 0xC4;
-                    memcpy (&csPkt[1],data,18);
-                
+                    memcpy(&csPkt[1], data, 18);
+
                     desfire_crc32(csPkt, 19, data + 1 + cmdcnt);
                 } else {
                     desfire_crc32_append(data + 1, cmdcnt);
@@ -1288,13 +1288,13 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
     apdu.Lc = (uint8_t)cmdcnt + 1;
 //    apdu.data = p;
 //  the above data pointed to from p did not have the key no. at the start, so copy preprocessed data after the key no.
-    memcpy (&data[1], p, cmdcnt);
+    memcpy(&data[1], p, cmdcnt);
     apdu.data = data;
 
 
     uint32_t recv_len = 0;
     uint16_t sw = 0;
-    
+
     //  If we call send_desfire with 2nd option (turn field on), it will turn off then on
     //  leading to loosing the authentication on the aid, so lets not turn on here.
     //    int res = send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, 0, true);
@@ -1319,7 +1319,7 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
             As such !p is true and the code reports "Error on changing key"; so comment back to user until its fixed.
         */
         if (new_algo == MFDES_ALGO_AES) {
-            PrintAndLogEx(WARNING,"AES password may have been changed, please check new password with the auth command.");
+            PrintAndLogEx(WARNING, "AES password may have been changed, please check new password with the auth command.");
         }
 
         return PM3_ESOFT;
@@ -3612,10 +3612,10 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         static const char STANDALONE_DESFIRE[] = { 0x75, 0x77, 0x81, 0x02};
         static const char JCOP_DESFIRE[] = { 0x75, 0xf7, 0xb1, 0x02 };
 
-        if (str_startswith((const char*)card.ats + 1, STANDALONE_DESFIRE)) {
+        if (str_startswith((const char *)card.ats + 1, STANDALONE_DESFIRE)) {
             PrintAndLogEx(INFO, "Standalone DESFire");
         }
-        if (str_startswith((const char*)card.ats + 1, JCOP_DESFIRE)) {
+        if (str_startswith((const char *)card.ats + 1, JCOP_DESFIRE)) {
             PrintAndLogEx(INFO, "JCOP DESFire");
         }
     }

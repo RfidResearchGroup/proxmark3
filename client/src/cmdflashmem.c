@@ -98,7 +98,7 @@ static int rdv4_sign_write(uint8_t *signature, uint8_t slen) {
 
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandNG(CMD_FLASHMEM_WRITE, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_FLASHMEM_WRITE, (uint8_t *)&payload, sizeof(payload));
 
     if (WaitForResponseTimeout(CMD_FLASHMEM_WRITE, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
@@ -107,7 +107,7 @@ static int rdv4_sign_write(uint8_t *signature, uint8_t slen) {
         if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Writing signature ( "_RED_("fail") ")");
             return PM3_EFAILED;
-        } 
+        }
     }
     PrintAndLogEx(SUCCESS, "Writing signature at offset %u ( "_GREEN_("ok") " )", FLASH_MEM_SIGNATURE_OFFSET);
     return PM3_SUCCESS;
@@ -271,7 +271,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
     uint32_t bytes_sent = 0;
     uint32_t bytes_remaining = datalen;
 
-    
+
     // fast push mode
     conn.block_after_ACK = true;
 
@@ -285,7 +285,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
             .len = bytes_in_packet,
         };
         memcpy(payload.data,  data + bytes_sent, bytes_in_packet);
-        SendCommandNG(CMD_FLASHMEM_WRITE, (uint8_t*)&payload, sizeof(payload));
+        SendCommandNG(CMD_FLASHMEM_WRITE, (uint8_t *)&payload, sizeof(payload));
 
         bytes_remaining -= bytes_in_packet;
         bytes_sent += bytes_in_packet;

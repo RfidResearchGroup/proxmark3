@@ -1546,7 +1546,7 @@ void iClass_Authentication_fast(iclass_chk_t *p) {
     Iso15693InitReader();
 
     bool isOK = false;
- 
+
     uint32_t start_time = 0, eof_time = 0;
     if (select_iclass_tag(&hdr, p->use_credit_key, &eof_time) == false)
         goto out;

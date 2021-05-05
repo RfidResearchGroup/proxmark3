@@ -257,12 +257,12 @@ static int CmdScriptRun(const char *Cmd) {
     sscanf(Cmd, "%127s%n %255[^\n\r]%n", filename, &fnlen, arguments, &arg_len);
 
     // hack
-    // since we don't want to use "-f"  for script filename, 
+    // since we don't want to use "-f"  for script filename,
     // and be able to send in parameters into script meanwhile
-    // being able to "-h" here too.  
+    // being able to "-h" here too.
     if ((strlen(filename) == 0) ||
-        (strcmp(filename, "-h") == 0) ||
-        (strcmp(filename, "--help") == 0)) {
+            (strcmp(filename, "-h") == 0) ||
+            (strcmp(filename, "--help") == 0)) {
         ctx->argtable = argtable;
         ctx->argtableLen = arg_getsize(argtable);
         CLIParserPrintHelp(ctx);

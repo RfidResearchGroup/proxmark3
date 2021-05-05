@@ -908,7 +908,7 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                     case MFDES_INIT_KEY_SETTINGS:
                         snprintf(exp, size, "INIT KEY SETTINGS");
                         break;
-                   case MFDES_FINALIZE_KEY_SETTINGS:
+                    case MFDES_FINALIZE_KEY_SETTINGS:
                         snprintf(exp, size, "FINALIZE KEY SETTINGS");
                         break;
                     case MFDES_GET_DELEGATE_INFO:

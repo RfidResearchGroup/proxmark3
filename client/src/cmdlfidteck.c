@@ -145,16 +145,16 @@ static int CmdIdteckClone(const char *Cmd) {
         blocks[0] = EM4305_IDTECK_CONFIG_BLOCK;
         snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
     }
-        
+
     for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
         blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
     }
 
     // config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
     PrintAndLogEx(INFO, "Preparing to clone Idteck to " _YELLOW_("%s") " raw " _GREEN_("%s")
-                    , cardtype
-                    , sprint_hex_inrow(raw, raw_len)
-                    );
+                  , cardtype
+                  , sprint_hex_inrow(raw, raw_len)
+                 );
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res;
@@ -174,7 +174,7 @@ static int CmdIdteckSim(const char *Cmd) {
                   "Enables simulation of Idteck card.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.",
                   "lf idteck sim --raw 4944544B351FBE4B"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
