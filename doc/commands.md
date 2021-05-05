@@ -115,6 +115,7 @@ Check column "offline" for their availability.
 |`data zerocrossings     `|Y       |`Count time between zero-crossings`
 |`data convertbitstream  `|Y       |`Convert GraphBuffer's 0/1 values to 127 / -127`
 |`data getbitstream      `|Y       |`Convert GraphBuffer's >=1 values to 1 and <1 to 0`
+|`data asn1              `|Y       |`asn1 decoder`
 |`data bin2hex           `|Y       |`Converts binary to hexadecimal`
 |`data bitsamples        `|N       |`Get raw samples as bitstring`
 |`data clear             `|Y       |`Clears bigbuf on deviceside and graph window`
@@ -225,6 +226,7 @@ Check column "offline" for their availability.
 |`hf 15 restore          `|N       |`Restore from file to all memory pages of an ISO-15693 tag`
 |`hf 15 samples          `|N       |`Acquire samples as reader (enables carrier, sends inquiry)`
 |`hf 15 sim              `|N       |`Fake an ISO-15693 tag`
+|`hf 15 slixdisable      `|N       |`Disable privacy mode on SLIX ISO-15693 tag`
 |`hf 15 wrbl             `|N       |`Write a block`
 |`hf 15 findafi          `|N       |`Brute force AFI of an ISO-15693 tag`
 |`hf 15 writeafi         `|N       |`Writes the AFI on an ISO-15693 tag`
@@ -807,6 +809,8 @@ Check column "offline" for their availability.
 |`lf idteck help         `|Y       |`This help`
 |`lf idteck demod        `|Y       |`demodulate an Idteck tag from the GraphBuffer`
 |`lf idteck reader       `|N       |`attempt to read and extract tag data`
+|`lf idteck clone        `|N       |`clone Idteck tag to T55x7 or Q5/T5555`
+|`lf idteck sim          `|N       |`simulate Idteck tag`
 
 
 ### lf indala
