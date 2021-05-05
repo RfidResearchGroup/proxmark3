@@ -65,7 +65,7 @@ static void asn1_print_cb(void *data, const struct tlv *tlv, int level, bool is_
     bool candump = true;
     asn1_tag_dump(tlv, level, &candump);
     if (is_leaf && candump) {
-        print_buffer(tlv->value, tlv->len, level);
+        print_buffer(tlv->value, tlv->len, level + 1);
     }
 }
 

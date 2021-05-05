@@ -35,6 +35,7 @@ enum asn1_tag_t {
     ASN1_TAG_UTC_TIME,
     ASN1_TAG_STR_TIME,
     ASN1_TAG_OBJECT_ID,
+    ASN1_TAG_HEX,
 };
 
 struct asn1_tag {
@@ -157,8 +158,11 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
 }
 
 static void asn1_tag_dump_string(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
-    PrintAndLogEx(NORMAL, "    value: '" NOLF);
-    PrintAndLogEx(NORMAL, "%s'", sprint_hex(tlv->value, tlv->len));
+    PrintAndLogEx(NORMAL, "    value: '%s'", sprint_hex(tlv->value, tlv->len));
+}
+
+static void asn1_tag_dump_hex(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
+    PrintAndLogEx(NORMAL, "    value: '%s'", sprint_hex_inrow(tlv->value, tlv->len));
 }
 
 static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_tag *tag, int level, bool *needdump) {
@@ -170,7 +174,7 @@ static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_
         }
 
     if (*needdump) {
-        PrintAndLogEx(NORMAL, "'");
+        PrintAndLogEx(NORMAL, "");
     } else {
         PrintAndLogEx(NORMAL, "        " NOLF);
         asn1_tag_dump_string(tlv, tag, level);
@@ -314,18 +318,26 @@ bool asn1_tag_dump(const struct tlv *tlv, int level, bool *candump) {
 
     const struct asn1_tag *tag = asn1_get_tag(tlv);
 
+/*
+    if ((tlv->tag & 0x20) == 0x20 ) {
+    } else if ((tlv->tag & 0x80) == 0x80 ) {
+    } else {
+    }
+*/
+
     PrintAndLogEx(INFO,
-         "%*s-- %2x [%02zx] '"_YELLOW_("%s") "' :" NOLF
-         , (level * 4)
-         , " "
-         , tlv->tag
-         , tlv->len
-         , tag->name
+        "%*s-- %2x [%02zx] '"_YELLOW_("%s") "'" NOLF
+        , (level * 4)
+        , " "
+        , tlv->tag
+        , tlv->len
+        , tag->name
     );
 
     switch (tag->type) {
         case ASN1_TAG_GENERIC:
             PrintAndLogEx(NORMAL, "");
+            // maybe print number of elements?
             break;
         case ASN1_TAG_STRING:
             asn1_tag_dump_string(tlv, tag, level);
@@ -350,6 +362,10 @@ bool asn1_tag_dump(const struct tlv *tlv, int level, bool *candump) {
             break;
         case ASN1_TAG_OBJECT_ID:
             asn1_tag_dump_object_id(tlv, tag, level);
+            *candump = false;
+            break;
+        case ASN1_TAG_HEX:
+            asn1_tag_dump_hex(tlv, tag, level);
             *candump = false;
             break;
     };
