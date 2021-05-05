@@ -329,7 +329,7 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown, bool full_help)
             PrintAndLogEx(NORMAL, "|`%s%-*s`|%-*s|`%s`", parent, w_cmd - (int)strlen(parent) - 2, cmds[i].Name, w_off, cmd_offline, cmds[i].Help);
         else if (full_help) {
             PrintAndLogEx(NORMAL, "---------------------------------------------------------------------------------------");
-            PrintAndLogEx(NORMAL, _RED_("%s%-*s\n") "available offline: %s", parent, w_cmd - (int)strlen(parent), cmds[i].Name, cmds[i].IsAvailable()?_GREEN_("yes"):_RED_("no"));
+            PrintAndLogEx(NORMAL, _RED_("%s%-*s\n") "available offline: %s", parent, w_cmd - (int)strlen(parent), cmds[i].Name, cmds[i].IsAvailable() ? _GREEN_("yes") : _RED_("no"));
             cmds[i].Parse("--help");
         } else {
             PrintAndLogEx(NORMAL, "%s%-*s|%-*s|%s", parent, w_cmd - (int)strlen(parent), cmds[i].Name, w_off, cmd_offline, cmds[i].Help);

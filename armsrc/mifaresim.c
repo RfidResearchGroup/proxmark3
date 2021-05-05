@@ -878,7 +878,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                         if (blockNo == 4) {
 
                             p_em += blockNo * 16;
-                            // TLV in NDEF, flip length between 
+                            // TLV in NDEF, flip length between
                             //  4 | 03 21 D1 02 1C 53 70 91 01 09 54 02 65 6E 4C 69
                             // 0xFF means long length
                             // 0xFE mean max short length

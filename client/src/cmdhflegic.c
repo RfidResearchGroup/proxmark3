@@ -902,7 +902,7 @@ static int CmdLegicRestore(const char *Cmd) {
     }
 
     if (shall_obsfuscate) {
-        if (legic_xor(data, card.cardsize) == false){
+        if (legic_xor(data, card.cardsize) == false) {
             PrintAndLogEx(FAILED, "Obsfuscate failed, exiting...");
             PrintAndLogEx(HINT, "Try running command without `--ob` parameter");
             free(data);

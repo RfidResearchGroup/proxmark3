@@ -154,7 +154,7 @@ static void ul_switch_on_field(void) {
 
 static int ul_send_cmd_raw(uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength) {
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0, cmd, cmdlen);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0, cmd, cmdlen);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
     if (!resp.oldarg[0] && responseLength) return -1;
@@ -3293,16 +3293,19 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
 
             lock_on = true;
 
-            if ((phase_begin_clear == -1) && (bitcount32(*(uint32_t *)pre) > bitcount32(*(uint32_t *)post)))
+            uint32_t post32 = bytes_to_num(post, 4);
+            uint32_t pre32 = bytes_to_num(pre, 4);
+
+            if ((phase_begin_clear == -1) && (bitcount32(pre32) > bitcount32(post32)))
                 phase_begin_clear = current;
 
-            if ((phase_begin_clear > -1) && (phase_end_clear == -1) && (bitcount32(*(uint32_t *)post) == 0))
+            if ((phase_begin_clear > -1) && (phase_end_clear == -1) && (bitcount32(post32) == 0))
                 phase_end_clear = current;
 
             if ((current == start) && (phase_end_clear > -1))
                 skip_phase1 = true;
             // new write phase must be atleast 100us later..
-            if (((bitcount32(*(uint32_t *)pre) == 0) || (phase_end_clear > -1)) && (phase_begin_newwr == -1) && (bitcount32(*(uint32_t *)post) != 0) && (skip_phase1 || (current > (phase_end_clear + 100))))
+            if (((bitcount32(pre32) == 0) || (phase_end_clear > -1)) && (phase_begin_newwr == -1) && (bitcount32(post32) != 0) && (skip_phase1 || (current > (phase_end_clear + 100))))
                 phase_begin_newwr = current;
 
             if ((phase_begin_newwr > -1) && (phase_end_newwr == -1) && (memcmp(post, teardata, sizeof(teardata)) == 0))

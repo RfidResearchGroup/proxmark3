@@ -42,7 +42,7 @@ static int switch_off_field_cryptorf(void) {
         .rawlen = 0,
     };
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
     return PM3_SUCCESS;
 }
 
@@ -105,7 +105,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
             .rawlen = 0,
         };
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
+        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
             if (resp.oldarg[0] == 0) {
@@ -130,7 +130,7 @@ static int infoHFCryptoRF(bool verbose) {
     };
     // 14b get and print UID only (general info)
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
         if (verbose) {
@@ -190,14 +190,14 @@ static int CmdHFCryptoRFInfo(const char *Cmd) {
 int readHFCryptoRF(bool loop, bool verbose) {
 
     int res = PM3_ESOFT;
-    do {        
+    do {
         iso14b_raw_cmd_t packet = {
             .flags = (ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT),
             .timeout = 0,
             .rawlen = 0,
         };
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
+        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
@@ -300,7 +300,7 @@ static int CmdHFCryptoRFDump(const char *Cmd) {
     PrintAndLogEx(INFO, "Reading memory from tag UID " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
 
     // select tag
-    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t*)calloc(1, sizeof(iso14b_raw_cmd_t) + 2);
+    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 2);
     if (packet == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -310,7 +310,7 @@ static int CmdHFCryptoRFDump(const char *Cmd) {
     packet->rawlen = 0;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)packet, sizeof(iso14b_raw_cmd_t));
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t));
     PacketResponseNG resp;
 
     // select
@@ -339,7 +339,7 @@ static int CmdHFCryptoRFDump(const char *Cmd) {
         packet->raw[1] = blocknum & 0xFF;
 
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t) + 2);
+        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t) + 2);
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
 
             status = resp.oldarg[0];

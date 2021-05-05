@@ -689,7 +689,7 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(INFO, "." NOLF);
             lnbreak = 32;
-        } 
+        }
     }
     PrintAndLogEx(NORMAL, "");
 
@@ -1035,7 +1035,7 @@ static bool emrtd_connect(bool *use_14b) {
             .rawlen = 0,
         };
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t*)&packet, sizeof(iso14b_raw_cmd_t));
+        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000) == false) {
             PrintAndLogEx(INFO, "timeout, no eMRTD spotted with 14b, exiting");
             return false;

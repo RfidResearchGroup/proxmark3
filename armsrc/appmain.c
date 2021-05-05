@@ -1257,8 +1257,8 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t pwd[4];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-			DisablePrivacySlixLIso15693(payload->pwd);
-			break;
+            DisablePrivacySlixLIso15693(payload->pwd);
+            break;
         }
 
 #endif
@@ -1317,8 +1317,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             SimulateIso14443bTag(packet->data.asBytes);
             break;
         }
-        case CMD_HF_ISO14443B_COMMAND: {           
-            iso14b_raw_cmd_t *payload = (iso14b_raw_cmd_t*)packet->data.asBytes;
+        case CMD_HF_ISO14443B_COMMAND: {
+            iso14b_raw_cmd_t *payload = (iso14b_raw_cmd_t *)packet->data.asBytes;
             SendRawCommand14443B_Ex(payload);
             break;
         }
@@ -1704,14 +1704,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_CHKKEYS: {
-            iClass_Authentication_fast((iclass_chk_t*)packet->data.asBytes);
+            iClass_Authentication_fast((iclass_chk_t *)packet->data.asBytes);
             break;
         }
         case CMD_HF_ICLASS_DUMP: {
             iClass_Dump(packet->data.asBytes);
             break;
         }
-        case CMD_HF_ICLASS_RESTORE: {            
+        case CMD_HF_ICLASS_RESTORE: {
             iClass_Restore((iclass_restore_req_t *)packet->data.asBytes);
             break;
         }

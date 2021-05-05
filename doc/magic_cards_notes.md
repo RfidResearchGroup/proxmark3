@@ -330,6 +330,8 @@ Android compatible
 
 ```
 hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 11223344440804006263646566676869
+
+hf mf wipe --gen2
 ```
 
 When "soft-bricked" (by writing invalid data in block0), these ones may help:

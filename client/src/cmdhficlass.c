@@ -137,11 +137,11 @@ static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t *bytes_sent) {
         clearCommandBuffer();
 
         struct p *payload = calloc(4 + bytes_in_packet, sizeof(uint8_t));
-        payload->offset = *bytes_sent;        
+        payload->offset = *bytes_sent;
         payload->len = bytes_in_packet;
         memcpy(payload->data, d + *bytes_sent, bytes_in_packet);
 
-        SendCommandNG(CMD_HF_ICLASS_EML_MEMSET, (uint8_t*)payload, 4 + bytes_in_packet);
+        SendCommandNG(CMD_HF_ICLASS_EML_MEMSET, (uint8_t *)payload, 4 + bytes_in_packet);
         free(payload);
 
         bytes_remaining -= bytes_in_packet;
@@ -3046,7 +3046,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     //  - a list of keys.
     //  - a list of precalculated macs that corresponds to the key list
     // We send a chunk of macs to the device each time
-    
+
     // main keychunk loop
     for (chunk_offset = 0; chunk_offset < keycount; chunk_offset += max_chunk_size) {
 
@@ -3068,7 +3068,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         }
 
         uint32_t tmp_plen = sizeof(iclass_chk_t) + (4 * curr_chunk_cnt);
-        iclass_chk_t *packet = calloc(tmp_plen,  sizeof(uint8_t) );
+        iclass_chk_t *packet = calloc(tmp_plen,  sizeof(uint8_t));
         if (packet == NULL) {
             PrintAndLogEx(WARNING, "failed to allocate memory");
             break;
@@ -3079,7 +3079,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         memcpy(packet->items, (pre + chunk_offset), (4 * curr_chunk_cnt));
 
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_ICLASS_CHKKEYS, (uint8_t*)packet, tmp_plen);
+        SendCommandNG(CMD_HF_ICLASS_CHKKEYS, (uint8_t *)packet, tmp_plen);
         free(packet);
 
         bool looped = false;
@@ -3098,15 +3098,15 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
 
         if (looped)
             PrintAndLogEx(NORMAL, "");
-     
+
         if (resp.status == PM3_SUCCESS) {
             found_offset = resp.data.asBytes[0];
             found_key = true;
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS,
-                     "Found valid key " _GREEN_("%s")
-                    , sprint_hex(keyBlock + (chunk_offset + found_offset) * 8, 8)
-                );
+                          "Found valid key " _GREEN_("%s")
+                          , sprint_hex(keyBlock + (chunk_offset + found_offset) * 8, 8)
+                         );
             break;
         } else {
             PrintAndLogEx(INPLACE, "Chunk [%03d/%d]", chunk_offset, keycount);
@@ -3324,7 +3324,7 @@ static void *bf_generate_mac(void *thread_arg) {
 void GenerateMacFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, uint8_t *keys, uint32_t keycnt, iclass_premac_t *list) {
 
     pthread_mutex_init(&generator_mutex, NULL);
-    
+
     iclass_tc = num_CPUs();
     pthread_t threads[iclass_tc];
     iclass_thread_arg_t args[iclass_tc];

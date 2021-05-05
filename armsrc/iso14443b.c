@@ -26,12 +26,12 @@
 #include "ticks.h"
 #include "iso14b.h"       // defines for ETU conversions
 
-/* 
+/*
 * Current timing issues with ISO14443-b implementation
-* Proxmark3 
-* Carrier Frequency 13.56MHz 
+* Proxmark3
+* Carrier Frequency 13.56MHz
 * SSP_CLK runs at 13.56MHz / 4 = 3,39MHz
-* 
+*
 *
 * PROBLEM 1.
 * ----------
@@ -62,7 +62,7 @@
 #define DELAY_ARM_TO_TAG                 16
 #define DELAY_TAG_TO_ARM                 32
 
-// SSP_CLK runs at 13.56MHz / 4 = 3,39MHz when sniffing. 
+// SSP_CLK runs at 13.56MHz / 4 = 3,39MHz when sniffing.
 // All values should be multiples of 16
 #define DELAY_TAG_TO_ARM_SNIFF           32
 #define DELAY_READER_TO_ARM_SNIFF        32
@@ -86,7 +86,7 @@
 *
 * FWI_max == 2^14 = 16384
 * FWT(max) = (256 x 16 / fc) * 16384 == 4949
-* 
+*
 * Which gives a maximum Frame Waiting time of FWT(max) == 4949 ms
 *   FWT(max) in ETU  4949000 / 9.4395 µS = 524286 ETU
 *
@@ -106,12 +106,12 @@
 // Activation frame waiting time
 // 512 ETU?
 // 65536/fc == 4833 µS or 4.833ms
-// SSP_CLK =  4833 µS * 3.39 = 16384 
+// SSP_CLK =  4833 µS * 3.39 = 16384
 #ifndef FWT_TIMEOUT_14B
 # define FWT_TIMEOUT_14B (16384)
-#endif  
+#endif
 
-// ETU 14 * 9.4395 µS = 132 µS == 0.132ms 
+// ETU 14 * 9.4395 µS = 132 µS == 0.132ms
 // TR2,  counting from start of PICC EOF 14 ETU.
 #define DELAY_ISO14443B_PICC_TO_PCD_READER  ETU_TO_SSP(14)
 #define DELAY_ISO14443B_PCD_TO_PICC_READER  ETU_TO_SSP(15)
@@ -126,7 +126,7 @@
 *   TR0 = FWT(1), FWT(2), FWT(3) .. FWT(14)
 *
 *
-*  TR0 
+*  TR0
 */
 #ifndef ISO14B_TR0
 # define ISO14B_TR0  ETU_TO_SSP(32)
@@ -140,7 +140,7 @@
 // TR0 max is 151/fsc = 151/848kHz = 302us or 64 samples from FPGA
 // 32 ETU * 9.4395 µS == 302 µS
 // 32 * 8 = 256 sub carrier cycles,
-// 256 / 4 = 64 I/Q pairs.   
+// 256 / 4 = 64 I/Q pairs.
 // since 1 I/Q pair after 4 subcarrier cycles at 848kHz subcarrier
 #endif
 
@@ -195,16 +195,16 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 * Elementary Time Unit (ETU)
 * --------------------------
 * ETU is used to denotate 1 bit period i.e. how long one bit transfer takes.
-* 
+*
 * - 128 Carrier cycles / 13.56MHz = 8 Subcarrier units / 848kHz = 1/106kHz = 9.4395 µS
 * - 16 Carrier cycles = 1 Subcarrier unit  = 1.17 µS
 *
 * Definition
 * ----------
-* 1 ETU =  128 / ( D x fc )  
+* 1 ETU =  128 / ( D x fc )
 * where
 *    D = divisor.  Which inital is 1
-*   fc = carrier frequency  
+*   fc = carrier frequency
 * gives
 *   1 ETU = 128 / fc
 *   1 ETU = 128 / 13 560 000 = 9.4395 µS
@@ -212,7 +212,7 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 *
 * (note: It seems we are using the subcarrier as base for our time calculations rather than the field clock)
 *
-* - 1 ETU = 1/106 KHz 
+* - 1 ETU = 1/106 KHz
 * - 1 ETU = 8 subcarrier units ( 8 / 848kHz )
 * - 1 ETU = 1 bit period
 *
@@ -260,14 +260,14 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 * let calc how long it takes the reader to send a message
 *  SOF 10 ETU + 4 data bytes + 2 crc bytes + EOF 2 ETU
 *  10 + (4+2 * 10) + 2 = 72 ETU
-*  72 * 9.4395 = 680 µS  or  0.68 ms 
-* 
+*  72 * 9.4395 = 680 µS  or  0.68 ms
+*
 *
 * -> TO VERIFY THIS BELOW <-
 * --------------------------
 * The mode FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK which we use to simulate tag
-* works like this:  
-* Simulation per definition is "inversed" effect on the reader antenna. 
+* works like this:
+* Simulation per definition is "inversed" effect on the reader antenna.
 * - A 1-bit input to the FPGA becomes 8 pulses at 847.5kHz (1.18µS / pulse) == 9.44us
 * - A 0-bit input to the FPGA becomes an unmodulated time of 1.18µS  or does it become 8 nonpulses for 9.44us
 *
@@ -278,13 +278,13 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 *
 * FPGA doesn't seem to work with ETU.  It seems to work with pulse / duration instead.
 *
-* This means that we are using a bit rate of 106 kbit/s, or fc/128. 
+* This means that we are using a bit rate of 106 kbit/s, or fc/128.
 * Oversample by 4, which ought to make things practical for the ARM
 * (fc/32, 423.8 kbits/s, ~52 kbytes/s)
 *
-* We are sampling the signal at FC/32,  we are reporting over SSP to PM3 each 
-* 
-* Current I/Q pair sampling 
+* We are sampling the signal at FC/32,  we are reporting over SSP to PM3 each
+*
+* Current I/Q pair sampling
 * -------------------------
 * Let us report a correlation every 64 samples. I.e.
 *  1 I/Q pair after 4 subcarrier cycles for the 848kHz subcarrier,
@@ -303,7 +303,7 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 *
 * sample: 3sec == 3000ms
 *
-*  13560000 * 1000 / 128 * 3000 == 13560000000 / 384000 == 
+*  13560000 * 1000 / 128 * 3000 == 13560000000 / 384000 ==
 *  13560000 / 384  = 35312 FWT
 *
 *  35312 * 9.4395 ==
@@ -428,7 +428,7 @@ static void Uart14bInit(uint8_t *data) {
     Uart14bReset();
 }
 
-// param timeout accepts ETU  
+// param timeout accepts ETU
 static void iso14b_set_timeout(uint32_t timeout_etu) {
 
     uint32_t ssp = ETU_TO_SSP(timeout_etu);
@@ -445,7 +445,7 @@ static void iso14b_set_timeout(uint32_t timeout_etu) {
 // keep track of FWT,  also updates the timeout
 static void iso14b_set_fwt(uint8_t fwt) {
     iso14b_fwt = fwt;
-    iso14b_set_timeout( 32 << fwt );
+    iso14b_set_timeout(32 << fwt);
 }
 
 static void iso14b_set_maxframesize(uint16_t size) {
@@ -1370,7 +1370,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
             break;
         }
 
-        if (((GetCountSspClkDelta(dma_start_time) ) > timeout) && Demod.state < DEMOD_PHASE_REF_TRAINING) {
+        if (((GetCountSspClkDelta(dma_start_time)) > timeout) && Demod.state < DEMOD_PHASE_REF_TRAINING) {
             ret = -1;
             break;
         }
@@ -1402,7 +1402,7 @@ static void TransmitFor14443b_AsReader(uint32_t *start_time) {
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
 
-    
+
     // TR2 minimum 14 ETUs
     if (*start_time < ISO14B_TR0) {
 //        *start_time = DELAY_ARM_TO_TAG;
@@ -1562,15 +1562,15 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
 
             uint32_t save_iso14b_timeout_spp = iso14b_timeout;
 
-             // 2 high bits mandatory set to 0b
-             // byte1 - WTXM [1..59]. 
+            // 2 high bits mandatory set to 0b
+            // byte1 - WTXM [1..59].
             uint8_t wtxm = data_bytes[1] & 0x3F;
 
             // command FWT = FWT * WTXM
             uint32_t fwt_temp = iso14b_fwt * wtxm;
-            
+
             // temporarily increase timeout
-            iso14b_set_timeout( (32 << fwt_temp));
+            iso14b_set_timeout((32 << fwt_temp));
 
             // Transmit WTX back
             data_bytes[1] = wtxm;
@@ -2176,7 +2176,7 @@ void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *o) {
 
     // receive buffer
     uint8_t buf[PM3_CMD_DATA_SIZE];
-    memset(buf, 0 , sizeof(buf));
+    memset(buf, 0, sizeof(buf));
     if (DBGLEVEL > DBG_DEBUG) {
         Dbprintf("14b raw: param, %04x", o->flags);
     }

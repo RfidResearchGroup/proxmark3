@@ -2671,7 +2671,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
     } // else force RATS
 
     if ((sak & 0x20) == 0) Dbprintf("Forcing RATS according to hf 14a config");
-    
+
     // RATS, Request for answer to select
     if (no_rats == false) {
         uint8_t rats[] = { ISO14443A_CMD_RATS, 0x80, 0x00, 0x00 }; // FSD=256, FSDI=8, CID=0

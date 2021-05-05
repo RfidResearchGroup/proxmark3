@@ -3538,10 +3538,10 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
                       _YELLOW_("H") ":Hardnested / "
                       _YELLOW_("C") ":statiCnested / "
                       _YELLOW_("A") ":keyA "
-                      ")"
+                      " )"
                      );
     } else {
-        PrintAndLogEx(SUCCESS, "( " _YELLOW_("0") ":Failed / " _YELLOW_("1") ":Success)");
+        PrintAndLogEx(SUCCESS, "( " _YELLOW_("0") ":Failed / " _YELLOW_("1") ":Success )");
     }
     PrintAndLogEx(NORMAL, "");
 }
@@ -5786,23 +5786,28 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
 static int CmdHF14AMfWipe(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf wipe",
-                  "Wipe card to zeros and default keys/acc.  This command taks a key file to wipe card\n"
-                  "New A/B keys  FF FF FF FF FF FF\n"
-                  "New acc       FF 07 80\n"
-                  "New GDB       69",
-                  "hf mf wipe"
+                  "Wipe card to zeros and default keys/acc. This command takes a key file to wipe card\n"
+                  "Will use UID from card to generate keyfile name if not specified.\n"
+                  "New A/B keys.....  FF FF FF FF FF FF\n"
+                  "New acc rights...  FF 07 80\n"
+                  "New GPB..........  69",
+                  "hf mf wipe                --> reads card uid to generate file name\n"
+                  "hf mf wipe --gen2         --> force write to S0, B0 manufacture block\n"
+                  "hf mf wipe -f mykey.bin   --> use mykey.bin\n"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f",  "file", "<fn>", "key filename"),
+        arg_lit0(NULL, "gen2", "force write to Sector 0, block 0  (GEN2)"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int keyfnlen = 0;
     char keyFilename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)keyFilename, FILE_PATH_SIZE, &keyfnlen);
 
+    bool gen2 = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     char *fptr;
@@ -5826,12 +5831,14 @@ static int CmdHF14AMfWipe(const char *Cmd) {
     uint8_t keyB[MIFARE_4K_MAXSECTOR * 6];
     uint8_t num_sectors = 0;
 
+    uint8_t mf[MFBLOCK_SIZE];
     switch (keyslen) {
         case (MIFARE_MINI_MAXSECTOR * 2 * 6): {
             PrintAndLogEx(INFO, "Loaded keys matching MIFARE Classic Mini 320b");
             memcpy(keyA, keys, (MIFARE_MINI_MAXSECTOR * 6));
             memcpy(keyB, keys + (MIFARE_MINI_MAXSECTOR * 6), (MIFARE_MINI_MAXSECTOR * 6));
             num_sectors = NumOfSectors('0');
+            memcpy(mf, "\x11\x22\x33\x44\x44\x09\x04\x00\x62\x63\x64\x65\x66\x67\x68\x69", MFBLOCK_SIZE);
             break;
         }
         case (MIFARE_1K_MAXSECTOR * 2 * 6): {
@@ -5839,6 +5846,8 @@ static int CmdHF14AMfWipe(const char *Cmd) {
             memcpy(keyA, keys, (MIFARE_1K_MAXSECTOR * 6));
             memcpy(keyB, keys + (MIFARE_1K_MAXSECTOR * 6), (MIFARE_1K_MAXSECTOR * 6));
             num_sectors = NumOfSectors('1');
+
+            memcpy(mf, "\x11\x22\x33\x44\x44\x08\x04\x00\x62\x63\x64\x65\x66\x67\x68\x69", MFBLOCK_SIZE);
             break;
         }
         case (MIFARE_4K_MAXSECTOR * 2 * 6): {
@@ -5846,6 +5855,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
             memcpy(keyA, keys, (MIFARE_4K_MAXSECTOR * 6));
             memcpy(keyB, keys + (MIFARE_4K_MAXSECTOR * 6), (MIFARE_4K_MAXSECTOR * 6));
             num_sectors = NumOfSectors('4');
+            memcpy(mf, "\x11\x22\x33\x44\x44\x18\x02\x00\x62\x63\x64\x65\x66\x67\x68\x69", MFBLOCK_SIZE);
             break;
         }
         default: {
@@ -5853,6 +5863,12 @@ static int CmdHF14AMfWipe(const char *Cmd) {
             goto out;
         }
     }
+
+    if (gen2)
+        PrintAndLogEx(INFO, "Forcing overwrite of sector 0 / block 0 ");
+    else
+        PrintAndLogEx(INFO, "Skipping sector 0 / block 0");
+    PrintAndLogEx(NORMAL, "");
 
     uint8_t zeros[MFBLOCK_SIZE] = {0};
     memset(zeros, 0x00, sizeof(zeros));
@@ -5863,12 +5879,22 @@ static int CmdHF14AMfWipe(const char *Cmd) {
 
         for (uint8_t b = 0; b < NumBlocksPerSector(s); b++) {
 
+            // Skipp write to manufacture block if not enforced
+            if (s == 0 && b == 0 && gen2 == false) {
+                continue;
+            }
+
             uint8_t data[26];
             memset(data, 0, sizeof(data));
             if (mfIsSectorTrailer(b)) {
                 memcpy(data + 10, st, sizeof(st));
             } else {
                 memcpy(data + 10, zeros, sizeof(zeros));
+            }
+
+            // add correct manufacture block if UID Gen2
+            if (s == 0 && b == 0 && gen2) {
+                memcpy(data + 10, mf, sizeof(mf));
             }
 
             // try both A/B keys, start with B key first
@@ -5879,16 +5905,16 @@ static int CmdHF14AMfWipe(const char *Cmd) {
                 else
                     memcpy(data, keyB + (s * 6), 6);
 
-                PrintAndLogEx(INFO, "block %3d: %s", FirstBlockOfSector(s) + b, sprint_hex(data + 10, MFBLOCK_SIZE));
+                PrintAndLogEx(INFO, "block %3d: %s" NOLF, FirstBlockOfSector(s) + b, sprint_hex(data + 10, MFBLOCK_SIZE));
                 clearCommandBuffer();
                 SendCommandMIX(CMD_HF_MIFARE_WRITEBL, FirstBlockOfSector(s) + b, kt, 0, data, sizeof(data));
                 PacketResponseNG resp;
-
                 if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
                     uint8_t isOK  = resp.oldarg[0] & 0xff;
                     if (isOK == 0) {
-                        PrintAndLogEx(FAILED, "isOk: %02x", isOK);
+                        PrintAndLogEx(NORMAL, "( " _RED_("fail") " )");
                     } else {
+                        PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
                         break;
                     }
                 } else {
@@ -5898,6 +5924,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
         }
     }
 
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Done!");
 out:
     free(keys);

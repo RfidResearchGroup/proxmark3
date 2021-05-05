@@ -35,7 +35,7 @@ local function calypso_parse(result)
         if len > 0 then
             local d = string.sub(result.Data, 0, len);
             return d, nil
-        end        
+        end
     end
     return nil, "calypso_parse failed"
 end

@@ -2883,7 +2883,7 @@ static int CmdDataModulationSearch(const char *Cmd) {
     return try_detect_modulation();
 }
 
-static int CmdAsn1Decoder(const char* Cmd) {
+static int CmdAsn1Decoder(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data asn1",

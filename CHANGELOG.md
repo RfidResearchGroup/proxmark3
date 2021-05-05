@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Added `HF_TMUDFORD` standalone mode that reads and emulates ISO15693 UID (@tmudford)
+ - Changed `hf mf wipe` - now supports enforcing sector 0 / block 0 writes (@iceman1001)
  - Added `data asn1` - a command to decode ASN1 byte arrays  (@iceman1001)
  - Added `hf 15 disableprivacy` - from @g3gg0 fork *WIP* (@iceman1001)
  - Added `lf_ident_json.lua` - script to identify t55xx json dump files (@iceman1001)
