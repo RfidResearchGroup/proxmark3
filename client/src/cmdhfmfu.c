@@ -154,7 +154,7 @@ static void ul_switch_on_field(void) {
 
 static int ul_send_cmd_raw(uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength) {
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0, cmd, cmdlen);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0, cmd, cmdlen);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
     if (!resp.oldarg[0] && responseLength) return -1;
