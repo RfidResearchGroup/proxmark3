@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `HF_TMUDFORD` standalone mode that reads and emulates ISO15693 UID (@tmudford)
  - Added `data asn1` - a command to decode ASN1 byte arrays  (@iceman1001)
  - Added `hf 15 disableprivacy` - from @g3gg0 fork *WIP* (@iceman1001)
  - Added `lf_ident_json.lua` - script to identify t55xx json dump files (@iceman1001)
