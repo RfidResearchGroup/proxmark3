@@ -81,3 +81,7 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_CRAFTBYTE,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_craftbyte.c
 endif
+# WITH_STANDALONE_HF_TMUDFORD
+ifneq (,$(findstring WITH_STANDALONE_HF_TMUDFORD,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_tmudford.c
+endif

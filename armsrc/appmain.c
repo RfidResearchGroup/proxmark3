@@ -1233,7 +1233,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO15693_READER: {
-            ReaderIso15693(packet->oldarg[0]);
+            ReaderIso15693(packet->oldarg[0], NULL);
             break;
         }
         case CMD_HF_ISO15693_SIMULATE: {

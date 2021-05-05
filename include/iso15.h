@@ -13,12 +13,12 @@
 
 #include "common.h"
 typedef struct {
-    uint8_t uid[10];
+    uint8_t uid[8];
     uint8_t uidlen;
     uint8_t atqb[7];
     uint8_t chipid;
     uint8_t cid;
-} PACKED iso14b_card_select_t;
+} PACKED iso15_card_select_t;
 
 typedef enum ISO15_COMMAND {
     ISO15_CONNECT = (1 << 0),

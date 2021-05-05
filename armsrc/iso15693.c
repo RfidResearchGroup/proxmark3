@@ -1581,7 +1581,7 @@ static void DbdecodeIso15693Answer(int len, uint8_t *d) {
 //-----------------------------------------------------------------------------
 // ok
 // parameter is unused !?!
-void ReaderIso15693(uint32_t parameter) {
+void ReaderIso15693(uint32_t parameter, iso15_card_select_t *p_card) {
 
     LED_A_ON();
     set_tracing(true);
@@ -1617,6 +1617,11 @@ void ReaderIso15693(uint32_t parameter) {
             uid[6] = answer[3];
             uid[7] = answer[2];
 
+            if (p_card != NULL) {
+                memcpy(p_card->uid, uid, 8);
+                p_card->uidlen = 8;
+            }
+
             if (DBGLEVEL >= DBG_EXTENDED) {
                 Dbprintf("[+] UID = %02X%02X%02X%02X%02X%02X%02X%02X",
                          uid[0], uid[1], uid[2], uid[3],
@@ -1636,6 +1641,7 @@ void ReaderIso15693(uint32_t parameter) {
                 Dbhexdump(recvlen, answer, true);
             }
         } else {
+            p_card->uidlen = 0;
             DbpString("Failed to select card");
             reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
         }
