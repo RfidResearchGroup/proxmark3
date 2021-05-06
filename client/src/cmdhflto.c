@@ -37,7 +37,7 @@
 */
 #define CM_MEM_MAX_SIZE     0x1FE0  // (32byte/block * 255block = 8160byte)
 
-// todo: vendor mapping table.. 
+// todo: vendor mapping table..
 
 // structure and database for uid -> tagtype lookups
 typedef struct cm_page_s {
@@ -82,7 +82,7 @@ static uint16_t get_page_len(uint16_t pageid) {
 */
 
 static const char *get_page_name(uint16_t pageid) {
-    for (uint8_t i = 0; i < ARRAYLEN(cm_page_map ); ++i) {
+    for (uint8_t i = 0; i < ARRAYLEN(cm_page_map); ++i) {
         if (pageid == cm_page_map[i].pageid) {
             return cm_page_map[i].name;
         }
@@ -223,7 +223,7 @@ static const char *lto_print_size(uint8_t ti) {
 static void lto_print_ci(uint8_t *d) {
     uint32_t sn = (bytes_to_num(d, 4) & 0x0FFFFFFF);
     PrintAndLogEx(INFO, "CM Serial number... " _YELLOW_("%u"), sn);
-    PrintAndLogEx(INFO, "Manufacture Id..... " _YELLOW_("%u"), (d[3] >> 4) );
+    PrintAndLogEx(INFO, "Manufacture Id..... " _YELLOW_("%u"), (d[3] >> 4));
     PrintAndLogEx(INFO, "CM Size............ " _YELLOW_("%u") " ( 1024 x %u bytes )", d[5], d[5]);
     PrintAndLogEx(INFO, "Type............... " _YELLOW_("%s"), sprint_hex_inrow(d + 6, 2));
     PrintAndLogEx(INFO, "Manufacture info... " _YELLOW_("%s"), sprint_hex_inrow(d + 8, 24));
@@ -232,7 +232,7 @@ static void lto_print_ci(uint8_t *d) {
 static void lto_print_cmwi(uint8_t *d) {
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("LTO CM Write-Inhibit") " --------------------------");    
+    PrintAndLogEx(INFO, "--- " _CYAN_("LTO CM Write-Inhibit") " --------------------------");
     PrintAndLogEx(INFO, "Raw");
     PrintAndLogEx(INFO, "   " _YELLOW_("%s"), sprint_hex_inrow(d, 4));
     PrintAndLogEx(INFO, "Last write-inhibited block#... " _YELLOW_("%u"), d[0]);
@@ -242,7 +242,7 @@ static void lto_print_cmwi(uint8_t *d) {
 
 static void lto_print_cmpt(uint8_t *d) {
 // Block Address:    B0 = integer part of [ (start address + offset) ÷ 32 ]
-// Word Address:    w = mod(start address + offset, 32 ) ÷ 2 
+// Word Address:    w = mod(start address + offset, 32 ) ÷ 2
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Page Descriptor Table") " ----------------------------------------");
@@ -253,7 +253,7 @@ static void lto_print_cmpt(uint8_t *d) {
     PrintAndLogEx(INFO, "                 start ");
     PrintAndLogEx(INFO, " # | ver | id  | address | name ");
     PrintAndLogEx(INFO, "---+-----+-----+---------+----------------------------------------");
- 
+
     uint8_t p = 0;
     for (uint8_t i = 0; i < 24; i += 4) {
 
@@ -271,16 +271,16 @@ static void lto_print_cmi(uint8_t *d) {
 
     uint16_t page_id = (d[0] << 8) | d[1];
     uint16_t page_len = (d[2] << 8) | d[3];
-    
+
     char man[8 + 1];
-    memcpy(man, (char*)d + 4, 8);
-    
+    memcpy(man, (char *)d + 4, 8);
+
     char serial[10 + 1];
-    memcpy(serial, (char*)d + 12, 10);
+    memcpy(serial, (char *)d + 12, 10);
 
     uint16_t cart_type = (d[22] << 8) | d[23];
     char dom[8 + 1];
-    memcpy(dom, (char*)d + 24, 8);
+    memcpy(dom, (char *)d + 24, 8);
 
     uint16_t tape_len = (d[32] << 8) | d[33];
     uint16_t tape_thick = (d[34] << 8) | d[35];
@@ -289,10 +289,10 @@ static void lto_print_cmi(uint8_t *d) {
     uint16_t full_reel = (d[40] << 8) | d[41];
     uint16_t max_media_speed = (d[42] << 8) | d[43];
     char lic[4 + 1];
-    memcpy(lic, (char*)d + 44, 4);
+    memcpy(lic, (char *)d + 44, 4);
 
     char cmuse[12 + 1];
-    memcpy(cmuse, (char*)d + 48, 12);
+    memcpy(cmuse, (char *)d + 48, 12);
 
 //    uint32_t crc = bytes_to_num(d+60, 4);
 
@@ -303,7 +303,7 @@ static void lto_print_cmi(uint8_t *d) {
     PrintAndLogEx(INFO, "   " _YELLOW_("%s"), sprint_hex_inrow(d + 32, 32));
     PrintAndLogEx(INFO, "                                                           ^^^^^^^^ CRC-32");
     PrintAndLogEx(INFO, "Page id.................. ..." _YELLOW_("0x%04x"), page_id);
-    PrintAndLogEx(INFO, "Page len.................... " _YELLOW_("%u"), page_len );
+    PrintAndLogEx(INFO, "Page len.................... " _YELLOW_("%u"), page_len);
     PrintAndLogEx(INFO, "Cartridge Manufacturer...... " _YELLOW_("%s"), man);
     PrintAndLogEx(INFO, "Serial number............... " _YELLOW_("%s"), serial);
     PrintAndLogEx(INFO, "Cartridge type.............. " _YELLOW_("0x%02x"), cart_type);
@@ -329,11 +329,11 @@ static void lto_print_mmi(uint8_t *d) {
 
     uint16_t page_id = (d[0] << 8) | d[1];
     uint16_t page_len = (d[2] << 8) | d[3];
-    
+
     char man[48 + 1];
-    memcpy(man, (char*)d + 4, 48);
+    memcpy(man, (char *)d + 4, 48);
     PrintAndLogEx(INFO, "Page id.................... " _YELLOW_("0x%04x"), page_id);
-    PrintAndLogEx(INFO, "Page len................... " _YELLOW_("%u"), page_len );
+    PrintAndLogEx(INFO, "Page len................... " _YELLOW_("%u"), page_len);
     PrintAndLogEx(INFO, "Servowriter Manufacturer... " _YELLOW_("%s"), man);
 }
 
@@ -345,7 +345,7 @@ static void lto_print_mmi(uint8_t *d) {
 //  - Cartridge Status and Tape Alert Flags  (64b)
 //  - Usage Information (4*64b , 256b)
 //  - Tape Write Pass (48b)
-//  - Tape Directory (16*xx) (max 1536b) 
+//  - Tape Directory (16*xx) (max 1536b)
 //  - EOD Information (64b)
 //  - Mechanism Related (384b)
 //  - Application Specific Data (1056b)
@@ -397,7 +397,7 @@ int infoLTO(bool verbose) {
             uint8_t b2_3[64];
             memcpy(b2_3, d00_d15, 16);
             memcpy(b2_3 + 16, d16_d31, 16);
-            
+
             if (lto_rdbl(3, d00_d15, d16_d31, verbose) == PM3_SUCCESS) {
                 memcpy(b2_3 + 32, d00_d15, 16);
                 memcpy(b2_3 + 48, d16_d31, 16);
@@ -409,7 +409,7 @@ int infoLTO(bool verbose) {
             uint8_t b2_3[64];
             memcpy(b2_3, d00_d15, 16);
             memcpy(b2_3 + 16, d16_d31, 16);
-            
+
             if (lto_rdbl(5, d00_d15, d16_d31, verbose) == PM3_SUCCESS) {
                 memcpy(b2_3 + 32, d00_d15, 16);
                 memcpy(b2_3 + 48, d16_d31, 16);
