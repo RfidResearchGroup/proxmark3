@@ -557,8 +557,8 @@ LZ4_FORCE_INLINE int LZ4HC_encodeSequence(
 
 LZ4_FORCE_INLINE int LZ4HC_compress_hashChain(
     LZ4HC_CCtx_internal *const ctx,
-    const char *const source,
-    char *const dest,
+    const char *const src,
+    char *const dst,
     int *srcSizePtr,
     int const maxOutputSize,
     int maxNbAttempts,
@@ -568,14 +568,14 @@ LZ4_FORCE_INLINE int LZ4HC_compress_hashChain(
     const int inputSize = *srcSizePtr;
     const int patternAnalysis = (maxNbAttempts > 128);   /* levels 9+ */
 
-    const BYTE *ip = (const BYTE *) source;
+    const BYTE *ip = (const BYTE *) src;
     const BYTE *anchor = ip;
     const BYTE *const iend = ip + inputSize;
     const BYTE *const mflimit = iend - MFLIMIT;
     const BYTE *const matchlimit = (iend - LASTLITERALS);
 
-    BYTE *optr = (BYTE *) dest;
-    BYTE *op = (BYTE *) dest;
+    BYTE *optr = (BYTE *) dst;
+    BYTE *op = (BYTE *) dst;
     BYTE *oend = op + maxOutputSize;
 
     int   ml0, ml, ml2, ml3;
@@ -774,8 +774,8 @@ _last_literals:
     }
 
     /* End */
-    *srcSizePtr = (int)(((const char *)ip) - source);
-    return (int)(((char *)op) - dest);
+    *srcSizePtr = (int)(((const char *)ip) - src);
+    return (int)(((char *)op) - dst);
 
 _dest_overflow:
     if (limit == fillOutput) {
@@ -805,7 +805,7 @@ _dest_overflow:
 
 
 static int LZ4HC_compress_optimal(LZ4HC_CCtx_internal *ctx,
-                                  const char *const source, char *dst,
+                                  const char *const src, char *dst,
                                   int *srcSizePtr, int dstCapacity,
                                   int const nbSearches, size_t sufficient_len,
                                   const limitedOutput_directive limit, int const fullUpdate,
@@ -985,12 +985,12 @@ int LZ4_compress_HC(const char *src, char *dst, int srcSize, int dstCapacity, in
 }
 
 /* state is presumed sized correctly (>= sizeof(LZ4_streamHC_t)) */
-int LZ4_compress_HC_destSize(void *state, const char *source, char *dest, int *sourceSizePtr, int targetDestSize, int cLevel) {
+int LZ4_compress_HC_destSize(void *state, const char *src, char *dst, int *sourceSizePtr, int targetDestSize, int cLevel) {
     LZ4_streamHC_t *const ctx = LZ4_initStreamHC(state, sizeof(*ctx));
     if (ctx == NULL) return 0; /* init failure */
-    LZ4HC_init_internal(&ctx->internal_donotuse, (const BYTE *) source);
+    LZ4HC_init_internal(&ctx->internal_donotuse, (const BYTE *) src);
     LZ4_setCompressionLevel(ctx, cLevel);
-    return LZ4HC_compress_generic(&ctx->internal_donotuse, source, dest, sourceSizePtr, targetDestSize, cLevel, fillOutput);
+    return LZ4HC_compress_generic(&ctx->internal_donotuse, src, dst, sourceSizePtr, targetDestSize, cLevel, fillOutput);
 }
 
 
@@ -1313,7 +1313,7 @@ LZ4HC_FindLongerMatch(LZ4HC_CCtx_internal *const ctx,
 
 
 static int LZ4HC_compress_optimal(LZ4HC_CCtx_internal *ctx,
-                                  const char *const source,
+                                  const char *const src,
                                   char *dst,
                                   int *srcSizePtr,
                                   int dstCapacity,
@@ -1331,7 +1331,7 @@ static int LZ4HC_compress_optimal(LZ4HC_CCtx_internal *ctx,
     LZ4HC_optimal_t opt[LZ4_OPT_NUM + TRAILING_LITERALS];   /* ~64 KB, which is a bit large for stack... */
 #endif
 
-    const BYTE *ip = (const BYTE *) source;
+    const BYTE *ip = (const BYTE *) src;
     const BYTE *anchor = ip;
     const BYTE *const iend = ip + *srcSizePtr;
     const BYTE *const mflimit = iend - MFLIMIT;
@@ -1600,7 +1600,7 @@ _last_literals:
     }
 
     /* End */
-    *srcSizePtr = (int)(((const char *)ip) - source);
+    *srcSizePtr = (int)(((const char *)ip) - src);
     retval = (int)((char *)op - dst);
     goto _return_label;
 
