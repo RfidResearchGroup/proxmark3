@@ -184,7 +184,11 @@ int demodNexWatch(bool verbose) {
         char desc[10];
         uint8_t chk;
     } nexwatch_magic_t;
-    nexwatch_magic_t items[] = { {0xBE, "Quadrakey", 0}, {0x88, "Nexkey", 0} };
+    nexwatch_magic_t items[] = {
+        {0xBE, "Quadrakey", 0},
+        {0x88, "Nexkey", 0},
+        {0x86, "Russian", 0}
+    };
 
     uint8_t m_idx;
     for (m_idx = 0; m_idx < ARRAYLEN(items); m_idx++) {
@@ -264,10 +268,11 @@ static int CmdNexWatchClone(const char *Cmd) {
     CLIParserInit(&ctx, "lf nexwatch clone",
                   "clone a Nexwatch tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
                   "You can use raw hex values or create a credential based on id, mode\n"
-                  "and type of credential (Nexkey / Quadrakey)",
+                  "and type of credential (Nexkey / Quadrakey / Russian)",
                   "lf nexwatch clone --raw 5600000000213C9F8F150C00\n"
-                  "lf nexwatch clone --cn 521512301 -m 1 -n    -> Nexkey credential\n"
-                  "lf nexwatch clone --cn 521512301 -m 1 -q    -> Quadrakey credential\n"
+                  "lf nexwatch clone --cn 521512301 -m 1 --nc    -> Nexkey credential\n"
+                  "lf nexwatch clone --cn 521512301 -m 1 --qc    -> Quadrakey credential\n"
+                  "lf nexwatch clone --cn 521512301 -m 1 --uc    -> Unknown credential\n"
                  );
 
     void *argtable[] = {
@@ -275,8 +280,9 @@ static int CmdNexWatchClone(const char *Cmd) {
         arg_str0("r", "raw", "<hex>", "raw hex data. 12 bytes"),
         arg_u64_0(NULL, "cn", "<dec>", "card id"),
         arg_u64_0("m", "mode", "<dec>", "mode (decimal) (0-15, defaults to 1)"),
-        arg_lit0("n", NULL, "Nexkey credential"),
-        arg_lit0("q", NULL, "Quadrakey credential"),
+        arg_lit0(NULL, "nc", "Nexkey credential"),
+        arg_lit0(NULL, "qc", "Quadrakey credential"),
+        arg_lit0(NULL, "uc", "Unknown credential"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
@@ -292,8 +298,9 @@ static int CmdNexWatchClone(const char *Cmd) {
     uint32_t mode = arg_get_u32_def(ctx, 3, -1);
     bool use_nexkey = arg_get_lit(ctx, 4);
     bool use_quadrakey = arg_get_lit(ctx, 5);
-    bool q5 = arg_get_lit(ctx, 6);
-    bool em = arg_get_lit(ctx, 7);
+    bool use_unk = arg_get_lit(ctx, 6);
+    bool q5 = arg_get_lit(ctx, 7);
+    bool em = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     if (use_nexkey && use_quadrakey) {
@@ -334,6 +341,9 @@ static int CmdNexWatchClone(const char *Cmd) {
 
     if (use_quadrakey)
         magic = 0xBE;
+
+    if (use_unk)
+        magic = 0x86;
 
     uint32_t blocks[4];
 
@@ -385,8 +395,9 @@ static int CmdNexWatchSim(const char *Cmd) {
                   "You can use raw hex values or create a credential based on id, mode\n"
                   "and type of credential (Nexkey/Quadrakey)",
                   "lf nexwatch sim --raw 5600000000213C9F8F150C00\n"
-                  "lf nexwatch sim --cn 521512301 -m 1 -n    -> Nexkey credential\n"
-                  "lf nexwatch sim --cn 521512301 -m 1 -q    -> Quadrakey credential"
+                  "lf nexwatch sim --cn 521512301 -m 1 --nc    -> Nexkey credential\n"
+                  "lf nexwatch sim --cn 521512301 -m 1 --qc    -> Quadrakey credential\n"
+                  "lf nexwatch sim --cn 521512301 -m 1 --uc    -> Unknown credential\n"
                  );
 
     void *argtable[] = {
@@ -394,8 +405,9 @@ static int CmdNexWatchSim(const char *Cmd) {
         arg_str0("r", "raw", "<hex>", "raw hex data. 12 bytes"),
         arg_u64_0(NULL, "cn", "<dec>", "card id"),
         arg_u64_0("m", "mode", "<dec>", "mode (decimal) (0-15, defaults to 1)"),
-        arg_lit0("n", NULL, "Nexkey credential"),
-        arg_lit0("q", NULL, "Quadrakey credential"),
+        arg_lit0(NULL, "nc", "Nexkey credential"),
+        arg_lit0(NULL, "qc", "Quadrakey credential"),
+        arg_lit0(NULL, "uc", "Unknown credential"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -409,6 +421,7 @@ static int CmdNexWatchSim(const char *Cmd) {
     uint32_t mode = arg_get_u32_def(ctx, 3, -1);
     bool use_nexkey = arg_get_lit(ctx, 4);
     bool use_quadrakey = arg_get_lit(ctx, 5);
+    bool use_unk = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     if (use_nexkey && use_quadrakey) {
@@ -443,6 +456,9 @@ static int CmdNexWatchSim(const char *Cmd) {
 
     if (use_quadrakey)
         magic = 0xBE;
+
+    if (use_unk)
+        magic = 0x86;
 
     if (use_raw == false) {
         uint8_t parity = nexwatch_parity(raw + 5) & 0xF;
