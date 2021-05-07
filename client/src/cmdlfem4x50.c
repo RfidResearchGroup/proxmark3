@@ -163,11 +163,9 @@ static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len
         return PM3_EFILE;
     }
 
-    uint32_t serial = 0, device_id = 0;
-
-    // valid em4x50 data?
-    serial = bytes_to_num(dump + 4 * EM4X50_DEVICE_SERIAL, 4);
-    device_id = bytes_to_num(dump + 4 * EM4X50_DEVICE_ID, 4);
+    // sanity check, valid em4x50 data?
+    uint32_t serial = bytes_to_num(dump + 4 * EM4X50_DEVICE_SERIAL, 4);
+    uint32_t device_id = bytes_to_num(dump + 4 * EM4X50_DEVICE_ID, 4);
     if (serial == device_id) {
         PrintAndLogEx(WARNING, "No valid EM4x50 data in file %s", filename);
         free(dump);
