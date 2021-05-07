@@ -937,9 +937,7 @@ int detectIndala(uint8_t *dest, size_t *size, uint8_t *invert) {
         goto inv;
     }
 
-    if (res == 0) {
-        return -4;
-    }
+    return -4;
 
 inv:
 
