@@ -286,7 +286,7 @@ int main(int argc, char *argv[]) {
     }
 
     int gpu = 1;
-    err = clGetDeviceIDs(ctx.platform_id, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, &(ctx.device_id), NULL);
+    err = clGetDeviceIDs(ctx.platform_id, CL_DEVICE_TYPE_GPU, 1, &(ctx.device_id), NULL);
     if (err != CL_SUCCESS) {
         printf("Error: Failed to create a device group!: %d\n", err);
         exit(1);
@@ -394,7 +394,7 @@ int main(int argc, char *argv[]) {
 
 static void try_state(uint64_t s) {
     Hitag_State hstate;
-    uint64_t keyrev, key, nR1xk;
+    uint64_t keyrev, nR1xk;
     uint32_t b = 0;
 
     hstate.shiftreg = s;
@@ -413,7 +413,7 @@ static void try_state(uint64_t s) {
     hitag2_init(&hstate, keyrev, uid, nR2);
     if ((aR2 ^ hitag2_nstep(&hstate, 32)) == 0xffffffff) {
 
-        key = rev64(keyrev);
+        uint64_t key = rev64(keyrev);
 
         printf("Key: ");
         for (int i = 0; i < 6; i++) {

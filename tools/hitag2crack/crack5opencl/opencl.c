@@ -208,7 +208,7 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
 
         err = clGetDeviceIDs((*cd_ctx)[platform_idx].platform_id, CL_DEVICE_TYPE_ALL, ocl_device_max, ocl_devices, &ocl_device_cnt);
         if (ocl_device_cnt == 0) {
-            if (device_types_selected == CL_DEVICE_TYPE_ALL) printf("No device(s) available with platform id %d\n", platform_idx);
+            if (device_types_selected == CL_DEVICE_TYPE_ALL) printf("No device(s) available with platform id %u\n", platform_idx);
             (*cd_ctx)[platform_idx].device_cnt = 0;
             continue;
         }

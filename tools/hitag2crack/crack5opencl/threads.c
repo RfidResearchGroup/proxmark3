@@ -177,10 +177,10 @@ int thread_init(thread_ctx_t *ctx, short type, size_t thread_count) {
 }
 
 int thread_start_scheduler(thread_ctx_t *ctx, thread_args_t *t_arg, wu_queue_ctx_t *queue_ctx) {
-    size_t z = 0;
+    size_t z;
     bool found = false;
     bool done = false;
-    unsigned int th_cnt = 0;
+    unsigned int th_cnt;
 
     if (ctx->type == THREAD_TYPE_SEQ) {
         bool error = false;
@@ -264,17 +264,6 @@ int thread_start_scheduler(thread_ctx_t *ctx, thread_args_t *t_arg, wu_queue_ctx
 
                 if (cur_status == TH_WAIT) {
                     pthread_mutex_lock(&ctx->thread_mutexs[z]);
-
-                    if (found) {
-#if TDEBUG >= 1
-                        printf("[%zu] key is found in another thread 1\n", z);
-                        fflush(stdout);
-#endif
-                        t_arg[z].status = TH_END;
-                        t_arg[z].quit = true;
-                        pthread_mutex_unlock(&ctx->thread_mutexs[z]);
-                        continue;
-                    }
 
                     if (wu_queue_done(queue_ctx) != QUEUE_EMPTY) {
                         t_arg[z].status = TH_PROCESSING;
@@ -592,9 +581,6 @@ void *computing_process_async(void *arg) {
 
     pthread_mutex_unlock(&a->thread_ctx->thread_mutexs[z]);
 
-    uint64_t off = 0;
-    int ret = 0;
-
     if (status == TH_START) {
 #if TDEBUG >= 1
         printf("[%s][%zu] plat id %d, uid %u, aR2 %u, nR1 %u, nR2 %u, Initial status: %s\n", __func__, z, ctx->id_platform, uid, aR2, nR1, nR2, thread_status_strdesc(status));
@@ -670,7 +656,7 @@ void *computing_process_async(void *arg) {
 
             wu_queue_data_t wu;
             wu_queue_pop(&ctx->queue_ctx, &wu, false);
-            off = wu.off;
+            uint32_t off = wu.off;
             a->slice = wu.id + 1;
 
             float progress = (((wu.id + 1) * 100.0) / wu.max);
@@ -690,7 +676,7 @@ void *computing_process_async(void *arg) {
 
             fflush(stdout);
 
-            ret = runKernel(ctx, (uint32_t) off, matches, matches_found, z);
+            int ret = runKernel(ctx, off, matches, matches_found, z);
 
             if (ret < 1) { // error or nada
                 if (ret == -1) {
@@ -776,7 +762,7 @@ void *computing_process_async(void *arg) {
                     if (a->r) {
                         pthread_mutex_lock(&a->thread_ctx->thread_mutexs[z]);
                         a->s = matches[match];
-                        status = a->status = TH_FOUND_KEY;
+                        a->status = TH_FOUND_KEY;
                         a->quit = true;
                         pthread_mutex_unlock(&a->thread_ctx->thread_mutexs[z]);
 #if TDEBUG >= 1

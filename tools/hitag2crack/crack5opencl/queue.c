@@ -189,7 +189,7 @@ int wu_queue_init(wu_queue_ctx_t *ctx, wu_queue_type_t queue_type) {
     ctx->queue_head = 0; //NULL;
     ctx->queue_tail = 0; //NULL;
 
-    int ret = 0;
+    int ret;
 
     if ((ret = pthread_mutexattr_init(&ctx->queue_mutex_attr)) != 0) {
 #if TEST_UNIT == 1
@@ -353,7 +353,6 @@ int wu_queue_pop(wu_queue_ctx_t *ctx, wu_queue_data_t *wu, short remove) {
 
     memset(ptr, 0, sizeof(wu_queue_item_t));
     free(ptr);
-    ptr = 0; //NULL;
 
     ctx->queue_size--;
 
@@ -407,7 +406,7 @@ int wu_queue_destroy(wu_queue_ctx_t *ctx) {
     memset(ctx, 0, sizeof(wu_queue_ctx_t));
     //ctx = 0; //NULL;
 
-    return (ret == 1) ? NO_ERROR : ERROR_GENERIC;
+    return NO_ERROR;
 }
 
 #if TEST_UNIT == 1
