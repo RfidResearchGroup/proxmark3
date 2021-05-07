@@ -1977,15 +1977,13 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
         if (do_aid_search) {
 
-
             PrintAndLogEx(INFO, "-------------------- " _CYAN_("AID Search") " --------------------");
 
-            bool found = false;
-            size_t elmindx = 0;
             json_t *root = AIDSearchInit(verbose);
             if (root != NULL) {
+                bool found = false;
                 bool ActivateField = true;
-                for (elmindx = 0; elmindx < json_array_size(root); elmindx++) {
+                for (size_t elmindx = 0; elmindx < json_array_size(root); elmindx++) {
 
                     if (kbd_enter_pressed()) {
                         break;
