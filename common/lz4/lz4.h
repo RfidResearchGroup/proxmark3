@@ -184,7 +184,7 @@ LZ4LIB_API int LZ4_decompress_safe(const char *src, char *dst, int compressedSiz
         return : maximum output size in a "worst case" scenario
               or 0, if input size is incorrect (too large or negative)
 */
-LZ4LIB_API int LZ4_compressBound(int inputSize);
+LZ4LIB_API int LZ4_compressBound(int isize);
 
 /*! LZ4_compress_fast() :
     Same as LZ4_compress_default(), but allows selection of "acceleration" factor.
