@@ -1601,7 +1601,7 @@ static int filelist(const char *path, const char *ext, uint8_t last, bool tentat
             filelist(newpath, ext, last + ((i == n - 1) << (indent + 1)), tentative, indent + 1, strlen(path));
         } else {
 
-            if ((ext == NULL) || (ext && (str_endswith(namelist[i]->d_name, ext)))) {
+            if ((ext == NULL) || ((str_endswith(namelist[i]->d_name, ext)))) {
 
                 for (uint8_t j = 0; j < indent + 1; j++) {
                     PrintAndLogEx(NORMAL, "%s   " NOLF, ((last >> j) & 1) ? " " : "│");
