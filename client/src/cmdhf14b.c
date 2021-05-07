@@ -994,7 +994,7 @@ static bool HF14B_other_reader(bool verbose) {
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 4);
     if (packet == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
-        return PM3_EMALLOC;
+        return false;
     }
     packet->flags = (ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_RAW | ISO14B_APPEND_CRC);
     packet->timeout = 0;
