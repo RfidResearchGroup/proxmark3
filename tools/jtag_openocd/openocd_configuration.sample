@@ -32,3 +32,6 @@ CONFIG_IF=interface/jlink.cfg
 
 # Wiggler:
 #CONFIG_IF=interface/parport.cfg
+
+# Shikra:
+#CONFIG_IF=interface-shikra.cfg
