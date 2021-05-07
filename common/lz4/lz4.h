@@ -708,15 +708,15 @@ union LZ4_streamDecode_u {
 
 /* Obsolete compression functions */
 LZ4_DEPRECATED("use LZ4_compress_default() instead")       LZ4LIB_API int LZ4_compress(const char *src, char *dst, int srcSize);
-LZ4_DEPRECATED("use LZ4_compress_default() instead")       LZ4LIB_API int LZ4_compress_limitedOutput(const char *src, char *dst, int srcSize, int maxOutputSize);
+LZ4_DEPRECATED("use LZ4_compress_default() instead")       LZ4LIB_API int LZ4_compress_limitedOutput(const char *src, char *dst, int srcSize, int dstCapacity);
 LZ4_DEPRECATED("use LZ4_compress_fast_extState() instead") LZ4LIB_API int LZ4_compress_withState(void *state, const char *src, char *dst, int srcSize);
-LZ4_DEPRECATED("use LZ4_compress_fast_extState() instead") LZ4LIB_API int LZ4_compress_limitedOutput_withState(void *state, const char *src, char *dst, int srcSize, int maxOutputSize);
+LZ4_DEPRECATED("use LZ4_compress_fast_extState() instead") LZ4LIB_API int LZ4_compress_limitedOutput_withState(void *state, const char *src, char *dst, int srcSize, int dstCapacity);
 LZ4_DEPRECATED("use LZ4_compress_fast_continue() instead") LZ4LIB_API int LZ4_compress_continue(LZ4_stream_t *LZ4_streamPtr, const char *src, char *dst, int srcSize);
-LZ4_DEPRECATED("use LZ4_compress_fast_continue() instead") LZ4LIB_API int LZ4_compress_limitedOutput_continue(LZ4_stream_t *LZ4_streamPtr, const char *src, char *dst, int srcSize, int maxOutputSize);
+LZ4_DEPRECATED("use LZ4_compress_fast_continue() instead") LZ4LIB_API int LZ4_compress_limitedOutput_continue(LZ4_stream_t *LZ4_streamPtr, const char *src, char *dst, int srcSize, int dstCapacity);
 
 /* Obsolete decompression functions */
 LZ4_DEPRECATED("use LZ4_decompress_fast() instead") LZ4LIB_API int LZ4_uncompress(const char *src, char *dst, int outputSize);
-LZ4_DEPRECATED("use LZ4_decompress_safe() instead") LZ4LIB_API int LZ4_uncompress_unknownOutputSize(const char *src, char *dst, int isize, int maxOutputSize);
+LZ4_DEPRECATED("use LZ4_decompress_safe() instead") LZ4LIB_API int LZ4_uncompress_unknownOutputSize(const char *src, char *dst, int isize, int dstCapacity);
 
 /* Obsolete streaming functions; degraded functionality; do not use!
  *
