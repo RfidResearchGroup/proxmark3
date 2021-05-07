@@ -2347,7 +2347,7 @@ static int CmdT55xxRestore(const char *Cmd) {
     }
 
     size_t dlen = 0;
-    uint8_t *dump = NULL;
+    void *dump = NULL;
     DumpFileType_t dftype = getfiletype(filename);
     switch (dftype) {
         case BIN: {
@@ -2364,7 +2364,7 @@ static int CmdT55xxRestore(const char *Cmd) {
                 PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
                 return PM3_EMALLOC;
             }
-            res = loadFileJSON(filename, (void *)dump, T55x7_BLOCK_COUNT * 4, &dlen, NULL);
+            res = loadFileJSON(filename, dump, T55x7_BLOCK_COUNT * 4, &dlen, NULL);
             break;
         }
         case DICTIONARY: {
