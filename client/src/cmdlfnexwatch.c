@@ -181,7 +181,7 @@ int demodNexWatch(bool verbose) {
     // Checksum
     typedef struct {
         uint8_t magic;
-        char desc[10];
+        char desc[13];
         uint8_t chk;
     } nexwatch_magic_t;
     nexwatch_magic_t items[] = {
