@@ -776,19 +776,19 @@ LZ4_getPosition(const BYTE *p,
 
 LZ4_FORCE_INLINE void
 LZ4_prepareTable(LZ4_stream_t_internal *const cctx,
-                 const int inputSize,
+                 const int srcSize,
                  const tableType_t tableType) {
     /* If the table hasn't been used, it's guaranteed to be zeroed out, and is
      * therefore safe to use no matter what mode we're in. Otherwise, we figure
      * out if it's safe to leave as is or whether it needs to be reset.
      */
     if ((tableType_t)cctx->tableType != clearedTable) {
-        assert(inputSize >= 0);
+        assert(srcSize >= 0);
         if ((tableType_t)cctx->tableType != tableType
-                || ((tableType == byU16) && cctx->currentOffset + (unsigned)inputSize >= 0xFFFFU)
+                || ((tableType == byU16) && cctx->currentOffset + (unsigned)srcSize >= 0xFFFFU)
                 || ((tableType == byU32) && cctx->currentOffset > 1 GB)
                 || tableType == byPtr
-                || inputSize >= 4 KB) {
+                || srcSize >= 4 KB) {
             DEBUGLOG(4, "LZ4_prepareTable: Resetting table in %p", cctx);
             MEM_INIT(cctx->hashTable, 0, LZ4_HASHTABLESIZE);
             cctx->currentOffset = 0;
@@ -823,7 +823,7 @@ LZ4_FORCE_INLINE int LZ4_compress_generic_validated(
     LZ4_stream_t_internal *const cctx,
     const char *const src,
     char *const dst,
-    const int inputSize,
+    const int srcSize,
     int *inputConsumed, /* only written when outputDirective == fillOutput */
     const int maxOutputSize,
     const limitedOutput_directive outputDirective,
@@ -849,7 +849,7 @@ LZ4_FORCE_INLINE int LZ4_compress_generic_validated(
     U32 const prefixIdxLimit = startIndex - dictSize;   /* used when dictDirective == dictSmall */
     const BYTE *const dictEnd = dictionary ? dictionary + dictSize : dictionary;
     const BYTE *anchor = (const BYTE *) src;
-    const BYTE *const iend = ip + inputSize;
+    const BYTE *const iend = ip + srcSize;
     const BYTE *const mflimitPlusOne = iend - MFLIMIT + 1;
     const BYTE *const matchlimit = iend - LASTLITERALS;
 
@@ -865,12 +865,12 @@ LZ4_FORCE_INLINE int LZ4_compress_generic_validated(
     U32 offset = 0;
     U32 forwardH;
 
-    DEBUGLOG(5, "LZ4_compress_generic_validated: srcSize=%i, tableType=%u", inputSize, tableType);
+    DEBUGLOG(5, "LZ4_compress_generic_validated: srcSize=%i, tableType=%u", srcSize, tableType);
     assert(ip != NULL);
     /* If init conditions are not met, we don't have to mark stream
      * as having dirty context, since no action was taken yet */
     if (outputDirective == fillOutput && maxOutputSize < 1) { return 0; } /* Impossible to store anything */
-    if ((tableType == byU16) && (inputSize >= LZ4_64Klimit)) { return 0; } /* Size too large (not within 64K limit) */
+    if ((tableType == byU16) && (srcSize >= LZ4_64Klimit)) { return 0; } /* Size too large (not within 64K limit) */
     if (tableType == byPtr) assert(dictDirective == noDict);  /* only supported use case with byPtr */
     assert(acceleration >= 1);
 
@@ -881,14 +881,14 @@ LZ4_FORCE_INLINE int LZ4_compress_generic_validated(
         /* Subsequent linked blocks can't use the dictionary. */
         /* Instead, they use the block we just compressed. */
         cctx->dictCtx = NULL;
-        cctx->dictSize = (U32)inputSize;
+        cctx->dictSize = (U32)srcSize;
     } else {
-        cctx->dictSize += (U32)inputSize;
+        cctx->dictSize += (U32)srcSize;
     }
-    cctx->currentOffset += (U32)inputSize;
+    cctx->currentOffset += (U32)srcSize;
     cctx->tableType = (U32)tableType;
 
-    if (inputSize < LZ4_minLength) goto _last_literals;      /* Input too small, no compression (all literals) */
+    if (srcSize < LZ4_minLength) goto _last_literals;      /* Input too small, no compression (all literals) */
 
     /* First Byte */
     LZ4_putPosition(ip, cctx->hashTable, tableType, base);
@@ -1210,7 +1210,7 @@ _last_literals:
     }
     result = (int)(((char *)op) - dst);
     assert(result > 0);
-    DEBUGLOG(5, "LZ4_compress_generic: compressed %i bytes into %i bytes", inputSize, result);
+    DEBUGLOG(5, "LZ4_compress_generic: compressed %i bytes into %i bytes", srcSize, result);
     return result;
 }
 
@@ -1323,7 +1323,7 @@ int LZ4_compress_fast_extState_fastReset(void *state, const char *src, char *dst
 }
 
 
-int LZ4_compress_fast(const char *src, char *dst, int inputSize, int maxOutputSize, int acceleration) {
+int LZ4_compress_fast(const char *src, char *dst, int srcSize, int maxOutputSize, int acceleration) {
     int result;
 #if (LZ4_HEAPMODE)
     LZ4_stream_t *ctxPtr = ALLOC(sizeof(LZ4_stream_t));   /* malloc-calloc always properly aligned */
@@ -1332,7 +1332,7 @@ int LZ4_compress_fast(const char *src, char *dst, int inputSize, int maxOutputSi
     LZ4_stream_t ctx;
     LZ4_stream_t *const ctxPtr = &ctx;
 #endif
-    result = LZ4_compress_fast_extState(ctxPtr, src, dst, inputSize, maxOutputSize, acceleration);
+    result = LZ4_compress_fast_extState(ctxPtr, src, dst, srcSize, maxOutputSize, acceleration);
 
 #if (LZ4_HEAPMODE)
     FREEMEM(ctxPtr);
@@ -1531,15 +1531,15 @@ static void LZ4_renormDictT(LZ4_stream_t_internal *LZ4_dict, int nextSize) {
 
 int LZ4_compress_fast_continue(LZ4_stream_t *LZ4_stream,
                                const char *src, char *dst,
-                               int inputSize, int maxOutputSize,
+                               int srcSize, int maxOutputSize,
                                int acceleration) {
     const tableType_t tableType = byU32;
     LZ4_stream_t_internal *streamPtr = &LZ4_stream->internal_donotuse;
     const BYTE *dictEnd = streamPtr->dictionary + streamPtr->dictSize;
 
-    DEBUGLOG(5, "LZ4_compress_fast_continue (inputSize=%i)", inputSize);
+    DEBUGLOG(5, "LZ4_compress_fast_continue (srcSize=%i)", srcSize);
 
-    LZ4_renormDictT(streamPtr, inputSize);   /* avoid index overflow */
+    LZ4_renormDictT(streamPtr, srcSize);   /* avoid index overflow */
     if (acceleration < 1) acceleration = LZ4_ACCELERATION_DEFAULT;
     if (acceleration > LZ4_ACCELERATION_MAX) acceleration = LZ4_ACCELERATION_MAX;
 
@@ -1554,7 +1554,7 @@ int LZ4_compress_fast_continue(LZ4_stream_t *LZ4_stream,
 
     /* Check overlapping input/dictionary space */
     {
-        const BYTE *srcEnd = (const BYTE *) src + inputSize;
+        const BYTE *srcEnd = (const BYTE *) src + srcSize;
         if ((srcEnd > streamPtr->dictionary) && (srcEnd < dictEnd)) {
             streamPtr->dictSize = (U32)(dictEnd - srcEnd);
             if (streamPtr->dictSize > 64 KB) streamPtr->dictSize = 64 KB;
@@ -1566,9 +1566,9 @@ int LZ4_compress_fast_continue(LZ4_stream_t *LZ4_stream,
     /* prefix mode : source data follows dictionary */
     if (dictEnd == (const BYTE *)src) {
         if ((streamPtr->dictSize < 64 KB) && (streamPtr->dictSize < streamPtr->currentOffset))
-            return LZ4_compress_generic(streamPtr, src, dst, inputSize, NULL, maxOutputSize, limitedOutput, tableType, withPrefix64k, dictSmall, acceleration);
+            return LZ4_compress_generic(streamPtr, src, dst, srcSize, NULL, maxOutputSize, limitedOutput, tableType, withPrefix64k, dictSmall, acceleration);
         else
-            return LZ4_compress_generic(streamPtr, src, dst, inputSize, NULL, maxOutputSize, limitedOutput, tableType, withPrefix64k, noDictIssue, acceleration);
+            return LZ4_compress_generic(streamPtr, src, dst, srcSize, NULL, maxOutputSize, limitedOutput, tableType, withPrefix64k, noDictIssue, acceleration);
     }
 
     /* external dictionary mode */
@@ -1581,25 +1581,25 @@ int LZ4_compress_fast_continue(LZ4_stream_t *LZ4_stream,
              * dictCtx->currentOffset - dictCtx->dictSize. This makes it safe
              * to use noDictIssue even when the dict isn't a full 64 KB.
              */
-            if (inputSize > 4 KB) {
+            if (srcSize > 4 KB) {
                 /* For compressing large blobs, it is faster to pay the setup
                  * cost to copy the dictionary's tables into the active context,
                  * so that the compression loop is only looking into one table.
                  */
                 LZ4_memcpy(streamPtr, streamPtr->dictCtx, sizeof(*streamPtr));
-                result = LZ4_compress_generic(streamPtr, src, dst, inputSize, NULL, maxOutputSize, limitedOutput, tableType, usingExtDict, noDictIssue, acceleration);
+                result = LZ4_compress_generic(streamPtr, src, dst, srcSize, NULL, maxOutputSize, limitedOutput, tableType, usingExtDict, noDictIssue, acceleration);
             } else {
-                result = LZ4_compress_generic(streamPtr, src, dst, inputSize, NULL, maxOutputSize, limitedOutput, tableType, usingDictCtx, noDictIssue, acceleration);
+                result = LZ4_compress_generic(streamPtr, src, dst, srcSize, NULL, maxOutputSize, limitedOutput, tableType, usingDictCtx, noDictIssue, acceleration);
             }
         } else {
             if ((streamPtr->dictSize < 64 KB) && (streamPtr->dictSize < streamPtr->currentOffset)) {
-                result = LZ4_compress_generic(streamPtr, src, dst, inputSize, NULL, maxOutputSize, limitedOutput, tableType, usingExtDict, dictSmall, acceleration);
+                result = LZ4_compress_generic(streamPtr, src, dst, srcSize, NULL, maxOutputSize, limitedOutput, tableType, usingExtDict, dictSmall, acceleration);
             } else {
-                result = LZ4_compress_generic(streamPtr, src, dst, inputSize, NULL, maxOutputSize, limitedOutput, tableType, usingExtDict, noDictIssue, acceleration);
+                result = LZ4_compress_generic(streamPtr, src, dst, srcSize, NULL, maxOutputSize, limitedOutput, tableType, usingExtDict, noDictIssue, acceleration);
             }
         }
         streamPtr->dictionary = (const BYTE *)src;
-        streamPtr->dictSize = (U32)inputSize;
+        streamPtr->dictSize = (U32)srcSize;
         return result;
     }
 }
@@ -2388,8 +2388,8 @@ int LZ4_decompress_fast_usingDict(const char *src, char *dst, int originalSize, 
 *  Obsolete Functions
 ***************************************************/
 /* obsolete compression functions */
-int LZ4_compress_limitedOutput(const char *src, char *dst, int inputSize, int maxOutputSize) {
-    return LZ4_compress_default(src, dst, inputSize, maxOutputSize);
+int LZ4_compress_limitedOutput(const char *src, char *dst, int srcSize, int maxOutputSize) {
+    return LZ4_compress_default(src, dst, srcSize, maxOutputSize);
 }
 int LZ4_compress(const char *src, char *dst, int srcSize) {
     return LZ4_compress_default(src, dst, srcSize, LZ4_compressBound(srcSize));
@@ -2403,8 +2403,8 @@ int LZ4_compress_withState(void *state, const char *src, char *dst, int srcSize)
 int LZ4_compress_limitedOutput_continue(LZ4_stream_t *LZ4_stream, const char *src, char *dst, int srcSize, int dstCapacity) {
     return LZ4_compress_fast_continue(LZ4_stream, src, dst, srcSize, dstCapacity, 1);
 }
-int LZ4_compress_continue(LZ4_stream_t *LZ4_stream, const char *src, char *dst, int inputSize) {
-    return LZ4_compress_fast_continue(LZ4_stream, src, dst, inputSize, LZ4_compressBound(inputSize), 1);
+int LZ4_compress_continue(LZ4_stream_t *LZ4_stream, const char *src, char *dst, int srcSize) {
+    return LZ4_compress_fast_continue(LZ4_stream, src, dst, srcSize, LZ4_compressBound(srcSize), 1);
 }
 
 /*
