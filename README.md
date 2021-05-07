@@ -186,15 +186,17 @@ If you are using @gator96100 's Proxspace with pre-compiled binaries do consider
 
 
 ## Citation
-Use this bibtex to cite this repository:
+Use this bibtex to cite this repository globally:
 ```
-@misc{Researching RFID using Proxmark3 tool,
-  title={Proxmark3, RRG/Iceman repo},
-  author={Iceman1001},
-  year={2019.08},
-  publisher={Github},
-  keywords={rfid nfc iceman proxmark3 125khz 134khz 13.56mhz},
-  journal={GitHub repository},
-  howpublished={\url{https://github.com/rfidresearchgroup/proxmark3}},
+@misc{proxmark3rrg,
+  author = {C. {Herrmann} and P. {Teuwen} and O. {Moiseenko} and M. {Walker} and others},
+  title = {{Proxmark3 -- RRG / Iceman repo}},
+  howpublished = {\url{https://github.com/RfidResearchGroup/proxmark3}},
+  keywords = {rfid nfc iceman proxmark3 125khz 134khz 13.56mhz},
 }
+```
+If you need to refer to a specific state of the repository, use a commit number or a date of access, e.g.:
+```
+  note = {Accessed: commit 12327f71a27da23831901847886aaf20e8ad3ca0}
+  note = {Accessed: 2021-01-01}
 ```
