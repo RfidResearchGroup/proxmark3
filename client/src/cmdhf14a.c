@@ -1021,7 +1021,7 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 
             // check R-block ACK
 //TODO check this one...
-            if ((*dataoutlen == 0) && (*dataoutlen != 0 || chaining != chainBlockNotLast)) { // *dataoutlen!=0. 'A && (!A || B)' is equivalent to 'A && B'
+            if ((*dataoutlen == 0) && (chaining != chainBlockNotLast)) { 
                 if (leaveSignalON == false)
                     DropField();
 
