@@ -1298,9 +1298,6 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
     // Set up the demodulator for tag -> reader responses.
     Demod14bInit(response, max_len);
 
-    // Setup and start DMA.
-    //FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
-
     // The DMA buffer, used to stream samples from the FPGA
     dmabuf16_t *dma = get_dma16();
     if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
@@ -1313,6 +1310,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
     int samples = 0, ret = 0;
 
     // Put FPGA in the appropriate mode
+    LED_D_ON();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_848_KHZ | FPGA_HF_READER_MODE_RECEIVE_IQ);
 
     for (;;) {
@@ -1888,13 +1886,13 @@ void iso14443b_setup(void) {
 
     // Signal field is on with the appropriate LED
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
-    SpinDelay(50);
+    SpinDelay(100);
 
     // Start the timer
     StartCountSspClk();
 
     // reset timeout
-    iso14b_set_fwt(9);
+    iso14b_set_fwt(8);
 
     LED_D_ON();
 }
@@ -2172,28 +2170,28 @@ static void iso14b_set_trigger(bool enable) {
     g_trigger = enable;
 }
 
-void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *o) {
+void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *p) {
 
     // receive buffer
     uint8_t buf[PM3_CMD_DATA_SIZE];
     memset(buf, 0, sizeof(buf));
     if (DBGLEVEL > DBG_DEBUG) {
-        Dbprintf("14b raw: param, %04x", o->flags);
+        Dbprintf("14b raw: param, %04x", p->flags);
     }
 
     // turn on trigger (LED_A)
-    if ((o->flags & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER)
+    if ((p->flags & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER)
         iso14b_set_trigger(true);
 
-    if ((o->flags & ISO14B_CONNECT) == ISO14B_CONNECT) {
+    if ((p->flags & ISO14B_CONNECT) == ISO14B_CONNECT) {
         iso14443b_setup();
     }
 
-    if ((o->flags & ISO14B_SET_TIMEOUT) == ISO14B_SET_TIMEOUT) {
-        iso14b_set_timeout(o->timeout);
+    if ((p->flags & ISO14B_SET_TIMEOUT) == ISO14B_SET_TIMEOUT) {
+        iso14b_set_timeout(p->timeout);
     }
 
-    if ((o->flags & ISO14B_CLEARTRACE) == ISO14B_CLEARTRACE) {
+    if ((p->flags & ISO14B_CLEARTRACE) == ISO14B_CLEARTRACE) {
         clear_trace();
     }
     set_tracing(true);
@@ -2203,21 +2201,21 @@ void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *o) {
     iso14b_card_select_t card;
     memset((void *)&card, 0x00, sizeof(card));
 
-    if ((o->flags & ISO14B_SELECT_STD) == ISO14B_SELECT_STD) {
+    if ((p->flags & ISO14B_SELECT_STD) == ISO14B_SELECT_STD) {
         status = iso14443b_select_card(&card);
         reply_mix(CMD_HF_ISO14443B_COMMAND, status, sendlen, 0, (uint8_t *)&card, sendlen);
         // 0: OK -1: attrib fail, -2:crc fail,
         if (status != 0) goto out;
     }
 
-    if ((o->flags & ISO14B_SELECT_SR) == ISO14B_SELECT_SR) {
+    if ((p->flags & ISO14B_SELECT_SR) == ISO14B_SELECT_SR) {
         status = iso14443b_select_srx_card(&card);
         reply_mix(CMD_HF_ISO14443B_COMMAND, status, sendlen, 0, (uint8_t *)&card, sendlen);
         // 0: OK 2: demod fail, 3:crc fail,
         if (status > 0) goto out;
     }
 
-    if ((o->flags & ISO14B_SELECT_CTS) == ISO14B_SELECT_CTS) {
+    if ((p->flags & ISO14B_SELECT_CTS) == ISO14B_SELECT_CTS) {
         iso14b_cts_card_select_t cts;
         sendlen = sizeof(iso14b_cts_card_select_t);
         status = iso14443b_select_cts_card(&cts);
@@ -2226,23 +2224,23 @@ void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *o) {
         if (status > 0) goto out;
     }
 
-    if ((o->flags & ISO14B_APDU) == ISO14B_APDU) {
+    if ((p->flags & ISO14B_APDU) == ISO14B_APDU) {
         uint8_t res;
-        status = iso14443b_apdu(o->raw, o->rawlen, (o->flags & ISO14B_SEND_CHAINING), buf, sizeof(buf), &res);
+        status = iso14443b_apdu(p->raw, p->rawlen, (p->flags & ISO14B_SEND_CHAINING), buf, sizeof(buf), &res);
         sendlen = MIN(Demod.len, PM3_CMD_DATA_SIZE);
         reply_mix(CMD_HF_ISO14443B_COMMAND, status, res, 0, buf, sendlen);
     }
 
-    if ((o->flags & ISO14B_RAW) == ISO14B_RAW) {
-        if ((o->flags & ISO14B_APPEND_CRC) == ISO14B_APPEND_CRC) {
-            if (o->rawlen > 0) {
-                AddCrc14B(o->raw, o->rawlen);
-                o->rawlen += 2;
+    if ((p->flags & ISO14B_RAW) == ISO14B_RAW) {
+        if ((p->flags & ISO14B_APPEND_CRC) == ISO14B_APPEND_CRC) {
+            if (p->rawlen > 0) {
+                AddCrc14B(p->raw, p->rawlen);
+                p->rawlen += 2;
             }
         }
         uint32_t start_time = 0;
         uint32_t eof_time = 0;
-        CodeAndTransmit14443bAsReader(o->raw, o->rawlen, &start_time, &eof_time);
+        CodeAndTransmit14443bAsReader(p->raw, p->rawlen, &start_time, &eof_time);
 
         if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
             FpgaDisableTracing();
@@ -2259,12 +2257,12 @@ void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *o) {
 
 out:
     // turn off trigger (LED_A)
-    if ((o->flags & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER)
+    if ((p->flags & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER)
         iso14b_set_trigger(false);
 
     // turn off antenna et al
     // we don't send a HALT command.
-    if ((o->flags & ISO14B_DISCONNECT) == ISO14B_DISCONNECT) {
+    if ((p->flags & ISO14B_DISCONNECT) == ISO14B_DISCONNECT) {
         switch_off(); // disconnect raw
         SpinDelay(20);
     }
