@@ -18,6 +18,6 @@ int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen
 int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMAD2);
 int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose);
 int MADDFDecodeAndPrint(uint32_t short_aid);
-int MADCardHolderInfoDecode(uint8_t *data, size_t dataLen, bool verbose);
+int MADCardHolderInfoDecode(uint8_t *data, size_t datalen, bool verbose);
 
 #endif // _MAD_H_

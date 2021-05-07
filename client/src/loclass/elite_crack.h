@@ -121,7 +121,7 @@ void hash2(uint8_t *key64, uint8_t *outp_keytable);
  * @param master_key where to put the master key
  * @return 0 for ok, 1 for failz
  */
-int calculateMasterKey(uint8_t first16bytes[], uint8_t master_key[]);
+int calculateMasterKey(uint8_t first16bytes[], uint8_t kcus[]);
 
 /**
  * @brief Test function
