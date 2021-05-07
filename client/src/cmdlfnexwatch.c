@@ -187,7 +187,7 @@ int demodNexWatch(bool verbose) {
     nexwatch_magic_t items[] = {
         {0xBE, "Quadrakey", 0},
         {0x88, "Nexkey", 0},
-        {0x86, "Russian", 0}
+        {0x86, "Unidentified", 0}
     };
 
     uint8_t m_idx;
@@ -282,7 +282,7 @@ static int CmdNexWatchClone(const char *Cmd) {
         arg_u64_0("m", "mode", "<dec>", "mode (decimal) (0-15, defaults to 1)"),
         arg_lit0(NULL, "nc", "Nexkey credential"),
         arg_lit0(NULL, "qc", "Quadrakey credential"),
-        arg_lit0(NULL, "uc", "Unknown credential"),
+        arg_lit0(NULL, "uc", "Unidentified credential"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
@@ -397,7 +397,7 @@ static int CmdNexWatchSim(const char *Cmd) {
                   "lf nexwatch sim --raw 5600000000213C9F8F150C00\n"
                   "lf nexwatch sim --cn 521512301 -m 1 --nc    -> Nexkey credential\n"
                   "lf nexwatch sim --cn 521512301 -m 1 --qc    -> Quadrakey credential\n"
-                  "lf nexwatch sim --cn 521512301 -m 1 --uc    -> Unknown credential\n"
+                  "lf nexwatch sim --cn 521512301 -m 1 --uc    -> Unidentified credential\n"
                  );
 
     void *argtable[] = {
