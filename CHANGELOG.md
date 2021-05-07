@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added openocd shikra support based on @ninjastyle82 patch to deprecated iceman fork (@iceman1001)
  - Changed `hf lto info` - now decode more of LTO CM info (@iceman1001)
  - Added `HF_TMUDFORD` standalone mode that reads and emulates ISO15693 UID (@tmudford)
  - Changed `hf mf wipe` - now supports enforcing sector 0 / block 0 writes (@iceman1001)

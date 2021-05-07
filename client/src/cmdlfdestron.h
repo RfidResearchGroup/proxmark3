@@ -12,7 +12,7 @@
 #include "common.h"
 
 int CmdLFDestron(const char *Cmd);
-int detectDestron(uint8_t *bits, size_t *size);
+int detectDestron(uint8_t *dest, size_t *size);
 int demodDestron(bool verbose);
 int readDestronUid(void);
 #endif
