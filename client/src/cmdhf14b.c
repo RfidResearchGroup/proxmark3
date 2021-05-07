@@ -1334,7 +1334,7 @@ static int CmdHF14BDump(const char *Cmd) {
     PacketResponseNG resp;
 
     // select
-    int status = 0;
+    int status;
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
         status = resp.oldarg[0];
         if (status < 0) {
@@ -1739,7 +1739,7 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field,
             // TODO check this one...
             // check R-block ACK
             // *dataoutlen!=0. 'A && (!A || B)' is equivalent to 'A && B'
-            if ((*dataoutlen == 0) && (*dataoutlen != 0 || chaining != chainBlockNotLast)) {
+            if ((*dataoutlen == 0) && (chaining != chainBlockNotLast)) {
                 if (leave_signal_on == false) {
                     switch_off_field_14b();
                 }
