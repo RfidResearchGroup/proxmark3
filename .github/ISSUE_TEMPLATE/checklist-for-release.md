@@ -16,7 +16,7 @@ assignees: doegox, iceman1001
 - [ ] `mycppcheck.sh` no alarming warning?
 - [ ] `mymakeclang.sh` no alarming error/warning ?
 - [ ] `mystandalone_makes.sh` compile all standalone modes (linux only)
-- [ ] [Travis](https://travis-ci.org/github/RfidResearchGroup/proxmark3/builds) green (linux noqt / osx+qt ; with makefile (w/wo bt) / with cmake)
+- [ ] GitHub Actions - green across the board ( MacOS, Ubuntu, Windows)
 - [ ] [Appveyor](https://ci.appveyor.com/project/RfidResearchGroup/proxmark3/history) green (PS)
 
 # OS compilation and tests
@@ -44,4 +44,3 @@ make install; pushd /tmp; proxmark3 -c 'data load -f em4x05.pm3;lf search 1'; po
 - [ ] OSX
 - [ ] Android
 - [ ] Termux
-
