@@ -207,7 +207,7 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen);
 */
 int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, void (*callback)(json_t *));
 int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, bool verbose, void (*callback)(json_t *));
-int loadFileJSONroot(const char *preferredName, void *out_root, bool verbose);
+int loadFileJSONroot(const char *preferredName, void **proot, bool verbose);
 
 /**
  * @brief  Utility function to load data from a DICTIONARY textfile. This method takes a preferred name.

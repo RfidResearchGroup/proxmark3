@@ -976,7 +976,6 @@ out:
     free(fileName);
     return retval;
 }
-
 int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
     char *path;
     int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, "", false);
@@ -1249,12 +1248,7 @@ out:
     return retval;
 }
 
-int loadFileJSONroot(const char *preferredName, void *out_root, bool verbose) {
- 
-    if (out_root == NULL) {
-        return PM3_EINVARG;
-    }
-
+int loadFileJSONroot(const char *preferredName, void **proot, bool verbose) {
     char *path;
     int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, ".json", false);
     if (res != PM3_SUCCESS) {
@@ -1281,7 +1275,7 @@ int loadFileJSONroot(const char *preferredName, void *out_root, bool verbose) {
         goto out;
     }
 
-    out_root = root;
+    *proot = root;
     return PM3_SUCCESS;
 
 out:
