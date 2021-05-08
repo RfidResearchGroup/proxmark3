@@ -639,6 +639,9 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             }
             break;
         }
+        case jsfFido: {
+            break;
+        }
         case jsfCustom: {
             (*callback)(root);
             break;
@@ -662,6 +665,28 @@ out:
     json_decref(root);
     free(fileName);
     return retval;
+}
+int saveFileJSONroot(const char *preferredName, void *root, size_t flags, bool verbose) {
+    if (root == NULL)
+        return PM3_EINVARG;
+
+    char *filename = newfilenamemcopy(preferredName, ".json");
+    if (filename == NULL)
+        return PM3_EMALLOC;
+
+    int res = json_dump_file(root, filename, flags);
+
+    free(filename);    
+
+    if ( res == 0 ) {
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, "saved to json file " _YELLOW_("%s"), filename);
+        }
+        return PM3_SUCCESS;
+    } else {
+        PrintAndLogEx(FAILED, "error: can't save the file: " _YELLOW_("%s"), filename);
+    }
+    return PM3_EFILE;
 }
 
 int saveFileWAVE(const char *preferredName, int *data, size_t datalen) {

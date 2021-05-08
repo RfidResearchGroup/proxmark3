@@ -254,7 +254,7 @@ int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *pu
     if (res) {
         PrintAndLogEx(ERR, "ERROR: DER verify returned 0x%x - %s\n", (res < 0) ? -res : res, ecdsa_get_error(res));
     } else {
-        PrintAndLogEx(SUCCESS, "Certificate OK.\n");
+        PrintAndLogEx(SUCCESS, "Certificate ( " _GREEN_("ok") " )\n");
     }
 
     if (verbose) {
@@ -388,13 +388,13 @@ static int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, 
         res = ecdsa_signature_verify(MBEDTLS_ECP_DP_SECP256R1, publickey, xbuf, xbuflen, sign, signLen, true);
         if (res) {
             if (res == MBEDTLS_ERR_ECP_VERIFY_FAILED) {
-                PrintAndLogEx(WARNING, "Signature is " _RED_("NOT VALID"));
+                PrintAndLogEx(WARNING, "Signature is ( " _RED_("not valid") " )");
             } else {
                 PrintAndLogEx(WARNING, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
             }
             return res;
         } else {
-            PrintAndLogEx(SUCCESS, "Signature is OK.");
+            PrintAndLogEx(SUCCESS, "Signature is ( " _GREEN_("ok") " )");
         }
     } else {
         PrintAndLogEx(ERR, "Invalid signature. res = %d.", res);
@@ -444,9 +444,9 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
 
     // check RP ID Hash
     if (CheckrpIdHash(root, ubuf)) {
-        PrintAndLogEx(SUCCESS, "rpIdHash OK.");
+        PrintAndLogEx(SUCCESS, "rpIdHash ( " _GREEN_("ok")" )");
     } else {
-        PrintAndLogEx(ERR, "rpIdHash ERROR!");
+        PrintAndLogEx(ERR, "rpIdHash " _RED_("ERROR!!"));
     }
 
     PrintAndLogEx(INFO, "Flags 0x%02x:", ubuf[32]);
@@ -704,9 +704,9 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 
     // check RP ID Hash
     if (CheckrpIdHash(root, ubuf)) {
-        PrintAndLogEx(SUCCESS, "rpIdHash OK.");
+        PrintAndLogEx(SUCCESS, "rpIdHash ( " _GREEN_("ok")" )");
     } else {
-        PrintAndLogEx(ERR, "rpIdHash ERROR!");
+        PrintAndLogEx(ERR, "rpIdHash " _RED_("ERROR!!"));
     }
 
     PrintAndLogEx(INFO, "Flags 0x%02x:", ubuf[32]);
@@ -760,7 +760,7 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
                 JsonLoadBufAsHex(root, "$.UserEntity.id", idbuf, sizeof(idbuf), &idbuflen);
 
                 if (idbuflen == n && !memcmp(idbuf, cid, idbuflen)) {
-                    PrintAndLogEx(SUCCESS, "UserEntity id OK.");
+                    PrintAndLogEx(SUCCESS, "UserEntity id ( " _GREEN_("ok") " )");
                 } else {
                     PrintAndLogEx(ERR, "ERROR: Wrong UserEntity id (from json: %s)", sprint_hex(idbuf, idbuflen));
                 }
