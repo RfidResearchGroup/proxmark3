@@ -54,9 +54,9 @@ Don't not turn off your device during the execution of this command!!
 Even its a quite fast command you should be warned.  You may brick it if you interrupt it.
 
 ```
-[usb] pm3 --> smart upgrade -f /usr/local/share/proxmark3/firmware/sim011.bin
+[usb] pm3 --> sc upgrade f /usr/local/share/proxmark3/firmware/sim011.bin
 # or if from local repo
-[usb] pm3 --> smart upgrade -f sim011.bin
+[usb] pm3 --> sc upgrade f sim011.bin
 ```
 
 You get the following output if the execution was successful:
