@@ -1224,6 +1224,46 @@ out:
     return retval;
 }
 
+int loadFileJSONroot(const char *preferredName, void *out_root, bool verbose) {
+ 
+    if (out_root == NULL) {
+        return PM3_EINVARG;
+    }
+
+    char *path;
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, ".json", false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    json_error_t error;
+    json_t *root = json_load_file(path, 0, &error);
+    if (verbose)
+        PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), path);
+
+    free(path);
+
+    int retval = PM3_SUCCESS;
+    if (root == NULL) {
+        PrintAndLogEx(ERR, "ERROR: json " _YELLOW_("%s") " error on line %d: %s", preferredName, error.line, error.text);
+        retval = PM3_ESOFT;
+        goto out;
+    }
+
+    if (!json_is_object(root)) {
+        PrintAndLogEx(ERR, "ERROR: Invalid json " _YELLOW_("%s") " format. root must be an object.", preferredName);
+        retval = PM3_ESOFT;
+        goto out;
+    }
+
+    out_root = root;
+    return PM3_SUCCESS;
+
+out:
+    json_decref(root);
+    return retval;
+}
+
 int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint32_t *keycnt) {
     // t5577 == 4bytes
     // mifare == 6 bytes
