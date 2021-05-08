@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf fido` - refactored load/save json objects (@iceman1001)
+ - Moved / renamed  `fido2.json` ->  `client/resource/fido2_defparams.json` (@iceman1001)
  - Added openocd shikra support based on @ninjastyle82 patch to deprecated iceman fork (@iceman1001)
  - Changed `hf lto info` - now decode more of LTO CM info (@iceman1001)
  - Added `HF_TMUDFORD` standalone mode that reads and emulates ISO15693 UID (@tmudford)
