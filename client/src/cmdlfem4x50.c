@@ -1149,7 +1149,7 @@ int CmdEM4x50Sim(const char *Cmd) {
     CLIParserInit(&ctx, "lf em 4x50 sim",
                   "Simulates a EM4x50 tag\n"
                   "First upload to device using `lf em 4x50 eload`",
-                  "lf em 4x50 sim"
+                  "lf em 4x50 sim\n"
                   "lf em 4x50 sim -p 27182818   -> uses password for eload data"
                  );
 
