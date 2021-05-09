@@ -77,7 +77,7 @@ static int em4x70_receive(uint8_t *bits, size_t length);
 static bool find_listen_window(bool command);
 
 static void init_tag(void) {
-    memset(tag.data, 0x00, sizeof(tag.data) / sizeof(tag.data[0]));
+    memset(tag.data, 0x00, ARRAYLEN(tag.data));
 }
 
 static void em4x70_setup_read(void) {

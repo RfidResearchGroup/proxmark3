@@ -25,6 +25,7 @@
 #include "whereami.h"
 #include "comms.h"
 #include "fileutils.h"
+#include "commonutil.h"    // ARRAYLEN
 #include "jni_tools.h"
 
 //iceman, todo:  proxify socker server name.  Maybe set in preferences?
@@ -151,13 +152,13 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
         {"closePm3", "()V", ClosePm3}
     };
 
-    if ((*jniEnv)->RegisterNatives(jniEnv, clazz, methods, sizeof(methods) / sizeof(methods[0])) !=
+    if ((*jniEnv)->RegisterNatives(jniEnv, clazz, methods, ARRAYLEN(methods)) !=
             JNI_OK) {
         return -1;
     }
 
     if ((*jniEnv)->RegisterNatives(jniEnv, clz_test, methods1,
-                                   sizeof(methods1) / sizeof(methods1[0])) != JNI_OK) {
+                                   ARRAYLEN(methods1)) != JNI_OK) {
         return -1;
     }
 
