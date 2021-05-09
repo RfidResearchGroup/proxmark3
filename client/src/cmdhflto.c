@@ -361,6 +361,13 @@ int infoLTO(bool verbose) {
     uint8_t type_info[2];
 
     int ret_val = lto_select(serial_number, serial_len, type_info, verbose);
+    if (verbose == false) {
+        if (ret_val == PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "UID......... " _YELLOW_("%s"), sprint_hex_inrow(serial_number, sizeof(serial_number)));
+        }
+        lto_switch_off_field();
+        return ret_val;
+    }
 
     if (ret_val == PM3_SUCCESS) {
         PrintAndLogEx(NORMAL, "");
@@ -417,7 +424,8 @@ int infoLTO(bool verbose) {
             }
         }
 
-    }
+
+    } 
     PrintAndLogEx(NORMAL, "");
     lto_switch_off_field();
     return ret_val;
