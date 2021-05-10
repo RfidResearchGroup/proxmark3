@@ -130,8 +130,8 @@ static int CmdHFFidoRegister(const char *cmd) {
                   "The output template filename is  `hf-fido2-params.json`\n"
                   "\n",
                   "hf fido reg          -> execute command with 2 parameters, filled 0x00\n"
-                  "hf fido reg -p s0 s1 -> execute command with plain parameters\n"
-                  "hf fido reg --cp 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f --ap 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f\n"
+                  "hf fido reg -p --cp s0 --ap s1 -> execute command with plain parameters\n"
+                  "hf fido reg --cpx 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f --apx 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f\n"
                  );
 
     void *argtable[] = {
@@ -141,8 +141,10 @@ static int CmdHFFidoRegister(const char *cmd) {
         arg_lit0("p",  "plain", "send plain ASCII to challenge and application parameters instead of HEX"),
         arg_lit0("t",  "tlv",   "Show DER certificate contents in TLV representation"),
         arg_str0("f",  "file",  "<fn>", "JSON input file name for parameters"),
-        arg_str0(NULL,  "cp",   "<hex/ascii>", "challenge parameter (32 bytes hex / 1..16 chars)"),
-        arg_str0(NULL,  "ap",   "<hex/ascii>",  "application parameter (32 bytes hex / 1..16 chars)"),
+        arg_str0(NULL,  "cp",   "<ascii>", "challenge parameter (1..16 chars)"),
+        arg_str0(NULL,  "ap",   "<ascii>",  "application parameter (1..16 chars)"),
+        arg_str0(NULL,  "cpx",   "<hex>", "challenge parameter (32 bytes hex)"),
+        arg_str0(NULL,  "apx",   "<hex>",  "application parameter (32 bytes hex)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
@@ -200,7 +202,7 @@ static int CmdHFFidoRegister(const char *cmd) {
         }
     } else {
         chlen = sizeof(cdata);
-        CLIGetHexWithReturn(ctx, 6, cdata, &chlen);
+        CLIGetHexWithReturn(ctx, 8, cdata, &chlen);
         if (chlen && chlen != 32) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length must be 32 bytes only.");
             CLIParserFree(ctx);
@@ -224,7 +226,7 @@ static int CmdHFFidoRegister(const char *cmd) {
         }
     } else {
         applen = sizeof(adata);
-        CLIGetHexWithReturn(ctx, 7, adata, &applen);
+        CLIGetHexWithReturn(ctx, 9, adata, &applen);
         if (applen && applen != 32) {
             PrintAndLogEx(ERR, "ERROR: application parameter length must be 32 bytes only.");
             CLIParserFree(ctx);
