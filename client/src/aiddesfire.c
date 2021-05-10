@@ -101,7 +101,7 @@ static int print_aiddf_description(json_t *root, uint8_t aid[3], char *fmt, bool
     const char *type = aiddf_json_get_str(elm, "Type");
 
     if (name && vendor) {
-        char result[4 + strlen(name) + strlen(vendor)];
+        char result[5 + strlen(name) + strlen(vendor)];
         sprintf(result, " %s [%s]", name, vendor);
         PrintAndLogEx(INFO, fmt, result);
     }
@@ -125,7 +125,7 @@ static int print_aiddf_description(json_t *root, uint8_t aid[3], char *fmt, bool
 int AIDDFDecodeAndPrint(uint8_t aid[3]) {
     open_aiddf_file(&df_known_aids, false);
 
-    char fmt[50];
+    char fmt[80];
     sprintf(fmt, "  DF AID Function %02X%02X%02X     :" _YELLOW_("%s"), aid[2], aid[1], aid[0], "%s");
     print_aiddf_description(df_known_aids, aid, fmt, false);
     close_aiddf_file(df_known_aids);
