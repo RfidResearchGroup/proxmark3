@@ -1698,6 +1698,8 @@ void iClass_Dump(uint8_t *msg) {
     // select tag.
     uint32_t eof_time = 0;
     picopass_hdr_t hdr = {0};
+    memset(&hdr, 0xff, sizeof(picopass_hdr_t));
+
     bool res = select_iclass_tag(&hdr, req->use_credit_key, &eof_time);
     if (res == false) {
         if (req->send_reply) {
