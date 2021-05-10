@@ -130,7 +130,7 @@ static int CmdHFFidoRegister(const char *cmd) {
                   "The output template filename is  `hf-fido2-params.json`\n"
                   "\n",
                   "hf fido reg          -> execute command with 2 parameters, filled 0x00\n"
-                  "hf fido reg -p --cp s0 --ap s1 -> execute command with plain parameters\n"
+                  "hf fido reg --cp s0 --ap s1 -> execute command with plain parameters\n"
                   "hf fido reg --cpx 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f --apx 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f\n"
                  );
 
@@ -138,7 +138,6 @@ static int CmdHFFidoRegister(const char *cmd) {
         arg_param_begin,
         arg_lit0("a",  "apdu",  "show APDU requests and responses"),
         arg_litn("v",  "verbose",  0, 2, "show technical data. vv - show full certificates data"),
-        arg_lit0("p",  "plain", "send plain ASCII to challenge and application parameters instead of HEX"),
         arg_lit0("t",  "tlv",   "Show DER certificate contents in TLV representation"),
         arg_str0("f",  "file",  "<fn>", "JSON input file name for parameters"),
         arg_str0(NULL,  "cp",   "<ascii>", "challenge parameter (1..16 chars)"),
@@ -152,9 +151,11 @@ static int CmdHFFidoRegister(const char *cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
     bool verbose2 = arg_get_lit(ctx, 2) > 1;
-    bool paramsPlain = arg_get_lit(ctx, 3);
-    bool showDERTLV = arg_get_lit(ctx, 4);
-
+    bool showDERTLV = arg_get_lit(ctx, 3);
+    bool cpplain = arg_get_str_len(ctx, 5);
+    bool applain = arg_get_str_len(ctx, 6);
+    bool cphex = arg_get_str_len(ctx, 7);
+    bool aphex = arg_get_str_len(ctx, 8);
 
     uint8_t data[64] = {0};
     int chlen = 0;
@@ -164,7 +165,7 @@ static int CmdHFFidoRegister(const char *cmd) {
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     // deafault name
     if (fnlen == 0) {
@@ -172,13 +173,6 @@ static int CmdHFFidoRegister(const char *cmd) {
         fnlen = strlen(filename);
     }
 
-    /*
-    json_t *root = calloc(1, sizeof(json_t));
-    if (root == NULL) {
-        PrintAndLogEx(ERR, "error, cannot allocate memory ");
-        return PM3_EMALLOC;
-    }
-    */
     json_t *root = NULL;
     int res = loadFileJSONroot(filename, (void**)&root, verbose);
     if (res != PM3_SUCCESS) {
@@ -190,19 +184,20 @@ static int CmdHFFidoRegister(const char *cmd) {
     JsonLoadBufAsHex(root, "$.ChallengeParam", data, 32, &jlen);
     JsonLoadBufAsHex(root, "$.ApplicationParam", &data[32], 32, &jlen);
 
-    if (paramsPlain) {
+    if (cpplain) {
         memset(cdata, 0x00, 32);
         chlen = sizeof(cdata);
-        CLIGetStrWithReturn(ctx, 6, cdata, &chlen);
+        CLIGetStrWithReturn(ctx, 5, cdata, &chlen);
         if (chlen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", chlen);
             CLIParserFree(ctx);
             json_decref(root);
             return PM3_EINVARG;
         }
-    } else {
+    }
+    if (cphex & !cpplain) {
         chlen = sizeof(cdata);
-        CLIGetHexWithReturn(ctx, 8, cdata, &chlen);
+        CLIGetHexWithReturn(ctx, 7, cdata, &chlen);
         if (chlen && chlen != 32) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length must be 32 bytes only.");
             CLIParserFree(ctx);
@@ -213,20 +208,20 @@ static int CmdHFFidoRegister(const char *cmd) {
     if (chlen)
         memmove(data, cdata, 32);
 
-
-    if (paramsPlain) {
+    if (applain) {
         memset(adata, 0x00, 32);
         applen = sizeof(adata);
-        CLIGetStrWithReturn(ctx, 7, adata, &applen);
+        CLIGetStrWithReturn(ctx, 6, adata, &applen);
         if (applen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", applen);
             CLIParserFree(ctx);
             json_decref(root);
             return PM3_EINVARG;
         }
-    } else {
+    }
+    if (aphex & !applain) {
         applen = sizeof(adata);
-        CLIGetHexWithReturn(ctx, 9, adata, &applen);
+        CLIGetHexWithReturn(ctx, 8, adata, &applen);
         if (applen && applen != 32) {
             PrintAndLogEx(ERR, "ERROR: application parameter length must be 32 bytes only.");
             CLIParserFree(ctx);
@@ -366,11 +361,13 @@ static int CmdHFFidoRegister(const char *cmd) {
     }
 
     PrintAndLogEx(INFO, "\nauth command: ");
-    PrintAndLogEx(INFO, "hf fido auth %s%s", paramsPlain ? "-p " : "", sprint_hex_inrow(&buf[67], keyHandleLen));
-    if (chlen || applen)
-        PrintAndLogEx(INFO, " %s", paramsPlain ? (char *)cdata : sprint_hex_inrow(cdata, 32));
+    char command[500] = {0};
+    sprintf(command, "hf fido auth -kh %s", sprint_hex_inrow(&buf[67], keyHandleLen));
+    if (chlen)
+        sprintf(command + strlen(command), " -%s %s", cpplain ? "cp" : "cpx", cpplain ? (char *)cdata : sprint_hex_inrow(cdata, 32));
     if (applen)
-        PrintAndLogEx(INFO, " %s", paramsPlain ? (char *)adata : sprint_hex_inrow(adata, 32));
+        sprintf(command + strlen(command), " -%s %s", applain ? "cp" : "cpx", applain ? (char *)adata : sprint_hex_inrow(adata, 32));
+    PrintAndLogEx(INFO, "%s", command);
 
     if (root) {
         JsonSaveBufAsHex(root, "ChallengeParam", data, 32);
@@ -380,7 +377,7 @@ static int CmdHFFidoRegister(const char *cmd) {
         JsonSaveBufAsHexCompact(root, "KeyHandle", &buf[67], keyHandleLen);
         JsonSaveBufAsHexCompact(root, "DER", &buf[67 + keyHandleLen], derLen);
 
-        sprintf(filename, "hf-fido2-params");
+        //sprintf(filename, "hf-fido2-params");
         res = saveFileJSONroot(filename, root, JSON_INDENT(2), verbose);
     }
     json_decref(root);
