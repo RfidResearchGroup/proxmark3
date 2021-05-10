@@ -363,11 +363,11 @@ static int CmdHFFidoRegister(const char *cmd) {
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "auth command: ");
     char command[500] = {0};
-    sprintf(command, "hf fido auth -kh %s", sprint_hex_inrow(&buf[67], keyHandleLen));
+    sprintf(command, "hf fido auth --kh %s", sprint_hex_inrow(&buf[67], keyHandleLen));
     if (chlen)
-        sprintf(command + strlen(command), " -%s %s", cpplain ? "cp" : "cpx", cpplain ? (char *)cdata : sprint_hex_inrow(cdata, 32));
+        sprintf(command + strlen(command), " --%s %s", cpplain ? "cp" : "cpx", cpplain ? (char *)cdata : sprint_hex_inrow(cdata, 32));
     if (applen)
-        sprintf(command + strlen(command), " -%s %s", applain ? "cp" : "cpx", applain ? (char *)adata : sprint_hex_inrow(adata, 32));
+        sprintf(command + strlen(command), " --%s %s", applain ? "cp" : "cpx", applain ? (char *)adata : sprint_hex_inrow(adata, 32));
     PrintAndLogEx(INFO, "%s", command);
 
     if (root) {
@@ -400,17 +400,19 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a",  "apdu",     "show APDU reqests and responses"),
-        arg_lit0("v",  "verbose",  "show technical data"),
-        arg_lit0("p",  "plain",    "send plain ASCII to challenge and application parameters instead of HEX"),
+        arg_lit0("a",  "apdu",      "show APDU reqests and responses"),
+        arg_lit0("v",  "verbose",   "show technical data"),
+        arg_lit0("p",  "plain",     "send plain ASCII to challenge and application parameters instead of HEX"),
         arg_rem("default mode:",    "dont-enforce-user-presence-and-sign"),
-        arg_lit0("u",  "user",     "mode: enforce-user-presence-and-sign"),
-        arg_lit0("c",  "check",    "mode: check-only"),
-        arg_str0("f",  "file", "<fn>", "JSON input file name for parameters"),
-        arg_str0("k",  "key",  "<hex>", "public key to verify signature"),
-        arg_str0(NULL, "kh",   "<hex>",  "key handle (var 0..255b)"),
-        arg_str0(NULL, "cp",   "<hex/ascii>", "challenge parameter (32 bytes hex / 1..16 chars)"),
-        arg_str0(NULL, "ap",   "<hex/ascii>", "application parameter (32 bytes hex / 1..16 chars)"),
+        arg_lit0("u",  "user",      "mode: enforce-user-presence-and-sign"),
+        arg_lit0("c",  "check",     "mode: check-only"),
+        arg_str0("f",  "file",    "<fn>", "JSON input file name for parameters"),
+        arg_str0("k",  "key",    "<hex>", "public key to verify signature"),
+        arg_str0(NULL, "kh",     "<hex>",  "key handle (var 0..255b)"),
+        arg_str0(NULL,  "cp",  "<ascii>", "challenge parameter (1..16 chars)"),
+        arg_str0(NULL,  "ap",  "<ascii>",  "application parameter (1..16 chars)"),
+        arg_str0(NULL,  "cpx",   "<hex>", "challenge parameter (32 bytes hex)"),
+        arg_str0(NULL,  "apx",   "<hex>",  "application parameter (32 bytes hex)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
@@ -490,7 +492,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     if (paramsPlain) {
         memset(hdata, 0x00, 32);
         hdatalen = sizeof(hdata);
-        CLIGetStrWithReturn(ctx, 9, hdata, &hdatalen);
+        CLIGetStrWithReturn(ctx, 10, hdata, &hdatalen);
         if (hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
             CLIParserFree(ctx);
@@ -499,7 +501,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
         }
     } else {
         hdatalen = sizeof(hdata);
-        CLIGetHexWithReturn(ctx, 10, hdata, &hdatalen);
+        CLIGetHexWithReturn(ctx, 12, hdata, &hdatalen);
         if (hdatalen && hdatalen != 32) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length must be 32 bytes only.");
             CLIParserFree(ctx);
@@ -523,7 +525,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
         }
     } else {
         hdatalen = sizeof(hdata);
-        CLIGetHexWithReturn(ctx, 10, hdata, &hdatalen);
+        CLIGetHexWithReturn(ctx, 13, hdata, &hdatalen);
         if (hdatalen && hdatalen != 32) {
             PrintAndLogEx(ERR, "ERROR: application parameter length must be 32 bytes only.");
             CLIParserFree(ctx);
