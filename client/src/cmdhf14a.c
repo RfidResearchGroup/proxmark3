@@ -1049,7 +1049,7 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
     while (chaining) {
         // I-block with chaining
         res = CmdExchangeAPDU(false, NULL, 0, false, &dataout[*dataoutlen], maxdataoutlen, dataoutlen, &chaining);
-        if (res == PM3_SUCCESS) {
+        if (res != PM3_SUCCESS) {
             if (leaveSignalON == false)
                 DropField();
 
