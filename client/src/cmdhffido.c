@@ -360,7 +360,8 @@ static int CmdHFFidoRegister(const char *cmd) {
         PrintAndLogEx(WARNING, "Invalid signature. res = %d. ( " _RED_("fail") " )" , res);
     }
 
-    PrintAndLogEx(INFO, "\nauth command: ");
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "auth command: ");
     char command[500] = {0};
     sprintf(command, "hf fido auth -kh %s", sprint_hex_inrow(&buf[67], keyHandleLen));
     if (chlen)
