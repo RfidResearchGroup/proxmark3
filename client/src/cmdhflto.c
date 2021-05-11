@@ -425,7 +425,7 @@ int infoLTO(bool verbose) {
         }
 
 
-    } 
+    }
     PrintAndLogEx(NORMAL, "");
     lto_switch_off_field();
     return ret_val;

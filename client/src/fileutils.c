@@ -676,16 +676,16 @@ int saveFileJSONroot(const char *preferredName, void *root, size_t flags, bool v
 
     int res = json_dump_file(root, filename, flags);
 
-    if ( res == 0 ) {
+    if (res == 0) {
         if (verbose) {
             PrintAndLogEx(SUCCESS, "saved to json file " _YELLOW_("%s"), filename);
         }
-        free(filename);    
+        free(filename);
         return PM3_SUCCESS;
     } else {
         PrintAndLogEx(FAILED, "error: can't save the file: " _YELLOW_("%s"), filename);
     }
-    free(filename);    
+    free(filename);
     return PM3_EFILE;
 }
 

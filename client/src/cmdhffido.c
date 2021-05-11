@@ -174,7 +174,7 @@ static int CmdHFFidoRegister(const char *cmd) {
     }
 
     json_t *root = NULL;
-    int res = loadFileJSONroot(filename, (void**)&root, verbose);
+    int res = loadFileJSONroot(filename, (void **)&root, verbose);
     if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -357,7 +357,7 @@ static int CmdHFFidoRegister(const char *cmd) {
         }
 
     } else {
-        PrintAndLogEx(WARNING, "Invalid signature. res = %d. ( " _RED_("fail") " )" , res);
+        PrintAndLogEx(WARNING, "Invalid signature. res = %d. ( " _RED_("fail") " )", res);
     }
 
     PrintAndLogEx(INFO, "");
@@ -390,7 +390,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     CLIParserInit(&ctx, "hf fido auth",
                   "Initiate a U2F token authentication. Needs key handle and two 32-byte hash numbers.\n"
                   "key handle(var 0..255), challenge parameter (32b) and application parameter (32b)\n"
-                   "The output template filename is  `hf-fido2-params.json`\n"
+                  "The output template filename is  `hf-fido2-params.json`\n"
                   "\n",
                   "hf fido auth --kh 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with 2 parameters, filled 0x00 and key handle\n"
                   "hf fido auth \n"
@@ -444,9 +444,9 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
         strcat(filename, DEF_FIDO_PARAM_FILE);
         fnlen = strlen(filename);
     }
-   
+
     json_t *root = NULL;
-    int res = loadFileJSONroot(filename, (void**)&root, verbose);
+    int res = loadFileJSONroot(filename, (void **)&root, verbose);
     if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -623,7 +623,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
             PrintAndLogEx(WARNING, "No public key provided. can't check signature.");
         }
     } else {
-        PrintAndLogEx(WARNING, "Invalid signature. res = %d. ( " _RED_("fail") " )" , res);
+        PrintAndLogEx(WARNING, "Invalid signature. res = %d. ( " _RED_("fail") " )", res);
     }
 
     if (root) {
@@ -678,7 +678,7 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     }
 
     json_t *root = NULL;
-    loadFileJSONroot(filename, (void**)&root, verbose);
+    loadFileJSONroot(filename, (void **)&root, verbose);
     if (root == NULL) {
         return PM3_EFILE;
     }
@@ -797,7 +797,7 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
     }
 
     json_t *root = NULL;
-    loadFileJSONroot(filename, (void**)&root, verbose);
+    loadFileJSONroot(filename, (void **)&root, verbose);
     if (root == NULL) {
         return PM3_EFILE;
     }

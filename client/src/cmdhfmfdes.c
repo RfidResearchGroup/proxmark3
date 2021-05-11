@@ -2424,7 +2424,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     int keylen2 = 1;
     uint8_t keysetting2[1] = {0};
     CLIGetHexWithReturn(ctx, 4, keysetting2, &keylen2);
-    
+
     int namelen = 16;
     uint8_t name[16] = {0};
     CLIGetStrWithReturn(ctx, 5, name, &namelen);
@@ -2991,7 +2991,7 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
         arg_strx0("a", "aid",   "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
         arg_param_end
     };
-    
+
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     mfdes_value_t value;
@@ -3205,7 +3205,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 6, maxnumrecords, &msizelen);
 
     bool cyclic = arg_get_lit(ctx, 7);
-    
+
     int aidlength = 3;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(ctx, 8, aid, &aidlength);
