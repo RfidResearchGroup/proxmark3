@@ -2301,6 +2301,7 @@ static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, 
     if (error == PM3_SUCCESS) {
         memcpy(&currentauth[payload.keyno], &payload, sizeof(mfdes_authinput_t));
     }
+
     return error;
 }
 
@@ -2337,7 +2338,7 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("a",  "aid",    "<aid>", "App ID to select as hex bytes (3 bytes,big endian)"),
+        arg_strx0("a", "aid", "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2372,11 +2373,11 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("a",  "aid",    "<aid>", "App ID to create as hex bytes (3 hex bytes)"),
-        arg_strx0("f",  "fid",    "<fid>", "File ID to create (optional)"),
-        arg_strx0("k",  "ks1",    "<keysetting1>", "Key Setting 1 (Application Master Key Settings)"),
-        arg_strx0("l",  "ks2",    "<keysetting2>", "Key Setting 2"),
-        arg_str0(NULL,  "name",   "<name>", "App ISO-4 Name (optional)"),
+        arg_strx0("a",  "aid",    "<hex>", "App ID to create as hex bytes (3 hex bytes)"),
+        arg_strx0("f",  "fid",    "<hex>", "File ID to create"),
+        arg_strx0("k",  "ks1",    "<hex>", "Key Setting 1 (Application Master Key Settings)"),
+        arg_strx0("l",  "ks2",    "<hex>", "Key Setting 2"),
+        arg_str0(NULL,  "name",   "<ascii>", "App ISO-4 Name"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2409,19 +2410,23 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
             AE = FID, AES, 14 keys
     */
     int aidlength = 3;
-    int fidlength = 2;
     uint8_t aid[3] = {0};
-    uint8_t fid[2] = {0};
-    uint8_t name[16] = {0};
-    uint8_t keysetting1[1] = {0};
-    uint8_t keysetting2[1] = {0};
-    int keylen1 = 1;
-    int keylen2 = 1;
-    int namelen = 16;
     CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
+
+    int fidlength = 2;
+    uint8_t fid[2] = {0};
     CLIGetHexWithReturn(ctx, 2, fid, &fidlength);
+
+    int keylen1 = 1;
+    uint8_t keysetting1[1] = {0};
     CLIGetHexWithReturn(ctx, 3, keysetting1, &keylen1);
+
+    int keylen2 = 1;
+    uint8_t keysetting2[1] = {0};
     CLIGetHexWithReturn(ctx, 4, keysetting2, &keylen2);
+    
+    int namelen = 16;
+    uint8_t name[16] = {0};
     CLIGetStrWithReturn(ctx, 5, name, &namelen);
     CLIParserFree(ctx);
 
@@ -2515,7 +2520,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("a",  "aid",    "<aid>", "App ID (3 hex bytes, big endian) to delete"),
+        arg_strx0("a", "aid", "<hex>", "App ID to delete (3 hex bytes, big endian)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2579,28 +2584,20 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes, big endian, optional)"),
+        arg_int0("n", "fileno", "<dec>", "File Number (0 - 31)"),
+        arg_strx0("a", "aid",   "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-
-    int filenolen = 0;
-    uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(ctx, 1, _fileno, &filenolen);
+    int fileno = arg_get_int_def(ctx, 1, 0);
     int aidlength = 3;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(ctx, 2, aid, &aidlength);
     swap24(aid);
     CLIParserFree(ctx);
 
-    if (filenolen != 1) {
-        PrintAndLogEx(ERR, "Fileno must have 1 bytes length.");
-        return PM3_EINVARG;
-    }
-
-    if (_fileno[0] > 0x1F) {
-        PrintAndLogEx(ERR, "Fileno must be lower 0x1F.");
+    if (fileno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
         return PM3_EINVARG;
     }
 
@@ -2615,12 +2612,12 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         memcpy(aid, (uint8_t *)&tag->selected_application, 3);
     }
     uint8_t cs = 0;
-    if (selectfile(aid, _fileno[0], &cs) != PM3_SUCCESS) {
+    if (selectfile(aid, fileno, &cs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, _RED_("   Error on selecting file."));
         return PM3_ESOFT;
     }
 
-    int res = handler_desfire_clearrecordfile(_fileno[0]);
+    int res = handler_desfire_clearrecordfile(fileno);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Successfully cleared record file.");
     } else {
@@ -2639,28 +2636,22 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian,optional)"),
+        arg_int0("n", "fileno", "<dec>", "File Number (0 - 31)"),
+        arg_strx0("a", "aid",   "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int filenolen = 0;
-    uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(ctx, 1, _fileno, &filenolen);
+    int fileno = arg_get_int_def(ctx, 1, 0);
+
     int aidlength = 3;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(ctx, 2, aid, &aidlength);
     swap24(aid);
     CLIParserFree(ctx);
 
-    if (filenolen != 1) {
-        PrintAndLogEx(ERR, "Fileno must have 1 bytes length.");
-        return PM3_EINVARG;
-    }
-
-    if (_fileno[0] > 0x1F) {
-        PrintAndLogEx(ERR, "Fileno must be lower 0x1F.");
+    if (fileno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
         return PM3_EINVARG;
     }
 
@@ -2675,12 +2666,12 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         memcpy(aid, (uint8_t *)&tag->selected_application, 3);
     }
     uint8_t cs = 0;
-    if (selectfile(aid, _fileno[0], &cs) != PM3_SUCCESS) {
+    if (selectfile(aid, fileno, &cs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, _RED_("   Error on selecting file."));
         return PM3_ESOFT;
     }
 
-    int res = handler_desfire_deletefile(_fileno[0]);
+    int res = handler_desfire_deletefile(fileno);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Successfully deleted file..");
     } else {
@@ -2699,21 +2690,18 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("f", "fileid", "<fileid>", "ISO FID (2 hex bytes, big endian)"),
-        arg_int0("c", "com.set", "<comset>", "Communication setting (0=Plain,1=Plain+MAC,3=Enciphered)"),
-//        arg_strx0("r", "accessrights", "<accessrights>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0-D Key, E Free, F Denied)"),
-        arg_strx0("r", "rights", "<accessrights>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0-D Key, E Free, F Denied)"),
-        arg_strx0("s", "filesize", "<filesize>", "File size (3 hex bytes, big endian)"),
+        arg_int0("n", "fileno",    "<dec>", "File Number (0 - 31)"),
+        arg_strx0("f", "fileid",   "<hex>", "ISO FID (2 hex bytes, big endian)"),
+        arg_int0("c", "com",       "<dec>", "Communication setting (0 = Plain, 1 = Plain + MAC, 3 = Enciphered)"),
+        arg_strx0("r", "rights",   "<hex>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0x0 - 0xD Key, 0xE Free, 0xF Denied)"),
+        arg_strx0("s", "filesize", "<hex>", "File size (3 hex bytes, big endian)"),
         arg_lit0("b", "backup", "Create backupfile instead of standard file"),
-        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian)"),
+        arg_strx0("a", "aid",      "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int filenolen = 0;
-    uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(ctx, 1, _fileno, &filenolen);
+    int fileno = arg_get_int_def(ctx, 1, 0);
 
     int fidlength = 0;
     uint8_t fid[2] = {0};
@@ -2738,13 +2726,8 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     swap16(fid);
     swap24(filesize);
 
-    if (filenolen != 1) {
-        PrintAndLogEx(ERR, "File number is missing.");
-        return PM3_EINVARG;
-    }
-
-    if (_fileno[0] > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F).");
+    if (fileno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
         return PM3_EINVARG;
     }
     if (comset != 0 && comset != 1 && comset != 3) {
@@ -2770,7 +2753,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     mfdes_file_t ft;
     memcpy(ft.fid, fid, 2);
     memcpy(ft.filesize, filesize, 3);
-    ft.fileno = _fileno[0];
+    ft.fileno = fileno;
     ft.comset = comset;
     memcpy(ft.access_rights, ar, 2);
 
@@ -2800,9 +2783,9 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         res = handler_desfire_create_std_file(&ft);
 
     if (res == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "Successfully created standard/backup file.");
+        PrintAndLogEx(SUCCESS, "Successfully created standard / backup file.");
     else
-        PrintAndLogEx(ERR, "Couldn't create standard/backup file. Error %d", res);
+        PrintAndLogEx(ERR, "Couldn't create standard / backup file. Error %d", res);
 
     DropFieldDesfire();
     return res;
@@ -2818,15 +2801,13 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian)"),
+        arg_int0("n", "fileno", "<dec>", "File Number (0 - 31)"),
+        arg_strx0("a", "aid",   "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int filenolen = 0;
-    uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(ctx, 1, _fileno, &filenolen);
+    int fileno = arg_get_int_def(ctx, 1, 0);
     int aidlength = 3;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(ctx, 2, aid, &aidlength);
@@ -2834,18 +2815,13 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (filenolen != 1) {
-        PrintAndLogEx(ERR, "File number is missing");
-        return PM3_EINVARG;
-    }
-
-    if (_fileno[0] > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F)");
+    if (fileno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
         return PM3_EINVARG;
     }
 
     mfdes_value_t value;
-    value.fileno = _fileno[0];
+    value.fileno = fileno;
 
     if (aidlength != 3 && aidlength != 0) {
         PrintAndLogEx(ERR, _RED_("   The given aid must have 3 bytes (big endian)."));
@@ -2866,7 +2842,7 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
     uint32_t len = 0;
     int res = handler_desfire_getvalue(&value, &len, cs);
     if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Successfully read value from File %u:", _fileno[0]);
+        PrintAndLogEx(SUCCESS, "Successfully read value from File %u:", fileno);
         PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
         PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
         for (uint32_t i = 0; i < len; i += 16) {
@@ -2885,23 +2861,21 @@ static int CmdHF14ADesReadData(const char *Cmd) {
                   "Read data from File\n"
                   "Make sure to select aid or authenticate aid before running this command.",
                   "hf mfdes readdata -n 01 -t 0 -o 000000 -l 000000 -a 123456\n"
-                  "hf mfdes readdata -n 01 -t 0 -> Read all data from standard file, fileno 01"
+                  "hf mfdes readdata -n 01 -t 0                 --> Read all data from standard file, fileno 01"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("o", "offset", "<offset>", "File Offset (3 hex bytes, big endian), optional"),
-        arg_strx0("l", "length", "<length>", "Length to read (3 hex bytes, big endian -> 000000 = Read all data),optional"),
-        arg_int0("t", "type", "<type>", "File Type (0=Standard/Backup, 1=Record)"),
-        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian,optional)"),
+        arg_int0("n", "fileno",  "<dec>", "File Number (0 - 31)"),
+        arg_strx0("o", "offset", "<hex>", "File Offset (3 hex bytes, big endian)"),
+        arg_strx0("l", "length", "<hex>", "Length to read (3 hex bytes, big endian -> 000000 = Read all data)"),
+        arg_int0("t", "type",    "<dec>", "File Type (0 = Standard / Backup, 1 = Record)"),
+        arg_strx0("a", "aid",    "<hex>", "App ID to select (3 hex bytes, big endian)"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int filenolen = 0;
-    uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(ctx, 1, _fileno, &filenolen);
+    int fileno = arg_get_int_def(ctx, 1, 0);
 
     int offsetlength = 0;
     uint8_t offset[3] = {0};
@@ -2920,7 +2894,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (type > 1) {
-        PrintAndLogEx(ERR, "Invalid file type (0=Standard/Backup, 1=Record)");
+        PrintAndLogEx(ERR, "Invalid file type (0 = Standard/Backup, 1 = Record)");
         return PM3_EINVARG;
     }
 
@@ -2929,13 +2903,8 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (filenolen != 1) {
-        PrintAndLogEx(ERR, "File number is missing");
-        return PM3_EINVARG;
-    }
-
-    if (_fileno[0] > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F)");
+    if (fileno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
         return PM3_EINVARG;
     }
 
@@ -2950,7 +2919,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     mfdes_data_t ft;
     memcpy(ft.offset, offset, 3);
     memcpy(ft.length, filesize, 3);
-    ft.fileno = _fileno[0];
+    ft.fileno = fileno;
 
     uint32_t bytestoread = (uint32_t)le24toh(filesize);
     bytestoread &= 0xFFFFFF;
@@ -2980,11 +2949,12 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         ft.data = data;
         res = handler_desfire_readdata(&ft, type, cs);
         if (res == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Successfully read data from file %d:", ft.fileno);
-            PrintAndLogEx(INFO, "\nOffset  | Data                                            | Ascii");
+            uint32_t len = le24toh(ft.length);
+
+            PrintAndLogEx(SUCCESS, "Read %u bytes from file %d:", ft.fileno, len);
+            PrintAndLogEx(INFO, "Offset  | Data                                            | Ascii");
             PrintAndLogEx(INFO, "----------------------------------------------------------------------------");
 
-            uint32_t len = le24toh(ft.length);
             for (uint32_t i = 0; i < len; i += 16) {
                 uint32_t l = len - i;
                 PrintAndLogEx(INFO, "%02d/0x%02X | %s| %s", i, i, sprint_hex(&ft.data[i], l > 16 ? 16 : l), sprint_ascii(&ft.data[i], l > 16 ? 16 : l));
@@ -3003,27 +2973,24 @@ static int CmdHF14ADesReadData(const char *Cmd) {
 static int CmdHF14ADesChangeValue(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes changevalue",
-                  "Change value (credit/limitedcredit/debit)\n"
+                  "Change value (credit / limitedcredit / debit)\n"
                   "Make sure to select aid or authenticate aid before running this command.",
                   "hf mfdes changevalue -n 03 -m 0 -d 00000001"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("d", "value", "<value>", "Value to increase (4 hex bytes, big endian)"),
-        arg_int0("m", "mode", "<mode>", "Mode (0=Credit, 1=LimitedCredit, 2=Debit)"),
-        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian)"),
+        arg_int0("n", "fileno", "<dec>", "File Number (0 - 31)"),
+        arg_strx0("d", "value", "<hex>", "Value to increase (4 hex bytes, big endian)"),
+        arg_int0("m", "mode",   "<dec>", "Mode (0 = Credit, 1 = Limited Credit, 2 = Debit)"),
+        arg_strx0("a", "aid",   "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
         arg_param_end
     };
-
-    mfdes_value_t value;
+    
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int filenolen = 0;
-    uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(ctx, 1, _fileno, &filenolen);
-    value.fileno = _fileno[0];
+    mfdes_value_t value;
+    value.fileno = arg_get_int_def(ctx, 1, 0);
 
     int vlength = 0x0;
     int res_val = CLIParamHexToBuf(arg_get_str(ctx, 2), value.value, 4, &vlength);
@@ -3037,7 +3004,7 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (mode > 2) {
-        PrintAndLogEx(ERR, "Invalid mode (0=Credit, 1=LimitedCredit, 2=Debit).");
+        PrintAndLogEx(ERR, "Invalid mode (0 = Credit, 1 = LimitedCredit, 2 = Debit)");
         return PM3_EINVARG;
     }
 
@@ -3047,13 +3014,8 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
     }
     swap32(value.value);
 
-    if (filenolen != 1) {
-        PrintAndLogEx(ERR, "File number is missing.");
-        return PM3_EINVARG;
-    }
-
     if (value.fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F).");
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
         return PM3_EINVARG;
     }
 
@@ -3068,7 +3030,7 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
         memcpy(aid, (uint8_t *)&tag->selected_application, 3);
     }
     uint8_t cs = 0;
-    if (selectfile(aid, _fileno[0], &cs) != PM3_SUCCESS) {
+    if (selectfile(aid, value.fileno, &cs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, _RED_("   Error on selecting file."));
         return PM3_ESOFT;
     }
@@ -3107,19 +3069,16 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("o", "offset", "<offset>", "File Offset (3 hex bytes, big endian), optional"),
-        arg_strx0("d", "data", "<data>", "Data to write (hex bytes, 256 bytes max)"),
-        arg_int0("t", "type", "<type>", "File Type (0=Standard/Backup, 1=Record)"),
-        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes, big endian, optional)"),
+        arg_int0("n", "fileno",  "<dec>", "File Number (0 - 31)"),
+        arg_strx0("o", "offset", "<hex>", "File Offset (3 hex bytes, big endian), optional"),
+        arg_strx0("d", "data",   "<hex>", "Data to write (hex bytes, 256 bytes max)"),
+        arg_int0("t", "type",    "<dec>", "File Type (0 = Standard / Backup, 1 = Record)"),
+        arg_strx0("a", "aid",    "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-
-    int filenolen = 0;
-    uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(ctx, 1, _fileno, &filenolen);
+    int fileno = arg_get_int_def(ctx, 1, 0);
 
     int offsetlength = 0;
     uint8_t offset[3] = {0};
@@ -3157,13 +3116,8 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (filenolen != 1) {
-        PrintAndLogEx(ERR, "File number is missing");
-        return PM3_EINVARG;
-    }
-
-    if (_fileno[0] > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F)");
+    if (fileno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
         return PM3_EINVARG;
     }
 
@@ -3171,7 +3125,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
     memcpy(ft.offset, offset, 3);
     htole24(dlength, ft.length);
-    ft.fileno = _fileno[0];
+    ft.fileno = fileno;
 
     if (aidlength != 3 && aidlength != 0) {
         PrintAndLogEx(ERR, _RED_("   The given aid must have 3 bytes (big endian)."));
@@ -3184,7 +3138,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         memcpy(aid, (uint8_t *)&tag->selected_application, 3);
     }
     uint8_t cs = 0;
-    if (selectfile(aid, _fileno[0], &cs) != PM3_SUCCESS) {
+    if (selectfile(aid, fileno, &cs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, _RED_("   Error on selecting file."));
         DropFieldDesfire();
         return PM3_ESOFT;
@@ -3205,36 +3159,34 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes createrecordfile",
-                  "Create Linear/Cyclic Record File\n"
+                  "Create Linear / Cyclic Record File\n"
                   "Make sure to select aid or authenticate aid before running this command.",
                   "hf mfdes createrecordfile -f 1122 -n 02 -c 0 -r EEEE -s 000010 -m 000005 -a 123456"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("f", "fileid", "<fileid>", "ISO FID (2 hex bytes, big endian)"),
-        arg_int0("c", "com.set", "<comset>", "Communication setting (0=Plain,1=Plain+MAC,3=Enciphered)"),
-//        arg_strx0("r", "accessrights", "<accessrights>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0-D Key, E Free, F Denied)"),
-//        arg_strx0("s", "recordsize", "<recordsize>", "Record size (3 hex bytes, big endian, 000001 to FFFFFF)"),
-        arg_strx0("r", "rights", "<accessrights>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0-D Key, E Free, F Denied)"),
-        arg_strx0("s", "size", "<recordsize>", "Record size (3 hex bytes, big endian, 000001 to FFFFFF)"),
-        arg_strx0("m", "maxrecord", "<maxrecord>", "Max. Number of Records (3 hex bytes, big endian)"),
+        arg_int0("n", "fileno",     "<dec>", "File Number (0 - 31)"),
+        arg_strx0("f", "fileid",    "<hex>", "ISO FID (2 hex bytes, big endian)"),
+        arg_int0("c", "com",        "<dec>", "Communication setting (0 = Plain, 1 = Plain + MAC, 3 = Enciphered)"),
+//        arg_strx0("s", "recordsize", "<hex>", "Record size (3 hex bytes, big endian, 000001 to FFFFFF)"),
+        arg_strx0("r", "rights",    "<hex>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0x0 - 0xD Key, 0xE Free, 0xF Denied)"),
+        arg_strx0("s", "size",      "<hex>", "Record size (3 hex bytes, big endian, 000001 to FFFFFF)"),
+        arg_strx0("m", "maxrecord", "<hex>", "Max. Number of Records (3 hex bytes, big endian)"),
         arg_lit0("b", "cyclic", "Create cyclic record file instead of linear record file"),
-        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian,optional)"),
+        arg_strx0("a", "aid",       "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int filenolen = 0;
-    uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(ctx, 1, _fileno, &filenolen);
+    int fileno = arg_get_int_def(ctx, 1, 0);
 
     int fidlength = 0;
     uint8_t fid[2] = {0};
     int res_flen = CLIParamHexToBuf(arg_get_str(ctx, 2), fid, 2, &fidlength);
 
     uint8_t comset = arg_get_int(ctx, 3);
+
     int arlength = 0;
     uint8_t ar[2] = {0};
     CLIGetHexWithReturn(ctx, 4, ar, &arlength);
@@ -3248,6 +3200,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 6, maxnumrecords, &msizelen);
 
     bool cyclic = arg_get_lit(ctx, 7);
+    
     int aidlength = 3;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(ctx, 8, aid, &aidlength);
@@ -3268,13 +3221,8 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (filenolen != 1) {
-        PrintAndLogEx(ERR, "File number is missing.");
-        return PM3_EINVARG;
-    }
-
-    if (_fileno[0] > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F).");
+    if (fileno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
         return PM3_EINVARG;
     }
 
@@ -3300,7 +3248,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
 
     mfdes_linear_t ft;
 
-    ft.fileno = _fileno[0];
+    ft.fileno = fileno;
     memcpy(ft.fid, fid, 2);
     ft.comset = comset;
     memcpy(ft.access_rights, ar, 2);
@@ -3343,28 +3291,26 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes createvaluefile",
                   "Create Value File\n"
                   "Make sure to select aid or authenticate aid before running this command.",
-                  "hf mfdes createvaluefile -n 03 -c 0 -r EEEE -l 00000000 -u 00002000 -v 00000001 -m 02 -a 123456\n"
+                  "hf mfdes createvaluefile -n 03 -c 0 -r EEEE -l 00000000 -u 00002000 --val 00000001 -m 02 -a 123456\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_int0("c", "com.set", "<comset>", "Communication setting (0=Plain,1=Plain+MAC,3=Enciphered)"),
-        arg_strx0("r", "rights", "<accessrights>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0-D Key, E Free, F Denied)"),
-        arg_strx0("l", "lowerlimit", "<lowerlimit>", "Lower limit (4 hex bytes, big endian)"),
-        arg_strx0("u", "upperlimit", "<upperlimit>", "Upper limit (4 hex bytes, big endian)"),
-        arg_strx0("v", "value", "<value>", "Value (4 hex bytes, big endian)"),
-        arg_strx0("m", "limitcredit", "<limitcredit>", "Limited Credit enabled (1 hex byte [Bit 0=LimitedCredit, 1=FreeValue])"),
-        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian,optional)"),
+        arg_int0("n", "fileno",   "<dec>", "File Number (0 - 31)"),
+        arg_int0("c", "com",      "<dec>", "Communication setting (0 = Plain, 1 = Plain + MAC, 3 = Enciphered)"),
+        arg_strx0("r", "rights",  "<hex>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0x0 - 0xD Key, 0xE Free, 0xF Denied)"),
+        arg_strx0("l", "lower",   "<hex>", "Lower limit (4 hex bytes, big endian)"),
+        arg_strx0("u", "upper",   "<hex>", "Upper limit (4 hex bytes, big endian)"),
+        arg_strx0(NULL, "val",    "<hex>", "Value (4 hex bytes, big endian)"),
+        arg_int0("m",  NULL,      "<dec>", "Limited Credit enabled (Bit 0 = Limited Credit, 1 = FreeValue)"),
+        arg_strx0("a", "aid",     "<hex>", "App ID to select as hex bytes (3 bytes,big endian,optional)"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int filenolen = 0;
-    uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(ctx, 1, _fileno, &filenolen);
-
+    int fileno = arg_get_int_def(ctx, 1, 0);
     uint8_t comset = arg_get_int(ctx, 2);
+
     int arlength = 0;
     uint8_t ar[2] = {0};
     CLIGetHexWithReturn(ctx, 3, ar, &arlength);
@@ -3381,9 +3327,8 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     uint8_t value[4] = {0};
     CLIGetHexWithReturn(ctx, 6, value, &vllen);
 
-    int limitedlen = 0;
-    uint8_t limited[1] = {0};
-    CLIGetHexWithReturn(ctx, 7, limited, &limitedlen);
+    uint8_t limited = arg_get_int_def(ctx, 7, 0);
+
     int aidlength = 3;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(ctx, 8, aid, &aidlength);
@@ -3394,13 +3339,8 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     swap32(upperlimit);
     swap32(value);
 
-    if (filenolen != 1) {
-        PrintAndLogEx(ERR, "File number is missing");
-        return PM3_EINVARG;
-    }
-
-    if (_fileno[0] > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F)");
+    if (fileno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
         return PM3_EINVARG;
     }
 
@@ -3429,20 +3369,16 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (limitedlen != 1) {
-        PrintAndLogEx(WARNING, "Limited Credit Enabled must have 1 hex byte");
-        return PM3_EINVARG;
-    }
+    mfdes_value_file_t ft = {
+        .fileno = fileno,
+        .comset = comset,
+        .limitedcreditenabled = limited,
+    };
 
-    mfdes_value_file_t ft;
-
-    ft.fileno = _fileno[0];
-    ft.comset = comset;
     memcpy(ft.access_rights, ar, 2);
     memcpy(ft.lowerlimit, lowerlimit, 4);
     memcpy(ft.upperlimit, upperlimit, 4);
     memcpy(ft.value, value, 4);
-    ft.limitedcreditenabled = limited[0];
 
     if (aidlength != 3 && aidlength != 0) {
         PrintAndLogEx(ERR, _RED_("   The given aid must have 3 bytes (big endian)."));
@@ -4058,9 +3994,9 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("s",  "start",    "<hex>", "Starting App ID as hex bytes (3 bytes,big endian)"),
-        arg_strx0("e",  "end",      "<hex>", "Last App ID as hex bytes (3 bytes,big endian)"),
-        arg_int0("i",  "step", "<dec>", "Increment step when bruteforcing (decimal integer)"),
+        arg_strx0("s",  "start",  "<hex>", "Starting App ID as hex bytes (3 bytes, big endian)"),
+        arg_strx0("e",  "end",    "<hex>", "Last App ID as hex bytes (3 bytes, big endian)"),
+        arg_int0("i",  "step",    "<dec>", "Increment step when bruteforcing"),
         arg_lit0("m", "mad", "Only bruteforce the MAD range"),
         arg_param_end
     };
@@ -4119,17 +4055,17 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes changekey",
                   "Changes MIFARE DESFire Key\n"
                   "Make sure to select aid or authenticate aid before running this command.",
-                  "hf mfdes changekey -n 0 -t 1 -k 0000000000000000 -u 1 -j 0102030405060708 -> DES,keynumber 0"
+                  "hf mfdes changekey -n 0 -t 1 -k 0000000000000000 -u 1 -j 0102030405060708  -> DES, keynumber 0"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("n",  "keyno",  "<keyno>", "Key number used for authentification"),
-        arg_int0("t",  "algo",   "<algo>", "Current key algo (1=DES, 2=3DES(2K2DES), 3=3K3DES, 4=AES)"),
-        arg_str0("k",  "key",     "<Key>", "Current Key (HEX 8-24 bytes)"),
-        arg_int0("u",  "newalgo",   "<newalgo>", "New key algo (1=DES, 2=3DES(2K2DES), 3=3K3DES, 4=AES)"),
-        arg_str0("j",  "newkey",     "<newkey>", "New Key (HEX 8-24 bytes)"),
-        arg_int0("v",  "aesversion",     "<aesversion>", "Aes version (if aes is used)"),
+        arg_int0("n",  "keyno",  "<dec>", "Key number used for authentification"),
+        arg_int0("t",  "algo",   "<dec>", "Current key algo (1 = DES, 2 = 3DES(2K2DES), 3 = 3K3DES, 4 = AES)"),
+        arg_str0("k",  "key",     "<hex>", "Current Key (HEX 8-24 bytes)"),
+        arg_int0("u",  "newalgo", "<dec>", "New key algo (1 = DES, 2 = 3DES(2K2DES), 3 = 3K3DES, 4 = AES)"),
+        arg_str0("j",  "newkey",  "<hex>", "New Key (HEX 8-24 bytes)"),
+        arg_int0("v",  "aesver",  "<dec>", "AES version (if AES is used)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4254,10 +4190,10 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     int keylen = 0;
     CLIGetHexWithReturn(ctx, 5, key, &keylen);
 
+    uint8_t cmdKDFAlgo  = arg_get_int_def(ctx, 6, 0);
     // Get KDF input
     uint8_t kdfInput[31] = {0};
     int kdfInputLen = 0;
-    uint8_t cmdKDFAlgo  = arg_get_int_def(ctx, 6, 0);
     CLIGetHexWithReturn(ctx, 7, kdfInput, &kdfInputLen);
 
     CLIParserFree(ctx);
