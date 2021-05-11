@@ -2548,24 +2548,29 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
     return res;
 }
 
-static int selectfile(uint8_t *aid, uint32_t fileno, uint8_t *cs) {
+static int selectfile(uint8_t *aid, uint8_t fileno, uint8_t *cs) {
     if (handler_desfire_select_application(aid) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, _RED_("   Couldn't select aid."));
         return PM3_ESOFT;
     }
 
+
     uint8_t filesettings[20] = {0};
     uint32_t fileset_len = 0;
     int res = handler_desfire_filesettings(fileno, filesettings, &fileset_len);
+    if (res != PM3_SUCCESS) return res;
 
     if (tag->session_key != NULL) {
-        mfdes_auth_res_t rpayload;
-        uint8_t keyno = (uint8_t)((filesettings[0] >> 4) & 0xF);
-        if (keyno != 0xE && currentauth[keyno].keyno == keyno) {
+
+        uint8_t keyno = tag->authenticated_key_no;
+        if (currentauth[keyno].keyno == keyno) {
+
+            mfdes_auth_res_t rpayload;
             if (handler_desfire_auth(&currentauth[keyno], &rpayload) != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, _RED_("   Couldn't authenticate key."));
                 return PM3_ESOFT;
             }
+
         } else if (keyno != 0xE) {
             PrintAndLogEx(ERR, _RED_("   Please authenticate first."));
             return PM3_ESOFT;
