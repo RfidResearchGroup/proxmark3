@@ -163,15 +163,31 @@ void BigBuf_free_keep_EM(void) {
 
 void BigBuf_print_status(void) {
     DbpString(_CYAN_("Memory"));
-    Dbprintf("  BigBuf_size.............%d", s_bigbuf_size);
-    Dbprintf("  Available memory........%d", s_bigbuf_hi);
+    Dbprintf("  BigBuf_size............. %d", s_bigbuf_size);
+    Dbprintf("  Available memory........ %d", s_bigbuf_hi);
     DbpString(_CYAN_("Tracing"));
-    Dbprintf("  tracing ................%d", tracing);
-    Dbprintf("  traceLen ...............%d", trace_len);
+    Dbprintf("  tracing ................ %d", tracing);
+    Dbprintf("  traceLen ............... %d", trace_len);
 
-    Dbprintf("  dma8 memory.............%d", dma_8.buf - BigBuf_get_addr());
-    Dbprintf("  dma16 memory............%d", (uint8_t *)dma_16.buf - BigBuf_get_addr());
-    Dbprintf("  toSend memory...........%d", toSend.buf - BigBuf_get_addr());
+    if (DBGLEVEL >= DBG_DEBUG) {
+        DbpString(_CYAN_("Sending buffers"));
+
+        uint16_t d8 = 0;
+        if (dma_8.buf)
+            d8 = dma_8.buf - BigBuf_get_addr();
+
+        uint16_t d16 = 0;
+        if (dma_16.buf)
+            d16 = (uint8_t *)dma_16.buf - BigBuf_get_addr();
+
+        uint16_t ts = 0;
+        if (toSend.buf)
+            ts = toSend.buf - BigBuf_get_addr();
+
+        Dbprintf("  dma8 memory............. %u", d8);
+        Dbprintf("  dma16 memory............ %u", d16);
+        Dbprintf("  toSend memory........... %u", ts);
+    }
 }
 
 // return the maximum trace length (i.e. the unallocated size of BigBuf)

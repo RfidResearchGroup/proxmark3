@@ -243,7 +243,7 @@ void print_stack_usage(void) {
     // pointer arithmetic is times 4. (two shifts to the left)
     for (uint32_t *p = &_stack_start; ; ++p) {
         if (*p != 0xdeadbeef) {
-            Dbprintf("  Max stack usage.........%d / %d bytes", (&_stack_end - p) << 2, (&_stack_end - &_stack_start) << 2);
+            Dbprintf("  Max stack usage......... %d / %d bytes", (&_stack_end - p) << 2, (&_stack_end - &_stack_start) << 2);
             break;
         }
     }
@@ -337,22 +337,22 @@ static void print_debug_level(void) {
     char dbglvlstr[20] = {0};
     switch (DBGLEVEL) {
         case DBG_NONE:
-            sprintf(dbglvlstr, "NONE");
+            sprintf(dbglvlstr, "none");
             break;
         case DBG_ERROR:
-            sprintf(dbglvlstr, "ERROR");
+            sprintf(dbglvlstr, "error");
             break;
         case DBG_INFO:
-            sprintf(dbglvlstr, "INFO");
+            sprintf(dbglvlstr, "info");
             break;
         case DBG_DEBUG:
-            sprintf(dbglvlstr, "DEBUG");
+            sprintf(dbglvlstr, "debug");
             break;
         case DBG_EXTENDED:
-            sprintf(dbglvlstr, "EXTENDED");
+            sprintf(dbglvlstr, "extended");
             break;
     }
-    Dbprintf("  DBGLEVEL................%d ( " _YELLOW_("%s")" )", DBGLEVEL, dbglvlstr);
+    Dbprintf("  Debug log level......... %d ( " _YELLOW_("%s")" )", DBGLEVEL, dbglvlstr);
 }
 
 // measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
@@ -376,9 +376,9 @@ static void printConnSpeed(void) {
     }
     LED_B_OFF();
 
-    Dbprintf("  Time elapsed............%dms", delta_time);
-    Dbprintf("  Bytes transferred.......%d", bytes_transferred);
-    Dbprintf("  Transfer Speed PM3 -> Client = " _YELLOW_("%d") " bytes/s", 1000 * bytes_transferred / delta_time);
+    Dbprintf("  Time elapsed................... %dms", delta_time);
+    Dbprintf("  Bytes transferred.............. %d", bytes_transferred);
+    Dbprintf("  Transfer Speed PM3 -> Client... " _YELLOW_("%d") " bytes/s", 1000 * bytes_transferred / delta_time);
 }
 
 /**
@@ -407,11 +407,11 @@ static void SendStatus(void) {
     print_debug_level();
 
     tosend_t *ts = get_tosend();
-    Dbprintf("  ToSendMax...............%d", ts->max);
-    Dbprintf("  ToSend BUFFERSIZE.......%d", TOSEND_BUFFER_SIZE);
+    Dbprintf("  ToSendMax............... %d", ts->max);
+    Dbprintf("  ToSend BUFFERSIZE....... %d", TOSEND_BUFFER_SIZE);
     while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
     uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;       // Get # main clocks within 16 slow clocks
-    Dbprintf("  Slow clock..............%d Hz", (16 * MAINCK) / mainf);
+    Dbprintf("  Slow clock.............. %d Hz", (16 * MAINCK) / mainf);
     uint32_t delta_time = 0;
     uint32_t start_time = GetTickCount();
 #define SLCK_CHECK_MS 50
@@ -429,7 +429,7 @@ static void SendStatus(void) {
 #ifdef WITH_FLASH
     Flashmem_print_info();
 #endif
-
+    DbpString("");
     reply_ng(CMD_STATUS, PM3_SUCCESS, NULL, 0);
 }
 
@@ -1573,11 +1573,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareGen3Freez();
             break;
         }
-        // mifare sniffer
-//        case CMD_HF_MIFARE_SNIFF: {
-//            SniffMifare(packet->oldarg[0]);
-//            break;
-//        }
         case CMD_HF_MIFARE_PERSONALIZE_UID: {
             struct p {
                 uint8_t keytype;
@@ -2294,7 +2289,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             // arg1 = length bytes to transfer
             // arg2 = RFU
 
-            if (!FlashInit()) {
+            if (FlashInit() == false) {
                 break;
             }
 
@@ -2302,7 +2297,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 bool isok = Flash_ReadDataCont(startidx + i, mem, len);
-                if (!isok)
+                if (isok == false)
                     Dbprintf("reading flash memory failed ::  | bytes between %d - %d", i, len);
 
                 isok = reply_old(CMD_FLASHMEM_DOWNLOADED, i, len, 0, mem, len);

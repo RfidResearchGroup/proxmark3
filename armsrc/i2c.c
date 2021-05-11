@@ -606,9 +606,9 @@ void I2C_print_status(void) {
     DbpString(_CYAN_("Smart card module (ISO 7816)"));
     uint8_t maj, min;
     if (I2C_get_version(&maj, &min) == PM3_SUCCESS)
-        Dbprintf("  version................." _YELLOW_("v%x.%02d"), maj, min);
+        Dbprintf("  version................. " _YELLOW_("v%x.%02d"), maj, min);
     else
-        DbpString("  version................." _RED_("FAILED"));
+        DbpString("  version................. " _RED_("FAILED"));
 }
 
 int I2C_get_version(uint8_t *maj, uint8_t *min) {
