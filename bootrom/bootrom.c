@@ -13,10 +13,9 @@
 #define DEBUG 0
 
 struct common_area common_area __attribute__((section(".commonarea")));
-unsigned int start_addr, end_addr, bootrom_unlocked;
-extern char _bootrom_start, _bootrom_end, _flash_end;
-extern uint32_t _flash_start[AT91C_IFLASH_NB_OF_PAGES * AT91C_IFLASH_PAGE_SIZE / sizeof(uint32_t)];
-extern uint32_t _osimage_entry;
+uint32_t start_addr, end_addr;
+bool bootrom_unlocked;
+extern char _bootrom_start[], _bootrom_end[], _flash_start[], _flash_end[], _osimage_entry[];
 
 static int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     PacketResponseOLD txcmd;
@@ -76,7 +75,7 @@ static void Fatal(void) {
 }
 
 static void UsbPacketReceived(uint8_t *packet) {
-    int dont_ack = 0;
+    bool ack = true;
     PacketCommandOLD *c = (PacketCommandOLD *)packet;
 
     //if ( len != sizeof(PacketCommandOLD`)) Fatal();
@@ -85,7 +84,7 @@ static void UsbPacketReceived(uint8_t *packet) {
 
     switch (c->cmd) {
         case CMD_DEVICE_INFO: {
-            dont_ack = 1;
+            ack = false;
             arg0 = DEVICE_INFO_FLAG_BOOTROM_PRESENT |
                    DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM |
                    DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH |
@@ -99,14 +98,14 @@ static void UsbPacketReceived(uint8_t *packet) {
         break;
 
         case CMD_CHIP_INFO: {
-            dont_ack = 1;
+            ack = false;
             arg0 = *(AT91C_DBGU_CIDR);
             reply_old(CMD_CHIP_INFO, arg0, 0, 0, 0, 0);
         }
         break;
 
         case CMD_BL_VERSION: {
-            dont_ack = 1;
+            ack = false;
             arg0 = BL_VERSION_1_0_0;
             reply_old(CMD_BL_VERSION, arg0, 0, 0, 0, 0);
         }
@@ -125,13 +124,13 @@ static void UsbPacketReceived(uint8_t *packet) {
                     offset = (AT91C_IFLASH_NB_OF_PAGES / 2) * AT91C_IFLASH_PAGE_SIZE / sizeof(uint32_t);
                 }
                 for (int i = 0 + (64 * j); i < 64 + (64 * j); i++) {
-                    _flash_start[offset + i] = c->d.asDwords[i];
+                    ((uint32_t *)_flash_start)[offset + i] = c->d.asDwords[i];
                 }
 
                 /* Check that the address that we are supposed to write to is within our allowed region */
                 if (((flash_address + AT91C_IFLASH_PAGE_SIZE - 1) >= end_addr) || (flash_address < start_addr)) {
                     /* Disallow write */
-                    dont_ack = 1;
+                    ack = false;
                     reply_old(CMD_NACK, 0, 0, 0, 0, 0);
                 } else {
 
@@ -144,7 +143,7 @@ static void UsbPacketReceived(uint8_t *packet) {
                 uint32_t sr;
                 while (!((sr = efc_bank->EFC_FSR) & AT91C_MC_FRDY));
                 if (sr & (AT91C_MC_LOCKE | AT91C_MC_PROGE)) {
-                    dont_ack = 1;
+                    ack = false;
                     reply_old(CMD_NACK, sr, 0, 0, 0, 0);
                 }
             }
@@ -159,28 +158,24 @@ static void UsbPacketReceived(uint8_t *packet) {
 
         case CMD_START_FLASH: {
             if (c->arg[2] == START_FLASH_MAGIC)
-                bootrom_unlocked = 1;
+                bootrom_unlocked = true;
             else
-                bootrom_unlocked = 0;
+                bootrom_unlocked = false;
 
-            int prot_start = (int)&_bootrom_start;
-            int prot_end = (int)&_bootrom_end;
-            int allow_start = (int)&_flash_start;
-            int allow_end = (int)&_flash_end;
-            int cmd_start = c->arg[0];
-            int cmd_end = c->arg[1];
+            uint32_t cmd_start = c->arg[0];
+            uint32_t cmd_end = c->arg[1];
 
             /* Only allow command if the bootrom is unlocked, or the parameters are outside of the protected
             * bootrom area. In any case they must be within the flash area.
             */
-            if ((bootrom_unlocked || ((cmd_start >= prot_end) || (cmd_end < prot_start))) &&
-                    (cmd_start >= allow_start) &&
-                    (cmd_end <= allow_end)) {
+            if ((bootrom_unlocked || ((cmd_start >= (uint32_t)_bootrom_end) || (cmd_end < (uint32_t)_bootrom_start))) &&
+                    (cmd_start >= (uint32_t)_flash_start) &&
+                    (cmd_end <= (uint32_t)_flash_end)) {
                 start_addr = cmd_start;
                 end_addr = cmd_end;
             } else {
                 start_addr = end_addr = 0;
-                dont_ack = 1;
+                ack = false;
                 reply_old(CMD_NACK, 0, 0, 0, 0, 0);
             }
         }
@@ -192,14 +187,14 @@ static void UsbPacketReceived(uint8_t *packet) {
         break;
     }
 
-    if (!dont_ack)
+    if (ack)
         reply_old(CMD_ACK, arg0, 0, 0, 0, 0);
 }
 
 static void flash_mode(void) {
     start_addr = 0;
     end_addr = 0;
-    bootrom_unlocked = 0;
+    bootrom_unlocked = false;
     uint8_t rx[sizeof(PacketCommandOLD)];
     common_area.command = COMMON_AREA_COMMAND_NONE;
     if (!common_area.flags.button_pressed && BUTTON_PRESS())
@@ -324,12 +319,12 @@ void BootROM(void) {
 
     if ((common_area.command == COMMON_AREA_COMMAND_ENTER_FLASH_MODE) ||
             (!common_area.flags.button_pressed && BUTTON_PRESS()) ||
-            (_osimage_entry == 0xffffffffU)) {
+            (*(uint32_t*)_osimage_entry == 0xffffffffU)) {
         flash_mode();
     } else {
         // clear button status, even if button still pressed
         common_area.flags.button_pressed = 0;
         // jump to Flash address of the osimage entry point (LSBit set for thumb mode)
-        __asm("bx %0\n" : : "r"(((int)&_osimage_entry) | 0x1));
+        __asm("bx %0\n" : : "r"(((uint32_t)_osimage_entry) | 0x1));
     }
 }
