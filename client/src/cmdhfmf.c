@@ -5438,11 +5438,11 @@ static int CmdHFMFPersonalize(const char *cmd) {
     CLIParserInit(&ctx, "hf mf personalize",
                   "Personalize the UID of a MIFARE Classic EV1 card. This is only possible \n"
                   "if it is a 7Byte UID card and if it is not already personalized.",
-                  "hf mf personalize -f0                    -> double size UID\n"
-                  "hf mf personalize -f1                    -> double size UID, optional usage of selection process shortcut\n"
-                  "hf mf personalize -f2                    -> single size random ID\n"
-                  "hf mf personalize -f3                    -> single size NUID\n"
-                  "hf mf personalize -b -k B0B1B2B3B4B5 -f3 -> use key B = 0xB0B1B2B3B4B5"
+                  "hf mf personalize --f0                    -> double size UID\n"
+                  "hf mf personalize --f1                    -> double size UID, optional usage of selection process shortcut\n"
+                  "hf mf personalize --f2                    -> single size random ID\n"
+                  "hf mf personalize --f3                    -> single size NUID\n"
+                  "hf mf personalize -b -k B0B1B2B3B4B5 --f3 -> use key B = 0xB0B1B2B3B4B5"
                  );
 
     void *argtable[] = {
