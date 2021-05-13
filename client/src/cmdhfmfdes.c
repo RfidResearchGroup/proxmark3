@@ -1140,7 +1140,7 @@ static int handler_desfire_freemem(uint32_t *free_mem) {
 
     size_t dlen = recv_len;
     p = mifare_cryto_postprocess_data(tag, apdu.data, &dlen, MDCM_PLAIN | CMAC_COMMAND | CMAC_VERIFY);
-
+    (void)p;
     if (sw != status(MFDES_S_OPERATION_OK))
         return PM3_ESOFT;
 
