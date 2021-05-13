@@ -3963,7 +3963,7 @@ static int CmdT55xxSniff(const char *Cmd) {
         PrintAndLogEx(ERR, "Must call with --zero larger than 0");
         return PM3_EINVARG;
     }
-    if ((opt_width0 == 0) || (opt_width1 == 0)) {
+    if (opt_width1 == 0) {
         PrintAndLogEx(ERR, "Must call with --one larger than 0");
         return PM3_EINVARG;
     }
