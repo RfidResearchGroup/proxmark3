@@ -195,7 +195,7 @@ static int CmdHFFidoRegister(const char *cmd) {
             return PM3_EINVARG;
         }
     }
-    if (cphex & !cpplain) {
+    if (cphex && cpplain == false) {
         chlen = sizeof(cdata);
         CLIGetHexWithReturn(ctx, 7, cdata, &chlen);
         if (chlen && chlen != 32) {
@@ -219,7 +219,7 @@ static int CmdHFFidoRegister(const char *cmd) {
             return PM3_EINVARG;
         }
     }
-    if (aphex & !applain) {
+    if (aphex && applain == false) {
         applen = sizeof(adata);
         CLIGetHexWithReturn(ctx, 8, adata, &applen);
         if (applen && applen != 32) {
@@ -380,6 +380,7 @@ static int CmdHFFidoRegister(const char *cmd) {
 
         //sprintf(filename, "hf-fido2-params");
         res = saveFileJSONroot(filename, root, JSON_INDENT(2), verbose);
+        (void)res;
     }
     json_decref(root);
     return PM3_SUCCESS;
@@ -635,6 +636,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
 
         sprintf(filename, "hf-fido2-params");
         res = saveFileJSONroot(filename, root, JSON_INDENT(2), verbose);
+        (void)res;
     }
     json_decref(root);
     return PM3_ESOFT;
@@ -754,6 +756,7 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     // new file name..
     sprintf(filename, "hf-fido2");
     res = saveFileJSONroot(filename, root, JSON_INDENT(2), verbose);
+    (void)res;
     json_decref(root);
     return res;
 }
@@ -873,6 +876,7 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
     // new file name..
     sprintf(filename, "hf-fido2");
     res = saveFileJSONroot(filename, root, JSON_INDENT(2), verbose);
+    (void)res;
     json_decref(root);
     return res;
 }
