@@ -227,40 +227,47 @@ void printT55xxConfig(void) {
                 break;
         }
 
-        if (T55xx_Timing.m[i].start_gap != 0xFFFF)
+        if (T55xx_Timing.m[i].start_gap != 0xFFFF) {
             sprintf(s + strlen(s), " %3d | ", T55xx_Timing.m[i].start_gap / 8);
-        else
+        } else {
             PRN_NA;
+        }
 
-        if (T55xx_Timing.m[i].write_gap != 0xFFFF)
+        if (T55xx_Timing.m[i].write_gap != 0xFFFF) {
             sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_gap / 8);
-        else
+        } else {
             PRN_NA;
+        }
 
-        if (T55xx_Timing.m[i].write_0 != 0xFFFF)
+        if (T55xx_Timing.m[i].write_0 != 0xFFFF) {
             sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_0 / 8);
-        else
+        } else {
             PRN_NA;
+        }
 
-        if (T55xx_Timing.m[i].write_1 != 0xFFFF)
+        if (T55xx_Timing.m[i].write_1 != 0xFFFF) {
             sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_1 / 8);
-        else
+        } else {
             PRN_NA;
+        }
 
-        if (T55xx_Timing.m[i].read_gap != 0xFFFF)
+        if (T55xx_Timing.m[i].read_gap != 0xFFFF) {
             sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].read_gap / 8);
-        else
+        } else {
             PRN_NA;
+        }
 
-        if (T55xx_Timing.m[i].write_2 != 0xFFFF && i == T55XX_DLMODE_1OF4)
+        if (T55xx_Timing.m[i].write_2 != 0xFFFF && i == T55XX_DLMODE_1OF4) {
             sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_2 / 8);
-        else
+        } else {
             PRN_NA
+        }
 
-            if (T55xx_Timing.m[i].write_3 != 0xFFFF && i == T55XX_DLMODE_1OF4)
-                sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_3 / 8);
-            else
-                PRN_NA;
+        if (T55xx_Timing.m[i].write_3 != 0xFFFF && i == T55XX_DLMODE_1OF4) {
+            sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_3 / 8);
+        } else {
+            PRN_NA;
+        }
 
         // remove last space
         s[strlen(s)] = 0;
