@@ -1376,12 +1376,15 @@ static int CmdHF14BDump(const char *Cmd) {
                 continue;
             }
 
-            memcpy(data + (blocknum * 4), recv, 4);
 
             // last read
             if (blocknum == 0xFF) {
+                // we reserved space for this block after 0x0F and 0x7F,  ie 0x10, 0x80
+                memcpy(data + (blocks * 4), recv, 4);
                 break;
             }
+            memcpy(data + (blocknum * 4), recv, 4);
+
 
             retry = 0;
             blocknum++;
@@ -1403,8 +1406,8 @@ static int CmdHF14BDump(const char *Cmd) {
         return switch_off_field_14b();
     }
 
-    PrintAndLogEx(DEBUG, "systemblock : %s", sprint_hex(data + (blocknum * 4), 4));
-    PrintAndLogEx(DEBUG, "   otp lock : %02x %02x", data[(blocknum * 4)], data[(blocknum * 4) + 1]);
+    PrintAndLogEx(DEBUG, "systemblock : %s", sprint_hex(data + (blocks * 4), 4));
+    PrintAndLogEx(DEBUG, "   otp lock : %02x %02x", data[(blocks * 4)], data[(blocks * 4) + 1]);
 
 
     PrintAndLogEx(INFO, " block#  | data         |lck| ascii");
@@ -1416,7 +1419,7 @@ static int CmdHF14BDump(const char *Cmd) {
                       i,
                       i,
                       sprint_hex(data + (i * 4), 4),
-                      get_st_lock_info(chipid, data + (blocknum * 4), i),
+                      get_st_lock_info(chipid, data + (blocks * 4), i),
                       sprint_ascii(data + (i * 4), 4)
                      );
     }
@@ -1426,7 +1429,7 @@ static int CmdHF14BDump(const char *Cmd) {
                   0xFF,
                   0xFF,
                   sprint_hex(data + (0xFF * 4), 4),
-                  get_st_lock_info(chipid, data + (blocknum * 4), 0xFF),
+                  get_st_lock_info(chipid, data + (blocks * 4), 0xFF),
                   sprint_ascii(data + (0xFF * 4), 4)
                  );
     PrintAndLogEx(INFO, "---------+--------------+---+----------");
