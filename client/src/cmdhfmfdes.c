@@ -831,12 +831,14 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
         if (res != PM3_SUCCESS) {
             return 1;
         }
-    } else if (payload->mode == MFDES_AUTH_PICC) {
-        /*cmd[0] = AUTHENTICATE;
+    }
+    // else {
+        /*
+        cmd[0] = AUTHENTICATE;
         cmd[1] = payload->keyno;
         len = DesfireAPDU(cmd, 2, resp);
-         */
-    }
+        */
+    //}
 
     if (!recv_len) {
         return 2;
@@ -1902,10 +1904,12 @@ static int handler_desfire_readdata(mfdes_data_t *data, MFDES_FILE_TYPE_T type, 
 
     size_t dlen = resplen;
     p = mifare_cryto_postprocess_data(tag, data->data, &dlen, cs | CMAC_COMMAND | CMAC_VERIFY | MAC_VERIFY);
-    if (dlen != -1) resplen = dlen;
+    (void)p;
+
+    if (dlen != -1)
+        resplen = dlen;
+
     memcpy(data->length, &resplen, 3);
-
-
     return res;
 }
 
@@ -1931,6 +1935,7 @@ static int handler_desfire_getvalue(mfdes_value_t *value, uint32_t *resplen, uin
     }
     size_t dlen = (size_t)resplen;
     p = mifare_cryto_postprocess_data(tag, value->value, &dlen, cs | CMAC_COMMAND | CMAC_VERIFY | MAC_VERIFY);
+    (void)p;
     return res;
 }
 
@@ -1998,9 +2003,11 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type,
     return res;
 }
 
-static int handler_desfire_deletefile(uint8_t fileno) {
-    if (fileno > 0x1F) return PM3_EINVARG;
-    sAPDU apdu = {0x90, MFDES_DELETE_FILE, 0x00, 0x00, 1, &fileno}; // 0xDF
+static int handler_desfire_deletefile(uint8_t file_no) {
+    if (file_no > 0x1F)
+        return PM3_EINVARG;
+
+    sAPDU apdu = {0x90, MFDES_DELETE_FILE, 0x00, 0x00, 1, &file_no}; // 0xDF
     uint16_t sw = 0;
     uint32_t recvlen = 0;
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
@@ -2012,9 +2019,11 @@ static int handler_desfire_deletefile(uint8_t fileno) {
     return res;
 }
 
-static int handler_desfire_clearrecordfile(uint8_t fileno) {
-    if (fileno > 0x1F) return PM3_EINVARG;
-    sAPDU apdu = {0x90, MFDES_CLEAR_RECORD_FILE, 0x00, 0x00, 1, &fileno}; // 0xEB
+static int handler_desfire_clearrecordfile(uint8_t file_no) {
+    if (file_no > 0x1F) 
+        return PM3_EINVARG;
+
+    sAPDU apdu = {0x90, MFDES_CLEAR_RECORD_FILE, 0x00, 0x00, 1, &file_no}; // 0xEB
     uint16_t sw = 0;
     uint32_t recvlen = 0;
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
@@ -2050,7 +2059,9 @@ static int handler_desfire_create_value_file(mfdes_value_file_t *value) {
 }
 
 static int handler_desfire_create_std_file(mfdes_file_t *file) {
-    if (file->fileno > 0x1F) return PM3_EINVARG;
+    if (file->fileno > 0x1F)
+        return PM3_EINVARG;
+
     sAPDU apdu = {0x90, MFDES_CREATE_STD_DATA_FILE, 0x00, 0x00, sizeof(mfdes_file_t), (uint8_t *)file}; // 0xCD
 
     uint16_t sw = 0;
@@ -2065,7 +2076,9 @@ static int handler_desfire_create_std_file(mfdes_file_t *file) {
 }
 
 static int handler_desfire_create_linearrecordfile(mfdes_linear_t *file) {
-    if (file->fileno > 0x1F) return PM3_EINVARG;
+    if (file->fileno > 0x1F)
+        return PM3_EINVARG;
+
     if (memcmp(file->recordsize, "\x00\x00\x00", 3) == 0) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_CREATE_LINEAR_RECORD_FILE, 0x00, 0x00, sizeof(mfdes_linear_t), (uint8_t *)file}; // 0xC1
 
@@ -2081,8 +2094,12 @@ static int handler_desfire_create_linearrecordfile(mfdes_linear_t *file) {
 }
 
 static int handler_desfire_create_cyclicrecordfile(mfdes_linear_t *file) {
-    if (memcmp(file->recordsize, "\x00\x00\x00", 3) == 0) return PM3_EINVARG;
-    if (file->fileno > 0x1F) return PM3_EINVARG;
+    if (memcmp(file->recordsize, "\x00\x00\x00", 3) == 0)
+        return PM3_EINVARG;
+
+    if (file->fileno > 0x1F)
+        return PM3_EINVARG;
+
     sAPDU apdu = {0x90, MFDES_CREATE_CYCLIC_RECORD_FILE, 0x00, 0x00, sizeof(mfdes_linear_t), (uint8_t *)file}; // 0xC0
 
     uint16_t sw = 0;
@@ -2594,15 +2611,15 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fileno = arg_get_int_def(ctx, 1, 0);
+    int fno = arg_get_int_def(ctx, 1, 0);
     int aidlength = 3;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(ctx, 2, aid, &aidlength);
     swap24(aid);
     CLIParserFree(ctx);
 
-    if (fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
+    if (fno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fno);
         return PM3_EINVARG;
     }
 
@@ -2617,12 +2634,12 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         memcpy(aid, (uint8_t *)&tag->selected_application, 3);
     }
     uint8_t cs = 0;
-    if (selectfile(aid, fileno, &cs) != PM3_SUCCESS) {
+    if (selectfile(aid, fno, &cs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, _RED_("   Error on selecting file."));
         return PM3_ESOFT;
     }
 
-    int res = handler_desfire_clearrecordfile(fileno);
+    int res = handler_desfire_clearrecordfile(fno);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Successfully cleared record file.");
     } else {
@@ -2647,7 +2664,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fileno = arg_get_int_def(ctx, 1, 0);
+    int fno = arg_get_int_def(ctx, 1, 0);
 
     int aidlength = 3;
     uint8_t aid[3] = {0};
@@ -2655,8 +2672,8 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     swap24(aid);
     CLIParserFree(ctx);
 
-    if (fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
+    if (fno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fno);
         return PM3_EINVARG;
     }
 
@@ -2671,12 +2688,12 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         memcpy(aid, (uint8_t *)&tag->selected_application, 3);
     }
     uint8_t cs = 0;
-    if (selectfile(aid, fileno, &cs) != PM3_SUCCESS) {
+    if (selectfile(aid, fno, &cs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, _RED_("   Error on selecting file."));
         return PM3_ESOFT;
     }
 
-    int res = handler_desfire_deletefile(fileno);
+    int res = handler_desfire_deletefile(fno);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Successfully deleted file..");
     } else {
@@ -2706,7 +2723,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fileno = arg_get_int_def(ctx, 1, 0);
+    int fno = arg_get_int_def(ctx, 1, 0);
 
     int fidlength = 0;
     uint8_t fid[2] = {0};
@@ -2731,8 +2748,8 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     swap16(fid);
     swap24(filesize);
 
-    if (fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
+    if (fno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fno);
         return PM3_EINVARG;
     }
     if (comset != 0 && comset != 1 && comset != 3) {
@@ -2758,7 +2775,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     mfdes_file_t ft;
     memcpy(ft.fid, fid, 2);
     memcpy(ft.filesize, filesize, 3);
-    ft.fileno = fileno;
+    ft.fileno = fno;
     ft.comset = comset;
     memcpy(ft.access_rights, ar, 2);
 
@@ -2812,7 +2829,7 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int fileno = arg_get_int_def(ctx, 1, 0);
+    int fno = arg_get_int_def(ctx, 1, 0);
     int aidlength = 3;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(ctx, 2, aid, &aidlength);
@@ -2820,13 +2837,14 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
+    if (fno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fno);
         return PM3_EINVARG;
     }
 
-    mfdes_value_t value;
-    value.fileno = fileno;
+    mfdes_value_t value = {
+        .fileno = fno
+    };
 
     if (aidlength != 3 && aidlength != 0) {
         PrintAndLogEx(ERR, _RED_("   The given aid must have 3 bytes (big endian)."));
@@ -2880,7 +2898,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fileno = arg_get_int_def(ctx, 1, 0);
+    int fno = arg_get_int_def(ctx, 1, 0);
 
     int offsetlength = 0;
     uint8_t offset[3] = {0};
@@ -2908,8 +2926,8 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
+    if (fno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fno);
         return PM3_EINVARG;
     }
 
@@ -2924,7 +2942,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     mfdes_data_t ft;
     memcpy(ft.offset, offset, 3);
     memcpy(ft.length, filesize, 3);
-    ft.fileno = fileno;
+    ft.fileno = fno;
 
     uint32_t bytestoread = (uint32_t)le24toh(filesize);
     bytestoread &= 0xFFFFFF;
@@ -3083,7 +3101,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fileno = arg_get_int_def(ctx, 1, 0);
+    int fno = arg_get_int_def(ctx, 1, 0);
 
     int offsetlength = 0;
     uint8_t offset[3] = {0};
@@ -3121,8 +3139,8 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
+    if (fno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fno);
         return PM3_EINVARG;
     }
 
@@ -3130,7 +3148,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
     memcpy(ft.offset, offset, 3);
     htole24(dlength, ft.length);
-    ft.fileno = fileno;
+    ft.fileno = fno;
 
     if (aidlength != 3 && aidlength != 0) {
         PrintAndLogEx(ERR, _RED_("   The given aid must have 3 bytes (big endian)."));
@@ -3143,7 +3161,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         memcpy(aid, (uint8_t *)&tag->selected_application, 3);
     }
     uint8_t cs = 0;
-    if (selectfile(aid, fileno, &cs) != PM3_SUCCESS) {
+    if (selectfile(aid, fno, &cs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, _RED_("   Error on selecting file."));
         DropFieldDesfire();
         return PM3_ESOFT;
@@ -3184,7 +3202,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fileno = arg_get_int_def(ctx, 1, 0);
+    int fno = arg_get_int_def(ctx, 1, 0);
 
     int fidlength = 0;
     uint8_t fid[2] = {0};
@@ -3226,8 +3244,8 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
+    if (fno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fno);
         return PM3_EINVARG;
     }
 
@@ -3251,11 +3269,11 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    mfdes_linear_t ft;
-
-    ft.fileno = fileno;
+    mfdes_linear_t ft = {
+        .fileno = fno,
+        .comset = comset
+    };
     memcpy(ft.fid, fid, 2);
-    ft.comset = comset;
     memcpy(ft.access_rights, ar, 2);
     memcpy(ft.recordsize, recordsize, 3);
     memcpy(ft.maxnumrecords, maxnumrecords, 3);
@@ -3313,7 +3331,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fileno = arg_get_int_def(ctx, 1, 0);
+    int fno = arg_get_int_def(ctx, 1, 0);
     uint8_t comset = arg_get_int(ctx, 2);
 
     int arlength = 0;
@@ -3344,8 +3362,8 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     swap32(upperlimit);
     swap32(value);
 
-    if (fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
+    if (fno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fno);
         return PM3_EINVARG;
     }
 
@@ -3375,7 +3393,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     }
 
     mfdes_value_file_t ft = {
-        .fileno = fileno,
+        .fileno = fno,
         .comset = comset,
         .limitedcreditenabled = limited,
     };
@@ -4614,7 +4632,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
     int vpatternlen = 0;
     CLIGetHexWithReturn(ctx, 6, vpattern, &vpatternlen);
     if (vpatternlen > 0) {
-        if (vpatternlen > 0 && vpatternlen <= 2) {
+        if (vpatternlen <= 2) {
             startPattern = (vpattern[0] << 8) + vpattern[1];
         } else {
             PrintAndLogEx(ERR, "Pattern must be 2-byte length.");
