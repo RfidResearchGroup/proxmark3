@@ -728,7 +728,7 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t cc[1] = {0};
+    uint8_t cc[8] = {0};
     int cclen = 0;
     res = CLIParamHexToBuf(arg_get_str(ctx, 2), cc, sizeof(cc), &cclen);
     if (res) {
