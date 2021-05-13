@@ -631,6 +631,8 @@ static bool brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
 
     for (*pwd = start; *pwd <= stop; (*pwd)++) {
 
+        WDT_HIT();
+
         if (login(*pwd) == PM3_SUCCESS) {
 
             pwd_found = true;
