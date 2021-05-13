@@ -187,7 +187,7 @@ int mbedtls_cipher_cmac(const mbedtls_cipher_info_t *cipher_info,
  */
 int mbedtls_aes_cmac_prf_128(const unsigned char *key, size_t key_len,
                              const unsigned char *input, size_t in_len,
-                             unsigned char output[16]);
+                             unsigned char *output);
 #endif /* MBEDTLS_AES_C */
 
 #if defined(MBEDTLS_SELF_TEST) && ( defined(MBEDTLS_AES_C) || defined(MBEDTLS_DES_C) )
