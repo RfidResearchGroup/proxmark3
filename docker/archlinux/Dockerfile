@@ -1,4 +1,4 @@
-FROM archlinux/base
+FROM archlinux:base
 
 ENV LANG C
 RUN pacman -Syy
