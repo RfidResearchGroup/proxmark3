@@ -17,8 +17,7 @@ cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-
 #########################################
 # Build ARM, no test coverage           #
 #########################################
-cov-build --dir "$COVDIR" --no-generate-build-id --force make bootrom
-cov-build --dir "$COVDIR" --no-generate-build-id --force make fullimage
+cov-build --dir "$COVDIR" --no-generate-build-id --force make recovery
 
 #########################################
 # Build client                          #
@@ -27,6 +26,7 @@ cov-build --dir "$COVDIR" --no-generate-build-id --force make fullimage
 # and we want the client-side of the common/ analysis
 cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD mfkey
 cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD nonce2key
+cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD mf_nonce_brute
 cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD client
 
 #########################################
