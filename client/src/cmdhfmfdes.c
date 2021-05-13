@@ -3757,8 +3757,6 @@ static int CmdHF14ADesDump(const char *Cmd) {
     dfname_t dfnames[255];
     uint8_t dfname_count = 0;
 
-    int res = 0;
-
     if (handler_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
         DropFieldDesfire();
@@ -3796,7 +3794,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
 
         uint8_t num_keys = 0;
         uint8_t key_setting = 0;
-        res = handler_desfire_getkeysettings(&key_setting, &num_keys);
+        int res = handler_desfire_getkeysettings(&key_setting, &num_keys);
         if (res != PM3_SUCCESS) continue;
 
         res = handler_desfire_select_application(aid);
@@ -4410,7 +4408,7 @@ static int AuthCheckDesfire(uint8_t *aid,
         des = true;
     }
 
-    int error = PM3_SUCCESS;
+    int error;
     bool badlen = false;
 
     if (des) {
