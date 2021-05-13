@@ -285,7 +285,6 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    int gpu = 1;
     err = clGetDeviceIDs(ctx.platform_id, CL_DEVICE_TYPE_GPU, 1, &(ctx.device_id), NULL);
     if (err != CL_SUCCESS) {
         printf("Error: Failed to create a device group!: %d\n", err);
