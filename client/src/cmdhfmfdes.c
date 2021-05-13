@@ -3020,7 +3020,7 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
     swap32(value.value);
 
     if (value.fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fileno);
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", value.fileno);
         return PM3_EINVARG;
     }
 
