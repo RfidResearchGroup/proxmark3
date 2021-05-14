@@ -101,7 +101,8 @@
 
 #if defined(MBEDTLS_ECDSA_C) &&            \
     ( !defined(MBEDTLS_ECP_C) ||           \
-      !( defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED) || \
+      !( defined(MBEDTLS_ECP_DP_SECP128R1_ENABLED) || \
+         defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED) || \
          defined(MBEDTLS_ECP_DP_SECP224R1_ENABLED) || \
          defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED) || \
          defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED) || \

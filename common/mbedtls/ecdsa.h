@@ -64,6 +64,8 @@
 /** The maximal size of an ECDSA signature in Bytes. */
 #define MBEDTLS_ECDSA_MAX_LEN  MBEDTLS_ECDSA_MAX_SIG_LEN( MBEDTLS_ECP_MAX_BITS )
 
+int ecdsa_signature_to_asn1(const mbedtls_mpi *r, const mbedtls_mpi *s, unsigned char *sig, size_t *slen);
+
 #ifdef __cplusplus
 extern "C" {
 #endif
