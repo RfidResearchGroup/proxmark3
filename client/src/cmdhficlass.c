@@ -3641,6 +3641,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
             }
             if (keylen != 16) {
                 PrintAndLogEx(ERR, "Failed to load transport key from file");
+                free(enckeyptr);
                 return PM3_EINVARG;
             }
             memcpy(enc_key, enckeyptr, sizeof(enc_key));
