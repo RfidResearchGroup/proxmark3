@@ -3316,6 +3316,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
                 break;
             default:
                 PrintAndLogEx(WARNING, "Invalid parameter for UID");
+                CLIParserFree(ctx);
                 return PM3_EINVARG;
         }
     }
