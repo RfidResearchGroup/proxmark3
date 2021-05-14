@@ -20,7 +20,6 @@ add_library(pm3rrg_rdv4_mbedtls STATIC
         ../../common/mbedtls/des.c
         ../../common/mbedtls/ecdsa.c
         ../../common/mbedtls/md.c
-        ../../common/mbedtls/md_wrap.c
         ../../common/mbedtls/md5.c
         ../../common/mbedtls/oid.c
         ../../common/mbedtls/pem.c

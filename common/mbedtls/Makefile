@@ -24,7 +24,6 @@ MYSRCS = \
 	des.c \
 	ecdsa.c \
 	md.c \
-	md_wrap.c \
 	md5.c \
 	oid.c \
 	pem.c \

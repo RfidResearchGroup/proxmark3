@@ -4,30 +4,26 @@
  * \brief Portable interface to timeouts and to the CPU cycle counter
  */
 /*
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
- *  SPDX-License-Identifier: GPL-2.0
+ *  Copyright The Mbed TLS Contributors
+ *  SPDX-License-Identifier: Apache-2.0
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
+ *  not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 #ifndef MBEDTLS_TIMING_H
 #define MBEDTLS_TIMING_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -45,14 +41,16 @@ extern "C" {
 /**
  * \brief          timer structure
  */
-struct mbedtls_timing_hr_time {
+struct mbedtls_timing_hr_time
+{
     unsigned char opaque[32];
 };
 
 /**
  * \brief          Context for mbedtls_timing_set/get_delay()
  */
-typedef struct mbedtls_timing_delay_context {
+typedef struct mbedtls_timing_delay_context
+{
     struct mbedtls_timing_hr_time   timer;
     uint32_t                        int_ms;
     uint32_t                        fin_ms;
@@ -74,7 +72,7 @@ extern volatile int mbedtls_timing_alarmed;
  * \note           This value starts at an unspecified origin and
  *                 may wrap around.
  */
-unsigned long mbedtls_timing_hardclock(void);
+unsigned long mbedtls_timing_hardclock( void );
 
 /**
  * \brief          Return the elapsed time in milliseconds
@@ -93,7 +91,7 @@ unsigned long mbedtls_timing_hardclock(void);
  *                 get_timer(0) }` the value time1+time2 is only approximately
  *                 the delay since the first reset.
  */
-unsigned long mbedtls_timing_get_timer(struct mbedtls_timing_hr_time *val, int reset);
+unsigned long mbedtls_timing_get_timer( struct mbedtls_timing_hr_time *val, int reset );
 
 /**
  * \brief          Setup an alarm clock
@@ -105,7 +103,7 @@ unsigned long mbedtls_timing_get_timer(struct mbedtls_timing_hr_time *val, int r
  *                 context, this means one for the whole process, not one per
  *                 thread.
  */
-void mbedtls_set_alarm(int seconds);
+void mbedtls_set_alarm( int seconds );
 
 /**
  * \brief          Set a pair of delays to watch
@@ -121,7 +119,7 @@ void mbedtls_set_alarm(int seconds);
  * \note           To set a single delay, either use \c mbedtls_timing_set_timer
  *                 directly or use this function with int_ms == fin_ms.
  */
-void mbedtls_timing_set_delay(void *data, uint32_t int_ms, uint32_t fin_ms);
+void mbedtls_timing_set_delay( void *data, uint32_t int_ms, uint32_t fin_ms );
 
 /**
  * \brief          Get the status of delays
@@ -135,7 +133,7 @@ void mbedtls_timing_set_delay(void *data, uint32_t int_ms, uint32_t fin_ms);
  *                  1 if only the intermediate delay is passed,
  *                  2 if the final delay is passed.
  */
-int mbedtls_timing_get_delay(void *data);
+int mbedtls_timing_get_delay( void *data );
 
 #if defined(MBEDTLS_SELF_TEST)
 /**
@@ -143,7 +141,7 @@ int mbedtls_timing_get_delay(void *data);
  *
  * \return         0 if successful, or 1 if a test failed
  */
-int mbedtls_timing_self_test(int verbose);
+int mbedtls_timing_self_test( int verbose );
 #endif
 
 #ifdef __cplusplus

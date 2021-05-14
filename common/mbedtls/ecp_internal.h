@@ -5,24 +5,20 @@
  * point arithmetic.
  */
 /*
- *  Copyright (C) 2016, ARM Limited, All Rights Reserved
- *  SPDX-License-Identifier: GPL-2.0
+ *  Copyright The Mbed TLS Contributors
+ *  SPDX-License-Identifier: Apache-2.0
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
+ *  not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 
 /*
@@ -63,6 +59,12 @@
 #ifndef MBEDTLS_ECP_INTERNAL_H
 #define MBEDTLS_ECP_INTERNAL_H
 
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
+
 #if defined(MBEDTLS_ECP_INTERNAL_ALT)
 
 /**
@@ -74,7 +76,7 @@
  *
  * \return          Non-zero if successful.
  */
-unsigned char mbedtls_internal_ecp_grp_capable(const mbedtls_ecp_group *grp);
+unsigned char mbedtls_internal_ecp_grp_capable( const mbedtls_ecp_group *grp );
 
 /**
  * \brief           Initialise the Elliptic Curve Point module extension.
@@ -91,7 +93,7 @@ unsigned char mbedtls_internal_ecp_grp_capable(const mbedtls_ecp_group *grp);
  *
  * \return          0 if successful.
  */
-int mbedtls_internal_ecp_init(const mbedtls_ecp_group *grp);
+int mbedtls_internal_ecp_init( const mbedtls_ecp_group *grp );
 
 /**
  * \brief           Frees and deallocates the Elliptic Curve Point module
@@ -99,9 +101,9 @@ int mbedtls_internal_ecp_init(const mbedtls_ecp_group *grp);
  *
  * \param grp       The pointer to the group the module was initialised for.
  */
-void mbedtls_internal_ecp_free(const mbedtls_ecp_group *grp);
+void mbedtls_internal_ecp_free( const mbedtls_ecp_group *grp );
 
-#if defined(ECP_SHORTWEIERSTRASS)
+#if defined(MBEDTLS_ECP_SHORT_WEIERSTRASS_ENABLED)
 
 #if defined(MBEDTLS_ECP_RANDOMIZE_JAC_ALT)
 /**
@@ -119,9 +121,9 @@ void mbedtls_internal_ecp_free(const mbedtls_ecp_group *grp);
  *
  * \return          0 if successful.
  */
-int mbedtls_internal_ecp_randomize_jac(const mbedtls_ecp_group *grp,
-                                       mbedtls_ecp_point *pt, int (*f_rng)(void *, unsigned char *, size_t),
-                                       void *p_rng);
+int mbedtls_internal_ecp_randomize_jac( const mbedtls_ecp_group *grp,
+        mbedtls_ecp_point *pt, int (*f_rng)(void *, unsigned char *, size_t),
+        void *p_rng );
 #endif
 
 #if defined(MBEDTLS_ECP_ADD_MIXED_ALT)
@@ -164,9 +166,9 @@ int mbedtls_internal_ecp_randomize_jac(const mbedtls_ecp_group *grp,
  *
  * \return          0 if successful.
  */
-int mbedtls_internal_ecp_add_mixed(const mbedtls_ecp_group *grp,
-                                   mbedtls_ecp_point *R, const mbedtls_ecp_point *P,
-                                   const mbedtls_ecp_point *Q);
+int mbedtls_internal_ecp_add_mixed( const mbedtls_ecp_group *grp,
+        mbedtls_ecp_point *R, const mbedtls_ecp_point *P,
+        const mbedtls_ecp_point *Q );
 #endif
 
 /**
@@ -189,8 +191,8 @@ int mbedtls_internal_ecp_add_mixed(const mbedtls_ecp_group *grp,
  * \return          0 if successful.
  */
 #if defined(MBEDTLS_ECP_DOUBLE_JAC_ALT)
-int mbedtls_internal_ecp_double_jac(const mbedtls_ecp_group *grp,
-                                    mbedtls_ecp_point *R, const mbedtls_ecp_point *P);
+int mbedtls_internal_ecp_double_jac( const mbedtls_ecp_group *grp,
+        mbedtls_ecp_point *R, const mbedtls_ecp_point *P );
 #endif
 
 /**
@@ -219,8 +221,8 @@ int mbedtls_internal_ecp_double_jac(const mbedtls_ecp_group *grp,
  *                      an error if one of the points is zero.
  */
 #if defined(MBEDTLS_ECP_NORMALIZE_JAC_MANY_ALT)
-int mbedtls_internal_ecp_normalize_jac_many(const mbedtls_ecp_group *grp,
-                                            mbedtls_ecp_point *T[], size_t t_len);
+int mbedtls_internal_ecp_normalize_jac_many( const mbedtls_ecp_group *grp,
+        mbedtls_ecp_point *T[], size_t t_len );
 #endif
 
 /**
@@ -237,18 +239,18 @@ int mbedtls_internal_ecp_normalize_jac_many(const mbedtls_ecp_group *grp,
  * \return          0 if successful.
  */
 #if defined(MBEDTLS_ECP_NORMALIZE_JAC_ALT)
-int mbedtls_internal_ecp_normalize_jac(const mbedtls_ecp_group *grp,
-                                       mbedtls_ecp_point *pt);
+int mbedtls_internal_ecp_normalize_jac( const mbedtls_ecp_group *grp,
+        mbedtls_ecp_point *pt );
 #endif
 
-#endif /* ECP_SHORTWEIERSTRASS */
+#endif /* MBEDTLS_ECP_SHORT_WEIERSTRASS_ENABLED */
 
-#if defined(ECP_MONTGOMERY)
+#if defined(MBEDTLS_ECP_MONTGOMERY_ENABLED)
 
 #if defined(MBEDTLS_ECP_DOUBLE_ADD_MXZ_ALT)
-int mbedtls_internal_ecp_double_add_mxz(const mbedtls_ecp_group *grp,
-                                        mbedtls_ecp_point *R, mbedtls_ecp_point *S, const mbedtls_ecp_point *P,
-                                        const mbedtls_ecp_point *Q, const mbedtls_mpi *d);
+int mbedtls_internal_ecp_double_add_mxz( const mbedtls_ecp_group *grp,
+        mbedtls_ecp_point *R, mbedtls_ecp_point *S, const mbedtls_ecp_point *P,
+        const mbedtls_ecp_point *Q, const mbedtls_mpi *d );
 #endif
 
 /**
@@ -267,9 +269,9 @@ int mbedtls_internal_ecp_double_add_mxz(const mbedtls_ecp_group *grp,
  * \return          0 if successful
  */
 #if defined(MBEDTLS_ECP_RANDOMIZE_MXZ_ALT)
-int mbedtls_internal_ecp_randomize_mxz(const mbedtls_ecp_group *grp,
-                                       mbedtls_ecp_point *P, int (*f_rng)(void *, unsigned char *, size_t),
-                                       void *p_rng);
+int mbedtls_internal_ecp_randomize_mxz( const mbedtls_ecp_group *grp,
+        mbedtls_ecp_point *P, int (*f_rng)(void *, unsigned char *, size_t),
+        void *p_rng );
 #endif
 
 /**
@@ -283,11 +285,11 @@ int mbedtls_internal_ecp_randomize_mxz(const mbedtls_ecp_group *grp,
  * \return          0 if successful
  */
 #if defined(MBEDTLS_ECP_NORMALIZE_MXZ_ALT)
-int mbedtls_internal_ecp_normalize_mxz(const mbedtls_ecp_group *grp,
-                                       mbedtls_ecp_point *P);
+int mbedtls_internal_ecp_normalize_mxz( const mbedtls_ecp_group *grp,
+        mbedtls_ecp_point *P );
 #endif
 
-#endif /* ECP_MONTGOMERY */
+#endif /* MBEDTLS_ECP_MONTGOMERY_ENABLED */
 
 #endif /* MBEDTLS_ECP_INTERNAL_ALT */
 
