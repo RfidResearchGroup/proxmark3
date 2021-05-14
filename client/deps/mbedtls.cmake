@@ -8,7 +8,6 @@ add_library(pm3rrg_rdv4_mbedtls STATIC
         ../../common/mbedtls/entropy_poll.c
         ../../common/mbedtls/entropy.c
         ../../common/mbedtls/error.c
-        ../../common/mbedtls/timing.c
         ../../common/mbedtls/ecp.c
         ../../common/mbedtls/ecp_curves.c
         ../../common/mbedtls/certs.c
