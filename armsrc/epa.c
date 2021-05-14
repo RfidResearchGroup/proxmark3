@@ -472,6 +472,7 @@ int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password)
 // Perform the PACE protocol by replaying given APDUs
 //-----------------------------------------------------------------------------
 void EPA_PACE_Replay(PacketCommandNG *c) {
+
     uint32_t timings[ARRAYLEN(apdu_lengths_replay)] = {0};
 
     // if an APDU has been passed, save it

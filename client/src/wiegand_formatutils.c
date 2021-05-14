@@ -176,19 +176,19 @@ bool add_HID_header(wiegand_message_t *data) {
         return false;
 
     if (data->Length >= 64) {
-        data->Top |= 1 << (data->Length - 64); // leading 1: start bit
         data->Top |= 0x09e00000; // Extended-length header
+        data->Top |= 1U << (data->Length - 64); // leading 1: start bit
     } else if (data->Length > 37) {
-        data->Mid |= 1 << (data->Length - 32); // leading 1: start bit
         data->Top |= 0x09e00000; // Extended-length header
+        data->Mid |= 1U << (data->Length - 32); // leading 1: start bit
     } else if (data->Length == 37) {
         // No header bits added to 37-bit cards
     } else if (data->Length >= 32) {
         data->Mid |= 0x20; // Bit 37; standard header
-        data->Mid |= 1 << (data->Length - 32); // leading 1: start bit
+        data->Mid |= 1U << (data->Length - 32); // leading 1: start bit
     } else {
         data->Mid |= 0x20; // Bit 37; standard header
-        data->Bot |= 1 << data->Length; // leading 1: start bit
+        data->Bot |= 1U << data->Length; // leading 1: start bit
     }
     return true;
 }

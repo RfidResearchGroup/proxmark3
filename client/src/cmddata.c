@@ -12,9 +12,9 @@
 #include "cmddata.h"
 #include <stdio.h>
 #include <string.h>
-#include <limits.h>   // for CmdNorm INT_MIN && INT_MAX
-#include <math.h>     // pow
-#include <ctype.h>    // tolower
+#include <limits.h>              // for CmdNorm INT_MIN && INT_MAX
+#include <math.h>                // pow
+#include <ctype.h>               // tolower
 #include "commonutil.h"          // ARRAYLEN
 #include "cmdparser.h"           // for command_t
 #include "ui.h"                  // for show graph controls
@@ -28,7 +28,7 @@
 #include "mifare/ndef.h"
 #include "cliparser.h"
 #include "cmdlft55xx.h"          // print...
-#include "crypto/asn1utils.h"     // ASN1 decode / print
+#include "crypto/asn1utils.h"    // ASN1 decode / print
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t DemodBufferLen = 0;
