@@ -78,9 +78,9 @@ extern "C" {
  * \param file  The file where the assertion failed.
  * \param line  The line in the file where the assertion failed.
  */
-void mbedtls_param_failed( const char *failure_condition,
-                           const char *file,
-                           int line );
+void mbedtls_param_failed(const char *failure_condition,
+                          const char *file,
+                          int line);
 #endif /* MBEDTLS_PARAM_FAILED */
 
 /* Internal macro meant to be called only from within the library. */
@@ -119,7 +119,7 @@ void mbedtls_param_failed( const char *failure_condition,
  * it, too. We might want to move all these definitions here at
  * some point for uniformity. */
 #define MBEDTLS_DEPRECATED __attribute__((deprecated))
-MBEDTLS_DEPRECATED typedef char const * mbedtls_deprecated_string_constant_t;
+MBEDTLS_DEPRECATED typedef char const *mbedtls_deprecated_string_constant_t;
 #define MBEDTLS_DEPRECATED_STRING_CONSTANT( VAL )       \
     ( (mbedtls_deprecated_string_constant_t) ( VAL ) )
 MBEDTLS_DEPRECATED typedef int mbedtls_deprecated_numeric_constant_t;
@@ -154,7 +154,7 @@ MBEDTLS_DEPRECATED typedef int mbedtls_deprecated_numeric_constant_t;
  * \param len   Length of the buffer in bytes
  *
  */
-void mbedtls_platform_zeroize( void *buf, size_t len );
+void mbedtls_platform_zeroize(void *buf, size_t len);
 
 #if defined(MBEDTLS_HAVE_TIME_DATE)
 /**
@@ -183,8 +183,8 @@ void mbedtls_platform_zeroize( void *buf, size_t len );
  * \return      Pointer to an object of type struct tm on success, otherwise
  *              NULL
  */
-struct tm *mbedtls_platform_gmtime_r( const mbedtls_time_t *tt,
-                                      struct tm *tm_buf );
+struct tm *mbedtls_platform_gmtime_r(const mbedtls_time_t *tt,
+                                     struct tm *tm_buf);
 #endif /* MBEDTLS_HAVE_TIME_DATE */
 
 #ifdef __cplusplus

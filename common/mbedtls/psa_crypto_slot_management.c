@@ -43,8 +43,7 @@
 
 #define ARRAY_LENGTH( array ) ( sizeof( array ) / sizeof( *( array ) ) )
 
-typedef struct
-{
+typedef struct {
     psa_key_slot_t key_slots[MBEDTLS_PSA_KEY_SLOT_COUNT];
     unsigned key_slots_initialized : 1;
 } psa_global_data_t;
@@ -52,20 +51,19 @@ typedef struct
 static psa_global_data_t global_data;
 
 psa_status_t psa_validate_key_id(
-    mbedtls_svc_key_id_t key, int vendor_ok )
-{
-    psa_key_id_t key_id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID( key );
+    mbedtls_svc_key_id_t key, int vendor_ok) {
+    psa_key_id_t key_id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID(key);
 
-    if( ( PSA_KEY_ID_USER_MIN <= key_id ) &&
-        ( key_id <= PSA_KEY_ID_USER_MAX ) )
-        return( PSA_SUCCESS );
+    if ((PSA_KEY_ID_USER_MIN <= key_id) &&
+            (key_id <= PSA_KEY_ID_USER_MAX))
+        return (PSA_SUCCESS);
 
-    if( vendor_ok &&
-        ( PSA_KEY_ID_VENDOR_MIN <= key_id ) &&
-        ( key_id <= PSA_KEY_ID_VENDOR_MAX ) )
-        return( PSA_SUCCESS );
+    if (vendor_ok &&
+            (PSA_KEY_ID_VENDOR_MIN <= key_id) &&
+            (key_id <= PSA_KEY_ID_VENDOR_MAX))
+        return (PSA_SUCCESS);
 
-    return( PSA_ERROR_INVALID_HANDLE );
+    return (PSA_ERROR_INVALID_HANDLE);
 }
 
 /** Get the description in memory of a key given its identifier and lock it.
@@ -100,15 +98,13 @@ psa_status_t psa_validate_key_id(
  *         There is no key with key identifier \p key in the key slots.
  */
 static psa_status_t psa_get_and_lock_key_slot_in_memory(
-    mbedtls_svc_key_id_t key, psa_key_slot_t **p_slot )
-{
+    mbedtls_svc_key_id_t key, psa_key_slot_t **p_slot) {
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
-    psa_key_id_t key_id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID( key );
+    psa_key_id_t key_id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID(key);
     size_t slot_idx;
     psa_key_slot_t *slot = NULL;
 
-    if( psa_key_id_is_volatile( key_id ) )
-    {
+    if (psa_key_id_is_volatile(key_id)) {
         slot = &global_data.key_slots[ key_id - PSA_KEY_ID_VOLATILE_MIN ];
 
         /*
@@ -119,83 +115,72 @@ static psa_status_t psa_get_and_lock_key_slot_in_memory(
          * is equal to zero. This is an invalid value for a PSA key identifier
          * and thus cannot be equal to the valid PSA key identifier key_id.
          */
-        status = mbedtls_svc_key_id_equal( key, slot->attr.id ) ?
+        status = mbedtls_svc_key_id_equal(key, slot->attr.id) ?
                  PSA_SUCCESS : PSA_ERROR_DOES_NOT_EXIST;
-    }
-    else
-    {
-        status = psa_validate_key_id( key, 1 );
-        if( status != PSA_SUCCESS )
-            return( status );
+    } else {
+        status = psa_validate_key_id(key, 1);
+        if (status != PSA_SUCCESS)
+            return (status);
 
-        for( slot_idx = 0; slot_idx < MBEDTLS_PSA_KEY_SLOT_COUNT; slot_idx++ )
-        {
+        for (slot_idx = 0; slot_idx < MBEDTLS_PSA_KEY_SLOT_COUNT; slot_idx++) {
             slot = &global_data.key_slots[ slot_idx ];
-            if( mbedtls_svc_key_id_equal( key, slot->attr.id ) )
+            if (mbedtls_svc_key_id_equal(key, slot->attr.id))
                 break;
         }
-        status = ( slot_idx < MBEDTLS_PSA_KEY_SLOT_COUNT ) ?
+        status = (slot_idx < MBEDTLS_PSA_KEY_SLOT_COUNT) ?
                  PSA_SUCCESS : PSA_ERROR_DOES_NOT_EXIST;
     }
 
-    if( status == PSA_SUCCESS )
-    {
-        status = psa_lock_key_slot( slot );
-        if( status == PSA_SUCCESS )
+    if (status == PSA_SUCCESS) {
+        status = psa_lock_key_slot(slot);
+        if (status == PSA_SUCCESS)
             *p_slot = slot;
     }
 
-    return( status );
+    return (status);
 }
 
-psa_status_t psa_initialize_key_slots( void )
-{
+psa_status_t psa_initialize_key_slots(void) {
     /* Nothing to do: program startup and psa_wipe_all_key_slots() both
      * guarantee that the key slots are initialized to all-zero, which
      * means that all the key slots are in a valid, empty state. */
     global_data.key_slots_initialized = 1;
-    return( PSA_SUCCESS );
+    return (PSA_SUCCESS);
 }
 
-void psa_wipe_all_key_slots( void )
-{
+void psa_wipe_all_key_slots(void) {
     size_t slot_idx;
 
-    for( slot_idx = 0; slot_idx < MBEDTLS_PSA_KEY_SLOT_COUNT; slot_idx++ )
-    {
+    for (slot_idx = 0; slot_idx < MBEDTLS_PSA_KEY_SLOT_COUNT; slot_idx++) {
         psa_key_slot_t *slot = &global_data.key_slots[ slot_idx ];
         slot->lock_count = 1;
-        (void) psa_wipe_key_slot( slot );
+        (void) psa_wipe_key_slot(slot);
     }
     global_data.key_slots_initialized = 0;
 }
 
-psa_status_t psa_get_empty_key_slot( psa_key_id_t *volatile_key_id,
-                                     psa_key_slot_t **p_slot )
-{
+psa_status_t psa_get_empty_key_slot(psa_key_id_t *volatile_key_id,
+                                    psa_key_slot_t **p_slot) {
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
     size_t slot_idx;
     psa_key_slot_t *selected_slot, *unlocked_persistent_key_slot;
 
-    if( ! global_data.key_slots_initialized )
-    {
+    if (! global_data.key_slots_initialized) {
         status = PSA_ERROR_BAD_STATE;
         goto error;
     }
 
     selected_slot = unlocked_persistent_key_slot = NULL;
-    for( slot_idx = 0; slot_idx < MBEDTLS_PSA_KEY_SLOT_COUNT; slot_idx++ )
-    {
+    for (slot_idx = 0; slot_idx < MBEDTLS_PSA_KEY_SLOT_COUNT; slot_idx++) {
         psa_key_slot_t *slot = &global_data.key_slots[ slot_idx ];
-        if( ! psa_is_key_slot_occupied( slot ) )
-        {
+        if (! psa_is_key_slot_occupied(slot)) {
             selected_slot = slot;
             break;
         }
 
-        if( ( unlocked_persistent_key_slot == NULL ) &&
-            ( ! PSA_KEY_LIFETIME_IS_VOLATILE( slot->attr.lifetime ) ) &&
-            ( ! psa_is_key_slot_locked( slot ) ) )
+        if ((unlocked_persistent_key_slot == NULL) &&
+                (! PSA_KEY_LIFETIME_IS_VOLATILE(slot->attr.lifetime)) &&
+                (! psa_is_key_slot_locked(slot)))
             unlocked_persistent_key_slot = slot;
     }
 
@@ -206,25 +191,23 @@ psa_status_t psa_get_empty_key_slot( psa_key_id_t *volatile_key_id,
      * persistent key we are evicting now, we will reload its description from
      * storage.
      */
-    if( ( selected_slot == NULL ) &&
-        ( unlocked_persistent_key_slot != NULL ) )
-    {
+    if ((selected_slot == NULL) &&
+            (unlocked_persistent_key_slot != NULL)) {
         selected_slot = unlocked_persistent_key_slot;
         selected_slot->lock_count = 1;
-        psa_wipe_key_slot( selected_slot );
+        psa_wipe_key_slot(selected_slot);
     }
 
-    if( selected_slot != NULL )
-    {
-       status = psa_lock_key_slot( selected_slot );
-       if( status != PSA_SUCCESS )
-           goto error;
+    if (selected_slot != NULL) {
+        status = psa_lock_key_slot(selected_slot);
+        if (status != PSA_SUCCESS)
+            goto error;
 
         *volatile_key_id = PSA_KEY_ID_VOLATILE_MIN +
-            ( (psa_key_id_t)( selected_slot - global_data.key_slots ) );
+                           ((psa_key_id_t)(selected_slot - global_data.key_slots));
         *p_slot = selected_slot;
 
-        return( PSA_SUCCESS );
+        return (PSA_SUCCESS);
     }
     status = PSA_ERROR_INSUFFICIENT_MEMORY;
 
@@ -232,19 +215,18 @@ error:
     *p_slot = NULL;
     *volatile_key_id = 0;
 
-    return( status );
+    return (status);
 }
 
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
-static psa_status_t psa_load_persistent_key_into_slot( psa_key_slot_t *slot )
-{
+static psa_status_t psa_load_persistent_key_into_slot(psa_key_slot_t *slot) {
     psa_status_t status = PSA_SUCCESS;
     uint8_t *key_data = NULL;
     size_t key_data_length = 0;
 
-    status = psa_load_persistent_key( &slot->attr,
-                                      &key_data, &key_data_length );
-    if( status != PSA_SUCCESS )
+    status = psa_load_persistent_key(&slot->attr,
+                                     &key_data, &key_data_length);
+    if (status != PSA_SUCCESS)
         goto exit;
 
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
@@ -252,77 +234,72 @@ static psa_status_t psa_load_persistent_key_into_slot( psa_key_slot_t *slot )
      * dynamically registered SE interface. */
     const psa_drv_se_t *drv;
     psa_drv_se_context_t *drv_context;
-    if( psa_get_se_driver( slot->attr.lifetime, &drv, &drv_context ) )
-    {
+    if (psa_get_se_driver(slot->attr.lifetime, &drv, &drv_context)) {
         psa_se_key_data_storage_t *data;
 
-        if( key_data_length != sizeof( *data ) )
-        {
+        if (key_data_length != sizeof(*data)) {
             status = PSA_ERROR_DATA_INVALID;
             goto exit;
         }
         data = (psa_se_key_data_storage_t *) key_data;
         status = psa_copy_key_material_into_slot(
-                     slot, data->slot_number, sizeof( data->slot_number ) );
+                     slot, data->slot_number, sizeof(data->slot_number));
         goto exit;
     }
 #endif /* MBEDTLS_PSA_CRYPTO_SE_C */
 
-    status = psa_copy_key_material_into_slot( slot, key_data, key_data_length );
+    status = psa_copy_key_material_into_slot(slot, key_data, key_data_length);
 
 exit:
-    psa_free_persistent_key_data( key_data, key_data_length );
-    return( status );
+    psa_free_persistent_key_data(key_data, key_data_length);
+    return (status);
 }
 #endif /* MBEDTLS_PSA_CRYPTO_STORAGE_C */
 
-psa_status_t psa_get_and_lock_key_slot( mbedtls_svc_key_id_t key,
-                                        psa_key_slot_t **p_slot )
-{
+psa_status_t psa_get_and_lock_key_slot(mbedtls_svc_key_id_t key,
+                                       psa_key_slot_t **p_slot) {
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
 
     *p_slot = NULL;
-    if( ! global_data.key_slots_initialized )
-        return( PSA_ERROR_BAD_STATE );
+    if (! global_data.key_slots_initialized)
+        return (PSA_ERROR_BAD_STATE);
 
     /*
      * On success, the pointer to the slot is passed directly to the caller
      * thus no need to unlock the key slot here.
      */
-    status = psa_get_and_lock_key_slot_in_memory( key, p_slot );
-    if( status != PSA_ERROR_DOES_NOT_EXIST )
-        return( status );
+    status = psa_get_and_lock_key_slot_in_memory(key, p_slot);
+    if (status != PSA_ERROR_DOES_NOT_EXIST)
+        return (status);
 
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
     psa_key_id_t volatile_key_id;
 
-    status = psa_get_empty_key_slot( &volatile_key_id, p_slot );
-    if( status != PSA_SUCCESS )
-        return( status );
+    status = psa_get_empty_key_slot(&volatile_key_id, p_slot);
+    if (status != PSA_SUCCESS)
+        return (status);
 
     (*p_slot)->attr.lifetime = PSA_KEY_LIFETIME_PERSISTENT;
     (*p_slot)->attr.id = key;
 
-    status = psa_load_persistent_key_into_slot( *p_slot );
-    if( status != PSA_SUCCESS )
-        psa_wipe_key_slot( *p_slot );
+    status = psa_load_persistent_key_into_slot(*p_slot);
+    if (status != PSA_SUCCESS)
+        psa_wipe_key_slot(*p_slot);
 
-    return( status );
+    return (status);
 #else
-    return( PSA_ERROR_DOES_NOT_EXIST );
+    return (PSA_ERROR_DOES_NOT_EXIST);
 #endif /* defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) */
 
 }
 
-psa_status_t psa_unlock_key_slot( psa_key_slot_t *slot )
-{
-    if( slot == NULL )
-        return( PSA_SUCCESS );
+psa_status_t psa_unlock_key_slot(psa_key_slot_t *slot) {
+    if (slot == NULL)
+        return (PSA_SUCCESS);
 
-    if( slot->lock_count > 0 )
-    {
+    if (slot->lock_count > 0) {
         slot->lock_count--;
-        return( PSA_SUCCESS );
+        return (PSA_SUCCESS);
     }
 
     /*
@@ -333,25 +310,22 @@ psa_status_t psa_unlock_key_slot( psa_key_slot_t *slot )
      * test suite execution).
      */
 #ifdef MBEDTLS_CHECK_PARAMS
-    MBEDTLS_PARAM_FAILED( slot->lock_count > 0 );
+    MBEDTLS_PARAM_FAILED(slot->lock_count > 0);
 #endif
 
-    return( PSA_ERROR_CORRUPTION_DETECTED );
+    return (PSA_ERROR_CORRUPTION_DETECTED);
 }
 
-psa_status_t psa_validate_key_location( psa_key_lifetime_t lifetime,
-                                        psa_se_drv_table_entry_t **p_drv )
-{
-    if ( psa_key_lifetime_is_external( lifetime ) )
-    {
+psa_status_t psa_validate_key_location(psa_key_lifetime_t lifetime,
+                                       psa_se_drv_table_entry_t **p_drv) {
+    if (psa_key_lifetime_is_external(lifetime)) {
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
         /* Check whether a driver is registered against this lifetime */
-        psa_se_drv_table_entry_t *driver = psa_get_se_driver_entry( lifetime );
-        if( driver != NULL )
-        {
+        psa_se_drv_table_entry_t *driver = psa_get_se_driver_entry(lifetime);
+        if (driver != NULL) {
             if (p_drv != NULL)
                 *p_drv = driver;
-            return( PSA_SUCCESS );
+            return (PSA_SUCCESS);
         }
 #else /* MBEDTLS_PSA_CRYPTO_SE_C */
         (void) p_drv;
@@ -359,126 +333,110 @@ psa_status_t psa_validate_key_location( psa_key_lifetime_t lifetime,
 
 #if defined(MBEDTLS_PSA_CRYPTO_DRIVERS)
         /* Key location for external keys gets checked by the wrapper */
-        return( PSA_SUCCESS );
+        return (PSA_SUCCESS);
 #else /* MBEDTLS_PSA_CRYPTO_DRIVERS */
         /* No support for external lifetimes at all, or dynamic interface
          * did not find driver for requested lifetime. */
-        return( PSA_ERROR_INVALID_ARGUMENT );
+        return (PSA_ERROR_INVALID_ARGUMENT);
 #endif /* MBEDTLS_PSA_CRYPTO_DRIVERS */
-    }
-    else
+    } else
         /* Local/internal keys are always valid */
-        return( PSA_SUCCESS );
+        return (PSA_SUCCESS);
 }
 
-psa_status_t psa_validate_key_persistence( psa_key_lifetime_t lifetime )
-{
-    if ( PSA_KEY_LIFETIME_IS_VOLATILE( lifetime ) )
-    {
+psa_status_t psa_validate_key_persistence(psa_key_lifetime_t lifetime) {
+    if (PSA_KEY_LIFETIME_IS_VOLATILE(lifetime)) {
         /* Volatile keys are always supported */
-        return( PSA_SUCCESS );
-    }
-    else
-    {
+        return (PSA_SUCCESS);
+    } else {
         /* Persistent keys require storage support */
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
-        return( PSA_SUCCESS );
+        return (PSA_SUCCESS);
 #else /* MBEDTLS_PSA_CRYPTO_STORAGE_C */
-        return( PSA_ERROR_NOT_SUPPORTED );
+        return (PSA_ERROR_NOT_SUPPORTED);
 #endif /* !MBEDTLS_PSA_CRYPTO_STORAGE_C */
     }
 }
 
-psa_status_t psa_open_key( mbedtls_svc_key_id_t key, psa_key_handle_t *handle )
-{
+psa_status_t psa_open_key(mbedtls_svc_key_id_t key, psa_key_handle_t *handle) {
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
     psa_status_t status;
     psa_key_slot_t *slot;
 
-    status = psa_get_and_lock_key_slot( key, &slot );
-    if( status != PSA_SUCCESS )
-    {
+    status = psa_get_and_lock_key_slot(key, &slot);
+    if (status != PSA_SUCCESS) {
         *handle = PSA_KEY_HANDLE_INIT;
-        return( status );
+        return (status);
     }
 
     *handle = key;
 
-    return( psa_unlock_key_slot( slot ) );
+    return (psa_unlock_key_slot(slot));
 
 #else /* defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) */
     (void) key;
     *handle = PSA_KEY_HANDLE_INIT;
-    return( PSA_ERROR_NOT_SUPPORTED );
+    return (PSA_ERROR_NOT_SUPPORTED);
 #endif /* !defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) */
 }
 
-psa_status_t psa_close_key( psa_key_handle_t handle )
-{
+psa_status_t psa_close_key(psa_key_handle_t handle) {
     psa_status_t status;
     psa_key_slot_t *slot;
 
-    if( psa_key_handle_is_null( handle ) )
-        return( PSA_SUCCESS );
+    if (psa_key_handle_is_null(handle))
+        return (PSA_SUCCESS);
 
-    status = psa_get_and_lock_key_slot_in_memory( handle, &slot );
-    if( status != PSA_SUCCESS )
-        return( status );
+    status = psa_get_and_lock_key_slot_in_memory(handle, &slot);
+    if (status != PSA_SUCCESS)
+        return (status);
 
-    if( slot->lock_count <= 1 )
-        return( psa_wipe_key_slot( slot ) );
+    if (slot->lock_count <= 1)
+        return (psa_wipe_key_slot(slot));
     else
-        return( psa_unlock_key_slot( slot ) );
+        return (psa_unlock_key_slot(slot));
 }
 
-psa_status_t psa_purge_key( mbedtls_svc_key_id_t key )
-{
+psa_status_t psa_purge_key(mbedtls_svc_key_id_t key) {
     psa_status_t status;
     psa_key_slot_t *slot;
 
-    status = psa_get_and_lock_key_slot_in_memory( key, &slot );
-    if( status != PSA_SUCCESS )
-        return( status );
+    status = psa_get_and_lock_key_slot_in_memory(key, &slot);
+    if (status != PSA_SUCCESS)
+        return (status);
 
-    if( ( ! PSA_KEY_LIFETIME_IS_VOLATILE( slot->attr.lifetime ) ) &&
-        ( slot->lock_count <= 1 ) )
-        return( psa_wipe_key_slot( slot ) );
+    if ((! PSA_KEY_LIFETIME_IS_VOLATILE(slot->attr.lifetime)) &&
+            (slot->lock_count <= 1))
+        return (psa_wipe_key_slot(slot));
     else
-        return( psa_unlock_key_slot( slot ) );
+        return (psa_unlock_key_slot(slot));
 }
 
-void mbedtls_psa_get_stats( mbedtls_psa_stats_t *stats )
-{
+void mbedtls_psa_get_stats(mbedtls_psa_stats_t *stats) {
     size_t slot_idx;
 
-    memset( stats, 0, sizeof( *stats ) );
+    memset(stats, 0, sizeof(*stats));
 
-    for( slot_idx = 0; slot_idx < MBEDTLS_PSA_KEY_SLOT_COUNT; slot_idx++ )
-    {
+    for (slot_idx = 0; slot_idx < MBEDTLS_PSA_KEY_SLOT_COUNT; slot_idx++) {
         const psa_key_slot_t *slot = &global_data.key_slots[ slot_idx ];
-        if( psa_is_key_slot_locked( slot ) )
-        {
+        if (psa_is_key_slot_locked(slot)) {
             ++stats->locked_slots;
         }
-        if( ! psa_is_key_slot_occupied( slot ) )
-        {
+        if (! psa_is_key_slot_occupied(slot)) {
             ++stats->empty_slots;
             continue;
         }
-        if( slot->attr.lifetime == PSA_KEY_LIFETIME_VOLATILE )
+        if (slot->attr.lifetime == PSA_KEY_LIFETIME_VOLATILE)
             ++stats->volatile_slots;
-        else if( slot->attr.lifetime == PSA_KEY_LIFETIME_PERSISTENT )
-        {
-            psa_key_id_t id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID( slot->attr.id );
+        else if (slot->attr.lifetime == PSA_KEY_LIFETIME_PERSISTENT) {
+            psa_key_id_t id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID(slot->attr.id);
             ++stats->persistent_slots;
-            if( id > stats->max_open_internal_key_id )
+            if (id > stats->max_open_internal_key_id)
                 stats->max_open_internal_key_id = id;
-        }
-        else
-        {
-            psa_key_id_t id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID( slot->attr.id );
+        } else {
+            psa_key_id_t id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID(slot->attr.id);
             ++stats->external_slots;
-            if( id > stats->max_open_external_key_id )
+            if (id > stats->max_open_external_key_id)
                 stats->max_open_external_key_id = id;
         }
     }

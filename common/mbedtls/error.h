@@ -123,7 +123,7 @@ extern "C" {
  * \param buffer    buffer to place representation in
  * \param buflen    length of the buffer
  */
-void mbedtls_strerror( int errnum, char *buffer, size_t buflen );
+void mbedtls_strerror(int errnum, char *buffer, size_t buflen);
 
 /**
  * \brief Translate the high-level part of an Mbed TLS error code into a string
@@ -138,7 +138,7 @@ void mbedtls_strerror( int errnum, char *buffer, size_t buflen );
  * \return The string representation of the error code, or \c NULL if the error
  *         code is unknown.
  */
-const char * mbedtls_high_level_strerr( int error_code );
+const char *mbedtls_high_level_strerr(int error_code);
 
 /**
  * \brief Translate the low-level part of an Mbed TLS error code into a string
@@ -153,7 +153,7 @@ const char * mbedtls_high_level_strerr( int error_code );
  * \return The string representation of the error code, or \c NULL if the error
  *         code is unknown.
  */
-const char * mbedtls_low_level_strerr( int error_code );
+const char *mbedtls_low_level_strerr(int error_code);
 
 #ifdef __cplusplus
 }

@@ -35,8 +35,7 @@
 /** The data structure representing a key slot, containing key material
  * and metadata for one key.
  */
-typedef struct
-{
+typedef struct {
     psa_core_key_attributes_t attr;
 
     /*
@@ -66,8 +65,7 @@ typedef struct
 
     /* Dynamically allocated key data buffer.
      * Format as specified in psa_export_key(). */
-    struct key_data
-    {
+    struct key_data {
         uint8_t *data;
         size_t bytes;
     } key;
@@ -87,9 +85,8 @@ typedef struct
  *
  * \return 1 if the slot is occupied, 0 otherwise.
  */
-static inline int psa_is_key_slot_occupied( const psa_key_slot_t *slot )
-{
-    return( slot->attr.type != 0 );
+static inline int psa_is_key_slot_occupied(const psa_key_slot_t *slot) {
+    return (slot->attr.type != 0);
 }
 
 /** Test whether a key slot is locked.
@@ -100,9 +97,8 @@ static inline int psa_is_key_slot_occupied( const psa_key_slot_t *slot )
  *
  * \return 1 if the slot is locked, 0 otherwise.
  */
-static inline int psa_is_key_slot_locked( const psa_key_slot_t *slot )
-{
-    return( slot->lock_count > 0 );
+static inline int psa_is_key_slot_locked(const psa_key_slot_t *slot) {
+    return (slot->lock_count > 0);
 }
 
 /** Retrieve flags from psa_key_slot_t::attr::core::flags.
@@ -113,10 +109,9 @@ static inline int psa_is_key_slot_locked( const psa_key_slot_t *slot )
  * \return The key attribute flags in the given slot,
  *         bitwise-anded with \p mask.
  */
-static inline uint16_t psa_key_slot_get_flags( const psa_key_slot_t *slot,
-                                               uint16_t mask )
-{
-    return( slot->attr.flags & mask );
+static inline uint16_t psa_key_slot_get_flags(const psa_key_slot_t *slot,
+                                              uint16_t mask) {
+    return (slot->attr.flags & mask);
 }
 
 /** Set flags in psa_key_slot_t::attr::core::flags.
@@ -125,12 +120,11 @@ static inline uint16_t psa_key_slot_get_flags( const psa_key_slot_t *slot,
  * \param mask          The mask of bits to modify.
  * \param value         The new value of the selected bits.
  */
-static inline void psa_key_slot_set_flags( psa_key_slot_t *slot,
-                                           uint16_t mask,
-                                           uint16_t value )
-{
-    slot->attr.flags = ( ( ~mask & slot->attr.flags ) |
-                              ( mask & value ) );
+static inline void psa_key_slot_set_flags(psa_key_slot_t *slot,
+                                          uint16_t mask,
+                                          uint16_t value) {
+    slot->attr.flags = ((~mask & slot->attr.flags) |
+                        (mask & value));
 }
 
 /** Turn on flags in psa_key_slot_t::attr::core::flags.
@@ -138,9 +132,8 @@ static inline void psa_key_slot_set_flags( psa_key_slot_t *slot,
  * \param[in,out] slot  The key slot to modify.
  * \param mask          The mask of bits to set.
  */
-static inline void psa_key_slot_set_bits_in_flags( psa_key_slot_t *slot,
-                                                   uint16_t mask )
-{
+static inline void psa_key_slot_set_bits_in_flags(psa_key_slot_t *slot,
+                                                  uint16_t mask) {
     slot->attr.flags |= mask;
 }
 
@@ -149,9 +142,8 @@ static inline void psa_key_slot_set_bits_in_flags( psa_key_slot_t *slot,
  * \param[in,out] slot  The key slot to modify.
  * \param mask          The mask of bits to clear.
  */
-static inline void psa_key_slot_clear_bits( psa_key_slot_t *slot,
-                                            uint16_t mask )
-{
+static inline void psa_key_slot_clear_bits(psa_key_slot_t *slot,
+                                           uint16_t mask) {
     slot->attr.flags &= ~mask;
 }
 
@@ -163,9 +155,8 @@ static inline void psa_key_slot_clear_bits( psa_key_slot_t *slot,
  *                   secure element, otherwise the behaviour is undefined.
  */
 static inline psa_key_slot_number_t psa_key_slot_get_slot_number(
-    const psa_key_slot_t *slot )
-{
-    return( *( (psa_key_slot_number_t *)( slot->key.data ) ) );
+    const psa_key_slot_t *slot) {
+    return (*((psa_key_slot_number_t *)(slot->key.data)));
 }
 #endif
 
@@ -180,7 +171,7 @@ static inline psa_key_slot_number_t psa_key_slot_get_slot_number(
  *         already fully wiped.
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  */
-psa_status_t psa_wipe_key_slot( psa_key_slot_t *slot );
+psa_status_t psa_wipe_key_slot(psa_key_slot_t *slot);
 
 /** Copy key data (in export format) into an empty key slot.
  *
@@ -199,9 +190,9 @@ psa_status_t psa_wipe_key_slot( psa_key_slot_t *slot );
  * \retval #PSA_ERROR_ALREADY_EXISTS
  *         There was other key material already present in the slot.
  */
-psa_status_t psa_copy_key_material_into_slot( psa_key_slot_t *slot,
-                                              const uint8_t *data,
-                                              size_t data_length );
+psa_status_t psa_copy_key_material_into_slot(psa_key_slot_t *slot,
+                                             const uint8_t *data,
+                                             size_t data_length);
 
 /** Convert an mbed TLS error code to a PSA error code
  *
@@ -212,7 +203,7 @@ psa_status_t psa_copy_key_material_into_slot( psa_key_slot_t *slot,
  *
  * \return              The corresponding PSA error code
  */
-psa_status_t mbedtls_to_psa_error( int ret );
+psa_status_t mbedtls_to_psa_error(int ret);
 
 /** Get Mbed TLS MD information of a hash algorithm given its PSA identifier
  *
@@ -221,7 +212,7 @@ psa_status_t mbedtls_to_psa_error( int ret );
  * \return  The Mbed TLS MD information of the hash algorithm. \c NULL if the
  *          PSA hash algorithm is not supported.
  */
-const mbedtls_md_info_t *mbedtls_md_info_from_psa( psa_algorithm_t alg );
+const mbedtls_md_info_t *mbedtls_md_info_from_psa(psa_algorithm_t alg);
 
 /** Import a key in binary format.
  *
@@ -253,7 +244,7 @@ psa_status_t psa_import_key_into_slot(
     const psa_key_attributes_t *attributes,
     const uint8_t *data, size_t data_length,
     uint8_t *key_buffer, size_t key_buffer_size,
-    size_t *key_buffer_length, size_t *bits );
+    size_t *key_buffer_length, size_t *bits);
 
 /** Export a key in binary format
  *
@@ -280,7 +271,7 @@ psa_status_t psa_import_key_into_slot(
 psa_status_t psa_export_key_internal(
     const psa_key_attributes_t *attributes,
     const uint8_t *key_buffer, size_t key_buffer_size,
-    uint8_t *data, size_t data_size, size_t *data_length );
+    uint8_t *data, size_t data_size, size_t *data_length);
 
 /** Export a public key or the public part of a key pair in binary format.
  *
@@ -308,7 +299,7 @@ psa_status_t psa_export_key_internal(
 psa_status_t psa_export_public_key_internal(
     const psa_key_attributes_t *attributes,
     const uint8_t *key_buffer, size_t key_buffer_size,
-    uint8_t *data, size_t data_size, size_t *data_length );
+    uint8_t *data, size_t data_size, size_t *data_length);
 
 /**
  * \brief Generate a key.
@@ -330,10 +321,10 @@ psa_status_t psa_export_public_key_internal(
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of \p key_buffer is too small.
  */
-psa_status_t psa_generate_key_internal( const psa_key_attributes_t *attributes,
-                                        uint8_t *key_buffer,
-                                        size_t key_buffer_size,
-                                        size_t *key_buffer_length );
+psa_status_t psa_generate_key_internal(const psa_key_attributes_t *attributes,
+                                       uint8_t *key_buffer,
+                                       size_t key_buffer_size,
+                                       size_t *key_buffer_length);
 
 /** Sign an already-calculated hash with a private key.
  *
@@ -373,7 +364,7 @@ psa_status_t psa_sign_hash_internal(
     const psa_key_attributes_t *attributes,
     const uint8_t *key_buffer, size_t key_buffer_size,
     psa_algorithm_t alg, const uint8_t *hash, size_t hash_length,
-    uint8_t *signature, size_t signature_size, size_t *signature_length );
+    uint8_t *signature, size_t signature_size, size_t *signature_length);
 
 /**
  * \brief Verify the signature a hash or short message using a public key.
@@ -409,6 +400,6 @@ psa_status_t psa_verify_hash_internal(
     const psa_key_attributes_t *attributes,
     const uint8_t *key_buffer, size_t key_buffer_size,
     psa_algorithm_t alg, const uint8_t *hash, size_t hash_length,
-    const uint8_t *signature, size_t signature_length );
+    const uint8_t *signature, size_t signature_length);
 
 #endif /* PSA_CRYPTO_CORE_H */

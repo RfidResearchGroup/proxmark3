@@ -151,8 +151,7 @@
 /*
  * Entropy gathering function
  */
-static void havege_fill( mbedtls_havege_state *hs )
-{
+static void havege_fill(mbedtls_havege_state *hs) {
     size_t n = 0;
     size_t i;
     uint32_t  U1,  U2, *A, *B, *C, *D;
@@ -168,10 +167,9 @@ static void havege_fill( mbedtls_havege_state *hs )
 
     (void)PTX;
 
-    memset( RES, 0, sizeof( RES ) );
+    memset(RES, 0, sizeof(RES));
 
-    while( n < MBEDTLS_HAVEGE_COLLECT_SIZE * 4 )
-    {
+    while (n < MBEDTLS_HAVEGE_COLLECT_SIZE * 4) {
         ONE_ITERATION
         ONE_ITERATION
         ONE_ITERATION
@@ -188,50 +186,46 @@ static void havege_fill( mbedtls_havege_state *hs )
 /*
  * HAVEGE initialization
  */
-void mbedtls_havege_init( mbedtls_havege_state *hs )
-{
-    memset( hs, 0, sizeof( mbedtls_havege_state ) );
+void mbedtls_havege_init(mbedtls_havege_state *hs) {
+    memset(hs, 0, sizeof(mbedtls_havege_state));
 
-    havege_fill( hs );
+    havege_fill(hs);
 }
 
-void mbedtls_havege_free( mbedtls_havege_state *hs )
-{
-    if( hs == NULL )
+void mbedtls_havege_free(mbedtls_havege_state *hs) {
+    if (hs == NULL)
         return;
 
-    mbedtls_platform_zeroize( hs, sizeof( mbedtls_havege_state ) );
+    mbedtls_platform_zeroize(hs, sizeof(mbedtls_havege_state));
 }
 
 /*
  * HAVEGE rand function
  */
-int mbedtls_havege_random( void *p_rng, unsigned char *buf, size_t len )
-{
+int mbedtls_havege_random(void *p_rng, unsigned char *buf, size_t len) {
     uint32_t val;
     size_t use_len;
     mbedtls_havege_state *hs = (mbedtls_havege_state *) p_rng;
     unsigned char *p = buf;
 
-    while( len > 0 )
-    {
+    while (len > 0) {
         use_len = len;
-        if( use_len > sizeof( val ) )
-            use_len = sizeof( val );
+        if (use_len > sizeof(val))
+            use_len = sizeof(val);
 
-        if( hs->offset[1] >= MBEDTLS_HAVEGE_COLLECT_SIZE )
-            havege_fill( hs );
+        if (hs->offset[1] >= MBEDTLS_HAVEGE_COLLECT_SIZE)
+            havege_fill(hs);
 
         val  = hs->pool[hs->offset[0]++];
         val ^= hs->pool[hs->offset[1]++];
 
-        memcpy( p, &val, use_len );
+        memcpy(p, &val, use_len);
 
         len -= use_len;
         p += use_len;
     }
 
-    return( 0 );
+    return (0);
 }
 
 #endif /* MBEDTLS_HAVEGE_C */

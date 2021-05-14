@@ -45,12 +45,10 @@
 #define MBEDTLS_SSL_TLS1_3_LABEL( name, string )       \
     const unsigned char name    [ sizeof(string) - 1 ];
 
-union mbedtls_ssl_tls1_3_labels_union
-{
+union mbedtls_ssl_tls1_3_labels_union {
     MBEDTLS_SSL_TLS1_3_LABEL_LIST
 };
-struct mbedtls_ssl_tls1_3_labels_struct
-{
+struct mbedtls_ssl_tls1_3_labels_struct {
     MBEDTLS_SSL_TLS1_3_LABEL_LIST
 };
 #undef MBEDTLS_SSL_TLS1_3_LABEL
@@ -107,11 +105,11 @@ extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
  */
 
 int mbedtls_ssl_tls1_3_hkdf_expand_label(
-                     mbedtls_md_type_t hash_alg,
-                     const unsigned char *secret, size_t slen,
-                     const unsigned char *label, size_t llen,
-                     const unsigned char *ctx, size_t clen,
-                     unsigned char *buf, size_t blen );
+    mbedtls_md_type_t hash_alg,
+    const unsigned char *secret, size_t slen,
+    const unsigned char *label, size_t llen,
+    const unsigned char *ctx, size_t clen,
+    unsigned char *buf, size_t blen);
 
 /**
  * \brief           This function is part of the TLS 1.3 key schedule.
@@ -143,11 +141,11 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
  */
 
 int mbedtls_ssl_tls1_3_make_traffic_keys(
-                     mbedtls_md_type_t hash_alg,
-                     const unsigned char *client_secret,
-                     const unsigned char *server_secret,
-                     size_t slen, size_t key_len, size_t iv_len,
-                     mbedtls_ssl_key_set *keys );
+    mbedtls_md_type_t hash_alg,
+    const unsigned char *client_secret,
+    const unsigned char *server_secret,
+    size_t slen, size_t key_len, size_t iv_len,
+    mbedtls_ssl_key_set *keys);
 
 
 #define MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED 0
@@ -191,12 +189,12 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
  * \returns        A negative error code on failure.
  */
 int mbedtls_ssl_tls1_3_derive_secret(
-                   mbedtls_md_type_t hash_alg,
-                   const unsigned char *secret, size_t slen,
-                   const unsigned char *label, size_t llen,
-                   const unsigned char *ctx, size_t clen,
-                   int ctx_hashed,
-                   unsigned char *dstbuf, size_t buflen );
+    mbedtls_md_type_t hash_alg,
+    const unsigned char *secret, size_t slen,
+    const unsigned char *label, size_t llen,
+    const unsigned char *ctx, size_t clen,
+    int ctx_hashed,
+    unsigned char *dstbuf, size_t buflen);
 
 /**
  * \brief Compute the next secret in the TLS 1.3 key schedule
@@ -266,9 +264,9 @@ int mbedtls_ssl_tls1_3_derive_secret(
  */
 
 int mbedtls_ssl_tls1_3_evolve_secret(
-                   mbedtls_md_type_t hash_alg,
-                   const unsigned char *secret_old,
-                   const unsigned char *input, size_t input_len,
-                   unsigned char *secret_new );
+    mbedtls_md_type_t hash_alg,
+    const unsigned char *secret_old,
+    const unsigned char *input, size_t input_len,
+    unsigned char *secret_new);
 
 #endif /* MBEDTLS_SSL_TLS1_3_KEYS_H */
