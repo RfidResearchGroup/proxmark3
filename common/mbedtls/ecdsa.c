@@ -703,8 +703,9 @@ int mbedtls_ecdsa_verify(mbedtls_ecp_group *grp,
 int ecdsa_signature_to_asn1(const mbedtls_mpi *r, const mbedtls_mpi *s,
                             unsigned char *sig, size_t *slen) {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    unsigned char buf[MBEDTLS_ECDSA_MAX_LEN];
-    unsigned char *p = buf + sizeof(buf);
+
+    unsigned char buf[MBEDTLS_ECDSA_MAX_LEN] = {0};
+    unsigned char *p = buf + sizeof(buf) - 1;
     size_t len = 0;
 
     MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_mpi(&p, buf, s));
