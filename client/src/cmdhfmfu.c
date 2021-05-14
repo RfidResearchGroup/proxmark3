@@ -433,6 +433,7 @@ static int ndef_print_CC(uint8_t *data) {
     uint8_t cc_major = (data[1] & 0xC0) >> 6;
 
     char wStr[50];
+    memset(wStr, 0, sizeof(wStr));
     switch (cc_write) {
         case 0:
             sprintf(wStr, "Write access granted without any security");
@@ -448,6 +449,7 @@ static int ndef_print_CC(uint8_t *data) {
             break;
     }
     char rStr[46];
+    memset(rStr, 0, sizeof(rStr));
     switch (cc_read) {
         case 0:
             sprintf(rStr, "Read access granted without any security");
