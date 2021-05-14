@@ -1156,10 +1156,10 @@ cleanup:
         INC_MUL_COUNT                                                   \
     } while( 0 )
 
-static inline int mbedtls_mpi_mul_mod(const mbedtls_ecp_group *grp,
-                                      mbedtls_mpi *X,
-                                      const mbedtls_mpi *A,
-                                      const mbedtls_mpi *B) {
+static int mbedtls_mpi_mul_mod(const mbedtls_ecp_group *grp,
+                               mbedtls_mpi *X,
+                               const mbedtls_mpi *A,
+                               const mbedtls_mpi *B) {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     MBEDTLS_MPI_CHK(mbedtls_mpi_mul_mpi(X, A, B));
     MOD_MUL(*X);
@@ -1182,10 +1182,10 @@ cleanup:
     ( defined(MBEDTLS_ECP_MONTGOMERY_ENABLED) && \
       !( defined(MBEDTLS_ECP_NO_FALLBACK) && \
          defined(MBEDTLS_ECP_DOUBLE_ADD_MXZ_ALT) ) )
-static inline int mbedtls_mpi_sub_mod(const mbedtls_ecp_group *grp,
-                                      mbedtls_mpi *X,
-                                      const mbedtls_mpi *A,
-                                      const mbedtls_mpi *B) {
+static int mbedtls_mpi_sub_mod(const mbedtls_ecp_group *grp,
+                               mbedtls_mpi *X,
+                               const mbedtls_mpi *A,
+                               const mbedtls_mpi *B) {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     MBEDTLS_MPI_CHK(mbedtls_mpi_sub_mpi(X, A, B));
     MOD_SUB(*X);
@@ -1203,10 +1203,10 @@ cleanup:
     while( mbedtls_mpi_cmp_mpi( &(N), &grp->P ) >= 0 )                  \
         MBEDTLS_MPI_CHK( mbedtls_mpi_sub_abs( &(N), &(N), &grp->P ) )
 
-static inline int mbedtls_mpi_add_mod(const mbedtls_ecp_group *grp,
-                                      mbedtls_mpi *X,
-                                      const mbedtls_mpi *A,
-                                      const mbedtls_mpi *B) {
+static int mbedtls_mpi_add_mod(const mbedtls_ecp_group *grp,
+                               mbedtls_mpi *X,
+                               const mbedtls_mpi *A,
+                               const mbedtls_mpi *B) {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     MBEDTLS_MPI_CHK(mbedtls_mpi_add_mpi(X, A, B));
     MOD_ADD(*X);
@@ -1218,9 +1218,9 @@ cleanup:
     !( defined(MBEDTLS_ECP_NO_FALLBACK) && \
        defined(MBEDTLS_ECP_DOUBLE_JAC_ALT) && \
        defined(MBEDTLS_ECP_ADD_MIXED_ALT) )
-static inline int mbedtls_mpi_shift_l_mod(const mbedtls_ecp_group *grp,
-                                          mbedtls_mpi *X,
-                                          size_t count) {
+static int mbedtls_mpi_shift_l_mod(const mbedtls_ecp_group *grp,
+                                   mbedtls_mpi *X,
+                                   size_t count) {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     MBEDTLS_MPI_CHK(mbedtls_mpi_shift_l(X, count));
     MOD_ADD(*X);
