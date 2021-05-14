@@ -1283,7 +1283,6 @@ static int CmdEMVExec(const char *Cmd) {
         PrintAndLogEx(NORMAL, "* * AC1");
         // EMVAC_TC + EMVAC_CDAREQ --- to get SDAD
         res = EMVAC(channel, true, (TrType == TT_CDA) ? EMVAC_TC + EMVAC_CDAREQ : EMVAC_TC, (uint8_t *)cdol1_data_tlv->value, cdol1_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
-
         if (res) {
             PrintAndLogEx(ERR, "AC1 error(%d): %4x. Exit...", res, sw);
             free(cdol1_data_tlv);
@@ -1312,8 +1311,9 @@ static int CmdEMVExec(const char *Cmd) {
             uint8_t IDDlen = 0;             // Issuer discretionary data length
             PrintAndLogEx(NORMAL, "IAD length: %zu", IAD->len);
             PrintAndLogEx(NORMAL, "VDDlen: %d", VDDlen);
-            if (VDDlen < IAD->len - 1)
+            if (VDDlen < IAD->len - 1) {
                 IDDlen = IAD->value[VDDlen + 1];
+            }
             PrintAndLogEx(NORMAL, "IDDlen: %d", IDDlen);
 
             uint8_t DerivKeyIndex = IAD->value[1];
@@ -1332,8 +1332,9 @@ static int CmdEMVExec(const char *Cmd) {
                     PrintAndLogEx(WARNING, "Wrong CVR length! CVR: %s", sprint_hex(&IAD->value[3], VDDlen - 2));
                 }
             }
-            if (IDDlen)
+            if (IDDlen) {
                 PrintAndLogEx(NORMAL, "IDD: %s", sprint_hex(&IAD->value[VDDlen + 1], IDDlen));
+            }
         } else {
             PrintAndLogEx(WARNING, "Issuer Application Data (IAD) not found.");
         }
@@ -1359,8 +1360,9 @@ static int CmdEMVExec(const char *Cmd) {
                 size_t rawARPClen = AC->len;
                 uint8_t rawARPC[rawARPClen];
                 memcpy(rawARPC, AC->value, AC->len);
-                for (int i = 0; (i < HostResponseLen) && (i < rawARPClen); i++)
+                for (int i = 0; (i < HostResponseLen) && (i < rawARPClen); i++) {
                     rawARPC[i] ^= HostResponse[i];
+                }
                 PrintAndLogEx(NORMAL, "raw ARPC: %s", sprint_hex(rawARPC, rawARPClen));
 
                 // here must be calculation of ARPC, but we dont know a bank keys.
@@ -1378,6 +1380,7 @@ static int CmdEMVExec(const char *Cmd) {
             struct tlv *cdol2_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8d, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
             if (!cdol2_data_tlv) {
                 PrintAndLogEx(ERR, "Error: can't create CDOL2 TLV.");
+                free(cdol1_data_tlv);
                 dreturn(PM3_ESOFT);
             }
 
@@ -1391,13 +1394,16 @@ static int CmdEMVExec(const char *Cmd) {
                         if ((CID & EMVAC_AC2_MASK) == EMVAC_ARQC2)    PrintAndLogEx(NORMAL, "\tAC2: not requested (ARQC)");
                         if ((CID & EMVAC_AC2_MASK) == EMVAC_AC2_MASK) PrintAndLogEx(NORMAL, "\tAC2: RFU");
             */
+            free(cdol2_data_tlv);
         }
+        free(cdol1_data_tlv);
     }
 
     DropFieldEx(channel);
 
     // Destroy TLV's
     free(pdol_data_tlv);
+
     tlvdb_free(tlvSelect);
     tlvdb_free(tlvRoot);
 
