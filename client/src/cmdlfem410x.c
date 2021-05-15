@@ -48,13 +48,13 @@ static int CmdHelp(const char *Cmd);
  */
 
 // Construct the graph for emulating an EM410X tag
-static void em410x_construct_emul_graph(uint8_t *uid, uint8_t clock) {
+static void em410x_construct_emul_graph(uint8_t *uid, uint8_t clock, uint8_t zeros) {
 
     // clear our graph
     ClearGraph(true);
 
     // write 16 zero bit sledge
-    for (uint8_t i = 0; i < 20; i++)
+    for (uint8_t i = 0; i < zeros; i++)
         AppendGraph(false, clock, 0);
 
     // write 9 start bits
@@ -410,6 +410,7 @@ static int CmdEM410xSim(const char *Cmd) {
         arg_param_begin,
         arg_u64_0(NULL, "clk", "<dec>", "<32|64> clock (default 64)"),
         arg_str1(NULL, "id", "<hex>", "ID number (5 hex bytes)"),
+        arg_u64_0(NULL, "zeros", "<dec>", "number of 0's between ID repeats (default 20)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -417,6 +418,7 @@ static int CmdEM410xSim(const char *Cmd) {
     // clock is 64 in EM410x tags
     int clk = arg_get_u32_def(ctx, 1, 64);
     int uid_len = 0;
+    int zeros = arg_get_u32_def(ctx,3,20);
     uint8_t uid[5] = {0};
     CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
     CLIParserFree(ctx);
@@ -427,7 +429,7 @@ static int CmdEM410xSim(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Starting simulating UID "_YELLOW_("%s")" clock: "_YELLOW_("%d"), sprint_hex_inrow(uid, sizeof(uid)), clk);
-    em410x_construct_emul_graph(uid, clk);
+    em410x_construct_emul_graph(uid, clk, zeros);
     CmdLFSim("");
     return PM3_SUCCESS;
 }
@@ -453,7 +455,7 @@ static int CmdEM410xBrute(const char *Cmd) {
 
     // clock default 64 in EM410x
     uint32_t clk = arg_get_u32_def(ctx, 1, 64);
-
+    int zeros = 20; // Should add argument to set....
     // default pause time: 1 second
     uint32_t delay = arg_get_u32_def(ctx, 2, 1000);
 
@@ -548,7 +550,7 @@ static int CmdEM410xBrute(const char *Cmd) {
                       , sprint_hex_inrow(testuid, sizeof(testuid))
                      );
 
-        em410x_construct_emul_graph(testuid, clk);
+        em410x_construct_emul_graph(testuid, clk, zeros);
 
         lfsim_upload_gb();
 
