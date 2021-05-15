@@ -1,11 +1,5 @@
 #define __STDC_FORMAT_MACROS
 
-#if !defined(_WIN64)
-#if defined(_WIN32) || defined(__WIN32__)
-# define _USE_32BIT_TIME_T 1
-#endif
-#endif
-
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -13,11 +7,11 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <time.h>
 #include <ctype.h>
 #include "crapto1/crapto1.h"
 #include "protocol.h"
 #include "iso14443crc.h"
+#include "util_posix.h"
 
 #define AEND  "\x1b[0m"
 #define _RED_(s) "\x1b[31m" s AEND
@@ -74,11 +68,11 @@ uint8_t cmds[8][2] = {
     {MIFARE_CMD_TRANSFER, 0}
 };
 
-int global_counter = 0;
-int global_found = 0;
-int global_found_candidate = 0;
-uint64_t global_candiate_key = 0;
-size_t thread_count = 2;
+//static int global_counter = 0;
+static int global_found = 0;
+static int global_found_candidate = 0;
+static uint64_t global_candiate_key = 0;
+static size_t thread_count = 2;
 
 static int param_getptr(const char *line, int *bg, int *en, int paramnum) {
     int i;
@@ -396,6 +390,7 @@ static void *brute_thread(void *arguments) {
         p64 = prng_successor(nt, 64);
         ks2 = ar_enc ^ p64;
         ks3 = at_enc ^ prng_successor(p64, 32);
+        free(revstate);
         revstate = lfsr_recovery64(ks2, ks3);
         ks4 = crypto1_word(revstate, 0, 0);
 
@@ -440,7 +435,6 @@ static void *brute_thread(void *arguments) {
             lfsr_rollback_word(revstate, nr_enc, 1);
             lfsr_rollback_word(revstate, uid ^ nt, 0);
             crypto1_get_lfsr(revstate, &key);
-            free(revstate);
 
             if (args->ev1) {
                 // if it was EV1,  we know for sure xxxAAAAAAAA recovery
@@ -450,9 +444,10 @@ static void *brute_thread(void *arguments) {
                 printf("\nKey candidate [ " _GREEN_("....%08" PRIx64) " ]\n\n", key & 0xFFFFFFFF);
                 __sync_fetch_and_add(&global_found, 1);
             }
-            __sync_fetch_and_add(&global_candiate_key, key);
             //release lock
             pthread_mutex_unlock(&print_lock);
+            __sync_fetch_and_add(&global_candiate_key, key);
+            free(revstate);
             break;
         }
     }
@@ -463,7 +458,7 @@ static void *brute_thread(void *arguments) {
 static void *brute_key_thread(void *arguments) {
 
     struct thread_key_args *args = (struct thread_key_args *) arguments;
-    uint64_t key;
+    uint64_t key = args->part_key;
     uint8_t local_enc[args->enc_len];
     memcpy(local_enc, args->enc, args->enc_len);
 
@@ -473,7 +468,7 @@ static void *brute_key_thread(void *arguments) {
             break;
         }
 
-        key = (count << 32 | args->part_key);
+        key |= count << 32;
 
         // Init cipher with key
         struct Crypto1State *pcs = crypto1_create(key);
@@ -489,13 +484,13 @@ static void *brute_key_thread(void *arguments) {
         for (int i = 0; i < args->enc_len; i++)
             dec[i] = crypto1_byte(pcs, 0x00, 0) ^ local_enc[i];
 
-        crypto1_deinit(pcs);
+        crypto1_destroy(pcs);
 
         // check if cmd exists
-        uint8_t isOK = checkValidCmdByte(dec, args->enc_len);
-        if (isOK == false) {
+        if (checkValidCmdByte(dec, args->enc_len) == false) {
             continue;
         }
+        __sync_fetch_and_add(&global_found, 1);
 
         // lock this section to avoid interlacing prints from different threats
         pthread_mutex_lock(&print_lock);
@@ -503,7 +498,6 @@ static void *brute_key_thread(void *arguments) {
         printf("dec:  %s\n", sprint_hex_inrow_ex(dec, args->enc_len, 0));
         printf("\nValid Key found [ " _GREEN_("%012" PRIx64) " ]\n\n", key);
         pthread_mutex_unlock(&print_lock);
-        __sync_fetch_and_add(&global_found, 1);
         break;
     }
     free(args);
@@ -568,7 +562,7 @@ int main(int argc, char *argv[]) {
         printf("next encrypted cmd... %s\n", sprint_hex_inrow_ex(enc, enc_len, 0));
     }
 
-    clock_t t1 = clock();
+    uint64_t t1 = msclock();
     uint16_t nt_par = parity_from_err(nt_enc, nt_par_err);
     uint16_t ar_par = parity_from_err(ar_enc, ar_par_err);
     uint16_t at_par = parity_from_err(at_enc, at_par_err);
@@ -612,8 +606,8 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < thread_count; ++i)
         pthread_join(threads[i], NULL);
 
-    t1 = clock() - t1;
-    printf("execution time %.2f sec\n", (float)t1 / 1000000.0);
+    t1 = msclock() - t1;
+    printf("execution time " _YELLOW_("%.2f") " sec\n", (float)t1 / 1000.0);
 
 
     if (!global_found && !global_found_candidate) {
@@ -631,11 +625,11 @@ int main(int argc, char *argv[]) {
     global_found_candidate = 0;
 
     printf("\n----------- " _CYAN_("Phase 2") " ------------------------\n");
-    printf("uid.......... %08x\n", uid);
-    printf("partial key.. %08x\n", (uint32_t)(global_candiate_key & 0xFFFFFFFF));
-    printf("nt enc....... %08x\n", nt_enc);
-    printf("nr enc....... %08x\n", nr_enc);
-    printf("next encrypted cmd: %s\n", sprint_hex_inrow_ex(enc, enc_len, 0));
+    printf("uid.................. %08x\n", uid);
+    printf("partial key.......... %08x\n", (uint32_t)(global_candiate_key & 0xFFFFFFFF));
+    printf("nt enc............... %08x\n", nt_enc);
+    printf("nr enc............... %08x\n", nr_enc);
+    printf("next encrypted cmd... %s\n", sprint_hex_inrow_ex(enc, enc_len, 0));
     printf("\nlooking for the upper 16 bits of key\n");
     fflush(stdout);
 

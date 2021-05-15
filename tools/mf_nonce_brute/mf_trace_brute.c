@@ -9,12 +9,6 @@
 
 #define __STDC_FORMAT_MACROS
 
-#if !defined(_WIN64)
-#if defined(_WIN32) || defined(__WIN32__)
-# define _USE_32BIT_TIME_T 1
-#endif
-#endif
-
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -23,10 +17,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "ctype.h"
-#include <time.h>
 #include "crapto1/crapto1.h"
 #include "protocol.h"
 #include "iso14443crc.h"
+#include <util_posix.h>
+
+#define AEND  "\x1b[0m"
+#define _RED_(s) "\x1b[31m" s AEND
+#define _GREEN_(s) "\x1b[32m" s AEND
+#define _YELLOW_(s) "\x1b[33m" s AEND
+#define _CYAN_(s) "\x1b[36m" s AEND
 
 // a global mutex to prevent interlaced printing from different threads
 pthread_mutex_t print_lock;
@@ -41,26 +41,25 @@ typedef struct thread_args {
     uint32_t part_key;
     uint32_t nt_enc;
     uint32_t nr_enc;
+    uint16_t enc_len;
     uint8_t enc[ENC_LEN];  // next encrypted command + a full read/write
 } targs;
 
 //------------------------------------------------------------------
-uint8_t cmds[] = {
-    ISO14443A_CMD_READBLOCK,
-    ISO14443A_CMD_WRITEBLOCK,
-    MIFARE_AUTH_KEYA,
-    MIFARE_AUTH_KEYB,
-    MIFARE_CMD_INC,
-    MIFARE_CMD_DEC,
-    MIFARE_CMD_RESTORE,
-    MIFARE_CMD_TRANSFER
+uint8_t cmds[8][2] = {
+    {ISO14443A_CMD_READBLOCK, 18},
+    {ISO14443A_CMD_WRITEBLOCK, 18},
+    {MIFARE_AUTH_KEYA, 0},
+    {MIFARE_AUTH_KEYB, 0},
+    {MIFARE_CMD_INC, 6},
+    {MIFARE_CMD_DEC, 6},
+    {MIFARE_CMD_RESTORE, 6},
+    {MIFARE_CMD_TRANSFER, 0}
 };
 
-int global_counter = 0;
-int global_fin_flag = 0;
-int global_found = 0;
-int global_found_candidate = 0;
-size_t thread_count = 2;
+static int global_found = 0;
+static int global_found_candidate = 0;
+static size_t thread_count = 2;
 
 static int param_getptr(const char *line, int *bg, int *en, int paramnum) {
     int i;
@@ -174,67 +173,71 @@ static char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const si
     return buf;
 }
 
+static bool checkValidCmdByte(uint8_t *cmd, uint16_t n) {
+
+    bool ok = false;
+    for (int i = 0; i < 8; ++i) {
+        if (cmd[0] == cmds[i][0]) {
+
+            if (n >= 4)
+                ok = CheckCrc14443(CRC_14443_A, cmd, 4);
+
+            if (cmds[i][1] > 0 && n >= cmds[i][1])
+                ok = CheckCrc14443(CRC_14443_A, cmd + 4, cmds[i][1]);
+
+            if (ok) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 static void *brute_thread(void *arguments) {
 
-    //int shift = (int)arg;
     struct thread_args *args = (struct thread_args *) arguments;
-
-    uint64_t key;     // recovered key candidate
-    int found = 0;
-    struct Crypto1State mpcs = {0, 0};
-    struct Crypto1State *pcs = &mpcs;
-
-    uint8_t local_enc[ENC_LEN] = {0};
-    memcpy(local_enc, args->enc, sizeof(local_enc));
+    uint64_t key = args->part_key; 
+    uint8_t local_enc[args->enc_len];
+    memcpy(local_enc, args->enc, args->enc_len);
 
     for (uint64_t count = args->idx; count < 0xFFFF; count += thread_count) {
 
-        found = global_found;
-        if (found) {
+        if (__atomic_load_n(&global_found, __ATOMIC_ACQUIRE) == 1) {
             break;
         }
 
-        key = (count << 32 | args->part_key);
+        key |= count << 32;
 
         // Init cipher with key
-        pcs = crypto1_create(key);
+        struct Crypto1State *pcs = crypto1_create(key);
 
         // NESTED decrypt nt with help of new key
-//        if (args->use_nested)
-//            crypto1_word(pcs, args->nt_enc ^ args->uid, 1) ^ args->nt_enc;
-//        else
         crypto1_word(pcs, args->nt_enc ^ args->uid, 1);
-
         crypto1_word(pcs, args->nr_enc, 1);
         crypto1_word(pcs, 0, 0);
         crypto1_word(pcs, 0, 0);
 
         // decrypt 22 bytes
-        uint8_t dec[ENC_LEN] = {0};
-        for (int i = 0; i < ENC_LEN; i++)
+        uint8_t dec[args->enc_len];
+        for (int i = 0; i < args->enc_len; i++)
             dec[i] = crypto1_byte(pcs, 0x00, 0) ^ local_enc[i];
 
-        crypto1_deinit(pcs);
+        crypto1_destroy(pcs);
 
-        if (CheckCrc14443(CRC_14443_A, dec, 4)) {
-
-            // check crc-16 in the end
-
-            if (CheckCrc14443(CRC_14443_A, dec + 4, 18)) {
-
-                // lock this section to avoid interlacing prints from different threats
-                pthread_mutex_lock(&print_lock);
-                printf("\nValid Key found: [%012" PRIx64 "]\n", key);
-
-                printf("enc:  %s\n", sprint_hex_inrow_ex(local_enc, ENC_LEN, 0));
-                printf("      xx  crcA                                crcA\n");
-                printf("dec:  %s\n", sprint_hex_inrow_ex(dec, ENC_LEN, 0));
-                pthread_mutex_unlock(&print_lock);
-
-                __sync_fetch_and_add(&global_found, 1);
-            }
+        if (checkValidCmdByte(dec, args->enc_len) == false) {
+            continue;
         }
+        __sync_fetch_and_add(&global_found, 1);
+
+        // lock this section to avoid interlacing prints from different threats
+        pthread_mutex_lock(&print_lock);
+        printf("\nenc:  %s\n", sprint_hex_inrow_ex(local_enc, args->enc_len, 0));
+        printf("dec:  %s\n", sprint_hex_inrow_ex(dec, args->enc_len, 0));
+        printf("\nValid Key found [ " _GREEN_("%012" PRIx64) " ]\n\n", key);
+        pthread_mutex_unlock(&print_lock);
+        break;
     }
+
     free(args);
     return NULL;
 }
@@ -245,7 +248,7 @@ static int usage(void) {
 }
 
 int main(int argc, char *argv[]) {
-    printf("Mifare classic nested auth key recovery. Phase 2.\n");
+    printf("Mifare classic nested auth key recovery Phase 2\n");
     if (argc < 3) return usage();
 
     uint32_t uid = 0;      // serial number
@@ -263,13 +266,13 @@ int main(int argc, char *argv[]) {
     param_gethex_to_eol(argv[5], 0, enc, sizeof(enc), &enc_len);
 
     printf("-------------------------------------------------\n");
-    printf("uid.......... %08x\n", uid);
-    printf("partial key.. %08x\n", part_key);
-    printf("nt enc....... %08x\n", nt_enc);
-    printf("nr enc....... %08x\n", nr_enc);
-    printf("next encrypted cmd: %s\n", sprint_hex_inrow_ex(enc, ENC_LEN, 0));
+    printf("uid.................. %08x\n", uid);
+    printf("partial key.......... %08x\n", part_key);
+    printf("nt enc............... %08x\n", nt_enc);
+    printf("nr enc............... %08x\n", nr_enc);
+    printf("next encrypted cmd... %s\n", sprint_hex_inrow_ex(enc, enc_len, 0));
 
-    clock_t t1 = clock();
+    uint64_t t1 = msclock();
 
 #if !defined(_WIN32) || !defined(__WIN32__)
     thread_count = sysconf(_SC_NPROCESSORS_CONF);
@@ -293,7 +296,8 @@ int main(int argc, char *argv[]) {
         a->part_key = part_key;
         a->nt_enc = nt_enc;
         a->nr_enc = nr_enc;
-        memcpy(a->enc, enc, sizeof(a->enc));
+        a->enc_len = enc_len;
+        memcpy(a->enc, enc, enc_len);
         pthread_create(&threads[i], NULL, brute_thread, (void *)a);
     }
 
@@ -305,7 +309,7 @@ int main(int argc, char *argv[]) {
         printf("\nFailed to find a key\n\n");
     }
 
-    t1 = clock() - t1;
+    t1 = msclock() - t1;
     if (t1 > 0)
         printf("Execution time: %.0f ticks\n", (float)t1);
 
