@@ -48,13 +48,13 @@ static int CmdHelp(const char *Cmd);
  */
 
 // Construct the graph for emulating an EM410X tag
-static void em410x_construct_emul_graph(uint8_t *uid, uint8_t clock, uint8_t zeros) {
+static void em410x_construct_emul_graph(uint8_t *uid, uint8_t clock, uint8_t gap) {
 
     // clear our graph
     ClearGraph(true);
 
     // write 16 zero bit sledge
-    for (uint8_t i = 0; i < zeros; i++)
+    for (uint8_t i = 0; i < gap; i++)
         AppendGraph(false, clock, 0);
 
     // write 9 start bits
@@ -403,14 +403,15 @@ static int CmdEM410xSim(const char *Cmd) {
                   "Enables simulation of EM 410x card.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.",
                   "lf em 410x sim --id 0F0368568B\n"
-                  "lf em 410x sim --id 0F0368568B --clk 32"
+                  "lf em 410x sim --id 0F0368568B --clk 32\n"
+                  "lf em 410x sim --id 0F0368568B --gap 0"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0(NULL, "clk", "<dec>", "<32|64> clock (default 64)"),
         arg_str1(NULL, "id", "<hex>", "ID number (5 hex bytes)"),
-        arg_u64_0(NULL, "zeros", "<dec>", "number of 0's between ID repeats (default 20)"),
+        arg_u64_0(NULL, "gap", "<dec>", "gap (0's) between ID repeats (default 20)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -418,7 +419,7 @@ static int CmdEM410xSim(const char *Cmd) {
     // clock is 64 in EM410x tags
     int clk = arg_get_u32_def(ctx, 1, 64);
     int uid_len = 0;
-    int zeros = arg_get_u32_def(ctx,3,20);
+    int gap = arg_get_u32_def(ctx,3,20);
     uint8_t uid[5] = {0};
     CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
     CLIParserFree(ctx);
@@ -429,7 +430,7 @@ static int CmdEM410xSim(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Starting simulating UID "_YELLOW_("%s")" clock: "_YELLOW_("%d"), sprint_hex_inrow(uid, sizeof(uid)), clk);
-    em410x_construct_emul_graph(uid, clk, zeros);
+    em410x_construct_emul_graph(uid, clk, gap);
     CmdLFSim("");
     return PM3_SUCCESS;
 }
@@ -449,13 +450,14 @@ static int CmdEM410xBrute(const char *Cmd) {
         arg_u64_0(NULL, "clk", "<dec>", "<32|64> clock (default 64)"),
         arg_u64_0(NULL, "delay", "<dec>", "pause delay in milliseconds between UIDs simulation (default 1000ms)"),
         arg_str1("f", "file", "<hex>", "file with UIDs in HEX format, one per line"),
+        arg_u64_0(NULL, "gap", "<dec>", "gap (0's) between ID repeats (default 20)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     // clock default 64 in EM410x
     uint32_t clk = arg_get_u32_def(ctx, 1, 64);
-    int zeros = 20; // Should add argument to set....
+    int gap = arg_get_u32_def(ctx, 4, 20);
     // default pause time: 1 second
     uint32_t delay = arg_get_u32_def(ctx, 2, 1000);
 
@@ -550,7 +552,7 @@ static int CmdEM410xBrute(const char *Cmd) {
                       , sprint_hex_inrow(testuid, sizeof(testuid))
                      );
 
-        em410x_construct_emul_graph(testuid, clk, zeros);
+        em410x_construct_emul_graph(testuid, clk, gap);
 
         lfsim_upload_gb();
 
