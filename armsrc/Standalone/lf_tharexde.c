@@ -102,7 +102,7 @@ static bool get_input_data_from_file(uint32_t *tag, char *inputfile) {
 
         rdv40_spiffs_read_as_filetype(inputfile, mem, size, RDV40_SPIFFS_SAFETY_SAFE);
 
-        now = size / 9;
+        now = (size + 1) / 9;
         for (int i = 0; i < now; i++) {
             for (int j = 0; j < 4; j++) {
                 tag[i] |= (hex2int(mem[2 * j + 9 * i]) << 4 | hex2int(mem[2 * j + 1 + 9 * i])) << ((3 - j) * 8);
