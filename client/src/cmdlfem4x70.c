@@ -19,9 +19,6 @@
 #define LOCKBIT_0 BITMASK(6)
 #define LOCKBIT_1 BITMASK(7)
 
-#define BYTES2UINT16(x) ((x[1] << 8) | (x[0]))
-#define BYTES2UINT32(x) ((x[3] << 24) | (x[2] << 16) | (x[1] << 8) | (x[0]))
-
 #define INDEX_TO_BLOCK(x) (((32-x)/2)-1)
 
 static int CmdHelp(const char *Cmd);

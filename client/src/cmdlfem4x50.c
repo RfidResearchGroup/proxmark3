@@ -18,8 +18,7 @@
 #include "commonutil.h"
 #include "pmflash.h"
 #include "cmdflashmemspiffs.h"
-
-#define BYTES2UINT32(x) ((x[0] << 24) | (x[1] << 16) | (x[2] << 8) | (x[3]))
+#include "em4x50.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -465,12 +464,12 @@ int CmdEM4x50Chk(const char *Cmd) {
     }
 
     size_t datalen = 0;
-    uint8_t data[FLASH_MEM_MAX_SIZE] = {0x0};
+    uint8_t data[100000] = {0x0};
     uint8_t *keys = data;
     uint32_t key_count = 0;
 
     int res = loadFileDICTIONARY(filename, data, &datalen, 4, &key_count);
-    if (res || !key_count)
+    if ((res != PM3_SUCCESS) || (key_count == 0))
         return PM3_EFILE;
 
     PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");

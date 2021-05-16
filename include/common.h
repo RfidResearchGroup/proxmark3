@@ -131,6 +131,15 @@ extern bool tearoff_enabled;
 #endif
 #endif
 
+// convert 2 bytes to U16
+#ifndef BYTES2UINT16
+# define BYTES2UINT16(x) ((x[1] << 8) | (x[0]))
+#endif
+// convert 4 bytes to U32
+#ifndef BYTES2UINT32
+# define BYTES2UINT32(x) ((x[3] << 24) | (x[2] << 16) | (x[1] << 8) | (x[0]))
+#endif
+
 #define EVEN                        0
 #define ODD                         1
 

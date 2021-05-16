@@ -11,6 +11,8 @@
 #ifndef EM4X50_H__
 #define EM4X50_H__
 
+#include "common.h"
+
 #define EM4X50_NO_WORDS             34
 
 // special words
@@ -44,8 +46,6 @@
 // misc
 #define TIMEOUT_CMD                 3000
 #define DUMP_FILESIZE               136
-
-#define BYTES2UINT32(x) ((x[0] << 24) | (x[1] << 16) | (x[2] << 8) | (x[3]))
 
 typedef struct {
     bool addr_given;
