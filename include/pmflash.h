@@ -35,7 +35,6 @@
 # define FLASH_MEM_MAX_4K_SECTOR   0x3F000
 #endif
 
-
 #ifndef FLASH_MEM_ID_LEN
 # define FLASH_MEM_ID_LEN 8
 #endif
@@ -78,5 +77,10 @@ typedef struct {
     uint8_t flashid[FLASH_MEM_ID_LEN];
     uint8_t signature[FLASH_MEM_SIGNATURE_LEN];
 } PACKED rdv40_validation_t;
+
+// SPIFFS current allocates 128kb of the 256kb available.
+#ifndef FLASH_SPIFFS_ALLOCATED_SIZE
+# define FLASH_SPIFFS_ALLOCATED_SIZE (1024 * 128)
+#endif
 
 #endif // __PMFLASH_H
