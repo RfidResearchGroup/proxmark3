@@ -1217,11 +1217,10 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     mbedtls_des3_context ctx;
     mbedtls_des3_set2key_dec(&ctx, key);
 
-    uint8_t dec_data[8] = {0};
-
     // decrypt user supplied data
     if (have_data) {
 
+        uint8_t dec_data[8] = {0};
         if (use_sc) {
             Decrypt(enc_data, dec_data);
         } else {
