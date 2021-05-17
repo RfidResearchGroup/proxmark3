@@ -56,6 +56,7 @@ uint8_t default_3des_keys[][16] = {
 
 uint8_t default_pwd_pack[][4] = {
     {0xFF, 0xFF, 0xFF, 0xFF}, // PACK 0x00,0x00 -- factory default
+    {0x4E, 0x45, 0x78, 0x54},
 };
 
 uint32_t UL_TYPES_ARRAY[] = {
