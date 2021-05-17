@@ -1980,7 +1980,7 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type,
 //        size_t plen = datasize;
 //        uint8_t *p = mifare_cryto_preprocess_data(tag, (uint8_t *)&data->data[pos], &plen, 0, cs | MAC_COMMAND | CMAC_COMMAND | ENC_COMMAND);
         size_t plen = datasize + 8;
-        uint8_t *p = mifare_cryto_preprocess_data(tag, tmp, &plen, 0, cs | MAC_COMMAND | CMAC_COMMAND | ENC_COMMAND);
+        uint8_t *p = mifare_cryto_preprocess_data(tag, tmp, &plen, 8, cs | MAC_COMMAND | CMAC_COMMAND | ENC_COMMAND);
 
         // Copy actual data as needed to create APDU Format
         if (plen != -1) {
