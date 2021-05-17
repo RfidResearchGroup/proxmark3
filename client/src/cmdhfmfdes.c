@@ -1953,11 +1953,12 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type,
     uint32_t recvlen = 0;
     int res = PM3_SUCCESS;
     uint16_t sw = 0;
-    uint8_t tmp[59] = {0};
+    uint8_t tmp[60] = {0};
     mfdes_data_t sdata;
     sAPDU apdu = {0x90, MFDES_WRITE_DATA, 0x00, 0x00, 0, (uint8_t *) &sdata}; // 0x3D
-    tmp[0] = data->fileno;
-    apdu.data = tmp;
+    tmp[0] = MFDES_WRITE_DATA;
+    tmp[1] = data->fileno;
+    apdu.data = &tmp[1]; // tmp[0] is holding the OPCODE for macd calc, so we dont want it in the apdu
     if (type == MFDES_RECORD_FILE) apdu.INS = MFDES_WRITE_RECORD;
 
     while (datatowrite) {
@@ -1967,21 +1968,34 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type,
         else
             datasize = datatowrite;
 
-        tmp[1] = offset & 0xFF;
-        tmp[2] = (offset >> 8) & 0xFF;
-        tmp[3] = (offset >> 16) & 0xFF;
-        tmp[4] = datasize & 0xFF;
-        tmp[5] = (datasize >> 8) & 0xFF;
-        tmp[6] = (datasize >> 16) & 0xFF;
+        // Build packet to pre-process (using CMD FN OFFSET LEN DATA)
+        tmp[2] = offset & 0xFF;
+        tmp[3] = (offset >> 8) & 0xFF;
+        tmp[4] = (offset >> 16) & 0xFF;
+        tmp[5] = datasize & 0xFF;
+        tmp[6] = (datasize >> 8) & 0xFF;
+        tmp[7] = (datasize >> 16) & 0xFF;
+        memcpy(&tmp[8],(uint8_t *)&data->data[offset] ,datasize);
 
+//        size_t plen = datasize;
+//        uint8_t *p = mifare_cryto_preprocess_data(tag, (uint8_t *)&data->data[pos], &plen, 0, cs | MAC_COMMAND | CMAC_COMMAND | ENC_COMMAND);
+        size_t plen = datasize + 8;
+        uint8_t *p = mifare_cryto_preprocess_data(tag, tmp, &plen, 8, cs | MAC_COMMAND | CMAC_COMMAND | ENC_COMMAND);
 
-        size_t plen = datasize;
-        uint8_t *p = mifare_cryto_preprocess_data(tag, (uint8_t *)&data->data[pos], &plen, 0, cs | MAC_COMMAND | CMAC_COMMAND | ENC_COMMAND);
+        // Copy actual data as needed to create APDU Format
+        if (plen != -1) {
+            memcpy(&tmp[8], &p[8], plen-8);
+            apdu.Lc = plen -1; //need to drop the OpCode from plen
+        }
+
+/*
+        // we dont want to change the value of datasize, so delt with above without change
+        // Doing so can create wrong offsets and endless loop.
         if (plen != -1) datasize = (uint8_t)plen;
         memcpy(&tmp[7], p, datasize);
 
         apdu.Lc = datasize + 1 + 3 + 3;
-
+*/
 
         res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
         if (res != PM3_SUCCESS) {
