@@ -1365,7 +1365,7 @@ static const cardformat_t FormatTable[] = {
     {"P10001",  Pack_P10001,  Unpack_P10001,  "HID P10001 Honeywell 40-bit",   {1, 1, 0, 1, 0}}, // from cardinfo.barkweb.com.au
     {"Casi40",  Pack_CasiRusco40, Unpack_CasiRusco40, "Casi-Rusco 40-bit",     {1, 0, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"C1k48s",  Pack_C1k48s,  Unpack_C1k48s,  "HID Corporate 1000 48-bit std", {1, 1, 0, 0, 1}}, // imported from old pack/unpack
-    {"BC40",    Pack_bc40,    Unpack_bc40,    "Bundy TimeClock 40-bit",     {1, 1, 0, 1, 1}}, // from 
+    {"BC40",    Pack_bc40,    Unpack_bc40,    "Bundy TimeClock 40-bit",     {1, 1, 0, 1, 1}}, // from
     {NULL, NULL, NULL, NULL, {0, 0, 0, 0, 0}} // Must null terminate array
 };
 

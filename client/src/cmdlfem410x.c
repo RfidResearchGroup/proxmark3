@@ -419,7 +419,7 @@ static int CmdEM410xSim(const char *Cmd) {
     // clock is 64 in EM410x tags
     int clk = arg_get_u32_def(ctx, 1, 64);
     int uid_len = 0;
-    int gap = arg_get_u32_def(ctx,3,20);
+    int gap = arg_get_u32_def(ctx, 3, 20);
     uint8_t uid[5] = {0};
     CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
     CLIParserFree(ctx);

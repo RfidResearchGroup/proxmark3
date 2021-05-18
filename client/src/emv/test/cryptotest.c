@@ -65,7 +65,7 @@ int ExecuteCryptoTests(bool verbose, bool ignore_time, bool include_slow_tests) 
         PrintAndLogEx(WARNING, "Repeat timing test " _RED_("%d"), i + 1);
     }
     if (res && !ignore_time) TestFail = true;
-*/
+    */
 
     res = mbedtls_ctr_drbg_self_test(verbose);
     if (res) TestFail = true;

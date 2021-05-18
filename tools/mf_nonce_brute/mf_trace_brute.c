@@ -195,7 +195,7 @@ static bool checkValidCmdByte(uint8_t *cmd, uint16_t n) {
 static void *brute_thread(void *arguments) {
 
     struct thread_args *args = (struct thread_args *) arguments;
-    uint64_t key = args->part_key; 
+    uint64_t key = args->part_key;
     uint8_t local_enc[args->enc_len];
     memcpy(local_enc, args->enc, args->enc_len);
 

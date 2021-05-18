@@ -833,11 +833,11 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
         }
     }
     // else {
-        /*
-        cmd[0] = AUTHENTICATE;
-        cmd[1] = payload->keyno;
-        len = DesfireAPDU(cmd, 2, resp);
-        */
+    /*
+    cmd[0] = AUTHENTICATE;
+    cmd[1] = payload->keyno;
+    len = DesfireAPDU(cmd, 2, resp);
+    */
     //}
 
     if (!recv_len) {
@@ -1890,16 +1890,16 @@ static int handler_desfire_readdata(mfdes_data_t *data, MFDES_FILE_TYPE_T type, 
     uint16_t sw = 0;
     uint32_t resplen = 0;
 
-    // we need the CMD 0xBD <data> to calc the CMAC 
+    // we need the CMD 0xBD <data> to calc the CMAC
     uint8_t tmp_data[8]; // Since the APDU is hardcoded to 7 bytes of payload 7+1 = 8 is enough.
     tmp_data[0] = 0xBD;
-    memcpy (&tmp_data[1], data, 7);
-    
+    memcpy(&tmp_data[1], data, 7);
+
     // size_t plen = apdu.Lc;
     // uint8_t *p = mifare_cryto_preprocess_data(tag, (uint8_t *)data, &plen, 0, MDCM_PLAIN | CMAC_COMMAND);
     // apdu.Lc = (uint8_t)plen;
     // apdu.data = p;
-    
+
     size_t plen = 8;
     uint8_t *p = mifare_cryto_preprocess_data(tag, tmp_data, &plen, 0, MDCM_PLAIN | CMAC_COMMAND);
     // apdu data does not need the cmd, so use the original read command data.
@@ -1986,7 +1986,7 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type,
         tmp[5] = datasize & 0xFF;
         tmp[6] = (datasize >> 8) & 0xFF;
         tmp[7] = (datasize >> 16) & 0xFF;
-        memcpy(&tmp[8],(uint8_t *)&data->data[offset] ,datasize);
+        memcpy(&tmp[8], (uint8_t *)&data->data[offset], datasize);
 
 //        size_t plen = datasize;
 //        uint8_t *p = mifare_cryto_preprocess_data(tag, (uint8_t *)&data->data[pos], &plen, 0, cs | MAC_COMMAND | CMAC_COMMAND | ENC_COMMAND);
@@ -1995,18 +1995,18 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type,
 
         // Copy actual data as needed to create APDU Format
         if (plen != -1) {
-            memcpy(&tmp[8], &p[8], plen-8);
-            apdu.Lc = plen -1; //need to drop the OpCode from plen
+            memcpy(&tmp[8], &p[8], plen - 8);
+            apdu.Lc = plen - 1; //need to drop the OpCode from plen
         }
 
-/*
-        // we dont want to change the value of datasize, so delt with above without change
-        // Doing so can create wrong offsets and endless loop.
-        if (plen != -1) datasize = (uint8_t)plen;
-        memcpy(&tmp[7], p, datasize);
+        /*
+                // we dont want to change the value of datasize, so delt with above without change
+                // Doing so can create wrong offsets and endless loop.
+                if (plen != -1) datasize = (uint8_t)plen;
+                memcpy(&tmp[7], p, datasize);
 
-        apdu.Lc = datasize + 1 + 3 + 3;
-*/
+                apdu.Lc = datasize + 1 + 3 + 3;
+        */
 
         res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
         if (res != PM3_SUCCESS) {
@@ -2045,7 +2045,7 @@ static int handler_desfire_deletefile(uint8_t file_no) {
 }
 
 static int handler_desfire_clearrecordfile(uint8_t file_no) {
-    if (file_no > 0x1F) 
+    if (file_no > 0x1F)
         return PM3_EINVARG;
 
     sAPDU apdu = {0x90, MFDES_CLEAR_RECORD_FILE, 0x00, 0x00, 1, &file_no}; // 0xEB
