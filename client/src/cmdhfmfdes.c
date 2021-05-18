@@ -1890,10 +1890,21 @@ static int handler_desfire_readdata(mfdes_data_t *data, MFDES_FILE_TYPE_T type, 
     uint16_t sw = 0;
     uint32_t resplen = 0;
 
-    size_t plen = apdu.Lc;
-    uint8_t *p = mifare_cryto_preprocess_data(tag, (uint8_t *)data, &plen, 0, MDCM_PLAIN | CMAC_COMMAND);
-    apdu.Lc = (uint8_t)plen;
-    apdu.data = p;
+    // we need the CMD 0xBD <data> to calc the CMAC 
+    uint8_t tmp_data[8]; // Since the APDU is hardcoded to 7 bytes of payload 7+1 = 8 is enough.
+    tmp_data[0] = 0xBD;
+    memcpy (&tmp_data[1], data, 7);
+    
+    // size_t plen = apdu.Lc;
+    // uint8_t *p = mifare_cryto_preprocess_data(tag, (uint8_t *)data, &plen, 0, MDCM_PLAIN | CMAC_COMMAND);
+    // apdu.Lc = (uint8_t)plen;
+    // apdu.data = p;
+    
+    size_t plen = 8;
+    uint8_t *p = mifare_cryto_preprocess_data(tag, tmp_data, &plen, 0, MDCM_PLAIN | CMAC_COMMAND);
+    // apdu data does not need the cmd, so use the original read command data.
+    apdu.Lc =  7;
+    apdu.data = (uint8_t *)data;
 
     int res = send_desfire_cmd(&apdu, false, data->data, &resplen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
