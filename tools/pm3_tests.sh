@@ -351,6 +351,12 @@ while true; do
       if ! CheckExecute "proxmark help text ISO7816"       "$CLIENTBIN -t 2>&1" "ISO7816"; then break; fi
       if ! CheckExecute "proxmark help text hardnested"    "$CLIENTBIN -t 2>&1" "hardnested"; then break; fi
       if ! CheckExecute "proxmark full help dump"          "$CLIENTBIN --fulltext 2>&1" "Full help dump done"; then break; fi
+      if ! CheckExecute "proxmark multi cmds 1/2"          "$CLIENTBIN -c 'rem foo;rem bar'" "remark: foo"; then break; fi
+      if ! CheckExecute "proxmark multi cmds 2/2"          "$CLIENTBIN -c 'rem foo;rem bar'" "remark: bar"; then break; fi
+      if ! CheckExecute "proxmark multi stdin 1/4"         "echo 'rem foo;rem bar;quit' |$CLIENTBIN" "remark: foo"; then break; fi
+      if ! CheckExecute "proxmark multi stdin 2/4"         "echo 'rem foo;rem bar;quit' |$CLIENTBIN" "remark: bar"; then break; fi
+      if ! CheckExecute "proxmark multi stdin 3/4"         "echo -e 'rem foo\nrem bar;quit' |$CLIENTBIN" "remark: foo"; then break; fi
+      if ! CheckExecute "proxmark multi stdin 4/4"         "echo -e 'rem foo\nrem bar;quit' |$CLIENTBIN" "remark: bar"; then break; fi
 
       echo -e "\n${C_BLUE}Testing data manipulation:${C_NC}"
       if ! CheckExecute "reveng readline test"    "$CLIENTBIN -c 'reveng -h;reveng -D'" "CRC-64/GO-ISO"; then break; fi

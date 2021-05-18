@@ -309,7 +309,7 @@ check_script:
         } else {
             // If there is a script command
             if (execCommand) {
-                prompt_ctx = PROXPROMPT_CTX_SCRIPTCMD;
+                prompt_ctx = stdinOnPipe ? PROXPROMPT_CTX_STDIN : PROXPROMPT_CTX_SCRIPTCMD;
 
                 cmd = str_dup(script_cmd);
                 if (cmd != NULL)
@@ -329,8 +329,6 @@ check_script:
 
                 // if there is a pipe from stdin
                 if (stdinOnPipe) {
-                    prompt_ctx = PROXPROMPT_CTX_STDIN;
-
                     // clear array
                     memset(script_cmd_buf, 0, sizeof(script_cmd_buf));
                     // get
@@ -338,13 +336,14 @@ check_script:
                         PrintAndLogEx(ERR, "STDIN unexpected end, exit...");
                         break;
                     }
+                    execCommand = true;
+                    stayInCommandLoop = true;
+                    script_cmd = script_cmd_buf;
+                    script_cmd_len = strlen(script_cmd);
+                    strcreplace(script_cmd, script_cmd_len, ';', '\0');
                     // remove linebreaks
                     strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
-
-                    cmd = str_dup(script_cmd_buf);
-                    if (cmd != NULL)
-                        printprompt = true;
-
+                    goto check_script;
                 } else {
 #ifdef HAVE_READLINE
                     rl_event_hook = check_comm;
