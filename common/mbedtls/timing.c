@@ -1,31 +1,23 @@
 /*
  *  Portable interface to the CPU cycle counter
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
- *  SPDX-License-Identifier: GPL-2.0
+ *  Copyright The Mbed TLS Contributors
+ *  SPDX-License-Identifier: Apache-2.0
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
+ *  not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_SELF_TEST) && defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
@@ -42,7 +34,7 @@
 
 #if !defined(unix) && !defined(__unix__) && !defined(__unix) && \
     !defined(__APPLE__) && !defined(_WIN32) && !defined(__QNXNTO__) && \
-    !defined(__HAIKU__)
+    !defined(__HAIKU__) && !defined(__midipix__)
 #error "This module only works on Unix and Windows, see MBEDTLS_TIMING_C in config.h"
 #endif
 
@@ -53,7 +45,7 @@
 #if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
 
 #include <windows.h>
-#include <winbase.h>
+#include <process.h>
 
 struct _hr_time {
     LARGE_INTEGER start;
@@ -216,19 +208,11 @@ unsigned long mbedtls_timing_hardclock(void) {
     struct timeval tv_cur;
 
     if (hardclock_init == 0) {
-#ifdef __MINGW32__
-        mingw_gettimeofday(&tv_init, NULL);
-#else
         gettimeofday(&tv_init, NULL);
-#endif
         hardclock_init = 1;
     }
 
-#ifdef __MINGW32__
-    mingw_gettimeofday(&tv_cur, NULL);
-#else
     gettimeofday(&tv_cur, NULL);
-#endif
     return ((tv_cur.tv_sec  - tv_init.tv_sec) * 1000000
             + (tv_cur.tv_usec - tv_init.tv_usec));
 }
@@ -258,16 +242,15 @@ unsigned long mbedtls_timing_get_timer(struct mbedtls_timing_hr_time *val, int r
 /* It's OK to use a global because alarm() is supposed to be global anyway */
 static DWORD alarmMs;
 
-static DWORD WINAPI TimerProc(LPVOID TimerContext) {
-    ((void) TimerContext);
+static void TimerProc(void *TimerContext) {
+    (void) TimerContext;
     Sleep(alarmMs);
     mbedtls_timing_alarmed = 1;
-    return (TRUE);
+    /* _endthread will be called implicitly on return
+     * That ensures execution of thread funcition's epilogue */
 }
 
 void mbedtls_set_alarm(int seconds) {
-    DWORD ThreadId;
-
     if (seconds == 0) {
         /* No need to create a thread for this simple case.
          * Also, this shorcut is more reliable at least on MinGW32 */
@@ -277,7 +260,7 @@ void mbedtls_set_alarm(int seconds) {
 
     mbedtls_timing_alarmed = 0;
     alarmMs = seconds * 1000;
-    CloseHandle(CreateThread(NULL, 0, TimerProc, NULL, 0, &ThreadId));
+    (void) _beginthread(TimerProc, 0, NULL);
 }
 
 #else /* _WIN32 && !EFIX64 && !EFI32 */

@@ -1,37 +1,31 @@
 /*
  *  Public Key layer for writing key files and structures
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
- *  SPDX-License-Identifier: GPL-2.0
+ *  Copyright The Mbed TLS Contributors
+ *  SPDX-License-Identifier: Apache-2.0
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
+ *  not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_PK_WRITE_C)
 
 #include "mbedtls/pk.h"
 #include "mbedtls/asn1write.h"
 #include "mbedtls/oid.h"
+#include "mbedtls/platform_util.h"
+#include "mbedtls/error.h"
 
 #include <string.h>
 
@@ -39,7 +33,9 @@
 #include "mbedtls/rsa.h"
 #endif
 #if defined(MBEDTLS_ECP_C)
+#include "mbedtls/bignum.h"
 #include "mbedtls/ecp.h"
+#include "mbedtls/platform_util.h"
 #endif
 #if defined(MBEDTLS_ECDSA_C)
 #include "mbedtls/ecdsa.h"
@@ -48,6 +44,10 @@
 #include "mbedtls/pem.h"
 #endif
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#include "psa/crypto.h"
+#include "mbedtls/psa_util.h"
+#endif
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
@@ -55,6 +55,12 @@
 #define mbedtls_calloc    calloc
 #define mbedtls_free       free
 #endif
+
+/* Parameter validation macros based on platform_util.h */
+#define PK_VALIDATE_RET( cond )    \
+    MBEDTLS_INTERNAL_VALIDATE_RET( cond, MBEDTLS_ERR_PK_BAD_INPUT_DATA )
+#define PK_VALIDATE( cond )        \
+    MBEDTLS_INTERNAL_VALIDATE( cond )
 
 #if defined(MBEDTLS_RSA_C)
 /*
@@ -65,7 +71,7 @@
  */
 static int pk_write_rsa_pubkey(unsigned char **p, unsigned char *start,
                                mbedtls_rsa_context *rsa) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len = 0;
     mbedtls_mpi T;
 
@@ -103,7 +109,7 @@ end_of_export:
  */
 static int pk_write_ec_pubkey(unsigned char **p, unsigned char *start,
                               mbedtls_ecp_keypair *ec) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len = 0;
     unsigned char buf[MBEDTLS_ECP_MAX_PT_LEN];
 
@@ -129,7 +135,7 @@ static int pk_write_ec_pubkey(unsigned char **p, unsigned char *start,
  */
 static int pk_write_ec_param(unsigned char **p, unsigned char *start,
                              mbedtls_ecp_keypair *ec) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len = 0;
     const char *oid;
     size_t oid_len;
@@ -141,12 +147,36 @@ static int pk_write_ec_param(unsigned char **p, unsigned char *start,
 
     return ((int) len);
 }
+
+/*
+ * privateKey  OCTET STRING -- always of length ceil(log2(n)/8)
+ */
+static int pk_write_ec_private(unsigned char **p, unsigned char *start,
+                               mbedtls_ecp_keypair *ec) {
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    size_t byte_length = (ec->grp.pbits + 7) / 8;
+    unsigned char tmp[MBEDTLS_ECP_MAX_BYTES];
+
+    ret = mbedtls_ecp_write_key(ec, tmp, byte_length);
+    if (ret != 0)
+        goto exit;
+    ret = mbedtls_asn1_write_octet_string(p, start, tmp, byte_length);
+
+exit:
+    mbedtls_platform_zeroize(tmp, byte_length);
+    return (ret);
+}
 #endif /* MBEDTLS_ECP_C */
 
 int mbedtls_pk_write_pubkey(unsigned char **p, unsigned char *start,
                             const mbedtls_pk_context *key) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len = 0;
+
+    PK_VALIDATE_RET(p != NULL);
+    PK_VALIDATE_RET(*p != NULL);
+    PK_VALIDATE_RET(start != NULL);
+    PK_VALIDATE_RET(key != NULL);
 
 #if defined(MBEDTLS_RSA_C)
     if (mbedtls_pk_get_type(key) == MBEDTLS_PK_RSA)
@@ -158,16 +188,40 @@ int mbedtls_pk_write_pubkey(unsigned char **p, unsigned char *start,
             MBEDTLS_ASN1_CHK_ADD(len, pk_write_ec_pubkey(p, start, mbedtls_pk_ec(*key)));
         else
 #endif
-            return (MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE);
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+            if (mbedtls_pk_get_type(key) == MBEDTLS_PK_OPAQUE) {
+                size_t buffer_size;
+                psa_key_id_t *key_id = (psa_key_id_t *) key->pk_ctx;
+
+                if (*p < start)
+                    return (MBEDTLS_ERR_PK_BAD_INPUT_DATA);
+
+                buffer_size = (size_t)(*p - start);
+                if (psa_export_public_key(*key_id, start, buffer_size, &len)
+                        != PSA_SUCCESS) {
+                    return (MBEDTLS_ERR_PK_BAD_INPUT_DATA);
+                } else {
+                    *p -= len;
+                    memmove(*p, start, len);
+                }
+            } else
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+                return (MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE);
 
     return ((int) len);
 }
 
 int mbedtls_pk_write_pubkey_der(mbedtls_pk_context *key, unsigned char *buf, size_t size) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *c;
     size_t len = 0, par_len = 0, oid_len;
+    mbedtls_pk_type_t pk_type;
     const char *oid;
+
+    PK_VALIDATE_RET(key != NULL);
+    if (size == 0)
+        return (MBEDTLS_ERR_ASN1_BUF_TOO_SMALL);
+    PK_VALIDATE_RET(buf != NULL);
 
     c = buf + size;
 
@@ -187,16 +241,49 @@ int mbedtls_pk_write_pubkey_der(mbedtls_pk_context *key, unsigned char *buf, siz
     MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&c, buf, len));
     MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&c, buf, MBEDTLS_ASN1_BIT_STRING));
 
-    if ((ret = mbedtls_oid_get_oid_by_pk_alg(mbedtls_pk_get_type(key),
-                                             &oid, &oid_len)) != 0) {
-        return (ret);
-    }
-
+    pk_type = mbedtls_pk_get_type(key);
 #if defined(MBEDTLS_ECP_C)
-    if (mbedtls_pk_get_type(key) == MBEDTLS_PK_ECKEY) {
+    if (pk_type == MBEDTLS_PK_ECKEY) {
         MBEDTLS_ASN1_CHK_ADD(par_len, pk_write_ec_param(&c, buf, mbedtls_pk_ec(*key)));
     }
 #endif
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    if (pk_type == MBEDTLS_PK_OPAQUE) {
+        psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
+        psa_key_type_t key_type;
+        psa_key_id_t key_id;
+        psa_ecc_family_t curve;
+        size_t bits;
+
+        key_id = *((psa_key_id_t *) key->pk_ctx);
+        if (PSA_SUCCESS != psa_get_key_attributes(key_id, &attributes))
+            return (MBEDTLS_ERR_PK_HW_ACCEL_FAILED);
+        key_type = psa_get_key_type(&attributes);
+        bits = psa_get_key_bits(&attributes);
+        psa_reset_key_attributes(&attributes);
+
+        curve = PSA_KEY_TYPE_ECC_GET_FAMILY(key_type);
+        if (curve == 0)
+            return (MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE);
+
+        ret = mbedtls_psa_get_ecc_oid_from_id(curve, bits, &oid, &oid_len);
+        if (ret != 0)
+            return (MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE);
+
+        /* Write EC algorithm parameters; that's akin
+         * to pk_write_ec_param() above. */
+        MBEDTLS_ASN1_CHK_ADD(par_len, mbedtls_asn1_write_oid(&c, buf,
+                                                             oid, oid_len));
+
+        /* The rest of the function works as for legacy EC contexts. */
+        pk_type = MBEDTLS_PK_ECKEY;
+    }
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
+    if ((ret = mbedtls_oid_get_oid_by_pk_alg(pk_type, &oid,
+                                             &oid_len)) != 0) {
+        return (ret);
+    }
 
     MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_algorithm_identifier(&c, buf, oid, oid_len,
                          par_len));
@@ -209,9 +296,16 @@ int mbedtls_pk_write_pubkey_der(mbedtls_pk_context *key, unsigned char *buf, siz
 }
 
 int mbedtls_pk_write_key_der(mbedtls_pk_context *key, unsigned char *buf, size_t size) {
-    int ret;
-    unsigned char *c = buf + size;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    unsigned char *c;
     size_t len = 0;
+
+    PK_VALIDATE_RET(key != NULL);
+    if (size == 0)
+        return (MBEDTLS_ERR_ASN1_BUF_TOO_SMALL);
+    PK_VALIDATE_RET(buf != NULL);
+
+    c = buf + size;
 
 #if defined(MBEDTLS_RSA_C)
     if (mbedtls_pk_get_type(key) == MBEDTLS_PK_RSA) {
@@ -330,9 +424,8 @@ end_of_export:
                                                                  MBEDTLS_ASN1_CONTEXT_SPECIFIC | MBEDTLS_ASN1_CONSTRUCTED | 0));
             len += par_len;
 
-            /* privateKey: write as MPI then fix tag */
-            MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_mpi(&c, buf, &ec->d));
-            *c = MBEDTLS_ASN1_OCTET_STRING;
+            /* privateKey */
+            MBEDTLS_ASN1_CHK_ADD(len, pk_write_ec_private(&c, buf, ec));
 
             /* version */
             MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_int(&c, buf, 1));
@@ -374,7 +467,7 @@ end_of_export:
  *      publicExponent    INTEGER   -- e            1 + 3 + MPI_MAX + 1
  *  }
  */
-#define RSA_PUB_DER_MAX_BYTES   38 + 2 * MBEDTLS_MPI_MAX_SIZE
+#define RSA_PUB_DER_MAX_BYTES   ( 38 + 2 * MBEDTLS_MPI_MAX_SIZE )
 
 /*
  * RSA private keys:
@@ -391,10 +484,10 @@ end_of_export:
  *      otherPrimeInfos   OtherPrimeInfos OPTIONAL  0 (not supported)
  *  }
  */
-#define MPI_MAX_SIZE_2          MBEDTLS_MPI_MAX_SIZE / 2 + \
-    MBEDTLS_MPI_MAX_SIZE % 2
-#define RSA_PRV_DER_MAX_BYTES   47 + 3 * MBEDTLS_MPI_MAX_SIZE \
-    + 5 * MPI_MAX_SIZE_2
+#define MPI_MAX_SIZE_2          ( MBEDTLS_MPI_MAX_SIZE / 2 + \
+                                  MBEDTLS_MPI_MAX_SIZE % 2 )
+#define RSA_PRV_DER_MAX_BYTES   ( 47 + 3 * MBEDTLS_MPI_MAX_SIZE \
+                                   + 5 * MPI_MAX_SIZE_2 )
 
 #else /* MBEDTLS_RSA_C */
 
@@ -415,7 +508,7 @@ end_of_export:
  *                                            + 2 * ECP_MAX (coords)    [1]
  *  }
  */
-#define ECP_PUB_DER_MAX_BYTES   30 + 2 * MBEDTLS_ECP_MAX_BYTES
+#define ECP_PUB_DER_MAX_BYTES   ( 30 + 2 * MBEDTLS_ECP_MAX_BYTES )
 
 /*
  * EC private keys:
@@ -426,7 +519,7 @@ end_of_export:
  *      publicKey  [1] BIT STRING OPTIONAL      1 + 2 + [1] above
  *    }
  */
-#define ECP_PRV_DER_MAX_BYTES   29 + 3 * MBEDTLS_ECP_MAX_BYTES
+#define ECP_PRV_DER_MAX_BYTES   ( 29 + 3 * MBEDTLS_ECP_MAX_BYTES )
 
 #else /* MBEDTLS_ECP_C */
 
@@ -435,15 +528,18 @@ end_of_export:
 
 #endif /* MBEDTLS_ECP_C */
 
-#define PUB_DER_MAX_BYTES   RSA_PUB_DER_MAX_BYTES > ECP_PUB_DER_MAX_BYTES ? \
-    RSA_PUB_DER_MAX_BYTES : ECP_PUB_DER_MAX_BYTES
-#define PRV_DER_MAX_BYTES   RSA_PRV_DER_MAX_BYTES > ECP_PRV_DER_MAX_BYTES ? \
-    RSA_PRV_DER_MAX_BYTES : ECP_PRV_DER_MAX_BYTES
+#define PUB_DER_MAX_BYTES   ( RSA_PUB_DER_MAX_BYTES > ECP_PUB_DER_MAX_BYTES ? \
+                              RSA_PUB_DER_MAX_BYTES : ECP_PUB_DER_MAX_BYTES )
+#define PRV_DER_MAX_BYTES   ( RSA_PRV_DER_MAX_BYTES > ECP_PRV_DER_MAX_BYTES ? \
+                              RSA_PRV_DER_MAX_BYTES : ECP_PRV_DER_MAX_BYTES )
 
 int mbedtls_pk_write_pubkey_pem(mbedtls_pk_context *key, unsigned char *buf, size_t size) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char output_buf[PUB_DER_MAX_BYTES];
     size_t olen = 0;
+
+    PK_VALIDATE_RET(key != NULL);
+    PK_VALIDATE_RET(buf != NULL || size == 0);
 
     if ((ret = mbedtls_pk_write_pubkey_der(key, output_buf,
                                            sizeof(output_buf))) < 0) {
@@ -460,10 +556,13 @@ int mbedtls_pk_write_pubkey_pem(mbedtls_pk_context *key, unsigned char *buf, siz
 }
 
 int mbedtls_pk_write_key_pem(mbedtls_pk_context *key, unsigned char *buf, size_t size) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char output_buf[PRV_DER_MAX_BYTES];
     const char *begin, *end;
     size_t olen = 0;
+
+    PK_VALIDATE_RET(key != NULL);
+    PK_VALIDATE_RET(buf != NULL || size == 0);
 
     if ((ret = mbedtls_pk_write_key_der(key, output_buf, sizeof(output_buf))) < 0)
         return (ret);

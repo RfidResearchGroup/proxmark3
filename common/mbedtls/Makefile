@@ -12,7 +12,6 @@ MYSRCS = \
 	entropy_poll.c \
 	entropy.c \
 	error.c \
-	timing.c \
 	ecp.c \
 	ecp_curves.c \
 	certs.c \
@@ -24,7 +23,6 @@ MYSRCS = \
 	des.c \
 	ecdsa.c \
 	md.c \
-	md_wrap.c \
 	md5.c \
 	oid.c \
 	pem.c \

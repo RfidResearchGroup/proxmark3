@@ -1,32 +1,24 @@
 /*
  *  Helper functions for the RSA module
  *
- *  Copyright (C) 2006-2017, ARM Limited, All Rights Reserved
- *  SPDX-License-Identifier: GPL-2.0
+ *  Copyright The Mbed TLS Contributors
+ *  SPDX-License-Identifier: Apache-2.0
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
+ *  not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  *
  */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_RSA_C)
 
@@ -332,14 +324,19 @@ int mbedtls_rsa_validate_params(const mbedtls_mpi *N, const mbedtls_mpi *P,
      */
 
 #if defined(MBEDTLS_GENPRIME)
+    /*
+     * When generating keys, the strongest security we support aims for an error
+     * rate of at most 2^-100 and we are aiming for the same certainty here as
+     * well.
+     */
     if (f_rng != NULL && P != NULL &&
-            (ret = mbedtls_mpi_is_prime(P, f_rng, p_rng)) != 0) {
+            (ret = mbedtls_mpi_is_prime_ext(P, 50, f_rng, p_rng)) != 0) {
         ret = MBEDTLS_ERR_RSA_KEY_CHECK_FAILED;
         goto cleanup;
     }
 
     if (f_rng != NULL && Q != NULL &&
-            (ret = mbedtls_mpi_is_prime(Q, f_rng, p_rng)) != 0) {
+            (ret = mbedtls_mpi_is_prime_ext(Q, 50, f_rng, p_rng)) != 0) {
         ret = MBEDTLS_ERR_RSA_KEY_CHECK_FAILED;
         goto cleanup;
     }

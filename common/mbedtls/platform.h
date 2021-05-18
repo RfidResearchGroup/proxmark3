@@ -13,37 +13,36 @@
  *        dynamically configured at runtime.
  */
 /*
- *  Copyright (C) 2006-2018, Arm Limited (or its affiliates), All Rights Reserved
- *  SPDX-License-Identifier: GPL-2.0
+ *  Copyright The Mbed TLS Contributors
+ *  SPDX-License-Identifier: Apache-2.0
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
+ *  not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- *  This file is part of Mbed TLS (https://tls.mbed.org)
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 #ifndef MBEDTLS_PLATFORM_H
 #define MBEDTLS_PLATFORM_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
 
 #if defined(MBEDTLS_HAVE_TIME)
-#include "platform_time.h"
+#include "mbedtls/platform_time.h"
 #endif
+
+#define MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED     -0x0070 /**< Hardware accelerator failed */
+#define MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED -0x0072 /**< The requested feature is not supported by the platform */
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,15 +56,31 @@ extern "C" {
  * \{
  */
 
+/* The older Microsoft Windows common runtime provides non-conforming
+ * implementations of some standard library functions, including snprintf
+ * and vsnprintf. This affects MSVC and MinGW builds.
+ */
+#if defined(__MINGW32__) || (defined(_MSC_VER) && _MSC_VER <= 1900)
+#define MBEDTLS_PLATFORM_HAS_NON_CONFORMING_SNPRINTF
+#define MBEDTLS_PLATFORM_HAS_NON_CONFORMING_VSNPRINTF
+#endif
+
 #if !defined(MBEDTLS_PLATFORM_NO_STD_FUNCTIONS)
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #if !defined(MBEDTLS_PLATFORM_STD_SNPRINTF)
-#if defined(_WIN32)
+#if defined(MBEDTLS_PLATFORM_HAS_NON_CONFORMING_SNPRINTF)
 #define MBEDTLS_PLATFORM_STD_SNPRINTF   mbedtls_platform_win32_snprintf /**< The default \c snprintf function to use.  */
 #else
 #define MBEDTLS_PLATFORM_STD_SNPRINTF   snprintf /**< The default \c snprintf function to use.  */
+#endif
+#endif
+#if !defined(MBEDTLS_PLATFORM_STD_VSNPRINTF)
+#if defined(MBEDTLS_PLATFORM_HAS_NON_CONFORMING_VSNPRINTF)
+#define MBEDTLS_PLATFORM_STD_VSNPRINTF   mbedtls_platform_win32_vsnprintf /**< The default \c vsnprintf function to use.  */
+#else
+#define MBEDTLS_PLATFORM_STD_VSNPRINTF   vsnprintf /**< The default \c vsnprintf function to use.  */
 #endif
 #endif
 #if !defined(MBEDTLS_PLATFORM_STD_PRINTF)
@@ -203,7 +218,7 @@ int mbedtls_platform_set_printf(int (*printf_func)(const char *, ...));
  * - however it is acceptable to return -1 instead of the required length when
  *   the destination buffer is too short.
  */
-#if defined(_WIN32)
+#if defined(MBEDTLS_PLATFORM_HAS_NON_CONFORMING_SNPRINTF)
 /* For Windows (inc. MSYS2), we provide our own fixed implementation */
 int mbedtls_platform_win32_snprintf(char *s, size_t n, const char *fmt, ...);
 #endif
@@ -228,6 +243,42 @@ int mbedtls_platform_set_snprintf(int (*snprintf_func)(char *s, size_t n,
 #define mbedtls_snprintf   MBEDTLS_PLATFORM_STD_SNPRINTF
 #endif /* MBEDTLS_PLATFORM_SNPRINTF_MACRO */
 #endif /* MBEDTLS_PLATFORM_SNPRINTF_ALT */
+
+/*
+ * The function pointers for vsnprintf
+ *
+ * The vsnprintf implementation should conform to C99:
+ * - it *must* always correctly zero-terminate the buffer
+ *   (except when n == 0, then it must leave the buffer untouched)
+ * - however it is acceptable to return -1 instead of the required length when
+ *   the destination buffer is too short.
+ */
+#if defined(MBEDTLS_PLATFORM_HAS_NON_CONFORMING_VSNPRINTF)
+#include <stdarg.h>
+/* For Older Windows (inc. MSYS2), we provide our own fixed implementation */
+int mbedtls_platform_win32_vsnprintf(char *s, size_t n, const char *fmt, va_list arg);
+#endif
+
+#if defined(MBEDTLS_PLATFORM_VSNPRINTF_ALT)
+#include <stdarg.h>
+extern int (*mbedtls_vsnprintf)(char *s, size_t n, const char *format, va_list arg);
+
+/**
+ * \brief   Set your own snprintf function pointer
+ *
+ * \param   vsnprintf_func   The \c vsnprintf function implementation
+ *
+ * \return  \c 0
+ */
+int mbedtls_platform_set_vsnprintf(int (*vsnprintf_func)(char *s, size_t n,
+                                                         const char *format, va_list arg));
+#else /* MBEDTLS_PLATFORM_VSNPRINTF_ALT */
+#if defined(MBEDTLS_PLATFORM_VSNPRINTF_MACRO)
+#define mbedtls_vsnprintf   MBEDTLS_PLATFORM_VSNPRINTF_MACRO
+#else
+#define mbedtls_vsnprintf   vsnprintf
+#endif /* MBEDTLS_PLATFORM_VSNPRINTF_MACRO */
+#endif /* MBEDTLS_PLATFORM_VSNPRINTF_ALT */
 
 /*
  * The function pointers for exit

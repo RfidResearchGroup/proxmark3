@@ -4,36 +4,32 @@
  * \brief Public Key abstraction layer: wrapper functions
  */
 /*
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
- *  SPDX-License-Identifier: GPL-2.0
+ *  Copyright The Mbed TLS Contributors
+ *  SPDX-License-Identifier: Apache-2.0
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
+ *  not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 
 #ifndef MBEDTLS_PK_WRAP_H
 #define MBEDTLS_PK_WRAP_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-#include "pk.h"
+#include "mbedtls/pk.h"
 
 struct mbedtls_pk_info_t {
     /** Public key type */
@@ -60,6 +56,21 @@ struct mbedtls_pk_info_t {
                      int (*f_rng)(void *, unsigned char *, size_t),
                      void *p_rng);
 
+#if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
+    /** Verify signature (restartable) */
+    int (*verify_rs_func)(void *ctx, mbedtls_md_type_t md_alg,
+                          const unsigned char *hash, size_t hash_len,
+                          const unsigned char *sig, size_t sig_len,
+                          void *rs_ctx);
+
+    /** Make signature (restartable) */
+    int (*sign_rs_func)(void *ctx, mbedtls_md_type_t md_alg,
+                        const unsigned char *hash, size_t hash_len,
+                        unsigned char *sig, size_t *sig_len,
+                        int (*f_rng)(void *, unsigned char *, size_t),
+                        void *p_rng, void *rs_ctx);
+#endif /* MBEDTLS_ECDSA_C && MBEDTLS_ECP_RESTARTABLE */
+
     /** Decrypt message */
     int (*decrypt_func)(void *ctx, const unsigned char *input, size_t ilen,
                         unsigned char *output, size_t *olen, size_t osize,
@@ -80,6 +91,14 @@ struct mbedtls_pk_info_t {
 
     /** Free the given context */
     void (*ctx_free_func)(void *ctx);
+
+#if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
+    /** Allocate the restart context */
+    void *(*rs_alloc_func)(void);
+
+    /** Free the restart context */
+    void (*rs_free_func)(void *rs_ctx);
+#endif /* MBEDTLS_ECDSA_C && MBEDTLS_ECP_RESTARTABLE */
 
     /** Interface with the debug module */
     void (*debug_func)(const void *ctx, mbedtls_pk_debug_item *items);
@@ -110,6 +129,10 @@ extern const mbedtls_pk_info_t mbedtls_ecdsa_info;
 
 #if defined(MBEDTLS_PK_RSA_ALT_SUPPORT)
 extern const mbedtls_pk_info_t mbedtls_rsa_alt_info;
+#endif
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+extern const mbedtls_pk_info_t mbedtls_pk_opaque_info;
 #endif
 
 #endif /* MBEDTLS_PK_WRAP_H */

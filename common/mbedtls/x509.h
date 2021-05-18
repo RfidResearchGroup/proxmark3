@@ -4,39 +4,35 @@
  * \brief X.509 generic defines and structures
  */
 /*
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
- *  SPDX-License-Identifier: GPL-2.0
+ *  Copyright The Mbed TLS Contributors
+ *  SPDX-License-Identifier: Apache-2.0
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
+ *  not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 #ifndef MBEDTLS_X509_H
 #define MBEDTLS_X509_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-#include "asn1.h"
-#include "pk.h"
+#include "mbedtls/asn1.h"
+#include "mbedtls/pk.h"
 
 #if defined(MBEDTLS_RSA_C)
-#include "rsa.h"
+#include "mbedtls/rsa.h"
 #endif
 
 /**
@@ -112,6 +108,28 @@
 /* \} addtogroup x509_module */
 
 /*
+ * X.509 v3 Subject Alternative Name types.
+ *      otherName                       [0]     OtherName,
+ *      rfc822Name                      [1]     IA5String,
+ *      dNSName                         [2]     IA5String,
+ *      x400Address                     [3]     ORAddress,
+ *      directoryName                   [4]     Name,
+ *      ediPartyName                    [5]     EDIPartyName,
+ *      uniformResourceIdentifier       [6]     IA5String,
+ *      iPAddress                       [7]     OCTET STRING,
+ *      registeredID                    [8]     OBJECT IDENTIFIER
+ */
+#define MBEDTLS_X509_SAN_OTHER_NAME                      0
+#define MBEDTLS_X509_SAN_RFC822_NAME                     1
+#define MBEDTLS_X509_SAN_DNS_NAME                        2
+#define MBEDTLS_X509_SAN_X400_ADDRESS_NAME               3
+#define MBEDTLS_X509_SAN_DIRECTORY_NAME                  4
+#define MBEDTLS_X509_SAN_EDI_PARTY_NAME                  5
+#define MBEDTLS_X509_SAN_UNIFORM_RESOURCE_IDENTIFIER     6
+#define MBEDTLS_X509_SAN_IP_ADDRESS                      7
+#define MBEDTLS_X509_SAN_REGISTERED_ID                   8
+
+/*
  * X.509 v3 Key Usage Extension flags
  * Reminder: update x509_info_key_usage() when adding new flags.
  */
@@ -144,24 +162,26 @@
  *
  * Comments refer to the status for using certificates. Status can be
  * different for writing certificates or reading CRLs or CSRs.
+ *
+ * Those are defined in oid.h as oid.c needs them in a data structure. Since
+ * these were previously defined here, let's have aliases for compatibility.
  */
-#define MBEDTLS_X509_EXT_AUTHORITY_KEY_IDENTIFIER    (1 << 0)
-#define MBEDTLS_X509_EXT_SUBJECT_KEY_IDENTIFIER      (1 << 1)
-#define MBEDTLS_X509_EXT_KEY_USAGE                   (1 << 2)
-#define MBEDTLS_X509_EXT_CERTIFICATE_POLICIES        (1 << 3)
-#define MBEDTLS_X509_EXT_POLICY_MAPPINGS             (1 << 4)
-#define MBEDTLS_X509_EXT_SUBJECT_ALT_NAME            (1 << 5)    /* Supported (DNS) */
-#define MBEDTLS_X509_EXT_ISSUER_ALT_NAME             (1 << 6)
-#define MBEDTLS_X509_EXT_SUBJECT_DIRECTORY_ATTRS     (1 << 7)
-#define MBEDTLS_X509_EXT_BASIC_CONSTRAINTS           (1 << 8)    /* Supported */
-#define MBEDTLS_X509_EXT_NAME_CONSTRAINTS            (1 << 9)
-#define MBEDTLS_X509_EXT_POLICY_CONSTRAINTS          (1 << 10)
-#define MBEDTLS_X509_EXT_EXTENDED_KEY_USAGE          (1 << 11)
-#define MBEDTLS_X509_EXT_CRL_DISTRIBUTION_POINTS     (1 << 12)
-#define MBEDTLS_X509_EXT_INIHIBIT_ANYPOLICY          (1 << 13)
-#define MBEDTLS_X509_EXT_FRESHEST_CRL                (1 << 14)
-
-#define MBEDTLS_X509_EXT_NS_CERT_TYPE                (1 << 16)
+#define MBEDTLS_X509_EXT_AUTHORITY_KEY_IDENTIFIER MBEDTLS_OID_X509_EXT_AUTHORITY_KEY_IDENTIFIER
+#define MBEDTLS_X509_EXT_SUBJECT_KEY_IDENTIFIER   MBEDTLS_OID_X509_EXT_SUBJECT_KEY_IDENTIFIER
+#define MBEDTLS_X509_EXT_KEY_USAGE                MBEDTLS_OID_X509_EXT_KEY_USAGE
+#define MBEDTLS_X509_EXT_CERTIFICATE_POLICIES     MBEDTLS_OID_X509_EXT_CERTIFICATE_POLICIES
+#define MBEDTLS_X509_EXT_POLICY_MAPPINGS          MBEDTLS_OID_X509_EXT_POLICY_MAPPINGS
+#define MBEDTLS_X509_EXT_SUBJECT_ALT_NAME         MBEDTLS_OID_X509_EXT_SUBJECT_ALT_NAME         /* Supported (DNS) */
+#define MBEDTLS_X509_EXT_ISSUER_ALT_NAME          MBEDTLS_OID_X509_EXT_ISSUER_ALT_NAME
+#define MBEDTLS_X509_EXT_SUBJECT_DIRECTORY_ATTRS  MBEDTLS_OID_X509_EXT_SUBJECT_DIRECTORY_ATTRS
+#define MBEDTLS_X509_EXT_BASIC_CONSTRAINTS        MBEDTLS_OID_X509_EXT_BASIC_CONSTRAINTS        /* Supported */
+#define MBEDTLS_X509_EXT_NAME_CONSTRAINTS         MBEDTLS_OID_X509_EXT_NAME_CONSTRAINTS
+#define MBEDTLS_X509_EXT_POLICY_CONSTRAINTS       MBEDTLS_OID_X509_EXT_POLICY_CONSTRAINTS
+#define MBEDTLS_X509_EXT_EXTENDED_KEY_USAGE       MBEDTLS_OID_X509_EXT_EXTENDED_KEY_USAGE
+#define MBEDTLS_X509_EXT_CRL_DISTRIBUTION_POINTS  MBEDTLS_OID_X509_EXT_CRL_DISTRIBUTION_POINTS
+#define MBEDTLS_X509_EXT_INIHIBIT_ANYPOLICY       MBEDTLS_OID_X509_EXT_INIHIBIT_ANYPOLICY
+#define MBEDTLS_X509_EXT_FRESHEST_CRL             MBEDTLS_OID_X509_EXT_FRESHEST_CRL
+#define MBEDTLS_X509_EXT_NS_CERT_TYPE             MBEDTLS_OID_X509_EXT_NS_CERT_TYPE
 
 /*
  * Storage format identifiers
@@ -270,12 +290,16 @@ int mbedtls_x509_time_is_past(const mbedtls_x509_time *to);
  */
 int mbedtls_x509_time_is_future(const mbedtls_x509_time *from);
 
+#if defined(MBEDTLS_SELF_TEST)
+
 /**
  * \brief          Checkup routine
  *
  * \return         0 if successful, or 1 if the test failed
  */
 int mbedtls_x509_self_test(int verbose);
+
+#endif /* MBEDTLS_SELF_TEST */
 
 /*
  * Internal module functions. You probably do not want to use these unless you
@@ -322,7 +346,7 @@ int mbedtls_x509_write_sig(unsigned char **p, unsigned char *start,
     do {                                                    \
         if( ret < 0 || (size_t) ret >= n )                  \
             return( MBEDTLS_ERR_X509_BUFFER_TOO_SMALL );    \
-        \
+                                                            \
         n -= (size_t) ret;                                  \
         p += (size_t) ret;                                  \
     } while( 0 )

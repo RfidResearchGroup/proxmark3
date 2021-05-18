@@ -1,24 +1,20 @@
 /*
  *  X.509 common functions for parsing and verification
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
- *  SPDX-License-Identifier: GPL-2.0
+ *  Copyright The Mbed TLS Contributors
+ *  SPDX-License-Identifier: Apache-2.0
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
+ *  not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 /*
  *  The ITU-T X.509 standard defines a certificate format for PKI.
@@ -31,20 +27,13 @@
  *  http://www.itu.int/ITU-T/studygroups/com17/languages/X.690-0207.pdf
  */
 
-/* Ensure gmtime_r is available even with -std=c99; must be included before
- * config.h, which pulls in glibc's features.h. Harmless on other platforms. */
-#define _POSIX_C_SOURCE 200112L
-
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_X509_USE_C)
 
 #include "mbedtls/x509.h"
 #include "mbedtls/asn1.h"
+#include "mbedtls/error.h"
 #include "mbedtls/oid.h"
 
 #include <stdio.h>
@@ -69,18 +58,26 @@
 #include "mbedtls/platform_time.h"
 #endif
 #if defined(MBEDTLS_HAVE_TIME_DATE)
+#include "mbedtls/platform_util.h"
 #include <time.h>
 #endif
 
-#define CHECK(code) if( ( ret = code ) != 0 ){ return( ret ); }
-#define CHECK_RANGE(min, max, val) if( val < min || val > max ){ return( ret ); }
+#define CHECK(code) if( ( ret = ( code ) ) != 0 ){ return( ret ); }
+#define CHECK_RANGE(min, max, val)                      \
+    do                                                  \
+    {                                                   \
+        if( ( val ) < ( min ) || ( val ) > ( max ) )    \
+        {                                               \
+            return( ret );                              \
+        }                                               \
+    } while( 0 )
 
 /*
  *  CertificateSerialNumber  ::=  INTEGER
  */
 int mbedtls_x509_get_serial(unsigned char **p, const unsigned char *end,
                             mbedtls_x509_buf *serial) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
     if ((end - *p) < 1)
         return (MBEDTLS_ERR_X509_INVALID_SERIAL +
@@ -110,7 +107,7 @@ int mbedtls_x509_get_serial(unsigned char **p, const unsigned char *end,
  */
 int mbedtls_x509_get_alg_null(unsigned char **p, const unsigned char *end,
                               mbedtls_x509_buf *alg) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
     if ((ret = mbedtls_asn1_get_alg_null(p, end, alg)) != 0)
         return (MBEDTLS_ERR_X509_INVALID_ALG + ret);
@@ -119,11 +116,11 @@ int mbedtls_x509_get_alg_null(unsigned char **p, const unsigned char *end,
 }
 
 /*
- * Parse an algorithm identifier with (optional) paramaters
+ * Parse an algorithm identifier with (optional) parameters
  */
 int mbedtls_x509_get_alg(unsigned char **p, const unsigned char *end,
                          mbedtls_x509_buf *alg, mbedtls_x509_buf *params) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
     if ((ret = mbedtls_asn1_get_alg(p, end, alg, params)) != 0)
         return (MBEDTLS_ERR_X509_INVALID_ALG + ret);
@@ -142,7 +139,7 @@ int mbedtls_x509_get_alg(unsigned char **p, const unsigned char *end,
  * For HashAlgorithm, parameters MUST be NULL or absent.
  */
 static int x509_get_hash_alg(const mbedtls_x509_buf *alg, mbedtls_md_type_t *md_alg) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *p;
     const unsigned char *end;
     mbedtls_x509_buf md_oid;
@@ -153,7 +150,7 @@ static int x509_get_hash_alg(const mbedtls_x509_buf *alg, mbedtls_md_type_t *md_
         return (MBEDTLS_ERR_X509_INVALID_ALG +
                 MBEDTLS_ERR_ASN1_UNEXPECTED_TAG);
 
-    p = (unsigned char *) alg->p;
+    p = alg->p;
     end = p + alg->len;
 
     if (p >= end)
@@ -202,7 +199,7 @@ static int x509_get_hash_alg(const mbedtls_x509_buf *alg, mbedtls_md_type_t *md_
 int mbedtls_x509_get_rsassa_pss_params(const mbedtls_x509_buf *params,
                                        mbedtls_md_type_t *md_alg, mbedtls_md_type_t *mgf_md,
                                        int *salt_len) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *p;
     const unsigned char *end, *end2;
     size_t len;
@@ -336,7 +333,7 @@ int mbedtls_x509_get_rsassa_pss_params(const mbedtls_x509_buf *params,
 static int x509_get_attr_type_value(unsigned char **p,
                                     const unsigned char *end,
                                     mbedtls_x509_name *cur) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len;
     mbedtls_x509_buf *oid;
     mbedtls_x509_buf *val;
@@ -344,6 +341,8 @@ static int x509_get_attr_type_value(unsigned char **p,
     if ((ret = mbedtls_asn1_get_tag(p, end, &len,
                                     MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE)) != 0)
         return (MBEDTLS_ERR_X509_INVALID_NAME + ret);
+
+    end = *p + len;
 
     if ((end - *p) < 1)
         return (MBEDTLS_ERR_X509_INVALID_NAME +
@@ -378,6 +377,11 @@ static int x509_get_attr_type_value(unsigned char **p,
     val->p = *p;
     *p += val->len;
 
+    if (*p != end) {
+        return (MBEDTLS_ERR_X509_INVALID_NAME +
+                MBEDTLS_ERR_ASN1_LENGTH_MISMATCH);
+    }
+
     cur->next = NULL;
 
     return (0);
@@ -408,7 +412,7 @@ static int x509_get_attr_type_value(unsigned char **p,
  */
 int mbedtls_x509_get_name(unsigned char **p, const unsigned char *end,
                           mbedtls_x509_name *cur) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t set_len;
     const unsigned char *end_set;
 
@@ -516,7 +520,7 @@ static int x509_date_is_valid(const mbedtls_x509_time *t) {
  */
 static int x509_parse_time(unsigned char **p, size_t len, size_t yearlen,
                            mbedtls_x509_time *tm) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
     /*
      * Minimum length is 10 or 12 depending on yearlen
@@ -576,7 +580,7 @@ static int x509_parse_time(unsigned char **p, size_t len, size_t yearlen,
  */
 int mbedtls_x509_get_time(unsigned char **p, const unsigned char *end,
                           mbedtls_x509_time *tm) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len, year_len;
     unsigned char tag;
 
@@ -604,7 +608,7 @@ int mbedtls_x509_get_time(unsigned char **p, const unsigned char *end,
 }
 
 int mbedtls_x509_get_sig(unsigned char **p, const unsigned char *end, mbedtls_x509_buf *sig) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len;
     int tag_type;
 
@@ -632,7 +636,7 @@ int mbedtls_x509_get_sig(unsigned char **p, const unsigned char *end, mbedtls_x5
 int mbedtls_x509_get_sig_alg(const mbedtls_x509_buf *sig_oid, const mbedtls_x509_buf *sig_params,
                              mbedtls_md_type_t *md_alg, mbedtls_pk_type_t *pk_alg,
                              void **sig_opts) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
     if (*sig_opts != NULL)
         return (MBEDTLS_ERR_X509_BAD_INPUT_DATA);
@@ -676,28 +680,23 @@ int mbedtls_x509_get_sig_alg(const mbedtls_x509_buf *sig_oid, const mbedtls_x509
  */
 int mbedtls_x509_get_ext(unsigned char **p, const unsigned char *end,
                          mbedtls_x509_buf *ext, int tag) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len;
 
-    if (*p == end)
-        return (0);
+    /* Extension structure use EXPLICIT tagging. That is, the actual
+     * `Extensions` structure is wrapped by a tag-length pair using
+     * the respective context-specific tag. */
+    ret = mbedtls_asn1_get_tag(p, end, &ext->len,
+                               MBEDTLS_ASN1_CONTEXT_SPECIFIC | MBEDTLS_ASN1_CONSTRUCTED | tag);
+    if (ret != 0)
+        return (MBEDTLS_ERR_X509_INVALID_EXTENSIONS + ret);
 
-    ext->tag = **p;
-
-    if ((ret = mbedtls_asn1_get_tag(p, end, &ext->len,
-                                    MBEDTLS_ASN1_CONTEXT_SPECIFIC | MBEDTLS_ASN1_CONSTRUCTED | tag)) != 0)
-        return (ret);
-
-    ext->p = *p;
-    end = *p + ext->len;
+    ext->tag = MBEDTLS_ASN1_CONTEXT_SPECIFIC | MBEDTLS_ASN1_CONSTRUCTED | tag;
+    ext->p   = *p;
+    end      = *p + ext->len;
 
     /*
      * Extensions  ::=  SEQUENCE SIZE (1..MAX) OF Extension
-     *
-     * Extension  ::=  SEQUENCE  {
-     *      extnID      OBJECT IDENTIFIER,
-     *      critical    BOOLEAN DEFAULT FALSE,
-     *      extnValue   OCTET STRING  }
      */
     if ((ret = mbedtls_asn1_get_tag(p, end, &len,
                                     MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE)) != 0)
@@ -715,7 +714,7 @@ int mbedtls_x509_get_ext(unsigned char **p, const unsigned char *end,
  * than size characters will be written
  */
 int mbedtls_x509_dn_gets(char *buf, size_t size, const mbedtls_x509_name *dn) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t i, n;
     unsigned char c, merge = 0;
     const mbedtls_x509_name *name;
@@ -752,7 +751,7 @@ int mbedtls_x509_dn_gets(char *buf, size_t size, const mbedtls_x509_name *dn) {
                 break;
 
             c = name->val.p[i];
-            if (c < 32 || c == 127 || (c > 128 && c < 160))
+            if (c < 32 || c >= 127)
                 s[i] = '?';
             else s[i] = c;
         }
@@ -772,7 +771,7 @@ int mbedtls_x509_dn_gets(char *buf, size_t size, const mbedtls_x509_name *dn) {
  * than size characters will be written
  */
 int mbedtls_x509_serial_gets(char *buf, size_t size, const mbedtls_x509_buf *serial) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t i, n, nr;
     char *p;
 
@@ -805,7 +804,7 @@ int mbedtls_x509_serial_gets(char *buf, size_t size, const mbedtls_x509_buf *ser
 int mbedtls_x509_sig_alg_gets(char *buf, size_t size, const mbedtls_x509_buf *sig_oid,
                               mbedtls_pk_type_t pk_alg, mbedtls_md_type_t md_alg,
                               const void *sig_opts) {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     char *p = buf;
     size_t n = size;
     const char *desc = NULL;
@@ -830,7 +829,7 @@ int mbedtls_x509_sig_alg_gets(char *buf, size_t size, const mbedtls_x509_buf *si
         ret = mbedtls_snprintf(p, n, " (%s, MGF1-%s, 0x%02X)",
                                md_info ? mbedtls_md_get_name(md_info) : "???",
                                mgf_md_info ? mbedtls_md_get_name(mgf_md_info) : "???",
-                               pss_opts->expected_salt_len);
+                               (unsigned int) pss_opts->expected_salt_len);
         MBEDTLS_X509_SAFE_SNPRINTF;
     }
 #else
@@ -848,7 +847,7 @@ int mbedtls_x509_sig_alg_gets(char *buf, size_t size, const mbedtls_x509_buf *si
 int mbedtls_x509_key_size_helper(char *buf, size_t buf_size, const char *name) {
     char *p = buf;
     size_t n = buf_size;
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
     ret = mbedtls_snprintf(p, n, "%s key size", name);
     MBEDTLS_X509_SAFE_SNPRINTF;
@@ -867,11 +866,7 @@ static int x509_get_current_time(mbedtls_x509_time *now) {
     int ret = 0;
 
     tt = mbedtls_time(NULL);
-#if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
-    lt = gmtime_s(&tm_buf, &tt) == 0 ? &tm_buf : NULL;
-#else
-    lt = gmtime_r(&tt, &tm_buf);
-#endif
+    lt = mbedtls_platform_gmtime_r(&tt, &tm_buf);
 
     if (lt == NULL)
         ret = -1;
@@ -967,8 +962,8 @@ int mbedtls_x509_time_is_future(const mbedtls_x509_time *from) {
  * Checkup routine
  */
 int mbedtls_x509_self_test(int verbose) {
+    int ret = 0;
 #if defined(MBEDTLS_CERTS_C) && defined(MBEDTLS_SHA256_C)
-    int ret;
     uint32_t flags;
     mbedtls_x509_crt cacert;
     mbedtls_x509_crt clicert;
@@ -976,6 +971,7 @@ int mbedtls_x509_self_test(int verbose) {
     if (verbose != 0)
         mbedtls_printf("  X.509 certificate load: ");
 
+    mbedtls_x509_crt_init(&cacert);
     mbedtls_x509_crt_init(&clicert);
 
     ret = mbedtls_x509_crt_parse(&clicert, (const unsigned char *) mbedtls_test_cli_crt,
@@ -984,10 +980,8 @@ int mbedtls_x509_self_test(int verbose) {
         if (verbose != 0)
             mbedtls_printf("failed\n");
 
-        return (ret);
+        goto cleanup;
     }
-
-    mbedtls_x509_crt_init(&cacert);
 
     ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char *) mbedtls_test_ca_crt,
                                  mbedtls_test_ca_crt_len);
@@ -995,7 +989,7 @@ int mbedtls_x509_self_test(int verbose) {
         if (verbose != 0)
             mbedtls_printf("failed\n");
 
-        return (ret);
+        goto cleanup;
     }
 
     if (verbose != 0)
@@ -1006,20 +1000,19 @@ int mbedtls_x509_self_test(int verbose) {
         if (verbose != 0)
             mbedtls_printf("failed\n");
 
-        return (ret);
+        goto cleanup;
     }
 
     if (verbose != 0)
         mbedtls_printf("passed\n\n");
 
+cleanup:
     mbedtls_x509_crt_free(&cacert);
     mbedtls_x509_crt_free(&clicert);
-
-    return (0);
 #else
     ((void) verbose);
-    return (0);
-#endif /* MBEDTLS_CERTS_C && MBEDTLS_SHA1_C */
+#endif /* MBEDTLS_CERTS_C && MBEDTLS_SHA256_C */
+    return (ret);
 }
 
 #endif /* MBEDTLS_SELF_TEST */
