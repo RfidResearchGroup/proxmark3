@@ -217,6 +217,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
 
     char *cmd = NULL;
     bool execCommand = (script_cmd != NULL);
+    bool fromInteractive = false;
     uint16_t script_cmd_len = 0;
     if (execCommand) {
         script_cmd_len = strlen(script_cmd);
@@ -312,7 +313,7 @@ check_script:
                 prompt_ctx = stdinOnPipe ? PROXPROMPT_CTX_STDIN : PROXPROMPT_CTX_SCRIPTCMD;
 
                 cmd = str_dup(script_cmd);
-                if (cmd != NULL)
+                if ((cmd != NULL) && (! fromInteractive))
                     printprompt = true;
 
                 uint16_t len = strlen(script_cmd) + 1;
@@ -338,11 +339,12 @@ check_script:
                     }
                     execCommand = true;
                     stayInCommandLoop = true;
+                    fromInteractive = false;
                     script_cmd = script_cmd_buf;
                     script_cmd_len = strlen(script_cmd);
                     strcreplace(script_cmd, script_cmd_len, ';', '\0');
                     // remove linebreaks
-                    strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
+                    strcleanrn(script_cmd, script_cmd_len);
                     goto check_script;
                 } else {
 #ifdef HAVE_READLINE
@@ -357,7 +359,17 @@ check_script:
                     memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
                     g_pendingPrompt = true;
 #ifdef HAVE_READLINE
-                    cmd = readline(prompt_filtered);
+                    script_cmd = readline(prompt_filtered);
+                    if (script_cmd != NULL) {
+                        execCommand = true;
+                        stayInCommandLoop = true;
+                        fromInteractive = true;
+                        script_cmd_len = strlen(script_cmd);
+                        strcreplace(script_cmd, script_cmd_len, ';', '\0');
+                        // remove linebreaks
+                        strcleanrn(script_cmd, script_cmd_len);
+                        goto check_script;
+                    }
 #else
                     printf("%s", prompt_filtered);
                     cmd = NULL;
