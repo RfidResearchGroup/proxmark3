@@ -58,7 +58,7 @@ uint8_t cmds[8][2] = {
 };
 
 static int global_found = 0;
-static size_t thread_count = 2;
+static int thread_count = 2;
 
 static int param_getptr(const char *line, int *bg, int *en, int paramnum) {
     int i;
@@ -279,7 +279,7 @@ int main(int argc, char *argv[]) {
         thread_count = 2;
 #endif  /* _WIN32 */
 
-    printf("\nBruteforce using %zu threads to find upper 16bits of key\n", thread_count);
+    printf("\nBruteforce using %d threads to find upper 16bits of key\n", thread_count);
 
     pthread_t threads[thread_count];
 
@@ -288,7 +288,7 @@ int main(int argc, char *argv[]) {
 
     // threads
     for (int i = 0; i < thread_count; ++i) {
-        struct thread_args *a = malloc(sizeof(struct thread_args));
+        struct thread_args *a = calloc(1, sizeof(struct thread_args));
         a->thread = i;
         a->idx = i;
         a->uid = uid;
