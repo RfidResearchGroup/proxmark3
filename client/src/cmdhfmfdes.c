@@ -1260,7 +1260,7 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
                     //                           C4  01   A0B08090E0F0C0D02030001060704050      03
                     // 19 bytes
                     //uint8_t csPkt[30] = {0x00};
-                    csPkt[0] = 0xC4;
+                    csPkt[0] = MFDES_CHANGE_KEY;
                     memcpy(&csPkt[1], data, 18);
 
                     desfire_crc32(csPkt, 19, data + 1 + cmdcnt);
