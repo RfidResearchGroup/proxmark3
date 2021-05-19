@@ -474,13 +474,13 @@ static int CmdFlashMemInfo(const char *Cmd) {
 
         // load private
         res = mbedtls_pk_parse_keyfile(&pkctx, path, NULL);
+        free(path);
         //res = mbedtls_pk_parse_public_keyfile(&pkctx, path);
         if (res == 0) {
             PrintAndLogEx(NORMAL, " ( " _GREEN_("ok") " )");
         } else {
             PrintAndLogEx(NORMAL, " ( " _RED_("fail") " )");
             mbedtls_pk_free(&pkctx);
-            free(path);
             return PM3_EFILE;
         }
 
@@ -489,7 +489,6 @@ static int CmdFlashMemInfo(const char *Cmd) {
             PrintAndLogEx(FAILED, "failed to allocate rsa context memory");
             return PM3_EMALLOC;
         }
-        free(path);
         got_private = true;
     } else {
 
