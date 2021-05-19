@@ -285,7 +285,7 @@ void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t le
         return;
     }
 
-    uint8_t *buffer = malloc(padded_data_length(len, kbs));
+    uint8_t *buffer = calloc(padded_data_length(len, kbs), sizeof(uint8_t));
 
     memcpy(buffer, data, len);
 
@@ -315,8 +315,8 @@ void mifare_kdf_an10922(const desfirekey_t key, const uint8_t *data, size_t len)
 
     cmac_generate_subkeys(key, MCD_SEND);
 
-    uint8_t *buffer = malloc(kbs2);
-    uint8_t *ivect = malloc(kbs);
+    uint8_t *buffer = calloc(kbs2, sizeof(uint8_t));
+    uint8_t *ivect = calloc(kbs, sizeof(uint8_t));
 
     memset(ivect, 0, kbs);
 
@@ -556,7 +556,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
     void *res = data;
     void *edata = NULL;
     tag->crypto_buffer_size = *nbytes * 2;
-    tag->crypto_buffer = (uint8_t *)malloc(tag->crypto_buffer_size);
+    tag->crypto_buffer = (uint8_t *)calloc(tag->crypto_buffer_size, sizeof(uint8_t));
 
     uint8_t first_cmac_byte = 0x00;
 
@@ -592,7 +592,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
                         }
 
                         size_t edl = enciphered_data_length(tag, *nbytes, communication_settings);
-                        edata = malloc(edl);
+                        edata = calloc(edl, sizeof(uint8_t));
 
                         memcpy(edata, data, *nbytes);
                         memset((uint8_t *)edata + *nbytes, 0, edl - *nbytes);
