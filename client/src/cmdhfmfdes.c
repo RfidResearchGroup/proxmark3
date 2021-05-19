@@ -1260,7 +1260,7 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
                     //                           C4  01   A0B08090E0F0C0D02030001060704050      03
                     // 19 bytes
                     //uint8_t csPkt[30] = {0x00};
-                    csPkt[0] = 0xC4;
+                    csPkt[0] = MFDES_CHANGE_KEY;
                     memcpy(&csPkt[1], data, 18);
 
                     desfire_crc32(csPkt, 19, data + 1 + cmdcnt);
@@ -1280,8 +1280,18 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
                 cmdcnt += 2;
                 break;
             case AS_NEW:
-                desfire_crc32_append(data, cmdcnt);
+                if (new_algo == MFDES_ALGO_AES) {
+                    // AES Checksum must cover : C4<KeyNo>    <PrevKey XOR Newkey>          <NewKeyVer>
+                    //                           C4  01   A0B08090E0F0C0D02030001060704050      03
+                    csPkt[0] = 0xC4;
+                    memcpy(&csPkt[1], data, 18);
+                    desfire_crc32(csPkt, 19, data + 1 + cmdcnt);
+                } else {
+                    desfire_crc32_append(data + 1, cmdcnt);
+                }
                 cmdcnt += 4;
+              //  desfire_crc32_append(data, cmdcnt);
+              //  cmdcnt += 4;
                 break;
         }
     }
@@ -1292,7 +1302,6 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
 //  the above data pointed to from p did not have the key no. at the start, so copy preprocessed data after the key no.
     memcpy(&data[1], p, cmdcnt);
     apdu.data = data;
-
 
     uint32_t recv_len = 0;
     uint16_t sw = 0;
@@ -1310,6 +1319,15 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
 
     size_t sn = recv_len;
 
+    if (new_algo == MFDES_ALGO_AES) 
+    {
+        // AES expects us to Calculate CMAC for status byte : OK 0x00  (0x91 00)
+        // As such if we get this far without an error, we should be good
+        // Since we are dropping the field, we dont need to maintain the CMAC etc.
+        // Setting sn = 1 will allow the post process to just exit (as status only)
+        sn = 1;
+    }
+
     p = mifare_cryto_postprocess_data(tag, data, &sn, MDCM_PLAIN | CMAC_COMMAND | CMAC_VERIFY);
 
     // Should be finished processing the changekey so lets ensure the field is dropped.
@@ -1319,9 +1337,11 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
         /*
             Note in my testing on an EV1, the AES password did change, with the number of returned bytes was 8, expected 9 <status><8 byte cmac>
             As such !p is true and the code reports "Error on changing key"; so comment back to user until its fixed.
+
+            Note: as at 19 May 2021, with the sn = 1 patch above, this should no longer be reachable!
         */
         if (new_algo == MFDES_ALGO_AES) {
-            PrintAndLogEx(WARNING, "AES password may have been changed, please check new password with the auth command.");
+            PrintAndLogEx(WARNING, "AES Key may have been changed, please check new password with the auth command.");
         }
 
         return PM3_ESOFT;
