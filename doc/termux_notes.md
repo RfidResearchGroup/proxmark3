@@ -200,4 +200,30 @@ Alternatively, if you have made the client in the git repo:
 ```
 ./client/proxmark3 tcp:localhost:<chosenPort>
 ```
+### Troubleshooting
+^[Top](#top)
+
+#### BTADDON Missing in Firmware of PM3
+
+1. Phone and pm3 are connected, blue led is on and *not* blinking
+2. BTUART Tool TCP Server at Port 4321 
+3. Using proxmark3 in termux shows the following error message:
+```
+$ proxmark3 tcp:localhost:4321
+
+[=] Session log /data/data/com.termux/files/home/.suroot /.proxmark3/log_20210519.txt
+
+[=] Loading Preferences...
+
+[+] loaded from JSON file /data/data/com.termux/files/ho me/.suroot/.proxmark3/preferences.json
+
+Using UART port tcp:localhost:4321
+
+[!!] ERROR: cannot communicate with the Proxmark
+```
+Solution:  
+
+Make sure you have installed a firmware with BTADDON compiled. 
+See: https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#platform_extras  
+
 ENJOY !
