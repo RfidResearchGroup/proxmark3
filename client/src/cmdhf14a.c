@@ -397,7 +397,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 static int CmdHF14AReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a reader",
-                  "Reader for ISO 14443A based tags",
+                  "Act as a ISO-14443a reader to identify tag. Look for ISO-14443a tags until Enter or the pm3 button is pressed",
                   "hf 14a reader -@   -> Continuous mode");
 
     void *argtable[] = {

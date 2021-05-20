@@ -119,14 +119,13 @@ static void print_service_code_list_constraints(void) {
 /*
 static int usage_hf_felica_sim(void) {
     PrintAndLogEx(INFO, "\n Emulating ISO/18092 FeliCa tag \n");
-    PrintAndLogEx(INFO, "Usage: hf felica sim [h] t <type> [v]");
+    PrintAndLogEx(INFO, "Usage: hf felica sim -t <type> [-v]");
     PrintAndLogEx(INFO, "Options:");
-    PrintAndLogEx(INFO, "    h     : This help");
     PrintAndLogEx(INFO, "    t     : 1 = FeliCa");
     PrintAndLogEx(INFO, "          : 2 = FeliCaLiteS");
     PrintAndLogEx(INFO, "    v     : (Optional) Verbose");
     PrintAndLogEx(INFO, "Examples:");
-    PrintAndLogEx(INFO, "          hf felica sim t 1 ");
+    PrintAndLogEx(INFO, "          hf felica sim -t 1");
     return PM3_SUCCESS;
 }
 */
@@ -259,7 +258,7 @@ int read_felica_uid(bool loop, bool verbose) {
 static int CmdHFFelicaReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica reader",
-                  "Reader for FeliCa based tags",
+                  "Act as a ISO 18092 / FeliCa reader. Look for FeliCa tags until Enter or the pm3 button is pressed",
                   "hf felica reader -@    -> Continuous mode");
 
     void *argtable[] = {
