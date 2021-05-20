@@ -4974,8 +4974,6 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
         }
     }
 
-//    PrintAndLogEx(INFO, "reading data from tag");
-
     if (!datalen) {
         PrintAndLogEx(ERR, "no NDEF data");
         return PM3_SUCCESS;
