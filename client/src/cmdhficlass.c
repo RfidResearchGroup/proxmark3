@@ -301,7 +301,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
             uint8_t *p = realloc(data, tot_bytes);
             if (p == NULL) {
                 PrintAndLogEx(FAILED, "failed to allocate memory");
-                //free(data);
+                free(data);
                 return PM3_EMALLOC;
             }
             data = p;
