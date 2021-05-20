@@ -34,6 +34,10 @@
 
 - Android phone
 - [Termux](https://play.google.com/store/apps/details?id=com.termux)
+- Proxmark3 RDV4 (https://www.proxmark.com/proxmark-3-hardware/proxmark-3-rdv4)
+- Blueshark Standalone Module (Bluetooth ONLY) (https://www.proxmark.com/proxmark-news/proxmark3-blueshark-bluetooth-released)
+- Proxmark with BTADDON compiled Firmware (Bluetooth ONLY) (https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#platform_extras)
+
 
 ## Notes
 ^[Top](#top)
