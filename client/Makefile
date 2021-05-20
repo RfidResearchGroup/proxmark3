@@ -582,7 +582,7 @@ SRCS =  aiddesfire.c \
 		tea.c \
 		ui.c \
 		util.c \
-		version.c \
+		version_pm3.c \
 		wiegand_formats.c \
 		wiegand_formatutils.c
 
@@ -631,7 +631,7 @@ OBJS += $(OBJCSRCS:%.m=$(OBJDIR)/%.o)
 
 BINS = proxmark3
 
-CLEAN = $(BINS) src/version.c src/*.moc.cpp src/ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
+CLEAN = $(BINS) src/version_pm3.c src/*.moc.cpp src/ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 # transition: cleaning also old path stuff
 CLEAN += flasher *.moc.cpp ui/ui_overlays.h
 
@@ -771,8 +771,8 @@ src/pm3_pywrap.c: pm3.i
 
 .PHONY: all clean install uninstall tarbin .FORCE
 
-# version.c should be remade on every compilation
-src/version.c: default_version.c
+# version_pm3.c should be remade on every compilation
+src/version_pm3.c: default_version_pm3.c
 	$(info [=] GEN $@)
 	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(PERL) ../tools/mkversion.pl > $@ || $(CP) $< $@
 

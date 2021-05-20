@@ -140,7 +140,7 @@ ARMSRC = fpgaloader.c \
     usb_cdc.c \
     cmd.c
 
-VERSIONSRC = version.c \
+VERSIONSRC = version_pm3.c \
     fpga_version_info.c
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
@@ -163,8 +163,8 @@ showinfo:
 
 .DELETE_ON_ERROR:
 
-# version.c should be remade on every time fullimage.stage1.elf should be remade
-version.c: default_version.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
+# version_pm3.c should be remade on every time fullimage.stage1.elf should be remade
+version_pm3.c: default_version_pm3.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
 	$(info [-] GEN $@)
 	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(PERL) ../tools/mkversion.pl > $@ || $(CP) $< $@
 
@@ -237,7 +237,7 @@ clean:
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.d
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.z
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.bin
-	$(Q)$(RM) version.c
+	$(Q)$(RM) version_pm3.c version.c
 
 install: all
 	$(info [@] Installing fullimage to $(DESTDIR)$(PREFIX)...)

@@ -13,7 +13,7 @@ THUMBSRC = usb_cdc.c \
            bootrom.c
 
 ASMSRC = ram-reset.s flash-reset.s
-VERSIONSRC = version.c
+VERSIONSRC = version_pm3.c
 
 ## There is a strange bug with the linker: Sometimes it will not emit the glue to call
 ## BootROM from ARM mode. The symbol is emitted, but the section will be filled with
@@ -36,8 +36,8 @@ INSTALLFW = $(OBJDIR)/bootrom.elf
 
 OBJS = $(OBJDIR)/bootrom.s19
 
-# version.c should be remade on every compilation
-version.c: default_version.c
+# version_pm3.c should be remade on every compilation
+version_pm3.c: default_version_pm3.c
 	$(info [=] GEN $@)
 	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(PERL) ../tools/mkversion.pl > $@ || $(CP) $< $@
 
@@ -60,7 +60,7 @@ clean:
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.s19
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.map
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.d
-	$(Q)$(RM) version.c
+	$(Q)$(RM) version_pm3.c version.c
 
 install: all
 	$(info [@] Installing bootrom to $(DESTDIR)$(PREFIX)...)

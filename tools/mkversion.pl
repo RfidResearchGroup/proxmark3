@@ -1,6 +1,6 @@
 #!/usr/bin/env perl -w
 
-# Output a version.c file that includes information about the current build
+# Output a version_pm3.c file that includes information about the current build
 # Normally a couple of lines of bash would be enough (see openpcd project, original firmware by Harald Welte and Milosch Meriac)
 # but this will, at least in theory, also work on Windows with our current compile environment.
 # -- Henryk Plötz <henryk@ploetzli.ch> 2009-09-28
@@ -23,7 +23,7 @@ my $undecided = (defined $ARGV[0]) && ($ARGV[0] =~ '--undecided');
 #######
 # solves some bug on macos i.e:
 ##
-# perl ../tools/mkversion.pl .. > version.c || cp ../common/default_version.c version.c
+# perl ../tools/mkversion.pl .. > version_pm3.c || cp ../common/default_version_pm3.c version_pm3.c
 # /usr/bin/which: /usr/bin/which: cannot execute binary file
 # fatal: No names found, cannot describe anything.
 ##

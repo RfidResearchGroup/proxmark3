@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Output a version.c file that includes information about the current build
+# Output a version_pm3.c file that includes information about the current build
 # From mkversion.pl
 # pure sh POSIX as now even on Windows we use WSL or ProxSpace with sh available
 

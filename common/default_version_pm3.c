@@ -1,5 +1,5 @@
 #include "common.h"
-/* This is the default version.c file that Makefile.common falls back to if neither sh nor perl are available */
+/* This is the default version_pm3.c file that Makefile.common falls back to if neither sh nor perl are available */
 #ifndef ON_DEVICE
 #define SECTVERSINFO
 #else

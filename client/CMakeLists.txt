@@ -314,13 +314,13 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/util.c
         ${PM3_ROOT}/client/src/wiegand_formats.c
         ${PM3_ROOT}/client/src/wiegand_formatutils.c
-        ${CMAKE_BINARY_DIR}/version.c
+        ${CMAKE_BINARY_DIR}/version_pm3.c
         )
 
 add_custom_command(
-    OUTPUT  ${CMAKE_BINARY_DIR}/version.c
-    COMMAND sh ${PM3_ROOT}/tools/mkversion.sh > ${CMAKE_BINARY_DIR}/version.c || perl ${PM3_ROOT}/tools/mkversion.pl > ${CMAKE_BINARY_DIR}/version.c || ${CMAKE_COMMAND} -E copy ${PM3_ROOT}/common/default_version.c ${CMAKE_BINARY_DIR}/version.c
-    DEPENDS ${PM3_ROOT}/common/default_version.c
+    OUTPUT  ${CMAKE_BINARY_DIR}/version_pm3.c
+    COMMAND sh ${PM3_ROOT}/tools/mkversion.sh > ${CMAKE_BINARY_DIR}/version_pm3.c || perl ${PM3_ROOT}/tools/mkversion.pl > ${CMAKE_BINARY_DIR}/version_pm3.c || ${CMAKE_COMMAND} -E copy ${PM3_ROOT}/common/default_version_pm3.c ${CMAKE_BINARY_DIR}/version_pm3.c
+    DEPENDS ${PM3_ROOT}/common/default_version_pm3.c
 )
 
 set(ADDITIONAL_SRC "")
