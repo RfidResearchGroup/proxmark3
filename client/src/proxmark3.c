@@ -783,9 +783,6 @@ int main(int argc, char *argv[]) {
 #if defined(__linux__) || defined(__APPLE__)
         session.supports_colors = true;
         session.emoji_mode = EMO_EMOJI;
-#elif defined(_WIN32)
-        session.supports_colors = DetectWindowsAnsiSupport();
-        session.emoji_mode = EMO_ALTTEXT;
 #endif
     }
     for (int i = 1; i < argc; i++) {
@@ -998,6 +995,11 @@ int main(int argc, char *argv[]) {
         session.supports_colors = false;
         session.emoji_mode = EMO_ALTTEXT;
     }
+	
+#if defined(_WIN32) //Color support on Windows has to be enabled each time and can fail, override prefs
+        session.supports_colors = DetectWindowsAnsiSupport();
+        session.emoji_mode = EMO_ALTTEXT;
+#endif
 
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
     if (speed == 0)
