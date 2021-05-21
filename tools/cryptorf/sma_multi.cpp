@@ -1080,7 +1080,7 @@ int main(int argc, const char *argv[]) {
     printf("Total count of right bins: " _YELLOW_("%zu") "\n", rstates.size());
 
     if (rbits < 96) {
-        printf(_RED_("\n  WARNING!!! Better find another trace, the right top-bin is < 96 bits\n\n"));
+        printf("\n" _RED_("WARNING!!!") ", better find another trace, the right top-bin is smaller than 96 bits\n\n");
     }
 
     for (itrstates = rstates.begin(); itrstates != rstates.end(); ++itrstates) {
