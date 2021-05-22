@@ -26,7 +26,6 @@
 *.DS_Store
 *.exe
 *.dsym
-version.c
 version_pm3.c
 *.json
 *.old
