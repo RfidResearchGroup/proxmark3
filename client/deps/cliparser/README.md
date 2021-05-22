@@ -1,6 +1,6 @@
 # Command line parser
 
-cliparser - librari for proxmark with command line parsing high level functions.
+cliparser - library for proxmark with command line parsing high level functions.
 
 ## External libraries:
 
