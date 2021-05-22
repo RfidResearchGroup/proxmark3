@@ -58,8 +58,8 @@
 #include "cmdlfti.h"        // for ti menu
 #include "cmdlfviking.h"    // for viking menu
 #include "cmdlfvisa2000.h"  // for VISA2000 menu
+#include "pm3_cmd.h"        // for LF_CMDREAD_MAX_EXTRA_SYMBOLS
 
-#define LF_CMDREAD_MAX_EXTRA_SYMBOLS 4
 static bool g_lf_threshold_set = false;
 
 static int CmdHelp(const char *Cmd);
@@ -255,7 +255,7 @@ int CmdLFCommandRead(const char *Cmd) {
     if (session.pm3_present == false)
         return PM3_ENOTTY;
 
-    const uint8_t payload_header_size = 12 + (3 * LF_CMDREAD_MAX_EXTRA_SYMBOLS);
+    #define PAYLOAD_HEADER_SIZE (12 + (3 * LF_CMDREAD_MAX_EXTRA_SYMBOLS))
     struct p {
         uint32_t delay;
         uint16_t period_0;
@@ -264,7 +264,7 @@ int CmdLFCommandRead(const char *Cmd) {
         uint16_t period_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
         uint32_t samples : 31;
         bool     verbose : 1;
-        uint8_t data[PM3_CMD_DATA_SIZE - payload_header_size];
+        uint8_t data[PM3_CMD_DATA_SIZE - PAYLOAD_HEADER_SIZE];
     } PACKED payload;
     payload.delay = delay;
     payload.period_1 = period_1;
@@ -324,7 +324,7 @@ int CmdLFCommandRead(const char *Cmd) {
     int ret = PM3_SUCCESS;
     do {
         clearCommandBuffer();
-        SendCommandNG(CMD_LF_MOD_THEN_ACQ_RAW_ADC, (uint8_t *)&payload, payload_header_size + cmd_len);
+        SendCommandNG(CMD_LF_MOD_THEN_ACQ_RAW_ADC, (uint8_t *)&payload, PAYLOAD_HEADER_SIZE + cmd_len);
 
         PacketResponseNG resp;
 
