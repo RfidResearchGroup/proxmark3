@@ -74,6 +74,7 @@ tools/cryptorf/sma
 tools/cryptorf/sma_multi
 tools/mf_nonce_brute/mf_nonce_brute
 tools/mf_nonce_brute/mf_trace_brute
+tools/jtag_openocd/openocd_configuration
 
 fpga/*
 !fpga/tests
