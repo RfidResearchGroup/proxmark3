@@ -284,13 +284,16 @@ int detectIdteck(uint8_t *dest, size_t *size) {
     if (getSignalProperties()->isnoise) return -2;
 
     size_t start_idx = 0;
+    //                    4           9           4           4           5           4           4           B
     uint8_t preamble[] = {0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1};
 
     //preamble not found
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &start_idx))
+    if (preambleSearch(dest, preamble, sizeof(preamble), size, &start_idx) == false)
         return -3;
 
     // wrong demoded size
-    if (*size != 64) return -4;
+    if (*size != 64) {
+        return -4;
+    }
     return (int)start_idx;
 }
