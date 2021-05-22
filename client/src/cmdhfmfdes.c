@@ -1969,7 +1969,7 @@ static int handler_desfire_getvalue(mfdes_value_t *value, uint32_t *resplen, uin
         DropFieldDesfire();
         return res;
     }
-    size_t dlen = (size_t)resplen;
+    size_t dlen = (size_t)*resplen;
     p = mifare_cryto_postprocess_data(tag, value->value, &dlen, cs | CMAC_COMMAND | CMAC_VERIFY | MAC_VERIFY);
     (void)p;
     return res;
