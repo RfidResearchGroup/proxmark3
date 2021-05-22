@@ -27,6 +27,7 @@
 *.exe
 *.dsym
 version.c
+version_pm3.c
 *.json
 *.old
 *.swp
