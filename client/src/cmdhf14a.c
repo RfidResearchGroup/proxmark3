@@ -29,6 +29,7 @@
 #include "cliparser.h"
 #include "protocols.h"     // definitions of ISO14A/7816 protocol, MAGIC_GEN_1A
 #include "emv/apduinfo.h"  // GetAPDUCodeDescription
+#include "mifare/ndef.h"   // NDEFRecordsDecodeAndPrint
 
 bool APDUInFramingEnable = true;
 
@@ -2313,11 +2314,187 @@ out:
     return PM3_SUCCESS;
 }
 
+static void print_cc_info(uint8_t *d, uint8_t n) {
+    if (n < 0x0F) {
+        PrintAndLogEx(WARNING, "Not enought bytes read from CC file");
+        return;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "------------ " _CYAN_("Capability Container file") " ------------");
+    PrintAndLogEx(SUCCESS, " len      %u bytes (" _GREEN_("0x%02X") ")", d[1], d[1]);
+    PrintAndLogEx(SUCCESS, " version  %s (" _GREEN_("0x%02X") ")", (d[2] == 0x20) ? "v2.0" : "v1.0", d[2]);
+
+    uint16_t maxr = (d[3] << 8 | d[4]);
+    PrintAndLogEx(SUCCESS, " max bytes read  %u bytes ( 0x%04X )", maxr, maxr);
+    uint16_t maxw = (d[5] << 8 | d[6]);
+    PrintAndLogEx(SUCCESS, " max bytes write %u bytes ( 0x%04X )", maxw, maxw);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, " NDEF file control TLV  {");
+    PrintAndLogEx(SUCCESS, "    (t) type of file  ( %02X )", d[7]);
+    PrintAndLogEx(SUCCESS, "    (v)               ( %02X )", d[8]);
+    PrintAndLogEx(SUCCESS, "    file id           ( %02X%02X )", d[9], d[10]);
+
+    uint16_t maxndef = (d[11] << 8 | d[12]);
+    PrintAndLogEx(SUCCESS, "    max NDEF filesize   %u bytes ( 0x%04X )", maxndef, maxndef);
+    PrintAndLogEx(SUCCESS, "    ----- " _CYAN_("access rights") " -------");
+    PrintAndLogEx(SUCCESS, "    read   ( %02X ) protection: %s", d[13], ((d[13] & 0x80) == 0x80) ? _RED_("enabled") : _GREEN_("disabled"));
+    PrintAndLogEx(SUCCESS, "    write  ( %02X ) protection: %s", d[14], ((d[14] & 0x80) == 0x80) ? _RED_("enabled") : _GREEN_("disabled"));
+    PrintAndLogEx(SUCCESS, " }");
+    PrintAndLogEx(SUCCESS, "----------------- " _CYAN_("raw") " -----------------");
+    PrintAndLogEx(SUCCESS, "%s", sprint_hex_inrow(d, n));
+    PrintAndLogEx(NORMAL, "");
+}
+
+static int CmdHF14ANdef(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a ndef",
+                  "Read NFC Data Exchange Format (NDEF) file on Type 4 NDEF tag",
+                  "hf 14a ndef\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    bool activate_field = true;
+    bool keep_field_on = true;
+    uint8_t response[PM3_CMD_DATA_SIZE];
+    int resplen = 0;
+
+    // ---------------  Select NDEF Tag application ----------------
+    uint8_t aSELECT_AID[80];
+    int aSELECT_AID_n = 0;
+    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
+    int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    if (resplen < 2) {
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    uint16_t sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    activate_field = false;
+    keep_field_on = true;
+
+    // ---------------  CC file reading ----------------
+
+    uint8_t aSELECT_FILE_CC[30];
+    int aSELECT_FILE_CC_n = 0;
+    param_gethex_to_eol("00a4000c02e103", 0, aSELECT_FILE_CC, sizeof(aSELECT_FILE_CC), &aSELECT_FILE_CC_n);
+    res = ExchangeAPDU14a(aSELECT_FILE_CC, aSELECT_FILE_CC_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "Selecting CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    uint8_t aREAD_CC[30];
+    int aREAD_CC_n = 0;
+    param_gethex_to_eol("00b000000f", 0, aREAD_CC, sizeof(aREAD_CC), &aREAD_CC_n);
+    res = ExchangeAPDU14a(aREAD_CC, aREAD_CC_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "reading CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    // Parse CC data
+    uint8_t cc_data[resplen - 2];
+    memcpy(cc_data, response, sizeof(cc_data));
+    uint8_t file_id[2] = {cc_data[9], cc_data[10]};
+
+    print_cc_info(cc_data, sizeof(cc_data));
+
+    // ---------------  NDEF file reading ----------------
+    uint8_t aSELECT_FILE_NDEF[30];
+    int aSELECT_FILE_NDEF_n = 0;
+    param_gethex_to_eol("00a4000c02", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
+    memcpy(aSELECT_FILE_NDEF + aSELECT_FILE_NDEF_n, file_id, sizeof(file_id));
+    res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n + sizeof(file_id), activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    // read first 2 bytes to get NDEF length
+
+    uint8_t aREAD_NDEF[30];
+    int aREAD_NDEF_n = 0;
+    param_gethex_to_eol("00b0000002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
+    res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    uint8_t offset = response[1];
+
+    keep_field_on = false;
+    aREAD_NDEF_n = 0;
+    param_gethex_to_eol("00b00002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
+    aREAD_NDEF[4] = offset;
+    res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n + 1, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    NDEFRecordsDecodeAndPrint(response, resplen - 2);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,              AlwaysAvailable, "This help"},
     {"list",        CmdHF14AList,         AlwaysAvailable, "List ISO 14443-a history"},
     {"info",        CmdHF14AInfo,         IfPm3Iso14443a,  "Tag information"},
     {"reader",      CmdHF14AReader,       IfPm3Iso14443a,  "Act like an ISO14443-a reader"},
+    {"ndef",        CmdHF14ANdef,         IfPm3Iso14443a,  "Read an NDEF file from ISO 14443-A Type 4 tag"},
     {"cuids",       CmdHF14ACUIDs,        IfPm3Iso14443a,  "Collect n>0 ISO14443-a UIDs in one go"},
     {"sim",         CmdHF14ASim,          IfPm3Iso14443a,  "Simulate ISO 14443-a tag"},
     {"sniff",       CmdHF14ASniff,        IfPm3Iso14443a,  "sniff ISO 14443-a traffic"},
