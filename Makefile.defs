@@ -50,6 +50,7 @@ else
 endif
 
 ifeq ($(platform),Darwin)
+  USE_BREW = 1
   AR= /usr/bin/ar rcs
   RANLIB= /usr/bin/ranlib
 else
@@ -57,8 +58,7 @@ else
   RANLIB= ranlib
 endif
 
-# For detection of Apple Silicon
-ifeq ($(platform),Darwin)
+ifeq ($(USE_BREW),1)
   BREW_PREFIX = $(shell brew --prefix)
 endif
 
