@@ -2450,6 +2450,7 @@ static int CmdHF14ANdef(const char *Cmd) {
     uint8_t file_id[2] = {cc_data[9], cc_data[10]};
 
     print_cc_info(cc_data, sizeof(cc_data));
+    uint16_t max_rapdu_size = (cc_data[3] << 8 | cc_data[4]) - 2;
 
     // ---------------  NDEF file reading ----------------
     uint8_t aSELECT_FILE_NDEF[30];
@@ -2490,27 +2491,45 @@ static int CmdHF14ANdef(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
-
-    uint8_t offset = response[1];
-
-    keep_field_on = false;
-    aREAD_NDEF_n = 0;
-    param_gethex_to_eol("00b00002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
-    aREAD_NDEF[4] = offset;
-    res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n + 1, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        return res;
-    }
-
-    sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
-        PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+    uint16_t ndef_size = (response[0] << 8) + response[1];
+    uint16_t offset = 2;
+    uint8_t *ndef_file = calloc(ndef_size, sizeof(uint8_t));
+    if (ndef_file == NULL) {
+        PrintAndLogEx(ERR, "Out of memory error in CmdHF14ANdef(). Aborting...\n");
         DropField();
         return PM3_ESOFT;
     }
-
-    NDEFRecordsDecodeAndPrint(response, resplen - 2);
+    for (uint16_t i = offset; i < ndef_size + offset; i += max_rapdu_size) {
+        uint16_t segment_size = max_rapdu_size < ndef_size + offset - i ? max_rapdu_size : ndef_size + offset - i;
+        keep_field_on = i < ndef_size + offset - max_rapdu_size;
+        aREAD_NDEF_n = 0;
+        param_gethex_to_eol("00b00000", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
+        aREAD_NDEF[2] = i >> 8;
+        aREAD_NDEF[3] = i & 0xFF;
+        aREAD_NDEF[4] = segment_size;
+        res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n + 1, activate_field, keep_field_on, response, sizeof(response), &resplen);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            free(ndef_file);
+            return res;
+        }
+        sw = get_sw(response, resplen);
+        if (sw != 0x9000) {
+            PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+            DropField();
+            free(ndef_file);
+            return PM3_ESOFT;
+        }
+        if (resplen != segment_size + 2) {
+            PrintAndLogEx(ERR, "reading NDEF file failed, expected %i bytes, got %i bytes.", segment_size, resplen - 2);
+            DropField();
+            free(ndef_file);
+            return PM3_ESOFT;
+        }
+        memcpy(ndef_file + (i - offset), response, segment_size);
+    }
+    NDEFRecordsDecodeAndPrint(ndef_file, ndef_size);
+    free(ndef_file);
     return PM3_SUCCESS;
 }
 
