@@ -11,6 +11,7 @@
 #ifndef _NDEF_H_
 #define _NDEF_H_
 
+#include <stdbool.h>
 #include "common.h"
 
 typedef enum {

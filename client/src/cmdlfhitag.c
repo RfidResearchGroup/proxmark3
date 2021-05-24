@@ -559,13 +559,13 @@ static int CmdLFHitagReader(const char *Cmd) {
     }
 
     // sanity checks
-    if (keylen != 0 && keylen != 6) {
-        PrintAndLogEx(WARNING, "Wrong KEY len expected 0 or 6, got %d", keylen);
+    if (keylen != 0 && keylen != 4) {
+        PrintAndLogEx(WARNING, "Wrong KEY len expected 0 or 4, got %d", keylen);
         return PM3_EINVARG;
     }
 
-    if (nalen != 0 && nalen != 8) {
-        PrintAndLogEx(WARNING, "Wrong NR/AR len expected 0 or 8, got %d", nalen);
+    if (nalen != 0 && nalen != 6) {
+        PrintAndLogEx(WARNING, "Wrong NR/AR len expected 0 or 6, got %d", nalen);
         return PM3_EINVARG;
     }
 
