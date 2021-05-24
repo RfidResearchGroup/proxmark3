@@ -2363,6 +2363,7 @@ static int CmdHF14ANdef(const char *Cmd) {
     bool keep_field_on = true;
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
+    bool backward_compatibility_v1 = false;
 
     // ---------------  Select NDEF Tag application ----------------
     uint8_t aSELECT_AID[80];
@@ -2381,9 +2382,25 @@ static int CmdHF14ANdef(const char *Cmd) {
 
     uint16_t sw = get_sw(response, resplen);
     if (sw != 0x9000) {
-        PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        DropField();
-        return PM3_ESOFT;
+        // Try NDEF Type 4 Tag v1.0
+        param_gethex_to_eol("00a4040007d2760000850100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
+        res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+        if (resplen < 2) {
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        sw = get_sw(response, resplen);
+        if (sw != 0x9000) {
+            PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+            DropField();
+            return PM3_ESOFT;
+        }
+        backward_compatibility_v1 = true;
     }
 
     activate_field = false;
@@ -2393,7 +2410,11 @@ static int CmdHF14ANdef(const char *Cmd) {
 
     uint8_t aSELECT_FILE_CC[30];
     int aSELECT_FILE_CC_n = 0;
-    param_gethex_to_eol("00a4000c02e103", 0, aSELECT_FILE_CC, sizeof(aSELECT_FILE_CC), &aSELECT_FILE_CC_n);
+    if (backward_compatibility_v1) {
+        param_gethex_to_eol("00a4000002e103", 0, aSELECT_FILE_CC, sizeof(aSELECT_FILE_CC), &aSELECT_FILE_CC_n);
+    } else {
+        param_gethex_to_eol("00a4000c02e103", 0, aSELECT_FILE_CC, sizeof(aSELECT_FILE_CC), &aSELECT_FILE_CC_n);
+    }
     res = ExchangeAPDU14a(aSELECT_FILE_CC, aSELECT_FILE_CC_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res != PM3_SUCCESS) {
         DropField();
@@ -2433,7 +2454,11 @@ static int CmdHF14ANdef(const char *Cmd) {
     // ---------------  NDEF file reading ----------------
     uint8_t aSELECT_FILE_NDEF[30];
     int aSELECT_FILE_NDEF_n = 0;
-    param_gethex_to_eol("00a4000c02", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
+    if (backward_compatibility_v1) {
+        param_gethex_to_eol("00a4000002", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
+    } else {
+        param_gethex_to_eol("00a4000c02", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
+    }
     memcpy(aSELECT_FILE_NDEF + aSELECT_FILE_NDEF_n, file_id, sizeof(file_id));
     res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n + sizeof(file_id), activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res != PM3_SUCCESS) {
