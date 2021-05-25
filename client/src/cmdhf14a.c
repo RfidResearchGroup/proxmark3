@@ -2498,7 +2498,7 @@ static int CmdHF14ANdef(const char *Cmd) {
     if (ndef_file == NULL) {
         PrintAndLogEx(ERR, "Out of memory error in CmdHF14ANdef(). Aborting...\n");
         DropField();
-        return PM3_ESOFT;
+        return PM3_EMALLOC;
     }
     for (uint16_t i = offset; i < ndef_size + offset; i += max_rapdu_size) {
         uint16_t segment_size = max_rapdu_size < ndef_size + offset - i ? max_rapdu_size : ndef_size + offset - i;
