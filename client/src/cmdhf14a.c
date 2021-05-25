@@ -2451,6 +2451,7 @@ static int CmdHF14ANdef(const char *Cmd) {
 
     print_cc_info(cc_data, sizeof(cc_data));
     uint16_t max_rapdu_size = (cc_data[3] << 8 | cc_data[4]) - 2;
+    max_rapdu_size = max_rapdu_size < sizeof(response) - 2 ? max_rapdu_size : sizeof(response) - 2;
 
     // ---------------  NDEF file reading ----------------
     uint8_t aSELECT_FILE_NDEF[30];
