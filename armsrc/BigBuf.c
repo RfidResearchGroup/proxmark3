@@ -14,7 +14,7 @@
 #include "dbprint.h"
 #include "pm3_cmd.h"
 
-extern char _stack_start[], __bss_end__[];
+extern uint32_t _stack_start[], __bss_end__[];
 
 // BigBuf is the large multi-purpose buffer, typically used to hold A/D samples or traces.
 // Also used to hold various smaller buffers and the Mifare Emulator Memory.

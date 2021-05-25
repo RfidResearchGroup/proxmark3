@@ -21,16 +21,16 @@
 #include "string.h"
 
 extern struct common_area common_area;
-extern char __data_src_start__[], __data_start__[], __data_end__[], __bss_start__[], __bss_end__[];
+extern uint32_t __data_src_start__[], __data_start__[], __data_end__[], __bss_start__[], __bss_end__[];
 
 #ifndef WITH_NO_COMPRESSION
 static void uncompress_data_section(void) {
     int avail_in;
     memcpy(&avail_in, __data_src_start__, sizeof(int));
-    int avail_out = __data_end__ - __data_start__;  // uncompressed size. Correct.
+    int avail_out = (uint32_t)__data_end__ - (uint32_t)__data_start__;  // uncompressed size. Correct.
     // uncompress data segment to RAM
-    char *p = __data_src_start__;
-    int res = LZ4_decompress_safe(p + 4, __data_start__, avail_in, avail_out);
+    char *p = (char *)__data_src_start__;
+    int res = LZ4_decompress_safe(p + 4, (char *)__data_start__, avail_in, avail_out);
 
     if (res < 0)
         return;
@@ -53,15 +53,15 @@ void Vector(void) {
 
     /* Set up data segment: Copy from flash to ram */
 #ifdef WITH_NO_COMPRESSION
-    char *data_src = __data_src_start__;
-    char *data_dst = __data_start__;
+    uint32_t *data_src = __data_src_start__;
+    uint32_t *data_dst = __data_start__;
     while (data_dst < __data_end__) *data_dst++ = *data_src++;
 #else
     uncompress_data_section();
 #endif
 
     /* Set up (that is: clear) BSS. */
-    char *bss_dst = __bss_start__;
+    uint32_t *bss_dst = __bss_start__;
     while (bss_dst < __bss_end__) *bss_dst++ = 0;
 
     AppMain();
