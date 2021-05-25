@@ -1,4 +1,3 @@
-#FROM opensuse/leap
 FROM opensuse/tumbleweed
 
 ENV LANG C
