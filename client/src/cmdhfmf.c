@@ -1972,8 +1972,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 // ------------------------------
 
     // create/initialize key storage structure
-    res = initSectorTable(&e_sector, sector_cnt);
-    if (res != sector_cnt) {
+    uint32_t e_sector_size = sector_cnt > sectorno ? sector_cnt : sectorno + 1;
+    res = initSectorTable(&e_sector, e_sector_size);
+    if (res != e_sector_size) {
         free(e_sector);
         return PM3_EMALLOC;
     }
