@@ -3127,7 +3127,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
                 uint8_t s = GetSectorFromBlockNo(b);
                 uint8_t sectrail = (FirstBlockOfSector(s) + NumBlocksPerSector(s) - 1);
                 PrintAndLogEx(INFO, "Sector: %u, First block: %u, Last block: %u, Num of blocks: %u", s, FirstBlockOfSector(s), sectrail, NumBlocksPerSector(s));
-                PrintAndLogEx(INFO, "Reading last block");
+                PrintAndLogEx(INFO, "Reading sector trailer");
 
                 mf_readblock_t payload;
                 payload.blockno = sectrail;
