@@ -210,10 +210,10 @@ static uint8_t NumBlocksPerSector(uint8_t sectorNo) {
 }
 
 static uint8_t GetSectorFromBlockNo(uint8_t blockNo) {
-    if (blockNo < 128)
+    if (blockNo < 32 * 4)
         return blockNo / 4;
     else
-        return 32 + ((128 - blockNo) / 16);
+        return 32 + ((blockNo - (32 * 4)) / 16);
 }
 
 static char GetFormatFromSector(uint8_t sectorNo) {
@@ -3126,8 +3126,8 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
                 uint8_t s = GetSectorFromBlockNo(b);
                 uint8_t sectrail = (FirstBlockOfSector(s) + NumBlocksPerSector(s) - 1);
-                PrintAndLogEx(INFO, "Sector %u, First block of sector %u, Num of block %u", s, FirstBlockOfSector(s), NumBlocksPerSector(s));
-                PrintAndLogEx(INFO, "Reading block %d", sectrail);
+                PrintAndLogEx(INFO, "Sector: %u, First block: %u, Last block: %u, Num of blocks: %u", s, FirstBlockOfSector(s), sectrail, NumBlocksPerSector(s));
+                PrintAndLogEx(INFO, "Reading last block");
 
                 mf_readblock_t payload;
                 payload.blockno = sectrail;
