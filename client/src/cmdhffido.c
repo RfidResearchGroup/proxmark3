@@ -378,8 +378,7 @@ static int CmdHFFidoRegister(const char *cmd) {
         JsonSaveBufAsHexCompact(root, "KeyHandle", &buf[67], keyHandleLen);
         JsonSaveBufAsHexCompact(root, "DER", &buf[67 + keyHandleLen], derLen);
 
-        //sprintf(filename, "hf-fido2-params");
-        res = saveFileJSONroot(filename, root, JSON_INDENT(2), verbose);
+        res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
         (void)res;
     }
     json_decref(root);
@@ -635,7 +634,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
         JsonSaveInt(root, "Counter", cntr);
 
         sprintf(filename, "hf-fido2-params");
-        res = saveFileJSONroot(filename, root, JSON_INDENT(2), verbose);
+        res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
         (void)res;
     }
     json_decref(root);
@@ -755,7 +754,7 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
 
     // new file name..
     sprintf(filename, "hf-fido2");
-    res = saveFileJSONroot(filename, root, JSON_INDENT(2), verbose);
+    res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
     (void)res;
     json_decref(root);
     return res;
@@ -875,7 +874,7 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
 
     // new file name..
     sprintf(filename, "hf-fido2");
-    res = saveFileJSONroot(filename, root, JSON_INDENT(2), verbose);
+    res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
     (void)res;
     json_decref(root);
     return res;
