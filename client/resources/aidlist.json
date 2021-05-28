@@ -840,6 +840,14 @@
         "Type": ""
     },
     {
+        "AID": "A0000006472F0001",
+        "Vendor": "FIDO authenticator",
+        "Country": "global",
+        "Name": "U2F/FIDO2 authenticator",
+        "Description": "U2F and/or FIDO2 authenticator",
+        "Type": ""
+    },
+    {
         "AID": "A000000116DB00",
         "Vendor": "GSA - TFCS",
         "Country": "United States",
