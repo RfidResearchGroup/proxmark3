@@ -761,8 +761,6 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     // parse returned cbor
     FIDO2MakeCredentionalParseRes(root, &buf[1], len - 1, verbose, verbose2, showCBOR, showDERTLV);
 
-    // new file name..
-    sprintf(filename, "hf-fido2");
     res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
     (void)res;
     json_decref(root);
@@ -881,8 +879,6 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
     // parse returned cbor
     FIDO2GetAssertionParseRes(root, &buf[1], len - 1, verbose, verbose2, showCBOR);
 
-    // new file name..
-    sprintf(filename, "hf-fido2");
     res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
     (void)res;
     json_decref(root);
