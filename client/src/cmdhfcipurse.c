@@ -80,6 +80,36 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFCipurseAuth(const char *Cmd) {
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+    
+    SetAPDULogging(true);
+    
+    int res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000) {
+        PrintAndLogEx(ERR, "Cipurse select error. Card returns 0x%04x.", sw);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    res = CIPURSEChallenge(buf, sizeof(buf), &len, &sw);
+    if (res != 0 || len != 0x16) {
+        PrintAndLogEx(ERR, "Cipurse get challenge error. Card returns 0x%04x.", sw);
+        DropField();
+        return PM3_ESOFT;
+    }
+    
+    
+    DropField();
+    return PM3_SUCCESS;
+}
+
+
+
+
+
 
 
 
@@ -96,6 +126,7 @@ bool CheckCardCipurse(void) {
 static command_t CommandTable[] = {
     {"help",      CmdHelp,                   AlwaysAvailable, "This help."},
     {"info",      CmdHFCipurseInfo,          IfPm3Iso14443a,  "Info about Cipurse tag."},
+    {"auth",      CmdHFCipurseAuth,          IfPm3Iso14443a,  "Authentication."},
     {NULL, NULL, 0, NULL}
 };
 

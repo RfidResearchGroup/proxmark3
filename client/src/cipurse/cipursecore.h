@@ -12,10 +12,14 @@
 #define __CIPURSECORE_H__
 
 #include "common.h"
+#include "emv/apduinfo.h"
+
 
 #include <jansson.h>
 #include "emv/apduinfo.h" // sAPDU
 
 int CIPURSESelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
+
+int CIPURSEChallenge(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 
 #endif /* __CIPURSECORE_H__ */
