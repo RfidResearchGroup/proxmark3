@@ -473,6 +473,7 @@ SRCS =  aiddesfire.c \
 		cmdhfemrtd.c \
 		cmdhffelica.c \
 		cmdhffido.c \
+		cmdhfcipurse.c \
 		cmdhficlass.c \
 		cmdhflegic.c \
 		cmdhfjooki.c \
@@ -556,6 +557,7 @@ SRCS =  aiddesfire.c \
 		fido/cose.c \
 		fido/cbortools.c \
 		fido/fidocore.c \
+		cipurse/cipursecore.c \
 		fileutils.c \
 		flash.c \
 		generator.c \
