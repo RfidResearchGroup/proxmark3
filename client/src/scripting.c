@@ -27,7 +27,7 @@
 #include "cmdhfmfhard.h"
 #include "cmdhfmfu.h"
 #include "cmdlft55xx.h"   // read t55xx etc
-#include "mifare/ndef.h"  // ndef parsing
+#include "nfc/ndef.h"     // ndef parsing
 #include "commonutil.h"
 #include "ui.h"
 

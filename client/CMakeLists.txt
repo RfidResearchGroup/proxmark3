@@ -220,7 +220,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/mifare/mifare4.c
         ${PM3_ROOT}/client/src/mifare/mifaredefault.c
         ${PM3_ROOT}/client/src/mifare/mifarehost.c
-        ${PM3_ROOT}/client/src/mifare/ndef.c
+        ${PM3_ROOT}/client/src/nfc/ndef.c
         ${PM3_ROOT}/client/src/mifare/desfire_crypto.c
         ${PM3_ROOT}/client/src/uart/uart_posix.c
         ${PM3_ROOT}/client/src/uart/uart_win32.c
@@ -291,6 +291,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfviking.c
         ${PM3_ROOT}/client/src/cmdlfvisa2000.c
         ${PM3_ROOT}/client/src/cmdmain.c
+        ${PM3_ROOT}/client/src/cmdnfc.c
         ${PM3_ROOT}/client/src/cmdparser.c
         ${PM3_ROOT}/client/src/cmdscript.c
         ${PM3_ROOT}/client/src/cmdsmartcard.c

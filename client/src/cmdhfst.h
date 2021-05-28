@@ -14,6 +14,6 @@
 #include "common.h"
 
 int CmdHFST(const char *Cmd);
+int CmdHFSTNdefRead(const char *Cmd);
 
-int infoHFST(void);
 #endif

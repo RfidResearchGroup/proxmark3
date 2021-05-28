@@ -1,18 +1,16 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2018 Merlok
-//
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// High frequency MIFARE  Plus commands
+// NFC commands
 //-----------------------------------------------------------------------------
-#ifndef CMDHFMFP_H__
-#define CMDHFMFP_H__
+
+#ifndef CMDNFC_H__
+#define CMDNFC_H__
 
 #include "common.h"
 
-int CmdHFMFP(const char *Cmd);
-int CmdHFMFPNDEFRead(const char *Cmd);
+int CmdNFC(const char *Cmd);
 
 #endif

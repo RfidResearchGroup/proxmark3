@@ -96,7 +96,7 @@ static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbos
     return PM3_SUCCESS;
 }
 
-static int CmdHfThinFilmInfo(const char *Cmd) {
+int CmdHfThinFilmInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf thinfilm info",
                   "Get info from Thinfilm tags",
@@ -138,7 +138,7 @@ int infoThinFilm(bool verbose) {
     return resp.status;
 }
 
-static int CmdHfThinFilmSim(const char *Cmd) {
+int CmdHfThinFilmSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf thinfilm sim",
                   "Simulate Thinfilm tag",

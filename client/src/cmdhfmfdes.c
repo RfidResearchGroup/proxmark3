@@ -31,7 +31,7 @@
 #include "crapto1/crapto1.h"
 #include "fileutils.h"
 #include "mifare/mifaredefault.h"  // default keys
-#include "mifare/ndef.h"           // NDEF
+#include "nfc/ndef.h"           // NDEF
 #include "mifare/mad.h"
 #include "generator.h"
 #include "aiddesfire.h"
@@ -4887,15 +4887,15 @@ static int CmdHF14ADesList(const char *Cmd) {
 }
 
 /*
-static int CmdHF14aDesNDEF(const char *Cmd) {
+static int CmdHF14aDesNDEFRead(const char *Cmd) {
     DropFieldDesfire();
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes ndef",
+    CLIParserInit(&ctx, "hf mfdes ndefread",
                   "Prints NFC Data Exchange Format (NDEF)",
-                  "hf mfdes ndef -> shows NDEF data\n"
-                  "hf mfdes ndef -v -> shows NDEF parsed and raw data\n"
-                  "hf mfdes ndef -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key");
+                  "hf mfdes ndefread -> shows NDEF data\n"
+                  "hf mfdes ndefread -v -> shows NDEF parsed and raw data\n"
+                  "hf mfdes ndefread -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4984,7 +4984,7 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
         print_buffer(data, datalen, 1);
     }
 
-    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfdes ndef -vv`") " for more details");
+    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfdes ndefread -vv`") " for more details");
     return PM3_SUCCESS;
 }
 */
@@ -5050,7 +5050,7 @@ static command_t CommandTable[] = {
     {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get random uid"},
     {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
     {"list",             CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
-//    {"ndef",             CmdHF14aDesNDEF,             IfPm3Iso14443a,  "Prints NDEF records from card"},
+//    {"ndefread",             CmdHF14aDesNDEFRead,             IfPm3Iso14443a,  "Prints NDEF records from card"},
 //    {"mad",             CmdHF14aDesMAD,             IfPm3Iso14443a,  "Prints MAD records from card"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Applications") " -------------------"},
     {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},

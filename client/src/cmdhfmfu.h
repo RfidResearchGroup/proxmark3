@@ -26,6 +26,7 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage);
 int ul_read_uid(uint8_t *uid);
 
 int CmdHFMFUltra(const char *Cmd);
+int CmdHF14MfuNDEFRead(const char *Cmd);
 
 uint16_t ul_ev1_packgen_VCNEW(uint8_t *uid, uint32_t pwd);
 uint32_t ul_ev1_otpgenA(uint8_t *uid);

@@ -523,6 +523,7 @@ SRCS =  aiddesfire.c \
 		cmdlfviking.c \
 		cmdlfvisa2000.c \
 		cmdmain.c \
+		cmdnfc.c \
 		cmdparser.c \
 		cmdscript.c \
 		cmdsmartcard.c \
@@ -570,7 +571,7 @@ SRCS =  aiddesfire.c \
 		mifare/mifare4.c \
 		mifare/mifaredefault.c \
 		mifare/mifarehost.c \
-		mifare/ndef.c \
+		nfc/ndef.c \
 		pm3.c \
 		pm3_binlib.c \
 		pm3_bitlib.c \

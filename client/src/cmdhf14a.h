@@ -25,6 +25,7 @@ typedef struct {
 int CmdHF14A(const char *Cmd);
 int CmdHF14ASniff(const char *Cmd); // used by hf topaz sniff
 int CmdHF14ASim(const char *Cmd);   // used by hf mfu sim
+int CmdHF14ANdefRead(const char *Cmd);
 
 int hf14a_getconfig(hf14a_config *config);
 int hf14a_setconfig(hf14a_config *config, bool verbose);

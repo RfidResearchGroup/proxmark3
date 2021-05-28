@@ -20,7 +20,7 @@
 #include "fileutils.h"
 #include "protocols.h"
 #include "generator.h"
-#include "mifare/ndef.h"
+#include "nfc/ndef.h"
 #include "cliparser.h"
 #include "cmdmain.h"
 #include "amiibo.h"     // amiiboo fcts
@@ -3765,7 +3765,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 // 2. magic bytes in the readable payload
 
 
-static int CmdHF14MfuNDEF(const char *Cmd) {
+int CmdHF14MfuNDEFRead(const char *Cmd) {
 
     int keylen;
     int maxsize = 16, status;
@@ -3779,10 +3779,10 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
     uint8_t pack[4] = {0, 0, 0, 0};
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfu ndef",
+    CLIParserInit(&ctx, "hf mfu ndefread",
                   "Prints NFC Data Exchange Format (NDEF)",
-                  "hf mfu ndef -> shows NDEF data\n"
-                  "hf mfu ndef -k ffffffff -> shows NDEF data with key");
+                  "hf mfu ndefread -> shows NDEF data\n"
+                  "hf mfu ndefread -k ffffffff -> shows NDEF data with key");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4014,7 +4014,7 @@ static command_t CommandTable[] = {
     {"cauth",   CmdHF14AMfUCAuth,          IfPm3Iso14443a,  "Authentication - Ultralight-C"},
     {"dump",    CmdHF14AMfUDump,           IfPm3Iso14443a,  "Dump MIFARE Ultralight family tag to binary file"},
     {"info",    CmdHF14AMfUInfo,           IfPm3Iso14443a,  "Tag information"},
-    {"ndef",    CmdHF14MfuNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
+    {"ndefread",CmdHF14MfuNDEFRead,        IfPm3Iso14443a,  "Prints NDEF records from card"},
     {"rdbl",    CmdHF14AMfURdBl,           IfPm3Iso14443a,  "Read block"},
     {"restore", CmdHF14AMfURestore,        IfPm3Iso14443a,  "Restore a dump onto a MFU MAGIC tag"},
     {"wrbl",    CmdHF14AMfUWrBl,           IfPm3Iso14443a,  "Write block"},

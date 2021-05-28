@@ -38,7 +38,7 @@ static int seos_select(void) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
-    // ---------------  Select NDEF Tag application ----------------
+    // ---------------  Select SEOS applet ----------------
     uint8_t aSELECT_AID[80];
     int aSELECT_AID_n = 0;
     param_gethex_to_eol("00a404000aa000000440000101000100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);

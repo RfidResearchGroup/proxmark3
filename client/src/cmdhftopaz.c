@@ -22,7 +22,7 @@
 #include "ui.h"
 #include "crc16.h"
 #include "protocols.h"
-#include "mifare/ndef.h"
+#include "nfc/ndef.h"
 
 #define TOPAZ_STATIC_MEMORY (0x0f * 8)  // 15 blocks with 8 Bytes each
 
@@ -412,7 +412,7 @@ static int CmdHFTopazReader(const char *Cmd) {
 }
 
 // read a Topaz tag and print some useful information
-static int CmdHFTopazInfo(const char *Cmd) {
+int CmdHFTopazInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf topaz info",
                   "Get info from Topaz tags",

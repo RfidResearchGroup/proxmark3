@@ -19,7 +19,7 @@
 #include "cmdhf14a.h"
 #include "protocols.h"     // definitions of ISO14A/7816 protocol
 #include "emv/apduinfo.h"  // GetAPDUCodeDescription
-#include "mifare/ndef.h"   // NDEFRecordsDecodeAndPrint
+#include "nfc/ndef.h"   // NDEFRecordsDecodeAndPrint
 
 #define TIMEOUT 2000
 
@@ -203,7 +203,7 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
 }
 
 // ST rothult
-int infoHFST(void) {
+static int infoHFST(void) {
 
     bool activate_field = true;
     bool keep_field_on = true;
@@ -361,15 +361,15 @@ static int CmdHFSTSim(const char *Cmd) {
     return CmdHF14ASim(param);
 }
 
-static int CmdHFSTNdef(const char *Cmd) {
+int CmdHFSTNdefRead(const char *Cmd) {
     int pwdlen = 0;
     uint8_t pwd[16] = {0};
     bool with_pwd = false;
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf st ndef",
+    CLIParserInit(&ctx, "hf st ndefread",
                   "Read NFC Data Exchange Format (NDEF) file on ST25TA",
-                  "hf st ndef -p 82E80053D4CA5C0B656D852CC696C8A1\n");
+                  "hf st ndefread -p 82E80053D4CA5C0B656D852CC696C8A1\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -795,7 +795,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,           AlwaysAvailable, "This help"},
     {"info",    CmdHFSTInfo,       IfPm3Iso14443a,  "Tag information"},
     {"list",    CmdHFSTList,       AlwaysAvailable, "List ISO 14443A/7816 history"},
-    {"ndef",    CmdHFSTNdef,       AlwaysAvailable, "read NDEF file on tag"},
+    {"ndefread",CmdHFSTNdefRead,   AlwaysAvailable, "read NDEF file on tag"},
     {"protect", CmdHFSTProtect,    IfPm3Iso14443a,  "change protection on tag"},
     {"pwd",     CmdHFSTPwd,        IfPm3Iso14443a,  "change password on tag"},
     {"sim",     CmdHFSTSim,        IfPm3Iso14443a,  "Fake ISO 14443A/ST tag"},

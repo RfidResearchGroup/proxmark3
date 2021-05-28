@@ -29,7 +29,7 @@
 #include "cliparser.h"
 #include "protocols.h"     // definitions of ISO14A/7816 protocol, MAGIC_GEN_1A
 #include "emv/apduinfo.h"  // GetAPDUCodeDescription
-#include "mifare/ndef.h"   // NDEFRecordsDecodeAndPrint
+#include "nfc/ndef.h"   // NDEFRecordsDecodeAndPrint
 
 bool APDUInFramingEnable = true;
 
@@ -2346,11 +2346,11 @@ static void print_cc_info(uint8_t *d, uint8_t n) {
     PrintAndLogEx(NORMAL, "");
 }
 
-static int CmdHF14ANdef(const char *Cmd) {
+int CmdHF14ANdefRead(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf 14a ndef",
+    CLIParserInit(&ctx, "hf 14a ndefread",
                   "Read NFC Data Exchange Format (NDEF) file on Type 4 NDEF tag",
-                  "hf 14a ndef\n");
+                  "hf 14a ndefread\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -2539,7 +2539,7 @@ static command_t CommandTable[] = {
     {"list",        CmdHF14AList,         AlwaysAvailable, "List ISO 14443-a history"},
     {"info",        CmdHF14AInfo,         IfPm3Iso14443a,  "Tag information"},
     {"reader",      CmdHF14AReader,       IfPm3Iso14443a,  "Act like an ISO14443-a reader"},
-    {"ndef",        CmdHF14ANdef,         IfPm3Iso14443a,  "Read an NDEF file from ISO 14443-A Type 4 tag"},
+    {"ndefread",    CmdHF14ANdefRead,     IfPm3Iso14443a,  "Read an NDEF file from ISO 14443-A Type 4 tag"},
     {"cuids",       CmdHF14ACUIDs,        IfPm3Iso14443a,  "Collect n>0 ISO14443-a UIDs in one go"},
     {"sim",         CmdHF14ASim,          IfPm3Iso14443a,  "Simulate ISO 14443-a tag"},
     {"sniff",       CmdHF14ASniff,        IfPm3Iso14443a,  "sniff ISO 14443-a traffic"},
