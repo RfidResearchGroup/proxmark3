@@ -128,6 +128,15 @@ int CmdHFSearch(const char *Cmd) {
             res = PM3_SUCCESS;
         }
     }
+    
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, " Searching for Cipurse tag...");
+    if (IfPm3Iso14443a()) {
+        if (CheckCardCipurse()) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Cipurse tag") " found\n");
+            res = PM3_SUCCESS;
+        }
+    }
 
     // 14b is the longest test
     PROMPT_CLEARLINE;

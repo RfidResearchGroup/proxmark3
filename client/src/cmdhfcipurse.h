@@ -20,4 +20,6 @@
 
 int CmdHFCipurse(const char *Cmd);
 
+bool CheckCardCipurse(void);
+
 #endif

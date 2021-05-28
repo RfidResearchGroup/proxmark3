@@ -84,6 +84,15 @@ static int CmdHFCipurseInfo(const char *Cmd) {
 
 
 
+bool CheckCardCipurse(void) {
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+    int res = CIPURSESelect(true, false, buf, sizeof(buf), &len, &sw);
+
+    return (res == 0 && sw == 0x9000);
+}
+
 static command_t CommandTable[] = {
     {"help",      CmdHelp,                   AlwaysAvailable, "This help."},
     {"info",      CmdHFCipurseInfo,          IfPm3Iso14443a,  "Info about Cipurse tag."},
