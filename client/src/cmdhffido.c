@@ -127,7 +127,7 @@ static int CmdHFFidoRegister(const char *cmd) {
     CLIParserInit(&ctx, "hf fido reg",
                   "Initiate a U2F token registration. Needs two 32-byte hash numbers.\n"
                   "challenge parameter (32b) and application parameter (32b).\n"
-                  "The output template filename is  `hf-fido2-params.json`\n"
+                  "The default config filename is  `fido2_defparams.json`\n"
                   "\n",
                   "hf fido reg                 -> execute command with 2 parameters, filled 0x00\n"
                   "hf fido reg --cp s0 --ap s1 -> execute command with plain parameters\n"
@@ -391,7 +391,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     CLIParserInit(&ctx, "hf fido auth",
                   "Initiate a U2F token authentication. Needs key handle and two 32-byte hash numbers.\n"
                   "key handle(var 0..255), challenge parameter (32b) and application parameter (32b)\n"
-                  "The output template filename is  `hf-fido2-params.json`\n"
+                  "The default config filename is  `fido2_defparams.json`\n"
                   "\n",
                   "hf fido auth --kh 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with 2 parameters, filled 0x00 and key handle\n"
                   "hf fido auth \n"
