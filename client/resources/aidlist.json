@@ -2158,5 +2158,13 @@
         "Name": "TeslaDAP",
         "Description": "Undocumented AID associated with official Tesla BTLE Key Fobs",
         "Type": "Tesla"
+    },
+    {
+        "AID": "4144204631",
+        "Vendor": "Cipurse",
+        "Country": "",
+        "Name": "Cipurse transport card",
+        "Description": "Cipurse transport card",
+        "Type": "transport"
     }
 ]
