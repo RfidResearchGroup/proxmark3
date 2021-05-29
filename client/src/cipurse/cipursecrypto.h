@@ -44,12 +44,12 @@ typedef struct CipurseContextS {
     uint8_t frameKeyNext[CIPURSE_AES_KEY_LENGTH];
 } CipurseContext;
 
-void CipurseClearContext(CipurseContext *ctx);
-void CipurseSetKey(CipurseContext *ctx, uint8_t keyId, uint8_t *key);
-void CipurseSetRandomFromPICC(CipurseContext *ctx, uint8_t *random);
-void CipurseSetRandomHost(CipurseContext *ctx);
+void CipurseCClearContext(CipurseContext *ctx);
+void CipurseCSetKey(CipurseContext *ctx, uint8_t keyId, uint8_t *key);
+void CipurseCSetRandomFromPICC(CipurseContext *ctx, uint8_t *random);
+void CipurseCSetRandomHost(CipurseContext *ctx);
 
-void CipurseAuthenticateHost(CipurseContext *ctx);
+void CipurseCAuthenticateHost(CipurseContext *ctx, uint8_t *authdata);
 
 
 void CipurseCGetKVV(uint8_t *key, uint8_t *kvv);

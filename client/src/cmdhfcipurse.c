@@ -95,24 +95,35 @@ static int CmdHFCipurseAuth(const char *Cmd) {
         return PM3_ESOFT;
     }
     
+    uint8_t keyId = 1;
     uint8_t key[] = {0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73};
     CipurseContext ctx = {0};
-    CipurseSetKey(&ctx, 1, key);
+    CipurseCSetKey(&ctx, 1, key);
     
     uint8_t kvv[CIPURSE_KVV_LENGTH] = {0};
     CipurseCGetKVV(key, kvv);
     PrintAndLogEx(INFO, "Key: %s KVV: %s", sprint_hex(key, CIPURSE_AES_KEY_LENGTH), sprint_hex_inrow(kvv, CIPURSE_KVV_LENGTH));
 
+    // get RP, rP
     res = CIPURSEChallenge(buf, sizeof(buf), &len, &sw);
     if (res != 0 || len != 0x16) {
         PrintAndLogEx(ERR, "Cipurse get challenge error. Card returns 0x%04x.", sw);
         DropField();
         return PM3_ESOFT;
     }
-    CipurseSetRandomFromPICC(&ctx, buf);
+    CipurseCSetRandomFromPICC(&ctx, buf);
     
+    // make auth data
+    uint8_t authparams[16 + 16 + 6] = {0};
+    CipurseCAuthenticateHost(&ctx, authparams);
     
-    
+    // authenticate
+    res = CIPURSEMutalAuthenticate(keyId, authparams, sizeof(authparams), buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000 || len != 0x16) {
+        PrintAndLogEx(ERR, "Cipurse authentication error. Card returns 0x%04x.", sw);
+        DropField();
+        return PM3_ESOFT;
+    }
     
     DropField();
     return PM3_SUCCESS;

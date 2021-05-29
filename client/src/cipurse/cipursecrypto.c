@@ -37,24 +37,24 @@ void CipurseCGetKVV(uint8_t *key, uint8_t *kvv) {
     memcpy(kvv, res, CIPURSE_KVV_LENGTH);
 }
 
-void CipurseClearContext(CipurseContext *ctx) {
+void CipurseCClearContext(CipurseContext *ctx) {
     if (ctx == NULL)
         return;
     
     memset(ctx, 0, sizeof(CipurseContext));
 }
 
-void CipurseSetKey(CipurseContext *ctx, uint8_t keyId, uint8_t *key) {
+void CipurseCSetKey(CipurseContext *ctx, uint8_t keyId, uint8_t *key) {
     if (ctx == NULL)
         return;
     
-    CipurseClearContext(ctx);
+    CipurseCClearContext(ctx);
     
     ctx->keyId = keyId;
     memcpy(ctx->key, key, member_size(CipurseContext, key));
 }
 
-void CipurseSetRandomFromPICC(CipurseContext *ctx, uint8_t *random) {
+void CipurseCSetRandomFromPICC(CipurseContext *ctx, uint8_t *random) {
     if (ctx == NULL)
         return;
       
@@ -62,16 +62,25 @@ void CipurseSetRandomFromPICC(CipurseContext *ctx, uint8_t *random) {
     memcpy(ctx->rP, random + member_size(CipurseContext, RP), member_size(CipurseContext, rP));
 }
 
-void CipurseSetRandomHost(CipurseContext *ctx) {
+void CipurseCSetRandomHost(CipurseContext *ctx) {
     memset(ctx->RT, 0x10, member_size(CipurseContext, RT));
     memset(ctx->rT, 0x20, member_size(CipurseContext, rT));
 }
 
-void CipurseAuthenticateHost(CipurseContext *ctx) {
+static void CipurseCFillAuthData(CipurseContext *ctx, uint8_t *authdata) {
+    memcpy(authdata, ctx->cP, member_size(CipurseContext, cP));
+    memcpy(&authdata[member_size(CipurseContext, cP)], ctx->RT, member_size(CipurseContext, RT));
+    memcpy(&authdata[member_size(CipurseContext, cP) + member_size(CipurseContext, RT)], ctx->rT, member_size(CipurseContext, rT));   
+}
+
+void CipurseCAuthenticateHost(CipurseContext *ctx, uint8_t *authdata) {
     if (ctx == NULL)
         return;
     
-    CipurseSetRandomHost(ctx);
+    CipurseCSetRandomHost(ctx);
     CipurseCGenerateK0AndGetCp(ctx);
-    CipurseCGenerateCT(ctx->RT, ctx->CT);    
+    CipurseCGenerateCT(ctx->RT, ctx->CT);
+
+    if (authdata != NULL)
+        CipurseCFillAuthData(ctx, authdata);
 }
