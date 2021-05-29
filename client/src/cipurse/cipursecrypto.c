@@ -184,3 +184,28 @@ void CipurseCAuthenticateHost(CipurseContext *ctx, uint8_t *authdata) {
 bool CipurseCCheckCT(CipurseContext *ctx, uint8_t *CT) {
     return (memcmp(CT, ctx->CT, CIPURSE_AES_KEY_LENGTH) == 0);
 }
+
+void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_t sdatalen, size_t blocklen) {
+    *ddatalen = sdatalen + 1;
+    *ddatalen += *ddatalen % blocklen;
+    memset(ddata, 0, *ddatalen);
+    memcpy(ddata, sdata, sdatalen);
+    ddata[sdatalen] = ISO9797_M2_PAD_BYTE;
+}
+
+void CipurseCGenerateMAC(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac) {
+    
+}
+
+void CipurseCCalcMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac) {
+    uint8_t pdata[datalen + CIPURSE_AES_KEY_LENGTH];
+    size_t pdatalen = 0;
+    AddISO9797M2Padding(pdata, &pdatalen, data, datalen, CIPURSE_AES_KEY_LENGTH);
+    CipurseCGenerateMAC(ctx, pdata, pdatalen, mac);
+}
+
+bool CipurseCCheckMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac) {
+    uint8_t xmac[CIPURSE_MAC_LENGTH] = {0};
+    CipurseCCalcMACPadded(ctx, data, datalen, xmac);
+    return (memcmp(mac, xmac, CIPURSE_MAC_LENGTH) == 0);
+}

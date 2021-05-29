@@ -21,6 +21,9 @@
 #include "util.h"
 #include "cipurse/cipursecrypto.h"
 
+// context for secure channel
+CipurseContext cipurseContext;
+
 static int CIPURSEExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, bool IncludeLe, uint16_t Le, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
     uint8_t data[APDU_RES_LEN] = {0};
 
@@ -84,6 +87,7 @@ static int CIPURSEExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, 
 
 int CIPURSESelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
     uint8_t data[] = {0x41, 0x44, 0x20, 0x46, 0x31};
+    CipurseCClearContext(&cipurseContext);
 
     return EMVSelect(ECC_CONTACTLESS, ActivateField, LeaveFieldON, data, sizeof(data), Result, MaxResultLen, ResultLen, sw, NULL);
 }
