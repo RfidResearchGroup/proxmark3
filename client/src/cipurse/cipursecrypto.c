@@ -13,6 +13,7 @@
 #include "commonutil.h"  // ARRAYLEN
 #include "comms.h"       // DropField
 #include "util_posix.h"  // msleep
+#include <string.h>      // memcpy memset
 
 #include "cmdhf14a.h"
 #include "emv/emvcore.h"
@@ -193,8 +194,32 @@ void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_
     ddata[sdatalen] = ISO9797_M2_PAD_BYTE;
 }
 
+/* from: https://github.com/duychuongvn/cipurse-card-core/blob/master/src/main/java/com/github/duychuongvn/cirpusecard/core/security/crypto/CipurseCrypto.java#L473
+ * 
+ * Generate OSPT MAC on the given input data.
+ * Data should be already padded.
+ *  
+ * Calculation of Mi and ki+1: hx := ki , hx+1 := AES( key = hx ; Dx )
+ * XOR Dx , hx+2 := AES( key = hx+1 ; Dx+1 ) XOR Dx+1, hx+3 := AES( key =
+ * hx+2 ; Dx+2 ) XOR Dx+2, ... hy+1 := AES( key = hy ; Dy ) XOR Dy, ki+1 :=
+ * hy+1 M'i := AES( key = ki ; ki+1 ) XOR ki+1, Mi := m LS bits of M'i = (
+ * (M'i )0, (M'i )1, ..., (M'i )m-1)
+ */
 void CipurseCGenerateMAC(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac) {
-    
+    uint8_t temp[CIPURSE_AES_KEY_LENGTH] = {0};
+
+    memcpy(ctx->frameKeyNext, ctx->frameKey, CIPURSE_AES_KEY_LENGTH);
+    int i = 0;
+    while (datalen > i) {
+        aes_encode(NULL, ctx->frameKeyNext, &data[i], temp, CIPURSE_AES_KEY_LENGTH);
+        bin_xor(temp, &data[i], CIPURSE_AES_KEY_LENGTH);
+        memcpy(ctx->frameKeyNext, temp, CIPURSE_AES_KEY_LENGTH);
+        i += CIPURSE_AES_KEY_LENGTH;
+    }
+ 
+    aes_encode(NULL, ctx->frameKey, ctx->frameKeyNext, temp, CIPURSE_AES_KEY_LENGTH);
+    bin_xor(temp, ctx->frameKeyNext, CIPURSE_AES_KEY_LENGTH);
+    memcpy(mac, temp, CIPURSE_MAC_LENGTH);
 }
 
 void CipurseCCalcMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac) {
