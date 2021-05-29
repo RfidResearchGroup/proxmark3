@@ -36,7 +36,7 @@ typedef struct CipurseContextS {
     uint8_t RT[16];
     uint8_t rT[6];
     
-    uint8_t frameKey0[16];
+    uint8_t k0[16];
     uint8_t cP[16];
     uint8_t CT[16];
     
