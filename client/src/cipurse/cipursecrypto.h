@@ -13,6 +13,11 @@
 
 #include "common.h"
 
+#define CIPURSE_KVV_LENGTH 4
+#define CIPURSE_AES_KEY_LENGTH 16
+#define CIPURSE_SECURITY_PARAM_N 6
+#define OSPT_MAC_LENGTH 8
+
 #define member_size(type, member) sizeof(((type *)0)->member)
 
 enum CipurseChannelSecurityLevel {
@@ -24,7 +29,7 @@ enum CipurseChannelSecurityLevel {
 
 typedef struct CipurseContextS {
     uint8_t keyId;
-    uint8_t key[16];
+    uint8_t key[CIPURSE_AES_KEY_LENGTH];
     
     uint8_t RP[16];
     uint8_t rP[6];
@@ -33,9 +38,10 @@ typedef struct CipurseContextS {
     
     uint8_t frameKey0[16];
     uint8_t cP[16];
+    uint8_t CT[16];
     
-    uint8_t frameKey[16];
-    uint8_t frameKeyNext[16];
+    uint8_t frameKey[CIPURSE_AES_KEY_LENGTH];
+    uint8_t frameKeyNext[CIPURSE_AES_KEY_LENGTH];
 } CipurseContext;
 
 void CipurseClearContext(CipurseContext *ctx);
@@ -46,6 +52,6 @@ void CipurseSetRandomHost(CipurseContext *ctx);
 void CipurseAuthenticateHost(CipurseContext *ctx);
 
 
-
+void CipurseCGetKVV(uint8_t *key, uint8_t *kvv);
 
 #endif /* __CIPURSECRYPTO_H__ */

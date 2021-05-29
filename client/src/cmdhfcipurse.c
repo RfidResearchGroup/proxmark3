@@ -98,6 +98,10 @@ static int CmdHFCipurseAuth(const char *Cmd) {
     uint8_t key[] = {0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73};
     CipurseContext ctx = {0};
     CipurseSetKey(&ctx, 1, key);
+    
+    uint8_t kvv[CIPURSE_KVV_LENGTH] = {0};
+    CipurseCGetKVV(key, kvv);
+    PrintAndLogEx(INFO, "Key: %s KVV: %s", sprint_hex(key, CIPURSE_AES_KEY_LENGTH), sprint_hex_inrow(kvv, CIPURSE_KVV_LENGTH));
 
     res = CIPURSEChallenge(buf, sizeof(buf), &len, &sw);
     if (res != 0 || len != 0x16) {

@@ -17,8 +17,25 @@
 #include "cmdhf14a.h"
 #include "emv/emvcore.h"
 #include "emv/emvjson.h"
+#include "crypto/libpcrypto.h"
 #include "ui.h"
 #include "util.h"
+
+uint8_t AESData0[CIPURSE_AES_KEY_LENGTH] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+static void CipurseCGenerateK0AndGetCp(CipurseContext *ctx) {
+
+}
+
+static void CipurseCGenerateCT(uint8_t *RT, uint8_t *CT) {
+    
+}
+
+void CipurseCGetKVV(uint8_t *key, uint8_t *kvv) {
+    uint8_t res[16] = {0};
+    aes_encode(NULL, key, AESData0, res, CIPURSE_AES_KEY_LENGTH);
+    memcpy(kvv, res, CIPURSE_KVV_LENGTH);
+}
 
 void CipurseClearContext(CipurseContext *ctx) {
     if (ctx == NULL)
@@ -54,12 +71,7 @@ void CipurseAuthenticateHost(CipurseContext *ctx) {
     if (ctx == NULL)
         return;
     
-/*        RT = Random.nextBytes(16)
-        rT = Random.nextBytes(6)
-
-        val cP = generateK0AndGetCp(key, RP, rP, RT, rT) ?: return Pair(null, null)
-
-        return Pair(cP + RT + rT, generateCT(RT))*/
-        
-        
+    CipurseSetRandomHost(ctx);
+    CipurseCGenerateK0AndGetCp(ctx);
+    CipurseCGenerateCT(ctx->RT, ctx->CT);    
 }
