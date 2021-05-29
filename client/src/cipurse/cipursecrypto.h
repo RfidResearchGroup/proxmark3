@@ -51,6 +51,7 @@ void CipurseCSetRandomFromPICC(CipurseContext *ctx, uint8_t *random);
 void CipurseCSetRandomHost(CipurseContext *ctx);
 
 void CipurseCAuthenticateHost(CipurseContext *ctx, uint8_t *authdata);
+bool CipurseCCheckCT(CipurseContext *ctx, uint8_t *CT);
 
 
 void CipurseCGetKVV(uint8_t *key, uint8_t *kvv);
