@@ -19,6 +19,7 @@
 #include "emv/emvjson.h"
 #include "ui.h"
 #include "util.h"
+#include "cipurse/cipursecrypto.h"
 
 static int CIPURSEExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, bool IncludeLe, uint16_t Le, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
     uint8_t data[APDU_RES_LEN] = {0};
@@ -91,3 +92,6 @@ int CIPURSEChallenge(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, ui
     return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0x84, 0x00, 0x00, 0x00, NULL}, true, 0x16, Result, MaxResultLen, ResultLen, sw);
 }
 
+int CIPURSEMutalAuthenticate(uint8_t keyIndex, uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+    return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0x82, 0x00, keyIndex, paramslen, params}, true, 0x10, Result, MaxResultLen, ResultLen, sw);
+}
