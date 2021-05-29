@@ -133,7 +133,7 @@ bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose) {
         if (sw == 0x6988) {
             if (verbose)
                 PrintAndLogEx(ERR, "Cipurse authentication " _RED_("error") ". Wrong key.");
-        } else if ((sw == 0x6A88)) {
+        } else if (sw == 0x6A88) {
             if (verbose)
                 PrintAndLogEx(ERR, "Cipurse authentication " _RED_("error") ". Wrong key number.");
         } else {
