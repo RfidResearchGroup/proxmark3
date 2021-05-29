@@ -264,6 +264,10 @@ style:
 	    --align-pointer=name {} \;
 	# Update commands.md
 	[ -x client/proxmark3 ] && client/proxmark3 -m > doc/commands.md
+	# Update commands.json
+	[ -x client/proxmark3 ] && client/proxmark3 --fulltext > commands.txt
+	python3 client/pyscripts/pm3_2_json.py commands.txt doc/commands.json
+	rm commands.txt
 
 # Detecting weird codepages and tabs.
 ifeq ($(platform),Darwin)
