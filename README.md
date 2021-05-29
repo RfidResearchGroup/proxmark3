@@ -122,7 +122,7 @@ All of this and more is what makes this repo different from any other Proxmark3 
 
 > ⚠ **Note**: This is a bleeding edge repository. The maintainers actively is working out of this repository and will be periodically re-structuring the code to make it easier to comprehend, navigate, build, test, and contribute to, so **DO expect significant changes to code layout on a regular basis**.
 
-> 👉 **Remember!** If you intend to contribute to the code, please read the [coding style notes](HACKING.md) first.
+> 👉 **Remember!** If you intend to contribute to the code, please read the [coding style notes](CONTRIBUTING.md) first.
 We usually merge your contributions fast since we do like the idea of getting a functionality in the Proxmark3 and weed out the bugs afterwards.
 
 The [public roadmap](https://github.com/RfidResearchGroup/proxmark3/wiki/Public-Roadmap) is an excellent start to read if you are interesting in contributing.
