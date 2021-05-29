@@ -55,11 +55,14 @@ void CipurseCAuthenticateHost(CipurseContext *ctx, uint8_t *authdata);
 bool CipurseCCheckCT(CipurseContext *ctx, uint8_t *CT);
 
 void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_t sdatalen, size_t blocklen);
+size_t FindISO9797M2PaddingDataLen(uint8_t *data, size_t datalen);
 
 void CipurseCGenerateMAC(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
 void CipurseCCalcMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
 bool CipurseCCheckMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
-
+void CipurseCEncryptDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *dstdata, bool isEncrypt);
+void CipurseCChannelEncrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *encdata, size_t *encdatalen);
+void CipurseCChannelDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *plaindata, size_t *plaindatalen);
 void CipurseCGetKVV(uint8_t *key, uint8_t *kvv);
 
 #endif /* __CIPURSECRYPTO_H__ */

@@ -23,6 +23,7 @@
 #include "util.h"
 
 uint8_t AESData0[CIPURSE_AES_KEY_LENGTH] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+uint8_t QConstant[CIPURSE_AES_KEY_LENGTH] = {0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73};
 
 static void bin_xor(uint8_t *d1, uint8_t *d2, size_t len) {
     for(size_t i = 0; i < len; i++)
@@ -192,6 +193,59 @@ void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_
     memset(ddata, 0, *ddatalen);
     memcpy(ddata, sdata, sdatalen);
     ddata[sdatalen] = ISO9797_M2_PAD_BYTE;
+}
+
+size_t FindISO9797M2PaddingDataLen(uint8_t *data, size_t datalen) {
+    for (int i = datalen; i > 0; i--) {
+        if (data[i - 1] == 0x80)
+            return i;
+        if (data[i - 1] != 0x00)
+            return 0;
+    }
+    return 0;
+}
+
+/* from: https://github.com/duychuongvn/cipurse-card-core/blob/master/src/main/java/com/github/duychuongvn/cirpusecard/core/security/crypto/CipurseCrypto.java#L521
+ * 
+ * Encrypt/Decrypt the given data using ciphering mechanism explained the OPST.
+ * Data should be already padded.
+ *  
+ * hx-1 := ki , hx := AES( key = hx-1 ; q) XOR q, Cx := AES( key = hx ;
+ * Dx ), hx+1 := AES( key = hx ; q ) XOR q, Cx+1 := AES( key = hx+1 ;
+ * Dx+1 ), ... hy := AES( key = hy-1 ; q ) XOR q, Cy := AES( key = hy ;
+ * Dy ), ki+1 := hy
+ */
+void CipurseCEncryptDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *dstdata, bool isEncrypt) {
+    uint8_t hx[CIPURSE_AES_KEY_LENGTH] = {0};
+
+    memcpy(ctx->frameKeyNext, ctx->frameKey, CIPURSE_AES_KEY_LENGTH);
+    int i = 0;
+    while (datalen > i) {
+        aes_encode(NULL, QConstant, ctx->frameKeyNext, hx, CIPURSE_AES_KEY_LENGTH);
+        bin_xor(hx, ctx->frameKeyNext, CIPURSE_AES_KEY_LENGTH);
+        
+        if (isEncrypt)
+            aes_encode(NULL, hx, &data[i], &dstdata[i], CIPURSE_AES_KEY_LENGTH);
+        else
+            aes_decode(NULL, hx, &data[i], &dstdata[i], CIPURSE_AES_KEY_LENGTH);
+        
+        memcpy(ctx->frameKeyNext, hx, CIPURSE_AES_KEY_LENGTH);
+        i += CIPURSE_AES_KEY_LENGTH;
+    }
+}
+
+void CipurseCChannelEncrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *encdata, size_t *encdatalen) {
+    uint8_t pdata[datalen + CIPURSE_AES_KEY_LENGTH];
+    size_t pdatalen = 0;
+    AddISO9797M2Padding(pdata, &pdatalen, data, datalen, CIPURSE_AES_KEY_LENGTH);
+    
+    CipurseCEncryptDecrypt(ctx, pdata, pdatalen, encdata, true);
+    *encdatalen = pdatalen;
+}
+
+void CipurseCChannelDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *plaindata, size_t *plaindatalen) {
+    CipurseCEncryptDecrypt(ctx, data, datalen, plaindata, false);
+    *plaindatalen = FindISO9797M2PaddingDataLen(plaindata, datalen);
 }
 
 /* from: https://github.com/duychuongvn/cipurse-card-core/blob/master/src/main/java/com/github/duychuongvn/cirpusecard/core/security/crypto/CipurseCrypto.java#L473
