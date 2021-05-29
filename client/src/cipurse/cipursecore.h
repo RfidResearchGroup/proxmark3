@@ -31,4 +31,6 @@ int CIPURSEReadFileAttributes(uint8_t *data, uint16_t *datalen);
 int CIPURSEReadBinary(uint16_t offset, uint8_t *data, uint16_t *datalen);
 int CIPURSEUpdateBinary(uint16_t offset, uint8_t *data, uint16_t datalen);
 
+bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose);
+
 #endif /* __CIPURSECORE_H__ */

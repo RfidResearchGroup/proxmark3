@@ -99,3 +99,58 @@ int CIPURSEChallenge(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, ui
 int CIPURSEMutalAuthenticate(uint8_t keyIndex, uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
     return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0x82, 0x00, keyIndex, paramslen, params}, true, 0x10, Result, MaxResultLen, ResultLen, sw);
 }
+
+bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose) {
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+
+    CipurseContext cpc = {0};
+    CipurseCSetKey(&cpc, keyIndex, key);
+    
+    // get RP, rP
+    int res = CIPURSEChallenge(buf, sizeof(buf), &len, &sw);
+    if (res != 0 || len != 0x16) {
+        if (verbose)
+            PrintAndLogEx(ERR, "Cipurse get challenge " _RED_("error") ". Card returns 0x%04x.", sw);
+        
+        return false;
+    }
+    CipurseCSetRandomFromPICC(&cpc, buf);
+
+    // make auth data
+    uint8_t authparams[16 + 16 + 6] = {0};
+    CipurseCAuthenticateHost(&cpc, authparams);
+    
+    // authenticate
+    res = CIPURSEMutalAuthenticate(keyIndex, authparams, sizeof(authparams), buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000 || len != 16) {
+        if (sw == 0x6988) {
+            if (verbose)
+                PrintAndLogEx(ERR, "Cipurse authentication " _RED_("error") ". Wrong key.");
+        } else if ((sw == 0x6A88)) {
+            if (verbose)
+                PrintAndLogEx(ERR, "Cipurse authentication " _RED_("error") ". Wrong key number.");
+        } else {
+            if (verbose)
+                PrintAndLogEx(ERR, "Cipurse authentication " _RED_("error") ". Card returns 0x%04x.", sw);
+        }
+        
+        CipurseCClearContext(&cipurseContext);
+        return false;
+    }
+    
+    if (CipurseCCheckCT(&cpc, buf)) {
+        if (verbose)
+            PrintAndLogEx(INFO, "Authentication " _GREEN_("OK"));
+        
+        memcpy(&cipurseContext, &cpc, sizeof(CipurseContext));
+        return true;
+    } else {
+        if (verbose)
+            PrintAndLogEx(ERR, "Authentication " _RED_("ERROR") " card returned wrong CT");
+        
+        CipurseCClearContext(&cipurseContext);
+        return false;
+    }
+}

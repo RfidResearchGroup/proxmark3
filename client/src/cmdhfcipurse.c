@@ -121,7 +121,7 @@ static int CmdHFCipurseAuth(const char *Cmd) {
     
     SetAPDULogging(APDULogging);
 
-    CLIParserFree(ctx);    
+    CLIParserFree(ctx);
     
     int res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
@@ -129,48 +129,23 @@ static int CmdHFCipurseAuth(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
-    
-    CipurseContext cpc = {0};
-    CipurseCSetKey(&cpc, keyId, key);
-    
+        
     uint8_t kvv[CIPURSE_KVV_LENGTH] = {0};
     CipurseCGetKVV(key, kvv);
     if (verbose)
         PrintAndLogEx(INFO, "Key id: %d key: %s KVV: %s", keyId, sprint_hex(key, CIPURSE_AES_KEY_LENGTH), sprint_hex_inrow(kvv, CIPURSE_KVV_LENGTH));
 
-    // get RP, rP
-    res = CIPURSEChallenge(buf, sizeof(buf), &len, &sw);
-    if (res != 0 || len != 0x16) {
-        PrintAndLogEx(ERR, "Cipurse get challenge " _RED_("error") ". Card returns 0x%04x.", sw);
-        DropField();
-        return PM3_ESOFT;
-    }
-    CipurseCSetRandomFromPICC(&cpc, buf);
-
-    // make auth data
-    uint8_t authparams[16 + 16 + 6] = {0};
-    CipurseCAuthenticateHost(&cpc, authparams);
+    bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
     
-    // authenticate
-    res = CIPURSEMutalAuthenticate(keyId, authparams, sizeof(authparams), buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000 || len != 16) {
-        if (sw == 0x6988)
-            PrintAndLogEx(ERR, "Cipurse authentication " _RED_("error") ". Wrong key.");
-        else if ((sw == 0x6A88))
-            PrintAndLogEx(ERR, "Cipurse authentication " _RED_("error") ". Wrong key number.");
-        else PrintAndLogEx(ERR, "Cipurse authentication " _RED_("error") ". Card returns 0x%04x.", sw);
-        
-        DropField();
-        return PM3_ESOFT;
+    if (verbose == false) {
+        if (bres)
+            PrintAndLogEx(INFO, "Authentication " _GREEN_("OK"));
+        else
+            PrintAndLogEx(ERR, "Authentication " _RED_("ERROR"));
     }
-    
-    if (CipurseCCheckCT(&cpc, buf))
-        PrintAndLogEx(INFO, "Authentication " _GREEN_("OK"));
-    else
-        PrintAndLogEx(ERR, "Authentication " _RED_("ERROR") " card returned wrong CT");
     
     DropField();
-    return PM3_SUCCESS;
+    return bres ? PM3_SUCCESS : PM3_ESOFT;
 }
 
 
