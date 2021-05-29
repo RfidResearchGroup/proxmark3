@@ -558,6 +558,7 @@ SRCS =  aiddesfire.c \
 		fido/cbortools.c \
 		fido/fidocore.c \
 		cipurse/cipursecore.c \
+		cipurse/cipursecrypto.c \
 		fileutils.c \
 		flash.c \
 		generator.c \

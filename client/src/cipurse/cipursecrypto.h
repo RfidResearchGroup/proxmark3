@@ -13,28 +13,37 @@
 
 #include "common.h"
 
+#define member_size(type, member) sizeof(((type *)0)->member)
+
 enum CipurseChannelSecurityLevel {
     CPSNone,
     CPSPlain,
     CPSMACed,
     CPSEncrypted
-}
+};
 
-struct CipurseSession {
-    uint8_t keyId,
-    uint8_t[16] key,
+typedef struct CipurseContextS {
+    uint8_t keyId;
+    uint8_t key[16];
     
-    uint8_t[16] RP,
-    uint8_t[6]  rP,
-    uint8_t[16] RT,
-    uint8_t[6]  rT,
+    uint8_t RP[16];
+    uint8_t rP[6];
+    uint8_t RT[16];
+    uint8_t rT[6];
     
-    uint8_t[16] k0,
-    uint8_t[16] cP,
+    uint8_t frameKey0[16];
+    uint8_t cP[16];
     
-    uint8_t[16] frameKey,
-    uint8_t[16] frameKey1
-}
+    uint8_t frameKey[16];
+    uint8_t frameKeyNext[16];
+} CipurseContext;
+
+void CipurseClearContext(CipurseContext *ctx);
+void CipurseSetKey(CipurseContext *ctx, uint8_t keyId, uint8_t *key);
+void CipurseSetRandomFromPICC(CipurseContext *ctx, uint8_t *random);
+void CipurseSetRandomHost(CipurseContext *ctx);
+
+void CipurseAuthenticateHost(CipurseContext *ctx);
 
 
 

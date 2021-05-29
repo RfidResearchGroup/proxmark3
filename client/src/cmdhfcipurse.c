@@ -24,6 +24,7 @@
 #include "cliparser.h"
 #include "cmdhfcipurse.h"
 #include "cipurse/cipursecore.h"
+#include "cipurse/cipursecrypto.h"
 #include "ui.h"
 #include "cmdhf14a.h"
 #include "cmdtrace.h"
@@ -93,6 +94,10 @@ static int CmdHFCipurseAuth(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
+    
+    uint8_t key[] = {0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73};
+    CipurseContext ctx = {0};
+    CipurseSetKey(&ctx, 1, key);
 
     res = CIPURSEChallenge(buf, sizeof(buf), &len, &sw);
     if (res != 0 || len != 0x16) {
@@ -100,6 +105,9 @@ static int CmdHFCipurseAuth(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
+    CipurseSetRandomFromPICC(&ctx, buf);
+    
+    
     
     
     DropField();
