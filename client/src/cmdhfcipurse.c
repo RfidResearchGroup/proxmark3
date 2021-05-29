@@ -85,8 +85,42 @@ static int CmdHFCipurseAuth(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
+    uint8_t keyId = 1;
+    uint8_t key[] = {0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73};
     
-    SetAPDULogging(true);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a sim",
+                  "Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID",
+                  "hf 14a sim -t 1 --uid 11223344      -> MIFARE Classic 1k\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyid",   "<dec>", "key id"),
+        arg_str0("k",  "key",     "<hex>", "key for authenticate"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    keyId = arg_get_int_def(ctx, 3, 1);
+    
+    uint8_t hdata[250] = {0};
+    int hdatalen = sizeof(hdata);    
+    CLIGetHexWithReturn(ctx, 4, hdata, &hdatalen);
+    if (hdatalen && hdatalen != 16) {
+        PrintAndLogEx(ERR, "ERROR: key length for AES128 must be 16 bytes only.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (hdatalen)
+        memcpy(key, hdata, CIPURSE_AES_KEY_LENGTH);
+    
+    SetAPDULogging(APDULogging);
+
+    CLIParserFree(ctx);    
     
     int res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
@@ -95,14 +129,13 @@ static int CmdHFCipurseAuth(const char *Cmd) {
         return PM3_ESOFT;
     }
     
-    uint8_t keyId = 1;
-    uint8_t key[] = {0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73};
-    CipurseContext ctx = {0};
-    CipurseCSetKey(&ctx, 1, key);
+    CipurseContext cpc = {0};
+    CipurseCSetKey(&cpc, 1, key);
     
     uint8_t kvv[CIPURSE_KVV_LENGTH] = {0};
     CipurseCGetKVV(key, kvv);
-    PrintAndLogEx(INFO, "Key: %s KVV: %s", sprint_hex(key, CIPURSE_AES_KEY_LENGTH), sprint_hex_inrow(kvv, CIPURSE_KVV_LENGTH));
+    if (verbose)
+        PrintAndLogEx(INFO, "Key: %s KVV: %s", sprint_hex(key, CIPURSE_AES_KEY_LENGTH), sprint_hex_inrow(kvv, CIPURSE_KVV_LENGTH));
 
     // get RP, rP
     res = CIPURSEChallenge(buf, sizeof(buf), &len, &sw);
@@ -111,16 +144,21 @@ static int CmdHFCipurseAuth(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
-    CipurseCSetRandomFromPICC(&ctx, buf);
+    CipurseCSetRandomFromPICC(&cpc, buf);
     
     // make auth data
     uint8_t authparams[16 + 16 + 6] = {0};
-    CipurseCAuthenticateHost(&ctx, authparams);
+    CipurseCAuthenticateHost(&cpc, authparams);
     
     // authenticate
     res = CIPURSEMutalAuthenticate(keyId, authparams, sizeof(authparams), buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000 || len != 0x16) {
-        PrintAndLogEx(ERR, "Cipurse authentication error. Card returns 0x%04x.", sw);
+        if (sw == 0x6988)
+            PrintAndLogEx(ERR, "Cipurse authentication error. Wrong key.");
+        else if ((sw == 0x6A88))
+            PrintAndLogEx(ERR, "Cipurse authentication error. Wrong key number.");
+        else PrintAndLogEx(ERR, "Cipurse authentication error. Card returns 0x%04x.", sw);
+        
         DropField();
         return PM3_ESOFT;
     }

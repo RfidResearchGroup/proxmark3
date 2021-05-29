@@ -17,6 +17,7 @@
 #define CIPURSE_AES_KEY_LENGTH 16
 #define CIPURSE_SECURITY_PARAM_N 6
 #define OSPT_MAC_LENGTH 8
+#define CIPURSE_POLY 0x35b088cce172UL
 
 #define member_size(type, member) sizeof(((type *)0)->member)
 
@@ -31,14 +32,14 @@ typedef struct CipurseContextS {
     uint8_t keyId;
     uint8_t key[CIPURSE_AES_KEY_LENGTH];
     
-    uint8_t RP[16];
-    uint8_t rP[6];
-    uint8_t RT[16];
-    uint8_t rT[6];
+    uint8_t RP[CIPURSE_AES_KEY_LENGTH];
+    uint8_t rP[CIPURSE_SECURITY_PARAM_N];
+    uint8_t RT[CIPURSE_AES_KEY_LENGTH];
+    uint8_t rT[CIPURSE_SECURITY_PARAM_N];
     
-    uint8_t k0[16];
-    uint8_t cP[16];
-    uint8_t CT[16];
+    uint8_t k0[CIPURSE_AES_KEY_LENGTH];
+    uint8_t cP[CIPURSE_AES_KEY_LENGTH];
+    uint8_t CT[CIPURSE_AES_KEY_LENGTH];
     
     uint8_t frameKey[CIPURSE_AES_KEY_LENGTH];
     uint8_t frameKeyNext[CIPURSE_AES_KEY_LENGTH];
