@@ -25,6 +25,16 @@
 uint8_t AESData0[CIPURSE_AES_KEY_LENGTH] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 uint8_t QConstant[CIPURSE_AES_KEY_LENGTH] = {0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73};
 
+uint8_t CipurseCSecurityLevelEnc(CipurseChannelSecurityLevel lvl) {
+    switch (lvl) {
+        case CPSNone: return 0x00;
+        case CPSPlain: return 0x00;
+        case CPSMACed: return 0x01;
+        case CPSEncrypted: return 0x02;
+        default: return 0x00;
+    }
+}
+
 static void bin_xor(uint8_t *d1, uint8_t *d2, size_t len) {
     for(size_t i = 0; i < len; i++)
         d1[i] = d1[i] ^ d2[i];
@@ -152,6 +162,11 @@ void CipurseCSetKey(CipurseContext *ctx, uint8_t keyId, uint8_t *key) {
     memcpy(ctx->key, key, member_size(CipurseContext, key));
 }
 
+void CipurseCChannelSetSecurityLevels(CipurseContext *ctx, CipurseChannelSecurityLevel req, CipurseChannelSecurityLevel resp) {
+    ctx->RequestSecurity = req;
+    ctx->ResponseSecurity = resp;
+}
+
 void CipurseCSetRandomFromPICC(CipurseContext *ctx, uint8_t *random) {
     if (ctx == NULL)
         return;
@@ -163,6 +178,13 @@ void CipurseCSetRandomFromPICC(CipurseContext *ctx, uint8_t *random) {
 void CipurseCSetRandomHost(CipurseContext *ctx) {
     memset(ctx->RT, 0x10, member_size(CipurseContext, RT));
     memset(ctx->rT, 0x20, member_size(CipurseContext, rT));
+}
+
+uint8_t CipurseCGetSMI(CipurseContext *ctx, bool LePresent) {
+    uint8_t res = LePresent ? 1 : 0;
+    res = res | (CipurseCSecurityLevelEnc(ctx->RequestSecurity) << 2);
+    res = res | (CipurseCSecurityLevelEnc(ctx->ResponseSecurity) << 6);
+    return res;
 }
 
 static void CipurseCFillAuthData(CipurseContext *ctx, uint8_t *authdata) {

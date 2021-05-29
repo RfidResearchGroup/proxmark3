@@ -13,6 +13,7 @@
 #include "commonutil.h"  // ARRAYLEN
 #include "comms.h"       // DropField
 #include "util_posix.h"  // msleep
+#include <string.h>      // memcpy memset
 
 #include "cmdhf14a.h"
 #include "emv/emvcore.h"
@@ -36,6 +37,10 @@ static int CIPURSEExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, 
         DropField();
         msleep(50);
     }
+    
+    // long messages is not allowed
+    if (apdu.Lc > 228)
+        return 20;
 
     // COMPUTE APDU
     int datalen = 0;
@@ -144,6 +149,7 @@ bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose) {
         if (verbose)
             PrintAndLogEx(INFO, "Authentication " _GREEN_("OK"));
         
+        CipurseCChannelSetSecurityLevels(&cpc, CPSMACed, CPSMACed);
         memcpy(&cipurseContext, &cpc, sizeof(CipurseContext));
         return true;
     } else {

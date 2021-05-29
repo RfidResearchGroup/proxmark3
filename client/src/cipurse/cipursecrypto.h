@@ -22,12 +22,12 @@
 
 #define member_size(type, member) sizeof(((type *)0)->member)
 
-enum CipurseChannelSecurityLevel {
+typedef enum {
     CPSNone,
     CPSPlain,
     CPSMACed,
     CPSEncrypted
-};
+} CipurseChannelSecurityLevel;
 
 typedef struct CipurseContextS {
     uint8_t keyId;
@@ -44,15 +44,23 @@ typedef struct CipurseContextS {
     
     uint8_t frameKey[CIPURSE_AES_KEY_LENGTH];
     uint8_t frameKeyNext[CIPURSE_AES_KEY_LENGTH];
+    
+    CipurseChannelSecurityLevel RequestSecurity;
+    CipurseChannelSecurityLevel ResponseSecurity;
 } CipurseContext;
+
+uint8_t CipurseCSecurityLevelEnc(CipurseChannelSecurityLevel lvl);
 
 void CipurseCClearContext(CipurseContext *ctx);
 void CipurseCSetKey(CipurseContext *ctx, uint8_t keyId, uint8_t *key);
 void CipurseCSetRandomFromPICC(CipurseContext *ctx, uint8_t *random);
 void CipurseCSetRandomHost(CipurseContext *ctx);
+uint8_t CipurseCGetSMI(CipurseContext *ctx, bool LePresent);
 
 void CipurseCAuthenticateHost(CipurseContext *ctx, uint8_t *authdata);
 bool CipurseCCheckCT(CipurseContext *ctx, uint8_t *CT);
+
+void CipurseCChannelSetSecurityLevels(CipurseContext *ctx, CipurseChannelSecurityLevel req, CipurseChannelSecurityLevel resp);
 
 void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_t sdatalen, size_t blocklen);
 size_t FindISO9797M2PaddingDataLen(uint8_t *data, size_t datalen);
