@@ -89,9 +89,10 @@ static int CmdHFCipurseAuth(const char *Cmd) {
     uint8_t key[] = {0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73};
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf 14a sim",
-                  "Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID",
-                  "hf 14a sim -t 1 --uid 11223344      -> MIFARE Classic 1k\n");
+    CLIParserInit(&ctx, "hf cipurse auth",
+                  "Authenticate with key ID and key",
+                  "hf cipurse auth      -> Authenticate with keyID=1 and key = 7373...7373\n"
+                  "hf cipurse auth -n 2 -k 65656565656565656565656565656565 -> Authenticate with key\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -111,7 +112,7 @@ static int CmdHFCipurseAuth(const char *Cmd) {
     int hdatalen = sizeof(hdata);    
     CLIGetHexWithReturn(ctx, 4, hdata, &hdatalen);
     if (hdatalen && hdatalen != 16) {
-        PrintAndLogEx(ERR, "ERROR: key length for AES128 must be 16 bytes only.");
+        PrintAndLogEx(ERR, _RED_("ERROR:") " key length for AES128 must be 16 bytes only.");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -124,7 +125,7 @@ static int CmdHFCipurseAuth(const char *Cmd) {
     
     int res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Cipurse select error. Card returns 0x%04x.", sw);
+        PrintAndLogEx(ERR, "Cipurse select " _RED_("error") ". Card returns 0x%04x.", sw);
         DropField();
         return PM3_ESOFT;
     }
@@ -140,7 +141,7 @@ static int CmdHFCipurseAuth(const char *Cmd) {
     // get RP, rP
     res = CIPURSEChallenge(buf, sizeof(buf), &len, &sw);
     if (res != 0 || len != 0x16) {
-        PrintAndLogEx(ERR, "Cipurse get challenge error. Card returns 0x%04x.", sw);
+        PrintAndLogEx(ERR, "Cipurse get challenge " _RED_("error") ". Card returns 0x%04x.", sw);
         DropField();
         return PM3_ESOFT;
     }
