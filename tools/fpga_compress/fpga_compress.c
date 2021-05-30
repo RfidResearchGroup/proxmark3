@@ -101,7 +101,7 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
 
         memcpy(ring_buffer, fpga_config + current_in, bytes_to_copy);
         int cmp_bytes = LZ4_compress_HC_continue(lz4_streamhc, ring_buffer, outbuf, bytes_to_copy, outsize_max);
-        if (cmp_bytes < 0 ){
+        if (cmp_bytes < 0) {
             fprintf(stderr, "(lz4 - zlib_compress) error,  got negative number of bytes from LZ4_compress_HC_continue call. got %d ", cmp_bytes);
             free(ring_buffer);
             free(outbuf);
@@ -220,7 +220,7 @@ static int bitparse_find_section(FILE *infile, char section_name, unsigned int *
                 /* Four byte length field */
                 for (int i = 0; i < 4; i++) {
                     tmp = fgetc(infile);
-                    if (tmp < 0 ) {
+                    if (tmp < 0) {
                         break;
                     }
                     current_length += tmp << (24 - (i * 8));
@@ -230,7 +230,7 @@ static int bitparse_find_section(FILE *infile, char section_name, unsigned int *
             default: /* Fall through, two byte length field */
                 for (int i = 0; i < 2; i++) {
                     tmp = fgetc(infile);
-                    if (tmp < 0 ) {
+                    if (tmp < 0) {
                         break;
                     }
                     current_length += tmp << (8 - (i * 8));

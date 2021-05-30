@@ -122,7 +122,6 @@ Check column "offline" for their availability.
 |`data hexsamples        `|N       |`Dump big buffer as hex bytes`
 |`data hex2bin           `|Y       |`Converts hexadecimal to binary`
 |`data load              `|Y       |`Load contents of file into graph window`
-|`data ndef              `|Y       |`Decode NDEF records`
 |`data print             `|Y       |`Print the data in the DemodBuffer`
 |`data samples           `|N       |`Get raw samples for graph window (GraphBuffer)`
 |`data save              `|Y       |`Save signal trace data  (from graph window)`
@@ -176,6 +175,7 @@ Check column "offline" for their availability.
 |`hf 14a list            `|Y       |`List ISO 14443-a history`
 |`hf 14a info            `|N       |`Tag information`
 |`hf 14a reader          `|N       |`Act like an ISO14443-a reader`
+|`hf 14a ndefread        `|N       |`Read an NDEF file from ISO 14443-A Type 4 tag`
 |`hf 14a cuids           `|N       |`Collect n>0 ISO14443-a UIDs in one go`
 |`hf 14a sim             `|N       |`Simulate ISO 14443-a tag`
 |`hf 14a sniff           `|N       |`sniff ISO 14443-a traffic`
@@ -198,7 +198,7 @@ Check column "offline" for their availability.
 |`hf 14b dump            `|N       |`Read all memory pages of an ISO-14443-B tag, save to file`
 |`hf 14b info            `|N       |`Tag information`
 |`hf 14b list            `|Y       |`List ISO-14443-B history`
-|`hf 14b ndef            `|N       |`Read NDEF file on tag`
+|`hf 14b ndefread        `|N       |`Read NDEF file on tag`
 |`hf 14b raw             `|N       |`Send raw hex data to tag`
 |`hf 14b reader          `|N       |`Act as a ISO-14443-B reader to identify a tag`
 |`hf 14b sim             `|N       |`Fake ISO ISO-14443-B tag`
@@ -400,7 +400,7 @@ Check column "offline" for their availability.
 |`hf mf auth4            `|N       |`ISO14443-4 AES authentication`
 |`hf mf dump             `|N       |`Dump MIFARE Classic tag to binary file`
 |`hf mf mad              `|N       |`Checks and prints MAD`
-|`hf mf ndef             `|N       |`Prints NDEF records from card`
+|`hf mf ndefread         `|N       |`Prints NDEF records from card`
 |`hf mf personalize      `|N       |`Personalize UID (MIFARE Classic EV1 only)`
 |`hf mf rdbl             `|N       |`Read MIFARE Classic block`
 |`hf mf rdsc             `|N       |`Read MIFARE Classic sector`
@@ -449,7 +449,7 @@ Check column "offline" for their availability.
 |`hf mfp wrbl            `|N       |`Write blocks`
 |`hf mfp chk             `|N       |`Check keys`
 |`hf mfp mad             `|N       |`Checks and prints MAD`
-|`hf mfp ndef            `|N       |`Prints NDEF records from card`
+|`hf mfp ndefread        `|N       |`Prints NDEF records from card`
 
 
 ### hf mfu
@@ -465,7 +465,7 @@ Check column "offline" for their availability.
 |`hf mfu cauth           `|N       |`Authentication - Ultralight-C`
 |`hf mfu dump            `|N       |`Dump MIFARE Ultralight family tag to binary file`
 |`hf mfu info            `|N       |`Tag information`
-|`hf mfu ndef            `|N       |`Prints NDEF records from card`
+|`hf mfu ndefread        `|N       |`Prints NDEF records from card`
 |`hf mfu rdbl            `|N       |`Read block`
 |`hf mfu restore         `|N       |`Restore a dump onto a MFU MAGIC tag`
 |`hf mfu wrbl            `|N       |`Write block`
@@ -507,6 +507,17 @@ Check column "offline" for their availability.
 |`hf mfdes writedata     `|N       |`Write data to standard/backup/record file`
 
 
+### hf seos
+
+ { SEOS RFIDs...                       }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf seos help           `|Y       |`This help`
+|`hf seos info           `|N       |`Tag information`
+|`hf seos list           `|Y       |`List SEOS history`
+
+
 ### hf st
 
  { ST Rothult RFIDs...                 }
@@ -516,7 +527,7 @@ Check column "offline" for their availability.
 |`hf st help             `|Y       |`This help`
 |`hf st info             `|N       |`Tag information`
 |`hf st list             `|Y       |`List ISO 14443A/7816 history`
-|`hf st ndef             `|Y       |`read NDEF file on tag`
+|`hf st ndefread         `|Y       |`read NDEF file on tag`
 |`hf st protect          `|N       |`change protection on tag`
 |`hf st pwd              `|N       |`change password on tag`
 |`hf st sim              `|N       |`Fake ISO 14443A/ST tag`
@@ -1098,6 +1109,79 @@ Check column "offline" for their availability.
 |`mem spiffs upload      `|N       |`Upload file into SPIFFS file system`
 |`mem spiffs view        `|N       |`View file on SPIFFS file system`
 |`mem spiffs wipe        `|N       |`Wipe all files from SPIFFS file system   * dangerous *`
+
+
+### nfc
+
+ { NFC commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`nfc help               `|Y       |`This help`
+|`nfc decode             `|Y       |`Decode NDEF records`
+
+
+### nfc type1
+
+ { NFC Forum Tag Type 1...             }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`nfc type1 read         `|N       |`read NFC Forum Tag Type 1`
+|`nfc type1 help         `|Y       |`This help`
+
+
+### nfc type2
+
+ { NFC Forum Tag Type 2...             }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`nfc type2 read         `|N       |`read NFC Forum Tag Type 2`
+|`nfc type2 help         `|Y       |`This help`
+
+
+### nfc type4a
+
+ { NFC Forum Tag Type 4 ISO14443A...   }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`nfc type4a read        `|N       |`read NFC Forum Tag Type 4 A`
+|`nfc type4a st25taread  `|N       |`read ST25TA as NFC Forum Tag Type 4`
+|`nfc type4a help        `|Y       |`This help`
+
+
+### nfc type4b
+
+ { NFC Forum Tag Type 4 ISO14443B...   }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`nfc type4b read        `|N       |`read NFC Forum Tag Type 4 B`
+|`nfc type4b help        `|Y       |`This help`
+
+
+### nfc mf
+
+ { NFC Type MIFARE Classic/Plus Tag... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`nfc mf cread           `|N       |`read NFC Type MIFARE Classic Tag`
+|`nfc mf pread           `|N       |`read NFC Type MIFARE Plus Tag`
+|`nfc mf help            `|Y       |`This help`
+
+
+### nfc barcode
+
+ { NFC Barcode Tag...                  }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`nfc barcode read       `|N       |`read NFC Barcode`
+|`nfc barcode sim        `|N       |`simulate NFC Barcode`
+|`nfc barcode help       `|Y       |`This help`
 
 
 ### reveng

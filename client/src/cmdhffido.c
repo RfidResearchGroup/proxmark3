@@ -531,7 +531,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
             json_decref(root);
             return PM3_EINVARG;
         }
-    } 
+    }
     if (aphex && applain == false) {
         hdatalen = sizeof(hdata);
         CLIGetHexWithReturn(ctx, 12, hdata, &hdatalen);

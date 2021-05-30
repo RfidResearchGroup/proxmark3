@@ -255,7 +255,7 @@ int CmdLFCommandRead(const char *Cmd) {
     if (session.pm3_present == false)
         return PM3_ENOTTY;
 
-    #define PAYLOAD_HEADER_SIZE (12 + (3 * LF_CMDREAD_MAX_EXTRA_SYMBOLS))
+#define PAYLOAD_HEADER_SIZE (12 + (3 * LF_CMDREAD_MAX_EXTRA_SYMBOLS))
     struct p {
         uint32_t delay;
         uint16_t period_0;

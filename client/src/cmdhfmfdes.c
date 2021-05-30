@@ -1290,8 +1290,8 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
                     desfire_crc32_append(data + 1, cmdcnt);
                 }
                 cmdcnt += 4;
-              //  desfire_crc32_append(data, cmdcnt);
-              //  cmdcnt += 4;
+                //  desfire_crc32_append(data, cmdcnt);
+                //  cmdcnt += 4;
                 break;
         }
     }
@@ -1319,8 +1319,7 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
 
     size_t sn = recv_len;
 
-    if (new_algo == MFDES_ALGO_AES) 
-    {
+    if (new_algo == MFDES_ALGO_AES) {
         // AES expects us to Calculate CMAC for status byte : OK 0x00  (0x91 00)
         // As such if we get this far without an error, we should be good
         // Since we are dropping the field, we dont need to maintain the CMAC etc.
@@ -1910,7 +1909,7 @@ static int handler_desfire_readdata(mfdes_data_t *data, MFDES_FILE_TYPE_T type, 
     sAPDU apdu = {0x90, MFDES_READ_DATA, 0x00, 0x00, 1 + 3 + 3, (uint8_t *)data}; // 0xBD
     if (type == MFDES_RECORD_FILE) {
         apdu.INS = MFDES_READ_RECORDS; //0xBB
-    } 
+    }
 
     // we need the CMD 0xBD <data> to calc the CMAC
     uint8_t tmp_data[8]; // Since the APDU is hardcoded to 7 bytes of payload 7+1 = 8 is enough.
@@ -1969,7 +1968,7 @@ static int handler_desfire_getvalue(mfdes_value_t *value, uint32_t *resplen, uin
         DropFieldDesfire();
         return res;
     }
-    size_t dlen = (size_t)*resplen;
+    size_t dlen = (size_t) * resplen;
     p = mifare_cryto_postprocess_data(tag, value->value, &dlen, cs | CMAC_COMMAND | CMAC_VERIFY | MAC_VERIFY);
     (void)p;
     return res;

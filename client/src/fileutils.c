@@ -678,7 +678,7 @@ int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool
         filename = filenamemcopy(preferredName, ".json");
     else
         filename = newfilenamemcopy(preferredName, ".json");
-    
+
     if (filename == NULL)
         return PM3_EMALLOC;
 

@@ -792,13 +792,13 @@ static int CmdHFSTList(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,           AlwaysAvailable, "This help"},
-    {"info",    CmdHFSTInfo,       IfPm3Iso14443a,  "Tag information"},
-    {"list",    CmdHFSTList,       AlwaysAvailable, "List ISO 14443A/7816 history"},
-    {"ndefread",CmdHFSTNdefRead,   AlwaysAvailable, "read NDEF file on tag"},
-    {"protect", CmdHFSTProtect,    IfPm3Iso14443a,  "change protection on tag"},
-    {"pwd",     CmdHFSTPwd,        IfPm3Iso14443a,  "change password on tag"},
-    {"sim",     CmdHFSTSim,        IfPm3Iso14443a,  "Fake ISO 14443A/ST tag"},
+    {"help",     CmdHelp,           AlwaysAvailable, "This help"},
+    {"info",     CmdHFSTInfo,       IfPm3Iso14443a,  "Tag information"},
+    {"list",     CmdHFSTList,       AlwaysAvailable, "List ISO 14443A/7816 history"},
+    {"ndefread", CmdHFSTNdefRead,   AlwaysAvailable, "read NDEF file on tag"},
+    {"protect",  CmdHFSTProtect,    IfPm3Iso14443a,  "change protection on tag"},
+    {"pwd",      CmdHFSTPwd,        IfPm3Iso14443a,  "change password on tag"},
+    {"sim",      CmdHFSTSim,        IfPm3Iso14443a,  "Fake ISO 14443A/ST tag"},
     {NULL, NULL, NULL, NULL}
 };
 

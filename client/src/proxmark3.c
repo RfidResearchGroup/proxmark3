@@ -995,10 +995,10 @@ int main(int argc, char *argv[]) {
         session.supports_colors = false;
         session.emoji_mode = EMO_ALTTEXT;
     }
-	
+
 #if defined(_WIN32) //Color support on Windows has to be enabled each time and can fail, override prefs
-        session.supports_colors = DetectWindowsAnsiSupport();
-        session.emoji_mode = EMO_ALTTEXT;
+    session.supports_colors = DetectWindowsAnsiSupport();
+    session.emoji_mode = EMO_ALTTEXT;
 #endif
 
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
