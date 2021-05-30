@@ -15,7 +15,7 @@
 #include "common.h"
 
 #include <jansson.h>
-#include "emv/apduinfo.h" // sAPDU
+#include "iso7816/apduinfo.h" // sAPDU
 
 typedef enum {
     fido2CmdMakeCredential      = 0x01,

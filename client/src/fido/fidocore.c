@@ -14,7 +14,7 @@
 
 #include "commonutil.h"  // ARRAYLEN
 
-#include "emv/emvcore.h"
+#include "iso7816/iso7816core.h"
 #include "emv/emvjson.h"
 #include "cbortools.h"
 #include "x509_crt.h"
@@ -172,17 +172,17 @@ const char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, int m
 int FIDOSelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
     uint8_t data[] = {0xA0, 0x00, 0x00, 0x06, 0x47, 0x2F, 0x00, 0x01};
 
-    return EMVSelect(ECC_CONTACTLESS, ActivateField, LeaveFieldON, data, sizeof(data), Result, MaxResultLen, ResultLen, sw, NULL);
+    return Iso7816Select(CC_CONTACTLESS, ActivateField, LeaveFieldON, data, sizeof(data), Result, MaxResultLen, ResultLen, sw);
 }
 
 int FIDOExchange(sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
-    int res = EMVExchange(ECC_CONTACTLESS, true, apdu, Result, MaxResultLen, ResultLen, sw, NULL);
+    int res = Iso7816Exchange(CC_CONTACTLESS, true, apdu, Result, MaxResultLen, ResultLen, sw);
     if (res == 5) // apdu result (sw) not a 0x9000
         res = 0;
     // software chaining
     while (!res && (*sw >> 8) == 0x61) {
         size_t oldlen = *ResultLen;
-        res = EMVExchange(ECC_CONTACTLESS, true, (sAPDU) {0x00, 0xC0, 0x00, 0x00, 0x00, NULL}, &Result[oldlen], MaxResultLen - oldlen, ResultLen, sw, NULL);
+        res = Iso7816Exchange(CC_CONTACTLESS, true, (sAPDU) {0x00, 0xC0, 0x00, 0x00, 0x00, NULL}, &Result[oldlen], MaxResultLen - oldlen, ResultLen, sw);
         if (res == 5) // apdu result (sw) not a 0x9000
             res = 0;
 

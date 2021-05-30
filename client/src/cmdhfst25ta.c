@@ -19,7 +19,7 @@
 #include "crc16.h"
 #include "cmdhf14a.h"
 #include "protocols.h"     // definitions of ISO14A/7816 protocol
-#include "emv/apduinfo.h"  // GetAPDUCodeDescription
+#include "iso7816/apduinfo.h"  // GetAPDUCodeDescription
 #include "nfc/ndef.h"      // NDEFRecordsDecodeAndPrint
 #include "cmdnfc.h"        // print_type4_cc_info
 

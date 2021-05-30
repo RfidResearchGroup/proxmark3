@@ -24,8 +24,8 @@
 #include "protocols.h"
 #include "cmdtrace.h"
 #include "cliparser.h"
-#include "emv/apduinfo.h"   // APDU manipulation / errorcodes
-#include "emv/emvcore.h"    // APDU logging
+#include "iso7816/apduinfo.h"   // APDU manipulation / errorcodes
+#include "iso7816/iso7816core.h"    // APDU logging
 #include "util_posix.h"     // msleep
 #include "mifare/desfire_crypto.h"
 #include "crapto1/crapto1.h"

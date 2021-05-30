@@ -24,7 +24,7 @@
 #include "commonutil.h"
 #include "comms.h"
 #include "proxmark3.h"
-#include "emv/emvcore.h"
+#include "iso7816/iso7816core.h"
 #include "emv/emvjson.h"
 #include "cliparser.h"
 #include "crypto/asn1utils.h"

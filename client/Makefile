@@ -535,7 +535,6 @@ SRCS =  aiddesfire.c \
 		crypto/asn1dump.c \
 		crypto/asn1utils.c\
 		crypto/libpcrypto.c\
-		emv/apduinfo.c \
 		emv/cmdemv.c \
 		emv/crypto.c\
 		emv/crypto_polarssl.c\
@@ -562,6 +561,8 @@ SRCS =  aiddesfire.c \
 		generator.c \
 		graph.c \
 		jansson_path.c \
+		iso7816/apduinfo.c \
+		iso7816/iso7816core.c \
 		loclass/cipher.c \
 		loclass/cipherutils.c \
 		loclass/elite_crack.c \

@@ -18,7 +18,7 @@
 #include "cliparser.h"              // CLIParserContext etc
 #include "cmdhf14a.h"               // ExchangeAPDU14a
 #include "protocols.h"              // definitions of ISO14A/7816 protocol
-#include "emv/apduinfo.h"           // GetAPDUCodeDescription
+#include "iso7816/apduinfo.h"           // GetAPDUCodeDescription
 #include "crypto/libpcrypto.h"      // Hash calculation (sha1, sha256, sha512)
 #include "mifare/desfire_crypto.h"  // des_encrypt/des_decrypt
 #include "des.h"                    // mbedtls_des_key_set_parity

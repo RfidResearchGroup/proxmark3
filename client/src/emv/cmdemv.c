@@ -56,12 +56,12 @@ static void ParamLoadDefaults(struct tlvdb *tlvRoot) {
     TLV_ADD(0x9F4E, "proxmrk3rdv\x00");
 }
 
-static void PrintChannel(EMVCommandChannel channel) {
+static void PrintChannel(Iso7816CommandChannel channel) {
     switch (channel) {
-        case ECC_CONTACTLESS:
+        case CC_CONTACTLESS:
             PrintAndLogEx(INFO, "Selected channel... " _GREEN_("CONTACTLESS (T=CL)"));
             break;
-        case ECC_CONTACT:
+        case CC_CONTACT:
             PrintAndLogEx(INFO, "Selected channel... " _GREEN_("CONTACT"));
             break;
     }
@@ -93,9 +93,9 @@ static int CmdEMVSelect(const char *Cmd) {
     bool leaveSignalON = arg_get_lit(ctx, 2);
     bool APDULogging = arg_get_lit(ctx, 3);
     bool decodeTLV = arg_get_lit(ctx, 4);
-    EMVCommandChannel channel = ECC_CONTACTLESS;
+    Iso7816CommandChannel channel = CC_CONTACTLESS;
     if (arg_get_lit(ctx, 5))
-        channel = ECC_CONTACT;
+        channel = CC_CONTACT;
     PrintChannel(channel);
     CLIGetHexWithReturn(ctx, 6, data, &datalen);
     CLIParserFree(ctx);
@@ -143,9 +143,9 @@ static int CmdEMVSearch(const char *Cmd) {
     bool leaveSignalON = arg_get_lit(ctx, 2);
     bool APDULogging = arg_get_lit(ctx, 3);
     bool decodeTLV = arg_get_lit(ctx, 4);
-    EMVCommandChannel channel = ECC_CONTACTLESS;
+    Iso7816CommandChannel channel = CC_CONTACTLESS;
     if (arg_get_lit(ctx, 5))
-        channel = ECC_CONTACT;
+        channel = CC_CONTACT;
     PrintChannel(channel);
     CLIParserFree(ctx);
 
@@ -201,9 +201,9 @@ static int CmdEMVPPSE(const char *Cmd) {
         PSENum = 2;
     bool APDULogging = arg_get_lit(ctx, 5);
     bool decodeTLV = arg_get_lit(ctx, 6);
-    EMVCommandChannel channel = ECC_CONTACTLESS;
+    Iso7816CommandChannel channel = CC_CONTACTLESS;
     if (arg_get_lit(ctx, 7))
-        channel = ECC_CONTACT;
+        channel = CC_CONTACT;
     PrintChannel(channel);
     CLIParserFree(ctx);
 
@@ -257,9 +257,9 @@ static int CmdEMVGPO(const char *Cmd) {
     bool dataMakeFromPDOL = arg_get_lit(ctx, 3);
     bool APDULogging = arg_get_lit(ctx, 4);
     bool decodeTLV = arg_get_lit(ctx, 5);
-    EMVCommandChannel channel = ECC_CONTACTLESS;
+    Iso7816CommandChannel channel = CC_CONTACTLESS;
     if (arg_get_lit(ctx, 6))
-        channel = ECC_CONTACT;
+        channel = CC_CONTACT;
     PrintChannel(channel);
     CLIGetHexWithReturn(ctx, 7, data, &datalen);
     CLIParserFree(ctx);
@@ -362,9 +362,9 @@ static int CmdEMVReadRecord(const char *Cmd) {
     bool leaveSignalON = arg_get_lit(ctx, 1);
     bool APDULogging = arg_get_lit(ctx, 2);
     bool decodeTLV = arg_get_lit(ctx, 3);
-    EMVCommandChannel channel = ECC_CONTACTLESS;
+    Iso7816CommandChannel channel = CC_CONTACTLESS;
     if (arg_get_lit(ctx, 4))
-        channel = ECC_CONTACT;
+        channel = CC_CONTACT;
     PrintChannel(channel);
     CLIGetHexWithReturn(ctx, 5, data, &datalen);
     CLIParserFree(ctx);
@@ -449,9 +449,9 @@ static int CmdEMVAC(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 6);
     bool decodeTLV = arg_get_lit(ctx, 7);
 
-    EMVCommandChannel channel = ECC_CONTACTLESS;
+    Iso7816CommandChannel channel = CC_CONTACTLESS;
     if (arg_get_lit(ctx, 8))
-        channel = ECC_CONTACT;
+        channel = CC_CONTACT;
 
     PrintChannel(channel);
     CLIGetHexWithReturn(ctx, 9, data, &datalen);
@@ -541,9 +541,9 @@ static int CmdEMVGenerateChallenge(const char *Cmd) {
 
     bool leaveSignalON = arg_get_lit(ctx, 1);
     bool APDULogging = arg_get_lit(ctx, 2);
-    EMVCommandChannel channel = ECC_CONTACTLESS;
+    Iso7816CommandChannel channel = CC_CONTACTLESS;
     if (arg_get_lit(ctx, 3))
-        channel = ECC_CONTACT;
+        channel = CC_CONTACT;
     PrintChannel(channel);
     CLIParserFree(ctx);
 
@@ -600,9 +600,9 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
     bool dataMakeFromDDOL = arg_get_lit(ctx, 3);
     bool APDULogging = arg_get_lit(ctx, 4);
     bool decodeTLV = arg_get_lit(ctx, 5);
-    EMVCommandChannel channel = ECC_CONTACTLESS;
+    Iso7816CommandChannel channel = CC_CONTACTLESS;
     if (arg_get_lit(ctx, 6))
-        channel = ECC_CONTACT;
+        channel = CC_CONTACT;
     PrintChannel(channel);
     CLIGetHexWithReturn(ctx, 7, data, &datalen);
     CLIParserFree(ctx);
@@ -841,15 +841,15 @@ static int CmdEMVExec(const char *Cmd) {
         TrType = TT_VSDC;
 
     bool GenACGPO = arg_get_lit(ctx, 10);
-    EMVCommandChannel channel = ECC_CONTACTLESS;
+    Iso7816CommandChannel channel = CC_CONTACTLESS;
     if (arg_get_lit(ctx, 11))
-        channel = ECC_CONTACT;
+        channel = CC_CONTACT;
     PrintChannel(channel);
-    uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
+    uint8_t psenum = (channel == CC_CONTACT) ? 1 : 2;
     CLIParserFree(ctx);
 
     if (!IfPm3Smartcard()) {
-        if (channel == ECC_CONTACT) {
+        if (channel == CC_CONTACT) {
             PrintAndLogEx(WARNING, "PM3 does not have SMARTCARD support. Exiting.");
             return PM3_EDEVNOTSUPP;
         }
@@ -1463,13 +1463,13 @@ static int CmdEMVScan(const char *Cmd) {
     bool GenACGPO = arg_get_lit(ctx, 9);
     bool MergeJSON = arg_get_lit(ctx, 10);
 
-    EMVCommandChannel channel = ECC_CONTACTLESS;
+    Iso7816CommandChannel channel = CC_CONTACTLESS;
     if (arg_get_lit(ctx, 11))
-        channel = ECC_CONTACT;
+        channel = CC_CONTACT;
 
     PrintChannel(channel);
 
-    uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
+    uint8_t psenum = (channel == CC_CONTACT) ? 1 : 2;
 
     uint8_t filename[FILE_PATH_SIZE] = {0};
     int filenamelen = sizeof(filename);
@@ -1478,7 +1478,7 @@ static int CmdEMVScan(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (!IfPm3Smartcard()) {
-        if (channel == ECC_CONTACT) {
+        if (channel == CC_CONTACT) {
             PrintAndLogEx(WARNING, "PM3 does not have SMARTCARD support, exiting");
             return PM3_EDEVNOTSUPP;
         }
@@ -1511,7 +1511,7 @@ static int CmdEMVScan(const char *Cmd) {
 
     JsonSaveStr(root, "$.File.Created", "proxmark3 `emv scan`");
 
-    if (channel == ECC_CONTACTLESS) {
+    if (channel == CC_CONTACTLESS) {
         // iso 14443 select
         PrintAndLogEx(INFO, "GET UID, ATS");
 
@@ -1868,22 +1868,22 @@ static int CmdEMVRoca(const char *Cmd) {
 
     bool show_apdu = arg_get_lit(ctx, 2);
 
-    EMVCommandChannel channel = ECC_CONTACTLESS;
+    Iso7816CommandChannel channel = CC_CONTACTLESS;
     if (arg_get_lit(ctx, 3))
-        channel = ECC_CONTACT;
+        channel = CC_CONTACT;
 
     CLIParserFree(ctx);
     PrintChannel(channel);
 
     if (!IfPm3Smartcard()) {
-        if (channel == ECC_CONTACT) {
+        if (channel == CC_CONTACT) {
             PrintAndLogEx(WARNING, "PM3 does not have SMARTCARD support, exiting");
             return PM3_EDEVNOTSUPP;
         }
     }
 
     // select card
-    uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
+    uint8_t psenum = (channel == CC_CONTACT) ? 1 : 2;
 
     SetAPDULogging(show_apdu);
 

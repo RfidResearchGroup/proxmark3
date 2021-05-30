@@ -26,7 +26,7 @@ extern "C" {
 
 #ifndef DropFieldEx
 #define DropFieldEx(x) { \
-        if ( (x) == ECC_CONTACTLESS) { \
+        if ( (x) == CC_CONTACTLESS) { \
             DropField(); \
         } \
     }

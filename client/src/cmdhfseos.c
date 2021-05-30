@@ -19,7 +19,7 @@
 #include "ui.h"
 #include "cmdhf14a.h"           // manufacture
 #include "protocols.h"          // definitions of ISO14A/7816 protocol
-#include "emv/apduinfo.h"       // GetAPDUCodeDescription
+#include "iso7816/apduinfo.h"       // GetAPDUCodeDescription
 #include "crypto/asn1utils.h"   // ASN1 decode / print
 
 static int CmdHelp(const char *Cmd);

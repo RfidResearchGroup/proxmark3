@@ -20,6 +20,7 @@
 #include "cliparser.h"
 #include "cmdhfmf.h"
 #include "cmdhfmfu.h"
+#include "iso7816/iso7816core.h"
 #include "emv/emvcore.h"
 #include "ui.h"
 #include "crc16.h"
@@ -28,7 +29,7 @@
 #include "cmdhf.h"       // handle HF plot
 #include "cliparser.h"
 #include "protocols.h"     // definitions of ISO14A/7816 protocol, MAGIC_GEN_1A
-#include "emv/apduinfo.h"  // GetAPDUCodeDescription
+#include "iso7816/apduinfo.h"  // GetAPDUCodeDescription
 #include "nfc/ndef.h"      // NDEFRecordsDecodeAndPrint
 #include "cmdnfc.h"        // print_type4_cc_info
 
@@ -2008,7 +2009,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     uint16_t sw = 0;
                     uint8_t result[1024] = {0};
                     size_t resultlen = 0;
-                    int res = EMVSelect(ECC_CONTACTLESS, ActivateField, true, vaid, vaidlen, result, sizeof(result), &resultlen, &sw, NULL);
+                    int res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, vaid, vaidlen, result, sizeof(result), &resultlen, &sw);
                     ActivateField = false;
                     if (res)
                         continue;
