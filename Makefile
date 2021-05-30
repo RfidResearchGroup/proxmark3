@@ -264,6 +264,10 @@ style:
 	    --align-pointer=name {} \;
 	# Update commands.md
 	[ -x client/proxmark3 ] && client/proxmark3 -m > doc/commands.md
+	# Make sure python3 is installed
+	@which python3 >/dev/null || ( echo "Please install 'python3' package first" ; exit 1 )
+	# Update commands.json
+	[ -x client/proxmark3 ] && client/proxmark3 --fulltext | python3 client/pyscripts/pm3_help2json.py - doc/commands.json
 
 # Detecting weird codepages and tabs.
 ifeq ($(platform),Darwin)
