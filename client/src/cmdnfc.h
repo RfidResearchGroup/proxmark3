@@ -12,5 +12,6 @@
 #include "common.h"
 
 int CmdNFC(const char *Cmd);
+void print_type4_cc_info(uint8_t *d, uint8_t n);
 
 #endif
