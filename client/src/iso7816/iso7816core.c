@@ -31,6 +31,16 @@ bool GetAPDULogging(void) {
     return APDULogging;
 }
 
+static isodep_state_t isodep_state = ISODEP_INACTIVE;
+
+void SetISODEPState(isodep_state_t state) {
+    isodep_state = state;
+}
+
+isodep_state_t GetISODEPState(void) {
+    return isodep_state;
+}
+
 int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, sAPDU apdu, bool IncludeLe, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
     uint8_t data[APDU_RES_LEN] = {0};
 
@@ -56,11 +66,26 @@ int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool ActivateField, bool Le
 
     switch (channel) {
         case CC_CONTACTLESS:
-            res = ExchangeAPDU14a(data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
+            switch (GetISODEPState()) {
+                case ISODEP_NFCA:
+                    res = ExchangeAPDU14a(data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
+                    break;
+                case ISODEP_NFCB:
+                    res = exchange_14b_apdu(data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen, 4000);
+                    break;
+                case ISODEP_INACTIVE:
+                    if (! ActivateField) {
+                        PrintAndLogEx(FAILED, "Field currently inactive, cannot send an APDU");
+                        return PM3_EIO;
+                    }
+                    res = ExchangeAPDU14a(data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
+                    if (res != PM3_SUCCESS) {
+                        res = exchange_14b_apdu(data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen, 4000);
+                    }
+                    break;
+            }
             if (res != PM3_SUCCESS) {
-                res = exchange_14b_apdu(data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen, 4000);
-                if (res != PM3_SUCCESS)
-                    return res;
+                return res;
             }
             break;
         case CC_CONTACT:

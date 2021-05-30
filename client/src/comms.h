@@ -15,13 +15,14 @@
 #include "common.h"
 #include "pm3_cmd.h"    // Packet structs
 #include "util.h"       // FILE_PATH_SIZE
+#include "iso7816/iso7816core.h" // SetISODEPState
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #ifndef DropField
-#define DropField() { clearCommandBuffer(); SendCommandNG(CMD_HF_DROPFIELD, NULL, 0); }
+#define DropField() { clearCommandBuffer(); SetISODEPState(ISODEP_INACTIVE); SendCommandNG(CMD_HF_DROPFIELD, NULL, 0); }
 #endif
 
 #ifndef DropFieldEx

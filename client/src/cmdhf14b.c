@@ -42,6 +42,7 @@ bool apdu_in_framing_enable = true;
 static int CmdHelp(const char *Cmd);
 
 static int switch_off_field_14b(void) {
+    SetISODEPState(ISODEP_INACTIVE);
     iso14b_raw_cmd_t packet = {
         .flags = ISO14B_DISCONNECT,
         .timeout = 0,

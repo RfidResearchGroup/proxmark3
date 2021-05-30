@@ -21,12 +21,21 @@
 #define APDU_AID_LEN 50
 
 typedef enum {
+    ISODEP_INACTIVE = 0,
+    ISODEP_NFCA,
+    ISODEP_NFCB,
+} isodep_state_t;
+
+typedef enum {
     CC_CONTACTLESS,
     CC_CONTACT
 } Iso7816CommandChannel;
 
 void SetAPDULogging(bool logging);
 bool GetAPDULogging(void);
+
+void SetISODEPState(isodep_state_t state);
+isodep_state_t GetISODEPState(void);
 
 // exchange
 int Iso7816Exchange(Iso7816CommandChannel channel, bool LeaveFieldON, sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
