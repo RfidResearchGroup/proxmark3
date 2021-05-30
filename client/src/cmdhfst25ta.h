@@ -5,14 +5,15 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// High frequency ISO14443A / ST  commands
+// High frequency ISO14443A / ST25TA  commands
 //-----------------------------------------------------------------------------
 
-#ifndef CMDHFST_H__
-#define CMDHFST_H__
+#ifndef CMDHFST25TA_H__
+#define CMDHFST25TA_H__
 
 #include "common.h"
 
-char *get_st_chip_model(uint8_t pc);
+int CmdHFST25TA(const char *Cmd);
+int CmdHFST25TANdefRead(const char *Cmd);
 
 #endif

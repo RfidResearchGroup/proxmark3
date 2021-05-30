@@ -15,7 +15,7 @@
 #include "cmdhfmf.h"
 #include "cmdhfmfp.h"
 #include "cmdhfmfu.h"
-#include "cmdhfst.h"
+#include "cmdhfst25ta.h"
 #include "cmdhfthinfilm.h"
 #include "cmdhftopaz.h"
 
@@ -145,7 +145,7 @@ static int CmdNFCType4ARead(const char *Cmd) {
 }
 
 static int CmdNFCST25TARead(const char *Cmd) {
-    return CmdHFSTNdefRead(Cmd);
+    return CmdHFST25TANdefRead(Cmd);
 }
 
 static int CmdNFCType4AHelp(const char *Cmd);

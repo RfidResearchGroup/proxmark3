@@ -485,6 +485,7 @@ SRCS =  aiddesfire.c \
 		cmdhfmfp.c \
 		cmdhfseos.c \
 		cmdhfst.c \
+		cmdhfst25ta.c \
 		cmdhfthinfilm.c \
 		cmdhftopaz.c \
 		cmdhfwaveshare.c \

@@ -37,7 +37,7 @@
 #include "cmdhflto.h"       // LTO-CM
 #include "cmdhfcryptorf.h"  // CryptoRF
 #include "cmdhfseos.h"      // SEOS
-#include "cmdhfst.h"        // ST rothult
+#include "cmdhfst25ta.h"    // ST25TA
 #include "cmdhfwaveshare.h" // Waveshare
 #include "cmdtrace.h"       // trace list
 #include "ui.h"
@@ -412,7 +412,7 @@ static command_t CommandTable[] = {
     {"mfu",         CmdHFMFUltra,     AlwaysAvailable, "{ MIFARE Ultralight RFIDs...          }"},
     {"mfdes",       CmdHFMFDes,       AlwaysAvailable, "{ MIFARE Desfire RFIDs...             }"},
     {"seos",        CmdHFSeos,        AlwaysAvailable, "{ SEOS RFIDs...                       }"},
-    {"st",          CmdHFST,          AlwaysAvailable, "{ ST Rothult RFIDs...                 }"},
+    {"st25ta",      CmdHFST25TA,      AlwaysAvailable, "{ ST25TA RFIDs...                     }"},
     {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                   }"},
     {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...         }"},
     {"waveshare",   CmdHFWaveshare,   AlwaysAvailable, "{ Waveshare NFC ePaper...             }"},

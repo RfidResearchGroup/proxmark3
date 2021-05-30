@@ -518,19 +518,19 @@ Check column "offline" for their availability.
 |`hf seos list           `|Y       |`List SEOS history`
 
 
-### hf st
+### hf st25ta
 
- { ST Rothult RFIDs...                 }
+ { ST25TA RFIDs...                     }
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`hf st help             `|Y       |`This help`
-|`hf st info             `|N       |`Tag information`
-|`hf st list             `|Y       |`List ISO 14443A/7816 history`
-|`hf st ndefread         `|Y       |`read NDEF file on tag`
-|`hf st protect          `|N       |`change protection on tag`
-|`hf st pwd              `|N       |`change password on tag`
-|`hf st sim              `|N       |`Fake ISO 14443A/ST tag`
+|`hf st25ta help         `|Y       |`This help`
+|`hf st25ta info         `|N       |`Tag information`
+|`hf st25ta list         `|Y       |`List ISO 14443A/7816 history`
+|`hf st25ta ndefread     `|Y       |`read NDEF file on tag`
+|`hf st25ta protect      `|N       |`change protection on tag`
+|`hf st25ta pwd          `|N       |`change password on tag`
+|`hf st25ta sim          `|N       |`Fake ISO 14443A/ST tag`
 
 
 ### hf thinfilm
