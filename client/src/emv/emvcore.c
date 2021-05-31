@@ -266,7 +266,7 @@ struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2) {
 }
 
 static int EMVExchangeEx(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, sAPDU apdu, bool IncludeLe, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
-    int res = Iso7816ExchangeEx(channel, ActivateField, LeaveFieldON, apdu, IncludeLe, Result, MaxResultLen, ResultLen, sw);
+    int res = Iso7816ExchangeEx(channel, ActivateField, LeaveFieldON, apdu, IncludeLe, 0, Result, MaxResultLen, ResultLen, sw);
     // add to tlv tree
     if ((res == PM3_SUCCESS) && tlv) {
         struct tlvdb *t = tlvdb_parse_multi(Result, *ResultLen);

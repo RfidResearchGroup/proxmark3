@@ -1680,7 +1680,7 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen,
     *dataoutlen += dlen;
 
     if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
-        PrintAndLogEx(ERR, "APDU: buffer too small(%d), needs %d bytes", *dataoutlen, maxdataoutlen);
+        PrintAndLogEx(ERR, "APDU: buffer too small(%d), needs %d bytes", maxdataoutlen, *dataoutlen);
         return PM3_ESOFT;
     }
 
