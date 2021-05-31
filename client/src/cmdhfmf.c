@@ -269,7 +269,7 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0(NULL, "blk", "<dec> ", "Simulation type to use"),
+        arg_int0(NULL, "blk", "<dec> ", "Target block"),
         arg_lit0("b", NULL, "Target key B instead of default key A"),
         arg_param_end
     };
