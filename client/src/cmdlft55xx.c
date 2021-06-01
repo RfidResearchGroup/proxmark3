@@ -287,7 +287,7 @@ bool t55xxAquireAndCompareBlock0(bool usepwd, uint32_t password, uint32_t known_
             continue;
         }
 
-        for (uint16_t i = 0; DemodBufferLen - 32; i++) {
+        for (uint16_t i = 0; i < DemodBufferLen - 32; i++) {
             uint32_t tmp = PackBits(i, 32, DemodBuffer);
             if (tmp == known_block0) {
                 config.offset = i;
