@@ -231,6 +231,61 @@ size_t FindISO9797M2PaddingDataLen(uint8_t *data, size_t datalen) {
     return 0;
 }
 
+/*    private fun computeCRC(inputData: ByteArray): Long {
+        var initialCRC: Long = 0x6363
+        var ch: Long
+        for (i in inputData.indices) {
+            ch = (inputData[i].toInt() and 0xFF).toLong()
+            ch = ch xor (initialCRC and 0xFF)
+            ch = ch xor (ch shl 4) and 0xFF
+            initialCRC =
+                ((initialCRC shr 8 and 0x0FFFF) xor (ch shl 8 and 0x0FFFF) xor (ch shl 3 and 0x0FFFF) xor (ch shr 4 and 0x0FFFF) and 0xFFFF)
+        }
+        return initialCRC
+    }*/
+    
+static uint16_t CipurseCComputeMICCRC (uint8_t *data, size_t len) {
+    uint16_t initCRC = 0x6363;
+    for (size_t i = 0; i < len; i++) {
+        uint8_t ch = data[i] ^ initCRC;
+        ch = ch ^ ((ch << 4) & 0xff);
+        initCRC = (initCRC >> 8) ^ (ch << 8) ^ (ch << 3) ^ (ch >> 4);
+    }
+    return initCRC;
+}
+
+void CipurseCGenerateMIC(uint8_t *data, size_t datalen, uint8_t *mic) {
+    size_t plen = 0;
+    uint8_t pdata[datalen + CIPURSE_MIC_LENGTH];
+    memset(pdata, 0, sizeof(pdata));
+    
+    // 0x00 padding
+    memcpy(pdata, data, datalen);
+    plen = datalen;
+    if (datalen % CIPURSE_MIC_LENGTH)
+        plen += CIPURSE_MIC_LENGTH - datalen % CIPURSE_MIC_LENGTH;
+    
+    // crc
+    uint16_t crc1 = CipurseCComputeMICCRC(pdata, plen);
+    
+    for (size_t i = 0; i < datalen; i += 4) {
+        uint8_t tmp1 = pdata[i + 0];
+        uint8_t tmp2 = pdata[i + 1];
+        pdata[i + 0] = pdata[i + 2];
+        pdata[i + 1] = pdata[i + 3];
+        pdata[i + 2] = tmp1;
+        pdata[i + 3] = tmp2;
+    }
+    
+    uint16_t crc2 = CipurseCComputeMICCRC(pdata, plen);
+    if (mic != NULL) {
+        mic[0] = crc2 >> 8;
+        mic[1] = crc2 & 0xff;
+        mic[2] = crc1 >> 8;
+        mic[3] = crc1 & 0xff;
+    }
+}
+
 /* from: https://github.com/duychuongvn/cipurse-card-core/blob/master/src/main/java/com/github/duychuongvn/cirpusecard/core/security/crypto/CipurseCrypto.java#L521
  * 
  * Encrypt/Decrypt the given data using ciphering mechanism explained the OPST.

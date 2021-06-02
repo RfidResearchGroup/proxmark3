@@ -18,6 +18,7 @@
 #define CIPURSE_AES_KEY_LENGTH 16
 #define CIPURSE_SECURITY_PARAM_N 6
 #define CIPURSE_MAC_LENGTH 8
+#define CIPURSE_MIC_LENGTH 4
 #define CIPURSE_POLY 0x35b088cce172UL
 #define ISO9797_M2_PAD_BYTE 0x80
 
@@ -70,6 +71,7 @@ size_t FindISO9797M2PaddingDataLen(uint8_t *data, size_t datalen);
 void CipurseCGenerateMAC(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
 void CipurseCCalcMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
 bool CipurseCCheckMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
+void CipurseCGenerateMIC(uint8_t *data, size_t datalen, uint8_t *mic);
 void CipurseCEncryptDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *dstdata, bool isEncrypt);
 void CipurseCChannelEncrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *encdata, size_t *encdatalen);
 void CipurseCChannelDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *plaindata, size_t *plaindatalen);
