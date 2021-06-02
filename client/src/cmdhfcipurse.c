@@ -75,7 +75,22 @@ static int CmdHFCipurseInfo(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Cipurse card: " _GREEN_("OK"));
 
+    res = CIPURSESelectFile(0x2ff7, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000) {
+        DropField();
+        return PM3_SUCCESS;
+    }
 
+    res = CIPURSEReadBinary(0, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000) {
+        DropField();
+        return PM3_SUCCESS;
+    }
+    
+    if (len > 0) {
+        PrintAndLogEx(INFO, "Info file: " _GREEN_("OK"));
+        PrintAndLogEx(INFO, "[%d]: %s", len, sprint_hex(buf, len));
+    }
 
     DropField();
     return PM3_SUCCESS;
