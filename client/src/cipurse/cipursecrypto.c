@@ -186,8 +186,8 @@ void CipurseCSetRandomHost(CipurseContext *ctx) {
 
 uint8_t CipurseCGetSMI(CipurseContext *ctx, bool LePresent) {
     uint8_t res = LePresent ? 1 : 0;
-    res = res | (CipurseCSecurityLevelEnc(ctx->RequestSecurity) << 2);
-    res = res | (CipurseCSecurityLevelEnc(ctx->ResponseSecurity) << 6);
+    res = res | (CipurseCSecurityLevelEnc(ctx->ResponseSecurity) << 2);
+    res = res | (CipurseCSecurityLevelEnc(ctx->RequestSecurity) << 6);
     return res;
 }
 
