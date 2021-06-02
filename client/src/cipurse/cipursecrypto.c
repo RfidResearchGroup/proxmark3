@@ -215,7 +215,7 @@ bool CipurseCCheckCT(CipurseContext *ctx, uint8_t *CT) {
 
 void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_t sdatalen, size_t blocklen) {
     *ddatalen = sdatalen + 1;
-    *ddatalen += *ddatalen % blocklen;
+    *ddatalen += blocklen - *ddatalen % blocklen;
     memset(ddata, 0, *ddatalen);
     memcpy(ddata, sdata, sdatalen);
     ddata[sdatalen] = ISO9797_M2_PAD_BYTE;
@@ -287,7 +287,7 @@ void CipurseCChannelDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, 
  */
 void CipurseCGenerateMAC(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac) {
     uint8_t temp[CIPURSE_AES_KEY_LENGTH] = {0};
-
+PrintAndLogEx(INFO, "------[%d]: %s", datalen, sprint_hex(data, datalen));
     memcpy(ctx->frameKeyNext, ctx->frameKey, CIPURSE_AES_KEY_LENGTH);
     int i = 0;
     while (datalen > i) {
@@ -299,7 +299,8 @@ void CipurseCGenerateMAC(CipurseContext *ctx, uint8_t *data, size_t datalen, uin
  
     aes_encode(NULL, ctx->frameKey, ctx->frameKeyNext, temp, CIPURSE_AES_KEY_LENGTH);
     bin_xor(temp, ctx->frameKeyNext, CIPURSE_AES_KEY_LENGTH);
-    memcpy(mac, temp, CIPURSE_MAC_LENGTH);
+    if (mac != NULL)
+        memcpy(mac, temp, CIPURSE_MAC_LENGTH);
 }
 
 void CipurseCCalcMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac) {
@@ -315,8 +316,23 @@ bool CipurseCCheckMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, 
     return (memcmp(mac, xmac, CIPURSE_MAC_LENGTH) == 0);
 }
 
+static void CipurseCAPDUMACEncode(CipurseContext *ctx, sAPDU *apdu, uint8_t *data, size_t *datalen) {
+    data[0] = apdu->CLA;
+    data[1] = apdu->INS;
+    data[2] = apdu->P1;
+    data[3] = apdu->P2;
+    data[4] = apdu->Lc;
+    *datalen = 5 + apdu->Lc;
+    
+    if (ctx->RequestSecurity == CPSMACed)
+        *datalen -= CIPURSE_MAC_LENGTH;
+    memcpy(&data[5], apdu->data, *datalen);
+}
+
 void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, uint8_t *dstdatabuf, bool includeLe, uint8_t Le) {
     uint8_t mac[CIPURSE_MAC_LENGTH] = {0};
+    uint8_t buf[260] = {0};
+    size_t buflen = 0;
     
     memcpy(dstapdu, srcapdu, sizeof(sAPDU));
     
@@ -337,11 +353,13 @@ void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, 
         case CPSNone:
         break;
         case CPSPlain: 
-            CipurseCCalcMACPadded(ctx, (uint8_t *)dstapdu, dstapdu->Lc + 5, mac);
+            CipurseCAPDUMACEncode(ctx, dstapdu, buf, &buflen);
+            CipurseCCalcMACPadded(ctx, buf, buflen, mac);
         break;
-        case CPSMACed:        
+        case CPSMACed:
             dstapdu->Lc += CIPURSE_MAC_LENGTH;
-            CipurseCCalcMACPadded(ctx, (uint8_t *)dstapdu, dstapdu->Lc + 5, mac);
+            CipurseCAPDUMACEncode(ctx, dstapdu, buf, &buflen);
+            CipurseCCalcMACPadded(ctx, buf, buflen, mac);
             memcpy(&dstdatabuf[dstapdu->Lc - CIPURSE_MAC_LENGTH], mac, CIPURSE_MAC_LENGTH);
         break;
         case CPSEncrypted:
