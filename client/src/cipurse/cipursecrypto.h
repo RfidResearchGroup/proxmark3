@@ -12,6 +12,7 @@
 #define __CIPURSECRYPTO_H__
 
 #include "common.h"
+#include "emv/apduinfo.h"    // sAPDU
 
 #define CIPURSE_KVV_LENGTH 4
 #define CIPURSE_AES_KEY_LENGTH 16
@@ -61,6 +62,7 @@ void CipurseCAuthenticateHost(CipurseContext *ctx, uint8_t *authdata);
 bool CipurseCCheckCT(CipurseContext *ctx, uint8_t *CT);
 
 void CipurseCChannelSetSecurityLevels(CipurseContext *ctx, CipurseChannelSecurityLevel req, CipurseChannelSecurityLevel resp);
+bool isCipurseCChannelSecuritySet(CipurseContext *ctx);
 
 void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_t sdatalen, size_t blocklen);
 size_t FindISO9797M2PaddingDataLen(uint8_t *data, size_t datalen);
@@ -72,5 +74,9 @@ void CipurseCEncryptDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, 
 void CipurseCChannelEncrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *encdata, size_t *encdatalen);
 void CipurseCChannelDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *plaindata, size_t *plaindatalen);
 void CipurseCGetKVV(uint8_t *key, uint8_t *kvv);
+
+void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, uint8_t *dstdatabuf, bool includeLe, uint8_t Le);
+void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen, uint16_t *sw);
+
 
 #endif /* __CIPURSECRYPTO_H__ */

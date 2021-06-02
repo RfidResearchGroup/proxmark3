@@ -167,6 +167,10 @@ void CipurseCChannelSetSecurityLevels(CipurseContext *ctx, CipurseChannelSecurit
     ctx->ResponseSecurity = resp;
 }
 
+bool isCipurseCChannelSecuritySet(CipurseContext *ctx) {
+    return ((ctx->RequestSecurity != CPSNone) && (ctx->ResponseSecurity != CPSNone));
+}
+
 void CipurseCSetRandomFromPICC(CipurseContext *ctx, uint8_t *random) {
     if (ctx == NULL)
         return;
@@ -309,4 +313,89 @@ bool CipurseCCheckMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, 
     uint8_t xmac[CIPURSE_MAC_LENGTH] = {0};
     CipurseCCalcMACPadded(ctx, data, datalen, xmac);
     return (memcmp(mac, xmac, CIPURSE_MAC_LENGTH) == 0);
+}
+
+void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, uint8_t *dstdatabuf, bool includeLe, uint8_t Le) {
+    uint8_t mac[CIPURSE_MAC_LENGTH] = {0};
+    
+    memcpy(dstapdu, srcapdu, sizeof(sAPDU));
+    
+    if (isCipurseCChannelSecuritySet(ctx) == false)
+        return;
+    
+    dstapdu->CLA |= 0x04;
+    dstapdu->data = dstdatabuf;
+    dstapdu->data[0] = CipurseCGetSMI(ctx, includeLe);
+    dstapdu->Lc++;
+    memcpy(&dstdatabuf[1], srcapdu->data, srcapdu->Lc);
+    if (includeLe) {
+        dstapdu->data[dstapdu->Lc] = Le;
+        dstapdu->Lc++;
+    }
+
+    switch (ctx->RequestSecurity) {
+        case CPSNone:
+        break;
+        case CPSPlain: 
+            CipurseCCalcMACPadded(ctx, (uint8_t *)dstapdu, dstapdu->Lc + 5, mac);
+        break;
+        case CPSMACed:        
+            dstapdu->Lc += CIPURSE_MAC_LENGTH;
+            CipurseCCalcMACPadded(ctx, (uint8_t *)dstapdu, dstapdu->Lc + 5, mac);
+            memcpy(&dstdatabuf[dstapdu->Lc - CIPURSE_MAC_LENGTH], mac, CIPURSE_MAC_LENGTH);
+        break;
+        case CPSEncrypted:
+        break;
+        default: 
+        break;
+    }
+
+}
+
+void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen, uint16_t *sw) {
+    if (dstdatalen != NULL)
+        *dstdatalen = 0;
+    if (sw != NULL)
+        *sw = 0;
+    
+    if (srcdatalen < 2)
+        return;
+    
+    srcdatalen -= 2;
+    uint16_t xsw = srcdata[srcdatalen] * 0x0100 + srcdata[srcdatalen + 1];
+    if (sw)
+        *sw = xsw;
+    
+    if (isCipurseCChannelSecuritySet(ctx) == false) {
+        memcpy(dstdata, srcdata, srcdatalen);
+        if (dstdatalen != NULL)
+            *dstdatalen = srcdatalen;
+        return;
+    }
+    
+    switch (ctx->RequestSecurity) {
+        case CPSNone:
+        break;
+        case CPSPlain: 
+            memcpy(dstdata, srcdata, srcdatalen);
+            if (dstdatalen != NULL)
+                *dstdatalen = srcdatalen;
+        break;
+        case CPSMACed:       
+            if (srcdatalen < CIPURSE_MAC_LENGTH)
+                return;
+            srcdatalen -= CIPURSE_MAC_LENGTH;
+            if (CipurseCCheckMACPadded(ctx, srcdata, srcdatalen, &srcdata[srcdatalen]) == false) {
+                PrintAndLogEx(WARNING, "APDU MAC is not valid!");
+            }
+            memcpy(dstdata, srcdata, srcdatalen);
+            if (dstdatalen != NULL)
+                *dstdatalen = srcdatalen;
+        break;
+        case CPSEncrypted:
+        break;
+        default: 
+        break;
+    }
+    
 }

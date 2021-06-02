@@ -27,6 +27,8 @@ CipurseContext cipurseContext;
 
 static int CIPURSEExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, bool IncludeLe, uint16_t Le, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
     uint8_t data[APDU_RES_LEN] = {0};
+    uint8_t securedata[APDU_RES_LEN] = {0};
+    sAPDU secapdu;
 
     *ResultLen = 0;
     if (sw) *sw = 0;
@@ -47,7 +49,10 @@ static int CIPURSEExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, 
     uint16_t xle = IncludeLe ? 0x100 : 0x00;
     if (xle == 0x100 && Le != 0)
         xle = Le;
-    if (APDUEncodeS(&apdu, false, xle, data, &datalen)) {
+    
+    CipurseCAPDUReqEncode(&cipurseContext, &apdu, &secapdu, securedata, IncludeLe, Le);
+    
+    if (APDUEncodeS(&secapdu, false, xle, data, &datalen)) {
         PrintAndLogEx(ERR, "APDU encoding error.");
         return 201;
     }
@@ -62,14 +67,18 @@ static int CIPURSEExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, 
 
     if (GetAPDULogging())
         PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(Result, *ResultLen));
-
+    
     if (*ResultLen < 2) {
         return 200;
     }
 
-    *ResultLen -= 2;
-    isw = Result[*ResultLen] * 0x0100 + Result[*ResultLen + 1];
-    if (sw)
+    size_t rlen = 0;
+    CipurseCAPDURespDecode(&cipurseContext, Result, *ResultLen, securedata, &rlen, &isw);
+    memcpy(Result, securedata, rlen);
+    if (ResultLen != NULL)
+        *ResultLen = rlen;
+    
+    if (sw != NULL)
         *sw = isw;
 
     if (isw != 0x9000) {
@@ -103,6 +112,20 @@ int CIPURSEChallenge(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, ui
 
 int CIPURSEMutalAuthenticate(uint8_t keyIndex, uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
     return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0x82, 0x00, keyIndex, paramslen, params}, true, 0x10, Result, MaxResultLen, ResultLen, sw);
+}
+
+int CIPURSESelectFile(uint16_t fileID, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+    uint8_t fileIdBin[] = {fileID >> 8, fileID & 0xff};
+    return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0xa4, 0x00, 0x00, 02, fileIdBin}, true, 0, Result, MaxResultLen, ResultLen, sw);
+}
+
+int CIPURSEReadFileAttributes(uint8_t *data, uint16_t *datalen) {
+    //CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0x82, 0x00, keyIndex, paramslen, params}, true, 0x10, Result, MaxResultLen, ResultLen, sw);
+    return 2;
+}
+
+int CIPURSEReadBinary(uint16_t offset, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+    return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0xb0, (offset >> 8) & 0x7f, offset & 0xff, 0, NULL}, true, 0, Result, MaxResultLen, ResultLen, sw);
 }
 
 bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose) {
@@ -149,7 +172,8 @@ bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose) {
         if (verbose)
             PrintAndLogEx(INFO, "Authentication " _GREEN_("OK"));
         
-        CipurseCChannelSetSecurityLevels(&cpc, CPSMACed, CPSMACed);
+        //CipurseCChannelSetSecurityLevels(&cpc, CPSMACed, CPSMACed);
+        CipurseCChannelSetSecurityLevels(&cpc, CPSPlain, CPSPlain);
         memcpy(&cipurseContext, &cpc, sizeof(CipurseContext));
         return true;
     } else {

@@ -14,9 +14,10 @@
 #include "common.h"
 #include "emv/apduinfo.h"
 
-
 #include <jansson.h>
 #include "emv/apduinfo.h" // sAPDU
+
+#define CIPURSE_DEFAULT_KEY {0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73}
 
 int CIPURSESelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 
@@ -26,9 +27,9 @@ int CIPURSEMutalAuthenticate(uint8_t keyIndex, uint8_t *params, uint8_t paramsle
 int CIPURSECreateFile(uint16_t fileID, uint8_t *fileAttr);
 int CIPURSEDeleteFile(uint16_t fileID);
 
-int CIPURSESelectFile(uint16_t fileID);
+int CIPURSESelectFile(uint16_t fileID, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 int CIPURSEReadFileAttributes(uint8_t *data, uint16_t *datalen);
-int CIPURSEReadBinary(uint16_t offset, uint8_t *data, uint16_t *datalen);
+int CIPURSEReadBinary(uint16_t offset, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 int CIPURSEUpdateBinary(uint16_t offset, uint8_t *data, uint16_t datalen);
 
 bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose);
