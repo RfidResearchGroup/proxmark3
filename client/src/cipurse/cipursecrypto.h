@@ -72,6 +72,7 @@ void CipurseCGenerateMAC(CipurseContext *ctx, uint8_t *data, size_t datalen, uin
 void CipurseCCalcMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
 bool CipurseCCheckMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
 void CipurseCGenerateMIC(uint8_t *data, size_t datalen, uint8_t *mic);
+bool CipurseCCheckMIC(uint8_t *data, size_t datalen, uint8_t *mic);
 void CipurseCEncryptDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *dstdata, bool isEncrypt);
 void CipurseCChannelEncrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *encdata, size_t *encdatalen);
 void CipurseCChannelDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *plaindata, size_t *plaindatalen);

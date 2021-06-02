@@ -23,7 +23,7 @@
 #include "util.h"
 
 uint8_t AESData0[CIPURSE_AES_KEY_LENGTH] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-uint8_t QConstant[CIPURSE_AES_KEY_LENGTH] = {0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73};
+uint8_t QConstant[CIPURSE_AES_KEY_LENGTH] = {0x74, 0x74, 0x74, 0x74, 0x74, 0x74, 0x74, 0x74, 0x74, 0x74, 0x74, 0x74, 0x74, 0x74, 0x74, 0x74};
 
 uint8_t CipurseCSecurityLevelEnc(CipurseChannelSecurityLevel lvl) {
     switch (lvl) {
@@ -224,26 +224,13 @@ void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_
 size_t FindISO9797M2PaddingDataLen(uint8_t *data, size_t datalen) {
     for (int i = datalen; i > 0; i--) {
         if (data[i - 1] == 0x80)
-            return i;
+            return i - 1;
         if (data[i - 1] != 0x00)
             return 0;
     }
     return 0;
 }
 
-/*    private fun computeCRC(inputData: ByteArray): Long {
-        var initialCRC: Long = 0x6363
-        var ch: Long
-        for (i in inputData.indices) {
-            ch = (inputData[i].toInt() and 0xFF).toLong()
-            ch = ch xor (initialCRC and 0xFF)
-            ch = ch xor (ch shl 4) and 0xFF
-            initialCRC =
-                ((initialCRC shr 8 and 0x0FFFF) xor (ch shl 8 and 0x0FFFF) xor (ch shl 3 and 0x0FFFF) xor (ch shr 4 and 0x0FFFF) and 0xFFFF)
-        }
-        return initialCRC
-    }*/
-    
 static uint16_t CipurseCComputeMICCRC (uint8_t *data, size_t len) {
     uint16_t initCRC = 0x6363;
     for (size_t i = 0; i < len; i++) {
@@ -286,6 +273,13 @@ void CipurseCGenerateMIC(uint8_t *data, size_t datalen, uint8_t *mic) {
     }
 }
 
+bool CipurseCCheckMIC(uint8_t *data, size_t datalen, uint8_t *mic) {
+    uint8_t xmic[CIPURSE_MIC_LENGTH] = {0};
+    
+    CipurseCGenerateMIC(data, datalen, xmic);
+    return (memcmp(xmic, mic, CIPURSE_MIC_LENGTH) == 0);
+}
+
 /* from: https://github.com/duychuongvn/cipurse-card-core/blob/master/src/main/java/com/github/duychuongvn/cirpusecard/core/security/crypto/CipurseCrypto.java#L521
  * 
  * Encrypt/Decrypt the given data using ciphering mechanism explained the OPST.
@@ -298,7 +292,7 @@ void CipurseCGenerateMIC(uint8_t *data, size_t datalen, uint8_t *mic) {
  */
 void CipurseCEncryptDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *dstdata, bool isEncrypt) {
     uint8_t hx[CIPURSE_AES_KEY_LENGTH] = {0};
-
+PrintAndLogEx(INFO, "----data[%d]: %s", datalen, sprint_hex(data, datalen));
     memcpy(ctx->frameKeyNext, ctx->frameKey, CIPURSE_AES_KEY_LENGTH);
     int i = 0;
     while (datalen > i) {
@@ -313,6 +307,7 @@ void CipurseCEncryptDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, 
         memcpy(ctx->frameKeyNext, hx, CIPURSE_AES_KEY_LENGTH);
         i += CIPURSE_AES_KEY_LENGTH;
     }
+    memcpy(ctx->frameKey, ctx->frameKeyNext, CIPURSE_AES_KEY_LENGTH);
 }
 
 void CipurseCChannelEncrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *encdata, size_t *encdatalen) {
@@ -419,6 +414,9 @@ void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, 
             memcpy(&dstdatabuf[dstapdu->Lc - CIPURSE_MAC_LENGTH], mac, CIPURSE_MAC_LENGTH);
         break;
         case CPSEncrypted:
+            CipurseCAPDUMACEncode(ctx, dstapdu, buf, &buflen);
+            CipurseCGenerateMIC(buf, buflen, mac);
+            PrintAndLogEx(INFO, "mic: %s", sprint_hex(mac, 4));
         break;
         default: 
         break;
@@ -429,6 +427,8 @@ void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, 
 void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen, uint16_t *sw) {
     uint8_t buf[260] = {0};
     size_t buflen = 0;
+    uint8_t micdata[260] = {0};
+    size_t micdatalen = 0;
 
     if (dstdatalen != NULL)
         *dstdatalen = 0;
@@ -450,7 +450,7 @@ void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdat
         return;
     }
     
-    switch (ctx->RequestSecurity) {
+    switch (ctx->ResponseSecurity) {
         case CPSNone:
         break;
         case CPSPlain: 
@@ -482,6 +482,23 @@ void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdat
                 *dstdatalen = srcdatalen;
         break;
         case CPSEncrypted:
+            CipurseCChannelDecrypt(ctx, srcdata, srcdatalen, buf, &buflen);
+            //PrintAndLogEx(INFO, "data plain[%d]: %s", buflen, sprint_hex(buf, buflen));
+            
+            micdatalen = buflen - 2 - CIPURSE_MIC_LENGTH;
+            memcpy(micdata, buf, buflen);
+            memcpy(&micdata[micdatalen], &buf[buflen - 2], 2);
+            micdatalen += 2;
+            
+            if (CipurseCCheckMIC(micdata, micdatalen, &buf[micdatalen - 2]) == false) {
+                PrintAndLogEx(ERR, "APDU response MIC is not valid!");
+            }
+            
+            memcpy(dstdata, buf, micdatalen - 2);
+            if (dstdatalen != NULL)
+                *dstdatalen = micdatalen - 2;
+            if (sw)
+                *sw = micdata[micdatalen - 2] * 0x0100 + micdata[micdatalen - 1];
         break;
         default: 
         break;
