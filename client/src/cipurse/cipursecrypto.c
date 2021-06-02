@@ -287,7 +287,7 @@ void CipurseCChannelDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, 
  */
 void CipurseCGenerateMAC(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac) {
     uint8_t temp[CIPURSE_AES_KEY_LENGTH] = {0};
-PrintAndLogEx(INFO, "------[%d]: %s", datalen, sprint_hex(data, datalen));
+
     memcpy(ctx->frameKeyNext, ctx->frameKey, CIPURSE_AES_KEY_LENGTH);
     int i = 0;
     while (datalen > i) {
@@ -299,6 +299,7 @@ PrintAndLogEx(INFO, "------[%d]: %s", datalen, sprint_hex(data, datalen));
  
     aes_encode(NULL, ctx->frameKey, ctx->frameKeyNext, temp, CIPURSE_AES_KEY_LENGTH);
     bin_xor(temp, ctx->frameKeyNext, CIPURSE_AES_KEY_LENGTH);
+    memcpy(ctx->frameKey, ctx->frameKeyNext, CIPURSE_AES_KEY_LENGTH);
     if (mac != NULL)
         memcpy(mac, temp, CIPURSE_MAC_LENGTH);
 }
@@ -354,7 +355,7 @@ void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, 
         break;
         case CPSPlain: 
             CipurseCAPDUMACEncode(ctx, dstapdu, buf, &buflen);
-            CipurseCCalcMACPadded(ctx, buf, buflen, mac);
+            CipurseCCalcMACPadded(ctx, buf, buflen, NULL);
         break;
         case CPSMACed:
             dstapdu->Lc += CIPURSE_MAC_LENGTH;
@@ -371,6 +372,9 @@ void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, 
 }
 
 void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen, uint16_t *sw) {
+    uint8_t buf[260] = {0};
+    size_t buflen = 0;
+
     if (dstdatalen != NULL)
         *dstdatalen = 0;
     if (sw != NULL)
@@ -395,6 +399,12 @@ void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdat
         case CPSNone:
         break;
         case CPSPlain: 
+            memcpy(buf, srcdata, srcdatalen);
+            buflen = srcdatalen;
+            memcpy(&buf[buflen], &srcdata[srcdatalen], 2);
+            buflen += 2;
+            CipurseCCalcMACPadded(ctx, buf, buflen, NULL);
+            
             memcpy(dstdata, srcdata, srcdatalen);
             if (dstdatalen != NULL)
                 *dstdatalen = srcdatalen;
@@ -402,8 +412,14 @@ void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdat
         case CPSMACed:       
             if (srcdatalen < CIPURSE_MAC_LENGTH)
                 return;
+
+            buflen = srcdatalen - CIPURSE_MAC_LENGTH;
+            memcpy(buf, srcdata, buflen);
+            memcpy(&buf[buflen], &srcdata[srcdatalen], 2);
+            buflen += 2;
+
             srcdatalen -= CIPURSE_MAC_LENGTH;
-            if (CipurseCCheckMACPadded(ctx, srcdata, srcdatalen, &srcdata[srcdatalen]) == false) {
+            if (CipurseCCheckMACPadded(ctx, buf, buflen, &srcdata[srcdatalen]) == false) {
                 PrintAndLogEx(WARNING, "APDU MAC is not valid!");
             }
             memcpy(dstdata, srcdata, srcdatalen);

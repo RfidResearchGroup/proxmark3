@@ -246,6 +246,7 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
+//CIPURSECSetActChannelSecurityLevels(CPSMACed, CPSMACed);
 
     if (verbose)
         PrintAndLogEx(INFO, "Select file 0x%x " _GREEN_("OK"), fileId);

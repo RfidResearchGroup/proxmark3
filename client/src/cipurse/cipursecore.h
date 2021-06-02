@@ -16,6 +16,8 @@
 
 #include <jansson.h>
 #include "emv/apduinfo.h" // sAPDU
+#include "cipurse/cipursecrypto.h"
+
 
 #define CIPURSE_DEFAULT_KEY {0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73}
 
@@ -35,5 +37,6 @@ int CIPURSEReadBinary(uint16_t offset, uint8_t *Result, size_t MaxResultLen, siz
 int CIPURSEUpdateBinary(uint16_t offset, uint8_t *data, uint16_t datalen);
 
 bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose);
+void CIPURSECSetActChannelSecurityLevels(CipurseChannelSecurityLevel req, CipurseChannelSecurityLevel resp);
 
 #endif /* __CIPURSECORE_H__ */

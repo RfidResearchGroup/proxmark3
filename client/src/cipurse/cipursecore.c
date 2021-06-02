@@ -20,7 +20,6 @@
 #include "emv/emvjson.h"
 #include "ui.h"
 #include "util.h"
-#include "cipurse/cipursecrypto.h"
 
 // context for secure channel
 CipurseContext cipurseContext;
@@ -49,7 +48,7 @@ static int CIPURSEExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, 
     uint16_t xle = IncludeLe ? 0x100 : 0x00;
     if (xle == 0x100 && Le != 0)
         xle = Le;
-    
+
     CipurseCAPDUReqEncode(&cipurseContext, &apdu, &secapdu, securedata, IncludeLe, Le);
     
     if (APDUEncodeS(&secapdu, false, xle, data, &datalen)) {
@@ -172,8 +171,8 @@ bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose) {
         if (verbose)
             PrintAndLogEx(INFO, "Authentication " _GREEN_("OK"));
         
-        //CipurseCChannelSetSecurityLevels(&cpc, CPSMACed, CPSMACed);
-        CipurseCChannelSetSecurityLevels(&cpc, CPSPlain, CPSPlain);
+        CipurseCChannelSetSecurityLevels(&cpc, CPSMACed, CPSMACed);
+        //CipurseCChannelSetSecurityLevels(&cpc, CPSPlain, CPSPlain);
         memcpy(&cipurseContext, &cpc, sizeof(CipurseContext));
         return true;
     } else {
@@ -183,6 +182,10 @@ bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose) {
         CipurseCClearContext(&cipurseContext);
         return false;
     }
+}
+
+void CIPURSECSetActChannelSecurityLevels(CipurseChannelSecurityLevel req, CipurseChannelSecurityLevel resp) {
+    CipurseCChannelSetSecurityLevels(&cipurseContext, req, resp);
 }
 
 void CIPURSEPrintInfoFile(uint8_t *data, size_t len) {
