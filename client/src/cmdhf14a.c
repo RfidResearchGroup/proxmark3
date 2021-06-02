@@ -906,7 +906,7 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
         if (card)
             memcpy(card, vcard, sizeof(iso14a_card_select_t));
     }
-
+    SetISODEPState(ISODEP_NFCA);
     if (disconnect)
         DropField();
 

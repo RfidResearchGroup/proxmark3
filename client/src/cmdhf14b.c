@@ -1599,7 +1599,7 @@ static int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
         switch_off_field_14b();
         return PM3_ESOFT;
     }
-
+    SetISODEPState(ISODEP_NFCB);
     apdu_frame_length = 0;
     // get frame length from ATS in card data structure
     iso14b_card_select_t *vcard = (iso14b_card_select_t *) resp.data.asBytes;
