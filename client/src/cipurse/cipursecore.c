@@ -184,3 +184,14 @@ bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose) {
         return false;
     }
 }
+
+void CIPURSEPrintInfoFile(uint8_t *data, size_t len) {
+    if (len < 2) {
+        PrintAndLogEx(ERR, "Info file length " _RED_("ERROR"));
+        return;
+    }
+
+    PrintAndLogEx(INFO, "------------ INFO ------------");
+    PrintAndLogEx(INFO, "CIPURSE version %d revision %d", data[0], data[1]);
+}
+

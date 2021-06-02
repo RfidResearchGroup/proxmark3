@@ -90,6 +90,7 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     if (len > 0) {
         PrintAndLogEx(INFO, "Info file: " _GREEN_("OK"));
         PrintAndLogEx(INFO, "[%d]: %s", len, sprint_hex(buf, len));
+        CIPURSEPrintInfoFile(buf, len);
     }
 
     DropField();
