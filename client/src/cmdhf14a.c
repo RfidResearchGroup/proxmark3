@@ -846,7 +846,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     return 0;
 }
 
-int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
+int SelectCard14443A_4(bool disconnect, iso14a_card_select_t *card) {
     PacketResponseNG resp;
 
     frameLength = 0;
@@ -918,7 +918,7 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
 
     if (activateField) {
         // select with no disconnect and set frameLength
-        int selres = SelectCard14443_4(false, NULL);
+        int selres = SelectCard14443A_4(false, NULL);
         if (selres != PM3_SUCCESS)
             return selres;
     }

@@ -50,39 +50,22 @@ int Iso7816Connect(Iso7816CommandChannel channel) {
         return PM3_ENOTIMPL;
     }
     // Try to 14a
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
-    PacketResponseNG resp;
-    bool failed_14a = false;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
-        DropField();
-        failed_14a = true;
-    }
-
-    if ((!failed_14a) && resp.oldarg[0] != 0) {
+    // select with no disconnect and set frameLength
+    int selres = SelectCard14443A_4(false, NULL);
+    if (selres == PM3_SUCCESS) {
         SetISODEPState(ISODEP_NFCA);
         return PM3_SUCCESS;
     }
 
     PrintAndLogEx(DEBUG, "No 14a tag spotted, trying 14b");
     // If not 14a, try to 14b
-    iso14b_raw_cmd_t packet = {
-        .flags = (ISO14B_CONNECT | ISO14B_SELECT_STD),
-        .timeout = 0,
-        .rawlen = 0,
-    };
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
-    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000) == false) {
-        PrintAndLogEx(DEBUG, "Timeout, no 14b tag spotted, exiting");
-        return PM3_ETIMEOUT;
+    selres = select_card_14443b_4(false, NULL);
+    if (selres == PM3_SUCCESS) {
+        SetISODEPState(ISODEP_NFCB);
+        return PM3_SUCCESS;
     }
-
-    if (resp.oldarg[0] != 0) {
-        PrintAndLogEx(DEBUG, "No 14b tag spotted, failed to find any tag.");
-        return PM3_ENODATA;
-    }
-    SetISODEPState(ISODEP_NFCB);
-    return PM3_SUCCESS;
+    PrintAndLogEx(DEBUG, "No 14b tag spotted, failed to find any tag.");
+    return selres;
 }
 
 int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, sAPDU apdu, bool includeLe, uint16_t Le, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {

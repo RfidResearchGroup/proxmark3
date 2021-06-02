@@ -1558,7 +1558,7 @@ static int srix4kValid(const char *Cmd) {
 }
 */
 
-static int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
+int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
     if (card)
         memset(card, 0, sizeof(iso14b_card_select_t));
 
