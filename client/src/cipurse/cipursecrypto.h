@@ -35,19 +35,19 @@ typedef enum {
 typedef struct CipurseContextS {
     uint8_t keyId;
     uint8_t key[CIPURSE_AES_KEY_LENGTH];
-    
+
     uint8_t RP[CIPURSE_AES_KEY_LENGTH];
     uint8_t rP[CIPURSE_SECURITY_PARAM_N];
     uint8_t RT[CIPURSE_AES_KEY_LENGTH];
     uint8_t rT[CIPURSE_SECURITY_PARAM_N];
-    
+
     uint8_t k0[CIPURSE_AES_KEY_LENGTH];
     uint8_t cP[CIPURSE_AES_KEY_LENGTH];
     uint8_t CT[CIPURSE_AES_KEY_LENGTH];
-    
+
     uint8_t frameKey[CIPURSE_AES_KEY_LENGTH];
     uint8_t frameKeyNext[CIPURSE_AES_KEY_LENGTH];
-    
+
     CipurseChannelSecurityLevel RequestSecurity;
     CipurseChannelSecurityLevel ResponseSecurity;
 } CipurseContext;

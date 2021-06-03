@@ -27,16 +27,21 @@ uint8_t QConstant[CIPURSE_AES_KEY_LENGTH] = {0x74, 0x74, 0x74, 0x74, 0x74, 0x74,
 
 uint8_t CipurseCSecurityLevelEnc(CipurseChannelSecurityLevel lvl) {
     switch (lvl) {
-        case CPSNone: return 0x00;
-        case CPSPlain: return 0x00;
-        case CPSMACed: return 0x01;
-        case CPSEncrypted: return 0x02;
-        default: return 0x00;
+        case CPSNone:
+            return 0x00;
+        case CPSPlain:
+            return 0x00;
+        case CPSMACed:
+            return 0x01;
+        case CPSEncrypted:
+            return 0x02;
+        default:
+            return 0x00;
     }
 }
 
 static void bin_xor(uint8_t *d1, uint8_t *d2, size_t len) {
-    for(size_t i = 0; i < len; i++)
+    for (size_t i = 0; i < len; i++)
         d1[i] = d1[i] ^ d2[i];
 }
 
@@ -74,14 +79,14 @@ static uint64_t rotateLeft48(uint64_t src) {
 
 static uint64_t computeNLM48(uint64_t x, uint64_t y) {
     uint64_t res = 0;
-    
+
     for (int i = 0; i < 48; i++) {
         res = rotateLeft48(res);
         if (res & 1)
             res = res ^ CIPURSE_POLY;
         y = rotateLeft48(y);
         if (y & 1)
-            res = res ^ x;    
+            res = res ^ x;
     }
     return res;
 }
@@ -89,25 +94,25 @@ static uint64_t computeNLM48(uint64_t x, uint64_t y) {
 static void computeNLM(uint8_t *res, uint8_t *x, uint8_t *y) {
     uint64_t x64 = 0;
     uint64_t y64 = 0;
-    
+
     for (int i = 0; i < 6; i++) {
         x64 = (x64 << 8) | x[i];
         y64 = (y64 << 8) | y[i];
     }
-    
+
     uint64_t res64 = computeNLM48(x64, y64);
-    
+
     for (int i = 0; i < 6; i++) {
         res[5 - i] = res64 & 0xff;
         res64 = res64 >> 8;
     }
 }
 
-static void CipurseCGenerateK0AndCp(CipurseContext *ctx) {        
+static void CipurseCGenerateK0AndCp(CipurseContext *ctx) {
     uint8_t temp1[CIPURSE_AES_KEY_LENGTH] = {0};
     uint8_t temp2[CIPURSE_AES_KEY_LENGTH] = {0};
     uint8_t kp[CIPURSE_SECURITY_PARAM_N] = {0};
-        
+
     // session key derivation function
     // kP := NLM(EXT(kID), rP)
     // k0 := AES(key=PAD2(kP) XOR PAD(rT),kID) XOR kID
@@ -116,11 +121,11 @@ static void CipurseCGenerateK0AndCp(CipurseContext *ctx) {
     bin_pad2(temp1, CIPURSE_AES_KEY_LENGTH, kp, CIPURSE_SECURITY_PARAM_N);
     bin_pad(temp2, CIPURSE_AES_KEY_LENGTH, ctx->rT, CIPURSE_SECURITY_PARAM_N);
     bin_xor(temp1, temp2, CIPURSE_AES_KEY_LENGTH);
-    
-    // session key K0    
+
+    // session key K0
     aes_encode(NULL, temp1, ctx->key, ctx->k0, CIPURSE_AES_KEY_LENGTH);
     bin_xor(ctx->k0, ctx->key, CIPURSE_AES_KEY_LENGTH);
-        
+
     // first frame key k1, function to calculate k1,
     // k1 := AES(key = RP; k0 XOR RT) XOR (k0 XOR RT)
     memcpy(temp1, ctx->k0, CIPURSE_AES_KEY_LENGTH);
@@ -128,7 +133,7 @@ static void CipurseCGenerateK0AndCp(CipurseContext *ctx) {
     aes_encode(NULL, ctx->RP, temp1, temp2, CIPURSE_AES_KEY_LENGTH);
     bin_xor(temp1, temp2, CIPURSE_AES_KEY_LENGTH);
     memcpy(ctx->frameKey, temp1, CIPURSE_AES_KEY_LENGTH);
-        
+
     // function to caluclate cP := AES(key=k0, RP).
     // terminal response
     aes_encode(NULL, ctx->k0, ctx->RP, ctx->cP, CIPURSE_AES_KEY_LENGTH);
@@ -148,16 +153,16 @@ void CipurseCGetKVV(uint8_t *key, uint8_t *kvv) {
 void CipurseCClearContext(CipurseContext *ctx) {
     if (ctx == NULL)
         return;
-    
+
     memset(ctx, 0, sizeof(CipurseContext));
 }
 
 void CipurseCSetKey(CipurseContext *ctx, uint8_t keyId, uint8_t *key) {
     if (ctx == NULL)
         return;
-    
+
     CipurseCClearContext(ctx);
-    
+
     ctx->keyId = keyId;
     memcpy(ctx->key, key, member_size(CipurseContext, key));
 }
@@ -174,7 +179,7 @@ bool isCipurseCChannelSecuritySet(CipurseContext *ctx) {
 void CipurseCSetRandomFromPICC(CipurseContext *ctx, uint8_t *random) {
     if (ctx == NULL)
         return;
-      
+
     memcpy(ctx->RP, random, member_size(CipurseContext, RP));
     memcpy(ctx->rP, random + member_size(CipurseContext, RP), member_size(CipurseContext, rP));
 }
@@ -194,13 +199,13 @@ uint8_t CipurseCGetSMI(CipurseContext *ctx, bool LePresent) {
 static void CipurseCFillAuthData(CipurseContext *ctx, uint8_t *authdata) {
     memcpy(authdata, ctx->cP, member_size(CipurseContext, cP));
     memcpy(&authdata[member_size(CipurseContext, cP)], ctx->RT, member_size(CipurseContext, RT));
-    memcpy(&authdata[member_size(CipurseContext, cP) + member_size(CipurseContext, RT)], ctx->rT, member_size(CipurseContext, rT));   
+    memcpy(&authdata[member_size(CipurseContext, cP) + member_size(CipurseContext, RT)], ctx->rT, member_size(CipurseContext, rT));
 }
 
 void CipurseCAuthenticateHost(CipurseContext *ctx, uint8_t *authdata) {
     if (ctx == NULL)
         return;
-    
+
     CipurseCSetRandomHost(ctx);
     CipurseCGenerateK0AndCp(ctx);
     CipurseCGenerateCT(ctx->k0, ctx->RT, ctx->CT);
@@ -231,7 +236,7 @@ size_t FindISO9797M2PaddingDataLen(uint8_t *data, size_t datalen) {
     return 0;
 }
 
-static uint16_t CipurseCComputeMICCRC (uint8_t *data, size_t len) {
+static uint16_t CipurseCComputeMICCRC(uint8_t *data, size_t len) {
     uint16_t initCRC = 0x6363;
     for (size_t i = 0; i < len; i++) {
         uint8_t ch = data[i] ^ initCRC;
@@ -245,16 +250,16 @@ void CipurseCGenerateMIC(uint8_t *data, size_t datalen, uint8_t *mic) {
     size_t plen = 0;
     uint8_t pdata[datalen + CIPURSE_MIC_LENGTH];
     memset(pdata, 0, sizeof(pdata));
-    
+
     // 0x00 padding
     memcpy(pdata, data, datalen);
     plen = datalen;
     if (datalen % CIPURSE_MIC_LENGTH)
         plen += CIPURSE_MIC_LENGTH - datalen % CIPURSE_MIC_LENGTH;
-    
+
     // crc
     uint16_t crc1 = CipurseCComputeMICCRC(pdata, plen);
-    
+
     for (size_t i = 0; i < datalen; i += 4) {
         uint8_t tmp1 = pdata[i + 0];
         uint8_t tmp2 = pdata[i + 1];
@@ -263,7 +268,7 @@ void CipurseCGenerateMIC(uint8_t *data, size_t datalen, uint8_t *mic) {
         pdata[i + 2] = tmp1;
         pdata[i + 3] = tmp2;
     }
-    
+
     uint16_t crc2 = CipurseCComputeMICCRC(pdata, plen);
     if (mic != NULL) {
         mic[0] = crc2 >> 8;
@@ -275,16 +280,16 @@ void CipurseCGenerateMIC(uint8_t *data, size_t datalen, uint8_t *mic) {
 
 bool CipurseCCheckMIC(uint8_t *data, size_t datalen, uint8_t *mic) {
     uint8_t xmic[CIPURSE_MIC_LENGTH] = {0};
-    
+
     CipurseCGenerateMIC(data, datalen, xmic);
     return (memcmp(xmic, mic, CIPURSE_MIC_LENGTH) == 0);
 }
 
 /* from: https://github.com/duychuongvn/cipurse-card-core/blob/master/src/main/java/com/github/duychuongvn/cirpusecard/core/security/crypto/CipurseCrypto.java#L521
- * 
+ *
  * Encrypt/Decrypt the given data using ciphering mechanism explained the OPST.
  * Data should be already padded.
- *  
+ *
  * hx-1 := ki , hx := AES( key = hx-1 ; q) XOR q, Cx := AES( key = hx ;
  * Dx ), hx+1 := AES( key = hx ; q ) XOR q, Cx+1 := AES( key = hx+1 ;
  * Dx+1 ), ... hy := AES( key = hy-1 ; q ) XOR q, Cy := AES( key = hy ;
@@ -292,21 +297,21 @@ bool CipurseCCheckMIC(uint8_t *data, size_t datalen, uint8_t *mic) {
  */
 void CipurseCEncryptDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *dstdata, bool isEncrypt) {
     uint8_t hx[CIPURSE_AES_KEY_LENGTH] = {0};
-    
+
     if (datalen == 0 || datalen % CIPURSE_AES_KEY_LENGTH != 0)
         return;
-    
+
     memcpy(ctx->frameKeyNext, ctx->frameKey, CIPURSE_AES_KEY_LENGTH);
     int i = 0;
     while (datalen > i) {
         aes_encode(NULL, QConstant, ctx->frameKeyNext, hx, CIPURSE_AES_KEY_LENGTH);
         bin_xor(hx, ctx->frameKeyNext, CIPURSE_AES_KEY_LENGTH);
-        
+
         if (isEncrypt)
             aes_encode(NULL, hx, &data[i], &dstdata[i], CIPURSE_AES_KEY_LENGTH);
         else
             aes_decode(NULL, hx, &data[i], &dstdata[i], CIPURSE_AES_KEY_LENGTH);
-        
+
         memcpy(ctx->frameKeyNext, hx, CIPURSE_AES_KEY_LENGTH);
         i += CIPURSE_AES_KEY_LENGTH;
     }
@@ -317,7 +322,7 @@ void CipurseCChannelEncrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, 
     uint8_t pdata[datalen + CIPURSE_AES_KEY_LENGTH];
     size_t pdatalen = 0;
     AddISO9797M2Padding(pdata, &pdatalen, data, datalen, CIPURSE_AES_KEY_LENGTH);
-    
+
     CipurseCEncryptDecrypt(ctx, pdata, pdatalen, encdata, true);
     *encdatalen = pdatalen;
 }
@@ -328,10 +333,10 @@ void CipurseCChannelDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, 
 }
 
 /* from: https://github.com/duychuongvn/cipurse-card-core/blob/master/src/main/java/com/github/duychuongvn/cirpusecard/core/security/crypto/CipurseCrypto.java#L473
- * 
+ *
  * Generate OSPT MAC on the given input data.
  * Data should be already padded.
- *  
+ *
  * Calculation of Mi and ki+1: hx := ki , hx+1 := AES( key = hx ; Dx )
  * XOR Dx , hx+2 := AES( key = hx+1 ; Dx+1 ) XOR Dx+1, hx+3 := AES( key =
  * hx+2 ; Dx+2 ) XOR Dx+2, ... hy+1 := AES( key = hy ; Dy ) XOR Dy, ki+1 :=
@@ -349,7 +354,7 @@ void CipurseCGenerateMAC(CipurseContext *ctx, uint8_t *data, size_t datalen, uin
         memcpy(ctx->frameKeyNext, temp, CIPURSE_AES_KEY_LENGTH);
         i += CIPURSE_AES_KEY_LENGTH;
     }
- 
+
     aes_encode(NULL, ctx->frameKey, ctx->frameKeyNext, temp, CIPURSE_AES_KEY_LENGTH);
     bin_xor(temp, ctx->frameKeyNext, CIPURSE_AES_KEY_LENGTH);
     memcpy(ctx->frameKey, ctx->frameKeyNext, CIPURSE_AES_KEY_LENGTH);
@@ -377,7 +382,7 @@ static void CipurseCAPDUMACEncode(CipurseContext *ctx, sAPDU *apdu, uint8_t orig
     data[3] = apdu->P2;
     data[4] = apdu->Lc;
     *datalen = 5 + apdu->Lc;
-    
+
     if (ctx->RequestSecurity == CPSMACed || ctx->RequestSecurity == CPSEncrypted)
         *datalen = 5 + originalLc;
     memcpy(&data[5], apdu->data, *datalen);
@@ -387,12 +392,12 @@ void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, 
     uint8_t mac[CIPURSE_MAC_LENGTH] = {0};
     uint8_t buf[260] = {0};
     size_t buflen = 0;
-    
+
     memcpy(dstapdu, srcapdu, sizeof(sAPDU));
-    
+
     if (isCipurseCChannelSecuritySet(ctx) == false)
         return;
-    
+
     dstapdu->CLA |= 0x04;
     dstapdu->data = dstdatabuf;
     dstapdu->data[0] = CipurseCGetSMI(ctx, includeLe);
@@ -406,23 +411,23 @@ void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, 
 
     switch (ctx->RequestSecurity) {
         case CPSNone:
-        break;
-        case CPSPlain: 
+            break;
+        case CPSPlain:
             CipurseCAPDUMACEncode(ctx, dstapdu, originalLc, buf, &buflen);
             CipurseCCalcMACPadded(ctx, buf, buflen, NULL);
-        break;
+            break;
         case CPSMACed:
             dstapdu->Lc += CIPURSE_MAC_LENGTH;
             CipurseCAPDUMACEncode(ctx, dstapdu, originalLc, buf, &buflen);
             CipurseCCalcMACPadded(ctx, buf, buflen, mac);
             memcpy(&dstdatabuf[dstapdu->Lc - CIPURSE_MAC_LENGTH], mac, CIPURSE_MAC_LENGTH);
-        break;
+            break;
         case CPSEncrypted:
             dstapdu->Lc = srcapdu->Lc + CIPURSE_MIC_LENGTH;
             dstapdu->Lc += CIPURSE_AES_BLOCK_LENGTH - dstapdu->Lc % CIPURSE_AES_BLOCK_LENGTH + 1; // 1 - SMI
             if (includeLe)
                 dstapdu->Lc++;
-            
+
             CipurseCAPDUMACEncode(ctx, dstapdu, originalLc, buf, &buflen);
             CipurseCGenerateMIC(buf, buflen, mac);
             buf[0] = dstapdu->CLA;
@@ -433,9 +438,9 @@ void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, 
             memcpy(&buf[4 + srcapdu->Lc], mac, CIPURSE_MIC_LENGTH);
             //PrintAndLogEx(INFO, "data plain[%d]: %s", 4 + srcapdu->Lc + CIPURSE_MIC_LENGTH, sprint_hex(buf, 4 + srcapdu->Lc + CIPURSE_MIC_LENGTH));
             CipurseCChannelEncrypt(ctx, buf, 4 + srcapdu->Lc + CIPURSE_MIC_LENGTH, &dstdatabuf[1], &buflen);
-        break;
-        default: 
-        break;
+            break;
+        default:
+            break;
     }
 
 }
@@ -450,37 +455,37 @@ void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdat
         *dstdatalen = 0;
     if (sw != NULL)
         *sw = 0;
-    
+
     if (srcdatalen < 2)
         return;
-    
+
     srcdatalen -= 2;
     uint16_t xsw = srcdata[srcdatalen] * 0x0100 + srcdata[srcdatalen + 1];
     if (sw)
         *sw = xsw;
-    
+
     if (isCipurseCChannelSecuritySet(ctx) == false) {
         memcpy(dstdata, srcdata, srcdatalen);
         if (dstdatalen != NULL)
             *dstdatalen = srcdatalen;
         return;
     }
-    
+
     switch (ctx->ResponseSecurity) {
         case CPSNone:
-        break;
-        case CPSPlain: 
+            break;
+        case CPSPlain:
             memcpy(buf, srcdata, srcdatalen);
             buflen = srcdatalen;
             memcpy(&buf[buflen], &srcdata[srcdatalen], 2);
             buflen += 2;
             CipurseCCalcMACPadded(ctx, buf, buflen, NULL);
-            
+
             memcpy(dstdata, srcdata, srcdatalen);
             if (dstdatalen != NULL)
                 *dstdatalen = srcdatalen;
-        break;
-        case CPSMACed:       
+            break;
+        case CPSMACed:
             if (srcdatalen < CIPURSE_MAC_LENGTH)
                 return;
 
@@ -496,28 +501,28 @@ void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdat
             memcpy(dstdata, srcdata, srcdatalen);
             if (dstdatalen != NULL)
                 *dstdatalen = srcdatalen;
-        break;
+            break;
         case CPSEncrypted:
             CipurseCChannelDecrypt(ctx, srcdata, srcdatalen, buf, &buflen);
             //PrintAndLogEx(INFO, "data plain[%d]: %s", buflen, sprint_hex(buf, buflen));
-            
+
             micdatalen = buflen - 2 - CIPURSE_MIC_LENGTH;
             memcpy(micdata, buf, buflen);
             memcpy(&micdata[micdatalen], &buf[buflen - 2], 2);
             micdatalen += 2;
-            
+
             if (CipurseCCheckMIC(micdata, micdatalen, &buf[micdatalen - 2]) == false) {
                 PrintAndLogEx(ERR, "APDU response MIC is not valid!");
             }
-            
+
             memcpy(dstdata, buf, micdatalen - 2);
             if (dstdatalen != NULL)
                 *dstdatalen = micdatalen - 2;
             if (sw)
                 *sw = micdata[micdatalen - 2] * 0x0100 + micdata[micdatalen - 1];
-        break;
-        default: 
-        break;
+            break;
+        default:
+            break;
     }
-    
+
 }

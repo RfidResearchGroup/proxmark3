@@ -38,7 +38,7 @@ static int CIPURSEExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, 
         DropField();
         msleep(50);
     }
-    
+
     // long messages is not allowed
     if (apdu.Lc > 228)
         return 20;
@@ -50,7 +50,7 @@ static int CIPURSEExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, 
         xle = Le;
 
     CipurseCAPDUReqEncode(&cipurseContext, &apdu, &secapdu, securedata, IncludeLe, Le);
-    
+
     if (APDUEncodeS(&secapdu, false, xle, data, &datalen)) {
         PrintAndLogEx(ERR, "APDU encoding error.");
         return 201;
@@ -66,11 +66,11 @@ static int CIPURSEExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, 
 
     if (GetAPDULogging())
         PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(Result, *ResultLen));
-    
+
     if (*ResultLen < 2) {
         return 200;
     }
-    
+
     size_t rlen = 0;
     if (*ResultLen == 2) {
         if (cipurseContext.RequestSecurity == CPSMACed || cipurseContext.RequestSecurity == CPSEncrypted)
@@ -81,10 +81,10 @@ static int CIPURSEExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, 
         CipurseCAPDURespDecode(&cipurseContext, Result, *ResultLen, securedata, &rlen, &isw);
         memcpy(Result, securedata, rlen);
     }
-    
+
     if (ResultLen != NULL)
         *ResultLen = rlen;
-    
+
     if (sw != NULL)
         *sw = isw;
 
@@ -158,13 +158,13 @@ bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose) {
 
     CipurseContext cpc = {0};
     CipurseCSetKey(&cpc, keyIndex, key);
-    
+
     // get RP, rP
     int res = CIPURSEChallenge(buf, sizeof(buf), &len, &sw);
     if (res != 0 || len != 0x16) {
         if (verbose)
             PrintAndLogEx(ERR, "Cipurse get challenge " _RED_("error") ". Card returns 0x%04x.", sw);
-        
+
         return false;
     }
     CipurseCSetRandomFromPICC(&cpc, buf);
@@ -172,7 +172,7 @@ bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose) {
     // make auth data
     uint8_t authparams[16 + 16 + 6] = {0};
     CipurseCAuthenticateHost(&cpc, authparams);
-    
+
     // authenticate
     res = CIPURSEMutalAuthenticate(keyIndex, authparams, sizeof(authparams), buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000 || len != 16) {
@@ -186,22 +186,22 @@ bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose) {
             if (verbose)
                 PrintAndLogEx(ERR, "Cipurse authentication " _RED_("error") ". Card returns 0x%04x.", sw);
         }
-        
+
         CipurseCClearContext(&cipurseContext);
         return false;
     }
-    
+
     if (CipurseCCheckCT(&cpc, buf)) {
         if (verbose)
             PrintAndLogEx(INFO, "Authentication " _GREEN_("OK"));
-        
+
         CipurseCChannelSetSecurityLevels(&cpc, CPSMACed, CPSMACed);
         memcpy(&cipurseContext, &cpc, sizeof(CipurseContext));
         return true;
     } else {
         if (verbose)
             PrintAndLogEx(ERR, "Authentication " _RED_("ERROR") " card returned wrong CT");
-        
+
         CipurseCClearContext(&cipurseContext);
         return false;
     }
@@ -257,7 +257,7 @@ void CIPURSEPrintFileAttr(uint8_t *fileAttr, size_t len) {
         PrintAndLogEx(ERR, "Attributes length " _RED_("ERROR"));
         return;
     }
-    
+
     PrintAndLogEx(INFO, "--------- FILE ATTRIBUTES ---------");
     if (fileAttr[0] == 0x38) {
         PrintAndLogEx(INFO, "Type: MF, ADF");
@@ -281,14 +281,14 @@ void CIPURSEPrintFileAttr(uint8_t *fileAttr, size_t len) {
             else
                 PrintAndLogEx(INFO, "PxSE select returns FCPTemplate ON");
         }
-        
+
         PrintAndLogEx(INFO, "File ID: 0x%02x%02x", fileAttr[2], fileAttr[3]);
-        
+
         PrintAndLogEx(INFO, "Maximum number of custom EFs: %d", fileAttr[4]);
         PrintAndLogEx(INFO, "Maximum number of EFs with SFID: %d", fileAttr[5]);
         uint8_t keyNum = fileAttr[6];
         PrintAndLogEx(INFO, "Keys assigned: %d", keyNum);
-        
+
         if (len >= 9) {
             PrintAndLogEx(INFO, "SMR entries: %02x%02x", fileAttr[7], fileAttr[8]);
         }
@@ -296,7 +296,7 @@ void CIPURSEPrintFileAttr(uint8_t *fileAttr, size_t len) {
         if (len >= 10 + keyNum + 1) {
             PrintAndLogEx(INFO, "ART: %s", sprint_hex(&fileAttr[9], keyNum + 1));
         }
-        
+
         if (len >= 11 + keyNum + 1 + keyNum * 7) {
             for (int i = 0; i < keyNum; i++) {
                 PrintAndLogEx(INFO, "Key %d Attributes: %s", i, sprint_hex(&fileAttr[11 + keyNum + 1 + i * 7], 7));
@@ -307,7 +307,7 @@ void CIPURSEPrintFileAttr(uint8_t *fileAttr, size_t len) {
         if (fileAttr[1] == 0x00) {
             PrintAndLogEx(INFO, "Total memory size: %d", (fileAttr[len - 6] << 16) + (fileAttr[len - 1] << 5) + fileAttr[len - 4]);
             PrintAndLogEx(INFO, "Free memory size: %d", (fileAttr[len - 3] << 16) + (fileAttr[len - 2] << 8) + fileAttr[len - 1]);
-            
+
         } else {
             int ptr = 11 + keyNum + 1 + keyNum * 7;
             if (len > ptr)
@@ -322,27 +322,27 @@ void CIPURSEPrintFileAttr(uint8_t *fileAttr, size_t len) {
             PrintAndLogEx(INFO, "SFI: 0x%02x", fileAttr[1]);
 
         PrintAndLogEx(INFO, "File ID: 0x%02x%02x", fileAttr[2], fileAttr[3]);
-        
+
         if (fileAttr[0] == 0x01 || fileAttr[0] == 0x11)
             PrintAndLogEx(INFO, "File size: %d", (fileAttr[4] << 8) + fileAttr[5]);
         else
             PrintAndLogEx(INFO, "Record num: %d record size: %d", fileAttr[4], fileAttr[5]);
-        
+
         PrintAndLogEx(INFO, "Keys assigned: %d", fileAttr[6]);
-        
+
         if (len >= 9) {
             PrintAndLogEx(INFO, "SMR entries: %02x%02x", fileAttr[7], fileAttr[8]);
         }
-        
+
         if (len >= 10) {
             PrintAndLogEx(INFO, "ART: %s", sprint_hex(&fileAttr[9], len - 9));
             if (fileAttr[6] + 1 != len - 9)
                 PrintAndLogEx(WARNING, "ART length is wrong");
         }
-        
+
     }
-    
-    
+
+
 }
 
 
