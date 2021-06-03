@@ -184,6 +184,7 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
         arg_str0("k",  "key",     "<hex>", "key for authenticate"),
         arg_str0("f",  "file",    "<hex>", "file ID"),
         arg_int0("o",  "offset",  "<dec>", "offset for reading data from file"),
+        arg_lit0(NULL, "noauth",  "read file without authentication"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -216,6 +217,13 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
         fileId = (hdata[0] << 8) + hdata[1];
     
     size_t offset = arg_get_int_def(ctx, 6, 0);
+
+    bool noAuth = arg_get_lit(ctx, 7);
+
+        //CipurseCChannelSetSecurityLevels(&cpc, CPSEncrypted, CPSEncrypted);
+        //CipurseCChannelSetSecurityLevels(&cpc, CPSMACed, CPSMACed);
+        //CipurseCChannelSetSecurityLevels(&cpc, CPSPlain, CPSPlain);
+
     
     SetAPDULogging(APDULogging);
 
@@ -231,12 +239,14 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
     if (verbose)
         PrintAndLogEx(INFO, "File id: %x offset %d key id: %d key: %s", fileId, offset, keyId, sprint_hex(key, CIPURSE_AES_KEY_LENGTH));
 
-    bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
-    if (bres == false) {
-        if (verbose == false)
-            PrintAndLogEx(ERR, "Authentication " _RED_("ERROR"));
-        DropField();
-        return PM3_ESOFT;
+    if (noAuth == false) {
+        bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
+        if (bres == false) {
+            if (verbose == false)
+                PrintAndLogEx(ERR, "Authentication " _RED_("ERROR"));
+            DropField();
+            return PM3_ESOFT;
+        }
     }
     
     res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
