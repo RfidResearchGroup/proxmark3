@@ -70,10 +70,17 @@ static int CIPURSEExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, 
     if (*ResultLen < 2) {
         return 200;
     }
-
+    
     size_t rlen = 0;
-    CipurseCAPDURespDecode(&cipurseContext, Result, *ResultLen, securedata, &rlen, &isw);
-    memcpy(Result, securedata, rlen);
+    if (*ResultLen == 2) {
+        CipurseCClearContext(&cipurseContext);
+
+        isw = Result[0] * 0x0100 + Result[1];
+    } else {
+        CipurseCAPDURespDecode(&cipurseContext, Result, *ResultLen, securedata, &rlen, &isw);
+        memcpy(Result, securedata, rlen);
+    }
+    
     if (ResultLen != NULL)
         *ResultLen = rlen;
     
@@ -171,6 +178,7 @@ bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose) {
         if (verbose)
             PrintAndLogEx(INFO, "Authentication " _GREEN_("OK"));
         
+        //CipurseCChannelSetSecurityLevels(&cpc, CPSEncrypted, CPSEncrypted);
         CipurseCChannelSetSecurityLevels(&cpc, CPSMACed, CPSMACed);
         //CipurseCChannelSetSecurityLevels(&cpc, CPSPlain, CPSPlain);
         memcpy(&cipurseContext, &cpc, sizeof(CipurseContext));
