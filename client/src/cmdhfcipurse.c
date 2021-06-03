@@ -164,6 +164,60 @@ static int CmdHFCipurseAuth(const char *Cmd) {
     return bres ? PM3_SUCCESS : PM3_ESOFT;
 }
 
+static int CLIParseKeyAndSecurityLevels(CLIParserContext *ctx, size_t keyid, size_t sreqid, size_t srespid, uint8_t *key, CipurseChannelSecurityLevel *sreq, CipurseChannelSecurityLevel *sresp) {
+    uint8_t hdata[250] = {0};
+    int hdatalen = sizeof(hdata);    
+    CLIGetHexWithReturn(ctx, keyid, hdata, &hdatalen);
+    if (hdatalen && hdatalen != 16) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " key length for AES128 must be 16 bytes only.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (hdatalen)
+        memcpy(key, hdata, CIPURSE_AES_KEY_LENGTH);
+    
+    *sreq = CPSMACed;
+    *sresp = CPSMACed;
+
+    char cdata[250] = {0};
+    int cdatalen = sizeof(cdata);    
+    cdatalen--; // for trailer 0x00
+    CLIGetStrWithReturn(ctx, sreqid, (uint8_t *)cdata, &cdatalen);
+    if (cdatalen) {
+        str_lower(cdata);
+        if (strcmp(cdata, "plain") == 0)
+            *sreq = CPSPlain;
+        else if (strcmp(cdata, "mac") == 0)
+            *sreq = CPSMACed;
+        else if (strcmp(cdata, "enc") == 0 || strcmp(cdata, "encode") == 0 || strcmp(cdata, "encrypted") == 0)
+            *sreq = CPSEncrypted;
+        else {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " security level can be only: plain|mac|encode.");
+            return PM3_EINVARG;
+        }
+    }
+
+    cdatalen = sizeof(cdata);    
+    memset(cdata, 0, cdatalen);
+    cdatalen--; // for trailer 0x00
+    CLIGetStrWithReturn(ctx, srespid, (uint8_t *)cdata, &cdatalen);
+    if (cdatalen) {
+        str_lower(cdata);
+        if (strcmp(cdata, "plain") == 0)
+            *sresp = CPSPlain;
+        else if (strcmp(cdata, "mac") == 0)
+            *sresp = CPSMACed;
+        else if (strcmp(cdata, "enc") == 0 || strcmp(cdata, "encode") == 0 || strcmp(cdata, "encrypted") == 0)
+            *sresp = CPSEncrypted;
+        else {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " security level can be only: plain|mac|encode.");
+            return PM3_EINVARG;
+        }
+    }
+    
+    return PM3_SUCCESS;
+}
+
 static int CmdHFCipurseReadFile(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
@@ -185,6 +239,8 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
         arg_str0("f",  "file",    "<hex>", "file ID"),
         arg_int0("o",  "offset",  "<dec>", "offset for reading data from file"),
         arg_lit0(NULL, "noauth",  "read file without authentication"),
+        arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
+        arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -193,20 +249,18 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     uint8_t keyId = arg_get_int_def(ctx, 3, 1);
     
-    uint8_t hdata[250] = {0};
-    int hdatalen = sizeof(hdata);    
-    CLIGetHexWithReturn(ctx, 4, hdata, &hdatalen);
-    if (hdatalen && hdatalen != 16) {
-        PrintAndLogEx(ERR, _RED_("ERROR:") " key length for AES128 must be 16 bytes only.");
+    CipurseChannelSecurityLevel sreq = CPSMACed;
+    CipurseChannelSecurityLevel sresp = CPSMACed;
+    int res = CLIParseKeyAndSecurityLevels(ctx, 4, 8, 9, key, &sreq, &sresp);
+    if (res) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    if (hdatalen)
-        memcpy(key, hdata, CIPURSE_AES_KEY_LENGTH);
-    
+
     uint16_t fileId = 0x2ff7;
     
-    hdatalen = sizeof(hdata);    
+    uint8_t hdata[250] = {0};
+    int hdatalen = sizeof(hdata);    
     CLIGetHexWithReturn(ctx, 5, hdata, &hdatalen);
     if (hdatalen && hdatalen != 2) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " file id length must be 2 bytes only.");
@@ -220,16 +274,11 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
 
     bool noAuth = arg_get_lit(ctx, 7);
 
-        //CipurseCChannelSetSecurityLevels(&cpc, CPSEncrypted, CPSEncrypted);
-        //CipurseCChannelSetSecurityLevels(&cpc, CPSMACed, CPSMACed);
-        //CipurseCChannelSetSecurityLevels(&cpc, CPSPlain, CPSPlain);
-
-    
     SetAPDULogging(APDULogging);
 
     CLIParserFree(ctx);
     
-    int res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
+    res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
         PrintAndLogEx(ERR, "Cipurse select " _RED_("error") ". Card returns 0x%04x.", sw);
         DropField();
@@ -247,6 +296,9 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
             DropField();
             return PM3_ESOFT;
         }
+        
+        // set channel security levels
+        CIPURSECSetActChannelSecurityLevels(sreq, sresp);
     }
     
     res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
@@ -256,7 +308,6 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
-//CIPURSECSetActChannelSecurityLevels(CPSMACed, CPSMACed);
 
     if (verbose)
         PrintAndLogEx(INFO, "Select file 0x%x " _GREEN_("OK"), fileId);
