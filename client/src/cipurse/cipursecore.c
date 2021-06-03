@@ -102,9 +102,9 @@ static int CIPURSEExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, 
     return PM3_SUCCESS;
 }
 
-/*static int CIPURSEExchange(sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+static int CIPURSEExchange(sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
     return CIPURSEExchangeEx(false, true, apdu, true, 0, Result, MaxResultLen, ResultLen, sw);
-}*/
+}
 
 int CIPURSESelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
     uint8_t data[] = {0x41, 0x44, 0x20, 0x46, 0x31};
@@ -121,21 +121,26 @@ int CIPURSEMutalAuthenticate(uint8_t keyIndex, uint8_t *params, uint8_t paramsle
     return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0x82, 0x00, keyIndex, paramslen, params}, true, 0x10, Result, MaxResultLen, ResultLen, sw);
 }
 
+int CIPURSEDeleteFile(uint16_t fileID, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+    uint8_t fileIdBin[] = {fileID >> 8, fileID & 0xff};
+    return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0xe4, 0x00, 0x00, 02, fileIdBin}, false, 0, Result, MaxResultLen, ResultLen, sw);
+}
+
 int CIPURSESelectFile(uint16_t fileID, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
     uint8_t fileIdBin[] = {fileID >> 8, fileID & 0xff};
-    return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0xa4, 0x00, 0x00, 02, fileIdBin}, true, 0, Result, MaxResultLen, ResultLen, sw);
+    return CIPURSEExchange((sAPDU) {0x00, 0xa4, 0x00, 0x00, 02, fileIdBin}, Result, MaxResultLen, ResultLen, sw);
 }
 
 int CIPURSESelectMFFile(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
-    return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0xa4, 0x00, 0x00, 0, NULL}, true, 0, Result, MaxResultLen, ResultLen, sw);
+    return CIPURSEExchange((sAPDU) {0x00, 0xa4, 0x00, 0x00, 0, NULL}, Result, MaxResultLen, ResultLen, sw);
 }
 
 int CIPURSEReadFileAttributes(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
-    return CIPURSEExchangeEx(false, true, (sAPDU) {0x80, 0xce, 0x00, 0x00, 0, NULL}, true, 0, Result, MaxResultLen, ResultLen, sw);
+    return CIPURSEExchange((sAPDU) {0x80, 0xce, 0x00, 0x00, 0, NULL}, Result, MaxResultLen, ResultLen, sw);
 }
 
 int CIPURSEReadBinary(uint16_t offset, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
-    return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0xb0, (offset >> 8) & 0x7f, offset & 0xff, 0, NULL}, true, 0, Result, MaxResultLen, ResultLen, sw);
+    return CIPURSEExchange((sAPDU) {0x00, 0xb0, (offset >> 8) & 0x7f, offset & 0xff, 0, NULL}, Result, MaxResultLen, ResultLen, sw);
 }
 
 int CIPURSEUpdateBinary(uint16_t offset, uint8_t *data, uint16_t datalen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
