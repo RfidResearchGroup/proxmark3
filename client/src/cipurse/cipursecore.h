@@ -28,7 +28,7 @@ int CIPURSESelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t
 int CIPURSEChallenge(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 int CIPURSEMutalAuthenticate(uint8_t keyIndex, uint8_t *params, uint8_t paramslen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 
-int CIPURSECreateFile(uint16_t fileID, uint8_t *attr, uint16_t attrlen, uint8_t *fileAttr, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
+int CIPURSECreateFile(uint8_t *attr, uint16_t attrlen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 int CIPURSEDeleteFile(uint16_t fileID, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 
 int CIPURSESelectMFFile(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) ;

@@ -121,6 +121,10 @@ int CIPURSEMutalAuthenticate(uint8_t keyIndex, uint8_t *params, uint8_t paramsle
     return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0x82, 0x00, keyIndex, paramslen, params}, true, 0x10, Result, MaxResultLen, ResultLen, sw);
 }
 
+int CIPURSECreateFile(uint8_t *attr, uint16_t attrlen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+    return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0xe4, 0x00, 0x00, attrlen, attr}, false, 0, Result, MaxResultLen, ResultLen, sw);
+}
+
 int CIPURSEDeleteFile(uint16_t fileID, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
     uint8_t fileIdBin[] = {fileID >> 8, fileID & 0xff};
     return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0xe4, 0x00, 0x00, 02, fileIdBin}, false, 0, Result, MaxResultLen, ResultLen, sw);
