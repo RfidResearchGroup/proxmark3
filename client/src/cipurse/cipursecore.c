@@ -126,9 +126,12 @@ int CIPURSESelectFile(uint16_t fileID, uint8_t *Result, size_t MaxResultLen, siz
     return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0xa4, 0x00, 0x00, 02, fileIdBin}, true, 0, Result, MaxResultLen, ResultLen, sw);
 }
 
-int CIPURSEReadFileAttributes(uint8_t *data, uint16_t *datalen) {
-    //CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0x82, 0x00, keyIndex, paramslen, params}, true, 0x10, Result, MaxResultLen, ResultLen, sw);
-    return 2;
+int CIPURSESelectMFFile(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+    return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0xa4, 0x00, 0x00, 0, NULL}, true, 0, Result, MaxResultLen, ResultLen, sw);
+}
+
+int CIPURSEReadFileAttributes(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
+    return CIPURSEExchangeEx(false, true, (sAPDU) {0x80, 0xce, 0x00, 0x00, 0, NULL}, true, 0, Result, MaxResultLen, ResultLen, sw);
 }
 
 int CIPURSEReadBinary(uint16_t offset, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
@@ -208,4 +211,129 @@ void CIPURSEPrintInfoFile(uint8_t *data, size_t len) {
     PrintAndLogEx(INFO, "------------ INFO ------------");
     PrintAndLogEx(INFO, "CIPURSE version %d revision %d", data[0], data[1]);
 }
+
+static void CIPURSEPrintFileDescriptor(uint8_t desc) {
+    if (desc == 0x01)
+        PrintAndLogEx(INFO, "Binary file");
+    else if (desc == 0x11)
+        PrintAndLogEx(INFO, "Binary file with transactions");
+    else if (desc == 0x02)
+        PrintAndLogEx(INFO, "Linear record file");
+    else if (desc == 0x12)
+        PrintAndLogEx(INFO, "Linear record file with transactions");
+    else if (desc == 0x06)
+        PrintAndLogEx(INFO, "Cyclic record file");
+    else if (desc == 0x16)
+        PrintAndLogEx(INFO, "Cyclic record file with transactions");
+    else if (desc == 0x1E)
+        PrintAndLogEx(INFO, "Linear value-record file");
+    else if (desc == 0x1F)
+        PrintAndLogEx(INFO, "Linear value-record file with transactions");
+    else
+        PrintAndLogEx(INFO, "Unknown file 0x%02x", desc);
+}
+
+static void CIPURSEPrintKeyAttrib(uint8_t *attr) {
+    PrintAndLogEx(INFO, "-------- KEY ATTRIBUTES --------");
+    PrintAndLogEx(INFO, "Additional info: 0x%02x", attr[0]);
+    PrintAndLogEx(INFO, "Key length: %d", attr[1]);
+    PrintAndLogEx(INFO, "Algorithm ID: 0x%02x", attr[2]);
+    PrintAndLogEx(INFO, "Security attr: 0x%02x", attr[3]);
+    PrintAndLogEx(INFO, "KVV: 0x%02x%02x%02x", attr[4], attr[5], attr[6]);
+    PrintAndLogEx(INFO, "-------------------------------");
+}
+
+void CIPURSEPrintFileAttr(uint8_t *fileAttr, size_t len) {
+    if (len < 7) {
+        PrintAndLogEx(ERR, "Attributes length " _RED_("ERROR"));
+        return;
+    }
+    
+    PrintAndLogEx(INFO, "--------- FILE ATTRIBUTES ---------");
+    if (fileAttr[0] == 0x38) {
+        PrintAndLogEx(INFO, "Type: MF, ADF");
+        if (fileAttr[1] == 0x00) {
+            PrintAndLogEx(INFO, "Type: MF");
+        } else {
+            if ((fileAttr[1] & 0xe0) == 0x00)
+                PrintAndLogEx(INFO, "Type: Unknown");
+            if ((fileAttr[1] & 0xe0) == 0x20)
+                PrintAndLogEx(INFO, "Type: CIPURSE L");
+            if ((fileAttr[1] & 0xe0) == 0x40)
+                PrintAndLogEx(INFO, "Type: CIPURSE S");
+            if ((fileAttr[1] & 0xe0) == 0x60)
+                PrintAndLogEx(INFO, "Type: CIPURSE T");
+            if ((fileAttr[1] & 0x02) == 0x00)
+                PrintAndLogEx(INFO, "Autoselect on PxSE select OFF");
+            else
+                PrintAndLogEx(INFO, "Autoselect on PxSE select ON");
+            if ((fileAttr[1] & 0x01) == 0x00)
+                PrintAndLogEx(INFO, "PxSE select returns FCPTemplate OFF");
+            else
+                PrintAndLogEx(INFO, "PxSE select returns FCPTemplate ON");
+        }
+        
+        PrintAndLogEx(INFO, "File ID: 0x%02x%02x", fileAttr[2], fileAttr[3]);
+        
+        PrintAndLogEx(INFO, "Maximum number of custom EFs: %d", fileAttr[4]);
+        PrintAndLogEx(INFO, "Maximum number of EFs with SFID: %d", fileAttr[5]);
+        uint8_t keyNum = fileAttr[6];
+        PrintAndLogEx(INFO, "Keys assigned: %d", keyNum);
+        
+        if (len >= 9) {
+            PrintAndLogEx(INFO, "SMR entries: %02x%02x", fileAttr[7], fileAttr[8]);
+        }
+
+        if (len >= 10 + keyNum + 1) {
+            PrintAndLogEx(INFO, "ART: %s", sprint_hex(&fileAttr[9], keyNum + 1));
+        }
+        
+        if (len >= 11 + keyNum + 1 + keyNum * 7) {
+            for (int i = 0; i < keyNum; i++) {
+                PrintAndLogEx(INFO, "Key %d Attributes: %s", i, sprint_hex(&fileAttr[11 + keyNum + 1 + i * 7], 7));
+                CIPURSEPrintKeyAttrib(&fileAttr[11 + keyNum + 1 + i * 7]);
+            }
+        }
+        // MF
+        if (fileAttr[1] == 0x00) {
+            PrintAndLogEx(INFO, "Total memory size: %d", (fileAttr[len - 6] << 16) + (fileAttr[len - 1] << 5) + fileAttr[len - 4]);
+            PrintAndLogEx(INFO, "Free memory size: %d", (fileAttr[len - 3] << 16) + (fileAttr[len - 2] << 8) + fileAttr[len - 1]);
+            
+        } else {
+            int ptr = 11 + keyNum + 1 + keyNum * 7;
+            if (len > ptr)
+                PrintAndLogEx(INFO, "TLV file control: %s", sprint_hex(&fileAttr[ptr], len - ptr));
+        }
+    } else {
+        PrintAndLogEx(INFO, "Type: EF");
+        CIPURSEPrintFileDescriptor(fileAttr[0]);
+        if (fileAttr[1] == 0)
+            PrintAndLogEx(INFO, "SFI: not assigned");
+        else
+            PrintAndLogEx(INFO, "SFI: 0x%02x", fileAttr[1]);
+
+        PrintAndLogEx(INFO, "File ID: 0x%02x%02x", fileAttr[2], fileAttr[3]);
+        
+        if (fileAttr[0] == 0x01 || fileAttr[0] == 0x11)
+            PrintAndLogEx(INFO, "File size: %d", (fileAttr[4] << 8) + fileAttr[5]);
+        else
+            PrintAndLogEx(INFO, "Record num: %d record size: %d", fileAttr[4], fileAttr[5]);
+        
+        PrintAndLogEx(INFO, "Keys assigned: %d", fileAttr[6]);
+        
+        if (len >= 9) {
+            PrintAndLogEx(INFO, "SMR entries: %02x%02x", fileAttr[7], fileAttr[8]);
+        }
+        
+        if (len >= 10) {
+            PrintAndLogEx(INFO, "ART: %s", sprint_hex(&fileAttr[9], len - 9));
+            if (fileAttr[6] + 1 != len - 9)
+                PrintAndLogEx(WARNING, "ART length is wrong");
+        }
+        
+    }
+    
+    
+}
+
 
