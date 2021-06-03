@@ -73,7 +73,8 @@ static int CIPURSEExchangeEx(bool ActivateField, bool LeaveFieldON, sAPDU apdu, 
     
     size_t rlen = 0;
     if (*ResultLen == 2) {
-        CipurseCClearContext(&cipurseContext);
+        if (cipurseContext.RequestSecurity == CPSMACed || cipurseContext.RequestSecurity == CPSEncrypted)
+            CipurseCClearContext(&cipurseContext);
 
         isw = Result[0] * 0x0100 + Result[1];
     } else {
@@ -178,9 +179,7 @@ bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose) {
         if (verbose)
             PrintAndLogEx(INFO, "Authentication " _GREEN_("OK"));
         
-        //CipurseCChannelSetSecurityLevels(&cpc, CPSEncrypted, CPSEncrypted);
         CipurseCChannelSetSecurityLevels(&cpc, CPSMACed, CPSMACed);
-        //CipurseCChannelSetSecurityLevels(&cpc, CPSPlain, CPSPlain);
         memcpy(&cipurseContext, &cpc, sizeof(CipurseContext));
         return true;
     } else {

@@ -292,7 +292,10 @@ bool CipurseCCheckMIC(uint8_t *data, size_t datalen, uint8_t *mic) {
  */
 void CipurseCEncryptDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *dstdata, bool isEncrypt) {
     uint8_t hx[CIPURSE_AES_KEY_LENGTH] = {0};
-PrintAndLogEx(INFO, "----data[%d]: %s", datalen, sprint_hex(data, datalen));
+    
+    if (datalen == 0 || datalen % CIPURSE_AES_KEY_LENGTH != 0)
+        return;
+    
     memcpy(ctx->frameKeyNext, ctx->frameKey, CIPURSE_AES_KEY_LENGTH);
     int i = 0;
     while (datalen > i) {
@@ -367,7 +370,7 @@ bool CipurseCCheckMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, 
     return (memcmp(mac, xmac, CIPURSE_MAC_LENGTH) == 0);
 }
 
-static void CipurseCAPDUMACEncode(CipurseContext *ctx, sAPDU *apdu, uint8_t *data, size_t *datalen) {
+static void CipurseCAPDUMACEncode(CipurseContext *ctx, sAPDU *apdu, uint8_t originalLc, uint8_t *data, size_t *datalen) {
     data[0] = apdu->CLA;
     data[1] = apdu->INS;
     data[2] = apdu->P1;
@@ -375,8 +378,8 @@ static void CipurseCAPDUMACEncode(CipurseContext *ctx, sAPDU *apdu, uint8_t *dat
     data[4] = apdu->Lc;
     *datalen = 5 + apdu->Lc;
     
-    if (ctx->RequestSecurity == CPSMACed)
-        *datalen -= CIPURSE_MAC_LENGTH;
+    if (ctx->RequestSecurity == CPSMACed || ctx->RequestSecurity == CPSEncrypted)
+        *datalen = 5 + originalLc;
     memcpy(&data[5], apdu->data, *datalen);
 }
 
@@ -399,24 +402,37 @@ void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, 
         dstapdu->data[dstapdu->Lc] = Le;
         dstapdu->Lc++;
     }
+    uint8_t originalLc = dstapdu->Lc;
 
     switch (ctx->RequestSecurity) {
         case CPSNone:
         break;
         case CPSPlain: 
-            CipurseCAPDUMACEncode(ctx, dstapdu, buf, &buflen);
+            CipurseCAPDUMACEncode(ctx, dstapdu, originalLc, buf, &buflen);
             CipurseCCalcMACPadded(ctx, buf, buflen, NULL);
         break;
         case CPSMACed:
             dstapdu->Lc += CIPURSE_MAC_LENGTH;
-            CipurseCAPDUMACEncode(ctx, dstapdu, buf, &buflen);
+            CipurseCAPDUMACEncode(ctx, dstapdu, originalLc, buf, &buflen);
             CipurseCCalcMACPadded(ctx, buf, buflen, mac);
             memcpy(&dstdatabuf[dstapdu->Lc - CIPURSE_MAC_LENGTH], mac, CIPURSE_MAC_LENGTH);
         break;
         case CPSEncrypted:
-            CipurseCAPDUMACEncode(ctx, dstapdu, buf, &buflen);
+            dstapdu->Lc = srcapdu->Lc + CIPURSE_MIC_LENGTH;
+            dstapdu->Lc += CIPURSE_AES_BLOCK_LENGTH - dstapdu->Lc % CIPURSE_AES_BLOCK_LENGTH + 1; // 1 - SMI
+            if (includeLe)
+                dstapdu->Lc++;
+            
+            CipurseCAPDUMACEncode(ctx, dstapdu, originalLc, buf, &buflen);
             CipurseCGenerateMIC(buf, buflen, mac);
-            PrintAndLogEx(INFO, "mic: %s", sprint_hex(mac, 4));
+            buf[0] = dstapdu->CLA;
+            buf[1] = dstapdu->INS;
+            buf[2] = dstapdu->P1;
+            buf[3] = dstapdu->P2;
+            memcpy(&buf[4], srcapdu->data, srcapdu->Lc);
+            memcpy(&buf[4 + srcapdu->Lc], mac, CIPURSE_MIC_LENGTH);
+            //PrintAndLogEx(INFO, "data plain[%d]: %s", 4 + srcapdu->Lc + CIPURSE_MIC_LENGTH, sprint_hex(buf, 4 + srcapdu->Lc + CIPURSE_MIC_LENGTH));
+            CipurseCChannelEncrypt(ctx, buf, 4 + srcapdu->Lc + CIPURSE_MIC_LENGTH, &dstdatabuf[1], &buflen);
         break;
         default: 
         break;
