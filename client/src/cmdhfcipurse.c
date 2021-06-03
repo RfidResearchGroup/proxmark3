@@ -228,7 +228,7 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
     CLIParserInit(&ctx, "hf cipurse read",
                   "Read file by file ID with key ID and key",
                   "hf cipurse read -f 2ff7   -> Authenticate with keyID=1 and key = 7373...7373 and read file with id 2ff7\n"
-                  "hf cipurse auth -n 2 -k 65656565656565656565656565656565 -f 2ff7 -> Authenticate with specified key and read file\n");
+                  "hf cipurse read -n 2 -k 65656565656565656565656565656565 -f 2ff7 -> Authenticate with specified key and read file\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -329,6 +329,124 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFCipurseWriteFile(const char *Cmd) {
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+    uint8_t key[] = CIPURSE_DEFAULT_KEY;
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf cipurse write",
+                  "Write file by file ID with key ID and key",
+                  "hf cipurse write -f 2ff7   -> Authenticate with keyID=1 and key = 7373...7373 and read file with id 2ff7\n"
+                  "hf cipurse write -n 2 -k 65656565656565656565656565656565 -f 2ff7 -> Authenticate with specified key and read file\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyid",   "<dec>", "key id"),
+        arg_str0("k",  "key",     "<hex>", "key for authenticate"),
+        arg_str0("f",  "file",    "<hex>", "file ID"),
+        arg_int0("o",  "offset",  "<dec>", "offset for reading data from file"),
+        arg_lit0(NULL, "noauth",  "read file without authentication"),
+        arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
+        arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
+        arg_str0("c",  "content", "<hex>", "new file content"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    uint8_t keyId = arg_get_int_def(ctx, 3, 1);
+    
+    CipurseChannelSecurityLevel sreq = CPSMACed;
+    CipurseChannelSecurityLevel sresp = CPSMACed;
+    int res = CLIParseKeyAndSecurityLevels(ctx, 4, 8, 9, key, &sreq, &sresp);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint16_t fileId = 0x2ff7;
+    
+    uint8_t hdata[250] = {0};
+    int hdatalen = sizeof(hdata);    
+    CLIGetHexWithReturn(ctx, 5, hdata, &hdatalen);
+    if (hdatalen && hdatalen != 2) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " file id length must be 2 bytes only.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (hdatalen)
+        fileId = (hdata[0] << 8) + hdata[1];
+    
+    size_t offset = arg_get_int_def(ctx, 6, 0);
+
+    bool noAuth = arg_get_lit(ctx, 7);
+
+    hdatalen = sizeof(hdata);    
+    CLIGetHexWithReturn(ctx, 10, hdata, &hdatalen);
+    if (hdatalen == 0) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " file content length must be more 0.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+
+    CLIParserFree(ctx);
+    
+    res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000) {
+        PrintAndLogEx(ERR, "Cipurse select " _RED_("error") ". Card returns 0x%04x.", sw);
+        DropField();
+        return PM3_ESOFT;
+    }
+        
+    if (verbose) {
+        PrintAndLogEx(INFO, "File id: %x offset %d key id: %d key: %s", fileId, offset, keyId, sprint_hex(key, CIPURSE_AES_KEY_LENGTH));
+        PrintAndLogEx(INFO, "data[%d]: %s", hdatalen, sprint_hex(hdata, hdatalen));
+    }
+
+    if (noAuth == false) {
+        bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
+        if (bres == false) {
+            if (verbose == false)
+                PrintAndLogEx(ERR, "Authentication " _RED_("ERROR"));
+            DropField();
+            return PM3_ESOFT;
+        }
+        
+        // set channel security levels
+        CIPURSECSetActChannelSecurityLevels(sreq, sresp);
+    }
+    
+    res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000) {
+        if (verbose == false)
+            PrintAndLogEx(ERR, "File select " _RED_("ERROR") ". Card returns 0x%04x.", sw);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (verbose)
+        PrintAndLogEx(INFO, "Select file 0x%x " _GREEN_("OK"), fileId);
+    
+    res = CIPURSEUpdateBinary(offset, hdata, hdatalen, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000) {
+        if (verbose == false)
+            PrintAndLogEx(ERR, "File read " _RED_("ERROR") ". Card returns 0x%04x.", sw);
+        DropField();
+        return PM3_ESOFT;
+    }
+        
+    PrintAndLogEx(INFO, "File id: %x successfully written.", fileId);
+    
+    DropField();
+    return PM3_SUCCESS;
+}
 
 
 
@@ -349,7 +467,8 @@ static command_t CommandTable[] = {
     {"help",      CmdHelp,                   AlwaysAvailable, "This help."},
     {"info",      CmdHFCipurseInfo,          IfPm3Iso14443a,  "Info about Cipurse tag."},
     {"auth",      CmdHFCipurseAuth,          IfPm3Iso14443a,  "Authentication."},
-    {"read",      CmdHFCipurseReadFile,      IfPm3Iso14443a,  "Read file."},
+    {"read",      CmdHFCipurseReadFile,      IfPm3Iso14443a,  "Read binary file."},
+    {"write",     CmdHFCipurseWriteFile,     IfPm3Iso14443a,  "Write binary file."},
     {NULL, NULL, 0, NULL}
 };
 
