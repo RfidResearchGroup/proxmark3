@@ -282,7 +282,7 @@ miscchecks:
 # Make sure recode is installed
 	@which recode >/dev/null || ( echo "Please install 'recode' package first" ; exit 1 )
 	@echo "Files with suspicious chars:"
-	@find . \( -not -path "./cov-int/*" -and -not -path "./client/deps/*" -and \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" -or -name "*.v" \) \) \
+	@find . \( -not -path "./cov-int/*" -and -not -path "./client/deps/*" -and \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" -or -name "*.v" -or -name "pm3" \) \) \
 	      -exec sh -c "cat {} |recode utf8.. >/dev/null || echo {}" \;
 ifneq (,$(EDIT))
 	@echo "Files with tabs: (EDIT enabled, files will be rewritten!)"
@@ -290,7 +290,7 @@ else
 	@echo "Files with tabs: (rerun with EDIT=1 if you want to convert them with vim)"
 endif
 # to remove tabs within lines, one can try with: vi $file -c ':set tabstop=4' -c ':set et|retab' -c ':wq'
-	@find . \( -not -path "./cov-int/*" -and -not -path "./client/deps/*" -and \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" -or -name "*.v" \) \) \
+	@find . \( -not -path "./cov-int/*" -and -not -path "./client/deps/*" -and \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" -or -name "*.v" -or -name "pm3" \) \) \
 	      -exec sh -c "$(TABSCMD)" \;
 #	@echo "Files with printf \\\\t:"
 #	@find . \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" -or -name "*.v" \) \
