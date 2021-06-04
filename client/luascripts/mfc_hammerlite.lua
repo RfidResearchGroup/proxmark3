@@ -59,20 +59,20 @@ function main(args)
     for o, a in getopt.getopt(args, 'hw:k:') do
         if o == 'h' then return help() end
         if o == 'w' then loopcount = tonumber(a) end
-	if o == 'k' then key = a end
+    if o == 'k' then key = a end
     end
 
     starttime = os.time()
 
     for i = 1,loopcount,1
     do
-	for a = 1,63,1
-	do
-	    if ((a + 1) % 4 ~= 0) and a ~= 0 then  -- :)
+    for a = 1,63,1
+    do
+        if ((a + 1) % 4 ~= 0) and a ~= 0 then  -- :)
                 data = randhex(32)
-	        -- core.console('hf mf rdbl --blk '..a..' -k FFFFFFFFFFFF')
-	        core.console('hf mf wrbl --blk '..a..' -k '..key..' -d '..data)
-	    end
+            -- core.console('hf mf rdbl --blk '..a..' -k FFFFFFFFFFFF')
+            core.console('hf mf wrbl --blk '..a..' -k '..key..' -d '..data)
+        end
         end
     end
 

@@ -713,7 +713,7 @@ function getRandomTempName()
   local keyLength = 8
   local output = ""
 
-  for	i = 1, keyLength do
+  for   i = 1, keyLength do
     local rand = math.random(#characterSet)
     output = output .. string.sub(characterSet, rand, rand)
   end

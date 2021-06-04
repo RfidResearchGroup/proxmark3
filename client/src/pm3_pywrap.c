@@ -240,7 +240,7 @@
       // success code
       if (SWIG_IsNewObj(res) {
         ...
-	delete *ptr;
+    delete *ptr;
       } else {
         ...
       }
@@ -341,32 +341,32 @@ typedef struct swig_type_info *(*swig_dycast_func)(void **);
 
 /* Structure to store information on one type */
 typedef struct swig_type_info {
-    const char             *name;			/* mangled name of this type */
-    const char             *str;			/* human readable name of this type */
-    swig_dycast_func        dcast;		/* dynamic cast function down a hierarchy */
-    struct swig_cast_info  *cast;			/* linked list of types that can cast into this type */
-    void                   *clientdata;		/* language specific type data */
-    int                    owndata;		/* flag if the structure owns the clientdata */
+    const char             *name;           /* mangled name of this type */
+    const char             *str;            /* human readable name of this type */
+    swig_dycast_func        dcast;      /* dynamic cast function down a hierarchy */
+    struct swig_cast_info  *cast;           /* linked list of types that can cast into this type */
+    void                   *clientdata;     /* language specific type data */
+    int                    owndata;     /* flag if the structure owns the clientdata */
 } swig_type_info;
 
 /* Structure to store a type and conversion function used for casting */
 typedef struct swig_cast_info {
-    swig_type_info         *type;			/* pointer to type that is equivalent to this type */
-    swig_converter_func     converter;		/* function to cast the void pointers */
-    struct swig_cast_info  *next;			/* pointer to next cast in linked list */
-    struct swig_cast_info  *prev;			/* pointer to the previous cast */
+    swig_type_info         *type;           /* pointer to type that is equivalent to this type */
+    swig_converter_func     converter;      /* function to cast the void pointers */
+    struct swig_cast_info  *next;           /* pointer to next cast in linked list */
+    struct swig_cast_info  *prev;           /* pointer to the previous cast */
 } swig_cast_info;
 
 /* Structure used to store module information
  * Each module generates one structure like this, and the runtime collects
  * all of these structures and stores them in a circularly linked list.*/
 typedef struct swig_module_info {
-    swig_type_info         **types;		/* Array of pointers to swig_type_info structures that are in this module */
-    size_t                 size;		        /* Number of types in this module */
-    struct swig_module_info *next;		/* Pointer to next element in circularly linked list */
-    swig_type_info         **type_initial;	/* Array of initially generated type structures */
-    swig_cast_info         **cast_initial;	/* Array of initially generated casting structures */
-    void                    *clientdata;		/* Language specific module data */
+    swig_type_info         **types;     /* Array of pointers to swig_type_info structures that are in this module */
+    size_t                 size;                /* Number of types in this module */
+    struct swig_module_info *next;      /* Pointer to next element in circularly linked list */
+    swig_type_info         **type_initial;  /* Array of initially generated type structures */
+    swig_cast_info         **cast_initial;  /* Array of initially generated casting structures */
+    void                    *clientdata;        /* Language specific module data */
 } swig_module_info;
 
 /*
@@ -728,18 +728,18 @@ SWIG_UnpackDataName(const char *c, void *ptr, size_t sz, const char *name) {
 #endif
 
 /*  Errors in SWIG */
-#define  SWIG_UnknownError    	   -1
-#define  SWIG_IOError        	   -2
-#define  SWIG_RuntimeError   	   -3
-#define  SWIG_IndexError     	   -4
-#define  SWIG_TypeError      	   -5
-#define  SWIG_DivisionByZero 	   -6
-#define  SWIG_OverflowError  	   -7
-#define  SWIG_SyntaxError    	   -8
-#define  SWIG_ValueError     	   -9
-#define  SWIG_SystemError    	   -10
-#define  SWIG_AttributeError 	   -11
-#define  SWIG_MemoryError    	   -12
+#define  SWIG_UnknownError         -1
+#define  SWIG_IOError              -2
+#define  SWIG_RuntimeError         -3
+#define  SWIG_IndexError           -4
+#define  SWIG_TypeError            -5
+#define  SWIG_DivisionByZero       -6
+#define  SWIG_OverflowError        -7
+#define  SWIG_SyntaxError          -8
+#define  SWIG_ValueError           -9
+#define  SWIG_SystemError          -10
+#define  SWIG_AttributeError       -11
+#define  SWIG_MemoryError          -12
 #define  SWIG_NullReferenceError   -13
 
 
@@ -1058,7 +1058,7 @@ typedef struct swig_const_info {
 #define SWIG_NewPointerObj(ptr, type, flags)            SWIG_Python_NewPointerObj(NULL, ptr, type, flags)
 #endif
 
-#define SWIG_InternalNewPointerObj(ptr, type, flags)	SWIG_Python_NewPointerObj(NULL, ptr, type, flags)
+#define SWIG_InternalNewPointerObj(ptr, type, flags)    SWIG_Python_NewPointerObj(NULL, ptr, type, flags)
 
 #define SWIG_CheckImplicit(ty)                          SWIG_Python_CheckImplicit(ty)
 #define SWIG_AcquirePtr(ptr, src)                       SWIG_Python_AcquirePtr(ptr, src)
@@ -1088,10 +1088,10 @@ typedef struct swig_const_info {
 #define SWIG_NewClientData(obj)                         SwigPyClientData_New(obj)
 
 #define SWIG_SetErrorObj                                SWIG_Python_SetErrorObj
-#define SWIG_SetErrorMsg                        	SWIG_Python_SetErrorMsg
-#define SWIG_ErrorType(code)                    	SWIG_Python_ErrorType(code)
-#define SWIG_Error(code, msg)            		SWIG_Python_SetErrorMsg(SWIG_ErrorType(code), msg)
-#define SWIG_fail                        		goto fail
+#define SWIG_SetErrorMsg                            SWIG_Python_SetErrorMsg
+#define SWIG_ErrorType(code)                        SWIG_Python_ErrorType(code)
+#define SWIG_Error(code, msg)                   SWIG_Python_SetErrorMsg(SWIG_ErrorType(code), msg)
+#define SWIG_fail                               goto fail
 
 
 /* Runtime API implementation */
@@ -1213,7 +1213,7 @@ SWIG_Python_UnpackTuple(PyObject *args, const char *name, Py_ssize_t min, Py_ssi
 }
 
 /* A functor is a function object with one single object argument */
-#define SWIG_Python_CallFunctor(functor, obj)	        PyObject_CallFunctionObjArgs(functor, obj, NULL);
+#define SWIG_Python_CallFunctor(functor, obj)           PyObject_CallFunctionObjArgs(functor, obj, NULL);
 
 /*
   Helper for static pointer initialization for both C and C++ code, for example
@@ -1235,8 +1235,8 @@ SWIG_Python_UnpackTuple(PyObject *args, const char *name, Py_ssize_t min, Py_ssi
 
 #define SWIG_POINTER_IMPLICIT_CONV  (SWIG_POINTER_DISOWN   << 1)
 
-#define SWIG_BUILTIN_TP_INIT	    (SWIG_POINTER_OWN << 2)
-#define SWIG_BUILTIN_INIT	    (SWIG_BUILTIN_TP_INIT | SWIG_POINTER_OWN)
+#define SWIG_BUILTIN_TP_INIT        (SWIG_POINTER_OWN << 2)
+#define SWIG_BUILTIN_INIT       (SWIG_BUILTIN_TP_INIT | SWIG_POINTER_OWN)
 
 #ifdef __cplusplus
 extern "C" {
@@ -1615,12 +1615,12 @@ SwigPyObject_TypeOnce(void) {
         (unaryfunc)0,  /*nb_positive*/
         (unaryfunc)0,  /*nb_absolute*/
         (inquiry)0,    /*nb_nonzero*/
-        0,		   /*nb_invert*/
-        0,		   /*nb_lshift*/
-        0,		   /*nb_rshift*/
-        0,		   /*nb_and*/
-        0,		   /*nb_xor*/
-        0,		   /*nb_or*/
+        0,         /*nb_invert*/
+        0,         /*nb_lshift*/
+        0,         /*nb_rshift*/
+        0,         /*nb_and*/
+        0,         /*nb_xor*/
+        0,         /*nb_or*/
 #if PY_VERSION_HEX < 0x03000000
         0,   /*nb_coerce*/
 #endif

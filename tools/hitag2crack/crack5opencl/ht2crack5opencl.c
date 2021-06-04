@@ -36,7 +36,7 @@
 #include "dolphin_macro.h"
 
 #if defined(__MINGW64__)
-#define	timersub(a, b, result) \
+#define timersub(a, b, result) \
   do { \
     (result)->tv_sec = (a)->tv_sec - (b)->tv_sec; \
     (result)->tv_usec = (a)->tv_usec - (b)->tv_usec; \
@@ -300,7 +300,7 @@ int main(int argc, char **argv) {
             printf("\n");
         }
 
-        if (dev_sel[0] == 0xff)	printf("Devices selected      : ALL\n");
+        if (dev_sel[0] == 0xff) printf("Devices selected      : ALL\n");
         else {
             printf("Devices selected      : %u", dev_sel[0]);
             for (unsigned int i = 1; i < dev_cnt; i++) printf(", %u", dev_sel[i]);
