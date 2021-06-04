@@ -257,7 +257,6 @@ Description:
      * the correct port name will be automatically guessed;
      * the script will wait for a Proxmark to be connected (same as option -w of the client).
     You can also specify a first option -n N to access the Nth Proxmark3 connected.
-    Don't use this script if you want to work offline.
     To see a list of available ports, use --list.
 
 Usage:
