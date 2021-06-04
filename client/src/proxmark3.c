@@ -176,19 +176,19 @@ static bool DetectWindowsAnsiSupport(void) {
 #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #endif
-    
+
     // disable colors if stdin or stdout are redirected
     if ((! session.stdinOnTTY) || (! session.stdoutOnTTY))
         return false;
-    
+
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD dwMode = 0;
     GetConsoleMode(hOut, &dwMode);
-    
+
     //ENABLE_VIRTUAL_TERMINAL_PROCESSING is already set
-    if((dwMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+    if ((dwMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING))
         return true;
-    
+
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 
     return SetConsoleMode(hOut, dwMode) ? true : false;

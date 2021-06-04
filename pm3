@@ -37,7 +37,7 @@ if [ ! "$1" == "--list" ]; then
 	else
 	# hope it's installed somehow, still not sure where fw images and pm3.py are...
 		CLIENT="proxmark3"
-	fi   
+	fi
 fi
 
 # LeakSanitizer suppressions
@@ -157,7 +157,7 @@ function get_pm3_list_Windows {
 				exit 1
 			fi
 		fi
-        #Prioritise USB connections 
+        #Prioritise USB connections
 		PM3LIST=("$DEV" "${PM3LIST[@]}")
         if [ ${#PM3LIST[*]} -ge "$N" ]; then
             return
@@ -212,7 +212,7 @@ function get_pm3_list_WSL {
 					exit 1
 				fi
 			fi
-            #Prioritise USB connections 
+            #Prioritise USB connections
 			PM3LIST=("$DEV" "${PM3LIST[@]}")
             if [ ! -w "$DEV" ]; then
                 echo "[!] Let's give users read/write access to $DEV"
@@ -489,7 +489,7 @@ if [ ${#PM3LIST} -lt "$N" ]; then
 
 [?] Hint: try '$SCRIPT --list' to see list of available ports,  and use the -n command like below
 [?]    $SCRIPT [-n <N>]
-    
+
 EOF
   }
     HELP
