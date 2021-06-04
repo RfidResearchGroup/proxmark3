@@ -261,20 +261,15 @@ Description:
     To see a list of available ports, use --list.
 
 Usage:
-    $SCRIPT [-n <N>] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i]
-    $SCRIPT [--list] [--help]
+    $SCRIPT [-n <N>] [<any other proxmark3 client option>]
+    $SCRIPT [--list] [-h|--help] [-hh|--helpclient]
 
 
 Arguments:
-    --help           this help
+    -h/--help        this help
+    -hh/--helpclient proxmark3 client help (the script will forward these options)
     --list           list all detected com ports
-    -n <N>           connect device refered to the N:th number on the --list output
-    -c 'cmd'         execute the pm3 cmd in client and exit afterwards
-    -i               interactive,  stay in client after executing a cmd or script
-    -s 'script'      execute a cmd script file and exit afterwards
-    -l 'luascript'   execute a lua script file and exit afterwards
-    -w               wait
-    -p <port>        specifiy which port to connect to
+    -n <N>           connect device referred to the N:th number on the --list output
 
 
 Samples:
@@ -390,6 +385,11 @@ else
 fi
 if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
     HELP
+    exit 0
+fi
+
+if [ "$1" == "-hh" ] || [ "$1" == "--helpclient" ]; then
+    CMD "-h"
     exit 0
 fi
 
