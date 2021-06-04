@@ -263,6 +263,7 @@ Description:
 Usage:
     $SCRIPT [-n <N>] [<any other proxmark3 client option>]
     $SCRIPT [--list] [-h|--help] [-hh|--helpclient]
+    $SCRIPT [-o|--offline]
 
 
 Arguments:
@@ -270,7 +271,7 @@ Arguments:
     -hh/--helpclient proxmark3 client help (the script will forward these options)
     --list           list all detected com ports
     -n <N>           connect device referred to the N:th number on the --list output
-
+    -o/--offline     shortcut to use directly the proxmark3 client without guessing ports
 
 Samples:
     ./$SCRIPT                       -- Auto detect/ select com port in the following order BT, USB/CDC, BT DONGLE
@@ -383,18 +384,31 @@ else
   echo >&2 "[!!] Script ran under unknown name, abort: $SCRIPT"
   exit 1
 fi
-if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
-    HELP
-    exit 0
-fi
 
-if [ "$1" == "-hh" ] || [ "$1" == "--helpclient" ]; then
-    CMD "-h"
-    exit 0
-fi
+# priority to the help options
+for ARG; do
+    if [ "$ARG" == "-h" ] || [ "$ARG" == "--help" ]; then
+        HELP
+        exit 0
+    fi
+    if [ "$ARG" == "-hh" ] || [ "$ARG" == "--helpclient" ]; then
+        CMD "-h"
+        exit 0
+    fi
+done
+
+# if offline, bypass the script and forward all other args
+for ARG; do
+    shift
+    if [ "$ARG" == "-o" ] || [ "$ARG" == "--offline" ]; then
+        CMD "$@"
+        exit $?
+    fi
+    set -- "$@" "$ARG"
+done
 
 # if a port is already provided, let's just run the command as such
-for ARG in "$@"; do
+for ARG; do
     if [ "$ARG" == "-p" ]; then
         CMD "$@"
         exit $?
