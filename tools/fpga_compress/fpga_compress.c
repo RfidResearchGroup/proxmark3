@@ -51,7 +51,7 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
     uint32_t total_size = 0;
     do {
 
-        if (total_size >= num_infiles * FPGA_CONFIG_SIZE) {
+        if (total_size > num_infiles * FPGA_CONFIG_SIZE) {
             fprintf(stderr,
                     "Input files too big (total > %li bytes). These are probably not PM3 FPGA config files.\n"
                     , num_infiles * FPGA_CONFIG_SIZE
@@ -144,7 +144,9 @@ typedef struct lz4_stream_s {
 // Call it either with opened infile + outsize=0
 // or with opened infile, opened outfiles, num_outfiles and valid outsize
 static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles, long *outsize) {
-
+    if (num_outfiles > 10) {
+        return (EXIT_FAILURE);
+    }
     LZ4_streamDecode_t lz4StreamDecode_body = {{ 0 }};
     char outbuf[FPGA_RING_BUFFER_BYTES];
 
@@ -187,7 +189,7 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
     compressed_fpga_stream.next_in = inbuf;
     compressed_fpga_stream.avail_in = infile_size;
 
-    int total_size = 0;
+    long total_size = 0;
     while (compressed_fpga_stream.avail_in > 0) {
         int cmp_bytes;
         memcpy(&cmp_bytes, compressed_fpga_stream.next_in, sizeof(int));
@@ -209,14 +211,36 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
         return EXIT_SUCCESS;
     } else {
         fclose(infile);
-        total_size = 0;
+        // seeking for trailing zeroes
+        long offset = 0;
+        long outfilesizes[10] = {0};
         for (uint16_t k = 0; k < *outsize / (FPGA_INTERLEAVE_SIZE * num_outfiles); k++) {
             for (uint16_t j = 0; j < num_outfiles; j++) {
-                fwrite(outbufall + total_size, FPGA_INTERLEAVE_SIZE, sizeof(char), outfiles[j]);
-                total_size += FPGA_INTERLEAVE_SIZE;
+                for (long i = 0; i < FPGA_INTERLEAVE_SIZE; i++) {
+                    if (outbufall[offset + i]) {
+                        outfilesizes[j] = (k * FPGA_INTERLEAVE_SIZE) + i + 1;
+                    }
+                }
+                offset += FPGA_INTERLEAVE_SIZE;
             }
         }
-        printf("uncompressed %li input bytes to %i output bytes\n", infile_size, total_size);
+        total_size = 0;
+        // FPGA bit file ends with 16 zeroes
+        for (uint16_t j = 0; j < num_outfiles; j++) {
+             outfilesizes[j] += 16;
+             total_size += outfilesizes[j];
+        }
+        offset = 0;
+        for (uint16_t k = 0; k < *outsize / (FPGA_INTERLEAVE_SIZE * num_outfiles); k++) {
+            for (uint16_t j = 0; j < num_outfiles; j++) {
+                if (k * FPGA_INTERLEAVE_SIZE < outfilesizes[j]) {
+                    uint16_t chunk = outfilesizes[j] - (k * FPGA_INTERLEAVE_SIZE) < FPGA_INTERLEAVE_SIZE ? outfilesizes[j] - (k * FPGA_INTERLEAVE_SIZE) : FPGA_INTERLEAVE_SIZE;
+                    fwrite(outbufall + offset, chunk, sizeof(char), outfiles[j]);
+                }
+                offset += FPGA_INTERLEAVE_SIZE;
+            }
+        }
+        printf("uncompressed %li input bytes to %li output bytes\n", infile_size, total_size);
     }
     if (*outsize >  0) {
         for (uint16_t j = 0; j < num_outfiles; j++) {
