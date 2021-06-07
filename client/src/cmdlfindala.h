@@ -21,6 +21,7 @@ int detectIndala(uint8_t *dest, size_t *size, uint8_t *invert);
 int demodIndalaEx(int clk, int invert, int maxErr, bool verbose);
 int demodIndala(bool verbose);
 int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits);
+int getIndalaBits4041x(uint8_t fc, uint16_t cn, uint8_t *bits);
 bool parityOdd(uint16_t x);
 bool parityEven(uint16_t x);
 
