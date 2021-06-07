@@ -646,10 +646,11 @@ static int CmdIndalaClone(const char *Cmd) {
         arg_param_begin,
         arg_strx0("r", "raw", "<hex>", "raw bytes"),
         arg_int0(NULL, "heden", "<decimal>", "Card number for Heden 2L format"),
-        arg_int0(NULL, "fc", "<decimal>", "Facility Code (Indala 4041X, 26 bit H10301 format)"),
-        arg_int0(NULL, "cn", "<decimal>", "Card number (Indala 4041X, 26 bit H10301 format)"),
-        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
-        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_int0(NULL, "fc", "<decimal>", "Facility code (26 bit H10301 format)"),
+        arg_int0(NULL, "cn", "<decimal>", "Card number (26 bit H10301 format)"),
+        arg_lit0(NULL, "q5", "Optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "Optional - specify writing to EM4305/4469 tag"),
+        arg_lit0(NULL, "4041x", "Optional - specify Indala 4041X format, must use with fc and cn"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -661,6 +662,7 @@ static int CmdIndalaClone(const char *Cmd) {
     bool is_long_uid = (raw_len == 28);
     bool q5 = arg_get_lit(ctx, 5);
     bool em = arg_get_lit(ctx, 6);
+    bool fmt4041x = arg_get_lit(ctx, 7);
 
     bool got_cn = false, got_26 = false;
     if (is_long_uid == false) {
@@ -678,6 +680,11 @@ static int CmdIndalaClone(const char *Cmd) {
 
     if (q5 && em) {
         PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
+
+    if( !got_26 & fmt4041x ) {
+        PrintAndLogEx(FAILED, "You must specify  a facility code and card number when using 4041X format");
         return PM3_EINVARG;
     }
 
@@ -714,7 +721,6 @@ static int CmdIndalaClone(const char *Cmd) {
                       , sprint_hex_inrow(raw, raw_len)
                      );
 
-
     } else {
         // 64 BIT UID
         if (got_cn) {
@@ -731,10 +737,18 @@ static int CmdIndalaClone(const char *Cmd) {
                 return PM3_EMALLOC;
             }
 
-            if (getIndalaBits(fc, cn, bits) != PM3_SUCCESS) {
+            // Bitstream generation, format select
+            int indalaReturn = PM3_ESOFT;
+            if(fmt4041x){
+                indalaReturn = getIndalaBits4041x(fc, cn, bits);
+            } else { 
+                indalaReturn = getIndalaBits(fc, cn, bits);
+            }
+
+            if (indalaReturn != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Error with tag bitstream generation.");
                 free(bits);
-                return PM3_ESOFT;
+                return indalaReturn;
             }
 
             raw[0] = bytebits_to_byte(bits, 8);
@@ -807,8 +821,73 @@ int CmdLFINDALA(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-// Rewritten by Matt Saunier 04 Jun 2021. Conforms to the Indala 4041X format, correctly calculates parity for 26-bit Wiegand.
 int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits) {
+    // preamble
+    // is there a preamble?
+    bits[0] = 1;
+    bits[2] = 1;
+    bits[32] = 1;
+
+    // add fc
+    bits[57] = ((fc >> 7) & 1); // b8
+    bits[49] = ((fc >> 6) & 1); // b7
+    bits[44] = ((fc >> 5) & 1); // b6
+    bits[47] = ((fc >> 4) & 1); // b5
+    bits[48] = ((fc >> 3) & 1); // b4
+    bits[53] = ((fc >> 2) & 1); // b3
+    bits[39] = ((fc >> 1) & 1); // b2
+    bits[58] = (fc & 1);        // b1
+
+    // add cn
+    bits[42] = ((cn >> 15) & 1); // b16
+    bits[45] = ((cn >> 14) & 1); // b15 - c
+    bits[43] = ((cn >> 13) & 1); // b14
+    bits[40] = ((cn >> 12) & 1); // b13 - c
+    bits[52] = ((cn >> 11) & 1); // b12
+    bits[36] = ((cn >> 10) & 1); // b11
+    bits[35] = ((cn >> 9) & 1);  // b10 - c
+    bits[51] = ((cn >> 8) & 1);  // b9  - c
+    bits[46] = ((cn >> 7) & 1);  // b8
+    bits[33] = ((cn >> 6) & 1);  // b7  - c
+    bits[37] = ((cn >> 5) & 1);  // b6  - c
+    bits[54] = ((cn >> 4) & 1);  // b5
+    bits[56] = ((cn >> 3) & 1);  // b4
+    bits[59] = ((cn >> 2) & 1);  // b3  - c
+    bits[50] = ((cn >> 1) & 1);  // b2
+    bits[41] = (cn & 1);         // b1  - c
+
+    // checksum
+    uint8_t chk = 0;
+    //sum(y2, y4, y7, y8, y10, y11, y14, y16
+    chk += ((cn >> 14) & 1); //y2 == 75 - 30 = 45
+    chk += ((cn >> 12) & 1); //y4 == 70 - 30 = 40
+    chk += ((cn >> 9) & 1); //y7 == 65 - 30 = 35
+    chk += ((cn >> 8) & 1); //y8 == 81 - 30 = 51
+    chk += ((cn >> 6) & 1); //y10 == 63 - 30 = 33
+    chk += ((cn >> 5) & 1); //y11 == 67 - 30 = 37
+    chk += ((cn >> 2) & 1); //y14 == 89 - 30 = 59
+    chk += (cn & 1); //y16 == 71 - 30 = 41
+
+    if ((chk & 1) == 0) {
+        bits[62] = 0;
+        bits[63] = 1;
+    } else {
+        bits[62] = 1;
+        bits[63] = 0;
+    }
+
+    // add parity
+    bits[34] = 1; // p1  64 - 30 = 34
+    bits[38] = 1; // p2  68 - 30 = 38
+
+    // 92 = 62
+    // 93 = 63
+
+    return PM3_SUCCESS;
+}
+
+// Derived from getIndalaBits() by Matt Saunier 04 Jun 2021. Conforms to the Indala 4041X format, correctly calculates parity for 26-bit Wiegand.
+int getIndalaBits4041x(uint8_t fc, uint16_t cn, uint8_t *bits) {
 
     // Preamble and required values
     bits[0] = 0x01;
