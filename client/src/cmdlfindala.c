@@ -886,8 +886,6 @@ int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits) {
     return PM3_SUCCESS;
 }
 
-// Derived from getIndalaBits() by Matt Saunier 04 Jun 2021. Conforms to the Indala 4041X format, correctly calculates parity for 26-bit Wiegand.
-
 /*
     Permutation table for this format, lower 4 bytes of card data.
 
@@ -896,7 +894,6 @@ int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits) {
     0x60 | FC 3 | FC 6 | CN 1 | CN 8 | CN B | FC 2 | CN 4 |  1   |
     0x70 | CN 3 | FC 7 | FC 0 | CN 2 |  0   |  0   |  0   |  0   |
 */
-
 int getIndalaBits4041x(uint8_t fc, uint16_t cn, uint8_t *bits) {
 
     // Preamble and required values
