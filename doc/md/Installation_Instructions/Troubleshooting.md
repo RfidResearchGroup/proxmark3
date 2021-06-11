@@ -175,7 +175,7 @@ When ```explorer.exe .``` doesn't work.
 Trying to access the dump files created in WSL,  you will need to run ```explorer.exe .```  but sometimes this doesn't work.
 [As seen here](https://github.com/microsoft/WSL/issues/4027)  they suggest checking the following registry value for *P9NP*
 
-[<img src="http://www.icedev.se/proxmark3/rdv40/wsl2_p9np.png">](www.icedev.se/proxmark3/rdv40/wsl2_p9np.png)
+[![screenshot of regedit](https://i.imgur.com/F1x53rf.png)](https://i.imgur.com/F1x53rf.png)
 
 ## Troubles with running the Proxmark3 client
 Some reports has stated that they needed to execute the Proxmark3 as root on their *nix system.  
@@ -228,7 +228,9 @@ If you get the message
 
 ```
 Qt: Session management error: None of the authentication protocols specified are supported
-``` when running the Proxmark3 client it might be because a a environment variable.
+```
+
+when running the Proxmark3 client it might be because a a environment variable.
 
 Solution:
 Try running the client without the SESSION_MANAGER environment variable.
