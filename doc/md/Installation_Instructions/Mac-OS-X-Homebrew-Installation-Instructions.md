@@ -18,10 +18,14 @@ Visual Studio Code still runs under Rosetta 2 and if you're developing for proxm
 
 ## Install Proxmark3 tools
 
-These instructions comes from @Chrisfu, where we got the proxmark3.rb scriptfile from.
-For further questions about Mac & Homebrew,  contact @Chrisfu  (https://github.com/chrisfu/)
+These instructions comes from \@Chrisfu, where we got the proxmark3.rb scriptfile from.
+For further questions about Mac & Homebrew, contact [\@Chrisfu on Twitter](https://github.com/chrisfu/)
+
+0. Install XCode Command Line Tools if you haven't yet already done so: `xcode-select --install`
 
 1. Install homebrew if you haven't yet already done so: http://brew.sh/
+
+2. Install xquartz: `brew install xquartz`
 
 2. Tap this repo: `brew tap RfidResearchGroup/proxmark3`
 
