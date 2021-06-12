@@ -175,7 +175,7 @@ When ```explorer.exe .``` doesn't work.
 Trying to access the dump files created in WSL,  you will need to run ```explorer.exe .```  but sometimes this doesn't work.
 [As seen here](https://github.com/microsoft/WSL/issues/4027)  they suggest checking the following registry value for *P9NP*
 
-[![screenshot of regedit](https://i.imgur.com/F1x53rf.png)](https://i.imgur.com/F1x53rf.png)
+[![screenshot of regedit](/doc/md/Use_of_Proxmark/wsl2_p9np.png)](/doc/md/Use_of_Proxmark/wsl2_p9np.png)
 
 ## Troubles with running the Proxmark3 client
 Some reports has stated that they needed to execute the Proxmark3 as root on their *nix system.  
