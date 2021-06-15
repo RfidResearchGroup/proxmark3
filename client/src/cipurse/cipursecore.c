@@ -110,7 +110,7 @@ int CIPURSESelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t
     uint8_t data[] = {0x41, 0x44, 0x20, 0x46, 0x31};
     CipurseCClearContext(&cipurseContext);
 
-    return EMVSelect(ECC_CONTACTLESS, ActivateField, LeaveFieldON, data, sizeof(data), Result, MaxResultLen, ResultLen, sw, NULL);
+    return EMVSelect(CC_CONTACTLESS, ActivateField, LeaveFieldON, data, sizeof(data), Result, MaxResultLen, ResultLen, sw, NULL);
 }
 
 int CIPURSEChallenge(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {

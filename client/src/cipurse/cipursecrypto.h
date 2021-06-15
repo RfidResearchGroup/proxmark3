@@ -12,7 +12,7 @@
 #define __CIPURSECRYPTO_H__
 
 #include "common.h"
-#include "emv/apduinfo.h"    // sAPDU
+#include "iso7816/apduinfo.h"    // sAPDU
 
 #define CIPURSE_KVV_LENGTH 4
 #define CIPURSE_AES_KEY_LENGTH 16

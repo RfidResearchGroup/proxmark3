@@ -12,10 +12,9 @@
 #define __CIPURSECORE_H__
 
 #include "common.h"
-#include "emv/apduinfo.h"
 
 #include <jansson.h>
-#include "emv/apduinfo.h" // sAPDU
+#include "iso7816/apduinfo.h" // sAPDU
 #include "cipurse/cipursecrypto.h"
 
 
