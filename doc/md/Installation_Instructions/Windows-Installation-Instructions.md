@@ -21,7 +21,7 @@ We have listed three ways to use these two setups  (dev environment vs pre-compi
 
 ## Video Installation guide
 _note:  this video is a bit out-of-date but still informative_
-[![Windows Installation tutorial](https://github.com/5w0rdfish/Proxmark3-RDV4-ParrotOS/blob/master/screenshot-www.youtube.com-2019.03.17-20-44-33.png)](https://youtu.be/zzF0NCMJnYU "Windows Installation Tutorial")
+[![Windows Installation tutorial](https://raw.githubusercontent.com/Chrissy-Morgan/Proxmark3-RDV4-ParrotOS/master/screenshot-www.youtube.com-2019.03.17-20-44-33.png)](https://youtu.be/zzF0NCMJnYU "Windows Installation Tutorial")
 
 ## Driver Installation ( Windows 7 )
 
@@ -92,10 +92,10 @@ to be done (tcprst)
 
 WSL 1 requires to run on Windows 10 version 1709 or above. Previous windows versions didn't have support for COM ports.
 
-### stay away from WSL 2
+### Stay away from WSL 2
 *Microsoft introduced WSL 2 starting on Windows 10 version 2004 with Hyper-V powering its virtualization; As of 2020-08-13, WSL 2 does not support USB and Serial.*
 
-### 
+### More about WSL
 Install WSL 1 with e.g. the standard Ubuntu. You can follow the guide on [Microsoft Docs](https://docs.microsoft.com/en-us/windows/wsl/install-win10) but be careful to follow WSL 1 specific instructions! When they recommend you to restart, you must restart.
 
 For WSL configuration, see [Manage and configure Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/wsl-config).
@@ -107,23 +107,25 @@ Make sure your WSL can launch Windows processes to get the `pm3` scripts working
 If you want to run the graphical components of the Proxmark3 client, you need to install a X Server such as [VcXsrv](https://sourceforge.net/projects/vcxsrv/) or [Xming](https://sourceforge.net/projects/xming/) and launch it, e.g. by executing XLaunch.
 
 
-## Window terminal Installation
-Microsoft has recent released a new terminal for their OS.  It is much better experience than old `cmd.exe` so we strongly recommend installing it.
-It is also open sourced, ref [terminal](https://github.com/microsoft/terminal). You can download and install from here: [windows terminal](https://aka.ms/terminal)
+## Windows Terminal Installation
+Microsoft has recently released a new terminal for their OS. It is much better experience than old `cmd.exe` so we strongly recommend installing it.
+It is also open sourced (see [github.com/microsoft/terminal](https://github.com/microsoft/terminal)). You can download and install from [GitHub](https://github.com/microsoft/terminal/releases/latest) or [Microsoft Store](https://www.microsoft.com/en-us/p/windows-terminal/9n0dx20hk701).
 
 
 ## Dependencies
 
-Enter WSL prompt (`wsl` or `start windows terminal`)  and from there, follow the [Linux Installation Instructions](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) for Ubuntu, summarized here below:
+Enter WSL prompt (`wsl` or Start Windows Terminal) and from there, follow the [Linux Installation Instructions](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) for Ubuntu, summarized here below:
 
-Make sure your WSL guest OS is up-to-date first
+Make sure your WSL guest OS is up-to-date first:
+
 ```sh
 sudo apt-get update
 sudo apt-get upgrade -y
 sudo apt-get auto-remove -y
 ```
 
-Install dependencies
+Install dependencies:
+
 ```sh
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
 libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev
@@ -158,13 +160,13 @@ If group ownership is `dialout` and your user is member of `dialout` group, all 
 sudo chmod 666 /dev/ttySX
 ```
 
-If you installed a X Server and compiled the Proxmark3 with QT4 support, you've to export the `DISPLAY` environment variable:
+If you installed an X Server and compiled the Proxmark3 with QT5 support, you've to export the `DISPLAY` environment variable:
 
 ```sh
 export DISPLAY=:0
 ```
 
-and add it to your Bash profile for the next times:
+And add it to your Bash (or your preferred shell) profile for the next times:
 
 ```sh
 echo "export DISPLAY=:0" >> ~/.bashrc
