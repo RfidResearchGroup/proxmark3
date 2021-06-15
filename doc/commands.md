@@ -234,6 +234,21 @@ Check column "offline" for their availability.
 |`hf 15 csetuid          `|N       |`Set UID for magic card`
 
 
+### hf cipurse
+
+ { Cipurse transport Cards...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf cipurse help        `|Y       |`This help.`
+|`hf cipurse info        `|N       |`Info about Cipurse tag.`
+|`hf cipurse auth        `|N       |`Authentication.`
+|`hf cipurse read        `|N       |`Read binary file.`
+|`hf cipurse write       `|N       |`Write binary file.`
+|`hf cipurse aread       `|N       |`Read file attributes.`
+|`hf cipurse delete      `|N       |`Delete file.`
+
+
 ### hf epa
 
  { German Identification Card...       }
