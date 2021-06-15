@@ -38,7 +38,7 @@
 #include "fileutils.h"   // laodFileJSONroot
 
 #define DEF_FIDO_SIZE        2048
-#define DEF_FIDO_PARAM_FILE  "hf-fido2_defparams.json"
+#define DEF_FIDO_PARAM_FILE  "hf_fido2_defparams.json"
 
 static int CmdHelp(const char *Cmd);
 
