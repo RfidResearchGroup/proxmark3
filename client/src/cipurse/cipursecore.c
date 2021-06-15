@@ -148,7 +148,7 @@ int CIPURSEReadBinary(uint16_t offset, uint8_t *Result, size_t MaxResultLen, siz
 }
 
 int CIPURSEUpdateBinary(uint16_t offset, uint8_t *data, uint16_t datalen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
-    return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0xd6, (offset >> 8) & 0x7f, offset & 0xff, datalen, data}, true, 0, Result, MaxResultLen, ResultLen, sw);
+    return CIPURSEExchange((sAPDU) {0x00, 0xd6, (offset >> 8) & 0x7f, offset & 0xff, datalen, data}, Result, MaxResultLen, ResultLen, sw);
 }
 
 bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose) {
