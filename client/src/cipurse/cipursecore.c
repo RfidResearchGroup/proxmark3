@@ -148,7 +148,7 @@ int CIPURSEReadBinary(uint16_t offset, uint8_t *Result, size_t MaxResultLen, siz
 }
 
 int CIPURSEUpdateBinary(uint16_t offset, uint8_t *data, uint16_t datalen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw) {
-    return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0xd6, (offset >> 8) & 0x7f, offset & 0xff, datalen, data}, true, 0, Result, MaxResultLen, ResultLen, sw);
+    return CIPURSEExchange((sAPDU) {0x00, 0xd6, (offset >> 8) & 0x7f, offset & 0xff, datalen, data}, Result, MaxResultLen, ResultLen, sw);
 }
 
 bool CIPURSEChannelAuthenticate(uint8_t keyIndex, uint8_t *key, bool verbose) {
@@ -211,6 +211,32 @@ void CIPURSECSetActChannelSecurityLevels(CipurseChannelSecurityLevel req, Cipurs
     CipurseCChannelSetSecurityLevels(&cipurseContext, req, resp);
 }
 
+static void CIPURSEPrintPersoMode(uint8_t data) {
+    if (data & 0x01)
+        PrintAndLogEx(INFO, "Perso: filesystem");
+    if (data & 0x02)
+        PrintAndLogEx(INFO, "Perso: EMV");
+    if (data & 0x04)
+        PrintAndLogEx(INFO, "Perso: transaction supported");
+    
+}
+    
+static void CIPURSEPrintProfileInfo(uint8_t data) {
+    if (data & 0x01)
+        PrintAndLogEx(INFO, "Profile: L");
+    if (data & 0x02)
+        PrintAndLogEx(INFO, "Profile: S");
+    if (data & 0x04)
+        PrintAndLogEx(INFO, "Profile: T");    
+}
+
+static void CIPURSEPrintManufacturerInfo(uint8_t data) {
+        if (data == 0)
+            PrintAndLogEx(INFO, "Manufacturer: n/a");
+        else
+            PrintAndLogEx(INFO, "Manufacturer: %s", getTagInfo(data)); // getTagInfo from cmfhf14a.h
+}
+
 void CIPURSEPrintInfoFile(uint8_t *data, size_t len) {
     if (len < 2) {
         PrintAndLogEx(ERR, "Info file length " _RED_("ERROR"));
@@ -219,6 +245,15 @@ void CIPURSEPrintInfoFile(uint8_t *data, size_t len) {
 
     PrintAndLogEx(INFO, "------------ INFO ------------");
     PrintAndLogEx(INFO, "CIPURSE version %d revision %d", data[0], data[1]);
+    
+    if (len >= 3)
+        CIPURSEPrintPersoMode(data[2]);
+    
+    if (len >= 4)
+        CIPURSEPrintProfileInfo(data[3]);
+    
+    if (len >= 9)
+        CIPURSEPrintManufacturerInfo(data[8]);
 }
 
 static void CIPURSEPrintFileDescriptor(uint8_t desc) {
