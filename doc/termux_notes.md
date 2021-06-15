@@ -85,12 +85,17 @@ ref : https://github.com/Proxmark/proxmark3/wiki/android
 Install [Termux](https://play.google.com/store/apps/details?id=com.termux) and start it
 
 
-### Install Proxmark3 package
+### Install Proxmark3 package which follows tagged releases
 ^[Top](#top)
 
 Run the following commands:
 ```
 pkg install proxmark3
+```
+### Install Proxmark3 package which offers a more up to date version from git `master` branch
+Run the following commands:
+```
+pkg install proxmark3-git
 ```
 ### Optional: Building Proxmark3 client from source
 ```
