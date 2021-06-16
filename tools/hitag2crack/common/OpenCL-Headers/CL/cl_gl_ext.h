@@ -37,4 +37,4 @@ clCreateEventFromGLsyncKHR(cl_context context,
 }
 #endif
 
-#endif	/* __OPENCL_CL_GL_EXT_H  */
+#endif  /* __OPENCL_CL_GL_EXT_H  */

@@ -1199,9 +1199,9 @@ void SniffHitag2(void) {
                     LED_B_ON();
                     // Capture reader frame
                     if (ra >= HITAG_T_STOP) {
-//						if (rxlen != 0) {
+//                      if (rxlen != 0) {
                         //DbpString("wierd0?");
-//						}
+//                      }
                         // Capture the T0 periods that have passed since last communication or field drop (reset)
                         response = (ra - HITAG_T_LOW);
                     } else if (ra >= HITAG_T_1_MIN) {
@@ -1218,9 +1218,9 @@ void SniffHitag2(void) {
                     LED_C_ON();
                     // Capture tag frame (manchester decoding using only falling edges)
                     if (ra >= HITAG_T_EOF) {
-//						if (rxlen != 0) {
+//                      if (rxlen != 0) {
                         //DbpString("wierd1?");
-//						}
+//                      }
                         // Capture the T0 periods that have passed since last communication or field drop (reset)
                         // We always recieve a 'one' first, which has the falling edge after a half period |-_|
                         response = ra - HITAG_T_TAG_HALF_PERIOD;

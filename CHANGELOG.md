@@ -4,6 +4,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Added '-4041x' option to lf indala clone for the Indala 4041X format (@chunkystew)
+ - Fixed `hf fido` commands now works correctly (@merlokk) 
+ - Moved / renamed  `client/resource/fido2_defparams.json` ->  `client/resource/hf_fido2_defparams.json` (@merlokk)
+ - Added `hf cipurse` commands to work with cipurse transport cards (@merlokk) 
  - Added '--gap' option to lf em 410x sim for more control over sim data (@mwalker)
  - Changed `hf fido` - refactored load/save json objects (@iceman1001)
  - Moved / renamed  `fido2.json` ->  `client/resource/fido2_defparams.json` (@iceman1001)

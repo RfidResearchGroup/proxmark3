@@ -94,6 +94,7 @@ static const char *get_page_name(uint16_t pageid) {
 static int CmdHelp(const char *Cmd);
 
 static void lto_switch_off_field(void) {
+    SetISODEPState(ISODEP_INACTIVE);
     SendCommandMIX(CMD_HF_ISO14443A_READER, 0, 0, 0, NULL, 0);
 }
 

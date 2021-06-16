@@ -22,7 +22,7 @@
 #include "crc16.h"
 #include "cmdhf14a.h"
 #include "protocols.h"     // definitions of ISO14B/7816 protocol
-#include "emv/apduinfo.h"  // GetAPDUCodeDescription
+#include "iso7816/apduinfo.h"  // GetAPDUCodeDescription
 #include "nfc/ndef.h"   // NDEFRecordsDecodeAndPrint
 #include "aidsearch.h"
 
@@ -42,6 +42,7 @@ bool apdu_in_framing_enable = true;
 static int CmdHelp(const char *Cmd);
 
 static int switch_off_field_14b(void) {
+    SetISODEPState(ISODEP_INACTIVE);
     iso14b_raw_cmd_t packet = {
         .flags = ISO14B_DISCONNECT,
         .timeout = 0,
@@ -1557,7 +1558,7 @@ static int srix4kValid(const char *Cmd) {
 }
 */
 
-static int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
+int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
     if (card)
         memset(card, 0, sizeof(iso14b_card_select_t));
 
@@ -1598,7 +1599,7 @@ static int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
         switch_off_field_14b();
         return PM3_ESOFT;
     }
-
+    SetISODEPState(ISODEP_NFCB);
     apdu_frame_length = 0;
     // get frame length from ATS in card data structure
     iso14b_card_select_t *vcard = (iso14b_card_select_t *) resp.data.asBytes;
@@ -1679,7 +1680,7 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen,
     *dataoutlen += dlen;
 
     if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
-        PrintAndLogEx(ERR, "APDU: buffer too small(%d), needs %d bytes", *dataoutlen, maxdataoutlen);
+        PrintAndLogEx(ERR, "APDU: buffer too small(%d), needs %d bytes", maxdataoutlen, *dataoutlen);
         return PM3_ESOFT;
     }
 

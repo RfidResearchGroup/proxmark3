@@ -20,6 +20,7 @@
 #include "cliparser.h"
 #include "cmdhfmf.h"
 #include "cmdhfmfu.h"
+#include "iso7816/iso7816core.h"
 #include "emv/emvcore.h"
 #include "ui.h"
 #include "crc16.h"
@@ -28,7 +29,7 @@
 #include "cmdhf.h"       // handle HF plot
 #include "cliparser.h"
 #include "protocols.h"     // definitions of ISO14A/7816 protocol, MAGIC_GEN_1A
-#include "emv/apduinfo.h"  // GetAPDUCodeDescription
+#include "iso7816/apduinfo.h"  // GetAPDUCodeDescription
 #include "nfc/ndef.h"      // NDEFRecordsDecodeAndPrint
 #include "cmdnfc.h"        // print_type4_cc_info
 
@@ -845,7 +846,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     return 0;
 }
 
-int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
+int SelectCard14443A_4(bool disconnect, iso14a_card_select_t *card) {
     PacketResponseNG resp;
 
     frameLength = 0;
@@ -905,7 +906,7 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
         if (card)
             memcpy(card, vcard, sizeof(iso14a_card_select_t));
     }
-
+    SetISODEPState(ISODEP_NFCA);
     if (disconnect)
         DropField();
 
@@ -917,7 +918,7 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
 
     if (activateField) {
         // select with no disconnect and set frameLength
-        int selres = SelectCard14443_4(false, NULL);
+        int selres = SelectCard14443A_4(false, NULL);
         if (selres != PM3_SUCCESS)
             return selres;
     }
@@ -2008,7 +2009,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     uint16_t sw = 0;
                     uint8_t result[1024] = {0};
                     size_t resultlen = 0;
-                    int res = EMVSelect(ECC_CONTACTLESS, ActivateField, true, vaid, vaidlen, result, sizeof(result), &resultlen, &sw, NULL);
+                    int res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, vaid, vaidlen, result, sizeof(result), &resultlen, &sw);
                     ActivateField = false;
                     if (res)
                         continue;

@@ -2162,66 +2162,66 @@ static uint32_t set_pass_15693_slixl(uint32_t start_time, uint32_t *eof_time, ui
 
 /*
 static uint32_t enable_privacy_15693_slixl(uint32_t start_time, uint32_t *eof_time, uint8_t *uid, uint8_t pass_id, uint8_t *password) {
-	uint8_t rnd[2];
+    uint8_t rnd[2];
     if (get_rnd_15693_slixl(start_time, eof_time, rnd) == false) {
-		return PM3_ETIMEOUT;
-	}
+        return PM3_ETIMEOUT;
+    }
 
-	uint8_t c[] = {ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS, ISO15693_ENABLE_PRIVACY, pass_id, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	memcpy(&c[3], uid, 8);
-	init_password_15693_slixl(&c[11], password, rnd);
-	AddCrc15(c, 15);
+    uint8_t c[] = {ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS, ISO15693_ENABLE_PRIVACY, pass_id, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    memcpy(&c[3], uid, 8);
+    init_password_15693_slixl(&c[11], password, rnd);
+    AddCrc15(c, 15);
 
-	start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
-	uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
-	int recvlen = SendDataTag(c, sizeof(c), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time);
-	if (recvlen != 3) {
-		return PM3_EWRONGANSWER;
-	}
-	return PM3_SUCCESS;
+    start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
+    int recvlen = SendDataTag(c, sizeof(c), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time);
+    if (recvlen != 3) {
+        return PM3_EWRONGANSWER;
+    }
+    return PM3_SUCCESS;
 }
 
 static uint32_t write_password_15693_slixl(uint32_t start_time, uint32_t *eof_time, uint8_t *uid, uint8_t pass_id, uint8_t *password) {
-	uint8_t rnd[2];
+    uint8_t rnd[2];
     if (get_rnd_15693_slixl(start_time, eof_time, rnd) == false) {
-		return PM3_ETIMEOUT;
-	}
+        return PM3_ETIMEOUT;
+    }
 
-	uint8_t c[] = {ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS, ISO15693_WRITE_PASSWORD, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	memcpy(&c[3], uid, 8);
-	c[11] = pass_id;
-	init_password_15693_slixl(&c[12], password, NULL);
-	AddCrc15(c, 16);
+    uint8_t c[] = {ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS, ISO15693_WRITE_PASSWORD, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    memcpy(&c[3], uid, 8);
+    c[11] = pass_id;
+    init_password_15693_slixl(&c[12], password, NULL);
+    AddCrc15(c, 16);
 
-	start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
 
-	uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
-	int recvlen = SendDataTag(c, sizeof(c), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time);
-	if (recvlen != 3) {
-		return PM3_EWRONGANSWER;
-	}
-	return PM3_SUCCESS;
+    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
+    int recvlen = SendDataTag(c, sizeof(c), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time);
+    if (recvlen != 3) {
+        return PM3_EWRONGANSWER;
+    }
+    return PM3_SUCCESS;
 }
 
 static uint32_t destroy_15693_slixl(uint32_t start_time, uint32_t *eof_time, uint8_t *uid, uint8_t *password) {
 
-	uint8_t rnd[2];
+    uint8_t rnd[2];
     if (get_rnd_15693_slixl(start_time, eof_time, rnd) == false) {
-		return PM3_ETIMEOUT;
-	}
+        return PM3_ETIMEOUT;
+    }
 
-	uint8_t c[] = {ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS, ISO15693_DESTROY, ISO15693_ENABLE_PRIVACY, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	memcpy(&c[3], uid, 8);
-	init_password_15693_slixl(&c[11], password, rnd);
-	AddCrc15(c, 15);
+    uint8_t c[] = {ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS, ISO15693_DESTROY, ISO15693_ENABLE_PRIVACY, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    memcpy(&c[3], uid, 8);
+    init_password_15693_slixl(&c[11], password, rnd);
+    AddCrc15(c, 15);
 
-	start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
-	uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
-	int recvlen = SendDataTag(c, sizeof(c), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time);
-	if (recvlen != 3) {
-		return PM3_EWRONGANSWER;
-	}
-	return PM3_SUCCESS;
+    start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
+    int recvlen = SendDataTag(c, sizeof(c), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time);
+    if (recvlen != 3) {
+        return PM3_EWRONGANSWER;
+    }
+    return PM3_SUCCESS;
 }
 
 */

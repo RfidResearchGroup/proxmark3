@@ -49,6 +49,7 @@ static void topaz_switch_on_field(void) {
 }
 
 static void topaz_switch_off_field(void) {
+    SetISODEPState(ISODEP_INACTIVE);
     SendCommandMIX(CMD_HF_ISO14443A_READER, 0, 0, 0, NULL, 0);
 }
 

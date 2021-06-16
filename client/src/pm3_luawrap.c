@@ -226,7 +226,7 @@
       // success code
       if (SWIG_IsNewObj(res) {
         ...
-	delete *ptr;
+    delete *ptr;
       } else {
         ...
       }
@@ -327,32 +327,32 @@ typedef struct swig_type_info *(*swig_dycast_func)(void **);
 
 /* Structure to store information on one type */
 typedef struct swig_type_info {
-    const char             *name;			/* mangled name of this type */
-    const char             *str;			/* human readable name of this type */
-    swig_dycast_func        dcast;		/* dynamic cast function down a hierarchy */
-    struct swig_cast_info  *cast;			/* linked list of types that can cast into this type */
-    void                   *clientdata;		/* language specific type data */
-    int                    owndata;		/* flag if the structure owns the clientdata */
+    const char             *name;           /* mangled name of this type */
+    const char             *str;            /* human readable name of this type */
+    swig_dycast_func        dcast;      /* dynamic cast function down a hierarchy */
+    struct swig_cast_info  *cast;           /* linked list of types that can cast into this type */
+    void                   *clientdata;     /* language specific type data */
+    int                    owndata;     /* flag if the structure owns the clientdata */
 } swig_type_info;
 
 /* Structure to store a type and conversion function used for casting */
 typedef struct swig_cast_info {
-    swig_type_info         *type;			/* pointer to type that is equivalent to this type */
-    swig_converter_func     converter;		/* function to cast the void pointers */
-    struct swig_cast_info  *next;			/* pointer to next cast in linked list */
-    struct swig_cast_info  *prev;			/* pointer to the previous cast */
+    swig_type_info         *type;           /* pointer to type that is equivalent to this type */
+    swig_converter_func     converter;      /* function to cast the void pointers */
+    struct swig_cast_info  *next;           /* pointer to next cast in linked list */
+    struct swig_cast_info  *prev;           /* pointer to the previous cast */
 } swig_cast_info;
 
 /* Structure used to store module information
  * Each module generates one structure like this, and the runtime collects
  * all of these structures and stores them in a circularly linked list.*/
 typedef struct swig_module_info {
-    swig_type_info         **types;		/* Array of pointers to swig_type_info structures that are in this module */
-    size_t                 size;		        /* Number of types in this module */
-    struct swig_module_info *next;		/* Pointer to next element in circularly linked list */
-    swig_type_info         **type_initial;	/* Array of initially generated type structures */
-    swig_cast_info         **cast_initial;	/* Array of initially generated casting structures */
-    void                    *clientdata;		/* Language specific module data */
+    swig_type_info         **types;     /* Array of pointers to swig_type_info structures that are in this module */
+    size_t                 size;                /* Number of types in this module */
+    struct swig_module_info *next;      /* Pointer to next element in circularly linked list */
+    swig_type_info         **type_initial;  /* Array of initially generated type structures */
+    swig_cast_info         **cast_initial;  /* Array of initially generated casting structures */
+    void                    *clientdata;        /* Language specific module data */
 } swig_module_info;
 
 /*
@@ -714,18 +714,18 @@ SWIG_UnpackDataName(const char *c, void *ptr, size_t sz, const char *name) {
 #endif
 
 /*  Errors in SWIG */
-#define  SWIG_UnknownError    	   -1
-#define  SWIG_IOError        	   -2
-#define  SWIG_RuntimeError   	   -3
-#define  SWIG_IndexError     	   -4
-#define  SWIG_TypeError      	   -5
-#define  SWIG_DivisionByZero 	   -6
-#define  SWIG_OverflowError  	   -7
-#define  SWIG_SyntaxError    	   -8
-#define  SWIG_ValueError     	   -9
-#define  SWIG_SystemError    	   -10
-#define  SWIG_AttributeError 	   -11
-#define  SWIG_MemoryError    	   -12
+#define  SWIG_UnknownError         -1
+#define  SWIG_IOError              -2
+#define  SWIG_RuntimeError         -3
+#define  SWIG_IndexError           -4
+#define  SWIG_TypeError            -5
+#define  SWIG_DivisionByZero       -6
+#define  SWIG_OverflowError        -7
+#define  SWIG_SyntaxError          -8
+#define  SWIG_ValueError           -9
+#define  SWIG_SystemError          -10
+#define  SWIG_AttributeError       -11
+#define  SWIG_MemoryError          -12
 #define  SWIG_NullReferenceError   -13
 
 
@@ -2568,9 +2568,9 @@ SWIG_Lua_dostring(lua_State *L, const char *str) {
     if (str == 0 || str[0] == 0) return 0; /* nothing to do */
     top = lua_gettop(L); /* save stack */
 #if (defined(LUA_VERSION_NUM) && (LUA_VERSION_NUM>=501))
-    ok = luaL_dostring(L, str);	/* looks like this is lua 5.1.X or later, good */
+    ok = luaL_dostring(L, str); /* looks like this is lua 5.1.X or later, good */
 #else
-    ok = lua_dostring(L, str);	/* might be lua 5.0.x, using lua_dostring */
+    ok = lua_dostring(L, str);  /* might be lua 5.0.x, using lua_dostring */
 #endif
     if (ok != 0) {
         SWIG_DOSTRING_FAIL(lua_tostring(L, -1));

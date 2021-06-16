@@ -1,6 +1,18 @@
 name: MacOS Build and Test
 
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore:
+      - 'doc/**'
+      - 'docker/**'
+      - 'traces/**'
+      - '.vscode/**'
+  pull_request:
+    paths-ignore:
+      - 'doc/**'
+      - 'docker/**'
+      - 'traces/**'
+      - '.vscode/**'
 
 jobs:
   macos-make:

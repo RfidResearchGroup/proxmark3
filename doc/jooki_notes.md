@@ -84,8 +84,8 @@ Note: Jooki doesn't like more than one NDEF record, so make sure you just have o
 `Value`|`Figurine Type`|
 |------|---------------|
 **01** | Stones |
-**02** | Generic Flat |			
-**03** | System Commands | 			
+**02** | Generic Flat |         
+**03** | System Commands |          
 **04** | Tests |
 
 | `Figurine Type` | `Figurine ID` | `Figurine`           |

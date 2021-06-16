@@ -24,7 +24,7 @@
 #include "commonutil.h"
 #include "comms.h"
 #include "proxmark3.h"
-#include "emv/emvcore.h"
+#include "iso7816/iso7816core.h"
 #include "emv/emvjson.h"
 #include "cliparser.h"
 #include "crypto/asn1utils.h"
@@ -38,7 +38,7 @@
 #include "fileutils.h"   // laodFileJSONroot
 
 #define DEF_FIDO_SIZE        2048
-#define DEF_FIDO_PARAM_FILE  "fido2_defparams.json"
+#define DEF_FIDO_PARAM_FILE  "hf_fido2_defparams.json"
 
 static int CmdHelp(const char *Cmd);
 
@@ -654,7 +654,9 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fido make",
                   "Execute a FIDO2 Make Credential command. Needs json file with parameters.\n"
-                  "Sample file `fido2_defparams.json` in `client/resources/`.",
+                  "Sample file `fido2_defparams.json` in `client/resources/`.\n"
+                  "- for yubikey there must be only one option `\"rk\": true` or false"
+                  ,
                   "hf fido make               --> use default parameters file `fido2_defparams.json`\n"
                   "hf fido make -f test.json  --> use parameters file `text.json`"
                  );
@@ -772,7 +774,8 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
     CLIParserInit(&ctx, "hf fido assert",
                   "Execute a FIDO2 Get Assertion command. Needs json file with parameters.\n"
                   "Sample file `fido2_defparams.json` in `client/resources/`.\n"
-                  "- Needs if `rk` option is `false` (authenticator doesn't store credential to its memory)"
+                  "- Needs if `rk` option is `false` (authenticator doesn't store credential to its memory)\n"
+                  "- for yubikey there must be only one option `\"up\": true` or false"
                   ,
                   "hf fido assert                  --> default parameters file `fido2_defparams.json`\n"
                   "hf fido assert -f test.json -l  --> use parameters file `text.json` and add to request CredentialId");
