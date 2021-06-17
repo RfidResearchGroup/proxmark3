@@ -876,7 +876,7 @@ int SelectCard14443A_4(bool disconnect, iso14a_card_select_t *card) {
 
     // check result
     if (resp.oldarg[0] == 0) {
-        PrintAndLogEx(ERR, "No card in fieldxx");
+        PrintAndLogEx(ERR, "No card in field");
         return PM3_ECARDEXCHANGE;
     }
 
