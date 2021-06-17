@@ -218,23 +218,23 @@ static void CIPURSEPrintPersoMode(uint8_t data) {
         PrintAndLogEx(INFO, "Perso: EMV");
     if (data & 0x04)
         PrintAndLogEx(INFO, "Perso: transaction supported");
-    
+
 }
-    
+
 static void CIPURSEPrintProfileInfo(uint8_t data) {
     if (data & 0x01)
         PrintAndLogEx(INFO, "Profile: L");
     if (data & 0x02)
         PrintAndLogEx(INFO, "Profile: S");
     if (data & 0x04)
-        PrintAndLogEx(INFO, "Profile: T");    
+        PrintAndLogEx(INFO, "Profile: T");
 }
 
 static void CIPURSEPrintManufacturerInfo(uint8_t data) {
-        if (data == 0)
-            PrintAndLogEx(INFO, "Manufacturer: n/a");
-        else
-            PrintAndLogEx(INFO, "Manufacturer: %s", getTagInfo(data)); // getTagInfo from cmfhf14a.h
+    if (data == 0)
+        PrintAndLogEx(INFO, "Manufacturer: n/a");
+    else
+        PrintAndLogEx(INFO, "Manufacturer: %s", getTagInfo(data)); // getTagInfo from cmfhf14a.h
 }
 
 void CIPURSEPrintInfoFile(uint8_t *data, size_t len) {
@@ -245,13 +245,13 @@ void CIPURSEPrintInfoFile(uint8_t *data, size_t len) {
 
     PrintAndLogEx(INFO, "------------ INFO ------------");
     PrintAndLogEx(INFO, "CIPURSE version %d revision %d", data[0], data[1]);
-    
+
     if (len >= 3)
         CIPURSEPrintPersoMode(data[2]);
-    
+
     if (len >= 4)
         CIPURSEPrintProfileInfo(data[3]);
-    
+
     if (len >= 9)
         CIPURSEPrintManufacturerInfo(data[8]);
 }

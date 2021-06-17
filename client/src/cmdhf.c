@@ -90,7 +90,7 @@ int CmdHFSearch(const char *Cmd) {
         if (infoHF14A(false, false, false) > 0) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-A tag") " found\n");
             res = PM3_SUCCESS;
-            
+
             infoHF14A4Applications();
         }
     }
