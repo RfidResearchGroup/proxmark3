@@ -174,8 +174,8 @@ static const hintAIDListT hintAIDList[] = {
     { "\xA0\x00\x00\x06\x47\x2F\x00\x01", 8, "FIDO", "try hf fido commands" },
     { "\xA0\x00\x00\x03\x08\x00\x00\x10\x00\x01\x00", 11, "PIV", "" },
     { "\xD2\x76\x00\x01\x24\x01", 8, "OpenPGP", "" },
-    { "\x31\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31 (pse)", 14, "EMV", "try hf emv commands" },
-    { "\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31 (ppse)", 14, "EMV", "try hf emv commands" },
+    { "\x31\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "EMV (pse)", "try hf emv commands" },
+    { "\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "EMV (ppse)", "try hf emv commands" },
     { "\x41\x44\x20\x46\x31", 5, "CIPURSE", "try hf cipurse commands" },
     { "\xd2\x76\x00\x00\x85\x01\x00", 7, "desfire", "try hf mfdes commands" },
 };
@@ -2159,7 +2159,7 @@ int infoHF14A4Applications(void) {
                 PrintAndLogEx(INFO, "----------------- " _CYAN_("Short AID search") " -----------------");
                 found = true;
             }
-            
+
             if (sw == 0x9000) {
                 PrintAndLogEx(SUCCESS, "Application " _CYAN_("%s") " ( " _GREEN_("ok") " )", hintAIDList[i].desc);
                 if (strlen(hintAIDList[i].hint))

@@ -81,7 +81,7 @@ function getUnixTime(datetime)
     local datetime_pattern = "(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)+(%d+):(%d+)"
     local new_year, new_month, new_day, new_hour, new_minute, new_seconds, new_hour_offset, new_minute_offset = datetime:match(datetime_pattern)
 
-    if new_year == nil or new_month == nil or new_day == nil or 
+    if new_year == nil or new_month == nil or new_day == nil or
         new_hour == nil or new_minute == nil or new_seconds == nil or
         new_hour_offset == nil or new_minute_offset == nil then
 
@@ -111,7 +111,7 @@ function sendRaw(rawdata, options)
 
         -- arg1 is the defined flags for sending "raw" ISO 14443A package
         arg1 = flags,
-        
+
         -- arg2 contains the length, which is half the length of the ASCII
         -- string data
         arg2 = string.len(rawdata) / 2,
@@ -137,7 +137,7 @@ function readOTP(show_output)
         lib14a.disconnect()
         return oops(err)
     end
-   
+
     -- parse the response
     local cmd_response = Command.parse(res)
     local len = tonumber(cmd_response.arg1) * 2
@@ -160,7 +160,7 @@ function readOTP(show_output)
         if show_output then
             print("[" .. ansicolors.green .. "+" .. ansicolors.reset .. "] OTP: " .. ansicolors.green .. otp_value .. ansicolors.reset)
         end
-    else 
+    else
         print("[" .. ansicolors.red .. "-" .. ansicolors.reset .."] Error: Could not read the OTP")
         otp_value = nil
     end
@@ -183,7 +183,7 @@ function readInfo(show_output)
         lib14a.disconnect()
         return oops(err)
     end
-   
+
     -- parse the response
     local cmd_response = Command.parse(res)
     local len = tonumber(cmd_response.arg1) * 2
@@ -233,7 +233,7 @@ function readInfo(show_output)
         end
 
         return otp_interval
-    else 
+    else
         print("[" .. ansicolors.red .. "-" .. ansicolors.reset .."] Error: Could not read the token info")
         otp_value = nil
     end
@@ -261,7 +261,7 @@ function bruteforceCommands()
             lib14a.disconnect()
             return oops(err)
         end
-    
+
         -- parse the response
         local cmd_response = Command.parse(res)
         local len = tonumber(cmd_response.arg1) * 2
@@ -287,7 +287,7 @@ function setTime(time, otp_interval)
 
     -- build the raw command data
     local data = "120000" ..string.format("%02x", otp_interval) .. string.format("%08x", time_var1) .. string.format("%02x", time_var2)
-   
+
     -- calculate XOR checksum on data
     local checksum = 0
     for i = 1, #data, 2 do
@@ -306,7 +306,7 @@ function setTime(time, otp_interval)
         lib14a.disconnect()
         return oops(err)
     end
-   
+
     -- parse the response
     local cmd_response = Command.parse(res)
     local len = tonumber(cmd_response.arg1) * 2
@@ -343,8 +343,8 @@ function timeTravelAttack(datetime_string, otp_interval)
 
     -- read the OTP
     local otp = readOTP(false)
-    print(string.format("[" .. ansicolors.green .. "+" .. ansicolors.reset .. "] The future OTP on " .. 
-                        ansicolors.yellow .. "%s (%d) " .. ansicolors.reset .. "is " .. 
+    print(string.format("[" .. ansicolors.green .. "+" .. ansicolors.reset .. "] The future OTP on " ..
+                        ansicolors.yellow .. "%s (%d) " .. ansicolors.reset .. "is " ..
                         ansicolors.green .. "%s" .. ansicolors.reset, datetime_string, future_time, otp))
 
     -- reset the current time
@@ -372,7 +372,7 @@ function main(args)
         if o == 'h' then return help() end
         if o == 'i' then operation = READ_INFO end
         if o == 'r' then operation = READ_OTP end
-        if o == 't' then 
+        if o == 't' then
             operation = TIME_TRAVELER_ATTACK
             target_time = a
         end
