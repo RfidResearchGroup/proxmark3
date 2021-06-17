@@ -90,6 +90,8 @@ int CmdHFSearch(const char *Cmd) {
         if (infoHF14A(false, false, false) > 0) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-A tag") " found\n");
             res = PM3_SUCCESS;
+            
+            infoHF14A4Applications();
         }
     }
 
@@ -125,15 +127,6 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iso14443a()) {
         if (readTopazUid(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
-            res = PM3_SUCCESS;
-        }
-    }
-
-    PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for Cipurse tag...");
-    if (IfPm3Iso14443a()) {
-        if (CheckCardCipurse()) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Cipurse tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
