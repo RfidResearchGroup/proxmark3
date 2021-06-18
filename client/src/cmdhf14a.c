@@ -2178,9 +2178,9 @@ int infoHF14A4Applications(bool verbose) {
             PrintAndLogEx(INFO, "---------------------------------------------------");
         else
             PrintAndLogEx(INFO, "Short AID search:");
-        
+
         if (found >= ARRAYLEN(hintAIDList) - 1) {
-                PrintAndLogEx(HINT, "Hint: card answers to all AID. It maybe the latest revision of plus/desfire/ultralight card.");
+            PrintAndLogEx(HINT, "Hint: card answers to all AID. It maybe the latest revision of plus/desfire/ultralight card.");
         } else {
             for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
                 if (cardFound[i] && strlen(hintAIDList[i].hint))
