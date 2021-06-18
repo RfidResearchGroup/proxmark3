@@ -59,9 +59,13 @@ int CmdHFSearch(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool verbose = arg_get_lit(ctx, 1);
+
     CLIParserFree(ctx);
 
     int res = PM3_ESOFT;
@@ -91,7 +95,7 @@ int CmdHFSearch(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-A tag") " found\n");
             res = PM3_SUCCESS;
 
-            infoHF14A4Applications();
+            infoHF14A4Applications(verbose);
         }
     }
 
