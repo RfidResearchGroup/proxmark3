@@ -171,6 +171,30 @@ static void terminate_handler(int signum) {
 
 #endif
 
+#if defined(_WIN32)
+static bool DetectWindowsAnsiSupport(void) {
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+
+    // disable colors if stdin or stdout are redirected
+    if ((! session.stdinOnTTY) || (! session.stdoutOnTTY))
+        return false;
+
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD dwMode = 0;
+    GetConsoleMode(hOut, &dwMode);
+
+    //ENABLE_VIRTUAL_TERMINAL_PROCESSING is already set
+    if ((dwMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+        return true;
+
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+
+    return SetConsoleMode(hOut, dwMode) ? true : false;
+}
+#endif //_WIN32
+
 // first slot is always NULL, indicating absence of script when idx=0
 static FILE *cmdscriptfile[MAX_NESTED_CMDSCRIPT + 1] = {0};
 static uint8_t cmdscriptfile_idx = 0;
@@ -360,6 +384,10 @@ check_script:
                     g_pendingPrompt = true;
 #ifdef HAVE_READLINE
                     script_cmd = readline(prompt_filtered);
+#if defined(_WIN32)
+                    //Check if color support needs to be enabled again in case the window buffer did change
+                    session.supports_colors = DetectWindowsAnsiSupport();
+#endif
                     if (script_cmd != NULL) {
                         execCommand = true;
                         stayInCommandLoop = true;
@@ -705,21 +733,6 @@ finish2:
 }
 #endif //LIBPM3
 
-#if defined(_WIN32)
-static bool DetectWindowsAnsiSupport(void) {
-#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
-#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
-#endif
-
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    DWORD dwMode = 0;
-    GetConsoleMode(hOut, &dwMode);
-    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-
-    return SetConsoleMode(hOut, dwMode) ? true : false;
-}
-#endif //_WIN32
-
 void pm3_init(void) {
     srand(time(0));
 
@@ -783,6 +796,9 @@ int main(int argc, char *argv[]) {
 #if defined(__linux__) || defined(__APPLE__)
         session.supports_colors = true;
         session.emoji_mode = EMO_EMOJI;
+#elif defined(_WIN32)
+        session.supports_colors = DetectWindowsAnsiSupport();
+        session.emoji_mode = EMO_ALTTEXT;
 #endif
     }
     for (int i = 1; i < argc; i++) {
@@ -995,11 +1011,6 @@ int main(int argc, char *argv[]) {
         session.supports_colors = false;
         session.emoji_mode = EMO_ALTTEXT;
     }
-	
-#if defined(_WIN32) //Color support on Windows has to be enabled each time and can fail, override prefs
-        session.supports_colors = DetectWindowsAnsiSupport();
-        session.emoji_mode = EMO_ALTTEXT;
-#endif
 
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
     if (speed == 0)

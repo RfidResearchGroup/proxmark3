@@ -18,6 +18,7 @@
 int CmdHFMF(const char *Cmd);
 int CmdHF14AMfELoad(const char *Cmd); // used by cmd hf mfu eload
 int CmdHF14AMfDbg(const char *Cmd);   // used by cmd hf mfu dbg
+int CmdHFMFNDEFRead(const char *Cmd);
 
 void showSectorTable(sector_t *k_sector, uint8_t k_sectorsCount);
 void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, bool setEmulatorMem, bool verbose);

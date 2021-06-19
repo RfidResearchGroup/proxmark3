@@ -24,14 +24,14 @@
 #include "protocols.h"
 #include "cmdtrace.h"
 #include "cliparser.h"
-#include "emv/apduinfo.h"   // APDU manipulation / errorcodes
-#include "emv/emvcore.h"    // APDU logging
+#include "iso7816/apduinfo.h"   // APDU manipulation / errorcodes
+#include "iso7816/iso7816core.h"    // APDU logging
 #include "util_posix.h"     // msleep
 #include "mifare/desfire_crypto.h"
 #include "crapto1/crapto1.h"
 #include "fileutils.h"
 #include "mifare/mifaredefault.h"  // default keys
-#include "mifare/ndef.h"           // NDEF
+#include "nfc/ndef.h"           // NDEF
 #include "mifare/mad.h"
 #include "generator.h"
 #include "aiddesfire.h"
@@ -1311,8 +1311,8 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
                     desfire_crc32_append(data + 1, cmdcnt);
                 }
                 cmdcnt += 4;
-              //  desfire_crc32_append(data, cmdcnt);
-              //  cmdcnt += 4;
+                //  desfire_crc32_append(data, cmdcnt);
+                //  cmdcnt += 4;
                 break;
         }
     }
@@ -1339,6 +1339,7 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
     }
 
     size_t sn = recv_len;
+
 
     if ((new_algo == MFDES_ALGO_AES) || (new_algo == MFDES_ALGO_3K3DES))
     {
@@ -1951,7 +1952,7 @@ static int handler_desfire_readdata(mfdes_data_t *data, MFDES_FILE_TYPE_T type, 
     sAPDU apdu = {0x90, MFDES_READ_DATA, 0x00, 0x00, 1 + 3 + 3, (uint8_t *)data}; // 0xBD
     if (type == MFDES_RECORD_FILE) {
         apdu.INS = MFDES_READ_RECORDS; //0xBB
-    } 
+    }
 
     // we need the CMD 0xBD <data> to calc the CMAC
     uint8_t tmp_data[8]; // Since the APDU is hardcoded to 7 bytes of payload 7+1 = 8 is enough.
@@ -2010,7 +2011,7 @@ static int handler_desfire_getvalue(mfdes_value_t *value, uint32_t *resplen, uin
         DropFieldDesfire();
         return res;
     }
-    size_t dlen = (size_t)*resplen;
+    size_t dlen = (size_t) * resplen;
     p = mifare_cryto_postprocess_data(tag, value->value, &dlen, cs | CMAC_COMMAND | CMAC_VERIFY | MAC_VERIFY);
     (void)p;
     return res;
@@ -3678,7 +3679,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
 
     iso14a_card_select_t card;
-    res = SelectCard14443_4(true, &card);
+    res = SelectCard14443A_4(true, &card);
     if (res == PM3_SUCCESS) {
         static const char STANDALONE_DESFIRE[] = { 0x75, 0x77, 0x81, 0x02};
         static const char JCOP_DESFIRE[] = { 0x75, 0xf7, 0xb1, 0x02 };
@@ -4951,15 +4952,15 @@ static int CmdHF14ADesList(const char *Cmd) {
 }
 
 /*
-static int CmdHF14aDesNDEF(const char *Cmd) {
+static int CmdHF14aDesNDEFRead(const char *Cmd) {
     DropFieldDesfire();
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes ndef",
+    CLIParserInit(&ctx, "hf mfdes ndefread",
                   "Prints NFC Data Exchange Format (NDEF)",
-                  "hf mfdes ndef -> shows NDEF data\n"
-                  "hf mfdes ndef -v -> shows NDEF parsed and raw data\n"
-                  "hf mfdes ndef -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key");
+                  "hf mfdes ndefread -> shows NDEF data\n"
+                  "hf mfdes ndefread -v -> shows NDEF parsed and raw data\n"
+                  "hf mfdes ndefread -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5048,7 +5049,7 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
         print_buffer(data, datalen, 1);
     }
 
-    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfdes ndef -vv`") " for more details");
+    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfdes ndefread -vv`") " for more details");
     return PM3_SUCCESS;
 }
 */
@@ -5105,7 +5106,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                     AlwaysAvailable, "This help"},
-    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("general") " -----------------------"},
+    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "---------------------- " _CYAN_("general") " ----------------------"},
     {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
     {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
     {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "Check keys"},
@@ -5114,9 +5115,9 @@ static command_t CommandTable[] = {
     {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get random uid"},
     {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
     {"list",             CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
-//    {"ndef",             CmdHF14aDesNDEF,             IfPm3Iso14443a,  "Prints NDEF records from card"},
+//    {"ndefread",             CmdHF14aDesNDEFRead,             IfPm3Iso14443a,  "Prints NDEF records from card"},
 //    {"mad",             CmdHF14aDesMAD,             IfPm3Iso14443a,  "Prints MAD records from card"},
-    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("AID") " -----------------------"},
+    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Applications") " -------------------"},
     {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
     {"createaid",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},
     {"deleteaid",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application ID"},

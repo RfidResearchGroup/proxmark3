@@ -16,5 +16,7 @@
 int infoThinFilm(bool verbose);
 
 int CmdHFThinfilm(const char *Cmd);
+int CmdHfThinFilmInfo(const char *Cmd);
+int CmdHfThinFilmSim(const char *Cmd);
 
 #endif

@@ -20,7 +20,7 @@
 #include "fileutils.h"
 #include "protocols.h"
 #include "generator.h"
-#include "mifare/ndef.h"
+#include "nfc/ndef.h"
 #include "cliparser.h"
 #include "cmdmain.h"
 #include "amiibo.h"     // amiiboo fcts
@@ -60,11 +60,11 @@ uint8_t default_pwd_pack[][4] = {
 };
 
 uint32_t UL_TYPES_ARRAY[] = {
-    UNKNOWN,   UL,          UL_C,        UL_EV1_48,       UL_EV1_128,      NTAG,
-    NTAG_203,  NTAG_210,    NTAG_212,    NTAG_213,        NTAG_215,        NTAG_216,
-    MY_D,      MY_D_NFC,    MY_D_MOVE,   MY_D_MOVE_NFC,   MY_D_MOVE_LEAN,  FUDAN_UL,
-    UL_EV1,    NTAG_213_F,  NTAG_216_F,  UL_NANO_40,      NTAG_I2C_1K,     NTAG_213_TT,
-    NTAG_213_C
+    UNKNOWN,    UL,          UL_C,        UL_EV1_48,       UL_EV1_128,      NTAG,
+    NTAG_203,   NTAG_210,    NTAG_212,    NTAG_213,        NTAG_215,        NTAG_216,
+    MY_D,       MY_D_NFC,    MY_D_MOVE,   MY_D_MOVE_NFC,   MY_D_MOVE_LEAN,  FUDAN_UL,
+    UL_EV1,     NTAG_213_F,  NTAG_216_F,  UL_NANO_40,      NTAG_I2C_1K,     NTAG_213_TT,
+    NTAG_213_C, NTAG_210u
 };
 
 uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
@@ -72,7 +72,7 @@ uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
     MAX_NTAG_203,      MAX_NTAG_210,  MAX_NTAG_212,   MAX_NTAG_213,      MAX_NTAG_215,       MAX_NTAG_216,
     MAX_UL_BLOCKS,     MAX_MY_D_NFC,  MAX_MY_D_MOVE,  MAX_MY_D_MOVE,     MAX_MY_D_MOVE_LEAN, MAX_UL_BLOCKS,
     MAX_ULEV1a_BLOCKS, MAX_NTAG_213,  MAX_NTAG_216,   MAX_UL_NANO_40,    MAX_NTAG_I2C_1K,    MAX_NTAG_213,
-    MAX_NTAG_213
+    MAX_NTAG_213,      MAX_NTAG_210
 };
 
 //------------------------------------
@@ -525,6 +525,8 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces) {
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG UNKNOWN"), spaces, "");
     else if (tagtype & NTAG_203)
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG 203 144bytes (NT2H0301F0DT)"), spaces, "");
+    else if (tagtype & NTAG_210u)
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG 210u (micro) 48bytes (NT2L1001G0DU)"), spaces, "");
     else if (tagtype & NTAG_210)
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG 210 48bytes (NT2L1011G0DU)"), spaces, "");
     else if (tagtype & NTAG_212)
@@ -1276,6 +1278,7 @@ uint32_t GetHF14AMfU_Type(void) {
                 else if (memcmp(version, "\x00\x04\x03\x02\x01\x00\x0E", 7) == 0) { tagtype = UL_EV1_128; break; }
                 else if (memcmp(version, "\x00\x34\x21\x01\x01\x00\x0E", 7) == 0) { tagtype = UL_EV1_128; break; } // Mikron JSC Russia EV1 41 pages tag
                 else if (memcmp(version, "\x00\x04\x04\x01\x01\x00\x0B", 7) == 0) { tagtype = NTAG_210; break; }
+                else if (memcmp(version, "\x00\x04\x04\x01\x02\x00\x0B", 7) == 0) { tagtype = NTAG_210u; break; }
                 else if (memcmp(version, "\x00\x04\x04\x01\x01\x00\x0E", 7) == 0) { tagtype = NTAG_212; break; }
                 else if (memcmp(version, "\x00\x04\x04\x02\x01\x00\x0F", 7) == 0) { tagtype = NTAG_213; break; }
                 else if (memcmp(version, "\x00\x04\x04\x02\x01\x01\x0F", 7) == 0) { tagtype = NTAG_213_C; break; }
@@ -1520,7 +1523,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     }
 
     // Read signature
-    if ((tagtype & (UL_EV1_48 | UL_EV1_128 | UL_EV1 | UL_NANO_40 | NTAG_213 | NTAG_213_F | NTAG_213_C | NTAG_213_TT | NTAG_215 | NTAG_216 | NTAG_216_F | NTAG_I2C_1K | NTAG_I2C_2K | NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
+    if ((tagtype & (UL_EV1_48 | UL_EV1_128 | UL_EV1 | UL_NANO_40 | NTAG_210u | NTAG_213 | NTAG_213_F | NTAG_213_C | NTAG_213_TT | NTAG_215 | NTAG_216 | NTAG_216_F | NTAG_I2C_1K | NTAG_I2C_2K | NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
         uint8_t ulev1_signature[32] = {0x00};
         status = ulev1_readSignature(ulev1_signature, sizeof(ulev1_signature));
         if (status == -1) {
@@ -3765,7 +3768,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 // 2. magic bytes in the readable payload
 
 
-static int CmdHF14MfuNDEF(const char *Cmd) {
+int CmdHF14MfuNDEFRead(const char *Cmd) {
 
     int keylen;
     int maxsize = 16, status;
@@ -3779,10 +3782,10 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
     uint8_t pack[4] = {0, 0, 0, 0};
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfu ndef",
+    CLIParserInit(&ctx, "hf mfu ndefread",
                   "Prints NFC Data Exchange Format (NDEF)",
-                  "hf mfu ndef -> shows NDEF data\n"
-                  "hf mfu ndef -k ffffffff -> shows NDEF data with key");
+                  "hf mfu ndefread -> shows NDEF data\n"
+                  "hf mfu ndefread -k ffffffff -> shows NDEF data with key");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4004,28 +4007,28 @@ static int CmdHF14AMfUCDecryptAmiibo(const char *Cmd){
 // Menu Stuff
 //------------------------------------
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,                   AlwaysAvailable, "This help"},
+    {"help",     CmdHelp,                   AlwaysAvailable, "This help"},
     {"-----------", CmdHelp,               IfPm3Iso14443a,  "----------------------- " _CYAN_("recovery") " -------------------------"},
-    {"keygen",  CmdHF14AMfUGenDiverseKeys, AlwaysAvailable, "Generate 3DES MIFARE diversified keys"},
-    {"pwdgen",  CmdHF14AMfUPwdGen,         AlwaysAvailable, "Generate pwd from known algos"},
-    {"otptear", CmdHF14AMfuOtpTearoff,     IfPm3Iso14443a,  "Tear-off test on OTP bits"},
+    {"keygen",   CmdHF14AMfUGenDiverseKeys, AlwaysAvailable, "Generate 3DES MIFARE diversified keys"},
+    {"pwdgen",   CmdHF14AMfUPwdGen,         AlwaysAvailable, "Generate pwd from known algos"},
+    {"otptear",  CmdHF14AMfuOtpTearoff,     IfPm3Iso14443a,  "Tear-off test on OTP bits"},
 //    {"tear_cnt", CmdHF14AMfuEv1CounterTearoff,     IfPm3Iso14443a,  "Tear-off test on Ev1/NTAG Counter bits"},
     {"-----------", CmdHelp,               IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
-    {"cauth",   CmdHF14AMfUCAuth,          IfPm3Iso14443a,  "Authentication - Ultralight-C"},
-    {"dump",    CmdHF14AMfUDump,           IfPm3Iso14443a,  "Dump MIFARE Ultralight family tag to binary file"},
-    {"info",    CmdHF14AMfUInfo,           IfPm3Iso14443a,  "Tag information"},
-    {"ndef",    CmdHF14MfuNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
-    {"rdbl",    CmdHF14AMfURdBl,           IfPm3Iso14443a,  "Read block"},
-    {"restore", CmdHF14AMfURestore,        IfPm3Iso14443a,  "Restore a dump onto a MFU MAGIC tag"},
-    {"wrbl",    CmdHF14AMfUWrBl,           IfPm3Iso14443a,  "Write block"},
+    {"cauth",    CmdHF14AMfUCAuth,          IfPm3Iso14443a,  "Authentication - Ultralight-C"},
+    {"dump",     CmdHF14AMfUDump,           IfPm3Iso14443a,  "Dump MIFARE Ultralight family tag to binary file"},
+    {"info",     CmdHF14AMfUInfo,           IfPm3Iso14443a,  "Tag information"},
+    {"ndefread", CmdHF14MfuNDEFRead,        IfPm3Iso14443a,  "Prints NDEF records from card"},
+    {"rdbl",     CmdHF14AMfURdBl,           IfPm3Iso14443a,  "Read block"},
+    {"restore",  CmdHF14AMfURestore,        IfPm3Iso14443a,  "Restore a dump onto a MFU MAGIC tag"},
+    {"wrbl",     CmdHF14AMfUWrBl,           IfPm3Iso14443a,  "Write block"},
     {"---------", CmdHelp,                 IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
-    {"eload",   CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "load Ultralight .eml dump file into emulator memory"},
-    {"eview",   CmdHF14AMfuEView,          IfPm3Iso14443a,  "View emulator memory"},
-    {"sim",     CmdHF14AMfUSim,            IfPm3Iso14443a,  "Simulate MIFARE Ultralight from emulator memory"},
+    {"eload",    CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "load Ultralight .eml dump file into emulator memory"},
+    {"eview",    CmdHF14AMfuEView,          IfPm3Iso14443a,  "View emulator memory"},
+    {"sim",      CmdHF14AMfUSim,            IfPm3Iso14443a,  "Simulate MIFARE Ultralight from emulator memory"},
     {"---------", CmdHelp,                 IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " ----------------------------"},
-    {"setpwd",  CmdHF14AMfUCSetPwd,        IfPm3Iso14443a,  "Set 3DES key - Ultralight-C"},
-    {"setuid",  CmdHF14AMfUCSetUid,        IfPm3Iso14443a,  "Set UID - MAGIC tags only"},
-    {"---------", CmdHelp,                 IfPm3Iso14443a,  "----------------------- " _CYAN_("amiibo") " ----------------------------"},
+    {"setpwd",   CmdHF14AMfUCSetPwd,        IfPm3Iso14443a,  "Set 3DES key - Ultralight-C"},
+    {"setuid",   CmdHF14AMfUCSetUid,        IfPm3Iso14443a,  "Set UID - MAGIC tags only"},
+//    {"---------", CmdHelp,                 IfPm3Iso14443a,  "----------------------- " _CYAN_("amiibo") " ----------------------------"},
 //    {"decrypt",  CmdHF14AMfUCDecryptAmiibo, IfPm3Iso14443a, "Decrypt a amiibo tag"},
     {NULL, NULL, NULL, NULL}
 };

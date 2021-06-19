@@ -17,7 +17,6 @@
 #include "comms.h"        // clearCommandBuffer
 #include "cmdtrace.h"
 #include "crc16.h"
-#include "cmdhf14a.h"
 #include "protocols.h"    // definitions of ISO14B protocol
 #include "iso14b.h"
 #include "cliparser.h"    // cliparsing
@@ -36,6 +35,7 @@ static void set_last_known_card(iso14b_card_select_t card) {
 }
 
 static int switch_off_field_cryptorf(void) {
+    SetISODEPState(ISODEP_INACTIVE);
     iso14b_raw_cmd_t packet = {
         .flags = ISO14B_DISCONNECT,
         .timeout = 0,

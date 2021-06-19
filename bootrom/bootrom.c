@@ -15,7 +15,7 @@
 struct common_area common_area __attribute__((section(".commonarea")));
 uint32_t start_addr, end_addr;
 bool bootrom_unlocked;
-extern char _bootrom_start[], _bootrom_end[], _flash_start[], _flash_end[], _osimage_entry[];
+extern uint32_t _bootrom_start[], _bootrom_end[], _flash_start[], _flash_end[], _osimage_entry[];
 
 static int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     PacketResponseOLD txcmd;
@@ -116,7 +116,7 @@ static void UsbPacketReceived(uint8_t *packet) {
                 uint32_t flash_address = arg0 + (0x100 * j);
                 AT91PS_EFC efc_bank = AT91C_BASE_EFC0;
                 int offset = 0;
-                uint32_t page_n = (flash_address - ((uint32_t)_flash_start)) / AT91C_IFLASH_PAGE_SIZE;
+                uint32_t page_n = (flash_address - (uint32_t)_flash_start) / AT91C_IFLASH_PAGE_SIZE;
                 if (page_n >= AT91C_IFLASH_NB_OF_PAGES / 2) {
                     page_n -= AT91C_IFLASH_NB_OF_PAGES / 2;
                     efc_bank = AT91C_BASE_EFC1;
@@ -124,7 +124,7 @@ static void UsbPacketReceived(uint8_t *packet) {
                     offset = (AT91C_IFLASH_NB_OF_PAGES / 2) * AT91C_IFLASH_PAGE_SIZE / sizeof(uint32_t);
                 }
                 for (int i = 0 + (64 * j); i < 64 + (64 * j); i++) {
-                    ((uint32_t *)_flash_start)[offset + i] = c->d.asDwords[i];
+                    _flash_start[offset + i] = c->d.asDwords[i];
                 }
 
                 /* Check that the address that we are supposed to write to is within our allowed region */
@@ -319,7 +319,7 @@ void BootROM(void) {
 
     if ((common_area.command == COMMON_AREA_COMMAND_ENTER_FLASH_MODE) ||
             (!common_area.flags.button_pressed && BUTTON_PRESS()) ||
-            (*(uint32_t *)_osimage_entry == 0xffffffffU)) {
+            (*_osimage_entry == 0xffffffffU)) {
         flash_mode();
     } else {
         // clear button status, even if button still pressed

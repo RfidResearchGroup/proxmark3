@@ -13,5 +13,6 @@
 #include "common.h"
 
 int CmdHFMFP(const char *Cmd);
+int CmdHFMFPNDEFRead(const char *Cmd);
 
 #endif

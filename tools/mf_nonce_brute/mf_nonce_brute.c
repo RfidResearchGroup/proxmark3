@@ -71,7 +71,7 @@ uint8_t cmds[8][2] = {
 //static int global_counter = 0;
 static int global_found = 0;
 static int global_found_candidate = 0;
-static uint64_t global_candiate_key = 0;
+static uint64_t global_candidate_key = 0;
 static int thread_count = 2;
 
 static int param_getptr(const char *line, int *bg, int *en, int paramnum) {
@@ -376,7 +376,7 @@ static void *brute_thread(void *arguments) {
     // TC == 4  (
     // threads calls 0 ev1 == false
     // threads calls 0,1,2  ev1 == true
-    for (count = args->idx; count < 0xFFFF; count += thread_count - 1) {
+    for (count = args->idx; count <= 0xFFFF; count += thread_count - 1) {
 
         if (__atomic_load_n(&global_found, __ATOMIC_ACQUIRE) == 1) {
             break;
@@ -448,7 +448,7 @@ static void *brute_thread(void *arguments) {
             }
             //release lock
             pthread_mutex_unlock(&print_lock);
-            __sync_fetch_and_add(&global_candiate_key, key);
+            __sync_fetch_and_add(&global_candidate_key, key);
             free(revstate);
             break;
         }
@@ -465,13 +465,13 @@ static void *brute_key_thread(void *arguments) {
     uint8_t local_enc[args->enc_len];
     memcpy(local_enc, args->enc, args->enc_len);
 
-    for (uint64_t count = args->idx; count < 0xFFFF; count += thread_count) {
+    for (uint64_t count = args->idx; count <= 0xFFFF; count += thread_count) {
 
         if (__atomic_load_n(&global_found, __ATOMIC_ACQUIRE) == 1) {
             break;
         }
 
-        key |= (count << 32);
+        key = args->part_key | (count << 32);
 
         // Init cipher with key
         struct Crypto1State *pcs = crypto1_create(key);
@@ -519,7 +519,8 @@ static int usage(void) {
     printf("  ./mf_nonce_brute fa247164 fb47c594 0000 71909d28 0c254817 1000 0dc7cfbd 1110\n");
     printf("\n");
     printf("**** Possible key candidate ****\n");
-    printf("Key candidate: [ffffffffffff]\n");
+    printf("Key candidate: [....ffffffff]\n");
+    printf("Too few next cmd bytes, skipping phase 2\n");
     printf("\n");
     printf("  ./mf_nonce_brute 96519578 d7e3c6ac 0011 cd311951 9da49e49 0010 2bb22e00 0100 a4f7f398ebdb4e484d1cb2b174b939d18b469f3fa5d9caab\n");
     printf("\n");
@@ -629,7 +630,7 @@ int main(int argc, char *argv[]) {
 
     printf("\n----------- " _CYAN_("Phase 2") " ------------------------\n");
     printf("uid.................. %08x\n", uid);
-    printf("partial key.......... %08x\n", (uint32_t)(global_candiate_key & 0xFFFFFFFF));
+    printf("partial key.......... %08x\n", (uint32_t)(global_candidate_key & 0xFFFFFFFF));
     printf("nt enc............... %08x\n", nt_enc);
     printf("nr enc............... %08x\n", nr_enc);
     printf("next encrypted cmd... %s\n", sprint_hex_inrow_ex(enc, enc_len, 0));
@@ -642,7 +643,7 @@ int main(int argc, char *argv[]) {
         b->thread = i;
         b->idx = i;
         b->uid = uid;
-        b->part_key = (uint32_t)(global_candiate_key & 0xFFFFFFFF);
+        b->part_key = (uint32_t)(global_candidate_key & 0xFFFFFFFF);
         b->nt_enc = nt_enc;
         b->nr_enc = nr_enc;
         b->enc_len = enc_len;

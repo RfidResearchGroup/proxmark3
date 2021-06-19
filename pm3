@@ -17,27 +17,27 @@ BOOTIMAGE="bootrom.elf"
 
 #Skip check if --list is used
 if [ ! "$1" == "--list" ]; then
-	# try pm3 dirs in current repo workdir
-	if [ -d "$PM3PATH/client/" ]; then
-		if [ -x "$PM3PATH/client/proxmark3" ]; then
-			CLIENT="$PM3PATH/client/proxmark3"
-		elif [ -x "$PM3PATH/client/build/proxmark3" ]; then
-			CLIENT="$PM3PATH/client/build/proxmark3"
-		else
-			echo >&2 "[!!] In devel workdir but no executable found, did you compile it?"
-			exit 1
-		fi
-		# Devel mode: point to workdir pm3.py module
-		EVALENV+=" PYTHONPATH=$PM3PATH/client/src"
-	# try install dir
-	elif [ -x "$PM3PATH/proxmark3" ]; then
-		CLIENT="$PM3PATH/proxmark3"
-		EVALENV+=" PYTHONPATH=$PM3PATH/../share/proxmark3/pyscripts/"
-		#  or /usr/[local/]lib/python3/dist-packages/pm3.py ?
-	else
-	# hope it's installed somehow, still not sure where fw images and pm3.py are...
-		CLIENT="proxmark3"
-	fi   
+    # try pm3 dirs in current repo workdir
+    if [ -d "$PM3PATH/client/" ]; then
+        if [ -x "$PM3PATH/client/proxmark3" ]; then
+            CLIENT="$PM3PATH/client/proxmark3"
+        elif [ -x "$PM3PATH/client/build/proxmark3" ]; then
+            CLIENT="$PM3PATH/client/build/proxmark3"
+        else
+            echo >&2 "[!!] In devel workdir but no executable found, did you compile it?"
+            exit 1
+        fi
+        # Devel mode: point to workdir pm3.py module
+        EVALENV+=" PYTHONPATH=$PM3PATH/client/src"
+    # try install dir
+    elif [ -x "$PM3PATH/proxmark3" ]; then
+        CLIENT="$PM3PATH/proxmark3"
+        EVALENV+=" PYTHONPATH=$PM3PATH/../share/proxmark3/pyscripts/"
+        #  or /usr/[local/]lib/python3/dist-packages/pm3.py ?
+    else
+    # hope it's installed somehow, still not sure where fw images and pm3.py are...
+        CLIENT="proxmark3"
+    fi
 fi
 
 # LeakSanitizer suppressions
@@ -150,15 +150,15 @@ function get_pm3_list_Windows {
     # Normal SERIAL PORTS (COM)
     for DEV in $(wmic /locale:ms_409 path Win32_SerialPort Where "PNPDeviceID LIKE '%VID_9AC4&PID_4B8F%' Or PNPDeviceID LIKE '%VID_2D2D&PID_504D%'" Get DeviceID 2>/dev/null | awk -b '/^COM/{print $1}'); do
         DEV=${DEV/ */}
-		#prevent soft bricking when using pm3-flash-all on an outdated bootloader
-		if [ $(basename -- "$0") = "pm3-flash-all" ]; then
-			if [ ! $(wmic /locale:ms_409 path Win32_SerialPort Where "DeviceID='$DEV'" Get PNPDeviceID 2>/dev/null | awk -b '/^USB/{print $1}') = "USB\VID_9AC4&PID_4B8F\ICEMAN" ]; then
-				echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
-				exit 1
-			fi
-		fi
-        #Prioritise USB connections 
-		PM3LIST=("$DEV" "${PM3LIST[@]}")
+        #prevent soft bricking when using pm3-flash-all on an outdated bootloader
+        if [ $(basename -- "$0") = "pm3-flash-all" ]; then
+            if [ ! $(wmic /locale:ms_409 path Win32_SerialPort Where "DeviceID='$DEV'" Get PNPDeviceID 2>/dev/null | awk -b '/^USB/{print $1}') = "USB\VID_9AC4&PID_4B8F\ICEMAN" ]; then
+                echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
+                exit 1
+            fi
+        fi
+        #Prioritise USB connections
+        PM3LIST=("$DEV" "${PM3LIST[@]}")
         if [ ${#PM3LIST[*]} -ge "$N" ]; then
             return
         fi
@@ -201,19 +201,19 @@ function get_pm3_list_WSL {
 
     # Normal SERIAL PORTS (COM)
     for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.PNPDeviceID -like '*VID_9AC4&PID_4B8F*' -or \$_.PNPDeviceID -like '*VID_2D2D&PID_504D*'} | Select -expandproperty DeviceID" 2>/dev/null | tr -dc '[:print:]'); do
-		_comport=$DEV
-		DEV=$(echo $DEV | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p')
+        _comport=$DEV
+        DEV=$(echo $DEV | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p')
         # ttyS counterpart takes some more time to appear
         if [ -e "$DEV" ]; then
-			#prevent soft bricking when using pm3-flash-all on an outdated bootloader
-			if [ $(basename -- "$0") = "pm3-flash-all" ]; then
-				if [ ! $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.DeviceID -eq '$_comport'} | Select -expandproperty PNPDeviceID" 2>/dev/null | tr -dc '[:print:]') = "USB\VID_9AC4&PID_4B8F\ICEMAN" ]; then
-					echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
-					exit 1
-				fi
-			fi
-            #Prioritise USB connections 
-			PM3LIST=("$DEV" "${PM3LIST[@]}")
+            #prevent soft bricking when using pm3-flash-all on an outdated bootloader
+            if [ $(basename -- "$0") = "pm3-flash-all" ]; then
+                if [ ! $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.DeviceID -eq '$_comport'} | Select -expandproperty PNPDeviceID" 2>/dev/null | tr -dc '[:print:]') = "USB\VID_9AC4&PID_4B8F\ICEMAN" ]; then
+                    echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
+                    exit 1
+                fi
+            fi
+            #Prioritise USB connections
+            PM3LIST=("$DEV" "${PM3LIST[@]}")
             if [ ! -w "$DEV" ]; then
                 echo "[!] Let's give users read/write access to $DEV"
                 sudo chmod 666 "$DEV"
@@ -257,25 +257,20 @@ Description:
      * the correct port name will be automatically guessed;
      * the script will wait for a Proxmark to be connected (same as option -w of the client).
     You can also specify a first option -n N to access the Nth Proxmark3 connected.
-    Don't use this script if you want to work offline.
     To see a list of available ports, use --list.
 
 Usage:
-    $SCRIPT [-n <N>] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i]
-    $SCRIPT [--list] [--help]
+    $SCRIPT [-n <N>] [<any other proxmark3 client option>]
+    $SCRIPT [--list] [-h|--help] [-hh|--helpclient]
+    $SCRIPT [-o|--offline]
 
 
 Arguments:
-    --help           this help
+    -h/--help        this help
+    -hh/--helpclient proxmark3 client help (the script will forward these options)
     --list           list all detected com ports
-    -n <N>           connect device refered to the N:th number on the --list output
-    -c 'cmd'         execute the pm3 cmd in client and exit afterwards
-    -i               interactive,  stay in client after executing a cmd or script
-    -s 'script'      execute a cmd script file and exit afterwards
-    -l 'luascript'   execute a lua script file and exit afterwards
-    -w               wait
-    -p <port>        specifiy which port to connect to
-
+    -n <N>           connect device referred to the N:th number on the --list output
+    -o/--offline     shortcut to use directly the proxmark3 client without guessing ports
 
 Samples:
     ./$SCRIPT                       -- Auto detect/ select com port in the following order BT, USB/CDC, BT DONGLE
@@ -388,13 +383,31 @@ else
   echo >&2 "[!!] Script ran under unknown name, abort: $SCRIPT"
   exit 1
 fi
-if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
-    HELP
-    exit 0
-fi
+
+# priority to the help options
+for ARG; do
+    if [ "$ARG" == "-h" ] || [ "$ARG" == "--help" ]; then
+        HELP
+        exit 0
+    fi
+    if [ "$ARG" == "-hh" ] || [ "$ARG" == "--helpclient" ]; then
+        CMD "-h"
+        exit 0
+    fi
+done
+
+# if offline, bypass the script and forward all other args
+for ARG; do
+    shift
+    if [ "$ARG" == "-o" ] || [ "$ARG" == "--offline" ]; then
+        CMD "$@"
+        exit $?
+    fi
+    set -- "$@" "$ARG"
+done
 
 # if a port is already provided, let's just run the command as such
-for ARG in "$@"; do
+for ARG; do
     if [ "$ARG" == "-p" ]; then
         CMD "$@"
         exit $?
@@ -489,7 +502,7 @@ if [ ${#PM3LIST} -lt "$N" ]; then
 
 [?] Hint: try '$SCRIPT --list' to see list of available ports,  and use the -n command like below
 [?]    $SCRIPT [-n <N>]
-    
+
 EOF
   }
     HELP

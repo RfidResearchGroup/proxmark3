@@ -667,10 +667,18 @@ out:
     return retval;
 }
 int saveFileJSONroot(const char *preferredName, void *root, size_t flags, bool verbose) {
+    return saveFileJSONrootEx(preferredName, root, flags, verbose, false);
+}
+int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool verbose, bool overwrite) {
     if (root == NULL)
         return PM3_EINVARG;
 
-    char *filename = newfilenamemcopy(preferredName, ".json");
+    char *filename = NULL;
+    if (overwrite)
+        filename = filenamemcopy(preferredName, ".json");
+    else
+        filename = newfilenamemcopy(preferredName, ".json");
+
     if (filename == NULL)
         return PM3_EMALLOC;
 

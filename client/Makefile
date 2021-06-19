@@ -13,7 +13,9 @@ VPATH =  ../common src
 vpath %.dic dictionaries
 OBJDIR = obj
 
-ifeq ($(platform),Darwin)
+ifeq ($(USE_BREW),1)
+	INCLUDES += -I$(BREW_PREFIX)/include
+	LDLIBS += -L$(BREW_PREFIX)/lib
 	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt/lib/pkgconfig
 	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt5/lib/pkgconfig
 endif
@@ -276,9 +278,9 @@ CXXINCLUDES += $(QTINCLUDES)
 
 ## Readline
 ifneq ($(SKIPREADLINE),1)
-    ifeq ($(platform),Darwin)
-		LDLIBS += -L$(BREW_PREFIX)/opt/readline/lib
-		INCLUDES += -I$(BREW_PREFIX)/opt/readline/include
+    ifeq ($(USE_BREW),1)
+        LDLIBS += -L$(BREW_PREFIX)/opt/readline/lib
+        INCLUDES += -I$(BREW_PREFIX)/opt/readline/include
     endif
     LDLIBS += -lreadline
     READLINE_FOUND = 1
@@ -471,6 +473,7 @@ SRCS =  aiddesfire.c \
 		cmdhfemrtd.c \
 		cmdhffelica.c \
 		cmdhffido.c \
+		cmdhfcipurse.c \
 		cmdhficlass.c \
 		cmdhflegic.c \
 		cmdhfjooki.c \
@@ -483,6 +486,7 @@ SRCS =  aiddesfire.c \
 		cmdhfmfp.c \
 		cmdhfseos.c \
 		cmdhfst.c \
+		cmdhfst25ta.c \
 		cmdhfthinfilm.c \
 		cmdhftopaz.c \
 		cmdhfwaveshare.c \
@@ -521,6 +525,7 @@ SRCS =  aiddesfire.c \
 		cmdlfviking.c \
 		cmdlfvisa2000.c \
 		cmdmain.c \
+		cmdnfc.c \
 		cmdparser.c \
 		cmdscript.c \
 		cmdsmartcard.c \
@@ -531,7 +536,6 @@ SRCS =  aiddesfire.c \
 		crypto/asn1dump.c \
 		crypto/asn1utils.c\
 		crypto/libpcrypto.c\
-		emv/apduinfo.c \
 		emv/cmdemv.c \
 		emv/crypto.c\
 		emv/crypto_polarssl.c\
@@ -553,11 +557,15 @@ SRCS =  aiddesfire.c \
 		fido/cose.c \
 		fido/cbortools.c \
 		fido/fidocore.c \
+		cipurse/cipursecore.c \
+		cipurse/cipursecrypto.c \
 		fileutils.c \
 		flash.c \
 		generator.c \
 		graph.c \
 		jansson_path.c \
+		iso7816/apduinfo.c \
+		iso7816/iso7816core.c \
 		loclass/cipher.c \
 		loclass/cipherutils.c \
 		loclass/elite_crack.c \
@@ -568,7 +576,7 @@ SRCS =  aiddesfire.c \
 		mifare/mifare4.c \
 		mifare/mifaredefault.c \
 		mifare/mifarehost.c \
-		mifare/ndef.c \
+		nfc/ndef.c \
 		pm3.c \
 		pm3_binlib.c \
 		pm3_bitlib.c \

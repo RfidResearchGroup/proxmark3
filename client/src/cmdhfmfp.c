@@ -19,7 +19,7 @@
 #include "cmdhf14a.h"
 #include "mifare/mifare4.h"
 #include "mifare/mad.h"
-#include "mifare/ndef.h"
+#include "nfc/ndef.h"
 #include "cliparser.h"
 #include "mifare/mifaredefault.h"
 #include "util_posix.h"
@@ -1458,14 +1458,14 @@ static int CmdHFMFPMAD(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFMFPNDEF(const char *Cmd) {
+int CmdHFMFPNDEFRead(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfp ndef",
+    CLIParserInit(&ctx, "hf mfp ndefread",
                   "Prints NFC Data Exchange Format (NDEF)",
-                  "hf mfp ndef -> shows NDEF data\n"
-                  "hf mfp ndef -vv -> shows NDEF parsed and raw data\n"
-                  "hf mfp ndef -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key");
+                  "hf mfp ndefread -> shows NDEF data\n"
+                  "hf mfp ndefread -vv -> shows NDEF parsed and raw data\n"
+                  "hf mfp ndefread -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1509,7 +1509,7 @@ static int CmdHFMFPNDEF(const char *Cmd) {
 
     if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
         PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
-        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndef -k `") " with your custom key");
+        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndefread -k `") " with your custom key");
         return PM3_ESOFT;
     }
 
@@ -1527,7 +1527,7 @@ static int CmdHFMFPNDEF(const char *Cmd) {
 
         if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector10, verbose)) {
             PrintAndLogEx(ERR, "error, read sector 0x10. card don't have MAD or don't have MAD on default keys");
-            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndef -k `") " with your custom key");
+            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndefread -k `") " with your custom key");
             return PM3_ESOFT;
         }
     }
@@ -1569,7 +1569,7 @@ static int CmdHFMFPNDEF(const char *Cmd) {
     }
 
     NDEFDecodeAndPrint(data, datalen, verbose);
-    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndef -vv`") " for more details");
+    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndefread -vv`") " for more details");
     return PM3_SUCCESS;
 }
 
@@ -1585,7 +1585,7 @@ static command_t CommandTable[] = {
     {"wrbl",             CmdHFMFPWrbl,            IfPm3Iso14443a,  "Write blocks"},
     {"chk",              CmdHFMFPChk,             IfPm3Iso14443a,  "Check keys"},
     {"mad",              CmdHFMFPMAD,             IfPm3Iso14443a,  "Checks and prints MAD"},
-    {"ndef",             CmdHFMFPNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
+    {"ndefread",         CmdHFMFPNDEFRead,        IfPm3Iso14443a,  "Prints NDEF records from card"},
     {NULL,               NULL,                    0, NULL}
 };
 

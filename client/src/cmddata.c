@@ -25,7 +25,6 @@
 #include "loclass/cipherutils.h" // for decimating samples in getsamples
 #include "cmdlfem410x.h"         // askem410xdecode
 #include "fileutils.h"           // searchFile
-#include "mifare/ndef.h"
 #include "cliparser.h"
 #include "cmdlft55xx.h"          // print...
 #include "crypto/asn1utils.h"    // ASN1 decode / print
@@ -2692,44 +2691,6 @@ static int CmdDataIIR(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdDataNDEF(const char *Cmd) {
-
-#ifndef MAX_NDEF_LEN
-#define MAX_NDEF_LEN  2048
-#endif
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "data ndef",
-                  "Decode and print NFC Data Exchange Format (NDEF)",
-                  "data ndef -d 9101085402656e48656c6c6f5101085402656e576f726c64\n"
-                  "data ndef -d 0103d020240203e02c040300fe\n"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_strx0("d",  "data", "<hex>", "NDEF data to decode"),
-        arg_lit0("v",  "verbose", "verbose mode"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-
-    int datalen = 0;
-    uint8_t data[MAX_NDEF_LEN] = {0};
-    CLIGetHexWithReturn(ctx, 1, data, &datalen);
-    bool verbose = arg_get_lit(ctx, 2);
-
-    CLIParserFree(ctx);
-    if (datalen == 0)
-        return PM3_EINVARG;
-
-    int res = NDEFDecodeAndPrint(data, datalen, verbose);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
-        res = NDEFRecordsDecodeAndPrint(data, datalen);
-    }
-    return res;
-}
-
 typedef struct {
     t55xx_modulation modulation;
     int bitrate;
@@ -2951,7 +2912,6 @@ static command_t CommandTable[] = {
     {"hexsamples",      CmdHexsamples,           IfPm3Present,     "Dump big buffer as hex bytes"},
     {"hex2bin",         Cmdhex2bin,              AlwaysAvailable,  "Converts hexadecimal to binary"},
     {"load",            CmdLoad,                 AlwaysAvailable,  "Load contents of file into graph window"},
-    {"ndef",            CmdDataNDEF,             AlwaysAvailable,  "Decode NDEF records"},
     {"print",           CmdPrintDemodBuff,       AlwaysAvailable,  "Print the data in the DemodBuffer"},
     {"samples",         CmdSamples,              IfPm3Present,     "Get raw samples for graph window (GraphBuffer)"},
     {"save",            CmdSave,                 AlwaysAvailable,  "Save signal trace data  (from graph window)"},

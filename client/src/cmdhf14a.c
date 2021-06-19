@@ -20,6 +20,7 @@
 #include "cliparser.h"
 #include "cmdhfmf.h"
 #include "cmdhfmfu.h"
+#include "iso7816/iso7816core.h"
 #include "emv/emvcore.h"
 #include "ui.h"
 #include "crc16.h"
@@ -28,7 +29,9 @@
 #include "cmdhf.h"       // handle HF plot
 #include "cliparser.h"
 #include "protocols.h"     // definitions of ISO14A/7816 protocol, MAGIC_GEN_1A
-#include "emv/apduinfo.h"  // GetAPDUCodeDescription
+#include "iso7816/apduinfo.h"  // GetAPDUCodeDescription
+#include "nfc/ndef.h"      // NDEFRecordsDecodeAndPrint
+#include "cmdnfc.h"        // print_type4_cc_info
 
 bool APDUInFramingEnable = true;
 
@@ -165,6 +168,17 @@ const char *getTagInfo(uint8_t uid) {
     //No match, return default
     return manufactureMapping[ARRAYLEN(manufactureMapping) - 1].desc;
 }
+
+static const hintAIDListT hintAIDList[] = {
+    // AID, AID len, name, hint - how to use
+    { "\xA0\x00\x00\x06\x47\x2F\x00\x01", 8, "FIDO", "hf fido" },
+    { "\xA0\x00\x00\x03\x08\x00\x00\x10\x00\x01\x00", 11, "PIV", "" },
+    { "\xD2\x76\x00\x01\x24\x01", 8, "OpenPGP", "" },
+    { "\x31\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "EMV (pse)", "hf emv" },
+    { "\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "EMV (ppse)", "hf emv" },
+    { "\x41\x44\x20\x46\x31", 5, "CIPURSE", "hf cipurse" },
+    { "\xd2\x76\x00\x00\x85\x01\x00", 7, "desfire", "hf mfdes" },
+};
 
 // iso14a apdu input frame length
 static uint16_t frameLength = 0;
@@ -843,7 +857,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     return 0;
 }
 
-int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
+int SelectCard14443A_4(bool disconnect, iso14a_card_select_t *card) {
     PacketResponseNG resp;
 
     frameLength = 0;
@@ -903,7 +917,7 @@ int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
         if (card)
             memcpy(card, vcard, sizeof(iso14a_card_select_t));
     }
-
+    SetISODEPState(ISODEP_NFCA);
     if (disconnect)
         DropField();
 
@@ -915,7 +929,7 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
 
     if (activateField) {
         // select with no disconnect and set frameLength
-        int selres = SelectCard14443_4(false, NULL);
+        int selres = SelectCard14443A_4(false, NULL);
         if (selres != PM3_SUCCESS)
             return selres;
     }
@@ -2006,7 +2020,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     uint16_t sw = 0;
                     uint8_t result[1024] = {0};
                     size_t resultlen = 0;
-                    int res = EMVSelect(ECC_CONTACTLESS, ActivateField, true, vaid, vaidlen, result, sizeof(result), &resultlen, &sw, NULL);
+                    int res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, vaid, vaidlen, result, sizeof(result), &resultlen, &sw);
                     ActivateField = false;
                     if (res)
                         continue;
@@ -2126,6 +2140,57 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     PrintAndLogEx(NORMAL, "");
     DropField();
     return select_status;
+}
+
+int infoHF14A4Applications(bool verbose) {
+    bool cardFound[ARRAYLEN(hintAIDList)] = {0};
+    bool ActivateField = true;
+    int found = 0;
+    for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
+        uint16_t sw = 0;
+        uint8_t result[1024] = {0};
+        size_t resultlen = 0;
+        int res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, (uint8_t *)hintAIDList[i].aid, hintAIDList[i].aid_length, result, sizeof(result), &resultlen, &sw);
+        ActivateField = false;
+        if (res)
+            continue;
+
+        if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
+            if (!found) {
+                if (verbose)
+                    PrintAndLogEx(INFO, "----------------- " _CYAN_("Short AID search") " -----------------");
+            }
+            found++;
+
+            if (sw == 0x9000) {
+                if (verbose)
+                    PrintAndLogEx(SUCCESS, "Application " _CYAN_("%s") " ( " _GREEN_("ok") " )", hintAIDList[i].desc);
+                cardFound[i] = true;
+            } else {
+                if (verbose)
+                    PrintAndLogEx(WARNING, "Application " _CYAN_("%s") " ( " _RED_("blocked") " )", hintAIDList[i].desc);
+            }
+        }
+    }
+
+    if (found) {
+        if (verbose)
+            PrintAndLogEx(INFO, "---------------------------------------------------");
+        else
+            PrintAndLogEx(INFO, "Short AID search:");
+
+        if (found >= ARRAYLEN(hintAIDList) - 1) {
+            PrintAndLogEx(HINT, "Hint: card answers to all AID. It maybe the latest revision of plus/desfire/ultralight card.");
+        } else {
+            for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
+                if (cardFound[i] && strlen(hintAIDList[i].hint))
+                    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("%s") " commands", hintAIDList[i].hint);
+            }
+        }
+    }
+
+    DropField();
+    return found;
 }
 
 static uint16_t get_sw(uint8_t *d, uint8_t n) {
@@ -2313,11 +2378,200 @@ out:
     return PM3_SUCCESS;
 }
 
+int CmdHF14ANdefRead(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a ndefread",
+                  "Read NFC Data Exchange Format (NDEF) file on Type 4 NDEF tag",
+                  "hf 14a ndefread\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    bool activate_field = true;
+    bool keep_field_on = true;
+    uint8_t response[PM3_CMD_DATA_SIZE];
+    int resplen = 0;
+    bool backward_compatibility_v1 = false;
+
+    // ---------------  Select NDEF Tag application ----------------
+    uint8_t aSELECT_AID[80];
+    int aSELECT_AID_n = 0;
+    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
+    int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    if (resplen < 2) {
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    uint16_t sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        // Try NDEF Type 4 Tag v1.0
+        param_gethex_to_eol("00a4040007d2760000850100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
+        res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+        if (resplen < 2) {
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        sw = get_sw(response, resplen);
+        if (sw != 0x9000) {
+            PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+            DropField();
+            return PM3_ESOFT;
+        }
+        backward_compatibility_v1 = true;
+    }
+
+    activate_field = false;
+    keep_field_on = true;
+
+    // ---------------  CC file reading ----------------
+
+    uint8_t aSELECT_FILE_CC[30];
+    int aSELECT_FILE_CC_n = 0;
+    if (backward_compatibility_v1) {
+        param_gethex_to_eol("00a4000002e103", 0, aSELECT_FILE_CC, sizeof(aSELECT_FILE_CC), &aSELECT_FILE_CC_n);
+    } else {
+        param_gethex_to_eol("00a4000c02e103", 0, aSELECT_FILE_CC, sizeof(aSELECT_FILE_CC), &aSELECT_FILE_CC_n);
+    }
+    res = ExchangeAPDU14a(aSELECT_FILE_CC, aSELECT_FILE_CC_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "Selecting CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    uint8_t aREAD_CC[30];
+    int aREAD_CC_n = 0;
+    param_gethex_to_eol("00b000000f", 0, aREAD_CC, sizeof(aREAD_CC), &aREAD_CC_n);
+    res = ExchangeAPDU14a(aREAD_CC, aREAD_CC_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "reading CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    // Parse CC data
+    uint8_t cc_data[resplen - 2];
+    memcpy(cc_data, response, sizeof(cc_data));
+    uint8_t file_id[2] = {cc_data[9], cc_data[10]};
+
+    print_type4_cc_info(cc_data, sizeof(cc_data));
+    uint16_t max_rapdu_size = (cc_data[3] << 8 | cc_data[4]) - 2;
+    max_rapdu_size = max_rapdu_size < sizeof(response) - 2 ? max_rapdu_size : sizeof(response) - 2;
+
+    // ---------------  NDEF file reading ----------------
+    uint8_t aSELECT_FILE_NDEF[30];
+    int aSELECT_FILE_NDEF_n = 0;
+    if (backward_compatibility_v1) {
+        param_gethex_to_eol("00a4000002", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
+    } else {
+        param_gethex_to_eol("00a4000c02", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
+    }
+    memcpy(aSELECT_FILE_NDEF + aSELECT_FILE_NDEF_n, file_id, sizeof(file_id));
+    res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n + sizeof(file_id), activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    // read first 2 bytes to get NDEF length
+
+    uint8_t aREAD_NDEF[30];
+    int aREAD_NDEF_n = 0;
+    param_gethex_to_eol("00b0000002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
+    res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
+        return PM3_ESOFT;
+    }
+    uint16_t ndef_size = (response[0] << 8) + response[1];
+    uint16_t offset = 2;
+    uint8_t *ndef_file = calloc(ndef_size, sizeof(uint8_t));
+    if (ndef_file == NULL) {
+        PrintAndLogEx(ERR, "Out of memory error in CmdHF14ANdef(). Aborting...\n");
+        DropField();
+        return PM3_EMALLOC;
+    }
+    for (uint16_t i = offset; i < ndef_size + offset; i += max_rapdu_size) {
+        uint16_t segment_size = max_rapdu_size < ndef_size + offset - i ? max_rapdu_size : ndef_size + offset - i;
+        keep_field_on = i < ndef_size + offset - max_rapdu_size;
+        aREAD_NDEF_n = 0;
+        param_gethex_to_eol("00b00000", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
+        aREAD_NDEF[2] = i >> 8;
+        aREAD_NDEF[3] = i & 0xFF;
+        aREAD_NDEF[4] = segment_size;
+        res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n + 1, activate_field, keep_field_on, response, sizeof(response), &resplen);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            free(ndef_file);
+            return res;
+        }
+        sw = get_sw(response, resplen);
+        if (sw != 0x9000) {
+            PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+            DropField();
+            free(ndef_file);
+            return PM3_ESOFT;
+        }
+        if (resplen != segment_size + 2) {
+            PrintAndLogEx(ERR, "reading NDEF file failed, expected %i bytes, got %i bytes.", segment_size, resplen - 2);
+            DropField();
+            free(ndef_file);
+            return PM3_ESOFT;
+        }
+        memcpy(ndef_file + (i - offset), response, segment_size);
+    }
+    NDEFRecordsDecodeAndPrint(ndef_file, ndef_size);
+    free(ndef_file);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,              AlwaysAvailable, "This help"},
     {"list",        CmdHF14AList,         AlwaysAvailable, "List ISO 14443-a history"},
     {"info",        CmdHF14AInfo,         IfPm3Iso14443a,  "Tag information"},
     {"reader",      CmdHF14AReader,       IfPm3Iso14443a,  "Act like an ISO14443-a reader"},
+    {"ndefread",    CmdHF14ANdefRead,     IfPm3Iso14443a,  "Read an NDEF file from ISO 14443-A Type 4 tag"},
     {"cuids",       CmdHF14ACUIDs,        IfPm3Iso14443a,  "Collect n>0 ISO14443-a UIDs in one go"},
     {"sim",         CmdHF14ASim,          IfPm3Iso14443a,  "Simulate ISO 14443-a tag"},
     {"sniff",       CmdHF14ASniff,        IfPm3Iso14443a,  "sniff ISO 14443-a traffic"},

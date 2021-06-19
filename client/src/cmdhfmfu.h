@@ -26,6 +26,7 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage);
 int ul_read_uid(uint8_t *uid);
 
 int CmdHFMFUltra(const char *Cmd);
+int CmdHF14MfuNDEFRead(const char *Cmd);
 
 uint16_t ul_ev1_packgen_VCNEW(uint8_t *uid, uint32_t pwd);
 uint32_t ul_ev1_otpgenA(uint8_t *uid);
@@ -63,6 +64,7 @@ typedef enum TAGTYPE_UL {
     MAGIC_1A         = 0x10000000 | MAGIC,
     MAGIC_1B         = 0x20000000 | MAGIC,
     MAGIC_NTAG       = 0x40000000 | MAGIC,
+    NTAG_210u        = 0x80000000,
     UL_MAGIC         = UL | MAGIC,
     UL_C_MAGIC       = UL_C | MAGIC,
     UL_ERROR         = 0xFFFFFF,

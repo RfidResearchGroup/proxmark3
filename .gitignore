@@ -26,7 +26,6 @@
 *.DS_Store
 *.exe
 *.dsym
-version.c
 version_pm3.c
 *.json
 *.old
@@ -75,6 +74,7 @@ tools/cryptorf/sma
 tools/cryptorf/sma_multi
 tools/mf_nonce_brute/mf_nonce_brute
 tools/mf_nonce_brute/mf_trace_brute
+tools/jtag_openocd/openocd_configuration
 
 fpga/*
 !fpga/tests
@@ -115,3 +115,6 @@ fpga_version_info.c
 !.vscode/templates/*.json
 !.vscode/extensions.json
 !.vscode/tasks.json
+
+# docs
+!doc/*.json

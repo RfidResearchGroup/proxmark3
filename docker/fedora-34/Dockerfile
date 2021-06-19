@@ -1,4 +1,4 @@
-FROM fedora:31
+FROM fedora:34
 
 ENV LANG C
 # qt5-qtbase-devel skipped

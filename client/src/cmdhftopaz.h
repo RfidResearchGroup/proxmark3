@@ -14,6 +14,7 @@
 #include "common.h"
 
 int CmdHFTopaz(const char *Cmd);
+int CmdHFTopazInfo(const char *Cmd);
 
 int readTopazUid(bool verbose);
 #endif

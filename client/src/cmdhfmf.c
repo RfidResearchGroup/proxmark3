@@ -20,7 +20,7 @@
 #include "cliparser.h"          // argtable
 #include "hardnested_bf_core.h" // SetSIMDInstr
 #include "mifare/mad.h"
-#include "mifare/ndef.h"
+#include "nfc/ndef.h"
 #include "protocols.h"
 #include "util_posix.h"         // msclock
 #include "cmdhfmfhard.h"
@@ -210,10 +210,10 @@ static uint8_t NumBlocksPerSector(uint8_t sectorNo) {
 }
 
 static uint8_t GetSectorFromBlockNo(uint8_t blockNo) {
-    if (blockNo < 128)
+    if (blockNo < 32 * 4)
         return blockNo / 4;
     else
-        return 32 + ((128 - blockNo) / 16);
+        return 32 + ((blockNo - (32 * 4)) / 16);
 }
 
 static char GetFormatFromSector(uint8_t sectorNo) {
@@ -269,7 +269,7 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0(NULL, "blk", "<dec> ", "Simulation type to use"),
+        arg_int0(NULL, "blk", "<dec> ", "Target block"),
         arg_lit0("b", NULL, "Target key B instead of default key A"),
         arg_param_end
     };
@@ -1972,8 +1972,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 // ------------------------------
 
     // create/initialize key storage structure
-    res = initSectorTable(&e_sector, sector_cnt);
-    if (res != sector_cnt) {
+    uint32_t e_sector_size = sector_cnt > sectorno ? sector_cnt : sectorno + 1;
+    res = initSectorTable(&e_sector, e_sector_size);
+    if (res != e_sector_size) {
         free(e_sector);
         return PM3_EMALLOC;
     }
@@ -3125,8 +3126,8 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
                 uint8_t s = GetSectorFromBlockNo(b);
                 uint8_t sectrail = (FirstBlockOfSector(s) + NumBlocksPerSector(s) - 1);
-                PrintAndLogEx(INFO, "Sector %u, First block of sector %u, Num of block %u", s, FirstBlockOfSector(s), NumBlocksPerSector(s));
-                PrintAndLogEx(INFO, "Reading block %d", sectrail);
+                PrintAndLogEx(INFO, "Sector: %u, First block: %u, Last block: %u, Num of blocks: %u", s, FirstBlockOfSector(s), sectrail, NumBlocksPerSector(s));
+                PrintAndLogEx(INFO, "Reading sector trailer");
 
                 mf_readblock_t payload;
                 payload.blockno = sectrail;
@@ -5319,14 +5320,14 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFMFNDEF(const char *Cmd) {
+int CmdHFMFNDEFRead(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mf ndef",
+    CLIParserInit(&ctx, "hf mf ndefread",
                   "Prints NFC Data Exchange Format (NDEF)",
-                  "hf mf ndef -> shows NDEF parsed data\n"
-                  "hf mf ndef -vv -> shows NDEF parsed and raw data\n"
-                  "hf mf ndef --aid e103 -k ffffffffffff -b -> shows NDEF data with custom AID, key and with key B\n");
+                  "hf mf ndefread -> shows NDEF parsed data\n"
+                  "hf mf ndefread -vv -> shows NDEF parsed and raw data\n"
+                  "hf mf ndefread --aid e103 -k ffffffffffff -b -> shows NDEF data with custom AID, key and with key B\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5370,7 +5371,7 @@ static int CmdHFMFNDEF(const char *Cmd) {
 
     if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector0)) {
         PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
-        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndef -k `") " with your custom key");
+        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
         return PM3_ESOFT;
     }
 
@@ -5387,7 +5388,7 @@ static int CmdHFMFNDEF(const char *Cmd) {
 
         if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector10)) {
             PrintAndLogEx(ERR, "error, read sector 0x10. card don't have MAD or don't have MAD on default keys");
-            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndef -k `") " with your custom key");
+            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
             return PM3_ESOFT;
         }
     }
@@ -5430,7 +5431,7 @@ static int CmdHFMFNDEF(const char *Cmd) {
 
     NDEFDecodeAndPrint(data, datalen, verbose);
 
-    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndef -vv`") " for more details");
+    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -vv`") " for more details");
     return PM3_SUCCESS;
 }
 
@@ -6025,7 +6026,7 @@ static command_t CommandTable[] = {
     {"auth4",       CmdHF14AMfAuth4,        IfPm3Iso14443a,  "ISO14443-4 AES authentication"},
     {"dump",        CmdHF14AMfDump,         IfPm3Iso14443a,  "Dump MIFARE Classic tag to binary file"},
     {"mad",         CmdHF14AMfMAD,          IfPm3Iso14443a,  "Checks and prints MAD"},
-    {"ndef",        CmdHFMFNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
+    {"ndefread",    CmdHFMFNDEFRead,        IfPm3Iso14443a,  "Prints NDEF records from card"},
     {"personalize", CmdHFMFPersonalize,     IfPm3Iso14443a,  "Personalize UID (MIFARE Classic EV1 only)"},
     {"rdbl",        CmdHF14AMfRdBl,         IfPm3Iso14443a,  "Read MIFARE Classic block"},
     {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE Classic sector"},

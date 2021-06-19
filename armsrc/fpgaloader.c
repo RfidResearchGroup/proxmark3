@@ -34,7 +34,7 @@ typedef lz4_stream *lz4_streamp;
 static int downloaded_bitstream = 0;
 
 // this is where the bitstreams are located in memory:
-extern char _binary_obj_fpga_all_bit_z_start[], _binary_obj_fpga_all_bit_z_end[];
+extern uint32_t _binary_obj_fpga_all_bit_z_start[], _binary_obj_fpga_all_bit_z_end[];
 
 static uint8_t *fpga_image_ptr = NULL;
 static uint32_t uncompressed_bytes_cnt;
@@ -235,8 +235,8 @@ static bool reset_fpga_stream(int bitstream_version, lz4_streamp compressed_fpga
     uncompressed_bytes_cnt = 0;
 
     // initialize z_stream structure for inflate:
-    compressed_fpga_stream->next_in = _binary_obj_fpga_all_bit_z_start;
-    compressed_fpga_stream->avail_in = _binary_obj_fpga_all_bit_z_end - _binary_obj_fpga_all_bit_z_start;
+    compressed_fpga_stream->next_in = (char *)_binary_obj_fpga_all_bit_z_start;
+    compressed_fpga_stream->avail_in = (uint32_t)_binary_obj_fpga_all_bit_z_end - (uint32_t)_binary_obj_fpga_all_bit_z_start;
 
     int res = LZ4_setStreamDecode(compressed_fpga_stream->lz4StreamDecode, NULL, 0);
     if (res == 0)

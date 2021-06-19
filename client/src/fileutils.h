@@ -123,6 +123,7 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, void (*callback)(json_t *));
 int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *));
 int saveFileJSONroot(const char *preferredName, void *root, size_t flags, bool verbose);
+int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool verbose, bool overwrite);
 /** STUB
  * @brief Utility function to save WAVE data to a file. This method takes a preferred name, but if that
  * file already exists, it tries with another name until it finds something suitable.

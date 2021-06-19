@@ -24,7 +24,7 @@
 #include "commonutil.h"
 #include "comms.h"
 #include "proxmark3.h"
-#include "emv/emvcore.h"
+#include "iso7816/iso7816core.h"
 #include "emv/emvjson.h"
 #include "cliparser.h"
 #include "crypto/asn1utils.h"
@@ -38,7 +38,7 @@
 #include "fileutils.h"   // laodFileJSONroot
 
 #define DEF_FIDO_SIZE        2048
-#define DEF_FIDO_PARAM_FILE  "fido2_defparams.json"
+#define DEF_FIDO_PARAM_FILE  "hf_fido2_defparams.json"
 
 static int CmdHelp(const char *Cmd);
 
@@ -127,11 +127,12 @@ static int CmdHFFidoRegister(const char *cmd) {
     CLIParserInit(&ctx, "hf fido reg",
                   "Initiate a U2F token registration. Needs two 32-byte hash numbers.\n"
                   "challenge parameter (32b) and application parameter (32b).\n"
-                  "The output template filename is  `hf-fido2-params.json`\n"
+                  "The default config filename is  `fido2_defparams.json`\n"
                   "\n",
-                  "hf fido reg          -> execute command with 2 parameters, filled 0x00\n"
+                  "hf fido reg                 -> execute command with 2 parameters, filled 0x00\n"
                   "hf fido reg --cp s0 --ap s1 -> execute command with plain parameters\n"
                   "hf fido reg --cpx 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f --apx 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f\n"
+                  "hf fido reg -f fido2-params -> execute command with custom config file\n"
                  );
 
     void *argtable[] = {
@@ -378,8 +379,7 @@ static int CmdHFFidoRegister(const char *cmd) {
         JsonSaveBufAsHexCompact(root, "KeyHandle", &buf[67], keyHandleLen);
         JsonSaveBufAsHexCompact(root, "DER", &buf[67 + keyHandleLen], derLen);
 
-        //sprintf(filename, "hf-fido2-params");
-        res = saveFileJSONroot(filename, root, JSON_INDENT(2), verbose);
+        res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
         (void)res;
     }
     json_decref(root);
@@ -391,7 +391,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     CLIParserInit(&ctx, "hf fido auth",
                   "Initiate a U2F token authentication. Needs key handle and two 32-byte hash numbers.\n"
                   "key handle(var 0..255), challenge parameter (32b) and application parameter (32b)\n"
-                  "The output template filename is  `hf-fido2-params.json`\n"
+                  "The default config filename is  `fido2_defparams.json`\n"
                   "\n",
                   "hf fido auth --kh 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with 2 parameters, filled 0x00 and key handle\n"
                   "hf fido auth \n"
@@ -403,30 +403,28 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
         arg_param_begin,
         arg_lit0("a",  "apdu",      "show APDU reqests and responses"),
         arg_lit0("v",  "verbose",   "show technical data"),
-        arg_lit0("p",  "plain",     "send plain ASCII to challenge and application parameters instead of HEX"),
         arg_rem("default mode:",    "dont-enforce-user-presence-and-sign"),
         arg_lit0("u",  "user",      "mode: enforce-user-presence-and-sign"),
         arg_lit0("c",  "check",     "mode: check-only"),
         arg_str0("f",  "file",    "<fn>", "JSON input file name for parameters"),
         arg_str0("k",  "key",    "<hex>", "public key to verify signature"),
         arg_str0(NULL, "kh",     "<hex>",  "key handle (var 0..255b)"),
-        arg_str0(NULL,  "cp",  "<ascii>", "challenge parameter (1..16 chars)"),
-        arg_str0(NULL,  "ap",  "<ascii>",  "application parameter (1..16 chars)"),
-        arg_str0(NULL,  "cpx",   "<hex>", "challenge parameter (32 bytes hex)"),
-        arg_str0(NULL,  "apx",   "<hex>",  "application parameter (32 bytes hex)"),
+        arg_str0(NULL, "cp",   "<ascii>", "challenge parameter (1..16 chars)"),
+        arg_str0(NULL, "ap",   "<ascii>",  "application parameter (1..16 chars)"),
+        arg_str0(NULL, "cpx",    "<hex>", "challenge parameter (32 bytes hex)"),
+        arg_str0(NULL, "apx",    "<hex>",  "application parameter (32 bytes hex)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    bool paramsPlain = arg_get_lit(ctx, 3);
 
     uint8_t controlByte = 0x08;
-    if (arg_get_lit(ctx, 5))
+    if (arg_get_lit(ctx, 4))
         controlByte = 0x03;
 
-    if (arg_get_lit(ctx, 6))
+    if (arg_get_lit(ctx, 5))
         controlByte = 0x07;
 
     uint8_t data[512] = {0};
@@ -438,7 +436,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 7), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     // deafault name
     if (fnlen == 0) {
@@ -463,7 +461,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     public_key_loaded = (jlen > 0);
 
     // public key
-    CLIGetHexWithReturn(ctx, 8, hdata, &hdatalen);
+    CLIGetHexWithReturn(ctx, 7, hdata, &hdatalen);
     if (hdatalen && hdatalen != 65) {
         PrintAndLogEx(ERR, "ERROR: public key length must be 65 bytes only.");
         CLIParserFree(ctx);
@@ -476,33 +474,41 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
         public_key_loaded = true;
     }
 
-    CLIGetHexWithReturn(ctx, 9, hdata, &hdatalen);
+    CLIGetHexWithReturn(ctx, 8, hdata, &hdatalen);
     if (hdatalen > 255) {
-        PrintAndLogEx(ERR, "ERROR: application parameter length must be less than 255.");
+        PrintAndLogEx(ERR, "ERROR: key handle length must be less than 255.");
         CLIParserFree(ctx);
         json_decref(root);
         return PM3_EINVARG;
     }
 
+    printf("-- hlen=%d\n", hdatalen);
     if (hdatalen) {
         keyHandleLen = hdatalen;
         data[64] = keyHandleLen;
         memmove(&data[65], hdata, keyHandleLen);
+        hdatalen = 0;
     }
 
-    if (paramsPlain) {
+    bool cpplain = arg_get_str_len(ctx, 9);
+    bool applain = arg_get_str_len(ctx, 10);
+    bool cphex = arg_get_str_len(ctx, 11);
+    bool aphex = arg_get_str_len(ctx, 12);
+
+    if (cpplain) {
         memset(hdata, 0x00, 32);
         hdatalen = sizeof(hdata);
-        CLIGetStrWithReturn(ctx, 10, hdata, &hdatalen);
+        CLIGetStrWithReturn(ctx, 9, hdata, &hdatalen);
         if (hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
             CLIParserFree(ctx);
             json_decref(root);
             return PM3_EINVARG;
         }
-    } else {
+    }
+    if (cphex && cpplain == false) {
         hdatalen = sizeof(hdata);
-        CLIGetHexWithReturn(ctx, 12, hdata, &hdatalen);
+        CLIGetHexWithReturn(ctx, 11, hdata, &hdatalen);
         if (hdatalen && hdatalen != 32) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length must be 32 bytes only.");
             CLIParserFree(ctx);
@@ -510,23 +516,25 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
             return PM3_EINVARG;
         }
     }
-
-    if (hdatalen)
+    if (hdatalen) {
         memmove(data, hdata, 32);
+        hdatalen = 0;
+    }
 
-    if (paramsPlain) {
+    if (applain) {
         memset(hdata, 0x00, 32);
         hdatalen = sizeof(hdata);
-        CLIGetStrWithReturn(ctx, 11, hdata, &hdatalen);
+        CLIGetStrWithReturn(ctx, 10, hdata, &hdatalen);
         if (hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
             CLIParserFree(ctx);
             json_decref(root);
             return PM3_EINVARG;
         }
-    } else {
+    }
+    if (aphex && applain == false) {
         hdatalen = sizeof(hdata);
-        CLIGetHexWithReturn(ctx, 13, hdata, &hdatalen);
+        CLIGetHexWithReturn(ctx, 12, hdata, &hdatalen);
         if (hdatalen && hdatalen != 32) {
             PrintAndLogEx(ERR, "ERROR: application parameter length must be 32 bytes only.");
             CLIParserFree(ctx);
@@ -534,9 +542,10 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
             return PM3_EINVARG;
         }
     }
-
-    if (hdatalen)
+    if (hdatalen) {
         memmove(&data[32], hdata, 32);
+        hdatalen = 0;
+    }
 
     CLIParserFree(ctx);
 
@@ -613,7 +622,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
             res = ecdsa_signature_verify(MBEDTLS_ECP_DP_SECP256R1, public_key, xbuf, xbuflen, &buf[5], len - 5, true);
             if (res) {
                 if (res == MBEDTLS_ERR_ECP_VERIFY_FAILED) {
-                    PrintAndLogEx(WARNING, "Signature is" _RED_("NOT VALID."));
+                    PrintAndLogEx(WARNING, "Signature is ( " _RED_("not valid") " )");
                 } else {
                     PrintAndLogEx(WARNING, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
                 }
@@ -634,8 +643,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
         JsonSaveBufAsHexCompact(root, "KeyHandle", &data[65], keyHandleLen);
         JsonSaveInt(root, "Counter", cntr);
 
-        sprintf(filename, "hf-fido2-params");
-        res = saveFileJSONroot(filename, root, JSON_INDENT(2), verbose);
+        res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
         (void)res;
     }
     json_decref(root);
@@ -646,7 +654,9 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fido make",
                   "Execute a FIDO2 Make Credential command. Needs json file with parameters.\n"
-                  "Sample file `fido2_defparams.json` in `client/resources/`.",
+                  "Sample file `fido2_defparams.json` in `client/resources/`.\n"
+                  "- for yubikey there must be only one option `\"rk\": true` or false"
+                  ,
                   "hf fido make               --> use default parameters file `fido2_defparams.json`\n"
                   "hf fido make -f test.json  --> use parameters file `text.json`"
                  );
@@ -753,9 +763,7 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     // parse returned cbor
     FIDO2MakeCredentionalParseRes(root, &buf[1], len - 1, verbose, verbose2, showCBOR, showDERTLV);
 
-    // new file name..
-    sprintf(filename, "hf-fido2");
-    res = saveFileJSONroot(filename, root, JSON_INDENT(2), verbose);
+    res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
     (void)res;
     json_decref(root);
     return res;
@@ -766,7 +774,8 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
     CLIParserInit(&ctx, "hf fido assert",
                   "Execute a FIDO2 Get Assertion command. Needs json file with parameters.\n"
                   "Sample file `fido2_defparams.json` in `client/resources/`.\n"
-                  "- Needs if `rk` option is `false` (authenticator doesn't store credential to its memory)"
+                  "- Needs if `rk` option is `false` (authenticator doesn't store credential to its memory)\n"
+                  "- for yubikey there must be only one option `\"up\": true` or false"
                   ,
                   "hf fido assert                  --> default parameters file `fido2_defparams.json`\n"
                   "hf fido assert -f test.json -l  --> use parameters file `text.json` and add to request CredentialId");
@@ -873,9 +882,7 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
     // parse returned cbor
     FIDO2GetAssertionParseRes(root, &buf[1], len - 1, verbose, verbose2, showCBOR);
 
-    // new file name..
-    sprintf(filename, "hf-fido2");
-    res = saveFileJSONroot(filename, root, JSON_INDENT(2), verbose);
+    res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
     (void)res;
     json_decref(root);
     return res;

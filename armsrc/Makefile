@@ -237,7 +237,7 @@ clean:
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.d
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.z
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.bin
-	$(Q)$(RM) version_pm3.c version.c
+	$(Q)$(RM) version_pm3.c version.c fpga_version_info.c
 
 install: all
 	$(info [@] Installing fullimage to $(DESTDIR)$(PREFIX)...)

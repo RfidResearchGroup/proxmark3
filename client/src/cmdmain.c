@@ -25,6 +25,7 @@
 #include "cmddata.h"
 #include "cmdhw.h"
 #include "cmdlf.h"
+#include "cmdnfc.h"
 #include "cmdtrace.h"
 #include "cmdscript.h"
 #include "cmdcrc.h"
@@ -315,6 +316,7 @@ static command_t CommandTable[] = {
     {"hw",           CmdHW,        AlwaysAvailable,         "{ Hardware commands... }"},
     {"lf",           CmdLF,        AlwaysAvailable,         "{ Low frequency commands... }"},
     {"mem",          CmdFlashMem,  IfPm3Flash,              "{ Flash memory manipulation... }"},
+    {"nfc",          CmdNFC,       AlwaysAvailable,         "{ NFC commands... }"},
     {"reveng",       CmdRev,       AlwaysAvailable,         "{ CRC calculations from RevEng software... }"},
     {"smart",        CmdSmartcard, AlwaysAvailable,         "{ Smart card ISO-7816 commands... }"},
     {"script",       CmdScript,    AlwaysAvailable,         "{ Scripting commands... }"},

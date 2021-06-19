@@ -16,7 +16,7 @@
 typedef struct emrtd_dg_s {
     uint8_t tag;
     uint8_t dgnum;
-    const char *fileid;
+    uint16_t fileid;
     const char *filename;
     const char *desc;
     bool pace;

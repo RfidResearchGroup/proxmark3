@@ -70,7 +70,7 @@
 int DBGLEVEL = DBG_ERROR;
 uint8_t g_trigger = 0;
 bool g_hf_field_active = false;
-extern char _stack_start[], _stack_end[];
+extern uint32_t _stack_start[], _stack_end[];
 struct common_area common_area __attribute__((section(".commonarea")));
 static int button_status = BUTTON_NO_CLICK;
 static bool allow_send_wtx = false;
@@ -240,9 +240,9 @@ static uint32_t MeasureAntennaTuningLfData(void) {
 }
 
 void print_stack_usage(void) {
-    for (uint32_t *p = (uint32_t *)_stack_start; ; ++p) {
+    for (uint32_t *p = _stack_start; ; ++p) {
         if (*p != 0xdeadbeef) {
-            Dbprintf("  Max stack usage......... %d / %d bytes", _stack_end - (char *)p, _stack_end - _stack_start);
+            Dbprintf("  Max stack usage......... %d / %d bytes", (uint32_t)_stack_end - (uint32_t)p, (uint32_t)_stack_end - (uint32_t)_stack_start);
             break;
         }
     }
@@ -256,9 +256,9 @@ void ReadMem(int addr) {
 
 /* osimage version information is linked in, cf commonutil.h */
 /* bootrom version information is pointed to from _bootphase1_version_pointer */
-extern char _bootphase1_version_pointer[], _flash_start[], _flash_end[], __data_src_start__[];
+extern uint32_t _bootphase1_version_pointer[], _flash_start[], _flash_end[], __data_src_start__[];
 #ifdef WITH_NO_COMPRESSION
-extern char _bootrom_end[], _bootrom_start[], __os_size__[];
+extern uint32_t _bootrom_end[], _bootrom_start[], __os_size__[];
 #endif
 static void SendVersion(void) {
     char temp[PM3_CMD_DATA_SIZE - 12]; /* Limited data payload in USB packets */
@@ -268,11 +268,13 @@ static void SendVersion(void) {
      * symbol _bootphase1_version_pointer, perform slight sanity checks on the
      * pointer, then use it.
      */
-    char *bootrom_version = *(char **)_bootphase1_version_pointer;
+    // dummy casting to avoid "dereferencing type-punned pointer breaking strict-aliasing rules" errors
+    uint32_t bootrom_version_ptr = (uint32_t)_bootphase1_version_pointer;
+    char *bootrom_version = *(char **)(bootrom_version_ptr);
 
     strncat(VersionString, " [ "_YELLOW_("ARM")" ]\n", sizeof(VersionString) - strlen(VersionString) - 1);
 
-    if (bootrom_version < _flash_start || bootrom_version >= _flash_end) {
+    if ((uint32_t)bootrom_version < (uint32_t)_flash_start || (uint32_t)bootrom_version >= (uint32_t)_flash_end) {
         strcat(VersionString, "bootrom version information appears invalid\n");
     } else {
         FormatVersionInformation(temp, sizeof(temp), "  bootrom: ", bootrom_version);
@@ -300,7 +302,7 @@ static void SendVersion(void) {
     }
 #ifndef WITH_NO_COMPRESSION
     // Send Chip ID and used flash memory
-    uint32_t text_and_rodata_section_size = __data_src_start__ - _flash_start;
+    uint32_t text_and_rodata_section_size = (uint32_t)__data_src_start__ - (uint32_t)_flash_start;
     uint32_t compressed_data_section_size = common_area.arg1;
 #endif
 
@@ -314,7 +316,7 @@ static void SendVersion(void) {
     struct p payload;
     payload.id = *(AT91C_DBGU_CIDR);
 #ifdef WITH_NO_COMPRESSION
-    payload.section_size = _bootrom_end - _bootrom_start + (uint32_t)__os_size__;
+    payload.section_size = (uint32_t)_bootrom_end - (uint32_t)_bootrom_start + (uint32_t)__os_size__;
 #else
     payload.section_size = text_and_rodata_section_size + compressed_data_section_size;
 #endif
@@ -2439,7 +2441,7 @@ void  __attribute__((noreturn)) AppMain(void) {
     SpinDelay(100);
     BigBuf_initialize();
 
-    for (uint32_t *p = (uint32_t *)_stack_start; p < (uint32_t *)_stack_end - 0x200; ++p) {
+    for (uint32_t *p = _stack_start; p < _stack_end - 0x200; ++p) {
         *p = 0xdeadbeef;
     }
 
@@ -2500,8 +2502,8 @@ void  __attribute__((noreturn)) AppMain(void) {
     for (;;) {
         WDT_HIT();
 
-        if (*((uint32_t *)_stack_start) != 0xdeadbeef) {
-            Dbprintf("Stack overflow detected! Please increase stack size, currently %d bytes", _stack_end - _stack_start);
+        if (*_stack_start != 0xdeadbeef) {
+            Dbprintf("Stack overflow detected! Please increase stack size, currently %d bytes", (uint32_t)_stack_end - (uint32_t)_stack_start);
             Dbprintf("Unplug your device now.");
             while (1);
         }

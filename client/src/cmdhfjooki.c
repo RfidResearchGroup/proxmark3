@@ -14,7 +14,7 @@
 #include "cmdparser.h"
 #include "generator.h"
 #include "base64.h"
-#include "mifare/ndef.h"  // print decode ndef
+#include "nfc/ndef.h"     // print decode ndef
 #include "mifare/mifarehost.h"  // mfemlsetmem_xt
 #include "cliparser.h"
 #include "cmdhfmfu.h"
@@ -651,7 +651,7 @@ static int CmdHF14AJookiClone(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Done");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf mfu ndef") "` to view");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf mfu ndefread") "` to view");
     return PM3_SUCCESS;
 }
 

@@ -193,7 +193,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/emv/test/cryptotest.c
         ${PM3_ROOT}/client/src/emv/test/dda_test.c
         ${PM3_ROOT}/client/src/emv/test/sda_test.c
-        ${PM3_ROOT}/client/src/emv/apduinfo.c
         ${PM3_ROOT}/client/src/emv/cmdemv.c
         ${PM3_ROOT}/client/src/emv/crypto.c
         ${PM3_ROOT}/client/src/emv/crypto_polarssl.c
@@ -210,6 +209,8 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/fido/cbortools.c
         ${PM3_ROOT}/client/src/fido/cose.c
         ${PM3_ROOT}/client/src/fido/fidocore.c
+        ${PM3_ROOT}/client/src/iso7816/apduinfo.c
+        ${PM3_ROOT}/client/src/iso7816/iso7816core.c
         ${PM3_ROOT}/client/src/loclass/cipher.c
         ${PM3_ROOT}/client/src/loclass/cipherutils.c
         ${PM3_ROOT}/client/src/loclass/elite_crack.c
@@ -220,7 +221,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/mifare/mifare4.c
         ${PM3_ROOT}/client/src/mifare/mifaredefault.c
         ${PM3_ROOT}/client/src/mifare/mifarehost.c
-        ${PM3_ROOT}/client/src/mifare/ndef.c
+        ${PM3_ROOT}/client/src/nfc/ndef.c
         ${PM3_ROOT}/client/src/mifare/desfire_crypto.c
         ${PM3_ROOT}/client/src/uart/uart_posix.c
         ${PM3_ROOT}/client/src/uart/uart_win32.c
@@ -252,6 +253,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfmfp.c
         ${PM3_ROOT}/client/src/cmdhfmfu.c
         ${PM3_ROOT}/client/src/cmdhfst.c
+        ${PM3_ROOT}/client/src/cmdhfst25ta.c
         ${PM3_ROOT}/client/src/cmdhfthinfilm.c
         ${PM3_ROOT}/client/src/cmdhftopaz.c
         ${PM3_ROOT}/client/src/cmdhfwaveshare.c
@@ -290,6 +292,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfviking.c
         ${PM3_ROOT}/client/src/cmdlfvisa2000.c
         ${PM3_ROOT}/client/src/cmdmain.c
+        ${PM3_ROOT}/client/src/cmdnfc.c
         ${PM3_ROOT}/client/src/cmdparser.c
         ${PM3_ROOT}/client/src/cmdscript.c
         ${PM3_ROOT}/client/src/cmdsmartcard.c

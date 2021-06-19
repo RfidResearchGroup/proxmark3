@@ -78,14 +78,14 @@ or use the base64 encoded parameter to clone:
 `hf jooki clone -b A5wlbrkq6QoKh9w1
 
 
-Note: Jooki doesn't like more than one NDEF record, so make sure you just have one. Check with `hf mfu ndef`
+Note: Jooki doesn't like more than one NDEF record, so make sure you just have one. Check with `hf mfu ndefread`
 
 ### List of known figurine types
 `Value`|`Figurine Type`|
 |------|---------------|
 **01** | Stones |
-**02** | Generic Flat |			
-**03** | System Commands | 			
+**02** | Generic Flat |         
+**03** | System Commands |          
 **04** | Tests |
 
 | `Figurine Type` | `Figurine ID` | `Figurine`           |

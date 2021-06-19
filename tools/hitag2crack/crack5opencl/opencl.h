@@ -104,7 +104,7 @@ typedef struct opencl_ctx {
     cl_program *programs;           // compute program's
     cl_kernel *kernels;             // compute kernel's
 
-//	cl_mem cand_base;               // device memory used for the candidate base
+//  cl_mem cand_base;               // device memory used for the candidate base
     cl_mem *keystreams;             // device memory used for the keystream array
     cl_mem *candidates;             // device memory used for the candidates array
     cl_mem *matches;                // device memory used for the matches array
