@@ -169,6 +169,17 @@ const char *getTagInfo(uint8_t uid) {
     return manufactureMapping[ARRAYLEN(manufactureMapping) - 1].desc;
 }
 
+static const hintAIDListT hintAIDList[] = {
+    // AID, AID len, name, hint - how to use
+    { "\xA0\x00\x00\x06\x47\x2F\x00\x01", 8, "FIDO", "hf fido" },
+    { "\xA0\x00\x00\x03\x08\x00\x00\x10\x00\x01\x00", 11, "PIV", "" },
+    { "\xD2\x76\x00\x01\x24\x01", 8, "OpenPGP", "" },
+    { "\x31\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "EMV (pse)", "hf emv" },
+    { "\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "EMV (ppse)", "hf emv" },
+    { "\x41\x44\x20\x46\x31", 5, "CIPURSE", "hf cipurse" },
+    { "\xd2\x76\x00\x00\x85\x01\x00", 7, "desfire", "hf mfdes" },
+};
+
 // iso14a apdu input frame length
 static uint16_t frameLength = 0;
 uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
@@ -2129,6 +2140,57 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     PrintAndLogEx(NORMAL, "");
     DropField();
     return select_status;
+}
+
+int infoHF14A4Applications(bool verbose) {
+    bool cardFound[ARRAYLEN(hintAIDList)] = {0};
+    bool ActivateField = true;
+    int found = 0;
+    for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
+        uint16_t sw = 0;
+        uint8_t result[1024] = {0};
+        size_t resultlen = 0;
+        int res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, (uint8_t *)hintAIDList[i].aid, hintAIDList[i].aid_length, result, sizeof(result), &resultlen, &sw);
+        ActivateField = false;
+        if (res)
+            continue;
+
+        if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
+            if (!found) {
+                if (verbose)
+                    PrintAndLogEx(INFO, "----------------- " _CYAN_("Short AID search") " -----------------");
+            }
+            found++;
+
+            if (sw == 0x9000) {
+                if (verbose)
+                    PrintAndLogEx(SUCCESS, "Application " _CYAN_("%s") " ( " _GREEN_("ok") " )", hintAIDList[i].desc);
+                cardFound[i] = true;
+            } else {
+                if (verbose)
+                    PrintAndLogEx(WARNING, "Application " _CYAN_("%s") " ( " _RED_("blocked") " )", hintAIDList[i].desc);
+            }
+        }
+    }
+
+    if (found) {
+        if (verbose)
+            PrintAndLogEx(INFO, "---------------------------------------------------");
+        else
+            PrintAndLogEx(INFO, "Short AID search:");
+
+        if (found >= ARRAYLEN(hintAIDList) - 1) {
+            PrintAndLogEx(HINT, "Hint: card answers to all AID. It maybe the latest revision of plus/desfire/ultralight card.");
+        } else {
+            for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
+                if (cardFound[i] && strlen(hintAIDList[i].hint))
+                    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("%s") " commands", hintAIDList[i].hint);
+            }
+        }
+    }
+
+    DropField();
+    return found;
 }
 
 static uint16_t get_sw(uint8_t *d, uint8_t n) {

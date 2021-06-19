@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - FIXED 'hf desfire' changekey, GetUID, 3DES sesson key tweak. (@mwalker33)
+ - Fixed `hf fido` commands now works correctly (@merlokk) 
+ - Moved / renamed  `client/resource/fido2_defparams.json` ->  `client/resource/hf_fido2_defparams.json` (@merlokk)
+ - Added `hf cipurse` commands to work with cipurse transport cards (@merlokk) 
  - Added '--gap' option to lf em 410x sim for more control over sim data (@mwalker)
  - Changed `hf fido` - refactored load/save json objects (@iceman1001)
  - Moved / renamed  `fido2.json` ->  `client/resource/fido2_defparams.json` (@iceman1001)

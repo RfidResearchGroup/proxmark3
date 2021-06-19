@@ -973,7 +973,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log /home/phil/.proxmark3/logs/log_20210604.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210618.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -1682,6 +1682,123 @@
             ],
             "usage": "hf 15 writedsfid [-h*2o] [-u <hex>] [--ua] --dsfid <dec>"
         },
+        "hf cipurse aread": {
+            "command": "hf cipurse aread",
+            "description": "read file attributes by file id with key id and key",
+            "notes": [
+                "hf cipurse aread -f 2ff7 -> authenticate with keyid=1 and key = 7373...7373 and read file attributes with id 2ff7",
+                "hf cipurse aread -n 2 -k 65656565656565656565656565656565 -f 2ff7 -> authenticate with specified key and read file attributes"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyid <dec> key id",
+                "-k, --key <hex> key for authenticate",
+                "-f, --file <hex> file id",
+                "--noauth read file attributes without authentication",
+                "--sreq <plain|mac(default)|encode> communication reader-picc security level",
+                "--sresp <plain|mac(default)|encode> communication picc-reader security level",
+                "--sel-adf show info about adf itself",
+                "--sel-mf show info about master file"
+            ],
+            "usage": "hf cipurse aread [-hav] [-n <dec>] [-k <hex>] [-f <hex>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [--sel-adf] [--sel-mf]"
+        },
+        "hf cipurse auth": {
+            "command": "hf cipurse auth",
+            "description": "authenticate with key id and key",
+            "notes": [
+                "hf cipurse auth -> authenticate with keyid=1 and key = 7373...7373",
+                "hf cipurse auth -n 2 -k 65656565656565656565656565656565 -> authenticate with key"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyid <dec> key id",
+                "-k, --key <hex> key for authenticate"
+            ],
+            "usage": "hf cipurse auth [-hav] [-n <dec>] [-k <hex>]"
+        },
+        "hf cipurse delete": {
+            "command": "hf cipurse delete",
+            "description": "read file by file id with key id and key",
+            "notes": [
+                "hf cipurse delete -f 2ff7 -> authenticate with keyid=1 and key = 7373...7373 and delete file with id 2ff7",
+                "hf cipurse delete -n 2 -k 65656565656565656565656565656565 -f 2ff7 -> authenticate with specified key and delete file"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyid <dec> key id",
+                "-k, --key <hex> key for authenticate",
+                "-f, --file <hex> file id",
+                "--sreq <plain|mac(default)|encode> communication reader-picc security level",
+                "--sresp <plain|mac(default)|encode> communication picc-reader security level"
+            ],
+            "usage": "hf cipurse delete [-hav] [-n <dec>] [-k <hex>] [-f <hex>] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>]"
+        },
+        "hf cipurse help": {
+            "command": "hf cipurse help",
+            "description": "help this help. --------------------------------------------------------------------------------------- hf cipurse info available offline: no get info from cipurse tags",
+            "notes": [
+                "hf cipurse info"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "hf cipurse info [-h]"
+        },
+        "hf cipurse read": {
+            "command": "hf cipurse read",
+            "description": "read file by file id with key id and key",
+            "notes": [
+                "hf cipurse read -f 2ff7 -> authenticate with keyid=1 and key = 7373...7373 and read file with id 2ff7",
+                "hf cipurse read -n 2 -k 65656565656565656565656565656565 -f 2ff7 -> authenticate with specified key and read file"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyid <dec> key id",
+                "-k, --key <hex> key for authenticate",
+                "-f, --file <hex> file id",
+                "-o, --offset <dec> offset for reading data from file",
+                "--noauth read file without authentication",
+                "--sreq <plain|mac(default)|encode> communication reader-picc security level",
+                "--sresp <plain|mac(default)|encode> communication picc-reader security level"
+            ],
+            "usage": "hf cipurse read [-hav] [-n <dec>] [-k <hex>] [-f <hex>] [-o <dec>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>]"
+        },
+        "hf cipurse write": {
+            "command": "hf cipurse write",
+            "description": "write file by file id with key id and key",
+            "notes": [
+                "hf cipurse write -f 2ff7 -> authenticate with keyid=1 and key = 7373...7373 and write file with id 2ff7",
+                "hf cipurse write -n 2 -k 65656565656565656565656565656565 -f 2ff7 -> authenticate with specified key and write file"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyid <dec> key id",
+                "-k, --key <hex> key for authenticate",
+                "-f, --file <hex> file id",
+                "-o, --offset <dec> offset for reading data from file",
+                "--noauth read file without authentication",
+                "--sreq <plain|mac(default)|encode> communication reader-picc security level",
+                "--sresp <plain|mac(default)|encode> communication picc-reader security level",
+                "-c, --content <hex> new file content"
+            ],
+            "usage": "hf cipurse write [-hav] [-n <dec>] [-k <hex>] [-f <hex>] [-o <dec>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [-c <hex>]"
+        },
         "hf emrtd help": {
             "command": "hf emrtd help",
             "description": "help this help info display info about an emrtd list list iso 14443a/7816 history --------------------------------------------------------------------------------------- hf emrtd dump available offline: no dump all files on an emrtd",
@@ -2049,7 +2166,7 @@
         },
         "hf fido assert": {
             "command": "hf fido assert",
-            "description": "execute a fido2 get assertion command. needs json file with parameters. sample file `fido2_defparams.json` in `client/resources/`. - needs if `rk` option is `false` (authenticator doesn't store credential to its memory)",
+            "description": "execute a fido2 get assertion command. needs json file with parameters. sample file `fido2_defparams.json` in `client/resources/`. - needs if `rk` option is `false` (authenticator doesn't store credential to its memory) - for yubikey there must be only one option `\"up\": true` or false",
             "notes": [
                 "hf fido assert -> default parameters file `fido2_defparams.json`",
                 "hf fido assert -f test.json -l -> use parameters file `text.json` and add to request credentialid"
@@ -2128,7 +2245,7 @@
         },
         "hf fido make": {
             "command": "hf fido make",
-            "description": "execute a fido2 make credential command. needs json file with parameters. sample file `fido2_defparams.json` in `client/resources/`.",
+            "description": "execute a fido2 make credential command. needs json file with parameters. sample file `fido2_defparams.json` in `client/resources/`. - for yubikey there must be only one option `\"rk\": true` or false",
             "notes": [
                 "hf fido make -> use default parameters file `fido2_defparams.json`",
                 "hf fido make -f test.json -> use parameters file `text.json`"
@@ -2169,7 +2286,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- high frequency ----------------------- 14a { iso14443a rfids... } 14b { iso14443b rfids... } 15 { iso15693 rfids... } epa { german identification card... } emrtd { machine readable travel document... } felica { iso18092 / felica rfids... } fido { fido and fido2 authenticators... } jooki { jooki rfids... } iclass { iclass rfids... } legic { legic rfids... } lto { lto cartridge memory rfids... } mf { mifare rfids... } mfp { mifare plus rfids... } mfu { mifare ultralight rfids... } mfdes { mifare desfire rfids... } seos { seos rfids... } st25ta { st25ta rfids... } thinfilm { thinfilm rfids... } topaz { topaz (nfc type 1) rfids... } waveshare { waveshare nfc epaper... } ----------- --------------------- general --------------------- help this help list list protocol data in trace buffer search search for known hf tags --------------------------------------------------------------------------------------- hf list available offline: yes alias of `trace list -t raw` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
+            "description": "-------- ----------------------- high frequency ----------------------- 14a { iso14443a rfids... } 14b { iso14443b rfids... } 15 { iso15693 rfids... } cipurse { cipurse transport cards... } epa { german identification card... } emrtd { machine readable travel document... } felica { iso18092 / felica rfids... } fido { fido and fido2 authenticators... } jooki { jooki rfids... } iclass { iclass rfids... } legic { legic rfids... } lto { lto cartridge memory rfids... } mf { mifare rfids... } mfp { mifare plus rfids... } mfu { mifare ultralight rfids... } mfdes { mifare desfire rfids... } seos { seos rfids... } st25ta { st25ta rfids... } thinfilm { thinfilm rfids... } topaz { topaz (nfc type 1) rfids... } waveshare { waveshare nfc epaper... } ----------- --------------------- general --------------------- help this help list list protocol data in trace buffer search search for known hf tags --------------------------------------------------------------------------------------- hf list available offline: yes alias of `trace list -t raw` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf list -f -> show frame delay times",
                 "hf list -1 -> use trace buffer"
@@ -4609,9 +4726,10 @@
             ],
             "offline": true,
             "options": [
-                "-h, --help this help"
+                "-h, --help this help",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf search [-h]"
+            "usage": "hf search [-hv]"
         },
         "hf seos help": {
             "command": "hf seos help",
@@ -4943,8 +5061,8 @@
             "command": "hw connect",
             "description": "connects to a proxmark3 device via specified serial port. baudrate here is only for physical uart or uart-bt, not for usb-cdc or blue shark add-on",
             "notes": [
-                "hw connect -p /dev/ttyacm0",
-                "hw connect -p /dev/ttyacm0 -b 115200"
+                "hw connect -p com3",
+                "hw connect -p com3 -b 115200"
             ],
             "offline": true,
             "options": [
@@ -9061,8 +9179,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 564,
+        "commands_extracted": 570,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-06-04T19:57:00"
+        "extracted_on": "2021-06-18T09:04:45"
     }
 }

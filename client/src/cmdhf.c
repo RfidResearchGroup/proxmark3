@@ -33,6 +33,7 @@
 #include "cmdhftopaz.h"     // TOPAZ
 #include "cmdhffelica.h"    // ISO18092 / FeliCa
 #include "cmdhffido.h"      // FIDO authenticators
+#include "cmdhfcipurse.h"   // CIPURSE transport cards
 #include "cmdhfthinfilm.h"  // Thinfilm
 #include "cmdhflto.h"       // LTO-CM
 #include "cmdhfcryptorf.h"  // CryptoRF
@@ -58,9 +59,13 @@ int CmdHFSearch(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool verbose = arg_get_lit(ctx, 1);
+
     CLIParserFree(ctx);
 
     int res = PM3_ESOFT;
@@ -89,6 +94,8 @@ int CmdHFSearch(const char *Cmd) {
         if (infoHF14A(false, false, false) > 0) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-A tag") " found\n");
             res = PM3_SUCCESS;
+
+            infoHF14A4Applications(verbose);
         }
     }
 
@@ -399,6 +406,7 @@ static command_t CommandTable[] = {
     {"14b",         CmdHF14B,         AlwaysAvailable, "{ ISO14443B RFIDs...                  }"},
     {"15",          CmdHF15,          AlwaysAvailable, "{ ISO15693 RFIDs...                   }"},
 //    {"cryptorf",    CmdHFCryptoRF,    AlwaysAvailable, "{ CryptoRF RFIDs...                   }"},
+    {"cipurse",     CmdHFCipurse,     AlwaysAvailable, "{ Cipurse transport Cards...          }"},
     {"epa",         CmdHFEPA,         AlwaysAvailable, "{ German Identification Card...       }"},
     {"emrtd",       CmdHFeMRTD,       AlwaysAvailable, "{ Machine Readable Travel Document... }"},
     {"felica",      CmdHFFelica,      AlwaysAvailable, "{ ISO18092 / FeliCa RFIDs...          }"},
