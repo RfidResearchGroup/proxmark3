@@ -3,11 +3,12 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - FIXED 'hf desfire' changekey, GetUID, 3DES sesson key tweak. (@mwalker33)
- - Fixed `hf fido` commands now works correctly (@merlokk) 
+ - Changed `hf nfc ndefread` - ndef parser now handles more types (@iceman1001)
+ - Fix `hf desfire` changekey, GetUID, 3DES sesson key tweak. (@mwalker33)
+ - Fix `hf fido` commands now works correctly (@merlokk) 
  - Moved / renamed  `client/resource/fido2_defparams.json` ->  `client/resource/hf_fido2_defparams.json` (@merlokk)
  - Added `hf cipurse` commands to work with cipurse transport cards (@merlokk) 
- - Added '--gap' option to lf em 410x sim for more control over sim data (@mwalker)
+ - Added `--gap` option to lf em 410x sim for more control over sim data (@mwalker)
  - Changed `hf fido` - refactored load/save json objects (@iceman1001)
  - Moved / renamed  `fido2.json` ->  `client/resource/fido2_defparams.json` (@iceman1001)
  - Added openocd shikra support based on @ninjastyle82 patch to deprecated iceman fork (@iceman1001)
@@ -17,8 +18,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `data asn1` - a command to decode ASN1 byte arrays  (@iceman1001)
  - Added `hf 15 disableprivacy` - from @g3gg0 fork *WIP* (@iceman1001)
  - Added `lf_ident_json.lua` - script to identify t55xx json dump files (@iceman1001)
- - Fixed `hf iclass chk` -  multithread concurrency issues solved (@iceman1001)
- - Fixed hf_iceclass standalone - correct null terminator filename (@metalauricle)
+ - Fix `hf iclass chk` -  multithread concurrency issues solved (@iceman1001)
+ - Fix hf_iceclass standalone - correct null terminator filename (@metalauricle)
  - Changed `trace list -t mfdes - added annotations for EV2, EV3 (@iceman1001)`
  - Changed `hf iclass lookup` - fixed swapped args (@iceman1001)
  - Changed `hf iclass decrypt` - added the possibility to decode the data as block6 if you have a cardhelper (@iceman1001)
