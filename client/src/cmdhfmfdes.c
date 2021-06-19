@@ -984,7 +984,14 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
 
     // Part 4
     // tag->session_key = &default_key;
-    tag->session_key = realloc (tag->session_key,sizeof(struct desfire_key));
+    struct desfire_key *p = realloc (tag->session_key,sizeof(struct desfire_key));
+    if (!p) {
+        PrintAndLogEx(FAILED, "Cannot allocate memory for session keys");
+        free(tag->session_key);
+        return PM3_EMALLOC;
+    }
+    tag->session_key = p;
+
     memset (tag->session_key, 0x00, sizeof(struct desfire_key));
 
     Desfire_session_key_new(RndA, RndB, key, tag->session_key);
