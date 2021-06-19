@@ -161,7 +161,7 @@ static void decode_print_st(uint16_t blockno, uint8_t *data) {
         PrintAndLogEx(INFO, "----------------------- " _CYAN_("Sector trailer decoder") " -----------------------");
         PrintAndLogEx(INFO, "key A........ " _GREEN_("%s"), sprint_hex_inrow(data, 6));
         PrintAndLogEx(INFO, "acr.......... " _GREEN_("%s"), sprint_hex_inrow(data + 6, 3));
-        PrintAndLogEx(INFO, "user / gdb... " _GREEN_("%02x"), data[9]);
+        PrintAndLogEx(INFO, "user / gpb... " _GREEN_("%02x"), data[9]);
         PrintAndLogEx(INFO, "key B........ " _GREEN_("%s"), sprint_hex_inrow(data + 10, 6));
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "  # | Access rights");
