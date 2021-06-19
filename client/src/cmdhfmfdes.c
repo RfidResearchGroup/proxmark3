@@ -983,7 +983,17 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
     }
 
     // Part 4
-    tag->session_key = &default_key;
+    // tag->session_key = &default_key;
+    struct desfire_key *p = realloc (tag->session_key,sizeof(struct desfire_key));
+    if (!p) {
+        PrintAndLogEx(FAILED, "Cannot allocate memory for session keys");
+        free(tag->session_key);
+        return PM3_EMALLOC;
+    }
+    tag->session_key = p;
+
+    memset (tag->session_key, 0x00, sizeof(struct desfire_key));
+
     Desfire_session_key_new(RndA, RndB, key, tag->session_key);
 
     if (payload->mode != MFDES_AUTH_PICC) {
@@ -1017,10 +1027,18 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
         }
     }
 
+    // If the 3Des key first 8 bytes = 2nd 8 Bytes then we are really using Singe Des
+    // As such we need to set the session key such that the 2nd 8 bytes = 1st 8 Bytes
+    if (payload->algo == MFDES_ALGO_3DES) {
+        if (memcmp(key->data,&key->data[8],8) == 0)
+            memcpy(&tag->session_key->data[8], tag->session_key->data, 8);
+    }
+
     rpayload->sessionkeylen = payload->keylen;
     memcpy(rpayload->sessionkey, tag->session_key->data, rpayload->sessionkeylen);
     memset(tag->ivect, 0, MAX_CRYPTO_BLOCK_SIZE);
     tag->authenticated_key_no = payload->keyno;
+
     if (tag->authentication_scheme == AS_NEW) {
         cmac_generate_subkeys(tag->session_key, MCD_RECEIVE);
     }
@@ -1206,7 +1224,7 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
     sAPDU apdu = {0x90, MFDES_CHANGE_KEY, 0x00, 0x00, 0x01, data}; // 0xC4
 
     size_t cmdcnt = 0;
-    uint8_t csPkt[30] = {0x00}; // temp storage for AES first CheckSum
+    uint8_t csPkt[100] = {0x00}; // temp storage for AES/3K3Des packet to calculate checksum  (size ????)
 
     uint8_t new_key_length = 16;
     switch (new_algo) {
@@ -1264,6 +1282,11 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
                     memcpy(&csPkt[1], data, 18);
 
                     desfire_crc32(csPkt, 19, data + 1 + cmdcnt);
+                } else if (new_algo == MFDES_ALGO_3K3DES) {
+                    // 3K3Des checksum must cover : C4 <KeyNo> <PrevKey XOR NewKey>
+                    csPkt[0] = MFDES_CHANGE_KEY;
+                    memcpy (&csPkt[1], data, 25);
+                    desfire_crc32(csPkt, 26, data + 1 + cmdcnt);
                 } else {
                     desfire_crc32_append(data + 1, cmdcnt);
                 }
@@ -1281,11 +1304,16 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
                 break;
             case AS_NEW:
                 if (new_algo == MFDES_ALGO_AES) {
-                    // AES Checksum must cover : C4<KeyNo>    <PrevKey XOR Newkey>          <NewKeyVer>
+                    // AES Checksum must cover : C4<KeyNo>    <Newkey data>                 <NewKeyVer>
                     //                           C4  01   A0B08090E0F0C0D02030001060704050      03
-                    csPkt[0] = 0xC4;
+                    csPkt[0] = MFDES_CHANGE_KEY;
                     memcpy(&csPkt[1], data, 18);
                     desfire_crc32(csPkt, 19, data + 1 + cmdcnt);
+                 } else if (new_algo == MFDES_ALGO_3K3DES) {
+                    // 3K3Des checksum must cover : C4 <KeyNo> <Newkey Data>
+                    csPkt[0] = MFDES_CHANGE_KEY;
+                    memcpy (&csPkt[1], data, 25);
+                    desfire_crc32(csPkt, 26, data + 1 + cmdcnt);
                 } else {
                     desfire_crc32_append(data + 1, cmdcnt);
                 }
@@ -1298,8 +1326,8 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
 
     uint8_t *p = mifare_cryto_preprocess_data(tag, data + 1, (size_t *)&cmdcnt, 0, MDCM_ENCIPHERED | ENC_COMMAND | NO_CRC);
     apdu.Lc = (uint8_t)cmdcnt + 1;
-//    apdu.data = p;
-//  the above data pointed to from p did not have the key no. at the start, so copy preprocessed data after the key no.
+    // apdu.data = p;
+    // the above data pointed to from p did not have the key no. at the start, so copy preprocessed data after the key no.
     memcpy(&data[1], p, cmdcnt);
     apdu.data = data;
 
@@ -1319,11 +1347,17 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
 
     size_t sn = recv_len;
 
-    if (new_algo == MFDES_ALGO_AES) {
+
+    if ((new_algo == MFDES_ALGO_AES) || (new_algo == MFDES_ALGO_3K3DES))
+    {
         // AES expects us to Calculate CMAC for status byte : OK 0x00  (0x91 00)
         // As such if we get this far without an error, we should be good
         // Since we are dropping the field, we dont need to maintain the CMAC etc.
         // Setting sn = 1 will allow the post process to just exit (as status only)
+        
+        // Simular 3K3Des has some work to validate, but as long as the reply code was 00
+        // e.g. 02  fe  ec  77  ca  13  e0  c2  06  [91  00 (OK)]  69  67
+
         sn = 1;
     }
 
@@ -1608,6 +1642,15 @@ static int handler_desfire_getuid(uint8_t *uid) {
     sAPDU apdu = {0x90, MFDES_GET_UID, 0x00, 0x00, 0x00, NULL}; //0x51
     uint32_t recv_len = 0;
     uint16_t sw = 0;
+
+    // Setup the pre-process to update the IV etc. (not needed in the apdu to send to card)
+    size_t plen = 1;
+    uint8_t tmp_data[100] = { 0x00 }; // Note sure on size, but 100 is more then enough
+    tmp_data[0] = MFDES_GET_UID;
+    int8_t *p = mifare_cryto_preprocess_data(tag, tmp_data, &plen, 0, MDCM_PLAIN | CMAC_COMMAND);
+    (void)p;
+
+    // Send request/apdu
     int res = send_desfire_cmd(&apdu, false, uid, &recv_len, &sw, 0, true);
 
     if (res != PM3_SUCCESS)
@@ -1615,6 +1658,13 @@ static int handler_desfire_getuid(uint8_t *uid) {
 
     if (sw != status(MFDES_S_OPERATION_OK))
         return PM3_ESOFT;
+
+    // decrypt response
+    size_t dlen = recv_len;
+    p = mifare_cryto_postprocess_data(tag, uid, &dlen, CMAC_COMMAND | CMAC_VERIFY | MAC_VERIFY | MDCM_ENCIPHERED);
+    (void)p;
+
+    DropFieldDesfire();
 
     return res;
 }
@@ -2389,7 +2439,27 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
         PrintAndLogEx(ERR, "Error on getting uid.");
         return res;
     }
-    PrintAndLogEx(SUCCESS, "    UID: " _GREEN_("%s"), sprint_hex(uid, sizeof(uid)));
+
+    // This could be done better. by the crc calc checks.
+    // Extract the Card UID length (needs rework to allow for 10 Byte UID
+    uint8_t uidlen = 16;
+
+    // Get datalen <uid len> + <crclen> by removing padding.
+    while ((uidlen > 0) && (uid[uidlen] == 0x00))
+        uidlen--;
+
+    if (tag->authentication_scheme == AS_LEGACY)
+        uidlen -= 2; // 2 byte crc
+    else
+        uidlen -= 4; // 4 byte crc
+
+    if (uidlen <= 4) // < incase we trimmed a CRC 00 or more
+        uidlen = 4;
+    else    
+        uidlen = 7;
+
+//    PrintAndLogEx(SUCCESS, "    UID: " _GREEN_("%s"), sprint_hex(uid, sizeof(uid)));
+    PrintAndLogEx(SUCCESS, "    UID: " _GREEN_("%s"), sprint_hex(uid, uidlen));
     return res;
 }
 
@@ -2839,6 +2909,9 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         memcpy(aid, (uint8_t *)&tag->selected_application, 3);
     }
 
+    // int res;
+    // a select here seems to invalidate the current authentication with AMK and create file fails if not open access.
+    // This will be managed when we track Authenticated or Note, so a place holder comment as a reminder.
     int res = handler_desfire_select_application(aid);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Couldn't select aid. Error %d", res);
