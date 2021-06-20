@@ -2445,7 +2445,7 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
     uint8_t uidlen = 16;
 
     // Get datalen <uid len> + <crclen> by removing padding.
-    while ((uidlen > 0) && (uid[uidlen] == 0x00))
+    while ((uidlen > 0) && (uid[uidlen - 1] == 0x00))
         uidlen--;
 
     if (tag->authentication_scheme == AS_LEGACY)
@@ -2455,10 +2455,9 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
 
     if (uidlen <= 4) // < incase we trimmed a CRC 00 or more
         uidlen = 4;
-    else    
+    else
         uidlen = 7;
 
-//    PrintAndLogEx(SUCCESS, "    UID: " _GREEN_("%s"), sprint_hex(uid, sizeof(uid)));
     PrintAndLogEx(SUCCESS, "    UID: " _GREEN_("%s"), sprint_hex(uid, uidlen));
     return res;
 }
