@@ -549,9 +549,9 @@ static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
         }  
         // Let's check payload[9]. If 0x08 then SHORT_NAME or if 0x09 then COMPLETE_NAME  
         if (ndef->Payload[9] == 0x08 ) {  
-            PrintAndLogEx(INFO, "Short name...... " _YELLOW_("%s"), ndef->Payload + 10, ndef->PayloadLen - 10);
+            PrintAndLogEx(INFO, "Short name...... " _YELLOW_("%.*s"), ndef->PayloadLen - 10, ndef->Payload + 10);
         } else if (ndef->Payload[9] == 0x09 ) {  
-            PrintAndLogEx(INFO, "Complete name... " _YELLOW_("%s"),   ndef->Payload + 10, ndef->PayloadLen - 10);
+            PrintAndLogEx(INFO, "Complete name... " _YELLOW_("%.*s"), ndef->PayloadLen - 10, ndef->Payload + 10);
         } else {  
             PrintAndLogEx(INFO, "[ %02x ]", ndef->Payload[9]);
         }
