@@ -43,5 +43,5 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card);
 int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool silentMode);
 
-int SelectCard14443A_4(bool disconnect, iso14a_card_select_t *card);
+int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card);
 #endif

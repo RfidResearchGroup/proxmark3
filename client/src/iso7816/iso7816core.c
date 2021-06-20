@@ -55,7 +55,7 @@ int Iso7816Connect(Iso7816CommandChannel channel) {
     }
     // Try to 14a
     // select with no disconnect and set frameLength
-    int res = SelectCard14443A_4(false, NULL);
+    int res = SelectCard14443A_4(false, false, NULL);
     if (res == PM3_SUCCESS) {
         SetISODEPState(ISODEP_NFCA);
         return PM3_SUCCESS;
