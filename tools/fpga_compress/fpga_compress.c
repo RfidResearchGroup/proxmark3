@@ -179,6 +179,9 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
                 fclose(outfiles[j]);
             }
         }
+        if (outbufall) {
+            free(outbufall);
+        }
         free(inbuf);
         return (EXIT_FAILURE);
     }
@@ -246,6 +249,9 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
         for (uint16_t j = 0; j < num_outfiles; j++) {
             fclose(outfiles[j]);
         }
+    }
+    if (outbufall) {
+        free(outbufall);
     }
     return (EXIT_SUCCESS);
 }
