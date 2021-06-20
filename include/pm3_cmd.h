@@ -260,6 +260,12 @@ typedef struct {
 } PACKED lf_nrzsim_t;
 
 typedef struct {
+    uint8_t type;
+    uint16_t len;
+    uint8_t *data;
+} PACKED lf_hitag_t;
+
+typedef struct {
     uint8_t blockno;
     uint8_t keytype;
     uint8_t key[6];

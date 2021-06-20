@@ -1114,15 +1114,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HITAG_ELOAD: {
-            /*
-            struct p {
-                uint16_t len;
-                uint8_t *data;
-            } PACKED;
-            struct p *payload = (struct p *) packet->data.asBytes;
+            lf_hitag_t *payload = (lf_hitag_t *) packet->data.asBytes;
             uint8_t *mem = BigBuf_get_EM_addr();
-            memcpy((uint8_t *)mem.sectors, payload->data, payload->len);
-            */
+            memcpy((uint8_t *)mem, payload->data, payload->len);
             break;
         }
 #endif

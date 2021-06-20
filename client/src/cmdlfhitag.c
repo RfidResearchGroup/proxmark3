@@ -210,14 +210,15 @@ static int CmdLFHitagEload(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag eload",
                   "Loads hitag tag dump into emulator memory on device",
-                  "lf hitag eload -f lf-hitag-11223344-dump.bin\n");
+                  "lf hitag eload -2 -f lf-hitag-11223344-dump.bin\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<filename>", "filename of dump"),
-        arg_lit0("1", NULL, "simulate Hitag1"),
-        arg_lit0("2", NULL, "simulate Hitag2"),
-        arg_lit0("s", NULL, "simulate HitagS"),
+        arg_lit0("1", NULL, "Card type Hitag1"),
+        arg_lit0("2", NULL, "Card type Hitag2"),
+        arg_lit0("s", NULL, "Card type HitagS"),
+        arg_lit0("m", NULL, "Card type HitagM"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -229,9 +230,10 @@ static int CmdLFHitagEload(const char *Cmd) {
     bool use_ht1 = arg_get_lit(ctx, 2);
     bool use_ht2 = arg_get_lit(ctx, 3);
     bool use_hts = arg_get_lit(ctx, 4);
+    bool use_htm = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
-    uint8_t n = (use_ht1 + use_ht2 + use_hts);
+    uint8_t n = (use_ht1 + use_ht2 + use_hts + use_htm);
     if (n != 1) {
         PrintAndLogEx(ERR, "error, only specify one Hitag type");
         return PM3_EINVARG;
@@ -274,15 +276,24 @@ static int CmdLFHitagEload(const char *Cmd) {
 
     // check dump len..
     if (dumplen == 48 ||  dumplen == 4 * 64) {
-        struct {
-            uint16_t len;
-            uint8_t *data;
-        } PACKED payload;
-        payload.len = dumplen;
-        memcpy(payload.data, dump, dumplen);
+
+        lf_hitag_t *payload =  calloc(1, sizeof(lf_hitag_t) + dumplen);
+        
+        if (use_ht1)
+            payload->type = 1;
+        if (use_ht2)
+            payload->type = 2;
+        if (use_hts)
+            payload->type = 3;
+        if (use_htm)
+            payload->type = 4;
+
+        payload->len = dumplen;
+        memcpy(payload->data, dump, dumplen);
 
         clearCommandBuffer();
-        SendCommandNG(CMD_LF_HITAG_ELOAD, (uint8_t *)&payload, 2 + dumplen);
+        SendCommandNG(CMD_LF_HITAG_ELOAD, (uint8_t *)payload, 3 + dumplen);
+        free(payload);
     } else {
         PrintAndLogEx(ERR, "error, wrong dump file size. got %zu", dumplen);
     }
