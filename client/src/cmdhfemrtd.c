@@ -843,9 +843,13 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, uint
     strncat(filepath, PATHSEP, 2);
     strcat(filepath, name);
 
-    PrintAndLogEx(INFO, "Read %s, len: %i.", name, resplen);
-    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
+    PrintAndLogEx(INFO, "Read " _YELLOW_("%s") " , len %zu", name, resplen);
+    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars)");
+    PrintAndLogEx(DEBUG, "------------------------------------------");
+    PrintAndLogEx(DEBUG, "%s", sprint_hex_inrow(response, resplen));
+    PrintAndLogEx(DEBUG, "------------------------------------------");
     saveFile(filepath, ".BIN", response, resplen);
+
     emrtd_dg_t *dg = emrtd_fileid_to_dg(file);
     if ((dg != NULL) && (dg->dumper != NULL)) {
         dg->dumper(response, resplen, path);
