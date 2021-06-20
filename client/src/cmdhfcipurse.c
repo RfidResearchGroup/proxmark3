@@ -67,7 +67,7 @@ static int CmdHFCipurseInfo(const char *Cmd) {
         if (sw)
             PrintAndLogEx(INFO, "Not a CIPURSE card. APDU response: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         else
-            PrintAndLogEx(ERR, "APDU exchange error. Card returns 0x0000.");
+            PrintAndLogEx(ERR, "APDU exchange error. Card returns 0x0000");
 
         DropField();
         return PM3_SUCCESS;
