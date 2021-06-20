@@ -154,7 +154,7 @@ int demodKeri(bool verbose) {
         raw1 = bytebits_to_byte(DemodBuffer, 32);
         raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
 
-        CmdPrintDemodBuff("x");
+        CmdPrintDemodBuff("-x");
     }
 
     //get internal id
