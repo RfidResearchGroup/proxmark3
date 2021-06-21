@@ -346,6 +346,7 @@ void mifare_kdf_an10922(const desfirekey_t key, const uint8_t *data, size_t len)
     uint8_t *ivect = calloc(kbs, sizeof(uint8_t));
     if (ivect == NULL) {
         PrintAndLogEx(WARNING, "failed to allocate memory");
+        free(buffer);
         return;
     }
 
