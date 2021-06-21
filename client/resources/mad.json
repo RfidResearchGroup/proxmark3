@@ -5995,6 +5995,7 @@
         "application": "(access control and security) VIGIK",
         "company": "CDV International",
         "mad": "0x4905",
+
         "service_provider": "CDVI",
         "system_integrator": "CDVI"
     },
@@ -11835,6 +11836,13 @@
         "mad": "0x88B7",
         "service_provider": "HUG-Witschi AG",
         "system_integrator": "HUG-Witschi AG"
+    },
+    {
+        "application": "Access control - Hotel lodging system",
+        "company": "DORMA/KABA",
+        "mad": "0x9051",
+        "service_provider": "DORMA/KABA",
+        "system_integrator": "DORMA/KABA"
     },
     {
         "application": "FIDELIO CRUISE ship property management system, - materials management system, - meal counting system",
