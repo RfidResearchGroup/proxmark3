@@ -2577,9 +2577,9 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
                   "hf mf fchk --2k -k FFFFFFFFFFFF                --> Key recovery against MIFARE 2k\n"
                   "hf mf fchk --4k -k FFFFFFFFFFFF                --> Key recovery against MIFARE 4k\n"
                   "hf mf fchk --1k -f mfc_default_keys.dic        --> Target 1K using default dictionary file\n"
-                  "hf mf fchk --1k --emu                          --> Target 1K, write to emulator memory\n"
-                  "hf mf fchk --1k --dump                         --> Target 1K, write to file\n"
-                  "hf mf fchk --1k --mem                          --> Target 1K, use dictionary from flashmemory");
+                  "hf mf fchk --1k --emu                          --> Target 1K, write keys to emulator memory\n"
+                  "hf mf fchk --1k --dump                         --> Target 1K, write keys to file\n"
+                  "hf mf fchk --1k --mem                          --> Target 1K, use dictionary from flash memory");
 
     void *argtable[] = {
         arg_param_begin,
