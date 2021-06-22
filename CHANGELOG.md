@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix `lf em 4x50/4x70 *`  reverted a missunderstanding in byte order macros (@iceman1001)
  - Added more keys (@equipter)
  - Changed `hf nfc ndefread` - ndef parser now handles more types (@iceman1001)
  - Fix `hf desfire` changekey, GetUID, 3DES sesson key tweak. (@mwalker33)
