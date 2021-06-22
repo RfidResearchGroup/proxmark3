@@ -251,7 +251,7 @@ int CmdEM4x70Unlock(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    etd.pin = BYTES2UINT32_BE(pin);
+    etd.pin = BYTES2UINT32(pin);
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X70_UNLOCK, (uint8_t *)&etd, sizeof(etd));
@@ -370,7 +370,7 @@ int CmdEM4x70WritePIN(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    etd.pin = BYTES2UINT32_BE(pin);
+    etd.pin = BYTES2UINT32(pin);
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X70_WRITEPIN, (uint8_t *)&etd, sizeof(etd));
