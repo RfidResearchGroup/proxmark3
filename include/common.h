@@ -131,14 +131,20 @@ extern bool tearoff_enabled;
 #endif
 #endif
 
-// convert 2 bytes to U16
+// convert 2 bytes to U16 in little endian
 #ifndef BYTES2UINT16
 # define BYTES2UINT16(x) ((x[1] << 8) | (x[0]))
 #endif
-// convert 4 bytes to U32
+// convert 4 bytes to U32 in little endian
 #ifndef BYTES2UINT32
 # define BYTES2UINT32(x) ((x[3] << 24) | (x[2] << 16) | (x[1] << 8) | (x[0]))
 #endif
+
+// convert 4 bytes to U32 in big endian
+#ifndef BYTES2UINT32_BE
+# define BYTES2UINT32_BE(x) ((x[0] << 24) | (x[1] << 16) | (x[2] << 8) | (x[3]))
+#endif
+
 
 #define EVEN                        0
 #define ODD                         1

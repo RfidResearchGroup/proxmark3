@@ -464,7 +464,9 @@ int CmdEM4x50Chk(const char *Cmd) {
     }
 
     size_t datalen = 0;
-    uint8_t data[100000] = {0x0};
+
+    // 2021 iceman: how many keys shall we reserv space for? The t55xx dictionary has 139 keys.
+    uint8_t data[2000 * 4] = {0x0};
     uint8_t *keys = data;
     uint32_t key_count = 0;
 
