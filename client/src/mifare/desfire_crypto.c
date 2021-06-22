@@ -335,6 +335,10 @@ void mifare_kdf_an10922(const desfirekey_t key, const uint8_t *data, size_t len)
         return;
     }
 
+    // AES uses 16 byte IV
+    if (kbs < 16)
+        kbs = 16;
+
     cmac_generate_subkeys(key, MCD_SEND);
 
     // reserv atleast 32bytes.
