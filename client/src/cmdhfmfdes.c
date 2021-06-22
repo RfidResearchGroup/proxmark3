@@ -1200,7 +1200,7 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
 
         // PICC master key, keyalgo specific 2bit MSB
         switch (new_algo) {
-            case MFDES_ALGO_DES:
+            // case MFDES_ALGO_DES: // not needed as we patched des to 3des above. (coverty deadcode)
             case MFDES_ALGO_3DES:
                 break;            // 00xx xxx
             case MFDES_ALGO_3K3DES:
@@ -1962,7 +1962,7 @@ static int handler_desfire_readdata(mfdes_data_t *data, MFDES_FILE_TYPE_T type, 
     }
 
     // we need the CMD 0xBD <data> to calc the CMAC
-    uint8_t tmp_data[8]; // Since the APDU is hardcoded to 7 bytes of payload 7+1 = 8 is enough.
+    uint8_t tmp_data[15]; // Since the APDU is hardcoded to 7 bytes of payload 7+1 = 8  + 4 bytes for CRC/CMAC should be enough.
     tmp_data[0] = apdu.INS;
     memcpy(&tmp_data[1], data, 7);
 
@@ -2066,7 +2066,8 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type,
         tmp[5] = datasize & 0xFF;
         tmp[6] = (datasize >> 8) & 0xFF;
         tmp[7] = (datasize >> 16) & 0xFF;
-        memcpy(&tmp[8], (uint8_t *)&data->data[offset], datasize);
+
+        memcpy(&tmp[8], (uint8_t *)data->data, datasize);
 
         size_t plen = datasize + 8;
         uint8_t *p = mifare_cryto_preprocess_data(tag, tmp, &plen, 8, cs | MAC_COMMAND | CMAC_COMMAND | ENC_COMMAND);
