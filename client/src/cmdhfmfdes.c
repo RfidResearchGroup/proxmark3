@@ -2066,7 +2066,7 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type,
         tmp[5] = datasize & 0xFF;
         tmp[6] = (datasize >> 8) & 0xFF;
         tmp[7] = (datasize >> 16) & 0xFF;
-//        memcpy(&tmp[8], (uint8_t *)&data->data[offset], datasize); // Incorredt data offset, data to write should be in data (no offset)
+
         memcpy(&tmp[8], (uint8_t *)data->data, datasize);
 
         size_t plen = datasize + 8;
