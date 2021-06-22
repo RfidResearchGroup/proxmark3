@@ -126,7 +126,7 @@ static int CmdHFCipurseAuth(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    
+
     uint8_t key[] = {0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73};
     if (hdatalen)
         memcpy(key, hdata, CIPURSE_AES_KEY_LENGTH);
@@ -150,10 +150,10 @@ static int CmdHFCipurseAuth(const char *Cmd) {
     CipurseCGetKVV(key, kvv);
     if (verbose) {
         PrintAndLogEx(INFO, "Key id" _YELLOW_("%d") " key " _YELLOW_("%s") " KVV " _YELLOW_("%s")
-            , keyId
-            , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
-            , sprint_hex_inrow(kvv, CIPURSE_KVV_LENGTH)
-            );
+                      , keyId
+                      , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
+                      , sprint_hex_inrow(kvv, CIPURSE_KVV_LENGTH)
+                     );
     }
 
     bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
@@ -413,11 +413,11 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
 
     if (verbose) {
         PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " offset " _YELLOW_("%zu") " key id " _YELLOW_("%d") " key " _YELLOW_("%s")
-            , fileId
-            , offset
-            , keyId
-            , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
-            );
+                      , fileId
+                      , offset
+                      , keyId
+                      , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
+                     );
         PrintAndLogEx(INFO, "data[%d]: %s", hdatalen, sprint_hex(hdata, hdatalen));
     }
 
@@ -529,10 +529,10 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
 
     if (verbose) {
         PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " key id " _YELLOW_("%d") " key " _YELLOW_("%s")
-            , fileId
-            , keyId
-            , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
-            );
+                      , fileId
+                      , keyId
+                      , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
+                     );
     }
 
     if (noAuth == false) {
@@ -651,10 +651,10 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
 
     if (verbose) {
         PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " key id " _YELLOW_("%d") " key " _YELLOW_("%s")
-            , fileId
-            , keyId
-            , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
-            );
+                      , fileId
+                      , keyId
+                      , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
+                     );
     }
 
     bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);

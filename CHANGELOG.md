@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
+## [Jrjgjk, Zolorah t55 improvement][2021-06-22]
+### Added
+ - Standalone mode for T55 tag, launch command lf nexwatch reader and dump important in the memory file. (@jrjgjk, @zolorah)
+ - Launch a brutefoce in lf nexwatch reader to find the magic number if not already known. (@jrjgjk, @zolorah)
+ - Can clone with an unknown magic byte in psk1 or psk2 modulation. (@jrjgjk, @zolorah)
+
+
 ## [unreleased][unreleased]
  - Fix `lf em 4x50/4x70 *`  reverted a missunderstanding in byte order macros (@iceman1001)
  - Added more keys (@equipter)

@@ -1027,7 +1027,7 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 
     // 3 byte here - 1b framing header, 2b crc16
     if (APDUInFramingEnable &&
-        ((g_frame_len && (datainlen > g_frame_len - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
+            ((g_frame_len && (datainlen > g_frame_len - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
 
         int clen = 0;
 

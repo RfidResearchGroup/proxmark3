@@ -984,7 +984,7 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
 
     // Part 4
     // tag->session_key = &default_key;
-    struct desfire_key *p = realloc (tag->session_key,sizeof(struct desfire_key));
+    struct desfire_key *p = realloc(tag->session_key, sizeof(struct desfire_key));
     if (!p) {
         PrintAndLogEx(FAILED, "Cannot allocate memory for session keys");
         free(tag->session_key);
@@ -992,7 +992,7 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
     }
     tag->session_key = p;
 
-    memset (tag->session_key, 0x00, sizeof(struct desfire_key));
+    memset(tag->session_key, 0x00, sizeof(struct desfire_key));
 
     Desfire_session_key_new(RndA, RndB, key, tag->session_key);
 
@@ -1030,7 +1030,7 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
     // If the 3Des key first 8 bytes = 2nd 8 Bytes then we are really using Singe Des
     // As such we need to set the session key such that the 2nd 8 bytes = 1st 8 Bytes
     if (payload->algo == MFDES_ALGO_3DES) {
-        if (memcmp(key->data,&key->data[8],8) == 0)
+        if (memcmp(key->data, &key->data[8], 8) == 0)
             memcpy(&tag->session_key->data[8], tag->session_key->data, 8);
     }
 
@@ -1285,7 +1285,7 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
                 } else if (new_algo == MFDES_ALGO_3K3DES) {
                     // 3K3Des checksum must cover : C4 <KeyNo> <PrevKey XOR NewKey>
                     csPkt[0] = MFDES_CHANGE_KEY;
-                    memcpy (&csPkt[1], data, 25);
+                    memcpy(&csPkt[1], data, 25);
                     desfire_crc32(csPkt, 26, data + 1 + cmdcnt);
                 } else {
                     desfire_crc32_append(data + 1, cmdcnt);
@@ -1309,10 +1309,10 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
                     csPkt[0] = MFDES_CHANGE_KEY;
                     memcpy(&csPkt[1], data, 18);
                     desfire_crc32(csPkt, 19, data + 1 + cmdcnt);
-                 } else if (new_algo == MFDES_ALGO_3K3DES) {
+                } else if (new_algo == MFDES_ALGO_3K3DES) {
                     // 3K3Des checksum must cover : C4 <KeyNo> <Newkey Data>
                     csPkt[0] = MFDES_CHANGE_KEY;
-                    memcpy (&csPkt[1], data, 25);
+                    memcpy(&csPkt[1], data, 25);
                     desfire_crc32(csPkt, 26, data + 1 + cmdcnt);
                 } else {
                     desfire_crc32_append(data + 1, cmdcnt);
@@ -1348,13 +1348,12 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
     size_t sn = recv_len;
 
 
-    if ((new_algo == MFDES_ALGO_AES) || (new_algo == MFDES_ALGO_3K3DES))
-    {
+    if ((new_algo == MFDES_ALGO_AES) || (new_algo == MFDES_ALGO_3K3DES)) {
         // AES expects us to Calculate CMAC for status byte : OK 0x00  (0x91 00)
         // As such if we get this far without an error, we should be good
         // Since we are dropping the field, we dont need to maintain the CMAC etc.
         // Setting sn = 1 will allow the post process to just exit (as status only)
-        
+
         // Simular 3K3Des has some work to validate, but as long as the reply code was 00
         // e.g. 02  fe  ec  77  ca  13  e0  c2  06  [91  00 (OK)]  69  67
 
