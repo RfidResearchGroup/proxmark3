@@ -1313,7 +1313,7 @@ static bool em4x50_sim_read_word(uint32_t *word) {
         }
     }
 
-    *word = BYTES2UINT32(bytes);
+    *word = BYTES2UINT32_BE(bytes);
 
     // check parities
     if ((parities == parities_calculated) && (stop_bit == 0)) {
