@@ -20,6 +20,8 @@
 uint8_t Key[] = CIPURSE_DEFAULT_KEY;
 uint8_t KeyKvv[CIPURSE_KVV_LENGTH] = {0x5f, 0xd6, 0x7b, 0xcb};
 
+uint8_t TestRandom[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x20, 0x21, 0x22};
+
 uint8_t TestData[16] = {0x11, 0x22, 0x33, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 uint8_t TestDataPadded[16] = {0x11, 0x22, 0x33, 0x44, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
@@ -123,10 +125,9 @@ static bool TestAuth(void) {
     res = res && (memcmp(ctx.key, Key, 16) == 0);
     res = res && (ctx.keyId == 1);
     
-    uint8_t random[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x20, 0x21, 0x22};
-    CipurseCSetRandomFromPICC(&ctx, random);
-    res = res && (memcmp(ctx.RP, random, 16) == 0);
-    res = res && (memcmp(ctx.rP, &random[16], 6) == 0);
+    CipurseCSetRandomFromPICC(&ctx, TestRandom);
+    res = res && (memcmp(ctx.RP, TestRandom, 16) == 0);
+    res = res && (memcmp(ctx.rP, &TestRandom[16], 6) == 0);
     
     uint8_t hrandom[] = {0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20};
     CipurseCSetRandomHost(&ctx);
@@ -153,11 +154,45 @@ static bool TestAuth(void) {
     return res;
 }
 
-//    PrintAndLogEx(INFO, "SMI: %s", sprint_hex(ctx.CT, 16));
+static bool TestMAC(void) {
+    CipurseContext ctx = {0};
 
-//void CipurseCGenerateMAC(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
-//void CipurseCCalcMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
-//bool CipurseCCheckMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
+    // authentication
+    CipurseCClearContext(&ctx);
+    CipurseCSetKey(&ctx, 1, Key);
+    CipurseCSetRandomFromPICC(&ctx, TestRandom);
+    uint8_t authparams[16 + 16 + 6] = {0};
+    CipurseCAuthenticateHost(&ctx, authparams);
+    uint8_t ct[] = {0xBE, 0x10, 0x6B, 0xB9, 0xAD, 0x84, 0xBC, 0xE1, 0x9F, 0xAE, 0x0C, 0x62, 0xCC, 0xC7, 0x0D, 0x41};
+    bool res = CipurseCCheckCT(&ctx, ct);
+    CipurseCChannelSetSecurityLevels(&ctx, CPSMACed, CPSMACed);
+    res = res && (isCipurseCChannelSecuritySet(&ctx) == true);
+
+    // check MAC
+    uint8_t mac[8] = {0};
+
+    CipurseCGenerateMAC(&ctx, TestData, 4, mac);
+    uint8_t testmac1[8] = {0xAB, 0x5C, 0x86, 0x18, 0x7F, 0x73, 0xEC, 0x4E};
+    res = res && (memcmp(mac, testmac1, 8) == 0);
+
+    CipurseCCalcMACPadded(&ctx, TestData, 4, mac);
+    uint8_t testmac2[8] = {0x9F, 0xE9, 0x54, 0xBF, 0xFC, 0xA0, 0x7D, 0x75};
+    res = res && (memcmp(mac, testmac2, 8) == 0);
+
+    CipurseCCalcMACPadded(&ctx, TestData, 4, mac);
+    uint8_t testmac3[8] = {0x15, 0x6F, 0x08, 0x5C, 0x0F, 0x80, 0xE7, 0x07};
+    res = res && (memcmp(mac, testmac3, 8) == 0);
+
+    uint8_t testmac4[8] = {0x0E, 0xF0, 0x70, 0xA6, 0xA1, 0x15, 0x9A, 0xB6};
+    res = res && CipurseCCheckMACPadded(&ctx, TestData, 4, testmac4);
+    
+    if (res)
+        PrintAndLogEx(INFO, "channel MAC: " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR, "channel MAC: " _RED_("fail"));
+
+    return res;
+}
 
 //void CipurseCEncryptDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *dstdata, bool isEncrypt);
 //void CipurseCChannelEncrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *encdata, size_t *encdatalen);
@@ -165,6 +200,8 @@ static bool TestAuth(void) {
 
 //void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, uint8_t *dstdatabuf, bool includeLe, uint8_t Le);
 //void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen, uint16_t *sw);
+
+//    PrintAndLogEx(INFO, "SMI: %s", sprint_hex(ctx.CT, 16));
 
 bool CIPURSETest(bool verbose) {
     bool res = true;
@@ -176,6 +213,7 @@ bool CIPURSETest(bool verbose) {
     res = res && TestSMI();
     res = res && TestMIC();
     res = res && TestAuth();
+    res = res && TestMAC();
 
 
 
