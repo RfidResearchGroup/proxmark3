@@ -295,8 +295,8 @@ static unsigned int bin2int(unsigned char *b, int size) {
     }
     return val;
 }
-static BYTE xor_parity(BYTE *stream_, int bit_number) {
-    BYTE parity_res = '0';
+static uint8_t xor_parity uint8_t *stream_, int bit_number) {
+    uint8_t parity_res = '0';
     for (int i = bit_number - 1; i < 36; i += 4) {
         if (stream_[i] == parity_res) {
             parity_res = '0';
@@ -307,8 +307,8 @@ static BYTE xor_parity(BYTE *stream_, int bit_number) {
     return parity_res;
 }
 
-static BYTE *parity(BYTE *stream_) {
-    BYTE *parity_res = malloc(4 * sizeof(BYTE));
+static uint8_t *parity uint8_t *stream_) {
+    uint8_t *parity_res = malloc(4 * sizeof uint8_t));
     parity_res[0] = xor_parity(stream_, 4);
     parity_res[1] = xor_parity(stream_, 2);
     parity_res[2] = xor_parity(stream_, 3);
@@ -316,8 +316,8 @@ static BYTE *parity(BYTE *stream_) {
     return parity_res;
 }
 
-static BYTE *convertUint8toByte(uint8_t number) {
-    BYTE *res = malloc(8 * sizeof(char));
+static uint8_t *convertUint8toByte(uint8_t number) {
+    uint8_t *res = malloc(8 * sizeof(char));
     uint8_t temp = number;
     for (int i = 1; i < 9; i++) {
         if (temp % 2) {
@@ -330,8 +330,8 @@ static BYTE *convertUint8toByte(uint8_t number) {
     return res;
 }
 
-static BYTE *convertUint32toByte(uint32_t number) {
-    BYTE *res = malloc(32 * sizeof(char));
+static uint8_t *convertUint32toByte(uint32_t number) {
+    uint8_t *res = malloc(32 * sizeof(char));
     uint32_t temp = number;
     for (int i = 0; i < 32; i++) {
         res[i] = '0';
@@ -348,8 +348,8 @@ static BYTE *convertUint32toByte(uint32_t number) {
 }
 
 
-static void TOpsk2(BYTE *bits, size_t size) {
-    BYTE lastbit = '0';
+static void TOpsk2 uint8_t *bits, size_t size) {
+    uint8_t lastbit = '0';
     for (size_t i = 1; i < size; i++) {
         //ignore errors
         if (bits[i] == 7) continue;
@@ -474,28 +474,28 @@ static int CmdNexWatchClone(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Scrambled : %u", scrambled);
         blocks[0] = 270464;
         raw[0] = 0xFA;
-        BYTE *byteId = convertUint32toByte(scrambled);
-        BYTE newmode[4] = "0001";
-        BYTE idAndMode[36];
-        memcpy(idAndMode, byteId, 32 * sizeof(BYTE));
-        memcpy(&idAndMode[32], newmode, 4 * sizeof(BYTE));
-        BYTE *newparity = parity(idAndMode);
+        uint8_t *byteId = convertUint32toByte(scrambled);
+        uint8_t newmode[4] = "0001";
+        uint8_t idAndMode[36];
+        memcpy(idAndMode, byteId, 32 * sizeof uint8_t));
+        memcpy(&idAndMode[32], newmode, 4 * sizeof uint8_t));
+        uint8_t *newparity = parity(idAndMode);
         uint8_t par = bin2int(newparity, 4);
         uint8_t checksum = nexwatch_checksum(magic, cn, par);
         printf("\x1b[1;92m[+]\x1b[0m Checksum : %s --> %u\n", convertUint8toByte(checksum), checksum);
-        BYTE Psk_card[128];
-        BYTE Psk2_card[128];
-        memcpy(Psk_card, "00000000000000000000000000000000", 32 * sizeof(BYTE));
-        memcpy(&Psk_card[32], "0101011000000000000000000000000000000000", 40 * sizeof(BYTE));
-        memcpy(&Psk_card[72], byteId, 32 * sizeof(BYTE));
-        memcpy(&Psk_card[104], newmode, 4 * sizeof(BYTE));
-        memcpy(&Psk_card[108], newparity, 4 * sizeof(BYTE));
-        memcpy(&Psk_card[112], convertUint8toByte(checksum), 8 * sizeof(BYTE));
-        memcpy(&Psk_card[120], "00000000", 8 * sizeof(BYTE));
+        uint8_t Psk_card[128];
+        uint8_t Psk2_card[128];
+        memcpy(Psk_card, "00000000000000000000000000000000", 32 * sizeof uint8_t));
+        memcpy(&Psk_card[32], "0101011000000000000000000000000000000000", 40 * sizeof uint8_t));
+        memcpy(&Psk_card[72], byteId, 32 * sizeof uint8_t));
+        memcpy(&Psk_card[104], newmode, 4 * sizeof uint8_t));
+        memcpy(&Psk_card[108], newparity, 4 * sizeof uint8_t));
+        memcpy(&Psk_card[112], convertUint8toByte(checksum), 8 * sizeof uint8_t));
+        memcpy(&Psk_card[120], "00000000", 8 * sizeof uint8_t));
         TOpsk2(Psk_card, 128);
-        memcpy(&Psk2_card[31], &Psk_card[32], 96 * sizeof(BYTE));
+        memcpy(&Psk2_card[31], &Psk_card[32], 96 * sizeof uint8_t));
         Psk2_card[127] = '0';
-        memcpy(Psk2_card, "00000000000001000010000010000000", 32 * sizeof(BYTE));
+        memcpy(Psk2_card, "00000000000001000010000010000000", 32 * sizeof uint8_t));
         blocks[0] = bin2int(&Psk2_card[0], 32);
         blocks[1] = bin2int(&Psk2_card[32], 32);
         blocks[2] = bin2int(&Psk2_card[64], 32);
