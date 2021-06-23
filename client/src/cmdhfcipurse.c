@@ -713,7 +713,7 @@ static command_t CommandTable[] = {
     {"write",     CmdHFCipurseWriteFile,     IfPm3Iso14443a,  "Write binary file"},
     {"aread",     CmdHFCipurseReadFileAttr,  IfPm3Iso14443a,  "Read file attributes"},
     {"delete",    CmdHFCipurseDeleteFile,    IfPm3Iso14443a,  "Delete file"},
-    {"test",      CmdHFCipurseTest,          IfPm3Iso14443a,  "Tests"},
+    {"test",      CmdHFCipurseTest,          AlwaysAvailable, "Tests"},
     {NULL, NULL, 0, NULL}
 };
 

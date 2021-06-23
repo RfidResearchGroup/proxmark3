@@ -45,9 +45,9 @@ bool CIPURSETest(bool verbose) {
 
     PrintAndLogEx(INFO, "---------------------------");
     if (res)
-        PrintAndLogEx(SUCCESS, "\tTest(s) [ %s ]", _GREEN_("ok"));
+        PrintAndLogEx(SUCCESS, "    Test(s) [ %s ]", _GREEN_("ok"));
     else
-        PrintAndLogEx(FAILED, "\tTest(s) [ %s ]", _RED_("fail"));
+        PrintAndLogEx(FAILED, "    Test(s) [ %s ]", _RED_("fail"));
     
     return res;
 }
