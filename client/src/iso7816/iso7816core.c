@@ -38,10 +38,10 @@ void SetISODEPState(isodep_state_t state) {
     isodep_state = state;
     if (APDULogging) {
         PrintAndLogEx(SUCCESS, "Setting ISODEP -> %s%s%s"
-            , isodep_state == ISODEP_INACTIVE ? "inactive" : ""
-            , isodep_state == ISODEP_NFCA ? _GREEN_("NFC-A") : ""
-            , isodep_state == ISODEP_NFCB ? _GREEN_("NFC-B") : ""
-            );
+                      , isodep_state == ISODEP_INACTIVE ? "inactive" : ""
+                      , isodep_state == ISODEP_NFCA ? _GREEN_("NFC-A") : ""
+                      , isodep_state == ISODEP_NFCB ? _GREEN_("NFC-B") : ""
+                     );
     }
 }
 
@@ -79,7 +79,7 @@ int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool l
 
     *result_len = 0;
     if (sw) {
-         *sw = 0;
+        *sw = 0;
     }
 
     if (activate_field) {
@@ -177,30 +177,30 @@ int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool l
 
 int Iso7816Exchange(Iso7816CommandChannel channel, bool leave_field_on, sAPDU apdu, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
     return Iso7816ExchangeEx(channel
-            , false
-            , leave_field_on
-            , apdu
-            , false
-            , 0
-            , result
-            , max_result_len
-            , result_len
-            , sw
-            );
+                             , false
+                             , leave_field_on
+                             , apdu
+                             , false
+                             , 0
+                             , result
+                             , max_result_len
+                             , result_len
+                             , sw
+                            );
 }
 
 int Iso7816Select(Iso7816CommandChannel channel, bool activate_field, bool leave_field_on, uint8_t *aid, size_t aid_len,
                   uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
 
     return Iso7816ExchangeEx(channel
-            , activate_field
-            , leave_field_on
-            , (sAPDU) {0x00, 0xa4, 0x04, 0x00, aid_len, aid}
-            , (channel == CC_CONTACTLESS)
-            , 0
-            , result
-            , max_result_len
-            , result_len
-            , sw
-            );
+                             , activate_field
+                             , leave_field_on
+    , (sAPDU) {0x00, 0xa4, 0x04, 0x00, aid_len, aid}
+    , (channel == CC_CONTACTLESS)
+    , 0
+    , result
+    , max_result_len
+    , result_len
+    , sw
+                            );
 }
