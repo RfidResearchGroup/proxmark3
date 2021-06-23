@@ -174,7 +174,7 @@ static int CLIParseKeyAndSecurityLevels(CLIParserContext *ctx, size_t keyid, siz
     int hdatalen = sizeof(hdata);
     if (CLIParamHexToBuf(arg_get_str(ctx, keyid), hdata, hdatalen, &hdatalen))
         return PM3_ESOFT;
-    
+
     if (hdatalen && hdatalen != 16) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " key length for AES128 must be 16 bytes only");
         return PM3_EINVARG;
@@ -190,7 +190,7 @@ static int CLIParseKeyAndSecurityLevels(CLIParserContext *ctx, size_t keyid, siz
     cdatalen--; // for trailer 0x00
     if (CLIParamStrToBuf(arg_get_str(ctx, sreqid), (uint8_t *)cdata, cdatalen, &cdatalen))
         return PM3_ESOFT;
-    
+
     if (cdatalen) {
         str_lower(cdata);
         if (strcmp(cdata, "plain") == 0)
@@ -210,7 +210,7 @@ static int CLIParseKeyAndSecurityLevels(CLIParserContext *ctx, size_t keyid, siz
     cdatalen--; // for trailer 0x00
     if (CLIParamStrToBuf(arg_get_str(ctx, srespid), (uint8_t *)cdata, cdatalen, &cdatalen))
         return PM3_ESOFT;
-    
+
     if (cdatalen) {
         str_lower(cdata);
         if (strcmp(cdata, "plain") == 0)
