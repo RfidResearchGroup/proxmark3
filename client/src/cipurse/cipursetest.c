@@ -55,6 +55,41 @@ static bool TestISO9797M2(void) {
     return res;
 }
 
+static bool TestSMI(void) {
+    CipurseContext ctx = {0};
+    CipurseCClearContext(&ctx);
+    
+    bool res = (isCipurseCChannelSecuritySet(&ctx) == false);
+    
+    CipurseCChannelSetSecurityLevels(&ctx, CPSPlain, CPSPlain);
+    res = res && (CipurseCGetSMI(&ctx, false) == 0x00);
+    res = res && (CipurseCGetSMI(&ctx, true) == 0x01);
+
+    CipurseCChannelSetSecurityLevels(&ctx, CPSPlain, CPSMACed);
+    res = res && (CipurseCGetSMI(&ctx, false) == 0x04);
+    res = res && (CipurseCGetSMI(&ctx, true) == 0x05);
+
+    CipurseCChannelSetSecurityLevels(&ctx, CPSMACed, CPSMACed);
+    res = res && (CipurseCGetSMI(&ctx, false) == 0x44);
+    res = res && (CipurseCGetSMI(&ctx, true) == 0x45);
+
+    CipurseCChannelSetSecurityLevels(&ctx, CPSMACed, CPSEncrypted);
+    res = res && (CipurseCGetSMI(&ctx, false) == 0x48);
+    res = res && (CipurseCGetSMI(&ctx, true) == 0x49);
+
+    CipurseCChannelSetSecurityLevels(&ctx, CPSEncrypted, CPSEncrypted);
+    res = res && (CipurseCGetSMI(&ctx, false) == 0x88);
+    res = res && (CipurseCGetSMI(&ctx, true) == 0x89);
+    
+    if (res)
+        PrintAndLogEx(INFO, "SMI: " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR, "SMI: " _RED_("fail"));
+
+    return res;
+}
+
+
 
 bool CIPURSETest(bool verbose) {
     bool res = true;
@@ -63,6 +98,7 @@ bool CIPURSETest(bool verbose) {
     
     res = res && TestKVV();
     res = res && TestISO9797M2();
+    res = res && TestSMI();
 
 
 
