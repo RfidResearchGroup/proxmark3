@@ -194,9 +194,47 @@ static bool TestMAC(void) {
     return res;
 }
 
-//void CipurseCEncryptDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *dstdata, bool isEncrypt);
 //void CipurseCChannelEncrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *encdata, size_t *encdatalen);
 //void CipurseCChannelDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *plaindata, size_t *plaindatalen);
+static bool TestEncDec(void) {
+    CipurseContext ctx = {0};
+
+    // authentication
+    CipurseCClearContext(&ctx);
+    CipurseCSetKey(&ctx, 1, Key);
+    CipurseCSetRandomFromPICC(&ctx, TestRandom);
+    uint8_t authparams[16 + 16 + 6] = {0};
+    CipurseCAuthenticateHost(&ctx, authparams);
+    uint8_t ct[] = {0xBE, 0x10, 0x6B, 0xB9, 0xAD, 0x84, 0xBC, 0xE1, 0x9F, 0xAE, 0x0C, 0x62, 0xCC, 0xC7, 0x0D, 0x41};
+    bool res = CipurseCCheckCT(&ctx, ct);
+    CipurseCChannelSetSecurityLevels(&ctx, CPSMACed, CPSMACed);
+    res = res && (isCipurseCChannelSecuritySet(&ctx) == true);
+
+    // check Encode-Decode
+    uint8_t dstdata[32] = {0};
+
+    CipurseCEncryptDecrypt(&ctx, TestData, 16, dstdata, true);
+    uint8_t tested1[16] = {0x5F, 0x01, 0x18, 0x79, 0xE0, 0x57, 0xA7, 0xE5, 0x34, 0x39, 0x6E, 0x32, 0x62, 0xF2, 0x71, 0x27};
+    res = res && (memcmp(dstdata, tested1, 16) == 0);
+    //PrintAndLogEx(INFO, "SMI: %s", sprint_hex(dstdata, 16));
+
+    uint8_t tested2[16] = {0xA6, 0x22, 0xB5, 0xCF, 0xE8, 0x6E, 0x67, 0xF4, 0xAA, 0x88, 0xB1, 0x19, 0x87, 0xCF, 0xC9, 0xD2};
+    CipurseCEncryptDecrypt(&ctx, tested2, 16, dstdata, false);
+    res = res && (memcmp(dstdata, TestData, 16) == 0);
+
+
+
+
+
+
+    
+    if (res)
+        PrintAndLogEx(INFO, "channel EncDec: " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR, "channel EncDec: " _RED_("fail"));
+
+    return res;
+}
 
 //void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, uint8_t *dstdatabuf, bool includeLe, uint8_t Le);
 //void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen, uint16_t *sw);
@@ -214,8 +252,8 @@ bool CIPURSETest(bool verbose) {
     res = res && TestMIC();
     res = res && TestAuth();
     res = res && TestMAC();
-
-
+    res = res && TestEncDec();
+    res = res && true;
 
     PrintAndLogEx(INFO, "---------------------------");
     if (res)
