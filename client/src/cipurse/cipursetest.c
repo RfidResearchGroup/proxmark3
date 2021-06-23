@@ -194,8 +194,6 @@ static bool TestMAC(void) {
     return res;
 }
 
-//void CipurseCChannelEncrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *encdata, size_t *encdatalen);
-//void CipurseCChannelDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *plaindata, size_t *plaindatalen);
 static bool TestEncDec(void) {
     CipurseContext ctx = {0};
 
@@ -212,22 +210,28 @@ static bool TestEncDec(void) {
 
     // check Encode-Decode
     uint8_t dstdata[32] = {0};
+    size_t dstdatalen = 0;
 
     CipurseCEncryptDecrypt(&ctx, TestData, 16, dstdata, true);
     uint8_t tested1[16] = {0x5F, 0x01, 0x18, 0x79, 0xE0, 0x57, 0xA7, 0xE5, 0x34, 0x39, 0x6E, 0x32, 0x62, 0xF2, 0x71, 0x27};
     res = res && (memcmp(dstdata, tested1, 16) == 0);
-    //PrintAndLogEx(INFO, "SMI: %s", sprint_hex(dstdata, 16));
 
     uint8_t tested2[16] = {0xA6, 0x22, 0xB5, 0xCF, 0xE8, 0x6E, 0x67, 0xF4, 0xAA, 0x88, 0xB1, 0x19, 0x87, 0xCF, 0xC9, 0xD2};
     CipurseCEncryptDecrypt(&ctx, tested2, 16, dstdata, false);
     res = res && (memcmp(dstdata, TestData, 16) == 0);
 
+    CipurseCChannelEncrypt(&ctx, TestData, 16, dstdata, &dstdatalen);
+    uint8_t tested3[32] = {0x1E, 0x0C, 0xD1, 0xF5, 0x8E, 0x0B, 0xAE, 0xF0, 0x06, 0xC6, 0xED, 0x73, 0x3F, 0x8A, 0x87, 0xCF, 
+                           0x36, 0xCC, 0xF2, 0xF4, 0x7D, 0x33, 0x50, 0xF1, 0x8E, 0xFF, 0xD1, 0x7D, 0x42, 0x88, 0xD5, 0xEE};
+    res = res && (dstdatalen == 32);
+    res = res && (memcmp(dstdata, tested3, 32) == 0);
 
+    uint8_t tested4[32] = {0xC0, 0x42, 0xDB, 0xD9, 0x53, 0xFF, 0x01, 0xE5, 0xCC, 0x49, 0x8C, 0x9C, 0xDA, 0x60, 0x73, 0xA7, 
+                           0xE1, 0xEB, 0x14, 0x69, 0xF6, 0x39, 0xF3, 0xE1, 0x07, 0x03, 0x32, 0xF4, 0x27, 0xF9, 0x48, 0x3D};
+    CipurseCChannelDecrypt(&ctx, tested4, 32, dstdata, &dstdatalen);
+    res = res && (dstdatalen == 16);
+    res = res && (memcmp(dstdata, TestData, 16) == 0);
 
-
-
-
-    
     if (res)
         PrintAndLogEx(INFO, "channel EncDec: " _GREEN_("passed"));
     else
