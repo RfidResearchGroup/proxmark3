@@ -271,6 +271,10 @@ static bool TestAPDU(void) {
 
     CipurseCAPDUReqEncode(&ctx, &srcAPDU, &dstAPDU, dstdata, true, 0x88);
     uint8_t test1[] = {0x45, 0x11, 0x22, 0x33, 0x44, 0x00, 0x88, 0x79, 0x2B, 0xB7, 0xDD, 0xD1, 0x69, 0xA6, 0x66};
+    res = res && ((srcAPDU.CLA | 0x04) == dstAPDU.CLA);
+    res = res && (srcAPDU.INS == dstAPDU.INS);
+    res = res && (srcAPDU.P1 == dstAPDU.P1);
+    res = res && (srcAPDU.P2 == dstAPDU.P2);
     res = res && (dstAPDU.Lc == sizeof(test1));
     res = res && (memcmp(dstdata, test1, sizeof(test1)) == 0);
     PrintAndLogEx(INFO, "dstAPDU.data: %s", sprint_hex(dstAPDU.data, dstAPDU.Lc));
