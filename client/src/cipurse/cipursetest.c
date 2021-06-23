@@ -89,6 +89,30 @@ static bool TestSMI(void) {
     return res;
 }
 
+static bool TestMIC(void) {
+    uint8_t mic[4] = {0};
+
+    CipurseCGenerateMIC(TestData, 4, mic);
+    uint8_t valid_mic4[4] = {0xD4, 0x71, 0xA7, 0x73};
+    bool res = (memcmp(mic, valid_mic4, 4) == 0);
+
+    res = res && (CipurseCCheckMIC(TestData, 4, mic));
+
+    CipurseCGenerateMIC(TestData, 6, mic);
+    uint8_t valid_mic6[4] = {0xAA, 0x90, 0xFC, 0x5A};
+    res = res && (memcmp(mic, valid_mic6, 4) == 0);
+
+    res = res && (CipurseCCheckMIC(TestData, 6, mic));
+    
+    if (res)
+        PrintAndLogEx(INFO, "MIC: " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR, "MIC: " _RED_("fail"));
+
+    return res;
+}
+
+
 static bool TestAuth(void) {
     CipurseContext ctx = {0};
     CipurseCClearContext(&ctx);
@@ -117,7 +141,6 @@ static bool TestAuth(void) {
     
     uint8_t ct[] = {0xBE, 0x10, 0x6B, 0xB9, 0xAD, 0x84, 0xBC, 0xE1, 0x9F, 0xAE, 0x0C, 0x62, 0xCC, 0xC7, 0x0D, 0x41};
     res = res && CipurseCCheckCT(&ctx, ct);
-    PrintAndLogEx(INFO, "SMI: %s", sprint_hex(ctx.CT, 16));
     
     CipurseCChannelSetSecurityLevels(&ctx, CPSMACed, CPSMACed);
     res = res && (isCipurseCChannelSecuritySet(&ctx) == true);
@@ -130,8 +153,18 @@ static bool TestAuth(void) {
     return res;
 }
 
+//    PrintAndLogEx(INFO, "SMI: %s", sprint_hex(ctx.CT, 16));
 
+//void CipurseCGenerateMAC(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
+//void CipurseCCalcMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
+//bool CipurseCCheckMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
 
+//void CipurseCEncryptDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *dstdata, bool isEncrypt);
+//void CipurseCChannelEncrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *encdata, size_t *encdatalen);
+//void CipurseCChannelDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *plaindata, size_t *plaindatalen);
+
+//void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, uint8_t *dstdatabuf, bool includeLe, uint8_t Le);
+//void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen, uint16_t *sw);
 
 bool CIPURSETest(bool verbose) {
     bool res = true;
@@ -141,6 +174,7 @@ bool CIPURSETest(bool verbose) {
     res = res && TestKVV();
     res = res && TestISO9797M2();
     res = res && TestSMI();
+    res = res && TestMIC();
     res = res && TestAuth();
 
 
