@@ -172,7 +172,9 @@ static int CmdHFCipurseAuth(const char *Cmd) {
 static int CLIParseKeyAndSecurityLevels(CLIParserContext *ctx, size_t keyid, size_t sreqid, size_t srespid, uint8_t *key, CipurseChannelSecurityLevel *sreq, CipurseChannelSecurityLevel *sresp) {
     uint8_t hdata[250] = {0};
     int hdatalen = sizeof(hdata);
-    CLIGetHexWithReturn(ctx, keyid, hdata, &hdatalen);
+    if (CLIParamHexToBuf(arg_get_str(ctx, keyid), hdata, hdatalen, &hdatalen))
+        return PM3_ESOFT;
+
     if (hdatalen && hdatalen != 16) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " key length for AES128 must be 16 bytes only");
         return PM3_EINVARG;
@@ -186,7 +188,9 @@ static int CLIParseKeyAndSecurityLevels(CLIParserContext *ctx, size_t keyid, siz
     char cdata[250] = {0};
     int cdatalen = sizeof(cdata);
     cdatalen--; // for trailer 0x00
-    CLIGetStrWithReturn(ctx, sreqid, (uint8_t *)cdata, &cdatalen);
+    if (CLIParamStrToBuf(arg_get_str(ctx, sreqid), (uint8_t *)cdata, cdatalen, &cdatalen))
+        return PM3_ESOFT;
+
     if (cdatalen) {
         str_lower(cdata);
         if (strcmp(cdata, "plain") == 0)
@@ -204,7 +208,9 @@ static int CLIParseKeyAndSecurityLevels(CLIParserContext *ctx, size_t keyid, siz
     cdatalen = sizeof(cdata);
     memset(cdata, 0, cdatalen);
     cdatalen--; // for trailer 0x00
-    CLIGetStrWithReturn(ctx, srespid, (uint8_t *)cdata, &cdatalen);
+    if (CLIParamStrToBuf(arg_get_str(ctx, srespid), (uint8_t *)cdata, cdatalen, &cdatalen))
+        return PM3_ESOFT;
+
     if (cdatalen) {
         str_lower(cdata);
         if (strcmp(cdata, "plain") == 0)
@@ -226,7 +232,7 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse read",
                   "Read file by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
-                  "hf cipurse read -f 2ff7   -> Authenticate with keyID 1, read file with id 2ff7\n"
+                  "hf cipurse read --fid 2ff7   -> Authenticate with keyID 1, read file with id 2ff7\n"
                   "hf cipurse read -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> Authenticate keyID 2 and read file\n");
 
     void *argtable[] = {
@@ -235,7 +241,7 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "show technical data"),
         arg_int0("n",  NULL,      "<dec>", "key ID"),
         arg_str0("k",  "key",     "<hex>", "Auth key"),
-        arg_str0(NULL,  "fid",    "<hex>", "file ID"),
+        arg_str0(NULL, "fid",    "<hex>", "file ID"),
         arg_int0("o",  "offset",  "<dec>", "offset for reading data from file"),
         arg_lit0(NULL, "noauth",  "read file without authentication"),
         arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
@@ -338,7 +344,7 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse write",
                   "Write file by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
-                  "hf cipurse write -f 2ff7   -> Authenticate with keyID 1, write file with id 2ff7\n"
+                  "hf cipurse write --fid 2ff7   -> Authenticate with keyID 1, write file with id 2ff7\n"
                   "hf cipurse write -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> Authenticate keyID 2 and write file\n");
 
     void *argtable[] = {
@@ -347,7 +353,7 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "show technical data"),
         arg_int0("n",  NULL,      "<dec>", "key ID"),
         arg_str0("k",  "key",     "<hex>", "Auth key"),
-        arg_str0(NULL,  "fid",    "<hex>", "file ID"),
+        arg_str0(NULL, "fid",    "<hex>", "file ID"),
         arg_int0("o",  "offset",  "<dec>", "offset for reading data from file"),
         arg_lit0(NULL, "noauth",  "read file without authentication"),
         arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
@@ -463,7 +469,7 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse aread",
                   "Read file attributes by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
-                  "hf cipurse aread -f 2ff7   -> Authenticate with keyID 1, read file attributes with id 2ff7\n"
+                  "hf cipurse aread --fid 2ff7   -> Authenticate with keyID 1, read file attributes with id 2ff7\n"
                   "hf cipurse aread -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> Authenticate keyID 2, read file attributes\n");
 
     void *argtable[] = {
@@ -592,7 +598,7 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse delete",
                   "Read file by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
-                  "hf cipurse delete -f 2ff7   -> Authenticate with keyID 1, delete file with id 2ff7\n"
+                  "hf cipurse delete --fid 2ff7   -> Authenticate with keyID 1, delete file with id 2ff7\n"
                   "hf cipurse delete -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> Authenticate keyID 2 and delete file\n");
 
     void *argtable[] = {
