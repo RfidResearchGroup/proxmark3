@@ -242,8 +242,52 @@ static bool TestEncDec(void) {
 
 //void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, uint8_t *dstdatabuf, bool includeLe, uint8_t Le);
 //void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen, uint16_t *sw);
+static bool TestAPDU(void) {
+    CipurseContext ctx = {0};
 
-//    PrintAndLogEx(INFO, "SMI: %s", sprint_hex(ctx.CT, 16));
+    // authentication
+    CipurseCClearContext(&ctx);
+    CipurseCSetKey(&ctx, 1, Key);
+    CipurseCSetRandomFromPICC(&ctx, TestRandom);
+    uint8_t authparams[16 + 16 + 6] = {0};
+    CipurseCAuthenticateHost(&ctx, authparams);
+    uint8_t ct[] = {0xBE, 0x10, 0x6B, 0xB9, 0xAD, 0x84, 0xBC, 0xE1, 0x9F, 0xAE, 0x0C, 0x62, 0xCC, 0xC7, 0x0D, 0x41};
+    bool res = CipurseCCheckCT(&ctx, ct);
+    CipurseCChannelSetSecurityLevels(&ctx, CPSMACed, CPSMACed);
+    res = res && (isCipurseCChannelSecuritySet(&ctx) == true);
+
+    // check APDU formatting
+    sAPDU srcAPDU = {0};
+    sAPDU dstAPDU = {0};
+    uint8_t dstdata[32] = {0};
+    //size_t dstdatalen = 0;
+    
+    srcAPDU.CLA = 0x00;
+    srcAPDU.INS = 0x55;
+    srcAPDU.P1 = 0x11;
+    srcAPDU.P2 = 0x22;
+    srcAPDU.data = TestData;
+    srcAPDU.Lc = 5;
+
+    CipurseCAPDUReqEncode(&ctx, &srcAPDU, &dstAPDU, dstdata, true, 0x88);
+    uint8_t test1[] = {0x45, 0x11, 0x22, 0x33, 0x44, 0x00, 0x88, 0x79, 0x2B, 0xB7, 0xDD, 0xD1, 0x69, 0xA6, 0x66};
+    res = res && (dstAPDU.Lc == sizeof(test1));
+    res = res && (memcmp(dstdata, test1, sizeof(test1)) == 0);
+    PrintAndLogEx(INFO, "dstAPDU.data: %s", sprint_hex(dstAPDU.data, dstAPDU.Lc));
+    
+    
+    
+    
+    
+    
+    
+    if (res)
+        PrintAndLogEx(INFO, "apdu: " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR, "apdu: " _RED_("fail"));
+
+    return res;
+}
 
 bool CIPURSETest(bool verbose) {
     bool res = true;
@@ -257,7 +301,7 @@ bool CIPURSETest(bool verbose) {
     res = res && TestAuth();
     res = res && TestMAC();
     res = res && TestEncDec();
-    res = res && true;
+    res = res && TestAPDU();
 
     PrintAndLogEx(INFO, "---------------------------");
     if (res)
