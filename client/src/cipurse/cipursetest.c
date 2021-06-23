@@ -262,6 +262,7 @@ static bool TestAPDU(void) {
     uint8_t dstdata[32] = {0};
     //size_t dstdatalen = 0;
     
+    // MACED APDU
     srcAPDU.CLA = 0x00;
     srcAPDU.INS = 0x55;
     srcAPDU.P1 = 0x11;
@@ -281,8 +282,19 @@ static bool TestAPDU(void) {
     
     
     
+    // Plain APDU
+    CipurseCChannelSetSecurityLevels(&ctx, CPSPlain, CPSPlain);
+    CipurseCAPDUReqEncode(&ctx, &srcAPDU, &dstAPDU, dstdata, true, 0x55);
+    uint8_t test2[] = {0x01, 0x11, 0x22, 0x33, 0x44, 0x00, 0x55};
+    res = res && ((srcAPDU.CLA | 0x04) == dstAPDU.CLA);
+    res = res && (srcAPDU.INS == dstAPDU.INS);
+    res = res && (srcAPDU.P1 == dstAPDU.P1);
+    res = res && (srcAPDU.P2 == dstAPDU.P2);
+    res = res && (dstAPDU.Lc == sizeof(test2));
+    res = res && (memcmp(dstdata, test2, sizeof(test2)) == 0);
     
-    
+    // Encrypted APDU
+    //CipurseCChannelSetSecurityLevels(&ctx, CPSEncrypted, CPSEncrypted);
     
     
     if (res)
