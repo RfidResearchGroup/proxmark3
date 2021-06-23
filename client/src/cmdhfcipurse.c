@@ -25,6 +25,7 @@
 #include "cmdhfcipurse.h"
 #include "cipurse/cipursecore.h"
 #include "cipurse/cipursecrypto.h"
+#include "cipurse/cipursetest.h"
 #include "ui.h"
 #include "cmdhf14a.h"
 #include "cmdtrace.h"
@@ -698,6 +699,12 @@ bool CheckCardCipurse(void) {
     return (res == 0 && sw == 0x9000);
 }
 
+static int CmdHFCipurseTest(const char *Cmd) {
+    CIPURSETest(true);
+
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",      CmdHelp,                   AlwaysAvailable, "This help."},
     {"info",      CmdHFCipurseInfo,          IfPm3Iso14443a,  "Get info about CIPURSE tag"},
@@ -706,6 +713,7 @@ static command_t CommandTable[] = {
     {"write",     CmdHFCipurseWriteFile,     IfPm3Iso14443a,  "Write binary file"},
     {"aread",     CmdHFCipurseReadFileAttr,  IfPm3Iso14443a,  "Read file attributes"},
     {"delete",    CmdHFCipurseDeleteFile,    IfPm3Iso14443a,  "Delete file"},
+    {"test",      CmdHFCipurseTest,          IfPm3Iso14443a,  "Tests"},
     {NULL, NULL, 0, NULL}
 };
 
