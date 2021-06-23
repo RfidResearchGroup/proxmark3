@@ -289,7 +289,7 @@ static int demodNexWatch(void) {
 }
 
 void ModInfo(void) {
-    DbpString(_YELLOW_(" Nexwatch credentials detection module") " - a.k.a NexID (jrjgjk & Zolorah)");
+    DbpString(_YELLOW_(" Nexwatch credentials detection mode") " - a.k.a NexID (jrjgjk & Zolorah)");
 }
 
 void RunMod(void) {
