@@ -1807,6 +1807,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
         memcpy(card.ats, resp.data.asBytes, resp.oldarg[0]);
         card.ats_len = resp.oldarg[0]; // note: ats_len includes CRC Bytes
+        if (card.ats_len > 3)
+            select_status = 1;
     }
 
     if (card.ats_len >= 3) {        // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
@@ -2097,6 +2099,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         if ((card.sak & 0x20) == 0x20) {
             PrintAndLogEx(INFO, "--> SAK incorrectly claims that card supports RATS <--");
         }
+        if (select_status == 1)
+            select_status = 2;
     }
 
     int isMagic = 0;
@@ -2169,7 +2173,7 @@ int infoHF14A4Applications(bool verbose) {
         int res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, (uint8_t *)hintAIDList[i].aid, hintAIDList[i].aid_length, result, sizeof(result), &resultlen, &sw);
         ActivateField = false;
         if (res)
-            continue;
+            break;
 
         if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
             if (!found) {
