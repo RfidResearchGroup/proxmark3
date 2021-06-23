@@ -498,7 +498,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 static int download_trace(void) {
 
     if (IfPm3Present() == false) {
-        PrintAndLogEx(FAILED, "You requested a trace upload in offline mode, consider using parameter '1' for working from Tracebuffer");
+        PrintAndLogEx(FAILED, "You requested a trace upload in offline mode, consider using parameter '-1' for working from Tracebuffer");
         return PM3_EINVARG;
     }
 
