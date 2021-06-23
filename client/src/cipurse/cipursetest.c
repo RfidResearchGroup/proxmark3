@@ -20,6 +20,9 @@
 uint8_t Key[] = CIPURSE_DEFAULT_KEY;
 uint8_t KeyKvv[CIPURSE_KVV_LENGTH] = {0x5f, 0xd6, 0x7b, 0xcb};
 
+uint8_t TestData[16] = {0x11, 0x22, 0x33, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+uint8_t TestDataPadded[16] = {0x11, 0x22, 0x33, 0x44, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
 static bool TestKVV(void) {
     uint8_t kvv[CIPURSE_KVV_LENGTH] = {0};
     CipurseCGetKVV(Key, kvv);
@@ -34,12 +37,32 @@ static bool TestKVV(void) {
     return res;
 }
 
+static bool TestISO9797M2(void) {
+    uint8_t data[32] = {0};
+    
+    size_t ddatalen = 0;
+    AddISO9797M2Padding(data, &ddatalen, TestData, 4, 16);
+    bool res = (ddatalen == 16);
+    res = res && (memcmp(data, TestDataPadded, ddatalen) == 0);
+
+    res = res && (FindISO9797M2PaddingDataLen(data, ddatalen) == 4);
+    
+    if (res)
+        PrintAndLogEx(INFO, "ISO9797M2: " _GREEN_("passed"));
+    else
+        PrintAndLogEx(INFO, "ISO9797M2: " _RED_("fail"));
+
+    return res;
+}
+
+
 bool CIPURSETest(bool verbose) {
     bool res = true;
 
     PrintAndLogEx(INFO, "------ " _CYAN_("CIPURSE TESTS") " ------");
     
     res = res && TestKVV();
+    res = res && TestISO9797M2();
 
 
 
