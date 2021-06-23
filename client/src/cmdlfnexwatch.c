@@ -24,6 +24,8 @@
 #include "cmdlft55xx.h"    // clone..
 #include "cmdlfem4x05.h"   //
 #include "cliparser.h"
+#include <math.h>
+
 
 typedef enum {
     SCRAMBLE,
@@ -52,7 +54,7 @@ static uint8_t nexwatch_parity(uint8_t hexid[5]) {
 }
 
 /// NETWATCH checksum
-/// @param magic =  0xBE  Quadrakey,  0x88 Nexkey
+/// @param magic =  0xBE  Quadrakey,  0x88 Nexkey, 0x86 EC
 /// @param id = descrambled id (printed card number)
 /// @param parity =  the parity based upon the scrambled raw id.
 static uint8_t nexwatch_checksum(uint8_t magic, uint32_t id, uint8_t parity) {
@@ -108,6 +110,21 @@ static int nexwatch_scamble(NexWatchScramble_t action, uint32_t *id, uint32_t *s
     return PM3_SUCCESS;
 }
 
+static int nexwatch_magic_bruteforce(uint32_t cn, uint8_t calc_parity, uint8_t chk) {
+    uint8_t magic = 0;
+    uint8_t temp_checksum;
+    for (; magic < 255; magic++) {
+        temp_checksum = nexwatch_checksum(magic, cn, calc_parity);
+        if (temp_checksum == chk) {
+            PrintAndLogEx(SUCCESS, "    Magic number : " _GREEN_("0x%X"),  magic);
+            return PM3_SUCCESS;
+        }
+    }
+    PrintAndLogEx(DEBUG, "DEBUG: Error - Magic number not found");
+    return PM3_ESOFT;
+}
+
+
 int demodNexWatch(bool verbose) {
     (void) verbose; // unused so far
     if (PSKDemod(0, 0, 100, false) != PM3_SUCCESS) {
@@ -138,6 +155,7 @@ int demodNexWatch(bool verbose) {
     idx += 4;
 
     setDemodBuff(DemodBuffer, size, idx);
+    PrintAndLogEx(SUCCESS, "Indice: %x %s", DemodBuffer, DemodBuffer);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
 
     if (invert) {
@@ -204,9 +222,13 @@ int demodNexWatch(bool verbose) {
 
     if (m_idx < ARRAYLEN(items)) {
         PrintAndLogEx(SUCCESS, "     fingerprint : " _GREEN_("%s"),  items[m_idx].desc);
+    } else {
+        nexwatch_magic_bruteforce(cn, calc_parity, chk);
     }
-    PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " ("  _YELLOW_("0x%08"PRIx32)")", cn, cn);
     PrintAndLogEx(SUCCESS, "            mode : %x", mode);
+    PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " ("  _YELLOW_("0x%08"PRIx32)")", cn, cn);
+    PrintAndLogEx(SUCCESS, "        Scambled : " _YELLOW_("%"PRIu32) " ("  _YELLOW_("0x%08"PRIx32)")", scambled, scambled);
+
 
     if (parity == calc_parity) {
         PrintAndLogEx(DEBUG, "          parity : %s (0x%X)", _GREEN_("ok"), parity);
@@ -257,12 +279,90 @@ static int CmdNexWatchReader(const char *Cmd) {
     }
 
     do {
-        lf_read(false, 20000);
+        lf_read(true, 20000);
         demodNexWatch(!cm);
     } while (cm && !kbd_enter_pressed());
     return PM3_SUCCESS;
 }
+//TOCHANGE
 
+static unsigned int bin2int(unsigned char *b, int size) {
+    unsigned int val = 0;
+    for (int i = 0; i < size; i++) {
+        if (b[i] == '1') {
+            val += pow(2, size - 1 - i);
+        }
+    }
+    return val;
+}
+static BYTE xor_parity(BYTE *stream_, int bit_number) {
+    BYTE parity_res = '0';
+    for (int i = bit_number - 1; i < 36; i += 4) {
+        if (stream_[i] == parity_res) {
+            parity_res = '0';
+        } else {
+            parity_res = '1';
+        }
+    }
+    return parity_res;
+}
+
+static BYTE *parity(BYTE *stream_) {
+    BYTE *parity_res = malloc(4 * sizeof(BYTE));
+    parity_res[0] = xor_parity(stream_, 4);
+    parity_res[1] = xor_parity(stream_, 2);
+    parity_res[2] = xor_parity(stream_, 3);
+    parity_res[3] = xor_parity(stream_, 1);
+    return parity_res;
+}
+
+static BYTE *convertUint8toByte(uint8_t number) {
+    BYTE *res = malloc(8 * sizeof(char));
+    uint8_t temp = number;
+    for (int i = 1; i < 9; i++) {
+        if (temp % 2) {
+            res[8 - i] = '1';
+        } else {
+            res[8 - i] = '0';
+        }
+        temp = temp / 2;
+    }
+    return res;
+}
+
+static BYTE *convertUint32toByte(uint32_t number) {
+    BYTE *res = malloc(32 * sizeof(char));
+    uint32_t temp = number;
+    for (int i = 0; i < 32; i++) {
+        res[i] = '0';
+    }
+    for (int i = 1; i < 33; i++) {
+        if (temp % 2) {
+            res[32 - i] = '1';
+        } else {
+            res[32 - i] = '0';
+        }
+        temp = temp / 2;
+    }
+    return res;
+}
+
+
+static void TOpsk2(BYTE *bits, size_t size) {
+    BYTE lastbit = '0';
+    for (size_t i = 1; i < size; i++) {
+        //ignore errors
+        if (bits[i] == 7) continue;
+
+        if (lastbit != bits[i]) {
+            lastbit = bits[i];
+            bits[i] = '1';
+        } else {
+            bits[i] = '0';
+        }
+    }
+}
+//ENDTOCHANGE
 static int CmdNexWatchClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf nexwatch clone",
@@ -285,6 +385,8 @@ static int CmdNexWatchClone(const char *Cmd) {
         arg_lit0(NULL, "hc", "Honeywell credential"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_str0(NULL, "magic", "<hex>", "optional - magic hex data. 1 byte"),
+        arg_lit0(NULL, "psk2", "optional - specify writing a tag in psk2 modulation"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -301,6 +403,10 @@ static int CmdNexWatchClone(const char *Cmd) {
     bool use_unk = arg_get_lit(ctx, 6);
     bool q5 = arg_get_lit(ctx, 7);
     bool em = arg_get_lit(ctx, 8);
+    bool use_psk2 = arg_get_lit(ctx, 10);
+    uint8_t magic_arg;
+    int magic_len = 0;
+    CLIGetHexWithReturn(ctx, 9, &magic_arg, &magic_len);
     CLIParserFree(ctx);
 
     if (use_nexkey && use_quadrakey) {
@@ -316,6 +422,13 @@ static int CmdNexWatchClone(const char *Cmd) {
     // 56000000 00213C9F 8F150C00
     bool use_raw = (raw_len != 0);
 
+    bool use_custom_magic = (magic_len != 0);
+
+    if (magic_len > 1) {
+        PrintAndLogEx(FAILED, "Can't specify a magic number bigger than one byte");
+        return PM3_EINVARG;
+    }
+
     if (use_raw && cn != -1) {
         PrintAndLogEx(FAILED, "Can't specify both Raw and Card id at the same time");
         return PM3_EINVARG;
@@ -325,6 +438,7 @@ static int CmdNexWatchClone(const char *Cmd) {
         uint32_t scrambled;
         nexwatch_scamble(SCRAMBLE, &cn, &scrambled);
         num_to_bytes(scrambled, 4, raw + 5);
+        PrintAndLogEx(SUCCESS, "Scrambled : %u", scrambled);
     }
 
     if (mode != -1) {
@@ -336,42 +450,85 @@ static int CmdNexWatchClone(const char *Cmd) {
     }
 
     uint8_t magic = 0xBE;
-    if (use_nexkey)
-        magic = 0x88;
+    if (use_custom_magic) {
+        magic = magic_arg;
+    } else {
+        if (use_nexkey)
+            magic = 0x88;
 
-    if (use_quadrakey)
-        magic = 0xBE;
+        if (use_quadrakey)
+            magic = 0xBE;
 
-    if (use_unk)
-        magic = 0x86;
+        if (use_unk)
+            magic = 0x86;
 
-    uint32_t blocks[4];
+    }
+    PrintAndLogEx(INFO, "Magic byte selected : 0x%X", magic);
 
-    //Nexwatch - compat mode, PSK, data rate 40, 3 data blocks
-    blocks[0] = T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_32 | 3 << T55x7_MAXBLOCK_SHIFT;
     char cardtype[16] = {"T55x7"};
-    // Q5
-    if (q5) {
-        blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
-        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
-    }
+    uint32_t blocks[4];
+    if (use_psk2) {
+        uint32_t scrambled;
+        nexwatch_scamble(SCRAMBLE, &cn, &scrambled);
+        num_to_bytes(scrambled, 4, raw + 5);
+        PrintAndLogEx(SUCCESS, "Scrambled : %u", scrambled);
+        blocks[0] = 270464;
+        raw[0] = 0xFA;
+        BYTE *byteId = convertUint32toByte(scrambled);
+        BYTE newmode[4] = "0001";
+        BYTE idAndMode[36];
+        memcpy(idAndMode, byteId, 32 * sizeof(BYTE));
+        memcpy(&idAndMode[32], newmode, 4 * sizeof(BYTE));
+        BYTE *newparity = parity(idAndMode);
+        uint8_t par = bin2int(newparity, 4);
+        uint8_t checksum = nexwatch_checksum(magic, cn, par);
+        printf("\x1b[1;92m[+]\x1b[0m Checksum : %s --> %u\n", convertUint8toByte(checksum), checksum);
+        BYTE Psk_card[128];
+        BYTE Psk2_card[128];
+        memcpy(Psk_card, "00000000000000000000000000000000", 32 * sizeof(BYTE));
+        memcpy(&Psk_card[32], "0101011000000000000000000000000000000000", 40 * sizeof(BYTE));
+        memcpy(&Psk_card[72], byteId, 32 * sizeof(BYTE));
+        memcpy(&Psk_card[104], newmode, 4 * sizeof(BYTE));
+        memcpy(&Psk_card[108], newparity, 4 * sizeof(BYTE));
+        memcpy(&Psk_card[112], convertUint8toByte(checksum), 8 * sizeof(BYTE));
+        memcpy(&Psk_card[120], "00000000", 8 * sizeof(BYTE));
+        TOpsk2(Psk_card, 128);
+        memcpy(&Psk2_card[31], &Psk_card[32], 96 * sizeof(BYTE));
+        Psk2_card[127] = '0';
+        memcpy(Psk2_card, "00000000000001000010000010000000", 32 * sizeof(BYTE));
+        blocks[0] = bin2int(&Psk2_card[0], 32);
+        blocks[1] = bin2int(&Psk2_card[32], 32);
+        blocks[2] = bin2int(&Psk2_card[64], 32);
+        blocks[3] = bin2int(&Psk2_card[96], 32);
+    } else {
+        //Nexwatch - compat mode, PSK, data rate 40, 3 data blocks
+        blocks[0] = T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_16 | 3 << T55x7_MAXBLOCK_SHIFT;
 
-    // EM4305
-    if (em) {
-        blocks[0] = EM4305_NEXWATCH_CONFIG_BLOCK;
-        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
-    }
+        // Q5
+        if (q5) {
+            blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
+            snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+        }
 
-    if (use_raw == false) {
-        uint8_t parity = nexwatch_parity(raw + 5) & 0xF;
-        raw[9] |= parity;
-        raw[10] |= nexwatch_checksum(magic, cn, parity);
-    }
+        // EM4305
+        if (em) {
+            blocks[0] = EM4305_NEXWATCH_CONFIG_BLOCK;
+            snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+        }
 
-    for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
-        blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
-    }
+        if (use_raw == false) {
+            uint8_t parity = nexwatch_parity(raw + 5) & 0xF;
+            raw[9] |= parity;
+            raw[10] |= nexwatch_checksum(magic, cn, parity);
+        }
 
+        if (use_unk)
+            magic = 0x86;
+
+        for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+            blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
+        }
+    }
     PrintAndLogEx(INFO, "Preparing to clone NexWatch to " _YELLOW_("%s") " raw " _YELLOW_("%s"), cardtype, sprint_hex_inrow(raw, sizeof(raw)));
     print_blocks(blocks,  ARRAYLEN(blocks));
 
@@ -408,6 +565,8 @@ static int CmdNexWatchSim(const char *Cmd) {
         arg_lit0(NULL, "nc", "Nexkey credential"),
         arg_lit0(NULL, "qc", "Quadrakey credential"),
         arg_lit0(NULL, "hc", "Honeywell credential"),
+        arg_str0(NULL, "magic", "<hex>", "optional - magic hex data. 1 byte"),
+        arg_lit0(NULL, "psk2", "optional - specify writing a tag in psk2 modulation"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
