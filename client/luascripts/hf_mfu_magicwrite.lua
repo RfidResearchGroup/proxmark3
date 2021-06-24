@@ -16,25 +16,25 @@ version = 'v1.1.4'
 desc = 'This script enables easy programming of a MAGIC NTAG 21* card'
 example = [[
     -- read magic tag configuration
-    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -c  ]]..ansicolors.reset..[[ 
+    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -c  ]]..ansicolors.reset..[[
 
     -- set uid
-    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -u 04112233445566 ]]..ansicolors.reset..[[ 
+    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -u 04112233445566 ]]..ansicolors.reset..[[
 
     -- set pwd / pack
-    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -p 11223344 -a 8080 ]]..ansicolors.reset..[[ 
+    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -p 11223344 -a 8080 ]]..ansicolors.reset..[[
 
     -- set version to NTAG213
-    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -v 0004040201000f03 ]]..ansicolors.reset..[[ 
+    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -v 0004040201000f03 ]]..ansicolors.reset..[[
 
     -- set signature
-    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -s 1122334455667788990011223344556677889900112233445566778899001122 ]]..ansicolors.reset..[[ 
+    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -s 1122334455667788990011223344556677889900112233445566778899001122 ]]..ansicolors.reset..[[
 
     -- wipe tag
-    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -w ]]..ansicolors.reset..[[ 
+    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -w ]]..ansicolors.reset..[[
 
     -- wipe a locked down tag by giving the password
-    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -k ffffffff -w ]]..ansicolors.reset..[[ 
+    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -k ffffffff -w ]]..ansicolors.reset..[[
 
 ]]
 usage = [[

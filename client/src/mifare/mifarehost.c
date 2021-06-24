@@ -1059,7 +1059,7 @@ int mfG3GetBlock(uint8_t blockno, uint8_t *data) {
     payload.blockno = blockno;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_G3_RDBL, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_MIFARE_G3_RDBL, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_G3_RDBL, &resp, 1500)) {
         if (resp.status != PM3_SUCCESS)

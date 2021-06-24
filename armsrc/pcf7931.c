@@ -152,8 +152,8 @@ bool IsBlock0PCF7931(uint8_t *block) {
     // assuming all RFU bits are set to 0
     // if PAC is enabled password is set to 0
     if (block[7] == 0x01) {
-        if (!memcmp(block, "\x00\x00\x00\x00\x00\x00\x00", 7) && 
-            !memcmp(block + 9, "\x00\x00\x00\x00\x00\x00\x00", 7)) {
+        if (!memcmp(block, "\x00\x00\x00\x00\x00\x00\x00", 7) &&
+                !memcmp(block + 9, "\x00\x00\x00\x00\x00\x00\x00", 7)) {
             return true;
         }
 
@@ -173,14 +173,14 @@ bool IsBlock1PCF7931(uint8_t *block) {
     uint8_t rlb = block[15];
 
     if (block[10] == 0
-        && block[11] == 0
-        && block[12] == 0
-        && block[13] == 0) {
+            && block[11] == 0
+            && block[12] == 0
+            && block[13] == 0) {
         // block 1 is sent only if (RLB >= 1 && RFB <= 1) or RB1 enabled
         if (rfb <= rlb
-            && rfb <= 9
-            && rlb <= 9
-            && ((rfb <= 1 && rlb >= 1) || rb1)) {
+                && rfb <= 9
+                && rlb <= 9
+                && ((rfb <= 1 && rlb >= 1) || rb1)) {
             return true;
         }
     }

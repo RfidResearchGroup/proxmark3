@@ -700,7 +700,6 @@ bool CheckCardCipurse(void) {
 
 static int CmdHFCipurseTest(const char *Cmd) {
     CIPURSETest(true);
-
     return PM3_SUCCESS;
 }
 

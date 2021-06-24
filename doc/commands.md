@@ -241,12 +241,13 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf cipurse help        `|Y       |`This help.`
-|`hf cipurse info        `|N       |`Info about Cipurse tag.`
-|`hf cipurse auth        `|N       |`Authentication.`
-|`hf cipurse read        `|N       |`Read binary file.`
-|`hf cipurse write       `|N       |`Write binary file.`
-|`hf cipurse aread       `|N       |`Read file attributes.`
-|`hf cipurse delete      `|N       |`Delete file.`
+|`hf cipurse info        `|N       |`Get info about CIPURSE tag`
+|`hf cipurse auth        `|N       |`Authenticate CIPURSE tag`
+|`hf cipurse read        `|N       |`Read binary file`
+|`hf cipurse write       `|N       |`Write binary file`
+|`hf cipurse aread       `|N       |`Read file attributes`
+|`hf cipurse delete      `|N       |`Delete file`
+|`hf cipurse test        `|Y       |`Tests`
 
 
 ### hf epa
@@ -445,6 +446,7 @@ Check column "offline" for their availability.
 |`hf mf gen3uid          `|N       |`Set UID without changing manufacturer block`
 |`hf mf gen3blk          `|N       |`Overwrite manufacturer block`
 |`hf mf gen3freeze       `|N       |`Perma lock UID changes. irreversible`
+|`hf mf gview            `|N       |`View card`
 
 
 ### hf mfp
@@ -518,8 +520,8 @@ Check column "offline" for their availability.
 |`hf mfdes deletefile    `|N       |`Create Delete File`
 |`hf mfdes dump          `|N       |`Dump all files`
 |`hf mfdes getvalue      `|N       |`Get value of file`
-|`hf mfdes readdata      `|N       |`Read data from standard/backup/record file`
-|`hf mfdes writedata     `|N       |`Write data to standard/backup/record file`
+|`hf mfdes read          `|N       |`Read data from standard/backup/record file`
+|`hf mfdes write         `|N       |`Write data to standard/backup/record file`
 
 
 ### hf seos

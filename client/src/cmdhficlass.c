@@ -247,7 +247,7 @@ static void print_config_cards(void) {
 
 static void print_config_card(const iclass_config_card_item_t *o) {
     if (check_config_card(o)) {
-        PrintAndLogEx(INFO, "description... " _YELLOW_("%s")    , o->desc);
+        PrintAndLogEx(INFO, "description... " _YELLOW_("%s"), o->desc);
         PrintAndLogEx(INFO, "data.......... " _YELLOW_("%s"), sprint_hex_inrow(o->data, sizeof(o->data)));
     }
 }

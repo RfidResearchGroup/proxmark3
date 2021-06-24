@@ -12,7 +12,7 @@
 
 #include <unistd.h>
 #include <string.h>      // memcpy memset
-#include "fileutils.h"  
+#include "fileutils.h"
 
 #include "cipurse/cipursecrypto.h"
 #include "cipurse/cipursecore.h"
@@ -30,7 +30,7 @@ static bool TestKVV(void) {
     CipurseCGetKVV(Key, kvv);
 
     bool res = memcmp(KeyKvv, kvv, CIPURSE_KVV_LENGTH) == 0;
-    
+
     if (res)
         PrintAndLogEx(INFO, "kvv.............. " _GREEN_("passed"));
     else
@@ -41,14 +41,14 @@ static bool TestKVV(void) {
 
 static bool TestISO9797M2(void) {
     uint8_t data[32] = {0};
-    
+
     size_t ddatalen = 0;
     AddISO9797M2Padding(data, &ddatalen, TestData, 4, 16);
     bool res = (ddatalen == 16);
     res = res && (memcmp(data, TestDataPadded, ddatalen) == 0);
 
     res = res && (FindISO9797M2PaddingDataLen(data, ddatalen) == 4);
-    
+
     if (res)
         PrintAndLogEx(INFO, "ISO9797M2........ " _GREEN_("passed"));
     else
@@ -60,9 +60,9 @@ static bool TestISO9797M2(void) {
 static bool TestSMI(void) {
     CipurseContext ctx = {0};
     CipurseCClearContext(&ctx);
-    
+
     bool res = (isCipurseCChannelSecuritySet(&ctx) == false);
-    
+
     CipurseCChannelSetSecurityLevels(&ctx, CPSPlain, CPSPlain);
     res = res && (CipurseCGetSMI(&ctx, false) == 0x00);
     res = res && (CipurseCGetSMI(&ctx, true) == 0x01);
@@ -82,7 +82,7 @@ static bool TestSMI(void) {
     CipurseCChannelSetSecurityLevels(&ctx, CPSEncrypted, CPSEncrypted);
     res = res && (CipurseCGetSMI(&ctx, false) == 0x88);
     res = res && (CipurseCGetSMI(&ctx, true) == 0x89);
-    
+
     if (res)
         PrintAndLogEx(INFO, "SMI.............. " _GREEN_("passed"));
     else
@@ -105,7 +105,7 @@ static bool TestMIC(void) {
     res = res && (memcmp(mic, valid_mic6, 4) == 0);
 
     res = res && (CipurseCCheckMIC(TestData, 6, mic));
-    
+
     if (res)
         PrintAndLogEx(INFO, "MIC.............. " _GREEN_("passed"));
     else
@@ -118,34 +118,35 @@ static bool TestMIC(void) {
 static bool TestAuth(void) {
     CipurseContext ctx = {0};
     CipurseCClearContext(&ctx);
-    
+
     bool res = (isCipurseCChannelSecuritySet(&ctx) == false);
-    
+
     CipurseCSetKey(&ctx, 1, Key);
     res = res && (memcmp(ctx.key, Key, 16) == 0);
     res = res && (ctx.keyId == 1);
-    
+
     CipurseCSetRandomFromPICC(&ctx, TestRandom);
     res = res && (memcmp(ctx.RP, TestRandom, 16) == 0);
     res = res && (memcmp(ctx.rP, &TestRandom[16], 6) == 0);
-    
+
     uint8_t hrandom[] = {0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20};
     CipurseCSetRandomHost(&ctx);
     res = res && (memcmp(ctx.RT, hrandom, 16) == 0);
     res = res && (memcmp(ctx.rT, &hrandom[16], 6) == 0);
-    
+
     uint8_t authparams[16 + 16 + 6] = {0};
     CipurseCAuthenticateHost(&ctx, authparams);
-    uint8_t aparamstest[] = {0x12, 0xAA, 0x79, 0xA9, 0x03, 0xC5, 0xB4, 0x6A, 0x27, 0x1B, 0x13, 0xAE, 0x02, 0x50, 0x1C, 0x99, 0x10, 0x10, 0x10, 0x10, 0x10, 
-                            0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20};
+    uint8_t aparamstest[] = {0x12, 0xAA, 0x79, 0xA9, 0x03, 0xC5, 0xB4, 0x6A, 0x27, 0x1B, 0x13, 0xAE, 0x02, 0x50, 0x1C, 0x99, 0x10, 0x10, 0x10, 0x10, 0x10,
+                             0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20
+                            };
     res = res && (memcmp(authparams, aparamstest, sizeof(authparams)) == 0);
-    
+
     uint8_t ct[] = {0xBE, 0x10, 0x6B, 0xB9, 0xAD, 0x84, 0xBC, 0xE1, 0x9F, 0xAE, 0x0C, 0x62, 0xCC, 0xC7, 0x0D, 0x41};
     res = res && CipurseCCheckCT(&ctx, ct);
-    
+
     CipurseCChannelSetSecurityLevels(&ctx, CPSMACed, CPSMACed);
     res = res && (isCipurseCChannelSecuritySet(&ctx) == true);
-    
+
     uint8_t framekey[] = {0xCF, 0x6F, 0x3A, 0x47, 0xFC, 0xAC, 0x8D, 0x38, 0x25, 0x75, 0x8B, 0xFC, 0x8B, 0x61, 0x68, 0xF3};
     res = res && (memcmp(ctx.frameKey, framekey, sizeof(framekey)) == 0);
 
@@ -200,7 +201,7 @@ static bool TestMAC(void) {
 
     uint8_t framekey4[] = {0xA0, 0x65, 0x1A, 0x62, 0x56, 0x5D, 0xD7, 0xC9, 0x32, 0xAE, 0x1D, 0xE0, 0xCF, 0x8D, 0xC1, 0xB9};
     res = res && (memcmp(ctx.frameKey, framekey4, sizeof(framekey4)) == 0);
-    
+
     if (res)
         PrintAndLogEx(INFO, "channel MAC...... " _GREEN_("passed"));
     else
@@ -236,13 +237,15 @@ static bool TestEncDec(void) {
     res = res && (memcmp(dstdata, TestData, 16) == 0);
 
     CipurseCChannelEncrypt(&ctx, TestData, 16, dstdata, &dstdatalen);
-    uint8_t tested3[32] = {0x1E, 0x0C, 0xD1, 0xF5, 0x8E, 0x0B, 0xAE, 0xF0, 0x06, 0xC6, 0xED, 0x73, 0x3F, 0x8A, 0x87, 0xCF, 
-                           0x36, 0xCC, 0xF2, 0xF4, 0x7D, 0x33, 0x50, 0xF1, 0x8E, 0xFF, 0xD1, 0x7D, 0x42, 0x88, 0xD5, 0xEE};
+    uint8_t tested3[32] = {0x1E, 0x0C, 0xD1, 0xF5, 0x8E, 0x0B, 0xAE, 0xF0, 0x06, 0xC6, 0xED, 0x73, 0x3F, 0x8A, 0x87, 0xCF,
+                           0x36, 0xCC, 0xF2, 0xF4, 0x7D, 0x33, 0x50, 0xF1, 0x8E, 0xFF, 0xD1, 0x7D, 0x42, 0x88, 0xD5, 0xEE
+                          };
     res = res && (dstdatalen == 32);
     res = res && (memcmp(dstdata, tested3, 32) == 0);
 
-    uint8_t tested4[32] = {0xC0, 0x42, 0xDB, 0xD9, 0x53, 0xFF, 0x01, 0xE5, 0xCC, 0x49, 0x8C, 0x9C, 0xDA, 0x60, 0x73, 0xA7, 
-                           0xE1, 0xEB, 0x14, 0x69, 0xF6, 0x39, 0xF3, 0xE1, 0x07, 0x03, 0x32, 0xF4, 0x27, 0xF9, 0x48, 0x3D};
+    uint8_t tested4[32] = {0xC0, 0x42, 0xDB, 0xD9, 0x53, 0xFF, 0x01, 0xE5, 0xCC, 0x49, 0x8C, 0x9C, 0xDA, 0x60, 0x73, 0xA7,
+                           0xE1, 0xEB, 0x14, 0x69, 0xF6, 0x39, 0xF3, 0xE1, 0x07, 0x03, 0x32, 0xF4, 0x27, 0xF9, 0x48, 0x3D
+                          };
     CipurseCChannelDecrypt(&ctx, tested4, 32, dstdata, &dstdatalen);
     res = res && (dstdatalen == 16);
     res = res && (memcmp(dstdata, TestData, 16) == 0);
@@ -276,7 +279,7 @@ static bool TestAPDU(void) {
     sAPDU dstAPDU = {0};
     uint8_t dstdata[256] = {0};
     size_t dstdatalen = 0;
-    
+
     // MACED APDU
     srcAPDU.CLA = 0x00;
     srcAPDU.INS = 0x55;
@@ -293,14 +296,14 @@ static bool TestAPDU(void) {
     res = res && (srcAPDU.P2 == dstAPDU.P2);
     res = res && (dstAPDU.Lc == sizeof(test1));
     res = res && (memcmp(dstdata, test1, sizeof(test1)) == 0);
-    
+
     uint16_t sw = 0;
     uint8_t test2[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x9D, 0x80, 0xE7, 0xE3, 0x34, 0xE9, 0x97, 0x82, 0xdd, 0xee};
     CipurseCAPDURespDecode(&ctx, test2, sizeof(test2), dstdata, &dstdatalen, &sw);
     res = res && (dstdatalen == 6);
     res = res && (memcmp(test2, dstdata, dstdatalen) == 0);
     res = res && (sw == 0xddee);
-    
+
     // Plain APDU
     CipurseCChannelSetSecurityLevels(&ctx, CPSPlain, CPSPlain);
     CipurseCAPDUReqEncode(&ctx, &srcAPDU, &dstAPDU, dstdata, true, 0x55);
@@ -317,7 +320,7 @@ static bool TestAPDU(void) {
     res = res && (dstdatalen == 6);
     res = res && (memcmp(test4, dstdata, dstdatalen) == 0);
     res = res && (sw == 0xccdd);
-    
+
     // Encrypted APDU
     CipurseCChannelSetSecurityLevels(&ctx, CPSEncrypted, CPSEncrypted);
     CipurseCAPDUReqEncode(&ctx, &srcAPDU, &dstAPDU, dstdata, true, 0x55);
@@ -328,17 +331,17 @@ static bool TestAPDU(void) {
     res = res && (srcAPDU.P2 == dstAPDU.P2);
     res = res && (dstAPDU.Lc == sizeof(test5));
     res = res && (memcmp(dstdata, test5, sizeof(test5)) == 0);
-    
-    uint8_t test6[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x7E, 0x4B, 0xA0, 0xB7, 0xcc, 0xdd}; 
+
+    uint8_t test6[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x7E, 0x4B, 0xA0, 0xB7, 0xcc, 0xdd};
     //CipurseCChannelEncrypt(&ctx, test6, sizeof(test6), dstdata, &dstdatalen);
     //PrintAndLogEx(INFO, "dstdata[%d]: %s", dstdatalen, sprint_hex(dstdata, dstdatalen));
-    
+
     uint8_t test7[] = {0x07, 0xEF, 0x16, 0x91, 0xE7, 0x0F, 0xB5, 0x10, 0x63, 0xCE, 0x66, 0xDB, 0x3B, 0xC6, 0xD4, 0xE0, 0x90, 0x00};
     CipurseCAPDURespDecode(&ctx, test7, sizeof(test7), dstdata, &dstdatalen, &sw);
     res = res && (dstdatalen == 8);
     res = res && (memcmp(test6, dstdata, dstdatalen) == 0);
     res = res && (sw == 0xccdd);
-    
+
     if (res)
         PrintAndLogEx(INFO, "apdu............. " _GREEN_("passed"));
     else
@@ -351,7 +354,7 @@ bool CIPURSETest(bool verbose) {
     bool res = true;
 
     PrintAndLogEx(INFO, "------ " _CYAN_("CIPURSE Tests") " ------");
-    
+
     res = res && TestKVV();
     res = res && TestISO9797M2();
     res = res && TestSMI();
@@ -366,7 +369,7 @@ bool CIPURSETest(bool verbose) {
         PrintAndLogEx(SUCCESS, "    Tests [ %s ]", _GREEN_("ok"));
     else
         PrintAndLogEx(FAILED, "    Tests [ %s ]", _RED_("fail"));
-    
+
     PrintAndLogEx(NORMAL, "");
     return res;
 }

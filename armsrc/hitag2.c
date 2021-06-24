@@ -1304,7 +1304,7 @@ void SniffHitag2(void) {
     LEDsoff();
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-   
+
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     set_tracing(false);
 

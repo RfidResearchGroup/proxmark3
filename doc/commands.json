@@ -973,7 +973,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210618.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log /home/osboxes/.proxmark3/logs/log_20210624.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -1684,67 +1684,67 @@
         },
         "hf cipurse aread": {
             "command": "hf cipurse aread",
-            "description": "read file attributes by file id with key id and key",
+            "description": "read file attributes by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
             "notes": [
-                "hf cipurse aread -f 2ff7 -> authenticate with keyid=1 and key = 7373...7373 and read file attributes with id 2ff7",
-                "hf cipurse aread -n 2 -k 65656565656565656565656565656565 -f 2ff7 -> authenticate with specified key and read file attributes"
+                "hf cipurse aread --fid 2ff7 -> authenticate with keyid 1, read file attributes with id 2ff7",
+                "hf cipurse aread -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> authenticate keyid 2, read file attributes"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
                 "-a, --apdu show apdu requests and responses",
                 "-v, --verbose show technical data",
-                "-n, --keyid <dec> key id",
-                "-k, --key <hex> key for authenticate",
-                "-f, --file <hex> file id",
+                "-n <dec> key id",
+                "-k, --key <hex> auth key",
+                "--fid <hex> file id",
                 "--noauth read file attributes without authentication",
                 "--sreq <plain|mac(default)|encode> communication reader-picc security level",
                 "--sresp <plain|mac(default)|encode> communication picc-reader security level",
                 "--sel-adf show info about adf itself",
                 "--sel-mf show info about master file"
             ],
-            "usage": "hf cipurse aread [-hav] [-n <dec>] [-k <hex>] [-f <hex>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [--sel-adf] [--sel-mf]"
+            "usage": "hf cipurse aread [-hav] [-n <dec>] [-k <hex>] [--fid <hex>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [--sel-adf] [--sel-mf]"
         },
         "hf cipurse auth": {
             "command": "hf cipurse auth",
-            "description": "authenticate with key id and key",
+            "description": "authenticate with key id and key. if no key is supplied, default key of 737373...7373 will be used",
             "notes": [
-                "hf cipurse auth -> authenticate with keyid=1 and key = 7373...7373",
-                "hf cipurse auth -n 2 -k 65656565656565656565656565656565 -> authenticate with key"
+                "hf cipurse auth -> authenticate with keyid 1, default key",
+                "hf cipurse auth -n 2 -k 65656565656565656565656565656565 -> authenticate keyid 2 with key"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
                 "-a, --apdu show apdu requests and responses",
                 "-v, --verbose show technical data",
-                "-n, --keyid <dec> key id",
-                "-k, --key <hex> key for authenticate"
+                "-n <dec> key id",
+                "-k, --key <hex> auth key"
             ],
             "usage": "hf cipurse auth [-hav] [-n <dec>] [-k <hex>]"
         },
         "hf cipurse delete": {
             "command": "hf cipurse delete",
-            "description": "read file by file id with key id and key",
+            "description": "read file by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
             "notes": [
-                "hf cipurse delete -f 2ff7 -> authenticate with keyid=1 and key = 7373...7373 and delete file with id 2ff7",
-                "hf cipurse delete -n 2 -k 65656565656565656565656565656565 -f 2ff7 -> authenticate with specified key and delete file"
+                "hf cipurse delete --fid 2ff7 -> authenticate with keyid 1, delete file with id 2ff7",
+                "hf cipurse delete -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> authenticate keyid 2 and delete file"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
                 "-a, --apdu show apdu requests and responses",
                 "-v, --verbose show technical data",
-                "-n, --keyid <dec> key id",
-                "-k, --key <hex> key for authenticate",
-                "-f, --file <hex> file id",
+                "-n <dec> key id",
+                "-k, --key <hex> auth key",
+                "--fid <hex> file id",
                 "--sreq <plain|mac(default)|encode> communication reader-picc security level",
                 "--sresp <plain|mac(default)|encode> communication picc-reader security level"
             ],
-            "usage": "hf cipurse delete [-hav] [-n <dec>] [-k <hex>] [-f <hex>] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>]"
+            "usage": "hf cipurse delete [-hav] [-n <dec>] [-k <hex>] [--fid <hex>] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>]"
         },
         "hf cipurse help": {
             "command": "hf cipurse help",
-            "description": "help this help. --------------------------------------------------------------------------------------- hf cipurse info available offline: no get info from cipurse tags",
+            "description": "help this help. test tests --------------------------------------------------------------------------------------- hf cipurse info available offline: no get info from cipurse tags",
             "notes": [
                 "hf cipurse info"
             ],
@@ -1756,48 +1756,63 @@
         },
         "hf cipurse read": {
             "command": "hf cipurse read",
-            "description": "read file by file id with key id and key",
+            "description": "read file by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
             "notes": [
-                "hf cipurse read -f 2ff7 -> authenticate with keyid=1 and key = 7373...7373 and read file with id 2ff7",
-                "hf cipurse read -n 2 -k 65656565656565656565656565656565 -f 2ff7 -> authenticate with specified key and read file"
+                "hf cipurse read --fid 2ff7 -> authenticate with keyid 1, read file with id 2ff7",
+                "hf cipurse read -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> authenticate keyid 2 and read file"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
                 "-a, --apdu show apdu requests and responses",
                 "-v, --verbose show technical data",
-                "-n, --keyid <dec> key id",
-                "-k, --key <hex> key for authenticate",
-                "-f, --file <hex> file id",
+                "-n <dec> key id",
+                "-k, --key <hex> auth key",
+                "--fid <hex> file id",
                 "-o, --offset <dec> offset for reading data from file",
                 "--noauth read file without authentication",
                 "--sreq <plain|mac(default)|encode> communication reader-picc security level",
                 "--sresp <plain|mac(default)|encode> communication picc-reader security level"
             ],
-            "usage": "hf cipurse read [-hav] [-n <dec>] [-k <hex>] [-f <hex>] [-o <dec>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>]"
+            "usage": "hf cipurse read [-hav] [-n <dec>] [-k <hex>] [--fid <hex>] [-o <dec>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>]"
+        },
+        "hf cipurse test": {
+            "command": "hf cipurse test",
+            "description": "[=] ------ cipurse tests ------ [=] kvv.............. passed [=] iso9797m2........ passed [=] smi.............. passed [=] mic.............. passed [=] auth............. passed [=] channel mac...... passed [=] channel encdec... passed [=] apdu............. passed [=] --------------------------- [+] tests [ ok ] ======================================================================================= hf epa { german identification card... } --------------------------------------------------------------------------------------- hf epa help available offline: yes help this help --------------------------------------------------------------------------------------- hf epa cnonces available offline: no tries to collect nonces when doing part of pace protocol.",
+            "notes": [
+                "hf epa cnonces --size 4 --num 4 --delay 1"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "--size <dec> nonce size",
+                "--num <dec> number of nonces to collect",
+                "-d, --delay <dec> delay between attempts"
+            ],
+            "usage": "hf epa cnonces [-h] --size <dec> --num <dec> -d <dec>"
         },
         "hf cipurse write": {
             "command": "hf cipurse write",
-            "description": "write file by file id with key id and key",
+            "description": "write file by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
             "notes": [
-                "hf cipurse write -f 2ff7 -> authenticate with keyid=1 and key = 7373...7373 and write file with id 2ff7",
-                "hf cipurse write -n 2 -k 65656565656565656565656565656565 -f 2ff7 -> authenticate with specified key and write file"
+                "hf cipurse write --fid 2ff7 -> authenticate with keyid 1, write file with id 2ff7",
+                "hf cipurse write -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> authenticate keyid 2 and write file"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
                 "-a, --apdu show apdu requests and responses",
                 "-v, --verbose show technical data",
-                "-n, --keyid <dec> key id",
-                "-k, --key <hex> key for authenticate",
-                "-f, --file <hex> file id",
+                "-n <dec> key id",
+                "-k, --key <hex> auth key",
+                "--fid <hex> file id",
                 "-o, --offset <dec> offset for reading data from file",
                 "--noauth read file without authentication",
                 "--sreq <plain|mac(default)|encode> communication reader-picc security level",
                 "--sresp <plain|mac(default)|encode> communication picc-reader security level",
-                "-c, --content <hex> new file content"
+                "-d, --data <hex> hex data to write to new file"
             ],
-            "usage": "hf cipurse write [-hav] [-n <dec>] [-k <hex>] [-f <hex>] [-o <dec>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [-c <hex>]"
+            "usage": "hf cipurse write [-hav] [-n <dec>] [-k <hex>] [--fid <hex>] [-o <dec>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [-d <hex>]"
         },
         "hf emrtd help": {
             "command": "hf emrtd help",
@@ -1853,21 +1868,6 @@
                 "--dict <file> use dictionary keys file"
             ],
             "usage": "hf emrtd list [-h1fcrux] [--dict <file>]..."
-        },
-        "hf epa help": {
-            "command": "hf epa help",
-            "description": "help this help --------------------------------------------------------------------------------------- hf epa cnonces available offline: no tries to collect nonces when doing part of pace protocol.",
-            "notes": [
-                "hf epa cnonces --size 4 --num 4 --delay 1"
-            ],
-            "offline": true,
-            "options": [
-                "-h, --help this help",
-                "--size <dec> nonce size",
-                "--num <dec> number of nonces to collect",
-                "-d, --delay <dec> delay between attempts"
-            ],
-            "usage": "hf epa cnonces [-h] --size <dec> --num <dec> -d <dec>"
         },
         "hf epa preplay": {
             "command": "hf epa preplay",
@@ -3491,9 +3491,9 @@
                 "hf mf fchk --2k -k ffffffffffff -> key recovery against mifare 2k",
                 "hf mf fchk --4k -k ffffffffffff -> key recovery against mifare 4k",
                 "hf mf fchk --1k -f mfc_default_keys.dic -> target 1k using default dictionary file",
-                "hf mf fchk --1k --emu -> target 1k, write to emulator memory",
-                "hf mf fchk --1k --dump -> target 1k, write to file",
-                "hf mf fchk --1k --mem -> target 1k, use dictionary from flashmemory"
+                "hf mf fchk --1k --emu -> target 1k, write keys to emulator memory",
+                "hf mf fchk --1k --dump -> target 1k, write keys to file",
+                "hf mf fchk --1k --mem -> target 1k, use dictionary from flash memory"
             ],
             "offline": false,
             "options": [
@@ -3552,6 +3552,23 @@
                 "-u, --uid <hex> uid 4/7 hex bytes"
             ],
             "usage": "hf mf gen3uid [-h] [-u <hex>]"
+        },
+        "hf mf gview": {
+            "command": "hf mf gview",
+            "description": "view `magic gen3 gtu` card memory",
+            "notes": [
+                "hf mf gview",
+                "hf mf gview --4k"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "--mini mifare classic mini / s20",
+                "--1k mifare classic 1k / s50 (def)",
+                "--2k mifare classic/plus 2k",
+                "--4k mifare classic 4k / s70"
+            ],
+            "usage": "hf mf gview [-h] [--mini] [--1k] [--2k] [--4k]"
         },
         "hf mf hardnested": {
             "command": "hf mf hardnested",
@@ -4219,12 +4236,12 @@
             ],
             "usage": "hf mfdes list [-h1fcrux] [--dict <file>]..."
         },
-        "hf mfdes readdata": {
-            "command": "hf mfdes readdata",
+        "hf mfdes read": {
+            "command": "hf mfdes read",
             "description": "read data from file make sure to select aid or authenticate aid before running this command.",
             "notes": [
-                "hf mfdes readdata -n 01 -t 0 -o 000000 -l 000000 -a 123456",
-                "hf mfdes readdata -n 01 -t 0 -> read all data from standard file, fileno 01"
+                "hf mfdes read -n 1 -t 0 -o 000000 -l 000000 -a 123456",
+                "hf mfdes read -n 1 -t 0 -> read all data from standard file, fileno 1"
             ],
             "offline": false,
             "options": [
@@ -4235,7 +4252,7 @@
                 "-t, --type <dec> file type (0 = standard / backup, 1 = record)",
                 "-a, --aid <hex> app id to select (3 hex bytes, big endian)"
             ],
-            "usage": "hf mfdes readdata [-h] [-n <dec>] [-o <hex>]... [-l <hex>]... [-t <dec>] [-a <hex>]..."
+            "usage": "hf mfdes read [-h] [-n <dec>] [-o <hex>]... [-l <hex>]... [-t <dec>] [-a <hex>]..."
         },
         "hf mfdes selectaid": {
             "command": "hf mfdes selectaid",
@@ -4250,11 +4267,11 @@
             ],
             "usage": "hf mfdes selectaid [-h] [-a <hex>]..."
         },
-        "hf mfdes writedata": {
-            "command": "hf mfdes writedata",
+        "hf mfdes write": {
+            "command": "hf mfdes write",
             "description": "write data to file make sure to select aid or authenticate aid before running this command.",
             "notes": [
-                "hf mfdes writedata -n 01 -t 0 -o 000000 -d 3132333435363738"
+                "hf mfdes write -n 01 -t 0 -o 000000 -d 3132333435363738"
             ],
             "offline": false,
             "options": [
@@ -4265,7 +4282,7 @@
                 "-t, --type <dec> file type (0 = standard / backup, 1 = record)",
                 "-a, --aid <hex> app id to select as hex bytes (3 bytes, big endian)"
             ],
-            "usage": "hf mfdes writedata [-h] [-n <dec>] [-o <hex>]... [-d <hex>]... [-t <dec>] [-a <hex>]..."
+            "usage": "hf mfdes write [-h] [-n <dec>] [-o <hex>]... [-d <hex>]... [-t <dec>] [-a <hex>]..."
         },
         "hf mfp auth": {
             "command": "hf mfp auth",
@@ -5061,8 +5078,8 @@
             "command": "hw connect",
             "description": "connects to a proxmark3 device via specified serial port. baudrate here is only for physical uart or uart-bt, not for usb-cdc or blue shark add-on",
             "notes": [
-                "hw connect -p com3",
-                "hw connect -p com3 -b 115200"
+                "hw connect -p /dev/ttyacm0",
+                "hw connect -p /dev/ttyacm0 -b 115200"
             ],
             "offline": true,
             "options": [
@@ -6441,17 +6458,18 @@
             "command": "lf hitag help",
             "description": "help this help list list hitag trace history --------------------------------------------------------------------------------------- lf hitag eload available offline: no loads hitag tag dump into emulator memory on device",
             "notes": [
-                "lf hitag eload -f lf-hitag-11223344-dump.bin"
+                "lf hitag eload -2 -f lf-hitag-11223344-dump.bin"
             ],
             "offline": true,
             "options": [
                 "-h, --help this help",
                 "-f, --file <filename> filename of dump",
-                "-1 simulate hitag1",
-                "-2 simulate hitag2",
-                "-s simulate hitags"
+                "-1 card type hitag1",
+                "-2 card type hitag2",
+                "-s card type hitags",
+                "-m card type hitagm"
             ],
-            "usage": "lf hitag eload [-h12s] -f <filename>"
+            "usage": "lf hitag eload [-h12sm] -f <filename>"
         },
         "lf hitag info": {
             "command": "lf hitag info",
@@ -7586,7 +7604,7 @@
         },
         "lf sniff": {
             "command": "lf sniff",
-            "description": "sniff low frequency signal. - use `lf config` to set parameters. - use `data plot` to look at it",
+            "description": "sniff low frequency signal. you need to configure the lf part on the proxmark3 device manually. usually a trigger and skip samples is a good thing to set before doing a low frequency sniff. - use `lf config` to set parameters. - use `data plot` to look at sniff signal. - use `lf search -1` to see if signal can be automatic decoded",
             "notes": [
                 "lf sniff -v",
                 "lf sniff -s 3000 -@ -> oscilloscope style"
@@ -9179,8 +9197,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 570,
+        "commands_extracted": 571,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-06-18T09:04:45"
+        "extracted_on": "2021-06-24T16:45:08"
     }
 }

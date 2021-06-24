@@ -278,7 +278,7 @@ static int CmdLFHitagEload(const char *Cmd) {
     if (dumplen == 48 ||  dumplen == 4 * 64) {
 
         lf_hitag_t *payload =  calloc(1, sizeof(lf_hitag_t) + dumplen);
-        
+
         if (use_ht1)
             payload->type = 1;
         if (use_ht2)
