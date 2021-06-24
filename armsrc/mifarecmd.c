@@ -2594,6 +2594,42 @@ OUT:
     BigBuf_free();
 }
 
+void MifareG3ReadBlk(uint8_t blockno) {
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    clear_trace();
+    set_tracing(true);
+
+    int retval = PM3_SUCCESS;
+    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
+    uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
+    uint8_t *uid = BigBuf_malloc(10);
+    if (iso14443a_select_card(uid, NULL, NULL, true, 0, true) == false) {
+        retval = PM3_ESOFT;
+        goto OUT;
+    }
+
+    LED_B_ON();
+    uint32_t save_iso14a_timeout = iso14a_get_timeout();
+    iso14a_set_timeout(13560000 / 1000 / (8 * 16) * 1000); // 2 seconds timeout
+
+    uint8_t cmd[] = { 0xCF, 0x00, 0x00, 0x00, 0x00, 0xCE, blockno, 0x00, 0x00};
+    AddCrc14A(cmd, sizeof(cmd) - 2);
+
+    ReaderTransmit(cmd, sizeof(cmd), NULL);
+    int res = ReaderReceive(buf, par);
+    if (res != 18) {
+        retval = PM3_ESOFT;
+    }
+    iso14a_set_timeout(save_iso14a_timeout);
+    LED_B_OFF();
+
+OUT:
+    reply_ng(CMD_HF_MIFARE_G3_RDBL, retval, buf, 18);
+    // turns off
+    OnSuccessMagic();
+    BigBuf_free();
+}
+
 void MifareSetMod(uint8_t *datain) {
 
     uint8_t mod = datain[0];

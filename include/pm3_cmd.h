@@ -740,6 +740,9 @@ typedef struct {
 #define CMD_HF_MIFARE_GEN3BLK                                             0x0851
 #define CMD_HF_MIFARE_GEN3FREEZ                                           0x0852
 
+// Gen 3 GTU magic cards
+#define CMD_HF_MIFARE_G3_RDBL                                             0x0860
+
 #define CMD_UNKNOWN                                                       0xFFFF
 
 //Mifare simulation flags

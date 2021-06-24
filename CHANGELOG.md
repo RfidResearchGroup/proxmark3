@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf mf gview` - view contents of a magic Gen3 GTU (@iceman1001)
  - Added Standalone mode for nexwatch ID credentials (@Guilhem7, @MaximeBosca)
  - Fix `lf em 4x50/4x70 *`  reverted a missunderstanding in byte order macros (@iceman1001)
  - Added more keys (@equipter)

@@ -1050,6 +1050,27 @@ int mfGen3Freeze(void) {
     }
 }
 
+int mfG3GetBlock(uint8_t blockno, uint8_t *data) {
+    struct p {
+        uint8_t blockno;
+    } PACKED payload;
+    payload.blockno = blockno;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_G3_RDBL, (uint8_t*)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_G3_RDBL, &resp, 1500)) {
+        if (resp.status != PM3_SUCCESS)
+            return PM3_EUNDEF;
+        memcpy(data, resp.data.asBytes, 16);
+    } else {
+        PrintAndLogEx(WARNING, "command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+    return PM3_SUCCESS;
+}
+
+
 // variables
 uint32_t cuid = 0;    // uid part used for crypto1.
 
