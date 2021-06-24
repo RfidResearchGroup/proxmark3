@@ -5778,7 +5778,7 @@
         },
         "lf em 4x50 chk": {
             "command": "lf em 4x50 chk",
-            "description": "dictionary attack against em4x50.",
+            "description": "run dictionary key recovery against em4x50 card.",
             "notes": [
                 "lf em 4x50 chk -> uses t55xx default dictionary",
                 "lf em 4x50 chk -f my.dic"
@@ -5848,7 +5848,7 @@
         },
         "lf em 4x50 help": {
             "command": "lf em 4x50 help",
-            "description": "help this help --------------------------------------------------------------------------------------- lf em 4x50 brute available offline: no tries to bruteforce the password of a em4x50. function can be stopped by pressing pm3 button.",
+            "description": "help this help ----------- --------------------- operations --------------------- ----------- --------------------- simulation --------------------- --------------------------------------------------------------------------------------- lf em 4x50 brute available offline: no tries to bruteforce the password of a em4x50 card. function can be stopped by pressing pm3 button.",
             "notes": [
                 "lf em 4x50 brute --first 12330000 --last 12340000 -> tries pwds from 0x12330000 to 0x1234000000"
             ],
@@ -5979,11 +5979,11 @@
             ],
             "usage": "lf em 4x50 wrbl [-h] -b <dec> -d <hex> [-p <hex>]"
         },
-        "lf em 4x50 writepwd": {
-            "command": "lf em 4x50 writepwd",
+        "lf em 4x50 wrpwd": {
+            "command": "lf em 4x50 wrpwd",
             "description": "writes em4x50 password.",
             "notes": [
-                "lf em 4x50 writepwd -p 4f22e7ff -n 12345678"
+                "lf em 4x50 wrpwd -p 4f22e7ff -n 12345678"
             ],
             "offline": false,
             "options": [
@@ -5991,7 +5991,7 @@
                 "-p, --pwd <hex> password, 4 hex bytes, lsb",
                 "-n, --new <hex> new password, 4 hex bytes, lsb"
             ],
-            "usage": "lf em 4x50 writepwd [-h] -p <hex> -n <hex>"
+            "usage": "lf em 4x50 wrpwd [-h] -p <hex> -n <hex>"
         },
         "lf em 4x70 auth": {
             "command": "lf em 4x70 auth",
@@ -9199,6 +9199,6 @@
     "metadata": {
         "commands_extracted": 571,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-06-24T16:45:08"
+        "extracted_on": "2021-06-24T17:24:39"
     }
 }

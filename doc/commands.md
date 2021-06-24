@@ -724,21 +724,21 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf em 4x50 help        `|Y       |`This help`
-|`lf em 4x50 brute       `|N       |`guess password of EM4x50`
-|`lf em 4x50 chk         `|N       |`check passwords from dictionary`
-|`lf em 4x50 dump        `|N       |`dump EM4x50 tag`
-|`lf em 4x50 info        `|N       |`tag information EM4x50`
-|`lf em 4x50 login       `|N       |`login into EM4x50`
-|`lf em 4x50 rdbl        `|N       |`read word data from EM4x50`
-|`lf em 4x50 wrbl        `|N       |`write word data to EM4x50`
-|`lf em 4x50 writepwd    `|N       |`change password of EM4x50`
-|`lf em 4x50 wipe        `|N       |`wipe EM4x50 tag`
-|`lf em 4x50 reader      `|N       |`show standard read mode data of EM4x50`
-|`lf em 4x50 restore     `|N       |`restore EM4x50 dump to tag`
-|`lf em 4x50 sim         `|N       |`simulate EM4x50 tag`
-|`lf em 4x50 eload       `|N       |`upload dump of EM4x50 to emulator memory`
-|`lf em 4x50 esave       `|N       |`save emulator memory to file`
-|`lf em 4x50 eview       `|N       |`view EM4x50 content in emulator memory`
+|`lf em 4x50 brute       `|N       |`Simple bruteforce attack to find password`
+|`lf em 4x50 chk         `|N       |`Check passwords from dictionary`
+|`lf em 4x50 dump        `|N       |`Dump EM4x50 tag`
+|`lf em 4x50 info        `|N       |`Tag information`
+|`lf em 4x50 login       `|N       |`Login into EM4x50 tag`
+|`lf em 4x50 rdbl        `|N       |`Read EM4x50 word data`
+|`lf em 4x50 reader      `|N       |`Show standard read mode data`
+|`lf em 4x50 restore     `|N       |`Restore EM4x50 dump to tag`
+|`lf em 4x50 wrbl        `|N       |`Write EM4x50 word data`
+|`lf em 4x50 wrpwd       `|N       |`Change EM4x50 password`
+|`lf em 4x50 wipe        `|N       |`Wipe EM4x50 tag`
+|`lf em 4x50 eload       `|N       |`Upload EM4x50 dump to emulator memory`
+|`lf em 4x50 esave       `|N       |`Save emulator memory to file`
+|`lf em 4x50 eview       `|N       |`View EM4x50 content in emulator memory`
+|`lf em 4x50 sim         `|N       |`Simulate EM4x50 tag`
 
 
 ### lf em 4x70
