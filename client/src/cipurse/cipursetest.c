@@ -274,7 +274,7 @@ static bool TestAPDU(void) {
     // check APDU formatting
     sAPDU srcAPDU = {0};
     sAPDU dstAPDU = {0};
-    uint8_t dstdata[32] = {0};
+    uint8_t dstdata[256] = {0};
     size_t dstdatalen = 0;
     
     // MACED APDU
@@ -328,8 +328,16 @@ static bool TestAPDU(void) {
     res = res && (srcAPDU.P2 == dstAPDU.P2);
     res = res && (dstAPDU.Lc == sizeof(test5));
     res = res && (memcmp(dstdata, test5, sizeof(test5)) == 0);
-    //PrintAndLogEx(INFO, "dstAPDU.data: %s", sprint_hex(dstAPDU.data, dstAPDU.Lc));
     
+    uint8_t test6[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x7E, 0x4B, 0xA0, 0xB7, 0xcc, 0xdd}; 
+    //CipurseCChannelEncrypt(&ctx, test6, sizeof(test6), dstdata, &dstdatalen);
+    //PrintAndLogEx(INFO, "dstdata[%d]: %s", dstdatalen, sprint_hex(dstdata, dstdatalen));
+    
+    uint8_t test7[] = {0x07, 0xEF, 0x16, 0x91, 0xE7, 0x0F, 0xB5, 0x10, 0x63, 0xCE, 0x66, 0xDB, 0x3B, 0xC6, 0xD4, 0xE0, 0x90, 0x00};
+    CipurseCAPDURespDecode(&ctx, test7, sizeof(test7), dstdata, &dstdatalen, &sw);
+    res = res && (dstdatalen == 8);
+    res = res && (memcmp(test6, dstdata, dstdatalen) == 0);
+    res = res && (sw == 0xccdd);
     
     if (res)
         PrintAndLogEx(INFO, "apdu: " _GREEN_("passed"));
