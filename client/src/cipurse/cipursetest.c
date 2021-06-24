@@ -260,7 +260,7 @@ static bool TestAPDU(void) {
     sAPDU srcAPDU = {0};
     sAPDU dstAPDU = {0};
     uint8_t dstdata[32] = {0};
-    //size_t dstdatalen = 0;
+    size_t dstdatalen = 0;
     
     // MACED APDU
     srcAPDU.CLA = 0x00;
@@ -278,23 +278,42 @@ static bool TestAPDU(void) {
     res = res && (srcAPDU.P2 == dstAPDU.P2);
     res = res && (dstAPDU.Lc == sizeof(test1));
     res = res && (memcmp(dstdata, test1, sizeof(test1)) == 0);
-    PrintAndLogEx(INFO, "dstAPDU.data: %s", sprint_hex(dstAPDU.data, dstAPDU.Lc));
     
-    
+    uint16_t sw = 0;
+    uint8_t test2[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x9D, 0x80, 0xE7, 0xE3, 0x34, 0xE9, 0x97, 0x82, 0xdd, 0xee};
+    CipurseCAPDURespDecode(&ctx, test2, sizeof(test2), dstdata, &dstdatalen, &sw);
+    res = res && (dstdatalen == 6);
+    res = res && (memcmp(test2, dstdata, dstdatalen) == 0);
+    res = res && (sw == 0xddee);
     
     // Plain APDU
     CipurseCChannelSetSecurityLevels(&ctx, CPSPlain, CPSPlain);
     CipurseCAPDUReqEncode(&ctx, &srcAPDU, &dstAPDU, dstdata, true, 0x55);
-    uint8_t test2[] = {0x01, 0x11, 0x22, 0x33, 0x44, 0x00, 0x55};
+    uint8_t test3[] = {0x01, 0x11, 0x22, 0x33, 0x44, 0x00, 0x55};
     res = res && ((srcAPDU.CLA | 0x04) == dstAPDU.CLA);
     res = res && (srcAPDU.INS == dstAPDU.INS);
     res = res && (srcAPDU.P1 == dstAPDU.P1);
     res = res && (srcAPDU.P2 == dstAPDU.P2);
-    res = res && (dstAPDU.Lc == sizeof(test2));
-    res = res && (memcmp(dstdata, test2, sizeof(test2)) == 0);
+    res = res && (dstAPDU.Lc == sizeof(test3));
+    res = res && (memcmp(dstdata, test3, sizeof(test3)) == 0);
+
+    uint8_t test4[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0xcc, 0xdd};
+    CipurseCAPDURespDecode(&ctx, test4, sizeof(test4), dstdata, &dstdatalen, &sw);
+    res = res && (dstdatalen == 6);
+    res = res && (memcmp(test4, dstdata, dstdatalen) == 0);
+    res = res && (sw == 0xccdd);
     
     // Encrypted APDU
-    //CipurseCChannelSetSecurityLevels(&ctx, CPSEncrypted, CPSEncrypted);
+    CipurseCChannelSetSecurityLevels(&ctx, CPSEncrypted, CPSEncrypted);
+    CipurseCAPDUReqEncode(&ctx, &srcAPDU, &dstAPDU, dstdata, true, 0x55);
+    uint8_t test5[] = {0x89, 0x7D, 0xED, 0x0D, 0x04, 0x8E, 0xE1, 0x99, 0x08, 0x70, 0x56, 0x7C, 0xEE, 0x67, 0xB3, 0x33, 0x6F, 0x00};
+    res = res && ((srcAPDU.CLA | 0x04) == dstAPDU.CLA);
+    res = res && (srcAPDU.INS == dstAPDU.INS);
+    res = res && (srcAPDU.P1 == dstAPDU.P1);
+    res = res && (srcAPDU.P2 == dstAPDU.P2);
+    res = res && (dstAPDU.Lc == sizeof(test5));
+    res = res && (memcmp(dstdata, test5, sizeof(test5)) == 0);
+    //PrintAndLogEx(INFO, "dstAPDU.data: %s", sprint_hex(dstAPDU.data, dstAPDU.Lc));
     
     
     if (res)
