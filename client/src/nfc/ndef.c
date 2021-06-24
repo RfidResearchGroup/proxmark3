@@ -25,6 +25,7 @@
 #define NDEF_WIFIAPPL   "application/vnd.wfa"
 #define NDEF_BLUEAPPL   "application/vnd.bluetooth"
 #define NDEF_VCARDTEXT  "text/vcard"
+#define NDEF_XVCARDTEXT "text/x-vcard"
 
 static const char *TypeNameFormat_s[] = {
     "Empty Record",
@@ -510,8 +511,8 @@ static int ndefDecodeMime_wifi(NDEFHeader_t *ndef) {
 static int ndefDecodeMime_vcard(NDEFHeader_t *ndef) {
     PrintAndLogEx(INFO, _CYAN_("VCARD details"));
     if (ndef->PayloadLen > 1) {
-        PrintAndLogEx(INFO, "Data... " _YELLOW_("%.*s"), (int)ndef->PayloadLen, ndef->Payload);
-        PrintAndLogEx(INFO, ">>> decorder, to be implemented <<<");
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(INFO, "%.*s", (int)ndef->PayloadLen, ndef->Payload);
     }
     return PM3_SUCCESS;
 }
@@ -629,20 +630,29 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
                 PrintAndLogEx(INFO, "- decoder to be impl -");
             }
             break;
-        case tnfMIMEMediaRecord:
+        case tnfMIMEMediaRecord: {
             PrintAndLogEx(INFO, "MIME Media Record");
+            if (ndef->TypeLen == 0)  {
+                PrintAndLogEx(INFO, "type length is zero");
+                break;
+            }
 
-            if (str_startswith((const char *)ndef->Type, NDEF_WIFIAPPL)) {
+            char begin[ndef->TypeLen];
+            memcpy(begin, ndef->Type, ndef->TypeLen);
+            str_lower(begin);
+
+            if (str_startswith(begin, NDEF_WIFIAPPL)) {
                 ndefDecodeMime_wifi(ndef);
             }
-            if (str_startswith((const char *)ndef->Type, NDEF_VCARDTEXT)) {
+            if (str_startswith(begin, NDEF_VCARDTEXT) || str_startswith(begin, NDEF_XVCARDTEXT)) {
                 ndefDecodeMime_vcard(ndef);
             }
-            if (str_startswith((const char *)ndef->Type, NDEF_BLUEAPPL)) {
+            if (str_startswith(begin, NDEF_BLUEAPPL)) {
                 ndefDecodeMime_bt(ndef);
             }
 
             break;
+        }
         case tnfAbsoluteURIRecord:
             PrintAndLogEx(INFO, "Absolute URI Record");
             PrintAndLogEx(INFO, "    payload : %.*s", (int)ndef->PayloadLen, ndef->Payload);
