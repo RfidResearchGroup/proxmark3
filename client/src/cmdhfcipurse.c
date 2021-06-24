@@ -689,7 +689,6 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-
 bool CheckCardCipurse(void) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
