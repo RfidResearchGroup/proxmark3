@@ -1857,7 +1857,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
         // compute number of bits flipped
         PrintAndLogEx(INFO, "Bitflips: %2u events => %s", bitcount32(bitflips), bitstring);
         PrintAndLogEx(INFO, "New protection word => " _CYAN_("%08X") "\n", word14b);
-        PrintAndLogEx(INFO, "Try " _YELLOW_("`lf em 4x05_dump`"));
+        PrintAndLogEx(INFO, "Try " _YELLOW_("`lf em 4x05 dump`"));
     }
 
     if (verbose) {
