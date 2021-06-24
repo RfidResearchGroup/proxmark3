@@ -56,6 +56,8 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
             return PM3_EOPABORTED;
         }
 
+        PrintAndLogEx(INFO, "." NOLF);
+
         // wait cycle
         while (true) {
             PrintAndLogEx(NORMAL, "." NOLF);
@@ -546,7 +548,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             PrintAndLogEx(SUCCESS, "\ntarget block:%3u key type: %c  -- found valid key [ " _GREEN_("%s") "]",
                           package->block,
                           package->keytype ? 'B' : 'A',
-                          sprint_hex(resultKey, 6)
+                          sprint_hex_inrow(resultKey, 6)
                          );
             return PM3_SUCCESS;
         }
@@ -725,7 +727,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
             PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _GREEN_("%s") "]",
                           package->block,
                           package->keytype ? 'B' : 'A',
-                          sprint_hex(resultKey, 6)
+                          sprint_hex_inrow(resultKey, 6)
                          );
             return PM3_SUCCESS;
         } else if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
