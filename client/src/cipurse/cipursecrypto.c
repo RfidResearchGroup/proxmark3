@@ -506,6 +506,11 @@ void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdat
             CipurseCChannelDecrypt(ctx, srcdata, srcdatalen, buf, &buflen);
             //PrintAndLogEx(INFO, "data plain[%d]: %s", buflen, sprint_hex(buf, buflen));
 
+            if (buflen == 0) {
+                PrintAndLogEx(ERR, "APDU can't decode crypto stream");
+                break;
+            }
+
             micdatalen = buflen - 2 - CIPURSE_MIC_LENGTH;
             memcpy(micdata, buf, buflen);
             memcpy(&micdata[micdatalen], &buf[buflen - 2], 2);
