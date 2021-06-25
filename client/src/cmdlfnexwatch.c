@@ -467,68 +467,38 @@ static int CmdNexWatchClone(const char *Cmd) {
 
     char cardtype[16] = {"T55x7"};
     uint32_t blocks[4];
-    if (use_psk2) {
-        uint32_t scrambled;
-        nexwatch_scamble(SCRAMBLE, &cn, &scrambled);
-        num_to_bytes(scrambled, 4, raw + 5);
-        PrintAndLogEx(SUCCESS, "Scrambled : %u", scrambled);
-        blocks[0] = 270464;
-        raw[0] = 0xFA;
-        uint8_t *byteId = convertUint32toByte(scrambled);
-        uint8_t newmode[4] = "0001";
-        uint8_t idAndMode[36];
-        memcpy(idAndMode, byteId, 32 * sizeof(uint8_t));
-        memcpy(&idAndMode[32], newmode, 4 * sizeof(uint8_t));
-        uint8_t *newparity = parity(idAndMode);
-        uint8_t par = bin2int(newparity, 4);
-        uint8_t checksum = nexwatch_checksum(magic, cn, par);
-        printf("\x1b[1;92m[+]\x1b[0m Checksum : %s --> %u\n", convertUint8toByte(checksum), checksum);
-        uint8_t Psk_card[128];
-        uint8_t Psk2_card[128];
-        memcpy(Psk_card, "00000000000000000000000000000000", 32 * sizeof(uint8_t));
-        memcpy(&Psk_card[32], "0101011000000000000000000000000000000000", 40 * sizeof(uint8_t));
-        memcpy(&Psk_card[72], byteId, 32 * sizeof(uint8_t));
-        memcpy(&Psk_card[104], newmode, 4 * sizeof(uint8_t));
-        memcpy(&Psk_card[108], newparity, 4 * sizeof(uint8_t));
-        memcpy(&Psk_card[112], convertUint8toByte(checksum), 8 * sizeof(uint8_t));
-        memcpy(&Psk_card[120], "00000000", 8 * sizeof(uint8_t));
-        TOpsk2(Psk_card, 128);
-        memcpy(&Psk2_card[31], &Psk_card[32], 96 * sizeof(uint8_t));
-        Psk2_card[127] = '0';
-        memcpy(Psk2_card, "00000000000001000010000010000000", 32 * sizeof(uint8_t));
-        blocks[0] = bin2int(&Psk2_card[0], 32);
-        blocks[1] = bin2int(&Psk2_card[32], 32);
-        blocks[2] = bin2int(&Psk2_card[64], 32);
-        blocks[3] = bin2int(&Psk2_card[96], 32);
-    } else {
-        //Nexwatch - compat mode, PSK, data rate 40, 3 data blocks
-        blocks[0] = T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_16 | 3 << T55x7_MAXBLOCK_SHIFT;
 
-        // Q5
-        if (q5) {
-            blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
-            snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
-        }
+    //Nexwatch - compat mode, PSK, data rate 40, 3 data blocks
+    blocks[0] = T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_16 | 3 << T55x7_MAXBLOCK_SHIFT;
 
-        // EM4305
-        if (em) {
-            blocks[0] = EM4305_NEXWATCH_CONFIG_BLOCK;
-            snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
-        }
-
-        if (use_raw == false) {
-            uint8_t parity = nexwatch_parity(raw + 5) & 0xF;
-            raw[9] |= parity;
-            raw[10] |= nexwatch_checksum(magic, cn, parity);
-        }
-
-        if (use_unk)
-            magic = 0x86;
-
-        for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
-            blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
-        }
+    // Q5
+    if (q5) {
+        blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
     }
+
+    // EM4305
+    if (em) {
+        blocks[0] = EM4305_NEXWATCH_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
+
+    if (use_raw == false) {
+        uint8_t parity = nexwatch_parity(raw + 5) & 0xF;
+        raw[9] |= parity;
+        raw[10] |= nexwatch_checksum(magic, cn, parity);
+    }
+
+    if (use_psk2) {
+        blocks[0] = 270464;
+        psk1TOpsk2(raw, 12);
+    }
+
+
+    for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+        blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
+    }
+
     PrintAndLogEx(INFO, "Preparing to clone NexWatch to " _YELLOW_("%s") " raw " _YELLOW_("%s"), cardtype, sprint_hex_inrow(raw, sizeof(raw)));
     print_blocks(blocks,  ARRAYLEN(blocks));
 
