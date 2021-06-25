@@ -462,34 +462,32 @@ int CmdEM4x50Chk(const char *Cmd) {
         PrintAndLogEx(INFO, "treating file as T55xx keys");
     }
 
+    // load keys
+    uint8_t *keys = NULL;
+    uint32_t key_count = 0;
+    int res = loadFileDICTIONARY_safe(filename, (void **)&keys, 4, &key_count);
+    if (res != PM3_SUCCESS || key_count == 0) {
+        free(keys);
+        return res;
+    }
+
     uint64_t t1 = msclock();
 
-    size_t datalen = 0;
-
-    // 2021 iceman: how many keys shall we reserv space for? The t55xx dictionary has 139 keys.
-    uint8_t data[2000 * 4] = {0x0};
-    uint8_t *keys = data;
-    uint32_t key_count = 0;
-
-    int res = loadFileDICTIONARY(filename, data, &datalen, 4, &key_count);
-    if ((res != PM3_SUCCESS) || (key_count == 0))
-        return PM3_EFILE;
-
     PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
-
-    int status = PM3_EFAILED;
-    int keyblock = 2000;    // block with 2000 bytes -> 500 keys
+        
+    // block with 2000 bytes -> 500 keys
     uint8_t destfn[32] = "em4x50_chk.bin";
-
     PacketResponseNG resp;
-    int bytes_remaining = datalen;
+    int bytes_remaining = key_count * 4;
+    int status = PM3_EFAILED;
+
     while (bytes_remaining > 0) {
 
         PrintAndLogEx(INPLACE, "Remaining keys: %i ", bytes_remaining / 4);
 
         // upload to flash.
-        datalen = MIN(bytes_remaining, keyblock);
-        res = flashmem_spiffs_load((char *)destfn, keys, datalen);
+        size_t n = MIN(bytes_remaining, 2000);
+        res = flashmem_spiffs_load((char *)destfn, keys, n);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "SPIFFS upload failed");
             return res;
@@ -503,22 +501,14 @@ int CmdEM4x50Chk(const char *Cmd) {
         if ((status == PM3_SUCCESS) || (status == PM3_EOPABORTED))
             break;
 
-        bytes_remaining -= keyblock;
-        keys += keyblock;
+        bytes_remaining -= n;
+        keys += n;
     }
 
+    free(keys);
     PrintAndLogEx(NORMAL, "");
 
-    // print response
     if (status == PM3_SUCCESS) {
-        /*
-        PrintAndLogEx(SUCCESS, "Key " _GREEN_("found: %02x %02x %02x %02x"),
-                      resp.data.asBytes[3],
-                      resp.data.asBytes[2],
-                      resp.data.asBytes[1],
-                      resp.data.asBytes[0]
-                     );
-        */
         uint32_t pwd = BYTES2UINT32(resp.data.asBytes);
         PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", pwd);
     } else {
