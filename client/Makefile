@@ -336,7 +336,7 @@ ifeq ($(SWIG_PYTHON_FOUND),1)
     PM3CFLAGS += -DHAVE_PYTHON_SWIG
 endif
 
-CXXFLAGS ?= -Wall -Werror -O3
+CXXFLAGS ?= -Wall -O3
 PM3CXXFLAGS = $(CXXFLAGS)
 PM3CXXFLAGS += -I../include -I./include
 
@@ -783,7 +783,7 @@ src/pm3_pywrap.c: pm3.i
 # version_pm3.c should be remade on every compilation
 src/version_pm3.c: default_version_pm3.c
 	$(info [=] GEN $@)
-	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(PERL) ../tools/mkversion.pl > $@ || $(CP) $< $@
+	$(Q)$(CP) $< $@
 
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*)
