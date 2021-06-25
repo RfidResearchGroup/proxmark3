@@ -319,13 +319,16 @@ static int CmdNexWatchClone(const char *Cmd) {
     uint32_t mode = arg_get_u32_def(ctx, 3, -1);
     bool use_nexkey = arg_get_lit(ctx, 4);
     bool use_quadrakey = arg_get_lit(ctx, 5);
-    bool use_unk = arg_get_lit(ctx, 6);
+    bool use_honeywell = arg_get_lit(ctx, 6);
     bool q5 = arg_get_lit(ctx, 7);
     bool em = arg_get_lit(ctx, 8);
+
+    uint8_t magic_arg[2];
+    int mlen = 0;
+    CLIGetHexWithReturn(ctx, 9, magic_arg, &mlen);
+
     bool use_psk2 = arg_get_lit(ctx, 10);
-    uint8_t magic_arg;
-    int magic_len = 0;
-    CLIGetHexWithReturn(ctx, 9, &magic_arg, &magic_len);
+
     CLIParserFree(ctx);
 
     if (use_nexkey && use_quadrakey) {
@@ -341,9 +344,9 @@ static int CmdNexWatchClone(const char *Cmd) {
     // 56000000 00213C9F 8F150C00
     bool use_raw = (raw_len != 0);
 
-    bool use_custom_magic = (magic_len != 0);
+    bool use_custom_magic = (mlen != 0);
 
-    if (magic_len > 1) {
+    if (mlen > 1) {
         PrintAndLogEx(FAILED, "Can't specify a magic number bigger than one byte");
         return PM3_EINVARG;
     }
@@ -369,7 +372,7 @@ static int CmdNexWatchClone(const char *Cmd) {
 
     uint8_t magic = 0xBE;
     if (use_custom_magic) {
-        magic = magic_arg;
+        magic = magic_arg[0];
     } else {
         if (use_nexkey)
             magic = 0x88;
@@ -377,11 +380,11 @@ static int CmdNexWatchClone(const char *Cmd) {
         if (use_quadrakey)
             magic = 0xBE;
 
-        if (use_unk)
+        if (use_honeywell)
             magic = 0x86;
 
     }
-    PrintAndLogEx(INFO, "Magic byte selected : 0x%X", magic);
+    PrintAndLogEx(INFO, "Magic byte selected... " _YELLOW_("0x%X"), magic);
 
     uint32_t blocks[4];
 
@@ -408,9 +411,11 @@ static int CmdNexWatchClone(const char *Cmd) {
     }
 
     if (use_psk2) {
-        blocks[0] = 270464;
-        uint8_t * res_shifted = calloc(96, sizeof(uint8_t));
-        uint8_t * res = calloc(96, sizeof(uint8_t));
+        blocks[0] = 0x00042080;
+
+        uint8_t *res_shifted = calloc(96, sizeof(uint8_t));
+        uint8_t *res = calloc(96, sizeof(uint8_t));
+
         bytes_to_bytebits(raw, 12, res);
         psk1TOpsk2(res, 96);
         memcpy(res_shifted, &res[1], 95 * sizeof(uint8_t));
