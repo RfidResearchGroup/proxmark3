@@ -38,7 +38,7 @@
 #ifndef LIBPM3
 #define BANNERMSG1 "      Iceman :coffee:"
 #define BANNERMSG2 "  :snowflake: bleeding edge"
-#define BANNERMSG3 "Release v4.13441 - midsummer"
+#define BANNERMSG3 "  https://github.com/rfidresearchgroup/proxmark3/"
 
 typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
 
