@@ -81,5 +81,4 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
 int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx);
 int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx);
 
-
 #endif

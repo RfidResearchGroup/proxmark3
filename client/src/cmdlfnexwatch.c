@@ -24,7 +24,6 @@
 #include "cmdlft55xx.h"    // clone..
 #include "cmdlfem4x05.h"   //
 #include "cliparser.h"
-#include <math.h>
 
 
 typedef enum {
@@ -54,7 +53,7 @@ static uint8_t nexwatch_parity(uint8_t hexid[5]) {
 }
 
 /// NETWATCH checksum
-/// @param magic =  0xBE  Quadrakey,  0x88 Nexkey, 0x86 EC
+/// @param magic =  0xBE  Quadrakey,  0x88 Nexkey, 0x86 Honeywell
 /// @param id = descrambled id (printed card number)
 /// @param parity =  the parity based upon the scrambled raw id.
 static uint8_t nexwatch_checksum(uint8_t magic, uint32_t id, uint8_t parity) {
@@ -155,7 +154,6 @@ int demodNexWatch(bool verbose) {
     idx += 4;
 
     setDemodBuff(DemodBuffer, size, idx);
-    PrintAndLogEx(SUCCESS, "Indice: %x %s", DemodBuffer, DemodBuffer);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
 
     if (invert) {
@@ -225,9 +223,8 @@ int demodNexWatch(bool verbose) {
     } else {
         nexwatch_magic_bruteforce(cn, calc_parity, chk);
     }
-    PrintAndLogEx(SUCCESS, "            mode : %x", mode);
     PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " ("  _YELLOW_("0x%08"PRIx32)")", cn, cn);
-    PrintAndLogEx(SUCCESS, "        Scambled : " _YELLOW_("%"PRIu32) " ("  _YELLOW_("0x%08"PRIx32)")", scambled, scambled);
+    PrintAndLogEx(SUCCESS, "            mode : %x", mode);
 
 
     if (parity == calc_parity) {
@@ -360,7 +357,6 @@ static int CmdNexWatchClone(const char *Cmd) {
         uint32_t scrambled;
         nexwatch_scamble(SCRAMBLE, &cn, &scrambled);
         num_to_bytes(scrambled, 4, raw + 5);
-        PrintAndLogEx(SUCCESS, "Scrambled : %u", scrambled);
     }
 
     if (mode != -1) {
@@ -387,11 +383,11 @@ static int CmdNexWatchClone(const char *Cmd) {
     }
     PrintAndLogEx(INFO, "Magic byte selected : 0x%X", magic);
 
-    char cardtype[16] = {"T55x7"};
     uint32_t blocks[4];
 
     //Nexwatch - compat mode, PSK, data rate 40, 3 data blocks
-    blocks[0] = T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_16 | 3 << T55x7_MAXBLOCK_SHIFT;
+    blocks[0] = T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_32 | 3 << T55x7_MAXBLOCK_SHIFT;
+    char cardtype[16] = {"T55x7"};
 
     // Q5
     if (q5) {
