@@ -24,6 +24,7 @@
 #include "cmdlft55xx.h"    // clone..
 #include "cmdlfem4x05.h"   //
 #include "cliparser.h"
+#include "util.h"
 
 
 typedef enum {
@@ -110,9 +111,8 @@ static int nexwatch_scamble(NexWatchScramble_t action, uint32_t *id, uint32_t *s
 }
 
 static int nexwatch_magic_bruteforce(uint32_t cn, uint8_t calc_parity, uint8_t chk) {
-    uint8_t magic = 0;
-    uint8_t temp_checksum;
-    for (; magic < 255; magic++) {
+    for (uint8_t magic = 0; magic < 255; magic++) {
+        uint8_t temp_checksum;
         temp_checksum = nexwatch_checksum(magic, cn, calc_parity);
         if (temp_checksum == chk) {
             PrintAndLogEx(SUCCESS, "    Magic number : " _GREEN_("0x%X"),  magic);
@@ -409,12 +409,14 @@ static int CmdNexWatchClone(const char *Cmd) {
 
     if (use_psk2) {
         blocks[0] = 270464;
-        uint8_t * res_shifted = malloc(96 * sizeof(uint8_t));
-        uint8_t * res = byte_to_bytebits(raw, 12);
+        uint8_t * res_shifted = calloc(96, sizeof(uint8_t));
+        uint8_t * res = calloc(96, sizeof(uint8_t));
+        bytes_to_bytebits(raw, 12, res);
         psk1TOpsk2(res, 96);
         memcpy(res_shifted, &res[1], 95 * sizeof(uint8_t));
-        res_shifted[95] = 0;
+        free(res);
         bits_to_array(res_shifted, 96, raw);
+        free(res_shifted);
     }
 
 

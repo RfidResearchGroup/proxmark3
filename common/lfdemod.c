@@ -295,17 +295,6 @@ int bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest) {
     return PM3_SUCCESS;
 }
 
-// Ex: 0x56 and numbytes = 1 ==> return res = {0,1,0,1,0,1,1,0}
-uint8_t * byte_to_bytebits(uint8_t * bits, size_t numbytes){
-    uint8_t * result = malloc(numbytes * 8 * (sizeof(uint8_t)));
-    for(int i=0;i<numbytes;i++){
-        for(int j=0;j<8;j++){
-            result[j + i*8] = ((bits[i] & 1<<(7-j))!=0);
-        }
-    }
-    return result;
-}
-
 uint32_t bytebits_to_byte(uint8_t *src, size_t numbits) {
     uint32_t num = 0;
     for (int i = 0 ; i < numbits ; i++) {
