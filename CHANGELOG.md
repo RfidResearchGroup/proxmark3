@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added bruteforce function for the magic byte in `cmdlfnexwatch.c` and ability to clone with psk2 modulation (@Guilhem7, @MaximeBosca)
  - Changed `hw setmux` - improve user feedback for special case (@iceman1001)
  - Changed 'filename' - unified file name param across client (@iceman1001)
  - Fix `lf em 4x05 brute/chk` - fixed input params crash (@iceman1001)
