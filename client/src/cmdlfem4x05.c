@@ -1377,7 +1377,7 @@ int CmdEM4x05Chk(const char *Cmd) {
 
         uint32_t keycount = 0;
 
-        int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 4, &keycount);
+        res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 4, &keycount);
         if (res != PM3_SUCCESS || keycount == 0 || keyBlock == NULL) {
             PrintAndLogEx(WARNING, "no keys found in file");
             if (keyBlock != NULL)
