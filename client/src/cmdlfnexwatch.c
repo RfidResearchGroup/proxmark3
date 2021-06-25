@@ -279,90 +279,12 @@ static int CmdNexWatchReader(const char *Cmd) {
     }
 
     do {
-        lf_read(true, 20000);
+        lf_read(false, 20000);
         demodNexWatch(!cm);
     } while (cm && !kbd_enter_pressed());
     return PM3_SUCCESS;
 }
-//TOCHANGE
 
-static unsigned int bin2int(unsigned char *b, int size) {
-    unsigned int val = 0;
-    for (int i = 0; i < size; i++) {
-        if (b[i] == '1') {
-            val += pow(2, size - 1 - i);
-        }
-    }
-    return val;
-}
-static uint8_t xor_parity(uint8_t *stream_, int bit_number) {
-    uint8_t parity_res = '0';
-    for (int i = bit_number - 1; i < 36; i += 4) {
-        if (stream_[i] == parity_res) {
-            parity_res = '0';
-        } else {
-            parity_res = '1';
-        }
-    }
-    return parity_res;
-}
-
-static uint8_t *parity(uint8_t *stream_) {
-    uint8_t *parity_res = malloc(4 * sizeof(uint8_t));
-    parity_res[0] = xor_parity(stream_, 4);
-    parity_res[1] = xor_parity(stream_, 2);
-    parity_res[2] = xor_parity(stream_, 3);
-    parity_res[3] = xor_parity(stream_, 1);
-    return parity_res;
-}
-
-static uint8_t *convertUint8toByte(uint8_t number) {
-    uint8_t *res = malloc(8 * sizeof(char));
-    uint8_t temp = number;
-    for (int i = 1; i < 9; i++) {
-        if (temp % 2) {
-            res[8 - i] = '1';
-        } else {
-            res[8 - i] = '0';
-        }
-        temp = temp / 2;
-    }
-    return res;
-}
-
-static uint8_t *convertUint32toByte(uint32_t number) {
-    uint8_t *res = malloc(32 * sizeof(char));
-    uint32_t temp = number;
-    for (int i = 0; i < 32; i++) {
-        res[i] = '0';
-    }
-    for (int i = 1; i < 33; i++) {
-        if (temp % 2) {
-            res[32 - i] = '1';
-        } else {
-            res[32 - i] = '0';
-        }
-        temp = temp / 2;
-    }
-    return res;
-}
-
-
-static void TOpsk2(uint8_t *bits, size_t size) {
-    uint8_t lastbit = '0';
-    for (size_t i = 1; i < size; i++) {
-        //ignore errors
-        if (bits[i] == 7) continue;
-
-        if (lastbit != bits[i]) {
-            lastbit = bits[i];
-            bits[i] = '1';
-        } else {
-            bits[i] = '0';
-        }
-    }
-}
-//ENDTOCHANGE
 static int CmdNexWatchClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf nexwatch clone",
@@ -491,7 +413,12 @@ static int CmdNexWatchClone(const char *Cmd) {
 
     if (use_psk2) {
         blocks[0] = 270464;
-        psk1TOpsk2(raw, 12);
+        uint8_t * res_shifted = malloc(96 * sizeof(uint8_t));
+        uint8_t * res = byte_to_bytebits(raw, 12);
+        psk1TOpsk2(res, 96);
+        memcpy(res_shifted, &res[1], 95 * sizeof(uint8_t));
+        res_shifted[95] = 0;
+        bits_to_array(res_shifted, 96, raw);
     }
 
 

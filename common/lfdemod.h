@@ -48,6 +48,7 @@ int      BiphaseRawDecode(uint8_t *bits, size_t *size, int *offset, int invert);
 int      bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest);
 uint32_t bytebits_to_byte(uint8_t *src, size_t numbits);
 uint32_t bytebits_to_byteLSBF(uint8_t *src, size_t numbits);
+uint8_t * byte_to_bytebits(uint8_t * bits, size_t numbits);
 uint16_t countFC(uint8_t *bits, size_t size, bool fskAdj);
 int      DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr);
 bool     DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low);
@@ -79,5 +80,6 @@ int detectAWID(uint8_t *dest, size_t *size, int *waveStartIdx);
 int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, uint64_t *lo);
 int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx);
 int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx);
+
 
 #endif
