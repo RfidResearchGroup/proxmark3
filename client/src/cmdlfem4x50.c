@@ -471,6 +471,8 @@ int CmdEM4x50Chk(const char *Cmd) {
         return res;
     }
 
+    uint8_t *pkeys = keys;
+
     uint64_t t1 = msclock();
 
     PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
@@ -505,7 +507,7 @@ int CmdEM4x50Chk(const char *Cmd) {
         keys += n;
     }
 
-    free(keys);
+    free(pkeys);
     PrintAndLogEx(NORMAL, "");
 
     if (status == PM3_SUCCESS) {
