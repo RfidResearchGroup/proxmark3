@@ -36,7 +36,8 @@ sudo make install; pushd /tmp; proxmark3 -c 'data load -f lf_EM4x05.pm3;lf searc
 
 - [ ] RPI Zero
 - [ ] WSL
-- [ ] PSv3.3
+- [ ] PSv3.9
+- [ ] Archlinux
 - [ ] Kali
 - [ ] Debian
 - [ ] Ubuntu20
