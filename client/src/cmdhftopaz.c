@@ -571,10 +571,10 @@ int CmdHFTopaz(const char *Cmd) {
 
 int readTopazUid(bool verbose) {
 
-    uint8_t atqa[2];
-    uint8_t rid_response[8];
+    uint8_t atqa[2] = {0};
+    uint8_t rid_response[8] = {0};
     uint8_t *uid_echo = &rid_response[2];
-    uint8_t rall_response[124];
+    uint8_t rall_response[124] = {0};
 
     int status = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response), verbose);
     if (status == PM3_ESOFT) {
