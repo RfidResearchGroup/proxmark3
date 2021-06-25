@@ -26,3 +26,14 @@ sudo pacman -S staging/gcc
 sudo pacman -S testing/gcc
 sudo pacman -S gcc
 ```
+
+# Notes to run tests
+
+Add first the mirrors, see above
+
+```
+sudo pacman -S python
+sudo pacman -S python-pip
+python3 -m pip install ansicolors sslcrypto
+tools/pm3_tests.sh --long
+```
