@@ -450,7 +450,7 @@ void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest) {
     }
 }
 
-//least significant bit first
+// least significant bit (lsb) first
 void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest) {
     for (size_t i = 0 ; i < len ; ++i) {
         dest[i] =  n & 1;
