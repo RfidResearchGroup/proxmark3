@@ -14,6 +14,7 @@
 #include "cmdlfem4x50.h"
 #include <ctype.h>
 #include "cmdparser.h"    // command_t
+#include "util_posix.h"  // msclock
 #include "fileutils.h"
 #include "commonutil.h"
 #include "pmflash.h"
@@ -236,7 +237,7 @@ int CmdEM4x50ESave(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "filename", "<fn>", "data filename"),
+        arg_str0("f", "file", "<fn>", "save filename"),
         arg_param_end
     };
 
@@ -406,12 +407,12 @@ int CmdEM4x50Brute(const char *Cmd) {
     int dur_m = (dur_s - dur_h * 3600) / 60;
 
     dur_s -= dur_h * 3600 + dur_m * 60;
-    PrintAndLogEx(INFO, "Trying %i passwords in range [0x%08x, 0x%08x]"
+    PrintAndLogEx(INFO, "Trying " _YELLOW_("%i") " passwords in range [0x%08x, 0x%08x]"
                   , no_iter
                   , etd.password1
                   , etd.password2
                  );
-    PrintAndLogEx(INFO, "Estimated duration: %ih%im%is", dur_h, dur_m, dur_s);
+    PrintAndLogEx(INFO, "Estimated duration: %ih %im %is", dur_h, dur_m, dur_s);
 
     // start
     clearCommandBuffer();
@@ -421,9 +422,9 @@ int CmdEM4x50Brute(const char *Cmd) {
 
     // print response
     if (resp.status == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "Password " _GREEN_("found") ": 0x%08x", resp.data.asDwords[0]);
+        PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", resp.data.asDwords[0]);
     else
-        PrintAndLogEx(FAILED, "Password: " _RED_("not found"));
+        PrintAndLogEx(WARNING, "brute pwd failed");
 
     return PM3_SUCCESS;
 }
@@ -440,7 +441,7 @@ int CmdEM4x50Chk(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "filename", "<fn>", "dictionary filename"),
+        arg_str0("f", "file", "<fn>", "dictionary filename"),
         arg_param_end
     };
 
@@ -460,6 +461,8 @@ int CmdEM4x50Chk(const char *Cmd) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
         PrintAndLogEx(INFO, "treating file as T55xx keys");
     }
+
+    uint64_t t1 = msclock();
 
     size_t datalen = 0;
 
@@ -508,17 +511,22 @@ int CmdEM4x50Chk(const char *Cmd) {
 
     // print response
     if (status == PM3_SUCCESS) {
+        /*
         PrintAndLogEx(SUCCESS, "Key " _GREEN_("found: %02x %02x %02x %02x"),
                       resp.data.asBytes[3],
                       resp.data.asBytes[2],
                       resp.data.asBytes[1],
                       resp.data.asBytes[0]
                      );
+        */
+        uint32_t pwd = BYTES2UINT32(resp.data.asBytes);
+        PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", pwd);
     } else {
         PrintAndLogEx(FAILED, "No key found");
     }
 
-    PrintAndLogEx(INFO, "Done");
+    t1 = msclock() - t1;
+    PrintAndLogEx(SUCCESS, "\ntime in check pwd " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
     return PM3_SUCCESS;
 }
 
@@ -750,7 +758,7 @@ int CmdEM4x50Dump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "filename", "<fn>", "dump filename (bin/eml/json)"),
+        arg_str0("f", "file", "<fn>", "dump filename (bin/eml/json)"),
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
         arg_param_end
     };
@@ -1061,7 +1069,7 @@ int CmdEM4x50Restore(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("u", "uid", "<hex>", "uid, 4 hex bytes, msb"),
-        arg_str0("f", "filename", "<fn>", "dump filename (bin/eml/json)"),
+        arg_str0("f", "file", "<fn>", "dump filename (bin/eml/json)"),
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
         arg_param_end
     };

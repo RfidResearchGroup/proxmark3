@@ -2885,7 +2885,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "emu", "Fill simulator keys from found keys"),
         arg_lit0(NULL, "dump", "Dump found keys to binary file"),
-        arg_str0("f", "file", "<filename>", "filename of dictionary"),
+        arg_str0("f", "file", "<fn>", "filename of dictionary"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -5031,7 +5031,7 @@ static int CmdHF14AMfice(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<filename>", "filename of nonce dump"),
+        arg_str0("f", "file", "<fn>", "filename of nonce dump"),
         arg_u64_0(NULL, "limit", "<dec>", "nonces to be collected"),
         arg_param_end
     };

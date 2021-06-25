@@ -650,7 +650,7 @@ static int CmdHfLTODump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<filename>", "specify a filename for dumpfile"),
+        arg_str0("f", "file", "<fn>", "specify a filename for dumpfile"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

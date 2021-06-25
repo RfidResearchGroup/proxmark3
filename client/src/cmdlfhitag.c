@@ -657,7 +657,7 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "filename", "<fn w/o ext>", "filename to load from"),
+        arg_str0("f", "file", "<fn>", "filename to load ( w/o ext )"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
