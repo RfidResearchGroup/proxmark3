@@ -571,7 +571,7 @@ static int CmdLFHitagReader(const char *Cmd) {
 
     // sanity checks
     if (keylen != 0 && keylen != 4 && keylen != 6) {
-        PrintAndLogEx(WARNING, "Wrong KEY len expected 0,4 or 6, got %d", keylen);
+        PrintAndLogEx(WARNING, "Wrong KEY len expected 0, 4 or 6, got %d", keylen);
         return PM3_EINVARG;
     }
 
