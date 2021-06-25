@@ -24,6 +24,8 @@
 #include "cmdlft55xx.h"    // clone..
 #include "cmdlfem4x05.h"   //
 #include "cliparser.h"
+#include "util.h"
+
 
 typedef enum {
     SCRAMBLE,
@@ -52,7 +54,7 @@ static uint8_t nexwatch_parity(uint8_t hexid[5]) {
 }
 
 /// NETWATCH checksum
-/// @param magic =  0xBE  Quadrakey,  0x88 Nexkey
+/// @param magic =  0xBE  Quadrakey,  0x88 Nexkey, 0x86 Honeywell
 /// @param id = descrambled id (printed card number)
 /// @param parity =  the parity based upon the scrambled raw id.
 static uint8_t nexwatch_checksum(uint8_t magic, uint32_t id, uint8_t parity) {
@@ -107,6 +109,20 @@ static int nexwatch_scamble(NexWatchScramble_t action, uint32_t *id, uint32_t *s
     }
     return PM3_SUCCESS;
 }
+
+static int nexwatch_magic_bruteforce(uint32_t cn, uint8_t calc_parity, uint8_t chk) {
+    for (uint8_t magic = 0; magic < 255; magic++) {
+        uint8_t temp_checksum;
+        temp_checksum = nexwatch_checksum(magic, cn, calc_parity);
+        if (temp_checksum == chk) {
+            PrintAndLogEx(SUCCESS, "    Magic number : " _GREEN_("0x%X"),  magic);
+            return PM3_SUCCESS;
+        }
+    }
+    PrintAndLogEx(DEBUG, "DEBUG: Error - Magic number not found");
+    return PM3_ESOFT;
+}
+
 
 int demodNexWatch(bool verbose) {
     (void) verbose; // unused so far
@@ -204,9 +220,12 @@ int demodNexWatch(bool verbose) {
 
     if (m_idx < ARRAYLEN(items)) {
         PrintAndLogEx(SUCCESS, "     fingerprint : " _GREEN_("%s"),  items[m_idx].desc);
+    } else {
+        nexwatch_magic_bruteforce(cn, calc_parity, chk);
     }
     PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " ("  _YELLOW_("0x%08"PRIx32)")", cn, cn);
     PrintAndLogEx(SUCCESS, "            mode : %x", mode);
+
 
     if (parity == calc_parity) {
         PrintAndLogEx(DEBUG, "          parity : %s (0x%X)", _GREEN_("ok"), parity);
@@ -285,6 +304,8 @@ static int CmdNexWatchClone(const char *Cmd) {
         arg_lit0(NULL, "hc", "Honeywell credential"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_str0(NULL, "magic", "<hex>", "optional - magic hex data. 1 byte"),
+        arg_lit0(NULL, "psk2", "optional - specify writing a tag in psk2 modulation"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -301,6 +322,10 @@ static int CmdNexWatchClone(const char *Cmd) {
     bool use_unk = arg_get_lit(ctx, 6);
     bool q5 = arg_get_lit(ctx, 7);
     bool em = arg_get_lit(ctx, 8);
+    bool use_psk2 = arg_get_lit(ctx, 10);
+    uint8_t magic_arg;
+    int magic_len = 0;
+    CLIGetHexWithReturn(ctx, 9, &magic_arg, &magic_len);
     CLIParserFree(ctx);
 
     if (use_nexkey && use_quadrakey) {
@@ -315,6 +340,13 @@ static int CmdNexWatchClone(const char *Cmd) {
 
     // 56000000 00213C9F 8F150C00
     bool use_raw = (raw_len != 0);
+
+    bool use_custom_magic = (magic_len != 0);
+
+    if (magic_len > 1) {
+        PrintAndLogEx(FAILED, "Can't specify a magic number bigger than one byte");
+        return PM3_EINVARG;
+    }
 
     if (use_raw && cn != -1) {
         PrintAndLogEx(FAILED, "Can't specify both Raw and Card id at the same time");
@@ -336,20 +368,27 @@ static int CmdNexWatchClone(const char *Cmd) {
     }
 
     uint8_t magic = 0xBE;
-    if (use_nexkey)
-        magic = 0x88;
+    if (use_custom_magic) {
+        magic = magic_arg;
+    } else {
+        if (use_nexkey)
+            magic = 0x88;
 
-    if (use_quadrakey)
-        magic = 0xBE;
+        if (use_quadrakey)
+            magic = 0xBE;
 
-    if (use_unk)
-        magic = 0x86;
+        if (use_unk)
+            magic = 0x86;
+
+    }
+    PrintAndLogEx(INFO, "Magic byte selected : 0x%X", magic);
 
     uint32_t blocks[4];
 
     //Nexwatch - compat mode, PSK, data rate 40, 3 data blocks
     blocks[0] = T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_32 | 3 << T55x7_MAXBLOCK_SHIFT;
     char cardtype[16] = {"T55x7"};
+
     // Q5
     if (q5) {
         blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
@@ -367,6 +406,19 @@ static int CmdNexWatchClone(const char *Cmd) {
         raw[9] |= parity;
         raw[10] |= nexwatch_checksum(magic, cn, parity);
     }
+
+    if (use_psk2) {
+        blocks[0] = 270464;
+        uint8_t * res_shifted = calloc(96, sizeof(uint8_t));
+        uint8_t * res = calloc(96, sizeof(uint8_t));
+        bytes_to_bytebits(raw, 12, res);
+        psk1TOpsk2(res, 96);
+        memcpy(res_shifted, &res[1], 95 * sizeof(uint8_t));
+        free(res);
+        bits_to_array(res_shifted, 96, raw);
+        free(res_shifted);
+    }
+
 
     for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
         blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
@@ -408,6 +460,8 @@ static int CmdNexWatchSim(const char *Cmd) {
         arg_lit0(NULL, "nc", "Nexkey credential"),
         arg_lit0(NULL, "qc", "Quadrakey credential"),
         arg_lit0(NULL, "hc", "Honeywell credential"),
+        arg_str0(NULL, "magic", "<hex>", "optional - magic hex data. 1 byte"),
+        arg_lit0(NULL, "psk2", "optional - specify writing a tag in psk2 modulation"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
