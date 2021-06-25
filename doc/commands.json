@@ -973,7 +973,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log /home/osboxes/.proxmark3/logs/log_20210624.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log /home/osboxes/.proxmark3/logs/log_20210625.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -2826,10 +2826,10 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --file <filename> specify a filename for dump file",
+                "-f, --file <fn> specify a filename for dump file",
                 "--de deobfuscate dump data (xor with mcc)"
             ],
-            "usage": "hf legic dump [-h] [-f <filename>] [--de]"
+            "usage": "hf legic dump [-h] [-f <fn>] [--de]"
         },
         "hf legic eload": {
             "command": "hf legic eload",
@@ -2860,11 +2860,11 @@
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-f, --file <filename> specify a filename to save",
+                "-f, --file <fn> specify a filename to save",
                 "-t, --type <dec> tag type",
                 "--deobfuscate de-obfuscate dump data (xor with mcc)"
             ],
-            "usage": "hf legic esave [-h] [-f <filename>] [-t <dec>] [--deobfuscate]"
+            "usage": "hf legic esave [-h] [-f <fn>] [-t <dec>] [--deobfuscate]"
         },
         "hf legic help": {
             "command": "hf legic help",
@@ -2996,9 +2996,9 @@
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-f, --file <filename> specify a filename for dumpfile"
+                "-f, --file <fn> specify a filename for dumpfile"
             ],
-            "usage": "hf lto dump [-h] [-f <filename>]"
+            "usage": "hf lto dump [-h] [-f <fn>]"
         },
         "hf lto info": {
             "command": "hf lto info",
@@ -3175,9 +3175,9 @@
                 "--4k mifare classic 4k / s70",
                 "--emu fill simulator keys from found keys",
                 "--dump dump found keys to binary file",
-                "-f, --file <filename> filename of dictionary"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf mf chk [-hab*] [-k <hex>]... [--blk <dec>] [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [-f <filename>]"
+            "usage": "hf mf chk [-hab*] [-k <hex>]... [--blk <dec>] [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [-f <fn>]"
         },
         "hf mf cload": {
             "command": "hf mf cload",
@@ -5226,7 +5226,7 @@
             "command": "hw setmux",
             "description": "set the adc mux to a specific value",
             "notes": [
-                "hw setmux --hiraw -> set high raw"
+                "hw setmux --hipkd -> set high peak"
             ],
             "offline": false,
             "options": [
@@ -5620,16 +5620,16 @@
             "description": "this command uses a dictionary attack against em4205/4305/4469/4569",
             "notes": [
                 "lf em 4x05 chk",
-                "lf em 4x05 chk -e 000022b8 -> remember to use 0x for hex",
+                "lf em 4x05 chk -e 000022b8 -> check password 000022b8",
                 "lf em 4x05 chk -f t55xx_default_pwds -> use t55xx default dictionary"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --file <*.dic> loads a default keys dictionary file <*.dic>",
+                "-f, --file <fn> loads a default keys dictionary file <*.dic>",
                 "-e, --em <em4100> try the calculated password from some cloners based on em4100 id"
             ],
-            "usage": "lf em 4x05 chk [-h] [-f <*.dic>]... [-e <em4100>]"
+            "usage": "lf em 4x05 chk [-h] [-f <fn>] [-e <em4100>]"
         },
         "lf em 4x05 demod": {
             "command": "lf em 4x05 demod",
@@ -5661,19 +5661,19 @@
         },
         "lf em 4x05 help": {
             "command": "lf em 4x05 help",
-            "description": "help this help demod demodulate a em4x05/em4x69 tag from the graphbuffer sniff attempt to recover em4x05 commands from sample buffer --------------------------------------------------------------------------------------- lf em 4x05 brute available offline: no this command tries to bruteforce the password of a em4205/4305/4469/4569",
+            "description": "help this help demod demodulate a em4x05/em4x69 tag from the graphbuffer sniff attempt to recover em4x05 commands from sample buffer --------------------------------------------------------------------------------------- lf em 4x05 brute available offline: no this command tries to bruteforce the password of a em4205/4305/4469/4569 the loop is running on device side, press proxmark3 button to abort",
             "notes": [
                 "note: if you get many false positives, change position on the antennalf em 4x05 brute",
                 "lf em 4x05 brute -n 1 -> stop after first candidate found",
-                "lf em 4x05 brute -s 000022b8 -> remember to use 0x for hex"
+                "lf em 4x05 brute -s 000022aa -> start at 000022aa"
             ],
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-s, --start <pwd> start bruteforce enumeration from this password value",
-                "-n <digits> stop after having found n candidates. default: 0 => infinite"
+                "-s, --start <hex> start bruteforce enumeration from this password value",
+                "-n <dec> stop after having found n candidates. default: 0 (infinite)"
             ],
-            "usage": "lf em 4x05 brute [-h] [-s <pwd>] [-n <digits>]"
+            "usage": "lf em 4x05 brute [-h] [-s <hex>] [-n <dec>]"
         },
         "lf em 4x05 info": {
             "command": "lf em 4x05 info",
@@ -5786,7 +5786,7 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --filename <fn> dictionary filename"
+                "-f, --file <fn> dictionary filename"
             ],
             "usage": "lf em 4x50 chk [-h] [-f <fn>]"
         },
@@ -5802,7 +5802,7 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --filename <fn> dump filename (bin/eml/json)",
+                "-f, --file <fn> dump filename (bin/eml/json)",
                 "-p, --pwd <hex> password, 4 hex bytes, lsb"
             ],
             "usage": "lf em 4x50 dump [-h] [-f <fn>] [-p <hex>]"
@@ -5830,7 +5830,7 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --filename <fn> data filename"
+                "-f, --file <fn> save filename"
             ],
             "usage": "lf em 4x50 esave [-h] [-f <fn>]"
         },
@@ -5931,7 +5931,7 @@
             "options": [
                 "-h, --help this help",
                 "-u, --uid <hex> uid, 4 hex bytes, msb",
-                "-f, --filename <fn> dump filename (bin/eml/json)",
+                "-f, --file <fn> dump filename (bin/eml/json)",
                 "-p, --pwd <hex> password, 4 hex bytes, lsb"
             ],
             "usage": "lf em 4x50 restore [-h] [-u <hex>] [-f <fn>] [-p <hex>]"
@@ -6434,9 +6434,9 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --filename <fn w/o ext> filename to load from"
+                "-f, --file <fn> filename to load ( w/o ext )"
             ],
-            "usage": "lf hitag cc [-h] [-f <fn w/o ext>]"
+            "usage": "lf hitag cc [-h] [-f <fn>]"
         },
         "lf hitag dump": {
             "command": "lf hitag dump",
@@ -7034,9 +7034,11 @@
                 "--qc quadrakey credential",
                 "--hc honeywell credential",
                 "--q5 optional - specify writing to q5/t5555 tag",
-                "--em optional - specify writing to em4305/4469 tag"
+                "--em optional - specify writing to em4305/4469 tag",
+                "--magic <hex> optional - magic hex data. 1 byte",
+                "--psk2 optional - specify writing a tag in psk2 modulation"
             ],
-            "usage": "lf nexwatch clone [-h] [-r <hex>] [--cn <dec>] [-m <dec>] [--nc] [--qc] [--hc] [--q5] [--em]"
+            "usage": "lf nexwatch clone [-h] [-r <hex>] [--cn <dec>] [-m <dec>] [--nc] [--qc] [--hc] [--q5] [--em] [--magic <hex>] [--psk2]"
         },
         "lf nexwatch help": {
             "command": "lf nexwatch help",
@@ -7080,9 +7082,11 @@
                 "-m, --mode <dec> mode (decimal) (0-15, defaults to 1)",
                 "--nc nexkey credential",
                 "--qc quadrakey credential",
-                "--hc honeywell credential"
+                "--hc honeywell credential",
+                "--magic <hex> optional - magic hex data. 1 byte",
+                "--psk2 optional - specify writing a tag in psk2 modulation"
             ],
-            "usage": "lf nexwatch sim [-h] [-r <hex>] [--cn <dec>] [-m <dec>] [--nc] [--qc] [--hc]"
+            "usage": "lf nexwatch sim [-h] [-r <hex>] [--cn <dec>] [-m <dec>] [--nc] [--qc] [--hc] [--magic <hex>] [--psk2]"
         },
         "lf noralsy clone": {
             "command": "lf noralsy clone",
@@ -7767,7 +7771,7 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --filename <fn> filename (default is generated on blk 0)",
+                "-f, --file <fn> filename (default is generated on blk 0)",
                 "-o, --override override, force pwd read despite danger to card",
                 "-p, --pwd <hex> password (4 hex bytes)",
                 "--r0 downlink - fixed bit length",
@@ -9199,6 +9203,6 @@
     "metadata": {
         "commands_extracted": 571,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-06-24T17:28:12"
+        "extracted_on": "2021-06-25T21:34:48"
     }
 }

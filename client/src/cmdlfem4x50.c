@@ -476,7 +476,7 @@ int CmdEM4x50Chk(const char *Cmd) {
     uint64_t t1 = msclock();
 
     PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
-        
+
     // block with 2000 bytes -> 500 keys
     uint8_t destfn[32] = "em4x50_chk.bin";
     PacketResponseNG resp;
