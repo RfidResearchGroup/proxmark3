@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
-## [midsummer][2021-06-25]
+## [midsummer.4.13441][2021-06-25]
  - Added bruteforce function for the magic byte in `cmdlfnexwatch.c` and ability to clone with psk2 modulation (@Guilhem7, @MaximeBosca)
  - Changed `hw setmux` - improve user feedback for special case (@iceman1001)
  - Changed 'filename' - unified file name param across client (@iceman1001)
