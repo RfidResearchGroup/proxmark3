@@ -3,6 +3,14 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hw setmux` - improve user feedback for special case (@iceman1001)
+ - Changed 'filename' - unified file name param across client (@iceman1001)
+ - Fix `lf em 4x05 brute/chk` - fixed input params crash (@iceman1001)
+ - Fix `lf hitag reader --23` - now accepts 6bytes key (@iceman1001)
+ - Fix coverity scans findigs (@merlokk, @iceman1001)
+ - Fix `hf iclass config` - now fallback to default config card configuration (@iceman1001)
+ - Changed `nfc parser` - now also identify xvcard types (@iceman1001)
+ - Added `hf mf gview` - view contents of a magic Gen3 GTU (@iceman1001)
  - Added Standalone mode for nexwatch ID credentials (@Guilhem7, @MaximeBosca)
  - Fix `lf em 4x50/4x70 *`  reverted a missunderstanding in byte order macros (@iceman1001)
  - Added more keys (@equipter)

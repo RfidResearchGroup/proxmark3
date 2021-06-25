@@ -14,13 +14,17 @@
 #define ALLOC 16
 
 size_t DemodPCF7931(uint8_t **outBlocks) {
+
+    // 2021 iceman, memor
     uint8_t bits[256] = {0x00};
     uint8_t blocks[8][16];
+
     uint8_t *dest = BigBuf_get_addr();
 
     int GraphTraceLen = BigBuf_max_traceLen();
-    if (GraphTraceLen > 18000)
+    if (GraphTraceLen > 18000) {
         GraphTraceLen = 18000;
+    }
 
     int i = 2, j, lastval, bitidx, half_switch;
     int clock = 64;
@@ -38,15 +42,17 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
     /* Find first local max/min */
     if (dest[1] > dest[0]) {
         while (i < GraphTraceLen) {
-            if (!(dest[i] > dest[i - 1]) && dest[i] > lmax)
+            if (!(dest[i] > dest[i - 1]) && dest[i] > lmax) {
                 break;
+            }
             i++;
         }
         dir = 0;
     } else {
         while (i < GraphTraceLen) {
-            if (!(dest[i] < dest[i - 1]) && dest[i] < lmin)
+            if (!(dest[i] < dest[i - 1]) && dest[i] < lmin) {
                 break;
+            }
             i++;
         }
         dir = 1;
@@ -58,6 +64,7 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
     block_done = 0;
 
     for (bitidx = 0; i < GraphTraceLen; i++) {
+
         if ((dest[i - 1] > dest[i] && dir == 1 && dest[i] > lmax) || (dest[i - 1] < dest[i] && dir == 0 && dest[i] < lmin)) {
             lc = i - lastval;
             lastval = i;
@@ -66,8 +73,8 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
             // Tolerance is 1/8 of clock rate (arbitrary)
             if (ABS(lc - clock / 4) < tolerance) {
                 // 16T0
-                if ((i - pmc) == lc) { /* 16T0 was previous one */
-                    /* It's a PMC ! */
+                if ((i - pmc) == lc) { // 16T0 was previous one
+                    // It's a PMC
                     i += (128 + 127 + 16 + 32 + 33 + 16) - 1;
                     lastval = i;
                     pmc = 0;
@@ -77,8 +84,8 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
                 }
             } else if (ABS(lc - clock / 2) < tolerance) {
                 // 32TO
-                if ((i - pmc) == lc) { /* 16T0 was previous one */
-                    /* It's a PMC ! */
+                if ((i - pmc) == lc) { // 16T0 was previous one
+                    // It's a PMC !
                     i += (128 + 127 + 16 + 32 + 33) - 1;
                     lastval = i;
                     pmc = 0;
@@ -95,8 +102,9 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
                 // Error
                 if (++warnings > 10) {
 
-                    if (DBGLEVEL >= DBG_EXTENDED)
-                        Dbprintf("Error: too many detection errors, aborting.");
+                    if (DBGLEVEL >= DBG_EXTENDED) {
+                        Dbprintf("Error: too many detection errors, aborting");
+                    }
 
                     return 0;
                 }
@@ -122,13 +130,19 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
                 block_done = 0;
                 half_switch = 0;
             }
-            if (i < GraphTraceLen)
+
+            if (i < GraphTraceLen) {
                 dir = (dest[i - 1] > dest[i]) ? 0 : 1;
+            }
         }
-        if (bitidx == 255)
+
+        if (bitidx == 255) {
             bitidx = 0;
-        warnings = 0;
-        if (num_blocks == 4) break;
+        }
+
+        if (num_blocks == 4) {
+            break;
+        }
     }
     memcpy(outBlocks, blocks, 16 * num_blocks);
     return num_blocks;
@@ -138,10 +152,11 @@ bool IsBlock0PCF7931(uint8_t *block) {
     // assuming all RFU bits are set to 0
     // if PAC is enabled password is set to 0
     if (block[7] == 0x01) {
-        if (!memcmp(block, "\x00\x00\x00\x00\x00\x00\x00", 7)
-                && !memcmp(block + 9, "\x00\x00\x00\x00\x00\x00\x00", 7)) {
+        if (!memcmp(block, "\x00\x00\x00\x00\x00\x00\x00", 7) &&
+                !memcmp(block + 9, "\x00\x00\x00\x00\x00\x00\x00", 7)) {
             return true;
         }
+
     } else if (block[7] == 0x00) {
         if (!memcmp(block + 9, "\x00\x00\x00\x00\x00\x00\x00", 7)) {
             return true;
@@ -211,8 +226,9 @@ void ReadPCF7931(void) {
         // exit if too many errors during reading
         if (tries > 50 && (2 * errors > tries)) {
 
-            if (DBGLEVEL >= DBG_INFO)
+            if (DBGLEVEL >= DBG_INFO) {
                 Dbprintf("[!!] Error reading the tag, only partial content");
+            }
 
             goto end;
         }
@@ -461,27 +477,32 @@ void SendCmdPCF7931(uint32_t *tab) {
     //initialization of the timer
     AT91C_BASE_PMC->PMC_PCER |= (0x1 << AT91C_ID_TC0);
     AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_NONE | AT91C_TCB_TC1XC1S_TIOA0 | AT91C_TCB_TC2XC2S_NONE;
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS; // timer disable
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;  //clock at 48/32 MHz
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;                 // timer disable
+    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;  // clock at 48/32 MHz
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN;
+
+    // Assert a sync signal. This sets all timers to 0 on next active clock edge
     AT91C_BASE_TCB->TCB_BCR = 1;
 
     tempo = AT91C_BASE_TC0->TC_CV;
     for (u = 0; tab[u] != 0; u += 3) {
         // modulate antenna
         HIGH(GPIO_SSC_DOUT);
-        while (tempo !=  tab[u])
+        while (tempo != tab[u]) {
             tempo = AT91C_BASE_TC0->TC_CV;
+        }
 
         // stop modulating antenna
         LOW(GPIO_SSC_DOUT);
-        while (tempo !=  tab[u + 1])
+        while (tempo != tab[u + 1]) {
             tempo = AT91C_BASE_TC0->TC_CV;
+        }
 
         // modulate antenna
         HIGH(GPIO_SSC_DOUT);
-        while (tempo !=  tab[u + 2])
+        while (tempo != tab[u + 2]) {
             tempo = AT91C_BASE_TC0->TC_CV;
+        }
     }
 
     LED_A_OFF();

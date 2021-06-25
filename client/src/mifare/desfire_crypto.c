@@ -68,7 +68,7 @@ void des_decrypt(void *out, const void *in, const void *key) {
 void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode) {
     if (length % 8)
         return;
-    
+
     mbedtls_des3_context ctx3;
     if (keymode == 2)
         mbedtls_des3_set2key_dec(&ctx3, key);
@@ -98,7 +98,7 @@ void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key,
 }
 
 void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode) {
-    if (length % 8) 
+    if (length % 8)
         return;
 
     mbedtls_des3_context ctx3;

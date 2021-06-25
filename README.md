@@ -131,7 +131,7 @@ The [public roadmap](https://github.com/RfidResearchGroup/proxmark3/wiki/Public-
 ## Supported operative systems 
 This repo compiles nicely on 
    - WSL1 on Windows 10
-   - Proxspace v3.9 [release v3.9](https://github.com/Gator96100/ProxSpace/releases)
+   - Proxspace enviroment [release v3.9](https://github.com/Gator96100/ProxSpace/releases)
    - Windows/MinGW environment
    - Ubuntu, ParrotOS, Gentoo, Pentoo, Kali, NetHunter, Arch Linux, Fedora, Debian, Raspbian
    - Android / Termux
@@ -155,7 +155,7 @@ We don't maintain any precompiled binaries in this repo. There is community effo
 ## Official channels
 Where do you find the community?
    - [RFID Hacking community discord server](https://discord.gg/QfPvGFRQxH)
-   - [Proxmark3 IRC channel](http://webchat.freenode.net/?channels=#proxmark3)
+   - [Proxmark3 IRC channel](https://web.libera.chat/?channels=#proxmark3)
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
    - [Proxmark3 forum](http://www.proxmark.org/forum/index.php)
 

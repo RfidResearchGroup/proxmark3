@@ -278,7 +278,7 @@ static int CmdLFHitagEload(const char *Cmd) {
     if (dumplen == 48 ||  dumplen == 4 * 64) {
 
         lf_hitag_t *payload =  calloc(1, sizeof(lf_hitag_t) + dumplen);
-        
+
         if (use_ht1)
             payload->type = 1;
         if (use_ht2)
@@ -570,8 +570,8 @@ static int CmdLFHitagReader(const char *Cmd) {
     }
 
     // sanity checks
-    if (keylen != 0 && keylen != 4) {
-        PrintAndLogEx(WARNING, "Wrong KEY len expected 0 or 4, got %d", keylen);
+    if (keylen != 0 && keylen != 4 && keylen != 6) {
+        PrintAndLogEx(WARNING, "Wrong KEY len expected 0, 4 or 6, got %d", keylen);
         return PM3_EINVARG;
     }
 
@@ -657,7 +657,7 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "filename", "<fn w/o ext>", "filename to load from"),
+        arg_str0("f", "file", "<fn>", "filename to load ( w/o ext )"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

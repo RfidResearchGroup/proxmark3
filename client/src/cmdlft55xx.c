@@ -2210,7 +2210,7 @@ static int CmdT55xxDump(const char *Cmd) {
     // 1 (help) + 3 (two user specified params) + (5 T55XX_DLMODE_SINGLE)
     void *argtable[4 + 5] = {
         arg_param_begin,
-        arg_str0("f", "filename", "<fn>", "filename (default is generated on blk 0)"),
+        arg_str0("f", "file", "<fn>", "filename (default is generated on blk 0)"),
         arg_lit0("o", "override", "override, force pwd read despite danger to card"),
         arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
     };

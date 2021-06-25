@@ -14,6 +14,7 @@
 #include "cmdlfem4x50.h"
 #include <ctype.h>
 #include "cmdparser.h"    // command_t
+#include "util_posix.h"  // msclock
 #include "fileutils.h"
 #include "commonutil.h"
 #include "pmflash.h"
@@ -100,8 +101,6 @@ static void print_info_result(uint8_t *data, bool verbose) {
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
 
     // data section
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, _YELLOW_("EM4x50 data:"));
     if (verbose) {
         print_result(words, 0, EM4X50_NO_WORDS - 1);
     } else {
@@ -112,16 +111,16 @@ static void print_info_result(uint8_t *data, bool verbose) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---- " _CYAN_("Configuration") " ----");
 
-    PrintAndLogEx(INFO, "first word read  %3i", fwr);
-    PrintAndLogEx(INFO, "last word read   %3i", lwr);
-    PrintAndLogEx(INFO, "password check   %3s", (bpwc) ? _RED_("on") : _GREEN_("off"));
-    PrintAndLogEx(INFO, "read after write %3s", (braw) ? "on" : "off");
+    PrintAndLogEx(INFO, "first word read.... " _YELLOW_("%i"), fwr);
+    PrintAndLogEx(INFO, "last word read..... " _YELLOW_("%i"), lwr);
+    PrintAndLogEx(INFO, "password check..... %s", (bpwc) ? _RED_("on") : _GREEN_("off"));
+    PrintAndLogEx(INFO, "read after write... %s", (braw) ? "on" : "off");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--------- " _CYAN_("Protection") " ---------");
-    PrintAndLogEx(INFO, "first word read protected  %3i", fwrp);
-    PrintAndLogEx(INFO, "last word read protected   %3i", lwrp);
-    PrintAndLogEx(INFO, "first word write inhibited %3i", fwwi);
-    PrintAndLogEx(INFO, "last word write inhibited  %3i", lwwi);
+    PrintAndLogEx(INFO, "--------- " _CYAN_("Protection") " ------------");
+    PrintAndLogEx(INFO, "first word read protected.... %i", fwrp);
+    PrintAndLogEx(INFO, "last word read protected..... %i", lwrp);
+    PrintAndLogEx(INFO, "first word write inhibited... %i", fwwi);
+    PrintAndLogEx(INFO, "last word write inhibited.... %i", lwwi);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "zero values may indicate read protection");
     PrintAndLogEx(NORMAL, "");
@@ -238,7 +237,7 @@ int CmdEM4x50ESave(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "filename", "<fn>", "data filename"),
+        arg_str0("f", "file", "<fn>", "save filename"),
         arg_param_end
     };
 
@@ -364,9 +363,9 @@ int CmdEM4x50Login(const char *Cmd) {
 int CmdEM4x50Brute(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 brute",
-                  "Tries to bruteforce the password of a EM4x50.\n"
+                  "Tries to bruteforce the password of a EM4x50 card.\n"
                   "Function can be stopped by pressing pm3 button.",
-                  "lf em 4x50 brute --first 12330000 --last 12340000     -> tries pwds from 0x12330000 to 0x1234000000\n"
+                  "lf em 4x50 brute --first 12330000 --last 12340000   -> tries pwds from 0x12330000 to 0x1234000000\n"
                  );
 
     void *argtable[] = {
@@ -408,12 +407,12 @@ int CmdEM4x50Brute(const char *Cmd) {
     int dur_m = (dur_s - dur_h * 3600) / 60;
 
     dur_s -= dur_h * 3600 + dur_m * 60;
-    PrintAndLogEx(INFO, "Trying %i passwords in range [0x%08x, 0x%08x]"
+    PrintAndLogEx(INFO, "Trying " _YELLOW_("%i") " passwords in range [0x%08x, 0x%08x]"
                   , no_iter
                   , etd.password1
                   , etd.password2
                  );
-    PrintAndLogEx(INFO, "Estimated duration: %ih%im%is", dur_h, dur_m, dur_s);
+    PrintAndLogEx(INFO, "Estimated duration: %ih %im %is", dur_h, dur_m, dur_s);
 
     // start
     clearCommandBuffer();
@@ -423,9 +422,9 @@ int CmdEM4x50Brute(const char *Cmd) {
 
     // print response
     if (resp.status == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "Password " _GREEN_("found") ": 0x%08x", resp.data.asDwords[0]);
+        PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", resp.data.asDwords[0]);
     else
-        PrintAndLogEx(FAILED, "Password: " _RED_("not found"));
+        PrintAndLogEx(WARNING, "brute pwd failed");
 
     return PM3_SUCCESS;
 }
@@ -435,14 +434,14 @@ int CmdEM4x50Brute(const char *Cmd) {
 int CmdEM4x50Chk(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 chk",
-                  "Dictionary attack against EM4x50.",
+                  "Run dictionary key recovery against EM4x50 card.",
                   "lf em 4x50 chk             -> uses T55xx default dictionary\n"
                   "lf em 4x50 chk -f my.dic"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "filename", "<fn>", "dictionary filename"),
+        arg_str0("f", "file", "<fn>", "dictionary filename"),
         arg_param_end
     };
 
@@ -462,6 +461,8 @@ int CmdEM4x50Chk(const char *Cmd) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
         PrintAndLogEx(INFO, "treating file as T55xx keys");
     }
+
+    uint64_t t1 = msclock();
 
     size_t datalen = 0;
 
@@ -510,17 +511,22 @@ int CmdEM4x50Chk(const char *Cmd) {
 
     // print response
     if (status == PM3_SUCCESS) {
+        /*
         PrintAndLogEx(SUCCESS, "Key " _GREEN_("found: %02x %02x %02x %02x"),
                       resp.data.asBytes[3],
                       resp.data.asBytes[2],
                       resp.data.asBytes[1],
                       resp.data.asBytes[0]
                      );
+        */
+        uint32_t pwd = BYTES2UINT32(resp.data.asBytes);
+        PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", pwd);
     } else {
         PrintAndLogEx(FAILED, "No key found");
     }
 
-    PrintAndLogEx(INFO, "Done");
+    t1 = msclock() - t1;
+    PrintAndLogEx(SUCCESS, "\ntime in check pwd " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
     return PM3_SUCCESS;
 }
 
@@ -639,8 +645,8 @@ int CmdEM4x50Info(const char *Cmd) {
     CLIParserInit(&ctx, "lf em 4x50 info",
                   "Tag information EM4x50.",
                   "lf em 4x50 info\n"
-                  "lf em 4x50 info -v -> show data section\n"
-                  "lf em 4x50 info -p 12345678   -> uses pwd 0x12345678\n"
+                  "lf em 4x50 info -v           -> show data section\n"
+                  "lf em 4x50 info -p 12345678  -> uses pwd 0x12345678\n"
                  );
 
     void *argtable[] = {
@@ -752,7 +758,7 @@ int CmdEM4x50Dump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "filename", "<fn>", "dump filename (bin/eml/json)"),
+        arg_str0("f", "file", "<fn>", "dump filename (bin/eml/json)"),
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
         arg_param_end
     };
@@ -908,9 +914,9 @@ int CmdEM4x50Write(const char *Cmd) {
 // envokes changing the password of EM4x50 tag
 int CmdEM4x50WritePwd(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50 writepwd",
+    CLIParserInit(&ctx, "lf em 4x50 wrpwd",
                   "Writes EM4x50 password.",
-                  "lf em 4x50 writepwd -p 4f22e7ff -n 12345678"
+                  "lf em 4x50 wrpwd -p 4f22e7ff -n 12345678"
                  );
 
     void *argtable[] = {
@@ -1063,7 +1069,7 @@ int CmdEM4x50Restore(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("u", "uid", "<hex>", "uid, 4 hex bytes, msb"),
-        arg_str0("f", "filename", "<fn>", "dump filename (bin/eml/json)"),
+        arg_str0("f", "file", "<fn>", "dump filename (bin/eml/json)"),
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
         arg_param_end
     };
@@ -1210,21 +1216,23 @@ int CmdEM4x50Sim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",   CmdHelp,              AlwaysAvailable, "This help"},
-    {"brute",  CmdEM4x50Brute,       IfPm3EM4x50,     "guess password of EM4x50"},
-    {"chk",    CmdEM4x50Chk,         IfPm3EM4x50,     "check passwords from dictionary"},
-    {"dump",   CmdEM4x50Dump,        IfPm3EM4x50,     "dump EM4x50 tag"},
-    {"info",   CmdEM4x50Info,        IfPm3EM4x50,     "tag information EM4x50"},
-    {"login",  CmdEM4x50Login,       IfPm3EM4x50,     "login into EM4x50"},
-    {"rdbl",   CmdEM4x50Read,        IfPm3EM4x50,     "read word data from EM4x50"},
-    {"wrbl",   CmdEM4x50Write,       IfPm3EM4x50,     "write word data to EM4x50"},
-    {"writepwd", CmdEM4x50WritePwd,   IfPm3EM4x50,     "change password of EM4x50"},
-    {"wipe",   CmdEM4x50Wipe,        IfPm3EM4x50,     "wipe EM4x50 tag"},
-    {"reader", CmdEM4x50Reader,      IfPm3EM4x50,     "show standard read mode data of EM4x50"},
-    {"restore", CmdEM4x50Restore,     IfPm3EM4x50,     "restore EM4x50 dump to tag"},
-    {"sim",    CmdEM4x50Sim,         IfPm3EM4x50,     "simulate EM4x50 tag"},
-    {"eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "upload dump of EM4x50 to emulator memory"},
-    {"esave",  CmdEM4x50ESave,       IfPm3EM4x50,     "save emulator memory to file"},
-    {"eview",  CmdEM4x50EView,       IfPm3EM4x50,     "view EM4x50 content in emulator memory"},
+    {"-----------", CmdHelp,         AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
+    {"brute",   CmdEM4x50Brute,      IfPm3EM4x50,     "Simple bruteforce attack to find password"},
+    {"chk",     CmdEM4x50Chk,        IfPm3EM4x50,     "Check passwords from dictionary"},
+    {"dump",    CmdEM4x50Dump,       IfPm3EM4x50,     "Dump EM4x50 tag"},
+    {"info",    CmdEM4x50Info,       IfPm3EM4x50,     "Tag information"},
+    {"login",   CmdEM4x50Login,      IfPm3EM4x50,     "Login into EM4x50 tag"},
+    {"rdbl",    CmdEM4x50Read,       IfPm3EM4x50,     "Read EM4x50 word data"},
+    {"reader",  CmdEM4x50Reader,     IfPm3EM4x50,     "Show standard read mode data"},
+    {"restore", CmdEM4x50Restore,    IfPm3EM4x50,     "Restore EM4x50 dump to tag"},
+    {"wrbl",    CmdEM4x50Write,      IfPm3EM4x50,     "Write EM4x50 word data"},
+    {"wrpwd",   CmdEM4x50WritePwd,   IfPm3EM4x50,     "Change EM4x50 password"},
+    {"wipe",    CmdEM4x50Wipe,       IfPm3EM4x50,     "Wipe EM4x50 tag"},
+    {"-----------", CmdHelp,         AlwaysAvailable, "--------------------- " _CYAN_("simulation") " ---------------------"},
+    {"eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "Upload EM4x50 dump to emulator memory"},
+    {"esave",  CmdEM4x50ESave,       IfPm3EM4x50,     "Save emulator memory to file"},
+    {"eview",  CmdEM4x50EView,       IfPm3EM4x50,     "View EM4x50 content in emulator memory"},
+    {"sim",    CmdEM4x50Sim,         IfPm3EM4x50,     "Simulate EM4x50 tag"},
     {NULL, NULL, NULL, NULL}
 };
 

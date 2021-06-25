@@ -25,6 +25,7 @@
 #define NDEF_WIFIAPPL   "application/vnd.wfa"
 #define NDEF_BLUEAPPL   "application/vnd.bluetooth"
 #define NDEF_VCARDTEXT  "text/vcard"
+#define NDEF_XVCARDTEXT "text/x-vcard"
 
 static const char *TypeNameFormat_s[] = {
     "Empty Record",
@@ -436,7 +437,7 @@ static int ndefDecodePayloadDeviceInfo(uint8_t *payload, size_t len) {
     n = *(p++);
     //uuid string
     // record.uuid_string = '123e4567-e89b-12d3-a456-426655440000'
-    //  8-4-4-4-12 
+    //  8-4-4-4-12
     char uuid[37] = {0};
     sprintf(uuid, "%s-", sprint_hex_inrow(p, 4));
     p += 4;
@@ -450,7 +451,7 @@ static int ndefDecodePayloadDeviceInfo(uint8_t *payload, size_t len) {
     p += 6;
     PrintAndLogEx(INFO, "UUID.......... " _YELLOW_("%s"), uuid);
     p++;
-    n = *(p++);    
+    n = *(p++);
     PrintAndLogEx(INFO, "Version....... " _YELLOW_("%.*s"), n, p);
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -490,7 +491,7 @@ static int ndefDecodePayloadSmartPoster(uint8_t *ndef, size_t ndeflen, bool prin
     }
     // recursive
     if (NDEFHeader.MessageEnd == false) {
-        ndefDecodePayloadSmartPoster(ndef + NDEFHeader.RecLen, ndeflen - NDEFHeader.RecLen, false, false); 
+        ndefDecodePayloadSmartPoster(ndef + NDEFHeader.RecLen, ndeflen - NDEFHeader.RecLen, false, false);
     }
 
     if (print) {
@@ -510,48 +511,48 @@ static int ndefDecodeMime_wifi(NDEFHeader_t *ndef) {
 static int ndefDecodeMime_vcard(NDEFHeader_t *ndef) {
     PrintAndLogEx(INFO, _CYAN_("VCARD details"));
     if (ndef->PayloadLen > 1) {
-        PrintAndLogEx(INFO, "Data... " _YELLOW_("%.*s"), (int)ndef->PayloadLen, ndef->Payload);
-        PrintAndLogEx(INFO, ">>> decorder, to be implemented <<<");
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(INFO, "%.*s", (int)ndef->PayloadLen, ndef->Payload);
     }
     return PM3_SUCCESS;
 }
 
 static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
-    PrintAndLogEx(INFO, "Type............ " _YELLOW_("%.*s"), (int)ndef->TypeLen, ndef->Type );
+    PrintAndLogEx(INFO, "Type............ " _YELLOW_("%.*s"), (int)ndef->TypeLen, ndef->Type);
     if (ndef->PayloadLen > 1) {
         uint16_t ooblen = (ndef->Payload[1] << 8 | ndef->Payload[0]);
         PrintAndLogEx(INFO, "OOB data len.... %u", ooblen);
         PrintAndLogEx(INFO, "BT MAC.......... " _YELLOW_("%s"), sprint_hex(ndef->Payload + 2, 6));
-        // Let's check payload[8]. Tells us a bit about the UUID's. If 0x07 then it tells us a service UUID is 128bit  
-        switch (ndef->Payload[8]) {  
-            case 0x02:  
+        // Let's check payload[8]. Tells us a bit about the UUID's. If 0x07 then it tells us a service UUID is 128bit
+        switch (ndef->Payload[8]) {
+            case 0x02:
                 PrintAndLogEx(INFO, "Optional Data... incomplete list 16-bit UUID's");
-                break;  
-            case 0x03:  
+                break;
+            case 0x03:
                 PrintAndLogEx(INFO, "Optional Data... complete list 16-bit UUID's");
-                break;  
-            case 0x04:  
+                break;
+            case 0x04:
                 PrintAndLogEx(INFO, "Optional Data... incomplete list 32-bit UUID's");
-                break;  
-            case 0x05:  
+                break;
+            case 0x05:
                 PrintAndLogEx(INFO, "Optional Data... complete list 32-bit UUID's");
-                break;  
-            case 0x06:  
+                break;
+            case 0x06:
                 PrintAndLogEx(INFO, "Optional Data... incomplete list 128-bit UUID's");
-                break;  
-            case 0x07:  
+                break;
+            case 0x07:
                 PrintAndLogEx(INFO, "Optional Data... complete list 128-bit UUID's");
-                break;  
-            default:  
+                break;
+            default:
                 PrintAndLogEx(INFO, "Optional Data... [ %02x ]", ndef->Payload[8]);
                 break;
-        }  
-        // Let's check payload[9]. If 0x08 then SHORT_NAME or if 0x09 then COMPLETE_NAME  
-        if (ndef->Payload[9] == 0x08 ) {  
+        }
+        // Let's check payload[9]. If 0x08 then SHORT_NAME or if 0x09 then COMPLETE_NAME
+        if (ndef->Payload[9] == 0x08) {
             PrintAndLogEx(INFO, "Short name...... " _YELLOW_("%.*s"), (int)(ndef->PayloadLen - 10), ndef->Payload + 10);
-        } else if (ndef->Payload[9] == 0x09 ) {  
+        } else if (ndef->Payload[9] == 0x09) {
             PrintAndLogEx(INFO, "Complete name... " _YELLOW_("%.*s"), (int)(ndef->PayloadLen - 10), ndef->Payload + 10);
-        } else {  
+        } else {
             PrintAndLogEx(INFO, "[ %02x ]", ndef->Payload[9]);
         }
         PrintAndLogEx(NORMAL, "");
@@ -629,20 +630,29 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
                 PrintAndLogEx(INFO, "- decoder to be impl -");
             }
             break;
-        case tnfMIMEMediaRecord:
+        case tnfMIMEMediaRecord: {
             PrintAndLogEx(INFO, "MIME Media Record");
+            if (ndef->TypeLen == 0)  {
+                PrintAndLogEx(INFO, "type length is zero");
+                break;
+            }
 
-            if (str_startswith((const char *)ndef->Type, NDEF_WIFIAPPL)) {
+            char begin[ndef->TypeLen];
+            memcpy(begin, ndef->Type, ndef->TypeLen);
+            str_lower(begin);
+
+            if (str_startswith(begin, NDEF_WIFIAPPL)) {
                 ndefDecodeMime_wifi(ndef);
             }
-            if (str_startswith((const char *)ndef->Type, NDEF_VCARDTEXT)) {
+            if (str_startswith(begin, NDEF_VCARDTEXT) || str_startswith(begin, NDEF_XVCARDTEXT)) {
                 ndefDecodeMime_vcard(ndef);
             }
-            if (str_startswith((const char *)ndef->Type, NDEF_BLUEAPPL)) {
+            if (str_startswith(begin, NDEF_BLUEAPPL)) {
                 ndefDecodeMime_bt(ndef);
             }
 
             break;
+        }
         case tnfAbsoluteURIRecord:
             PrintAndLogEx(INFO, "Absolute URI Record");
             PrintAndLogEx(INFO, "    payload : %.*s", (int)ndef->PayloadLen, ndef->Payload);
@@ -686,7 +696,7 @@ static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
         print_buffer(NDEFHeader.Payload, NDEFHeader.PayloadLen, 1);
     }
     if (NDEFHeader.TypeLen && NDEFHeader.PayloadLen) {
-            ndefDecodePayload(&NDEFHeader);
+        ndefDecodePayload(&NDEFHeader);
     }
 
     return PM3_SUCCESS;
