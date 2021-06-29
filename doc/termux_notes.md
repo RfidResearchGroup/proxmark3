@@ -99,7 +99,7 @@ pkg install proxmark3-git
 ```
 ### Optional: Building Proxmark3 client from source
 ```
-pkg install make clang clang++ readline libc++ git
+pkg install make clang readline libc++ git
 git clone https://github.com/RfidResearchGroup/proxmark3.git
 cd proxmark
 make clean && make client
