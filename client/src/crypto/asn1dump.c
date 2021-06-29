@@ -197,14 +197,14 @@ static unsigned long asn1_value_integer(const struct tlv *tlv, unsigned start, u
         i = start;
 
     for (; i < end - 1; i += 2) {
-        ret *= 10;
+        ret = ret << 4; // was: ret*=10
         ret += tlv->value[i / 2] >> 4;
-        ret *= 10;
+        ret = ret << 4; // was: ret*=10
         ret += tlv->value[i / 2] & 0xf;
     }
 
     if (end & 1) {
-        ret *= 10;
+        ret = ret << 4; // was: ret*=10
         ret += tlv->value[end / 2] >> 4;
     }
 
