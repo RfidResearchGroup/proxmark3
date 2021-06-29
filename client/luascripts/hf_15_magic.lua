@@ -68,10 +68,10 @@ end
 --- Set UID on magic command enabled on a ICEMAN based REPO
 local function magicUID_iceman(b0, b1)
     print('Using backdoor Magic tag function')
-    core.console('hf 15 raw -2 -c 02213E00000000')
-    core.console('hf 15 raw -2 -c 02213F69960000')
-    core.console('hf 15 raw -2 -c 022138'..b1)
-    core.console('hf 15 raw -2 -c 022139'..b0)
+    core.console('hf 15 raw -2 -c -d 02213E00000000')
+    core.console('hf 15 raw -2 -c -d 02213F69960000')
+    core.console('hf 15 raw -2 -c -d 022138'..b1)
+    core.console('hf 15 raw -2 -c -d 022139'..b0)
 end
 --
 --- Set UID on magic command enabled,  OFFICAL REPO
