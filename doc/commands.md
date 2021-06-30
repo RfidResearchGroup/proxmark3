@@ -247,6 +247,7 @@ Check column "offline" for their availability.
 |`hf cipurse write       `|N       |`Write binary file`
 |`hf cipurse aread       `|N       |`Read file attributes`
 |`hf cipurse delete      `|N       |`Delete file`
+|`hf cipurse default     `|N       |`Set default key and file id for all the other commands`
 |`hf cipurse test        `|Y       |`Tests`
 
 

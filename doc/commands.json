@@ -973,7 +973,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log /home/osboxes/.proxmark3/logs/log_20210625.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210630.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -1721,6 +1721,22 @@
                 "-k, --key <hex> auth key"
             ],
             "usage": "hf cipurse auth [-hav] [-n <dec>] [-k <hex>]"
+        },
+        "hf cipurse default": {
+            "command": "hf cipurse default",
+            "description": "set default parameters for access to cipurse card",
+            "notes": [
+                "hf cipurse default -n 1 -k 65656565656565656565656565656565 --fid 2ff7 -> set key, key id and file id"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "--clear resets to defaults",
+                "-n <dec> key id",
+                "-k, --key <hex> authentication key",
+                "--fid <hex> file id"
+            ],
+            "usage": "hf cipurse default [-h] [--clear] [-n <dec>] [-k <hex>] [--fid <hex>]"
         },
         "hf cipurse delete": {
             "command": "hf cipurse delete",
@@ -5078,8 +5094,8 @@
             "command": "hw connect",
             "description": "connects to a proxmark3 device via specified serial port. baudrate here is only for physical uart or uart-bt, not for usb-cdc or blue shark add-on",
             "notes": [
-                "hw connect -p /dev/ttyacm0",
-                "hw connect -p /dev/ttyacm0 -b 115200"
+                "hw connect -p com3",
+                "hw connect -p com3 -b 115200"
             ],
             "offline": true,
             "options": [
@@ -9201,8 +9217,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 571,
+        "commands_extracted": 572,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-06-25T21:34:48"
+        "extracted_on": "2021-06-30T09:30:39"
     }
 }

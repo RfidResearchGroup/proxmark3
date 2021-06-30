@@ -32,6 +32,10 @@
 #include "util.h"
 #include "fileutils.h"   // laodFileJSONroot
 
+static uint8_t defaultKeyId = 1;
+static uint8_t defaultKey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
+static uint16_t defaultFileId = 0x2ff7;
+
 static int CmdHelp(const char *Cmd);
 
 static int CmdHFCipurseInfo(const char *Cmd) {
@@ -117,7 +121,7 @@ static int CmdHFCipurseAuth(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    uint8_t keyId = arg_get_int_def(ctx, 3, 1);
+    uint8_t keyId = arg_get_int_def(ctx, 3, defaultKeyId);
 
     uint8_t hdata[250] = {0};
     int hdatalen = sizeof(hdata);
@@ -128,9 +132,11 @@ static int CmdHFCipurseAuth(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t key[] = {0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73, 0x73};
+    uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
     if (hdatalen)
         memcpy(key, hdata, CIPURSE_AES_KEY_LENGTH);
+    else
+        memcpy(key, defaultKey, sizeof(defaultKey));
 
     SetAPDULogging(APDULogging);
 
@@ -150,7 +156,7 @@ static int CmdHFCipurseAuth(const char *Cmd) {
     uint8_t kvv[CIPURSE_KVV_LENGTH] = {0};
     CipurseCGetKVV(key, kvv);
     if (verbose) {
-        PrintAndLogEx(INFO, "Key id" _YELLOW_("%d") " key " _YELLOW_("%s") " KVV " _YELLOW_("%s")
+        PrintAndLogEx(INFO, "Key id " _YELLOW_("%d") " key " _YELLOW_("%s") " KVV " _YELLOW_("%s")
                       , keyId
                       , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
                       , sprint_hex_inrow(kvv, CIPURSE_KVV_LENGTH)
@@ -182,6 +188,8 @@ static int CLIParseKeyAndSecurityLevels(CLIParserContext *ctx, size_t keyid, siz
     }
     if (hdatalen)
         memcpy(key, hdata, CIPURSE_AES_KEY_LENGTH);
+    else
+        memcpy(key, defaultKey, sizeof(defaultKey));
 
     *sreq = CPSMACed;
     *sresp = CPSMACed;
@@ -254,11 +262,11 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    uint8_t keyId = arg_get_int_def(ctx, 3, 1);
+    uint8_t keyId = arg_get_int_def(ctx, 3, defaultKeyId);
 
     CipurseChannelSecurityLevel sreq = CPSMACed;
     CipurseChannelSecurityLevel sresp = CPSMACed;
-    uint8_t key[] = CIPURSE_DEFAULT_KEY;
+    uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
     int res = CLIParseKeyAndSecurityLevels(ctx, 4, 8, 9, key, &sreq, &sresp);
     if (res) {
         CLIParserFree(ctx);
@@ -274,7 +282,7 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint16_t fileId = 0x2ff7;
+    uint16_t fileId = defaultFileId;
     if (hdatalen)
         fileId = (hdata[0] << 8) + hdata[1];
 
@@ -366,19 +374,19 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    uint8_t keyId = arg_get_int_def(ctx, 3, 1);
+    uint8_t keyId = arg_get_int_def(ctx, 3, defaultKeyId);
 
     CipurseChannelSecurityLevel sreq = CPSMACed;
     CipurseChannelSecurityLevel sresp = CPSMACed;
 
-    uint8_t key[] = CIPURSE_DEFAULT_KEY;
+    uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
     int res = CLIParseKeyAndSecurityLevels(ctx, 4, 8, 9, key, &sreq, &sresp);
     if (res) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    uint16_t fileId = 0x2ff7;
+    uint16_t fileId = defaultFileId;
 
     uint8_t hdata[250] = {0};
     int hdatalen = sizeof(hdata);
@@ -491,11 +499,11 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    uint8_t keyId = arg_get_int_def(ctx, 3, 1);
+    uint8_t keyId = arg_get_int_def(ctx, 3, defaultKeyId);
 
     CipurseChannelSecurityLevel sreq = CPSMACed;
     CipurseChannelSecurityLevel sresp = CPSMACed;
-    uint8_t key[] = CIPURSE_DEFAULT_KEY;
+    uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
     int res = CLIParseKeyAndSecurityLevels(ctx, 4, 7, 8, key, &sreq, &sresp);
     if (res) {
         CLIParserFree(ctx);
@@ -511,7 +519,7 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint16_t fileId = 0x2ff7;
+    uint16_t fileId = defaultFileId;
     if (hdatalen)
         fileId = (hdata[0] << 8) + hdata[1];
 
@@ -617,11 +625,11 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    uint8_t keyId = arg_get_int_def(ctx, 3, 1);
+    uint8_t keyId = arg_get_int_def(ctx, 3, defaultKeyId);
 
     CipurseChannelSecurityLevel sreq = CPSMACed;
     CipurseChannelSecurityLevel sresp = CPSMACed;
-    uint8_t key[] = CIPURSE_DEFAULT_KEY;
+    uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
     int res = CLIParseKeyAndSecurityLevels(ctx, 4, 6, 7, key, &sreq, &sresp);
     if (res) {
         CLIParserFree(ctx);
@@ -637,7 +645,7 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint16_t fileId = 0x2ff7;
+    uint16_t fileId = defaultFileId;
     if (hdatalen)
         fileId = (hdata[0] << 8) + hdata[1];
 
@@ -703,6 +711,68 @@ static int CmdHFCipurseTest(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFCipurseDefault(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf cipurse default",
+                  "Set default parameters for access to cipurse card",
+                  "hf cipurse default -n 1 -k 65656565656565656565656565656565 --fid 2ff7 -> Set key, key id and file id\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "clear",   "resets to defaults"),
+        arg_int0("n",  NULL,      "<dec>", "Key ID"),
+        arg_str0("k",  "key",     "<hex>", "Authentication key"),
+        arg_str0(NULL, "fid",     "<hex>", "File ID"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool clearing = arg_get_lit(ctx, 1);
+    if (clearing) {
+        defaultKeyId = 1;
+        defaultFileId = 0x2ff7;
+        uint8_t ckey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
+        memcpy(defaultKey, ckey, CIPURSE_AES_KEY_LENGTH);
+    }
+
+    defaultKeyId = arg_get_int_def(ctx, 2, defaultKeyId);
+
+    uint8_t hdata[250] = {0};
+    int hdatalen = sizeof(hdata);
+    CLIGetHexWithReturn(ctx, 3, hdata, &hdatalen);
+    if (hdatalen && hdatalen != 16) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " key length for AES128 must be 16 bytes only");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    if (hdatalen)
+        memcpy(defaultKey, hdata, CIPURSE_AES_KEY_LENGTH);
+
+    memset(hdata, 0, sizeof(hdata));
+    hdatalen = sizeof(hdata);
+    CLIGetHexWithReturn(ctx, 4, hdata, &hdatalen);
+    if (hdatalen && hdatalen != 2) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " file id length must be 2 bytes only");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    if (hdatalen)
+        defaultFileId = (hdata[0] << 8) + hdata[1];
+
+    CLIParserFree(ctx);
+
+
+    PrintAndLogEx(INFO, "-----------" _CYAN_("Default parameters") "---------------------------------");
+
+    PrintAndLogEx(INFO, "Key ID : %d", defaultKeyId);
+    PrintAndLogEx(INFO, "Key    : %s", sprint_hex(defaultKey, sizeof(defaultKey)));
+    PrintAndLogEx(INFO, "File ID: 0x%04x", defaultFileId);
+
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",      CmdHelp,                   AlwaysAvailable, "This help."},
     {"info",      CmdHFCipurseInfo,          IfPm3Iso14443a,  "Get info about CIPURSE tag"},
@@ -711,6 +781,7 @@ static command_t CommandTable[] = {
     {"write",     CmdHFCipurseWriteFile,     IfPm3Iso14443a,  "Write binary file"},
     {"aread",     CmdHFCipurseReadFileAttr,  IfPm3Iso14443a,  "Read file attributes"},
     {"delete",    CmdHFCipurseDeleteFile,    IfPm3Iso14443a,  "Delete file"},
+    {"default",   CmdHFCipurseDefault,       IfPm3Iso14443a,  "Set default key and file id for all the other commands"},
     {"test",      CmdHFCipurseTest,          AlwaysAvailable, "Tests"},
     {NULL, NULL, 0, NULL}
 };
