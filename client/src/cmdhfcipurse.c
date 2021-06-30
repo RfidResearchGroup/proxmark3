@@ -719,6 +719,7 @@ static int CmdHFCipurseDefault(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0(NULL, "clear",   "resets to defaults"),
         arg_int0("n",  NULL,      "<dec>", "Key ID"),
         arg_str0("k",  "key",     "<hex>", "Authentication key"),
         arg_str0(NULL, "fid",     "<hex>", "File ID"),
@@ -726,11 +727,19 @@ static int CmdHFCipurseDefault(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    defaultKeyId = arg_get_int_def(ctx, 1, defaultKeyId);
+    bool clearing = arg_get_lit(ctx, 1);
+    if (clearing) {
+        defaultKeyId = 1;
+        defaultFileId = 0x2ff7;
+        uint8_t ckey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
+        memcpy(defaultKey, ckey, CIPURSE_AES_KEY_LENGTH);
+    }
+    
+    defaultKeyId = arg_get_int_def(ctx, 2, defaultKeyId);
 
     uint8_t hdata[250] = {0};
     int hdatalen = sizeof(hdata);
-    CLIGetHexWithReturn(ctx, 2, hdata, &hdatalen);
+    CLIGetHexWithReturn(ctx, 3, hdata, &hdatalen);
     if (hdatalen && hdatalen != 16) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " key length for AES128 must be 16 bytes only");
         CLIParserFree(ctx);
@@ -742,7 +751,7 @@ static int CmdHFCipurseDefault(const char *Cmd) {
 
     memset(hdata, 0, sizeof(hdata));
     hdatalen = sizeof(hdata);
-    CLIGetHexWithReturn(ctx, 3, hdata, &hdatalen);
+    CLIGetHexWithReturn(ctx, 4, hdata, &hdatalen);
     if (hdatalen && hdatalen != 2) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " file id length must be 2 bytes only");
         CLIParserFree(ctx);
