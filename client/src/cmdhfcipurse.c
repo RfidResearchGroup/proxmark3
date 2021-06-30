@@ -734,7 +734,7 @@ static int CmdHFCipurseDefault(const char *Cmd) {
         uint8_t ckey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
         memcpy(defaultKey, ckey, CIPURSE_AES_KEY_LENGTH);
     }
-    
+
     defaultKeyId = arg_get_int_def(ctx, 2, defaultKeyId);
 
     uint8_t hdata[250] = {0};
@@ -765,7 +765,7 @@ static int CmdHFCipurseDefault(const char *Cmd) {
 
 
     PrintAndLogEx(INFO, "-----------" _CYAN_("Default parameters") "---------------------------------");
-    
+
     PrintAndLogEx(INFO, "Key ID : %d", defaultKeyId);
     PrintAndLogEx(INFO, "Key    : %s", sprint_hex(defaultKey, sizeof(defaultKey)));
     PrintAndLogEx(INFO, "File ID: 0x%04x", defaultFileId);
