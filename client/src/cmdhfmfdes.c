@@ -5230,12 +5230,12 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     
 
     //size_t len = 0;
-    uint16_t sw = 0;
+    //uint16_t sw = 0;
     //uint8_t buf[APDU_RES_LEN] = {0};
 
     int res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
-    if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ". Card returns 0x%02x", sw);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
         DropField();
         return PM3_ESOFT;
     }
