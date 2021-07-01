@@ -25,7 +25,126 @@
 #include "iso7816/apduinfo.h"     // APDU manipulation / errorcodes
 #include "iso7816/iso7816core.h"  // APDU logging
 #include "util_posix.h"           // msleep
-#include "mifare/desfire_crypto.h"
+#include "mifare/desfire_crypto.h"\
+
+static const char *getstatus(uint16_t *sw) {
+    if (sw == NULL) return "--> sw argument error. This should never happen !";
+    if (((*sw >> 8) & 0xFF) == 0x91) {
+        switch (*sw & 0xFF) {
+            case MFDES_E_OUT_OF_EEPROM:
+                return "Out of Eeprom, insufficient NV-Memory to complete command";
+            case MFDES_E_ILLEGAL_COMMAND_CODE:
+                return "Command code not supported";
+
+            case MFDES_E_INTEGRITY_ERROR:
+                return "CRC or MAC does not match data / Padding bytes invalid";
+
+            case MFDES_E_NO_SUCH_KEY:
+                return "Invalid key number specified";
+
+            case MFDES_E_LENGTH:
+                return "Length of command string invalid";
+
+            case MFDES_E_PERMISSION_DENIED:
+                return "Current configuration/status does not allow the requested command";
+
+            case MFDES_E_PARAMETER_ERROR:
+                return "Value of the parameter(s) invalid";
+
+            case MFDES_E_APPLICATION_NOT_FOUND:
+                return "Requested AID not present on PICC";
+
+            case MFDES_E_APPL_INTEGRITY:
+                return "Application integrity error, application will be disabled";
+
+            case MFDES_E_AUTHENTIFICATION_ERROR:
+                return "Current authentication status does not allow the requested command";
+
+            case MFDES_E_BOUNDARY:
+                return "Attempted to read/write data from/to beyond the file's/record's limit";
+
+            case MFDES_E_PICC_INTEGRITY:
+                return "PICC integrity error, PICC will be disabled";
+
+            case MFDES_E_COMMAND_ABORTED:
+                return "Previous command was not fully completed / Not all Frames were requested or provided by the PCD";
+
+            case MFDES_E_PICC_DISABLED:
+                return "PICC was disabled by an unrecoverable error";
+
+            case MFDES_E_COUNT:
+                return "Application count is limited to 28, not addition CreateApplication possible";
+
+            case MFDES_E_DUPLICATE:
+                return "Duplicate entry: File/Application/ISO Text does already exist";
+
+            case MFDES_E_EEPROM:
+                return "Eeprom error due to loss of power, internal backup/rollback mechanism activated";
+
+            case MFDES_E_FILE_NOT_FOUND:
+                return "Specified file number does not exist";
+
+            case MFDES_E_FILE_INTEGRITY:
+                return "File integrity error, file will be disabled";
+
+            default:
+                return "Unknown error";
+        }
+    }
+    return "Unknown error";
+}
+
+const char *DesfireGetErrorString(int res, uint16_t *sw) {
+    switch (res) {
+        case PM3_EAPDU_FAIL:
+            return getstatus(sw);
+        case PM3_EUNDEF:
+            return "Undefined error";
+        case PM3_EINVARG:
+            return "Invalid argument(s)";
+        case PM3_EDEVNOTSUPP:
+            return "Operation not supported by device";
+        case PM3_ETIMEOUT:
+            return "Operation timed out";
+        case PM3_EOPABORTED:
+            return "Operation aborted (by user)";
+        case PM3_ENOTIMPL:
+            return "Not (yet) implemented";
+        case PM3_ERFTRANS:
+            return "Error while RF transmission";
+        case PM3_EIO:
+            return "Input / output error";
+        case PM3_EOVFLOW:
+            return "Buffer overflow";
+        case PM3_ESOFT:
+            return "Software error";
+        case PM3_EFLASH:
+            return "Flash error";
+        case PM3_EMALLOC:
+            return "Memory allocation error";
+        case PM3_EFILE:
+            return "File error";
+        case PM3_ENOTTY:
+            return "Generic TTY error";
+        case PM3_EINIT:
+            return "Initialization error";
+        case PM3_EWRONGANSWER:
+            return "Expected a different answer error";
+        case PM3_EOUTOFBOUND:
+            return "Memory out-of-bounds error";
+        case PM3_ECARDEXCHANGE:
+            return "Exchange with card error";
+        case PM3_EAPDU_ENCODEFAIL:
+            return "Failed to create APDU";
+        case PM3_ENODATA:
+            return "No data";
+        case PM3_EFATAL:
+            return "Fatal error";
+        default:
+            break;
+    }
+    return "";
+}
 
 void DesfireClearContext(DesfireContext *ctx) {
     ctx->keyNum = 0;
@@ -141,7 +260,7 @@ static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t 
 
     int res = DESFIRESendApdu(activate_field, apdu, buf, sizeof(buf), &buflen, &sw);
     if (res != PM3_SUCCESS) {
-        //PrintAndLogEx(DEBUG, "error DESFIRESendApdu %s", GetErrorString(res, &sw));
+        PrintAndLogEx(DEBUG, "error DESFIRESendApdu %s", DesfireGetErrorString(res, &sw));
         return res;
     }
     
@@ -171,7 +290,7 @@ static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t 
 
         res = DESFIRESendApdu(false, apdu, buf, sizeof(buf), &buflen, &sw);
         if (res != PM3_SUCCESS) {
-            //PrintAndLogEx(DEBUG, "error DESFIRESendApdu %s", GetErrorString(res, &sw));
+            PrintAndLogEx(DEBUG, "error DESFIRESendApdu %s", DesfireGetErrorString(res, &sw));
             return res;
         }
 

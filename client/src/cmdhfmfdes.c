@@ -509,125 +509,6 @@ static int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, 
     return PM3_SUCCESS;
 }
 
-static const char *getstatus(uint16_t *sw) {
-    if (sw == NULL) return "--> sw argument error. This should never happen !";
-    if (((*sw >> 8) & 0xFF) == 0x91) {
-        switch (*sw & 0xFF) {
-            case MFDES_E_OUT_OF_EEPROM:
-                return "Out of Eeprom, insufficient NV-Memory to complete command";
-            case MFDES_E_ILLEGAL_COMMAND_CODE:
-                return "Command code not supported";
-
-            case MFDES_E_INTEGRITY_ERROR:
-                return "CRC or MAC does not match data / Padding bytes invalid";
-
-            case MFDES_E_NO_SUCH_KEY:
-                return "Invalid key number specified";
-
-            case MFDES_E_LENGTH:
-                return "Length of command string invalid";
-
-            case MFDES_E_PERMISSION_DENIED:
-                return "Current configuration/status does not allow the requested command";
-
-            case MFDES_E_PARAMETER_ERROR:
-                return "Value of the parameter(s) invalid";
-
-            case MFDES_E_APPLICATION_NOT_FOUND:
-                return "Requested AID not present on PICC";
-
-            case MFDES_E_APPL_INTEGRITY:
-                return "Application integrity error, application will be disabled";
-
-            case MFDES_E_AUTHENTIFICATION_ERROR:
-                return "Current authentication status does not allow the requested command";
-
-            case MFDES_E_BOUNDARY:
-                return "Attempted to read/write data from/to beyond the file's/record's limit";
-
-            case MFDES_E_PICC_INTEGRITY:
-                return "PICC integrity error, PICC will be disabled";
-
-            case MFDES_E_COMMAND_ABORTED:
-                return "Previous command was not fully completed / Not all Frames were requested or provided by the PCD";
-
-            case MFDES_E_PICC_DISABLED:
-                return "PICC was disabled by an unrecoverable error";
-
-            case MFDES_E_COUNT:
-                return "Application count is limited to 28, not addition CreateApplication possible";
-
-            case MFDES_E_DUPLICATE:
-                return "Duplicate entry: File/Application/ISO Text does already exist";
-
-            case MFDES_E_EEPROM:
-                return "Eeprom error due to loss of power, internal backup/rollback mechanism activated";
-
-            case MFDES_E_FILE_NOT_FOUND:
-                return "Specified file number does not exist";
-
-            case MFDES_E_FILE_INTEGRITY:
-                return "File integrity error, file will be disabled";
-
-            default:
-                return "Unknown error";
-        }
-    }
-    return "Unknown error";
-}
-
-static const char *GetErrorString(int res, uint16_t *sw) {
-    switch (res) {
-        case PM3_EAPDU_FAIL:
-            return getstatus(sw);
-        case PM3_EUNDEF:
-            return "Undefined error";
-        case PM3_EINVARG:
-            return "Invalid argument(s)";
-        case PM3_EDEVNOTSUPP:
-            return "Operation not supported by device";
-        case PM3_ETIMEOUT:
-            return "Operation timed out";
-        case PM3_EOPABORTED:
-            return "Operation aborted (by user)";
-        case PM3_ENOTIMPL:
-            return "Not (yet) implemented";
-        case PM3_ERFTRANS:
-            return "Error while RF transmission";
-        case PM3_EIO:
-            return "Input / output error";
-        case PM3_EOVFLOW:
-            return "Buffer overflow";
-        case PM3_ESOFT:
-            return "Software error";
-        case PM3_EFLASH:
-            return "Flash error";
-        case PM3_EMALLOC:
-            return "Memory allocation error";
-        case PM3_EFILE:
-            return "File error";
-        case PM3_ENOTTY:
-            return "Generic TTY error";
-        case PM3_EINIT:
-            return "Initialization error";
-        case PM3_EWRONGANSWER:
-            return "Expected a different answer error";
-        case PM3_EOUTOFBOUND:
-            return "Memory out-of-bounds error";
-        case PM3_ECARDEXCHANGE:
-            return "Exchange with card error";
-        case PM3_EAPDU_ENCODEFAIL:
-            return "Failed to create APDU";
-        case PM3_ENODATA:
-            return "No data";
-        case PM3_EFATAL:
-            return "Fatal error";
-        default:
-            break;
-    }
-    return "";
-}
-
 static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, uint32_t *recv_len, uint16_t *sw, uint32_t splitbysize, bool readalldata) {
     if (apdu == NULL) {
         PrintAndLogEx(DEBUG, "APDU=NULL");
@@ -649,7 +530,7 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, uint32_t *r
     uint32_t i = 1;
     int res = DESFIRESendApdu(select, true, *apdu, data, sizeof(data), &resplen, sw);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(DEBUG, "%s", GetErrorString(res, sw));
+        PrintAndLogEx(DEBUG, "%s", DesfireGetErrorString(res, sw));
         DropFieldDesfire();
         return res;
     }
@@ -674,7 +555,7 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, uint32_t *r
 
         res = DESFIRESendApdu(false, true, *apdu, data, sizeof(data), &resplen, sw);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(DEBUG, "%s", GetErrorString(res, sw));
+            PrintAndLogEx(DEBUG, "%s", DesfireGetErrorString(res, sw));
             DropFieldDesfire();
             return res;
         }
@@ -1341,7 +1222,7 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
     int res = send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0, true);
 
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("can't change key -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("can't change key -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
         return res;
     }
@@ -1771,7 +1652,7 @@ static int handler_desfire_select_application(uint8_t *aid) {
         PrintAndLogEx(WARNING,
                       _RED_("   Can't select AID 0x%X -> %s"),
                       (aid[2] << 16) + (aid[1] << 8) + aid[0],
-                      GetErrorString(res, &sw)
+                      DesfireGetErrorString(res, &sw)
                      );
         DropFieldDesfire();
         return res;
@@ -1814,7 +1695,7 @@ static int handler_desfire_fileids(uint8_t *dest, uint32_t *file_ids_len) {
     *file_ids_len = 0;
     int res = send_desfire_cmd(&apdu, false, dest, &recv_len, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't get file ids -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't get file ids -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
         return res;
     }
@@ -1833,7 +1714,7 @@ static int handler_desfire_filesettings(uint8_t file_id, uint8_t *dest, uint32_t
     uint16_t sw = 0;
     int res = send_desfire_cmd(&apdu, false, dest, destlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't get file settings -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't get file settings -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
         return res;
     }
@@ -1873,7 +1754,7 @@ static int handler_desfire_createapp(aidhdr_t *aidhdr, bool usename, bool usefid
         free(data);
     }
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't create aid -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't create aid -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
     }
     return res;
@@ -1888,7 +1769,7 @@ static int handler_desfire_deleteapp(const uint8_t *aid) {
     uint32_t recvlen = 0;
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't delete aid -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't delete aid -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
     }
     return res;
@@ -1906,7 +1787,7 @@ static int handler_desfire_credit(mfdes_value_t *value, uint8_t cs) {
 
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't credit value -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't credit value -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
         return res;
     }
@@ -1925,7 +1806,7 @@ static int handler_desfire_limitedcredit(mfdes_value_t *value, uint8_t cs) {
 
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't credit limited value -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't credit limited value -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
         return res;
     }
@@ -1944,7 +1825,7 @@ static int handler_desfire_debit(mfdes_value_t *value, uint8_t cs) {
 
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't debit value -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't debit value -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
         return res;
     }
@@ -1982,7 +1863,7 @@ static int handler_desfire_readdata(mfdes_data_t *data, MFDES_FILE_TYPE_T type, 
     uint32_t resplen = 0;
     int res = send_desfire_cmd(&apdu, false, data->data, &resplen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't read data -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't read data -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
         return res;
     }
@@ -2014,7 +1895,7 @@ static int handler_desfire_getvalue(mfdes_value_t *value, uint32_t *resplen, uin
 
     int res = send_desfire_cmd(&apdu, false, value->value, resplen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't read data -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't read data -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
         return res;
     }
@@ -2090,7 +1971,7 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type,
 
         res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, _RED_("   Can't write data -> %s"), GetErrorString(res, &sw));
+            PrintAndLogEx(WARNING, _RED_("   Can't write data -> %s"), DesfireGetErrorString(res, &sw));
             DropFieldDesfire();
             return res;
         }
@@ -2099,7 +1980,7 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type,
     }
     if (type == MFDES_RECORD_FILE) {
         if (handler_desfire_commit_transaction() != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, _RED_("   Can't commit transaction -> %s"), GetErrorString(res, &sw));
+            PrintAndLogEx(WARNING, _RED_("   Can't commit transaction -> %s"), DesfireGetErrorString(res, &sw));
             DropFieldDesfire();
             return res;
         }
@@ -2116,7 +1997,7 @@ static int handler_desfire_deletefile(uint8_t file_no) {
     uint32_t recvlen = 0;
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't delete file -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't delete file -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
         return res;
     }
@@ -2132,13 +2013,13 @@ static int handler_desfire_clear_record_file(uint8_t file_no) {
     uint32_t recvlen = 0;
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't clear record file -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't clear record file -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
         return res;
     } else {
         res = handler_desfire_commit_transaction();
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, _RED_("   Can't commit transaction -> %s"), GetErrorString(res, &sw));
+            PrintAndLogEx(WARNING, _RED_("   Can't commit transaction -> %s"), DesfireGetErrorString(res, &sw));
             DropFieldDesfire();
             return res;
         }
@@ -2155,7 +2036,7 @@ static int handler_desfire_create_value_file(mfdes_value_file_t *value) {
     uint32_t recvlen = 0;
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't create value -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't create value -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
         return res;
     }
@@ -2172,7 +2053,7 @@ static int handler_desfire_create_std_file(mfdes_file_t *file) {
     uint32_t recvlen = 0;
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't create file -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't create file -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
         return res;
     }
@@ -2190,7 +2071,7 @@ static int handler_desfire_create_linearrecordfile(mfdes_linear_t *file) {
     uint32_t recvlen = 0;
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't create linear record file -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't create linear record file -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
         return res;
     }
@@ -2210,7 +2091,7 @@ static int handler_desfire_create_cyclicrecordfile(mfdes_linear_t *file) {
     uint32_t recvlen = 0;
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't create cyclic record file -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't create cyclic record file -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
         return res;
     }
@@ -2226,7 +2107,7 @@ static int handler_desfire_create_backup_file(mfdes_file_t *file) {
     uint32_t recvlen = 0;
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't create backup file -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't create backup file -> %s"), DesfireGetErrorString(res, &sw));
         DropFieldDesfire();
         return res;
     }
@@ -3573,7 +3454,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
     uint32_t recvlen = 0;
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't format picc -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't format picc -> %s"), DesfireGetErrorString(res, &sw));
     } else {
         PrintAndLogEx(INFO, "Card successfully reset");
     }
