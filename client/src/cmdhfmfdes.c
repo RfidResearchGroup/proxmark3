@@ -5116,6 +5116,121 @@ static int CmdHF14aDesMAD(const char *Cmd) {
 }
 */
 
+static int CmdHF14ADesGetAIDs(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes getaids",
+                  "Get Application IDs list from card. Master key needs to be provided.",
+                  "hf mfdes getaids -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_int0("t",  "algo",    "<algo>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_int0("f",  "kdf",     "<kdf>",   "Key Derivation Function (KDF): None(default), AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+
+/*
+    int aidlength = 0;
+    uint8_t aid[3] = {0};
+    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
+    swap24(aid);
+    uint8_t vkey[16] = {0};
+    int vkeylen = 0;
+    CLIGetHexWithReturn(ctx, 2, vkey, &vkeylen);
+
+    if (vkeylen > 0) {
+        if (vkeylen == 8) {
+            memcpy(&deskeyList[deskeyListLen], vkey, 8);
+            deskeyListLen++;
+        } else if (vkeylen == 16) {
+            memcpy(&aeskeyList[aeskeyListLen], vkey, 16);
+            aeskeyListLen++;
+        } else if (vkeylen == 24) {
+            memcpy(&k3kkeyList[k3kkeyListLen], vkey, 16);
+            k3kkeyListLen++;
+        } else {
+            PrintAndLogEx(ERR, "Specified key must have 8, 16 or 24 bytes length.");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    uint8_t dict_filename[FILE_PATH_SIZE + 2] = {0};
+    int dict_filenamelen = 0;
+    if (CLIParamStrToBuf(arg_get_str(ctx, 3), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
+        PrintAndLogEx(FAILED, "File name too long or invalid.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool pattern1b = arg_get_lit(ctx, 4);
+    bool pattern2b = arg_get_lit(ctx, 5);
+
+    if (pattern1b && pattern2b) {
+        PrintAndLogEx(ERR, "Pattern search mode must be 2-byte or 1-byte only.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    if (dict_filenamelen && (pattern1b || pattern2b)) {
+        PrintAndLogEx(ERR, "Pattern search mode and dictionary mode can't be used in one command.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t startPattern = 0x0000;
+    uint8_t vpattern[2];
+    int vpatternlen = 0;
+    CLIGetHexWithReturn(ctx, 6, vpattern, &vpatternlen);
+    if (vpatternlen > 0) {
+        if (vpatternlen <= 2) {
+            startPattern = (vpattern[0] << 8) + vpattern[1];
+        } else {
+            PrintAndLogEx(ERR, "Pattern must be 2-byte length.");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+        if (!pattern2b)
+            PrintAndLogEx(WARNING, "Pattern entered, but search mode not is 2-byte search.");
+    }
+
+    uint8_t jsonname[250] = {0};
+    int jsonnamelen = 0;
+    if (CLIParamStrToBuf(arg_get_str(ctx, 7), jsonname, sizeof(jsonname), &jsonnamelen)) {
+        PrintAndLogEx(ERR, "Invalid json name.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    jsonname[jsonnamelen] = 0;
+
+    bool verbose = arg_get_lit(ctx, 8);
+
+    // Get KDF input
+    uint8_t kdfInput[31] = {0};
+    int kdfInputLen = 0;
+    uint8_t cmdKDFAlgo  = arg_get_int_def(ctx, 9, 0);
+    CLIGetHexWithReturn(ctx, 10, kdfInput, &kdfInputLen);
+*/
+    CLIParserFree(ctx);
+    
+    
+    
+    
+    return PM3_SUCCESS;
+}
+
+//    {"getappnames",      CmdHF14ADesGetAppNames,      IfPm3Iso14443a,  "Get Applications list"},
+static int CmdHF14ADesGetAppNames(const char *Cmd) {
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                     AlwaysAvailable, "This help"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "---------------------- " _CYAN_("general") " ----------------------"},
@@ -5134,6 +5249,8 @@ static command_t CommandTable[] = {
     {"createaid",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},
     {"deleteaid",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application ID"},
     {"selectaid",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
+    {"getaids",          CmdHF14ADesGetAIDs,          IfPm3Iso14443a,  "Get Application IDs list"},
+    {"getappnames",      CmdHF14ADesGetAppNames,      IfPm3Iso14443a,  "Get Applications list"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("Files") " -----------------------"},
     {"changevalue",      CmdHF14ADesChangeValue,      IfPm3Iso14443a,  "Write value of a value file (credit/debit/clear)"},
     {"clearfile",        CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},

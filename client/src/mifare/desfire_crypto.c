@@ -51,6 +51,17 @@ static inline void update_key_schedules(desfirekey_t key) {
     // }
 }
 
+int desfire_get_key_length(enum DESFIRE_CRYPTOALGO key_type) {
+    switch (key_type) {
+        case T_DES:     return 8;
+        case T_3DES:    return 16;
+        case T_3K3DES:  return 24;
+        case T_AES:     return 16;
+    }
+    return 0;
+}
+
+
 /******************************************************************************/
 
 void des_encrypt(void *out, const void *in, const void *key) {

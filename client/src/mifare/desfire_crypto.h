@@ -60,6 +60,8 @@ enum DESFIRE_CRYPTOALGO {
     T_AES = 0x03
 };
 
+int desfire_get_key_length(enum DESFIRE_CRYPTOALGO key_type);
+
 enum DESFIRE_AUTH_SCHEME {
     AS_LEGACY,
     AS_NEW
