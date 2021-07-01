@@ -231,6 +231,11 @@ int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uin
     data[0] = aid1 & 0xff;
     data[1] = (aid1 >> 8) & 0xff;
     data[2] = (aid1 >> 16) & 0xff;
+    
+    data[3] = aid2 & 0xff;
+    data[4] = (aid2 >> 8) & 0xff;
+    data[5] = (aid2 >> 16) & 0xff;
+    
     return DesfireSelectAID(ctx, data, (select_two) ? &data[3] : NULL);
 }
 

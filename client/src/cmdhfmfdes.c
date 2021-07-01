@@ -28,6 +28,7 @@
 #include "iso7816/iso7816core.h"    // APDU logging
 #include "util_posix.h"     // msleep
 #include "mifare/desfire_crypto.h"
+#include "mifare/desfirecore.h"
 #include "crapto1/crapto1.h"
 #include "fileutils.h"
 #include "mifare/mifaredefault.h"  // default keys
@@ -5218,11 +5219,31 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     uint8_t cmdKDFAlgo  = arg_get_int_def(ctx, 9, 0);
     CLIGetHexWithReturn(ctx, 10, kdfInput, &kdfInputLen);
 */
+//    SetAPDULogging(APDULogging);
+    SetAPDULogging(true);
     CLIParserFree(ctx);
     
+    uint8_t key[24] = {0};
+    DesfireContext dctx;
+    DesfireSetKey(&dctx, 1, T_DES, key);
+    dctx.cmdChannel = DCCNativeISO;
+    
+
+    //size_t len = 0;
+    uint16_t sw = 0;
+    //uint8_t buf[APDU_RES_LEN] = {0};
+
+    int res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    if (res != 0 || sw != 0x9000) {
+        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ". Card returns 0x%02x", sw);
+        DropField();
+        return PM3_ESOFT;
+    }
+
     
     
     
+    DropField();
     return PM3_SUCCESS;
 }
 
