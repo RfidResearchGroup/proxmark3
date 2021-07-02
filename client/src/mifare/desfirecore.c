@@ -601,17 +601,6 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireAuthChannel authChannel) {
     // Part 4
     memcpy(encRndA, recv_data, rndlen);
 
-    // tag->session_key = &default_key;
-    /*struct desfire_key *p = realloc(tag->session_key, sizeof(struct desfire_key));
-    if (!p) {
-        PrintAndLogEx(FAILED, "Cannot allocate memory for session keys");
-        free(tag->session_key);
-        return PM3_EMALLOC;
-    }
-    tag->session_key = p;
-
-    memset(tag->session_key, 0x00, sizeof(struct desfire_key));
-    */
     struct desfire_key sesskey = {0};
 
     Desfire_session_key_new(RndA, RndB, key, &sesskey);
@@ -650,11 +639,6 @@ PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
         if (memcmp(key->data, &key->data[8], 8) == 0)
             memcpy(&dctx->sessionKeyEnc[8], dctx->sessionKeyEnc, 8);
     }
-
-//    rpayload->sessionkeylen = payload->keylen;
-  //  memcpy(rpayload->sessionkey, tag->session_key->data, rpayload->sessionkeylen);
-  //  memset(tag->ivect, 0, MAX_CRYPTO_BLOCK_SIZE);
-  //  tag->authenticated_key_no = payload->keyno;
 
     if (dctx->authChannel == DACEV1) {
         cmac_generate_subkeys(&sesskey, MCD_RECEIVE);

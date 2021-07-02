@@ -5017,6 +5017,9 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    uint8_t keyNum = arg_get_int_def(ctx, 3, 0); // defaultKeyId
 
 /*
     int aidlength = 0;
@@ -5100,13 +5103,12 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     uint8_t cmdKDFAlgo  = arg_get_int_def(ctx, 9, 0);
     CLIGetHexWithReturn(ctx, 10, kdfInput, &kdfInputLen);
 */
-//    SetAPDULogging(APDULogging);
-    SetAPDULogging(true);
+    SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
     
     uint8_t key[24] = {0};
     DesfireContext dctx;
-    DesfireSetKey(&dctx, 0, T_DES, key); // T_DES T_3DES T_3K3DES T_AES
+    DesfireSetKey(&dctx, keyNum, T_DES, key); // T_DES T_3DES T_3K3DES T_AES
     DesfireSetCommandChannel(&dctx, DCCNativeISO);
     
 
@@ -5124,10 +5126,12 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         return PM3_ESOFT;
     }
     
-    if (DesfireIsAuthenticated(&dctx))
-        PrintAndLogEx(ERR, "Desfire  " _GREEN_("authenticated") , res);
-    else
+    if (DesfireIsAuthenticated(&dctx)) {
+        if (verbose)
+            PrintAndLogEx(ERR, "Desfire  " _GREEN_("authenticated") , res);
+    } else {
         return PM3_ESOFT;
+    }
 
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t buflen = 0;
@@ -5139,8 +5143,11 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         return PM3_ESOFT;
     }
     
-    for (int i = 0; i < buflen; i += 3)
-        PrintAndLogEx(INFO, "AID: %06x", DesfireAIDByteToUint(&buf[i]));
+    if (buflen >= 3) {
+        PrintAndLogEx(INFO, "---- " _CYAN_("AID list") " ----");
+        for (int i = 0; i < buflen; i += 3)
+            PrintAndLogEx(INFO, "AID: %06x", DesfireAIDByteToUint(&buf[i]));
+    }
     
     DropField();
     return PM3_SUCCESS;
