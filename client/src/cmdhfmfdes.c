@@ -5110,10 +5110,6 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     DesfireSetCommandChannel(&dctx, DCCNativeISO);
     
 
-    //size_t len = 0;
-    //uint16_t sw = 0;
-    //uint8_t buf[APDU_RES_LEN] = {0};
-
     int res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
@@ -5133,8 +5129,18 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     else
         return PM3_ESOFT;
 
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t buflen = 0;
     
+    res = DesfireGetAIDList(&dctx, buf, &buflen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire GetAIDList command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
     
+    for (int i = 0; i < buflen; i += 3)
+        PrintAndLogEx(INFO, "AID: %06x", DesfireAIDByteToUint(&buf[i]));
     
     DropField();
     return PM3_SUCCESS;

@@ -71,14 +71,20 @@ void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO 
 void DesfireSetCommandChannel(DesfireContext *ctx, DesfireCommandChannel cmdChannel);
 
 const char *DesfireGetErrorString(int res, uint16_t *sw);
+uint32_t DesfireAIDByteToUint(uint8_t *data);
+void DesfireAIDUintToByte(uint32_t aid, uint8_t *data);
 
 int DesfireExchange(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen);
 int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining);
 
 int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2);
 int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uint32_t aid2);
+
 int DesfireAuthenticate(DesfireContext *dctx, DesfireAuthChannel authChannel);
 bool DesfireIsAuthenticated(DesfireContext *dctx);
+
+int DesfireGetAIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
+int DesfireGetDFList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 
 
 #endif // __DESFIRECORE_H

@@ -148,6 +148,16 @@ const char *DesfireGetErrorString(int res, uint16_t *sw) {
     return "";
 }
 
+uint32_t DesfireAIDByteToUint(uint8_t *data) {
+    return data[0] + (data[1] << 8) + (data[2] << 16);
+}
+
+void DesfireAIDUintToByte(uint32_t aid, uint8_t *data) {
+    data[0] = aid & 0xff;
+    data[1] = (aid >> 8) & 0xff;
+    data[2] = (aid >> 16) & 0xff;
+}
+
 void DesfireClearContext(DesfireContext *ctx) {
     ctx->keyNum = 0;
     ctx->keyType = T_DES;
@@ -383,13 +393,8 @@ int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2) {
 int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uint32_t aid2) {
     uint8_t data[6] = {0};
 
-    data[0] = aid1 & 0xff;
-    data[1] = (aid1 >> 8) & 0xff;
-    data[2] = (aid1 >> 16) & 0xff;
-    
-    data[3] = aid2 & 0xff;
-    data[4] = (aid2 >> 8) & 0xff;
-    data[5] = (aid2 >> 16) & 0xff;
+    DesfireAIDUintToByte(aid1, data);
+    DesfireAIDUintToByte(aid2, &data[3]);
     
     return DesfireSelectAID(ctx, data, (select_two) ? &data[3] : NULL);
 }
@@ -663,4 +668,12 @@ PrintAndLogEx(INFO, "sessionKeyEnc : %s", sprint_hex(dctx->sessionKeyEnc, desfir
     return PM3_SUCCESS;
 }
 
-
+int DesfireGetAIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
+    uint8_t respcode = 0xff;
+    int res = DesfireExchange(dctx, MFDES_GET_APPLICATION_IDS, NULL, 0, &respcode, resp, resplen);
+    if (res != PM3_SUCCESS)
+        return res;
+    if (respcode != MFDES_S_OPERATION_OK)
+        return PM3_EAPDU_FAIL;
+    return PM3_SUCCESS;
+}
