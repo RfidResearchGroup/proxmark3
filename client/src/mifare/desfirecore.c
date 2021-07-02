@@ -467,7 +467,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireAuthChannel authChannel) {
             subcommand = MFDES_AUTHENTICATE_ISO;
     }
 
-    uint32_t recv_len = 0;
+    size_t recv_len = 0;
     uint8_t respcode = 0;
     uint8_t recv_data[256] = {0};
 
