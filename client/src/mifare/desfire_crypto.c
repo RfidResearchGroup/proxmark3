@@ -407,6 +407,24 @@ size_t key_block_size(const desfirekey_t key) {
     return block_size;
 }
 
+size_t key_size(const enum DESFIRE_CRYPTOALGO algo) {
+    switch (algo) {
+        case T_DES:
+            return 8;
+            break;
+        case T_3DES:
+            return 16;
+            break;
+        case T_3K3DES:
+            return 24;
+            break;
+        case T_AES:
+            return 16;
+            break;
+    }
+    return 0;    
+}
+
 /*
  * Size of MACing produced with the key.
  */
