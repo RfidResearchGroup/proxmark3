@@ -21,6 +21,8 @@
 
 #define DESFIRE_GET_ISO_STATUS(x) ( ((uint16_t)(0x91<<8)) + (uint16_t)x )
 
+typedef enum DESFIRE_CRYPTOALGO DesfireCryptoAlgorythm;
+
 typedef enum {
     DACNone,
     DACd40,

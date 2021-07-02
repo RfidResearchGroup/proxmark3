@@ -5009,10 +5009,12 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         arg_lit0("a",  "apdu",    "show APDU requests and responses"),
         arg_lit0("v",  "verbose", "show technical data"),
         arg_int0("n",  "keyno",   "<keyno>", "Key number"),
-        arg_int0("t",  "algo",    "<algo>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
         arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
-        arg_int0("f",  "kdf",     "<kdf>",   "Key Derivation Function (KDF): None(default), AN10922, Gallagher"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None(default), AN10922, Gallagher"),
         arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Commpunicaton mode: plain(default)/mac/encrypt"),
+        arg_str0("c",  "commc",   "<native/niso/iso>", "Commpunicaton channel: native/niso(default)/iso"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -5021,95 +5023,71 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     uint8_t keyNum = arg_get_int_def(ctx, 3, 0); // defaultKeyId
 
-/*
-    int aidlength = 0;
-    uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
-    swap24(aid);
-    uint8_t vkey[16] = {0};
-    int vkeylen = 0;
-    CLIGetHexWithReturn(ctx, 2, vkey, &vkeylen);
 
-    if (vkeylen > 0) {
-        if (vkeylen == 8) {
-            memcpy(&deskeyList[deskeyListLen], vkey, 8);
-            deskeyListLen++;
-        } else if (vkeylen == 16) {
-            memcpy(&aeskeyList[aeskeyListLen], vkey, 16);
-            aeskeyListLen++;
-        } else if (vkeylen == 24) {
-            memcpy(&k3kkeyList[k3kkeyListLen], vkey, 16);
-            k3kkeyListLen++;
-        } else {
-            PrintAndLogEx(ERR, "Specified key must have 8, 16 or 24 bytes length.");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
+    const CLIParserOption algo_opts[] = {
+        {T_DES,    "des"},
+        {T_3DES,   "2tdea"},
+        {T_3K3DES, "3tdea"},
+        {T_AES,    "aes"},
+    };
+    
+    int ares = T_DES;
+    CLIGetOptionListWithReturn(ctx, 4, algo_opts, ARRAY_LENGTH(algo_opts), &ares);
+    PrintAndLogEx(INFO, "algo: %s", CLIGetOptionListStr(algo_opts, ARRAY_LENGTH(algo_opts), ares));
+    
+    int keylen = 0;
+    uint8_t key[200] = {0};
+    CLIGetHexWithReturn(ctx, 5, key, &keylen);
+    if (keylen == 0) {
+        keylen = key_size(ares);
+        //memcpy(key, defaultkey, key_size(ares));
     }
-
-    uint8_t dict_filename[FILE_PATH_SIZE + 2] = {0};
-    int dict_filenamelen = 0;
-    if (CLIParamStrToBuf(arg_get_str(ctx, 3), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
-        PrintAndLogEx(FAILED, "File name too long or invalid.");
+    if (keylen != key_size(ares)) {
+        PrintAndLogEx(ERR, "%s key must have %d bytes length instead of %d.", CLIGetOptionListStr(algo_opts, ARRAY_LENGTH(algo_opts), ares), key_size(ares), keylen);
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-
-    bool pattern1b = arg_get_lit(ctx, 4);
-    bool pattern2b = arg_get_lit(ctx, 5);
-
-    if (pattern1b && pattern2b) {
-        PrintAndLogEx(ERR, "Pattern search mode must be 2-byte or 1-byte only.");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
-    if (dict_filenamelen && (pattern1b || pattern2b)) {
-        PrintAndLogEx(ERR, "Pattern search mode and dictionary mode can't be used in one command.");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
-    uint32_t startPattern = 0x0000;
-    uint8_t vpattern[2];
-    int vpatternlen = 0;
-    CLIGetHexWithReturn(ctx, 6, vpattern, &vpatternlen);
-    if (vpatternlen > 0) {
-        if (vpatternlen <= 2) {
-            startPattern = (vpattern[0] << 8) + vpattern[1];
-        } else {
-            PrintAndLogEx(ERR, "Pattern must be 2-byte length.");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
-        if (!pattern2b)
-            PrintAndLogEx(WARNING, "Pattern entered, but search mode not is 2-byte search.");
-    }
-
-    uint8_t jsonname[250] = {0};
-    int jsonnamelen = 0;
-    if (CLIParamStrToBuf(arg_get_str(ctx, 7), jsonname, sizeof(jsonname), &jsonnamelen)) {
-        PrintAndLogEx(ERR, "Invalid json name.");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-    jsonname[jsonnamelen] = 0;
-
-    bool verbose = arg_get_lit(ctx, 8);
-
-    // Get KDF input
-    uint8_t kdfInput[31] = {0};
+    
+    const CLIParserOption kdf_opts[] = {
+        {MFDES_KDF_ALGO_NONE,      "none"},
+        {MFDES_KDF_ALGO_AN10922,   "an10922"},
+        {MFDES_KDF_ALGO_GALLAGHER, "gallagher"},
+    };
+    
+    int kres = MFDES_KDF_ALGO_NONE;
+    CLIGetOptionListWithReturn(ctx, 6, kdf_opts, ARRAY_LENGTH(kdf_opts), &kres);
+    PrintAndLogEx(INFO, "kdf funct: %s", CLIGetOptionListStr(kdf_opts, ARRAY_LENGTH(kdf_opts), kres));
+    
     int kdfInputLen = 0;
-    uint8_t cmdKDFAlgo  = arg_get_int_def(ctx, 9, 0);
-    CLIGetHexWithReturn(ctx, 10, kdfInput, &kdfInputLen);
-*/
+    uint8_t kdfInput[50] = {0};
+    CLIGetHexWithReturn(ctx, 7, kdfInput, &kdfInputLen);
+
+    const CLIParserOption cmode_opts[] = {
+        {DCMPlain,     "plain"},
+        {DCMMACed,     "mac"},
+        {DCMEncrypted, "encrypt"},
+    };
+    
+    int commmode = DCMPlain;
+    CLIGetOptionListWithReturn(ctx, 8, cmode_opts, ARRAY_LENGTH(cmode_opts), &commmode);
+    PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(cmode_opts, ARRAY_LENGTH(cmode_opts), commmode));
+
+    const CLIParserOption commc_opts[] = {
+        {DCCNative,    "native"},
+        {DCCNativeISO, "niso"},
+        {DCCISO,       "iso"},
+    };
+    
+    int commchann = DCCNativeISO;
+    CLIGetOptionListWithReturn(ctx, 8, commc_opts, ARRAY_LENGTH(commc_opts), &commchann);
+    PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(commc_opts, ARRAY_LENGTH(commc_opts), commchann));
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
     
-    uint8_t key[24] = {0};
     DesfireContext dctx;
-    DesfireSetKey(&dctx, keyNum, T_DES, key); // T_DES T_3DES T_3K3DES T_AES
-    DesfireSetCommandChannel(&dctx, DCCNativeISO);
+    DesfireSetKey(&dctx, keyNum, ares, key); // T_DES T_3DES T_3K3DES T_AES
+    DesfireSetCommandChannel(&dctx, commchann);
     
 
     int res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
