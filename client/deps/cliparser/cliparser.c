@@ -298,6 +298,58 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     return 0;
 }
 
+int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array, size_t option_array_len, int *value) {
+    char data[200] = {0};
+    int datalen = 0;
+    int res = CLIParamStrToBuf(argstr, (uint8_t *)data, sizeof(data), &datalen);
+    if (res)
+        return res;
+    
+    // no data to check - we do not touch *value, just return
+    if (datalen == 0)
+        return 0;
+    
+    str_lower(data);
+    
+    int val = -1;
+    int cntr = 0;
+    for (int i = 0; i < option_array_len; i++) {
+        // exact match
+        if (strcmp(option_array[i].text, data) == 0) {
+            *value = option_array[i].code;
+            return 0;
+        }
+        // partial match
+        if (strncmp(option_array[i].text, data, datalen) == 0) {
+            val = option_array[i].code;
+            cntr++;
+        }
+    }
+    
+    // check partial match
+    if (cntr == 0) {
+        PrintAndLogEx(ERR, "Parameter error: No similar option to `%s`. Valid options: %s\n", argstr->sval[0], argstr->hdr.datatype);
+        return 20;
+    }
+    if (cntr > 1) {
+        PrintAndLogEx(ERR, "Parameter error: Several options fit to `%s`. Valid options: %s\n", argstr->sval[0], argstr->hdr.datatype);
+        return 21;
+    }
+    
+    *value = val;    
+    return 0;    
+}
+
+const char *CLIGetOptionListStr(const CLIParserOption *option_array, size_t option_array_len, int value) {
+    static const char *errmsg = "n/a";
+    
+    for (int i = 0; i < option_array_len; i++)
+        if (option_array[i].code == value)
+            return option_array[i].text;
+    return errmsg;
+}
+
+
 // hexstr ->  u64,  w optional len input and default value fallback.
 // 0 = failed
 // 1 = OK
