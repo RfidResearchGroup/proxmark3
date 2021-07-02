@@ -19,13 +19,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <util.h>
+#include "aes.h"
 #include "ui.h"
 #include "protocols.h"
+#include "commonutil.h"
 #include "cmdhf14a.h"
-#include "iso7816/apduinfo.h"     // APDU manipulation / errorcodes
-#include "iso7816/iso7816core.h"  // APDU logging
-#include "util_posix.h"           // msleep
-#include "mifare/desfire_crypto.h"\
+#include "iso7816/apduinfo.h"      // APDU manipulation / errorcodes
+#include "iso7816/iso7816core.h"   // APDU logging
+#include "util_posix.h"            // msleep
+#include "mifare/desfire_crypto.h"
 
 static const char *getstatus(uint16_t *sw) {
     if (sw == NULL) return "--> sw argument error. This should never happen !";
@@ -155,6 +157,16 @@ void DesfireClearContext(DesfireContext *ctx) {
     ctx->cmdChannel = DCCNative;
     ctx->commMode = DCMNone;
 
+    ctx->kdfAlgo = 0;
+    ctx->kdfInputLen = 0;
+    memset(ctx->kdfInput, 0, sizeof(ctx->kdfInput));
+
+    DesfireClearSession(ctx);
+}
+
+void DesfireClearSession(DesfireContext *ctx) {
+    ctx->authChannel = DACNone; // here none - not authenticared
+
     memset(ctx->sessionKeyMAC, 0, sizeof(ctx->sessionKeyMAC));
     memset(ctx->sessionKeyEnc, 0, sizeof(ctx->sessionKeyEnc));
     memset(ctx->lastIV, 0, sizeof(ctx->lastIV));
@@ -169,6 +181,10 @@ void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO 
     ctx->keyNum = keyNum;
     ctx->keyType = keyType;
     memcpy(ctx->key, key, desfire_get_key_length(keyType));
+}
+
+void DesfireSetCommandChannel(DesfireContext *ctx, DesfireCommandChannel cmdChannel) {
+    ctx->cmdChannel = cmdChannel;
 }
 
 static int DESFIRESendApdu(bool activate_field, sAPDU apdu, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint16_t *sw) {
@@ -272,12 +288,12 @@ static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t 
 
     pos += buflen;
     if (!enable_chaining) {
-        if (sw == DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME)) {
+        if (sw == DESFIRE_GET_ISO_STATUS(MFDES_S_OPERATION_OK) ||
+            sw == DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME)) {
             if (resplen) 
                 *resplen = pos;
-            return PM3_SUCCESS;
         }
-        return res;
+        return PM3_SUCCESS;
     }
 
     while (sw == DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME)) {
@@ -312,6 +328,7 @@ static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t 
 
     if (resplen)
         *resplen = (splitbysize) ? i : pos;
+
     return PM3_SUCCESS;    
 }
 
@@ -376,4 +393,274 @@ int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uin
     
     return DesfireSelectAID(ctx, data, (select_two) ? &data[3] : NULL);
 }
+
+bool DesfireIsAuthenticated(DesfireContext *dctx) {
+    return dctx->authChannel != DACNone;
+}
+
+int DesfireAuthenticate(DesfireContext *dctx, DesfireAuthChannel authChannel) {
+    // 3 different way to authenticate   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
+    // 4 different crypto arg1   DES, 3DES, 3K3DES, AES
+    // 3 different communication modes,  PLAIN,MAC,CRYPTO
+    
+    DesfireClearSession(dctx);
+    
+    if (authChannel == DACNone)
+        return PM3_SUCCESS;
+
+    mbedtls_aes_context ctx;
+
+    uint8_t keybytes[24] = {0};
+    // Crypt constants
+    uint8_t IV[16] = {0};
+    uint8_t RndA[16] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16};
+    uint8_t RndB[16] = {0};
+    uint8_t encRndB[16] = {0};
+    uint8_t rotRndB[16] = {0};   //RndB'
+    uint8_t both[32 + 1] = {0};  // ek/dk_keyNo(RndA+RndB')
+
+    // Part 1
+    memcpy(keybytes, dctx->key, desfire_get_key_length(dctx->keyType));
+
+    struct desfire_key dkey = {0};
+    desfirekey_t key = &dkey;
+
+    if (dctx->keyType == T_AES) {
+        mbedtls_aes_init(&ctx);
+        Desfire_aes_key_new(keybytes, key);
+    } else if (dctx->keyType == T_3DES) {
+        Desfire_3des_key_new_with_version(keybytes, key);
+    } else if (dctx->keyType == T_DES) {
+        Desfire_des_key_new(keybytes, key);
+    } else if (dctx->keyType == T_3K3DES) {
+        Desfire_3k3des_key_new_with_version(keybytes, key);
+    }
+
+    if (dctx->kdfAlgo == MFDES_KDF_ALGO_AN10922) {
+        mifare_kdf_an10922(key, dctx->kdfInput, dctx->kdfInputLen);
+        PrintAndLogEx(DEBUG, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
+    } else if (dctx->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER) {
+        // We will overrite any provided KDF input since a gallagher specific KDF was requested.
+        dctx->kdfInputLen = 11;
+
+        /*if (mfdes_kdf_input_gallagher(tag->info.uid, tag->info.uidlen, dctx->keyNum, tag->selected_application, dctx->kdfInput, &dctx->kdfInputLen) != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Could not generate Gallagher KDF input");
+        }*/
+
+        mifare_kdf_an10922(key, dctx->kdfInput, dctx->kdfInputLen);
+        PrintAndLogEx(DEBUG, "    KDF Input: " _YELLOW_("%s"), sprint_hex(dctx->kdfInput, dctx->kdfInputLen));
+        PrintAndLogEx(DEBUG, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
+
+    }
+
+    uint8_t subcommand = MFDES_AUTHENTICATE;
+    dctx->authChannel = authChannel;
+    if (dctx->authChannel == DACEV1) {
+        if (dctx->keyType == T_AES)
+            subcommand = MFDES_AUTHENTICATE_AES;
+        else
+            subcommand = MFDES_AUTHENTICATE_ISO;
+    }
+
+    uint32_t recv_len = 0;
+    uint8_t respcode = 0;
+    uint8_t recv_data[256] = {0};
+
+    // Let's send our auth command
+    int res = DesfireExchangeEx(false, dctx, subcommand, &dctx->keyNum, 1, &respcode, recv_data, &recv_len, false);
+    if (res != PM3_SUCCESS) {
+        return 1;
+    }
+
+    if (!recv_len) {
+        return 2;
+    }
+
+    if (respcode != MFDES_ADDITIONAL_FRAME) {
+        return 3;
+    }
+
+    uint32_t expectedlen = 8;
+    if (dctx->keyType == T_AES || dctx->keyType == T_3K3DES) {
+        expectedlen = 16;
+    }
+
+    if (recv_len != expectedlen) {
+        return 4;
+    }
+
+    // Part 2
+    uint32_t rndlen = recv_len;
+    memcpy(encRndB, recv_data, rndlen);
+    
+
+    // Part 3
+    if (dctx->keyType == T_AES) {
+        if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
+            return 5;
+        }
+        mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, rndlen, IV, encRndB, RndB);
+    } else if (dctx->keyType == T_DES)
+        des_decrypt(RndB, encRndB, key->data);
+    else if (dctx->keyType == T_3DES)
+        tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 2);
+    else if (dctx->keyType == T_3K3DES) {
+        tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 3);
+    }
+
+    if (g_debugMode > 1) {
+        PrintAndLogEx(DEBUG, "encRndB: %s", sprint_hex(encRndB, 8));
+        PrintAndLogEx(DEBUG, "RndB: %s", sprint_hex(RndB, 8));
+    }
+
+    // - Rotate RndB by 8 bits
+    memcpy(rotRndB, RndB, rndlen);
+    rol(rotRndB, rndlen);
+
+    uint8_t encRndA[16] = {0x00};
+
+    // - Encrypt our response
+    if (dctx->authChannel == DACd40) {
+        des_decrypt(encRndA, RndA, key->data);
+        memcpy(both, encRndA, rndlen);
+
+        for (uint32_t x = 0; x < rndlen; x++) {
+            rotRndB[x] = rotRndB[x] ^ encRndA[x];
+        }
+
+        des_decrypt(encRndB, rotRndB, key->data);
+        memcpy(both + rndlen, encRndB, rndlen);
+    } else if (dctx->authChannel == DACEV1 && dctx->keyType != T_AES) {
+        if (dctx->keyType == T_3DES) {
+            uint8_t tmp[16] = {0x00};
+            memcpy(tmp, RndA, rndlen);
+            memcpy(tmp + rndlen, rotRndB, rndlen);
+            if (g_debugMode > 1) {
+                PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
+                PrintAndLogEx(DEBUG, "Both: %s", sprint_hex(tmp, 16));
+            }
+            tdes_nxp_send(tmp, both, 16, key->data, IV, 2);
+            if (g_debugMode > 1) {
+                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 16));
+            }
+        } else if (dctx->keyType == T_3K3DES) {
+            uint8_t tmp[32] = {0x00};
+            memcpy(tmp, RndA, rndlen);
+            memcpy(tmp + rndlen, rotRndB, rndlen);
+            if (g_debugMode > 1) {
+                PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
+                PrintAndLogEx(DEBUG, "Both3k3: %s", sprint_hex(tmp, 32));
+            }
+            tdes_nxp_send(tmp, both, 32, key->data, IV, 3);
+            if (g_debugMode > 1) {
+                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 32));
+            }
+        }
+    } else if (dctx->authChannel == DACEV1 && dctx->keyType == T_AES) {
+        uint8_t tmp[32] = {0x00};
+        memcpy(tmp, RndA, rndlen);
+        memcpy(tmp + rndlen, rotRndB, rndlen);
+        if (g_debugMode > 1) {
+            PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
+            PrintAndLogEx(DEBUG, "Both3k3: %s", sprint_hex(tmp, 32));
+        }
+        if (dctx->keyType == T_AES) {
+            if (mbedtls_aes_setkey_enc(&ctx, key->data, 128) != 0) {
+                return 6;
+            }
+            mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, 32, IV, tmp, both);
+            if (g_debugMode > 1) {
+                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 32));
+            }
+        }
+    }
+
+    uint32_t bothlen = 16;
+    if (dctx->keyType == T_AES || dctx->keyType == T_3K3DES) {
+        bothlen = 32;
+    }
+
+    res = DesfireExchangeEx(false, dctx, MFDES_ADDITIONAL_FRAME, both, bothlen, &respcode, recv_data, &recv_len, false);
+    if (res != PM3_SUCCESS) {
+        return 7;
+    }
+
+    if (!recv_len) {
+        return 8;
+    }
+
+    if (respcode != MFDES_S_OPERATION_OK) {
+        return 9;
+    }
+
+    // Part 4
+    memcpy(encRndA, recv_data, rndlen);
+
+    // tag->session_key = &default_key;
+    /*struct desfire_key *p = realloc(tag->session_key, sizeof(struct desfire_key));
+    if (!p) {
+        PrintAndLogEx(FAILED, "Cannot allocate memory for session keys");
+        free(tag->session_key);
+        return PM3_EMALLOC;
+    }
+    tag->session_key = p;
+
+    memset(tag->session_key, 0x00, sizeof(struct desfire_key));
+    */
+    struct desfire_key sesskey = {0};
+
+    Desfire_session_key_new(RndA, RndB, key, &sesskey);
+    memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));
+
+PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, rndlen));
+    if (dctx->keyType == T_DES)
+        des_decrypt(encRndA, encRndA, key->data);
+    else if (dctx->keyType == T_3DES)
+        tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 2);
+    else if (dctx->keyType == T_3K3DES)
+        tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 3);
+    else if (dctx->keyType == T_AES) {
+        if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
+            return 10;
+        }
+        mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, rndlen, IV, encRndA, encRndA);
+    }
+
+    rol(RndA, rndlen);
+PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
+PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
+    for (uint32_t x = 0; x < rndlen; x++) {
+        if (RndA[x] != encRndA[x]) {
+            if (g_debugMode > 1) {
+                PrintAndLogEx(DEBUG, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
+                PrintAndLogEx(DEBUG, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
+            }
+            return 11;
+        }
+    }
+
+    // If the 3Des key first 8 bytes = 2nd 8 Bytes then we are really using Singe Des
+    // As such we need to set the session key such that the 2nd 8 bytes = 1st 8 Bytes
+    if (dctx->keyType == T_3DES) {
+        if (memcmp(key->data, &key->data[8], 8) == 0)
+            memcpy(&dctx->sessionKeyEnc[8], dctx->sessionKeyEnc, 8);
+    }
+
+//    rpayload->sessionkeylen = payload->keylen;
+  //  memcpy(rpayload->sessionkey, tag->session_key->data, rpayload->sessionkeylen);
+  //  memset(tag->ivect, 0, MAX_CRYPTO_BLOCK_SIZE);
+  //  tag->authenticated_key_no = payload->keyno;
+
+    if (dctx->authChannel == DACEV1) {
+        cmac_generate_subkeys(&sesskey, MCD_RECEIVE);
+        //key->cmac_sk1 and key->cmac_sk2
+        //memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));
+    }
+    
+    memcpy(dctx->sessionKeyMAC, dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType));
+PrintAndLogEx(INFO, "sessionKeyEnc : %s", sprint_hex(dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType)));
+
+    return PM3_SUCCESS;
+}
+
 

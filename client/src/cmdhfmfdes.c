@@ -5106,8 +5106,8 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     
     uint8_t key[24] = {0};
     DesfireContext dctx;
-    DesfireSetKey(&dctx, 1, T_DES, key);
-    dctx.cmdChannel = DCCNativeISO;
+    DesfireSetKey(&dctx, 0, T_DES, key); // T_DES T_3DES T_3K3DES T_AES
+    DesfireSetCommandChannel(&dctx, DCCNativeISO);
     
 
     //size_t len = 0;
@@ -5120,6 +5120,18 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
+    
+    res = DesfireAuthenticate(&dctx, DACd40); //DACd40 DACEV1
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
+    
+    if (DesfireIsAuthenticated(&dctx))
+        PrintAndLogEx(ERR, "Desfire  " _GREEN_("authenticated") , res);
+    else
+        return PM3_ESOFT;
 
     
     

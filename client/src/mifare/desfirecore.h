@@ -44,11 +44,13 @@ typedef enum {
 
 typedef struct DesfireContextS {
     uint8_t keyNum;
-    enum DESFIRE_CRYPTOALGO keyType;   // des,2tdea,3tdea,aes
+    enum DESFIRE_CRYPTOALGO keyType;   // des/2tdea/3tdea/aes
     uint8_t key[DESF_MAX_KEY_LEN];
     
     // KDF finction
-    // KDF input
+    uint8_t kdfAlgo;
+    uint8_t kdfInputLen;
+    uint8_t kdfInput[31];
     
     DesfireAuthChannel authChannel;    // none/d40/ev1/ev2
     DesfireCommandChannel cmdChannel;  // native/nativeiso/iso
@@ -64,14 +66,19 @@ typedef struct DesfireContextS {
 } DesfireContext;
 
 void DesfireClearContext(DesfireContext *ctx);
+void DesfireClearSession(DesfireContext *ctx);
 void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key);
+void DesfireSetCommandChannel(DesfireContext *ctx, DesfireCommandChannel cmdChannel);
 
 const char *DesfireGetErrorString(int res, uint16_t *sw);
 
-int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2);
-int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uint32_t aid2);
 int DesfireExchange(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen);
 int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining);
+
+int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2);
+int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uint32_t aid2);
+int DesfireAuthenticate(DesfireContext *dctx, DesfireAuthChannel authChannel);
+bool DesfireIsAuthenticated(DesfireContext *dctx);
 
 
 #endif // __DESFIRECORE_H
