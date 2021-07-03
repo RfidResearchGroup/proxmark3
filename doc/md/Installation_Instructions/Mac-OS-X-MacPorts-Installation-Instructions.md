@@ -39,7 +39,7 @@ These instructions will show how to setup the environment on OSX to the point wh
     sudo port select --set cython cython39 
     ```
 
-    This won't set a default python3.pc (and  python3-embed.pc) under the MacPorts pkgconfig includes folder.
+    This won't set a default python3.pc (and python3-embed.pc) under the MacPorts pkgconfig includes folder.
 
     To fix that, follow these steps:
 
