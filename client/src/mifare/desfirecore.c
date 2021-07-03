@@ -256,19 +256,16 @@ static int DESFIRESendApdu(bool activate_field, sAPDU apdu, uint8_t *result, uin
     return PM3_SUCCESS;
 }
 
-static int DesfireExchangeNative(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining) {
+static int DesfireExchangeNative(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
     
     return PM3_SUCCESS;
 }
 
-static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining) {
+static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
     if (resplen) 
         *resplen = 0;
     if (respcode) 
         *respcode = 0xff;
-
-    // TODO !!!
-    size_t splitbysize = 0;
 
     uint16_t sw = 0;
     uint8_t buf[255 * 5]  = {0x00};
@@ -342,15 +339,15 @@ static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t 
     return PM3_SUCCESS;    
 }
 
-int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining) {
+int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
     int res = PM3_SUCCESS;
     
     switch(ctx->cmdChannel) {
         case DCCNative:
-            res = DesfireExchangeNative(activate_field, ctx, cmd, data, datalen, respcode, resp, resplen, enable_chaining);
+            res = DesfireExchangeNative(activate_field, ctx, cmd, data, datalen, respcode, resp, resplen, enable_chaining, splitbysize);
         break;
         case DCCNativeISO:
-            res = DesfireExchangeISO(activate_field, ctx, cmd, data, datalen, respcode, resp, resplen, enable_chaining);
+            res = DesfireExchangeISO(activate_field, ctx, cmd, data, datalen, respcode, resp, resplen, enable_chaining, splitbysize);
         break;
         case DCCISO:
             return PM3_EAPDU_FAIL;
@@ -361,7 +358,7 @@ int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uin
 }
 
 int DesfireExchange(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen) {
-    return DesfireExchangeEx(false, ctx, cmd, data, datalen, respcode, resp, resplen, true);
+    return DesfireExchangeEx(false, ctx, cmd, data, datalen, respcode, resp, resplen, true, 0);
 }
 
 int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2) {
@@ -376,7 +373,7 @@ int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2) {
     size_t resplen = 0;
     uint8_t respcode = 0;
     
-    int res = DesfireExchangeEx(true, ctx, MFDES_SELECT_APPLICATION, data, (aid2 == NULL) ? 3 : 6, &respcode, resp, &resplen, true);
+    int res = DesfireExchangeEx(true, ctx, MFDES_SELECT_APPLICATION, data, (aid2 == NULL) ? 3 : 6, &respcode, resp, &resplen, true, 0);
     if (res == PM3_SUCCESS) {
         if (resplen != 0)
             return PM3_ECARDEXCHANGE;
@@ -472,7 +469,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireAuthChannel authChannel) {
     uint8_t recv_data[256] = {0};
 
     // Let's send our auth command
-    int res = DesfireExchangeEx(false, dctx, subcommand, &dctx->keyNum, 1, &respcode, recv_data, &recv_len, false);
+    int res = DesfireExchangeEx(false, dctx, subcommand, &dctx->keyNum, 1, &respcode, recv_data, &recv_len, false, 0);
     if (res != PM3_SUCCESS) {
         return 1;
     }
@@ -585,7 +582,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireAuthChannel authChannel) {
         bothlen = 32;
     }
 
-    res = DesfireExchangeEx(false, dctx, MFDES_ADDITIONAL_FRAME, both, bothlen, &respcode, recv_data, &recv_len, false);
+    res = DesfireExchangeEx(false, dctx, MFDES_ADDITIONAL_FRAME, both, bothlen, &respcode, recv_data, &recv_len, false, 0);
     if (res != PM3_SUCCESS) {
         return 7;
     }
@@ -655,6 +652,16 @@ PrintAndLogEx(INFO, "sessionKeyEnc : %s", sprint_hex(dctx->sessionKeyEnc, desfir
 int DesfireGetAIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
     uint8_t respcode = 0xff;
     int res = DesfireExchange(dctx, MFDES_GET_APPLICATION_IDS, NULL, 0, &respcode, resp, resplen);
+    if (res != PM3_SUCCESS)
+        return res;
+    if (respcode != MFDES_S_OPERATION_OK)
+        return PM3_EAPDU_FAIL;
+    return PM3_SUCCESS;
+}
+
+int DesfireGetDFList(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
+    uint8_t respcode = 0xff;
+    int res = DesfireExchangeEx(false, dctx, MFDES_GET_DF_NAMES, NULL, 0, &respcode, resp, resplen, true, 24);
     if (res != PM3_SUCCESS)
         return res;
     if (respcode != MFDES_S_OPERATION_OK)

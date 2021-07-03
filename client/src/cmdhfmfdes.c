@@ -5080,7 +5080,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     };
     
     int commchann = DCCNativeISO;
-    CLIGetOptionListWithReturn(ctx, 8, commc_opts, ARRAY_LENGTH(commc_opts), &commchann);
+    CLIGetOptionListWithReturn(ctx, 9, commc_opts, ARRAY_LENGTH(commc_opts), &commchann);
     PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(commc_opts, ARRAY_LENGTH(commc_opts), commchann));
 
     const CLIParserOption authc_opts[] = {
@@ -5090,7 +5090,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     };
     
     int authchann = DACEV1;
-    CLIGetOptionListWithReturn(ctx, 9, authc_opts, ARRAY_LENGTH(authc_opts), &authchann);
+    CLIGetOptionListWithReturn(ctx, 10, authc_opts, ARRAY_LENGTH(authc_opts), &authchann);
     PrintAndLogEx(INFO, "auth channel: %s", CLIGetOptionListStr(authc_opts, ARRAY_LENGTH(authc_opts), authchann));
 
     SetAPDULogging(APDULogging);
@@ -5142,8 +5142,152 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-//    {"getappnames",      CmdHF14ADesGetAppNames,      IfPm3Iso14443a,  "Get Applications list"},
 static int CmdHF14ADesGetAppNames(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes getappnames",
+                  "Get Application IDs, ISO IDs and DF names from card. Master key needs to be provided.",
+                  "hf mfdes getappnames -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Commpunicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "commc",   "<native/niso/iso>", "Commpunicaton channel: native/niso/iso"),
+        arg_str0("u",  "authc",   "<d40/ev1/ev2>", "Authentication channel: d40/ev1/ev2"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    uint8_t keyNum = arg_get_int_def(ctx, 3, 0); // defaultKeyId
+
+
+    const CLIParserOption algo_opts[] = {
+        {T_DES,    "des"},
+        {T_3DES,   "2tdea"},
+        {T_3K3DES, "3tdea"},
+        {T_AES,    "aes"},
+    };
+    
+    int ares = T_DES;
+    CLIGetOptionListWithReturn(ctx, 4, algo_opts, ARRAY_LENGTH(algo_opts), &ares);
+    PrintAndLogEx(INFO, "algo: %s", CLIGetOptionListStr(algo_opts, ARRAY_LENGTH(algo_opts), ares));
+    
+    int keylen = 0;
+    uint8_t key[200] = {0};
+    CLIGetHexWithReturn(ctx, 5, key, &keylen);
+    if (keylen == 0) {
+        keylen = key_size(ares);
+        //memcpy(key, defaultkey, key_size(ares));
+    }
+    if (keylen != key_size(ares)) {
+        PrintAndLogEx(ERR, "%s key must have %d bytes length instead of %d.", CLIGetOptionListStr(algo_opts, ARRAY_LENGTH(algo_opts), ares), key_size(ares), keylen);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    
+    const CLIParserOption kdf_opts[] = {
+        {MFDES_KDF_ALGO_NONE,      "none"},
+        {MFDES_KDF_ALGO_AN10922,   "an10922"},
+        {MFDES_KDF_ALGO_GALLAGHER, "gallagher"},
+    };
+    
+    int kres = MFDES_KDF_ALGO_NONE;
+    CLIGetOptionListWithReturn(ctx, 6, kdf_opts, ARRAY_LENGTH(kdf_opts), &kres);
+    PrintAndLogEx(INFO, "kdf funct: %s", CLIGetOptionListStr(kdf_opts, ARRAY_LENGTH(kdf_opts), kres));
+    
+    int kdfInputLen = 0;
+    uint8_t kdfInput[50] = {0};
+    CLIGetHexWithReturn(ctx, 7, kdfInput, &kdfInputLen);
+
+    const CLIParserOption cmode_opts[] = {
+        {DCMPlain,     "plain"},
+        {DCMMACed,     "mac"},
+        {DCMEncrypted, "encrypt"},
+    };
+    
+    int commmode = DCMPlain;
+    CLIGetOptionListWithReturn(ctx, 8, cmode_opts, ARRAY_LENGTH(cmode_opts), &commmode);
+    PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(cmode_opts, ARRAY_LENGTH(cmode_opts), commmode));
+
+    const CLIParserOption commc_opts[] = {
+        {DCCNative,    "native"},
+        {DCCNativeISO, "niso"},
+        {DCCISO,       "iso"},
+    };
+    
+    int commchann = DCCNativeISO;
+    CLIGetOptionListWithReturn(ctx, 9, commc_opts, ARRAY_LENGTH(commc_opts), &commchann);
+    PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(commc_opts, ARRAY_LENGTH(commc_opts), commchann));
+
+    const CLIParserOption authc_opts[] = {
+        {DACd40, "d40"},
+        {DACEV1, "ev1"},
+        {DACEV2, "ev2"},
+    };
+    
+    int authchann = DACEV1;
+    CLIGetOptionListWithReturn(ctx, 10, authc_opts, ARRAY_LENGTH(authc_opts), &authchann);
+    PrintAndLogEx(INFO, "auth channel: %s", CLIGetOptionListStr(authc_opts, ARRAY_LENGTH(authc_opts), authchann));
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+    
+    DesfireContext dctx;
+    DesfireSetKey(&dctx, keyNum, ares, key);
+    DesfireSetCommandChannel(&dctx, commchann);
+    
+
+    int res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+        DropField();
+        return PM3_ESOFT;
+    }
+    
+    res = DesfireAuthenticate(&dctx, authchann); 
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
+    
+    if (DesfireIsAuthenticated(&dctx)) {
+        if (verbose)
+            PrintAndLogEx(ERR, "Desfire  " _GREEN_("authenticated") , res);
+    } else {
+        return PM3_ESOFT;
+    }
+
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t buflen = 0;
+    
+    // result bytes: 3, 2, 1-16. total record size = 24
+    res = DesfireGetDFList(&dctx, buf, &buflen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire DesfireGetDFList command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
+    
+    if (buflen > 0) {
+        PrintAndLogEx(INFO, "----------------------- " _CYAN_("File list") " -----------------------");
+        for (int i = 0; i < buflen; i++)
+            PrintAndLogEx(INFO, "AID: %06x ISO file id: %02x%02x ISO DF name[%d]: %s", 
+                            DesfireAIDByteToUint(&buf[i * 24]),
+                            buf[i * 24 + 3], buf[i * 24 + 4],
+                            strlen((char *)&buf[i * 24 + 5]),
+                            &buf[i * 24 + 5]);
+    }
+    
+    DropField();
     return PM3_SUCCESS;
 }
 
