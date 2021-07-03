@@ -1,5 +1,6 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014 Iceman
+// Copyright (C) 2021 Merlok
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -4997,6 +4998,133 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     return PM3_SUCCESS;
 }
 */
+static uint8_t defaultKeyNum = 0; 
+static enum DESFIRE_CRYPTOALGO defaultAlgoId = T_DES;
+static uint8_t defaultKey[DESFIRE_MAX_KEY_SIZE] = {0};
+static int defaultKdfAlgo = MFDES_KDF_ALGO_NONE;
+static int defaultKdfInputLen = 0;
+static uint8_t defaultKdfInput[50] = {0};
+static DesfireSecureChannel defaultSecureChannel = DACEV1;    
+static DesfireCommandSet defaultCommSet = DCCNativeISO;     
+static DesfireCommunicationMode defaultCommMode = DCMPlain;
+
+static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dctx, 
+                        uint8_t keynoid, uint8_t algoid, uint8_t keyid, 
+                        uint8_t kdfid, uint8_t kdfiid, 
+                        uint8_t cmodeid, uint8_t ccsetid, uint8_t schannid,
+                        int *securechannel) {
+                        
+    uint8_t keynum = defaultKeyNum;                        
+    int algores = defaultAlgoId;
+    uint8_t key[DESFIRE_MAX_KEY_SIZE] = {0};
+    memcpy(key, defaultKey, DESFIRE_MAX_KEY_SIZE);
+    int kdfAlgo = defaultKdfAlgo;
+    int kdfInputLen = defaultKdfInputLen;
+    uint8_t kdfInput[50] = {0};
+    memcpy(kdfInput, defaultKdfInput, defaultKdfInputLen);
+    int commmode = defaultCommMode;
+    int commset = defaultCommSet;
+    int secchann = defaultSecureChannel;
+
+    if (keynoid) {
+        keynum = arg_get_int_def(ctx, keynoid, keynum);
+    }
+    
+    const CLIParserOption algo_opts[] = {
+        {T_DES,    "des"},
+        {T_3DES,   "2tdea"},
+        {T_3K3DES, "3tdea"},
+        {T_AES,    "aes"},
+    };
+    
+    if (algoid) {
+        if (CLIGetOptionList(arg_get_str(ctx, algoid), algo_opts, ARRAY_LENGTH(algo_opts), &algores))
+           return PM3_ESOFT;
+        PrintAndLogEx(INFO, "algo: %s", CLIGetOptionListStr(algo_opts, ARRAY_LENGTH(algo_opts), algores));
+    }
+    
+    if (keyid) {
+        int keylen = 0;
+        uint8_t keydata[200] = {0};
+        if (CLIParamHexToBuf(arg_get_str(ctx, keyid), keydata, sizeof(keydata), &keylen))
+           return PM3_ESOFT;
+        if (keylen && keylen != key_size(algores)) {
+            PrintAndLogEx(ERR, "%s key must have %d bytes length instead of %d.", CLIGetOptionListStr(algo_opts, ARRAY_LENGTH(algo_opts), algores), key_size(algores), keylen);
+            return PM3_EINVARG;
+        }
+        if (keylen)
+            memcpy(key, keydata, keylen);
+    }
+    
+    if (kdfid) {
+        const CLIParserOption kdf_opts[] = {
+            {MFDES_KDF_ALGO_NONE,      "none"},
+            {MFDES_KDF_ALGO_AN10922,   "an10922"},
+            {MFDES_KDF_ALGO_GALLAGHER, "gallagher"},
+        };
+        
+        if (CLIGetOptionList(arg_get_str(ctx, kdfid), kdf_opts, ARRAY_LENGTH(kdf_opts), &kdfAlgo))
+           return PM3_ESOFT;
+        PrintAndLogEx(INFO, "kdf funct: %s", CLIGetOptionListStr(kdf_opts, ARRAY_LENGTH(kdf_opts), kdfAlgo));
+           
+    }
+    
+    if (kdfiid) {
+        int datalen = kdfInputLen;
+        uint8_t data[200] = {0};
+        if (CLIParamHexToBuf(arg_get_str(ctx, kdfiid), data, sizeof(data), &datalen))
+           return PM3_ESOFT;
+        if (datalen) {
+            kdfInputLen = datalen;
+            memcpy(kdfInput, data, datalen);
+        }
+    }
+    
+    if (cmodeid) {
+        const CLIParserOption cmode_opts[] = {
+            {DCMPlain,     "plain"},
+            {DCMMACed,     "mac"},
+            {DCMEncrypted, "encrypt"},
+        };
+        
+        if (CLIGetOptionList(arg_get_str(ctx, cmodeid), cmode_opts, ARRAY_LENGTH(cmode_opts), &commmode))
+           return PM3_ESOFT;
+        PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(cmode_opts, ARRAY_LENGTH(cmode_opts), commmode));
+    }
+
+    if (ccsetid) {
+        const CLIParserOption commc_opts[] = {
+            {DCCNative,    "native"},
+            {DCCNativeISO, "niso"},
+            {DCCISO,       "iso"},
+        };
+        
+        if (CLIGetOptionList(arg_get_str(ctx, ccsetid), commc_opts, ARRAY_LENGTH(commc_opts), &commset))
+           return PM3_ESOFT;
+        PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(commc_opts, ARRAY_LENGTH(commc_opts), commset));
+    }
+
+    if (schannid) {
+        const CLIParserOption authc_opts[] = {
+            {DACd40, "d40"},
+            {DACEV1, "ev1"},
+            {DACEV2, "ev2"},
+        };
+        
+        if (CLIGetOptionList(arg_get_str(ctx, schannid), authc_opts, ARRAY_LENGTH(authc_opts), &secchann))
+           return PM3_ESOFT;
+        PrintAndLogEx(INFO, "auth channel: %s", CLIGetOptionListStr(authc_opts, ARRAY_LENGTH(authc_opts), secchann));
+    }
+        
+    DesfireSetKey(dctx, keynum, algores, key);
+    DesfireSetKdf(dctx, kdfAlgo, kdfInput, kdfInputLen);
+    DesfireSetCommandSet(dctx, commset);
+    DesfireSetCommMode(dctx, commmode);
+    if (securechannel)
+        *securechannel = secchann;
+    
+    return PM3_SUCCESS;
+}
 
 static int CmdHF14ADesGetAIDs(const char *Cmd) {
     CLIParserContext *ctx;
@@ -5013,102 +5141,38 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
         arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
         arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
-        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Commpunicaton mode: plain/mac/encrypt"),
-        arg_str0("c",  "commc",   "<native/niso/iso>", "Commpunicaton channel: native/niso/iso"),
-        arg_str0("u",  "authc",   "<d40/ev1/ev2>", "Authentication channel: d40/ev1/ev2"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    uint8_t keyNum = arg_get_int_def(ctx, 3, 0); // defaultKeyId
-
-
-    const CLIParserOption algo_opts[] = {
-        {T_DES,    "des"},
-        {T_3DES,   "2tdea"},
-        {T_3K3DES, "3tdea"},
-        {T_AES,    "aes"},
-    };
     
-    int ares = T_DES;
-    CLIGetOptionListWithReturn(ctx, 4, algo_opts, ARRAY_LENGTH(algo_opts), &ares);
-    PrintAndLogEx(INFO, "algo: %s", CLIGetOptionListStr(algo_opts, ARRAY_LENGTH(algo_opts), ares));
-    
-    int keylen = 0;
-    uint8_t key[200] = {0};
-    CLIGetHexWithReturn(ctx, 5, key, &keylen);
-    if (keylen == 0) {
-        keylen = key_size(ares);
-        //memcpy(key, defaultkey, key_size(ares));
-    }
-    if (keylen != key_size(ares)) {
-        PrintAndLogEx(ERR, "%s key must have %d bytes length instead of %d.", CLIGetOptionListStr(algo_opts, ARRAY_LENGTH(algo_opts), ares), key_size(ares), keylen);
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, &securechann);
+    if (res) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
     
-    const CLIParserOption kdf_opts[] = {
-        {MFDES_KDF_ALGO_NONE,      "none"},
-        {MFDES_KDF_ALGO_AN10922,   "an10922"},
-        {MFDES_KDF_ALGO_GALLAGHER, "gallagher"},
-    };
-    
-    int kres = MFDES_KDF_ALGO_NONE;
-    CLIGetOptionListWithReturn(ctx, 6, kdf_opts, ARRAY_LENGTH(kdf_opts), &kres);
-    PrintAndLogEx(INFO, "kdf funct: %s", CLIGetOptionListStr(kdf_opts, ARRAY_LENGTH(kdf_opts), kres));
-    
-    int kdfInputLen = 0;
-    uint8_t kdfInput[50] = {0};
-    CLIGetHexWithReturn(ctx, 7, kdfInput, &kdfInputLen);
-
-    const CLIParserOption cmode_opts[] = {
-        {DCMPlain,     "plain"},
-        {DCMMACed,     "mac"},
-        {DCMEncrypted, "encrypt"},
-    };
-    
-    int commmode = DCMPlain;
-    CLIGetOptionListWithReturn(ctx, 8, cmode_opts, ARRAY_LENGTH(cmode_opts), &commmode);
-    PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(cmode_opts, ARRAY_LENGTH(cmode_opts), commmode));
-
-    const CLIParserOption commc_opts[] = {
-        {DCCNative,    "native"},
-        {DCCNativeISO, "niso"},
-        {DCCISO,       "iso"},
-    };
-    
-    int commchann = DCCNativeISO;
-    CLIGetOptionListWithReturn(ctx, 9, commc_opts, ARRAY_LENGTH(commc_opts), &commchann);
-    PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(commc_opts, ARRAY_LENGTH(commc_opts), commchann));
-
-    const CLIParserOption authc_opts[] = {
-        {DACd40, "d40"},
-        {DACEV1, "ev1"},
-        {DACEV2, "ev2"},
-    };
-    
-    int authchann = DACEV1;
-    CLIGetOptionListWithReturn(ctx, 10, authc_opts, ARRAY_LENGTH(authc_opts), &authchann);
-    PrintAndLogEx(INFO, "auth channel: %s", CLIGetOptionListStr(authc_opts, ARRAY_LENGTH(authc_opts), authchann));
-
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
     
-    DesfireContext dctx;
-    DesfireSetKey(&dctx, keyNum, ares, key); // T_DES T_3DES T_3K3DES T_AES
-    DesfireSetCommandChannel(&dctx, commchann);
+    if (verbose)
+        DesfirePrintContext(&dctx);
     
-
-    int res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
         DropField();
         return PM3_ESOFT;
     }
     
-    res = DesfireAuthenticate(&dctx, authchann); //DACd40 DACEV1
+    res = DesfireAuthenticate(&dctx, securechann); //DACd40 DACEV1
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
         DropField();
@@ -5157,102 +5221,38 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
         arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
         arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
         arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
-        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Commpunicaton mode: plain/mac/encrypt"),
-        arg_str0("c",  "commc",   "<native/niso/iso>", "Commpunicaton channel: native/niso/iso"),
-        arg_str0("u",  "authc",   "<d40/ev1/ev2>", "Authentication channel: d40/ev1/ev2"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    uint8_t keyNum = arg_get_int_def(ctx, 3, 0); // defaultKeyId
-
-
-    const CLIParserOption algo_opts[] = {
-        {T_DES,    "des"},
-        {T_3DES,   "2tdea"},
-        {T_3K3DES, "3tdea"},
-        {T_AES,    "aes"},
-    };
-    
-    int ares = T_DES;
-    CLIGetOptionListWithReturn(ctx, 4, algo_opts, ARRAY_LENGTH(algo_opts), &ares);
-    PrintAndLogEx(INFO, "algo: %s", CLIGetOptionListStr(algo_opts, ARRAY_LENGTH(algo_opts), ares));
-    
-    int keylen = 0;
-    uint8_t key[200] = {0};
-    CLIGetHexWithReturn(ctx, 5, key, &keylen);
-    if (keylen == 0) {
-        keylen = key_size(ares);
-        //memcpy(key, defaultkey, key_size(ares));
-    }
-    if (keylen != key_size(ares)) {
-        PrintAndLogEx(ERR, "%s key must have %d bytes length instead of %d.", CLIGetOptionListStr(algo_opts, ARRAY_LENGTH(algo_opts), ares), key_size(ares), keylen);
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-    
-    const CLIParserOption kdf_opts[] = {
-        {MFDES_KDF_ALGO_NONE,      "none"},
-        {MFDES_KDF_ALGO_AN10922,   "an10922"},
-        {MFDES_KDF_ALGO_GALLAGHER, "gallagher"},
-    };
-    
-    int kres = MFDES_KDF_ALGO_NONE;
-    CLIGetOptionListWithReturn(ctx, 6, kdf_opts, ARRAY_LENGTH(kdf_opts), &kres);
-    PrintAndLogEx(INFO, "kdf funct: %s", CLIGetOptionListStr(kdf_opts, ARRAY_LENGTH(kdf_opts), kres));
-    
-    int kdfInputLen = 0;
-    uint8_t kdfInput[50] = {0};
-    CLIGetHexWithReturn(ctx, 7, kdfInput, &kdfInputLen);
-
-    const CLIParserOption cmode_opts[] = {
-        {DCMPlain,     "plain"},
-        {DCMMACed,     "mac"},
-        {DCMEncrypted, "encrypt"},
-    };
-    
-    int commmode = DCMPlain;
-    CLIGetOptionListWithReturn(ctx, 8, cmode_opts, ARRAY_LENGTH(cmode_opts), &commmode);
-    PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(cmode_opts, ARRAY_LENGTH(cmode_opts), commmode));
-
-    const CLIParserOption commc_opts[] = {
-        {DCCNative,    "native"},
-        {DCCNativeISO, "niso"},
-        {DCCISO,       "iso"},
-    };
-    
-    int commchann = DCCNativeISO;
-    CLIGetOptionListWithReturn(ctx, 9, commc_opts, ARRAY_LENGTH(commc_opts), &commchann);
-    PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(commc_opts, ARRAY_LENGTH(commc_opts), commchann));
-
-    const CLIParserOption authc_opts[] = {
-        {DACd40, "d40"},
-        {DACEV1, "ev1"},
-        {DACEV2, "ev2"},
-    };
-    
-    int authchann = DACEV1;
-    CLIGetOptionListWithReturn(ctx, 10, authc_opts, ARRAY_LENGTH(authc_opts), &authchann);
-    PrintAndLogEx(INFO, "auth channel: %s", CLIGetOptionListStr(authc_opts, ARRAY_LENGTH(authc_opts), authchann));
-
-    SetAPDULogging(APDULogging);
-    CLIParserFree(ctx);
     
     DesfireContext dctx;
-    DesfireSetKey(&dctx, keyNum, ares, key);
-    DesfireSetCommandChannel(&dctx, commchann);
+    int securechann = defaultSecureChannel;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, &securechann);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
     
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
 
-    int res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    if (verbose)
+        DesfirePrintContext(&dctx);
+    
+    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
         DropField();
         return PM3_ESOFT;
     }
     
-    res = DesfireAuthenticate(&dctx, authchann); 
+    res = DesfireAuthenticate(&dctx, securechann); 
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
         DropField();

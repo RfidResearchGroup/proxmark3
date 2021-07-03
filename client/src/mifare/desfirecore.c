@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------------
 // High frequency Desfire core functions
 //-----------------------------------------------------------------------------
-// Info from here and many other soursec from the internet
+// Info from here and many other sources from the public internet sites
 // https://github.com/revk/DESFireAES
 // https://github.com/step21/desfire_rfid
 // https://github.com/patsys/desfire-python/blob/master/Desfire/DESFire.py
@@ -163,8 +163,8 @@ void DesfireClearContext(DesfireContext *ctx) {
     ctx->keyType = T_DES;
     memset(ctx->key, 0, sizeof(ctx->key));
     
-    ctx->authChannel = DACNone;
-    ctx->cmdChannel = DCCNative;
+    ctx->secureChannel = DACNone;
+    ctx->cmdSet = DCCNative;
     ctx->commMode = DCMNone;
 
     ctx->kdfAlgo = 0;
@@ -175,7 +175,7 @@ void DesfireClearContext(DesfireContext *ctx) {
 }
 
 void DesfireClearSession(DesfireContext *ctx) {
-    ctx->authChannel = DACNone; // here none - not authenticared
+    ctx->secureChannel = DACNone; // here none - not authenticared
 
     memset(ctx->sessionKeyMAC, 0, sizeof(ctx->sessionKeyMAC));
     memset(ctx->sessionKeyEnc, 0, sizeof(ctx->sessionKeyEnc));
@@ -183,6 +183,11 @@ void DesfireClearSession(DesfireContext *ctx) {
     ctx->cntrTx = 0; 
     ctx->cntrRx = 0;
     memset(ctx->TI, 0, sizeof(ctx->TI));
+}
+
+void DesfirePrintContext(DesfireContext *ctx) {
+    //PrintAndLogEx(INFO, "algo: %s", CLIGetOptionListStr(algo_opts, ARRAY_LENGTH(algo_opts), algores));
+    PrintAndLogEx(INFO, "Key num: %d Key type: %d Key[%d]: %s", ctx->keyNum, ctx->keyType, key_size(ctx->keyType), sprint_hex(ctx->key, key_size(ctx->keyType)));
 }
 
 void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key) {
@@ -193,8 +198,19 @@ void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO 
     memcpy(ctx->key, key, desfire_get_key_length(keyType));
 }
 
-void DesfireSetCommandChannel(DesfireContext *ctx, DesfireCommandChannel cmdChannel) {
-    ctx->cmdChannel = cmdChannel;
+void DesfireSetCommandSet(DesfireContext *ctx, DesfireCommandSet cmdSet) {
+    ctx->cmdSet = cmdSet;
+}
+
+void DesfireSetCommMode(DesfireContext *ctx, DesfireCommunicationMode commMode) {
+    ctx->commMode = commMode;
+}
+
+void DesfireSetKdf(DesfireContext *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint8_t kdfInputLen) {
+    ctx->kdfAlgo = kdfAlgo;
+    ctx->kdfInputLen = kdfInputLen;
+    if (kdfInputLen)
+        memcpy(ctx->kdfInput, kdfInput, kdfInputLen);
 }
 
 static int DESFIRESendApdu(bool activate_field, sAPDU apdu, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint16_t *sw) {
@@ -342,7 +358,7 @@ static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t 
 int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
     int res = PM3_SUCCESS;
     
-    switch(ctx->cmdChannel) {
+    switch(ctx->cmdSet) {
         case DCCNative:
             res = DesfireExchangeNative(activate_field, ctx, cmd, data, datalen, respcode, resp, resplen, enable_chaining, splitbysize);
         break;
@@ -397,17 +413,17 @@ int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uin
 }
 
 bool DesfireIsAuthenticated(DesfireContext *dctx) {
-    return dctx->authChannel != DACNone;
+    return dctx->secureChannel != DACNone;
 }
 
-int DesfireAuthenticate(DesfireContext *dctx, DesfireAuthChannel authChannel) {
+int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel) {
     // 3 different way to authenticate   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
     // 4 different crypto arg1   DES, 3DES, 3K3DES, AES
     // 3 different communication modes,  PLAIN,MAC,CRYPTO
     
     DesfireClearSession(dctx);
     
-    if (authChannel == DACNone)
+    if (secureChannel == DACNone)
         return PM3_SUCCESS;
 
     mbedtls_aes_context ctx;
@@ -456,8 +472,8 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireAuthChannel authChannel) {
     }
 
     uint8_t subcommand = MFDES_AUTHENTICATE;
-    dctx->authChannel = authChannel;
-    if (dctx->authChannel == DACEV1) {
+    dctx->secureChannel = secureChannel;
+    if (dctx->secureChannel == DACEV1) {
         if (dctx->keyType == T_AES)
             subcommand = MFDES_AUTHENTICATE_AES;
         else
@@ -522,7 +538,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireAuthChannel authChannel) {
     uint8_t encRndA[16] = {0x00};
 
     // - Encrypt our response
-    if (dctx->authChannel == DACd40) {
+    if (dctx->secureChannel == DACd40) {
         des_decrypt(encRndA, RndA, key->data);
         memcpy(both, encRndA, rndlen);
 
@@ -532,7 +548,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireAuthChannel authChannel) {
 
         des_decrypt(encRndB, rotRndB, key->data);
         memcpy(both + rndlen, encRndB, rndlen);
-    } else if (dctx->authChannel == DACEV1 && dctx->keyType != T_AES) {
+    } else if (dctx->secureChannel == DACEV1 && dctx->keyType != T_AES) {
         if (dctx->keyType == T_3DES) {
             uint8_t tmp[16] = {0x00};
             memcpy(tmp, RndA, rndlen);
@@ -558,7 +574,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireAuthChannel authChannel) {
                 PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 32));
             }
         }
-    } else if (dctx->authChannel == DACEV1 && dctx->keyType == T_AES) {
+    } else if (dctx->secureChannel == DACEV1 && dctx->keyType == T_AES) {
         uint8_t tmp[32] = {0x00};
         memcpy(tmp, RndA, rndlen);
         memcpy(tmp + rndlen, rotRndB, rndlen);
@@ -637,7 +653,7 @@ PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
             memcpy(&dctx->sessionKeyEnc[8], dctx->sessionKeyEnc, 8);
     }
 
-    if (dctx->authChannel == DACEV1) {
+    if (dctx->secureChannel == DACEV1) {
         cmac_generate_subkeys(&sesskey, MCD_RECEIVE);
         //key->cmac_sk1 and key->cmac_sk2
         //memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));

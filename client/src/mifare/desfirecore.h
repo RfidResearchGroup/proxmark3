@@ -28,13 +28,13 @@ typedef enum {
     DACd40,
     DACEV1,
     DACEV2
-} DesfireAuthChannel;
+} DesfireSecureChannel;
 
 typedef enum {
     DCCNative,
     DCCNativeISO,
     DCCISO
-} DesfireCommandChannel;
+} DesfireCommandSet;
 
 typedef enum {
     DCMNone,
@@ -54,9 +54,9 @@ typedef struct DesfireContextS {
     uint8_t kdfInputLen;
     uint8_t kdfInput[31];
     
-    DesfireAuthChannel authChannel;    // none/d40/ev1/ev2
-    DesfireCommandChannel cmdChannel;  // native/nativeiso/iso
-    DesfireCommunicationMode commMode; // plain/mac/enc
+    DesfireSecureChannel secureChannel; // none/d40/ev1/ev2
+    DesfireCommandSet cmdSet;           // native/nativeiso/iso
+    DesfireCommunicationMode commMode;  // plain/mac/enc
 
     uint8_t sessionKeyMAC[DESF_MAX_KEY_LEN];
     uint8_t sessionKeyEnc[DESF_MAX_KEY_LEN];  // look at mifare4.h - mf4Session_t
@@ -68,9 +68,12 @@ typedef struct DesfireContextS {
 } DesfireContext;
 
 void DesfireClearContext(DesfireContext *ctx);
+void DesfirePrintContext(DesfireContext *ctx);
 void DesfireClearSession(DesfireContext *ctx);
 void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key);
-void DesfireSetCommandChannel(DesfireContext *ctx, DesfireCommandChannel cmdChannel);
+void DesfireSetCommandSet(DesfireContext *ctx, DesfireCommandSet cmdSet);
+void DesfireSetCommMode(DesfireContext *ctx, DesfireCommunicationMode commMode);
+void DesfireSetKdf(DesfireContext *ctx, uint8_t kdfAlgo,uint8_t *kdfInput, uint8_t kdfInputLen);
 
 const char *DesfireGetErrorString(int res, uint16_t *sw);
 uint32_t DesfireAIDByteToUint(uint8_t *data);
@@ -82,7 +85,7 @@ int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uin
 int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2);
 int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uint32_t aid2);
 
-int DesfireAuthenticate(DesfireContext *dctx, DesfireAuthChannel authChannel);
+int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel);
 bool DesfireIsAuthenticated(DesfireContext *dctx);
 
 int DesfireGetAIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
