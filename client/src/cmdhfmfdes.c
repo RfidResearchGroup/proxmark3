@@ -5011,10 +5011,11 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         arg_int0("n",  "keyno",   "<keyno>", "Key number"),
         arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
         arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
-        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None(default), AN10922, Gallagher"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
         arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
-        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Commpunicaton mode: plain(default)/mac/encrypt"),
-        arg_str0("c",  "commc",   "<native/niso/iso>", "Commpunicaton channel: native/niso(default)/iso"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Commpunicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "commc",   "<native/niso/iso>", "Commpunicaton channel: native/niso/iso"),
+        arg_str0("u",  "authc",   "<d40/ev1/ev2>", "Authentication channel: d40/ev1/ev2"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -5082,6 +5083,16 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     CLIGetOptionListWithReturn(ctx, 8, commc_opts, ARRAY_LENGTH(commc_opts), &commchann);
     PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(commc_opts, ARRAY_LENGTH(commc_opts), commchann));
 
+    const CLIParserOption authc_opts[] = {
+        {DACd40, "d40"},
+        {DACEV1, "ev1"},
+        {DACEV2, "ev2"},
+    };
+    
+    int authchann = DACEV1;
+    CLIGetOptionListWithReturn(ctx, 9, authc_opts, ARRAY_LENGTH(authc_opts), &authchann);
+    PrintAndLogEx(INFO, "auth channel: %s", CLIGetOptionListStr(authc_opts, ARRAY_LENGTH(authc_opts), authchann));
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
     
@@ -5097,7 +5108,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         return PM3_ESOFT;
     }
     
-    res = DesfireAuthenticate(&dctx, DACd40); //DACd40 DACEV1
+    res = DesfireAuthenticate(&dctx, authchann); //DACd40 DACEV1
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
         DropField();
