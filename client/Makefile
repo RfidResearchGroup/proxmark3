@@ -14,10 +14,18 @@ vpath %.dic dictionaries
 OBJDIR = obj
 
 ifeq ($(USE_BREW),1)
-	INCLUDES += -I$(BREW_PREFIX)/include
-	LDLIBS += -L$(BREW_PREFIX)/lib
-	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt/lib/pkgconfig
-	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt5/lib/pkgconfig
+	ifdef MACPORTS_PREFIX
+		INCLUDES += -I$(MACPORTS_PREFIX)/include
+		LDLIBS += -L$(MACPORTS_PREFIX)/lib
+		PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(MACPORTS_PREFIX)/lib/pkgconfig
+		PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(MACPORTS_PREFIX)/libexec/qt/lib/pkgconfig
+		PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(MACPORTS_PREFIX)/libexec/qt5/lib/pkgconfig
+	else
+		INCLUDES += -I$(BREW_PREFIX)/include
+		LDLIBS += -L$(BREW_PREFIX)/lib
+		PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt/lib/pkgconfig
+		PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt5/lib/pkgconfig
+	endif
 endif
 
 ###################
@@ -117,8 +125,13 @@ INCLUDES += $(HARDNESTEDLIBINC)
 
 ## Lua
 ifneq ($(SKIPLUASYSTEM),1)
-    LUAINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags lua5.2 2>/dev/null)
-    LUALDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs lua5.2 2>/dev/null)
+    ifdef MACPORTS_PREFIX
+        LUAINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags lua-5.2 2>/dev/null)
+        LUALDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs lua-5.2 2>/dev/null)
+    else
+        LUAINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags lua5.2 2>/dev/null)
+        LUALDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs lua5.2 2>/dev/null)
+    endif
     ifneq ($(LUALDLIBS),)
         LUALIB =
         LUALIBLD = $(LUALDLIBS)
@@ -279,8 +292,12 @@ CXXINCLUDES += $(QTINCLUDES)
 ## Readline
 ifneq ($(SKIPREADLINE),1)
     ifeq ($(USE_BREW),1)
-        LDLIBS += -L$(BREW_PREFIX)/opt/readline/lib
-        INCLUDES += -I$(BREW_PREFIX)/opt/readline/include
+        ifdef MACPORTS_PREFIX
+            INCLUDES += -I$(MACPORTS_PREFIX)/include/readline
+        else
+            LDLIBS += -L$(BREW_PREFIX)/opt/readline/lib
+            INCLUDES += -I$(BREW_PREFIX)/opt/readline/include
+        endif
     endif
     LDLIBS += -lreadline
     READLINE_FOUND = 1
