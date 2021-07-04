@@ -1653,6 +1653,9 @@ static int CmdHFiClassDump(const char *Cmd) {
 
             app_limit1 = card_app2_limit[type];
             app_limit2 = 0;
+        } else if (hdr->conf.app_limit >= hdr->conf.mem_config) {
+            PrintAndLogEx(WARNING, "AA1 config is >= card size, using card size as AA1 limit");
+            app_limit1 = card_app2_limit[type];
         } else {
             app_limit1 = hdr->conf.app_limit;
             app_limit2 = card_app2_limit[type];
@@ -1674,7 +1677,12 @@ static int CmdHFiClassDump(const char *Cmd) {
             PrintAndLogEx(FAILED, "Run command with keys");
             return PM3_ESOFT;
         }
-        PrintAndLogEx(INFO, "Card has atleast 2 application areas. AA1 limit %u (0x%02X) AA2 limit %u (0x%02X)", app_limit1, app_limit1, app_limit2, app_limit2);
+
+        if (app_limit2 != 0) {
+            PrintAndLogEx(INFO, "Card has at least 2 application areas. AA1 limit %u (0x%02X) AA2 limit %u (0x%02X)", app_limit1, app_limit1, app_limit2, app_limit2);
+        } else {
+            PrintAndLogEx(INFO, "Card has 1 application area. AA1 limit %u (0x%02X)", app_limit1, app_limit1);
+        }
     }
 
     iclass_dump_req_t payload = {
@@ -1750,7 +1758,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         // AIA data
         memcpy(tag_data + (8 * 5), tempbuf + (8 * 5), 8);
         // AA1 data
-        memcpy(tag_data + (8 * 6), tempbuf + (8 * 6), (blocks_read * 8));
+        memcpy(tag_data + (8 * 6), tempbuf + (8 * 6), ((blocks_read - 6) * 8));
     }
 
     uint16_t bytes_got = (app_limit1 + 1) * 8;
@@ -1758,7 +1766,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     // try AA2 Kc, Credit
     bool aa2_success = false;
 
-    if (have_credit_key && pagemap != 0x01) {
+    if (have_credit_key && pagemap != PICOPASS_NON_SECURE_PAGEMODE && app_limit2 != 0) {
 
         // AA2 authenticate credit key
         memcpy(payload.req.key, credit_key, 8);

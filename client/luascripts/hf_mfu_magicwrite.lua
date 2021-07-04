@@ -191,11 +191,27 @@ local function read_config()
     elseif cardtype == '02' then typestr = 'NTAG 216'
     end
 
+    local versionstr = 'unknown'
+    if version == '0004030101000B03' then versionstr = 'UL EV1 48b'
+    elseif version == '0004030101000E03' then versionstr = 'UL EV1 128b'
+    elseif version == '0004040101000B03' then versionstr = 'NTAG 210'
+    elseif version == '0004040101000E03' then versionstr = 'NTAG 212'
+    elseif version == '0004040201000F03' then versionstr = 'NTAG 213'
+    elseif version == '0004040201001103' then versionstr = 'NTAG 215'
+    elseif version == '0004040201001303' then versionstr = 'NTAG 216'
+    elseif version == '0004040502011303' then versionstr = 'NTAG I2C 1K'
+    elseif version == '0004040502011503' then versionstr = 'NTAG I2C 2K'
+    elseif version == '0004040502021303' then versionstr = 'NTAG I2C 1K PLUS'
+    elseif version == '0004040502021503' then versionstr = 'NTAG I2C 2K PLUS'
+    elseif version == '0004040401000F03' then versionstr = 'NTAG 213F'
+    elseif version == '0004040401001303' then versionstr = 'NTAG 216F'
+    end
+
     print('Magic NTAG 21* Configuration')
     print(' - Type    ', typestr, '(genuine cardtype)')
     print(' - Password', pwd)
     print(' - Pack    ', pack)
-    print(' - Version ', version)
+    print(' - Version ', version, '(' .. versionstr .. ')')
     print(' - Signature', signature1..signature2)
 
     lib14a.disconnect()
