@@ -59,6 +59,7 @@ typedef struct DesfireContextS {
     DesfireCommandSet cmdSet;           // native/nativeiso/iso
     DesfireCommunicationMode commMode;  // plain/mac/enc
 
+    uint8_t IV[DESF_MAX_KEY_LEN];
     uint8_t sessionKeyMAC[DESF_MAX_KEY_LEN];
     uint8_t sessionKeyEnc[DESF_MAX_KEY_LEN];  // look at mifare4.h - mf4Session_t
     uint8_t lastIV[DESF_MAX_KEY_LEN];
