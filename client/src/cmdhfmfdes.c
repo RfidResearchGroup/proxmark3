@@ -5033,7 +5033,6 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
     if (algoid) {
         if (CLIGetOptionList(arg_get_str(ctx, algoid), DesfireAlgoOpts, &algores))
            return PM3_ESOFT;
-        PrintAndLogEx(INFO, "algo: %s", CLIGetOptionListStr(DesfireAlgoOpts, algores));
     }
     
     if (keyid) {
@@ -5052,8 +5051,6 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
     if (kdfid) {
         if (CLIGetOptionList(arg_get_str(ctx, kdfid), DesfireKDFAlgoOpts, &kdfAlgo))
            return PM3_ESOFT;
-        PrintAndLogEx(INFO, "kdf funct: %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, kdfAlgo));
-           
     }
     
     if (kdfiid) {
@@ -5070,19 +5067,16 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
     if (cmodeid) {
         if (CLIGetOptionList(arg_get_str(ctx, cmodeid), DesfireCommunicationModeOpts, &commmode))
            return PM3_ESOFT;
-        PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(DesfireCommunicationModeOpts, commmode));
     }
 
     if (ccsetid) {
         if (CLIGetOptionList(arg_get_str(ctx, ccsetid), DesfireCommandSetOpts, &commset))
            return PM3_ESOFT;
-        PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(DesfireCommandSetOpts, commset));
     }
 
     if (schannid) {
         if (CLIGetOptionList(arg_get_str(ctx, schannid), DesfireSecureChannelOpts, &secchann))
            return PM3_ESOFT;
-        PrintAndLogEx(INFO, "auth channel: %s", CLIGetOptionListStr(DesfireSecureChannelOpts, secchann));
     }
         
     DesfireSetKey(dctx, keynum, algores, key);

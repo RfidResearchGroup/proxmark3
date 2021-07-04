@@ -63,6 +63,7 @@ typedef struct {
 } CLIParserContext;
 
 #define CLI_MAX_OPTLIST_LEN    50
+// option list needs to have NULL at the last record int the field `text`
 typedef struct {
     int code;
     const char *text;
