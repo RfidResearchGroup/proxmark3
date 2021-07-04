@@ -630,9 +630,59 @@ static void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t
     }
 }
 
-static void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
+static void DesfireSecureChannelDecodeD40(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
+
+    switch(ctx->commMode) {
+        case DCMMACed:
+
+            break;
+        case DCMEncrypted:
+            break;
+        case DCMPlain:
+        case DACNone:
+            memcpy(dstdata, srcdata, srcdatalen);
+            *dstdatalen = srcdatalen;
+            break;
+    }    
+}
+
+static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
+    memcpy(dstdata, srcdata, srcdatalen);
+    *dstdatalen = srcdatalen;
+
+    switch(ctx->commMode) {
+        case DCMPlain:
+        case DCMMACed:
+            memcpy(dstdata, srcdata, srcdatalen - 8);
+            *dstdatalen = srcdatalen - 8;
+            
+            break;
+        case DCMEncrypted:
+            break;
+        case DACNone:
+            memcpy(dstdata, srcdata, srcdatalen);
+            *dstdatalen = srcdatalen;
+            break;
+    }    
+}
+
+static void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
+    switch(ctx->secureChannel) {
+        case DACd40:
+            DesfireSecureChannelDecodeD40(ctx, srcdata, srcdatalen, respcode, dstdata, dstdatalen);
+            break;
+        case DACEV1:
+            DesfireSecureChannelDecodeEV1(ctx, srcdata, srcdatalen, respcode, dstdata, dstdatalen);
+            break;
+        case DACEV2:
+            break;
+        case DACNone:
+            memcpy(dstdata, srcdata, srcdatalen);
+            *dstdatalen = srcdatalen;
+            break;
+    }
 }
 
 int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
@@ -759,8 +809,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     }
 
     uint8_t subcommand = MFDES_AUTHENTICATE;
-    dctx->secureChannel = secureChannel;
-    if (dctx->secureChannel == DACEV1) {
+    if (secureChannel == DACEV1) {
         if (dctx->keyType == T_AES)
             subcommand = MFDES_AUTHENTICATE_AES;
         else
@@ -806,9 +855,9 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
         }
         mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, rndlen, IV, encRndB, RndB);
     } else if (dctx->keyType == T_DES) {
-        if (dctx->secureChannel == DACd40)
+        if (secureChannel == DACd40)
             des_decrypt(RndB, encRndB, key->data);
-        if (dctx->secureChannel == DACEV1)
+        if (secureChannel == DACEV1)
             des_decrypt_cbc(RndB, encRndB, rndlen, key->data, IV);
     } else if (dctx->keyType == T_3DES)
         tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 2);
@@ -828,7 +877,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     uint8_t encRndA[16] = {0x00};
 
     // - Encrypt our response
-    if (dctx->secureChannel == DACd40) {
+    if (secureChannel == DACd40) {
         if (dctx->keyType == T_DES) {
             des_decrypt(encRndA, RndA, key->data);
             memcpy(both, encRndA, rndlen);
@@ -842,7 +891,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
         } else if (dctx->keyType == T_3DES) {
             //TODO
         }
-    } else if (dctx->secureChannel == DACEV1 && dctx->keyType != T_AES) {
+    } else if (secureChannel == DACEV1 && dctx->keyType != T_AES) {
         if (dctx->keyType == T_DES) {
             uint8_t tmp[16] = {0x00};
             memcpy(tmp, RndA, rndlen);
@@ -880,7 +929,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
                 PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 32));
             }
         }
-    } else if (dctx->secureChannel == DACEV1 && dctx->keyType == T_AES) {
+    } else if (secureChannel == DACEV1 && dctx->keyType == T_AES) {
         uint8_t tmp[32] = {0x00};
         memcpy(tmp, RndA, rndlen);
         memcpy(tmp + rndlen, rotRndB, rndlen);
@@ -928,9 +977,9 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
 PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, rndlen));
 PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, rndlen));
     if (dctx->keyType == T_DES){
-        if (dctx->secureChannel == DACd40)
+        if (secureChannel == DACd40)
             des_decrypt(encRndA, encRndA, key->data);
-        if (dctx->secureChannel == DACEV1)
+        if (secureChannel == DACEV1)
             des_decrypt_cbc(encRndA, encRndA, rndlen, key->data, IV);
     } else if (dctx->keyType == T_3DES)
         tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 2);
@@ -963,12 +1012,13 @@ PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
             memcpy(&dctx->sessionKeyEnc[8], dctx->sessionKeyEnc, 8);
     }
 
-    if (dctx->secureChannel == DACEV1) {
+    if (secureChannel == DACEV1) {
         cmac_generate_subkeys(&sesskey, MCD_RECEIVE);
         //key->cmac_sk1 and key->cmac_sk2
         //memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));
     }
     
+    dctx->secureChannel = secureChannel;
     memcpy(dctx->sessionKeyMAC, dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType));
 PrintAndLogEx(INFO, "sessionKeyEnc : %s", sprint_hex(dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType)));
 
