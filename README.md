@@ -25,6 +25,7 @@
 ||[Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)|[More cheat sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
 ||**[Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md)**|[Complete client command set](/doc/commands.md)|
 ||**[JTAG](/doc/jtag_notes.md)**|[T5577 Introduction Guide](/doc/T5577_Guide.md)|
+||**[MacPorts (Mac OS X, experimental)](/doc/md/Installation_Instructions/Mac-OS-X-MacPorts-Installation-Instructions.md)** |
 
 
 ## Notes / helpful documents
@@ -135,7 +136,7 @@ This repo compiles nicely on
    - Windows/MinGW environment
    - Ubuntu, ParrotOS, Gentoo, Pentoo, Kali, NetHunter, Arch Linux, Fedora, Debian, Raspbian
    - Android / Termux
-   - Mac OS X / Homebrew / Apple Silicon M1
+   - Mac OS X / Homebrew (or MacPorts, experimental) / Apple Silicon M1
    - Docker container
       - [ RRG / Iceman repo based ubuntu 18.04 container ](https://hub.docker.com/r/secopsconsult/proxmark3)
       - [ Iceman fork based container v1.7 ](https://hub.docker.com/r/iceman1001/proxmark3/)

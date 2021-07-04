@@ -61,7 +61,7 @@ endif
 ifeq ($(USE_BREW),1)
   BREW_PREFIX = $(shell brew --prefix 2>/dev/null)
   ifeq ($(strip $(BREW_PREFIX)),)
-    MACPORTS_PREFIX = /opt/local
+    MACPORTS_PREFIX ?= /opt/local
   endif
 endif
 
