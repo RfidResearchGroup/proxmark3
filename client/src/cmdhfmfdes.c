@@ -5195,7 +5195,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
-    
+  
     if (DesfireIsAuthenticated(&dctx)) {
         if (verbose)
             PrintAndLogEx(ERR, "Desfire  " _GREEN_("authenticated") , res);

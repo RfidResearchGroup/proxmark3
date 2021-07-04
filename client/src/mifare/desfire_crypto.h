@@ -82,6 +82,7 @@ enum DESFIRE_CRYPTOALGO {
 };
 
 int desfire_get_key_length(enum DESFIRE_CRYPTOALGO key_type);
+size_t desfire_get_key_block_length(enum DESFIRE_CRYPTOALGO key_type);
 
 enum DESFIRE_AUTH_SCHEME {
     AS_LEGACY,

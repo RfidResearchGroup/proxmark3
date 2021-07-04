@@ -390,12 +390,9 @@ void mifare_kdf_an10922(const desfirekey_t key, const uint8_t *data, size_t len)
     free(buffer);
 }
 
-size_t key_block_size(const desfirekey_t key) {
-    if (key == NULL) {
-        return 0;
-    }
+size_t desfire_get_key_block_length(enum DESFIRE_CRYPTOALGO key_type) {
     size_t block_size = 8;
-    switch (key->type) {
+    switch (key_type) {
         case T_DES:
         case T_3DES:
         case T_3K3DES:
@@ -406,6 +403,13 @@ size_t key_block_size(const desfirekey_t key) {
             break;
     }
     return block_size;
+}
+
+size_t key_block_size(const desfirekey_t key) {
+    if (key == NULL) {
+        return 0;
+    }
+    return desfire_get_key_block_length(key->type);
 }
 
 size_t key_size(const enum DESFIRE_CRYPTOALGO algo) {

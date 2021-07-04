@@ -227,9 +227,31 @@ void DesfireClearSession(DesfireContext *ctx) {
 }
 
 void DesfirePrintContext(DesfireContext *ctx) {
-    //PrintAndLogEx(INFO, "algo: %s", CLIGetOptionListStr(algo_opts, ARRAY_LENGTH(algo_opts), algores));
-    PrintAndLogEx(INFO, "Key num: %d Key algo: %s Key[%d]: %s", ctx->keyNum, CLIGetOptionListStr(DesfireAlgoOpts, ctx->keyType), key_size(ctx->keyType), sprint_hex(ctx->key, key_size(ctx->keyType)));
-}
+    PrintAndLogEx(INFO, "Key num: %d Key algo: %s Key[%d]: %s", 
+                        ctx->keyNum, 
+                        CLIGetOptionListStr(DesfireAlgoOpts, ctx->keyType), 
+                        key_size(ctx->keyType), 
+                        sprint_hex(ctx->key, 
+                        key_size(ctx->keyType)));
+                        
+    if (ctx->kdfAlgo != MFDES_KDF_ALGO_NONE)
+        PrintAndLogEx(INFO, "KDF algo: %s KDF input[%d]: %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, ctx->kdfAlgo), ctx->kdfInputLen, sprint_hex(ctx->kdfInput, ctx->kdfInputLen));
+    
+    PrintAndLogEx(INFO, "Secure channel: %s Command set: %s Communication mode: %s", 
+                        CLIGetOptionListStr(DesfireSecureChannelOpts, ctx->secureChannel),
+                        CLIGetOptionListStr(DesfireCommandSetOpts, ctx->cmdSet),
+                        CLIGetOptionListStr(DesfireCommunicationModeOpts, ctx->commMode));
+                        
+    if (DesfireIsAuthenticated(ctx)) {
+        PrintAndLogEx(INFO, "Session key MAC [%d]: %s ENC: %s IV [%d]: %s", 
+                            key_size(ctx->keyType), 
+                            sprint_hex(ctx->sessionKeyMAC, key_size(ctx->keyType)), 
+                            sprint_hex(ctx->sessionKeyEnc, key_size(ctx->keyType)),
+                            desfire_get_key_block_length(ctx->keyType),
+                            sprint_hex(ctx->sessionKeyEnc, desfire_get_key_block_length(ctx->keyType)));
+        
+    }
+ }
 
 void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key) {
     DesfireClearContext(ctx);
