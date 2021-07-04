@@ -688,9 +688,12 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
             return 5;
         }
         mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, rndlen, IV, encRndB, RndB);
-    } else if (dctx->keyType == T_DES)
-        des_decrypt(RndB, encRndB, key->data);
-    else if (dctx->keyType == T_3DES)
+    } else if (dctx->keyType == T_DES) {
+        if (dctx->secureChannel == DACd40)
+            des_decrypt(RndB, encRndB, key->data);
+        if (dctx->secureChannel == DACEV1)
+            des_decrypt_cbc(RndB, encRndB, rndlen, key->data, IV);
+    } else if (dctx->keyType == T_3DES)
         tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 2);
     else if (dctx->keyType == T_3K3DES) {
         tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 3);
@@ -709,17 +712,33 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
 
     // - Encrypt our response
     if (dctx->secureChannel == DACd40) {
-        des_decrypt(encRndA, RndA, key->data);
-        memcpy(both, encRndA, rndlen);
+        if (dctx->keyType == T_DES) {
+            des_decrypt(encRndA, RndA, key->data);
+            memcpy(both, encRndA, rndlen);
 
-        for (uint32_t x = 0; x < rndlen; x++) {
-            rotRndB[x] = rotRndB[x] ^ encRndA[x];
+            for (uint32_t x = 0; x < rndlen; x++) {
+                rotRndB[x] = rotRndB[x] ^ encRndA[x];
+            }
+
+            des_decrypt(encRndB, rotRndB, key->data);
+            memcpy(both + rndlen, encRndB, rndlen);
+        } else if (dctx->keyType == T_3DES) {
+            //TODO
         }
-
-        des_decrypt(encRndB, rotRndB, key->data);
-        memcpy(both + rndlen, encRndB, rndlen);
     } else if (dctx->secureChannel == DACEV1 && dctx->keyType != T_AES) {
-        if (dctx->keyType == T_3DES) {
+        if (dctx->keyType == T_DES) {
+            uint8_t tmp[16] = {0x00};
+            memcpy(tmp, RndA, rndlen);
+            memcpy(tmp + rndlen, rotRndB, rndlen);
+            if (g_debugMode > 1) {
+                PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
+                PrintAndLogEx(DEBUG, "Both: %s", sprint_hex(tmp, 16));
+            }
+            des_encrypt_cbc(both, tmp, 16, key->data, IV);
+            if (g_debugMode > 1) {
+                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 16));
+            }
+        } else if (dctx->keyType == T_3DES) {
             uint8_t tmp[16] = {0x00};
             memcpy(tmp, RndA, rndlen);
             memcpy(tmp + rndlen, rotRndB, rndlen);
@@ -790,9 +809,13 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));
 
 PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, rndlen));
-    if (dctx->keyType == T_DES)
-        des_decrypt(encRndA, encRndA, key->data);
-    else if (dctx->keyType == T_3DES)
+PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, rndlen));
+    if (dctx->keyType == T_DES){
+        if (dctx->secureChannel == DACd40)
+            des_decrypt(encRndA, encRndA, key->data);
+        if (dctx->secureChannel == DACEV1)
+            des_decrypt_cbc(encRndA, encRndA, rndlen, key->data, IV);
+    } else if (dctx->keyType == T_3DES)
         tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 2);
     else if (dctx->keyType == T_3K3DES)
         tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 3);

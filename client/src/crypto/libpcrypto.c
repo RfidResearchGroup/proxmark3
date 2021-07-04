@@ -41,6 +41,18 @@ void des_decrypt(void *out, const void *in, const void *key) {
     mbedtls_des_crypt_ecb(&ctx, in, out);
 }
 
+void des_encrypt_cbc(void *out, const void *in, const int length, const void *key, uint8_t *iv) {
+    mbedtls_des_context ctx;
+    mbedtls_des_setkey_enc(&ctx, key);
+    mbedtls_des_crypt_cbc(&ctx, MBEDTLS_DES_ENCRYPT, length, iv, in, out);
+}
+
+void des_decrypt_cbc(void *out, const void *in, const int length, const void *key, uint8_t *iv) {
+    mbedtls_des_context ctx;
+    mbedtls_des_setkey_dec(&ctx, key);
+    mbedtls_des_crypt_cbc(&ctx, MBEDTLS_DES_DECRYPT, length, iv, in, out);
+}
+
 // NIST Special Publication 800-38A — Recommendation for block cipher modes of operation: methods and techniques, 2001.
 int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) {
     uint8_t iiv[16] = {0};

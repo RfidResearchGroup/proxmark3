@@ -18,6 +18,8 @@
 
 void des_encrypt(void *out, const void *in, const void *key);
 void des_decrypt(void *out, const void *in, const void *key);
+void des_encrypt_cbc(void *out, const void *in, const int length, const void *key, uint8_t *iv);
+void des_decrypt_cbc(void *out, const void *in, const int length, const void *key, uint8_t *iv);
 
 int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length);
 int aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length);
