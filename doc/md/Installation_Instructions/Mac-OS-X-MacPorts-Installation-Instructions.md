@@ -8,7 +8,13 @@ These instructions will show how to setup the environment on OSX to the point wh
 
 1. Have MacPorts installed. Visit https://www.macports.org/ for more information.
 
-    * MacPorts may require a bit more setup. Such as setting up new include environments like:
+    * MacPorts may require a bit more setup. You first need to set up your PATH variable:
+
+    ```bash
+    export "/opt/local/bin:/opt/local/sbin:/usr/local/bin:/usr/local/sbin:$PATH"
+    ```
+
+    Although it is optional for proxmark3 repository, you can also set include variables:
 
     ```bash
     export C_INCLUDE_PATH="/opt/local/include"
@@ -18,8 +24,6 @@ These instructions will show how to setup the environment on OSX to the point wh
     export CFLAGS="-I/opt/local/include"
     export CPPFLAGS="-isystem/opt/local/include -I/opt/local/include"
     ```
-
-    other than just modifying PATH variable to `/opt/local/bin:/opt/local/sbin:/usr/local/bin:/usr/local/sbin:$PATH`.
 
 2. Install dependencies:
 
@@ -59,11 +63,7 @@ These instructions will show how to setup the environment on OSX to the point wh
 
 ## Compile and use the project
 
-To use the compiled client, the only difference is that the Proxmark3 port is `/dev/tty.usbmodemiceman1`, so commands become:
-
-```sh
-proxmark3 /dev/ttyACM0  =>  proxmark3 /dev/tty.usbmodemiceman1
-```
+To use the compiled client, you can use `pm3` script, it is a wrapper of the proxmark3 client that handles automatic detection of your proxmark.
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 
