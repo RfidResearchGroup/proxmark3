@@ -3,7 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+<<<<<<< Updated upstream
  - Added experimental support for macOS users utilizing MacPorts instead of Homebrew (@linuxgemini)
+=======
+>>>>>>> Stashed changes
  - Added `pm3_online_check.py` - a script to verify and initialize a Proxmark3 RDV4 device (@iceman1001)
 
 ## [midsummer.4.13441][2021-06-25]
