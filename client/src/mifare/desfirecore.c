@@ -708,18 +708,18 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     uint8_t encRndA[16] = {0x00};
 
     // - Encrypt our response
-    if ((dctx->secureChannel == DACEV1  || dctx->secureChannel == DACd40) && dctx->keyType != T_AES) {
-        if (dctx->keyType == T_DES) {
-            des_decrypt(encRndA, RndA, key->data);
-            memcpy(both, encRndA, rndlen);
+    if (dctx->secureChannel == DACd40) {
+        des_decrypt(encRndA, RndA, key->data);
+        memcpy(both, encRndA, rndlen);
 
-            for (uint32_t x = 0; x < rndlen; x++) {
-                rotRndB[x] = rotRndB[x] ^ encRndA[x];
-            }
+        for (uint32_t x = 0; x < rndlen; x++) {
+            rotRndB[x] = rotRndB[x] ^ encRndA[x];
+        }
 
-            des_decrypt(encRndB, rotRndB, key->data);
-            memcpy(both + rndlen, encRndB, rndlen);
-        } else if (dctx->keyType == T_3DES) {
+        des_decrypt(encRndB, rotRndB, key->data);
+        memcpy(both + rndlen, encRndB, rndlen);
+    } else if (dctx->secureChannel == DACEV1 && dctx->keyType != T_AES) {
+        if (dctx->keyType == T_3DES) {
             uint8_t tmp[16] = {0x00};
             memcpy(tmp, RndA, rndlen);
             memcpy(tmp + rndlen, rotRndB, rndlen);
@@ -731,7 +731,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
             if (g_debugMode > 1) {
                 PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 16));
             }
-        } else if (dctx->secureChannel == DACEV1 && dctx->keyType == T_3K3DES) {
+        } else if (dctx->keyType == T_3K3DES) {
             uint8_t tmp[32] = {0x00};
             memcpy(tmp, RndA, rndlen);
             memcpy(tmp + rndlen, rotRndB, rndlen);
