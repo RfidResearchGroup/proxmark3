@@ -29,6 +29,47 @@
 #include "util_posix.h"            // msleep
 #include "mifare/desfire_crypto.h"
 
+const CLIParserOption DesfireAlgoOpts[] = {
+    {T_DES,    "des"},
+    {T_3DES,   "2tdea"},
+    {T_3K3DES, "3tdea"},
+    {T_AES,    "aes"},
+    {0,    NULL},
+};
+const size_t DesfireAlgoOptsLen = ARRAY_LENGTH(DesfireAlgoOpts);
+
+const CLIParserOption DesfireKDFAlgoOpts[] = {
+    {MFDES_KDF_ALGO_NONE,      "none"},
+    {MFDES_KDF_ALGO_AN10922,   "an10922"},
+    {MFDES_KDF_ALGO_GALLAGHER, "gallagher"},
+    {0,    NULL},
+};
+const size_t DesfireKDFAlgoOptsLen = ARRAY_LENGTH(DesfireKDFAlgoOpts);
+
+const CLIParserOption DesfireCommunicationModeOpts[] = {
+    {DCMPlain,     "plain"},
+    {DCMMACed,     "mac"},
+    {DCMEncrypted, "encrypt"},
+    {0,    NULL},
+};
+const size_t DesfireCommunicationModeOptsLen = ARRAY_LENGTH(DesfireCommunicationModeOpts);
+
+const CLIParserOption DesfireCommandSetOpts[] = {
+    {DCCNative,    "native"},
+    {DCCNativeISO, "niso"},
+    {DCCISO,       "iso"},
+    {0,    NULL},
+};
+const size_t DesfireCommandSetOptsLen = ARRAY_LENGTH(DesfireCommandSetOpts);
+
+const CLIParserOption DesfireSecureChannelOpts[] = {
+    {DACd40, "d40"},
+    {DACEV1, "ev1"},
+    {DACEV2, "ev2"},
+    {0,    NULL},
+};
+const size_t DesfireSecureChannelOptsLen = ARRAY_LENGTH(DesfireSecureChannelOpts);
+
 static const char *getstatus(uint16_t *sw) {
     if (sw == NULL) return "--> sw argument error. This should never happen !";
     if (((*sw >> 8) & 0xFF) == 0x91) {
@@ -187,7 +228,7 @@ void DesfireClearSession(DesfireContext *ctx) {
 
 void DesfirePrintContext(DesfireContext *ctx) {
     //PrintAndLogEx(INFO, "algo: %s", CLIGetOptionListStr(algo_opts, ARRAY_LENGTH(algo_opts), algores));
-    PrintAndLogEx(INFO, "Key num: %d Key type: %d Key[%d]: %s", ctx->keyNum, ctx->keyType, key_size(ctx->keyType), sprint_hex(ctx->key, key_size(ctx->keyType)));
+    PrintAndLogEx(INFO, "Key num: %d Key algo: %s Key[%d]: %s", ctx->keyNum, CLIGetOptionListStr(DesfireAlgoOpts, ctx->keyType), key_size(ctx->keyType), sprint_hex(ctx->key, key_size(ctx->keyType)));
 }
 
 void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key) {

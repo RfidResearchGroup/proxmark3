@@ -14,6 +14,7 @@
 #define __DESFIRECORE_H
 
 #include "common.h"
+#include "cliparser.h"
 #include "mifare/desfire_crypto.h"
 #include "mifare/mifare4.h"
 
@@ -66,6 +67,12 @@ typedef struct DesfireContextS {
     uint16_t cntrRx;    // for AES
     uint8_t TI[4];      // for AES
 } DesfireContext;
+
+extern const CLIParserOption DesfireAlgoOpts[];
+extern const CLIParserOption DesfireKDFAlgoOpts[];
+extern const CLIParserOption DesfireCommunicationModeOpts[];
+extern const CLIParserOption DesfireCommandSetOpts[];
+extern const CLIParserOption DesfireSecureChannelOpts[];
 
 void DesfireClearContext(DesfireContext *ctx);
 void DesfirePrintContext(DesfireContext *ctx);

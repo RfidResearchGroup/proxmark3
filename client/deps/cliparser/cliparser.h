@@ -62,6 +62,7 @@ typedef struct {
     char buf[1024 + 60];
 } CLIParserContext;
 
+#define CLI_MAX_OPTLIST_LEN    50
 typedef struct {
     int code;
     const char *text;
@@ -78,8 +79,8 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
 int CLIParamBinToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
 
 // names in the CLIParserOption array must be in the lowercase format
-int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array, size_t option_array_len, int *value);
-const char *CLIGetOptionListStr(const CLIParserOption *option_array, size_t option_array_len, int value);
+int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array, int *value);
+const char *CLIGetOptionListStr(const CLIParserOption *option_array, int value);
 
 uint64_t arg_get_u64_hexstr_def(CLIParserContext *ctx, uint8_t paramnum, uint64_t def);
 int arg_get_u64_hexstr_def_nlen(CLIParserContext *ctx, uint8_t paramnum, uint64_t def, uint64_t *out, uint8_t nlen, bool optional);

@@ -298,7 +298,7 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     return 0;
 }
 
-int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array, size_t option_array_len, int *value) {
+int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array, int *value) {
     char data[200] = {0};
     int datalen = 0;
     int res = CLIParamStrToBuf(argstr, (uint8_t *)data, sizeof(data), &datalen);
@@ -313,7 +313,10 @@ int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array
     
     int val = -1;
     int cntr = 0;
-    for (int i = 0; i < option_array_len; i++) {
+    for (int i = 0; i < CLI_MAX_OPTLIST_LEN; i++) {
+        // end of array
+        if (option_array[i].text == NULL)
+            break;
         // exact match
         if (strcmp(option_array[i].text, data) == 0) {
             *value = option_array[i].code;
@@ -340,12 +343,15 @@ int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array
     return 0;    
 }
 
-const char *CLIGetOptionListStr(const CLIParserOption *option_array, size_t option_array_len, int value) {
+const char *CLIGetOptionListStr(const CLIParserOption *option_array, int value) {
     static const char *errmsg = "n/a";
     
-    for (int i = 0; i < option_array_len; i++)
+    for (int i = 0; i < CLI_MAX_OPTLIST_LEN; i++) {
+        if (option_array[i].text == NULL)
+            break;
         if (option_array[i].code == value)
             return option_array[i].text;
+    }
     return errmsg;
 }
 

@@ -5030,17 +5030,10 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
         keynum = arg_get_int_def(ctx, keynoid, keynum);
     }
     
-    const CLIParserOption algo_opts[] = {
-        {T_DES,    "des"},
-        {T_3DES,   "2tdea"},
-        {T_3K3DES, "3tdea"},
-        {T_AES,    "aes"},
-    };
-    
     if (algoid) {
-        if (CLIGetOptionList(arg_get_str(ctx, algoid), algo_opts, ARRAY_LENGTH(algo_opts), &algores))
+        if (CLIGetOptionList(arg_get_str(ctx, algoid), DesfireAlgoOpts, &algores))
            return PM3_ESOFT;
-        PrintAndLogEx(INFO, "algo: %s", CLIGetOptionListStr(algo_opts, ARRAY_LENGTH(algo_opts), algores));
+        PrintAndLogEx(INFO, "algo: %s", CLIGetOptionListStr(DesfireAlgoOpts, algores));
     }
     
     if (keyid) {
@@ -5049,7 +5042,7 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
         if (CLIParamHexToBuf(arg_get_str(ctx, keyid), keydata, sizeof(keydata), &keylen))
            return PM3_ESOFT;
         if (keylen && keylen != key_size(algores)) {
-            PrintAndLogEx(ERR, "%s key must have %d bytes length instead of %d.", CLIGetOptionListStr(algo_opts, ARRAY_LENGTH(algo_opts), algores), key_size(algores), keylen);
+            PrintAndLogEx(ERR, "%s key must have %d bytes length instead of %d.", CLIGetOptionListStr(DesfireAlgoOpts, algores), key_size(algores), keylen);
             return PM3_EINVARG;
         }
         if (keylen)
@@ -5057,15 +5050,9 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
     }
     
     if (kdfid) {
-        const CLIParserOption kdf_opts[] = {
-            {MFDES_KDF_ALGO_NONE,      "none"},
-            {MFDES_KDF_ALGO_AN10922,   "an10922"},
-            {MFDES_KDF_ALGO_GALLAGHER, "gallagher"},
-        };
-        
-        if (CLIGetOptionList(arg_get_str(ctx, kdfid), kdf_opts, ARRAY_LENGTH(kdf_opts), &kdfAlgo))
+        if (CLIGetOptionList(arg_get_str(ctx, kdfid), DesfireKDFAlgoOpts, &kdfAlgo))
            return PM3_ESOFT;
-        PrintAndLogEx(INFO, "kdf funct: %s", CLIGetOptionListStr(kdf_opts, ARRAY_LENGTH(kdf_opts), kdfAlgo));
+        PrintAndLogEx(INFO, "kdf funct: %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, kdfAlgo));
            
     }
     
@@ -5081,39 +5068,21 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
     }
     
     if (cmodeid) {
-        const CLIParserOption cmode_opts[] = {
-            {DCMPlain,     "plain"},
-            {DCMMACed,     "mac"},
-            {DCMEncrypted, "encrypt"},
-        };
-        
-        if (CLIGetOptionList(arg_get_str(ctx, cmodeid), cmode_opts, ARRAY_LENGTH(cmode_opts), &commmode))
+        if (CLIGetOptionList(arg_get_str(ctx, cmodeid), DesfireCommunicationModeOpts, &commmode))
            return PM3_ESOFT;
-        PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(cmode_opts, ARRAY_LENGTH(cmode_opts), commmode));
+        PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(DesfireCommunicationModeOpts, commmode));
     }
 
     if (ccsetid) {
-        const CLIParserOption commc_opts[] = {
-            {DCCNative,    "native"},
-            {DCCNativeISO, "niso"},
-            {DCCISO,       "iso"},
-        };
-        
-        if (CLIGetOptionList(arg_get_str(ctx, ccsetid), commc_opts, ARRAY_LENGTH(commc_opts), &commset))
+        if (CLIGetOptionList(arg_get_str(ctx, ccsetid), DesfireCommandSetOpts, &commset))
            return PM3_ESOFT;
-        PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(commc_opts, ARRAY_LENGTH(commc_opts), commset));
+        PrintAndLogEx(INFO, "comm mode: %s", CLIGetOptionListStr(DesfireCommandSetOpts, commset));
     }
 
     if (schannid) {
-        const CLIParserOption authc_opts[] = {
-            {DACd40, "d40"},
-            {DACEV1, "ev1"},
-            {DACEV2, "ev2"},
-        };
-        
-        if (CLIGetOptionList(arg_get_str(ctx, schannid), authc_opts, ARRAY_LENGTH(authc_opts), &secchann))
+        if (CLIGetOptionList(arg_get_str(ctx, schannid), DesfireSecureChannelOpts, &secchann))
            return PM3_ESOFT;
-        PrintAndLogEx(INFO, "auth channel: %s", CLIGetOptionListStr(authc_opts, ARRAY_LENGTH(authc_opts), secchann));
+        PrintAndLogEx(INFO, "auth channel: %s", CLIGetOptionListStr(DesfireSecureChannelOpts, secchann));
     }
         
     DesfireSetKey(dctx, keynum, algores, key);
@@ -5122,6 +5091,60 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
     DesfireSetCommMode(dctx, commmode);
     if (securechannel)
         *securechannel = secchann;
+    
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesDefault(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes default",
+                  "Get Application IDs, ISO IDs and DF names from card. Master key needs to be provided.",
+                  "hf mfdes getappnames -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 1, 2, 3, 4, 5, 6, 7, 8, &securechann);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+    
+    CLIParserFree(ctx);
+     
+    defaultKeyNum = dctx.keyNum; 
+    defaultAlgoId = dctx.keyType;
+    memcpy(defaultKey, dctx.key, DESFIRE_MAX_KEY_SIZE);
+    defaultKdfAlgo = dctx.kdfAlgo;
+    defaultKdfInputLen = dctx.kdfInputLen;
+    memcpy(defaultKdfInput, dctx.kdfInput, sizeof(dctx.kdfInput));
+    defaultSecureChannel = securechann;    
+    defaultCommSet = dctx.cmdSet;     
+    defaultCommMode = dctx.commMode;
+
+    PrintAndLogEx(INFO, "-----------" _CYAN_("Default parameters") "---------------------------------");
+
+    PrintAndLogEx(INFO, "Key Num     : %d", defaultKeyNum);
+    PrintAndLogEx(INFO, "Algo        : %s", CLIGetOptionListStr(DesfireAlgoOpts, defaultAlgoId));
+    PrintAndLogEx(INFO, "Key         : %s", sprint_hex(defaultKey, key_size(defaultAlgoId)));
+    PrintAndLogEx(INFO, "KDF algo    : %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, defaultKdfAlgo));
+    PrintAndLogEx(INFO, "KDF input   : [%d] %s", defaultKdfInputLen, sprint_hex(defaultKdfInput, defaultKdfInputLen));
+    PrintAndLogEx(INFO, "Secure chan : %s", CLIGetOptionListStr(DesfireSecureChannelOpts, defaultSecureChannel));
+    PrintAndLogEx(INFO, "Command set : %s", CLIGetOptionListStr(DesfireCommandSetOpts, defaultCommSet));
+    PrintAndLogEx(INFO, "Comm mode   : %s", CLIGetOptionListStr(DesfireCommunicationModeOpts, defaultCommMode));
     
     return PM3_SUCCESS;
 }
@@ -5294,6 +5317,7 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                     AlwaysAvailable, "This help"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "---------------------- " _CYAN_("general") " ----------------------"},
+    {"default",          CmdHF14ADesDefault,          IfPm3Iso14443a,  "Set defaults for all the commands"},
     {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
     {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
     {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "Check keys"},
