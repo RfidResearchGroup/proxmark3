@@ -16,6 +16,9 @@
 #include <stddef.h>
 #include <mbedtls/pk.h>
 
+void des_encrypt(void *out, const void *in, const void *key);
+void des_decrypt(void *out, const void *in, const void *key);
+
 int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length);
 int aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length);
 int aes_cmac(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int length);

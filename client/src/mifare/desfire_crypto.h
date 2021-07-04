@@ -24,6 +24,7 @@
 #include "common.h"
 #include "mifare.h" // structs
 #include "crc32.h"
+#include "crypto/libpcrypto.h"
 
 
 #define MAX_CRYPTO_BLOCK_SIZE 16
@@ -126,8 +127,7 @@ typedef unsigned long DES3_KS[48][2];  /* Triple-DES key schedule */
 
 extern int Asmversion; /* 1 if we're linked with an asm version, 0 if C */
 
-void des_encrypt(void *out, const void *in, const void *key);
-void des_decrypt(void *out, const void *in, const void *key);
+
 void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode);
 void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode);
 void Desfire_des_key_new(const uint8_t value[8], desfirekey_t key);

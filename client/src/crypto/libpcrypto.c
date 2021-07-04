@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <mbedtls/asn1.h>
+#include <mbedtls/des.h>
 #include <mbedtls/aes.h>
 #include <mbedtls/cmac.h>
 #include <mbedtls/pk.h>
@@ -27,6 +28,19 @@
 #include <mbedtls/error.h>
 #include "util.h"
 #include "ui.h"
+
+void des_encrypt(void *out, const void *in, const void *key) {
+    mbedtls_des_context ctx;
+    mbedtls_des_setkey_enc(&ctx, key);
+    mbedtls_des_crypt_ecb(&ctx, in, out);
+}
+
+void des_decrypt(void *out, const void *in, const void *key) {
+    mbedtls_des_context ctx;
+    mbedtls_des_setkey_dec(&ctx, key);
+    mbedtls_des_crypt_ecb(&ctx, in, out);
+}
+
 // NIST Special Publication 800-38A — Recommendation for block cipher modes of operation: methods and techniques, 2001.
 int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) {
     uint8_t iiv[16] = {0};

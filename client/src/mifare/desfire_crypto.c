@@ -65,18 +65,6 @@ int desfire_get_key_length(enum DESFIRE_CRYPTOALGO key_type) {
 
 /******************************************************************************/
 
-void des_encrypt(void *out, const void *in, const void *key) {
-    mbedtls_des_context ctx;
-    mbedtls_des_setkey_enc(&ctx, key);
-    mbedtls_des_crypt_ecb(&ctx, in, out);
-}
-
-void des_decrypt(void *out, const void *in, const void *key) {
-    mbedtls_des_context ctx;
-    mbedtls_des_setkey_dec(&ctx, key);
-    mbedtls_des_crypt_ecb(&ctx, in, out);
-}
-
 void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode) {
     if (length % 8)
         return;
