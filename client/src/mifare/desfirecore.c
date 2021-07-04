@@ -525,15 +525,32 @@ static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t 
     return PM3_SUCCESS;    
 }
 
+static void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
+    memcpy(dstdata, srcdata, srcdatalen);
+    *dstdatalen = srcdatalen;
+}
+
+static void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
+    memcpy(dstdata, srcdata, srcdatalen);
+    *dstdatalen = srcdatalen;
+}
+
 int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
     int res = PM3_SUCCESS;
     
+    uint8_t databuf[250 * 5] = {0};
+    size_t databuflen = 0;
+        
     switch(ctx->cmdSet) {
         case DCCNative:
-            res = DesfireExchangeNative(activate_field, ctx, cmd, data, datalen, respcode, resp, resplen, enable_chaining, splitbysize);
+            DesfireSecureChannelEncode(ctx, cmd, data, datalen, databuf, &databuflen);
+            res = DesfireExchangeNative(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize);
+            DesfireSecureChannelDecode(ctx, databuf, databuflen, *respcode, resp, resplen);
         break;
         case DCCNativeISO:
-            res = DesfireExchangeISO(activate_field, ctx, cmd, data, datalen, respcode, resp, resplen, enable_chaining, splitbysize);
+            DesfireSecureChannelEncode(ctx, cmd, data, datalen, databuf, &databuflen);
+            res = DesfireExchangeISO(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize);
+            DesfireSecureChannelDecode(ctx, databuf, databuflen, *respcode, resp, resplen);
         break;
         case DCCISO:
             return PM3_EAPDU_FAIL;
