@@ -24,7 +24,6 @@
 #include "protocols.h"
 #include "util_posix.h"         // msclock
 #include "cmdhfmfhard.h"
-#include "des.h"                // des ecb
 #include "crapto1/crapto1.h"    // prng_successor
 #include "cmdhf14a.h"           // exchange APDU
 #include "crypto/libpcrypto.h"
@@ -5643,12 +5642,6 @@ static int CmdHf14AGen3Freeze(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "MFC Gen3 UID card is now perma-locked");
     }
     return res;
-}
-
-static void des_decrypt(void *out, const void *in, const void *key) {
-    mbedtls_des_context ctx;
-    mbedtls_des_setkey_dec(&ctx, key);
-    mbedtls_des_crypt_ecb(&ctx, in, out);
 }
 
 static int CmdHf14AMfSuperCard(const char *Cmd) {

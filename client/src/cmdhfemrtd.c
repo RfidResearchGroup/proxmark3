@@ -19,8 +19,7 @@
 #include "protocols.h"              // definitions of ISO14A/7816 protocol
 #include "iso7816/apduinfo.h"       // GetAPDUCodeDescription
 #include "iso7816/iso7816core.h"    // Iso7816ExchangeEx etc
-#include "crypto/libpcrypto.h"      // Hash calculation (sha1, sha256, sha512)
-#include "mifare/desfire_crypto.h"  // des_encrypt/des_decrypt
+#include "crypto/libpcrypto.h"      // Hash calculation (sha1, sha256, sha512), des_encrypt/des_decrypt
 #include "des.h"                    // mbedtls_des_key_set_parity
 #include "crapto1/crapto1.h"        // prng_successor
 #include "commonutil.h"             // num_to_bytes
@@ -263,20 +262,6 @@ static int emrtd_get_asn1_field_length(uint8_t *datain, int datainlen, int offse
     return 0;
 }
 
-static void des_encrypt_ecb(uint8_t *key, uint8_t *input, uint8_t *output) {
-    mbedtls_des_context ctx_enc;
-    mbedtls_des_setkey_enc(&ctx_enc, key);
-    mbedtls_des_crypt_ecb(&ctx_enc, input, output);
-    mbedtls_des_free(&ctx_enc);
-}
-
-static void des_decrypt_ecb(uint8_t *key, uint8_t *input, uint8_t *output) {
-    mbedtls_des_context ctx_dec;
-    mbedtls_des_setkey_dec(&ctx_dec, key);
-    mbedtls_des_crypt_ecb(&ctx_dec, input, output);
-    mbedtls_des_free(&ctx_dec);
-}
-
 static void des3_encrypt_cbc(uint8_t *iv, uint8_t *key, uint8_t *input, int inputlen, uint8_t *output) {
     mbedtls_des3_context ctx;
     mbedtls_des3_set2key_enc(&ctx, key);
@@ -345,15 +330,15 @@ static void retail_mac(uint8_t *key, uint8_t *input, int inputlen, uint8_t *outp
             intermediate[x] = intermediate[x] ^ block[x];
         }
 
-        des_encrypt_ecb(k0, intermediate, intermediate_des);
+        des_encrypt(intermediate_des, intermediate, k0);
         memcpy(intermediate, intermediate_des, 8);
     }
 
 
-    des_decrypt_ecb(k1, intermediate, intermediate_des);
+    des_decrypt(intermediate_des, intermediate, k1);
     memcpy(intermediate, intermediate_des, 8);
 
-    des_encrypt_ecb(k0, intermediate, intermediate_des);
+    des_encrypt(intermediate_des, intermediate, k0);
     memcpy(output, intermediate_des, 8);
 }
 

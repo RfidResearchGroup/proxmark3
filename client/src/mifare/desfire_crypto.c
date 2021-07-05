@@ -1,5 +1,6 @@
 /*-
  * Copyright (C) 2010, Romain Tartiere.
+ * Copyright (C) 2021 Merlok
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -51,19 +52,18 @@ static inline void update_key_schedules(desfirekey_t key) {
     // }
 }
 
+int desfire_get_key_length(enum DESFIRE_CRYPTOALGO key_type) {
+    switch (key_type) {
+        case T_DES:     return 8;
+        case T_3DES:    return 16;
+        case T_3K3DES:  return 24;
+        case T_AES:     return 16;
+    }
+    return 0;
+}
+
+
 /******************************************************************************/
-
-void des_encrypt(void *out, const void *in, const void *key) {
-    mbedtls_des_context ctx;
-    mbedtls_des_setkey_enc(&ctx, key);
-    mbedtls_des_crypt_ecb(&ctx, in, out);
-}
-
-void des_decrypt(void *out, const void *in, const void *key) {
-    mbedtls_des_context ctx;
-    mbedtls_des_setkey_dec(&ctx, key);
-    mbedtls_des_crypt_ecb(&ctx, in, out);
-}
 
 void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode) {
     if (length % 8)
@@ -378,12 +378,9 @@ void mifare_kdf_an10922(const desfirekey_t key, const uint8_t *data, size_t len)
     free(buffer);
 }
 
-size_t key_block_size(const desfirekey_t key) {
-    if (key == NULL) {
-        return 0;
-    }
+size_t desfire_get_key_block_length(enum DESFIRE_CRYPTOALGO key_type) {
     size_t block_size = 8;
-    switch (key->type) {
+    switch (key_type) {
         case T_DES:
         case T_3DES:
         case T_3K3DES:
@@ -394,6 +391,31 @@ size_t key_block_size(const desfirekey_t key) {
             break;
     }
     return block_size;
+}
+
+size_t key_block_size(const desfirekey_t key) {
+    if (key == NULL) {
+        return 0;
+    }
+    return desfire_get_key_block_length(key->type);
+}
+
+size_t key_size(const enum DESFIRE_CRYPTOALGO algo) {
+    switch (algo) {
+        case T_DES:
+            return 8;
+            break;
+        case T_3DES:
+            return 16;
+            break;
+        case T_3K3DES:
+            return 24;
+            break;
+        case T_AES:
+            return 16;
+            break;
+    }
+    return 0;    
 }
 
 /*
