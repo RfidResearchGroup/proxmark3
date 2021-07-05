@@ -314,6 +314,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/pm3.c
         ${PM3_ROOT}/client/src/pm3_binlib.c
         ${PM3_ROOT}/client/src/pm3_bitlib.c
+        ${PM3_ROOT}/client/src/pm3line.c
         ${PM3_ROOT}/client/src/prng.c
         ${PM3_ROOT}/client/src/scandir.c
         ${PM3_ROOT}/client/src/scripting.c
@@ -469,6 +470,14 @@ else (SKIPREADLINE EQUAL 1)
     endif (READLINE_FOUND)
 endif(SKIPREADLINE EQUAL 1)
 
+if (NOT READLINE_FOUND)
+    if (NOT SKIPLINENOISE EQUAL 1)
+        message("Linenoise library: enabled")
+    else (NOT SKIPLINENOISE EQUAL 1)
+        message("Linenoise library: skipped")
+    endif (NOT SKIPLINENOISE EQUAL 1)
+endif (NOT READLINE_FOUND)
+
 if (SKIPWHEREAMISYSTEM EQUAL 1)
     message(STATUS "Whereami library:  local library forced")
 else (SKIPWHEREAMISYSTEM EQUAL 1)
@@ -546,6 +555,13 @@ endif (NOT APPLE)
 if (NOT JANSSON_FOUND)
     set(ADDITIONAL_LNK pm3rrg_rdv4_jansson ${ADDITIONAL_LNK})
 endif (NOT JANSSON_FOUND)
+if (NOT READLINE_FOUND)
+    if (NOT SKIPLINENOISE EQUAL 1)
+        add_definitions("-DHAVE_LINENOISE")
+        find_library(pm3rrg_rdv4_linenoise REQUIRED)
+        set(ADDITIONAL_LNK pm3rrg_rdv4_linenoise ${ADDITIONAL_LNK})
+    endif (NOT SKIPLINENOISE EQUAL 1)
+endif (NOT READLINE_FOUND)
 if (NOT WHEREAMI_FOUND)
     set(ADDITIONAL_LNK pm3rrg_rdv4_whereami ${ADDITIONAL_LNK})
 endif (NOT WHEREAMI_FOUND)
