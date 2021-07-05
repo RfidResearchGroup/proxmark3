@@ -105,8 +105,13 @@ void ProxGuiQT::_HideGraphWindow(void) {
 
 // picture viewer 
 void ProxGuiQT::_ShowPictureWindow(char *fn) {
+
+    if (!plotapp) 
+        return;
+
     if (fn == NULL)
         return;
+
     size_t slen = strlen(fn);
     if (slen == 0)
         return;
@@ -116,9 +121,6 @@ void ProxGuiQT::_ShowPictureWindow(char *fn) {
         return;
 
     memcpy(myfn, fn, slen);
-
-    if (!plotapp)
-        return;
 
     if (!pictureWidget) {
 
@@ -191,11 +193,6 @@ void ProxGuiQT::_StartProxmarkThread(void) {
 void ProxGuiQT::MainLoop() {
     plotapp = new QApplication(argc, argv);
 
-    // Setup the picture widget
-    pictureWidget = new QWidget();
-    pictureController = new Ui::PictureForm();
-    pictureController->setupUi(pictureWidget);
-
     connect(this, SIGNAL(ShowGraphWindowSignal()), this, SLOT(_ShowGraphWindow()));
     connect(this, SIGNAL(RepaintGraphWindowSignal()), this, SLOT(_RepaintGraphWindow()));
     connect(this, SIGNAL(HideGraphWindowSignal()), this, SLOT(_HideGraphWindow()));
@@ -222,6 +219,11 @@ void ProxGuiQT::MainLoop() {
 
 ProxGuiQT::ProxGuiQT(int argc, char **argv, WorkerThread *wthread) : plotapp(NULL), plotwidget(NULL),
     argc(argc), argv(argv), proxmarkThread(wthread) {
+
+    // Setup the picture widget
+    pictureWidget = new QWidget();
+    pictureController = new Ui::PictureForm();
+    pictureController->setupUi(pictureWidget);
 }
 
 ProxGuiQT::~ProxGuiQT(void) {
