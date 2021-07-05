@@ -404,8 +404,14 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext *ctx, uint8
         return res;
     }
     
-    if (resp)
-        memcpy(resp, buf, buflen);
+    if (resp) {
+        if (splitbysize) {
+            resp[0] = buflen;
+            memcpy(&resp[1], buf, buflen);
+        } else {
+            memcpy(resp, buf, buflen);
+        }
+    }
     if (respcode != NULL)
         *respcode = rcode;
 
@@ -434,7 +440,8 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext *ctx, uint8
 
         if (resp != NULL) {
             if (splitbysize) {
-                memcpy(&resp[i * splitbysize], buf, buflen);
+                resp[i * splitbysize] = buflen;
+                memcpy(&resp[i * splitbysize + 1], buf, buflen);
                 i += 1;
             } else {
                 memcpy(&resp[pos], buf, buflen);
@@ -480,8 +487,14 @@ static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t 
     if (respcode != NULL && ((sw & 0xff00) == 0x9100))
         *respcode = sw & 0xff;
 
-    if (resp)
-        memcpy(resp, buf, buflen);
+    if (resp) {
+        if (splitbysize) {
+            resp[0] = buflen;
+            memcpy(&resp[1], buf, buflen);
+        } else {
+            memcpy(resp, buf, buflen);
+        }
+    }
 
     pos += buflen;
     if (!enable_chaining) {
@@ -512,7 +525,8 @@ static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t 
 
         if (resp != NULL) {
             if (splitbysize) {
-                memcpy(&resp[i * splitbysize], buf, buflen);
+                resp[i * splitbysize] = buflen;
+                memcpy(&resp[i * splitbysize + 1], buf, buflen);
                 i += 1;
             } else {
                 memcpy(&resp[pos], buf, buflen);
