@@ -459,6 +459,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_GET_FILE_SETTINGS         0xF5
 #define MFDES_FORMAT_PICC               0xFC
 #define MFDES_VERIFY_PC                 0xFD
+#define MFDES_NATIVE_ISO7816_WRAP_CLA   0x90
 
 // MIFARE DESFire status & error codes:
 #define MFDES_S_OPERATION_OK            0x00
