@@ -699,6 +699,32 @@ static void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, si
     }
 }
 
+// move data from blockdata [format: <length, data><length, data>...] to single data block
+static void DesfireJoinBlockToBytes(uint8_t *blockdata, size_t blockdatacount, size_t blockdatasize, uint8_t *dstdata, size_t *dstdatalen) {
+    *dstdatalen = 0;
+    for(int i = 0; i < blockdatacount; i++) {
+        memcpy(&dstdata[*dstdatalen], &blockdata[i * blockdatasize + 1], blockdata[i * blockdatasize]);
+        *dstdatalen += blockdata[i * blockdatasize];
+    }
+}
+
+// move data from single data block to blockdata [format: <length, data><length, data>...] 
+// lengths in the blockdata is not changed. result - in the blockdata
+static void DesfireSplitBytesToBlock(uint8_t *blockdata, size_t *blockdatacount, size_t blockdatasize, uint8_t *dstdata, size_t dstdatalen) {
+    size_t len = 0;
+    for(int i = 0; i < *blockdatacount; i++) {
+        size_t tlen = len + blockdata[i * blockdatasize];
+        if (tlen > dstdatalen)
+            tlen = dstdatalen;
+        if (len == tlen) {
+            *blockdatacount = i;
+            break;
+        }
+        memcpy(&blockdata[i * blockdatasize + 1], &dstdata[len], tlen - len);
+        len = tlen;
+    }
+}
+
 int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
     int res = PM3_SUCCESS;
     
@@ -707,14 +733,28 @@ int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uin
         
     switch(ctx->cmdSet) {
         case DCCNative:
-            DesfireSecureChannelEncode(ctx, cmd, data, datalen, databuf, &databuflen);
-            res = DesfireExchangeNative(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize);
-            DesfireSecureChannelDecode(ctx, databuf, databuflen, *respcode, resp, resplen);
-        break;
         case DCCNativeISO:
             DesfireSecureChannelEncode(ctx, cmd, data, datalen, databuf, &databuflen);
-            res = DesfireExchangeISO(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize);
-            DesfireSecureChannelDecode(ctx, databuf, databuflen, *respcode, resp, resplen);
+            
+            if (ctx->cmdSet == DCCNative)
+                res = DesfireExchangeNative(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize);
+            else
+                res = DesfireExchangeISO(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize);
+            
+            if (splitbysize) {
+                uint8_t sdata[250 * 5] = {0};
+                size_t sdatalen = 0;
+                DesfireJoinBlockToBytes(databuf, databuflen, splitbysize, sdata, &sdatalen);
+
+                //PrintAndLogEx(INFO, "block : %s", sprint_hex(sdata, sdatalen));
+                DesfireSecureChannelDecode(ctx, sdata, sdatalen, *respcode, resp, resplen);
+
+                DesfireSplitBytesToBlock(databuf, &databuflen, splitbysize, resp, *resplen);
+                memcpy(resp, databuf, databuflen * splitbysize);
+                *resplen = databuflen;
+            } else {
+                DesfireSecureChannelDecode(ctx, databuf, databuflen, *respcode, resp, resplen);
+            }
         break;
         case DCCISO:
             return PM3_EAPDU_FAIL;
