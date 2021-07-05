@@ -12,6 +12,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <iostream>
+//#include <QtCore>
 #include <QPainterPath>
 #include <QBrush>
 #include <QPen>
@@ -32,6 +33,7 @@
 #include "graph.h"
 #include "cmddata.h"
 #include "util_darwin.h"
+//#include "fileutils.h"
 
 extern "C" int preferences_save(void);
 
@@ -54,6 +56,19 @@ void ProxGuiQT::HideGraphWindow(void) {
     emit HideGraphWindowSignal();
 }
 
+// emit picture viewer signals
+void ProxGuiQT::ShowPictureWindow(char *fn) {
+    emit ShowPictureWindowSignal(fn);
+}
+
+void ProxGuiQT::RepaintPictureWindow(void) {
+    emit RepaintPictureWindowSignal();
+}
+
+void ProxGuiQT::HidePictureWindow(void) {
+    emit HidePictureWindowSignal();
+}
+
 void ProxGuiQT::Exit(void) {
     emit ExitSignal();
 }
@@ -71,6 +86,7 @@ void ProxGuiQT::_ShowGraphWindow(void) {
         plotwidget = new ProxWidget();
     }
     plotwidget->show();
+
 }
 
 void ProxGuiQT::_RepaintGraphWindow(void) {
@@ -87,8 +103,78 @@ void ProxGuiQT::_HideGraphWindow(void) {
     plotwidget->hide();
 }
 
+// picture viewer 
+void ProxGuiQT::_ShowPictureWindow(char *fn) {
+    if (fn == NULL)
+        return;
+    size_t slen = strlen(fn);
+    if (slen == 0)
+        return;
+
+    char *myfn = (char*)calloc(slen + 1, sizeof(uint8_t));
+    if (myfn == NULL)
+        return;
+
+    memcpy(myfn, fn, slen);
+
+    if (!plotapp)
+        return;
+
+    if (!pictureWidget) {
+
+#if defined(__MACH__) && defined(__APPLE__)
+        makeFocusable();
+#endif
+
+        pictureWidget = new QWidget();
+    }
+
+    QPixmap pm;
+    if(pm.load(myfn) == false){
+        qWarning("Failed to load %s", myfn);
+    }
+    free(myfn);
+    free(fn);
+
+    //QPixmap newPixmap = pm.scaled(QSize(50,50),  Qt::KeepAspectRatio);
+    //pm = pm.scaled(pictureController->lbl_pm->size(),  Qt::KeepAspectRatio);
+
+    pictureController->lbl_pm->setPixmap(pm);
+    pictureController->lbl_pm->setScaledContents(false);
+    pictureController->lbl_pm->setAlignment(Qt::AlignCenter);
+
+    QString s = QString("w: %1  h: %2")
+                    .arg(pm.size().width())
+                    .arg(pm.size().height()
+                );
+    pictureController->lbl_sz->setText(s);
+    pictureWidget->show();
+}
+
+void ProxGuiQT::_RepaintPictureWindow(void) {
+    if (!plotapp || !pictureWidget)
+        return;
+
+    pictureWidget->update();
+}
+
+void ProxGuiQT::_HidePictureWindow(void) {
+    if (!plotapp || !pictureWidget)
+        return;
+
+    pictureWidget->hide();
+}
+
 void ProxGuiQT::_Exit(void) {
     delete this;
+}
+
+void ProxGuiQT::closeEvent(QCloseEvent *event) {
+    event->ignore();
+    pictureWidget->hide();
+}
+void ProxGuiQT::hideEvent(QHideEvent *event) {
+    pictureWidget->hide();
 }
 
 void ProxGuiQT::_StartProxmarkThread(void) {
@@ -105,10 +191,22 @@ void ProxGuiQT::_StartProxmarkThread(void) {
 void ProxGuiQT::MainLoop() {
     plotapp = new QApplication(argc, argv);
 
+    // Setup the picture widget
+    pictureWidget = new QWidget();
+    pictureController = new Ui::PictureForm();
+    pictureController->setupUi(pictureWidget);
+
     connect(this, SIGNAL(ShowGraphWindowSignal()), this, SLOT(_ShowGraphWindow()));
     connect(this, SIGNAL(RepaintGraphWindowSignal()), this, SLOT(_RepaintGraphWindow()));
     connect(this, SIGNAL(HideGraphWindowSignal()), this, SLOT(_HideGraphWindow()));
+
     connect(this, SIGNAL(ExitSignal()), this, SLOT(_Exit()));
+
+    // hook up picture viewer signals
+    connect(this, SIGNAL(ShowPictureWindowSignal(char*)), this, SLOT(_ShowPictureWindow(char*)));
+    connect(this, SIGNAL(RepaintPictureWindowSignal()), this, SLOT(_RepaintPictureWindow()));
+    connect(this, SIGNAL(HidePictureWindowSignal()), this, SLOT(_HidePictureWindow()));
+
 
     //start proxmark thread after starting event loop
     QTimer::singleShot(200, this, SLOT(_StartProxmarkThread()));
@@ -127,6 +225,18 @@ ProxGuiQT::ProxGuiQT(int argc, char **argv, WorkerThread *wthread) : plotapp(NUL
 }
 
 ProxGuiQT::~ProxGuiQT(void) {
+
+    if (pictureController) {
+        delete pictureController;
+        pictureController = NULL;
+    }
+
+    if (pictureWidget) {
+        pictureWidget->close();
+        delete pictureWidget;
+        pictureWidget = NULL;
+    }
+
     if (plotapp) {
         plotapp->quit();
         plotapp = NULL;
@@ -197,6 +307,8 @@ void ProxWidget::vchange_dthr_down(int v) {
     g_useOverlays = true;
     RepaintGraphWindow();
 }
+
+
 ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     this->master = master;
     // Set the initail postion and size from settings
@@ -207,6 +319,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
 
     // Setup the controller widget
     controlWidget = new SliderWidget(); //new QWidget();
+
     opsController = new Ui::Form();
     opsController->setupUi(controlWidget);
     //Due to quirks in QT Designer, we need to fiddle a bit
@@ -295,6 +408,7 @@ void ProxWidget::showEvent(QShowEvent *event) {
         controlWidget->show();
     else
         controlWidget->hide();
+
     plot->show();
 }
 void ProxWidget::moveEvent(QMoveEvent *event) {

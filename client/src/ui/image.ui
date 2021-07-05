@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PictureForm</class>
+ <widget class="QWidget" name="Form">
+    <property name="geometry">
+    <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>400</width>
+        <height>400</height>
+    </rect>
+    </property>
+    <property name="windowTitle">
+        <string>Picture Viewer</string>
+    </property>
+    <layout class="QVBoxLayout" name="verticalLayout_1">
+        <item>
+            <widget class="QLabel" name="lbl_pm">
+            </widget>
+        </item>
+        <item>
+            <widget class="QLabel" name="lbl_sz">
+            <property name="text">
+                <string>Image size</string>
+            </property>
+            </widget>
+        </item>
+    </layout>
+    </widget>
+    <resources/>
+    <connections/>
+</ui>
+

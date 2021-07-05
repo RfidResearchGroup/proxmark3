@@ -24,6 +24,8 @@
 #include "crapto1/crapto1.h"        // prng_successor
 #include "commonutil.h"             // num_to_bytes
 #include "util_posix.h"             // msclock
+#include "ui.h"                     // searchhomedirectory
+#include "proxgui.h"                // Picture Window
 
 // Max file size in bytes. Used in several places.
 // Average EF_DG2 seems to be around 20-25kB or so, but ICAO doesn't set an upper limit
@@ -53,6 +55,7 @@ static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length, const c
 static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length, const char *path);
 static int emrtd_print_ef_com_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen);
+static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen);
@@ -84,7 +87,7 @@ static emrtd_dg_t dg_table[] = {
 //  tag    dg# fileid  filename           desc                                                  pace   eac    req    fast   parser                          dumper
     {0x60, 0,  0x011E, "EF_COM",          "Header and Data Group Presence Information",         false, false, true,  true,  emrtd_print_ef_com_info,        NULL},
     {0x61, 1,  0x0101, "EF_DG1",          "Details recorded in MRZ",                            false, false, true,  true,  emrtd_print_ef_dg1_info,        NULL},
-    {0x75, 2,  0x0102, "EF_DG2",          "Encoded Face",                                       false, false, true,  false, NULL,                           emrtd_dump_ef_dg2},
+    {0x75, 2,  0x0102, "EF_DG2",          "Encoded Face",                                       false, false, true,  false, emrtd_print_ef_dg2_info,        emrtd_dump_ef_dg2},
     {0x63, 3,  0x0103, "EF_DG3",          "Encoded Finger(s)",                                  false, true,  false, false, NULL,                           NULL},
     {0x76, 4,  0x0104, "EF_DG4",          "Encoded Eye(s)",                                     false, true,  false, false, NULL,                           NULL},
     {0x65, 5,  0x0105, "EF_DG5",          "Displayed Portrait",                                 false, false, false, false, NULL,                           emrtd_dump_ef_dg5},
@@ -1398,6 +1401,65 @@ static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen) {
     return PM3_SUCCESS;
 }
 
+static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen) {
+
+    int offset = 0;
+
+    // This is a hacky impl that just looks for the image header. I'll improve it eventually.
+    // based on mrpkey.py
+    // Note: Doing datalen - 6 to account for the longest data we're checking.
+    // Checks first byte before the rest to reduce overhead
+    for (offset = 0; offset < datalen - 6; offset++) {
+        if ((data[offset] == 0xFF && memcmp(jpeg_header, data + offset, 4) == 0) ||
+                (data[offset] == 0x00 && memcmp(jpeg2k_header, data + offset, 6) == 0)) {
+            datalen = datalen - offset;
+            break;
+        }
+    }
+
+    // If we didn't get any data, return false.
+    if (datalen == 0) {
+        return PM3_ESOFT;
+    }
+
+    bool is_jpg = (data[offset] == 0xFF);
+
+    char *fn = calloc( strlen(dg_table[EF_DG2].filename) + 4 + 1, sizeof(uint8_t));
+    if (fn == NULL)
+        return PM3_EMALLOC;
+
+    sprintf(fn, "%s.%s", dg_table[EF_DG2].filename, (is_jpg) ? "jpg" : "jp2");
+
+    PrintAndLogEx(DEBUG, "image filename `" _YELLOW_("%s") "`", fn);
+
+    char *path;
+    if (searchHomeFilePath(&path, NULL, fn, false) != PM3_SUCCESS) {
+        free(fn);
+        return PM3_EFILE;        
+    }
+    free(fn);
+
+    // remove old file
+    if (fileExists(path)) {
+        PrintAndLogEx(DEBUG, "Delete old temp file `" _YELLOW_("%s") "`", path);
+        remove(path);
+    }
+
+    // temp file.
+    PrintAndLogEx(DEBUG, "Save temp file `" _YELLOW_("%s") "`", path);
+    saveFile(path, "", data + offset, datalen);
+
+    PrintAndLogEx(DEBUG, "view temp file `" _YELLOW_("%s") "`", path);
+    ShowPictureWindow(path);
+    msleep(500);
+
+    // delete temp file
+    PrintAndLogEx(DEBUG, "Deleting temp file `" _YELLOW_("%s") "`", path);
+    remove(path);
+    //free(path);
+    return PM3_SUCCESS;
+}
+
 static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen) {
     uint8_t taglist[100] = { 0x00 };
     size_t taglistlen = 0;
@@ -1930,6 +1992,7 @@ int infoHF_EMRTD_offline(const char *path) {
 
     if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS) {
         emrtd_print_ef_cardaccess_info(data, datalen);
+        free(data);
     } else {
         PrintAndLogEx(HINT, "The error above this is normal. It just means that your eMRTD lacks PACE.");
     }
@@ -2184,12 +2247,12 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
         }
     }
     uint8_t path[FILENAME_MAX] = { 0x00 };
-    bool offline = CLIParamStrToBuf(arg_get_str(ctx, 5), path, sizeof(path), &slen) == 0 && slen > 0;
+    bool is_offline = CLIParamStrToBuf(arg_get_str(ctx, 5), path, sizeof(path), &slen) == 0 && slen > 0;
     CLIParserFree(ctx);
     if (error) {
         return PM3_ESOFT;
     }
-    if (offline) {
+    if (is_offline) {
         return infoHF_EMRTD_offline((const char *)path);
     } else {
         bool restore_apdu_logging = GetAPDULogging();

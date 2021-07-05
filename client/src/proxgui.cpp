@@ -40,6 +40,7 @@ extern "C" void ShowGraphWindow(void) {
     }
 
     gui->ShowGraphWindow();
+
 }
 
 extern "C" void HideGraphWindow(void) {
@@ -54,6 +55,36 @@ extern "C" void RepaintGraphWindow(void) {
         return;
 
     gui->RepaintGraphWindow();
+}
+
+
+// hook up picture viewer 
+extern "C" void ShowPictureWindow(char *fn) {
+    if (!gui) {
+        // Show a notice if X11/XQuartz isn't available
+#if defined(__MACH__) && defined(__APPLE__)
+        PrintAndLogEx(WARNING, "You appear to be on a MacOS device without XQuartz.\nYou may need to install XQuartz (https://www.xquartz.org/) to make the plot work.");
+#else
+        PrintAndLogEx(WARNING, "You appear to be on an environment without an X11 server or without DISPLAY environment variable set.\nPlot may not work until you resolve these issues.");
+#endif
+        return;
+    }
+
+    gui->ShowPictureWindow(fn);
+}
+
+extern "C" void HidePictureWindow(void) {
+    if (!gui)
+        return;
+
+    gui->HidePictureWindow();
+}
+
+extern "C" void RepaintPictureWindow(void) {
+    if (!gui)
+        return;
+
+    gui->RepaintPictureWindow();
 }
 
 extern "C" void MainGraphics(void) {

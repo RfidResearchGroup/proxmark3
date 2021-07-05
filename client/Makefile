@@ -657,9 +657,9 @@ OBJS += $(OBJCSRCS:%.m=$(OBJDIR)/%.o)
 
 BINS = proxmark3
 
-CLEAN = $(BINS) src/version_pm3.c src/*.moc.cpp src/ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
+CLEAN = $(BINS) src/version_pm3.c src/*.moc.cpp src/ui/ui_overlays.h src/ui/ui_image.h lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 # transition: cleaning also old path stuff
-CLEAN += flasher *.moc.cpp ui/ui_overlays.h
+CLEAN += flasher *.moc.cpp ui/ui_overlays.h ui/ui_image.h
 
 ###########
 # targets #
@@ -675,13 +675,17 @@ proxmark3: $(OBJS) $(STATICLIBS) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lu
 	$(info [=] LD $@)
 	$(Q)$(LD) $(PM3LDFLAGS) $(OBJS) $(STATICLIBS) $(LDLIBS) -o $@
 
-src/proxgui.cpp: src/ui/ui_overlays.h
+src/proxgui.cpp: src/ui/ui_overlays.h src/ui/ui_image.h
 
 src/proxguiqt.moc.cpp: src/proxguiqt.h
 	$(info [-] MOC $@)
 	$(Q)$(MOC) -o$@ $^
 
 src/ui/ui_overlays.h: src/ui/overlays.ui
+	$(info [-] UIC $@)
+	$(Q)$(UIC) $^ > $@
+
+src/ui/ui_image.h: src/ui/image.ui
 	$(info [-] UIC $@)
 	$(Q)$(UIC) $^ > $@
 

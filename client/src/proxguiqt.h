@@ -22,6 +22,7 @@
 #include <QtGui>
 
 #include "ui/ui_overlays.h"
+#include "ui/ui_image.h"
 
 class ProxWidget;
 
@@ -81,8 +82,8 @@ class ProxWidget : public QWidget {
     ProxGuiQT *master;
     Plot *plot;
     Ui::Form *opsController;
-//    QWidget *controlWidget;
     SliderWidget *controlWidget;
+
   public:
     ProxWidget(QWidget *parent = 0, ProxGuiQT *master = NULL);
     ~ProxWidget(void);
@@ -125,6 +126,10 @@ class ProxGuiQT : public QObject {
   private:
     QApplication *plotapp;
     ProxWidget *plotwidget;
+    
+    Ui::PictureForm *pictureController;
+    QWidget *pictureWidget;
+    
     int argc;
     char **argv;
     //void (*main_func)(void);
@@ -136,13 +141,29 @@ class ProxGuiQT : public QObject {
     void ShowGraphWindow(void);
     void RepaintGraphWindow(void);
     void HideGraphWindow(void);
+
+    // hook up picture viewer 
+    void ShowPictureWindow(char *fn);
+    void HidePictureWindow(void);
+    void RepaintPictureWindow(void);
+
     void MainLoop(void);
     void Exit(void);
+
+  protected:
+    void closeEvent(QCloseEvent *event);
+    void hideEvent(QHideEvent *event);
 
   private slots:
     void _ShowGraphWindow(void);
     void _RepaintGraphWindow(void);
     void _HideGraphWindow(void);
+
+    // hook up picture viewer 
+    void _ShowPictureWindow(char *fn);
+    void _HidePictureWindow(void);
+    void _RepaintPictureWindow(void);
+
     void _Exit(void);
     void _StartProxmarkThread(void);
 
@@ -151,6 +172,11 @@ class ProxGuiQT : public QObject {
     void RepaintGraphWindowSignal(void);
     void HideGraphWindowSignal(void);
     void ExitSignal(void);
+    
+    // hook up picture viewer signals
+    void ShowPictureWindowSignal(char *fn);
+    void HidePictureWindowSignal(void);
+    void RepaintPictureWindowSignal(void);
 };
 
 #endif // PROXGUI_QT
