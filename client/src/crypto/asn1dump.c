@@ -231,7 +231,7 @@ static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *
         return;
     }
     uint32_t val = asn1_value_integer(tlv, 0, tlv->len * 2);
-    PrintAndLogEx(NORMAL, "    value: %lu (0x%X)", val, val);
+    PrintAndLogEx(NORMAL, "    value: %" PRIu32 " (0x%X)", val, val);
 }
 
 static char *asn1_oid_description(const char *oid, bool with_group_desc) {
@@ -327,7 +327,7 @@ bool asn1_tag_dump(const struct tlv *tlv, int level, bool *candump) {
     */
 
     PrintAndLogEx(INFO,
-                  "%*s-- %02X [%02X] '"_YELLOW_("%s") "'" NOLF
+                  "%*s-- %02X [%02ZX] '"_YELLOW_("%s") "'" NOLF
                   , (level * 4)
                   , " "
                   , tlv->tag
