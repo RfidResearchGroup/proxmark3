@@ -5297,7 +5297,7 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
     if (buflen > 0) {
         PrintAndLogEx(INFO, "----------------------- " _CYAN_("File list") " -----------------------");
         for (int i = 0; i < buflen; i++)
-            PrintAndLogEx(INFO, "AID: %06x ISO file id: %02x%02x ISO DF name[%d]: %s", 
+            PrintAndLogEx(INFO, "AID: %06x ISO file id: %02x%02x ISO DF name[%" PRIu32 "]: %s", 
                             DesfireAIDByteToUint(&buf[i * 24 + 1]),
                             buf[i * 24 + 1 + 3], buf[i * 24 + 1 + 4],
                             strlen((char *)&buf[i * 24 + 1 + 5]),
