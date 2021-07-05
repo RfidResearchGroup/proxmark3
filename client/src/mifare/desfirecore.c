@@ -234,9 +234,9 @@ void DesfirePrintContext(DesfireContext *ctx) {
     PrintAndLogEx(INFO, "Key num: %d Key algo: %s Key[%d]: %s", 
                         ctx->keyNum, 
                         CLIGetOptionListStr(DesfireAlgoOpts, ctx->keyType), 
-                        key_size(ctx->keyType), 
+                        desfire_get_key_length(ctx->keyType), 
                         sprint_hex(ctx->key, 
-                        key_size(ctx->keyType)));
+                        desfire_get_key_length(ctx->keyType)));
                         
     if (ctx->kdfAlgo != MFDES_KDF_ALGO_NONE)
         PrintAndLogEx(INFO, "KDF algo: %s KDF input[%d]: %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, ctx->kdfAlgo), ctx->kdfInputLen, sprint_hex(ctx->kdfInput, ctx->kdfInputLen));
@@ -248,9 +248,9 @@ void DesfirePrintContext(DesfireContext *ctx) {
                         
     if (DesfireIsAuthenticated(ctx)) {
         PrintAndLogEx(INFO, "Session key MAC [%d]: %s ENC: %s IV [%d]: %s", 
-                            key_size(ctx->keyType), 
-                            sprint_hex(ctx->sessionKeyMAC, key_size(ctx->keyType)), 
-                            sprint_hex(ctx->sessionKeyEnc, key_size(ctx->keyType)),
+                            desfire_get_key_length(ctx->keyType), 
+                            sprint_hex(ctx->sessionKeyMAC, desfire_get_key_length(ctx->keyType)), 
+                            sprint_hex(ctx->sessionKeyEnc, desfire_get_key_length(ctx->keyType)),
                             desfire_get_key_block_length(ctx->keyType),
                             sprint_hex(ctx->sessionKeyEnc, desfire_get_key_block_length(ctx->keyType)));
         

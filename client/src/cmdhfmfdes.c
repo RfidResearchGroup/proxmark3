@@ -5040,8 +5040,8 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
         uint8_t keydata[200] = {0};
         if (CLIParamHexToBuf(arg_get_str(ctx, keyid), keydata, sizeof(keydata), &keylen))
            return PM3_ESOFT;
-        if (keylen && keylen != key_size(algores)) {
-            PrintAndLogEx(ERR, "%s key must have %d bytes length instead of %d.", CLIGetOptionListStr(DesfireAlgoOpts, algores), key_size(algores), keylen);
+        if (keylen && keylen != desfire_get_key_length(algores)) {
+            PrintAndLogEx(ERR, "%s key must have %d bytes length instead of %d.", CLIGetOptionListStr(DesfireAlgoOpts, algores), desfire_get_key_length(algores), keylen);
             return PM3_EINVARG;
         }
         if (keylen)
@@ -5133,7 +5133,7 @@ static int CmdHF14ADesDefault(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Key Num     : %d", defaultKeyNum);
     PrintAndLogEx(INFO, "Algo        : %s", CLIGetOptionListStr(DesfireAlgoOpts, defaultAlgoId));
-    PrintAndLogEx(INFO, "Key         : %s", sprint_hex(defaultKey, key_size(defaultAlgoId)));
+    PrintAndLogEx(INFO, "Key         : %s", sprint_hex(defaultKey, desfire_get_key_length(defaultAlgoId)));
     PrintAndLogEx(INFO, "KDF algo    : %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, defaultKdfAlgo));
     PrintAndLogEx(INFO, "KDF input   : [%d] %s", defaultKdfInputLen, sprint_hex(defaultKdfInput, defaultKdfInputLen));
     PrintAndLogEx(INFO, "Secure chan : %s", CLIGetOptionListStr(DesfireSecureChannelOpts, defaultSecureChannel));
