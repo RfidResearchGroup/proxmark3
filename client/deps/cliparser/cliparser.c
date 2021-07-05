@@ -313,10 +313,7 @@ int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array
     
     int val = -1;
     int cntr = 0;
-    for (int i = 0; i < CLI_MAX_OPTLIST_LEN; i++) {
-        // end of array
-        if (option_array[i].text == NULL)
-            break;
+    for (int i = 0; i < CLI_MAX_OPTLIST_LEN && option_array[i].text != NULL; i++) {
         // exact match
         if (strcmp(option_array[i].text, data) == 0) {
             *value = option_array[i].code;
@@ -346,9 +343,7 @@ int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array
 const char *CLIGetOptionListStr(const CLIParserOption *option_array, int value) {
     static const char *errmsg = "n/a";
     
-    for (int i = 0; i < CLI_MAX_OPTLIST_LEN; i++) {
-        if (option_array[i].text == NULL)
-            break;
+    for (int i = 0; i < CLI_MAX_OPTLIST_LEN && option_array[i].text != NULL; i++) {
         if (option_array[i].code == value)
             return option_array[i].text;
     }
