@@ -192,7 +192,12 @@ void ProxGuiQT::_StartProxmarkThread(void) {
 
 void ProxGuiQT::MainLoop() {
     plotapp = new QApplication(argc, argv);
-
+    
+    // Setup the picture widget
+    pictureWidget = new QWidget();
+    pictureController = new Ui::PictureForm();
+    pictureController->setupUi(pictureWidget);
+ 
     connect(this, SIGNAL(ShowGraphWindowSignal()), this, SLOT(_ShowGraphWindow()));
     connect(this, SIGNAL(RepaintGraphWindowSignal()), this, SLOT(_RepaintGraphWindow()));
     connect(this, SIGNAL(HideGraphWindowSignal()), this, SLOT(_HideGraphWindow()));
@@ -213,17 +218,12 @@ void ProxGuiQT::MainLoop() {
     makeUnfocusable();
 #endif
 
-
     plotapp->exec();
 }
 
-ProxGuiQT::ProxGuiQT(int argc, char **argv, WorkerThread *wthread) : plotapp(NULL), plotwidget(NULL),
-    argc(argc), argv(argv), proxmarkThread(wthread) {
+ProxGuiQT::ProxGuiQT(int argc, char **argv, WorkerThread *wthread) : 
+    plotapp(NULL), plotwidget(NULL), pictureController(NULL), pictureWidget(NULL), argc(argc), argv(argv), proxmarkThread(wthread) {
 
-    // Setup the picture widget
-    pictureWidget = new QWidget();
-    pictureController = new Ui::PictureForm();
-    pictureController->setupUi(pictureWidget);
 }
 
 ProxGuiQT::~ProxGuiQT(void) {
