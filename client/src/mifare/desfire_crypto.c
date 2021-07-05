@@ -31,6 +31,7 @@
 #include <string.h>
 #include <util.h>
 #include "commonutil.h"
+#include "crypto/libpcrypto.h" 
 #include "aes.h"
 #include "des.h"
 #include "ui.h"
@@ -61,7 +62,6 @@ int desfire_get_key_length(enum DESFIRE_CRYPTOALGO key_type) {
     }
     return 0;
 }
-
 
 /******************************************************************************/
 

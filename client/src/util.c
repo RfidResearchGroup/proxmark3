@@ -25,7 +25,7 @@
 
 #include "ui.h"     // PrintAndLog
 
-#define UTIL_BUFFER_SIZE_SPRINT 4097
+#define UTIL_BUFFER_SIZE_SPRINT 8193
 // global client debug variable
 uint8_t g_debugMode = 0;
 // global client disable logging variable
