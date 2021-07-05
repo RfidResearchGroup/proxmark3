@@ -5198,7 +5198,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
   
     if (DesfireIsAuthenticated(&dctx)) {
         if (verbose)
-            PrintAndLogEx(ERR, "Desfire  " _GREEN_("authenticated") , res);
+            PrintAndLogEx(ERR, "Desfire  " _GREEN_("authenticated"));
     } else {
         return PM3_ESOFT;
     }
