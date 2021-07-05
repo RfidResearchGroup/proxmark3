@@ -128,7 +128,7 @@ void ProxGuiQT::_ShowPictureWindow(char *fn) {
         makeFocusable();
 #endif
 
-        pictureWidget = new QWidget();
+        pictureWidget = new PictureWidget();
     }
 
     QPixmap pm;
@@ -171,14 +171,6 @@ void ProxGuiQT::_Exit(void) {
     delete this;
 }
 
-void ProxGuiQT::closeEvent(QCloseEvent *event) {
-    event->ignore();
-    pictureWidget->hide();
-}
-void ProxGuiQT::hideEvent(QHideEvent *event) {
-    pictureWidget->hide();
-}
-
 void ProxGuiQT::_StartProxmarkThread(void) {
     if (!proxmarkThread)
         return;
@@ -194,10 +186,18 @@ void ProxGuiQT::MainLoop() {
     plotapp = new QApplication(argc, argv);
     
     // Setup the picture widget
-    pictureWidget = new QWidget();
+    pictureWidget = new PictureWidget();
     pictureController = new Ui::PictureForm();
     pictureController->setupUi(pictureWidget);
- 
+//    pictureWidget->setAttribute(Qt::WA_DeleteOnClose,true);
+
+    // Set picture widget position if no settings.
+    if (session.preferences_loaded == false) {
+        // Move controller widget below plot
+        //pictureController->move(x(), y() + frameSize().height());
+        //pictureController->resize(size().width(), 200);
+    }
+
     connect(this, SIGNAL(ShowGraphWindowSignal()), this, SLOT(_ShowGraphWindow()));
     connect(this, SIGNAL(RepaintGraphWindowSignal()), this, SLOT(_RepaintGraphWindow()));
     connect(this, SIGNAL(HideGraphWindowSignal()), this, SLOT(_HideGraphWindow()));
@@ -208,7 +208,6 @@ void ProxGuiQT::MainLoop() {
     connect(this, SIGNAL(ShowPictureWindowSignal(char*)), this, SLOT(_ShowPictureWindow(char*)));
     connect(this, SIGNAL(RepaintPictureWindowSignal()), this, SLOT(_RepaintPictureWindow()));
     connect(this, SIGNAL(HidePictureWindowSignal()), this, SLOT(_HidePictureWindow()));
-
 
     //start proxmark thread after starting event loop
     QTimer::singleShot(200, this, SLOT(_StartProxmarkThread()));
@@ -244,6 +243,24 @@ ProxGuiQT::~ProxGuiQT(void) {
         plotapp = NULL;
     }
 }
+
+// -------------------------------------------------
+// Slider Widget form based on a class to enable
+// Event override functions
+// -------------------------------------------------
+PictureWidget::PictureWidget() {
+    // Set the initail postion and size from settings
+//    if (session.preferences_loaded)
+//        setGeometry(session.pw.x, session.pw.y, session.pw.w, session.pw.h);
+//    else
+        resize(400, 400);
+}
+
+void PictureWidget::closeEvent(QCloseEvent *event) {
+    this->hide();
+    event->ignore();
+}
+
 
 // -------------------------------------------------
 // Slider Widget form based on a class to enable
@@ -320,8 +337,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
         resize(800, 400);
 
     // Setup the controller widget
-    controlWidget = new SliderWidget(); //new QWidget();
-
+    controlWidget = new SliderWidget();
     opsController = new Ui::Form();
     opsController->setupUi(controlWidget);
     //Due to quirks in QT Designer, we need to fiddle a bit
@@ -357,7 +373,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     show();
 
     // Set Slider/Overlay position if no settings.
-    if (!session.preferences_loaded) {
+    if (session.preferences_loaded == false) {
         // Move controller widget below plot
         controlWidget->move(x(), y() + frameSize().height());
         controlWidget->resize(size().width(), 200);
