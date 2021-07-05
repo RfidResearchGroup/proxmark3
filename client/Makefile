@@ -590,6 +590,7 @@ SRCS =  aiddesfire.c \
 		loclass/ikeys.c \
 		mifare/desfire_crypto.c \
 		mifare/desfirecore.c \
+        mifare/desfiresecurechan.c \
 		mifare/mad.c \
 		mifare/mfkey.c \
 		mifare/mifare4.c \
