@@ -30,6 +30,7 @@
 #include <string.h>
 #include <util.h>
 #include "commonutil.h"
+#include "crypto/libpcrypto.h" 
 #include "aes.h"
 #include "des.h"
 #include "ui.h"
