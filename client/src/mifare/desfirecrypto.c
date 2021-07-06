@@ -24,6 +24,8 @@
 #include <string.h>
 #include <util.h>
 #include "ui.h"
+#include "aes.h"
+#include "des.h"
 #include "crc.h"
 #include "crc16.h"        // crc16 ccitt
 #include "crc32.h"
@@ -85,39 +87,152 @@ bool DesfireIsAuthenticated(DesfireContext *dctx) {
     return dctx->secureChannel != DACNone;
 }
 
-void DesfireCryptoEncDec(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode) {
-    uint8_t data[1024] = {0};
+static void DesfireCryptoEncDecSingleBlock(uint8_t *key, DesfireCryptoAlgorythm keyType, uint8_t *data, uint8_t *dstdata, uint8_t *ivect, bool dir_to_send, bool encode) {
+    size_t block_size = desfire_get_key_block_length(keyType);
+    uint8_t sdata[MAX_CRYPTO_BLOCK_SIZE] = {0};
+    memcpy(sdata, data, block_size);
+    if (dir_to_send) {
+        bin_xor(sdata, ivect, block_size);
+    }
 
-    switch (ctx->keyType) {
+    uint8_t edata[MAX_CRYPTO_BLOCK_SIZE] = {0};
+
+    switch (keyType) {
         case T_DES:
-            if (ctx->secureChannel == DACd40) {
-                if (encode)
-                    des_encrypt_ecb(data, srcdata, srcdatalen, ctx->key);
-                else
-                    des_decrypt_ecb(data, srcdata, srcdatalen, ctx->key);
-            }
-            if (ctx->secureChannel == DACEV1) {
-                if (encode)
-                    des_encrypt_cbc(data, srcdata, srcdatalen, ctx->key, ctx->IV);
-                else
-                    des_decrypt_cbc(data, srcdata, srcdatalen, ctx->key, ctx->IV);
-            }
-
-            if (dstdata)
-                memcpy(dstdata, data, srcdatalen);
+            if (encode)
+                des_encrypt(edata, sdata, key);
+            else
+                des_decrypt(edata, sdata, key);
             break;
         case T_3DES:
+            if (encode) {
+                mbedtls_des3_context ctx3;
+                mbedtls_des3_set2key_enc(&ctx3, key);
+                mbedtls_des3_crypt_ecb(&ctx3, sdata, edata);
+            } else {
+                mbedtls_des3_context ctx3;
+                mbedtls_des3_set2key_dec(&ctx3, key);
+                mbedtls_des3_crypt_ecb(&ctx3, sdata, edata);
+            }
             break;
         case T_3K3DES:
+            if (encode) {
+                mbedtls_des3_context ctx3;
+                mbedtls_des3_set3key_enc(&ctx3, key);
+                mbedtls_des3_crypt_ecb(&ctx3, sdata, edata);
+            } else {
+                mbedtls_des3_context ctx3;
+                mbedtls_des3_set3key_dec(&ctx3, key);
+                mbedtls_des3_crypt_ecb(&ctx3, sdata, edata);
+            }
             break;
         case T_AES:
-            if (encode)
-                aes_encode(ctx->IV, ctx->key, srcdata, data, srcdatalen);
-            else
-                aes_decode(ctx->IV, ctx->key, srcdata, data, srcdatalen);
-            if (dstdata)
-                memcpy(dstdata, data, srcdatalen);
+            if (encode) {
+                mbedtls_aes_context actx;
+                mbedtls_aes_init(&actx);
+                mbedtls_aes_setkey_enc(&actx, key, 128);
+                mbedtls_aes_crypt_ecb(&actx, MBEDTLS_AES_ENCRYPT, sdata, edata);
+                mbedtls_aes_free(&actx);
+            } else {
+                mbedtls_aes_context actx;
+                mbedtls_aes_init(&actx);
+                mbedtls_aes_setkey_dec(&actx, key, 128);
+                mbedtls_aes_crypt_ecb(&actx, MBEDTLS_AES_DECRYPT, sdata, edata);
+                mbedtls_aes_free(&actx);
+            }
             break;
     }
+
+    memcpy(dstdata, edata, block_size);
+
+    if (dir_to_send) {
+        memcpy(ivect, sdata, block_size);
+    } else {
+        memcpy(ivect, data, block_size);
+    }
+}
+
+void DesfireCryptoEncDec(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode) {
+    uint8_t data[1024] = {0};
+    
+    if (ctx->secureChannel == DACd40)
+        memset(ctx->IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
+        
+    size_t block_size = desfire_get_key_block_length(ctx->keyType);
+    size_t offset = 0;
+    while (offset < srcdatalen) {
+        //mifare_cypher_single_block(key, data + offset, ivect, direction, operation, block_size);
+        if (use_session_key)
+            DesfireCryptoEncDecSingleBlock(ctx->sessionKeyMAC, ctx->keyType, srcdata + offset, data, ctx->IV, encode, encode);
+        else
+            DesfireCryptoEncDecSingleBlock(ctx->key, ctx->keyType, srcdata + offset, data, ctx->IV, encode, encode);
+        offset += block_size;
+    }
+
+    if (dstdata)
+        memcpy(dstdata, data, srcdatalen);
+}
+
+static void DesfireCMACGenerateSubkeys(DesfireContext *ctx, uint8_t *sk1, uint8_t *sk2) {
+    int kbs = desfire_get_key_block_length(ctx->keyType);
+    const uint8_t R = (kbs == 8) ? 0x1B : 0x87;
+
+    uint8_t l[kbs];
+    memset(l, 0, kbs);
+
+    uint8_t ivect[kbs];
+    memset(ivect, 0, kbs);
+
+    //mifare_cypher_blocks_chained(NULL, key, ivect, l, kbs, MCD_SEND, MCO_ENCYPHER);
+    DesfireCryptoEncDec(ctx, true, l, kbs, NULL, true);
+
+    bool txor = false;
+
+    // Used to compute CMAC on complete blocks
+    memcpy(sk1, l, kbs);
+    txor = l[0] & 0x80;
+    lsl(sk1, kbs);
+    if (txor) {
+        sk1[kbs - 1] ^= R;
+    }
+
+    // Used to compute CMAC on the last block if non-complete
+    memcpy(sk2, sk1, kbs);
+    txor = sk1[0] & 0x80;
+    lsl(sk2, kbs);
+    if (txor) {
+        sk2[kbs - 1] ^= R;
+    }
+}
+
+void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *data, size_t len, uint8_t *cmac) {
+    int kbs = desfire_get_key_block_length(ctx->keyType);
+    if (kbs == 0)
+        return;
+    
+    uint8_t buffer[kbs];
+    memset(buffer, 0, kbs);
+    
+    uint8_t sk1[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+    uint8_t sk2[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+    DesfireCMACGenerateSubkeys(ctx, sk1, sk2);
+    
+    memcpy(buffer, data, len);
+
+    if ((!len) || (len % kbs)) {
+        buffer[len++] = 0x80;
+        while (len % kbs) {
+            buffer[len++] = 0x00;
+        }
+        bin_xor(buffer + len - kbs, sk2, kbs);
+    } else {
+        bin_xor(buffer + len - kbs, sk1, kbs);
+    }
+
+    //mifare_cypher_blocks_chained(NULL, key, ivect, buffer, len, MCD_SEND, MCO_ENCYPHER);
+    DesfireCryptoEncDec(ctx, true, buffer, len, NULL, true);
+
+    memcpy(cmac, ctx->IV, kbs);
+    
 }
 

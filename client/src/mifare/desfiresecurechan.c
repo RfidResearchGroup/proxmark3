@@ -40,7 +40,7 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
 
             rlen = padded_data_length(srcdatalen, desfire_get_key_block_length(ctx->keyType));
             memcpy(data, srcdata, srcdatalen);
-            DesfireCryptoEncDec(ctx, data, rlen, NULL, true);
+            DesfireCryptoEncDec(ctx, true, data, rlen, NULL, true);
             memcpy(dstdata, srcdata, srcdatalen);
             memcpy(&dstdata[srcdatalen], ctx->IV, 4);
             *dstdatalen = rlen;
@@ -49,7 +49,7 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
             rlen = padded_data_length(srcdatalen + 2, desfire_get_key_block_length(ctx->keyType)); // 2 - crc16
             memcpy(data, srcdata, srcdatalen);
             compute_crc(CRC_14443_A, data, srcdatalen, &data[srcdatalen], &data[srcdatalen + 1]);
-            DesfireCryptoEncDec(ctx, data, rlen, dstdata, true);
+            DesfireCryptoEncDec(ctx, true, data, rlen, dstdata, true);
             *dstdatalen = rlen;
             break;
         case DCMNone:
@@ -70,7 +70,7 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
             data[0] = cmd;
             rlen = padded_data_length(srcdatalen + 1, desfire_get_key_block_length(ctx->keyType));
             memcpy(&data[1], srcdata, srcdatalen);
-            DesfireCryptoEncDec(ctx, data, rlen, NULL, true);
+            DesfireCryptoEncDec(ctx, true, data, rlen, NULL, true);
 
             memcpy(dstdata, srcdata, srcdatalen);
             if (srcdatalen != 0 && ctx->commMode == DCMMACed) {
