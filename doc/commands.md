@@ -501,6 +501,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf mfdes help          `|Y       |`This help`
+|`hf mfdes default       `|N       |`[new]Set defaults for all the commands`
 |`hf mfdes auth          `|N       |`Tries a MIFARE DesFire Authentication`
 |`hf mfdes changekey     `|N       |`Change Key`
 |`hf mfdes chk           `|N       |`Check keys`
@@ -513,6 +514,8 @@ Check column "offline" for their availability.
 |`hf mfdes createaid     `|N       |`Create Application ID`
 |`hf mfdes deleteaid     `|N       |`Delete Application ID`
 |`hf mfdes selectaid     `|N       |`Select Application ID`
+|`hf mfdes getaids       `|N       |`[new]Get Application IDs list`
+|`hf mfdes getappnames   `|N       |`[new]Get Applications list`
 |`hf mfdes changevalue   `|N       |`Write value of a value file (credit/debit/clear)`
 |`hf mfdes clearfile     `|N       |`Clear record File`
 |`hf mfdes createfile    `|N       |`Create Standard/Backup File`

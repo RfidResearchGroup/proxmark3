@@ -49,12 +49,12 @@ typedef struct DesfireContextS {
     uint8_t keyNum;
     enum DESFIRE_CRYPTOALGO keyType;   // des/2tdea/3tdea/aes
     uint8_t key[DESF_MAX_KEY_LEN];
-    
+
     // KDF finction
     uint8_t kdfAlgo;
     uint8_t kdfInputLen;
     uint8_t kdfInput[31];
-    
+
     DesfireSecureChannel secureChannel; // none/d40/ev1/ev2
     DesfireCommandSet cmdSet;           // native/nativeiso/iso
     DesfireCommunicationMode commMode;  // plain/mac/enc
@@ -81,7 +81,7 @@ void DesfireClearSession(DesfireContext *ctx);
 void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key);
 void DesfireSetCommandSet(DesfireContext *ctx, DesfireCommandSet cmdSet);
 void DesfireSetCommMode(DesfireContext *ctx, DesfireCommunicationMode commMode);
-void DesfireSetKdf(DesfireContext *ctx, uint8_t kdfAlgo,uint8_t *kdfInput, uint8_t kdfInputLen);
+void DesfireSetKdf(DesfireContext *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint8_t kdfInputLen);
 
 const char *DesfireGetErrorString(int res, uint16_t *sw);
 uint32_t DesfireAIDByteToUint(uint8_t *data);

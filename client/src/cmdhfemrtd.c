@@ -1424,7 +1424,7 @@ static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen) {
 
     bool is_jpg = (data[offset] == 0xFF);
 
-    char *fn = calloc( strlen(dg_table[EF_DG2].filename) + 4 + 1, sizeof(uint8_t));
+    char *fn = calloc(strlen(dg_table[EF_DG2].filename) + 4 + 1, sizeof(uint8_t));
     if (fn == NULL)
         return PM3_EMALLOC;
 
@@ -1435,7 +1435,7 @@ static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen) {
     char *path;
     if (searchHomeFilePath(&path, NULL, fn, false) != PM3_SUCCESS) {
         free(fn);
-        return PM3_EFILE;        
+        return PM3_EFILE;
     }
     free(fn);
 

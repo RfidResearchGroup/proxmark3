@@ -304,13 +304,13 @@ int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array
     int res = CLIParamStrToBuf(argstr, (uint8_t *)data, sizeof(data), &datalen);
     if (res)
         return res;
-    
+
     // no data to check - we do not touch *value, just return
     if (datalen == 0)
         return 0;
-    
+
     str_lower(data);
-    
+
     int val = -1;
     int cntr = 0;
     for (int i = 0; i < CLI_MAX_OPTLIST_LEN && option_array[i].text != NULL; i++) {
@@ -325,7 +325,7 @@ int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array
             cntr++;
         }
     }
-    
+
     // check partial match
     if (cntr == 0) {
         PrintAndLogEx(ERR, "Parameter error: No similar option to `%s`. Valid options: %s\n", argstr->sval[0], argstr->hdr.datatype);
@@ -335,9 +335,9 @@ int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array
         PrintAndLogEx(ERR, "Parameter error: Several options fit to `%s`. Valid options: %s\n", argstr->sval[0], argstr->hdr.datatype);
         return 21;
     }
-    
-    *value = val;    
-    return 0;    
+
+    *value = val;
+    return 0;
 }
 
 const char *CLIGetOptionListStr(const CLIParserOption *option_array, int value) {

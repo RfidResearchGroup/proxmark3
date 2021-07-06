@@ -226,6 +226,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/mifare/mifarehost.c
         ${PM3_ROOT}/client/src/nfc/ndef.c
         ${PM3_ROOT}/client/src/mifare/desfire_crypto.c
+        ${PM3_ROOT}/client/src/mifare/desfiresecurechan.c
         ${PM3_ROOT}/client/src/mifare/desfirecore.c
         ${PM3_ROOT}/client/src/uart/uart_posix.c
         ${PM3_ROOT}/client/src/uart/uart_win32.c
