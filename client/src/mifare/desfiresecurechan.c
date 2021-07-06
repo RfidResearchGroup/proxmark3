@@ -70,11 +70,13 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
             data[0] = cmd;
             rlen = padded_data_length(srcdatalen + 1, desfire_get_key_block_length(ctx->keyType));
             memcpy(&data[1], srcdata, srcdatalen);
-            DesfireCryptoEncDec(ctx, true, data, rlen, NULL, true);
+            uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+            DesfireCryptoCMAC(ctx, data, rlen, cmac);
+PrintAndLogEx(INFO, "MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
 
             memcpy(dstdata, srcdata, srcdatalen);
             if (srcdatalen != 0 && ctx->commMode == DCMMACed) {
-                memcpy(&dstdata[srcdatalen], ctx->IV, 4);
+                memcpy(&dstdata[srcdatalen], cmac, 8);
                 *dstdatalen = rlen;
             }
             break;
@@ -121,6 +123,9 @@ static void DesfireSecureChannelDecodeD40(DesfireContext *ctx, uint8_t *srcdata,
 }
 
 static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
+    uint8_t data[1024] = {0};
+    size_t rlen = 0;
+
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
 
@@ -129,6 +134,18 @@ static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata,
         case DCMMACed:
             memcpy(dstdata, srcdata, srcdatalen - 8);
             *dstdatalen = srcdatalen - 8;
+            
+            memcpy(data, srcdata, *dstdatalen);
+            data[*dstdatalen] = respcode;
+            rlen = padded_data_length(*dstdatalen + 1, desfire_get_key_block_length(ctx->keyType));
+            
+            uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+            DesfireCryptoCMAC(ctx, data, rlen, cmac);
+PrintAndLogEx(INFO, "MACp: %s", sprint_hex(&srcdata[*dstdatalen], desfire_get_key_block_length(ctx->keyType)));
+PrintAndLogEx(INFO, "MACc: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
+            if (memcmp(&srcdata[*dstdatalen], cmac, desfire_get_key_block_length(ctx->keyType)) != 0) {
+                PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
+            }
 
             break;
         case DCMEncrypted:
