@@ -17,8 +17,8 @@
  *
  * $Id$
  */
- 
- #ifndef __DESFIRE_CRYPTO_H
+
+#ifndef __DESFIRE_CRYPTO_H
 #define __DESFIRE_CRYPTO_H
 
 #include "common.h"

@@ -25,20 +25,21 @@
 void DesfireCryptoEncDec(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode) {
     uint8_t data[1024] = {0};
 
-    switch(ctx->keyType) {
+    switch (ctx->keyType) {
         case T_DES:
             if (ctx->secureChannel == DACd40) {
                 if (encode)
                     des_encrypt_ecb(data, srcdata, srcdatalen, ctx->key);
                 else
                     des_decrypt_ecb(data, srcdata, srcdatalen, ctx->key);
-            } if (ctx->secureChannel == DACEV1) {
+            }
+            if (ctx->secureChannel == DACEV1) {
                 if (encode)
                     des_encrypt_cbc(data, srcdata, srcdatalen, ctx->key, ctx->IV);
                 else
                     des_decrypt_cbc(data, srcdata, srcdatalen, ctx->key, ctx->IV);
             }
-            
+
             if (dstdata)
                 memcpy(dstdata, data, srcdatalen);
             break;
@@ -60,11 +61,11 @@ void DesfireCryptoEncDec(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatale
 static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
-    
+
     uint8_t data[1024] = {0};
     size_t rlen = 0;
 
-    switch(ctx->commMode) {
+    switch (ctx->commMode) {
         case DCMPlain:
             memcpy(dstdata, srcdata, srcdatalen);
             *dstdatalen = srcdatalen;
@@ -72,7 +73,7 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
         case DCMMACed:
             if (srcdatalen == 0)
                 break;
-            
+
             rlen = padded_data_length(srcdatalen, desfire_get_key_block_length(ctx->keyType));
             memcpy(data, srcdata, srcdatalen);
             DesfireCryptoEncDec(ctx, data, rlen, NULL, true);
@@ -87,7 +88,8 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
             DesfireCryptoEncDec(ctx, data, rlen, dstdata, true);
             *dstdatalen = rlen;
             break;
-        case DCMNone:;
+        case DCMNone:
+            ;
     }
 }
 
@@ -98,28 +100,29 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
 
-    switch(ctx->commMode) {
+    switch (ctx->commMode) {
         case DCMPlain:
         case DCMMACed:
             data[0] = cmd;
             rlen = padded_data_length(srcdatalen + 1, desfire_get_key_block_length(ctx->keyType));
             memcpy(&data[1], srcdata, srcdatalen);
             DesfireCryptoEncDec(ctx, data, rlen, NULL, true);
-            
+
             memcpy(dstdata, srcdata, srcdatalen);
             if (srcdatalen != 0 && ctx->commMode == DCMMACed) {
                 memcpy(&dstdata[srcdatalen], ctx->IV, 4);
                 *dstdatalen = rlen;
-            }            
+            }
             break;
         case DCMEncrypted:
             break;
-        case DCMNone:;
+        case DCMNone:
+            ;
     }
 }
 
 void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
-    switch(ctx->secureChannel) {
+    switch (ctx->secureChannel) {
         case DACd40:
             DesfireSecureChannelEncodeD40(ctx, cmd, srcdata, srcdatalen, dstdata, dstdatalen);
             break;
@@ -139,7 +142,7 @@ static void DesfireSecureChannelDecodeD40(DesfireContext *ctx, uint8_t *srcdata,
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
 
-    switch(ctx->commMode) {
+    switch (ctx->commMode) {
         case DCMMACed:
 
             break;
@@ -150,19 +153,19 @@ static void DesfireSecureChannelDecodeD40(DesfireContext *ctx, uint8_t *srcdata,
             memcpy(dstdata, srcdata, srcdatalen);
             *dstdatalen = srcdatalen;
             break;
-    }    
+    }
 }
 
 static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
 
-    switch(ctx->commMode) {
+    switch (ctx->commMode) {
         case DCMPlain:
         case DCMMACed:
             memcpy(dstdata, srcdata, srcdatalen - 8);
             *dstdatalen = srcdatalen - 8;
-            
+
             break;
         case DCMEncrypted:
             break;
@@ -170,11 +173,11 @@ static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata,
             memcpy(dstdata, srcdata, srcdatalen);
             *dstdatalen = srcdatalen;
             break;
-    }    
+    }
 }
 
 void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
-    switch(ctx->secureChannel) {
+    switch (ctx->secureChannel) {
         case DACd40:
             DesfireSecureChannelDecodeD40(ctx, srcdata, srcdatalen, respcode, dstdata, dstdatalen);
             break;

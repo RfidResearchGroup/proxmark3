@@ -4998,23 +4998,23 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     return PM3_SUCCESS;
 }
 */
-static uint8_t defaultKeyNum = 0; 
+static uint8_t defaultKeyNum = 0;
 static enum DESFIRE_CRYPTOALGO defaultAlgoId = T_DES;
 static uint8_t defaultKey[DESFIRE_MAX_KEY_SIZE] = {0};
 static int defaultKdfAlgo = MFDES_KDF_ALGO_NONE;
 static int defaultKdfInputLen = 0;
 static uint8_t defaultKdfInput[50] = {0};
-static DesfireSecureChannel defaultSecureChannel = DACEV1;    
-static DesfireCommandSet defaultCommSet = DCCNativeISO;     
+static DesfireSecureChannel defaultSecureChannel = DACEV1;
+static DesfireCommandSet defaultCommSet = DCCNativeISO;
 static DesfireCommunicationMode defaultCommMode = DCMPlain;
 
-static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dctx, 
-                        uint8_t keynoid, uint8_t algoid, uint8_t keyid, 
-                        uint8_t kdfid, uint8_t kdfiid, 
-                        uint8_t cmodeid, uint8_t ccsetid, uint8_t schannid,
-                        int *securechannel) {
-                        
-    uint8_t keynum = defaultKeyNum;                        
+static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dctx,
+                                      uint8_t keynoid, uint8_t algoid, uint8_t keyid,
+                                      uint8_t kdfid, uint8_t kdfiid,
+                                      uint8_t cmodeid, uint8_t ccsetid, uint8_t schannid,
+                                      int *securechannel) {
+
+    uint8_t keynum = defaultKeyNum;
     int algores = defaultAlgoId;
     uint8_t key[DESFIRE_MAX_KEY_SIZE] = {0};
     memcpy(key, defaultKey, DESFIRE_MAX_KEY_SIZE);
@@ -5029,17 +5029,17 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
     if (keynoid) {
         keynum = arg_get_int_def(ctx, keynoid, keynum);
     }
-    
+
     if (algoid) {
         if (CLIGetOptionList(arg_get_str(ctx, algoid), DesfireAlgoOpts, &algores))
-           return PM3_ESOFT;
+            return PM3_ESOFT;
     }
-    
+
     if (keyid) {
         int keylen = 0;
         uint8_t keydata[200] = {0};
         if (CLIParamHexToBuf(arg_get_str(ctx, keyid), keydata, sizeof(keydata), &keylen))
-           return PM3_ESOFT;
+            return PM3_ESOFT;
         if (keylen && keylen != desfire_get_key_length(algores)) {
             PrintAndLogEx(ERR, "%s key must have %d bytes length instead of %d.", CLIGetOptionListStr(DesfireAlgoOpts, algores), desfire_get_key_length(algores), keylen);
             return PM3_EINVARG;
@@ -5047,45 +5047,45 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
         if (keylen)
             memcpy(key, keydata, keylen);
     }
-    
+
     if (kdfid) {
         if (CLIGetOptionList(arg_get_str(ctx, kdfid), DesfireKDFAlgoOpts, &kdfAlgo))
-           return PM3_ESOFT;
+            return PM3_ESOFT;
     }
-    
+
     if (kdfiid) {
         int datalen = kdfInputLen;
         uint8_t data[200] = {0};
         if (CLIParamHexToBuf(arg_get_str(ctx, kdfiid), data, sizeof(data), &datalen))
-           return PM3_ESOFT;
+            return PM3_ESOFT;
         if (datalen) {
             kdfInputLen = datalen;
             memcpy(kdfInput, data, datalen);
         }
     }
-    
+
     if (cmodeid) {
         if (CLIGetOptionList(arg_get_str(ctx, cmodeid), DesfireCommunicationModeOpts, &commmode))
-           return PM3_ESOFT;
+            return PM3_ESOFT;
     }
 
     if (ccsetid) {
         if (CLIGetOptionList(arg_get_str(ctx, ccsetid), DesfireCommandSetOpts, &commset))
-           return PM3_ESOFT;
+            return PM3_ESOFT;
     }
 
     if (schannid) {
         if (CLIGetOptionList(arg_get_str(ctx, schannid), DesfireSecureChannelOpts, &secchann))
-           return PM3_ESOFT;
+            return PM3_ESOFT;
     }
-        
+
     DesfireSetKey(dctx, keynum, algores, key);
     DesfireSetKdf(dctx, kdfAlgo, kdfInput, kdfInputLen);
     DesfireSetCommandSet(dctx, commset);
     DesfireSetCommMode(dctx, commmode);
     if (securechannel)
         *securechannel = secchann;
-    
+
     return PM3_SUCCESS;
 }
 
@@ -5116,17 +5116,17 @@ static int CmdHF14ADesDefault(const char *Cmd) {
         CLIParserFree(ctx);
         return res;
     }
-    
+
     CLIParserFree(ctx);
-     
-    defaultKeyNum = dctx.keyNum; 
+
+    defaultKeyNum = dctx.keyNum;
     defaultAlgoId = dctx.keyType;
     memcpy(defaultKey, dctx.key, DESFIRE_MAX_KEY_SIZE);
     defaultKdfAlgo = dctx.kdfAlgo;
     defaultKdfInputLen = dctx.kdfInputLen;
     memcpy(defaultKdfInput, dctx.kdfInput, sizeof(dctx.kdfInput));
-    defaultSecureChannel = securechann;    
-    defaultCommSet = dctx.cmdSet;     
+    defaultSecureChannel = securechann;
+    defaultCommSet = dctx.cmdSet;
     defaultCommMode = dctx.commMode;
 
     PrintAndLogEx(INFO, "-----------" _CYAN_("Default parameters") "---------------------------------");
@@ -5139,7 +5139,7 @@ static int CmdHF14ADesDefault(const char *Cmd) {
     PrintAndLogEx(INFO, "Secure chan : %s", CLIGetOptionListStr(DesfireSecureChannelOpts, defaultSecureChannel));
     PrintAndLogEx(INFO, "Command set : %s", CLIGetOptionListStr(DesfireCommandSetOpts, defaultCommSet));
     PrintAndLogEx(INFO, "Comm mode   : %s", CLIGetOptionListStr(DesfireCommunicationModeOpts, defaultCommMode));
-    
+
     return PM3_SUCCESS;
 }
 
@@ -5167,7 +5167,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    
+
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, &securechann);
@@ -5175,27 +5175,27 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         CLIParserFree(ctx);
         return res;
     }
-    
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
-    
+
     if (verbose)
         DesfirePrintContext(&dctx);
-    
+
     res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
         DropField();
         return PM3_ESOFT;
     }
-    
+
     res = DesfireAuthenticate(&dctx, securechann); //DACd40 DACEV1
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
         DropField();
         return PM3_ESOFT;
     }
-  
+
     if (DesfireIsAuthenticated(&dctx)) {
         if (verbose)
             PrintAndLogEx(ERR, "Desfire  " _GREEN_("authenticated"));
@@ -5205,20 +5205,20 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
 
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t buflen = 0;
-    
+
     res = DesfireGetAIDList(&dctx, buf, &buflen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire GetAIDList command " _RED_("error") ". Result: %d", res);
         DropField();
         return PM3_ESOFT;
     }
-    
+
     if (buflen >= 3) {
         PrintAndLogEx(INFO, "---- " _CYAN_("AID list") " ----");
         for (int i = 0; i < buflen; i += 3)
             PrintAndLogEx(INFO, "AID: %06x", DesfireAIDByteToUint(&buf[i]));
     }
-    
+
     DropField();
     return PM3_SUCCESS;
 }
@@ -5247,7 +5247,7 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    
+
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, &securechann);
@@ -5255,27 +5255,27 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
         CLIParserFree(ctx);
         return res;
     }
-    
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
     if (verbose)
         DesfirePrintContext(&dctx);
-    
+
     res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
         DropField();
         return PM3_ESOFT;
     }
-    
-    res = DesfireAuthenticate(&dctx, securechann); 
+
+    res = DesfireAuthenticate(&dctx, securechann);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
         DropField();
         return PM3_ESOFT;
     }
-    
+
     if (DesfireIsAuthenticated(&dctx)) {
         if (verbose)
             PrintAndLogEx(ERR, "Desfire  " _GREEN_("authenticated"));
@@ -5285,7 +5285,7 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
 
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t buflen = 0;
-    
+
     // result bytes: 3, 2, 1-16. total record size = 24
     res = DesfireGetDFList(&dctx, buf, &buflen);
     if (res != PM3_SUCCESS) {
@@ -5293,17 +5293,17 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
-    
+
     if (buflen > 0) {
         PrintAndLogEx(INFO, "----------------------- " _CYAN_("File list") " -----------------------");
         for (int i = 0; i < buflen; i++)
-            PrintAndLogEx(INFO, "AID: %06x ISO file id: %02x%02x ISO DF name[%" PRIu32 "]: %s", 
-                            DesfireAIDByteToUint(&buf[i * 24 + 1]),
-                            buf[i * 24 + 1 + 3], buf[i * 24 + 1 + 4],
-                            strlen((char *)&buf[i * 24 + 1 + 5]),
-                            &buf[i * 24 + 1 + 5]);
+            PrintAndLogEx(INFO, "AID: %06x ISO file id: %02x%02x ISO DF name[%" PRIu32 "]: %s",
+                          DesfireAIDByteToUint(&buf[i * 24 + 1]),
+                          buf[i * 24 + 1 + 3], buf[i * 24 + 1 + 4],
+                          strlen((char *)&buf[i * 24 + 1 + 5]),
+                          &buf[i * 24 + 1 + 5]);
     }
-    
+
     DropField();
     return PM3_SUCCESS;
 }
