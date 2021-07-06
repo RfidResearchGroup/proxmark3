@@ -14,6 +14,7 @@
 #include <string.h>      // memcpy memset
 #include "fileutils.h"
 
+#include "crypto/libpcrypto.h"
 #include "cipurse/cipursecrypto.h"
 #include "cipurse/cipursecore.h"
 
