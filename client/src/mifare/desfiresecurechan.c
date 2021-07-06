@@ -22,7 +22,6 @@
 #include "commonutil.h"
 #include "mifare/desfire_crypto.h"
 
-
 void DesfireCryptoEncDec(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode) {
     uint8_t data[1024] = {0};
 
@@ -93,13 +92,25 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
 }
 
 static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
+    uint8_t data[1024] = {0};
+    size_t rlen = 0;
+
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
 
     switch(ctx->commMode) {
         case DCMPlain:
         case DCMMACed:
+            data[0] = cmd;
+            rlen = padded_data_length(srcdatalen + 1, desfire_get_key_block_length(ctx->keyType));
+            memcpy(&data[1], srcdata, srcdatalen);
+            DesfireCryptoEncDec(ctx, data, rlen, NULL, true);
             
+            memcpy(dstdata, srcdata, srcdatalen);
+            if (srcdatalen != 0 && ctx->commMode == DCMMACed) {
+                memcpy(&dstdata[srcdatalen], ctx->IV, 4);
+                *dstdatalen = rlen;
+            }            
             break;
         case DCMEncrypted:
             break;
