@@ -71,6 +71,14 @@ class SliderWidget : public QWidget {
     SliderWidget();
 };
 
+// Added class for SliderWidget to allow move/resize event override
+class PictureWidget : public QWidget {
+  protected:
+    void closeEvent(QCloseEvent *event);
+  public:
+    PictureWidget();
+};
+
 /**
  * The window with plot and controls
  */
@@ -126,10 +134,9 @@ class ProxGuiQT : public QObject {
   private:
     QApplication *plotapp;
     ProxWidget *plotwidget;
-    
     Ui::PictureForm *pictureController;
-    QWidget *pictureWidget;
-    
+    PictureWidget *pictureWidget;
+
     int argc;
     char **argv;
     //void (*main_func)(void);
@@ -149,10 +156,6 @@ class ProxGuiQT : public QObject {
 
     void MainLoop(void);
     void Exit(void);
-
-  protected:
-    void closeEvent(QCloseEvent *event);
-    void hideEvent(QHideEvent *event);
 
   private slots:
     void _ShowGraphWindow(void);
