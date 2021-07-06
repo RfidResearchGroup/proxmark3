@@ -862,6 +862,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
         //memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));
     }
 
+    memset(dctx->IV, 0, DESFIRE_MAX_KEY_SIZE);
     dctx->secureChannel = secureChannel;
     memcpy(dctx->sessionKeyMAC, dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType));
     PrintAndLogEx(INFO, "sessionKeyEnc : %s", sprint_hex(dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType)));
@@ -888,3 +889,30 @@ int DesfireGetDFList(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
         return PM3_EAPDU_FAIL;
     return PM3_SUCCESS;
 }
+
+int DesfireCreateApplication(DesfireContext *dctx, uint8_t *appdata, size_t appdatalen) {
+    uint8_t respcode = 0xff;
+    uint8_t resp[257] = {0};
+    size_t resplen = 0;
+    int res = DesfireExchangeEx(false, dctx, MFDES_CREATE_APPLICATION, appdata, appdatalen, &respcode, resp, &resplen, true, 24);
+    if (res != PM3_SUCCESS)
+        return res;
+    if (respcode != MFDES_S_OPERATION_OK || resplen != 0)
+        return PM3_EAPDU_FAIL;
+    return PM3_SUCCESS;
+}
+
+int DesfireDeleteApplication(DesfireContext *dctx, uint32_t aid) {
+    uint8_t respcode = 0xff;
+    uint8_t data[3] = {0};
+    DesfireAIDUintToByte(aid, data);
+    uint8_t resp[257] = {0};
+    size_t resplen = 0;
+    int res = DesfireExchangeEx(false, dctx, MFDES_DELETE_APPLICATION, data, sizeof(data), &respcode, resp, &resplen, true, 24);
+    if (res != PM3_SUCCESS)
+        return res;
+    if (respcode != MFDES_S_OPERATION_OK || resplen != 0)
+        return PM3_EAPDU_FAIL;
+    return PM3_SUCCESS;
+}
+

@@ -42,5 +42,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
 int DesfireGetAIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetDFList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 
+int DesfireCreateApplication(DesfireContext *dctx, uint8_t *appdata, size_t appdatalen);
+int DesfireDeleteApplication(DesfireContext *dctx, uint32_t aid);
 
 #endif // __DESFIRECORE_H
