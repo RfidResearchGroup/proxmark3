@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added one new key from gun cloner found in wild (@scott4290)
+ - Fix `hf_msdsal` standalone in simulation flow (@netxing)
  - Added a picture viewer in QT. To be used with `hf emrtd info` (@iceman1001)
  - Fix - move des functions to libcrypto (@merlokk)
  - Added `CLIGetOptionList` to cliparser that makes it easier to implement text options in the cli (@merlokk) 
