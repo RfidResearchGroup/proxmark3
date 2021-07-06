@@ -22,42 +22,6 @@
 #include "commonutil.h"
 #include "mifare/desfire_crypto.h"
 
-void DesfireCryptoEncDec(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode) {
-    uint8_t data[1024] = {0};
-
-    switch (ctx->keyType) {
-        case T_DES:
-            if (ctx->secureChannel == DACd40) {
-                if (encode)
-                    des_encrypt_ecb(data, srcdata, srcdatalen, ctx->key);
-                else
-                    des_decrypt_ecb(data, srcdata, srcdatalen, ctx->key);
-            }
-            if (ctx->secureChannel == DACEV1) {
-                if (encode)
-                    des_encrypt_cbc(data, srcdata, srcdatalen, ctx->key, ctx->IV);
-                else
-                    des_decrypt_cbc(data, srcdata, srcdatalen, ctx->key, ctx->IV);
-            }
-
-            if (dstdata)
-                memcpy(dstdata, data, srcdatalen);
-            break;
-        case T_3DES:
-            break;
-        case T_3K3DES:
-            break;
-        case T_AES:
-            if (encode)
-                aes_encode(ctx->IV, ctx->key, srcdata, data, srcdatalen);
-            else
-                aes_decode(ctx->IV, ctx->key, srcdata, data, srcdatalen);
-            if (dstdata)
-                memcpy(dstdata, data, srcdatalen);
-            break;
-    }
-}
-
 static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;

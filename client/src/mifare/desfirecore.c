@@ -203,34 +203,6 @@ void DesfireAIDUintToByte(uint32_t aid, uint8_t *data) {
     data[2] = (aid >> 16) & 0xff;
 }
 
-void DesfireClearContext(DesfireContext *ctx) {
-    ctx->keyNum = 0;
-    ctx->keyType = T_DES;
-    memset(ctx->key, 0, sizeof(ctx->key));
-
-    ctx->secureChannel = DACNone;
-    ctx->cmdSet = DCCNative;
-    ctx->commMode = DCMNone;
-
-    ctx->kdfAlgo = 0;
-    ctx->kdfInputLen = 0;
-    memset(ctx->kdfInput, 0, sizeof(ctx->kdfInput));
-
-    DesfireClearSession(ctx);
-}
-
-void DesfireClearSession(DesfireContext *ctx) {
-    ctx->secureChannel = DACNone; // here none - not authenticared
-
-    memset(ctx->IV, 0, sizeof(ctx->IV));
-    memset(ctx->sessionKeyMAC, 0, sizeof(ctx->sessionKeyMAC));
-    memset(ctx->sessionKeyEnc, 0, sizeof(ctx->sessionKeyEnc));
-    memset(ctx->lastIV, 0, sizeof(ctx->lastIV));
-    ctx->cntrTx = 0;
-    ctx->cntrRx = 0;
-    memset(ctx->TI, 0, sizeof(ctx->TI));
-}
-
 void DesfirePrintContext(DesfireContext *ctx) {
     PrintAndLogEx(INFO, "Key num: %d Key algo: %s Key[%d]: %s",
                   ctx->keyNum,
@@ -256,29 +228,6 @@ void DesfirePrintContext(DesfireContext *ctx) {
                       sprint_hex(ctx->sessionKeyEnc, desfire_get_key_block_length(ctx->keyType)));
 
     }
-}
-
-void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key) {
-    DesfireClearContext(ctx);
-
-    ctx->keyNum = keyNum;
-    ctx->keyType = keyType;
-    memcpy(ctx->key, key, desfire_get_key_length(keyType));
-}
-
-void DesfireSetCommandSet(DesfireContext *ctx, DesfireCommandSet cmdSet) {
-    ctx->cmdSet = cmdSet;
-}
-
-void DesfireSetCommMode(DesfireContext *ctx, DesfireCommunicationMode commMode) {
-    ctx->commMode = commMode;
-}
-
-void DesfireSetKdf(DesfireContext *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint8_t kdfInputLen) {
-    ctx->kdfAlgo = kdfAlgo;
-    ctx->kdfInputLen = kdfInputLen;
-    if (kdfInputLen)
-        memcpy(ctx->kdfInput, kdfInput, kdfInputLen);
 }
 
 static int DESFIRESendApdu(bool activate_field, sAPDU apdu, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint16_t *sw) {
@@ -646,10 +595,6 @@ int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uin
     DesfireAIDUintToByte(aid2, &data[3]);
 
     return DesfireSelectAID(ctx, data, (select_two) ? &data[3] : NULL);
-}
-
-bool DesfireIsAuthenticated(DesfireContext *dctx) {
-    return dctx->secureChannel != DACNone;
 }
 
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel) {
