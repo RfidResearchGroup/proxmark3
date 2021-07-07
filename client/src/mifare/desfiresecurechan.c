@@ -22,42 +22,6 @@
 #include "commonutil.h"
 #include "mifare/desfire_crypto.h"
 
-void DesfireCryptoEncDec(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode) {
-    uint8_t data[1024] = {0};
-
-    switch (ctx->keyType) {
-        case T_DES:
-            if (ctx->secureChannel == DACd40) {
-                if (encode)
-                    des_encrypt_ecb(data, srcdata, srcdatalen, ctx->key);
-                else
-                    des_decrypt_ecb(data, srcdata, srcdatalen, ctx->key);
-            }
-            if (ctx->secureChannel == DACEV1) {
-                if (encode)
-                    des_encrypt_cbc(data, srcdata, srcdatalen, ctx->key, ctx->IV);
-                else
-                    des_decrypt_cbc(data, srcdata, srcdatalen, ctx->key, ctx->IV);
-            }
-
-            if (dstdata)
-                memcpy(dstdata, data, srcdatalen);
-            break;
-        case T_3DES:
-            break;
-        case T_3K3DES:
-            break;
-        case T_AES:
-            if (encode)
-                aes_encode(ctx->IV, ctx->key, srcdata, data, srcdatalen);
-            else
-                aes_decode(ctx->IV, ctx->key, srcdata, data, srcdatalen);
-            if (dstdata)
-                memcpy(dstdata, data, srcdatalen);
-            break;
-    }
-}
-
 static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
@@ -76,7 +40,7 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
 
             rlen = padded_data_length(srcdatalen, desfire_get_key_block_length(ctx->keyType));
             memcpy(data, srcdata, srcdatalen);
-            DesfireCryptoEncDec(ctx, data, rlen, NULL, true);
+            DesfireCryptoEncDec(ctx, true, data, rlen, NULL, true);
             memcpy(dstdata, srcdata, srcdatalen);
             memcpy(&dstdata[srcdatalen], ctx->IV, 4);
             *dstdatalen = rlen;
@@ -85,7 +49,7 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
             rlen = padded_data_length(srcdatalen + 2, desfire_get_key_block_length(ctx->keyType)); // 2 - crc16
             memcpy(data, srcdata, srcdatalen);
             compute_crc(CRC_14443_A, data, srcdatalen, &data[srcdatalen], &data[srcdatalen + 1]);
-            DesfireCryptoEncDec(ctx, data, rlen, dstdata, true);
+            DesfireCryptoEncDec(ctx, true, data, rlen, dstdata, true);
             *dstdatalen = rlen;
             break;
         case DCMNone:
@@ -95,7 +59,6 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
 
 static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
     uint8_t data[1024] = {0};
-    size_t rlen = 0;
 
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
@@ -104,14 +67,14 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
         case DCMPlain:
         case DCMMACed:
             data[0] = cmd;
-            rlen = padded_data_length(srcdatalen + 1, desfire_get_key_block_length(ctx->keyType));
             memcpy(&data[1], srcdata, srcdatalen);
-            DesfireCryptoEncDec(ctx, data, rlen, NULL, true);
+            uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+            DesfireCryptoCMAC(ctx, data, srcdatalen + 1, cmac);
 
             memcpy(dstdata, srcdata, srcdatalen);
             if (srcdatalen != 0 && ctx->commMode == DCMMACed) {
-                memcpy(&dstdata[srcdatalen], ctx->IV, 4);
-                *dstdatalen = rlen;
+                memcpy(&dstdata[srcdatalen], cmac, DesfireGetMACLength(ctx));
+                *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
             }
             break;
         case DCMEncrypted:
@@ -157,14 +120,30 @@ static void DesfireSecureChannelDecodeD40(DesfireContext *ctx, uint8_t *srcdata,
 }
 
 static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
+    uint8_t data[1024] = {0};
+
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
 
     switch (ctx->commMode) {
         case DCMPlain:
         case DCMMACed:
-            memcpy(dstdata, srcdata, srcdatalen - 8);
-            *dstdatalen = srcdatalen - 8;
+            if (srcdatalen < DesfireGetMACLength(ctx))
+                break;
+            
+            memcpy(dstdata, srcdata, srcdatalen - DesfireGetMACLength(ctx));
+            *dstdatalen = srcdatalen - DesfireGetMACLength(ctx);
+            
+            memcpy(data, srcdata, *dstdatalen);
+            data[*dstdatalen] = respcode;
+            
+            uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+            DesfireCryptoCMAC(ctx, data, *dstdatalen + 1, cmac);
+            if (memcmp(&srcdata[*dstdatalen], cmac, DesfireGetMACLength(ctx)) != 0) {
+                PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
+                PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], desfire_get_key_block_length(ctx->keyType)));
+                PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
+            }
 
             break;
         case DCMEncrypted:

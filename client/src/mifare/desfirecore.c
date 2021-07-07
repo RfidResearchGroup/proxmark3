@@ -203,34 +203,6 @@ void DesfireAIDUintToByte(uint32_t aid, uint8_t *data) {
     data[2] = (aid >> 16) & 0xff;
 }
 
-void DesfireClearContext(DesfireContext *ctx) {
-    ctx->keyNum = 0;
-    ctx->keyType = T_DES;
-    memset(ctx->key, 0, sizeof(ctx->key));
-
-    ctx->secureChannel = DACNone;
-    ctx->cmdSet = DCCNative;
-    ctx->commMode = DCMNone;
-
-    ctx->kdfAlgo = 0;
-    ctx->kdfInputLen = 0;
-    memset(ctx->kdfInput, 0, sizeof(ctx->kdfInput));
-
-    DesfireClearSession(ctx);
-}
-
-void DesfireClearSession(DesfireContext *ctx) {
-    ctx->secureChannel = DACNone; // here none - not authenticared
-
-    memset(ctx->IV, 0, sizeof(ctx->IV));
-    memset(ctx->sessionKeyMAC, 0, sizeof(ctx->sessionKeyMAC));
-    memset(ctx->sessionKeyEnc, 0, sizeof(ctx->sessionKeyEnc));
-    memset(ctx->lastIV, 0, sizeof(ctx->lastIV));
-    ctx->cntrTx = 0;
-    ctx->cntrRx = 0;
-    memset(ctx->TI, 0, sizeof(ctx->TI));
-}
-
 void DesfirePrintContext(DesfireContext *ctx) {
     PrintAndLogEx(INFO, "Key num: %d Key algo: %s Key[%d]: %s",
                   ctx->keyNum,
@@ -248,37 +220,16 @@ void DesfirePrintContext(DesfireContext *ctx) {
                   CLIGetOptionListStr(DesfireCommunicationModeOpts, ctx->commMode));
 
     if (DesfireIsAuthenticated(ctx)) {
-        PrintAndLogEx(INFO, "Session key MAC [%d]: %s ENC: %s IV [%d]: %s",
+        PrintAndLogEx(INFO, "Session key MAC [%d]: %s ",
                       desfire_get_key_length(ctx->keyType),
-                      sprint_hex(ctx->sessionKeyMAC, desfire_get_key_length(ctx->keyType)),
-                      sprint_hex(ctx->sessionKeyEnc, desfire_get_key_length(ctx->keyType)),
+                      sprint_hex(ctx->sessionKeyMAC, desfire_get_key_length(ctx->keyType)));
+        PrintAndLogEx(INFO, "    ENC: %s",
+                      sprint_hex(ctx->sessionKeyEnc, desfire_get_key_length(ctx->keyType)));
+        PrintAndLogEx(INFO, "    IV [%d]: %s",
                       desfire_get_key_block_length(ctx->keyType),
-                      sprint_hex(ctx->sessionKeyEnc, desfire_get_key_block_length(ctx->keyType)));
+                      sprint_hex(ctx->IV, desfire_get_key_block_length(ctx->keyType)));
 
     }
-}
-
-void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key) {
-    DesfireClearContext(ctx);
-
-    ctx->keyNum = keyNum;
-    ctx->keyType = keyType;
-    memcpy(ctx->key, key, desfire_get_key_length(keyType));
-}
-
-void DesfireSetCommandSet(DesfireContext *ctx, DesfireCommandSet cmdSet) {
-    ctx->cmdSet = cmdSet;
-}
-
-void DesfireSetCommMode(DesfireContext *ctx, DesfireCommunicationMode commMode) {
-    ctx->commMode = commMode;
-}
-
-void DesfireSetKdf(DesfireContext *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint8_t kdfInputLen) {
-    ctx->kdfAlgo = kdfAlgo;
-    ctx->kdfInputLen = kdfInputLen;
-    if (kdfInputLen)
-        memcpy(ctx->kdfInput, kdfInput, kdfInputLen);
 }
 
 static int DESFIRESendApdu(bool activate_field, sAPDU apdu, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint16_t *sw) {
@@ -648,10 +599,6 @@ int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uin
     return DesfireSelectAID(ctx, data, (select_two) ? &data[3] : NULL);
 }
 
-bool DesfireIsAuthenticated(DesfireContext *dctx) {
-    return dctx->secureChannel != DACNone;
-}
-
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel) {
     // 3 different way to authenticate   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
     // 4 different crypto arg1   DES, 3DES, 3K3DES, AES
@@ -917,6 +864,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
         //memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));
     }
 
+    memset(dctx->IV, 0, DESFIRE_MAX_KEY_SIZE);
     dctx->secureChannel = secureChannel;
     memcpy(dctx->sessionKeyMAC, dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType));
     PrintAndLogEx(INFO, "sessionKeyEnc : %s", sprint_hex(dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType)));
@@ -943,3 +891,30 @@ int DesfireGetDFList(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
         return PM3_EAPDU_FAIL;
     return PM3_SUCCESS;
 }
+
+int DesfireCreateApplication(DesfireContext *dctx, uint8_t *appdata, size_t appdatalen) {
+    uint8_t respcode = 0xff;
+    uint8_t resp[257] = {0};
+    size_t resplen = 0;
+    int res = DesfireExchangeEx(false, dctx, MFDES_CREATE_APPLICATION, appdata, appdatalen, &respcode, resp, &resplen, true, 24);
+    if (res != PM3_SUCCESS)
+        return res;
+    if (respcode != MFDES_S_OPERATION_OK || resplen != 0)
+        return PM3_EAPDU_FAIL;
+    return PM3_SUCCESS;
+}
+
+int DesfireDeleteApplication(DesfireContext *dctx, uint32_t aid) {
+    uint8_t respcode = 0xff;
+    uint8_t data[3] = {0};
+    DesfireAIDUintToByte(aid, data);
+    uint8_t resp[257] = {0};
+    size_t resplen = 0;
+    int res = DesfireExchangeEx(false, dctx, MFDES_DELETE_APPLICATION, data, sizeof(data), &respcode, resp, &resplen, true, 24);
+    if (res != PM3_SUCCESS)
+        return res;
+    if (respcode != MFDES_S_OPERATION_OK || resplen != 0)
+        return PM3_EAPDU_FAIL;
+    return PM3_SUCCESS;
+}
+

@@ -25,10 +25,9 @@
 #include "mifare.h" // structs
 #include "crc32.h"
 #include "crypto/libpcrypto.h"
+#include "mifare/desfirecrypto.h"
 
 
-#define MAX_CRYPTO_BLOCK_SIZE 16
-#define DESFIRE_MAX_KEY_SIZE 24
 /* Mifare DESFire EV1 Application crypto operations */
 #define APPLICATION_CRYPTO_DES    0x00
 #define APPLICATION_CRYPTO_3K3DES 0x40
@@ -74,13 +73,6 @@ typedef enum {
 
 /* Error code managed by the library */
 #define CRYPTO_ERROR            0x01
-
-enum DESFIRE_CRYPTOALGO {
-    T_DES = 0x00,
-    T_3DES = 0x01, //aka 2K3DES
-    T_3K3DES = 0x02,
-    T_AES = 0x03
-};
 
 int desfire_get_key_length(enum DESFIRE_CRYPTOALGO key_type);
 size_t desfire_get_key_block_length(enum DESFIRE_CRYPTOALGO key_type);
