@@ -5217,6 +5217,8 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         PrintAndLogEx(INFO, "---- " _CYAN_("AID list") " ----");
         for (int i = 0; i < buflen; i += 3)
             PrintAndLogEx(INFO, "AID: %06x", DesfireAIDByteToUint(&buf[i]));
+    } else {
+        PrintAndLogEx(INFO, "There is no applications on the card");
     }
 
     DropField();
@@ -5302,11 +5304,14 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
                           buf[i * 24 + 1 + 3], buf[i * 24 + 1 + 4],
                           strlen((char *)&buf[i * 24 + 1 + 5]),
                           &buf[i * 24 + 1 + 5]);
+    } else {
+        PrintAndLogEx(INFO, "There is no applications on the card");
     }
 
     DropField();
     return PM3_SUCCESS;
 }
+
 
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                     AlwaysAvailable, "This help"},
@@ -5340,6 +5345,8 @@ static command_t CommandTable[] = {
     {"getvalue",         CmdHF14ADesGetValueData,     IfPm3Iso14443a,  "Get value of file"},
     {"read",             CmdHF14ADesReadData,         IfPm3Iso14443a,  "Read data from standard/backup/record file"},
     {"write",            CmdHF14ADesWriteData,        IfPm3Iso14443a,  "Write data to standard/backup/record file"},
+    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("System") " -----------------------"},
+//    {"test",             CmdHF14ADesTest,        IfPm3Iso14443a,  "Test crypto"},
     {NULL, NULL, NULL, NULL}
 };
 
