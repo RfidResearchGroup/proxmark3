@@ -1,4 +1,4 @@
-// Merlok, 2011, 2012, 2019
+//// Merlok, 2011, 2012, 2019
 // people from mifare@nethemba.com, 2010
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
@@ -112,8 +112,8 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         uint32_t keycount = nonce2key(uid, nt, nr, ar, par_list, ks_list, &keylist);
 
         if (keycount == 0) {
-            PrintAndLogEx(FAILED, "key not found (lfsr_common_prefix list is null). Nt=%08x", nt);
-            PrintAndLogEx(FAILED, "this is expected to happen in 25%% of all cases. Trying again with a different reader nonce...");
+            PrintAndLogEx(FAILED, "Key not found (lfsr_common_prefix list is null). Nt=%08x", nt);
+            PrintAndLogEx(FAILED, "This is expected to happen in 25% of all cases. Trying again with a different reader nonce...");
             continue;
         }
 
@@ -124,7 +124,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
             if (keycount == 0) {
                 free(last_keylist);
                 last_keylist = keylist;
-                PrintAndLogEx(FAILED, "no candidates found, trying again");
+                PrintAndLogEx(FAILED, "No candidates found, trying again");
                 continue;
             }
         }
@@ -154,7 +154,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         if (*key != UINT64_C(-1)) {
             break;
         } else {
-            PrintAndLogEx(FAILED, "all key candidates failed. Restarting darkside attack");
+            PrintAndLogEx(FAILED, "All key candidates failed. Restarting darkside attack");
             free(last_keylist);
             last_keylist = keylist;
             first_run = true;
@@ -789,7 +789,7 @@ int mfReadBlock(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t *data) {
         memcpy(data, resp.data.asBytes, 16);
 
         if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(DEBUG, "failed reading block");
+            PrintAndLogEx(DEBUG, "Failed reading block");
             return PM3_ESOFT;
         }
     } else {
@@ -871,12 +871,12 @@ int mfCSetUID(uint8_t *uid, uint8_t uidlen, uint8_t *atqa, uint8_t *sak, uint8_t
 
     int res = mfCGetBlock(0, block0, params);
     if (res == 0) {
-        PrintAndLogEx(SUCCESS, "old block 0... %s", sprint_hex_inrow(block0, sizeof(block0)));
+        PrintAndLogEx(SUCCESS, "Old block 0:  %s", sprint_hex_inrow(block0, sizeof(block0)));
         if (old_uid) {
             memcpy(old_uid, block0, uidlen);
         }
     } else {
-        PrintAndLogEx(INFO, "couldn't get old data. Will write over the last bytes of block 0");
+        PrintAndLogEx(INFO, "Couldn't get old data. Will write over the last bytes of block 0");
     }
 
     // fill in the new values
@@ -908,7 +908,7 @@ int mfCSetUID(uint8_t *uid, uint8_t uidlen, uint8_t *atqa, uint8_t *sak, uint8_t
         }
     }
 
-    PrintAndLogEx(SUCCESS, "new block 0... %s", sprint_hex_inrow(block0, 16));
+    PrintAndLogEx(SUCCESS, "New block 0:  %s", sprint_hex_inrow(block0, 16));
 
     if (wipecard) {
         params |= MAGIC_WIPE;
@@ -963,11 +963,11 @@ int mfCWipe(uint8_t *uid, uint8_t *atqa, uint8_t *sak) {
             if (res == PM3_SUCCESS)
                 break;
 
-            PrintAndLogEx(WARNING, "retry block %d ...", blockNo);
+            PrintAndLogEx(WARNING, "Retry block %d ...", blockNo);
         }
 
         if (res) {
-            PrintAndLogEx(ERR, "error setting block %d (%d)", blockNo, res);
+            PrintAndLogEx(ERR, "Error setting block %d (%d)", blockNo, res);
             return res;
         }
     }
@@ -988,7 +988,7 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
         if (!isOK)
             return PM3_EUNDEF;
     } else {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
     return PM3_SUCCESS;
@@ -1004,7 +1004,7 @@ int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
             return PM3_EUNDEF;
         memcpy(data, resp.data.asBytes, 16);
     } else {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
     return PM3_SUCCESS;
@@ -1066,7 +1066,7 @@ int mfG3GetBlock(uint8_t blockno, uint8_t *data) {
             return PM3_EUNDEF;
         memcpy(data, resp.data.asBytes, 16);
     } else {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
     return PM3_SUCCESS;
@@ -1091,13 +1091,13 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool i
 }
 
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len) {
-    PrintAndLogEx(SUCCESS, "encrypted data... %s", sprint_hex(data, len));
+    PrintAndLogEx(SUCCESS, "encrypted data:  %s", sprint_hex(data, len));
     struct Crypto1State *s;
     uint32_t ks2 = ar_enc ^ prng_successor(nt, 64);
     uint32_t ks3 = at_enc ^ prng_successor(nt, 96);
     s = lfsr_recovery64(ks2, ks3);
     mf_crypto1_decrypt(s, data, len, false);
-    PrintAndLogEx(SUCCESS, "decrypted data... " _YELLOW_("%s"), sprint_hex(data, len));
+    PrintAndLogEx(SUCCESS, "decrypted data   " _YELLOW_("%s"), sprint_hex(data, len));
     PrintAndLogEx(NORMAL, "");
     crypto1_destroy(s);
     return PM3_SUCCESS;
@@ -1126,7 +1126,7 @@ int detect_classic_prng(void) {
 
     // if select tag failed.
     if (resp.oldarg[0] == 0) {
-        PrintAndLogEx(ERR, "error:  selecting tag failed,  can't detect prng\n");
+        PrintAndLogEx(ERR, "Error: selecting tag failed, can't detect prng\n");
         return PM3_ERFTRANS;
     }
     if (!WaitForResponseTimeout(CMD_ACK, &respA, 2500)) {
@@ -1160,7 +1160,7 @@ int detect_classic_nackbug(bool verbose) {
     PrintAndLogEx(INFO, "Checking for NACK bug");
 
     if (verbose)
-        PrintAndLogEx(SUCCESS, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.\n");
+        PrintAndLogEx(SUCCESS, "Press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.\n");
 
     while (true) {
 
@@ -1174,7 +1174,7 @@ int detect_classic_nackbug(bool verbose) {
             PrintAndLogEx(NORMAL, "");
 
             if (resp.status == PM3_EOPABORTED) {
-                PrintAndLogEx(WARNING, "button pressed. Aborted.");
+                PrintAndLogEx(WARNING, "Button pressed. Aborted.");
                 return PM3_EOPABORTED;
             }
 
@@ -1183,20 +1183,20 @@ int detect_classic_nackbug(bool verbose) {
             uint16_t auths = bytes_to_num(resp.data.asBytes + 2, 2);
 
             if (verbose) {
-                PrintAndLogEx(SUCCESS, "num of auth requests  : %u", auths);
-                PrintAndLogEx(SUCCESS, "num of received NACK  : %u", nacks);
+                PrintAndLogEx(SUCCESS, "Num of auth requests:  %u", auths);
+                PrintAndLogEx(SUCCESS, "Num of received NACK:  %u", nacks);
             }
             switch (ok) {
                 case 96 :
                 case 98 : {
                     if (verbose)
-                        PrintAndLogEx(FAILED, "card random number generator is not predictable.");
-                    PrintAndLogEx(WARNING, "detection failed");
+                        PrintAndLogEx(FAILED, "Card random number generator is not predictable.");
+                    PrintAndLogEx(WARNING, "Detection failed");
                     return PM3_SUCCESS;
                 }
                 case 97 : {
                     if (verbose) {
-                        PrintAndLogEx(FAILED, "card random number generator seems to be based on the well-known generating polynomial");
+                        PrintAndLogEx(FAILED, "Card random number generator seems to be based on the well-known generating polynomial");
                         PrintAndLogEx(FAILED, "with 16 effective bits only, but shows unexpected behavior, try again.");
                     }
                     return PM3_SUCCESS;
@@ -1257,25 +1257,25 @@ int detect_mf_magic(bool is_mfc) {
 
     switch (isGeneration) {
         case MAGIC_GEN_1A:
-            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 1a"));
+            PrintAndLogEx(SUCCESS, "Magic capabilities: " _GREEN_("Gen 1a"));
             break;
         case MAGIC_GEN_1B:
-            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 1b"));
+            PrintAndLogEx(SUCCESS, "Magic capabilities: " _GREEN_("Gen 1b"));
             break;
         case MAGIC_GEN_2:
-            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 2 / CUID"));
+            PrintAndLogEx(SUCCESS, "Magic capabilities: " _GREEN_("Gen 2 / CUID"));
             break;
         case MAGIC_GEN_3:
-            PrintAndLogEx(SUCCESS, "Magic capabilities : possibly " _GREEN_("Gen 3 / APDU"));
+            PrintAndLogEx(SUCCESS, "Magic capabilities: possibly " _GREEN_("Gen 3 / APDU"));
             break;
         case MAGIC_GEN_UNFUSED:
-            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Write Once / FUID"));
+            PrintAndLogEx(SUCCESS, "Magic capabilities: " _GREEN_("Write Once / FUID"));
             break;
         case MAGIC_SUPER:
-            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("super card"));
+            PrintAndLogEx(SUCCESS, "Magic capabilities: " _GREEN_("super card"));
             break;
         case MAGIC_NTAG21X:
-            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("NTAG21x"));
+            PrintAndLogEx(SUCCESS, "Magic capabilities: " _GREEN_("NTAG21x"));
             break;
         default:
             break;

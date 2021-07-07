@@ -23,7 +23,7 @@
 #include "nfc/ndef.h"
 #include "protocols.h"
 #include "util_posix.h"         // msclock
-#include "cmdhfmfhard.h"
+#include "cmdhfmfhard.h"			  
 #include "crapto1/crapto1.h"    // prng_successor
 #include "cmdhf14a.h"           // exchange APDU
 #include "crypto/libpcrypto.h"
@@ -105,7 +105,7 @@ static int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-        PrintAndLogEx(WARNING, "iso14443a card select failed");
+        PrintAndLogEx(WARNING, "ISO14443a card select failed");
         DropField();
         return 0;
     }
@@ -318,16 +318,17 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf wrbl",
-                  "Write MIFARE Classic block",
+                  "Write a MIFARE Classic block",
+				  "hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d A1B2C3D40488040000007269766A696E\n"										
                   "hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 000102030405060708090a0b0c0d0e0f"
-                 );
+				  );
     void *argtable[] = {
         arg_param_begin,
-        arg_int1(NULL, "blk", "<dec>", "block number"),
-        arg_lit0("a", NULL, "input key type is key A (def)"),
-        arg_lit0("b", NULL, "input key type is key B"),
-        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
-        arg_str0("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
+        arg_int1(NULL, "blk", "<dec>", "Block number"),
+        arg_lit0("a", NULL, "Set input key type to key A (default)"),
+        arg_lit0("b", NULL, "Set input key type to key B"),
+        arg_str0("k", "key", "<hex>", "Key, 6 hex bytes"),
+        arg_str0("d", "data", "<hex>", "Bytes to write, 16 hex bytes"),
 
         arg_param_end
     };
@@ -354,7 +355,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (blen != MFBLOCK_SIZE) {
-        PrintAndLogEx(WARNING, "block data must include 16 HEX bytes. Got %i", blen);
+        PrintAndLogEx(WARNING, "Block data must include 16 HEX bytes. Got %i", blen);
         return PM3_EINVARG;
     }
 
@@ -393,14 +394,14 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
 static int CmdHF14AMfRdBl(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf rdbl",
-                  "Read MIFARE Classic block",
-                  "hf mf rdbl --blk 0 -k FFFFFFFFFFFF\n"
-                  "hf mf rdbl -b 3 -v   -> get block 3, decode sector trailer\n"
+                  "Read MIFARE Classic block with key authentication",
+                  "hf mf rdbl --blk 0 -k FFFFFFFFFFFF 	 --> Get block 0 and display its contents\n"
+                  "hf mf rdbl --blk 3 -k FFFFFFFFFFFF -v --> Get block 3, display its contents and decode sector trailer\n"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_int1(NULL, "blk", "<dec>", "block number"),
-        arg_lit0("a", NULL, "input key type is key A (def)"),
+        arg_lit0("a", NULL, "input key type is key A (default)"),
         arg_lit0("b", NULL, "input key type is key B"),
         arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
         arg_lit0("v", "verbose", "verbose output"),
@@ -448,12 +449,13 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf rdsc",
-                  "Read MIFARE Classic sector",
-                  "hf mf rdsc -s 0 -k FFFFFFFFFFFF\n"
+                  "Read a MIFARE Classic sector.",
+                  "hf mf rdsc -s 0 -k FFFFFFFFFFFF   --> Get sector 0 and display its contents\n"
+				  "hf mf rdsc -s 0 -k FFFFFFFFFFFF -v --> Get sector 0, display its contents and decode the sector trailer\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a", NULL, "input key specified is A key (def)"),
+        arg_lit0("a", NULL, "input key specified is A key (default)"),
         arg_lit0("b", NULL, "input key specified is B key"),
         arg_str0("k", "key", "<hex>", "key specified as 6 hex bytes"),
         arg_int1("s", "sec", "<dec>", "sector number"),
@@ -552,8 +554,8 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
 static int CmdHF14AMfDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf dump",
-                  "Dump MIFARE Classic tag to binary file\n"
-                  "If no <name> given, UID will be used as filename",
+                  "Dump a MIFARE Classic tag to a binary file.\n"
+                  "If no <name> is given, the UID of the card will be used as filename instead.",
                   "hf mf dump --mini                        --> MIFARE Mini\n"
                   "hf mf dump --1k                          --> MIFARE Classic 1k\n"
                   "hf mf dump --2k                          --> MIFARE 2k\n"
@@ -565,7 +567,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
         arg_str0("f", "file", "<fn>", "filename of dump"),
         arg_str0("k", "keys", "<fn>", "filename of keys"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_param_end
@@ -825,7 +827,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_str0("u", "uid",  "<hex>", "uid, 6 hex bytes"),
@@ -1050,7 +1052,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
 static int CmdHF14AMfNested(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf nested",
-                  "Execute Nested attack against MIFARE Classic card for key recovery",
+                  "Execute a Nested attack against a MIFARE Classic card for key recovery.",
                   "hf mf nested --single --blk 0 -a FFFFFFFFFFFF --tblk 4 --ta     --> Single sector key recovery. Use block 0 Key A to find block 4 Key A\n"
                   "hf mf nested --mini --blk 0 -a -k FFFFFFFFFFFF                  --> Key recovery against MIFARE Mini\n"
                   "hf mf nested --1k --blk 0 -a -k FFFFFFFFFFFF                    --> Key recovery against MIFARE Classic 1k\n"
@@ -1360,7 +1362,7 @@ jumptoend:
 static int CmdHF14AMfNestedStatic(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf staticnested",
-                  "Execute Nested attack against MIFARE Classic card with static nonce for key recovery",
+                  "Execute a Nested attack against MIFARE Classic card with static nonce for key recovery",
                   "hf mf staticnested --mini --blk 0 -a -k FFFFFFFFFFFF                   --> Key recovery against MIFARE Mini\n"
                   "hf mf staticnested --1k --blk 0 -a -k FFFFFFFFFFFF                     --> Key recovery against MIFARE Classic 1k\n"
                   "hf mf staticnested --2k --blk 0 -a -k FFFFFFFFFFFF                     --> Key recovery against MIFARE 2k\n"
@@ -1607,27 +1609,28 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf hardnested",
-                  "Nested attack for hardened MIFARE Classic cards.\n"
-                  "`--i<X>`  set type of SIMD instructions. Without this flag programs autodetect it.\n"
+                  "Nested attack for hardened (PRNG=HARD) MIFARE Classic cards.\n\n"
+                  "`--i<X>` - set type of SIMD instructions. Without this flag the program will autodetect it.\n"
                   " or \n"
                   "    hf mf hardnested -r --tk [known target key]\n"
-                  "Add the known target key to check if it is present in the remaining key space\n"
-                  "    hf mf hardnested --blk 0 -a -k A0A1A2A3A4A5 --tblk 4 --ta --tk FFFFFFFFFFFF\n"
+                  "Add the known target key to check if it is present in the remaining key space:\n"
+                  "    hf mf hardnested --blk 0 -a -k A0A1A2A3A4A5 --tblk 4 --ta --tk FFFFFFFFFFFF\n\n"
+				  "Please note that this command takes blocks as input, not sectors!"
                   ,
-                  "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta\n"
-                  "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta -w\n"
-                  "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta -f nonces.bin -w -s\n"
                   "hf mf hardnested -r\n"
-                  "hf mf hardnested -r --tk a0a1a2a3a4a5\n"
-                  "hf mf hardnested -t --tk a0a1a2a3a4a5\n"
-                  "hf mf hardnested --blk 0 -a -k a0a1a2a3a4a5 --tblk 4 --ta --tk FFFFFFFFFFFF"
+                  "hf mf hardnested -r --tk A0A1A2A3A4A5\n"
+                  "hf mf hardnested -t --tk A0A1A2A3A4A5\n"                  
+				  "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta\n"
+                  "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta -w\n"
+                  "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta -f nonces.bin -w -s\n"												   
+				  "hf mf hardnested --blk 0 -a -k A0A1A2A3A4A5 --tblk 4 --ta --tk FFFFFFFFFFFF"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("k",  "key",   "<hex>", "Key, 12 hex bytes"),      // 1
         arg_int0(NULL, "blk",   "<dec>", "Input block number"),     // 2
-        arg_lit0("a",   NULL,            "Input key A (def)"),      // 3
+        arg_lit0("a",   NULL,            "Input key A (default)"),      // 3
         arg_lit0("b",   NULL,            "Input key B"),
         arg_int0(NULL, "tblk",  "<dec>", "Target block number"),
         arg_lit0(NULL, "ta",             "Target key A"),
@@ -1759,7 +1762,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         // check if tag doesn't have static nonce
         if (detect_classic_static_nonce() == NONCE_STATIC) {
             PrintAndLogEx(WARNING, "Static nonce detected. Quitting...");
-            PrintAndLogEx(HINT, "\tTry use `" _YELLOW_("hf mf staticnested") "`");
+            PrintAndLogEx(HINT, "\tTry using `" _YELLOW_("hf mf staticnested") "`");
             return PM3_EOPABORTED;
         }
 
@@ -1822,12 +1825,12 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         arg_param_begin,
         arg_str0("k",  "key",    "<hex>", "Known key, 12 hex bytes"),
         arg_int0("s",  "sector", "<dec>", "Input sector number"),
-        arg_lit0("a",   NULL,             "Input key A (def)"),
+        arg_lit0("a",   NULL,             "Input key A (default)"),
         arg_lit0("b",   NULL,             "Input key B"),
-        arg_str0("f", "file",    "<fn>",  "filename of dictionary"),
+        arg_str0("f", "file",    "<fn>",  "Filename of dictionary"),
         arg_lit0("s",  "slow",            "Slower acquisition (required by some non standard cards)"),
-        arg_lit0("l",  "legacy",          "legacy mode (use the slow `hf mf chk`)"),
-        arg_lit0("v",  "verbose",         "verbose output (statistics)"),
+        arg_lit0("l",  "legacy",          "Legacy mode (use the slower `hf mf chk`)"),
+        arg_lit0("v",  "verbose",         "Verbose output (statistics)"),
 
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
@@ -2570,11 +2573,13 @@ all_found:
 static int CmdHF14AMfChk_fast(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf fchk",
-                  "This is a improved checkkeys method speedwise. It checks MIFARE Classic tags sector keys against a dictionary file with keys",
+                  "This is a speed improvement of the checkkeys method.\n" 
+				  "It can be used to check a MIFARE Classic tag's sector keys against a dictionary file (.dic) with keys.",
                   "hf mf fchk --mini -k FFFFFFFFFFFF              --> Key recovery against MIFARE Mini\n"
                   "hf mf fchk --1k -k FFFFFFFFFFFF                --> Key recovery against MIFARE Classic 1k\n"
                   "hf mf fchk --2k -k FFFFFFFFFFFF                --> Key recovery against MIFARE 2k\n"
                   "hf mf fchk --4k -k FFFFFFFFFFFF                --> Key recovery against MIFARE 4k\n"
+				  "hf mf chk --1k -k FFFFFFFFFFFF -k A0A1A2A3A4A5 --> Check all sectors, A&B keys against MIFARE Classic 1k\n"
                   "hf mf fchk --1k -f mfc_default_keys.dic        --> Target 1K using default dictionary file\n"
                   "hf mf fchk --1k --emu                          --> Target 1K, write keys to emulator memory\n"
                   "hf mf fchk --1k --dump                         --> Target 1K, write keys to file\n"
@@ -2862,14 +2867,16 @@ out:
 static int CmdHF14AMfChk(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf chk",
-                  "Check keys on MIFARE Classic card",
-                  "hf mf chk --mini -k FFFFFFFFFFFF              --> Check all sectors, all keys against MIFARE Mini\n"
-                  "hf mf chk --1k -k FFFFFFFFFFFF                --> Check all sectors, all keys against MIFARE Classic 1k\n"
-                  "hf mf chk --2k -k FFFFFFFFFFFF                --> Check all sectors, all keys against MIFARE 2k\n"
-                  "hf mf chk --4k -k FFFFFFFFFFFF                --> Check all sectors, all keys against MIFARE 4k\n"
-                  "hf mf chk --1k --emu                          --> Check all sectors, all keys, 1K, and write to emulator memory\n"
-                  "hf mf chk --1k --dump                         --> Check all sectors, all keys, 1K, and write to file\n"
-                  "hf mf chk -a --blk 0 -f mfc_default_keys.dic  --> Check dictionary against block 0, key A");
+                  "Check sector keys on a MIFARE Classic tag.",
+                  "hf mf chk --mini -k FFFFFFFFFFFF              	  --> Check all sectors, A&B keys against MIFARE Mini\n"
+                  "hf mf chk --1k -k FFFFFFFFFFFF                	  --> Check all sectors, A&B keys against MIFARE Classic 1k\n"
+                  "hf mf chk --2k -k FFFFFFFFFFFF                	  --> Check all sectors, A&B keys against MIFARE 2k\n"
+                  "hf mf chk --4k -k FFFFFFFFFFFF                	  --> Check all sectors, A&B keys against MIFARE Classic 4k\n"
+				  "hf mf chk --1k -k FFFFFFFFFFFF -k A0A1A2A3A4A5     --> Check all sectors, A&B keys against MIFARE Classic 1k\n"
+                  "hf mf chk --1k --emu                          	  --> Check all sectors, A&B keys, 1K, and write to emulator memory\n"
+                  "hf mf chk --1k --dump                         	  --> Check all sectors, A&B keys, 1K, and write to file\n"
+                  "hf mf chk -a --blk 0 -f mfc_default_keys.dic  	  --> Check dictionary against block 0, key A\n"
+				  "hf mf chk --1k -* -f mfc_default_keys.dic --dump   --> Check all sectors, A&B keys, 1K, and write to file\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -3287,8 +3294,8 @@ static int CmdHF14AMfSim(const char *Cmd) {
         arg_lit0("i", "interactive", "Console will not be returned until simulation finishes or is aborted"),
         arg_lit0("x", NULL, "Performs the 'reader attack', nr/ar attack against a reader"),
         arg_lit0("e", "emukeys", "Fill simulator keys from found keys"),
-        arg_lit0("v", "verbose", "verbose output"),
-        arg_lit0(NULL, "cve", "trigger CVE 2021_0430"),
+        arg_lit0("v", "verbose", "Verbose output"),
+        arg_lit0(NULL, "cve", "Trigger CVE 2021_0430"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3552,9 +3559,9 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
 static int CmdHF14AMfEGetBlk(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf egetblk",
-                  "Get emulator memory block",
-                  "hf mf egetblk --blk 0      -> get block 0 (manufacturer)\n"
-                  "hf mf egetblk --blk 3 -v   -> get block 3, decode sector trailer\n"
+                  "Get specified block from emulator memory",
+                  "hf mf egetblk --blk 0      --> Get block 0 (manufacturer block)\n"
+                  "hf mf egetblk --blk 3 -v   --> Get block 3 and decode the sector trailer\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -3590,8 +3597,9 @@ static int CmdHF14AMfEGetBlk(const char *Cmd) {
 static int CmdHF14AMfEGetSc(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf egetsc",
-                  "Get emulator memory sector",
-                  "hf mf egetsc -s 0"
+                  "Get specified sector from emulator memory",
+                  "hf mf egetsc -s 0     --> Get sector 0 \n"
+				  "hf mf egetsc -s 1 -v  --> Get sector 1 and decode the sector trailer" 
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -3633,7 +3641,7 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
 static int CmdHF14AMfEClear(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf eclr",
-                  "It set card emulator memory to empty data blocks and key A/B FFFFFFFFFFFF",
+                  "Set emulator memory to empty data blocks and key A/B to FFFFFFFFFFFF\n",
                   "hf mf eclr"
                  );
     void *argtable[] = {
@@ -3651,7 +3659,7 @@ static int CmdHF14AMfESet(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf esetblk",
-                  "Set emulator memory block",
+                  "Set emulator memory block to specified data",
                   "hf mf esetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f"
                  );
     void *argtable[] = {
@@ -3678,7 +3686,7 @@ static int CmdHF14AMfESet(const char *Cmd) {
     }
 
     if (datalen != sizeof(data)) {
-        PrintAndLogEx(WARNING, "block data must include 16 HEX bytes. Got %i", datalen);
+        PrintAndLogEx(WARNING, "Block data must include 16 HEX bytes. Got %i", datalen);
         return PM3_EINVARG;
     }
 
@@ -3691,18 +3699,18 @@ int CmdHF14AMfELoad(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf eload",
                   "Load emulator memory with data from (bin/eml/json) dump file",
-                  "hf mf eload -f hf-mf-01020304.bin\n"
-                  "hf mf eload --4k -f hf-mf-01020304.eml\n"
+                  "hf mf eload -f hf-mf-01020304.bin      --> Use the specified file's data to fill 1KB of emulator memory\n"
+                  "hf mf eload --4k -f hf-mf-01020304.eml --> Fill 4KB of emulator memory from the specified file\n"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "filename of dump"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "ul", "MIFARE Ultralight family"),
-        arg_int0("q", "qty", "<dec>", "manually set number of blocks (overrides)"),
+        arg_int0("q", "qty", "<dec>", "Manually set number of blocks (overrides)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3752,7 +3760,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
     if (numblks > 0) {
         block_cnt = MIN(numblks, block_cnt);
-        PrintAndLogEx(INFO, "overriding number of blocks, will use %d blocks ( %u bytes )", block_cnt, block_cnt * block_width);
+        PrintAndLogEx(INFO, "Overriding number of blocks, will use %d blocks ( %u bytes )", block_cnt, block_cnt * block_width);
     }
 
     uint8_t *data = NULL;
@@ -3778,7 +3786,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
             break;
         }
         case DICTIONARY: {
-            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats are allowed");
             free(data);
             return PM3_EINVARG;
         }
@@ -3847,7 +3855,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf mfu sim -h`"));
         // MFU / NTAG
         if ((cnt != block_cnt)) {
-            PrintAndLogEx(WARNING, "Warning, Ultralight/Ntag file content, Loaded %d blocks of expected %d blocks into emulator memory", cnt, block_cnt);
+            PrintAndLogEx(WARNING, "Warning, Ultralight/Ntag file content. Loaded %d blocks of expected %d blocks into emulator memory", cnt, block_cnt);
             return PM3_SUCCESS;
         }
     } else {
@@ -3866,16 +3874,16 @@ static int CmdHF14AMfESave(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf esave",
-                  "Save emulator memory into three files (BIN/EML/JSON) ",
+                  "Save emulator memory into three files (BIN/EML/JSON)",
                   "hf mf esave\n"
                   "hf mf esave --4k\n"
                   "hf mf esave --4k -f hf-mf-01020304.eml"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_str0("f", "file", "<fn>", "Filename of dump"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_param_end
@@ -3947,14 +3955,14 @@ static int CmdHF14AMfEView(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf eview",
-                  "It displays emulator memory",
+                  "Display the data in emulator memory",
                   "hf mf eview\n"
                   "hf mf eview --4k"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_param_end
@@ -4016,15 +4024,16 @@ static int CmdHF14AMfECFill(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf ecfill",
                   "Dump card and transfer the data to emulator memory.\n"
                   "Keys must be laid in the emulator memory",
-                  "hf mf ecfill          --> use key type A\n"
-                  "hf mf ecfill --4k -b  --> target 4K card with key type B"
+                  "hf mf ecfill          --> Use key type A\n"
+                  "hf mf ecfill --4k -b  --> Target 4K card with key type B"
                  );
+				 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a", NULL, "input key type is key A(def)"),
-        arg_lit0("b", NULL, "input key type is key B"),
+        arg_lit0("a", NULL, "Input key type is key A (default)"),
+        arg_lit0("b", NULL, "Input key type is key B"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_param_end
@@ -4084,15 +4093,15 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf ekeyprn",
-                  "Download and print the keys from emulator memory",
-                  "hf mf ekeyprn --1k --> print MFC 1K keyset\n"
-                  "hf mf ekeyprn -w   --> write keys to binary file"
+                  "View in use keys from emulator memory",
+                  "hf mf ekeyprn --1k --> View MIFARE 1K keys from emulator memory\n"
+                  "hf mf ekeyprn -w   --> View keys from emulator memory and write them to a binary file"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("w", "write", "write keys to binary file `hf-mf-<UID>-key.bin`"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_param_end
@@ -4141,7 +4150,7 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     // read UID from EMUL
     uint8_t data[16];
     if (mfEmlGetMem(data, 0, 1) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "error get block 0");
+        PrintAndLogEx(WARNING, "Error getting block 0");
         free(e_sector);
         return PM3_ESOFT;
     }
@@ -4154,7 +4163,7 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     for (int i = 0; i < sectors_cnt; i++) {
 
         if (mfEmlGetMem(data, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1) != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "error get block %d", FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
+            PrintAndLogEx(WARNING, "Error getting block %d", FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
             e_sector[i].foundKey[0] = false;
             e_sector[i].foundKey[1] = false;
         } else {
@@ -4187,14 +4196,15 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf csetuid",
-                  "Set UID, ATQA, and SAK for magic gen1a card",
+                  "Set UID, ATQA, and SAK for magic gen1a card\n"
+				  "Only works with magic gen1a cards\n",
                   "hf mf csetuid -u 01020304\n"
                   "hf mf csetuid -w -u 01020304 --atqa 0004 --sak 08"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("w", "wipe", "wipes card with backdoor cmd`"),
-        arg_str0("u", "uid",  "<hex>", "UID, 4/7 hex bytes"),
+        arg_lit0("w", "wipe", "wipes card with backdoor command`"),
+        arg_str0("u", "uid",  "<hex>", "UID, 4 or 7 hex bytes"),
         arg_str0("a", "atqa", "<hex>", "ATQA, 2 hex bytes"),
         arg_str0("s", "sak",  "<hex>", "SAK, 1 hex byte"),
         arg_param_end
@@ -4250,8 +4260,8 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
 
     res = memcmp(uid, verify_uid, uidlen);
 
-    PrintAndLogEx(SUCCESS, "Old UID... %s", sprint_hex(old_uid, uidlen));
-    PrintAndLogEx(SUCCESS, "New UID... %s ( %s )",
+    PrintAndLogEx(SUCCESS, "Old UID:  %s", sprint_hex(old_uid, uidlen));
+    PrintAndLogEx(SUCCESS, "New UID:  %s ( %s )",
                   sprint_hex(verify_uid, uidlen),
                   (res == 0) ? _GREEN_("verified") : _RED_("fail")
                  );
@@ -4261,10 +4271,11 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
 static int CmdHF14AMfCWipe(const char *cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf cwipe",
-                  "Wipe gen1 magic chinese card.\n"
-                  "Set UID / ATQA / SAK / Data / Keys / Access to default values",
+                  "Wipe a gen1 magic card.\n"
+                  "Set UID / ATQA / SAK / Data / Keys / Access to default values\n"
+				  "Only works with magic gen1a cards\n",
                   "hf mf cwipe\n"
-                  "hf mf cwipe -u 09080706 -a 0004 -s 18 --> set UID, ATQA and SAK and wipe card");
+                  "hf mf cwipe -u 09080706 -a 0004 -s 18 --> Set UID, ATQA and SAK and wipe card");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4315,7 +4326,8 @@ static int CmdHF14AMfCSetBlk(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf csetblk",
-                  "Set block data on a magic gen1a card",
+                  "Set block data on a magic gen1a card\n"
+				  "Only works with magic gen1a cards",
                   "hf mf csetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f"
                  );
     void *argtable[] = {
@@ -4337,12 +4349,12 @@ static int CmdHF14AMfCSetBlk(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (b < 0 ||  b >= MIFARE_1K_MAXBLOCK) {
-        PrintAndLogEx(FAILED, "target block number out-of-range, got %i", b);
+        PrintAndLogEx(FAILED, "Target block number out-of-range, got %i", b);
         return PM3_EINVARG;
     }
 
     if (datalen != MFBLOCK_SIZE) {
-        PrintAndLogEx(FAILED, "expected 16 bytes data, got %i", datalen);
+        PrintAndLogEx(FAILED, "Expected 16 bytes data, got %i", datalen);
         return PM3_EINVARG;
     }
 
@@ -4364,9 +4376,9 @@ static int CmdHF14AMfCSetBlk(const char *Cmd) {
 static int CmdHF14AMfCLoad(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mf cload",
-                  "Load magic gen1a card with data from (bin/eml/json) dump file\n"
-                  "or from emulator memory.",
+    CLIParserInit(&ctx, "hf mf cload\n",
+                  "Load magic gen1a card with data from (bin/eml/json) dump file or from emulator memory.\n"
+				  "Only works with magic gen1a cards",
                   "hf mf cload --emu\n"
                   "hf mf cload -f hf-mf-01020304.eml\n"
                  );
@@ -4396,7 +4408,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
             // read from emul memory
             if (mfEmlGetMem(buf8, b, 1)) {
-                PrintAndLogEx(WARNING, "Can't read from emul block: %d", b);
+                PrintAndLogEx(WARNING, "Can't read from emulator memory block: %d", b);
                 return PM3_ESOFT;
             }
 
@@ -4450,7 +4462,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
             break;
         }
         case DICTIONARY: {
-            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats are allowed");
             free(data);
             return PM3_EINVARG;
         }
@@ -4529,10 +4541,10 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 static int CmdHF14AMfCGetBlk(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf cgetblk",
-                  "Get block data from magic Chinese card.\n"
+                  "Get specified block's data from magic gen1a card.\n"
                   "Only works with magic gen1a cards",
                   "hf mf cgetblk --blk 0      --> get block 0 (manufacturer)\n"
-                  "hf mf cgetblk --blk 3 -v   --> get block 3, decode sector trailer\n"
+                  "hf mf cgetblk --blk 3 -v   --> get block 3 and decode the sector trailer\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -4572,9 +4584,10 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
 static int CmdHF14AMfCGetSc(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf cgetsc",
-                  "Get sector data from magic Chinese card.\n"
+                  "Get sector data from magic gen1a card.\n"
                   "Only works with magic gen1a cards",
-                  "hf mf cgetsc -s 0"
+                  "hf mf cgetsc -s 0    --> Get sector 0\n"
+				  "hf mf cgetsc -s 0 -v --> Get sector 0 and decode the sector trailer\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -4625,19 +4638,20 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
 static int CmdHF14AMfCSave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf csave",
-                  "Save magic gen1a card memory into three files (BIN/EML/JSON)"
-                  "or into emulator memory",
-                  "hf mf csave\n"
-                  "hf mf csave --4k"
+                  "Save magic gen1a card memory into three files (BIN/EML/JSON) and/or into emulator memory\n"
+				  "Only works with magic gen1a cards",
+                  "hf mf csave                 --> Save a MIFARE 1K card to file using the UID as the filename\n"
+                  "hf mf csave --4k            --> Save a MIFARE 4K card to file using the UID as the filename\n"
+				  "hf mf csave -f MyFile --emu --> Save a MIFARE 1K card to file using specified filename and into emulator memory\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_str0("f", "file", "<fn>", "Filename of dump"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
-        arg_lit0(NULL, "emu", "from emulator memory"),
+        arg_lit0(NULL, "emu", "Save to emulator memory"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4689,7 +4703,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "iso14443a card select timeout");
+        PrintAndLogEx(WARNING, "ISO14443a card select timeout");
         return PM3_ETIMEOUT;
     }
 
@@ -4701,7 +4715,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     */
     uint64_t select_status = resp.oldarg[0];
     if (select_status == 0) {
-        PrintAndLogEx(WARNING, "iso14443a card select failed");
+        PrintAndLogEx(WARNING, "ISO14443a card select failed");
         return select_status;
     }
 
@@ -4742,7 +4756,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     if (fill_emulator) {
-        PrintAndLogEx(INFO, "uploading to emulator memory");
+        PrintAndLogEx(INFO, "Uploading to emulator memory");
         PrintAndLogEx(INFO, "." NOLF);
         // fast push mode
         conn.block_after_ACK = true;
@@ -4752,7 +4766,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
                 conn.block_after_ACK = false;
             }
             if (mfEmlSetMem(dump + (i * MFBLOCK_SIZE), i, 5) != PM3_SUCCESS) {
-                PrintAndLogEx(WARNING, "Can't set emul block: %d", i);
+                PrintAndLogEx(WARNING, "Can't set emulator memory block: %d", i);
             }
             PrintAndLogEx(NORMAL, "." NOLF);
             fflush(stdout);
@@ -4779,14 +4793,15 @@ static int CmdHF14AMfCView(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf cview",
-                  "View `magic gen1a` card memory",
+                  "View all of the memory in a magic gen1a card\n"
+				  "Only works with magic gen1a cards",
                   "hf mf cview\n"
                   "hf mf cview --4k"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_param_end
@@ -4833,7 +4848,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "iso14443a card select timeout");
+        PrintAndLogEx(WARNING, "ISO14443a card select timeout");
         return PM3_ETIMEOUT;
     }
 
@@ -4954,7 +4969,7 @@ static int CmdHf14AMfSetMod(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("0", NULL, "normal modulation"),
-        arg_lit0("1", NULL, "strong modulation (def)"),
+        arg_lit0("1", NULL, "strong modulation (default)"),
         arg_str0("k", "key", "<hex>", "key A, Sector 0,  6 hex bytes"),
         arg_param_end
     };
@@ -5167,9 +5182,9 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf mad",
                   "Checks and prints MIFARE Application Directory (MAD)",
-                  "hf mf mad -> shows MAD if exists\n"
-                  "hf mf mad --aid e103 -k ffffffffffff -b -> shows NDEF data if exists. read card with custom key and key B\n"
-                  "hf mf mad --dch -k ffffffffffff -> decode CardHolder information\n");
+                  "hf mf mad        			--> Shows MAD if it exists\n" //4 spaces, 3 tabs
+                  "hf mf mad --dch -k ffffffffffff 	     --> Decode CardHolder information\n" //6 spaces, 1 tab 
+				  "hf mf mad --aid e103 -k ffffffffffff -b  --> Shows NDEF data if it exists. Read card with custom key and key B\n"); //2 spaces
 
     void *argtable[] = {
         arg_param_begin,
@@ -5324,9 +5339,9 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf ndefread",
                   "Prints NFC Data Exchange Format (NDEF)",
-                  "hf mf ndefread -> shows NDEF parsed data\n"
-                  "hf mf ndefread -vv -> shows NDEF parsed and raw data\n"
-                  "hf mf ndefread --aid e103 -k ffffffffffff -b -> shows NDEF data with custom AID, key and with key B\n");
+                  "hf mf ndefread  			--> shows NDEF parsed data\n"
+                  "hf mf ndefread -vv 				--> shows NDEF parsed and raw data\n"
+                  "hf mf ndefread --aid e103 -k ffffffffffff -b  --> shows NDEF data with custom AID, key and with key B\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5437,8 +5452,8 @@ int CmdHFMFNDEFRead(const char *Cmd) {
 static int CmdHFMFPersonalize(const char *cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf personalize",
-                  "Personalize the UID of a MIFARE Classic EV1 card. This is only possible \n"
-                  "if it is a 7Byte UID card and if it is not already personalized.",
+                  "Personalize the UID of a MIFARE Classic EV1 card.\n"
+                  "This is only possible if it is a 7Byte UID card and if it is not already personalized.",
                   "hf mf personalize --f0                    -> double size UID\n"
                   "hf mf personalize --f1                    -> double size UID, optional usage of selection process shortcut\n"
                   "hf mf personalize --f2                    -> single size random ID\n"
@@ -5448,7 +5463,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a", NULL, "use key A to authenticate sector 0 (def)"),
+        arg_lit0("a", NULL, "use key A to authenticate sector 0 (default)"),
         arg_lit0("b", NULL, "use key B to authenticate sector 0"),
         arg_str0("k",  "key", "<hex>", "key (def FFFFFFFFFFFF)"),
         arg_lit0(NULL, "f0", "UIDFO, double size UID"),
@@ -5781,19 +5796,19 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
 static int CmdHF14AMfWipe(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf wipe",
-                  "Wipe card to zeros and default keys/acc. This command takes a key file to wipe card\n"
-                  "Will use UID from card to generate keyfile name if not specified.\n"
+                  "Wipe a MIFARRE Classic card to zeros and default keys/access bits. This command needs a key file to wipe the card\n"
+                  "By default, it will use the UID of the card to find the key file.\n"
                   "New A/B keys.....  FF FF FF FF FF FF\n"
                   "New acc rights...  FF 07 80\n"
                   "New GPB..........  69",
-                  "hf mf wipe                --> reads card uid to generate file name\n"
-                  "hf mf wipe --gen2         --> force write to S0, B0 manufacture block\n"
-                  "hf mf wipe -f mykey.bin   --> use mykey.bin\n"
+                  "hf mf wipe                --> Reads card UID to find key file name\n"
+                  "hf mf wipe --gen2         --> Force write to Sector 0, Block 0; manufacturer block (GEN2)\n"
+                  "hf mf wipe -f mykey.bin   --> Use the specified file 'mykey.bin'\n"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f",  "file", "<fn>", "key filename"),
-        arg_lit0(NULL, "gen2", "force write to Sector 0, block 0  (GEN2)"),
+        arg_lit0(NULL, "gen2", "force write to Sector 0, block 0 (GEN2)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -5930,8 +5945,8 @@ static int CmdHF14AMfView(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf view",
-                  "Print a MIFARE Classic dump file (bin/eml/json)",
-                  "hf mf view -f hf-mf-01020304-dump.bin"
+                  "View the contents of a MIFARE Classic dump file (bin/eml/json)",
+                  "hf mf view -f hf-mf-01020304-dump.bin --> View the contents of the supplied bin file"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -6011,7 +6026,7 @@ static int CmdHF14AGen3View(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_param_end
@@ -6058,7 +6073,7 @@ static int CmdHF14AGen3View(const char *Cmd) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "iso14443a card select timeout");
+        PrintAndLogEx(WARNING, "ISO14443a card select timeout");
         return PM3_ETIMEOUT;
     }
 
@@ -6071,7 +6086,7 @@ static int CmdHF14AGen3View(const char *Cmd) {
     uint64_t select_status = resp.oldarg[0];
 
     if (select_status == 0) {
-        PrintAndLogEx(WARNING, "iso14443a card select failed");
+        PrintAndLogEx(WARNING, "ISO14443a card select failed");
         return select_status;
     }
 
@@ -6129,7 +6144,7 @@ static command_t CommandTable[] = {
     {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE Classic sector"},
     {"restore",     CmdHF14AMfRestore,      IfPm3Iso14443a,  "Restore MIFARE Classic binary file to BLANK tag"},
     {"setmod",      CmdHf14AMfSetMod,       IfPm3Iso14443a,  "Set MIFARE Classic EV1 load modulation strength"},
-    {"view",        CmdHF14AMfView,         AlwaysAvailable,  "Display content from tag dump file"},
+    {"view",        CmdHF14AMfView,         AlwaysAvailable, "Display content from tag dump file"},
     {"wipe",        CmdHF14AMfWipe,         IfPm3Iso14443a,  "Wipe card to zeros and default keys/acc"},
     {"wrbl",        CmdHF14AMfWrBl,         IfPm3Iso14443a,  "Write MIFARE Classic block"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
