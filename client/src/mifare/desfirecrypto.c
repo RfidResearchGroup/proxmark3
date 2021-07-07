@@ -265,6 +265,7 @@ void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *data, size_t len, uint8_t *
 
     DesfireCryptoEncDec(ctx, true, buffer, len, NULL, true);
 
-    memcpy(cmac, ctx->IV, kbs);
+    if (cmac != NULL)
+        memcpy(cmac, ctx->IV, kbs);
 }
 
