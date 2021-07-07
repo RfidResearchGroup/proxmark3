@@ -1,4 +1,4 @@
-//// Merlok, 2011, 2012, 2019
+// Merlok, 2011, 2012, 2019
 // people from mifare@nethemba.com, 2010
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
