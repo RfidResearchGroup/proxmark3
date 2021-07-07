@@ -91,9 +91,11 @@ void DesfireSetCommandSet(DesfireContext *ctx, DesfireCommandSet cmdSet);
 void DesfireSetCommMode(DesfireContext *ctx, DesfireCommunicationMode commMode);
 void DesfireSetKdf(DesfireContext *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint8_t kdfInputLen);
 bool DesfireIsAuthenticated(DesfireContext *dctx);
+size_t DesfireGetMACLength(DesfireContext *ctx);
 
 
 void DesfireCryptoEncDec(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode);
+void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode, uint8_t *iv);
 void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *cmac);
 
 
