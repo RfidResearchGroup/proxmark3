@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add new standalone mode `hf_reblay` -  relay 14a over bt (@salmg)
  - Added one new key from gun cloner found in wild (@scott4290)
  - Fix `hf_msdsal` standalone in simulation flow (@salmg)
  - Added a picture viewer in QT. To be used with `hf emrtd info` (@iceman1001)

@@ -89,3 +89,7 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_TMUDFORD,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_tmudford.c
 endif
+ # WITH_STANDALONE_HF_REBLAY
+ifneq (,$(findstring WITH_STANDALONE_HF_REBLAY,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_reblay.c
+endif
