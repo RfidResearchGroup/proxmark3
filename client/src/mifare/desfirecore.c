@@ -220,12 +220,14 @@ void DesfirePrintContext(DesfireContext *ctx) {
                   CLIGetOptionListStr(DesfireCommunicationModeOpts, ctx->commMode));
 
     if (DesfireIsAuthenticated(ctx)) {
-        PrintAndLogEx(INFO, "Session key MAC [%d]: %s ENC: %s IV [%d]: %s",
+        PrintAndLogEx(INFO, "Session key MAC [%d]: %s ",
                       desfire_get_key_length(ctx->keyType),
-                      sprint_hex(ctx->sessionKeyMAC, desfire_get_key_length(ctx->keyType)),
-                      sprint_hex(ctx->sessionKeyEnc, desfire_get_key_length(ctx->keyType)),
+                      sprint_hex(ctx->sessionKeyMAC, desfire_get_key_length(ctx->keyType)));
+        PrintAndLogEx(INFO, "    ENC: %s",
+                      sprint_hex(ctx->sessionKeyEnc, desfire_get_key_length(ctx->keyType)));
+        PrintAndLogEx(INFO, "    IV [%d]: %s",
                       desfire_get_key_block_length(ctx->keyType),
-                      sprint_hex(ctx->sessionKeyEnc, desfire_get_key_block_length(ctx->keyType)));
+                      sprint_hex(ctx->IV, desfire_get_key_block_length(ctx->keyType)));
 
     }
 }
