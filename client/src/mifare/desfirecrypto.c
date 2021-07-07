@@ -188,7 +188,6 @@ void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *s
     
     size_t offset = 0;
     while (offset < srcdatalen) {
-        //mifare_cypher_single_block(key, data + offset, ivect, direction, operation, block_size);
         if (use_session_key)
             DesfireCryptoEncDecSingleBlock(ctx->sessionKeyMAC, ctx->keyType, srcdata + offset, data, xiv, encode, encode);
         else
@@ -219,9 +218,7 @@ static void DesfireCMACGenerateSubkeys(DesfireContext *ctx, uint8_t *sk1, uint8_
     uint8_t ivect[kbs];
     memset(ivect, 0, kbs);
 
-    //mifare_cypher_blocks_chained(NULL, key, ivect, l, kbs, MCD_SEND, MCO_ENCYPHER);
     DesfireCryptoEncDecEx(ctx, true, l, kbs, l, true, ivect);
-//PrintAndLogEx(INFO, "i: %s", sprint_hex(l, kbs));
 
     bool txor = false;
 
@@ -255,25 +252,17 @@ void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *data, size_t len, uint8_t *
     DesfireCMACGenerateSubkeys(ctx, sk1, sk2);
     
     memcpy(buffer, data, len);
-PrintAndLogEx(INFO, "key: %s", sprint_hex(ctx->sessionKeyMAC, 24));
-PrintAndLogEx(INFO, "sk1: %s", sprint_hex(sk1, 8));
-PrintAndLogEx(INFO, "sk2: %s", sprint_hex(sk2, 8));
 
     if ((!len) || (len % kbs)) {
         buffer[len++] = 0x80;
         while (len % kbs) {
             buffer[len++] = 0x00;
         }
-PrintAndLogEx(INFO, "befode xor sk1: %s", sprint_hex(buffer, len));
         bin_xor(buffer + len - kbs, sk2, kbs);
     } else {
-PrintAndLogEx(INFO, "befode xor sk2: %s", sprint_hex(buffer, len));
         bin_xor(buffer + len - kbs, sk1, kbs);
     }
 
-PrintAndLogEx(INFO, "cbuf: %s", sprint_hex(buffer, len));
-PrintAndLogEx(INFO, "iv: %s", sprint_hex(ctx->IV, kbs));
-    //mifare_cypher_blocks_chained(NULL, key, ivect, buffer, len, MCD_SEND, MCO_ENCYPHER);
     DesfireCryptoEncDec(ctx, true, buffer, len, NULL, true);
 
     memcpy(cmac, ctx->IV, kbs);
