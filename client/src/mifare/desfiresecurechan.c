@@ -40,15 +40,20 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
 
             rlen = padded_data_length(srcdatalen, desfire_get_key_block_length(ctx->keyType));
             memcpy(data, srcdata, srcdatalen);
+            memset(ctx->IV, 0, sizeof(ctx->IV));
             DesfireCryptoEncDec(ctx, true, data, rlen, NULL, true);
             memcpy(dstdata, srcdata, srcdatalen);
             memcpy(&dstdata[srcdatalen], ctx->IV, 4);
             *dstdatalen = rlen;
             break;
         case DCMEncrypted:
+            if (srcdatalen == 0)
+                break;
+
             rlen = padded_data_length(srcdatalen + 2, desfire_get_key_block_length(ctx->keyType)); // 2 - crc16
             memcpy(data, srcdata, srcdatalen);
             compute_crc(CRC_14443_A, data, srcdatalen, &data[srcdatalen], &data[srcdatalen + 1]);
+            memset(ctx->IV, 0, sizeof(ctx->IV));
             DesfireCryptoEncDec(ctx, true, data, rlen, dstdata, true);
             *dstdatalen = rlen;
             break;
