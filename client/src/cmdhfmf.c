@@ -23,7 +23,7 @@
 #include "nfc/ndef.h"
 #include "protocols.h"
 #include "util_posix.h"         // msclock
-#include "cmdhfmfhard.h"			  
+#include "cmdhfmfhard.h"
 #include "crapto1/crapto1.h"    // prng_successor
 #include "cmdhf14a.h"           // exchange APDU
 #include "crypto/libpcrypto.h"
@@ -319,9 +319,9 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf wrbl",
                   "Write a MIFARE Classic block",
-				  "hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d A1B2C3D40488040000007269766A696E\n"										
+                  "hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d A1B2C3D40488040000007269766A696E\n"
                   "hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 000102030405060708090a0b0c0d0e0f"
-				  );
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_int1(NULL, "blk", "<dec>", "Block number"),
@@ -451,7 +451,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf rdsc",
                   "Read a MIFARE Classic sector.",
                   "hf mf rdsc -s 0 -k FFFFFFFFFFFF   --> Get sector 0 and display its contents\n"
-				  "hf mf rdsc -s 0 -k FFFFFFFFFFFF -v --> Get sector 0, display its contents and decode the sector trailer\n"
+                  "hf mf rdsc -s 0 -k FFFFFFFFFFFF -v --> Get sector 0, display its contents and decode the sector trailer\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -1615,15 +1615,15 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
                   "    hf mf hardnested -r --tk [known target key]\n"
                   "Add the known target key to check if it is present in the remaining key space:\n"
                   "    hf mf hardnested --blk 0 -a -k A0A1A2A3A4A5 --tblk 4 --ta --tk FFFFFFFFFFFF\n\n"
-				  "Please note that this command takes blocks as input, not sectors!"
+                  "Please note that this command takes blocks as input, not sectors!"
                   ,
                   "hf mf hardnested -r\n"
                   "hf mf hardnested -r --tk A0A1A2A3A4A5\n"
-                  "hf mf hardnested -t --tk A0A1A2A3A4A5\n"                  
-				  "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta\n"
+                  "hf mf hardnested -t --tk A0A1A2A3A4A5\n"
+                  "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta\n"
                   "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta -w\n"
-                  "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta -f nonces.bin -w -s\n"												   
-				  "hf mf hardnested --blk 0 -a -k A0A1A2A3A4A5 --tblk 4 --ta --tk FFFFFFFFFFFF"
+                  "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta -f nonces.bin -w -s\n"
+                  "hf mf hardnested --blk 0 -a -k A0A1A2A3A4A5 --tblk 4 --ta --tk FFFFFFFFFFFF"
                  );
 
     void *argtable[] = {
@@ -2573,13 +2573,13 @@ all_found:
 static int CmdHF14AMfChk_fast(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf fchk",
-                  "This is a speed improvement of the checkkeys method.\n" 
-				  "It can be used to check a MIFARE Classic tag's sector keys against a dictionary file (.dic) with keys.",
+                  "This is a speed improvement of the checkkeys method.\n"
+                  "It can be used to check a MIFARE Classic tag's sector keys against a dictionary file (.dic) with keys.",
                   "hf mf fchk --mini -k FFFFFFFFFFFF              --> Key recovery against MIFARE Mini\n"
                   "hf mf fchk --1k -k FFFFFFFFFFFF                --> Key recovery against MIFARE Classic 1k\n"
                   "hf mf fchk --2k -k FFFFFFFFFFFF                --> Key recovery against MIFARE 2k\n"
                   "hf mf fchk --4k -k FFFFFFFFFFFF                --> Key recovery against MIFARE 4k\n"
-				  "hf mf chk --1k -k FFFFFFFFFFFF -k A0A1A2A3A4A5 --> Check all sectors, A&B keys against MIFARE Classic 1k\n"
+                  "hf mf chk --1k -k FFFFFFFFFFFF -k A0A1A2A3A4A5 --> Check all sectors, A&B keys against MIFARE Classic 1k\n"
                   "hf mf fchk --1k -f mfc_default_keys.dic        --> Target 1K using default dictionary file\n"
                   "hf mf fchk --1k --emu                          --> Target 1K, write keys to emulator memory\n"
                   "hf mf fchk --1k --dump                         --> Target 1K, write keys to file\n"
@@ -2872,11 +2872,11 @@ static int CmdHF14AMfChk(const char *Cmd) {
                   "hf mf chk --1k -k FFFFFFFFFFFF                	  --> Check all sectors, A&B keys against MIFARE Classic 1k\n"
                   "hf mf chk --2k -k FFFFFFFFFFFF                	  --> Check all sectors, A&B keys against MIFARE 2k\n"
                   "hf mf chk --4k -k FFFFFFFFFFFF                	  --> Check all sectors, A&B keys against MIFARE Classic 4k\n"
-				  "hf mf chk --1k -k FFFFFFFFFFFF -k A0A1A2A3A4A5     --> Check all sectors, A&B keys against MIFARE Classic 1k\n"
+                  "hf mf chk --1k -k FFFFFFFFFFFF -k A0A1A2A3A4A5        --> Check all sectors, A&B keys against MIFARE Classic 1k\n"
                   "hf mf chk --1k --emu                          	  --> Check all sectors, A&B keys, 1K, and write to emulator memory\n"
                   "hf mf chk --1k --dump                         	  --> Check all sectors, A&B keys, 1K, and write to file\n"
                   "hf mf chk -a --blk 0 -f mfc_default_keys.dic  	  --> Check dictionary against block 0, key A\n"
-				  "hf mf chk --1k -* -f mfc_default_keys.dic --dump   --> Check all sectors, A&B keys, 1K, and write to file\n");
+                  "hf mf chk --1k -* -f mfc_default_keys.dic --dump      --> Check all sectors, A&B keys, 1K, and write to file\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -3599,7 +3599,7 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf egetsc",
                   "Get specified sector from emulator memory",
                   "hf mf egetsc -s 0     --> Get sector 0 \n"
-				  "hf mf egetsc -s 1 -v  --> Get sector 1 and decode the sector trailer" 
+                  "hf mf egetsc -s 1 -v  --> Get sector 1 and decode the sector trailer"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -4027,7 +4027,7 @@ static int CmdHF14AMfECFill(const char *Cmd) {
                   "hf mf ecfill          --> Use key type A\n"
                   "hf mf ecfill --4k -b  --> Target 4K card with key type B"
                  );
-				 
+
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a", NULL, "Input key type is key A (default)"),
@@ -4197,7 +4197,7 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf csetuid",
                   "Set UID, ATQA, and SAK for magic gen1a card\n"
-				  "Only works with magic gen1a cards\n",
+                  "Only works with magic gen1a cards\n",
                   "hf mf csetuid -u 01020304\n"
                   "hf mf csetuid -w -u 01020304 --atqa 0004 --sak 08"
                  );
@@ -4273,7 +4273,7 @@ static int CmdHF14AMfCWipe(const char *cmd) {
     CLIParserInit(&ctx, "hf mf cwipe",
                   "Wipe a gen1 magic card.\n"
                   "Set UID / ATQA / SAK / Data / Keys / Access to default values\n"
-				  "Only works with magic gen1a cards\n",
+                  "Only works with magic gen1a cards\n",
                   "hf mf cwipe\n"
                   "hf mf cwipe -u 09080706 -a 0004 -s 18 --> Set UID, ATQA and SAK and wipe card");
 
@@ -4327,7 +4327,7 @@ static int CmdHF14AMfCSetBlk(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf csetblk",
                   "Set block data on a magic gen1a card\n"
-				  "Only works with magic gen1a cards",
+                  "Only works with magic gen1a cards",
                   "hf mf csetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f"
                  );
     void *argtable[] = {
@@ -4378,7 +4378,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf cload\n",
                   "Load magic gen1a card with data from (bin/eml/json) dump file or from emulator memory.\n"
-				  "Only works with magic gen1a cards",
+                  "Only works with magic gen1a cards",
                   "hf mf cload --emu\n"
                   "hf mf cload -f hf-mf-01020304.eml\n"
                  );
@@ -4587,7 +4587,7 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
                   "Get sector data from magic gen1a card.\n"
                   "Only works with magic gen1a cards",
                   "hf mf cgetsc -s 0    --> Get sector 0\n"
-				  "hf mf cgetsc -s 0 -v --> Get sector 0 and decode the sector trailer\n"
+                  "hf mf cgetsc -s 0 -v --> Get sector 0 and decode the sector trailer\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -4639,10 +4639,10 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf csave",
                   "Save magic gen1a card memory into three files (BIN/EML/JSON) and/or into emulator memory\n"
-				  "Only works with magic gen1a cards",
+                  "Only works with magic gen1a cards",
                   "hf mf csave                 --> Save a MIFARE 1K card to file using the UID as the filename\n"
                   "hf mf csave --4k            --> Save a MIFARE 4K card to file using the UID as the filename\n"
-				  "hf mf csave -f MyFile --emu --> Save a MIFARE 1K card to file using specified filename and into emulator memory\n"
+                  "hf mf csave -f MyFile --emu --> Save a MIFARE 1K card to file using specified filename and into emulator memory\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -4794,7 +4794,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf cview",
                   "View all of the memory in a magic gen1a card\n"
-				  "Only works with magic gen1a cards",
+                  "Only works with magic gen1a cards",
                   "hf mf cview\n"
                   "hf mf cview --4k"
                  );
@@ -5183,8 +5183,8 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf mad",
                   "Checks and prints MIFARE Application Directory (MAD)",
                   "hf mf mad        			--> Shows MAD if it exists\n" //4 spaces, 3 tabs
-                  "hf mf mad --dch -k ffffffffffff 	     --> Decode CardHolder information\n" //6 spaces, 1 tab 
-				  "hf mf mad --aid e103 -k ffffffffffff -b  --> Shows NDEF data if it exists. Read card with custom key and key B\n"); //2 spaces
+                  "hf mf mad --dch -k ffffffffffff 	     --> Decode CardHolder information\n" //6 spaces, 1 tab
+                  "hf mf mad --aid e103 -k ffffffffffff -b  --> Shows NDEF data if it exists. Read card with custom key and key B\n"); //2 spaces
 
     void *argtable[] = {
         arg_param_begin,
