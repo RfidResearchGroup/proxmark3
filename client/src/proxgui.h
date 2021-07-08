@@ -23,7 +23,7 @@ void ShowGraphWindow(void);
 void HideGraphWindow(void);
 void RepaintGraphWindow(void);
 
-// hook up picture viewer 
+// hook up picture viewer
 void ShowPictureWindow(char *fn);
 void HidePictureWindow(void);
 void RepaintPictureWindow(void);

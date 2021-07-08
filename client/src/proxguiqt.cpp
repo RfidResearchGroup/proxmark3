@@ -103,10 +103,10 @@ void ProxGuiQT::_HideGraphWindow(void) {
     plotwidget->hide();
 }
 
-// picture viewer 
+// picture viewer
 void ProxGuiQT::_ShowPictureWindow(char *fn) {
 
-    if (!plotapp) 
+    if (!plotapp)
         return;
 
     if (fn == NULL)
@@ -116,7 +116,7 @@ void ProxGuiQT::_ShowPictureWindow(char *fn) {
     if (slen == 0)
         return;
 
-    char *myfn = (char*)calloc(slen + 1, sizeof(uint8_t));
+    char *myfn = (char *)calloc(slen + 1, sizeof(uint8_t));
     if (myfn == NULL)
         return;
 
@@ -132,7 +132,7 @@ void ProxGuiQT::_ShowPictureWindow(char *fn) {
     }
 
     QPixmap pm;
-    if(pm.load(myfn) == false){
+    if (pm.load(myfn) == false) {
         qWarning("Failed to load %s", myfn);
     }
     free(myfn);
@@ -146,9 +146,9 @@ void ProxGuiQT::_ShowPictureWindow(char *fn) {
     pictureController->lbl_pm->setAlignment(Qt::AlignCenter);
 
     QString s = QString("w: %1  h: %2")
-                    .arg(pm.size().width())
-                    .arg(pm.size().height()
-                );
+                .arg(pm.size().width())
+                .arg(pm.size().height()
+                    );
     pictureController->lbl_sz->setText(s);
     pictureWidget->show();
 }
@@ -184,7 +184,7 @@ void ProxGuiQT::_StartProxmarkThread(void) {
 
 void ProxGuiQT::MainLoop() {
     plotapp = new QApplication(argc, argv);
-    
+
     // Setup the picture widget
     pictureWidget = new PictureWidget();
     pictureController = new Ui::PictureForm();
@@ -205,7 +205,7 @@ void ProxGuiQT::MainLoop() {
     connect(this, SIGNAL(ExitSignal()), this, SLOT(_Exit()));
 
     // hook up picture viewer signals
-    connect(this, SIGNAL(ShowPictureWindowSignal(char*)), this, SLOT(_ShowPictureWindow(char*)));
+    connect(this, SIGNAL(ShowPictureWindowSignal(char *)), this, SLOT(_ShowPictureWindow(char *)));
     connect(this, SIGNAL(RepaintPictureWindowSignal()), this, SLOT(_RepaintPictureWindow()));
     connect(this, SIGNAL(HidePictureWindowSignal()), this, SLOT(_HidePictureWindow()));
 
@@ -220,7 +220,7 @@ void ProxGuiQT::MainLoop() {
     plotapp->exec();
 }
 
-ProxGuiQT::ProxGuiQT(int argc, char **argv, WorkerThread *wthread) : 
+ProxGuiQT::ProxGuiQT(int argc, char **argv, WorkerThread *wthread) :
     plotapp(NULL), plotwidget(NULL), pictureController(NULL), pictureWidget(NULL), argc(argc), argv(argv), proxmarkThread(wthread) {
 
 }
@@ -253,7 +253,7 @@ PictureWidget::PictureWidget() {
 //    if (session.preferences_loaded)
 //        setGeometry(session.pw.x, session.pw.y, session.pw.w, session.pw.h);
 //    else
-        resize(400, 400);
+    resize(400, 400);
 }
 
 void PictureWidget::closeEvent(QCloseEvent *event) {

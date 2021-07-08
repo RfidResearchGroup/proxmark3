@@ -973,7 +973,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210706.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log /home/phil/.proxmark3/logs/log_20210708.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -1721,22 +1721,6 @@
                 "-k, --key <hex> auth key"
             ],
             "usage": "hf cipurse auth [-hav] [-n <dec>] [-k <hex>]"
-        },
-        "hf cipurse default": {
-            "command": "hf cipurse default",
-            "description": "set default parameters for access to cipurse card",
-            "notes": [
-                "hf cipurse default -n 1 -k 65656565656565656565656565656565 --fid 2ff7 -> set key, key id and file id"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help this help",
-                "--clear resets to defaults",
-                "-n <dec> key id",
-                "-k, --key <hex> authentication key",
-                "--fid <hex> file id"
-            ],
-            "usage": "hf cipurse default [-h] [--clear] [-n <dec>] [-k <hex>] [--fid <hex>]"
         },
         "hf cipurse delete": {
             "command": "hf cipurse delete",
@@ -3938,31 +3922,6 @@
             ],
             "usage": "hf mf wrbl [-hab] --blk <dec> [-k <hex>] [-d <hex>]"
         },
-        "hf mfdes auth": {
-            "command": "hf mfdes auth",
-            "description": "authenticates mifare desfire using key",
-            "notes": [
-                "hf mfdes auth -m 3 -t 4 -a 808301 -n 0 -k 00000000000000000000000000000000 -> aes,keynumber 0, aid 0x803201",
-                "hf mfdes auth -m 2 -t 2 -a 000000 -n 1 -k 00000000000000000000000000000000 -> 3des,keynumber 1, aid 0x000000",
-                "hf mfdes auth -m 1 -t 1 -a 000000 -n 2 -k 0000000000000000 -> des,keynumber 2, aid 0x000000",
-                "hf mfdes auth -m 1 -t 1 -a 000000 -n 0 -> des, defaultkey, aid 0x000000",
-                "hf mfdes auth -m 2 -t 2 -a 000000 -n 0 -> 3des, defaultkey, aid 0x000000",
-                "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> 3k3des, defaultkey, aid 0x000000",
-                "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> aes, defaultkey, aid 0x000000"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-m, --type <type> auth type (1=normal, 2=iso, 3=aes)",
-                "-t, --algo <algo> crypt algo (1=des, 2=3des(2k2des), 3=3k3des, 4=aes)",
-                "-a, --aid <aid> aid used for authentification (hex 3 bytes)",
-                "-n, --keyno <keyno> key number used for authentification",
-                "-k, --key <key> key for checking (hex 8-24 bytes)",
-                "-d, --kdf <kdf> key derivation function (kdf) (0=none, 1=an10922, 2=gallagher)",
-                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)"
-            ],
-            "usage": "hf mfdes auth [-h] [-m <type>] [-t <algo>] [-a <aid>]... [-n <keyno>] [-k <key>] [-d <kdf>] [-i <kdfi>]"
-        },
         "hf mfdes bruteaid": {
             "command": "hf mfdes bruteaid",
             "description": "recover aids by bruteforce. warning: this command takes a long time",
@@ -4193,50 +4152,6 @@
             ],
             "usage": "hf mfdes formatpicc [-h]"
         },
-        "hf mfdes getaids": {
-            "command": "hf mfdes getaids",
-            "description": "get application ids list from card. master key needs to be provided.",
-            "notes": [
-                "hf mfdes getaids -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-a, --apdu show apdu requests and responses",
-                "-v, --verbose show technical data",
-                "-n, --keyno <keyno> key number",
-                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
-                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
-                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
-                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
-                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
-                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
-                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2"
-            ],
-            "usage": "hf mfdes getaids [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>]"
-        },
-        "hf mfdes getappnames": {
-            "command": "hf mfdes getappnames",
-            "description": "get application ids, iso ids and df names from card. master key needs to be provided.",
-            "notes": [
-                "hf mfdes getappnames -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-a, --apdu show apdu requests and responses",
-                "-v, --verbose show technical data",
-                "-n, --keyno <keyno> key number",
-                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
-                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
-                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
-                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
-                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
-                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
-                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2"
-            ],
-            "usage": "hf mfdes getappnames [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>]"
-        },
         "hf mfdes getuid": {
             "command": "hf mfdes getuid",
             "description": "get uid from a mifare desfire tag",
@@ -4265,23 +4180,28 @@
         },
         "hf mfdes help": {
             "command": "hf mfdes help",
-            "description": "help this help list list desfire (iso 14443a) history --------------------------------------------------------------------------------------- hf mfdes default available offline: no get application ids, iso ids and df names from card. master key needs to be provided.",
+            "description": "help this help list list desfire (iso 14443a) history --------------------------------------------------------------------------------------- hf mfdes auth available offline: no authenticates mifare desfire using key",
             "notes": [
-                "hf mfdes getappnames -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup"
+                "hf mfdes auth -m 3 -t 4 -a 808301 -n 0 -k 00000000000000000000000000000000 -> aes,keynumber 0, aid 0x803201",
+                "hf mfdes auth -m 2 -t 2 -a 000000 -n 1 -k 00000000000000000000000000000000 -> 3des,keynumber 1, aid 0x000000",
+                "hf mfdes auth -m 1 -t 1 -a 000000 -n 2 -k 0000000000000000 -> des,keynumber 2, aid 0x000000",
+                "hf mfdes auth -m 1 -t 1 -a 000000 -n 0 -> des, defaultkey, aid 0x000000",
+                "hf mfdes auth -m 2 -t 2 -a 000000 -n 0 -> 3des, defaultkey, aid 0x000000",
+                "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> 3k3des, defaultkey, aid 0x000000",
+                "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> aes, defaultkey, aid 0x000000"
             ],
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-n, --keyno <keyno> key number",
-                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
-                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
-                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
-                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
-                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
-                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
-                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2"
+                "-m, --type <type> auth type (1=normal, 2=iso, 3=aes)",
+                "-t, --algo <algo> crypt algo (1=des, 2=3des(2k2des), 3=3k3des, 4=aes)",
+                "-a, --aid <aid> aid used for authentification (hex 3 bytes)",
+                "-n, --keyno <keyno> key number used for authentification",
+                "-k, --key <key> key for checking (hex 8-24 bytes)",
+                "-d, --kdf <kdf> key derivation function (kdf) (0=none, 1=an10922, 2=gallagher)",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)"
             ],
-            "usage": "hf mfdes default [-h] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>]"
+            "usage": "hf mfdes auth [-h] [-m <type>] [-t <algo>] [-a <aid>]... [-n <keyno>] [-k <key>] [-d <kdf>] [-i <kdfi>]"
         },
         "hf mfdes info": {
             "command": "hf mfdes info",
@@ -5158,8 +5078,8 @@
             "command": "hw connect",
             "description": "connects to a proxmark3 device via specified serial port. baudrate here is only for physical uart or uart-bt, not for usb-cdc or blue shark add-on",
             "notes": [
-                "hw connect -p com3",
-                "hw connect -p com3 -b 115200"
+                "hw connect -p /dev/ttyacm0",
+                "hw connect -p /dev/ttyacm0 -b 115200"
             ],
             "offline": true,
             "options": [
@@ -9281,8 +9201,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 575,
+        "commands_extracted": 571,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-07-06T09:14:57"
+        "extracted_on": "2021-07-08T07:53:00"
     }
 }

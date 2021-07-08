@@ -47,9 +47,9 @@ for x in apdu:
         print(toHexString(x))
         print('--')
 
-        lenpk = ser.read(1) #first byte is the buffer length 
-        bufferlen = pd(lenpk)[0] 
+        lenpk = ser.read(1) #first byte is the buffer length
+        bufferlen = pd(lenpk)[0]
 
-        buffer = pd(ser.read(bufferlen)) 
+        buffer = pd(ser.read(bufferlen))
         print('Terminal command:'),
         print(toHexString(buffer))

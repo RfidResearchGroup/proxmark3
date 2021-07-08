@@ -149,7 +149,7 @@ class ProxGuiQT : public QObject {
     void RepaintGraphWindow(void);
     void HideGraphWindow(void);
 
-    // hook up picture viewer 
+    // hook up picture viewer
     void ShowPictureWindow(char *fn);
     void HidePictureWindow(void);
     void RepaintPictureWindow(void);
@@ -162,7 +162,7 @@ class ProxGuiQT : public QObject {
     void _RepaintGraphWindow(void);
     void _HideGraphWindow(void);
 
-    // hook up picture viewer 
+    // hook up picture viewer
     void _ShowPictureWindow(char *fn);
     void _HidePictureWindow(void);
     void _RepaintPictureWindow(void);
@@ -175,7 +175,7 @@ class ProxGuiQT : public QObject {
     void RepaintGraphWindowSignal(void);
     void HideGraphWindowSignal(void);
     void ExitSignal(void);
-    
+
     // hook up picture viewer signals
     void ShowPictureWindowSignal(char *fn);
     void HidePictureWindowSignal(void);
