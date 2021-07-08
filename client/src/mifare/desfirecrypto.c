@@ -165,13 +165,14 @@ static void DesfireCryptoEncDecSingleBlock(uint8_t *key, DesfireCryptoAlgorythm 
             break;
     }
 
-    memcpy(dstdata, edata, block_size);
-
     if (dir_to_send) {
         memcpy(ivect, edata, block_size);
     } else {
+        bin_xor(edata, ivect, block_size);
         memcpy(ivect, data, block_size);
     }
+
+    memcpy(dstdata, edata, block_size);
 }
 
 void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode, uint8_t *iv) {
