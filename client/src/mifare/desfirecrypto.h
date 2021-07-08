@@ -78,6 +78,8 @@ typedef struct DesfireContextS {
     uint8_t sessionKeyMAC[DESFIRE_MAX_KEY_SIZE];
     uint8_t sessionKeyEnc[DESFIRE_MAX_KEY_SIZE];  // look at mifare4.h - mf4Session_t
     uint8_t lastIV[DESFIRE_MAX_KEY_SIZE];
+    uint8_t lastCommand;
+    bool lastRequestZeroLen;
     //mf4Session_t AESSession;
     uint16_t cntrTx;    // for AES
     uint16_t cntrRx;    // for AES

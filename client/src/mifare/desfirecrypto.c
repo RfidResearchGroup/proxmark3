@@ -56,6 +56,8 @@ void DesfireClearSession(DesfireContext *ctx) {
     memset(ctx->sessionKeyMAC, 0, sizeof(ctx->sessionKeyMAC));
     memset(ctx->sessionKeyEnc, 0, sizeof(ctx->sessionKeyEnc));
     memset(ctx->lastIV, 0, sizeof(ctx->lastIV));
+    ctx->lastCommand = 0;
+    ctx->lastRequestZeroLen = false;
     ctx->cntrTx = 0;
     ctx->cntrRx = 0;
     memset(ctx->TI, 0, sizeof(ctx->TI));
