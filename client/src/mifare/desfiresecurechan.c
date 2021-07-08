@@ -67,7 +67,6 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
         memcpy(&data[1], srcdata, srcdatalen);
         uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
         DesfireCryptoCMAC(ctx, data, srcdatalen + 1, cmac);
-PrintAndLogEx(INFO, "mac iv: %s", sprint_hex(ctx->IV, 16));
 
         memcpy(dstdata, srcdata, srcdatalen);
         if (srcdatalen != 0 && ctx->commMode == DCMMACed) {
@@ -148,12 +147,52 @@ static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata,
             PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
         }
     } else if (ctx->commMode == DCMEncrypted) {
-            //mifare_cypher_blocks_chained(tag, NULL, NULL, res, *nbytes, MCD_RECEIVE, MCO_DECYPHER);
-PrintAndLogEx(INFO, "data: %s", sprint_hex(srcdata, srcdatalen));
-PrintAndLogEx(INFO, "dec iv: %s", sprint_hex(ctx->IV, 16));
+            if (srcdatalen < desfire_get_key_block_length(ctx->keyType)) {
+                memcpy(dstdata, srcdata, srcdatalen);
+                *dstdatalen = srcdatalen;
+                return;
+            }
+            
             DesfireCryptoEncDec(ctx, true, srcdata, srcdatalen, dstdata, false);
-PrintAndLogEx(INFO, "dec iv: %s", sprint_hex(ctx->IV, 16));
             PrintAndLogEx(INFO, "decoded[%d]: %s", srcdatalen, sprint_hex(dstdata, srcdatalen));
+            
+            size_t crcpos = srcdatalen - 1;
+            while (crcpos > 0)
+                if (dstdata[crcpos] == 0)
+                    crcpos--;
+                else
+                    break;
+            crcpos++; // crc may be 0x00000000
+            *dstdatalen = crcpos;
+            PrintAndLogEx(INFO, "crcpos: %d", crcpos);
+            if (crcpos < 4) {
+                PrintAndLogEx(WARNING, "No space for crc. pos: %d", crcpos);
+                return;
+            }
+            
+            uint8_t crcdata[1024] = {0};
+            bool crcok = false;
+            for (int i = 0; i < 5; i++) {
+                if (crcpos == 0)
+                    break;
+                if (crcpos - i + 4 > srcdatalen)
+                    continue;
+                
+                memcpy(crcdata, dstdata, crcpos - i);
+                crcdata[crcpos - i] = respcode;
+                if (desfire_crc32_check(crcdata, crcpos - i + 1, &dstdata[crcpos - i])) {
+                    crcpos -= i;
+                    crcok = true;
+                    break;
+                }
+           }
+            
+            if (crcok) {
+                *dstdatalen = crcpos;
+            } else {
+                PrintAndLogEx(WARNING, "CRC32 error. pos: %d", crcpos);
+            }
+            
     } else {
         memcpy(dstdata, srcdata, srcdatalen);
         *dstdatalen = srcdatalen;
