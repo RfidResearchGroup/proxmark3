@@ -976,6 +976,12 @@ void desfire_crc32_append(uint8_t *data, const size_t len) {
     crc32_ex(data, len, data + len);
 }
 
+bool desfire_crc32_check(uint8_t *data, const size_t len, uint8_t *crc) {
+    uint8_t ccrc[4] = {0};
+    crc32_ex(data, len, ccrc);
+    return (memcmp(ccrc, crc, 4) == 0);
+}
+
 void iso14443a_crc_append(uint8_t *data, size_t len) {
     return compute_crc(CRC_14443_A, data, len, data + len, data + len + 1);
 }
