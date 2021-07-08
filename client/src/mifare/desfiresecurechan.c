@@ -60,31 +60,34 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
 static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
     uint8_t data[1024] = {0};
 
-    memcpy(dstdata, srcdata, srcdatalen);
-    *dstdatalen = srcdatalen;
+    // we calc MAC anyway
+    // if encypted channel and no data - we only calc MAC
+    if (ctx->commMode == DCMPlain || ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && srcdatalen == 0)) {
+        data[0] = cmd;
+        memcpy(&data[1], srcdata, srcdatalen);
+        uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+        DesfireCryptoCMAC(ctx, data, srcdatalen + 1, cmac);
+PrintAndLogEx(INFO, "mac iv: %s", sprint_hex(ctx->IV, 16));
 
-    switch (ctx->commMode) {
-        case DCMPlain:
-        case DCMMACed:
-            data[0] = cmd;
-            memcpy(&data[1], srcdata, srcdatalen);
-            uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
-            DesfireCryptoCMAC(ctx, data, srcdatalen + 1, cmac);
-
-            memcpy(dstdata, srcdata, srcdatalen);
-            if (srcdatalen != 0 && ctx->commMode == DCMMACed) {
-                memcpy(&dstdata[srcdatalen], cmac, DesfireGetMACLength(ctx));
-                *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
-            }
-            break;
-        case DCMEncrypted:
-            break;
-        case DCMNone:
-            ;
+        memcpy(dstdata, srcdata, srcdatalen);
+        if (srcdatalen != 0 && ctx->commMode == DCMMACed) {
+            memcpy(&dstdata[srcdatalen], cmac, DesfireGetMACLength(ctx));
+            *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
+        }
+    } else if (ctx->commMode == DCMEncrypted) {
+            
+            
+            
+    } else {
+        memcpy(dstdata, srcdata, srcdatalen);
+        *dstdatalen = srcdatalen;
     }
 }
 
 void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
+    ctx->lastCommand = cmd;
+    ctx->lastRequestZeroLen = (srcdatalen == 0);
+
     switch (ctx->secureChannel) {
         case DACd40:
             DesfireSecureChannelEncodeD40(ctx, cmd, srcdata, srcdatalen, dstdata, dstdatalen);
@@ -122,36 +125,38 @@ static void DesfireSecureChannelDecodeD40(DesfireContext *ctx, uint8_t *srcdata,
 static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
     uint8_t data[1024] = {0};
 
-    memcpy(dstdata, srcdata, srcdatalen);
-    *dstdatalen = srcdatalen;
-
-    switch (ctx->commMode) {
-        case DCMPlain:
-        case DCMMACed:
-            if (srcdatalen < DesfireGetMACLength(ctx))
-                break;
-            
-            memcpy(dstdata, srcdata, srcdatalen - DesfireGetMACLength(ctx));
-            *dstdatalen = srcdatalen - DesfireGetMACLength(ctx);
-            
-            memcpy(data, srcdata, *dstdatalen);
-            data[*dstdatalen] = respcode;
-            
-            uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
-            DesfireCryptoCMAC(ctx, data, *dstdatalen + 1, cmac);
-            if (memcmp(&srcdata[*dstdatalen], cmac, DesfireGetMACLength(ctx)) != 0) {
-                PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
-                PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], desfire_get_key_block_length(ctx->keyType)));
-                PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
-            }
-
-            break;
-        case DCMEncrypted:
-            break;
-        case DACNone:
+    // if comm mode = plain --> response with MAC
+    // if request is not zero length --> response MAC
+    if (ctx->commMode == DCMPlain || ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && !ctx->lastRequestZeroLen)) {
+        if (srcdatalen < DesfireGetMACLength(ctx)) {
             memcpy(dstdata, srcdata, srcdatalen);
             *dstdatalen = srcdatalen;
-            break;
+            return;
+        }
+        
+        memcpy(dstdata, srcdata, srcdatalen - DesfireGetMACLength(ctx));
+        *dstdatalen = srcdatalen - DesfireGetMACLength(ctx);
+        
+        memcpy(data, srcdata, *dstdatalen);
+        data[*dstdatalen] = respcode;
+        
+        uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+        DesfireCryptoCMAC(ctx, data, *dstdatalen + 1, cmac);
+        if (memcmp(&srcdata[*dstdatalen], cmac, DesfireGetMACLength(ctx)) != 0) {
+            PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
+            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], desfire_get_key_block_length(ctx->keyType)));
+            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
+        }
+    } else if (ctx->commMode == DCMEncrypted) {
+            //mifare_cypher_blocks_chained(tag, NULL, NULL, res, *nbytes, MCD_RECEIVE, MCO_DECYPHER);
+PrintAndLogEx(INFO, "data: %s", sprint_hex(srcdata, srcdatalen));
+PrintAndLogEx(INFO, "dec iv: %s", sprint_hex(ctx->IV, 16));
+            DesfireCryptoEncDec(ctx, true, srcdata, srcdatalen, dstdata, false);
+PrintAndLogEx(INFO, "dec iv: %s", sprint_hex(ctx->IV, 16));
+            PrintAndLogEx(INFO, "decoded[%d]: %s", srcdatalen, sprint_hex(dstdata, srcdatalen));
+    } else {
+        memcpy(dstdata, srcdata, srcdatalen);
+        *dstdatalen = srcdatalen;
     }
 }
 
