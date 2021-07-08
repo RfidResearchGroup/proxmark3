@@ -177,17 +177,17 @@ static void DesfireCryptoEncDecSingleBlock(uint8_t *key, DesfireCryptoAlgorythm 
 void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode, uint8_t *iv) {
     uint8_t data[1024] = {0};
     uint8_t xiv[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
-    
+
     if (ctx->secureChannel == DACd40)
         memset(ctx->IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
 
     size_t block_size = desfire_get_key_block_length(ctx->keyType);
-    
+
     if (iv == NULL)
         memcpy(xiv, ctx->IV, block_size);
     else
         memcpy(xiv, iv, block_size);
-    
+
     size_t offset = 0;
     while (offset < srcdatalen) {
         if (use_session_key)
@@ -245,14 +245,14 @@ void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *data, size_t len, uint8_t *
     int kbs = desfire_get_key_block_length(ctx->keyType);
     if (kbs == 0)
         return;
-    
+
     uint8_t buffer[padded_data_length(len, kbs)];
     memset(buffer, 0, sizeof(buffer));
-    
+
     uint8_t sk1[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
     uint8_t sk2[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
     DesfireCMACGenerateSubkeys(ctx, sk1, sk2);
-    
+
     memcpy(buffer, data, len);
 
     if ((!len) || (len % kbs)) {

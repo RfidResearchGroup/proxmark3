@@ -58,7 +58,7 @@ extern "C" void RepaintGraphWindow(void) {
 }
 
 
-// hook up picture viewer 
+// hook up picture viewer
 extern "C" void ShowPictureWindow(char *fn) {
     if (!gui) {
         // Show a notice if X11/XQuartz isn't available
