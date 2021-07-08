@@ -52,7 +52,7 @@ void ModInfo(void) {
 * technologies. Be brave enough to share your knowledge & inspire others. Salvador Mendoza.
 */
 
- // Default GET PROCESSING
+// Default GET PROCESSING
 static uint8_t ppdol [255] = {0x80, 0xA8, 0x00, 0x00, 0x02, 0x83, 0x00};
 
 // Generate GET PROCESSING
@@ -133,14 +133,14 @@ void RunMod(void) {
 
     //Specific for Visa cards: select ppse, select Visa AID, GET PROCESSING, SFI
     uint8_t ppse[20] = {
-            0x00, 0xA4, 0x04, 0x00, 0x0e, 0x32, 0x50, 0x41,
-            0x59, 0x2e, 0x53, 0x59, 0x53, 0x2e, 0x44, 0x44,
-            0x46, 0x30, 0x31, 0x00
-        };
+        0x00, 0xA4, 0x04, 0x00, 0x0e, 0x32, 0x50, 0x41,
+        0x59, 0x2e, 0x53, 0x59, 0x53, 0x2e, 0x44, 0x44,
+        0x46, 0x30, 0x31, 0x00
+    };
     uint8_t visa[13] = {
-            0x00, 0xA4, 0x04, 0x00, 0x07, 0xa0, 0x00, 0x00,
-            0x00, 0x03, 0x10, 0x10, 0x00
-        };
+        0x00, 0xA4, 0x04, 0x00, 0x07, 0xa0, 0x00, 0x00,
+        0x00, 0x03, 0x10, 0x10, 0x00
+    };
 
     uint8_t processing [8] = {0x80, 0xA8, 0x00, 0x00, 0x02, 0x83, 0x00, 0x00};
     uint8_t sfi[5] = {0x00, 0xb2, 0x01, 0x0c, 0x00};
@@ -168,12 +168,12 @@ void RunMod(void) {
 
     // Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
     // Such a response is less time critical, so we can prepare them on the fly
-    #define DYNAMIC_RESPONSE_BUFFER_SIZE 64
-    #define DYNAMIC_MODULATION_BUFFER_SIZE 512
+#define DYNAMIC_RESPONSE_BUFFER_SIZE 64
+#define DYNAMIC_MODULATION_BUFFER_SIZE 512
 
     // UID 4 bytes(could be 7 bytes if needed it)
-    uint8_t flags = FLAG_4B_UID_IN_DATA; 
-     // in case there is a read command received we shouldn't break
+    uint8_t flags = FLAG_4B_UID_IN_DATA;
+    // in case there is a read command received we shouldn't break
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
 
     uint8_t visauid[7] = {0x01, 0x02, 0x03, 0x04};
@@ -231,10 +231,10 @@ void RunMod(void) {
         int button_pressed = BUTTON_HELD(1000);
 
 
-        if (button_pressed  == BUTTON_HOLD)        
+        if (button_pressed  == BUTTON_HOLD)
             break;
         else if (button_pressed == BUTTON_SINGLE_CLICK) {
-             // pressing one time change between reading & emulation
+            // pressing one time change between reading & emulation
             if (state == STATE_READ) {
                 if (chktoken == true && token[0] != 0x00) {
                     // only change to emulation if it saved a track 2 in memory
@@ -277,7 +277,7 @@ void RunMod(void) {
                         for (uint8_t u = 0; u < apdulen; u++) {
                             if (i == 1) {
 
-                                 // check for PDOL
+                                // check for PDOL
                                 if (apdubuffer[u] == 0x9F && apdubuffer[u + 1] == 0x38) {
                                     for (uint8_t e = 0; e <= apdubuffer[u + 2]; e++)
                                         pdol[e] =  apdubuffer[u + e + 2];
@@ -346,8 +346,8 @@ void RunMod(void) {
             iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
             // command length
-            int len = 0;             
-             // to check emulation status 
+            int len = 0;
+            // to check emulation status
             int retval = PM3_SUCCESS;
             bool odd_reply = true;
 
@@ -375,28 +375,28 @@ void RunMod(void) {
                         p_response = &responses[RESP_INDEX_ATQA];
                     }
 
-                // received a HALT
+                    // received a HALT
                 } else if (receivedCmd[0] == ISO14443A_CMD_HALT && len == 4) {
                     DbpString(_YELLOW_("+") "Received a HALT");
                     p_response = NULL;
 
-                // received a WAKEUP
+                    // received a WAKEUP
                 } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) {
                     DbpString(_YELLOW_("+") "WAKEUP Received");
                     prevCmd = 0;
                     p_response = &responses[RESP_INDEX_ATQA];
 
-                // received request for UID (cascade 1)
+                    // received request for UID (cascade 1)
                 } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {
                     DbpString(_YELLOW_("+") "Request for UID C1");
                     p_response = &responses[RESP_INDEX_UIDC1];
 
-                // received a SELECT (cascade 1)
+                    // received a SELECT (cascade 1)
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {
                     DbpString(_YELLOW_("+") "Request for SELECT S1");
                     p_response = &responses[RESP_INDEX_SAKC1];
 
-                // received a RATS request
+                    // received a RATS request
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {
                     DbpString(_YELLOW_("+") "Request for RATS");
                     prevCmd = 0;
@@ -412,39 +412,39 @@ void RunMod(void) {
 
                         // depending on card reader commands, the Proxmark will answer to fool the reader
                         // respond with PPSE
-                        if (receivedCmd[2] == 0xA4 && receivedCmd[6] == 0x32 && prevCmd == 0) {                                 
+                        if (receivedCmd[2] == 0xA4 && receivedCmd[6] == 0x32 && prevCmd == 0) {
                             uint8_t ppsea[39] = {
-                                    0x6F, 0x23, 0x84, 0x0E, 0x32, 0x50, 0x41, 0x59,
-                                    0x2E, 0x53, 0x59, 0x53, 0x2E, 0x44, 0x44, 0x46,
-                                    0x30, 0x31, 0xA5, 0x11, 0xBF, 0x0C, 0x0E, 0x61,
-                                    0x0C, 0x4F, 0x07, 0xA0, 0x00, 0x00, 0x00, 0x03,
-                                    0x10, 0x10, 0x87, 0x01, 0x01, 0x90, 0x00 
-                                };
+                                0x6F, 0x23, 0x84, 0x0E, 0x32, 0x50, 0x41, 0x59,
+                                0x2E, 0x53, 0x59, 0x53, 0x2E, 0x44, 0x44, 0x46,
+                                0x30, 0x31, 0xA5, 0x11, 0xBF, 0x0C, 0x0E, 0x61,
+                                0x0C, 0x4F, 0x07, 0xA0, 0x00, 0x00, 0x00, 0x03,
+                                0x10, 0x10, 0x87, 0x01, 0x01, 0x90, 0x00
+                            };
                             memcpy(&dynamic_response_info.response[1], ppsea, sizeof(ppsea));
                             dynamic_response_info.response_n = sizeof(ppsea) + 1;
                             prevCmd++;
 
-                        // respond Visa AID
+                            // respond Visa AID
                         } else if (receivedCmd[2] == 0xA4 && receivedCmd[10] == 0x03 && receivedCmd[11] == 0x10 && prevCmd == 1) {
                             uint8_t visauid_long[34] = {
-                                    0x6F, 0x1E, 0x84, 0x07, 0xA0, 0x00, 0x00, 0x00,
-                                    0x03, 0x10, 0x10, 0xA5, 0x13, 0x50, 0x0B, 0x56,
-                                    0x49, 0x53, 0x41, 0x20, 0x43, 0x52, 0x45, 0x44,
-                                    0x49, 0x54, 0x9F, 0x38, 0x03, 0x9F, 0x66, 0x02,
-                                    0x90, 0x00
-                                };
+                                0x6F, 0x1E, 0x84, 0x07, 0xA0, 0x00, 0x00, 0x00,
+                                0x03, 0x10, 0x10, 0xA5, 0x13, 0x50, 0x0B, 0x56,
+                                0x49, 0x53, 0x41, 0x20, 0x43, 0x52, 0x45, 0x44,
+                                0x49, 0x54, 0x9F, 0x38, 0x03, 0x9F, 0x66, 0x02,
+                                0x90, 0x00
+                            };
                             memcpy(&dynamic_response_info.response[1], visauid_long, sizeof(visauid_long));
                             dynamic_response_info.response_n = sizeof(visauid_long) + 1;
                             prevCmd++;
 
-                        // GET PROCESSING
+                            // GET PROCESSING
                         } else if (receivedCmd[1] == 0x80 && receivedCmd[2] == 0xA8 && receivedCmd[6] == 0x83  && prevCmd == 2) {
                             uint8_t processing_long[10] = {0x80, 0x06, 0x00, 0x80, 0x08, 0x01, 0x01, 0x00, 0x90, 0x00};
                             memcpy(&dynamic_response_info.response[1], processing_long, sizeof(processing_long));
                             dynamic_response_info.response_n = sizeof(processing_long) + 1;
                             prevCmd++;
 
-                        // SFI
+                            // SFI
                         } else if (receivedCmd[1] == 0x00 && receivedCmd[2] == 0xB2  && prevCmd == 3) {
                             uint8_t last[4] =  {0x70, 0x15, 0x57, 0x13};
                             uint8_t statusapdu[2] = {0x90, 0x00};

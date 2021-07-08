@@ -226,7 +226,7 @@ def main():
         child.sendline('hw version')
         i = child.expect('pm3 --> ')
         msg = escape_ansi(str(child.before))
-        
+
         if signature_msg in msg:
             print("[+] RDV4 signature ", color('[OK]', fg='green'))
             res += 1
@@ -238,7 +238,7 @@ def main():
         child.sendline('hw status')
         i = child.expect('pm3 --> ')
         msg = escape_ansi(str(child.before))
-      
+
         if sm_version in msg:
             print("[+] Smart card firmware version ", color('[OK]', fg='green'))
             res += 1

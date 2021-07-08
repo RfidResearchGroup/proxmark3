@@ -130,13 +130,13 @@ static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata,
         case DCMMACed:
             if (srcdatalen < DesfireGetMACLength(ctx))
                 break;
-            
+
             memcpy(dstdata, srcdata, srcdatalen - DesfireGetMACLength(ctx));
             *dstdatalen = srcdatalen - DesfireGetMACLength(ctx);
-            
+
             memcpy(data, srcdata, *dstdatalen);
             data[*dstdatalen] = respcode;
-            
+
             uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
             DesfireCryptoCMAC(ctx, data, *dstdatalen + 1, cmac);
             if (memcmp(&srcdata[*dstdatalen], cmac, DesfireGetMACLength(ctx)) != 0) {

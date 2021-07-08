@@ -57,10 +57,10 @@ for x in apdu:
         ser.write(x)
         print(toHexString(x))
 
-        lenpk = ser.read(1) #first byte is the buffer length 
-        bufferlen = pd(lenpk)[0] 
+        lenpk = ser.read(1) #first byte is the buffer length
+        bufferlen = pd(lenpk)[0]
 
-        buffer = pd(ser.read(bufferlen)) 
+        buffer = pd(ser.read(bufferlen))
         print('Card Response:'),
         print(toHexString(buffer))
         print('--')
