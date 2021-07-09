@@ -20,7 +20,41 @@
 #include "crc16.h"        // crc16 ccitt
 #include "crc32.h"
 #include "commonutil.h"
+#include "protocols.h"
 #include "mifare/desfire_crypto.h"
+
+AllowedChannelModesS AllowedChannelModes[] = {
+    {MFDES_CREATE_APPLICATION,    DACd40,  DCCNative,    DCMPlain},
+    {MFDES_DELETE_APPLICATION,    DACd40,  DCCNative,    DCMPlain},
+    {MFDES_GET_APPLICATION_IDS,   DACd40,  DCCNative,    DCMPlain},
+    {MFDES_GET_DF_NAMES,          DACd40,  DCCNative,    DCMPlain},
+
+    {MFDES_READ_DATA,             DACd40,  DCCNative,    DCMMACed},
+    {MFDES_WRITE_DATA,            DACd40,  DCCNative,    DCMMACed},
+    {MFDES_GET_VALUE,             DACd40,  DCCNative,    DCMMACed},
+    {MFDES_CREDIT,                DACd40,  DCCNative,    DCMMACed},
+    {MFDES_DEBIT,                 DACd40,  DCCNative,    DCMMACed},
+    {MFDES_LIMITED_CREDIT,        DACd40,  DCCNative,    DCMMACed},
+    {MFDES_READ_RECORDS,          DACd40,  DCCNative,    DCMMACed},
+    {MFDES_WRITE_RECORD,          DACd40,  DCCNative,    DCMMACed},
+    {MFDES_UPDATE_RECORD1,        DACd40,  DCCNative,    DCMMACed},
+    {MFDES_UPDATE_RECORD2,        DACd40,  DCCNativeISO, DCMMACed},
+    {MFDES_INIT_KEY_SETTINGS,     DACd40,  DCCNative,    DCMMACed},
+    {MFDES_FINALIZE_KEY_SETTINGS, DACd40,  DCCNative,    DCMMACed},
+    {MFDES_ROLL_KEY_SETTINGS,     DACd40,  DCCNative,    DCMMACed},
+    {MFDES_COMMIT_READER_ID,      DACd40,  DCCNative,    DCMMACed},
+
+    {MFDES_GET_UID,               DACd40,  DCCNative,    DCMEncrypted},
+    {MFDES_READ_DATA,             DACd40,  DCCNative,    DCMEncrypted},
+    {MFDES_WRITE_DATA,            DACd40,  DCCNative,    DCMEncrypted},
+
+    {MFDES_CREATE_APPLICATION,    DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_DELETE_APPLICATION,    DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_GET_APPLICATION_IDS,   DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_GET_DF_NAMES,          DACEV1,  DCCNative,    DCMMACed},
+
+    {MFDES_GET_UID,               DACEV1,  DCCNative,    DCMEncrypted},
+};
 
 static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
     memcpy(dstdata, srcdata, srcdatalen);
@@ -207,3 +241,44 @@ void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t sr
             break;
     }
 }
+
+bool PrintChannelModeWarning(uint8_t cmd, DesfireSecureChannel secureChannel, DesfireCommandSet cmdSet, DesfireCommunicationMode commMode) {
+    if (commMode == DCMNone) {
+        PrintAndLogEx(WARNING, "Communication mode can't be NONE. command: %02x", cmd);
+        return false;
+    }
+    
+    // no security set
+    if (secureChannel == DACNone)
+        return true;
+    
+    bool found = false;
+    for (int i = 0; i < ARRAY_LENGTH(AllowedChannelModes); i++)
+        if (AllowedChannelModes[i].cmd == cmd) {
+            // full compare
+            if (AllowedChannelModes[i].secureChannel == secureChannel && 
+                (AllowedChannelModes[i].cmdSet == cmdSet || (AllowedChannelModes[i].cmdSet == DCCNative && cmdSet == DCCNativeISO)) && 
+                AllowedChannelModes[i].commMode == commMode){
+
+                found = true;
+                break;
+            }
+            
+            // ev1 plain and mac are the same
+            if (AllowedChannelModes[i].secureChannel == secureChannel && 
+                AllowedChannelModes[i].secureChannel == DACEV1 &&
+                (AllowedChannelModes[i].cmdSet == cmdSet || (AllowedChannelModes[i].cmdSet == DCCNative && cmdSet == DCCNativeISO)) && 
+                (commMode == DCMPlain || commMode == DCMMACed)){
+
+                found = true;
+                break;
+            }
+            
+        }
+    
+    if (!found)
+        PrintAndLogEx(WARNING, "Wrong communication mode. Check settings. command: %02x", cmd);
+    
+    return found;
+}
+
