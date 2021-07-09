@@ -161,41 +161,12 @@ static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata,
             DesfireCryptoEncDec(ctx, true, srcdata, srcdatalen, dstdata, false);
             PrintAndLogEx(INFO, "decoded[%d]: %s", srcdatalen, sprint_hex(dstdata, srcdatalen));
             
-            size_t crcpos = srcdatalen - 1;
-            while (crcpos > 0)
-                if (dstdata[crcpos] == 0)
-                    crcpos--;
-                else
-                    break;
-            crcpos++; // crc may be 0x00000000
-            *dstdatalen = crcpos;
-            PrintAndLogEx(INFO, "crcpos: %d", crcpos);
-            if (crcpos < 4) {
-                PrintAndLogEx(WARNING, "No space for crc. pos: %d", crcpos);
-                return;
-            }
-            
-            uint8_t crcdata[1024] = {0};
-            bool crcok = false;
-            for (int i = 0; i < 5; i++) {
-                if (crcpos == 0)
-                    break;
-                if (crcpos - i + 4 > srcdatalen)
-                    continue;
-                
-                memcpy(crcdata, dstdata, crcpos - i);
-                crcdata[crcpos - i] = respcode;
-                if (desfire_crc32_check(crcdata, crcpos - i + 1, &dstdata[crcpos - i])) {
-                    crcpos -= i;
-                    crcok = true;
-                    break;
-                }
-           }
-            
-            if (crcok) {
-                *dstdatalen = crcpos;
+            size_t puredatalen = DesfireSearchCRCPos(dstdata, srcdatalen, respcode, 4);
+            if (puredatalen != 0) {
+                *dstdatalen = puredatalen;
             } else {
-                PrintAndLogEx(WARNING, "CRC32 error. pos: %d", crcpos);
+                PrintAndLogEx(WARNING, "CRC32 error.");
+                *dstdatalen = srcdatalen;
             }
             
     } else {
