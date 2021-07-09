@@ -31,6 +31,7 @@
 #include "mifare/desfire_crypto.h"
 #include "mifare/desfirecore.h"
 #include "mifare/desfiretest.h"
+#include "mifare/desfiresecurechan.h"
 #include "mifare/mifaredefault.h"  // default keys
 #include "crapto1/crapto1.h"
 #include "fileutils.h"
@@ -5143,6 +5144,16 @@ static int CmdHF14ADesDefault(const char *Cmd) {
 
     return PM3_SUCCESS;
 }
+//    {"chkeysetings",     CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "Change Key Settings"},
+static int CmdHF14ADesChKeySettings(const char *Cmd) {
+    
+    return PM3_SUCCESS;
+}
+    //{"getkeysetings",    CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "Get Key Settings"},
+static int CmdHF14ADesGetKeySettings(const char *Cmd) {
+    
+    return PM3_SUCCESS;
+}
 
 static int CmdHF14ADesGetAIDs(const char *Cmd) {
     CLIParserContext *ctx;
@@ -5170,7 +5181,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
 
     DesfireContext dctx;
-    int securechann = defaultSecureChannel;
+    int securechann = DCMPlain;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, &securechann);
     if (res) {
         CLIParserFree(ctx);
@@ -5252,7 +5263,7 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
 
     DesfireContext dctx;
-    int securechann = defaultSecureChannel;
+    int securechann = DCMPlain;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, &securechann);
     if (res) {
         CLIParserFree(ctx);
@@ -5323,7 +5334,6 @@ static command_t CommandTable[] = {
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "---------------------- " _CYAN_("general") " ----------------------"},
     {"default",          CmdHF14ADesDefault,          IfPm3Iso14443a,  "[new]Set defaults for all the commands"},
     {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
-    {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
     {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "Check keys"},
     {"enum",             CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
     {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
@@ -5332,6 +5342,10 @@ static command_t CommandTable[] = {
     {"list",             CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
 //    {"ndefread",             CmdHF14aDesNDEFRead,             IfPm3Iso14443a,  "Prints NDEF records from card"},
 //    {"mad",             CmdHF14aDesMAD,             IfPm3Iso14443a,  "Prints MAD records from card"},
+    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "------------------------ " _CYAN_("Keys") " -----------------------"},
+    {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
+    {"chkeysetings",     CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "Change Key Settings"},
+    {"getkeysetings",    CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "Get Key Settings"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Applications") " -------------------"},
     {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
     {"createaid",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},

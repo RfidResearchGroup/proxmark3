@@ -523,6 +523,9 @@ static void DesfireSplitBytesToBlock(uint8_t *blockdata, size_t *blockdatacount,
 
 int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
     int res = PM3_SUCCESS;
+    
+    if (!PrintChannelModeWarning(cmd, ctx->secureChannel, ctx->cmdSet, ctx->commMode))
+        DesfirePrintContext(ctx);
 
     uint8_t databuf[250 * 5] = {0};
     size_t databuflen = 0;
@@ -820,8 +823,8 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     Desfire_session_key_new(RndA, RndB, key, &sesskey);
     memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));
 
-    PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, rndlen));
-    PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, rndlen));
+    //PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, rndlen));
+    //PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, rndlen));
     if (dctx->keyType == T_DES) {
         if (secureChannel == DACd40)
             des_decrypt(encRndA, encRndA, key->data);
@@ -839,8 +842,8 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     }
 
     rol(RndA, rndlen);
-    PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
-    PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
+    //PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
+    //PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
     for (uint32_t x = 0; x < rndlen; x++) {
         if (RndA[x] != encRndA[x]) {
             if (g_debugMode > 1) {
@@ -867,7 +870,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     memset(dctx->IV, 0, DESFIRE_MAX_KEY_SIZE);
     dctx->secureChannel = secureChannel;
     memcpy(dctx->sessionKeyMAC, dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType));
-    PrintAndLogEx(INFO, "sessionKeyEnc : %s", sprint_hex(dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType)));
+    PrintAndLogEx(INFO, "Session key : %s", sprint_hex(dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType)));
 
     return PM3_SUCCESS;
 }
