@@ -9,10 +9,10 @@ Indeed, the RRG/Iceman fork can be used on other Proxmark3 hardware platforms as
 
 Via some definitions, you can adjust the firmware for a given platform, but also to add features like the support of the Blue Shark add-on or to select which standalone mode to embed. To learn how to adjust the firmware, please read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md).
 
-### for Proxmark3 RDV4
+### Compile for Proxmark3 RDV4
 The repo defaults for compiling a firmware and client suitable for Proxmark3 RDV4.
 
-## for generic Proxmark3 platforms
+### Compile for generic Proxmark3 platforms
 In order to build this repo for generic Proxmark3 platforms we urge you to read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
 
 
