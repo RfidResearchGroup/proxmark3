@@ -79,6 +79,9 @@ proxmark3 /dev/ttyACM0 --flash --unlock-bootloader --image /tmp/my-bootrom.elf -
 ## Run the client
 
 In most cases, you can run the script `pm3` which try to auto-detect the port to use, on several OS.
+```sh
+./pm3
+```
 
 For the other cases, specify the port by yourself. For example, for a Proxmark3 connected via USB under Linux:
 
