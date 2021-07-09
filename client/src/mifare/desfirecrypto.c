@@ -117,21 +117,18 @@ size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint
         else
             break;
     crcpos++; // crc may be 0x00000000 or 0x0000
-    PrintAndLogEx(INFO, "crcpos: %d", crcpos);
     if (crcpos < crclen) {
         PrintAndLogEx(WARNING, "No space for crc. pos: %d", crcpos);
         return 0;
     }
 
     uint8_t crcdata[1024] = {0};
-    bool crcok = false;
+    size_t crcposfound = 0;
     for (int i = 0; i < crclen + 1; i++) {
-    PrintAndLogEx(INFO, "--crcpos: %d", crcpos - i);
         if (crcpos - i == 0)
             break;
         if (crcpos - i + crclen > datalen)
             continue;
-    PrintAndLogEx(INFO, "--crcposcheck: %d", crcpos - i);
         
         memcpy(crcdata, data, crcpos - i);
         crcdata[crcpos - i] = respcode;
@@ -139,18 +136,13 @@ size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint
         if (crclen == 4)
             res = desfire_crc32_check(crcdata, crcpos - i + 1, &data[crcpos - i]);
         else
-            res = iso14443a_crc_check(crcdata, crcpos - i + 1, &data[crcpos - i]);
+            res = iso14443a_crc_check(data, crcpos - i, &data[crcpos - i]);
         if (res) {
-    PrintAndLogEx(INFO, "--crc OK pos: %d", crcpos - i);
-            crcpos -= i;
-            crcok = true;
-            break;
+            crcposfound = crcpos - i;
         }
     }
-    if (!crcok)
-        crcpos = 0;
     
-    return crcpos;
+    return crcposfound;
 }
 
 static void DesfireCryptoEncDecSingleBlock(uint8_t *key, DesfireCryptoAlgorythm keyType, uint8_t *data, uint8_t *dstdata, uint8_t *ivect, bool dir_to_send, bool encode) {
