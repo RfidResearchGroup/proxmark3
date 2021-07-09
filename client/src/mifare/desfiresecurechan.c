@@ -117,6 +117,22 @@ static void DesfireSecureChannelDecodeD40(DesfireContext *ctx, uint8_t *srcdata,
 
             break;
         case DCMEncrypted:
+            if (srcdatalen < desfire_get_key_block_length(ctx->keyType)) {
+                memcpy(dstdata, srcdata, srcdatalen);
+                *dstdatalen = srcdatalen;
+                return;
+            }
+            
+            DesfireCryptoEncDec(ctx, true, srcdata, srcdatalen, dstdata, false);
+            PrintAndLogEx(INFO, "decoded[%d]: %s", srcdatalen, sprint_hex(dstdata, srcdatalen));
+
+            size_t puredatalen = DesfireSearchCRCPos(dstdata, srcdatalen, respcode, 2);
+            if (puredatalen != 0) {
+                *dstdatalen = puredatalen;
+            } else {
+                PrintAndLogEx(WARNING, "CRC32 error.");
+                *dstdatalen = srcdatalen;
+            }
             break;
         case DCMPlain:
         case DACNone:
