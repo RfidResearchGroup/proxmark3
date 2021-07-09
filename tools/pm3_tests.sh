@@ -492,6 +492,7 @@ while true; do
         if ! CheckExecute "hf iclass loclass test"         "$CLIENTBIN -c 'hf iclass loclass --test'" "key diversification (ok)"; then break; fi
         if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Test(s) \[ ok"; then break; fi
         if ! CheckExecute "hf cipurse test"                "$CLIENTBIN -c 'hf cipurse test'" "Tests \[ ok"; then break; fi
+        if ! CheckExecute "hf mfdes test"                  "$CLIENTBIN -c 'hf mfdes test'"   "Tests \[ ok"; then break; fi
       fi
     fi
   echo -e "\n------------------------------------------------------------"

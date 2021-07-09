@@ -30,9 +30,10 @@
 #include "util_posix.h"     // msleep
 #include "mifare/desfire_crypto.h"
 #include "mifare/desfirecore.h"
+#include "mifare/desfiretest.h"
+#include "mifare/mifaredefault.h"  // default keys
 #include "crapto1/crapto1.h"
 #include "fileutils.h"
-#include "mifare/mifaredefault.h"  // default keys
 #include "nfc/ndef.h"           // NDEF
 #include "mifare/mad.h"
 #include "generator.h"
@@ -5312,6 +5313,10 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14ADesTest(const char *Cmd) {
+    DesfireTest(true);
+    return PM3_SUCCESS;
+}
 
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                     AlwaysAvailable, "This help"},
@@ -5346,7 +5351,7 @@ static command_t CommandTable[] = {
     {"read",             CmdHF14ADesReadData,         IfPm3Iso14443a,  "Read data from standard/backup/record file"},
     {"write",            CmdHF14ADesWriteData,        IfPm3Iso14443a,  "Write data to standard/backup/record file"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("System") " -----------------------"},
-//    {"test",             CmdHF14ADesTest,        IfPm3Iso14443a,  "Test crypto"},
+    {"test",             CmdHF14ADesTest,             AlwaysAvailable, "Test crypto"},
     {NULL, NULL, NULL, NULL}
 };
 
