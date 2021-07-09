@@ -32,7 +32,7 @@ make clean && make -j
 ### if you got an error
 Read the [troubleshooting guide](/doc/md/Installation_Instructions/Troubleshooting.md), 
 
-For instance,  on WSl-1 you usually get the _libQt5Core.so.5 not found_ message
+For instance,  on WSl-1 you usually get the `libQt5Core.so.5 not found` message
 [solution](/doc/md/Installation_Instructions/Troubleshooting.md#libQt5Coreso5-not-found)
 
 
