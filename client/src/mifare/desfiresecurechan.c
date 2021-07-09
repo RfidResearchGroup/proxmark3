@@ -124,13 +124,13 @@ static void DesfireSecureChannelDecodeD40(DesfireContext *ctx, uint8_t *srcdata,
             }
             
             DesfireCryptoEncDec(ctx, true, srcdata, srcdatalen, dstdata, false);
-            PrintAndLogEx(INFO, "decoded[%d]: %s", srcdatalen, sprint_hex(dstdata, srcdatalen));
+            //PrintAndLogEx(INFO, "decoded[%d]: %s", srcdatalen, sprint_hex(dstdata, srcdatalen));
 
             size_t puredatalen = DesfireSearchCRCPos(dstdata, srcdatalen, respcode, 2);
             if (puredatalen != 0) {
                 *dstdatalen = puredatalen;
             } else {
-                PrintAndLogEx(WARNING, "CRC32 error.");
+                PrintAndLogEx(WARNING, "CRC16 error.");
                 *dstdatalen = srcdatalen;
             }
             break;
@@ -175,7 +175,7 @@ static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata,
             }
             
             DesfireCryptoEncDec(ctx, true, srcdata, srcdatalen, dstdata, false);
-            PrintAndLogEx(INFO, "decoded[%d]: %s", srcdatalen, sprint_hex(dstdata, srcdatalen));
+            //PrintAndLogEx(INFO, "decoded[%d]: %s", srcdatalen, sprint_hex(dstdata, srcdatalen));
             
             size_t puredatalen = DesfireSearchCRCPos(dstdata, srcdatalen, respcode, 4);
             if (puredatalen != 0) {
