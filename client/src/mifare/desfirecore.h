@@ -39,6 +39,7 @@ int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uin
 
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel);
 
+int DesfireGetUID(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetAIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetDFList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 
