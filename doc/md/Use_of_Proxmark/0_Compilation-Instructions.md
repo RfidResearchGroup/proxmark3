@@ -21,7 +21,7 @@ git pull
 ## Clean and compile everything
 
 ```sh
-make clean && make all
+make clean && make -j
 ```
 
 ### if you got an error
