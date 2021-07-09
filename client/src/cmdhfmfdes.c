@@ -5014,7 +5014,9 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
                                       uint8_t keynoid, uint8_t algoid, uint8_t keyid,
                                       uint8_t kdfid, uint8_t kdfiid,
                                       uint8_t cmodeid, uint8_t ccsetid, uint8_t schannid,
-                                      int *securechannel) {
+                                      uint8_t appid,
+                                      int *securechannel,
+                                      uint32_t *aid) {
 
     uint8_t keynum = defaultKeyNum;
     int algores = defaultAlgoId;
@@ -5080,6 +5082,14 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
         if (CLIGetOptionList(arg_get_str(ctx, schannid), DesfireSecureChannelOpts, &secchann))
             return PM3_ESOFT;
     }
+    
+    if (appid && aid) {
+        *aid = 0x000000;
+        
+        //int arg_get_u32_hexstr_def_nlen(CLIParserContext *ctx, uint8_t paramnum, uint32_t def, uint32_t *out, uint8_t nlen, bool optional);
+    //    if (arg_get_u32_hexstr_def_nlen(ctx, appid, 0x000000, aid, 3, true))
+    //        return PM3_ESOFT;
+    }
 
     DesfireSetKey(dctx, keynum, algores, key);
     DesfireSetKdf(dctx, kdfAlgo, kdfInput, kdfInputLen);
@@ -5113,7 +5123,7 @@ static int CmdHF14ADesDefault(const char *Cmd) {
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 1, 2, 3, 4, 5, 6, 7, 8, &securechann);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 1, 2, 3, 4, 5, 6, 7, 8, 0, &securechann, NULL);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -5149,9 +5159,114 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
     
     return PM3_SUCCESS;
 }
-    //{"getkeysetings",    CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "Get Key Settings"},
+
 static int CmdHF14ADesGetKeySettings(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes getkeysetings",
+                  "Get key settings for card level or application level.",
+                  "hf mfdes getkeysetings  -> execute with default factory setup");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_int0(NULL, "appid",   "<app id hex>", "Application ID (HEX 3 bytes)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext dctx;
+    int securechann = DCMPlain;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    if (verbose)
+        DesfirePrintContext(&dctx);
+
+    res = DesfireSelectAIDHex(&dctx, appid, false, 0);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    res = DesfireAuthenticate(&dctx, securechann);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (DesfireIsAuthenticated(&dctx)) {
+        if (verbose)
+            PrintAndLogEx(ERR, "Desfire  " _GREEN_("authenticated"));
+    } else {
+        return PM3_ESOFT;
+    }
+
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t buflen = 0;
+
+    res = DesfireGetKeySettings(&dctx, buf, &buflen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire DesfireGetKeySettings command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
     
+//    if (verbose)
+        PrintAndLogEx(INFO, "DesfireGetKeySettings[%d]: %s", buflen, sprint_hex(buf, buflen));
+    
+    if (buflen < 2) {
+        PrintAndLogEx(ERR, "Command DesfireGetKeySettings returned wrong length: %d", buflen);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "----------------------- " _CYAN_("Key settings") " -----------------------");
+    PrintKeySettings(buf[0], buf[1], (appid != 0x000000));
+    if (buflen > 2)
+        PrintAndLogEx(INFO, "ak ver: %d", buf[2]);
+    if (buflen > 3)
+        PrintAndLogEx(INFO, "num keysets: %d", buf[3]);
+    if (buflen > 4)
+        PrintAndLogEx(INFO, "max keysize: %d", buf[4]);
+    if (buflen > 5)
+        PrintAndLogEx(INFO, "app key settings: 0x%02x", buf[5]);
+    
+    
+
+    /*if (buflen > 0) {
+        PrintAndLogEx(INFO, "----------------------- " _CYAN_("File list") " -----------------------");
+        for (int i = 0; i < buflen; i++)
+            PrintAndLogEx(INFO, "AID: %06x ISO file id: %02x%02x ISO DF name[%" PRIu32 "]: %s",
+                          DesfireAIDByteToUint(&buf[i * 24 + 1]),
+                          buf[i * 24 + 1 + 3], buf[i * 24 + 1 + 4],
+                          strlen((char *)&buf[i * 24 + 1 + 5]),
+                          &buf[i * 24 + 1 + 5]);
+    } else {
+        PrintAndLogEx(INFO, "There is no applications on the card");
+    }*/
+
+    DropField();
     return PM3_SUCCESS;
 }
 
@@ -5182,7 +5297,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
 
     DesfireContext dctx;
     int securechann = DCMPlain;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, &securechann);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, &securechann, NULL);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -5264,7 +5379,7 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
 
     DesfireContext dctx;
     int securechann = DCMPlain;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, &securechann);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, &securechann, NULL);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -5344,8 +5459,8 @@ static command_t CommandTable[] = {
 //    {"mad",             CmdHF14aDesMAD,             IfPm3Iso14443a,  "Prints MAD records from card"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "------------------------ " _CYAN_("Keys") " -----------------------"},
     {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
-    {"chkeysetings",     CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "Change Key Settings"},
-    {"getkeysetings",    CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "Get Key Settings"},
+    {"chkeysetings",     CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "[new]Change Key Settings"},
+    {"getkeysetings",    CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "[new]Get Key Settings"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Applications") " -------------------"},
     {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
     {"createaid",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},
