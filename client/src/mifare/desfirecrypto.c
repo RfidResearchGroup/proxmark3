@@ -129,7 +129,7 @@ size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint
             break;
         if (crcpos - i + crclen > datalen)
             continue;
-        
+
         memcpy(crcdata, data, crcpos - i);
         crcdata[crcpos - i] = respcode;
         bool res;
@@ -141,7 +141,7 @@ size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint
             crcposfound = crcpos - i;
         }
     }
-    
+
     return crcposfound;
 }
 

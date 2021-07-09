@@ -79,9 +79,9 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
             *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
         }
     } else if (ctx->commMode == DCMEncrypted) {
-            
-            
-            
+
+
+
     } else {
         memcpy(dstdata, srcdata, srcdatalen);
         *dstdatalen = srcdatalen;
@@ -122,7 +122,7 @@ static void DesfireSecureChannelDecodeD40(DesfireContext *ctx, uint8_t *srcdata,
                 *dstdatalen = srcdatalen;
                 return;
             }
-            
+
             DesfireCryptoEncDec(ctx, true, srcdata, srcdatalen, dstdata, false);
             //PrintAndLogEx(INFO, "decoded[%d]: %s", srcdatalen, sprint_hex(dstdata, srcdatalen));
 
@@ -153,13 +153,13 @@ static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata,
             *dstdatalen = srcdatalen;
             return;
         }
-        
+
         memcpy(dstdata, srcdata, srcdatalen - DesfireGetMACLength(ctx));
         *dstdatalen = srcdatalen - DesfireGetMACLength(ctx);
-        
+
         memcpy(data, srcdata, *dstdatalen);
         data[*dstdatalen] = respcode;
-        
+
         uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
         DesfireCryptoCMAC(ctx, data, *dstdatalen + 1, cmac);
         if (memcmp(&srcdata[*dstdatalen], cmac, DesfireGetMACLength(ctx)) != 0) {
@@ -168,23 +168,23 @@ static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata,
             PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
         }
     } else if (ctx->commMode == DCMEncrypted) {
-            if (srcdatalen < desfire_get_key_block_length(ctx->keyType)) {
-                memcpy(dstdata, srcdata, srcdatalen);
-                *dstdatalen = srcdatalen;
-                return;
-            }
-            
-            DesfireCryptoEncDec(ctx, true, srcdata, srcdatalen, dstdata, false);
-            //PrintAndLogEx(INFO, "decoded[%d]: %s", srcdatalen, sprint_hex(dstdata, srcdatalen));
-            
-            size_t puredatalen = DesfireSearchCRCPos(dstdata, srcdatalen, respcode, 4);
-            if (puredatalen != 0) {
-                *dstdatalen = puredatalen;
-            } else {
-                PrintAndLogEx(WARNING, "CRC32 error.");
-                *dstdatalen = srcdatalen;
-            }
-            
+        if (srcdatalen < desfire_get_key_block_length(ctx->keyType)) {
+            memcpy(dstdata, srcdata, srcdatalen);
+            *dstdatalen = srcdatalen;
+            return;
+        }
+
+        DesfireCryptoEncDec(ctx, true, srcdata, srcdatalen, dstdata, false);
+        //PrintAndLogEx(INFO, "decoded[%d]: %s", srcdatalen, sprint_hex(dstdata, srcdatalen));
+
+        size_t puredatalen = DesfireSearchCRCPos(dstdata, srcdatalen, respcode, 4);
+        if (puredatalen != 0) {
+            *dstdatalen = puredatalen;
+        } else {
+            PrintAndLogEx(WARNING, "CRC32 error.");
+            *dstdatalen = srcdatalen;
+        }
+
     } else {
         memcpy(dstdata, srcdata, srcdatalen);
         *dstdatalen = srcdatalen;
