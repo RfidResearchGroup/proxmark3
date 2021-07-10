@@ -60,12 +60,13 @@ We define generic Proxmark3 platforms as following devices.
    - **Note**: unknown pin assignments.
  - ⚠  Ryscorp Proxmark3 Pro 
    - **Note**: device has different fpga and unknown pin assignments.
+ - ⚠  i-copy 
+   - **Note**: reversed hw,  experimental support maintained in [icopyx-community pm3 repo](https://github.com/iCopy-X-Community/icopyx-community-pm3)
 
 **Unknown support status**
  - ⚠  VX
    - **Note**: unknown device hw
- - ⚠  i-copy 
-   - **Note**: unknown device hw
+
 
 **256kb flash memory size of generic Proxmark3 platforms**
 
