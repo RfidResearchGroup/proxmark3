@@ -3301,7 +3301,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
     uint32_t curr = 0;
     uint8_t found = 0; // > 0 if found xx1 xx downlink needed, 1 found
 
-    if (start_password >= end_password) {
+    if (start_password > end_password) {
         PrintAndLogEx(FAILED, "Error, start larger then end password");
         return PM3_EINVARG;
     }
@@ -3331,7 +3331,10 @@ static int CmdT55xxBruteForce(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     if (found) {
-        PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08X") " ]", curr - 1);
+        if (curr != end_password) {
+            PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08X") " ]", curr - 1);
+        } else
+            PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08X") " ]", curr);
         T55xx_Print_DownlinkMode((found >> 1) & 3);
     } else
         PrintAndLogEx(WARNING, "Bruteforce failed, last tried: [ " _YELLOW_("%08X") " ]", curr);
