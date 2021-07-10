@@ -101,5 +101,11 @@ void DesfireCryptoEncDec(DesfireContext *ctx, bool use_session_key, uint8_t *src
 void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode, uint8_t *iv);
 void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *cmac);
 
+void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc);
+void desfire_crc32_append(uint8_t *data, const size_t len);
+bool desfire_crc32_check(uint8_t *data, const size_t len, uint8_t *crc);
+void iso14443a_crc_append(uint8_t *data, size_t len);
+void iso14443a_crc(uint8_t *data, size_t len, uint8_t *pbtCrc);
+bool iso14443a_crc_check(uint8_t *data, const size_t len, uint8_t *crc);
 
 #endif // __DESFIRECRYPTO_H
