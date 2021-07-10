@@ -986,8 +986,9 @@ static void PrintKeySettingsPICC(uint8_t keysettings, uint8_t numkeys) {
     PrintAndLogEx(SUCCESS, "[.%c..] CMK required for create/delete : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? _GREEN_("NO") : "YES");
     PrintAndLogEx(SUCCESS, "[..%c.] Directory list access with CMK : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? _GREEN_("NO") : "YES");
     PrintAndLogEx(SUCCESS, "[...%c] CMK is changeable              : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "");
 
-    PrintAndLogEx(SUCCESS, "\nkey count: %d", numkeys & 0x0f);
+    PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
 }
 
 static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys) {
@@ -1017,9 +1018,10 @@ static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys) {
     PrintAndLogEx(SUCCESS, "[.%c..] AMK required for create/delete : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? "NO" : "YES");
     PrintAndLogEx(SUCCESS, "[..%c.] Directory list access with AMK : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? "NO" : "YES");
     PrintAndLogEx(SUCCESS, "[...%c] AMK is changeable              : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "");
 
     PrintKeyType(numkeys >> 6);
-    PrintAndLogEx(SUCCESS, "\nkey count: %d", numkeys & 0x0f);
+    PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
 }
 
 void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel) {

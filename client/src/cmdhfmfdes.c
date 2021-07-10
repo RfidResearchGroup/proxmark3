@@ -5085,10 +5085,14 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
     
     if (appid && aid) {
         *aid = 0x000000;
-        
-        //int arg_get_u32_hexstr_def_nlen(CLIParserContext *ctx, uint8_t paramnum, uint32_t def, uint32_t *out, uint8_t nlen, bool optional);
-    //    if (arg_get_u32_hexstr_def_nlen(ctx, appid, 0x000000, aid, 3, true))
-    //        return PM3_ESOFT;
+        int res = arg_get_u32_hexstr_def_nlen(ctx, appid, 0x000000, aid, 3, true);
+        if (res == 0)
+            return PM3_ESOFT;
+        if (res == 2) {
+            PrintAndLogEx(ERR, "AID length must have 3 bytes length");
+            return PM3_EINVARG;
+        }
+        PrintAndLogEx(INFO, "--aid: %x", *aid);
     }
 
     DesfireSetKey(dctx, keynum, algores, key);
@@ -5178,7 +5182,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
         arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
-        arg_int0(NULL, "appid",   "<app id hex>", "Application ID (HEX 3 bytes)"),
+        arg_str0(NULL, "appid",   "<app id hex>", "Application ID (HEX 3 bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
