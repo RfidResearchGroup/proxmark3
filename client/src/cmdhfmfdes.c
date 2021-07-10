@@ -5181,7 +5181,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
         arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
-        arg_str0(NULL, "appid",   "<app id hex>", "Application ID (HEX 3 bytes)"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
