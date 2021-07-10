@@ -5092,7 +5092,6 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
             PrintAndLogEx(ERR, "AID length must have 3 bytes length");
             return PM3_EINVARG;
         }
-        PrintAndLogEx(INFO, "--aid: %x", *aid);
     }
 
     DesfireSetKey(dctx, keynum, algores, key);
@@ -5236,7 +5235,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
         return PM3_ESOFT;
     }
     
-//    if (verbose)
+    if (verbose)
         PrintAndLogEx(INFO, "DesfireGetKeySettings[%d]: %s", buflen, sprint_hex(buf, buflen));
     
     if (buflen < 2) {
