@@ -49,6 +49,6 @@ int DesfireDeleteApplication(DesfireContext *dctx, uint32_t aid);
 int DesfireGetKeyVersion(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetKeySettings(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireChangeKeySettings(DesfireContext *dctx, uint8_t *data, size_t len);
-void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel);
+void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool print2ndbyte);
 
 #endif // __DESFIRECORE_H

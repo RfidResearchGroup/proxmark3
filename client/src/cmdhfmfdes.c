@@ -5157,8 +5157,86 @@ static int CmdHF14ADesDefault(const char *Cmd) {
 
     return PM3_SUCCESS;
 }
-//    {"chkeysetings",     CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "Change Key Settings"},
+
 static int CmdHF14ADesChKeySettings(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes chkeysetings",
+                  "Change key settings for card level or application level. WARNING: card level changes may block card!",
+                  "hf mfdes chkeysetings -d 0e -> set picc key settings with default key/channel setup\n"\
+                  "hf mfdes chkeysetings --aid 123456 -d 0e -> set app 123456 key settings with default key/channel setup");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0("d",  "data",    "<key settings HEX>", "Key settings (HEX 1 byte)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext dctx;
+    int securechann = DCMPlain;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    uint32_t ksett32 = 0;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 0x000000, &ksett32, 1, false);
+    if (res == 0)
+        return PM3_ESOFT;
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Key settings must have 1 byte length");
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    if (verbose) {
+       DesfirePrintContext(&dctx);
+       PrintAndLogEx(SUCCESS, "\nNew key settings:");
+       PrintKeySettings(ksett32, 0, (appid != 0x000000), false);
+    }
+
+    res = DesfireSelectAIDHex(&dctx, appid, false, 0);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    res = DesfireAuthenticate(&dctx, securechann);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (DesfireIsAuthenticated(&dctx)) {
+        if (verbose)
+            PrintAndLogEx(ERR, "Desfire  " _GREEN_("authenticated"));
+    } else {
+        return PM3_ESOFT;
+    }
+
+
+
+
     
     return PM3_SUCCESS;
 }
@@ -5167,7 +5245,8 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes getkeysetings",
                   "Get key settings for card level or application level.",
-                  "hf mfdes getkeysetings  -> execute with default factory setup");
+                  "hf mfdes getkeysetings  -> get picc key settings with default key/channel setup\n"\
+                  "hf mfdes getkeysetings --aid 123456 -> get app 123456 key settings with default key/channel setup");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5245,7 +5324,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "----------------------- " _CYAN_("Key settings") " -----------------------");
-    PrintKeySettings(buf[0], buf[1], (appid != 0x000000));
+    PrintKeySettings(buf[0], buf[1], (appid != 0x000000), true);
     if (buflen > 2)
         PrintAndLogEx(INFO, "ak ver: %d", buf[2]);
     if (buflen > 3)

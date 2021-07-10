@@ -980,7 +980,7 @@ static void PrintKeyType(uint8_t keytype) {
     }
 }
 
-static void PrintKeySettingsPICC(uint8_t keysettings, uint8_t numkeys) {
+static void PrintKeySettingsPICC(uint8_t keysettings, uint8_t numkeys, bool print2ndbyte) {
     PrintAndLogEx(SUCCESS, "PICC level rights:");
     PrintAndLogEx(SUCCESS, "[%c...] CMK Configuration changeable   : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
     PrintAndLogEx(SUCCESS, "[.%c..] CMK required for create/delete : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? _GREEN_("NO") : "YES");
@@ -988,10 +988,11 @@ static void PrintKeySettingsPICC(uint8_t keysettings, uint8_t numkeys) {
     PrintAndLogEx(SUCCESS, "[...%c] CMK is changeable              : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
     PrintAndLogEx(SUCCESS, "");
 
-    PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
+    if (print2ndbyte)
+        PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
 }
 
-static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys) {
+static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print2ndbyte) {
     // Access rights.
     PrintAndLogEx(SUCCESS, "Application level rights:");
     uint8_t rights = ((keysettings >> 4) & 0x0F);
@@ -1020,13 +1021,15 @@ static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys) {
     PrintAndLogEx(SUCCESS, "[...%c] AMK is changeable              : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
     PrintAndLogEx(SUCCESS, "");
 
-    PrintKeyType(numkeys >> 6);
-    PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
+    if (print2ndbyte) {
+        PrintKeyType(numkeys >> 6);
+        PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
+    }
 }
 
-void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel) {
+void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool print2ndbyte) {
     if (applevel)
-        PrintKeySettingsApp(keysettings, numkeys);
+        PrintKeySettingsApp(keysettings, numkeys, print2ndbyte);
     else
-        PrintKeySettingsPICC(keysettings, numkeys);
+        PrintKeySettingsPICC(keysettings, numkeys, print2ndbyte);
 }
