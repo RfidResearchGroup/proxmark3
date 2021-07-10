@@ -5229,14 +5229,20 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
 
     if (DesfireIsAuthenticated(&dctx)) {
         if (verbose)
-            PrintAndLogEx(ERR, "Desfire  " _GREEN_("authenticated"));
+            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
     } else {
         return PM3_ESOFT;
     }
 
+    uint8_t keysett = ksett32 & 0x0f;
+    res = DesfireChangeKeySettings(&dctx, &keysett, 1);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire DesfireChangeKeySettings command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
 
-
-
+    PrintAndLogEx(INFO, "Key settings " _GREEN_("changed"));
     
     return PM3_SUCCESS;
 }
@@ -5299,7 +5305,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
 
     if (DesfireIsAuthenticated(&dctx)) {
         if (verbose)
-            PrintAndLogEx(ERR, "Desfire  " _GREEN_("authenticated"));
+            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
     } else {
         return PM3_ESOFT;
     }
@@ -5334,20 +5340,6 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
     if (buflen > 5)
         PrintAndLogEx(INFO, "app key settings: 0x%02x", buf[5]);
     
-    
-
-    /*if (buflen > 0) {
-        PrintAndLogEx(INFO, "----------------------- " _CYAN_("File list") " -----------------------");
-        for (int i = 0; i < buflen; i++)
-            PrintAndLogEx(INFO, "AID: %06x ISO file id: %02x%02x ISO DF name[%" PRIu32 "]: %s",
-                          DesfireAIDByteToUint(&buf[i * 24 + 1]),
-                          buf[i * 24 + 1 + 3], buf[i * 24 + 1 + 4],
-                          strlen((char *)&buf[i * 24 + 1 + 5]),
-                          &buf[i * 24 + 1 + 5]);
-    } else {
-        PrintAndLogEx(INFO, "There is no applications on the card");
-    }*/
-
     DropField();
     return PM3_SUCCESS;
 }
@@ -5407,7 +5399,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
 
     if (DesfireIsAuthenticated(&dctx)) {
         if (verbose)
-            PrintAndLogEx(ERR, "Desfire  " _GREEN_("authenticated"));
+            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
     } else {
         return PM3_ESOFT;
     }
@@ -5489,7 +5481,7 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
 
     if (DesfireIsAuthenticated(&dctx)) {
         if (verbose)
-            PrintAndLogEx(ERR, "Desfire  " _GREEN_("authenticated"));
+            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
     } else {
         return PM3_ESOFT;
     }
