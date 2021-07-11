@@ -147,10 +147,4 @@ void cmac(const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t l
 
 void mifare_kdf_an10922(const desfirekey_t key, const uint8_t *data, size_t len);
 
-void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc);
-void desfire_crc32_append(uint8_t *data, const size_t len);
-bool desfire_crc32_check(uint8_t *data, const size_t len, uint8_t *crc);
-void iso14443a_crc_append(uint8_t *data, size_t len);
-void iso14443a_crc(uint8_t *data, size_t len, uint8_t *pbtCrc);
-bool iso14443a_crc_check(uint8_t *data, const size_t len, uint8_t *crc);
 #endif

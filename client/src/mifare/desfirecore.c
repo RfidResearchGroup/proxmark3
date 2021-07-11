@@ -524,6 +524,9 @@ static void DesfireSplitBytesToBlock(uint8_t *blockdata, size_t *blockdatacount,
 int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
     int res = PM3_SUCCESS;
 
+    if (!PrintChannelModeWarning(cmd, ctx->secureChannel, ctx->cmdSet, ctx->commMode))
+        DesfirePrintContext(ctx);
+
     uint8_t databuf[250 * 5] = {0};
     size_t databuflen = 0;
 
@@ -820,8 +823,8 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     Desfire_session_key_new(RndA, RndB, key, &sesskey);
     memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));
 
-    PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, rndlen));
-    PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, rndlen));
+    //PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, rndlen));
+    //PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, rndlen));
     if (dctx->keyType == T_DES) {
         if (secureChannel == DACd40)
             des_decrypt(encRndA, encRndA, key->data);
@@ -839,8 +842,8 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     }
 
     rol(RndA, rndlen);
-    PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
-    PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
+    //PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
+    //PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
     for (uint32_t x = 0; x < rndlen; x++) {
         if (RndA[x] != encRndA[x]) {
             if (g_debugMode > 1) {
@@ -867,7 +870,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     memset(dctx->IV, 0, DESFIRE_MAX_KEY_SIZE);
     dctx->secureChannel = secureChannel;
     memcpy(dctx->sessionKeyMAC, dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType));
-    PrintAndLogEx(INFO, "sessionKeyEnc : %s", sprint_hex(dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType)));
+    PrintAndLogEx(INFO, "Session key : %s", sprint_hex(dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType)));
 
     return PM3_SUCCESS;
 }
@@ -906,7 +909,7 @@ int DesfireCreateApplication(DesfireContext *dctx, uint8_t *appdata, size_t appd
     uint8_t respcode = 0xff;
     uint8_t resp[257] = {0};
     size_t resplen = 0;
-    int res = DesfireExchangeEx(false, dctx, MFDES_CREATE_APPLICATION, appdata, appdatalen, &respcode, resp, &resplen, true, 24);
+    int res = DesfireExchangeEx(false, dctx, MFDES_CREATE_APPLICATION, appdata, appdatalen, &respcode, resp, &resplen, true, 0);
     if (res != PM3_SUCCESS)
         return res;
     if (respcode != MFDES_S_OPERATION_OK || resplen != 0)
@@ -920,7 +923,7 @@ int DesfireDeleteApplication(DesfireContext *dctx, uint32_t aid) {
     DesfireAIDUintToByte(aid, data);
     uint8_t resp[257] = {0};
     size_t resplen = 0;
-    int res = DesfireExchangeEx(false, dctx, MFDES_DELETE_APPLICATION, data, sizeof(data), &respcode, resp, &resplen, true, 24);
+    int res = DesfireExchangeEx(false, dctx, MFDES_DELETE_APPLICATION, data, sizeof(data), &respcode, resp, &resplen, true, 0);
     if (res != PM3_SUCCESS)
         return res;
     if (respcode != MFDES_S_OPERATION_OK || resplen != 0)
@@ -928,3 +931,105 @@ int DesfireDeleteApplication(DesfireContext *dctx, uint32_t aid) {
     return PM3_SUCCESS;
 }
 
+int DesfireGetKeySettings(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
+    uint8_t respcode = 0xff;
+    int res = DesfireExchange(dctx, MFDES_GET_KEY_SETTINGS, NULL, 0, &respcode, resp, resplen);
+    if (res != PM3_SUCCESS)
+        return res;
+    if (respcode != MFDES_S_OPERATION_OK)
+        return PM3_EAPDU_FAIL;
+    return PM3_SUCCESS;
+}
+
+int DesfireGetKeyVersion(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
+    uint8_t respcode = 0xff;
+    int res = DesfireExchange(dctx, MFDES_GET_KEY_VERSION, NULL, 0, &respcode, resp, resplen);
+    if (res != PM3_SUCCESS)
+        return res;
+    if (respcode != MFDES_S_OPERATION_OK)
+        return PM3_EAPDU_FAIL;
+    return PM3_SUCCESS;
+}
+
+int DesfireChangeKeySettings(DesfireContext *dctx, uint8_t *data, size_t len) {
+    uint8_t respcode = 0xff;
+    uint8_t resp[257] = {0};
+    size_t resplen = 0;
+    int res = DesfireExchange(dctx, MFDES_CHANGE_KEY_SETTINGS, data, len, &respcode, resp, &resplen);
+    if (res != PM3_SUCCESS)
+        return res;
+    if (respcode != MFDES_S_OPERATION_OK || resplen != 0)
+        return PM3_EAPDU_FAIL;
+    return PM3_SUCCESS;
+}
+
+static void PrintKeyType(uint8_t keytype) {
+    switch (keytype) {
+        case 00:
+            PrintAndLogEx(SUCCESS, "Key: 2TDEA");
+            break;
+        case 01:
+            PrintAndLogEx(SUCCESS, "Key: 3TDEA");
+            break;
+        case 02:
+            PrintAndLogEx(SUCCESS, "Key: AES");
+            break;
+        default:
+            PrintAndLogEx(SUCCESS, "Key: unknown: 0x%02x", keytype);
+            break;
+    }
+}
+
+static void PrintKeySettingsPICC(uint8_t keysettings, uint8_t numkeys, bool print2ndbyte) {
+    PrintAndLogEx(SUCCESS, "PICC level rights:");
+    PrintAndLogEx(SUCCESS, "[%c...] CMK Configuration changeable   : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "[.%c..] CMK required for create/delete : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? _GREEN_("NO") : "YES");
+    PrintAndLogEx(SUCCESS, "[..%c.] Directory list access with CMK : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? _GREEN_("NO") : "YES");
+    PrintAndLogEx(SUCCESS, "[...%c] CMK is changeable              : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "");
+
+    if (print2ndbyte)
+        PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
+}
+
+static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print2ndbyte) {
+    // Access rights.
+    PrintAndLogEx(SUCCESS, "Application level rights:");
+    uint8_t rights = ((keysettings >> 4) & 0x0F);
+    switch (rights) {
+        case 0x0:
+            PrintAndLogEx(SUCCESS, "-- AMK authentication is necessary to change any key (default)");
+            break;
+        case 0xE:
+            PrintAndLogEx(SUCCESS, "-- Authentication with the key to be changed (same KeyNo) is necessary to change a key");
+            break;
+        case 0xF:
+            PrintAndLogEx(SUCCESS, "-- All keys (except AMK,see Bit0) within this application are frozen");
+            break;
+        default:
+            PrintAndLogEx(SUCCESS,
+                          "-- Authentication with the specified key is necessary to change any key.\n"
+                          "A change key and a PICC master key (CMK) can only be changed after authentication with the master key.\n"
+                          "For keys other then the master or change key, an authentication with the same key is needed."
+                         );
+            break;
+    }
+
+    PrintAndLogEx(SUCCESS, "[%c...] AMK Configuration changeable   : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "[.%c..] AMK required for create/delete : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? "NO" : "YES");
+    PrintAndLogEx(SUCCESS, "[..%c.] Directory list access with AMK : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? "NO" : "YES");
+    PrintAndLogEx(SUCCESS, "[...%c] AMK is changeable              : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "");
+
+    if (print2ndbyte) {
+        PrintKeyType(numkeys >> 6);
+        PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
+    }
+}
+
+void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool print2ndbyte) {
+    if (applevel)
+        PrintKeySettingsApp(keysettings, numkeys, print2ndbyte);
+    else
+        PrintKeySettingsPICC(keysettings, numkeys, print2ndbyte);
+}

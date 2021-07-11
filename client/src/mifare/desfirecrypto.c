@@ -215,8 +215,11 @@ void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *s
     uint8_t data[1024] = {0};
     uint8_t xiv[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
 
-    if (ctx->secureChannel == DACd40)
+    bool xencode = encode;
+    if (ctx->secureChannel == DACd40) {
         memset(ctx->IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
+        xencode = false;
+    }
 
     size_t block_size = desfire_get_key_block_length(ctx->keyType);
 
@@ -228,9 +231,9 @@ void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *s
     size_t offset = 0;
     while (offset < srcdatalen) {
         if (use_session_key)
-            DesfireCryptoEncDecSingleBlock(ctx->sessionKeyMAC, ctx->keyType, srcdata + offset, data + offset, xiv, encode, encode);
+            DesfireCryptoEncDecSingleBlock(ctx->sessionKeyMAC, ctx->keyType, srcdata + offset, data + offset, xiv, encode, xencode);
         else
-            DesfireCryptoEncDecSingleBlock(ctx->key, ctx->keyType, srcdata + offset, data + offset, xiv, encode, encode);
+            DesfireCryptoEncDecSingleBlock(ctx->key, ctx->keyType, srcdata + offset, data + offset, xiv, encode, xencode);
         offset += block_size;
     }
 
@@ -308,3 +311,31 @@ void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *data, size_t len, uint8_t *
         memcpy(cmac, ctx->IV, kbs);
 }
 
+
+void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc) {
+    crc32_ex(data, len, crc);
+}
+
+void desfire_crc32_append(uint8_t *data, const size_t len) {
+    crc32_ex(data, len, data + len);
+}
+
+bool desfire_crc32_check(uint8_t *data, const size_t len, uint8_t *crc) {
+    uint8_t ccrc[4] = {0};
+    desfire_crc32(data, len, ccrc);
+    return (memcmp(ccrc, crc, 4) == 0);
+}
+
+void iso14443a_crc_append(uint8_t *data, size_t len) {
+    return compute_crc(CRC_14443_A, data, len, data + len, data + len + 1);
+}
+
+void iso14443a_crc(uint8_t *data, size_t len, uint8_t *pbtCrc) {
+    return compute_crc(CRC_14443_A, data, len, pbtCrc, pbtCrc + 1);
+}
+
+bool iso14443a_crc_check(uint8_t *data, const size_t len, uint8_t *crc) {
+    uint8_t ccrc[2] = {0};
+    iso14443a_crc(data, len, ccrc);
+    return (memcmp(ccrc, crc, 2) == 0);
+}
