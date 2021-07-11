@@ -5016,6 +5016,7 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
                                       uint8_t cmodeid, uint8_t ccsetid, uint8_t schannid,
                                       uint8_t appid,
                                       int *securechannel,
+                                      DesfireCommunicationMode defcommmode,
                                       uint32_t *aid) {
 
     uint8_t keynum = defaultKeyNum;
@@ -5027,10 +5028,10 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
     uint8_t kdfInput[50] = {0};
     memcpy(kdfInput, defaultKdfInput, defaultKdfInputLen);
     int commmode = defaultCommMode;
+    if (defcommmode != DCMNone)
+        commmode = defcommmode;
     int commset = defaultCommSet;
     int secchann = defaultSecureChannel;
-    if (securechannel)
-        secchann = *securechannel;
 
     if (keynoid) {
         keynum = arg_get_int_def(ctx, keynoid, keynum);
@@ -5081,11 +5082,11 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
     }
 
     if (schannid) {
-        
+
         if (CLIGetOptionList(arg_get_str(ctx, schannid), DesfireSecureChannelOpts, &secchann))
             return PM3_ESOFT;
     }
-    
+
     if (appid && aid) {
         *aid = 0x000000;
         int res = arg_get_u32_hexstr_def_nlen(ctx, appid, 0x000000, aid, 3, true);
@@ -5129,7 +5130,7 @@ static int CmdHF14ADesDefault(const char *Cmd) {
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 1, 2, 3, 4, 5, 6, 7, 8, 0, &securechann, NULL);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 1, 2, 3, 4, 5, 6, 7, 8, 0, &securechann, DCMNone, NULL);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -5190,9 +5191,9 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
 
     DesfireContext dctx;
-    int securechann = DCMEncrypted;
+    int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, &appid);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMEncrypted, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -5211,9 +5212,9 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (verbose) {
-       DesfirePrintContext(&dctx);
-       PrintAndLogEx(SUCCESS, "\nNew key settings:");
-       PrintKeySettings(ksett32, 0, (appid != 0x000000), false);
+        DesfirePrintContext(&dctx);
+        PrintAndLogEx(SUCCESS, "\nNew key settings:");
+        PrintKeySettings(ksett32, 0, (appid != 0x000000), false);
     }
 
     res = DesfireSelectAIDHex(&dctx, appid, false, 0);
@@ -5246,7 +5247,7 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Key settings " _GREEN_("changed"));
-    
+
     return PM3_SUCCESS;
 }
 
@@ -5272,15 +5273,15 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
 
     DesfireContext dctx;
-    int securechann = DCMPlain;
+    int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, &appid);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -5322,10 +5323,10 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
-    
+
     if (verbose)
         PrintAndLogEx(INFO, "DesfireGetKeySettings[%d]: %s", buflen, sprint_hex(buf, buflen));
-    
+
     if (buflen < 2) {
         PrintAndLogEx(ERR, "Command DesfireGetKeySettings returned wrong length: %d", buflen);
         DropField();
@@ -5342,7 +5343,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
         PrintAndLogEx(INFO, "max keysize: %d", buf[4]);
     if (buflen > 5)
         PrintAndLogEx(INFO, "app key settings: 0x%02x", buf[5]);
-    
+
     DropField();
     return PM3_SUCCESS;
 }
@@ -5367,14 +5368,14 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
 
     DesfireContext dctx;
-    int securechann = DCMPlain;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, &securechann, NULL);
+    int securechann = defaultSecureChannel;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, &securechann, DCMMACed, NULL);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -5393,7 +5394,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    res = DesfireAuthenticate(&dctx, securechann); //DACd40 DACEV1
+    res = DesfireAuthenticate(&dctx, securechann);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
         DropField();
@@ -5449,14 +5450,14 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
 
     DesfireContext dctx;
-    int securechann = DCMPlain;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, &securechann, NULL);
+    int securechann = defaultSecureChannel;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, &securechann, DCMMACed, NULL);
     if (res) {
         CLIParserFree(ctx);
         return res;
