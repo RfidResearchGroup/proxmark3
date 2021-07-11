@@ -118,10 +118,11 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
         }
     } else if (ctx->commMode == DCMEncrypted) {
         rlen = padded_data_length(srcdatalen + 4, desfire_get_key_block_length(ctx->keyType));
-        memcpy(data, srcdata, srcdatalen);
-        desfire_crc32_append(data, srcdatalen);
-        PrintAndLogEx(INFO, "decoded[%d]: %s", rlen, sprint_hex(data, rlen));
-        DesfireCryptoEncDec(ctx, true, data, rlen, dstdata, true);
+        data[0] = cmd;
+        memcpy(&data[1], srcdata, srcdatalen);
+        desfire_crc32_append(data, srcdatalen + 1);
+        
+        DesfireCryptoEncDec(ctx, true, &data[1], rlen, dstdata, true);
         
         *dstdatalen = rlen;
     } else {
