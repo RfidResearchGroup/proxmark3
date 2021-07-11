@@ -523,7 +523,7 @@ static void DesfireSplitBytesToBlock(uint8_t *blockdata, size_t *blockdatacount,
 
 int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
     int res = PM3_SUCCESS;
-    
+
     if (!PrintChannelModeWarning(cmd, ctx->secureChannel, ctx->cmdSet, ctx->commMode))
         DesfirePrintContext(ctx);
 
@@ -964,19 +964,19 @@ int DesfireChangeKeySettings(DesfireContext *dctx, uint8_t *data, size_t len) {
 }
 
 static void PrintKeyType(uint8_t keytype) {
-    switch(keytype) {
-    case 00:
-        PrintAndLogEx(SUCCESS, "Key: 2TDEA");
-        break;
-    case 01:
-        PrintAndLogEx(SUCCESS, "Key: 3TDEA");
-        break;
-    case 02:
-        PrintAndLogEx(SUCCESS, "Key: AES");
-        break;
-    default:
-        PrintAndLogEx(SUCCESS, "Key: unknown: 0x%02x", keytype);
-        break;
+    switch (keytype) {
+        case 00:
+            PrintAndLogEx(SUCCESS, "Key: 2TDEA");
+            break;
+        case 01:
+            PrintAndLogEx(SUCCESS, "Key: 3TDEA");
+            break;
+        case 02:
+            PrintAndLogEx(SUCCESS, "Key: AES");
+            break;
+        default:
+            PrintAndLogEx(SUCCESS, "Key: unknown: 0x%02x", keytype);
+            break;
     }
 }
 
@@ -1014,7 +1014,7 @@ static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print
                          );
             break;
     }
-    
+
     PrintAndLogEx(SUCCESS, "[%c...] AMK Configuration changeable   : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
     PrintAndLogEx(SUCCESS, "[.%c..] AMK required for create/delete : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? "NO" : "YES");
     PrintAndLogEx(SUCCESS, "[..%c.] Directory list access with AMK : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? "NO" : "YES");

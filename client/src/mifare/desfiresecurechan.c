@@ -101,7 +101,7 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
 static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
     uint8_t data[1024] = {0};
     size_t rlen = 0;
-    
+
     // we calc MAC anyway
     // if encypted channel and no data - we only calc MAC
     if (ctx->commMode == DCMPlain || ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && srcdatalen == 0)) {
@@ -121,9 +121,9 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
         data[0] = cmd;
         memcpy(&data[1], srcdata, srcdatalen);
         desfire_crc32_append(data, srcdatalen + 1);
-        
+
         DesfireCryptoEncDec(ctx, true, &data[1], rlen, dstdata, true);
-        
+
         *dstdatalen = rlen;
     } else {
         memcpy(dstdata, srcdata, srcdatalen);
@@ -256,38 +256,38 @@ bool PrintChannelModeWarning(uint8_t cmd, DesfireSecureChannel secureChannel, De
         PrintAndLogEx(WARNING, "Communication mode can't be NONE. command: %02x", cmd);
         return false;
     }
-    
+
     // no security set
     if (secureChannel == DACNone)
         return true;
-    
+
     bool found = false;
     for (int i = 0; i < ARRAY_LENGTH(AllowedChannelModes); i++)
         if (AllowedChannelModes[i].cmd == cmd) {
             // full compare
-            if (AllowedChannelModes[i].secureChannel == secureChannel && 
-                (AllowedChannelModes[i].cmdSet == cmdSet || (AllowedChannelModes[i].cmdSet == DCCNative && cmdSet == DCCNativeISO)) && 
-                AllowedChannelModes[i].commMode == commMode){
+            if (AllowedChannelModes[i].secureChannel == secureChannel &&
+                    (AllowedChannelModes[i].cmdSet == cmdSet || (AllowedChannelModes[i].cmdSet == DCCNative && cmdSet == DCCNativeISO)) &&
+                    AllowedChannelModes[i].commMode == commMode) {
 
                 found = true;
                 break;
             }
-            
+
             // ev1 plain and mac are the same
-            if (AllowedChannelModes[i].secureChannel == secureChannel && 
-                AllowedChannelModes[i].secureChannel == DACEV1 &&
-                (AllowedChannelModes[i].cmdSet == cmdSet || (AllowedChannelModes[i].cmdSet == DCCNative && cmdSet == DCCNativeISO)) && 
-                (commMode == DCMPlain || commMode == DCMMACed)){
+            if (AllowedChannelModes[i].secureChannel == secureChannel &&
+                    AllowedChannelModes[i].secureChannel == DACEV1 &&
+                    (AllowedChannelModes[i].cmdSet == cmdSet || (AllowedChannelModes[i].cmdSet == DCCNative && cmdSet == DCCNativeISO)) &&
+                    (commMode == DCMPlain || commMode == DCMMACed)) {
 
                 found = true;
                 break;
             }
-            
+
         }
-    
+
     if (!found)
         PrintAndLogEx(WARNING, "Wrong communication mode. Check settings. command: %02x", cmd);
-    
+
     return found;
 }
 
