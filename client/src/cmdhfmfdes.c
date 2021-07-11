@@ -5029,6 +5029,8 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
     int commmode = defaultCommMode;
     int commset = defaultCommSet;
     int secchann = defaultSecureChannel;
+    if (securechannel)
+        secchann = *securechannel;
 
     if (keynoid) {
         keynum = arg_get_int_def(ctx, keynoid, keynum);
@@ -5079,6 +5081,7 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
     }
 
     if (schannid) {
+        
         if (CLIGetOptionList(arg_get_str(ctx, schannid), DesfireSecureChannelOpts, &secchann))
             return PM3_ESOFT;
     }
@@ -5187,7 +5190,7 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
 
     DesfireContext dctx;
-    int securechann = DCMPlain;
+    int securechann = DCMEncrypted;
     uint32_t appid = 0x000000;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, &appid);
     if (res) {

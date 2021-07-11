@@ -46,6 +46,7 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_COMMIT_READER_ID,      DACd40,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,               DACd40,  DCCNative,    DCMEncrypted},
+    {MFDES_CHANGE_KEY_SETTINGS,   DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_READ_DATA,             DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_WRITE_DATA,            DACd40,  DCCNative,    DCMEncrypted},
 
@@ -56,6 +57,7 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_GET_KEY_SETTINGS,      DACEV1,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,               DACEV1,  DCCNative,    DCMEncrypted},
+    {MFDES_CHANGE_KEY_SETTINGS,   DACEV1,  DCCNative,    DCMEncrypted},
 };
 
 static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
@@ -74,10 +76,9 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
             if (srcdatalen == 0)
                 break;
 
-            rlen = padded_data_length(srcdatalen, desfire_get_key_block_length(ctx->keyType));
+            rlen = srcdatalen + DesfireGetMACLength(ctx);
             memcpy(data, srcdata, srcdatalen);
-            memset(ctx->IV, 0, sizeof(ctx->IV));
-            DesfireCryptoEncDec(ctx, true, data, rlen, NULL, true);
+            DesfireCryptoEncDec(ctx, true, data, srcdatalen, NULL, true);
             memcpy(dstdata, srcdata, srcdatalen);
             memcpy(&dstdata[srcdatalen], ctx->IV, 4);
             *dstdatalen = rlen;
@@ -89,7 +90,6 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
             rlen = padded_data_length(srcdatalen + 2, desfire_get_key_block_length(ctx->keyType)); // 2 - crc16
             memcpy(data, srcdata, srcdatalen);
             compute_crc(CRC_14443_A, data, srcdatalen, &data[srcdatalen], &data[srcdatalen + 1]);
-            memset(ctx->IV, 0, sizeof(ctx->IV));
             DesfireCryptoEncDec(ctx, true, data, rlen, dstdata, true);
             *dstdatalen = rlen;
             break;
@@ -100,7 +100,8 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
 
 static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
     uint8_t data[1024] = {0};
-
+    size_t rlen = 0;
+    
     // we calc MAC anyway
     // if encypted channel and no data - we only calc MAC
     if (ctx->commMode == DCMPlain || ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && srcdatalen == 0)) {
@@ -110,14 +111,19 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
         DesfireCryptoCMAC(ctx, data, srcdatalen + 1, cmac);
 
         memcpy(dstdata, srcdata, srcdatalen);
+        *dstdatalen = srcdatalen;
         if (srcdatalen != 0 && ctx->commMode == DCMMACed) {
             memcpy(&dstdata[srcdatalen], cmac, DesfireGetMACLength(ctx));
             *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
         }
     } else if (ctx->commMode == DCMEncrypted) {
-
-
-
+        rlen = padded_data_length(srcdatalen + 4, desfire_get_key_block_length(ctx->keyType));
+        memcpy(data, srcdata, srcdatalen);
+        desfire_crc32_append(data, srcdatalen);
+        PrintAndLogEx(INFO, "decoded[%d]: %s", rlen, sprint_hex(data, rlen));
+        DesfireCryptoEncDec(ctx, true, data, rlen, dstdata, true);
+        
+        *dstdatalen = rlen;
     } else {
         memcpy(dstdata, srcdata, srcdatalen);
         *dstdatalen = srcdatalen;
