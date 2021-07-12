@@ -5205,6 +5205,7 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
         return PM3_ESOFT;
     if (res == 2) {
         PrintAndLogEx(ERR, "Key settings must have 1 byte length");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
