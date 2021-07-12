@@ -5403,7 +5403,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
         PrintAndLogEx(INFO, "DesfireGetKeySettings[%zu]: %s", buflen, sprint_hex(buf, buflen));
 
     if (buflen < 2) {
-        PrintAndLogEx(ERR, "Command DesfireGetKeySettings returned wrong length: %d", buflen);
+        PrintAndLogEx(ERR, "Command DesfireGetKeySettings returned wrong length: %zu", buflen);
         DropField();
         return PM3_ESOFT;
     }
