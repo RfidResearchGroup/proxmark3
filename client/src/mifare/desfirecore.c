@@ -225,7 +225,7 @@ void DesfirePrintContext(DesfireContext *ctx) {
                       sprint_hex(ctx->sessionKeyMAC, desfire_get_key_length(ctx->keyType)));
         PrintAndLogEx(INFO, "    ENC: %s",
                       sprint_hex(ctx->sessionKeyEnc, desfire_get_key_length(ctx->keyType)));
-        PrintAndLogEx(INFO, "    IV [%d]: %s",
+        PrintAndLogEx(INFO, "    IV [%zu]: %s",
                       desfire_get_key_block_length(ctx->keyType),
                       sprint_hex(ctx->IV, desfire_get_key_block_length(ctx->keyType)));
 
