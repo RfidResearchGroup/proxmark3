@@ -1518,6 +1518,7 @@ static int handler_desfire_getkeysettings(uint8_t *key_settings, uint8_t *num_ke
     return res;
 }
 
+/*
 static int handler_desfire_getuid(uint8_t *uid) {
     if (uid == NULL) {
         PrintAndLogEx(DEBUG, "UID=NULL");
@@ -1552,6 +1553,7 @@ static int handler_desfire_getuid(uint8_t *uid) {
 
     return res;
 }
+*/
 
 static int handler_desfire_commit_transaction(void) {
     sAPDU apdu = {0x90, MFDES_COMMIT_TRANSACTION, 0x00, 0x00, 0x00, NULL}; //0xC7
@@ -2310,6 +2312,7 @@ static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, 
     return error;
 }
 
+/*
 static int CmdHF14ADesGetUID(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes getuid",
@@ -2352,6 +2355,7 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "    UID: " _GREEN_("%s"), sprint_hex(uid, uidlen));
     return res;
 }
+*/
 
 static int CmdHF14ADesSelectApp(const char *Cmd) {
     CLIParserContext *ctx;
@@ -5162,6 +5166,64 @@ static int CmdHF14ADesDefault(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14ADesGetUID(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes getuid",
+                  "Get UID from card. Get the real UID if the random UID bit is on and get the same UID as in anticollision if not. Master key needs to be provided. ",
+                  "hf mfdes getuid -> execute with default factory setup");
+ 
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, &securechann, DCMEncrypted, NULL);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t buflen = 0;
+
+    res = DesfireGetUID(&dctx, buf, &buflen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire DesfireGetUID command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(SUCCESS, "Desfire UID[%d]: %s", buflen, sprint_hex(buf, buflen));
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesChKeySettings(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes chkeysetings",
@@ -5575,7 +5637,7 @@ static command_t CommandTable[] = {
     {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "Check keys"},
     {"enum",             CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
     {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
-    {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get random uid"},
+    {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "[new]Get uid from card"},
     {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
     {"list",             CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
 //    {"ndefread",             CmdHF14aDesNDEFRead,             IfPm3Iso14443a,  "Prints NDEF records from card"},
@@ -5624,10 +5686,7 @@ int CmdHFMFDes(const char *Cmd) {
 
     Native Cmds
     -----------
-    ChangeKeySettings 0x5F
     SetConfiguration
-    GetISOFileIDs
-    GetCardUID
     ChangeFileSettings
 
     ISO/IEC 7816 Cmds
