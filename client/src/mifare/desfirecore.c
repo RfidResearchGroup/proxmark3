@@ -967,9 +967,9 @@ int DesfireGetKeySettings(DesfireContext *dctx, uint8_t *resp, size_t *resplen) 
     return PM3_SUCCESS;
 }
 
-int DesfireGetKeyVersion(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
+int DesfireGetKeyVersion(DesfireContext *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen) {
     uint8_t respcode = 0xff;
-    int res = DesfireExchange(dctx, MFDES_GET_KEY_VERSION, NULL, 0, &respcode, resp, resplen);
+    int res = DesfireExchange(dctx, MFDES_GET_KEY_VERSION, data, len, &respcode, resp, resplen);
     if (res != PM3_SUCCESS)
         return res;
     if (respcode != MFDES_S_OPERATION_OK)
