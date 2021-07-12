@@ -5235,6 +5235,7 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Key settings " _GREEN_("changed"));
 
+    DropField();
     return PM3_SUCCESS;
 }
 
@@ -5342,6 +5343,7 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
         PrintAndLogEx(INFO, "No key versions returned.");
     }
     
+    DropField();
     return PM3_SUCCESS;
 }
 
