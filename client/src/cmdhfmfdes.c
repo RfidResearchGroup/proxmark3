@@ -5168,10 +5168,10 @@ static int CmdHF14ADesDefault(const char *Cmd) {
 
 static int CmdHF14ADesGetUID(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes getaids",
-                  "Get Application IDs list from card. Master key needs to be provided.",
-                  "hf mfdes getaids -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup");
-
+    CLIParserInit(&ctx, "hf mfdes getuid",
+                  "Get UID from card. Get the real UID if the random UID bit is on and get the same UID as in anticollision if not. Master key needs to be provided. ",
+                  "hf mfdes getuid -> execute with default factory setup");
+ 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "show APDU requests and responses"),
