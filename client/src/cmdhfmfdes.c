@@ -5342,7 +5342,7 @@ static int CmdHF14ADesGetFreeMem(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Free memory 0x%06x, %d bytes", freemem, freemem);
+    PrintAndLogEx(SUCCESS, "Free memory [0x%06x] %d bytes", freemem, freemem);
 
     DropField();
     return PM3_SUCCESS;
