@@ -118,7 +118,7 @@ size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint
             break;
     crcpos++; // crc may be 0x00000000 or 0x0000
     if (crcpos < crclen) {
-        PrintAndLogEx(WARNING, "No space for crc. pos: %d", crcpos);
+        PrintAndLogEx(WARNING, "No space for crc. pos: %zu", crcpos);
         return 0;
     }
 

@@ -5205,6 +5205,7 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
         return PM3_ESOFT;
     if (res == 2) {
         PrintAndLogEx(ERR, "Key settings must have 1 byte length");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -5325,7 +5326,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
     }
 
     if (verbose)
-        PrintAndLogEx(INFO, "DesfireGetKeySettings[%d]: %s", buflen, sprint_hex(buf, buflen));
+        PrintAndLogEx(INFO, "DesfireGetKeySettings[%zu]: %s", buflen, sprint_hex(buf, buflen));
 
     if (buflen < 2) {
         PrintAndLogEx(ERR, "Command DesfireGetKeySettings returned wrong length: %d", buflen);
@@ -5504,7 +5505,7 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
     if (buflen > 0) {
         PrintAndLogEx(INFO, "----------------------- " _CYAN_("File list") " -----------------------");
         for (int i = 0; i < buflen; i++)
-            PrintAndLogEx(INFO, "AID: %06x ISO file id: %02x%02x ISO DF name[%" PRIu32 "]: %s",
+            PrintAndLogEx(INFO, "AID: %06x ISO file id: %02x%02x ISO DF name[%zu]: %s",
                           DesfireAIDByteToUint(&buf[i * 24 + 1]),
                           buf[i * 24 + 1 + 3], buf[i * 24 + 1 + 4],
                           strlen((char *)&buf[i * 24 + 1 + 5]),
