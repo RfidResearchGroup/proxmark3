@@ -5242,8 +5242,9 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes getkeyversions",
                   "Get key versions for card level or application level.",
-                  "hf mfdes getkeyversions  -> get picc key settings with default key/channel setup\n"\
-                  "hf mfdes getkeyversions --aid 123456 -> get app 123456 key settings with default key/channel setup");
+                  "--keynum parameter: App level: key number. PICC level: 00..0d - keys count, 21..23 vc keys, default 0x00.\n"\
+                  "hf mfdes getkeyversions --keynum 00 -> get picc master key version with default key/channel setup\n"\
+                  "hf mfdes getkeyversions --aid 123456 --keynum 0d -> get app 123456 all key versions with default key/channel setup");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5258,7 +5259,7 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
-        arg_str0(NULL, "keynum",  "<key number HEX>", "Key number (HEX 1 byte). App level: 00..0d - key num, 21..23 vc keys. PICC level: key number, default 0x00."),
+        arg_str0(NULL, "keynum",  "<key number HEX>", "Key number/count (HEX 1 byte). Default 0x00."),
         arg_str0(NULL, "keyset",  "<keyset num HEX>", "Keyset number (HEX 1 byte)"),
         arg_param_end
     };
