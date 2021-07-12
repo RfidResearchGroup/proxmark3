@@ -5326,7 +5326,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
     }
 
     if (verbose)
-        PrintAndLogEx(INFO, "DesfireGetKeySettings[%d]: %s", buflen, sprint_hex(buf, buflen));
+        PrintAndLogEx(INFO, "DesfireGetKeySettings[%zu]: %s", buflen, sprint_hex(buf, buflen));
 
     if (buflen < 2) {
         PrintAndLogEx(ERR, "Command DesfireGetKeySettings returned wrong length: %d", buflen);
