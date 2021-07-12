@@ -901,6 +901,18 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     return PM3_SUCCESS;
 }
 
+int DesfireFormatPICC(DesfireContext *dctx) {
+    uint8_t respcode = 0xff;
+    uint8_t resp[257] = {0};
+    size_t resplen = 0;
+    int res = DesfireExchange(dctx, MFDES_GET_UID, NULL, 0, &respcode, resp, &resplen);
+    if (res != PM3_SUCCESS)
+        return res;
+    if (respcode != MFDES_S_OPERATION_OK || resplen != 0)
+        return PM3_EAPDU_FAIL;
+    return PM3_SUCCESS;
+}
+
 int DesfireGetUID(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
     uint8_t respcode = 0xff;
     int res = DesfireExchange(dctx, MFDES_GET_UID, NULL, 0, &respcode, resp, resplen);
