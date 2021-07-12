@@ -602,6 +602,32 @@ int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uin
     return DesfireSelectAID(ctx, data, (select_two) ? &data[3] : NULL);
 }
 
+int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose) {
+    if (verbose)
+        DesfirePrintContext(dctx);
+
+    int res = DesfireSelectAIDHex(dctx, aid, false, 0);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+        return PM3_ESOFT;
+    }
+
+    res = DesfireAuthenticate(dctx, secureChannel);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
+        return PM3_ESOFT;
+    }
+
+    if (DesfireIsAuthenticated(dctx)) {
+        if (verbose)
+            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
+    } else {
+        return PM3_ESOFT;
+    }
+    
+    return PM3_SUCCESS;
+}
+
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel) {
     // 3 different way to authenticate   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
     // 4 different crypto arg1   DES, 3DES, 3K3DES, AES

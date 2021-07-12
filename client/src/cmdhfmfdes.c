@@ -5213,30 +5213,14 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (verbose) {
-        DesfirePrintContext(&dctx);
         PrintAndLogEx(SUCCESS, "\nNew key settings:");
         PrintKeySettings(ksett32, 0, (appid != 0x000000), false);
     }
 
-    res = DesfireSelectAIDHex(&dctx, appid, false, 0);
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
         DropField();
-        return PM3_ESOFT;
-    }
-
-    res = DesfireAuthenticate(&dctx, securechann);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (DesfireIsAuthenticated(&dctx)) {
-        if (verbose)
-            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
-    } else {
-        return PM3_ESOFT;
+        return res;
     }
 
     uint8_t keysett = ksett32 & 0x0f;
@@ -5249,6 +5233,11 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Key settings " _GREEN_("changed"));
 
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
+    
     return PM3_SUCCESS;
 }
 
@@ -5291,28 +5280,10 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (verbose)
-        DesfirePrintContext(&dctx);
-
-    res = DesfireSelectAIDHex(&dctx, appid, false, 0);
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
         DropField();
-        return PM3_ESOFT;
-    }
-
-    res = DesfireAuthenticate(&dctx, securechann);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (DesfireIsAuthenticated(&dctx)) {
-        if (verbose)
-            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
-    } else {
-        return PM3_ESOFT;
+        return res;
     }
 
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -5385,28 +5356,10 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (verbose)
-        DesfirePrintContext(&dctx);
-
-    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
         DropField();
-        return PM3_ESOFT;
-    }
-
-    res = DesfireAuthenticate(&dctx, securechann);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (DesfireIsAuthenticated(&dctx)) {
-        if (verbose)
-            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
-    } else {
-        return PM3_ESOFT;
+        return res;
     }
 
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -5470,25 +5423,10 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
     if (verbose)
         DesfirePrintContext(&dctx);
 
-    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
         DropField();
-        return PM3_ESOFT;
-    }
-
-    res = DesfireAuthenticate(&dctx, securechann);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (DesfireIsAuthenticated(&dctx)) {
-        if (verbose)
-            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
-    } else {
-        return PM3_ESOFT;
+        return res;
     }
 
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -5540,6 +5478,7 @@ static command_t CommandTable[] = {
     {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
     {"chkeysetings",     CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "[new]Change Key Settings"},
     {"getkeysetings",    CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "[new]Get Key Settings"},
+    {"getkeyversions",   CmdHF14ADesGetKeyVersions,   IfPm3Iso14443a,  "[new]Get Key Versions"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Applications") " -------------------"},
     {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
     {"createaid",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},
