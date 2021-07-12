@@ -905,7 +905,7 @@ int DesfireFormatPICC(DesfireContext *dctx) {
     uint8_t respcode = 0xff;
     uint8_t resp[257] = {0};
     size_t resplen = 0;
-    int res = DesfireExchange(dctx, MFDES_GET_UID, NULL, 0, &respcode, resp, &resplen);
+    int res = DesfireExchange(dctx, MFDES_FORMAT_PICC, NULL, 0, &respcode, resp, &resplen);
     if (res != PM3_SUCCESS)
         return res;
     if (respcode != MFDES_S_OPERATION_OK || resplen != 0)
