@@ -29,6 +29,7 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_GET_APPLICATION_IDS,   DACd40,  DCCNative,    DCMPlain},
     {MFDES_GET_DF_NAMES,          DACd40,  DCCNative,    DCMPlain},
     {MFDES_GET_KEY_SETTINGS,      DACd40,  DCCNative,    DCMPlain},
+    {MFDES_GET_KEY_VERSION,       DACd40,  DCCNative,    DCMPlain},
 
     {MFDES_READ_DATA,             DACd40,  DCCNative,    DCMMACed},
     {MFDES_WRITE_DATA,            DACd40,  DCCNative,    DCMMACed},
@@ -49,6 +50,8 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_CHANGE_KEY_SETTINGS,   DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_READ_DATA,             DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_WRITE_DATA,            DACd40,  DCCNative,    DCMEncrypted},
+
+    {MFDES_GET_KEY_VERSION,       DACEV1,  DCCNative,    DCMPlain},
 
     {MFDES_CREATE_APPLICATION,    DACEV1,  DCCNative,    DCMMACed},
     {MFDES_DELETE_APPLICATION,    DACEV1,  DCCNative,    DCMMACed},

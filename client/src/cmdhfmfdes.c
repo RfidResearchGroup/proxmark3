@@ -5201,8 +5201,10 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
 
     uint32_t ksett32 = 0;
     res = arg_get_u32_hexstr_def_nlen(ctx, 12, 0x000000, &ksett32, 1, false);
-    if (res == 0)
+    if (res == 0) {
+        CLIParserFree(ctx);
         return PM3_ESOFT;
+    }
     if (res == 2) {
         PrintAndLogEx(ERR, "Key settings must have 1 byte length");
         CLIParserFree(ctx);
@@ -5213,30 +5215,14 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (verbose) {
-        DesfirePrintContext(&dctx);
         PrintAndLogEx(SUCCESS, "\nNew key settings:");
         PrintKeySettings(ksett32, 0, (appid != 0x000000), false);
     }
 
-    res = DesfireSelectAIDHex(&dctx, appid, false, 0);
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
         DropField();
-        return PM3_ESOFT;
-    }
-
-    res = DesfireAuthenticate(&dctx, securechann);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (DesfireIsAuthenticated(&dctx)) {
-        if (verbose)
-            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
-    } else {
-        return PM3_ESOFT;
+        return res;
     }
 
     uint8_t keysett = ksett32 & 0x0f;
@@ -5249,6 +5235,115 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Key settings " _GREEN_("changed"));
 
+    DropField();
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes getkeyversions",
+                  "Get key versions for card level or application level.",
+                  "--keynum parameter: App level: key number. PICC level: 00..0d - keys count, 21..23 vc keys, default 0x00.\n"\
+                  "hf mfdes getkeyversions --keynum 00 -> get picc master key version with default key/channel setup\n"\
+                  "hf mfdes getkeyversions --aid 123456 --keynum 0d -> get app 123456 all key versions with default key/channel setup");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number for authentication"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "keynum",  "<key number HEX>", "Key number/count (HEX 1 byte). Default 0x00."),
+        arg_str0(NULL, "keyset",  "<keyset num HEX>", "Keyset number (HEX 1 byte)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid); // DCMMACed
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    uint32_t keynum32 = 0x00;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 0x00, &keynum32, 1, false);
+    if (res == 0) {
+        keynum32 = 0x00;
+    }
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Key number must have 1 byte length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t keysetnum32 = 0x00;
+    bool keysetpresent = true;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 13, 0x00, &keysetnum32, 1, false);
+    if (res == 0) {
+        keysetpresent = false;
+    }
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Keyset number must have 1 byte length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    if (keysetpresent && appid == 0x000000) {
+        PrintAndLogEx(WARNING, "Keyset only at Application level");
+        keysetpresent = false;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t buflen = 0;
+    
+    uint8_t data[2] = {0};
+    data[0] = keynum32 & 0xff;
+    if (keysetpresent) {
+        data[0] |= 0x40;
+        data[1] = keysetnum32 & 0xff;
+    }
+
+    res = DesfireGetKeyVersion(&dctx, data, (keysetpresent) ? 2 : 1, buf, &buflen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire DesfireGetKeyVersion command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (verbose)
+        PrintAndLogEx(INFO, "DesfireGetKeyVersion[%zu]: %s", buflen, sprint_hex(buf, buflen));
+
+    if (buflen > 0) {
+        PrintAndLogEx(INFO, "----------------------- " _CYAN_("Key Versions") " -----------------------");
+        for (int i = 0; i < buflen; i++)
+            PrintAndLogEx(INFO, "Key 0x%02x version 0x%02x", i, buf[i]);
+    } else {
+        PrintAndLogEx(INFO, "No key versions returned.");
+    }
+    
+    DropField();
     return PM3_SUCCESS;
 }
 
@@ -5291,28 +5386,10 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (verbose)
-        DesfirePrintContext(&dctx);
-
-    res = DesfireSelectAIDHex(&dctx, appid, false, 0);
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
         DropField();
-        return PM3_ESOFT;
-    }
-
-    res = DesfireAuthenticate(&dctx, securechann);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (DesfireIsAuthenticated(&dctx)) {
-        if (verbose)
-            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
-    } else {
-        return PM3_ESOFT;
+        return res;
     }
 
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -5329,7 +5406,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
         PrintAndLogEx(INFO, "DesfireGetKeySettings[%zu]: %s", buflen, sprint_hex(buf, buflen));
 
     if (buflen < 2) {
-        PrintAndLogEx(ERR, "Command DesfireGetKeySettings returned wrong length: %d", buflen);
+        PrintAndLogEx(ERR, "Command DesfireGetKeySettings returned wrong length: %zu", buflen);
         DropField();
         return PM3_ESOFT;
     }
@@ -5385,28 +5462,10 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (verbose)
-        DesfirePrintContext(&dctx);
-
-    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
         DropField();
-        return PM3_ESOFT;
-    }
-
-    res = DesfireAuthenticate(&dctx, securechann);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (DesfireIsAuthenticated(&dctx)) {
-        if (verbose)
-            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
-    } else {
-        return PM3_ESOFT;
+        return res;
     }
 
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -5470,25 +5529,10 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
     if (verbose)
         DesfirePrintContext(&dctx);
 
-    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
         DropField();
-        return PM3_ESOFT;
-    }
-
-    res = DesfireAuthenticate(&dctx, securechann);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (DesfireIsAuthenticated(&dctx)) {
-        if (verbose)
-            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
-    } else {
-        return PM3_ESOFT;
+        return res;
     }
 
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -5540,6 +5584,7 @@ static command_t CommandTable[] = {
     {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
     {"chkeysetings",     CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "[new]Change Key Settings"},
     {"getkeysetings",    CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "[new]Get Key Settings"},
+    {"getkeyversions",   CmdHF14ADesGetKeyVersions,   IfPm3Iso14443a,  "[new]Get Key Versions"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Applications") " -------------------"},
     {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
     {"createaid",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},
