@@ -5242,6 +5242,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
         arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID of delegated application (3 hex bytes, big endian)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -5251,7 +5252,8 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, &securechann, DCMMACed, NULL);
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -5260,7 +5262,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
@@ -5761,7 +5763,7 @@ static command_t CommandTable[] = {
     {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "Check keys"},
     {"enum",             CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
     {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "[new]Format PICC"},
-    {"getfreemem",       CmdHF14ADesGetFreeMem,       IfPm3Iso14443a,  "[new]Get free memory size"},
+    {"freemem",          CmdHF14ADesGetFreeMem,       IfPm3Iso14443a,  "[new]Get free memory size"},
     {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "[new]Get uid from card"},
     {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
     {"list",             CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
