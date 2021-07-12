@@ -5686,10 +5686,7 @@ int CmdHFMFDes(const char *Cmd) {
 
     Native Cmds
     -----------
-    ChangeKeySettings 0x5F
     SetConfiguration
-    GetISOFileIDs
-    GetCardUID
     ChangeFileSettings
 
     ISO/IEC 7816 Cmds
