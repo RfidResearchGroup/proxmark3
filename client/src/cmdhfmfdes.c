@@ -5082,11 +5082,11 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
         arg_str0(NULL, "rawdata", "<rawdata hex>", "Rawdata that sends to command"),
-        arg_str0(NULL, "aid",     "<app id hex>", "Application ID of delegated application (3 hex bytes, big endian)"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID for create. Mandatory. (3 hex bytes, big endian)"),
         arg_str0(NULL, "fid",     "<file id hex>", "ISO file ID. Forbidden values: 0000 3F00, 3FFF, FFFF. (2 hex bytes, big endian). If specified - enable iso file id over all the files in the app."),
         arg_str0(NULL, "dfname",  "<df name str>", "ISO DF Name 1..16 chars string"),
-        arg_str0(NULL, "ks1",     "<key settings HEX>", "Key settings 1 (HEX 1 byte). Application Master Key Settings. default 0x2e"),
-        arg_str0(NULL, "ks2",     "<key settings HEX>", "Key settings 2 (HEX 1 byte). default 0x0f"),
+        arg_str0(NULL, "ks1",     "<key settings HEX>", "Key settings 1 (HEX 1 byte). Application Master Key Settings. default 0x2f"),
+        arg_str0(NULL, "ks2",     "<key settings HEX>", "Key settings 2 (HEX 1 byte). default 0x0e"),
         arg_str0(NULL, "dstalgo", "<DES/2TDEA/3TDEA/AES>",  "Application key crypt algo: DES, 2TDEA, 3TDEA, AES. default DES"),
         arg_int0(NULL, "numkeys", "<number of keys>",  "Keys count. 0x00..0x0e. default 0x0e"),
         arg_param_end
@@ -5105,21 +5105,111 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         return res;
     }
 
+    uint8_t rawdata[250] = {0};
+    int rawdatalen = sizeof(rawdata);
+    CLIGetHexWithReturn(ctx, 11, rawdata, &rawdatalen);
+
+    uint32_t fileid = 0x0000;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 13, 0x0000, &fileid, 2, true);
+    bool fileidpresent = (res == 1);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "ISO file ID must have 2 bytes length");
+        return PM3_EINVARG;
+    }
+    
+    uint8_t dfname[250] = {0};
+    int dfnamelen = 16;
+    CLIGetStrWithReturn(ctx, 14, dfname, &dfnamelen);
+    
+    uint32_t ks1 = 0x2f;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 15, 0x2f, &ks1, 1, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Key settings 1 must have 1 byte length");
+        return PM3_EINVARG;
+    }
+
+    uint32_t ks2 = 0x0e;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 16, 0x0e, &ks2, 1, true);
+    bool ks2present = (res == 1);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Key settings 2 must have 1 byte length");
+        return PM3_EINVARG;
+    }
+    
+    int dstalgo = T_DES;
+    if (CLIGetOptionList(arg_get_str(ctx, 17), DesfireAlgoOpts, &dstalgo))
+        return PM3_ESOFT;
+    
+    int keycount = arg_get_int_def(ctx, 18, 0x0e);
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
     
     if (appid == 0x000000) {
-        PrintAndLogEx(WARNING, "Creating the root aid (0x000000) is " _RED_("forbidden"));
+        PrintAndLogEx(ERR, "Creating the root aid (0x000000) is " _RED_("forbidden"));
         return PM3_ESOFT;
     }
 
-    res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
+    if ((fileidpresent || (ks2 & 0x20) != 0) &&  fileid == 0x0000) {
+        PrintAndLogEx(ERR, "Creating the application with ISO file ID 0x0000 is " _RED_("forbidden"));
+        return PM3_ESOFT;
+    }
+
+    if (keycount > 0x0e || keycount < 1) {
+        PrintAndLogEx(ERR, "Key count must be in the range 0x01..0x0e");
+        return PM3_ESOFT;
+    }
+
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
+    
+    uint8_t data[250] = {0};
+    size_t datalen = 0;
+    if (rawdatalen > 0) {
+        memcpy(data, rawdata, rawdatalen);
+        datalen = rawdatalen;
+    } else {
+        DesfireAIDUintToByte(appid, &data[0]);
+        data[3] = ks1 & 0xff;
+        data[4] = ks2 & 0xff;
+        
+        if (!ks2present) {
+            if (keycount > 0) {
+                //data[4] keycount
+            }
+            //data[4] dstalgo
+        }
+        
+        
+        datalen = 5;
+        if (fileidpresent || (data[4] & 0x20) != 0) {
+            data[5] = fileid & 0xff;
+            data[6] = (fileid >> 8) & 0xff;
+            data[4] |= 0x20; // set bit FileID in the ks2
+            memcpy(&data[7], dfname, dfnamelen);            
+            datalen = 7 + 16;
+        }
+    }
 
-    res = DesfireCreateApplication(&dctx, appid);
+    if (verbose) {
+        PrintAndLogEx(INFO, "---------------------------");
+        PrintAndLogEx(INFO, _CYAN_("Creating Application using:"));
+        PrintAndLogEx(INFO, "AID          0x%02X%02X%02X", data[2], data[1], data[0]);
+        PrintAndLogEx(INFO, "Key Set 1    0x%02X", data[3]);
+        PrintAndLogEx(INFO, "Key Set 2    0x%02X", data[4]);
+        PrintAndLogEx(INFO, "ISO file ID  %s", (data[4] & 0x20) ? "enabled" : "disabled");
+        if ((data[4] & 0x20)) {
+            PrintAndLogEx(INFO, "FID           0x%02x%02x", data[5], data[6]);
+            PrintAndLogEx(INFO, "DF Name[%02d]  %s\n", strnlen((char *)&data[7], 16), (char *)&data[7]);
+        }
+        PrintKeySettings(data[3], data[4], true, true);
+        PrintAndLogEx(INFO, "---------------------------");
+    }
+
+    res = DesfireCreateApplication(&dctx, data, datalen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire CreateApplication command " _RED_("error") ". Result: %d", res);
         DropField();
@@ -5894,9 +5984,6 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
-
-    if (verbose)
-        DesfirePrintContext(&dctx);
 
     res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
     if (res != PM3_SUCCESS) {

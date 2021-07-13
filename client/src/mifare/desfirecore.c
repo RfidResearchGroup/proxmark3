@@ -1049,6 +1049,9 @@ static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print
     if (print2ndbyte) {
         PrintKeyType(numkeys >> 6);
         PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
+        if (numkeys & 0x20)
+            PrintAndLogEx(SUCCESS, "iso file id: enabled");
+        PrintAndLogEx(SUCCESS, "");
     }
 }
 
