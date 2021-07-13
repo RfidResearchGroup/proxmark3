@@ -988,6 +988,15 @@ int DesfireChangeKeySettings(DesfireContext *dctx, uint8_t *data, size_t len) {
     return DesfireCommandTxData(dctx, MFDES_CHANGE_KEY_SETTINGS, data, len);
 }
 
+uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType) {
+    switch(keyType) {
+    case T_DES: return 0x00;
+    case T_3DES: return 0x00;
+    case T_3K3DES: return 0x01;
+    case T_AES: return 0x02;
+    }
+    return 0;
+}
 static void PrintKeyType(uint8_t keytype) {
     switch (keytype) {
         case 00:

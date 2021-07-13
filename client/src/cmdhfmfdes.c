@@ -5034,7 +5034,7 @@ static int CmdHF14ADesDefault(const char *Cmd) {
 
 static int CmdHF14ADesCreateApp(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes createid",
+    CLIParserInit(&ctx, "hf mfdes createaid",
                   "Create application. Master key needs to be provided.",
                   "option rawdata have priority over the rest settings, and options ks1 and ks2 have priority over corresponded key settings\n"
                   "\n"\
@@ -5065,9 +5065,9 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
                   "       6E = with FID, 3TDEA, 14 keys\n"\
                   "       AE = with FID, AES, 14 keys\n"\
                   "\n"\
-                  "hf mfdes createid --rawdata 123456 -> execute create by rawdata\n"\
-                  "hf mfdes createid --aid 123456 --fid 2345 --dfname aid123456 -> app aid, iso file id, and iso df name is specified\n"
-                  "hf mfdes createid --aid 123456 --fid 2345 --dfname aid123456 --dstalgo aes -> with algorithm for key AES");
+                  "hf mfdes createaid --rawdata 123456 -> execute create by rawdata\n"\
+                  "hf mfdes createaid --aid 123456 --fid 2345 --dfname aid123456 -> app aid, iso file id, and iso df name is specified\n"
+                  "hf mfdes createaid --aid 123456 --fid 2345 --dfname aid123456 --dstalgo aes -> with algorithm for key AES");
  
     void *argtable[] = {
         arg_param_begin,
@@ -5156,8 +5156,13 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     }
 
     if (keycount > 0x0e || keycount < 1) {
-        PrintAndLogEx(ERR, "Key count must be in the range 0x01..0x0e");
+        PrintAndLogEx(ERR, "Key count must be in the range 1..14");
         return PM3_ESOFT;
+    }
+    
+    if (dfnamelen > 16) {
+        PrintAndLogEx(ERR, "DF name must be a maximum of 16 bytes in length");
+        return PM3_EINVARG;
     }
 
     res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
@@ -5178,11 +5183,13 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         
         if (!ks2present) {
             if (keycount > 0) {
-                //data[4] keycount
+                data[4] &= 0xf0;
+                data[4] |= keycount & 0x0f;
             }
-            //data[4] dstalgo
-        }
-        
+            uint8_t kt = DesfireKeyAlgoToType(dstalgo);
+            data[4] &= 0x3f;
+            data[4] |= (kt & 0x03) << 6;
+        }        
         
         datalen = 5;
         if (fileidpresent || (data[4] & 0x20) != 0) {
@@ -5190,7 +5197,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
             data[6] = (fileid >> 8) & 0xff;
             data[4] |= 0x20; // set bit FileID in the ks2
             memcpy(&data[7], dfname, dfnamelen);            
-            datalen = 7 + 16;
+            datalen = 7 + dfnamelen;
         }
     }
 
