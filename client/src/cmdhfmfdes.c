@@ -1518,43 +1518,6 @@ static int handler_desfire_getkeysettings(uint8_t *key_settings, uint8_t *num_ke
     return res;
 }
 
-/*
-static int handler_desfire_getuid(uint8_t *uid) {
-    if (uid == NULL) {
-        PrintAndLogEx(DEBUG, "UID=NULL");
-        return PM3_EINVARG;
-    }
-    sAPDU apdu = {0x90, MFDES_GET_UID, 0x00, 0x00, 0x00, NULL}; //0x51
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-
-    // Setup the pre-process to update the IV etc. (not needed in the apdu to send to card)
-    size_t plen = 1;
-    uint8_t tmp_data[100] = { 0x00 }; // Note sure on size, but 100 is more then enough
-    tmp_data[0] = MFDES_GET_UID;
-    int8_t *p = mifare_cryto_preprocess_data(tag, tmp_data, &plen, 0, MDCM_PLAIN | CMAC_COMMAND);
-    (void)p;
-
-    // Send request/apdu
-    int res = send_desfire_cmd(&apdu, false, uid, &recv_len, &sw, 0, true);
-
-    if (res != PM3_SUCCESS)
-        return res;
-
-    if (sw != status(MFDES_S_OPERATION_OK))
-        return PM3_ESOFT;
-
-    // decrypt response
-    size_t dlen = recv_len;
-    p = mifare_cryto_postprocess_data(tag, uid, &dlen, CMAC_COMMAND | CMAC_VERIFY | MAC_VERIFY | MDCM_ENCIPHERED);
-    (void)p;
-
-    DropFieldDesfire();
-
-    return res;
-}
-*/
-
 static int handler_desfire_commit_transaction(void) {
     sAPDU apdu = {0x90, MFDES_COMMIT_TRANSACTION, 0x00, 0x00, 0x00, NULL}; //0xC7
     uint32_t recv_len = 0;
@@ -1764,21 +1727,6 @@ static int handler_desfire_createapp(aidhdr_t *aidhdr, bool usename, bool usefid
     }
     return res;
 }
-/*
-static int handler_desfire_deleteapp(const uint8_t *aid) {
-    if (aid == NULL) {
-        return PM3_EINVARG;
-    }
-    sAPDU apdu = {0x90, MFDES_DELETE_APPLICATION, 0x00, 0x00, 3, (uint8_t *)aid}; // 0xDA
-    uint16_t sw = 0;
-    uint32_t recvlen = 0;
-    int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't delete aid -> %s"), DesfireGetErrorString(res, &sw));
-        DropFieldDesfire();
-    }
-    return res;
-}*/
 
 static int handler_desfire_credit(mfdes_value_t *value, uint8_t cs) {
     sAPDU apdu = {0x90, MFDES_CREDIT, 0x00, 0x00, 1 + 4, (uint8_t *)value}; // 0x0C
@@ -2312,51 +2260,6 @@ static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, 
     return error;
 }
 
-/*
-static int CmdHF14ADesGetUID(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes getuid",
-                  "Get UID from a MIFARE DESfire tag",
-                  "hf mfdes getuid");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
-    uint8_t uid[16] = {0};
-    int res = handler_desfire_getuid(uid);
-    if (res != PM3_SUCCESS) {
-        DropFieldDesfire();
-        PrintAndLogEx(ERR, "Error on getting uid.");
-        return res;
-    }
-
-    // This could be done better. by the crc calc checks.
-    // Extract the Card UID length (needs rework to allow for 10 Byte UID
-    uint8_t uidlen = 16;
-
-    // Get datalen <uid len> + <crclen> by removing padding.
-    while ((uidlen > 0) && (uid[uidlen - 1] == 0x00))
-        uidlen--;
-
-    if (tag->authentication_scheme == AS_LEGACY)
-        uidlen -= 2; // 2 byte crc
-    else
-        uidlen -= 4; // 4 byte crc
-
-    if (uidlen <= 4) // < incase we trimmed a CRC 00 or more
-        uidlen = 4;
-    else
-        uidlen = 7;
-
-    PrintAndLogEx(SUCCESS, "    UID: " _GREEN_("%s"), sprint_hex(uid, uidlen));
-    return res;
-}
-*/
-
 static int CmdHF14ADesSelectApp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes selectaid",
@@ -2538,43 +2441,6 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     }
     return res;
 }
-/*
-static int CmdHF14ADesDeleteApp(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes deleteaid",
-                  "Delete Application ID",
-                  "hf mfdes deleteaid -a 123456"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_strx0("a", "aid", "<hex>", "App ID to delete (3 hex bytes, big endian)"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int aidlength = 3;
-    uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
-    CLIParserFree(ctx);
-    swap24(aid);
-    if (aidlength != 3) {
-        PrintAndLogEx(ERR, "AID must have 3 bytes length.");
-        return PM3_EINVARG;
-    }
-
-    if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
-        PrintAndLogEx(WARNING, _RED_("   Deleting root aid 000000 is forbidden."));
-        return PM3_ESOFT;
-    }
-
-    int res = handler_desfire_deleteapp(aid);
-    DropFieldDesfire();
-
-    if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Successfully deleted aid.");
-    }
-    return res;
-}*/
 
 static int selectfile(uint8_t *aid, uint8_t fileno, uint8_t *cs) {
     if (handler_desfire_select_application(aid) != PM3_SUCCESS) {
