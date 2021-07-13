@@ -5218,7 +5218,7 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Desfire UID[%d]: %s", buflen, sprint_hex(buf, buflen));
+    PrintAndLogEx(SUCCESS, "Desfire UID[%zu]: %s", buflen, sprint_hex(buf, buflen));
 
     DropField();
     return PM3_SUCCESS;
