@@ -5624,7 +5624,7 @@ static int CmdHF14ADesGetFreeMem(const char *Cmd) {
 static int CmdHF14ADesChKeySettings(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes chkeysetings",
-                  "Change key settings for card level or application level. WARNING: card level changes may block card!",
+                  "Change key settings for card level or application level. WARNING: card level changes may block the card!",
                   "hf mfdes chkeysetings -d 0f -> set picc key settings with default key/channel setup\n"\
                   "hf mfdes chkeysetings --aid 123456 -d 0f -> set app 123456 key settings with default key/channel setup");
 
@@ -5903,12 +5903,14 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
+    bool noauth = arg_get_lit(ctx, 11);
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
@@ -5921,10 +5923,19 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        return res;
+    if (noauth) {
+        res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            DropField();
+            return res;
+        }        
+    } else {
+        res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
     }
 
     uint8_t buf[APDU_RES_LEN] = {0};
