@@ -40,6 +40,8 @@ int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uin
 int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose);
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel);
 
+int DesfireFormatPICC(DesfireContext *dctx);
+int DesfireGetFreeMem(DesfireContext *dctx, uint32_t *freemem);
 int DesfireGetUID(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetAIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetDFList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
