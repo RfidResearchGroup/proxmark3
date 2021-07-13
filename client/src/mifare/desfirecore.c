@@ -624,7 +624,7 @@ int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secu
     } else {
         return PM3_ESOFT;
     }
-    
+
     return PM3_SUCCESS;
 }
 
@@ -904,7 +904,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
 static int DesfireCommandEx(DesfireContext *dctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen, int checklength, size_t splitbysize) {
     if (resplen)
         *resplen = 0;
-    
+
     uint8_t respcode = 0xff;
     uint8_t xresp[257] = {0};
     size_t xresplen = 0;
@@ -945,9 +945,9 @@ int DesfireFormatPICC(DesfireContext *dctx) {
 
 int DesfireGetFreeMem(DesfireContext *dctx, uint32_t *freemem) {
     *freemem = 0;
-    
+
     uint8_t resp[257] = {0};
-    size_t resplen = 0;    
+    size_t resplen = 0;
     int res = DesfireCommandRxData(dctx, MFDES_GET_FREE_MEMORY, resp, &resplen, 3);
     if (res == PM3_SUCCESS)
         *freemem = DesfireAIDByteToUint(resp);
@@ -989,11 +989,15 @@ int DesfireChangeKeySettings(DesfireContext *dctx, uint8_t *data, size_t len) {
 }
 
 uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType) {
-    switch(keyType) {
-    case T_DES: return 0x00;
-    case T_3DES: return 0x00;
-    case T_3K3DES: return 0x01;
-    case T_AES: return 0x02;
+    switch (keyType) {
+        case T_DES:
+            return 0x00;
+        case T_3DES:
+            return 0x00;
+        case T_3K3DES:
+            return 0x01;
+        case T_AES:
+            return 0x02;
     }
     return 0;
 }

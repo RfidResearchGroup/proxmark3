@@ -2329,7 +2329,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
             0xE: Auth with the key to be changed (same KeyNo) is necessary to change a key
             0xF: All Keys within this application are frozen
 
-    
+
      KeySetting 2:
        0..3: Number of keys stored within the application (max. 14 keys)
        4:    RFU
@@ -2339,7 +2339,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
             2E = FID, DES, 14 keys
             6E = FID, 3K3DES, 14 keys
             AE = FID, AES, 14 keys
-    
+
     int aidlength = 3;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
@@ -2425,14 +2425,14 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     if (usename)
         PrintAndLogEx(INFO, "DF Name  %s", aidhdr.name);
 
-    
+
         uint8_t rootaid[3] = {0x00, 0x00, 0x00};
         int res = handler_desfire_select_application(rootaid);
         if (res != PM3_SUCCESS) {
             DropFieldDesfire();
             return res;
         }
-    
+
 
     int res = handler_desfire_createapp(&aidhdr, usename, usefid);
     DropFieldDesfire();
@@ -5068,7 +5068,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
                   "hf mfdes createaid --rawdata 123456 -> execute create by rawdata\n"\
                   "hf mfdes createaid --aid 123456 --fid 2345 --dfname aid123456 -> app aid, iso file id, and iso df name is specified\n"
                   "hf mfdes createaid --aid 123456 --fid 2345 --dfname aid123456 --dstalgo aes -> with algorithm for key AES");
- 
+
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "show APDU requests and responses"),
@@ -5116,11 +5116,11 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         PrintAndLogEx(ERR, "ISO file ID must have 2 bytes length");
         return PM3_EINVARG;
     }
-    
+
     uint8_t dfname[250] = {0};
     int dfnamelen = 16;
     CLIGetStrWithReturn(ctx, 14, dfname, &dfnamelen);
-    
+
     uint32_t ks1 = 0x2f;
     res = arg_get_u32_hexstr_def_nlen(ctx, 15, 0x2f, &ks1, 1, true);
     if (res == 2) {
@@ -5135,16 +5135,16 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         PrintAndLogEx(ERR, "Key settings 2 must have 1 byte length");
         return PM3_EINVARG;
     }
-    
+
     int dstalgo = T_DES;
     if (CLIGetOptionList(arg_get_str(ctx, 17), DesfireAlgoOpts, &dstalgo))
         return PM3_ESOFT;
-    
+
     int keycount = arg_get_int_def(ctx, 18, 0x0e);
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
-    
+
     if (appid == 0x000000) {
         PrintAndLogEx(ERR, "Creating the root aid (0x000000) is " _RED_("forbidden"));
         return PM3_ESOFT;
@@ -5159,7 +5159,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         PrintAndLogEx(ERR, "Key count must be in the range 1..14");
         return PM3_ESOFT;
     }
-    
+
     if (dfnamelen > 16) {
         PrintAndLogEx(ERR, "DF name must be a maximum of 16 bytes in length");
         return PM3_EINVARG;
@@ -5170,7 +5170,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         DropField();
         return res;
     }
-    
+
     uint8_t data[250] = {0};
     size_t datalen = 0;
     if (rawdatalen > 0) {
@@ -5180,7 +5180,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         DesfireAIDUintToByte(appid, &data[0]);
         data[3] = ks1 & 0xff;
         data[4] = ks2 & 0xff;
-        
+
         if (!ks2present) {
             if (keycount > 0) {
                 data[4] &= 0xf0;
@@ -5189,14 +5189,14 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
             uint8_t kt = DesfireKeyAlgoToType(dstalgo);
             data[4] &= 0x3f;
             data[4] |= (kt & 0x03) << 6;
-        }        
-        
+        }
+
         datalen = 5;
         if (fileidpresent || (data[4] & 0x20) != 0) {
             data[5] = fileid & 0xff;
             data[6] = (fileid >> 8) & 0xff;
             data[4] |= 0x20; // set bit FileID in the ks2
-            memcpy(&data[7], dfname, dfnamelen);            
+            memcpy(&data[7], dfname, dfnamelen);
             datalen = 7 + dfnamelen;
         }
     }
@@ -5227,159 +5227,6 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
 
     DropField();
     return PM3_SUCCESS;
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    /*CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes createaid",
-                  "Create Application ID",
-                  "hf mfdes createaid -a 123456 -f 1111 -k 0E -l 2E --name Test"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_strx0("a",  "aid",    "<hex>", "App ID to create as hex bytes (3 hex bytes)"),
-        arg_strx0("f",  "fid",    "<hex>", "File ID to create"),
-        arg_strx0("k",  "ks1",    "<hex>", "Key Setting 1 (Application Master Key Settings)"),
-        arg_strx0("l",  "ks2",    "<hex>", "Key Setting 2"),
-        arg_str0(NULL,  "name",   "<ascii>", "App ISO-4 Name"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-     KeySetting 1 (AMK Setting):
-       0:   Allow change master key
-       1:   Free Directory list access without master key
-            0: AMK auth needed for GetFileSettings and GetKeySettings
-            1: No AMK auth needed for GetFileIDs, GetISOFileIDs, GetFileSettings, GetKeySettings
-       2:   Free create/delete without master key
-            0:  CreateFile/DeleteFile only with AMK auth
-            1:  CreateFile/DeleteFile always
-       3:   Configuration changable
-            0: Configuration frozen
-            1: Configuration changable if authenticated with AMK (default)
-       4-7: ChangeKey Access Rights
-            0: Application master key needed (default)
-            0x1..0xD: Auth with specific key needed to change any key
-            0xE: Auth with the key to be changed (same KeyNo) is necessary to change a key
-            0xF: All Keys within this application are frozen
-
-    
-     KeySetting 2:
-       0..3: Number of keys stored within the application (max. 14 keys)
-       4:    RFU
-       5:    Use of 2 byte ISO FID, 0: No, 1: Yes
-       6..7: Crypto Method 00: DES/3DES, 01: 3K3DES, 10: AES
-       Example:
-            2E = FID, DES, 14 keys
-            6E = FID, 3K3DES, 14 keys
-            AE = FID, AES, 14 keys
-    
-    int aidlength = 3;
-    uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
-
-    int fidlength = 2;
-    uint8_t fid[2] = {0};
-    CLIGetHexWithReturn(ctx, 2, fid, &fidlength);
-
-    int keylen1 = 1;
-    uint8_t keysetting1[1] = {0};
-    CLIGetHexWithReturn(ctx, 3, keysetting1, &keylen1);
-
-    int keylen2 = 1;
-    uint8_t keysetting2[1] = {0};
-    CLIGetHexWithReturn(ctx, 4, keysetting2, &keylen2);
-
-    int namelen = 16;
-    uint8_t name[16] = {0};
-    CLIGetStrWithReturn(ctx, 5, name, &namelen);
-    CLIParserFree(ctx);
-
-    swap24(aid);
-    swap16(fid);
-
-    if (aidlength != 3) {
-        PrintAndLogEx(ERR, "AID must have 3 bytes length");
-        return PM3_EINVARG;
-    }
-
-    if (fidlength != 2 && fidlength != 0) {
-        PrintAndLogEx(ERR, "FID must have 2 bytes length");
-        return PM3_EINVARG;
-    }
-
-    bool usefid = (fidlength != 0);
-
-    if (keylen1 != 1) {
-        PrintAndLogEx(ERR, "Keysetting1 must have 1 byte length");
-        return PM3_EINVARG;
-    }
-
-    if (keylen2 != 1) {
-        PrintAndLogEx(ERR, "Keysetting2 must have 1 byte length");
-        return PM3_EINVARG;
-    }
-
-    if (namelen > 16) {
-        PrintAndLogEx(ERR, "Name has a max. of 16 bytes length");
-        return PM3_EINVARG;
-    }
-    bool usename = true;
-    if (namelen == 0) usename = false;
-
-    //90 ca 00 00 0e 3cb849 09 22 10e1 d27600 00850101 00
-    *char name[]="Test";
-    uint8_t aid[]={0x12,0x34,0x56};
-    uint8_t fid[]={0x11,0x22};
-    uint8_t keysetting1=0xEE;
-    uint8_t keysetting2=0xEE;
-
-    if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
-        PrintAndLogEx(WARNING, _RED_("   Creating root aid 000000 is forbidden"));
-        return PM3_ESOFT;
-    }
-
-    aidhdr_t aidhdr;
-    memcpy(aidhdr.aid, aid, sizeof(aid));
-    aidhdr.keysetting1 = keysetting1[0];
-    aidhdr.keysetting2 = keysetting2[0];
-
-    if (usefid)
-        memcpy(aidhdr.fid, fid, sizeof(aidhdr.fid));
-
-    if (usename)
-        memcpy(aidhdr.name, name, sizeof(aidhdr.name));
-
-    PrintAndLogEx(INFO, "Creating AID using:");
-    PrintAndLogEx(INFO, "AID      %s", sprint_hex_inrow(aidhdr.aid, sizeof(aidhdr.aid)));
-    PrintAndLogEx(INFO, "Key set1 0x%02X", aidhdr.keysetting1);
-    PrintAndLogEx(INFO, "Key Set2 0x%02X", aidhdr.keysetting2);
-    if (usefid)
-        PrintAndLogEx(INFO, "FID      %s", sprint_hex_inrow(aidhdr.fid, sizeof(aidhdr.fid)));
-    if (usename)
-        PrintAndLogEx(INFO, "DF Name  %s", aidhdr.name);
-
-    
-        uint8_t rootaid[3] = {0x00, 0x00, 0x00};
-        int res = handler_desfire_select_application(rootaid);
-        if (res != PM3_SUCCESS) {
-            DropFieldDesfire();
-            return res;
-        }
-    
-
-    int res = handler_desfire_createapp(&aidhdr, usename, usefid);
-    DropFieldDesfire();
-    if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Successfully created aid.");
-    }
-    return res;*/
 }
 
 static int CmdHF14ADesDeleteApp(const char *Cmd) {
@@ -5387,7 +5234,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes deleteaid",
                   "Delete application by its 3-byte AID. Master key needs to be provided. ",
                   "hf mfdes deleteaid --aid 123456 -> execute with default factory setup");
- 
+
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "show APDU requests and responses"),
@@ -5419,7 +5266,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
-    
+
     if (appid == 0x000000) {
         PrintAndLogEx(WARNING, "Deleting the root aid (0x000000) is " _RED_("forbidden"));
         return PM3_ESOFT;
@@ -5449,7 +5296,7 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes getuid",
                   "Get UID from card. Get the real UID if the random UID bit is on and get the same UID as in anticollision if not. Master key needs to be provided. ",
                   "hf mfdes getuid -> execute with default factory setup");
- 
+
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "show APDU requests and responses"),
@@ -5507,7 +5354,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes formatpicc",
                   "Format card. Can be done only if enabled in the configuration. Master key needs to be provided. ",
                   "hf mfdes formatpicc -> execute with default factory setup");
- 
+
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "show APDU requests and responses"),
@@ -5564,7 +5411,7 @@ static int CmdHF14ADesGetFreeMem(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes getfreemem",
                   "Get card's free memory. Can be doe with ot without authentication. Master key may be provided. ",
                   "hf mfdes getfreemem -> execute with default factory setup");
- 
+
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "show APDU requests and responses"),
@@ -5604,7 +5451,7 @@ static int CmdHF14ADesGetFreeMem(const char *Cmd) {
             PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
             DropField();
             return res;
-        }        
+        }
     } else {
         res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
         if (res != PM3_SUCCESS) {
@@ -5783,7 +5630,7 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
 
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t buflen = 0;
-    
+
     uint8_t data[2] = {0};
     data[0] = keynum32 & 0xff;
     if (keysetpresent) {
@@ -5808,7 +5655,7 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
     } else {
         PrintAndLogEx(INFO, "No key versions returned.");
     }
-    
+
     DropField();
     return PM3_SUCCESS;
 }
@@ -5936,7 +5783,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
             PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
             DropField();
             return res;
-        }        
+        }
     } else {
         res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
         if (res != PM3_SUCCESS) {
@@ -6011,7 +5858,7 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
             PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
             DropField();
             return res;
-        }        
+        }
     } else {
         res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
         if (res != PM3_SUCCESS) {
