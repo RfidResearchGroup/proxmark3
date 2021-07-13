@@ -901,14 +901,14 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     return PM3_SUCCESS;
 }
 
-static int DesfireCommand(DesfireContext *dctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen, int checklength) {
+static int DesfireCommandEx(DesfireContext *dctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen, int checklength, size_t splitbysize) {
     if (resplen)
         *resplen = 0;
     
     uint8_t respcode = 0xff;
     uint8_t xresp[257] = {0};
     size_t xresplen = 0;
-    int res = DesfireExchange(dctx, cmd, data, datalen, &respcode, xresp, &xresplen);
+    int res = DesfireExchangeEx(false, dctx, cmd, data, datalen, &respcode, xresp, &xresplen, true, splitbysize);
     if (res != PM3_SUCCESS)
         return res;
     if (respcode != MFDES_S_OPERATION_OK)
@@ -923,14 +923,18 @@ static int DesfireCommand(DesfireContext *dctx, uint8_t cmd, uint8_t *data, size
     return PM3_SUCCESS;
 }
 
+static int DesfireCommand(DesfireContext *dctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen, int checklength) {
+    return DesfireCommandEx(dctx, cmd, data, datalen, resp, resplen, checklength, 0);
+}
+
 static int DesfireCommandNoData(DesfireContext *dctx, uint8_t cmd) {
     return DesfireCommand(dctx, cmd, NULL, 0, NULL, NULL, 0);
 }
-/*
-static int DesfireCommandTxData(DesfireContext *dctx, uint8_t cmd, uint8_t *data, size_t datalen, int checklength) {
-    return DesfireCommand(dctx, cmd, data, 0, datalen, NULL, checklength);
+
+static int DesfireCommandTxData(DesfireContext *dctx, uint8_t cmd, uint8_t *data, size_t datalen) {
+    return DesfireCommand(dctx, cmd, data, datalen, NULL, NULL, 0);
 }
-*/
+
 static int DesfireCommandRxData(DesfireContext *dctx, uint8_t cmd, uint8_t *resp, size_t *resplen, int checklength) {
     return DesfireCommand(dctx, cmd, NULL, 0, resp, resplen, checklength);
 }
@@ -959,33 +963,17 @@ int DesfireGetAIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
 }
 
 int DesfireGetDFList(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
-    return DesfireCommandRxData(dctx, MFDES_GET_DF_NAMES, resp, resplen, -1);
+    return DesfireCommandEx(dctx, MFDES_GET_DF_NAMES, NULL, 0, resp, resplen, -1, 24);
 }
 
 int DesfireCreateApplication(DesfireContext *dctx, uint8_t *appdata, size_t appdatalen) {
-    uint8_t respcode = 0xff;
-    uint8_t resp[257] = {0};
-    size_t resplen = 0;
-    int res = DesfireExchangeEx(false, dctx, MFDES_CREATE_APPLICATION, appdata, appdatalen, &respcode, resp, &resplen, true, 0);
-    if (res != PM3_SUCCESS)
-        return res;
-    if (respcode != MFDES_S_OPERATION_OK || resplen != 0)
-        return PM3_EAPDU_FAIL;
-    return PM3_SUCCESS;
+    return DesfireCommandTxData(dctx, MFDES_CREATE_APPLICATION, appdata, appdatalen);
 }
 
 int DesfireDeleteApplication(DesfireContext *dctx, uint32_t aid) {
-    uint8_t respcode = 0xff;
     uint8_t data[3] = {0};
     DesfireAIDUintToByte(aid, data);
-    uint8_t resp[257] = {0};
-    size_t resplen = 0;
-    int res = DesfireExchangeEx(false, dctx, MFDES_DELETE_APPLICATION, data, sizeof(data), &respcode, resp, &resplen, true, 0);
-    if (res != PM3_SUCCESS)
-        return res;
-    if (respcode != MFDES_S_OPERATION_OK || resplen != 0)
-        return PM3_EAPDU_FAIL;
-    return PM3_SUCCESS;
+    return DesfireCommandTxData(dctx, MFDES_DELETE_APPLICATION, data, sizeof(data));
 }
 
 int DesfireGetKeySettings(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
@@ -993,19 +981,11 @@ int DesfireGetKeySettings(DesfireContext *dctx, uint8_t *resp, size_t *resplen) 
 }
 
 int DesfireGetKeyVersion(DesfireContext *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen) {
-    return DesfireCommandRxData(dctx, MFDES_GET_KEY_VERSION, resp, resplen, -1);
+    return DesfireCommand(dctx, MFDES_GET_KEY_VERSION, data, len, resp, resplen, -1);
 }
 
 int DesfireChangeKeySettings(DesfireContext *dctx, uint8_t *data, size_t len) {
-    uint8_t respcode = 0xff;
-    uint8_t resp[257] = {0};
-    size_t resplen = 0;
-    int res = DesfireExchange(dctx, MFDES_CHANGE_KEY_SETTINGS, data, len, &respcode, resp, &resplen);
-    if (res != PM3_SUCCESS)
-        return res;
-    if (respcode != MFDES_S_OPERATION_OK || resplen != 0)
-        return PM3_EAPDU_FAIL;
-    return PM3_SUCCESS;
+    return DesfireCommandTxData(dctx, MFDES_CHANGE_KEY_SETTINGS, data, len);
 }
 
 static void PrintKeyType(uint8_t keytype) {
