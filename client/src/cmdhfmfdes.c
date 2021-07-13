@@ -5888,7 +5888,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
 static int CmdHF14ADesGetAIDs(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes getaids",
-                  "Get Application IDs list from card. Master key needs to be provided.",
+                  "Get Application IDs list from card. Master key needs to be provided or flag --no-auth set.",
                   "hf mfdes getaids -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup");
 
     void *argtable[] = {
@@ -5963,7 +5963,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
 static int CmdHF14ADesGetAppNames(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes getappnames",
-                  "Get Application IDs, ISO IDs and DF names from card. Master key needs to be provided.",
+                  "Get Application IDs, ISO IDs and DF names from card. Master key needs to be provided or flag --no-auth set.",
                   "hf mfdes getappnames -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup");
 
     void *argtable[] = {
@@ -5978,12 +5978,14 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
         arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
+    bool noauth = arg_get_lit(ctx, 11);
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
@@ -5996,10 +5998,19 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        return res;
+    if (noauth) {
+        res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            DropField();
+            return res;
+        }        
+    } else {
+        res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
     }
 
     uint8_t buf[APDU_RES_LEN] = {0};
