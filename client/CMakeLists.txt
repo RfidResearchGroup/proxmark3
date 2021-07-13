@@ -76,7 +76,9 @@ endif (NOT SKIPPYTHON EQUAL 1)
 
 # If cross-compiled, we need to init source and build.
 if (CMAKE_TOOLCHAIN_FILE)
-    set(CFLAGS_EXTERNAL_LIB "CFLAGS=--target=${CMAKE_C_COMPILER_TARGET} -w")
+    if (ANDROID)
+        set(CFLAGS_EXTERNAL_LIB "CFLAGS=--target=${CMAKE_C_COMPILER_TARGET} -w")
+    endif (ANDROID)
     set(EMBED_READLINE ON)
     set(EMBED_BZIP2 ON)
 endif (CMAKE_TOOLCHAIN_FILE)
