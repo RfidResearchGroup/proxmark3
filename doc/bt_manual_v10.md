@@ -190,10 +190,11 @@ The first time, your OS will ask you for pairing. The default PIN is
 1234. If PIN is not typed in quickly, the client might timeout. Simply
 restart it again after pairing.
 
-If your OS doesn't prompt you for pairing, you can do it in command line, e.g. (again, replace with your addon MAC address):
+If your OS doesn't prompt you for pairing or if the device connects and immediately disconnects, you can pair it in command line, e.g. (again, replace with your addon MAC address):
 
 ```sh
 bluetoothctl
+[bluetooth]# remove aa:bb:cc:dd:ee:ff
 [bluetooth]# pairable on
 [bluetooth]# scan on
 Discovery started
@@ -204,24 +205,7 @@ Discovery started
 [agent] Enter PIN code: 1234
 [bluetooth]# quit
 ```
-If bluetoothctl fails to pair without prompting you for a PIN code, use the remove command to remove it, turn off pairable, turn off scanning, and try the bluetoothctl commands above:
-```[bluetooth]# pair aa:bb:cc:dd:ee:ff
-Attempting to pair with aa:bb:cc:dd:ee:ff
-Failed to pair: org.bluez.Error.ConnectionAttemptFailed
-[bluetooth]# pair aa:bb:cc:dd:ee:ff
-Attempting to pair with aa:bb:cc:dd:ee:ff
-Failed to pair: org.bluez.Error.ConnectionAttemptFailed
-[bluetooth]# remove aa:bb:cc:dd:ee:ff
-[DEL] Device aa:bb:cc:dd:ee:ff aa-bb-cc-dd-ee-ff
-Device has been removed
-[bluetooth]# pairable off
-Changing pairable off succeeded
-[CHG] Controller 00:00:00:00:00:00 Pairable: no
-[bluetooth]# scan off
-[CHG] Controller 00:00:00:00:00:00 Discovering: no
-Discovery stopped
-```
- 
+
 #### 5.2.2 Fast connection using dedicated USB Bluetooth adapter under Linux
 ^[Top](#top)
 
