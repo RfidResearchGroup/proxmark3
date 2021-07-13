@@ -4982,7 +4982,7 @@ static int CmdHF14ADesDefault(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes default",
                   "Set default parameters for access to desfire card.",
-                  "hf mfdes default -n 0 -t des -k 0000000000000000 -f none -> save to the default factory setup");
+                  "hf mfdes default -n 0 -t des -k 0000000000000000 -f none -> save to the default parameters");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5625,8 +5625,8 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes chkeysetings",
                   "Change key settings for card level or application level. WARNING: card level changes may block card!",
-                  "hf mfdes chkeysetings -d 0e -> set picc key settings with default key/channel setup\n"\
-                  "hf mfdes chkeysetings --aid 123456 -d 0e -> set app 123456 key settings with default key/channel setup");
+                  "hf mfdes chkeysetings -d 0f -> set picc key settings with default key/channel setup\n"\
+                  "hf mfdes chkeysetings --aid 123456 -d 0f -> set app 123456 key settings with default key/channel setup");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5644,7 +5644,7 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
         arg_str0("d",  "data",    "<key settings HEX>", "Key settings (HEX 1 byte)"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
@@ -5659,7 +5659,7 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
     }
 
     uint32_t ksett32 = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 0x000000, &ksett32, 1, false);
+    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 0x0f, &ksett32, 1, false);
     if (res == 0) {
         CLIParserFree(ctx);
         return PM3_ESOFT;
@@ -5684,7 +5684,7 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
         return res;
     }
 
-    uint8_t keysett = ksett32 & 0x0f;
+    uint8_t keysett = ksett32 & 0xff;
     res = DesfireChangeKeySettings(&dctx, &keysett, 1);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire ChangeKeySettings command " _RED_("error") ". Result: %d", res);
