@@ -5065,7 +5065,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
                   "       6E = with FID, 3TDEA, 14 keys\n"\
                   "       AE = with FID, AES, 14 keys\n"\
                   "\n"\
-                  "hf mfdes createaid --rawdata 123456 -> execute create by rawdata\n"\
+                  "hf mfdes createaid --rawdata 5634122F2E4523616964313233343536 -> execute create by rawdata\n"\
                   "hf mfdes createaid --aid 123456 --fid 2345 --dfname aid123456 -> app aid, iso file id, and iso df name is specified\n"
                   "hf mfdes createaid --aid 123456 --fid 2345 --dfname aid123456 --dstalgo aes -> with algorithm for key AES");
 
@@ -5145,12 +5145,12 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (appid == 0x000000) {
+    if (rawdatalen == 0 && appid == 0x000000) {
         PrintAndLogEx(ERR, "Creating the root aid (0x000000) is " _RED_("forbidden"));
         return PM3_ESOFT;
     }
 
-    if ((fileidpresent || (ks2 & 0x20) != 0) &&  fileid == 0x0000) {
+    if (rawdatalen == 0 && (fileidpresent || (ks2 & 0x20) != 0) &&  fileid == 0x0000) {
         PrintAndLogEx(ERR, "Creating the application with ISO file ID 0x0000 is " _RED_("forbidden"));
         return PM3_ESOFT;
     }
@@ -5209,7 +5209,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         PrintAndLogEx(INFO, "Key Set 2    0x%02X", data[4]);
         PrintAndLogEx(INFO, "ISO file ID  %s", (data[4] & 0x20) ? "enabled" : "disabled");
         if ((data[4] & 0x20)) {
-            PrintAndLogEx(INFO, "FID           0x%02x%02x", data[5], data[6]);
+            PrintAndLogEx(INFO, "FID           0x%02x%02x", data[6], data[5]);
             PrintAndLogEx(INFO, "DF Name[%02d]  %s\n", strnlen((char *)&data[7], 16), (char *)&data[7]);
         }
         PrintKeySettings(data[3], data[4], true, true);
