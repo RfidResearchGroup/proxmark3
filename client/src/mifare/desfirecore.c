@@ -919,7 +919,7 @@ static int DesfireCommandEx(DesfireContext *dctx, uint8_t cmd, uint8_t *data, si
     if (resplen)
         *resplen = xresplen;
     if (resp)
-        memcpy(resp, xresp, xresplen);
+        memcpy(resp, xresp, (splitbysize == 0) ? xresplen : xresplen * splitbysize);
     return PM3_SUCCESS;
 }
 
