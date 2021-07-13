@@ -2294,154 +2294,7 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     }
     return res;
 }
-/*
-static int CmdHF14ADesCreateApp(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes createaid",
-                  "Create Application ID",
-                  "hf mfdes createaid -a 123456 -f 1111 -k 0E -l 2E --name Test"
-                 );
 
-    void *argtable[] = {
-        arg_param_begin,
-        arg_strx0("a",  "aid",    "<hex>", "App ID to create as hex bytes (3 hex bytes)"),
-        arg_strx0("f",  "fid",    "<hex>", "File ID to create"),
-        arg_strx0("k",  "ks1",    "<hex>", "Key Setting 1 (Application Master Key Settings)"),
-        arg_strx0("l",  "ks2",    "<hex>", "Key Setting 2"),
-        arg_str0(NULL,  "name",   "<ascii>", "App ISO-4 Name"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-     KeySetting 1 (AMK Setting):
-       0:   Allow change master key
-       1:   Free Directory list access without master key
-            0: AMK auth needed for GetFileSettings and GetKeySettings
-            1: No AMK auth needed for GetFileIDs, GetISOFileIDs, GetFileSettings, GetKeySettings
-       2:   Free create/delete without master key
-            0:  CreateFile/DeleteFile only with AMK auth
-            1:  CreateFile/DeleteFile always
-       3:   Configuration changable
-            0: Configuration frozen
-            1: Configuration changable if authenticated with AMK (default)
-       4-7: ChangeKey Access Rights
-            0: Application master key needed (default)
-            0x1..0xD: Auth with specific key needed to change any key
-            0xE: Auth with the key to be changed (same KeyNo) is necessary to change a key
-            0xF: All Keys within this application are frozen
-
-
-     KeySetting 2:
-       0..3: Number of keys stored within the application (max. 14 keys)
-       4:    RFU
-       5:    Use of 2 byte ISO FID, 0: No, 1: Yes
-       6..7: Crypto Method 00: DES/3DES, 01: 3K3DES, 10: AES
-       Example:
-            2E = FID, DES, 14 keys
-            6E = FID, 3K3DES, 14 keys
-            AE = FID, AES, 14 keys
-
-    int aidlength = 3;
-    uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
-
-    int fidlength = 2;
-    uint8_t fid[2] = {0};
-    CLIGetHexWithReturn(ctx, 2, fid, &fidlength);
-
-    int keylen1 = 1;
-    uint8_t keysetting1[1] = {0};
-    CLIGetHexWithReturn(ctx, 3, keysetting1, &keylen1);
-
-    int keylen2 = 1;
-    uint8_t keysetting2[1] = {0};
-    CLIGetHexWithReturn(ctx, 4, keysetting2, &keylen2);
-
-    int namelen = 16;
-    uint8_t name[16] = {0};
-    CLIGetStrWithReturn(ctx, 5, name, &namelen);
-    CLIParserFree(ctx);
-
-    swap24(aid);
-    swap16(fid);
-
-    if (aidlength != 3) {
-        PrintAndLogEx(ERR, "AID must have 3 bytes length");
-        return PM3_EINVARG;
-    }
-
-    if (fidlength != 2 && fidlength != 0) {
-        PrintAndLogEx(ERR, "FID must have 2 bytes length");
-        return PM3_EINVARG;
-    }
-
-    bool usefid = (fidlength != 0);
-
-    if (keylen1 != 1) {
-        PrintAndLogEx(ERR, "Keysetting1 must have 1 byte length");
-        return PM3_EINVARG;
-    }
-
-    if (keylen2 != 1) {
-        PrintAndLogEx(ERR, "Keysetting2 must have 1 byte length");
-        return PM3_EINVARG;
-    }
-
-    if (namelen > 16) {
-        PrintAndLogEx(ERR, "Name has a max. of 16 bytes length");
-        return PM3_EINVARG;
-    }
-    bool usename = true;
-    if (namelen == 0) usename = false;
-
-    //90 ca 00 00 0e 3cb849 09 22 10e1 d27600 00850101 00
-    *char name[]="Test";
-    uint8_t aid[]={0x12,0x34,0x56};
-    uint8_t fid[]={0x11,0x22};
-    uint8_t keysetting1=0xEE;
-    uint8_t keysetting2=0xEE;
-
-    if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
-        PrintAndLogEx(WARNING, _RED_("   Creating root aid 000000 is forbidden"));
-        return PM3_ESOFT;
-    }
-
-    aidhdr_t aidhdr;
-    memcpy(aidhdr.aid, aid, sizeof(aid));
-    aidhdr.keysetting1 = keysetting1[0];
-    aidhdr.keysetting2 = keysetting2[0];
-
-    if (usefid)
-        memcpy(aidhdr.fid, fid, sizeof(aidhdr.fid));
-
-    if (usename)
-        memcpy(aidhdr.name, name, sizeof(aidhdr.name));
-
-    PrintAndLogEx(INFO, "Creating AID using:");
-    PrintAndLogEx(INFO, "AID      %s", sprint_hex_inrow(aidhdr.aid, sizeof(aidhdr.aid)));
-    PrintAndLogEx(INFO, "Key set1 0x%02X", aidhdr.keysetting1);
-    PrintAndLogEx(INFO, "Key Set2 0x%02X", aidhdr.keysetting2);
-    if (usefid)
-        PrintAndLogEx(INFO, "FID      %s", sprint_hex_inrow(aidhdr.fid, sizeof(aidhdr.fid)));
-    if (usename)
-        PrintAndLogEx(INFO, "DF Name  %s", aidhdr.name);
-
-
-        uint8_t rootaid[3] = {0x00, 0x00, 0x00};
-        int res = handler_desfire_select_application(rootaid);
-        if (res != PM3_SUCCESS) {
-            DropFieldDesfire();
-            return res;
-        }
-
-
-    int res = handler_desfire_createapp(&aidhdr, usename, usefid);
-    DropFieldDesfire();
-    if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Successfully created aid.");
-    }
-    return res;
-}
-*/
 static int selectfile(uint8_t *aid, uint8_t fileno, uint8_t *cs) {
     if (handler_desfire_select_application(aid) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, _RED_("   Couldn't select aid."));
@@ -5034,7 +4887,7 @@ static int CmdHF14ADesDefault(const char *Cmd) {
 
 static int CmdHF14ADesCreateApp(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes createaid",
+    CLIParserInit(&ctx, "hf mfdes createapp",
                   "Create application. Master key needs to be provided.",
                   "option rawdata have priority over the rest settings, and options ks1 and ks2 have priority over corresponded key settings\n"
                   "\n"\
@@ -5065,9 +4918,9 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
                   "       6E = with FID, 3TDEA, 14 keys\n"\
                   "       AE = with FID, AES, 14 keys\n"\
                   "\n"\
-                  "hf mfdes createaid --rawdata 5634122F2E4523616964313233343536 -> execute create by rawdata\n"\
-                  "hf mfdes createaid --aid 123456 --fid 2345 --dfname aid123456 -> app aid, iso file id, and iso df name is specified\n"
-                  "hf mfdes createaid --aid 123456 --fid 2345 --dfname aid123456 --dstalgo aes -> with algorithm for key AES");
+                  "hf mfdes createapp --rawdata 5634122F2E4523616964313233343536 -> execute create by rawdata\n"\
+                  "hf mfdes createapp --aid 123456 --fid 2345 --dfname aid123456 -> app aid, iso file id, and iso df name is specified\n"
+                  "hf mfdes createapp --aid 123456 --fid 2345 --dfname aid123456 --dstalgo aes -> with algorithm for key AES");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5231,9 +5084,9 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
 
 static int CmdHF14ADesDeleteApp(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes deleteaid",
+    CLIParserInit(&ctx, "hf mfdes deleteapp",
                   "Delete application by its 3-byte AID. Master key needs to be provided. ",
-                  "hf mfdes deleteaid --aid 123456 -> execute with default factory setup");
+                  "hf mfdes deleteapp --aid 123456 -> execute with default factory setup");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5250,7 +5103,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID of delegated application (3 hex bytes, big endian)"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
@@ -5409,7 +5262,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
 static int CmdHF14ADesGetFreeMem(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes getfreemem",
-                  "Get card's free memory. Can be doe with ot without authentication. Master key may be provided. ",
+                  "Get card's free memory. Can be done with ot without authentication. Master key may be provided.",
                   "hf mfdes getfreemem -> execute with default factory setup");
 
     void *argtable[] = {
@@ -5477,10 +5330,10 @@ static int CmdHF14ADesGetFreeMem(const char *Cmd) {
 
 static int CmdHF14ADesChKeySettings(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes chkeysetings",
+    CLIParserInit(&ctx, "hf mfdes chkeysettings",
                   "Change key settings for card level or application level. WARNING: card level changes may block the card!",
-                  "hf mfdes chkeysetings -d 0f -> set picc key settings with default key/channel setup\n"\
-                  "hf mfdes chkeysetings --aid 123456 -d 0f -> set app 123456 key settings with default key/channel setup");
+                  "hf mfdes chkeysettings -d 0f -> set picc key settings with default key/channel setup\n"\
+                  "hf mfdes chkeysettings --aid 123456 -d 0f -> set app 123456 key settings with default key/channel setup");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5662,10 +5515,10 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
 
 static int CmdHF14ADesGetKeySettings(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes getkeysetings",
+    CLIParserInit(&ctx, "hf mfdes getkeysettings",
                   "Get key settings for card level or application level.",
-                  "hf mfdes getkeysetings  -> get picc key settings with default key/channel setup\n"\
-                  "hf mfdes getkeysetings --aid 123456 -> get app 123456 key settings with default key/channel setup");
+                  "hf mfdes getkeysettings  -> get picc key settings with default key/channel setup\n"\
+                  "hf mfdes getkeysettings --aid 123456 -> get app 123456 key settings with default key/channel setup");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5915,13 +5768,13 @@ static command_t CommandTable[] = {
 //    {"mad",             CmdHF14aDesMAD,             IfPm3Iso14443a,  "Prints MAD records from card"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "------------------------ " _CYAN_("Keys") " -----------------------"},
     {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
-    {"chkeysetings",     CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "[new]Change Key Settings"},
-    {"getkeysetings",    CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "[new]Get Key Settings"},
+    {"chkeysettings",    CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "[new]Change Key Settings"},
+    {"getkeysettings",   CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "[new]Get Key Settings"},
     {"getkeyversions",   CmdHF14ADesGetKeyVersions,   IfPm3Iso14443a,  "[new]Get Key Versions"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Applications") " -------------------"},
     {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
-    {"createaid",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "[new]Create Application ID"},
-    {"deleteaid",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "[new]Delete Application ID"},
+    {"createapp",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "[new]Create Application"},
+    {"deleteapp",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "[new]Delete Application"},
     {"selectaid",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
     {"getaids",          CmdHF14ADesGetAIDs,          IfPm3Iso14443a,  "[new]Get Application IDs list"},
     {"getappnames",      CmdHF14ADesGetAppNames,      IfPm3Iso14443a,  "[new]Get Applications list"},
