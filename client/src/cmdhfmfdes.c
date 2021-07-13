@@ -4981,8 +4981,8 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
 static int CmdHF14ADesDefault(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes default",
-                  "Get Application IDs, ISO IDs and DF names from card. Master key needs to be provided.",
-                  "hf mfdes getappnames -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup");
+                  "Set default parameters for access to desfire card.",
+                  "hf mfdes default -n 0 -t des -k 0000000000000000 -f none -> save to the default factory setup");
 
     void *argtable[] = {
         arg_param_begin,
