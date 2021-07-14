@@ -18,16 +18,16 @@
 #include "graph.h"
 #include "cliparser.h"
 #include "commonutil.h"
-#include "ui.h"         // PrintAndLog
+#include "ui.h"           // PrintAndLog
 #include "proxgui.h"
-#include "lfdemod.h"    // parityTest, bitbytes_to_byte
+#include "lfdemod.h"      // parityTest, bitbytes_to_byte
 #include "cmddata.h"
-#include "cmdlf.h"      // lf_read
-#include "protocols.h"  // t55 defines
-#include "cmdlft55xx.h" // verifywrite
+#include "cmdlf.h"        // lf_read
+#include "protocols.h"    // t55 defines
+#include "cmdlft55xx.h"   // verifywrite
 #include "cliparser.h"
 #include "cmdlfem4x05.h"  // EM defines
-
+#include "parity.h"       // parity
 #define INDALA_ARR_LEN 64
 
 static int CmdHelp(const char *Cmd);
@@ -111,17 +111,6 @@ static void decodeHeden2L(uint8_t *bits) {
 
     PrintAndLogEx(SUCCESS, "    Heden-2L    | %u", cardnumber);
 }
-
-bool parityEven(uint16_t x) {
-    x ^= x >> 1;
-    x ^= x >> 2;
-    x ^= x >> 4;
-    x ^= x >> 8;
-    x ^= x >> 16;
-    return (x & 0x01);
-}
-
-bool parityOdd(uint16_t x) { return(!parityEven(x)); }
 
 // Indala 26 bit decode
 // by marshmellow, martinbeier
@@ -635,10 +624,11 @@ static int CmdIndalaClone(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf indala clone",
-                  "clone Indala UID to T55x7 or Q5/T5555 tag\n"
+                  "clone Indala UID to T55x7 or Q5/T5555 tag using different known formats\n"
                   _RED_("\nWarning, encoding with FC/CN doesn't always work"),
-                  "lf indala clone --heden 888\n"
-                  "lf indala clone --fc 123 --cn 1337\n"
+                  "lf indala clone --heden 888                --> use Heden 2L format\n"
+                  "lf indala clone --fc 123 --cn 1337         --> use standard 26b format\n"
+                  "lf indala clone --fc 123 --cn 1337 --4041x --> use 4041x format\n"
                   "lf indala clone -r a0000000a0002021\n"
                   "lf indala clone -r 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5");
 
@@ -684,7 +674,7 @@ static int CmdIndalaClone(const char *Cmd) {
     }
 
     if( !got_26 & fmt4041x ) {
-        PrintAndLogEx(FAILED, "You must specify  a facility code and card number when using 4041X format");
+        PrintAndLogEx(FAILED, "You must specify a facility code and card number when using 4041X format");
         return PM3_EINVARG;
     }
 
@@ -805,7 +795,7 @@ static command_t CommandTable[] = {
     {"demod",    CmdIndalaDemod,     AlwaysAvailable, "Demodulate an Indala tag (PSK1) from GraphBuffer"},
     {"altdemod", CmdIndalaDemodAlt,  AlwaysAvailable, "Alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
     {"reader",   CmdIndalaReader,    IfPm3Lf,         "Read an Indala tag from the antenna"},
-    {"clone",    CmdIndalaClone,     IfPm3Lf,         "Clone Indala 4041X tag to T55x7 or Q5/T5555"},
+    {"clone",    CmdIndalaClone,     IfPm3Lf,         "Clone Indala tag to T55x7 or Q5/T5555"},
     {"sim",      CmdIndalaSim,       IfPm3Lf,         "Simulate Indala tag"},
     {NULL, NULL, NULL, NULL}
 };
@@ -932,8 +922,8 @@ int getIndalaBits4041x(uint8_t fc, uint16_t cn, uint8_t *bits) {
     bits[41] = (cn & 0x01);         // LSB L
 
     // Parity
-    bits[34] = parityEven((fc << 4) | (cn >> 12)); 
-    bits[38] = parityOdd(cn & 0x0fff); 
+    bits[34] = evenparity16((fc << 4) | (cn >> 12));
+    bits[38] = oddparity16(cn & 0x0fff);
 
     return PM3_SUCCESS;
 }
