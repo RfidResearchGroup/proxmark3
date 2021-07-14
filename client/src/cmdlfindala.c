@@ -112,6 +112,17 @@ static void decodeHeden2L(uint8_t *bits) {
     PrintAndLogEx(SUCCESS, "    Heden-2L    | %u", cardnumber);
 }
 
+bool parityEven(uint16_t x) {
+    x ^= x >> 1;
+    x ^= x >> 2;
+    x ^= x >> 4;
+    x ^= x >> 8;
+    x ^= x >> 16;
+    return (x & 0x01);
+}
+
+bool parityOdd(uint16_t x) { return(!parityEven(x)); }
+
 // Indala 26 bit decode
 // by marshmellow, martinbeier
 // optional arguments - same as PSKDemod (clock & invert & maxerr)
@@ -194,18 +205,19 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
         csn |= DemodBuffer[50] << 1; // b2
         csn |= DemodBuffer[41] << 0; // b1
 
-        uint8_t checksum = 0;
-        checksum |= DemodBuffer[62] << 1; // b2
-        checksum |= DemodBuffer[63] << 0; // b1
+        uint8_t parity = 0;
+        parity |= DemodBuffer[34] << 1; // b2
+        parity |= DemodBuffer[38] << 0; // b1
 
-        PrintAndLogEx(SUCCESS, "Fmt " _GREEN_("26") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u") " checksum: " _GREEN_("%1d%1d")
+        PrintAndLogEx(SUCCESS, "Fmt " _GREEN_("26") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u") " Parity: " _GREEN_("%1d%1d")
                       , fc
                       , csn
-                      , checksum >> 1 & 0x01
-                      , checksum & 0x01
+                      , parity >> 1 & 0x01
+                      , parity & 0x01
                      );
 
         PrintAndLogEx(SUCCESS, "Possible de-scramble patterns");
+        // This doesn't seem to line up with the hot-stamp numbers on any HID cards I have seen, but, leaving it alone since I do not know how those work. -MS
         PrintAndLogEx(SUCCESS, "    Printed     | __%04d__ [0x%X]", p1, p1);
         PrintAndLogEx(SUCCESS, "    Internal ID | %" PRIu64, foo);
         decodeHeden2L(DemodBuffer);
@@ -245,7 +257,7 @@ static int CmdIndalaDemod(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf indala demod",
-                  "Tries to psk demodulate the graphbuffer as Indala",
+                  "Tries to PSK demodulate the graphbuffer as Indala",
                   "lf indala demod\n"
                   "lf indala demod --clock 32      -> demod a Indala tag from GraphBuffer using a clock of RF/32\n"
                   "lf indala demod --clock 32 -i    -> demod a Indala tag from GraphBuffer using a clock of RF/32 and inverting data\n"
@@ -276,7 +288,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf indala altdemod",
-                  "Tries to psk demodulate the graphbuffer as Indala\n"
+                  "Tries to PSK demodulate the graphbuffer as Indala\n"
                   "This is uses a alternative way to demodulate and was used from the beginning in the Pm3 client.\n"
                   "It's now considered obsolete but remains because it has sometimes its advantages.",
                   "lf indala altdemod\n"
@@ -345,7 +357,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
 
     if (rawbit > 0) {
         PrintAndLogEx(INFO, "Recovered %d raw bits, expected: %zu", rawbit, GraphTraceLen / 32);
-        PrintAndLogEx(INFO, "worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
+        PrintAndLogEx(INFO, "Worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
     } else {
         return PM3_ESOFT;
     }
@@ -375,7 +387,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
     }
 
     if (start == rawbit - uidlen + 1) {
-        PrintAndLogEx(FAILED, "nothing to wait for");
+        PrintAndLogEx(FAILED, "Nothing to wait for");
         return PM3_ESOFT;
     }
 
@@ -527,7 +539,7 @@ static int CmdIndalaSim(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf indala sim",
-                  "Enables simulation of Indala card with specified facility-code and card number.\n"
+                  "Enables simulation of Indala card with specified facility code and card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.",
                   "lf indala sim --heden 888\n"
                   "lf indala sim --raw a0000000a0002021\n"
@@ -633,11 +645,12 @@ static int CmdIndalaClone(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_strx0("r", "raw", "<hex>", "raw bytes"),
-        arg_int0(NULL, "heden", "<decimal>", "Cardnumber for Heden 2L format"),
-        arg_int0(NULL, "fc", "<decimal>", "Facility Code (26 bit H10301 format)"),
-        arg_int0(NULL, "cn", "<decimal>", "Cardnumber (26 bit H10301 format)"),
-        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
-        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_int0(NULL, "heden", "<decimal>", "Card number for Heden 2L format"),
+        arg_int0(NULL, "fc", "<decimal>", "Facility code (26 bit H10301 format)"),
+        arg_int0(NULL, "cn", "<decimal>", "Card number (26 bit H10301 format)"),
+        arg_lit0(NULL, "q5", "Optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "Optional - specify writing to EM4305/4469 tag"),
+        arg_lit0(NULL, "4041x", "Optional - specify Indala 4041X format, must use with fc and cn"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -649,6 +662,7 @@ static int CmdIndalaClone(const char *Cmd) {
     bool is_long_uid = (raw_len == 28);
     bool q5 = arg_get_lit(ctx, 5);
     bool em = arg_get_lit(ctx, 6);
+    bool fmt4041x = arg_get_lit(ctx, 7);
 
     bool got_cn = false, got_26 = false;
     if (is_long_uid == false) {
@@ -666,6 +680,11 @@ static int CmdIndalaClone(const char *Cmd) {
 
     if (q5 && em) {
         PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
+
+    if( !got_26 & fmt4041x ) {
+        PrintAndLogEx(FAILED, "You must specify  a facility code and card number when using 4041X format");
         return PM3_EINVARG;
     }
 
@@ -697,11 +716,10 @@ static int CmdIndalaClone(const char *Cmd) {
 
         // 224 BIT UID
         // config for Indala (RF/32;PSK2 with RF/2;Maxblock=7)
-        PrintAndLogEx(INFO, "Preparing to clone Indala 224bit to " _YELLOW_("%s") " raw " _GREEN_("%s")
+        PrintAndLogEx(INFO, "Preparing to clone Indala 224 bit to " _YELLOW_("%s") " raw " _GREEN_("%s")
                       , cardtype
                       , sprint_hex_inrow(raw, raw_len)
                      );
-
 
     } else {
         // 64 BIT UID
@@ -710,7 +728,7 @@ static int CmdIndalaClone(const char *Cmd) {
             raw_len = 8;
         } else if (got_26) {
 
-            PrintAndLogEx(INFO, "Using Indala 26b FC " _GREEN_("%u") " CN " _GREEN_("%u"), fc, cn);
+            PrintAndLogEx(INFO, "Using Indala 64 bit, FC " _GREEN_("%u") " CN " _GREEN_("%u"), fc, cn);
 
             // Used with the 26bit FC/CSN
             uint8_t *bits = calloc(INDALA_ARR_LEN, sizeof(uint8_t));
@@ -719,10 +737,18 @@ static int CmdIndalaClone(const char *Cmd) {
                 return PM3_EMALLOC;
             }
 
-            if (getIndalaBits(fc, cn, bits) != PM3_SUCCESS) {
+            // Bitstream generation, format select
+            int indalaReturn = PM3_ESOFT;
+            if(fmt4041x){
+                indalaReturn = getIndalaBits4041x(fc, cn, bits);
+            } else { 
+                indalaReturn = getIndalaBits(fc, cn, bits);
+            }
+
+            if (indalaReturn != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Error with tag bitstream generation.");
                 free(bits);
-                return PM3_ESOFT;
+                return indalaReturn;
             }
 
             raw[0] = bytebits_to_byte(bits, 8);
@@ -755,7 +781,7 @@ static int CmdIndalaClone(const char *Cmd) {
         max = 3;
 
         // config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
-        PrintAndLogEx(INFO, "Preparing to clone Indala 64bit to " _YELLOW_("%s") " raw " _GREEN_("%s")
+        PrintAndLogEx(INFO, "Preparing to clone Indala 64 bit to " _YELLOW_("%s") " raw " _GREEN_("%s")
                       , cardtype
                       , sprint_hex_inrow(raw, raw_len)
                      );
@@ -775,12 +801,12 @@ static int CmdIndalaClone(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",     CmdHelp,            AlwaysAvailable, "this help"},
-    {"demod",    CmdIndalaDemod,     AlwaysAvailable, "demodulate an Indala tag (PSK1) from GraphBuffer"},
-    {"altdemod", CmdIndalaDemodAlt,  AlwaysAvailable, "alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
-    {"reader",   CmdIndalaReader,    IfPm3Lf,         "read an Indala tag from the antenna"},
-    {"clone",    CmdIndalaClone,     IfPm3Lf,         "clone Indala tag to T55x7 or Q5/T5555"},
-    {"sim",      CmdIndalaSim,       IfPm3Lf,         "simulate Indala tag"},
+    {"help",     CmdHelp,            AlwaysAvailable, "This help"},
+    {"demod",    CmdIndalaDemod,     AlwaysAvailable, "Demodulate an Indala tag (PSK1) from GraphBuffer"},
+    {"altdemod", CmdIndalaDemodAlt,  AlwaysAvailable, "Alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
+    {"reader",   CmdIndalaReader,    IfPm3Lf,         "Read an Indala tag from the antenna"},
+    {"clone",    CmdIndalaClone,     IfPm3Lf,         "Clone Indala 4041X tag to T55x7 or Q5/T5555"},
+    {"sim",      CmdIndalaSim,       IfPm3Lf,         "Simulate Indala tag"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -856,6 +882,58 @@ int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits) {
 
     // 92 = 62
     // 93 = 63
+
+    return PM3_SUCCESS;
+}
+
+/*
+    Permutation table for this format, lower 4 bytes of card data.
+
+    0x40 |  1   | CN 6 | P Hi | CN 9 | CN A | CN 5 | P Lo | FC 1 |
+    0x50 | CN C | CN 0 | CN 5 | CN D | FC 5 | CN E | CN 7 | FC 4 |
+    0x60 | FC 3 | FC 6 | CN 1 | CN 8 | CN B | FC 2 | CN 4 |  1   |
+    0x70 | CN 3 | FC 7 | FC 0 | CN 2 |  0   |  0   |  0   |  0   |
+*/
+int getIndalaBits4041x(uint8_t fc, uint16_t cn, uint8_t *bits) {
+
+    // Preamble and required values
+    bits[0] = 0x01;
+    bits[2] = 0x01;
+    bits[32] = 0x01;
+    bits[40] = 0x01;
+    bits[55] = 0x01;
+
+    // Facility code
+    bits[57] = ((fc >> 7) & 0x01);  // MSB
+    bits[49] = ((fc >> 6) & 0x01);
+    bits[44] = ((fc >> 5) & 0x01);
+    bits[47] = ((fc >> 4) & 0x01);
+    bits[48] = ((fc >> 3) & 0x01);
+    bits[53] = ((fc >> 2) & 0x01);
+    bits[39] = ((fc >> 1) & 0x01);
+    bits[58] = (fc & 0x01);         // LSB
+
+    // Serial number
+    bits[42] = ((cn >> 15) & 0x01); // MSB H
+    bits[45] = ((cn >> 14) & 0x01);
+    bits[43] = ((cn >> 13) & 0x01);
+    bits[40] = ((cn >> 12) & 0x01);
+    bits[52] = ((cn >> 11) & 0x01);
+    bits[36] = ((cn >> 10) & 0x01);
+    bits[35] = ((cn >> 9) & 0x01);
+    bits[51] = ((cn >> 8) & 0x01);  // LSB H
+    bits[46] = ((cn >> 7) & 0x01);  // MSB L
+    bits[33] = ((cn >> 6) & 0x01);
+    bits[37] = ((cn >> 5) & 0x01);
+    bits[54] = ((cn >> 4) & 0x01);
+    bits[56] = ((cn >> 3) & 0x01);
+    bits[59] = ((cn >> 2) & 0x01);
+    bits[50] = ((cn >> 1) & 0x01);
+    bits[41] = (cn & 0x01);         // LSB L
+
+    // Parity
+    bits[34] = parityEven((fc << 4) | (cn >> 12)); 
+    bits[38] = parityOdd(cn & 0x0fff); 
 
     return PM3_SUCCESS;
 }

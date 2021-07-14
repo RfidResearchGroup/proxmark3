@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `-4041x` option to lf indala clone for the Indala 4041X format (@chunkystew)
  - Added a new client preference,  delay of execution,  a delay in ms before a cmd is sent. Good for implants (@iceman1001)
  - Fix `lf t55xx brute` - now correctly prints last key if it was correct (@scott4290)
  - Added support python scripts (@salmg)
