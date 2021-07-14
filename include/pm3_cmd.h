@@ -260,6 +260,12 @@ typedef struct {
 } PACKED lf_nrzsim_t;
 
 typedef struct {
+    uint8_t type;
+    uint16_t len;
+    uint8_t *data;
+} PACKED lf_hitag_t;
+
+typedef struct {
     uint8_t blockno;
     uint8_t keytype;
     uint8_t key[6];
@@ -733,6 +739,9 @@ typedef struct {
 #define CMD_HF_MIFARE_GEN3UID                                             0x0850
 #define CMD_HF_MIFARE_GEN3BLK                                             0x0851
 #define CMD_HF_MIFARE_GEN3FREEZ                                           0x0852
+
+// Gen 3 GTU magic cards
+#define CMD_HF_MIFARE_G3_RDBL                                             0x0860
 
 #define CMD_UNKNOWN                                                       0xFFFF
 

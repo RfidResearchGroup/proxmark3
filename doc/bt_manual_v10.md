@@ -190,10 +190,11 @@ The first time, your OS will ask you for pairing. The default PIN is
 1234. If PIN is not typed in quickly, the client might timeout. Simply
 restart it again after pairing.
 
-If your OS doesn't prompt you for pairing, you can do it in command line, e.g. (again, replace with your addon MAC address):
+If your OS doesn't prompt you for pairing or if the device connects and immediately disconnects, you can pair it in command line, e.g. (again, replace with your addon MAC address):
 
 ```sh
 bluetoothctl
+[bluetooth]# remove aa:bb:cc:dd:ee:ff
 [bluetooth]# pairable on
 [bluetooth]# scan on
 Discovery started

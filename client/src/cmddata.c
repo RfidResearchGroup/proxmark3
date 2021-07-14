@@ -2702,7 +2702,7 @@ typedef struct {
 static int print_modulation(lf_modulation_t b) {
     PrintAndLogEx(INFO, " Modulation........ " _GREEN_("%s"), GetSelectedModulationStr(b.modulation));
     PrintAndLogEx(INFO, " Bit clock......... " _GREEN_("RF/%d"), b.bitrate);
-    PrintAndLogEx(INFO, " Approx baudrate... " _GREEN_("%.f") "bauds", (125000 / (float)b.bitrate));
+    PrintAndLogEx(INFO, " Approx baudrate... " _GREEN_("%.f") " baud", (125000 / (float)b.bitrate));
     switch (b.modulation) {
         case DEMOD_PSK1:
         case DEMOD_PSK2:

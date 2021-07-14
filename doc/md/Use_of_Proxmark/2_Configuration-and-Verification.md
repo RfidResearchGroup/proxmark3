@@ -1,6 +1,6 @@
-### First things on your RDV40
+### First things on your Proxmark3 RDV4
 
-You will need to run these commands to make sure your rdv4 is prepared
+You will need to run these commands to make sure your RDV4 is prepared
 ```
 [usb] pm3 --> script run init_rdv4
 ```

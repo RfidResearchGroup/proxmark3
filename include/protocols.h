@@ -436,6 +436,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_GET_FILE_IDS              0x6F
 #define MFDES_ABORT_TRANSACTION         0xA7
 #define MFDES_ADDITIONAL_FRAME          0xAF
+#define MFDES_UPDATE_RECORD1            0xBA
 #define MFDES_READ_RECORDS              0xBB
 #define MFDES_READ_DATA                 0xBD
 #define MFDES_CREATE_CYCLIC_RECORD_FILE 0xC0
@@ -451,6 +452,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_CREATE_STD_DATA_FILE      0xCD
 #define MFDES_CREATE_TRANS_MAC_FILE     0xCE
 #define MFDES_DELETE_APPLICATION        0xDA
+#define MFDES_UPDATE_RECORD2            0xDB
 #define MFDES_DEBIT                     0xDC
 #define MFDES_DELETE_FILE               0xDF
 #define MFDES_CLEAR_RECORD_FILE         0xEB
@@ -459,6 +461,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_GET_FILE_SETTINGS         0xF5
 #define MFDES_FORMAT_PICC               0xFC
 #define MFDES_VERIFY_PC                 0xFD
+#define MFDES_NATIVE_ISO7816_WRAP_CLA   0x90
 
 // MIFARE DESFire status & error codes:
 #define MFDES_S_OPERATION_OK            0x00

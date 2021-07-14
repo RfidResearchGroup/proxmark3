@@ -48,6 +48,7 @@ typedef struct {
     clientdebugLevel_t client_debug_level;
     barMode_t bar_mode;
 //    uint8_t device_debug_level;
+    uint16_t client_exe_delay;
     char *history_path;
     pm3_device *current_device;
 } session_arg_t;

@@ -60,6 +60,12 @@ void HideGraphWindow(void) {}
 
 void RepaintGraphWindow(void) {}
 
+void ShowPictureWindow(char *fn) {}
+
+void HidePictureWindow(void) {}
+
+void RepaintPictureWindow(void) {}
+
 int push_cmdscriptfile(char *path, bool stayafter) { return PM3_SUCCESS; }
 
 static bool OpenPm3(void) {

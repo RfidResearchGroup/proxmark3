@@ -21,6 +21,18 @@ extern "C" void ShowGraphWindow(void) {
 
 extern "C" void HideGraphWindow(void) {}
 extern "C" void RepaintGraphWindow(void) {}
+
+extern "C" void ShowPictureWindow(char *fn) {
+    static int warned = 0;
+
+    if (!warned) {
+        printf("No GUI in this build!\n");
+        warned = 1;
+    }
+}
+extern "C" void HidePictureWindow(void) {}
+extern "C" void RepaintPictureWindow(void) {}
+
 extern "C" void MainGraphics() {}
 extern "C" void InitGraphics(int argc, char **argv) {}
 extern "C" void ExitGraphics(void) {}

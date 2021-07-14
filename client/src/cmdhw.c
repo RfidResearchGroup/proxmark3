@@ -539,7 +539,7 @@ static int CmdSetMux(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw setmux",
                   "Set the ADC mux to a specific value",
-                  "hw setmux --hiraw    -> set HIGH RAW"
+                  "hw setmux --hipkd    -> set HIGH PEAK\n"
                  );
 
     void *argtable[] = {
@@ -561,6 +561,13 @@ static int CmdSetMux(const char *Cmd) {
         PrintAndLogEx(INFO, "Can only set one mux");
         return PM3_EINVARG;
     }
+
+#ifdef WITH_FPC_USART
+    if (loraw || hiraw) {
+        PrintAndLogEx(INFO, "this ADC mux option is unavailable on RDV4 compiled with FPC USART");
+        return PM3_EINVARG;
+    }
+#endif
 
     uint8_t arg = 0;
     if (lopkd)

@@ -20,7 +20,7 @@ We have listed three ways to use these two setups  (dev environment vs pre-compi
 ^[Top](#top)
 
 ## Video Installation guide
-_note:  this video is a bit out-of-date but still informative_
+_note:  this video is out-of-date but still informative_
 [![Windows Installation tutorial](https://raw.githubusercontent.com/Chrissy-Morgan/Proxmark3-RDV4-ParrotOS/master/screenshot-www.youtube.com-2019.03.17-20-44-33.png)](https://youtu.be/zzF0NCMJnYU "Windows Installation Tutorial")
 
 ## Driver Installation ( Windows 7 )
@@ -83,7 +83,10 @@ Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmar
 # Installing pre-compiled binaries with ProxSpace
 ^[Top](#top)
 
-to be done (tcprst)
+There are a community effort by @gator96100 to make up-to-date precompiled version of the offical repository and this repository.
+[www.proxmarkbuilds.org](https://www.proxmarkbuilds.org/)
+
+It has excellent instructions to follow. 
 
 
 
@@ -104,7 +107,9 @@ Make sure your WSL can launch Windows processes to get the `pm3` scripts working
 
 ## X Server Installation
 
-If you want to run the graphical components of the Proxmark3 client, you need to install a X Server such as [VcXsrv](https://sourceforge.net/projects/vcxsrv/) or [Xming](https://sourceforge.net/projects/xming/) and launch it, e.g. by executing XLaunch.
+If you want to run the graphical components of the Proxmark3 client, you need to install a X Server such as in the list below, and launch it, e.g. by executing XLaunch.
+ * [VcXsrv](https://sourceforge.net/projects/vcxsrv/) 
+ * [Xming](https://sourceforge.net/projects/xming/) 
 
 
 ## Windows Terminal Installation
@@ -114,7 +119,7 @@ It is also open sourced (see [github.com/microsoft/terminal](https://github.com/
 
 ## Dependencies
 
-Enter WSL prompt (`wsl` or Start Windows Terminal) and from there, follow the [Linux Installation Instructions](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) for Ubuntu, summarized here below:
+Enter WSL prompt (`wsl` or Start Windows Terminal with `wt`) and from there, follow the [Linux Installation Instructions](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) for Ubuntu, summarized here below:
 
 Make sure your WSL guest OS is up-to-date first:
 

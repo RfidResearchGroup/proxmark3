@@ -498,7 +498,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 static int download_trace(void) {
 
     if (IfPm3Present() == false) {
-        PrintAndLogEx(FAILED, "You requested a trace upload in offline mode, consider using parameter '1' for working from Tracebuffer");
+        PrintAndLogEx(FAILED, "You requested a trace upload in offline mode, consider using parameter '-1' for working from Tracebuffer");
         return PM3_EINVARG;
     }
 
@@ -753,7 +753,7 @@ int CmdTraceList(const char *Cmd) {
     if (use_buffer == false) {
         download_trace();
     } else if (g_traceLen == 0) {
-        PrintAndLogEx(FAILED, "You requested a trace list in offline mode but there is no trace, consider using 'trace load' or removing parameter '1'");
+        PrintAndLogEx(FAILED, "You requested a trace list in offline mode but there is no trace, consider using 'trace load' or removing parameter '-1'");
         return PM3_EINVARG;
     }
 

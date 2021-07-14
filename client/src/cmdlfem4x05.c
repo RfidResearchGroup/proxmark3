@@ -1319,13 +1319,13 @@ int CmdEM4x05Chk(const char *Cmd) {
     CLIParserInit(&ctx, "lf em 4x05 chk",
                   "This command uses a dictionary attack against EM4205/4305/4469/4569",
                   "lf em 4x05 chk\n"
-                  "lf em 4x05 chk -e 000022B8            -> remember to use 0x for hex\n"
+                  "lf em 4x05 chk -e 000022B8            -> check password 000022B8\n"
                   "lf em 4x05 chk -f t55xx_default_pwds  -> use T55xx default dictionary"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("f", "file", "<*.dic>", "loads a default keys dictionary file <*.dic>"),
+        arg_str0("f", "file", "<fn>", "loads a default keys dictionary file <*.dic>"),
         arg_str0("e", "em", "<EM4100>", "try the calculated password from some cloners based on EM4100 ID"),
         arg_param_end
     };
@@ -1334,7 +1334,18 @@ int CmdEM4x05Chk(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    uint64_t card_id = arg_get_u64_hexstr_def(ctx, 2, 0);
+    uint64_t card_id = 0;
+    int res = arg_get_u64_hexstr_def_nlen(ctx, 2, 0, &card_id, 5, true);
+    if (res == 2) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "EM4100 ID must be 5 hex bytes");
+        return PM3_EINVARG;
+    }
+    if (res == 0) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
     CLIParserFree(ctx);
 
     if (strlen(filename) == 0) {
@@ -1366,7 +1377,7 @@ int CmdEM4x05Chk(const char *Cmd) {
 
         uint32_t keycount = 0;
 
-        int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 4, &keycount);
+        res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 4, &keycount);
         if (res != PM3_SUCCESS || keycount == 0 || keyBlock == NULL) {
             PrintAndLogEx(WARNING, "no keys found in file");
             if (keyBlock != NULL)
@@ -1418,22 +1429,30 @@ int CmdEM4x05Chk(const char *Cmd) {
 int CmdEM4x05Brute(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x05 brute",
-                  "This command tries to bruteforce the password of a EM4205/4305/4469/4569\n",
+                  "This command tries to bruteforce the password of a EM4205/4305/4469/4569\n"
+                  "The loop is running on device side,  press Proxmark3 button to abort\n",
                   "Note: if you get many false positives, change position on the antenna"
                   "lf em 4x05 brute\n"
-                  "lf em 4x05 brute -n 1                   -> stop after first candidate found\n"
-                  "lf em 4x05 brute -s 000022B8            -> remember to use 0x for hex"
+                  "lf em 4x05 brute -n 1            -> stop after first candidate found\n"
+                  "lf em 4x05 brute -s 000022AA     -> start at 000022AA"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_0("s", "start", "<pwd>", "Start bruteforce enumeration from this password value"),
-        arg_int0("n", NULL, "<digits>", "Stop after having found n candidates. Default: 0 => infinite"),
+        arg_str0("s", "start", "<hex>", "Start bruteforce enumeration from this password value"),
+        arg_u64_0("n", NULL, "<dec>", "Stop after having found n candidates. Default: 0 (infinite)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint32_t start_pwd = arg_get_u64_hexstr_def(ctx, 1, 0);
-    uint32_t n = arg_get_int_def(ctx, 2, 0);
+    uint32_t start_pwd = 0;
+    int res = arg_get_u32_hexstr_def(ctx, 1, 0, &start_pwd);
+    if (res != 1) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "check `start_pwd` parameter");
+        return PM3_EINVARG;
+    }
+
+    uint32_t n = arg_get_u32_def(ctx, 2, 0);
     CLIParserFree(ctx);
 
     PrintAndLogEx(NORMAL, "");
@@ -1449,7 +1468,7 @@ int CmdEM4x05Brute(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X_BF, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_LF_EM4X_BF, &resp, 1000)) {
+    if (WaitForResponseTimeout(CMD_LF_EM4X_BF, &resp, 1000) == false) {
         PrintAndLogEx(WARNING, "(EM4x05 Bruteforce) timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -1857,7 +1876,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
         // compute number of bits flipped
         PrintAndLogEx(INFO, "Bitflips: %2u events => %s", bitcount32(bitflips), bitstring);
         PrintAndLogEx(INFO, "New protection word => " _CYAN_("%08X") "\n", word14b);
-        PrintAndLogEx(INFO, "Try " _YELLOW_("`lf em 4x05_dump`"));
+        PrintAndLogEx(INFO, "Try " _YELLOW_("`lf em 4x05 dump`"));
     }
 
     if (verbose) {

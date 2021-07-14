@@ -1148,6 +1148,9 @@ void SniffHitag2(void) {
     // Enable and reset counter
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
+    // Assert a sync signal. This sets all timers to 0 on next active clock edge
+    AT91C_BASE_TCB->TCB_BCR = 1;
+
     int frame_count = 0, response = 0, overflow = 0, lastbit = 1, tag_sof = 4;
     bool rising_edge = false, reader_frame = false, bSkip = true;
     uint8_t rx[HITAG_FRAME_LEN];
@@ -1293,11 +1296,15 @@ void SniffHitag2(void) {
         // Reset the timer to restart while-loop that receives frames
         AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
         AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+
+        // Assert a sync signal. This sets all timers to 0 on next active clock edge
+        AT91C_BASE_TCB->TCB_BCR = 1;
     }
 
     LEDsoff();
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     set_tracing(false);
 

@@ -762,7 +762,7 @@ static int CmdLegicDump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<filename>", "specify a filename for dump file"),
+        arg_str0("f", "file", "<fn>", "specify a filename for dump file"),
         arg_lit0(NULL, "de", "deobfuscate dump data (xor with MCC)"),
         arg_param_end
     };
@@ -1032,7 +1032,7 @@ static int CmdLegicESave(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<filename>", "Specify a filename to save"),
+        arg_str0("f", "file", "<fn>", "Specify a filename to save"),
         arg_int0("t", "type", "<dec>", "Tag type"),
         arg_lit0(NULL, "deobfuscate", "De-obfuscate dump data (xor with MCC)"),
         arg_param_end

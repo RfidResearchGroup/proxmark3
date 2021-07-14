@@ -16,6 +16,13 @@
 #include <stddef.h>
 #include <mbedtls/pk.h>
 
+void des_encrypt(void *out, const void *in, const void *key);
+void des_decrypt(void *out, const void *in, const void *key);
+void des_encrypt_ecb(void *out, const void *in, const int length, const void *key);
+void des_decrypt_ecb(void *out, const void *in, const int length, const void *key);
+void des_encrypt_cbc(void *out, const void *in, const int length, const void *key, uint8_t *iv);
+void des_decrypt_cbc(void *out, const void *in, const int length, const void *key, uint8_t *iv);
+
 int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length);
 int aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length);
 int aes_cmac(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int length);
@@ -34,5 +41,12 @@ int ecdsa_signature_r_s_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, ui
 char *ecdsa_get_error(int ret);
 
 int ecdsa_nist_test(bool verbose);
+
+void bin_xor(uint8_t *d1, uint8_t *d2, size_t len);
+
+#define ISO9797_M2_PAD_BYTE 0x80
+void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_t sdatalen, size_t blocklen);
+size_t FindISO9797M2PaddingDataLen(uint8_t *data, size_t datalen);
+
 
 #endif /* libpcrypto.h */

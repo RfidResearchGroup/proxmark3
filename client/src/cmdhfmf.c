@@ -24,7 +24,6 @@
 #include "protocols.h"
 #include "util_posix.h"         // msclock
 #include "cmdhfmfhard.h"
-#include "des.h"                // des ecb
 #include "crapto1/crapto1.h"    // prng_successor
 #include "cmdhf14a.h"           // exchange APDU
 #include "crypto/libpcrypto.h"
@@ -161,7 +160,7 @@ static void decode_print_st(uint16_t blockno, uint8_t *data) {
         PrintAndLogEx(INFO, "----------------------- " _CYAN_("Sector trailer decoder") " -----------------------");
         PrintAndLogEx(INFO, "key A........ " _GREEN_("%s"), sprint_hex_inrow(data, 6));
         PrintAndLogEx(INFO, "acr.......... " _GREEN_("%s"), sprint_hex_inrow(data + 6, 3));
-        PrintAndLogEx(INFO, "user / gdb... " _GREEN_("%02x"), data[9]);
+        PrintAndLogEx(INFO, "user / gpb... " _GREEN_("%02x"), data[9]);
         PrintAndLogEx(INFO, "key B........ " _GREEN_("%s"), sprint_hex_inrow(data + 10, 6));
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "  # | Access rights");
@@ -2577,9 +2576,9 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
                   "hf mf fchk --2k -k FFFFFFFFFFFF                --> Key recovery against MIFARE 2k\n"
                   "hf mf fchk --4k -k FFFFFFFFFFFF                --> Key recovery against MIFARE 4k\n"
                   "hf mf fchk --1k -f mfc_default_keys.dic        --> Target 1K using default dictionary file\n"
-                  "hf mf fchk --1k --emu                          --> Target 1K, write to emulator memory\n"
-                  "hf mf fchk --1k --dump                         --> Target 1K, write to file\n"
-                  "hf mf fchk --1k --mem                          --> Target 1K, use dictionary from flashmemory");
+                  "hf mf fchk --1k --emu                          --> Target 1K, write keys to emulator memory\n"
+                  "hf mf fchk --1k --dump                         --> Target 1K, write keys to file\n"
+                  "hf mf fchk --1k --mem                          --> Target 1K, use dictionary from flash memory");
 
     void *argtable[] = {
         arg_param_begin,
@@ -2885,7 +2884,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "emu", "Fill simulator keys from found keys"),
         arg_lit0(NULL, "dump", "Dump found keys to binary file"),
-        arg_str0("f", "file", "<filename>", "filename of dictionary"),
+        arg_str0("f", "file", "<fn>", "filename of dictionary"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -5031,7 +5030,7 @@ static int CmdHF14AMfice(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<filename>", "filename of nonce dump"),
+        arg_str0("f", "file", "<fn>", "filename of nonce dump"),
         arg_u64_0(NULL, "limit", "<dec>", "nonces to be collected"),
         arg_param_end
     };
@@ -5645,12 +5644,6 @@ static int CmdHf14AGen3Freeze(const char *Cmd) {
     return res;
 }
 
-static void des_decrypt(void *out, const void *in, const void *key) {
-    mbedtls_des_context ctx;
-    mbedtls_des_setkey_dec(&ctx, key);
-    mbedtls_des_crypt_ecb(&ctx, in, out);
-}
-
 static int CmdHf14AMfSuperCard(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -6007,6 +6000,110 @@ static int CmdHF14AMfView(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AGen3View(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf gview",
+                  "View `magic gen3 gtu` card memory",
+                  "hf mf gview\n"
+                  "hf mf gview --4k"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool m0 = arg_get_lit(ctx, 1);
+    bool m1 = arg_get_lit(ctx, 2);
+    bool m2 = arg_get_lit(ctx, 3);
+    bool m4 = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    // validations
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    } else if ((m0 + m1 + m2 + m4) == 0) {
+        m1 = true;
+    }
+
+    char s[6];
+    memset(s, 0, sizeof(s));
+    uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
+    if (m0) {
+        block_cnt = MIFARE_MINI_MAXBLOCK;
+        strncpy(s, "Mini", 5);
+    } else if (m1) {
+        block_cnt = MIFARE_1K_MAXBLOCK;
+        strncpy(s, "1K", 3);
+    } else if (m2) {
+        block_cnt = MIFARE_2K_MAXBLOCK;
+        strncpy(s, "2K", 3);
+    } else if (m4) {
+        block_cnt = MIFARE_4K_MAXBLOCK;
+        strncpy(s, "4K", 3);
+    } else {
+        PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
+        return PM3_EINVARG;
+    }
+    PrintAndLogEx(SUCCESS, "View magic gen3 GTU MIFARE Classic " _GREEN_("%s"), s);
+    PrintAndLogEx(INFO, "." NOLF);
+
+    // Select card to get UID/UIDLEN information
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "iso14443a card select timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    /*
+        0: couldn't read
+        1: OK, with ATS
+        2: OK, no ATS
+        3: proprietary Anticollision
+    */
+    uint64_t select_status = resp.oldarg[0];
+
+    if (select_status == 0) {
+        PrintAndLogEx(WARNING, "iso14443a card select failed");
+        return select_status;
+    }
+
+    iso14a_card_select_t card;
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    // reserve memory
+    uint16_t bytes = block_cnt * MFBLOCK_SIZE;
+    uint8_t *dump = calloc(bytes, sizeof(uint8_t));
+    if (dump == NULL) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    for (uint16_t i = 0; i < block_cnt; i++) {
+
+        if (mfG3GetBlock(i, dump + (i * MFBLOCK_SIZE)) !=  PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Can't get magic card block: %u", i);
+            PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
+            free(dump);
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    mf_print_blocks(block_cnt, dump);
+    free(dump);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                AlwaysAvailable, "This help"},
     {"list",        CmdHF14AMfList,         AlwaysAvailable,  "List MIFARE history"},
@@ -6059,7 +6156,8 @@ static command_t CommandTable[] = {
     {"gen3uid",     CmdHf14AGen3UID,        IfPm3Iso14443a,  "Set UID without changing manufacturer block"},
     {"gen3blk",     CmdHf14AGen3Block,      IfPm3Iso14443a,  "Overwrite manufacturer block"},
     {"gen3freeze",  CmdHf14AGen3Freeze,     IfPm3Iso14443a,  "Perma lock UID changes. irreversible"},
-
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic gen3 GTU") " -----------------------"},
+    {"gview",       CmdHF14AGen3View,       IfPm3Iso14443a,  "View card"},
 //    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("i") " -----------------------"},
 //    {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},
     {NULL, NULL, NULL, NULL}

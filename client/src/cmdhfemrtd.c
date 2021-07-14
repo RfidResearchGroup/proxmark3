@@ -19,12 +19,13 @@
 #include "protocols.h"              // definitions of ISO14A/7816 protocol
 #include "iso7816/apduinfo.h"       // GetAPDUCodeDescription
 #include "iso7816/iso7816core.h"    // Iso7816ExchangeEx etc
-#include "crypto/libpcrypto.h"      // Hash calculation (sha1, sha256, sha512)
-#include "mifare/desfire_crypto.h"  // des_encrypt/des_decrypt
+#include "crypto/libpcrypto.h"      // Hash calculation (sha1, sha256, sha512), des_encrypt/des_decrypt
 #include "des.h"                    // mbedtls_des_key_set_parity
 #include "crapto1/crapto1.h"        // prng_successor
 #include "commonutil.h"             // num_to_bytes
 #include "util_posix.h"             // msclock
+#include "ui.h"                     // searchhomedirectory
+#include "proxgui.h"                // Picture Window
 
 // Max file size in bytes. Used in several places.
 // Average EF_DG2 seems to be around 20-25kB or so, but ICAO doesn't set an upper limit
@@ -54,6 +55,7 @@ static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length, const c
 static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length, const char *path);
 static int emrtd_print_ef_com_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen);
+static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen);
@@ -85,7 +87,7 @@ static emrtd_dg_t dg_table[] = {
 //  tag    dg# fileid  filename           desc                                                  pace   eac    req    fast   parser                          dumper
     {0x60, 0,  0x011E, "EF_COM",          "Header and Data Group Presence Information",         false, false, true,  true,  emrtd_print_ef_com_info,        NULL},
     {0x61, 1,  0x0101, "EF_DG1",          "Details recorded in MRZ",                            false, false, true,  true,  emrtd_print_ef_dg1_info,        NULL},
-    {0x75, 2,  0x0102, "EF_DG2",          "Encoded Face",                                       false, false, true,  false, NULL,                           emrtd_dump_ef_dg2},
+    {0x75, 2,  0x0102, "EF_DG2",          "Encoded Face",                                       false, false, true,  false, emrtd_print_ef_dg2_info,        emrtd_dump_ef_dg2},
     {0x63, 3,  0x0103, "EF_DG3",          "Encoded Finger(s)",                                  false, true,  false, false, NULL,                           NULL},
     {0x76, 4,  0x0104, "EF_DG4",          "Encoded Eye(s)",                                     false, true,  false, false, NULL,                           NULL},
     {0x65, 5,  0x0105, "EF_DG5",          "Displayed Portrait",                                 false, false, false, false, NULL,                           emrtd_dump_ef_dg5},
@@ -263,20 +265,6 @@ static int emrtd_get_asn1_field_length(uint8_t *datain, int datainlen, int offse
     return 0;
 }
 
-static void des_encrypt_ecb(uint8_t *key, uint8_t *input, uint8_t *output) {
-    mbedtls_des_context ctx_enc;
-    mbedtls_des_setkey_enc(&ctx_enc, key);
-    mbedtls_des_crypt_ecb(&ctx_enc, input, output);
-    mbedtls_des_free(&ctx_enc);
-}
-
-static void des_decrypt_ecb(uint8_t *key, uint8_t *input, uint8_t *output) {
-    mbedtls_des_context ctx_dec;
-    mbedtls_des_setkey_dec(&ctx_dec, key);
-    mbedtls_des_crypt_ecb(&ctx_dec, input, output);
-    mbedtls_des_free(&ctx_dec);
-}
-
 static void des3_encrypt_cbc(uint8_t *iv, uint8_t *key, uint8_t *input, int inputlen, uint8_t *output) {
     mbedtls_des3_context ctx;
     mbedtls_des3_set2key_enc(&ctx, key);
@@ -345,15 +333,15 @@ static void retail_mac(uint8_t *key, uint8_t *input, int inputlen, uint8_t *outp
             intermediate[x] = intermediate[x] ^ block[x];
         }
 
-        des_encrypt_ecb(k0, intermediate, intermediate_des);
+        des_encrypt(intermediate_des, intermediate, k0);
         memcpy(intermediate, intermediate_des, 8);
     }
 
 
-    des_decrypt_ecb(k1, intermediate, intermediate_des);
+    des_decrypt(intermediate_des, intermediate, k1);
     memcpy(intermediate, intermediate_des, 8);
 
-    des_encrypt_ecb(k0, intermediate, intermediate_des);
+    des_encrypt(intermediate_des, intermediate, k0);
     memcpy(output, intermediate_des, 8);
 }
 
@@ -698,18 +686,18 @@ static bool emrtd_lds_get_data_by_tag(uint8_t *datain, size_t datainlen, uint8_t
 static bool emrtd_select_and_read(uint8_t *dataout, size_t *dataoutlen, uint16_t file, uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, bool use_secure) {
     if (use_secure) {
         if (emrtd_secure_select_file_by_ef(ks_enc, ks_mac, ssc, file) == false) {
-            PrintAndLogEx(ERR, "Failed to secure select %s.", file);
+            PrintAndLogEx(ERR, "Failed to secure select %04X", file);
             return false;
         }
     } else {
         if (emrtd_select_file_by_ef(file) == false) {
-            PrintAndLogEx(ERR, "Failed to select %04X.", file);
+            PrintAndLogEx(ERR, "Failed to select %04X", file);
             return false;
         }
     }
 
     if (emrtd_read_file(dataout, dataoutlen, ks_enc, ks_mac, ssc, use_secure) == false) {
-        PrintAndLogEx(ERR, "Failed to read %04X.", file);
+        PrintAndLogEx(ERR, "Failed to read %04X", file);
         return false;
     }
     return true;
@@ -843,9 +831,13 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, uint
     strncat(filepath, PATHSEP, 2);
     strcat(filepath, name);
 
-    PrintAndLogEx(INFO, "Read %s, len: %i.", name, resplen);
-    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
+    PrintAndLogEx(INFO, "Read " _YELLOW_("%s") " , len %zu", name, resplen);
+    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars)");
+    PrintAndLogEx(DEBUG, "------------------------------------------");
+    PrintAndLogEx(DEBUG, "%s", sprint_hex_inrow(response, resplen));
+    PrintAndLogEx(DEBUG, "------------------------------------------");
     saveFile(filepath, ".BIN", response, resplen);
+
     emrtd_dg_t *dg = emrtd_fileid_to_dg(file);
     if ((dg != NULL) && (dg->dumper != NULL)) {
         dg->dumper(response, resplen, path);
@@ -1030,8 +1022,8 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 
     // Dump EF_CardAccess (if available)
     if (!emrtd_dump_file(ks_enc, ks_mac, ssc, dg_table[EF_CardAccess].fileid, dg_table[EF_CardAccess].filename, BAC, path)) {
-        PrintAndLogEx(INFO, "Couldn't dump EF_CardAccess, card does not support PACE.");
-        PrintAndLogEx(HINT, "This is expected behavior for cards without PACE, and isn't something to be worried about.");
+        PrintAndLogEx(INFO, "Couldn't dump EF_CardAccess, card does not support PACE");
+        PrintAndLogEx(HINT, "This is expected behavior for cards without PACE, and isn't something to be worried about");
     }
 
     // Authenticate with the eMRTD
@@ -1042,7 +1034,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 
     // Select EF_COM
     if (!emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, ks_enc, ks_mac, ssc, BAC)) {
-        PrintAndLogEx(ERR, "Failed to read EF_COM.");
+        PrintAndLogEx(ERR, "Failed to read EF_COM");
         DropField();
         return PM3_ESOFT;
     }
@@ -1051,11 +1043,12 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
     if (filepath == NULL)
         return PM3_EMALLOC;
+
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
     strcat(filepath, dg_table[EF_COM].filename);
 
-    PrintAndLogEx(INFO, "Read EF_COM, len: %i.", resplen);
+    PrintAndLogEx(INFO, "Read EF_COM, len: %zu", resplen);
     PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
     saveFile(filepath, ".BIN", response, resplen);
 
@@ -1065,7 +1058,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     size_t filelistlen = 0;
 
     if (emrtd_lds_get_data_by_tag(response, resplen, filelist, &filelistlen, 0x5c, 0x00, false, true, 0) == false) {
-        PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
+        PrintAndLogEx(ERR, "Failed to read file list from EF_COM");
         DropField();
         return PM3_ESOFT;
     }
@@ -1405,6 +1398,65 @@ static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen) {
         }
     }
 
+    return PM3_SUCCESS;
+}
+
+static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen) {
+
+    int offset = 0;
+
+    // This is a hacky impl that just looks for the image header. I'll improve it eventually.
+    // based on mrpkey.py
+    // Note: Doing datalen - 6 to account for the longest data we're checking.
+    // Checks first byte before the rest to reduce overhead
+    for (offset = 0; offset < datalen - 6; offset++) {
+        if ((data[offset] == 0xFF && memcmp(jpeg_header, data + offset, 4) == 0) ||
+                (data[offset] == 0x00 && memcmp(jpeg2k_header, data + offset, 6) == 0)) {
+            datalen = datalen - offset;
+            break;
+        }
+    }
+
+    // If we didn't get any data, return false.
+    if (datalen == 0) {
+        return PM3_ESOFT;
+    }
+
+    bool is_jpg = (data[offset] == 0xFF);
+
+    char *fn = calloc(strlen(dg_table[EF_DG2].filename) + 4 + 1, sizeof(uint8_t));
+    if (fn == NULL)
+        return PM3_EMALLOC;
+
+    sprintf(fn, "%s.%s", dg_table[EF_DG2].filename, (is_jpg) ? "jpg" : "jp2");
+
+    PrintAndLogEx(DEBUG, "image filename `" _YELLOW_("%s") "`", fn);
+
+    char *path;
+    if (searchHomeFilePath(&path, NULL, fn, false) != PM3_SUCCESS) {
+        free(fn);
+        return PM3_EFILE;
+    }
+    free(fn);
+
+    // remove old file
+    if (fileExists(path)) {
+        PrintAndLogEx(DEBUG, "Delete old temp file `" _YELLOW_("%s") "`", path);
+        remove(path);
+    }
+
+    // temp file.
+    PrintAndLogEx(DEBUG, "Save temp file `" _YELLOW_("%s") "`", path);
+    saveFile(path, "", data + offset, datalen);
+
+    PrintAndLogEx(DEBUG, "view temp file `" _YELLOW_("%s") "`", path);
+    ShowPictureWindow(path);
+    msleep(500);
+
+    // delete temp file
+    PrintAndLogEx(DEBUG, "Deleting temp file `" _YELLOW_("%s") "`", path);
+    remove(path);
+    //free(path);
     return PM3_SUCCESS;
 }
 
@@ -1940,6 +1992,7 @@ int infoHF_EMRTD_offline(const char *path) {
 
     if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS) {
         emrtd_print_ef_cardaccess_info(data, datalen);
+        free(data);
     } else {
         PrintAndLogEx(HINT, "The error above this is normal. It just means that your eMRTD lacks PACE.");
     }
@@ -2194,12 +2247,12 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
         }
     }
     uint8_t path[FILENAME_MAX] = { 0x00 };
-    bool offline = CLIParamStrToBuf(arg_get_str(ctx, 5), path, sizeof(path), &slen) == 0 && slen > 0;
+    bool is_offline = CLIParamStrToBuf(arg_get_str(ctx, 5), path, sizeof(path), &slen) == 0 && slen > 0;
     CLIParserFree(ctx);
     if (error) {
         return PM3_ESOFT;
     }
-    if (offline) {
+    if (is_offline) {
         return infoHF_EMRTD_offline((const char *)path);
     } else {
         bool restore_apdu_logging = GetAPDULogging();

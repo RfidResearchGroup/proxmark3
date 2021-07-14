@@ -49,6 +49,10 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_LF_ICEHID,$(APP_CFLAGS)))
     SRC_STANDALONE = lf_icehid.c
 endif
+# WITH_STANDALONE_LF_NEXID
+ifneq (,$(findstring WITH_STANDALONE_LF_NEXID,$(APP_CFLAGS)))
+    SRC_STANDALONE = lf_nexid.c
+endif
 # WITH_STANDALONE_LF_EM4100EMUL
 ifneq (,$(findstring WITH_STANDALONE_LF_EM4100EMUL,$(APP_CFLAGS)))
     SRC_STANDALONE = lf_em4100emul.c
@@ -84,4 +88,8 @@ endif
 # WITH_STANDALONE_HF_TMUDFORD
 ifneq (,$(findstring WITH_STANDALONE_HF_TMUDFORD,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_tmudford.c
+endif
+ # WITH_STANDALONE_HF_REBLAY
+ifneq (,$(findstring WITH_STANDALONE_HF_REBLAY,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_reblay.c
 endif

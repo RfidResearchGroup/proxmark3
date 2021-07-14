@@ -13,6 +13,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct emrtd_dg_s {
     uint8_t tag;
     uint8_t dgnum;
@@ -53,4 +57,8 @@ int CmdHFeMRTD(const char *Cmd);
 int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available, const char *path);
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available);
 int infoHF_EMRTD_offline(const char *path);
+
+#ifdef __cplusplus
+}
+#endif
 #endif

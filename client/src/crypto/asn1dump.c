@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+// //-----------------------------------------------------------------------------
 // Copyright (C) 2018 Merlok
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
@@ -197,14 +197,14 @@ static unsigned long asn1_value_integer(const struct tlv *tlv, unsigned start, u
         i = start;
 
     for (; i < end - 1; i += 2) {
-        ret *= 10;
+        ret = ret << 4; // was: ret*=10
         ret += tlv->value[i / 2] >> 4;
-        ret *= 10;
+        ret = ret << 4; // was: ret*=10
         ret += tlv->value[i / 2] & 0xf;
     }
 
     if (end & 1) {
-        ret *= 10;
+        ret = ret << 4; // was: ret*=10
         ret += tlv->value[end / 2] >> 4;
     }
 
@@ -227,10 +227,11 @@ static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *
         for (size_t i = 0; i < tlv->len; i++) {
             val = (val << 8) + tlv->value[i];
         }
-        PrintAndLogEx(NORMAL, "    value4b: %d", val);
+        PrintAndLogEx(NORMAL, "    value: %d (0x%08X)", val, val);
         return;
     }
-    PrintAndLogEx(NORMAL, "    value: %lu", asn1_value_integer(tlv, 0, tlv->len * 2));
+    uint32_t val = asn1_value_integer(tlv, 0, tlv->len * 2);
+    PrintAndLogEx(NORMAL, "    value: %" PRIu32 " (0x%X)", val, val);
 }
 
 static char *asn1_oid_description(const char *oid, bool with_group_desc) {
@@ -326,7 +327,7 @@ bool asn1_tag_dump(const struct tlv *tlv, int level, bool *candump) {
     */
 
     PrintAndLogEx(INFO,
-                  "%*s-- %2x [%02zx] '"_YELLOW_("%s") "'" NOLF
+                  "%*s-- %02X [%02ZX] '"_YELLOW_("%s") "'" NOLF
                   , (level * 4)
                   , " "
                   , tlv->tag

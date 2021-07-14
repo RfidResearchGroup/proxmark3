@@ -40,11 +40,6 @@ uint8_t CipurseCSecurityLevelEnc(CipurseChannelSecurityLevel lvl) {
     }
 }
 
-static void bin_xor(uint8_t *d1, uint8_t *d2, size_t len) {
-    for (size_t i = 0; i < len; i++)
-        d1[i] = d1[i] ^ d2[i];
-}
-
 static void bin_ext(uint8_t *dst, size_t dstlen, uint8_t *src, size_t srclen) {
     if (srclen > dstlen)
         memcpy(dst, &src[srclen - dstlen], dstlen);
@@ -216,24 +211,6 @@ void CipurseCAuthenticateHost(CipurseContext *ctx, uint8_t *authdata) {
 
 bool CipurseCCheckCT(CipurseContext *ctx, uint8_t *CT) {
     return (memcmp(CT, ctx->CT, CIPURSE_AES_KEY_LENGTH) == 0);
-}
-
-void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_t sdatalen, size_t blocklen) {
-    *ddatalen = sdatalen + 1;
-    *ddatalen += blocklen - *ddatalen % blocklen;
-    memset(ddata, 0, *ddatalen);
-    memcpy(ddata, sdata, sdatalen);
-    ddata[sdatalen] = ISO9797_M2_PAD_BYTE;
-}
-
-size_t FindISO9797M2PaddingDataLen(uint8_t *data, size_t datalen) {
-    for (int i = datalen; i > 0; i--) {
-        if (data[i - 1] == 0x80)
-            return i - 1;
-        if (data[i - 1] != 0x00)
-            return 0;
-    }
-    return 0;
 }
 
 static uint16_t CipurseCComputeMICCRC(uint8_t *data, size_t len) {
@@ -505,6 +482,11 @@ void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdat
         case CPSEncrypted:
             CipurseCChannelDecrypt(ctx, srcdata, srcdatalen, buf, &buflen);
             //PrintAndLogEx(INFO, "data plain[%d]: %s", buflen, sprint_hex(buf, buflen));
+
+            if (buflen == 0) {
+                PrintAndLogEx(ERR, "APDU can't decode crypto stream");
+                break;
+            }
 
             micdatalen = buflen - 2 - CIPURSE_MIC_LENGTH;
             memcpy(micdata, buf, buflen);

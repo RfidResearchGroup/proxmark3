@@ -71,22 +71,23 @@ If you have installed a Blue Shark add-on on your RDV4, define `PLATFORM_EXTRAS=
 
 ## STANDALONE
 
-The RRG/Iceman fork gives you to easily choose which standalone mode to embed in the firmware.
+The RRG/Iceman repository gives you to easily choose which standalone mode to embed in the firmware.
 
 Here are the supported values you can assign to `STANDALONE` in `Makefile.platform`:
 
 | STANDALONE      | DESCRIPTION                            |
 |-----------------|----------------------------------------|
 |                 | No standalone mode
-| LF_SKELETON     | standalone mode skeleton - Iceman1001
-| LF_THAREXDE     | LF EM4x50 simulator/read standalone mode - tharexde
 | LF_EM4100EMUL   | LF EM4100 simulator standalone mode - temskiy
 | LF_EM4100RSWB   | LF EM4100 read/write/clone/brute mode - Monster1024
 | LF_EM4100RWC    | LF EM4100 read/write/clone mode - temskiy
 | LF_HIDBRUTE     | HID corporate 1000 bruteforce - Federico dotta & Maurizio Agazzini
 | LF_ICEHID       | LF HID collector to flashmem - Iceman1001
+| LF_NEXID        | Nexwatch credentials detection mode - jrjgjk & Zolorah
 | LF_PROXBRUTE    | HID ProxII bruteforce - Brad Antoniewicz
 | LF_SAMYRUN      | HID26 read/clone/sim - Samy Kamkar
+| LF_SKELETON     | standalone mode skeleton - Iceman1001
+| LF_THAREXDE     | LF EM4x50 simulator/read standalone mode - tharexde
 | HF_14ASNIFF     | 14a sniff storing to flashmem - Micolous
 | HF_AVEFUL       | MIFARE Ultralight read/simulation - Ave Ozkal
 | HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth storing in flashmem - Bogito
@@ -96,6 +97,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_LEGIC        | HF Legic Prime standalone - uhei
 | HF_MATTYRUN     | Mifare sniff/clone - Matías A. Ré Medina
 | HF_MSDSAL  (def)| EMV Read and emulation - Salvador Mendoza
+| HF_REBLAY       | 14A relay over BT  - Salvador Mendoza
 | HF_TCPRST       | IKEA Rothult ST25TA, Standalone Master Key Dump/Emulation - Nick Draffen
 | HF_TMUDFORD     | Read and emulate ISO15693 card UID - Tim Mudford
 | HF_YOUNG        | Mifare sniff/simulation - Craig Young
@@ -133,6 +135,7 @@ a series of `SKIP_*` allow to skip some of the functionalities and to get a smal
 |SKIP_NFCBARCODE=1    | 1.4kb
 |SKIP_HFSNIFF=1       | 0.5kb
 |SKIP_HFPLOT=1        | 0.3kb
+
 
 So for example, at the time of writing, this is a valid `Makefile.platform` compiling an image for 256k:
 ```

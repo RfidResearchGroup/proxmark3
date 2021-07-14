@@ -36,7 +36,8 @@ sudo make install; pushd /tmp; proxmark3 -c 'data load -f lf_EM4x05.pm3;lf searc
 
 - [ ] RPI Zero
 - [ ] WSL
-- [ ] PSv3.3
+- [ ] PSv3.9
+- [ ] Archlinux
 - [ ] Kali
 - [ ] Debian
 - [ ] Ubuntu20
@@ -46,3 +47,12 @@ sudo make install; pushd /tmp; proxmark3 -c 'data load -f lf_EM4x05.pm3;lf searc
 - [ ] OSX
 - [ ] Android
 - [ ] Termux
+
+# creating release
+`make release RELEASE_NAME="ice awesome"`
+last line of output,  gives you next command to run
+Sample:  `git push && git push origin v4.15000`
+
+
+Go to Github releases,  create release based on the new created tag and publish
+update homebrew repo, file `proxmark3.rb` with a SHA256 sum of the file `v4.15000.tar.gz`  

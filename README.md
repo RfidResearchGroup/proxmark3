@@ -25,6 +25,7 @@
 ||[Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)|[More cheat sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
 ||**[Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md)**|[Complete client command set](/doc/commands.md)|
 ||**[JTAG](/doc/jtag_notes.md)**|[T5577 Introduction Guide](/doc/T5577_Guide.md)|
+||**[MacPorts (Mac OS X, experimental)](/doc/md/Installation_Instructions/Mac-OS-X-MacPorts-Installation-Instructions.md)** |
 
 
 ## Notes / helpful documents
@@ -59,12 +60,13 @@ We define generic Proxmark3 platforms as following devices.
    - **Note**: unknown pin assignments.
  - ⚠  Ryscorp Proxmark3 Pro 
    - **Note**: device has different fpga and unknown pin assignments.
+ - ⚠  i-copy 
+   - **Note**: reversed hw,  experimental support maintained in [icopyx-community pm3 repo](https://github.com/iCopy-X-Community/icopyx-community-pm3)
 
 **Unknown support status**
  - ⚠  VX
    - **Note**: unknown device hw
- - ⚠  i-copy 
-   - **Note**: unknown device hw
+
 
 **256kb flash memory size of generic Proxmark3 platforms**
 
@@ -131,11 +133,11 @@ The [public roadmap](https://github.com/RfidResearchGroup/proxmark3/wiki/Public-
 ## Supported operative systems 
 This repo compiles nicely on 
    - WSL1 on Windows 10
-   - Proxspace v3.9 [release v3.9](https://github.com/Gator96100/ProxSpace/releases)
+   - Proxspace enviroment [release v3.9](https://github.com/Gator96100/ProxSpace/releases)
    - Windows/MinGW environment
    - Ubuntu, ParrotOS, Gentoo, Pentoo, Kali, NetHunter, Arch Linux, Fedora, Debian, Raspbian
    - Android / Termux
-   - Mac OS X / Homebrew / Apple Silicon M1
+   - Mac OS X / Homebrew (or MacPorts, experimental) / Apple Silicon M1
    - Docker container
       - [ RRG / Iceman repo based ubuntu 18.04 container ](https://hub.docker.com/r/secopsconsult/proxmark3)
       - [ Iceman fork based container v1.7 ](https://hub.docker.com/r/iceman1001/proxmark3/)
@@ -155,7 +157,7 @@ We don't maintain any precompiled binaries in this repo. There is community effo
 ## Official channels
 Where do you find the community?
    - [RFID Hacking community discord server](https://discord.gg/QfPvGFRQxH)
-   - [Proxmark3 IRC channel](http://webchat.freenode.net/?channels=#proxmark3)
+   - [Proxmark3 IRC channel](https://web.libera.chat/?channels=#proxmark3)
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
    - [Proxmark3 forum](http://www.proxmark.org/forum/index.php)
 

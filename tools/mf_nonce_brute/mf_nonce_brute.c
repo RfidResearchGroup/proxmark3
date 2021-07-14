@@ -417,6 +417,7 @@ static void *brute_thread(void *arguments) {
                 if (isOK == false) {
                     printf(_RED_("<-- not a valid cmd\n"));
                     pthread_mutex_unlock(&print_lock);
+                    free(revstate);
                     continue;
                 }
 
@@ -425,6 +426,7 @@ static void *brute_thread(void *arguments) {
                 if (isOK == false) {
                     printf(_RED_("<-- not a valid crc\n"));
                     pthread_mutex_unlock(&print_lock);
+                    free(revstate);
                     continue;
                 } else {
                     printf("<-- valid cmd\n");

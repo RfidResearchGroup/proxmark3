@@ -260,7 +260,7 @@ static int CmdHFCryptoRFDump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<filename>", "filename to save dump to"),
+        arg_str0("f", "file", "<fn>", "filename to save dump to"),
         arg_lit0(NULL, "64", "64byte / 512bit memory"),
         arg_lit0(NULL, "512", "512byte / 4096bit memory"),
         arg_param_end
@@ -486,7 +486,7 @@ static int CmdHFCryptoRFESave(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<filename>", "filename of dumpfile"),
+        arg_str0("f", "file", "<fn>", "filename of dumpfile"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

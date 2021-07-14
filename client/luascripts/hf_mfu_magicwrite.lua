@@ -12,29 +12,30 @@ local err_lock = 'use -k or change cfg0 block'
 
 copyright = 'Copyright (c) 2017 IceSQL AB. All rights reserved.'
 author = 'Christian Herrmann'
-version = 'v1.1.3'
+version = 'v1.1.4'
 desc = 'This script enables easy programming of a MAGIC NTAG 21* card'
 example = [[
-    -- wipe tag
-    script run hf_mfu_magicwrite -w
-
-    -- wipe a locked down tag by giving the password
-    script run hf_mfu_magicwrite -k ffffffff -w
-
-    --read magic tag configuration
-    script run hf_mfu_magicwrite -c
+    -- read magic tag configuration
+    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -c  ]]..ansicolors.reset..[[
 
     -- set uid
-    script run hf_mfu_magicwrite -u 04112233445566
+    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -u 04112233445566 ]]..ansicolors.reset..[[
 
     -- set pwd / pack
-    script run hf_mfu_magicwrite -p 11223344 -a 8080
+    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -p 11223344 -a 8080 ]]..ansicolors.reset..[[
 
     -- set version to NTAG213
-    script run hf_mfu_magicwrite -v 0004040201000f03
+    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -v 0004040201000f03 ]]..ansicolors.reset..[[
 
     -- set signature
-    script run hf_mfu_magicwrite -s 1122334455667788990011223344556677889900112233445566778899001122
+    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -s 1122334455667788990011223344556677889900112233445566778899001122 ]]..ansicolors.reset..[[
+
+    -- wipe tag
+    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -w ]]..ansicolors.reset..[[
+
+    -- wipe a locked down tag by giving the password
+    ]]..ansicolors.yellow..[[script run hf_mfu_magicwrite -k ffffffff -w ]]..ansicolors.reset..[[
+
 ]]
 usage = [[
 script run hf_mfu_easywrite -h -k <passwd> -c -w -u <uid> -t <type> -p <passwd> -a <pack> -s <signature> -o <otp> -v <version>
@@ -190,11 +191,27 @@ local function read_config()
     elseif cardtype == '02' then typestr = 'NTAG 216'
     end
 
+    local versionstr = 'unknown'
+    if version == '0004030101000B03' then versionstr = 'UL EV1 48b'
+    elseif version == '0004030101000E03' then versionstr = 'UL EV1 128b'
+    elseif version == '0004040101000B03' then versionstr = 'NTAG 210'
+    elseif version == '0004040101000E03' then versionstr = 'NTAG 212'
+    elseif version == '0004040201000F03' then versionstr = 'NTAG 213'
+    elseif version == '0004040201001103' then versionstr = 'NTAG 215'
+    elseif version == '0004040201001303' then versionstr = 'NTAG 216'
+    elseif version == '0004040502011303' then versionstr = 'NTAG I2C 1K'
+    elseif version == '0004040502011503' then versionstr = 'NTAG I2C 2K'
+    elseif version == '0004040502021303' then versionstr = 'NTAG I2C 1K PLUS'
+    elseif version == '0004040502021503' then versionstr = 'NTAG I2C 2K PLUS'
+    elseif version == '0004040401000F03' then versionstr = 'NTAG 213F'
+    elseif version == '0004040401001303' then versionstr = 'NTAG 216F'
+    end
+
     print('Magic NTAG 21* Configuration')
     print(' - Type    ', typestr, '(genuine cardtype)')
     print(' - Password', pwd)
     print(' - Pack    ', pack)
-    print(' - Version ', version)
+    print(' - Version ', version, '(' .. versionstr .. ')')
     print(' - Signature', signature1..signature2)
 
     lib14a.disconnect()

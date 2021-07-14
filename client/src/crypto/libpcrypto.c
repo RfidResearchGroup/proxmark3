@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <mbedtls/asn1.h>
+#include <mbedtls/des.h>
 #include <mbedtls/aes.h>
 #include <mbedtls/cmac.h>
 #include <mbedtls/pk.h>
@@ -27,6 +28,43 @@
 #include <mbedtls/error.h>
 #include "util.h"
 #include "ui.h"
+
+void des_encrypt(void *out, const void *in, const void *key) {
+    mbedtls_des_context ctx;
+    mbedtls_des_setkey_enc(&ctx, key);
+    mbedtls_des_crypt_ecb(&ctx, in, out);
+    mbedtls_des_free(&ctx);
+}
+
+void des_decrypt(void *out, const void *in, const void *key) {
+    mbedtls_des_context ctx;
+    mbedtls_des_setkey_dec(&ctx, key);
+    mbedtls_des_crypt_ecb(&ctx, in, out);
+    mbedtls_des_free(&ctx);
+}
+
+void des_encrypt_ecb(void *out, const void *in, const int length, const void *key) {
+    for (int i = 0; i < length; i += 8)
+        des_encrypt((uint8_t *)out + i, (uint8_t *)in + i, key);
+}
+
+void des_decrypt_ecb(void *out, const void *in, const int length, const void *key) {
+    for (int i = 0; i < length; i += 8)
+        des_decrypt((uint8_t *)out + i, (uint8_t *)in + i, key);
+}
+
+void des_encrypt_cbc(void *out, const void *in, const int length, const void *key, uint8_t *iv) {
+    mbedtls_des_context ctx;
+    mbedtls_des_setkey_enc(&ctx, key);
+    mbedtls_des_crypt_cbc(&ctx, MBEDTLS_DES_ENCRYPT, length, iv, in, out);
+}
+
+void des_decrypt_cbc(void *out, const void *in, const int length, const void *key, uint8_t *iv) {
+    mbedtls_des_context ctx;
+    mbedtls_des_setkey_dec(&ctx, key);
+    mbedtls_des_crypt_cbc(&ctx, MBEDTLS_DES_DECRYPT, length, iv, in, out);
+}
+
 // NIST Special Publication 800-38A — Recommendation for block cipher modes of operation: methods and techniques, 2001.
 int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) {
     uint8_t iiv[16] = {0};
@@ -497,4 +535,27 @@ exit:
     if (verbose)
         PrintAndLogEx(NORMAL, _RED_("failed\n"));
     return res;
+}
+
+void bin_xor(uint8_t *d1, uint8_t *d2, size_t len) {
+    for (size_t i = 0; i < len; i++)
+        d1[i] = d1[i] ^ d2[i];
+}
+
+void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_t sdatalen, size_t blocklen) {
+    *ddatalen = sdatalen + 1;
+    *ddatalen += blocklen - *ddatalen % blocklen;
+    memset(ddata, 0, *ddatalen);
+    memcpy(ddata, sdata, sdatalen);
+    ddata[sdatalen] = ISO9797_M2_PAD_BYTE;
+}
+
+size_t FindISO9797M2PaddingDataLen(uint8_t *data, size_t datalen) {
+    for (int i = datalen; i > 0; i--) {
+        if (data[i - 1] == 0x80)
+            return i - 1;
+        if (data[i - 1] != 0x00)
+            return 0;
+    }
+    return 0;
 }

@@ -22,6 +22,12 @@ extern "C" {
 void ShowGraphWindow(void);
 void HideGraphWindow(void);
 void RepaintGraphWindow(void);
+
+// hook up picture viewer
+void ShowPictureWindow(char *fn);
+void HidePictureWindow(void);
+void RepaintPictureWindow(void);
+
 void MainGraphics(void);
 void InitGraphics(int argc, char **argv, char *script_cmds_file, char *script_cmd, bool stayInCommandLoop);
 void ExitGraphics(void);

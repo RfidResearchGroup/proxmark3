@@ -14,7 +14,8 @@ Useful docs:
   * [MIFARE Classic DirectWrite, FUID version aka 1-write](#mifare-classic-directwrite-fuid-version-aka-1-write)
   * [MIFARE Classic DirectWrite, UFUID version](#mifare-classic-directwrite-ufuid-version)
   * [MIFARE Classic, other versions](#mifare-classic-other-versions)
-  * [MIFARE Classic APDU aka Gen3](#mifare-classic-apdu-aka-gen3)
+  * [MIFARE Classic Gen3 aka APDU](#mifare-classic-gen3-aka-apdu)
+  * [MIFARE Classic Gen3 aka GTU](#mifare-classic-gen3-aka-gtu)
   * [MIFARE Classic Super](#mifare-classic-super)
 - [MIFARE Ultralight](#mifare-ultralight)
   * [MIFARE Ultralight blocks 0..2](#mifare-ultralight-blocks-02)
@@ -400,7 +401,7 @@ hf 14a raw       -c   85000000000000000000000000000008
 * ZXUID, EUID, ICUID ?
 * Some cards exhibit a specific SAK=28 ??
 
-## MIFARE Classic APDU aka Gen3
+## MIFARE Classic Gen3 aka APDU
 
 ### Identify
 
@@ -467,6 +468,154 @@ hf 14a raw -s -c  -t 2000  90F0CCCC10 041219c3219316984200e32000000000
 # lock (uid/block0?) forever:
 hf 14a raw -s -c 90FD111100
 ```
+---------
+## MIFARE Classic Gen3 aka GTU
+
+### Identify
+
+Tag doesn't get identified by latest Proxmark3 client correct but instead mislabled as Gen2/CUID
+
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 2 / CUID
+```
+
+
+### Magic commands
+
+Android compatible - unknown status
+
+* issue special APDUs
+
+```
+cla ins p1 p2 len
+ CF  00 00 00 00 32 <param>
+ CF  00 00 00 00 35 <ATQA><SAK>
+ CF  00 00 00 00 34 <length><ATS>
+ CF  00 00 00 00 68 <param>
+ CF  00 00 00 00 69 <00>
+ CF  00 00 00 00 CE <block number>                    // Backdoor read card
+ CF  00 00 00 00 CD <block number><single block data> // Backdoor write card
+ CF  00 00 00 00 FE aabbccdd                          // set password to AABBCCDD
+ CF  00 00 00 00 F1                                   // fuse is set  ???
+ CF  00 00 00 00 F0                                   // fuse ???
+```
+Note: It doesn't seem to follow a APDU structure per default,
+
+
+### Characteristics
+
+* UID: 4b, 7b and 10b versions
+* ATQA/SAK: changeable
+* BCC: 
+* ATS: changable
+* Card Type:  changeable
+* Shadow mode:  GTU
+* Backdoor password mode:
+
+#### Possible card types
+Known Preset Change Available:
+* MIFARE Mini
+* MIFARE 1k S50 4 byte UID
+* MIFARE 1k S50 7 byte UID
+* MIFARE 1k S50 10 byte UID
+* MIFARE 4k S70 4 byte UID
+* MIFARE 4k S70 7 byte UID
+* MIFARE 4k S70 10 byte UID
+* Ultralight
+* Ultralight-C
+* Ultralight Ev1
+* NTAG
+
+
+
+### Proxmark3 commands
+
+```
+# view contents of tag memory:
+hf mf gview
+```
+
+Equivalent:
+
+
+change ATQA / SAK
+=================
+```
+hf 14a raw -s -c -t 1000 cf0000000035<ATQA><SAK>
+hf 14a raw -s -c -t 1000 cf0000000035440028    //  ATQA 00 44 SAK 28
+```
+
+change ATS
+==========
+It should be noted that when SAK=20,28, ATS must be turned on, otherwise the card will not be recognized!
+
+```
+hf 14a raw -s -c -t 1000 cf0000000034<length><ATS>
+hf 14a raw -s -c -t 1000 cf000000003406067577810280  // ATS to 0606757781028002F0
+```
+ * length 0, ATS is not sent
+ * when SAK is 20 or 28, ATS must be set, otherwise the card cannot be read
+ * the last two digits of ATS are CRC and cannot be counted as length
+
+set UID length (4, 7, 10)
+=========================
+```
+hf 14a raw -s -c -t 1000 cf0000000068<Param>
+hf 14a raw -s -c -t 1000 cf000000006801  // set UID length to 7 bytes
+```
+ * param=00: 4 bytes 01: 7 bytes 02: 10 bytes
+
+Set 14443A/B-UID
+================
+-->  missing instructions.
+
+
+
+Set Ultralight mode
+===================
+```
+hf 14a raw -s -c -t 1000 cf0000000069<00>
+```
+ * 01: UL agreement opened
+ * 00: UL agreement closed
+ * in this mode, if SAK=00 ATQA=0044 (Pm3 sequence), it can become an Ultralight card
+
+
+set shadow mode (GTU)
+=====================
+
+This mode is divided into four states: off (pre-write), on (on restore), don’t care, and high-speed read and write.
+If you use it, please enter the pre-write mode first. At this time, write the full card data.
+After writing, set it to on. At this time, after writing the data, the first time you read the data just written, the next time you read It is the pre-written data. All modes support this operation. It should be noted that using any block to read and write in this mode may give wrong results.
+
+```
+hf 14a raw -s -c -t 1000 cf0000000032<param>
+```
+Param | Description
+ 00   | Closed, shadow data can be written at this time
+ 01   | Open, start restore
+ 02   | Turn it off completely, as a normal card
+ 03   | High-speed read and write mode
+
+Any block read and write
+========================
+Using the backdoor command can read and write any area without password, similar to UID card, it should be noted that this command must be used to modify UID.
+
+```
+hf 14a raw -s -c -t 1000 cf00000000CE<block number>                    // Backdoor read card
+hf 14a raw -s -c -t 1000 cf00000000CD<block number><single block data> // Backdoor write card
+```
+
+set backdoor password
+=====================
+All backdoor operations are protected by passwords. If password is forgotten, the card will be scrapped
+default password is 00000000
+```
+hf 14a raw -s -c -t 1000 cf00000000feaabbccdd   // set password to AABBCCDD
+```
+
 
 ## MIFARE Classic Super
 

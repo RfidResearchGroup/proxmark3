@@ -179,6 +179,9 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
                 fclose(outfiles[j]);
             }
         }
+        if (outbufall) {
+            free(outbufall);
+        }
         free(inbuf);
         return (EXIT_FAILURE);
     }
@@ -227,8 +230,8 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
         total_size = 0;
         // FPGA bit file ends with 16 zeroes
         for (uint16_t j = 0; j < num_outfiles; j++) {
-             outfilesizes[j] += 16;
-             total_size += outfilesizes[j];
+            outfilesizes[j] += 16;
+            total_size += outfilesizes[j];
         }
         offset = 0;
         for (uint16_t k = 0; k < *outsize / (FPGA_INTERLEAVE_SIZE * num_outfiles); k++) {
@@ -246,6 +249,9 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
         for (uint16_t j = 0; j < num_outfiles; j++) {
             fclose(outfiles[j]);
         }
+    }
+    if (outbufall) {
+        free(outbufall);
     }
     return (EXIT_SUCCESS);
 }

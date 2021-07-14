@@ -92,8 +92,10 @@ static model_t models[] = {
 static int CmdHelp(const char *Cmd);
 
 static int picture_bit_depth(const uint8_t *bmp, const size_t bmpsize, const uint8_t model_nr) {
-    if (bmpsize < sizeof(BMP_HEADER))
+    if (bmpsize < sizeof(BMP_HEADER)) {
         return PM3_ESOFT;
+    }
+
     BMP_HEADER *pbmpheader = (BMP_HEADER *)bmp;
     PrintAndLogEx(DEBUG, "colorsused = %d", pbmpheader->colorsused);
     PrintAndLogEx(DEBUG, "pbmpheader->bpp = %d", pbmpheader->bpp);
@@ -403,14 +405,14 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
 
     if ((model_nr == M1in54B) || (model_nr == M2in13B)) {
         // for BW+Red screens:
-        uint8_t *mapBlack = calloc(width * height, sizeof(uint8_t));
+        uint8_t *mapBlack = calloc((uint32_t)(width * height), sizeof(uint8_t));
         if (mapBlack == NULL) {
             free(chanR);
             free(chanG);
             free(chanB);
             return PM3_EMALLOC;
         }
-        uint8_t *mapRed = calloc(width * height, sizeof(uint8_t));
+        uint8_t *mapRed = calloc((uint32_t)(width * height), sizeof(uint8_t));
         if (mapRed == NULL) {
             free(chanR);
             free(chanG);

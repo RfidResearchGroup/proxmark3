@@ -342,12 +342,12 @@ static int l_GetFromFlashMemSpiffs(lua_State *L) {
         return returnToLuaWithError(L, "Filename missing or invalid");
 
     // get size from spiffs itself !
-    SendCommandMIX(CMD_SPIFFS_STAT, 0, 0, 0, (uint8_t *)destfilename, 32);
+    SendCommandNG(CMD_SPIFFS_STAT, (uint8_t *)destfilename, 32);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000))
+    if (!WaitForResponseTimeout(CMD_SPIFFS_STAT, &resp, 2000))
         return returnToLuaWithError(L, "No response from the device");
 
-    len = resp.oldarg[0];
+    len = resp.data.asDwords[0];
 
     if (len == 0)
         return returnToLuaWithError(L, "Filename invalid or empty");

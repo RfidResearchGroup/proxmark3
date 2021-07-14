@@ -30,11 +30,12 @@ For further questions about Mac & Homebrew, contact [\@Chrisfu on Twitter](https
 2. Tap this repo: `brew tap RfidResearchGroup/proxmark3`
 
 3. Install Proxmark3:
-  - (Optional) `export HOMEBREW_PROXMARK3_PLATFORM=xxxxxx` to specify [platform](https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#platform), default value is `PM3RDV4` if none
   - `brew install proxmark3` for stable release 
   - `brew install --HEAD proxmark3` for latest non-stable from GitHub (use this if previous command fails)
   - `brew install --with-blueshark proxmark3` for blueshark support, stable release
   - `brew install --HEAD --with-blueshark proxmark3` for blueshark support, latest non-stable from GitHub (use this if previous command fails)
+  - `brew install --with-generic proxmark3`: for generic (non-RDV4) devices ([platform](https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#platform)), stable release
+  - `brew install --HEAD --with-generic proxmark3`: for generic (non-RDV4) devices ([platform](https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#platform)), latest non-stable from GitHub (use this if previous command fails)
 
 For more info, go to https://github.com/RfidResearchGroup/homebrew-proxmark3
 

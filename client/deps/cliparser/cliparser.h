@@ -51,6 +51,8 @@
 
 #define CLIGetStrWithReturn(ctx, paramnum, data, datalen) if (CLIParamStrToBuf(arg_get_str((ctx), (paramnum)), (data), (*datalen), (datalen))) {CLIParserFree((ctx)); return PM3_ESOFT;}
 
+#define CLIGetOptionListWithReturn(ctx, paramnum, option_array, option_array_len, value) if (CLIGetOptionList(arg_get_str((ctx), (paramnum)), (option_array), (option_array_len), (value))) {CLIParserFree((ctx)); return PM3_ESOFT;}
+
 typedef struct {
     void **argtable;
     size_t argtableLen;
@@ -59,6 +61,14 @@ typedef struct {
     const char *programHelp;
     char buf[1024 + 60];
 } CLIParserContext;
+
+#define CLI_MAX_OPTLIST_LEN    50
+// option list needs to have NULL at the last record int the field `text`
+typedef struct {
+    int code;
+    const char *text;
+} CLIParserOption;
+
 int CLIParserInit(CLIParserContext **ctx, const char *vprogramName, const char *vprogramHint, const char *vprogramHelp);
 void CLIParserPrintHelp(CLIParserContext *ctx);
 int CLIParserParseString(CLIParserContext *ctx, const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
@@ -68,6 +78,10 @@ int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargta
 int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
 int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
 int CLIParamBinToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
+
+// names in the CLIParserOption array must be in the lowercase format
+int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array, int *value);
+const char *CLIGetOptionListStr(const CLIParserOption *option_array, int value);
 
 uint64_t arg_get_u64_hexstr_def(CLIParserContext *ctx, uint8_t paramnum, uint64_t def);
 int arg_get_u64_hexstr_def_nlen(CLIParserContext *ctx, uint8_t paramnum, uint64_t def, uint64_t *out, uint8_t nlen, bool optional);

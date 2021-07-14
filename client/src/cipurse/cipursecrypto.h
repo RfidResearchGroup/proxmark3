@@ -21,7 +21,6 @@
 #define CIPURSE_MAC_LENGTH 8
 #define CIPURSE_MIC_LENGTH 4
 #define CIPURSE_POLY 0x35b088cce172UL
-#define ISO9797_M2_PAD_BYTE 0x80
 
 #define member_size(type, member) sizeof(((type *)0)->member)
 
@@ -65,9 +64,6 @@ bool CipurseCCheckCT(CipurseContext *ctx, uint8_t *CT);
 
 void CipurseCChannelSetSecurityLevels(CipurseContext *ctx, CipurseChannelSecurityLevel req, CipurseChannelSecurityLevel resp);
 bool isCipurseCChannelSecuritySet(CipurseContext *ctx);
-
-void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_t sdatalen, size_t blocklen);
-size_t FindISO9797M2PaddingDataLen(uint8_t *data, size_t datalen);
 
 void CipurseCGenerateMAC(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
 void CipurseCCalcMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);

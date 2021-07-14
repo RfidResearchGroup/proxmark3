@@ -1114,15 +1114,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HITAG_ELOAD: {
-            /*
-            struct p {
-                uint16_t len;
-                uint8_t *data;
-            } PACKED;
-            struct p *payload = (struct p *) packet->data.asBytes;
+            lf_hitag_t *payload = (lf_hitag_t *) packet->data.asBytes;
             uint8_t *mem = BigBuf_get_EM_addr();
-            memcpy((uint8_t *)mem.sectors, payload->data, payload->len);
-            */
+            memcpy((uint8_t *)mem, payload->data, payload->len);
             break;
         }
 #endif
@@ -1572,6 +1566,14 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_MIFARE_GEN3FREEZ: {
             MifareGen3Freez();
+            break;
+        }
+        case CMD_HF_MIFARE_G3_RDBL: {
+            struct p {
+                uint8_t blockno;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareG3ReadBlk(payload->blockno);
             break;
         }
         case CMD_HF_MIFARE_PERSONALIZE_UID: {

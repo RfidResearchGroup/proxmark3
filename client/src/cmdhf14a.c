@@ -169,8 +169,19 @@ const char *getTagInfo(uint8_t uid) {
     return manufactureMapping[ARRAYLEN(manufactureMapping) - 1].desc;
 }
 
+static const hintAIDListT hintAIDList[] = {
+    // AID, AID len, name, hint - how to use
+    { "\xA0\x00\x00\x06\x47\x2F\x00\x01", 8, "FIDO", "hf fido" },
+    { "\xA0\x00\x00\x03\x08\x00\x00\x10\x00\x01\x00", 11, "PIV", "" },
+    { "\xD2\x76\x00\x01\x24\x01", 8, "OpenPGP", "" },
+    { "\x31\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "EMV (pse)", "emv" },
+    { "\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "EMV (ppse)", "emv" },
+    { "\x41\x44\x20\x46\x31", 5, "CIPURSE", "hf cipurse" },
+    { "\xd2\x76\x00\x00\x85\x01\x00", 7, "desfire", "hf mfdes" },
+};
+
 // iso14a apdu input frame length
-static uint16_t frameLength = 0;
+static uint16_t g_frame_len = 0;
 uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 
 static int CmdHF14AList(const char *Cmd) {
@@ -846,31 +857,35 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     return 0;
 }
 
-int SelectCard14443A_4(bool disconnect, iso14a_card_select_t *card) {
-    PacketResponseNG resp;
+int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card) {
 
-    frameLength = 0;
+    // global vars should be prefixed with g_
+    g_frame_len = 0;
 
-    if (card)
+    if (card) {
         memset(card, 0, sizeof(iso14a_card_select_t));
+    }
 
     DropField();
 
     // Anticollision + SELECT card
+    PacketResponseNG resp;
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        PrintAndLogEx(ERR, "Proxmark3 connection timeout");
+        PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
 
     // check result
     if (resp.oldarg[0] == 0) {
-        PrintAndLogEx(ERR, "No card in field");
+        if (verbose) {
+            PrintAndLogEx(FAILED, "No card in field");
+        }
         return PM3_ECARDEXCHANGE;
     }
 
     if (resp.oldarg[0] != 1 && resp.oldarg[0] != 2) {
-        PrintAndLogEx(ERR, "Card not in iso14443-4, res=%" PRId64 ".", resp.oldarg[0]);
+        PrintAndLogEx(WARNING, "Card not in iso14443-4, res=%" PRId64 ".", resp.oldarg[0]);
         return PM3_ECARDEXCHANGE;
     }
 
@@ -879,36 +894,44 @@ int SelectCard14443A_4(bool disconnect, iso14a_card_select_t *card) {
         uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, sizeof(rats), 0, rats, sizeof(rats));
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-            PrintAndLogEx(ERR, "Proxmark3 connection timeout");
+            PrintAndLogEx(WARNING, "Command execute timeout");
             return PM3_ETIMEOUT;
         }
 
         if (resp.oldarg[0] == 0) { // ats_len
-            PrintAndLogEx(ERR, "Can't get ATS");
+            if (verbose) {
+                PrintAndLogEx(FAILED, "Can't get ATS");
+            }
             return PM3_ECARDEXCHANGE;
         }
 
         // get frame length from ATS in data field
         if (resp.oldarg[0] > 1) {
             uint8_t fsci = resp.data.asBytes[1] & 0x0f;
-            if (fsci < ARRAYLEN(atsFSC))
-                frameLength = atsFSC[fsci];
+            if (fsci < ARRAYLEN(atsFSC)) {
+                g_frame_len = atsFSC[fsci];
+            }
         }
     } else {
         // get frame length from ATS in card data structure
         iso14a_card_select_t *vcard = (iso14a_card_select_t *) resp.data.asBytes;
         if (vcard->ats_len > 1) {
             uint8_t fsci = vcard->ats[1] & 0x0f;
-            if (fsci < ARRAYLEN(atsFSC))
-                frameLength = atsFSC[fsci];
+            if (fsci < ARRAYLEN(atsFSC)) {
+                g_frame_len = atsFSC[fsci];
+            }
         }
 
-        if (card)
+        if (card) {
             memcpy(card, vcard, sizeof(iso14a_card_select_t));
+        }
     }
+
     SetISODEPState(ISODEP_NFCA);
-    if (disconnect)
+
+    if (disconnect) {
         DropField();
+    }
 
     return PM3_SUCCESS;
 }
@@ -917,8 +940,8 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
     *chainingout = false;
 
     if (activateField) {
-        // select with no disconnect and set frameLength
-        int selres = SelectCard14443A_4(false, NULL);
+        // select with no disconnect and set g_frame_len
+        int selres = SelectCard14443A_4(false, true, NULL);
         if (selres != PM3_SUCCESS)
             return selres;
     }
@@ -954,7 +977,7 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
         }
 
         // I-block ACK
-        if ((res & 0xf2) == 0xa2) {
+        if ((res & 0xF2) == 0xA2) {
             *dataoutlen = 0;
             *chainingout = true;
             return PM3_SUCCESS;
@@ -1004,13 +1027,14 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 
     // 3 byte here - 1b framing header, 2b crc16
     if (APDUInFramingEnable &&
-            ((frameLength && (datainlen > frameLength - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
+            ((g_frame_len && (datainlen > g_frame_len - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
+
         int clen = 0;
 
         bool vActivateField = activateField;
 
         do {
-            int vlen = MIN(frameLength - 3, datainlen - clen);
+            int vlen = MIN(g_frame_len - 3, datainlen - clen);
             bool chainBlockNotLast = ((clen + vlen) < datainlen);
 
             *dataoutlen = 0;
@@ -1034,17 +1058,19 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
             clen += vlen;
             vActivateField = false;
             if (*dataoutlen) {
-                if (clen != datainlen)
+                if (clen != datainlen) {
                     PrintAndLogEx(ERR, "APDU: I-block/R-block sequence error. Data len=%d, Sent=%d, Last packet len=%d", datainlen, clen, *dataoutlen);
+                }
                 break;
             }
         } while (clen < datainlen);
+
     } else {
         res = CmdExchangeAPDU(false, datain, datainlen, activateField, dataout, maxdataoutlen, dataoutlen, &chaining);
         if (res != PM3_SUCCESS) {
-            if (leaveSignalON == false)
+            if (leaveSignalON == false) {
                 DropField();
-
+            }
             return res;
         }
     }
@@ -1053,15 +1079,16 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
         // I-block with chaining
         res = CmdExchangeAPDU(false, NULL, 0, false, &dataout[*dataoutlen], maxdataoutlen, dataoutlen, &chaining);
         if (res != PM3_SUCCESS) {
-            if (leaveSignalON == false)
+            if (leaveSignalON == false) {
                 DropField();
-
+            }
             return 100;
         }
     }
 
-    if (!leaveSignalON)
+    if (leaveSignalON == false) {
         DropField();
+    }
 
     return PM3_SUCCESS;
 }
@@ -1780,6 +1807,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
         memcpy(card.ats, resp.data.asBytes, resp.oldarg[0]);
         card.ats_len = resp.oldarg[0]; // note: ats_len includes CRC Bytes
+        if (card.ats_len > 3)
+            select_status = 1;
     }
 
     if (card.ats_len >= 3) {        // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
@@ -2070,6 +2099,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         if ((card.sak & 0x20) == 0x20) {
             PrintAndLogEx(INFO, "--> SAK incorrectly claims that card supports RATS <--");
         }
+        if (select_status == 1)
+            select_status = 2;
     }
 
     int isMagic = 0;
@@ -2129,6 +2160,57 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     PrintAndLogEx(NORMAL, "");
     DropField();
     return select_status;
+}
+
+int infoHF14A4Applications(bool verbose) {
+    bool cardFound[ARRAYLEN(hintAIDList)] = {0};
+    bool ActivateField = true;
+    int found = 0;
+    for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
+        uint16_t sw = 0;
+        uint8_t result[1024] = {0};
+        size_t resultlen = 0;
+        int res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, (uint8_t *)hintAIDList[i].aid, hintAIDList[i].aid_length, result, sizeof(result), &resultlen, &sw);
+        ActivateField = false;
+        if (res)
+            break;
+
+        if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
+            if (!found) {
+                if (verbose)
+                    PrintAndLogEx(INFO, "----------------- " _CYAN_("Short AID search") " -----------------");
+            }
+            found++;
+
+            if (sw == 0x9000) {
+                if (verbose)
+                    PrintAndLogEx(SUCCESS, "Application " _CYAN_("%s") " ( " _GREEN_("ok") " )", hintAIDList[i].desc);
+                cardFound[i] = true;
+            } else {
+                if (verbose)
+                    PrintAndLogEx(WARNING, "Application " _CYAN_("%s") " ( " _RED_("blocked") " )", hintAIDList[i].desc);
+            }
+        }
+    }
+
+    if (found) {
+        if (verbose)
+            PrintAndLogEx(INFO, "---------------------------------------------------");
+        else
+            PrintAndLogEx(INFO, "Short AID search:");
+
+        if (found >= ARRAYLEN(hintAIDList) - 1) {
+            PrintAndLogEx(HINT, "Hint: card answers to all AID. It maybe the latest revision of plus/desfire/ultralight card.");
+        } else {
+            for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
+                if (cardFound[i] && strlen(hintAIDList[i].hint))
+                    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("%s") " commands", hintAIDList[i].hint);
+            }
+        }
+    }
+
+    DropField();
+    return found;
 }
 
 static uint16_t get_sw(uint8_t *d, uint8_t n) {

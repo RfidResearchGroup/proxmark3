@@ -3,9 +3,9 @@
 If all went well you should get some information about the firmware and memory usage as well as the prompt,  something like this.
 
 ```
-[=] Session log /home/iceman/.proxmark3/log_20200521.txt
+[=] Session log /home/iceman/.proxmark3/log_20210708.txt
 [+] loaded from JSON file /home/iceman/.proxmark3/preferences.json
-[=] Using UART port /dev/ttyS7
+[=] Using UART port /dev/ttyS3
 [=] Communicating with PM3 over USB-CDC
 
 
@@ -21,8 +21,8 @@ If all went well you should get some information about the firmware and memory u
  [ Proxmark3 RFID instrument ] 
 
  [ CLIENT ]
-  client: RRG/Iceman/master/v4.9237-2-g2cb19874 2020-05-21 22:00:00
-  compiled with GCC 9.3.0 OS:Linux ARCH:x86_64
+  client: RRG/Iceman/master/v4.13441-129-g60d132fcc 2021-07-08 22:00:00
+  compiled with GCC 10.3.0 OS:Linux ARCH:x86_64
  
  [ PROXMARK RDV4 ]
   device.................... RDV4
@@ -32,8 +32,8 @@ If all went well you should get some information about the firmware and memory u
   FPC USART for BT add-on... absent
 
  [ ARM ]
- bootrom: RRG/Iceman/master/v4.9237-2-g2cb19874 2020-05-21 22:00:10
-      os: RRG/Iceman/master/v4.9237-2-g2cb19874 2019-05-21 22:00:26
+ bootrom: RRG/Iceman/master/v4.13441 2020-05-21 22:00:10
+      os: RRG/Iceman/master/v4.13441 2019-05-21 22:00:26
  compiled with GCC 9.2.1 20191025 (release) [ARM/arm-9-branch revision 277599]
 
  [ FPGA ]

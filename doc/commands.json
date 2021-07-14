@@ -973,7 +973,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210615.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210709.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -1684,67 +1684,83 @@
         },
         "hf cipurse aread": {
             "command": "hf cipurse aread",
-            "description": "read file attributes by file id with key id and key",
+            "description": "read file attributes by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
             "notes": [
-                "hf cipurse aread -f 2ff7 -> authenticate with keyid=1 and key = 7373...7373 and read file attributes with id 2ff7",
-                "hf cipurse aread -n 2 -k 65656565656565656565656565656565 -f 2ff7 -> authenticate with specified key and read file attributes"
+                "hf cipurse aread --fid 2ff7 -> authenticate with keyid 1, read file attributes with id 2ff7",
+                "hf cipurse aread -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> authenticate keyid 2, read file attributes"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
                 "-a, --apdu show apdu requests and responses",
                 "-v, --verbose show technical data",
-                "-n, --keyid <dec> key id",
-                "-k, --key <hex> key for authenticate",
-                "-f, --file <hex> file id",
+                "-n <dec> key id",
+                "-k, --key <hex> auth key",
+                "--fid <hex> file id",
                 "--noauth read file attributes without authentication",
                 "--sreq <plain|mac(default)|encode> communication reader-picc security level",
                 "--sresp <plain|mac(default)|encode> communication picc-reader security level",
                 "--sel-adf show info about adf itself",
                 "--sel-mf show info about master file"
             ],
-            "usage": "hf cipurse aread [-hav] [-n <dec>] [-k <hex>] [-f <hex>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [--sel-adf] [--sel-mf]"
+            "usage": "hf cipurse aread [-hav] [-n <dec>] [-k <hex>] [--fid <hex>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [--sel-adf] [--sel-mf]"
         },
         "hf cipurse auth": {
             "command": "hf cipurse auth",
-            "description": "authenticate with key id and key",
+            "description": "authenticate with key id and key. if no key is supplied, default key of 737373...7373 will be used",
             "notes": [
-                "hf cipurse auth -> authenticate with keyid=1 and key = 7373...7373",
-                "hf cipurse auth -n 2 -k 65656565656565656565656565656565 -> authenticate with key"
+                "hf cipurse auth -> authenticate with keyid 1, default key",
+                "hf cipurse auth -n 2 -k 65656565656565656565656565656565 -> authenticate keyid 2 with key"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
                 "-a, --apdu show apdu requests and responses",
                 "-v, --verbose show technical data",
-                "-n, --keyid <dec> key id",
-                "-k, --key <hex> key for authenticate"
+                "-n <dec> key id",
+                "-k, --key <hex> auth key"
             ],
             "usage": "hf cipurse auth [-hav] [-n <dec>] [-k <hex>]"
         },
+        "hf cipurse default": {
+            "command": "hf cipurse default",
+            "description": "set default parameters for access to cipurse card",
+            "notes": [
+                "hf cipurse default -n 1 -k 65656565656565656565656565656565 --fid 2ff7 -> set key, key id and file id"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "--clear resets to defaults",
+                "-n <dec> key id",
+                "-k, --key <hex> authentication key",
+                "--fid <hex> file id"
+            ],
+            "usage": "hf cipurse default [-h] [--clear] [-n <dec>] [-k <hex>] [--fid <hex>]"
+        },
         "hf cipurse delete": {
             "command": "hf cipurse delete",
-            "description": "read file by file id with key id and key",
+            "description": "read file by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
             "notes": [
-                "hf cipurse delete -f 2ff7 -> authenticate with keyid=1 and key = 7373...7373 and delete file with id 2ff7",
-                "hf cipurse delete -n 2 -k 65656565656565656565656565656565 -f 2ff7 -> authenticate with specified key and delete file"
+                "hf cipurse delete --fid 2ff7 -> authenticate with keyid 1, delete file with id 2ff7",
+                "hf cipurse delete -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> authenticate keyid 2 and delete file"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
                 "-a, --apdu show apdu requests and responses",
                 "-v, --verbose show technical data",
-                "-n, --keyid <dec> key id",
-                "-k, --key <hex> key for authenticate",
-                "-f, --file <hex> file id",
+                "-n <dec> key id",
+                "-k, --key <hex> auth key",
+                "--fid <hex> file id",
                 "--sreq <plain|mac(default)|encode> communication reader-picc security level",
                 "--sresp <plain|mac(default)|encode> communication picc-reader security level"
             ],
-            "usage": "hf cipurse delete [-hav] [-n <dec>] [-k <hex>] [-f <hex>] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>]"
+            "usage": "hf cipurse delete [-hav] [-n <dec>] [-k <hex>] [--fid <hex>] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>]"
         },
         "hf cipurse help": {
             "command": "hf cipurse help",
-            "description": "help this help. --------------------------------------------------------------------------------------- hf cipurse info available offline: no get info from cipurse tags",
+            "description": "help this help. test tests --------------------------------------------------------------------------------------- hf cipurse info available offline: no get info from cipurse tags",
             "notes": [
                 "hf cipurse info"
             ],
@@ -1756,48 +1772,63 @@
         },
         "hf cipurse read": {
             "command": "hf cipurse read",
-            "description": "read file by file id with key id and key",
+            "description": "read file by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
             "notes": [
-                "hf cipurse read -f 2ff7 -> authenticate with keyid=1 and key = 7373...7373 and read file with id 2ff7",
-                "hf cipurse read -n 2 -k 65656565656565656565656565656565 -f 2ff7 -> authenticate with specified key and read file"
+                "hf cipurse read --fid 2ff7 -> authenticate with keyid 1, read file with id 2ff7",
+                "hf cipurse read -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> authenticate keyid 2 and read file"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
                 "-a, --apdu show apdu requests and responses",
                 "-v, --verbose show technical data",
-                "-n, --keyid <dec> key id",
-                "-k, --key <hex> key for authenticate",
-                "-f, --file <hex> file id",
+                "-n <dec> key id",
+                "-k, --key <hex> auth key",
+                "--fid <hex> file id",
                 "-o, --offset <dec> offset for reading data from file",
                 "--noauth read file without authentication",
                 "--sreq <plain|mac(default)|encode> communication reader-picc security level",
                 "--sresp <plain|mac(default)|encode> communication picc-reader security level"
             ],
-            "usage": "hf cipurse read [-hav] [-n <dec>] [-k <hex>] [-f <hex>] [-o <dec>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>]"
+            "usage": "hf cipurse read [-hav] [-n <dec>] [-k <hex>] [--fid <hex>] [-o <dec>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>]"
+        },
+        "hf cipurse test": {
+            "command": "hf cipurse test",
+            "description": "[=] ------ cipurse tests ------ [=] kvv.............. passed [=] iso9797m2........ passed [=] smi.............. passed [=] mic.............. passed [=] auth............. passed [=] channel mac...... passed [=] channel encdec... passed [=] apdu............. passed [=] --------------------------- [+] tests [ ok ] ======================================================================================= hf epa { german identification card... } --------------------------------------------------------------------------------------- hf epa help available offline: yes help this help --------------------------------------------------------------------------------------- hf epa cnonces available offline: no tries to collect nonces when doing part of pace protocol.",
+            "notes": [
+                "hf epa cnonces --size 4 --num 4 --delay 1"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "--size <dec> nonce size",
+                "--num <dec> number of nonces to collect",
+                "-d, --delay <dec> delay between attempts"
+            ],
+            "usage": "hf epa cnonces [-h] --size <dec> --num <dec> -d <dec>"
         },
         "hf cipurse write": {
             "command": "hf cipurse write",
-            "description": "write file by file id with key id and key",
+            "description": "write file by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
             "notes": [
-                "hf cipurse write -f 2ff7 -> authenticate with keyid=1 and key = 7373...7373 and write file with id 2ff7",
-                "hf cipurse write -n 2 -k 65656565656565656565656565656565 -f 2ff7 -> authenticate with specified key and write file"
+                "hf cipurse write --fid 2ff7 -> authenticate with keyid 1, write file with id 2ff7",
+                "hf cipurse write -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> authenticate keyid 2 and write file"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
                 "-a, --apdu show apdu requests and responses",
                 "-v, --verbose show technical data",
-                "-n, --keyid <dec> key id",
-                "-k, --key <hex> key for authenticate",
-                "-f, --file <hex> file id",
+                "-n <dec> key id",
+                "-k, --key <hex> auth key",
+                "--fid <hex> file id",
                 "-o, --offset <dec> offset for reading data from file",
                 "--noauth read file without authentication",
                 "--sreq <plain|mac(default)|encode> communication reader-picc security level",
                 "--sresp <plain|mac(default)|encode> communication picc-reader security level",
-                "-c, --content <hex> new file content"
+                "-d, --data <hex> hex data to write to new file"
             ],
-            "usage": "hf cipurse write [-hav] [-n <dec>] [-k <hex>] [-f <hex>] [-o <dec>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [-c <hex>]"
+            "usage": "hf cipurse write [-hav] [-n <dec>] [-k <hex>] [--fid <hex>] [-o <dec>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [-d <hex>]"
         },
         "hf emrtd help": {
             "command": "hf emrtd help",
@@ -1853,21 +1884,6 @@
                 "--dict <file> use dictionary keys file"
             ],
             "usage": "hf emrtd list [-h1fcrux] [--dict <file>]..."
-        },
-        "hf epa help": {
-            "command": "hf epa help",
-            "description": "help this help --------------------------------------------------------------------------------------- hf epa cnonces available offline: no tries to collect nonces when doing part of pace protocol.",
-            "notes": [
-                "hf epa cnonces --size 4 --num 4 --delay 1"
-            ],
-            "offline": true,
-            "options": [
-                "-h, --help this help",
-                "--size <dec> nonce size",
-                "--num <dec> number of nonces to collect",
-                "-d, --delay <dec> delay between attempts"
-            ],
-            "usage": "hf epa cnonces [-h] --size <dec> --num <dec> -d <dec>"
         },
         "hf epa preplay": {
             "command": "hf epa preplay",
@@ -2826,10 +2842,10 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --file <filename> specify a filename for dump file",
+                "-f, --file <fn> specify a filename for dump file",
                 "--de deobfuscate dump data (xor with mcc)"
             ],
-            "usage": "hf legic dump [-h] [-f <filename>] [--de]"
+            "usage": "hf legic dump [-h] [-f <fn>] [--de]"
         },
         "hf legic eload": {
             "command": "hf legic eload",
@@ -2860,11 +2876,11 @@
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-f, --file <filename> specify a filename to save",
+                "-f, --file <fn> specify a filename to save",
                 "-t, --type <dec> tag type",
                 "--deobfuscate de-obfuscate dump data (xor with mcc)"
             ],
-            "usage": "hf legic esave [-h] [-f <filename>] [-t <dec>] [--deobfuscate]"
+            "usage": "hf legic esave [-h] [-f <fn>] [-t <dec>] [--deobfuscate]"
         },
         "hf legic help": {
             "command": "hf legic help",
@@ -2996,9 +3012,9 @@
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-f, --file <filename> specify a filename for dumpfile"
+                "-f, --file <fn> specify a filename for dumpfile"
             ],
-            "usage": "hf lto dump [-h] [-f <filename>]"
+            "usage": "hf lto dump [-h] [-f <fn>]"
         },
         "hf lto info": {
             "command": "hf lto info",
@@ -3175,9 +3191,9 @@
                 "--4k mifare classic 4k / s70",
                 "--emu fill simulator keys from found keys",
                 "--dump dump found keys to binary file",
-                "-f, --file <filename> filename of dictionary"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf mf chk [-hab*] [-k <hex>]... [--blk <dec>] [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [-f <filename>]"
+            "usage": "hf mf chk [-hab*] [-k <hex>]... [--blk <dec>] [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [-f <fn>]"
         },
         "hf mf cload": {
             "command": "hf mf cload",
@@ -3491,9 +3507,9 @@
                 "hf mf fchk --2k -k ffffffffffff -> key recovery against mifare 2k",
                 "hf mf fchk --4k -k ffffffffffff -> key recovery against mifare 4k",
                 "hf mf fchk --1k -f mfc_default_keys.dic -> target 1k using default dictionary file",
-                "hf mf fchk --1k --emu -> target 1k, write to emulator memory",
-                "hf mf fchk --1k --dump -> target 1k, write to file",
-                "hf mf fchk --1k --mem -> target 1k, use dictionary from flashmemory"
+                "hf mf fchk --1k --emu -> target 1k, write keys to emulator memory",
+                "hf mf fchk --1k --dump -> target 1k, write keys to file",
+                "hf mf fchk --1k --mem -> target 1k, use dictionary from flash memory"
             ],
             "offline": false,
             "options": [
@@ -3552,6 +3568,23 @@
                 "-u, --uid <hex> uid 4/7 hex bytes"
             ],
             "usage": "hf mf gen3uid [-h] [-u <hex>]"
+        },
+        "hf mf gview": {
+            "command": "hf mf gview",
+            "description": "view `magic gen3 gtu` card memory",
+            "notes": [
+                "hf mf gview",
+                "hf mf gview --4k"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "--mini mifare classic mini / s20",
+                "--1k mifare classic 1k / s50 (def)",
+                "--2k mifare classic/plus 2k",
+                "--4k mifare classic 4k / s70"
+            ],
+            "usage": "hf mf gview [-h] [--mini] [--1k] [--2k] [--4k]"
         },
         "hf mf hardnested": {
             "command": "hf mf hardnested",
@@ -3905,6 +3938,31 @@
             ],
             "usage": "hf mf wrbl [-hab] --blk <dec> [-k <hex>] [-d <hex>]"
         },
+        "hf mfdes auth": {
+            "command": "hf mfdes auth",
+            "description": "authenticates mifare desfire using key",
+            "notes": [
+                "hf mfdes auth -m 3 -t 4 -a 808301 -n 0 -k 00000000000000000000000000000000 -> aes,keynumber 0, aid 0x803201",
+                "hf mfdes auth -m 2 -t 2 -a 000000 -n 1 -k 00000000000000000000000000000000 -> 3des,keynumber 1, aid 0x000000",
+                "hf mfdes auth -m 1 -t 1 -a 000000 -n 2 -k 0000000000000000 -> des,keynumber 2, aid 0x000000",
+                "hf mfdes auth -m 1 -t 1 -a 000000 -n 0 -> des, defaultkey, aid 0x000000",
+                "hf mfdes auth -m 2 -t 2 -a 000000 -n 0 -> 3des, defaultkey, aid 0x000000",
+                "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> 3k3des, defaultkey, aid 0x000000",
+                "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> aes, defaultkey, aid 0x000000"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-m, --type <type> auth type (1=normal, 2=iso, 3=aes)",
+                "-t, --algo <algo> crypt algo (1=des, 2=3des(2k2des), 3=3k3des, 4=aes)",
+                "-a, --aid <aid> aid used for authentification (hex 3 bytes)",
+                "-n, --keyno <keyno> key number used for authentification",
+                "-k, --key <key> key for checking (hex 8-24 bytes)",
+                "-d, --kdf <kdf> key derivation function (kdf) (0=none, 1=an10922, 2=gallagher)",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)"
+            ],
+            "usage": "hf mfdes auth [-h] [-m <type>] [-t <algo>] [-a <aid>]... [-n <keyno>] [-k <key>] [-d <kdf>] [-i <kdfi>]"
+        },
         "hf mfdes bruteaid": {
             "command": "hf mfdes bruteaid",
             "description": "recover aids by bruteforce. warning: this command takes a long time",
@@ -4135,6 +4193,50 @@
             ],
             "usage": "hf mfdes formatpicc [-h]"
         },
+        "hf mfdes getaids": {
+            "command": "hf mfdes getaids",
+            "description": "get application ids list from card. master key needs to be provided.",
+            "notes": [
+                "hf mfdes getaids -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2"
+            ],
+            "usage": "hf mfdes getaids [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>]"
+        },
+        "hf mfdes getappnames": {
+            "command": "hf mfdes getappnames",
+            "description": "get application ids, iso ids and df names from card. master key needs to be provided.",
+            "notes": [
+                "hf mfdes getappnames -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2"
+            ],
+            "usage": "hf mfdes getappnames [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>]"
+        },
         "hf mfdes getuid": {
             "command": "hf mfdes getuid",
             "description": "get uid from a mifare desfire tag",
@@ -4163,28 +4265,23 @@
         },
         "hf mfdes help": {
             "command": "hf mfdes help",
-            "description": "help this help list list desfire (iso 14443a) history --------------------------------------------------------------------------------------- hf mfdes auth available offline: no authenticates mifare desfire using key",
+            "description": "help this help list list desfire (iso 14443a) history --------------------------------------------------------------------------------------- hf mfdes default available offline: no get application ids, iso ids and df names from card. master key needs to be provided.",
             "notes": [
-                "hf mfdes auth -m 3 -t 4 -a 808301 -n 0 -k 00000000000000000000000000000000 -> aes,keynumber 0, aid 0x803201",
-                "hf mfdes auth -m 2 -t 2 -a 000000 -n 1 -k 00000000000000000000000000000000 -> 3des,keynumber 1, aid 0x000000",
-                "hf mfdes auth -m 1 -t 1 -a 000000 -n 2 -k 0000000000000000 -> des,keynumber 2, aid 0x000000",
-                "hf mfdes auth -m 1 -t 1 -a 000000 -n 0 -> des, defaultkey, aid 0x000000",
-                "hf mfdes auth -m 2 -t 2 -a 000000 -n 0 -> 3des, defaultkey, aid 0x000000",
-                "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> 3k3des, defaultkey, aid 0x000000",
-                "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> aes, defaultkey, aid 0x000000"
+                "hf mfdes getappnames -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup"
             ],
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-m, --type <type> auth type (1=normal, 2=iso, 3=aes)",
-                "-t, --algo <algo> crypt algo (1=des, 2=3des(2k2des), 3=3k3des, 4=aes)",
-                "-a, --aid <aid> aid used for authentification (hex 3 bytes)",
-                "-n, --keyno <keyno> key number used for authentification",
-                "-k, --key <key> key for checking (hex 8-24 bytes)",
-                "-d, --kdf <kdf> key derivation function (kdf) (0=none, 1=an10922, 2=gallagher)",
-                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)"
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2"
             ],
-            "usage": "hf mfdes auth [-h] [-m <type>] [-t <algo>] [-a <aid>]... [-n <keyno>] [-k <key>] [-d <kdf>] [-i <kdfi>]"
+            "usage": "hf mfdes default [-h] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>]"
         },
         "hf mfdes info": {
             "command": "hf mfdes info",
@@ -4219,12 +4316,12 @@
             ],
             "usage": "hf mfdes list [-h1fcrux] [--dict <file>]..."
         },
-        "hf mfdes readdata": {
-            "command": "hf mfdes readdata",
+        "hf mfdes read": {
+            "command": "hf mfdes read",
             "description": "read data from file make sure to select aid or authenticate aid before running this command.",
             "notes": [
-                "hf mfdes readdata -n 01 -t 0 -o 000000 -l 000000 -a 123456",
-                "hf mfdes readdata -n 01 -t 0 -> read all data from standard file, fileno 01"
+                "hf mfdes read -n 1 -t 0 -o 000000 -l 000000 -a 123456",
+                "hf mfdes read -n 1 -t 0 -> read all data from standard file, fileno 1"
             ],
             "offline": false,
             "options": [
@@ -4235,7 +4332,7 @@
                 "-t, --type <dec> file type (0 = standard / backup, 1 = record)",
                 "-a, --aid <hex> app id to select (3 hex bytes, big endian)"
             ],
-            "usage": "hf mfdes readdata [-h] [-n <dec>] [-o <hex>]... [-l <hex>]... [-t <dec>] [-a <hex>]..."
+            "usage": "hf mfdes read [-h] [-n <dec>] [-o <hex>]... [-l <hex>]... [-t <dec>] [-a <hex>]..."
         },
         "hf mfdes selectaid": {
             "command": "hf mfdes selectaid",
@@ -4250,11 +4347,23 @@
             ],
             "usage": "hf mfdes selectaid [-h] [-a <hex>]..."
         },
-        "hf mfdes writedata": {
-            "command": "hf mfdes writedata",
+        "hf mfdes test": {
+            "command": "hf mfdes test",
+            "description": "[=] key num: 0 key algo: des key[8]: 00 00 00 00 00 00 00 00 [=] secure channel: n/a command set: niso communication mode: encrypt [+] setting isodep -> inactive [=] sending bytes to proxmark failed - offline [+] >>>> 90 5a 00 00 03 00 00 00 00 [+] setting isodep -> inactive [=] sending bytes to proxmark failed - offline [=] sending bytes to proxmark failed - offline [!] command execute timeout [+] setting isodep -> inactive [=] sending bytes to proxmark failed - offline ======================================================================================= hf seos { seos rfids... } --------------------------------------------------------------------------------------- hf seos help available offline: yes help this help list list seos history --------------------------------------------------------------------------------------- hf seos info available offline: no get info from seos tags",
+            "notes": [
+                "hf seos info"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "hf seos info [-h]"
+        },
+        "hf mfdes write": {
+            "command": "hf mfdes write",
             "description": "write data to file make sure to select aid or authenticate aid before running this command.",
             "notes": [
-                "hf mfdes writedata -n 01 -t 0 -o 000000 -d 3132333435363738"
+                "hf mfdes write -n 01 -t 0 -o 000000 -d 3132333435363738"
             ],
             "offline": false,
             "options": [
@@ -4265,7 +4374,7 @@
                 "-t, --type <dec> file type (0 = standard / backup, 1 = record)",
                 "-a, --aid <hex> app id to select as hex bytes (3 bytes, big endian)"
             ],
-            "usage": "hf mfdes writedata [-h] [-n <dec>] [-o <hex>]... [-d <hex>]... [-t <dec>] [-a <hex>]..."
+            "usage": "hf mfdes write [-h] [-n <dec>] [-o <hex>]... [-d <hex>]... [-t <dec>] [-a <hex>]..."
         },
         "hf mfp auth": {
             "command": "hf mfp auth",
@@ -4726,21 +4835,10 @@
             ],
             "offline": true,
             "options": [
-                "-h, --help this help"
+                "-h, --help this help",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf search [-h]"
-        },
-        "hf seos help": {
-            "command": "hf seos help",
-            "description": "help this help list list seos history --------------------------------------------------------------------------------------- hf seos info available offline: no get info from seos tags",
-            "notes": [
-                "hf seos info"
-            ],
-            "offline": true,
-            "options": [
-                "-h, --help this help"
-            ],
-            "usage": "hf seos info [-h]"
+            "usage": "hf search [-hv]"
         },
         "hf seos list": {
             "command": "hf seos list",
@@ -5208,7 +5306,7 @@
             "command": "hw setmux",
             "description": "set the adc mux to a specific value",
             "notes": [
-                "hw setmux --hiraw -> set high raw"
+                "hw setmux --hipkd -> set high peak"
             ],
             "offline": false,
             "options": [
@@ -5602,16 +5700,16 @@
             "description": "this command uses a dictionary attack against em4205/4305/4469/4569",
             "notes": [
                 "lf em 4x05 chk",
-                "lf em 4x05 chk -e 000022b8 -> remember to use 0x for hex",
+                "lf em 4x05 chk -e 000022b8 -> check password 000022b8",
                 "lf em 4x05 chk -f t55xx_default_pwds -> use t55xx default dictionary"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --file <*.dic> loads a default keys dictionary file <*.dic>",
+                "-f, --file <fn> loads a default keys dictionary file <*.dic>",
                 "-e, --em <em4100> try the calculated password from some cloners based on em4100 id"
             ],
-            "usage": "lf em 4x05 chk [-h] [-f <*.dic>]... [-e <em4100>]"
+            "usage": "lf em 4x05 chk [-h] [-f <fn>] [-e <em4100>]"
         },
         "lf em 4x05 demod": {
             "command": "lf em 4x05 demod",
@@ -5643,19 +5741,19 @@
         },
         "lf em 4x05 help": {
             "command": "lf em 4x05 help",
-            "description": "help this help demod demodulate a em4x05/em4x69 tag from the graphbuffer sniff attempt to recover em4x05 commands from sample buffer --------------------------------------------------------------------------------------- lf em 4x05 brute available offline: no this command tries to bruteforce the password of a em4205/4305/4469/4569",
+            "description": "help this help demod demodulate a em4x05/em4x69 tag from the graphbuffer sniff attempt to recover em4x05 commands from sample buffer --------------------------------------------------------------------------------------- lf em 4x05 brute available offline: no this command tries to bruteforce the password of a em4205/4305/4469/4569 the loop is running on device side, press proxmark3 button to abort",
             "notes": [
                 "note: if you get many false positives, change position on the antennalf em 4x05 brute",
                 "lf em 4x05 brute -n 1 -> stop after first candidate found",
-                "lf em 4x05 brute -s 000022b8 -> remember to use 0x for hex"
+                "lf em 4x05 brute -s 000022aa -> start at 000022aa"
             ],
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-s, --start <pwd> start bruteforce enumeration from this password value",
-                "-n <digits> stop after having found n candidates. default: 0 => infinite"
+                "-s, --start <hex> start bruteforce enumeration from this password value",
+                "-n <dec> stop after having found n candidates. default: 0 (infinite)"
             ],
-            "usage": "lf em 4x05 brute [-h] [-s <pwd>] [-n <digits>]"
+            "usage": "lf em 4x05 brute [-h] [-s <hex>] [-n <dec>]"
         },
         "lf em 4x05 info": {
             "command": "lf em 4x05 info",
@@ -5760,7 +5858,7 @@
         },
         "lf em 4x50 chk": {
             "command": "lf em 4x50 chk",
-            "description": "dictionary attack against em4x50.",
+            "description": "run dictionary key recovery against em4x50 card.",
             "notes": [
                 "lf em 4x50 chk -> uses t55xx default dictionary",
                 "lf em 4x50 chk -f my.dic"
@@ -5768,7 +5866,7 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --filename <fn> dictionary filename"
+                "-f, --file <fn> dictionary filename"
             ],
             "usage": "lf em 4x50 chk [-h] [-f <fn>]"
         },
@@ -5784,7 +5882,7 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --filename <fn> dump filename (bin/eml/json)",
+                "-f, --file <fn> dump filename (bin/eml/json)",
                 "-p, --pwd <hex> password, 4 hex bytes, lsb"
             ],
             "usage": "lf em 4x50 dump [-h] [-f <fn>] [-p <hex>]"
@@ -5812,7 +5910,7 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --filename <fn> data filename"
+                "-f, --file <fn> save filename"
             ],
             "usage": "lf em 4x50 esave [-h] [-f <fn>]"
         },
@@ -5830,7 +5928,7 @@
         },
         "lf em 4x50 help": {
             "command": "lf em 4x50 help",
-            "description": "help this help --------------------------------------------------------------------------------------- lf em 4x50 brute available offline: no tries to bruteforce the password of a em4x50. function can be stopped by pressing pm3 button.",
+            "description": "help this help ----------- --------------------- operations --------------------- ----------- --------------------- simulation --------------------- --------------------------------------------------------------------------------------- lf em 4x50 brute available offline: no tries to bruteforce the password of a em4x50 card. function can be stopped by pressing pm3 button.",
             "notes": [
                 "lf em 4x50 brute --first 12330000 --last 12340000 -> tries pwds from 0x12330000 to 0x1234000000"
             ],
@@ -5913,7 +6011,7 @@
             "options": [
                 "-h, --help this help",
                 "-u, --uid <hex> uid, 4 hex bytes, msb",
-                "-f, --filename <fn> dump filename (bin/eml/json)",
+                "-f, --file <fn> dump filename (bin/eml/json)",
                 "-p, --pwd <hex> password, 4 hex bytes, lsb"
             ],
             "usage": "lf em 4x50 restore [-h] [-u <hex>] [-f <fn>] [-p <hex>]"
@@ -5961,11 +6059,11 @@
             ],
             "usage": "lf em 4x50 wrbl [-h] -b <dec> -d <hex> [-p <hex>]"
         },
-        "lf em 4x50 writepwd": {
-            "command": "lf em 4x50 writepwd",
+        "lf em 4x50 wrpwd": {
+            "command": "lf em 4x50 wrpwd",
             "description": "writes em4x50 password.",
             "notes": [
-                "lf em 4x50 writepwd -p 4f22e7ff -n 12345678"
+                "lf em 4x50 wrpwd -p 4f22e7ff -n 12345678"
             ],
             "offline": false,
             "options": [
@@ -5973,7 +6071,7 @@
                 "-p, --pwd <hex> password, 4 hex bytes, lsb",
                 "-n, --new <hex> new password, 4 hex bytes, lsb"
             ],
-            "usage": "lf em 4x50 writepwd [-h] -p <hex> -n <hex>"
+            "usage": "lf em 4x50 wrpwd [-h] -p <hex> -n <hex>"
         },
         "lf em 4x70 auth": {
             "command": "lf em 4x70 auth",
@@ -6416,9 +6514,9 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --filename <fn w/o ext> filename to load from"
+                "-f, --file <fn> filename to load ( w/o ext )"
             ],
-            "usage": "lf hitag cc [-h] [-f <fn w/o ext>]"
+            "usage": "lf hitag cc [-h] [-f <fn>]"
         },
         "lf hitag dump": {
             "command": "lf hitag dump",
@@ -6440,17 +6538,18 @@
             "command": "lf hitag help",
             "description": "help this help list list hitag trace history --------------------------------------------------------------------------------------- lf hitag eload available offline: no loads hitag tag dump into emulator memory on device",
             "notes": [
-                "lf hitag eload -f lf-hitag-11223344-dump.bin"
+                "lf hitag eload -2 -f lf-hitag-11223344-dump.bin"
             ],
             "offline": true,
             "options": [
                 "-h, --help this help",
                 "-f, --file <filename> filename of dump",
-                "-1 simulate hitag1",
-                "-2 simulate hitag2",
-                "-s simulate hitags"
+                "-1 card type hitag1",
+                "-2 card type hitag2",
+                "-s card type hitags",
+                "-m card type hitagm"
             ],
-            "usage": "lf hitag eload [-h12s] -f <filename>"
+            "usage": "lf hitag eload [-h12sm] -f <filename>"
         },
         "lf hitag info": {
             "command": "lf hitag info",
@@ -7015,9 +7114,11 @@
                 "--qc quadrakey credential",
                 "--hc honeywell credential",
                 "--q5 optional - specify writing to q5/t5555 tag",
-                "--em optional - specify writing to em4305/4469 tag"
+                "--em optional - specify writing to em4305/4469 tag",
+                "--magic <hex> optional - magic hex data. 1 byte",
+                "--psk2 optional - specify writing a tag in psk2 modulation"
             ],
-            "usage": "lf nexwatch clone [-h] [-r <hex>] [--cn <dec>] [-m <dec>] [--nc] [--qc] [--hc] [--q5] [--em]"
+            "usage": "lf nexwatch clone [-h] [-r <hex>] [--cn <dec>] [-m <dec>] [--nc] [--qc] [--hc] [--q5] [--em] [--magic <hex>] [--psk2]"
         },
         "lf nexwatch help": {
             "command": "lf nexwatch help",
@@ -7061,9 +7162,11 @@
                 "-m, --mode <dec> mode (decimal) (0-15, defaults to 1)",
                 "--nc nexkey credential",
                 "--qc quadrakey credential",
-                "--hc honeywell credential"
+                "--hc honeywell credential",
+                "--magic <hex> optional - magic hex data. 1 byte",
+                "--psk2 optional - specify writing a tag in psk2 modulation"
             ],
-            "usage": "lf nexwatch sim [-h] [-r <hex>] [--cn <dec>] [-m <dec>] [--nc] [--qc] [--hc]"
+            "usage": "lf nexwatch sim [-h] [-r <hex>] [--cn <dec>] [-m <dec>] [--nc] [--qc] [--hc] [--magic <hex>] [--psk2]"
         },
         "lf noralsy clone": {
             "command": "lf noralsy clone",
@@ -7585,7 +7688,7 @@
         },
         "lf sniff": {
             "command": "lf sniff",
-            "description": "sniff low frequency signal. - use `lf config` to set parameters. - use `data plot` to look at it",
+            "description": "sniff low frequency signal. you need to configure the lf part on the proxmark3 device manually. usually a trigger and skip samples is a good thing to set before doing a low frequency sniff. - use `lf config` to set parameters. - use `data plot` to look at sniff signal. - use `lf search -1` to see if signal can be automatic decoded",
             "notes": [
                 "lf sniff -v",
                 "lf sniff -s 3000 -@ -> oscilloscope style"
@@ -7748,7 +7851,7 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --filename <fn> filename (default is generated on blk 0)",
+                "-f, --file <fn> filename (default is generated on blk 0)",
                 "-o, --override override, force pwd read despite danger to card",
                 "-p, --pwd <hex> password (4 hex bytes)",
                 "--r0 downlink - fixed bit length",
@@ -9178,8 +9281,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 570,
+        "commands_extracted": 575,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-06-15T12:04:40"
+        "extracted_on": "2021-07-09T11:42:14"
     }
 }

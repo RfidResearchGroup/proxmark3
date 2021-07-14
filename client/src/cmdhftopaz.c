@@ -133,7 +133,7 @@ static int topaz_rall(uint8_t *uid, uint8_t *response) {
 static int topaz_read_block(uint8_t *uid, uint8_t blockno, uint8_t *block_data) {
     uint16_t resp_len = 0;
     uint8_t read8_cmd[] = {TOPAZ_READ8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t read8_response[11];
+    uint8_t read8_response[11] = {0};
 
     read8_cmd[1] = blockno;
     memcpy(&read8_cmd[10], uid, 4);
@@ -571,10 +571,10 @@ int CmdHFTopaz(const char *Cmd) {
 
 int readTopazUid(bool verbose) {
 
-    uint8_t atqa[2];
-    uint8_t rid_response[8];
+    uint8_t atqa[2] = {0};
+    uint8_t rid_response[8] = {0};
     uint8_t *uid_echo = &rid_response[2];
-    uint8_t rall_response[124];
+    uint8_t rall_response[124] = {0};
 
     int status = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response), verbose);
     if (status == PM3_ESOFT) {

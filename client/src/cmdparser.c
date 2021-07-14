@@ -15,6 +15,7 @@
 
 #include "ui.h"
 #include "comms.h"
+#include "util_posix.h" // msleep
 
 bool AlwaysAvailable(void) {
     return true;
@@ -193,6 +194,11 @@ void CmdsHelp(const command_t Commands[]) {
 }
 
 int CmdsParse(const command_t Commands[], const char *Cmd) {
+
+    if (session.client_exe_delay != 0) {
+        msleep(session.client_exe_delay);
+    }
+
     // Help dump children
     if (strcmp(Cmd, "XX_internal_command_dump_XX") == 0) {
         dumpCommandsRecursive(Commands, 0, false);

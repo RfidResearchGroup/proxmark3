@@ -6,7 +6,8 @@
 ffffffffffff # Defaultkey(firstkeyusedbyprogramifnouserdefinedkey)
 000000000000 # Blankkey
 a0a1a2a3a4a5 # NFC Forum MADkey
-A5A4A3A2A1A0 # MAD access key (reversed) 
+A5A4A3A2A1A0 # MAD access key A (reversed) 
+89ECA97F8C2A # MAD access key B
 b0b1b2b3b4b5
 c0c1c2c3c4c5
 d0d1d2d3d4d5
@@ -20,6 +21,9 @@ d3f7d3f7d3f7 # key A Wien
 a0478cc39091
 533cb6c723f6
 8fd0a4f256e9
+e00000000000 # iCopy-X
+e7d6064c5860
+b27ccab30dbd
 #
 d2ece8b9395e # lib / Nat Bieb
 # NSCP default key
@@ -288,6 +292,49 @@ c2b7ec7d4eb1
 51044efb5aab
 ac70ca327a04
 eb0a8ff88ade
+#
+# Transport system Metromoney
+2803bcb0c7e1 
+9c616585e26d 
+4fa9eb49f75e
+2dade48942c5
+a160fcd5ec4c
+112233445566
+361a62f35bc9
+# 
+# Transport system Spain
+83f3cb98c258
+070d486bc555
+a9b018868cc1
+9dcdb136110c
+749934cc8ed3
+506db955f161
+f088a85e71d7
+72b458d60363
+70c714869dc7
+b32464412ee3
+f253c30568c4
+1c68315674ac
+cfe63749080a
+c1e6f8afc9ec
+dd0de3ba08a6
+3d923eb73534
+ff94f86b09a6
+d61707ffdfb1
+8223205047b6
+9951a273dee7
+c9449301af93
+66695a45c9fa
+89aa9d743812
+c41514defc07
+c52876869800
+5353b3aecb53
+2e4169a5c79d
+4bb747e48c2a
+6285a1c8eb5c
+5145c34dba19
+25352912cd8d
+81b20c274c3f
 #
 # Data from https://github.com/RadioWar/NFCGUI
 44dd5a385aaf
@@ -1369,6 +1416,17 @@ F678905568C3
 D1417E431949    
 4BF6DE347FB6
 #
+#
 3a471b2192bf
 a297ceb7d34b
 ae76242931f1
+#
+#
+124578ABFEDC
+ABFEDC124578
+4578ABFEDC12
+#
+# Data from 
+# premier inn hotel chain
+5e594208ef02    
+af9e38d36582 

@@ -25,7 +25,7 @@
 
 #include "ui.h"     // PrintAndLog
 
-#define UTIL_BUFFER_SIZE_SPRINT 4097
+#define UTIL_BUFFER_SIZE_SPRINT 8193
 // global client debug variable
 uint8_t g_debugMode = 0;
 // global client disable logging variable
@@ -450,7 +450,7 @@ void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest) {
     }
 }
 
-//least significant bit first
+// least significant bit (lsb) first
 void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest) {
     for (size_t i = 0 ; i < len ; ++i) {
         dest[i] =  n & 1;

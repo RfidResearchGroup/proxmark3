@@ -56,6 +56,8 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
             return PM3_EOPABORTED;
         }
 
+        PrintAndLogEx(INFO, "." NOLF);
+
         // wait cycle
         while (true) {
             PrintAndLogEx(NORMAL, "." NOLF);
@@ -197,16 +199,20 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
                      uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory) {
 
     uint64_t t2 = msclock();
-    uint32_t timeout = 0;
 
     // send keychunk
     clearCommandBuffer();
     SendCommandOLD(CMD_HF_MIFARE_CHKKEYS_FAST, (sectorsCnt | (firstChunk << 8) | (lastChunk << 12)), ((use_flashmemory << 8) | strategy), size, keyBlock, 6 * size);
     PacketResponseNG resp;
 
+    uint32_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+
+        PrintAndLogEx((timeout == 0) ? INFO : NORMAL, "." NOLF);
+        fflush(stdout);
+
         timeout++;
-        PrintAndLogEx(NORMAL, "." NOLF);
+
         // max timeout for one chunk of 85keys, 60*3sec = 180seconds
         // s70 with 40*2 keys to check, 80*85 = 6800 auth.
         // takes about 97s, still some margin before abort
@@ -216,6 +222,10 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
         }
     }
     t2 = msclock() - t2;
+
+    if (timeout) {
+        PrintAndLogEx(NORMAL, "");
+    }
 
     // time to convert the returned data.
     uint8_t curr_keys = resp.oldarg[0];
@@ -538,7 +548,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             PrintAndLogEx(SUCCESS, "\ntarget block:%3u key type: %c  -- found valid key [ " _GREEN_("%s") "]",
                           package->block,
                           package->keytype ? 'B' : 'A',
-                          sprint_hex(resultKey, 6)
+                          sprint_hex_inrow(resultKey, 6)
                          );
             return PM3_SUCCESS;
         }
@@ -717,7 +727,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
             PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _GREEN_("%s") "]",
                           package->block,
                           package->keytype ? 'B' : 'A',
-                          sprint_hex(resultKey, 6)
+                          sprint_hex_inrow(resultKey, 6)
                          );
             return PM3_SUCCESS;
         } else if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
@@ -1041,6 +1051,27 @@ int mfGen3Freeze(void) {
         return PM3_ETIMEOUT;
     }
 }
+
+int mfG3GetBlock(uint8_t blockno, uint8_t *data) {
+    struct p {
+        uint8_t blockno;
+    } PACKED payload;
+    payload.blockno = blockno;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_G3_RDBL, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_G3_RDBL, &resp, 1500)) {
+        if (resp.status != PM3_SUCCESS)
+            return PM3_EUNDEF;
+        memcpy(data, resp.data.asBytes, 16);
+    } else {
+        PrintAndLogEx(WARNING, "command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+    return PM3_SUCCESS;
+}
+
 
 // variables
 uint32_t cuid = 0;    // uid part used for crypto1.

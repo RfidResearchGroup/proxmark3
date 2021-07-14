@@ -103,8 +103,9 @@ void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, un
     uint8_t *tout = (uint8_t *) out;
 
     while (length > 0) {
-        for (i = 0; i < 8; i++)
+        for (i = 0; i < 8; i++) {
             tin[i] = (unsigned char)(tin[i] ^ iv[i]);
+        }
 
         mbedtls_des3_crypt_ecb(&ctx3, tin, tout);
 
@@ -121,8 +122,9 @@ void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, un
 void Desfire_des_key_new(const uint8_t value[8], desfirekey_t key) {
     uint8_t data[8];
     memcpy(data, value, 8);
-    for (int n = 0; n < 8; n++)
-        data[n] &= 0xfe;
+    for (int n = 0; n < 8; n++) {
+        data[n] &= 0xFE;
+    }
     Desfire_des_key_new_with_version(data, key);
 }
 
@@ -138,10 +140,12 @@ void Desfire_des_key_new_with_version(const uint8_t value[8], desfirekey_t key) 
 void Desfire_3des_key_new(const uint8_t value[16], desfirekey_t key) {
     uint8_t data[16];
     memcpy(data, value, 16);
-    for (int n = 0; n < 8; n++)
-        data[n] &= 0xfe;
-    for (int n = 8; n < 16; n++)
+    for (int n = 0; n < 8; n++) {
+        data[n] &= 0xFE;
+    }
+    for (int n = 8; n < 16; n++) {
         data[n] |= 0x01;
+    }
     Desfire_3des_key_new_with_version(data, key);
 }
 
@@ -156,8 +160,9 @@ void Desfire_3des_key_new_with_version(const uint8_t value[16], desfirekey_t key
 void Desfire_3k3des_key_new(const uint8_t value[24], desfirekey_t key) {
     uint8_t data[24];
     memcpy(data, value, 24);
-    for (int n = 0; n < 8; n++)
-        data[n] &= 0xfe;
+    for (int n = 0; n < 8; n++) {
+        data[n] &= 0xFE;
+    }
     Desfire_3k3des_key_new_with_version(data, key);
 }
 
@@ -194,13 +199,13 @@ uint8_t Desfire_key_get_version(desfirekey_t key) {
 void Desfire_key_set_version(desfirekey_t key, uint8_t version) {
     for (int n = 0; n < 8; n++) {
         uint8_t version_bit = ((version & (1 << (7 - n))) >> (7 - n));
-        key->data[n] &= 0xfe;
+        key->data[n] &= 0xFE;
         key->data[n] |= version_bit;
         if (key->type == T_DES) {
             key->data[n + 8] = key->data[n];
         } else {
             // Write ~version to avoid turning a 3DES key into a DES key
-            key->data[n + 8] &= 0xfe;
+            key->data[n + 8] &= 0xFE;
             key->data[n + 8] |= ~version_bit;
         }
     }
@@ -267,23 +272,32 @@ void cmac_generate_subkeys(desfirekey_t key) {
 
     // Used to compute CMAC on complete blocks
     memcpy(key->cmac_sk1, l, kbs);
+
     txor = l[0] & 0x80;
+
     lsl(key->cmac_sk1, kbs);
-    if (txor)
+
+    if (txor) {
         key->cmac_sk1[kbs - 1] ^= R;
+    }
 
     // Used to compute CMAC on the last block if non-complete
     memcpy(key->cmac_sk2, key->cmac_sk1, kbs);
+
     txor = key->cmac_sk1[0] & 0x80;
+
     lsl(key->cmac_sk2, kbs);
-    if (txor)
+
+    if (txor) {
         key->cmac_sk2[kbs - 1] ^= R;
+    }
 }
 
 void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac) {
     int kbs = key_block_size(key);
-    if (kbs == 0)
+    if (kbs == 0) {
         return;
+    }
 
     uint8_t *buffer = BigBuf_malloc(padded_data_length(len, kbs));
 
@@ -306,8 +320,10 @@ void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t le
 }
 
 size_t key_block_size(const desfirekey_t key) {
-    if (key == NULL)
+    if (key == NULL) {
         return 0;
+    }
+
     size_t block_size = 8;
     switch (key->type) {
         case T_DES:
@@ -830,10 +846,12 @@ void mifare_cypher_blocks_chained(desfiretag_t tag, desfirekey_t key, uint8_t *i
     size_t block_size;
 
     if (tag) {
-        if (!key)
+        if (key == NULL) {
             key = DESFIRE(tag)->session_key;
-        if (!ivect)
+        }
+        if (ivect == NULL) {
             ivect = DESFIRE(tag)->ivect;
+        }
 
         switch (DESFIRE(tag)->authentication_scheme) {
             case AS_LEGACY:
