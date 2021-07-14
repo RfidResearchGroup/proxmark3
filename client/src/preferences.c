@@ -243,6 +243,8 @@ void preferences_save_callback(json_t *root) {
                 JsonSaveStr(root, "logging.level", "NORMAL");
         }
     */
+    JsonSaveInt(root, "client.exe.delay", session.client_exe_delay);
+
 }
 void preferences_load_callback(json_t *root) {
     json_error_t up_error = {0};
@@ -331,6 +333,9 @@ void preferences_load_callback(json_t *root) {
             if (strncmp(tempStr, "extended", 8) == 0) session.device_debug_level = ddbEXTENDED;
         }
     */
+    // client command execution delay
+    if (json_unpack_ex(root, &up_error, 0, "{s:i}", "client.exe.delay", &i1) == 0)
+        session.client_exe_delay = i1;
 }
 
 // Help Functions
@@ -501,6 +506,11 @@ static void showBarModeState(prefShowOpt_t opt) {
             PrintAndLogEx(INFO, "   %s barmode............... "_RED_("unknown"), prefShowMsg(opt));
     }
 }
+
+static void showClientExeDelayState(void) {
+    PrintAndLogEx(INFO, "    Cmd execution delay.... "_GREEN_("%u"), session.client_exe_delay);
+}
+
 
 static int setCmdEmoji(const char *Cmd) {
     CLIParserContext *ctx;
@@ -717,6 +727,35 @@ static int setCmdDeviceDebug (const char *Cmd)
     return PM3_SUCCESS;
 }
 */
+
+
+static int setCmdExeDelay(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs set clientdelay",
+                  "Set presistent preference of delay before executing a command in the client",
+                  "prefs set clientdelay --ms 0     --> unsets any delay\n"
+                  "prefs set clientdelay --ms 1000  --> sets 1000ms delay"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "ms", "<ms>", "delay in micro seconds"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint16_t new_value = (uint16_t)arg_get_int_def(ctx, 1, 0);
+    CLIParserFree(ctx);
+
+    if (session.client_exe_delay != new_value) {
+        showClientExeDelayState();
+        session.client_exe_delay = new_value;
+        showClientExeDelayState();
+        preferences_save();
+    } else {
+        showClientExeDelayState();
+    }
+    return PM3_SUCCESS;
+}
 
 static int setCmdHint(const char *Cmd) {
     CLIParserContext *ctx;
@@ -1045,9 +1084,26 @@ static int getCmdSavePaths(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int getCmdExeDelay(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs get clientdelay",
+                  "Get preference of delay time before execution of a command in the client",
+                  "prefs get clientdelay"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    showClientExeDelayState();
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTableGet[] = {
     {"barmode",          getCmdBarMode,       AlwaysAvailable, "Get bar mode preference"},
     {"clientdebug",      getCmdDebug,         AlwaysAvailable, "Get client debug level preference"},
+    {"clientdelay",      getCmdExeDelay,      AlwaysAvailable, "Get client execution delay preference"},    
     {"color",            getCmdColor,         AlwaysAvailable, "Get color support preference"},
     {"savepaths",        getCmdSavePaths,     AlwaysAvailable, "Get file folder  "},
     //  {"devicedebug",      getCmdDeviceDebug,   AlwaysAvailable, "Get device debug level"},
@@ -1061,6 +1117,7 @@ static command_t CommandTableSet[] = {
     {"help",             setCmdHelp,          AlwaysAvailable, "This help"},
     {"barmode",          setCmdBarMode,       AlwaysAvailable, "Set bar mode"},
     {"clientdebug",      setCmdDebug,         AlwaysAvailable, "Set client debug level"},
+    {"clientdelay",      setCmdExeDelay,      AlwaysAvailable, "Set client execution delay"},
     {"color",            setCmdColor,         AlwaysAvailable, "Set color support"},
     {"emoji",            setCmdEmoji,         AlwaysAvailable, "Set emoji display"},
     {"hints",            setCmdHint,          AlwaysAvailable, "Set hint display"},
@@ -1120,8 +1177,9 @@ static int CmdPrefShow(const char *Cmd) {
     showClientDebugState(prefShowNone);
     showPlotSliderState(prefShowNone);
 //    showDeviceDebugState(prefShowNone);
-
     showBarModeState(prefShowNone);
+    showClientExeDelayState();
+    
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
