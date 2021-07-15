@@ -369,7 +369,7 @@ typedef struct aidhdr {
 
 static int CmdHelp(const char *Cmd);
 
-static const char *getEncryptionAlgoStr(uint8_t algo) {
+/*static const char *getEncryptionAlgoStr(uint8_t algo) {
     switch (algo) {
         case MFDES_ALGO_AES :
             return "AES";
@@ -382,7 +382,7 @@ static const char *getEncryptionAlgoStr(uint8_t algo) {
         default :
             return "";
     }
-}
+}*/
 /*
   The 7 MSBits (= n) code the storage size itself based on 2^n,
   the LSBit is set to '0' if the size is exactly 2^n
@@ -1051,7 +1051,7 @@ static int handler_desfire_freemem(uint32_t *free_mem) {
     return res;
 }
 
-static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t new_algo, uint8_t *old_key, uint8_t old_algo, uint8_t aes_version) {
+/*static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t new_algo, uint8_t *old_key, uint8_t old_algo, uint8_t aes_version) {
 
     if (new_key == NULL || old_key == NULL) {
         return PM3_EINVARG;
@@ -1060,10 +1060,10 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
     // AID == 000000  6bits LSB needs to be 0
     key_no &= 0x0F;
 
-    /*
+    
         Desfire treats Des keys as TDes but with the first half = 2nd half
         As such, we should be able to convert the Des to TDes then run the code as TDes
-    */
+    
     if (new_algo == MFDES_ALGO_DES) {
         memcpy(&new_key[8], new_key, 8);
         new_algo = MFDES_ALGO_3DES;
@@ -1074,10 +1074,10 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
         old_algo = MFDES_ALGO_3DES;
     }
 
-    /*
+    *
      * Because new crypto methods can be setup only at application creation,
      * changing the card master key to one of them require a key_no tweak.
-     */
+     *
     if (0x000000 == tag->selected_application) {
 
         // PICC master key, 6bits LSB needs to be 0
@@ -1096,13 +1096,13 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
                 break;
         }
     }
-    /*
+    *
     keyno   1b
     key     8b
     cpy     8b
     crc     2b
     padding
-    */
+    *
 
     // Variable length ciphered key data 24-42 bytes plus padding..
     uint8_t data[64] = {key_no};
@@ -1113,13 +1113,13 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
 
     uint8_t new_key_length = 16;
     switch (new_algo) {
-        /*
+        *
                 // We have converted the DES to 3DES above,so this will never hit
                 case MFDES_ALGO_DES:
                     memcpy(data + cmdcnt + 1, new_key, new_key_length);
                     memcpy(data + cmdcnt + 1 + new_key_length, new_key, new_key_length);
                     break;
-        */
+        *
         case MFDES_ALGO_3DES:
         case MFDES_ALGO_AES:
             new_key_length = 16;
@@ -1251,12 +1251,12 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
     DropFieldDesfire();
 
     if (!p) {
-        /*
+        *
             Note in my testing on an EV1, the AES password did change, with the number of returned bytes was 8, expected 9 <status><8 byte cmac>
             As such !p is true and the code reports "Error on changing key"; so comment back to user until its fixed.
 
             Note: as at 19 May 2021, with the sn = 1 patch above, this should no longer be reachable!
-        */
+        *
         if (new_algo == MFDES_ALGO_AES) {
             PrintAndLogEx(WARNING, "AES Key may have been changed, please check new password with the auth command.");
         }
@@ -1264,17 +1264,17 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
         return PM3_ESOFT;
     }
 
-    /*
+    *
      * If we changed the current authenticated key, we are not authenticated
      * anymore.
-     */
+     *
     if (key_no == tag->authenticated_key_no) {
         free(tag->session_key);
         tag->session_key = NULL;
     }
 
     return PM3_SUCCESS;
-}
+}*/
 
 // --- GET SIGNATURE
 static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len, nxp_cardtype_t card_type) {
@@ -3805,7 +3805,7 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
     DropFieldDesfire();
     return PM3_SUCCESS;
 }
-
+/*
 static int CmdHF14ADesChangeKey(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes changekey",
@@ -3900,7 +3900,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
         PrintAndLogEx(FAILED, "Change key ( " _RED_("fail") " )");
     }
     return res;
-}
+}*/
 
 
 // MIAFRE DESFire Authentication
@@ -4885,6 +4885,197 @@ static int CmdHF14ADesDefault(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14ADesChangeKey(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes changekey",
+                  "Change PICC/Application key. Needs to provide keynum/key for a valid authentication (may get from default parameters).",
+                  "hf mfdes changekey --aid 123456 -> execute with default factory setup");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID of application (3 hex bytes, big endian)"),
+        arg_str0(NULL, "oldalgo", "<DES/2TDEA/3TDEA/AES>", "Old key crypto algorithm: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0(NULL, "oldkey",  "<old key>", "Old key (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_int0(NULL, "newkeyno","<keyno>", "Key number for change"),
+        arg_str0(NULL, "newalgo", "<DES/2TDEA/3TDEA/AES>", "New key crypto algorithm: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0(NULL, "newkey",  "<new key>", "New key (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0(NULL, "newver",  "<version hex>", "New key's version (1 hex byte)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMEncrypted, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    int oldkeytype = T_DES;
+    if (CLIGetOptionList(arg_get_str(ctx, 12), DesfireAlgoOpts, &oldkeytype))
+        return PM3_ESOFT;
+    
+    uint8_t oldkey[DESFIRE_MAX_KEY_SIZE] = {0};
+    
+    uint8_t newkeynum = arg_get_int_def(ctx, 14, 0);
+
+    int newkeytype = T_DES;
+    if (CLIGetOptionList(arg_get_str(ctx, 15), DesfireAlgoOpts, &newkeytype))
+        return PM3_ESOFT;
+
+    uint8_t newkey[DESFIRE_MAX_KEY_SIZE] = {0};
+
+    uint8_t newkeyver = arg_get_int_def(ctx, 17, 0x100);
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    if (appid == 0x000000) {
+        PrintAndLogEx(WARNING, "Changing the root aid (0x000000)");
+        return PM3_ESOFT; // TODO!!!!
+    }
+
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    res = DesfireChangeKey(&dctx, newkeynum, newkeytype, newkeyver, newkey, oldkeytype, oldkey);
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Change key " _GREEN_("ok") " ");
+    } else {
+        PrintAndLogEx(FAILED, "Change key " _RED_("failed") " ");
+    }
+
+    DropField();
+    return res;
+
+    return PM3_SUCCESS;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes changekey",
+                  "Change MIFARE DESFire Key.\n"
+                  "Make sure to select aid or authenticate aid before running this command.",
+                  "hf mfdes changekey -n 0 -t 1 -k 0000000000000000 -u 1 -j 0102030405060708  -> DES, keynumber 0"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("n",  "keyno",  "<dec>", "Key number used for authentification"),
+        arg_int0("t",  "algo",   "<dec>", "Current key algo (1 = DES, 2 = 3DES(2K2DES), 3 = 3K3DES, 4 = AES)"),
+        arg_str0("k",  "key",     "<hex>", "Current Key (HEX 8-24 bytes)"),
+        arg_int0("u",  "newalgo", "<dec>", "New key algo (1 = DES, 2 = 3DES(2K2DES), 3 = 3K3DES, 4 = AES)"),
+        arg_str0("j",  "newkey",  "<hex>", "New Key (HEX 8-24 bytes)"),
+        arg_int0("v",  "aesver",  "<dec>", "AES version (if AES is used)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint8_t cmdKeyNo  = arg_get_int_def(ctx, 1, 0);
+    uint8_t cmdAuthAlgo = arg_get_int_def(ctx, 2, 0);
+    uint8_t key[24] = {0};
+    int keylen = 0;
+    int res_klen = CLIParamHexToBuf(arg_get_str(ctx, 3), key, 24, &keylen);
+
+    uint8_t newcmdAuthAlgo = arg_get_int_def(ctx, 4, 0);
+    uint8_t newkey[24] = {0};
+    int newkeylen = 0;
+    int res_newklen = CLIParamHexToBuf(arg_get_str(ctx, 5), newkey, 24, &newkeylen);
+
+    uint8_t aesversion = arg_get_int_def(ctx, 6, 0);
+    CLIParserFree(ctx);
+
+    //DropFieldDesfire();
+    // NR  DESC     KEYLENGHT
+    // ------------------------
+    // 1 = DES      8
+    // 2 = 3DES     16
+    // 3 = 3K 3DES  24
+    // 4 = AES      16
+    uint8_t keylength = 8;
+    if (cmdAuthAlgo == MFDES_ALGO_AES) {
+        keylength = 16;
+    } else if (cmdAuthAlgo == MFDES_ALGO_3DES) {
+        keylength = 16;
+    } else if (cmdAuthAlgo == MFDES_ALGO_DES) {
+        keylength = 8;
+    } else if (cmdAuthAlgo == MFDES_ALGO_3K3DES) {
+        keylength = 24;
+    }
+
+    uint8_t newkeylength = 8;
+    if (newcmdAuthAlgo == MFDES_ALGO_AES) {
+        newkeylength = 16;
+    } else if (newcmdAuthAlgo == MFDES_ALGO_3DES) {
+        newkeylength = 16;
+    } else if (newcmdAuthAlgo == MFDES_ALGO_DES) {
+        newkeylength = 8;
+    } else if (newcmdAuthAlgo == MFDES_ALGO_3K3DES) {
+        newkeylength = 24;
+    }
+
+    if (res_klen || (keylen < 8) || (keylen > 24)) {
+        PrintAndLogEx(ERR, "Specified key must have %d bytes length", keylen);
+        return PM3_EINVARG;
+    }
+
+    if (res_newklen || (newkeylen < 8) || (newkeylen > 24)) {
+        PrintAndLogEx(ERR, "Specified new key must have %d bytes length", newkeylen);
+        return PM3_EINVARG;
+    }
+
+    if (keylen != keylength) {
+        PrintAndLogEx(WARNING, "Key must include %d hex symbols, got %d", keylength, keylen);
+        return PM3_EINVARG;
+    }
+
+    if (newkeylen != newkeylength) {
+        PrintAndLogEx(WARNING, "New key must include %d hex symbols, got %d", keylength, newkeylen);
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, "changing key number  " _YELLOW_("0x%02x"), cmdKeyNo);
+    PrintAndLogEx(INFO, "old key: %s ( %s )", sprint_hex_inrow(key, keylen), getEncryptionAlgoStr(cmdAuthAlgo));
+    PrintAndLogEx(INFO, "new key: %s ( %s )", sprint_hex_inrow(newkey, newkeylen), getEncryptionAlgoStr(newcmdAuthAlgo));
+
+    int res = mifare_desfire_change_key(cmdKeyNo, newkey, newcmdAuthAlgo, key, cmdAuthAlgo, aesversion);
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Change key ( " _GREEN_("ok") " )");
+    } else {
+        PrintAndLogEx(FAILED, "Change key ( " _RED_("fail") " )");
+    }
+    return res;*/
+}
+
 static int CmdHF14ADesCreateApp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes createapp",
@@ -5767,7 +5958,7 @@ static command_t CommandTable[] = {
 //    {"ndefread",             CmdHF14aDesNDEFRead,             IfPm3Iso14443a,  "Prints NDEF records from card"},
 //    {"mad",             CmdHF14aDesMAD,             IfPm3Iso14443a,  "Prints MAD records from card"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "------------------------ " _CYAN_("Keys") " -----------------------"},
-    {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
+    {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "[new]Change Key"},
     {"chkeysettings",    CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "[new]Change Key Settings"},
     {"getkeysettings",   CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "[new]Get Key Settings"},
     {"getkeyversions",   CmdHF14ADesGetKeyVersions,   IfPm3Iso14443a,  "[new]Get Key Versions"},

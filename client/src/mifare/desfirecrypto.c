@@ -327,22 +327,23 @@ void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorythm keytype, uint8
         key[n] |= version_bit;
 
         if (keytype == T_DES) {
-            key[n + 8] = key->data[n];
+            key[n + 8] = key[n];
         } else {
             // Write ~version to avoid turning a 3DES key into a DES key
-            key->data[n + 8] &= 0xFE;
-            key->data[n + 8] |= ~version_bit;
+            key[n + 8] &= 0xFE;
+            key[n + 8] |= ~version_bit;
         }
     }
 }
 
 uint8_t DesfireDESKeyGetVersion(uint8_t *key) {
     uint8_t version = 0;
-    for (int n = 0; n < 8; n++) {
-        version = version << 1;
-        version |= (key[n] & 0xFE);
-    }
+    for (int n = 0; n < 8; n++)
+        version |= ((key[n] & 1) << (7 - n));
+
+    return version;
 }
+
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc) {
     crc32_ex(data, len, crc);
 }

@@ -1081,26 +1081,26 @@ void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool 
 
 int DesfireChangeKey(DesfireContext *dctx, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey) {
     
-    uint_8t okeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
-    uint_8t nkeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
-    uint_8t cdata[DESFIRE_MAX_KEY_SIZE + 10] = {0};
+    uint8_t okeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
+    uint8_t nkeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
+    uint8_t cdata[DESFIRE_MAX_KEY_SIZE + 10] = {0};
     
     // DES -> 2TDEA
     memcpy(okeybuf, oldkey, desfire_get_key_length(oldkeytype));
-    if (oldkeytype == MFDES_ALGO_DES) {
+    if (oldkeytype == T_DES) {
         memcpy(&okeybuf[8], oldkey, 8);
-        oldkeytype = MFDES_ALGO_3DES;
+        oldkeytype = T_3DES;
     }    
 
     memcpy(nkeybuf, newkey, desfire_get_key_length(newkeytype));
-    if (newkeytype == MFDES_ALGO_DES) {
+    if (newkeytype == T_DES) {
         memcpy(&nkeybuf[8], newkey, 8);
-        newkeytype = MFDES_ALGO_3DES;
+        newkeytype = T_3DES;
     }    
     size_t nkeylen = desfire_get_key_length(newkeytype);
 
     // set key version for DES. if newkeyver > 0xff - setting key version is disabled
-    if (newkeytype != MFDES_ALGO_AES && newkeyver < 0x100)
+    if (newkeytype != T_AES && newkeyver < 0x100)
         DesfireDESKeySetVersion(nkeybuf, newkeytype, newkeyver);
     
     // xor if we change current auth key
@@ -1108,13 +1108,13 @@ int DesfireChangeKey(DesfireContext *dctx, uint8_t newkeynum, DesfireCryptoAlgor
         memcpy(cdata, nkeybuf, nkeylen);
     } else {
         memcpy(cdata, nkeybuf, nkeylen);
-        binxor(cdata, okeybuf, nkeylen)
+        bin_xor(cdata, okeybuf, nkeylen);
     }
     
     // add key version for AES
     size_t cdatalen = nkeylen;
-    if (newkeytype == MFDES_ALGO_AES) {
-        cdata[cdatalen] = newkeyversion;
+    if (newkeytype == T_AES) {
+        cdata[cdatalen] = newkeyver;
         cdatalen++;
     }
     
@@ -1136,12 +1136,12 @@ int DesfireChangeKey(DesfireContext *dctx, uint8_t newkeynum, DesfireCryptoAlgor
     }
     
     // get padded data length
-    size_t rlen = padded_data_length(cdatalen, desfire_get_key_block_length(ctx->keyType));
+    size_t rlen = padded_data_length(cdatalen, desfire_get_key_block_length(newkeytype));
     
     // send command
     uint8_t resp[257] = {0};
     size_t resplen = 0;
-    int res = DesfireChangeKeyCmd(dctx, cdata, rlen, resp, resplen);
+    int res = DesfireChangeKeyCmd(dctx, cdata, rlen, resp, &resplen);
     
     // check response
     
@@ -1149,6 +1149,6 @@ int DesfireChangeKey(DesfireContext *dctx, uint8_t newkeynum, DesfireCryptoAlgor
     if (newkeynum == dctx->keyNum)
         DesfireClearSession(dctx);
     
-    return PM3_SUCCESS;
+    return res;
 }
 
