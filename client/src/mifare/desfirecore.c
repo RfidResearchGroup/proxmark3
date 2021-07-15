@@ -988,6 +988,10 @@ int DesfireChangeKeySettings(DesfireContext *dctx, uint8_t *data, size_t len) {
     return DesfireCommandTxData(dctx, MFDES_CHANGE_KEY_SETTINGS, data, len);
 }
 
+int DesfireChangeKeyCmd(DesfireContext *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen) {
+    return DesfireCommand(dctx, MFDES_GET_KEY_VERSION, data, len, resp, resplen, -1);
+}
+
 uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType) {
     switch (keyType) {
         case T_DES:
@@ -1074,3 +1078,77 @@ void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool 
     else
         PrintKeySettingsPICC(keysettings, numkeys, print2ndbyte);
 }
+
+int DesfireChangeKey(DesfireContext *dctx, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey) {
+    
+    uint_8t okeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
+    uint_8t nkeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
+    uint_8t cdata[DESFIRE_MAX_KEY_SIZE + 10] = {0};
+    
+    // DES -> 2TDEA
+    memcpy(okeybuf, oldkey, desfire_get_key_length(oldkeytype));
+    if (oldkeytype == MFDES_ALGO_DES) {
+        memcpy(&okeybuf[8], oldkey, 8);
+        oldkeytype = MFDES_ALGO_3DES;
+    }    
+
+    memcpy(nkeybuf, newkey, desfire_get_key_length(newkeytype));
+    if (newkeytype == MFDES_ALGO_DES) {
+        memcpy(&nkeybuf[8], newkey, 8);
+        newkeytype = MFDES_ALGO_3DES;
+    }    
+    size_t nkeylen = desfire_get_key_length(newkeytype);
+
+    // set key version for DES. if newkeyver > 0xff - setting key version is disabled
+    if (newkeytype != MFDES_ALGO_AES && newkeyver < 0x100)
+        DesfireDESKeySetVersion(nkeybuf, newkeytype, newkeyver);
+    
+    // xor if we change current auth key
+    if (newkeynum == dctx->keyNum) {
+        memcpy(cdata, nkeybuf, nkeylen);
+    } else {
+        memcpy(cdata, nkeybuf, nkeylen);
+        binxor(cdata, okeybuf, nkeylen)
+    }
+    
+    // add key version for AES
+    size_t cdatalen = nkeylen;
+    if (newkeytype == MFDES_ALGO_AES) {
+        cdata[cdatalen] = newkeyversion;
+        cdatalen++;
+    }
+    
+    // add crc||crc_new_key
+    if (dctx->secureChannel == DACd40) {
+        iso14443a_crc_append(cdata, cdatalen);
+        cdatalen += 2;
+        if (newkeynum != dctx->keyNum) {
+            iso14443a_crc(nkeybuf, nkeylen, &cdata[cdatalen]);
+            cdatalen += 2;
+        }
+    } else {
+        desfire_crc32_append(cdata, cdatalen);
+        cdatalen += 4;
+        if (newkeynum != dctx->keyNum) {
+            desfire_crc32(nkeybuf, nkeylen, &cdata[cdatalen]);
+            cdatalen += 4;
+        }
+    }
+    
+    // get padded data length
+    size_t rlen = padded_data_length(cdatalen, desfire_get_key_block_length(ctx->keyType));
+    
+    // send command
+    uint8_t resp[257] = {0};
+    size_t resplen = 0;
+    int res = DesfireChangeKeyCmd(dctx, cdata, rlen, resp, resplen);
+    
+    // check response
+    
+    // clear auth
+    if (newkeynum == dctx->keyNum)
+        DesfireClearSession(dctx);
+    
+    return PM3_SUCCESS;
+}
+
