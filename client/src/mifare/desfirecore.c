@@ -989,7 +989,7 @@ int DesfireChangeKeySettings(DesfireContext *dctx, uint8_t *data, size_t len) {
 }
 
 int DesfireChangeKeyCmd(DesfireContext *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen) {
-    return DesfireCommand(dctx, MFDES_GET_KEY_VERSION, data, len, resp, resplen, -1);
+    return DesfireCommand(dctx, MFDES_CHANGE_KEY, data, len, resp, resplen, -1);
 }
 
 uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType) {
@@ -1083,25 +1083,34 @@ int DesfireChangeKey(DesfireContext *dctx, uint8_t newkeynum, DesfireCryptoAlgor
     
     uint8_t okeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
     uint8_t nkeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
-    uint8_t cdata[DESFIRE_MAX_KEY_SIZE + 10] = {0};
+    uint8_t pckcdata[DESFIRE_MAX_KEY_SIZE + 10] = {0};
+    uint8_t *cdata = &pckcdata[2];
+    uint8_t keynodata = newkeynum & 0x3f;
+    keynodata |= (DesfireKeyAlgoToType(newkeytype) & 0x03) << 6;
+    pckcdata[0] = MFDES_CHANGE_KEY; // TODO
+    pckcdata[1] = keynodata;
     
     // DES -> 2TDEA
     memcpy(okeybuf, oldkey, desfire_get_key_length(oldkeytype));
     if (oldkeytype == T_DES) {
         memcpy(&okeybuf[8], oldkey, 8);
-        oldkeytype = T_3DES;
     }    
 
     memcpy(nkeybuf, newkey, desfire_get_key_length(newkeytype));
+    size_t nkeylen = desfire_get_key_length(newkeytype);
     if (newkeytype == T_DES) {
         memcpy(&nkeybuf[8], newkey, 8);
-        newkeytype = T_3DES;
+        nkeylen = desfire_get_key_length(T_3DES);
     }    
-    size_t nkeylen = desfire_get_key_length(newkeytype);
+
+PrintAndLogEx(SUCCESS, "--oldk [%d]: %s", desfire_get_key_length(oldkeytype), sprint_hex(okeybuf, desfire_get_key_length(oldkeytype)));
+PrintAndLogEx(SUCCESS, "--newk [%d]: %s", nkeylen, sprint_hex(nkeybuf, nkeylen));
 
     // set key version for DES. if newkeyver > 0xff - setting key version is disabled
     if (newkeytype != T_AES && newkeyver < 0x100)
         DesfireDESKeySetVersion(nkeybuf, newkeytype, newkeyver);
+    
+PrintAndLogEx(SUCCESS, "--newk [%d]: %s", nkeylen, sprint_hex(nkeybuf, nkeylen));
     
     // xor if we change current auth key
     if (newkeynum == dctx->keyNum) {
@@ -1113,10 +1122,12 @@ int DesfireChangeKey(DesfireContext *dctx, uint8_t newkeynum, DesfireCryptoAlgor
     
     // add key version for AES
     size_t cdatalen = nkeylen;
+PrintAndLogEx(SUCCESS, "--cdata [%d]: %s kv = 0x%02x", cdatalen, sprint_hex(cdata, cdatalen), newkeyver);
     if (newkeytype == T_AES) {
         cdata[cdatalen] = newkeyver;
         cdatalen++;
     }
+PrintAndLogEx(SUCCESS, "--cdata [%d]: %s", cdatalen, sprint_hex(cdata, cdatalen));
     
     // add crc||crc_new_key
     if (dctx->secureChannel == DACd40) {
@@ -1127,13 +1138,15 @@ int DesfireChangeKey(DesfireContext *dctx, uint8_t newkeynum, DesfireCryptoAlgor
             cdatalen += 2;
         }
     } else {
-        desfire_crc32_append(cdata, cdatalen);
+        // EV1 Checksum must cover : <KeyNo> <PrevKey XOR Newkey>  [<AES NewKeyVer>]
+        desfire_crc32_append(pckcdata, cdatalen + 2);
         cdatalen += 4;
         if (newkeynum != dctx->keyNum) {
             desfire_crc32(nkeybuf, nkeylen, &cdata[cdatalen]);
             cdatalen += 4;
         }
     }
+PrintAndLogEx(SUCCESS, "--cdata [%d]: %s", cdatalen, sprint_hex(cdata, cdatalen));
     
     // get padded data length
     size_t rlen = padded_data_length(cdatalen, desfire_get_key_block_length(newkeytype));
@@ -1141,7 +1154,8 @@ int DesfireChangeKey(DesfireContext *dctx, uint8_t newkeynum, DesfireCryptoAlgor
     // send command
     uint8_t resp[257] = {0};
     size_t resplen = 0;
-    int res = DesfireChangeKeyCmd(dctx, cdata, rlen, resp, &resplen);
+PrintAndLogEx(SUCCESS, "--pckdata [%d]: %s", rlen + 1, sprint_hex(&pckcdata[1], rlen + 1));
+    int res = DesfireChangeKeyCmd(dctx, &pckcdata[1], rlen + 1, resp, &resplen);
     
     // check response
     

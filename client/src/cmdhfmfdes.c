@@ -4931,6 +4931,15 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
         return PM3_ESOFT;
     
     uint8_t oldkey[DESFIRE_MAX_KEY_SIZE] = {0};
+    uint8_t keydata[200] = {0};
+    int keylen = sizeof(keydata);
+    CLIGetHexWithReturn(ctx, 13, keydata, &keylen);
+    if (keylen && keylen != desfire_get_key_length(oldkeytype)) {
+        PrintAndLogEx(ERR, "%s old key must have %d bytes length instead of %d.", CLIGetOptionListStr(DesfireAlgoOpts, oldkeytype), desfire_get_key_length(oldkeytype), keylen);
+        return PM3_EINVARG;
+    }
+    if (keylen)
+        memcpy(oldkey, keydata, keylen);
     
     uint8_t newkeynum = arg_get_int_def(ctx, 14, 0);
 
@@ -4939,8 +4948,22 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
         return PM3_ESOFT;
 
     uint8_t newkey[DESFIRE_MAX_KEY_SIZE] = {0};
+    memset(keydata, 0x00, sizeof(keydata));
+    CLIGetHexWithReturn(ctx, 16, keydata, &keylen);
+    if (keylen && keylen != desfire_get_key_length(newkeytype)) {
+        PrintAndLogEx(ERR, "%s new key must have %d bytes length instead of %d.", CLIGetOptionListStr(DesfireAlgoOpts, newkeytype), desfire_get_key_length(newkeytype), keylen);
+        return PM3_EINVARG;
+    }
+    if (keylen)
+        memcpy(newkey, keydata, keylen);
 
-    uint8_t newkeyver = arg_get_int_def(ctx, 17, 0x100);
+    uint32_t newkeyver = 0x100;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 17, 0x100, &newkeyver, 1, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Key version must have 1 bytes length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
@@ -4956,6 +4979,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
         return res;
     }
 
+    DesfireSetCommMode(&dctx, DCMEncryptedPlain);
     res = DesfireChangeKey(&dctx, newkeynum, newkeytype, newkeyver, newkey, oldkeytype, oldkey);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Change key " _GREEN_("ok") " ");

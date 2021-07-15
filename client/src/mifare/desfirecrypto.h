@@ -56,7 +56,8 @@ typedef enum {
     DCMNone,
     DCMPlain,
     DCMMACed,
-    DCMEncrypted
+    DCMEncrypted,
+    DCMEncryptedPlain
 } DesfireCommunicationMode;
 
 

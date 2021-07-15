@@ -331,7 +331,7 @@ void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorythm keytype, uint8
         } else {
             // Write ~version to avoid turning a 3DES key into a DES key
             key[n + 8] &= 0xFE;
-            key[n + 8] |= ~version_bit;
+            key[n + 8] |= (~version_bit) & 0x01;
         }
     }
 }
