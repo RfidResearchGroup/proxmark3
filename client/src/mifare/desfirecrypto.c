@@ -311,7 +311,38 @@ void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *data, size_t len, uint8_t *
         memcpy(cmac, ctx->IV, kbs);
 }
 
+void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorythm keytype, uint8_t version) {
+    if (keytype == T_AES)
+        return;
 
+    // clear version
+    for (int n = 0; n < desfire_get_key_length(keytype); n++)
+        key[n] &= 0xFE;
+
+    // set version
+    for (int n = 0; n < 8; n++) {
+        uint8_t version_bit = ((version & (1 << (7 - n))) >> (7 - n));
+
+        key[n] &= 0xFE;
+        key[n] |= version_bit;
+
+        if (keytype == T_DES) {
+            key[n + 8] = key->data[n];
+        } else {
+            // Write ~version to avoid turning a 3DES key into a DES key
+            key->data[n + 8] &= 0xFE;
+            key->data[n + 8] |= ~version_bit;
+        }
+    }
+}
+
+uint8_t DesfireDESKeyGetVersion(uint8_t *key) {
+    uint8_t version = 0;
+    for (int n = 0; n < 8; n++) {
+        version = version << 1;
+        version |= (key[n] & 0xFE);
+    }
+}
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc) {
     crc32_ex(data, len, crc);
 }
