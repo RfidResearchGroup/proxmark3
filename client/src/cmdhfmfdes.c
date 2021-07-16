@@ -4991,7 +4991,6 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     if (newkeyver < 0x100 || newkeytype == T_AES)
         PrintAndLogEx(INFO, "new key version: 0x%02x", newkeyver & 0x00);
     
-
     res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
@@ -4999,7 +4998,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     }
 
     DesfireSetCommMode(&dctx, DCMEncryptedPlain);
-    res = DesfireChangeKey(&dctx, newkeynum, newkeytype, newkeyver, newkey, oldkeytype, oldkey);
+    res = DesfireChangeKey(&dctx, newkeynum, newkeytype, newkeyver, newkey, oldkeytype, oldkey, true);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Change key " _GREEN_("ok") " ");
     } else {

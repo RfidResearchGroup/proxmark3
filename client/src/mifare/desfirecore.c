@@ -1079,7 +1079,7 @@ void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool 
         PrintKeySettingsPICC(keysettings, numkeys, print2ndbyte);
 }
 
-int DesfireChangeKey(DesfireContext *dctx, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey) {
+int DesfireChangeKey(DesfireContext *dctx, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey, bool verbose) {
     
     uint8_t okeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
     uint8_t nkeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
@@ -1107,8 +1107,11 @@ PrintAndLogEx(SUCCESS, "--oldk [%d]: %s", desfire_get_key_length(oldkeytype), sp
 PrintAndLogEx(SUCCESS, "--newk [%d]: %s", nkeylen, sprint_hex(nkeybuf, nkeylen));
 
     // set key version for DES. if newkeyver > 0xff - setting key version is disabled
-    if (newkeytype != T_AES && newkeyver < 0x100)
+    if (newkeytype != T_AES && newkeyver < 0x100) {
         DesfireDESKeySetVersion(nkeybuf, newkeytype, newkeyver);
+        if (verbose)
+            PrintAndLogEx(INFO, "changed new key: %s [%d] %s", CLIGetOptionListStr(DesfireAlgoOpts, newkeytype), desfire_get_key_length(newkeytype), sprint_hex(newkey, desfire_get_key_length(newkeytype)));
+    }
     
 PrintAndLogEx(SUCCESS, "--newk [%d]: %s", nkeylen, sprint_hex(nkeybuf, nkeylen));
     
