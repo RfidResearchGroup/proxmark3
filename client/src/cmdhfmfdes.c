@@ -4986,7 +4986,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
         PrintAndLogEx(INFO, _CYAN_("Changing PICC key"));
     PrintAndLogEx(INFO, "auth key %d: %s [%d] %s", dctx.keyNum, CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType), desfire_get_key_length(dctx.keyType), sprint_hex(dctx.key, desfire_get_key_length(dctx.keyType)));
     PrintAndLogEx(INFO, "changing key number  " _YELLOW_("0x%02x") " (%d)", newkeynum, newkeynum);
-    PrintAndLogEx(INFO, "old key: %s [%d] %s", CLIGetOptionListStr(DesfireAlgoOpts, newkeytype), desfire_get_key_length(oldkeytype), sprint_hex(oldkey, desfire_get_key_length(oldkeytype)));
+    PrintAndLogEx(INFO, "old key: %s [%d] %s", CLIGetOptionListStr(DesfireAlgoOpts, oldkeytype), desfire_get_key_length(oldkeytype), sprint_hex(oldkey, desfire_get_key_length(oldkeytype)));
     PrintAndLogEx(INFO, "new key: %s [%d] %s", CLIGetOptionListStr(DesfireAlgoOpts, newkeytype), desfire_get_key_length(newkeytype), sprint_hex(newkey, desfire_get_key_length(newkeytype)));
     if (newkeyver < 0x100 || newkeytype == T_AES)
         PrintAndLogEx(INFO, "new key version: 0x%02x", newkeyver & 0x00);

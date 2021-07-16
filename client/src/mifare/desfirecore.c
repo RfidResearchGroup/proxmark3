@@ -764,7 +764,15 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
             des_decrypt(encRndB, rotRndB, key->data);
             memcpy(both + rndlen, encRndB, rndlen);
         } else if (dctx->keyType == T_3DES) {
-            //TODO
+            des3_decrypt(encRndA, RndA, key->data, 2);
+            memcpy(both, encRndA, rndlen);
+
+            for (uint32_t x = 0; x < rndlen; x++) {
+                rotRndB[x] = rotRndB[x] ^ encRndA[x];
+            }
+
+            des3_decrypt(encRndB, rotRndB, key->data, 2);
+            memcpy(both + rndlen, encRndB, rndlen);
         }
     } else if (secureChannel == DACEV1 && dctx->keyType != T_AES) {
         if (dctx->keyType == T_DES) {
@@ -857,7 +865,10 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
         if (secureChannel == DACEV1)
             des_decrypt_cbc(encRndA, encRndA, rndlen, key->data, IV);
     } else if (dctx->keyType == T_3DES)
-        tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 2);
+        if (secureChannel == DACd40)
+            des3_decrypt(encRndA, encRndA, key->data, 2);
+        else
+            tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 2);
     else if (dctx->keyType == T_3K3DES)
         tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 3);
     else if (dctx->keyType == T_AES) {
