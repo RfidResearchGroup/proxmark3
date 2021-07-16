@@ -4932,14 +4932,14 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     
     uint8_t oldkey[DESFIRE_MAX_KEY_SIZE] = {0};
     uint8_t keydata[200] = {0};
-    int keylen = sizeof(keydata);
-    CLIGetHexWithReturn(ctx, 13, keydata, &keylen);
-    if (keylen && keylen != desfire_get_key_length(oldkeytype)) {
-        PrintAndLogEx(ERR, "%s old key must have %d bytes length instead of %d.", CLIGetOptionListStr(DesfireAlgoOpts, oldkeytype), desfire_get_key_length(oldkeytype), keylen);
+    int oldkeylen = sizeof(keydata);
+    CLIGetHexWithReturn(ctx, 13, keydata, &oldkeylen);
+    if (oldkeylen && oldkeylen != desfire_get_key_length(oldkeytype)) {
+        PrintAndLogEx(ERR, "%s old key must have %d bytes length instead of %d.", CLIGetOptionListStr(DesfireAlgoOpts, oldkeytype), desfire_get_key_length(oldkeytype), oldkeylen);
         return PM3_EINVARG;
     }
-    if (keylen)
-        memcpy(oldkey, keydata, keylen);
+    if (oldkeylen)
+        memcpy(oldkey, keydata, oldkeylen);
     
     uint8_t newkeynum = arg_get_int_def(ctx, 14, 0);
 
@@ -4949,6 +4949,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
 
     uint8_t newkey[DESFIRE_MAX_KEY_SIZE] = {0};
     memset(keydata, 0x00, sizeof(keydata));
+    int keylen = sizeof(keydata);
     CLIGetHexWithReturn(ctx, 16, keydata, &keylen);
     if (keylen && keylen != desfire_get_key_length(newkeytype)) {
         PrintAndLogEx(ERR, "%s new key must have %d bytes length instead of %d.", CLIGetOptionListStr(DesfireAlgoOpts, newkeytype), desfire_get_key_length(newkeytype), keylen);
@@ -4967,6 +4968,12 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
+    
+    // if we change the same key
+    if (oldkeylen == 0 && newkeynum == dctx.keyNum) {
+        oldkeytype = dctx.keyType;
+        memcpy(oldkey, dctx.key, desfire_get_key_length(dctx.keyType));
+    }
 
     if (appid == 0x000000) {
         PrintAndLogEx(WARNING, "Changing the root aid (0x000000)");
