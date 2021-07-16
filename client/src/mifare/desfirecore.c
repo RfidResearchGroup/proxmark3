@@ -1080,7 +1080,7 @@ void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool 
 }
 
 int DesfireChangeKey(DesfireContext *dctx, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey, bool verbose) {
-    
+
     uint8_t okeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
     uint8_t nkeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
     uint8_t pckcdata[DESFIRE_MAX_KEY_SIZE + 10] = {0};
@@ -1089,22 +1089,22 @@ int DesfireChangeKey(DesfireContext *dctx, uint8_t newkeynum, DesfireCryptoAlgor
     keynodata |= (DesfireKeyAlgoToType(newkeytype) & 0x03) << 6;
     pckcdata[0] = MFDES_CHANGE_KEY; // TODO
     pckcdata[1] = keynodata;
-    
+
     // DES -> 2TDEA
     memcpy(okeybuf, oldkey, desfire_get_key_length(oldkeytype));
     if (oldkeytype == T_DES) {
         memcpy(&okeybuf[8], oldkey, 8);
-    }    
+    }
 
     memcpy(nkeybuf, newkey, desfire_get_key_length(newkeytype));
     size_t nkeylen = desfire_get_key_length(newkeytype);
     if (newkeytype == T_DES) {
         memcpy(&nkeybuf[8], newkey, 8);
         nkeylen = desfire_get_key_length(T_3DES);
-    }    
+    }
 
-PrintAndLogEx(SUCCESS, "--oldk [%d]: %s", desfire_get_key_length(oldkeytype), sprint_hex(okeybuf, desfire_get_key_length(oldkeytype)));
-PrintAndLogEx(SUCCESS, "--newk [%d]: %s", nkeylen, sprint_hex(nkeybuf, nkeylen));
+    PrintAndLogEx(SUCCESS, "--oldk [%d]: %s", desfire_get_key_length(oldkeytype), sprint_hex(okeybuf, desfire_get_key_length(oldkeytype)));
+    PrintAndLogEx(SUCCESS, "--newk [%d]: %s", nkeylen, sprint_hex(nkeybuf, nkeylen));
 
     // set key version for DES. if newkeyver > 0xff - setting key version is disabled
     if (newkeytype != T_AES && newkeyver < 0x100) {
@@ -1112,9 +1112,9 @@ PrintAndLogEx(SUCCESS, "--newk [%d]: %s", nkeylen, sprint_hex(nkeybuf, nkeylen))
         if (verbose)
             PrintAndLogEx(INFO, "changed new key: %s [%d] %s", CLIGetOptionListStr(DesfireAlgoOpts, newkeytype), desfire_get_key_length(newkeytype), sprint_hex(newkey, desfire_get_key_length(newkeytype)));
     }
-    
-PrintAndLogEx(SUCCESS, "--newk [%d]: %s", nkeylen, sprint_hex(nkeybuf, nkeylen));
-    
+
+    PrintAndLogEx(SUCCESS, "--newk [%d]: %s", nkeylen, sprint_hex(nkeybuf, nkeylen));
+
     // xor if we change current auth key
     if (newkeynum == dctx->keyNum) {
         memcpy(cdata, nkeybuf, nkeylen);
@@ -1122,16 +1122,16 @@ PrintAndLogEx(SUCCESS, "--newk [%d]: %s", nkeylen, sprint_hex(nkeybuf, nkeylen))
         memcpy(cdata, nkeybuf, nkeylen);
         bin_xor(cdata, okeybuf, nkeylen);
     }
-    
+
     // add key version for AES
     size_t cdatalen = nkeylen;
-PrintAndLogEx(SUCCESS, "--cdata [%d]: %s kv = 0x%02x", cdatalen, sprint_hex(cdata, cdatalen), newkeyver);
+    PrintAndLogEx(SUCCESS, "--cdata [%d]: %s kv = 0x%02x", cdatalen, sprint_hex(cdata, cdatalen), newkeyver);
     if (newkeytype == T_AES) {
         cdata[cdatalen] = newkeyver;
         cdatalen++;
     }
-PrintAndLogEx(SUCCESS, "--cdata [%d]: %s", cdatalen, sprint_hex(cdata, cdatalen));
-    
+    PrintAndLogEx(SUCCESS, "--cdata [%d]: %s", cdatalen, sprint_hex(cdata, cdatalen));
+
     // add crc||crc_new_key
     if (dctx->secureChannel == DACd40) {
         iso14443a_crc_append(cdata, cdatalen);
@@ -1149,23 +1149,23 @@ PrintAndLogEx(SUCCESS, "--cdata [%d]: %s", cdatalen, sprint_hex(cdata, cdatalen)
             cdatalen += 4;
         }
     }
-PrintAndLogEx(SUCCESS, "--cdata [%d]: %s", cdatalen, sprint_hex(cdata, cdatalen));
-    
+    PrintAndLogEx(SUCCESS, "--cdata [%d]: %s", cdatalen, sprint_hex(cdata, cdatalen));
+
     // get padded data length
     size_t rlen = padded_data_length(cdatalen, desfire_get_key_block_length(newkeytype));
-    
+
     // send command
     uint8_t resp[257] = {0};
     size_t resplen = 0;
-PrintAndLogEx(SUCCESS, "--pckdata [%d]: %s", rlen + 1, sprint_hex(&pckcdata[1], rlen + 1));
+    PrintAndLogEx(SUCCESS, "--pckdata [%d]: %s", rlen + 1, sprint_hex(&pckcdata[1], rlen + 1));
     int res = DesfireChangeKeyCmd(dctx, &pckcdata[1], rlen + 1, resp, &resplen);
-    
+
     // check response
-    
+
     // clear auth
     if (newkeynum == dctx->keyNum)
         DesfireClearSession(dctx);
-    
+
     return res;
 }
 
