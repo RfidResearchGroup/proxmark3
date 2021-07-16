@@ -65,6 +65,54 @@ void des_decrypt_cbc(void *out, const void *in, const int length, const void *ke
     mbedtls_des_crypt_cbc(&ctx, MBEDTLS_DES_DECRYPT, length, iv, in, out);
 }
 
+void des3_encrypt(void *out, const void *in, const void *key, uint8_t keycount) {
+    switch (keycount) {
+        case 1:
+            des_encrypt(out, in, key);
+            break;
+        case 2: {
+            mbedtls_des3_context ctx3;
+            mbedtls_des3_set2key_enc(&ctx3, key);
+            mbedtls_des3_crypt_ecb(&ctx3, in, out);
+            mbedtls_des3_free(&ctx3);
+            break;
+        }
+        case 3: {
+            mbedtls_des3_context ctx3;
+            mbedtls_des3_set3key_enc(&ctx3, key);
+            mbedtls_des3_crypt_ecb(&ctx3, in, out);
+            mbedtls_des3_free(&ctx3);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+void des3_decrypt(void *out, const void *in, const void *key, uint8_t keycount) {
+    switch (keycount) {
+        case 1:
+            des_encrypt(out, in, key);
+            break;
+        case 2: {
+            mbedtls_des3_context ctx3;
+            mbedtls_des3_set2key_dec(&ctx3, key);
+            mbedtls_des3_crypt_ecb(&ctx3, in, out);
+            mbedtls_des3_free(&ctx3);
+            break;
+        }
+        case 3: {
+            mbedtls_des3_context ctx3;
+            mbedtls_des3_set3key_dec(&ctx3, key);
+            mbedtls_des3_crypt_ecb(&ctx3, in, out);
+            mbedtls_des3_free(&ctx3);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
 // NIST Special Publication 800-38A — Recommendation for block cipher modes of operation: methods and techniques, 2001.
 int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) {
     uint8_t iiv[16] = {0};
