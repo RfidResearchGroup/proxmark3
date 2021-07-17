@@ -225,7 +225,7 @@ void DesfirePrintContext(DesfireContext *ctx) {
                       sprint_hex(ctx->sessionKeyMAC, desfire_get_key_length(ctx->keyType)));
         PrintAndLogEx(INFO, "    ENC: %s",
                       sprint_hex(ctx->sessionKeyEnc, desfire_get_key_length(ctx->keyType)));
-        PrintAndLogEx(INFO, "    IV [%d]: %s",
+        PrintAndLogEx(INFO, "    IV [%zu]: %s",
                       desfire_get_key_block_length(ctx->keyType),
                       sprint_hex(ctx->IV, desfire_get_key_block_length(ctx->keyType)));
 
@@ -524,6 +524,9 @@ static void DesfireSplitBytesToBlock(uint8_t *blockdata, size_t *blockdatacount,
 int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
     int res = PM3_SUCCESS;
 
+    if (!PrintChannelModeWarning(cmd, ctx->secureChannel, ctx->cmdSet, ctx->commMode))
+        DesfirePrintContext(ctx);
+
     uint8_t databuf[250 * 5] = {0};
     size_t databuflen = 0;
 
@@ -597,6 +600,32 @@ int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uin
     DesfireAIDUintToByte(aid2, &data[3]);
 
     return DesfireSelectAID(ctx, data, (select_two) ? &data[3] : NULL);
+}
+
+int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose) {
+    if (verbose)
+        DesfirePrintContext(dctx);
+
+    int res = DesfireSelectAIDHex(dctx, aid, false, 0);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+        return PM3_ESOFT;
+    }
+
+    res = DesfireAuthenticate(dctx, secureChannel);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
+        return PM3_ESOFT;
+    }
+
+    if (DesfireIsAuthenticated(dctx)) {
+        if (verbose)
+            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
+    } else {
+        return PM3_ESOFT;
+    }
+
+    return PM3_SUCCESS;
 }
 
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel) {
@@ -820,8 +849,8 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     Desfire_session_key_new(RndA, RndB, key, &sesskey);
     memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));
 
-    PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, rndlen));
-    PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, rndlen));
+    //PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, rndlen));
+    //PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, rndlen));
     if (dctx->keyType == T_DES) {
         if (secureChannel == DACd40)
             des_decrypt(encRndA, encRndA, key->data);
@@ -839,8 +868,8 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     }
 
     rol(RndA, rndlen);
-    PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
-    PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
+    //PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
+    //PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
     for (uint32_t x = 0; x < rndlen; x++) {
         if (RndA[x] != encRndA[x]) {
             if (g_debugMode > 1) {
@@ -867,54 +896,181 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     memset(dctx->IV, 0, DESFIRE_MAX_KEY_SIZE);
     dctx->secureChannel = secureChannel;
     memcpy(dctx->sessionKeyMAC, dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType));
-    PrintAndLogEx(INFO, "sessionKeyEnc : %s", sprint_hex(dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType)));
+    PrintAndLogEx(INFO, "Session key : %s", sprint_hex(dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType)));
 
     return PM3_SUCCESS;
+}
+
+static int DesfireCommandEx(DesfireContext *dctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen, int checklength, size_t splitbysize) {
+    if (resplen)
+        *resplen = 0;
+
+    uint8_t respcode = 0xff;
+    uint8_t xresp[257] = {0};
+    size_t xresplen = 0;
+    int res = DesfireExchangeEx(false, dctx, cmd, data, datalen, &respcode, xresp, &xresplen, true, splitbysize);
+    if (res != PM3_SUCCESS)
+        return res;
+    if (respcode != MFDES_S_OPERATION_OK)
+        return PM3_EAPDU_FAIL;
+    if (checklength >= 0 && xresplen != checklength)
+        return PM3_EAPDU_FAIL;
+
+    if (resplen)
+        *resplen = xresplen;
+    if (resp)
+        memcpy(resp, xresp, (splitbysize == 0) ? xresplen : xresplen * splitbysize);
+    return PM3_SUCCESS;
+}
+
+static int DesfireCommand(DesfireContext *dctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen, int checklength) {
+    return DesfireCommandEx(dctx, cmd, data, datalen, resp, resplen, checklength, 0);
+}
+
+static int DesfireCommandNoData(DesfireContext *dctx, uint8_t cmd) {
+    return DesfireCommand(dctx, cmd, NULL, 0, NULL, NULL, 0);
+}
+
+static int DesfireCommandTxData(DesfireContext *dctx, uint8_t cmd, uint8_t *data, size_t datalen) {
+    return DesfireCommand(dctx, cmd, data, datalen, NULL, NULL, 0);
+}
+
+static int DesfireCommandRxData(DesfireContext *dctx, uint8_t cmd, uint8_t *resp, size_t *resplen, int checklength) {
+    return DesfireCommand(dctx, cmd, NULL, 0, resp, resplen, checklength);
+}
+
+int DesfireFormatPICC(DesfireContext *dctx) {
+    return DesfireCommandNoData(dctx, MFDES_FORMAT_PICC);
+}
+
+int DesfireGetFreeMem(DesfireContext *dctx, uint32_t *freemem) {
+    *freemem = 0;
+
+    uint8_t resp[257] = {0};
+    size_t resplen = 0;
+    int res = DesfireCommandRxData(dctx, MFDES_GET_FREE_MEMORY, resp, &resplen, 3);
+    if (res == PM3_SUCCESS)
+        *freemem = DesfireAIDByteToUint(resp);
+    return res;
+}
+
+int DesfireGetUID(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
+    return DesfireCommandRxData(dctx, MFDES_GET_UID, resp, resplen, -1);
 }
 
 int DesfireGetAIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
-    uint8_t respcode = 0xff;
-    int res = DesfireExchange(dctx, MFDES_GET_APPLICATION_IDS, NULL, 0, &respcode, resp, resplen);
-    if (res != PM3_SUCCESS)
-        return res;
-    if (respcode != MFDES_S_OPERATION_OK)
-        return PM3_EAPDU_FAIL;
-    return PM3_SUCCESS;
+    return DesfireCommandRxData(dctx, MFDES_GET_APPLICATION_IDS, resp, resplen, -1);
 }
 
 int DesfireGetDFList(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
-    uint8_t respcode = 0xff;
-    int res = DesfireExchangeEx(false, dctx, MFDES_GET_DF_NAMES, NULL, 0, &respcode, resp, resplen, true, 24);
-    if (res != PM3_SUCCESS)
-        return res;
-    if (respcode != MFDES_S_OPERATION_OK)
-        return PM3_EAPDU_FAIL;
-    return PM3_SUCCESS;
+    return DesfireCommandEx(dctx, MFDES_GET_DF_NAMES, NULL, 0, resp, resplen, -1, 24);
 }
 
 int DesfireCreateApplication(DesfireContext *dctx, uint8_t *appdata, size_t appdatalen) {
-    uint8_t respcode = 0xff;
-    uint8_t resp[257] = {0};
-    size_t resplen = 0;
-    int res = DesfireExchangeEx(false, dctx, MFDES_CREATE_APPLICATION, appdata, appdatalen, &respcode, resp, &resplen, true, 24);
-    if (res != PM3_SUCCESS)
-        return res;
-    if (respcode != MFDES_S_OPERATION_OK || resplen != 0)
-        return PM3_EAPDU_FAIL;
-    return PM3_SUCCESS;
+    return DesfireCommandTxData(dctx, MFDES_CREATE_APPLICATION, appdata, appdatalen);
 }
 
 int DesfireDeleteApplication(DesfireContext *dctx, uint32_t aid) {
-    uint8_t respcode = 0xff;
     uint8_t data[3] = {0};
     DesfireAIDUintToByte(aid, data);
-    uint8_t resp[257] = {0};
-    size_t resplen = 0;
-    int res = DesfireExchangeEx(false, dctx, MFDES_DELETE_APPLICATION, data, sizeof(data), &respcode, resp, &resplen, true, 24);
-    if (res != PM3_SUCCESS)
-        return res;
-    if (respcode != MFDES_S_OPERATION_OK || resplen != 0)
-        return PM3_EAPDU_FAIL;
-    return PM3_SUCCESS;
+    return DesfireCommandTxData(dctx, MFDES_DELETE_APPLICATION, data, sizeof(data));
 }
 
+int DesfireGetKeySettings(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
+    return DesfireCommandRxData(dctx, MFDES_GET_KEY_SETTINGS, resp, resplen, -1);
+}
+
+int DesfireGetKeyVersion(DesfireContext *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen) {
+    return DesfireCommand(dctx, MFDES_GET_KEY_VERSION, data, len, resp, resplen, -1);
+}
+
+int DesfireChangeKeySettings(DesfireContext *dctx, uint8_t *data, size_t len) {
+    return DesfireCommandTxData(dctx, MFDES_CHANGE_KEY_SETTINGS, data, len);
+}
+
+uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType) {
+    switch (keyType) {
+        case T_DES:
+            return 0x00;
+        case T_3DES:
+            return 0x00;
+        case T_3K3DES:
+            return 0x01;
+        case T_AES:
+            return 0x02;
+    }
+    return 0;
+}
+static void PrintKeyType(uint8_t keytype) {
+    switch (keytype) {
+        case 00:
+            PrintAndLogEx(SUCCESS, "Key: 2TDEA");
+            break;
+        case 01:
+            PrintAndLogEx(SUCCESS, "Key: 3TDEA");
+            break;
+        case 02:
+            PrintAndLogEx(SUCCESS, "Key: AES");
+            break;
+        default:
+            PrintAndLogEx(SUCCESS, "Key: unknown: 0x%02x", keytype);
+            break;
+    }
+}
+
+static void PrintKeySettingsPICC(uint8_t keysettings, uint8_t numkeys, bool print2ndbyte) {
+    PrintAndLogEx(SUCCESS, "PICC level rights:");
+    PrintAndLogEx(SUCCESS, "[%c...] CMK Configuration changeable   : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "[.%c..] CMK required for create/delete : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? _GREEN_("NO") : "YES");
+    PrintAndLogEx(SUCCESS, "[..%c.] Directory list access with CMK : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? _GREEN_("NO") : "YES");
+    PrintAndLogEx(SUCCESS, "[...%c] CMK is changeable              : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "");
+
+    if (print2ndbyte)
+        PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
+}
+
+static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print2ndbyte) {
+    // Access rights.
+    PrintAndLogEx(SUCCESS, "Application level rights:");
+    uint8_t rights = ((keysettings >> 4) & 0x0F);
+    switch (rights) {
+        case 0x0:
+            PrintAndLogEx(SUCCESS, "-- AMK authentication is necessary to change any key (default)");
+            break;
+        case 0xE:
+            PrintAndLogEx(SUCCESS, "-- Authentication with the key to be changed (same KeyNo) is necessary to change a key");
+            break;
+        case 0xF:
+            PrintAndLogEx(SUCCESS, "-- All keys (except AMK,see Bit0) within this application are frozen");
+            break;
+        default:
+            PrintAndLogEx(SUCCESS,
+                          "-- Authentication with the specified key is necessary to change any key.\n"
+                          "A change key and a PICC master key (CMK) can only be changed after authentication with the master key.\n"
+                          "For keys other then the master or change key, an authentication with the same key is needed."
+                         );
+            break;
+    }
+
+    PrintAndLogEx(SUCCESS, "[%c...] AMK Configuration changeable   : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "[.%c..] AMK required for create/delete : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? "NO" : "YES");
+    PrintAndLogEx(SUCCESS, "[..%c.] Directory list access with AMK : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? "NO" : "YES");
+    PrintAndLogEx(SUCCESS, "[...%c] AMK is changeable              : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "");
+
+    if (print2ndbyte) {
+        PrintKeyType(numkeys >> 6);
+        PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
+        if (numkeys & 0x20)
+            PrintAndLogEx(SUCCESS, "iso file id: enabled");
+        PrintAndLogEx(SUCCESS, "");
+    }
+}
+
+void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool print2ndbyte) {
+    if (applevel)
+        PrintKeySettingsApp(keysettings, numkeys, print2ndbyte);
+    else
+        PrintKeySettingsPICC(keysettings, numkeys, print2ndbyte);
+}

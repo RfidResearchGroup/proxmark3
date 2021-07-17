@@ -19,8 +19,16 @@
 #include "mifare/desfire_crypto.h"
 #include "mifare/mifare4.h"
 
+typedef struct {
+    uint8_t cmd;
+    DesfireSecureChannel secureChannel;
+    DesfireCommandSet cmdSet;
+    DesfireCommunicationMode commMode;
+} AllowedChannelModesS;
+
 void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen);
 void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen);
 
+bool PrintChannelModeWarning(uint8_t cmd, DesfireSecureChannel secureChannel, DesfireCommandSet cmdSet, DesfireCommunicationMode commMode);
 
 #endif // __DESFIRESECURECHAN_H

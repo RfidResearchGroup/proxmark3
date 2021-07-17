@@ -78,6 +78,8 @@ typedef struct DesfireContextS {
     uint8_t sessionKeyMAC[DESFIRE_MAX_KEY_SIZE];
     uint8_t sessionKeyEnc[DESFIRE_MAX_KEY_SIZE];  // look at mifare4.h - mf4Session_t
     uint8_t lastIV[DESFIRE_MAX_KEY_SIZE];
+    uint8_t lastCommand;
+    bool lastRequestZeroLen;
     //mf4Session_t AESSession;
     uint16_t cntrTx;    // for AES
     uint16_t cntrRx;    // for AES
@@ -93,10 +95,17 @@ void DesfireSetKdf(DesfireContext *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint
 bool DesfireIsAuthenticated(DesfireContext *dctx);
 size_t DesfireGetMACLength(DesfireContext *ctx);
 
+size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint8_t crclen);
 
 void DesfireCryptoEncDec(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode);
 void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode, uint8_t *iv);
 void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *cmac);
 
+void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc);
+void desfire_crc32_append(uint8_t *data, const size_t len);
+bool desfire_crc32_check(uint8_t *data, const size_t len, uint8_t *crc);
+void iso14443a_crc_append(uint8_t *data, size_t len);
+void iso14443a_crc(uint8_t *data, size_t len, uint8_t *pbtCrc);
+bool iso14443a_crc_check(uint8_t *data, const size_t len, uint8_t *crc);
 
 #endif // __DESFIRECRYPTO_H

@@ -76,7 +76,9 @@ endif (NOT SKIPPYTHON EQUAL 1)
 
 # If cross-compiled, we need to init source and build.
 if (CMAKE_TOOLCHAIN_FILE)
-    set(CFLAGS_EXTERNAL_LIB "CFLAGS=--target=${CMAKE_C_COMPILER_TARGET} -w")
+    if (ANDROID)
+        set(CFLAGS_EXTERNAL_LIB "CFLAGS=--target=${CMAKE_C_COMPILER_TARGET} -w")
+    endif (ANDROID)
     set(EMBED_READLINE ON)
     set(EMBED_BZIP2 ON)
 endif (CMAKE_TOOLCHAIN_FILE)
@@ -229,6 +231,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/mifare/desfirecrypto.c
         ${PM3_ROOT}/client/src/mifare/desfiresecurechan.c
         ${PM3_ROOT}/client/src/mifare/desfirecore.c
+        ${PM3_ROOT}/client/src/mifare/desfiretest.c
         ${PM3_ROOT}/client/src/uart/uart_posix.c
         ${PM3_ROOT}/client/src/uart/uart_win32.c
         ${PM3_ROOT}/client/src/ui/overlays.ui

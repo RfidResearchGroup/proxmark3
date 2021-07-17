@@ -967,19 +967,3 @@ void mifare_cypher_blocks_chained(desfiretag_t tag, desfirekey_t key, uint8_t *i
         offset += block_size;
     }
 }
-
-void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc) {
-    crc32_ex(data, len, crc);
-}
-
-void desfire_crc32_append(uint8_t *data, const size_t len) {
-    crc32_ex(data, len, data + len);
-}
-
-void iso14443a_crc_append(uint8_t *data, size_t len) {
-    return compute_crc(CRC_14443_A, data, len, data + len, data + len + 1);
-}
-
-void iso14443a_crc(uint8_t *data, size_t len, uint8_t *pbtCrc) {
-    return compute_crc(CRC_14443_A, data, len, pbtCrc, pbtCrc + 1);
-}

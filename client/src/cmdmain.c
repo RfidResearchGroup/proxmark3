@@ -17,7 +17,7 @@
 
 #include <string.h>
 #include <ctype.h>
-#include <time.h> // MingW
+#include <time.h>    // MingW
 #include <stdlib.h>  // calloc
 
 #include "comms.h"

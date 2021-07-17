@@ -7,9 +7,14 @@ Nevertheless, the firmware can be tuned depending on the Proxmark3 platform and 
 
 Indeed, the RRG/Iceman fork can be used on other Proxmark3 hardware platforms as well.
 
-Via some definitions, you can adjust the firmware for a given platform, but also to add features like the support of the Blue Shark add-on or to select which standalone mode to embed.
+Via some definitions, you can adjust the firmware for a given platform, but also to add features like the support of the Blue Shark add-on or to select which standalone mode to embed. To learn how to adjust the firmware, please read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md).
 
-To learn how to adjust the firmware, please read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md).
+### Compile for Proxmark3 RDV4
+The repo defaults for compiling a firmware and client suitable for Proxmark3 RDV4.
+
+### Compile for generic Proxmark3 platforms
+In order to build this repo for generic Proxmark3 platforms we urge you to read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
+
 
 ## Get the latest commits
 
@@ -21,13 +26,13 @@ git pull
 ## Clean and compile everything
 
 ```sh
-make clean && make all
+make clean && make -j
 ```
 
 ### if you got an error
 Read the [troubleshooting guide](/doc/md/Installation_Instructions/Troubleshooting.md), 
 
-For instance,  on WSl-1 you usually get the _libQt5Core.so.5 not found_ message
+For instance,  on WSl-1 you usually get the `libQt5Core.so.5 not found` message
 [solution](/doc/md/Installation_Instructions/Troubleshooting.md#libQt5Coreso5-not-found)
 
 
@@ -74,6 +79,9 @@ proxmark3 /dev/ttyACM0 --flash --unlock-bootloader --image /tmp/my-bootrom.elf -
 ## Run the client
 
 In most cases, you can run the script `pm3` which try to auto-detect the port to use, on several OS.
+```sh
+./pm3
+```
 
 For the other cases, specify the port by yourself. For example, for a Proxmark3 connected via USB under Linux:
 

@@ -23,6 +23,24 @@ static inline uint8_t evenparity8(const uint8_t x) {
     return !OddByteParity[x];
 }
 
+static inline uint8_t evenparity16(uint16_t x) {
+#if !defined __GNUC__
+    x ^= x >> 8;
+    return evenparity8(x);
+#else
+    return (__builtin_parity(x) & 0xFF);
+#endif
+}
+
+static inline uint8_t oddparity16(uint16_t x) {
+#if !defined __GNUC__
+    x ^= x >> 8;
+    return oddparity8(x);
+#else
+    return !__builtin_parity(x);
+#endif
+}
+
 static inline uint8_t evenparity32(uint32_t x) {
 #if !defined __GNUC__
     x ^= x >> 16;

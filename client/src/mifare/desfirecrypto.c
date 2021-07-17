@@ -56,6 +56,8 @@ void DesfireClearSession(DesfireContext *ctx) {
     memset(ctx->sessionKeyMAC, 0, sizeof(ctx->sessionKeyMAC));
     memset(ctx->sessionKeyEnc, 0, sizeof(ctx->sessionKeyEnc));
     memset(ctx->lastIV, 0, sizeof(ctx->lastIV));
+    ctx->lastCommand = 0;
+    ctx->lastRequestZeroLen = false;
     ctx->cntrTx = 0;
     ctx->cntrRx = 0;
     memset(ctx->TI, 0, sizeof(ctx->TI));
@@ -105,6 +107,42 @@ size_t DesfireGetMACLength(DesfireContext *ctx) {
             break;
     }
     return mac_length;
+}
+
+size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint8_t crclen) {
+    size_t crcpos = datalen - 1;
+    while (crcpos > 0)
+        if (data[crcpos] == 0)
+            crcpos--;
+        else
+            break;
+    crcpos++; // crc may be 0x00000000 or 0x0000
+    if (crcpos < crclen) {
+        PrintAndLogEx(WARNING, "No space for crc. pos: %zu", crcpos);
+        return 0;
+    }
+
+    uint8_t crcdata[1024] = {0};
+    size_t crcposfound = 0;
+    for (int i = 0; i < crclen + 1; i++) {
+        if (crcpos - i == 0)
+            break;
+        if (crcpos - i + crclen > datalen)
+            continue;
+
+        memcpy(crcdata, data, crcpos - i);
+        crcdata[crcpos - i] = respcode;
+        bool res;
+        if (crclen == 4)
+            res = desfire_crc32_check(crcdata, crcpos - i + 1, &data[crcpos - i]);
+        else
+            res = iso14443a_crc_check(data, crcpos - i, &data[crcpos - i]);
+        if (res) {
+            crcposfound = crcpos - i;
+        }
+    }
+
+    return crcposfound;
 }
 
 static void DesfireCryptoEncDecSingleBlock(uint8_t *key, DesfireCryptoAlgorythm keyType, uint8_t *data, uint8_t *dstdata, uint8_t *ivect, bool dir_to_send, bool encode) {
@@ -163,21 +201,25 @@ static void DesfireCryptoEncDecSingleBlock(uint8_t *key, DesfireCryptoAlgorythm 
             break;
     }
 
-    memcpy(dstdata, edata, block_size);
-
     if (dir_to_send) {
         memcpy(ivect, edata, block_size);
     } else {
+        bin_xor(edata, ivect, block_size);
         memcpy(ivect, data, block_size);
     }
+
+    memcpy(dstdata, edata, block_size);
 }
 
 void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode, uint8_t *iv) {
     uint8_t data[1024] = {0};
     uint8_t xiv[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
 
-    if (ctx->secureChannel == DACd40)
+    bool xencode = encode;
+    if (ctx->secureChannel == DACd40) {
         memset(ctx->IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
+        xencode = false;
+    }
 
     size_t block_size = desfire_get_key_block_length(ctx->keyType);
 
@@ -189,9 +231,9 @@ void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *s
     size_t offset = 0;
     while (offset < srcdatalen) {
         if (use_session_key)
-            DesfireCryptoEncDecSingleBlock(ctx->sessionKeyMAC, ctx->keyType, srcdata + offset, data, xiv, encode, encode);
+            DesfireCryptoEncDecSingleBlock(ctx->sessionKeyMAC, ctx->keyType, srcdata + offset, data + offset, xiv, encode, xencode);
         else
-            DesfireCryptoEncDecSingleBlock(ctx->key, ctx->keyType, srcdata + offset, data, xiv, encode, encode);
+            DesfireCryptoEncDecSingleBlock(ctx->key, ctx->keyType, srcdata + offset, data + offset, xiv, encode, xencode);
         offset += block_size;
     }
 
@@ -265,6 +307,35 @@ void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *data, size_t len, uint8_t *
 
     DesfireCryptoEncDec(ctx, true, buffer, len, NULL, true);
 
-    memcpy(cmac, ctx->IV, kbs);
+    if (cmac != NULL)
+        memcpy(cmac, ctx->IV, kbs);
 }
 
+
+void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc) {
+    crc32_ex(data, len, crc);
+}
+
+void desfire_crc32_append(uint8_t *data, const size_t len) {
+    crc32_ex(data, len, data + len);
+}
+
+bool desfire_crc32_check(uint8_t *data, const size_t len, uint8_t *crc) {
+    uint8_t ccrc[4] = {0};
+    desfire_crc32(data, len, ccrc);
+    return (memcmp(ccrc, crc, 4) == 0);
+}
+
+void iso14443a_crc_append(uint8_t *data, size_t len) {
+    return compute_crc(CRC_14443_A, data, len, data + len, data + len + 1);
+}
+
+void iso14443a_crc(uint8_t *data, size_t len, uint8_t *pbtCrc) {
+    return compute_crc(CRC_14443_A, data, len, pbtCrc, pbtCrc + 1);
+}
+
+bool iso14443a_crc_check(uint8_t *data, const size_t len, uint8_t *crc) {
+    uint8_t ccrc[2] = {0};
+    iso14443a_crc(data, len, ccrc);
+    return (memcmp(ccrc, crc, 2) == 0);
+}
