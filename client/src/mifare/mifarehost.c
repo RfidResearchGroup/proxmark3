@@ -113,7 +113,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
         if (keycount == 0) {
             PrintAndLogEx(FAILED, "Key not found (lfsr_common_prefix list is null). Nt=%08x", nt);
-            PrintAndLogEx(FAILED, "This is expected to happen in 25% of all cases. Trying again with a different reader nonce...");
+            PrintAndLogEx(FAILED, "This is expected to happen in 25%% of all cases. Trying again with a different reader nonce...");
             continue;
         }
 
