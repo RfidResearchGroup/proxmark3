@@ -430,7 +430,7 @@ int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx) {
         return -4; //preamble not found
 
     // wrong size?  (between to preambles)
-    if (*size != 128) return -5;
+    if (*size < 128) return -5;
 
     return (int)startIdx;
 }
