@@ -56,6 +56,7 @@ static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length, const c
 static int emrtd_print_ef_com_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen);
+static int emrtd_print_ef_dg5_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen);
@@ -90,7 +91,7 @@ static emrtd_dg_t dg_table[] = {
     {0x75, 2,  0x0102, "EF_DG2",          "Encoded Face",                                       false, false, true,  false, emrtd_print_ef_dg2_info,        emrtd_dump_ef_dg2},
     {0x63, 3,  0x0103, "EF_DG3",          "Encoded Finger(s)",                                  false, true,  false, false, NULL,                           NULL},
     {0x76, 4,  0x0104, "EF_DG4",          "Encoded Eye(s)",                                     false, true,  false, false, NULL,                           NULL},
-    {0x65, 5,  0x0105, "EF_DG5",          "Displayed Portrait",                                 false, false, false, false, NULL,                           emrtd_dump_ef_dg5},
+    {0x65, 5,  0x0105, "EF_DG5",          "Displayed Portrait",                                 false, false, false, false, emrtd_print_ef_dg5_info,        emrtd_dump_ef_dg5},
     {0x66, 6,  0x0106, "EF_DG6",          "Reserved for Future Use",                            false, false, false, false, NULL,                           NULL},
     {0x67, 7,  0x0107, "EF_DG7",          "Displayed Signature or Usual Mark",                  false, false, false, false, NULL,                           emrtd_dump_ef_dg7},
     {0x68, 8,  0x0108, "EF_DG8",          "Data Feature(s)",                                    false, false, false, true,  NULL,                           NULL},
@@ -1429,6 +1430,65 @@ static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen) {
         return PM3_EMALLOC;
 
     sprintf(fn, "%s.%s", dg_table[EF_DG2].filename, (is_jpg) ? "jpg" : "jp2");
+
+    PrintAndLogEx(DEBUG, "image filename `" _YELLOW_("%s") "`", fn);
+
+    char *path;
+    if (searchHomeFilePath(&path, NULL, fn, false) != PM3_SUCCESS) {
+        free(fn);
+        return PM3_EFILE;
+    }
+    free(fn);
+
+    // remove old file
+    if (fileExists(path)) {
+        PrintAndLogEx(DEBUG, "Delete old temp file `" _YELLOW_("%s") "`", path);
+        remove(path);
+    }
+
+    // temp file.
+    PrintAndLogEx(DEBUG, "Save temp file `" _YELLOW_("%s") "`", path);
+    saveFile(path, "", data + offset, datalen);
+
+    PrintAndLogEx(DEBUG, "view temp file `" _YELLOW_("%s") "`", path);
+    ShowPictureWindow(path);
+    msleep(500);
+
+    // delete temp file
+    PrintAndLogEx(DEBUG, "Deleting temp file `" _YELLOW_("%s") "`", path);
+    remove(path);
+    //free(path);
+    return PM3_SUCCESS;
+}
+
+static int emrtd_print_ef_dg5_info(uint8_t *data, size_t datalen) {
+
+    int offset = 0;
+
+    // This is a hacky impl that just looks for the image header. I'll improve it eventually.
+    // based on mrpkey.py
+    // Note: Doing datalen - 6 to account for the longest data we're checking.
+    // Checks first byte before the rest to reduce overhead
+    for (offset = 0; offset < datalen - 6; offset++) {
+        if ((data[offset] == 0xFF && memcmp(jpeg_header, data + offset, 4) == 0) ||
+                (data[offset] == 0x00 && memcmp(jpeg2k_header, data + offset, 6) == 0)) {
+            datalen = datalen - offset;
+            break;
+        }
+    }
+
+    // If we didn't get any data, return false.
+    if (datalen == 0) {
+        return PM3_ESOFT;
+    }
+
+    bool is_jpg = (data[offset] == 0xFF);
+
+    char *fn = calloc(strlen(dg_table[EF_DG5].filename) + 4 + 1, sizeof(uint8_t));
+    if (fn == NULL)
+        return PM3_EMALLOC;
+
+    sprintf(fn, "%s.%s", dg_table[EF_DG5].filename, (is_jpg) ? "jpg" : "jp2");
 
     PrintAndLogEx(DEBUG, "image filename `" _YELLOW_("%s") "`", fn);
 
