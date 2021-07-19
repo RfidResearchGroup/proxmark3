@@ -1090,14 +1090,22 @@ void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool 
         PrintKeySettingsPICC(keysettings, numkeys, print2ndbyte);
 }
 
-int DesfireChangeKey(DesfireContext *dctx, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey, bool verbose) {
+int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey, bool verbose) {
 
     uint8_t okeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
     uint8_t nkeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
     uint8_t pckcdata[DESFIRE_MAX_KEY_SIZE + 10] = {0};
     uint8_t *cdata = &pckcdata[2];
     uint8_t keynodata = newkeynum & 0x3f;
-    keynodata |= (DesfireKeyAlgoToType(newkeytype) & 0x03) << 6;
+    
+    /*
+     * Because new crypto methods can be setup only at application creation,
+     * changing the card master key to one of them require a key_no tweak.
+     */
+    if (change_master_key) {
+        keynodata |= (DesfireKeyAlgoToType(newkeytype) & 0x03) << 6;
+    }
+    
     pckcdata[0] = MFDES_CHANGE_KEY; // TODO
     pckcdata[1] = keynodata;
 
