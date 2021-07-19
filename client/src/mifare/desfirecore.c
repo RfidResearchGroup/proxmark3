@@ -764,7 +764,15 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
             des_decrypt(encRndB, rotRndB, key->data);
             memcpy(both + rndlen, encRndB, rndlen);
         } else if (dctx->keyType == T_3DES) {
-            //TODO
+            des3_decrypt(encRndA, RndA, key->data, 2);
+            memcpy(both, encRndA, rndlen);
+
+            for (uint32_t x = 0; x < rndlen; x++) {
+                rotRndB[x] = rotRndB[x] ^ encRndA[x];
+            }
+
+            des3_decrypt(encRndB, rotRndB, key->data, 2);
+            memcpy(both + rndlen, encRndB, rndlen);
         }
     } else if (secureChannel == DACEV1 && dctx->keyType != T_AES) {
         if (dctx->keyType == T_DES) {
@@ -857,7 +865,10 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
         if (secureChannel == DACEV1)
             des_decrypt_cbc(encRndA, encRndA, rndlen, key->data, IV);
     } else if (dctx->keyType == T_3DES)
-        tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 2);
+        if (secureChannel == DACd40)
+            des3_decrypt(encRndA, encRndA, key->data, 2);
+        else
+            tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 2);
     else if (dctx->keyType == T_3K3DES)
         tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 3);
     else if (dctx->keyType == T_AES) {
@@ -988,6 +999,10 @@ int DesfireChangeKeySettings(DesfireContext *dctx, uint8_t *data, size_t len) {
     return DesfireCommandTxData(dctx, MFDES_CHANGE_KEY_SETTINGS, data, len);
 }
 
+int DesfireChangeKeyCmd(DesfireContext *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen) {
+    return DesfireCommand(dctx, MFDES_CHANGE_KEY, data, len, resp, resplen, -1);
+}
+
 uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType) {
     switch (keyType) {
         case T_DES:
@@ -1046,9 +1061,10 @@ static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print
             break;
         default:
             PrintAndLogEx(SUCCESS,
-                          "-- Authentication with the specified key is necessary to change any key.\n"
+                          "-- Authentication with the specified key " _YELLOW_("(0x%02x)") " is necessary to change any key.\n"
                           "A change key and a PICC master key (CMK) can only be changed after authentication with the master key.\n"
-                          "For keys other then the master or change key, an authentication with the same key is needed."
+                          "For keys other then the master or change key, an authentication with the same key is needed.",
+                          rights & 0x0f
                          );
             break;
     }
@@ -1074,3 +1090,92 @@ void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool 
     else
         PrintKeySettingsPICC(keysettings, numkeys, print2ndbyte);
 }
+
+int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey, bool verbose) {
+
+    uint8_t okeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
+    uint8_t nkeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
+    uint8_t pckcdata[DESFIRE_MAX_KEY_SIZE + 10] = {0};
+    uint8_t *cdata = &pckcdata[2];
+    uint8_t keynodata = newkeynum & 0x3f;
+    
+    /*
+     * Because new crypto methods can be setup only at application creation,
+     * changing the card master key to one of them require a key_no tweak.
+     */
+    if (change_master_key) {
+        keynodata |= (DesfireKeyAlgoToType(newkeytype) & 0x03) << 6;
+    }
+    
+    pckcdata[0] = MFDES_CHANGE_KEY; // TODO
+    pckcdata[1] = keynodata;
+
+    // DES -> 2TDEA
+    memcpy(okeybuf, oldkey, desfire_get_key_length(oldkeytype));
+    if (oldkeytype == T_DES) {
+        memcpy(&okeybuf[8], oldkey, 8);
+    }
+
+    memcpy(nkeybuf, newkey, desfire_get_key_length(newkeytype));
+    size_t nkeylen = desfire_get_key_length(newkeytype);
+    if (newkeytype == T_DES) {
+        memcpy(&nkeybuf[8], newkey, 8);
+        nkeylen = desfire_get_key_length(T_3DES);
+    }
+
+    // set key version for DES. if newkeyver > 0xff - setting key version is disabled
+    if (newkeytype != T_AES && newkeyver < 0x100) {
+        DesfireDESKeySetVersion(nkeybuf, newkeytype, newkeyver);
+        if (verbose)
+            PrintAndLogEx(INFO, "changed new key: %s [%d] %s", CLIGetOptionListStr(DesfireAlgoOpts, newkeytype), desfire_get_key_length(newkeytype), sprint_hex(nkeybuf, desfire_get_key_length(newkeytype)));
+    }
+
+    // xor if we change current auth key
+    if (newkeynum == dctx->keyNum) {
+        memcpy(cdata, nkeybuf, nkeylen);
+    } else {
+        memcpy(cdata, nkeybuf, nkeylen);
+        bin_xor(cdata, okeybuf, nkeylen);
+    }
+
+    // add key version for AES
+    size_t cdatalen = nkeylen;
+    if (newkeytype == T_AES) {
+        cdata[cdatalen] = newkeyver;
+        cdatalen++;
+    }
+
+    // add crc||crc_new_key
+    if (dctx->secureChannel == DACd40) {
+        iso14443a_crc_append(cdata, cdatalen);
+        cdatalen += 2;
+        if (newkeynum != dctx->keyNum) {
+            iso14443a_crc(nkeybuf, nkeylen, &cdata[cdatalen]);
+            cdatalen += 2;
+        }
+    } else {
+        // EV1 Checksum must cover : <KeyNo> <PrevKey XOR Newkey>  [<AES NewKeyVer>]
+        desfire_crc32_append(pckcdata, cdatalen + 2);
+        cdatalen += 4;
+        if (newkeynum != dctx->keyNum) {
+            desfire_crc32(nkeybuf, nkeylen, &cdata[cdatalen]);
+            cdatalen += 4;
+        }
+    }
+
+    // send command
+    uint8_t resp[257] = {0};
+    size_t resplen = 0;
+    int res = DesfireChangeKeyCmd(dctx, &pckcdata[1], cdatalen, resp, &resplen);
+
+    // check response
+    if (res == 0 && resplen > 0)
+        res = -20;
+
+    // clear auth
+    if (newkeynum == dctx->keyNum)
+        DesfireClearSession(dctx);
+
+    return res;
+}
+

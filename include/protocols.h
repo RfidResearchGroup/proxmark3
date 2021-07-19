@@ -424,6 +424,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_INIT_KEY_SETTINGS         0x56
 #define MFDES_FINALIZE_KEY_SETTINGS     0x57
 #define MFDES_SELECT_APPLICATION        0x5A
+#define MFDES_CHANGE_CONFIGURATION      0x5C
 #define MFDES_CHANGE_FILE_SETTINGS      0x5F
 #define MFDES_GET_VERSION               0x60
 #define MFDES_GET_ISOFILE_IDS           0x61

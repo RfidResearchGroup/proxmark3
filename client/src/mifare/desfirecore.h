@@ -55,4 +55,7 @@ int DesfireChangeKeySettings(DesfireContext *dctx, uint8_t *data, size_t len);
 void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool print2ndbyte);
 uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType);
 
+int DesfireChangeKeyCmd(DesfireContext *dctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen);
+int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey, bool verbose);
+
 #endif // __DESFIRECORE_H
