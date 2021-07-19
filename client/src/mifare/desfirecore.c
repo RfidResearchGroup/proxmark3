@@ -1163,15 +1163,14 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
         }
     }
 
-    // get padded data length
-    size_t rlen = padded_data_length(cdatalen, desfire_get_key_block_length(newkeytype));
-
     // send command
     uint8_t resp[257] = {0};
     size_t resplen = 0;
-    int res = DesfireChangeKeyCmd(dctx, &pckcdata[1], rlen + 1, resp, &resplen);
+    int res = DesfireChangeKeyCmd(dctx, &pckcdata[1], cdatalen, resp, &resplen);
 
     // check response
+    if (res == 0 && resplen > 0)
+        res = -20;
 
     // clear auth
     if (newkeynum == dctx->keyNum)

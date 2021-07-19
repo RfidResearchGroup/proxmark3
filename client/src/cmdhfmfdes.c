@@ -4997,7 +4997,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     }
 
     DesfireSetCommMode(&dctx, DCMEncryptedPlain);
-    res = DesfireChangeKey(&dctx, (appid == 0x000000), newkeynum, newkeytype, newkeyver, newkey, oldkeytype, oldkey, true);
+    res = DesfireChangeKey(&dctx, (appid == 0x000000) && (newkeynum == 0) && (dctx.keyNum == 0), newkeynum, newkeytype, newkeyver, newkey, oldkeytype, oldkey, true);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Change key " _GREEN_("ok") " ");
     } else {
