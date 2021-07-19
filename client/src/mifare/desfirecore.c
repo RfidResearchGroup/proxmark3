@@ -1123,17 +1123,12 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
         nkeylen = desfire_get_key_length(T_3DES);
     }
 
-    PrintAndLogEx(SUCCESS, "--oldk [%d]: %s", desfire_get_key_length(oldkeytype), sprint_hex(okeybuf, desfire_get_key_length(oldkeytype)));
-    PrintAndLogEx(SUCCESS, "--newk [%d]: %s", nkeylen, sprint_hex(nkeybuf, nkeylen));
-
     // set key version for DES. if newkeyver > 0xff - setting key version is disabled
     if (newkeytype != T_AES && newkeyver < 0x100) {
         DesfireDESKeySetVersion(nkeybuf, newkeytype, newkeyver);
         if (verbose)
-            PrintAndLogEx(INFO, "changed new key: %s [%d] %s", CLIGetOptionListStr(DesfireAlgoOpts, newkeytype), desfire_get_key_length(newkeytype), sprint_hex(newkey, desfire_get_key_length(newkeytype)));
+            PrintAndLogEx(INFO, "changed new key: %s [%d] %s", CLIGetOptionListStr(DesfireAlgoOpts, newkeytype), desfire_get_key_length(newkeytype), sprint_hex(nkeybuf, desfire_get_key_length(newkeytype)));
     }
-
-    PrintAndLogEx(SUCCESS, "--newk [%d]: %s", nkeylen, sprint_hex(nkeybuf, nkeylen));
 
     // xor if we change current auth key
     if (newkeynum == dctx->keyNum) {
@@ -1145,12 +1140,10 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
 
     // add key version for AES
     size_t cdatalen = nkeylen;
-    PrintAndLogEx(SUCCESS, "--cdata [%d]: %s kv = 0x%02x", cdatalen, sprint_hex(cdata, cdatalen), newkeyver);
     if (newkeytype == T_AES) {
         cdata[cdatalen] = newkeyver;
         cdatalen++;
     }
-    PrintAndLogEx(SUCCESS, "--cdata [%d]: %s", cdatalen, sprint_hex(cdata, cdatalen));
 
     // add crc||crc_new_key
     if (dctx->secureChannel == DACd40) {
@@ -1169,7 +1162,6 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
             cdatalen += 4;
         }
     }
-    PrintAndLogEx(SUCCESS, "--cdata [%d]: %s", cdatalen, sprint_hex(cdata, cdatalen));
 
     // get padded data length
     size_t rlen = padded_data_length(cdatalen, desfire_get_key_block_length(newkeytype));
@@ -1177,7 +1169,6 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
     // send command
     uint8_t resp[257] = {0};
     size_t resplen = 0;
-    PrintAndLogEx(SUCCESS, "--pckdata [%d]: %s", rlen + 1, sprint_hex(&pckcdata[1], rlen + 1));
     int res = DesfireChangeKeyCmd(dctx, &pckcdata[1], rlen + 1, resp, &resplen);
 
     // check response

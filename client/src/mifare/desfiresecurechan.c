@@ -167,15 +167,11 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
         if (srcdatalen == 0 || srcdatalen <= hdrlen)
             return;
 
-        PrintAndLogEx(SUCCESS, "--ch hdrlen: %d, cmd: %02x", hdrlen, cmd);
-        //dstdata[0] = cmd;
         memcpy(&dstdata[0], srcdata, hdrlen);
         memcpy(data, &srcdata[hdrlen], srcdatalen);
         rlen = padded_data_length(srcdatalen - hdrlen, desfire_get_key_block_length(ctx->keyType));
-        PrintAndLogEx(SUCCESS, "--ch src rlen: %d data: %s", rlen, sprint_hex(data, rlen));
         DesfireCryptoEncDec(ctx, true, data, rlen, &dstdata[hdrlen], true);
         *dstdatalen = hdrlen + rlen;
-        PrintAndLogEx(SUCCESS, "--ch dst len: %d data: %s", *dstdatalen, sprint_hex(dstdata, *dstdatalen));
     }
 }
 

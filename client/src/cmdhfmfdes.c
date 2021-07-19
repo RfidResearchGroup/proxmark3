@@ -4977,7 +4977,6 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
 
     if (appid == 0x000000) {
         PrintAndLogEx(WARNING, "Changing the root aid (0x000000)");
-        return PM3_ESOFT; // TODO!!!!
     }
 
     if (appid)
@@ -5007,115 +5006,6 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
 
     DropField();
     return res;
-
-    return PM3_SUCCESS;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /*    CLIParserContext *ctx;
-        CLIParserInit(&ctx, "hf mfdes changekey",
-                      "Change MIFARE DESFire Key.\n"
-                      "Make sure to select aid or authenticate aid before running this command.",
-                      "hf mfdes changekey -n 0 -t 1 -k 0000000000000000 -u 1 -j 0102030405060708  -> DES, keynumber 0"
-                     );
-
-        void *argtable[] = {
-            arg_param_begin,
-            arg_int0("n",  "keyno",  "<dec>", "Key number used for authentification"),
-            arg_int0("t",  "algo",   "<dec>", "Current key algo (1 = DES, 2 = 3DES(2K2DES), 3 = 3K3DES, 4 = AES)"),
-            arg_str0("k",  "key",     "<hex>", "Current Key (HEX 8-24 bytes)"),
-            arg_int0("u",  "newalgo", "<dec>", "New key algo (1 = DES, 2 = 3DES(2K2DES), 3 = 3K3DES, 4 = AES)"),
-            arg_str0("j",  "newkey",  "<hex>", "New Key (HEX 8-24 bytes)"),
-            arg_int0("v",  "aesver",  "<dec>", "AES version (if AES is used)"),
-            arg_param_end
-        };
-        CLIExecWithReturn(ctx, Cmd, argtable, false);
-
-        uint8_t cmdKeyNo  = arg_get_int_def(ctx, 1, 0);
-        uint8_t cmdAuthAlgo = arg_get_int_def(ctx, 2, 0);
-        uint8_t key[24] = {0};
-        int keylen = 0;
-        int res_klen = CLIParamHexToBuf(arg_get_str(ctx, 3), key, 24, &keylen);
-
-        uint8_t newcmdAuthAlgo = arg_get_int_def(ctx, 4, 0);
-        uint8_t newkey[24] = {0};
-        int newkeylen = 0;
-        int res_newklen = CLIParamHexToBuf(arg_get_str(ctx, 5), newkey, 24, &newkeylen);
-
-        uint8_t aesversion = arg_get_int_def(ctx, 6, 0);
-        CLIParserFree(ctx);
-
-        //DropFieldDesfire();
-        // NR  DESC     KEYLENGHT
-        // ------------------------
-        // 1 = DES      8
-        // 2 = 3DES     16
-        // 3 = 3K 3DES  24
-        // 4 = AES      16
-        uint8_t keylength = 8;
-        if (cmdAuthAlgo == MFDES_ALGO_AES) {
-            keylength = 16;
-        } else if (cmdAuthAlgo == MFDES_ALGO_3DES) {
-            keylength = 16;
-        } else if (cmdAuthAlgo == MFDES_ALGO_DES) {
-            keylength = 8;
-        } else if (cmdAuthAlgo == MFDES_ALGO_3K3DES) {
-            keylength = 24;
-        }
-
-        uint8_t newkeylength = 8;
-        if (newcmdAuthAlgo == MFDES_ALGO_AES) {
-            newkeylength = 16;
-        } else if (newcmdAuthAlgo == MFDES_ALGO_3DES) {
-            newkeylength = 16;
-        } else if (newcmdAuthAlgo == MFDES_ALGO_DES) {
-            newkeylength = 8;
-        } else if (newcmdAuthAlgo == MFDES_ALGO_3K3DES) {
-            newkeylength = 24;
-        }
-
-        if (res_klen || (keylen < 8) || (keylen > 24)) {
-            PrintAndLogEx(ERR, "Specified key must have %d bytes length", keylen);
-            return PM3_EINVARG;
-        }
-
-        if (res_newklen || (newkeylen < 8) || (newkeylen > 24)) {
-            PrintAndLogEx(ERR, "Specified new key must have %d bytes length", newkeylen);
-            return PM3_EINVARG;
-        }
-
-        if (keylen != keylength) {
-            PrintAndLogEx(WARNING, "Key must include %d hex symbols, got %d", keylength, keylen);
-            return PM3_EINVARG;
-        }
-
-        if (newkeylen != newkeylength) {
-            PrintAndLogEx(WARNING, "New key must include %d hex symbols, got %d", keylength, newkeylen);
-            return PM3_EINVARG;
-        }
-
-        PrintAndLogEx(INFO, "changing key number  " _YELLOW_("0x%02x"), cmdKeyNo);
-        PrintAndLogEx(INFO, "old key: %s ( %s )", sprint_hex_inrow(key, keylen), getEncryptionAlgoStr(cmdAuthAlgo));
-        PrintAndLogEx(INFO, "new key: %s ( %s )", sprint_hex_inrow(newkey, newkeylen), getEncryptionAlgoStr(newcmdAuthAlgo));
-
-        int res = mifare_desfire_change_key(cmdKeyNo, newkey, newcmdAuthAlgo, key, cmdAuthAlgo, aesversion);
-        if (res == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Change key ( " _GREEN_("ok") " )");
-        } else {
-            PrintAndLogEx(FAILED, "Change key ( " _RED_("fail") " )");
-        }
-        return res;*/
 }
 
 static int CmdHF14ADesCreateApp(const char *Cmd) {
