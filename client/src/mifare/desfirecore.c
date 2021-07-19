@@ -1064,7 +1064,7 @@ static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print
                           "-- Authentication with the specified key " _YELLOW_("(0x%02x)") " is necessary to change any key.\n"
                           "A change key and a PICC master key (CMK) can only be changed after authentication with the master key.\n"
                           "For keys other then the master or change key, an authentication with the same key is needed.",
-                          (rights >> 4) & 0x0f
+                          rights & 0x0f
                          );
             break;
     }
