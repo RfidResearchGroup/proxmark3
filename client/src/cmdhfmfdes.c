@@ -5171,7 +5171,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID for create. Mandatory. (3 hex bytes, big endian)"),
         arg_str0(NULL, "fid",     "<file id hex>", "ISO file ID. Forbidden values: 0000 3F00, 3FFF, FFFF. (2 hex bytes, big endian). If specified - enable iso file id over all the files in the app."),
         arg_str0(NULL, "dfname",  "<df name str>", "ISO DF Name 1..16 chars string"),
-        arg_str0(NULL, "ks1",     "<key settings HEX>", "Key settings 1 (HEX 1 byte). Application Master Key Settings. default 0x2f"),
+        arg_str0(NULL, "ks1",     "<key settings HEX>", "Key settings 1 (HEX 1 byte). Application Master Key Settings. default 0x0f"),
         arg_str0(NULL, "ks2",     "<key settings HEX>", "Key settings 2 (HEX 1 byte). default 0x0e"),
         arg_str0(NULL, "dstalgo", "<DES/2TDEA/3TDEA/AES>",  "Application key crypt algo: DES, 2TDEA, 3TDEA, AES. default DES"),
         arg_int0(NULL, "numkeys", "<number of keys>",  "Keys count. 0x00..0x0e. default 0x0e"),
@@ -5207,8 +5207,8 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     int dfnamelen = 16;
     CLIGetStrWithReturn(ctx, 14, dfname, &dfnamelen);
 
-    uint32_t ks1 = 0x2f;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 15, 0x2f, &ks1, 1, true);
+    uint32_t ks1 = 0x0f;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 15, 0x0f, &ks1, 1, true);
     if (res == 2) {
         PrintAndLogEx(ERR, "Key settings 1 must have 1 byte length");
         return PM3_EINVARG;
