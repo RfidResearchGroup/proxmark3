@@ -46,6 +46,7 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_FINALIZE_KEY_SETTINGS, DACd40,  DCCNative,    DCMMACed},
     {MFDES_ROLL_KEY_SETTINGS,     DACd40,  DCCNative,    DCMMACed},
     {MFDES_COMMIT_READER_ID,      DACd40,  DCCNative,    DCMMACed},
+    {MFDES_FORMAT_PICC,           DACd40,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,               DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,   DACd40,  DCCNative,    DCMEncrypted},
@@ -63,6 +64,7 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_GET_APPLICATION_IDS,   DACEV1,  DCCNative,    DCMMACed},
     {MFDES_GET_DF_NAMES,          DACEV1,  DCCNative,    DCMMACed},
     {MFDES_GET_KEY_SETTINGS,      DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_FORMAT_PICC,           DACEV1,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,               DACEV1,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,   DACEV1,  DCCNative,    DCMEncrypted},
