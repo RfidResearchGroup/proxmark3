@@ -4926,7 +4926,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
         return res;
     }
 
-    int oldkeytype = T_DES;
+    int oldkeytype = dctx.keyType;
     if (CLIGetOptionList(arg_get_str(ctx, 12), DesfireAlgoOpts, &oldkeytype))
         return PM3_ESOFT;
 
@@ -4943,7 +4943,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
 
     uint8_t newkeynum = arg_get_int_def(ctx, 14, 0);
 
-    int newkeytype = T_DES;
+    int newkeytype = oldkeytype;
     if (CLIGetOptionList(arg_get_str(ctx, 15), DesfireAlgoOpts, &newkeytype))
         return PM3_ESOFT;
 
