@@ -4888,8 +4888,9 @@ static int CmdHF14ADesDefault(const char *Cmd) {
 static int CmdHF14ADesSetConfiguration(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes setconfig",
-                  "Set card configuration. Danger zone! Needs to provide card's master key and works if not blocked by config.",
-                  "hf mfdes setconfig --param 03 --data 0428 -> set parameter with data value");
+                  "Set card configuration. WARNING! Danger zone! Needs to provide card's master key and works if not blocked by config.",
+                  "hf mfdes setconfig --param 03 --data 0428 -> set parameter 03\n"
+                  "hf mfdes setconfig --param 02 --data 0875778102637264 -> set parameter 02");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4970,8 +4971,6 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
     DropField();
     return res;
 }
-
-
 
 static int CmdHF14ADesChangeKey(const char *Cmd) {
     CLIParserContext *ctx;

@@ -1216,7 +1216,6 @@ int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *para
     // send command
     uint8_t resp[257] = {0};
     size_t resplen = 0;
-    PrintAndLogEx(INFO, "plain data[%d]: %s", datalen, sprint_hex(data, datalen));
     int res = DesfireSetConfigurationCmd(dctx, data, datalen, resp, &resplen);
 
     // check response
