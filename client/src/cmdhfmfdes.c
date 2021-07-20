@@ -4885,6 +4885,94 @@ static int CmdHF14ADesDefault(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14ADesSetConfiguration(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes setconfig",
+                  "Set card configuration. Danger zone! Needs to provide card's master key and works if not blocked by config.",
+                  "hf mfdes setconfig --param xxx --data yyy -> set parameter with data value");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID of application for some parameters (3 hex bytes, big endian)"),
+        arg_str0("p",  "param",   "<HEX 1 byte>", "Parameter id (HEX 1 byte)"),
+        arg_str0("d",  "data",    "<data HEX>", "Data for parameter (HEX 1..30 bytes)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMEncrypted, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+    
+    uint32_t paramid = 0;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 0, &paramid, 1, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Parameter ID must have 1 bytes length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    
+    uint8_t param[250] = {0};
+    int paramlen = sizeof(param);
+    CLIGetHexWithReturn(ctx, 13, param, &paramlen);
+    if (paramlen == 0) {
+        PrintAndLogEx(ERR, "Parameter must have a data.");
+        return PM3_EINVARG;
+    }
+    if (paramlen > 50) {
+        PrintAndLogEx(ERR, "Parameter data length must be less than 50 instead of %d.", paramlen);
+        return PM3_EINVARG;
+    }
+    
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    if (verbose) {
+        if (appid == 0x000000)
+            PrintAndLogEx(INFO, _CYAN_("PICC") " param ID: 0x%02x param[%d]: %s", paramid, paramlen, sprint_hex(param, paramlen));
+        else
+            PrintAndLogEx(INFO, _CYAN_("Application %06x") " param ID: 0x%02x param[%d]: %s", appid, paramid, paramlen, sprint_hex(param, paramlen));
+    }
+        
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    DesfireSetCommMode(&dctx, DCMEncryptedPlain);
+    res = DesfireSetConfiguration(&dctx, paramid, param, paramlen);
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Set configuration 0x%02x " _GREEN_("ok") " ", paramid);
+    } else {
+        PrintAndLogEx(FAILED, "Set configuration 0x%02x " _RED_("failed") " ", paramid);
+    }
+    DesfireSetCommMode(&dctx, DCMEncrypted);
+
+    DropField();
+    return res;
+}
+
+
+
 static int CmdHF14ADesChangeKey(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes changekey",
@@ -5003,6 +5091,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     } else {
         PrintAndLogEx(FAILED, "Change key " _RED_("failed") " ");
     }
+    DesfireSetCommMode(&dctx, DCMEncrypted);
 
     DropField();
     return res;
@@ -5885,6 +5974,7 @@ static command_t CommandTable[] = {
     {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "[new]Format PICC"},
     {"freemem",          CmdHF14ADesGetFreeMem,       IfPm3Iso14443a,  "[new]Get free memory size"},
     {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "[new]Get uid from card"},
+    {"setconfig",        CmdHF14ADesSetConfiguration, IfPm3Iso14443a,  "[new]Set card configuration"},
     {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
     {"list",             CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
 //    {"ndefread",             CmdHF14aDesNDEFRead,             IfPm3Iso14443a,  "Prints NDEF records from card"},
