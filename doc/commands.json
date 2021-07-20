@@ -973,7 +973,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210709.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210720.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -3982,21 +3982,32 @@
         },
         "hf mfdes changekey": {
             "command": "hf mfdes changekey",
-            "description": "change mifare desfire key. make sure to select aid or authenticate aid before running this command.",
+            "description": "change picc/application key. needs to provide keynum/key for a valid authentication (may get from default parameters).",
             "notes": [
-                "hf mfdes changekey -n 0 -t 1 -k 0000000000000000 -u 1 -j 0102030405060708 -> des, keynumber 0"
+                "hf mfdes changekey --aid 123456 -> execute with default factory setup"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-n, --keyno <dec> key number used for authentification",
-                "-t, --algo <dec> current key algo (1 = des, 2 = 3des(2k2des), 3 = 3k3des, 4 = aes)",
-                "-k, --key <hex> current key (hex 8-24 bytes)",
-                "-u, --newalgo <dec> new key algo (1 = des, 2 = 3des(2k2des), 3 = 3k3des, 4 = aes)",
-                "-j, --newkey <hex> new key (hex 8-24 bytes)",
-                "-v, --aesver <dec> aes version (if aes is used)"
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id of application (3 hex bytes, big endian)",
+                "--oldalgo <des/2tdea/3tdea/aes> old key crypto algorithm: des, 2tdea, 3tdea, aes",
+                "--oldkey <old key> old key (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "--newkeyno <keyno> key number for change",
+                "--newalgo <des/2tdea/3tdea/aes> new key crypto algorithm: des, 2tdea, 3tdea, aes",
+                "--newkey <new key> new key (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "--newver <version hex> new key's version (1 hex byte)"
             ],
-            "usage": "hf mfdes changekey [-h] [-n <dec>] [-t <dec>] [-k <hex>] [-u <dec>] [-j <hex>] [-v <dec>]"
+            "usage": "hf mfdes changekey [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--oldalgo <des/2tdea/3tdea/aes>] [--oldkey <old key>] [--newkeyno <keyno>] [--newalgo <des/2tdea/3tdea/aes>] [--newkey <new key>] [--newver <version hex>]"
         },
         "hf mfdes changevalue": {
             "command": "hf mfdes changevalue",
@@ -4040,6 +4051,31 @@
             ],
             "usage": "hf mfdes chk [-hv] [-a <aid>]... [-k <key>] [-d <file>] [--pattern1b] [--pattern2b] [--startp2b <pattern>] [-j <file>] [-f <kdf>] [-i <kdfi>]"
         },
+        "hf mfdes chkeysettings": {
+            "command": "hf mfdes chkeysettings",
+            "description": "change key settings for card level or application level. warning: card level changes may block the card!",
+            "notes": [
+                "hf mfdes chkeysettings -d 0f -> set picc key settings with default key/channel setup",
+                "hf mfdes chkeysettings --aid 123456 -d 0f -> set app 123456 key settings with default key/channel setup"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "-d, --data <key settings hex> key settings (hex 1 byte)"
+            ],
+            "usage": "hf mfdes chkeysettings [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [-d <key settings hex>]"
+        },
         "hf mfdes clearfile": {
             "command": "hf mfdes clearfile",
             "description": "clear record file make sure to select aid or authenticate aid before running this command.",
@@ -4054,22 +4090,66 @@
             ],
             "usage": "hf mfdes clearfile [-h] [-n <dec>] [-a <hex>]..."
         },
-        "hf mfdes createaid": {
-            "command": "hf mfdes createaid",
-            "description": "create application id",
+        "hf mfdes createapp": {
+            "command": "hf mfdes createapp",
+            "description": "create application. master key needs to be provided.",
             "notes": [
-                "hf mfdes createaid -a 123456 -f 1111 -k 0e -l 2e --name test"
+                "option rawdata have priority over the rest settings, and options ks1 and ks2 have priority over corresponded key settings",
+                "",
+                "keysetting 1 (amk setting, ks1):",
+                "0: allow change master key. 1 - allow, 0 - frozen",
+                "1: free directory list access without master key",
+                "0: amk auth needed for getfilesettings and getkeysettings",
+                "1: no amk auth needed for getfileids, getisofileids, getfilesettings, getkeysettings",
+                "2: free create/delete without master key",
+                "0: createfile/deletefile only with amk auth",
+                "1: createfile/deletefile always",
+                "3: configuration changable",
+                "0: configuration frozen",
+                "1: configuration changable if authenticated with amk (default)",
+                "4-7: changekey access rights",
+                "0: application master key needed (default)",
+                "0x1..0xd: auth with specific key needed to change any key",
+                "0xe: auth with the key to be changed (same keyno) is necessary to change a key",
+                "0xf: all keys within this application are frozen",
+                "",
+                "keysetting 2 (ks2):",
+                "0..3: number of keys stored within the application (max. 14 keys)",
+                "4: ks3 is present",
+                "5: use of 2 byte iso fid, 0: no, 1: yes",
+                "6..7: crypto method 00: des/2tdea, 01: 3tdea, 10: aes, 11: rfu",
+                "example:",
+                "2e = with fid, des/2tdea, 14 keys",
+                "6e = with fid, 3tdea, 14 keys",
+                "ae = with fid, aes, 14 keys",
+                "",
+                "hf mfdes createapp --rawdata 5634122f2e4523616964313233343536 -> execute create by rawdata",
+                "hf mfdes createapp --aid 123456 --fid 2345 --dfname aid123456 -> app aid, iso file id, and iso df name is specified",
+                "hf mfdes createapp --aid 123456 --fid 2345 --dfname aid123456 --dstalgo aes -> with algorithm for key aes"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-a, --aid <hex> app id to create as hex bytes (3 hex bytes)",
-                "-f, --fid <hex> file id to create",
-                "-k, --ks1 <hex> key setting 1 (application master key settings)",
-                "-l, --ks2 <hex> key setting 2",
-                "--name <ascii> app iso-4 name"
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--rawdata <rawdata hex> rawdata that sends to command",
+                "--aid <app id hex> application id for create. mandatory. (3 hex bytes, big endian)",
+                "--fid <file id hex> iso file id. forbidden values: 0000 3f00, 3fff, ffff. (2 hex bytes, big endian). if specified - enable iso file id over all the files in the app.",
+                "--dfname <df name str> iso df name 1..16 chars string",
+                "--ks1 <key settings hex> key settings 1 (hex 1 byte). application master key settings. default 0x0f",
+                "--ks2 <key settings hex> key settings 2 (hex 1 byte). default 0x0e",
+                "--dstalgo <des/2tdea/3tdea/aes> application key crypt algo: des, 2tdea, 3tdea, aes. default des",
+                "--numkeys <number of keys> keys count. 0x00..0x0e. default 0x0e"
             ],
-            "usage": "hf mfdes createaid [-h] [-a <hex>]... [-f <hex>]... [-k <hex>]... [-l <hex>]... [--name <ascii>]"
+            "usage": "hf mfdes createapp [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--rawdata <rawdata hex>] [--aid <app id hex>] [--fid <file id hex>] [--dfname <df name str>] [--ks1 <key settings hex>] [--ks2 <key settings hex>] [--dstalgo <des/2tdea/3tdea/aes>] [--numkeys <number of keys>]"
         },
         "hf mfdes createfile": {
             "command": "hf mfdes createfile",
@@ -4130,18 +4210,28 @@
             ],
             "usage": "hf mfdes createvaluefile [-h] [-n <dec>] [-c <dec>] [-r <hex>]... [-l <hex>]... [-u <hex>]... [--val <hex>]... [-m <dec>] [-a <hex>]..."
         },
-        "hf mfdes deleteaid": {
-            "command": "hf mfdes deleteaid",
-            "description": "delete application id",
+        "hf mfdes deleteapp": {
+            "command": "hf mfdes deleteapp",
+            "description": "delete application by its 3-byte aid. master key needs to be provided.",
             "notes": [
-                "hf mfdes deleteaid -a 123456"
+                "hf mfdes deleteapp --aid 123456 -> execute with default factory setup"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-a, --aid <hex> app id to delete (3 hex bytes, big endian)"
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id of delegated application (3 hex bytes, big endian)"
             ],
-            "usage": "hf mfdes deleteaid [-h] [-a <hex>]..."
+            "usage": "hf mfdes deleteapp [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>]"
         },
         "hf mfdes deletefile": {
             "command": "hf mfdes deletefile",
@@ -4183,19 +4273,53 @@
         },
         "hf mfdes formatpicc": {
             "command": "hf mfdes formatpicc",
-            "description": "formats mifare desfire picc to factory state make sure to authenticate picc before running this command.",
+            "description": "format card. can be done only if enabled in the configuration. master key needs to be provided.",
             "notes": [
-                "hf mfdes formatpicc"
+                "hf mfdes formatpicc -> execute with default factory setup"
             ],
             "offline": false,
             "options": [
-                "-h, --help this help"
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id of delegated application (3 hex bytes, big endian)"
             ],
-            "usage": "hf mfdes formatpicc [-h]"
+            "usage": "hf mfdes formatpicc [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>]"
+        },
+        "hf mfdes freemem": {
+            "command": "hf mfdes freemem",
+            "description": "get card's free memory. can be done with ot without authentication. master key may be provided.",
+            "notes": [
+                "hf mfdes getfreemem -> execute with default factory setup"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--no-auth execute without authentication"
+            ],
+            "usage": "hf mfdes getfreemem [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--no-auth]"
         },
         "hf mfdes getaids": {
             "command": "hf mfdes getaids",
-            "description": "get application ids list from card. master key needs to be provided.",
+            "description": "get application ids list from card. master key needs to be provided or flag --no-auth set.",
             "notes": [
                 "hf mfdes getaids -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup"
             ],
@@ -4211,13 +4335,14 @@
                 "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
                 "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
-                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2"
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--no-auth execute without authentication"
             ],
-            "usage": "hf mfdes getaids [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>]"
+            "usage": "hf mfdes getaids [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--no-auth]"
         },
         "hf mfdes getappnames": {
             "command": "hf mfdes getappnames",
-            "description": "get application ids, iso ids and df names from card. master key needs to be provided.",
+            "description": "get application ids, iso ids and df names from card. master key needs to be provided or flag --no-auth set.",
             "notes": [
                 "hf mfdes getappnames -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup"
             ],
@@ -4233,21 +4358,83 @@
                 "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
                 "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
-                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2"
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--no-auth execute without authentication"
             ],
-            "usage": "hf mfdes getappnames [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>]"
+            "usage": "hf mfdes getappnames [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--no-auth]"
         },
-        "hf mfdes getuid": {
-            "command": "hf mfdes getuid",
-            "description": "get uid from a mifare desfire tag",
+        "hf mfdes getkeysettings": {
+            "command": "hf mfdes getkeysettings",
+            "description": "get key settings for card level or application level.",
             "notes": [
-                "hf mfdes getuid"
+                "hf mfdes getkeysettings -> get picc key settings with default key/channel setup",
+                "hf mfdes getkeysettings --aid 123456 -> get app 123456 key settings with default key/channel setup"
             ],
             "offline": false,
             "options": [
-                "-h, --help this help"
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id (3 hex bytes, big endian)"
             ],
-            "usage": "hf mfdes getuid [-h]"
+            "usage": "hf mfdes getkeysettings [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>]"
+        },
+        "hf mfdes getkeyversions": {
+            "command": "hf mfdes getkeyversions",
+            "description": "get key versions for card level or application level.",
+            "notes": [
+                "--keynum parameter: app level: key number. picc level: 00..0d - keys count, 21..23 vc keys, default 0x00.",
+                "hf mfdes getkeyversions --keynum 00 -> get picc master key version with default key/channel setup",
+                "hf mfdes getkeyversions --aid 123456 --keynum 0d -> get app 123456 all key versions with default key/channel setup"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number for authentication",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--keynum <key number hex> key number/count (hex 1 byte). default 0x00.",
+                "--keyset <keyset num hex> keyset number (hex 1 byte)"
+            ],
+            "usage": "hf mfdes getkeyversions [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--keynum <key number hex>] [--keyset <keyset num hex>]"
+        },
+        "hf mfdes getuid": {
+            "command": "hf mfdes getuid",
+            "description": "get uid from card. get the real uid if the random uid bit is on and get the same uid as in anticollision if not. master key needs to be provided.",
+            "notes": [
+                "hf mfdes getuid -> execute with default factory setup"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2"
+            ],
+            "usage": "hf mfdes getuid [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>]"
         },
         "hf mfdes getvalue": {
             "command": "hf mfdes getvalue",
@@ -4265,9 +4452,9 @@
         },
         "hf mfdes help": {
             "command": "hf mfdes help",
-            "description": "help this help list list desfire (iso 14443a) history --------------------------------------------------------------------------------------- hf mfdes default available offline: no get application ids, iso ids and df names from card. master key needs to be provided.",
+            "description": "help this help list list desfire (iso 14443a) history test test crypto --------------------------------------------------------------------------------------- hf mfdes default available offline: no set default parameters for access to desfire card.",
             "notes": [
-                "hf mfdes getappnames -n 0 -t des -k 0000000000000000 -f none -> execute with default factory setup"
+                "hf mfdes default -n 0 -t des -k 0000000000000000 -f none -> save to the default parameters"
             ],
             "offline": true,
             "options": [
@@ -4347,13 +4534,38 @@
             ],
             "usage": "hf mfdes selectaid [-h] [-a <hex>]..."
         },
+        "hf mfdes setconfig": {
+            "command": "hf mfdes setconfig",
+            "description": "set card configuration. danger zone! needs to provide card's master key and works if not blocked by config.",
+            "notes": [
+                "hf mfdes setconfig --param 03 --data 0428 -> set parameter with data value"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id of application for some parameters (3 hex bytes, big endian)",
+                "-p, --param <hex 1 byte> parameter id (hex 1 byte)",
+                "-d, --data <data hex> data for parameter (hex 1..30 bytes)"
+            ],
+            "usage": "hf mfdes setconfig [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [-p <hex 1 byte>] [-d <data hex>]"
+        },
         "hf mfdes test": {
             "command": "hf mfdes test",
-            "description": "[=] key num: 0 key algo: des key[8]: 00 00 00 00 00 00 00 00 [=] secure channel: n/a command set: niso communication mode: encrypt [+] setting isodep -> inactive [=] sending bytes to proxmark failed - offline [+] >>>> 90 5a 00 00 03 00 00 00 00 [+] setting isodep -> inactive [=] sending bytes to proxmark failed - offline [=] sending bytes to proxmark failed - offline [!] command execute timeout [+] setting isodep -> inactive [=] sending bytes to proxmark failed - offline ======================================================================================= hf seos { seos rfids... } --------------------------------------------------------------------------------------- hf seos help available offline: yes help this help list list seos history --------------------------------------------------------------------------------------- hf seos info available offline: no get info from seos tags",
+            "description": "[=] ------ desfire tests ------ [!] no space for crc. pos: 1 [=] crc16............ passed [!] no space for crc. pos: 2 [=] crc32............ passed [=] cmac 3tdea....... passed [=] cmac 2tdea....... passed [=] cmac des......... passed [=] --------------------------- [+] tests [ ok ] ======================================================================================= hf seos { seos rfids... } --------------------------------------------------------------------------------------- hf seos help available offline: yes help this help list list seos history --------------------------------------------------------------------------------------- hf seos info available offline: no get info from seos tags",
             "notes": [
                 "hf seos info"
             ],
-            "offline": false,
+            "offline": true,
             "options": [
                 "-h, --help this help"
             ],
@@ -6733,10 +6945,11 @@
         },
         "lf indala clone": {
             "command": "lf indala clone",
-            "description": "clone indala uid to t55x7 or q5/t5555 tag warning, encoding with fc/cn doesn't always work",
+            "description": "clone indala uid to t55x7 or q5/t5555 tag using different known formats warning, encoding with fc/cn doesn't always work",
             "notes": [
-                "lf indala clone --heden 888",
-                "lf indala clone --fc 123 --cn 1337",
+                "lf indala clone --heden 888 -> use heden 2l format",
+                "lf indala clone --fc 123 --cn 1337 -> use standard 26b format",
+                "lf indala clone --fc 123 --cn 1337 --4041x -> use 4041x format",
                 "lf indala clone -r a0000000a0002021",
                 "lf indala clone -r 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"
             ],
@@ -6744,13 +6957,14 @@
             "options": [
                 "-h, --help this help",
                 "-r, --raw <hex> raw bytes",
-                "--heden <decimal> cardnumber for heden 2l format",
+                "--heden <decimal> card number for heden 2l format",
                 "--fc <decimal> facility code (26 bit h10301 format)",
-                "--cn <decimal> cardnumber (26 bit h10301 format)",
+                "--cn <decimal> card number (26 bit h10301 format)",
                 "--q5 optional - specify writing to q5/t5555 tag",
-                "--em optional - specify writing to em4305/4469 tag"
+                "--em optional - specify writing to em4305/4469 tag",
+                "--4041x optional - specify indala 4041x format, must use with fc and cn"
             ],
-            "usage": "lf indala clone [-h] [-r <hex>]... [--heden <decimal>] [--fc <decimal>] [--cn <decimal>] [--q5] [--em]"
+            "usage": "lf indala clone [-h] [-r <hex>]... [--heden <decimal>] [--fc <decimal>] [--cn <decimal>] [--q5] [--em] [--4041x]"
         },
         "lf indala help": {
             "command": "lf indala help",
@@ -6788,7 +7002,7 @@
         },
         "lf indala sim": {
             "command": "lf indala sim",
-            "description": "enables simulation of indala card with specified facility-code and card number. simulation runs until the button is pressed or another usb command is issued.",
+            "description": "enables simulation of indala card with specified facility code and card number. simulation runs until the button is pressed or another usb command is issued.",
             "notes": [
                 "lf indala sim --heden 888",
                 "lf indala sim --raw a0000000a0002021",
@@ -8740,6 +8954,18 @@
             ],
             "usage": "prefs get clientdebug [-h]"
         },
+        "prefs get clientdelay": {
+            "command": "prefs get clientdelay",
+            "description": "get preference of delay time before execution of a command in the client",
+            "notes": [
+                "prefs get clientdelay"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "prefs get clientdelay [-h]"
+        },
         "prefs get color": {
             "command": "prefs get color",
             "description": "get preference of using colors in the client",
@@ -8827,6 +9053,20 @@
             ],
             "usage": "prefs set clientdebug [-h] [--off] [--simple] [--full]"
         },
+        "prefs set clientdelay": {
+            "command": "prefs set clientdelay",
+            "description": "set presistent preference of delay before executing a command in the client",
+            "notes": [
+                "prefs set clientdelay --ms 0 -> unsets any delay",
+                "prefs set clientdelay --ms 1000 -> sets 1000ms delay"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "--ms <ms> delay in micro seconds"
+            ],
+            "usage": "prefs set clientdelay [-h] [--ms <ms>]"
+        },
         "prefs set color": {
             "command": "prefs set color",
             "description": "set presistent preference of using colors in the client",
@@ -8859,7 +9099,7 @@
         },
         "prefs set help": {
             "command": "prefs set help",
-            "description": "help this help barmode set bar mode clientdebug set client debug level color set color support emoji set emoji display hints set hint display savepaths ... to be adjusted next ... plotsliders set plot slider display --------------------------------------------------------------------------------------- prefs set barmode available offline: yes set presistent preference of hf/lf tune command styled output in the client",
+            "description": "help this help barmode set bar mode clientdebug set client debug level clientdelay set client execution delay color set color support emoji set emoji display hints set hint display savepaths ... to be adjusted next ... plotsliders set plot slider display --------------------------------------------------------------------------------------- prefs set barmode available offline: yes set presistent preference of hf/lf tune command styled output in the client",
             "notes": [
                 "prefs set barmode --mix"
             ],
@@ -9281,8 +9521,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 575,
+        "commands_extracted": 582,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-07-09T11:42:14"
+        "extracted_on": "2021-07-20T20:36:37"
     }
 }

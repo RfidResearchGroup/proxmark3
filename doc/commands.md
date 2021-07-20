@@ -38,6 +38,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`prefs get barmode      `|Y       |`Get bar mode preference`
 |`prefs get clientdebug  `|Y       |`Get client debug level preference`
+|`prefs get clientdelay  `|Y       |`Get client execution delay preference`
 |`prefs get color        `|Y       |`Get color support preference`
 |`prefs get savepaths    `|Y       |`Get file folder  `
 |`prefs get emoji        `|Y       |`Get emoji display preference`
@@ -54,6 +55,7 @@ Check column "offline" for their availability.
 |`prefs set help         `|Y       |`This help`
 |`prefs set barmode      `|Y       |`Set bar mode`
 |`prefs set clientdebug  `|Y       |`Set client debug level`
+|`prefs set clientdelay  `|Y       |`Set client execution delay`
 |`prefs set color        `|Y       |`Set color support`
 |`prefs set emoji        `|Y       |`Set emoji display`
 |`prefs set hints        `|Y       |`Set hint display`
@@ -503,16 +505,21 @@ Check column "offline" for their availability.
 |`hf mfdes help          `|Y       |`This help`
 |`hf mfdes default       `|N       |`[new]Set defaults for all the commands`
 |`hf mfdes auth          `|N       |`Tries a MIFARE DesFire Authentication`
-|`hf mfdes changekey     `|N       |`Change Key`
 |`hf mfdes chk           `|N       |`Check keys`
 |`hf mfdes enum          `|N       |`Tries enumerate all applications`
-|`hf mfdes formatpicc    `|N       |`Format PICC`
-|`hf mfdes getuid        `|N       |`Get random uid`
+|`hf mfdes formatpicc    `|N       |`[new]Format PICC`
+|`hf mfdes freemem       `|N       |`[new]Get free memory size`
+|`hf mfdes getuid        `|N       |`[new]Get uid from card`
+|`hf mfdes setconfig     `|N       |`[new]Set card configuration`
 |`hf mfdes info          `|N       |`Tag information`
 |`hf mfdes list          `|Y       |`List DESFire (ISO 14443A) history`
+|`hf mfdes changekey     `|N       |`[new]Change Key`
+|`hf mfdes chkeysettings `|N       |`[new]Change Key Settings`
+|`hf mfdes getkeysettings`|N       |`[new]Get Key Settings`
+|`hf mfdes getkeyversions`|N       |`[new]Get Key Versions`
 |`hf mfdes bruteaid      `|N       |`Recover AIDs by bruteforce`
-|`hf mfdes createaid     `|N       |`Create Application ID`
-|`hf mfdes deleteaid     `|N       |`Delete Application ID`
+|`hf mfdes createapp     `|N       |`[new]Create Application`
+|`hf mfdes deleteapp     `|N       |`[new]Delete Application`
 |`hf mfdes selectaid     `|N       |`Select Application ID`
 |`hf mfdes getaids       `|N       |`[new]Get Application IDs list`
 |`hf mfdes getappnames   `|N       |`[new]Get Applications list`
@@ -526,7 +533,7 @@ Check column "offline" for their availability.
 |`hf mfdes getvalue      `|N       |`Get value of file`
 |`hf mfdes read          `|N       |`Read data from standard/backup/record file`
 |`hf mfdes write         `|N       |`Write data to standard/backup/record file`
-|`hf mfdes test          `|N       |`Test crypto`
+|`hf mfdes test          `|Y       |`Test crypto`
 
 
 ### hf seos
@@ -852,12 +859,12 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`lf indala help         `|Y       |`this help`
-|`lf indala demod        `|Y       |`demodulate an Indala tag (PSK1) from GraphBuffer`
-|`lf indala altdemod     `|Y       |`alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)`
-|`lf indala reader       `|N       |`read an Indala tag from the antenna`
-|`lf indala clone        `|N       |`clone Indala tag to T55x7 or Q5/T5555`
-|`lf indala sim          `|N       |`simulate Indala tag`
+|`lf indala help         `|Y       |`This help`
+|`lf indala demod        `|Y       |`Demodulate an Indala tag (PSK1) from GraphBuffer`
+|`lf indala altdemod     `|Y       |`Alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)`
+|`lf indala reader       `|N       |`Read an Indala tag from the antenna`
+|`lf indala clone        `|N       |`Clone Indala tag to T55x7 or Q5/T5555`
+|`lf indala sim          `|N       |`Simulate Indala tag`
 
 
 ### lf io

@@ -1103,7 +1103,7 @@ static int getCmdExeDelay(const char *Cmd) {
 static command_t CommandTableGet[] = {
     {"barmode",          getCmdBarMode,       AlwaysAvailable, "Get bar mode preference"},
     {"clientdebug",      getCmdDebug,         AlwaysAvailable, "Get client debug level preference"},
-    {"clientdelay",      getCmdExeDelay,      AlwaysAvailable, "Get client execution delay preference"},    
+    {"clientdelay",      getCmdExeDelay,      AlwaysAvailable, "Get client execution delay preference"},
     {"color",            getCmdColor,         AlwaysAvailable, "Get color support preference"},
     {"savepaths",        getCmdSavePaths,     AlwaysAvailable, "Get file folder  "},
     //  {"devicedebug",      getCmdDeviceDebug,   AlwaysAvailable, "Get device debug level"},
@@ -1179,7 +1179,7 @@ static int CmdPrefShow(const char *Cmd) {
 //    showDeviceDebugState(prefShowNone);
     showBarModeState(prefShowNone);
     showClientExeDelayState();
-    
+
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
