@@ -6022,7 +6022,6 @@ int CmdHFMFDes(const char *Cmd) {
 
     Native Cmds
     -----------
-    SetConfiguration
     ChangeFileSettings
 
     ISO/IEC 7816 Cmds
