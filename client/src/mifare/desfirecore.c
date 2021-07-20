@@ -1108,7 +1108,7 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
     uint8_t pckcdata[DESFIRE_MAX_KEY_SIZE + 10] = {0};
     uint8_t *cdata = &pckcdata[2];
     uint8_t keynodata = newkeynum & 0x3f;
-    
+
     /*
      * Because new crypto methods can be setup only at application creation,
      * changing the card master key to one of them require a key_no tweak.
@@ -1116,7 +1116,7 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
     if (change_master_key) {
         keynodata |= (DesfireKeyAlgoToType(newkeytype) & 0x03) << 6;
     }
-    
+
     pckcdata[0] = MFDES_CHANGE_KEY; // TODO
     pckcdata[1] = keynodata;
 
@@ -1206,13 +1206,13 @@ int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *para
         desfire_crc32_append(cdata, datalen + 1);
         datalen += 4;
     }
-    
+
     // dynamic length
     if (paramid == 0x02) {
         data[datalen] = 0x80;
         datalen++;
-    }    
-    
+    }
+
     // send command
     uint8_t resp[257] = {0};
     size_t resplen = 0;
@@ -1221,6 +1221,6 @@ int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *para
     // check response
     if (res == 0 && resplen > 0)
         res = -20;
-    
+
     return res;
 }

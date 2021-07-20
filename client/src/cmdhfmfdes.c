@@ -4913,7 +4913,7 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    
+
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
@@ -4922,7 +4922,7 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
         CLIParserFree(ctx);
         return res;
     }
-    
+
     uint32_t paramid = 0;
     res = arg_get_u32_hexstr_def_nlen(ctx, 12, 0, &paramid, 1, true);
     if (res == 2) {
@@ -4930,7 +4930,7 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    
+
     uint8_t param[250] = {0};
     int paramlen = sizeof(param);
     CLIGetHexWithReturn(ctx, 13, param, &paramlen);
@@ -4942,7 +4942,7 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
         PrintAndLogEx(ERR, "Parameter data length must be less than 50 instead of %d.", paramlen);
         return PM3_EINVARG;
     }
-    
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
@@ -4952,7 +4952,7 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
         else
             PrintAndLogEx(INFO, _CYAN_("Application %06x") " param ID: 0x%02x param[%d]: %s", appid, paramid, paramlen, sprint_hex(param, paramlen));
     }
-        
+
     res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
