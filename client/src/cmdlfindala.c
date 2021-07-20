@@ -673,7 +673,7 @@ static int CmdIndalaClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if( !got_26 & fmt4041x ) {
+    if (!got_26 & fmt4041x) {
         PrintAndLogEx(FAILED, "You must specify a facility code and card number when using 4041X format");
         return PM3_EINVARG;
     }
@@ -729,9 +729,9 @@ static int CmdIndalaClone(const char *Cmd) {
 
             // Bitstream generation, format select
             int indalaReturn = PM3_ESOFT;
-            if(fmt4041x){
+            if (fmt4041x) {
                 indalaReturn = getIndalaBits4041x(fc, cn, bits);
-            } else { 
+            } else {
                 indalaReturn = getIndalaBits(fc, cn, bits);
             }
 
