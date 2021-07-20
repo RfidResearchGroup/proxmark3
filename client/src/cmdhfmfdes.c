@@ -4889,7 +4889,7 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes setconfig",
                   "Set card configuration. Danger zone! Needs to provide card's master key and works if not blocked by config.",
-                  "hf mfdes setconfig --param xxx --data yyy -> set parameter with data value");
+                  "hf mfdes setconfig --param 03 --data 0428 -> set parameter with data value");
 
     void *argtable[] = {
         arg_param_begin,

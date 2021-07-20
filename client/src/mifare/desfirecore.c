@@ -1190,15 +1190,34 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
 }
 
 int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *param, size_t paramlen) {
-    uint8_t data[200] = {0};
+    uint8_t cdata[200] = {0};
+    cdata[0] = MFDES_CHANGE_CONFIGURATION;
+    uint8_t *data = &cdata[1];
     data[0] = paramid;
     memcpy(&data[1], param, paramlen);
     size_t datalen = 1 + paramlen;
+
+
+    // add crc
+    if (dctx->secureChannel == DACd40) {
+        iso14443a_crc_append(&data[1], datalen - 1);
+        datalen += 2;
+    } else {
+        desfire_crc32_append(cdata, datalen + 1);
+        datalen += 4;
+    }
+    
+    // dynamic length
+    if (paramid == 0x02) {
+        data[datalen] = 0x80;
+        datalen++;
+    }    
     
     // send command
     uint8_t resp[257] = {0};
     size_t resplen = 0;
-    int res = DesfireChangeKeyCmd(dctx, data, datalen, resp, &resplen);
+    PrintAndLogEx(INFO, "plain data[%d]: %s", datalen, sprint_hex(data, datalen));
+    int res = DesfireSetConfigurationCmd(dctx, data, datalen, resp, &resplen);
 
     // check response
     if (res == 0 && resplen > 0)
