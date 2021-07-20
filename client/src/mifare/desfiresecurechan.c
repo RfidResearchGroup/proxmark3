@@ -126,6 +126,7 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
             memcpy(dstdata, srcdata, hdrlen);
             DesfireCryptoEncDec(ctx, true, &data[hdrlen], rlen - hdrlen, &dstdata[hdrlen], true);
             *dstdatalen = rlen;
+            ctx->commMode = DCMEncrypted;
             break;
         case DCMNone:
             ;
@@ -172,6 +173,7 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
         rlen = padded_data_length(srcdatalen - hdrlen, desfire_get_key_block_length(ctx->keyType));
         DesfireCryptoEncDec(ctx, true, data, rlen, &dstdata[hdrlen], true);
         *dstdatalen = hdrlen + rlen;
+        ctx->commMode = DCMEncrypted;
     }
 }
 

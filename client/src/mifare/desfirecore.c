@@ -611,8 +611,10 @@ int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secu
         PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
         return PM3_ESOFT;
     }
+    if (verbose)
+        PrintAndLogEx(INFO, "App %06x " _GREEN_("selected"), aid);
 
-    res = DesfireAuthenticate(dctx, secureChannel);
+    res = DesfireAuthenticate(dctx, secureChannel, verbose);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
         return PM3_ESOFT;
@@ -628,7 +630,7 @@ int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secu
     return PM3_SUCCESS;
 }
 
-int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel) {
+int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
     // 3 different way to authenticate   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
     // 4 different crypto arg1   DES, 3DES, 3K3DES, AES
     // 3 different communication modes,  PLAIN,MAC,CRYPTO
@@ -694,6 +696,9 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     size_t recv_len = 0;
     uint8_t respcode = 0;
     uint8_t recv_data[256] = {0};
+
+    if (verbose)
+        PrintAndLogEx(INFO, _CYAN_("Auth:") " cmd: 0x%02x keynum: 0x%02x", subcommand, dctx->keyNum);
 
     // Let's send our auth command
     int res = DesfireExchangeEx(false, dctx, subcommand, &dctx->keyNum, 1, &respcode, recv_data, &recv_len, false, 0);
@@ -907,7 +912,8 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     memset(dctx->IV, 0, DESFIRE_MAX_KEY_SIZE);
     dctx->secureChannel = secureChannel;
     memcpy(dctx->sessionKeyMAC, dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType));
-    PrintAndLogEx(INFO, "Session key : %s", sprint_hex(dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType)));
+    if (verbose)
+        PrintAndLogEx(INFO, _GREEN_("Session key") " : %s", sprint_hex(dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType)));
 
     return PM3_SUCCESS;
 }
@@ -1001,6 +1007,10 @@ int DesfireChangeKeySettings(DesfireContext *dctx, uint8_t *data, size_t len) {
 
 int DesfireChangeKeyCmd(DesfireContext *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen) {
     return DesfireCommand(dctx, MFDES_CHANGE_KEY, data, len, resp, resplen, -1);
+}
+
+int DesfireSetConfigurationCmd(DesfireContext *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen) {
+    return DesfireCommand(dctx, MFDES_CHANGE_CONFIGURATION, data, len, resp, resplen, -1);
 }
 
 uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType) {
@@ -1098,7 +1108,7 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
     uint8_t pckcdata[DESFIRE_MAX_KEY_SIZE + 10] = {0};
     uint8_t *cdata = &pckcdata[2];
     uint8_t keynodata = newkeynum & 0x3f;
-    
+
     /*
      * Because new crypto methods can be setup only at application creation,
      * changing the card master key to one of them require a key_no tweak.
@@ -1106,7 +1116,7 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
     if (change_master_key) {
         keynodata |= (DesfireKeyAlgoToType(newkeytype) & 0x03) << 6;
     }
-    
+
     pckcdata[0] = MFDES_CHANGE_KEY; // TODO
     pckcdata[1] = keynodata;
 
@@ -1179,3 +1189,38 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
     return res;
 }
 
+int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *param, size_t paramlen) {
+    uint8_t cdata[200] = {0};
+    cdata[0] = MFDES_CHANGE_CONFIGURATION;
+    uint8_t *data = &cdata[1];
+    data[0] = paramid;
+    memcpy(&data[1], param, paramlen);
+    size_t datalen = 1 + paramlen;
+
+
+    // add crc
+    if (dctx->secureChannel == DACd40) {
+        iso14443a_crc_append(&data[1], datalen - 1);
+        datalen += 2;
+    } else {
+        desfire_crc32_append(cdata, datalen + 1);
+        datalen += 4;
+    }
+
+    // dynamic length
+    if (paramid == 0x02) {
+        data[datalen] = 0x80;
+        datalen++;
+    }
+
+    // send command
+    uint8_t resp[257] = {0};
+    size_t resplen = 0;
+    int res = DesfireSetConfigurationCmd(dctx, data, datalen, resp, &resplen);
+
+    // check response
+    if (res == 0 && resplen > 0)
+        res = -20;
+
+    return res;
+}

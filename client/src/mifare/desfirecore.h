@@ -38,7 +38,7 @@ int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2);
 int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uint32_t aid2);
 
 int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose);
-int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel);
+int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose);
 
 int DesfireFormatPICC(DesfireContext *dctx);
 int DesfireGetFreeMem(DesfireContext *dctx, uint32_t *freemem);
@@ -57,5 +57,8 @@ uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType);
 
 int DesfireChangeKeyCmd(DesfireContext *dctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen);
 int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey, bool verbose);
+
+int DesfireSetConfigurationCmd(DesfireContext *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen);
+int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *param, size_t paramlen);
 
 #endif // __DESFIRECORE_H
