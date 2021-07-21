@@ -1192,7 +1192,7 @@ static const char *GetDesfireKeyType(uint8_t keytype) {
         return DesfireUnknownStr;
 }
 
-static const char *GetAccessRightStr(uint8_t right) {
+const char *GetDesfireAccessRightStr(uint8_t right) {
     static char int_access_str[200];
     memset(int_access_str, 0, sizeof(int_access_str));
     
@@ -1213,10 +1213,10 @@ static const char *GetAccessRightStr(uint8_t right) {
 }
 
 void DesfirePrintAccessRight(uint8_t *data) {
-    PrintAndLogEx(SUCCESS, "read     : %s", GetAccessRightStr((data[1] >> 4) & 0x0f)); // hi 2b
-    PrintAndLogEx(SUCCESS, "write    : %s", GetAccessRightStr(data[1] & 0x0f));
-    PrintAndLogEx(SUCCESS, "readwrite: %s", GetAccessRightStr((data[0] >> 4) & 0x0f)); // low 2b
-    PrintAndLogEx(SUCCESS, "change   : %s", GetAccessRightStr(data[0] & 0x0f));
+    PrintAndLogEx(SUCCESS, "read     : %s", GetDesfireAccessRightStr((data[1] >> 4) & 0x0f)); // hi 2b
+    PrintAndLogEx(SUCCESS, "write    : %s", GetDesfireAccessRightStr(data[1] & 0x0f));
+    PrintAndLogEx(SUCCESS, "readwrite: %s", GetDesfireAccessRightStr((data[0] >> 4) & 0x0f)); // low 2b
+    PrintAndLogEx(SUCCESS, "change   : %s", GetDesfireAccessRightStr(data[0] & 0x0f));
 }
 
 void DesfirePrintFileSettings(uint8_t *data, size_t len) {

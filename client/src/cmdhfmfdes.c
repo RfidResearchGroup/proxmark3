@@ -6313,21 +6313,39 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
         }
     }
 
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t buflen = 0;
+
+    // check current file settings
+    DesfireCommunicationMode commMode = dctx.commMode;
+    DesfireSetCommMode(&dctx, DCMPlain);
+    res = DesfireGetFileSettings(&dctx, fileid, buf, &buflen);
+    if (res == PM3_SUCCESS && buflen > 5) {
+        uint8_t chright = buf[2] & 0x0f;
+        if (verbose)
+            PrintAndLogEx(INFO, "Current access right for change file settings: %s", GetDesfireAccessRightStr(chright));
+        
+        if (chright == 0x0f)
+            PrintAndLogEx(WARNING, "Change file settings disabled");
+            
+        if (chright == 0x0e && (!(commMode == DCMPlain || commMode == DCMMACed || noauth)))
+            PrintAndLogEx(WARNING, "File settings have free access for change. Change command must be sent via plain communications mode or without authentication (--no-auth option)");
+        
+        if (chright < 0x0e && dctx.keyNum != chright)
+            PrintAndLogEx(WARNING, "File settings must be changed with auth key=0x%02x but current auth with key 0x%02x", chright, dctx.keyNum);
+
+        if (chright < 0x0e && commMode != DCMEncrypted)
+            PrintAndLogEx(WARNING, "File settings must be changed via encryted (full) communication mode");
+    }
+    DesfireSetCommMode(&dctx, commMode);
+
+    // print the new file settings
     if (verbose)
         PrintAndLogEx(INFO, "app %06x file %02x settings[%d]: %s", appid, fileid, settingslen, sprint_hex(settings, settingslen));
 
     DesfirePrintSetFileSettings(settings, settingslen);
 
-   /* uint8_t buf[APDU_RES_LEN] = {0};
-    size_t buflen = 0;
-
-    res = DesfireGetFileSettings(&dctx, fileid, buf, &buflen);
-    if (res == PM3_SUCCESS && buflen > 5) {
-        uint8_t chright = buf[2] & 0x0f;
-    }*/
-
-
-
+    // set file settings
     data[0] = fileid;
     res = DesfireChangeFileSettings(&dctx, data, settingslen + 1);
     if (res != PM3_SUCCESS) {

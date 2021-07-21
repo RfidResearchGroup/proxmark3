@@ -66,6 +66,7 @@ int DesfireGetFileIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetFileISOIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetFileSettings(DesfireContext *dctx, uint8_t fileid, uint8_t *resp, size_t *resplen);
 int DesfireChangeFileSettings(DesfireContext *dctx, uint8_t *data, size_t datalen);
+const char *GetDesfireAccessRightStr(uint8_t right);
 void DesfirePrintAccessRight(uint8_t *data);
 void DesfirePrintFileSettings(uint8_t *data, size_t len);
 void DesfirePrintSetFileSettings(uint8_t *data, size_t len);
