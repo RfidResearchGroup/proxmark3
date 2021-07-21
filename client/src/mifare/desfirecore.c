@@ -74,6 +74,27 @@ const CLIParserOption DesfireSecureChannelOpts[] = {
 };
 const size_t DesfireSecureChannelOptsLen = ARRAY_LENGTH(DesfireSecureChannelOpts);
 
+const CLIParserOption DesfireFileAccessModeOpts[] = {
+    {0x00, "key0"},
+    {0x01, "key1"},
+    {0x02, "key2"},
+    {0x03, "key3"},
+    {0x04, "key4"},
+    {0x05, "key5"},
+    {0x06, "key6"},
+    {0x07, "key7"},
+    {0x08, "key8"},
+    {0x09, "key9"},
+    {0x0a, "key10"},
+    {0x0b, "key11"},
+    {0x0c, "key12"},
+    {0x0d, "key13"},
+    {0x0e, "free"},
+    {0x0f, "deny"},
+    {0,    NULL},
+};
+
+
 static const char *getstatus(uint16_t *sw) {
     if (sw == NULL) return "--> sw argument error. This should never happen !";
     if (((*sw >> 8) & 0xFF) == 0x91) {
@@ -1013,6 +1034,10 @@ int DesfireSetConfigurationCmd(DesfireContext *dctx, uint8_t *data, size_t len, 
     return DesfireCommand(dctx, MFDES_CHANGE_CONFIGURATION, data, len, resp, resplen, -1);
 }
 
+int DesfireChangeFileSettings(DesfireContext *dctx, uint8_t *data, size_t datalen) {
+    return DesfireCommandTxData(dctx, MFDES_CHANGE_FILE_SETTINGS, data, datalen);
+}
+
 int DesfireGetFileIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
     return DesfireCommandRxData(dctx, MFDES_GET_FILE_IDS, resp, resplen, -1);
 }
@@ -1187,7 +1212,7 @@ static const char *GetAccessRightStr(uint8_t right) {
     return DesfireUnknownStr;
 }
 
-static void PrintAccessRight(uint8_t *data) {
+void DesfirePrintAccessRight(uint8_t *data) {
     PrintAndLogEx(SUCCESS, "read     : %s", GetAccessRightStr((data[1] >> 4) & 0x0f)); // hi 2b
     PrintAndLogEx(SUCCESS, "write    : %s", GetAccessRightStr(data[1] & 0x0f));
     PrintAndLogEx(SUCCESS, "readwrite: %s", GetAccessRightStr((data[0] >> 4) & 0x0f)); // low 2b
@@ -1210,7 +1235,7 @@ void DesfirePrintFileSettings(uint8_t *data, size_t len) {
         PrintAndLogEx(SUCCESS, "Additional access: %s", (addaccess) ? "Yes" : "No");
     }
     PrintAndLogEx(SUCCESS, "Access rights    : %02x%02x", data[2], data[3]);
-    PrintAccessRight(&data[2]); //2 bytes
+    DesfirePrintAccessRight(&data[2]); //2 bytes
     
     uint8_t reclen = 0;
     switch (filetype) {
@@ -1262,8 +1287,27 @@ void DesfirePrintFileSettings(uint8_t *data, size_t len) {
     if (addaccess && reclen > 0 && len > reclen && len == reclen + data[reclen] * 2) {
         PrintAndLogEx(SUCCESS, "Add access records: %d", data[reclen]);
         for (int i = 0; i < data[reclen] * 2; i += 2) {
-            PrintAndLogEx(SUCCESS, "Add access rights : [%d] %02x%02x", i, data[reclen + 1 + i], data[reclen + 2 + i]);
-            PrintAccessRight(&data[reclen + 1 + i]);
+            PrintAndLogEx(SUCCESS, "Add access rights : [%d] %02x%02x", i / 2, data[reclen + 1 + i], data[reclen + 2 + i]);
+            DesfirePrintAccessRight(&data[reclen + 1 + i]);
+        }
+    }
+}
+
+void DesfirePrintSetFileSettings(uint8_t *data, size_t len) {
+    PrintAndLogEx(INFO, "---- " _CYAN_("Set file settings") " ----");
+    PrintAndLogEx(SUCCESS, "File comm mode   : %s", GetDesfireCommunicationMode(data[0] & 0x03));
+
+    bool addaccess = ((data[0] & 0x80) != 0);
+    PrintAndLogEx(SUCCESS, "Additional access: %s", (addaccess) ? "Yes" : "No");
+
+    PrintAndLogEx(SUCCESS, "Access rights    : %02x%02x", data[1], data[2]);
+    DesfirePrintAccessRight(&data[1]); //2 bytes
+    
+    if (addaccess && len > 3 && len == 4 + data[3] * 2) {
+        PrintAndLogEx(SUCCESS, "Add access records: %d", data[3]);
+        for (int i = 0; i < data[3] * 2; i += 2) {
+            PrintAndLogEx(SUCCESS, "Add access rights : [%d] %02x%02x", i / 2, data[4 + i], data[5 + i]);
+            DesfirePrintAccessRight(&data[4 + i]);
         }
     }
 }
