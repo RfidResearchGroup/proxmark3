@@ -1013,6 +1013,22 @@ int DesfireSetConfigurationCmd(DesfireContext *dctx, uint8_t *data, size_t len, 
     return DesfireCommand(dctx, MFDES_CHANGE_CONFIGURATION, data, len, resp, resplen, -1);
 }
 
+int DesfireGetFileIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
+    return DesfireCommandRxData(dctx, MFDES_GET_FILE_IDS, resp, resplen, -1);
+}
+
+int DesfireGetFileISOIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
+    return DesfireCommandRxData(dctx, MFDES_GET_ISOFILE_IDS, resp, resplen, -1);
+}
+
+int DesfireCreateFile(DesfireContext *dctx, uint8_t *fdata, size_t fdatalen) {
+    return DesfireCommandTxData(dctx, MFDES_CREATE_STD_DATA_FILE, fdata, fdatalen);
+}
+
+int DesfireDeleteFile(DesfireContext *dctx, uint8_t fid) {
+    return DesfireCommandTxData(dctx, MFDES_DELETE_FILE, &fid, 1);
+}
+
 uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType) {
     switch (keyType) {
         case T_DES:
