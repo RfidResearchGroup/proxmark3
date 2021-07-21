@@ -52,6 +52,7 @@ AllowedChannelModesS AllowedChannelModes[] = {
 
     {MFDES_GET_UID,               DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,   DACd40,  DCCNative,    DCMEncrypted},
+    {MFDES_CHANGE_FILE_SETTINGS,  DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_READ_DATA,             DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_WRITE_DATA,            DACd40,  DCCNative,    DCMEncrypted},
 
@@ -69,20 +70,30 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_FORMAT_PICC,           DACEV1,  DCCNative,    DCMMACed},
     {MFDES_GET_FILE_IDS,          DACEV1,  DCCNative,    DCMMACed},
     {MFDES_GET_ISOFILE_IDS,       DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_GET_FILE_SETTINGS,     DACEV1,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,               DACEV1,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,   DACEV1,  DCCNative,    DCMEncrypted},
+    {MFDES_CHANGE_FILE_SETTINGS,  DACEV1,  DCCNative,    DCMEncrypted},
 
     {MFDES_CHANGE_KEY,            DACEV1,  DCCNative,    DCMEncryptedPlain},
     {MFDES_CHANGE_KEY_EV2,        DACEV1,  DCCNative,    DCMEncryptedPlain},
 };
 
-static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {
-    if (cmd == MFDES_CHANGE_KEY || cmd == MFDES_CHANGE_CONFIGURATION)
-        return 1;
+#define CMD_HEADER_LEN_ALL 0xffff
+CmdHeaderLengthsS CmdHeaderLengths[] = {
+    {MFDES_CREATE_APPLICATION,    CMD_HEADER_LEN_ALL},
+    {MFDES_DELETE_APPLICATION,    CMD_HEADER_LEN_ALL},
+    {MFDES_CHANGE_KEY,            1},
+    {MFDES_CHANGE_KEY_EV2,        2},
+    {MFDES_CHANGE_CONFIGURATION,  1},
+    {MFDES_CHANGE_FILE_SETTINGS,  1},
+};
 
-    if (cmd == MFDES_CHANGE_KEY_EV2)
-        return 2;
+static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {
+    for (int i = 0; i < ARRAY_LENGTH(CmdHeaderLengths); i++)
+        if (CmdHeaderLengths[i].cmd == cmd)
+            return CmdHeaderLengths[i].len;
 
     return 0;
 }
@@ -160,19 +171,20 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
             *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
         }
     } else if (ctx->commMode == DCMEncrypted) {
-        rlen = padded_data_length(srcdatalen + 4, desfire_get_key_block_length(ctx->keyType));
+        rlen = padded_data_length(srcdatalen + 4 - hdrlen, desfire_get_key_block_length(ctx->keyType));
         data[0] = cmd;
         memcpy(&data[1], srcdata, srcdatalen);
         desfire_crc32_append(data, srcdatalen + 1);
 
-        DesfireCryptoEncDec(ctx, true, &data[1], rlen, dstdata, true);
+        memcpy(dstdata, srcdata, hdrlen);
+        DesfireCryptoEncDec(ctx, true, &data[1 + hdrlen], rlen, &dstdata[hdrlen], true);
 
-        *dstdatalen = rlen;
+        *dstdatalen = hdrlen + rlen;
     } else if (ctx->commMode == DCMEncryptedPlain) {
         if (srcdatalen == 0 || srcdatalen <= hdrlen)
             return;
 
-        memcpy(&dstdata[0], srcdata, hdrlen);
+        memcpy(dstdata, srcdata, hdrlen);
         memcpy(data, &srcdata[hdrlen], srcdatalen);
         rlen = padded_data_length(srcdatalen - hdrlen, desfire_get_key_block_length(ctx->keyType));
         DesfireCryptoEncDec(ctx, true, data, rlen, &dstdata[hdrlen], true);

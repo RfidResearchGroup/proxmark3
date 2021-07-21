@@ -24,6 +24,7 @@ extern const CLIParserOption DesfireKDFAlgoOpts[];
 extern const CLIParserOption DesfireCommunicationModeOpts[];
 extern const CLIParserOption DesfireCommandSetOpts[];
 extern const CLIParserOption DesfireSecureChannelOpts[];
+extern const CLIParserOption DesfireFileAccessModeOpts[];
 
 const char *DesfireGetErrorString(int res, uint16_t *sw);
 uint32_t DesfireAIDByteToUint(uint8_t *data);
@@ -63,6 +64,12 @@ int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *para
 
 int DesfireGetFileIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetFileISOIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
+int DesfireGetFileSettings(DesfireContext *dctx, uint8_t fileid, uint8_t *resp, size_t *resplen);
+int DesfireChangeFileSettings(DesfireContext *dctx, uint8_t *data, size_t datalen);
+const char *GetDesfireAccessRightStr(uint8_t right);
+void DesfirePrintAccessRight(uint8_t *data);
+void DesfirePrintFileSettings(uint8_t *data, size_t len);
+void DesfirePrintSetFileSettings(uint8_t *data, size_t len);
 int DesfireCreateFile(DesfireContext *dctx, uint8_t *fdata, size_t fdatalen);
 int DesfireDeleteFile(DesfireContext *dctx, uint8_t fid);
 
