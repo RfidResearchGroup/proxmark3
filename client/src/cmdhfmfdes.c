@@ -6186,13 +6186,8 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
 
     if (verbose)
         PrintAndLogEx(INFO, "app %06x file %02x settings[%d]: %s", appid, fileid, buflen, sprint_hex(buf, buflen));
-    /*if (buflen >= 3) {
-        PrintAndLogEx(INFO, "---- " _CYAN_("File ISO ID list") " ----");
-        for (int i = 0; i < buflen; i += 2)
-            PrintAndLogEx(INFO, "File ID: %02x%02x", buf[i], buf[i + 1]);
-    } else {
-        PrintAndLogEx(INFO, "There is no files in the application %06x", appid);
-    }*/
+    
+    DesfirePrintFileSettings(buf, buflen);
 
     DropField();
     return PM3_SUCCESS;

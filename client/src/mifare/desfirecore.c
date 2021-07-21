@@ -1120,6 +1120,154 @@ void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool 
         PrintKeySettingsPICC(keysettings, numkeys, print2ndbyte);
 }
 
+static const char *DesfireUnknownStr = "unknown";
+static const char *DesfireDisabledStr = "disabled";
+static const char *DesfireFreeStr = "free";
+static const char *DesfireFileTypes[] = {
+    "Standard data",
+    "Backup data",
+    "Value",
+    "Linear Record",
+    "Cyclic Record",
+    "Transaction MAC",
+};
+
+static const char *GetDesfireFileType(uint8_t type) {
+    if (type < ARRAYLEN(DesfireFileTypes))
+        return DesfireFileTypes[type];
+    else
+        return DesfireUnknownStr;
+}
+
+static const char *DesfireCommunicationModes[] = {
+    "Plain",
+    "MAC",
+    "Plain rfu",
+    "Full",
+};
+
+static const char *GetDesfireCommunicationMode(uint8_t mode) {
+    if (mode < ARRAYLEN(DesfireCommunicationModes))
+        return DesfireCommunicationModes[mode];
+    else
+        return DesfireUnknownStr;
+}
+
+static const char *DesfireKeyTypeStr[] = {
+    "2tdea",
+    "3tdea",
+    "aes",
+    "rfu",
+};
+
+static const char *GetDesfireKeyType(uint8_t keytype) {
+    if (keytype < ARRAYLEN(DesfireKeyTypeStr))
+        return DesfireKeyTypeStr[keytype];
+    else
+        return DesfireUnknownStr;
+}
+
+static const char *GetAccessRightStr(uint8_t right) {
+    static char int_access_str[200];
+    memset(int_access_str, 0, sizeof(int_access_str));
+    
+    if (right > 0x0f)
+        return DesfireUnknownStr;
+    
+    if (right <= 0x0d) {
+        sprintf(int_access_str, "key 0x%02x", right);
+        return int_access_str;
+    }
+    if (right == 0x0e)
+        return DesfireFreeStr;
+    
+    if (right == 0x0f)
+        return DesfireDisabledStr;
+ 
+    return DesfireUnknownStr;
+}
+
+static void PrintAccessRight(uint8_t *data) {
+    PrintAndLogEx(SUCCESS, "read     : %s", GetAccessRightStr((data[1] >> 4) & 0x0f)); // hi 2b
+    PrintAndLogEx(SUCCESS, "write    : %s", GetAccessRightStr(data[1] & 0x0f));
+    PrintAndLogEx(SUCCESS, "readwrite: %s", GetAccessRightStr((data[0] >> 4) & 0x0f)); // low 2b
+    PrintAndLogEx(SUCCESS, "change   : %s", GetAccessRightStr(data[0] & 0x0f));
+}
+
+void DesfirePrintFileSettings(uint8_t *data, size_t len) {
+    if (len < 6) {
+        PrintAndLogEx(ERR, "Wrong file settings length: %d", len);
+        return;
+    }
+    
+    uint8_t filetype = data[0];
+    PrintAndLogEx(INFO, "---- " _CYAN_("File settings") " ----");
+    PrintAndLogEx(SUCCESS, "File type [0x%02x] : %s file", filetype, GetDesfireFileType(filetype));
+    PrintAndLogEx(SUCCESS, "File comm mode   : %s", GetDesfireCommunicationMode(data[1] & 0x03));
+    bool addaccess = false;
+    if (filetype != 0x05) {
+        addaccess = ((data[1] & 0x80) != 0);
+        PrintAndLogEx(SUCCESS, "Additional access: %s", (addaccess) ? "Yes" : "No");
+    }
+    PrintAndLogEx(SUCCESS, "Access rights    : %02x%02x", data[2], data[3]);
+    PrintAccessRight(&data[2]); //2 bytes
+    
+    uint8_t reclen = 0;
+    switch (filetype) {
+        case 0x00: 
+        case 0x01: {
+            int filesize = (data[6] << 16) + (data[5] << 8) + data[4];
+            
+            PrintAndLogEx(INFO, "File size        : %d (0x%X) bytes", filesize, filesize);
+
+            reclen = 7;
+            break;
+        }
+        case 0x02: {
+            int lowerlimit = (data[7] << 24) + (data[6] << 16) + (data[5] << 8) + data[4];
+            int upperlimit = (data[11] << 24) + (data[10] << 16) + (data[9] << 8) + data[8];
+            int limitcredvalue = (data[15] << 24) + (data[14] << 16) + (data[13] << 8) + data[12];
+            uint8_t limited_credit_enabled = data[16];
+            
+            PrintAndLogEx(INFO, "Lower limit      : %d (0x%X)", lowerlimit, lowerlimit);
+            PrintAndLogEx(INFO, "Upper limit      : %d (0x%X)", upperlimit, upperlimit);
+            PrintAndLogEx(INFO, "Limited credit   : [%d - %s] %d (0x%X)", limited_credit_enabled, (limited_credit_enabled == 1) ? "enabled" : "disabled", limitcredvalue, limitcredvalue);
+
+            reclen = 17;
+            break;
+        }
+        case 0x03:
+        case 0x04: {
+            uint32_t recordsize = (data[6] << 16) + (data[5] << 8) + data[4];
+            uint32_t maxrecords = (data[9] << 16) + (data[8] << 8) + data[7];
+            uint32_t currentrecord = (data[12] << 16) + (data[11] << 8) + data[10];
+
+            PrintAndLogEx(INFO, "Record size      : %d (0x%X) bytes", recordsize, recordsize);
+            PrintAndLogEx(INFO, "Max num records  : %d (0x%X)", maxrecords, maxrecords);
+            PrintAndLogEx(INFO, "Curr num records : %d (0x%X)", currentrecord, currentrecord);
+
+            reclen = 13;
+            break;
+        }
+        case 0x05: {
+            PrintAndLogEx(INFO, "Key type [0x%02x] : %s", data[4], GetDesfireKeyType(data[4]));
+            PrintAndLogEx(INFO, "Key version      : %d (0x%X)", data[5], data[5]);
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+    
+    if (addaccess && reclen > 0 && len > reclen && len == reclen + data[reclen] * 2) {
+        PrintAndLogEx(SUCCESS, "Add access records: %d", data[reclen]);
+        for (int i = 0; i < data[reclen] * 2; i += 2) {
+            PrintAndLogEx(SUCCESS, "Add access rights : [%d] %02x%02x", i, data[reclen + 1 + i], data[reclen + 2 + i]);
+            PrintAccessRight(&data[reclen + 1 + i]);
+        }
+    }
+}
+
 int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey, bool verbose) {
 
     uint8_t okeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
