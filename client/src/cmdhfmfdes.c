@@ -6114,7 +6114,6 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-//    {"getfilesettings",  CmdHF14ADesGetFileSettings,  IfPm3Iso14443a,  "[new]Get file settings"},
 static int CmdHF14ADesGetFileSettings(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes getfilesettings",
@@ -6264,10 +6263,6 @@ int CmdHFMFDes(const char *Cmd) {
 
 /*
     ToDo:
-
-    Native Cmds
-    -----------
-    ChangeFileSettings
 
     ISO/IEC 7816 Cmds
     -----------------
