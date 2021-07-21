@@ -69,6 +69,7 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_FORMAT_PICC,           DACEV1,  DCCNative,    DCMMACed},
     {MFDES_GET_FILE_IDS,          DACEV1,  DCCNative,    DCMMACed},
     {MFDES_GET_ISOFILE_IDS,       DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_GET_FILE_SETTINGS,     DACEV1,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,               DACEV1,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,   DACEV1,  DCCNative,    DCMEncrypted},

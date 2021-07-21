@@ -1021,6 +1021,9 @@ int DesfireGetFileISOIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen
     return DesfireCommandRxData(dctx, MFDES_GET_ISOFILE_IDS, resp, resplen, -1);
 }
 
+int DesfireGetFileSettings(DesfireContext *dctx, uint8_t fileid, uint8_t *resp, size_t *resplen) {
+    return DesfireCommand(dctx, MFDES_GET_FILE_SETTINGS, &fileid, 1, resp, resplen, -1);
+}
 int DesfireCreateFile(DesfireContext *dctx, uint8_t *fdata, size_t fdatalen) {
     return DesfireCommandTxData(dctx, MFDES_CREATE_STD_DATA_FILE, fdata, fdatalen);
 }
