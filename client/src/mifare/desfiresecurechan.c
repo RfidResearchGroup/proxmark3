@@ -176,7 +176,6 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
         memcpy(&data[1], srcdata, srcdatalen);
         desfire_crc32_append(data, srcdatalen + 1);
 
- PrintAndLogEx(INFO, "plain [%d]: %s", rlen, sprint_hex(&data[1 + hdrlen], rlen));
         memcpy(dstdata, srcdata, hdrlen);
         DesfireCryptoEncDec(ctx, true, &data[1 + hdrlen], rlen, &dstdata[hdrlen], true);
 
