@@ -6225,12 +6225,14 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
         arg_str0(NULL, "wrights", "<key0/../key13/free/deny>", "Write file access mode: the specified key, free, deny"),
         arg_str0(NULL, "rwrights","<key0/../key13/free/deny>", "Read/Write file access mode: the specified key, free, deny"),
         arg_str0(NULL, "chrights","<key0/../key13/free/deny>", "Change file settings access mode: the specified key, free, deny"),
+        arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
+    bool noauth = arg_get_lit(ctx, 19);
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
@@ -6296,16 +6298,35 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        return res;
+    if (noauth) {
+        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            DropField();
+            return res;
+        }
+    } else {
+        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
     }
 
     if (verbose)
         PrintAndLogEx(INFO, "app %06x file %02x settings[%d]: %s", appid, fileid, settingslen, sprint_hex(settings, settingslen));
 
     DesfirePrintSetFileSettings(settings, settingslen);
+
+   /* uint8_t buf[APDU_RES_LEN] = {0};
+    size_t buflen = 0;
+
+    res = DesfireGetFileSettings(&dctx, fileid, buf, &buflen);
+    if (res == PM3_SUCCESS && buflen > 5) {
+        uint8_t chright = buf[2] & 0x0f;
+    }*/
+
+
 
     data[0] = fileid;
     res = DesfireChangeFileSettings(&dctx, data, settingslen + 1);
