@@ -171,19 +171,21 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
             *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
         }
     } else if (ctx->commMode == DCMEncrypted) {
-        rlen = padded_data_length(srcdatalen + 4, desfire_get_key_block_length(ctx->keyType));
+        rlen = padded_data_length(srcdatalen + 4 - hdrlen, desfire_get_key_block_length(ctx->keyType));
         data[0] = cmd;
         memcpy(&data[1], srcdata, srcdatalen);
         desfire_crc32_append(data, srcdatalen + 1);
 
-        DesfireCryptoEncDec(ctx, true, &data[1], rlen, dstdata, true);
+ PrintAndLogEx(INFO, "plain [%d]: %s", rlen, sprint_hex(&data[1 + hdrlen], rlen));
+        memcpy(dstdata, srcdata, hdrlen);
+        DesfireCryptoEncDec(ctx, true, &data[1 + hdrlen], rlen, &dstdata[hdrlen], true);
 
-        *dstdatalen = rlen;
+        *dstdatalen = hdrlen + rlen;
     } else if (ctx->commMode == DCMEncryptedPlain) {
         if (srcdatalen == 0 || srcdatalen <= hdrlen)
             return;
 
-        memcpy(&dstdata[0], srcdata, hdrlen);
+        memcpy(dstdata, srcdata, hdrlen);
         memcpy(data, &srcdata[hdrlen], srcdatalen);
         rlen = padded_data_length(srcdatalen - hdrlen, desfire_get_key_block_length(ctx->keyType));
         DesfireCryptoEncDec(ctx, true, data, rlen, &dstdata[hdrlen], true);
