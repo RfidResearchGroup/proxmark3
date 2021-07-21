@@ -26,6 +26,11 @@ typedef struct {
     DesfireCommunicationMode commMode;
 } AllowedChannelModesS;
 
+typedef struct {
+    uint8_t cmd;
+    uint32_t len;
+} CmdHeaderLengthsS;
+
 void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen);
 void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen);
 

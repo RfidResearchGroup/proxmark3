@@ -52,6 +52,7 @@ AllowedChannelModesS AllowedChannelModes[] = {
 
     {MFDES_GET_UID,               DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,   DACd40,  DCCNative,    DCMEncrypted},
+    {MFDES_CHANGE_FILE_SETTINGS,  DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_READ_DATA,             DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_WRITE_DATA,            DACd40,  DCCNative,    DCMEncrypted},
 
@@ -73,17 +74,26 @@ AllowedChannelModesS AllowedChannelModes[] = {
 
     {MFDES_GET_UID,               DACEV1,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,   DACEV1,  DCCNative,    DCMEncrypted},
+    {MFDES_CHANGE_FILE_SETTINGS,  DACEV1,  DCCNative,    DCMEncrypted},
 
     {MFDES_CHANGE_KEY,            DACEV1,  DCCNative,    DCMEncryptedPlain},
     {MFDES_CHANGE_KEY_EV2,        DACEV1,  DCCNative,    DCMEncryptedPlain},
 };
 
-static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {
-    if (cmd == MFDES_CHANGE_KEY || cmd == MFDES_CHANGE_CONFIGURATION)
-        return 1;
+#define CMD_HEADER_LEN_ALL 0xffff
+CmdHeaderLengthsS CmdHeaderLengths[] = {
+    {MFDES_CREATE_APPLICATION,    CMD_HEADER_LEN_ALL},
+    {MFDES_DELETE_APPLICATION,    CMD_HEADER_LEN_ALL},
+    {MFDES_CHANGE_KEY,            1},
+    {MFDES_CHANGE_KEY_EV2,        2},
+    {MFDES_CHANGE_CONFIGURATION,  1},
+    {MFDES_CHANGE_FILE_SETTINGS,  1},
+};
 
-    if (cmd == MFDES_CHANGE_KEY_EV2)
-        return 2;
+static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {
+    for (int i = 0; i < ARRAY_LENGTH(CmdHeaderLengths); i++)
+        if (CmdHeaderLengths[i].cmd == cmd)
+            return CmdHeaderLengths[i].len;
 
     return 0;
 }
