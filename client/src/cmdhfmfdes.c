@@ -6134,7 +6134,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
-        arg_str0(NULL, "fid",     "<file id hex>", "File ID (1 hex byte)"),
+        arg_str0(NULL, "fid",     "<file id hex>", "File ID (1 hex byte). default: 1"),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_param_end
     };
@@ -6153,7 +6153,12 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
         return res;
     }
     
-    uint8_t fileid = 1;
+    uint32_t fileid = 1;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fileid, 1, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "File ID must have 1 byte length");
+        return PM3_EINVARG;
+    }
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
@@ -6192,8 +6197,126 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-//    {"chfilesettings",   CmdHF14ADesChFileSettings,   IfPm3Iso14443a,  "[new]Change file settings"},
 static int CmdHF14ADesChFileSettings(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes chfilesettings",
+                  "Get File Settings from file from application. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
+                  "hf mfdes chfilesettings --aid 123456 --fid 01 --amode plain --rrights free --wrights free --rwrights free --chrights key0 -> change file settings app=123456, file=01 with defaults from `default` command\n"
+                  "hf mfdes chfilesettings -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -rawdata 00EEEE -> execute with default factory setup\n"
+                  "hf mfdes chfilesettings --aid 123456 --fid 01 --rawdata 810000021f112f22 -> change file settings with additional rights for keys 1 and 2");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "fid",     "<file id hex>", "File ID (1 hex byte)"),
+        arg_str0(NULL, "rawdata", "<file settings HEX>", "File settings (HEX > 5 bytes)"),
+        arg_str0(NULL, "amode",   "<plain/mac/encrypt>", "File access mode: plain/mac/encrypt"),
+        arg_str0(NULL, "rrights", "<key0/../key13/free/deny>", "Read file access mode: the specified key, free, deny"),
+        arg_str0(NULL, "wrights", "<key0/../key13/free/deny>", "Write file access mode: the specified key, free, deny"),
+        arg_str0(NULL, "rwrights","<key0/../key13/free/deny>", "Read/Write file access mode: the specified key, free, deny"),
+        arg_str0(NULL, "chrights","<key0/../key13/free/deny>", "Change file settings access mode: the specified key, free, deny"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMEncrypted, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+    
+    uint32_t fileid = 1;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fileid, 1, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "File ID must have 1 byte length");
+        return PM3_EINVARG;
+    }
+
+    uint8_t data[250] = {0x01, 0x00, 0xee, 0xee};
+    uint8_t *settings = &data[1];
+    int settingslen = 3;
+
+    uint8_t sdata[250] = {0};
+    int sdatalen = sizeof(sdata);
+    CLIGetHexWithReturn(ctx, 13, sdata, &sdatalen);
+    if (sdatalen > 18) {
+        PrintAndLogEx(ERR, "File settings length must be less than 18 instead of %d.", settingslen);
+        return PM3_EINVARG;
+    }
+
+    // rawdata have priority over all the rest methods
+    if (sdatalen > 0) {
+        memcpy(settings, sdata, sdatalen);
+        settingslen = sdatalen;
+    } else {
+        int cmode = DCMNone;
+        if (CLIGetOptionList(arg_get_str(ctx, 14), DesfireCommunicationModeOpts, &cmode))
+            return PM3_ESOFT;
+        
+        if (cmode == DCMPlain)        
+            settings[0] = 0x00;
+        if (cmode == DCMMACed)        
+            settings[0] = 0x01;
+        if (cmode == DCMEncrypted)        
+            settings[0] = 0x03;
+        
+        int r_mode = 0x0e;
+        if (CLIGetOptionList(arg_get_str(ctx, 15), DesfireFileAccessModeOpts, &r_mode))
+            return PM3_ESOFT;
+        int w_mode = 0x0e;
+        if (CLIGetOptionList(arg_get_str(ctx, 16), DesfireFileAccessModeOpts, &w_mode))
+            return PM3_ESOFT;
+        int rw_mode = 0x0e;
+        if (CLIGetOptionList(arg_get_str(ctx, 17), DesfireFileAccessModeOpts, &rw_mode))
+            return PM3_ESOFT;
+        int ch_mode = 0x0e;
+        if (CLIGetOptionList(arg_get_str(ctx, 18), DesfireFileAccessModeOpts, &ch_mode))
+            return PM3_ESOFT;
+        
+        settings[1] = ((rw_mode & 0x0f) << 4) | (ch_mode & 0x0f);
+        settings[2] = ((r_mode & 0x0f) << 4) | (w_mode & 0x0f);
+    }    
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    if (verbose)
+        PrintAndLogEx(INFO, "app %06x file %02x settings[%d]: %s", appid, fileid, settingslen, sprint_hex(settings, settingslen));
+
+    DesfirePrintSetFileSettings(settings, settingslen);
+
+    data[0] = fileid;
+    res = DesfireChangeFileSettings(&dctx, data, settingslen + 1);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire ChangeFileSettings command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(SUCCESS, "File settings changed " _GREEN_("successfully"));
+
     DropField();
     return PM3_SUCCESS;
 }
