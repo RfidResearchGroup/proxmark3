@@ -82,12 +82,13 @@ AllowedChannelModesS AllowedChannelModes[] = {
 
 #define CMD_HEADER_LEN_ALL 0xffff
 CmdHeaderLengthsS CmdHeaderLengths[] = {
-    {MFDES_CREATE_APPLICATION,    CMD_HEADER_LEN_ALL},
-    {MFDES_DELETE_APPLICATION,    CMD_HEADER_LEN_ALL},
-    {MFDES_CHANGE_KEY,            1},
-    {MFDES_CHANGE_KEY_EV2,        2},
-    {MFDES_CHANGE_CONFIGURATION,  1},
-    {MFDES_CHANGE_FILE_SETTINGS,  1},
+    {MFDES_CREATE_APPLICATION,     CMD_HEADER_LEN_ALL},
+    {MFDES_DELETE_APPLICATION,     CMD_HEADER_LEN_ALL},
+    {MFDES_CHANGE_KEY,             1},
+    {MFDES_CHANGE_KEY_EV2,         2},
+    {MFDES_CHANGE_CONFIGURATION,   1},
+    {MFDES_CHANGE_FILE_SETTINGS,   1},
+    {MFDES_CREATE_TRANS_MAC_FILE, 17},
 };
 
 static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {

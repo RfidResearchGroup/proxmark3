@@ -1049,12 +1049,30 @@ int DesfireGetFileISOIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen
 int DesfireGetFileSettings(DesfireContext *dctx, uint8_t fileid, uint8_t *resp, size_t *resplen) {
     return DesfireCommand(dctx, MFDES_GET_FILE_SETTINGS, &fileid, 1, resp, resplen, -1);
 }
-int DesfireCreateFile(DesfireContext *dctx, uint8_t *fdata, size_t fdatalen) {
-    return DesfireCommandTxData(dctx, MFDES_CREATE_STD_DATA_FILE, fdata, fdatalen);
+
+int DesfireCreateFile(DesfireContext *dctx, uint8_t ftype, uint8_t *fdata, size_t fdatalen) {
+    const DesfireCreateFileCommandsS *rcmd = GetDesfireFileCmdRec(ftype);
+    if (rcmd == NULL)
+        return -10;
+    if (fdatalen != rcmd->len || fdatalen != (rcmd->len + (rcmd->mayHaveISOfid) ? 2 : 0))
+        return -20;
+
+    return DesfireCommandTxData(dctx, rcmd->cmd, fdata, fdatalen);
 }
 
 int DesfireDeleteFile(DesfireContext *dctx, uint8_t fid) {
     return DesfireCommandTxData(dctx, MFDES_DELETE_FILE, &fid, 1);
+}
+
+int DesfireCommitTrqansaction(DesfireContext *dctx, bool enable_options, uint8_t options) {
+    if (enable_options)
+        return DesfireCommandTxData(dctx, MFDES_COMMIT_TRANSACTION, &options, 1);
+    else
+        return DesfireCommandNoData(dctx, MFDES_COMMIT_TRANSACTION);
+}
+
+int DesfireAbortTrqansaction(DesfireContext *dctx) {
+    return DesfireCommandNoData(dctx, MFDES_ABORT_TRANSACTION);
 }
 
 uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType) {
@@ -1148,18 +1166,27 @@ void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool 
 static const char *DesfireUnknownStr = "unknown";
 static const char *DesfireDisabledStr = "disabled";
 static const char *DesfireFreeStr = "free";
-static const char *DesfireFileTypes[] = {
-    "Standard data",
-    "Backup data",
-    "Value",
-    "Linear Record",
-    "Cyclic Record",
-    "Transaction MAC",
+static const DesfireCreateFileCommandsS DesfireFileCommands[] = {
+    {0x00, "Standard data",   MFDES_CREATE_STD_DATA_FILE,       6, true},
+    {0x01, "Backup data",     MFDES_CREATE_BACKUP_DATA_FILE,    6, true},
+    {0x02, "Value",           MFDES_CREATE_VALUE_FILE,         16, false},
+    {0x03, "Linear Record",   MFDES_CREATE_LINEAR_RECORD_FILE,  9, true},
+    {0x04, "Cyclic Record",   MFDES_CREATE_CYCLIC_RECORD_FILE,  9, true},
+    {0x05, "Transaction MAC", MFDES_CREATE_TRANS_MAC_FILE,     22, false},
 };
 
+const DesfireCreateFileCommandsS *GetDesfireFileCmdRec(uint8_t type) {
+    for (int i = 0; i < ARRAYLEN(DesfireFileCommands); i++)
+        if (DesfireFileCommands[i].id == type)
+            return &DesfireFileCommands[i];
+
+    return NULL;
+}
+
 static const char *GetDesfireFileType(uint8_t type) {
-    if (type < ARRAYLEN(DesfireFileTypes))
-        return DesfireFileTypes[type];
+    const DesfireCreateFileCommandsS *res = GetDesfireFileCmdRec(type);
+    if (res != NULL)
+        return res->text;
     else
         return DesfireUnknownStr;
 }
