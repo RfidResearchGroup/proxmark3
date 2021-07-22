@@ -1060,8 +1060,8 @@ int DesfireCreateFile(DesfireContext *dctx, uint8_t ftype, uint8_t *fdata, size_
     return DesfireCommandTxData(dctx, rcmd->cmd, fdata, fdatalen);
 }
 
-int DesfireDeleteFile(DesfireContext *dctx, uint8_t fid) {
-    return DesfireCommandTxData(dctx, MFDES_DELETE_FILE, &fid, 1);
+int DesfireDeleteFile(DesfireContext *dctx, uint8_t fnum) {
+    return DesfireCommandTxData(dctx, MFDES_DELETE_FILE, &fnum, 1);
 }
 
 int DesfireCommitTrqansaction(DesfireContext *dctx, bool enable_options, uint8_t options) {

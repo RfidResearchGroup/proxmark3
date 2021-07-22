@@ -1941,7 +1941,7 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type,
     return res;
 }
 
-static int handler_desfire_deletefile(uint8_t file_no) {
+/*static int handler_desfire_deletefile(uint8_t file_no) {
     if (file_no > 0x1F)
         return PM3_EINVARG;
 
@@ -1955,7 +1955,7 @@ static int handler_desfire_deletefile(uint8_t file_no) {
         return res;
     }
     return res;
-}
+}*/
 
 static int handler_desfire_clear_record_file(uint8_t file_no) {
     if (file_no > 0x1F)
@@ -2372,60 +2372,6 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     int res = handler_desfire_clear_record_file(fno);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Successfully cleared record file.");
-    } else {
-        PrintAndLogEx(ERR, "Error on deleting file : %d", res);
-    }
-    DropFieldDesfire();
-    return res;
-}
-
-static int CmdHF14ADesDeleteFile(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes deletefile",
-                  "Delete File",
-                  "hf mfdes deletefile -n 01 -> Make sure to select aid or authenticate aid before running this command."
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_int0("n", "fileno", "<dec>", "File Number (0 - 31)"),
-        arg_strx0("a", "aid",   "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
-        arg_param_end
-    };
-
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fno = arg_get_int_def(ctx, 1, 0);
-
-    int aidlength = 3;
-    uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(ctx, 2, aid, &aidlength);
-    swap24(aid);
-    CLIParserFree(ctx);
-
-    if (fno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fno);
-        return PM3_EINVARG;
-    }
-
-    if (aidlength != 3 && aidlength != 0) {
-        PrintAndLogEx(ERR, _RED_("   The given aid must have 3 bytes (big endian)."));
-        return PM3_ESOFT;
-    } else if (aidlength == 0) {
-        if (memcmp(&tag->selected_application, aid, 3) == 0) {
-            PrintAndLogEx(ERR, _RED_("   You need to select an aid first."));
-            return PM3_ESOFT;
-        }
-        memcpy(aid, (uint8_t *)&tag->selected_application, 3);
-    }
-    uint8_t cs = 0;
-    if (selectfile(aid, fno, &cs) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, _RED_("   Error on selecting file."));
-        return PM3_ESOFT;
-    }
-
-    int res = handler_desfire_deletefile(fno);
-    if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Successfully deleted file..");
     } else {
         PrintAndLogEx(ERR, "Error on deleting file : %d", res);
     }
@@ -6359,6 +6305,91 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
     DropField();
     return PM3_SUCCESS;
 }
+
+//{"createfile",       CmdHF14ADesCreateFile,       IfPm3Iso14443a,  "Create Standard/Backup File"},
+
+static int CmdHF14ADesDeleteFile(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes deletefile",
+                  "Delete file from application. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
+                  "hf mfdes deletefile --aid 123456 --fid 01 -> delete file for: app=123456, file=01 with defaults from `default` command");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "fid",     "<file id hex>", "File ID (1 hex byte)"),
+        arg_lit0(NULL, "no-auth", "execute without authentication"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool noauth = arg_get_lit(ctx, 13);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMEncrypted, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+    
+    uint32_t fnum = 1;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fnum, 1, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "File ID must have 1 byte length");
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    if (fnum > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fnum);
+        return PM3_EINVARG;
+    }
+
+    if (noauth) {
+        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            DropField();
+            return res;
+        }
+    } else {
+        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    }
+
+    res = DesfireDeleteFile(&dctx, fnum);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire DeleteFile command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(SUCCESS, "File %02x in the app %06x deleted " _GREEN_("successfully"), fnum, appid);
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
+
 
 static int CmdHF14ADesTest(const char *Cmd) {
     DesfireTest(true);
