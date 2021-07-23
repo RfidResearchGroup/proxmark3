@@ -5970,7 +5970,7 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    if (buflen >= 3) {
+    if (buflen > 0) {
         PrintAndLogEx(INFO, "---- " _CYAN_("File ID list") " ----");
         for (int i = 0; i < buflen; i++)
             PrintAndLogEx(INFO, "File ID: %02x", buf[i]);
@@ -6048,7 +6048,7 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    if (buflen >= 3) {
+    if (buflen > 1) {
         PrintAndLogEx(INFO, "---- " _CYAN_("File ISO ID list") " ----");
         for (int i = 0; i < buflen; i += 2)
             PrintAndLogEx(INFO, "File ID: %02x%02x", buf[i], buf[i + 1]);
@@ -6236,9 +6236,8 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
         int ch_mode = 0x0e;
         if (CLIGetOptionList(arg_get_str(ctx, 18), DesfireFileAccessModeOpts, &ch_mode))
             return PM3_ESOFT;
-        
-        settings[1] = ((rw_mode & 0x0f) << 4) | (ch_mode & 0x0f);
-        settings[2] = ((r_mode & 0x0f) << 4) | (w_mode & 0x0f);
+
+        DesfireEncodeFileAcessMode(&settings[1], r_mode, w_mode, rw_mode, ch_mode) ;
     }    
 
     SetAPDULogging(APDULogging);

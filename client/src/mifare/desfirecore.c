@@ -1239,11 +1239,36 @@ const char *GetDesfireAccessRightStr(uint8_t right) {
     return DesfireUnknownStr;
 }
 
+void DesfireEncodeFileAcessMode(uint8_t *mode, uint8_t r, uint8_t w, uint8_t rw, uint8_t ch) {
+    mode[0] = (ch & 0x0f) | ((rw << 4) & 0xf0);
+    mode[1] = (w & 0x0f) | ((r << 4) & 0xf0);
+}
+
+void DesfireDecodeFileAcessMode(uint8_t *mode, uint8_t *r, uint8_t *w, uint8_t *rw, uint8_t *ch) {
+    // read
+    if (r)
+        *r = (mode[1] >> 4) & 0x0f; // hi 2b
+    // write
+    if (w)
+        *w = mode[1] & 0x0f;
+    // read/write
+    if (rw)
+        *rw = (mode[0] >> 4) & 0x0f; // low 2b
+    // change
+    if (ch)
+        *ch = mode[0] & 0x0f;
+}
+
 void DesfirePrintAccessRight(uint8_t *data) {
-    PrintAndLogEx(SUCCESS, "read     : %s", GetDesfireAccessRightStr((data[1] >> 4) & 0x0f)); // hi 2b
-    PrintAndLogEx(SUCCESS, "write    : %s", GetDesfireAccessRightStr(data[1] & 0x0f));
-    PrintAndLogEx(SUCCESS, "readwrite: %s", GetDesfireAccessRightStr((data[0] >> 4) & 0x0f)); // low 2b
-    PrintAndLogEx(SUCCESS, "change   : %s", GetDesfireAccessRightStr(data[0] & 0x0f));
+    uint8_t r = 0;
+    uint8_t w = 0;
+    uint8_t rw = 0;
+    uint8_t ch = 0;
+    DesfireDecodeFileAcessMode(data, &r, &w, &rw, &ch);
+    PrintAndLogEx(SUCCESS, "read     : %s", GetDesfireAccessRightStr(r)); 
+    PrintAndLogEx(SUCCESS, "write    : %s", GetDesfireAccessRightStr(w));
+    PrintAndLogEx(SUCCESS, "readwrite: %s", GetDesfireAccessRightStr(rw)); 
+    PrintAndLogEx(SUCCESS, "change   : %s", GetDesfireAccessRightStr(ch));
 }
 
 void DesfirePrintFileSettings(uint8_t *data, size_t len) {

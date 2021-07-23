@@ -78,6 +78,8 @@ int DesfireChangeFileSettings(DesfireContext *dctx, uint8_t *data, size_t datale
 
 const DesfireCreateFileCommandsS *GetDesfireFileCmdRec(uint8_t type);
 const char *GetDesfireAccessRightStr(uint8_t right);
+void DesfireEncodeFileAcessMode(uint8_t *mode, uint8_t r, uint8_t w, uint8_t rw, uint8_t ch);
+void DesfireDecodeFileAcessMode(uint8_t *mode, uint8_t *r, uint8_t *w, uint8_t *rw, uint8_t *ch);
 void DesfirePrintAccessRight(uint8_t *data);
 void DesfirePrintFileSettings(uint8_t *data, size_t len);
 void DesfirePrintSetFileSettings(uint8_t *data, size_t len);
