@@ -6266,7 +6266,8 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
     DesfireSetCommMode(&dctx, DCMPlain);
     res = DesfireGetFileSettings(&dctx, fileid, buf, &buflen);
     if (res == PM3_SUCCESS && buflen > 5) {
-        uint8_t chright = buf[2] & 0x0f;
+        uint8_t chright = 0;
+        DesfireDecodeFileAcessMode(&buf[2], NULL, NULL, NULL, &chright) ;
         if (verbose)
             PrintAndLogEx(INFO, "Current access right for change file settings: %s", GetDesfireAccessRightStr(chright));
         
