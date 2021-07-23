@@ -1364,6 +1364,65 @@ void DesfirePrintSetFileSettings(uint8_t *data, size_t len) {
     }
 }
 
+void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len) {
+    const DesfireCreateFileCommandsS *ftyperec = GetDesfireFileCmdRec(filetype);
+    if (ftyperec == NULL) {
+        PrintAndLogEx(WARNING, "Unknown file type 0x%02x", filetype);
+        return;
+    }  
+    
+    bool isoidpresent = ftyperec->mayHaveISOfid; // TODO!!!
+    
+    PrintAndLogEx(INFO, "---- " _CYAN_("Create file settings") " ----");
+    PrintAndLogEx(SUCCESS, "File type        : %s", ftyperec->text);
+    PrintAndLogEx(SUCCESS, "File number      : 0x%02x (%d)", data[0], data[0]);
+    size_t xlen = 1;
+    if (isoidpresent) {
+        PrintAndLogEx(SUCCESS, "File ISO number  : 0x%02x%02x", data[xlen], data[xlen + 1]);
+        xlen += 2;
+    }
+        
+    PrintAndLogEx(SUCCESS, "File comm mode   : %s", GetDesfireCommunicationMode(data[xlen] & 0x03));
+    bool addaccess = ((data[xlen] & 0x80) != 0);
+    PrintAndLogEx(SUCCESS, "Additional access: %s", (addaccess) ? "Yes" : "No");
+    xlen++;
+    
+    PrintAndLogEx(SUCCESS, "Access rights    : %02x%02x", data[xlen + 1], data[xlen]);
+    DesfirePrintAccessRight(&data[xlen]);
+    xlen += 2;
+
+    switch (filetype) {
+        case 0x00: 
+        case 0x01: {
+            int filesize = (data[xlen + 2] << 16) + (data[xlen + 1] << 8) + data[xlen];
+            xlen += 3;
+            
+            PrintAndLogEx(INFO, "File size        : %d (0x%X) bytes", filesize, filesize);
+            break;
+        }
+        case 0x02: {
+            int lowerlimit = (data[xlen + 3] << 24) + (data[xlen + 2] << 16) + (data[xlen + 1] << 8) + data[xlen];
+            xlen += 4;
+            int upperlimit = (data[xlen + 3] << 24) + (data[xlen + 2] << 16) + (data[xlen + 1] << 8) + data[xlen];
+            xlen += 4;
+            int limitcredvalue = (data[xlen + 3] << 24) + (data[xlen + 2] << 16) + (data[xlen + 1] << 8) + data[xlen];
+            xlen += 4;
+            uint8_t limited_credit_enabled = data[xlen];
+            xlen++;
+            
+            PrintAndLogEx(INFO, "Lower limit      : %d (0x%X)", lowerlimit, lowerlimit);
+            PrintAndLogEx(INFO, "Upper limit      : %d (0x%X)", upperlimit, upperlimit);
+            PrintAndLogEx(INFO, "Limited credit   : [%d - %s] %d (0x%X)", limited_credit_enabled, (limited_credit_enabled == 1) ? "enabled" : "disabled", limitcredvalue, limitcredvalue);
+
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+}
+
+
 int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey, bool verbose) {
 
     uint8_t okeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
