@@ -5011,6 +5011,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     bool fileidpresent = (res == 1);
     if (res == 2) {
         PrintAndLogEx(ERR, "ISO file ID must have 2 bytes length");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -5022,6 +5023,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     res = arg_get_u32_hexstr_def_nlen(ctx, 15, 0x0f, &ks1, 1, true);
     if (res == 2) {
         PrintAndLogEx(ERR, "Key settings 1 must have 1 byte length");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -5030,12 +5032,15 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     bool ks2present = (res == 1);
     if (res == 2) {
         PrintAndLogEx(ERR, "Key settings 2 must have 1 byte length");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     int dstalgo = T_DES;
-    if (CLIGetOptionList(arg_get_str(ctx, 17), DesfireAlgoOpts, &dstalgo))
+    if (CLIGetOptionList(arg_get_str(ctx, 17), DesfireAlgoOpts, &dstalgo)) {
+        CLIParserFree(ctx);
         return PM3_ESOFT;
+    }
 
     int keycount = arg_get_int_def(ctx, 18, 0x0e);
 
@@ -6229,6 +6234,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         arg_str0(NULL, "chrights","<key0/../key13/free/deny>", "Change file settings access mode: the specified key, free, deny"),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_str0(NULL, "size", "<hex>", "File size (3 hex bytes, big endian)"),
+        arg_lit0(NULL, "backup", "Create backupfile instead of standard file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -6236,6 +6242,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 22);
+    bool backup = arg_get_lit(ctx, 24);
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
@@ -6268,7 +6275,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t filetype = 0x00; // standard data file
+    uint8_t filetype = (backup) ? 0x01 : 0x00; // backup / standard data file
     uint8_t data[250] = {0};
     data[0] = fileid;
     size_t datalen = 1;
@@ -6281,7 +6288,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
 
     uint32_t rawftype = 0x00;
     res = arg_get_u32_hexstr_def_nlen(ctx, 14, 0x00, &rawftype, 1, true);
-    bool useraw = (res != 0);
+    bool useraw = (res == 1);
     if (res == 2) {
         PrintAndLogEx(ERR, "Raw file type must have 1 byte length");
         CLIParserFree(ctx);
@@ -6326,14 +6333,14 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         // file rights
         uint32_t frights = 0;
         res = arg_get_u32_hexstr_def_nlen(ctx, 17, 0xeeee, &frights, 2, true);
-        bool userawfrights = (res != 0);
+        bool userawfrights = (res == 1);
         if (res == 2) {
             PrintAndLogEx(ERR, "File rights must have 2 bytes length");
             CLIParserFree(ctx);
             return PM3_EINVARG;
         }
-        settings[1] = (frights >> 8) & 0xff;
-        settings[2] = frights & 0xff;
+        settings[1] = frights & 0xff;
+        settings[2] = (frights >> 8) & 0xff;
 
         if (userawfrights == false) {
             int r_mode = 0x0e;
@@ -6363,7 +6370,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
 
         // file size
         uint32_t filesize = 0;
-        res = arg_get_u32_hexstr_def_nlen(ctx, 22, 0, &filesize, 3, true);
+        res = arg_get_u32_hexstr_def_nlen(ctx, 23, 0, &filesize, 3, true);
         if (res == 2) {
             PrintAndLogEx(ERR, "File size must have 3 bytes length");
             CLIParserFree(ctx);
