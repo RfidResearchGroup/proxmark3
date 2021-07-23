@@ -1050,12 +1050,12 @@ int DesfireGetFileSettings(DesfireContext *dctx, uint8_t fileid, uint8_t *resp, 
     return DesfireCommand(dctx, MFDES_GET_FILE_SETTINGS, &fileid, 1, resp, resplen, -1);
 }
 
-int DesfireCreateFile(DesfireContext *dctx, uint8_t ftype, uint8_t *fdata, size_t fdatalen) {
+int DesfireCreateFile(DesfireContext *dctx, uint8_t ftype, uint8_t *fdata, size_t fdatalen, bool checklen) {
     const DesfireCreateFileCommandsS *rcmd = GetDesfireFileCmdRec(ftype);
     if (rcmd == NULL)
-        return -10;
-    if (fdatalen != rcmd->len || fdatalen != (rcmd->len + (rcmd->mayHaveISOfid) ? 2 : 0))
-        return -20;
+        return -100;
+    if (checklen && fdatalen != (rcmd->len + 1) && fdatalen != (rcmd->len + 1 + (rcmd->mayHaveISOfid ? 2 : 0)))
+        return -110;
 
     return DesfireCommandTxData(dctx, rcmd->cmd, fdata, fdatalen);
 }
