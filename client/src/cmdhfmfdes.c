@@ -6216,7 +6216,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     if (useraw && sdatalen > 0) {
         filetype = rawftype;
         memcpy(&data[1], sdata, sdatalen);
-        datalen += sdatalen;
+        datalen = 1 + sdatalen;
     } else {
         useraw = false;
     }
@@ -6394,21 +6394,17 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     
     if (verbose)
         PrintAndLogEx(INFO, "App: %06x. File num: 0x%02x type: 0x%02x data[%d]: %s", appid, data[0], filetype, datalen, sprint_hex(data, datalen));
+    DesfirePrintCreateFileSettings(filetype, data, datalen);
 
 
+    res = DesfireCreateFile(&dctx, filetype, data, datalen, true); 
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire CreateFile command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
+    PrintAndLogEx(SUCCESS, "Value file %02x in the app %06x created " _GREEN_("successfully"), data[0], appid);
 
     DropField();
     return PM3_SUCCESS;

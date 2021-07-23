@@ -1371,7 +1371,7 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
         return;
     }  
     
-    bool isoidpresent = ftyperec->mayHaveISOfid; // TODO!!!
+    bool isoidpresent = ftyperec->mayHaveISOfid && (len == ftyperec->len + 2 + 1);
     
     PrintAndLogEx(INFO, "---- " _CYAN_("Create file settings") " ----");
     PrintAndLogEx(SUCCESS, "File type        : %s", ftyperec->text);
@@ -1380,8 +1380,10 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
     if (isoidpresent) {
         PrintAndLogEx(SUCCESS, "File ISO number  : 0x%02x%02x", data[xlen], data[xlen + 1]);
         xlen += 2;
+    } else {
+        PrintAndLogEx(SUCCESS, "File ISO number  : n/a");
     }
-        
+    
     PrintAndLogEx(SUCCESS, "File comm mode   : %s", GetDesfireCommunicationMode(data[xlen] & 0x03));
     bool addaccess = ((data[xlen] & 0x80) != 0);
     PrintAndLogEx(SUCCESS, "Additional access: %s", (addaccess) ? "Yes" : "No");
