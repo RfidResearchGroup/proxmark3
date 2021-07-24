@@ -167,6 +167,56 @@ static int print_authentication2(void) {
     return PM3_SUCCESS;
 }
 
+static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
+    // source: mainly https://www.sony.net/Products/felica/business/tech-support/list.html
+    switch (ic_type) {
+        // FeliCa Standard Products:
+        case 0x46:
+            return "FeliCa Standard RC-SA21/2";
+        case 0x45:
+            return "FeliCa Standard RC-SA20/2";
+        case 0x44:
+            return "FeliCa Standard RC-SA20/1";
+        case 0x35:
+            return "FeliCa Standard RC-SA01/2";
+        case 0x32:
+            return "FeliCa Standard RC-SA00/1";
+        case 0x20:
+            return "FeliCa Standard RC-S962";
+        case 0x0D:
+            return "FeliCa Standard RC-S960";
+        case 0x0C:
+            return "FeliCa Standard RC-S954";
+        case 0x09:
+            return "FeliCa Standard RC-S953";
+        case 0x08:
+            return "FeliCa Standard RC-S952";
+        case 0x01:
+            return "FeliCa Standard RC-S915";
+        // FeliCa Lite Products:
+        case 0xF1:
+            return "FeliCa Lite-S RC-S966";
+        case 0xF0:
+            return "FeliCa Lite RC-S965";
+        // FeliCa Link Products:
+        case 0xF2:
+            return "FeliCa Link RC-S967 (Lite-S Mode or Lite-S HT Mode)";
+        case 0xE1:
+            return "FeliCa Link RC-S967 (Plug Mode)";
+        case 0xFF:
+            if (rom_type == 0xFF) { // from FeliCa Link User's Manual
+                return "FeliCa Link RC-S967 (NFC-DEP Mode)";
+            }
+            break;
+        // NFC Dynamic Tag (FeliCa Plug) Products:
+        case 0xE0:
+            return "NFC Dynamic Tag (FeliCa Plug) RC-S926";
+        default:
+            break;
+    }
+    return "Unknown IC Type";
+}
+
 /**
  * Wait for response from pm3 or timeout.
  * Checks if receveid bytes have a valid CRC.
@@ -318,7 +368,7 @@ static int info_felica(bool verbose) {
             PrintAndLogEx(INFO, "NFCID2......... %s", sprint_hex_inrow(card.uid, sizeof(card.uid)));
             PrintAndLogEx(INFO, "Parameter");
             PrintAndLogEx(INFO, "PAD............ " _YELLOW_("%s"), sprint_hex_inrow(card.PMm, sizeof(card.PMm)));
-            PrintAndLogEx(INFO, "IC code........ %s", sprint_hex_inrow(card.iccode, sizeof(card.iccode)));
+            PrintAndLogEx(INFO, "IC code........ %s ( " _YELLOW_("%s") " )", sprint_hex_inrow(card.iccode, sizeof(card.iccode)), felica_model_name(card.iccode[0], card.iccode[1]));
             PrintAndLogEx(INFO, "MRT............ %s", sprint_hex_inrow(card.mrt, sizeof(card.mrt)));
             PrintAndLogEx(INFO, "Service code... " _YELLOW_("%s"), sprint_hex(card.servicecode, sizeof(card.servicecode)));
             PrintAndLogEx(NORMAL, "");
