@@ -4372,17 +4372,18 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "filename of dump"),
+        arg_str0("f", "file", "<fn>", "filename of dump"),
         arg_lit0(NULL, "emu", "from emulator memory"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int fnlen = 0;
-    char filename[FILE_PATH_SIZE];
+    char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     bool fill_from_emulator = arg_get_lit(ctx, 2);
+
     CLIParserFree(ctx);
 
     if (fill_from_emulator) {

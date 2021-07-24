@@ -142,6 +142,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     // fast push mode
     conn.block_after_ACK = true;
     for (int i = 0; i < ARRAYLEN(apdu_lengths); i++) {
+
         // transfer the APDU in several parts if necessary
         for (int j = 0; j * sizeof(data) < apdu_lengths[i]; j++) {
             // amount of data in this packet
@@ -161,7 +162,10 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
             // arg0: APDU number
             // arg1: offset into the APDU
             SendCommandOLD(CMD_HF_EPA_REPLAY, i + 1, j * sizeof(data), packet_length, data, packet_length);
-            WaitForResponse(CMD_ACK, &resp);
+            if (WaitForResponseTimeout(CMD_HF_EPA_REPLAY, &resp, 2500) == false) {
+                PrintAndLogEx(WARNING, "command time out");
+                return PM3_ETIMEOUT;
+            }
             if (resp.oldarg[0] != 0) {
                 PrintAndLogEx(WARNING, "Transfer of APDU #%d Part %d failed!", i, j);
                 return PM3_ESOFT;
