@@ -9,16 +9,16 @@
  * 
  * To retrieve log file from flash:
  *
- * 1. mem spiffs dump -s lf_hidlfcollect.log -d lf_hidlfcollect.log
+ * 1. mem spiffs dump -s lf_hid_fcbrute.log -d lf_hid_fcbrute.log
  *    Copies log file from flash to your client.
  *
  * 2. exit the Proxmark3 client
  *
- * 3. more lf_hidcollect.log
+ * 3. more lf_hid_fcbrute.log
  *
  * To delete the log file from flash:
  *
- * 1. mem spiffs remove -f lf_hidlfcollect.log
+ * 1. mem spiffs remove -f lf_hid_fcbrute.log
  */
 
 #include "standalone.h"
@@ -41,7 +41,7 @@
 // In some systems, card number 1 is valid, so this may be a good starting point.
 #define CARD_NUMBER 1
 
-#define LF_HIDCOLLECT_LOGFILE "lf_hidlfcollect.log"
+#define LF_HIDCOLLECT_LOGFILE "lf_hid_fcbrute.log"
 
 static void append(uint8_t *entry, size_t entry_len) {
 	LED_B_ON();
@@ -52,7 +52,7 @@ static void append(uint8_t *entry, size_t entry_len) {
 }
 
 void ModInfo(void) {
-	DbpString(_YELLOW_("  LF HID FC Bruteforce"));
+	DbpString(_YELLOW_("  LF - HID facility code bruteforce - (ss23)"));
 }
 
 void RunMod(void) {
@@ -71,7 +71,7 @@ void RunMod(void) {
 	// Buffer for writing to log
 	uint8_t entry[81];
 	memset(entry, 0, sizeof(entry));
-	sprintf((char *)entry, "%s\n", "HID FC Brute");
+	sprintf((char *)entry, "%s\n", "HID FC brute start");
 
 	// Create the log file
 	if (exists_in_spiffs(LF_HIDCOLLECT_LOGFILE)) {
