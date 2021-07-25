@@ -385,7 +385,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     } else {
         PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
         // suggest the opposite keytype than what was used.
-        PrintAndLogEx(HINT, "Maybe access rights? Try specify keytype " _YELLOW_("%c") " instead", (keytype == MF_KEY_A) ? 'B' : 'A');
+        PrintAndLogEx(HINT, "Maybe access rights? Try specify keytype `" _YELLOW_("hf mf wrbl -%c ...") "` instead", (keytype == MF_KEY_A) ? 'b' : 'a');
     }
     return PM3_SUCCESS;
 }
