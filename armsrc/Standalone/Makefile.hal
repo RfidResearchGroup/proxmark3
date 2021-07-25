@@ -26,6 +26,9 @@ define KNOWN_STANDALONE_DEFINITIONS
 | LF_HIDBRUTE     | HID corporate 1000 bruteforce          |
 |                 | - Federico dotta & Maurizio Agazzini   |
 +----------------------------------------------------------+
+| LF_HIDFCBRUTE   | HID Facility Code bruteforce           |
+| (RDV4 only)     |                                        |
++----------------------------------------------------------+
 | LF_ICEHID       | LF HID collector to flashmem           |
 | (RDV4 only)     |                                        |
 +----------------------------------------------------------+
@@ -86,7 +89,7 @@ STANDALONE_MODES := LF_SKELETON LF_EM4100EMUL LF_EM4100RSWB LF_EM4100RWC LF_HIDB
 STANDALONE_MODES += HF_14ASNIFF HF_AVEFUL HF_BOG HF_COLIN HF_CRAFTBYTE HF_ICECLASS HF_LEGIC HF_MATTYRUN HF_MSDSAL HF_TCPRST HF_TMUDFORD HF_YOUNG HF_REBLAY
 STANDALONE_MODES_REQ_BT := HF_REBLAY
 STANDALONE_MODES_REQ_SMARTCARD :=
-STANDALONE_MODES_REQ_FLASH := LF_ICEHID LF_NEXID LF_THAREXDE HF_14ASNIFF HF_BOG HF_COLIN HF_ICECLASS
+STANDALONE_MODES_REQ_FLASH := LF_HIDFCBRUTE LF_ICEHID LF_NEXID LF_THAREXDE HF_14ASNIFF HF_BOG HF_COLIN HF_ICECLASS
 ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES)),)
     STANDALONE_PLATFORM_DEFS += -DWITH_STANDALONE_$(STANDALONE)
     ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES_REQ_SMARTCARD)),)
