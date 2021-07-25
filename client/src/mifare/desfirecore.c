@@ -19,13 +19,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <util.h>
+#include "commonutil.h"
 #include "aes.h"
 #include "ui.h"
 #include "crc.h"
 #include "crc16.h"        // crc16 ccitt
 #include "crc32.h"
 #include "protocols.h"
-#include "commonutil.h"
 #include "cmdhf14a.h"
 #include "iso7816/apduinfo.h"      // APDU manipulation / errorcodes
 #include "iso7816/iso7816core.h"   // APDU logging

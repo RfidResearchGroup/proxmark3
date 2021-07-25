@@ -503,36 +503,6 @@ void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSiz
     }
 }
 
-uint16_t MemLeToUint2byte(uint8_t *data) {
-    return (data[1] << 8) + data[0];
-}
-
-uint32_t MemLeToUint3byte(uint8_t *data) {
-    return (data[2] << 16) + (data[1] << 8) + data[0];
-}
-
-uint32_t MemLeToUint4byte(uint8_t *data) {
-    return (data[3] << 24) + (data[2] << 16) + (data[1] << 8) + data[0];
-}
-
-void Uint2byteToMemLe(uint8_t *data, uint16_t value) {
-    data[0] = (value >> 8) & 0xff;
-    data[1] = value & 0xff;
-}
-
-void Uint3byteToMemLe(uint8_t *data, uint32_t value) {
-    data[0] = (value >> 16) & 0xff;
-    data[1] = (value >> 8) & 0xff;
-    data[2] = value & 0xff;
-}
-
-void Uint4byteToMemLe(uint8_t *data, uint32_t value) {
-    data[0] = (value >> 24) & 0xff;
-    data[1] = (value >> 16) & 0xff;
-    data[2] = (value >> 8) & 0xff;
-    data[3] = value & 0xff;
-}
-
 //  -------------------------------------------------------------------------
 //  string parameters lib
 //  -------------------------------------------------------------------------

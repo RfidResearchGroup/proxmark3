@@ -129,6 +129,66 @@ uint64_t bytes_to_num(uint8_t *src, size_t len) {
     return num;
 }
 
+uint16_t MemLeToUint2byte(uint8_t *data) {
+    return (data[1] << 8) + data[0];
+}
+
+uint32_t MemLeToUint3byte(uint8_t *data) {
+    return (data[2] << 16) + (data[1] << 8) + data[0];
+}
+
+uint32_t MemLeToUint4byte(uint8_t *data) {
+    return (data[3] << 24) + (data[2] << 16) + (data[1] << 8) + data[0];
+}
+
+uint16_t MemBeToUint2byte(uint8_t *data) {
+    return (data[0] << 8) + data[1];
+}
+
+uint32_t MemBeToUint3byte(uint8_t *data) {
+    return (data[0] << 16) + (data[1] << 8) + data[2];
+}
+
+uint32_t MemBeToUint4byte(uint8_t *data) {
+    return (data[0] << 24) + (data[1] << 16) + (data[2] << 8) + data[3];
+}
+
+void Uint2byteToMemLe(uint8_t *data, uint16_t value) {
+    data[1] = (value >> 8) & 0xff;
+    data[0] = value & 0xff;
+}
+
+void Uint3byteToMemLe(uint8_t *data, uint32_t value) {
+    data[2] = (value >> 16) & 0xff;
+    data[1] = (value >> 8) & 0xff;
+    data[0] = value & 0xff;
+}
+
+void Uint4byteToMemLe(uint8_t *data, uint32_t value) {
+    data[3] = (value >> 24) & 0xff;
+    data[2] = (value >> 16) & 0xff;
+    data[1] = (value >> 8) & 0xff;
+    data[0] = value & 0xff;
+}
+
+void Uint2byteToMemBe(uint8_t *data, uint16_t value) {
+    data[0] = (value >> 8) & 0xff;
+    data[1] = value & 0xff;
+}
+
+void Uint3byteToMemBe(uint8_t *data, uint32_t value) {
+    data[0] = (value >> 16) & 0xff;
+    data[1] = (value >> 8) & 0xff;
+    data[2] = value & 0xff;
+}
+
+void Uint4byteToMemBe(uint8_t *data, uint32_t value) {
+    data[0] = (value >> 24) & 0xff;
+    data[1] = (value >> 16) & 0xff;
+    data[2] = (value >> 8) & 0xff;
+    data[3] = value & 0xff;
+}
+
 // RotateLeft - Ultralight, Desfire
 void rol(uint8_t *data, const size_t len) {
     uint8_t first = data[0];
