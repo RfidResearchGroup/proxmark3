@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added new standalone mode `lf_hidfcbrute` - bruteforce facility code (@ss23)
+ - Changed `hf felica info` - got more ic chip definitions (@ah01)
  - Changed `lf pyramid demod` - relaxed the size check (@iceman1001)
  - Changed `hf emrtd info` to view DG5 picture (@iceman1001)
  - Added `-4041x` option to lf indala clone for the Indala 4041X format (@chunkystew)
