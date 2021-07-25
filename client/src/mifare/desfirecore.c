@@ -1334,7 +1334,7 @@ static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t 
 
 void DesfirePrintFileSettings(uint8_t *data, size_t len) {
     if (len < 6) {
-        PrintAndLogEx(ERR, "Wrong file settings length: %d", len);
+        PrintAndLogEx(ERR, "Wrong file settings length: %zu", len);
         return;
     }
     
