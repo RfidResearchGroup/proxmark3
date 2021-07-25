@@ -1223,9 +1223,6 @@ const char *GetDesfireAccessRightStr(uint8_t right) {
     static char int_access_str[200];
     memset(int_access_str, 0, sizeof(int_access_str));
     
-    if (right > 0x0f)
-        return DesfireUnknownStr;
-    
     if (right <= 0x0d) {
         sprintf(int_access_str, "key 0x%02x", right);
         return int_access_str;
