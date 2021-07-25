@@ -169,6 +169,12 @@ static int print_authentication2(void) {
 
 static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
     // source: mainly https://www.sony.net/Products/felica/business/tech-support/list.html
+
+    if (ic_type >= 0x14 && ic_type <= 0x1F) {
+        return "FeliCa Mobile IC Chip V3.0";
+    }
+
+
     switch (ic_type) {
         // FeliCa Standard Products:
         case 0x46:
@@ -211,6 +217,37 @@ static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
         // NFC Dynamic Tag (FeliCa Plug) Products:
         case 0xE0:
             return "NFC Dynamic Tag (FeliCa Plug) RC-S926";
+
+        // FeliCa Mobile Chip
+        case 0x14:
+        case 0x15:
+        case 0x16:
+        case 0x17:
+        case 0x18:
+        case 0x19:
+        case 0x1A:
+        case 0x1B:
+        case 0x1C:
+        case 0x1D:
+        case 0x1E:
+        case 0x1F:
+            return "Mobile FeliCa IC Chip V3.0";
+        case 0x10:
+        case 0x11:
+        case 0x12:
+        case 0x13:
+            return "Mobile FeliCa IC Chip V2.0";
+        case 0x06:
+        case 0x07:
+            return "Mobile FeliCa IC Chip V1.0";
+
+        // odd findings
+        case 0x00:
+            return "FeliCa Standard RC-S830";
+        case 0x02: 
+            return "FeliCa Standard RC-S919";
+        case  0x0B: 
+            return "FeliCa Suica RC-S???";
         default:
             break;
     }
