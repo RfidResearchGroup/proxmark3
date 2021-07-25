@@ -64,6 +64,14 @@ void bytes_to_bytebits(void *src, size_t srclen, void *dest);
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);
 void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSize, uint8_t *dest);
 
+// LE to/from memory
+uint16_t MemLeToUint2byte(uint8_t *data);
+uint32_t MemLeToUint3byte(uint8_t *data);
+uint32_t MemLeToUint4byte(uint8_t *data);
+void Uint2byteToMemLe(uint8_t *data, uint16_t value);
+void Uint3byteToMemLe(uint8_t *data, uint32_t value);
+void Uint4byteToMemLe(uint8_t *data, uint32_t value);
+
 // parameter helper functions
 int param_getlength(const char *line, int paramnum);
 char param_getchar(const char *line, int paramnum);
