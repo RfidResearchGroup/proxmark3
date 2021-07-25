@@ -1271,6 +1271,70 @@ void DesfirePrintAccessRight(uint8_t *data) {
     PrintAndLogEx(SUCCESS, "change   : %s", GetDesfireAccessRightStr(ch));
 }
 
+static uint32_t MemLeToUint3byte(uint8_t *data) {
+    return (data[2] << 16) + (data[1] << 8) + data[0];
+}
+
+static uint32_t MemLeToUint4byte(uint8_t *data) {
+    return (data[3] << 24) + (data[2] << 16) + (data[1] << 8) + data[0];
+}
+
+static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t datalen, uint8_t *dynlen) {
+    switch (filetype) {
+        case 0x00: 
+        case 0x01: {
+            int filesize = MemLeToUint3byte(&data[0]);
+            
+            PrintAndLogEx(INFO, "File size        : %d (0x%X) bytes", filesize, filesize);
+
+            *dynlen = 3;
+            break;
+        }
+        case 0x02: {
+            int lowerlimit = MemLeToUint4byte(&data[0]);
+            int upperlimit = MemLeToUint4byte(&data[4]);
+            int limitcredvalue = MemLeToUint4byte(&data[8]);
+            uint8_t limited_credit_enabled = data[12];
+            
+            PrintAndLogEx(INFO, "Lower limit      : %d (0x%X)", lowerlimit, lowerlimit);
+            PrintAndLogEx(INFO, "Upper limit      : %d (0x%X)", upperlimit, upperlimit);
+            PrintAndLogEx(INFO, "Limited credit   : [%d - %s] %d (0x%X)", limited_credit_enabled, (limited_credit_enabled == 1) ? "enabled" : "disabled", limitcredvalue, limitcredvalue);
+
+            *dynlen = 13;
+            break;
+        }
+        case 0x03:
+        case 0x04: {
+            uint32_t recordsize = MemLeToUint3byte(&data[0]);
+            uint32_t maxrecords = MemLeToUint3byte(&data[3]);
+            uint32_t currentrecord = MemLeToUint3byte(&data[6]);
+
+            PrintAndLogEx(INFO, "Record size      : %d (0x%X) bytes", recordsize, recordsize);
+            PrintAndLogEx(INFO, "Max num records  : %d (0x%X)", maxrecords, maxrecords);
+            PrintAndLogEx(INFO, "Curr num records : %d (0x%X)", currentrecord, currentrecord);
+
+            *dynlen = 9;
+            break;
+        }
+        case 0x05: {
+            PrintAndLogEx(INFO, "Key type [0x%02x] : %s", data[0], GetDesfireKeyType(data[0]));
+            *dynlen = 1;
+            
+            if (datalen > 16) {
+                PrintAndLogEx(INFO, "Key              : %s", sprint_hex(&data[1], 16));
+                *dynlen += 16;
+            }
+            
+            PrintAndLogEx(INFO, "Key version      : %d (0x%X)", data[*dynlen], data[*dynlen]);
+            (*dynlen)++;
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+}
+
 void DesfirePrintFileSettings(uint8_t *data, size_t len) {
     if (len < 6) {
         PrintAndLogEx(ERR, "Wrong file settings length: %d", len);
@@ -1286,57 +1350,14 @@ void DesfirePrintFileSettings(uint8_t *data, size_t len) {
         addaccess = ((data[1] & 0x80) != 0);
         PrintAndLogEx(SUCCESS, "Additional access: %s", (addaccess) ? "Yes" : "No");
     }
-    PrintAndLogEx(SUCCESS, "Access rights    : %02x%02x", data[2], data[3]);
+    PrintAndLogEx(SUCCESS, "Access rights    : %02x%02x", data[3], data[2]);
     DesfirePrintAccessRight(&data[2]); //2 bytes
     
     uint8_t reclen = 0;
-    switch (filetype) {
-        case 0x00: 
-        case 0x01: {
-            int filesize = (data[6] << 16) + (data[5] << 8) + data[4];
-            
-            PrintAndLogEx(INFO, "File size        : %d (0x%X) bytes", filesize, filesize);
-
-            reclen = 7;
-            break;
-        }
-        case 0x02: {
-            int lowerlimit = (data[7] << 24) + (data[6] << 16) + (data[5] << 8) + data[4];
-            int upperlimit = (data[11] << 24) + (data[10] << 16) + (data[9] << 8) + data[8];
-            int limitcredvalue = (data[15] << 24) + (data[14] << 16) + (data[13] << 8) + data[12];
-            uint8_t limited_credit_enabled = data[16];
-            
-            PrintAndLogEx(INFO, "Lower limit      : %d (0x%X)", lowerlimit, lowerlimit);
-            PrintAndLogEx(INFO, "Upper limit      : %d (0x%X)", upperlimit, upperlimit);
-            PrintAndLogEx(INFO, "Limited credit   : [%d - %s] %d (0x%X)", limited_credit_enabled, (limited_credit_enabled == 1) ? "enabled" : "disabled", limitcredvalue, limitcredvalue);
-
-            reclen = 17;
-            break;
-        }
-        case 0x03:
-        case 0x04: {
-            uint32_t recordsize = (data[6] << 16) + (data[5] << 8) + data[4];
-            uint32_t maxrecords = (data[9] << 16) + (data[8] << 8) + data[7];
-            uint32_t currentrecord = (data[12] << 16) + (data[11] << 8) + data[10];
-
-            PrintAndLogEx(INFO, "Record size      : %d (0x%X) bytes", recordsize, recordsize);
-            PrintAndLogEx(INFO, "Max num records  : %d (0x%X)", maxrecords, maxrecords);
-            PrintAndLogEx(INFO, "Curr num records : %d (0x%X)", currentrecord, currentrecord);
-
-            reclen = 13;
-            break;
-        }
-        case 0x05: {
-            PrintAndLogEx(INFO, "Key type [0x%02x] : %s", data[4], GetDesfireKeyType(data[4]));
-            PrintAndLogEx(INFO, "Key version      : %d (0x%X)", data[5], data[5]);
-            break;
-        }
-        default: {
-            break;
-        }
-    }
+    DesfirePrintFileSettDynPart(filetype, &data[4], len - 4, &reclen);
+    reclen += 4;
     
-    if (addaccess && reclen > 0 && len > reclen && len == reclen + data[reclen] * 2) {
+    if (addaccess && filetype != 0x05 && reclen > 0 && len > reclen && len == reclen + data[reclen] * 2) {
         PrintAndLogEx(SUCCESS, "Add access records: %d", data[reclen]);
         for (int i = 0; i < data[reclen] * 2; i += 2) {
             PrintAndLogEx(SUCCESS, "Add access rights : [%d] %02x%02x", i / 2, data[reclen + 1 + i], data[reclen + 2 + i]);
@@ -1352,7 +1373,7 @@ void DesfirePrintSetFileSettings(uint8_t *data, size_t len) {
     bool addaccess = ((data[0] & 0x80) != 0);
     PrintAndLogEx(SUCCESS, "Additional access: %s", (addaccess) ? "Yes" : "No");
 
-    PrintAndLogEx(SUCCESS, "Access rights    : %02x%02x", data[1], data[2]);
+    PrintAndLogEx(SUCCESS, "Access rights    : %02x%02x", data[2], data[1]);
     DesfirePrintAccessRight(&data[1]); //2 bytes
     
     if (addaccess && len > 3 && len == 4 + data[3] * 2) {
@@ -1393,35 +1414,9 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
     DesfirePrintAccessRight(&data[xlen]);
     xlen += 2;
 
-    switch (filetype) {
-        case 0x00: 
-        case 0x01: {
-            int filesize = (data[xlen + 2] << 16) + (data[xlen + 1] << 8) + data[xlen];
-            xlen += 3;
-            
-            PrintAndLogEx(INFO, "File size        : %d (0x%X) bytes", filesize, filesize);
-            break;
-        }
-        case 0x02: {
-            int lowerlimit = (data[xlen + 3] << 24) + (data[xlen + 2] << 16) + (data[xlen + 1] << 8) + data[xlen];
-            xlen += 4;
-            int upperlimit = (data[xlen + 3] << 24) + (data[xlen + 2] << 16) + (data[xlen + 1] << 8) + data[xlen];
-            xlen += 4;
-            int limitcredvalue = (data[xlen + 3] << 24) + (data[xlen + 2] << 16) + (data[xlen + 1] << 8) + data[xlen];
-            xlen += 4;
-            uint8_t limited_credit_enabled = data[xlen];
-            xlen++;
-            
-            PrintAndLogEx(INFO, "Lower limit      : %d (0x%X)", lowerlimit, lowerlimit);
-            PrintAndLogEx(INFO, "Upper limit      : %d (0x%X)", upperlimit, upperlimit);
-            PrintAndLogEx(INFO, "Limited credit   : [%d - %s] %d (0x%X)", limited_credit_enabled, (limited_credit_enabled == 1) ? "enabled" : "disabled", limitcredvalue, limitcredvalue);
-
-            break;
-        }
-        default: {
-            break;
-        }
-    }
+    uint8_t reclen = 0;
+    DesfirePrintFileSettDynPart(filetype, &data[xlen], len - xlen, &reclen);
+    reclen += xlen;
 }
 
 
