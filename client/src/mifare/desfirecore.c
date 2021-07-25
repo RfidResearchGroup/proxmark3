@@ -1268,14 +1268,6 @@ void DesfirePrintAccessRight(uint8_t *data) {
     PrintAndLogEx(SUCCESS, "change   : %s", GetDesfireAccessRightStr(ch));
 }
 
-static uint32_t MemLeToUint3byte(uint8_t *data) {
-    return (data[2] << 16) + (data[1] << 8) + data[0];
-}
-
-static uint32_t MemLeToUint4byte(uint8_t *data) {
-    return (data[3] << 24) + (data[2] << 16) + (data[1] << 8) + data[0];
-}
-
 static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t datalen, uint8_t *dynlen) {
     switch (filetype) {
         case 0x00: 
