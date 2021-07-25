@@ -4933,7 +4933,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         PrintAndLogEx(INFO, "ISO file ID  %s", (data[4] & 0x20) ? "enabled" : "disabled");
         if ((data[4] & 0x20)) {
             PrintAndLogEx(INFO, "FID           0x%02x%02x", data[6], data[5]);
-            PrintAndLogEx(INFO, "DF Name[%02d]  %s\n", strnlen((char *)&data[7], 16), (char *)&data[7]);
+            PrintAndLogEx(INFO, "DF Name[%02zu]  %s\n", strnlen((char *)&data[7], 16), (char *)&data[7]);
         }
         PrintKeySettings(data[3], data[4], true, true);
         PrintAndLogEx(INFO, "---------------------------");
