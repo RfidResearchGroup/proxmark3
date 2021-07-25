@@ -6236,9 +6236,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
             return PM3_EINVARG;
         }
         
-        data[datalen] = (filesize >> 16) & 0xff;
-        data[datalen + 1] = (filesize >> 8) & 0xff;
-        data[datalen + 2] = filesize & 0xff;
+        Uint3byteToMemLe(&data[datalen], filesize);     
         datalen += 3;        
     }    
 
@@ -6320,7 +6318,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    bool noauth = arg_get_lit(ctx, 22);
+    bool noauth = arg_get_lit(ctx, 20);
     
     uint8_t filetype = 0x02; // value file
 
@@ -6348,34 +6346,50 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     uint8_t data[250] = {0};
     size_t datalen = 0;
 
-    res = DesfireCreateFileParameters(ctx, 12, 13, 16, 17, 18, 19, 20, 21, data, &datalen);
+    res = DesfireCreateFileParameters(ctx, 12, 13, 14, 15, 16, 17, 18, 19, data, &datalen);
     if (res) {
         CLIParserFree(ctx);
         return res;
     }
 
-    uint32_t filesize = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 23, 0, &filesize, 3, true);
+    uint32_t lowerlimit = 0;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 21, 0, &lowerlimit, 4, true);
     if (res == 2) {
-        PrintAndLogEx(ERR, "File size must have 3 bytes length");
+        PrintAndLogEx(ERR, "Lower limit value must have 4 bytes length");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    if (filesize == 0) {
-        PrintAndLogEx(ERR, "File size must be greater than 0");
+    uint32_t upperlimit = 0;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 22, 0, &upperlimit, 4, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Upper limit value must have 4 bytes length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t value = 0;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 23, 0, &value, 4, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Lower limit value must have 4 bytes length");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
     
-    data[datalen] = (filesize >> 16) & 0xff;
-    data[datalen + 1] = (filesize >> 8) & 0xff;
-    data[datalen + 2] = filesize & 0xff;
-    datalen += 3;        
-
+    uint32_t lcredit = arg_get_int_def(ctx, 24, 0);
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
+    
+    
+    Uint4byteToMemLe(&data[datalen], lowerlimit);
+    datalen += 4;
+    Uint4byteToMemLe(&data[datalen], upperlimit);
+    datalen += 4;
+    Uint4byteToMemLe(&data[datalen], value);
+    datalen += 4;
+    data[datalen] = lcredit;
+    datalen++;
 
     if (noauth) {
         res = DesfireSelectAIDHex(&dctx, appid, false, 0);
