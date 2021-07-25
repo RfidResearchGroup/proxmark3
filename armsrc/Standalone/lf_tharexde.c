@@ -70,7 +70,6 @@
 #define LF_EM4X50_LOGFILE_COLLECT       "lf_em4x50_collect.log"
 #define MAX_NO_PWDS_TO_SAVE             50
 
-uint32_t gPassword;
 
 static void LoadDataInstructions(const char *inputfile) {
     Dbprintf("");
