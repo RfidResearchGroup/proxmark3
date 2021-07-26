@@ -6504,6 +6504,122 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+//    {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "[new]Operations with value file (get/credit/limited credit/debit/clear)"},
+static int CmdHF14ADesValueOperations(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes value",
+                  "Get File Settings from file from application. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
+                  "hf mfdes value --aid 123456 --fid 01 --op credit -d 00000001 -> change file settings app=123456, file=01 with defaults from `default` command\n"
+                  "hf mfdes value -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -rawdata 00EEEE -> execute with default factory setup\n"
+                  "hf mfdes value --aid 123456 --fid 01 --rawdata 810000021f112f22 -> change file settings with additional rights for keys 1 and 2");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "fid",     "<file id hex>", "File ID (1 hex byte)"),
+        arg_str0("o",  "op",      "<get/credit/limcredit/debit/clear>", "Operation: get(default)/credit/limcredit(limited credit)/debit/clear. Operation clear: get-getopt-debit to min value"),
+        arg_str0("d",  "data",    "<value HEX>", "Value for operation (HEX 4 bytes)"),
+        arg_lit0(NULL, "no-auth", "execute without authentication"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool noauth = arg_get_lit(ctx, 15);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+    
+    uint32_t fileid = 1;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fileid, 1, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "File ID must have 1 byte length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    
+    int op = MFDES_GET_VALUE;
+    if (CLIGetOptionList(arg_get_str(ctx, 13), DesfireValueFileOperOpts, &op)) {
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
+    }
+
+    uint32_t value = 0;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 14, 0, &value, 4, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Value must have 4 byte length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    if (noauth) {
+        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            DropField();
+            return res;
+        }
+    } else {
+        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    }
+
+    if (verbose)
+        PrintAndLogEx(INFO, "app %06x file %02x operation: %s value: 0x%08x", appid, fileid, CLIGetOptionListStr(DesfireValueFileOperOpts, op), value);
+
+    if (op != 0xff) {
+        res = DesfireValueFileOperations(&dctx, fileid, op, &value);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire ValueFileOperations (0x%02x) command " _RED_("error") ". Result: %d", op, res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (op == MFDES_GET_VALUE)
+            PrintAndLogEx(SUCCESS, "Value: " _GREEN_("%d (0x%08x)"), value, value);
+        else
+            PrintAndLogEx(SUCCESS, "Value changed " _GREEN_("successfully"));
+    } else {
+        res = DesfireValueFileOperations(&dctx, fileid, MFDES_GET_VALUE, &value);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire GetValue command " _RED_("error") ". Result: %d", op, res);
+            DropField();
+            return PM3_ESOFT;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "current value: 0x%08x", value);
+        
+        
+        PrintAndLogEx(SUCCESS, "Value cleared " _GREEN_("successfully"));
+    }
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesTest(const char *Cmd) {
     DesfireTest(true);
     return PM3_SUCCESS;
@@ -6541,14 +6657,15 @@ static command_t CommandTable[] = {
     {"getfileisoids",    CmdHF14ADesGetFileISOIDs,    IfPm3Iso14443a,  "[new]Get File ISO IDs list"},
     {"getfilesettings",  CmdHF14ADesGetFileSettings,  IfPm3Iso14443a,  "[new]Get file settings"},
     {"chfilesettings",   CmdHF14ADesChFileSettings,   IfPm3Iso14443a,  "[new]Change file settings"},
-    {"changevalue",      CmdHF14ADesChangeValue,      IfPm3Iso14443a,  "Write value of a value file (credit/debit/clear)"},
     {"clearfile",        CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
     {"createfile",       CmdHF14ADesCreateFile,       IfPm3Iso14443a,  "[new]Create Standard/Backup File"},
     {"createvaluefile",  CmdHF14ADesCreateValueFile,  IfPm3Iso14443a,  "[new]Create Value File"},
     {"createrecordfile", CmdHF14ADesCreateRecordFile, IfPm3Iso14443a,  "Create Linear/Cyclic Record File"},
     {"deletefile",       CmdHF14ADesDeleteFile,       IfPm3Iso14443a,  "[new]Delete File"},
     {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
+    {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "[new]Operations with value file (get/credit/limited credit/debit/clear)"},
     {"getvalue",         CmdHF14ADesGetValueData,     IfPm3Iso14443a,  "Get value of file"},
+    {"changevalue",      CmdHF14ADesChangeValue,      IfPm3Iso14443a,  "Write value of a value file (credit/debit/clear)"},
     {"read",             CmdHF14ADesReadData,         IfPm3Iso14443a,  "Read data from standard/backup/record file"},
     {"write",            CmdHF14ADesWriteData,        IfPm3Iso14443a,  "Write data to standard/backup/record file"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("System") " -----------------------"},
