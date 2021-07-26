@@ -1167,12 +1167,12 @@ static const char *DesfireUnknownStr = "unknown";
 static const char *DesfireDisabledStr = "disabled";
 static const char *DesfireFreeStr = "free";
 static const DesfireCreateFileCommandsS DesfireFileCommands[] = {
-    {0x00, "Standard data",   MFDES_CREATE_STD_DATA_FILE,       6, true},
-    {0x01, "Backup data",     MFDES_CREATE_BACKUP_DATA_FILE,    6, true},
-    {0x02, "Value",           MFDES_CREATE_VALUE_FILE,         16, false},
-    {0x03, "Linear Record",   MFDES_CREATE_LINEAR_RECORD_FILE,  9, true},
-    {0x04, "Cyclic Record",   MFDES_CREATE_CYCLIC_RECORD_FILE,  9, true},
-    {0x05, "Transaction MAC", MFDES_CREATE_TRANS_MAC_FILE,     22, false},
+    {0x00, "Standard data",   MFDES_CREATE_STD_DATA_FILE,       6,  6, true},
+    {0x01, "Backup data",     MFDES_CREATE_BACKUP_DATA_FILE,    6,  6, true},
+    {0x02, "Value",           MFDES_CREATE_VALUE_FILE,         16, 16, false},
+    {0x03, "Linear Record",   MFDES_CREATE_LINEAR_RECORD_FILE, 12,  9, true},
+    {0x04, "Cyclic Record",   MFDES_CREATE_CYCLIC_RECORD_FILE, 12,  9, true},
+    {0x05, "Transaction MAC", MFDES_CREATE_TRANS_MAC_FILE,      5, 22, false},
 };
 
 const DesfireCreateFileCommandsS *GetDesfireFileCmdRec(uint8_t type) {
@@ -1268,7 +1268,7 @@ void DesfirePrintAccessRight(uint8_t *data) {
     PrintAndLogEx(SUCCESS, "change   : %s", GetDesfireAccessRightStr(ch));
 }
 
-static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t datalen, uint8_t *dynlen) {
+static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t datalen, uint8_t *dynlen, bool create) {
     switch (filetype) {
         case 0x00: 
         case 0x01: {
@@ -1282,12 +1282,18 @@ static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t 
         case 0x02: {
             int lowerlimit = MemLeToUint4byte(&data[0]);
             int upperlimit = MemLeToUint4byte(&data[4]);
-            int limitcredvalue = MemLeToUint4byte(&data[8]);
+            int value = MemLeToUint4byte(&data[8]);
             uint8_t limited_credit_enabled = data[12];
             
-            PrintAndLogEx(INFO, "Lower limit      : %d (0x%X)", lowerlimit, lowerlimit);
-            PrintAndLogEx(INFO, "Upper limit      : %d (0x%X)", upperlimit, upperlimit);
-            PrintAndLogEx(INFO, "Limited credit   : [%d - %s] %d (0x%X)", limited_credit_enabled, (limited_credit_enabled == 1) ? "enabled" : "disabled", limitcredvalue, limitcredvalue);
+            PrintAndLogEx(INFO, "Lower limit      : %d (0x%08X)", lowerlimit, lowerlimit);
+            PrintAndLogEx(INFO, "Upper limit      : %d (0x%08X)", upperlimit, upperlimit);
+            if (create) {
+                PrintAndLogEx(INFO, "Value            : %d (0x%08X)", value, value);
+                PrintAndLogEx(INFO, "Limited credit   : [%d - %s]", limited_credit_enabled, ((limited_credit_enabled & 1) != 0) ? "enabled" : "disabled");
+            } else {
+                PrintAndLogEx(INFO, "Limited credit   : [%d - %s] %d (0x%08X)", limited_credit_enabled, ((limited_credit_enabled & 1) != 0) ? "enabled" : "disabled", value, value);
+            }
+            PrintAndLogEx(INFO, "GetValue access  : %s", ((limited_credit_enabled & 0x02) != 0) ? "Free" : "Not Free");
 
             *dynlen = 13;
             break;
@@ -1296,20 +1302,23 @@ static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t 
         case 0x04: {
             uint32_t recordsize = MemLeToUint3byte(&data[0]);
             uint32_t maxrecords = MemLeToUint3byte(&data[3]);
-            uint32_t currentrecord = MemLeToUint3byte(&data[6]);
+            uint32_t currentrecord = 0;
+            if (!create)
+                currentrecord = MemLeToUint3byte(&data[6]);
 
             PrintAndLogEx(INFO, "Record size      : %d (0x%X) bytes", recordsize, recordsize);
             PrintAndLogEx(INFO, "Max num records  : %d (0x%X)", maxrecords, maxrecords);
-            PrintAndLogEx(INFO, "Curr num records : %d (0x%X)", currentrecord, currentrecord);
+            if (!create)
+                PrintAndLogEx(INFO, "Curr num records : %d (0x%X)", currentrecord, currentrecord);
 
-            *dynlen = 9;
+            *dynlen = (create) ? 6 : 9;
             break;
         }
         case 0x05: {
             PrintAndLogEx(INFO, "Key type [0x%02x] : %s", data[0], GetDesfireKeyType(data[0]));
             *dynlen = 1;
             
-            if (datalen > 16) {
+            if (create) {
                 PrintAndLogEx(INFO, "Key              : %s", sprint_hex(&data[1], 16));
                 *dynlen += 16;
             }
@@ -1343,8 +1352,8 @@ void DesfirePrintFileSettings(uint8_t *data, size_t len) {
     DesfirePrintAccessRight(&data[2]); //2 bytes
     
     uint8_t reclen = 0;
-    DesfirePrintFileSettDynPart(filetype, &data[4], len - 4, &reclen);
-    reclen += 4;
+    DesfirePrintFileSettDynPart(filetype, &data[4], len - 4, &reclen, false);
+    reclen += 4; // static part
     
     if (addaccess && filetype != 0x05 && reclen > 0 && len > reclen && len == reclen + data[reclen] * 2) {
         PrintAndLogEx(SUCCESS, "Add access records: %d", data[reclen]);
@@ -1381,8 +1390,9 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
         return;
     }  
     
-    bool isoidpresent = ftyperec->mayHaveISOfid && (len == ftyperec->len + 2 + 1);
+    bool isoidpresent = ftyperec->mayHaveISOfid && (len == ftyperec->createlen + 2 + 1);
     
+ PrintAndLogEx(SUCCESS, "---: %d", ftyperec->createlen);
     PrintAndLogEx(INFO, "---- " _CYAN_("Create file settings") " ----");
     PrintAndLogEx(SUCCESS, "File type        : %s", ftyperec->text);
     PrintAndLogEx(SUCCESS, "File number      : 0x%02x (%d)", data[0], data[0]);
@@ -1404,8 +1414,8 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
     xlen += 2;
 
     uint8_t reclen = 0;
-    DesfirePrintFileSettDynPart(filetype, &data[xlen], len - xlen, &reclen);
-    reclen += xlen;
+    DesfirePrintFileSettDynPart(filetype, &data[xlen], len - xlen, &reclen, true);
+    xlen += reclen;
 }
 
 

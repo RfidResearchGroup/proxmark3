@@ -24,6 +24,7 @@ typedef struct {
     const char *text;
     const uint8_t cmd;
     const uint8_t len;
+    const uint8_t createlen;
     const bool mayHaveISOfid;
 } DesfireCreateFileCommandsS;
 

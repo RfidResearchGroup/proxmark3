@@ -6279,12 +6279,12 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
 static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes createvaluefile",
-                  "Create Standard/Backup file in the application. Application master key needs to be provided or flag --no-auth set (depend on application settings).",
+                  "Create Value file in the application. Application master key needs to be provided or flag --no-auth set (depend on application settings).",
                   "--rawrights have priority over the separate rights settings.\n"
                   "Key/mode/etc of the authentication depends on application settings\n"
-                  "hf mfdes createvaluefile --aid 123456 --fid 01 --rawtype 01 --rawdata 000100EEEE000100 -> create file via sending rawdata to the card. Can be used to create any type of file. Authentication with defaults from `default` command\n"
+                  "hf mfdes createvaluefile --aid 123456 --fid 01 --lower 00000010 --upper 00010000 --value 00000100 -> create file with parameters. Rights from default. Authentication with defaults from `default` command\n"
                   "hf mfdes createvaluefile --aid 123456 --fid 01 --amode plain --rrights free --wrights free --rwrights free --chrights key0 -> create file app=123456, file=01 and mentioned rights with defaults from `default` command\n"
-                  "hf mfdes createvaluefile -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 --rawtype 00 --rawdata 00EEEE000100 -> execute with default factory setup");
+                  "hf mfdes createvaluefile -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> execute with default factory setup");
 
     void *argtable[] = {
         arg_param_begin,
@@ -6300,7 +6300,6 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
         arg_str0(NULL, "fid",     "<file id hex>", "File ID (1 hex byte)"),
-        arg_str0(NULL, "isofid",  "<iso file id hex>", "ISO File ID (2 hex bytes)"),
         arg_str0(NULL, "amode",   "<plain/mac/encrypt>", "File access mode: plain/mac/encrypt"),
         arg_str0(NULL, "rawrights", "<access rights HEX>", "Access rights for file (HEX 2 byte) R/W/RW/Chg, 0x0 - 0xD Key, 0xE Free, 0xF Denied"),
         arg_str0(NULL, "rrights", "<key0/../key13/free/deny>", "Read file access mode: the specified key, free, deny"),
@@ -6318,7 +6317,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    bool noauth = arg_get_lit(ctx, 20);
+    bool noauth = arg_get_lit(ctx, 19);
     
     uint8_t filetype = 0x02; // value file
 
@@ -6346,14 +6345,14 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     uint8_t data[250] = {0};
     size_t datalen = 0;
 
-    res = DesfireCreateFileParameters(ctx, 12, 13, 14, 15, 16, 17, 18, 19, data, &datalen);
+    res = DesfireCreateFileParameters(ctx, 12, 0, 13, 14, 15, 16, 17, 18, data, &datalen);
     if (res) {
         CLIParserFree(ctx);
         return res;
     }
 
     uint32_t lowerlimit = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 21, 0, &lowerlimit, 4, true);
+    res = arg_get_u32_hexstr_def_nlen(ctx, 20, 0, &lowerlimit, 4, true);
     if (res == 2) {
         PrintAndLogEx(ERR, "Lower limit value must have 4 bytes length");
         CLIParserFree(ctx);
@@ -6361,7 +6360,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     }
 
     uint32_t upperlimit = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 22, 0, &upperlimit, 4, true);
+    res = arg_get_u32_hexstr_def_nlen(ctx, 21, 0, &upperlimit, 4, true);
     if (res == 2) {
         PrintAndLogEx(ERR, "Upper limit value must have 4 bytes length");
         CLIParserFree(ctx);
@@ -6369,14 +6368,14 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     }
 
     uint32_t value = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 23, 0, &value, 4, true);
+    res = arg_get_u32_hexstr_def_nlen(ctx, 22, 0, &value, 4, true);
     if (res == 2) {
         PrintAndLogEx(ERR, "Lower limit value must have 4 bytes length");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
     
-    uint32_t lcredit = arg_get_int_def(ctx, 24, 0);
+    uint32_t lcredit = arg_get_int_def(ctx, 23, 0);
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
