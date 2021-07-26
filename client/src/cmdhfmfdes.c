@@ -5509,7 +5509,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
         CLIParserFree(ctx);
         return res;
     }
-    
+
     uint32_t fileid = 1;
     res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fileid, 1, true);
     if (res == 2) {
@@ -5548,7 +5548,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
 
     if (verbose)
         PrintAndLogEx(INFO, "app %06x file %02x settings[%zu]: %s", appid, fileid, buflen, sprint_hex(buf, buflen));
-    
+
     DesfirePrintFileSettings(buf, buflen);
 
     DropField();
@@ -5581,8 +5581,8 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
         arg_str0(NULL, "amode",   "<plain/mac/encrypt>", "File access mode: plain/mac/encrypt"),
         arg_str0(NULL, "rrights", "<key0/../key13/free/deny>", "Read file access mode: the specified key, free, deny"),
         arg_str0(NULL, "wrights", "<key0/../key13/free/deny>", "Write file access mode: the specified key, free, deny"),
-        arg_str0(NULL, "rwrights","<key0/../key13/free/deny>", "Read/Write file access mode: the specified key, free, deny"),
-        arg_str0(NULL, "chrights","<key0/../key13/free/deny>", "Change file settings access mode: the specified key, free, deny"),
+        arg_str0(NULL, "rwrights", "<key0/../key13/free/deny>", "Read/Write file access mode: the specified key, free, deny"),
+        arg_str0(NULL, "chrights", "<key0/../key13/free/deny>", "Change file settings access mode: the specified key, free, deny"),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_param_end
     };
@@ -5600,7 +5600,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
         CLIParserFree(ctx);
         return res;
     }
-    
+
     uint32_t fileid = 1;
     res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fileid, 1, true);
     if (res == 2) {
@@ -5630,14 +5630,14 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
         int cmode = DCMNone;
         if (CLIGetOptionList(arg_get_str(ctx, 14), DesfireCommunicationModeOpts, &cmode))
             return PM3_ESOFT;
-        
-        if (cmode == DCMPlain)        
+
+        if (cmode == DCMPlain)
             settings[0] = 0x00;
-        if (cmode == DCMMACed)        
+        if (cmode == DCMMACed)
             settings[0] = 0x01;
-        if (cmode == DCMEncrypted)        
+        if (cmode == DCMEncrypted)
             settings[0] = 0x03;
-        
+
         int r_mode = 0x0e;
         if (CLIGetOptionList(arg_get_str(ctx, 15), DesfireFileAccessModeOpts, &r_mode))
             return PM3_ESOFT;
@@ -5652,7 +5652,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
             return PM3_ESOFT;
 
         DesfireEncodeFileAcessMode(&settings[1], r_mode, w_mode, rw_mode, ch_mode) ;
-    }    
+    }
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
@@ -5684,13 +5684,13 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
         DesfireDecodeFileAcessMode(&buf[2], NULL, NULL, NULL, &chright) ;
         if (verbose)
             PrintAndLogEx(INFO, "Current access right for change file settings: %s", GetDesfireAccessRightStr(chright));
-        
+
         if (chright == 0x0f)
             PrintAndLogEx(WARNING, "Change file settings disabled");
-            
+
         if (chright == 0x0e && (!(commMode == DCMPlain || commMode == DCMMACed || noauth)))
             PrintAndLogEx(WARNING, "File settings have free access for change. Change command must be sent via plain communications mode or without authentication (--no-auth option)");
-        
+
         if (chright < 0x0e && dctx.keyNum != chright)
             PrintAndLogEx(WARNING, "File settings must be changed with auth key=0x%02x but current auth with key 0x%02x", chright, dctx.keyNum);
 
@@ -5721,19 +5721,19 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
 }
 
 static int DesfireCreateFileParameters(
-                CLIParserContext *ctx, 
-               
-                uint8_t pfileid, uint8_t pisofileid, 
-                uint8_t amodeid,
-                uint8_t frightsid,
-                uint8_t r_modeid, uint8_t w_modeid, uint8_t rw_modeid, uint8_t ch_modeid,
-                                      
-                uint8_t *data,
-                size_t *datalen
-                ) {
+    CLIParserContext *ctx,
+
+    uint8_t pfileid, uint8_t pisofileid,
+    uint8_t amodeid,
+    uint8_t frightsid,
+    uint8_t r_modeid, uint8_t w_modeid, uint8_t rw_modeid, uint8_t ch_modeid,
+
+    uint8_t *data,
+    size_t *datalen
+) {
     *datalen = 0;
     int res = 0;
-    
+
     uint32_t fileid = 1;
     if (pfileid) {
         res = arg_get_u32_hexstr_def_nlen(ctx, pfileid, 1, &fileid, 1, true);
@@ -5769,12 +5769,12 @@ static int DesfireCreateFileParameters(
         if (CLIGetOptionList(arg_get_str(ctx, amodeid), DesfireCommunicationModeOpts, &cmode)) {
             return PM3_ESOFT;
         }
-        
-        if (cmode == DCMPlain)        
+
+        if (cmode == DCMPlain)
             settings[0] = 0x00;
-        if (cmode == DCMMACed)        
+        if (cmode == DCMMACed)
             settings[0] = 0x01;
-        if (cmode == DCMEncrypted)        
+        if (cmode == DCMEncrypted)
             settings[0] = 0x03;
         (*datalen)++;
     }
@@ -5799,7 +5799,7 @@ static int DesfireCreateFileParameters(
             if (CLIGetOptionList(arg_get_str(ctx, r_modeid), DesfireFileAccessModeOpts, &r_mode))
                 return PM3_ESOFT;
         }
-        
+
         int w_mode = 0x0e;
         if (w_modeid) {
             if (CLIGetOptionList(arg_get_str(ctx, w_modeid), DesfireFileAccessModeOpts, &w_mode))
@@ -5817,11 +5817,11 @@ static int DesfireCreateFileParameters(
             if (CLIGetOptionList(arg_get_str(ctx, ch_modeid), DesfireFileAccessModeOpts, &ch_mode))
                 return PM3_ESOFT;
         }
-        
+
         DesfireEncodeFileAcessMode(&settings[1], r_mode, w_mode, rw_mode, ch_mode) ;
     }
     *datalen += 2;
-    
+
     return PM3_SUCCESS;
 }
 
@@ -5857,8 +5857,8 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         arg_str0(NULL, "rawrights", "<access rights HEX>", "Access rights for file (HEX 2 byte) R/W/RW/Chg, 0x0 - 0xD Key, 0xE Free, 0xF Denied"),
         arg_str0(NULL, "rrights", "<key0/../key13/free/deny>", "Read file access mode: the specified key, free, deny"),
         arg_str0(NULL, "wrights", "<key0/../key13/free/deny>", "Write file access mode: the specified key, free, deny"),
-        arg_str0(NULL, "rwrights","<key0/../key13/free/deny>", "Read/Write file access mode: the specified key, free, deny"),
-        arg_str0(NULL, "chrights","<key0/../key13/free/deny>", "Change file settings access mode: the specified key, free, deny"),
+        arg_str0(NULL, "rwrights", "<key0/../key13/free/deny>", "Read/Write file access mode: the specified key, free, deny"),
+        arg_str0(NULL, "chrights", "<key0/../key13/free/deny>", "Change file settings access mode: the specified key, free, deny"),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_str0(NULL, "size", "<hex>", "File size (3 hex bytes, big endian)"),
         arg_lit0(NULL, "backup", "Create backupfile instead of standard file"),
@@ -5880,7 +5880,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         CLIParserFree(ctx);
         return res;
     }
-    
+
     if (appid == 0x000000) {
         PrintAndLogEx(ERR, "Can't create files at card level.");
         CLIParserFree(ctx);
@@ -5904,7 +5904,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    
+
     uint8_t sdata[250] = {0};
     int sdatalen = sizeof(sdata);
     CLIGetHexWithReturn(ctx, 15, sdata, &sdatalen);
@@ -5913,7 +5913,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    
+
     if (useraw && sdatalen > 0) {
         filetype = rawftype;
         memcpy(&data[1], sdata, sdatalen);
@@ -5936,10 +5936,10 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
             CLIParserFree(ctx);
             return PM3_EINVARG;
         }
-        
-        Uint3byteToMemLe(&data[datalen], filesize);     
-        datalen += 3;        
-    }    
+
+        Uint3byteToMemLe(&data[datalen], filesize);
+        datalen += 3;
+    }
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
@@ -5958,12 +5958,12 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
             return res;
         }
     }
-    
+
     if (verbose)
         PrintAndLogEx(INFO, "App: %06x. File num: 0x%02x type: 0x%02x data[%zu]: %s", appid, data[0], filetype, datalen, sprint_hex(data, datalen));
     DesfirePrintCreateFileSettings(filetype, data, datalen);
 
-    
+
     res = DesfireCreateFile(&dctx, filetype, data, datalen, useraw == false);  // check length only if we nont use raw mode
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire CreateFile command " _RED_("error") ". Result: %d", res);
@@ -5972,7 +5972,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "File %02x in the app %06x created " _GREEN_("successfully"), data[0], appid);
-    
+
     DropField();
     return PM3_SUCCESS;
 }
@@ -6005,8 +6005,8 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
         arg_str0(NULL, "rawrights", "<access rights HEX>", "Access rights for file (HEX 2 byte) R/W/RW/Chg, 0x0 - 0xD Key, 0xE Free, 0xF Denied"),
         arg_str0(NULL, "rrights", "<key0/../key13/free/deny>", "Read file access mode: the specified key, free, deny"),
         arg_str0(NULL, "wrights", "<key0/../key13/free/deny>", "Write file access mode: the specified key, free, deny"),
-        arg_str0(NULL, "rwrights","<key0/../key13/free/deny>", "Read/Write file access mode: the specified key, free, deny"),
-        arg_str0(NULL, "chrights","<key0/../key13/free/deny>", "Change file settings access mode: the specified key, free, deny"),
+        arg_str0(NULL, "rwrights", "<key0/../key13/free/deny>", "Read/Write file access mode: the specified key, free, deny"),
+        arg_str0(NULL, "chrights", "<key0/../key13/free/deny>", "Change file settings access mode: the specified key, free, deny"),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_str0(NULL, "lower",   "<hex>", "Lower limit (4 hex bytes, big endian)"),
         arg_str0(NULL, "upper",   "<hex>", "Upper limit (4 hex bytes, big endian)"),
@@ -6019,7 +6019,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 19);
-    
+
     uint8_t filetype = 0x02; // value file
 
     DesfireContext dctx;
@@ -6030,13 +6030,13 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
         CLIParserFree(ctx);
         return res;
     }
-    
+
     if (appid == 0x000000) {
         PrintAndLogEx(ERR, "Can't create files at card level.");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    
+
     uint8_t data[250] = {0};
     size_t datalen = 0;
 
@@ -6069,13 +6069,13 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    
+
     uint32_t lcredit = arg_get_int_def(ctx, 23, 0);
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
-    
-    
+
+
     Uint4byteToMemLe(&data[datalen], lowerlimit);
     datalen += 4;
     Uint4byteToMemLe(&data[datalen], upperlimit);
@@ -6099,13 +6099,13 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
             return res;
         }
     }
-    
+
     if (verbose)
         PrintAndLogEx(INFO, "App: %06x. File num: 0x%02x type: 0x%02x data[%zu]: %s", appid, data[0], filetype, datalen, sprint_hex(data, datalen));
     DesfirePrintCreateFileSettings(filetype, data, datalen);
 
 
-    res = DesfireCreateFile(&dctx, filetype, data, datalen, true); 
+    res = DesfireCreateFile(&dctx, filetype, data, datalen, true);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire CreateFile command " _RED_("error") ". Result: %d", res);
         DropField();
@@ -6155,7 +6155,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         CLIParserFree(ctx);
         return res;
     }
-    
+
     uint32_t fnum = 1;
     res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fnum, 1, true);
     if (res == 2) {
@@ -6241,7 +6241,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
         CLIParserFree(ctx);
         return res;
     }
-    
+
     uint32_t fileid = 1;
     res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fileid, 1, true);
     if (res == 2) {
@@ -6249,7 +6249,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    
+
     int op = MFDES_GET_VALUE;
     if (CLIGetOptionList(arg_get_str(ctx, 13), DesfireValueFileOperOpts, &op)) {
         CLIParserFree(ctx);
@@ -6302,7 +6302,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
                 DropField();
                 return PM3_ESOFT;
             }
-            
+
             PrintAndLogEx(SUCCESS, "Value changed " _GREEN_("successfully"));
         }
     } else {
@@ -6314,10 +6314,10 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
         }
         if (verbose)
             PrintAndLogEx(INFO, "current value: 0x%08x", value);
-        
+
         uint8_t buf[250] = {0};
         size_t buflen = 0;
-        
+
         res = DesfireGetFileSettings(&dctx, fileid, buf, &buflen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire GetFileSettings command " _RED_("error") ". Result: %d", res);
@@ -6327,13 +6327,13 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
 
         if (verbose)
             PrintAndLogEx(INFO, "file settings[%d]: %s", buflen, sprint_hex(buf, buflen));
-        
+
         if (buflen < 8 || buf[0] != 0x02) {
             PrintAndLogEx(ERR, "Desfire GetFileSettings command returns " _RED_("wrong") " data");
             DropField();
             return PM3_ESOFT;
         }
-        
+
         uint32_t minvalue = MemLeToUint4byte(&buf[4]);
         uint32_t delta = (value > minvalue) ? value - minvalue : 0;
         if (verbose) {
@@ -6365,7 +6365,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
             if (verbose)
                 PrintAndLogEx(INFO, "Nothing to clear. Vallue allready in the minimum level.");
         }
-        
+
         PrintAndLogEx(SUCCESS, "Value cleared " _GREEN_("successfully"));
     }
 

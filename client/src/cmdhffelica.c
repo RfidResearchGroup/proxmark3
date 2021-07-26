@@ -244,9 +244,9 @@ static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
         // odd findings
         case 0x00:
             return "FeliCa Standard RC-S830";
-        case 0x02: 
+        case 0x02:
             return "FeliCa Standard RC-S919";
-        case  0x0B: 
+        case  0x0B:
             return "FeliCa Suica RC-S???";
         default:
             break;

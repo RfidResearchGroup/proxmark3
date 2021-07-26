@@ -1089,12 +1089,12 @@ int DesfireValueFileOperations(DesfireContext *dctx, uint8_t fid, uint8_t operat
     size_t datalen = (operation == MFDES_GET_VALUE) ? 1 : 5;
     if (value)
         Uint4byteToMemLe(&data[1], *value);
-    
+
     uint8_t resp[250] = {0};
     size_t resplen = 0;
-    
+
     int res = DesfireCommand(dctx, operation, data, datalen, resp, &resplen, -1);
-    
+
     if (resplen == 4 && value)
         *value = MemLeToUint4byte(resp);
     return res;
@@ -1248,17 +1248,17 @@ static const char *GetDesfireKeyType(uint8_t keytype) {
 const char *GetDesfireAccessRightStr(uint8_t right) {
     static char int_access_str[200];
     memset(int_access_str, 0, sizeof(int_access_str));
-    
+
     if (right <= 0x0d) {
         sprintf(int_access_str, "key 0x%02x", right);
         return int_access_str;
     }
     if (right == 0x0e)
         return DesfireFreeStr;
-    
+
     if (right == 0x0f)
         return DesfireDisabledStr;
- 
+
     return DesfireUnknownStr;
 }
 
@@ -1288,18 +1288,18 @@ void DesfirePrintAccessRight(uint8_t *data) {
     uint8_t rw = 0;
     uint8_t ch = 0;
     DesfireDecodeFileAcessMode(data, &r, &w, &rw, &ch);
-    PrintAndLogEx(SUCCESS, "read     : %s", GetDesfireAccessRightStr(r)); 
+    PrintAndLogEx(SUCCESS, "read     : %s", GetDesfireAccessRightStr(r));
     PrintAndLogEx(SUCCESS, "write    : %s", GetDesfireAccessRightStr(w));
-    PrintAndLogEx(SUCCESS, "readwrite: %s", GetDesfireAccessRightStr(rw)); 
+    PrintAndLogEx(SUCCESS, "readwrite: %s", GetDesfireAccessRightStr(rw));
     PrintAndLogEx(SUCCESS, "change   : %s", GetDesfireAccessRightStr(ch));
 }
 
 static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t datalen, uint8_t *dynlen, bool create) {
     switch (filetype) {
-        case 0x00: 
+        case 0x00:
         case 0x01: {
             int filesize = MemLeToUint3byte(&data[0]);
-            
+
             PrintAndLogEx(INFO, "File size        : %d (0x%X) bytes", filesize, filesize);
 
             *dynlen = 3;
@@ -1310,7 +1310,7 @@ static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t 
             int upperlimit = MemLeToUint4byte(&data[4]);
             int value = MemLeToUint4byte(&data[8]);
             uint8_t limited_credit_enabled = data[12];
-            
+
             PrintAndLogEx(INFO, "Lower limit      : %d (0x%08X)", lowerlimit, lowerlimit);
             PrintAndLogEx(INFO, "Upper limit      : %d (0x%08X)", upperlimit, upperlimit);
             if (create) {
@@ -1343,12 +1343,12 @@ static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t 
         case 0x05: {
             PrintAndLogEx(INFO, "Key type [0x%02x] : %s", data[0], GetDesfireKeyType(data[0]));
             *dynlen = 1;
-            
+
             if (create) {
                 PrintAndLogEx(INFO, "Key              : %s", sprint_hex(&data[1], 16));
                 *dynlen += 16;
             }
-            
+
             PrintAndLogEx(INFO, "Key version      : %d (0x%X)", data[*dynlen], data[*dynlen]);
             (*dynlen)++;
             break;
@@ -1364,7 +1364,7 @@ void DesfirePrintFileSettings(uint8_t *data, size_t len) {
         PrintAndLogEx(ERR, "Wrong file settings length: %zu", len);
         return;
     }
-    
+
     uint8_t filetype = data[0];
     PrintAndLogEx(INFO, "---- " _CYAN_("File settings") " ----");
     PrintAndLogEx(SUCCESS, "File type [0x%02x] : %s file", filetype, GetDesfireFileType(filetype));
@@ -1376,11 +1376,11 @@ void DesfirePrintFileSettings(uint8_t *data, size_t len) {
     }
     PrintAndLogEx(SUCCESS, "Access rights    : %04x", MemLeToUint2byte(&data[2]));
     DesfirePrintAccessRight(&data[2]); //2 bytes
-    
+
     uint8_t reclen = 0;
     DesfirePrintFileSettDynPart(filetype, &data[4], len - 4, &reclen, false);
     reclen += 4; // static part
-    
+
     if (addaccess && filetype != 0x05 && reclen > 0 && len > reclen && len == reclen + data[reclen] * 2) {
         PrintAndLogEx(SUCCESS, "Add access records: %d", data[reclen]);
         for (int i = 0; i < data[reclen] * 2; i += 2) {
@@ -1399,7 +1399,7 @@ void DesfirePrintSetFileSettings(uint8_t *data, size_t len) {
 
     PrintAndLogEx(SUCCESS, "Access rights    : %04x", MemLeToUint2byte(&data[1]));
     DesfirePrintAccessRight(&data[1]); //2 bytes
-    
+
     if (addaccess && len > 3 && len == 4 + data[3] * 2) {
         PrintAndLogEx(SUCCESS, "Add access records: %d", data[3]);
         for (int i = 0; i < data[3] * 2; i += 2) {
@@ -1414,10 +1414,10 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
     if (ftyperec == NULL) {
         PrintAndLogEx(WARNING, "Unknown file type 0x%02x", filetype);
         return;
-    }  
-    
+    }
+
     bool isoidpresent = ftyperec->mayHaveISOfid && (len == ftyperec->createlen + 2 + 1);
-    
+
     PrintAndLogEx(INFO, "---- " _CYAN_("Create file settings") " ----");
     PrintAndLogEx(SUCCESS, "File type        : %s", ftyperec->text);
     PrintAndLogEx(SUCCESS, "File number      : 0x%02x (%d)", data[0], data[0]);
@@ -1428,12 +1428,12 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
     } else {
         PrintAndLogEx(SUCCESS, "File ISO number  : n/a");
     }
-    
+
     PrintAndLogEx(SUCCESS, "File comm mode   : %s", GetDesfireCommunicationMode(data[xlen] & 0x03));
     bool addaccess = ((data[xlen] & 0x80) != 0);
     PrintAndLogEx(SUCCESS, "Additional access: %s", (addaccess) ? "Yes" : "No");
     xlen++;
-    
+
     PrintAndLogEx(SUCCESS, "Access rights    : %04x", MemLeToUint2byte(&data[xlen]));
     DesfirePrintAccessRight(&data[xlen]);
     xlen += 2;

