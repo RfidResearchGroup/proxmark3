@@ -1062,7 +1062,7 @@ int DesfireCreateFile(DesfireContext *dctx, uint8_t ftype, uint8_t *fdata, size_
     const DesfireCreateFileCommandsS *rcmd = GetDesfireFileCmdRec(ftype);
     if (rcmd == NULL)
         return -100;
-    if (checklen && fdatalen != (rcmd->len + 1) && fdatalen != (rcmd->len + 1 + (rcmd->mayHaveISOfid ? 2 : 0)))
+    if (checklen && fdatalen != (rcmd->createlen + 1) && fdatalen != (rcmd->createlen + 1 + (rcmd->mayHaveISOfid ? 2 : 0)))
         return -110;
 
     return DesfireCommandTxData(dctx, rcmd->cmd, fdata, fdatalen);
@@ -1072,14 +1072,18 @@ int DesfireDeleteFile(DesfireContext *dctx, uint8_t fnum) {
     return DesfireCommandTxData(dctx, MFDES_DELETE_FILE, &fnum, 1);
 }
 
-int DesfireCommitTrqansaction(DesfireContext *dctx, bool enable_options, uint8_t options) {
+int DesfireClearRecordFile(DesfireContext *dctx, uint8_t fnum) {
+    return DesfireCommandTxData(dctx, MFDES_CLEAR_RECORD_FILE, &fnum, 1);
+}
+
+int DesfireCommitTransaction(DesfireContext *dctx, bool enable_options, uint8_t options) {
     if (enable_options)
         return DesfireCommandTxData(dctx, MFDES_COMMIT_TRANSACTION, &options, 1);
     else
         return DesfireCommandNoData(dctx, MFDES_COMMIT_TRANSACTION);
 }
 
-int DesfireAbortTrqansaction(DesfireContext *dctx) {
+int DesfireAbortTransaction(DesfireContext *dctx) {
     return DesfireCommandNoData(dctx, MFDES_ABORT_TRANSACTION);
 }
 
@@ -1209,7 +1213,7 @@ const DesfireCreateFileCommandsS *GetDesfireFileCmdRec(uint8_t type) {
     return NULL;
 }
 
-static const char *GetDesfireFileType(uint8_t type) {
+const char *GetDesfireFileType(uint8_t type) {
     const DesfireCreateFileCommandsS *res = GetDesfireFileCmdRec(type);
     if (res != NULL)
         return res->text;
@@ -1334,6 +1338,7 @@ static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t 
 
             PrintAndLogEx(INFO, "Record size      : %d (0x%X) bytes", recordsize, recordsize);
             PrintAndLogEx(INFO, "Max num records  : %d (0x%X)", maxrecords, maxrecords);
+            PrintAndLogEx(INFO, "Total size       : %d (0x%X) bytes", recordsize * maxrecords, recordsize * maxrecords);
             if (!create)
                 PrintAndLogEx(INFO, "Curr num records : %d (0x%X)", currentrecord, currentrecord);
 
