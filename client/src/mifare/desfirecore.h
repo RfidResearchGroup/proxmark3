@@ -87,6 +87,7 @@ void DesfirePrintFileSettings(uint8_t *data, size_t len);
 void DesfirePrintSetFileSettings(uint8_t *data, size_t len);
 void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len);
 
+const char *GetDesfireFileType(uint8_t type);
 int DesfireCreateFile(DesfireContext *dctx, uint8_t ftype, uint8_t *fdata, size_t fdatalen, bool checklen);
 int DesfireDeleteFile(DesfireContext *dctx, uint8_t fid);
 int DesfireCommitTransaction(DesfireContext *dctx, bool enable_options, uint8_t options);

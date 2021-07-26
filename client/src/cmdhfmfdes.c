@@ -5808,7 +5808,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "File %02x in the app %06x created " _GREEN_("successfully"), data[0], appid);
+    PrintAndLogEx(SUCCESS, "%s file %02x in the app %06x created " _GREEN_("successfully"), GetDesfireFileType(filetype), data[0], appid);
 
     DropField();
     return PM3_SUCCESS;
@@ -6077,7 +6077,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Record file %02x in the app %06x created " _GREEN_("successfully"), data[0], appid);
+    PrintAndLogEx(SUCCESS, "%s file %02x in the app %06x created " _GREEN_("successfully"), GetDesfireFileType(filetype), data[0], appid);
 
     DropField();
     return PM3_SUCCESS;

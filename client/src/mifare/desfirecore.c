@@ -1209,7 +1209,7 @@ const DesfireCreateFileCommandsS *GetDesfireFileCmdRec(uint8_t type) {
     return NULL;
 }
 
-static const char *GetDesfireFileType(uint8_t type) {
+const char *GetDesfireFileType(uint8_t type) {
     const DesfireCreateFileCommandsS *res = GetDesfireFileCmdRec(type);
     if (res != NULL)
         return res->text;
