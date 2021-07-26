@@ -4284,10 +4284,12 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 13, param, &paramlen);
     if (paramlen == 0) {
         PrintAndLogEx(ERR, "Parameter must have a data.");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
     if (paramlen > 50) {
         PrintAndLogEx(ERR, "Parameter data length must be less than 50 instead of %d.", paramlen);
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
