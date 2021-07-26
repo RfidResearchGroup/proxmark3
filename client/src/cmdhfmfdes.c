@@ -5542,7 +5542,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
     }
 
     if (verbose)
-        PrintAndLogEx(INFO, "app %06x file %02x settings[%d]: %s", appid, fileid, buflen, sprint_hex(buf, buflen));
+        PrintAndLogEx(INFO, "app %06x file %02x settings[%zu]: %s", appid, fileid, buflen, sprint_hex(buf, buflen));
     
     DesfirePrintFileSettings(buf, buflen);
 
