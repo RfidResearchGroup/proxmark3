@@ -94,6 +94,14 @@ const CLIParserOption DesfireFileAccessModeOpts[] = {
     {0,    NULL},
 };
 
+const CLIParserOption DesfireValueFileOperOpts[] = {
+    {MFDES_GET_VALUE,      "get"},
+    {MFDES_CREDIT,         "credit"},
+    {MFDES_LIMITED_CREDIT, "limcredit"},
+    {MFDES_DEBIT,          "debit"},
+    {0xff,                 "clear"},
+    {0,    NULL},
+};
 
 static const char *getstatus(uint16_t *sw) {
     if (sw == NULL) return "--> sw argument error. This should never happen !";
@@ -1074,6 +1082,24 @@ int DesfireCommitTrqansaction(DesfireContext *dctx, bool enable_options, uint8_t
 int DesfireAbortTrqansaction(DesfireContext *dctx) {
     return DesfireCommandNoData(dctx, MFDES_ABORT_TRANSACTION);
 }
+
+int DesfireValueFileOperations(DesfireContext *dctx, uint8_t fid, uint8_t operation, uint32_t *value) {
+    uint8_t data[250] = {0};
+    data[0] = fid;
+    size_t datalen = (operation == MFDES_GET_VALUE) ? 1 : 5;
+    if (value)
+        Uint4byteToMemLe(&data[1], *value);
+    
+    uint8_t resp[250] = {0};
+    size_t resplen = 0;
+    
+    int res = DesfireCommand(dctx, operation, data, datalen, resp, &resplen, -1);
+    
+    if (resplen == 4 && value)
+        *value = MemLeToUint4byte(resp);
+    return res;
+}
+
 
 uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType) {
     switch (keyType) {

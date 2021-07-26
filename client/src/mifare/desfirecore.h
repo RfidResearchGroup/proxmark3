@@ -34,6 +34,7 @@ extern const CLIParserOption DesfireCommunicationModeOpts[];
 extern const CLIParserOption DesfireCommandSetOpts[];
 extern const CLIParserOption DesfireSecureChannelOpts[];
 extern const CLIParserOption DesfireFileAccessModeOpts[];
+extern const CLIParserOption DesfireValueFileOperOpts[];
 
 const char *DesfireGetErrorString(int res, uint16_t *sw);
 uint32_t DesfireAIDByteToUint(uint8_t *data);
@@ -90,5 +91,7 @@ int DesfireCreateFile(DesfireContext *dctx, uint8_t ftype, uint8_t *fdata, size_
 int DesfireDeleteFile(DesfireContext *dctx, uint8_t fid);
 int DesfireCommitTrqansaction(DesfireContext *dctx, bool enable_options, uint8_t options);
 int DesfireAbortTrqansaction(DesfireContext *dctx);
+
+int DesfireValueFileOperations(DesfireContext *dctx, uint8_t fid, uint8_t operation, uint32_t *value);
 
 #endif // __DESFIRECORE_H

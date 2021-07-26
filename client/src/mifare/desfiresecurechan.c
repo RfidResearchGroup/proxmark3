@@ -37,6 +37,11 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_CREATE_LINEAR_RECORD_FILE, DACd40,  DCCNative,    DCMPlain},
     {MFDES_CREATE_CYCLIC_RECORD_FILE, DACd40,  DCCNative,    DCMPlain},
     {MFDES_CREATE_TRANS_MAC_FILE,     DACd40,  DCCNative,    DCMPlain},
+    {MFDES_GET_VALUE,                 DACd40,  DCCNative,    DCMPlain},
+    {MFDES_CREDIT,                    DACd40,  DCCNative,    DCMPlain},
+    {MFDES_LIMITED_CREDIT,            DACd40,  DCCNative,    DCMPlain},
+    {MFDES_DEBIT,                     DACd40,  DCCNative,    DCMPlain},
+    {MFDES_COMMIT_TRANSACTION,        DACd40,  DCCNative,    DCMPlain},
 
     {MFDES_READ_DATA,                 DACd40,  DCCNative,    DCMMACed},
     {MFDES_WRITE_DATA,                DACd40,  DCCNative,    DCMMACed},
@@ -83,6 +88,11 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_CREATE_LINEAR_RECORD_FILE, DACEV1,  DCCNative,    DCMMACed},
     {MFDES_CREATE_CYCLIC_RECORD_FILE, DACEV1,  DCCNative,    DCMMACed},
     {MFDES_CREATE_TRANS_MAC_FILE,     DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_GET_VALUE,                 DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_CREDIT,                    DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_LIMITED_CREDIT,            DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_DEBIT,                     DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_COMMIT_TRANSACTION,        DACEV1,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,                   DACEV1,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,       DACEV1,  DCCNative,    DCMEncrypted},
