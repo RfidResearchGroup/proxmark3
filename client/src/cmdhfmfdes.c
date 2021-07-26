@@ -1853,44 +1853,6 @@ static int handler_desfire_clear_record_file(uint8_t file_no) {
     return res;
 }
 
-static int handler_desfire_create_linearrecordfile(mfdes_linear_t *file) {
-    if (file->fileno > 0x1F)
-        return PM3_EINVARG;
-
-    if (memcmp(file->recordsize, "\x00\x00\x00", 3) == 0) return PM3_EINVARG;
-    sAPDU apdu = {0x90, MFDES_CREATE_LINEAR_RECORD_FILE, 0x00, 0x00, sizeof(mfdes_linear_t), (uint8_t *)file}; // 0xC1
-
-    uint16_t sw = 0;
-    uint32_t recvlen = 0;
-    int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't create linear record file -> %s"), DesfireGetErrorString(res, &sw));
-        DropFieldDesfire();
-        return res;
-    }
-    return res;
-}
-
-static int handler_desfire_create_cyclicrecordfile(mfdes_linear_t *file) {
-    if (memcmp(file->recordsize, "\x00\x00\x00", 3) == 0)
-        return PM3_EINVARG;
-
-    if (file->fileno > 0x1F)
-        return PM3_EINVARG;
-
-    sAPDU apdu = {0x90, MFDES_CREATE_CYCLIC_RECORD_FILE, 0x00, 0x00, sizeof(mfdes_linear_t), (uint8_t *)file}; // 0xC0
-
-    uint16_t sw = 0;
-    uint32_t recvlen = 0;
-    int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't create cyclic record file -> %s"), DesfireGetErrorString(res, &sw));
-        DropFieldDesfire();
-        return res;
-    }
-    return res;
-}
-
 static int getKeySettings(uint8_t *aid) {
     if (aid == NULL) return PM3_EINVARG;
 
@@ -1960,13 +1922,6 @@ static void swap24(uint8_t *data) {
     uint8_t tmp = data[0];
     data[0] = data[2];
     data[2] = tmp;
-};
-
-static void swap16(uint8_t *data) {
-    if (data == NULL) return;
-    uint8_t tmp = data[0];
-    data[0] = data[1];
-    data[1] = tmp;
 };
 
 static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, uint8_t *key, int cmdKeyNo, uint8_t cmdKdfAlgo, uint8_t kdfInputLen, uint8_t *kdfInput, mfdes_auth_res_t *rpayload) {
@@ -2401,136 +2356,6 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Successfully wrote data");
     } else {
         PrintAndLogEx(ERR, "Couldn't read data. Error %d", res);
-    }
-    DropFieldDesfire();
-    return res;
-}
-
-static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes createrecordfile",
-                  "Create Linear / Cyclic Record File\n"
-                  "Make sure to select aid or authenticate aid before running this command.",
-                  "hf mfdes createrecordfile -f 1122 -n 02 -c 0 -r EEEE -s 000010 -m 000005 -a 123456"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_int0("n", "fileno",     "<dec>", "File Number (0 - 31)"),
-        arg_strx0("f", "fileid",    "<hex>", "ISO FID (2 hex bytes, big endian)"),
-        arg_int0("c", "com",        "<dec>", "Communication setting (0 = Plain, 1 = Plain + MAC, 3 = Enciphered)"),
-//        arg_strx0("s", "recordsize", "<hex>", "Record size (3 hex bytes, big endian, 000001 to FFFFFF)"),
-        arg_strx0("r", "rights",    "<hex>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0x0 - 0xD Key, 0xE Free, 0xF Denied)"),
-        arg_strx0("s", "size",      "<hex>", "Record size (3 hex bytes, big endian, 000001 to FFFFFF)"),
-        arg_strx0("m", "maxrecord", "<hex>", "Max. Number of Records (3 hex bytes, big endian)"),
-        arg_lit0("b", "cyclic", "Create cyclic record file instead of linear record file"),
-        arg_strx0("a", "aid",       "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
-        arg_param_end
-    };
-
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fno = arg_get_int_def(ctx, 1, 0);
-
-    int fidlength = 0;
-    uint8_t fid[2] = {0};
-    int res_flen = CLIParamHexToBuf(arg_get_str(ctx, 2), fid, 2, &fidlength);
-
-    uint8_t comset = arg_get_int(ctx, 3);
-
-    int arlength = 0;
-    uint8_t ar[2] = {0};
-    CLIGetHexWithReturn(ctx, 4, ar, &arlength);
-
-    int rsizelen = 0;
-    uint8_t recordsize[3] = {0};
-    CLIGetHexWithReturn(ctx, 5, recordsize, &rsizelen);
-
-    int msizelen = 0;
-    uint8_t maxnumrecords[3] = {0};
-    CLIGetHexWithReturn(ctx, 6, maxnumrecords, &msizelen);
-
-    bool cyclic = arg_get_lit(ctx, 7);
-
-    int aidlength = 3;
-    uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(ctx, 8, aid, &aidlength);
-    swap24(aid);
-    CLIParserFree(ctx);
-
-    swap16(fid);
-    swap24(recordsize);
-    swap24(maxnumrecords);
-
-    if (msizelen != 3) {
-        PrintAndLogEx(ERR, "Maximum number of records must have 3 hex bytes length.");
-        return PM3_EINVARG;
-    }
-
-    if (memcmp("\x00\x00\x00", maxnumrecords, 3) == 0x0) {
-        PrintAndLogEx(ERR, "Maximum number of records is invalid (0x000001-0xFFFFFF).");
-        return PM3_EINVARG;
-    }
-
-    if (fno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fno);
-        return PM3_EINVARG;
-    }
-
-    if (comset != 0 && comset != 1 && comset != 3) {
-        PrintAndLogEx(ERR, "Communication setting must be either 0=Plain, 1=Plain+MAC or 3=Encrypt.");
-        return PM3_EINVARG;
-    }
-
-    if (arlength != 2) {
-        PrintAndLogEx(ERR, "Access rights must have 2 hex bytes length.");
-        return PM3_EINVARG;
-    }
-
-    if (rsizelen != 3) {
-        PrintAndLogEx(ERR, "Recordsize must have 3 hex bytes length.");
-        return PM3_EINVARG;
-    }
-
-    if (res_flen || fidlength != 2) {
-        PrintAndLogEx(ERR, "ISO File id must have 2 hex bytes length.");
-        return PM3_EINVARG;
-    }
-
-    mfdes_linear_t ft = {
-        .fileno = fno,
-        .comset = comset
-    };
-    memcpy(ft.fid, fid, 2);
-    memcpy(ft.access_rights, ar, 2);
-    memcpy(ft.recordsize, recordsize, 3);
-    memcpy(ft.maxnumrecords, maxnumrecords, 3);
-
-    if (aidlength != 3 && aidlength != 0) {
-        PrintAndLogEx(ERR, _RED_("   The given aid must have 3 bytes (big endian)."));
-        return PM3_ESOFT;
-    } else if (aidlength == 0) {
-        if (memcmp(&tag->selected_application, aid, 3) == 0) {
-            PrintAndLogEx(ERR, _RED_("   You need to select an aid first."));
-            return PM3_ESOFT;
-        }
-        memcpy(aid, (uint8_t *)&tag->selected_application, 3);
-    }
-    if (handler_desfire_select_application(aid) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, _RED_("   Error on selecting aid."));
-        return PM3_ESOFT;
-    }
-
-    int res = PM3_SUCCESS;
-    if (cyclic) {
-        res = handler_desfire_create_cyclicrecordfile(&ft);
-    } else {
-        res = handler_desfire_create_linearrecordfile(&ft);
-    }
-
-    if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Successfully created linear/cyclic record file.");
-    } else {
-        PrintAndLogEx(ERR, "Couldn't create linear/cyclic record file. Error %d", res);
     }
     DropFieldDesfire();
     return res;
@@ -6118,6 +5943,277 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes createrecordfile",
+                  "Create Linear/Cyclic Record file in the application. Application master key needs to be provided or flag --no-auth set (depend on application settings).",
+                  "--rawrights have priority over the separate rights settings.\n"
+                  "Key/mode/etc of the authentication depends on application settings\n"
+                  "hf mfdes createrecordfile --aid 123456 --fid 01 --size 000100 --maxrecord 000010 --cyclic -> create cyclic record file with parameters. Rights from default. Authentication with defaults from `default` command\n"
+                  "hf mfdes createrecordfile --aid 123456 --fid 01 --amode plain --rrights free --wrights free --rwrights free --chrights key0 --size 000100 --maxrecord 000010 -> create linear record file app=123456, file=01 and mentioned rights with defaults from `default` command\n"
+                  "hf mfdes createrecordfile -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 --size 000100 --maxrecord 000010 -> execute with default factory setup");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "fid",     "<file id hex>", "File ID (1 hex byte)"),
+        arg_str0(NULL, "isofid",  "<iso file id hex>", "ISO File ID (2 hex bytes)"),
+        arg_str0(NULL, "amode",   "<plain/mac/encrypt>", "File access mode: plain/mac/encrypt"),
+        arg_str0(NULL, "rawrights", "<access rights HEX>", "Access rights for file (HEX 2 byte) R/W/RW/Chg, 0x0 - 0xD Key, 0xE Free, 0xF Denied"),
+        arg_str0(NULL, "rrights", "<key0/../key13/free/deny>", "Read file access mode: the specified key, free, deny"),
+        arg_str0(NULL, "wrights", "<key0/../key13/free/deny>", "Write file access mode: the specified key, free, deny"),
+        arg_str0(NULL, "rwrights", "<key0/../key13/free/deny>", "Read/Write file access mode: the specified key, free, deny"),
+        arg_str0(NULL, "chrights", "<key0/../key13/free/deny>", "Change file settings access mode: the specified key, free, deny"),
+        arg_lit0(NULL, "no-auth", "execute without authentication"),
+        arg_str0(NULL, "size",    "<hex>", "Record size (3 hex bytes, big endian, 000001 to FFFFFF)"),
+        arg_str0(NULL, "maxrecord", "<hex>", "Max. Number of Records (3 hex bytes, big endian)"),
+        arg_lit0(NULL, "cyclic", "Create cyclic record file instead of linear record file"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool noauth = arg_get_lit(ctx, 20);
+
+    bool cyclic = arg_get_lit(ctx, 23);
+    uint8_t filetype = (cyclic) ? 0x04 : 0x03; // linear(03) / cyclic(04) record file
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    if (appid == 0x000000) {
+        PrintAndLogEx(ERR, "Can't create files at card level.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t data[250] = {0};
+    size_t datalen = 0;
+
+    res = DesfireCreateFileParameters(ctx, 12, 13, 14, 15, 16, 17, 18, 19, data, &datalen);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    uint32_t size = 0;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 21, 0, &size, 3, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Record size must have 3 bytes length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t maxrecord = 0;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 22, 0, &maxrecord, 3, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Max number of records must have 3 bytes length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+
+    Uint3byteToMemLe(&data[datalen], size);
+    datalen += 3;
+    Uint3byteToMemLe(&data[datalen], maxrecord);
+    datalen += 3;
+
+    if (noauth) {
+        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            DropField();
+            return res;
+        }
+    } else {
+        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    }
+
+    if (verbose)
+        PrintAndLogEx(INFO, "App: %06x. File num: 0x%02x type: 0x%02x data[%zu]: %s", appid, data[0], filetype, datalen, sprint_hex(data, datalen));
+    DesfirePrintCreateFileSettings(filetype, data, datalen);
+
+
+    res = DesfireCreateFile(&dctx, filetype, data, datalen, true);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire CreateFile command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(SUCCESS, "Record file %02x in the app %06x created " _GREEN_("successfully"), data[0], appid);
+
+    DropField();
+    return PM3_SUCCESS;
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    /*
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes createrecordfile",
+                  "Create Linear / Cyclic Record File\n"
+                  "Make sure to select aid or authenticate aid before running this command.",
+                  "hf mfdes createrecordfile -f 1122 -n 02 -c 0 -r EEEE -s 000010 -m 000005 -a 123456"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("n", "fileno",     "<dec>", "File Number (0 - 31)"),
+        arg_strx0("f", "fileid",    "<hex>", "ISO FID (2 hex bytes, big endian)"),
+        arg_int0("c", "com",        "<dec>", "Communication setting (0 = Plain, 1 = Plain + MAC, 3 = Enciphered)"),
+//        arg_strx0("s", "recordsize", "<hex>", "Record size (3 hex bytes, big endian, 000001 to FFFFFF)"),
+        arg_strx0("r", "rights",    "<hex>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0x0 - 0xD Key, 0xE Free, 0xF Denied)"),
+        arg_strx0("s", "size",      "<hex>", "Record size (3 hex bytes, big endian, 000001 to FFFFFF)"),
+        arg_strx0("m", "maxrecord", "<hex>", "Max. Number of Records (3 hex bytes, big endian)"),
+        arg_lit0("b", "cyclic", "Create cyclic record file instead of linear record file"),
+        arg_strx0("a", "aid",       "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int fno = arg_get_int_def(ctx, 1, 0);
+
+    int fidlength = 0;
+    uint8_t fid[2] = {0};
+    int res_flen = CLIParamHexToBuf(arg_get_str(ctx, 2), fid, 2, &fidlength);
+
+    uint8_t comset = arg_get_int(ctx, 3);
+
+    int arlength = 0;
+    uint8_t ar[2] = {0};
+    CLIGetHexWithReturn(ctx, 4, ar, &arlength);
+
+    int rsizelen = 0;
+    uint8_t recordsize[3] = {0};
+    CLIGetHexWithReturn(ctx, 5, recordsize, &rsizelen);
+
+    int msizelen = 0;
+    uint8_t maxnumrecords[3] = {0};
+    CLIGetHexWithReturn(ctx, 6, maxnumrecords, &msizelen);
+
+    bool cyclic = arg_get_lit(ctx, 7);
+
+    int aidlength = 3;
+    uint8_t aid[3] = {0};
+    CLIGetHexWithReturn(ctx, 8, aid, &aidlength);
+    swap24(aid);
+    CLIParserFree(ctx);
+
+    swap16(fid);
+    swap24(recordsize);
+    swap24(maxnumrecords);
+
+    if (msizelen != 3) {
+        PrintAndLogEx(ERR, "Maximum number of records must have 3 hex bytes length.");
+        return PM3_EINVARG;
+    }
+
+    if (memcmp("\x00\x00\x00", maxnumrecords, 3) == 0x0) {
+        PrintAndLogEx(ERR, "Maximum number of records is invalid (0x000001-0xFFFFFF).");
+        return PM3_EINVARG;
+    }
+
+    if (fno > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fno);
+        return PM3_EINVARG;
+    }
+
+    if (comset != 0 && comset != 1 && comset != 3) {
+        PrintAndLogEx(ERR, "Communication setting must be either 0=Plain, 1=Plain+MAC or 3=Encrypt.");
+        return PM3_EINVARG;
+    }
+
+    if (arlength != 2) {
+        PrintAndLogEx(ERR, "Access rights must have 2 hex bytes length.");
+        return PM3_EINVARG;
+    }
+
+    if (rsizelen != 3) {
+        PrintAndLogEx(ERR, "Recordsize must have 3 hex bytes length.");
+        return PM3_EINVARG;
+    }
+
+    if (res_flen || fidlength != 2) {
+        PrintAndLogEx(ERR, "ISO File id must have 2 hex bytes length.");
+        return PM3_EINVARG;
+    }
+
+    mfdes_linear_t ft = {
+        .fileno = fno,
+        .comset = comset
+    };
+    memcpy(ft.fid, fid, 2);
+    memcpy(ft.access_rights, ar, 2);
+    memcpy(ft.recordsize, recordsize, 3);
+    memcpy(ft.maxnumrecords, maxnumrecords, 3);
+
+    if (aidlength != 3 && aidlength != 0) {
+        PrintAndLogEx(ERR, _RED_("   The given aid must have 3 bytes (big endian)."));
+        return PM3_ESOFT;
+    } else if (aidlength == 0) {
+        if (memcmp(&tag->selected_application, aid, 3) == 0) {
+            PrintAndLogEx(ERR, _RED_("   You need to select an aid first."));
+            return PM3_ESOFT;
+        }
+        memcpy(aid, (uint8_t *)&tag->selected_application, 3);
+    }
+    if (handler_desfire_select_application(aid) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, _RED_("   Error on selecting aid."));
+        return PM3_ESOFT;
+    }
+
+    int res = PM3_SUCCESS;
+    if (cyclic) {
+        res = handler_desfire_create_cyclicrecordfile(&ft);
+    } else {
+        res = handler_desfire_create_linearrecordfile(&ft);
+    }
+
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Successfully created linear/cyclic record file.");
+    } else {
+        PrintAndLogEx(ERR, "Couldn't create linear/cyclic record file. Error %d", res);
+    }
+    DropFieldDesfire();
+    return res;*/
+    
+}
+
 static int CmdHF14ADesDeleteFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes deletefile",
@@ -6408,17 +6504,17 @@ static command_t CommandTable[] = {
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("Files") " -----------------------"},
     {"getfileids",       CmdHF14ADesGetFileIDs,       IfPm3Iso14443a,  "[new]Get File IDs list"},
     {"getfileisoids",    CmdHF14ADesGetFileISOIDs,    IfPm3Iso14443a,  "[new]Get File ISO IDs list"},
-    {"getfilesettings",  CmdHF14ADesGetFileSettings,  IfPm3Iso14443a,  "[new]Get file settings"},
-    {"chfilesettings",   CmdHF14ADesChFileSettings,   IfPm3Iso14443a,  "[new]Change file settings"},
-    {"clearfile",        CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
     {"createfile",       CmdHF14ADesCreateFile,       IfPm3Iso14443a,  "[new]Create Standard/Backup File"},
     {"createvaluefile",  CmdHF14ADesCreateValueFile,  IfPm3Iso14443a,  "[new]Create Value File"},
-    {"createrecordfile", CmdHF14ADesCreateRecordFile, IfPm3Iso14443a,  "Create Linear/Cyclic Record File"},
+    {"createrecordfile", CmdHF14ADesCreateRecordFile, IfPm3Iso14443a,  "[new]Create Linear/Cyclic Record File"},
     {"deletefile",       CmdHF14ADesDeleteFile,       IfPm3Iso14443a,  "[new]Delete File"},
+    {"getfilesettings",  CmdHF14ADesGetFileSettings,  IfPm3Iso14443a,  "[new]Get file settings"},
+    {"chfilesettings",   CmdHF14ADesChFileSettings,   IfPm3Iso14443a,  "[new]Change file settings"},
     {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
-    {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "[new]Operations with value file (get/credit/limited credit/debit/clear)"},
     {"read",             CmdHF14ADesReadData,         IfPm3Iso14443a,  "Read data from standard/backup/record file"},
     {"write",            CmdHF14ADesWriteData,        IfPm3Iso14443a,  "Write data to standard/backup/record file"},
+    {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "[new]Operations with value file (get/credit/limited credit/debit/clear)"},
+    {"clearfile",        CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("System") " -----------------------"},
     {"test",             CmdHF14ADesTest,             AlwaysAvailable, "Test crypto"},
     {NULL, NULL, NULL, NULL}
