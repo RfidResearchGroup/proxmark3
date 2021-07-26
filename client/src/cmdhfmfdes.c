@@ -4208,8 +4208,10 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     uint8_t newkeynum = arg_get_int_def(ctx, 14, 0);
 
     int newkeytype = oldkeytype;
-    if (CLIGetOptionList(arg_get_str(ctx, 15), DesfireAlgoOpts, &newkeytype))
+    if (CLIGetOptionList(arg_get_str(ctx, 15), DesfireAlgoOpts, &newkeytype)) {
+        CLIParserFree(ctx);
         return PM3_ESOFT;
+    }
 
     uint8_t newkey[DESFIRE_MAX_KEY_SIZE] = {0};
     memset(keydata, 0x00, sizeof(keydata));
@@ -5453,8 +5455,10 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
         settingslen = sdatalen;
     } else {
         int cmode = DCMNone;
-        if (CLIGetOptionList(arg_get_str(ctx, 14), DesfireCommunicationModeOpts, &cmode))
+        if (CLIGetOptionList(arg_get_str(ctx, 14), DesfireCommunicationModeOpts, &cmode)) {
+            CLIParserFree(ctx);
             return PM3_ESOFT;
+        }
 
         if (cmode == DCMPlain)
             settings[0] = 0x00;
@@ -5464,17 +5468,25 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
             settings[0] = 0x03;
 
         int r_mode = 0x0e;
-        if (CLIGetOptionList(arg_get_str(ctx, 15), DesfireFileAccessModeOpts, &r_mode))
+        if (CLIGetOptionList(arg_get_str(ctx, 15), DesfireFileAccessModeOpts, &r_mode)) {
+            CLIParserFree(ctx);
             return PM3_ESOFT;
+        }
         int w_mode = 0x0e;
-        if (CLIGetOptionList(arg_get_str(ctx, 16), DesfireFileAccessModeOpts, &w_mode))
+        if (CLIGetOptionList(arg_get_str(ctx, 16), DesfireFileAccessModeOpts, &w_mode)) {
+            CLIParserFree(ctx);
             return PM3_ESOFT;
+        }
         int rw_mode = 0x0e;
-        if (CLIGetOptionList(arg_get_str(ctx, 17), DesfireFileAccessModeOpts, &rw_mode))
+        if (CLIGetOptionList(arg_get_str(ctx, 17), DesfireFileAccessModeOpts, &rw_mode)) {
+            CLIParserFree(ctx);
             return PM3_ESOFT;
+        }
         int ch_mode = 0x0e;
-        if (CLIGetOptionList(arg_get_str(ctx, 18), DesfireFileAccessModeOpts, &ch_mode))
+        if (CLIGetOptionList(arg_get_str(ctx, 18), DesfireFileAccessModeOpts, &ch_mode)) {
+            CLIParserFree(ctx);
             return PM3_ESOFT;
+        }
 
         DesfireEncodeFileAcessMode(&settings[1], r_mode, w_mode, rw_mode, ch_mode) ;
     }
@@ -6404,7 +6416,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
     } else {
         res = DesfireValueFileOperations(&dctx, fileid, MFDES_GET_VALUE, &value);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire GetValue command " _RED_("error") ". Result: %d", op, res);
+            PrintAndLogEx(ERR, "Desfire GetValue command " _RED_("error") ". Result: %d", res);
             DropField();
             return PM3_ESOFT;
         }
@@ -6422,7 +6434,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
         }
 
         if (verbose)
-            PrintAndLogEx(INFO, "file settings[%d]: %s", buflen, sprint_hex(buf, buflen));
+            PrintAndLogEx(INFO, "file settings[%zu]: %s", buflen, sprint_hex(buf, buflen));
 
         if (buflen < 8 || buf[0] != 0x02) {
             PrintAndLogEx(ERR, "Desfire GetFileSettings command returns " _RED_("wrong") " data");
