@@ -5949,9 +5949,9 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
                   "Create Linear/Cyclic Record file in the application. Application master key needs to be provided or flag --no-auth set (depend on application settings).",
                   "--rawrights have priority over the separate rights settings.\n"
                   "Key/mode/etc of the authentication depends on application settings\n"
-                  "hf mfdes createrecordfile --aid 123456 --fid 01 --size 000100 --maxrecord 000010 --cyclic -> create cyclic record file with parameters. Rights from default. Authentication with defaults from `default` command\n"
-                  "hf mfdes createrecordfile --aid 123456 --fid 01 --amode plain --rrights free --wrights free --rwrights free --chrights key0 --size 000100 --maxrecord 000010 -> create linear record file app=123456, file=01 and mentioned rights with defaults from `default` command\n"
-                  "hf mfdes createrecordfile -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 --size 000100 --maxrecord 000010 -> execute with default factory setup");
+                  "hf mfdes createrecordfile --aid 123456 --fid 01 --size 000010 --maxrecord 000010 --cyclic -> create cyclic record file with parameters. Rights from default. Authentication with defaults from `default` command\n"
+                  "hf mfdes createrecordfile --aid 123456 --fid 01 --amode plain --rrights free --wrights free --rwrights free --chrights key0 --size 000010 --maxrecord 000010 -> create linear record file app=123456, file=01 and mentioned rights with defaults from `default` command\n"
+                  "hf mfdes createrecordfile -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 --size 000010 --maxrecord 000010 -> execute with default factory setup");
 
     void *argtable[] = {
         arg_param_begin,

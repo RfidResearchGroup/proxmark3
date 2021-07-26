@@ -1334,6 +1334,7 @@ static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t 
 
             PrintAndLogEx(INFO, "Record size      : %d (0x%X) bytes", recordsize, recordsize);
             PrintAndLogEx(INFO, "Max num records  : %d (0x%X)", maxrecords, maxrecords);
+            PrintAndLogEx(INFO, "Total size       : %d (0x%X) bytes", recordsize * maxrecords, recordsize * maxrecords);
             if (!create)
                 PrintAndLogEx(INFO, "Curr num records : %d (0x%X)", currentrecord, currentrecord);
 
