@@ -6392,7 +6392,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
         if (op == MFDES_GET_VALUE) {
             PrintAndLogEx(SUCCESS, "Value: " _GREEN_("%d (0x%08x)"), value, value);
         } else {
-            DesfireCommitTrqansaction(&dctx, false, 0);
+            res = DesfireCommitTransaction(&dctx, false, 0);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Desfire CommitTrqansaction command " _RED_("error") ". Result: %d", res);
                 DropField();
@@ -6448,7 +6448,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
             if (verbose)
                 PrintAndLogEx(INFO, "Value debited");
 
-            DesfireCommitTrqansaction(&dctx, false, 0);
+            res = DesfireCommitTransaction(&dctx, false, 0);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Desfire CommitTrqansaction command " _RED_("error") ". Result: %d", res);
                 DropField();

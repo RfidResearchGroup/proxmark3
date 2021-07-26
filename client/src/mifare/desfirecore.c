@@ -1072,14 +1072,14 @@ int DesfireDeleteFile(DesfireContext *dctx, uint8_t fnum) {
     return DesfireCommandTxData(dctx, MFDES_DELETE_FILE, &fnum, 1);
 }
 
-int DesfireCommitTrqansaction(DesfireContext *dctx, bool enable_options, uint8_t options) {
+int DesfireCommitTransaction(DesfireContext *dctx, bool enable_options, uint8_t options) {
     if (enable_options)
         return DesfireCommandTxData(dctx, MFDES_COMMIT_TRANSACTION, &options, 1);
     else
         return DesfireCommandNoData(dctx, MFDES_COMMIT_TRANSACTION);
 }
 
-int DesfireAbortTrqansaction(DesfireContext *dctx) {
+int DesfireAbortTransaction(DesfireContext *dctx) {
     return DesfireCommandNoData(dctx, MFDES_ABORT_TRANSACTION);
 }
 
