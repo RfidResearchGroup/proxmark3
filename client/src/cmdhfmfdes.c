@@ -6541,7 +6541,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -6598,10 +6598,18 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        if (op == MFDES_GET_VALUE)
+        if (op == MFDES_GET_VALUE) {
             PrintAndLogEx(SUCCESS, "Value: " _GREEN_("%d (0x%08x)"), value, value);
-        else
+        } else {
+            DesfireCommitTrqansaction(&dctx, false, 0);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Desfire CommitTrqansaction command " _RED_("error") ". Result: %d", res);
+                DropField();
+                return PM3_ESOFT;
+            }
+
             PrintAndLogEx(SUCCESS, "Value changed " _GREEN_("successfully"));
+        }
     } else {
         res = DesfireValueFileOperations(&dctx, fileid, MFDES_GET_VALUE, &value);
         if (res != PM3_SUCCESS) {
