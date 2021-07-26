@@ -1062,7 +1062,7 @@ int DesfireCreateFile(DesfireContext *dctx, uint8_t ftype, uint8_t *fdata, size_
     const DesfireCreateFileCommandsS *rcmd = GetDesfireFileCmdRec(ftype);
     if (rcmd == NULL)
         return -100;
-    if (checklen && fdatalen != (rcmd->len + 1) && fdatalen != (rcmd->len + 1 + (rcmd->mayHaveISOfid ? 2 : 0)))
+    if (checklen && fdatalen != (rcmd->createlen + 1) && fdatalen != (rcmd->createlen + 1 + (rcmd->mayHaveISOfid ? 2 : 0)))
         return -110;
 
     return DesfireCommandTxData(dctx, rcmd->cmd, fdata, fdatalen);
