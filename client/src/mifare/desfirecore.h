@@ -19,6 +19,15 @@
 #include "mifare/desfire_crypto.h"
 #include "mifare/mifare4.h"
 
+typedef struct {
+    const uint8_t id;
+    const char *text;
+    const uint8_t cmd;
+    const uint8_t len;
+    const uint8_t createlen;
+    const bool mayHaveISOfid;
+} DesfireCreateFileCommandsS;
+
 extern const CLIParserOption DesfireAlgoOpts[];
 extern const CLIParserOption DesfireKDFAlgoOpts[];
 extern const CLIParserOption DesfireCommunicationModeOpts[];
@@ -64,13 +73,22 @@ int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *para
 
 int DesfireGetFileIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetFileISOIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
+
 int DesfireGetFileSettings(DesfireContext *dctx, uint8_t fileid, uint8_t *resp, size_t *resplen);
 int DesfireChangeFileSettings(DesfireContext *dctx, uint8_t *data, size_t datalen);
+
+const DesfireCreateFileCommandsS *GetDesfireFileCmdRec(uint8_t type);
 const char *GetDesfireAccessRightStr(uint8_t right);
+void DesfireEncodeFileAcessMode(uint8_t *mode, uint8_t r, uint8_t w, uint8_t rw, uint8_t ch);
+void DesfireDecodeFileAcessMode(uint8_t *mode, uint8_t *r, uint8_t *w, uint8_t *rw, uint8_t *ch);
 void DesfirePrintAccessRight(uint8_t *data);
 void DesfirePrintFileSettings(uint8_t *data, size_t len);
 void DesfirePrintSetFileSettings(uint8_t *data, size_t len);
-int DesfireCreateFile(DesfireContext *dctx, uint8_t *fdata, size_t fdatalen);
+void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len);
+
+int DesfireCreateFile(DesfireContext *dctx, uint8_t ftype, uint8_t *fdata, size_t fdatalen, bool checklen);
 int DesfireDeleteFile(DesfireContext *dctx, uint8_t fid);
+int DesfireCommitTrqansaction(DesfireContext *dctx, bool enable_options, uint8_t options);
+int DesfireAbortTrqansaction(DesfireContext *dctx);
 
 #endif // __DESFIRECORE_H
