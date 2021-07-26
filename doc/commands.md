@@ -523,14 +523,17 @@ Check column "offline" for their availability.
 |`hf mfdes selectaid     `|N       |`Select Application ID`
 |`hf mfdes getaids       `|N       |`[new]Get Application IDs list`
 |`hf mfdes getappnames   `|N       |`[new]Get Applications list`
-|`hf mfdes changevalue   `|N       |`Write value of a value file (credit/debit/clear)`
+|`hf mfdes getfileids    `|N       |`[new]Get File IDs list`
+|`hf mfdes getfileisoids `|N       |`[new]Get File ISO IDs list`
+|`hf mfdes getfilesettings`|N       |`[new]Get file settings`
+|`hf mfdes chfilesettings`|N       |`[new]Change file settings`
 |`hf mfdes clearfile     `|N       |`Clear record File`
-|`hf mfdes createfile    `|N       |`Create Standard/Backup File`
-|`hf mfdes createvaluefile`|N       |`Create Value File`
+|`hf mfdes createfile    `|N       |`[new]Create Standard/Backup File`
+|`hf mfdes createvaluefile`|N       |`[new]Create Value File`
 |`hf mfdes createrecordfile`|N       |`Create Linear/Cyclic Record File`
-|`hf mfdes deletefile    `|N       |`Create Delete File`
+|`hf mfdes deletefile    `|N       |`[new]Delete File`
 |`hf mfdes dump          `|N       |`Dump all files`
-|`hf mfdes getvalue      `|N       |`Get value of file`
+|`hf mfdes value         `|N       |`[new]Operations with value file (get/credit/limited credit/debit/clear)`
 |`hf mfdes read          `|N       |`Read data from standard/backup/record file`
 |`hf mfdes write         `|N       |`Write data to standard/backup/record file`
 |`hf mfdes test          `|Y       |`Test crypto`

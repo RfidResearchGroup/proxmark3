@@ -973,7 +973,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210720.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210726.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -3208,7 +3208,7 @@
                 "-f, --file <fn> filename of dump",
                 "--emu from emulator memory"
             ],
-            "usage": "hf mf cload [-h] -f <fn> [--emu]"
+            "usage": "hf mf cload [-h] [-f <fn>] [--emu]"
         },
         "hf mf csave": {
             "command": "hf mf csave",
@@ -4009,21 +4009,38 @@
             ],
             "usage": "hf mfdes changekey [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--oldalgo <des/2tdea/3tdea/aes>] [--oldkey <old key>] [--newkeyno <keyno>] [--newalgo <des/2tdea/3tdea/aes>] [--newkey <new key>] [--newver <version hex>]"
         },
-        "hf mfdes changevalue": {
-            "command": "hf mfdes changevalue",
-            "description": "change value (credit / limitedcredit / debit) make sure to select aid or authenticate aid before running this command.",
+        "hf mfdes chfilesettings": {
+            "command": "hf mfdes chfilesettings",
+            "description": "get file settings from file from application. master key needs to be provided or flag --no-auth set (depend on cards settings).",
             "notes": [
-                "hf mfdes changevalue -n 03 -m 0 -d 00000001"
+                "hf mfdes chfilesettings --aid 123456 --fid 01 --amode plain --rrights free --wrights free --rwrights free --chrights key0 -> change file settings app=123456, file=01 with defaults from `default` command",
+                "hf mfdes chfilesettings -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 --rawdata 00eeee -> execute with default factory setup",
+                "hf mfdes chfilesettings --aid 123456 --fid 01 --rawdata 810000021f112f22 -> change file settings with additional rights for keys 1 and 2"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-n, --fileno <dec> file number (0 - 31)",
-                "-d, --value <hex> value to increase (4 hex bytes, big endian)",
-                "-m, --mode <dec> mode (0 = credit, 1 = limited credit, 2 = debit)",
-                "-a, --aid <hex> app id to select as hex bytes (3 bytes, big endian)"
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--fid <file id hex> file id (1 hex byte)",
+                "--rawdata <file settings hex> file settings (hex > 5 bytes)",
+                "--amode <plain/mac/encrypt> file access mode: plain/mac/encrypt",
+                "--rrights <key0/../key13/free/deny> read file access mode: the specified key, free, deny",
+                "--wrights <key0/../key13/free/deny> write file access mode: the specified key, free, deny",
+                "--rwrights <key0/../key13/free/deny> read/write file access mode: the specified key, free, deny",
+                "--chrights <key0/../key13/free/deny> change file settings access mode: the specified key, free, deny",
+                "--no-auth execute without authentication"
             ],
-            "usage": "hf mfdes changevalue [-h] [-n <dec>] [-d <hex>]... [-m <dec>] [-a <hex>]..."
+            "usage": "hf mfdes chfilesettings [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--fid <file id hex>] [--rawdata <file settings hex>] [--amode <plain/mac/encrypt>] [--rrights <key0/../key13/free/deny>] [--wrights <key0/../key13/free/deny>] [--rwrights <key0/../key13/free/deny>] [--chrights <key0/../key13/free/deny>] [--no-auth]"
         },
         "hf mfdes chk": {
             "command": "hf mfdes chk",
@@ -4153,22 +4170,44 @@
         },
         "hf mfdes createfile": {
             "command": "hf mfdes createfile",
-            "description": "create standard/backup file",
+            "description": "create standard/backup file in the application. application master key needs to be provided or flag --no-auth set (depend on application settings).",
             "notes": [
-                "hf mfdes createfile -f 0001 -n 01 -c 0 -r eeee -s 000100 -a 123456"
+                "--rawtype/--rawdata have priority over the other settings. and with these parameters you can create any file. file id comes from parameters, all the rest data must be in the --rawdata parameter",
+                "--rawrights have priority over the separate rights settings.",
+                "key/mode/etc of the authentication depends on application settings",
+                "hf mfdes createfile --aid 123456 --fid 01 --rawtype 01 --rawdata 000100eeee000100 -> create file via sending rawdata to the card. can be used to create any type of file. authentication with defaults from `default` command",
+                "hf mfdes createfile --aid 123456 --fid 01 --amode plain --rrights free --wrights free --rwrights free --chrights key0 -> create file app=123456, file=01 and mentioned rights with defaults from `default` command",
+                "hf mfdes createfile -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 --rawtype 00 --rawdata 00eeee000100 -> execute with default factory setup"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-n, --fileno <dec> file number (0 - 31)",
-                "-f, --fileid <hex> iso fid (2 hex bytes, big endian)",
-                "-c, --com <dec> communication setting (0 = plain, 1 = plain + mac, 3 = enciphered)",
-                "-r, --rights <hex> access rights (2 hex bytes -> rw/chg/r/w, 0x0 - 0xd key, 0xe free, 0xf denied)",
-                "-s, --filesize <hex> file size (3 hex bytes, big endian)",
-                "-b, --backup create backupfile instead of standard file",
-                "-a, --aid <hex> app id to select as hex bytes (3 bytes, big endian)"
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--fid <file id hex> file id (1 hex byte)",
+                "--isofid <iso file id hex> iso file id (2 hex bytes)",
+                "--rawtype <file type hex 1b> raw file type (hex 1 byte)",
+                "--rawdata <file settings hex> raw file settings (hex > 5 bytes)",
+                "--amode <plain/mac/encrypt> file access mode: plain/mac/encrypt",
+                "--rawrights <access rights hex> access rights for file (hex 2 byte) r/w/rw/chg, 0x0 - 0xd key, 0xe free, 0xf denied",
+                "--rrights <key0/../key13/free/deny> read file access mode: the specified key, free, deny",
+                "--wrights <key0/../key13/free/deny> write file access mode: the specified key, free, deny",
+                "--rwrights <key0/../key13/free/deny> read/write file access mode: the specified key, free, deny",
+                "--chrights <key0/../key13/free/deny> change file settings access mode: the specified key, free, deny",
+                "--no-auth execute without authentication",
+                "--size <hex> file size (3 hex bytes, big endian)",
+                "--backup create backupfile instead of standard file"
             ],
-            "usage": "hf mfdes createfile [-hb] [-n <dec>] [-f <hex>]... [-c <dec>] [-r <hex>]... [-s <hex>]... [-a <hex>]..."
+            "usage": "hf mfdes createfile [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--fid <file id hex>] [--isofid <iso file id hex>] [--rawtype <file type hex 1b>] [--rawdata <file settings hex>] [--amode <plain/mac/encrypt>] [--rawrights <access rights hex>] [--rrights <key0/../key13/free/deny>] [--wrights <key0/../key13/free/deny>] [--rwrights <key0/../key13/free/deny>] [--chrights <key0/../key13/free/deny>] [--no-auth] [--size <hex>] [--backup]"
         },
         "hf mfdes createrecordfile": {
             "command": "hf mfdes createrecordfile",
@@ -4192,23 +4231,42 @@
         },
         "hf mfdes createvaluefile": {
             "command": "hf mfdes createvaluefile",
-            "description": "create value file make sure to select aid or authenticate aid before running this command.",
+            "description": "create value file in the application. application master key needs to be provided or flag --no-auth set (depend on application settings).",
             "notes": [
-                "hf mfdes createvaluefile -n 03 -c 0 -r eeee -l 00000000 -u 00002000 --val 00000001 -m 02 -a 123456"
+                "--rawrights have priority over the separate rights settings.",
+                "key/mode/etc of the authentication depends on application settings",
+                "hf mfdes createvaluefile --aid 123456 --fid 01 --lower 00000010 --upper 00010000 --value 00000100 -> create file with parameters. rights from default. authentication with defaults from `default` command",
+                "hf mfdes createvaluefile --aid 123456 --fid 01 --amode plain --rrights free --wrights free --rwrights free --chrights key0 -> create file app=123456, file=01 and mentioned rights with defaults from `default` command",
+                "hf mfdes createvaluefile -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> execute with default factory setup"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-n, --fileno <dec> file number (0 - 31)",
-                "-c, --com <dec> communication setting (0 = plain, 1 = plain + mac, 3 = enciphered)",
-                "-r, --rights <hex> access rights (2 hex bytes -> rw/chg/r/w, 0x0 - 0xd key, 0xe free, 0xf denied)",
-                "-l, --lower <hex> lower limit (4 hex bytes, big endian)",
-                "-u, --upper <hex> upper limit (4 hex bytes, big endian)",
-                "--val <hex> value (4 hex bytes, big endian)",
-                "-m <dec> limited credit enabled (bit 0 = limited credit, 1 = freevalue)",
-                "-a, --aid <hex> app id to select as hex bytes (3 bytes,big endian,optional)"
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--fid <file id hex> file id (1 hex byte)",
+                "--amode <plain/mac/encrypt> file access mode: plain/mac/encrypt",
+                "--rawrights <access rights hex> access rights for file (hex 2 byte) r/w/rw/chg, 0x0 - 0xd key, 0xe free, 0xf denied",
+                "--rrights <key0/../key13/free/deny> read file access mode: the specified key, free, deny",
+                "--wrights <key0/../key13/free/deny> write file access mode: the specified key, free, deny",
+                "--rwrights <key0/../key13/free/deny> read/write file access mode: the specified key, free, deny",
+                "--chrights <key0/../key13/free/deny> change file settings access mode: the specified key, free, deny",
+                "--no-auth execute without authentication",
+                "--lower <hex> lower limit (4 hex bytes, big endian)",
+                "--upper <hex> upper limit (4 hex bytes, big endian)",
+                "--value <hex> value (4 hex bytes, big endian)",
+                "--lcredit <dec> limited credit enabled (bit 0 = limited credit, 1 = freevalue)"
             ],
-            "usage": "hf mfdes createvaluefile [-h] [-n <dec>] [-c <dec>] [-r <hex>]... [-l <hex>]... [-u <hex>]... [--val <hex>]... [-m <dec>] [-a <hex>]..."
+            "usage": "hf mfdes createvaluefile [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--fid <file id hex>] [--amode <plain/mac/encrypt>] [--rawrights <access rights hex>] [--rrights <key0/../key13/free/deny>] [--wrights <key0/../key13/free/deny>] [--rwrights <key0/../key13/free/deny>] [--chrights <key0/../key13/free/deny>] [--no-auth] [--lower <hex>] [--upper <hex>] [--value <hex>] [--lcredit <dec>]"
         },
         "hf mfdes deleteapp": {
             "command": "hf mfdes deleteapp",
@@ -4235,17 +4293,28 @@
         },
         "hf mfdes deletefile": {
             "command": "hf mfdes deletefile",
-            "description": "delete file",
+            "description": "delete file from application. master key needs to be provided or flag --no-auth set (depend on cards settings).",
             "notes": [
-                "hf mfdes deletefile -n 01 -> make sure to select aid or authenticate aid before running this command."
+                "hf mfdes deletefile --aid 123456 --fid 01 -> delete file for: app=123456, file=01 with defaults from `default` command"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-n, --fileno <dec> file number (0 - 31)",
-                "-a, --aid <hex> app id to select as hex bytes (3 bytes, big endian)"
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--fid <file id hex> file id (1 hex byte)",
+                "--no-auth execute without authentication"
             ],
-            "usage": "hf mfdes deletefile [-h] [-n <dec>] [-a <hex>]..."
+            "usage": "hf mfdes deletefile [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--fid <file id hex>] [--no-auth]"
         },
         "hf mfdes dump": {
             "command": "hf mfdes dump",
@@ -4363,6 +4432,82 @@
             ],
             "usage": "hf mfdes getappnames [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--no-auth]"
         },
+        "hf mfdes getfileids": {
+            "command": "hf mfdes getfileids",
+            "description": "get file ids list from card. master key needs to be provided or flag --no-auth set.",
+            "notes": [
+                "hf mfdes getfileids --aid 123456 -> execute with defaults from `default` command",
+                "hf mfdes getfileids -n 0 -t des -k 0000000000000000 -f none --aid 123456 -> execute with default factory setup"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--no-auth execute without authentication"
+            ],
+            "usage": "hf mfdes getfileids [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--no-auth]"
+        },
+        "hf mfdes getfileisoids": {
+            "command": "hf mfdes getfileisoids",
+            "description": "get file ids list from card. master key needs to be provided or flag --no-auth set.",
+            "notes": [
+                "hf mfdes getfileisoids --aid 123456 -> execute with defaults from `default` command",
+                "hf mfdes getfileisoids -n 0 -t des -k 0000000000000000 -f none --aid 123456 -> execute with default factory setup"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--no-auth execute without authentication"
+            ],
+            "usage": "hf mfdes getfileisoids [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--no-auth]"
+        },
+        "hf mfdes getfilesettings": {
+            "command": "hf mfdes getfilesettings",
+            "description": "get file settings from file from application. master key needs to be provided or flag --no-auth set (depend on cards settings).",
+            "notes": [
+                "hf mfdes getfilesettings --aid 123456 --fid 01 -> execute with defaults from `default` command",
+                "hf mfdes getfilesettings -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> execute with default factory setup"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--fid <file id hex> file id (1 hex byte). default: 1",
+                "--no-auth execute without authentication"
+            ],
+            "usage": "hf mfdes getfilesettings [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--fid <file id hex>] [--no-auth]"
+        },
         "hf mfdes getkeysettings": {
             "command": "hf mfdes getkeysettings",
             "description": "get key settings for card level or application level.",
@@ -4435,20 +4580,6 @@
                 "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2"
             ],
             "usage": "hf mfdes getuid [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>]"
-        },
-        "hf mfdes getvalue": {
-            "command": "hf mfdes getvalue",
-            "description": "get value from value file make sure to select aid or authenticate aid before running this command.",
-            "notes": [
-                "hf mfdes getvalue -n 03"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-n, --fileno <dec> file number (0 - 31)",
-                "-a, --aid <hex> app id to select as hex bytes (3 bytes, big endian)"
-            ],
-            "usage": "hf mfdes getvalue [-h] [-n <dec>] [-a <hex>]..."
         },
         "hf mfdes help": {
             "command": "hf mfdes help",
@@ -4536,9 +4667,10 @@
         },
         "hf mfdes setconfig": {
             "command": "hf mfdes setconfig",
-            "description": "set card configuration. danger zone! needs to provide card's master key and works if not blocked by config.",
+            "description": "set card configuration. warning! danger zone! needs to provide card's master key and works if not blocked by config.",
             "notes": [
-                "hf mfdes setconfig --param 03 --data 0428 -> set parameter with data value"
+                "hf mfdes setconfig --param 03 --data 0428 -> set parameter 03",
+                "hf mfdes setconfig --param 02 --data 0875778102637264 -> set parameter 02"
             ],
             "offline": false,
             "options": [
@@ -4570,6 +4702,35 @@
                 "-h, --help this help"
             ],
             "usage": "hf seos info [-h]"
+        },
+        "hf mfdes value": {
+            "command": "hf mfdes value",
+            "description": "get file settings from file from application. master key needs to be provided or flag --no-auth set (depend on cards settings).",
+            "notes": [
+                "hf mfdes value --aid 123456 --fid 01 -> get value app=123456, file=01 with defaults from `default` command",
+                "hf mfdes value --aid 123456 --fid 01 --op credit -d 00000001 -> credit value app=123456, file=01 with defaults from `default` command",
+                "hf mfdes value -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> get value with default factory setup"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--fid <file id hex> file id (1 hex byte)",
+                "-o, --op <get/credit/limcredit/debit/clear> operation: get(default)/credit/limcredit(limited credit)/debit/clear. operation clear: get-getopt-debit to min value",
+                "-d, --data <value hex> value for operation (hex 4 bytes)",
+                "--no-auth execute without authentication"
+            ],
+            "usage": "hf mfdes value [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--fid <file id hex>] [-o <get/credit/limcredit/debit/clear>] [-d <value hex>] [--no-auth]"
         },
         "hf mfdes write": {
             "command": "hf mfdes write",
@@ -9521,8 +9682,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 582,
+        "commands_extracted": 585,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-07-20T20:36:37"
+        "extracted_on": "2021-07-26T14:56:39"
     }
 }
