@@ -6202,9 +6202,9 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes value",
                   "Get File Settings from file from application. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
-                  "hf mfdes value --aid 123456 --fid 01 --op credit -d 00000001 -> change file settings app=123456, file=01 with defaults from `default` command\n"
-                  "hf mfdes value -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -rawdata 00EEEE -> execute with default factory setup\n"
-                  "hf mfdes value --aid 123456 --fid 01 --rawdata 810000021f112f22 -> change file settings with additional rights for keys 1 and 2");
+                  "hf mfdes value --aid 123456 --fid 01  -> get value app=123456, file=01 with defaults from `default` command\n"
+                  "hf mfdes value --aid 123456 --fid 01 --op credit -d 00000001 -> credit value app=123456, file=01 with defaults from `default` command\n"
+                  "hf mfdes value -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> get value with default factory setup");
 
     void *argtable[] = {
         arg_param_begin,
