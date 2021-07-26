@@ -4362,8 +4362,10 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     }
 
     int oldkeytype = dctx.keyType;
-    if (CLIGetOptionList(arg_get_str(ctx, 12), DesfireAlgoOpts, &oldkeytype))
+    if (CLIGetOptionList(arg_get_str(ctx, 12), DesfireAlgoOpts, &oldkeytype)) {
+        CLIParserFree(ctx);
         return PM3_ESOFT;
+    }
 
     uint8_t oldkey[DESFIRE_MAX_KEY_SIZE] = {0};
     uint8_t keydata[200] = {0};
