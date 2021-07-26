@@ -1392,7 +1392,6 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
     
     bool isoidpresent = ftyperec->mayHaveISOfid && (len == ftyperec->createlen + 2 + 1);
     
- PrintAndLogEx(SUCCESS, "---: %d", ftyperec->createlen);
     PrintAndLogEx(INFO, "---- " _CYAN_("Create file settings") " ----");
     PrintAndLogEx(SUCCESS, "File type        : %s", ftyperec->text);
     PrintAndLogEx(SUCCESS, "File number      : 0x%02x (%d)", data[0], data[0]);
