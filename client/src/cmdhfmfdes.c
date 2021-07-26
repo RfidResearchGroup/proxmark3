@@ -6504,7 +6504,6 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-//    {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "[new]Operations with value file (get/credit/limited credit/debit/clear)"},
 static int CmdHF14ADesValueOperations(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes value",
@@ -6607,7 +6606,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
                 DropField();
                 return PM3_ESOFT;
             }
-
+            
             PrintAndLogEx(SUCCESS, "Value changed " _GREEN_("successfully"));
         }
     } else {
@@ -6620,6 +6619,56 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
         if (verbose)
             PrintAndLogEx(INFO, "current value: 0x%08x", value);
         
+        uint8_t buf[250] = {0};
+        size_t buflen = 0;
+        
+        res = DesfireGetFileSettings(&dctx, fileid, buf, &buflen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire GetFileSettings command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (verbose)
+            PrintAndLogEx(INFO, "file settings[%d]: %s", buflen, sprint_hex(buf, buflen));
+        
+        if (buflen < 8 || buf[0] != 0x02) {
+            PrintAndLogEx(ERR, "Desfire GetFileSettings command returns " _RED_("wrong") " data");
+            DropField();
+            return PM3_ESOFT;
+        }
+        
+        uint32_t minvalue = MemLeToUint4byte(&buf[4]);
+        uint32_t delta = (value > minvalue) ? value - minvalue : 0;
+        if (verbose) {
+            PrintAndLogEx(INFO, "minimum value: 0x%08x", minvalue);
+            PrintAndLogEx(INFO, "delta value  : 0x%08x", delta);
+        }
+
+        if (delta > 0) {
+            res = DesfireValueFileOperations(&dctx, fileid, MFDES_DEBIT, &delta);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Desfire Debit operation " _RED_("error") ". Result: %d", res);
+                DropField();
+                return PM3_ESOFT;
+            }
+
+            if (verbose)
+                PrintAndLogEx(INFO, "Value debited");
+
+            DesfireCommitTrqansaction(&dctx, false, 0);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Desfire CommitTrqansaction command " _RED_("error") ". Result: %d", res);
+                DropField();
+                return PM3_ESOFT;
+            }
+
+            if (verbose)
+                PrintAndLogEx(INFO, "Transaction commited");
+        } else {
+            if (verbose)
+                PrintAndLogEx(INFO, "Nothing to clear. Vallue allready in the minimum level.");
+        }
         
         PrintAndLogEx(SUCCESS, "Value cleared " _GREEN_("successfully"));
     }
