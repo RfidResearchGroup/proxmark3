@@ -5514,6 +5514,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
     res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fileid, 1, true);
     if (res == 2) {
         PrintAndLogEx(ERR, "File ID must have 1 byte length");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -5604,6 +5605,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
     res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fileid, 1, true);
     if (res == 2) {
         PrintAndLogEx(ERR, "File ID must have 1 byte length");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -5616,6 +5618,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 13, sdata, &sdatalen);
     if (sdatalen > 18) {
         PrintAndLogEx(ERR, "File settings length must be less than 18 instead of %d.", settingslen);
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -5957,7 +5960,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     }
     
     if (verbose)
-        PrintAndLogEx(INFO, "App: %06x. File num: 0x%02x type: 0x%02x data[%d]: %s", appid, data[0], filetype, datalen, sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "App: %06x. File num: 0x%02x type: 0x%02x data[%zu]: %s", appid, data[0], filetype, datalen, sprint_hex(data, datalen));
     DesfirePrintCreateFileSettings(filetype, data, datalen);
 
     
@@ -6034,12 +6037,6 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
         return PM3_EINVARG;
     }
     
-    if (appid == 0x000000) {
-        PrintAndLogEx(ERR, "Can't create files at card level.");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
     uint8_t data[250] = {0};
     size_t datalen = 0;
 
@@ -6104,7 +6101,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     }
     
     if (verbose)
-        PrintAndLogEx(INFO, "App: %06x. File num: 0x%02x type: 0x%02x data[%d]: %s", appid, data[0], filetype, datalen, sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "App: %06x. File num: 0x%02x type: 0x%02x data[%zu]: %s", appid, data[0], filetype, datalen, sprint_hex(data, datalen));
     DesfirePrintCreateFileSettings(filetype, data, datalen);
 
 
@@ -6163,6 +6160,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fnum, 1, true);
     if (res == 2) {
         PrintAndLogEx(ERR, "File ID must have 1 byte length");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
