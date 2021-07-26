@@ -1339,7 +1339,7 @@ void DesfirePrintFileSettings(uint8_t *data, size_t len) {
         addaccess = ((data[1] & 0x80) != 0);
         PrintAndLogEx(SUCCESS, "Additional access: %s", (addaccess) ? "Yes" : "No");
     }
-    PrintAndLogEx(SUCCESS, "Access rights    : %02x%02x", data[3], data[2]);
+    PrintAndLogEx(SUCCESS, "Access rights    : %04x", MemLeToUint2byte(&data[2]));
     DesfirePrintAccessRight(&data[2]); //2 bytes
     
     uint8_t reclen = 0;
@@ -1349,7 +1349,7 @@ void DesfirePrintFileSettings(uint8_t *data, size_t len) {
     if (addaccess && filetype != 0x05 && reclen > 0 && len > reclen && len == reclen + data[reclen] * 2) {
         PrintAndLogEx(SUCCESS, "Add access records: %d", data[reclen]);
         for (int i = 0; i < data[reclen] * 2; i += 2) {
-            PrintAndLogEx(SUCCESS, "Add access rights : [%d] %02x%02x", i / 2, data[reclen + 1 + i], data[reclen + 2 + i]);
+            PrintAndLogEx(SUCCESS, "Add access rights : [%d] %04x", i / 2, MemLeToUint2byte(&data[reclen + 1 + i]));
             DesfirePrintAccessRight(&data[reclen + 1 + i]);
         }
     }
@@ -1362,13 +1362,13 @@ void DesfirePrintSetFileSettings(uint8_t *data, size_t len) {
     bool addaccess = ((data[0] & 0x80) != 0);
     PrintAndLogEx(SUCCESS, "Additional access: %s", (addaccess) ? "Yes" : "No");
 
-    PrintAndLogEx(SUCCESS, "Access rights    : %02x%02x", data[2], data[1]);
+    PrintAndLogEx(SUCCESS, "Access rights    : %04x", MemLeToUint2byte(&data[1]));
     DesfirePrintAccessRight(&data[1]); //2 bytes
     
     if (addaccess && len > 3 && len == 4 + data[3] * 2) {
         PrintAndLogEx(SUCCESS, "Add access records: %d", data[3]);
         for (int i = 0; i < data[3] * 2; i += 2) {
-            PrintAndLogEx(SUCCESS, "Add access rights : [%d] %02x%02x", i / 2, data[4 + i], data[5 + i]);
+            PrintAndLogEx(SUCCESS, "Add access rights : [%d] %04x", i / 2, MemLeToUint2byte(&data[4 + i]));
             DesfirePrintAccessRight(&data[4 + i]);
         }
     }
@@ -1388,7 +1388,7 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
     PrintAndLogEx(SUCCESS, "File number      : 0x%02x (%d)", data[0], data[0]);
     size_t xlen = 1;
     if (isoidpresent) {
-        PrintAndLogEx(SUCCESS, "File ISO number  : 0x%02x%02x", data[xlen], data[xlen + 1]);
+        PrintAndLogEx(SUCCESS, "File ISO number  : 0x%04x", MemBeToUint2byte(&data[xlen]));
         xlen += 2;
     } else {
         PrintAndLogEx(SUCCESS, "File ISO number  : n/a");
@@ -1399,7 +1399,7 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
     PrintAndLogEx(SUCCESS, "Additional access: %s", (addaccess) ? "Yes" : "No");
     xlen++;
     
-    PrintAndLogEx(SUCCESS, "Access rights    : %02x%02x", data[xlen + 1], data[xlen]);
+    PrintAndLogEx(SUCCESS, "Access rights    : %04x", MemLeToUint2byte(&data[xlen]));
     DesfirePrintAccessRight(&data[xlen]);
     xlen += 2;
 
