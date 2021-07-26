@@ -1072,6 +1072,10 @@ int DesfireDeleteFile(DesfireContext *dctx, uint8_t fnum) {
     return DesfireCommandTxData(dctx, MFDES_DELETE_FILE, &fnum, 1);
 }
 
+int DesfireClearRecordFile(DesfireContext *dctx, uint8_t fnum) {
+    return DesfireCommandTxData(dctx, MFDES_CLEAR_RECORD_FILE, &fnum, 1);
+}
+
 int DesfireCommitTransaction(DesfireContext *dctx, bool enable_options, uint8_t options) {
     if (enable_options)
         return DesfireCommandTxData(dctx, MFDES_COMMIT_TRANSACTION, &options, 1);

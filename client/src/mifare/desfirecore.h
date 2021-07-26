@@ -89,10 +89,11 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
 
 const char *GetDesfireFileType(uint8_t type);
 int DesfireCreateFile(DesfireContext *dctx, uint8_t ftype, uint8_t *fdata, size_t fdatalen, bool checklen);
-int DesfireDeleteFile(DesfireContext *dctx, uint8_t fid);
+int DesfireDeleteFile(DesfireContext *dctx, uint8_t fnum);
 int DesfireCommitTransaction(DesfireContext *dctx, bool enable_options, uint8_t options);
 int DesfireAbortTransaction(DesfireContext *dctx);
 
 int DesfireValueFileOperations(DesfireContext *dctx, uint8_t fid, uint8_t operation, uint32_t *value);
+int DesfireClearRecordFile(DesfireContext *dctx, uint8_t fnum);
 
 #endif // __DESFIRECORE_H
