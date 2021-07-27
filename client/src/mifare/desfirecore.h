@@ -33,6 +33,7 @@ typedef struct {
     uint8_t fileType;
     uint8_t fileOption;
     uint8_t fileCommMode;
+    DesfireCommunicationMode commMode;
     bool additionalAccessRightsEn;
     uint16_t rawAccessRights;
     uint8_t rAccess;

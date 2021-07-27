@@ -1377,6 +1377,7 @@ void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsett
     fsettings->fileType = data[0];
     fsettings->fileOption = data[1];
     fsettings->fileCommMode = data[1] & 0x03;
+    fsettings->commMode = DesfireFileCommModeToCommMode(fsettings->fileCommMode);
     fsettings->additionalAccessRightsEn = ((data[1] & 0x80) != 0);
     fsettings->rawAccessRights = MemLeToUint2byte(&data[2]);
     DesfireDecodeFileAcessMode(&data[2], &fsettings->rAccess, &fsettings->wAccess, &fsettings->rwAccess, &fsettings->chAccess);
