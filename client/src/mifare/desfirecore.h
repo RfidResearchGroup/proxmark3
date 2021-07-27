@@ -28,6 +28,14 @@ typedef struct {
     const bool mayHaveISOfid;
 } DesfireCreateFileCommandsS;
 
+typedef enum {
+    RFTAuto,
+    RFTData,
+    RFTValue,
+    RFTRecord,
+    RFTMAC,
+} DesfireReadOpFileType;
+
 extern const CLIParserOption DesfireAlgoOpts[];
 extern const CLIParserOption DesfireKDFAlgoOpts[];
 extern const CLIParserOption DesfireCommunicationModeOpts[];
@@ -35,6 +43,7 @@ extern const CLIParserOption DesfireCommandSetOpts[];
 extern const CLIParserOption DesfireSecureChannelOpts[];
 extern const CLIParserOption DesfireFileAccessModeOpts[];
 extern const CLIParserOption DesfireValueFileOperOpts[];
+extern const CLIParserOption DesfireReadFileTypeOpts[];
 
 const char *DesfireGetErrorString(int res, uint16_t *sw);
 uint32_t DesfireAIDByteToUint(uint8_t *data);

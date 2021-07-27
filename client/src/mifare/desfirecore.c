@@ -103,6 +103,15 @@ const CLIParserOption DesfireValueFileOperOpts[] = {
     {0,    NULL},
 };
 
+const CLIParserOption DesfireReadFileTypeOpts[] = {
+    {RFTAuto,   "auto"},
+    {RFTData,   "data"},
+    {RFTValue,  "value"},
+    {RFTRecord, "record"},
+    {RFTMAC,    "mac"},
+    {0,    NULL},
+};
+
 static const char *getstatus(uint16_t *sw) {
     if (sw == NULL) return "--> sw argument error. This should never happen !";
     if (((*sw >> 8) & 0xFF) == 0x91) {
