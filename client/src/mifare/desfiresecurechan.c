@@ -36,7 +36,6 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_CREATE_VALUE_FILE,         DACd40,  DCCNative,    DCMPlain},
     {MFDES_CREATE_LINEAR_RECORD_FILE, DACd40,  DCCNative,    DCMPlain},
     {MFDES_CREATE_CYCLIC_RECORD_FILE, DACd40,  DCCNative,    DCMPlain},
-    {MFDES_CREATE_TRANS_MAC_FILE,     DACd40,  DCCNative,    DCMPlain},
     {MFDES_GET_VALUE,                 DACd40,  DCCNative,    DCMPlain},
     {MFDES_CREDIT,                    DACd40,  DCCNative,    DCMPlain},
     {MFDES_LIMITED_CREDIT,            DACd40,  DCCNative,    DCMPlain},
@@ -67,6 +66,7 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_CHANGE_FILE_SETTINGS,      DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_READ_DATA,                 DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_WRITE_DATA,                DACd40,  DCCNative,    DCMEncrypted},
+    {MFDES_CREATE_TRANS_MAC_FILE,     DACd40,  DCCNative,    DCMEncrypted},
 
     {MFDES_CHANGE_KEY,                DACd40,  DCCNative,    DCMEncryptedPlain},
     {MFDES_CHANGE_KEY_EV2,            DACd40,  DCCNative,    DCMEncryptedPlain},
@@ -88,7 +88,6 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_CREATE_VALUE_FILE,         DACEV1,  DCCNative,    DCMMACed},
     {MFDES_CREATE_LINEAR_RECORD_FILE, DACEV1,  DCCNative,    DCMMACed},
     {MFDES_CREATE_CYCLIC_RECORD_FILE, DACEV1,  DCCNative,    DCMMACed},
-    {MFDES_CREATE_TRANS_MAC_FILE,     DACEV1,  DCCNative,    DCMMACed},
     {MFDES_GET_VALUE,                 DACEV1,  DCCNative,    DCMMACed},
     {MFDES_CREDIT,                    DACEV1,  DCCNative,    DCMMACed},
     {MFDES_LIMITED_CREDIT,            DACEV1,  DCCNative,    DCMMACed},
@@ -99,6 +98,7 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_GET_UID,                   DACEV1,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,       DACEV1,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_FILE_SETTINGS,      DACEV1,  DCCNative,    DCMEncrypted},
+    {MFDES_CREATE_TRANS_MAC_FILE,     DACEV1,  DCCNative,    DCMEncrypted},
 
     {MFDES_CHANGE_KEY,                DACEV1,  DCCNative,    DCMEncryptedPlain},
     {MFDES_CHANGE_KEY_EV2,            DACEV1,  DCCNative,    DCMEncryptedPlain},
@@ -112,7 +112,7 @@ CmdHeaderLengthsS CmdHeaderLengths[] = {
     {MFDES_CHANGE_KEY_EV2,         2},
     {MFDES_CHANGE_CONFIGURATION,   1},
     {MFDES_CHANGE_FILE_SETTINGS,   1},
-    {MFDES_CREATE_TRANS_MAC_FILE, 17},
+    {MFDES_CREATE_TRANS_MAC_FILE,  5},
 };
 
 static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {
