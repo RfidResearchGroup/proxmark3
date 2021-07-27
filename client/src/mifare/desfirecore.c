@@ -1385,29 +1385,29 @@ void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsett
     switch (fsettings->fileType) {
         case 0x00:
         case 0x01: {
-            fsettings->fileSize = MemLeToUint3byte(&data[0]);
+            fsettings->fileSize = MemLeToUint3byte(&data[4]);
             reclen = 4 + 3;
             break;
         }
         case 0x02: {
-            fsettings->lowerLimit = MemLeToUint4byte(&data[0]);
-            fsettings->upperLimit = MemLeToUint4byte(&data[4]);
-            fsettings->value = MemLeToUint4byte(&data[8]);
-            fsettings->limitedCredit = data[12];
+            fsettings->lowerLimit = MemLeToUint4byte(&data[4]);
+            fsettings->upperLimit = MemLeToUint4byte(&data[8]);
+            fsettings->value = MemLeToUint4byte(&data[12]);
+            fsettings->limitedCredit = data[16];
             reclen = 4 + 13;
             break;
         }
         case 0x03:
         case 0x04: {
-            fsettings->recordSize = MemLeToUint3byte(&data[0]);
-            fsettings->maxRecordCount = MemLeToUint3byte(&data[3]);
-            fsettings->curRecordCount = MemLeToUint3byte(&data[6]);
+            fsettings->recordSize = MemLeToUint3byte(&data[4]);
+            fsettings->maxRecordCount = MemLeToUint3byte(&data[7]);
+            fsettings->curRecordCount = MemLeToUint3byte(&data[10]);
             reclen = 4 + 9;
             break;
         }
         case 0x05: {
-            fsettings->keyType = data[0];
-            fsettings->keyVersion = data[1];
+            fsettings->keyType = data[4];
+            fsettings->keyVersion = data[5];
             break;
         }
         default: {
