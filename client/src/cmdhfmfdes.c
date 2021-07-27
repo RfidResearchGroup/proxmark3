@@ -6235,7 +6235,8 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes read",
                   "Read data from file. Key needs to be provided or flag --no-auth set (depend on file settings).",
-                  "hf mfdes read --aid 123456 --fid 01 -> read file: app=123456, file=01, offset=0, all the data. use default channel settings from `default` command");
+                  "hf mfdes read --aid 123456 --fid 01 -> read file: app=123456, file=01, offset=0, all the data. use default channel settings from `default` command\n"
+                  "hf mfdes read --aid 123456 --fid 01 --type record --offset 000000 --length 000001 -> read one last record from record file. use default channel settings from `default` command");
 
     void *argtable[] = {
         arg_param_begin,
@@ -6430,7 +6431,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         if (resplen > 0) {
             size_t reccount = resplen / reclen;
             PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x from record %u record count %zu record length %zu", resplen, fnum, offset, reccount, reclen);
-            if (reccount > 0)
+            if (reccount > 1)
                 PrintAndLogEx(SUCCESS, "Lastest record at the bottom.");
             for (int i = 0; i < reccount; i++) {
                 if (i != 0)
