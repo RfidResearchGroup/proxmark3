@@ -435,7 +435,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_GET_FREE_MEMORY           0x6E
 #define MFDES_GET_DF_NAMES              0x6D
 #define MFDES_GET_FILE_IDS              0x6F
+#define MFDES_WRITE_DATA2               0x8D
 #define MFDES_ABORT_TRANSACTION         0xA7
+#define MFDES_READ_DATA2                0xAD
 #define MFDES_ADDITIONAL_FRAME          0xAF
 #define MFDES_UPDATE_RECORD1            0xBA
 #define MFDES_READ_RECORDS              0xBB

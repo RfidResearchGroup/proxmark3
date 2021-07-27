@@ -1096,6 +1096,25 @@ int DesfireAbortTransaction(DesfireContext *dctx) {
     return DesfireCommandNoData(dctx, MFDES_ABORT_TRANSACTION);
 }
 
+int DesfireReadFile(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint32_t len, uint8_t *resp, size_t *resplen) {
+    uint8_t data[10] = {0};
+    data[0] = fnum;
+    Uint3byteToMemLe(&data[1], offset);
+    Uint3byteToMemLe(&data[4], len);
+   
+    return DesfireCommand(dctx, MFDES_READ_DATA, data, 7, resp, resplen, -1);
+}
+
+int DesfireWriteFile(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint32_t len, uint8_t *data) {
+    uint8_t xdata[1024] = {0};
+    xdata[0] = fnum;
+    Uint3byteToMemLe(&xdata[1], offset);
+    Uint3byteToMemLe(&xdata[4], len);
+    memcpy(&xdata[7], data, len);
+   
+    return DesfireCommandTxData(dctx, MFDES_WRITE_DATA, xdata, 7 + len);
+}
+
 int DesfireValueFileOperations(DesfireContext *dctx, uint8_t fid, uint8_t operation, uint32_t *value) {
     uint8_t data[250] = {0};
     data[0] = fid;

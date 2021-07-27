@@ -105,4 +105,7 @@ int DesfireAbortTransaction(DesfireContext *dctx);
 int DesfireValueFileOperations(DesfireContext *dctx, uint8_t fid, uint8_t operation, uint32_t *value);
 int DesfireClearRecordFile(DesfireContext *dctx, uint8_t fnum);
 
+int DesfireReadFile(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint32_t len, uint8_t *resp, size_t *resplen);
+int DesfireWriteFile(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint32_t len, uint8_t *data);
+
 #endif // __DESFIRECORE_H
