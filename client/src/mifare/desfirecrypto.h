@@ -105,6 +105,9 @@ void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen,
 void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorythm keytype, uint8_t version);
 uint8_t DesfireDESKeyGetVersion(uint8_t *key);
 
+DesfireCommunicationMode DesfireFileCommModeToCommMode(uint8_t file_comm_mode);
+uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode);
+
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc);
 void desfire_crc32_append(uint8_t *data, const size_t len);
 bool desfire_crc32_check(uint8_t *data, const size_t len, uint8_t *crc);

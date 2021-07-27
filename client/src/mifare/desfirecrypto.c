@@ -345,6 +345,44 @@ uint8_t DesfireDESKeyGetVersion(uint8_t *key) {
     return version;
 }
 
+DesfireCommunicationMode DesfireFileCommModeToCommMode(uint8_t file_comm_mode) {
+    DesfireCommunicationMode mode = DCMNone;
+    switch (file_comm_mode & 0x03) {
+        case 0x00:
+        case 0x02:
+            mode = DCMPlain;
+            break;
+        case 0x01:
+            mode = DCMMACed;
+            break;
+        case 0x03:
+            mode = DCMEncrypted;
+            break;
+        default:
+            break;
+    }
+    return mode;
+}
+
+uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode) {
+    uint8_t fmode = DCMNone;
+    switch (comm_mode) {
+        case DCMPlain:
+            fmode = 0x00;
+            break;
+        case DCMMACed:
+            fmode = 0x01;
+            break;
+        case DCMEncrypted:
+        case DCMEncryptedPlain:
+            fmode = 0x11;
+            break;
+        case DCMNone:
+            break;
+    }
+    return fmode;    
+}
+
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc) {
     crc32_ex(data, len, crc);
 }
