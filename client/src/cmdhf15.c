@@ -624,7 +624,7 @@ static int CmdHF15Samples(const char *Cmd) {
         arg_param_begin,
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
     clearCommandBuffer();
