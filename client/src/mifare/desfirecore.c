@@ -1427,11 +1427,13 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
     PrintAndLogEx(SUCCESS, "File type        : %s", ftyperec->text);
     PrintAndLogEx(SUCCESS, "File number      : 0x%02x (%d)", data[0], data[0]);
     size_t xlen = 1;
-    if (isoidpresent) {
-        PrintAndLogEx(SUCCESS, "File ISO number  : 0x%04x", MemBeToUint2byte(&data[xlen]));
-        xlen += 2;
-    } else {
-        PrintAndLogEx(SUCCESS, "File ISO number  : n/a");
+    if (ftyperec->mayHaveISOfid) {
+        if (isoidpresent) {
+            PrintAndLogEx(SUCCESS, "File ISO number  : 0x%04x", MemBeToUint2byte(&data[xlen]));
+            xlen += 2;
+        } else {
+            PrintAndLogEx(SUCCESS, "File ISO number  : n/a");
+        }
     }
 
     PrintAndLogEx(SUCCESS, "File comm mode   : %s", GetDesfireCommunicationMode(data[xlen] & 0x03));
