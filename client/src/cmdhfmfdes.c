@@ -6331,7 +6331,12 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     // get file settings
     if (op == RFTAuto) {
         FileSettingsS fsettings;
+        
+        DesfireCommunicationMode commMode = dctx.commMode;
+        DesfireSetCommMode(&dctx, DCMMACed);
         res = DesfireGetFileSettingsStruct(&dctx, fnum, &fsettings);
+        DesfireSetCommMode(&dctx, commMode);        
+        
         if (res == PM3_SUCCESS) {
             switch(fsettings.fileType) {
                 case 0x00:
@@ -6358,8 +6363,12 @@ static int CmdHF14ADesReadData(const char *Cmd) {
                 }
             }
             if (verbose)
-                PrintAndLogEx(INFO, "Got file type: %s. Option: %s", GetDesfireFileType(fsettings.fileType), CLIGetOptionListStr(DesfireReadFileTypeOpts, op));
+                PrintAndLogEx(INFO, "Got file type: %s. Option: %s. comm mode: %s", 
+                    GetDesfireFileType(fsettings.fileType), 
+                    CLIGetOptionListStr(DesfireReadFileTypeOpts, op), 
+                    CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
 
+            DesfireSetCommMode(&dctx, fsettings.commMode);
         } else {
             PrintAndLogEx(WARNING, "GetFileSettings error. Can't get file type.");
         }
