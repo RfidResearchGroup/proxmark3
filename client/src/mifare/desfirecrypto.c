@@ -124,7 +124,8 @@ size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint
 
     uint8_t crcdata[1024] = {0};
     size_t crcposfound = 0;
-    for (int i = 0; i < crclen + 1; i++) {
+    // crc may be 00..00 and at the end of file may be padding 0x80. so we search from last zero to crclen + 2 (one for crc=0 and one for padding 0x80)
+    for (int i = 0; i < crclen + 2; i++) {
         if (crcpos - i == 0)
             break;
         if (crcpos - i + crclen > datalen)
