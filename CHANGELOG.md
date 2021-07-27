@@ -3,7 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Fix 'lf_tharexde' - double define of global variable (@axisray)
+ - Fix `hf 15 sample` - data collection works again (@iceman1001)
+ - Changed `data plot -h` - removed line (@doegox)
+ - Fix `lf_tharexde` - double define of global variable (@axisray)
  - Added new standalone mode `lf_hidfcbrute` - bruteforce facility code (@ss23)
  - Changed `hf felica info` - got more ic chip definitions (@ah01)
  - Changed `lf pyramid demod` - relaxed the size check (@iceman1001)
