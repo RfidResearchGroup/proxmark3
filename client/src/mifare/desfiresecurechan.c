@@ -120,6 +120,8 @@ static const CmdHeaderLengthsS CmdHeaderLengths[] = {
     {MFDES_CHANGE_CONFIGURATION,   1},
     {MFDES_CHANGE_FILE_SETTINGS,   1},
     {MFDES_CREATE_TRANS_MAC_FILE,  5},
+    {MFDES_READ_DATA,              7},
+    {MFDES_WRITE_DATA,             7},
 };
 
 static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {
@@ -190,7 +192,7 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
 
     // we calc MAC anyway
     // if encypted channel and no data - we only calc MAC
-    if (ctx->commMode == DCMPlain || ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && srcdatalen == 0)) {
+    if (ctx->commMode == DCMPlain || ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && srcdatalen <= hdrlen)) {
         data[0] = cmd;
         memcpy(&data[1], srcdata, srcdatalen);
         uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
@@ -198,7 +200,7 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
 
         memcpy(dstdata, srcdata, srcdatalen);
         *dstdatalen = srcdatalen;
-        if (srcdatalen != 0 && ctx->commMode == DCMMACed) {
+        if (srcdatalen > hdrlen && ctx->commMode == DCMMACed) {
             memcpy(&dstdata[srcdatalen], cmac, DesfireGetMACLength(ctx));
             *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
         }
@@ -227,7 +229,7 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
 
 void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
     ctx->lastCommand = cmd;
-    ctx->lastRequestZeroLen = (srcdatalen == 0);
+    ctx->lastRequestZeroLen = (srcdatalen <= DesfireGetCmdHeaderLen(cmd));
 
     switch (ctx->secureChannel) {
         case DACd40:
