@@ -1195,21 +1195,39 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
 // so that it can be downloaded to a PC and processed there.
 //-----------------------------------------------------------------------------
 void AcquireRawAdcSamplesIso15693(void) {
-    LED_A_ON();
-    uint8_t *dest = BigBuf_malloc(4000);
 
+    LEDsoff();
+    DbpString("Starting to acquire data...");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
-    LED_D_ON();
-    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+
+    BigBuf_free();
+    clear_trace();
+
+    // Start from off (no field generated)
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    SpinDelay(10);
+
 
     uint8_t cmd[5];
     BuildIdentifyRequest(cmd);
     CodeIso15693AsReader(cmd, sizeof(cmd));
 
+    LED_A_ON();
+
+    uint8_t *dest = BigBuf_malloc(4000);
+
+    // switch field on
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
+    LED_D_ON();
+
+    // initialize SSC and select proper AD input
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
+    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+
+    StartCountSspClk();
+
     // Give the tags time to energize
-    SpinDelay(100);
+    SpinDelay(250);
 
     // Now send the command
     tosend_t *ts = get_tosend();
@@ -1229,6 +1247,8 @@ void AcquireRawAdcSamplesIso15693(void) {
         }
     }
 
+
+    FpgaDisableSscDma();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
 }
