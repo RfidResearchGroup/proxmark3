@@ -5325,7 +5325,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
 
     // print the new file settings
     if (verbose)
-        PrintAndLogEx(INFO, "app %06x file %02x settings[%d]: %s", appid, fileid, datalen - 1, sprint_hex(settings, datalen - 1));
+        PrintAndLogEx(INFO, "app %06x file %02x settings[%zu]: %s", appid, fileid, datalen - 1, sprint_hex(settings, datalen - 1));
 
     DesfirePrintSetFileSettings(settings, datalen - 1);
 
