@@ -6343,14 +6343,8 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         }
 
         if (resplen > 0) {
-            PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x", resplen, fnum);
-            PrintAndLogEx(INFO, "Offset  | Data                                            | Ascii");
-            PrintAndLogEx(INFO, "----------------------------------------------------------------------------");
-
-            for (uint32_t i = 0; i < resplen; i += 16) {
-                uint32_t l = resplen - i;
-                PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s", i, i, sprint_hex(&resp[i], l > 16 ? 16 : l), sprint_ascii(&resp[i], l > 16 ? 16 : l));
-            }
+            PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x offset %u", resplen, fnum, offset);
+            print_buffer_with_offset(resp, resplen, offset);
         } else {
             PrintAndLogEx(SUCCESS, "Read operation returned no data from file %d", fnum);
         }
