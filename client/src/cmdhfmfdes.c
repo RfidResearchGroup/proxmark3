@@ -3931,6 +3931,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 16, keydata, &keylen);
     if (keylen && keylen != desfire_get_key_length(newkeytype)) {
         PrintAndLogEx(ERR, "%s new key must have %d bytes length instead of %d.", CLIGetOptionListStr(DesfireAlgoOpts, newkeytype), desfire_get_key_length(newkeytype), keylen);
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
     if (keylen)
