@@ -34,6 +34,10 @@ version_pm3.c
 *.pyc
 *.bmp
 originalitysig.csv
+*.trace
+
+# Qt auto generated files
+ui_image.h
 
 # new build file for add-ons.
 Makefile.platform
