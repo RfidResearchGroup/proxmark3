@@ -66,7 +66,6 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_CHANGE_FILE_SETTINGS,      DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_READ_DATA,                 DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_WRITE_DATA,                DACd40,  DCCNative,    DCMEncrypted},
-    {MFDES_CREATE_TRANS_MAC_FILE,     DACd40,  DCCNative,    DCMEncrypted},
 
     {MFDES_CHANGE_KEY,                DACd40,  DCCNative,    DCMEncryptedPlain},
     {MFDES_CHANGE_KEY_EV2,            DACd40,  DCCNative,    DCMEncryptedPlain},

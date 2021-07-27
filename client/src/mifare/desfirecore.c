@@ -1202,7 +1202,7 @@ static const DesfireCreateFileCommandsS DesfireFileCommands[] = {
     {0x02, "Value",           MFDES_CREATE_VALUE_FILE,         16, 16, false},
     {0x03, "Linear Record",   MFDES_CREATE_LINEAR_RECORD_FILE, 12,  9, true},
     {0x04, "Cyclic Record",   MFDES_CREATE_CYCLIC_RECORD_FILE, 12,  9, true},
-    {0x05, "Transaction MAC", MFDES_CREATE_TRANS_MAC_FILE,      5, 22, false},
+    {0x05, "Transaction MAC", MFDES_CREATE_TRANS_MAC_FILE,      5, 21, false},
 };
 
 const DesfireCreateFileCommandsS *GetDesfireFileCmdRec(uint8_t type) {
@@ -1346,7 +1346,7 @@ static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t 
             break;
         }
         case 0x05: {
-            PrintAndLogEx(INFO, "Key type [0x%02x] : %s", data[0], GetDesfireKeyType(data[0]));
+            PrintAndLogEx(INFO, "Key type [0x%02x]  : %s", data[0], GetDesfireKeyType(data[0]));
             *dynlen = 1;
 
             if (create) {
