@@ -249,6 +249,20 @@ void print_buffer(const uint8_t *data, const size_t len, int level) {
     print_buffer_ex(data, len, level, 16);
 }
 
+void print_buffer_with_offset(const uint8_t *data, const size_t len, int offset) {
+    PrintAndLogEx(INFO, " Offset  | Data                                            | Ascii");
+    PrintAndLogEx(INFO, "----------------------------------------------------------------------------");
+
+    for (uint32_t i = 0; i < len; i += 16) {
+        uint32_t l = len - i;
+        PrintAndLogEx(INFO, "%3d/0x%02X | %s" NOLF, offset + i, offset + i, sprint_hex(&data[i], l > 16 ? 16 : l));
+        if (l < 16)
+            PrintAndLogEx(NORMAL, "%*s" NOLF, 3 * (16 - l), " ");
+        PrintAndLogEx(NORMAL, "| %s", sprint_ascii(&data[i], l > 16 ? 16 : l));
+    }
+}
+
+
 void print_blocks(uint32_t *data, size_t len) {
     PrintAndLogEx(SUCCESS, "Blk | Data ");
     PrintAndLogEx(SUCCESS, "----+------------");
