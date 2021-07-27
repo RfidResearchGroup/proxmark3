@@ -6345,7 +6345,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
 
         if (resplen > 0) {
             PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x offset %u", resplen, fnum, offset);
-            print_buffer_with_offset(resp, resplen, offset);
+            print_buffer_with_offset(resp, resplen, offset, true);
         } else {
             PrintAndLogEx(SUCCESS, "Read operation returned no data from file %d", fnum);
         }
@@ -6363,6 +6363,17 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     }
 
     if (op == RFTRecord) {
+        res = DesfireReadRecords(&dctx, fnum, offset, 1, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire ReadRecords (len=1) command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+        
+        size_t reclen = resplen;
+        if (verbose)
+            PrintAndLogEx(INFO, "Record length %zu", reclen);
+
         res = DesfireReadRecords(&dctx, fnum, offset, length, resp, &resplen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire ReadRecords command " _RED_("error") ". Result: %d", res);
@@ -6371,8 +6382,15 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         }
 
         if (resplen > 0) {
-            PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x offset %u", resplen, fnum, offset);
-            print_buffer_with_offset(resp, resplen, offset);
+            size_t reccount = resplen / reclen;
+            PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x from record %u record count %zu record length %zu", resplen, fnum, offset, reccount, reclen);
+            if (reccount > 0)
+                PrintAndLogEx(SUCCESS, "Lastest record at the bottom.");
+            for (int i = 0; i < reccount; i++) {
+                if (i != 0)
+                    PrintAndLogEx(SUCCESS, "Record %d", i + offset);
+                print_buffer_with_offset(&resp[i * reclen], reclen, offset, (i == 0));
+            }
         } else {
             PrintAndLogEx(SUCCESS, "Read operation returned no data from file %d", fnum);
         }
@@ -6389,7 +6407,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         if (resplen > 0) {
             if (resplen != 12) {
                 PrintAndLogEx(WARNING, "Read wrong %u bytes from file 0x%02x offset %u", resplen, fnum, offset);
-                print_buffer_with_offset(resp, resplen, offset);
+                print_buffer_with_offset(resp, resplen, offset, true);
             } else {
                 uint32_t cnt = MemLeToUint4byte(&resp[0]);
                 PrintAndLogEx(SUCCESS, "Transaction counter: %d (0x%08x)", cnt, cnt);

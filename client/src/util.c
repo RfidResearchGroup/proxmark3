@@ -249,9 +249,11 @@ void print_buffer(const uint8_t *data, const size_t len, int level) {
     print_buffer_ex(data, len, level, 16);
 }
 
-void print_buffer_with_offset(const uint8_t *data, const size_t len, int offset) {
-    PrintAndLogEx(INFO, " Offset  | Data                                            | Ascii");
-    PrintAndLogEx(INFO, "----------------------------------------------------------------------------");
+void print_buffer_with_offset(const uint8_t *data, const size_t len, int offset, bool print_header) {
+    if (print_header) {
+        PrintAndLogEx(INFO, " Offset  | Data                                            | Ascii");
+        PrintAndLogEx(INFO, "----------------------------------------------------------------------------");
+    }
 
     for (uint32_t i = 0; i < len; i += 16) {
         uint32_t l = len - i;
