@@ -23,19 +23,23 @@
 #include "protocols.h"
 #include "mifare/desfire_crypto.h"
 
+static const uint8_t CommandsCanUseAnyChannel[] = {
+    MFDES_READ_DATA,
+    MFDES_WRITE_DATA,
+    MFDES_GET_VALUE,  
+    MFDES_READ_RECORDS, 
+    MFDES_WRITE_RECORD, 
+    MFDES_UPDATE_RECORD,
+};
+
+static bool CommandCanUseAnyChannel(uint8_t cmd) {
+    for (int i = 0; i < ARRAYLEN(CommandsCanUseAnyChannel); i++)
+        if (CommandsCanUseAnyChannel[i] == cmd)
+            return true;
+    return false;
+}
+
 static const AllowedChannelModesS AllowedChannelModes[] = {
-    // read and write data can go in any mode
-    {MFDES_READ_DATA,                 DACd40,  DCCNative,    DCMPlain},
-    {MFDES_READ_DATA,                 DACd40,  DCCNative,    DCMMACed},
-    {MFDES_READ_DATA,                 DACd40,  DCCNative,    DCMEncrypted},
-    {MFDES_READ_DATA,                 DACEV1,  DCCNative,    DCMMACed},
-    {MFDES_READ_DATA,                 DACEV1,  DCCNative,    DCMEncrypted},
-    {MFDES_WRITE_DATA,                DACd40,  DCCNative,    DCMPlain},
-    {MFDES_WRITE_DATA,                DACd40,  DCCNative,    DCMMACed},
-    {MFDES_WRITE_DATA,                DACd40,  DCCNative,    DCMEncrypted},
-    {MFDES_WRITE_DATA,                DACEV1,  DCCNative,    DCMMACed},
-    {MFDES_WRITE_DATA,                DACEV1,  DCCNative,    DCMEncrypted},
-    
     {MFDES_CREATE_APPLICATION,        DACd40,  DCCNative,    DCMPlain},
     {MFDES_DELETE_APPLICATION,        DACd40,  DCCNative,    DCMPlain},
     {MFDES_GET_APPLICATION_IDS,       DACd40,  DCCNative,    DCMPlain},
@@ -118,6 +122,7 @@ static const CmdHeaderLengthsS CmdHeaderLengths[] = {
     {MFDES_CHANGE_KEY,             1},
     {MFDES_CHANGE_KEY_EV2,         2},
     {MFDES_CHANGE_CONFIGURATION,   1},
+    {MFDES_GET_FILE_SETTINGS,      1},
     {MFDES_CHANGE_FILE_SETTINGS,   1},
     {MFDES_CREATE_TRANS_MAC_FILE,  5},
     {MFDES_READ_DATA,              7},
@@ -359,6 +364,8 @@ bool PrintChannelModeWarning(uint8_t cmd, DesfireSecureChannel secureChannel, De
 
     // no security set
     if (secureChannel == DACNone)
+        return true;
+    if (CommandCanUseAnyChannel(cmd))
         return true;
 
     bool found = false;
