@@ -1116,7 +1116,7 @@ int DesfireWriteFile(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint32
 }
 
 int DesfireValueFileOperations(DesfireContext *dctx, uint8_t fid, uint8_t operation, uint32_t *value) {
-    uint8_t data[250] = {0};
+    uint8_t data[10] = {0};
     data[0] = fid;
     size_t datalen = (operation == MFDES_GET_VALUE) ? 1 : 5;
     if (value)
@@ -1132,6 +1132,35 @@ int DesfireValueFileOperations(DesfireContext *dctx, uint8_t fid, uint8_t operat
     return res;
 }
 
+int DesfireReadRecords(DesfireContext *dctx, uint8_t fnum, uint32_t recnum, uint32_t reccount, uint8_t *resp, size_t *resplen) {
+    uint8_t data[10] = {0};
+    data[0] = fnum;
+    Uint3byteToMemLe(&data[1], recnum);
+    Uint3byteToMemLe(&data[4], reccount);
+   
+    return DesfireCommand(dctx, MFDES_READ_RECORDS, data, 7, resp, resplen, -1);
+}
+
+int DesfireWriteRecord(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint32_t len, uint8_t *data) {
+    uint8_t xdata[1024] = {0};
+    xdata[0] = fnum;
+    Uint3byteToMemLe(&xdata[1], offset);
+    Uint3byteToMemLe(&xdata[4], len);
+    memcpy(&xdata[7], data, len);
+   
+    return DesfireCommandTxData(dctx, MFDES_WRITE_RECORD, xdata, 7 + len);
+}
+
+int DesfireUpdateRecord(DesfireContext *dctx, uint8_t fnum, uint32_t recnum, uint32_t offset, uint32_t len, uint8_t *data) {
+    uint8_t xdata[1024] = {0};
+    xdata[0] = fnum;
+    Uint3byteToMemLe(&xdata[1], recnum);
+    Uint3byteToMemLe(&xdata[4], offset);
+    Uint3byteToMemLe(&xdata[7], len);
+    memcpy(&xdata[10], data, len);
+   
+    return DesfireCommandTxData(dctx, MFDES_UPDATE_RECORD, xdata, 10 + len);
+}
 
 uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType) {
     switch (keyType) {

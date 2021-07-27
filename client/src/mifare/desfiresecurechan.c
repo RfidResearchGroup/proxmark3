@@ -61,7 +61,7 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_LIMITED_CREDIT,            DACd40,  DCCNative,    DCMMACed},
     {MFDES_READ_RECORDS,              DACd40,  DCCNative,    DCMMACed},
     {MFDES_WRITE_RECORD,              DACd40,  DCCNative,    DCMMACed},
-    {MFDES_UPDATE_RECORD1,            DACd40,  DCCNative,    DCMMACed},
+    {MFDES_UPDATE_RECORD,             DACd40,  DCCNative,    DCMMACed},
     {MFDES_UPDATE_RECORD2,            DACd40,  DCCNativeISO, DCMMACed},
     {MFDES_INIT_KEY_SETTINGS,         DACd40,  DCCNative,    DCMMACed},
     {MFDES_FINALIZE_KEY_SETTINGS,     DACd40,  DCCNative,    DCMMACed},
@@ -122,6 +122,9 @@ static const CmdHeaderLengthsS CmdHeaderLengths[] = {
     {MFDES_CREATE_TRANS_MAC_FILE,  5},
     {MFDES_READ_DATA,              7},
     {MFDES_WRITE_DATA,             7},
+    {MFDES_READ_RECORDS,           7},
+    {MFDES_WRITE_RECORD,           7},
+    {MFDES_UPDATE_RECORD,         10},
 };
 
 static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {
