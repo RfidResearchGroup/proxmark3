@@ -6073,7 +6073,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
         } else {
             res = DesfireCommitTransaction(&dctx, false, 0);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "Desfire CommitTrqansaction command " _RED_("error") ". Result: %d", res);
+                PrintAndLogEx(ERR, "Desfire CommitTransaction command " _RED_("error") ". Result: %d", res);
                 DropField();
                 return PM3_ESOFT;
             }
@@ -6129,7 +6129,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
 
             res = DesfireCommitTransaction(&dctx, false, 0);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "Desfire CommitTrqansaction command " _RED_("error") ". Result: %d", res);
+                PrintAndLogEx(ERR, "Desfire CommitTransaction command " _RED_("error") ". Result: %d", res);
                 DropField();
                 return PM3_ESOFT;
             }
@@ -6251,9 +6251,9 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
         arg_str0(NULL, "fid",     "<file id hex>", "File ID for clearing (1 hex byte)"),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
-        arg_str0("t", "type",     "<auto/data/value/record/mac>", "File Type auto/data(Standard/Backup)/value/record(linear/cyclic)/mac). Auto - check file settings and then read. Default: auto"),
-        arg_str0("o", "offset",   "<hex>", "File Offset (3 hex bytes, big endian). Default 0"),
-        arg_str0("l", "length",   "<hex>", "Length to read (3 hex bytes, big endian -> 000000 = Read all data). Default 0."),
+        arg_str0(NULL, "type",    "<auto/data/value/record/mac>", "File Type auto/data(Standard/Backup)/value/record(linear/cyclic)/mac). Auto - check file settings and then read. Default: auto"),
+        arg_str0("o", "offset",   "<hex>", "File Offset (3 hex bytes, big endian). For records - record number (0 - lastest record). Default 0"),
+        arg_str0("l", "length",   "<hex>", "Length to read (3 hex bytes, big endian -> 000000 = Read all data). For records - records count (0 - all). Default 0."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -6362,11 +6362,41 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     }
 
     if (op == RFTRecord) {
-        
+        res = DesfireReadRecords(&dctx, fnum, offset, length, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire ReadRecords command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (resplen > 0) {
+            PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x offset %u", resplen, fnum, offset);
+            print_buffer_with_offset(resp, resplen, offset);
+        } else {
+            PrintAndLogEx(SUCCESS, "Read operation returned no data from file %d", fnum);
+        }
     }
 
     if (op == RFTMAC) {
-        
+        res = DesfireReadFile(&dctx, fnum, 0, 0, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire ReadFile command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (resplen > 0) {
+            if (resplen != 12) {
+                PrintAndLogEx(WARNING, "Read wrong %u bytes from file 0x%02x offset %u", resplen, fnum, offset);
+                print_buffer_with_offset(resp, resplen, offset);
+            } else {
+                uint32_t cnt = MemLeToUint4byte(&resp[0]);
+                PrintAndLogEx(SUCCESS, "Transaction counter: %d (0x%08x)", cnt, cnt);
+                PrintAndLogEx(SUCCESS, "Transaction MAC    : %s", sprint_hex(&resp[4], 8));
+            }
+        } else {
+            PrintAndLogEx(SUCCESS, "Read operation returned no data from file %d", fnum);
+        }
     }
 
     DropField();
