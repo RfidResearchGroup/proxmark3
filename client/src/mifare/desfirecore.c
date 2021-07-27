@@ -1067,6 +1067,16 @@ int DesfireGetFileSettings(DesfireContext *dctx, uint8_t fileid, uint8_t *resp, 
     return DesfireCommand(dctx, MFDES_GET_FILE_SETTINGS, &fileid, 1, resp, resplen, -1);
 }
 
+int DesfireGetFileSettingsStruct(DesfireContext *dctx, uint8_t fileid, FileSettingsS *fsettings) {
+    uint8_t resp[250] = {0};
+    size_t resplen = 0;
+    int res = DesfireGetFileSettings(dctx, fileid, resp, &resplen);
+    if (res == PM3_SUCCESS && resplen > 0 && fsettings != NULL)
+        DesfireFillFileSettings(resp, resplen, fsettings);
+
+    return res;
+}
+
 int DesfireCreateFile(DesfireContext *dctx, uint8_t ftype, uint8_t *fdata, size_t fdatalen, bool checklen) {
     const DesfireCreateFileCommandsS *rcmd = GetDesfireFileCmdRec(ftype);
     if (rcmd == NULL)
@@ -1355,6 +1365,66 @@ void DesfirePrintAccessRight(uint8_t *data) {
     PrintAndLogEx(SUCCESS, "change   : %s", GetDesfireAccessRightStr(ch));
 }
 
+void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsettings) {
+    if (fsettings == NULL)
+        return;
+    
+    memset(fsettings, 0, sizeof(FileSettingsS));
+    
+    if (datalen < 4)
+        return;
+    
+    fsettings->fileType = data[0];
+    fsettings->fileOption = data[1];
+    fsettings->fileCommMode = data[1] & 0x03;
+    fsettings->additionalAccessRightsEn = ((data[1] & 0x80) != 0);
+    fsettings->rawAccessRights = MemLeToUint2byte(&data[2]);
+    DesfireDecodeFileAcessMode(&data[2], &fsettings->rAccess, &fsettings->wAccess, &fsettings->rwAccess, &fsettings->chAccess);
+
+    int reclen = 0;
+    switch (fsettings->fileType) {
+        case 0x00:
+        case 0x01: {
+            fsettings->fileSize = MemLeToUint3byte(&data[0]);
+            reclen = 4 + 3;
+            break;
+        }
+        case 0x02: {
+            fsettings->lowerLimit = MemLeToUint4byte(&data[0]);
+            fsettings->upperLimit = MemLeToUint4byte(&data[4]);
+            fsettings->value = MemLeToUint4byte(&data[8]);
+            fsettings->limitedCredit = data[12];
+            reclen = 4 + 13;
+            break;
+        }
+        case 0x03:
+        case 0x04: {
+            fsettings->recordSize = MemLeToUint3byte(&data[0]);
+            fsettings->maxRecordCount = MemLeToUint3byte(&data[3]);
+            fsettings->curRecordCount = MemLeToUint3byte(&data[6]);
+            reclen = 4 + 9;
+            break;
+        }
+        case 0x05: {
+            fsettings->keyType = data[0];
+            fsettings->keyVersion = data[1];
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    if (fsettings->additionalAccessRightsEn && reclen > 0 && datalen > reclen && datalen == reclen + data[reclen] * 2) {
+        fsettings->additionalAccessRightsLength = data[reclen];
+        
+        for (int i = 0; i < fsettings->additionalAccessRightsLength; i++) {
+            fsettings->additionalAccessRights[i] = MemLeToUint2byte(&data[reclen + 1 + i * 2]);
+        }
+    }
+}
+
+
 static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t datalen, uint8_t *dynlen, bool create) {
     switch (filetype) {
         case 0x00:
@@ -1506,7 +1576,6 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
     DesfirePrintFileSettDynPart(filetype, &data[xlen], len - xlen, &reclen, true);
     xlen += reclen;
 }
-
 
 int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey, bool verbose) {
 

@@ -6325,9 +6325,44 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         }
     }
     
+    // length of record for record file
+    size_t reclen = 0;
+
     // get file settings
     if (op == RFTAuto) {
-        
+        FileSettingsS fsettings;
+        res = DesfireGetFileSettingsStruct(&dctx, fnum, &fsettings);
+        if (res == PM3_SUCCESS) {
+            switch(fsettings.fileType) {
+                case 0x00:
+                case 0x01: {
+                    op = RFTData;
+                    break;
+                }
+                case 0x02: {
+                    op = RFTValue;
+                    break;
+                }
+                case 0x03:
+                case 0x04: {
+                    op = RFTRecord;
+                    reclen = fsettings.recordSize;
+                    break;
+                }
+                case 0x05: {
+                    op = RFTMAC;
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+            if (verbose)
+                PrintAndLogEx(INFO, "Got file type: %s. Option: %s", GetDesfireFileType(fsettings.fileType), CLIGetOptionListStr(DesfireReadFileTypeOpts, op));
+
+        } else {
+            PrintAndLogEx(WARNING, "GetFileSettings error. Can't get file type.");
+        }
     }
 
     PrintAndLogEx(INFO, "-------------- " _CYAN_("File data") " --------------");
@@ -6363,14 +6398,16 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     }
 
     if (op == RFTRecord) {
-        res = DesfireReadRecords(&dctx, fnum, offset, 1, resp, &resplen);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire ReadRecords (len=1) command " _RED_("error") ". Result: %d", res);
-            DropField();
-            return PM3_ESOFT;
+        if (reclen == 0) {
+            res = DesfireReadRecords(&dctx, fnum, offset, 1, resp, &resplen);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Desfire ReadRecords (len=1) command " _RED_("error") ". Result: %d", res);
+                DropField();
+                return PM3_ESOFT;
+            }
+            reclen = resplen;
         }
         
-        size_t reclen = resplen;
         if (verbose)
             PrintAndLogEx(INFO, "Record length %zu", reclen);
 

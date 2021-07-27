@@ -28,6 +28,43 @@ typedef struct {
     const bool mayHaveISOfid;
 } DesfireCreateFileCommandsS;
 
+typedef struct {
+    // all
+    uint8_t fileType;
+    uint8_t fileOption;
+    uint8_t fileCommMode;
+    bool additionalAccessRightsEn;
+    uint16_t rawAccessRights;
+    uint8_t rAccess;
+    uint8_t wAccess;
+    uint8_t rwAccess;
+    uint8_t chAccess;
+    
+    // data
+    uint32_t fileSize;
+    
+    //value
+    uint32_t lowerLimit;
+    uint32_t upperLimit;
+    uint32_t value;
+    uint8_t limitedCredit;
+
+    // record
+    uint32_t recordSize;
+    uint32_t maxRecordCount;
+    uint32_t curRecordCount;
+    
+    //mac
+    uint8_t keyType;
+    uint8_t key[16];
+    uint8_t keyVersion;
+    
+    // additional rights
+    uint8_t additionalAccessRightsLength;
+    uint16_t additionalAccessRights[16];
+
+} FileSettingsS;
+
 typedef enum {
     RFTAuto,
     RFTData,
@@ -84,7 +121,9 @@ int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *para
 int DesfireGetFileIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetFileISOIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 
+void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsettings);
 int DesfireGetFileSettings(DesfireContext *dctx, uint8_t fileid, uint8_t *resp, size_t *resplen);
+int DesfireGetFileSettingsStruct(DesfireContext *dctx, uint8_t fileid, FileSettingsS *fsettings);
 int DesfireChangeFileSettings(DesfireContext *dctx, uint8_t *data, size_t datalen);
 
 const DesfireCreateFileCommandsS *GetDesfireFileCmdRec(uint8_t type);
