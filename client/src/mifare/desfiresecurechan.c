@@ -23,7 +23,19 @@
 #include "protocols.h"
 #include "mifare/desfire_crypto.h"
 
-AllowedChannelModesS AllowedChannelModes[] = {
+static const AllowedChannelModesS AllowedChannelModes[] = {
+    // read and write data can go in any mode
+    {MFDES_READ_DATA,                 DACd40,  DCCNative,    DCMPlain},
+    {MFDES_READ_DATA,                 DACd40,  DCCNative,    DCMMACed},
+    {MFDES_READ_DATA,                 DACd40,  DCCNative,    DCMEncrypted},
+    {MFDES_READ_DATA,                 DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_READ_DATA,                 DACEV1,  DCCNative,    DCMEncrypted},
+    {MFDES_WRITE_DATA,                DACd40,  DCCNative,    DCMPlain},
+    {MFDES_WRITE_DATA,                DACd40,  DCCNative,    DCMMACed},
+    {MFDES_WRITE_DATA,                DACd40,  DCCNative,    DCMEncrypted},
+    {MFDES_WRITE_DATA,                DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_WRITE_DATA,                DACEV1,  DCCNative,    DCMEncrypted},
+    
     {MFDES_CREATE_APPLICATION,        DACd40,  DCCNative,    DCMPlain},
     {MFDES_DELETE_APPLICATION,        DACd40,  DCCNative,    DCMPlain},
     {MFDES_GET_APPLICATION_IDS,       DACd40,  DCCNative,    DCMPlain},
@@ -43,8 +55,6 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_COMMIT_TRANSACTION,        DACd40,  DCCNative,    DCMPlain},
     {MFDES_CLEAR_RECORD_FILE,         DACd40,  DCCNative,    DCMPlain},
 
-    {MFDES_READ_DATA,                 DACd40,  DCCNative,    DCMMACed},
-    {MFDES_WRITE_DATA,                DACd40,  DCCNative,    DCMMACed},
     {MFDES_GET_VALUE,                 DACd40,  DCCNative,    DCMMACed},
     {MFDES_CREDIT,                    DACd40,  DCCNative,    DCMMACed},
     {MFDES_DEBIT,                     DACd40,  DCCNative,    DCMMACed},
@@ -64,8 +74,6 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_GET_UID,                   DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,       DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_FILE_SETTINGS,      DACd40,  DCCNative,    DCMEncrypted},
-    {MFDES_READ_DATA,                 DACd40,  DCCNative,    DCMEncrypted},
-    {MFDES_WRITE_DATA,                DACd40,  DCCNative,    DCMEncrypted},
 
     {MFDES_CHANGE_KEY,                DACd40,  DCCNative,    DCMEncryptedPlain},
     {MFDES_CHANGE_KEY_EV2,            DACd40,  DCCNative,    DCMEncryptedPlain},
@@ -104,7 +112,7 @@ AllowedChannelModesS AllowedChannelModes[] = {
 };
 
 #define CMD_HEADER_LEN_ALL 0xffff
-CmdHeaderLengthsS CmdHeaderLengths[] = {
+static const CmdHeaderLengthsS CmdHeaderLengths[] = {
     {MFDES_CREATE_APPLICATION,     CMD_HEADER_LEN_ALL},
     {MFDES_DELETE_APPLICATION,     CMD_HEADER_LEN_ALL},
     {MFDES_CHANGE_KEY,             1},
