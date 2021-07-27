@@ -6233,6 +6233,156 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
 static int CmdHF14ADesReadData(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes read",
+                  "Read data from file. Key needs to be provided or flag --no-auth set (depend on file settings).",
+                  "hf mfdes read --aid 123456 --fid 01 -> read file: app=123456, file=01, offset=0, all the data. use default channel settings from `default` command");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "fid",     "<file id hex>", "File ID for clearing (1 hex byte)"),
+        arg_lit0(NULL, "no-auth", "execute without authentication"),
+        arg_str0("t", "type",     "<auto/data/value/record/mac>", "File Type auto/data(Standard/Backup)/value/record(linear/cyclic)/mac). Auto - check file settings and then read. Default: auto"),
+        arg_str0("o", "offset",   "<hex>", "File Offset (3 hex bytes, big endian). Default 0"),
+        arg_str0("l", "length",   "<hex>", "Length to read (3 hex bytes, big endian -> 000000 = Read all data). Default 0."),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool noauth = arg_get_lit(ctx, 13);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    uint32_t fnum = 1;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fnum, 1, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "File ID must have 1 byte length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int op = RFTAuto;
+    if (CLIGetOptionList(arg_get_str(ctx, 14), DesfireReadFileTypeOpts, &op)) {
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
+    }
+
+    uint32_t offset = 0;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 15, 0, &offset, 3, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Offset must have 3 byte length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t length = 0;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 16, 0, &length, 3, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Length must have 3 byte length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    if (fnum > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fnum);
+        return PM3_EINVARG;
+    }
+
+    if (noauth) {
+        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            DropField();
+            return res;
+        }
+    } else {
+        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    }
+    
+    // get file settings
+    if (op == RFTAuto) {
+        
+    }
+
+    PrintAndLogEx(INFO, "-------------- " _CYAN_("File data") " --------------");
+
+    uint8_t resp[2048] = {0};
+    size_t resplen = 0;
+    
+    if (op == RFTData) {
+        res = DesfireReadFile(&dctx, fnum, offset, length, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire ReadFile command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (resplen > 0) {
+            PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x", resplen, fnum);
+            PrintAndLogEx(INFO, "Offset  | Data                                            | Ascii");
+            PrintAndLogEx(INFO, "----------------------------------------------------------------------------");
+
+            for (uint32_t i = 0; i < resplen; i += 16) {
+                uint32_t l = resplen - i;
+                PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s", i, i, sprint_hex(&resp[i], l > 16 ? 16 : l), sprint_ascii(&resp[i], l > 16 ? 16 : l));
+            }
+        } else {
+            PrintAndLogEx(SUCCESS, "Read operation returned no data from file %d", fnum);
+        }
+    }
+
+    if (op == RFTValue) {
+        uint32_t value = 0;
+        res = DesfireValueFileOperations(&dctx, fnum, MFDES_GET_VALUE, &value);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire GetValue operation " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(SUCCESS, "Read file 0x%02x value: %d (0x%08x)", fnum, value, value);
+    }
+
+    if (op == RFTRecord) {
+        
+    }
+
+    if (op == RFTMAC) {
+        
+    }
+
+    DropField();
+    return PM3_SUCCESS;
+    
+      
+    
+    /*
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes read",
                   "Read data from File\n"
                   "Make sure to select aid or authenticate aid before running this command.",
                   "hf mfdes read -n 1 -t 0 -o 000000 -l 000000 -a 123456\n"
@@ -6342,7 +6492,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         free(data);
     }
     DropFieldDesfire();
-    return res;
+    return res; */
 }
 
 static int CmdHF14ADesWriteData(const char *Cmd) {
