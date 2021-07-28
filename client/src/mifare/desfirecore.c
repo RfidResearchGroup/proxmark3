@@ -1475,13 +1475,45 @@ void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsett
 
 void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
     PrintAndLogEx(NORMAL, "(%-5s) " NOLF, GetDesfireCommunicationMode(fsettings->fileCommMode));    
-    PrintAndLogEx(NORMAL, "[0x%02x] %-13s ", fsettings->fileType, GetDesfireFileType(fsettings->fileType));
+    PrintAndLogEx(NORMAL, "[0x%02x] %-13s " NOLF, fsettings->fileType, GetDesfireFileType(fsettings->fileType));
 
+    switch (fsettings->fileType) {
+        case 0x00:
+        case 0x01: {
+            PrintAndLogEx(NORMAL, "size: %d [0x%x] " NOLF, fsettings->fileSize, fsettings->fileSize);    
+            break;
+        }
+ /*       case 0x02: {
+            fsettings->lowerLimit = MemLeToUint4byte(&data[4]);
+            fsettings->upperLimit = MemLeToUint4byte(&data[8]);
+            fsettings->value = MemLeToUint4byte(&data[12]);
+            fsettings->limitedCredit = data[16];
+            reclen = 4 + 13;
+            break;
+        }
+        case 0x03:
+        case 0x04: {
+            fsettings->recordSize = MemLeToUint3byte(&data[4]);
+            fsettings->maxRecordCount = MemLeToUint3byte(&data[7]);
+            fsettings->curRecordCount = MemLeToUint3byte(&data[10]);
+            reclen = 4 + 9;
+            break;
+        }
+        case 0x05: {
+            fsettings->keyType = data[4];
+            fsettings->keyVersion = data[5];
+            break;
+        }*/
+        default: {
+            break;
+        }
+    }
     
-  /*      PrintAndLogEx(SUCCESS, "read     : %s", GetDesfireAccessRightStr(r));
-    PrintAndLogEx(SUCCESS, "write    : %s", GetDesfireAccessRightStr(w));
-    PrintAndLogEx(SUCCESS, "readwrite: %s", GetDesfireAccessRightStr(rw));
-    PrintAndLogEx(SUCCESS, "change   : %s", GetDesfireAccessRightStr(ch));*/
+    PrintAndLogEx(NORMAL, "(%s %s %s %s)", 
+        GetDesfireAccessRightStr(fsettings->rAccess), 
+        GetDesfireAccessRightStr(fsettings->wAccess),
+        GetDesfireAccessRightStr(fsettings->rwAccess),
+        GetDesfireAccessRightStr(fsettings->chAccess));
 }
 
 static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t datalen, uint8_t *dynlen, bool create) {

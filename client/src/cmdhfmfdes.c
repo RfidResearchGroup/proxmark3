@@ -6781,9 +6781,6 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
         }
     }    
     
-//int DesfireGetFileIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
-//int DesfireGetFileISOIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);   
-
     FileListS FileList;
     memset(FileList, 0, sizeof(FileList));
  
@@ -6815,33 +6812,35 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
         PrintAndLogEx(ERR, "Desfire GetFileISOIDList command " _RED_("error") ". Result: %d", res);
     }
     
+    size_t isoindx = 0;
     if (buflen > 0) {
-        size_t isoindx = 0;
         for (int i = 0; i < filescount; i++) {
-            if (FileList[i].fileSettings.fileType != 0x03 && FileList[i].fileSettings.fileType != 0x05) {
+            if (FileList[i].fileSettings.fileType != 0x02 && FileList[i].fileSettings.fileType != 0x05) {
                 FileList[i].fileISONum = MemBeToUint2byte(&buf[isoindx * 2]);
                 isoindx++;
             }
         }
+        if (isoindx > 0)
+            isoindx--;
         if (isoindx * 2 != buflen)
             PrintAndLogEx(WARNING, "Wrong ISO ID list length. must be %d but %d", buflen, isoindx * 2);
     } else {
         PrintAndLogEx(WARNING, "ISO ID list returned no data");
     }
     
-    PrintAndLogEx(INFO, "---- " _CYAN_("File list") " ----");
+    PrintAndLogEx(INFO, "---------------------------- " _CYAN_("File list") " ----------(r w rw ch)------------------");
     for (int i = 0; i < filescount; i++) {
         PrintAndLogEx(SUCCESS, "ID: " _GREEN_("%02x ") NOLF, FileList[i].fileNum);
-        if (FileList[i].fileISONum != 0)
-            PrintAndLogEx(NORMAL, "ISO ID: %04x " NOLF, FileList[i].fileISONum);
-        else
-            PrintAndLogEx(NORMAL, "ISO ID: n/a  " NOLF);
+        if (isoindx > 0) {
+            if (FileList[i].fileISONum != 0)
+                PrintAndLogEx(NORMAL, "ISO ID: " _CYAN_("%04x ") NOLF, FileList[i].fileISONum);
+            else
+                PrintAndLogEx(NORMAL, "ISO ID: " _YELLOW_("n/a  ") NOLF);
+        }
         
         DesfirePrintFileSettingsOneLine(&FileList[i].fileSettings);
     }
 
-    
-    
     DropField();
     return PM3_SUCCESS;
 }
