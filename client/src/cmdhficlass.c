@@ -3598,6 +3598,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
         arg_str0(NULL, "enckey", "<hex>", "3DES transport key, 16 hex bytes"),
         arg_u64_0(NULL, "fc", "<dec>", "facility code"),
         arg_u64_0(NULL, "cn", "<dec>", "card number"),
+        arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3637,6 +3638,10 @@ static int CmdHFiClassEncode(const char *Cmd) {
     memset(&card, 0, sizeof(wiegand_card_t));
     card.FacilityCode = arg_get_u32_def(ctx, 7, 0);
     card.CardNumber = arg_get_u32_def(ctx, 8, 0);
+
+    char format[16] = {0};
+    int format_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 9), (uint8_t *)format, sizeof(format), &format_len);
 
     CLIParserFree(ctx);
 
@@ -3717,8 +3722,9 @@ static int CmdHFiClassEncode(const char *Cmd) {
       wiegand_message_t packed;
       memset(&packed, 0, sizeof(wiegand_message_t));
 
-      int format_idx = HIDFindCardFormat("H10301");
+      int format_idx = HIDFindCardFormat((char *)format);
       if (format_idx == -1) {
+          PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
           return PM3_EINVARG;
       }
 
