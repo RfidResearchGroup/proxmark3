@@ -6483,6 +6483,10 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes write",
                   "Write data from file. Key needs to be provided or flag --no-auth set (depend on file settings).",
                   "hf mfdes write --aid 123456 --fid 01 -d 01020304 -> write file: app=123456, file=01, offset=0, get file type from card. use default channel settings from `default` command\n"
+                  "hf mfdes write --aid 123456 --fid 01 --type data -d 01020304 --0ffset 000100 -> write data to std file with offset 0x100\n"
+                  "hf mfdes write --aid 123456 --fid 01 --type data -d 01020304 --commit -> write data to backup file with commit\n"
+                  "hf mfdes write --aid 123456 --fid 01 --type value -d 00000001 -> increment value file\n"
+                  "hf mfdes write --aid 123456 --fid 01 --type value --debit -d 00000001 -> decrement value file\n"
                   "hf mfdes write --aid 123456 --fid 01 --type record --offset 000000 -d 11223344 -> write record to record file. use default channel settings from `default` command");
 
     void *argtable[] = {
@@ -6504,7 +6508,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         arg_str0("o",  "offset",  "<hex>", "File Offset (3 hex bytes, big endian). For records - record number (0 - lastest record). Default 0"),
         arg_str0("d",  "data",    "<hex>", "data for write (data/record file), credit/debit(value file)"),
         arg_lit0(NULL, "debit",   "use for value file debit operation instead of credit"),
-        arg_lit0(NULL, "commit",  "commit needs for backup, value and record data file. In `auto` type it set automatically."),
+        arg_lit0(NULL, "commit",  "commit needs for backup file only. For the other file types - command set it automatically."),
         arg_int0(NULL, "updaterec", "<record number dec>", "Record number for update record command. Updates record instead of write. Lastest record - 0"),
         arg_param_end
     };
@@ -6665,6 +6669,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
         if (verbose)
             PrintAndLogEx(INFO, "%s value file %02x (%s)  " _GREEN_("success"), (debit) ? "Debit" : "Credit", fnum, CLIGetOptionListStr(DesfireValueFileOperOpts, vop));
+        commit = true;
     }
 
     if (op == RFTRecord) {
@@ -6705,6 +6710,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         } else {
             PrintAndLogEx(SUCCESS, "Read operation returned no data from file %d", fnum);
         }*/
+        commit = true;
     }
 
     if (op == RFTMAC) {
