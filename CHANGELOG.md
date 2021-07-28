@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add `--wiegand/--fc/--cn` to `hf iclass encode` (@bettse)
  - Fix `hf 15 sample` - data collection works again (@iceman1001)
  - Changed `data plot -h` - removed line (@doegox)
  - Fix `lf_tharexde` - double define of global variable (@axisray)
