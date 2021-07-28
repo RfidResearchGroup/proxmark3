@@ -6363,13 +6363,14 @@ static int CmdHF14ADesReadData(const char *Cmd) {
                     break;
                 }
             }
+
+            DesfireSetCommMode(&dctx, fsettings.commMode);
+
             if (verbose)
                 PrintAndLogEx(INFO, "Got file type: %s. Option: %s. comm mode: %s", 
                     GetDesfireFileType(fsettings.fileType), 
                     CLIGetOptionListStr(DesfireReadFileTypeOpts, op), 
                     CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
-
-            DesfireSetCommMode(&dctx, fsettings.commMode);
         } else {
             PrintAndLogEx(WARNING, "GetFileSettings error. Can't get file type.");
         }
@@ -6408,6 +6409,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     }
 
     if (op == RFTRecord) {
+        resplen = 0;
         if (reclen == 0) {
             res = DesfireReadRecords(&dctx, fnum, offset, 1, resp, &resplen);
             if (res != PM3_SUCCESS) {
@@ -6421,11 +6423,14 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         if (verbose)
             PrintAndLogEx(INFO, "Record length %zu", reclen);
 
-        res = DesfireReadRecords(&dctx, fnum, offset, length, resp, &resplen);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire ReadRecords command " _RED_("error") ". Result: %d", res);
-            DropField();
-            return PM3_ESOFT;
+        // if we got one record via the DesfireReadRecords before -- we not need to get it 2nd time
+        if (length != 1 || resplen == 0) {
+            res = DesfireReadRecords(&dctx, fnum, offset, length, resp, &resplen);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Desfire ReadRecords command " _RED_("error") ". Result: %d", res);
+                DropField();
+                return PM3_ESOFT;
+            }
         }
 
         if (resplen > 0) {
