@@ -6784,7 +6784,8 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
 //int DesfireGetFileIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 //int DesfireGetFileISOIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);   
 
-
+    FileListS FileList;
+    memset(FileList, 0, sizeof(FileList));
  
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t buflen = 0;
@@ -6795,14 +6796,50 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
-
-    if (buflen > 0) {
-        PrintAndLogEx(INFO, "---- " _CYAN_("File list") " ----");
-        for (int i = 0; i < buflen; i++)
-            PrintAndLogEx(INFO, "File ID: %02x", buf[i]);
-    } else {
+    
+    if (buflen == 0) {
         PrintAndLogEx(INFO, "There is no files in the application %06x", appid);
-    }    
+        DropField();
+        return PM3_SUCCESS;
+    }        
+    
+    for (int i = 0; i < buflen; i++) {
+        FileList[i].fileNum = buf[i];
+        DesfireGetFileSettingsStruct(&dctx, FileList[i].fileNum, &FileList[i].fileSettings);
+    }
+    size_t filescount = buflen;
+
+    buflen = 0;
+    res = DesfireGetFileISOIDList(&dctx, buf, &buflen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire GetFileISOIDList command " _RED_("error") ". Result: %d", res);
+    }
+    
+    if (buflen > 0) {
+        size_t isoindx = 0;
+        for (int i = 0; i < filescount; i++) {
+            if (FileList[i].fileSettings.fileType != 0x03 && FileList[i].fileSettings.fileType != 0x05) {
+                FileList[i].fileISONum = MemBeToUint2byte(&buf[isoindx * 2]);
+                isoindx++;
+            }
+        }
+        if (isoindx * 2 != buflen)
+            PrintAndLogEx(WARNING, "Wrong ISO ID list length. must be %d but %d", buflen, isoindx * 2);
+    } else {
+        PrintAndLogEx(WARNING, "ISO ID list returned no data");
+    }
+    
+    PrintAndLogEx(INFO, "---- " _CYAN_("File list") " ----");
+    for (int i = 0; i < filescount; i++) {
+        PrintAndLogEx(SUCCESS, "ID: " _GREEN_("%02x ") NOLF, FileList[i].fileNum);
+        if (FileList[i].fileISONum != 0)
+            PrintAndLogEx(NORMAL, "ISO ID: %04x " NOLF, FileList[i].fileISONum);
+        else
+            PrintAndLogEx(NORMAL, "ISO ID: n/a  " NOLF);
+        
+        DesfirePrintFileSettingsOneLine(&FileList[i].fileSettings);
+    }
+
     
     
     DropField();

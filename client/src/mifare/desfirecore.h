@@ -68,6 +68,14 @@ typedef struct {
 
 } FileSettingsS;
 
+typedef struct {
+    uint8_t fileNum;
+    uint16_t fileISONum;
+    FileSettingsS fileSettings;
+} FileListElmS;
+
+typedef FileListElmS FileListS[32];
+
 typedef enum {
     RFTAuto,
     RFTData,
@@ -125,6 +133,7 @@ int DesfireGetFileIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetFileISOIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 
 void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsettings);
+void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings);
 int DesfireGetFileSettings(DesfireContext *dctx, uint8_t fileid, uint8_t *resp, size_t *resplen);
 int DesfireGetFileSettingsStruct(DesfireContext *dctx, uint8_t fileid, FileSettingsS *fsettings);
 int DesfireChangeFileSettings(DesfireContext *dctx, uint8_t *data, size_t datalen);

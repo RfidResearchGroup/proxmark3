@@ -1473,6 +1473,16 @@ void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsett
     }
 }
 
+void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
+    PrintAndLogEx(NORMAL, "(%-5s) " NOLF, GetDesfireCommunicationMode(fsettings->fileCommMode));    
+    PrintAndLogEx(NORMAL, "[0x%02x] %-13s ", fsettings->fileType, GetDesfireFileType(fsettings->fileType));
+
+    
+  /*      PrintAndLogEx(SUCCESS, "read     : %s", GetDesfireAccessRightStr(r));
+    PrintAndLogEx(SUCCESS, "write    : %s", GetDesfireAccessRightStr(w));
+    PrintAndLogEx(SUCCESS, "readwrite: %s", GetDesfireAccessRightStr(rw));
+    PrintAndLogEx(SUCCESS, "change   : %s", GetDesfireAccessRightStr(ch));*/
+}
 
 static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t datalen, uint8_t *dynlen, bool create) {
     switch (filetype) {
