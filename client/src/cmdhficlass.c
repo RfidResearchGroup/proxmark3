@@ -3582,7 +3582,8 @@ static int CmdHFiClassEncode(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass encode",
-                  "Encode binary wiegand to block 7",
+                  "Encode binary wiegand to block 7\n"
+                  "Use either --bin or --wiegand/--fc/--cn",
                   "hf iclass encode --bin 10001111100000001010100011 --ki 0            -> FC 31 CN 337\n"
                   "hf iclass encode --fc 31 --cn 337 --ki 0                            -> FC 31 CN 337\n"
                   "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite    -> FC 31 CN 337,  writing w elite key"
