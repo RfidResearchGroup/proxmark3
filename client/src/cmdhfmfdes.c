@@ -1518,7 +1518,7 @@ static int handler_desfire_getkeysettings(uint8_t *key_settings, uint8_t *num_ke
     return res;
 }
 
-static int handler_desfire_commit_transaction(void) {
+/*static int handler_desfire_commit_transaction(void) {
     sAPDU apdu = {0x90, MFDES_COMMIT_TRANSACTION, 0x00, 0x00, 0x00, NULL}; //0xC7
     uint32_t recv_len = 0;
     uint16_t sw = 0;
@@ -1531,7 +1531,7 @@ static int handler_desfire_commit_transaction(void) {
         return PM3_ESOFT;
 
     return res;
-}
+}*/
 
 // --- GET APPIDS
 static int handler_desfire_appids(uint8_t *dest, uint32_t *app_ids_len) {
@@ -1747,12 +1747,12 @@ static int handler_desfire_getvalue(mfdes_value_t *value, uint32_t *resplen, uin
     return res;
 }
 
-static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type, uint8_t cs) {
+//static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type, uint8_t cs) {
     /*                  LC  FN  OF  OF  OF  LN  LN  LN  DD  DD  DD
         90  3d  00  00  16  01  00  00  00  0f  00  00  00  0f  20  00  3b  00  34  04  06  e1  04  0f  fe  00  00  00
         90  3d  00  00  09  02  00  00  00  02  00  00  00  00  00
     */
-
+/*
     if (data->fileno > 0x1F) {
         return PM3_EINVARG;
     }
@@ -1802,14 +1802,14 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type,
             apdu.Lc = plen - 1;
         }
 
-        /*
+        *
                 // we dont want to change the value of datasize, so delt with above without change
                 // Doing so can create wrong offsets and endless loop.
                 if (plen != -1) datasize = (uint8_t)plen;
                 memcpy(&tmp[7], p, datasize);
 
                 apdu.Lc = datasize + 1 + 3 + 3;
-        */
+        *
 
         res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
         if (res != PM3_SUCCESS) {
@@ -1828,7 +1828,7 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type,
         }
     }
     return res;
-}
+}*/
 
 static int getKeySettings(uint8_t *aid) {
     if (aid == NULL) return PM3_EINVARG;
@@ -2041,7 +2041,7 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     return res;
 }
 
-static int selectfile(uint8_t *aid, uint8_t fileno, uint8_t *cs) {
+/*static int selectfile(uint8_t *aid, uint8_t fileno, uint8_t *cs) {
     if (handler_desfire_select_application(aid) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, _RED_("   Couldn't select aid."));
         return PM3_ESOFT;
@@ -2071,7 +2071,7 @@ static int selectfile(uint8_t *aid, uint8_t fileno, uint8_t *cs) {
     }
     *cs = filesettings[1];
     return res;
-}
+}*/
 
 static int CmdHF14ADesInfo(const char *Cmd) {
     CLIParserContext *ctx;
@@ -6252,7 +6252,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
-        arg_str0(NULL, "fid",     "<file id hex>", "File ID for clearing (1 hex byte)"),
+        arg_str0(NULL, "fid",     "<file id hex>", "File ID (1 hex byte)"),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_str0(NULL, "type",    "<auto/data/value/record/mac>", "File Type auto/data(Standard/Backup)/value/record(linear/cyclic)/mac). Auto - check file settings and then read. Default: auto"),
         arg_str0("o", "offset",   "<hex>", "File Offset (3 hex bytes, big endian). For records - record number (0 - lastest record). Default 0"),
@@ -6444,7 +6444,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "Lastest record at the bottom.");
             for (int i = 0; i < reccount; i++) {
                 if (i != 0)
-                    PrintAndLogEx(SUCCESS, "Record %d", i + offset);
+                    PrintAndLogEx(SUCCESS, "Record %d", reccount - (i + offset + 1));
                 print_buffer_with_offset(&resp[i * reclen], reclen, offset, (i == 0));
             }
         } else {
@@ -6479,101 +6479,251 @@ static int CmdHF14ADesReadData(const char *Cmd) {
 }
 
 static int CmdHF14ADesWriteData(const char *Cmd) {
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes write",
-                  "Write data to file\n"
-                  "Make sure to select aid or authenticate aid before running this command.",
-                  "hf mfdes write -n 01 -t 0 -o 000000 -d 3132333435363738"
-                 );
+                  "Write data from file. Key needs to be provided or flag --no-auth set (depend on file settings).",
+                  "hf mfdes write --aid 123456 --fid 01 -d 01020304 -> write file: app=123456, file=01, offset=0, get file type from card. use default channel settings from `default` command\n"
+                  "hf mfdes write --aid 123456 --fid 01 --type data -d 01020304 --0ffset 000100 -> write data to std file with offset 0x100\n"
+                  "hf mfdes write --aid 123456 --fid 01 --type data -d 01020304 --commit -> write data to backup file with commit\n"
+                  "hf mfdes write --aid 123456 --fid 01 --type value -d 00000001 -> increment value file\n"
+                  "hf mfdes write --aid 123456 --fid 01 --type value -d 00000001 --debit -> decrement value file\n"
+                  "hf mfdes write --aid 123456 --fid 01 -d 01020304 -> write data to record file with `auto` type\n"
+                  "hf mfdes write --aid 123456 --fid 01 --type record -d 01020304 -> write data to record file\n"
+                  "hf mfdes write --aid 123456 --fid 01 --type record -d 01020304 --updaterec 0 -> update record in the record file. record 0 - lastest record.\n"
+                  "hf mfdes write --aid 123456 --fid 01 --type record --offset 000000 -d 11223344 -> write record to record file. use default channel settings from `default` command");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("n", "fileno",  "<dec>", "File Number (0 - 31)"),
-        arg_strx0("o", "offset", "<hex>", "File Offset (3 hex bytes, big endian), optional"),
-        arg_strx0("d", "data",   "<hex>", "Data to write (hex bytes, 256 bytes max)"),
-        arg_int0("t", "type",    "<dec>", "File Type (0 = Standard / Backup, 1 = Record)"),
-        arg_strx0("a", "aid",    "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "fid",     "<file id hex>", "File ID (1 hex byte)"),
+        arg_lit0(NULL, "no-auth", "execute without authentication"),
+        arg_str0(NULL, "type",    "<auto/data/value/record/mac>", "File Type auto/data(Standard/Backup)/value/record(linear/cyclic)/mac). Auto - check file settings and then write. Default: auto"),
+        arg_str0("o",  "offset",  "<hex>", "File Offset (3 hex bytes, big endian). For records - record number (0 - lastest record). Default 0"),
+        arg_str0("d",  "data",    "<hex>", "data for write (data/record file), credit/debit(value file)"),
+        arg_lit0(NULL, "debit",   "use for value file debit operation instead of credit"),
+        arg_lit0(NULL, "commit",  "commit needs for backup file only. For the other file types and in the `auto` mode - command set it automatically."),
+        arg_int0(NULL, "updaterec", "<record number dec>", "Record number for update record command. Updates record instead of write. Lastest record - 0"),
         arg_param_end
     };
-
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fno = arg_get_int_def(ctx, 1, 0);
 
-    int offsetlength = 0;
-    uint8_t offset[3] = {0};
-    int res_offset = CLIParamHexToBuf(arg_get_str(ctx, 2), offset, 3, &offsetlength);
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool noauth = arg_get_lit(ctx, 13);
 
-    // iceman:  we only have a 1024 byte commandline input array. So this is pointlessly large.
-    // with 2char hex, 512bytes could be input.
-    // Instead large binary inputs should be BINARY files and written to card.
-    int dlength = 512;
-    uint8_t data[512] = {0};
-    int res_data = CLIParamHexToBuf(arg_get_str(ctx, 3), data, 512, &dlength);
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
 
-    int type = arg_get_int(ctx, 4);
-    int aidlength = 3;
-    uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(ctx, 5, aid, &aidlength);
-    swap24(aid);
+    uint32_t fnum = 1;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fnum, 1, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "File ID must have 1 byte length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
+    int op = RFTAuto;
+    if (CLIGetOptionList(arg_get_str(ctx, 14), DesfireReadFileTypeOpts, &op)) {
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
+    }
+
+    uint32_t offset = 0;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 15, 0, &offset, 3, true);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Offset must have 3 byte length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t data[1024] = {0};
+    int datalen = sizeof(data);
+    CLIGetHexWithReturn(ctx, 16, data, &datalen);
+    if (datalen == 0) {
+        PrintAndLogEx(ERR, "Data for write must be present.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool debit = arg_get_lit(ctx, 17);
+    bool commit = arg_get_lit(ctx, 18);
+
+    int updaterecno = arg_get_int_def(ctx, 19, -1);
+
+    SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    swap24(offset);
-
-    if (type < 0 || type > 1) {
-        PrintAndLogEx(ERR, "Unknown type (0=Standard/Backup, 1=Record)");
+    if (fnum > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fnum);
         return PM3_EINVARG;
     }
 
-    if (res_data || dlength == 0) {
-        PrintAndLogEx(ERR, "Data needs some hex bytes to write");
-        return PM3_EINVARG;
+    if (noauth) {
+        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            DropField();
+            return res;
+        }
+    } else {
+        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
     }
 
-    if (res_offset || (offsetlength != 3 && offsetlength != 0)) {
-        PrintAndLogEx(ERR, "Offset needs 3 hex bytes");
-        return PM3_EINVARG;
+    // get file settings
+    if (op == RFTAuto) {
+        FileSettingsS fsettings;
+        
+        DesfireCommunicationMode commMode = dctx.commMode;
+        DesfireSetCommMode(&dctx, DCMPlain);
+        res = DesfireGetFileSettingsStruct(&dctx, fnum, &fsettings);
+        DesfireSetCommMode(&dctx, commMode);        
+        
+        if (res == PM3_SUCCESS) {
+            switch(fsettings.fileType) {
+                case 0x00:
+                case 0x01: {
+                    op = RFTData;
+                    commit = (fsettings.fileType == 0x01);
+                    break;
+                }
+                case 0x02: {
+                    op = RFTValue;
+                    commit = true;
+                    break;
+                }
+                case 0x03:
+                case 0x04: {
+                    op = RFTRecord;
+                    commit = true;
+                    if (datalen > fsettings.recordSize)
+                        PrintAndLogEx(WARNING, "Record size (%d) " _RED_("is less") " than data length (%d)", fsettings.recordSize, datalen);
+                    break;
+                }
+                case 0x05: {
+                    op = RFTMAC;
+                    commit = false;
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+
+            DesfireSetCommMode(&dctx, fsettings.commMode);
+            
+            if (fsettings.fileCommMode != 0 && noauth)
+                PrintAndLogEx(WARNING, "File needs communication mode `%s` but there is no authentication", CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
+
+            if (verbose)
+                PrintAndLogEx(INFO, "Got file type: %s. Option: %s. comm mode: %s", 
+                    GetDesfireFileType(fsettings.fileType), 
+                    CLIGetOptionListStr(DesfireReadFileTypeOpts, op), 
+                    CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
+        } else {
+            PrintAndLogEx(WARNING, "GetFileSettings error. Can't get file type.");
+        }
     }
 
-    if (fno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fno);
-        return PM3_EINVARG;
-    }
-
-    mfdes_data_t ft;
-
-    memcpy(ft.offset, offset, 3);
-    htole24(dlength, ft.length);
-    ft.fileno = fno;
-
-    if (aidlength != 3 && aidlength != 0) {
-        PrintAndLogEx(ERR, _RED_("   The given aid must have 3 bytes (big endian)."));
-        return PM3_ESOFT;
-    } else if (aidlength == 0) {
-        if (memcmp(&tag->selected_application, aid, 3) == 0) {
-            PrintAndLogEx(ERR, _RED_("   You need to select an aid first."));
+    if (op == RFTData) {
+        res = DesfireWriteFile(&dctx, fnum, offset, datalen, data);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire WriteFile command " _RED_("error") ". Result: %d", res);
+            DropField();
             return PM3_ESOFT;
         }
-        memcpy(aid, (uint8_t *)&tag->selected_application, 3);
-    }
-    uint8_t cs = 0;
-    if (selectfile(aid, fno, &cs) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, _RED_("   Error on selecting file."));
-        DropFieldDesfire();
-        return PM3_ESOFT;
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Write data file %02x " _GREEN_("success"), fnum);
     }
 
-    int res = PM3_ESOFT;
-    ft.data = data;
-    res = handler_desfire_writedata(&ft, type, cs);
-    if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Successfully wrote data");
-    } else {
-        PrintAndLogEx(ERR, "Couldn't read data. Error %d", res);
+    if (op == RFTValue) {
+        if (datalen != 4) {
+            PrintAndLogEx(ERR, "Value " _RED_("should be") " 4 byte length instead of %d", datalen);
+            DropField();
+            return PM3_EINVARG;
+        }
+
+        uint32_t value = MemBeToUint4byte(data);
+        uint8_t vop = (debit) ? MFDES_DEBIT : MFDES_CREDIT;
+        res = DesfireValueFileOperations(&dctx, fnum, vop, &value);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire %s operation " _RED_("error") ". Result: %d", CLIGetOptionListStr(DesfireValueFileOperOpts, vop), res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (verbose)
+            PrintAndLogEx(INFO, "%s value file %02x (%s)  " _GREEN_("success"), (debit) ? "Debit" : "Credit", fnum, CLIGetOptionListStr(DesfireValueFileOperOpts, vop));
+        commit = true;
     }
-    DropFieldDesfire();
-    return res;
+
+    if (op == RFTRecord) {
+        if (updaterecno < 0) {
+            res = DesfireWriteRecord(&dctx, fnum, offset, datalen, data);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Desfire WriteRecord command " _RED_("error") ". Result: %d", res);
+                DropField();
+                return PM3_ESOFT;
+            }
+            if (verbose)
+                PrintAndLogEx(INFO, "Write record file %02x " _GREEN_("success"), fnum);
+        } else {
+            res = DesfireUpdateRecord(&dctx, fnum, updaterecno, offset, datalen, data);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Desfire UpdateRecord command " _RED_("error") ". Result: %d", res);
+                DropField();
+                return PM3_ESOFT;
+            }
+            if (verbose)
+                PrintAndLogEx(INFO, "Update record %06x in the file %02x " _GREEN_("success"), updaterecno, fnum);
+        }
+
+        commit = true;
+    }
+
+    if (op == RFTMAC) {
+        PrintAndLogEx(ERR, "Can't " _RED_("write") " to transaction MAC file");
+        DropField();
+        return PM3_EINVARG;
+    }
+
+    // commit phase
+    if (commit) {
+        res = DesfireCommitTransaction(&dctx, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire CommitTransaction command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+    }
+    
+    PrintAndLogEx(INFO, "Write %s file %02x " _GREEN_("success"), CLIGetOptionListStr(DesfireReadFileTypeOpts, op), fnum);
+    
+    DropField();
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14ADesTest(const char *Cmd) {
@@ -6620,7 +6770,7 @@ static command_t CommandTable[] = {
     {"chfilesettings",   CmdHF14ADesChFileSettings,   IfPm3Iso14443a,  "[new]Change file settings"},
     {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
     {"read",             CmdHF14ADesReadData,         IfPm3Iso14443a,  "[new]Read data from standard/backup/record/value/mac file"},
-    {"write",            CmdHF14ADesWriteData,        IfPm3Iso14443a,  "Write data to standard/backup/record/value file"},
+    {"write",            CmdHF14ADesWriteData,        IfPm3Iso14443a,  "[new]Write data to standard/backup/record/value file"},
     {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "[new]Operations with value file (get/credit/limited credit/debit/clear)"},
     {"clearrecfile",     CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "[new]Clear record File"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("System") " -----------------------"},
