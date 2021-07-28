@@ -6444,7 +6444,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "Lastest record at the bottom.");
             for (int i = 0; i < reccount; i++) {
                 if (i != 0)
-                    PrintAndLogEx(SUCCESS, "Record %d", i + offset);
+                    PrintAndLogEx(SUCCESS, "Record %d", reccount - (i + offset + 1));
                 print_buffer_with_offset(&resp[i * reclen], reclen, offset, (i == 0));
             }
         } else {
@@ -6561,14 +6561,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     bool debit = arg_get_lit(ctx, 17);
     bool commit = arg_get_lit(ctx, 18);
 
-    uint32_t updaterecno = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 19, 0, &offset, 3, true);
-    bool updaterec = (res == 1);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Offset must have 3 byte length");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
+    int updaterecno = arg_get_int_def(ctx, 19, -1);
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
@@ -6682,7 +6675,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     }
 
     if (op == RFTRecord) {
-        if (!updaterec) {
+        if (updaterecno < 0) {
             res = DesfireWriteRecord(&dctx, fnum, offset, datalen, data);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Desfire WriteRecord command " _RED_("error") ". Result: %d", res);
