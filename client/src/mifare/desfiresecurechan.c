@@ -23,7 +23,23 @@
 #include "protocols.h"
 #include "mifare/desfire_crypto.h"
 
-AllowedChannelModesS AllowedChannelModes[] = {
+static const uint8_t CommandsCanUseAnyChannel[] = {
+    MFDES_READ_DATA,
+    MFDES_WRITE_DATA,
+    MFDES_GET_VALUE,  
+    MFDES_READ_RECORDS, 
+    MFDES_WRITE_RECORD, 
+    MFDES_UPDATE_RECORD,
+};
+
+static bool CommandCanUseAnyChannel(uint8_t cmd) {
+    for (int i = 0; i < ARRAYLEN(CommandsCanUseAnyChannel); i++)
+        if (CommandsCanUseAnyChannel[i] == cmd)
+            return true;
+    return false;
+}
+
+static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_CREATE_APPLICATION,        DACd40,  DCCNative,    DCMPlain},
     {MFDES_DELETE_APPLICATION,        DACd40,  DCCNative,    DCMPlain},
     {MFDES_GET_APPLICATION_IDS,       DACd40,  DCCNative,    DCMPlain},
@@ -42,16 +58,15 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_DEBIT,                     DACd40,  DCCNative,    DCMPlain},
     {MFDES_COMMIT_TRANSACTION,        DACd40,  DCCNative,    DCMPlain},
     {MFDES_CLEAR_RECORD_FILE,         DACd40,  DCCNative,    DCMPlain},
+    {MFDES_GET_FILE_SETTINGS,         DACd40,  DCCNative,    DCMPlain},
 
-    {MFDES_READ_DATA,                 DACd40,  DCCNative,    DCMMACed},
-    {MFDES_WRITE_DATA,                DACd40,  DCCNative,    DCMMACed},
     {MFDES_GET_VALUE,                 DACd40,  DCCNative,    DCMMACed},
     {MFDES_CREDIT,                    DACd40,  DCCNative,    DCMMACed},
     {MFDES_DEBIT,                     DACd40,  DCCNative,    DCMMACed},
     {MFDES_LIMITED_CREDIT,            DACd40,  DCCNative,    DCMMACed},
     {MFDES_READ_RECORDS,              DACd40,  DCCNative,    DCMMACed},
     {MFDES_WRITE_RECORD,              DACd40,  DCCNative,    DCMMACed},
-    {MFDES_UPDATE_RECORD1,            DACd40,  DCCNative,    DCMMACed},
+    {MFDES_UPDATE_RECORD,             DACd40,  DCCNative,    DCMMACed},
     {MFDES_UPDATE_RECORD2,            DACd40,  DCCNativeISO, DCMMACed},
     {MFDES_INIT_KEY_SETTINGS,         DACd40,  DCCNative,    DCMMACed},
     {MFDES_FINALIZE_KEY_SETTINGS,     DACd40,  DCCNative,    DCMMACed},
@@ -64,8 +79,6 @@ AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_GET_UID,                   DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,       DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_FILE_SETTINGS,      DACd40,  DCCNative,    DCMEncrypted},
-    {MFDES_READ_DATA,                 DACd40,  DCCNative,    DCMEncrypted},
-    {MFDES_WRITE_DATA,                DACd40,  DCCNative,    DCMEncrypted},
 
     {MFDES_CHANGE_KEY,                DACd40,  DCCNative,    DCMEncryptedPlain},
     {MFDES_CHANGE_KEY_EV2,            DACd40,  DCCNative,    DCMEncryptedPlain},
@@ -104,14 +117,20 @@ AllowedChannelModesS AllowedChannelModes[] = {
 };
 
 #define CMD_HEADER_LEN_ALL 0xffff
-CmdHeaderLengthsS CmdHeaderLengths[] = {
+static const CmdHeaderLengthsS CmdHeaderLengths[] = {
     {MFDES_CREATE_APPLICATION,     CMD_HEADER_LEN_ALL},
     {MFDES_DELETE_APPLICATION,     CMD_HEADER_LEN_ALL},
     {MFDES_CHANGE_KEY,             1},
     {MFDES_CHANGE_KEY_EV2,         2},
     {MFDES_CHANGE_CONFIGURATION,   1},
+    {MFDES_GET_FILE_SETTINGS,      1},
     {MFDES_CHANGE_FILE_SETTINGS,   1},
     {MFDES_CREATE_TRANS_MAC_FILE,  5},
+    {MFDES_READ_DATA,              7},
+    {MFDES_WRITE_DATA,             7},
+    {MFDES_READ_RECORDS,           7},
+    {MFDES_WRITE_RECORD,           7},
+    {MFDES_UPDATE_RECORD,         10},
 };
 
 static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {
@@ -130,45 +149,38 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
     size_t rlen = 0;
     uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd);
 
-    switch (ctx->commMode) {
-        case DCMPlain:
-            memcpy(dstdata, srcdata, srcdatalen);
-            *dstdatalen = srcdatalen;
-            break;
-        case DCMMACed:
-            if (srcdatalen == 0)
-                break;
+    if (ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && srcdatalen <= hdrlen)) {
+        if (srcdatalen == 0)
+            return;
 
-            rlen = srcdatalen + DesfireGetMACLength(ctx);
-            memcpy(data, srcdata, srcdatalen);
-            DesfireCryptoEncDec(ctx, true, data, srcdatalen, NULL, true);
-            memcpy(dstdata, srcdata, srcdatalen);
-            memcpy(&dstdata[srcdatalen], ctx->IV, 4);
-            *dstdatalen = rlen;
-            break;
-        case DCMEncrypted:
-            if (srcdatalen == 0 || srcdatalen <= hdrlen)
-                break;
+        rlen = srcdatalen + DesfireGetMACLength(ctx);
+        memcpy(data, srcdata, srcdatalen);
+        DesfireCryptoEncDec(ctx, true, data, srcdatalen, NULL, true);
+        memcpy(dstdata, srcdata, srcdatalen);
+        memcpy(&dstdata[srcdatalen], ctx->IV, 4);
+        *dstdatalen = rlen;
+    } else if (ctx->commMode == DCMEncrypted) {
+        if (srcdatalen == 0 || srcdatalen <= hdrlen)
+            return;
 
-            rlen = padded_data_length(srcdatalen + 2, desfire_get_key_block_length(ctx->keyType)); // 2 - crc16
-            memcpy(data, srcdata, srcdatalen);
-            compute_crc(CRC_14443_A, data, srcdatalen, &data[srcdatalen], &data[srcdatalen + 1]);
-            DesfireCryptoEncDec(ctx, true, data, rlen, dstdata, true);
-            *dstdatalen = rlen;
-            break;
-        case DCMEncryptedPlain:
-            if (srcdatalen == 0 || srcdatalen <= hdrlen)
-                break;
+        rlen = padded_data_length(srcdatalen + 2, desfire_get_key_block_length(ctx->keyType)); // 2 - crc16
+        memcpy(data, srcdata, srcdatalen);
+        compute_crc(CRC_14443_A, data, srcdatalen, &data[srcdatalen], &data[srcdatalen + 1]);
+        DesfireCryptoEncDec(ctx, true, data, rlen, dstdata, true);
+        *dstdatalen = rlen;
+    } if (ctx->commMode == DCMEncryptedPlain) {
+        if (srcdatalen == 0 || srcdatalen <= hdrlen)
+            return;
 
-            rlen = padded_data_length(srcdatalen - hdrlen, desfire_get_key_block_length(ctx->keyType)) + hdrlen;
-            memcpy(data, srcdata, srcdatalen);
-            memcpy(dstdata, srcdata, hdrlen);
-            DesfireCryptoEncDec(ctx, true, &data[hdrlen], rlen - hdrlen, &dstdata[hdrlen], true);
-            *dstdatalen = rlen;
-            ctx->commMode = DCMEncrypted;
-            break;
-        case DCMNone:
-            ;
+        rlen = padded_data_length(srcdatalen - hdrlen, desfire_get_key_block_length(ctx->keyType)) + hdrlen;
+        memcpy(data, srcdata, srcdatalen);
+        memcpy(dstdata, srcdata, hdrlen);
+        DesfireCryptoEncDec(ctx, true, &data[hdrlen], rlen - hdrlen, &dstdata[hdrlen], true);
+        *dstdatalen = rlen;
+        ctx->commMode = DCMEncrypted;
+    } else {
+        memcpy(dstdata, srcdata, srcdatalen);
+        *dstdatalen = srcdatalen;
     }
 }
 
@@ -182,7 +194,7 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
 
     // we calc MAC anyway
     // if encypted channel and no data - we only calc MAC
-    if (ctx->commMode == DCMPlain || ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && srcdatalen == 0)) {
+    if (ctx->commMode == DCMPlain || ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && srcdatalen <= hdrlen)) {
         data[0] = cmd;
         memcpy(&data[1], srcdata, srcdatalen);
         uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
@@ -190,7 +202,7 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
 
         memcpy(dstdata, srcdata, srcdatalen);
         *dstdatalen = srcdatalen;
-        if (srcdatalen != 0 && ctx->commMode == DCMMACed) {
+        if (srcdatalen > hdrlen && ctx->commMode == DCMMACed) {
             memcpy(&dstdata[srcdatalen], cmac, DesfireGetMACLength(ctx));
             *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
         }
@@ -219,7 +231,7 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
 
 void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
     ctx->lastCommand = cmd;
-    ctx->lastRequestZeroLen = (srcdatalen == 0);
+    ctx->lastRequestZeroLen = (srcdatalen <= DesfireGetCmdHeaderLen(cmd));
 
     switch (ctx->secureChannel) {
         case DACd40:
@@ -238,13 +250,31 @@ void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcda
 }
 
 static void DesfireSecureChannelDecodeD40(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
+    uint8_t data[1024] = {0};
+    size_t rlen = 0;
+
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
 
     switch (ctx->commMode) {
-        case DCMMACed:
-
+        case DCMMACed: {
+            size_t maclen = DesfireGetMACLength(ctx);
+            if (srcdatalen > maclen) {
+                uint8_t mac[16] = {0};
+                rlen = padded_data_length(srcdatalen - maclen, desfire_get_key_block_length(ctx->keyType));
+                memcpy(data, srcdata, srcdatalen - maclen);
+                DesfireCryptoEncDecEx(ctx, true, data, rlen, NULL, true, true, mac);
+                
+                if (memcmp(mac, &srcdata[srcdatalen - maclen], maclen) == 0) {
+                    *dstdatalen = srcdatalen - maclen; 
+                } else {
+                    PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
+                    //PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[srcdatalen - maclen], maclen));
+                    //PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(mac, maclen));
+                }
+            }
             break;
+        }   
         case DCMEncrypted:
             if (srcdatalen < desfire_get_key_block_length(ctx->keyType)) {
                 memcpy(dstdata, srcdata, srcdatalen);
@@ -346,6 +376,8 @@ bool PrintChannelModeWarning(uint8_t cmd, DesfireSecureChannel secureChannel, De
 
     // no security set
     if (secureChannel == DACNone)
+        return true;
+    if (CommandCanUseAnyChannel(cmd))
         return true;
 
     bool found = false;
