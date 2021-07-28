@@ -6334,7 +6334,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         FileSettingsS fsettings;
         
         DesfireCommunicationMode commMode = dctx.commMode;
-        DesfireSetCommMode(&dctx, DCMMACed);
+        DesfireSetCommMode(&dctx, DCMPlain);
         res = DesfireGetFileSettingsStruct(&dctx, fnum, &fsettings);
         DesfireSetCommMode(&dctx, commMode);        
         
@@ -6365,6 +6365,9 @@ static int CmdHF14ADesReadData(const char *Cmd) {
             }
 
             DesfireSetCommMode(&dctx, fsettings.commMode);
+            
+            if (fsettings.fileCommMode != 0 && noauth)
+                PrintAndLogEx(WARNING, "File needs communication mode `%s` but there is no authentication", CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
 
             if (verbose)
                 PrintAndLogEx(INFO, "Got file type: %s. Option: %s. comm mode: %s", 

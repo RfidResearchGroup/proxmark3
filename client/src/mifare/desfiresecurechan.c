@@ -58,6 +58,7 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_DEBIT,                     DACd40,  DCCNative,    DCMPlain},
     {MFDES_COMMIT_TRANSACTION,        DACd40,  DCCNative,    DCMPlain},
     {MFDES_CLEAR_RECORD_FILE,         DACd40,  DCCNative,    DCMPlain},
+    {MFDES_GET_FILE_SETTINGS,         DACd40,  DCCNative,    DCMPlain},
 
     {MFDES_GET_VALUE,                 DACd40,  DCCNative,    DCMMACed},
     {MFDES_CREDIT,                    DACd40,  DCCNative,    DCMMACed},
@@ -249,16 +250,31 @@ void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcda
 }
 
 static void DesfireSecureChannelDecodeD40(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
+    uint8_t data[1024] = {0};
+    size_t rlen = 0;
+
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
 
     switch (ctx->commMode) {
-        case DCMMACed:
-            //if (srcdatalen > 4)
-            //    *dstdatalen = srcdatalen - 4; 
-            // TODO check MAC!!!
-
+        case DCMMACed: {
+            size_t maclen = DesfireGetMACLength(ctx);
+            if (srcdatalen > maclen) {
+                uint8_t mac[16] = {0};
+                rlen = padded_data_length(srcdatalen - maclen, desfire_get_key_block_length(ctx->keyType));
+                memcpy(data, srcdata, srcdatalen - maclen);
+                DesfireCryptoEncDecEx(ctx, true, data, rlen, NULL, true, true, mac);
+                
+                if (memcmp(mac, &srcdata[srcdatalen - maclen], maclen) == 0) {
+                    *dstdatalen = srcdatalen - maclen; 
+                } else {
+                    PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
+                    //PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[srcdatalen - maclen], maclen));
+                    //PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(mac, maclen));
+                }
+            }
             break;
+        }   
         case DCMEncrypted:
             if (srcdatalen < desfire_get_key_block_length(ctx->keyType)) {
                 memcpy(dstdata, srcdata, srcdatalen);
