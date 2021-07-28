@@ -6721,102 +6721,6 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     
     DropField();
     return PM3_SUCCESS;
-
-/*    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes write",
-                  "Write data to file\n"
-                  "Make sure to select aid or authenticate aid before running this command.",
-                  "hf mfdes write -n 01 -t 0 -o 000000 -d 3132333435363738"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_int0("n", "fileno",  "<dec>", "File Number (0 - 31)"),
-        arg_strx0("o", "offset", "<hex>", "File Offset (3 hex bytes, big endian), optional"),
-        arg_strx0("d", "data",   "<hex>", "Data to write (hex bytes, 256 bytes max)"),
-        arg_int0("t", "type",    "<dec>", "File Type (0 = Standard / Backup, 1 = Record)"),
-        arg_strx0("a", "aid",    "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
-        arg_param_end
-    };
-
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fno = arg_get_int_def(ctx, 1, 0);
-
-    int offsetlength = 0;
-    uint8_t offset[3] = {0};
-    int res_offset = CLIParamHexToBuf(arg_get_str(ctx, 2), offset, 3, &offsetlength);
-
-    // iceman:  we only have a 1024 byte commandline input array. So this is pointlessly large.
-    // with 2char hex, 512bytes could be input.
-    // Instead large binary inputs should be BINARY files and written to card.
-    int dlength = 512;
-    uint8_t data[512] = {0};
-    int res_data = CLIParamHexToBuf(arg_get_str(ctx, 3), data, 512, &dlength);
-
-    int type = arg_get_int(ctx, 4);
-    int aidlength = 3;
-    uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(ctx, 5, aid, &aidlength);
-    swap24(aid);
-
-    CLIParserFree(ctx);
-
-    swap24(offset);
-
-    if (type < 0 || type > 1) {
-        PrintAndLogEx(ERR, "Unknown type (0=Standard/Backup, 1=Record)");
-        return PM3_EINVARG;
-    }
-
-    if (res_data || dlength == 0) {
-        PrintAndLogEx(ERR, "Data needs some hex bytes to write");
-        return PM3_EINVARG;
-    }
-
-    if (res_offset || (offsetlength != 3 && offsetlength != 0)) {
-        PrintAndLogEx(ERR, "Offset needs 3 hex bytes");
-        return PM3_EINVARG;
-    }
-
-    if (fno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fno);
-        return PM3_EINVARG;
-    }
-
-    mfdes_data_t ft;
-
-    memcpy(ft.offset, offset, 3);
-    htole24(dlength, ft.length);
-    ft.fileno = fno;
-
-    if (aidlength != 3 && aidlength != 0) {
-        PrintAndLogEx(ERR, _RED_("   The given aid must have 3 bytes (big endian)."));
-        return PM3_ESOFT;
-    } else if (aidlength == 0) {
-        if (memcmp(&tag->selected_application, aid, 3) == 0) {
-            PrintAndLogEx(ERR, _RED_("   You need to select an aid first."));
-            return PM3_ESOFT;
-        }
-        memcpy(aid, (uint8_t *)&tag->selected_application, 3);
-    }
-    uint8_t cs = 0;
-    if (selectfile(aid, fno, &cs) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, _RED_("   Error on selecting file."));
-        DropFieldDesfire();
-        return PM3_ESOFT;
-    }
-
-    int res = PM3_ESOFT;
-    ft.data = data;
-    res = handler_desfire_writedata(&ft, type, cs);
-    if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Successfully wrote data");
-    } else {
-        PrintAndLogEx(ERR, "Couldn't read data. Error %d", res);
-    }
-    DropFieldDesfire();
-    return res;
-    */
 }
 
 static int CmdHF14ADesTest(const char *Cmd) {
@@ -6863,7 +6767,7 @@ static command_t CommandTable[] = {
     {"chfilesettings",   CmdHF14ADesChFileSettings,   IfPm3Iso14443a,  "[new]Change file settings"},
     {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
     {"read",             CmdHF14ADesReadData,         IfPm3Iso14443a,  "[new]Read data from standard/backup/record/value/mac file"},
-    {"write",            CmdHF14ADesWriteData,        IfPm3Iso14443a,  "Write data to standard/backup/record/value file"},
+    {"write",            CmdHF14ADesWriteData,        IfPm3Iso14443a,  "[new]Write data to standard/backup/record/value file"},
     {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "[new]Operations with value file (get/credit/limited credit/debit/clear)"},
     {"clearrecfile",     CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "[new]Clear record File"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("System") " -----------------------"},
