@@ -6643,21 +6643,16 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        if (commit) {
-            res = DesfireCommitTransaction(&dctx, false, 0);
-            if (res != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "Desfire CommitTransaction command " _RED_("error") ". Result: %d", res);
-                DropField();
-                return PM3_ESOFT;
-            }
-        }
-
-        PrintAndLogEx(SUCCESS, "Write data file %02x " _GREEN_("success"), fnum);
+        if (verbose)
+            PrintAndLogEx(INFO, "Write data file %02x " _GREEN_("success"), fnum);
     }
 
     if (op == RFTValue) {
-        if (datalen != 4)
-            PrintAndLogEx(WARNING, "Value " _RED_("should be") " 4 byte length instead of %d", datalen);
+        if (datalen != 4) {
+            PrintAndLogEx(ERR, "Value " _RED_("should be") " 4 byte length instead of %d", datalen);
+            DropField();
+            return PM3_EINVARG;
+        }
 
         uint32_t value = MemBeToUint4byte(data);
         uint8_t vop = (debit) ? MFDES_DEBIT : MFDES_CREDIT;
@@ -6668,16 +6663,8 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        if (commit) {
-            res = DesfireCommitTransaction(&dctx, false, 0);
-            if (res != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "Desfire CommitTransaction command " _RED_("error") ". Result: %d", res);
-                DropField();
-                return PM3_ESOFT;
-            }
-        }
-
-        PrintAndLogEx(SUCCESS, "Value file %02x (%s)  " _GREEN_("success"), fnum, CLIGetOptionListStr(DesfireValueFileOperOpts, vop));
+        if (verbose)
+            PrintAndLogEx(INFO, "%s value file %02x (%s)  " _GREEN_("success"), (debit) ? "Debit" : "Credit", fnum, CLIGetOptionListStr(DesfireValueFileOperOpts, vop));
     }
 
     if (op == RFTRecord) {
@@ -6722,8 +6709,25 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
     if (op == RFTMAC) {
         PrintAndLogEx(ERR, "Can't " _RED_("write") " to transaction MAC file");
+        DropField();
+        return PM3_EINVARG;
     }
 
+    // commit phase
+    if (commit) {
+        res = DesfireCommitTransaction(&dctx, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire CommitTransaction command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+    }
+    
+    PrintAndLogEx(INFO, "Write %s file %02x " _GREEN_("success"), CLIGetOptionListStr(DesfireReadFileTypeOpts, op), fnum);
+    
     DropField();
     return PM3_SUCCESS;
 
