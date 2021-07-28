@@ -142,9 +142,6 @@ static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {
 }
 
 static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
-    memcpy(dstdata, srcdata, srcdatalen);
-    *dstdatalen = srcdatalen;
-
     uint8_t data[1024] = {0};
     size_t rlen = 0;
     uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd);
@@ -152,6 +149,7 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
     if (ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && srcdatalen <= hdrlen)) {
         if (srcdatalen == 0)
             return;
+PrintAndLogEx(INFO, "---MAC");
 
         rlen = srcdatalen + DesfireGetMACLength(ctx);
         memcpy(data, srcdata, srcdatalen);
@@ -163,12 +161,14 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
         if (srcdatalen == 0 || srcdatalen <= hdrlen)
             return;
 
-        rlen = padded_data_length(srcdatalen + 2, desfire_get_key_block_length(ctx->keyType)); // 2 - crc16
-        memcpy(data, srcdata, srcdatalen);
-        compute_crc(CRC_14443_A, data, srcdatalen, &data[srcdatalen], &data[srcdatalen + 1]);
-        DesfireCryptoEncDec(ctx, true, data, rlen, dstdata, true);
+        rlen = padded_data_length(srcdatalen + 2 - hdrlen, desfire_get_key_block_length(ctx->keyType)) + hdrlen; // 2 - crc16
+        memcpy(data, &srcdata[hdrlen], srcdatalen - hdrlen);
+        iso14443a_crc_append(data, srcdatalen - hdrlen);
+        memcpy(dstdata, srcdata, hdrlen);
+        //PrintAndLogEx(INFO, "src[%d]: %s", srcdatalen - hdrlen + 2, sprint_hex(data, srcdatalen - hdrlen + 2));
+        DesfireCryptoEncDec(ctx, true, data, rlen - hdrlen, &dstdata[hdrlen], true);
         *dstdatalen = rlen;
-    } if (ctx->commMode == DCMEncryptedPlain) {
+    } else if (ctx->commMode == DCMEncryptedPlain) {
         if (srcdatalen == 0 || srcdatalen <= hdrlen)
             return;
 
