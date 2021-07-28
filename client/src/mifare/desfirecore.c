@@ -411,6 +411,7 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext *ctx, uint8
             PrintAndLogEx(DEBUG, "error DESFIRESendRaw %s", DesfireGetErrorString(res, &ssw));
             return res;
         }
+        
         sentdatalen += len;
         if (rcode != MFDES_ADDITIONAL_FRAME || buflen > 0) {
             if (sentdatalen != cdatalen)
@@ -494,10 +495,31 @@ static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t 
     apdu.P2 = 0;
     apdu.data = data;
 
-    int res = DESFIRESendApdu(activate_field, apdu, buf, sizeof(buf), &buflen, &sw);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(DEBUG, "error DESFIRESendApdu %s", DesfireGetErrorString(res, &sw));
-        return res;
+    int res = 0;
+    // tx chaining
+    size_t sentdatalen = 0;
+    while(datalen >= sentdatalen) {
+        if (datalen - sentdatalen > DESFIRE_TX_FRAME_MAX_LEN)
+            apdu.Lc = DESFIRE_TX_FRAME_MAX_LEN;
+        else
+            apdu.Lc = datalen - sentdatalen;
+        apdu.data = &data[sentdatalen];
+        
+        if (sentdatalen > 0)
+            apdu.INS = MFDES_ADDITIONAL_FRAME;     
+
+        res = DESFIRESendApdu(activate_field, apdu, buf, sizeof(buf), &buflen, &sw);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(DEBUG, "error DESFIRESendApdu %s", DesfireGetErrorString(res, &sw));
+            return res;
+        }
+        
+        sentdatalen += apdu.Lc;
+        if (sw != DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME) || buflen > 0) {
+            if (sentdatalen != datalen)
+                PrintAndLogEx(WARNING, "Tx chaining error. Needs to send: %d but sent: %d", datalen, sentdatalen);
+            break;
+        }
     }
 
     if (respcode != NULL && ((sw & 0xff00) == 0x9100))
