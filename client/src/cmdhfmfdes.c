@@ -3912,6 +3912,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 13, keydata, &oldkeylen);
     if (oldkeylen && oldkeylen != desfire_get_key_length(oldkeytype)) {
         PrintAndLogEx(ERR, "%s old key must have %d bytes length instead of %d.", CLIGetOptionListStr(DesfireAlgoOpts, oldkeytype), desfire_get_key_length(oldkeytype), oldkeylen);
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
     if (oldkeylen)
@@ -6438,7 +6439,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
 
         if (resplen > 0) {
             size_t reccount = resplen / reclen;
-            PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x from record %u record count %zu record length %zu", resplen, fnum, offset, reccount, reclen);
+            PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x from record %d record count %zu record length %zu", resplen, fnum, offset, reccount, reclen);
             if (reccount > 1)
                 PrintAndLogEx(SUCCESS, "Lastest record at the bottom.");
             for (int i = 0; i < reccount; i++) {
