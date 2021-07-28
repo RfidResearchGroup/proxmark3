@@ -3584,17 +3584,20 @@ static int CmdHFiClassEncode(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass encode",
                   "Encode binary wiegand to block 7",
                   "hf iclass encode --bin 10001111100000001010100011 --ki 0            -> FC 31 CN 337\n"
+                  "hf iclass encode --fc 31 --cn 337 --ki 0                            -> FC 31 CN 337\n"
                   "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite    -> FC 31 CN 337,  writing w elite key"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
+        arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
         arg_int1(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_str0(NULL, "enckey", "<hex>", "3DES transport key, 16 hex bytes"),
+        arg_u64_0(NULL, "fc", "<dec>", "facility code"),
+        arg_u64_0(NULL, "cn", "<dec>", "card number"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3630,6 +3633,11 @@ static int CmdHFiClassEncode(const char *Cmd) {
     bool use_sc = false;
     CLIGetHexWithReturn(ctx, 6, enc_key, &enc_key_len);
 
+    wiegand_card_t card;
+    memset(&card, 0, sizeof(wiegand_card_t));
+    card.FacilityCode = arg_get_u32_def(ctx, 7, 0);
+    card.CardNumber = arg_get_u32_def(ctx, 8, 0);
+
     CLIParserFree(ctx);
 
     if ((rawkey + elite) > 1) {
@@ -3647,6 +3655,11 @@ static int CmdHFiClassEncode(const char *Cmd) {
 
     if (bin_len > 127) {
         PrintAndLogEx(ERR, "Binary wiegand string must be less than 128 bits");
+        return PM3_EINVARG;
+    }
+
+    if (bin_len == 0 && card.FacilityCode == 0 && card.CardNumber == 0) {
+        PrintAndLogEx(ERR, "Must provide either --cn/--fc or --bin");
         return PM3_EINVARG;
     }
 
@@ -3697,7 +3710,27 @@ static int CmdHFiClassEncode(const char *Cmd) {
             PrintAndLogEx(WARNING, "Ignoring '%c'", c);
         }
     }
-    memcpy(credential + 8, data, sizeof(data));
+
+    if (bin_len) {
+      memcpy(credential + 8, data, sizeof(data));
+    } else {
+      wiegand_message_t packed;
+      memset(&packed, 0, sizeof(wiegand_message_t));
+
+      int format_idx = HIDFindCardFormat("H10301");
+      if (format_idx == -1) {
+          return PM3_EINVARG;
+      }
+
+      if (HIDPack(format_idx, &card, &packed, false) == false) {
+          PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
+          return PM3_ESOFT;
+      }
+      add_HID_header(&packed);
+
+      packed.Bot = BSWAP_32(packed.Bot);
+      memcpy(credential + 12, &packed.Bot, sizeof(packed.Bot));
+    }
 
     // encrypt with transport key
     if (use_sc) {
