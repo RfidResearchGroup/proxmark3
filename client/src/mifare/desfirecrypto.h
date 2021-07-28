@@ -99,11 +99,14 @@ size_t DesfireGetMACLength(DesfireContext *ctx);
 size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint8_t crclen);
 
 void DesfireCryptoEncDec(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode);
-void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode, uint8_t *iv);
+void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool dir_to_send, bool encode, uint8_t *iv);
 void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *cmac);
 
 void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorythm keytype, uint8_t version);
 uint8_t DesfireDESKeyGetVersion(uint8_t *key);
+
+DesfireCommunicationMode DesfireFileCommModeToCommMode(uint8_t file_comm_mode);
+uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode);
 
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc);
 void desfire_crc32_append(uint8_t *data, const size_t len);

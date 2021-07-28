@@ -45,9 +45,7 @@ void printLFConfig(void) {
     Dbprintf("  [a] averaging........... %s", (config.averaging) ? "yes" : "no");
     Dbprintf("  [t] trigger threshold... %d", config.trigger_threshold);
     Dbprintf("  [s] samples to skip..... %d ", config.samples_to_skip);
-
-    DbpString(_CYAN_("LF Sampling Stack"));
-    print_stack_usage();
+    DbpString("");
 }
 
 void printSamples(void) {

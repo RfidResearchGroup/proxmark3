@@ -124,7 +124,8 @@ size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint
 
     uint8_t crcdata[1024] = {0};
     size_t crcposfound = 0;
-    for (int i = 0; i < crclen + 1; i++) {
+    // crc may be 00..00 and at the end of file may be padding 0x80. so we search from last zero to crclen + 2 (one for crc=0 and one for padding 0x80)
+    for (int i = 0; i < crclen + 2; i++) {
         if (crcpos - i == 0)
             break;
         if (crcpos - i + crclen > datalen)
@@ -211,14 +212,12 @@ static void DesfireCryptoEncDecSingleBlock(uint8_t *key, DesfireCryptoAlgorythm 
     memcpy(dstdata, edata, block_size);
 }
 
-void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode, uint8_t *iv) {
+void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool dir_to_send, bool encode, uint8_t *iv) {
     uint8_t data[1024] = {0};
     uint8_t xiv[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
 
-    bool xencode = encode;
     if (ctx->secureChannel == DACd40) {
         memset(ctx->IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
-        xencode = false;
     }
 
     size_t block_size = desfire_get_key_block_length(ctx->keyType);
@@ -231,9 +230,9 @@ void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *s
     size_t offset = 0;
     while (offset < srcdatalen) {
         if (use_session_key)
-            DesfireCryptoEncDecSingleBlock(ctx->sessionKeyMAC, ctx->keyType, srcdata + offset, data + offset, xiv, encode, xencode);
+            DesfireCryptoEncDecSingleBlock(ctx->sessionKeyMAC, ctx->keyType, srcdata + offset, data + offset, xiv, dir_to_send, encode);
         else
-            DesfireCryptoEncDecSingleBlock(ctx->key, ctx->keyType, srcdata + offset, data + offset, xiv, encode, xencode);
+            DesfireCryptoEncDecSingleBlock(ctx->key, ctx->keyType, srcdata + offset, data + offset, xiv, dir_to_send, encode);
         offset += block_size;
     }
 
@@ -247,7 +246,12 @@ void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *s
 }
 
 void DesfireCryptoEncDec(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode) {
-    DesfireCryptoEncDecEx(ctx, use_session_key, srcdata, srcdatalen, dstdata, encode, NULL);
+    bool dir_to_send = encode;
+    bool xencode = encode;
+    if (ctx->secureChannel == DACd40)
+        xencode = false;
+
+    DesfireCryptoEncDecEx(ctx, use_session_key, srcdata, srcdatalen, dstdata, dir_to_send, xencode, NULL);
 }
 
 static void DesfireCMACGenerateSubkeys(DesfireContext *ctx, uint8_t *sk1, uint8_t *sk2) {
@@ -260,7 +264,7 @@ static void DesfireCMACGenerateSubkeys(DesfireContext *ctx, uint8_t *sk1, uint8_
     uint8_t ivect[kbs];
     memset(ivect, 0, kbs);
 
-    DesfireCryptoEncDecEx(ctx, true, l, kbs, l, true, ivect);
+    DesfireCryptoEncDecEx(ctx, true, l, kbs, l, true, true, ivect);
 
     bool txor = false;
 
@@ -342,6 +346,44 @@ uint8_t DesfireDESKeyGetVersion(uint8_t *key) {
         version |= ((key[n] & 1) << (7 - n));
 
     return version;
+}
+
+DesfireCommunicationMode DesfireFileCommModeToCommMode(uint8_t file_comm_mode) {
+    DesfireCommunicationMode mode = DCMNone;
+    switch (file_comm_mode & 0x03) {
+        case 0x00:
+        case 0x02:
+            mode = DCMPlain;
+            break;
+        case 0x01:
+            mode = DCMMACed;
+            break;
+        case 0x03:
+            mode = DCMEncrypted;
+            break;
+        default:
+            break;
+    }
+    return mode;
+}
+
+uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode) {
+    uint8_t fmode = DCMNone;
+    switch (comm_mode) {
+        case DCMPlain:
+            fmode = 0x00;
+            break;
+        case DCMMACed:
+            fmode = 0x01;
+            break;
+        case DCMEncrypted:
+        case DCMEncryptedPlain:
+            fmode = 0x11;
+            break;
+        case DCMNone:
+            break;
+    }
+    return fmode;    
 }
 
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc) {
