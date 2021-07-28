@@ -6394,7 +6394,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         }
 
         if (resplen > 0) {
-            PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x offset %u", resplen, fnum, offset);
+            PrintAndLogEx(SUCCESS, "Read %zu bytes from file 0x%02x offset %u", resplen, fnum, offset);
             print_buffer_with_offset(resp, resplen, offset, true);
         } else {
             PrintAndLogEx(SUCCESS, "Read operation returned no data from file %d", fnum);
@@ -6444,7 +6444,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "Lastest record at the bottom.");
             for (int i = 0; i < reccount; i++) {
                 if (i != 0)
-                    PrintAndLogEx(SUCCESS, "Record %d", reccount - (i + offset + 1));
+                    PrintAndLogEx(SUCCESS, "Record %zu", reccount - (i + offset + 1));
                 print_buffer_with_offset(&resp[i * reclen], reclen, offset, (i == 0));
             }
         } else {

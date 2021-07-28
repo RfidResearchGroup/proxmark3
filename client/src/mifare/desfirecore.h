@@ -19,6 +19,8 @@
 #include "mifare/desfire_crypto.h"
 #include "mifare/mifare4.h"
 
+#define DESFIRE_TX_FRAME_MAX_LEN 54
+
 typedef struct {
     const uint8_t id;
     const char *text;
