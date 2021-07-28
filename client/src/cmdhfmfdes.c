@@ -6561,6 +6561,15 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     bool debit = arg_get_lit(ctx, 17);
     bool commit = arg_get_lit(ctx, 18);
 
+    uint32_t updaterecno = 0;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 19, 0, &offset, 3, true);
+    bool updaterec = (res == 1);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Offset must have 3 byte length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
@@ -6673,43 +6682,26 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     }
 
     if (op == RFTRecord) {
-/*        resplen = 0;
-        if (reclen == 0) {
-            res = DesfireReadRecords(&dctx, fnum, offset, 1, resp, &resplen);
+        if (!updaterec) {
+            res = DesfireWriteRecord(&dctx, fnum, offset, datalen, data);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "Desfire ReadRecords (len=1) command " _RED_("error") ". Result: %d", res);
+                PrintAndLogEx(ERR, "Desfire WriteRecord command " _RED_("error") ". Result: %d", res);
                 DropField();
                 return PM3_ESOFT;
             }
-            reclen = resplen;
-        }
-        
-        if (verbose)
-            PrintAndLogEx(INFO, "Record length %zu", reclen);
-
-        // if we got one record via the DesfireReadRecords before -- we not need to get it 2nd time
-        if (length != 1 || resplen == 0) {
-            res = DesfireReadRecords(&dctx, fnum, offset, length, resp, &resplen);
-            if (res != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "Desfire ReadRecords command " _RED_("error") ". Result: %d", res);
-                DropField();
-                return PM3_ESOFT;
-            }
-        }
-
-        if (resplen > 0) {
-            size_t reccount = resplen / reclen;
-            PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x from record %d record count %zu record length %zu", resplen, fnum, offset, reccount, reclen);
-            if (reccount > 1)
-                PrintAndLogEx(SUCCESS, "Lastest record at the bottom.");
-            for (int i = 0; i < reccount; i++) {
-                if (i != 0)
-                    PrintAndLogEx(SUCCESS, "Record %d", i + offset);
-                print_buffer_with_offset(&resp[i * reclen], reclen, offset, (i == 0));
-            }
+            if (verbose)
+                PrintAndLogEx(INFO, "Write record file %02x " _GREEN_("success"), fnum);
         } else {
-            PrintAndLogEx(SUCCESS, "Read operation returned no data from file %d", fnum);
-        }*/
+            res = DesfireUpdateRecord(&dctx, fnum, updaterecno, offset, datalen, data);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Desfire UpdateRecord command " _RED_("error") ". Result: %d", res);
+                DropField();
+                return PM3_ESOFT;
+            }
+            if (verbose)
+                PrintAndLogEx(INFO, "Update record %06x in the file %02x " _GREEN_("success"), updaterecno, fnum);
+        }
+
         commit = true;
     }
 
