@@ -444,7 +444,7 @@ int lf_config_savereset(sample_config *config) {
         return PM3_EINVARG;
     }
 
-    memset(&config, 0, sizeof(sample_config));
+    memset(config, 0, sizeof(sample_config));
 
     int res = lf_getconfig(config);
     if (res != PM3_SUCCESS) {
