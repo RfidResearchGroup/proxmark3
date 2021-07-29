@@ -3250,7 +3250,16 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     DesfirePrintContext(&dctx);
     
     if (save) {
-        // TODO
+        defaultKeyNum = dctx.keyNum;
+        defaultAlgoId = dctx.keyType;
+        memcpy(defaultKey, dctx.key, DESFIRE_MAX_KEY_SIZE);
+        defaultKdfAlgo = dctx.kdfAlgo;
+        defaultKdfInputLen = dctx.kdfInputLen;
+        memcpy(defaultKdfInput, dctx.kdfInput, sizeof(dctx.kdfInput));
+        defaultSecureChannel = securechann;
+        defaultCommSet = dctx.cmdSet;
+        defaultCommMode = dctx.commMode;
+        
         PrintAndLogEx(SUCCESS, "Context saved to defaults " _GREEN_("succesfully") ". You can check them by command " _YELLOW_("hf mfdes default"));
     }
 
