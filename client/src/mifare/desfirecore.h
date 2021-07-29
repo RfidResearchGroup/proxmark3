@@ -106,6 +106,7 @@ int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2);
 int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uint32_t aid2);
 
 int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose);
+int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose);
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose);
 
 int DesfireFormatPICC(DesfireContext *dctx);
@@ -129,11 +130,13 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
 int DesfireSetConfigurationCmd(DesfireContext *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen);
 int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *param, size_t paramlen);
 
+int DesfireFillFileList(DesfireContext *dctx, FileListS FileList, size_t *filescount, bool *isopresent);
 int DesfireGetFileIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetFileISOIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 
 void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsettings);
 void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings);
+void DesfirePrintFileSettingsExtended(FileSettingsS *fsettings);
 int DesfireGetFileSettings(DesfireContext *dctx, uint8_t fileid, uint8_t *resp, size_t *resplen);
 int DesfireGetFileSettingsStruct(DesfireContext *dctx, uint8_t fileid, FileSettingsS *fsettings);
 int DesfireChangeFileSettings(DesfireContext *dctx, uint8_t *data, size_t datalen);

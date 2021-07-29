@@ -688,7 +688,7 @@ int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uin
     return DesfireSelectAID(ctx, data, (select_two) ? &data[3] : NULL);
 }
 
-int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose) {
+int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose) {
     if (verbose)
         DesfirePrintContext(dctx);
 
@@ -700,20 +700,26 @@ int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secu
     if (verbose)
         PrintAndLogEx(INFO, "App %06x " _GREEN_("selected"), aid);
 
-    res = DesfireAuthenticate(dctx, secureChannel, verbose);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
-        return PM3_ESOFT;
-    }
+    if (!noauth) {
+        res = DesfireAuthenticate(dctx, secureChannel, verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
+            return PM3_ESOFT;
+        }
 
-    if (DesfireIsAuthenticated(dctx)) {
-        if (verbose)
-            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
-    } else {
-        return PM3_ESOFT;
+        if (DesfireIsAuthenticated(dctx)) {
+            if (verbose)
+                PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
+        } else {
+            return PM3_ESOFT;
+        }
     }
 
     return PM3_SUCCESS;
+}
+
+int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose) {
+    return DesfireSelectAndAuthenticateEx(dctx, secureChannel, aid, false, verbose);
 }
 
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
@@ -1125,6 +1131,57 @@ int DesfireGetFileSettingsStruct(DesfireContext *dctx, uint8_t fileid, FileSetti
     return res;
 }
 
+int DesfireFillFileList(DesfireContext *dctx, FileListS FileList, size_t *filescount, bool *isopresent) {
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t buflen = 0;
+    
+    *filescount = 0;
+    *isopresent = false;
+    memset(FileList, 0, sizeof(FileListS));
+
+    int res = DesfireGetFileIDList(dctx, buf, &buflen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire GetFileIDList command " _RED_("error") ". Result: %d", res);
+        return PM3_ESOFT;
+    }
+    
+    if (buflen == 0)
+        return PM3_SUCCESS;
+    
+    for (int i = 0; i < buflen; i++) {
+        FileList[i].fileNum = buf[i];
+        DesfireGetFileSettingsStruct(dctx, FileList[i].fileNum, &FileList[i].fileSettings);
+    }
+    *filescount = buflen;
+
+    buflen = 0;
+    res = DesfireGetFileISOIDList(dctx, buf, &buflen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire GetFileISOIDList command " _RED_("error") ". Result: %d", res);
+    }
+    
+    size_t isoindx = 0;
+    if (buflen > 0) {
+        for (int i = 0; i < *filescount; i++) {
+            if (FileList[i].fileSettings.fileType != 0x02 && FileList[i].fileSettings.fileType != 0x05) {
+                FileList[i].fileISONum = MemBeToUint2byte(&buf[isoindx * 2]);
+                isoindx++;
+            }
+        }
+        if (isoindx > 0)
+            isoindx--;
+        if (isoindx * 2 != buflen)
+            PrintAndLogEx(WARNING, "Wrong ISO ID list length. must be %d but %d", buflen, isoindx * 2);
+    } else {
+        PrintAndLogEx(WARNING, "ISO ID list returned no data");
+    }
+    
+    *isopresent = (isoindx > 0);
+    
+    return res;
+}
+
+
 int DesfireCreateFile(DesfireContext *dctx, uint8_t ftype, uint8_t *fdata, size_t fdatalen, bool checklen) {
     const DesfireCreateFileCommandsS *rcmd = GetDesfireFileCmdRec(ftype);
     if (rcmd == NULL)
@@ -1509,6 +1566,50 @@ void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
         GetDesfireAccessRightStr(fsettings->rwAccess),
         GetDesfireAccessRightStr(fsettings->chAccess));
 }
+
+void DesfirePrintFileSettingsExtended(FileSettingsS *fsettings) {
+    PrintAndLogEx(SUCCESS, "File type       : " _CYAN_("%s") "  [0x%02x]", GetDesfireFileType(fsettings->fileType), fsettings->fileType);
+    PrintAndLogEx(SUCCESS, "Comm mode       : %s", GetDesfireCommunicationMode(fsettings->fileCommMode));    
+
+    switch (fsettings->fileType) {
+        case 0x00:
+        case 0x01: {
+            PrintAndLogEx(SUCCESS, "File size       : %d [0x%x] bytes", fsettings->fileSize, fsettings->fileSize);    
+            break;
+        }
+        case 0x02: {
+            PrintAndLogEx(SUCCESS, "Lower limit     : %d [0x%x]", fsettings->lowerLimit, fsettings->lowerLimit);
+            PrintAndLogEx(SUCCESS, "Upper limit     : %d [0x%x]", fsettings->upperLimit, fsettings->upperLimit);
+            bool limited_credit_enabled = ((fsettings->limitedCredit & 0x01) != 0);
+            PrintAndLogEx(SUCCESS, "Limited credit  : [%d - %s] %d (0x%08X)", fsettings->limitedCredit, (limited_credit_enabled) ? "enabled" : "disabled", fsettings->value, fsettings->value);
+            PrintAndLogEx(SUCCESS, "GetValue access : %s", ((fsettings->limitedCredit & 0x02) != 0) ? "Free" : "Not Free");
+            break;
+        }
+        case 0x03:
+        case 0x04: {
+            PrintAndLogEx(SUCCESS, "Record count    : %d [0x%x]", fsettings->curRecordCount, fsettings->curRecordCount);
+            PrintAndLogEx(SUCCESS, "Max record count: %d [0x%x]", fsettings->maxRecordCount, fsettings->maxRecordCount);
+            PrintAndLogEx(SUCCESS, "Record size     : %d [0x%x] bytes", fsettings->recordSize, fsettings->recordSize);
+            break;
+        }
+        case 0x05: {
+            PrintAndLogEx(SUCCESS, "Key type        : 0x%02x", fsettings->keyType);
+            PrintAndLogEx(SUCCESS, "Key version     : 0x%02x ", fsettings->keyVersion);
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+    
+    PrintAndLogEx(SUCCESS, "Access rights   : %04x  (r: %s w: %s rw: %s change: %s)", 
+            fsettings->rawAccessRights,
+            GetDesfireAccessRightStr(fsettings->rAccess), 
+            GetDesfireAccessRightStr(fsettings->wAccess),
+            GetDesfireAccessRightStr(fsettings->rwAccess),
+            GetDesfireAccessRightStr(fsettings->chAccess));
+}
+
 
 static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t datalen, uint8_t *dynlen, bool create) {
     switch (filetype) {

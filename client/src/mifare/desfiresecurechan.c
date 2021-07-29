@@ -40,6 +40,7 @@ static bool CommandCanUseAnyChannel(uint8_t cmd) {
 }
 
 static const AllowedChannelModesS AllowedChannelModes[] = {
+    {MFDES_SELECT_APPLICATION,        DACd40,  DCCNative,    DCMPlain},
     {MFDES_CREATE_APPLICATION,        DACd40,  DCCNative,    DCMPlain},
     {MFDES_DELETE_APPLICATION,        DACd40,  DCCNative,    DCMPlain},
     {MFDES_GET_APPLICATION_IDS,       DACd40,  DCCNative,    DCMPlain},
@@ -85,6 +86,7 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
 
     {MFDES_GET_KEY_VERSION,           DACEV1,  DCCNative,    DCMPlain},
     {MFDES_GET_FREE_MEMORY,           DACEV1,  DCCNative,    DCMPlain},
+    {MFDES_SELECT_APPLICATION,        DACEV1,  DCCNative,    DCMPlain},
 
     {MFDES_CREATE_APPLICATION,        DACEV1,  DCCNative,    DCMMACed},
     {MFDES_DELETE_APPLICATION,        DACEV1,  DCCNative,    DCMMACed},
