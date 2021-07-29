@@ -6387,14 +6387,25 @@ static int CmdHF14ADesDump(const char *Cmd) {
         return res;
     }
 
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Application " _CYAN_("%06x") " have " _GREEN_("%zu") " files", appid, filescount);
+
+    uint8_t aid[3] = {0};
+    DesfireAIDUintToByte(appid, aid);
+    if ((aid[2] >> 4) == 0xF) {
+        uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
+        PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
+        PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, cluster_to_text(short_aid >> 8));
+        MADDFDecodeAndPrint(short_aid);
+    } else {
+        AIDDFDecodeAndPrint(aid);
+    }
+
     if (filescount == 0) {
         PrintAndLogEx(INFO, "There is no files in the application %06x", appid);
         DropField();
         return res;
     }
-
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Application " _CYAN_("%06x") " have " _GREEN_("%zu") " files", appid, filescount);
 
     res = PM3_SUCCESS;
     for (int i = 0; i < filescount; i++) {
