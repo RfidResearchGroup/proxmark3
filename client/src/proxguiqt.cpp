@@ -443,6 +443,9 @@ void ProxWidget::resizeEvent(QResizeEvent *event) {
 //----------- Plotting
 
 int Plot::xCoordOf(int i, QRect r) {
+    if (i < 0) {
+        i = 0;
+    }
     return r.left() + (int)((i - GraphStart) * GraphPixelsPerPoint);
 }
 
@@ -526,7 +529,12 @@ void Plot::PlotDemod(uint8_t *buffer, size_t len, QRect plotRect, QRect annotati
     char str[5];
     int absVMax = (int)(100 * 1.05 + 1);
     int x = xCoordOf(DemodStart, plotRect);
-    int y = yCoordOf((buffer[BitStart] * 200 - 100) * -1, plotRect, absVMax);
+    int y = 0;
+    if (DemodStart >= 0) {
+        y = yCoordOf((buffer[BitStart] * 200 - 100) * -1, plotRect, absVMax);
+    } else {
+        y = yCoordOf(0, plotRect, absVMax);
+    }
     penPath.moveTo(x, y);
     delta_x = 0;
     int clk = first_delta_x;
