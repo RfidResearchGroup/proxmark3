@@ -42,10 +42,10 @@ typedef struct {
     uint8_t wAccess;
     uint8_t rwAccess;
     uint8_t chAccess;
-    
+
     // data
     uint32_t fileSize;
-    
+
     //value
     uint32_t lowerLimit;
     uint32_t upperLimit;
@@ -56,12 +56,12 @@ typedef struct {
     uint32_t recordSize;
     uint32_t maxRecordCount;
     uint32_t curRecordCount;
-    
+
     //mac
     uint8_t keyType;
     uint8_t key[16];
     uint8_t keyVersion;
-    
+
     // additional rights
     uint8_t additionalAccessRightsLength;
     uint16_t additionalAccessRights[16];

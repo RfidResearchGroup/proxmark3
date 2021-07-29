@@ -383,7 +383,7 @@ uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode) {
         case DCMNone:
             break;
     }
-    return fmode;    
+    return fmode;
 }
 
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc) {

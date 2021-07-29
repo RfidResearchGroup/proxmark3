@@ -26,9 +26,9 @@
 static const uint8_t CommandsCanUseAnyChannel[] = {
     MFDES_READ_DATA,
     MFDES_WRITE_DATA,
-    MFDES_GET_VALUE,  
-    MFDES_READ_RECORDS, 
-    MFDES_WRITE_RECORD, 
+    MFDES_GET_VALUE,
+    MFDES_READ_RECORDS,
+    MFDES_WRITE_RECORD,
     MFDES_UPDATE_RECORD,
 };
 
@@ -157,10 +157,10 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
             return;
 
         rlen = srcdatalen + DesfireGetMACLength(ctx);
-        
+
         memcpy(data, &srcdata[hdrlen], srcdatalen - hdrlen);
         size_t srcmaclen = padded_data_length(srcdatalen - hdrlen, desfire_get_key_block_length(ctx->keyType));
-        
+
         uint8_t mac[32] = {0};
         DesfireCryptoEncDecEx(ctx, true, data, srcmaclen, NULL, true, true, mac);
 
@@ -274,9 +274,9 @@ static void DesfireSecureChannelDecodeD40(DesfireContext *ctx, uint8_t *srcdata,
                 rlen = padded_data_length(srcdatalen - maclen, desfire_get_key_block_length(ctx->keyType));
                 memcpy(data, srcdata, srcdatalen - maclen);
                 DesfireCryptoEncDecEx(ctx, true, data, rlen, NULL, true, true, mac);
-                
+
                 if (memcmp(mac, &srcdata[srcdatalen - maclen], maclen) == 0) {
-                    *dstdatalen = srcdatalen - maclen; 
+                    *dstdatalen = srcdatalen - maclen;
                 } else {
                     PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
                     //PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[srcdatalen - maclen], maclen));
@@ -284,7 +284,7 @@ static void DesfireSecureChannelDecodeD40(DesfireContext *ctx, uint8_t *srcdata,
                 }
             }
             break;
-        }   
+        }
         case DCMEncrypted:
             if (srcdatalen < desfire_get_key_block_length(ctx->keyType)) {
                 memcpy(dstdata, srcdata, srcdatalen);
