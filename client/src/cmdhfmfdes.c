@@ -6828,7 +6828,7 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
         PrintAndLogEx(WARNING, "ISO ID list returned no data");
     }
     
-    PrintAndLogEx(INFO, "---------------------------- " _CYAN_("File list") " ----------(r w rw ch)------------------");
+    PrintAndLogEx(INFO, "---------------------------- " _CYAN_("File list") " -----------------------(r w rw ch)-----");
     for (int i = 0; i < filescount; i++) {
         PrintAndLogEx(SUCCESS, "ID: " _GREEN_("%02x ") NOLF, FileList[i].fileNum);
         if (isoindx > 0) {

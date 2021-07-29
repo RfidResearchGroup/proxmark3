@@ -1475,7 +1475,7 @@ void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsett
 
 void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
     PrintAndLogEx(NORMAL, "(%-5s) " NOLF, GetDesfireCommunicationMode(fsettings->fileCommMode));    
-    PrintAndLogEx(NORMAL, "[0x%02x] %-13s " NOLF, fsettings->fileType, GetDesfireFileType(fsettings->fileType));
+    PrintAndLogEx(NORMAL, "[0x%02x] " _CYAN_("%-13s ") NOLF, fsettings->fileType, GetDesfireFileType(fsettings->fileType));
 
     switch (fsettings->fileType) {
         case 0x00:
@@ -1483,27 +1483,21 @@ void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
             PrintAndLogEx(NORMAL, "size: %d [0x%x] " NOLF, fsettings->fileSize, fsettings->fileSize);    
             break;
         }
- /*       case 0x02: {
-            fsettings->lowerLimit = MemLeToUint4byte(&data[4]);
-            fsettings->upperLimit = MemLeToUint4byte(&data[8]);
-            fsettings->value = MemLeToUint4byte(&data[12]);
-            fsettings->limitedCredit = data[16];
-            reclen = 4 + 13;
+        case 0x02: {
+            PrintAndLogEx(NORMAL, "[%d .. %d] lim cred: 0x%02x (%d [0x%x]) " NOLF, 
+                    fsettings->lowerLimit, fsettings->upperLimit, fsettings->limitedCredit, fsettings->value, fsettings->value);    
             break;
         }
         case 0x03:
         case 0x04: {
-            fsettings->recordSize = MemLeToUint3byte(&data[4]);
-            fsettings->maxRecordCount = MemLeToUint3byte(&data[7]);
-            fsettings->curRecordCount = MemLeToUint3byte(&data[10]);
-            reclen = 4 + 9;
+            PrintAndLogEx(NORMAL, "%d/%d record size: %d [0x%x]b " NOLF,
+                    fsettings->curRecordCount, fsettings->maxRecordCount, fsettings->recordSize, fsettings->recordSize);
             break;
         }
         case 0x05: {
-            fsettings->keyType = data[4];
-            fsettings->keyVersion = data[5];
+            PrintAndLogEx(NORMAL, "key type: 0x%02x version: 0x%02x " NOLF, fsettings->keyType, fsettings->keyVersion);
             break;
-        }*/
+        }
         default: {
             break;
         }
