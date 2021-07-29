@@ -96,7 +96,7 @@ void LFSetupFPGAForADC(int divisor, bool reader_field);
  * @param sc
  */
 void setSamplingConfig(sample_config *sc);
-
+void setDefaultSamplingConfig(void);
 sample_config *getSamplingConfig(void);
 
 void printLFConfig(void);

@@ -1999,6 +1999,12 @@ void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, 
     flags                |= (downlink_mode & 3) << 3;
     if (brute_mem) flags |= 0x0100;
 
+    sample_config old_config;
+    sample_config *curr_config = getSamplingConfig();
+    memcpy(&old_config, curr_config, sizeof(sample_config));
+    old_config.verbose = false;
+
+    setDefaultSamplingConfig();
 
     size_t samples = 12000;
 
@@ -2037,6 +2043,9 @@ void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, 
         reply_ng(CMD_LF_T55XX_READBL, PM3_SUCCESS, NULL, 0);
         LED_A_OFF();
     }
+
+    // reset back to old / save config
+    setSamplingConfig(&old_config);
 }
 
 

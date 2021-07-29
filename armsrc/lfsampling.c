@@ -28,7 +28,18 @@ Default LF config is set to:
     samples_to_skip = 0
     verbose = YES
     */
-static sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0, 1} ;
+
+static sample_config def_config = {
+        .decimation = 1,
+        .bits_per_sample = 8,
+        .averaging = 1,
+        .divisor = LF_DIVISOR_125,
+        .trigger_threshold = 0,
+        .samples_to_skip = 0,
+        .verbose = false,
+    };
+
+static sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0, true} ;
 
 // Holds bit packed struct of samples.
 static BitstreamOut data = {0, 0, 0};
@@ -55,6 +66,11 @@ void printSamples(void) {
     Dbprintf("  counter.............. " _YELLOW_("%u"), samples.counter);
     Dbprintf("  total saved.......... " _YELLOW_("%u"), samples.total_saved);
     print_stack_usage();
+}
+
+
+void setDefaultSamplingConfig(void) {
+    setSamplingConfig(&def_config);
 }
 
 /**

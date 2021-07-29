@@ -942,27 +942,6 @@ static int CmdT55xxDetect(const char *Cmd) {
     // detect called so clear data blocks
     T55x7_ClearAllBlockData();
 
-    // make sure decimate == 1
-    sample_config curr_lf_config;
-    memset(&curr_lf_config, 0, sizeof(sample_config));
-
-    res = lf_getconfig(&curr_lf_config);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "failed to get current device LF config");
-        return res;
-    }
-    int8_t old_decimation = curr_lf_config.decimation;
-    if (curr_lf_config.decimation != 1) {
-        curr_lf_config.decimation = 1;
-        curr_lf_config.verbose = false;
-        res = lf_config(&curr_lf_config);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "failed to set LF configuration decimation value to 1");
-            return res;
-        }
-    }
-
-
     // sanity check.
     if (SanityOfflineCheck(use_gb) != PM3_SUCCESS)
         return PM3_ESOFT;
@@ -1036,17 +1015,6 @@ static int CmdT55xxDetect(const char *Cmd) {
         config.usepwd = false;
         config.pwd = 0x00;
         PrintAndLogEx(WARNING, "Could not detect modulation automatically. Try setting it manually with " _YELLOW_("\'lf t55xx config\'"));
-    }
-
-
-    if (old_decimation != curr_lf_config.decimation) {
-        curr_lf_config.decimation = old_decimation;
-        curr_lf_config.verbose = false;
-        res = lf_config(&curr_lf_config);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "failed to restore LF configuration");
-            return res;
-        }
     }
 
     return PM3_SUCCESS;
