@@ -24,6 +24,7 @@
 #include "common.h"
 #include "mifare/mifare4.h"
 
+#define CRYPTO_AES_BLOCK_SIZE 16
 #define MAX_CRYPTO_BLOCK_SIZE 16
 #define DESFIRE_MAX_CRYPTO_BLOCK_SIZE 16
 #define DESFIRE_MAX_KEY_SIZE  24

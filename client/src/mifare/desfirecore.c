@@ -745,7 +745,7 @@ int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secu
     return DesfireSelectAndAuthenticateEx(dctx, secureChannel, aid, false, verbose);
 }
 
-int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
+static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
     // 3 different way to authenticate   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
     // 4 different crypto arg1   DES, 3DES, 3K3DES, AES
     // 3 different communication modes,  PLAIN,MAC,CRYPTO
@@ -1030,6 +1030,154 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     if (verbose)
         PrintAndLogEx(INFO, _GREEN_("Session key") " : %s", sprint_hex(dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType)));
 
+    return PM3_SUCCESS;
+}
+
+static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool firstauth, bool verbose) {
+    // Crypt constants
+    uint8_t IV[16] = {0};
+    uint8_t RndA[CRYPTO_AES_BLOCK_SIZE] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16};
+    uint8_t RndB[CRYPTO_AES_BLOCK_SIZE] = {0};
+    uint8_t encRndB[CRYPTO_AES_BLOCK_SIZE] = {0};
+    uint8_t rotRndB[CRYPTO_AES_BLOCK_SIZE] = {0};   //RndB'
+    uint8_t both[CRYPTO_AES_BLOCK_SIZE * 2 + 1] = {0};  // ek/dk_keyNo(RndA+RndB')    
+
+    uint8_t subcommand = firstauth ? MFDES_AUTHENTICATE_EV2F : MFDES_AUTHENTICATE_EV2NF;
+
+    size_t recv_len = 0;
+    uint8_t respcode = 0;
+    uint8_t recv_data[256] = {0};
+    
+    //mbedtls_aes_context ctx;
+
+    if (verbose)
+        PrintAndLogEx(INFO, _CYAN_("Auth:") " cmd: 0x%02x keynum: 0x%02x", subcommand, dctx->keyNum);
+
+    // Let's send our auth command
+    uint8_t cdata[2] = {dctx->keyNum, 0x00};
+    int res = DesfireExchangeEx(false, dctx, subcommand, cdata, sizeof(cdata), &respcode, recv_data, &recv_len, false, 0);
+    if (res != PM3_SUCCESS) {
+        return 1;
+    }
+
+    if (!recv_len) {
+        return 2;
+    }
+
+    if (respcode != MFDES_ADDITIONAL_FRAME) {
+        return 3;
+    }
+
+    if (recv_len != CRYPTO_AES_BLOCK_SIZE) {
+        return 4;
+    }
+
+    // Part 2
+    memcpy(encRndB, recv_data, 16);
+
+    // Part 3
+    //if (mbedtls_aes_setkey_dec(&ctx, dctx->key, 128) != 0) {
+    //    return 5;
+    //}
+    //mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, CRYPTO_AES_BLOCK_SIZE, IV, encRndB, RndB);
+    //aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) 
+    if (aes_decode(IV, dctx->key, encRndB, RndB, CRYPTO_AES_BLOCK_SIZE))
+        return 5;
+    
+    if (g_debugMode > 1) {
+        PrintAndLogEx(DEBUG, "encRndB: %s", sprint_hex(encRndB, CRYPTO_AES_BLOCK_SIZE));
+        PrintAndLogEx(DEBUG, "RndB: %s", sprint_hex(RndB, CRYPTO_AES_BLOCK_SIZE));
+    }
+PrintAndLogEx(INFO, "encRndB: %s", sprint_hex(encRndB, 16));
+PrintAndLogEx(INFO, "RndB: %s", sprint_hex(RndB, 16));
+
+    // - Rotate RndB by 8 bits
+    memcpy(rotRndB, RndB, CRYPTO_AES_BLOCK_SIZE);
+    rol(rotRndB, CRYPTO_AES_BLOCK_SIZE);
+
+    uint8_t encRndA[16] = {0x00};
+
+    // - Encrypt our response
+    uint8_t tmp[32] = {0x00};
+    memcpy(tmp, RndA, CRYPTO_AES_BLOCK_SIZE);
+    memcpy(tmp + CRYPTO_AES_BLOCK_SIZE, rotRndB, CRYPTO_AES_BLOCK_SIZE);
+    if (g_debugMode > 1) {
+        PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, CRYPTO_AES_BLOCK_SIZE));
+        PrintAndLogEx(DEBUG, "Both: %s", sprint_hex(tmp, CRYPTO_AES_BLOCK_SIZE * 2));
+    }
+    
+PrintAndLogEx(INFO, "rotRndB: %s", sprint_hex(rotRndB, CRYPTO_AES_BLOCK_SIZE));
+PrintAndLogEx(INFO, "Both: %s", sprint_hex(tmp, CRYPTO_AES_BLOCK_SIZE * 2));
+
+    //if (mbedtls_aes_setkey_enc(&ctx, dctx->key, 128) != 0) {
+    //    return 6;
+    //}
+    //mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, CRYPTO_AES_BLOCK_SIZE * 2, IV, tmp, both);
+    if (aes_encode(IV, dctx->key, tmp, both, CRYPTO_AES_BLOCK_SIZE * 2))
+        return 6;
+    if (g_debugMode > 1) {
+        PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, CRYPTO_AES_BLOCK_SIZE * 2));
+    }
+
+PrintAndLogEx(INFO, "EncBoth: %s", sprint_hex(both, CRYPTO_AES_BLOCK_SIZE * 2));
+
+    res = DesfireExchangeEx(false, dctx, MFDES_ADDITIONAL_FRAME, both, CRYPTO_AES_BLOCK_SIZE * 2, &respcode, recv_data, &recv_len, false, 0);
+    if (res != PM3_SUCCESS) {
+        return 7;
+    }
+
+    if (!recv_len) {
+        return 8;
+    }
+
+    if (respcode != MFDES_S_OPERATION_OK) {
+        return 9;
+    }
+
+    // Part 4
+    memcpy(encRndA, recv_data, CRYPTO_AES_BLOCK_SIZE);    
+    
+    //struct desfire_key sesskey = {0};
+    //Desfire_session_key_new(RndA, RndB, key, &sesskey);
+    //memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));
+
+PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, CRYPTO_AES_BLOCK_SIZE));
+PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, CRYPTO_AES_BLOCK_SIZE));
+
+    uint8_t data[32] = {0};
+
+    if (aes_decode(IV, dctx->key, recv_data, data, CRYPTO_AES_BLOCK_SIZE))
+        return 10;
+    //if (mbedtls_aes_setkey_dec(&ctx, dctx->key, 128) != 0) {
+    //    return 10;
+    //}
+    //mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, CRYPTO_AES_BLOCK_SIZE, IV, recv_data, data);
+PrintAndLogEx(INFO, "data : %s", sprint_hex(data, CRYPTO_AES_BLOCK_SIZE * 2));
+
+
+    rol(RndA, CRYPTO_AES_BLOCK_SIZE);
+PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, CRYPTO_AES_BLOCK_SIZE));
+PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, CRYPTO_AES_BLOCK_SIZE));
+    for (uint32_t x = 0; x < CRYPTO_AES_BLOCK_SIZE; x++) {
+        if (RndA[x] != encRndA[x]) {
+            if (g_debugMode > 1) {
+                PrintAndLogEx(DEBUG, "Expected_RndA : %s", sprint_hex(RndA, CRYPTO_AES_BLOCK_SIZE));
+                PrintAndLogEx(DEBUG, "Generated_RndA : %s", sprint_hex(encRndA, CRYPTO_AES_BLOCK_SIZE));
+            }
+            return 11;
+        }
+    }
+    
+    return PM3_SUCCESS;
+}
+
+int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
+    if (secureChannel == DACd40 || secureChannel == DACEV1)
+        return DesfireAuthenticateEV1(dctx, secureChannel, verbose);
+
+    if (secureChannel == DACEV2)
+        return DesfireAuthenticateEV2(dctx, secureChannel, true, verbose); // TODO make 2nd auth if there is working secure channel
+    
     return PM3_SUCCESS;
 }
 
