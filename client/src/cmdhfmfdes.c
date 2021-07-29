@@ -6691,20 +6691,11 @@ static int CmdHF14ADesDump(const char *Cmd) {
         //here must be application enumeration
     }
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
-    }    
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
 
     FileListS FileList = {0};
     size_t filescount = 0;
@@ -6722,12 +6713,23 @@ static int CmdHF14ADesDump(const char *Cmd) {
     }
 
 
-
-
-
-
-
-
+    res = PM3_SUCCESS;
+    for (int i = 0; i < filescount; i++) {
+        if (res != PM3_SUCCESS) {
+            DesfireSetCommMode(&dctx, DCMPlain);
+            res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+            if (res != PM3_SUCCESS) {
+                DropField();
+                return res;
+            }
+        }
+                
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--------------------------------- " _CYAN_("File %02x") " ----------------------------------", FileList[i].fileNum);
+        DesfirePrintFileSettingsOneLine(&FileList[i].fileSettings);
+        
+        res = DesfileReadFileAndPrint(&dctx, FileList[i].fileNum, RFTAuto, 0, 0, noauth, verbose);
+    }
 
     DropField();
     return PM3_SUCCESS;
