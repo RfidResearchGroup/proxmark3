@@ -695,6 +695,9 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
         return PM3_ESOFT;
     }
 
+    if (offset >= 1) {
+        offset -= 1;
+    }
     //success set DemodBuffer and return
     setDemodBuff(bs, size, 0);
     setClockGrid(clk, startIdx + clk * offset / 2);
