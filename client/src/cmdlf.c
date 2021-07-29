@@ -434,6 +434,46 @@ int CmdFlexdemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+/*
+*  this function will save a copy of the current lf config value, and set config to default values.
+*  
+*/
+int lf_config_savereset(sample_config *config) {
+
+    if (config == NULL) {
+        return PM3_EINVARG;
+    }
+
+    memset(&config, 0, sizeof(sample_config));
+
+    int res = lf_getconfig(config);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to get current device LF config");
+        return res;
+    }
+
+    sample_config def_config = {
+        .decimation = 1,
+        .bits_per_sample = 8,
+        .averaging = 1,
+        .divisor = LF_DIVISOR_125,
+        .trigger_threshold = 0,
+        .samples_to_skip = 0,
+        .verbose = false,
+    };
+
+    res = lf_config(&def_config);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to reset LF configuration to default values");
+        return res;
+    }
+
+    // disable output on save config object
+    config->verbose = false;
+
+    return PM3_SUCCESS;
+}
+
 int lf_getconfig(sample_config *config) {
     if (!session.pm3_present) return PM3_ENOTTY;
 
@@ -475,6 +515,7 @@ int CmdLFConfig(const char *Cmd) {
                   "lf config -b 8 --125         --> samples at 125 kHz, 8 bps\n"
                   "lf config -b 4 --134 --dec 3 --> samples at 134 kHz, averages three samples into one, stored with a resolution of 4 bits per sample\n"
                   "lf config --trig 20 -s 10000 --> trigger sampling when above 20, skip 10 000 first samples after triggered\n"
+                  "lf config --reset            --> reset back to default values\n"
                  );
 
     char div_str[70] = {0};
