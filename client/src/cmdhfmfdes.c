@@ -3193,15 +3193,6 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
         
         res = DesfireSelectAIDHexNoFieldOn(&dctx, id);
         
-        /*uint8_t appId[3] = {0};
-        htole24(id, appId);
-        sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, appId}; //0x5a
-        uint16_t sw = 0;
-        uint8_t data[255 * 5]  = {0x00};
-        uint32_t resplen = 0;
-        DESFIRESendApdu(!tag->rf_field_on, true, apdu, data, sizeof(data), &resplen, &sw);
-        if (sw == status(MFDES_S_OPERATION_OK)) {*/
-        
         if (res == PM3_SUCCESS) {
             printf("\33[2K\r"); // clear current line before printing
             PrintAndLogEx(SUCCESS, "Got new APPID %06X", id);
