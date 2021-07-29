@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix demod plot for various demodulations (@doegox)
  - Fix `lf t55xx detect/rdbl/dump` - to override if user set `lf config` and use default values during operation (@iceman1001)
  - Added `hf iclass encode --wiegand/--fc/--cn` - direct fmt/fc/cn support (@bettse)
  - Fix `lf t55xx detect` - to unset lf config decimation if value is not one (@iceman1001)
