@@ -916,7 +916,7 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
     return PM3_SUCCESS;
 }
 
-static void AuthToError(int error) {
+/*static void AuthToError(int error) {
     switch (error) {
         case 1:
             PrintAndLogEx(SUCCESS, "Sending auth command failed");
@@ -954,7 +954,7 @@ static void AuthToError(int error) {
         default:
             break;
     }
-}
+}*/
 
 // -- test if card supports 0x0A
 static int test_desfire_authenticate(void) {
@@ -2264,121 +2264,6 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// MIAFRE DESFire Authentication
-//
-#define BUFSIZE 256
-static int CmdHF14ADesAuth(const char *Cmd) {
-    //DropFieldDesfire();
-    // NR  DESC     KEYLENGHT
-    // ------------------------
-    // 1 = DES      8
-    // 2 = 3DES     16
-    // 3 = 3K 3DES  24
-    // 4 = AES      16
-    uint8_t keylength = 8;
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes auth",
-                  "Authenticates MIFARE DESFire using Key",
-                  "hf mfdes auth -m 3 -t 4 -a 808301 -n 0 -k 00000000000000000000000000000000 -> AES,keynumber 0, aid 0x803201\n"
-                  "hf mfdes auth -m 2 -t 2 -a 000000 -n 1 -k 00000000000000000000000000000000 -> 3DES,keynumber 1, aid 0x000000\n"
-                  "hf mfdes auth -m 1 -t 1 -a 000000 -n 2 -k 0000000000000000 -> DES,keynumber 2, aid 0x000000\n"
-                  "hf mfdes auth -m 1 -t 1 -a 000000 -n 0 -> DES, defaultkey, aid 0x000000\n"
-                  "hf mfdes auth -m 2 -t 2 -a 000000 -n 0 -> 3DES, defaultkey, aid 0x000000\n"
-                  "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> 3K3DES, defaultkey, aid 0x000000\n"
-                  "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> AES, defaultkey, aid 0x000000"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_int0("m",  "type",   "<type>", "Auth type (1=normal, 2=iso, 3=aes)"),
-        arg_int0("t",  "algo",   "<algo>", "Crypt algo (1=DES, 2=3DES(2K2DES), 3=3K3DES, 4=AES)"),
-        arg_strx0("a",  "aid",    "<aid>", "AID used for authentification (HEX 3 bytes)"),
-        arg_int0("n",  "keyno",  "<keyno>", "Key number used for authentification"),
-        arg_str0("k",  "key",     "<Key>", "Key for checking (HEX 8-24 bytes)"),
-        arg_int0("d",  "kdf",     "<kdf>", "Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)"),
-        arg_str0("i",  "kdfi",    "<kdfi>", "KDF input (HEX 1-31 bytes)"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-
-    uint8_t cmdAuthMode = arg_get_int_def(ctx, 1, 0);
-    uint8_t cmdAuthAlgo = arg_get_int_def(ctx, 2, 0);
-
-    int aidlength = 3;
-    uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(ctx, 3, aid, &aidlength);
-    swap24(aid);
-    uint8_t cmdKeyNo  = arg_get_int_def(ctx, 4, 0);
-
-    uint8_t key[24] = {0};
-    int keylen = 0;
-    CLIGetHexWithReturn(ctx, 5, key, &keylen);
-
-    uint8_t cmdKDFAlgo  = arg_get_int_def(ctx, 6, 0);
-    // Get KDF input
-    uint8_t kdfInput[31] = {0};
-    int kdfInputLen = 0;
-    CLIGetHexWithReturn(ctx, 7, kdfInput, &kdfInputLen);
-
-    CLIParserFree(ctx);
-
-    if (cmdAuthAlgo == MFDES_ALGO_AES) {
-        if (keylen == 0) {
-            keylen = 16;
-            memcpy(key, aesdefaultkeys[0], keylen);
-        }
-        keylength = 16;
-    } else if (cmdAuthAlgo == MFDES_ALGO_3DES) {
-        if (keylen == 0) {
-            keylen = 16;
-            memcpy(key, aesdefaultkeys[0], keylen);
-        }
-        keylength = 16;
-    } else if (cmdAuthAlgo == MFDES_ALGO_DES) {
-        if (keylen == 0) {
-            keylen = 8;
-            memcpy(key, desdefaultkeys[0], keylen);
-        }
-        keylength = 8;
-    } else if (cmdAuthAlgo == MFDES_ALGO_3K3DES) {
-        if (keylen == 0) {
-            keylen = 24;
-            memcpy(key, k3kdefaultkeys[0], keylen);
-        }
-        keylength = 24;
-    }
-
-    if ((keylen < 8) || (keylen > 24)) {
-        PrintAndLogEx(ERR, "Specified key must have %d bytes length.", keylen);
-        return PM3_EINVARG;
-    }
-
-    if (keylen != keylength) {
-        PrintAndLogEx(WARNING, "Key must include %d HEX symbols", keylength);
-        return PM3_EINVARG;
-    }
-
-    // AID
-    if (aidlength != 3) {
-        PrintAndLogEx(WARNING, "aid must include %d HEX symbols", 3);
-        return PM3_EINVARG;
-    }
-
-    mfdes_auth_res_t rpayload;
-    int error = desfire_authenticate(cmdAuthMode, cmdAuthAlgo, aid, key, cmdKeyNo, cmdKDFAlgo, kdfInputLen, kdfInput, &rpayload);
-    if (error == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "  Key        : " _GREEN_("%s"), sprint_hex(key, keylength));
-        PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(rpayload.sessionkey, keylength));
-        PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    } else {
-        AuthToError(error);
-        return PM3_ESOFT;
-    }
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    return PM3_SUCCESS;
-}
-
 static void DesFill2bPattern(
     uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t *deskeyListLen,
     uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t *aeskeyListLen,
@@ -3295,6 +3180,189 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
 
     DropField();
     return res;
+}
+
+// MIAFRE DESFire Authentication
+// keys:
+// NR  DESC     KEYLENGHT
+// ------------------------
+// 1 = DES      8
+// 2 = 3DES     16
+// 3 = 3K 3DES  24
+// 4 = AES      16
+static int CmdHF14ADesAuth(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes auth",
+                  "Select application on the card. It selects app if it is a valid one or returns an error.",
+                  "hf mfdes auth  -n 0 -t des -k 0000000000000000 -f none -> select PICC level and authenticate with key num=0, key type=des, key=00..00 and key derivation = none\n"
+                  "hf mfdes auth  -n 0 -t aes -k 00000000000000000000000000000000 -> select PICC level and authenticate with key num=0, key type=aes, key=00..00 and key derivation = none\n"
+                  "hf mfdes auth  -n 0 -t des -k 0000000000000000 --save -> select PICC level and authenticate and in case of successful authentication - save channel parameters to defaults\n"
+                  "hf mfdes auth --aid 123456 -> select application 123456 and authenticate via parameters from `default` command");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID of application for some parameters (3 hex bytes, big endian)"),
+        arg_lit0(NULL, "save",    "saves channels parameters to defaults if authentication succeeds"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    bool save = arg_get_lit(ctx, 12);
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, false, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "Select or authentication 0x%06x " _RED_("failed") " ", appid);
+        return res;
+    }
+    
+    if (appid == 0x000000)
+        PrintAndLogEx(SUCCESS, "PICC selected and authenticated " _GREEN_("succesfully"));
+    else
+        PrintAndLogEx(SUCCESS, "Application " _CYAN_("%06x") " selected and authenticated " _GREEN_("succesfully"), appid);
+
+    PrintAndLogEx(SUCCESS, _CYAN_("Context: "));
+    DesfirePrintContext(&dctx);
+    
+    if (save) {
+        // TODO
+        PrintAndLogEx(SUCCESS, "Context saved to defaults " _GREEN_("succesfully") ". You can check them by command " _YELLOW_("hf mfdes default"));
+    }
+
+    DropField();
+    return res;
+    
+    
+    
+    /*
+    //DropFieldDesfire();
+    uint8_t keylength = 8;
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes auth",
+                  "Authenticates MIFARE DESFire using Key",
+                  "hf mfdes auth -m 3 -t 4 -a 808301 -n 0 -k 00000000000000000000000000000000 -> AES,keynumber 0, aid 0x803201\n"
+                  "hf mfdes auth -m 2 -t 2 -a 000000 -n 1 -k 00000000000000000000000000000000 -> 3DES,keynumber 1, aid 0x000000\n"
+                  "hf mfdes auth -m 1 -t 1 -a 000000 -n 2 -k 0000000000000000 -> DES,keynumber 2, aid 0x000000\n"
+                  "hf mfdes auth -m 1 -t 1 -a 000000 -n 0 -> DES, defaultkey, aid 0x000000\n"
+                  "hf mfdes auth -m 2 -t 2 -a 000000 -n 0 -> 3DES, defaultkey, aid 0x000000\n"
+                  "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> 3K3DES, defaultkey, aid 0x000000\n"
+                  "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> AES, defaultkey, aid 0x000000"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("m",  "type",   "<type>", "Auth type (1=normal, 2=iso, 3=aes)"),
+        arg_int0("t",  "algo",   "<algo>", "Crypt algo (1=DES, 2=3DES(2K2DES), 3=3K3DES, 4=AES)"),
+        arg_strx0("a",  "aid",    "<aid>", "AID used for authentification (HEX 3 bytes)"),
+        arg_int0("n",  "keyno",  "<keyno>", "Key number used for authentification"),
+        arg_str0("k",  "key",     "<Key>", "Key for checking (HEX 8-24 bytes)"),
+        arg_int0("d",  "kdf",     "<kdf>", "Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)"),
+        arg_str0("i",  "kdfi",    "<kdfi>", "KDF input (HEX 1-31 bytes)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint8_t cmdAuthMode = arg_get_int_def(ctx, 1, 0);
+    uint8_t cmdAuthAlgo = arg_get_int_def(ctx, 2, 0);
+
+    int aidlength = 3;
+    uint8_t aid[3] = {0};
+    CLIGetHexWithReturn(ctx, 3, aid, &aidlength);
+    swap24(aid);
+    uint8_t cmdKeyNo  = arg_get_int_def(ctx, 4, 0);
+
+    uint8_t key[24] = {0};
+    int keylen = 0;
+    CLIGetHexWithReturn(ctx, 5, key, &keylen);
+
+    uint8_t cmdKDFAlgo  = arg_get_int_def(ctx, 6, 0);
+    // Get KDF input
+    uint8_t kdfInput[31] = {0};
+    int kdfInputLen = 0;
+    CLIGetHexWithReturn(ctx, 7, kdfInput, &kdfInputLen);
+
+    CLIParserFree(ctx);
+
+    if (cmdAuthAlgo == MFDES_ALGO_AES) {
+        if (keylen == 0) {
+            keylen = 16;
+            memcpy(key, aesdefaultkeys[0], keylen);
+        }
+        keylength = 16;
+    } else if (cmdAuthAlgo == MFDES_ALGO_3DES) {
+        if (keylen == 0) {
+            keylen = 16;
+            memcpy(key, aesdefaultkeys[0], keylen);
+        }
+        keylength = 16;
+    } else if (cmdAuthAlgo == MFDES_ALGO_DES) {
+        if (keylen == 0) {
+            keylen = 8;
+            memcpy(key, desdefaultkeys[0], keylen);
+        }
+        keylength = 8;
+    } else if (cmdAuthAlgo == MFDES_ALGO_3K3DES) {
+        if (keylen == 0) {
+            keylen = 24;
+            memcpy(key, k3kdefaultkeys[0], keylen);
+        }
+        keylength = 24;
+    }
+
+    if ((keylen < 8) || (keylen > 24)) {
+        PrintAndLogEx(ERR, "Specified key must have %d bytes length.", keylen);
+        return PM3_EINVARG;
+    }
+
+    if (keylen != keylength) {
+        PrintAndLogEx(WARNING, "Key must include %d HEX symbols", keylength);
+        return PM3_EINVARG;
+    }
+
+    // AID
+    if (aidlength != 3) {
+        PrintAndLogEx(WARNING, "aid must include %d HEX symbols", 3);
+        return PM3_EINVARG;
+    }
+
+    mfdes_auth_res_t rpayload;
+    int error = desfire_authenticate(cmdAuthMode, cmdAuthAlgo, aid, key, cmdKeyNo, cmdKDFAlgo, kdfInputLen, kdfInput, &rpayload);
+    if (error == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "  Key        : " _GREEN_("%s"), sprint_hex(key, keylength));
+        PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(rpayload.sessionkey, keylength));
+        PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    } else {
+        AuthToError(error);
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    return PM3_SUCCESS;*/
 }
 
 static int CmdHF14ADesSetConfiguration(const char *Cmd) {
@@ -6314,7 +6382,7 @@ static command_t CommandTable[] = {
     {"help",             CmdHelp,                     AlwaysAvailable, "This help"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "---------------------- " _CYAN_("general") " ----------------------"},
     {"default",          CmdHF14ADesDefault,          IfPm3Iso14443a,  "[new]Set defaults for all the commands"},
-    {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
+    {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "[new]MIFARE DesFire Authentication"},
     {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "Check keys"},
     {"enum",             CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
     {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "[new]Format PICC"},
