@@ -129,6 +129,7 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
 int DesfireSetConfigurationCmd(DesfireContext *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen);
 int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *param, size_t paramlen);
 
+int DesfireFillFileList(DesfireContext *dctx, FileListS FileList, size_t *filescount, bool *isopresent);
 int DesfireGetFileIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetFileISOIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 
