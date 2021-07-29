@@ -1473,6 +1473,42 @@ void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsett
     }
 }
 
+void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
+    PrintAndLogEx(NORMAL, "(%-5s) " NOLF, GetDesfireCommunicationMode(fsettings->fileCommMode));    
+    PrintAndLogEx(NORMAL, "[0x%02x] " _CYAN_("%-13s ") NOLF, fsettings->fileType, GetDesfireFileType(fsettings->fileType));
+
+    switch (fsettings->fileType) {
+        case 0x00:
+        case 0x01: {
+            PrintAndLogEx(NORMAL, "size: %d [0x%x] " NOLF, fsettings->fileSize, fsettings->fileSize);    
+            break;
+        }
+        case 0x02: {
+            PrintAndLogEx(NORMAL, "[%d .. %d] lim cred: 0x%02x (%d [0x%x]) " NOLF, 
+                    fsettings->lowerLimit, fsettings->upperLimit, fsettings->limitedCredit, fsettings->value, fsettings->value);    
+            break;
+        }
+        case 0x03:
+        case 0x04: {
+            PrintAndLogEx(NORMAL, "%d/%d record size: %d [0x%x]b " NOLF,
+                    fsettings->curRecordCount, fsettings->maxRecordCount, fsettings->recordSize, fsettings->recordSize);
+            break;
+        }
+        case 0x05: {
+            PrintAndLogEx(NORMAL, "key type: 0x%02x version: 0x%02x " NOLF, fsettings->keyType, fsettings->keyVersion);
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+    
+    PrintAndLogEx(NORMAL, "(%s %s %s %s)", 
+        GetDesfireAccessRightStr(fsettings->rAccess), 
+        GetDesfireAccessRightStr(fsettings->wAccess),
+        GetDesfireAccessRightStr(fsettings->rwAccess),
+        GetDesfireAccessRightStr(fsettings->chAccess));
+}
 
 static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t datalen, uint8_t *dynlen, bool create) {
     switch (filetype) {

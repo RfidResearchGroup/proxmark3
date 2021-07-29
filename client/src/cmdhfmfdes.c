@@ -6726,6 +6726,125 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14ADesLsFiles(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes lsfiles",
+                  "Show file list. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
+                  "hf mfdes lsfiles --aid 123456 -> show file list for: app=123456 with defaults from `default` command");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_lit0(NULL, "no-auth", "execute without authentication"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool noauth = arg_get_lit(ctx, 12);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    if (noauth) {
+        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            DropField();
+            return res;
+        }
+    } else {
+        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    }    
+    
+    FileListS FileList;
+    memset(FileList, 0, sizeof(FileList));
+ 
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t buflen = 0;
+
+    res = DesfireGetFileIDList(&dctx, buf, &buflen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire GetFileIDList command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
+    
+    if (buflen == 0) {
+        PrintAndLogEx(INFO, "There is no files in the application %06x", appid);
+        DropField();
+        return PM3_SUCCESS;
+    }        
+    
+    for (int i = 0; i < buflen; i++) {
+        FileList[i].fileNum = buf[i];
+        DesfireGetFileSettingsStruct(&dctx, FileList[i].fileNum, &FileList[i].fileSettings);
+    }
+    size_t filescount = buflen;
+
+    buflen = 0;
+    res = DesfireGetFileISOIDList(&dctx, buf, &buflen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire GetFileISOIDList command " _RED_("error") ". Result: %d", res);
+    }
+    
+    size_t isoindx = 0;
+    if (buflen > 0) {
+        for (int i = 0; i < filescount; i++) {
+            if (FileList[i].fileSettings.fileType != 0x02 && FileList[i].fileSettings.fileType != 0x05) {
+                FileList[i].fileISONum = MemBeToUint2byte(&buf[isoindx * 2]);
+                isoindx++;
+            }
+        }
+        if (isoindx > 0)
+            isoindx--;
+        if (isoindx * 2 != buflen)
+            PrintAndLogEx(WARNING, "Wrong ISO ID list length. must be %d but %d", buflen, isoindx * 2);
+    } else {
+        PrintAndLogEx(WARNING, "ISO ID list returned no data");
+    }
+    
+    PrintAndLogEx(INFO, "---------------------------- " _CYAN_("File list") " -----------------------(r w rw ch)-----");
+    for (int i = 0; i < filescount; i++) {
+        PrintAndLogEx(SUCCESS, "ID: " _GREEN_("%02x ") NOLF, FileList[i].fileNum);
+        if (isoindx > 0) {
+            if (FileList[i].fileISONum != 0)
+                PrintAndLogEx(NORMAL, "ISO ID: " _CYAN_("%04x ") NOLF, FileList[i].fileISONum);
+            else
+                PrintAndLogEx(NORMAL, "ISO ID: " _YELLOW_("n/a  ") NOLF);
+        }
+        
+        DesfirePrintFileSettingsOneLine(&FileList[i].fileSettings);
+    }
+
+    DropField();
+    return PM3_SUCCESS;
+}
+    
 static int CmdHF14ADesTest(const char *Cmd) {
     DesfireTest(true);
     return PM3_SUCCESS;
@@ -6761,6 +6880,8 @@ static command_t CommandTable[] = {
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("Files") " -----------------------"},
     {"getfileids",       CmdHF14ADesGetFileIDs,       IfPm3Iso14443a,  "[new]Get File IDs list"},
     {"getfileisoids",    CmdHF14ADesGetFileISOIDs,    IfPm3Iso14443a,  "[new]Get File ISO IDs list"},
+    {"lsfiles",          CmdHF14ADesLsFiles,          IfPm3Iso14443a,  "[new]Show all files list"},
+    {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
     {"createfile",       CmdHF14ADesCreateFile,       IfPm3Iso14443a,  "[new]Create Standard/Backup File"},
     {"createvaluefile",  CmdHF14ADesCreateValueFile,  IfPm3Iso14443a,  "[new]Create Value File"},
     {"createrecordfile", CmdHF14ADesCreateRecordFile, IfPm3Iso14443a,  "[new]Create Linear/Cyclic Record File"},
@@ -6768,7 +6889,6 @@ static command_t CommandTable[] = {
     {"deletefile",       CmdHF14ADesDeleteFile,       IfPm3Iso14443a,  "[new]Delete File"},
     {"getfilesettings",  CmdHF14ADesGetFileSettings,  IfPm3Iso14443a,  "[new]Get file settings"},
     {"chfilesettings",   CmdHF14ADesChFileSettings,   IfPm3Iso14443a,  "[new]Change file settings"},
-    {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
     {"read",             CmdHF14ADesReadData,         IfPm3Iso14443a,  "[new]Read data from standard/backup/record/value/mac file"},
     {"write",            CmdHF14ADesWriteData,        IfPm3Iso14443a,  "[new]Write data to standard/backup/record/value file"},
     {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "[new]Operations with value file (get/credit/limited credit/debit/clear)"},
