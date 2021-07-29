@@ -106,6 +106,7 @@ int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2);
 int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uint32_t aid2);
 
 int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose);
+int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose);
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose);
 
 int DesfireFormatPICC(DesfireContext *dctx);

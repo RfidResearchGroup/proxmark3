@@ -688,7 +688,7 @@ int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uin
     return DesfireSelectAID(ctx, data, (select_two) ? &data[3] : NULL);
 }
 
-int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose) {
+int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose) {
     if (verbose)
         DesfirePrintContext(dctx);
 
@@ -700,20 +700,26 @@ int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secu
     if (verbose)
         PrintAndLogEx(INFO, "App %06x " _GREEN_("selected"), aid);
 
-    res = DesfireAuthenticate(dctx, secureChannel, verbose);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
-        return PM3_ESOFT;
-    }
+    if (!noauth) {
+        res = DesfireAuthenticate(dctx, secureChannel, verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
+            return PM3_ESOFT;
+        }
 
-    if (DesfireIsAuthenticated(dctx)) {
-        if (verbose)
-            PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
-    } else {
-        return PM3_ESOFT;
+        if (DesfireIsAuthenticated(dctx)) {
+            if (verbose)
+                PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
+        } else {
+            return PM3_ESOFT;
+        }
     }
 
     return PM3_SUCCESS;
+}
+
+int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose) {
+    return DesfireSelectAndAuthenticateEx(dctx, secureChannel, aid, false, verbose);
 }
 
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
