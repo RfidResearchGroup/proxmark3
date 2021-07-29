@@ -2207,63 +2207,6 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14ADesBruteApps(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes bruteaid",
-                  "Recover AIDs by bruteforce.\n"
-                  "WARNING: This command takes a long time",
-                  "hf mfdes bruteaid                    -> Search all apps\n"
-                  "hf mfdes bruteaid -s F0000F -i 16    -> Search MAD range manually");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_strx0("s",  "start",  "<hex>", "Starting App ID as hex bytes (3 bytes, big endian)"),
-        arg_strx0("e",  "end",    "<hex>", "Last App ID as hex bytes (3 bytes, big endian)"),
-        arg_int0("i",  "step",    "<dec>", "Increment step when bruteforcing"),
-        arg_lit0("m", "mad", "Only bruteforce the MAD range"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint8_t startAid[3] = {0};
-    uint8_t endAid[3] = {0xFF, 0xFF, 0xFF};
-    int startLen = 0;
-    int endLen = 0;
-    CLIGetHexWithReturn(ctx, 1, startAid, &startLen);
-    CLIGetHexWithReturn(ctx, 2, endAid, &endLen);
-    uint32_t idIncrement = arg_get_int_def(ctx, 3, 1);
-    bool mad = arg_get_lit(ctx, 4);
-    CLIParserFree(ctx);
-    // TODO: We need to check the tag version, EV1 should stop after 26 apps are found
-    if (mad) {
-        idIncrement = 0x10;
-        startAid[0] = 0xF0;
-        startAid[1] = 0x00;
-        startAid[2] = 0x0F;
-    }
-    uint32_t idStart = le24toh(startAid);
-    uint32_t idEnd = le24toh(endAid);
-    PrintAndLogEx(INFO, "Enumerating through all AIDs manually, this will take a while!");
-    for (uint32_t id = idStart; id <= idEnd && id >= idStart; id += idIncrement) {
-        if (kbd_enter_pressed()) break;
-        int progress = ((id - idStart) * 100) / ((idEnd - idStart));
-        PrintAndLogEx(INPLACE, "Progress: %d %%, current AID: %06X", progress, id);
-        uint8_t appId[3] = {0};
-        htole24(id, appId);
-        sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, appId}; //0x5a
-        uint16_t sw = 0;
-        uint8_t data[255 * 5]  = {0x00};
-        uint32_t resplen = 0;
-        DESFIRESendApdu(!tag->rf_field_on, true, apdu, data, sizeof(data), &resplen, &sw);
-        if (sw == status(MFDES_S_OPERATION_OK)) {
-            printf("\33[2K\r"); // clear current line before printing
-            PrintAndLogEx(SUCCESS, "Got new APPID %06X", id);
-        }
-    }
-    PrintAndLogEx(SUCCESS, "Done");
-    DropFieldDesfire();
-    return PM3_SUCCESS;
-}
-
 static void DesFill2bPattern(
     uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t *deskeyListLen,
     uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t *aeskeyListLen,
@@ -3180,6 +3123,95 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
 
     DropField();
     return res;
+}
+
+static int CmdHF14ADesBruteApps(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes bruteaid",
+                  "Recover AIDs by bruteforce.\n"
+                  "WARNING: This command takes a loooong time",
+                  "hf mfdes bruteaid                    -> Search all apps\n"
+                  "hf mfdes bruteaid -s F0000F -i 16    -> Search MAD range manually");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("s",  "start", "<hex>", "Starting App ID as hex bytes (3 bytes, big endian)"),
+        arg_strx0("e",  "end",   "<hex>", "Last App ID as hex bytes (3 bytes, big endian)"),
+        arg_int0("i",   "step",  "<dec>", "Increment step when bruteforcing"),
+        arg_lit0("m",   "mad",   "Only bruteforce the MAD range"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 0, 0, 0, 0, 0, 0, 0, 0, 0, &securechann, DCMNone, NULL);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    uint8_t startAid[3] = {0};
+    uint8_t endAid[3] = {0xFF, 0xFF, 0xFF};
+    int startLen = 0;
+    int endLen = 0;
+    CLIGetHexWithReturn(ctx, 1, startAid, &startLen);
+    CLIGetHexWithReturn(ctx, 2, endAid, &endLen);
+    uint32_t idIncrement = arg_get_int_def(ctx, 3, 1);
+    bool mad = arg_get_lit(ctx, 4);
+    
+    CLIParserFree(ctx);
+    
+    // tru select PICC
+    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "Desfire PICC level select " _RED_("failed") ". Maybe wrong card or no card in the field.");
+        return res;
+    }
+    
+    // TODO: We need to check the tag version, EV1 should stop after 26 apps are found
+    if (mad) {
+        idIncrement = 0x10;
+        startAid[0] = 0xF0;
+        startAid[1] = 0x00;
+        startAid[2] = 0x0F;
+    }
+    uint32_t idStart = DesfireAIDByteToUint(startAid);
+    uint32_t idEnd = DesfireAIDByteToUint(endAid);
+    if (idStart > idEnd) {
+        PrintAndLogEx(ERR, "Start should be lower than end. start: %06x end: %06x", idStart, idEnd);
+        return PM3_EINVARG;
+    }
+    PrintAndLogEx(INFO, "Bruteforce from %06x to %06x", idStart, idEnd);
+    PrintAndLogEx(INFO, "Enumerating through all AIDs manually, this will take a while!");
+    for (uint32_t id = idStart; id <= idEnd && id >= idStart; id += idIncrement) {
+        if (kbd_enter_pressed()) break;
+        
+        int progress = ((id - idStart) * 100) / ((idEnd - idStart));
+        PrintAndLogEx(INPLACE, "Progress: %d %%, current AID: %06X", progress, id);
+        
+        res = DesfireSelectAIDHexNoFieldOn(&dctx, id);
+        
+        /*uint8_t appId[3] = {0};
+        htole24(id, appId);
+        sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, appId}; //0x5a
+        uint16_t sw = 0;
+        uint8_t data[255 * 5]  = {0x00};
+        uint32_t resplen = 0;
+        DESFIRESendApdu(!tag->rf_field_on, true, apdu, data, sizeof(data), &resplen, &sw);
+        if (sw == status(MFDES_S_OPERATION_OK)) {*/
+        
+        if (res == PM3_SUCCESS) {
+            printf("\33[2K\r"); // clear current line before printing
+            PrintAndLogEx(SUCCESS, "Got new APPID %06X", id);
+        }
+    }
+    
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, _GREEN_("Done"));
+    DropField();
+    return PM3_SUCCESS;
 }
 
 // MIAFRE DESFire Authentication
@@ -5747,7 +5779,7 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
 
         if (resplen > 0) {
             if (resplen != 12) {
-                PrintAndLogEx(WARNING, "Read wrong %u bytes from file 0x%02x offset %u", resplen, fnum, offset);
+                PrintAndLogEx(WARNING, "Read wrong %zu bytes from file 0x%02x offset %u", resplen, fnum, offset);
                 print_buffer_with_offset(resp, resplen, offset, true);
             } else {
                 uint32_t cnt = MemLeToUint4byte(&resp[0]);
@@ -6301,7 +6333,7 @@ static command_t CommandTable[] = {
     {"getkeysettings",   CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "Get Key Settings"},
     {"getkeyversions",   CmdHF14ADesGetKeyVersions,   IfPm3Iso14443a,  "Get Key Versions"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Applications") " -------------------"},
-    {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "[old]Recover AIDs by bruteforce"},
+    {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
     {"createapp",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application"},
     {"deleteapp",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application"},
     {"selectapp",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
