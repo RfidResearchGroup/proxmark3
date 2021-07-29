@@ -916,7 +916,7 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
     return PM3_SUCCESS;
 }
 
-static void AuthToError(int error) {
+/*static void AuthToError(int error) {
     switch (error) {
         case 1:
             PrintAndLogEx(SUCCESS, "Sending auth command failed");
@@ -954,7 +954,7 @@ static void AuthToError(int error) {
         default:
             break;
     }
-}
+}*/
 
 // -- test if card supports 0x0A
 static int test_desfire_authenticate(void) {
@@ -1821,41 +1821,6 @@ static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, 
     return error;
 }
 
-static int CmdHF14ADesSelectApp(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes selectaid",
-                  "Select Application ID",
-                  "hf mfdes selectaid -a 123456"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_strx0("a", "aid", "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int aidlength = 3;
-    uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
-    CLIParserFree(ctx);
-
-    swap24(aid);
-
-    if (aidlength != 3) {
-        PrintAndLogEx(ERR, "AID must have 3 bytes length");
-        return PM3_EINVARG;
-    }
-
-    int res = handler_desfire_select_application(aid);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Error on selecting aid.");
-        DropFieldDesfire();
-    } else {
-        PrintAndLogEx(SUCCESS, "Successfully selected aid.");
-    }
-    return res;
-}
-
 static int CmdHF14ADesInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes info",
@@ -2239,178 +2204,6 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     }
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     DropFieldDesfire();
-    return PM3_SUCCESS;
-}
-
-static int CmdHF14ADesBruteApps(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes bruteaid",
-                  "Recover AIDs by bruteforce.\n"
-                  "WARNING: This command takes a long time",
-                  "hf mfdes bruteaid                    -> Search all apps\n"
-                  "hf mfdes bruteaid -s F0000F -i 16    -> Search MAD range manually");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_strx0("s",  "start",  "<hex>", "Starting App ID as hex bytes (3 bytes, big endian)"),
-        arg_strx0("e",  "end",    "<hex>", "Last App ID as hex bytes (3 bytes, big endian)"),
-        arg_int0("i",  "step",    "<dec>", "Increment step when bruteforcing"),
-        arg_lit0("m", "mad", "Only bruteforce the MAD range"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint8_t startAid[3] = {0};
-    uint8_t endAid[3] = {0xFF, 0xFF, 0xFF};
-    int startLen = 0;
-    int endLen = 0;
-    CLIGetHexWithReturn(ctx, 1, startAid, &startLen);
-    CLIGetHexWithReturn(ctx, 2, endAid, &endLen);
-    uint32_t idIncrement = arg_get_int_def(ctx, 3, 1);
-    bool mad = arg_get_lit(ctx, 4);
-    CLIParserFree(ctx);
-    // TODO: We need to check the tag version, EV1 should stop after 26 apps are found
-    if (mad) {
-        idIncrement = 0x10;
-        startAid[0] = 0xF0;
-        startAid[1] = 0x00;
-        startAid[2] = 0x0F;
-    }
-    uint32_t idStart = le24toh(startAid);
-    uint32_t idEnd = le24toh(endAid);
-    PrintAndLogEx(INFO, "Enumerating through all AIDs manually, this will take a while!");
-    for (uint32_t id = idStart; id <= idEnd && id >= idStart; id += idIncrement) {
-        if (kbd_enter_pressed()) break;
-        int progress = ((id - idStart) * 100) / ((idEnd - idStart));
-        PrintAndLogEx(INPLACE, "Progress: %d %%, current AID: %06X", progress, id);
-        uint8_t appId[3] = {0};
-        htole24(id, appId);
-        sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, appId}; //0x5a
-        uint16_t sw = 0;
-        uint8_t data[255 * 5]  = {0x00};
-        uint32_t resplen = 0;
-        DESFIRESendApdu(!tag->rf_field_on, true, apdu, data, sizeof(data), &resplen, &sw);
-        if (sw == status(MFDES_S_OPERATION_OK)) {
-            printf("\33[2K\r"); // clear current line before printing
-            PrintAndLogEx(SUCCESS, "Got new APPID %06X", id);
-        }
-    }
-    PrintAndLogEx(SUCCESS, "Done");
-    DropFieldDesfire();
-    return PM3_SUCCESS;
-}
-
-// MIAFRE DESFire Authentication
-//
-#define BUFSIZE 256
-static int CmdHF14ADesAuth(const char *Cmd) {
-    //DropFieldDesfire();
-    // NR  DESC     KEYLENGHT
-    // ------------------------
-    // 1 = DES      8
-    // 2 = 3DES     16
-    // 3 = 3K 3DES  24
-    // 4 = AES      16
-    uint8_t keylength = 8;
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes auth",
-                  "Authenticates MIFARE DESFire using Key",
-                  "hf mfdes auth -m 3 -t 4 -a 808301 -n 0 -k 00000000000000000000000000000000 -> AES,keynumber 0, aid 0x803201\n"
-                  "hf mfdes auth -m 2 -t 2 -a 000000 -n 1 -k 00000000000000000000000000000000 -> 3DES,keynumber 1, aid 0x000000\n"
-                  "hf mfdes auth -m 1 -t 1 -a 000000 -n 2 -k 0000000000000000 -> DES,keynumber 2, aid 0x000000\n"
-                  "hf mfdes auth -m 1 -t 1 -a 000000 -n 0 -> DES, defaultkey, aid 0x000000\n"
-                  "hf mfdes auth -m 2 -t 2 -a 000000 -n 0 -> 3DES, defaultkey, aid 0x000000\n"
-                  "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> 3K3DES, defaultkey, aid 0x000000\n"
-                  "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> AES, defaultkey, aid 0x000000"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_int0("m",  "type",   "<type>", "Auth type (1=normal, 2=iso, 3=aes)"),
-        arg_int0("t",  "algo",   "<algo>", "Crypt algo (1=DES, 2=3DES(2K2DES), 3=3K3DES, 4=AES)"),
-        arg_strx0("a",  "aid",    "<aid>", "AID used for authentification (HEX 3 bytes)"),
-        arg_int0("n",  "keyno",  "<keyno>", "Key number used for authentification"),
-        arg_str0("k",  "key",     "<Key>", "Key for checking (HEX 8-24 bytes)"),
-        arg_int0("d",  "kdf",     "<kdf>", "Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)"),
-        arg_str0("i",  "kdfi",    "<kdfi>", "KDF input (HEX 1-31 bytes)"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-
-    uint8_t cmdAuthMode = arg_get_int_def(ctx, 1, 0);
-    uint8_t cmdAuthAlgo = arg_get_int_def(ctx, 2, 0);
-
-    int aidlength = 3;
-    uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(ctx, 3, aid, &aidlength);
-    swap24(aid);
-    uint8_t cmdKeyNo  = arg_get_int_def(ctx, 4, 0);
-
-    uint8_t key[24] = {0};
-    int keylen = 0;
-    CLIGetHexWithReturn(ctx, 5, key, &keylen);
-
-    uint8_t cmdKDFAlgo  = arg_get_int_def(ctx, 6, 0);
-    // Get KDF input
-    uint8_t kdfInput[31] = {0};
-    int kdfInputLen = 0;
-    CLIGetHexWithReturn(ctx, 7, kdfInput, &kdfInputLen);
-
-    CLIParserFree(ctx);
-
-    if (cmdAuthAlgo == MFDES_ALGO_AES) {
-        if (keylen == 0) {
-            keylen = 16;
-            memcpy(key, aesdefaultkeys[0], keylen);
-        }
-        keylength = 16;
-    } else if (cmdAuthAlgo == MFDES_ALGO_3DES) {
-        if (keylen == 0) {
-            keylen = 16;
-            memcpy(key, aesdefaultkeys[0], keylen);
-        }
-        keylength = 16;
-    } else if (cmdAuthAlgo == MFDES_ALGO_DES) {
-        if (keylen == 0) {
-            keylen = 8;
-            memcpy(key, desdefaultkeys[0], keylen);
-        }
-        keylength = 8;
-    } else if (cmdAuthAlgo == MFDES_ALGO_3K3DES) {
-        if (keylen == 0) {
-            keylen = 24;
-            memcpy(key, k3kdefaultkeys[0], keylen);
-        }
-        keylength = 24;
-    }
-
-    if ((keylen < 8) || (keylen > 24)) {
-        PrintAndLogEx(ERR, "Specified key must have %d bytes length.", keylen);
-        return PM3_EINVARG;
-    }
-
-    if (keylen != keylength) {
-        PrintAndLogEx(WARNING, "Key must include %d HEX symbols", keylength);
-        return PM3_EINVARG;
-    }
-
-    // AID
-    if (aidlength != 3) {
-        PrintAndLogEx(WARNING, "aid must include %d HEX symbols", 3);
-        return PM3_EINVARG;
-    }
-
-    mfdes_auth_res_t rpayload;
-    int error = desfire_authenticate(cmdAuthMode, cmdAuthAlgo, aid, key, cmdKeyNo, cmdKDFAlgo, kdfInputLen, kdfInput, &rpayload);
-    if (error == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "  Key        : " _GREEN_("%s"), sprint_hex(key, keylength));
-        PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(rpayload.sessionkey, keylength));
-        PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    } else {
-        AuthToError(error);
-        return PM3_ESOFT;
-    }
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
     return PM3_SUCCESS;
 }
 
@@ -3279,6 +3072,222 @@ static int CmdHF14ADesDefault(const char *Cmd) {
     PrintAndLogEx(INFO, "Comm mode   : %s", CLIGetOptionListStr(DesfireCommunicationModeOpts, defaultCommMode));
 
     return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesSelectApp(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes selectapp",
+                  "Select application on the card. It selects app if it is a valid one or returns an error.",
+                  "hf mfdes selectapp --aid 123456 -> select application 123456");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID of application for some parameters (3 hex bytes, big endian)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, true, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "Select application 0x%06x " _RED_("failed") " ", appid);
+        return res;
+    }
+    
+    PrintAndLogEx(SUCCESS, "Application 0x%06x selected " _GREEN_("succesfully") " ", appid);
+
+    DropField();
+    return res;
+}
+
+static int CmdHF14ADesBruteApps(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes bruteaid",
+                  "Recover AIDs by bruteforce.\n"
+                  "WARNING: This command takes a loooong time",
+                  "hf mfdes bruteaid                    -> Search all apps\n"
+                  "hf mfdes bruteaid -s F0000F -i 16    -> Search MAD range manually");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("s",  "start", "<hex>", "Starting App ID as hex bytes (3 bytes, big endian)"),
+        arg_strx0("e",  "end",   "<hex>", "Last App ID as hex bytes (3 bytes, big endian)"),
+        arg_int0("i",   "step",  "<dec>", "Increment step when bruteforcing"),
+        arg_lit0("m",   "mad",   "Only bruteforce the MAD range"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 0, 0, 0, 0, 0, 0, 0, 0, 0, &securechann, DCMNone, NULL);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    uint8_t startAid[3] = {0};
+    uint8_t endAid[3] = {0xFF, 0xFF, 0xFF};
+    int startLen = 0;
+    int endLen = 0;
+    CLIGetHexWithReturn(ctx, 1, startAid, &startLen);
+    CLIGetHexWithReturn(ctx, 2, endAid, &endLen);
+    uint32_t idIncrement = arg_get_int_def(ctx, 3, 1);
+    bool mad = arg_get_lit(ctx, 4);
+    
+    CLIParserFree(ctx);
+    
+    // tru select PICC
+    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "Desfire PICC level select " _RED_("failed") ". Maybe wrong card or no card in the field.");
+        return res;
+    }
+    
+    // TODO: We need to check the tag version, EV1 should stop after 26 apps are found
+    if (mad) {
+        idIncrement = 0x10;
+        startAid[0] = 0xF0;
+        startAid[1] = 0x00;
+        startAid[2] = 0x0F;
+    }
+    uint32_t idStart = DesfireAIDByteToUint(startAid);
+    uint32_t idEnd = DesfireAIDByteToUint(endAid);
+    if (idStart > idEnd) {
+        PrintAndLogEx(ERR, "Start should be lower than end. start: %06x end: %06x", idStart, idEnd);
+        return PM3_EINVARG;
+    }
+    PrintAndLogEx(INFO, "Bruteforce from %06x to %06x", idStart, idEnd);
+    PrintAndLogEx(INFO, "Enumerating through all AIDs manually, this will take a while!");
+    for (uint32_t id = idStart; id <= idEnd && id >= idStart; id += idIncrement) {
+        if (kbd_enter_pressed()) break;
+        
+        int progress = ((id - idStart) * 100) / ((idEnd - idStart));
+        PrintAndLogEx(INPLACE, "Progress: %d %%, current AID: %06X", progress, id);
+        
+        res = DesfireSelectAIDHexNoFieldOn(&dctx, id);
+        
+        if (res == PM3_SUCCESS) {
+            printf("\33[2K\r"); // clear current line before printing
+            PrintAndLogEx(SUCCESS, "Got new APPID %06X", id);
+        }
+    }
+    
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, _GREEN_("Done"));
+    DropField();
+    return PM3_SUCCESS;
+}
+
+// MIAFRE DESFire Authentication
+// keys:
+// NR  DESC     KEYLENGHT
+// ------------------------
+// 1 = DES      8
+// 2 = 3DES     16
+// 3 = 3K 3DES  24
+// 4 = AES      16
+static int CmdHF14ADesAuth(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes auth",
+                  "Select application on the card. It selects app if it is a valid one or returns an error.",
+                  "hf mfdes auth  -n 0 -t des -k 0000000000000000 -f none -> select PICC level and authenticate with key num=0, key type=des, key=00..00 and key derivation = none\n"
+                  "hf mfdes auth  -n 0 -t aes -k 00000000000000000000000000000000 -> select PICC level and authenticate with key num=0, key type=aes, key=00..00 and key derivation = none\n"
+                  "hf mfdes auth  -n 0 -t des -k 0000000000000000 --save -> select PICC level and authenticate and in case of successful authentication - save channel parameters to defaults\n"
+                  "hf mfdes auth --aid 123456 -> select application 123456 and authenticate via parameters from `default` command");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID of application for some parameters (3 hex bytes, big endian)"),
+        arg_lit0(NULL, "save",    "saves channels parameters to defaults if authentication succeeds"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    bool save = arg_get_lit(ctx, 12);
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, false, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "Select or authentication 0x%06x " _RED_("failed") " ", appid);
+        return res;
+    }
+    
+    if (appid == 0x000000)
+        PrintAndLogEx(SUCCESS, "PICC selected and authenticated " _GREEN_("succesfully"));
+    else
+        PrintAndLogEx(SUCCESS, "Application " _CYAN_("%06x") " selected and authenticated " _GREEN_("succesfully"), appid);
+
+    PrintAndLogEx(SUCCESS, _CYAN_("Context: "));
+    DesfirePrintContext(&dctx);
+    
+    if (save) {
+        defaultKeyNum = dctx.keyNum;
+        defaultAlgoId = dctx.keyType;
+        memcpy(defaultKey, dctx.key, DESFIRE_MAX_KEY_SIZE);
+        defaultKdfAlgo = dctx.kdfAlgo;
+        defaultKdfInputLen = dctx.kdfInputLen;
+        memcpy(defaultKdfInput, dctx.kdfInput, sizeof(dctx.kdfInput));
+        defaultSecureChannel = securechann;
+        defaultCommSet = dctx.cmdSet;
+        defaultCommMode = dctx.commMode;
+        
+        PrintAndLogEx(SUCCESS, "Context saved to defaults " _GREEN_("succesfully") ". You can check them by command " _YELLOW_("hf mfdes default"));
+    }
+
+    DropField();
+    return res;
 }
 
 static int CmdHF14ADesSetConfiguration(const char *Cmd) {
@@ -5663,6 +5672,12 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
             if (fsettings.fileCommMode != 0 && noauth)
                 PrintAndLogEx(WARNING, "File needs communication mode `%s` but there is no authentication", CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
 
+            if ((fsettings.rAccess < 0x0e && fsettings.rAccess != dctx->keyNum) || (fsettings.rwAccess < 0x0e && fsettings.rwAccess != dctx->keyNum))
+                PrintAndLogEx(WARNING, "File needs to be authenticated with key 0x%02x or 0x%02x but current authentication key is 0x%02x", fsettings.rAccess, fsettings.rwAccess, dctx->keyNum);
+
+            if (fsettings.rAccess == 0x0f && fsettings.rwAccess == 0x0f)
+                PrintAndLogEx(WARNING, "File access denied. All read access rights is 0x0f.");
+
             if (verbose)
                 PrintAndLogEx(INFO, "Got file type: %s. Option: %s. comm mode: %s",
                               GetDesfireFileType(fsettings.fileType),
@@ -5755,7 +5770,7 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
 
         if (resplen > 0) {
             if (resplen != 12) {
-                PrintAndLogEx(WARNING, "Read wrong %u bytes from file 0x%02x offset %u", resplen, fnum, offset);
+                PrintAndLogEx(WARNING, "Read wrong %zu bytes from file 0x%02x offset %u", resplen, fnum, offset);
                 print_buffer_with_offset(resp, resplen, offset, true);
             } else {
                 uint32_t cnt = MemLeToUint4byte(&resp[0]);
@@ -6291,46 +6306,46 @@ static int CmdHF14ADesTest(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                     AlwaysAvailable, "This help"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "---------------------- " _CYAN_("general") " ----------------------"},
-    {"default",          CmdHF14ADesDefault,          IfPm3Iso14443a,  "[new]Set defaults for all the commands"},
-    {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
-    {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "Check keys"},
-    {"enum",             CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
-    {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "[new]Format PICC"},
-    {"freemem",          CmdHF14ADesGetFreeMem,       IfPm3Iso14443a,  "[new]Get free memory size"},
-    {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "[new]Get uid from card"},
-    {"setconfig",        CmdHF14ADesSetConfiguration, IfPm3Iso14443a,  "[new]Set card configuration"},
-    {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
+    {"default",          CmdHF14ADesDefault,          IfPm3Iso14443a,  "Set defaults for all the commands"},
+    {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "MIFARE DesFire Authentication"},
+    {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "[old]Check keys"},
+    {"enum",             CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "[old]Tries enumerate all applications"},
+    {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
+    {"freemem",          CmdHF14ADesGetFreeMem,       IfPm3Iso14443a,  "Get free memory size"},
+    {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get uid from card"},
+    {"setconfig",        CmdHF14ADesSetConfiguration, IfPm3Iso14443a,  "Set card configuration"},
+    {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "[old]Tag information"},
     {"list",             CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
 //    {"ndefread",             CmdHF14aDesNDEFRead,             IfPm3Iso14443a,  "Prints NDEF records from card"},
 //    {"mad",             CmdHF14aDesMAD,             IfPm3Iso14443a,  "Prints MAD records from card"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "------------------------ " _CYAN_("Keys") " -----------------------"},
-    {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "[new]Change Key"},
-    {"chkeysettings",    CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "[new]Change Key Settings"},
-    {"getkeysettings",   CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "[new]Get Key Settings"},
-    {"getkeyversions",   CmdHF14ADesGetKeyVersions,   IfPm3Iso14443a,  "[new]Get Key Versions"},
+    {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
+    {"chkeysettings",    CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "Change Key Settings"},
+    {"getkeysettings",   CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "Get Key Settings"},
+    {"getkeyversions",   CmdHF14ADesGetKeyVersions,   IfPm3Iso14443a,  "Get Key Versions"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Applications") " -------------------"},
     {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
-    {"createapp",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "[new]Create Application"},
-    {"deleteapp",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "[new]Delete Application"},
-    {"selectaid",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
-    {"getaids",          CmdHF14ADesGetAIDs,          IfPm3Iso14443a,  "[new]Get Application IDs list"},
-    {"getappnames",      CmdHF14ADesGetAppNames,      IfPm3Iso14443a,  "[new]Get Applications list"},
+    {"createapp",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application"},
+    {"deleteapp",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application"},
+    {"selectapp",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
+    {"getaids",          CmdHF14ADesGetAIDs,          IfPm3Iso14443a,  "Get Application IDs list"},
+    {"getappnames",      CmdHF14ADesGetAppNames,      IfPm3Iso14443a,  "Get Applications list"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("Files") " -----------------------"},
-    {"getfileids",       CmdHF14ADesGetFileIDs,       IfPm3Iso14443a,  "[new]Get File IDs list"},
-    {"getfileisoids",    CmdHF14ADesGetFileISOIDs,    IfPm3Iso14443a,  "[new]Get File ISO IDs list"},
-    {"lsfiles",          CmdHF14ADesLsFiles,          IfPm3Iso14443a,  "[new]Show all files list"},
-    {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "[new]Dump all files"},
-    {"createfile",       CmdHF14ADesCreateFile,       IfPm3Iso14443a,  "[new]Create Standard/Backup File"},
-    {"createvaluefile",  CmdHF14ADesCreateValueFile,  IfPm3Iso14443a,  "[new]Create Value File"},
-    {"createrecordfile", CmdHF14ADesCreateRecordFile, IfPm3Iso14443a,  "[new]Create Linear/Cyclic Record File"},
-    {"createmacfile",    CmdHF14ADesCreateTrMACFile,  IfPm3Iso14443a,  "[new]Create Transaction MAC File"},
-    {"deletefile",       CmdHF14ADesDeleteFile,       IfPm3Iso14443a,  "[new]Delete File"},
-    {"getfilesettings",  CmdHF14ADesGetFileSettings,  IfPm3Iso14443a,  "[new]Get file settings"},
-    {"chfilesettings",   CmdHF14ADesChFileSettings,   IfPm3Iso14443a,  "[new]Change file settings"},
-    {"read",             CmdHF14ADesReadData,         IfPm3Iso14443a,  "[new]Read data from standard/backup/record/value/mac file"},
-    {"write",            CmdHF14ADesWriteData,        IfPm3Iso14443a,  "[new]Write data to standard/backup/record/value file"},
-    {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "[new]Operations with value file (get/credit/limited credit/debit/clear)"},
-    {"clearrecfile",     CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "[new]Clear record File"},
+    {"getfileids",       CmdHF14ADesGetFileIDs,       IfPm3Iso14443a,  "Get File IDs list"},
+    {"getfileisoids",    CmdHF14ADesGetFileISOIDs,    IfPm3Iso14443a,  "Get File ISO IDs list"},
+    {"lsfiles",          CmdHF14ADesLsFiles,          IfPm3Iso14443a,  "Show all files list"},
+    {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
+    {"createfile",       CmdHF14ADesCreateFile,       IfPm3Iso14443a,  "Create Standard/Backup File"},
+    {"createvaluefile",  CmdHF14ADesCreateValueFile,  IfPm3Iso14443a,  "Create Value File"},
+    {"createrecordfile", CmdHF14ADesCreateRecordFile, IfPm3Iso14443a,  "Create Linear/Cyclic Record File"},
+    {"createmacfile",    CmdHF14ADesCreateTrMACFile,  IfPm3Iso14443a,  "Create Transaction MAC File"},
+    {"deletefile",       CmdHF14ADesDeleteFile,       IfPm3Iso14443a,  "Delete File"},
+    {"getfilesettings",  CmdHF14ADesGetFileSettings,  IfPm3Iso14443a,  "Get file settings"},
+    {"chfilesettings",   CmdHF14ADesChFileSettings,   IfPm3Iso14443a,  "Change file settings"},
+    {"read",             CmdHF14ADesReadData,         IfPm3Iso14443a,  "Read data from standard/backup/record/value/mac file"},
+    {"write",            CmdHF14ADesWriteData,        IfPm3Iso14443a,  "Write data to standard/backup/record/value file"},
+    {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "Operations with value file (get/credit/limited credit/debit/clear)"},
+    {"clearrecfile",     CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("System") " -----------------------"},
     {"test",             CmdHF14ADesTest,             AlwaysAvailable, "Test crypto"},
     {NULL, NULL, NULL, NULL}

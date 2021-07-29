@@ -688,6 +688,29 @@ int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uin
     return DesfireSelectAID(ctx, data, (select_two) ? &data[3] : NULL);
 }
 
+int DesfireSelectAIDHexNoFieldOn(DesfireContext *ctx, uint32_t aid) {
+    uint8_t data[3] = {0};
+
+    DesfireAIDUintToByte(aid, data);
+
+    uint8_t resp[257] = {0};
+    size_t resplen = 0;
+    uint8_t respcode = 0;
+
+    int res = DesfireExchangeEx(false, ctx, MFDES_SELECT_APPLICATION, data, 3, &respcode, resp, &resplen, true, 0);
+    if (res == PM3_SUCCESS) {
+        if (resplen != 0)
+            return PM3_ECARDEXCHANGE;
+
+        // select operation fail
+        if (respcode != MFDES_S_OPERATION_OK)
+            return PM3_EAPDU_FAIL;
+
+        return PM3_SUCCESS;
+    }
+    return res;
+}
+
 int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose) {
     if (verbose)
         DesfirePrintContext(dctx);
