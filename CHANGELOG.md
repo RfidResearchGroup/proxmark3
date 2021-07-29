@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Added `hf iclass encode --wiegand/--fc/--cn` - direct fmt/fc/cn support (@bettse)
- - Fic `lf t55xx detect` - to unset lf config decimation if value is not one (@iceman1001)
+ - Fix `lf t55xx detect` - to unset lf config decimation if value is not one (@iceman1001)
  - Fix `hf 15 sample` - data collection works again (@iceman1001)
  - Changed `data plot -h` - removed line (@doegox)
  - Fix `lf_tharexde` - double define of global variable (@axisray)
