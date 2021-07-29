@@ -3918,19 +3918,10 @@ static int CmdHF14ADesGetFreeMem(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, 0x000000, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     uint32_t freemem = 0;
@@ -4250,19 +4241,10 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, 0x000000, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -4325,19 +4307,10 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, 0x000000, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -4408,19 +4381,10 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -4486,19 +4450,10 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -4573,19 +4528,10 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -4794,19 +4740,10 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
 
     uint8_t fileid = data[0];
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -4976,19 +4913,10 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     if (verbose)
@@ -5117,19 +5045,10 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     data[datalen] = lcredit;
     datalen++;
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     if (verbose)
@@ -5245,19 +5164,10 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     Uint3byteToMemLe(&data[datalen], maxrecord);
     datalen += 3;
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     if (verbose)
@@ -5373,19 +5283,10 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
     data[datalen] = keyver & 0xff;
     datalen++;
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     if (verbose)
@@ -5460,19 +5361,10 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     res = DesfireDeleteFile(&dctx, fnum);
@@ -5555,19 +5447,10 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     if (verbose)
@@ -5715,19 +5598,10 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     res = DesfireClearRecordFile(&dctx, fnum);
@@ -5976,19 +5850,10 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     res = DesfileReadFileAndPrint(&dctx, fnum, op, offset, length, noauth, verbose);
@@ -6093,19 +5958,10 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     // get file settings
@@ -6285,19 +6141,10 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (noauth) {
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
 
     FileListS FileList = {0};
