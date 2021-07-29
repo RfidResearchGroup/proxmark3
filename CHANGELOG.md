@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Add `--wiegand/--fc/--cn` to `hf iclass encode` (@bettse)
+ - Added `hf iclass encode --wiegand/--fc/--cn` - direct fmt/fc/cn support (@bettse)
  - Fic `lf t55xx detect` - to unset lf config decimation if value is not one (@iceman1001)
  - Fix `hf 15 sample` - data collection works again (@iceman1001)
  - Changed `data plot -h` - removed line (@doegox)
@@ -16,7 +16,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added a new client preference,  delay of execution,  a delay in ms before a cmd is sent. Good for implants (@iceman1001)
  - Fix `lf t55xx brute` - now correctly prints last key if it was correct (@scott4290)
  - Added support python scripts (@salmg)
- - Add new standalone mode `hf_reblay` -  relay 14a over bt (@salmg)
+ - Added new standalone mode `hf_reblay` -  relay 14a over bt (@salmg)
  - Added one new key from gun cloner found in wild (@scott4290)
  - Fix `hf_msdsal` standalone in simulation flow (@salmg)
  - Added a picture viewer in QT. To be used with `hf emrtd info` (@iceman1001)
