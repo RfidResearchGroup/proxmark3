@@ -661,12 +661,8 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
     PrintAndLogEx(INFO, "Biphase decoded using offset %d%s", offset, (invert) ? "( inverted )" : "");
     PrintAndLogEx(INFO, "%s", sprint_bin_break(bits, size, 32));
 
-    //remove first bit from raw demod
-    if (offset) {
-        setDemodBuff(DemodBuffer, DemodBufferLen - offset, offset);
-    }
-
-    setClockGrid(g_DemodClock, g_DemodStartIdx + g_DemodClock * offset / 2);
+    setDemodBuff(bits, size, 0);
+    setClockGrid(g_DemodClock * 2, g_DemodStartIdx + g_DemodClock * offset);
     return PM3_SUCCESS;
 }
 
