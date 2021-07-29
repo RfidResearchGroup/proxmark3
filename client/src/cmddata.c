@@ -598,8 +598,8 @@ static int Cmdmandecoderaw(const char *Cmd) {
             printEM410x(hi, id, false);
         }
     }
-
-    setClockGrid(g_DemodClock, g_DemodStartIdx + g_DemodClock / 2);
+    setDemodBuff(bits, size, 0);
+    setClockGrid(g_DemodClock * 2, g_DemodStartIdx);
     return PM3_SUCCESS;
 }
 
