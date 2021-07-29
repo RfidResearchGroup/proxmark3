@@ -1076,11 +1076,6 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
     memcpy(encRndB, recv_data, 16);
 
     // Part 3
-    //if (mbedtls_aes_setkey_dec(&ctx, dctx->key, 128) != 0) {
-    //    return 5;
-    //}
-    //mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, CRYPTO_AES_BLOCK_SIZE, IV, encRndB, RndB);
-    //aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) 
     if (aes_decode(IV, dctx->key, encRndB, RndB, CRYPTO_AES_BLOCK_SIZE))
         return 5;
     
@@ -1109,10 +1104,7 @@ PrintAndLogEx(INFO, "RndB: %s", sprint_hex(RndB, 16));
 PrintAndLogEx(INFO, "rotRndB: %s", sprint_hex(rotRndB, CRYPTO_AES_BLOCK_SIZE));
 PrintAndLogEx(INFO, "Both: %s", sprint_hex(tmp, CRYPTO_AES_BLOCK_SIZE * 2));
 
-    //if (mbedtls_aes_setkey_enc(&ctx, dctx->key, 128) != 0) {
-    //    return 6;
-    //}
-    //mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, CRYPTO_AES_BLOCK_SIZE * 2, IV, tmp, both);
+
     if (aes_encode(IV, dctx->key, tmp, both, CRYPTO_AES_BLOCK_SIZE * 2))
         return 6;
     if (g_debugMode > 1) {
@@ -1146,28 +1138,29 @@ PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, CRYPTO_AES_BLOCK_SIZE));
 
     uint8_t data[32] = {0};
 
-    if (aes_decode(IV, dctx->key, recv_data, data, CRYPTO_AES_BLOCK_SIZE))
+    if (aes_decode(IV, dctx->key, recv_data, data, CRYPTO_AES_BLOCK_SIZE * 2))
         return 10;
-    //if (mbedtls_aes_setkey_dec(&ctx, dctx->key, 128) != 0) {
-    //    return 10;
-    //}
-    //mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, CRYPTO_AES_BLOCK_SIZE, IV, recv_data, data);
+
 PrintAndLogEx(INFO, "data : %s", sprint_hex(data, CRYPTO_AES_BLOCK_SIZE * 2));
 
 
     rol(RndA, CRYPTO_AES_BLOCK_SIZE);
 PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, CRYPTO_AES_BLOCK_SIZE));
-PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, CRYPTO_AES_BLOCK_SIZE));
-    for (uint32_t x = 0; x < CRYPTO_AES_BLOCK_SIZE; x++) {
-        if (RndA[x] != encRndA[x]) {
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "Expected_RndA : %s", sprint_hex(RndA, CRYPTO_AES_BLOCK_SIZE));
-                PrintAndLogEx(DEBUG, "Generated_RndA : %s", sprint_hex(encRndA, CRYPTO_AES_BLOCK_SIZE));
-            }
-            return 11;
+PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(&data[4], CRYPTO_AES_BLOCK_SIZE));
+
+    if (memcmp(RndA, &data[4], CRYPTO_AES_BLOCK_SIZE) != 0) {
+        if (g_debugMode > 1) {
+            PrintAndLogEx(DEBUG, "Expected_RndA : %s", sprint_hex(RndA, CRYPTO_AES_BLOCK_SIZE));
+            PrintAndLogEx(DEBUG, "Generated_RndA : %s", sprint_hex(&data[4], CRYPTO_AES_BLOCK_SIZE));
         }
+        return 11;
     }
+
+    memcpy(dctx->TI, data, 4);
+    memset(dctx->IV, 0, DESFIRE_MAX_KEY_SIZE);
+    dctx->secureChannel = secureChannel;
     
+PrintAndLogEx(INFO, "done");
     return PM3_SUCCESS;
 }
 
