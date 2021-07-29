@@ -436,7 +436,7 @@ int CmdFlexdemod(const char *Cmd) {
 
 /*
 *  this function will save a copy of the current lf config value, and set config to default values.
-*  
+*
 */
 int lf_config_savereset(sample_config *config) {
 

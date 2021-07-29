@@ -525,17 +525,19 @@ Check column "offline" for their availability.
 |`hf mfdes getappnames   `|N       |`[new]Get Applications list`
 |`hf mfdes getfileids    `|N       |`[new]Get File IDs list`
 |`hf mfdes getfileisoids `|N       |`[new]Get File ISO IDs list`
-|`hf mfdes getfilesettings`|N       |`[new]Get file settings`
-|`hf mfdes chfilesettings`|N       |`[new]Change file settings`
-|`hf mfdes clearfile     `|N       |`Clear record File`
+|`hf mfdes lsfiles       `|N       |`[new]Show all files list`
+|`hf mfdes dump          `|N       |`Dump all files`
 |`hf mfdes createfile    `|N       |`[new]Create Standard/Backup File`
 |`hf mfdes createvaluefile`|N       |`[new]Create Value File`
-|`hf mfdes createrecordfile`|N       |`Create Linear/Cyclic Record File`
+|`hf mfdes createrecordfile`|N       |`[new]Create Linear/Cyclic Record File`
+|`hf mfdes createmacfile `|N       |`[new]Create Transaction MAC File`
 |`hf mfdes deletefile    `|N       |`[new]Delete File`
-|`hf mfdes dump          `|N       |`Dump all files`
+|`hf mfdes getfilesettings`|N       |`[new]Get file settings`
+|`hf mfdes chfilesettings`|N       |`[new]Change file settings`
+|`hf mfdes read          `|N       |`[new]Read data from standard/backup/record/value/mac file`
+|`hf mfdes write         `|N       |`[new]Write data to standard/backup/record/value file`
 |`hf mfdes value         `|N       |`[new]Operations with value file (get/credit/limited credit/debit/clear)`
-|`hf mfdes read          `|N       |`Read data from standard/backup/record file`
-|`hf mfdes write         `|N       |`Write data to standard/backup/record file`
+|`hf mfdes clearrecfile  `|N       |`[new]Clear record File`
 |`hf mfdes test          `|Y       |`Test crypto`
 
 

@@ -30,14 +30,14 @@ Default LF config is set to:
     */
 
 static sample_config def_config = {
-        .decimation = 1,
-        .bits_per_sample = 8,
-        .averaging = 1,
-        .divisor = LF_DIVISOR_125,
-        .trigger_threshold = 0,
-        .samples_to_skip = 0,
-        .verbose = false,
-    };
+    .decimation = 1,
+    .bits_per_sample = 8,
+    .averaging = 1,
+    .divisor = LF_DIVISOR_125,
+    .trigger_threshold = 0,
+    .samples_to_skip = 0,
+    .verbose = false,
+};
 
 static sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0, true} ;
 

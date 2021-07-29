@@ -3718,25 +3718,25 @@ static int CmdHFiClassEncode(const char *Cmd) {
     }
 
     if (bin_len) {
-      memcpy(credential + 8, data, sizeof(data));
+        memcpy(credential + 8, data, sizeof(data));
     } else {
-      wiegand_message_t packed;
-      memset(&packed, 0, sizeof(wiegand_message_t));
+        wiegand_message_t packed;
+        memset(&packed, 0, sizeof(wiegand_message_t));
 
-      int format_idx = HIDFindCardFormat((char *)format);
-      if (format_idx == -1) {
-          PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
-          return PM3_EINVARG;
-      }
+        int format_idx = HIDFindCardFormat((char *)format);
+        if (format_idx == -1) {
+            PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
+            return PM3_EINVARG;
+        }
 
-      if (HIDPack(format_idx, &card, &packed, false) == false) {
-          PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
-          return PM3_ESOFT;
-      }
-      add_HID_header(&packed);
+        if (HIDPack(format_idx, &card, &packed, false) == false) {
+            PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
+            return PM3_ESOFT;
+        }
+        add_HID_header(&packed);
 
-      packed.Bot = BSWAP_32(packed.Bot);
-      memcpy(credential + 12, &packed.Bot, sizeof(packed.Bot));
+        packed.Bot = BSWAP_32(packed.Bot);
+        memcpy(credential + 12, &packed.Bot, sizeof(packed.Bot));
     }
 
     // encrypt with transport key
