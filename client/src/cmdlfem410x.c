@@ -410,7 +410,7 @@ static int CmdEM410xSim(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0(NULL, "clk", "<dec>", "<32|64> clock (default 64)"),
-        arg_str1(NULL, "id", "<hex>", "ID number (5 hex bytes)"),
+        arg_str1(NULL, "id", "<hex>", "ID number (5 bytes, 10 hex digits)"),
         arg_u64_0(NULL, "gap", "<dec>", "gap (0's) between ID repeats (default 20)"),
         arg_param_end
     };
@@ -425,7 +425,7 @@ static int CmdEM410xSim(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (uid_len != 5) {
-        PrintAndLogEx(FAILED, "UID must include 5 hex bytes (%u)", uid_len);
+        PrintAndLogEx(FAILED, "UID must include 5 bytes, 10 hex digits (%u)", uid_len);
         return PM3_EINVARG;
     }
 
@@ -613,7 +613,7 @@ static int CmdEM410xClone(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0(NULL, "clk", "<dec>", "<16|32|40|64> clock (default 64)"),
-        arg_str1(NULL, "id", "<hex>", "ID number (5 hex bytes)"),
+        arg_str1(NULL, "id", "<hex>", "ID number (5 bytes, 10 hex digits)"),
         arg_lit0(NULL, "q5", "specify writing to Q5/T5555 tag"),
         arg_param_end
     };
