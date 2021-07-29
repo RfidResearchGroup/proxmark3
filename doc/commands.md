@@ -526,7 +526,7 @@ Check column "offline" for their availability.
 |`hf mfdes getfileids    `|N       |`[new]Get File IDs list`
 |`hf mfdes getfileisoids `|N       |`[new]Get File ISO IDs list`
 |`hf mfdes lsfiles       `|N       |`[new]Show all files list`
-|`hf mfdes dump          `|N       |`Dump all files`
+|`hf mfdes dump          `|N       |`[new]Dump all files`
 |`hf mfdes createfile    `|N       |`[new]Create Standard/Backup File`
 |`hf mfdes createvaluefile`|N       |`[new]Create Value File`
 |`hf mfdes createrecordfile`|N       |`[new]Create Linear/Cyclic Record File`

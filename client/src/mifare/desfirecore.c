@@ -391,19 +391,19 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext *ctx, uint8
     size_t len = 0;
     // tx chaining
     size_t sentdatalen = 0;
-    while(cdatalen >= sentdatalen) {
+    while (cdatalen >= sentdatalen) {
         if (cdatalen - sentdatalen > DESFIRE_TX_FRAME_MAX_LEN)
             len = DESFIRE_TX_FRAME_MAX_LEN;
         else
             len = cdatalen - sentdatalen;
-        
+
         size_t sendindx = sentdatalen;
         size_t sendlen = len;
         if (sentdatalen > 0) {
             sendindx--;
             sendlen++;
             cdata[sendindx] = MFDES_ADDITIONAL_FRAME;
-        }        
+        }
 
         res = DESFIRESendRaw(activate_field, &cdata[sendindx], sendlen, buf, sizeof(buf), &buflen, &rcode);
         if (res != PM3_SUCCESS) {
@@ -411,7 +411,7 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext *ctx, uint8
             PrintAndLogEx(DEBUG, "error DESFIRESendRaw %s", DesfireGetErrorString(res, &ssw));
             return res;
         }
-        
+
         sentdatalen += len;
         if (rcode != MFDES_ADDITIONAL_FRAME || buflen > 0) {
             if (sentdatalen != cdatalen)
@@ -498,22 +498,22 @@ static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t 
     int res = 0;
     // tx chaining
     size_t sentdatalen = 0;
-    while(datalen >= sentdatalen) {
+    while (datalen >= sentdatalen) {
         if (datalen - sentdatalen > DESFIRE_TX_FRAME_MAX_LEN)
             apdu.Lc = DESFIRE_TX_FRAME_MAX_LEN;
         else
             apdu.Lc = datalen - sentdatalen;
         apdu.data = &data[sentdatalen];
-        
+
         if (sentdatalen > 0)
-            apdu.INS = MFDES_ADDITIONAL_FRAME;     
+            apdu.INS = MFDES_ADDITIONAL_FRAME;
 
         res = DESFIRESendApdu(activate_field, apdu, buf, sizeof(buf), &buflen, &sw);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(DEBUG, "error DESFIRESendApdu %s", DesfireGetErrorString(res, &sw));
             return res;
         }
-        
+
         sentdatalen += apdu.Lc;
         if (sw != DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME) || buflen > 0) {
             if (sentdatalen != datalen)
@@ -1134,7 +1134,7 @@ int DesfireGetFileSettingsStruct(DesfireContext *dctx, uint8_t fileid, FileSetti
 int DesfireFillFileList(DesfireContext *dctx, FileListS FileList, size_t *filescount, bool *isopresent) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t buflen = 0;
-    
+
     *filescount = 0;
     *isopresent = false;
     memset(FileList, 0, sizeof(FileListS));
@@ -1144,10 +1144,10 @@ int DesfireFillFileList(DesfireContext *dctx, FileListS FileList, size_t *filesc
         PrintAndLogEx(ERR, "Desfire GetFileIDList command " _RED_("error") ". Result: %d", res);
         return PM3_ESOFT;
     }
-    
+
     if (buflen == 0)
         return PM3_SUCCESS;
-    
+
     for (int i = 0; i < buflen; i++) {
         FileList[i].fileNum = buf[i];
         DesfireGetFileSettingsStruct(dctx, FileList[i].fileNum, &FileList[i].fileSettings);
@@ -1159,7 +1159,7 @@ int DesfireFillFileList(DesfireContext *dctx, FileListS FileList, size_t *filesc
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire GetFileISOIDList command " _RED_("error") ". Result: %d", res);
     }
-    
+
     size_t isoindx = 0;
     if (buflen > 0) {
         for (int i = 0; i < *filescount; i++) {
@@ -1175,9 +1175,9 @@ int DesfireFillFileList(DesfireContext *dctx, FileListS FileList, size_t *filesc
     } else {
         PrintAndLogEx(WARNING, "ISO ID list returned no data");
     }
-    
+
     *isopresent = (isoindx > 0);
-    
+
     return res;
 }
 
@@ -1216,7 +1216,7 @@ int DesfireReadFile(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint32_
     data[0] = fnum;
     Uint3byteToMemLe(&data[1], offset);
     Uint3byteToMemLe(&data[4], len);
-   
+
     return DesfireCommand(dctx, MFDES_READ_DATA, data, 7, resp, resplen, -1);
 }
 
@@ -1226,7 +1226,7 @@ int DesfireWriteFile(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint32
     Uint3byteToMemLe(&xdata[1], offset);
     Uint3byteToMemLe(&xdata[4], len);
     memcpy(&xdata[7], data, len);
-   
+
     return DesfireCommandTxData(dctx, MFDES_WRITE_DATA, xdata, 7 + len);
 }
 
@@ -1252,7 +1252,7 @@ int DesfireReadRecords(DesfireContext *dctx, uint8_t fnum, uint32_t recnum, uint
     data[0] = fnum;
     Uint3byteToMemLe(&data[1], recnum);
     Uint3byteToMemLe(&data[4], reccount);
-   
+
     return DesfireCommand(dctx, MFDES_READ_RECORDS, data, 7, resp, resplen, -1);
 }
 
@@ -1262,7 +1262,7 @@ int DesfireWriteRecord(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint
     Uint3byteToMemLe(&xdata[1], offset);
     Uint3byteToMemLe(&xdata[4], len);
     memcpy(&xdata[7], data, len);
-   
+
     return DesfireCommandTxData(dctx, MFDES_WRITE_RECORD, xdata, 7 + len);
 }
 
@@ -1273,7 +1273,7 @@ int DesfireUpdateRecord(DesfireContext *dctx, uint8_t fnum, uint32_t recnum, uin
     Uint3byteToMemLe(&xdata[4], offset);
     Uint3byteToMemLe(&xdata[7], len);
     memcpy(&xdata[10], data, len);
-   
+
     return DesfireCommandTxData(dctx, MFDES_UPDATE_RECORD, xdata, 10 + len);
 }
 
@@ -1473,12 +1473,12 @@ void DesfirePrintAccessRight(uint8_t *data) {
 void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsettings) {
     if (fsettings == NULL)
         return;
-    
+
     memset(fsettings, 0, sizeof(FileSettingsS));
-    
+
     if (datalen < 4)
         return;
-    
+
     fsettings->fileType = data[0];
     fsettings->fileOption = data[1];
     fsettings->fileCommMode = data[1] & 0x03;
@@ -1523,7 +1523,7 @@ void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsett
 
     if (fsettings->additionalAccessRightsEn && reclen > 0 && datalen > reclen && datalen == reclen + data[reclen] * 2) {
         fsettings->additionalAccessRightsLength = data[reclen];
-        
+
         for (int i = 0; i < fsettings->additionalAccessRightsLength; i++) {
             fsettings->additionalAccessRights[i] = MemLeToUint2byte(&data[reclen + 1 + i * 2]);
         }
@@ -1531,24 +1531,24 @@ void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsett
 }
 
 void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
-    PrintAndLogEx(NORMAL, "(%-5s) " NOLF, GetDesfireCommunicationMode(fsettings->fileCommMode));    
+    PrintAndLogEx(NORMAL, "(%-5s) " NOLF, GetDesfireCommunicationMode(fsettings->fileCommMode));
     PrintAndLogEx(NORMAL, "[0x%02x] " _CYAN_("%-13s ") NOLF, fsettings->fileType, GetDesfireFileType(fsettings->fileType));
 
     switch (fsettings->fileType) {
         case 0x00:
         case 0x01: {
-            PrintAndLogEx(NORMAL, "size: %d [0x%x] " NOLF, fsettings->fileSize, fsettings->fileSize);    
+            PrintAndLogEx(NORMAL, "size: %d [0x%x] " NOLF, fsettings->fileSize, fsettings->fileSize);
             break;
         }
         case 0x02: {
-            PrintAndLogEx(NORMAL, "[%d .. %d] lim cred: 0x%02x (%d [0x%x]) " NOLF, 
-                    fsettings->lowerLimit, fsettings->upperLimit, fsettings->limitedCredit, fsettings->value, fsettings->value);    
+            PrintAndLogEx(NORMAL, "[%d .. %d] lim cred: 0x%02x (%d [0x%x]) " NOLF,
+                          fsettings->lowerLimit, fsettings->upperLimit, fsettings->limitedCredit, fsettings->value, fsettings->value);
             break;
         }
         case 0x03:
         case 0x04: {
             PrintAndLogEx(NORMAL, "%d/%d record size: %d [0x%x]b " NOLF,
-                    fsettings->curRecordCount, fsettings->maxRecordCount, fsettings->recordSize, fsettings->recordSize);
+                          fsettings->curRecordCount, fsettings->maxRecordCount, fsettings->recordSize, fsettings->recordSize);
             break;
         }
         case 0x05: {
@@ -1559,22 +1559,22 @@ void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
             break;
         }
     }
-    
-    PrintAndLogEx(NORMAL, "(%s %s %s %s)", 
-        GetDesfireAccessRightStr(fsettings->rAccess), 
-        GetDesfireAccessRightStr(fsettings->wAccess),
-        GetDesfireAccessRightStr(fsettings->rwAccess),
-        GetDesfireAccessRightStr(fsettings->chAccess));
+
+    PrintAndLogEx(NORMAL, "(%s %s %s %s)",
+                  GetDesfireAccessRightStr(fsettings->rAccess),
+                  GetDesfireAccessRightStr(fsettings->wAccess),
+                  GetDesfireAccessRightStr(fsettings->rwAccess),
+                  GetDesfireAccessRightStr(fsettings->chAccess));
 }
 
 void DesfirePrintFileSettingsExtended(FileSettingsS *fsettings) {
     PrintAndLogEx(SUCCESS, "File type       : " _CYAN_("%s") "  [0x%02x]", GetDesfireFileType(fsettings->fileType), fsettings->fileType);
-    PrintAndLogEx(SUCCESS, "Comm mode       : %s", GetDesfireCommunicationMode(fsettings->fileCommMode));    
+    PrintAndLogEx(SUCCESS, "Comm mode       : %s", GetDesfireCommunicationMode(fsettings->fileCommMode));
 
     switch (fsettings->fileType) {
         case 0x00:
         case 0x01: {
-            PrintAndLogEx(SUCCESS, "File size       : %d [0x%x] bytes", fsettings->fileSize, fsettings->fileSize);    
+            PrintAndLogEx(SUCCESS, "File size       : %d [0x%x] bytes", fsettings->fileSize, fsettings->fileSize);
             break;
         }
         case 0x02: {
@@ -1601,13 +1601,13 @@ void DesfirePrintFileSettingsExtended(FileSettingsS *fsettings) {
             break;
         }
     }
-    
-    PrintAndLogEx(SUCCESS, "Access rights   : %04x  (r: %s w: %s rw: %s change: %s)", 
-            fsettings->rawAccessRights,
-            GetDesfireAccessRightStr(fsettings->rAccess), 
-            GetDesfireAccessRightStr(fsettings->wAccess),
-            GetDesfireAccessRightStr(fsettings->rwAccess),
-            GetDesfireAccessRightStr(fsettings->chAccess));
+
+    PrintAndLogEx(SUCCESS, "Access rights   : %04x  (r: %s w: %s rw: %s change: %s)",
+                  fsettings->rawAccessRights,
+                  GetDesfireAccessRightStr(fsettings->rAccess),
+                  GetDesfireAccessRightStr(fsettings->wAccess),
+                  GetDesfireAccessRightStr(fsettings->rwAccess),
+                  GetDesfireAccessRightStr(fsettings->chAccess));
 }
 
 

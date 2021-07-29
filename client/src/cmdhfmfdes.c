@@ -4758,7 +4758,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
         CLIParserFree(ctx);
         return res;
     }
-    
+
     uint8_t data[250] = {0};
     uint8_t *settings = &data[1];
     size_t datalen = 0;
@@ -4768,7 +4768,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
         CLIParserFree(ctx);
         return res;
     }
-    
+
     uint8_t sdata[250] = {0};
     int sdatalen = sizeof(sdata);
     CLIGetHexWithReturn(ctx, 13, sdata, &sdatalen);
@@ -4776,7 +4776,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    
+
     if (sdatalen > 18) {
         PrintAndLogEx(ERR, "File settings length must be less than 18 instead of %d.", sdatalen);
         CLIParserFree(ctx);
@@ -4791,7 +4791,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
-    
+
     uint8_t fileid = data[0];
 
     if (noauth) {
@@ -5752,14 +5752,14 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
     // get file settings
     if (filetype == RFTAuto) {
         FileSettingsS fsettings;
-        
+
         DesfireCommunicationMode commMode = dctx->commMode;
         DesfireSetCommMode(dctx, DCMPlain);
         res = DesfireGetFileSettingsStruct(dctx, fnum, &fsettings);
-        DesfireSetCommMode(dctx, commMode);        
-        
+        DesfireSetCommMode(dctx, commMode);
+
         if (res == PM3_SUCCESS) {
-            switch(fsettings.fileType) {
+            switch (fsettings.fileType) {
                 case 0x00:
                 case 0x01: {
                     filetype = RFTData;
@@ -5785,15 +5785,15 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
             }
 
             DesfireSetCommMode(dctx, fsettings.commMode);
-            
+
             if (fsettings.fileCommMode != 0 && noauth)
                 PrintAndLogEx(WARNING, "File needs communication mode `%s` but there is no authentication", CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
 
             if (verbose)
-                PrintAndLogEx(INFO, "Got file type: %s. Option: %s. comm mode: %s", 
-                    GetDesfireFileType(fsettings.fileType), 
-                    CLIGetOptionListStr(DesfireReadFileTypeOpts, filetype), 
-                    CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
+                PrintAndLogEx(INFO, "Got file type: %s. Option: %s. comm mode: %s",
+                              GetDesfireFileType(fsettings.fileType),
+                              CLIGetOptionListStr(DesfireReadFileTypeOpts, filetype),
+                              CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
         } else {
             PrintAndLogEx(WARNING, "GetFileSettings error. Can't get file type.");
         }
@@ -5803,7 +5803,7 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
 
     uint8_t resp[2048] = {0};
     size_t resplen = 0;
-    
+
     if (filetype == RFTData) {
         res = DesfireReadFile(dctx, fnum, offset, length, resp, &resplen);
         if (res != PM3_SUCCESS) {
@@ -5842,7 +5842,7 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
             }
             reclen = resplen;
         }
-        
+
         if (verbose)
             PrintAndLogEx(INFO, "Record length %zu", reclen);
 
@@ -5892,7 +5892,7 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
             PrintAndLogEx(SUCCESS, "Read operation returned no data from file %d", fnum);
         }
     }
-    
+
     return PM3_SUCCESS;
 }
 
@@ -5990,9 +5990,9 @@ static int CmdHF14ADesReadData(const char *Cmd) {
             return res;
         }
     }
-    
+
     res = DesfileReadFileAndPrint(&dctx, fnum, op, offset, length, noauth, verbose);
-    
+
     DropField();
     return res;
 }
@@ -6111,14 +6111,14 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     // get file settings
     if (op == RFTAuto) {
         FileSettingsS fsettings;
-        
+
         DesfireCommunicationMode commMode = dctx.commMode;
         DesfireSetCommMode(&dctx, DCMPlain);
         res = DesfireGetFileSettingsStruct(&dctx, fnum, &fsettings);
-        DesfireSetCommMode(&dctx, commMode);        
-        
+        DesfireSetCommMode(&dctx, commMode);
+
         if (res == PM3_SUCCESS) {
-            switch(fsettings.fileType) {
+            switch (fsettings.fileType) {
                 case 0x00:
                 case 0x01: {
                     op = RFTData;
@@ -6149,15 +6149,15 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
             }
 
             DesfireSetCommMode(&dctx, fsettings.commMode);
-            
+
             if (fsettings.fileCommMode != 0 && noauth)
                 PrintAndLogEx(WARNING, "File needs communication mode `%s` but there is no authentication", CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
 
             if (verbose)
-                PrintAndLogEx(INFO, "Got file type: %s. Option: %s. comm mode: %s", 
-                    GetDesfireFileType(fsettings.fileType), 
-                    CLIGetOptionListStr(DesfireReadFileTypeOpts, op), 
-                    CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
+                PrintAndLogEx(INFO, "Got file type: %s. Option: %s. comm mode: %s",
+                              GetDesfireFileType(fsettings.fileType),
+                              CLIGetOptionListStr(DesfireReadFileTypeOpts, op),
+                              CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
         } else {
             PrintAndLogEx(WARNING, "GetFileSettings error. Can't get file type.");
         }
@@ -6238,9 +6238,9 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         if (verbose)
             PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
     }
-    
+
     PrintAndLogEx(INFO, "Write %s file %02x " _GREEN_("success"), CLIGetOptionListStr(DesfireReadFileTypeOpts, op), fnum);
-    
+
     DropField();
     return PM3_SUCCESS;
 }
@@ -6298,8 +6298,8 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
             DropField();
             return res;
         }
-    }    
-    
+    }
+
     FileListS FileList = {0};
     size_t filescount = 0;
     bool isopresent = false;
@@ -6314,7 +6314,7 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
         DropField();
         return res;
     }
-    
+
     PrintAndLogEx(INFO, "---------------------------- " _CYAN_("File list") " -----------------------(r w rw ch)-----");
     for (int i = 0; i < filescount; i++) {
         PrintAndLogEx(SUCCESS, "ID: " _GREEN_("%02x ") NOLF, FileList[i].fileNum);
@@ -6324,7 +6324,7 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
             else
                 PrintAndLogEx(NORMAL, "ISO ID: " _YELLOW_("n/a  ") NOLF);
         }
-        
+
         DesfirePrintFileSettingsOneLine(&FileList[i].fileSettings);
     }
 
@@ -6371,7 +6371,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
-    
+
     res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
@@ -6417,7 +6417,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
                 return res;
             }
         }
-                
+
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--------------------------------- " _CYAN_("File %02x") " ----------------------------------", FileList[i].fileNum);
         PrintAndLogEx(SUCCESS, "File ID         : " _GREEN_("%02x"), FileList[i].fileNum);
@@ -6428,14 +6428,14 @@ static int CmdHF14ADesDump(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "File ISO ID     : " _YELLOW_("n/a"));
         }
         DesfirePrintFileSettingsExtended(&FileList[i].fileSettings);
-        
+
         res = DesfileReadFileAndPrint(&dctx, FileList[i].fileNum, RFTAuto, 0, 0, noauth, verbose);
     }
 
     DropField();
     return PM3_SUCCESS;
 }
-    
+
 static int CmdHF14ADesTest(const char *Cmd) {
     DesfireTest(true);
     return PM3_SUCCESS;
