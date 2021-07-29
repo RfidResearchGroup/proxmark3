@@ -415,7 +415,7 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext *ctx, uint8
         sentdatalen += len;
         if (rcode != MFDES_ADDITIONAL_FRAME || buflen > 0) {
             if (sentdatalen != cdatalen)
-                PrintAndLogEx(WARNING, "Tx chaining error. Needs to send: %d but sent: %d", cdatalen, sentdatalen);
+                PrintAndLogEx(WARNING, "Tx chaining error. Needs to send: %d but sent: %zu", cdatalen, sentdatalen);
             break;
         }
     }
@@ -517,7 +517,7 @@ static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t 
         sentdatalen += apdu.Lc;
         if (sw != DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME) || buflen > 0) {
             if (sentdatalen != datalen)
-                PrintAndLogEx(WARNING, "Tx chaining error. Needs to send: %d but sent: %d", datalen, sentdatalen);
+                PrintAndLogEx(WARNING, "Tx chaining error. Needs to send: %zu but sent: %zu", datalen, sentdatalen);
             break;
         }
     }
@@ -1171,7 +1171,7 @@ int DesfireFillFileList(DesfireContext *dctx, FileListS FileList, size_t *filesc
         if (isoindx > 0)
             isoindx--;
         if (isoindx * 2 != buflen)
-            PrintAndLogEx(WARNING, "Wrong ISO ID list length. must be %d but %d", buflen, isoindx * 2);
+            PrintAndLogEx(WARNING, "Wrong ISO ID list length. must be %zu but %zu", buflen, isoindx * 2);
     } else {
         PrintAndLogEx(WARNING, "ISO ID list returned no data");
     }
