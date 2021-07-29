@@ -6650,8 +6650,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes dump",
                   "For each application show fil list and then file content. Key needs to be provided for authentication or flag --no-auth set (depend on cards settings).",
-                  "hf mfdes dump --aid 123456 -> show file dump for: app=123456 with channel defaults from `default` command\n"
-                  "hf mfdes dump -> show file dump for all applications with channel defaults from `default` command");
+                  "hf mfdes dump --aid 123456 -> show file dump for: app=123456 with channel defaults from `default` command");
 
     void *argtable[] = {
         arg_param_begin,
@@ -6687,10 +6686,6 @@ static int CmdHF14ADesDump(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
     
-    if (appid == 0x000000) {
-        //here must be application enumeration
-    }
-
     res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
@@ -6712,6 +6707,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
         return res;
     }
 
+    PrintAndLogEx(INFO, "Application " _CYAN_("%06x") " have " _GREEN_("%zu") " files", appid, filescount);
 
     res = PM3_SUCCESS;
     for (int i = 0; i < filescount; i++) {
@@ -6726,6 +6722,13 @@ static int CmdHF14ADesDump(const char *Cmd) {
                 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--------------------------------- " _CYAN_("File %02x") " ----------------------------------", FileList[i].fileNum);
+        PrintAndLogEx(SUCCESS, "File ID    : " _GREEN_("%02x"), FileList[i].fileNum);
+        if (isopresent) {
+            if (FileList[i].fileISONum != 0)
+                PrintAndLogEx(SUCCESS, "File ISO ID: %04x", FileList[i].fileISONum);
+            else
+                PrintAndLogEx(SUCCESS, "File ISO ID: " _YELLOW_("n/a"));
+        }
         DesfirePrintFileSettingsOneLine(&FileList[i].fileSettings);
         
         res = DesfileReadFileAndPrint(&dctx, FileList[i].fileNum, RFTAuto, 0, 0, noauth, verbose);
@@ -6733,183 +6736,6 @@ static int CmdHF14ADesDump(const char *Cmd) {
 
     DropField();
     return PM3_SUCCESS;
-
-
-
-
-/*
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes dump",
-                  "Tries to dump all files on a DESFire tag",
-                  "hf mfdes dump");
-
-    void *argtable[] = {
-        arg_param_begin,
-//        arg_strx0("a",  "aid",      "<aid>", "Use specific AID (3 hex bytes, big endian)"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
-    (void)Cmd; // Cmd is not used so far
-    DropFieldDesfire();
-
-    uint8_t aid[3] = {0};
-    uint8_t app_ids[78] = {0};
-    uint32_t app_ids_len = 0;
-
-    uint8_t file_ids[33] = {0};
-    uint32_t file_ids_len = 0;
-
-    dfname_t dfnames[255];
-    uint8_t dfname_count = 0;
-
-    if (handler_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Can't get list of applications on tag");
-        DropFieldDesfire();
-        return PM3_ESOFT;
-    }
-
-    if (handler_desfire_dfnames(dfnames, &dfname_count) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("Can't get DF Names"));
-    }
-
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-- " _CYAN_("MIFARE DESFire Dump") " ----------------------");
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
-
-    for (uint32_t i = 0; i < app_ids_len; i += 3) {
-
-        aid[0] = app_ids[i];
-        aid[1] = app_ids[i + 1];
-        aid[2] = app_ids[i + 2];
-
-        PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X%02X%02X"), aid[2], aid[1], aid[0]);
-        if ((aid[2] >> 4) == 0xF) {
-            uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
-            PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
-            PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, cluster_to_text(short_aid >> 8));
-            MADDFDecodeAndPrint(short_aid);
-        } else {
-            AIDDFDecodeAndPrint(aid);
-        }
-        for (uint8_t m = 0; m < dfname_count; m++) {
-            if (dfnames[m].aid[0] == aid[0] && dfnames[m].aid[1] == aid[1] && dfnames[m].aid[2] == aid[2]) {
-                PrintAndLogEx(SUCCESS, "  -  DF " _YELLOW_("%02X%02X") " Name : " _YELLOW_("%s"), dfnames[m].fid[1], dfnames[m].fid[0], dfnames[m].name);
-            }
-        }
-
-        uint8_t num_keys = 0;
-        uint8_t key_setting = 0;
-        int res = handler_desfire_getkeysettings(&key_setting, &num_keys);
-        if (res != PM3_SUCCESS) continue;
-
-        res = handler_desfire_select_application(aid);
-        if (res != PM3_SUCCESS) continue;
-
-        res = handler_desfire_fileids(file_ids, &file_ids_len);
-        if (res != PM3_SUCCESS) continue;
-
-        for (int j = (int)file_ids_len - 1; j >= 0; j--) {
-            PrintAndLogEx(SUCCESS, "\n\n   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
-
-            uint8_t filesettings[20] = {0};
-            uint32_t fileset_len = 0;
-
-            res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
-            if (res != PM3_SUCCESS) continue;
-
-            int maclen = 0; // To be implemented
-
-            if (fileset_len == 1 + 1 + 2 + 3 + maclen) {
-                int filesize = (filesettings[6] << 16) + (filesettings[5] << 8) + filesettings[4];
-                mfdes_data_t fdata;
-                fdata.fileno = file_ids[j];
-                memset(fdata.offset, 0, 3);
-                memset(fdata.length, 0, 3);
-
-                uint8_t *data = (uint8_t *)calloc(filesize, sizeof(uint8_t));
-                if (data == NULL) {
-                    DropFieldDesfire();
-                    return PM3_EMALLOC;
-                }
-
-                fdata.data = data;
-                res = handler_desfire_readdata(&fdata, MFDES_DATA_FILE, filesettings[1]);
-                if (res == PM3_SUCCESS) {
-                    PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
-                    PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
-                    uint32_t len = le24toh(fdata.length);
-                    for (uint32_t n = 0; n < len; n += 16) {
-                        PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&fdata.data[n], len > 16 ? 16 : len), sprint_ascii(&fdata.data[n], len > 16 ? 16 : len));
-                    }
-                } else {
-                    PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
-                    res = handler_desfire_select_application(aid);
-                    if (res != PM3_SUCCESS) continue;
-                }
-
-                free(data);
-
-            } else if (fileset_len == 1 + 1 + 2 + 4 + 4 + 4 + 1 + maclen) {
-                PrintAndLogEx(NORMAL, "\n\nValue file: 0x%0x", file_ids[j]);
-                mfdes_value_t value;
-                value.fileno = file_ids[j];
-                uint32_t len = 0;
-                res = handler_desfire_getvalue(&value, &len, filesettings[1]);
-                if (res == PM3_SUCCESS) {
-                    PrintAndLogEx(NORMAL, "\nOffset  | Value                                            | Ascii");
-                    PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
-                    for (uint32_t n = 0; n < len; n += 16) {
-                        PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&value.value[n], len > 16 ? 16 : len), sprint_ascii(&value.value[n], len > 16 ? 16 : len));
-                    }
-                } else {
-                    PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
-                    res = handler_desfire_select_application(aid);
-                    if (res != PM3_SUCCESS) continue;
-                }
-
-            } else if (fileset_len == 1 + 1 + 2 + 3 + 3 + 3 + maclen) {
-                uint32_t maxrecords = (filesettings[9] << 16) + (filesettings[8] << 8) + filesettings[7];
-                uint32_t filesize = (filesettings[6] << 16) + (filesettings[5] << 8) + filesettings[4];
-                mfdes_data_t fdata;
-                fdata.fileno = file_ids[j];
-                memset(fdata.length, 0, 3);
-                uint8_t *data = (uint8_t *)calloc(filesize, sizeof(uint8_t));
-                if (data == NULL) {
-                    DropFieldDesfire();
-                    return PM3_EMALLOC;
-                }
-
-                fdata.data = data;
-                for (uint32_t offset = 0; offset < maxrecords; offset++) {
-                    PrintAndLogEx(NORMAL, "\n\nRecord offset: %024x", offset);
-                    memset(data, 0, filesize);
-                    fdata.offset[0] = offset & 0xFF;
-                    fdata.offset[1] = (offset >> 8) & 0xFF;
-                    fdata.offset[2] = (offset >> 16) & 0xFF;
-                    res = handler_desfire_readdata(&fdata, MFDES_RECORD_FILE, filesettings[1]);
-                    if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
-                        PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
-                        uint32_t len = le24toh(fdata.length);
-                        for (uint32_t n = 0; n < len; n += 16) {
-                            PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&fdata.data[n], len > 16 ? 16 : len), sprint_ascii(&fdata.data[n], len > 16 ? 16 : len));
-                        }
-                    } else {
-                        res = handler_desfire_select_application(aid);
-                        if (res != PM3_SUCCESS) continue;
-                    }
-                }
-                free(data);
-            }
-        }
-    }
-
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    DropFieldDesfire();
-    return PM3_SUCCESS;
-    */
 }
     
 static int CmdHF14ADesTest(const char *Cmd) {
