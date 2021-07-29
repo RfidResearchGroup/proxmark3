@@ -424,7 +424,12 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, b
 
     int start_idx = 0;
     int errCnt = askdemod_ext(bits, &bitlen, &clk, &invert, maxErr, askamp, askType, &start_idx);
-
+    if (start_idx >- clk / 2) {
+        start_idx -= clk / 2;
+    }
+    if ( askType == 0 ) { // if not Manchester, clock width is halved
+        clk /= 2;
+    }
     if (errCnt < 0 || bitlen < 16) { //if fatal error (or -1)
         PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, %s bitlen:%zu, clock:%d"
                       , errCnt
