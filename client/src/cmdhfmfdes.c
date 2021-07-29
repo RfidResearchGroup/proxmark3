@@ -1821,41 +1821,6 @@ static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, 
     return error;
 }
 
-static int CmdHF14ADesSelectApp(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes selectaid",
-                  "Select Application ID",
-                  "hf mfdes selectaid -a 123456"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_strx0("a", "aid", "<hex>", "App ID to select as hex bytes (3 bytes, big endian)"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int aidlength = 3;
-    uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
-    CLIParserFree(ctx);
-
-    swap24(aid);
-
-    if (aidlength != 3) {
-        PrintAndLogEx(ERR, "AID must have 3 bytes length");
-        return PM3_EINVARG;
-    }
-
-    int res = handler_desfire_select_application(aid);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Error on selecting aid.");
-        DropFieldDesfire();
-    } else {
-        PrintAndLogEx(SUCCESS, "Successfully selected aid.");
-    }
-    return res;
-}
-
 static int CmdHF14ADesInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes info",
@@ -3279,6 +3244,57 @@ static int CmdHF14ADesDefault(const char *Cmd) {
     PrintAndLogEx(INFO, "Comm mode   : %s", CLIGetOptionListStr(DesfireCommunicationModeOpts, defaultCommMode));
 
     return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesSelectApp(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes selectapp",
+                  "Select application on the card. It selects app if it is a valid one or returns an error.",
+                  "hf mfdes selectapp --aid 123456 -> select application 123456");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID of application for some parameters (3 hex bytes, big endian)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, true, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "Select application 0x%06x " _RED_("failed") " ", appid);
+        return res;
+    }
+    
+    PrintAndLogEx(SUCCESS, "Application 0x%06x selected " _GREEN_("succesfully") " ", appid);
+
+    DropField();
+    return res;
 }
 
 static int CmdHF14ADesSetConfiguration(const char *Cmd) {
@@ -6318,7 +6334,7 @@ static command_t CommandTable[] = {
     {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
     {"createapp",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "[new]Create Application"},
     {"deleteapp",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "[new]Delete Application"},
-    {"selectaid",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
+    {"selectapp",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "[new]Select Application ID"},
     {"getaids",          CmdHF14ADesGetAIDs,          IfPm3Iso14443a,  "[new]Get Application IDs list"},
     {"getappnames",      CmdHF14ADesGetAppNames,      IfPm3Iso14443a,  "[new]Get Applications list"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("Files") " -----------------------"},
