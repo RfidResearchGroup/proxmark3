@@ -136,6 +136,7 @@ int DesfireGetFileISOIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen
 
 void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsettings);
 void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings);
+void DesfirePrintFileSettingsExtended(FileSettingsS *fsettings);
 int DesfireGetFileSettings(DesfireContext *dctx, uint8_t fileid, uint8_t *resp, size_t *resplen);
 int DesfireGetFileSettingsStruct(DesfireContext *dctx, uint8_t fileid, FileSettingsS *fsettings);
 int DesfireChangeFileSettings(DesfireContext *dctx, uint8_t *data, size_t datalen);

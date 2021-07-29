@@ -6707,6 +6707,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
         return res;
     }
 
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Application " _CYAN_("%06x") " have " _GREEN_("%zu") " files", appid, filescount);
 
     res = PM3_SUCCESS;
@@ -6722,14 +6723,14 @@ static int CmdHF14ADesDump(const char *Cmd) {
                 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--------------------------------- " _CYAN_("File %02x") " ----------------------------------", FileList[i].fileNum);
-        PrintAndLogEx(SUCCESS, "File ID    : " _GREEN_("%02x"), FileList[i].fileNum);
+        PrintAndLogEx(SUCCESS, "File ID         : " _GREEN_("%02x"), FileList[i].fileNum);
         if (isopresent) {
             if (FileList[i].fileISONum != 0)
-                PrintAndLogEx(SUCCESS, "File ISO ID: %04x", FileList[i].fileISONum);
+                PrintAndLogEx(SUCCESS, "File ISO ID     : %04x", FileList[i].fileISONum);
             else
-                PrintAndLogEx(SUCCESS, "File ISO ID: " _YELLOW_("n/a"));
+                PrintAndLogEx(SUCCESS, "File ISO ID     : " _YELLOW_("n/a"));
         }
-        DesfirePrintFileSettingsOneLine(&FileList[i].fileSettings);
+        DesfirePrintFileSettingsExtended(&FileList[i].fileSettings);
         
         res = DesfileReadFileAndPrint(&dctx, FileList[i].fileNum, RFTAuto, 0, 0, noauth, verbose);
     }

@@ -1567,6 +1567,50 @@ void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
         GetDesfireAccessRightStr(fsettings->chAccess));
 }
 
+void DesfirePrintFileSettingsExtended(FileSettingsS *fsettings) {
+    PrintAndLogEx(SUCCESS, "File type       : " _CYAN_("%s") "  [0x%02x]", GetDesfireFileType(fsettings->fileType), fsettings->fileType);
+    PrintAndLogEx(SUCCESS, "Comm mode       : %s", GetDesfireCommunicationMode(fsettings->fileCommMode));    
+
+    switch (fsettings->fileType) {
+        case 0x00:
+        case 0x01: {
+            PrintAndLogEx(SUCCESS, "File size       : %d [0x%x] bytes", fsettings->fileSize, fsettings->fileSize);    
+            break;
+        }
+        case 0x02: {
+            PrintAndLogEx(SUCCESS, "Lower limit     : %d [0x%x]", fsettings->lowerLimit, fsettings->lowerLimit);
+            PrintAndLogEx(SUCCESS, "Upper limit     : %d [0x%x]", fsettings->upperLimit, fsettings->upperLimit);
+            bool limited_credit_enabled = ((fsettings->limitedCredit & 0x01) != 0);
+            PrintAndLogEx(SUCCESS, "Limited credit  : [%d - %s] %d (0x%08X)", fsettings->limitedCredit, (limited_credit_enabled) ? "enabled" : "disabled", fsettings->value, fsettings->value);
+            PrintAndLogEx(SUCCESS, "GetValue access : %s", ((fsettings->limitedCredit & 0x02) != 0) ? "Free" : "Not Free");
+            break;
+        }
+        case 0x03:
+        case 0x04: {
+            PrintAndLogEx(SUCCESS, "Record count    : %d [0x%x]", fsettings->curRecordCount, fsettings->curRecordCount);
+            PrintAndLogEx(SUCCESS, "Max record count: %d [0x%x]", fsettings->maxRecordCount, fsettings->maxRecordCount);
+            PrintAndLogEx(SUCCESS, "Record size     : %d [0x%x] bytes", fsettings->recordSize, fsettings->recordSize);
+            break;
+        }
+        case 0x05: {
+            PrintAndLogEx(SUCCESS, "Key type        : 0x%02x", fsettings->keyType);
+            PrintAndLogEx(SUCCESS, "Key version     : 0x%02x ", fsettings->keyVersion);
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+    
+    PrintAndLogEx(SUCCESS, "Access rights   : %04x  (r: %s w: %s rw: %s change: %s)", 
+            fsettings->rawAccessRights,
+            GetDesfireAccessRightStr(fsettings->rAccess), 
+            GetDesfireAccessRightStr(fsettings->wAccess),
+            GetDesfireAccessRightStr(fsettings->rwAccess),
+            GetDesfireAccessRightStr(fsettings->chAccess));
+}
+
+
 static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t datalen, uint8_t *dynlen, bool create) {
     switch (filetype) {
         case 0x00:
