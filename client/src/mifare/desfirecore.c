@@ -266,6 +266,12 @@ void DesfirePrintContext(DesfireContext *ctx) {
         PrintAndLogEx(INFO, "    IV [%zu]: %s",
                       desfire_get_key_block_length(ctx->keyType),
                       sprint_hex(ctx->IV, desfire_get_key_block_length(ctx->keyType)));
+        if (ctx->secureChannel == DACEV2) {
+            PrintAndLogEx(INFO, "    TI: %s cnTX: 0x%08x cnRx: 0x%08x",
+                          sprint_hex(ctx->TI, 4),
+                          ctx->cntrTx,
+                          ctx->cntrRx);
+        }
 
     }
 }
@@ -1128,10 +1134,6 @@ PrintAndLogEx(INFO, "EncBoth: %s", sprint_hex(both, CRYPTO_AES_BLOCK_SIZE * 2));
 
     // Part 4
     memcpy(encRndA, recv_data, CRYPTO_AES_BLOCK_SIZE);    
-    
-    //struct desfire_key sesskey = {0};
-    //Desfire_session_key_new(RndA, RndB, key, &sesskey);
-    //memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));
 
 PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, CRYPTO_AES_BLOCK_SIZE));
 PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, CRYPTO_AES_BLOCK_SIZE));
@@ -1155,7 +1157,15 @@ PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(&data[4], CRYPTO_AES_BLOCK
         }
         return 11;
     }
+    
+    if (verbose) {
+        PrintAndLogEx(INFO, " TI: %s", sprint_hex(data, 4));
+        PrintAndLogEx(INFO, "pic: %s", sprint_hex(&data[20], 6));
+        PrintAndLogEx(INFO, "pcd: %s", sprint_hex(&data[26], 6));
+    }
 
+    dctx->cntrRx = 0;
+    dctx->cntrTx = 0;
     memcpy(dctx->TI, data, 4);
     memset(dctx->IV, 0, DESFIRE_MAX_KEY_SIZE);
     dctx->secureChannel = secureChannel;
