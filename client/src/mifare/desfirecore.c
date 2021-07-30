@@ -1085,15 +1085,14 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
     uint8_t both[CRYPTO_AES_BLOCK_SIZE * 2 + 1] = {0};  // ek/dk_keyNo(RndA+RndB')    
 
     uint8_t subcommand = firstauth ? MFDES_AUTHENTICATE_EV2F : MFDES_AUTHENTICATE_EV2NF;
+    uint8_t *key = firstauth ? dctx->key : dctx->sessionKeyEnc;
 
     size_t recv_len = 0;
     uint8_t respcode = 0;
     uint8_t recv_data[256] = {0};
     
-    //mbedtls_aes_context ctx;
-
     if (verbose)
-        PrintAndLogEx(INFO, _CYAN_("Auth:") " cmd: 0x%02x keynum: 0x%02x", subcommand, dctx->keyNum);
+        PrintAndLogEx(INFO, _CYAN_("Auth %s:") " cmd: 0x%02x keynum: 0x%02x key: %s", (firstauth) ? "first" : "non-first", subcommand, dctx->keyNum, sprint_hex(key, 16));
 
     // Let's send our auth command
     uint8_t cdata[2] = {dctx->keyNum, 0x00};
@@ -1118,7 +1117,7 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
     memcpy(encRndB, recv_data, 16);
 
     // Part 3
-    if (aes_decode(IV, dctx->key, encRndB, RndB, CRYPTO_AES_BLOCK_SIZE))
+    if (aes_decode(IV, key, encRndB, RndB, CRYPTO_AES_BLOCK_SIZE))
         return 5;
     
     if (g_debugMode > 1) {
@@ -1147,7 +1146,7 @@ PrintAndLogEx(INFO, "rotRndB: %s", sprint_hex(rotRndB, CRYPTO_AES_BLOCK_SIZE));
 PrintAndLogEx(INFO, "Both: %s", sprint_hex(tmp, CRYPTO_AES_BLOCK_SIZE * 2));
 
 
-    if (aes_encode(IV, dctx->key, tmp, both, CRYPTO_AES_BLOCK_SIZE * 2))
+    if (aes_encode(IV, key, tmp, both, CRYPTO_AES_BLOCK_SIZE * 2))
         return 6;
     if (g_debugMode > 1) {
         PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, CRYPTO_AES_BLOCK_SIZE * 2));
@@ -1176,7 +1175,7 @@ PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, CRYPTO_AES_BLOCK_SIZE));
 
     uint8_t data[32] = {0};
 
-    if (aes_decode(IV, dctx->key, recv_data, data, CRYPTO_AES_BLOCK_SIZE * 2))
+    if (aes_decode(IV, key, recv_data, data, CRYPTO_AES_BLOCK_SIZE * 2))
         return 10;
 
 PrintAndLogEx(INFO, "data : %s", sprint_hex(data, CRYPTO_AES_BLOCK_SIZE * 2));
@@ -1200,9 +1199,11 @@ PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(&data[4], CRYPTO_AES_BLOCK
         PrintAndLogEx(INFO, "pcd            : %s", sprint_hex(&data[26], 6));
     }
 
-    dctx->cntrRx = 0;
-    dctx->cntrTx = 0;
-    memcpy(dctx->TI, data, 4);
+    if (firstauth) {
+        dctx->cntrRx = 0;
+        dctx->cntrTx = 0;
+        memcpy(dctx->TI, data, 4);
+    }
     memset(dctx->IV, 0, DESFIRE_MAX_KEY_SIZE);
     DesfireGenSessionKeyEV2(dctx->key, RndA, RndB, true, dctx->sessionKeyEnc);
     DesfireGenSessionKeyEV2(dctx->key, RndA, RndB, false, dctx->sessionKeyMAC);
@@ -1221,7 +1222,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
         return DesfireAuthenticateEV1(dctx, secureChannel, verbose);
 
     if (secureChannel == DACEV2)
-        return DesfireAuthenticateEV2(dctx, secureChannel, true, verbose); // TODO make 2nd auth if there is working secure channel
+        return DesfireAuthenticateEV2(dctx, secureChannel, (DesfireIsAuthenticated(dctx) == false), verbose); // non first auth if there is a working secure channel
     
     return 100;
 }
