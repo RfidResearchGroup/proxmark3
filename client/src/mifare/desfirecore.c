@@ -2175,14 +2175,14 @@ int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *para
     return res;
 }
 
-int DesfireISOSelect(DesfireContext *dctx, bool sel_by_df_name, uint8_t *id, uint8_t idlen, uint8_t *resp, size_t *resplen) {
+int DesfireISOSelect(DesfireContext *dctx, char *dfname, uint8_t *resp, size_t *resplen) {
     sAPDU apdu = {0};
     apdu.CLA = 0x00;
     apdu.INS = ISO7816_SELECT_FILE;
-    apdu.P1 = (sel_by_df_name) ? 0x04 : 0x00;
+    apdu.P1 = 0x04;
     apdu.P2 = 0x00;
-    apdu.Lc = idlen;
-    apdu.data = id;
+    apdu.Lc = strnlen(dfname, 16);
+    apdu.data = (uint8_t *)dfname;
 
     uint16_t sw = 0;
     int res = DesfireExchangeISO(true, dctx, apdu, APDU_INCLUDE_LE_00, resp, resplen, &sw);

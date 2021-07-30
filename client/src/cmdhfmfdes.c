@@ -3053,6 +3053,7 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID of application for some parameters (3 hex bytes, big endian)"),
+        arg_str0(NULL, "dfname",  "<df name str>", "Application DF Name (string, max 16 chars). Selects application via ISO SELECT command"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3068,18 +3069,39 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
         CLIParserFree(ctx);
         return res;
     }
+    
+    uint8_t dfname[32] = {0};
+    int dfnamelen = 16;
+    CLIGetStrWithReturn(ctx, 12, dfname, &dfnamelen);
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, true, verbose);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        PrintAndLogEx(FAILED, "Select application 0x%06x " _RED_("failed") " ", appid);
-        return res;
+    if (dfnamelen > 0) { // dctx.cmdSet == DCCISO ?
+        uint8_t resp[250] = {0};
+        size_t resplen = 0;
+        res = DesfireISOSelect(&dctx, (char *)dfname, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(FAILED, "ISO Select application " _RED_("failed"));
+            return res;
+        }
+
+        if (resplen > 0)
+            PrintAndLogEx(FAILED, "Application " _CYAN_("FCI template") " [%zu]%s", resplen, sprint_hex(resp, resplen));
+        
+        PrintAndLogEx(SUCCESS, "Application `%s` selected " _GREEN_("succesfully") " ", (char *)dfname);
+    } else {    
+        res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, true, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(FAILED, "Select application 0x%06x " _RED_("failed") " ", appid);
+            return res;
+        }
+        
+        PrintAndLogEx(SUCCESS, "Application 0x%06x selected " _GREEN_("succesfully") " ", appid);
     }
     
-    PrintAndLogEx(SUCCESS, "Application 0x%06x selected " _GREEN_("succesfully") " ", appid);
 
     DropField();
     return res;
