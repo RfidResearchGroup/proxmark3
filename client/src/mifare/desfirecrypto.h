@@ -108,6 +108,7 @@ uint8_t DesfireDESKeyGetVersion(uint8_t *key);
 DesfireCommunicationMode DesfireFileCommModeToCommMode(uint8_t file_comm_mode);
 uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode);
 
+void DesfireGenSessionKeyEV1(const uint8_t rnda[], const uint8_t rndb[], DesfireCryptoAlgorythm keytype, uint8_t *key);
 void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool enckey, uint8_t *sessionkey);
 void DesfireEV2FillIV(DesfireContext *ctx, bool ivforcommand, uint8_t *iv);
 
