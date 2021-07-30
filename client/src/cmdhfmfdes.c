@@ -3102,7 +3102,6 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Application 0x%06x selected " _GREEN_("succesfully") " ", appid);
     }
     
-
     DropField();
     return res;
 }
