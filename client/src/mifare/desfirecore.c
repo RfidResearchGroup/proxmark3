@@ -277,6 +277,34 @@ void DesfireAIDUintToByte(uint32_t aid, uint8_t *data) {
     data[2] = (aid >> 16) & 0xff;
 }
 
+static uint8_t DesfireKeyToISOKey(DesfireCryptoAlgorythm keytype) {
+    switch (keytype) {
+        case T_DES:
+            return 0x02;
+        case T_3DES:
+            return 0x02;
+        case T_3K3DES:
+            return 0x04;
+        case T_AES:
+            return 0x09;
+    }
+    return 0x00;
+}
+
+static uint8_t DesfireGetRndLenForKey(DesfireCryptoAlgorythm keytype) {
+    switch (keytype) {
+        case T_DES:
+            return 0x08;
+        case T_3DES:
+            return 0x08;
+        case T_3K3DES:
+            return 0x10;
+        case T_AES:
+            return 0x10;
+    }
+    return 0x00;
+}
+
 void DesfirePrintContext(DesfireContext *ctx) {
     PrintAndLogEx(INFO, "Key num: %d Key algo: %s Key[%d]: %s",
                   ctx->keyNum,
@@ -311,7 +339,7 @@ void DesfirePrintContext(DesfireContext *ctx) {
     }
 }
 
-static int DESFIRESendApdu(bool activate_field, sAPDU apdu, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint16_t *sw) {
+static int DESFIRESendApduEx(bool activate_field, sAPDU apdu, uint16_t le, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint16_t *sw) {
     if (result_len) *result_len = 0;
     if (sw) *sw = 0;
 
@@ -327,7 +355,7 @@ static int DESFIRESendApdu(bool activate_field, sAPDU apdu, uint8_t *result, uin
 
     // COMPUTE APDU
     int datalen = 0;
-    if (APDUEncodeS(&apdu, false, 0x100, data, &datalen)) { // 100 == with Le
+    if (APDUEncodeS(&apdu, false, le, data, &datalen)) { // 100 == with Le
         PrintAndLogEx(ERR, "APDU encoding error.");
         return PM3_EAPDU_ENCODEFAIL;
     }
@@ -368,6 +396,10 @@ static int DESFIRESendApdu(bool activate_field, sAPDU apdu, uint8_t *result, uin
         return PM3_EAPDU_FAIL;
     }
     return PM3_SUCCESS;
+}
+
+static int DESFIRESendApdu(bool activate_field, sAPDU apdu, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint16_t *sw) {
+    return DESFIRESendApduEx(activate_field, apdu, APDU_INCLUDE_LE_00, result, max_result_len, result_len, sw);
 }
 
 static int DESFIRESendRaw(bool activate_field, uint8_t *data, size_t datalen, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint8_t *respcode) {
@@ -516,7 +548,7 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext *ctx, uint8
     return PM3_SUCCESS;
 }
 
-static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
+static int DesfireExchangeISONative(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
     if (resplen)
         *resplen = 0;
     if (respcode)
@@ -622,6 +654,16 @@ static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, uint8_t 
     return PM3_SUCCESS;
 }
 
+static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, sAPDU apdu, uint16_t le, uint8_t *resp, size_t *resplen, uint16_t *sw) {
+    uint32_t rlen = 0;
+    int res = DESFIRESendApduEx(activate_field, apdu, le, resp, 255, &rlen, sw);
+    
+    if (res == PM3_SUCCESS)
+        *resplen = rlen;
+    
+    return res;
+}
+
 // move data from blockdata [format: <length, data><length, data>...] to single data block
 static void DesfireJoinBlockToBytes(uint8_t *blockdata, size_t blockdatacount, size_t blockdatasize, uint8_t *dstdata, size_t *dstdatalen) {
     *dstdatalen = 0;
@@ -665,7 +707,7 @@ int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uin
             if (ctx->cmdSet == DCCNative)
                 res = DesfireExchangeNative(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize);
             else
-                res = DesfireExchangeISO(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize);
+                res = DesfireExchangeISONative(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize);
 
             if (splitbysize) {
                 uint8_t sdata[250 * 5] = {0};
@@ -1201,7 +1243,53 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
     return PM3_SUCCESS;
 }
 
+static int DesfireAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
+    uint8_t rndlen = DesfireGetRndLenForKey(dctx->keyType);
+    
+    uint8_t hostrnd[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16};
+    uint8_t hostrnd2[] = {0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01};
+    
+    uint8_t piccrnd[64];
+    size_t xlen = 0;
+    int res = DesfireISOGetChallenge(dctx, dctx->keyType, piccrnd, &xlen);
+    if (res != PM3_SUCCESS)
+        return 301;
+    
+    if (xlen != rndlen)
+        return 302;
+    
+    uint8_t both[32] = {0};
+    memcpy(both, hostrnd, rndlen);
+    memcpy(&both[rndlen], piccrnd, rndlen);
+    
+    // encode
+    
+    // external authenticate
+    res = DesfireISOExternalAuth(dctx, dctx->keyNum, dctx->keyType);
+    if (res != PM3_SUCCESS)
+        return 302;
+    
+    // internal authenticate
+    uint8_t rnddata[64] = {0};
+    xlen = 0;
+    res = DesfireISOInternalAuth(dctx, dctx->keyNum, dctx->keyType, hostrnd2, rnddata, &xlen);
+    if (res != PM3_SUCCESS)
+        return 303;
+
+    if (xlen != rndlen)
+        return 304;
+    
+    // decode rnddata
+    
+    // check
+        
+    return PM3_SUCCESS;
+}
+
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
+    if (dctx->cmdSet == DCCISO)
+        return DesfireAuthenticateISO(dctx, secureChannel, verbose);
+    
     if (secureChannel == DACd40 || secureChannel == DACEV1)
         return DesfireAuthenticateEV1(dctx, secureChannel, verbose);
 
@@ -1381,7 +1469,6 @@ int DesfireFillFileList(DesfireContext *dctx, FileListS FileList, size_t *filesc
 
     return res;
 }
-
 
 int DesfireCreateFile(DesfireContext *dctx, uint8_t ftype, uint8_t *fdata, size_t fdatalen, bool checklen) {
     const DesfireCreateFileCommandsS *rcmd = GetDesfireFileCmdRec(ftype);
@@ -2087,3 +2174,40 @@ int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *para
 
     return res;
 }
+
+int DesfireISOSelect(DesfireContext *dctx, bool sel_by_df_name, uint8_t *id, uint8_t idlen, uint8_t *resp, size_t *resplen) {
+    sAPDU apdu = {0};
+    apdu.CLA = 0x00;
+    apdu.INS = ISO7816_SELECT_FILE;
+    apdu.P1 = (sel_by_df_name) ? 0x04 : 0x00;
+    apdu.P2 = 0x00;
+    apdu.Lc = idlen;
+    apdu.data = id;
+
+    uint16_t sw = 0;
+    int res = DesfireExchangeISO(true, dctx, apdu, APDU_INCLUDE_LE_00, resp, resplen, &sw);
+    
+    if (res == PM3_SUCCESS && sw != 0x9000)
+        return PM3_ESOFT;
+    
+    return res;
+}
+
+int DesfireISOGetChallenge(DesfireContext *dctx, DesfireCryptoAlgorythm keytype, uint8_t *resp, size_t *resplen) {
+    DesfireGetRndLenForKey(keytype);
+
+    return PM3_SUCCESS;
+}
+
+int DesfireISOExternalAuth(DesfireContext *dctx, uint8_t keynum, DesfireCryptoAlgorythm keytype) {
+    
+    DesfireKeyToISOKey(keytype);
+    
+    return PM3_SUCCESS;
+}
+
+int DesfireISOInternalAuth(DesfireContext *dctx, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data, uint8_t *resp, size_t *resplen) {
+
+    return PM3_SUCCESS;
+}
+

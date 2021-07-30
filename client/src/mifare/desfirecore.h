@@ -167,4 +167,9 @@ int DesfireReadRecords(DesfireContext *dctx, uint8_t fnum, uint32_t recnum, uint
 int DesfireWriteRecord(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint32_t len, uint8_t *data);
 int DesfireUpdateRecord(DesfireContext *dctx, uint8_t fnum, uint32_t recnum, uint32_t offset, uint32_t len, uint8_t *data);
 
+int DesfireISOSelect(DesfireContext *dctx, bool sel_by_df_name, uint8_t *id, uint8_t idlen, uint8_t *resp, size_t *resplen);
+int DesfireISOGetChallenge(DesfireContext *dctx, DesfireCryptoAlgorythm keytype, uint8_t *resp, size_t *resplen);
+int DesfireISOExternalAuth(DesfireContext *dctx, uint8_t keynum, DesfireCryptoAlgorythm keytype);
+int DesfireISOInternalAuth(DesfireContext *dctx, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data, uint8_t *resp, size_t *resplen);
+
 #endif // __DESFIRECORE_H
