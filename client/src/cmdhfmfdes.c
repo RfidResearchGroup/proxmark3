@@ -6348,12 +6348,9 @@ int CmdHFMFDes(const char *Cmd) {
 
     ISO/IEC 7816 Cmds
     -----------------
-    'A4' Select
     'B0' Read Binary
     'D6' Update Binary
     'B2' Read Records
     'E2' Append Records
-    '84' Get Challenge
-    '88' Internal Authenticate
-    '82' External Authenticate
+
 */
