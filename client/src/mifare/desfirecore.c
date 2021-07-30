@@ -231,6 +231,42 @@ const char *DesfireGetErrorString(int res, uint16_t *sw) {
     return "";
 }
 
+const char *DesfireAuthErrorToStr(int error) {
+    switch (error) {
+        case 1:
+            return "Sending auth command failed";
+        case 2:
+            return "Authentication failed. No data received";
+        case 3:
+            return "Authentication failed. Invalid key number.";
+        case 4:
+            return "Authentication failed. Length of answer doesn't match algo length";
+        case 5:
+            return "mbedtls_aes_setkey_dec failed";
+        case 6:
+            return "mbedtls_aes_setkey_enc failed";
+        case 7:
+            return "Sending auth command failed";
+        case 8:
+            return "Authentication failed. Card timeout.";
+        case 9:
+            return "Authentication failed.";
+        case 10:
+            return "mbedtls_aes_setkey_dec failed";
+        case 11:
+            return "Authentication failed. Cannot verify Session Key.";
+        case 100:
+            return "Can't find auth method for provided channel parameters.";
+        case 200:
+            return "Can't select application.";
+        case 201:
+            return "Authentication retured no error but channel not authenticated.";
+        default:
+            break;
+    }
+    return "";
+}
+
 uint32_t DesfireAIDByteToUint(uint8_t *data) {
     return data[0] + (data[1] << 8) + (data[2] << 16);
 }
@@ -724,7 +760,7 @@ int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel se
     int res = DesfireSelectAIDHex(dctx, aid, false, 0);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-        return PM3_ESOFT;
+        return 200;
     }
     if (verbose)
         PrintAndLogEx(INFO, "App %06x " _GREEN_("selected"), aid);
@@ -732,15 +768,15 @@ int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel se
     if (!noauth) {
         res = DesfireAuthenticate(dctx, secureChannel, verbose);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: %d", res);
-            return PM3_ESOFT;
+            PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: [%d] %s", res, DesfireAuthErrorToStr(res));
+            return res;
         }
 
         if (DesfireIsAuthenticated(dctx)) {
             if (verbose)
                 PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
         } else {
-            return PM3_ESOFT;
+            return 201;
         }
     }
 
@@ -1152,25 +1188,31 @@ PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(&data[4], CRYPTO_AES_BLOCK
 
     if (memcmp(RndA, &data[4], CRYPTO_AES_BLOCK_SIZE) != 0) {
         if (g_debugMode > 1) {
-            PrintAndLogEx(DEBUG, "Expected_RndA : %s", sprint_hex(RndA, CRYPTO_AES_BLOCK_SIZE));
+            PrintAndLogEx(DEBUG, "Expected_RndA  : %s", sprint_hex(RndA, CRYPTO_AES_BLOCK_SIZE));
             PrintAndLogEx(DEBUG, "Generated_RndA : %s", sprint_hex(&data[4], CRYPTO_AES_BLOCK_SIZE));
         }
         return 11;
     }
     
     if (verbose) {
-        PrintAndLogEx(INFO, " TI: %s", sprint_hex(data, 4));
-        PrintAndLogEx(INFO, "pic: %s", sprint_hex(&data[20], 6));
-        PrintAndLogEx(INFO, "pcd: %s", sprint_hex(&data[26], 6));
+        PrintAndLogEx(INFO, "TI             : %s", sprint_hex(data, 4));
+        PrintAndLogEx(INFO, "pic            : %s", sprint_hex(&data[20], 6));
+        PrintAndLogEx(INFO, "pcd            : %s", sprint_hex(&data[26], 6));
     }
 
     dctx->cntrRx = 0;
     dctx->cntrTx = 0;
     memcpy(dctx->TI, data, 4);
     memset(dctx->IV, 0, DESFIRE_MAX_KEY_SIZE);
+    DesfireGenSessionKeyEV2(dctx->key, RndA, RndB, true, dctx->sessionKeyEnc);
+    DesfireGenSessionKeyEV2(dctx->key, RndA, RndB, false, dctx->sessionKeyMAC);
     dctx->secureChannel = secureChannel;
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "session key ENC: %s", sprint_hex(dctx->sessionKeyEnc, 16));
+        PrintAndLogEx(INFO, "session key MAC: %s", sprint_hex(dctx->sessionKeyMAC, 16));
+    }
     
-PrintAndLogEx(INFO, "done");
     return PM3_SUCCESS;
 }
 
@@ -1181,7 +1223,7 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     if (secureChannel == DACEV2)
         return DesfireAuthenticateEV2(dctx, secureChannel, true, verbose); // TODO make 2nd auth if there is working secure channel
     
-    return PM3_SUCCESS;
+    return 100;
 }
 
 static int DesfireCommandEx(DesfireContext *dctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen, int checklength, size_t splitbysize) {

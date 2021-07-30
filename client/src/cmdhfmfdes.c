@@ -916,46 +916,6 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
     return PM3_SUCCESS;
 }
 
-/*static void AuthToError(int error) {
-    switch (error) {
-        case 1:
-            PrintAndLogEx(SUCCESS, "Sending auth command failed");
-            break;
-        case 2:
-            PrintAndLogEx(ERR, "Authentication failed. No data received");
-            break;
-        case 3:
-            PrintAndLogEx(ERR, "Authentication failed. Invalid key number.");
-            break;
-        case 4:
-            PrintAndLogEx(ERR, "Authentication failed. Length of answer doesn't match algo length");
-            break;
-        case 5:
-            PrintAndLogEx(ERR, "mbedtls_aes_setkey_dec failed");
-            break;
-        case 6:
-            PrintAndLogEx(ERR, "mbedtls_aes_setkey_enc failed");
-            break;
-        case 7:
-            PrintAndLogEx(SUCCESS, "Sending auth command failed");
-            break;
-        case 8:
-            PrintAndLogEx(ERR, "Authentication failed. Card timeout.");
-            break;
-        case 9:
-            PrintAndLogEx(ERR, "Authentication failed.");
-            break;
-        case 10:
-            PrintAndLogEx(ERR, "mbedtls_aes_setkey_dec failed");
-            break;
-        case 11:
-            PrintAndLogEx(ERR, "Authentication failed. Cannot verify Session Key.");
-            break;
-        default:
-            break;
-    }
-}*/
-
 // -- test if card supports 0x0A
 static int test_desfire_authenticate(void) {
     uint8_t data[] = {0x00};
@@ -3260,7 +3220,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, false, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication 0x%06x " _RED_("failed") " ", appid);
+        PrintAndLogEx(FAILED, "Select or authentication 0x%06x " _RED_("failed") ". Result [%d] %s", appid, res, DesfireAuthErrorToStr(res));
         return res;
     }
     
