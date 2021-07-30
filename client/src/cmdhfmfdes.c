@@ -3077,13 +3077,13 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (dfnamelen > 0) { // dctx.cmdSet == DCCISO ?
+    if (dctx.cmdSet == DCCISO || dfnamelen > 0) {
         uint8_t resp[250] = {0};
         size_t resplen = 0;
         res = DesfireISOSelect(&dctx, (char *)dfname, resp, &resplen);
         if (res != PM3_SUCCESS) {
             DropField();
-            PrintAndLogEx(FAILED, "ISO Select application " _RED_("failed"));
+            PrintAndLogEx(FAILED, "ISO Select application `%s` " _RED_("failed"), (char *)dfname);
             return res;
         }
 
