@@ -62,6 +62,10 @@ void DesfireClearSession(DesfireContext *ctx) {
     memset(ctx->TI, 0, sizeof(ctx->TI));
 }
 
+void DesfireClearIV(DesfireContext *ctx) {
+    memset(ctx->IV, 0, sizeof(ctx->IV));
+}
+
 void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key) {
     DesfireClearContext(ctx);
 

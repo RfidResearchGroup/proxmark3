@@ -1084,7 +1084,7 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
     uint8_t both[CRYPTO_AES_BLOCK_SIZE * 2 + 1] = {0};  // ek/dk_keyNo(RndA+RndB')    
 
     uint8_t subcommand = firstauth ? MFDES_AUTHENTICATE_EV2F : MFDES_AUTHENTICATE_EV2NF;
-    uint8_t *key = firstauth ? dctx->key : dctx->sessionKeyEnc;
+    uint8_t *key = dctx->key;
 
     size_t recv_len = 0;
     uint8_t respcode = 0;
@@ -1123,8 +1123,6 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
         PrintAndLogEx(DEBUG, "encRndB: %s", sprint_hex(encRndB, CRYPTO_AES_BLOCK_SIZE));
         PrintAndLogEx(DEBUG, "RndB: %s", sprint_hex(RndB, CRYPTO_AES_BLOCK_SIZE));
     }
-PrintAndLogEx(INFO, "encRndB: %s", sprint_hex(encRndB, 16));
-PrintAndLogEx(INFO, "RndB: %s", sprint_hex(RndB, 16));
 
     // - Rotate RndB by 8 bits
     memcpy(rotRndB, RndB, CRYPTO_AES_BLOCK_SIZE);
@@ -1141,17 +1139,11 @@ PrintAndLogEx(INFO, "RndB: %s", sprint_hex(RndB, 16));
         PrintAndLogEx(DEBUG, "Both: %s", sprint_hex(tmp, CRYPTO_AES_BLOCK_SIZE * 2));
     }
     
-PrintAndLogEx(INFO, "rotRndB: %s", sprint_hex(rotRndB, CRYPTO_AES_BLOCK_SIZE));
-PrintAndLogEx(INFO, "Both: %s", sprint_hex(tmp, CRYPTO_AES_BLOCK_SIZE * 2));
-
-
     if (aes_encode(IV, key, tmp, both, CRYPTO_AES_BLOCK_SIZE * 2))
         return 6;
     if (g_debugMode > 1) {
         PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, CRYPTO_AES_BLOCK_SIZE * 2));
     }
-
-PrintAndLogEx(INFO, "EncBoth: %s", sprint_hex(both, CRYPTO_AES_BLOCK_SIZE * 2));
 
     res = DesfireExchangeEx(false, dctx, MFDES_ADDITIONAL_FRAME, both, CRYPTO_AES_BLOCK_SIZE * 2, &respcode, recv_data, &recv_len, false, 0);
     if (res != PM3_SUCCESS) {
@@ -1169,45 +1161,39 @@ PrintAndLogEx(INFO, "EncBoth: %s", sprint_hex(both, CRYPTO_AES_BLOCK_SIZE * 2));
     // Part 4
     memcpy(encRndA, recv_data, CRYPTO_AES_BLOCK_SIZE);    
 
-PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, CRYPTO_AES_BLOCK_SIZE));
-PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, CRYPTO_AES_BLOCK_SIZE));
-
     uint8_t data[32] = {0};
 
     if (aes_decode(IV, key, recv_data, data, recv_len))
         return 10;
 
-PrintAndLogEx(INFO, "data : %s", sprint_hex(data, CRYPTO_AES_BLOCK_SIZE * 2));
-
-
     rol(RndA, CRYPTO_AES_BLOCK_SIZE);
-PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, CRYPTO_AES_BLOCK_SIZE));
-PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(&data[4], CRYPTO_AES_BLOCK_SIZE));
+    uint8_t *recRndA = (firstauth) ? &data[4] : data;
 
-    if (memcmp(RndA, &data[4], CRYPTO_AES_BLOCK_SIZE) != 0) {
+    if (memcmp(RndA, recRndA, CRYPTO_AES_BLOCK_SIZE) != 0) {
         if (g_debugMode > 1) {
             PrintAndLogEx(DEBUG, "Expected_RndA  : %s", sprint_hex(RndA, CRYPTO_AES_BLOCK_SIZE));
-            PrintAndLogEx(DEBUG, "Generated_RndA : %s", sprint_hex(&data[4], CRYPTO_AES_BLOCK_SIZE));
+            PrintAndLogEx(DEBUG, "Generated_RndA : %s", sprint_hex(recRndA, CRYPTO_AES_BLOCK_SIZE));
         }
         return 11;
     }
     
-    if (verbose) {
-        PrintAndLogEx(INFO, "TI             : %s", sprint_hex(data, 4));
-        PrintAndLogEx(INFO, "pic            : %s", sprint_hex(&data[20], 6));
-        PrintAndLogEx(INFO, "pcd            : %s", sprint_hex(&data[26], 6));
-    }
-
     if (firstauth) {
         dctx->cmdCntr = 0;
         memcpy(dctx->TI, data, 4);
     }
-    memset(dctx->IV, 0, DESFIRE_MAX_KEY_SIZE);
+    DesfireClearIV(dctx);
     DesfireGenSessionKeyEV2(dctx->key, RndA, RndB, true, dctx->sessionKeyEnc);
     DesfireGenSessionKeyEV2(dctx->key, RndA, RndB, false, dctx->sessionKeyMAC);
     dctx->secureChannel = secureChannel;
 
     if (verbose) {
+        if (firstauth) {
+            PrintAndLogEx(INFO, "TI             : %s", sprint_hex(data, 4));
+            PrintAndLogEx(INFO, "pic            : %s", sprint_hex(&data[20], 6));
+            PrintAndLogEx(INFO, "pcd            : %s", sprint_hex(&data[26], 6));
+        } else {
+            PrintAndLogEx(INFO, "TI             : %s", sprint_hex(dctx->TI, 4));
+        }
         PrintAndLogEx(INFO, "session key ENC: %s", sprint_hex(dctx->sessionKeyEnc, 16));
         PrintAndLogEx(INFO, "session key MAC: %s", sprint_hex(dctx->sessionKeyMAC, 16));
     }
