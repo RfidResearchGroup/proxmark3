@@ -169,7 +169,7 @@ int DesfireUpdateRecord(DesfireContext *dctx, uint8_t fnum, uint32_t recnum, uin
 
 int DesfireISOSelect(DesfireContext *dctx, char *dfname, uint8_t *resp, size_t *resplen);
 int DesfireISOGetChallenge(DesfireContext *dctx, DesfireCryptoAlgorythm keytype, uint8_t *resp, size_t *resplen);
-int DesfireISOExternalAuth(DesfireContext *dctx, uint8_t keynum, DesfireCryptoAlgorythm keytype);
-int DesfireISOInternalAuth(DesfireContext *dctx, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data, uint8_t *resp, size_t *resplen);
+int DesfireISOExternalAuth(DesfireContext *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data);
+int DesfireISOInternalAuth(DesfireContext *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data, uint8_t *resp, size_t *resplen);
 
 #endif // __DESFIRECORE_H
