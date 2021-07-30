@@ -44,9 +44,9 @@ static bool TestCRC16(void) {
     res = res && (len == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "crc16............ " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "crc16............. " _GREEN_("passed"));
     else
-        PrintAndLogEx(ERR, "crc16............ " _RED_("fail"));
+        PrintAndLogEx(ERR, "crc16............. " _RED_("fail"));
 
     return res;
 }
@@ -71,9 +71,9 @@ static bool TestCRC32(void) {
     res = res && (len == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "crc32............ " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "crc32............. " _GREEN_("passed"));
     else
-        PrintAndLogEx(ERR, "crc32............ " _RED_("fail"));
+        PrintAndLogEx(ERR, "crc32............. " _RED_("fail"));
 
     return res;
 }
@@ -115,9 +115,9 @@ static bool TestCMAC3TDEA(void) {
     res = res && (memcmp(cmac, cmac4, sizeof(cmac1)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "CMAC 3TDEA....... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "CMAC 3TDEA........ " _GREEN_("passed"));
     else
-        PrintAndLogEx(ERR, "CMAC 3TDEA....... " _RED_("fail"));
+        PrintAndLogEx(ERR, "CMAC 3TDEA........ " _RED_("fail"));
 
     return res;
 }
@@ -159,9 +159,9 @@ static bool TestCMAC2TDEA(void) {
     res = res && (memcmp(cmac, cmac4, sizeof(cmac1)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "CMAC 2TDEA....... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "CMAC 2TDEA........ " _GREEN_("passed"));
     else
-        PrintAndLogEx(ERR, "CMAC 2TDEA....... " _RED_("fail"));
+        PrintAndLogEx(ERR, "CMAC 2TDEA........ " _RED_("fail"));
 
     return res;
 }
@@ -199,9 +199,72 @@ static bool TestCMACDES(void) {
     res = res && (memcmp(cmac, cmac4, sizeof(cmac1)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "CMAC DES......... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "CMAC DES.......... " _GREEN_("passed"));
     else
-        PrintAndLogEx(ERR, "CMAC DES......... " _RED_("fail"));
+        PrintAndLogEx(ERR, "CMAC DES.......... " _RED_("fail"));
+
+    return res;
+}
+
+// https://www.nxp.com/docs/en/application-note/AN12343.pdf
+// page 33-34
+static bool TestEV2SessionKeys(void) {
+    bool res = true;
+
+    uint8_t key[16] = {0};
+    uint8_t rnda[] = {0xB0, 0x4D, 0x07, 0x87, 0xC9, 0x3E, 0xE0, 0xCC, 0x8C, 0xAC, 0xC8, 0xE8, 0x6F, 0x16, 0xC6, 0xFE};
+    uint8_t rndb[] = {0xFA, 0x65, 0x9A, 0xD0, 0xDC, 0xA7, 0x38, 0xDD, 0x65, 0xDC, 0x7D, 0xC3, 0x86, 0x12, 0xAD, 0x81};
+    uint8_t sessionkeyauth[] = {0x63, 0xDC, 0x07, 0x28, 0x62, 0x89, 0xA7, 0xA6, 0xC0, 0x33, 0x4C, 0xA3, 0x1C, 0x31, 0x4A, 0x04};
+    uint8_t sessionkeymac[] = {0x77, 0x4F, 0x26, 0x74, 0x3E, 0xCE, 0x6A, 0xF5, 0x03, 0x3B, 0x6A, 0xE8, 0x52, 0x29, 0x46, 0xF6};
+    
+    uint8_t sessionkey[16] = {0};
+    DesfireGenSessionKeyEV2(key, rnda, rndb, true, sessionkey);
+    res = res && (memcmp(sessionkey, sessionkeyauth, sizeof(sessionkeyauth)) == 0);
+
+    memset(sessionkey, 0, sizeof(sessionkey));
+    DesfireGenSessionKeyEV2(key, rnda, rndb, false, sessionkey);
+    res = res && (memcmp(sessionkey, sessionkeymac, sizeof(sessionkeymac)) == 0);
+    
+    if (res)
+        PrintAndLogEx(INFO, "EV2 session keys.. " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "EV2 session keys.. " _RED_("fail"));
+
+    return res;
+}
+
+static bool TestEV2IVEncode(void) {
+    bool res = true;
+
+    uint8_t key[] = {0x66, 0xA8, 0xCB, 0x93, 0x26, 0x9D, 0xC9, 0xBC, 0x28, 0x85, 0xB7, 0xA9, 0x1B, 0x9C, 0x69, 0x7B};
+    uint8_t ti[] = {0xED, 0x56, 0xF6, 0xE6};
+    uint8_t ivres[] = {0xDA, 0x0F, 0x64, 0x4A, 0x49, 0x86, 0x27, 0x59, 0x57, 0xCF, 0x1E, 0xC3, 0xAF, 0x4C, 0xCE, 0x53};
+    
+    DesfireContext ctx = {0};
+    ctx.keyType = T_AES;
+    memcpy(ctx.sessionKeyEnc, key, 16);
+    memcpy(ctx.TI, ti, 4);
+    ctx.cmdCntr = 0;
+    
+    uint8_t iv[16] = {0};
+    DesfireEV2FillIV(&ctx, true, iv);
+    res = res && (memcmp(iv, ivres, sizeof(ivres)) == 0);
+    
+    uint8_t key2[] = {0x44, 0x5A, 0x86, 0x26, 0xB3, 0x33, 0x84, 0x59, 0x32, 0x12, 0x32, 0xfA, 0xDf, 0x6a, 0xDe, 0x2B};
+    uint8_t ti2[] = {0x11, 0x22, 0x33, 0x44};
+    uint8_t ivres2[] = {0x17, 0x74, 0x94, 0xFC, 0xC4, 0xF1, 0xDA, 0xB2, 0xAF, 0xBE, 0x8F, 0xAE, 0x20, 0x57, 0xA9, 0xD2};
+    memcpy(ctx.sessionKeyEnc, key2, 16);
+    memcpy(ctx.TI, ti2, 4);
+    ctx.cmdCntr = 5;
+
+    memset(iv, 0, 16);
+    DesfireEV2FillIV(&ctx, true, iv);
+    res = res && (memcmp(iv, ivres2, sizeof(ivres2)) == 0);
+
+    if (res)
+        PrintAndLogEx(INFO, "EV2 IV calc....... " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "EV2 IV calc....... " _RED_("fail"));
 
     return res;
 }
@@ -216,6 +279,8 @@ bool DesfireTest(bool verbose) {
     res = res && TestCMAC3TDEA();
     res = res && TestCMAC2TDEA();
     res = res && TestCMACDES();
+    res = res && TestEV2SessionKeys();
+    res = res && TestEV2IVEncode();
 
     PrintAndLogEx(INFO, "---------------------------");
     if (res)

@@ -24,6 +24,7 @@
 #include "common.h"
 #include "mifare/mifare4.h"
 
+#define CRYPTO_AES_BLOCK_SIZE 16
 #define MAX_CRYPTO_BLOCK_SIZE 16
 #define DESFIRE_MAX_CRYPTO_BLOCK_SIZE 16
 #define DESFIRE_MAX_KEY_SIZE  24
@@ -81,14 +82,13 @@ typedef struct DesfireContextS {
     uint8_t lastIV[DESFIRE_MAX_KEY_SIZE];
     uint8_t lastCommand;
     bool lastRequestZeroLen;
-    //mf4Session_t AESSession;
-    uint16_t cntrTx;    // for AES
-    uint16_t cntrRx;    // for AES
+    uint16_t cmdCntr;   // for AES
     uint8_t TI[4];      // for AES
 } DesfireContext;
 
 void DesfireClearContext(DesfireContext *ctx);
 void DesfireClearSession(DesfireContext *ctx);
+void DesfireClearIV(DesfireContext *ctx);
 void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key);
 void DesfireSetCommandSet(DesfireContext *ctx, DesfireCommandSet cmdSet);
 void DesfireSetCommMode(DesfireContext *ctx, DesfireCommunicationMode commMode);
@@ -107,6 +107,9 @@ uint8_t DesfireDESKeyGetVersion(uint8_t *key);
 
 DesfireCommunicationMode DesfireFileCommModeToCommMode(uint8_t file_comm_mode);
 uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode);
+
+void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool enckey, uint8_t *sessionkey);
+void DesfireEV2FillIV(DesfireContext *ctx, bool ivforcommand, uint8_t *iv);
 
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc);
 void desfire_crc32_append(uint8_t *data, const size_t len);

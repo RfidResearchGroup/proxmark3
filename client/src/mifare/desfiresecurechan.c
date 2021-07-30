@@ -24,6 +24,7 @@
 #include "mifare/desfire_crypto.h"
 
 static const uint8_t CommandsCanUseAnyChannel[] = {
+    MFDES_S_ADDITIONAL_FRAME,
     MFDES_READ_DATA,
     MFDES_WRITE_DATA,
     MFDES_GET_VALUE,
@@ -116,6 +117,9 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
 
     {MFDES_CHANGE_KEY,                DACEV1,  DCCNative,    DCMEncryptedPlain},
     {MFDES_CHANGE_KEY_EV2,            DACEV1,  DCCNative,    DCMEncryptedPlain},
+    
+    {MFDES_AUTHENTICATE_EV2F,         DACEV2,  DCCNative,    DCMPlain},
+    {MFDES_AUTHENTICATE_EV2NF,        DACEV2,  DCCNative,    DCMPlain},
 };
 
 #define CMD_HEADER_LEN_ALL 0xffff
@@ -239,6 +243,12 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
     }
 }
 
+static void DesfireSecureChannelEncodeEV2(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
+    memcpy(dstdata, srcdata, srcdatalen);
+    *dstdatalen = srcdatalen;
+    
+}
+
 void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
     ctx->lastCommand = cmd;
     ctx->lastRequestZeroLen = (srcdatalen <= DesfireGetCmdHeaderLen(cmd));
@@ -251,6 +261,7 @@ void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcda
             DesfireSecureChannelEncodeEV1(ctx, cmd, srcdata, srcdatalen, dstdata, dstdatalen);
             break;
         case DACEV2:
+            DesfireSecureChannelEncodeEV2(ctx, cmd, srcdata, srcdatalen, dstdata, dstdatalen);
             break;
         case DACNone:
             memcpy(dstdata, srcdata, srcdatalen);
@@ -361,6 +372,13 @@ static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata,
     }
 }
 
+static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
+    ctx->cmdCntr++;
+
+    memcpy(dstdata, srcdata, srcdatalen);
+    *dstdatalen = srcdatalen;
+}
+
 void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
     switch (ctx->secureChannel) {
         case DACd40:
@@ -370,6 +388,7 @@ void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t sr
             DesfireSecureChannelDecodeEV1(ctx, srcdata, srcdatalen, respcode, dstdata, dstdatalen);
             break;
         case DACEV2:
+            DesfireSecureChannelDecodeEV2(ctx, srcdata, srcdatalen, respcode, dstdata, dstdatalen);
             break;
         case DACNone:
             memcpy(dstdata, srcdata, srcdatalen);
