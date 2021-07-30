@@ -303,10 +303,9 @@ void DesfirePrintContext(DesfireContext *ctx) {
                       desfire_get_key_block_length(ctx->keyType),
                       sprint_hex(ctx->IV, desfire_get_key_block_length(ctx->keyType)));
         if (ctx->secureChannel == DACEV2) {
-            PrintAndLogEx(INFO, "    TI: %s cnTX: 0x%08x cnRx: 0x%08x",
+            PrintAndLogEx(INFO, "    TI: %s cmdCntr: 0x%08x",
                           sprint_hex(ctx->TI, 4),
-                          ctx->cntrTx,
-                          ctx->cntrRx);
+                          ctx->cmdCntr);
         }
 
     }
@@ -1096,7 +1095,7 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
 
     // Let's send our auth command
     uint8_t cdata[2] = {dctx->keyNum, 0x00};
-    int res = DesfireExchangeEx(false, dctx, subcommand, cdata, sizeof(cdata), &respcode, recv_data, &recv_len, false, 0);
+    int res = DesfireExchangeEx(false, dctx, subcommand, cdata, (firstauth) ? sizeof(cdata) : 1, &respcode, recv_data, &recv_len, false, 0);
     if (res != PM3_SUCCESS) {
         return 1;
     }
@@ -1175,7 +1174,7 @@ PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, CRYPTO_AES_BLOCK_SIZE));
 
     uint8_t data[32] = {0};
 
-    if (aes_decode(IV, key, recv_data, data, CRYPTO_AES_BLOCK_SIZE * 2))
+    if (aes_decode(IV, key, recv_data, data, recv_len))
         return 10;
 
 PrintAndLogEx(INFO, "data : %s", sprint_hex(data, CRYPTO_AES_BLOCK_SIZE * 2));
@@ -1200,8 +1199,7 @@ PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(&data[4], CRYPTO_AES_BLOCK
     }
 
     if (firstauth) {
-        dctx->cntrRx = 0;
-        dctx->cntrTx = 0;
+        dctx->cmdCntr = 0;
         memcpy(dctx->TI, data, 4);
     }
     memset(dctx->IV, 0, DESFIRE_MAX_KEY_SIZE);

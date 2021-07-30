@@ -58,8 +58,7 @@ void DesfireClearSession(DesfireContext *ctx) {
     memset(ctx->lastIV, 0, sizeof(ctx->lastIV));
     ctx->lastCommand = 0;
     ctx->lastRequestZeroLen = false;
-    ctx->cntrTx = 0;
-    ctx->cntrRx = 0;
+    ctx->cmdCntr = 0;
     memset(ctx->TI, 0, sizeof(ctx->TI));
 }
 
@@ -218,6 +217,10 @@ void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *s
 
     if (ctx->secureChannel == DACd40) {
         memset(ctx->IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
+    }
+    
+    if (ctx->secureChannel == DACEV2) {
+        DesfireEV2FillIV(ctx, dir_to_send, NULL);
     }
 
     size_t block_size = desfire_get_key_block_length(ctx->keyType);
@@ -416,6 +419,27 @@ void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool en
 
     memcpy(sessionkey, cmac, CRYPTO_AES_BLOCK_SIZE);
 }
+
+void DesfireEV2FillIV(DesfireContext *ctx, bool send, uint8_t *iv) {
+    uint8_t xiv[CRYPTO_AES_BLOCK_SIZE] = {0};
+    
+    if (send) {
+        xiv[0] = 0xa5;
+        xiv[1] = 0x5a;
+    } else {
+        xiv[0] = 0x5a;
+        xiv[1] = 0xa5;
+    }
+
+    memcpy(xiv + 2, ctx->TI, 4);
+    Uint2byteToMemLe(xiv + 2 + 4, ctx->cmdCntr);
+    
+    if (iv == NULL)
+        memcpy(ctx->IV, xiv, CRYPTO_AES_BLOCK_SIZE);
+    else
+        memcpy(iv, xiv, CRYPTO_AES_BLOCK_SIZE);
+}
+
 
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc) {
     crc32_ex(data, len, crc);
