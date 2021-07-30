@@ -233,6 +233,42 @@ static bool TestEV2SessionKeys(void) {
     return res;
 }
 
+static bool TestEV2IVEncode(void) {
+    bool res = true;
+
+    uint8_t key[] = {0x66, 0xA8, 0xCB, 0x93, 0x26, 0x9D, 0xC9, 0xBC, 0x28, 0x85, 0xB7, 0xA9, 0x1B, 0x9C, 0x69, 0x7B};
+    uint8_t ti[] = {0xED, 0x56, 0xF6, 0xE6};
+    uint8_t ivres[] = {0xDA, 0x0F, 0x64, 0x4A, 0x49, 0x86, 0x27, 0x59, 0x57, 0xCF, 0x1E, 0xC3, 0xAF, 0x4C, 0xCE, 0x53};
+    
+    DesfireContext ctx = {0};
+    ctx.keyType = T_AES;
+    memcpy(ctx.sessionKeyEnc, key, 16);
+    memcpy(ctx.TI, ti, 4);
+    ctx.cmdCntr = 0;
+    
+    uint8_t iv[16] = {0};
+    DesfireEV2FillIV(&ctx, true, iv);
+    res = res && (memcmp(iv, ivres, sizeof(ivres)) == 0);
+    
+    uint8_t key2[] = {0x44, 0x5A, 0x86, 0x26, 0xB3, 0x33, 0x84, 0x59, 0x32, 0x12, 0x32, 0xfA, 0xDf, 0x6a, 0xDe, 0x2B};
+    uint8_t ti2[] = {0x11, 0x22, 0x33, 0x44};
+    uint8_t ivres2[] = {0x17, 0x74, 0x94, 0xFC, 0xC4, 0xF1, 0xDA, 0xB2, 0xAF, 0xBE, 0x8F, 0xAE, 0x20, 0x57, 0xA9, 0xD2};
+    memcpy(ctx.sessionKeyEnc, key2, 16);
+    memcpy(ctx.TI, ti2, 4);
+    ctx.cmdCntr = 5;
+
+    memset(iv, 0, 16);
+    DesfireEV2FillIV(&ctx, true, iv);
+    res = res && (memcmp(iv, ivres2, sizeof(ivres2)) == 0);
+
+    if (res)
+        PrintAndLogEx(INFO, "EV2 IV calc....... " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "EV2 IV calc....... " _RED_("fail"));
+
+    return res;
+}
+
 bool DesfireTest(bool verbose) {
     bool res = true;
 
@@ -244,6 +280,7 @@ bool DesfireTest(bool verbose) {
     res = res && TestCMAC2TDEA();
     res = res && TestCMACDES();
     res = res && TestEV2SessionKeys();
+    res = res && TestEV2IVEncode();
 
     PrintAndLogEx(INFO, "---------------------------");
     if (res)
