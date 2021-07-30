@@ -386,6 +386,37 @@ uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode) {
     return fmode;
 }
 
+// https://www.nxp.com/docs/en/application-note/AN12343.pdf
+// page 35
+void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool enckey, uint8_t *sessionkey) {
+    uint8_t data[64] = {0};
+    memset(sessionkey, 0, CRYPTO_AES_BLOCK_SIZE);
+    
+    if (enckey) {
+        data[0] = 0xa5;
+        data[1] = 0x5a;
+    } else {
+        data[0] = 0x5a;
+        data[1] = 0xa5;
+    }
+    data[3] = 0x01;
+    data[5] = 0x80;
+    
+    // data+6 - start of rnd part
+    memcpy(data + 6, rndA, 8);
+    bin_xor(data + 8, rndB, 6); // xor rndb 6b
+    memcpy(data + 14, rndB + 6, 10);
+    memcpy(data + 24, rndA + 8, 8);
+
+    uint8_t cmac[CRYPTO_AES_BLOCK_SIZE] = {0};
+    DesfireContext ctx = {0};
+    ctx.keyType = T_AES;
+    memcpy(ctx.key, key, 16); // aes-128
+    DesfireCryptoCMAC(&ctx, data, 32, cmac);
+
+    memcpy(sessionkey, cmac, CRYPTO_AES_BLOCK_SIZE);
+}
+
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc) {
     crc32_ex(data, len, crc);
 }

@@ -109,6 +109,8 @@ uint8_t DesfireDESKeyGetVersion(uint8_t *key);
 DesfireCommunicationMode DesfireFileCommModeToCommMode(uint8_t file_comm_mode);
 uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode);
 
+void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool enckey, uint8_t *sessionkey);
+
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc);
 void desfire_crc32_append(uint8_t *data, const size_t len);
 bool desfire_crc32_check(uint8_t *data, const size_t len, uint8_t *crc);
