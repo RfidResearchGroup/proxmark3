@@ -1701,6 +1701,7 @@ void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool 
 static const char *DesfireUnknownStr = "unknown";
 static const char *DesfireDisabledStr = "disabled";
 static const char *DesfireFreeStr = "free";
+static const char *DesfireNAStr = "n/a";
 static const DesfireCreateFileCommandsS DesfireFileCommands[] = {
     {0x00, "Standard data",   MFDES_CREATE_STD_DATA_FILE,       6,  6, true},
     {0x01, "Backup data",     MFDES_CREATE_BACKUP_DATA_FILE,    6,  6, true},
@@ -1769,6 +1770,32 @@ const char *GetDesfireAccessRightStr(uint8_t right) {
         return DesfireDisabledStr;
 
     return DesfireUnknownStr;
+}
+
+const char *AccessRightShortStr[] = {
+    "key0",
+    "key1",
+    "key2",
+    "key3",
+    "key4",
+    "key5",
+    "key6",
+    "key7",
+    "key8",
+    "key9",
+    "keyA",
+    "keyB",
+    "keyC",
+    "keyD",
+    "free",
+    "deny"    
+};
+
+const char *GetDesfireAccessRightShortStr(uint8_t right) {
+    if (right > 0x0f)
+        return DesfireNAStr;
+
+    return AccessRightShortStr[right];
 }
 
 void DesfireEncodeFileAcessMode(uint8_t *mode, uint8_t r, uint8_t w, uint8_t rw, uint8_t ch) {
@@ -1863,10 +1890,7 @@ void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsett
     }
 }
 
-void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
-    PrintAndLogEx(NORMAL, "(%-5s) " NOLF, GetDesfireCommunicationMode(fsettings->fileCommMode));
-    PrintAndLogEx(NORMAL, "[0x%02x] " _CYAN_("%-13s ") NOLF, fsettings->fileType, GetDesfireFileType(fsettings->fileType));
-
+static void DesfirePrintShortFileTypeSettings(FileSettingsS *fsettings) {
     switch (fsettings->fileType) {
         case 0x00:
         case 0x01: {
@@ -1874,13 +1898,13 @@ void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
             break;
         }
         case 0x02: {
-            PrintAndLogEx(NORMAL, "[%d .. %d] lim cred: 0x%02x (%d [0x%x]) " NOLF,
+            PrintAndLogEx(NORMAL, "value [%d .. %d] lim cred: 0x%02x (%d [0x%x]) " NOLF,
                           fsettings->lowerLimit, fsettings->upperLimit, fsettings->limitedCredit, fsettings->value, fsettings->value);
             break;
         }
         case 0x03:
         case 0x04: {
-            PrintAndLogEx(NORMAL, "%d/%d record size: %d [0x%x]b " NOLF,
+            PrintAndLogEx(NORMAL, "record count %d/%d size: %d [0x%x]b " NOLF,
                           fsettings->curRecordCount, fsettings->maxRecordCount, fsettings->recordSize, fsettings->recordSize);
             break;
         }
@@ -1891,13 +1915,50 @@ void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
         default: {
             break;
         }
-    }
+    }    
+}
+
+void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
+    PrintAndLogEx(NORMAL, "(%-5s) " NOLF, GetDesfireCommunicationMode(fsettings->fileCommMode));
+    PrintAndLogEx(NORMAL, "[0x%02x] " _CYAN_("%-13s ") NOLF, fsettings->fileType, GetDesfireFileType(fsettings->fileType));
+
+    DesfirePrintShortFileTypeSettings(fsettings);
 
     PrintAndLogEx(NORMAL, "(%s %s %s %s)",
-                  GetDesfireAccessRightStr(fsettings->rAccess),
-                  GetDesfireAccessRightStr(fsettings->wAccess),
-                  GetDesfireAccessRightStr(fsettings->rwAccess),
-                  GetDesfireAccessRightStr(fsettings->chAccess));
+                  GetDesfireAccessRightShortStr(fsettings->rAccess),
+                  GetDesfireAccessRightShortStr(fsettings->wAccess),
+                  GetDesfireAccessRightShortStr(fsettings->rwAccess),
+                  GetDesfireAccessRightShortStr(fsettings->chAccess));
+}
+
+void DesfirePrintFileSettingsTable(bool printheader, uint8_t id, bool isoidavail, uint16_t isoid, FileSettingsS *fsettings) {
+    if (printheader) {
+        PrintAndLogEx(SUCCESS, " ID |ISO ID|     File type     | Mode  | Rights: raw, r w rw ch   | File settings   ");
+        PrintAndLogEx(SUCCESS, "----------------------------------------------------------------------------------------------------------");
+    }
+        PrintAndLogEx(SUCCESS, " " _GREEN_("%02x") " |" NOLF, id);
+        if (isoidavail) {
+            if (isoid != 0)
+                PrintAndLogEx(NORMAL, " " _CYAN_("%04x") " |" NOLF, isoid);
+            else
+                PrintAndLogEx(NORMAL, " " _YELLOW_("n/a ") " |" NOLF);
+        } else {
+            PrintAndLogEx(NORMAL, "      |" NOLF);
+        }
+
+    PrintAndLogEx(NORMAL, "0x%02x " _CYAN_("%-13s") " |" NOLF, fsettings->fileType, GetDesfireFileType(fsettings->fileType));
+    PrintAndLogEx(NORMAL, " %-5s |" NOLF, GetDesfireCommunicationMode(fsettings->fileCommMode));
+
+    PrintAndLogEx(NORMAL, "%04x, %-4s %-4s %-4s %-4s |" NOLF,
+                  fsettings->rawAccessRights,
+                  GetDesfireAccessRightShortStr(fsettings->rAccess),
+                  GetDesfireAccessRightShortStr(fsettings->wAccess),
+                  GetDesfireAccessRightShortStr(fsettings->rwAccess),
+                  GetDesfireAccessRightShortStr(fsettings->chAccess));
+                  
+    PrintAndLogEx(NORMAL, " " NOLF);
+    DesfirePrintShortFileTypeSettings(fsettings);
+    PrintAndLogEx(NORMAL, "");
 }
 
 void DesfirePrintFileSettingsExtended(FileSettingsS *fsettings) {

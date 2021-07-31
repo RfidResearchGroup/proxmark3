@@ -147,6 +147,7 @@ int DesfireGetFileISOIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen
 
 void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsettings);
 void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings);
+void DesfirePrintFileSettingsTable(bool printheader, uint8_t id, bool isoidavail, uint16_t isoid, FileSettingsS *fsettings);
 void DesfirePrintFileSettingsExtended(FileSettingsS *fsettings);
 int DesfireGetFileSettings(DesfireContext *dctx, uint8_t fileid, uint8_t *resp, size_t *resplen);
 int DesfireGetFileSettingsStruct(DesfireContext *dctx, uint8_t fileid, FileSettingsS *fsettings);
@@ -154,6 +155,7 @@ int DesfireChangeFileSettings(DesfireContext *dctx, uint8_t *data, size_t datale
 
 const DesfireCreateFileCommandsS *GetDesfireFileCmdRec(uint8_t type);
 const char *GetDesfireAccessRightStr(uint8_t right);
+const char *GetDesfireAccessRightShortStr(uint8_t right);
 void DesfireEncodeFileAcessMode(uint8_t *mode, uint8_t r, uint8_t w, uint8_t rw, uint8_t ch);
 void DesfireDecodeFileAcessMode(uint8_t *mode, uint8_t *r, uint8_t *w, uint8_t *rw, uint8_t *ch);
 void DesfirePrintAccessRight(uint8_t *data);

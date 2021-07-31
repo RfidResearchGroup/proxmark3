@@ -6164,19 +6164,18 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
         return res;
     }
 
-    PrintAndLogEx(INFO, "---------------------------- " _CYAN_("File list") " -----------------------(r w rw ch)-----");
-    for (int i = 0; i < filescount; i++) {
-        PrintAndLogEx(SUCCESS, "ID: " _GREEN_("%02x ") NOLF, FileList[i].fileNum);
-        if (isopresent) {
-            if (FileList[i].fileISONum != 0)
-                PrintAndLogEx(NORMAL, "ISO ID: " _CYAN_("%04x ") NOLF, FileList[i].fileISONum);
-            else
-                PrintAndLogEx(NORMAL, "ISO ID: " _YELLOW_("n/a  ") NOLF);
-        }
+    PrintAndLogEx(INFO, "------------------------------------------ " _CYAN_("File list") " -----------------------------------------------------");
+    for (int i = 0; i < filescount; i++)
+        DesfirePrintFileSettingsTable((i == 0), FileList[i].fileNum, isopresent, FileList[i].fileISONum, &FileList[i].fileSettings);
 
-        DesfirePrintFileSettingsOneLine(&FileList[i].fileSettings);
-    }
+    DropField();
+    return PM3_SUCCESS;
+}
 
+static int CmdHF14ADesLsApp(const char *Cmd) {
+    
+    
+    
     DropField();
     return PM3_SUCCESS;
 }
@@ -6311,12 +6310,13 @@ static command_t CommandTable[] = {
     {"getkeysettings",   CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "Get Key Settings"},
     {"getkeyversions",   CmdHF14ADesGetKeyVersions,   IfPm3Iso14443a,  "Get Key Versions"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Applications") " -------------------"},
+    {"getaids",          CmdHF14ADesGetAIDs,          IfPm3Iso14443a,  "Get Application IDs list"},
+    {"getappnames",      CmdHF14ADesGetAppNames,      IfPm3Iso14443a,  "Get Applications list"},
+    {"lsapp",            CmdHF14ADesLsApp,            IfPm3Iso14443a,  "Show all files list"},
     {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
     {"createapp",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application"},
     {"deleteapp",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application"},
     {"selectapp",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
-    {"getaids",          CmdHF14ADesGetAIDs,          IfPm3Iso14443a,  "Get Application IDs list"},
-    {"getappnames",      CmdHF14ADesGetAppNames,      IfPm3Iso14443a,  "Get Applications list"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("Files") " -----------------------"},
     {"getfileids",       CmdHF14ADesGetFileIDs,       IfPm3Iso14443a,  "Get File IDs list"},
     {"getfileisoids",    CmdHF14ADesGetFileISOIDs,    IfPm3Iso14443a,  "Get File ISO IDs list"},
