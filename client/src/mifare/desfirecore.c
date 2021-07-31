@@ -694,6 +694,7 @@ static void DesfireJoinBlockToBytes(uint8_t *blockdata, size_t blockdatacount, s
 static void DesfireSplitBytesToBlock(uint8_t *blockdata, size_t *blockdatacount, size_t blockdatasize, uint8_t *dstdata, size_t dstdatalen) {
     size_t len = 0;
     for (int i = 0; i < *blockdatacount; i++) {
+        memset(&blockdata[i * blockdatasize + 1], 0, blockdatasize - 1);
         size_t tlen = len + blockdata[i * blockdatasize];
         if (tlen > dstdatalen) {
             tlen = dstdatalen;
