@@ -1293,9 +1293,8 @@ static int DesfireAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel sec
     memcpy(&both[rndlen], piccrnd, rndlen);
     
     // encode
-    uint8_t IV[16] = {0};
-    if (aes_encode(IV, dctx->key, both, both, rndlen * 2))
-        return 303;
+    DesfireClearIV(dctx);
+    DesfireCryptoEncDec(dctx, false, both, rndlen * 2, both, true); // error 303
     
     // external authenticate
     res = DesfireISOExternalAuth(dctx, true, dctx->keyNum, dctx->keyType, both);
@@ -1314,8 +1313,7 @@ static int DesfireAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel sec
     
     // decode rnddata
     uint8_t piccrnd2[64] = {0};
-    if (aes_decode(IV, dctx->key, rnddata, piccrnd2, rndlen * 2))
-        return 307;
+    DesfireCryptoEncDec(dctx, false, rnddata, rndlen * 2, piccrnd2, false); // error 307
     
     // check
     if (memcmp(hostrnd2, &piccrnd2[rndlen], rndlen) != 0)
