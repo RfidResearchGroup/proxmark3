@@ -41,7 +41,7 @@ void DesfireClearContext(DesfireContext *ctx) {
     ctx->secureChannel = DACNone;
     ctx->cmdSet = DCCNative;
     ctx->commMode = DCMNone;
-    
+
     ctx->appSelected = false;
 
     ctx->kdfAlgo = 0;
@@ -224,7 +224,7 @@ void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *s
     if (ctx->secureChannel == DACd40) {
         memset(ctx->IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
     }
-    
+
     size_t block_size = desfire_get_key_block_length(ctx->keyType);
 
     if (iv == NULL)
@@ -425,7 +425,7 @@ void DesfireGenSessionKeyEV1(const uint8_t rnda[], const uint8_t rndb[], Desfire
 void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool enckey, uint8_t *sessionkey) {
     uint8_t data[64] = {0};
     memset(sessionkey, 0, CRYPTO_AES_BLOCK_SIZE);
-    
+
     if (enckey) {
         data[0] = 0xa5;
         data[1] = 0x5a;
@@ -435,7 +435,7 @@ void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool en
     }
     data[3] = 0x01;
     data[5] = 0x80;
-    
+
     // data+6 - start of rnd part
     memcpy(data + 6, rndA, 8);
     bin_xor(data + 8, rndB, 6); // xor rndb 6b
@@ -453,7 +453,7 @@ void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool en
 
 void DesfireEV2FillIV(DesfireContext *ctx, bool ivforcommand, uint8_t *iv) {
     uint8_t xiv[CRYPTO_AES_BLOCK_SIZE] = {0};
-    
+
     if (ivforcommand) {
         xiv[0] = 0xa5;
         xiv[1] = 0x5a;
@@ -464,10 +464,10 @@ void DesfireEV2FillIV(DesfireContext *ctx, bool ivforcommand, uint8_t *iv) {
 
     memcpy(xiv + 2, ctx->TI, 4);
     Uint2byteToMemLe(xiv + 2 + 4, ctx->cmdCntr);
-    
+
     if (aes_encode(NULL, ctx->sessionKeyEnc, xiv, xiv, CRYPTO_AES_BLOCK_SIZE))
         return;
-    
+
     if (iv == NULL)
         memcpy(ctx->IV, xiv, CRYPTO_AES_BLOCK_SIZE);
     else

@@ -973,7 +973,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210729.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210731.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -3944,32 +3944,34 @@
         },
         "hf mfdes auth": {
             "command": "hf mfdes auth",
-            "description": "authenticates mifare desfire using key",
+            "description": "select application on the card. it selects app if it is a valid one or returns an error.",
             "notes": [
-                "hf mfdes auth -m 3 -t 4 -a 808301 -n 0 -k 00000000000000000000000000000000 -> aes,keynumber 0, aid 0x803201",
-                "hf mfdes auth -m 2 -t 2 -a 000000 -n 1 -k 00000000000000000000000000000000 -> 3des,keynumber 1, aid 0x000000",
-                "hf mfdes auth -m 1 -t 1 -a 000000 -n 2 -k 0000000000000000 -> des,keynumber 2, aid 0x000000",
-                "hf mfdes auth -m 1 -t 1 -a 000000 -n 0 -> des, defaultkey, aid 0x000000",
-                "hf mfdes auth -m 2 -t 2 -a 000000 -n 0 -> 3des, defaultkey, aid 0x000000",
-                "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> 3k3des, defaultkey, aid 0x000000",
-                "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> aes, defaultkey, aid 0x000000"
+                "hf mfdes auth -n 0 -t des -k 0000000000000000 -f none -> select picc level and authenticate with key num=0, key type=des, key=00..00 and key derivation = none",
+                "hf mfdes auth -n 0 -t aes -k 00000000000000000000000000000000 -> select picc level and authenticate with key num=0, key type=aes, key=00..00 and key derivation = none",
+                "hf mfdes auth -n 0 -t des -k 0000000000000000 --save -> select picc level and authenticate and in case of successful authentication - save channel parameters to defaults",
+                "hf mfdes auth --aid 123456 -> select application 123456 and authenticate via parameters from `default` command"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-m, --type <type> auth type (1=normal, 2=iso, 3=aes)",
-                "-t, --algo <algo> crypt algo (1=des, 2=3des(2k2des), 3=3k3des, 4=aes)",
-                "-a, --aid <aid> aid used for authentification (hex 3 bytes)",
-                "-n, --keyno <keyno> key number used for authentification",
-                "-k, --key <key> key for checking (hex 8-24 bytes)",
-                "-d, --kdf <kdf> key derivation function (kdf) (0=none, 1=an10922, 2=gallagher)",
-                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)"
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id of application for some parameters (3 hex bytes, big endian)",
+                "--save saves channels parameters to defaults if authentication succeeds"
             ],
-            "usage": "hf mfdes auth [-h] [-m <type>] [-t <algo>] [-a <aid>]... [-n <keyno>] [-k <key>] [-d <kdf>] [-i <kdfi>]"
+            "usage": "hf mfdes auth [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--save]"
         },
         "hf mfdes bruteaid": {
             "command": "hf mfdes bruteaid",
-            "description": "recover aids by bruteforce. warning: this command takes a long time",
+            "description": "recover aids by bruteforce. warning: this command takes a loooong time",
             "notes": [
                 "hf mfdes bruteaid -> search all apps",
                 "hf mfdes bruteaid -s f0000f -i 16 -> search mad range manually"
@@ -4771,18 +4773,29 @@
             ],
             "usage": "hf mfdes read [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--fid <file id hex>] [--no-auth] [--type <auto/data/value/record/mac>] [-o <hex>] [-l <hex>]"
         },
-        "hf mfdes selectaid": {
-            "command": "hf mfdes selectaid",
-            "description": "select application id",
+        "hf mfdes selectapp": {
+            "command": "hf mfdes selectapp",
+            "description": "select application on the card. it selects app if it is a valid one or returns an error.",
             "notes": [
-                "hf mfdes selectaid -a 123456"
+                "hf mfdes selectapp --aid 123456 -> select application 123456"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-a, --aid <hex> app id to select as hex bytes (3 bytes, big endian)"
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n, --keyno <keyno> key number",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40/ev1/ev2> secure channel: d40/ev1/ev2",
+                "--aid <app id hex> application id of application for some parameters (3 hex bytes, big endian)",
+                "--dfname <df name str> application df name (string, max 16 chars). selects application via iso select command"
             ],
-            "usage": "hf mfdes selectaid [-h] [-a <hex>]..."
+            "usage": "hf mfdes selectapp [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--dfname <df name str>]"
         },
         "hf mfdes setconfig": {
             "command": "hf mfdes setconfig",
@@ -4812,7 +4825,7 @@
         },
         "hf mfdes test": {
             "command": "hf mfdes test",
-            "description": "[=] ------ desfire tests ------ [!] no space for crc. pos: 1 [=] crc16............ passed [!] no space for crc. pos: 2 [=] crc32............ passed [=] cmac 3tdea....... passed [=] cmac 2tdea....... passed [=] cmac des......... passed [=] --------------------------- [+] tests [ ok ] ======================================================================================= hf seos { seos rfids... } --------------------------------------------------------------------------------------- hf seos help available offline: yes help this help list list seos history --------------------------------------------------------------------------------------- hf seos info available offline: no get info from seos tags",
+            "description": "[=] ------ desfire tests ------ [!] no space for crc. pos: 1 [=] crc16............. passed [!] no space for crc. pos: 2 [=] crc32............. passed [=] cmac 3tdea........ passed [=] cmac 2tdea........ passed [=] cmac des.......... passed [=] ev2 session keys.. passed [=] ev2 iv calc....... passed [=] --------------------------- [+] tests [ ok ] ======================================================================================= hf seos { seos rfids... } --------------------------------------------------------------------------------------- hf seos help available offline: yes help this help list list seos history --------------------------------------------------------------------------------------- hf seos info available offline: no get info from seos tags",
             "notes": [
                 "hf seos info"
             ],
@@ -9826,6 +9839,6 @@
     "metadata": {
         "commands_extracted": 587,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-07-29T15:18:59"
+        "extracted_on": "2021-07-31T13:44:52"
     }
 }

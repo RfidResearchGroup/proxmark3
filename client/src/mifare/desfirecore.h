@@ -23,9 +23,9 @@
 
 enum DesfireISOSelectControlEnum {
     ISSMFDFEF     = 0x00,
-    ISSChildDF    = 0x01, 
+    ISSChildDF    = 0x01,
     ISSEFByFileID = 0x02,
-    ISSParentDF   = 0x03, 
+    ISSParentDF   = 0x03,
     ISSDFName     = 0x04
 };
 typedef enum DesfireISOSelectControlEnum DesfireISOSelectControl;

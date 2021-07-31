@@ -3069,7 +3069,7 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
         CLIParserFree(ctx);
         return res;
     }
-    
+
     uint8_t dfname[32] = {0};
     int dfnamelen = 16;
     CLIGetStrWithReturn(ctx, 12, dfname, &dfnamelen);
@@ -3092,22 +3092,22 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
 
         if (resplen > 0)
             PrintAndLogEx(FAILED, "Application " _CYAN_("FCI template") " [%zu]%s", resplen, sprint_hex(resp, resplen));
-        
+
         if (dfnamelen > 0)
             PrintAndLogEx(SUCCESS, "Application `%s` selected " _GREEN_("succesfully"), (char *)dfname);
         else
             PrintAndLogEx(SUCCESS, "PICC MF selected " _GREEN_("succesfully"));
-    } else {    
+    } else {
         res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, true, verbose);
         if (res != PM3_SUCCESS) {
             DropField();
             PrintAndLogEx(FAILED, "Select application 0x%06x " _RED_("failed") " ", appid);
             return res;
         }
-        
+
         PrintAndLogEx(SUCCESS, "Application 0x%06x selected " _GREEN_("succesfully") " ", appid);
     }
-    
+
     DropField();
     return res;
 }
@@ -3146,9 +3146,9 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 2, endAid, &endLen);
     uint32_t idIncrement = arg_get_int_def(ctx, 3, 1);
     bool mad = arg_get_lit(ctx, 4);
-    
+
     CLIParserFree(ctx);
-    
+
     // tru select PICC
     res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
     if (res != PM3_SUCCESS) {
@@ -3156,7 +3156,7 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
         PrintAndLogEx(FAILED, "Desfire PICC level select " _RED_("failed") ". Maybe wrong card or no card in the field.");
         return res;
     }
-    
+
     // TODO: We need to check the tag version, EV1 should stop after 26 apps are found
     if (mad) {
         idIncrement = 0x10;
@@ -3174,18 +3174,18 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
     PrintAndLogEx(INFO, "Enumerating through all AIDs manually, this will take a while!");
     for (uint32_t id = idStart; id <= idEnd && id >= idStart; id += idIncrement) {
         if (kbd_enter_pressed()) break;
-        
+
         int progress = ((id - idStart) * 100) / ((idEnd - idStart));
         PrintAndLogEx(INPLACE, "Progress: %d %%, current AID: %06X", progress, id);
-        
+
         res = DesfireSelectAIDHexNoFieldOn(&dctx, id);
-        
+
         if (res == PM3_SUCCESS) {
             printf("\33[2K\r"); // clear current line before printing
             PrintAndLogEx(SUCCESS, "Got new APPID %06X", id);
         }
     }
-    
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, _GREEN_("Done"));
     DropField();
@@ -3250,7 +3250,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         PrintAndLogEx(FAILED, "Select or authentication 0x%06x " _RED_("failed") ". Result [%d] %s", appid, res, DesfireAuthErrorToStr(res));
         return res;
     }
-    
+
     if (appid == 0x000000)
         PrintAndLogEx(SUCCESS, "PICC selected and authenticated " _GREEN_("succesfully"));
     else
@@ -3258,7 +3258,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, _CYAN_("Context: "));
     DesfirePrintContext(&dctx);
-    
+
     if (save) {
         defaultKeyNum = dctx.keyNum;
         defaultAlgoId = dctx.keyType;
@@ -3269,7 +3269,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         defaultSecureChannel = securechann;
         defaultCommSet = dctx.cmdSet;
         defaultCommMode = dctx.commMode;
-        
+
         PrintAndLogEx(SUCCESS, "Context saved to defaults " _GREEN_("succesfully") ". You can check them by command " _YELLOW_("hf mfdes default"));
     }
 

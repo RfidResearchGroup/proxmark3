@@ -75,7 +75,7 @@ typedef struct DesfireContextS {
     DesfireSecureChannel secureChannel; // none/d40/ev1/ev2
     DesfireCommandSet cmdSet;           // native/nativeiso/iso
     DesfireCommunicationMode commMode;  // plain/mac/enc
-    
+
     bool appSelected; // for iso auth
 
     uint8_t IV[DESFIRE_MAX_KEY_SIZE];
