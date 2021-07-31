@@ -2218,13 +2218,24 @@ int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *para
     return res;
 }
 
-int DesfireISOSelect(DesfireContext *dctx, char *dfname, uint8_t *resp, size_t *resplen) {
+int DesfireISOSelect(DesfireContext *dctx, DesfireISOSelectControl cntr, uint8_t *data, uint8_t datalen, uint8_t *resp, size_t *resplen) {
+    uint8_t xresp[250] = {0};
+    size_t xresplen = 0;
     uint16_t sw = 0;
-    int res = DesfireExchangeISO(true, dctx, (sAPDU) {0x00, ISO7816_SELECT_FILE, 0x04, 0x00, strnlen(dfname, 16), (uint8_t *)dfname}, APDU_INCLUDE_LE_00, resp, resplen, &sw);
+    int res = DesfireExchangeISO(true, dctx, (sAPDU) {0x00, ISO7816_SELECT_FILE, cntr, ((resp == NULL) ? 0x0C : 0x00), datalen, data}, APDU_INCLUDE_LE_00, xresp, &xresplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
         return PM3_ESOFT;
     
+    if (resp != NULL && resplen != NULL) {
+        *resplen = xresplen;
+        memcpy(resp, xresp, xresplen);
+    }
+    
     return res;
+}
+
+int DesfireISOSelectDF(DesfireContext *dctx, char *dfname, uint8_t *resp, size_t *resplen) {
+    return DesfireISOSelect(dctx, ISSDFName, (uint8_t *)dfname, strnlen(dfname, 16), resp, resplen);
 }
 
 int DesfireISOGetChallenge(DesfireContext *dctx, DesfireCryptoAlgorythm keytype, uint8_t *resp, size_t *resplen) {

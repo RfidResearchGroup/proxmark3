@@ -3080,7 +3080,10 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     if (dctx.cmdSet == DCCISO || dfnamelen > 0) {
         uint8_t resp[250] = {0};
         size_t resplen = 0;
-        res = DesfireISOSelect(&dctx, (char *)dfname, resp, &resplen);
+        if (dfnamelen > 0)
+            res = DesfireISOSelectDF(&dctx, (char *)dfname, resp, &resplen);
+        else
+            res = DesfireISOSelect(&dctx, ISSMFDFEF, NULL, 0, resp, &resplen);
         if (res != PM3_SUCCESS) {
             DropField();
             PrintAndLogEx(FAILED, "ISO Select application `%s` " _RED_("failed"), (char *)dfname);
@@ -3090,7 +3093,10 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
         if (resplen > 0)
             PrintAndLogEx(FAILED, "Application " _CYAN_("FCI template") " [%zu]%s", resplen, sprint_hex(resp, resplen));
         
-        PrintAndLogEx(SUCCESS, "Application `%s` selected " _GREEN_("succesfully") " ", (char *)dfname);
+        if (dfnamelen > 0)
+            PrintAndLogEx(SUCCESS, "Application `%s` selected " _GREEN_("succesfully"), (char *)dfname);
+        else
+            PrintAndLogEx(SUCCESS, "PICC MF selected " _GREEN_("succesfully"));
     } else {    
         res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, true, verbose);
         if (res != PM3_SUCCESS) {
