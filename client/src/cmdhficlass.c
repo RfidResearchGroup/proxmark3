@@ -31,6 +31,7 @@
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
 #include "cmdsmartcard.h"   // smart select fct
+#include "proxendian.h"
 
 #define NUM_CSNS 9
 #define ICLASS_KEYS_MAX 8
@@ -1317,7 +1318,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         has_values = (memcmp(decrypted + (8 * 7), empty, 8) != 0) && (memcmp(decrypted + (8 * 7), zeros, 8) != 0);
         if (has_values) {
 
-            //todo:  remove preamble/sentinal
+            //todo:  remove preamble/sentinel
             uint32_t top = 0, mid, bot;
             mid = bytes_to_num(decrypted + (8 * 7), 4);
             bot = bytes_to_num(decrypted + (8 * 7) + 4, 4);
@@ -2352,7 +2353,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
 
             if (memcmp(dec_data, empty, 8) != 0) {
 
-                //todo:  remove preamble/sentinal
+                //todo:  remove preamble/sentinel
 
                 uint32_t top = 0, mid, bot;
                 mid = bytes_to_num(dec_data, 4);
@@ -3733,9 +3734,17 @@ static int CmdHFiClassEncode(const char *Cmd) {
             PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
             return PM3_ESOFT;
         }
-        add_HID_header(&packed);
 
+        // Set sentinel bit
+        packed.Length++;// increase length to allow setting bit just above real data
+        set_bit_by_position(&packed, true, 0);
+
+#ifdef HOST_LITTLE_ENDIAN
+        packed.Mid = BSWAP_32(packed.Mid);
         packed.Bot = BSWAP_32(packed.Bot);
+#endif
+
+        memcpy(credential + 8, &packed.Mid, sizeof(packed.Mid));
         memcpy(credential + 12, &packed.Bot, sizeof(packed.Bot));
     }
 
