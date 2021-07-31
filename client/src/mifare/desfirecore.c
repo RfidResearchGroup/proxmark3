@@ -773,10 +773,10 @@ int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2) {
         if (respcode != MFDES_S_OPERATION_OK)
             return PM3_EAPDU_FAIL;
 
+        DesfireClearSession(ctx);
+        
         return PM3_SUCCESS;
     }
-    
-    DesfireClearSession(ctx);
     
     return res;
 }
