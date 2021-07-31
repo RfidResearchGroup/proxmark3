@@ -695,8 +695,13 @@ static void DesfireSplitBytesToBlock(uint8_t *blockdata, size_t *blockdatacount,
     size_t len = 0;
     for (int i = 0; i < *blockdatacount; i++) {
         size_t tlen = len + blockdata[i * blockdatasize];
-        if (tlen > dstdatalen)
+        if (tlen > dstdatalen) {
             tlen = dstdatalen;
+            if (tlen >= len)
+                blockdata[i * blockdatasize] = tlen - len;
+            else
+                blockdata[i * blockdatasize] = 0;
+        }
         if (len == tlen) {
             *blockdatacount = i;
             break;
