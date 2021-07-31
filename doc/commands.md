@@ -503,41 +503,41 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf mfdes help          `|Y       |`This help`
-|`hf mfdes default       `|N       |`[new]Set defaults for all the commands`
-|`hf mfdes auth          `|N       |`Tries a MIFARE DesFire Authentication`
-|`hf mfdes chk           `|N       |`Check keys`
-|`hf mfdes enum          `|N       |`Tries enumerate all applications`
-|`hf mfdes formatpicc    `|N       |`[new]Format PICC`
-|`hf mfdes freemem       `|N       |`[new]Get free memory size`
-|`hf mfdes getuid        `|N       |`[new]Get uid from card`
-|`hf mfdes setconfig     `|N       |`[new]Set card configuration`
-|`hf mfdes info          `|N       |`Tag information`
+|`hf mfdes default       `|N       |`Set defaults for all the commands`
+|`hf mfdes auth          `|N       |`MIFARE DesFire Authentication`
+|`hf mfdes chk           `|N       |`[old]Check keys`
+|`hf mfdes enum          `|N       |`[old]Tries enumerate all applications`
+|`hf mfdes formatpicc    `|N       |`Format PICC`
+|`hf mfdes freemem       `|N       |`Get free memory size`
+|`hf mfdes getuid        `|N       |`Get uid from card`
+|`hf mfdes setconfig     `|N       |`Set card configuration`
+|`hf mfdes info          `|N       |`[old]Tag information`
 |`hf mfdes list          `|Y       |`List DESFire (ISO 14443A) history`
-|`hf mfdes changekey     `|N       |`[new]Change Key`
-|`hf mfdes chkeysettings `|N       |`[new]Change Key Settings`
-|`hf mfdes getkeysettings`|N       |`[new]Get Key Settings`
-|`hf mfdes getkeyversions`|N       |`[new]Get Key Versions`
+|`hf mfdes changekey     `|N       |`Change Key`
+|`hf mfdes chkeysettings `|N       |`Change Key Settings`
+|`hf mfdes getkeysettings`|N       |`Get Key Settings`
+|`hf mfdes getkeyversions`|N       |`Get Key Versions`
 |`hf mfdes bruteaid      `|N       |`Recover AIDs by bruteforce`
-|`hf mfdes createapp     `|N       |`[new]Create Application`
-|`hf mfdes deleteapp     `|N       |`[new]Delete Application`
-|`hf mfdes selectaid     `|N       |`Select Application ID`
-|`hf mfdes getaids       `|N       |`[new]Get Application IDs list`
-|`hf mfdes getappnames   `|N       |`[new]Get Applications list`
-|`hf mfdes getfileids    `|N       |`[new]Get File IDs list`
-|`hf mfdes getfileisoids `|N       |`[new]Get File ISO IDs list`
-|`hf mfdes lsfiles       `|N       |`[new]Show all files list`
-|`hf mfdes dump          `|N       |`[new]Dump all files`
-|`hf mfdes createfile    `|N       |`[new]Create Standard/Backup File`
-|`hf mfdes createvaluefile`|N       |`[new]Create Value File`
-|`hf mfdes createrecordfile`|N       |`[new]Create Linear/Cyclic Record File`
-|`hf mfdes createmacfile `|N       |`[new]Create Transaction MAC File`
-|`hf mfdes deletefile    `|N       |`[new]Delete File`
-|`hf mfdes getfilesettings`|N       |`[new]Get file settings`
-|`hf mfdes chfilesettings`|N       |`[new]Change file settings`
-|`hf mfdes read          `|N       |`[new]Read data from standard/backup/record/value/mac file`
-|`hf mfdes write         `|N       |`[new]Write data to standard/backup/record/value file`
-|`hf mfdes value         `|N       |`[new]Operations with value file (get/credit/limited credit/debit/clear)`
-|`hf mfdes clearrecfile  `|N       |`[new]Clear record File`
+|`hf mfdes createapp     `|N       |`Create Application`
+|`hf mfdes deleteapp     `|N       |`Delete Application`
+|`hf mfdes selectapp     `|N       |`Select Application ID`
+|`hf mfdes getaids       `|N       |`Get Application IDs list`
+|`hf mfdes getappnames   `|N       |`Get Applications list`
+|`hf mfdes getfileids    `|N       |`Get File IDs list`
+|`hf mfdes getfileisoids `|N       |`Get File ISO IDs list`
+|`hf mfdes lsfiles       `|N       |`Show all files list`
+|`hf mfdes dump          `|N       |`Dump all files`
+|`hf mfdes createfile    `|N       |`Create Standard/Backup File`
+|`hf mfdes createvaluefile`|N       |`Create Value File`
+|`hf mfdes createrecordfile`|N       |`Create Linear/Cyclic Record File`
+|`hf mfdes createmacfile `|N       |`Create Transaction MAC File`
+|`hf mfdes deletefile    `|N       |`Delete File`
+|`hf mfdes getfilesettings`|N       |`Get file settings`
+|`hf mfdes chfilesettings`|N       |`Change file settings`
+|`hf mfdes read          `|N       |`Read data from standard/backup/record/value/mac file`
+|`hf mfdes write         `|N       |`Write data to standard/backup/record/value file`
+|`hf mfdes value         `|N       |`Operations with value file (get/credit/limited credit/debit/clear)`
+|`hf mfdes clearrecfile  `|N       |`Clear record File`
 |`hf mfdes test          `|Y       |`Test crypto`
 
 

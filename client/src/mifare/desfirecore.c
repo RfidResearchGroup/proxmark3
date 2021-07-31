@@ -673,10 +673,10 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext *ctx, ui
 static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, sAPDU apdu, uint16_t le, uint8_t *resp, size_t *resplen, uint16_t *sw) {
     uint32_t rlen = 0;
     int res = DESFIRESendApduEx(activate_field, apdu, le, resp, 255, &rlen, sw);
-    
+
     if (res == PM3_SUCCESS)
         *resplen = rlen;
-    
+
     return res;
 }
 
@@ -775,10 +775,10 @@ int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2) {
 
         DesfireClearSession(ctx);
         ctx->appSelected = (aid1[0] != 0x00 || aid1[1] != 0x00 || aid1[2] != 0x00);
-        
+
         return PM3_SUCCESS;
     }
-    
+
     return res;
 }
 
@@ -817,7 +817,7 @@ int DesfireSelectAIDHexNoFieldOn(DesfireContext *ctx, uint32_t aid) {
 int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose) {
     if (verbose)
         DesfirePrintContext(dctx);
-    
+
     bool isosw = false;
     if (dctx->cmdSet == DCCISO) {
         dctx->cmdSet = DCCNativeISO;
@@ -833,7 +833,7 @@ int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel se
     }
     if (verbose)
         PrintAndLogEx(INFO, "App %06x " _GREEN_("selected"), aid);
-    
+
     if (isosw)
         dctx->cmdSet = DCCISO;
 
@@ -1154,7 +1154,7 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
     uint8_t RndB[CRYPTO_AES_BLOCK_SIZE] = {0};
     uint8_t encRndB[CRYPTO_AES_BLOCK_SIZE] = {0};
     uint8_t rotRndB[CRYPTO_AES_BLOCK_SIZE] = {0};   //RndB'
-    uint8_t both[CRYPTO_AES_BLOCK_SIZE * 2 + 1] = {0};  // ek/dk_keyNo(RndA+RndB')    
+    uint8_t both[CRYPTO_AES_BLOCK_SIZE * 2 + 1] = {0};  // ek/dk_keyNo(RndA+RndB')
 
     uint8_t subcommand = firstauth ? MFDES_AUTHENTICATE_EV2F : MFDES_AUTHENTICATE_EV2NF;
     uint8_t *key = dctx->key;
@@ -1162,7 +1162,7 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
     size_t recv_len = 0;
     uint8_t respcode = 0;
     uint8_t recv_data[256] = {0};
-    
+
     if (verbose)
         PrintAndLogEx(INFO, _CYAN_("Auth %s:") " cmd: 0x%02x keynum: 0x%02x key: %s", (firstauth) ? "first" : "non-first", subcommand, dctx->keyNum, sprint_hex(key, 16));
 
@@ -1191,7 +1191,7 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
     // Part 3
     if (aes_decode(IV, key, encRndB, RndB, CRYPTO_AES_BLOCK_SIZE))
         return 5;
-    
+
     if (g_debugMode > 1) {
         PrintAndLogEx(DEBUG, "encRndB: %s", sprint_hex(encRndB, CRYPTO_AES_BLOCK_SIZE));
         PrintAndLogEx(DEBUG, "RndB: %s", sprint_hex(RndB, CRYPTO_AES_BLOCK_SIZE));
@@ -1211,7 +1211,7 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
         PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, CRYPTO_AES_BLOCK_SIZE));
         PrintAndLogEx(DEBUG, "Both: %s", sprint_hex(tmp, CRYPTO_AES_BLOCK_SIZE * 2));
     }
-    
+
     if (aes_encode(IV, key, tmp, both, CRYPTO_AES_BLOCK_SIZE * 2))
         return 6;
     if (g_debugMode > 1) {
@@ -1232,7 +1232,7 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
     }
 
     // Part 4
-    memcpy(encRndA, recv_data, CRYPTO_AES_BLOCK_SIZE);    
+    memcpy(encRndA, recv_data, CRYPTO_AES_BLOCK_SIZE);
 
     uint8_t data[32] = {0};
 
@@ -1249,7 +1249,7 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
         }
         return 11;
     }
-    
+
     if (firstauth) {
         dctx->cmdCntr = 0;
         memcpy(dctx->TI, data, 4);
@@ -1270,38 +1270,38 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
         PrintAndLogEx(INFO, "session key ENC: %s", sprint_hex(dctx->sessionKeyEnc, 16));
         PrintAndLogEx(INFO, "session key MAC: %s", sprint_hex(dctx->sessionKeyMAC, 16));
     }
-    
+
     return PM3_SUCCESS;
 }
 
 static int DesfireAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
     uint8_t rndlen = DesfireGetRndLenForKey(dctx->keyType);
-    
+
     uint8_t hostrnd[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16};
     uint8_t hostrnd2[] = {0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01};
-    
+
     uint8_t piccrnd[64];
     size_t xlen = 0;
     int res = DesfireISOGetChallenge(dctx, dctx->keyType, piccrnd, &xlen);
     if (res != PM3_SUCCESS)
         return 301;
-    
+
     if (xlen != rndlen)
         return 302;
-    
+
     uint8_t both[32] = {0};
     memcpy(both, hostrnd, rndlen);
     memcpy(&both[rndlen], piccrnd, rndlen);
-    
+
     // encode
     DesfireClearIV(dctx);
     DesfireCryptoEncDec(dctx, false, both, rndlen * 2, both, true); // error 303
-    
+
     // external authenticate
     res = DesfireISOExternalAuth(dctx, dctx->appSelected, dctx->keyNum, dctx->keyType, both);
     if (res != PM3_SUCCESS)
         return 304;
-    
+
     // internal authenticate
     uint8_t rnddata[64] = {0};
     xlen = 0;
@@ -1311,36 +1311,36 @@ static int DesfireAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel sec
 
     if (xlen != rndlen * 2)
         return 306;
-    
+
     // decode rnddata
     uint8_t piccrnd2[64] = {0};
     DesfireCryptoEncDec(dctx, false, rnddata, rndlen * 2, piccrnd2, false); // error 307
-    
+
     // check
     if (memcmp(hostrnd2, &piccrnd2[rndlen], rndlen) != 0)
         return 308;
-        
+
     DesfireGenSessionKeyEV1(hostrnd, piccrnd2, dctx->keyType, dctx->sessionKeyEnc);
     DesfireClearIV(dctx);
     memcpy(dctx->sessionKeyMAC, dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType));
     dctx->secureChannel = secureChannel;
-    
+
     if (verbose)
         PrintAndLogEx(INFO, "session key: %s", sprint_hex(dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType)));
-    
+
     return PM3_SUCCESS;
 }
 
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
     if (dctx->cmdSet == DCCISO && secureChannel != DACEV2)
         return DesfireAuthenticateISO(dctx, secureChannel, verbose);
-    
+
     if (secureChannel == DACd40 || secureChannel == DACEV1)
         return DesfireAuthenticateEV1(dctx, secureChannel, verbose);
 
     if (secureChannel == DACEV2)
         return DesfireAuthenticateEV2(dctx, secureChannel, (DesfireIsAuthenticated(dctx) == false), verbose); // non first auth if there is a working secure channel
-    
+
     return 100;
 }
 
@@ -2227,15 +2227,15 @@ int DesfireISOSelect(DesfireContext *dctx, DesfireISOSelectControl cntr, uint8_t
     int res = DesfireExchangeISO(true, dctx, (sAPDU) {0x00, ISO7816_SELECT_FILE, cntr, ((resp == NULL) ? 0x0C : 0x00), datalen, data}, APDU_INCLUDE_LE_00, xresp, &xresplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
         return PM3_ESOFT;
-    
+
     if (resp != NULL && resplen != NULL) {
         *resplen = xresplen;
         memcpy(resp, xresp, xresplen);
     }
-    
+
     DesfireClearSession(dctx);
-    dctx->appSelected = !( (cntr == ISSMFDFEF && datalen == 0) || (cntr == ISSEFByFileID && datalen == 2 && data[0] == 0 && data[1] == 0) );
-    
+    dctx->appSelected = !((cntr == ISSMFDFEF && datalen == 0) || (cntr == ISSEFByFileID && datalen == 2 && data[0] == 0 && data[1] == 0));
+
     return res;
 }
 
@@ -2248,22 +2248,22 @@ int DesfireISOGetChallenge(DesfireContext *dctx, DesfireCryptoAlgorythm keytype,
     int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_GET_CHALLENGE, 0x00, 0x00, 0x00, NULL}, DesfireGetRndLenForKey(keytype), resp, resplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
         return PM3_ESOFT;
-    
+
     return res;
 }
 
 int DesfireISOExternalAuth(DesfireContext *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data) {
     uint8_t p1 = DesfireKeyToISOKey(keytype);
     uint8_t p2 = ((app_level) ? 0x80 : 0x00) | keynum;
-    
+
     uint8_t resp[250] = {0};
     size_t resplen = 0;
-    
+
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_EXTERNAL_AUTHENTICATION, p1, p2, DesfireGetRndLenForKey(keytype) * 2, data}, 0, resp, &resplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
         return PM3_ESOFT;
-    
+
     return res;
 }
 
@@ -2276,7 +2276,7 @@ int DesfireISOInternalAuth(DesfireContext *dctx, bool app_level, uint8_t keynum,
     int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_INTERNAL_AUTHENTICATION, p1, p2, keylen, data}, keylen * 2, resp, resplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
         return PM3_ESOFT;
-    
+
     return res;
 }
 
