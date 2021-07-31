@@ -775,6 +775,9 @@ int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2) {
 
         return PM3_SUCCESS;
     }
+    
+    DesfireClearSession(ctx);
+    
     return res;
 }
 
@@ -2230,6 +2233,8 @@ int DesfireISOSelect(DesfireContext *dctx, DesfireISOSelectControl cntr, uint8_t
         *resplen = xresplen;
         memcpy(resp, xresp, xresplen);
     }
+    
+    DesfireClearSession(dctx);
     
     return res;
 }
