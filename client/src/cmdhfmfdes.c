@@ -6170,6 +6170,14 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
 
     DropField();
     return PM3_SUCCESS;
+}   
+
+static int AppListSearchAID(uint32_t appNum, AppListS AppList, size_t appcount) {
+     for (int i = 0; i < appcount; i++)
+         if (AppList[i].appNum == appNum)
+             return i;
+    
+    return -1;
 }
 
 static int CmdHF14ADesLsApp(const char *Cmd) {
@@ -6201,7 +6209,7 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, &securechann, DCMPlain, NULL);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, &securechann, DCMMACed, NULL);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -6226,17 +6234,33 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
         return PM3_ESOFT;
     }    
     
+    AppListS AppList = {0};
+    
+    size_t appcount = buflen / 3;
     for (int i = 0; i < buflen; i += 3)
-        PrintAndLogEx(INFO, "AID: %06x", DesfireAIDByteToUint(&buf[i]));
+        AppList[i / 3].appNum = DesfireAIDByteToUint(&buf[i]);
     
     // result bytes: 3, 2, 1-16. total record size = 24
     res = DesfireGetDFList(&dctx, buf, &buflen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Desfire GetDFList command " _RED_("error") ". Result: %d", res);
     } else if (buflen > 1) {
-        //for 
+        for (int i = 0; i < buflen; i++) {
+            int indx = AppListSearchAID(DesfireAIDByteToUint(&buf[i * 24 + 1]), AppList, appcount);
+            if (indx >= 0) {
+                AppList[indx].appISONum = MemBeToUint2byte(&buf[i * 24 + 1 + 3]);
+                memcpy(AppList[indx].appDFName, &buf[i * 24 + 1 + 5], strnlen((char *)&buf[i * 24 + 1 + 5], 16));
+            }
+        }
     }
     
+    PrintAndLogEx(INFO, "-------------- " _CYAN_("Alications list") " --------------");
+    PrintAndLogEx(INFO, "Applications count: " _GREEN_("%zu"), appcount);
+    if (appcount > 0) {
+        for (int i = 0; i < appcount; i++) {
+            PrintAndLogEx(INFO, "App num: 0x%02x iso id: 0x%04x name: %s", AppList[i].appNum, AppList[i].appISONum, AppList[i].appDFName);
+       }
+    }
     
     DropField();
     return PM3_SUCCESS;

@@ -85,6 +85,13 @@ typedef struct {
 
 typedef FileListElmS FileListS[32];
 
+typedef struct {
+    uint32_t appNum;
+    uint16_t appISONum;
+    char appDFName[16];
+} AppListElmS;
+typedef AppListElmS AppListS[64];
+
 typedef enum {
     RFTAuto,
     RFTData,
