@@ -41,6 +41,8 @@ void DesfireClearContext(DesfireContext *ctx) {
     ctx->secureChannel = DACNone;
     ctx->cmdSet = DCCNative;
     ctx->commMode = DCMNone;
+    
+    ctx->appSelected = false;
 
     ctx->kdfAlgo = 0;
     ctx->kdfInputLen = 0;

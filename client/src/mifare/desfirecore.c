@@ -774,6 +774,7 @@ int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2) {
             return PM3_EAPDU_FAIL;
 
         DesfireClearSession(ctx);
+        ctx->appSelected = (aid1[0] != 0x00 || aid1[1] != 0x00 || aid1[2] != 0x00);
         
         return PM3_SUCCESS;
     }
@@ -1297,14 +1298,14 @@ static int DesfireAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel sec
     DesfireCryptoEncDec(dctx, false, both, rndlen * 2, both, true); // error 303
     
     // external authenticate
-    res = DesfireISOExternalAuth(dctx, true, dctx->keyNum, dctx->keyType, both);
+    res = DesfireISOExternalAuth(dctx, dctx->appSelected, dctx->keyNum, dctx->keyType, both);
     if (res != PM3_SUCCESS)
         return 304;
     
     // internal authenticate
     uint8_t rnddata[64] = {0};
     xlen = 0;
-    res = DesfireISOInternalAuth(dctx, true, dctx->keyNum, dctx->keyType, hostrnd2, rnddata, &xlen);
+    res = DesfireISOInternalAuth(dctx, dctx->appSelected, dctx->keyNum, dctx->keyType, hostrnd2, rnddata, &xlen);
     if (res != PM3_SUCCESS)
         return 305;
 
@@ -2233,6 +2234,7 @@ int DesfireISOSelect(DesfireContext *dctx, DesfireISOSelectControl cntr, uint8_t
     }
     
     DesfireClearSession(dctx);
+    dctx->appSelected = !( (cntr == ISSMFDFEF && datalen == 0) || (cntr == ISSEFByFileID && datalen == 2 && data[0] == 0 && data[1] == 0) );
     
     return res;
 }
