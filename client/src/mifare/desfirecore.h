@@ -21,6 +21,15 @@
 
 #define DESFIRE_TX_FRAME_MAX_LEN 54
 
+enum DesfireISOSelectControlEnum {
+    ISSMFDFEF     = 0x00,
+    ISSChildDF    = 0x01, 
+    ISSEFByFileID = 0x02,
+    ISSParentDF   = 0x03, 
+    ISSDFName     = 0x04
+};
+typedef enum DesfireISOSelectControlEnum DesfireISOSelectControl;
+
 typedef struct {
     const uint8_t id;
     const char *text;
@@ -166,5 +175,11 @@ int DesfireWriteFile(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint32
 int DesfireReadRecords(DesfireContext *dctx, uint8_t fnum, uint32_t recnum, uint32_t reccount, uint8_t *resp, size_t *resplen);
 int DesfireWriteRecord(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint32_t len, uint8_t *data);
 int DesfireUpdateRecord(DesfireContext *dctx, uint8_t fnum, uint32_t recnum, uint32_t offset, uint32_t len, uint8_t *data);
+
+int DesfireISOSelectDF(DesfireContext *dctx, char *dfname, uint8_t *resp, size_t *resplen);
+int DesfireISOSelect(DesfireContext *dctx, DesfireISOSelectControl cntr, uint8_t *data, uint8_t datalen, uint8_t *resp, size_t *resplen);
+int DesfireISOGetChallenge(DesfireContext *dctx, DesfireCryptoAlgorythm keytype, uint8_t *resp, size_t *resplen);
+int DesfireISOExternalAuth(DesfireContext *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data);
+int DesfireISOInternalAuth(DesfireContext *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data, uint8_t *resp, size_t *resplen);
 
 #endif // __DESFIRECORE_H

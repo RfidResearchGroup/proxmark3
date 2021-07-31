@@ -19,6 +19,8 @@
 #define APDUCODE_TYPE_ERROR    3
 #define APDUCODE_TYPE_SECURITY 4
 
+#define APDU_INCLUDE_LE_00     0x100
+
 typedef struct {
     const char *ID;
     const uint8_t Type;

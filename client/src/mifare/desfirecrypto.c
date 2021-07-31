@@ -41,6 +41,8 @@ void DesfireClearContext(DesfireContext *ctx) {
     ctx->secureChannel = DACNone;
     ctx->cmdSet = DCCNative;
     ctx->commMode = DCMNone;
+    
+    ctx->appSelected = false;
 
     ctx->kdfAlgo = 0;
     ctx->kdfInputLen = 0;
@@ -387,6 +389,35 @@ uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode) {
             break;
     }
     return fmode;
+}
+
+void DesfireGenSessionKeyEV1(const uint8_t rnda[], const uint8_t rndb[], DesfireCryptoAlgorythm keytype, uint8_t *key) {
+    switch (keytype) {
+        case T_DES:
+            memcpy(key, rnda, 4);
+            memcpy(key + 4, rndb, 4);
+            break;
+        case T_3DES:
+            memcpy(key, rnda, 4);
+            memcpy(key + 4, rndb, 4);
+            memcpy(key + 8, rnda + 4, 4);
+            memcpy(key + 12, rndb + 4, 4);
+            break;
+        case T_3K3DES:
+            memcpy(key, rnda, 4);
+            memcpy(key + 4, rndb, 4);
+            memcpy(key + 8, rnda + 6, 4);
+            memcpy(key + 12, rndb + 6, 4);
+            memcpy(key + 16, rnda + 12, 4);
+            memcpy(key + 20, rndb + 12, 4);
+            break;
+        case T_AES:
+            memcpy(key, rnda, 4);
+            memcpy(key + 4, rndb, 4);
+            memcpy(key + 8, rnda + 12, 4);
+            memcpy(key + 12, rndb + 12, 4);
+            break;
+    }
 }
 
 // https://www.nxp.com/docs/en/application-note/AN12343.pdf
