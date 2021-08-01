@@ -816,6 +816,7 @@ void Plot::Zoom(double factor, uint32_t refX) {
 }
 
 void Plot::Move(int offset) {
+    if (GraphTraceLen == 0) return;
     if (offset > 0) { // Move right
         if (GraphPixelsPerPoint < 20) {
             GraphStart += offset;
