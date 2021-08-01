@@ -6259,10 +6259,10 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     }
 
     AuthCommandsChk authCmdCheck0 = {0};
-    DesfireCheckAuthCommands(0x000000, 0, &authCmdCheck0);
+    DesfireCheckAuthCommands(0x000000, NULL, 0, &authCmdCheck0);
     if (appcount > 0) {
         for (int i = 0; i < appcount; i++) {
-            DesfireCheckAuthCommands(AppList[i].appNum, 0, &AppList[i].authCmdCheck);
+            DesfireCheckAuthCommands(AppList[i].appNum, AppList[i].appDFName, 0, &AppList[i].authCmdCheck);
         }
     }
             

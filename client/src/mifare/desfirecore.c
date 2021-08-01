@@ -1371,14 +1371,54 @@ static bool DesfireCheckAuthCmd(uint32_t appAID, uint8_t keyNum, uint8_t authcmd
     return (res == PM3_SUCCESS && respcode == 0xaf);
 }
 
-void DesfireCheckAuthCommands(uint32_t appAID, uint8_t keyNum, AuthCommandsChk *authCmdCheck) {
+static bool DesfireCheckISOAuthCmd(uint32_t appAID, char *dfname, uint8_t keyNum, DesfireCryptoAlgorythm keytype) {
+  
+    DesfireContext dctx = {0};
+    dctx.keyNum = keyNum;
+    dctx.commMode = DCMPlain;
+    dctx.cmdSet = DCCISO;
+
+    bool app_level = (appAID != 0x000000);
+    int res = 0;
+    // if cant select - return false
+    if (dfname == NULL || strnlen(dfname, 16) == 0) {
+        res = DesfireSelectAIDHex(&dctx, appAID, false, 0);
+        if (res != PM3_SUCCESS)
+            return false;
+    } else {
+        res = DesfireISOSelectDF(&dctx, dfname, NULL, NULL);
+        if (res != PM3_SUCCESS)
+            return false;
+        app_level = true;
+    }
+    
+    uint8_t rndlen = DesfireGetRndLenForKey(keytype);
+    
+    uint8_t piccrnd[64] = {0};
+    size_t xlen = 0;
+    res = DesfireISOGetChallenge(&dctx, keytype, piccrnd, &xlen);
+    if (res != PM3_SUCCESS || xlen != rndlen)
+        return false;
+    
+    uint8_t resp[250] = {0};
+    size_t resplen = 0;
+    
+    uint16_t sw = 0;
+    uint8_t p1 = DesfireKeyToISOKey(keytype);
+    uint8_t p2 = ((app_level) ? 0x80 : 0x00) | keyNum;    
+    res = DesfireExchangeISO(false, &dctx, (sAPDU) {0x00, ISO7816_EXTERNAL_AUTHENTICATION, p1, p2, rndlen * 2, piccrnd}, 0, resp, &resplen, &sw);
+    DropField();
+    return (sw == 0x9000 || sw == 0x6982);
+}
+
+void DesfireCheckAuthCommands(uint32_t appAID, char *dfname, uint8_t keyNum, AuthCommandsChk *authCmdCheck) {
     memset(authCmdCheck, 0, sizeof(AuthCommandsChk));
     
     authCmdCheck->auth = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE);
     authCmdCheck->authISO = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE_ISO);
     authCmdCheck->authAES = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE_AES);
     authCmdCheck->authEV2 = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE_EV2F);
-    
+    authCmdCheck->authISONative = DesfireCheckISOAuthCmd(appAID, dfname, keyNum, T_DES);
 }
 
 void DesfireCheckAuthCommandsPrint(AuthCommandsChk *authCmdCheck) {

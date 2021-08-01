@@ -135,7 +135,7 @@ const char *DesfireAuthErrorToStr(int error);
 int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose);
 int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose);
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose);
-void DesfireCheckAuthCommands(uint32_t appAID, uint8_t keyNum,  AuthCommandsChk *authCmdCheck);
+void DesfireCheckAuthCommands(uint32_t appAID, char *dfname, uint8_t keyNum,  AuthCommandsChk *authCmdCheck);
 void DesfireCheckAuthCommandsPrint(AuthCommandsChk *authCmdCheck);
 
 int DesfireFormatPICC(DesfireContext *dctx);
