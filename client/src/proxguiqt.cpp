@@ -549,7 +549,7 @@ void Plot::PlotDemod(uint8_t *buffer, size_t len, QRect plotRect, QRect annotati
 
             if (GraphPixelsPerPoint > 10) {
                 QRect f(QPoint(x - 3, y - 3), QPoint(x + 3, y + 3));
-                painter->fillRect(f, QColor(100, 255, 100));
+                painter->fillRect(f, getColor(graphNum));
             }
             if (j == (int)clk / 2) {
                 //print label
