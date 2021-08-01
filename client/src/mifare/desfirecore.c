@@ -1379,12 +1379,17 @@ static bool DesfireCheckISOAuthCmd(uint32_t appAID, char *dfname, uint8_t keyNum
     dctx.cmdSet = DCCISO;
 
     bool app_level = (appAID != 0x000000);
-    int res = 0;
-    // if cant select - return false
+    int res = 0;    
     if (dfname == NULL || strnlen(dfname, 16) == 0) {
-        res = DesfireSelectAIDHex(&dctx, appAID, false, 0);
-        if (res != PM3_SUCCESS)
-            return false;
+        if (appAID == 0x000000) {
+            res = DesfireISOSelect(&dctx, ISSMFDFEF, NULL, 0, NULL, NULL);
+            if (res != PM3_SUCCESS)
+                return false;
+        } else {
+            res = DesfireSelectAIDHex(&dctx, appAID, false, 0);
+            if (res != PM3_SUCCESS)
+                return false;
+        }
     } else {
         res = DesfireISOSelectDF(&dctx, dfname, NULL, NULL);
         if (res != PM3_SUCCESS)
