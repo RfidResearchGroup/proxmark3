@@ -780,6 +780,7 @@ Plot::Plot(QWidget *parent) : QWidget(parent), GraphPixelsPerPoint(1) {
 
     CursorAPos = 0;
     CursorBPos = 0;
+    GraphStart = 0;
     GraphStop = 0;
 
     setWindowTitle(tr("Sliders"));
