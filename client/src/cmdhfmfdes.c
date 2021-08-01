@@ -6176,7 +6176,7 @@ static int AppListSearchAID(uint32_t appNum, AppListS AppList, size_t appcount) 
      for (int i = 0; i < appcount; i++)
          if (AppList[i].appNum == appNum)
              return i;
-    
+
     return -1;
 }
 
@@ -6227,6 +6227,10 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     uint8_t buf[250] = {0};
     size_t buflen = 0;
     
+    uint32_t freemem = 0;
+    DesfireGetFreeMem(&dctx, &freemem);
+
+    
     res = DesfireGetAIDList(&dctx, buf, &buflen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire GetAIDList command " _RED_("error") ". Result: %d", res);
@@ -6253,12 +6257,25 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
             }
         }
     }
-    
+
+    AuthCommandsChk authCmdCheck0 = {0};
+    DesfireCheckAuthCommands(0x000000, 0, &authCmdCheck0);
+    if (appcount > 0) {
+        for (int i = 0; i < appcount; i++) {
+            DesfireCheckAuthCommands(AppList[i].appNum, 0, &AppList[i].authCmdCheck);
+        }
+    }
+            
     PrintAndLogEx(INFO, "-------------- " _CYAN_("Alications list") " --------------");
-    PrintAndLogEx(INFO, "Applications count: " _GREEN_("%zu"), appcount);
+    PrintAndLogEx(INFO, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d"), appcount, freemem);
+    PrintAndLogEx(INFO, "PICC level auth commands: " NOLF);
+    DesfireCheckAuthCommandsPrint(&authCmdCheck0);
+
     if (appcount > 0) {
         for (int i = 0; i < appcount; i++) {
             PrintAndLogEx(INFO, "App num: 0x%02x iso id: 0x%04x name: %s", AppList[i].appNum, AppList[i].appISONum, AppList[i].appDFName);
+            PrintAndLogEx(INFO, "Auth commands: " NOLF);
+            DesfireCheckAuthCommandsPrint(&AppList[i].authCmdCheck);
        }
     }
     

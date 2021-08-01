@@ -86,9 +86,18 @@ typedef struct {
 typedef FileListElmS FileListS[32];
 
 typedef struct {
+    bool auth;
+    bool authISO;
+    bool authAES;
+    bool authEV2;
+    bool authISONative;
+} AuthCommandsChk;
+
+typedef struct {
     uint32_t appNum;
     uint16_t appISONum;
     char appDFName[16];
+    AuthCommandsChk authCmdCheck;
 } AppListElmS;
 typedef AppListElmS AppListS[64];
 
@@ -126,6 +135,8 @@ const char *DesfireAuthErrorToStr(int error);
 int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose);
 int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose);
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose);
+void DesfireCheckAuthCommands(uint32_t appAID, uint8_t keyNum,  AuthCommandsChk *authCmdCheck);
+void DesfireCheckAuthCommandsPrint(AuthCommandsChk *authCmdCheck);
 
 int DesfireFormatPICC(DesfireContext *dctx);
 int DesfireGetFreeMem(DesfireContext *dctx, uint32_t *freemem);

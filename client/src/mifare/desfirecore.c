@@ -1350,6 +1350,47 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
     return 100;
 }
 
+static bool DesfireCheckAuthCmd(uint32_t appAID, uint8_t keyNum, uint8_t authcmd) {
+    size_t recv_len = 0;
+    uint8_t respcode = 0;
+    uint8_t recv_data[256] = {0};
+    
+    DesfireContext dctx = {0};
+    dctx.keyNum = keyNum;
+    dctx.commMode = DCMPlain;
+    dctx.cmdSet = DCCNative;
+
+    // if cant select - return false
+    int res = DesfireSelectAIDHex(&dctx, appAID, false, 0);
+    if (res != PM3_SUCCESS)
+        return false;
+
+    uint8_t data[] = {keyNum, 0x00};
+    res = DesfireExchangeEx(false, &dctx, authcmd, data, (authcmd == MFDES_AUTHENTICATE_EV2F) ? 2 : 1, &respcode, recv_data, &recv_len, false, 0);
+    DropField();
+    return (res == PM3_SUCCESS && respcode == 0xaf);
+}
+
+void DesfireCheckAuthCommands(uint32_t appAID, uint8_t keyNum, AuthCommandsChk *authCmdCheck) {
+    memset(authCmdCheck, 0, sizeof(AuthCommandsChk));
+    
+    authCmdCheck->auth = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE);
+    authCmdCheck->authISO = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE_ISO);
+    authCmdCheck->authAES = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE_AES);
+    authCmdCheck->authEV2 = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE_EV2F);
+    
+}
+
+void DesfireCheckAuthCommandsPrint(AuthCommandsChk *authCmdCheck) {
+    PrintAndLogEx(NORMAL, "auth:%s auth iso: %s auth aes: %s auth ev2: %s auth iso native: %s",
+            authCmdCheck->auth ? _GREEN_("YES") : _RED_("NO"),
+            authCmdCheck->authISO ? _GREEN_("YES") : _RED_("NO"),
+            authCmdCheck->authAES ? _GREEN_("YES") : _RED_("NO"),
+            authCmdCheck->authEV2 ? _GREEN_("YES") : _RED_("NO"),
+            authCmdCheck->authISONative ? _GREEN_("YES") : _RED_("NO")
+            );
+}
+
 static int DesfireCommandEx(DesfireContext *dctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen, int checklength, size_t splitbysize) {
     if (resplen)
         *resplen = 0;
