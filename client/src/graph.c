@@ -43,8 +43,9 @@ size_t ClearGraph(bool redraw) {
     size_t gtl = GraphTraceLen;
     memset(GraphBuffer, 0x00, GraphTraceLen);
     GraphTraceLen = 0;
+    GraphStart = 0;
     GraphStop = 0;
-//    showDemod = false;
+
     DemodBufferLen = 0;
     if (redraw)
         RepaintGraphWindow();

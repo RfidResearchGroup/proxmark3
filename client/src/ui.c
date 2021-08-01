@@ -45,6 +45,7 @@ double CursorScaleFactor = 1;
 char CursorScaleFactorUnit[11] = {0};
 double PlotGridX = 0, PlotGridY = 0, PlotGridXdefault = 64, PlotGridYdefault = 64;
 uint32_t CursorCPos = 0, CursorDPos = 0, GraphStop = 0;
+uint32_t GraphStart = 0; // Starting point/offset for the left side of the graph
 double GraphPixelsPerPoint = 1.f; // How many visual pixels are between each sample point (x axis)
 static bool flushAfterWrite = 0;
 double GridOffset = 0;

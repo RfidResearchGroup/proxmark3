@@ -766,7 +766,7 @@ void Plot::paintEvent(QPaintEvent *event) {
     painter.drawText(20, infoRect.bottom() - 3, str);
 }
 
-Plot::Plot(QWidget *parent) : QWidget(parent), GraphStart(0), GraphPixelsPerPoint(1) {
+Plot::Plot(QWidget *parent) : QWidget(parent), GraphPixelsPerPoint(1) {
     //Need to set this, otherwise we don't receive keypress events
     setFocusPolicy(Qt::StrongFocus);
     resize(400, 200);
