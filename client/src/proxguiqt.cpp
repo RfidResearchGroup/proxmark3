@@ -460,21 +460,29 @@ int Plot::valueOf_yCoord(int y, QRect r, int maxVal) {
     return (y - z) * maxVal / z;
 }
 
-static const QColor GREEN = QColor(100, 255, 100);
-static const QColor RED   = QColor(255, 100, 100);
-static const QColor BLUE  = QColor(100, 100, 255);
-static const QColor GRAY = QColor(240, 240, 240);
+static const QColor BLACK     = QColor(0, 0, 0);
+static const QColor GRAY60    = QColor(60, 60, 60);
+static const QColor GRAY100   = QColor(100, 100, 100);
+static const QColor GRAY240   = QColor(240, 240, 240);
+static const QColor WHITE     = QColor(255, 255, 255);
+static const QColor GREEN     = QColor(100, 255, 100);
+static const QColor RED       = QColor(255, 100, 100);
+static const QColor BLUE      = QColor(100, 100, 255);
+static const QColor YELLOW    = QColor(255, 255, 0);
+static const QColor PINK      = QColor(255, 0, 255);
+static const QColor ORANGE    = QColor(255, 153, 0);
+static const QColor LIGHTBLUE = QColor(100, 209, 246);
 
 QColor Plot::getColor(int graphNum) {
     switch (graphNum) {
         case 0:
-            return GREEN;  //Green
+            return GREEN;
         case 1:
-            return RED;    //Red
+            return RED;
         case 2:
-            return BLUE;   //Blue
+            return BLUE;
         default:
-            return GRAY;  //Gray
+            return GRAY240;
     }
 }
 
@@ -586,7 +594,7 @@ void Plot::PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRe
 
         if (GraphPixelsPerPoint > 10) {
             QRect f(QPoint(x - 3, y - 3), QPoint(x + 3, y + 3));
-            painter->fillRect(f, QColor(100, 255, 100));
+            painter->fillRect(f, GREEN);
         }
         // catch stats
         if (v < vMin) vMin = v;
@@ -677,8 +685,8 @@ void Plot::plotGridLines(QPainter *painter, QRect r) {
 
 void Plot::paintEvent(QPaintEvent *event) {
     QPainter painter(this);
-    QBrush brush(QColor(100, 255, 100));
-    QPen pen(QColor(100, 255, 100));
+    QBrush brush(GREEN);
+    QPen pen(GREEN);
 
     painter.setFont(QFont("Courier New", 10));
 
@@ -696,16 +704,16 @@ void Plot::paintEvent(QPaintEvent *event) {
     PageWidth = plotRect.width() / GraphPixelsPerPoint;
 
     //Grey background
-    painter.fillRect(rect(), QColor(60, 60, 60));
+    painter.fillRect(rect(), GRAY60);
     //Black foreground
-    painter.fillRect(plotRect, QColor(0, 0, 0));
+    painter.fillRect(plotRect, BLACK);
 
     //init graph variables
     setMaxAndStart(GraphBuffer, GraphTraceLen, plotRect);
 
     // center line
     int zeroHeight = plotRect.top() + (plotRect.bottom() - plotRect.top()) / 2;
-    painter.setPen(QColor(100, 100, 100));
+    painter.setPen(GRAY100);
     painter.drawLine(plotRect.left(), zeroHeight, plotRect.right(), zeroHeight);
     // plot X and Y grid lines
     plotGridLines(&painter, plotRect);
@@ -724,19 +732,19 @@ void Plot::paintEvent(QPaintEvent *event) {
 
     //Draw the cursors
     if (CursorAPos > GraphStart && xCoordOf(CursorAPos, plotRect) < plotRect.right()) {
-        painter.setPen(QColor(255, 255, 0));
+        painter.setPen(YELLOW);
         painter.drawLine(xCoordOf(CursorAPos, plotRect), plotRect.top(), xCoordOf(CursorAPos, plotRect), plotRect.bottom());
     }
     if (CursorBPos > GraphStart && xCoordOf(CursorBPos, plotRect) < plotRect.right()) {
-        painter.setPen(QColor(255, 0, 255));
+        painter.setPen(PINK);
         painter.drawLine(xCoordOf(CursorBPos, plotRect), plotRect.top(), xCoordOf(CursorBPos, plotRect), plotRect.bottom());
     }
     if (CursorCPos > GraphStart && xCoordOf(CursorCPos, plotRect) < plotRect.right()) {
-        painter.setPen(QColor(255, 153, 0)); //orange
+        painter.setPen(ORANGE);
         painter.drawLine(xCoordOf(CursorCPos, plotRect), plotRect.top(), xCoordOf(CursorCPos, plotRect), plotRect.bottom());
     }
     if (CursorDPos > GraphStart && xCoordOf(CursorDPos, plotRect) < plotRect.right()) {
-        painter.setPen(QColor(100, 209, 246)); //light blue
+        painter.setPen(LIGHTBLUE);
         painter.drawLine(xCoordOf(CursorDPos, plotRect), plotRect.top(), xCoordOf(CursorDPos, plotRect), plotRect.bottom());
     }
 
@@ -763,7 +771,7 @@ void Plot::paintEvent(QPaintEvent *event) {
             GridLocked ? "Locked" : "Unlocked",
             GridOffset
            );
-    painter.setPen(QColor(255, 255, 255));
+    painter.setPen(WHITE);
     painter.drawText(20, infoRect.bottom() - 3, str);
 }
 
@@ -773,9 +781,9 @@ Plot::Plot(QWidget *parent) : QWidget(parent), GraphStart(0), GraphPixelsPerPoin
     resize(400, 200);
 
     QPalette palette(QColor(0, 0, 0, 0));
-    palette.setColor(QPalette::WindowText, QColor(255, 255, 255));
-    palette.setColor(QPalette::Text, QColor(255, 255, 255));
-    palette.setColor(QPalette::Button, QColor(100, 100, 100));
+    palette.setColor(QPalette::WindowText, WHITE);
+    palette.setColor(QPalette::Text, WHITE);
+    palette.setColor(QPalette::Button, GRAY100);
     setPalette(palette);
     setAutoFillBackground(true);
 
