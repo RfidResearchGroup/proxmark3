@@ -6258,24 +6258,38 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
         }
     }
 
+    uint8_t keysettings0 = 0;
+    uint8_t numkeys0 = 0;
+    res = DesfireGetKeySettings(&dctx, buf, &buflen);
+    if (res == PM3_SUCCESS && buflen >= 2) {
+        keysettings0 = buf[0];
+        numkeys0 = buf[1];
+    }
+    
     AuthCommandsChk authCmdCheck0 = {0};
     DesfireCheckAuthCommands(0x000000, NULL, 0, &authCmdCheck0);
+
     if (appcount > 0) {
         for (int i = 0; i < appcount; i++) {
             DesfireCheckAuthCommands(AppList[i].appNum, AppList[i].appDFName, 0, &AppList[i].authCmdCheck);
         }
     }
             
-    PrintAndLogEx(INFO, "-------------- " _CYAN_("Alications list") " --------------");
+    PrintAndLogEx(INFO, "------------------- " _CYAN_("PICC level") " ------------------");
     PrintAndLogEx(INFO, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d"), appcount, freemem);
     PrintAndLogEx(INFO, "PICC level auth commands: " NOLF);
     DesfireCheckAuthCommandsPrint(&authCmdCheck0);
+    if (numkeys0 > 0)
+        PrintKeySettings(keysettings0, numkeys0, false, true);
 
     if (appcount > 0) {
+        PrintAndLogEx(INFO, "-------------- " _CYAN_("Alications list") " --------------");
+        
         for (int i = 0; i < appcount; i++) {
             PrintAndLogEx(INFO, "App num: 0x%02x iso id: 0x%04x name: %s", AppList[i].appNum, AppList[i].appISONum, AppList[i].appDFName);
             PrintAndLogEx(INFO, "Auth commands: " NOLF);
             DesfireCheckAuthCommandsPrint(&AppList[i].authCmdCheck);
+            PrintAndLogEx(INFO, "");
        }
     }
     
