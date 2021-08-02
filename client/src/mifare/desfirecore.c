@@ -1466,6 +1466,8 @@ int DesfireFillPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo, bool deepmode
     int res = DesfireGetFreeMem(dctx, &freemem);
     if (res == PM3_SUCCESS)
         PICCInfo->freemem = freemem;
+    else
+        PICCInfo->freemem = 0xffffffff;
     
     PICCInfo->keySettings = 0;
     PICCInfo->numKeysRaw = 0;
@@ -1573,7 +1575,10 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
 
 void DesfirePrintPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo) {
     PrintAndLogEx(SUCCESS, "------------------------------------ " _CYAN_("PICC level") " -------------------------------------");
-    PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d"), PICCInfo->appCount, PICCInfo->freemem);
+    if (PICCInfo->freemem == 0xffffffff)
+        PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _YELLOW_("n/a"), PICCInfo->appCount);
+    else
+        PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d") " bytes", PICCInfo->appCount, PICCInfo->freemem);
     PrintAndLogEx(SUCCESS, "PICC level auth commands: " NOLF);
     if (PICCInfo->authCmdCheck.checked)
         DesfireCheckAuthCommandsPrint(&PICCInfo->authCmdCheck);
