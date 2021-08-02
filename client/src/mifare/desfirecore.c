@@ -1427,7 +1427,7 @@ void DesfireCheckAuthCommands(uint32_t appAID, char *dfname, uint8_t keyNum, Aut
 }
 
 void DesfireCheckAuthCommandsPrint(AuthCommandsChk *authCmdCheck) {
-    PrintAndLogEx(NORMAL, "auth:%s auth iso: %s auth aes: %s auth ev2: %s auth iso native: %s",
+    PrintAndLogEx(NORMAL, "auth: %s auth iso: %s auth aes: %s auth ev2: %s auth iso native: %s",
             authCmdCheck->auth ? _GREEN_("YES") : _RED_("NO"),
             authCmdCheck->authISO ? _GREEN_("YES") : _RED_("NO"),
             authCmdCheck->authAES ? _GREEN_("YES") : _RED_("NO"),
@@ -1702,42 +1702,12 @@ int DesfireUpdateRecord(DesfireContext *dctx, uint8_t fnum, uint32_t recnum, uin
     return DesfireCommandTxData(dctx, MFDES_UPDATE_RECORD, xdata, 10 + len);
 }
 
-uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType) {
-    switch (keyType) {
-        case T_DES:
-            return 0x00;
-        case T_3DES:
-            return 0x00;
-        case T_3K3DES:
-            return 0x01;
-        case T_AES:
-            return 0x02;
-    }
-    return 0;
-}
-static void PrintKeyType(uint8_t keytype) {
-    switch (keytype) {
-        case 00:
-            PrintAndLogEx(SUCCESS, "Key: 2TDEA");
-            break;
-        case 01:
-            PrintAndLogEx(SUCCESS, "Key: 3TDEA");
-            break;
-        case 02:
-            PrintAndLogEx(SUCCESS, "Key: AES");
-            break;
-        default:
-            PrintAndLogEx(SUCCESS, "Key: unknown: 0x%02x", keytype);
-            break;
-    }
-}
-
 static void PrintKeySettingsPICC(uint8_t keysettings, uint8_t numkeys, bool print2ndbyte) {
     PrintAndLogEx(SUCCESS, "PICC level rights:");
-    PrintAndLogEx(SUCCESS, "[%c...] CMK Configuration changeable   : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "[%c...] CMK Configuration changeable   : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
     PrintAndLogEx(SUCCESS, "[.%c..] CMK required for create/delete : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? _GREEN_("NO") : "YES");
     PrintAndLogEx(SUCCESS, "[..%c.] Directory list access with CMK : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? _GREEN_("NO") : "YES");
-    PrintAndLogEx(SUCCESS, "[...%c] CMK is changeable              : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "[...%c] CMK is changeable              : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
     PrintAndLogEx(SUCCESS, "");
 
     if (print2ndbyte)
@@ -1768,14 +1738,14 @@ static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print
             break;
     }
 
-    PrintAndLogEx(SUCCESS, "[%c...] AMK Configuration changeable   : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
-    PrintAndLogEx(SUCCESS, "[.%c..] AMK required for create/delete : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? "NO" : "YES");
-    PrintAndLogEx(SUCCESS, "[..%c.] Directory list access with AMK : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? "NO" : "YES");
-    PrintAndLogEx(SUCCESS, "[...%c] AMK is changeable              : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "[%c...] AMK Configuration changeable   : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
+    PrintAndLogEx(SUCCESS, "[.%c..] AMK required for create/delete : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? _GREEN_("NO") : "YES");
+    PrintAndLogEx(SUCCESS, "[..%c.] Directory list access with AMK : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? _GREEN_("NO") : "YES");
+    PrintAndLogEx(SUCCESS, "[...%c] AMK is changeable              : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
     PrintAndLogEx(SUCCESS, "");
 
     if (print2ndbyte) {
-        PrintKeyType(numkeys >> 6);
+        DesfirePrintCardKeyType(numkeys >> 6);
         PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
         if (numkeys & 0x20)
             PrintAndLogEx(SUCCESS, "iso file id: enabled");

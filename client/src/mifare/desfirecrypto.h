@@ -107,6 +107,10 @@ void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen,
 void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorythm keytype, uint8_t version);
 uint8_t DesfireDESKeyGetVersion(uint8_t *key);
 
+DesfireCryptoAlgorythm DesfireKeyTypeToAlgo(uint8_t keyType);
+uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType);
+void DesfirePrintCardKeyType(uint8_t keyType);
+
 DesfireCommunicationMode DesfireFileCommModeToCommMode(uint8_t file_comm_mode);
 uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode);
 

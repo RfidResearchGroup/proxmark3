@@ -6265,7 +6265,21 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
         keysettings0 = buf[0];
         numkeys0 = buf[1];
     }
-    
+
+    if (appcount > 0) {
+        for (int i = 0; i < appcount; i++) {
+            DesfireGetKeySettings(&dctx, buf, &buflen);
+            if (res == PM3_SUCCESS && buflen >= 2) {
+                AppList[i].keySettings = buf[0];
+                AppList[i].numKeysRaw = buf[1];
+                AppList[i].numberOfKeys = AppList[i].numKeysRaw & 0x1f;
+                AppList[i].isoFileIDEnabled = ((AppList[i].numKeysRaw & 0x20) != 0);
+                AppList[i].keyType = DesfireKeyTypeToAlgo(AppList[i].numKeysRaw >> 6);
+            }
+        }
+    }
+
+    // field on-off zone
     AuthCommandsChk authCmdCheck0 = {0};
     DesfireCheckAuthCommands(0x000000, NULL, 0, &authCmdCheck0);
 
@@ -6275,21 +6289,26 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
         }
     }
             
-    PrintAndLogEx(INFO, "------------------- " _CYAN_("PICC level") " ------------------");
-    PrintAndLogEx(INFO, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d"), appcount, freemem);
-    PrintAndLogEx(INFO, "PICC level auth commands: " NOLF);
+    // print zone
+    PrintAndLogEx(SUCCESS, "------------------- " _CYAN_("PICC level") " ------------------");
+    PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d"), appcount, freemem);
+    PrintAndLogEx(SUCCESS, "PICC level auth commands: " NOLF);
     DesfireCheckAuthCommandsPrint(&authCmdCheck0);
     if (numkeys0 > 0)
         PrintKeySettings(keysettings0, numkeys0, false, true);
 
     if (appcount > 0) {
-        PrintAndLogEx(INFO, "-------------- " _CYAN_("Alications list") " --------------");
+        PrintAndLogEx(SUCCESS, "");
+        PrintAndLogEx(SUCCESS, "-------------- " _CYAN_("Alications list") " --------------");
         
         for (int i = 0; i < appcount; i++) {
-            PrintAndLogEx(INFO, "App num: 0x%02x iso id: 0x%04x name: %s", AppList[i].appNum, AppList[i].appISONum, AppList[i].appDFName);
-            PrintAndLogEx(INFO, "Auth commands: " NOLF);
+            PrintAndLogEx(SUCCESS, _CYAN_("Application number: 0x%02x") " iso id: " _GREEN_("0x%04x") " name: " _GREEN_("%s"), AppList[i].appNum, AppList[i].appISONum, AppList[i].appDFName);
+            PrintAndLogEx(SUCCESS, "Auth commands: " NOLF);
             DesfireCheckAuthCommandsPrint(&AppList[i].authCmdCheck);
-            PrintAndLogEx(INFO, "");
+            PrintAndLogEx(SUCCESS, "");
+            if (AppList[i].numberOfKeys > 0) {
+                PrintKeySettings(AppList[i].keySettings, AppList[i].numKeysRaw, true, true);
+            }
        }
     }
     
