@@ -720,87 +720,6 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
     return PM3_SUCCESS;
 }
 
-// -- test if card supports 0x0A
-static int test_desfire_authenticate(void) {
-    uint8_t data[] = {0x00};
-    sAPDU apdu = {0x90, MFDES_AUTHENTICATE, 0x00, 0x00, 0x01, data}; // 0x0A, KEY 0
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, 0, false);
-    if (res == PM3_SUCCESS)
-        if (sw == status(MFDES_ADDITIONAL_FRAME)) {
-            DropFieldDesfire();
-            return res;
-        }
-    return res;
-}
-
-// -- test if card supports 0x1A
-static int test_desfire_authenticate_iso(void) {
-    uint8_t data[] = {0x00};
-    sAPDU apdu = {0x90, MFDES_AUTHENTICATE_ISO, 0x00, 0x00, 0x01, data}; // 0x1A, KEY 0
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, 0, false);
-    if (res == PM3_SUCCESS)
-        if (sw == status(MFDES_ADDITIONAL_FRAME)) {
-            DropFieldDesfire();
-            return res;
-        }
-    return res;
-}
-
-// -- test if card supports 0xAA
-static int test_desfire_authenticate_aes(void) {
-    uint8_t data[] = {0x00};
-    sAPDU apdu = {0x90, MFDES_AUTHENTICATE_AES, 0x00, 0x00, 0x01, data}; // 0xAA, KEY 0
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, 0, false);
-    if (res == PM3_SUCCESS)
-        if (sw == status(MFDES_ADDITIONAL_FRAME)) {
-            DropFieldDesfire();
-            return res;
-        }
-    return res;
-}
-
-// --- GET FREE MEM
-static int desfire_print_freemem(uint32_t free_mem) {
-    PrintAndLogEx(SUCCESS, "   Available free memory on card         : " _GREEN_("%d bytes"), free_mem);
-    return PM3_SUCCESS;
-}
-
-static int handler_desfire_freemem(uint32_t *free_mem) {
-    if (free_mem == NULL) return PM3_EINVARG;
-
-    uint8_t data[] = {0x00};
-    sAPDU apdu = {0x90, MFDES_GET_FREE_MEMORY, 0x00, 0x00, 0x00, data}; // 0x6E
-    *free_mem = 0;
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    uint8_t fmem[4] = {0};
-
-    size_t plen = apdu.Lc;
-    uint8_t *p = mifare_cryto_preprocess_data(tag, (uint8_t *)apdu.data, &plen, 0, MDCM_PLAIN | CMAC_COMMAND);
-    apdu.Lc = (uint8_t)plen;
-    apdu.data = p;
-
-    int res = send_desfire_cmd(&apdu, true, fmem, &recv_len, &sw, 0, true);
-
-    if (res != PM3_SUCCESS)
-        return res;
-
-    size_t dlen = recv_len;
-    p = mifare_cryto_postprocess_data(tag, apdu.data, &dlen, MDCM_PLAIN | CMAC_COMMAND | CMAC_VERIFY);
-    (void)p;
-    if (sw != status(MFDES_S_OPERATION_OK))
-        return PM3_ESOFT;
-
-    *free_mem = le24toh(fmem);
-    return res;
-}
-
 /*static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t new_algo, uint8_t *old_key, uint8_t old_algo, uint8_t aes_version) {
 
     if (new_key == NULL || old_key == NULL) {
@@ -1093,155 +1012,6 @@ static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signat
     return PM3_SUCCESS;
 }
 
-static int handler_desfire_signature(uint8_t *signature, size_t *signature_len) {
-
-    if (signature == NULL) {
-        PrintAndLogEx(DEBUG, "SIGNATURE=NULL");
-        return PM3_EINVARG;
-    }
-    if (signature_len == NULL) {
-        PrintAndLogEx(DEBUG, "SIGNATURE_LEN=NULL");
-        return PM3_EINVARG;
-    }
-
-    uint8_t c[] = {0x00};
-    sAPDU apdu = {0x90, MFDES_READSIG, 0x00, 0x00, sizeof(c), c}; // 0x3C
-
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, signature, &recv_len, &sw, 0, true);
-    if (res == PM3_SUCCESS) {
-        if (recv_len != 56) {
-            *signature_len = 0;
-            res = PM3_ESOFT;
-        } else {
-            *signature_len = recv_len;
-        }
-    }
-    DropFieldDesfire();
-    return res;
-}
-
-// --- KEY VERSION
-static int desfire_print_keyversion(uint8_t key_idx, uint8_t key_version) {
-    PrintAndLogEx(SUCCESS, "   Key [%u]  Version : %d (0x%02x)", key_idx, key_version, key_version);
-    return PM3_SUCCESS;
-}
-
-static int handler_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
-    if (num_versions == NULL) {
-        PrintAndLogEx(DEBUG, "NUM_VERSIONS=NULL");
-        return PM3_EINVARG;
-    }
-    sAPDU apdu = {0x90, MFDES_GET_KEY_VERSION, 0x00, 0x00, 0x01, &curr_key}; //0x64
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, false, num_versions, &recv_len, &sw, 0, true);
-
-    if (res != PM3_SUCCESS)
-        return res;
-
-    if (sw != status(MFDES_S_OPERATION_OK))
-        return PM3_ESOFT;
-
-    return res;
-}
-
-// --- KEY SETTING  Application Master Key
-static int desfire_print_amk_keysetting(uint8_t key_settings, uint8_t num_keys, int algo) {
-    PrintAndLogEx(SUCCESS, "  AID Key settings           : 0x%02x", key_settings);
-    // 2 MSB denotes
-    const char *str =                 "  Max key number and type    : %d, " _YELLOW_("%s");
-
-    if (algo == MFDES_ALGO_DES)
-        PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "(3)DES");
-    else if (algo == MFDES_ALGO_AES)
-        PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "AES");
-    else if (algo == MFDES_ALGO_3K3DES)
-        PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "3K3DES");
-
-    //PrintAndLogEx(SUCCESS, "  Max number of keys in AID  : %d", num_keys & 0x3F);
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    PrintAndLogEx(SUCCESS, "  Changekey Access rights");
-
-    // Access rights.
-    uint8_t rights = ((key_settings >> 4) & 0x0F);
-    switch (rights) {
-        case 0x0:
-            PrintAndLogEx(SUCCESS, "  -- AMK authentication is necessary to change any key (default)");
-            break;
-        case 0xE:
-            PrintAndLogEx(SUCCESS, "  -- Authentication with the key to be changed (same KeyNo) is necessary to change a key");
-            break;
-        case 0xF:
-            PrintAndLogEx(SUCCESS, "  -- All keys (except AMK,see Bit0) within this application are frozen");
-            break;
-        default:
-            PrintAndLogEx(SUCCESS,
-                          "  -- Authentication with the specified key is necessary to change any key.\n"
-                          "A change key and a PICC master key (CMK) can only be changed after authentication with the master key.\n"
-                          "For keys other then the master or change key, an authentication with the same key is needed."
-                         );
-            break;
-    }
-
-    PrintAndLogEx(SUCCESS, "   [%c...] AMK Configuration changeable   : %s", (key_settings & (1 << 3)) ? '1' : '0', (key_settings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
-    PrintAndLogEx(SUCCESS, "   [.%c..] AMK required for create/delete : %s", (key_settings & (1 << 2)) ? '1' : '0', (key_settings & (1 << 2)) ? "NO" : "YES");
-    PrintAndLogEx(SUCCESS, "   [..%c.] Directory list access with AMK : %s", (key_settings & (1 << 1)) ? '1' : '0', (key_settings & (1 << 1)) ? "NO" : "YES");
-    PrintAndLogEx(SUCCESS, "   [...%c] AMK is changeable              : %s", (key_settings & (1 << 0)) ? '1' : '0', (key_settings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
-    return PM3_SUCCESS;
-}
-
-// --- KEY SETTING  PICC Master Key (CMK)
-static int desfire_print_piccmk_keysetting(uint8_t key_settings, uint8_t num_keys, int algo) {
-    //PrintAndLogEx(INFO, "--- " _CYAN_("PICC Master Key (CMK) settings"));
-    // number of Master keys (0x01)
-    PrintAndLogEx(SUCCESS, "   Number of Masterkeys                  : " _YELLOW_("%u"), (num_keys & 0x3F));
-    const char *str = "   Operation of PICC master key          : " _YELLOW_("%s");
-
-    if (algo == MFDES_ALGO_DES)
-        PrintAndLogEx(SUCCESS, str, "(3)DES");
-    else if (algo == MFDES_ALGO_AES)
-        PrintAndLogEx(SUCCESS, str, "AES");
-    else if (algo == MFDES_ALGO_3K3DES)
-        PrintAndLogEx(SUCCESS, str, "3K3DES");
-
-    uint8_t cmk_num_versions = 0;
-    if (handler_desfire_keyversion(0, &cmk_num_versions) == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "   PICC Master key Version               : " _YELLOW_("%d (0x%02x)"), cmk_num_versions, cmk_num_versions);
-    }
-
-    PrintAndLogEx(INFO, "   ----------------------------------------------------------");
-
-    // Authentication tests
-    int res = test_desfire_authenticate();
-    if (res == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "   [0x0A] Authenticate      : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
-
-    res = test_desfire_authenticate_iso();
-    if (res == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "   [0x1A] Authenticate ISO  : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
-
-    res = test_desfire_authenticate_aes();
-    if (res == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "   [0xAA] Authenticate AES  : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
-
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    PrintAndLogEx(INFO, " Key setting: 0x%02X [%c%c%c%c]",
-                  key_settings,
-                  (key_settings & (1 << 3)) ? '1' : '0',
-                  (key_settings & (1 << 2)) ? '1' : '0',
-                  (key_settings & (1 << 1)) ? '1' : '0',
-                  (key_settings & (1 << 0)) ? '1' : '0'
-                 );
-
-    PrintAndLogEx(SUCCESS, "   [%c...] CMK Configuration changeable   : %s", (key_settings & (1 << 3)) ? '1' : '0', (key_settings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
-    PrintAndLogEx(SUCCESS, "   [.%c..] CMK required for create/delete : %s", (key_settings & (1 << 2)) ? '1' : '0', (key_settings & (1 << 2)) ? _GREEN_("NO") : "YES");
-    PrintAndLogEx(SUCCESS, "   [..%c.] Directory list access with CMK : %s", (key_settings & (1 << 1)) ? '1' : '0', (key_settings & (1 << 1)) ? _GREEN_("NO") : "YES");
-    PrintAndLogEx(SUCCESS, "   [...%c] CMK is changeable              : %s", (key_settings & (1 << 0)) ? '1' : '0', (key_settings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
-    return PM3_SUCCESS;
-}
-
 static int handler_desfire_getkeysettings(uint8_t *key_settings, uint8_t *num_keys) {
     if (key_settings == NULL) {
         PrintAndLogEx(DEBUG, "KEY_SETTINGS=NULL");
@@ -1322,28 +1092,6 @@ static int handler_desfire_select_application(uint8_t *aid) {
     return PM3_SUCCESS;
 }
 
-static int key_setting_to_algo(uint8_t aid[3], uint8_t *key_setting, mifare_des_authalgo_t *algo, uint8_t *num_keys) {
-    int res = handler_desfire_select_application(aid);
-    if (res != PM3_SUCCESS) return res;
-
-    *num_keys = 0;
-    res = handler_desfire_getkeysettings(key_setting, num_keys);
-    if (res == PM3_SUCCESS) {
-        switch (*num_keys >> 6) {
-            case 0:
-                *algo = MFDES_ALGO_DES;
-                break;
-            case 1:
-                *algo = MFDES_ALGO_3K3DES;
-                break;
-            case 2:
-                *algo = MFDES_ALGO_AES;
-                break;
-        }
-    }
-    return res;
-}
-
 static int handler_desfire_fileids(uint8_t *dest, uint32_t *file_ids_len) {
     if (g_debugMode > 1) {
         if (dest == NULL) PrintAndLogEx(ERR, "DEST=NULL");
@@ -1380,70 +1128,6 @@ static int handler_desfire_filesettings(uint8_t file_id, uint8_t *dest, uint32_t
         return res;
     }
     return res;
-}
-
-static int getKeySettings(uint8_t *aid) {
-    if (aid == NULL) return PM3_EINVARG;
-
-    uint8_t num_keys = 0;
-    uint8_t key_setting = 0;
-    int res = 0;
-    if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
-
-        // CARD MASTER KEY
-        //PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
-
-        // KEY Settings - AMK
-        mifare_des_authalgo_t algo = MFDES_ALGO_DES;
-        res = key_setting_to_algo(aid, &key_setting, &algo, &num_keys);
-
-        if (res == PM3_SUCCESS) {
-            desfire_print_piccmk_keysetting(key_setting, num_keys, algo);
-        } else {
-            PrintAndLogEx(WARNING, _RED_("   Can't read PICC Master key settings"));
-        }
-
-    } else {
-
-        // AID - APPLICATION MASTER KEYS
-        //PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
-        res = handler_desfire_select_application(aid);
-        if (res != PM3_SUCCESS) return res;
-
-        // KEY Settings - AMK
-        mifare_des_authalgo_t algo = MFDES_ALGO_DES;
-        res = key_setting_to_algo(aid, &key_setting, &algo, &num_keys);
-        if (res == PM3_SUCCESS) {
-            desfire_print_amk_keysetting(key_setting, num_keys, algo);
-        } else {
-            PrintAndLogEx(WARNING, _RED_("   Can't read Application Master key settings"));
-        }
-
-        // KEY VERSION  - AMK
-        uint8_t num_version = 0;
-        if (handler_desfire_keyversion(0, &num_version) == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "-------------------------------------------------------------");
-            PrintAndLogEx(INFO, "  Application keys");
-            desfire_print_keyversion(0, num_version);
-        } else {
-            PrintAndLogEx(WARNING, "   Can't read AID master key version. Trying all keys");
-        }
-
-        // From 0x01 to numOfKeys.  We already got 0x00. (AMK)
-        num_keys &= 0x3F;
-        if (num_keys > 1) {
-            for (uint8_t i = 0x01; i < num_keys; ++i) {
-                if (handler_desfire_keyversion(i, &num_version) == PM3_SUCCESS) {
-                    desfire_print_keyversion(i, num_version);
-                } else {
-                    PrintAndLogEx(WARNING, "   Can't read key %d  (0x%02x) version", i, i);
-                }
-            }
-        }
-    }
-
-    DropFieldDesfire();
-    return PM3_SUCCESS;
 }
 
 static void swap24(uint8_t *data) {
@@ -1632,35 +1316,45 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     if (major == 0 && minor == 2)
         PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
-
+    
+    DesfireContext dctx = {0};
+    dctx.commMode = DCMPlain;
+    dctx.cmdSet = DCCNative;
+    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    if (res != PM3_SUCCESS)
+        return res;
+    
     if (cardtype == DESFIRE_EV2 ||
             cardtype == DESFIRE_LIGHT ||
             cardtype == DESFIRE_EV3 ||
             cardtype == NTAG413DNA) {
         // Signature originality check
-        uint8_t signature[56] = {0};
+        uint8_t signature[250] = {0}; // must be 56
         size_t signature_len = 0;
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-        if (handler_desfire_signature(signature, &signature_len) == PM3_SUCCESS) {
-            desfire_print_signature(info.uid, info.uidlen, signature, signature_len, cardtype);
+        res = DesfireReadSignature(&dctx, 0x00, signature, &signature_len);
+        if (res == PM3_SUCCESS) {
+            if (signature_len == 56)
+                desfire_print_signature(info.uid, info.uidlen, signature, signature_len, cardtype);
+            else
+                PrintAndLogEx(WARNING, "--- GetSignature returned wrong signature length: %zu", signature_len);
         } else {
             PrintAndLogEx(WARNING, "--- Card doesn't support GetSignature cmd");
         }
     }
-
-    // Master Key settings
-    uint8_t master_aid[3] = {0x00, 0x00, 0x00};
-    getKeySettings(master_aid);
+    
+    PICCInfoS PICCInfo = {0};
+    DesfireFillPICCInfo(&dctx, &PICCInfo, true);
+    DesfirePrintPICCInfo(&dctx, &PICCInfo);
 
     if (cardtype != DESFIRE_LIGHT) {
         // Free memory on card
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Free memory"));
-        uint32_t free_mem = 0;
-        if (handler_desfire_freemem(&free_mem) == PM3_SUCCESS) {
-            desfire_print_freemem(free_mem);
+        if (PICCInfo.freemem != 0xffffffff) {
+            PrintAndLogEx(SUCCESS, "   Available free memory on card         : " _GREEN_("%d bytes"), PICCInfo.freemem);
         } else {
             PrintAndLogEx(SUCCESS, "   Card doesn't support 'free mem' cmd");
         }
@@ -5863,14 +5557,14 @@ static int CmdHF14ADesTest(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                     AlwaysAvailable, "This help"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "---------------------- " _CYAN_("general") " ----------------------"},
+    {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
+    {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get uid from card"},
     {"default",          CmdHF14ADesDefault,          IfPm3Iso14443a,  "Set defaults for all the commands"},
     {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "MIFARE DesFire Authentication"},
     {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "[old]Check keys"},
-    {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
     {"freemem",          CmdHF14ADesGetFreeMem,       IfPm3Iso14443a,  "Get free memory size"},
-    {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get uid from card"},
     {"setconfig",        CmdHF14ADesSetConfiguration, IfPm3Iso14443a,  "Set card configuration"},
-    {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "[old]Tag information"},
+    {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
     {"list",             CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
 //    {"ndefread",             CmdHF14aDesNDEFRead,             IfPm3Iso14443a,  "Prints NDEF records from card"},
 //    {"mad",             CmdHF14aDesMAD,             IfPm3Iso14443a,  "Prints MAD records from card"},
