@@ -104,6 +104,8 @@ typedef struct {
     bool isoFileIDEnabled;          // from numKeysRaw
     uint8_t numberOfKeys;           // from numKeysRaw
     DesfireCryptoAlgorythm keyType; // from numKeysRaw
+    
+    uint8_t keyVersions[16];
 } AppListElmS;
 typedef AppListElmS AppListS[64];
 

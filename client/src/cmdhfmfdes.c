@@ -6064,10 +6064,18 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
 
     uint8_t keysettings0 = 0;
     uint8_t numkeys0 = 0;
+    uint8_t keyVer0 = 0;
     res = DesfireGetKeySettings(&dctx, buf, &buflen);
     if (res == PM3_SUCCESS && buflen >= 2) {
         keysettings0 = buf[0];
         numkeys0 = buf[1];
+        if ((numkeys0 & 0x1f) > 0) {
+            uint8_t keyNum0 = numkeys0 & 0x1f;
+            res = DesfireGetKeyVersion(&dctx, &keyNum0, 1, buf, &buflen);
+            if (res == PM3_SUCCESS && buflen > 0) {
+                keyVer0 = buf[0];
+            }
+        }
     }
 
     if (appcount > 0) {
@@ -6083,6 +6091,14 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
                 AppList[i].numberOfKeys = AppList[i].numKeysRaw & 0x1f;
                 AppList[i].isoFileIDEnabled = ((AppList[i].numKeysRaw & 0x20) != 0);
                 AppList[i].keyType = DesfireKeyTypeToAlgo(AppList[i].numKeysRaw >> 6);
+                
+                if (AppList[i].numberOfKeys > 0)
+                    for (uint8_t keyn = 0; keyn < AppList[i].numberOfKeys; keyn++) {
+                        res = DesfireGetKeyVersion(&dctx, &keyn, 1, buf, &buflen);
+                        if (res == PM3_SUCCESS && buflen > 0) {
+                            AppList[i].keyVersions[keyn] = buf[0];
+                        }
+                    }
             }
         }
     }
@@ -6102,11 +6118,13 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d"), appcount, freemem);
     PrintAndLogEx(SUCCESS, "PICC level auth commands: " NOLF);
     DesfireCheckAuthCommandsPrint(&authCmdCheck0);
-    if (numkeys0 > 0)
+    if (numkeys0 > 0) {
         PrintKeySettings(keysettings0, numkeys0, false, true);
+        PrintAndLogEx(SUCCESS, "PICC key 0 version: %d (0x%02x)", keyVer0, keyVer0);
+    }
 
     if (appcount > 0) {
-        PrintAndLogEx(SUCCESS, "");
+        PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, "-------------- " _CYAN_("Alications list") " --------------");
         
         for (int i = 0; i < appcount; i++) {
@@ -6119,6 +6137,14 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "");
             if (AppList[i].numberOfKeys > 0) {
                 PrintKeySettings(AppList[i].keySettings, AppList[i].numKeysRaw, true, true);
+                
+                if (AppList[i].numberOfKeys > 0) {
+                    PrintAndLogEx(SUCCESS, "Key versions [0..%d]: " NOLF, AppList[i].numberOfKeys - 1);
+                    for (uint8_t keyn = 0; keyn < AppList[i].numberOfKeys; keyn++) {
+                        PrintAndLogEx(NORMAL, "%s %02x" NOLF, (keyn == 0) ? "" : ",",  AppList[i].keyVersions[keyn]);
+                    }
+                    PrintAndLogEx(NORMAL, "\n");
+                }
             }
        }
     }
