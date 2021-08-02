@@ -2394,29 +2394,6 @@ static int CmdHF14aDesMAD(const char *Cmd) {
 }
 */
 
-/*static int CmdTest(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    uint8_t IV[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t key[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-    uint8_t encRndB[8] = {0x1A, 0xBE, 0x10, 0x8D, 0x09, 0xE0, 0x18, 0x13};
-    uint8_t RndB[8] = {0};
-    uint8_t RndA[8] = {0x6E, 0x6A, 0xEB, 0x86, 0x6E, 0x6A, 0xEB, 0x86};
-    tdes_nxp_receive(encRndB, RndB, 8, key, IV, 2);
-    uint8_t rotRndB[8] = {0};
-    memcpy(rotRndB, RndB, 8);
-    rol(rotRndB, 8);
-    uint8_t tmp[16] = {0x00};
-    uint8_t both[16] = {0x00};
-    memcpy(tmp, RndA, 8);
-    memcpy(tmp + 8, rotRndB, 8);
-    PrintAndLogEx(INFO, "3keyenc: %s", sprint_hex(tmp, 16));
-    PrintAndLogEx(SUCCESS, "  Res        : " _GREEN_("%s"), sprint_hex(IV, 8));
-    tdes_nxp_send(tmp, both, 16, key, IV, 2);
-    PrintAndLogEx(SUCCESS, "  Res        : " _GREEN_("%s"), sprint_hex(both, 16));
-    return PM3_SUCCESS;
-}
-*/
 static uint8_t defaultKeyNum = 0;
 static enum DESFIRE_CRYPTOALGO defaultAlgoId = T_DES;
 static uint8_t defaultKey[DESFIRE_MAX_KEY_SIZE] = {0};
