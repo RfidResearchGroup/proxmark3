@@ -1255,7 +1255,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-    DropFieldDesfire();
+    DropField();
 
     mfdes_info_res_t info;
     int res = mfdes_get_info(&info);
@@ -1270,8 +1270,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(INFO, "---------------------------------- " _CYAN_("Tag Information") " ----------------------------------");
     PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(info.uid, info.uidlen));
     PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(info.details + 7, 5));
     PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), info.details[12], info.details[13]);
@@ -1296,7 +1295,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(info.versionSW[6], false));
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Card capabilities"));
+    PrintAndLogEx(INFO, "--------------------------------- " _CYAN_("Card capabilities") " ---------------------------------");
     uint8_t major = info.versionSW[3];
     uint8_t minor = info.versionSW[4];
     if (major == 0 && minor == 4)
@@ -1324,6 +1323,15 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (res != PM3_SUCCESS)
         return res;
     
+    PICCInfoS PICCInfo = {0};
+    
+    uint8_t buf[250] = {0};
+    size_t buflen = 0;
+    res = DesfireGetAIDList(&dctx, buf, &buflen);
+    if (res == PM3_SUCCESS) {
+        PICCInfo.appCount = buflen / 3;
+    }    
+    
     if (cardtype == DESFIRE_EV2 ||
             cardtype == DESFIRE_LIGHT ||
             cardtype == DESFIRE_EV3 ||
@@ -1345,7 +1353,6 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         }
     }
     
-    PICCInfoS PICCInfo = {0};
     DesfireFillPICCInfo(&dctx, &PICCInfo, true);
     DesfirePrintPICCInfo(&dctx, &PICCInfo);
 
@@ -1358,8 +1365,8 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         } else {
             PrintAndLogEx(SUCCESS, "   Card doesn't support 'free mem' cmd");
         }
-        PrintAndLogEx(INFO, "-------------------------------------------------------------");
     }
+    PrintAndLogEx(NORMAL, "");
 
 
     iso14a_card_select_t card;
@@ -1402,7 +1409,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     */
 
-    DropFieldDesfire();
+    DropField();
     return PM3_SUCCESS;
 }
 

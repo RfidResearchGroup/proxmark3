@@ -1934,8 +1934,10 @@ static void PrintKeySettingsPICC(uint8_t keysettings, uint8_t numkeys, bool prin
     PrintAndLogEx(SUCCESS, "[...%c] CMK is changeable              : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
     PrintAndLogEx(SUCCESS, "");
 
-    if (print2ndbyte)
+    if (print2ndbyte) {
+        DesfirePrintCardKeyType(numkeys >> 6);
         PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
+    }
 }
 
 static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print2ndbyte) {
