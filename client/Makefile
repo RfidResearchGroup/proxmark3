@@ -474,7 +474,7 @@ POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d && $(TOUCH) $@
 # enumerations #
 ################
 
-SRCS =  aiddesfire.c \
+SRCS =  mifare/aiddesfire.c \
 		aidsearch.c \
 		cmdanalyse.c \
 		cmdcrc.c \

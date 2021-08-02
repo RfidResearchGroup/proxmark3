@@ -32,6 +32,8 @@
 #include "util_posix.h"            // msleep
 #include "mifare/desfire_crypto.h"
 #include "desfiresecurechan.h"
+#include "mifare/mad.h"
+#include "mifare/aiddesfire.h"
 
 const CLIParserOption DesfireAlgoOpts[] = {
     {T_DES,    "des"},
@@ -824,6 +826,20 @@ int DesfireSelectAIDHexNoFieldOn(DesfireContext *ctx, uint32_t aid) {
     }
     return res;
 }
+
+void DesfirePrintAIDFunctions(uint32_t appid) {
+    uint8_t aid[3] = {0};
+    DesfireAIDUintToByte(appid, aid);
+    if ((aid[2] >> 4) == 0xF) {
+        uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
+        PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
+        PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, nxp_cluster_to_text(short_aid >> 8));
+        MADDFDecodeAndPrint(short_aid);
+    } else {
+        AIDDFDecodeAndPrint(aid);
+    }
+}
+
 
 int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose) {
     if (verbose)

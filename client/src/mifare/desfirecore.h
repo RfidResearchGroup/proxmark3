@@ -136,6 +136,7 @@ int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uin
 int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2);
 int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uint32_t aid2);
 int DesfireSelectAIDHexNoFieldOn(DesfireContext *ctx, uint32_t aid);
+void DesfirePrintAIDFunctions(uint32_t appid);
 
 const char *DesfireAuthErrorToStr(int error);
 int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose);

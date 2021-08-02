@@ -38,7 +38,7 @@
 #include "nfc/ndef.h"           // NDEF
 #include "mifare/mad.h"
 #include "generator.h"
-#include "aiddesfire.h"
+#include "mifare/aiddesfire.h"
 #include "util.h"
 
 #define MAX_KEY_LEN        24
@@ -145,202 +145,6 @@ typedef enum {
     MFDES_RECORD_FILE,
     MFDES_VALUE_FILE
 } MFDES_FILE_TYPE_T;
-
-// NXP Appnote AN10787 - Application Directory (MAD)
-typedef enum {
-    CL_ADMIN = 0,
-    CL_MISC1,
-    CL_MISC2,
-    CL_MISC3,
-    CL_MISC4,
-    CL_MISC5,
-    CL_MISC6,
-    CL_MISC7,
-    CL_AIRLINES = 8,
-    CL_FERRY,
-    CL_RAIL,
-    CL_MISC,
-    CL_TRANSPORT,
-    CL_SECURITY = 0x14,
-    CL_CITYTRAFFIC = 0x18,
-    CL_CZECH_RAIL,
-    CL_BUS,
-    CL_MMT,
-    CL_TAXI = 0x28,
-    CL_TOLL = 0x30,
-    CL_GENERIC_TRANS,
-    CL_COMPANY_SERVICES = 0x38,
-    CL_CITYCARD = 0x40,
-    CL_ACCESS_CONTROL_1 = 0x47,
-    CL_ACCESS_CONTROL_2,
-    CL_VIGIK = 0x49,
-    CL_NED_DEFENCE = 0x4A,
-    CL_BOSCH_TELECOM = 0x4B,
-    CL_EU = 0x4C,
-    CL_SKI_TICKET = 0x50,
-    CL_SOAA = 0x55,
-    CL_ACCESS2 = 0x56,
-    CL_FOOD = 0x60,
-    CL_NONFOOD = 0x68,
-    CL_HOTEL = 0x70,
-    CL_LOYALTY = 0x71,
-    CL_AIRPORT = 0x75,
-    CL_CAR_RENTAL = 0x78,
-    CL_NED_GOV = 0x79,
-    CL_ADMIN2 = 0x80,
-    CL_PURSE = 0x88,
-    CL_TV = 0x90,
-    CL_CRUISESHIP = 0x91,
-    CL_IOPTA = 0x95,
-    CL_METERING = 0x97,
-    CL_TELEPHONE = 0x98,
-    CL_HEALTH = 0xA0,
-    CL_WAREHOUSE = 0xA8,
-    CL_BANKING = 0xB8,
-    CL_ENTERTAIN = 0xC0,
-    CL_PARKING = 0xC8,
-    CL_FLEET = 0xC9,
-    CL_FUEL = 0xD0,
-    CL_INFO = 0xD8,
-    CL_PRESS = 0xE0,
-    CL_NFC = 0xE1,
-    CL_COMPUTER = 0xE8,
-    CL_MAIL = 0xF0,
-    CL_AMISC = 0xF8,
-    CL_AMISC1 = 0xF9,
-    CL_AMISC2 = 0xFA,
-    CL_AMISC3 = 0xFB,
-    CL_AMISC4 = 0xFC,
-    CL_AMISC5 = 0xFD,
-    CL_AMISC6 = 0xFE,
-    CL_AMISC7 = 0xFF,
-} aidcluster_h;
-
-static const char *cluster_to_text(uint8_t cluster) {
-    switch (cluster) {
-        case CL_ADMIN:
-            return "card administration";
-        case CL_MISC1:
-        case CL_MISC2:
-        case CL_MISC3:
-        case CL_MISC4:
-        case CL_MISC5:
-        case CL_MISC6:
-        case CL_MISC7:
-            return "miscellaneous applications";
-        case CL_AIRLINES:
-            return "airlines";
-        case CL_FERRY:
-            return "ferry traffic";
-        case CL_RAIL:
-            return "railway services";
-        case CL_MISC:
-            return "miscellaneous applications";
-        case CL_TRANSPORT:
-            return "transport";
-        case CL_SECURITY:
-            return "security solutions";
-        case CL_CITYTRAFFIC:
-            return "city traffic";
-        case CL_CZECH_RAIL:
-            return "Czech Railways";
-        case CL_BUS:
-            return "bus services";
-        case CL_MMT:
-            return "multi modal transit";
-        case CL_TAXI:
-            return "taxi";
-        case CL_TOLL:
-            return "road toll";
-        case CL_GENERIC_TRANS:
-            return "generic transport";
-        case CL_COMPANY_SERVICES:
-            return "company services";
-        case CL_CITYCARD:
-            return "city card services";
-        case CL_ACCESS_CONTROL_1:
-        case CL_ACCESS_CONTROL_2:
-            return "access control & security";
-        case CL_VIGIK:
-            return "VIGIK";
-        case CL_NED_DEFENCE:
-            return "Ministry of Defence, Netherlands";
-        case CL_BOSCH_TELECOM:
-            return "Bosch Telecom, Germany";
-        case CL_EU:
-            return "European Union Institutions";
-        case CL_SKI_TICKET:
-            return "ski ticketing";
-        case CL_SOAA:
-            return "SOAA standard for offline access standard";
-        case CL_ACCESS2:
-            return "access control & security";
-        case CL_FOOD:
-            return "food";
-        case CL_NONFOOD:
-            return "non-food trade";
-        case CL_HOTEL:
-            return "hotel";
-        case CL_LOYALTY:
-            return "loyalty";
-        case CL_AIRPORT:
-            return "airport services";
-        case CL_CAR_RENTAL:
-            return "car rental";
-        case CL_NED_GOV:
-            return "Dutch government";
-        case CL_ADMIN2:
-            return "administration services";
-        case CL_PURSE:
-            return "electronic purse";
-        case CL_TV:
-            return "television";
-        case CL_CRUISESHIP:
-            return "cruise ship";
-        case CL_IOPTA:
-            return "IOPTA";
-        case CL_METERING:
-            return "metering";
-        case CL_TELEPHONE:
-            return "telephone";
-        case CL_HEALTH:
-            return "health services";
-        case CL_WAREHOUSE:
-            return "warehouse";
-        case CL_BANKING:
-            return "banking";
-        case CL_ENTERTAIN:
-            return "entertainment & sports";
-        case CL_PARKING:
-            return "car parking";
-        case CL_FLEET:
-            return "fleet management";
-        case CL_FUEL:
-            return "fuel, gasoline";
-        case CL_INFO:
-            return "info services";
-        case CL_PRESS:
-            return "press";
-        case CL_NFC:
-            return "NFC Forum";
-        case CL_COMPUTER:
-            return "computer";
-        case CL_MAIL:
-            return "mail";
-        case CL_AMISC:
-        case CL_AMISC1:
-        case CL_AMISC2:
-        case CL_AMISC3:
-        case CL_AMISC4:
-        case CL_AMISC5:
-        case CL_AMISC6:
-        case CL_AMISC7:
-            return "miscellaneous applications";
-        default:
-            break;
-    }
-    return "reserved";
-}
 
 typedef enum {
     DESFIRE_UNKNOWN = 0,
@@ -2125,7 +1929,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         if ((aid[2] >> 4) == 0xF) {
             uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
             PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
-            PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, cluster_to_text(short_aid >> 8));
+            PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, nxp_cluster_to_text(short_aid >> 8));
             MADDFDecodeAndPrint(short_aid);
         } else {
             AIDDFDecodeAndPrint(aid);
@@ -6308,16 +6112,7 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
         for (int i = 0; i < appcount; i++) {
             PrintAndLogEx(SUCCESS, _CYAN_("Application number: 0x%02x") " iso id: " _GREEN_("0x%04x") " name: " _GREEN_("%s"), AppList[i].appNum, AppList[i].appISONum, AppList[i].appDFName);
 
-            uint8_t aid[3] = {0};
-            DesfireAIDUintToByte(AppList[i].appNum, aid);
-            if ((aid[2] >> 4) == 0xF) {
-                uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
-                PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
-                PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, cluster_to_text(short_aid >> 8));
-                MADDFDecodeAndPrint(short_aid);
-            } else {
-                AIDDFDecodeAndPrint(aid);
-            }
+            DesfirePrintAIDFunctions(AppList[i].appNum);
 
             PrintAndLogEx(SUCCESS, "Auth commands: " NOLF);
             DesfireCheckAuthCommandsPrint(&AppList[i].authCmdCheck);
@@ -6390,16 +6185,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "Application " _CYAN_("%06x") " have " _GREEN_("%zu") " files", appid, filescount);
 
-    uint8_t aid[3] = {0};
-    DesfireAIDUintToByte(appid, aid);
-    if ((aid[2] >> 4) == 0xF) {
-        uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
-        PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
-        PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, cluster_to_text(short_aid >> 8));
-        MADDFDecodeAndPrint(short_aid);
-    } else {
-        AIDDFDecodeAndPrint(aid);
-    }
+    DesfirePrintAIDFunctions(appid);
 
     if (filescount == 0) {
         PrintAndLogEx(INFO, "There is no files in the application %06x", appid);
