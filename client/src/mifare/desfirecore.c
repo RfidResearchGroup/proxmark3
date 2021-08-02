@@ -1445,6 +1445,7 @@ void DesfireCheckAuthCommands(uint32_t appAID, char *dfname, uint8_t keyNum, Aut
     authCmdCheck->authAES = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE_AES);
     authCmdCheck->authEV2 = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE_EV2F);
     authCmdCheck->authISONative = DesfireCheckISOAuthCmd(appAID, dfname, keyNum, T_DES);
+    authCmdCheck->checked = true;
 }
 
 void DesfireCheckAuthCommandsPrint(AuthCommandsChk *authCmdCheck) {
@@ -1571,10 +1572,11 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
 }
 
 void DesfirePrintPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo) {
-    PrintAndLogEx(SUCCESS, "------------------- " _CYAN_("PICC level") " ------------------");
+    PrintAndLogEx(SUCCESS, "------------------------------------ " _CYAN_("PICC level") " -------------------------------------");
     PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d"), PICCInfo->appCount, PICCInfo->freemem);
     PrintAndLogEx(SUCCESS, "PICC level auth commands: " NOLF);
-    DesfireCheckAuthCommandsPrint(&PICCInfo->authCmdCheck);
+    if (PICCInfo->authCmdCheck.checked)
+        DesfireCheckAuthCommandsPrint(&PICCInfo->authCmdCheck);
     if (PICCInfo->numberOfKeys > 0) {
         PrintKeySettings(PICCInfo->keySettings, PICCInfo->numKeysRaw, false, true);
         PrintAndLogEx(SUCCESS, "PICC key 0 version: %d (0x%02x)", PICCInfo->keyVersion0, PICCInfo->keyVersion0);
@@ -1586,16 +1588,19 @@ void DesfirePrintAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS app
         return;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "--------------------------------- " _CYAN_("Alications list") " ---------------------------------");
+    PrintAndLogEx(SUCCESS, "--------------------------------- " _CYAN_("Applications list") " ---------------------------------");
     
     for (int i = 0; i < PICCInfo->appCount; i++) {
         PrintAndLogEx(SUCCESS, _CYAN_("Application number: 0x%02x") " iso id: " _GREEN_("0x%04x") " name: " _GREEN_("%s"), appList[i].appNum, appList[i].appISONum, appList[i].appDFName);
 
         DesfirePrintAIDFunctions(appList[i].appNum);
 
-        PrintAndLogEx(SUCCESS, "Auth commands: " NOLF);
-        DesfireCheckAuthCommandsPrint(&appList[i].authCmdCheck);
-        PrintAndLogEx(SUCCESS, "");
+        if (PICCInfo->authCmdCheck.checked) {
+            PrintAndLogEx(SUCCESS, "Auth commands: " NOLF);
+            DesfireCheckAuthCommandsPrint(&appList[i].authCmdCheck);
+            PrintAndLogEx(SUCCESS, "");
+        }
+        
         if (appList[i].numberOfKeys > 0) {
             PrintKeySettings(appList[i].keySettings, appList[i].numKeysRaw, true, true);
             

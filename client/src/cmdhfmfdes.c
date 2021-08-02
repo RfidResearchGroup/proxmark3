@@ -1294,33 +1294,6 @@ static int handler_desfire_appids(uint8_t *dest, uint32_t *app_ids_len) {
     return res;
 }
 
-// --- GET DF NAMES
-static int handler_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
-
-    if (g_debugMode > 1) {
-        if (dest == NULL) PrintAndLogEx(ERR, "DEST = NULL");
-        if (dfname_count == NULL) PrintAndLogEx(ERR, "DFNAME_COUNT = NULL");
-    }
-
-    if (dest == NULL || dfname_count == NULL)
-        return PM3_EINVARG;
-
-    *dfname_count = 0;
-    sAPDU apdu = {0x90, MFDES_GET_DF_NAMES, 0x00, 0x00, 0x00, NULL}; //0x6d
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, (uint8_t *)dest, &recv_len, &sw, sizeof(dfname_t), true);
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
-
-    if (sw != status(MFDES_S_OPERATION_OK))
-        return PM3_ESOFT;
-
-    *dfname_count = recv_len;
-    return res;
-}
-
 static int handler_desfire_select_application(uint8_t *aid) {
     if (g_debugMode > 1) {
         if (aid == NULL) {
@@ -1735,238 +1708,6 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     */
 
-    DropFieldDesfire();
-    return PM3_SUCCESS;
-}
-
-static void DecodeFileType(uint8_t filetype) {
-    switch (filetype) {
-        case 0x00:
-            PrintAndLogEx(INFO, "     File Type: 0x%02X -> Standard Data File", filetype);
-            break;
-        case 0x01:
-            PrintAndLogEx(INFO, "     File Type: 0x%02X -> Backup Data File", filetype);
-            break;
-        case 0x02:
-            PrintAndLogEx(INFO, "     File Type: 0x%02X -> Value Files with Backup", filetype);
-            break;
-        case 0x03:
-            PrintAndLogEx(INFO, "     File Type: 0x%02X -> Linear Record Files with Backup", filetype);
-            break;
-        case 0x04:
-            PrintAndLogEx(INFO, "     File Type: 0x%02X -> Cyclic Record Files with Backup", filetype);
-            break;
-        default:
-            PrintAndLogEx(INFO, "     File Type: 0x%02X", filetype);
-            break;
-    }
-}
-
-static void DecodeComSet(uint8_t comset) {
-    switch (comset) {
-        case 0x00:
-            PrintAndLogEx(INFO, "     Com.Setting: 0x%02X -> Plain", comset);
-            break;
-        case 0x01:
-            PrintAndLogEx(INFO, "     Com.Setting: 0x%02X -> Plain + MAC", comset);
-            break;
-        case 0x03:
-            PrintAndLogEx(INFO, "     Com.Setting: 0x%02X -> Enciphered", comset);
-            break;
-        default:
-            PrintAndLogEx(INFO, "     Com.Setting: 0x%02X", comset);
-            break;
-    }
-}
-
-static char *DecodeAccessValue(uint8_t value) {
-
-    char *car = (char *)calloc(255, sizeof(char));
-    if (car == NULL)
-        return NULL;
-
-    switch (value) {
-        case 0xE:
-            strcat(car, "(Free Access)");
-            break;
-        case 0xF:
-            strcat(car, "(Denied Access)");
-            break;
-        default:
-            snprintf(car, 255, "(Access Key: %d)", value);
-            break;
-    }
-    return car;
-}
-
-static void DecodeAccessRights(uint16_t accrights) {
-    int change_access_rights = accrights & 0xF;
-    int read_write_access = (accrights >> 4) & 0xF;
-    int write_access = (accrights >> 8) & 0xF;
-    int read_access = (accrights >> 12) & 0xF;
-    char *car = DecodeAccessValue(change_access_rights);
-    if (car == NULL) return;
-
-    char *rwa = DecodeAccessValue(read_write_access);
-    if (rwa == NULL) {
-        free(car);
-        return;
-    }
-
-    char *wa = DecodeAccessValue(write_access);
-    if (wa == NULL) {
-        free(car);
-        free(rwa);
-        return;
-    }
-
-    char *ra = DecodeAccessValue(read_access);
-    if (ra == NULL) {
-        free(car);
-        free(rwa);
-        free(wa);
-        return;
-    }
-
-    PrintAndLogEx(INFO, "     Access Rights: 0x%04X - Change %s - RW %s - W %s - R %s", accrights, car, rwa, wa, ra);
-    free(car);
-    free(rwa);
-    free(wa);
-    free(ra);
-}
-
-static int DecodeFileSettings(uint8_t *src, int src_len, int maclen) {
-    uint8_t filetype = src[0];
-    uint8_t comset = src[1];
-
-    uint16_t accrights = (src[3] << 8) + src[2];
-    if (src_len == 1 + 1 + 2 + 3 + maclen) {
-        int filesize = (src[6] << 16) + (src[5] << 8) + src[4];
-        DecodeFileType(filetype);
-        DecodeComSet(comset);
-        DecodeAccessRights(accrights);
-        PrintAndLogEx(INFO, "     Filesize: %d (0x%X)", filesize, filesize);
-        return PM3_SUCCESS;
-    } else if (src_len == 1 + 1 + 2 + 4 + 4 + 4 + 1 + maclen) {
-        int lowerlimit = (src[7] << 24) + (src[6] << 16) + (src[5] << 8) + src[4];
-        int upperlimit = (src[11] << 24) + (src[10] << 16) + (src[9] << 8) + src[8];
-        int limitcredvalue = (src[15] << 24) + (src[14] << 16) + (src[13] << 8) + src[12];
-        uint8_t limited_credit_enabled = src[17];
-        DecodeFileType(filetype);
-        DecodeComSet(comset);
-        DecodeAccessRights(accrights);
-        PrintAndLogEx(INFO, "     Lower limit: %d (0x%X) - Upper limit: %d (0x%X) - limited credit value: %d (0x%X) - limited credit enabled: %d", lowerlimit, lowerlimit, upperlimit, upperlimit, limitcredvalue, limitcredvalue, limited_credit_enabled);
-        return PM3_SUCCESS;
-    } else if (src_len == 1 + 1 + 2 + 3 + 3 + 3 + maclen) {
-        uint32_t recordsize = (src[6] << 16) + (src[5] << 8) + src[4];
-        uint32_t maxrecords = (src[9] << 16) + (src[8] << 8) + src[7];
-        uint32_t currentrecord = (src[12] << 16) + (src[11] << 8) + src[10];
-        DecodeFileType(filetype);
-        DecodeComSet(comset);
-        DecodeAccessRights(accrights);
-        PrintAndLogEx(INFO, "     Record size: %d (0x%X) - MaxNumberRecords: %d (0x%X) - Current Number Records: %d (0x%X)", recordsize, recordsize, maxrecords, maxrecords, currentrecord, currentrecord);
-        return PM3_SUCCESS;
-    }
-    return PM3_ESOFT;
-}
-
-static int CmdHF14ADesEnumApplications(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes enum",
-                  "Enumerate all AID's on MIFARE DESfire tag",
-                  "hf mfdes enum");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
-    DropFieldDesfire();
-
-    uint8_t aid[3] = {0};
-    uint8_t app_ids[78] = {0};
-    uint32_t app_ids_len = 0;
-
-    uint8_t file_ids[33] = {0};
-    uint32_t file_ids_len = 0;
-
-    dfname_t dfnames[255];
-    uint8_t dfname_count = 0;
-
-    if (handler_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Can't get list of applications on tag");
-        DropFieldDesfire();
-        return PM3_ESOFT;
-    }
-
-    if (handler_desfire_dfnames(dfnames, &dfname_count) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("Can't get DF Names"));
-    }
-
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-- MIFARE DESFire Enumerate applications --------------------");
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") " application%c", app_ids_len / 3, (app_ids_len == 3) ? ' ' : 's');
-
-    for (uint32_t i = 0; i < app_ids_len; i += 3) {
-
-        aid[0] = app_ids[i];
-        aid[1] = app_ids[i + 1];
-        aid[2] = app_ids[i + 2];
-
-        PrintAndLogEx(NORMAL, "");
-
-        if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
-            // CARD MASTER KEY
-            PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
-        } else {
-            PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
-        }
-
-        PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X%02X%02X"), aid[2], aid[1], aid[0]);
-        if ((aid[2] >> 4) == 0xF) {
-            uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
-            PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
-            PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, nxp_cluster_to_text(short_aid >> 8));
-            MADDFDecodeAndPrint(short_aid);
-        } else {
-            AIDDFDecodeAndPrint(aid);
-        }
-        for (uint8_t m = 0; m < dfname_count; m++) {
-            if (dfnames[m].aid[0] == aid[0] && dfnames[m].aid[1] == aid[1] && dfnames[m].aid[2] == aid[2]) {
-                PrintAndLogEx(SUCCESS, "  -  DF " _YELLOW_("%02X%02X") " Name : " _YELLOW_("%s"), dfnames[m].fid[1], dfnames[m].fid[0], dfnames[m].name);
-            }
-        }
-
-        int res = getKeySettings(aid);
-        if (res != PM3_SUCCESS) continue;
-
-        res = handler_desfire_select_application(aid);
-        if (res != PM3_SUCCESS) continue;
-
-        res = handler_desfire_fileids(file_ids, &file_ids_len);
-        if (res != PM3_SUCCESS) continue;
-
-        PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") " file%c", file_ids_len, (file_ids_len == 1) ? ' ' : 's');
-        for (int j = (int)file_ids_len - 1; j >= 0; j--) {
-            PrintAndLogEx(SUCCESS, "   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
-
-            uint8_t filesettings[20] = {0};
-            uint32_t fileset_len = 0;
-            uint32_t maclen = 0; // To be implemented
-
-            res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
-            if (res != PM3_SUCCESS) continue;
-
-            if (DecodeFileSettings(filesettings, fileset_len, maclen) != PM3_SUCCESS) {
-                PrintAndLogEx(INFO, "  Settings [%u] %s", fileset_len, sprint_hex(filesettings, fileset_len));
-            }
-        }
-
-    }
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
     DropFieldDesfire();
     return PM3_SUCCESS;
 }
@@ -5980,7 +5721,8 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes lsapp",
                   "Show application list. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
-                  "hf mfdes lsapp -> show application list with defaults from `default` command");
+                  "hf mfdes lsapp -> show application list with defaults from `default` command\n"
+                  "hf mfdes lsapp --files -> show application list and show each file type/settings/etc for each application");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5995,6 +5737,8 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
+        arg_lit0(NULL, "no-deep", "not to check authentication commands that avail for any application"),
+        arg_lit0(NULL, "files",   "scan files and print file settings for each application"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -6002,6 +5746,8 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 11);
+    bool nodeep = arg_get_lit(ctx, 12);
+    bool scanfiles = arg_get_lit(ctx, 13);
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
@@ -6024,7 +5770,7 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     
     PICCInfoS PICCInfo = {0};
     AppListS AppList = {0};
-    DesfireFillAppList(&dctx, &PICCInfo, AppList, true, false);
+    DesfireFillAppList(&dctx, &PICCInfo, AppList, !nodeep, scanfiles);
 
     printf("\33[2K\r"); // clear current line before printing
     PrintAndLogEx(NORMAL, "");
@@ -6143,7 +5889,6 @@ static command_t CommandTable[] = {
     {"default",          CmdHF14ADesDefault,          IfPm3Iso14443a,  "Set defaults for all the commands"},
     {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "MIFARE DesFire Authentication"},
     {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "[old]Check keys"},
-    {"enum",             CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "[old]Tries enumerate all applications"},
     {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
     {"freemem",          CmdHF14ADesGetFreeMem,       IfPm3Iso14443a,  "Get free memory size"},
     {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get uid from card"},
@@ -6152,19 +5897,19 @@ static command_t CommandTable[] = {
     {"list",             CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
 //    {"ndefread",             CmdHF14aDesNDEFRead,             IfPm3Iso14443a,  "Prints NDEF records from card"},
 //    {"mad",             CmdHF14aDesMAD,             IfPm3Iso14443a,  "Prints MAD records from card"},
+    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Applications") " -------------------"},
+    {"lsapp",            CmdHF14ADesLsApp,            IfPm3Iso14443a,  "Show all applications with files list"},
+    {"getaids",          CmdHF14ADesGetAIDs,          IfPm3Iso14443a,  "Get Application IDs list"},
+    {"getappnames",      CmdHF14ADesGetAppNames,      IfPm3Iso14443a,  "Get Applications list"},
+    {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
+    {"createapp",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application"},
+    {"deleteapp",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application"},
+    {"selectapp",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "------------------------ " _CYAN_("Keys") " -----------------------"},
     {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
     {"chkeysettings",    CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "Change Key Settings"},
     {"getkeysettings",   CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "Get Key Settings"},
     {"getkeyversions",   CmdHF14ADesGetKeyVersions,   IfPm3Iso14443a,  "Get Key Versions"},
-    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Applications") " -------------------"},
-    {"getaids",          CmdHF14ADesGetAIDs,          IfPm3Iso14443a,  "Get Application IDs list"},
-    {"getappnames",      CmdHF14ADesGetAppNames,      IfPm3Iso14443a,  "Get Applications list"},
-    {"lsapp",            CmdHF14ADesLsApp,            IfPm3Iso14443a,  "Show all files list"},
-    {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
-    {"createapp",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application"},
-    {"deleteapp",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application"},
-    {"selectapp",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("Files") " -----------------------"},
     {"getfileids",       CmdHF14ADesGetFileIDs,       IfPm3Iso14443a,  "Get File IDs list"},
     {"getfileisoids",    CmdHF14ADesGetFileISOIDs,    IfPm3Iso14443a,  "Get File ISO IDs list"},

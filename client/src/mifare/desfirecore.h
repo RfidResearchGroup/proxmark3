@@ -86,6 +86,7 @@ typedef struct {
 typedef FileListElmS FileListS[32];
 
 typedef struct {
+    bool checked;
     bool auth;
     bool authISO;
     bool authAES;
