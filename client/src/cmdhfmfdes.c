@@ -6014,6 +6014,8 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
     
+    PrintAndLogEx(INPLACE, _YELLOW_("It may take up to 15 seconds. Processing...."));
+    
     res = DesfireSelectAndAuthenticateEx(&dctx, securechann, 0x000000, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
@@ -6022,43 +6024,14 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     
     PICCInfoS PICCInfo = {0};
     AppListS AppList = {0};
-    DesfireFillAppList(&dctx, &PICCInfo, AppList, true);
+    DesfireFillAppList(&dctx, &PICCInfo, AppList, true, false);
+
+    printf("\33[2K\r"); // clear current line before printing
+    PrintAndLogEx(NORMAL, "");
             
     // print zone
-    PrintAndLogEx(SUCCESS, "------------------- " _CYAN_("PICC level") " ------------------");
-    PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d"), PICCInfo.appCount, PICCInfo.freemem);
-    PrintAndLogEx(SUCCESS, "PICC level auth commands: " NOLF);
-    DesfireCheckAuthCommandsPrint(&PICCInfo.authCmdCheck);
-    if (PICCInfo.numberOfKeys > 0) {
-        PrintKeySettings(PICCInfo.keySettings, PICCInfo.numKeysRaw, false, true);
-        PrintAndLogEx(SUCCESS, "PICC key 0 version: %d (0x%02x)", PICCInfo.keyVersion0, PICCInfo.keyVersion0);
-    }
-
-    if (PICCInfo.appCount > 0) {
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(SUCCESS, "-------------- " _CYAN_("Alications list") " --------------");
-        
-        for (int i = 0; i < PICCInfo.appCount; i++) {
-            PrintAndLogEx(SUCCESS, _CYAN_("Application number: 0x%02x") " iso id: " _GREEN_("0x%04x") " name: " _GREEN_("%s"), AppList[i].appNum, AppList[i].appISONum, AppList[i].appDFName);
-
-            DesfirePrintAIDFunctions(AppList[i].appNum);
-
-            PrintAndLogEx(SUCCESS, "Auth commands: " NOLF);
-            DesfireCheckAuthCommandsPrint(&AppList[i].authCmdCheck);
-            PrintAndLogEx(SUCCESS, "");
-            if (AppList[i].numberOfKeys > 0) {
-                PrintKeySettings(AppList[i].keySettings, AppList[i].numKeysRaw, true, true);
-                
-                if (AppList[i].numberOfKeys > 0) {
-                    PrintAndLogEx(SUCCESS, "Key versions [0..%d]: " NOLF, AppList[i].numberOfKeys - 1);
-                    for (uint8_t keyn = 0; keyn < AppList[i].numberOfKeys; keyn++) {
-                        PrintAndLogEx(NORMAL, "%s %02x" NOLF, (keyn == 0) ? "" : ",",  AppList[i].keyVersions[keyn]);
-                    }
-                    PrintAndLogEx(NORMAL, "\n");
-                }
-            }
-       }
-    }
+    DesfirePrintPICCInfo(&dctx, &PICCInfo);
+    DesfirePrintAppList(&dctx, &PICCInfo, AppList);
     
     DropField();
     return PM3_SUCCESS;

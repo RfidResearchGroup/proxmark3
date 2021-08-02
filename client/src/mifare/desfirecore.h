@@ -106,6 +106,11 @@ typedef struct {
     DesfireCryptoAlgorythm keyType; // from numKeysRaw
     
     uint8_t keyVersions[16];
+    
+    bool filesReaded;
+    size_t filesCount;
+    bool isoPresent;
+    FileListS fileList;
 } AppListElmS;
 typedef AppListElmS AppListS[64];
 
@@ -165,7 +170,9 @@ int DesfireGetUID(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetAIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetDFList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireFillPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo, bool deepmode);
-int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList, bool deepmode);
+int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList, bool deepmode, bool readFiles);
+void DesfirePrintPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo);
+void DesfirePrintAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList);
 
 int DesfireCreateApplication(DesfireContext *dctx, uint8_t *appdata, size_t appdatalen);
 int DesfireDeleteApplication(DesfireContext *dctx, uint32_t aid);

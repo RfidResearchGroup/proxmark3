@@ -1498,11 +1498,9 @@ static int AppListSearchAID(uint32_t appNum, AppListS AppList, size_t appcount) 
     return -1;
 }
 
-int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList, bool deepmode) {
+int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList, bool deepmode, bool readFiles) {
     uint8_t buf[250] = {0};
     size_t buflen = 0;
-
-    DesfireFillPICCInfo(dctx, PICCInfo, deepmode);
 
     int res = DesfireGetAIDList(dctx, buf, &buflen);
     if (res != PM3_SUCCESS) {
@@ -1550,11 +1548,19 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
                             appList[i].keyVersions[keyn] = buf[0];
                         }
                     }
+                
+                appList[i].filesReaded = false;
+                if (readFiles) {
+                    res = DesfireFillFileList(dctx, appList[i].fileList, &appList[i].filesCount, &appList[i].isoPresent);
+                    appList[i].filesReaded = (res == PM3_SUCCESS);
+                }
             }
         }
     }
 
     // field on-off zone
+    DesfireFillPICCInfo(dctx, PICCInfo, deepmode);
+
     if (PICCInfo->appCount > 0 && deepmode) {
         for (int i = 0; i < PICCInfo->appCount; i++) {
             DesfireCheckAuthCommands(appList[i].appNum, appList[i].appDFName, 0, &appList[i].authCmdCheck);
@@ -1562,6 +1568,46 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
     }
 
     return PM3_SUCCESS;
+}
+
+void DesfirePrintPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo) {
+    PrintAndLogEx(SUCCESS, "------------------- " _CYAN_("PICC level") " ------------------");
+    PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d"), PICCInfo->appCount, PICCInfo->freemem);
+    PrintAndLogEx(SUCCESS, "PICC level auth commands: " NOLF);
+    DesfireCheckAuthCommandsPrint(&PICCInfo->authCmdCheck);
+    if (PICCInfo->numberOfKeys > 0) {
+        PrintKeySettings(PICCInfo->keySettings, PICCInfo->numKeysRaw, false, true);
+        PrintAndLogEx(SUCCESS, "PICC key 0 version: %d (0x%02x)", PICCInfo->keyVersion0, PICCInfo->keyVersion0);
+    }
+}
+
+void DesfirePrintAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList) {
+    if (PICCInfo->appCount == 0)
+        return;
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "-------------- " _CYAN_("Alications list") " --------------");
+    
+    for (int i = 0; i < PICCInfo->appCount; i++) {
+        PrintAndLogEx(SUCCESS, _CYAN_("Application number: 0x%02x") " iso id: " _GREEN_("0x%04x") " name: " _GREEN_("%s"), appList[i].appNum, appList[i].appISONum, appList[i].appDFName);
+
+        DesfirePrintAIDFunctions(appList[i].appNum);
+
+        PrintAndLogEx(SUCCESS, "Auth commands: " NOLF);
+        DesfireCheckAuthCommandsPrint(&appList[i].authCmdCheck);
+        PrintAndLogEx(SUCCESS, "");
+        if (appList[i].numberOfKeys > 0) {
+            PrintKeySettings(appList[i].keySettings, appList[i].numKeysRaw, true, true);
+            
+            if (appList[i].numberOfKeys > 0) {
+                PrintAndLogEx(SUCCESS, "Key versions [0..%d]: " NOLF, appList[i].numberOfKeys - 1);
+                for (uint8_t keyn = 0; keyn < appList[i].numberOfKeys; keyn++) {
+                    PrintAndLogEx(NORMAL, "%s %02x" NOLF, (keyn == 0) ? "" : ",",  appList[i].keyVersions[keyn]);
+                }
+                PrintAndLogEx(NORMAL, "\n");
+            }
+        }
+   }
 }
 
 static int DesfireCommandEx(DesfireContext *dctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen, int checklength, size_t splitbysize) {
