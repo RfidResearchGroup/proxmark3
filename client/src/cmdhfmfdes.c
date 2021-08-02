@@ -6268,6 +6268,10 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
 
     if (appcount > 0) {
         for (int i = 0; i < appcount; i++) {
+            res = DesfireSelectAIDHexNoFieldOn(&dctx, AppList[i].appNum);
+            if (res != PM3_SUCCESS)
+                continue;
+
             DesfireGetKeySettings(&dctx, buf, &buflen);
             if (res == PM3_SUCCESS && buflen >= 2) {
                 AppList[i].keySettings = buf[0];
@@ -6303,6 +6307,18 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
         
         for (int i = 0; i < appcount; i++) {
             PrintAndLogEx(SUCCESS, _CYAN_("Application number: 0x%02x") " iso id: " _GREEN_("0x%04x") " name: " _GREEN_("%s"), AppList[i].appNum, AppList[i].appISONum, AppList[i].appDFName);
+
+            uint8_t aid[3] = {0};
+            DesfireAIDUintToByte(AppList[i].appNum, aid);
+            if ((aid[2] >> 4) == 0xF) {
+                uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
+                PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
+                PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, cluster_to_text(short_aid >> 8));
+                MADDFDecodeAndPrint(short_aid);
+            } else {
+                AIDDFDecodeAndPrint(aid);
+            }
+
             PrintAndLogEx(SUCCESS, "Auth commands: " NOLF);
             DesfireCheckAuthCommandsPrint(&AppList[i].authCmdCheck);
             PrintAndLogEx(SUCCESS, "");

@@ -770,6 +770,7 @@ int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2) {
     size_t resplen = 0;
     uint8_t respcode = 0;
 
+    ctx->secureChannel = DACNone;
     int res = DesfireExchangeEx(true, ctx, MFDES_SELECT_APPLICATION, data, (aid2 == NULL) ? 3 : 6, &respcode, resp, &resplen, true, 0);
     if (res == PM3_SUCCESS) {
         if (resplen != 0)
@@ -806,6 +807,7 @@ int DesfireSelectAIDHexNoFieldOn(DesfireContext *ctx, uint32_t aid) {
     size_t resplen = 0;
     uint8_t respcode = 0;
 
+    ctx->secureChannel = DACNone;
     int res = DesfireExchangeEx(false, ctx, MFDES_SELECT_APPLICATION, data, 3, &respcode, resp, &resplen, true, 0);
     if (res == PM3_SUCCESS) {
         if (resplen != 0)
@@ -814,6 +816,9 @@ int DesfireSelectAIDHexNoFieldOn(DesfireContext *ctx, uint32_t aid) {
         // select operation fail
         if (respcode != MFDES_S_OPERATION_OK)
             return PM3_EAPDU_FAIL;
+
+        DesfireClearSession(ctx);
+        ctx->appSelected = (aid != 0x000000);
 
         return PM3_SUCCESS;
     }
