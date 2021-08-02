@@ -1586,7 +1586,7 @@ void DesfirePrintAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS app
         return;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "-------------- " _CYAN_("Alications list") " --------------");
+    PrintAndLogEx(SUCCESS, "--------------------------------- " _CYAN_("Alications list") " ---------------------------------");
     
     for (int i = 0; i < PICCInfo->appCount; i++) {
         PrintAndLogEx(SUCCESS, _CYAN_("Application number: 0x%02x") " iso id: " _GREEN_("0x%04x") " name: " _GREEN_("%s"), appList[i].appNum, appList[i].appISONum, appList[i].appDFName);
@@ -1605,6 +1605,26 @@ void DesfirePrintAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS app
                     PrintAndLogEx(NORMAL, "%s %02x" NOLF, (keyn == 0) ? "" : ",",  appList[i].keyVersions[keyn]);
                 }
                 PrintAndLogEx(NORMAL, "\n");
+            }
+            
+            if (appList[i].filesReaded) {
+                PrintAndLogEx(SUCCESS, "Application have " _GREEN_("%zu") " files", appList[i].filesCount);
+
+                if (appList[i].filesCount > 0) {
+                    for (int fnum = 0; fnum < appList[i].filesCount; fnum++) {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(SUCCESS, "--------------------------------- " _CYAN_("File %02x") " ----------------------------------", appList[i].fileList[fnum].fileNum);
+                        PrintAndLogEx(SUCCESS, "File ID         : " _GREEN_("%02x"), appList[i].fileList[fnum].fileNum);
+                        if (appList[i].isoPresent) {
+                            if (appList[i].fileList[fnum].fileISONum != 0)
+                                PrintAndLogEx(SUCCESS, "File ISO ID     : %04x", appList[i].fileList[fnum].fileISONum);
+                            else
+                                PrintAndLogEx(SUCCESS, "File ISO ID     : " _YELLOW_("n/a"));
+                        }
+                        DesfirePrintFileSettingsExtended(&appList[i].fileList[fnum].fileSettings);
+                    }
+                }
+                PrintAndLogEx(NORMAL, "");
             }
         }
    }
