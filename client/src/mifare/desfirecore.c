@@ -1688,6 +1688,26 @@ int DesfireGetFreeMem(DesfireContext *dctx, uint32_t *freemem) {
     return res;
 }
 
+int DesfireReadSignature(DesfireContext *dctx, uint8_t sid, uint8_t *resp, size_t *resplen) {
+    *resplen = 0;
+    
+    uint8_t xresp[257] = {0};
+    size_t xresplen = 0;
+    uint8_t respcode = 0xff;
+    
+    int res = DesfireExchange(dctx, MFDES_READSIG, &sid, 1, &respcode, xresp, &xresplen);
+    if (res != PM3_SUCCESS)
+        return res;
+    
+    if (respcode != 0x90)
+        return PM3_EAPDU_FAIL;
+    
+    memcpy(resp, xresp, xresplen);
+    *resplen = xresplen;
+
+    return PM3_SUCCESS;
+}
+
 int DesfireGetUID(DesfireContext *dctx, uint8_t *resp, size_t *resplen) {
     return DesfireCommandRxData(dctx, MFDES_GET_UID, resp, resplen, -1);
 }
