@@ -5976,14 +5976,6 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
     return PM3_SUCCESS;
 }   
 
-static int AppListSearchAID(uint32_t appNum, AppListS AppList, size_t appcount) {
-     for (int i = 0; i < appcount; i++)
-         if (AppList[i].appNum == appNum)
-             return i;
-
-    return -1;
-}
-
 static int CmdHF14ADesLsApp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes lsapp",
@@ -6013,7 +6005,7 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, &securechann, DCMMACed, NULL);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, &securechann, DCMPlain, NULL);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -6028,106 +6020,25 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
         return res;
     }
     
-    uint8_t buf[250] = {0};
-    size_t buflen = 0;
-    
-    uint32_t freemem = 0;
-    DesfireGetFreeMem(&dctx, &freemem);
-
-    
-    res = DesfireGetAIDList(&dctx, buf, &buflen);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire GetAIDList command " _RED_("error") ". Result: %d", res);
-        DropField();
-        return PM3_ESOFT;
-    }    
-    
+    PICCInfoS PICCInfo = {0};
     AppListS AppList = {0};
-    
-    size_t appcount = buflen / 3;
-    for (int i = 0; i < buflen; i += 3)
-        AppList[i / 3].appNum = DesfireAIDByteToUint(&buf[i]);
-    
-    // result bytes: 3, 2, 1-16. total record size = 24
-    res = DesfireGetDFList(&dctx, buf, &buflen);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Desfire GetDFList command " _RED_("error") ". Result: %d", res);
-    } else if (buflen > 1) {
-        for (int i = 0; i < buflen; i++) {
-            int indx = AppListSearchAID(DesfireAIDByteToUint(&buf[i * 24 + 1]), AppList, appcount);
-            if (indx >= 0) {
-                AppList[indx].appISONum = MemBeToUint2byte(&buf[i * 24 + 1 + 3]);
-                memcpy(AppList[indx].appDFName, &buf[i * 24 + 1 + 5], strnlen((char *)&buf[i * 24 + 1 + 5], 16));
-            }
-        }
-    }
-
-    uint8_t keysettings0 = 0;
-    uint8_t numkeys0 = 0;
-    uint8_t keyVer0 = 0;
-    res = DesfireGetKeySettings(&dctx, buf, &buflen);
-    if (res == PM3_SUCCESS && buflen >= 2) {
-        keysettings0 = buf[0];
-        numkeys0 = buf[1];
-        if ((numkeys0 & 0x1f) > 0) {
-            uint8_t keyNum0 = numkeys0 & 0x1f;
-            res = DesfireGetKeyVersion(&dctx, &keyNum0, 1, buf, &buflen);
-            if (res == PM3_SUCCESS && buflen > 0) {
-                keyVer0 = buf[0];
-            }
-        }
-    }
-
-    if (appcount > 0) {
-        for (int i = 0; i < appcount; i++) {
-            res = DesfireSelectAIDHexNoFieldOn(&dctx, AppList[i].appNum);
-            if (res != PM3_SUCCESS)
-                continue;
-
-            DesfireGetKeySettings(&dctx, buf, &buflen);
-            if (res == PM3_SUCCESS && buflen >= 2) {
-                AppList[i].keySettings = buf[0];
-                AppList[i].numKeysRaw = buf[1];
-                AppList[i].numberOfKeys = AppList[i].numKeysRaw & 0x1f;
-                AppList[i].isoFileIDEnabled = ((AppList[i].numKeysRaw & 0x20) != 0);
-                AppList[i].keyType = DesfireKeyTypeToAlgo(AppList[i].numKeysRaw >> 6);
-                
-                if (AppList[i].numberOfKeys > 0)
-                    for (uint8_t keyn = 0; keyn < AppList[i].numberOfKeys; keyn++) {
-                        res = DesfireGetKeyVersion(&dctx, &keyn, 1, buf, &buflen);
-                        if (res == PM3_SUCCESS && buflen > 0) {
-                            AppList[i].keyVersions[keyn] = buf[0];
-                        }
-                    }
-            }
-        }
-    }
-
-    // field on-off zone
-    AuthCommandsChk authCmdCheck0 = {0};
-    DesfireCheckAuthCommands(0x000000, NULL, 0, &authCmdCheck0);
-
-    if (appcount > 0) {
-        for (int i = 0; i < appcount; i++) {
-            DesfireCheckAuthCommands(AppList[i].appNum, AppList[i].appDFName, 0, &AppList[i].authCmdCheck);
-        }
-    }
+    DesfireFillAppList(&dctx, &PICCInfo, AppList, true);
             
     // print zone
     PrintAndLogEx(SUCCESS, "------------------- " _CYAN_("PICC level") " ------------------");
-    PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d"), appcount, freemem);
+    PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d"), PICCInfo.appCount, PICCInfo.freemem);
     PrintAndLogEx(SUCCESS, "PICC level auth commands: " NOLF);
-    DesfireCheckAuthCommandsPrint(&authCmdCheck0);
-    if (numkeys0 > 0) {
-        PrintKeySettings(keysettings0, numkeys0, false, true);
-        PrintAndLogEx(SUCCESS, "PICC key 0 version: %d (0x%02x)", keyVer0, keyVer0);
+    DesfireCheckAuthCommandsPrint(&PICCInfo.authCmdCheck);
+    if (PICCInfo.numberOfKeys > 0) {
+        PrintKeySettings(PICCInfo.keySettings, PICCInfo.numKeysRaw, false, true);
+        PrintAndLogEx(SUCCESS, "PICC key 0 version: %d (0x%02x)", PICCInfo.keyVersion0, PICCInfo.keyVersion0);
     }
 
-    if (appcount > 0) {
+    if (PICCInfo.appCount > 0) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, "-------------- " _CYAN_("Alications list") " --------------");
         
-        for (int i = 0; i < appcount; i++) {
+        for (int i = 0; i < PICCInfo.appCount; i++) {
             PrintAndLogEx(SUCCESS, _CYAN_("Application number: 0x%02x") " iso id: " _GREEN_("0x%04x") " name: " _GREEN_("%s"), AppList[i].appNum, AppList[i].appISONum, AppList[i].appDFName);
 
             DesfirePrintAIDFunctions(AppList[i].appNum);

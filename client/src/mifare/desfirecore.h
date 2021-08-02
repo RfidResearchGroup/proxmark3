@@ -109,6 +109,18 @@ typedef struct {
 } AppListElmS;
 typedef AppListElmS AppListS[64];
 
+typedef struct {
+    size_t appCount;
+    uint32_t freemem;
+    AuthCommandsChk authCmdCheck;
+    
+    uint8_t keySettings;
+    uint8_t numKeysRaw;
+    uint8_t numberOfKeys; // from numKeysRaw
+    
+    uint8_t keyVersion0;
+} PICCInfoS;
+
 typedef enum {
     RFTAuto,
     RFTData,
@@ -152,6 +164,8 @@ int DesfireGetFreeMem(DesfireContext *dctx, uint32_t *freemem);
 int DesfireGetUID(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetAIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetDFList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
+int DesfireFillPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo, bool deepmode);
+int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList, bool deepmode);
 
 int DesfireCreateApplication(DesfireContext *dctx, uint8_t *appdata, size_t appdatalen);
 int DesfireDeleteApplication(DesfireContext *dctx, uint32_t aid);

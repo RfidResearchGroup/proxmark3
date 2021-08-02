@@ -1457,6 +1457,113 @@ void DesfireCheckAuthCommandsPrint(AuthCommandsChk *authCmdCheck) {
             );
 }
 
+int DesfireFillPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo, bool deepmode) {
+    uint8_t buf[250] = {0};
+    size_t buflen = 0;
+
+    uint32_t freemem = 0;
+    int res = DesfireGetFreeMem(dctx, &freemem);
+    if (res == PM3_SUCCESS)
+        PICCInfo->freemem = freemem;
+    
+    PICCInfo->keySettings = 0;
+    PICCInfo->numKeysRaw = 0;
+    PICCInfo->keyVersion0 = 0;
+    res = DesfireGetKeySettings(dctx, buf, &buflen);
+    if (res == PM3_SUCCESS && buflen >= 2) {
+        PICCInfo->keySettings = buf[0];
+        PICCInfo->numKeysRaw = buf[1];
+        PICCInfo->numberOfKeys = PICCInfo->numKeysRaw & 0x1f;
+        if (PICCInfo->numKeysRaw > 0) {
+            uint8_t keyNum0 = 0;
+            res = DesfireGetKeyVersion(dctx, &keyNum0, 1, buf, &buflen);
+            if (res == PM3_SUCCESS && buflen > 0) {
+                PICCInfo->keyVersion0 = buf[0];
+            }
+        }
+    }
+
+    // field on-off zone
+    if (deepmode)
+        DesfireCheckAuthCommands(0x000000, NULL, 0, &PICCInfo->authCmdCheck);
+    
+    return PM3_SUCCESS;
+}
+
+static int AppListSearchAID(uint32_t appNum, AppListS AppList, size_t appcount) {
+     for (int i = 0; i < appcount; i++)
+         if (AppList[i].appNum == appNum)
+             return i;
+
+    return -1;
+}
+
+int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList, bool deepmode) {
+    uint8_t buf[250] = {0};
+    size_t buflen = 0;
+
+    DesfireFillPICCInfo(dctx, PICCInfo, deepmode);
+
+    int res = DesfireGetAIDList(dctx, buf, &buflen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire GetAIDList command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }    
+    
+    PICCInfo->appCount = buflen / 3;
+    for (int i = 0; i < buflen; i += 3)
+        appList[i / 3].appNum = DesfireAIDByteToUint(&buf[i]);
+    
+    // result bytes: 3, 2, 1-16. total record size = 24
+    res = DesfireGetDFList(dctx, buf, &buflen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Desfire GetDFList command " _RED_("error") ". Result: %d", res);
+    } else if (buflen > 1) {
+        for (int i = 0; i < buflen; i++) {
+            int indx = AppListSearchAID(DesfireAIDByteToUint(&buf[i * 24 + 1]), appList, PICCInfo->appCount);
+            if (indx >= 0) {
+                appList[indx].appISONum = MemBeToUint2byte(&buf[i * 24 + 1 + 3]);
+                memcpy(appList[indx].appDFName, &buf[i * 24 + 1 + 5], strnlen((char *)&buf[i * 24 + 1 + 5], 16));
+            }
+        }
+    }
+
+    if (PICCInfo->appCount > 0) {
+        for (int i = 0; i < PICCInfo->appCount; i++) {
+            res = DesfireSelectAIDHexNoFieldOn(dctx, appList[i].appNum);
+            if (res != PM3_SUCCESS)
+                continue;
+
+            DesfireGetKeySettings(dctx, buf, &buflen);
+            if (res == PM3_SUCCESS && buflen >= 2) {
+                appList[i].keySettings = buf[0];
+                appList[i].numKeysRaw = buf[1];
+                appList[i].numberOfKeys = appList[i].numKeysRaw & 0x1f;
+                appList[i].isoFileIDEnabled = ((appList[i].numKeysRaw & 0x20) != 0);
+                appList[i].keyType = DesfireKeyTypeToAlgo(appList[i].numKeysRaw >> 6);
+                
+                if (appList[i].numberOfKeys > 0)
+                    for (uint8_t keyn = 0; keyn < appList[i].numberOfKeys; keyn++) {
+                        res = DesfireGetKeyVersion(dctx, &keyn, 1, buf, &buflen);
+                        if (res == PM3_SUCCESS && buflen > 0) {
+                            appList[i].keyVersions[keyn] = buf[0];
+                        }
+                    }
+            }
+        }
+    }
+
+    // field on-off zone
+    if (PICCInfo->appCount > 0 && deepmode) {
+        for (int i = 0; i < PICCInfo->appCount; i++) {
+            DesfireCheckAuthCommands(appList[i].appNum, appList[i].appDFName, 0, &appList[i].authCmdCheck);
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int DesfireCommandEx(DesfireContext *dctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen, int checklength, size_t splitbysize) {
     if (resplen)
         *resplen = 0;
