@@ -1325,11 +1325,11 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     
     PICCInfoS PICCInfo = {0};
     
-    uint8_t buf[250] = {0};
-    size_t buflen = 0;
-    res = DesfireGetAIDList(&dctx, buf, &buflen);
+    uint8_t aidbuf[250] = {0};
+    size_t aidbuflen = 0;
+    res = DesfireGetAIDList(&dctx, aidbuf, &aidbuflen);
     if (res == PM3_SUCCESS) {
-        PICCInfo.appCount = buflen / 3;
+        PICCInfo.appCount = aidbuflen / 3;
     }    
     
     if (cardtype == DESFIRE_EV2 ||
@@ -1351,6 +1351,15 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         } else {
             PrintAndLogEx(WARNING, "--- Card doesn't support GetSignature cmd");
         }
+    }
+    
+    if (aidbuflen > 2) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "--- " _CYAN_("AID list"));
+        PrintAndLogEx(SUCCESS, "AIDs: " NOLF);
+        for (int i = 0; i < aidbuflen; i += 3)
+            PrintAndLogEx(NORMAL, "%s %06x" NOLF, (i == 0) ? "" : ",", DesfireAIDByteToUint(&aidbuf[i]));        
+        PrintAndLogEx(NORMAL, "\n");
     }
     
     DesfireFillPICCInfo(&dctx, &PICCInfo, true);
