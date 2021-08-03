@@ -244,9 +244,47 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
 }
 
 static void DesfireSecureChannelEncodeEV2(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
+    uint8_t data[1050] = {0};
+    size_t rlen = 0;
+
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
 
+    uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd);
+
+    if (ctx->commMode == DCMPlain || ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && srcdatalen <= hdrlen)) {
+
+        if (srcdatalen > hdrlen && ctx->commMode == DCMMACed) {
+            uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+            DesfireEV2CalcCMAC(ctx, cmd, data, srcdatalen, cmac);
+
+            memcpy(&dstdata[srcdatalen], cmac, DesfireGetMACLength(ctx));
+            *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
+        }
+    } else if (ctx->commMode == DCMEncrypted) {
+        //uint8_t iv[CRYPTO_AES_BLOCK_SIZE] = {0};
+        DesfireEV2FillIV(ctx, true, NULL); // fill IV to ctx
+        
+        rlen = padded_data_length(srcdatalen + 1 - hdrlen, desfire_get_key_block_length(ctx->keyType));
+        memcpy(data, &srcdata[hdrlen], srcdatalen - hdrlen);
+        data[hdrlen] = 0x80; // padding
+
+        dstdata[0] = cmd;
+        memcpy(&dstdata[1], srcdata, hdrlen);
+        DesfireCryptoEncDec(ctx, true, data, rlen, &dstdata[1 + hdrlen], true);
+
+        uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+        DesfireEV2CalcCMAC(ctx, cmd, &dstdata[1], hdrlen + rlen, cmac);
+
+        memcpy(&dstdata[ + hdrlen + rlen], cmac, DesfireGetMACLength(ctx));
+
+        *dstdatalen = hdrlen + rlen + DesfireGetMACLength(ctx);
+    } else if (ctx->commMode == DCMEncryptedPlain) {
+        if (srcdatalen <= hdrlen)
+            return;
+        
+        // TODO !!!
+    }
 }
 
 void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
