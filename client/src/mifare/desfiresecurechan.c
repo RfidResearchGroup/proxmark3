@@ -262,7 +262,6 @@ static void DesfireSecureChannelEncodeEV2(DesfireContext *ctx, uint8_t cmd, uint
             *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
         }
     } else if (ctx->commMode == DCMEncrypted) {
-        //uint8_t iv[CRYPTO_AES_BLOCK_SIZE] = {0};
         DesfireEV2FillIV(ctx, true, NULL); // fill IV to ctx
         
         rlen = padded_data_length(srcdatalen + 1 - hdrlen, desfire_get_key_block_length(ctx->keyType));
@@ -415,6 +414,53 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
 
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
+    uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+
+    // if comm mode = plain --> response with MAC
+    // if request is not zero length --> response MAC
+    if (ctx->commMode == DCMPlain || ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && !ctx->lastRequestZeroLen)) {
+        if (srcdatalen < DesfireGetMACLength(ctx)) {
+            memcpy(dstdata, srcdata, srcdatalen);
+            *dstdatalen = srcdatalen;
+            return;
+        }
+
+        memcpy(dstdata, srcdata, srcdatalen - DesfireGetMACLength(ctx));
+        *dstdatalen = srcdatalen - DesfireGetMACLength(ctx);
+
+        DesfireEV2CalcCMAC(ctx, 0x00, srcdata, *dstdatalen, cmac);
+        if (memcmp(&srcdata[*dstdatalen], cmac, DesfireGetMACLength(ctx)) != 0) {
+            PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
+            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], desfire_get_key_block_length(ctx->keyType)));
+            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
+        }
+    } else if (ctx->commMode == DCMEncrypted) {
+        if (srcdatalen < desfire_get_key_block_length(ctx->keyType) + DesfireGetMACLength(ctx)) {
+            memcpy(dstdata, srcdata, srcdatalen);
+            *dstdatalen = srcdatalen;
+            return;
+        }
+
+        *dstdatalen = srcdatalen - DesfireGetMACLength(ctx);
+        DesfireEV2CalcCMAC(ctx, 0x00, srcdata, *dstdatalen, cmac);
+        if (memcmp(&srcdata[*dstdatalen], cmac, DesfireGetMACLength(ctx)) != 0) {
+            PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
+            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], desfire_get_key_block_length(ctx->keyType)));
+            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
+        }
+
+        DesfireEV2FillIV(ctx, true, NULL); // fill IV to ctx
+
+        DesfireCryptoEncDec(ctx, true, srcdata, *dstdatalen, dstdata, false);
+        PrintAndLogEx(INFO, "decoded[%d]: %s", *dstdatalen, sprint_hex(dstdata, *dstdatalen));
+
+        size_t puredatalen = FindISO9797M2PaddingDataLen(dstdata, *dstdatalen);
+        if (puredatalen != 0) {
+            *dstdatalen = puredatalen;
+        } else {
+            PrintAndLogEx(WARNING, "Padding search error.");
+        }
+    }
 }
 
 void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
