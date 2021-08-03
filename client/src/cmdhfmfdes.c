@@ -3370,7 +3370,13 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes changekey",
                   "Change PICC/Application key. Needs to provide keynum/key for a valid authentication (may get from default parameters).",
-                  "hf mfdes changekey --aid 123456 -> execute with default factory setup");
+                  "Change crypto algorithm for PICC key is possible, but for APP keys crypto algorithm is set by createapp command and can't be changed wo application delete\n"
+                  "\n"
+                  "hf mfdes changekey --aid 123456 -> execute with default factory setup. change des key 0 in the app 123456 from 00..00 to 00..00\n"
+                  "hf mfdes changekey -t des --newalgo aes --newkey 11223344556677889900112233445566 --newver a5 -> change card master key to AES one\n"
+                  "hf mfdes changekey --aid 123456 -t aes --key 00000000000000000000000000000000 --newkey 11223344556677889900112233445566 -> change app master key\n"
+                  "hf mfdes changekey --aid 123456 -t des -n 0 --newkeyno 1 --oldkey 5555555555555555 --newkey 1122334455667788 -> change key 1 with auth from key 0\n"
+                  "hf mfdes changekey --aid 123456 -t 3tdea --newkey 112233445566778899001122334455667788990011223344-> change 3tdea key 0 from default 00..00 to provided");
 
     void *argtable[] = {
         arg_param_begin,
