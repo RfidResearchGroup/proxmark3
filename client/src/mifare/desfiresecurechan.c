@@ -254,7 +254,7 @@ static void DesfireSecureChannelEncodeEV2(DesfireContext *ctx, uint8_t cmd, uint
 
     if (ctx->commMode == DCMPlain || ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && srcdatalen <= hdrlen)) {
 
-        if (srcdatalen > hdrlen && ctx->commMode == DCMMACed) {
+        if (ctx->commMode == DCMMACed || ctx->commMode == DCMEncrypted) {
             uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
             DesfireEV2CalcCMAC(ctx, cmd, data, srcdatalen, cmac);
 
