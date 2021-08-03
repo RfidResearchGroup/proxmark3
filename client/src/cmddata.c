@@ -592,10 +592,11 @@ static int Cmdmandecoderaw(const char *Cmd) {
         uint64_t id = 0;
         uint32_t hi = 0;
         size_t idx = 0;
-        if (Em410xDecode(bits, &size, &idx, &hi, &id) == 1) {
+        int res = Em410xDecode(bits, &size, &idx, &hi, &id);
+        if (res > 0) {
             //need to adjust to set bitstream back to manchester encoded data
             //setDemodBuff(bits, size, idx);
-            printEM410x(hi, id, false);
+            printEM410x(hi, id, false, res);
         }
     }
     setDemodBuff(bits, size, 0);
