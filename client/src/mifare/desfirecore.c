@@ -1530,9 +1530,15 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
         }
     }
 
+    // field on-off zone
+    DesfireFillPICCInfo(dctx, PICCInfo, deepmode);
+
     if (PICCInfo->appCount > 0) {
         for (int i = 0; i < PICCInfo->appCount; i++) {
-            res = DesfireSelectAIDHexNoFieldOn(dctx, appList[i].appNum);
+            if (i == 0)
+                res = DesfireSelectAIDHex(dctx, appList[i].appNum, false, 0);
+            else
+                res = DesfireSelectAIDHexNoFieldOn(dctx, appList[i].appNum);
             if (res != PM3_SUCCESS)
                 continue;
 
@@ -1562,8 +1568,6 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
     }
 
     // field on-off zone
-    DesfireFillPICCInfo(dctx, PICCInfo, deepmode);
-
     if (PICCInfo->appCount > 0 && deepmode) {
         for (int i = 0; i < PICCInfo->appCount; i++) {
             DesfireCheckAuthCommands(appList[i].appNum, appList[i].appDFName, 0, &appList[i].authCmdCheck);
