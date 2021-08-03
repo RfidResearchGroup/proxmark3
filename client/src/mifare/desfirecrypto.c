@@ -474,6 +474,19 @@ void DesfireEV2FillIV(DesfireContext *ctx, bool ivforcommand, uint8_t *iv) {
         memcpy(iv, xiv, CRYPTO_AES_BLOCK_SIZE);
 }
 
+int DesfireEV2CalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac) {
+    uint8_t mdata[1050] = {0};
+    size_t mdatalen = 0;
+    
+    mdata[0] = cmd;
+    Uint2byteToMemLe(&mdata[1], ctx->cmdCntr);
+    memcpy(&mdata[3], ctx->TI, 4);
+    if (data != NULL && datalen > 0)
+        memcpy(&mdata[7], data, datalen);
+    mdatalen = 1 + 2 + 4 + datalen;
+    
+    return aes_cmac8(NULL, ctx->sessionKeyMAC, mdata, mac, mdatalen);
+}
 
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc) {
     crc32_ex(data, len, crc);
