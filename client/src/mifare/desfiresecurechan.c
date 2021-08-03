@@ -256,7 +256,7 @@ static void DesfireSecureChannelEncodeEV2(DesfireContext *ctx, uint8_t cmd, uint
 
         if (ctx->commMode == DCMMACed || ctx->commMode == DCMEncrypted) {
             uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
-            DesfireEV2CalcCMAC(ctx, cmd, data, srcdatalen, cmac);
+            DesfireEV2CalcCMAC(ctx, cmd, srcdata, srcdatalen, cmac);
 
             memcpy(&dstdata[srcdatalen], cmac, DesfireGetMACLength(ctx));
             *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
@@ -515,6 +515,15 @@ bool PrintChannelModeWarning(uint8_t cmd, DesfireSecureChannel secureChannel, De
                 break;
             }
 
+            // ev2 like ev1
+            if (secureChannel == DACEV2 &&
+                    AllowedChannelModes[i].secureChannel == DACEV1 &&
+                    (AllowedChannelModes[i].cmdSet == cmdSet || (AllowedChannelModes[i].cmdSet == DCCNative && cmdSet == DCCNativeISO)) &&
+                    AllowedChannelModes[i].commMode == commMode) {
+
+                found = true;
+                break;
+            }
         }
 
     if (!found)

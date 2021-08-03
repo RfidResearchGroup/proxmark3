@@ -347,7 +347,7 @@ void DesfirePrintContext(DesfireContext *ctx) {
                       desfire_get_key_block_length(ctx->keyType),
                       sprint_hex(ctx->IV, desfire_get_key_block_length(ctx->keyType)));
         if (ctx->secureChannel == DACEV2) {
-            PrintAndLogEx(INFO, "    TI: %s cmdCntr: 0x%08x",
+            PrintAndLogEx(INFO, "    TI: %s cmdCntr: 0x%04x",
                           sprint_hex(ctx->TI, 4),
                           ctx->cmdCntr);
         }
