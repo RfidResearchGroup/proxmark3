@@ -269,6 +269,40 @@ static bool TestEV2IVEncode(void) {
     return res;
 }
 
+static bool TestEV2MAC(void) {
+    bool res = true;
+
+    uint8_t key[] = {0x93, 0x66, 0xFA, 0x19, 0x5E, 0xB5, 0x66, 0xF5, 0xBD, 0x2B, 0xAD, 0x40, 0x20, 0xB8, 0x30, 0x02};
+    uint8_t ti[] = {0xE2, 0xD3, 0xAF, 0x69};
+    uint8_t cmd = 8D;
+    uint8_t cmddata = {0x00, 0x00, 0x00, 0x00, 0x19, 0x00, 0x00, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 
+                       0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22}
+    uint8_t macres[] = {0x68, 0xF2, 0xC2, 0x8C, 0x57, 0x5A, 0x16, 0x28};
+
+    DesfireContext ctx = {0};
+    ctx.keyType = T_AES;
+    memcpy(ctx.sessionKeyMAC, key, 16);
+    memcpy(ctx.TI, ti, 4);
+    ctx.cmdCntr = 0;
+
+    uint8_t mac[16] = {0};
+    DesfireEV2CalcCMAC(&ctx, cmd, cmddata, sizeof(cmddata), mac);
+    res = res && (memcmp(mac, macres, sizeof(macres)) == 0);
+
+    memset(mac, 0, sizeof(mac));
+    uint8_t macres2[] = {0x08, 0x20, 0xF6, 0x88, 0x98, 0xC2, 0xA7, 0xF1};
+    uint8_t rc = 0;
+    ctx.cmdCntr++;
+    DesfireEV2CalcCMAC(&ctx, rc, NULL, 0, mac);
+    res = res && (memcmp(mac, macres2, sizeof(macres2)) == 0);
+    
+    if (res)
+        PrintAndLogEx(INFO, "EV2 MAC calc...... " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "EV2 MAC calc...... " _RED_("fail"));
+
+    return res;
+
 bool DesfireTest(bool verbose) {
     bool res = true;
 
@@ -281,6 +315,7 @@ bool DesfireTest(bool verbose) {
     res = res && TestCMACDES();
     res = res && TestEV2SessionKeys();
     res = res && TestEV2IVEncode();
+    res = res && TestEV2MAC();
 
     PrintAndLogEx(INFO, "---------------------------");
     if (res)
