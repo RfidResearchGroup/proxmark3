@@ -3038,7 +3038,10 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes selectapp",
                   "Select application on the card. It selects app if it is a valid one or returns an error.",
-                  "hf mfdes selectapp --aid 123456 -> select application 123456");
+                  "hf mfdes selectapp --aid 123456 -> select application 123456\n"
+                  "hf mfdes selectapp --mf -> select master file (PICC level)\n"
+                  "hf mfdes selectapp --dfname aid123456 -> select application aid123456 by DF name\n"
+                  "hf mfdes selectapp --isoid 1111 -> select application 1111 by ISO ID");
 
     void *argtable[] = {
         arg_param_begin,
@@ -3054,6 +3057,8 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID of application for some parameters (3 hex bytes, big endian)"),
         arg_str0(NULL, "dfname",  "<df name str>", "Application DF Name (string, max 16 chars). Selects application via ISO SELECT command"),
+        arg_str0(NULL, "isoid",   "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)"),
+        arg_lit0(NULL, "mf",      "Select MF (master file) via ISO channel"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3074,12 +3079,49 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     int dfnamelen = 16;
     CLIGetStrWithReturn(ctx, 12, dfname, &dfnamelen);
 
+    uint32_t isoid = 0x0000;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 13, 0x0000, &isoid, 2, true);
+    bool idsoidpresent = (res == 1);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "ISO ID for EF or DF must have 2 bytes length");
+        return PM3_EINVARG;
+    }
+
+    bool selectmf = arg_get_lit(ctx, 14);
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (dctx.cmdSet == DCCISO || dfnamelen > 0) {
-        uint8_t resp[250] = {0};
-        size_t resplen = 0;
+    uint8_t resp[250] = {0};
+    size_t resplen = 0;
+
+    if (selectmf) {
+        res = DesfireISOSelect(&dctx, ISSMFDFEF, NULL, 0, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(FAILED, "ISO Select MF " _RED_("failed"));
+            return res;
+        }
+
+        if (resplen > 0)
+            PrintAndLogEx(FAILED, "Application " _CYAN_("FCI template") " [%zu]%s", resplen, sprint_hex(resp, resplen));
+
+        PrintAndLogEx(SUCCESS, "PICC MF selected " _GREEN_("succesfully"));
+    } else if (idsoidpresent) {
+        uint8_t data[2] = {0};
+        Uint2byteToMemLe(data, isoid);
+        res = DesfireISOSelect(&dctx, ISSMFDFEF, data, 2, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(FAILED, "ISO Select DF 0x%04x " _RED_("failed"), isoid);
+            return res;
+        }
+
+        if (resplen > 0)
+            PrintAndLogEx(FAILED, "Application " _CYAN_("FCI template") " [%zu]%s", resplen, sprint_hex(resp, resplen));
+
+        PrintAndLogEx(SUCCESS, "PICC DF 0x%04x selected " _GREEN_("succesfully"), isoid);
+    } else if (dctx.cmdSet == DCCISO || dfnamelen > 0) {
         if (dfnamelen > 0)
             res = DesfireISOSelectDF(&dctx, (char *)dfname, resp, &resplen);
         else
