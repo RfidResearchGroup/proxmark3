@@ -2542,7 +2542,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
             // SELECT_ALL
             ReaderTransmit(sel_all, sizeof(sel_all), NULL);
             if (!ReaderReceive(resp, resp_par)) {
-                Dbprintf("Card didn't answer to CL%i select all", cascade_level + 1);
+                if (DBGLEVEL >= DBG_ERROR) Dbprintf("Card didn't answer to CL%i select all", cascade_level + 1);
                 return 0;
             }
 
@@ -2550,10 +2550,10 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
                 memset(uid_resp, 0, 5);
                 uint16_t uid_resp_bits = 0;
                 uint16_t collision_answer_offset = 0;
-
+                if (DBGLEVEL >= DBG_INFO) Dbprintf("Multiple tags detected. Collision after Bit %d", Demod.collisionPos);
+                
                 // anti-collision-loop:
                 while (Demod.collisionPos) {
-                    Dbprintf("Multiple tags detected. Collision after Bit %d", Demod.collisionPos);
                     for (uint16_t i = collision_answer_offset; i < Demod.collisionPos; i++, uid_resp_bits++) {    // add valid UID bits before collision point
                         uint16_t UIDbit = (resp[i / 8] >> (i % 8)) & 0x01;
                         uid_resp[uid_resp_bits / 8] |= UIDbit << (uid_resp_bits % 8);
@@ -2567,7 +2567,10 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
                     }
                     collision_answer_offset = uid_resp_bits % 8;
                     ReaderTransmitBits(sel_uid, 16 + uid_resp_bits, NULL);
-                    if (!ReaderReceiveOffset(resp, collision_answer_offset, resp_par)) return 0;
+                    if (!ReaderReceiveOffset(resp, collision_answer_offset, resp_par)) {
+                        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Anti-Collision: No response from card! Maybe the collision position is wrong.");
+                        return 0;
+                    }
                 }
 
                 // finally, add the last bits and BCC of the UID
