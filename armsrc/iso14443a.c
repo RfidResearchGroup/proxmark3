@@ -2571,7 +2571,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
                 }
 
                 // finally, add the last bits and BCC of the UID
-                for (uint16_t i = collision_answer_offset; i < (Demod.len - 1) * 8; i++, uid_resp_bits++) {
+                for (uint16_t i = collision_answer_offset; i < Demod.len * 8; i++, uid_resp_bits++) {
                     uint16_t UIDbit = (resp[i / 8] >> (i % 8)) & 0x01;
                     uid_resp[uid_resp_bits / 8] |= UIDbit << (uid_resp_bits % 8);
                 }
