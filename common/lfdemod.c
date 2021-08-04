@@ -253,6 +253,55 @@ size_t removeParity(uint8_t *bits, size_t startIdx, uint8_t pLen, uint8_t pType,
     return bitCnt;
 }
 
+static size_t removeEm410xParity(uint8_t *bits, size_t startIdx, bool isLong, bool *validShort, bool *validShortExtended, bool *validLong) {
+    uint32_t parityWd = 0;
+    size_t bitCnt = 0;
+    bool validColParity = false;
+    bool validRowParity = true;
+    bool validRowParitySkipColP = true;
+    *validShort = false;
+    *validShortExtended = false;
+    *validLong = false;
+    uint8_t bLen = isLong ? 110 : 55;
+    uint16_t parityCol[4] = { 0, 0, 0, 0 };
+    for (int word = 0; word < bLen; word += 5) {
+        for (int bit = 0; bit < 5; bit++) {
+            if (word + bit >= bLen) break;
+            parityWd = (parityWd << 1) | bits[startIdx + word + bit];
+            if ((word <= 50) && (bit < 4))
+                parityCol[bit] = (parityCol[bit] << 1) | bits[startIdx + word + bit];
+            bits[bitCnt++] = (bits[startIdx + word + bit]);
+        }
+        if (word + 5 > bLen) break;
+
+        bitCnt--; // overwrite parity with next data
+        validRowParity &= parityTest(parityWd, 5, 0) != 0;
+        if (word == 50) { // column parity nibble on short EM and on Electra
+            validColParity = parityTest(parityCol[0], 11, 0) != 0;
+            validColParity &= parityTest(parityCol[1], 11, 0) != 0;
+            validColParity &= parityTest(parityCol[2], 11, 0) != 0;
+            validColParity &= parityTest(parityCol[3], 11, 0) != 0;
+        } else {
+            validRowParitySkipColP &= parityTest(parityWd, 5, 0) != 0;
+        }
+        parityWd = 0;
+    }
+    if (!isLong && validRowParitySkipColP && validColParity) {
+        *validShort = true;
+    }
+    if (isLong && validRowParity) {
+        *validLong = true;
+    }
+    if (isLong && validRowParitySkipColP && validColParity) {
+        *validShortExtended = true;
+    }
+    if (*validShort || *validShortExtended || *validLong) {
+        return bitCnt;
+    } else {
+        return 0;
+    }
+}
+
 // by marshmellow
 // takes a array of binary values, length of bits per parity (includes parity bit),
 //   Parity Type (1 for odd; 0 for even; 2 Always 1's; 3 Always 0's), and binary Length (length to run)
@@ -2122,7 +2171,6 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
     if (bits[1] > 1) return -1;
     if (*size < 64) return -2;
 
-    uint8_t fmtlen;
     *start_idx = 0;
 
     // preamble 0111111111
@@ -2131,31 +2179,28 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
     if (!preambleSearch(bits, preamble, sizeof(preamble), size, start_idx))
         return -4;
 
-    // (iceman) if the preamble doesn't find two occuriences, this identification fails.
-    fmtlen = (*size == 128) ? 22 : 10;
+    bool validShort = false;
+    bool validShortExtended = false;
+    bool validLong = false;
+    *size = removeEm410xParity(bits, *start_idx + sizeof(preamble), *size == 128, &validShort, &validShortExtended, &validLong);
 
-    //skip last 4bit parity row for simplicity
-    *size = removeParity(bits, *start_idx + sizeof(preamble), 5, 0, fmtlen * 5);
-
-    switch (*size) {
-        case 40: {
-            // std em410x format
-            *hi = 0;
-            *lo = ((uint64_t)(bytebits_to_byte(bits, 8)) << 32) | (bytebits_to_byte(bits + 8, 32));
-            break;
-        }
-        case 88:  {
-            // long em format
-            *hi = (bytebits_to_byte(bits, 24));
-            *lo = ((uint64_t)(bytebits_to_byte(bits + 24, 32)) << 32) | (bytebits_to_byte(bits + 24 + 32, 32));
-            break;
-        }
-        default:
-            return -6;
+    if (validShort) {
+        // std em410x format
+        *hi = 0;
+        *lo = ((uint64_t)(bytebits_to_byte(bits, 8)) << 32) | (bytebits_to_byte(bits + 8, 32));
+        // 1 = Short
+        return 1;
     }
-    return 1;
+    if (validShortExtended || validLong) {
+        // store in long em format
+        *hi = (bytebits_to_byte(bits, 24));
+        *lo = ((uint64_t)(bytebits_to_byte(bits + 24, 32)) << 32) | (bytebits_to_byte(bits + 24 + 32, 32));
+        // 2 = Long
+        // 4 = ShortExtended
+        return ((int)validShortExtended << 2) + ((int)validLong << 1);
+    }
+    return -6;
 }
-
 
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
 int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx) {
