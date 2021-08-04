@@ -2316,6 +2316,7 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     bool idsoidpresent = (res == 1);
     if (res == 2) {
         PrintAndLogEx(ERR, "ISO ID for EF or DF must have 2 bytes length");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
