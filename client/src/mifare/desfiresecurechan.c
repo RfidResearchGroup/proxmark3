@@ -147,6 +147,30 @@ static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {
     return 0;
 }
 
+static const uint8_t EV1TransmitMAC[] = {
+    MFDES_WRITE_DATA,
+    MFDES_CREDIT,
+    MFDES_LIMITED_CREDIT,
+    MFDES_DEBIT,
+    MFDES_WRITE_RECORD,
+    MFDES_UPDATE_RECORD,
+    MFDES_COMMIT_READER_ID,
+    MFDES_INIT_KEY_SETTINGS,
+    MFDES_ROLL_KEY_SETTINGS,
+    MFDES_FINALIZE_KEY_SETTINGS,
+};
+
+static bool DesfireEV1TransmitMAC(DesfireContext *ctx, uint8_t cmd) {
+    if (ctx->secureChannel != DACEV1)
+        return true;
+        
+    for (int i = 0; i < ARRAY_LENGTH(EV1TransmitMAC); i++)
+        if (EV1TransmitMAC[i] == cmd)
+            return true;
+
+    return false;
+}
+
 static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
     uint8_t data[1024] = {0};
     size_t rlen = 0;
@@ -216,7 +240,7 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
 
         memcpy(dstdata, srcdata, srcdatalen);
         *dstdatalen = srcdatalen;
-        if (srcdatalen > hdrlen && ctx->commMode == DCMMACed) {
+        if (ctx->commMode == DCMMACed && DesfireEV1TransmitMAC(ctx, cmd)) {
             memcpy(&dstdata[srcdatalen], cmac, DesfireGetMACLength(ctx));
             *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
         }
