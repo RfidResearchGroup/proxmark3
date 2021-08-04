@@ -1822,7 +1822,7 @@ int DesfireFillFileList(DesfireContext *dctx, FileListS FileList, size_t *filesc
                 isoindx++;
             }
         }
-        
+
         if (isoindx * 2 != buflen)
             PrintAndLogEx(WARNING, "Wrong ISO ID list length. must be %zu but %zu", buflen, isoindx * 2);
     } else {

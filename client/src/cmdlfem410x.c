@@ -114,7 +114,7 @@ void printEM410x(uint32_t hi, uint64_t id, bool verbose, int type) {
         if (type & 0x4) { // Short Extended ID
             uint64_t data = (id << 20) >> 20;
             // Convert back to Short ID
-            id = ((uint64_t)hi << 16 ) | (id >> 48);
+            id = ((uint64_t)hi << 16) | (id >> 48);
             if ((data & 0xFFFFFFFF) == 0) {
                 PrintAndLogEx(SUCCESS, "EM 410x ID "_GREEN_("%010" PRIX64)" Electra "_GREEN_("%03" PRIu64), id, data >> 32);
             } else {
@@ -137,7 +137,7 @@ void printEM410x(uint32_t hi, uint64_t id, bool verbose, int type) {
         }
         PrintAndLogEx(SUCCESS, "    Short ID details:");
         // Convert back to Short ID
-        id = ((uint64_t)hi << 16 ) | (id >> 48);
+        id = ((uint64_t)hi << 16) | (id >> 48);
     }
     if (type & (0x4 | 0x1)) { // Short Extended or Short ID
         //output 40 bit em id
