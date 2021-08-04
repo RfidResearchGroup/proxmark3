@@ -222,7 +222,7 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
         
         // add padding
         if (paddinglen > 0)
-            data[srcdatalen + 1 + 2] = 0x80;
+            data[srcdatalen - hdrlen + 2] = 0x80;
 
         memcpy(dstdata, srcdata, hdrlen);
         //PrintAndLogEx(INFO, "src[%d]: %s", srcdatalen - hdrlen + 2, sprint_hex(data, srcdatalen - hdrlen + 2));
