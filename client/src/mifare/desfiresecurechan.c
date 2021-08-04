@@ -324,6 +324,8 @@ static void DesfireSecureChannelDecodeD40(DesfireContext *ctx, uint8_t *srcdata,
 
                 if (memcmp(mac, &srcdata[srcdatalen - maclen], maclen) == 0) {
                     *dstdatalen = srcdatalen - maclen;
+                    if (GetAPDULogging())
+                        PrintAndLogEx(INFO, "Received MAC OK");
                 } else {
                     PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
                     //PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[srcdatalen - maclen], maclen));
@@ -383,6 +385,9 @@ static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata,
             PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
             PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], desfire_get_key_block_length(ctx->keyType)));
             PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
+        } else {
+            if (GetAPDULogging())
+                PrintAndLogEx(INFO, "Received MAC OK");
         }
     } else if (ctx->commMode == DCMEncrypted) {
         if (srcdatalen < desfire_get_key_block_length(ctx->keyType)) {
@@ -432,6 +437,9 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
             PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
             PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], desfire_get_key_block_length(ctx->keyType)));
             PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
+        } else {
+            if (GetAPDULogging())
+                PrintAndLogEx(INFO, "Received MAC OK");
         }
     } else if (ctx->commMode == DCMEncrypted) {
         if (srcdatalen < desfire_get_key_block_length(ctx->keyType) + DesfireGetMACLength(ctx)) {
@@ -447,7 +455,8 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
             PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], desfire_get_key_block_length(ctx->keyType)));
             PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
         } else {
-            //PrintAndLogEx(INFO, "Received MAC OK");
+            if (GetAPDULogging())
+                PrintAndLogEx(INFO, "Received MAC OK");
         }
 
         DesfireEV2FillIV(ctx, false, NULL); // fill response IV to ctx
