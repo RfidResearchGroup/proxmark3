@@ -465,7 +465,7 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
 
     // if comm mode = plain --> response with MAC
     // if request is not zero length --> response MAC
-    if (ctx->commMode == DCMPlain || ctx->commMode == DCMMACed) {
+    if (ctx->commMode == DCMMACed) {
         if (srcdatalen < DesfireGetMACLength(ctx)) {
             memcpy(dstdata, srcdata, srcdatalen);
             *dstdatalen = srcdatalen;
