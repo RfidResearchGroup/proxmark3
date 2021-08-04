@@ -252,25 +252,24 @@ static void DesfireSecureChannelEncodeEV2(DesfireContext *ctx, uint8_t cmd, uint
 
     uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd);
 
-    if (ctx->commMode == DCMPlain || ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && srcdatalen <= hdrlen)) {
+    if (ctx->commMode == DCMMACed) {
+        uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+        DesfireEV2CalcCMAC(ctx, cmd, srcdata, srcdatalen, cmac);
 
-        if (ctx->commMode == DCMMACed || ctx->commMode == DCMEncrypted) {
-            uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
-            DesfireEV2CalcCMAC(ctx, cmd, srcdata, srcdatalen, cmac);
-
-            memcpy(&dstdata[srcdatalen], cmac, DesfireGetMACLength(ctx));
-            *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
-        }
+        memcpy(&dstdata[srcdatalen], cmac, DesfireGetMACLength(ctx));
+        *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
     } else if (ctx->commMode == DCMEncrypted) {
-        DesfireEV2FillIV(ctx, true, NULL); // fill IV to ctx
-
-        rlen = padded_data_length(srcdatalen + 1 - hdrlen, desfire_get_key_block_length(ctx->keyType));
-        memcpy(data, &srcdata[hdrlen], srcdatalen - hdrlen);
-        data[hdrlen] = 0x80; // padding
-
         dstdata[0] = cmd;
         memcpy(&dstdata[1], srcdata, hdrlen);
-        DesfireCryptoEncDec(ctx, DCOSessionKeyEnc, data, rlen, &dstdata[1 + hdrlen], true);
+
+        if (srcdatalen > hdrlen) {
+            rlen = padded_data_length(srcdatalen + 1 - hdrlen, desfire_get_key_block_length(ctx->keyType));
+            memcpy(data, &srcdata[hdrlen], srcdatalen - hdrlen);
+            data[hdrlen] = 0x80; // padding
+
+            DesfireEV2FillIV(ctx, true, NULL); // fill IV to ctx
+            DesfireCryptoEncDec(ctx, DCOSessionKeyEnc, data, rlen, &dstdata[1 + hdrlen], true);
+        }
 
         uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
         DesfireEV2CalcCMAC(ctx, cmd, &dstdata[1], hdrlen + rlen, cmac);
@@ -418,7 +417,7 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
 
     // if comm mode = plain --> response with MAC
     // if request is not zero length --> response MAC
-    if (ctx->commMode == DCMPlain || ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && !ctx->lastRequestZeroLen)) {
+    if (ctx->commMode == DCMPlain || ctx->commMode == DCMMACed) {
         if (srcdatalen < DesfireGetMACLength(ctx)) {
             memcpy(dstdata, srcdata, srcdatalen);
             *dstdatalen = srcdatalen;
