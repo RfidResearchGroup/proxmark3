@@ -11,6 +11,7 @@
 
 #include "common.h"
 
+const char *nxp_cluster_to_text(uint8_t cluster);
 int AIDDFDecodeAndPrint(uint8_t aid[3]);
 
 #endif // _AIDDESFIRE_H_

@@ -353,6 +353,50 @@ uint8_t DesfireDESKeyGetVersion(uint8_t *key) {
     return version;
 }
 
+DesfireCryptoAlgorythm DesfireKeyTypeToAlgo(uint8_t keyType) {
+    switch (keyType) {
+        case 00:
+            return T_3DES;
+        case 01:
+            return T_3K3DES;
+        case 02:
+            return T_AES;
+        default:
+            return T_3DES; // unknown....
+    }
+}
+
+uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType) {
+    switch (keyType) {
+        case T_DES:
+            return 0x00;
+        case T_3DES:
+            return 0x00;
+        case T_3K3DES:
+            return 0x01;
+        case T_AES:
+            return 0x02;
+    }
+    return 0;
+}
+
+void DesfirePrintCardKeyType(uint8_t keyType) {
+    switch (keyType) {
+        case 00:
+            PrintAndLogEx(SUCCESS, "Key: 2TDEA");
+            break;
+        case 01:
+            PrintAndLogEx(SUCCESS, "Key: 3TDEA");
+            break;
+        case 02:
+            PrintAndLogEx(SUCCESS, "Key: AES");
+            break;
+        default:
+            PrintAndLogEx(SUCCESS, "Key: unknown: 0x%02x", keyType);
+            break;
+    }
+}
+
 DesfireCommunicationMode DesfireFileCommModeToCommMode(uint8_t file_comm_mode) {
     DesfireCommunicationMode mode = DCMNone;
     switch (file_comm_mode & 0x03) {

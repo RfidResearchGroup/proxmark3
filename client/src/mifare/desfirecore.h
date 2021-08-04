@@ -85,6 +85,48 @@ typedef struct {
 
 typedef FileListElmS FileListS[32];
 
+typedef struct {
+    bool checked;
+    bool auth;
+    bool authISO;
+    bool authAES;
+    bool authEV2;
+    bool authISONative;
+} AuthCommandsChk;
+
+typedef struct {
+    uint32_t appNum;
+    uint16_t appISONum;
+    char appDFName[16];
+    AuthCommandsChk authCmdCheck;
+    
+    uint8_t keySettings;
+    uint8_t numKeysRaw;
+    bool isoFileIDEnabled;          // from numKeysRaw
+    uint8_t numberOfKeys;           // from numKeysRaw
+    DesfireCryptoAlgorythm keyType; // from numKeysRaw
+    
+    uint8_t keyVersions[16];
+    
+    bool filesReaded;
+    size_t filesCount;
+    bool isoPresent;
+    FileListS fileList;
+} AppListElmS;
+typedef AppListElmS AppListS[64];
+
+typedef struct {
+    size_t appCount;
+    uint32_t freemem;
+    AuthCommandsChk authCmdCheck;
+    
+    uint8_t keySettings;
+    uint8_t numKeysRaw;
+    uint8_t numberOfKeys; // from numKeysRaw
+    
+    uint8_t keyVersion0;
+} PICCInfoS;
+
 typedef enum {
     RFTAuto,
     RFTData,
@@ -111,20 +153,29 @@ void DesfirePrintContext(DesfireContext *ctx);
 int DesfireExchange(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen);
 int DesfireExchangeEx(bool activate_field, DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize);
 
+int DesfireReadSignature(DesfireContext *dctx, uint8_t sid, uint8_t *resp, size_t *resplen);
+
 int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2);
 int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uint32_t aid2);
 int DesfireSelectAIDHexNoFieldOn(DesfireContext *ctx, uint32_t aid);
+void DesfirePrintAIDFunctions(uint32_t appid);
 
 const char *DesfireAuthErrorToStr(int error);
 int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose);
 int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose);
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose);
+void DesfireCheckAuthCommands(uint32_t appAID, char *dfname, uint8_t keyNum,  AuthCommandsChk *authCmdCheck);
+void DesfireCheckAuthCommandsPrint(AuthCommandsChk *authCmdCheck);
 
 int DesfireFormatPICC(DesfireContext *dctx);
 int DesfireGetFreeMem(DesfireContext *dctx, uint32_t *freemem);
 int DesfireGetUID(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetAIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetDFList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
+int DesfireFillPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo, bool deepmode);
+int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList, bool deepmode, bool readFiles);
+void DesfirePrintPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo);
+void DesfirePrintAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList);
 
 int DesfireCreateApplication(DesfireContext *dctx, uint8_t *appdata, size_t appdatalen);
 int DesfireDeleteApplication(DesfireContext *dctx, uint32_t aid);
@@ -133,7 +184,6 @@ int DesfireGetKeyVersion(DesfireContext *dctx, uint8_t *data, size_t len, uint8_
 int DesfireGetKeySettings(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireChangeKeySettings(DesfireContext *dctx, uint8_t *data, size_t len);
 void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool print2ndbyte);
-uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType);
 
 int DesfireChangeKeyCmd(DesfireContext *dctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen);
 int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey, bool verbose);
@@ -147,6 +197,7 @@ int DesfireGetFileISOIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen
 
 void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettingsS *fsettings);
 void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings);
+void DesfirePrintFileSettingsTable(bool printheader, uint8_t id, bool isoidavail, uint16_t isoid, FileSettingsS *fsettings);
 void DesfirePrintFileSettingsExtended(FileSettingsS *fsettings);
 int DesfireGetFileSettings(DesfireContext *dctx, uint8_t fileid, uint8_t *resp, size_t *resplen);
 int DesfireGetFileSettingsStruct(DesfireContext *dctx, uint8_t fileid, FileSettingsS *fsettings);
@@ -154,6 +205,7 @@ int DesfireChangeFileSettings(DesfireContext *dctx, uint8_t *data, size_t datale
 
 const DesfireCreateFileCommandsS *GetDesfireFileCmdRec(uint8_t type);
 const char *GetDesfireAccessRightStr(uint8_t right);
+const char *GetDesfireAccessRightShortStr(uint8_t right);
 void DesfireEncodeFileAcessMode(uint8_t *mode, uint8_t r, uint8_t w, uint8_t rw, uint8_t ch);
 void DesfireDecodeFileAcessMode(uint8_t *mode, uint8_t *r, uint8_t *w, uint8_t *rw, uint8_t *ch);
 void DesfirePrintAccessRight(uint8_t *data);

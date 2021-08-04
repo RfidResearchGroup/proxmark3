@@ -38,7 +38,7 @@
 #include "nfc/ndef.h"           // NDEF
 #include "mifare/mad.h"
 #include "generator.h"
-#include "aiddesfire.h"
+#include "mifare/aiddesfire.h"
 #include "util.h"
 
 #define MAX_KEY_LEN        24
@@ -145,202 +145,6 @@ typedef enum {
     MFDES_RECORD_FILE,
     MFDES_VALUE_FILE
 } MFDES_FILE_TYPE_T;
-
-// NXP Appnote AN10787 - Application Directory (MAD)
-typedef enum {
-    CL_ADMIN = 0,
-    CL_MISC1,
-    CL_MISC2,
-    CL_MISC3,
-    CL_MISC4,
-    CL_MISC5,
-    CL_MISC6,
-    CL_MISC7,
-    CL_AIRLINES = 8,
-    CL_FERRY,
-    CL_RAIL,
-    CL_MISC,
-    CL_TRANSPORT,
-    CL_SECURITY = 0x14,
-    CL_CITYTRAFFIC = 0x18,
-    CL_CZECH_RAIL,
-    CL_BUS,
-    CL_MMT,
-    CL_TAXI = 0x28,
-    CL_TOLL = 0x30,
-    CL_GENERIC_TRANS,
-    CL_COMPANY_SERVICES = 0x38,
-    CL_CITYCARD = 0x40,
-    CL_ACCESS_CONTROL_1 = 0x47,
-    CL_ACCESS_CONTROL_2,
-    CL_VIGIK = 0x49,
-    CL_NED_DEFENCE = 0x4A,
-    CL_BOSCH_TELECOM = 0x4B,
-    CL_EU = 0x4C,
-    CL_SKI_TICKET = 0x50,
-    CL_SOAA = 0x55,
-    CL_ACCESS2 = 0x56,
-    CL_FOOD = 0x60,
-    CL_NONFOOD = 0x68,
-    CL_HOTEL = 0x70,
-    CL_LOYALTY = 0x71,
-    CL_AIRPORT = 0x75,
-    CL_CAR_RENTAL = 0x78,
-    CL_NED_GOV = 0x79,
-    CL_ADMIN2 = 0x80,
-    CL_PURSE = 0x88,
-    CL_TV = 0x90,
-    CL_CRUISESHIP = 0x91,
-    CL_IOPTA = 0x95,
-    CL_METERING = 0x97,
-    CL_TELEPHONE = 0x98,
-    CL_HEALTH = 0xA0,
-    CL_WAREHOUSE = 0xA8,
-    CL_BANKING = 0xB8,
-    CL_ENTERTAIN = 0xC0,
-    CL_PARKING = 0xC8,
-    CL_FLEET = 0xC9,
-    CL_FUEL = 0xD0,
-    CL_INFO = 0xD8,
-    CL_PRESS = 0xE0,
-    CL_NFC = 0xE1,
-    CL_COMPUTER = 0xE8,
-    CL_MAIL = 0xF0,
-    CL_AMISC = 0xF8,
-    CL_AMISC1 = 0xF9,
-    CL_AMISC2 = 0xFA,
-    CL_AMISC3 = 0xFB,
-    CL_AMISC4 = 0xFC,
-    CL_AMISC5 = 0xFD,
-    CL_AMISC6 = 0xFE,
-    CL_AMISC7 = 0xFF,
-} aidcluster_h;
-
-static const char *cluster_to_text(uint8_t cluster) {
-    switch (cluster) {
-        case CL_ADMIN:
-            return "card administration";
-        case CL_MISC1:
-        case CL_MISC2:
-        case CL_MISC3:
-        case CL_MISC4:
-        case CL_MISC5:
-        case CL_MISC6:
-        case CL_MISC7:
-            return "miscellaneous applications";
-        case CL_AIRLINES:
-            return "airlines";
-        case CL_FERRY:
-            return "ferry traffic";
-        case CL_RAIL:
-            return "railway services";
-        case CL_MISC:
-            return "miscellaneous applications";
-        case CL_TRANSPORT:
-            return "transport";
-        case CL_SECURITY:
-            return "security solutions";
-        case CL_CITYTRAFFIC:
-            return "city traffic";
-        case CL_CZECH_RAIL:
-            return "Czech Railways";
-        case CL_BUS:
-            return "bus services";
-        case CL_MMT:
-            return "multi modal transit";
-        case CL_TAXI:
-            return "taxi";
-        case CL_TOLL:
-            return "road toll";
-        case CL_GENERIC_TRANS:
-            return "generic transport";
-        case CL_COMPANY_SERVICES:
-            return "company services";
-        case CL_CITYCARD:
-            return "city card services";
-        case CL_ACCESS_CONTROL_1:
-        case CL_ACCESS_CONTROL_2:
-            return "access control & security";
-        case CL_VIGIK:
-            return "VIGIK";
-        case CL_NED_DEFENCE:
-            return "Ministry of Defence, Netherlands";
-        case CL_BOSCH_TELECOM:
-            return "Bosch Telecom, Germany";
-        case CL_EU:
-            return "European Union Institutions";
-        case CL_SKI_TICKET:
-            return "ski ticketing";
-        case CL_SOAA:
-            return "SOAA standard for offline access standard";
-        case CL_ACCESS2:
-            return "access control & security";
-        case CL_FOOD:
-            return "food";
-        case CL_NONFOOD:
-            return "non-food trade";
-        case CL_HOTEL:
-            return "hotel";
-        case CL_LOYALTY:
-            return "loyalty";
-        case CL_AIRPORT:
-            return "airport services";
-        case CL_CAR_RENTAL:
-            return "car rental";
-        case CL_NED_GOV:
-            return "Dutch government";
-        case CL_ADMIN2:
-            return "administration services";
-        case CL_PURSE:
-            return "electronic purse";
-        case CL_TV:
-            return "television";
-        case CL_CRUISESHIP:
-            return "cruise ship";
-        case CL_IOPTA:
-            return "IOPTA";
-        case CL_METERING:
-            return "metering";
-        case CL_TELEPHONE:
-            return "telephone";
-        case CL_HEALTH:
-            return "health services";
-        case CL_WAREHOUSE:
-            return "warehouse";
-        case CL_BANKING:
-            return "banking";
-        case CL_ENTERTAIN:
-            return "entertainment & sports";
-        case CL_PARKING:
-            return "car parking";
-        case CL_FLEET:
-            return "fleet management";
-        case CL_FUEL:
-            return "fuel, gasoline";
-        case CL_INFO:
-            return "info services";
-        case CL_PRESS:
-            return "press";
-        case CL_NFC:
-            return "NFC Forum";
-        case CL_COMPUTER:
-            return "computer";
-        case CL_MAIL:
-            return "mail";
-        case CL_AMISC:
-        case CL_AMISC1:
-        case CL_AMISC2:
-        case CL_AMISC3:
-        case CL_AMISC4:
-        case CL_AMISC5:
-        case CL_AMISC6:
-        case CL_AMISC7:
-            return "miscellaneous applications";
-        default:
-            break;
-    }
-    return "reserved";
-}
 
 typedef enum {
     DESFIRE_UNKNOWN = 0,
@@ -916,87 +720,6 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
     return PM3_SUCCESS;
 }
 
-// -- test if card supports 0x0A
-static int test_desfire_authenticate(void) {
-    uint8_t data[] = {0x00};
-    sAPDU apdu = {0x90, MFDES_AUTHENTICATE, 0x00, 0x00, 0x01, data}; // 0x0A, KEY 0
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, 0, false);
-    if (res == PM3_SUCCESS)
-        if (sw == status(MFDES_ADDITIONAL_FRAME)) {
-            DropFieldDesfire();
-            return res;
-        }
-    return res;
-}
-
-// -- test if card supports 0x1A
-static int test_desfire_authenticate_iso(void) {
-    uint8_t data[] = {0x00};
-    sAPDU apdu = {0x90, MFDES_AUTHENTICATE_ISO, 0x00, 0x00, 0x01, data}; // 0x1A, KEY 0
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, 0, false);
-    if (res == PM3_SUCCESS)
-        if (sw == status(MFDES_ADDITIONAL_FRAME)) {
-            DropFieldDesfire();
-            return res;
-        }
-    return res;
-}
-
-// -- test if card supports 0xAA
-static int test_desfire_authenticate_aes(void) {
-    uint8_t data[] = {0x00};
-    sAPDU apdu = {0x90, MFDES_AUTHENTICATE_AES, 0x00, 0x00, 0x01, data}; // 0xAA, KEY 0
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, 0, false);
-    if (res == PM3_SUCCESS)
-        if (sw == status(MFDES_ADDITIONAL_FRAME)) {
-            DropFieldDesfire();
-            return res;
-        }
-    return res;
-}
-
-// --- GET FREE MEM
-static int desfire_print_freemem(uint32_t free_mem) {
-    PrintAndLogEx(SUCCESS, "   Available free memory on card         : " _GREEN_("%d bytes"), free_mem);
-    return PM3_SUCCESS;
-}
-
-static int handler_desfire_freemem(uint32_t *free_mem) {
-    if (free_mem == NULL) return PM3_EINVARG;
-
-    uint8_t data[] = {0x00};
-    sAPDU apdu = {0x90, MFDES_GET_FREE_MEMORY, 0x00, 0x00, 0x00, data}; // 0x6E
-    *free_mem = 0;
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    uint8_t fmem[4] = {0};
-
-    size_t plen = apdu.Lc;
-    uint8_t *p = mifare_cryto_preprocess_data(tag, (uint8_t *)apdu.data, &plen, 0, MDCM_PLAIN | CMAC_COMMAND);
-    apdu.Lc = (uint8_t)plen;
-    apdu.data = p;
-
-    int res = send_desfire_cmd(&apdu, true, fmem, &recv_len, &sw, 0, true);
-
-    if (res != PM3_SUCCESS)
-        return res;
-
-    size_t dlen = recv_len;
-    p = mifare_cryto_postprocess_data(tag, apdu.data, &dlen, MDCM_PLAIN | CMAC_COMMAND | CMAC_VERIFY);
-    (void)p;
-    if (sw != status(MFDES_S_OPERATION_OK))
-        return PM3_ESOFT;
-
-    *free_mem = le24toh(fmem);
-    return res;
-}
-
 /*static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t new_algo, uint8_t *old_key, uint8_t old_algo, uint8_t aes_version) {
 
     if (new_key == NULL || old_key == NULL) {
@@ -1289,155 +1012,6 @@ static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signat
     return PM3_SUCCESS;
 }
 
-static int handler_desfire_signature(uint8_t *signature, size_t *signature_len) {
-
-    if (signature == NULL) {
-        PrintAndLogEx(DEBUG, "SIGNATURE=NULL");
-        return PM3_EINVARG;
-    }
-    if (signature_len == NULL) {
-        PrintAndLogEx(DEBUG, "SIGNATURE_LEN=NULL");
-        return PM3_EINVARG;
-    }
-
-    uint8_t c[] = {0x00};
-    sAPDU apdu = {0x90, MFDES_READSIG, 0x00, 0x00, sizeof(c), c}; // 0x3C
-
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, signature, &recv_len, &sw, 0, true);
-    if (res == PM3_SUCCESS) {
-        if (recv_len != 56) {
-            *signature_len = 0;
-            res = PM3_ESOFT;
-        } else {
-            *signature_len = recv_len;
-        }
-    }
-    DropFieldDesfire();
-    return res;
-}
-
-// --- KEY VERSION
-static int desfire_print_keyversion(uint8_t key_idx, uint8_t key_version) {
-    PrintAndLogEx(SUCCESS, "   Key [%u]  Version : %d (0x%02x)", key_idx, key_version, key_version);
-    return PM3_SUCCESS;
-}
-
-static int handler_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
-    if (num_versions == NULL) {
-        PrintAndLogEx(DEBUG, "NUM_VERSIONS=NULL");
-        return PM3_EINVARG;
-    }
-    sAPDU apdu = {0x90, MFDES_GET_KEY_VERSION, 0x00, 0x00, 0x01, &curr_key}; //0x64
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, false, num_versions, &recv_len, &sw, 0, true);
-
-    if (res != PM3_SUCCESS)
-        return res;
-
-    if (sw != status(MFDES_S_OPERATION_OK))
-        return PM3_ESOFT;
-
-    return res;
-}
-
-// --- KEY SETTING  Application Master Key
-static int desfire_print_amk_keysetting(uint8_t key_settings, uint8_t num_keys, int algo) {
-    PrintAndLogEx(SUCCESS, "  AID Key settings           : 0x%02x", key_settings);
-    // 2 MSB denotes
-    const char *str =                 "  Max key number and type    : %d, " _YELLOW_("%s");
-
-    if (algo == MFDES_ALGO_DES)
-        PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "(3)DES");
-    else if (algo == MFDES_ALGO_AES)
-        PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "AES");
-    else if (algo == MFDES_ALGO_3K3DES)
-        PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "3K3DES");
-
-    //PrintAndLogEx(SUCCESS, "  Max number of keys in AID  : %d", num_keys & 0x3F);
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    PrintAndLogEx(SUCCESS, "  Changekey Access rights");
-
-    // Access rights.
-    uint8_t rights = ((key_settings >> 4) & 0x0F);
-    switch (rights) {
-        case 0x0:
-            PrintAndLogEx(SUCCESS, "  -- AMK authentication is necessary to change any key (default)");
-            break;
-        case 0xE:
-            PrintAndLogEx(SUCCESS, "  -- Authentication with the key to be changed (same KeyNo) is necessary to change a key");
-            break;
-        case 0xF:
-            PrintAndLogEx(SUCCESS, "  -- All keys (except AMK,see Bit0) within this application are frozen");
-            break;
-        default:
-            PrintAndLogEx(SUCCESS,
-                          "  -- Authentication with the specified key is necessary to change any key.\n"
-                          "A change key and a PICC master key (CMK) can only be changed after authentication with the master key.\n"
-                          "For keys other then the master or change key, an authentication with the same key is needed."
-                         );
-            break;
-    }
-
-    PrintAndLogEx(SUCCESS, "   [%c...] AMK Configuration changeable   : %s", (key_settings & (1 << 3)) ? '1' : '0', (key_settings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
-    PrintAndLogEx(SUCCESS, "   [.%c..] AMK required for create/delete : %s", (key_settings & (1 << 2)) ? '1' : '0', (key_settings & (1 << 2)) ? "NO" : "YES");
-    PrintAndLogEx(SUCCESS, "   [..%c.] Directory list access with AMK : %s", (key_settings & (1 << 1)) ? '1' : '0', (key_settings & (1 << 1)) ? "NO" : "YES");
-    PrintAndLogEx(SUCCESS, "   [...%c] AMK is changeable              : %s", (key_settings & (1 << 0)) ? '1' : '0', (key_settings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
-    return PM3_SUCCESS;
-}
-
-// --- KEY SETTING  PICC Master Key (CMK)
-static int desfire_print_piccmk_keysetting(uint8_t key_settings, uint8_t num_keys, int algo) {
-    //PrintAndLogEx(INFO, "--- " _CYAN_("PICC Master Key (CMK) settings"));
-    // number of Master keys (0x01)
-    PrintAndLogEx(SUCCESS, "   Number of Masterkeys                  : " _YELLOW_("%u"), (num_keys & 0x3F));
-    const char *str = "   Operation of PICC master key          : " _YELLOW_("%s");
-
-    if (algo == MFDES_ALGO_DES)
-        PrintAndLogEx(SUCCESS, str, "(3)DES");
-    else if (algo == MFDES_ALGO_AES)
-        PrintAndLogEx(SUCCESS, str, "AES");
-    else if (algo == MFDES_ALGO_3K3DES)
-        PrintAndLogEx(SUCCESS, str, "3K3DES");
-
-    uint8_t cmk_num_versions = 0;
-    if (handler_desfire_keyversion(0, &cmk_num_versions) == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "   PICC Master key Version               : " _YELLOW_("%d (0x%02x)"), cmk_num_versions, cmk_num_versions);
-    }
-
-    PrintAndLogEx(INFO, "   ----------------------------------------------------------");
-
-    // Authentication tests
-    int res = test_desfire_authenticate();
-    if (res == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "   [0x0A] Authenticate      : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
-
-    res = test_desfire_authenticate_iso();
-    if (res == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "   [0x1A] Authenticate ISO  : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
-
-    res = test_desfire_authenticate_aes();
-    if (res == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "   [0xAA] Authenticate AES  : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
-
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    PrintAndLogEx(INFO, " Key setting: 0x%02X [%c%c%c%c]",
-                  key_settings,
-                  (key_settings & (1 << 3)) ? '1' : '0',
-                  (key_settings & (1 << 2)) ? '1' : '0',
-                  (key_settings & (1 << 1)) ? '1' : '0',
-                  (key_settings & (1 << 0)) ? '1' : '0'
-                 );
-
-    PrintAndLogEx(SUCCESS, "   [%c...] CMK Configuration changeable   : %s", (key_settings & (1 << 3)) ? '1' : '0', (key_settings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
-    PrintAndLogEx(SUCCESS, "   [.%c..] CMK required for create/delete : %s", (key_settings & (1 << 2)) ? '1' : '0', (key_settings & (1 << 2)) ? _GREEN_("NO") : "YES");
-    PrintAndLogEx(SUCCESS, "   [..%c.] Directory list access with CMK : %s", (key_settings & (1 << 1)) ? '1' : '0', (key_settings & (1 << 1)) ? _GREEN_("NO") : "YES");
-    PrintAndLogEx(SUCCESS, "   [...%c] CMK is changeable              : %s", (key_settings & (1 << 0)) ? '1' : '0', (key_settings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
-    return PM3_SUCCESS;
-}
-
 static int handler_desfire_getkeysettings(uint8_t *key_settings, uint8_t *num_keys) {
     if (key_settings == NULL) {
         PrintAndLogEx(DEBUG, "KEY_SETTINGS=NULL");
@@ -1490,33 +1064,6 @@ static int handler_desfire_appids(uint8_t *dest, uint32_t *app_ids_len) {
     return res;
 }
 
-// --- GET DF NAMES
-static int handler_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
-
-    if (g_debugMode > 1) {
-        if (dest == NULL) PrintAndLogEx(ERR, "DEST = NULL");
-        if (dfname_count == NULL) PrintAndLogEx(ERR, "DFNAME_COUNT = NULL");
-    }
-
-    if (dest == NULL || dfname_count == NULL)
-        return PM3_EINVARG;
-
-    *dfname_count = 0;
-    sAPDU apdu = {0x90, MFDES_GET_DF_NAMES, 0x00, 0x00, 0x00, NULL}; //0x6d
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, (uint8_t *)dest, &recv_len, &sw, sizeof(dfname_t), true);
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
-
-    if (sw != status(MFDES_S_OPERATION_OK))
-        return PM3_ESOFT;
-
-    *dfname_count = recv_len;
-    return res;
-}
-
 static int handler_desfire_select_application(uint8_t *aid) {
     if (g_debugMode > 1) {
         if (aid == NULL) {
@@ -1543,28 +1090,6 @@ static int handler_desfire_select_application(uint8_t *aid) {
     }
     memcpy(&tag->selected_application, aid, 3);
     return PM3_SUCCESS;
-}
-
-static int key_setting_to_algo(uint8_t aid[3], uint8_t *key_setting, mifare_des_authalgo_t *algo, uint8_t *num_keys) {
-    int res = handler_desfire_select_application(aid);
-    if (res != PM3_SUCCESS) return res;
-
-    *num_keys = 0;
-    res = handler_desfire_getkeysettings(key_setting, num_keys);
-    if (res == PM3_SUCCESS) {
-        switch (*num_keys >> 6) {
-            case 0:
-                *algo = MFDES_ALGO_DES;
-                break;
-            case 1:
-                *algo = MFDES_ALGO_3K3DES;
-                break;
-            case 2:
-                *algo = MFDES_ALGO_AES;
-                break;
-        }
-    }
-    return res;
 }
 
 static int handler_desfire_fileids(uint8_t *dest, uint32_t *file_ids_len) {
@@ -1603,70 +1128,6 @@ static int handler_desfire_filesettings(uint8_t file_id, uint8_t *dest, uint32_t
         return res;
     }
     return res;
-}
-
-static int getKeySettings(uint8_t *aid) {
-    if (aid == NULL) return PM3_EINVARG;
-
-    uint8_t num_keys = 0;
-    uint8_t key_setting = 0;
-    int res = 0;
-    if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
-
-        // CARD MASTER KEY
-        //PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
-
-        // KEY Settings - AMK
-        mifare_des_authalgo_t algo = MFDES_ALGO_DES;
-        res = key_setting_to_algo(aid, &key_setting, &algo, &num_keys);
-
-        if (res == PM3_SUCCESS) {
-            desfire_print_piccmk_keysetting(key_setting, num_keys, algo);
-        } else {
-            PrintAndLogEx(WARNING, _RED_("   Can't read PICC Master key settings"));
-        }
-
-    } else {
-
-        // AID - APPLICATION MASTER KEYS
-        //PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
-        res = handler_desfire_select_application(aid);
-        if (res != PM3_SUCCESS) return res;
-
-        // KEY Settings - AMK
-        mifare_des_authalgo_t algo = MFDES_ALGO_DES;
-        res = key_setting_to_algo(aid, &key_setting, &algo, &num_keys);
-        if (res == PM3_SUCCESS) {
-            desfire_print_amk_keysetting(key_setting, num_keys, algo);
-        } else {
-            PrintAndLogEx(WARNING, _RED_("   Can't read Application Master key settings"));
-        }
-
-        // KEY VERSION  - AMK
-        uint8_t num_version = 0;
-        if (handler_desfire_keyversion(0, &num_version) == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "-------------------------------------------------------------");
-            PrintAndLogEx(INFO, "  Application keys");
-            desfire_print_keyversion(0, num_version);
-        } else {
-            PrintAndLogEx(WARNING, "   Can't read AID master key version. Trying all keys");
-        }
-
-        // From 0x01 to numOfKeys.  We already got 0x00. (AMK)
-        num_keys &= 0x3F;
-        if (num_keys > 1) {
-            for (uint8_t i = 0x01; i < num_keys; ++i) {
-                if (handler_desfire_keyversion(i, &num_version) == PM3_SUCCESS) {
-                    desfire_print_keyversion(i, num_version);
-                } else {
-                    PrintAndLogEx(WARNING, "   Can't read key %d  (0x%02x) version", i, i);
-                }
-            }
-        }
-    }
-
-    DropFieldDesfire();
-    return PM3_SUCCESS;
 }
 
 static void swap24(uint8_t *data) {
@@ -1794,7 +1255,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-    DropFieldDesfire();
+    DropField();
 
     mfdes_info_res_t info;
     int res = mfdes_get_info(&info);
@@ -1809,8 +1270,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(INFO, "---------------------------------- " _CYAN_("Tag Information") " ----------------------------------");
     PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(info.uid, info.uidlen));
     PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(info.details + 7, 5));
     PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), info.details[12], info.details[13]);
@@ -1835,7 +1295,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(info.versionSW[6], false));
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Card capabilities"));
+    PrintAndLogEx(INFO, "--------------------------------- " _CYAN_("Card capabilities") " ---------------------------------");
     uint8_t major = info.versionSW[3];
     uint8_t minor = info.versionSW[4];
     if (major == 0 && minor == 4)
@@ -1855,40 +1315,67 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     if (major == 0 && minor == 2)
         PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
-
+    
+    DesfireContext dctx = {0};
+    dctx.commMode = DCMPlain;
+    dctx.cmdSet = DCCNative;
+    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    if (res != PM3_SUCCESS)
+        return res;
+    
+    PICCInfoS PICCInfo = {0};
+    
+    uint8_t aidbuf[250] = {0};
+    size_t aidbuflen = 0;
+    res = DesfireGetAIDList(&dctx, aidbuf, &aidbuflen);
+    if (res == PM3_SUCCESS) {
+        PICCInfo.appCount = aidbuflen / 3;
+    }    
+    
     if (cardtype == DESFIRE_EV2 ||
             cardtype == DESFIRE_LIGHT ||
             cardtype == DESFIRE_EV3 ||
             cardtype == NTAG413DNA) {
         // Signature originality check
-        uint8_t signature[56] = {0};
+        uint8_t signature[250] = {0}; // must be 56
         size_t signature_len = 0;
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-        if (handler_desfire_signature(signature, &signature_len) == PM3_SUCCESS) {
-            desfire_print_signature(info.uid, info.uidlen, signature, signature_len, cardtype);
+        res = DesfireReadSignature(&dctx, 0x00, signature, &signature_len);
+        if (res == PM3_SUCCESS) {
+            if (signature_len == 56)
+                desfire_print_signature(info.uid, info.uidlen, signature, signature_len, cardtype);
+            else
+                PrintAndLogEx(WARNING, "--- GetSignature returned wrong signature length: %zu", signature_len);
         } else {
             PrintAndLogEx(WARNING, "--- Card doesn't support GetSignature cmd");
         }
     }
-
-    // Master Key settings
-    uint8_t master_aid[3] = {0x00, 0x00, 0x00};
-    getKeySettings(master_aid);
+    
+    if (aidbuflen > 2) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "--- " _CYAN_("AID list"));
+        PrintAndLogEx(SUCCESS, "AIDs: " NOLF);
+        for (int i = 0; i < aidbuflen; i += 3)
+            PrintAndLogEx(NORMAL, "%s %06x" NOLF, (i == 0) ? "" : ",", DesfireAIDByteToUint(&aidbuf[i]));        
+        PrintAndLogEx(NORMAL, "\n");
+    }
+    
+    DesfireFillPICCInfo(&dctx, &PICCInfo, true);
+    DesfirePrintPICCInfo(&dctx, &PICCInfo);
 
     if (cardtype != DESFIRE_LIGHT) {
         // Free memory on card
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Free memory"));
-        uint32_t free_mem = 0;
-        if (handler_desfire_freemem(&free_mem) == PM3_SUCCESS) {
-            desfire_print_freemem(free_mem);
+        if (PICCInfo.freemem != 0xffffffff) {
+            PrintAndLogEx(SUCCESS, "   Available free memory on card         : " _GREEN_("%d bytes"), PICCInfo.freemem);
         } else {
             PrintAndLogEx(SUCCESS, "   Card doesn't support 'free mem' cmd");
         }
-        PrintAndLogEx(INFO, "-------------------------------------------------------------");
     }
+    PrintAndLogEx(NORMAL, "");
 
 
     iso14a_card_select_t card;
@@ -1931,239 +1418,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     */
 
-    DropFieldDesfire();
-    return PM3_SUCCESS;
-}
-
-static void DecodeFileType(uint8_t filetype) {
-    switch (filetype) {
-        case 0x00:
-            PrintAndLogEx(INFO, "     File Type: 0x%02X -> Standard Data File", filetype);
-            break;
-        case 0x01:
-            PrintAndLogEx(INFO, "     File Type: 0x%02X -> Backup Data File", filetype);
-            break;
-        case 0x02:
-            PrintAndLogEx(INFO, "     File Type: 0x%02X -> Value Files with Backup", filetype);
-            break;
-        case 0x03:
-            PrintAndLogEx(INFO, "     File Type: 0x%02X -> Linear Record Files with Backup", filetype);
-            break;
-        case 0x04:
-            PrintAndLogEx(INFO, "     File Type: 0x%02X -> Cyclic Record Files with Backup", filetype);
-            break;
-        default:
-            PrintAndLogEx(INFO, "     File Type: 0x%02X", filetype);
-            break;
-    }
-}
-
-static void DecodeComSet(uint8_t comset) {
-    switch (comset) {
-        case 0x00:
-            PrintAndLogEx(INFO, "     Com.Setting: 0x%02X -> Plain", comset);
-            break;
-        case 0x01:
-            PrintAndLogEx(INFO, "     Com.Setting: 0x%02X -> Plain + MAC", comset);
-            break;
-        case 0x03:
-            PrintAndLogEx(INFO, "     Com.Setting: 0x%02X -> Enciphered", comset);
-            break;
-        default:
-            PrintAndLogEx(INFO, "     Com.Setting: 0x%02X", comset);
-            break;
-    }
-}
-
-static char *DecodeAccessValue(uint8_t value) {
-
-    char *car = (char *)calloc(255, sizeof(char));
-    if (car == NULL)
-        return NULL;
-
-    switch (value) {
-        case 0xE:
-            strcat(car, "(Free Access)");
-            break;
-        case 0xF:
-            strcat(car, "(Denied Access)");
-            break;
-        default:
-            snprintf(car, 255, "(Access Key: %d)", value);
-            break;
-    }
-    return car;
-}
-
-static void DecodeAccessRights(uint16_t accrights) {
-    int change_access_rights = accrights & 0xF;
-    int read_write_access = (accrights >> 4) & 0xF;
-    int write_access = (accrights >> 8) & 0xF;
-    int read_access = (accrights >> 12) & 0xF;
-    char *car = DecodeAccessValue(change_access_rights);
-    if (car == NULL) return;
-
-    char *rwa = DecodeAccessValue(read_write_access);
-    if (rwa == NULL) {
-        free(car);
-        return;
-    }
-
-    char *wa = DecodeAccessValue(write_access);
-    if (wa == NULL) {
-        free(car);
-        free(rwa);
-        return;
-    }
-
-    char *ra = DecodeAccessValue(read_access);
-    if (ra == NULL) {
-        free(car);
-        free(rwa);
-        free(wa);
-        return;
-    }
-
-    PrintAndLogEx(INFO, "     Access Rights: 0x%04X - Change %s - RW %s - W %s - R %s", accrights, car, rwa, wa, ra);
-    free(car);
-    free(rwa);
-    free(wa);
-    free(ra);
-}
-
-static int DecodeFileSettings(uint8_t *src, int src_len, int maclen) {
-    uint8_t filetype = src[0];
-    uint8_t comset = src[1];
-
-    uint16_t accrights = (src[3] << 8) + src[2];
-    if (src_len == 1 + 1 + 2 + 3 + maclen) {
-        int filesize = (src[6] << 16) + (src[5] << 8) + src[4];
-        DecodeFileType(filetype);
-        DecodeComSet(comset);
-        DecodeAccessRights(accrights);
-        PrintAndLogEx(INFO, "     Filesize: %d (0x%X)", filesize, filesize);
-        return PM3_SUCCESS;
-    } else if (src_len == 1 + 1 + 2 + 4 + 4 + 4 + 1 + maclen) {
-        int lowerlimit = (src[7] << 24) + (src[6] << 16) + (src[5] << 8) + src[4];
-        int upperlimit = (src[11] << 24) + (src[10] << 16) + (src[9] << 8) + src[8];
-        int limitcredvalue = (src[15] << 24) + (src[14] << 16) + (src[13] << 8) + src[12];
-        uint8_t limited_credit_enabled = src[17];
-        DecodeFileType(filetype);
-        DecodeComSet(comset);
-        DecodeAccessRights(accrights);
-        PrintAndLogEx(INFO, "     Lower limit: %d (0x%X) - Upper limit: %d (0x%X) - limited credit value: %d (0x%X) - limited credit enabled: %d", lowerlimit, lowerlimit, upperlimit, upperlimit, limitcredvalue, limitcredvalue, limited_credit_enabled);
-        return PM3_SUCCESS;
-    } else if (src_len == 1 + 1 + 2 + 3 + 3 + 3 + maclen) {
-        uint32_t recordsize = (src[6] << 16) + (src[5] << 8) + src[4];
-        uint32_t maxrecords = (src[9] << 16) + (src[8] << 8) + src[7];
-        uint32_t currentrecord = (src[12] << 16) + (src[11] << 8) + src[10];
-        DecodeFileType(filetype);
-        DecodeComSet(comset);
-        DecodeAccessRights(accrights);
-        PrintAndLogEx(INFO, "     Record size: %d (0x%X) - MaxNumberRecords: %d (0x%X) - Current Number Records: %d (0x%X)", recordsize, recordsize, maxrecords, maxrecords, currentrecord, currentrecord);
-        return PM3_SUCCESS;
-    }
-    return PM3_ESOFT;
-}
-
-static int CmdHF14ADesEnumApplications(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes enum",
-                  "Enumerate all AID's on MIFARE DESfire tag",
-                  "hf mfdes enum");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
-    DropFieldDesfire();
-
-    uint8_t aid[3] = {0};
-    uint8_t app_ids[78] = {0};
-    uint32_t app_ids_len = 0;
-
-    uint8_t file_ids[33] = {0};
-    uint32_t file_ids_len = 0;
-
-    dfname_t dfnames[255];
-    uint8_t dfname_count = 0;
-
-    if (handler_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Can't get list of applications on tag");
-        DropFieldDesfire();
-        return PM3_ESOFT;
-    }
-
-    if (handler_desfire_dfnames(dfnames, &dfname_count) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("Can't get DF Names"));
-    }
-
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-- MIFARE DESFire Enumerate applications --------------------");
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") " application%c", app_ids_len / 3, (app_ids_len == 3) ? ' ' : 's');
-
-    for (uint32_t i = 0; i < app_ids_len; i += 3) {
-
-        aid[0] = app_ids[i];
-        aid[1] = app_ids[i + 1];
-        aid[2] = app_ids[i + 2];
-
-        PrintAndLogEx(NORMAL, "");
-
-        if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
-            // CARD MASTER KEY
-            PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
-        } else {
-            PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
-        }
-
-        PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X%02X%02X"), aid[2], aid[1], aid[0]);
-        if ((aid[2] >> 4) == 0xF) {
-            uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
-            PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
-            PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, cluster_to_text(short_aid >> 8));
-            MADDFDecodeAndPrint(short_aid);
-        } else {
-            AIDDFDecodeAndPrint(aid);
-        }
-        for (uint8_t m = 0; m < dfname_count; m++) {
-            if (dfnames[m].aid[0] == aid[0] && dfnames[m].aid[1] == aid[1] && dfnames[m].aid[2] == aid[2]) {
-                PrintAndLogEx(SUCCESS, "  -  DF " _YELLOW_("%02X%02X") " Name : " _YELLOW_("%s"), dfnames[m].fid[1], dfnames[m].fid[0], dfnames[m].name);
-            }
-        }
-
-        int res = getKeySettings(aid);
-        if (res != PM3_SUCCESS) continue;
-
-        res = handler_desfire_select_application(aid);
-        if (res != PM3_SUCCESS) continue;
-
-        res = handler_desfire_fileids(file_ids, &file_ids_len);
-        if (res != PM3_SUCCESS) continue;
-
-        PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") " file%c", file_ids_len, (file_ids_len == 1) ? ' ' : 's');
-        for (int j = (int)file_ids_len - 1; j >= 0; j--) {
-            PrintAndLogEx(SUCCESS, "   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
-
-            uint8_t filesettings[20] = {0};
-            uint32_t fileset_len = 0;
-            uint32_t maclen = 0; // To be implemented
-
-            res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
-            if (res != PM3_SUCCESS) continue;
-
-            if (DecodeFileSettings(filesettings, fileset_len, maclen) != PM3_SUCCESS) {
-                PrintAndLogEx(INFO, "  Settings [%u] %s", fileset_len, sprint_hex(filesettings, fileset_len));
-            }
-        }
-
-    }
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    DropFieldDesfire();
+    DropField();
     return PM3_SUCCESS;
 }
 
@@ -2849,29 +2104,6 @@ static int CmdHF14aDesMAD(const char *Cmd) {
 }
 */
 
-/*static int CmdTest(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    uint8_t IV[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t key[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-    uint8_t encRndB[8] = {0x1A, 0xBE, 0x10, 0x8D, 0x09, 0xE0, 0x18, 0x13};
-    uint8_t RndB[8] = {0};
-    uint8_t RndA[8] = {0x6E, 0x6A, 0xEB, 0x86, 0x6E, 0x6A, 0xEB, 0x86};
-    tdes_nxp_receive(encRndB, RndB, 8, key, IV, 2);
-    uint8_t rotRndB[8] = {0};
-    memcpy(rotRndB, RndB, 8);
-    rol(rotRndB, 8);
-    uint8_t tmp[16] = {0x00};
-    uint8_t both[16] = {0x00};
-    memcpy(tmp, RndA, 8);
-    memcpy(tmp + 8, rotRndB, 8);
-    PrintAndLogEx(INFO, "3keyenc: %s", sprint_hex(tmp, 16));
-    PrintAndLogEx(SUCCESS, "  Res        : " _GREEN_("%s"), sprint_hex(IV, 8));
-    tdes_nxp_send(tmp, both, 16, key, IV, 2);
-    PrintAndLogEx(SUCCESS, "  Res        : " _GREEN_("%s"), sprint_hex(both, 16));
-    return PM3_SUCCESS;
-}
-*/
 static uint8_t defaultKeyNum = 0;
 static enum DESFIRE_CRYPTOALGO defaultAlgoId = T_DES;
 static uint8_t defaultKey[DESFIRE_MAX_KEY_SIZE] = {0};
@@ -6164,19 +5396,76 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
         return res;
     }
 
-    PrintAndLogEx(INFO, "---------------------------- " _CYAN_("File list") " -----------------------(r w rw ch)-----");
-    for (int i = 0; i < filescount; i++) {
-        PrintAndLogEx(SUCCESS, "ID: " _GREEN_("%02x ") NOLF, FileList[i].fileNum);
-        if (isopresent) {
-            if (FileList[i].fileISONum != 0)
-                PrintAndLogEx(NORMAL, "ISO ID: " _CYAN_("%04x ") NOLF, FileList[i].fileISONum);
-            else
-                PrintAndLogEx(NORMAL, "ISO ID: " _YELLOW_("n/a  ") NOLF);
-        }
+    PrintAndLogEx(INFO, "------------------------------------------ " _CYAN_("File list") " -----------------------------------------------------");
+    for (int i = 0; i < filescount; i++)
+        DesfirePrintFileSettingsTable((i == 0), FileList[i].fileNum, isopresent, FileList[i].fileISONum, &FileList[i].fileSettings);
 
-        DesfirePrintFileSettingsOneLine(&FileList[i].fileSettings);
+    DropField();
+    return PM3_SUCCESS;
+}   
+
+static int CmdHF14ADesLsApp(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes lsapp",
+                  "Show application list. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
+                  "hf mfdes lsapp -> show application list with defaults from `default` command\n"
+                  "hf mfdes lsapp --files -> show application list and show each file type/settings/etc for each application");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_lit0(NULL, "no-auth", "execute without authentication"),
+        arg_lit0(NULL, "no-deep", "not to check authentication commands that avail for any application"),
+        arg_lit0(NULL, "files",   "scan files and print file settings for each application"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool noauth = arg_get_lit(ctx, 11);
+    bool nodeep = arg_get_lit(ctx, 12);
+    bool scanfiles = arg_get_lit(ctx, 13);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, &securechann, DCMPlain, NULL);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
     }
 
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+    
+    PrintAndLogEx(INPLACE, _YELLOW_("It may take up to 15 seconds. Processing...."));
+    
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, 0x000000, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+    
+    PICCInfoS PICCInfo = {0};
+    AppListS AppList = {0};
+    DesfireFillAppList(&dctx, &PICCInfo, AppList, !nodeep, scanfiles);
+
+    printf("\33[2K\r"); // clear current line before printing
+    PrintAndLogEx(NORMAL, "");
+            
+    // print zone
+    DesfirePrintPICCInfo(&dctx, &PICCInfo);
+    DesfirePrintAppList(&dctx, &PICCInfo, AppList);
+    
     DropField();
     return PM3_SUCCESS;
 }
@@ -6239,16 +5528,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "Application " _CYAN_("%06x") " have " _GREEN_("%zu") " files", appid, filescount);
 
-    uint8_t aid[3] = {0};
-    DesfireAIDUintToByte(appid, aid);
-    if ((aid[2] >> 4) == 0xF) {
-        uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
-        PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
-        PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, cluster_to_text(short_aid >> 8));
-        MADDFDecodeAndPrint(short_aid);
-    } else {
-        AIDDFDecodeAndPrint(aid);
-    }
+    DesfirePrintAIDFunctions(appid);
 
     if (filescount == 0) {
         PrintAndLogEx(INFO, "There is no files in the application %06x", appid);
@@ -6293,30 +5573,30 @@ static int CmdHF14ADesTest(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                     AlwaysAvailable, "This help"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "---------------------- " _CYAN_("general") " ----------------------"},
+    {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
+    {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get uid from card"},
     {"default",          CmdHF14ADesDefault,          IfPm3Iso14443a,  "Set defaults for all the commands"},
     {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "MIFARE DesFire Authentication"},
     {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "[old]Check keys"},
-    {"enum",             CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "[old]Tries enumerate all applications"},
-    {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
     {"freemem",          CmdHF14ADesGetFreeMem,       IfPm3Iso14443a,  "Get free memory size"},
-    {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get uid from card"},
     {"setconfig",        CmdHF14ADesSetConfiguration, IfPm3Iso14443a,  "Set card configuration"},
-    {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "[old]Tag information"},
+    {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
     {"list",             CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
 //    {"ndefread",             CmdHF14aDesNDEFRead,             IfPm3Iso14443a,  "Prints NDEF records from card"},
 //    {"mad",             CmdHF14aDesMAD,             IfPm3Iso14443a,  "Prints MAD records from card"},
+    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Applications") " -------------------"},
+    {"lsapp",            CmdHF14ADesLsApp,            IfPm3Iso14443a,  "Show all applications with files list"},
+    {"getaids",          CmdHF14ADesGetAIDs,          IfPm3Iso14443a,  "Get Application IDs list"},
+    {"getappnames",      CmdHF14ADesGetAppNames,      IfPm3Iso14443a,  "Get Applications list"},
+    {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
+    {"createapp",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application"},
+    {"deleteapp",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application"},
+    {"selectapp",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "------------------------ " _CYAN_("Keys") " -----------------------"},
     {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
     {"chkeysettings",    CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "Change Key Settings"},
     {"getkeysettings",   CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "Get Key Settings"},
     {"getkeyversions",   CmdHF14ADesGetKeyVersions,   IfPm3Iso14443a,  "Get Key Versions"},
-    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Applications") " -------------------"},
-    {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
-    {"createapp",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application"},
-    {"deleteapp",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application"},
-    {"selectapp",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
-    {"getaids",          CmdHF14ADesGetAIDs,          IfPm3Iso14443a,  "Get Application IDs list"},
-    {"getappnames",      CmdHF14ADesGetAppNames,      IfPm3Iso14443a,  "Get Applications list"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("Files") " -----------------------"},
     {"getfileids",       CmdHF14ADesGetFileIDs,       IfPm3Iso14443a,  "Get File IDs list"},
     {"getfileisoids",    CmdHF14ADesGetFileISOIDs,    IfPm3Iso14443a,  "Get File ISO IDs list"},
