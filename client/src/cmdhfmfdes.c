@@ -1315,23 +1315,23 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     if (major == 0 && minor == 2)
         PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
-    
+
     DesfireContext dctx = {0};
     dctx.commMode = DCMPlain;
     dctx.cmdSet = DCCNative;
     res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
     if (res != PM3_SUCCESS)
         return res;
-    
+
     PICCInfoS PICCInfo = {0};
-    
+
     uint8_t aidbuf[250] = {0};
     size_t aidbuflen = 0;
     res = DesfireGetAIDList(&dctx, aidbuf, &aidbuflen);
     if (res == PM3_SUCCESS) {
         PICCInfo.appCount = aidbuflen / 3;
-    }    
-    
+    }
+
     if (cardtype == DESFIRE_EV2 ||
             cardtype == DESFIRE_LIGHT ||
             cardtype == DESFIRE_EV3 ||
@@ -1352,16 +1352,16 @@ static int CmdHF14ADesInfo(const char *Cmd) {
             PrintAndLogEx(WARNING, "--- Card doesn't support GetSignature cmd");
         }
     }
-    
+
     if (aidbuflen > 2) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, "--- " _CYAN_("AID list"));
         PrintAndLogEx(SUCCESS, "AIDs: " NOLF);
         for (int i = 0; i < aidbuflen; i += 3)
-            PrintAndLogEx(NORMAL, "%s %06x" NOLF, (i == 0) ? "" : ",", DesfireAIDByteToUint(&aidbuf[i]));        
+            PrintAndLogEx(NORMAL, "%s %06x" NOLF, (i == 0) ? "" : ",", DesfireAIDByteToUint(&aidbuf[i]));
         PrintAndLogEx(NORMAL, "\n");
     }
-    
+
     DesfireFillPICCInfo(&dctx, &PICCInfo, true);
     DesfirePrintPICCInfo(&dctx, &PICCInfo);
 
@@ -5450,7 +5450,7 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
 
     DropField();
     return PM3_SUCCESS;
-}   
+}
 
 static int CmdHF14ADesLsApp(const char *Cmd) {
     CLIParserContext *ctx;
@@ -5494,26 +5494,26 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
-    
+
     PrintAndLogEx(INPLACE, _YELLOW_("It may take up to 15 seconds. Processing...."));
-    
+
     res = DesfireSelectAndAuthenticateEx(&dctx, securechann, 0x000000, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
-    
+
     PICCInfoS PICCInfo = {0};
     AppListS AppList = {0};
     DesfireFillAppList(&dctx, &PICCInfo, AppList, !nodeep, scanfiles);
 
     printf("\33[2K\r"); // clear current line before printing
     PrintAndLogEx(NORMAL, "");
-            
+
     // print zone
     DesfirePrintPICCInfo(&dctx, &PICCInfo);
     DesfirePrintAppList(&dctx, &PICCInfo, AppList);
-    
+
     DropField();
     return PM3_SUCCESS;
 }

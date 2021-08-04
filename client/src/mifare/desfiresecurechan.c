@@ -263,7 +263,7 @@ static void DesfireSecureChannelEncodeEV2(DesfireContext *ctx, uint8_t cmd, uint
         }
     } else if (ctx->commMode == DCMEncrypted) {
         DesfireEV2FillIV(ctx, true, NULL); // fill IV to ctx
-        
+
         rlen = padded_data_length(srcdatalen + 1 - hdrlen, desfire_get_key_block_length(ctx->keyType));
         memcpy(data, &srcdata[hdrlen], srcdatalen - hdrlen);
         data[hdrlen] = 0x80; // padding
@@ -281,7 +281,7 @@ static void DesfireSecureChannelEncodeEV2(DesfireContext *ctx, uint8_t cmd, uint
     } else if (ctx->commMode == DCMEncryptedPlain) {
         if (srcdatalen <= hdrlen)
             return;
-        
+
         // TODO !!!
     }
 }

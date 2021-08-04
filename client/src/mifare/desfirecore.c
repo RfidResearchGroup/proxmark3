@@ -1266,7 +1266,7 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
     // rotate rndA to check
     memcpy(rotRndA, RndA, CRYPTO_AES_BLOCK_SIZE);
     rol(rotRndA, CRYPTO_AES_BLOCK_SIZE);
-    
+
     uint8_t *recRndA = (firstauth) ? &data[4] : data;
 
     if (memcmp(rotRndA, recRndA, CRYPTO_AES_BLOCK_SIZE) != 0) {
@@ -1375,7 +1375,7 @@ static bool DesfireCheckAuthCmd(uint32_t appAID, uint8_t keyNum, uint8_t authcmd
     size_t recv_len = 0;
     uint8_t respcode = 0;
     uint8_t recv_data[256] = {0};
-    
+
     DesfireContext dctx = {0};
     dctx.keyNum = keyNum;
     dctx.commMode = DCMPlain;
@@ -1393,14 +1393,14 @@ static bool DesfireCheckAuthCmd(uint32_t appAID, uint8_t keyNum, uint8_t authcmd
 }
 
 static bool DesfireCheckISOAuthCmd(uint32_t appAID, char *dfname, uint8_t keyNum, DesfireCryptoAlgorythm keytype) {
-  
+
     DesfireContext dctx = {0};
     dctx.keyNum = keyNum;
     dctx.commMode = DCMPlain;
     dctx.cmdSet = DCCISO;
 
     bool app_level = (appAID != 0x000000);
-    int res = 0;    
+    int res = 0;
     if (dfname == NULL || strnlen(dfname, 16) == 0) {
         if (appAID == 0x000000) {
             res = DesfireISOSelect(&dctx, ISSMFDFEF, NULL, 0, NULL, NULL);
@@ -1417,21 +1417,21 @@ static bool DesfireCheckISOAuthCmd(uint32_t appAID, char *dfname, uint8_t keyNum
             return false;
         app_level = true;
     }
-    
+
     uint8_t rndlen = DesfireGetRndLenForKey(keytype);
-    
+
     uint8_t piccrnd[64] = {0};
     size_t xlen = 0;
     res = DesfireISOGetChallenge(&dctx, keytype, piccrnd, &xlen);
     if (res != PM3_SUCCESS || xlen != rndlen)
         return false;
-    
+
     uint8_t resp[250] = {0};
     size_t resplen = 0;
-    
+
     uint16_t sw = 0;
     uint8_t p1 = DesfireKeyToISOKey(keytype);
-    uint8_t p2 = ((app_level) ? 0x80 : 0x00) | keyNum;    
+    uint8_t p2 = ((app_level) ? 0x80 : 0x00) | keyNum;
     res = DesfireExchangeISO(false, &dctx, (sAPDU) {0x00, ISO7816_EXTERNAL_AUTHENTICATION, p1, p2, rndlen * 2, piccrnd}, 0, resp, &resplen, &sw);
     DropField();
     return (sw == 0x9000 || sw == 0x6982);
@@ -1439,7 +1439,7 @@ static bool DesfireCheckISOAuthCmd(uint32_t appAID, char *dfname, uint8_t keyNum
 
 void DesfireCheckAuthCommands(uint32_t appAID, char *dfname, uint8_t keyNum, AuthCommandsChk *authCmdCheck) {
     memset(authCmdCheck, 0, sizeof(AuthCommandsChk));
-    
+
     authCmdCheck->auth = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE);
     authCmdCheck->authISO = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE_ISO);
     authCmdCheck->authAES = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE_AES);
@@ -1450,12 +1450,12 @@ void DesfireCheckAuthCommands(uint32_t appAID, char *dfname, uint8_t keyNum, Aut
 
 void DesfireCheckAuthCommandsPrint(AuthCommandsChk *authCmdCheck) {
     PrintAndLogEx(NORMAL, "auth: %s auth iso: %s auth aes: %s auth ev2: %s auth iso native: %s",
-            authCmdCheck->auth ? _GREEN_("YES") : _RED_("NO"),
-            authCmdCheck->authISO ? _GREEN_("YES") : _RED_("NO"),
-            authCmdCheck->authAES ? _GREEN_("YES") : _RED_("NO"),
-            authCmdCheck->authEV2 ? _GREEN_("YES") : _RED_("NO"),
-            authCmdCheck->authISONative ? _GREEN_("YES") : _RED_("NO")
-            );
+                  authCmdCheck->auth ? _GREEN_("YES") : _RED_("NO"),
+                  authCmdCheck->authISO ? _GREEN_("YES") : _RED_("NO"),
+                  authCmdCheck->authAES ? _GREEN_("YES") : _RED_("NO"),
+                  authCmdCheck->authEV2 ? _GREEN_("YES") : _RED_("NO"),
+                  authCmdCheck->authISONative ? _GREEN_("YES") : _RED_("NO")
+                 );
 }
 
 int DesfireFillPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo, bool deepmode) {
@@ -1468,7 +1468,7 @@ int DesfireFillPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo, bool deepmode
         PICCInfo->freemem = freemem;
     else
         PICCInfo->freemem = 0xffffffff;
-    
+
     PICCInfo->keySettings = 0;
     PICCInfo->numKeysRaw = 0;
     PICCInfo->keyVersion0 = 0;
@@ -1489,14 +1489,14 @@ int DesfireFillPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo, bool deepmode
     // field on-off zone
     if (deepmode)
         DesfireCheckAuthCommands(0x000000, NULL, 0, &PICCInfo->authCmdCheck);
-    
+
     return PM3_SUCCESS;
 }
 
 static int AppListSearchAID(uint32_t appNum, AppListS AppList, size_t appcount) {
-     for (int i = 0; i < appcount; i++)
-         if (AppList[i].appNum == appNum)
-             return i;
+    for (int i = 0; i < appcount; i++)
+        if (AppList[i].appNum == appNum)
+            return i;
 
     return -1;
 }
@@ -1510,12 +1510,12 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
         PrintAndLogEx(ERR, "Desfire GetAIDList command " _RED_("error") ". Result: %d", res);
         DropField();
         return PM3_ESOFT;
-    }    
-    
+    }
+
     PICCInfo->appCount = buflen / 3;
     for (int i = 0; i < buflen; i += 3)
         appList[i / 3].appNum = DesfireAIDByteToUint(&buf[i]);
-    
+
     // result bytes: 3, 2, 1-16. total record size = 24
     res = DesfireGetDFList(dctx, buf, &buflen);
     if (res != PM3_SUCCESS) {
@@ -1549,7 +1549,7 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
                 appList[i].numberOfKeys = appList[i].numKeysRaw & 0x1f;
                 appList[i].isoFileIDEnabled = ((appList[i].numKeysRaw & 0x20) != 0);
                 appList[i].keyType = DesfireKeyTypeToAlgo(appList[i].numKeysRaw >> 6);
-                
+
                 if (appList[i].numberOfKeys > 0)
                     for (uint8_t keyn = 0; keyn < appList[i].numberOfKeys; keyn++) {
                         res = DesfireGetKeyVersion(dctx, &keyn, 1, buf, &buflen);
@@ -1557,7 +1557,7 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
                             appList[i].keyVersions[keyn] = buf[0];
                         }
                     }
-                
+
                 appList[i].filesReaded = false;
                 if (readFiles) {
                     res = DesfireFillFileList(dctx, appList[i].fileList, &appList[i].filesCount, &appList[i].isoPresent);
@@ -1598,7 +1598,7 @@ void DesfirePrintAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS app
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "--------------------------------- " _CYAN_("Applications list") " ---------------------------------");
-    
+
     for (int i = 0; i < PICCInfo->appCount; i++) {
         PrintAndLogEx(SUCCESS, _CYAN_("Application number: 0x%02x") " iso id: " _GREEN_("0x%04x") " name: " _GREEN_("%s"), appList[i].appNum, appList[i].appISONum, appList[i].appDFName);
 
@@ -1609,10 +1609,10 @@ void DesfirePrintAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS app
             DesfireCheckAuthCommandsPrint(&appList[i].authCmdCheck);
             PrintAndLogEx(SUCCESS, "");
         }
-        
+
         if (appList[i].numberOfKeys > 0) {
             PrintKeySettings(appList[i].keySettings, appList[i].numKeysRaw, true, true);
-            
+
             if (appList[i].numberOfKeys > 0) {
                 PrintAndLogEx(SUCCESS, "Key versions [0..%d]: " NOLF, appList[i].numberOfKeys - 1);
                 for (uint8_t keyn = 0; keyn < appList[i].numberOfKeys; keyn++) {
@@ -1620,7 +1620,7 @@ void DesfirePrintAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS app
                 }
                 PrintAndLogEx(NORMAL, "\n");
             }
-            
+
             if (appList[i].filesReaded) {
                 PrintAndLogEx(SUCCESS, "Application have " _GREEN_("%zu") " files", appList[i].filesCount);
 
@@ -1641,7 +1641,7 @@ void DesfirePrintAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS app
                 PrintAndLogEx(NORMAL, "");
             }
         }
-   }
+    }
 }
 
 static int DesfireCommandEx(DesfireContext *dctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen, int checklength, size_t splitbysize) {
@@ -1699,18 +1699,18 @@ int DesfireGetFreeMem(DesfireContext *dctx, uint32_t *freemem) {
 
 int DesfireReadSignature(DesfireContext *dctx, uint8_t sid, uint8_t *resp, size_t *resplen) {
     *resplen = 0;
-    
+
     uint8_t xresp[257] = {0};
     size_t xresplen = 0;
     uint8_t respcode = 0xff;
-    
+
     int res = DesfireExchange(dctx, MFDES_READSIG, &sid, 1, &respcode, xresp, &xresplen);
     if (res != PM3_SUCCESS)
         return res;
-    
+
     if (respcode != 0x90)
         return PM3_EAPDU_FAIL;
-    
+
     memcpy(resp, xresp, xresplen);
     *resplen = xresplen;
 
@@ -2080,7 +2080,7 @@ const char *AccessRightShortStr[] = {
     "keyC",
     "keyD",
     "free",
-    "deny"    
+    "deny"
 };
 
 const char *GetDesfireAccessRightShortStr(uint8_t right) {
@@ -2207,7 +2207,7 @@ static void DesfirePrintShortFileTypeSettings(FileSettingsS *fsettings) {
         default: {
             break;
         }
-    }    
+    }
 }
 
 void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
@@ -2228,15 +2228,15 @@ void DesfirePrintFileSettingsTable(bool printheader, uint8_t id, bool isoidavail
         PrintAndLogEx(SUCCESS, " ID |ISO ID|     File type     | Mode  | Rights: raw, r w rw ch   | File settings   ");
         PrintAndLogEx(SUCCESS, "----------------------------------------------------------------------------------------------------------");
     }
-        PrintAndLogEx(SUCCESS, " " _GREEN_("%02x") " |" NOLF, id);
-        if (isoidavail) {
-            if (isoid != 0)
-                PrintAndLogEx(NORMAL, " " _CYAN_("%04x") " |" NOLF, isoid);
-            else
-                PrintAndLogEx(NORMAL, " " _YELLOW_("n/a ") " |" NOLF);
-        } else {
-            PrintAndLogEx(NORMAL, "      |" NOLF);
-        }
+    PrintAndLogEx(SUCCESS, " " _GREEN_("%02x") " |" NOLF, id);
+    if (isoidavail) {
+        if (isoid != 0)
+            PrintAndLogEx(NORMAL, " " _CYAN_("%04x") " |" NOLF, isoid);
+        else
+            PrintAndLogEx(NORMAL, " " _YELLOW_("n/a ") " |" NOLF);
+    } else {
+        PrintAndLogEx(NORMAL, "      |" NOLF);
+    }
 
     PrintAndLogEx(NORMAL, "0x%02x " _CYAN_("%-13s") " |" NOLF, fsettings->fileType, GetDesfireFileType(fsettings->fileType));
     PrintAndLogEx(NORMAL, " %-5s |" NOLF, GetDesfireCommunicationMode(fsettings->fileCommMode));
@@ -2247,7 +2247,7 @@ void DesfirePrintFileSettingsTable(bool printheader, uint8_t id, bool isoidavail
                   GetDesfireAccessRightShortStr(fsettings->wAccess),
                   GetDesfireAccessRightShortStr(fsettings->rwAccess),
                   GetDesfireAccessRightShortStr(fsettings->chAccess));
-                  
+
     PrintAndLogEx(NORMAL, " " NOLF);
     DesfirePrintShortFileTypeSettings(fsettings);
     PrintAndLogEx(NORMAL, "");
