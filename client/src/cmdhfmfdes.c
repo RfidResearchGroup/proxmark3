@@ -2316,6 +2316,7 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     bool idsoidpresent = (res == 1);
     if (res == 2) {
         PrintAndLogEx(ERR, "ISO ID for EF or DF must have 2 bytes length");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -2843,7 +2844,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 12, &securechann, DCMPlain, &appid);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 12, &securechann, DCMMACed, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -3007,7 +3008,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -3342,7 +3343,7 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid); // DCMMACed
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -3804,7 +3805,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -4137,7 +4138,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -4278,7 +4279,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -4411,7 +4412,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -4632,7 +4633,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -4709,7 +4710,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -4869,7 +4870,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -4921,7 +4922,7 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
         FileSettingsS fsettings;
 
         DesfireCommunicationMode commMode = dctx->commMode;
-        DesfireSetCommMode(dctx, DCMPlain);
+        DesfireSetCommMode(dctx, DCMMACed);
         res = DesfireGetFileSettingsStruct(dctx, fnum, &fsettings);
         DesfireSetCommMode(dctx, commMode);
 
@@ -5105,7 +5106,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -5268,7 +5269,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         FileSettingsS fsettings;
 
         DesfireCommunicationMode commMode = dctx.commMode;
-        DesfireSetCommMode(&dctx, DCMPlain);
+        DesfireSetCommMode(&dctx, DCMMACed);
         res = DesfireGetFileSettingsStruct(&dctx, fnum, &fsettings);
         DesfireSetCommMode(&dctx, commMode);
 
@@ -5431,7 +5432,7 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -5503,7 +5504,7 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, &securechann, DCMPlain, NULL);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, &securechann, (noauth) ? DCMPlain : DCMMACed, NULL);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -5566,7 +5567,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, (noauth) ? DCMPlain : DCMMACed, &appid);
     if (res) {
         CLIParserFree(ctx);
         return res;
