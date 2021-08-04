@@ -58,6 +58,7 @@ typedef enum {
     DCMPlain,
     DCMMACed,
     DCMEncrypted,
+    DCMEncryptedWithPadding,
     DCMEncryptedPlain
 } DesfireCommunicationMode;
 

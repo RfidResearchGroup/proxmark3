@@ -2545,7 +2545,7 @@ int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *para
     size_t datalen = 1 + paramlen;
 
 
-    // add crc
+    /*// add crc
     if (dctx->secureChannel == DACd40) {
         iso14443a_crc_append(&data[1], datalen - 1);
         datalen += 2;
@@ -2553,11 +2553,12 @@ int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *para
         desfire_crc32_append(cdata, datalen + 1);
         datalen += 4;
     }
-
+*/
     // dynamic length
-    if (paramid == 0x02) {
-        data[datalen] = 0x80;
-        datalen++;
+    if (paramid == 0x02 && dctx->commMode == DCMEncrypted) {
+        dctx->commMode = DCMEncryptedWithPadding;
+        //data[datalen] = 0x80;
+        //datalen++;
     }
 
     // send command
