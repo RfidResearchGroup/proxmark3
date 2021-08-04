@@ -259,22 +259,21 @@ static void DesfireSecureChannelEncodeEV2(DesfireContext *ctx, uint8_t cmd, uint
         memcpy(&dstdata[srcdatalen], cmac, DesfireGetMACLength(ctx));
         *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
     } else if (ctx->commMode == DCMEncrypted) {
-        dstdata[0] = cmd;
-        memcpy(&dstdata[1], srcdata, hdrlen);
+        memcpy(dstdata, srcdata, hdrlen);
 
         if (srcdatalen > hdrlen) {
             rlen = padded_data_length(srcdatalen + 1 - hdrlen, desfire_get_key_block_length(ctx->keyType));
             memcpy(data, &srcdata[hdrlen], srcdatalen - hdrlen);
-            data[hdrlen] = 0x80; // padding
+            data[srcdatalen - hdrlen] = 0x80; // padding
 
             DesfireEV2FillIV(ctx, true, NULL); // fill IV to ctx
-            DesfireCryptoEncDec(ctx, DCOSessionKeyEnc, data, rlen, &dstdata[1 + hdrlen], true);
+            DesfireCryptoEncDec(ctx, DCOSessionKeyEnc, data, rlen, &dstdata[hdrlen], true);
         }
 
         uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
-        DesfireEV2CalcCMAC(ctx, cmd, &dstdata[1], hdrlen + rlen, cmac);
+        DesfireEV2CalcCMAC(ctx, cmd, dstdata, hdrlen + rlen, cmac);
 
-        memcpy(&dstdata[ + hdrlen + rlen], cmac, DesfireGetMACLength(ctx));
+        memcpy(&dstdata[hdrlen + rlen], cmac, DesfireGetMACLength(ctx));
 
         *dstdatalen = hdrlen + rlen + DesfireGetMACLength(ctx);
     } else if (ctx->commMode == DCMEncryptedPlain) {
@@ -442,7 +441,7 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
                 PrintAndLogEx(INFO, "Received MAC OK");
         }
     } else if (ctx->commMode == DCMEncrypted) {
-        if (srcdatalen < desfire_get_key_block_length(ctx->keyType) + DesfireGetMACLength(ctx)) {
+        if (srcdatalen < DesfireGetMACLength(ctx)) {
             memcpy(dstdata, srcdata, srcdatalen);
             *dstdatalen = srcdatalen;
             return;
@@ -459,15 +458,16 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
                 PrintAndLogEx(INFO, "Received MAC OK");
         }
 
-        DesfireEV2FillIV(ctx, false, NULL); // fill response IV to ctx
+        if (*dstdatalen >= desfire_get_key_block_length(ctx->keyType)) {
+            DesfireEV2FillIV(ctx, false, NULL); // fill response IV to ctx
+            DesfireCryptoEncDec(ctx, DCOSessionKeyEnc, srcdata, *dstdatalen, dstdata, false);
 
-        DesfireCryptoEncDec(ctx, DCOSessionKeyEnc, srcdata, *dstdatalen, dstdata, false);
-
-        size_t puredatalen = FindISO9797M2PaddingDataLen(dstdata, *dstdatalen);
-        if (puredatalen != 0) {
-            *dstdatalen = puredatalen;
-        } else {
-            PrintAndLogEx(WARNING, "Padding search error.");
+            size_t puredatalen = FindISO9797M2PaddingDataLen(dstdata, *dstdatalen);
+            if (puredatalen != 0) {
+                *dstdatalen = puredatalen;
+            } else {
+                PrintAndLogEx(WARNING, "Padding search error.");
+            }
         }
     }
 }
