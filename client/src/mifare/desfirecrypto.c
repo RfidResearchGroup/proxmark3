@@ -217,7 +217,7 @@ static void DesfireCryptoEncDecSingleBlock(uint8_t *key, DesfireCryptoAlgorythm 
     memcpy(dstdata, edata, block_size);
 }
 
-void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool dir_to_send, bool encode, uint8_t *iv) {
+void DesfireCryptoEncDecEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool dir_to_send, bool encode, uint8_t *iv) {
     uint8_t data[1024] = {0};
     uint8_t xiv[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
 
@@ -234,10 +234,13 @@ void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *s
 
     size_t offset = 0;
     while (offset < srcdatalen) {
-        if (use_session_key)
+        if (key_type == DCOSessionKeyMac) {
             DesfireCryptoEncDecSingleBlock(ctx->sessionKeyMAC, ctx->keyType, srcdata + offset, data + offset, xiv, dir_to_send, encode);
-        else
+        } else if (key_type == DCOSessionKeyEnc) {
+            DesfireCryptoEncDecSingleBlock(ctx->sessionKeyEnc, ctx->keyType, srcdata + offset, data + offset, xiv, dir_to_send, encode);
+        } else {
             DesfireCryptoEncDecSingleBlock(ctx->key, ctx->keyType, srcdata + offset, data + offset, xiv, dir_to_send, encode);
+        }
         offset += block_size;
     }
 
@@ -250,13 +253,13 @@ void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *s
         memcpy(dstdata, data, srcdatalen);
 }
 
-void DesfireCryptoEncDec(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode) {
+void DesfireCryptoEncDec(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode) {
     bool dir_to_send = encode;
     bool xencode = encode;
     if (ctx->secureChannel == DACd40)
         xencode = false;
 
-    DesfireCryptoEncDecEx(ctx, use_session_key, srcdata, srcdatalen, dstdata, dir_to_send, xencode, NULL);
+    DesfireCryptoEncDecEx(ctx, key_type, srcdata, srcdatalen, dstdata, dir_to_send, xencode, NULL);
 }
 
 static void DesfireCMACGenerateSubkeys(DesfireContext *ctx, uint8_t *sk1, uint8_t *sk2) {
@@ -269,7 +272,7 @@ static void DesfireCMACGenerateSubkeys(DesfireContext *ctx, uint8_t *sk1, uint8_
     uint8_t ivect[kbs];
     memset(ivect, 0, kbs);
 
-    DesfireCryptoEncDecEx(ctx, true, l, kbs, l, true, true, ivect);
+    DesfireCryptoEncDecEx(ctx, DCOSessionKeyMac, l, kbs, l, true, true, ivect);
 
     bool txor = false;
 
@@ -314,7 +317,7 @@ void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *data, size_t len, uint8_t *
         bin_xor(buffer + len - kbs, sk1, kbs);
     }
 
-    DesfireCryptoEncDec(ctx, true, buffer, len, NULL, true);
+    DesfireCryptoEncDec(ctx, DCOSessionKeyMac, buffer, len, NULL, true);
 
     if (cmac != NULL)
         memcpy(cmac, ctx->IV, kbs);
@@ -484,7 +487,7 @@ int DesfireEV2CalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t d
     if (data != NULL && datalen > 0)
         memcpy(&mdata[7], data, datalen);
     mdatalen = 1 + 2 + 4 + datalen;
-    
+
     return aes_cmac8(NULL, ctx->sessionKeyMAC, mdata, mac, mdatalen);
 }
 

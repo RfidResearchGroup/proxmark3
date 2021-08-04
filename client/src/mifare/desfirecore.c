@@ -1295,7 +1295,7 @@ static int DesfireAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel sec
 
     // encode
     DesfireClearIV(dctx);
-    DesfireCryptoEncDec(dctx, false, both, rndlen * 2, both, true); // error 303
+    DesfireCryptoEncDec(dctx, DCOMainKey, both, rndlen * 2, both, true); // error 303
 
     // external authenticate
     res = DesfireISOExternalAuth(dctx, dctx->appSelected, dctx->keyNum, dctx->keyType, both);
@@ -1314,7 +1314,7 @@ static int DesfireAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel sec
 
     // decode rnddata
     uint8_t piccrnd2[64] = {0};
-    DesfireCryptoEncDec(dctx, false, rnddata, rndlen * 2, piccrnd2, false); // error 307
+    DesfireCryptoEncDec(dctx, DCOMainKey, rnddata, rndlen * 2, piccrnd2, false); // error 307
 
     // check
     if (memcmp(hostrnd2, &piccrnd2[rndlen], rndlen) != 0)
