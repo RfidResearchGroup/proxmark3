@@ -349,7 +349,7 @@ void DesfirePrintContext(DesfireContext *ctx) {
                       desfire_get_key_block_length(ctx->keyType),
                       sprint_hex(ctx->IV, desfire_get_key_block_length(ctx->keyType)));
         if (ctx->secureChannel == DACEV2) {
-            PrintAndLogEx(INFO, "    TI: %s cmdCntr: 0x%08x",
+            PrintAndLogEx(INFO, "    TI: %s cmdCntr: 0x%04x",
                           sprint_hex(ctx->TI, 4),
                           ctx->cmdCntr);
         }
@@ -1180,6 +1180,7 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
     uint8_t RndA[CRYPTO_AES_BLOCK_SIZE] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16};
     uint8_t RndB[CRYPTO_AES_BLOCK_SIZE] = {0};
     uint8_t encRndB[CRYPTO_AES_BLOCK_SIZE] = {0};
+    uint8_t rotRndA[CRYPTO_AES_BLOCK_SIZE] = {0};   //RndA'
     uint8_t rotRndB[CRYPTO_AES_BLOCK_SIZE] = {0};   //RndB'
     uint8_t both[CRYPTO_AES_BLOCK_SIZE * 2 + 1] = {0};  // ek/dk_keyNo(RndA+RndB')
 
@@ -1228,8 +1229,6 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
     memcpy(rotRndB, RndB, CRYPTO_AES_BLOCK_SIZE);
     rol(rotRndB, CRYPTO_AES_BLOCK_SIZE);
 
-    uint8_t encRndA[16] = {0x00};
-
     // - Encrypt our response
     uint8_t tmp[32] = {0x00};
     memcpy(tmp, RndA, CRYPTO_AES_BLOCK_SIZE);
@@ -1259,20 +1258,21 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
     }
 
     // Part 4
-    memcpy(encRndA, recv_data, CRYPTO_AES_BLOCK_SIZE);
-
     uint8_t data[32] = {0};
 
     if (aes_decode(IV, key, recv_data, data, recv_len))
         return 10;
 
-    rol(RndA, CRYPTO_AES_BLOCK_SIZE);
+    // rotate rndA to check
+    memcpy(rotRndA, RndA, CRYPTO_AES_BLOCK_SIZE);
+    rol(rotRndA, CRYPTO_AES_BLOCK_SIZE);
+    
     uint8_t *recRndA = (firstauth) ? &data[4] : data;
 
-    if (memcmp(RndA, recRndA, CRYPTO_AES_BLOCK_SIZE) != 0) {
+    if (memcmp(rotRndA, recRndA, CRYPTO_AES_BLOCK_SIZE) != 0) {
         if (g_debugMode > 1) {
-            PrintAndLogEx(DEBUG, "Expected_RndA  : %s", sprint_hex(RndA, CRYPTO_AES_BLOCK_SIZE));
-            PrintAndLogEx(DEBUG, "Generated_RndA : %s", sprint_hex(recRndA, CRYPTO_AES_BLOCK_SIZE));
+            PrintAndLogEx(DEBUG, "Expected_RndA'  : %s", sprint_hex(rotRndA, CRYPTO_AES_BLOCK_SIZE));
+            PrintAndLogEx(DEBUG, "Generated_RndA' : %s", sprint_hex(recRndA, CRYPTO_AES_BLOCK_SIZE));
         }
         return 11;
     }
@@ -1322,7 +1322,7 @@ static int DesfireAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel sec
 
     // encode
     DesfireClearIV(dctx);
-    DesfireCryptoEncDec(dctx, false, both, rndlen * 2, both, true); // error 303
+    DesfireCryptoEncDec(dctx, DCOMainKey, both, rndlen * 2, both, true); // error 303
 
     // external authenticate
     res = DesfireISOExternalAuth(dctx, dctx->appSelected, dctx->keyNum, dctx->keyType, both);
@@ -1341,7 +1341,7 @@ static int DesfireAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel sec
 
     // decode rnddata
     uint8_t piccrnd2[64] = {0};
-    DesfireCryptoEncDec(dctx, false, rnddata, rndlen * 2, piccrnd2, false); // error 307
+    DesfireCryptoEncDec(dctx, DCOMainKey, rnddata, rndlen * 2, piccrnd2, false); // error 307
 
     // check
     if (memcmp(hostrnd2, &piccrnd2[rndlen], rndlen) != 0)

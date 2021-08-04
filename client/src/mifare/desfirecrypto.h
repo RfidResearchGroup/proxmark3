@@ -61,6 +61,11 @@ typedef enum {
     DCMEncryptedPlain
 } DesfireCommunicationMode;
 
+typedef enum {
+    DCOMainKey,
+    DCOSessionKeyMac,
+    DCOSessionKeyEnc
+} DesfireCryptoOpKeyType;
 
 typedef struct DesfireContextS {
     uint8_t keyNum;
@@ -100,8 +105,8 @@ size_t DesfireGetMACLength(DesfireContext *ctx);
 
 size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint8_t crclen);
 
-void DesfireCryptoEncDec(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode);
-void DesfireCryptoEncDecEx(DesfireContext *ctx, bool use_session_key, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool dir_to_send, bool encode, uint8_t *iv);
+void DesfireCryptoEncDec(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode);
+void DesfireCryptoEncDecEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool dir_to_send, bool encode, uint8_t *iv);
 void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *cmac);
 
 void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorythm keytype, uint8_t version);
@@ -117,6 +122,7 @@ uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode);
 void DesfireGenSessionKeyEV1(const uint8_t rnda[], const uint8_t rndb[], DesfireCryptoAlgorythm keytype, uint8_t *key);
 void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool enckey, uint8_t *sessionkey);
 void DesfireEV2FillIV(DesfireContext *ctx, bool ivforcommand, uint8_t *iv);
+int DesfireEV2CalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac);
 
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc);
 void desfire_crc32_append(uint8_t *data, const size_t len);
