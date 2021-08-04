@@ -329,6 +329,7 @@ static void DesfireSecureChannelEncodeEV2(DesfireContext *ctx, uint8_t cmd, uint
         memcpy(&dstdata[hdrlen + rlen], cmac, DesfireGetMACLength(ctx));
 
         *dstdatalen = hdrlen + rlen + DesfireGetMACLength(ctx);
+        ctx->commMode = DCMEncrypted;
     } else if (ctx->commMode == DCMEncryptedPlain) {
         if (srcdatalen <= hdrlen)
             return;
@@ -442,7 +443,7 @@ static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata,
             if (GetAPDULogging())
                 PrintAndLogEx(INFO, "Received MAC OK");
         }
-    } else if (ctx->commMode == DCMEncrypted) {
+    } else if (ctx->commMode == DCMEncrypted || ctx->commMode == DCMEncryptedWithPadding) {
         if (srcdatalen < desfire_get_key_block_length(ctx->keyType)) {
             memcpy(dstdata, srcdata, srcdatalen);
             *dstdatalen = srcdatalen;
@@ -473,8 +474,6 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
     *dstdatalen = srcdatalen;
     uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
 
-    // if comm mode = plain --> response with MAC
-    // if request is not zero length --> response MAC
     if (ctx->commMode == DCMMACed) {
         if (srcdatalen < DesfireGetMACLength(ctx)) {
             memcpy(dstdata, srcdata, srcdatalen);
@@ -494,7 +493,7 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
             if (GetAPDULogging())
                 PrintAndLogEx(INFO, "Received MAC OK");
         }
-    } else if (ctx->commMode == DCMEncrypted) {
+    } else if (ctx->commMode == DCMEncrypted || ctx->commMode == DCMEncryptedWithPadding) {
         if (srcdatalen < DesfireGetMACLength(ctx)) {
             memcpy(dstdata, srcdata, srcdatalen);
             *dstdatalen = srcdatalen;
