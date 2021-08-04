@@ -99,15 +99,15 @@ typedef struct {
     uint16_t appISONum;
     char appDFName[16];
     AuthCommandsChk authCmdCheck;
-    
+
     uint8_t keySettings;
     uint8_t numKeysRaw;
     bool isoFileIDEnabled;          // from numKeysRaw
     uint8_t numberOfKeys;           // from numKeysRaw
     DesfireCryptoAlgorythm keyType; // from numKeysRaw
-    
+
     uint8_t keyVersions[16];
-    
+
     bool filesReaded;
     size_t filesCount;
     bool isoPresent;
@@ -119,11 +119,11 @@ typedef struct {
     size_t appCount;
     uint32_t freemem;
     AuthCommandsChk authCmdCheck;
-    
+
     uint8_t keySettings;
     uint8_t numKeysRaw;
     uint8_t numberOfKeys; // from numKeysRaw
-    
+
     uint8_t keyVersion0;
 } PICCInfoS;
 

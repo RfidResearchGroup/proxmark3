@@ -524,7 +524,7 @@ void DesfireEV2FillIV(DesfireContext *ctx, bool ivforcommand, uint8_t *iv) {
 int DesfireEV2CalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac) {
     uint8_t mdata[1050] = {0};
     size_t mdatalen = 0;
-    
+
     mdata[0] = cmd;
     Uint2byteToMemLe(&mdata[1], ctx->cmdCntr);
     memcpy(&mdata[3], ctx->TI, 4);
