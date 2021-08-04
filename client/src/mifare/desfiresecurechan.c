@@ -42,7 +42,7 @@ static bool CommandCanUseAnyChannel(uint8_t cmd) {
 
 static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_SELECT_APPLICATION,        DACd40,  DCCNative,    DCMPlain},
-    
+
     {MFDES_CREATE_APPLICATION,        DACd40,  DCCNative,    DCMMACed},
     {MFDES_DELETE_APPLICATION,        DACd40,  DCCNative,    DCMMACed},
     {MFDES_GET_APPLICATION_IDS,       DACd40,  DCCNative,    DCMMACed},
@@ -159,7 +159,7 @@ static const uint8_t EV1D40TransmitMAC[] = {
 static bool DesfireEV1D40TransmitMAC(DesfireContext *ctx, uint8_t cmd) {
     if (ctx->secureChannel != DACd40 && ctx->secureChannel != DACEV1)
         return true;
-        
+
     for (int i = 0; i < ARRAY_LENGTH(EV1D40TransmitMAC); i++)
         if (EV1D40TransmitMAC[i] == cmd)
             return true;
@@ -178,7 +178,7 @@ static const uint8_t D40ReceiveMAC[] = {
 static bool DesfireEV1D40ReceiveMAC(DesfireContext *ctx, uint8_t cmd) {
     if (ctx->secureChannel != DACd40)
         return true;
-        
+
     for (int i = 0; i < ARRAY_LENGTH(D40ReceiveMAC); i++)
         if (D40ReceiveMAC[i] == cmd)
             return true;
@@ -214,12 +214,12 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
     } else if (ctx->commMode == DCMEncrypted || ctx->commMode == DCMEncryptedWithPadding) {
         if (srcdatalen <= hdrlen)
             return;
-        
+
         uint8_t paddinglen = (ctx->commMode == DCMEncryptedWithPadding) ? 1 : 0;
         rlen = padded_data_length(srcdatalen + 2 + paddinglen - hdrlen, desfire_get_key_block_length(ctx->keyType)) + hdrlen; // 2 - crc16
         memcpy(data, &srcdata[hdrlen], srcdatalen - hdrlen);
         iso14443a_crc_append(data, srcdatalen - hdrlen);
-        
+
         // add padding
         if (paddinglen > 0)
             data[srcdatalen - hdrlen + 2] = 0x80;
@@ -269,11 +269,11 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
         uint8_t paddinglen = (ctx->commMode == DCMEncryptedWithPadding) ? 1 : 0;
         rlen = padded_data_length(srcdatalen + 4 + paddinglen - hdrlen, desfire_get_key_block_length(ctx->keyType));
         data[0] = cmd;
-        
+
         // crc
         memcpy(&data[1], srcdata, srcdatalen);
         desfire_crc32_append(data, srcdatalen + 1);
-        
+
         // add padding
         if (paddinglen > 0)
             data[srcdatalen + 1 + 4] = 0x80;
