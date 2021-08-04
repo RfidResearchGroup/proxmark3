@@ -3092,7 +3092,24 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Desfire UID[%zu]: %s", buflen, sprint_hex(buf, buflen));
+    if (verbose)
+        PrintAndLogEx(SUCCESS, "received data[%zu]: %s", buflen, sprint_hex(buf, buflen));
+
+    if (buflen > 0) {
+        if (buf[0] != 0) {
+            PrintAndLogEx(SUCCESS, "Desfire UID[%zu]: " _GREEN_("%s"), buflen, sprint_hex(buf, buflen));
+        } else {
+            if (buf[1] == 0x04) {
+                PrintAndLogEx(SUCCESS, "Desfire UID4: " _GREEN_("%s"), sprint_hex(&buf[2], 4));
+            } else if (buf[1] == 0x0a) {
+                PrintAndLogEx(SUCCESS, "Desfire UID10: " _GREEN_("%s"), sprint_hex(&buf[2], 10));
+            } else {
+                PrintAndLogEx(WARNING, "Card returned wrong uid length: %d (0x%02x)", buf[1], buf[1]);
+            }
+        }
+    } else {
+        PrintAndLogEx(WARNING, "Card returned no data");
+    }
 
     DropField();
     return PM3_SUCCESS;
