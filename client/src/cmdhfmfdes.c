@@ -2628,14 +2628,12 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
         return res;
     }
 
-    DesfireSetCommMode(&dctx, DCMEncryptedPlain);
     res = DesfireSetConfiguration(&dctx, paramid, param, paramlen);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Set configuration 0x%02x " _GREEN_("ok") " ", paramid);
     } else {
         PrintAndLogEx(FAILED, "Set configuration 0x%02x " _RED_("failed") " ", paramid);
     }
-    DesfireSetCommMode(&dctx, DCMEncrypted);
 
     DropField();
     return res;

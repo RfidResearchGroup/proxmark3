@@ -429,6 +429,7 @@ uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode) {
             fmode = 0x01;
             break;
         case DCMEncrypted:
+        case DCMEncryptedWithPadding:
         case DCMEncryptedPlain:
             fmode = 0x11;
             break;
