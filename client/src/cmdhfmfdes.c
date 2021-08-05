@@ -2557,8 +2557,20 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes setconfig",
                   "Set card configuration. WARNING! Danger zone! Needs to provide card's master key and works if not blocked by config.",
-                  "hf mfdes setconfig --param 03 --data 0428 -> set parameter 03\n"
-                  "hf mfdes setconfig --param 02 --data 0875778102637264 -> set parameter 02");
+                  "More about options MF2DLHX0.pdf. Options list:\n"
+                  "00h PICC configuration.\n"
+                  "02h ATS update.\n"
+                  "03h SAK update\n"
+                  "04h Secure Messaging Configuration.\n"
+                  "05h Capability data. (here change for LRP in the Desfire Light)\n"
+                  "06h DF Name renaming\n"
+                  "08h File renaming\n"
+                  "09h Value file configuration\n"
+                  "0Ah Failed authentication counter setting\n"
+                  "0Bh HW configuration\n"
+                  "\n"
+                  "hf mfdes setconfig --param 03 --data 0428 -> set SAK\n"
+                  "hf mfdes setconfig --param 02 --data 0875778102637264 -> set ATS (first byte - length)");
 
     void *argtable[] = {
         arg_param_begin,
