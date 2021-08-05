@@ -7876,6 +7876,13 @@
         "system_integrator": "Atelei Engineering"
     },
     {
+        "application": "Access control",
+        "company": "LEAF Identity",
+        "mad": "0x51CD",
+        "service_provider": "",
+        "system_integrator": ""
+    ,
+    {
         "application": "Access & biometrics application",
         "company": "Manufacture Francaise des Pneumatiques MICHELIN",
         "mad": "0x5202",
