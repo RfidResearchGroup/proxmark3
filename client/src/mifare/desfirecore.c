@@ -2510,7 +2510,7 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
             iso14443a_crc(nkeybuf, nkeylen, &cdata[cdatalen]);
             cdatalen += 2;
         }
-    } else {
+    } else if (dctx->secureChannel == DACEV1) {
         // EV1 Checksum must cover : <KeyNo> <PrevKey XOR Newkey>  [<AES NewKeyVer>]
         desfire_crc32_append(pckcdata, cdatalen + 2);
         cdatalen += 4;
@@ -2518,12 +2518,19 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
             desfire_crc32(nkeybuf, nkeylen, &cdata[cdatalen]);
             cdatalen += 4;
         }
+    } else if (dctx->secureChannel == DACEV2) {
+        // EV2 : <PrevKey XOR Newkey>  [<AES NewKeyVer>]
+        if (newkeynum != dctx->keyNum) {
+            desfire_crc32(nkeybuf, nkeylen, &cdata[cdatalen]);
+            cdatalen += 4;
+        }
     }
-
+    
     // send command
     uint8_t resp[257] = {0};
     size_t resplen = 0;
-    int res = DesfireChangeKeyCmd(dctx, &pckcdata[1], cdatalen, resp, &resplen);
+ PrintAndLogEx(SUCCESS, "Change key [%d] %s", cdatalen + 1, sprint_hex(&pckcdata[1], cdatalen + 1));
+    int res = DesfireChangeKeyCmd(dctx, &pckcdata[1], cdatalen + 1, resp, &resplen);
 
     // check response
     if (res == 0 && resplen > 0)

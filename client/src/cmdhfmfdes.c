@@ -1255,6 +1255,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
+    SetAPDULogging(false);
     DropField();
 
     mfdes_info_res_t info;
