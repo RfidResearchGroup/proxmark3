@@ -4922,6 +4922,11 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int DesfileReadISOFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filetype, uint32_t offset, uint32_t length, bool noauth, bool verbose) {
+
+
+    return PM3_SUCCESS;
+}
 
 static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filetype, uint32_t offset, uint32_t length, bool noauth, bool verbose) {
     int res = 0;
@@ -5167,7 +5172,10 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         return res;
     }
 
-    res = DesfileReadFileAndPrint(&dctx, fnum, op, offset, length, noauth, verbose);
+    if (dctx.cmdSet != DCCISO)
+        res = DesfileReadFileAndPrint(&dctx, fnum, op, offset, length, noauth, verbose);
+    else
+        res = DesfileReadISOFileAndPrint(&dctx, fnum, op, offset, length, noauth, verbose);
 
     DropField();
     return res;

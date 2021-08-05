@@ -234,4 +234,9 @@ int DesfireISOGetChallenge(DesfireContext *dctx, DesfireCryptoAlgorythm keytype,
 int DesfireISOExternalAuth(DesfireContext *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data);
 int DesfireISOInternalAuth(DesfireContext *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data, uint8_t *resp, size_t *resplen);
 
+int DesfireISOReadBinary(DesfireContext *dctx, bool use_file_id, uint8_t fileid, uint16_t offset, uint8_t length, uint8_t *resp, size_t *resplen);
+int DesfireISOUpdateBinary(DesfireContext *dctx, bool use_file_id, uint8_t fileid, uint16_t offset, uint8_t *data, size_t datalen);
+int DesfireISOReadRecords(DesfireContext *dctx, uint8_t recordnum, bool read_all_records, uint8_t fileid, uint8_t length, uint8_t *resp, size_t *resplen);
+int DesfireISOAppendRecord(DesfireContext *dctx, uint8_t fileid, uint8_t *data, size_t datalen);
+
 #endif // __DESFIRECORE_H
