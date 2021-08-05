@@ -1520,7 +1520,7 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
     res = DesfireGetDFList(dctx, buf, &buflen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Desfire GetDFList command " _RED_("error") ". Result: %d", res);
-    } else if (buflen > 1) {
+    } else if (buflen > 0) {
         for (int i = 0; i < buflen; i++) {
             int indx = AppListSearchAID(DesfireAIDByteToUint(&buf[i * 24 + 1]), appList, PICCInfo->appCount);
             if (indx >= 0) {
@@ -1529,7 +1529,7 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
             }
         }
     }
-
+    
     // field on-off zone
     DesfireFillPICCInfo(dctx, PICCInfo, deepmode);
 
