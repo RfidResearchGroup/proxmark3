@@ -2529,7 +2529,6 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
     // send command
     uint8_t resp[257] = {0};
     size_t resplen = 0;
- PrintAndLogEx(SUCCESS, "Change key [%d] %s", cdatalen + 1, sprint_hex(&pckcdata[1], cdatalen + 1));
     int res = DesfireChangeKeyCmd(dctx, &pckcdata[1], cdatalen + 1, resp, &resplen);
 
     // check response
