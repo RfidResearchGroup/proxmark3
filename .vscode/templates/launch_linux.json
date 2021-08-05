@@ -62,7 +62,7 @@
             "type": "command",
             "command": "shellCommand.execute",
             "args": {
-                "command": "pgrep -n proxmark3"
+                "command": "pgrep -n proxmark3",
             }
             
         }
