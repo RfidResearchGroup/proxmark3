@@ -2551,7 +2551,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
                 uint16_t uid_resp_bits = 0;
                 uint16_t collision_answer_offset = 0;
                 if (DBGLEVEL >= DBG_INFO) Dbprintf("Multiple tags detected. Collision after Bit %d", Demod.collisionPos);
-                
+
                 // anti-collision-loop:
                 while (Demod.collisionPos) {
                     for (uint16_t i = collision_answer_offset; i < Demod.collisionPos; i++, uid_resp_bits++) {    // add valid UID bits before collision point
