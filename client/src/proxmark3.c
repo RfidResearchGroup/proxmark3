@@ -127,6 +127,15 @@ static void prompt_compose(char *buf, size_t buflen, const char *promptctx, cons
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if (IsCommunicationThreadDead() && session.pm3_present) {
+#ifdef HAVE_READLINE
+        char* saved_line;
+        int saved_point;
+        saved_point = rl_point;
+        saved_line = rl_copy_text(0, rl_end);
+        rl_set_prompt("");
+        rl_replace_line("", 0);
+        rl_redisplay();
+#endif
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
         prompt_dev = PROXPROMPT_DEV_OFFLINE;
 #ifdef HAVE_READLINE
@@ -135,7 +144,10 @@ static int check_comm(void) {
         char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
         memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
         rl_set_prompt(prompt_filtered);
-        rl_forced_update_display();
+        rl_replace_line(saved_line, 0);
+        rl_point = saved_point;
+        rl_redisplay();
+        free(saved_line);
 #endif
         CloseProxmark(session.current_device);
     }
