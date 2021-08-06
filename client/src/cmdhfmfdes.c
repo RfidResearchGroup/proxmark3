@@ -4978,12 +4978,12 @@ static int DesfileReadISOFileAndPrint(DesfireContext *dctx, bool select_current_
             DropField();
             return PM3_ESOFT;
         }
-        reclen = resplen - 8;
+        reclen = resplen;
 
         if (verbose)
             PrintAndLogEx(INFO, "Record length %zu", reclen);
 
-        if (length > 1) {
+        if (length != 1) {
             res = DesfireISOReadRecords(dctx, offset, true, (select_current_file) ? 0x00 : fnum, 0, resp, &resplen);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Desfire ISOReadRecords (one record) command " _RED_("error") ". Result: %d", res);
@@ -5177,12 +5177,15 @@ static int CmdHF14ADesReadData(const char *Cmd) {
                   "Read data from file. Key needs to be provided or flag --no-auth set (depend on file settings).",
                   "It reads file via all command sets. \n"
                   "For ISO command set it can be read by specifying full 2-byte iso id or 1-byte short iso id (first byte of the full iso id). ISO id lays in the data in BIG ENDIAN format.\n"
+                  "ISO record commands: offset - record number (0-current, 1..ff-number, 1-lastest), length - if 0 - all records, if 1 - one\n"
                   "\n"
                   "hf mfdes read --aid 123456 --fid 01 -> read file: app=123456, file=01, offset=0, all the data. use default channel settings from `default` command\n"
                   "hf mfdes read --aid 123456 --fid 01 --type record --offset 000000 --length 000001 -> read one last record from record file. use default channel settings from `default` command\n"
                   "hf mfdes read --aid 123456 --fid 10 --type data -c iso -> read file via ISO channel: app=123456, short iso id=10, offset=0.\n"
                   "hf mfdes read --aid 123456 --fileisoid 1000 --type data -c iso -> read file via ISO channel: app=123456, iso id=1000, offset=0. Select via native ISO wrapper\n"
-                  "hf mfdes read --appisoid 0102 --fileisoid 1000 --type data -c iso -> read file via ISO channel: app iso id=0102, iso id=1000, offset=0. Select via ISO commands");
+                  "hf mfdes read --appisoid 0102 --fileisoid 1000 --type data -c iso -> read file via ISO channel: app iso id=0102, iso id=1000, offset=0. Select via ISO commands\n"
+                  "hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000001 -> get one record (number 5) from file 1100 via iso commands\n"
+                  "hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000000 -> get all record (from 5 to 1) from file 1100 via iso commands");
 
     void *argtable[] = {
         arg_param_begin,
