@@ -5131,7 +5131,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
                   "\n"
                   "hf mfdes read --aid 123456 --fid 01 -> read file: app=123456, file=01, offset=0, all the data. use default channel settings from `default` command\n"
                   "hf mfdes read --aid 123456 --fid 01 --type record --offset 000000 --length 000001 -> read one last record from record file. use default channel settings from `default` command\n"
-                  "hf mfdes read --aid 123456 --fid 10 --type data -c iso -> read file via ISO channel: app=123456, short iso id=10, offset=0, all the data.\n");
+                  "hf mfdes read --aid 123456 --fid 10 --type data -c iso -> read file via ISO channel: app=123456, short iso id=10, offset=0, all the data.\n"
                   "hf mfdes read --aid 123456 --isofid 1000 --type data -c iso -> read file via ISO channel: app=123456, iso id=1000, offset=0, all the data.");
 
     void *argtable[] = {
@@ -5760,7 +5760,6 @@ int CmdHFMFDes(const char *Cmd) {
 
     ISO/IEC 7816 Cmds
     -----------------
-    'B0' Read Binary
     'D6' Update Binary
     'B2' Read Records
     'E2' Append Records
