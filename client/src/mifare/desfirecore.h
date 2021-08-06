@@ -30,6 +30,14 @@ enum DesfireISOSelectControlEnum {
 };
 typedef enum DesfireISOSelectControlEnum DesfireISOSelectControl;
 
+enum DesfireISOSelectWayEnum {
+    ISW6bAID,
+    ISWMF,
+    ISWIsoID,
+    ISWDFName
+};
+typedef enum DesfireISOSelectWayEnum DesfireISOSelectWay;
+
 typedef struct {
     const uint8_t id;
     const char *text;
@@ -160,9 +168,13 @@ int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uin
 int DesfireSelectAIDHexNoFieldOn(DesfireContext *ctx, uint32_t aid);
 void DesfirePrintAIDFunctions(uint32_t appid);
 
+int DesfireSelectEx(DesfireContext *ctx, bool fieldon, DesfireISOSelectWay way, uint32_t id, char *dfname);
+int DesfireSelect(DesfireContext *ctx, DesfireISOSelectWay way, uint32_t id, char *dfname);
+
 const char *DesfireAuthErrorToStr(int error);
 int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose);
 int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose);
+int DesfireSelectAndAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool useaid, uint32_t aid, uint16_t isoappid, uint16_t isofileid, bool noauth, bool verbose);
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose);
 void DesfireCheckAuthCommands(uint32_t appAID, char *dfname, uint8_t keyNum,  AuthCommandsChk *authCmdCheck);
 void DesfireCheckAuthCommandsPrint(AuthCommandsChk *authCmdCheck);
@@ -230,6 +242,8 @@ int DesfireUpdateRecord(DesfireContext *dctx, uint8_t fnum, uint32_t recnum, uin
 
 int DesfireISOSelectDF(DesfireContext *dctx, char *dfname, uint8_t *resp, size_t *resplen);
 int DesfireISOSelect(DesfireContext *dctx, DesfireISOSelectControl cntr, uint8_t *data, uint8_t datalen, uint8_t *resp, size_t *resplen);
+int DesfireISOSelectFile(DesfireContext *dctx, char *appdfname, uint16_t appid, uint16_t fileid);
+int DesfireISOSelectEx(DesfireContext *dctx, bool fieldon, DesfireISOSelectControl cntr, uint8_t *data, uint8_t datalen, uint8_t *resp, size_t *resplen);
 int DesfireISOGetChallenge(DesfireContext *dctx, DesfireCryptoAlgorythm keytype, uint8_t *resp, size_t *resplen);
 int DesfireISOExternalAuth(DesfireContext *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data);
 int DesfireISOInternalAuth(DesfireContext *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data, uint8_t *resp, size_t *resplen);
