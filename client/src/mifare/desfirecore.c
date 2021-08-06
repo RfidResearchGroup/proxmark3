@@ -263,6 +263,10 @@ const char *DesfireAuthErrorToStr(int error) {
             return "Can't select application.";
         case 201:
             return "Authentication retured no error but channel not authenticated.";
+        case 202:
+            return "Can't select application by ISO ID.";
+        case 203:
+            return "Can't select file by ISO ID.";
         case 301:
             return "ISO Get challenge error.";
         case 302:
@@ -673,11 +677,12 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext *ctx, ui
 }
 
 static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, sAPDU apdu, uint16_t le, uint8_t *resp, size_t *resplen, uint16_t *sw) {
-    uint32_t rlen = 0;
-    int res = DESFIRESendApduEx(activate_field, apdu, le, resp, 255, &rlen, sw);
+    uint8_t data[1050] = {0};
+    uint32_t datalen = 0;
+    int res = DESFIRESendApduEx(activate_field, apdu, le, data, sizeof(data), &datalen, sw);
 
     if (res == PM3_SUCCESS)
-        *resplen = rlen;
+        DesfireSecureChannelDecode(ctx, data, datalen, 0, resp, resplen);
 
     return res;
 }
@@ -884,6 +889,62 @@ int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel se
 
 int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool verbose) {
     return DesfireSelectAndAuthenticateEx(dctx, secureChannel, aid, false, verbose);
+}
+
+int DesfireSelectAndAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool useaid, uint32_t aid, uint16_t isoappid, uint16_t isofileid, bool noauth, bool verbose) {
+    if (verbose)
+        DesfirePrintContext(dctx);
+
+    int res = 0;
+    if (useaid) {
+        dctx->cmdSet = DCCNativeISO;
+        if (verbose)
+            PrintAndLogEx(INFO, "Select via " _CYAN_("native iso wrapping") " interface");
+
+        res = DesfireSelectAIDHex(dctx, aid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            return 200;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "App %06x via native iso channel is " _GREEN_("selected"), aid);
+
+        dctx->cmdSet = DCCISO;
+    } else {
+        res = DesfireSelectEx(dctx, true, ISWIsoID, isoappid, NULL);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire iso application select " _RED_("error") ".");
+            return 202;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "Application iso id %04x is " _GREEN_("selected"), isoappid);
+
+        res = DesfireSelectEx(dctx, false, ISWIsoID, isofileid, NULL);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire iso file select " _RED_("error") ".");
+            return 203;
+        }
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Application iso id %04x file iso id %04x is " _GREEN_("selected"), isoappid, isofileid);
+    }
+
+    if (!noauth) {
+        res = DesfireAuthenticate(dctx, secureChannel, verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: [%d] %s", res, DesfireAuthErrorToStr(res));
+            return res;
+        }
+
+        if (DesfireIsAuthenticated(dctx)) {
+            if (verbose)
+                PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
+        } else {
+            return 201;
+        }
+    }
+
+    return PM3_SUCCESS;
 }
 
 static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
@@ -2529,7 +2590,6 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
     // send command
     uint8_t resp[257] = {0};
     size_t resplen = 0;
- PrintAndLogEx(SUCCESS, "Change key [%d] %s", cdatalen + 1, sprint_hex(&pckcdata[1], cdatalen + 1));
     int res = DesfireChangeKeyCmd(dctx, &pckcdata[1], cdatalen + 1, resp, &resplen);
 
     // check response
@@ -2567,11 +2627,11 @@ int DesfireSetConfiguration(DesfireContext *dctx, uint8_t paramid, uint8_t *para
     return res;
 }
 
-int DesfireISOSelect(DesfireContext *dctx, DesfireISOSelectControl cntr, uint8_t *data, uint8_t datalen, uint8_t *resp, size_t *resplen) {
+int DesfireISOSelectEx(DesfireContext *dctx, bool fieldon, DesfireISOSelectControl cntr, uint8_t *data, uint8_t datalen, uint8_t *resp, size_t *resplen) {
     uint8_t xresp[250] = {0};
     size_t xresplen = 0;
     uint16_t sw = 0;
-    int res = DesfireExchangeISO(true, dctx, (sAPDU) {0x00, ISO7816_SELECT_FILE, cntr, ((resp == NULL) ? 0x0C : 0x00), datalen, data}, APDU_INCLUDE_LE_00, xresp, &xresplen, &sw);
+    int res = DesfireExchangeISO(fieldon, dctx, (sAPDU) {0x00, ISO7816_SELECT_FILE, cntr, ((resp == NULL) ? 0x0C : 0x00), datalen, data}, APDU_INCLUDE_LE_00, xresp, &xresplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
         return PM3_ESOFT;
 
@@ -2584,6 +2644,10 @@ int DesfireISOSelect(DesfireContext *dctx, DesfireISOSelectControl cntr, uint8_t
     dctx->appSelected = !((cntr == ISSMFDFEF && datalen == 0) || (cntr == ISSEFByFileID && datalen == 2 && data[0] == 0 && data[1] == 0));
 
     return res;
+}
+
+int DesfireISOSelect(DesfireContext *dctx, DesfireISOSelectControl cntr, uint8_t *data, uint8_t datalen, uint8_t *resp, size_t *resplen) {
+    return DesfireISOSelectEx(dctx, true, cntr, data, datalen, resp, resplen);
 }
 
 int DesfireISOSelectDF(DesfireContext *dctx, char *dfname, uint8_t *resp, size_t *resplen) {
@@ -2627,3 +2691,87 @@ int DesfireISOInternalAuth(DesfireContext *dctx, bool app_level, uint8_t keynum,
     return res;
 }
 
+int DesfireISOReadBinary(DesfireContext *dctx, bool use_file_id, uint8_t fileid, uint16_t offset, uint8_t length, uint8_t *resp, size_t *resplen) {
+    uint8_t p1 = 0;
+    if (use_file_id)
+        p1 = 0x80 | (fileid & 0x1f);
+    else
+        p1 = (offset >> 8) & 0x7f;
+    uint8_t p2 = offset & 0xff;
+    
+    uint16_t sw = 0;
+    int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_READ_BINARY, p1, p2, 0, NULL}, (length == 0) ? APDU_INCLUDE_LE_00 : length, resp, resplen, &sw);
+    if (res == PM3_SUCCESS && sw != 0x9000)
+        return PM3_ESOFT;
+
+    return res;
+}
+
+int DesfireISOUpdateBinary(DesfireContext *dctx, bool use_file_id, uint8_t fileid, uint16_t offset, uint8_t *data, size_t datalen) {
+    uint8_t p1 = 0;
+    if (use_file_id)
+        p1 = 0x80 | (fileid & 0x1f);
+    else
+        p1 = (offset >> 8) & 0x7f;
+    uint8_t p2 = offset & 0xff;
+
+    uint8_t resp[250] = {0};
+    size_t resplen = 0;
+    
+    uint16_t sw = 0;
+    int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_UPDATE_BINARY, p1, p2, datalen, data}, 0, resp, &resplen, &sw);
+    if (res == PM3_SUCCESS && sw != 0x9000)
+        return PM3_ESOFT;
+
+    return res;
+}
+
+int DesfireISOReadRecords(DesfireContext *dctx, uint8_t recordnum, bool read_all_records, uint8_t fileid, uint8_t length, uint8_t *resp, size_t *resplen) {
+    uint8_t p2 = ((fileid & 0x1f) << 3) | ((read_all_records) ? 0x05 : 0x04);
+    
+    uint16_t sw = 0;
+    int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_READ_RECORDS, recordnum, p2, 0, NULL}, (length == 0) ? APDU_INCLUDE_LE_00 : length, resp, resplen, &sw);
+    if (res == PM3_SUCCESS && sw != 0x9000)
+        return PM3_ESOFT;
+
+    return res;
+}
+
+int DesfireISOAppendRecord(DesfireContext *dctx, uint8_t fileid, uint8_t *data, size_t datalen) { 
+    uint8_t p2 = ((fileid & 0x1f) << 3);
+
+    uint8_t resp[250] = {0};
+    size_t resplen = 0;
+
+    uint16_t sw = 0;
+    int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_APPEND_RECORD, 0x00, p2, datalen, data}, 0, resp, &resplen, &sw);
+    if (res == PM3_SUCCESS && sw != 0x9000)
+        return PM3_ESOFT;
+
+    return res;
+}
+
+int DesfireSelectEx(DesfireContext *ctx, bool fieldon, DesfireISOSelectWay way, uint32_t id, char *dfname) {
+    uint8_t resp[250] = {0};
+    size_t resplen = 0;
+
+    if (way == ISWMF || (way == ISWDFName && dfname == NULL)) {
+        return DesfireISOSelect(ctx, ISSMFDFEF, NULL, 0, resp, &resplen);
+    } else if (way == ISW6bAID) {
+        if (fieldon)
+            return DesfireSelectAIDHex(ctx, id, false, 0);
+        else
+            return DesfireSelectAIDHexNoFieldOn(ctx, id);
+    } else if (way == ISWIsoID) {
+        uint8_t data[2] = {0};
+        Uint2byteToMemBe(data, id);
+        return DesfireISOSelectEx(ctx, fieldon, ISSMFDFEF, data, 2, resp, &resplen);
+    } else if (way == ISWDFName) {
+        return DesfireISOSelect(ctx, ISSMFDFEF, NULL, 0, resp, &resplen);
+    }
+    return PM3_ESOFT;
+}
+
+int DesfireSelect(DesfireContext *ctx, DesfireISOSelectWay way, uint32_t id, char *dfname) {
+    return DesfireSelectEx(ctx, true, way, id, dfname);
+}

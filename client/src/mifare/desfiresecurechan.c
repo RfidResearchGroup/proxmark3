@@ -41,6 +41,7 @@ static bool CommandCanUseAnyChannel(uint8_t cmd) {
 }
 
 static const AllowedChannelModesS AllowedChannelModes[] = {
+    // D40 channel
     {MFDES_SELECT_APPLICATION,        DACd40,  DCCNative,    DCMPlain},
 
     {MFDES_CREATE_APPLICATION,        DACd40,  DCCNative,    DCMMACed},
@@ -81,6 +82,7 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_CHANGE_KEY,                DACd40,  DCCNative,    DCMEncryptedPlain},
     {MFDES_CHANGE_KEY_EV2,            DACd40,  DCCNative,    DCMEncryptedPlain},
 
+    // EV1 and EV2 channel
     {MFDES_SELECT_APPLICATION,        DACEV1,  DCCNative,    DCMPlain},
 
     {MFDES_GET_KEY_VERSION,           DACEV1,  DCCNative,    DCMMACed},
@@ -114,8 +116,26 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_CHANGE_KEY,                DACEV1,  DCCNative,    DCMEncryptedPlain},
     {MFDES_CHANGE_KEY_EV2,            DACEV1,  DCCNative,    DCMEncryptedPlain},
 
+    // EV2 channel separately
     {MFDES_AUTHENTICATE_EV2F,         DACEV2,  DCCNative,    DCMPlain},
     {MFDES_AUTHENTICATE_EV2NF,        DACEV2,  DCCNative,    DCMPlain},
+
+    // ISO channel
+    {ISO7816_READ_BINARY,             DACd40,  DCCISO,       DCMPlain},
+    {ISO7816_UPDATE_BINARY,           DACd40,  DCCISO,       DCMPlain},
+    {ISO7816_READ_RECORDS,            DACd40,  DCCISO,       DCMPlain},
+    {ISO7816_APPEND_RECORD,           DACd40,  DCCISO,       DCMPlain},
+
+    {ISO7816_READ_BINARY,             DACd40,  DCCISO,       DCMMACed},
+    {ISO7816_READ_RECORDS,            DACd40,  DCCISO,       DCMMACed},
+
+    {ISO7816_READ_BINARY,             DACEV1,  DCCISO,       DCMPlain},
+    {ISO7816_UPDATE_BINARY,           DACEV1,  DCCISO,       DCMPlain},
+    {ISO7816_READ_RECORDS,            DACEV1,  DCCISO,       DCMPlain},
+    {ISO7816_APPEND_RECORD,           DACEV1,  DCCISO,       DCMPlain},
+
+    {ISO7816_READ_BINARY,             DACEV1,  DCCISO,       DCMMACed},
+    {ISO7816_READ_RECORDS,            DACEV1,  DCCISO,       DCMMACed},
 };
 
 #define CMD_HEADER_LEN_ALL 0xffff
@@ -181,6 +201,25 @@ static bool DesfireEV1D40ReceiveMAC(DesfireContext *ctx, uint8_t cmd) {
 
     for (int i = 0; i < ARRAY_LENGTH(D40ReceiveMAC); i++)
         if (D40ReceiveMAC[i] == cmd)
+            return true;
+
+    return false;
+}
+
+static const uint8_t ISOChannelValidCmd[] = {
+    ISO7816_SELECT_FILE,
+    ISO7816_READ_BINARY,
+    ISO7816_UPDATE_BINARY,
+    ISO7816_READ_RECORDS,
+    ISO7816_APPEND_RECORD,
+    ISO7816_GET_CHALLENGE,
+    ISO7816_EXTERNAL_AUTHENTICATION,
+    ISO7816_INTERNAL_AUTHENTICATION
+};
+
+static bool DesfireISOChannelValidCmd(uint8_t cmd) {
+    for (int i = 0; i < ARRAY_LENGTH(ISOChannelValidCmd); i++)
+        if (ISOChannelValidCmd[i] == cmd)
             return true;
 
     return false;
@@ -432,8 +471,8 @@ static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata,
         DesfireCryptoCMAC(ctx, data, *dstdatalen + 1, cmac);
         if (memcmp(&srcdata[*dstdatalen], cmac, DesfireGetMACLength(ctx)) != 0) {
             PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
-            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], desfire_get_key_block_length(ctx->keyType)));
-            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
+            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], DesfireGetMACLength(ctx)));
+            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, DesfireGetMACLength(ctx)));
         } else {
             if (GetAPDULogging())
                 PrintAndLogEx(INFO, "Received MAC OK");
@@ -482,8 +521,8 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
         DesfireEV2CalcCMAC(ctx, 0x00, srcdata, *dstdatalen, cmac);
         if (memcmp(&srcdata[*dstdatalen], cmac, DesfireGetMACLength(ctx)) != 0) {
             PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
-            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], desfire_get_key_block_length(ctx->keyType)));
-            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
+            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], DesfireGetMACLength(ctx)));
+            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, DesfireGetMACLength(ctx)));
         } else {
             if (GetAPDULogging())
                 PrintAndLogEx(INFO, "Received MAC OK");
@@ -499,8 +538,8 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
         DesfireEV2CalcCMAC(ctx, 0x00, srcdata, *dstdatalen, cmac);
         if (memcmp(&srcdata[*dstdatalen], cmac, DesfireGetMACLength(ctx)) != 0) {
             PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
-            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], desfire_get_key_block_length(ctx->keyType)));
-            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
+            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], DesfireGetMACLength(ctx)));
+            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, DesfireGetMACLength(ctx)));
         } else {
             if (GetAPDULogging())
                 PrintAndLogEx(INFO, "Received MAC OK");
@@ -520,7 +559,39 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
     }
 }
 
+static void DesfireISODecode(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
+    memcpy(dstdata, srcdata, srcdatalen);
+    *dstdatalen = srcdatalen;
+    uint8_t data[1050] = {0};
+    
+    if (srcdatalen < DesfireGetMACLength(ctx))
+        return;
+    
+    uint8_t maclen = DesfireGetMACLength(ctx);
+    if (DesfireIsAuthenticated(ctx)) {
+        memcpy(data, srcdata, srcdatalen - maclen);
+        data[*dstdatalen] = 0x00; // respcode
+
+        uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+        DesfireCryptoCMAC(ctx, data, srcdatalen - maclen + 1, cmac);
+        if (memcmp(&srcdata[srcdatalen - maclen], cmac, maclen) != 0) {
+            PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
+            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[srcdatalen - maclen], maclen));
+            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, maclen));
+        } else {
+            *dstdatalen = srcdatalen - maclen;
+            if (GetAPDULogging())
+                PrintAndLogEx(INFO, "Received MAC OK");
+        }
+    }
+}
+
 void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
+    if (ctx->cmdSet == DCCISO) {
+        DesfireISODecode(ctx, srcdata, srcdatalen, dstdata, dstdatalen);
+        return;
+    }
+        
     switch (ctx->secureChannel) {
         case DACd40:
             DesfireSecureChannelDecodeD40(ctx, srcdata, srcdatalen, respcode, dstdata, dstdatalen);
@@ -543,12 +614,20 @@ bool PrintChannelModeWarning(uint8_t cmd, DesfireSecureChannel secureChannel, De
         PrintAndLogEx(WARNING, "Communication mode can't be NONE. command: %02x", cmd);
         return false;
     }
-
+    
     // no security set
     if (secureChannel == DACNone)
         return true;
+
     if (CommandCanUseAnyChannel(cmd))
         return true;
+
+    // ISO commands
+    if (cmdSet == DCCISO) {
+        bool res = DesfireISOChannelValidCmd(cmd);
+        if (!res)
+            return false;        
+    }
 
     bool found = false;
     for (int i = 0; i < ARRAY_LENGTH(AllowedChannelModes); i++)

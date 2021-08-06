@@ -4922,6 +4922,99 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int DesfileReadISOFileAndPrint(DesfireContext *dctx, bool select_current_file, uint8_t fnum, uint16_t fisoid, int filetype, uint32_t offset, uint32_t length, bool noauth, bool verbose) {
+
+    if (filetype == RFTAuto) {
+        PrintAndLogEx(ERR, "ISO mode needs to specify file type");
+        return PM3_EINVARG;
+    }
+    
+    if (filetype == RFTValue) {
+        PrintAndLogEx(ERR, "ISO mode can't read Value file type");
+        return PM3_EINVARG;
+    }
+
+    if (filetype == RFTMAC) {
+        PrintAndLogEx(ERR, "ISO mode can't read Transaction MAC file type");
+        return PM3_EINVARG;
+    }
+    
+    if (select_current_file)
+        PrintAndLogEx(INFO, "------------------------------- " _CYAN_("File ISO %04x data") " -------------------------------", fisoid);
+    else
+        PrintAndLogEx(INFO, "---------------------------- " _CYAN_("File ISO short %02x data") " ----------------------------", fnum);
+
+    uint8_t resp[2048] = {0};
+    size_t resplen = 0;
+    int res = 0;
+    
+    if (filetype == RFTData) {
+        res = DesfireISOReadBinary(dctx, !select_current_file, (select_current_file) ? 0x00 : fnum, offset, length, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire ISOReadBinary command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (resplen > 0) {
+            if (select_current_file)
+                PrintAndLogEx(SUCCESS, "Read %zu bytes from file 0x%04x offset %u", resplen, fisoid, offset);
+            else
+                PrintAndLogEx(SUCCESS, "Read %zu bytes from file 0x%02x offset %u", resplen, fnum, offset);
+            print_buffer_with_offset(resp, resplen, offset, true);
+        } else {
+            if (select_current_file)
+                PrintAndLogEx(SUCCESS, "Read operation returned no data from file %04x", fisoid);
+            else
+                PrintAndLogEx(SUCCESS, "Read operation returned no data from file %02x", fnum);
+        }
+    }
+
+    if (filetype == RFTRecord) {
+        size_t reclen = 0;
+        res = DesfireISOReadRecords(dctx, offset, false, (select_current_file) ? 0x00 : fnum, 0, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire ISOReadRecords (one record) command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+        reclen = resplen;
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Record length %zu", reclen);
+
+        if (length != 1) {
+            res = DesfireISOReadRecords(dctx, offset, true, (select_current_file) ? 0x00 : fnum, 0, resp, &resplen);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Desfire ISOReadRecords (one record) command " _RED_("error") ". Result: %d", res);
+                DropField();
+                return PM3_ESOFT;
+            }
+        }
+
+        if (resplen > 0) {
+            size_t reccount = resplen / reclen;
+            if (select_current_file)
+                PrintAndLogEx(SUCCESS, "Read %zu bytes from file 0x%04x from record %d record count %zu record length %zu", resplen, fisoid, offset, reccount, reclen);
+            else
+                PrintAndLogEx(SUCCESS, "Read %zu bytes from file 0x%02x from record %d record count %zu record length %zu", resplen, fnum, offset, reccount, reclen);
+            if (reccount > 1)
+                PrintAndLogEx(SUCCESS, "Lastest record at the bottom.");
+            for (int i = 0; i < reccount; i++) {
+                if (i != 0)
+                    PrintAndLogEx(SUCCESS, "Record %zu", reccount - (i + offset + 1));
+                print_buffer_with_offset(&resp[i * reclen], reclen, offset, (i == 0));
+            }
+        } else {
+            if (select_current_file)
+                PrintAndLogEx(SUCCESS, "Read operation returned no data from file %04x", fisoid);
+            else
+                PrintAndLogEx(SUCCESS, "Read operation returned no data from file %02x", fnum);
+        }
+    }
+
+    return PM3_SUCCESS;
+}
 
 static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filetype, uint32_t offset, uint32_t length, bool noauth, bool verbose) {
     int res = 0;
@@ -5085,8 +5178,17 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes read",
                   "Read data from file. Key needs to be provided or flag --no-auth set (depend on file settings).",
+                  "It reads file via all command sets. \n"
+                  "For ISO command set it can be read by specifying full 2-byte iso id or 1-byte short iso id (first byte of the full iso id). ISO id lays in the data in BIG ENDIAN format.\n"
+                  "ISO record commands: offset - record number (0-current, 1..ff-number, 1-lastest), length - if 0 - all records, if 1 - one\n"
+                  "\n"
                   "hf mfdes read --aid 123456 --fid 01 -> read file: app=123456, file=01, offset=0, all the data. use default channel settings from `default` command\n"
-                  "hf mfdes read --aid 123456 --fid 01 --type record --offset 000000 --length 000001 -> read one last record from record file. use default channel settings from `default` command");
+                  "hf mfdes read --aid 123456 --fid 01 --type record --offset 000000 --length 000001 -> read one last record from record file. use default channel settings from `default` command\n"
+                  "hf mfdes read --aid 123456 --fid 10 --type data -c iso -> read file via ISO channel: app=123456, short iso id=10, offset=0.\n"
+                  "hf mfdes read --aid 123456 --fileisoid 1000 --type data -c iso -> read file via ISO channel: app=123456, iso id=1000, offset=0. Select via native ISO wrapper\n"
+                  "hf mfdes read --appisoid 0102 --fileisoid 1000 --type data -c iso -> read file via ISO channel: app iso id=0102, iso id=1000, offset=0. Select via ISO commands\n"
+                  "hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000001 -> get one record (number 5) from file 1100 via iso commands\n"
+                  "hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000000 -> get all record (from 5 to 1) from file 1100 via iso commands");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5106,6 +5208,8 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         arg_str0(NULL, "type",    "<auto/data/value/record/mac>", "File Type auto/data(Standard/Backup)/value/record(linear/cyclic)/mac). Auto - check file settings and then read. Default: auto"),
         arg_str0("o", "offset",   "<hex>", "File Offset (3 hex bytes, big endian). For records - record number (0 - lastest record). Default 0"),
         arg_str0("l", "length",   "<hex>", "Length to read (3 hex bytes, big endian -> 000000 = Read all data). For records - records count (0 - all). Default 0."),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
+        arg_str0(NULL, "fileisoid", "<isoid hex>", "File ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -5153,6 +5257,24 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    uint32_t appisoid = 0x0000;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 17, 0x0000, &appisoid, 2, true);
+    bool isoidpresent = (res == 1);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Application ISO ID (for EF) must have 2 bytes length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t fileisoid = 0x0000;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 18, 0x0000, &fileisoid, 2, true);
+    bool fileisoidpresent = (res == 1);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "File ISO ID (for DF) must have 2 bytes length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
@@ -5161,16 +5283,78 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        return res;
+    if (!isoidpresent) {
+        res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    } else {
+        res = DesfireSelectAndAuthenticateISO(&dctx, securechann, (appid != 0), appid, appisoid, fileisoid, noauth, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
     }
 
-    res = DesfileReadFileAndPrint(&dctx, fnum, op, offset, length, noauth, verbose);
+    if (dctx.cmdSet != DCCISO)
+        res = DesfileReadFileAndPrint(&dctx, fnum, op, offset, length, noauth, verbose);
+    else
+        res = DesfileReadISOFileAndPrint(&dctx, fileisoidpresent, fnum, fileisoid, op, offset, length, noauth, verbose);
 
     DropField();
     return res;
+}
+
+static int DesfileWriteISOFile(DesfireContext *dctx, bool select_current_file, uint8_t fnum, uint16_t fisoid, int filetype, uint32_t offset, uint8_t *data, uint32_t datalen, bool verbose) {
+
+    if (filetype == RFTAuto) {
+        PrintAndLogEx(ERR, "ISO mode needs to specify file type");
+        return PM3_EINVARG;
+    }
+    
+    if (filetype == RFTValue) {
+        PrintAndLogEx(ERR, "ISO mode can't write Value file type");
+        return PM3_EINVARG;
+    }
+
+    if (filetype == RFTMAC) {
+        PrintAndLogEx(ERR, "ISO mode can't write Transaction MAC file type");
+        return PM3_EINVARG;
+    }
+    
+    if (dctx->commMode != DCMPlain) {
+        PrintAndLogEx(ERR, "ISO mode can write only in plain mode");
+        return PM3_EINVARG;
+    }
+    
+    int res = 0;
+    if (filetype == RFTData) {
+        res = DesfireISOUpdateBinary(dctx, !select_current_file, (select_current_file) ? 0x00 : fnum, offset, data, datalen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire ISOUpdateBinary command " _RED_("error") ". Result: %d", res);
+            return PM3_ESOFT;
+        }
+
+        if (select_current_file)
+            PrintAndLogEx(INFO, "Write data file %04x " _GREEN_("success"), fisoid);
+        else
+            PrintAndLogEx(INFO, "Write data file %02x " _GREEN_("success"), fnum);
+    }
+
+    if (filetype == RFTRecord) {
+        res = DesfireISOAppendRecord(dctx, (select_current_file) ? 0x00 : fnum, data, datalen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire WriteRecord command " _RED_("error") ". Result: %d", res);
+            return PM3_ESOFT;
+        }
+        if (select_current_file)
+            PrintAndLogEx(INFO, "Write record to file %04x " _GREEN_("success"), fisoid);
+        else
+            PrintAndLogEx(INFO, "Write record to file %02x " _GREEN_("success"), fnum);
+    }
+
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14ADesWriteData(const char *Cmd) {
@@ -5185,7 +5369,9 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
                   "hf mfdes write --aid 123456 --fid 01 -d 01020304 -> write data to record file with `auto` type\n"
                   "hf mfdes write --aid 123456 --fid 01 --type record -d 01020304 -> write data to record file\n"
                   "hf mfdes write --aid 123456 --fid 01 --type record -d 01020304 --updaterec 0 -> update record in the record file. record 0 - lastest record.\n"
-                  "hf mfdes write --aid 123456 --fid 01 --type record --offset 000000 -d 11223344 -> write record to record file. use default channel settings from `default` command");
+                  "hf mfdes write --aid 123456 --fid 01 --type record --offset 000000 -d 11223344 -> write record to record file. use default channel settings from `default` command\n"
+                  "hf mfdes write --appisoid 1234 --fileisoid 1000 --type data -c iso -d 01020304 -> write data to std/backup file via iso commandset\n"
+                  "hf mfdes write --appisoid 1234 --fileisoid 2000 --type record -c iso -d 01020304 -> aend record to record file via iso commandset");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5208,6 +5394,8 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         arg_lit0(NULL, "debit",   "use for value file debit operation instead of credit"),
         arg_lit0(NULL, "commit",  "commit needs for backup file only. For the other file types and in the `auto` mode - command set it automatically."),
         arg_int0(NULL, "updaterec", "<record number dec>", "Record number for update record command. Updates record instead of write. Lastest record - 0"),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
+        arg_str0(NULL, "fileisoid", "<isoid hex>", "File ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -5261,6 +5449,24 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
     int updaterecno = arg_get_int_def(ctx, 19, -1);
 
+    uint32_t appisoid = 0x0000;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 20, 0x0000, &appisoid, 2, true);
+    bool isoidpresent = (res == 1);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Application ISO ID (for EF) must have 2 bytes length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t fileisoid = 0x0000;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 21, 0x0000, &fileisoid, 2, true);
+    bool fileisoidpresent = (res == 1);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "File ISO ID (for DF) must have 2 bytes length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
@@ -5269,8 +5475,29 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
-    if (res != PM3_SUCCESS) {
+    if (!isoidpresent) {
+        res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    } else {
+        res = DesfireSelectAndAuthenticateISO(&dctx, securechann, (appid != 0), appid, appisoid, fileisoid, noauth, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    }
+
+    // ISO command set
+    if (dctx.cmdSet == DCCISO) {
+        if (op == RFTRecord && updaterecno >= 0) {
+            PrintAndLogEx(ERR, "ISO mode can't update record. Only append.");
+            DropField();
+            return PM3_EINVARG;
+        }
+
+        res = DesfileWriteISOFile(&dctx, fileisoidpresent, fnum, fileisoid, op, offset, data, datalen, verbose);
         DropField();
         return res;
     }
@@ -5705,15 +5932,3 @@ int CmdHFMFDes(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
-/*
-    ToDo:
-
-    ISO/IEC 7816 Cmds
-    -----------------
-    'B0' Read Binary
-    'D6' Update Binary
-    'B2' Read Records
-    'E2' Append Records
-
-*/
