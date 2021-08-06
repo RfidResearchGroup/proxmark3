@@ -4924,6 +4924,42 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
 
 static int DesfileReadISOFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filetype, uint32_t offset, uint32_t length, bool noauth, bool verbose) {
 
+    if (filetype == RFTAuto) {
+        PrintAndLogEx(ERR, "ISO mode needs to specify file type");
+        return PM3_EINVARG;
+    }
+    
+    if (filetype == RFTValue) {
+        PrintAndLogEx(ERR, "ISO mode can't read Value file type");
+        return PM3_EINVARG;
+    }
+
+    if (filetype == RFTMAC) {
+        PrintAndLogEx(ERR, "ISO mode can't read Transaction MAC file type");
+        return PM3_EINVARG;
+    }
+    
+    PrintAndLogEx(INFO, "------------------------------- " _CYAN_("File ISO %02x data") " -------------------------------", fnum);
+
+    uint8_t resp[2048] = {0};
+    size_t resplen = 0;
+    int res = 0;
+    
+    if (filetype == RFTData) {
+        res = DesfireISOReadBinary(dctx, true, fnum, offset, length, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire ISOReadBinary command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (resplen > 0) {
+            PrintAndLogEx(SUCCESS, "Read %zu bytes from file 0x%02x offset %u", resplen, fnum, offset);
+            print_buffer_with_offset(resp, resplen, offset, true);
+        } else {
+            PrintAndLogEx(SUCCESS, "Read operation returned no data from file %d", fnum);
+        }
+    }
 
     return PM3_SUCCESS;
 }
@@ -5090,8 +5126,13 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes read",
                   "Read data from file. Key needs to be provided or flag --no-auth set (depend on file settings).",
+                  "It reads file via all command sets. \n"
+                  "For ISO command set it can be read by specifying full 2-byte iso id or 1-byte short iso id (first byte of the full iso id). ISO id lays in the data in BIG ENDIAN format.\n"
+                  "\n"
                   "hf mfdes read --aid 123456 --fid 01 -> read file: app=123456, file=01, offset=0, all the data. use default channel settings from `default` command\n"
-                  "hf mfdes read --aid 123456 --fid 01 --type record --offset 000000 --length 000001 -> read one last record from record file. use default channel settings from `default` command");
+                  "hf mfdes read --aid 123456 --fid 01 --type record --offset 000000 --length 000001 -> read one last record from record file. use default channel settings from `default` command\n"
+                  "hf mfdes read --aid 123456 --fid 10 --type data -c iso -> read file via ISO channel: app=123456, short iso id=10, offset=0, all the data.\n");
+                  "hf mfdes read --aid 123456 --isofid 1000 --type data -c iso -> read file via ISO channel: app=123456, iso id=1000, offset=0, all the data.");
 
     void *argtable[] = {
         arg_param_begin,
