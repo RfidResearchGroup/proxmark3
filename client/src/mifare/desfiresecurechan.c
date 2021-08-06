@@ -471,8 +471,8 @@ static void DesfireSecureChannelDecodeEV1(DesfireContext *ctx, uint8_t *srcdata,
         DesfireCryptoCMAC(ctx, data, *dstdatalen + 1, cmac);
         if (memcmp(&srcdata[*dstdatalen], cmac, DesfireGetMACLength(ctx)) != 0) {
             PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
-            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], desfire_get_key_block_length(ctx->keyType)));
-            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
+            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], DesfireGetMACLength(ctx)));
+            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, DesfireGetMACLength(ctx)));
         } else {
             if (GetAPDULogging())
                 PrintAndLogEx(INFO, "Received MAC OK");
@@ -521,8 +521,8 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
         DesfireEV2CalcCMAC(ctx, 0x00, srcdata, *dstdatalen, cmac);
         if (memcmp(&srcdata[*dstdatalen], cmac, DesfireGetMACLength(ctx)) != 0) {
             PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
-            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], desfire_get_key_block_length(ctx->keyType)));
-            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
+            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], DesfireGetMACLength(ctx)));
+            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, DesfireGetMACLength(ctx)));
         } else {
             if (GetAPDULogging())
                 PrintAndLogEx(INFO, "Received MAC OK");
@@ -538,8 +538,8 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
         DesfireEV2CalcCMAC(ctx, 0x00, srcdata, *dstdatalen, cmac);
         if (memcmp(&srcdata[*dstdatalen], cmac, DesfireGetMACLength(ctx)) != 0) {
             PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
-            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], desfire_get_key_block_length(ctx->keyType)));
-            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, desfire_get_key_block_length(ctx->keyType)));
+            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], DesfireGetMACLength(ctx)));
+            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, DesfireGetMACLength(ctx)));
         } else {
             if (GetAPDULogging())
                 PrintAndLogEx(INFO, "Received MAC OK");
@@ -559,7 +559,39 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
     }
 }
 
+static void DesfireISODecode(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
+    memcpy(dstdata, srcdata, srcdatalen);
+    *dstdatalen = srcdatalen;
+    uint8_t data[1050] = {0};
+    
+    if (srcdatalen < DesfireGetMACLength(ctx))
+        return;
+    
+    uint8_t maclen = DesfireGetMACLength(ctx);
+    if (DesfireIsAuthenticated(ctx)) {
+        memcpy(data, srcdata, srcdatalen - maclen);
+        data[*dstdatalen] = 0x00; // respcode
+
+        uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+        DesfireCryptoCMAC(ctx, data, srcdatalen - maclen + 1, cmac);
+        if (memcmp(&srcdata[srcdatalen - maclen], cmac, maclen) != 0) {
+            PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
+            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[srcdatalen - maclen], maclen));
+            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, maclen));
+        } else {
+            *dstdatalen = srcdatalen - maclen;
+            if (GetAPDULogging())
+                PrintAndLogEx(INFO, "Received MAC OK");
+        }
+    }
+}
+
 void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
+    if (ctx->cmdSet == DCCISO) {
+        DesfireISODecode(ctx, srcdata, srcdatalen, dstdata, dstdatalen);
+        return;
+    }
+        
     switch (ctx->secureChannel) {
         case DACd40:
             DesfireSecureChannelDecodeD40(ctx, srcdata, srcdatalen, respcode, dstdata, dstdatalen);

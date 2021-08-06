@@ -677,11 +677,12 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext *ctx, ui
 }
 
 static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, sAPDU apdu, uint16_t le, uint8_t *resp, size_t *resplen, uint16_t *sw) {
+    uint8_t r[1050] = {0};
     uint32_t rlen = 0;
-    int res = DESFIRESendApduEx(activate_field, apdu, le, resp, 255, &rlen, sw);
+    int res = DESFIRESendApduEx(activate_field, apdu, le, r, 255, &rlen, sw);
 
     if (res == PM3_SUCCESS)
-        *resplen = rlen;
+        DesfireSecureChannelDecode(ctx, r, rlen, 0, resp, resplen);
 
     return res;
 }
