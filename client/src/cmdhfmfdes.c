@@ -4994,7 +4994,10 @@ static int DesfileReadISOFileAndPrint(DesfireContext *dctx, bool select_current_
 
         if (resplen > 0) {
             size_t reccount = resplen / reclen;
-            PrintAndLogEx(SUCCESS, "Read %zu bytes from file 0x%02x from record %d record count %zu record length %zu", resplen, fnum, offset, reccount, reclen);
+            if (select_current_file)
+                PrintAndLogEx(SUCCESS, "Read %zu bytes from file 0x%04x from record %d record count %zu record length %zu", resplen, fisoid, offset, reccount, reclen);
+            else
+                PrintAndLogEx(SUCCESS, "Read %zu bytes from file 0x%02x from record %d record count %zu record length %zu", resplen, fnum, offset, reccount, reclen);
             if (reccount > 1)
                 PrintAndLogEx(SUCCESS, "Lastest record at the bottom.");
             for (int i = 0; i < reccount; i++) {
