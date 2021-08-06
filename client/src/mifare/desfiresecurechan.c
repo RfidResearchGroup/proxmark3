@@ -563,10 +563,10 @@ static void DesfireISODecode(DesfireContext *ctx, uint8_t *srcdata, size_t srcda
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
     uint8_t data[1050] = {0};
-    
+
     if (srcdatalen < DesfireGetMACLength(ctx))
         return;
-    
+
     uint8_t maclen = DesfireGetMACLength(ctx);
     if (DesfireIsAuthenticated(ctx)) {
         memcpy(data, srcdata, srcdatalen - maclen);
@@ -591,7 +591,7 @@ void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t sr
         DesfireISODecode(ctx, srcdata, srcdatalen, dstdata, dstdatalen);
         return;
     }
-        
+
     switch (ctx->secureChannel) {
         case DACd40:
             DesfireSecureChannelDecodeD40(ctx, srcdata, srcdatalen, respcode, dstdata, dstdatalen);
@@ -614,7 +614,7 @@ bool PrintChannelModeWarning(uint8_t cmd, DesfireSecureChannel secureChannel, De
         PrintAndLogEx(WARNING, "Communication mode can't be NONE. command: %02x", cmd);
         return false;
     }
-    
+
     // no security set
     if (secureChannel == DACNone)
         return true;
@@ -626,7 +626,7 @@ bool PrintChannelModeWarning(uint8_t cmd, DesfireSecureChannel secureChannel, De
     if (cmdSet == DCCISO) {
         bool res = DesfireISOChannelValidCmd(cmd);
         if (!res)
-            return false;        
+            return false;
     }
 
     bool found = false;

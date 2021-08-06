@@ -4928,7 +4928,7 @@ static int DesfileReadISOFileAndPrint(DesfireContext *dctx, bool select_current_
         PrintAndLogEx(ERR, "ISO mode needs to specify file type");
         return PM3_EINVARG;
     }
-    
+
     if (filetype == RFTValue) {
         PrintAndLogEx(ERR, "ISO mode can't read Value file type");
         return PM3_EINVARG;
@@ -4938,7 +4938,7 @@ static int DesfileReadISOFileAndPrint(DesfireContext *dctx, bool select_current_
         PrintAndLogEx(ERR, "ISO mode can't read Transaction MAC file type");
         return PM3_EINVARG;
     }
-    
+
     if (select_current_file)
         PrintAndLogEx(INFO, "------------------------------- " _CYAN_("File ISO %04x data") " -------------------------------", fisoid);
     else
@@ -4947,7 +4947,7 @@ static int DesfileReadISOFileAndPrint(DesfireContext *dctx, bool select_current_
     uint8_t resp[2048] = {0};
     size_t resplen = 0;
     int res = 0;
-    
+
     if (filetype == RFTData) {
         res = DesfireISOReadBinary(dctx, !select_current_file, (select_current_file) ? 0x00 : fnum, offset, length, resp, &resplen);
         if (res != PM3_SUCCESS) {
@@ -5312,7 +5312,7 @@ static int DesfileWriteISOFile(DesfireContext *dctx, bool select_current_file, u
         PrintAndLogEx(ERR, "ISO mode needs to specify file type");
         return PM3_EINVARG;
     }
-    
+
     if (filetype == RFTValue) {
         PrintAndLogEx(ERR, "ISO mode can't write Value file type");
         return PM3_EINVARG;
@@ -5322,12 +5322,12 @@ static int DesfileWriteISOFile(DesfireContext *dctx, bool select_current_file, u
         PrintAndLogEx(ERR, "ISO mode can't write Transaction MAC file type");
         return PM3_EINVARG;
     }
-    
+
     if (dctx->commMode != DCMPlain) {
         PrintAndLogEx(ERR, "ISO mode can write only in plain mode");
         return PM3_EINVARG;
     }
-    
+
     int res = 0;
     if (filetype == RFTData) {
         res = DesfireISOUpdateBinary(dctx, !select_current_file, (select_current_file) ? 0x00 : fnum, offset, data, datalen);

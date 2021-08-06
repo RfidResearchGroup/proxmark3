@@ -1590,7 +1590,7 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
             }
         }
     }
-    
+
     // field on-off zone
     DesfireFillPICCInfo(dctx, PICCInfo, deepmode);
 
@@ -2586,7 +2586,7 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
             cdatalen += 4;
         }
     }
-    
+
     // send command
     uint8_t resp[257] = {0};
     size_t resplen = 0;
@@ -2698,7 +2698,7 @@ int DesfireISOReadBinary(DesfireContext *dctx, bool use_file_id, uint8_t fileid,
     else
         p1 = (offset >> 8) & 0x7f;
     uint8_t p2 = offset & 0xff;
-    
+
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_READ_BINARY, p1, p2, 0, NULL}, (length == 0) ? APDU_INCLUDE_LE_00 : length, resp, resplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
@@ -2717,7 +2717,7 @@ int DesfireISOUpdateBinary(DesfireContext *dctx, bool use_file_id, uint8_t filei
 
     uint8_t resp[250] = {0};
     size_t resplen = 0;
-    
+
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_UPDATE_BINARY, p1, p2, datalen, data}, 0, resp, &resplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
@@ -2728,7 +2728,7 @@ int DesfireISOUpdateBinary(DesfireContext *dctx, bool use_file_id, uint8_t filei
 
 int DesfireISOReadRecords(DesfireContext *dctx, uint8_t recordnum, bool read_all_records, uint8_t fileid, uint8_t length, uint8_t *resp, size_t *resplen) {
     uint8_t p2 = ((fileid & 0x1f) << 3) | ((read_all_records) ? 0x05 : 0x04);
-    
+
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_READ_RECORDS, recordnum, p2, 0, NULL}, (length == 0) ? APDU_INCLUDE_LE_00 : length, resp, resplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
@@ -2737,7 +2737,7 @@ int DesfireISOReadRecords(DesfireContext *dctx, uint8_t recordnum, bool read_all
     return res;
 }
 
-int DesfireISOAppendRecord(DesfireContext *dctx, uint8_t fileid, uint8_t *data, size_t datalen) { 
+int DesfireISOAppendRecord(DesfireContext *dctx, uint8_t fileid, uint8_t *data, size_t datalen) {
     uint8_t p2 = ((fileid & 0x1f) << 3);
 
     uint8_t resp[250] = {0};
