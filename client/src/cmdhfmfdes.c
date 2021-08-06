@@ -5932,13 +5932,3 @@ int CmdHFMFDes(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
-/*
-    ToDo:
-
-    ISO/IEC 7816 Cmds
-    -----------------
-    'D6' Update Binary
-    'E2' Append Records
-
-*/
