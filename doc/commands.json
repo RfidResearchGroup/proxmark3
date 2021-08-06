@@ -973,7 +973,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210804.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210806.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -4768,8 +4768,17 @@
             "command": "hf mfdes read",
             "description": "read data from file. key needs to be provided or flag --no-auth set (depend on file settings).",
             "notes": [
+                "it reads file via all command sets.",
+                "for iso command set it can be read by specifying full 2-byte iso id or 1-byte short iso id (first byte of the full iso id). iso id lays in the data in big endian format.",
+                "iso record commands: offset - record number (0-current, 1..ff-number, 1-lastest), length - if 0 - all records, if 1 - one",
+                "",
                 "hf mfdes read --aid 123456 --fid 01 -> read file: app=123456, file=01, offset=0, all the data. use default channel settings from `default` command",
-                "hf mfdes read --aid 123456 --fid 01 --type record --offset 000000 --length 000001 -> read one last record from record file. use default channel settings from `default` command"
+                "hf mfdes read --aid 123456 --fid 01 --type record --offset 000000 --length 000001 -> read one last record from record file. use default channel settings from `default` command",
+                "hf mfdes read --aid 123456 --fid 10 --type data -c iso -> read file via iso channel: app=123456, short iso id=10, offset=0.",
+                "hf mfdes read --aid 123456 --fileisoid 1000 --type data -c iso -> read file via iso channel: app=123456, iso id=1000, offset=0. select via native iso wrapper",
+                "hf mfdes read --appisoid 0102 --fileisoid 1000 --type data -c iso -> read file via iso channel: app iso id=0102, iso id=1000, offset=0. select via iso commands",
+                "hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000001 -> get one record (number 5) from file 1100 via iso commands",
+                "hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000000 -> get all record (from 5 to 1) from file 1100 via iso commands"
             ],
             "offline": false,
             "options": [
@@ -4789,9 +4798,11 @@
                 "--no-auth execute without authentication",
                 "--type <auto/data/value/record/mac> file type auto/data(standard/backup)/value/record(linear/cyclic)/mac). auto - check file settings and then read. default: auto",
                 "-o, --offset <hex> file offset (3 hex bytes, big endian). for records - record number (0 - lastest record). default 0",
-                "-l, --length <hex> length to read (3 hex bytes, big endian -> 000000 = read all data). for records - records count (0 - all). default 0."
+                "-l, --length <hex> length to read (3 hex bytes, big endian -> 000000 = read all data). for records - records count (0 - all). default 0.",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian). works only for iso read commands.",
+                "--fileisoid <isoid hex> file iso id (iso df id) (2 hex bytes, big endian). works only for iso read commands."
             ],
-            "usage": "hf mfdes read [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--fid <file id hex>] [--no-auth] [--type <auto/data/value/record/mac>] [-o <hex>] [-l <hex>]"
+            "usage": "hf mfdes read [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--fid <file id hex>] [--no-auth] [--type <auto/data/value/record/mac>] [-o <hex>] [-l <hex>] [--appisoid <isoid hex>] [--fileisoid <isoid hex>]"
         },
         "hf mfdes selectapp": {
             "command": "hf mfdes selectapp",
@@ -4826,8 +4837,20 @@
             "command": "hf mfdes setconfig",
             "description": "set card configuration. warning! danger zone! needs to provide card's master key and works if not blocked by config.",
             "notes": [
-                "hf mfdes setconfig --param 03 --data 0428 -> set parameter 03",
-                "hf mfdes setconfig --param 02 --data 0875778102637264 -> set parameter 02"
+                "more about options mf2dlhx0.pdf. options list:",
+                "00h picc configuration.",
+                "02h ats update.",
+                "03h sak update",
+                "04h secure messaging configuration.",
+                "05h capability data. (here change for lrp in the desfire light)",
+                "06h df name renaming",
+                "08h file renaming",
+                "09h value file configuration",
+                "0ah failed authentication counter setting",
+                "0bh hw configuration",
+                "",
+                "hf mfdes setconfig --param 03 --data 0428 -> set sak",
+                "hf mfdes setconfig --param 02 --data 0875778102637264 -> set ats (first byte - length)"
             ],
             "offline": false,
             "options": [
@@ -4901,7 +4924,9 @@
                 "hf mfdes write --aid 123456 --fid 01 -d 01020304 -> write data to record file with `auto` type",
                 "hf mfdes write --aid 123456 --fid 01 --type record -d 01020304 -> write data to record file",
                 "hf mfdes write --aid 123456 --fid 01 --type record -d 01020304 --updaterec 0 -> update record in the record file. record 0 - lastest record.",
-                "hf mfdes write --aid 123456 --fid 01 --type record --offset 000000 -d 11223344 -> write record to record file. use default channel settings from `default` command"
+                "hf mfdes write --aid 123456 --fid 01 --type record --offset 000000 -d 11223344 -> write record to record file. use default channel settings from `default` command",
+                "hf mfdes write --appisoid 1234 --fileisoid 1000 --type data -c iso -d 01020304 -> write data to std/backup file iso commandset",
+                "hf mfdes write --appisoid 1234 --fileisoid 2000 --type record -c iso -d 01020304 -> aend record to record file via iso commandset"
             ],
             "offline": false,
             "options": [
@@ -4924,9 +4949,11 @@
                 "-d, --data <hex> data for write (data/record file), credit/debit(value file)",
                 "--debit use for value file debit operation instead of credit",
                 "--commit commit needs for backup file only. for the other file types and in the `auto` mode - command set it automatically.",
-                "--updaterec <record number dec> record number for update record command. updates record instead of write. lastest record - 0"
+                "--updaterec <record number dec> record number for update record command. updates record instead of write. lastest record - 0",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian). works only for iso read commands.",
+                "--fileisoid <isoid hex> file iso id (iso df id) (2 hex bytes, big endian). works only for iso read commands."
             ],
-            "usage": "hf mfdes write [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--fid <file id hex>] [--no-auth] [--type <auto/data/value/record/mac>] [-o <hex>] [-d <hex>] [--debit] [--commit] [--updaterec <record number dec>]"
+            "usage": "hf mfdes write [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2>] [--aid <app id hex>] [--fid <file id hex>] [--no-auth] [--type <auto/data/value/record/mac>] [-o <hex>] [-d <hex>] [--debit] [--commit] [--updaterec <record number dec>] [--appisoid <isoid hex>] [--fileisoid <isoid hex>]"
         },
         "hf mfp auth": {
             "command": "hf mfp auth",
@@ -9864,6 +9891,6 @@
     "metadata": {
         "commands_extracted": 587,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-08-04T21:00:22"
+        "extracted_on": "2021-08-06T20:40:15"
     }
 }
