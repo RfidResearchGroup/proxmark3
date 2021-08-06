@@ -135,7 +135,7 @@ static int check_comm(void) {
         char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
         memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
         rl_set_prompt(prompt_filtered);
-        rl_forced_update_display();
+        rl_redisplay();
 #endif
         CloseProxmark(session.current_device);
     }
