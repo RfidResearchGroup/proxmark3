@@ -5306,6 +5306,57 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     return res;
 }
 
+static int DesfileWriteISOFile(DesfireContext *dctx, bool select_current_file, uint8_t fnum, uint16_t fisoid, int filetype, uint32_t offset, uint8_t *data, uint32_t datalen, bool verbose) {
+
+    if (filetype == RFTAuto) {
+        PrintAndLogEx(ERR, "ISO mode needs to specify file type");
+        return PM3_EINVARG;
+    }
+    
+    if (filetype == RFTValue) {
+        PrintAndLogEx(ERR, "ISO mode can't write Value file type");
+        return PM3_EINVARG;
+    }
+
+    if (filetype == RFTMAC) {
+        PrintAndLogEx(ERR, "ISO mode can't write Transaction MAC file type");
+        return PM3_EINVARG;
+    }
+    
+    if (dctx->commMode != DCMPlain) {
+        PrintAndLogEx(ERR, "ISO mode can write only in plain mode");
+        return PM3_EINVARG;
+    }
+    
+    int res = 0;
+    if (filetype == RFTData) {
+        res = DesfireISOUpdateBinary(dctx, !select_current_file, (select_current_file) ? 0x00 : fnum, offset, data, datalen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire ISOUpdateBinary command " _RED_("error") ". Result: %d", res);
+            return PM3_ESOFT;
+        }
+
+        if (select_current_file)
+            PrintAndLogEx(INFO, "Write data file %04x " _GREEN_("success"), fisoid);
+        else
+            PrintAndLogEx(INFO, "Write data file %02x " _GREEN_("success"), fnum);
+    }
+
+    if (filetype == RFTRecord) {
+        res = DesfireISOAppendRecord(dctx, (select_current_file) ? 0x00 : fnum, data, datalen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire WriteRecord command " _RED_("error") ". Result: %d", res);
+            return PM3_ESOFT;
+        }
+        if (select_current_file)
+            PrintAndLogEx(INFO, "Write record to file %04x " _GREEN_("success"), fisoid);
+        else
+            PrintAndLogEx(INFO, "Write record to file %02x " _GREEN_("success"), fnum);
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesWriteData(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes write",
@@ -5341,6 +5392,8 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         arg_lit0(NULL, "debit",   "use for value file debit operation instead of credit"),
         arg_lit0(NULL, "commit",  "commit needs for backup file only. For the other file types and in the `auto` mode - command set it automatically."),
         arg_int0(NULL, "updaterec", "<record number dec>", "Record number for update record command. Updates record instead of write. Lastest record - 0"),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
+        arg_str0(NULL, "fileisoid", "<isoid hex>", "File ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -5394,6 +5447,24 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
     int updaterecno = arg_get_int_def(ctx, 19, -1);
 
+    uint32_t appisoid = 0x0000;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 20, 0x0000, &appisoid, 2, true);
+    bool isoidpresent = (res == 1);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "Application ISO ID (for EF) must have 2 bytes length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t fileisoid = 0x0000;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 21, 0x0000, &fileisoid, 2, true);
+    bool fileisoidpresent = (res == 1);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "File ISO ID (for DF) must have 2 bytes length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
@@ -5402,8 +5473,29 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
-    if (res != PM3_SUCCESS) {
+    if (!isoidpresent) {
+        res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    } else {
+        res = DesfireSelectAndAuthenticateISO(&dctx, securechann, (appid != 0), appid, appisoid, fileisoid, noauth, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    }
+
+    // ISO command set
+    if (dctx.cmdSet == DCCISO) {
+        if (op == RFTRecord && updaterecno >= 0) {
+            PrintAndLogEx(ERR, "ISO mode can't update record. Only append.");
+            DropField();
+            return PM3_EINVARG;
+        }
+
+        res = DesfileWriteISOFile(&dctx, fileisoidpresent, fnum, fileisoid, op, offset, data, datalen, verbose);
         DropField();
         return res;
     }
