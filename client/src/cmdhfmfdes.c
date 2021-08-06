@@ -5845,7 +5845,6 @@ int CmdHFMFDes(const char *Cmd) {
     ISO/IEC 7816 Cmds
     -----------------
     'D6' Update Binary
-    'B2' Read Records
     'E2' Append Records
 
 */
