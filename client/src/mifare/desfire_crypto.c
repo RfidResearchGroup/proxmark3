@@ -320,7 +320,6 @@ void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t le
 // This function is almot like cmac(...). but with some key differences.
 void mifare_kdf_an10922(const desfirekey_t key, const uint8_t *data, size_t len) {
     int kbs = key_block_size(key);
-    int kbs2 = kbs * 2;
     if (key == NULL || kbs == 0 || data == NULL || len < 1 || len > 31) {
         return;
     }
@@ -328,6 +327,7 @@ void mifare_kdf_an10922(const desfirekey_t key, const uint8_t *data, size_t len)
     // AES uses 16 byte IV
     if (kbs < 16)
         kbs = 16;
+    int kbs2 = kbs * 2;
 
     cmac_generate_subkeys(key, MCD_SEND);
 
