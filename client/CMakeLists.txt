@@ -222,6 +222,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/loclass/hash1_brute.c
         ${PM3_ROOT}/client/src/loclass/ikeys.c
         ${PM3_ROOT}/client/src/mifare/mad.c
+        ${PM3_ROOT}/client/src/mifare/aiddesfire.c
         ${PM3_ROOT}/client/src/mifare/mfkey.c
         ${PM3_ROOT}/client/src/mifare/mifare4.c
         ${PM3_ROOT}/client/src/mifare/mifaredefault.c
@@ -236,7 +237,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/uart/uart_win32.c
         ${PM3_ROOT}/client/src/ui/overlays.ui
         ${PM3_ROOT}/client/src/ui/image.ui
-        ${PM3_ROOT}/client/src/aiddesfire.c
         ${PM3_ROOT}/client/src/aidsearch.c
         ${PM3_ROOT}/client/src/cmdanalyse.c
         ${PM3_ROOT}/client/src/cmdcrc.c

@@ -100,35 +100,55 @@ static void em410x_construct_emul_graph(uint8_t *uid, uint8_t clock, uint8_t gap
 }
 
 //print 64 bit EM410x ID in multiple formats
-void printEM410x(uint32_t hi, uint64_t id, bool verbose) {
+void printEM410x(uint32_t hi, uint64_t id, bool verbose, int type) {
 
     if (!id && !hi) return;
 
-    uint64_t n = 1;
-    uint64_t id2lo = 0;
-    uint8_t m, i;
-    for (m = 5; m > 0; m--) {
-        for (i = 0; i < 8; i++) {
-            id2lo = (id2lo << 1LL) | ((id & (n << (i + ((m - 1) * 8)))) >> (i + ((m - 1) * 8)));
-        }
-    }
-
     if (verbose == false) {
-
-        if (hi) {
-            PrintAndLogEx(SUCCESS, "EM 410x ID "_GREEN_("%06X%016" PRIX64), hi, id);
-        } else {
+        if (type & 0x1) { // Short ID
             PrintAndLogEx(SUCCESS, "EM 410x ID "_GREEN_("%010" PRIX64), id);
+        }
+        if (type & 0x2) { // Long ID
+            PrintAndLogEx(SUCCESS, "EM 410x XL ID "_GREEN_("%06X%016" PRIX64), hi, id);
+        }
+        if (type & 0x4) { // Short Extended ID
+            uint64_t data = (id << 20) >> 20;
+            // Convert back to Short ID
+            id = ((uint64_t)hi << 16) | (id >> 48);
+            if ((data & 0xFFFFFFFF) == 0) {
+                PrintAndLogEx(SUCCESS, "EM 410x ID "_GREEN_("%010" PRIX64)" Electra "_GREEN_("%03" PRIu64), id, data >> 32);
+            } else {
+                PrintAndLogEx(SUCCESS, "EM 410x ID "_GREEN_("%010" PRIX64)" on 128b frame with data "_GREEN_("%011" PRIX64), id, data);
+            }
         }
         return;
     }
 
-    if (hi) {
+    if (type & 0x2) { // Long ID
         //output 88 bit em id
-        PrintAndLogEx(SUCCESS, "EM 410x ID "_GREEN_("%06X%016" PRIX64), hi, id);
-        PrintAndLogEx(SUCCESS, "EM410x XL ( RF/%d )", g_DemodClock);
-    } else {
+        PrintAndLogEx(SUCCESS, "EM 410x XL ID "_GREEN_("%06X%016" PRIX64)" ( RF/%d )", hi, id, g_DemodClock);
+    }
+    if (type & 0x4) { // Short Extended ID
+        PrintAndLogEx(SUCCESS, "EM 410x Short ID found on a 128b frame");
+        uint64_t data = (id << 20) >> 20;
+        PrintAndLogEx(SUCCESS, "    Data after ID: "_GREEN_("%011" PRIX64), data);
+        if ((data & 0xFFFFFFFF) == 0) {
+            PrintAndLogEx(SUCCESS, "    Possibly an Electra (RO), 0x"_GREEN_("%03" PRIX64)" = "_GREEN_("%03" PRIu64), data >> 32, data >> 32);
+        }
+        PrintAndLogEx(SUCCESS, "    Short ID details:");
+        // Convert back to Short ID
+        id = ((uint64_t)hi << 16) | (id >> 48);
+    }
+    if (type & (0x4 | 0x1)) { // Short Extended or Short ID
         //output 40 bit em id
+        uint64_t n = 1;
+        uint64_t id2lo = 0;
+        uint8_t m, i;
+        for (m = 5; m > 0; m--) {
+            for (i = 0; i < 8; i++) {
+                id2lo = (id2lo << 1LL) | ((id & (n << (i + ((m - 1) * 8)))) >> (i + ((m - 1) * 8)));
+            }
+        }
         PrintAndLogEx(SUCCESS, "EM 410x ID "_GREEN_("%010" PRIX64), id);
         PrintAndLogEx(SUCCESS, "EM410x ( RF/%d )", g_DemodClock);
         PrintAndLogEx(INFO, "-------- " _CYAN_("Possible de-scramble patterns") " ---------");
@@ -252,7 +272,7 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
         printDemodBuff(0, false, false, true);
     }
 
-    printEM410x(*hi, *lo, verbose);
+    printEM410x(*hi, *lo, verbose, ans);
     g_em410xid = *lo;
     return PM3_SUCCESS;
 }

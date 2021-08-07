@@ -327,7 +327,7 @@ bool asn1_tag_dump(const struct tlv *tlv, int level, bool *candump) {
     */
 
     PrintAndLogEx(INFO,
-                  "%*s-- %02X [%02ZX] '"_YELLOW_("%s") "'" NOLF
+                  "%*s-- %02X [%02zX] '"_YELLOW_("%s") "'" NOLF
                   , (level * 4)
                   , " "
                   , tlv->tag
