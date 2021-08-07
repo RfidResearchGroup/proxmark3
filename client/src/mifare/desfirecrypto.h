@@ -108,9 +108,10 @@ size_t DesfireGetMACLength(DesfireContext *ctx);
 
 size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint8_t crclen);
 
+uint8_t *DesfireGetKey(DesfireContext *ctx, DesfireCryptoOpKeyType key_type);
 void DesfireCryptoEncDec(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode);
 void DesfireCryptoEncDecEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool dir_to_send, bool encode, uint8_t *iv);
-void DesfireCMACGenerateSubkeys(DesfireContext *ctx, uint8_t *sk1, uint8_t *sk2);
+void DesfireCMACGenerateSubkeys(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *sk1, uint8_t *sk2);
 void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *cmac);
 void MifareKdfAn10922(DesfireContext *ctx, const uint8_t *data, size_t len);
     

@@ -151,6 +151,17 @@ size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint
     return crcposfound;
 }
 
+uint8_t *DesfireGetKey(DesfireContext *ctx, DesfireCryptoOpKeyType key_type) {
+    if (key_type == DCOSessionKeyMac) {
+        return ctx->sessionKeyMAC;
+    } else if (key_type == DCOSessionKeyEnc) {
+        return ctx->sessionKeyEnc;
+    }
+    
+    return ctx->key;
+}
+
+
 static void DesfireCryptoEncDecSingleBlock(uint8_t *key, DesfireCryptoAlgorythm keyType, uint8_t *data, uint8_t *dstdata, uint8_t *ivect, bool dir_to_send, bool encode) {
     size_t block_size = desfire_get_key_block_length(keyType);
     uint8_t sdata[MAX_CRYPTO_BLOCK_SIZE] = {0};
@@ -232,15 +243,14 @@ void DesfireCryptoEncDecEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type,
     else
         memcpy(xiv, iv, block_size);
 
+    uint8_t *key = DesfireGetKey(ctx, key_type);
+    if (key == NULL)
+        return;
+
     size_t offset = 0;
     while (offset < srcdatalen) {
-        if (key_type == DCOSessionKeyMac) {
-            DesfireCryptoEncDecSingleBlock(ctx->sessionKeyMAC, ctx->keyType, srcdata + offset, data + offset, xiv, dir_to_send, encode);
-        } else if (key_type == DCOSessionKeyEnc) {
-            DesfireCryptoEncDecSingleBlock(ctx->sessionKeyEnc, ctx->keyType, srcdata + offset, data + offset, xiv, dir_to_send, encode);
-        } else {
-            DesfireCryptoEncDecSingleBlock(ctx->key, ctx->keyType, srcdata + offset, data + offset, xiv, dir_to_send, encode);
-        }
+        DesfireCryptoEncDecSingleBlock(key, ctx->keyType, srcdata + offset, data + offset, xiv, dir_to_send, encode);
+
         offset += block_size;
     }
 
@@ -262,7 +272,7 @@ void DesfireCryptoEncDec(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, u
     DesfireCryptoEncDecEx(ctx, key_type, srcdata, srcdatalen, dstdata, dir_to_send, xencode, NULL);
 }
 
-void DesfireCMACGenerateSubkeys(DesfireContext *ctx, uint8_t *sk1, uint8_t *sk2) {
+void DesfireCMACGenerateSubkeys(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *sk1, uint8_t *sk2) {
     int kbs = desfire_get_key_block_length(ctx->keyType);
     const uint8_t R = (kbs == 8) ? 0x1B : 0x87;
 
@@ -272,7 +282,7 @@ void DesfireCMACGenerateSubkeys(DesfireContext *ctx, uint8_t *sk1, uint8_t *sk2)
     uint8_t ivect[kbs];
     memset(ivect, 0, kbs);
 
-    DesfireCryptoEncDecEx(ctx, DCOSessionKeyMac, l, kbs, l, true, true, ivect);
+    DesfireCryptoEncDecEx(ctx, key_type, l, kbs, l, true, true, ivect);
 
     bool txor = false;
 
@@ -303,7 +313,7 @@ void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *data, size_t len, uint8_t *
 
     uint8_t sk1[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
     uint8_t sk2[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
-    DesfireCMACGenerateSubkeys(ctx, sk1, sk2);
+    DesfireCMACGenerateSubkeys(ctx, DCOSessionKeyMac, sk1, sk2);
 
     memcpy(buffer, data, len);
 
@@ -337,7 +347,7 @@ void MifareKdfAn10922(DesfireContext *ctx, const uint8_t *data, size_t len) {
 
     uint8_t sk1[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
     uint8_t sk2[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
-    DesfireCMACGenerateSubkeys(ctx, sk1, sk2);
+    DesfireCMACGenerateSubkeys(ctx, DCOMainKey, sk1, sk2);
 
     // reserv atleast 32bytes.
     uint8_t buffer[DESFIRE_MAX_CRYPTO_BLOCK_SIZE * 2] = {0};
