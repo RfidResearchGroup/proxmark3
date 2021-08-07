@@ -104,6 +104,8 @@ static bool TestCMACSubkeys(void) {
     return res;
 }
 
+// https://www.nxp.com/docs/en/application-note/AN10922.pdf
+// page 8
 static bool TestAn10922KDFAES(void) {
     bool res = true;
     
@@ -113,6 +115,11 @@ static bool TestAn10922KDFAES(void) {
     DesfireSetKey(&dctx, 0, T_AES, key);
     memcpy(dctx.sessionKeyMAC, key, sizeof(key));
     
+    uint8_t kdfInput[] = {0x04, 0x78, 0x2E, 0x21, 0x80, 0x1D, 0x80, 0x30, 0x42, 0xF5, 0x4E, 0x58, 0x50, 0x20, 0x41, 0x62, 0x75};
+    MifareKdfAn10922(&dctx, kdfInput, sizeof(kdfInput));
+    
+    uint8_t dkey[] = {0xA8, 0xDD, 0x63, 0xA3, 0xB8, 0x9D, 0x54, 0xB3, 0x7C, 0xA8, 0x02, 0x47, 0x3F, 0xDA, 0x91, 0x75};
+    res = res && (memcmp(dctx.key, dkey, sizeof(dkey)) == 0);
 
     if (res)
         PrintAndLogEx(INFO, "AES An10922....... " _GREEN_("passed"));
