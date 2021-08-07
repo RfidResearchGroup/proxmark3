@@ -1220,12 +1220,6 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
             memcpy(&dctx->sessionKeyEnc[8], dctx->sessionKeyEnc, 8);
     }
 
-    if (secureChannel == DACEV1) {
-        cmac_generate_subkeys(&sesskey, MCD_RECEIVE);
-        //key->cmac_sk1 and key->cmac_sk2
-        //memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));
-    }
-
     memset(dctx->IV, 0, DESFIRE_MAX_KEY_SIZE);
     dctx->secureChannel = secureChannel;
     memcpy(dctx->sessionKeyMAC, dctx->sessionKeyEnc, desfire_get_key_length(dctx->keyType));
