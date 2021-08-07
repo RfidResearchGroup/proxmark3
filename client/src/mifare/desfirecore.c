@@ -1074,85 +1074,26 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
     uint8_t encRndA[16] = {0x00};
 
     // - Encrypt our response
-    if (secureChannel == DACd40)
-        memset(IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
     if (secureChannel == DACd40) {
-        if (dctx->keyType == T_DES) {
-            des_decrypt(encRndA, RndA, key->data);
-            memcpy(both, encRndA, rndlen);
-
-            for (uint32_t x = 0; x < rndlen; x++) {
-                rotRndB[x] = rotRndB[x] ^ encRndA[x];
-            }
-
-            des_decrypt(encRndB, rotRndB, key->data);
-            memcpy(both + rndlen, encRndB, rndlen);
-        } else if (dctx->keyType == T_3DES) {
-            des3_decrypt(encRndA, RndA, key->data, 2);
-            memcpy(both, encRndA, rndlen);
-
-            for (uint32_t x = 0; x < rndlen; x++) {
-                rotRndB[x] = rotRndB[x] ^ encRndA[x];
-            }
-
-            des3_decrypt(encRndB, rotRndB, key->data, 2);
-            memcpy(both + rndlen, encRndB, rndlen);
-        }
-    } else if (secureChannel == DACEV1 && dctx->keyType != T_AES) {
-        if (dctx->keyType == T_DES) {
-            uint8_t tmp[16] = {0x00};
-            memcpy(tmp, RndA, rndlen);
-            memcpy(tmp + rndlen, rotRndB, rndlen);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-                PrintAndLogEx(DEBUG, "Both: %s", sprint_hex(tmp, 16));
-            }
-            des_encrypt_cbc(both, tmp, 16, key->data, IV);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 16));
-            }
-        } else if (dctx->keyType == T_3DES) {
-            uint8_t tmp[16] = {0x00};
-            memcpy(tmp, RndA, rndlen);
-            memcpy(tmp + rndlen, rotRndB, rndlen);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-                PrintAndLogEx(DEBUG, "Both: %s", sprint_hex(tmp, 16));
-            }
-            tdes_nxp_send(tmp, both, 16, key->data, IV, 2);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 16));
-            }
-        } else if (dctx->keyType == T_3K3DES) {
-            uint8_t tmp[32] = {0x00};
-            memcpy(tmp, RndA, rndlen);
-            memcpy(tmp + rndlen, rotRndB, rndlen);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-                PrintAndLogEx(DEBUG, "Both3k3: %s", sprint_hex(tmp, 32));
-            }
-            tdes_nxp_send(tmp, both, 32, key->data, IV, 3);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 32));
-            }
-        }
-    } else if (secureChannel == DACEV1 && dctx->keyType == T_AES) {
+        memset(IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
+        DesfireCryptoEncDecEx(dctx, DCOMainKey, RndA, rndlen, encRndA, true, true, IV);
+        
+        memcpy(both, encRndA, rndlen);
+        bin_xor(rotRndB, encRndA, rndlen);
+        
+        memset(IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
+        DesfireCryptoEncDecEx(dctx, DCOMainKey, rotRndB, rndlen, encRndB, true, true, IV);
+        
+        memcpy(both + rndlen, encRndB, rndlen);
+    } else if (secureChannel == DACEV1) {
         uint8_t tmp[32] = {0x00};
         memcpy(tmp, RndA, rndlen);
         memcpy(tmp + rndlen, rotRndB, rndlen);
         if (g_debugMode > 1) {
             PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-            PrintAndLogEx(DEBUG, "Both3k3: %s", sprint_hex(tmp, 32));
+            PrintAndLogEx(DEBUG, "Both   : %s", sprint_hex(tmp, 32));
         }
-        if (dctx->keyType == T_AES) {
-            if (mbedtls_aes_setkey_enc(&ctx, key->data, 128) != 0) {
-                return 6;
-            }
-            mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, 32, IV, tmp, both);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 32));
-            }
-        }
+        DesfireCryptoEncDecEx(dctx, DCOMainKey, tmp, rndlen * 2, both, true, true, IV);
     }
 
     uint32_t bothlen = 16;
