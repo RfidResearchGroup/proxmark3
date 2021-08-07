@@ -86,6 +86,7 @@ static bool TestCMACSubkeys(void) {
     uint8_t sk1[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
     uint8_t sk2[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
     DesfireContext dctx;
+    // AES
     DesfireSetKey(&dctx, 0, T_AES, key);
 
     DesfireCMACGenerateSubkeys(&dctx, DCOMainKey, sk1, sk2);
@@ -95,6 +96,29 @@ static bool TestCMACSubkeys(void) {
     
     res = res && (memcmp(sk1, sk1test, sizeof(sk1test)) == 0);
     res = res && (memcmp(sk2, sk2test, sizeof(sk2test)) == 0);
+
+    // 2tdea
+    DesfireSetKey(&dctx, 0, T_3DES, key);
+
+    DesfireCMACGenerateSubkeys(&dctx, DCOMainKey, sk1, sk2);
+
+    uint8_t sk1_2tdea[] = {0xF6, 0x12, 0xEB, 0x32, 0xE4, 0x60, 0x35, 0xF3};
+    uint8_t sk2_2tdea[] = {0xEC, 0x25, 0xD6, 0x65, 0xC8, 0xC0, 0x6B, 0xFD};
+    
+    res = res && (memcmp(sk1, sk1_2tdea, sizeof(sk1_2tdea)) == 0);
+    res = res && (memcmp(sk2, sk2_2tdea, sizeof(sk2_2tdea)) == 0);
+
+    // 3tdea
+    uint8_t key3[] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+    DesfireSetKey(&dctx, 0, T_3K3DES, key3);
+
+    DesfireCMACGenerateSubkeys(&dctx, DCOMainKey, sk1, sk2);
+
+    uint8_t sk1_3tdea[] = {0xA3, 0xED, 0x58, 0xF8, 0xE6, 0x94, 0x1B, 0xCA};
+    uint8_t sk2_3tdea[] = {0x47, 0xDA, 0xB1, 0xF1, 0xCD, 0x28, 0x37, 0x8F};
+    
+    res = res && (memcmp(sk1, sk1_3tdea, sizeof(sk1_3tdea)) == 0);
+    res = res && (memcmp(sk2, sk2_3tdea, sizeof(sk2_3tdea)) == 0);
 
     if (res)
         PrintAndLogEx(INFO, "CMAC subkeys...... " _GREEN_("passed"));
