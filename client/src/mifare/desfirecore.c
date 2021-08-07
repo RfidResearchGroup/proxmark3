@@ -1045,21 +1045,6 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
 
 
     // Part 3
-    /*if (dctx->keyType == T_AES) {
-        if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
-            return 5;
-        }
-        mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, rndlen, IV, encRndB, RndB);
-    } else if (dctx->keyType == T_DES) {
-        if (secureChannel == DACd40)
-            des_decrypt(RndB, encRndB, key->data);
-        if (secureChannel == DACEV1)
-            des_decrypt_cbc(RndB, encRndB, rndlen, key->data, IV);
-    } else if (dctx->keyType == T_3DES)
-        tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 2);
-    else if (dctx->keyType == T_3K3DES) {
-        tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 3);
-    }*/
     DesfireCryptoEncDecEx(dctx, DCOMainKey, encRndB, rndlen, RndB, false, false, IV);
 
     if (g_debugMode > 1) {
@@ -1117,26 +1102,9 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
     // Part 4
     memcpy(encRndA, recv_data, rndlen);
 
-    PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, rndlen));
-    PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, rndlen));
-    /*if (dctx->keyType == T_DES) {
-        if (secureChannel == DACd40)
-            des_decrypt(encRndA, encRndA, key->data);
-        if (secureChannel == DACEV1)
-            des_decrypt_cbc(encRndA, encRndA, rndlen, key->data, IV);
-    } else if (dctx->keyType == T_3DES)
-        if (secureChannel == DACd40)
-            des3_decrypt(encRndA, encRndA, key->data, 2);
-        else
-            tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 2);
-    else if (dctx->keyType == T_3K3DES)
-        tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 3);
-    else if (dctx->keyType == T_AES) {
-        if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
-            return 10;
-        }
-        mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, rndlen, IV, encRndA, encRndA);
-    }*/
+    //PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, rndlen));
+    //PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, rndlen));
+
     if (secureChannel == DACd40)
         memset(IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
     DesfireCryptoEncDecEx(dctx, DCOMainKey, encRndA, rndlen, encRndA, false, false, IV);
@@ -1145,8 +1113,8 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
     DesfireGenSessionKeyEV1(RndA, RndB, dctx->keyType, dctx->sessionKeyEnc);
 
     rol(RndA, rndlen);
-    PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
-    PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
+    //PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
+    //PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
     for (uint32_t x = 0; x < rndlen; x++) {
         if (RndA[x] != encRndA[x]) {
             if (g_debugMode > 1) {
