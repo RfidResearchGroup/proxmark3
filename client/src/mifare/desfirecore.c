@@ -30,7 +30,6 @@
 #include "iso7816/apduinfo.h"      // APDU manipulation / errorcodes
 #include "iso7816/iso7816core.h"   // APDU logging
 #include "util_posix.h"            // msleep
-#include "mifare/desfire_crypto.h"
 #include "desfiresecurechan.h"
 #include "mifare/mad.h"
 #include "mifare/aiddesfire.h"
@@ -1174,11 +1173,6 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
     // Part 4
     memcpy(encRndA, recv_data, rndlen);
 
-    struct desfire_key sesskey = {0};
-
-    Desfire_session_key_new(RndA, RndB, key, &sesskey);
-    memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));
-
     //PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, rndlen));
     //PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, rndlen));
     if (dctx->keyType == T_DES) {
@@ -1200,6 +1194,9 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
         mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, rndlen, IV, encRndA, encRndA);
     }
 
+    // generate session key from rnda and rndb. before rol(RndA)!
+    DesfireGenSessionKeyEV1(RndA, RndB, dctx->keyType, dctx->sessionKeyEnc);
+
     rol(RndA, rndlen);
     //PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
     //PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
@@ -1212,7 +1209,7 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
             return 11;
         }
     }
-
+        
     // If the 3Des key first 8 bytes = 2nd 8 Bytes then we are really using Singe Des
     // As such we need to set the session key such that the 2nd 8 bytes = 1st 8 Bytes
     if (dctx->keyType == T_3DES) {

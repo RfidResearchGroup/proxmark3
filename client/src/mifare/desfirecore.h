@@ -16,7 +16,6 @@
 #include "common.h"
 #include "cliparser.h"
 #include "mifare/desfirecrypto.h"
-#include "mifare/desfire_crypto.h"
 #include "mifare/mifare4.h"
 
 #define DESFIRE_TX_FRAME_MAX_LEN 54
