@@ -78,6 +78,7 @@ static bool TestCRC32(void) {
     return res;
 }
 
+// https://www.nxp.com/docs/en/application-note/AN10922.pdf
 static bool TestCMACSubkeys(void) {
     bool res = true;
     
