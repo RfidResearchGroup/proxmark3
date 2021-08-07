@@ -78,6 +78,51 @@ static bool TestCRC32(void) {
     return res;
 }
 
+static bool TestCMACSubkeys(void) {
+    bool res = true;
+    
+    uint8_t key[] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
+    
+    uint8_t sk1[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+    uint8_t sk2[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+    DesfireContext dctx;
+    DesfireSetKey(&dctx, 0, T_AES, key);
+    memcpy(dctx.sessionKeyMAC, key, sizeof(key));
+
+    DesfireCMACGenerateSubkeys(&dctx, sk1, sk2);
+
+    uint8_t sk1test[] = {0xFB, 0xC9, 0xF7, 0x5C, 0x94, 0x13, 0xC0, 0x41, 0xDF, 0xEE, 0x45, 0x2D, 0x3F, 0x07, 0x06, 0xD1};
+    uint8_t sk2test[] = {0xF7, 0x93, 0xEE, 0xB9, 0x28, 0x27, 0x80, 0x83, 0xBF, 0xDC, 0x8A, 0x5A, 0x7E, 0x0E, 0x0D, 0x25};
+    
+    res = res && (memcmp(sk1, sk1test, sizeof(sk1test)) == 0);
+    res = res && (memcmp(sk2, sk2test, sizeof(sk2test)) == 0);
+
+    if (res)
+        PrintAndLogEx(INFO, "CMAC subkeys...... " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "CMAC subkeys...... " _RED_("fail"));
+
+    return res;
+}
+
+static bool TestAn10922KDFAES(void) {
+    bool res = true;
+    
+    uint8_t key[] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
+    
+    DesfireContext dctx;
+    DesfireSetKey(&dctx, 0, T_AES, key);
+    memcpy(dctx.sessionKeyMAC, key, sizeof(key));
+    
+
+    if (res)
+        PrintAndLogEx(INFO, "AES An10922....... " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "AES An10922....... " _RED_("fail"));
+
+    return res;
+}
+
 // https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/TDES_CMAC.pdf
 static bool TestCMAC3TDEA(void) {
     bool res = true;
@@ -336,6 +381,8 @@ bool DesfireTest(bool verbose) {
 
     res = res && TestCRC16();
     res = res && TestCRC32();
+    res = res && TestCMACSubkeys();
+    res = res && TestAn10922KDFAES();
     res = res && TestCMAC3TDEA();
     res = res && TestCMAC2TDEA();
     res = res && TestCMACDES();

@@ -262,7 +262,7 @@ void DesfireCryptoEncDec(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, u
     DesfireCryptoEncDecEx(ctx, key_type, srcdata, srcdatalen, dstdata, dir_to_send, xencode, NULL);
 }
 
-static void DesfireCMACGenerateSubkeys(DesfireContext *ctx, uint8_t *sk1, uint8_t *sk2) {
+void DesfireCMACGenerateSubkeys(DesfireContext *ctx, uint8_t *sk1, uint8_t *sk2) {
     int kbs = desfire_get_key_block_length(ctx->keyType);
     const uint8_t R = (kbs == 8) ? 0x1B : 0x87;
 
@@ -321,6 +321,43 @@ void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *data, size_t len, uint8_t *
 
     if (cmac != NULL)
         memcpy(cmac, ctx->IV, kbs);
+}
+
+// This function is almot like cmac(...). but with some key differences.
+void MifareKdfAn10922(DesfireContext *ctx, const uint8_t *data, size_t len) {
+    int kbs = desfire_get_key_block_length(ctx->keyType); // 8 or 16
+    if (ctx == NULL || kbs == 0 || data == NULL || len < 1 || len > 31) {
+        return;
+    }
+
+    // AES uses 16 byte IV
+    if (kbs < CRYPTO_AES_BLOCK_SIZE)
+        kbs = CRYPTO_AES_BLOCK_SIZE;
+    int kbs2 = kbs * 2;
+
+    uint8_t sk1[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+    uint8_t sk2[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+    DesfireCMACGenerateSubkeys(ctx, sk1, sk2);
+
+    // reserv atleast 32bytes.
+    uint8_t buffer[DESFIRE_MAX_CRYPTO_BLOCK_SIZE * 2] = {0};
+
+    buffer[0] = 0x01;
+    memcpy(&buffer[1], data, len++);
+
+    if (len != (kbs2)) {
+        buffer[len++] = 0x80;
+        while (len % kbs2) {
+            buffer[len++] = 0x00;
+        }
+        bin_xor(buffer + kbs, sk2, kbs);
+    } else {
+        bin_xor(buffer + kbs, sk1, kbs);
+    }
+
+    aes_encode(NULL, ctx->key, buffer, buffer, kbs2);
+
+    memcpy(ctx->key, buffer + kbs, kbs);
 }
 
 void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorythm keytype, uint8_t version) {
