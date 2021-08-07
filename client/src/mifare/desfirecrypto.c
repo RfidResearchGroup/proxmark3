@@ -31,7 +31,7 @@
 #include "crc16.h"        // crc16 ccitt
 #include "crc32.h"
 #include "commonutil.h"
-#include "mifare/desfire_crypto.h"
+#include "crypto/libpcrypto.h"
 
 void DesfireClearContext(DesfireContext *ctx) {
     ctx->keyNum = 0;
@@ -96,7 +96,7 @@ bool DesfireIsAuthenticated(DesfireContext *dctx) {
 }
 
 size_t DesfireGetMACLength(DesfireContext *ctx) {
-    size_t mac_length = MAC_LENGTH;
+    size_t mac_length = DESFIRE_MAC_LENGTH;
     switch (ctx->secureChannel) {
         case DACNone:
             mac_length = 0;
@@ -534,6 +534,45 @@ int DesfireEV2CalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t d
     mdatalen = 1 + 2 + 4 + datalen;
 
     return aes_cmac8(NULL, ctx->sessionKeyMAC, mdata, mac, mdatalen);
+}
+
+int desfire_get_key_length(DesfireCryptoAlgorythm key_type) {
+    switch (key_type) {
+        case T_DES:
+            return 8;
+        case T_3DES:
+            return 16;
+        case T_3K3DES:
+            return 24;
+        case T_AES:
+            return 16;
+    }
+    return 0;
+}
+
+size_t desfire_get_key_block_length(DesfireCryptoAlgorythm key_type) {
+    size_t block_size = 8;
+    switch (key_type) {
+        case T_DES:
+        case T_3DES:
+        case T_3K3DES:
+            block_size = 8;
+            break;
+        case T_AES:
+            block_size = 16;
+            break;
+    }
+    return block_size;
+}
+
+/*
+ * Size required to store nbytes of data in a buffer of size n*block_size.
+ */
+size_t padded_data_length(const size_t nbytes, const size_t block_size) {
+    if ((!nbytes) || (nbytes % block_size))
+        return ((nbytes / block_size) + 1) * block_size;
+    else
+        return nbytes;
 }
 
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc) {

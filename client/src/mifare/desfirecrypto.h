@@ -22,12 +22,13 @@
 #define __DESFIRECRYPTO_H
 
 #include "common.h"
-#include "mifare/mifare4.h"
 
 #define CRYPTO_AES_BLOCK_SIZE 16
 #define MAX_CRYPTO_BLOCK_SIZE 16
 #define DESFIRE_MAX_CRYPTO_BLOCK_SIZE 16
 #define DESFIRE_MAX_KEY_SIZE  24
+#define DESFIRE_MAC_LENGTH 4
+#define DESFIRE_CMAC_LENGTH 8
 
 #define DESFIRE_GET_ISO_STATUS(x) ( ((uint16_t)(0x91<<8)) + (uint16_t)x )
 
@@ -124,6 +125,10 @@ void DesfireGenSessionKeyEV1(const uint8_t rnda[], const uint8_t rndb[], Desfire
 void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool enckey, uint8_t *sessionkey);
 void DesfireEV2FillIV(DesfireContext *ctx, bool ivforcommand, uint8_t *iv);
 int DesfireEV2CalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac);
+
+int desfire_get_key_length(DesfireCryptoAlgorythm key_type);
+size_t desfire_get_key_block_length(DesfireCryptoAlgorythm key_type);
+size_t padded_data_length(const size_t nbytes, const size_t block_size);
 
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc);
 void desfire_crc32_append(uint8_t *data, const size_t len);

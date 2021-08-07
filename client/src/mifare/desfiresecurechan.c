@@ -21,7 +21,6 @@
 #include "crc32.h"
 #include "commonutil.h"
 #include "protocols.h"
-#include "mifare/desfire_crypto.h"
 
 static const uint8_t CommandsCanUseAnyChannel[] = {
     MFDES_S_ADDITIONAL_FRAME,
