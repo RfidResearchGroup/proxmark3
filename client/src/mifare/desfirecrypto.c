@@ -43,6 +43,10 @@ void DesfireClearContext(DesfireContext *ctx) {
     ctx->commMode = DCMNone;
 
     ctx->appSelected = false;
+    ctx->selectedAID = 0;
+    
+    memset(ctx->uid, 0, sizeof(ctx->uid));
+    ctx->uidlen = 0;
 
     ctx->kdfAlgo = 0;
     ctx->kdfInputLen = 0;

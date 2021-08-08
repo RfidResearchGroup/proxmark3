@@ -87,6 +87,10 @@ typedef struct DesfireContextS {
     DesfireCommunicationMode commMode;  // plain/mac/enc
 
     bool appSelected; // for iso auth
+    uint32_t selectedAID;
+    
+    uint8_t uid[10];
+    uint8_t uidlen;
 
     uint8_t IV[DESFIRE_MAX_KEY_SIZE];
     uint8_t sessionKeyMAC[DESFIRE_MAX_KEY_SIZE];

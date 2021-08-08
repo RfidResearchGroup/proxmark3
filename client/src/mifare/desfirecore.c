@@ -20,6 +20,7 @@
 #include <string.h>
 #include <util.h>
 #include "commonutil.h"
+#include "generator.h"
 #include "aes.h"
 #include "ui.h"
 #include "crc.h"
@@ -788,6 +789,7 @@ int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2) {
 
         DesfireClearSession(ctx);
         ctx->appSelected = (aid1[0] != 0x00 || aid1[1] != 0x00 || aid1[2] != 0x00);
+        ctx->selectedAID = DesfireAIDByteToUint(aid1);
 
         return PM3_SUCCESS;
     }
@@ -825,6 +827,7 @@ int DesfireSelectAIDHexNoFieldOn(DesfireContext *ctx, uint32_t aid) {
 
         DesfireClearSession(ctx);
         ctx->appSelected = (aid != 0x000000);
+        ctx->selectedAID = aid;
 
         return PM3_SUCCESS;
     }
@@ -991,13 +994,13 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
         // We will overrite any provided KDF input since a gallagher specific KDF was requested.
         dctx->kdfInputLen = 11;
 
-        /*if (mfdes_kdf_input_gallagher(tag->info.uid, tag->info.uidlen, dctx->keyNum, tag->selected_application, dctx->kdfInput, &dctx->kdfInputLen) != PM3_SUCCESS) {
+        if (mfdes_kdf_input_gallagher(dctx->uid, dctx->uidlen, dctx->keyNum, dctx->selectedAID, dctx->kdfInput, &dctx->kdfInputLen) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Could not generate Gallagher KDF input");
-        }*/
+        }
+        PrintAndLogEx(INFO, "    KDF Input: " _YELLOW_("%s"), sprint_hex(dctx->kdfInput, dctx->kdfInputLen));
 
         MifareKdfAn10922(dctx, DCOMasterKey, dctx->kdfInput, dctx->kdfInputLen);
         PrintAndLogEx(INFO, " Derrived key: " _GREEN_("%s"), sprint_hex(dctx->key, desfire_get_key_block_length(dctx->keyType)));
-        PrintAndLogEx(INFO, "    KDF Input: " _YELLOW_("%s"), sprint_hex(dctx->kdfInput, dctx->kdfInputLen));
     }
 
     uint8_t subcommand = MFDES_AUTHENTICATE;
@@ -2547,6 +2550,7 @@ int DesfireISOSelectEx(DesfireContext *dctx, bool fieldon, DesfireISOSelectContr
 
     DesfireClearSession(dctx);
     dctx->appSelected = !((cntr == ISSMFDFEF && datalen == 0) || (cntr == ISSEFByFileID && datalen == 2 && data[0] == 0 && data[1] == 0));
+    dctx->selectedAID = 0;
 
     return res;
 }
