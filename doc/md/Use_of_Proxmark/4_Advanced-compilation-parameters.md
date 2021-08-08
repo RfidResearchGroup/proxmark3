@@ -102,6 +102,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_TCPRST       | IKEA Rothult ST25TA, Standalone Master Key Dump/Emulation - Nick Draffen
 | HF_TMUDFORD     | Read and emulate ISO15693 card UID - Tim Mudford
 | HF_YOUNG        | Mifare sniff/simulation - Craig Young
+| HF_MFCSIM       | Mifare Classic simulation  - Ray Lee
 
 By default `STANDALONE=HF_MSDSAL`.
 
