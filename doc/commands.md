@@ -710,9 +710,9 @@ Check column "offline" for their availability.
 |`lf em 410x reader      `|N       |`attempt to read and extract tag data`
 |`lf em 410x sim         `|N       |`simulate EM410x tag`
 |`lf em 410x brute       `|N       |`reader bruteforce attack by simulating EM410x tags`
-|`lf em 410x watch       `|N       |`watches for EM410x 125/134 kHz tags`
-|`lf em 410x spoof       `|N       |`watches for EM410x 125/134 kHz tags, and replays them`
-|`lf em 410x clone       `|N       |`write EM410x Tag ID to T55x7 or Q5/T5555 tag`
+|`lf em 410x watch       `|N       |`watches for EM410x 125/134 kHz tags (option 'h' for 134)`
+|`lf em 410x spoof       `|N       |`watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)`
+|`lf em 410x clone       `|N       |`write EM410x UID to T55x7 or Q5/T5555 tag`
 
 
 ### lf em 4x05

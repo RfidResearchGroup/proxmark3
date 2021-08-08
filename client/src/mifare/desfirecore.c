@@ -344,7 +344,7 @@ void DesfirePrintContext(DesfireContext *ctx) {
                   CLIGetOptionListStr(DesfireSecureChannelOpts, ctx->secureChannel),
                   CLIGetOptionListStr(DesfireCommandSetOpts, ctx->cmdSet),
                   CLIGetOptionListStr(DesfireCommunicationModeOpts, ctx->commMode));
-                  
+
 
     if (DesfireIsAuthenticated(ctx)) {
         PrintAndLogEx(INFO, "Session key MAC [%d]: %s ",
@@ -853,7 +853,7 @@ void DesfirePrintAIDFunctions(uint32_t appid) {
 int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose) {
     if (verbose)
         DesfirePrintContext(dctx);
-    
+
     // needs card uid for diversification
     if (dctx->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER)
         DesfireGetCardUID(dctx);
@@ -1038,13 +1038,13 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
     if (secureChannel == DACd40) {
         memset(IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
         DesfireCryptoEncDecEx(dctx, DCOMainKey, RndA, rndlen, encRndA, true, true, IV);
-        
+
         memcpy(both, encRndA, rndlen);
         bin_xor(rotRndB, encRndA, rndlen);
-        
+
         memset(IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
         DesfireCryptoEncDecEx(dctx, DCOMainKey, rotRndB, rndlen, encRndB, true, true, IV);
-        
+
         memcpy(both + rndlen, encRndB, rndlen);
     } else if (secureChannel == DACEV1) {
         uint8_t tmp[32] = {0x00};
@@ -1084,7 +1084,7 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
     if (secureChannel == DACd40)
         memset(IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
     DesfireCryptoEncDecEx(dctx, DCOMainKey, encRndA, rndlen, encRndA, false, false, IV);
-    
+
     // generate session key from rnda and rndb. before rol(RndA)!
     DesfireGenSessionKeyEV1(RndA, RndB, dctx->keyType, dctx->sessionKeyEnc);
 
@@ -1100,7 +1100,7 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
             return 11;
         }
     }
-        
+
     // If the 3Des key first 8 bytes = 2nd 8 Bytes then we are really using Singe Des
     // As such we need to set the session key such that the 2nd 8 bytes = 1st 8 Bytes
     if (dctx->keyType == T_3DES) {
@@ -2652,21 +2652,21 @@ int DesfireISOAppendRecord(DesfireContext *dctx, uint8_t fileid, uint8_t *data, 
 
 int DesfireGetCardUID(DesfireContext *ctx) {
     iso14a_card_select_t card = {0};
-    
+
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     WaitForResponse(CMD_ACK, &resp);
 
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
     uint64_t select_status = resp.oldarg[0];
-    
+
     if (select_status == 0 || select_status == 2 || select_status == 3) {
         return PM3_ESOFT;
     }
 
     memcpy(ctx->uid, card.uid, card.uidlen);
     ctx->uidlen = card.uidlen;
-    
+
     return PM3_SUCCESS;
 }
 

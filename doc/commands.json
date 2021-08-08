@@ -973,7 +973,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log /home/iceman/.proxmark3/logs/log_20210808.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210808.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -4873,7 +4873,7 @@
         },
         "hf mfdes test": {
             "command": "hf mfdes test",
-            "description": "[=] ------ desfire tests ------ [!] no space for crc. pos: 1 [=] crc16............. passed [!] no space for crc. pos: 2 [=] crc32............. passed [=] cmac 3tdea........ passed [=] cmac 2tdea........ passed [=] cmac des.......... passed [=] ev2 session keys.. passed [=] ev2 iv calc....... passed [=] ev2 mac calc...... passed [=] --------------------------- [+] tests [ ok ] ======================================================================================= hf seos { seos rfids... } --------------------------------------------------------------------------------------- hf seos help available offline: yes help this help list list seos history --------------------------------------------------------------------------------------- hf seos info available offline: no get info from seos tags",
+            "description": "[=] ------ desfire tests ------ [!] no space for crc. pos: 1 [=] crc16............. passed [!] no space for crc. pos: 2 [=] crc32............. passed [=] cmac subkeys...... passed [=] an10922 aes....... passed [=] an10922 2tdea..... passed [=] an10922 3tdea..... passed [=] cmac 3tdea........ passed [=] cmac 2tdea........ passed [=] cmac des.......... passed [=] ev2 session keys.. passed [=] ev2 iv calc....... passed [=] ev2 mac calc...... passed [=] --------------------------- [+] tests [ ok ] ======================================================================================= hf seos { seos rfids... } --------------------------------------------------------------------------------------- hf seos help available offline: yes help this help list list seos history --------------------------------------------------------------------------------------- hf seos info available offline: no get info from seos tags",
             "notes": [
                 "hf seos info"
             ],
@@ -5737,8 +5737,8 @@
             "command": "hw connect",
             "description": "connects to a proxmark3 device via specified serial port. baudrate here is only for physical uart or uart-bt, not for usb-cdc or blue shark add-on",
             "notes": [
-                "hw connect -p /dev/ttyacm0",
-                "hw connect -p /dev/ttyacm0 -b 115200"
+                "hw connect -p com3",
+                "hw connect -p com3 -b 115200"
             ],
             "offline": true,
             "options": [
@@ -6187,7 +6187,7 @@
                 "-h, --help this help",
                 "--clk <dec> <32|64> clock (default 64)",
                 "--delay <dec> pause delay in milliseconds between uids simulation (default 1000ms)",
-                "-f, --file <hex> file with em tag ids, one id per line",
+                "-f, --file <hex> file with uids in hex format, one per line",
                 "--gap <dec> gap (0's) between id repeats (default 20)"
             ],
             "usage": "lf em 410x brute [-h] [--clk <dec>] [--delay <dec>] -f <hex> [--gap <dec>]"
@@ -6196,14 +6196,14 @@
             "command": "lf em 410x clone",
             "description": "writes em410x id to a t55x7 or q5/t5555 tag",
             "notes": [
-                "lf em 410x clone --id 0f0368568b -> write t55x7 tag",
-                "lf em 410x clone --id 0f0368568b --q5 -> write q5/t5555 tag"
+                "lf em 410x clone --id 0f0368568b -> write id to t55x7 tag",
+                "lf em 410x clone --id 0f0368568b --q5 -> write id to q5/t5555 tag"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
                 "--clk <dec> <16|32|40|64> clock (default 64)",
-                "--id <hex> em tag id number (5 hex bytes)",
+                "--id <hex> id number (5 hex bytes)",
                 "--q5 specify writing to q5/t5555 tag"
             ],
             "usage": "lf em 410x clone [-h] [--clk <dec>] --id <hex> [--q5]"
@@ -6212,12 +6212,12 @@
             "command": "lf em 410x reader",
             "description": "read em 410x tag",
             "notes": [
-                "lf em 410x reader",
+                "lf em 410x reader -> reader",
                 "lf em 410x reader -@ -> continuous reader mode",
-                "lf em 410x reader --clk 32 -> using a clock of rf/32",
-                "lf em 410x reader --clk 32 -i -> using a clock of rf/32 and inverting data",
-                "lf em 410x reader -i -> inverting data",
-                "lf em 410x reader --clk 64 -i --err 0 -> using a clock of rf/64 and inverting data and allowing 0 demod errors"
+                "lf em 410x reader --clk 32 -> reader using a clock of rf/32",
+                "lf em 410x reader --clk 32 -i -> reader using a clock of rf/32 and inverting data",
+                "lf em 410x reader -i -> reader while inverting data",
+                "lf em 410x reader --clk 64 -i --err 0 -> reader using a clock of rf/64 and inverting data and allowing 0 demod errors"
             ],
             "offline": false,
             "options": [
@@ -6245,14 +6245,14 @@
             "options": [
                 "-h, --help this help",
                 "--clk <dec> <32|64> clock (default 64)",
-                "--id <hex> em tag id number (5 hex bytes)",
+                "--id <hex> id number (5 hex bytes)",
                 "--gap <dec> gap (0's) between id repeats (default 20)"
             ],
             "usage": "lf em 410x sim [-h] [--clk <dec>] --id <hex> [--gap <dec>]"
         },
         "lf em 410x spoof": {
             "command": "lf em 410x spoof",
-            "description": "watch 'nd spoof, activates reader waits until a em 410x tag gets presented then proxmark3 starts simulating the found em tag id",
+            "description": "watch 'nd spoof, activates reader waits until a em 410x tag gets presented then proxmark3 starts simulating the found uid",
             "notes": [
                 "lf em 410x spoof"
             ],
@@ -9891,6 +9891,6 @@
     "metadata": {
         "commands_extracted": 587,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-08-08T13:35:19"
+        "extracted_on": "2021-08-08T21:11:10"
     }
 }

@@ -44,7 +44,7 @@ void DesfireClearContext(DesfireContext *ctx) {
 
     ctx->appSelected = false;
     ctx->selectedAID = 0;
-    
+
     memset(ctx->uid, 0, sizeof(ctx->uid));
     ctx->uidlen = 0;
 
@@ -164,7 +164,7 @@ uint8_t *DesfireGetKey(DesfireContext *ctx, DesfireCryptoOpKeyType key_type) {
     } else if (key_type == DCOMasterKey) {
         return ctx->masterKey;
     }
-    
+
     return ctx->key;
 }
 
@@ -370,7 +370,7 @@ void MifareKdfAn10922(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, cons
 
         DesfireClearIV(ctx);
         DesfireCryptoCMACEx(ctx, key_type, buffer, len + 1, kbs * 2, cmac);
-        
+
         buffer[0] = 0x22;
         memcpy(&buffer[1], data, len);
 
@@ -384,13 +384,13 @@ void MifareKdfAn10922(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, cons
 
         DesfireClearIV(ctx);
         DesfireCryptoCMACEx(ctx, key_type, buffer, len + 1, kbs * 2, cmac);
-        
+
         buffer[0] = 0x32;
         memcpy(&buffer[1], data, len);
 
         DesfireClearIV(ctx);
         DesfireCryptoCMACEx(ctx, key_type, buffer, len + 1, kbs * 2, &cmac[kbs]);
-        
+
         buffer[0] = 0x33;
         memcpy(&buffer[1], data, len);
 
