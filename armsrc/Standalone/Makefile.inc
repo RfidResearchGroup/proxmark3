@@ -97,3 +97,7 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_REBLAY,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_reblay.c
 endif
+ # WITH_STANDALONE_HF_MFCSIM
+ifneq (,$(findstring WITH_STANDALONE_HF_MFCSIM,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_mfcsim.c
+endif

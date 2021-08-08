@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add new standalone mode `hf_mfcsim` which can load dump from flash and simulate Mifare Classic 1K card (@axisray)
  - Added support to demodulate Electra tags and column parity check for EM410x (@doegox)
  - Fix demod plot for various demodulations (@doegox)
  - Fix `lf t55xx detect/rdbl/dump` - to override if user set `lf config` and use default values during operation (@iceman1001)
