@@ -2148,7 +2148,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     ul_print_type(tagtype, 0);
     PrintAndLogEx(SUCCESS, "Reading tag memory...");
     uint8_t keytype = 0;
-    if (has_auth_key) {
+    if (has_auth_key || has_pwd) {
         if (tagtype & UL_C)
             keytype = 1; //UL_C auth
         else
