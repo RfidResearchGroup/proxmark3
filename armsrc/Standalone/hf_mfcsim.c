@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// RayCN, 2021
+// Ray Lee, 2021
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -30,7 +30,7 @@
  * It requires RDV4 hardware (for flash and battery).
  *
  * On entering stand-alone mode, this module will start simulating.
- * Data is read from bin dump file uploaded to flash memory (hf_mfcsim_dump_1.bin).
+ * Data is read from bin dump file uploaded to flash memory (hf_mfcsim_dump.bin).
  * Only support mifare classic 1k
  *
  * LEDs:
@@ -39,13 +39,13 @@
  * - LED C blinking: data transmiting
  *
  * To upload input file (eml format) to flash:
- * - mem spiffs upload -s <filename> -d hf_mfcsim_dump_1.bin
+ * - mem spiffs upload -s <filename> -d hf_mfcsim_dump.bin
  * To delete the input file from flash:
- * - mem spiffs remove -f hf_mfcsim_dump_1.bin
+ * - mem spiffs remove -f hf_mfcsim_dump.bin
  *
  */
 
-#define HF_MFCSIM_INPUTFILE_SIM         "hf_mfcsim_dump_1.bin"
+#define HF_MFCSIM_INPUTFILE_SIM         "hf_mfcsim_dump.bin"
 #define DUMP_SIZE                       1024
 
 static uint8_t uid[10];
