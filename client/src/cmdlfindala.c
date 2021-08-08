@@ -198,12 +198,17 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
         parity |= DemodBuffer[34] << 1; // b2
         parity |= DemodBuffer[38] << 0; // b1
 
+        uint8_t checksum = 0;
+        checksum |= DemodBuffer[62] << 1; // b2
+        checksum |= DemodBuffer[63] << 0; // b1
+
         PrintAndLogEx(SUCCESS, "Fmt " _GREEN_("26") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u") " Parity: " _GREEN_("%1d%1d")
                       , fc
                       , csn
                       , parity >> 1 & 0x01
                       , parity & 0x01
                      );
+        PrintAndLogEx(DEBUG, "two bit checksum... " _GREEN_("%1d%1d"), checksum >> 1 & 0x01, checksum & 0x01);
 
         PrintAndLogEx(SUCCESS, "Possible de-scramble patterns");
         // This doesn't seem to line up with the hot-stamp numbers on any HID cards I have seen, but, leaving it alone since I do not know how those work. -MS

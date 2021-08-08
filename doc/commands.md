@@ -503,26 +503,26 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf mfdes help          `|Y       |`This help`
+|`hf mfdes info          `|N       |`Tag information`
+|`hf mfdes getuid        `|N       |`Get uid from card`
 |`hf mfdes default       `|N       |`Set defaults for all the commands`
 |`hf mfdes auth          `|N       |`MIFARE DesFire Authentication`
 |`hf mfdes chk           `|N       |`[old]Check keys`
-|`hf mfdes enum          `|N       |`[old]Tries enumerate all applications`
-|`hf mfdes formatpicc    `|N       |`Format PICC`
 |`hf mfdes freemem       `|N       |`Get free memory size`
-|`hf mfdes getuid        `|N       |`Get uid from card`
 |`hf mfdes setconfig     `|N       |`Set card configuration`
-|`hf mfdes info          `|N       |`[old]Tag information`
+|`hf mfdes formatpicc    `|N       |`Format PICC`
 |`hf mfdes list          `|Y       |`List DESFire (ISO 14443A) history`
-|`hf mfdes changekey     `|N       |`Change Key`
-|`hf mfdes chkeysettings `|N       |`Change Key Settings`
-|`hf mfdes getkeysettings`|N       |`Get Key Settings`
-|`hf mfdes getkeyversions`|N       |`Get Key Versions`
+|`hf mfdes lsapp         `|N       |`Show all applications with files list`
+|`hf mfdes getaids       `|N       |`Get Application IDs list`
+|`hf mfdes getappnames   `|N       |`Get Applications list`
 |`hf mfdes bruteaid      `|N       |`Recover AIDs by bruteforce`
 |`hf mfdes createapp     `|N       |`Create Application`
 |`hf mfdes deleteapp     `|N       |`Delete Application`
 |`hf mfdes selectapp     `|N       |`Select Application ID`
-|`hf mfdes getaids       `|N       |`Get Application IDs list`
-|`hf mfdes getappnames   `|N       |`Get Applications list`
+|`hf mfdes changekey     `|N       |`Change Key`
+|`hf mfdes chkeysettings `|N       |`Change Key Settings`
+|`hf mfdes getkeysettings`|N       |`Get Key Settings`
+|`hf mfdes getkeyversions`|N       |`Get Key Versions`
 |`hf mfdes getfileids    `|N       |`Get File IDs list`
 |`hf mfdes getfileisoids `|N       |`Get File ISO IDs list`
 |`hf mfdes lsfiles       `|N       |`Show all files list`
