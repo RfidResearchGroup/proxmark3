@@ -344,38 +344,34 @@ void MifareKdfAn10922(DesfireContext *ctx, const uint8_t *data, size_t len) {
         return;
     }
 
-    // AES uses 16 byte IV
-    if (kbs < CRYPTO_AES_BLOCK_SIZE)
-        kbs = CRYPTO_AES_BLOCK_SIZE;
-    int kbs2 = kbs * 2;
-
-    uint8_t sk1[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
-    uint8_t sk2[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
-    DesfireCMACGenerateSubkeys(ctx, DCOMainKey, sk1, sk2);
-
-    // reserv atleast 32bytes.
+    uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
     uint8_t buffer[DESFIRE_MAX_CRYPTO_BLOCK_SIZE * 2] = {0};
 
-    buffer[0] = 0x01;
-    memcpy(&buffer[1], data, len++);
+    if (ctx->keyType == T_AES) {
+        // AES uses 16 byte IV
+        if (kbs < CRYPTO_AES_BLOCK_SIZE)
+            kbs = CRYPTO_AES_BLOCK_SIZE;
 
-    uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
-    DesfireCryptoCMACEx(ctx, buffer, len, kbs2, cmac);
-    memcpy(ctx->key, cmac, kbs);
+        buffer[0] = 0x01;
+        memcpy(&buffer[1], data, len++);
 
-    /*if (len != (kbs2)) {
-        buffer[len++] = 0x80;
-        while (len % kbs2) {
-            buffer[len++] = 0x00;
-        }
-        bin_xor(buffer + kbs, sk2, kbs);
-    } else {
-        bin_xor(buffer + kbs, sk1, kbs);
+        DesfireCryptoCMACEx(ctx, buffer, len, kbs * 2, cmac);
+        memcpy(ctx->key, cmac, kbs);
+    } else if (ctx->keyType == T_3DES) {
+        buffer[0] = 0x21;
+        memcpy(&buffer[1], data, len);
+
+        DesfireClearIV(ctx);
+        DesfireCryptoCMACEx(ctx, buffer, len + 1, kbs * 2, cmac);
+        
+        buffer[0] = 0x22;
+        memcpy(&buffer[1], data, len);
+
+        DesfireClearIV(ctx);
+        DesfireCryptoCMACEx(ctx, buffer, len + 1, kbs * 2, &cmac[kbs]);
+
+        memcpy(ctx->key, cmac, kbs * 2);
     }
-
-    aes_encode(NULL, ctx->key, buffer, buffer, kbs2);
-
-    memcpy(ctx->key, buffer + kbs, kbs);*/
 }
 
 void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorythm keytype, uint8_t version) {

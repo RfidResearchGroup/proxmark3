@@ -154,6 +154,29 @@ static bool TestAn10922KDFAES(void) {
     return res;
 }
 
+static bool TestAn10922KDF2TDEA(void) {
+    bool res = true;
+    
+    uint8_t key[] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
+    
+    DesfireContext dctx;
+    DesfireSetKey(&dctx, 0, T_3DES, key);
+    memcpy(dctx.sessionKeyMAC, key, sizeof(key));
+
+    uint8_t kdfInput[] = {0x04, 0x78, 0x2E, 0x21, 0x80, 0x1D, 0x80, 0x30, 0x42, 0xF5, 0x4E, 0x58, 0x50, 0x20, 0x41};
+    MifareKdfAn10922(&dctx, kdfInput, sizeof(kdfInput));
+    
+    uint8_t dkey[] = {0x16, 0xF8, 0x59, 0x7C, 0x9E, 0x89, 0x10, 0xC8, 0x6B, 0x96, 0x48, 0xD0, 0x06, 0x10, 0x7D, 0xD7};
+    res = res && (memcmp(dctx.key, dkey, sizeof(dkey)) == 0);
+
+    if (res)
+        PrintAndLogEx(INFO, "2TDEA An10922..... " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "2TDEA An10922..... " _RED_("fail"));
+
+    return res;
+}
+
 // https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/TDES_CMAC.pdf
 static bool TestCMAC3TDEA(void) {
     bool res = true;
@@ -414,6 +437,7 @@ bool DesfireTest(bool verbose) {
     res = res && TestCRC32();
     res = res && TestCMACSubkeys();
     res = res && TestAn10922KDFAES();
+    res = res && TestAn10922KDF2TDEA();
     res = res && TestCMAC3TDEA();
     res = res && TestCMAC2TDEA();
     res = res && TestCMACDES();
