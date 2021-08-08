@@ -403,8 +403,11 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
         PrintAndLogEx(INFO, "E-> Error ATS length(%d) : %s", card->ats_len, sprint_hex(card->ats, card->ats_len));
         return 1;
     }
-
-    PrintAndLogEx(SUCCESS, " ATS: %s", sprint_hex(card->ats, card->ats_len));
+    
+    if (card->ats_len == card->ats[0] + 2)
+        PrintAndLogEx(SUCCESS, " ATS: [%d] %s", card->ats[0], sprint_hex(card->ats, card->ats[0]));
+    else
+        PrintAndLogEx(SUCCESS, " ATS: [%d] %s", card->ats_len, sprint_hex(card->ats, card->ats_len));
     return 0;
 }
 
@@ -498,7 +501,10 @@ static int CmdHF14AReader(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02x [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
 
                 if (card.ats_len >= 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
-                    PrintAndLogEx(SUCCESS, " ATS: " _GREEN_("%s"), sprint_hex(card.ats, card.ats_len));
+                    if (card.ats_len == card.ats[0] + 2)
+                        PrintAndLogEx(SUCCESS, " ATS: "  _GREEN_("%s"), sprint_hex(card.ats, card.ats[0]));
+                    else
+                        PrintAndLogEx(SUCCESS, " ATS: [%d] "  _GREEN_("%s"), card.ats_len, sprint_hex(card.ats, card.ats_len));
                 }
             }
             if (!disconnectAfter) {
