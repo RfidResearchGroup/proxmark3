@@ -88,7 +88,7 @@ typedef struct DesfireContextS {
 
     bool appSelected; // for iso auth
     uint32_t selectedAID;
-    
+
     uint8_t uid[10];
     uint8_t uidlen;
 
@@ -121,7 +121,7 @@ void DesfireCMACGenerateSubkeys(DesfireContext *ctx, DesfireCryptoOpKeyType key_
 void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *cmac);
 void DesfireCryptoCMACEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *data, size_t len, size_t minlen, uint8_t *cmac);
 void MifareKdfAn10922(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, const uint8_t *data, size_t len);
-    
+
 void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorythm keytype, uint8_t version);
 uint8_t DesfireDESKeyGetVersion(uint8_t *key);
 
