@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Changed `lf em 410x *` - now better text (@clach04)
- - Fix `hf mf dump` - now sets keytype correct #1426 (@axisray)
+ - Fix `hf mfu dump` - now sets keytype correct #1426 (@axisray)
  - Add new standalone mode `hf_mfcsim` which can load dump from flash and simulate Mifare Classic 1K card (@axisray)
  - Added support to demodulate Electra tags and column parity check for EM410x (@doegox)
  - Fix demod plot for various demodulations (@doegox)
