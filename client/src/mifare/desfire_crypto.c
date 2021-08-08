@@ -53,20 +53,6 @@ static inline void update_key_schedules(desfirekey_t key) {
     // }
 }
 
-int desfire_get_key_length(enum DESFIRE_CRYPTOALGO key_type) {
-    switch (key_type) {
-        case T_DES:
-            return 8;
-        case T_3DES:
-            return 16;
-        case T_3K3DES:
-            return 24;
-        case T_AES:
-            return 16;
-    }
-    return 0;
-}
-
 /******************************************************************************/
 
 void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode) {
@@ -334,7 +320,6 @@ void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t le
 // This function is almot like cmac(...). but with some key differences.
 void mifare_kdf_an10922(const desfirekey_t key, const uint8_t *data, size_t len) {
     int kbs = key_block_size(key);
-    int kbs2 = kbs * 2;
     if (key == NULL || kbs == 0 || data == NULL || len < 1 || len > 31) {
         return;
     }
@@ -342,6 +327,7 @@ void mifare_kdf_an10922(const desfirekey_t key, const uint8_t *data, size_t len)
     // AES uses 16 byte IV
     if (kbs < 16)
         kbs = 16;
+    int kbs2 = kbs * 2;
 
     cmac_generate_subkeys(key, MCD_SEND);
 
@@ -382,21 +368,6 @@ void mifare_kdf_an10922(const desfirekey_t key, const uint8_t *data, size_t len)
     free(buffer);
 }
 
-size_t desfire_get_key_block_length(enum DESFIRE_CRYPTOALGO key_type) {
-    size_t block_size = 8;
-    switch (key_type) {
-        case T_DES:
-        case T_3DES:
-        case T_3K3DES:
-            block_size = 8;
-            break;
-        case T_AES:
-            block_size = 16;
-            break;
-    }
-    return block_size;
-}
-
 size_t key_block_size(const desfirekey_t key) {
     if (key == NULL) {
         return 0;
@@ -420,16 +391,6 @@ static size_t key_macing_length(const desfirekey_t key) {
             break;
     }
     return mac_length;
-}
-
-/*
- * Size required to store nbytes of data in a buffer of size n*block_size.
- */
-size_t padded_data_length(const size_t nbytes, const size_t block_size) {
-    if ((!nbytes) || (nbytes % block_size))
-        return ((nbytes / block_size) + 1) * block_size;
-    else
-        return nbytes;
 }
 
 /*

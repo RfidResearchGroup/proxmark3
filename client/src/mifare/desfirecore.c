@@ -20,6 +20,7 @@
 #include <string.h>
 #include <util.h>
 #include "commonutil.h"
+#include "generator.h"
 #include "aes.h"
 #include "ui.h"
 #include "crc.h"
@@ -30,7 +31,6 @@
 #include "iso7816/apduinfo.h"      // APDU manipulation / errorcodes
 #include "iso7816/iso7816core.h"   // APDU logging
 #include "util_posix.h"            // msleep
-#include "mifare/desfire_crypto.h"
 #include "desfiresecurechan.h"
 #include "mifare/mad.h"
 #include "mifare/aiddesfire.h"
@@ -335,13 +335,16 @@ void DesfirePrintContext(DesfireContext *ctx) {
                   sprint_hex(ctx->key,
                              desfire_get_key_length(ctx->keyType)));
 
-    if (ctx->kdfAlgo != MFDES_KDF_ALGO_NONE)
+    if (ctx->kdfAlgo != MFDES_KDF_ALGO_NONE) {
         PrintAndLogEx(INFO, "KDF algo: %s KDF input[%d]: %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, ctx->kdfAlgo), ctx->kdfInputLen, sprint_hex(ctx->kdfInput, ctx->kdfInputLen));
+        PrintAndLogEx(INFO, "AID: %06x UID[%d]: %s", ctx->selectedAID, ctx->uidlen, sprint_hex(ctx->uid, ctx->uidlen));
+    }
 
     PrintAndLogEx(INFO, "Secure channel: %s Command set: %s Communication mode: %s",
                   CLIGetOptionListStr(DesfireSecureChannelOpts, ctx->secureChannel),
                   CLIGetOptionListStr(DesfireCommandSetOpts, ctx->cmdSet),
                   CLIGetOptionListStr(DesfireCommunicationModeOpts, ctx->commMode));
+                  
 
     if (DesfireIsAuthenticated(ctx)) {
         PrintAndLogEx(INFO, "Session key MAC [%d]: %s ",
@@ -789,6 +792,7 @@ int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2) {
 
         DesfireClearSession(ctx);
         ctx->appSelected = (aid1[0] != 0x00 || aid1[1] != 0x00 || aid1[2] != 0x00);
+        ctx->selectedAID = DesfireAIDByteToUint(aid1);
 
         return PM3_SUCCESS;
     }
@@ -826,6 +830,7 @@ int DesfireSelectAIDHexNoFieldOn(DesfireContext *ctx, uint32_t aid) {
 
         DesfireClearSession(ctx);
         ctx->appSelected = (aid != 0x000000);
+        ctx->selectedAID = aid;
 
         return PM3_SUCCESS;
     }
@@ -845,10 +850,13 @@ void DesfirePrintAIDFunctions(uint32_t appid) {
     }
 }
 
-
 int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose) {
     if (verbose)
         DesfirePrintContext(dctx);
+    
+    // needs card uid for diversification
+    if (dctx->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER)
+        DesfireGetCardUID(dctx);
 
     bool isosw = false;
     if (dctx->cmdSet == DCCISO) {
@@ -957,8 +965,6 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
     if (secureChannel == DACNone)
         return PM3_SUCCESS;
 
-    mbedtls_aes_context ctx;
-
     uint8_t keybytes[24] = {0};
     // Crypt constants
     uint8_t IV[16] = {0};
@@ -970,37 +976,6 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
 
     // Part 1
     memcpy(keybytes, dctx->key, desfire_get_key_length(dctx->keyType));
-
-    struct desfire_key dkey = {0};
-    desfirekey_t key = &dkey;
-
-    if (dctx->keyType == T_AES) {
-        mbedtls_aes_init(&ctx);
-        Desfire_aes_key_new(keybytes, key);
-    } else if (dctx->keyType == T_3DES) {
-        Desfire_3des_key_new_with_version(keybytes, key);
-    } else if (dctx->keyType == T_DES) {
-        Desfire_des_key_new(keybytes, key);
-    } else if (dctx->keyType == T_3K3DES) {
-        Desfire_3k3des_key_new_with_version(keybytes, key);
-    }
-
-    if (dctx->kdfAlgo == MFDES_KDF_ALGO_AN10922) {
-        mifare_kdf_an10922(key, dctx->kdfInput, dctx->kdfInputLen);
-        PrintAndLogEx(DEBUG, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
-    } else if (dctx->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER) {
-        // We will overrite any provided KDF input since a gallagher specific KDF was requested.
-        dctx->kdfInputLen = 11;
-
-        /*if (mfdes_kdf_input_gallagher(tag->info.uid, tag->info.uidlen, dctx->keyNum, tag->selected_application, dctx->kdfInput, &dctx->kdfInputLen) != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "Could not generate Gallagher KDF input");
-        }*/
-
-        mifare_kdf_an10922(key, dctx->kdfInput, dctx->kdfInputLen);
-        PrintAndLogEx(DEBUG, "    KDF Input: " _YELLOW_("%s"), sprint_hex(dctx->kdfInput, dctx->kdfInputLen));
-        PrintAndLogEx(DEBUG, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
-
-    }
 
     uint8_t subcommand = MFDES_AUTHENTICATE;
     if (secureChannel == DACEV1) {
@@ -1046,21 +1021,7 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
 
 
     // Part 3
-    if (dctx->keyType == T_AES) {
-        if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
-            return 5;
-        }
-        mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, rndlen, IV, encRndB, RndB);
-    } else if (dctx->keyType == T_DES) {
-        if (secureChannel == DACd40)
-            des_decrypt(RndB, encRndB, key->data);
-        if (secureChannel == DACEV1)
-            des_decrypt_cbc(RndB, encRndB, rndlen, key->data, IV);
-    } else if (dctx->keyType == T_3DES)
-        tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 2);
-    else if (dctx->keyType == T_3K3DES) {
-        tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 3);
-    }
+    DesfireCryptoEncDecEx(dctx, DCOMainKey, encRndB, rndlen, RndB, false, false, IV);
 
     if (g_debugMode > 1) {
         PrintAndLogEx(DEBUG, "encRndB: %s", sprint_hex(encRndB, 8));
@@ -1075,82 +1036,25 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
 
     // - Encrypt our response
     if (secureChannel == DACd40) {
-        if (dctx->keyType == T_DES) {
-            des_decrypt(encRndA, RndA, key->data);
-            memcpy(both, encRndA, rndlen);
-
-            for (uint32_t x = 0; x < rndlen; x++) {
-                rotRndB[x] = rotRndB[x] ^ encRndA[x];
-            }
-
-            des_decrypt(encRndB, rotRndB, key->data);
-            memcpy(both + rndlen, encRndB, rndlen);
-        } else if (dctx->keyType == T_3DES) {
-            des3_decrypt(encRndA, RndA, key->data, 2);
-            memcpy(both, encRndA, rndlen);
-
-            for (uint32_t x = 0; x < rndlen; x++) {
-                rotRndB[x] = rotRndB[x] ^ encRndA[x];
-            }
-
-            des3_decrypt(encRndB, rotRndB, key->data, 2);
-            memcpy(both + rndlen, encRndB, rndlen);
-        }
-    } else if (secureChannel == DACEV1 && dctx->keyType != T_AES) {
-        if (dctx->keyType == T_DES) {
-            uint8_t tmp[16] = {0x00};
-            memcpy(tmp, RndA, rndlen);
-            memcpy(tmp + rndlen, rotRndB, rndlen);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-                PrintAndLogEx(DEBUG, "Both: %s", sprint_hex(tmp, 16));
-            }
-            des_encrypt_cbc(both, tmp, 16, key->data, IV);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 16));
-            }
-        } else if (dctx->keyType == T_3DES) {
-            uint8_t tmp[16] = {0x00};
-            memcpy(tmp, RndA, rndlen);
-            memcpy(tmp + rndlen, rotRndB, rndlen);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-                PrintAndLogEx(DEBUG, "Both: %s", sprint_hex(tmp, 16));
-            }
-            tdes_nxp_send(tmp, both, 16, key->data, IV, 2);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 16));
-            }
-        } else if (dctx->keyType == T_3K3DES) {
-            uint8_t tmp[32] = {0x00};
-            memcpy(tmp, RndA, rndlen);
-            memcpy(tmp + rndlen, rotRndB, rndlen);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-                PrintAndLogEx(DEBUG, "Both3k3: %s", sprint_hex(tmp, 32));
-            }
-            tdes_nxp_send(tmp, both, 32, key->data, IV, 3);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 32));
-            }
-        }
-    } else if (secureChannel == DACEV1 && dctx->keyType == T_AES) {
+        memset(IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
+        DesfireCryptoEncDecEx(dctx, DCOMainKey, RndA, rndlen, encRndA, true, true, IV);
+        
+        memcpy(both, encRndA, rndlen);
+        bin_xor(rotRndB, encRndA, rndlen);
+        
+        memset(IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
+        DesfireCryptoEncDecEx(dctx, DCOMainKey, rotRndB, rndlen, encRndB, true, true, IV);
+        
+        memcpy(both + rndlen, encRndB, rndlen);
+    } else if (secureChannel == DACEV1) {
         uint8_t tmp[32] = {0x00};
         memcpy(tmp, RndA, rndlen);
         memcpy(tmp + rndlen, rotRndB, rndlen);
         if (g_debugMode > 1) {
             PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-            PrintAndLogEx(DEBUG, "Both3k3: %s", sprint_hex(tmp, 32));
+            PrintAndLogEx(DEBUG, "Both   : %s", sprint_hex(tmp, 32));
         }
-        if (dctx->keyType == T_AES) {
-            if (mbedtls_aes_setkey_enc(&ctx, key->data, 128) != 0) {
-                return 6;
-            }
-            mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, 32, IV, tmp, both);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 32));
-            }
-        }
+        DesfireCryptoEncDecEx(dctx, DCOMainKey, tmp, rndlen * 2, both, true, true, IV);
     }
 
     uint32_t bothlen = 16;
@@ -1174,31 +1078,15 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
     // Part 4
     memcpy(encRndA, recv_data, rndlen);
 
-    struct desfire_key sesskey = {0};
-
-    Desfire_session_key_new(RndA, RndB, key, &sesskey);
-    memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));
-
     //PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, rndlen));
     //PrintAndLogEx(INFO, "IV : %s", sprint_hex(IV, rndlen));
-    if (dctx->keyType == T_DES) {
-        if (secureChannel == DACd40)
-            des_decrypt(encRndA, encRndA, key->data);
-        if (secureChannel == DACEV1)
-            des_decrypt_cbc(encRndA, encRndA, rndlen, key->data, IV);
-    } else if (dctx->keyType == T_3DES)
-        if (secureChannel == DACd40)
-            des3_decrypt(encRndA, encRndA, key->data, 2);
-        else
-            tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 2);
-    else if (dctx->keyType == T_3K3DES)
-        tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 3);
-    else if (dctx->keyType == T_AES) {
-        if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
-            return 10;
-        }
-        mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, rndlen, IV, encRndA, encRndA);
-    }
+
+    if (secureChannel == DACd40)
+        memset(IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
+    DesfireCryptoEncDecEx(dctx, DCOMainKey, encRndA, rndlen, encRndA, false, false, IV);
+    
+    // generate session key from rnda and rndb. before rol(RndA)!
+    DesfireGenSessionKeyEV1(RndA, RndB, dctx->keyType, dctx->sessionKeyEnc);
 
     rol(RndA, rndlen);
     //PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
@@ -1212,18 +1100,12 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
             return 11;
         }
     }
-
+        
     // If the 3Des key first 8 bytes = 2nd 8 Bytes then we are really using Singe Des
     // As such we need to set the session key such that the 2nd 8 bytes = 1st 8 Bytes
     if (dctx->keyType == T_3DES) {
-        if (memcmp(key->data, &key->data[8], 8) == 0)
+        if (memcmp(dctx->key, &dctx->key[8], 8) == 0)
             memcpy(&dctx->sessionKeyEnc[8], dctx->sessionKeyEnc, 8);
-    }
-
-    if (secureChannel == DACEV1) {
-        cmac_generate_subkeys(&sesskey, MCD_RECEIVE);
-        //key->cmac_sk1 and key->cmac_sk2
-        //memcpy(dctx->sessionKeyEnc, sesskey.data, desfire_get_key_length(dctx->keyType));
     }
 
     memset(dctx->IV, 0, DESFIRE_MAX_KEY_SIZE);
@@ -1420,6 +1302,22 @@ static int DesfireAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel sec
 }
 
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
+    if (dctx->kdfAlgo == MFDES_KDF_ALGO_AN10922) {
+        MifareKdfAn10922(dctx, DCOMasterKey, dctx->kdfInput, dctx->kdfInputLen);
+        PrintAndLogEx(DEBUG, " Derrived key: " _GREEN_("%s"), sprint_hex(dctx->key, desfire_get_key_block_length(dctx->keyType)));
+    } else if (dctx->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER) {
+        // We will overrite any provided KDF input since a gallagher specific KDF was requested.
+        dctx->kdfInputLen = 11;
+
+        if (mfdes_kdf_input_gallagher(dctx->uid, dctx->uidlen, dctx->keyNum, dctx->selectedAID, dctx->kdfInput, &dctx->kdfInputLen) != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Could not generate Gallagher KDF input");
+        }
+        PrintAndLogEx(DEBUG, "    KDF Input: " _YELLOW_("%s"), sprint_hex(dctx->kdfInput, dctx->kdfInputLen));
+
+        MifareKdfAn10922(dctx, DCOMasterKey, dctx->kdfInput, dctx->kdfInputLen);
+        PrintAndLogEx(DEBUG, " Derrived key: " _GREEN_("%s"), sprint_hex(dctx->key, desfire_get_key_block_length(dctx->keyType)));
+    }
+
     if (dctx->cmdSet == DCCISO && secureChannel != DACEV2)
         return DesfireAuthenticateISO(dctx, secureChannel, verbose);
 
@@ -2642,6 +2540,7 @@ int DesfireISOSelectEx(DesfireContext *dctx, bool fieldon, DesfireISOSelectContr
 
     DesfireClearSession(dctx);
     dctx->appSelected = !((cntr == ISSMFDFEF && datalen == 0) || (cntr == ISSEFByFileID && datalen == 2 && data[0] == 0 && data[1] == 0));
+    dctx->selectedAID = 0;
 
     return res;
 }
@@ -2749,6 +2648,26 @@ int DesfireISOAppendRecord(DesfireContext *dctx, uint8_t fileid, uint8_t *data, 
         return PM3_ESOFT;
 
     return res;
+}
+
+int DesfireGetCardUID(DesfireContext *ctx) {
+    iso14a_card_select_t card = {0};
+    
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    WaitForResponse(CMD_ACK, &resp);
+
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+    uint64_t select_status = resp.oldarg[0];
+    
+    if (select_status == 0 || select_status == 2 || select_status == 3) {
+        return PM3_ESOFT;
+    }
+
+    memcpy(ctx->uid, card.uid, card.uidlen);
+    ctx->uidlen = card.uidlen;
+    
+    return PM3_SUCCESS;
 }
 
 int DesfireSelectEx(DesfireContext *ctx, bool fieldon, DesfireISOSelectWay way, uint32_t id, char *dfname) {

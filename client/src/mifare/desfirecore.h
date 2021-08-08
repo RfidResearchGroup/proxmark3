@@ -16,8 +16,6 @@
 #include "common.h"
 #include "cliparser.h"
 #include "mifare/desfirecrypto.h"
-#include "mifare/desfire_crypto.h"
-#include "mifare/mifare4.h"
 
 #define DESFIRE_TX_FRAME_MAX_LEN 54
 
@@ -167,6 +165,8 @@ int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2);
 int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uint32_t aid2);
 int DesfireSelectAIDHexNoFieldOn(DesfireContext *ctx, uint32_t aid);
 void DesfirePrintAIDFunctions(uint32_t appid);
+
+int DesfireGetCardUID(DesfireContext *ctx);
 
 int DesfireSelectEx(DesfireContext *ctx, bool fieldon, DesfireISOSelectWay way, uint32_t id, char *dfname);
 int DesfireSelect(DesfireContext *ctx, DesfireISOSelectWay way, uint32_t id, char *dfname);

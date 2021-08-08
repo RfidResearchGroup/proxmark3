@@ -16,7 +16,6 @@
 #include "common.h"
 #include "mifare/desfirecore.h"
 #include "mifare/desfirecrypto.h"
-#include "mifare/desfire_crypto.h"
 #include "mifare/mifare4.h"
 
 typedef struct {
