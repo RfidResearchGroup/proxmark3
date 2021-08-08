@@ -147,9 +147,9 @@ static bool TestAn10922KDFAES(void) {
     res = res && (memcmp(dctx.key, dkey, sizeof(dkey)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "AES An10922....... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "An10922 AES....... " _GREEN_("passed"));
     else
-        PrintAndLogEx(ERR,  "AES An10922....... " _RED_("fail"));
+        PrintAndLogEx(ERR,  "An10922 AES....... " _RED_("fail"));
 
     return res;
 }
@@ -170,9 +170,33 @@ static bool TestAn10922KDF2TDEA(void) {
     res = res && (memcmp(dctx.key, dkey, sizeof(dkey)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "2TDEA An10922..... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "An10922 2TDEA..... " _GREEN_("passed"));
     else
-        PrintAndLogEx(ERR,  "2TDEA An10922..... " _RED_("fail"));
+        PrintAndLogEx(ERR,  "An10922 2TDEA..... " _RED_("fail"));
+
+    return res;
+}
+
+static bool TestAn10922KDF3TDEA(void) {
+    bool res = true;
+    
+    uint8_t key[] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+    
+    DesfireContext dctx;
+    DesfireSetKey(&dctx, 0, T_3K3DES, key);
+    memcpy(dctx.sessionKeyMAC, key, sizeof(key));
+
+    uint8_t kdfInput[] = {0x04, 0x78, 0x2E, 0x21, 0x80, 0x1D, 0x80, 0x30, 0x42, 0xF5, 0x4E, 0x58, 0x50};
+    MifareKdfAn10922(&dctx, kdfInput, sizeof(kdfInput));
+    
+    uint8_t dkey[] = {0x2F, 0x0D, 0xD0, 0x36, 0x75, 0xD3, 0xFB, 0x9A, 0x57, 0x05, 0xAB, 0x0B, 0xDA, 0x91, 0xCA, 0x0B, 
+                      0x55, 0xB8, 0xE0, 0x7F, 0xCD, 0xBF, 0x10, 0xEC};
+    res = res && (memcmp(dctx.key, dkey, sizeof(dkey)) == 0);
+
+    if (res)
+        PrintAndLogEx(INFO, "An10922 3TDEA..... " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "An10922 3TDEA..... " _RED_("fail"));
 
     return res;
 }
@@ -438,6 +462,7 @@ bool DesfireTest(bool verbose) {
     res = res && TestCMACSubkeys();
     res = res && TestAn10922KDFAES();
     res = res && TestAn10922KDF2TDEA();
+    res = res && TestAn10922KDF3TDEA();
     res = res && TestCMAC3TDEA();
     res = res && TestCMAC2TDEA();
     res = res && TestCMACDES();

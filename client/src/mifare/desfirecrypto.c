@@ -344,8 +344,8 @@ void MifareKdfAn10922(DesfireContext *ctx, const uint8_t *data, size_t len) {
         return;
     }
 
-    uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
-    uint8_t buffer[DESFIRE_MAX_CRYPTO_BLOCK_SIZE * 2] = {0};
+    uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE * 3] = {0};
+    uint8_t buffer[DESFIRE_MAX_CRYPTO_BLOCK_SIZE * 3] = {0};
 
     if (ctx->keyType == T_AES) {
         // AES uses 16 byte IV
@@ -371,6 +371,26 @@ void MifareKdfAn10922(DesfireContext *ctx, const uint8_t *data, size_t len) {
         DesfireCryptoCMACEx(ctx, buffer, len + 1, kbs * 2, &cmac[kbs]);
 
         memcpy(ctx->key, cmac, kbs * 2);
+    } else if (ctx->keyType == T_3K3DES) {
+        buffer[0] = 0x31;
+        memcpy(&buffer[1], data, len);
+
+        DesfireClearIV(ctx);
+        DesfireCryptoCMACEx(ctx, buffer, len + 1, kbs * 2, cmac);
+        
+        buffer[0] = 0x32;
+        memcpy(&buffer[1], data, len);
+
+        DesfireClearIV(ctx);
+        DesfireCryptoCMACEx(ctx, buffer, len + 1, kbs * 2, &cmac[kbs]);
+        
+        buffer[0] = 0x33;
+        memcpy(&buffer[1], data, len);
+
+        DesfireClearIV(ctx);
+        DesfireCryptoCMACEx(ctx, buffer, len + 1, kbs * 2, &cmac[kbs * 2]);
+
+        memcpy(ctx->key, cmac, kbs * 3);
     }
 }
 
