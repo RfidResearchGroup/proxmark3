@@ -959,8 +959,6 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
     if (secureChannel == DACNone)
         return PM3_SUCCESS;
 
-    mbedtls_aes_context ctx;
-
     uint8_t keybytes[24] = {0};
     // Crypt constants
     uint8_t IV[16] = {0};
@@ -972,20 +970,6 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
 
     // Part 1
     memcpy(keybytes, dctx->key, desfire_get_key_length(dctx->keyType));
-
-    struct desfire_key dkey = {0};
-    desfirekey_t key = &dkey;
-
-    if (dctx->keyType == T_AES) {
-        mbedtls_aes_init(&ctx);
-        Desfire_aes_key_new(keybytes, key);
-    } else if (dctx->keyType == T_3DES) {
-        Desfire_3des_key_new_with_version(keybytes, key);
-    } else if (dctx->keyType == T_DES) {
-        Desfire_des_key_new(keybytes, key);
-    } else if (dctx->keyType == T_3K3DES) {
-        Desfire_3k3des_key_new_with_version(keybytes, key);
-    }
 
     if (dctx->kdfAlgo == MFDES_KDF_ALGO_AN10922) {
         MifareKdfAn10922(dctx, DCOMasterKey, dctx->kdfInput, dctx->kdfInputLen);
@@ -1130,7 +1114,7 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
     // If the 3Des key first 8 bytes = 2nd 8 Bytes then we are really using Singe Des
     // As such we need to set the session key such that the 2nd 8 bytes = 1st 8 Bytes
     if (dctx->keyType == T_3DES) {
-        if (memcmp(key->data, &key->data[8], 8) == 0)
+        if (memcmp(dctx->key, &dctx->key[8], 8) == 0)
             memcpy(&dctx->sessionKeyEnc[8], dctx->sessionKeyEnc, 8);
     }
 
