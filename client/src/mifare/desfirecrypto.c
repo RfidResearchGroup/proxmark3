@@ -315,7 +315,7 @@ void DesfireCryptoCMACEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, u
     if (kbs == 0)
         return;
 
-    uint8_t buffer[padded_data_length(len, kbs)];
+    uint8_t buffer[padded_data_length(MAX(minlen, len) + 1, kbs)];
     memset(buffer, 0, sizeof(buffer));
 
     uint8_t sk1[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
@@ -360,9 +360,9 @@ void MifareKdfAn10922(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, cons
             kbs = CRYPTO_AES_BLOCK_SIZE;
 
         buffer[0] = 0x01;
-        memcpy(&buffer[1], data, len++);
+        memcpy(&buffer[1], data, len);
 
-        DesfireCryptoCMACEx(ctx, key_type, buffer, len, kbs * 2, cmac);
+        DesfireCryptoCMACEx(ctx, key_type, buffer, len + 1, kbs * 2, cmac);
         memcpy(ctx->key, cmac, kbs);
     } else if (ctx->keyType == T_3DES) {
         buffer[0] = 0x21;

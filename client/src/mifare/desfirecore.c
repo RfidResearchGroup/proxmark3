@@ -1312,10 +1312,10 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
         if (mfdes_kdf_input_gallagher(dctx->uid, dctx->uidlen, dctx->keyNum, dctx->selectedAID, dctx->kdfInput, &dctx->kdfInputLen) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Could not generate Gallagher KDF input");
         }
-        PrintAndLogEx(INFO, "    KDF Input: " _YELLOW_("%s"), sprint_hex(dctx->kdfInput, dctx->kdfInputLen));
+        PrintAndLogEx(DEBUG, "    KDF Input: " _YELLOW_("%s"), sprint_hex(dctx->kdfInput, dctx->kdfInputLen));
 
         MifareKdfAn10922(dctx, DCOMasterKey, dctx->kdfInput, dctx->kdfInputLen);
-        PrintAndLogEx(INFO, " Derrived key: " _GREEN_("%s"), sprint_hex(dctx->key, desfire_get_key_block_length(dctx->keyType)));
+        PrintAndLogEx(DEBUG, " Derrived key: " _GREEN_("%s"), sprint_hex(dctx->key, desfire_get_key_block_length(dctx->keyType)));
     }
 
     if (dctx->cmdSet == DCCISO && secureChannel != DACEV2)
@@ -2652,12 +2652,18 @@ int DesfireISOAppendRecord(DesfireContext *dctx, uint8_t fileid, uint8_t *data, 
 
 int DesfireGetCardUID(DesfireContext *ctx) {
     iso14a_card_select_t card = {0};
-    int res = Hf14443_4aGetCardData(&card);
-    DropField();
-    if (res != PM3_SUCCESS) {
+    
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    WaitForResponse(CMD_ACK, &resp);
+
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+    uint64_t select_status = resp.oldarg[0];
+    
+    if (select_status == 0 || select_status == 2 || select_status == 3) {
         return PM3_ESOFT;
     }
-    
+
     memcpy(ctx->uid, card.uid, card.uidlen);
     ctx->uidlen = card.uidlen;
     
