@@ -971,22 +971,6 @@ static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel sec
     // Part 1
     memcpy(keybytes, dctx->key, desfire_get_key_length(dctx->keyType));
 
-    if (dctx->kdfAlgo == MFDES_KDF_ALGO_AN10922) {
-        MifareKdfAn10922(dctx, DCOMasterKey, dctx->kdfInput, dctx->kdfInputLen);
-        PrintAndLogEx(DEBUG, " Derrived key: " _GREEN_("%s"), sprint_hex(dctx->key, desfire_get_key_block_length(dctx->keyType)));
-    } else if (dctx->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER) {
-        // We will overrite any provided KDF input since a gallagher specific KDF was requested.
-        dctx->kdfInputLen = 11;
-
-        if (mfdes_kdf_input_gallagher(dctx->uid, dctx->uidlen, dctx->keyNum, dctx->selectedAID, dctx->kdfInput, &dctx->kdfInputLen) != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "Could not generate Gallagher KDF input");
-        }
-        PrintAndLogEx(INFO, "    KDF Input: " _YELLOW_("%s"), sprint_hex(dctx->kdfInput, dctx->kdfInputLen));
-
-        MifareKdfAn10922(dctx, DCOMasterKey, dctx->kdfInput, dctx->kdfInputLen);
-        PrintAndLogEx(INFO, " Derrived key: " _GREEN_("%s"), sprint_hex(dctx->key, desfire_get_key_block_length(dctx->keyType)));
-    }
-
     uint8_t subcommand = MFDES_AUTHENTICATE;
     if (secureChannel == DACEV1) {
         if (dctx->keyType == T_AES)
@@ -1312,6 +1296,22 @@ static int DesfireAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel sec
 }
 
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
+    if (dctx->kdfAlgo == MFDES_KDF_ALGO_AN10922) {
+        MifareKdfAn10922(dctx, DCOMasterKey, dctx->kdfInput, dctx->kdfInputLen);
+        PrintAndLogEx(DEBUG, " Derrived key: " _GREEN_("%s"), sprint_hex(dctx->key, desfire_get_key_block_length(dctx->keyType)));
+    } else if (dctx->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER) {
+        // We will overrite any provided KDF input since a gallagher specific KDF was requested.
+        dctx->kdfInputLen = 11;
+
+        if (mfdes_kdf_input_gallagher(dctx->uid, dctx->uidlen, dctx->keyNum, dctx->selectedAID, dctx->kdfInput, &dctx->kdfInputLen) != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Could not generate Gallagher KDF input");
+        }
+        PrintAndLogEx(INFO, "    KDF Input: " _YELLOW_("%s"), sprint_hex(dctx->kdfInput, dctx->kdfInputLen));
+
+        MifareKdfAn10922(dctx, DCOMasterKey, dctx->kdfInput, dctx->kdfInputLen);
+        PrintAndLogEx(INFO, " Derrived key: " _GREEN_("%s"), sprint_hex(dctx->key, desfire_get_key_block_length(dctx->keyType)));
+    }
+
     if (dctx->cmdSet == DCCISO && secureChannel != DACEV2)
         return DesfireAuthenticateISO(dctx, secureChannel, verbose);
 
