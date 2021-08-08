@@ -166,6 +166,8 @@ int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uin
 int DesfireSelectAIDHexNoFieldOn(DesfireContext *ctx, uint32_t aid);
 void DesfirePrintAIDFunctions(uint32_t appid);
 
+int DesfireGetCardUID(DesfireContext *ctx);
+
 int DesfireSelectEx(DesfireContext *ctx, bool fieldon, DesfireISOSelectWay way, uint32_t id, char *dfname);
 int DesfireSelect(DesfireContext *ctx, DesfireISOSelectWay way, uint32_t id, char *dfname);
 

@@ -335,13 +335,16 @@ void DesfirePrintContext(DesfireContext *ctx) {
                   sprint_hex(ctx->key,
                              desfire_get_key_length(ctx->keyType)));
 
-    if (ctx->kdfAlgo != MFDES_KDF_ALGO_NONE)
+    if (ctx->kdfAlgo != MFDES_KDF_ALGO_NONE) {
         PrintAndLogEx(INFO, "KDF algo: %s KDF input[%d]: %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, ctx->kdfAlgo), ctx->kdfInputLen, sprint_hex(ctx->kdfInput, ctx->kdfInputLen));
+        PrintAndLogEx(INFO, "AID: %06x UID[%d]: %s", ctx->selectedAID, ctx->uidlen, sprint_hex(ctx->uid, ctx->uidlen));
+    }
 
     PrintAndLogEx(INFO, "Secure channel: %s Command set: %s Communication mode: %s",
                   CLIGetOptionListStr(DesfireSecureChannelOpts, ctx->secureChannel),
                   CLIGetOptionListStr(DesfireCommandSetOpts, ctx->cmdSet),
                   CLIGetOptionListStr(DesfireCommunicationModeOpts, ctx->commMode));
+                  
 
     if (DesfireIsAuthenticated(ctx)) {
         PrintAndLogEx(INFO, "Session key MAC [%d]: %s ",
@@ -847,10 +850,13 @@ void DesfirePrintAIDFunctions(uint32_t appid) {
     }
 }
 
-
 int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose) {
     if (verbose)
         DesfirePrintContext(dctx);
+    
+    // needs card uid for diversification
+    if (dctx->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER)
+        DesfireGetCardUID(dctx);
 
     bool isosw = false;
     if (dctx->cmdSet == DCCISO) {
@@ -2642,6 +2648,20 @@ int DesfireISOAppendRecord(DesfireContext *dctx, uint8_t fileid, uint8_t *data, 
         return PM3_ESOFT;
 
     return res;
+}
+
+int DesfireGetCardUID(DesfireContext *ctx) {
+    iso14a_card_select_t card = {0};
+    int res = Hf14443_4aGetCardData(&card);
+    DropField();
+    if (res != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+    
+    memcpy(ctx->uid, card.uid, card.uidlen);
+    ctx->uidlen = card.uidlen;
+    
+    return PM3_SUCCESS;
 }
 
 int DesfireSelectEx(DesfireContext *ctx, bool fieldon, DesfireISOSelectWay way, uint32_t id, char *dfname) {
