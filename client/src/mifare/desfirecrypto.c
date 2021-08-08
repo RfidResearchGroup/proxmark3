@@ -74,6 +74,7 @@ void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO 
     ctx->keyNum = keyNum;
     ctx->keyType = keyType;
     memcpy(ctx->key, key, desfire_get_key_length(keyType));
+    memcpy(ctx->masterKey, key, desfire_get_key_length(keyType));
 }
 
 void DesfireSetCommandSet(DesfireContext *ctx, DesfireCommandSet cmdSet) {
@@ -156,6 +157,8 @@ uint8_t *DesfireGetKey(DesfireContext *ctx, DesfireCryptoOpKeyType key_type) {
         return ctx->sessionKeyMAC;
     } else if (key_type == DCOSessionKeyEnc) {
         return ctx->sessionKeyEnc;
+    } else if (key_type == DCOMasterKey) {
+        return ctx->masterKey;
     }
     
     return ctx->key;
@@ -303,7 +306,7 @@ void DesfireCMACGenerateSubkeys(DesfireContext *ctx, DesfireCryptoOpKeyType key_
     }
 }
 
-void DesfireCryptoCMACEx(DesfireContext *ctx, uint8_t *data, size_t len, size_t minlen, uint8_t *cmac) {
+void DesfireCryptoCMACEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *data, size_t len, size_t minlen, uint8_t *cmac) {
     int kbs = desfire_get_key_block_length(ctx->keyType);
     if (kbs == 0)
         return;
@@ -313,7 +316,7 @@ void DesfireCryptoCMACEx(DesfireContext *ctx, uint8_t *data, size_t len, size_t 
 
     uint8_t sk1[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
     uint8_t sk2[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
-    DesfireCMACGenerateSubkeys(ctx, DCOSessionKeyMac, sk1, sk2);
+    DesfireCMACGenerateSubkeys(ctx, key_type, sk1, sk2);
 
     memcpy(buffer, data, len);
 
@@ -327,18 +330,18 @@ void DesfireCryptoCMACEx(DesfireContext *ctx, uint8_t *data, size_t len, size_t 
         bin_xor(buffer + len - kbs, sk1, kbs);
     }
 
-    DesfireCryptoEncDec(ctx, DCOSessionKeyMac, buffer, len, NULL, true);
+    DesfireCryptoEncDec(ctx, key_type, buffer, len, NULL, true);
 
     if (cmac != NULL)
         memcpy(cmac, ctx->IV, kbs);
 }
 
 void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *data, size_t len, uint8_t *cmac) {
-    DesfireCryptoCMACEx(ctx, data, len, 0, cmac);
+    DesfireCryptoCMACEx(ctx, DCOSessionKeyMac, data, len, 0, cmac);
 }
 
 // This function is almot like cmac(...). but with some key differences.
-void MifareKdfAn10922(DesfireContext *ctx, const uint8_t *data, size_t len) {
+void MifareKdfAn10922(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, const uint8_t *data, size_t len) {
     int kbs = desfire_get_key_block_length(ctx->keyType); // 8 or 16
     if (ctx == NULL || kbs == 0 || data == NULL || len < 1 || len > 31) {
         return;
@@ -355,20 +358,20 @@ void MifareKdfAn10922(DesfireContext *ctx, const uint8_t *data, size_t len) {
         buffer[0] = 0x01;
         memcpy(&buffer[1], data, len++);
 
-        DesfireCryptoCMACEx(ctx, buffer, len, kbs * 2, cmac);
+        DesfireCryptoCMACEx(ctx, key_type, buffer, len, kbs * 2, cmac);
         memcpy(ctx->key, cmac, kbs);
     } else if (ctx->keyType == T_3DES) {
         buffer[0] = 0x21;
         memcpy(&buffer[1], data, len);
 
         DesfireClearIV(ctx);
-        DesfireCryptoCMACEx(ctx, buffer, len + 1, kbs * 2, cmac);
+        DesfireCryptoCMACEx(ctx, key_type, buffer, len + 1, kbs * 2, cmac);
         
         buffer[0] = 0x22;
         memcpy(&buffer[1], data, len);
 
         DesfireClearIV(ctx);
-        DesfireCryptoCMACEx(ctx, buffer, len + 1, kbs * 2, &cmac[kbs]);
+        DesfireCryptoCMACEx(ctx, key_type, buffer, len + 1, kbs * 2, &cmac[kbs]);
 
         memcpy(ctx->key, cmac, kbs * 2);
     } else if (ctx->keyType == T_3K3DES) {
@@ -376,19 +379,19 @@ void MifareKdfAn10922(DesfireContext *ctx, const uint8_t *data, size_t len) {
         memcpy(&buffer[1], data, len);
 
         DesfireClearIV(ctx);
-        DesfireCryptoCMACEx(ctx, buffer, len + 1, kbs * 2, cmac);
+        DesfireCryptoCMACEx(ctx, key_type, buffer, len + 1, kbs * 2, cmac);
         
         buffer[0] = 0x32;
         memcpy(&buffer[1], data, len);
 
         DesfireClearIV(ctx);
-        DesfireCryptoCMACEx(ctx, buffer, len + 1, kbs * 2, &cmac[kbs]);
+        DesfireCryptoCMACEx(ctx, key_type, buffer, len + 1, kbs * 2, &cmac[kbs]);
         
         buffer[0] = 0x33;
         memcpy(&buffer[1], data, len);
 
         DesfireClearIV(ctx);
-        DesfireCryptoCMACEx(ctx, buffer, len + 1, kbs * 2, &cmac[kbs * 2]);
+        DesfireCryptoCMACEx(ctx, key_type, buffer, len + 1, kbs * 2, &cmac[kbs * 2]);
 
         memcpy(ctx->key, cmac, kbs * 3);
     }

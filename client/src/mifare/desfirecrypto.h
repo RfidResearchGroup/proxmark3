@@ -65,6 +65,7 @@ typedef enum {
 } DesfireCommunicationMode;
 
 typedef enum {
+    DCOMasterKey,
     DCOMainKey,
     DCOSessionKeyMac,
     DCOSessionKeyEnc
@@ -74,6 +75,7 @@ typedef struct DesfireContextS {
     uint8_t keyNum;
     DesfireCryptoAlgorythm keyType;   // des/2tdea/3tdea/aes
     uint8_t key[DESFIRE_MAX_KEY_SIZE];
+    uint8_t masterKey[DESFIRE_MAX_KEY_SIZE]; // source for kdf
 
     // KDF finction
     uint8_t kdfAlgo;
@@ -113,8 +115,8 @@ void DesfireCryptoEncDec(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, u
 void DesfireCryptoEncDecEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool dir_to_send, bool encode, uint8_t *iv);
 void DesfireCMACGenerateSubkeys(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *sk1, uint8_t *sk2);
 void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *cmac);
-void DesfireCryptoCMACEx(DesfireContext *ctx, uint8_t *data, size_t len, size_t minlen, uint8_t *cmac);
-void MifareKdfAn10922(DesfireContext *ctx, const uint8_t *data, size_t len);
+void DesfireCryptoCMACEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *data, size_t len, size_t minlen, uint8_t *cmac);
+void MifareKdfAn10922(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, const uint8_t *data, size_t len);
     
 void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorythm keytype, uint8_t version);
 uint8_t DesfireDESKeyGetVersion(uint8_t *key);
