@@ -246,8 +246,9 @@ static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
             return "FeliCa Standard RC-S830";
         case 0x02:
             return "FeliCa Standard RC-S919";
-        case  0x0B:
-            return "FeliCa Suica RC-S???";
+        case 0x0B:
+        case 0x31:
+            return "Suica card (FeliCa Standard RC-S???)";
         default:
             break;
     }
