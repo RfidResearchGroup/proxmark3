@@ -69,7 +69,7 @@ static void em410x_construct_emul_graph(uint8_t *uid, uint8_t clock, uint8_t gap
         for (uint8_t j = 0; j < 8; j++) {
             bs[j] = (uid[i] >> (7 - j) & 1);
         }
-        PrintAndLogEx(DEBUG, "uid[%d] 0x%02x (%s)", i, uid[i], sprint_bin(bs, 4));
+        PrintAndLogEx(DEBUG, "EM ID[%d] 0x%02x (%s)", i, uid[i], sprint_bin(bs, 4));
 
         for (uint8_t j = 0; j < 2; j++) {
             // append each bit
@@ -365,12 +365,12 @@ static int CmdEM410xReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x reader",
                   "read EM 410x tag",
-                  "lf em 410x reader                      -> reader\n"
+                  "lf em 410x reader\n"
                   "lf em 410x reader -@                   -> continuous reader mode\n"
-                  "lf em 410x reader --clk 32             -> reader using a clock of RF/32\n"
-                  "lf em 410x reader --clk 32 -i          -> reader using a clock of RF/32 and inverting data\n"
-                  "lf em 410x reader -i                   -> reader while inverting data\n"
-                  "lf em 410x reader --clk 64 -i --err 0  -> reader using a clock of RF/64 and inverting data and allowing 0 demod errors"
+                  "lf em 410x reader --clk 32             -> using a clock of RF/32\n"
+                  "lf em 410x reader --clk 32 -i          -> using a clock of RF/32 and inverting data\n"
+                  "lf em 410x reader -i                   -> inverting data\n"
+                  "lf em 410x reader --clk 64 -i --err 0  -> using a clock of RF/64 and inverting data and allowing 0 demod errors"
                  );
 
     void *argtable[] = {
@@ -430,7 +430,7 @@ static int CmdEM410xSim(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0(NULL, "clk", "<dec>", "<32|64> clock (default 64)"),
-        arg_str1(NULL, "id", "<hex>", "ID number (5 hex bytes)"),
+        arg_str1(NULL, "id", "<hex>", "EM Tag ID number (5 hex bytes)"),
         arg_u64_0(NULL, "gap", "<dec>", "gap (0's) between ID repeats (default 20)"),
         arg_param_end
     };
@@ -445,11 +445,11 @@ static int CmdEM410xSim(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (uid_len != 5) {
-        PrintAndLogEx(FAILED, "UID must include 5 hex bytes (%u)", uid_len);
+        PrintAndLogEx(FAILED, "EM ID must include 5 hex bytes (10 hex symbols), got " _YELLOW_("%u"), uid_len);
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Starting simulating UID "_YELLOW_("%s")" clock: "_YELLOW_("%d"), sprint_hex_inrow(uid, sizeof(uid)), clk);
+    PrintAndLogEx(SUCCESS, "Starting simulating EM Tag ID "_YELLOW_("%s")" clock: "_YELLOW_("%d"), sprint_hex_inrow(uid, sizeof(uid)), clk);
     em410x_construct_emul_graph(uid, clk, gap);
     CmdLFSim("");
     return PM3_SUCCESS;
@@ -469,7 +469,7 @@ static int CmdEM410xBrute(const char *Cmd) {
         arg_param_begin,
         arg_u64_0(NULL, "clk", "<dec>", "<32|64> clock (default 64)"),
         arg_u64_0(NULL, "delay", "<dec>", "pause delay in milliseconds between UIDs simulation (default 1000ms)"),
-        arg_str1("f", "file", "<hex>", "file with UIDs in HEX format, one per line"),
+        arg_str1("f", "file", "<hex>", "file with EM Tag IDs, one id per line"),
         arg_u64_0(NULL, "gap", "<dec>", "gap (0's) between ID repeats (default 20)"),
         arg_param_end
     };
@@ -499,7 +499,7 @@ static int CmdEM410xBrute(const char *Cmd) {
     // open file
     FILE *f = NULL;
     if ((f = fopen(filename, "r")) == NULL) {
-        PrintAndLogEx(ERR, "Error: Could not open UIDs file ["_YELLOW_("%s")"]", filename);
+        PrintAndLogEx(ERR, "Error: Could not open EM Tag IDs file ["_YELLOW_("%s")"]", filename);
         return PM3_EFILE;
     }
 
@@ -522,7 +522,7 @@ static int CmdEM410xBrute(const char *Cmd) {
         if (buf[0] == '#') continue;
 
         if (param_gethex(buf, 0, uid, 10)) {
-            PrintAndLogEx(FAILED, "UIDs must include 10 HEX symbols");
+            PrintAndLogEx(FAILED, "EM Tag IDs must include 5 hex bytes (10 hex symbols)");
             free(uidblock);
             fclose(f);
             return PM3_ESOFT;
@@ -533,7 +533,7 @@ static int CmdEM410xBrute(const char *Cmd) {
         if (stUidBlock - uidcnt < 2) {
             p = realloc(uidblock, 5 * (stUidBlock += 10));
             if (!p) {
-                PrintAndLogEx(WARNING, "Cannot allocate memory for UIDs");
+                PrintAndLogEx(WARNING, "Cannot allocate memory for EM Tag IDs");
                 free(uidblock);
                 fclose(f);
                 return PM3_ESOFT;
@@ -548,12 +548,12 @@ static int CmdEM410xBrute(const char *Cmd) {
     fclose(f);
 
     if (uidcnt == 0) {
-        PrintAndLogEx(FAILED, "No UIDs found in file");
+        PrintAndLogEx(FAILED, "No EM Tag IDs found in file");
         free(uidblock);
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Loaded "_YELLOW_("%d")" UIDs from "_YELLOW_("%s")", pause delay:"_YELLOW_("%d")" ms", uidcnt, filename, delay);
+    PrintAndLogEx(SUCCESS, "Loaded "_YELLOW_("%d")" EM Tag IDs from "_YELLOW_("%s")", pause delay:"_YELLOW_("%d")" ms", uidcnt, filename, delay);
 
     // loop
     uint8_t testuid[5];
@@ -566,7 +566,7 @@ static int CmdEM410xBrute(const char *Cmd) {
         }
 
         memcpy(testuid, uidblock + 5 * c, 5);
-        PrintAndLogEx(INFO, "Bruteforce %d / %u: simulating UID " _YELLOW_("%s")
+        PrintAndLogEx(INFO, "Bruteforce %d / %u: simulating EM Tag ID " _YELLOW_("%s")
                       , c + 1
                       , uidcnt
                       , sprint_hex_inrow(testuid, sizeof(testuid))
@@ -603,7 +603,7 @@ static int CmdEM410xSpoof(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x spoof",
                   "Watch 'nd Spoof, activates reader\n"
-                  "Waits until a EM 410x tag gets presented then Proxmark3 starts simulating the found UID",
+                  "Waits until a EM 410x tag gets presented then Proxmark3 starts simulating the found EM Tag ID",
                   "lf em 410x spoof"
                  );
 
@@ -617,7 +617,7 @@ static int CmdEM410xSpoof(const char *Cmd) {
     // loops if the captured ID was in XL-format.
     g_em410xid = 0;
     CmdEM410xReader("-b@");
-    PrintAndLogEx(SUCCESS, "Replaying captured ID "_YELLOW_("%010" PRIx64), g_em410xid);
+    PrintAndLogEx(SUCCESS, "Replaying captured EM Tag ID "_YELLOW_("%010" PRIx64), g_em410xid);
     CmdLFSim("");
     return PM3_SUCCESS;
 }
@@ -626,14 +626,14 @@ static int CmdEM410xClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x clone",
                   "Writes EM410x ID to a T55x7 or Q5/T5555 tag",
-                  "lf em 410x clone --id 0F0368568B        -> write id to T55x7 tag\n"
-                  "lf em 410x clone --id 0F0368568B --q5   -> write id to Q5/T5555 tag"
+                  "lf em 410x clone --id 0F0368568B        -> write T55x7 tag\n"
+                  "lf em 410x clone --id 0F0368568B --q5   -> write Q5/T5555 tag"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0(NULL, "clk", "<dec>", "<16|32|40|64> clock (default 64)"),
-        arg_str1(NULL, "id", "<hex>", "ID number (5 hex bytes)"),
+        arg_str1(NULL, "id", "<hex>", "EM Tag ID number (5 hex bytes)"),
         arg_lit0(NULL, "q5", "specify writing to Q5/T5555 tag"),
         arg_param_end
     };
@@ -660,7 +660,7 @@ static int CmdEM410xClone(const char *Cmd) {
         snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
     }
 
-    PrintAndLogEx(SUCCESS, "Preparing to clone EM4102 to " _YELLOW_("%s") " tag with ID " _GREEN_("%010" PRIX64) " (RF/%d)", cardtype, id, clk);
+    PrintAndLogEx(SUCCESS, "Preparing to clone EM4102 to " _YELLOW_("%s") " tag with EM Tag ID " _GREEN_("%010" PRIX64) " (RF/%d)", cardtype, id, clk);
     // NOTE: We really should pass the clock in as a separate argument, but to
     //   provide for backwards-compatibility for older firmware, and to avoid
     //   having to add another argument to CMD_LF_EM410X_WRITE, we just store
@@ -704,9 +704,9 @@ static command_t CommandTable[] = {
     {"reader", CmdEM410xReader,   IfPm3Lf,         "attempt to read and extract tag data"},
     {"sim",    CmdEM410xSim,      IfPm3Lf,         "simulate EM410x tag"},
     {"brute",  CmdEM410xBrute,    IfPm3Lf,         "reader bruteforce attack by simulating EM410x tags"},
-    {"watch",  CmdEM410xWatch,    IfPm3Lf,         "watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
-    {"spoof",  CmdEM410xSpoof,    IfPm3Lf,         "watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
-    {"clone",  CmdEM410xClone,    IfPm3Lf,         "write EM410x UID to T55x7 or Q5/T5555 tag"},
+    {"watch",  CmdEM410xWatch,    IfPm3Lf,         "watches for EM410x 125/134 kHz tags"},
+    {"spoof",  CmdEM410xSpoof,    IfPm3Lf,         "watches for EM410x 125/134 kHz tags, and replays them" },
+    {"clone",  CmdEM410xClone,    IfPm3Lf,         "write EM410x Tag ID to T55x7 or Q5/T5555 tag"},
     {NULL, NULL, NULL, NULL}
 };
 
