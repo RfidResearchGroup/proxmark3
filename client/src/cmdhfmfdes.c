@@ -3840,9 +3840,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
     }
 
     uint32_t fileid = 1;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fileid, 1, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "File ID must have 1 byte length");
+    if (CLIGetUint32Hex(ctx, 12, 1, &fileid, NULL, 1, "File ID must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -3891,20 +3889,14 @@ static int DesfireCreateFileParameters(
 
     uint32_t fileid = 1;
     if (pfileid) {
-        res = arg_get_u32_hexstr_def_nlen(ctx, pfileid, 1, &fileid, 1, true);
-        if (res == 2) {
-            PrintAndLogEx(ERR, "File ID must have 1 byte length");
+        if (CLIGetUint32Hex(ctx, pfileid, 1, &fileid, NULL, 1, "File ID must have 1 byte length"))
             return PM3_EINVARG;
-        }
     }
 
     uint32_t isofileid = 0;
     if (pisofileid) {
-        res = arg_get_u32_hexstr_def_nlen(ctx, pisofileid, 0, &isofileid, 2, true);
-        if (res == 2) {
-            PrintAndLogEx(ERR, "ISO file ID must have 2 bytes length");
+        if (CLIGetUint32Hex(ctx, pisofileid, 0, &isofileid, NULL, 2, "ISO file ID must have 2 bytes length"))
             return PM3_EINVARG;
-        }
     }
 
     data[0] = fileid;
@@ -4668,9 +4660,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     }
 
     uint32_t fnum = 1;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fnum, 1, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "File ID must have 1 byte length");
+    if (CLIGetUint32Hex(ctx, 12, 1, &fnum, NULL, 1, "File ID must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
