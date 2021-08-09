@@ -106,6 +106,7 @@ void DesfireClearContext(DesfireContext *ctx);
 void DesfireClearSession(DesfireContext *ctx);
 void DesfireClearIV(DesfireContext *ctx);
 void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key);
+void DesfireSetKeyNoClear(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key);
 void DesfireSetCommandSet(DesfireContext *ctx, DesfireCommandSet cmdSet);
 void DesfireSetCommMode(DesfireContext *ctx, DesfireCommunicationMode commMode);
 void DesfireSetKdf(DesfireContext *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint8_t kdfInputLen);

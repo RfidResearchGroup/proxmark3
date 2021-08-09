@@ -74,7 +74,10 @@ void DesfireClearIV(DesfireContext *ctx) {
 
 void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key) {
     DesfireClearContext(ctx);
+    DesfireSetKeyNoClear(ctx, keyNum, keyType, key);
+}
 
+void DesfireSetKeyNoClear(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key) {
     ctx->keyNum = keyNum;
     ctx->keyType = keyType;
     memcpy(ctx->key, key, desfire_get_key_length(keyType));

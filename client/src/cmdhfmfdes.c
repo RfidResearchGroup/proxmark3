@@ -28,7 +28,6 @@
 #include "iso7816/apduinfo.h"   // APDU manipulation / errorcodes
 #include "iso7816/iso7816core.h"    // APDU logging
 #include "util_posix.h"     // msleep
-#include "mifare/desfire_crypto.h"
 #include "mifare/desfirecore.h"
 #include "mifare/desfiretest.h"
 #include "mifare/desfiresecurechan.h"
@@ -46,17 +45,6 @@
 
 #define status(x) ( ((uint16_t)(0x91<<8)) + (uint16_t)x )
 
-#ifndef DropFieldDesfire
-#define DropFieldDesfire() { \
-        clearCommandBuffer(); \
-        SendCommandNG(CMD_HF_DROPFIELD, NULL, 0); \
-        tag->rf_field_on = false; \
-        PrintAndLogEx(DEBUG, "field dropped"); \
-    }
-#endif
-
-struct desfire_key default_key = {0};
-
 uint8_t desdefaultkeys[3][8] = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, //Official
     {0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47},
     {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07}
@@ -71,9 +59,6 @@ uint8_t aesdefaultkeys[5][16] = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 
 uint8_t k3kdefaultkeys[1][24] = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 
-struct desfire_tag mf_state = {.session_key = NULL, .authentication_scheme = AS_LEGACY, .authenticated_key_no = NOT_YET_AUTHENTICATED, .crypto_buffer = NULL, .crypto_buffer_size = 0, .selected_application = 0};
-static desfiretag_t tag = &mf_state;
-
 typedef struct mfdes_authinput {
     uint8_t mode;
     uint8_t algo;
@@ -84,8 +69,6 @@ typedef struct mfdes_authinput {
     uint8_t kdfInputLen;
     uint8_t kdfInput[31];
 } PACKED mfdes_authinput_t;
-
-static mfdes_authinput_t currentauth[0xF] = {{.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}};
 
 typedef struct mfdes_auth_res {
     uint8_t sessionkeylen;
@@ -174,8 +157,7 @@ typedef struct aidhdr {
 static int CmdHelp(const char *Cmd);
 
 static int CLIGetUint32Hex(CLIParserContext *ctx, uint8_t paramnum, uint32_t defaultValue, uint32_t *value, bool *valuePresent, uint8_t nlen, const char *lengthErrorStr) {
-    if (value != NULL)
-        *value = defaultValue;
+    *value = defaultValue;
     if (valuePresent != NULL)
         *valuePresent = false;
     
@@ -261,137 +243,6 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
 //04 01 01 01 00 1A 05
 }
 
-static int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint16_t *sw) {
-
-    *result_len = 0;
-    if (sw) *sw = 0;
-
-    uint16_t isw = 0;
-    int res = 0;
-
-    if (activate_field) {
-        DropFieldDesfire();
-        msleep(50);
-    }
-
-    // select?
-    uint8_t data[APDU_RES_LEN] = {0};
-
-    // COMPUTE APDU
-    int datalen = 0;
-    //if (APDUEncodeS(&apdu, false, IncludeLe ? 0x100 : 0x00, data, &datalen)) {
-    if (APDUEncodeS(&apdu, false, 0x100, data, &datalen)) {
-        PrintAndLogEx(ERR, "APDU encoding error.");
-        return PM3_EAPDU_ENCODEFAIL;
-    }
-
-    if (GetAPDULogging() || (g_debugMode > 1))
-        PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(data, datalen));
-
-    res = ExchangeAPDU14a(data, datalen, activate_field, leavefield_on, result, max_result_len, (int *)result_len);
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
-
-    if (activate_field) {
-        PrintAndLogEx(DEBUG, "field up");
-        tag->rf_field_on = true;
-    }
-
-    if (GetAPDULogging() || (g_debugMode > 1))
-        PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(result, *result_len));
-
-    if (*result_len < 2) {
-        return PM3_SUCCESS;
-    }
-
-    *result_len -= 2;
-    isw = (result[*result_len] << 8) + result[*result_len + 1];
-    if (sw)
-        *sw = isw;
-
-    if (isw != 0x9000 && isw != status(MFDES_S_OPERATION_OK) && isw != status(MFDES_S_SIGNATURE) && isw != status(MFDES_S_ADDITIONAL_FRAME) && isw != status(MFDES_S_NO_CHANGES)) {
-        if (GetAPDULogging()) {
-            if (isw >> 8 == 0x61) {
-                PrintAndLogEx(ERR, "APDU chaining len: 0x%02x -->", isw & 0xff);
-            } else {
-                PrintAndLogEx(ERR, "APDU(%02x%02x) ERROR: [0x%4X] %s", apdu.CLA, apdu.INS, isw, GetAPDUCodeDescription(isw >> 8, isw & 0xff));
-                return PM3_EAPDU_FAIL;
-            }
-        }
-        return PM3_EAPDU_FAIL;
-    }
-    return PM3_SUCCESS;
-}
-
-static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, uint32_t *recv_len, uint16_t *sw, uint32_t splitbysize, bool readalldata) {
-    if (apdu == NULL) {
-        PrintAndLogEx(DEBUG, "APDU=NULL");
-        return PM3_EINVARG;
-    }
-    if (sw == NULL) {
-        PrintAndLogEx(DEBUG, "SW=NULL");
-        return PM3_EINVARG;
-    }
-    if (recv_len == NULL) {
-        PrintAndLogEx(DEBUG, "RECV_LEN=NULL");
-        return PM3_EINVARG;
-    }
-
-    *sw = 0;
-    uint8_t data[255 * 5]  = {0x00};
-    uint32_t resplen = 0;
-    uint32_t pos = 0;
-    uint32_t i = 1;
-    int res = DESFIRESendApdu(select, true, *apdu, data, sizeof(data), &resplen, sw);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(DEBUG, "%s", DesfireGetErrorString(res, sw));
-        DropFieldDesfire();
-        return res;
-    }
-    if (dest != NULL) {
-        memcpy(dest, data, resplen);
-    }
-
-    pos += resplen;
-    if (!readalldata) {
-        if (*sw == status(MFDES_ADDITIONAL_FRAME)) {
-            *recv_len = pos;
-            return PM3_SUCCESS;
-        }
-        return res;
-    }
-
-    while (*sw == status(MFDES_ADDITIONAL_FRAME)) {
-        apdu->INS = MFDES_ADDITIONAL_FRAME; //0xAF
-        apdu->Lc = 0;
-        apdu->P1 = 0;
-        apdu->P2 = 0;
-
-        res = DESFIRESendApdu(false, true, *apdu, data, sizeof(data), &resplen, sw);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(DEBUG, "%s", DesfireGetErrorString(res, sw));
-            DropFieldDesfire();
-            return res;
-        }
-
-        if (dest != NULL) {
-            if (splitbysize) {
-                memcpy(&dest[i * splitbysize], data, resplen);
-                i += 1;
-            } else {
-                memcpy(&dest[pos], data, resplen);
-            }
-        }
-        pos += resplen;
-
-        if (*sw != status(MFDES_ADDITIONAL_FRAME)) break;
-    }
-
-    *recv_len = (splitbysize) ? i : pos;
-    return PM3_SUCCESS;
-}
-
 static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
 
     if (major == 0x00)
@@ -417,7 +268,7 @@ static int mfdes_get_info(mfdes_info_res_t *info) {
 
     if (WaitForResponseTimeout(CMD_HF_DESFIRE_INFO, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
-        DropFieldDesfire();
+        DropField();
         return PM3_ETIMEOUT;
     }
 
@@ -441,531 +292,6 @@ static int mfdes_get_info(mfdes_info_res_t *info) {
 
     return PM3_SUCCESS;
 }
-
-static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload) {
-    // 3 different way to authenticate   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
-    // 4 different crypto arg1   DES, 3DES, 3K3DES, AES
-    // 3 different communication modes,  PLAIN,MAC,CRYPTO
-    tag->authenticated_key_no = NOT_YET_AUTHENTICATED;
-    tag->session_key = NULL;
-
-    mbedtls_aes_context ctx;
-
-    uint8_t keybytes[24];
-    // Crypt constants
-    uint8_t IV[16] = {0x00};
-    uint8_t RndA[16] = {0x00};
-    uint8_t RndB[16] = {0x00};
-    uint8_t encRndB[16] = {0x00};
-    uint8_t rotRndB[16] = {0x00}; //RndB'
-    uint8_t both[32 + 1] = {0x00}; // ek/dk_keyNo(RndA+RndB')
-
-    // Generate Random Value
-    uint32_t ng = msclock();
-    uint32_t value = prng_successor(ng, 32);
-    num_to_bytes(value, 4, &RndA[0]);
-    value = prng_successor(ng, 32);
-    num_to_bytes(value, 4, &RndA[4]);
-    value = prng_successor(ng, 32);
-    num_to_bytes(value, 4, &RndA[8]);
-    value = prng_successor(ng, 32);
-    num_to_bytes(value, 4, &RndA[12]);
-
-    // Part 1
-    memcpy(keybytes, payload->key, payload->keylen);
-
-    struct desfire_key dkey = {0};
-    desfirekey_t key = &dkey;
-
-    if (payload->algo == MFDES_ALGO_AES) {
-        mbedtls_aes_init(&ctx);
-        Desfire_aes_key_new(keybytes, key);
-    } else if (payload->algo == MFDES_ALGO_3DES) {
-        Desfire_3des_key_new_with_version(keybytes, key);
-    } else if (payload->algo == MFDES_ALGO_DES) {
-        Desfire_des_key_new(keybytes, key);
-    } else if (payload->algo == MFDES_ALGO_3K3DES) {
-        Desfire_3k3des_key_new_with_version(keybytes, key);
-    }
-
-    if (payload->kdfAlgo == MFDES_KDF_ALGO_AN10922) {
-        mifare_kdf_an10922(key, payload->kdfInput, payload->kdfInputLen);
-        PrintAndLogEx(DEBUG, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
-    } else if (payload->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER) {
-        // We will overrite any provided KDF input since a gallagher specific KDF was requested.
-        payload->kdfInputLen = 11;
-
-        if (mfdes_kdf_input_gallagher(tag->info.uid, tag->info.uidlen, payload->keyno, tag->selected_application, payload->kdfInput, &payload->kdfInputLen) != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "Could not generate Gallagher KDF input");
-        }
-
-        mifare_kdf_an10922(key, payload->kdfInput, payload->kdfInputLen);
-        PrintAndLogEx(DEBUG, "    KDF Input: " _YELLOW_("%s"), sprint_hex(payload->kdfInput, payload->kdfInputLen));
-        PrintAndLogEx(DEBUG, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
-
-    }
-
-    uint8_t subcommand = MFDES_AUTHENTICATE;
-    tag->authentication_scheme = AS_LEGACY;
-
-    if (payload->mode == MFDES_AUTH_AES) {
-        subcommand = MFDES_AUTHENTICATE_AES;
-        tag->authentication_scheme = AS_NEW;
-    } else if (payload->mode == MFDES_AUTH_ISO) {
-        subcommand = MFDES_AUTHENTICATE_ISO;
-        tag->authentication_scheme = AS_NEW;
-    }
-
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    uint8_t recv_data[256] = {0};
-
-    if (payload->mode != MFDES_AUTH_PICC) {
-        // Let's send our auth command
-        uint8_t data[] = {payload->keyno};
-        sAPDU apdu = {0x90, subcommand, 0x00, 0x00, 0x01, data};
-        int res = send_desfire_cmd(&apdu, false, recv_data, &recv_len, &sw, 0, false);
-        if (res != PM3_SUCCESS) {
-            return 1;
-        }
-    }
-    // else {
-    /*
-    cmd[0] = AUTHENTICATE;
-    cmd[1] = payload->keyno;
-    len = DesfireAPDU(cmd, 2, resp);
-    */
-    //}
-
-    if (!recv_len) {
-        return 2;
-    }
-
-    if (sw != status(MFDES_ADDITIONAL_FRAME)) {
-        return 3;
-    }
-
-    uint32_t expectedlen = 8;
-    if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3K3DES) {
-        expectedlen = 16;
-    }
-
-    if (recv_len != expectedlen) {
-        return 4;
-    }
-    uint32_t rndlen = recv_len;
-
-    // Part 2
-    if (payload->mode != MFDES_AUTH_PICC) {
-        memcpy(encRndB, recv_data, rndlen);
-    } else {
-        memcpy(encRndB, recv_data + 2, rndlen);
-    }
-
-    // Part 3
-    if (payload->algo == MFDES_ALGO_AES) {
-        if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
-            return 5;
-        }
-        mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, rndlen, IV, encRndB, RndB);
-    } else if (payload->algo == MFDES_ALGO_DES)
-        des_decrypt(RndB, encRndB, key->data);
-    else if (payload->algo == MFDES_ALGO_3DES)
-        tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 2);
-    else if (payload->algo == MFDES_ALGO_3K3DES) {
-        tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 3);
-    }
-
-    if (g_debugMode > 1) {
-        PrintAndLogEx(DEBUG, "encRndB: %s", sprint_hex(encRndB, 8));
-        PrintAndLogEx(DEBUG, "RndB: %s", sprint_hex(RndB, 8));
-    }
-
-    // - Rotate RndB by 8 bits
-    memcpy(rotRndB, RndB, rndlen);
-    rol(rotRndB, rndlen);
-
-    uint8_t encRndA[16] = {0x00};
-
-    // - Encrypt our response
-    if (payload->mode == MFDES_AUTH_DES || payload->mode == MFDES_AUTH_PICC) {
-        des_decrypt(encRndA, RndA, key->data);
-        memcpy(both, encRndA, rndlen);
-
-        for (uint32_t x = 0; x < rndlen; x++) {
-            rotRndB[x] = rotRndB[x] ^ encRndA[x];
-        }
-
-        des_decrypt(encRndB, rotRndB, key->data);
-        memcpy(both + rndlen, encRndB, rndlen);
-    } else if (payload->mode == MFDES_AUTH_ISO) {
-        if (payload->algo == MFDES_ALGO_3DES) {
-            uint8_t tmp[16] = {0x00};
-            memcpy(tmp, RndA, rndlen);
-            memcpy(tmp + rndlen, rotRndB, rndlen);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-                PrintAndLogEx(DEBUG, "Both: %s", sprint_hex(tmp, 16));
-            }
-            tdes_nxp_send(tmp, both, 16, key->data, IV, 2);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 16));
-            }
-        } else if (payload->algo == MFDES_ALGO_3K3DES) {
-            uint8_t tmp[32] = {0x00};
-            memcpy(tmp, RndA, rndlen);
-            memcpy(tmp + rndlen, rotRndB, rndlen);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-                PrintAndLogEx(DEBUG, "Both3k3: %s", sprint_hex(tmp, 32));
-            }
-            tdes_nxp_send(tmp, both, 32, key->data, IV, 3);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 32));
-            }
-        }
-    } else if (payload->mode == MFDES_AUTH_AES) {
-        uint8_t tmp[32] = {0x00};
-        memcpy(tmp, RndA, rndlen);
-        memcpy(tmp + rndlen, rotRndB, rndlen);
-        if (g_debugMode > 1) {
-            PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-            PrintAndLogEx(DEBUG, "Both3k3: %s", sprint_hex(tmp, 32));
-        }
-        if (payload->algo == MFDES_ALGO_AES) {
-            if (mbedtls_aes_setkey_enc(&ctx, key->data, 128) != 0) {
-                return 6;
-            }
-            mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, 32, IV, tmp, both);
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 32));
-            }
-        }
-    }
-
-    uint32_t bothlen = 16;
-    if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3K3DES) {
-        bothlen = 32;
-    }
-    if (payload->mode != MFDES_AUTH_PICC) {
-        sAPDU apdu = {0x90, MFDES_ADDITIONAL_FRAME, 0x00, 0x00, bothlen, both};
-        int res = send_desfire_cmd(&apdu, false, recv_data, &recv_len, &sw, 0, false);
-        if (res != PM3_SUCCESS) {
-            return 7;
-        }
-    } else {
-        /*cmd[0] = ADDITIONAL_FRAME;
-        memcpy(cmd + 1, both, 16);
-        len = DesfireAPDU(cmd, 1 + 16, resp);
-
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Sending auth command %02X " _RED_("failed"),subcommand);
-            return PM3_ESOFT;
-        }*/
-    }
-
-    if (!recv_len) {
-        return 8;
-    }
-
-    if (payload->mode != MFDES_AUTH_PICC) {
-        if (sw != status(MFDES_S_OPERATION_OK)) {
-            return 9;
-        }
-    } else {
-        /*if (resp[1] != 0x00) {
-            PrintAndLogEx(ERR,"Authentication failed. Card timeout.");
-            return PM3_ESOFT;
-        }*/
-    }
-
-    // Part 4
-    // tag->session_key = &default_key;
-    struct desfire_key *p = realloc(tag->session_key, sizeof(struct desfire_key));
-    if (!p) {
-        PrintAndLogEx(FAILED, "Cannot allocate memory for session keys");
-        free(tag->session_key);
-        return PM3_EMALLOC;
-    }
-    tag->session_key = p;
-
-    memset(tag->session_key, 0x00, sizeof(struct desfire_key));
-
-    Desfire_session_key_new(RndA, RndB, key, tag->session_key);
-
-    if (payload->mode != MFDES_AUTH_PICC) {
-        memcpy(encRndA, recv_data, rndlen);
-    } else {
-        memcpy(encRndA, recv_data + 2, rndlen);
-    }
-
-    if (payload->mode == MFDES_AUTH_DES || payload->mode == MFDES_AUTH_ISO || payload->mode == MFDES_AUTH_PICC) {
-        if (payload->algo == MFDES_ALGO_DES)
-            des_decrypt(encRndA, encRndA, key->data);
-        else if (payload->algo == MFDES_ALGO_3DES)
-            tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 2);
-        else if (payload->algo == MFDES_ALGO_3K3DES)
-            tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 3);
-    } else if (payload->mode == MFDES_AUTH_AES) {
-        if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
-            return 10;
-        }
-        mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, rndlen, IV, encRndA, encRndA);
-    }
-
-    rol(RndA, rndlen);
-    for (uint32_t x = 0; x < rndlen; x++) {
-        if (RndA[x] != encRndA[x]) {
-            if (g_debugMode > 1) {
-                PrintAndLogEx(DEBUG, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
-                PrintAndLogEx(DEBUG, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
-            }
-            return 11;
-        }
-    }
-
-    // If the 3Des key first 8 bytes = 2nd 8 Bytes then we are really using Singe Des
-    // As such we need to set the session key such that the 2nd 8 bytes = 1st 8 Bytes
-    if (payload->algo == MFDES_ALGO_3DES) {
-        if (memcmp(key->data, &key->data[8], 8) == 0)
-            memcpy(&tag->session_key->data[8], tag->session_key->data, 8);
-    }
-
-    rpayload->sessionkeylen = payload->keylen;
-    memcpy(rpayload->sessionkey, tag->session_key->data, rpayload->sessionkeylen);
-    memset(tag->ivect, 0, MAX_CRYPTO_BLOCK_SIZE);
-    tag->authenticated_key_no = payload->keyno;
-
-    if (tag->authentication_scheme == AS_NEW) {
-        cmac_generate_subkeys(tag->session_key, MCD_RECEIVE);
-    }
-    return PM3_SUCCESS;
-}
-
-/*static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t new_algo, uint8_t *old_key, uint8_t old_algo, uint8_t aes_version) {
-
-    if (new_key == NULL || old_key == NULL) {
-        return PM3_EINVARG;
-    }
-
-    // AID == 000000  6bits LSB needs to be 0
-    key_no &= 0x0F;
-
-
-        Desfire treats Des keys as TDes but with the first half = 2nd half
-        As such, we should be able to convert the Des to TDes then run the code as TDes
-
-    if (new_algo == MFDES_ALGO_DES) {
-        memcpy(&new_key[8], new_key, 8);
-        new_algo = MFDES_ALGO_3DES;
-    }
-
-    if (old_algo == MFDES_ALGO_DES) {
-        memcpy(&old_key[8], old_key, 8);
-        old_algo = MFDES_ALGO_3DES;
-    }
-
-    *
-     * Because new crypto methods can be setup only at application creation,
-     * changing the card master key to one of them require a key_no tweak.
-     *
-    if (0x000000 == tag->selected_application) {
-
-        // PICC master key, 6bits LSB needs to be 0
-        key_no = 0x00;
-
-        // PICC master key, keyalgo specific 2bit MSB
-        switch (new_algo) {
-            // case MFDES_ALGO_DES: // not needed as we patched des to 3des above. (coverty deadcode)
-            case MFDES_ALGO_3DES:
-                break;            // 00xx xxx
-            case MFDES_ALGO_3K3DES:
-                key_no |= 0x40;   // 01xx xxx
-                break;
-            case MFDES_ALGO_AES:
-                key_no |= 0x80;   // 10xx xxx
-                break;
-        }
-    }
-    *
-    keyno   1b
-    key     8b
-    cpy     8b
-    crc     2b
-    padding
-    *
-
-    // Variable length ciphered key data 24-42 bytes plus padding..
-    uint8_t data[64] = {key_no};
-    sAPDU apdu = {0x90, MFDES_CHANGE_KEY, 0x00, 0x00, 0x01, data}; // 0xC4
-
-    size_t cmdcnt = 0;
-    uint8_t csPkt[100] = {0x00}; // temp storage for AES/3K3Des packet to calculate checksum  (size ????)
-
-    uint8_t new_key_length = 16;
-    switch (new_algo) {
-        *
-                // We have converted the DES to 3DES above,so this will never hit
-                case MFDES_ALGO_DES:
-                    memcpy(data + cmdcnt + 1, new_key, new_key_length);
-                    memcpy(data + cmdcnt + 1 + new_key_length, new_key, new_key_length);
-                    break;
-        *
-        case MFDES_ALGO_3DES:
-        case MFDES_ALGO_AES:
-            new_key_length = 16;
-            memcpy(data + cmdcnt + 1, new_key, new_key_length);
-            break;
-        case MFDES_ALGO_3K3DES:
-            new_key_length = 24;
-            memcpy(data + cmdcnt + 1, new_key, new_key_length);
-            break;
-    }
-
-    if ((tag->authenticated_key_no & 0x0f) != (key_no & 0x0f)) {
-        if (old_key) {
-            for (uint32_t n = 0; n < new_key_length; n++) {
-                data[cmdcnt + 1 + n] ^= old_key[n];
-            }
-        }
-    }
-
-    cmdcnt += new_key_length;
-
-    if (new_algo == MFDES_ALGO_AES) {
-        data[cmdcnt + 1] = aes_version;
-        cmdcnt += 1;
-    }
-
-    if ((tag->authenticated_key_no & 0x0f) != (key_no & 0x0f)) {
-        switch (tag->authentication_scheme) {
-            case AS_LEGACY:
-                iso14443a_crc_append(data + 1, cmdcnt);
-                cmdcnt += 2;
-
-//              iso14443a_crc(new_key, new_key_length, data + cmdcnt);
-//              Add offset + 1 for key no. at start
-                iso14443a_crc(new_key, new_key_length, data + 1 + cmdcnt);
-                cmdcnt += 2;
-                break;
-            case AS_NEW:
-                if (new_algo == MFDES_ALGO_AES) {
-                    // AES Checksum must cover : C4<KeyNo>    <PrevKey XOR Newkey>          <NewKeyVer>
-                    //                           C4  01   A0B08090E0F0C0D02030001060704050      03
-                    // 19 bytes
-                    //uint8_t csPkt[30] = {0x00};
-                    csPkt[0] = MFDES_CHANGE_KEY;
-                    memcpy(&csPkt[1], data, 18);
-
-                    desfire_crc32(csPkt, 19, data + 1 + cmdcnt);
-                } else if (new_algo == MFDES_ALGO_3K3DES) {
-                    // 3K3Des checksum must cover : C4 <KeyNo> <PrevKey XOR NewKey>
-                    csPkt[0] = MFDES_CHANGE_KEY;
-                    memcpy(&csPkt[1], data, 25);
-                    desfire_crc32(csPkt, 26, data + 1 + cmdcnt);
-                } else {
-                    desfire_crc32_append(data + 1, cmdcnt);
-                }
-                cmdcnt += 4;
-
-                desfire_crc32(new_key, new_key_length, data + 1 + cmdcnt);
-                cmdcnt += 4;
-                break;
-        }
-    } else {
-        switch (tag->authentication_scheme) {
-            case AS_LEGACY:
-                iso14443a_crc_append(data + 1, cmdcnt);
-                cmdcnt += 2;
-                break;
-            case AS_NEW:
-                if (new_algo == MFDES_ALGO_AES) {
-                    // AES Checksum must cover : C4<KeyNo>    <Newkey data>                 <NewKeyVer>
-                    //                           C4  01   A0B08090E0F0C0D02030001060704050      03
-                    csPkt[0] = MFDES_CHANGE_KEY;
-                    memcpy(&csPkt[1], data, 18);
-                    desfire_crc32(csPkt, 19, data + 1 + cmdcnt);
-                } else if (new_algo == MFDES_ALGO_3K3DES) {
-                    // 3K3Des checksum must cover : C4 <KeyNo> <Newkey Data>
-                    csPkt[0] = MFDES_CHANGE_KEY;
-                    memcpy(&csPkt[1], data, 25);
-                    desfire_crc32(csPkt, 26, data + 1 + cmdcnt);
-                } else {
-                    desfire_crc32_append(data + 1, cmdcnt);
-                }
-                cmdcnt += 4;
-                //  desfire_crc32_append(data, cmdcnt);
-                //  cmdcnt += 4;
-                break;
-        }
-    }
-
-    uint8_t *p = mifare_cryto_preprocess_data(tag, data + 1, (size_t *)&cmdcnt, 0, MDCM_ENCIPHERED | ENC_COMMAND | NO_CRC);
-    apdu.Lc = (uint8_t)cmdcnt + 1;
-    // apdu.data = p;
-    // the above data pointed to from p did not have the key no. at the start, so copy preprocessed data after the key no.
-    memcpy(&data[1], p, cmdcnt);
-    apdu.data = data;
-
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-
-    //  If we call send_desfire with 2nd option (turn field on), it will turn off then on
-    //  leading to loosing the authentication on the aid, so lets not turn on here.
-    //    int res = send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, 0, true);
-    int res = send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0, true);
-
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("can't change key -> %s"), DesfireGetErrorString(res, &sw));
-        DropFieldDesfire();
-        return res;
-    }
-
-    size_t sn = recv_len;
-
-
-    if ((new_algo == MFDES_ALGO_AES) || (new_algo == MFDES_ALGO_3K3DES)) {
-        // AES expects us to Calculate CMAC for status byte : OK 0x00  (0x91 00)
-        // As such if we get this far without an error, we should be good
-        // Since we are dropping the field, we dont need to maintain the CMAC etc.
-        // Setting sn = 1 will allow the post process to just exit (as status only)
-
-        // Simular 3K3Des has some work to validate, but as long as the reply code was 00
-        // e.g. 02  fe  ec  77  ca  13  e0  c2  06  [91  00 (OK)]  69  67
-
-        sn = 1;
-    }
-
-    p = mifare_cryto_postprocess_data(tag, data, &sn, MDCM_PLAIN | CMAC_COMMAND | CMAC_VERIFY);
-
-    // Should be finished processing the changekey so lets ensure the field is dropped.
-    DropFieldDesfire();
-
-    if (!p) {
-        *
-            Note in my testing on an EV1, the AES password did change, with the number of returned bytes was 8, expected 9 <status><8 byte cmac>
-            As such !p is true and the code reports "Error on changing key"; so comment back to user until its fixed.
-
-            Note: as at 19 May 2021, with the sn = 1 patch above, this should no longer be reachable!
-        *
-        if (new_algo == MFDES_ALGO_AES) {
-            PrintAndLogEx(WARNING, "AES Key may have been changed, please check new password with the auth command.");
-        }
-
-        return PM3_ESOFT;
-    }
-
-    *
-     * If we changed the current authenticated key, we are not authenticated
-     * anymore.
-     *
-    if (key_no == tag->authenticated_key_no) {
-        free(tag->session_key);
-        tag->session_key = NULL;
-    }
-
-    return PM3_SUCCESS;
-}*/
 
 // --- GET SIGNATURE
 static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len, nxp_cardtype_t card_type) {
@@ -1034,235 +360,12 @@ static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signat
     return PM3_SUCCESS;
 }
 
-static int handler_desfire_getkeysettings(uint8_t *key_settings, uint8_t *num_keys) {
-    if (key_settings == NULL) {
-        PrintAndLogEx(DEBUG, "KEY_SETTINGS=NULL");
-        return PM3_EINVARG;
-    }
-    if (num_keys == NULL) {
-        PrintAndLogEx(DEBUG, "NUM_KEYS=NULL");
-        return PM3_EINVARG;
-    }
-    sAPDU apdu = {0x90, MFDES_GET_KEY_SETTINGS, 0x00, 0x00, 0x00, NULL}; //0x45
-
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    uint8_t data[2] = {0};
-    int res = send_desfire_cmd(&apdu, false, data, &recv_len, &sw, 0, true);
-
-    if (res != PM3_SUCCESS)
-        return res;
-    if (sw != status(MFDES_S_OPERATION_OK))
-        return PM3_ESOFT;
-
-    *key_settings = data[0];
-    *num_keys = data[1];
-    return res;
-}
-
-// --- GET APPIDS
-static int handler_desfire_appids(uint8_t *dest, uint32_t *app_ids_len) {
-    if (dest == NULL) {
-        PrintAndLogEx(DEBUG, "DEST=NULL");
-        return PM3_EINVARG;
-    }
-    if (app_ids_len == NULL) {
-        PrintAndLogEx(DEBUG, "APP_IDS_LEN=NULL");
-        return PM3_EINVARG;
-    }
-
-    sAPDU apdu = {0x90, MFDES_GET_APPLICATION_IDS, 0x00, 0x00, 0x00, NULL}; //0x6a
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, dest, &recv_len, &sw, 0, true);
-
-    if (res != PM3_SUCCESS)
-        return res;
-
-    if (sw != status(MFDES_S_OPERATION_OK))
-        return PM3_ESOFT;
-
-    *app_ids_len = (uint8_t)(recv_len & 0xFF);
-    return res;
-}
-
-static int handler_desfire_select_application(uint8_t *aid) {
-    if (g_debugMode > 1) {
-        if (aid == NULL) {
-            PrintAndLogEx(ERR, "AID=NULL");
-        }
-    }
-    if (aid == NULL) {
-        return PM3_EINVARG;
-    }
-
-    sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, aid}; //0x5a
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-
-    int res = send_desfire_cmd(&apdu, !tag->rf_field_on, NULL, &recv_len, &sw, sizeof(dfname_t), true);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING,
-                      _RED_("   Can't select AID 0x%X -> %s"),
-                      (aid[2] << 16) + (aid[1] << 8) + aid[0],
-                      DesfireGetErrorString(res, &sw)
-                     );
-        DropFieldDesfire();
-        return res;
-    }
-    memcpy(&tag->selected_application, aid, 3);
-    return PM3_SUCCESS;
-}
-
-static int handler_desfire_fileids(uint8_t *dest, uint32_t *file_ids_len) {
-    if (g_debugMode > 1) {
-        if (dest == NULL) PrintAndLogEx(ERR, "DEST=NULL");
-        if (file_ids_len == NULL) PrintAndLogEx(ERR, "FILE_IDS_LEN=NULL");
-    }
-    if (dest == NULL || file_ids_len == NULL) return PM3_EINVARG;
-    sAPDU apdu = {0x90, MFDES_GET_FILE_IDS, 0x00, 0x00, 0x00, NULL}; //0x6f
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    *file_ids_len = 0;
-    int res = send_desfire_cmd(&apdu, false, dest, &recv_len, &sw, 0, true);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't get file ids -> %s"), DesfireGetErrorString(res, &sw));
-        DropFieldDesfire();
-        return res;
-    }
-    *file_ids_len = recv_len;
-    return res;
-}
-
-// none, verified
-static int handler_desfire_filesettings(uint8_t file_id, uint8_t *dest, uint32_t *destlen) {
-    if (g_debugMode > 1) {
-        if (dest == NULL) PrintAndLogEx(ERR, "DEST=NULL");
-        if (destlen == NULL) PrintAndLogEx(ERR, "DESTLEN=NULL");
-    }
-    if (dest == NULL || destlen == NULL) return PM3_EINVARG;
-    sAPDU apdu = {0x90, MFDES_GET_FILE_SETTINGS, 0x00, 0x00, 0x01, &file_id}; // 0xF5
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, false, dest, destlen, &sw, 0, true);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't get file settings -> %s"), DesfireGetErrorString(res, &sw));
-        DropFieldDesfire();
-        return res;
-    }
-    return res;
-}
-
 static void swap24(uint8_t *data) {
     if (data == NULL) return;
     uint8_t tmp = data[0];
     data[0] = data[2];
     data[2] = tmp;
 };
-
-static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, uint8_t *key, int cmdKeyNo, uint8_t cmdKdfAlgo, uint8_t kdfInputLen, uint8_t *kdfInput, mfdes_auth_res_t *rpayload) {
-    switch (cmdAuthMode) {
-        case MFDES_AUTH_DES:
-            if (cmdAuthAlgo != MFDES_ALGO_DES && cmdAuthAlgo != MFDES_ALGO_3DES) {
-                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth des mode");
-                return PM3_EINVARG;
-            }
-            break;
-        case MFDES_AUTH_ISO:
-            if (cmdAuthAlgo != MFDES_ALGO_3DES && cmdAuthAlgo != MFDES_ALGO_3K3DES) {
-                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth iso mode");
-                return PM3_EINVARG;
-            }
-            break;
-        case MFDES_AUTH_AES:
-            if (cmdAuthAlgo != MFDES_ALGO_AES) {
-                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth aes mode");
-                return PM3_EINVARG;
-            }
-            break;
-        case MFDES_AUTH_PICC:
-            if (cmdAuthAlgo != MFDES_AUTH_DES) {
-                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth picc mode");
-                return PM3_EINVARG;
-            }
-            break;
-        default:
-            PrintAndLogEx(WARNING, "Wrong Auth mode (%d) -> (1=normal, 2=iso, 3=aes)", cmdAuthMode);
-            return PM3_EINVARG;
-    }
-
-    int keylength = 16;
-
-    switch (cmdAuthAlgo) {
-        case MFDES_ALGO_3DES:
-            keylength = 16;
-            break;
-        case MFDES_ALGO_3K3DES:
-            keylength = 24;
-            break;
-        case MFDES_ALGO_AES:
-            keylength = 16;
-            break;
-        default:
-            cmdAuthAlgo = MFDES_ALGO_DES;
-            keylength = 8;
-            break;
-    }
-
-    switch (cmdKdfAlgo) {
-        case MFDES_KDF_ALGO_AN10922:
-            // TODO: 2TDEA and 3TDEA keys use an input length of 1-15 bytes
-            if (cmdAuthAlgo != MFDES_ALGO_AES) {
-                PrintAndLogEx(FAILED, "Crypto algo not valid for the KDF AN10922 algo.");
-                return PM3_EINVARG;
-            }
-            if (kdfInputLen < 1 || kdfInputLen > 31) {
-                PrintAndLogEx(FAILED, "KDF AN10922 algo requires an input of length 1-31 bytes.");
-                return PM3_EINVARG;
-            }
-            break;
-        case MFDES_KDF_ALGO_GALLAGHER:
-            // TODO: 2TDEA and 3TDEA keys use an input length of 1-15 bytes
-            if (cmdAuthAlgo != MFDES_ALGO_AES) {
-                PrintAndLogEx(FAILED, "Crypto algo not valid for the KDF AN10922 algo.");
-                return PM3_EINVARG;
-            }
-            break;
-        // KDF input arg is ignored as it'll be generated.
-        case MFDES_KDF_ALGO_NONE:
-            break;
-        default:
-            PrintAndLogEx(WARNING, "KDF algo %d is not supported.", cmdKdfAlgo);
-            return PM3_EINVARG;
-    }
-
-    // KEY
-    int res = handler_desfire_select_application(aid);
-    if (res != PM3_SUCCESS) return res;
-
-    if (memcmp(aid, "\x00\x00\x00", 3) != 0) {
-        uint8_t file_ids[33] = {0};
-        uint32_t file_ids_len = 0;
-        res = handler_desfire_fileids(file_ids, &file_ids_len);
-        if (res != PM3_SUCCESS) return res;
-    }
-
-    mfdes_authinput_t payload;
-    payload.keylen = keylength;
-    memcpy(payload.key, key, keylength);
-    payload.mode = cmdAuthMode;
-    payload.algo = cmdAuthAlgo;
-    payload.keyno = cmdKeyNo;
-    payload.kdfAlgo = cmdKdfAlgo;
-    payload.kdfInputLen = kdfInputLen;
-    memcpy(payload.kdfInput, kdfInput, kdfInputLen);
-
-    int error = handler_desfire_auth(&payload, rpayload);
-    if (error == PM3_SUCCESS) {
-        memcpy(&currentauth[payload.keyno], &payload, sizeof(mfdes_authinput_t));
-    }
-
-    return error;
-}
 
 static int CmdHF14ADesInfo(const char *Cmd) {
     CLIParserContext *ctx;
@@ -1486,19 +589,24 @@ static void DesFill2bPattern(
     (*startPattern)++;
 }
 
-static int AuthCheckDesfire(uint8_t *aid,
+static int AuthCheckDesfire(DesfireContext *dctx,
+                            DesfireSecureChannel secureChannel,
+                            uint8_t *aid,
                             uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t deskeyListLen,
                             uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t aeskeyListLen,
                             uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t k3kkeyListLen,
                             uint8_t cmdKdfAlgo, uint8_t kdfInputLen, uint8_t *kdfInput,
-                            uint8_t foundKeys[4][0xE][24 + 1], bool *result) {
+                            uint8_t foundKeys[4][0xE][24 + 1], 
+                            bool *result,
+                            bool verbose) {
 
     uint32_t curaid = (aid[0] & 0xFF) + ((aid[1] & 0xFF) << 8) + ((aid[2] & 0xFF) << 16);
 
-    int res = handler_desfire_select_application(aid);
+    int res = DesfireSelectAIDHex(dctx, curaid, false, 0);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "AID 0x%06X does not exist.", curaid);
-        return res;
+        DropField();
+        return PM3_ESOFT;
     }
 
     int usedkeys[0xF] = {0};
@@ -1507,78 +615,69 @@ static int AuthCheckDesfire(uint8_t *aid,
     bool aes = false;
     bool k3kdes = false;
 
-    uint8_t num_keys = 0;
-    uint8_t key_setting = 0;
-    res = handler_desfire_getkeysettings(&key_setting, &num_keys);
-    if (res != PM3_SUCCESS) {
+    uint8_t data[250] = {0};
+    size_t datalen = 0;
+    
+    res = DesfireGetKeySettings(dctx, data, &datalen);
+    if (res != PM3_SUCCESS && datalen < 2) {
         PrintAndLogEx(ERR, "Could not get key settings");
         return res;
     }
-
-    if (memcmp(aid, "\x00\x00\x00", 3) != 0) {
-        uint8_t file_ids[33] = {0};
-        uint32_t file_ids_len = 0;
-        // Get File IDs
-        if (handler_desfire_fileids(file_ids, &file_ids_len) == PM3_SUCCESS) {
-
-            for (int j = (int)file_ids_len - 1; j >= 0; j--) {
-
-                uint8_t filesettings[20] = {0};
-                uint32_t fileset_len = 0;
-
-                res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
-                if (res == PM3_SUCCESS) {
-
-                    uint16_t accrights = (filesettings[3] << 8) + filesettings[2];
-                    uint8_t change_access_rights = accrights & 0xF;
-                    uint8_t read_write_access = (accrights >> 4) & 0xF;
-                    uint8_t write_access = (accrights >> 8) & 0xF;
-                    uint8_t read_access = (accrights >> 12) & 0xF;
-
-                    if (change_access_rights == 0xE) change_access_rights = 0x0;
-                    if (read_write_access == 0xE) read_write_access = 0x0;
-                    if (write_access == 0xE) write_access = 0x0;
-                    if (read_access == 0xE) read_access = 0x0;
-
-                    usedkeys[change_access_rights] = 1;
-                    usedkeys[read_write_access] = 1;
-                    usedkeys[write_access] = 1;
-                    usedkeys[read_access] = 1;
-
-                    if (res == PM3_SUCCESS) {
-                        switch (num_keys >> 6) {
-                            case 0:
-                                des = true;
-                                tdes = true;
-                                break;
-                            case 1:
-                                k3kdes = true;
-                                break;
-                            case 2:
-                                aes = true;
-                                break;
-                            default:
-                                break;
-                        }
-                    }
+    uint8_t num_keys = data[1];
+    switch (num_keys >> 6) {
+        case 0:
+            des = true;
+            tdes = true;
+            break;
+        case 1:
+            k3kdes = true;
+            break;
+        case 2:
+            aes = true;
+            break;
+        default:
+            break;
+    }
+    
+    // always check master key
+    usedkeys[0] = 1;
+    
+    if (curaid != 0) {
+        FileListS fileList = {0};
+        size_t filescount = 0;
+        bool isopresent = 0;
+        res = DesfireFillFileList(dctx, fileList, &filescount, &isopresent);
+        if (res == PM3_SUCCESS) {
+            if (filescount > 0) {
+                for (int i = 0; i < filescount; i++) {
+                    if (fileList[i].fileSettings.rAccess < 0x0e)
+                        usedkeys[fileList[i].fileSettings.rAccess] = 1;
+                    if (fileList[i].fileSettings.wAccess < 0x0e)
+                        usedkeys[fileList[i].fileSettings.wAccess] = 1;
+                    if (fileList[i].fileSettings.rwAccess < 0x0e)
+                        usedkeys[fileList[i].fileSettings.rwAccess] = 1;
+                    if (fileList[i].fileSettings.chAccess < 0x0e)
+                        usedkeys[fileList[i].fileSettings.chAccess] = 1;
                 }
+            } else {
+                for (int i = 0; i < 0xE; i++)
+                    usedkeys[i] = 1;
             }
-
-            if (file_ids_len == 0) {
-                for (uint8_t z = 0; z < 0xE; z++) {
-                    usedkeys[z] = 1;
-                    des = true;
-                    tdes = true;
-                    aes = true;
-                    k3kdes = true;
-                }
-            }
+        } else {
+            for (int i = 0; i < 0xE; i++)
+                usedkeys[i] = 1;
         }
-    } else {
-        des = true;
+    }
+    
+    if (verbose) {
+        PrintAndLogEx(INFO, "Check: %s %s %s %s " NOLF, (des) ? "DES" : "", (tdes) ? "2TDEA" : "", (k3kdes) ? "3TDEA" : "", (aes) ? "AES" : "");
+        PrintAndLogEx(NORMAL, "keys: " NOLF);
+        for (int i = 0; i < 0xE; i++)
+            if (usedkeys[i] == 1)
+                PrintAndLogEx(NORMAL, "%02x " NOLF, i);
+        PrintAndLogEx(NORMAL, "");
     }
 
-    int error;
     bool badlen = false;
 
     if (des) {
@@ -1587,18 +686,18 @@ static int AuthCheckDesfire(uint8_t *aid,
 
             if (usedkeys[keyno] == 1 && foundKeys[0][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < deskeyListLen; curkey++) {
-                    mfdes_auth_res_t rpayload;
-                    error = desfire_authenticate(MFDES_AUTH_DES, MFDES_ALGO_DES, aid, deskeyList[curkey], keyno, 0, 0, NULL, &rpayload);
-                    if (error == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found DES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(deskeyList[curkey], 8));
+                    DesfireSetKeyNoClear(dctx, keyno, T_DES, deskeyList[curkey]);
+                    res = DesfireAuthenticate(dctx, secureChannel, false);
+                    if (res == PM3_SUCCESS) {
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found DES Key %02u          : " _GREEN_("%s"), curaid, keyno, sprint_hex(deskeyList[curkey], 8));
                         foundKeys[0][keyno][0] = 0x01;
                         *result = true;
                         memcpy(&foundKeys[0][keyno][1], deskeyList[curkey], 8);
                         break;
-                    } else if (error < 7) {
+                    } else if (res < 7) {
                         badlen = true;
-                        DropFieldDesfire();
-                        res = handler_desfire_select_application(aid);
+                        DropField();
+                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
                         if (res != PM3_SUCCESS) {
                             return res;
                         }
@@ -1619,18 +718,18 @@ static int AuthCheckDesfire(uint8_t *aid,
 
             if (usedkeys[keyno] == 1 && foundKeys[1][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
-                    mfdes_auth_res_t rpayload;
-                    error = desfire_authenticate(MFDES_AUTH_DES, MFDES_ALGO_3DES, aid, aeskeyList[curkey], keyno, 0, 0, NULL, &rpayload);
-                    if (error == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3DES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
+                    DesfireSetKeyNoClear(dctx, keyno, T_3DES, aeskeyList[curkey]);
+                    res = DesfireAuthenticate(dctx, secureChannel, false);
+                    if (res == PM3_SUCCESS) {
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 2TDEA Key %02u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
                         foundKeys[1][keyno][0] = 0x01;
                         *result = true;
                         memcpy(&foundKeys[1][keyno][1], aeskeyList[curkey], 16);
                         break;
-                    } else if (error < 7) {
+                    } else if (res < 7) {
                         badlen = true;
-                        DropFieldDesfire();
-                        res = handler_desfire_select_application(aid);
+                        DropField();
+                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
                         if (res != PM3_SUCCESS) {
                             return res;
                         }
@@ -1651,18 +750,18 @@ static int AuthCheckDesfire(uint8_t *aid,
 
             if (usedkeys[keyno] == 1 && foundKeys[2][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
-                    mfdes_auth_res_t rpayload;
-                    error = desfire_authenticate(MFDES_AUTH_AES, MFDES_ALGO_AES, aid, aeskeyList[curkey], keyno, cmdKdfAlgo, kdfInputLen, kdfInput, &rpayload);
-                    if (error == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found AES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
+                    DesfireSetKeyNoClear(dctx, keyno, T_AES, aeskeyList[curkey]);
+                    res = DesfireAuthenticate(dctx, secureChannel, false);
+                    if (res == PM3_SUCCESS) {
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found AES Key %02u          : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
                         foundKeys[2][keyno][0] = 0x01;
                         *result = true;
                         memcpy(&foundKeys[2][keyno][1], aeskeyList[curkey], 16);
                         break;
-                    } else if (error < 7) {
+                    } else if (res < 7) {
                         badlen = true;
-                        DropFieldDesfire();
-                        res = handler_desfire_select_application(aid);
+                        DropField();
+                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
                         if (res != PM3_SUCCESS) {
                             return res;
                         }
@@ -1683,18 +782,18 @@ static int AuthCheckDesfire(uint8_t *aid,
 
             if (usedkeys[keyno] == 1 && foundKeys[3][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < k3kkeyListLen; curkey++) {
-                    mfdes_auth_res_t rpayload;
-                    error = desfire_authenticate(MFDES_AUTH_ISO, MFDES_ALGO_3K3DES, aid, k3kkeyList[curkey], keyno, 0, 0, NULL, &rpayload);
-                    if (error == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3K3 Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(k3kkeyList[curkey], 24));
+                    DesfireSetKeyNoClear(dctx, keyno, T_3K3DES, k3kkeyList[curkey]);
+                    res = DesfireAuthenticate(dctx, secureChannel, false);
+                    if (res == PM3_SUCCESS) {
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3TDEA Key %02u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(k3kkeyList[curkey], 24));
                         foundKeys[3][keyno][0] = 0x01;
                         *result = true;
                         memcpy(&foundKeys[3][keyno][1], k3kkeyList[curkey], 16);
                         break;
-                    } else if (error < 7) {
+                    } else if (res < 7) {
                         badlen = true;
-                        DropFieldDesfire();
-                        res = handler_desfire_select_application(aid);
+                        DropField();
+                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
                         if (res != PM3_SUCCESS) {
                             return res;
                         }
@@ -1708,7 +807,7 @@ static int AuthCheckDesfire(uint8_t *aid,
             }
         }
     }
-    DropFieldDesfire();
+    DropField();
     return PM3_SUCCESS;
 }
 
@@ -1733,7 +832,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("a",  "aid",      "<aid>", "Use specific AID (3 hex bytes, big endian)"),
+        arg_strx0(NULL,  "aid",      "<aid>", "Use specific AID (3 hex bytes, big endian)"),
         arg_str0("k",  "key",       "<Key>", "Key for checking (HEX 16 bytes)"),
         arg_str0("d",  "dict",      "<file>", "File with keys dictionary"),
         arg_lit0(NULL,  "pattern1b", "Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
@@ -1743,9 +842,12 @@ static int CmdHF14aDesChk(const char *Cmd) {
         arg_lit0("v",  "verbose",   "Verbose mode."),
         arg_int0("f",  "kdf",     "<kdf>", "Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)"),
         arg_str0("i",  "kdfi",    "<kdfi>", "KDF input (HEX 1-31 bytes)"),
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 11);
 
     int aidlength = 0;
     uint8_t aid[3] = {0};
@@ -1829,6 +931,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 10, kdfInput, &kdfInputLen);
 
     CLIParserFree(ctx);
+    SetAPDULogging(APDULogging);
 
     // 1-byte pattern search mode
     if (pattern1b) {
@@ -1891,22 +994,31 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     bool result = false;
     uint8_t app_ids[78] = {0};
-    uint32_t app_ids_len = 0;
+    size_t app_ids_len = 0;
 
     clearCommandBuffer();
 
-    mfdes_info_res_t info = {0};
-    res = mfdes_get_info(&info);
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
-    // TODO: Store this UID someowhere not global
-    memcpy(tag->info.uid, info.uid, info.uidlen);
-    tag->info.uidlen = info.uidlen;
+    DesfireContext dctx;
+    DesfireSetKdf(&dctx, cmdKDFAlgo, kdfInput, kdfInputLen);
+    DesfireSetCommandSet(&dctx, DCCNativeISO);
+    DesfireSetCommMode(&dctx, DCMPlain);
+    DesfireSecureChannel secureChannel = DACEV1;
+    
+    // save card UID to dctx
+    DesfireGetCardUID(&dctx);
 
-    if (handler_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
+    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Can't select PICC level.");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+
+    res = DesfireGetAIDList(&dctx, app_ids, &app_ids_len);
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
-        DropFieldDesfire();
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -1920,7 +1032,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         uint32_t curaid = (app_ids[x * 3] & 0xFF) + ((app_ids[(x * 3) + 1] & 0xFF) << 8) + ((app_ids[(x * 3) + 2] & 0xFF) << 16);
         PrintAndLogEx(ERR, "Checking aid 0x%06X...", curaid);
 
-        res = AuthCheckDesfire(&app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &result);
+        res = AuthCheckDesfire(&dctx, secureChannel, &app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &result, (verbose == false));
         if (res == PM3_EOPABORTED) {
             break;
         }
@@ -1963,6 +1075,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     // save keys to json
     if ((jsonnamelen > 0) && result) {
+        DropField();
         // MIFARE DESFire info
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
 
@@ -1991,6 +1104,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         saveFileJSON((char *)jsonname, jsfMfDesfireKeys, data, 0xE, NULL);
     }
 
+    DropField();
     return PM3_SUCCESS;
 }
 
@@ -5836,7 +4950,7 @@ static command_t CommandTable[] = {
     {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get uid from card"},
     {"default",          CmdHF14ADesDefault,          IfPm3Iso14443a,  "Set defaults for all the commands"},
     {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "MIFARE DesFire Authentication"},
-    {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "[old]Check keys"},
+    {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "Check keys"},
     {"freemem",          CmdHF14ADesGetFreeMem,       IfPm3Iso14443a,  "Get free memory size"},
     {"setconfig",        CmdHF14ADesSetConfiguration, IfPm3Iso14443a,  "Set card configuration"},
     {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
