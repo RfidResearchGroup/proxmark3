@@ -588,7 +588,6 @@ SRCS =  mifare/aiddesfire.c \
 		loclass/cipherutils.c \
 		loclass/elite_crack.c \
 		loclass/ikeys.c \
-		mifare/desfire_crypto.c \
 		mifare/desfirecrypto.c \
 		mifare/desfirecore.c \
         mifare/desfiresecurechan.c \
