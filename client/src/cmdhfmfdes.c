@@ -639,7 +639,10 @@ static int AuthCheckDesfire(DesfireContext *dctx,
         default:
             break;
     }
-
+    
+    // always check master key
+    usedkeys[0] = 1;
+    
     if (curaid != 0) {
         FileListS fileList = {0};
         size_t filescount = 0;
@@ -716,7 +719,7 @@ static int AuthCheckDesfire(DesfireContext *dctx,
 
             if (usedkeys[keyno] == 1 && foundKeys[1][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_3DES, deskeyList[curkey]);
+                    DesfireSetKeyNoClear(dctx, keyno, T_3DES, aeskeyList[curkey]);
                     res = DesfireAuthenticate(dctx, secureChannel, false);
                     if (res == PM3_SUCCESS) {
                         PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 2TDEA Key %02u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
@@ -748,7 +751,7 @@ static int AuthCheckDesfire(DesfireContext *dctx,
 
             if (usedkeys[keyno] == 1 && foundKeys[2][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_AES, deskeyList[curkey]);
+                    DesfireSetKeyNoClear(dctx, keyno, T_AES, aeskeyList[curkey]);
                     res = DesfireAuthenticate(dctx, secureChannel, false);
                     if (res == PM3_SUCCESS) {
                         PrintAndLogEx(SUCCESS, "AID 0x%06X, Found AES Key %02u          : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
@@ -780,7 +783,7 @@ static int AuthCheckDesfire(DesfireContext *dctx,
 
             if (usedkeys[keyno] == 1 && foundKeys[3][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < k3kkeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_3K3DES, deskeyList[curkey]);
+                    DesfireSetKeyNoClear(dctx, keyno, T_3K3DES, k3kkeyList[curkey]);
                     res = DesfireAuthenticate(dctx, secureChannel, false);
                     if (res == PM3_SUCCESS) {
                         PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3TDEA Key %02u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(k3kkeyList[curkey], 24));
