@@ -687,7 +687,7 @@ static int AuthCheckDesfire(DesfireContext *dctx,
                     DesfireSetKeyNoClear(dctx, keyno, T_DES, deskeyList[curkey]);
                     res = DesfireAuthenticate(dctx, secureChannel, false);
                     if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found DES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(deskeyList[curkey], 8));
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found DES Key %02u          : " _GREEN_("%s"), curaid, keyno, sprint_hex(deskeyList[curkey], 8));
                         foundKeys[0][keyno][0] = 0x01;
                         *result = true;
                         memcpy(&foundKeys[0][keyno][1], deskeyList[curkey], 8);
@@ -719,7 +719,7 @@ static int AuthCheckDesfire(DesfireContext *dctx,
                     DesfireSetKeyNoClear(dctx, keyno, T_3DES, deskeyList[curkey]);
                     res = DesfireAuthenticate(dctx, secureChannel, false);
                     if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 2TDEA Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 2TDEA Key %02u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
                         foundKeys[1][keyno][0] = 0x01;
                         *result = true;
                         memcpy(&foundKeys[1][keyno][1], aeskeyList[curkey], 16);
@@ -751,7 +751,7 @@ static int AuthCheckDesfire(DesfireContext *dctx,
                     DesfireSetKeyNoClear(dctx, keyno, T_AES, deskeyList[curkey]);
                     res = DesfireAuthenticate(dctx, secureChannel, false);
                     if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found AES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found AES Key %02u          : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
                         foundKeys[2][keyno][0] = 0x01;
                         *result = true;
                         memcpy(&foundKeys[2][keyno][1], aeskeyList[curkey], 16);
@@ -783,7 +783,7 @@ static int AuthCheckDesfire(DesfireContext *dctx,
                     DesfireSetKeyNoClear(dctx, keyno, T_3K3DES, deskeyList[curkey]);
                     res = DesfireAuthenticate(dctx, secureChannel, false);
                     if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3TDEA Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(k3kkeyList[curkey], 24));
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3TDEA Key %02u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(k3kkeyList[curkey], 24));
                         foundKeys[3][keyno][0] = 0x01;
                         *result = true;
                         memcpy(&foundKeys[3][keyno][1], k3kkeyList[curkey], 16);
