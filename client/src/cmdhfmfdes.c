@@ -173,6 +173,28 @@ typedef struct aidhdr {
 
 static int CmdHelp(const char *Cmd);
 
+static int CLIGetUint32Hex(CLIParserContext *ctx, uint8_t paramnum, uint32_t defaultValue, uint32_t *value, bool *valuePresent, uint8_t nlen, const char *lengthErrorStr) {
+    if (value != NULL)
+        *value = defaultValue;
+    if (valuePresent != NULL)
+        *valuePresent = false;
+    
+    int res = arg_get_u32_hexstr_def_nlen(ctx, paramnum, defaultValue, value, nlen, true);
+
+    if (valuePresent != NULL)
+        *valuePresent = (res == 1);
+
+    if (res == 2) {
+        PrintAndLogEx(ERR, lengthErrorStr);
+        return PM3_EINVARG;
+    }
+    if (res == 0) {
+        return PM3_EINVARG;
+    }
+
+    return PM3_SUCCESS;
+}
+
 /*
   The 7 MSBits (= n) code the storage size itself based on 2^n,
   the LSBit is set to '0' if the size is exactly 2^n
@@ -2194,13 +2216,8 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
 
     if (appid && aid) {
         *aid = 0x000000;
-        int res = arg_get_u32_hexstr_def_nlen(ctx, appid, 0x000000, aid, 3, true);
-        if (res == 0)
-            return PM3_ESOFT;
-        if (res == 2) {
-            PrintAndLogEx(ERR, "AID length must have 3 bytes length");
+        if (CLIGetUint32Hex(ctx, appid, 0x000000, aid, NULL, 3, "AID must have 3 bytes length"))
             return PM3_EINVARG;
-        }
     }
 
     DesfireSetKey(dctx, keynum, algores, key);
@@ -4728,9 +4745,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
     }
 
     uint32_t fileid = 1;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fileid, 1, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "File ID must have 1 byte length");
+    if (CLIGetUint32Hex(ctx, 12, 1, &fileid, NULL, 1, "File ID must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -4888,9 +4903,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     }
 
     uint32_t fnum = 1;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fnum, 1, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "File ID must have 1 byte length");
+    if (CLIGetUint32Hex(ctx, 12, 1, &fnum, NULL, 1, "File ID must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -5228,9 +5241,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     }
 
     uint32_t fnum = 1;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fnum, 1, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "File ID must have 1 byte length");
+    if (CLIGetUint32Hex(ctx, 12, 1, &fnum, NULL, 1, "File ID must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -5242,35 +5253,27 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     }
 
     uint32_t offset = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 15, 0, &offset, 3, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Offset must have 3 byte length");
+    if (CLIGetUint32Hex(ctx, 15, 0, &offset, NULL, 3, "Offset must have 3 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t length = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 16, 0, &length, 3, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Length must have 3 byte length");
+    if (CLIGetUint32Hex(ctx, 16, 0, &length, NULL, 3, "Length parameter must have 3 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t appisoid = 0x0000;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 17, 0x0000, &appisoid, 2, true);
-    bool isoidpresent = (res == 1);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Application ISO ID (for EF) must have 2 bytes length");
+    bool isoidpresent = false;
+    if (CLIGetUint32Hex(ctx, 17, 0x0000, &appisoid, &isoidpresent, 2, "Application ISO ID (for EF) must have 2 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t fileisoid = 0x0000;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 18, 0x0000, &fileisoid, 2, true);
-    bool fileisoidpresent = (res == 1);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "File ISO ID (for DF) must have 2 bytes length");
+    bool fileisoidpresent = false;
+    if (CLIGetUint32Hex(ctx, 18, 0x0000, &fileisoid, &fileisoidpresent, 2, "File ISO ID (for DF) must have 2 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -5414,9 +5417,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     }
 
     uint32_t fnum = 1;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 1, &fnum, 1, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "File ID must have 1 byte length");
+    if (CLIGetUint32Hex(ctx, 12, 1, &fnum, NULL, 1, "File ID must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -5428,9 +5429,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     }
 
     uint32_t offset = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 15, 0, &offset, 3, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Offset must have 3 byte length");
+    if (CLIGetUint32Hex(ctx, 15, 0, &offset, NULL, 3, "Offset must have 3 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -5450,19 +5449,15 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     int updaterecno = arg_get_int_def(ctx, 19, -1);
 
     uint32_t appisoid = 0x0000;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 20, 0x0000, &appisoid, 2, true);
-    bool isoidpresent = (res == 1);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Application ISO ID (for EF) must have 2 bytes length");
+    bool isoidpresent = false;
+    if (CLIGetUint32Hex(ctx, 20, 0x0000, &appisoid, &isoidpresent, 2, "Application ISO ID (for EF) must have 2 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t fileisoid = 0x0000;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 21, 0x0000, &fileisoid, 2, true);
-    bool fileisoidpresent = (res == 1);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "File ISO ID (for DF) must have 2 bytes length");
+    bool fileisoidpresent = false;
+    if (CLIGetUint32Hex(ctx, 21, 0x0000, &fileisoid, &fileisoidpresent, 2, "File ISO ID (for DF) must have 2 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
