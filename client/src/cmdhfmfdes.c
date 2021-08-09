@@ -2335,24 +2335,14 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
 
     uint32_t isoid = 0x0000;
     bool isoidpresent = false;
-    if (CLIGetUint32Hex(ctx, 13, 0x0000, &isoid, &isoidpresent, 2, "ISO ID for EF or DF must have 2 bytes length")) {
+    if (CLIGetUint32Hex(ctx, 14, 0x0000, &isoid, &isoidpresent, 2, "ISO ID for EF or DF must have 2 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
     
-    res = arg_get_u32_hexstr_def_nlen(ctx, 14, 0x0000, &isoid, 2, true);
-    bool idsoidpresent = (res == 1);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "ISO ID for EF or DF must have 2 bytes length");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
     uint32_t fileisoid = 0x0000;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 15, 0x0000, &fileisoid, 2, true);
-    bool fileisoidpresent = (res == 1);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "ISO ID for EF or DF must have 2 bytes length");
+    bool fileisoidpresent = false;
+    if (CLIGetUint32Hex(ctx, 15, 0x0000, &fileisoid, &fileisoidpresent, 2, "ISO ID for EF or DF must have 2 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
