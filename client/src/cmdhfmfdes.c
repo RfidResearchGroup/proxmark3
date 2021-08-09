@@ -1034,32 +1034,6 @@ static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signat
     return PM3_SUCCESS;
 }
 
-static int handler_desfire_getkeysettings(uint8_t *key_settings, uint8_t *num_keys) {
-    if (key_settings == NULL) {
-        PrintAndLogEx(DEBUG, "KEY_SETTINGS=NULL");
-        return PM3_EINVARG;
-    }
-    if (num_keys == NULL) {
-        PrintAndLogEx(DEBUG, "NUM_KEYS=NULL");
-        return PM3_EINVARG;
-    }
-    sAPDU apdu = {0x90, MFDES_GET_KEY_SETTINGS, 0x00, 0x00, 0x00, NULL}; //0x45
-
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    uint8_t data[2] = {0};
-    int res = send_desfire_cmd(&apdu, false, data, &recv_len, &sw, 0, true);
-
-    if (res != PM3_SUCCESS)
-        return res;
-    if (sw != status(MFDES_S_OPERATION_OK))
-        return PM3_ESOFT;
-
-    *key_settings = data[0];
-    *num_keys = data[1];
-    return res;
-}
-
 static int handler_desfire_select_application(uint8_t *aid) {
     if (g_debugMode > 1) {
         if (aid == NULL) {
@@ -1105,24 +1079,6 @@ static int handler_desfire_fileids(uint8_t *dest, uint32_t *file_ids_len) {
         return res;
     }
     *file_ids_len = recv_len;
-    return res;
-}
-
-// none, verified
-static int handler_desfire_filesettings(uint8_t file_id, uint8_t *dest, uint32_t *destlen) {
-    if (g_debugMode > 1) {
-        if (dest == NULL) PrintAndLogEx(ERR, "DEST=NULL");
-        if (destlen == NULL) PrintAndLogEx(ERR, "DESTLEN=NULL");
-    }
-    if (dest == NULL || destlen == NULL) return PM3_EINVARG;
-    sAPDU apdu = {0x90, MFDES_GET_FILE_SETTINGS, 0x00, 0x00, 0x01, &file_id}; // 0xF5
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, false, dest, destlen, &sw, 0, true);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't get file settings -> %s"), DesfireGetErrorString(res, &sw));
-        DropFieldDesfire();
-        return res;
-    }
     return res;
 }
 
@@ -1460,19 +1416,23 @@ static void DesFill2bPattern(
     (*startPattern)++;
 }
 
-static int AuthCheckDesfire(uint8_t *aid,
+static int AuthCheckDesfire(DesfireContext *dctx,
+                            uint8_t *aid,
                             uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t deskeyListLen,
                             uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t aeskeyListLen,
                             uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t k3kkeyListLen,
                             uint8_t cmdKdfAlgo, uint8_t kdfInputLen, uint8_t *kdfInput,
-                            uint8_t foundKeys[4][0xE][24 + 1], bool *result) {
+                            uint8_t foundKeys[4][0xE][24 + 1], 
+                            bool *result,
+                            bool verbose) {
 
     uint32_t curaid = (aid[0] & 0xFF) + ((aid[1] & 0xFF) << 8) + ((aid[2] & 0xFF) << 16);
 
-    int res = handler_desfire_select_application(aid);
+    int res = DesfireSelectAIDHex(dctx, curaid, false, 0);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "AID 0x%06X does not exist.", curaid);
-        return res;
+        DropField();
+        return PM3_ESOFT;
     }
 
     int usedkeys[0xF] = {0};
@@ -1481,75 +1441,64 @@ static int AuthCheckDesfire(uint8_t *aid,
     bool aes = false;
     bool k3kdes = false;
 
-    uint8_t num_keys = 0;
-    uint8_t key_setting = 0;
-    res = handler_desfire_getkeysettings(&key_setting, &num_keys);
-    if (res != PM3_SUCCESS) {
+    uint8_t data[250] = {0};
+    size_t datalen = 0;
+    
+    res = DesfireGetKeySettings(dctx, data, &datalen);
+    if (res != PM3_SUCCESS && datalen < 2) {
         PrintAndLogEx(ERR, "Could not get key settings");
         return res;
     }
+    uint8_t num_keys = data[1];
+    switch (num_keys >> 6) {
+        case 0:
+            des = true;
+            tdes = true;
+            break;
+        case 1:
+            k3kdes = true;
+            break;
+        case 2:
+            aes = true;
+            break;
+        default:
+            break;
+    }
 
-    if (memcmp(aid, "\x00\x00\x00", 3) != 0) {
-        uint8_t file_ids[33] = {0};
-        uint32_t file_ids_len = 0;
-        // Get File IDs
-        if (handler_desfire_fileids(file_ids, &file_ids_len) == PM3_SUCCESS) {
-
-            for (int j = (int)file_ids_len - 1; j >= 0; j--) {
-
-                uint8_t filesettings[20] = {0};
-                uint32_t fileset_len = 0;
-
-                res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
-                if (res == PM3_SUCCESS) {
-
-                    uint16_t accrights = (filesettings[3] << 8) + filesettings[2];
-                    uint8_t change_access_rights = accrights & 0xF;
-                    uint8_t read_write_access = (accrights >> 4) & 0xF;
-                    uint8_t write_access = (accrights >> 8) & 0xF;
-                    uint8_t read_access = (accrights >> 12) & 0xF;
-
-                    if (change_access_rights == 0xE) change_access_rights = 0x0;
-                    if (read_write_access == 0xE) read_write_access = 0x0;
-                    if (write_access == 0xE) write_access = 0x0;
-                    if (read_access == 0xE) read_access = 0x0;
-
-                    usedkeys[change_access_rights] = 1;
-                    usedkeys[read_write_access] = 1;
-                    usedkeys[write_access] = 1;
-                    usedkeys[read_access] = 1;
-
-                    if (res == PM3_SUCCESS) {
-                        switch (num_keys >> 6) {
-                            case 0:
-                                des = true;
-                                tdes = true;
-                                break;
-                            case 1:
-                                k3kdes = true;
-                                break;
-                            case 2:
-                                aes = true;
-                                break;
-                            default:
-                                break;
-                        }
-                    }
+    if (curaid != 0) {
+        FileListS fileList = {0};
+        size_t filescount = 0;
+        bool isopresent = 0;
+        res = DesfireFillFileList(dctx, fileList, &filescount, &isopresent);
+        if (res == PM3_SUCCESS) {
+            if (filescount > 0) {
+                for (int i = 0; i < filescount; i++) {
+                    if (fileList[i].fileSettings.rAccess < 0x0e)
+                        usedkeys[fileList[i].fileSettings.rAccess] = 1;
+                    if (fileList[i].fileSettings.wAccess < 0x0e)
+                        usedkeys[fileList[i].fileSettings.wAccess] = 1;
+                    if (fileList[i].fileSettings.rwAccess < 0x0e)
+                        usedkeys[fileList[i].fileSettings.rwAccess] = 1;
+                    if (fileList[i].fileSettings.chAccess < 0x0e)
+                        usedkeys[fileList[i].fileSettings.chAccess] = 1;
                 }
+            } else {
+                for (int i = 0; i < 0xE; i++)
+                    usedkeys[i] = 1;
             }
-
-            if (file_ids_len == 0) {
-                for (uint8_t z = 0; z < 0xE; z++) {
-                    usedkeys[z] = 1;
-                    des = true;
-                    tdes = true;
-                    aes = true;
-                    k3kdes = true;
-                }
-            }
+        } else {
+            for (int i = 0; i < 0xE; i++)
+                usedkeys[i] = 1;
         }
-    } else {
-        des = true;
+    }
+    
+    if (verbose) {
+        PrintAndLogEx(INFO, "Check: %s %s %s %s " NOLF, (des) ? "DES" : "", (tdes) ? "2TDEA" : "", (k3kdes) ? "3TDEA" : "", (aes) ? "AES" : "");
+        PrintAndLogEx(NORMAL, "keys: " NOLF);
+        for (int i = 0; i < 0xE; i++)
+            if (usedkeys[i] == 1)
+                PrintAndLogEx(NORMAL, "%02x " NOLF, i);
+        PrintAndLogEx(NORMAL, "");
     }
 
     int error;
@@ -1906,7 +1855,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         uint32_t curaid = (app_ids[x * 3] & 0xFF) + ((app_ids[(x * 3) + 1] & 0xFF) << 8) + ((app_ids[(x * 3) + 2] & 0xFF) << 16);
         PrintAndLogEx(ERR, "Checking aid 0x%06X...", curaid);
 
-        res = AuthCheckDesfire(&app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &result);
+        res = AuthCheckDesfire(&dctx, &app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &result, (verbose == false));
         if (res == PM3_EOPABORTED) {
             break;
         }
@@ -1949,6 +1898,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     // save keys to json
     if ((jsonnamelen > 0) && result) {
+        DropField();
         // MIFARE DESFire info
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
 
@@ -1977,6 +1927,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         saveFileJSON((char *)jsonname, jsfMfDesfireKeys, data, 0xE, NULL);
     }
 
+    DropField();
     return PM3_SUCCESS;
 }
 
