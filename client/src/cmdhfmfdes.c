@@ -157,8 +157,7 @@ typedef struct aidhdr {
 static int CmdHelp(const char *Cmd);
 
 static int CLIGetUint32Hex(CLIParserContext *ctx, uint8_t paramnum, uint32_t defaultValue, uint32_t *value, bool *valuePresent, uint8_t nlen, const char *lengthErrorStr) {
-    if (value != NULL)
-        *value = defaultValue;
+    *value = defaultValue;
     if (valuePresent != NULL)
         *valuePresent = false;
     
