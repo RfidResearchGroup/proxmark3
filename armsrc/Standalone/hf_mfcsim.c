@@ -53,31 +53,36 @@ static uint8_t uid[10];
 static bool ecfill_from_file(char *inputfile) {
 
     if (exists_in_spiffs(inputfile)) {
-
         uint32_t size = size_in_spiffs(inputfile);
         uint8_t *mem = BigBuf_malloc(size);
         if (!mem) {
             Dbprintf(_RED_("No memory！"));
+            return false;
         }
 
+        //read dumpfile
         Dbprintf(_YELLOW_("Found dump file %s"), inputfile);
         rdv40_spiffs_read_as_filetype(inputfile, mem, size, RDV40_SPIFFS_SAFETY_SAFE);
 
+        //check dumpfile size
         Dbprintf(_YELLOW_("File size is %d"), size);
         if (size != DUMP_SIZE) {
             Dbprintf(_RED_("Only support Mifare Classic 1K! Please check the dumpfile"));
+            BigBuf_free();
+            return false;
         }
 
+        //load the dump into emulator memory
         Dbprintf(_YELLOW_("Read card data from input file"));
         emlSetMem(mem, 0, MIFARE_1K_MAXBLOCK);
         Dbprintf(_YELLOW_("Uploaded to emulator memory"));
-
+        BigBuf_free_keep_EM();
+        return true;
     } else {
         Dbprintf(_RED_("no input file %s"), inputfile);
         return false;
     }
-    BigBuf_free();
-    return true;
+    return false;//Shouldn't be here
 }
 
 void ModInfo(void) {
