@@ -346,10 +346,12 @@ void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *data, size_t len, uint8_t *
 
 // This function is almot like cmac(...). but with some key differences.
 void MifareKdfAn10922(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, const uint8_t *data, size_t len) {
-    int kbs = desfire_get_key_block_length(ctx->keyType); // 8 or 16
-    if (ctx == NULL || kbs == 0 || data == NULL || len < 1 || len > 31) {
+    if (ctx == NULL || data == NULL || len < 1 || len > 31)
         return;
-    }
+
+    int kbs = desfire_get_key_block_length(ctx->keyType); // 8 or 16
+    if (kbs == 0) 
+        return;
 
     uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE * 3] = {0};
     uint8_t buffer[DESFIRE_MAX_CRYPTO_BLOCK_SIZE * 3] = {0};
