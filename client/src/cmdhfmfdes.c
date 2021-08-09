@@ -2356,7 +2356,7 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
             PrintAndLogEx(FAILED, "Application " _CYAN_("FCI template") " [%zu]%s", resplen, sprint_hex(resp, resplen));
 
         PrintAndLogEx(SUCCESS, "PICC MF selected " _GREEN_("succesfully"));
-    } else if (idsoidpresent) {
+    } else if (isoidpresent) {
         uint8_t data[2] = {0};
         Uint2byteToMemLe(data, isoid);
         res = DesfireISOSelect(&dctx, ISSMFDFEF, data, 2, resp, &resplen);
@@ -2619,9 +2619,7 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
     }
 
     uint32_t paramid = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 0, &paramid, 1, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Parameter ID must have 1 bytes length");
+    if (CLIGetUint32Hex(ctx, 12, 0, &paramid, NULL, 1, "Parameter ID must have 1 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -2753,9 +2751,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
         memcpy(newkey, keydata, keylen);
 
     uint32_t newkeyver = 0x100;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 17, 0x100, &newkeyver, 1, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Key version must have 1 bytes length");
+    if (CLIGetUint32Hex(ctx, 17, 0x100, &newkeyver, NULL, 1, "Key version must have 1 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -2881,10 +2877,8 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 11, rawdata, &rawdatalen);
 
     uint32_t fileid = 0x0000;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 13, 0x0000, &fileid, 2, true);
-    bool fileidpresent = (res == 1);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "ISO file ID must have 2 bytes length");
+    bool fileidpresent = false;
+    if (CLIGetUint32Hex(ctx, 13, 0x0000, &fileid, &fileidpresent, 2, "ISO file ID must have 2 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -2894,18 +2888,14 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     CLIGetStrWithReturn(ctx, 14, dfname, &dfnamelen);
 
     uint32_t ks1 = 0x0f;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 15, 0x0f, &ks1, 1, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Key settings 1 must have 1 byte length");
+    if (CLIGetUint32Hex(ctx, 15, 0x0f, &ks1, NULL, 1, "Key settings 1 must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t ks2 = 0x0e;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 16, 0x0e, &ks2, 1, true);
-    bool ks2present = (res == 1);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Key settings 2 must have 1 byte length");
+    bool ks2present = false;
+    if (CLIGetUint32Hex(ctx, 16, 0x0e, &ks2, &ks2present, 1, "Key settings 2 must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
