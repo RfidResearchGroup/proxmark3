@@ -4553,9 +4553,7 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
     }
 
     uint32_t keyver = 0x00;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 21, 0x00, &keyver, 1, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Key version must be 1 byte length");
+    if (CLIGetUint32Hex(ctx, 21, 0x00, &keyver, NULL, 1, "Key version must have 1 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
