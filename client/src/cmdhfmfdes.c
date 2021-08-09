@@ -2274,7 +2274,8 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
                   "hf mfdes selectapp --aid 123456 -> select application 123456\n"
                   "hf mfdes selectapp --mf -> select master file (PICC level)\n"
                   "hf mfdes selectapp --dfname aid123456 -> select application aid123456 by DF name\n"
-                  "hf mfdes selectapp --isoid 1111 -> select application 1111 by ISO ID");
+                  "hf mfdes selectapp --isoid 1111 -> select application 1111 by ISO ID\n"
+                  "hf mfdes selectapp --isoid 1111 --fileisoid 2222 -> select application 1111 file 2222 by ISO ID");
 
     void *argtable[] = {
         arg_param_begin,
@@ -2290,8 +2291,9 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
         arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID of application for some parameters (3 hex bytes, big endian)"),
         arg_str0(NULL, "dfname",  "<df name str>", "Application DF Name (string, max 16 chars). Selects application via ISO SELECT command"),
-        arg_str0(NULL, "isoid",   "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)"),
         arg_lit0(NULL, "mf",      "Select MF (master file) via ISO channel"),
+        arg_str0(NULL, "isoid",   "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)"),
+        arg_str0(NULL, "fileisoid", "<isoid hex>", "Select file inside application by ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2312,8 +2314,10 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     int dfnamelen = 16;
     CLIGetStrWithReturn(ctx, 12, dfname, &dfnamelen);
 
+    bool selectmf = arg_get_lit(ctx, 13);
+
     uint32_t isoid = 0x0000;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 13, 0x0000, &isoid, 2, true);
+    res = arg_get_u32_hexstr_def_nlen(ctx, 14, 0x0000, &isoid, 2, true);
     bool idsoidpresent = (res == 1);
     if (res == 2) {
         PrintAndLogEx(ERR, "ISO ID for EF or DF must have 2 bytes length");
@@ -2321,7 +2325,14 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    bool selectmf = arg_get_lit(ctx, 14);
+    uint32_t fileisoid = 0x0000;
+    res = arg_get_u32_hexstr_def_nlen(ctx, 15, 0x0000, &fileisoid, 2, true);
+    bool fileisoidpresent = (res == 1);
+    if (res == 2) {
+        PrintAndLogEx(ERR, "ISO ID for EF or DF must have 2 bytes length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
@@ -2382,6 +2393,17 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
         }
 
         PrintAndLogEx(SUCCESS, "Application 0x%06x selected " _GREEN_("succesfully") " ", appid);
+    }
+    
+    if (fileisoidpresent) {
+        res = DesfireSelectEx(&dctx, false, ISWIsoID, fileisoid, NULL);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(FAILED, "Select file 0x%04x " _RED_("failed") " ", fileisoid);
+            return res;
+        }
+        
+        PrintAndLogEx(SUCCESS, "File 0x%04x selected " _GREEN_("succesfully") " ", fileisoid);
     }
 
     DropField();
@@ -2954,8 +2976,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
 
         datalen = 5;
         if (fileidpresent || (data[4] & 0x20) != 0) {
-            data[5] = fileid & 0xff;
-            data[6] = (fileid >> 8) & 0xff;
+            Uint2byteToMemBe(&data[5], fileid);
             data[4] |= 0x20; // set bit FileID in the ks2
             memcpy(&data[7], dfname, dfnamelen);
             datalen = 7 + dfnamelen;
@@ -2970,7 +2991,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         PrintAndLogEx(INFO, "Key Set 2    0x%02X", data[4]);
         PrintAndLogEx(INFO, "ISO file ID  %s", (data[4] & 0x20) ? "enabled" : "disabled");
         if ((data[4] & 0x20)) {
-            PrintAndLogEx(INFO, "FID           0x%02x%02x", data[6], data[5]);
+            PrintAndLogEx(INFO, "FID           0x%04x", MemBeToUint2byte(&data[5]));
             PrintAndLogEx(INFO, "DF Name[%02zu]  %s\n", strnlen((char *)&data[7], 16), (char *)&data[7]);
         }
         PrintKeySettings(data[3], data[4], true, true);
