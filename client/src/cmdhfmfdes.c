@@ -28,7 +28,6 @@
 #include "iso7816/apduinfo.h"   // APDU manipulation / errorcodes
 #include "iso7816/iso7816core.h"    // APDU logging
 #include "util_posix.h"     // msleep
-#include "mifare/desfire_crypto.h"
 #include "mifare/desfirecore.h"
 #include "mifare/desfiretest.h"
 #include "mifare/desfiresecurechan.h"
@@ -46,17 +45,6 @@
 
 #define status(x) ( ((uint16_t)(0x91<<8)) + (uint16_t)x )
 
-#ifndef DropFieldDesfire
-#define DropFieldDesfire() { \
-        clearCommandBuffer(); \
-        SendCommandNG(CMD_HF_DROPFIELD, NULL, 0); \
-        tag->rf_field_on = false; \
-        PrintAndLogEx(DEBUG, "field dropped"); \
-    }
-#endif
-
-struct desfire_key default_key = {0};
-
 uint8_t desdefaultkeys[3][8] = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, //Official
     {0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47},
     {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07}
@@ -70,9 +58,6 @@ uint8_t aesdefaultkeys[5][16] = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 uint8_t k3kdefaultkeys[1][24] = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
-
-struct desfire_tag mf_state = {.session_key = NULL, .authentication_scheme = AS_LEGACY, .authenticated_key_no = NOT_YET_AUTHENTICATED, .crypto_buffer = NULL, .crypto_buffer_size = 0, .selected_application = 0};
-static desfiretag_t tag = &mf_state;
 
 typedef struct mfdes_authinput {
     uint8_t mode;
@@ -284,7 +269,7 @@ static int mfdes_get_info(mfdes_info_res_t *info) {
 
     if (WaitForResponseTimeout(CMD_HF_DESFIRE_INFO, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
-        DropFieldDesfire();
+        DropField();
         return PM3_ETIMEOUT;
     }
 
