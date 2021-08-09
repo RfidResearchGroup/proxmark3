@@ -4757,9 +4757,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
     }
 
     uint32_t value = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 14, 0, &value, 4, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Value must have 4 byte length");
+    if (CLIGetUint32Hex(ctx, 14, 0, &value, NULL, 4, "Value must have 4 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
