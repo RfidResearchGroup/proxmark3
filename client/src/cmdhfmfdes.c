@@ -2954,8 +2954,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
 
         datalen = 5;
         if (fileidpresent || (data[4] & 0x20) != 0) {
-            data[5] = fileid & 0xff;
-            data[6] = (fileid >> 8) & 0xff;
+            Uint2byteToMemBe(&data[5], fileid);
             data[4] |= 0x20; // set bit FileID in the ks2
             memcpy(&data[7], dfname, dfnamelen);
             datalen = 7 + dfnamelen;
@@ -2970,7 +2969,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         PrintAndLogEx(INFO, "Key Set 2    0x%02X", data[4]);
         PrintAndLogEx(INFO, "ISO file ID  %s", (data[4] & 0x20) ? "enabled" : "disabled");
         if ((data[4] & 0x20)) {
-            PrintAndLogEx(INFO, "FID           0x%02x%02x", data[6], data[5]);
+            PrintAndLogEx(INFO, "FID           0x%04x", MemBeToUint2byte(&data[5]));
             PrintAndLogEx(INFO, "DF Name[%02zu]  %s\n", strnlen((char *)&data[7], 16), (char *)&data[7]);
         }
         PrintKeySettings(data[3], data[4], true, true);

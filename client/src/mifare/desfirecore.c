@@ -2683,7 +2683,7 @@ int DesfireSelectEx(DesfireContext *ctx, bool fieldon, DesfireISOSelectWay way, 
             return DesfireSelectAIDHexNoFieldOn(ctx, id);
     } else if (way == ISWIsoID) {
         uint8_t data[2] = {0};
-        Uint2byteToMemBe(data, id);
+        Uint2byteToMemLe(data, id);
         return DesfireISOSelectEx(ctx, fieldon, ISSMFDFEF, data, 2, resp, &resplen);
     } else if (way == ISWDFName) {
         return DesfireISOSelect(ctx, ISSMFDFEF, NULL, 0, resp, &resplen);
