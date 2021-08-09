@@ -1060,32 +1060,6 @@ static int handler_desfire_getkeysettings(uint8_t *key_settings, uint8_t *num_ke
     return res;
 }
 
-// --- GET APPIDS
-static int handler_desfire_appids(uint8_t *dest, uint32_t *app_ids_len) {
-    if (dest == NULL) {
-        PrintAndLogEx(DEBUG, "DEST=NULL");
-        return PM3_EINVARG;
-    }
-    if (app_ids_len == NULL) {
-        PrintAndLogEx(DEBUG, "APP_IDS_LEN=NULL");
-        return PM3_EINVARG;
-    }
-
-    sAPDU apdu = {0x90, MFDES_GET_APPLICATION_IDS, 0x00, 0x00, 0x00, NULL}; //0x6a
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, dest, &recv_len, &sw, 0, true);
-
-    if (res != PM3_SUCCESS)
-        return res;
-
-    if (sw != status(MFDES_S_OPERATION_OK))
-        return PM3_ESOFT;
-
-    *app_ids_len = (uint8_t)(recv_len & 0xFF);
-    return res;
-}
-
 static int handler_desfire_select_application(uint8_t *aid) {
     if (g_debugMode > 1) {
         if (aid == NULL) {
@@ -1733,7 +1707,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("a",  "aid",      "<aid>", "Use specific AID (3 hex bytes, big endian)"),
+        arg_strx0(NULL,  "aid",      "<aid>", "Use specific AID (3 hex bytes, big endian)"),
         arg_str0("k",  "key",       "<Key>", "Key for checking (HEX 16 bytes)"),
         arg_str0("d",  "dict",      "<file>", "File with keys dictionary"),
         arg_lit0(NULL,  "pattern1b", "Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
@@ -1743,9 +1717,12 @@ static int CmdHF14aDesChk(const char *Cmd) {
         arg_lit0("v",  "verbose",   "Verbose mode."),
         arg_int0("f",  "kdf",     "<kdf>", "Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)"),
         arg_str0("i",  "kdfi",    "<kdfi>", "KDF input (HEX 1-31 bytes)"),
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 11);
 
     int aidlength = 0;
     uint8_t aid[3] = {0};
@@ -1829,6 +1806,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 10, kdfInput, &kdfInputLen);
 
     CLIParserFree(ctx);
+    SetAPDULogging(APDULogging);
 
     // 1-byte pattern search mode
     if (pattern1b) {
@@ -1891,22 +1869,30 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     bool result = false;
     uint8_t app_ids[78] = {0};
-    uint32_t app_ids_len = 0;
+    size_t app_ids_len = 0;
 
     clearCommandBuffer();
 
-    mfdes_info_res_t info = {0};
-    res = mfdes_get_info(&info);
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
-    // TODO: Store this UID someowhere not global
-    memcpy(tag->info.uid, info.uid, info.uidlen);
-    tag->info.uidlen = info.uidlen;
+    DesfireContext dctx;
+    DesfireSetKdf(&dctx, cmdKDFAlgo, kdfInput, kdfInputLen);
+    DesfireSetCommandSet(&dctx, DCCNativeISO);
+    DesfireSetCommMode(&dctx, DCMPlain);
+    
+    // save card UID to dctx
+    DesfireGetCardUID(&dctx);
 
-    if (handler_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
+    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Can't select PICC level.");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+
+    res = DesfireGetAIDList(&dctx, app_ids, &app_ids_len);
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
-        DropFieldDesfire();
+        DropField();
         return PM3_ESOFT;
     }
 
