@@ -3287,13 +3287,7 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
     }
 
     uint32_t ksett32 = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 0x0f, &ksett32, 1, false);
-    if (res == 0) {
-        CLIParserFree(ctx);
-        return PM3_ESOFT;
-    }
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Key settings must have 1 byte length");
+    if (CLIGetUint32Hex(ctx, 12, 0x0f, &ksett32, NULL, 1, "Key settings must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -3366,24 +3360,14 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
     }
 
     uint32_t keynum32 = 0x00;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 12, 0x00, &keynum32, 1, false);
-    if (res == 0) {
-        keynum32 = 0x00;
-    }
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Key number must have 1 byte length");
+    if (CLIGetUint32Hex(ctx, 12, 0x00, &keynum32, NULL, 1, "Key number must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t keysetnum32 = 0x00;
-    bool keysetpresent = true;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 13, 0x00, &keysetnum32, 1, false);
-    if (res == 0) {
-        keysetpresent = false;
-    }
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Keyset number must have 1 byte length");
+    bool keysetpresent = false;
+    if (CLIGetUint32Hex(ctx, 13, 0x00, &keysetnum32, &keysetpresent, 1, "Keyset number must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -3873,7 +3857,6 @@ static int DesfireCreateFileParameters(
     size_t *datalen
 ) {
     *datalen = 0;
-    int res = 0;
 
     uint32_t fileid = 1;
     if (pfileid) {
@@ -3918,10 +3901,8 @@ static int DesfireCreateFileParameters(
     uint32_t frights = 0xeeee;
     bool userawfrights = false;
     if (frightsid) {
-        res = arg_get_u32_hexstr_def_nlen(ctx, frightsid, 0xeeee, &frights, 2, true);
-        userawfrights = (res == 1);
-        if (res == 2) {
-            PrintAndLogEx(ERR, "File rights must have 2 bytes length");
+        if (CLIGetUint32Hex(ctx, frightsid, 0xeeee, &frights, &userawfrights, 2, "File rights must have 2 bytes length")) {
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     }
@@ -4168,10 +4149,8 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     }
 
     uint32_t rawftype = 0x00;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 14, 0x00, &rawftype, 1, true);
-    bool useraw = (res == 1);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Raw file type must have 1 byte length");
+    bool useraw = false;
+    if (CLIGetUint32Hex(ctx, 14, 0x00, &rawftype, &useraw, 1, "Raw file type must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -4195,9 +4174,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
 
     if (useraw == false) {
         uint32_t filesize = 0;
-        res = arg_get_u32_hexstr_def_nlen(ctx, 23, 0, &filesize, 3, true);
-        if (res == 2) {
-            PrintAndLogEx(ERR, "File size must have 3 bytes length");
+        if (CLIGetUint32Hex(ctx, 23, 0, &filesize, NULL, 3, "File size must have 3 bytes length")) {
             CLIParserFree(ctx);
             return PM3_EINVARG;
         }
@@ -4309,25 +4286,19 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     }
 
     uint32_t lowerlimit = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 20, 0, &lowerlimit, 4, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Lower limit value must have 4 bytes length");
+    if (CLIGetUint32Hex(ctx, 20, 0, &lowerlimit, NULL, 4, "Lower limit value must have 4 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t upperlimit = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 21, 0, &upperlimit, 4, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Upper limit value must have 4 bytes length");
+    if (CLIGetUint32Hex(ctx, 21, 0, &upperlimit, NULL, 4, "Upper limit value must have 4 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t value = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 22, 0, &value, 4, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Lower limit value must have 4 bytes length");
+    if (CLIGetUint32Hex(ctx, 22, 0, &value, NULL, 4, "Value must have 4 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -4442,17 +4413,13 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     }
 
     uint32_t size = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 21, 0, &size, 3, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Record size must have 3 bytes length");
+    if (CLIGetUint32Hex(ctx, 21, 0, &size, NULL, 3, "Record size must have 3 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t maxrecord = 0;
-    res = arg_get_u32_hexstr_def_nlen(ctx, 22, 0, &maxrecord, 3, true);
-    if (res == 2) {
-        PrintAndLogEx(ERR, "Max number of records must have 3 bytes length");
+    if (CLIGetUint32Hex(ctx, 22, 0, &maxrecord, NULL, 3, "Max number of records must have 3 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
