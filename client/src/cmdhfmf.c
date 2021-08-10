@@ -3266,13 +3266,13 @@ static int CmdHF14AMfSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf sim",
                   "Simulate MIFARE Classic card",
-                  "hf mf sim --mini                         --> MIFARE Mini\n"
-                  "hf mf sim --1k                           --> MIFARE Classic 1k (default)\n"
-                  "hf mf sim --1k -u 0a0a0a0a               --> MIFARE Classic 1k with 4b UID\n"
-                  "hf mf sim --1k -u 11223344556677         --> MIFARE Classic 1k with 7b UID\n"
-                  "hf mf sim --1k -u 11223344 -i --crack    --> Perform reader attack in interactive mode\n"
-                  "hf mf sim --2k                           --> MIFARE 2k\n"
-                  "hf mf sim --4k                           --> MIFARE 4k");
+                  "hf mf sim --mini                    --> MIFARE Mini\n"
+                  "hf mf sim --1k                      --> MIFARE Classic 1k (default)\n"
+                  "hf mf sim --1k -u 0a0a0a0a          --> MIFARE Classic 1k with 4b UID\n"
+                  "hf mf sim --1k -u 11223344556677    --> MIFARE Classic 1k with 7b UID\n"
+                  "hf mf sim --1k -u 11223344 -i -x    --> Perform reader attack in interactive mode\n"
+                  "hf mf sim --2k                      --> MIFARE 2k\n"
+                  "hf mf sim --4k                      --> MIFARE 4k");
 
     void *argtable[] = {
         arg_param_begin,
