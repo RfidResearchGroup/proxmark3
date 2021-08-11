@@ -1463,13 +1463,10 @@ static int CmdHF14aDesDetect(const char *Cmd) {
             
             while (!found) {
                 res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, keylen, &keyListLen, endFilePosition, &endFilePosition, verbose);
-                PrintAndLogEx(ERR, "--res: %d endFilePosition: %d keyListLen: %d", res, endFilePosition, keyListLen);
                 if (res != 1 && res != PM3_SUCCESS)
                     break;
             
                 for (int i = 0; i < keyListLen; i++) {
-                    PrintAndLogEx(ERR, "--key:[%02d] %s", i, sprint_hex(&keyList[i * keylen], keylen));
-
                     res = DesfireAuthCheck(&dctx, appid, securechann, &keyList[i * keylen]);
                     if (res == PM3_SUCCESS) {
                         found = true;
@@ -1520,7 +1517,25 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     DropField();
     
     if (found && save) {
-        
+        defaultKeyNum = dctx.keyNum;
+        defaultAlgoId = dctx.keyType;
+        memcpy(defaultKey, dctx.key, DESFIRE_MAX_KEY_SIZE);
+        defaultKdfAlgo = dctx.kdfAlgo;
+        defaultKdfInputLen = dctx.kdfInputLen;
+        memcpy(defaultKdfInput, dctx.kdfInput, sizeof(dctx.kdfInput));
+        defaultSecureChannel = securechann;
+        defaultCommSet = dctx.cmdSet;
+
+        PrintAndLogEx(INFO, "-----------" _CYAN_("Default parameters") "---------------------------------");
+
+        PrintAndLogEx(INFO, "Key Num     : %d", defaultKeyNum);
+        PrintAndLogEx(INFO, "Algo        : %s", CLIGetOptionListStr(DesfireAlgoOpts, defaultAlgoId));
+        PrintAndLogEx(INFO, "Key         : %s", sprint_hex(defaultKey, desfire_get_key_length(defaultAlgoId)));
+        PrintAndLogEx(INFO, "KDF algo    : %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, defaultKdfAlgo));
+        PrintAndLogEx(INFO, "KDF input   : [%d] %s", defaultKdfInputLen, sprint_hex(defaultKdfInput, defaultKdfInputLen));
+        PrintAndLogEx(INFO, "Secure chan : %s", CLIGetOptionListStr(DesfireSecureChannelOpts, defaultSecureChannel));
+        PrintAndLogEx(INFO, "Command set : %s", CLIGetOptionListStr(DesfireCommandSetOpts, defaultCommSet));
+        PrintAndLogEx(INFO, _GREEN_("Saved"));
     }
     
     return PM3_SUCCESS;
