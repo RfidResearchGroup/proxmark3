@@ -1383,7 +1383,11 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     }
     
     if (verbose) {
-        PrintAndLogEx(INFO, "Check keys: DES: %s 2TDEA: %s 3TDEA: %s AES: %s", 
+        if (appid == 0)
+            PrintAndLogEx(INFO, "Check PICC key num: %d (0x%02x)", dctx.keyNum, dctx.keyNum);
+        else
+            PrintAndLogEx(INFO, "Check app: %06x key num: %d (0x%02x)", appid, dctx.keyNum, dctx.keyNum);
+        PrintAndLogEx(INFO, "keys: DES: %s 2TDEA: %s 3TDEA: %s AES: %s", 
                     keytypes[T_DES] ? _GREEN_("YES") : _RED_("NO"),
                     keytypes[T_3DES] ? _GREEN_("YES") : _RED_("NO"),
                     keytypes[T_3K3DES] ? _GREEN_("YES") : _RED_("NO"),
