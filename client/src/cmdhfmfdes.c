@@ -36,6 +36,7 @@
 #include "fileutils.h"
 #include "nfc/ndef.h"           // NDEF
 #include "mifare/mad.h"
+#include "mifare/mifaredefault.h"
 #include "generator.h"
 #include "mifare/aiddesfire.h"
 #include "util.h"
@@ -1270,6 +1271,25 @@ static int CmdHF14ADesList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf mfdes", "des");
 }
 
+static int DesfireAuthCheck(DesfireContext *dctx, uint32_t appid, DesfireSecureChannel secureChannel, uint8_t *key) {
+    DesfireSetKeyNoClear(dctx, dctx->keyNum, dctx->keyType, key);
+    
+    int res = DesfireAuthenticate(dctx, secureChannel, false);
+    if (res == PM3_SUCCESS) {
+        memcpy(dctx->key, key, desfire_get_key_length(dctx->keyType));
+        return PM3_SUCCESS;
+    } else if (res < 7) {
+        DropField();
+        res = DesfireSelectAIDHex(dctx, appid, false, 0);
+        if (res != PM3_SUCCESS) {
+            return -10;
+        }
+        return -11;
+    }
+    return -1;
+}
+
+
 static int CmdHF14aDesDetect(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes detect",
@@ -1296,7 +1316,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         arg_lit0(NULL, "save",    "save found key and parameters to defaults"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
@@ -1310,8 +1330,10 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         return res;
     }
 
-    uint32_t fnum = 1;
-    if (CLIGetUint32Hex(ctx, 12, 1, &fnum, NULL, 1, "File ID must have 1 byte length")) {
+    uint8_t dict_filename[FILE_PATH_SIZE + 2] = {0};
+    int dict_filenamelen = 0;
+    if (CLIParamStrToBuf(arg_get_str(ctx, 12), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
+        PrintAndLogEx(FAILED, "File name too long or invalid.");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -1330,10 +1352,6 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     }
     
     bool keytypes[4] = {0};
-    /*T_DES = 0x00,
-      T_3DES = 0x01, //aka 2K3DES
-      T_3K3DES = 0x02,
-      T_AES = 0x03 */
     
     uint8_t data[250] = {0};
     size_t datalen = 0;
@@ -1396,56 +1414,112 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     }
     
     // for key types
+    bool found = false;
+    size_t errcount = 0;
     for (uint8_t ktype = T_DES; ktype <= T_AES; ktype++) {
+        if (!keytypes[ktype])
+            continue;
+        dctx.keyType = ktype;
+        if (verbose)
+            PrintAndLogEx(INFO, "Scan key type: %s", CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType));
         
-     }
-    
-/*    
-    // load keys from file
-    size_t endFilePosition = 0;
-    if (dict_filenamelen) {
-
-        res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 8, &deskeyListLen, 0, &endFilePosition, true);
-        if (res == PM3_SUCCESS && endFilePosition)
-            PrintAndLogEx(SUCCESS, "First part of des dictionary successfully loaded.");
-    
-    // checks
-            if (usedkeys[keyno] == 1 && foundKeys[0][keyno][0] == 0) {
-                for (uint32_t curkey = 0; curkey < deskeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_DES, deskeyList[curkey]);
-                    res = DesfireAuthenticate(dctx, secureChannel, false);
-                    if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found DES Key %02u          : " _GREEN_("%s"), curaid, keyno, sprint_hex(deskeyList[curkey], 8));
-                        foundKeys[0][keyno][0] = 0x01;
-                        *result = true;
-                        memcpy(&foundKeys[0][keyno][1], deskeyList[curkey], 8);
-                        break;
-                    } else if (res < 7) {
-                        badlen = true;
-                        DropField();
-                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
-                        if (res != PM3_SUCCESS) {
-                            return res;
-                        }
-                        break;
+        if (dict_filenamelen == 0) {
+            // keys from mifaredefault.h
+            for (int i = 0; i < g_mifare_plus_default_keys_len; i++) {
+                uint8_t key[DESFIRE_MAX_KEY_SIZE] = {0};
+                if (hex_to_bytes(g_mifare_plus_default_keys[i], key, 16) != 16)
+                    continue;
+                if (ktype == T_3K3DES)
+                    memcpy(&key[16], key, 8);
+                
+                res = DesfireAuthCheck(&dctx, appid, securechann, key);
+                if (res == PM3_SUCCESS) {
+                    found = true;
+                    break; // all the params already in the dctx
+                }
+                if (res == -10) {
+                    if (verbose)
+                        PrintAndLogEx(ERR, "Can't select AID. There is no connection with card.");
+                    
+                    found = false;
+                    break; // we can't select app after invalid 1st auth stages
+                }
+                if (res == -11) {
+                    if (errcount > 10) {
+                        if (verbose)
+                            PrintAndLogEx(ERR, "Too much errors (%zu) from card", errcount);
+                        break;                        
                     }
-                }
-                if (badlen == true) {
-                    badlen = false;
-                    break;
-                }
+                    errcount++;
+                } else
+                    errcount = 0;
             }
+        } else {
+            // keys from file
+            uint8_t keyList[MAX_KEYS_LIST_LEN * MAX_KEY_LEN] = {0};
+            uint32_t keyListLen = 0;
+            size_t keylen = desfire_get_key_length(dctx.keyType);
+            size_t endFilePosition = 0;
+            
+            while (!found) {
+                res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, keylen, &keyListLen, endFilePosition, &endFilePosition, verbose);
+                PrintAndLogEx(ERR, "--res: %d endFilePosition: %d keyListLen: %d", res, endFilePosition, keyListLen);
+                if (res != 1 && res != PM3_SUCCESS)
+                    break;
+            
+                for (int i = 0; i < keyListLen; i++) {
+                    PrintAndLogEx(ERR, "--key:[%02d] %s", i, sprint_hex(&keyList[i * keylen], keylen));
+
+                    res = DesfireAuthCheck(&dctx, appid, securechann, &keyList[i * keylen]);
+                    if (res == PM3_SUCCESS) {
+                        found = true;
+                        break; // all the params already in the dctx
+                    }
+                    if (res == -10) {
+                        if (verbose)
+                            PrintAndLogEx(ERR, "Can't select AID. There is no connection with card.");
+                        
+                        found = false;
+                        break; // we can't select app after invalid 1st auth stages
+                    }
+                    if (res == -11) {
+                        if (errcount > 10) {
+                            if (verbose)
+                                PrintAndLogEx(ERR, "Too much errors (%zu) from card", errcount);
+                            break;                        
+                        }
+                        errcount++;
+                    } else
+                        errcount = 0;
+                }
+            
+                if (endFilePosition == 0)
+                    break;
+            }
+            
         }
-    // load keys from file
-            uint32_t keycnt = 0;
-            res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
-            if (res == PM3_SUCCESS && endFilePosition)
-                deskeyListLen = keycnt;
-*/
+        if (found)
+            break;
+    }
+
+    if (found) {
+        if (appid == 0)
+            PrintAndLogEx(INFO, _GREEN_("Found") " key num: %d (0x%02x)", dctx.keyNum, dctx.keyNum);
+        else
+            PrintAndLogEx(INFO, "Found key for app: %06x key num: %d (0x%02x)", appid, dctx.keyNum, dctx.keyNum);
+        
+        PrintAndLogEx(INFO, "key " _GREEN_("%s") " [%d]: " _GREEN_("%s"), 
+                    CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType), 
+                    desfire_get_key_length(dctx.keyType), 
+                    sprint_hex(dctx.key, desfire_get_key_length(dctx.keyType)));
+
+    } else {
+        PrintAndLogEx(INFO, "Key " _RED_("not found"));
+    }
 
     DropField();
     
-    if (save) {
+    if (found && save) {
         
     }
     
