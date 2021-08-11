@@ -36,6 +36,7 @@
 #include "fileutils.h"
 #include "nfc/ndef.h"           // NDEF
 #include "mifare/mad.h"
+#include "mifare/mifaredefault.h"
 #include "generator.h"
 #include "mifare/aiddesfire.h"
 #include "util.h"
@@ -366,6 +367,164 @@ static void swap24(uint8_t *data) {
     data[0] = data[2];
     data[2] = tmp;
 };
+
+// default parameters
+static uint8_t defaultKeyNum = 0;
+static enum DESFIRE_CRYPTOALGO defaultAlgoId = T_DES;
+static uint8_t defaultKey[DESFIRE_MAX_KEY_SIZE] = {0};
+static int defaultKdfAlgo = MFDES_KDF_ALGO_NONE;
+static int defaultKdfInputLen = 0;
+static uint8_t defaultKdfInput[50] = {0};
+static DesfireSecureChannel defaultSecureChannel = DACEV1;
+static DesfireCommandSet defaultCommSet = DCCNativeISO;
+static DesfireCommunicationMode defaultCommMode = DCMPlain;
+
+static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dctx,
+                                      uint8_t keynoid, uint8_t algoid, uint8_t keyid,
+                                      uint8_t kdfid, uint8_t kdfiid,
+                                      uint8_t cmodeid, uint8_t ccsetid, uint8_t schannid,
+                                      uint8_t appid,
+                                      int *securechannel,
+                                      DesfireCommunicationMode defcommmode,
+                                      uint32_t *aid) {
+
+    uint8_t keynum = defaultKeyNum;
+    int algores = defaultAlgoId;
+    uint8_t key[DESFIRE_MAX_KEY_SIZE] = {0};
+    memcpy(key, defaultKey, DESFIRE_MAX_KEY_SIZE);
+    int kdfAlgo = defaultKdfAlgo;
+    int kdfInputLen = defaultKdfInputLen;
+    uint8_t kdfInput[50] = {0};
+    memcpy(kdfInput, defaultKdfInput, defaultKdfInputLen);
+    int commmode = defaultCommMode;
+    if (defcommmode != DCMNone)
+        commmode = defcommmode;
+    int commset = defaultCommSet;
+    int secchann = defaultSecureChannel;
+
+    if (keynoid) {
+        keynum = arg_get_int_def(ctx, keynoid, keynum);
+    }
+
+    if (algoid) {
+        if (CLIGetOptionList(arg_get_str(ctx, algoid), DesfireAlgoOpts, &algores))
+            return PM3_ESOFT;
+    }
+
+    if (keyid) {
+        int keylen = 0;
+        uint8_t keydata[200] = {0};
+        if (CLIParamHexToBuf(arg_get_str(ctx, keyid), keydata, sizeof(keydata), &keylen))
+            return PM3_ESOFT;
+        if (keylen && keylen != desfire_get_key_length(algores)) {
+            PrintAndLogEx(ERR, "%s key must have %d bytes length instead of %d.", CLIGetOptionListStr(DesfireAlgoOpts, algores), desfire_get_key_length(algores), keylen);
+            return PM3_EINVARG;
+        }
+        if (keylen)
+            memcpy(key, keydata, keylen);
+    }
+
+    if (kdfid) {
+        if (CLIGetOptionList(arg_get_str(ctx, kdfid), DesfireKDFAlgoOpts, &kdfAlgo))
+            return PM3_ESOFT;
+    }
+
+    if (kdfiid) {
+        int datalen = kdfInputLen;
+        uint8_t data[200] = {0};
+        if (CLIParamHexToBuf(arg_get_str(ctx, kdfiid), data, sizeof(data), &datalen))
+            return PM3_ESOFT;
+        if (datalen) {
+            kdfInputLen = datalen;
+            memcpy(kdfInput, data, datalen);
+        }
+    }
+
+    if (cmodeid) {
+        if (CLIGetOptionList(arg_get_str(ctx, cmodeid), DesfireCommunicationModeOpts, &commmode))
+            return PM3_ESOFT;
+    }
+
+    if (ccsetid) {
+        if (CLIGetOptionList(arg_get_str(ctx, ccsetid), DesfireCommandSetOpts, &commset))
+            return PM3_ESOFT;
+    }
+
+    if (schannid) {
+
+        if (CLIGetOptionList(arg_get_str(ctx, schannid), DesfireSecureChannelOpts, &secchann))
+            return PM3_ESOFT;
+    }
+
+    if (appid && aid) {
+        *aid = 0x000000;
+        if (CLIGetUint32Hex(ctx, appid, 0x000000, aid, NULL, 3, "AID must have 3 bytes length"))
+            return PM3_EINVARG;
+    }
+
+    DesfireSetKey(dctx, keynum, algores, key);
+    DesfireSetKdf(dctx, kdfAlgo, kdfInput, kdfInputLen);
+    DesfireSetCommandSet(dctx, commset);
+    DesfireSetCommMode(dctx, commmode);
+    if (securechannel)
+        *securechannel = secchann;
+
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesDefault(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes default",
+                  "Set default parameters for access to desfire card.",
+                  "hf mfdes default -n 0 -t des -k 0000000000000000 -f none -> save to the default parameters");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 1, 2, 3, 4, 5, 6, 7, 8, 0, &securechann, DCMNone, NULL);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    CLIParserFree(ctx);
+
+    defaultKeyNum = dctx.keyNum;
+    defaultAlgoId = dctx.keyType;
+    memcpy(defaultKey, dctx.key, DESFIRE_MAX_KEY_SIZE);
+    defaultKdfAlgo = dctx.kdfAlgo;
+    defaultKdfInputLen = dctx.kdfInputLen;
+    memcpy(defaultKdfInput, dctx.kdfInput, sizeof(dctx.kdfInput));
+    defaultSecureChannel = securechann;
+    defaultCommSet = dctx.cmdSet;
+    defaultCommMode = dctx.commMode;
+
+    PrintAndLogEx(INFO, "-----------" _CYAN_("Default parameters") "---------------------------------");
+
+    PrintAndLogEx(INFO, "Key Num     : %d", defaultKeyNum);
+    PrintAndLogEx(INFO, "Algo        : %s", CLIGetOptionListStr(DesfireAlgoOpts, defaultAlgoId));
+    PrintAndLogEx(INFO, "Key         : %s", sprint_hex(defaultKey, desfire_get_key_length(defaultAlgoId)));
+    PrintAndLogEx(INFO, "KDF algo    : %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, defaultKdfAlgo));
+    PrintAndLogEx(INFO, "KDF input   : [%d] %s", defaultKdfInputLen, sprint_hex(defaultKdfInput, defaultKdfInputLen));
+    PrintAndLogEx(INFO, "Secure chan : %s", CLIGetOptionListStr(DesfireSecureChannelOpts, defaultSecureChannel));
+    PrintAndLogEx(INFO, "Command set : %s", CLIGetOptionListStr(DesfireCommandSetOpts, defaultCommSet));
+    PrintAndLogEx(INFO, "Comm mode   : %s", CLIGetOptionListStr(DesfireCommunicationModeOpts, defaultCommMode));
+
+    return PM3_SUCCESS;
+}
 
 static int CmdHF14ADesInfo(const char *Cmd) {
     CLIParserContext *ctx;
@@ -1112,6 +1271,276 @@ static int CmdHF14ADesList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf mfdes", "des");
 }
 
+static int DesfireAuthCheck(DesfireContext *dctx, uint32_t appid, DesfireSecureChannel secureChannel, uint8_t *key) {
+    DesfireSetKeyNoClear(dctx, dctx->keyNum, dctx->keyType, key);
+    
+    int res = DesfireAuthenticate(dctx, secureChannel, false);
+    if (res == PM3_SUCCESS) {
+        memcpy(dctx->key, key, desfire_get_key_length(dctx->keyType));
+        return PM3_SUCCESS;
+    } else if (res < 7) {
+        DropField();
+        res = DesfireSelectAIDHex(dctx, appid, false, 0);
+        if (res != PM3_SUCCESS) {
+            return -10;
+        }
+        return -11;
+    }
+    return -1;
+}
+
+
+static int CmdHF14aDesDetect(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes detect",
+                  "Detect key type and tries to find one from the list.",
+                  "hf mfdes detect -> detect key 0 from PICC level\n"
+                  "hf mfdes detect -s d40 -> detect key 0 from PICC level via secure channel D40\n"
+                  "hf mfdes detect --dict mfdes_default_keys -> detect key 0 from PICC level with help of the standard dictionary\n"
+                  "hf mfdes detect --aid 123456 -n 2 --save -> detect key 2 from app 123456 and if succeed - save params to defaults (`default` command)");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "dict",    "<file>", "File with keys dictionary"),
+        arg_lit0(NULL, "save",    "save found key and parameters to defaults"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMMACed, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    uint8_t dict_filename[FILE_PATH_SIZE + 2] = {0};
+    int dict_filenamelen = 0;
+    if (CLIParamStrToBuf(arg_get_str(ctx, 12), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
+        PrintAndLogEx(FAILED, "File name too long or invalid.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool save = arg_get_lit(ctx, 13);
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    // no auth and fill KDF if needs
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, true, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "Select AID 0x%06x " _RED_("failed") ". Result: %d", appid, res);
+        return res;
+    }
+    
+    bool keytypes[4] = {0};
+    
+    uint8_t data[250] = {0};
+    size_t datalen = 0;
+    res = DesfireGetKeySettings(&dctx, data, &datalen);
+    if (res == PM3_SUCCESS && datalen >= 2) {
+        uint8_t num_keys = data[1];
+        switch (num_keys >> 6) {
+            case 0:
+                keytypes[T_DES] = true;
+                keytypes[T_3DES] = true;
+                break;
+            case 1:
+                keytypes[T_3K3DES] = true;
+                break;
+            case 2:
+                keytypes[T_AES] = true;
+                break;
+            default:
+                break;
+        }
+    } else {
+        // if fail - check auth commands
+        AuthCommandsChk authCmdCheck = {0};
+        DesfireCheckAuthCommands(appid, NULL, 0, &authCmdCheck);
+        if (authCmdCheck.checked) {
+            if (authCmdCheck.auth) {
+                keytypes[T_DES] = true;
+                keytypes[T_3DES] = true;
+
+                if (authCmdCheck.authISO) {
+                    keytypes[T_3K3DES] = true;
+                }
+            }
+            if (authCmdCheck.authAES || authCmdCheck.authEV2) {
+                keytypes[T_AES] = true;
+            }
+        } else {
+            // if nothing helps - we check DES only
+            keytypes[T_DES] = true;
+        }
+
+        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            return res;
+        }
+    }
+    
+    if (verbose) {
+        if (appid == 0)
+            PrintAndLogEx(INFO, "Check PICC key num: %d (0x%02x)", dctx.keyNum, dctx.keyNum);
+        else
+            PrintAndLogEx(INFO, "Check app: %06x key num: %d (0x%02x)", appid, dctx.keyNum, dctx.keyNum);
+        PrintAndLogEx(INFO, "keys: DES: %s 2TDEA: %s 3TDEA: %s AES: %s", 
+                    keytypes[T_DES] ? _GREEN_("YES") : _RED_("NO"),
+                    keytypes[T_3DES] ? _GREEN_("YES") : _RED_("NO"),
+                    keytypes[T_3K3DES] ? _GREEN_("YES") : _RED_("NO"),
+                    keytypes[T_AES] ? _GREEN_("YES") : _RED_("NO")
+                    );
+    }
+    
+    // for key types
+    bool found = false;
+    size_t errcount = 0;
+    for (uint8_t ktype = T_DES; ktype <= T_AES; ktype++) {
+        if (!keytypes[ktype])
+            continue;
+        dctx.keyType = ktype;
+        if (verbose)
+            PrintAndLogEx(INFO, "Scan key type: %s", CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType));
+        
+        if (dict_filenamelen == 0) {
+            // keys from mifaredefault.h
+            for (int i = 0; i < g_mifare_plus_default_keys_len; i++) {
+                uint8_t key[DESFIRE_MAX_KEY_SIZE] = {0};
+                if (hex_to_bytes(g_mifare_plus_default_keys[i], key, 16) != 16)
+                    continue;
+                if (ktype == T_3K3DES)
+                    memcpy(&key[16], key, 8);
+                
+                res = DesfireAuthCheck(&dctx, appid, securechann, key);
+                if (res == PM3_SUCCESS) {
+                    found = true;
+                    break; // all the params already in the dctx
+                }
+                if (res == -10) {
+                    if (verbose)
+                        PrintAndLogEx(ERR, "Can't select AID. There is no connection with card.");
+                    
+                    found = false;
+                    break; // we can't select app after invalid 1st auth stages
+                }
+                if (res == -11) {
+                    if (errcount > 10) {
+                        if (verbose)
+                            PrintAndLogEx(ERR, "Too much errors (%zu) from card", errcount);
+                        break;                        
+                    }
+                    errcount++;
+                } else
+                    errcount = 0;
+            }
+        } else {
+            // keys from file
+            uint8_t keyList[MAX_KEYS_LIST_LEN * MAX_KEY_LEN] = {0};
+            uint32_t keyListLen = 0;
+            size_t keylen = desfire_get_key_length(dctx.keyType);
+            size_t endFilePosition = 0;
+            
+            while (!found) {
+                res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, keylen, &keyListLen, endFilePosition, &endFilePosition, verbose);
+                if (res != 1 && res != PM3_SUCCESS)
+                    break;
+            
+                for (int i = 0; i < keyListLen; i++) {
+                    res = DesfireAuthCheck(&dctx, appid, securechann, &keyList[i * keylen]);
+                    if (res == PM3_SUCCESS) {
+                        found = true;
+                        break; // all the params already in the dctx
+                    }
+                    if (res == -10) {
+                        if (verbose)
+                            PrintAndLogEx(ERR, "Can't select AID. There is no connection with card.");
+                        
+                        found = false;
+                        break; // we can't select app after invalid 1st auth stages
+                    }
+                    if (res == -11) {
+                        if (errcount > 10) {
+                            if (verbose)
+                                PrintAndLogEx(ERR, "Too much errors (%zu) from card", errcount);
+                            break;                        
+                        }
+                        errcount++;
+                    } else
+                        errcount = 0;
+                }
+            
+                if (endFilePosition == 0)
+                    break;
+            }
+            
+        }
+        if (found)
+            break;
+    }
+
+    if (found) {
+        if (appid == 0)
+            PrintAndLogEx(INFO, _GREEN_("Found") " key num: %d (0x%02x)", dctx.keyNum, dctx.keyNum);
+        else
+            PrintAndLogEx(INFO, "Found key for app: %06x key num: %d (0x%02x)", appid, dctx.keyNum, dctx.keyNum);
+        
+        PrintAndLogEx(INFO, "key " _GREEN_("%s") " [%d]: " _GREEN_("%s"), 
+                    CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType), 
+                    desfire_get_key_length(dctx.keyType), 
+                    sprint_hex(dctx.key, desfire_get_key_length(dctx.keyType)));
+
+    } else {
+        PrintAndLogEx(INFO, "Key " _RED_("not found"));
+    }
+
+    DropField();
+    
+    if (found && save) {
+        defaultKeyNum = dctx.keyNum;
+        defaultAlgoId = dctx.keyType;
+        memcpy(defaultKey, dctx.key, DESFIRE_MAX_KEY_SIZE);
+        defaultKdfAlgo = dctx.kdfAlgo;
+        defaultKdfInputLen = dctx.kdfInputLen;
+        memcpy(defaultKdfInput, dctx.kdfInput, sizeof(dctx.kdfInput));
+        defaultSecureChannel = securechann;
+        defaultCommSet = dctx.cmdSet;
+
+        PrintAndLogEx(INFO, "-----------" _CYAN_("Default parameters") "---------------------------------");
+
+        PrintAndLogEx(INFO, "Key Num     : %d", defaultKeyNum);
+        PrintAndLogEx(INFO, "Algo        : %s", CLIGetOptionListStr(DesfireAlgoOpts, defaultAlgoId));
+        PrintAndLogEx(INFO, "Key         : %s", sprint_hex(defaultKey, desfire_get_key_length(defaultAlgoId)));
+        PrintAndLogEx(INFO, "KDF algo    : %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, defaultKdfAlgo));
+        PrintAndLogEx(INFO, "KDF input   : [%d] %s", defaultKdfInputLen, sprint_hex(defaultKdfInput, defaultKdfInputLen));
+        PrintAndLogEx(INFO, "Secure chan : %s", CLIGetOptionListStr(DesfireSecureChannelOpts, defaultSecureChannel));
+        PrintAndLogEx(INFO, "Command set : %s", CLIGetOptionListStr(DesfireCommandSetOpts, defaultCommSet));
+        PrintAndLogEx(INFO, _GREEN_("Saved"));
+    }
+    
+    return PM3_SUCCESS;
+}
+
 /*
 static int CmdHF14aDesNDEFRead(const char *Cmd) {
     DropFieldDesfire();
@@ -1240,163 +1669,6 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     return PM3_SUCCESS;
 }
 */
-
-static uint8_t defaultKeyNum = 0;
-static enum DESFIRE_CRYPTOALGO defaultAlgoId = T_DES;
-static uint8_t defaultKey[DESFIRE_MAX_KEY_SIZE] = {0};
-static int defaultKdfAlgo = MFDES_KDF_ALGO_NONE;
-static int defaultKdfInputLen = 0;
-static uint8_t defaultKdfInput[50] = {0};
-static DesfireSecureChannel defaultSecureChannel = DACEV1;
-static DesfireCommandSet defaultCommSet = DCCNativeISO;
-static DesfireCommunicationMode defaultCommMode = DCMPlain;
-
-static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dctx,
-                                      uint8_t keynoid, uint8_t algoid, uint8_t keyid,
-                                      uint8_t kdfid, uint8_t kdfiid,
-                                      uint8_t cmodeid, uint8_t ccsetid, uint8_t schannid,
-                                      uint8_t appid,
-                                      int *securechannel,
-                                      DesfireCommunicationMode defcommmode,
-                                      uint32_t *aid) {
-
-    uint8_t keynum = defaultKeyNum;
-    int algores = defaultAlgoId;
-    uint8_t key[DESFIRE_MAX_KEY_SIZE] = {0};
-    memcpy(key, defaultKey, DESFIRE_MAX_KEY_SIZE);
-    int kdfAlgo = defaultKdfAlgo;
-    int kdfInputLen = defaultKdfInputLen;
-    uint8_t kdfInput[50] = {0};
-    memcpy(kdfInput, defaultKdfInput, defaultKdfInputLen);
-    int commmode = defaultCommMode;
-    if (defcommmode != DCMNone)
-        commmode = defcommmode;
-    int commset = defaultCommSet;
-    int secchann = defaultSecureChannel;
-
-    if (keynoid) {
-        keynum = arg_get_int_def(ctx, keynoid, keynum);
-    }
-
-    if (algoid) {
-        if (CLIGetOptionList(arg_get_str(ctx, algoid), DesfireAlgoOpts, &algores))
-            return PM3_ESOFT;
-    }
-
-    if (keyid) {
-        int keylen = 0;
-        uint8_t keydata[200] = {0};
-        if (CLIParamHexToBuf(arg_get_str(ctx, keyid), keydata, sizeof(keydata), &keylen))
-            return PM3_ESOFT;
-        if (keylen && keylen != desfire_get_key_length(algores)) {
-            PrintAndLogEx(ERR, "%s key must have %d bytes length instead of %d.", CLIGetOptionListStr(DesfireAlgoOpts, algores), desfire_get_key_length(algores), keylen);
-            return PM3_EINVARG;
-        }
-        if (keylen)
-            memcpy(key, keydata, keylen);
-    }
-
-    if (kdfid) {
-        if (CLIGetOptionList(arg_get_str(ctx, kdfid), DesfireKDFAlgoOpts, &kdfAlgo))
-            return PM3_ESOFT;
-    }
-
-    if (kdfiid) {
-        int datalen = kdfInputLen;
-        uint8_t data[200] = {0};
-        if (CLIParamHexToBuf(arg_get_str(ctx, kdfiid), data, sizeof(data), &datalen))
-            return PM3_ESOFT;
-        if (datalen) {
-            kdfInputLen = datalen;
-            memcpy(kdfInput, data, datalen);
-        }
-    }
-
-    if (cmodeid) {
-        if (CLIGetOptionList(arg_get_str(ctx, cmodeid), DesfireCommunicationModeOpts, &commmode))
-            return PM3_ESOFT;
-    }
-
-    if (ccsetid) {
-        if (CLIGetOptionList(arg_get_str(ctx, ccsetid), DesfireCommandSetOpts, &commset))
-            return PM3_ESOFT;
-    }
-
-    if (schannid) {
-
-        if (CLIGetOptionList(arg_get_str(ctx, schannid), DesfireSecureChannelOpts, &secchann))
-            return PM3_ESOFT;
-    }
-
-    if (appid && aid) {
-        *aid = 0x000000;
-        if (CLIGetUint32Hex(ctx, appid, 0x000000, aid, NULL, 3, "AID must have 3 bytes length"))
-            return PM3_EINVARG;
-    }
-
-    DesfireSetKey(dctx, keynum, algores, key);
-    DesfireSetKdf(dctx, kdfAlgo, kdfInput, kdfInputLen);
-    DesfireSetCommandSet(dctx, commset);
-    DesfireSetCommMode(dctx, commmode);
-    if (securechannel)
-        *securechannel = secchann;
-
-    return PM3_SUCCESS;
-}
-
-static int CmdHF14ADesDefault(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes default",
-                  "Set default parameters for access to desfire card.",
-                  "hf mfdes default -n 0 -t des -k 0000000000000000 -f none -> save to the default parameters");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
-        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
-        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
-        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
-        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
-        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
-        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
-        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-
-    DesfireContext dctx;
-    int securechann = defaultSecureChannel;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 1, 2, 3, 4, 5, 6, 7, 8, 0, &securechann, DCMNone, NULL);
-    if (res) {
-        CLIParserFree(ctx);
-        return res;
-    }
-
-    CLIParserFree(ctx);
-
-    defaultKeyNum = dctx.keyNum;
-    defaultAlgoId = dctx.keyType;
-    memcpy(defaultKey, dctx.key, DESFIRE_MAX_KEY_SIZE);
-    defaultKdfAlgo = dctx.kdfAlgo;
-    defaultKdfInputLen = dctx.kdfInputLen;
-    memcpy(defaultKdfInput, dctx.kdfInput, sizeof(dctx.kdfInput));
-    defaultSecureChannel = securechann;
-    defaultCommSet = dctx.cmdSet;
-    defaultCommMode = dctx.commMode;
-
-    PrintAndLogEx(INFO, "-----------" _CYAN_("Default parameters") "---------------------------------");
-
-    PrintAndLogEx(INFO, "Key Num     : %d", defaultKeyNum);
-    PrintAndLogEx(INFO, "Algo        : %s", CLIGetOptionListStr(DesfireAlgoOpts, defaultAlgoId));
-    PrintAndLogEx(INFO, "Key         : %s", sprint_hex(defaultKey, desfire_get_key_length(defaultAlgoId)));
-    PrintAndLogEx(INFO, "KDF algo    : %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, defaultKdfAlgo));
-    PrintAndLogEx(INFO, "KDF input   : [%d] %s", defaultKdfInputLen, sprint_hex(defaultKdfInput, defaultKdfInputLen));
-    PrintAndLogEx(INFO, "Secure chan : %s", CLIGetOptionListStr(DesfireSecureChannelOpts, defaultSecureChannel));
-    PrintAndLogEx(INFO, "Command set : %s", CLIGetOptionListStr(DesfireCommandSetOpts, defaultCommSet));
-    PrintAndLogEx(INFO, "Comm mode   : %s", CLIGetOptionListStr(DesfireCommunicationModeOpts, defaultCommMode));
-
-    return PM3_SUCCESS;
-}
 
 static int CmdHF14ADesSelectApp(const char *Cmd) {
     CLIParserContext *ctx;
@@ -4951,6 +5223,7 @@ static command_t CommandTable[] = {
     {"default",          CmdHF14ADesDefault,          IfPm3Iso14443a,  "Set defaults for all the commands"},
     {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "MIFARE DesFire Authentication"},
     {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "Check keys"},
+    {"detect",           CmdHF14aDesDetect,           IfPm3Iso14443a,  "Detect key type and tries to find one from the list"},
     {"freemem",          CmdHF14ADesGetFreeMem,       IfPm3Iso14443a,  "Get free memory size"},
     {"setconfig",        CmdHF14ADesSetConfiguration, IfPm3Iso14443a,  "Set card configuration"},
     {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
