@@ -845,8 +845,9 @@ void DesfirePrintMADAID(uint32_t appid, bool verbose) {
     
     uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
     
-    PrintAndLogEx(SUCCESS, "MIFARE Classic ID (MAD) " _YELLOW_("%04X") " AID %06x MAD AID Cluster  0x%02X " _YELLOW_("%s"), 
+    PrintAndLogEx(SUCCESS, "MIFARE Classic ID (MAD): " _YELLOW_("%04X") " ver: " _YELLOW_("%01X") " AID: " _YELLOW_("%06x") " MAD AID Cluster[0x%02X]: " _YELLOW_("%s"), 
                 short_aid, 
+                appid & 0x0f,
                 appid,
                 short_aid >> 8, 
                 nxp_cluster_to_text(short_aid >> 8));
