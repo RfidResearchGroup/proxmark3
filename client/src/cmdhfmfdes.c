@@ -1541,134 +1541,75 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-/*
-static int CmdHF14aDesNDEFRead(const char *Cmd) {
-    DropFieldDesfire();
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes ndefread",
-                  "Prints NFC Data Exchange Format (NDEF)",
-                  "hf mfdes ndefread -> shows NDEF data\n"
-                  "hf mfdes ndefread -v -> shows NDEF parsed and raw data\n"
-                  "hf mfdes ndefread -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_litn("v",  "verbose",  0, 2, "show technical data"),
-        arg_str0(NULL, "aid",      "<aid>", "replace default aid for NDEF"),
-        arg_str0("k",  "key",      "<key>", "replace default key for NDEF"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-
-    bool verbose = arg_get_lit(ctx, 1);
-    bool verbose2 = arg_get_lit(ctx, 1) > 1;
-    uint8_t aid[2] = {0};
-    int aidlen;
-    CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
-    uint8_t key[16] = {0};
-    int keylen;
-    CLIGetHexWithReturn(ctx, 3, key, &keylen);
-
-    CLIParserFree(ctx);
-
-    uint32_t ndefAID = 0xEEEE10;
-    if (aidlen == 2) {
-        ndefAID = (aid[0] << 16) | (aid[1] << 8) | aid[2];
-    }
-
-    // set default NDEF key
-    uint8_t ndefkey[16] = {0};
-    memcpy(ndefkey, g_mifarep_ndef_key, 16);
-
-    // user supplied key
-    if (keylen == 16) {
-        memcpy(ndefkey, key, 16);
-    }
-
-    int file_ids_len = 0;
-
-    for (int j = (int)file_ids_len - 1; j >= 0; j--) {
-        PrintAndLogEx(SUCCESS, "\n\n   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
-
-        uint8_t filesettings[20] = {0};
-        uint32_t fileset_len = 0;
-
-        int res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
-        if (res != PM3_SUCCESS) continue;
-
-        int maclen = 0; // To be implemented
-
-        if (fileset_len == 1 + 1 + 2 + 3 + maclen) {
-            int filesize = (filesettings[6] << 16) + (filesettings[5] << 8) + filesettings[4];
-            mfdes_data_t fdata;
-            fdata.fileno = file_ids[j];
-            memset(fdata.offset, 0, 3);
-            memset(fdata.length, 0, 3);
-
-            uint8_t *data = (uint8_t *)calloc(filesize, sizeof(uint8_t));
-            if (data == NULL) {
-                DropFieldDesfire();
-                return PM3_EMALLOC;
-            }
-
-            fdata.data = data;
-            res = handler_desfire_readdata(&fdata, MFDES_DATA_FILE, filesettings[1]);
-            if (res == PM3_SUCCESS) {
-                uint32_t len = le24toh(fdata.length);
-                NDEFDecodeAndPrint(data, datalen, verbose);
-
-            } else {
-                PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
-                res = handler_desfire_select_application(aid);
-                if (res != PM3_SUCCESS) continue;
-            }
-
-            free(data);
-        }
-    }
-
-    if (!datalen) {
-        PrintAndLogEx(ERR, "no NDEF data");
-        return PM3_SUCCESS;
-    }
-
-    if (verbose2) {
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "--- " _CYAN_("DESFire NDEF raw") " ----------------");
-        print_buffer(data, datalen, 1);
-    }
-
-    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfdes ndefread -vv`") " for more details");
-    return PM3_SUCCESS;
-}
-*/
-/*
+// https://www.nxp.com/docs/en/application-note/AN10787.pdf
+// MIFARE Application Directory (MAD)
 static int CmdHF14aDesMAD(const char *Cmd) {
-    DropFieldDesfire();
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes mad",
-                  "Prints MIFARE Application directory (MAD)",
+                  "Reads and prints MIFARE Application directory (MAD).",
+                  "MAD consists of one file with issuer info (AID ffffff) and several files with AID in the special format `faaaav` (a - MAD ID, v - multiple AID over one MAD ID)\n"
+                  "The MIFARE DESFire Card Master Key settings have to allow the MIFARE DESFire command GetApplicationIDs without authentication (from datasheet)\n"
+                  "\n"
                   "hf mfdes mad      -> shows MAD data\n"
                   "hf mfdes mad -v   -> shows MAD parsed and raw data\n"
                   "hf mfdes mad -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows MAD data with custom AID and key");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_litn("v",  "verbose",  0, 2, "show technical data"),
-        arg_str0(NULL, "aid",      "<aid>", "replace default aid for MAD"),
-        arg_str0("k",  "key",      "<key>", "replace default key for MAD"),
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
+        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40/ev1/ev2>", "Secure channel: d40/ev1/ev2"),
+        arg_str0(NULL, "aid",     "<app id hex>", "Application ID of issuer info file, (non-standard feature!) (3 hex bytes, big endian)"),
+        arg_lit0(NULL, "auth",    "Authenticate to get info from GetApplicationIDs command (non-standard feature!)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext dctx;
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, &securechann, DCMPlain, &appid);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    bool authen = arg_get_lit(ctx, 12);
+
+    SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfdes mad -v`") " for more details");
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, !authen, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    PICCInfoS PICCInfo = {0};
+    AppListS AppList = {0};
+    DesfireFillAppList(&dctx, &PICCInfo, AppList, false, false); // no deep scan, no scan files
+
+    // print zone
+    DesfirePrintPICCInfo(&dctx, &PICCInfo);
+    DesfirePrintAppList(&dctx, &PICCInfo, AppList);
+
+
+
+
+    DropField();
     return PM3_SUCCESS;
 }
-*/
 
 static int CmdHF14ADesSelectApp(const char *Cmd) {
     CLIParserContext *ctx;
@@ -5228,8 +5169,7 @@ static command_t CommandTable[] = {
     {"setconfig",        CmdHF14ADesSetConfiguration, IfPm3Iso14443a,  "Set card configuration"},
     {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
     {"list",             CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
-//    {"ndefread",             CmdHF14aDesNDEFRead,             IfPm3Iso14443a,  "Prints NDEF records from card"},
-//    {"mad",             CmdHF14aDesMAD,             IfPm3Iso14443a,  "Prints MAD records from card"},
+    {"mad",              CmdHF14aDesMAD,              IfPm3Iso14443a,  "Prints MAD records / files from the card"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Applications") " -------------------"},
     {"lsapp",            CmdHF14ADesLsApp,            IfPm3Iso14443a,  "Show all applications with files list"},
     {"getaids",          CmdHF14ADesGetAIDs,          IfPm3Iso14443a,  "Get Application IDs list"},
