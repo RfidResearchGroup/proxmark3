@@ -88,14 +88,9 @@ void RunMod(void) {
     Dbprintf(_YELLOW_("Standalone mode MFCSIM started!"));
 
     bool flag_has_dumpfile = false;
-    for (int i = 1;; i++) {
-        if (i > 15) {
-            if (flag_has_dumpfile) i = 1; //Next loop!
-            else break;//No dump,Exit!
-        }
-        LED(i, 1000);
+    for (int i = 1; i < 16; i++) {        
+        LED(i, 100);
         emlClearMem();
-
         sprintf(cur_dump_file, HF_MFCSIM_DUMPFILE_SIM, i);
         Dbprintf(_YELLOW_("[Slot: %d] Try to load dump file: %s"), i, cur_dump_file);
         if (!ecfill_from_file(cur_dump_file)) {
@@ -103,13 +98,16 @@ void RunMod(void) {
             continue;
         }
         flag_has_dumpfile = true;
+        LED(i, 1000);
 
         Dbprintf(_YELLOW_("[Slot: %d] Simulation start, Press button to change next card."), i);
         uint16_t simflags = FLAG_UID_IN_EMUL | FLAG_MF_1K;
         Mifare1ksim(simflags, 0, NULL, 0, 0);
         Dbprintf(_YELLOW_("[Slot: %d] Simulation end, Change to next card!"), i);
     }
-    Dbprintf("No dump file found, Exit!");
+    if(!flag_has_dumpfile) Dbprintf("No dump file found, Exit!");
+    Dbprintf("Loop end, Exit!");
+    SpinErr(15, 200, 3);
     return;
 }
 
