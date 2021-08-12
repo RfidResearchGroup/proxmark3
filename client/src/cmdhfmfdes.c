@@ -4875,7 +4875,8 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
                 case 0x00:
                 case 0x01: {
                     op = RFTData;
-                    commit = (fsettings.fileType == 0x01);
+                    if (!commit)
+                        commit = (fsettings.fileType == 0x01);
                     break;
                 }
                 case 0x02: {
