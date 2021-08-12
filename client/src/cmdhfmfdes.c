@@ -1600,12 +1600,46 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     AppListS AppList = {0};
     DesfireFillAppList(&dctx, &PICCInfo, AppList, false, false); // no deep scan, no scan files
 
+    if (PICCInfo.freemem == 0xffffffff)
+        PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _YELLOW_("n/a"), PICCInfo.appCount);
+    else
+        PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d") " bytes", PICCInfo.appCount, PICCInfo.freemem);
+
+    if ((PICCInfo.keySettings & (1 << 1)) == 0)
+        PrintAndLogEx(WARNING, "Directory list access with CMK : " _RED_("Enabled") ". Try to read mad with Card Master Key(");
+
     // print zone
-    DesfirePrintPICCInfo(&dctx, &PICCInfo);
-    DesfirePrintAppList(&dctx, &PICCInfo, AppList);
-
-
-
+    PrintAndLogEx(SUCCESS, "------------------------------------ " _CYAN_("MAD") " -------------------------------------");
+    bool foundFFFFFF = false;
+    for (int i = 0; i < PICCInfo.appCount; i++) {
+        if (AppList[i].appNum == 0xffffff) {
+            foundFFFFFF = true;
+            break;
+        }
+    }
+    
+    if (foundFFFFFF) {
+        res = DesfireSelectAIDHexNoFieldOn(&dctx, 0xffffff);
+        if (res == PM3_SUCCESS) {
+            
+            
+        } else {
+            PrintAndLogEx(WARNING,  _RED_("Can't select") " issuer information app (0xffffff).");
+        }
+    } else {
+        PrintAndLogEx(WARNING, "Issuer information " _RED_("not found") " on the card.");
+    }
+    
+    size_t madappcount = 0;
+    for (int i = 0; i < PICCInfo.appCount; i++) {
+        if ((AppList[i].appNum & 0xf00000) == 0xf00000) {
+            DesfirePrintMADAID(AppList[i].appNum, verbose);
+            madappcount++;
+        }
+    }
+    
+    if (madappcount == 0)
+        PrintAndLogEx(SUCCESS, "There is no MAD applications on the card");
 
     DropField();
     return PM3_SUCCESS;

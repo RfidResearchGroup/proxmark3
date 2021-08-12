@@ -837,6 +837,23 @@ int DesfireSelectAIDHexNoFieldOn(DesfireContext *ctx, uint32_t aid) {
     return res;
 }
 
+void DesfirePrintMADAID(uint32_t appid, bool verbose) {
+    uint8_t aid[3] = {0};
+    DesfireAIDUintToByte(appid, aid);
+    if ((aid[2] >> 4) != 0xF)
+        return;
+    
+    uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
+    
+    PrintAndLogEx(SUCCESS, "MIFARE Classic ID (MAD) " _YELLOW_("%04X") " AID %06x MAD AID Cluster  0x%02X " _YELLOW_("%s"), 
+                short_aid, 
+                appid,
+                short_aid >> 8, 
+                nxp_cluster_to_text(short_aid >> 8));
+    if (verbose)     
+        MADDFDecodeAndPrint(short_aid);
+}
+
 void DesfirePrintAIDFunctions(uint32_t appid) {
     uint8_t aid[3] = {0};
     DesfireAIDUintToByte(appid, aid);
