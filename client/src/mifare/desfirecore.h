@@ -165,6 +165,7 @@ int DesfireSelectAID(DesfireContext *ctx, uint8_t *aid1, uint8_t *aid2);
 int DesfireSelectAIDHex(DesfireContext *ctx, uint32_t aid1, bool select_two, uint32_t aid2);
 int DesfireSelectAIDHexNoFieldOn(DesfireContext *ctx, uint32_t aid);
 void DesfirePrintAIDFunctions(uint32_t appid);
+void DesfirePrintMADAID(uint32_t appid, bool verbose);
 
 int DesfireGetCardUID(DesfireContext *ctx);
 
@@ -185,7 +186,7 @@ int DesfireGetUID(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetAIDList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetDFList(DesfireContext *dctx, uint8_t *resp, size_t *resplen);
 int DesfireFillPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo, bool deepmode);
-int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList, bool deepmode, bool readFiles);
+int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList, bool deepmode, bool readFiles, bool fillAppSettings);
 void DesfirePrintPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo);
 void DesfirePrintAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList);
 

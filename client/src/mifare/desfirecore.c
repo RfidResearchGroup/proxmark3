@@ -837,6 +837,28 @@ int DesfireSelectAIDHexNoFieldOn(DesfireContext *ctx, uint32_t aid) {
     return res;
 }
 
+void DesfirePrintMADAID(uint32_t appid, bool verbose) {
+    uint8_t aid[3] = {0};
+    DesfireAIDUintToByte(appid, aid);
+    if ((aid[2] >> 4) != 0xF)
+        return;
+    
+    uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
+    
+    PrintAndLogEx(SUCCESS, "MIFARE Classic ID (MAD): " _YELLOW_("%04X") " ver: " _YELLOW_("%01X") " AID: " _YELLOW_("%06x") " MAD AID Cluster[0x%02X]: " _YELLOW_("%s"), 
+                short_aid, 
+                appid & 0x0f,
+                appid,
+                short_aid >> 8, 
+                nxp_cluster_to_text(short_aid >> 8));
+    if (verbose) {   
+        if (appid == 0xffffff)
+            PrintAndLogEx(SUCCESS, "  Card issuer information application");
+        else
+            MADDFDecodeAndPrint(short_aid);
+    }
+}
+
 void DesfirePrintAIDFunctions(uint32_t appid) {
     uint8_t aid[3] = {0};
     DesfireAIDUintToByte(appid, aid);
@@ -1460,7 +1482,7 @@ static int AppListSearchAID(uint32_t appNum, AppListS AppList, size_t appcount) 
     return -1;
 }
 
-int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList, bool deepmode, bool readFiles) {
+int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList, bool deepmode, bool readFiles, bool fillAppSettings) {
     uint8_t buf[250] = {0};
     size_t buflen = 0;
 
@@ -1492,7 +1514,7 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
     // field on-off zone
     DesfireFillPICCInfo(dctx, PICCInfo, deepmode);
 
-    if (PICCInfo->appCount > 0) {
+    if (fillAppSettings && PICCInfo->appCount > 0) {
         for (int i = 0; i < PICCInfo->appCount; i++) {
             if (i == 0)
                 res = DesfireSelectAIDHex(dctx, appList[i].appNum, false, 0);
@@ -1527,7 +1549,7 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
     }
 
     // field on-off zone
-    if (PICCInfo->appCount > 0 && deepmode) {
+    if (fillAppSettings && PICCInfo->appCount > 0 && deepmode) {
         for (int i = 0; i < PICCInfo->appCount; i++) {
             DesfireCheckAuthCommands(appList[i].appNum, appList[i].appDFName, 0, &appList[i].authCmdCheck);
         }
@@ -1542,9 +1564,10 @@ void DesfirePrintPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo) {
         PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _YELLOW_("n/a"), PICCInfo->appCount);
     else
         PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d") " bytes", PICCInfo->appCount, PICCInfo->freemem);
-    PrintAndLogEx(SUCCESS, "PICC level auth commands: " NOLF);
-    if (PICCInfo->authCmdCheck.checked)
+    if (PICCInfo->authCmdCheck.checked) {
+        PrintAndLogEx(SUCCESS, "PICC level auth commands: " NOLF);
         DesfireCheckAuthCommandsPrint(&PICCInfo->authCmdCheck);
+    }
     if (PICCInfo->numberOfKeys > 0) {
         PrintKeySettings(PICCInfo->keySettings, PICCInfo->numKeysRaw, false, true);
         PrintAndLogEx(SUCCESS, "PICC key 0 version: %d (0x%02x)", PICCInfo->keyVersion0, PICCInfo->keyVersion0);
