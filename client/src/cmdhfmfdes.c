@@ -4942,7 +4942,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         DesfireSetCommMode(&dctx, commMode);
 
         if (res == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Prev reader id[%d]: %s", resplen, sprint_hex(resp, resplen));
+            PrintAndLogEx(INFO, "Prev reader id encoded[%d]: %s", resplen, sprint_hex(resp, resplen));
             readeridpushed = true;
             if (verbose)
                 PrintAndLogEx(INFO, "CommitReaderID " _GREEN_("OK"));
