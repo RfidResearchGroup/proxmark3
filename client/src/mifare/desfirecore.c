@@ -1482,7 +1482,7 @@ static int AppListSearchAID(uint32_t appNum, AppListS AppList, size_t appcount) 
     return -1;
 }
 
-int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList, bool deepmode, bool readFiles) {
+int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appList, bool deepmode, bool readFiles, bool fillAppSettings) {
     uint8_t buf[250] = {0};
     size_t buflen = 0;
 
@@ -1514,7 +1514,7 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
     // field on-off zone
     DesfireFillPICCInfo(dctx, PICCInfo, deepmode);
 
-    if (PICCInfo->appCount > 0) {
+    if (fillAppSettings && PICCInfo->appCount > 0) {
         for (int i = 0; i < PICCInfo->appCount; i++) {
             if (i == 0)
                 res = DesfireSelectAIDHex(dctx, appList[i].appNum, false, 0);
@@ -1549,7 +1549,7 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
     }
 
     // field on-off zone
-    if (PICCInfo->appCount > 0 && deepmode) {
+    if (fillAppSettings && PICCInfo->appCount > 0 && deepmode) {
         for (int i = 0; i < PICCInfo->appCount; i++) {
             DesfireCheckAuthCommands(appList[i].appNum, appList[i].appDFName, 0, &appList[i].authCmdCheck);
         }

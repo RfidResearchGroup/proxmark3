@@ -1599,7 +1599,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
 
     PICCInfoS PICCInfo = {0};
     AppListS AppList = {0};
-    DesfireFillAppList(&dctx, &PICCInfo, AppList, false, false); // no deep scan, no scan files
+    DesfireFillAppList(&dctx, &PICCInfo, AppList, false, false, false); // no deep scan, no scan files
 
     if (PICCInfo.freemem == 0xffffffff)
         PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _YELLOW_("n/a"), PICCInfo.appCount);
@@ -5120,7 +5120,7 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
 
     PICCInfoS PICCInfo = {0};
     AppListS AppList = {0};
-    DesfireFillAppList(&dctx, &PICCInfo, AppList, !nodeep, scanfiles);
+    DesfireFillAppList(&dctx, &PICCInfo, AppList, !nodeep, scanfiles, true);
 
     printf("\33[2K\r"); // clear current line before printing
     PrintAndLogEx(NORMAL, "");
