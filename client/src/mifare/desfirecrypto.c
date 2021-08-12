@@ -619,6 +619,8 @@ int DesfireEV2CalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t d
     return aes_cmac8(NULL, ctx->sessionKeyMAC, mdata, mac, mdatalen);
 }
 
+// https://www.nxp.com/docs/en/data-sheet/MF2DLHX0.pdf
+// page 42
 void DesfireGenTransSessionKey(uint8_t *key, uint32_t trCntr, uint8_t *uid, bool forMAC, uint8_t *sessionkey) {
     uint8_t xiv[CRYPTO_AES_BLOCK_SIZE] = {0};
     
