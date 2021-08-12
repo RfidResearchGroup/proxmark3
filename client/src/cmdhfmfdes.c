@@ -1543,6 +1543,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
 
 // https://www.nxp.com/docs/en/application-note/AN10787.pdf
 // MIFARE Application Directory (MAD)
+// test cardholder data 0a53616d706c656d616e00475068696c697000826d00d054656c2b312f313233342f3536373800
 static int CmdHF14aDesMAD(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes mad",
@@ -1634,13 +1635,17 @@ static int CmdHF14aDesMAD(const char *Cmd) {
             uint8_t data[250] = {0};
             size_t datalen = 0;
 
-            res = DesfireReadFile(&dctx, 02, 0x000000, 0, data, &datalen);
+            res = DesfireReadFile(&dctx, 01, 0x000000, 0, data, &datalen);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "Card Holder   : " _RED_("n/a"));
             } else {
                 if (datalen > 0) {
                     PrintAndLogEx(SUCCESS, "Card Holder   : ");
-                    print_buffer_with_offset(data, datalen, 0, true);
+                    if (verbose) {
+                        print_buffer_with_offset(data, datalen, 0, true);
+                        PrintAndLogEx(NORMAL, "");
+                    }
+                    MADCardHolderInfoDecode(data, datalen, verbose);
                     PrintAndLogEx(NORMAL, "");
                 } else {
                     PrintAndLogEx(SUCCESS, "Card Holder   : " _YELLOW_("none"));
