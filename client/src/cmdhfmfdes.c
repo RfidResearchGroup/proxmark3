@@ -1621,6 +1621,16 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     if (foundFFFFFF) {
         res = DesfireSelectAIDHexNoFieldOn(&dctx, 0xffffff);
         if (res == PM3_SUCCESS) {
+            uint32_t madver = 0;
+            res = DesfireValueFileOperations(&dctx, 0x00, MFDES_GET_VALUE, &madver);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Desfire GetValue for MAD version command " _RED_("error") ". Result: %d", res);
+            } else {
+                if (madver == 3)
+                    PrintAndLogEx(SUCCESS, "MAD version: " _GREEN_("3"));
+                else
+                    PrintAndLogEx(WARNING, "MAD version: " _YELLOW_("%d"), madver);
+            }
             
             
         } else {
