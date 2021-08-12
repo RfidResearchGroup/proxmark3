@@ -2424,6 +2424,28 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
     PrintAndLogEx(SUCCESS, "Access rights    : %04x", MemLeToUint2byte(&data[xlen]));
     DesfirePrintAccessRight(&data[xlen]);
     xlen += 2;
+    
+    // https://www.nxp.com/docs/en/data-sheet/MF2DLHX0.pdf
+    // page 14
+    // TransactionMAC file
+    if (filetype == 0x05) {
+        uint8_t read = 0;
+        uint8_t write = 0;
+        uint8_t readwrite = 0;
+        uint8_t change = 0;
+        DesfireDecodeFileAcessMode(&data[xlen - 2], &read, &write, &readwrite, &change);
+        if (write != 0x0f)
+            PrintAndLogEx(WARNING, "descr.   : Write right should be set to F because write " _RED_("not allowed") ".");
+        
+        if (readwrite == 0x0f)
+            PrintAndLogEx(SUCCESS, "descr.   : ReadWrite right is %01X, CommitReaderID command disabled", readwrite);
+        else if (readwrite == 0x0e)
+            PrintAndLogEx(SUCCESS, "descr.   : ReadWrite right is %01X, CommitReaderID command enabled with free access", readwrite);
+        else if (readwrite <= 0x04)
+            PrintAndLogEx(SUCCESS, "descr.   : ReadWrite right is %01X, CommitReaderID command enabled with key 0x0%01x", readwrite, readwrite);
+        else
+            PrintAndLogEx(WARNING, "descr.   : ReadWrite right must me 0..4,E,F instead of is %01X.", readwrite);
+    }
 
     uint8_t reclen = 0;
     DesfirePrintFileSettDynPart(filetype, &data[xlen], len - xlen, &reclen, true);
