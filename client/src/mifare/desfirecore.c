@@ -1542,9 +1542,10 @@ void DesfirePrintPICCInfo(DesfireContext *dctx, PICCInfoS *PICCInfo) {
         PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _YELLOW_("n/a"), PICCInfo->appCount);
     else
         PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d") " bytes", PICCInfo->appCount, PICCInfo->freemem);
-    PrintAndLogEx(SUCCESS, "PICC level auth commands: " NOLF);
-    if (PICCInfo->authCmdCheck.checked)
+    if (PICCInfo->authCmdCheck.checked) {
+        PrintAndLogEx(SUCCESS, "PICC level auth commands: " NOLF);
         DesfireCheckAuthCommandsPrint(&PICCInfo->authCmdCheck);
+    }
     if (PICCInfo->numberOfKeys > 0) {
         PrintKeySettings(PICCInfo->keySettings, PICCInfo->numKeysRaw, false, true);
         PrintAndLogEx(SUCCESS, "PICC key 0 version: %d (0x%02x)", PICCInfo->keyVersion0, PICCInfo->keyVersion0);
