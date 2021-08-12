@@ -1609,7 +1609,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
         PrintAndLogEx(WARNING, "Directory list access with CMK : " _RED_("Enabled") ". Try to read mad with Card Master Key(");
 
     // print zone
-    PrintAndLogEx(SUCCESS, "------------------------------------ " _CYAN_("MAD") " -------------------------------------");
+    PrintAndLogEx(SUCCESS, "----------------------------------------- " _CYAN_("MAD") " ------------------------------------------");
     bool foundFFFFFF = false;
     for (int i = 0; i < PICCInfo.appCount; i++) {
         if (AppList[i].appNum == 0xffffff) {
@@ -1624,15 +1624,38 @@ static int CmdHF14aDesMAD(const char *Cmd) {
             uint32_t madver = 0;
             res = DesfireValueFileOperations(&dctx, 0x00, MFDES_GET_VALUE, &madver);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(WARNING, "Desfire GetValue for MAD version command " _RED_("error") ". Result: %d", res);
+                PrintAndLogEx(SUCCESS, "MAD version   : " _RED_("n/a"));
             } else {
                 if (madver == 3)
-                    PrintAndLogEx(SUCCESS, "MAD version: " _GREEN_("3"));
+                    PrintAndLogEx(SUCCESS, "MAD version   : " _GREEN_("3"));
                 else
-                    PrintAndLogEx(WARNING, "MAD version: " _YELLOW_("%d"), madver);
+                    PrintAndLogEx(WARNING, "MAD version   : " _YELLOW_("%d"), madver);
             }
             
-            
+            uint8_t data[250] = {0};
+            size_t datalen = 0;
+
+            res = DesfireReadFile(&dctx, 02, 0x000000, 0, data, &datalen);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "Card Holder   : " _RED_("n/a"));
+            } else {
+                if (datalen > 0) {
+                    
+                } else {
+                    PrintAndLogEx(SUCCESS, "Card Holder   : " _YELLOW_("none"));
+                }
+            }
+
+            res = DesfireReadFile(&dctx, 02, 0x000000, 0, data, &datalen);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "Card Publisher: " _RED_("n/a"));
+            } else {
+                if (datalen > 0) {
+                    
+                } else {
+                    PrintAndLogEx(SUCCESS, "Card Publisher: " _YELLOW_("none"));
+                }
+            }
         } else {
             PrintAndLogEx(WARNING,  _RED_("Can't select") " issuer information app (0xffffff).");
         }
