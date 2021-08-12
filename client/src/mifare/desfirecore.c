@@ -851,8 +851,12 @@ void DesfirePrintMADAID(uint32_t appid, bool verbose) {
                 appid,
                 short_aid >> 8, 
                 nxp_cluster_to_text(short_aid >> 8));
-    if (verbose)     
-        MADDFDecodeAndPrint(short_aid);
+    if (verbose) {   
+        if (appid == 0xffffff)
+            PrintAndLogEx(SUCCESS, "  Card issuer information application");
+        else
+            MADDFDecodeAndPrint(short_aid);
+    }
 }
 
 void DesfirePrintAIDFunctions(uint32_t appid) {
