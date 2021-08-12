@@ -507,11 +507,13 @@ Check column "offline" for their availability.
 |`hf mfdes getuid        `|N       |`Get uid from card`
 |`hf mfdes default       `|N       |`Set defaults for all the commands`
 |`hf mfdes auth          `|N       |`MIFARE DesFire Authentication`
-|`hf mfdes chk           `|N       |`[old]Check keys`
+|`hf mfdes chk           `|N       |`Check keys`
+|`hf mfdes detect        `|N       |`Detect key type and tries to find one from the list`
 |`hf mfdes freemem       `|N       |`Get free memory size`
 |`hf mfdes setconfig     `|N       |`Set card configuration`
 |`hf mfdes formatpicc    `|N       |`Format PICC`
 |`hf mfdes list          `|Y       |`List DESFire (ISO 14443A) history`
+|`hf mfdes mad           `|N       |`Prints MAD records / files from the card`
 |`hf mfdes lsapp         `|N       |`Show all applications with files list`
 |`hf mfdes getaids       `|N       |`Get Application IDs list`
 |`hf mfdes getappnames   `|N       |`Get Applications list`
@@ -710,9 +712,9 @@ Check column "offline" for their availability.
 |`lf em 410x reader      `|N       |`attempt to read and extract tag data`
 |`lf em 410x sim         `|N       |`simulate EM410x tag`
 |`lf em 410x brute       `|N       |`reader bruteforce attack by simulating EM410x tags`
-|`lf em 410x watch       `|N       |`watches for EM410x 125/134 kHz tags (option 'h' for 134)`
-|`lf em 410x spoof       `|N       |`watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)`
-|`lf em 410x clone       `|N       |`write EM410x UID to T55x7 or Q5/T5555 tag`
+|`lf em 410x watch       `|N       |`watches for EM410x 125/134 kHz tags`
+|`lf em 410x spoof       `|N       |`watches for EM410x 125/134 kHz tags, and replays them`
+|`lf em 410x clone       `|N       |`write EM410x Tag ID to T55x7 or Q5/T5555 tag`
 
 
 ### lf em 4x05

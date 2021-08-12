@@ -353,7 +353,7 @@ void MifareKdfAn10922(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, cons
         return;
 
     int kbs = desfire_get_key_block_length(ctx->keyType); // 8 or 16
-    if (kbs == 0) 
+    if (kbs == 0)
         return;
 
     uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE * 3] = {0};
