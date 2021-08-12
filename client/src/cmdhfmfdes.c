@@ -4832,7 +4832,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
     uint8_t readerid[250] = {0};
     int readeridlen = sizeof(data);
-    CLIGetHexWithReturn(ctx, 22, data, &datalen);
+    CLIGetHexWithReturn(ctx, 22, readerid, &readeridlen);
     if (datalen > 16) {
         PrintAndLogEx(ERR, "ReaderID must be up to 16 bytes length.");
         CLIParserFree(ctx);
@@ -5018,6 +5018,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     if (commit || readeridpushed) {
         uint8_t resp[250] = {0};
         size_t resplen = 0;
+        DesfireSetCommMode(&dctx, DCMMACed);
         res = DesfireCommitTransactionEx(&dctx, readeridpushed, 0x01, resp, &resplen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire CommitTransaction command " _RED_("error") ". Result: %d", res);
