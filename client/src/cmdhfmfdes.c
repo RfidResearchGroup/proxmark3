@@ -1608,7 +1608,6 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     if ((PICCInfo.keySettings & (1 << 1)) == 0)
         PrintAndLogEx(WARNING, "Directory list access with CMK : " _RED_("Enabled") ". Try to read mad with Card Master Key(");
 
-    // print zone
     PrintAndLogEx(SUCCESS, "----------------------------------------- " _CYAN_("MAD") " ------------------------------------------");
     bool foundFFFFFF = false;
     for (int i = 0; i < PICCInfo.appCount; i++) {
@@ -1640,7 +1639,9 @@ static int CmdHF14aDesMAD(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "Card Holder   : " _RED_("n/a"));
             } else {
                 if (datalen > 0) {
-                    
+                    PrintAndLogEx(SUCCESS, "Card Holder   : ");
+                    print_buffer_with_offset(data, datalen, 0, true);
+                    PrintAndLogEx(NORMAL, "");
                 } else {
                     PrintAndLogEx(SUCCESS, "Card Holder   : " _YELLOW_("none"));
                 }
@@ -1651,7 +1652,9 @@ static int CmdHF14aDesMAD(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "Card Publisher: " _RED_("n/a"));
             } else {
                 if (datalen > 0) {
-                    
+                    PrintAndLogEx(SUCCESS, "Card Publisher: ");
+                    print_buffer_with_offset(data, datalen, 0, true);
+                    PrintAndLogEx(NORMAL, "");
                 } else {
                     PrintAndLogEx(SUCCESS, "Card Publisher: " _YELLOW_("none"));
                 }
@@ -1664,6 +1667,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     }
     
     size_t madappcount = 0;
+    PrintAndLogEx(SUCCESS, "Applications  : ");
     for (int i = 0; i < PICCInfo.appCount; i++) {
         if ((AppList[i].appNum & 0xf00000) == 0xf00000) {
             DesfirePrintMADAID(AppList[i].appNum, verbose);
@@ -3497,6 +3501,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
                   "--rawtype/--rawdata have priority over the other settings. and with these parameters you can create any file. file id comes from parameters, all the rest data must be in the --rawdata parameter\n"
                   "--rawrights have priority over the separate rights settings.\n"
                   "Key/mode/etc of the authentication depends on application settings\n"
+                  "hf mfdes createfile --aid 123456 --fid 01 --isofid 0001 --size 000010 -> create file with iso id. Authentication with defaults from `default` command\n"
                   "hf mfdes createfile --aid 123456 --fid 01 --rawtype 01 --rawdata 000100EEEE000100 -> create file via sending rawdata to the card. Can be used to create any type of file. Authentication with defaults from `default` command\n"
                   "hf mfdes createfile --aid 123456 --fid 01 --amode plain --rrights free --wrights free --rwrights free --chrights key0 -> create file app=123456, file=01 and mentioned rights with defaults from `default` command\n"
                   "hf mfdes createfile -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 --rawtype 00 --rawdata 00EEEE000100 -> execute with default factory setup");
