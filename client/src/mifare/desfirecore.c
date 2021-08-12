@@ -1834,6 +1834,13 @@ int DesfireClearRecordFile(DesfireContext *dctx, uint8_t fnum) {
     return DesfireCommandTxData(dctx, MFDES_CLEAR_RECORD_FILE, &fnum, 1);
 }
 
+int DesfireCommitReaderID(DesfireContext *dctx, uint8_t *readerid, size_t readeridlen, uint8_t *resp, size_t *resplen) {
+    uint8_t rid[16] = {0};
+    // command use 16b reader id only
+    memcpy(rid, readerid, MIN(readeridlen, 16));
+    return DesfireCommand(dctx, MFDES_COMMIT_READER_ID, rid, 16, resp, resplen, -1);
+}
+
 int DesfireCommitTransaction(DesfireContext *dctx, bool enable_options, uint8_t options) {
     if (enable_options)
         return DesfireCommandTxData(dctx, MFDES_COMMIT_TRANSACTION, &options, 1);
