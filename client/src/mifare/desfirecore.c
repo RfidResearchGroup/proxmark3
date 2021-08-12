@@ -1841,11 +1841,17 @@ int DesfireCommitReaderID(DesfireContext *dctx, uint8_t *readerid, size_t reader
     return DesfireCommand(dctx, MFDES_COMMIT_READER_ID, rid, 16, resp, resplen, -1);
 }
 
-int DesfireCommitTransaction(DesfireContext *dctx, bool enable_options, uint8_t options) {
+int DesfireCommitTransactionEx(DesfireContext *dctx, bool enable_options, uint8_t options, uint8_t *resp, size_t *resplen) {
     if (enable_options)
-        return DesfireCommandTxData(dctx, MFDES_COMMIT_TRANSACTION, &options, 1);
+        return DesfireCommand(dctx, MFDES_COMMIT_TRANSACTION, &options, 1, resp, resplen, -1);
     else
         return DesfireCommandNoData(dctx, MFDES_COMMIT_TRANSACTION);
+}
+
+int DesfireCommitTransaction(DesfireContext *dctx, bool enable_options, uint8_t options) {
+    uint8_t resp[250] = {0};
+    size_t resplen = 0;
+    return DesfireCommitTransactionEx(dctx, enable_options, options, resp, &resplen);
 }
 
 int DesfireAbortTransaction(DesfireContext *dctx) {
