@@ -95,4 +95,20 @@ All the commands use these settings by default if a more important setting is no
 ### How to look at the application list on the card
 `hf mfdes lsapp --no-auth` - show applications list without authentication
 `hf mfdes lsapp` - show applications list with authentication from default settings
-`hf mfdes lsapp --files` - show applications list their files
+`hf mfdes lsapp --files` - show applications list with their files
+`hf mfdes getaids --no-auth` - this command can return a simple aid list if it is enabled in the card settings
+
+### How to look/dump files from the application file list
+`hf mfdes lsfiles --aid 123456 -t aes` - file list for application 123456 with aes key
+`hf mfdes dump --aid 123456` - shows files and their contents from application 123456
+
+### How to create the application
+`hf mfdes createapp --aid 123456 --fid 2345 --dfname aid123456 --dstalgo aes` - create an application with iso file id, df name, and key algorithm AES
+`hf mfdes createapp --aid 123456` - create an application 123456 with DES key algorithm and without iso file id. in this case, iso file id can't be provided for application's files
+
+### How to create files
+
+### How to read/write files
+
+### How to work with transactions
+
