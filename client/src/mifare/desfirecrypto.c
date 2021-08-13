@@ -623,7 +623,7 @@ int DesfireEV2CalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t d
 // page 42
 void DesfireGenTransSessionKey(uint8_t *key, uint32_t trCntr, uint8_t *uid, bool forMAC, uint8_t *sessionkey) {
     uint8_t xiv[CRYPTO_AES_BLOCK_SIZE] = {0};
-    
+
     if (forMAC) {
         xiv[0] = 0x5a;
     } else {
@@ -633,7 +633,7 @@ void DesfireGenTransSessionKey(uint8_t *key, uint32_t trCntr, uint8_t *uid, bool
     xiv[4] = 0x80;
     Uint4byteToMemLe(&xiv[5], trCntr + 1);
     memcpy(&xiv[9], uid, 7);
-    
+
     DesfireContext ctx = {0};
     DesfireSetKey(&ctx, 0, T_AES, key);
     DesfireCryptoCMACEx(&ctx, DCOMainKey, xiv, 16, 0, sessionkey);

@@ -4843,7 +4843,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    
+
     uint8_t trkey[250] = {0};
     int trkeylen = sizeof(trkey);
     CLIGetHexWithReturn(ctx, 23, trkey, &trkeylen);
@@ -4860,7 +4860,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fnum);
         return PM3_EINVARG;
     }
-    
+
     // get uid
     if (trkeylen > 0)
         DesfireGetCardUID(&dctx);
@@ -4947,7 +4947,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
             PrintAndLogEx(WARNING, "GetFileSettings error. Can't get file type.");
         }
     }
-    
+
     // CommitReaderID command
     bool readeridpushed = false;
     if (readeridlen > 0) {
@@ -4962,24 +4962,24 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         if (res == PM3_SUCCESS) {
             PrintAndLogEx(INFO, _GREEN_("Commit Reader ID: "));
             PrintAndLogEx(INFO, "Prev reader id encoded [%d]: %s", resplen, sprint_hex(resp, resplen));
-            
+
             if (trkeylen > 0) {
                 uint8_t sessionkey[16] = {0};
                 uint8_t uid[7] = {0};
                 memcpy(uid, dctx.uid, MAX(dctx.uidlen, 7));
                 DesfireGenTransSessionKey(trkey, transactionCounter, uid, false, sessionkey);
-                
+
                 aes_decode(NULL, sessionkey, resp, resp, CRYPTO_AES_BLOCK_SIZE);
                 PrintAndLogEx(INFO, "Prev reader id [%d]: %s", resplen, sprint_hex(resp, resplen));
             }
-            
+
             readeridpushed = true;
             if (verbose)
                 PrintAndLogEx(INFO, "CommitReaderID " _GREEN_("OK"));
         } else
             PrintAndLogEx(WARNING, "Desfire CommitReaderID command " _RED_("error") ". Result: %d", res);
     }
-    
+
     // write
     if (op == RFTData) {
         res = DesfireWriteFile(&dctx, fnum, offset, datalen, data);
@@ -5061,7 +5061,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
                 PrintAndLogEx(INFO, "TMC and TMV[%d]: %s", resplen, sprint_hex(resp, resplen));
             PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
         }
-        
+
         if (resplen == 4 + 8) {
             PrintAndLogEx(INFO, _GREEN_("Commit result:"));
             uint32_t cnt = MemLeToUint4byte(&resp[0]);
