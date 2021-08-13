@@ -229,6 +229,8 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
 const char *GetDesfireFileType(uint8_t type);
 int DesfireCreateFile(DesfireContext *dctx, uint8_t ftype, uint8_t *fdata, size_t fdatalen, bool checklen);
 int DesfireDeleteFile(DesfireContext *dctx, uint8_t fnum);
+int DesfireCommitReaderID(DesfireContext *dctx, uint8_t *readerid, size_t readeridlen, uint8_t *resp, size_t *resplen);
+int DesfireCommitTransactionEx(DesfireContext *dctx, bool enable_options, uint8_t options, uint8_t *resp, size_t *resplen);
 int DesfireCommitTransaction(DesfireContext *dctx, bool enable_options, uint8_t options);
 int DesfireAbortTransaction(DesfireContext *dctx);
 

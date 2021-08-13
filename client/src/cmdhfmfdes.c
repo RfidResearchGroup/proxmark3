@@ -378,6 +378,7 @@ static uint8_t defaultKdfInput[50] = {0};
 static DesfireSecureChannel defaultSecureChannel = DACEV1;
 static DesfireCommandSet defaultCommSet = DCCNativeISO;
 static DesfireCommunicationMode defaultCommMode = DCMPlain;
+static uint32_t transactionCounter = 0;
 
 static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dctx,
                                       uint8_t keynoid, uint8_t algoid, uint8_t keyid,
@@ -3886,7 +3887,9 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
                   "Create Transaction MAC file in the application. Application master key needs to be provided or flag --no-auth set (depend on application settings).",
                   "--rawrights have priority over the separate rights settings.\n"
                   "Key/mode/etc of the authentication depends on application settings\n"
-                  "hf mfdes createmacfile --aid 123456 --fid 01 --mackey --rawrights 1F30 00112233445566778899aabbccddeeff --mackeyver 01 -> create transaction mac file with parameters. Rights from default. Authentication with defaults from `default` command\n"
+                  "Write right should be always 0xF. Read-write right should be 0xF if you not need to submit CommitReaderID command each time transaction starts\n"
+                  "\n"
+                  "hf mfdes createmacfile --aid 123456 --fid 01 --rawrights 0FF0 --mackey 00112233445566778899aabbccddeeff --mackeyver 01 -> create transaction mac file with parameters. Rights from default. Authentication with defaults from `default` command\n"
                   "hf mfdes createmacfile --aid 123456 --fid 01 --amode plain --rrights free --wrights deny --rwrights free --chrights key0 --mackey 00112233445566778899aabbccddeeff -> create file app=123456, file=01, with key, and mentioned rights with defaults from `default` command\n"
                   "hf mfdes createmacfile -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> execute with default factory setup. key and keyver == 0x00..00");
 
@@ -4540,6 +4543,7 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
                 print_buffer_with_offset(resp, resplen, offset, true);
             } else {
                 uint32_t cnt = MemLeToUint4byte(&resp[0]);
+                transactionCounter = cnt;
                 PrintAndLogEx(SUCCESS, "Transaction counter: %d (0x%08x)", cnt, cnt);
                 PrintAndLogEx(SUCCESS, "Transaction MAC    : %s", sprint_hex(&resp[4], 8));
             }
@@ -4728,17 +4732,20 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes write",
                   "Write data from file. Key needs to be provided or flag --no-auth set (depend on file settings).",
+                  "In the mode with CommitReaderID to decode previous reader id command needs to read transaction counter via dump/read command and specify --trkey\n"
+                  "\n"
                   "hf mfdes write --aid 123456 --fid 01 -d 01020304 -> write file: app=123456, file=01, offset=0, get file type from card. use default channel settings from `default` command\n"
                   "hf mfdes write --aid 123456 --fid 01 --type data -d 01020304 --0ffset 000100 -> write data to std file with offset 0x100\n"
                   "hf mfdes write --aid 123456 --fid 01 --type data -d 01020304 --commit -> write data to backup file with commit\n"
                   "hf mfdes write --aid 123456 --fid 01 --type value -d 00000001 -> increment value file\n"
                   "hf mfdes write --aid 123456 --fid 01 --type value -d 00000001 --debit -> decrement value file\n"
-                  "hf mfdes write --aid 123456 --fid 01 -d 01020304 -> write data to record file with `auto` type\n"
+                  "hf mfdes write --aid 123456 --fid 01 -d 01020304 -> write data to file with `auto` type\n"
                   "hf mfdes write --aid 123456 --fid 01 --type record -d 01020304 -> write data to record file\n"
                   "hf mfdes write --aid 123456 --fid 01 --type record -d 01020304 --updaterec 0 -> update record in the record file. record 0 - lastest record.\n"
                   "hf mfdes write --aid 123456 --fid 01 --type record --offset 000000 -d 11223344 -> write record to record file. use default channel settings from `default` command\n"
                   "hf mfdes write --appisoid 1234 --fileisoid 1000 --type data -c iso -d 01020304 -> write data to std/backup file via iso commandset\n"
-                  "hf mfdes write --appisoid 1234 --fileisoid 2000 --type record -c iso -d 01020304 -> aend record to record file via iso commandset");
+                  "hf mfdes write --appisoid 1234 --fileisoid 2000 --type record -c iso -d 01020304 -> aend record to record file via iso commandset\n"
+                  "hf mfdes write --aid 123456 --fid 01 -d 01020304 --readerid 010203 -> write data to file with CommitReaderID command before write and CommitTransaction after write");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4763,6 +4770,8 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         arg_int0(NULL, "updaterec", "<record number dec>", "Record number for update record command. Updates record instead of write. Lastest record - 0"),
         arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
         arg_str0(NULL, "fileisoid", "<isoid hex>", "File ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
+        arg_str0(NULL, "readerid", "<hex>", "reader id for CommitReaderID command. If present - the command issued before write command."),
+        arg_str0(NULL, "trkey",   "<hex>", "key for decode previous reader id."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4826,6 +4835,24 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    uint8_t readerid[250] = {0};
+    int readeridlen = sizeof(readerid);
+    CLIGetHexWithReturn(ctx, 22, readerid, &readeridlen);
+    if (readeridlen > 16) {
+        PrintAndLogEx(ERR, "ReaderID must be up to 16 bytes length.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    
+    uint8_t trkey[250] = {0};
+    int trkeylen = sizeof(trkey);
+    CLIGetHexWithReturn(ctx, 23, trkey, &trkeylen);
+    if (trkeylen > 0 && trkeylen != 16) {
+        PrintAndLogEx(ERR, "Transaction key must be 16 bytes length.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
@@ -4833,6 +4860,10 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fnum);
         return PM3_EINVARG;
     }
+    
+    // get uid
+    if (trkeylen > 0)
+        DesfireGetCardUID(&dctx);
 
     if (!isoidpresent) {
         res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
@@ -4875,7 +4906,8 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
                 case 0x00:
                 case 0x01: {
                     op = RFTData;
-                    commit = (fsettings.fileType == 0x01);
+                    if (!commit)
+                        commit = (fsettings.fileType == 0x01);
                     break;
                 }
                 case 0x02: {
@@ -4915,7 +4947,40 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
             PrintAndLogEx(WARNING, "GetFileSettings error. Can't get file type.");
         }
     }
+    
+    // CommitReaderID command
+    bool readeridpushed = false;
+    if (readeridlen > 0) {
+        uint8_t resp[250] = {0};
+        size_t resplen = 0;
 
+        DesfireCommunicationMode commMode = dctx.commMode;
+        DesfireSetCommMode(&dctx, DCMMACed);
+        res = DesfireCommitReaderID(&dctx, readerid, readeridlen, resp, &resplen);
+        DesfireSetCommMode(&dctx, commMode);
+
+        if (res == PM3_SUCCESS) {
+            PrintAndLogEx(INFO, _GREEN_("Commit Reader ID: "));
+            PrintAndLogEx(INFO, "Prev reader id encoded [%d]: %s", resplen, sprint_hex(resp, resplen));
+            
+            if (trkeylen > 0) {
+                uint8_t sessionkey[16] = {0};
+                uint8_t uid[7] = {0};
+                memcpy(uid, dctx.uid, MAX(dctx.uidlen, 7));
+                DesfireGenTransSessionKey(trkey, transactionCounter, uid, false, sessionkey);
+                
+                aes_decode(NULL, sessionkey, resp, resp, CRYPTO_AES_BLOCK_SIZE);
+                PrintAndLogEx(INFO, "Prev reader id [%d]: %s", resplen, sprint_hex(resp, resplen));
+            }
+            
+            readeridpushed = true;
+            if (verbose)
+                PrintAndLogEx(INFO, "CommitReaderID " _GREEN_("OK"));
+        } else
+            PrintAndLogEx(WARNING, "Desfire CommitReaderID command " _RED_("error") ". Result: %d", res);
+    }
+    
+    // write
     if (op == RFTData) {
         res = DesfireWriteFile(&dctx, fnum, offset, datalen, data);
         if (res != PM3_SUCCESS) {
@@ -4980,16 +5045,30 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     }
 
     // commit phase
-    if (commit) {
-        res = DesfireCommitTransaction(&dctx, false, 0);
+    if (commit || readeridpushed) {
+        uint8_t resp[250] = {0};
+        size_t resplen = 0;
+        DesfireSetCommMode(&dctx, DCMMACed);
+        res = DesfireCommitTransactionEx(&dctx, readeridpushed, 0x01, resp, &resplen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire CommitTransaction command " _RED_("error") ". Result: %d", res);
             DropField();
             return PM3_ESOFT;
         }
 
-        if (verbose)
+        if (verbose) {
+            if (readeridpushed)
+                PrintAndLogEx(INFO, "TMC and TMV[%d]: %s", resplen, sprint_hex(resp, resplen));
             PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+        }
+        
+        if (resplen == 4 + 8) {
+            PrintAndLogEx(INFO, _GREEN_("Commit result:"));
+            uint32_t cnt = MemLeToUint4byte(&resp[0]);
+            transactionCounter = cnt;
+            PrintAndLogEx(SUCCESS, "Transaction counter: %d (0x%08x)", cnt, cnt);
+            PrintAndLogEx(SUCCESS, "Transaction MAC    : %s", sprint_hex(&resp[4], 8));
+        }
     }
 
     PrintAndLogEx(INFO, "Write %s file %02x " _GREEN_("success"), CLIGetOptionListStr(DesfireReadFileTypeOpts, op), fnum);

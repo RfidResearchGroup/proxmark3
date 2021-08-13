@@ -450,6 +450,30 @@ static bool TestEV2MAC(void) {
     return res;
 }
 
+static bool TestTransSessionKeys(void) {
+    bool res = true;
+    
+    uint8_t key[] = {0x66, 0xA8, 0xCB, 0x93, 0x26, 0x9D, 0xC9, 0xBC, 0x28, 0x85, 0xB7, 0xA9, 0x1B, 0x9C, 0x69, 0x7B};
+    uint8_t uid[] = {0x04, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
+    uint32_t trCntr = 8;
+    
+    uint8_t sessionkey[16] = {0};
+    DesfireGenTransSessionKey(key, trCntr, uid, true, sessionkey);
+    uint8_t keymac[] = {0x7C, 0x1A, 0xD2, 0xD9, 0xC5, 0xC0, 0x81, 0x54, 0xA0, 0xA4, 0x91, 0x4B, 0x40, 0x1A, 0x65, 0x98};
+    res = res && (memcmp(sessionkey, keymac, sizeof(keymac)) == 0);
+
+    DesfireGenTransSessionKey(key, trCntr, uid, false, sessionkey);
+    uint8_t keyenc[] = {0x11, 0x9B, 0x90, 0x2A, 0x07, 0xB1, 0x8A, 0x86, 0x5B, 0x8E, 0x1B, 0x00, 0x60, 0x59, 0x47, 0x84};
+    res = res && (memcmp(sessionkey, keyenc, sizeof(keyenc)) == 0);
+    
+    if (res)
+        PrintAndLogEx(INFO, "Trans session key. " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "Trans session key. " _RED_("fail"));
+
+    return res;
+}
+
 bool DesfireTest(bool verbose) {
     bool res = true;
 
@@ -467,6 +491,7 @@ bool DesfireTest(bool verbose) {
     res = res && TestEV2SessionKeys();
     res = res && TestEV2IVEncode();
     res = res && TestEV2MAC();
+    res = res && TestTransSessionKeys();
 
     PrintAndLogEx(INFO, "---------------------------");
     if (res)
