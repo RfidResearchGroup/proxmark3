@@ -76,10 +76,10 @@ void LRPGenerateUpdatedKeys(LRPContext *ctx, size_t updatedKeysCount) {
         return;
 
     uint8_t h[CRYPTO_AES128_KEY_SIZE] = {0};
-    aes_encode(NULL, ctx->key, const55, h, CRYPTO_AES128_KEY_SIZE);
+    aes_encode(NULL, ctx->key, constAA, h, CRYPTO_AES128_KEY_SIZE);
 
     for (int i = 0; i < updatedKeysCount; i++) {
-        aes_encode(NULL, h, constAA, ctx->plaintexts[i], CRYPTO_AES128_KEY_SIZE);        
+        aes_encode(NULL, h, constAA, ctx->updatedKeys[i], CRYPTO_AES128_KEY_SIZE);        
         aes_encode(NULL, h, const55, h, CRYPTO_AES128_KEY_SIZE);
     }
         
