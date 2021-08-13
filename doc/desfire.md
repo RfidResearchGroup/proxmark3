@@ -1,7 +1,7 @@
 # Desfire card
 
 ## Documentation
-[Desfire Light datasheet MF2DLHX0](https://www.nxp.com/docs/en/data-sheet/MF2DLHX0.pdf)
+[Desfire Light datasheet MF2DL(H)x0](https://www.nxp.com/docs/en/data-sheet/MF2DLHX0.pdf)
 [Features and Hints AN12343](https://www.nxp.com/docs/en/application-note/AN12343.pdf)
 [Quick Start Guide AN12341](https://www.nxp.com/docs/en/application-note/AN12341.pdf)
 [LRP Specification](https://www.nxp.com/docs/en/application-note/AN12304.pdf)
@@ -127,28 +127,57 @@ create standard file with mac access mode and specified access settings. access 
 `hf mfdes deletefile --aid 123456 --fid 01` - delete file
 
 ### How to read/write files
-read:
+*read:*
 `hf mfdes read --aid 123456 --fid 01` - autodetect file type (with `hf mfdes getfilesettings`) and read its contents
 `hf mfdes read --aid 123456 --fid 01 --type record --offset 000000 --length 000001` - read one last record from a record file
-read via iso command set:
+*read via iso command set:*
 Here needs to specify type of the file because there is no `hf mfdes getfilesettings` in the iso command set
 `hf mfdes read --aid 123456 --fileisoid 1000 --type data -c iso` - select application via native command and then read file via iso
 `hf mfdes read --appisoid 0102 --fileisoid 1000 --type data -c iso` - select all via iso commands and then read
 `hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000001` - read one record (number 5) from file 1100 via iso command set
 `hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000000` - read all the records (from 5 to 1) from file 1100 via iso command set
-write:
+*write:*
 `hf mfdes write --aid 123456 --fid 01 -d 01020304` - autodetect file type (with `hf mfdes getfilesettings`) and write data with offset 0
 `hf mfdes write --aid 123456 --fid 01 --type data -d 01020304 --commit` - write backup data file and commit
 `hf mfdes write --aid 123456 --fid 01 --type value -d 00000001` increment value file
 `hf mfdes write --aid 123456 --fid 01 --type value -d 00000001 --debit` decrement value file
 `hf mfdes write --aid 123456 --fid 01 --type record -d 01020304` write data to a record file
 `hf mfdes write --aid 123456 --fid 01 --type record -d 01020304 --updaterec 0` update record 0 (lastest) in the record file.
-write via iso command set:
+*write via iso command set:*
 `hf mfdes write --appisoid 1234 --fileisoid 1000 --type data -c iso -d 01020304` write data to std/backup file via iso commandset
 `hf mfdes write --appisoid 1234 --fileisoid 2000 --type record -c iso -d 01020304` send record to record file via iso commandset
-transactions:
+*transactions:*
 for more detailed samples look at the next howto.
 `hf mfdes write --aid 123456 --fid 01 -d 01020304 --readerid 010203` write data to the file with CommitReaderID command before and CommitTransaction after write  
     
-### How to work with transactions
+### How to work with transaction mac
+There are two types of transactions with mac: with and without the CommitReaderID command. This type can be chosen by `hf mfdes createmacfile` command.
+By default, the application works with transactions. All the write operations except write to standard file need to be committed by CommitTransaction command.
+CommitTransaction command issued at the end of each write operation (except standard file).
+Mac mode of transactions can be switched on by creation mac file. There may be only one file with this file type for one application.
+Command CommitReaderID enable/disable mode can be chosen at the creation of this file.
+When CommitReaderID is enabled - needs to issue this command once per transaction. The transaction can't be committed without this command.
+When the command is disabled - CommitReaderID returns an error.
 
+*more info from MF2DL(H)x0 datasheet (link at the top of this document):*
+10.3.2.1 Transaction MAC Counter (page 41)
+10.3.2.5 Transaction MAC Reader ID and its encryption (page 43)
+10.3.3 Transaction MAC Enabling (page 44)
+10.3.4 Transaction MAC Calculation (page 45)
+10.3.4.3 CommitReaderID Command (page 47)
+
+*create mac file:*
+`hf mfdes createmacfile --aid 123456 --fid 0f --rawrights 0FF0 --mackey 00112233445566778899aabbccddeeff --mackeyver 01` - create transaction mac file. CommitReaderID disabled
+`hf mfdes createmacfile --aid 123456 --fid 0f --rawrights 0F10 --mackey 00112233445566778899aabbccddeeff --mackeyver 01` - create transaction mac file. CommitReaderID enabled with key 1
+*read mac and transactions counter from mac file:*
+`hf mfdes read --aid 123456 --fid 0f` - with type autodetect
+*write to data file without CommitReaderID:*
+`hf mfdes write --aid 123456 --fid 01 -d 01020304`
+*write to data file with CommitReaderID:*
+`hf mfdes write --aid 123456 --fid 01 -d 01020304 --readerid 010203`
+*write to data file with CommitReaderID and decode previous reader id:*
+step 1. read mac file or read all the files to get transaction mac counter
+`hf mfdes read --aid 123456 --fid 0f` - read mac file
+`hf mfdes dump --aid 123456` - read all the files
+step 2. write something to a file with CommitReaderID command and provide the key that was set by `hf mfdes createmacfile` command
+`hf mfdes write --aid 123456 --fid 01 -d 01020304 --readerid 010203 --trkey 00112233445566778899aabbccddeeff`
