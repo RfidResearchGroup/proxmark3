@@ -23,11 +23,24 @@
 #include "common.h"
 #include "crypto/libpcrypto.h"
 
+#define LRP_MAX_PLAINTEXTS_SIZE 16
+#define LRP_MAX_UPDATED_KEYS_SIZE 4
+
 typedef struct {
     uint8_t key[CRYPTO_AES128_KEY_SIZE];
+    
+    bool useBitPadding;
+    size_t plaintextsCount;
+    uint8_t plaintexts[LRP_MAX_PLAINTEXTS_SIZE][CRYPTO_AES128_KEY_SIZE];
+    size_t updatedKeysCount;
+    uint8_t updatedKeys[LRP_MAX_UPDATED_KEYS_SIZE][CRYPTO_AES128_KEY_SIZE];
+    size_t useUpdatedKeyNum;
 } LRPContext;
 
-void LRPSetKey(LRPContext *ctx);
+void LRPClearContext(LRPContext *ctx);
+void LRPSetKey(LRPContext *ctx, uint8_t *key, size_t updatedKeyNum, bool useBitPadding);
+void LRPGeneratePlaintexts(LRPContext *ctx, size_t plaintextsCount);
+void LRPGenerateUpdatedKeys(LRPContext *ctx, size_t updatedKeysCount);
 
 
 #endif // __LRPCRYPTO_H

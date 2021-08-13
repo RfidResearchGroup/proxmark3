@@ -16,6 +16,7 @@
 
 #include "crypto/libpcrypto.h"
 #include "mifare/desfirecrypto.h"
+#include "mifare/lrpcrypto.h"
 
 static uint8_t CMACData[] = {0x6B, 0xC1, 0xBE, 0xE2, 0x2E, 0x40, 0x9F, 0x96,
                              0xE9, 0x3D, 0x7E, 0x11, 0x73, 0x93, 0x17, 0x2A,
@@ -474,6 +475,47 @@ static bool TestTransSessionKeys(void) {
     return res;
 }
 
+// https://www.nxp.com/docs/en/application-note/AN12304.pdf
+// page 10
+static bool TestLRPPlaintexts(void) {
+    bool res = true;
+    
+    uint8_t key[] = {0x56, 0x78, 0x26, 0xB8, 0xDA, 0x8E, 0x76, 0x84, 0x32, 0xA9, 0x54, 0x8D, 0xBE, 0x4A, 0xA3, 0xA0};
+    LRPContext ctx = {0};
+    LRPSetKey(&ctx, key, 0, false);
+    
+    uint8_t key0[] = {0xAC, 0x20, 0xD3, 0x9F, 0x53, 0x41, 0xFE, 0x98, 0xDF, 0xCA, 0x21, 0xDA, 0x86, 0xBA, 0x79, 0x14};
+    res = res && (memcmp(ctx.plaintexts[0], key0, sizeof(key0)) == 0);
+
+    uint8_t key1[] = {0x90, 0x7D, 0xA0, 0x3D, 0x67, 0x24, 0x49, 0x16, 0x69, 0x15, 0xE4, 0x56, 0x3E, 0x08, 0x9D, 0x6D};
+    res = res && (memcmp(ctx.plaintexts[1], key1, sizeof(key1)) == 0);
+
+    uint8_t key14[] = {0x37, 0xD7, 0x34, 0xA5, 0x1C, 0x07, 0x6E, 0xB8, 0x03, 0xBD, 0x53, 0x0E, 0x17, 0xEB, 0x87, 0xDC};
+    res = res && (memcmp(ctx.plaintexts[14], key14, sizeof(key14)) == 0);
+
+    uint8_t key15[] = {0x71, 0xB4, 0x44, 0xAF, 0x25, 0x7A, 0x93, 0x21, 0x53, 0x11, 0xD7, 0x58, 0xDD, 0x33, 0x32, 0x47};
+    res = res && (memcmp(ctx.plaintexts[15], key15, sizeof(key15)) == 0);
+
+    if (res)
+        PrintAndLogEx(INFO, "LRP plaintexts.... " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "LRP plaintexts.... " _RED_("fail"));
+
+    return res;
+}
+
+static bool TestLRPUpdatedKeys(void) {
+    bool res = true;
+
+
+    if (res)
+        PrintAndLogEx(INFO, "LRP updated keys.. " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "LRP updated keys.. " _RED_("fail"));
+
+    return res;
+}
+
 bool DesfireTest(bool verbose) {
     bool res = true;
 
@@ -492,6 +534,8 @@ bool DesfireTest(bool verbose) {
     res = res && TestEV2IVEncode();
     res = res && TestEV2MAC();
     res = res && TestTransSessionKeys();
+    res = res && TestLRPPlaintexts();
+    res = res && TestLRPUpdatedKeys();
 
     PrintAndLogEx(INFO, "---------------------------");
     if (res)
