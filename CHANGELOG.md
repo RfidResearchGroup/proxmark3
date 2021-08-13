@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - `hf mfdes` - commands refactoring. now fully works: des,2tdea,3tdea,aes keys with d40,ev1,ev2 channels and native/nativeiso/iso command sets(@merlokk)
  - Changed `lf em 410x *` - now better text (@clach04)
  - Fix `hf mfu dump` - now sets keytype correct #1426 (@axisray)
  - Add new standalone mode `hf_mfcsim` which can load dump from flash and simulate Mifare Classic 1K card (@axisray)
