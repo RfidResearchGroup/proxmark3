@@ -46,8 +46,8 @@ The card can work in the combination of: key type - command set - secure channel
 
 ## Card architecture
 
-Card has several applications on it and the application have files and some other objects
-Each card has a master application with AID 0x000000 that saves card's configuration.
+The card has several applications on it and the application have files and some other objects
+Each card has a master application with AID 0x000000 that saves the card's configuration.
 Master application has many keys with different purposes, but commands show that there is only one key - card master key.
 Each application may have its own key type and set of keys. Each file can only have links to these keys in its access rights.
 
@@ -102,13 +102,53 @@ All the commands use these settings by default if a more important setting is no
 `hf mfdes lsfiles --aid 123456 -t aes` - file list for application 123456 with aes key
 `hf mfdes dump --aid 123456` - shows files and their contents from application 123456
 
+### How to change key
+Change key algorithm can be done only in one case - change card master key.
+Key algorithm for application can be chosen only on its creation.
+`hf mfdes changekey -t des --newalgo aes --newkey 11223344556677889900112233445566 --newver a5` - change picc master key from des default to aes
+`hf mfdes changekey --aid 123456 -t des -n 0 -k 5555555555555555 --newkey 1122334455667788` - change application master key from one key to another
+`hf mfdes changekey --aid 123456 -t des -n 0 --newkeyno 1 --oldkey 5555555555555555 --newkey 1122334455667788` - change key 1 with authentication with key 0 (app master key)
+
 ### How to create the application
 `hf mfdes createapp --aid 123456 --fid 2345 --dfname aid123456 --dstalgo aes` - create an application with iso file id, df name, and key algorithm AES
 `hf mfdes createapp --aid 123456` - create an application 123456 with DES key algorithm and without iso file id. in this case, iso file id can't be provided for application's files
 
 ### How to create files
+`hf mfdes createfile --aid 123456 --fid 01 --isofid 0001 --size 000010` - create standard file with iso id and default access settings
+`hf mfdes createfile --aid 123456 --fid 01 --isofid 0001 --size 000010 --backup` - create backup file
+create standard file with mac access mode and specified access settings. access settigs can be changed later with command `hf mfdes chfilesettings`
+`hf mfdes createfile --aid 123456 --fid 01 --isofid 0001 --size 000010 --amode mac --rrights free --wrights free --rwrights free --chrights key0`
+`hf mfdes createvaluefile --aid 123456 --fid 01 --isofid 0001 --lower 00000010 --upper 00010000 --value 00000100` - create value file
+`hf mfdes createrecordfile --aid 123456 --fid 01 --isofid 0001 --size 000010 --maxrecord 000010` - create linear record file
+`hf mfdes createrecordfile --aid 123456 --fid 01 --isofid 0001 --size 000010 --maxrecord 000010 --cyclic` - create cyclic record file
+`hf mfdes createmacfile --aid 123456 --fid 01 --rawrights 0FF0 --mackey 00112233445566778899aabbccddeeff --mackeyver 01` - create transaction mac file
+
+### How to delete files
+`hf mfdes deletefile --aid 123456 --fid 01` - delete file
 
 ### How to read/write files
-
+read:
+`hf mfdes read --aid 123456 --fid 01` - autodetect file type (with `hf mfdes getfilesettings`) and read its contents
+`hf mfdes read --aid 123456 --fid 01 --type record --offset 000000 --length 000001` - read one last record from a record file
+read via iso command set:
+Here needs to specify type of the file because there is no `hf mfdes getfilesettings` in the iso command set
+`hf mfdes read --aid 123456 --fileisoid 1000 --type data -c iso` - select application via native command and then read file via iso
+`hf mfdes read --appisoid 0102 --fileisoid 1000 --type data -c iso` - select all via iso commands and then read
+`hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000001` - read one record (number 5) from file 1100 via iso command set
+`hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000000` - read all the records (from 5 to 1) from file 1100 via iso command set
+write:
+`hf mfdes write --aid 123456 --fid 01 -d 01020304` - autodetect file type (with `hf mfdes getfilesettings`) and write data with offset 0
+`hf mfdes write --aid 123456 --fid 01 --type data -d 01020304 --commit` - write backup data file and commit
+`hf mfdes write --aid 123456 --fid 01 --type value -d 00000001` increment value file
+`hf mfdes write --aid 123456 --fid 01 --type value -d 00000001 --debit` decrement value file
+`hf mfdes write --aid 123456 --fid 01 --type record -d 01020304` write data to a record file
+`hf mfdes write --aid 123456 --fid 01 --type record -d 01020304 --updaterec 0` update record 0 (lastest) in the record file.
+write via iso command set:
+`hf mfdes write --appisoid 1234 --fileisoid 1000 --type data -c iso -d 01020304` write data to std/backup file via iso commandset
+`hf mfdes write --appisoid 1234 --fileisoid 2000 --type record -c iso -d 01020304` send record to record file via iso commandset
+transactions:
+for more detailed samples look at the next howto.
+`hf mfdes write --aid 123456 --fid 01 -d 01020304 --readerid 010203` write data to the file with CommitReaderID command before and CommitTransaction after write  
+    
 ### How to work with transactions
 
