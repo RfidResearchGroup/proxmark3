@@ -22,7 +22,7 @@
 #include "iso14443a.h"
 #include "mifarecmd.h"
 #include "crc16.h"
-#include "mifaresim.h"  // mifare1ksim
+#include "mifaresim.h" // mifare1ksim
 #include "mifareutil.h"
 
 /*
@@ -40,47 +40,49 @@
  * 
  */
 
-#define HF_MFCSIM_DUMPFILE_SIM         "hf_mfcsim_dump_%02d.bin"
-#define DUMP_SIZE                       1024
+#define HF_MFCSIM_DUMPFILE_SIM "hf_mfcsim_dump_%02d.bin"
+#define DUMP_SIZE 1024
 
 static char cur_dump_file[22] = {0};
 
-static bool ecfill_from_file(char *dumpfile) {
-
-    if (exists_in_spiffs(dumpfile)) {
-        //check dumpfile size
-        uint32_t size = size_in_spiffs(dumpfile);
-        if (size != DUMP_SIZE) {
-            Dbprintf(_RED_("File Size: %dB  The dump file size is incorrect! Only support Mifare Classic 1K! Please check it."));
-            BigBuf_free();
-            return false;
-        }
-
-        uint8_t *mem = BigBuf_malloc(size);
-        if (!mem) {
-            Dbprintf(_RED_("No memory!"));
-            return false;
-        }
-
-        //read and load dump file
-        if (DBGLEVEL >= DBG_INFO) Dbprintf(_YELLOW_("Found dump file %s. Uploading to emulator memory..."), dumpfile);
-        rdv40_spiffs_read_as_filetype(dumpfile, mem, size, RDV40_SPIFFS_SAFETY_SAFE);
-        emlClearMem();
-        emlSetMem(mem, 0, MIFARE_1K_MAXBLOCK);
-        BigBuf_free_keep_EM();
-        return true;
-    } else {
+static bool fill_eml_from_file(char *dumpfile){
+    // check file exist
+    if (!exists_in_spiffs(dumpfile)){
         Dbprintf(_RED_("Dump file %s not found!"), dumpfile);
         return false;
     }
-    return false;//Shouldn't be here
+    //check dumpfile size
+    uint32_t size = size_in_spiffs(dumpfile);
+    if (size != DUMP_SIZE){
+        Dbprintf(_RED_("File Size: %dB  The dump file size is incorrect! Only support Mifare Classic 1K! Please check it."));
+        BigBuf_free();
+        return false;
+    }
+    //read and load dump file
+    if (DBGLEVEL >= DBG_INFO)
+        Dbprintf(_YELLOW_("Found dump file %s. Uploading to emulator memory..."), dumpfile);
+    emlClearMem();
+    uint8_t *emCARD = BigBuf_get_EM_addr();
+    rdv40_spiffs_read_as_filetype(dumpfile, emCARD, size, RDV40_SPIFFS_SAFETY_SAFE);
+    return true;
 }
 
-void ModInfo(void) {
+static bool write_file_from_eml(char *dumpfile){
+    if (!exists_in_spiffs(dumpfile)){
+        Dbprintf(_RED_("Dump file %s not found!"), dumpfile);
+        return false;
+    }
+    uint8_t *emCARD = BigBuf_get_EM_addr();
+    rdv40_spiffs_write(dumpfile, emCARD, DUMP_SIZE, RDV40_SPIFFS_SAFETY_SAFE);
+    return true;
+}
+
+void ModInfo(void){
     DbpString(_YELLOW_("  HF Mifare Classic simulation mode") " - a.k.a MFCSIM");
 }
 
-void RunMod(void) {
+void RunMod(void)
+{
     //initializing
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -88,29 +90,57 @@ void RunMod(void) {
     Dbprintf(_YELLOW_("Standalone mode MFCSIM started!"));
 
     bool flag_has_dumpfile = false;
-    for (int i = 1; i < 16; i++) {        
-        LED(i, 100);
-        emlClearMem();
+    for (int i = 1;; i++)
+    {
+        //Exit! usbcommand break
+        if (data_available()) break;
+
+        //Infinite loop
+        if (i > 15){
+            if (!flag_has_dumpfile)
+                break; //still no dump file found
+            i = 1;     //next loop
+        }
+
+        //Indicate which card will be simulated
+        LED(i, 0);
+
+        //Try to load dump form flash
         sprintf(cur_dump_file, HF_MFCSIM_DUMPFILE_SIM, i);
         Dbprintf(_YELLOW_("[Slot: %d] Try to load dump file: %s"), i, cur_dump_file);
-        if (!ecfill_from_file(cur_dump_file)) {
+        if (!fill_eml_from_file(cur_dump_file)){
             Dbprintf(_YELLOW_("[Slot: %d] Dump load Failed, Next one!"), i);
+            LEDsoff();
             continue;
         }
         flag_has_dumpfile = true;
-        LED(i, 1000);
 
+        //Exit! Button hold break
+        int button_pressed = BUTTON_HELD(500);
+        if (button_pressed == BUTTON_HOLD){
+            Dbprintf("Button hold, Break!");
+            break;
+        }
+
+        //Hope there is enough time to see clearly
+        SpinDelay(500);
+
+        //Start to simulate
         Dbprintf(_YELLOW_("[Slot: %d] Simulation start, Press button to change next card."), i);
         uint16_t simflags = FLAG_UID_IN_EMUL | FLAG_MF_1K;
         Mifare1ksim(simflags, 0, NULL, 0, 0);
-        Dbprintf(_YELLOW_("[Slot: %d] Simulation end, Change to next card!"), i);
+        Dbprintf(_YELLOW_("[Slot: %d] Simulation end, Write Back to dump file!"), i);
+
+        //Simulation end, Write Back
+        if (!write_file_from_eml(cur_dump_file)){
+            Dbprintf(_RED_("[Slot: %d] Write Failed! Anyway, Change to next one!"), i);
+            continue;
+        }
+        Dbprintf(_YELLOW_("[Slot: %d] Write Success! Change to next one!"), i);
     }
-    if(!flag_has_dumpfile) Dbprintf("No dump file found, Exit!");
-    Dbprintf("Loop end, Exit!");
+    if (!flag_has_dumpfile)
+        Dbprintf("No dump file found!");
+    Dbprintf("Breaked! Exit standalone mode!");
     SpinErr(15, 200, 3);
     return;
 }
-
-
-
-
