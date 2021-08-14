@@ -37,7 +37,7 @@
  * - mem spiffs upload -s <filename> -d hf_mfcsim_dump_xx.bin (Notes: xx is form 01 to 15)
  * To delete the input file from flash:
  * - mem spiffs remove -f hf_mfcsim_dump_xx.bin (Notes: xx is form 01 to 15)
- * 
+ *
  */
 
 #define HF_MFCSIM_DUMPFILE_SIM "hf_mfcsim_dump_%02d.bin"
@@ -45,15 +45,15 @@
 
 static char cur_dump_file[22] = {0};
 
-static bool fill_eml_from_file(char *dumpfile){
+static bool fill_eml_from_file(char *dumpfile) {
     // check file exist
-    if (!exists_in_spiffs(dumpfile)){
+    if (!exists_in_spiffs(dumpfile)) {
         Dbprintf(_RED_("Dump file %s not found!"), dumpfile);
         return false;
     }
     //check dumpfile size
     uint32_t size = size_in_spiffs(dumpfile);
-    if (size != DUMP_SIZE){
+    if (size != DUMP_SIZE) {
         Dbprintf(_RED_("File Size: %dB  The dump file size is incorrect! Only support Mifare Classic 1K! Please check it."));
         BigBuf_free();
         return false;
@@ -67,8 +67,8 @@ static bool fill_eml_from_file(char *dumpfile){
     return true;
 }
 
-static bool write_file_from_eml(char *dumpfile){
-    if (!exists_in_spiffs(dumpfile)){
+static bool write_file_from_eml(char *dumpfile) {
+    if (!exists_in_spiffs(dumpfile)) {
         Dbprintf(_RED_("Dump file %s not found!"), dumpfile);
         return false;
     }
@@ -77,12 +77,11 @@ static bool write_file_from_eml(char *dumpfile){
     return true;
 }
 
-void ModInfo(void){
+void ModInfo(void) {
     DbpString(_YELLOW_("  HF Mifare Classic simulation mode") " - a.k.a MFCSIM");
 }
 
-void RunMod(void)
-{
+void RunMod(void) {
     //initializing
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -90,13 +89,12 @@ void RunMod(void)
     Dbprintf(_YELLOW_("Standalone mode MFCSIM started!"));
 
     bool flag_has_dumpfile = false;
-    for (int i = 1;; i++)
-    {
+    for (int i = 1;; i++) {
         //Exit! usbcommand break
         if (data_available()) break;
 
         //Infinite loop
-        if (i > 15){
+        if (i > 15) {
             if (!flag_has_dumpfile)
                 break; //still no dump file found
             i = 1;     //next loop
@@ -108,7 +106,7 @@ void RunMod(void)
         //Try to load dump form flash
         sprintf(cur_dump_file, HF_MFCSIM_DUMPFILE_SIM, i);
         Dbprintf(_YELLOW_("[Slot: %d] Try to load dump file: %s"), i, cur_dump_file);
-        if (!fill_eml_from_file(cur_dump_file)){
+        if (!fill_eml_from_file(cur_dump_file)) {
             Dbprintf(_YELLOW_("[Slot: %d] Dump load Failed, Next one!"), i);
             LEDsoff();
             continue;
@@ -117,7 +115,7 @@ void RunMod(void)
 
         //Exit! Button hold break
         int button_pressed = BUTTON_HELD(500);
-        if (button_pressed == BUTTON_HOLD){
+        if (button_pressed == BUTTON_HOLD) {
             Dbprintf("Button hold, Break!");
             break;
         }
@@ -132,7 +130,7 @@ void RunMod(void)
         Dbprintf(_YELLOW_("[Slot: %d] Simulation end, Write Back to dump file!"), i);
 
         //Simulation end, Write Back
-        if (!write_file_from_eml(cur_dump_file)){
+        if (!write_file_from_eml(cur_dump_file)) {
             Dbprintf(_RED_("[Slot: %d] Write Failed! Anyway, Change to next one!"), i);
             continue;
         }
