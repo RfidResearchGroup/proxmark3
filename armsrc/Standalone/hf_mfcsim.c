@@ -22,7 +22,7 @@
 #include "iso14443a.h"
 #include "mifarecmd.h"
 #include "crc16.h"
-#include "mifaresim.h"  // mifare1ksim
+#include "mifaresim.h" // mifare1ksim
 #include "mifareutil.h"
 
 /*
@@ -30,59 +30,51 @@
  * It requires RDV4 hardware (for flash and battery).
  *
  * On entering stand-alone mode, this module will start simulating.
- * Data is read from bin dump file uploaded to flash memory (hf_mfcsim_dump.bin).
+ * Data is read from bin dump file uploaded to flash memory (hf_mfcsim_dump_xx.bin).
  * Only support mifare classic 1k
  *
- * LEDs:
- * - LED A: initializing
- * - LED B: simulating
- * - LED C blinking: data transmiting
- *
  * To upload input file (eml format) to flash:
- * - mem spiffs upload -s <filename> -d hf_mfcsim_dump.bin
+ * - mem spiffs upload -s <filename> -d hf_mfcsim_dump_xx.bin (Notes: xx is form 01 to 15)
  * To delete the input file from flash:
- * - mem spiffs remove -f hf_mfcsim_dump.bin
+ * - mem spiffs remove -f hf_mfcsim_dump_xx.bin (Notes: xx is form 01 to 15)
  *
  */
 
-#define HF_MFCSIM_INPUTFILE_SIM         "hf_mfcsim_dump.bin"
-#define DUMP_SIZE                       1024
+#define HF_MFCSIM_DUMPFILE_SIM "hf_mfcsim_dump_%02d.bin"
+#define DUMP_SIZE 1024
 
-static uint8_t uid[10];
+static char cur_dump_file[22] = {0};
 
-static bool ecfill_from_file(char *inputfile) {
-
-    if (exists_in_spiffs(inputfile)) {
-        uint32_t size = size_in_spiffs(inputfile);
-        uint8_t *mem = BigBuf_malloc(size);
-        if (!mem) {
-            Dbprintf(_RED_("No memory！"));
-            return false;
-        }
-
-        //read dumpfile
-        Dbprintf(_YELLOW_("Found dump file %s"), inputfile);
-        rdv40_spiffs_read_as_filetype(inputfile, mem, size, RDV40_SPIFFS_SAFETY_SAFE);
-
-        //check dumpfile size
-        Dbprintf(_YELLOW_("File size is %d"), size);
-        if (size != DUMP_SIZE) {
-            Dbprintf(_RED_("Only support Mifare Classic 1K! Please check the dumpfile"));
-            BigBuf_free();
-            return false;
-        }
-
-        //load the dump into emulator memory
-        Dbprintf(_YELLOW_("Read card data from input file"));
-        emlSetMem(mem, 0, MIFARE_1K_MAXBLOCK);
-        Dbprintf(_YELLOW_("Uploaded to emulator memory"));
-        BigBuf_free_keep_EM();
-        return true;
-    } else {
-        Dbprintf(_RED_("no input file %s"), inputfile);
+static bool fill_eml_from_file(char *dumpfile) {
+    // check file exist
+    if (!exists_in_spiffs(dumpfile)) {
+        Dbprintf(_RED_("Dump file %s not found!"), dumpfile);
         return false;
     }
-    return false;//Shouldn't be here
+    //check dumpfile size
+    uint32_t size = size_in_spiffs(dumpfile);
+    if (size != DUMP_SIZE) {
+        Dbprintf(_RED_("File Size: %dB  The dump file size is incorrect! Only support Mifare Classic 1K! Please check it."));
+        BigBuf_free();
+        return false;
+    }
+    //read and load dump file
+    if (DBGLEVEL >= DBG_INFO)
+        Dbprintf(_YELLOW_("Found dump file %s. Uploading to emulator memory..."), dumpfile);
+    emlClearMem();
+    uint8_t *emCARD = BigBuf_get_EM_addr();
+    rdv40_spiffs_read_as_filetype(dumpfile, emCARD, size, RDV40_SPIFFS_SAFETY_SAFE);
+    return true;
+}
+
+static bool write_file_from_eml(char *dumpfile) {
+    if (!exists_in_spiffs(dumpfile)) {
+        Dbprintf(_RED_("Dump file %s not found!"), dumpfile);
+        return false;
+    }
+    uint8_t *emCARD = BigBuf_get_EM_addr();
+    rdv40_spiffs_write(dumpfile, emCARD, DUMP_SIZE, RDV40_SPIFFS_SAFETY_SAFE);
+    return true;
 }
 
 void ModInfo(void) {
@@ -90,32 +82,63 @@ void ModInfo(void) {
 }
 
 void RunMod(void) {
+    //initializing
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+    rdv40_spiffs_lazy_mount();
     Dbprintf(_YELLOW_("Standalone mode MFCSIM started!"));
 
-    LED_A_ON();
-    emlClearMem();
-    Dbprintf(_YELLOW_("Emulator memory initialized"));
-    rdv40_spiffs_lazy_mount();
-    if (!ecfill_from_file(HF_MFCSIM_INPUTFILE_SIM)) {
-        Dbprintf(_RED_("Load data failed!"));
-        return;
+    bool flag_has_dumpfile = false;
+    for (int i = 1;; i++) {
+        //Exit! usbcommand break
+        if (data_available()) break;
+
+        //Infinite loop
+        if (i > 15) {
+            if (!flag_has_dumpfile)
+                break; //still no dump file found
+            i = 1;     //next loop
+        }
+
+        //Indicate which card will be simulated
+        LED(i, 0);
+
+        //Try to load dump form flash
+        sprintf(cur_dump_file, HF_MFCSIM_DUMPFILE_SIM, i);
+        Dbprintf(_YELLOW_("[Slot: %d] Try to load dump file: %s"), i, cur_dump_file);
+        if (!fill_eml_from_file(cur_dump_file)) {
+            Dbprintf(_YELLOW_("[Slot: %d] Dump load Failed, Next one!"), i);
+            LEDsoff();
+            continue;
+        }
+        flag_has_dumpfile = true;
+
+        //Exit! Button hold break
+        int button_pressed = BUTTON_HELD(500);
+        if (button_pressed == BUTTON_HOLD) {
+            Dbprintf("Button hold, Break!");
+            break;
+        }
+
+        //Hope there is enough time to see clearly
+        SpinDelay(500);
+
+        //Start to simulate
+        Dbprintf(_YELLOW_("[Slot: %d] Simulation start, Press button to change next card."), i);
+        uint16_t simflags = FLAG_UID_IN_EMUL | FLAG_MF_1K;
+        Mifare1ksim(simflags, 0, NULL, 0, 0);
+        Dbprintf(_YELLOW_("[Slot: %d] Simulation end, Write Back to dump file!"), i);
+
+        //Simulation end, Write Back
+        if (!write_file_from_eml(cur_dump_file)) {
+            Dbprintf(_RED_("[Slot: %d] Write Failed! Anyway, Change to next one!"), i);
+            continue;
+        }
+        Dbprintf(_YELLOW_("[Slot: %d] Write Success! Change to next one!"), i);
     }
-    Dbprintf(_YELLOW_("Emulator memory filled, simulation ready to start."));
-    Dbprintf(_YELLOW_("Press button to abort simulation at anytime."));
-
-    SpinOff(1000);
-
-    LED_B_ON();
-    Dbprintf(_YELLOW_("Simulation start!"));
-    uint16_t simflags = FLAG_UID_IN_EMUL | FLAG_MF_1K;
-    Mifare1ksim(simflags, 0, uid, 0, 0);
-
-    Dbprintf(_YELLOW_("Simulation end!"));
-    LEDsoff();
+    if (!flag_has_dumpfile)
+        Dbprintf("No dump file found!");
+    Dbprintf("Breaked! Exit standalone mode!");
+    SpinErr(15, 200, 3);
+    return;
 }
-
-
-
-
