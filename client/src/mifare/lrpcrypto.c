@@ -100,3 +100,23 @@ void LRPEvalLRP(LRPContext *ctx, uint8_t *iv, size_t ivlen, bool final, uint8_t 
     if (final)
         aes_encode(NULL, y, const00, y, CRYPTO_AES128_KEY_SIZE);
 }
+
+void LRPIncCounter(uint8_t *ctr, size_t ctrlen) {
+    bool carry = true;
+    for (int i = ctrlen - 1; i >= 0; i--) {
+        uint8_t nk = (i % 2) ? ctr[i / 2] & 0x0f : (ctr[i / 2] >> 4) & 0x0f;
+
+        if (carry)
+            nk++;
+
+        carry = (nk > 0xf);
+        if (i % 2)
+            ctr[i / 2] = (ctr[i / 2] & 0xf0) | (nk & 0x0f);
+        else
+            ctr[i / 2] = (ctr[i / 2] & 0x0f) | ((nk << 4) & 0xf0);
+        
+        if(!carry)
+            break;
+    }
+}
+

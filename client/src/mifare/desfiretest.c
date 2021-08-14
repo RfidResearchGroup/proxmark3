@@ -586,6 +586,37 @@ static bool TestLRPEval(void) {
     return res;
 }
 
+static bool TestLRPIncCounter(void) {
+    bool res = true;
+
+    uint8_t ctr1[] = {0x00, 0x01};
+    LRPIncCounter(ctr1, 4);
+    uint8_t ctrr1[] = {0x00, 0x02};
+    res = res && (memcmp(ctr1, ctrr1, sizeof(ctrr1)) == 0);
+
+    uint8_t ctr2[] = {0x00, 0xf0};
+    LRPIncCounter(ctr2, 3);
+    uint8_t ctrr2[] = {0x01, 0x00};
+    res = res && (memcmp(ctr2, ctrr2, sizeof(ctrr2)) == 0);
+
+    uint8_t ctr3[] = {0xff, 0xf0};
+    LRPIncCounter(ctr3, 3);
+    uint8_t ctrr3[] = {0x00, 0x00};
+    res = res && (memcmp(ctr3, ctrr3, sizeof(ctrr3)) == 0);
+    
+    uint8_t ctr4[] = {0xf0};
+    LRPIncCounter(ctr4, 1);
+    uint8_t ctrr4[] = {0x00};
+    res = res && (memcmp(ctr4, ctrr4, sizeof(ctrr4)) == 0);
+
+    if (res)
+        PrintAndLogEx(INFO, "LRP inc counter... " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "LRP inc counter... " _RED_("fail"));
+
+    return res;
+}
+
 bool DesfireTest(bool verbose) {
     bool res = true;
 
@@ -607,6 +638,7 @@ bool DesfireTest(bool verbose) {
     res = res && TestLRPPlaintexts();
     res = res && TestLRPUpdatedKeys();
     res = res && TestLRPEval();
+    res = res && TestLRPIncCounter();
 
     PrintAndLogEx(INFO, "---------------------------");
     if (res)
