@@ -41,6 +41,6 @@ void LRPClearContext(LRPContext *ctx);
 void LRPSetKey(LRPContext *ctx, uint8_t *key, size_t updatedKeyNum, bool useBitPadding);
 void LRPGeneratePlaintexts(LRPContext *ctx, size_t plaintextsCount);
 void LRPGenerateUpdatedKeys(LRPContext *ctx, size_t updatedKeysCount);
-
+void LRPEvalLRP(LRPContext *ctx, uint8_t *iv, size_t ivlen, bool final, uint8_t *y);
 
 #endif // __LRPCRYPTO_H

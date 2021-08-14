@@ -28,6 +28,7 @@
 
 static uint8_t constAA[] = {0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa};
 static uint8_t const55[] = {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
+static uint8_t const00[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 void LRPClearContext(LRPContext *ctx) {
     memset(ctx->key, 0, CRYPTO_AES128_KEY_SIZE);
@@ -84,4 +85,18 @@ void LRPGenerateUpdatedKeys(LRPContext *ctx, size_t updatedKeysCount) {
     }
         
     ctx->updatedKeysCount = updatedKeysCount;
+}
+
+// https://www.nxp.com/docs/en/application-note/AN12304.pdf
+// Algorithm 3
+void LRPEvalLRP(LRPContext *ctx, uint8_t *iv, size_t ivlen, bool final, uint8_t *y) {
+    memcpy(y, ctx->updatedKeys[ctx->useUpdatedKeyNum], CRYPTO_AES128_KEY_SIZE);
+    
+    for (int i = 0; i < ivlen; i++) {
+        uint8_t nk = (i % 2) ? iv[i / 2] & 0x0f : (iv[i / 2] >> 4) & 0x0f;
+        aes_encode(NULL, y, ctx->plaintexts[nk], y, CRYPTO_AES128_KEY_SIZE);
+    }
+    
+    if (final)
+        aes_encode(NULL, y, const00, y, CRYPTO_AES128_KEY_SIZE);
 }
