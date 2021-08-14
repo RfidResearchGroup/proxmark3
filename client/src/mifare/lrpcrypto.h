@@ -50,5 +50,6 @@ void LRPGenerateUpdatedKeys(LRPContext *ctx, size_t updatedKeysCount);
 void LRPEvalLRP(LRPContext *ctx, uint8_t *iv, size_t ivlen, bool final, uint8_t *y);
 void LRPIncCounter(uint8_t *ctr, size_t ctrlen);
 void LRPEncode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen);
+void LRPDecode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen);
 
 #endif // __LRPCRYPTO_H

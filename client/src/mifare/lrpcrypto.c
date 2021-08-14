@@ -157,3 +157,27 @@ void LRPEncode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, si
         LRPIncCounter(ctx->counter, ctx->counterLenNibbles);
     }
 }
+
+void LRPDecode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen) {
+    *resplen = 0;
+    if (datalen % CRYPTO_AES128_KEY_SIZE)
+        return;
+    
+    uint8_t y[CRYPTO_AES128_KEY_SIZE] = {0};
+    for (int i = 0; i < datalen / CRYPTO_AES128_KEY_SIZE; i++) {
+        LRPEvalLRP(ctx, ctx->counter, ctx->counterLenNibbles, true, y);
+        aes_decode(NULL, y, &data[i * CRYPTO_AES128_KEY_SIZE], &resp[i * CRYPTO_AES128_KEY_SIZE], CRYPTO_AES128_KEY_SIZE);
+        *resplen += CRYPTO_AES128_KEY_SIZE;
+        LRPIncCounter(ctx->counter, ctx->counterLenNibbles);
+    }
+    
+    // search padding
+    if (ctx->useBitPadding) {
+        for (int i = *resplen - 1; i >= *resplen - CRYPTO_AES128_KEY_SIZE; i--) {
+            if (resp[i] == 0x80)
+                *resplen = i;
+            if (resp[i] != 0x00)
+                break;
+        }
+    }
+}
