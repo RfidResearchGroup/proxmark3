@@ -617,6 +617,32 @@ static bool TestLRPIncCounter(void) {
     return res;
 }
 
+static bool TestLRPEncode(void) {
+    bool res = true;
+    
+    uint8_t resp[100] = {0}; 
+    size_t resplen = 0;
+
+    LRPContext ctx = {0};
+
+    uint8_t key1[] = {0xE0, 0xC4, 0x93, 0x5F, 0xF0, 0xC2, 0x54, 0xCD, 0x2C, 0xEF, 0x8F, 0xDD, 0xC3, 0x24, 0x60, 0xCF};
+    uint8_t iv1[] = {0xC3, 0x31, 0x5D, 0xBF};
+    LRPSetKeyEx(&ctx, key1, iv1, sizeof(iv1) * 2, 0, true);
+    uint8_t data1[] = {0x01, 0x2D, 0x7F, 0x16, 0x53, 0xCA, 0xF6, 0x50, 0x3C, 0x6A, 0xB0, 0xC1, 0x01, 0x0E, 0x8C, 0xB0};
+    LRPEncode(&ctx, data1, sizeof (data1), resp, &resplen);
+    uint8_t res1[] = {0xFC, 0xBB, 0xAC, 0xAA, 0x4F, 0x29, 0x18, 0x24, 0x64, 0xF9, 0x9D, 0xE4, 0x10, 0x85, 0x26, 0x6F, 
+                      0x48, 0x0E, 0x86, 0x3E, 0x48, 0x7B, 0xAA, 0xF6, 0x87, 0xB4, 0x3E, 0xD1, 0xEC, 0xE0, 0xD6, 0x23};
+    res = res && (resplen == sizeof(res1));
+    res = res && (memcmp(resp, res1, sizeof(res1)) == 0);
+
+    if (res)
+        PrintAndLogEx(INFO, "LRP encode........ " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "LRP encode........ " _RED_("fail"));
+
+    return res;
+}
+
 bool DesfireTest(bool verbose) {
     bool res = true;
 
@@ -639,6 +665,7 @@ bool DesfireTest(bool verbose) {
     res = res && TestLRPUpdatedKeys();
     res = res && TestLRPEval();
     res = res && TestLRPIncCounter();
+    res = res && TestLRPEncode();
 
     PrintAndLogEx(INFO, "---------------------------");
     if (res)

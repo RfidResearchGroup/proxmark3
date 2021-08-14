@@ -25,6 +25,7 @@
 
 #define LRP_MAX_PLAINTEXTS_SIZE 16
 #define LRP_MAX_UPDATED_KEYS_SIZE 4
+#define LRP_MAX_COUNTER_SIZE (CRYPTO_AES128_KEY_SIZE * 4)
 
 typedef struct {
     uint8_t key[CRYPTO_AES128_KEY_SIZE];
@@ -35,14 +36,19 @@ typedef struct {
     size_t updatedKeysCount;
     uint8_t updatedKeys[LRP_MAX_UPDATED_KEYS_SIZE][CRYPTO_AES128_KEY_SIZE];
     size_t useUpdatedKeyNum;
+    
+    uint8_t counter[LRP_MAX_COUNTER_SIZE];
+    size_t counterLenNibbles; // len in bytes * 2 (or * 2 - 1)
 } LRPContext;
 
 void LRPClearContext(LRPContext *ctx);
 void LRPSetKey(LRPContext *ctx, uint8_t *key, size_t updatedKeyNum, bool useBitPadding);
+void LRPSetKeyEx(LRPContext *ctx, uint8_t *key, uint8_t *counter, size_t counterLenNibbles, size_t updatedKeyNum, bool useBitPadding);
+void LRPSetCounter(LRPContext *ctx, uint8_t *counter, size_t counterLenNibbles);
 void LRPGeneratePlaintexts(LRPContext *ctx, size_t plaintextsCount);
 void LRPGenerateUpdatedKeys(LRPContext *ctx, size_t updatedKeysCount);
 void LRPEvalLRP(LRPContext *ctx, uint8_t *iv, size_t ivlen, bool final, uint8_t *y);
 void LRPIncCounter(uint8_t *ctr, size_t ctrlen);
-void LRPEncode(LRPContext *ctx, uint8_t *ctr, size_t ctrlen, uint8_t *resp, size_t *resplen);
+void LRPEncode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen);
 
 #endif // __LRPCRYPTO_H

@@ -53,6 +53,17 @@ void LRPSetKey(LRPContext *ctx, uint8_t *key, size_t updatedKeyNum, bool useBitP
     ctx->useBitPadding = useBitPadding;
 }
 
+void LRPSetCounter(LRPContext *ctx, uint8_t *counter, size_t counterLenNibbles) {
+    memcpy(ctx->counter, counter, counterLenNibbles / 2);
+    ctx->counterLenNibbles = counterLenNibbles;
+}
+
+void LRPSetKeyEx(LRPContext *ctx, uint8_t *key, uint8_t *counter, size_t counterLenNibbles, size_t updatedKeyNum, bool useBitPadding){
+    LRPSetKey(ctx, key, updatedKeyNum, useBitPadding);
+    LRPSetCounter(ctx, counter, counterLenNibbles);
+}
+
+
 // https://www.nxp.com/docs/en/application-note/AN12304.pdf
 // Algorithm 1
 void LRPGeneratePlaintexts(LRPContext *ctx, size_t plaintextsCount) {
@@ -120,3 +131,29 @@ void LRPIncCounter(uint8_t *ctr, size_t ctrlen) {
     }
 }
 
+// https://www.nxp.com/docs/en/application-note/AN12304.pdf
+// Algorithm 4
+void LRPEncode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen) {
+    *resplen = 0;
+    
+    uint8_t xdata[1024] = {0};
+    memcpy(xdata, data, datalen);
+    if (ctx->useBitPadding) {
+        xdata[datalen] = 0x80;
+        datalen++;
+    }
+    
+    if (datalen % CRYPTO_AES128_KEY_SIZE)
+        datalen = datalen + CRYPTO_AES128_KEY_SIZE - (datalen % CRYPTO_AES128_KEY_SIZE);
+    
+    if (datalen == 0)
+        return;
+
+    uint8_t y[CRYPTO_AES128_KEY_SIZE] = {0};
+    for (int i = 0; i < datalen / CRYPTO_AES128_KEY_SIZE; i++) {
+        LRPEvalLRP(ctx, ctx->counter, ctx->counterLenNibbles, true, y);
+        aes_encode(NULL, y, &xdata[i * CRYPTO_AES128_KEY_SIZE], &resp[i * CRYPTO_AES128_KEY_SIZE], CRYPTO_AES128_KEY_SIZE);
+        *resplen += CRYPTO_AES128_KEY_SIZE;
+        LRPIncCounter(ctx->counter, ctx->counterLenNibbles);
+    }
+}
