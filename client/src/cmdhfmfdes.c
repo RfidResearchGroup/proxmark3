@@ -4970,7 +4970,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
                 DesfireGenTransSessionKey(trkey, transactionCounter, uid, false, sessionkey);
 
                 aes_decode(NULL, sessionkey, resp, resp, CRYPTO_AES_BLOCK_SIZE);
-                PrintAndLogEx(INFO, "Prev reader id [%d]: %s", resplen, sprint_hex(resp, resplen));
+                PrintAndLogEx(INFO, "Prev reader id [%zu]: %s", resplen, sprint_hex(resp, resplen));
             }
 
             readeridpushed = true;
