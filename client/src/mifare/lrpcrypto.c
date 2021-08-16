@@ -238,22 +238,27 @@ void LRPCMAC(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
     uint8_t y[CRYPTO_AES128_KEY_SIZE] = {0};
     size_t clen = 0;
     for (int i = 0; i < datalen / CRYPTO_AES128_KEY_SIZE; i++) {
+        if (datalen - clen <= CRYPTO_AES128_KEY_SIZE)
+            break;
+
         bin_xor(y, &data[i * CRYPTO_AES128_KEY_SIZE], CRYPTO_AES128_KEY_SIZE);
         LRPEvalLRP(ctx, y, CRYPTO_AES128_KEY_SIZE * 2, true, y);
         clen += CRYPTO_AES128_KEY_SIZE;
     }
 
     size_t bllen = datalen - clen;
+    uint8_t bl[CRYPTO_AES128_KEY_SIZE] = {0};
+    memcpy(bl, &data[clen * CRYPTO_AES128_KEY_SIZE], bllen);
 
 PrintAndLogEx(ERR, "--bllen %d", bllen);    
 PrintAndLogEx(ERR, "--y %s", sprint_hex(y, 16));    
     // if there is more data
     if (bllen == 16) {
+        bin_xor(y, bl, CRYPTO_AES128_KEY_SIZE);
+      
         bin_xor(y, sk1, CRYPTO_AES128_KEY_SIZE);
     } else {
         // padding
-        uint8_t bl[CRYPTO_AES128_KEY_SIZE] = {0};
-        memcpy(bl, &data[clen * CRYPTO_AES128_KEY_SIZE], bllen);
         bl[bllen] = 0x80;
         bin_xor(y, bl, CRYPTO_AES128_KEY_SIZE);
 
