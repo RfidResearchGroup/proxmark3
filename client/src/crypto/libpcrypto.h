@@ -16,6 +16,9 @@
 #include <stddef.h>
 #include <mbedtls/pk.h>
 
+#define CRYPTO_AES_BLOCK_SIZE 16
+#define CRYPTO_AES128_KEY_SIZE 16
+
 void des_encrypt(void *out, const void *in, const void *key);
 void des_decrypt(void *out, const void *in, const void *key);
 void des_encrypt_ecb(void *out, const void *in, const int length, const void *key);
