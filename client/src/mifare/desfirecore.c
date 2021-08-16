@@ -887,14 +887,25 @@ int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel se
         if (verbose)
             PrintAndLogEx(INFO, "Switch to " _CYAN_("native") " for select");
     }
-
-    int res = DesfireSelectAIDHex(dctx, aid, false, 0);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-        return 200;
+    
+    int res;
+    if (aid == 0x000000) {
+        res = DesfireAnticollision(verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire anticollision " _RED_("error") ".");
+            return 200;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "Anticollision " _GREEN_("ok"));
+    } else {
+        res = DesfireSelectAIDHex(dctx, aid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            return 200;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "App %06x " _GREEN_("selected"), aid);
     }
-    if (verbose)
-        PrintAndLogEx(INFO, "App %06x " _GREEN_("selected"), aid);
 
     if (isosw)
         dctx->cmdSet = DCCISO;
@@ -2219,8 +2230,8 @@ void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
 
 void DesfirePrintFileSettingsTable(bool printheader, uint8_t id, bool isoidavail, uint16_t isoid, FileSettingsS *fsettings) {
     if (printheader) {
-        PrintAndLogEx(SUCCESS, " ID |ISO ID|     File type     | Mode  | Rights: raw, r w rw ch   | File settings   ");
-        PrintAndLogEx(SUCCESS, "----------------------------------------------------------------------------------------------------------");
+        PrintAndLogEx(SUCCESS, " ID |ISO ID|     File type       | Mode  | Rights: raw, r w rw ch   | File settings   ");
+        PrintAndLogEx(SUCCESS, "------------------------------------------------------------------------------------------------------------");
     }
     PrintAndLogEx(SUCCESS, " " _GREEN_("%02x") " |" NOLF, id);
     if (isoidavail) {
@@ -2232,7 +2243,7 @@ void DesfirePrintFileSettingsTable(bool printheader, uint8_t id, bool isoidavail
         PrintAndLogEx(NORMAL, "      |" NOLF);
     }
 
-    PrintAndLogEx(NORMAL, "0x%02x " _CYAN_("%-13s") " |" NOLF, fsettings->fileType, GetDesfireFileType(fsettings->fileType));
+    PrintAndLogEx(NORMAL, "0x%02x " _CYAN_("%-15s") " |" NOLF, fsettings->fileType, GetDesfireFileType(fsettings->fileType));
     PrintAndLogEx(NORMAL, " %-5s |" NOLF, GetDesfireCommunicationMode(fsettings->fileCommMode));
 
     PrintAndLogEx(NORMAL, "%04x, %-4s %-4s %-4s %-4s |" NOLF,
@@ -2726,6 +2737,10 @@ int DesfireGetCardUID(DesfireContext *ctx) {
     ctx->uidlen = card.uidlen;
 
     return PM3_SUCCESS;
+}
+
+int DesfireAnticollision(bool verbose) {
+    return SelectCard14443A_4(false, verbose, NULL);
 }
 
 int DesfireSelectEx(DesfireContext *ctx, bool fieldon, DesfireISOSelectWay way, uint32_t id, char *dfname) {
