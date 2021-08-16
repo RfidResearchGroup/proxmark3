@@ -218,6 +218,7 @@ void LRPGenSubkeys(uint8_t *key, uint8_t *sk1, uint8_t *sk2) {
 
     uint8_t y[CRYPTO_AES128_KEY_SIZE] = {0};
     LRPEvalLRP(&ctx, const00, CRYPTO_AES128_KEY_SIZE * 2, true, y);
+PrintAndLogEx(ERR, "--k %s", sprint_hex(key, 16));    
 PrintAndLogEx(ERR, "--y %s", sprint_hex(y, 16));    
     mulPolyX(y);
     memcpy(sk1, y, CRYPTO_AES128_KEY_SIZE);
@@ -243,19 +244,22 @@ void LRPCMAC(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
     }
 
     size_t bllen = datalen - clen;
-    // padding
-    if (bllen > 0) {
+
+PrintAndLogEx(ERR, "--bllen %d", bllen);    
+PrintAndLogEx(ERR, "--y %s", sprint_hex(y, 16));    
+    // if there is more data
+    if (bllen == 16) {
+        bin_xor(y, sk1, CRYPTO_AES128_KEY_SIZE);
+    } else {
+        // padding
         uint8_t bl[CRYPTO_AES128_KEY_SIZE] = {0};
         memcpy(bl, &data[clen * CRYPTO_AES128_KEY_SIZE], bllen);
         bl[bllen] = 0x80;
         bin_xor(y, bl, CRYPTO_AES128_KEY_SIZE);
-    }
 
-    // if there is more data
-    if (bllen == 0)
-        bin_xor(y, sk1, CRYPTO_AES128_KEY_SIZE);
-    else
         bin_xor(y, sk2, CRYPTO_AES128_KEY_SIZE);
+    }
     
     LRPEvalLRP(ctx, y, CRYPTO_AES128_KEY_SIZE * 2, true, cmac);
+PrintAndLogEx(ERR, "--cmac %s", sprint_hex(cmac, 16));    
 }
