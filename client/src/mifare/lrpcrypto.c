@@ -107,15 +107,17 @@ void LRPGenerateUpdatedKeys(LRPContext *ctx, size_t updatedKeysCount) {
 // https://www.nxp.com/docs/en/application-note/AN12304.pdf
 // Algorithm 3
 void LRPEvalLRP(LRPContext *ctx, uint8_t *iv, size_t ivlen, bool final, uint8_t *y) {
-    memcpy(y, ctx->updatedKeys[ctx->useUpdatedKeyNum], CRYPTO_AES128_KEY_SIZE);
+    uint8_t ry[CRYPTO_AES128_KEY_SIZE] = {0};
+    memcpy(ry, ctx->updatedKeys[ctx->useUpdatedKeyNum], CRYPTO_AES128_KEY_SIZE);
     
     for (int i = 0; i < ivlen; i++) {
         uint8_t nk = (i % 2) ? iv[i / 2] & 0x0f : (iv[i / 2] >> 4) & 0x0f;
-        aes_encode(NULL, y, ctx->plaintexts[nk], y, CRYPTO_AES128_KEY_SIZE);
+        aes_encode(NULL, ry, ctx->plaintexts[nk], ry, CRYPTO_AES128_KEY_SIZE);
     }
     
     if (final)
-        aes_encode(NULL, y, const00, y, CRYPTO_AES128_KEY_SIZE);
+        aes_encode(NULL, ry, const00, ry, CRYPTO_AES128_KEY_SIZE);
+    memcpy(y, ry, CRYPTO_AES128_KEY_SIZE);
 }
 
 void LRPIncCounter(uint8_t *ctr, size_t ctrlen) {
@@ -218,14 +220,12 @@ void LRPGenSubkeys(uint8_t *key, uint8_t *sk1, uint8_t *sk2) {
 
     uint8_t y[CRYPTO_AES128_KEY_SIZE] = {0};
     LRPEvalLRP(&ctx, const00, CRYPTO_AES128_KEY_SIZE * 2, true, y);
-PrintAndLogEx(ERR, "--k %s", sprint_hex(key, 16));    
-PrintAndLogEx(ERR, "--y %s", sprint_hex(y, 16));    
+
     mulPolyX(y);
     memcpy(sk1, y, CRYPTO_AES128_KEY_SIZE);
-PrintAndLogEx(ERR, "--sk1 %s", sprint_hex(y, 16));    
+
     mulPolyX(y);
     memcpy(sk2, y, CRYPTO_AES128_KEY_SIZE);
-PrintAndLogEx(ERR, "--sk2 %s", sprint_hex(y, 16));    
 }
 
 // https://www.nxp.com/docs/en/application-note/AN12304.pdf
@@ -248,11 +248,9 @@ void LRPCMAC(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
 
     size_t bllen = datalen - clen;
     uint8_t bl[CRYPTO_AES128_KEY_SIZE] = {0};
-    memcpy(bl, &data[clen * CRYPTO_AES128_KEY_SIZE], bllen);
+    memcpy(bl, &data[clen], bllen);
 
-PrintAndLogEx(ERR, "--bllen %d", bllen);    
-PrintAndLogEx(ERR, "--y %s", sprint_hex(y, 16));    
-    // if there is more data
+    // last block
     if (bllen == 16) {
         bin_xor(y, bl, CRYPTO_AES128_KEY_SIZE);
       
@@ -266,5 +264,4 @@ PrintAndLogEx(ERR, "--y %s", sprint_hex(y, 16));
     }
     
     LRPEvalLRP(ctx, y, CRYPTO_AES128_KEY_SIZE * 2, true, cmac);
-PrintAndLogEx(ERR, "--cmac %s", sprint_hex(cmac, 16));    
 }
