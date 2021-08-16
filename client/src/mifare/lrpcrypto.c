@@ -35,7 +35,7 @@ static uint8_t const00[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 
 void LRPClearContext(LRPContext *ctx) {
     memset(ctx->key, 0, CRYPTO_AES128_KEY_SIZE);
-    
+
     ctx->useBitPadding = false;
     ctx->plaintextsCount = 0;
     memset(ctx->plaintexts, 0, LRP_MAX_PLAINTEXTS_SIZE * CRYPTO_AES128_KEY_SIZE);
@@ -46,15 +46,15 @@ void LRPClearContext(LRPContext *ctx) {
 
 void LRPSetKey(LRPContext *ctx, uint8_t *key, size_t updatedKeyNum, bool useBitPadding) {
     LRPClearContext(ctx);
-    
+
     memcpy(ctx->key, key, CRYPTO_AES128_KEY_SIZE);
-    
+
     LRPGeneratePlaintexts(ctx, 16);
     LRPGenerateUpdatedKeys(ctx, 4);
-    
+
     ctx->useUpdatedKeyNum = updatedKeyNum;
     ctx->useBitPadding = useBitPadding;
-    
+
     memcpy(ctx->counter, const00, CRYPTO_AES128_KEY_SIZE);
     ctx->counterLenNibbles = CRYPTO_AES128_KEY_SIZE;
 }
@@ -64,7 +64,7 @@ void LRPSetCounter(LRPContext *ctx, uint8_t *counter, size_t counterLenNibbles) 
     ctx->counterLenNibbles = counterLenNibbles;
 }
 
-void LRPSetKeyEx(LRPContext *ctx, uint8_t *key, uint8_t *counter, size_t counterLenNibbles, size_t updatedKeyNum, bool useBitPadding){
+void LRPSetKeyEx(LRPContext *ctx, uint8_t *key, uint8_t *counter, size_t counterLenNibbles, size_t updatedKeyNum, bool useBitPadding) {
     LRPSetKey(ctx, key, updatedKeyNum, useBitPadding);
     LRPSetCounter(ctx, counter, counterLenNibbles);
 }
@@ -75,15 +75,15 @@ void LRPSetKeyEx(LRPContext *ctx, uint8_t *key, uint8_t *counter, size_t counter
 void LRPGeneratePlaintexts(LRPContext *ctx, size_t plaintextsCount) {
     if (plaintextsCount > LRP_MAX_PLAINTEXTS_SIZE)
         return;
-    
+
     uint8_t h[CRYPTO_AES128_KEY_SIZE] = {0};
     memcpy(h, ctx->key, CRYPTO_AES128_KEY_SIZE);
-    
+
     for (int i = 0; i < plaintextsCount; i++) {
         aes_encode(NULL, h, const55, h, CRYPTO_AES128_KEY_SIZE);
-        aes_encode(NULL, h, constAA, ctx->plaintexts[i], CRYPTO_AES128_KEY_SIZE);        
+        aes_encode(NULL, h, constAA, ctx->plaintexts[i], CRYPTO_AES128_KEY_SIZE);
     }
-    
+
     ctx->plaintextsCount = plaintextsCount;
 }
 
@@ -97,10 +97,10 @@ void LRPGenerateUpdatedKeys(LRPContext *ctx, size_t updatedKeysCount) {
     aes_encode(NULL, ctx->key, constAA, h, CRYPTO_AES128_KEY_SIZE);
 
     for (int i = 0; i < updatedKeysCount; i++) {
-        aes_encode(NULL, h, constAA, ctx->updatedKeys[i], CRYPTO_AES128_KEY_SIZE);        
+        aes_encode(NULL, h, constAA, ctx->updatedKeys[i], CRYPTO_AES128_KEY_SIZE);
         aes_encode(NULL, h, const55, h, CRYPTO_AES128_KEY_SIZE);
     }
-        
+
     ctx->updatedKeysCount = updatedKeysCount;
 }
 
@@ -109,12 +109,12 @@ void LRPGenerateUpdatedKeys(LRPContext *ctx, size_t updatedKeysCount) {
 void LRPEvalLRP(LRPContext *ctx, uint8_t *iv, size_t ivlen, bool final, uint8_t *y) {
     uint8_t ry[CRYPTO_AES128_KEY_SIZE] = {0};
     memcpy(ry, ctx->updatedKeys[ctx->useUpdatedKeyNum], CRYPTO_AES128_KEY_SIZE);
-    
+
     for (int i = 0; i < ivlen; i++) {
         uint8_t nk = (i % 2) ? iv[i / 2] & 0x0f : (iv[i / 2] >> 4) & 0x0f;
         aes_encode(NULL, ry, ctx->plaintexts[nk], ry, CRYPTO_AES128_KEY_SIZE);
     }
-    
+
     if (final)
         aes_encode(NULL, ry, const00, ry, CRYPTO_AES128_KEY_SIZE);
     memcpy(y, ry, CRYPTO_AES128_KEY_SIZE);
@@ -133,8 +133,8 @@ void LRPIncCounter(uint8_t *ctr, size_t ctrlen) {
             ctr[i / 2] = (ctr[i / 2] & 0xf0) | (nk & 0x0f);
         else
             ctr[i / 2] = (ctr[i / 2] & 0x0f) | ((nk << 4) & 0xf0);
-        
-        if(!carry)
+
+        if (!carry)
             break;
     }
 }
@@ -143,17 +143,17 @@ void LRPIncCounter(uint8_t *ctr, size_t ctrlen) {
 // Algorithm 4
 void LRPEncode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen) {
     *resplen = 0;
-    
+
     uint8_t xdata[1024] = {0};
     memcpy(xdata, data, datalen);
     if (ctx->useBitPadding) {
         xdata[datalen] = 0x80;
         datalen++;
     }
-    
+
     if (datalen % CRYPTO_AES128_KEY_SIZE)
         datalen = datalen + CRYPTO_AES128_KEY_SIZE - (datalen % CRYPTO_AES128_KEY_SIZE);
-    
+
     if (datalen == 0)
         return;
 
@@ -172,7 +172,7 @@ void LRPDecode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, si
     *resplen = 0;
     if (datalen % CRYPTO_AES128_KEY_SIZE)
         return;
-    
+
     uint8_t y[CRYPTO_AES128_KEY_SIZE] = {0};
     for (int i = 0; i < datalen / CRYPTO_AES128_KEY_SIZE; i++) {
         LRPEvalLRP(ctx, ctx->counter, ctx->counterLenNibbles, true, y);
@@ -180,7 +180,7 @@ void LRPDecode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, si
         *resplen += CRYPTO_AES128_KEY_SIZE;
         LRPIncCounter(ctx->counter, ctx->counterLenNibbles);
     }
-    
+
     // search padding
     if (ctx->useBitPadding) {
         for (int i = *resplen - 1; i >= *resplen - CRYPTO_AES128_KEY_SIZE; i--) {
@@ -195,7 +195,7 @@ void LRPDecode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, si
 static bool shiftLeftBe(uint8_t *data, size_t length) {
     if (length == 0)
         return false;
-    
+
     bool carry = false;
     for (int i = length - 1; i >= 0; i--) {
         uint8_t val = data[i];
@@ -234,7 +234,7 @@ void LRPCMAC(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
     uint8_t sk1[CRYPTO_AES128_KEY_SIZE] = {0};
     uint8_t sk2[CRYPTO_AES128_KEY_SIZE] = {0};
     LRPGenSubkeys(ctx->key, sk1, sk2);
-    
+
     uint8_t y[CRYPTO_AES128_KEY_SIZE] = {0};
     size_t clen = 0;
     for (int i = 0; i < datalen / CRYPTO_AES128_KEY_SIZE; i++) {
@@ -253,7 +253,7 @@ void LRPCMAC(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
     // last block
     if (bllen == 16) {
         bin_xor(y, bl, CRYPTO_AES128_KEY_SIZE);
-      
+
         bin_xor(y, sk1, CRYPTO_AES128_KEY_SIZE);
     } else {
         // padding
@@ -262,6 +262,6 @@ void LRPCMAC(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
 
         bin_xor(y, sk2, CRYPTO_AES128_KEY_SIZE);
     }
-    
+
     LRPEvalLRP(ctx, y, CRYPTO_AES128_KEY_SIZE * 2, true, cmac);
 }

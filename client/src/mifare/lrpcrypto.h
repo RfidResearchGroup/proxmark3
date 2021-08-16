@@ -32,14 +32,14 @@
 
 typedef struct {
     uint8_t key[CRYPTO_AES128_KEY_SIZE];
-    
+
     bool useBitPadding;
     size_t plaintextsCount;
     uint8_t plaintexts[LRP_MAX_PLAINTEXTS_SIZE][CRYPTO_AES128_KEY_SIZE];
     size_t updatedKeysCount;
     uint8_t updatedKeys[LRP_MAX_UPDATED_KEYS_SIZE][CRYPTO_AES128_KEY_SIZE];
     size_t useUpdatedKeyNum;
-    
+
     uint8_t counter[LRP_MAX_COUNTER_SIZE];
     size_t counterLenNibbles; // len in bytes * 2 (or * 2 - 1)
 } LRPContext;
