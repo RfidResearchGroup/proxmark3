@@ -15,6 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
  * $Id$
+ *
+ * description here: Leakage Resilient Primitive (LRP) Specification, https://www.nxp.com/docs/en/application-note/AN12304.pdf
+ *
  */
 
 #include "lrpcrypto.h"
@@ -51,6 +54,9 @@ void LRPSetKey(LRPContext *ctx, uint8_t *key, size_t updatedKeyNum, bool useBitP
     
     ctx->useUpdatedKeyNum = updatedKeyNum;
     ctx->useBitPadding = useBitPadding;
+    
+    memcpy(ctx->counter, const00, CRYPTO_AES128_KEY_SIZE);
+    ctx->counterLenNibbles = CRYPTO_AES128_KEY_SIZE;
 }
 
 void LRPSetCounter(LRPContext *ctx, uint8_t *counter, size_t counterLenNibbles) {
@@ -158,6 +164,8 @@ void LRPEncode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, si
     }
 }
 
+// https://www.nxp.com/docs/en/application-note/AN12304.pdf
+// Algorithm 5
 void LRPDecode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen) {
     *resplen = 0;
     if (datalen % CRYPTO_AES128_KEY_SIZE)
@@ -199,7 +207,7 @@ static bool shiftLeftBe(uint8_t *data, size_t length) {
 // GF(2 ^ 128)
 // poly x^128 + x ^ 7 + x ^ 2 + x + 1
 // bit: 1000..0010000111 == 0x1 00 00 .. 00 00 87
-static void shiftPolyLeft(uint8_t *data) {
+static void mulPolyX(uint8_t *data) {
     if (shiftLeftBe(data, 16))
         data[15] = data[15] ^ 0x87;
 }
@@ -211,14 +219,43 @@ void LRPGenSubkeys(uint8_t *key, uint8_t *sk1, uint8_t *sk2) {
     uint8_t y[CRYPTO_AES128_KEY_SIZE] = {0};
     LRPEvalLRP(&ctx, const00, CRYPTO_AES128_KEY_SIZE * 2, true, y);
 PrintAndLogEx(ERR, "--y %s", sprint_hex(y, 16));    
-    shiftPolyLeft(y);
+    mulPolyX(y);
     memcpy(sk1, y, CRYPTO_AES128_KEY_SIZE);
 PrintAndLogEx(ERR, "--sk1 %s", sprint_hex(y, 16));    
-    shiftPolyLeft(y);
+    mulPolyX(y);
     memcpy(sk2, y, CRYPTO_AES128_KEY_SIZE);
 PrintAndLogEx(ERR, "--sk2 %s", sprint_hex(y, 16));    
 }
 
+// https://www.nxp.com/docs/en/application-note/AN12304.pdf
+// Algorithm 6
 void LRPCMAC(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
+    uint8_t sk1[CRYPTO_AES128_KEY_SIZE] = {0};
+    uint8_t sk2[CRYPTO_AES128_KEY_SIZE] = {0};
+    LRPGenSubkeys(ctx->key, sk1, sk2);
     
+    uint8_t y[CRYPTO_AES128_KEY_SIZE] = {0};
+    size_t clen = 0;
+    for (int i = 0; i < datalen / CRYPTO_AES128_KEY_SIZE; i++) {
+        bin_xor(y, &data[i * CRYPTO_AES128_KEY_SIZE], CRYPTO_AES128_KEY_SIZE);
+        LRPEvalLRP(ctx, y, CRYPTO_AES128_KEY_SIZE * 2, true, y);
+        clen += CRYPTO_AES128_KEY_SIZE;
+    }
+
+    size_t bllen = datalen - clen;
+    // padding
+    if (bllen > 0) {
+        uint8_t bl[CRYPTO_AES128_KEY_SIZE] = {0};
+        memcpy(bl, &data[clen * CRYPTO_AES128_KEY_SIZE], bllen);
+        bl[bllen] = 0x80;
+        bin_xor(y, bl, CRYPTO_AES128_KEY_SIZE);
+    }
+
+    // if there is more data
+    if (bllen == 0)
+        bin_xor(y, sk1, CRYPTO_AES128_KEY_SIZE);
+    else
+        bin_xor(y, sk2, CRYPTO_AES128_KEY_SIZE);
+    
+    LRPEvalLRP(ctx, y, CRYPTO_AES128_KEY_SIZE * 2, true, cmac);
 }

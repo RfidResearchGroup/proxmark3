@@ -15,6 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
  * $Id$
+ *
+ * description here: Leakage Resilient Primitive (LRP) Specification, https://www.nxp.com/docs/en/application-note/AN12304.pdf
+ *
  */
 
 #ifndef __LRPCRYPTO_H

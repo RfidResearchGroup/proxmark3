@@ -6,6 +6,9 @@
 // the license.
 //-----------------------------------------------------------------------------
 //  tests for desfire
+//
+//  tests for LRP here: Leakage Resilient Primitive (LRP) Specification, https://www.nxp.com/docs/en/application-note/AN12304.pdf
+//
 //-----------------------------------------------------------------------------
 
 #include "desfiretest.h"
@@ -746,6 +749,8 @@ static bool TestLRPDecode(void) {
     return res;
 }
 
+// https://www.nxp.com/docs/en/application-note/AN12304.pdf
+// 3.4 LRP CMAC
 static bool TestLRPSubkeys(void) {
     bool res = true;
 
@@ -770,9 +775,28 @@ static bool TestLRPSubkeys(void) {
     return res;
 }
 
+// https://www.nxp.com/docs/en/application-note/AN12304.pdf
+// 3.4 LRP CMAC
 static bool TestLRPCMAC(void) {
     bool res = true;
 
+    LRPContext ctx = {0};
+    uint8_t cmac[CRYPTO_AES128_KEY_SIZE] = {0};
+
+    uint8_t key1[] = {0x81, 0x95, 0x08, 0x8C, 0xE6, 0xC3, 0x93, 0x70, 0x8E, 0xBB, 0xE6, 0xC7, 0x91, 0x4E, 0xCB, 0x0B};
+    LRPSetKey(&ctx, key1, 0, true);
+    uint8_t data1[] = {0xBB, 0xD5, 0xB8, 0x57, 0x72, 0xC7};
+    LRPCMAC(&ctx, data1, sizeof(data1), cmac);
+    uint8_t cmacres1[] = {0xAD, 0x85, 0x95, 0xE0, 0xB4, 0x9C, 0x5C, 0x0D, 0xB1, 0x8E, 0x77, 0x35, 0x5F, 0x5A, 0xAF, 0xF6};
+    res = res && (memcmp(cmac, cmacres1, sizeof(cmacres1)) == 0);
+  
+    /*uint8_t key2[] = {0x5A, 0xA9, 0xF6, 0xC6, 0xDE, 0x51, 0x38, 0x11, 0x3D, 0xF5, 0xD6, 0xB6, 0xC7, 0x7D, 0x5D, 0x52};
+    LRPSetKey(&ctx, key2, 0, true);
+    uint8_t data2[] = {0xA4, 0x43, 0x4D, 0x74, 0x0C, 0x2C, 0xB6, 0x65, 0xFE, 0x53, 0x96, 0x95, 0x91, 0x89, 0x38, 0x3F};
+    LRPCMAC(&ctx, data2, sizeof(data2), cmac);
+    uint8_t cmacres2[] = {0xA4, 0x43, 0x4D, 0x74, 0x0C, 0x2C, 0xB6, 0x65, 0xFE, 0x53, 0x96, 0x95, 0x91, 0x89, 0x38, 0x3F};
+    res = res && (memcmp(cmac, cmacres2, sizeof(cmacres2)) == 0);
+*/
 
     if (res)
         PrintAndLogEx(INFO, "LRP CMAC.......... " _GREEN_("passed"));
