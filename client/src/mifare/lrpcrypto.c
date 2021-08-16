@@ -181,3 +181,44 @@ void LRPDecode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, si
         }
     }
 }
+
+static bool shiftLeftBe(uint8_t *data, size_t length) {
+    if (length == 0)
+        return false;
+    
+    bool carry = false;
+    for (int i = length - 1; i >= 0; i--) {
+        uint8_t val = data[i];
+        val = (val << 1) | ((carry) ? 1 : 0);
+        carry = ((data[i] & 0x80) != 0);
+        data[i] = val;
+    }
+    return carry;
+}
+
+// GF(2 ^ 128)
+// poly x^128 + x ^ 7 + x ^ 2 + x + 1
+// bit: 1000..0010000111 == 0x1 00 00 .. 00 00 87
+static void shiftPolyLeft(uint8_t *data) {
+    if (shiftLeftBe(data, 16))
+        data[15] = data[15] ^ 0x87;
+}
+
+void LRPGenSubkeys(uint8_t *key, uint8_t *sk1, uint8_t *sk2) {
+    LRPContext ctx = {0};
+    LRPSetKey(&ctx, key, 0, true);
+
+    uint8_t y[CRYPTO_AES128_KEY_SIZE] = {0};
+    LRPEvalLRP(&ctx, const00, CRYPTO_AES128_KEY_SIZE * 2, true, y);
+PrintAndLogEx(ERR, "--y %s", sprint_hex(y, 16));    
+    shiftPolyLeft(y);
+    memcpy(sk1, y, CRYPTO_AES128_KEY_SIZE);
+PrintAndLogEx(ERR, "--sk1 %s", sprint_hex(y, 16));    
+    shiftPolyLeft(y);
+    memcpy(sk2, y, CRYPTO_AES128_KEY_SIZE);
+PrintAndLogEx(ERR, "--sk2 %s", sprint_hex(y, 16));    
+}
+
+void LRPCMAC(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
+    
+}

@@ -746,6 +746,42 @@ static bool TestLRPDecode(void) {
     return res;
 }
 
+static bool TestLRPSubkeys(void) {
+    bool res = true;
+
+    uint8_t sk1[CRYPTO_AES128_KEY_SIZE] = {0};
+    uint8_t sk2[CRYPTO_AES128_KEY_SIZE] = {0};
+
+    uint8_t key1[] = {0x81, 0x95, 0x08, 0x8C, 0xE6, 0xC3, 0x93, 0x70, 0x8E, 0xBB, 0xE6, 0xC7, 0x91, 0x4E, 0xCB, 0x0B};
+
+    uint8_t sk1r1[] = {0x16, 0x91, 0x2B, 0x8D, 0x19, 0xD9, 0x4B, 0x2D, 0x4D, 0xA4, 0xFF, 0xA1, 0xCA, 0xD2, 0x18, 0x23};
+    uint8_t sk2r1[] = {0x2D, 0x22, 0x57, 0x1A, 0x33, 0xB2, 0x96, 0x5A, 0x9B, 0x49, 0xFF, 0x43, 0x95, 0xA4, 0x30, 0x46};
+    
+    LRPGenSubkeys(key1, sk1, sk2);
+    res = res && (memcmp(sk1, sk1r1, sizeof(sk1r1)) == 0);
+    res = res && (memcmp(sk2, sk2r1, sizeof(sk2r1)) == 0);
+
+
+    if (res)
+        PrintAndLogEx(INFO, "LRP subkeys....... " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "LRP subkeys....... " _RED_("fail"));
+
+    return res;
+}
+
+static bool TestLRPCMAC(void) {
+    bool res = true;
+
+
+    if (res)
+        PrintAndLogEx(INFO, "LRP CMAC.......... " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "LRP CMAC.......... " _RED_("fail"));
+
+    return res;
+}
+
 bool DesfireTest(bool verbose) {
     bool res = true;
 
@@ -770,6 +806,8 @@ bool DesfireTest(bool verbose) {
     res = res && TestLRPIncCounter();
     res = res && TestLRPEncode();
     res = res && TestLRPDecode();
+    res = res && TestLRPSubkeys();
+    res = res && TestLRPCMAC();
 
     PrintAndLogEx(INFO, "---------------------------");
     if (res)
