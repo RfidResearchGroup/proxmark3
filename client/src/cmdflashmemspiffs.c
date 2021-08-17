@@ -385,9 +385,9 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
 
     // set file extension
     char *suffix = strchr(fn, '.');
-    if (suffix) {
+    if (suffix)
         saveFile(fn, suffix, dump, len);
-    } else
+    else
         saveFile(fn, ".bin", dump, len); // default
 
     if (eml) {
