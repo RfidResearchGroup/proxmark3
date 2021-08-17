@@ -1984,8 +1984,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    //res = DesfireSelectAndAuthenticateISO(&dctx, securechann, (appid != 0), appid, appisoid, false, 0, noauth, verbose);
-    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, id, false, verbose);
+    res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, id, false, 0, false, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
         PrintAndLogEx(FAILED, "Select or authentication %s 0x%06x " _RED_("failed") ". Result [%d] %s", DesfireSelectWayToStr(selectway), id, res, DesfireAuthErrorToStr(res));
@@ -1995,7 +1994,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     if (DesfireMFSelected(selectway, id))
         PrintAndLogEx(SUCCESS, "PICC selected and authenticated " _GREEN_("succesfully"));
     else
-        PrintAndLogEx(SUCCESS, "Application %s " _CYAN_("%06x") " selected and authenticated " _GREEN_("succesfully"), DesfireSelectWayToStr(selectway), id);
+        PrintAndLogEx(SUCCESS, "Application %s " _CYAN_("%0*x") " selected and authenticated " _GREEN_("succesfully"), DesfireSelectWayToStr(selectway), selectway == ISW6bAID ? 6 : 4, id);
 
     PrintAndLogEx(SUCCESS, _CYAN_("Context: "));
     DesfirePrintContext(&dctx);
