@@ -933,7 +933,7 @@ int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secu
     return DesfireSelectAndAuthenticateEx(dctx, secureChannel, aid, false, verbose);
 }
 
-int DesfireSelectAndAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool useaid, uint32_t aid, uint16_t isoappid, uint16_t isofileid, bool noauth, bool verbose) {
+int DesfireSelectAndAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool useaid, uint32_t aid, uint16_t isoappid, bool selectfile, uint16_t isofileid, bool noauth, bool verbose) {
     if (verbose)
         DesfirePrintContext(dctx);
 
@@ -961,14 +961,16 @@ int DesfireSelectAndAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel s
         if (verbose)
             PrintAndLogEx(INFO, "Application iso id %04x is " _GREEN_("selected"), isoappid);
 
-        res = DesfireSelectEx(dctx, false, ISWIsoID, isofileid, NULL);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire iso file select " _RED_("error") ".");
-            return 203;
-        }
+        if (selectfile) {
+            res = DesfireSelectEx(dctx, false, ISWIsoID, isofileid, NULL);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Desfire iso file select " _RED_("error") ".");
+                return 203;
+            }
 
-        if (verbose)
-            PrintAndLogEx(INFO, "Application iso id %04x file iso id %04x is " _GREEN_("selected"), isoappid, isofileid);
+            if (verbose)
+                PrintAndLogEx(INFO, "Application iso id %04x file iso id %04x is " _GREEN_("selected"), isoappid, isofileid);
+        }
     }
 
     if (!noauth) {
