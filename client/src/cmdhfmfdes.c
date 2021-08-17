@@ -625,6 +625,12 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     dctx.commMode = DCMPlain;
     dctx.cmdSet = DCCNative;
 
+    res = DesfireAnticollision(false);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
     if (cardtype == DESFIRE_EV2 ||
             cardtype == DESFIRE_LIGHT ||
             cardtype == DESFIRE_EV3 ||
@@ -644,12 +650,6 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         } else {
             PrintAndLogEx(WARNING, "--- Card doesn't support GetSignature cmd");
         }
-    }
-
-    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        return res;
     }
 
     PICCInfoS PICCInfo = {0};
