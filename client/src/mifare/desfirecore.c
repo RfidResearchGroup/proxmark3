@@ -1373,6 +1373,134 @@ static int DesfireAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel sec
     return PM3_SUCCESS;
 }
 
+static int DesfireAuthenticateLRP(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool firstauth, bool verbose) {
+    // Crypt constants
+    uint8_t IV[16] = {0};
+    uint8_t RndA[CRYPTO_AES_BLOCK_SIZE] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16};
+    uint8_t RndB[CRYPTO_AES_BLOCK_SIZE] = {0};
+    uint8_t encRndB[CRYPTO_AES_BLOCK_SIZE] = {0};
+    uint8_t rotRndA[CRYPTO_AES_BLOCK_SIZE] = {0};   //RndA'
+    uint8_t rotRndB[CRYPTO_AES_BLOCK_SIZE] = {0};   //RndB'
+    uint8_t both[CRYPTO_AES_BLOCK_SIZE * 2 + 1] = {0};  // ek/dk_keyNo(RndA+RndB')
+
+    uint8_t subcommand = firstauth ? MFDES_AUTHENTICATE_EV2F : MFDES_AUTHENTICATE_EV2NF;
+    uint8_t *key = dctx->key;
+
+    size_t recv_len = 0;
+    uint8_t respcode = 0;
+    uint8_t recv_data[256] = {0};
+
+    if (verbose)
+        PrintAndLogEx(INFO, _CYAN_("Auth %s:") " cmd: 0x%02x keynum: 0x%02x key: %s", (firstauth) ? "first" : "non-first", subcommand, dctx->keyNum, sprint_hex(key, 16));
+
+    // Let's send our auth command
+    uint8_t cdata[] = {dctx->keyNum, 0x06, 0x02, 0x00, 0x00, 0x00, 0x00, 0x02};
+    int res = DesfireExchangeEx(false, dctx, subcommand, cdata, (firstauth) ? sizeof(cdata) : 1, &respcode, recv_data, &recv_len, false, 0);
+    if (res != PM3_SUCCESS) {
+        return 1;
+    }
+
+    if (!recv_len) {
+        return 2;
+    }
+
+    if (respcode != MFDES_ADDITIONAL_FRAME) {
+        return 3;
+    }
+
+    if (recv_len != CRYPTO_AES_BLOCK_SIZE) {
+        return 4;
+    }
+
+    // Part 2
+    memcpy(encRndB, recv_data, 16);
+
+    // Part 3
+    if (aes_decode(IV, key, encRndB, RndB, CRYPTO_AES_BLOCK_SIZE))
+        return 5;
+
+    if (g_debugMode > 1) {
+        PrintAndLogEx(DEBUG, "encRndB: %s", sprint_hex(encRndB, CRYPTO_AES_BLOCK_SIZE));
+        PrintAndLogEx(DEBUG, "RndB: %s", sprint_hex(RndB, CRYPTO_AES_BLOCK_SIZE));
+    }
+
+    // - Rotate RndB by 8 bits
+    memcpy(rotRndB, RndB, CRYPTO_AES_BLOCK_SIZE);
+    rol(rotRndB, CRYPTO_AES_BLOCK_SIZE);
+
+    // - Encrypt our response
+    uint8_t tmp[32] = {0x00};
+    memcpy(tmp, RndA, CRYPTO_AES_BLOCK_SIZE);
+    memcpy(tmp + CRYPTO_AES_BLOCK_SIZE, rotRndB, CRYPTO_AES_BLOCK_SIZE);
+    if (g_debugMode > 1) {
+        PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, CRYPTO_AES_BLOCK_SIZE));
+        PrintAndLogEx(DEBUG, "Both: %s", sprint_hex(tmp, CRYPTO_AES_BLOCK_SIZE * 2));
+    }
+
+    if (aes_encode(IV, key, tmp, both, CRYPTO_AES_BLOCK_SIZE * 2))
+        return 6;
+    if (g_debugMode > 1) {
+        PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, CRYPTO_AES_BLOCK_SIZE * 2));
+    }
+
+    res = DesfireExchangeEx(false, dctx, MFDES_ADDITIONAL_FRAME, both, CRYPTO_AES_BLOCK_SIZE * 2, &respcode, recv_data, &recv_len, false, 0);
+    if (res != PM3_SUCCESS) {
+        return 7;
+    }
+
+    if (!recv_len) {
+        return 8;
+    }
+
+    if (respcode != MFDES_S_OPERATION_OK) {
+        return 9;
+    }
+
+    // Part 4
+    uint8_t data[32] = {0};
+
+    if (aes_decode(IV, key, recv_data, data, recv_len))
+        return 10;
+
+    // rotate rndA to check
+    memcpy(rotRndA, RndA, CRYPTO_AES_BLOCK_SIZE);
+    rol(rotRndA, CRYPTO_AES_BLOCK_SIZE);
+
+    uint8_t *recRndA = (firstauth) ? &data[4] : data;
+
+    if (memcmp(rotRndA, recRndA, CRYPTO_AES_BLOCK_SIZE) != 0) {
+        if (g_debugMode > 1) {
+            PrintAndLogEx(DEBUG, "Expected_RndA'  : %s", sprint_hex(rotRndA, CRYPTO_AES_BLOCK_SIZE));
+            PrintAndLogEx(DEBUG, "Generated_RndA' : %s", sprint_hex(recRndA, CRYPTO_AES_BLOCK_SIZE));
+        }
+        return 11;
+    }
+
+    if (firstauth) {
+        dctx->cmdCntr = 0;
+        memcpy(dctx->TI, data, 4);
+    }
+    DesfireClearIV(dctx);
+    DesfireGenSessionKeyEV2(dctx->key, RndA, RndB, true, dctx->sessionKeyEnc);
+    DesfireGenSessionKeyEV2(dctx->key, RndA, RndB, false, dctx->sessionKeyMAC);
+    dctx->secureChannel = secureChannel;
+
+    if (verbose) {
+        if (firstauth) {
+            PrintAndLogEx(INFO, "TI             : %s", sprint_hex(data, 4));
+            PrintAndLogEx(INFO, "pic            : %s", sprint_hex(&data[20], 6));
+            PrintAndLogEx(INFO, "pcd            : %s", sprint_hex(&data[26], 6));
+        } else {
+            PrintAndLogEx(INFO, "TI             : %s", sprint_hex(dctx->TI, 4));
+        }
+        PrintAndLogEx(INFO, "session key ENC: %s", sprint_hex(dctx->sessionKeyEnc, 16));
+        PrintAndLogEx(INFO, "session key MAC: %s", sprint_hex(dctx->sessionKeyMAC, 16));
+    }
+
+    return PM3_SUCCESS;
+}
+
+
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
     if (dctx->kdfAlgo == MFDES_KDF_ALGO_AN10922) {
         MifareKdfAn10922(dctx, DCOMasterKey, dctx->kdfInput, dctx->kdfInputLen);
@@ -1398,6 +1526,9 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
 
     if (secureChannel == DACEV2)
         return DesfireAuthenticateEV2(dctx, secureChannel, (DesfireIsAuthenticated(dctx) == false), verbose); // non first auth if there is a working secure channel
+
+    if (secureChannel == DACLRP)
+        return DesfireAuthenticateLRP(dctx, secureChannel, (DesfireIsAuthenticated(dctx) == false), verbose);
 
     return 100;
 }

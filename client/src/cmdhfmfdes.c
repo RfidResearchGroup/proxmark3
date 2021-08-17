@@ -1960,8 +1960,8 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID of application for some parameters (3 hex bytes, big endian)"),
-        arg_lit0(NULL, "save",    "saves channels parameters to defaults if authentication succeeds"),
         arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
+        arg_lit0(NULL, "save",    "saves channels parameters to defaults if authentication succeeds"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1973,13 +1973,13 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, &securechann, DCMPlain, &id, &selectway);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, &securechann, DCMPlain, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
     }
 
-    bool save = arg_get_lit(ctx, 12);
+    bool save = arg_get_lit(ctx, 13);
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
@@ -2026,15 +2026,16 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
                   "02h ATS update.\n"
                   "03h SAK update\n"
                   "04h Secure Messaging Configuration.\n"
-                  "05h Capability data. (here change for LRP in the Desfire Light)\n"
-                  "06h DF Name renaming\n"
-                  "08h File renaming\n"
-                  "09h Value file configuration\n"
+                  "05h Capability data. (here change for LRP in the Desfire Light [00000000010000000000])\n"
+                  "06h DF Name renaming (one-time)\n"
+                  "08h File renaming (one-time)\n"
+                  "09h Value file configuration (one-time)\n"
                   "0Ah Failed authentication counter setting\n"
                   "0Bh HW configuration\n"
                   "\n"
                   "hf mfdes setconfig --param 03 --data 0428 -> set SAK\n"
-                  "hf mfdes setconfig --param 02 --data 0875778102637264 -> set ATS (first byte - length)");
+                  "hf mfdes setconfig --param 02 --data 0875778102637264 -> set ATS (first byte - length)\n"
+                  "hf mfdes setconfig --appisoid 01df -t aes -s ev2 --param 05 --data 00000000020000000000 -> set LRP mode enable for Desfire Light");
 
     void *argtable[] = {
         arg_param_begin,
@@ -2049,6 +2050,7 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID of application for some parameters (3 hex bytes, big endian)"),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
         arg_str0("p",  "param",   "<HEX 1 byte>", "Parameter id (HEX 1 byte)"),
         arg_str0("d",  "data",    "<data HEX>", "Data for parameter (HEX 1..30 bytes)"),
         arg_param_end
@@ -2060,22 +2062,23 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, &securechann, DCMEncrypted, &appid, NULL);
+    uint32_t id = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, &securechann, DCMEncrypted, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
     }
 
     uint32_t paramid = 0;
-    if (CLIGetUint32Hex(ctx, 12, 0, &paramid, NULL, 1, "Parameter ID must have 1 bytes length")) {
+    if (CLIGetUint32Hex(ctx, 13, 0, &paramid, NULL, 1, "Parameter ID must have 1 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint8_t param[250] = {0};
     int paramlen = sizeof(param);
-    CLIGetHexWithReturn(ctx, 13, param, &paramlen);
+    CLIGetHexWithReturn(ctx, 14, param, &paramlen);
     if (paramlen == 0) {
         PrintAndLogEx(ERR, "Parameter must have a data.");
         CLIParserFree(ctx);
@@ -2091,13 +2094,13 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (verbose) {
-        if (appid == 0x000000)
+        if (DesfireMFSelected(selectway, id))
             PrintAndLogEx(INFO, _CYAN_("PICC") " param ID: 0x%02x param[%d]: %s", paramid, paramlen, sprint_hex(param, paramlen));
         else
-            PrintAndLogEx(INFO, _CYAN_("Application %06x") " param ID: 0x%02x param[%d]: %s", appid, paramid, paramlen, sprint_hex(param, paramlen));
+            PrintAndLogEx(INFO, _CYAN_("%s %06x") " param ID: 0x%02x param[%d]: %s", DesfireSelectWayToStr(selectway), id, paramid, paramlen, sprint_hex(param, paramlen));
     }
 
-    res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
+    res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, id, false, 0, false, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
