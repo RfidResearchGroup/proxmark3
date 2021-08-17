@@ -19,7 +19,7 @@
  * at power-off).
  *
  * Short-pressing the button again will stop sniffing, and at _this_ point
- * append trace data from RAM to a file in flash (hf_14asniff.trc) and unmount.
+ * append trace data from RAM to a file in flash (hf_14asniff.trace) and unmount.
  *
  * Once the data is saved, standalone mode will exit.
  *
@@ -31,10 +31,10 @@
  *
  * To retrieve trace data from flash:
  *
- * 1. mem spiffs dump -s hf_14asniff.trc -d trace.trc
+ * 1. mem spiffs dump -s hf_14asniff.trace -d hf_14asniff.trace
  *    Copies trace data file from flash to your PC.
  *
- * 2. trace load trace.trc
+ * 2. trace load hf_14asniff.trace
  *    Loads trace data from a file into PC-side buffers.
  *
  * 3. For ISO14a: trace list -t 14a -1
@@ -66,13 +66,13 @@
 #include "ticks.h"
 #include "BigBuf.h"
 
-#define HF_14ASNIFF_LOGFILE "hf_14asniff.trc"
+#define HF_14ASNIFF_LOGFILE "hf_14asniff.trace"
 
 static void DownloadTraceInstructions(void) {
     Dbprintf("");
     Dbprintf("To get the trace from flash and display it:");
-    Dbprintf("1. mem spiffs dump -s "HF_14ASNIFF_LOGFILE" -d trace.trc");
-    Dbprintf("2. trace load -f trace.trc");
+    Dbprintf("1. mem spiffs dump -s "HF_14ASNIFF_LOGFILE" -d hf_14asniff.trace");
+    Dbprintf("2. trace load -f hf_14asniff.trace");
     Dbprintf("3. trace list -t 14a -1");
 }
 
