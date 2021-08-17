@@ -563,12 +563,14 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     mfdes_info_res_t info;
     int res = mfdes_get_info(&info);
     if (res != PM3_SUCCESS) {
+        DropField();
         return res;
     }
 
     nxp_cardtype_t cardtype = getCardType(info.versionHW[3], info.versionHW[4]);
     if (cardtype == PLUS_EV1) {
         PrintAndLogEx(INFO, "Card seems to be MIFARE Plus EV1.  Try " _YELLOW_("`hf mfp info`"));
+        DropField();
         return PM3_SUCCESS;
     }
 
@@ -622,18 +624,6 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     DesfireContext dctx = {0};
     dctx.commMode = DCMPlain;
     dctx.cmdSet = DCCNative;
-    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
-    if (res != PM3_SUCCESS)
-        return res;
-
-    PICCInfoS PICCInfo = {0};
-
-    uint8_t aidbuf[250] = {0};
-    size_t aidbuflen = 0;
-    res = DesfireGetAIDList(&dctx, aidbuf, &aidbuflen);
-    if (res == PM3_SUCCESS) {
-        PICCInfo.appCount = aidbuflen / 3;
-    }
 
     if (cardtype == DESFIRE_EV2 ||
             cardtype == DESFIRE_LIGHT ||
@@ -654,6 +644,21 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         } else {
             PrintAndLogEx(WARNING, "--- Card doesn't support GetSignature cmd");
         }
+    }
+
+    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    PICCInfoS PICCInfo = {0};
+
+    uint8_t aidbuf[250] = {0};
+    size_t aidbuflen = 0;
+    res = DesfireGetAIDList(&dctx, aidbuf, &aidbuflen);
+    if (res == PM3_SUCCESS) {
+        PICCInfo.appCount = aidbuflen / 3;
     }
 
     if (aidbuflen > 2) {
@@ -1966,8 +1971,9 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, &securechann, DCMPlain, &appid, NULL);
+    uint32_t id = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, &securechann, DCMPlain, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -1975,28 +1981,21 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     bool save = arg_get_lit(ctx, 12);
 
-    uint32_t appisoid = 0x0000;
-    bool isoidpresent = false;
-    if (CLIGetUint32Hex(ctx, 13, 0x0000, &appisoid, &isoidpresent, 2, "Application ISO ID (for EF) must have 2 bytes length")) {
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
     //res = DesfireSelectAndAuthenticateISO(&dctx, securechann, (appid != 0), appid, appisoid, false, 0, noauth, verbose);
-    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, false, verbose);
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, id, false, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication 0x%06x " _RED_("failed") ". Result [%d] %s", appid, res, DesfireAuthErrorToStr(res));
+        PrintAndLogEx(FAILED, "Select or authentication %s 0x%06x " _RED_("failed") ". Result [%d] %s", DesfireSelectWayToStr(selectway), id, res, DesfireAuthErrorToStr(res));
         return res;
     }
 
-    if (appid == 0x000000)
+    if (DesfireMFSelected(selectway, id))
         PrintAndLogEx(SUCCESS, "PICC selected and authenticated " _GREEN_("succesfully"));
     else
-        PrintAndLogEx(SUCCESS, "Application " _CYAN_("%06x") " selected and authenticated " _GREEN_("succesfully"), appid);
+        PrintAndLogEx(SUCCESS, "Application %s " _CYAN_("%06x") " selected and authenticated " _GREEN_("succesfully"), DesfireSelectWayToStr(selectway), id);
 
     PrintAndLogEx(SUCCESS, _CYAN_("Context: "));
     DesfirePrintContext(&dctx);
