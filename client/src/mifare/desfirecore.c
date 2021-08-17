@@ -72,6 +72,7 @@ const CLIParserOption DesfireSecureChannelOpts[] = {
     {DACd40, "d40"},
     {DACEV1, "ev1"},
     {DACEV2, "ev2"},
+    {DACLRP, "lrp"},
     {0,    NULL},
 };
 const size_t DesfireSecureChannelOptsLen = ARRAY_LENGTH(DesfireSecureChannelOpts);

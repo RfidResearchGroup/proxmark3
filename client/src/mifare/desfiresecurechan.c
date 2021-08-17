@@ -387,6 +387,7 @@ void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcda
         case DACEV2:
             DesfireSecureChannelEncodeEV2(ctx, cmd, srcdata, srcdatalen, dstdata, dstdatalen);
             break;
+        case DACLRP:
         case DACNone:
             memcpy(dstdata, srcdata, srcdatalen);
             *dstdatalen = srcdatalen;
@@ -603,6 +604,7 @@ void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t sr
         case DACEV2:
             DesfireSecureChannelDecodeEV2(ctx, srcdata, srcdatalen, respcode, dstdata, dstdatalen);
             break;
+        case DACLRP:
         case DACNone:
             memcpy(dstdata, srcdata, srcdatalen);
             *dstdatalen = srcdatalen;

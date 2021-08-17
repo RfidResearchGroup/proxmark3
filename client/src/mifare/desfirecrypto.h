@@ -45,7 +45,8 @@ typedef enum {
     DACNone,
     DACd40,
     DACEV1,
-    DACEV2
+    DACEV2,
+    DACLRP,
 } DesfireSecureChannel;
 
 typedef enum {

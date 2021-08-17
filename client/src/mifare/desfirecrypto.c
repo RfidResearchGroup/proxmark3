@@ -118,6 +118,9 @@ size_t DesfireGetMACLength(DesfireContext *ctx) {
         case DACEV2:
             mac_length = 8;
             break;
+        case DACLRP:
+            mac_length = 8;
+            break;
     }
     return mac_length;
 }
