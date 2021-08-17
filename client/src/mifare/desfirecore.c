@@ -290,6 +290,38 @@ const char *DesfireAuthErrorToStr(int error) {
     return "";
 }
 
+const char *DesfireSelectWayToStr(DesfireISOSelectWay way) {
+    switch (way) {
+        case ISW6bAID:
+            return "AID";
+        case ISWMF:
+            return "MF";
+        case ISWIsoID:
+            return "ISO ID";
+        case ISWDFName:
+            return "DF Name";
+        default:
+            break;
+    }
+    return "";
+}
+
+bool DesfireMFSelected(DesfireISOSelectWay way, uint32_t id) {
+    switch (way) {
+        case ISW6bAID:
+            return (id == 0x000000);
+        case ISWMF:
+            return true;
+        case ISWIsoID:
+            return (id == 0x3f00);
+        case ISWDFName:
+            return false;
+        default:
+            break;
+    }
+    return false;
+}
+
 uint32_t DesfireAIDByteToUint(uint8_t *data) {
     return data[0] + (data[1] << 8) + (data[2] << 16);
 }
