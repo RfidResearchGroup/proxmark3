@@ -858,7 +858,7 @@ static bool TestLRPCMAC(void) {
 }
 
 // https://www.nxp.com/docs/en/application-note/AN12343.pdf
-// page 33-34
+// page 49
 static bool TestLRPSessionKeys(void) {
     bool res = true;
 
