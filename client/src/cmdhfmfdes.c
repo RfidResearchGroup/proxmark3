@@ -2026,16 +2026,17 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
                   "02h ATS update.\n"
                   "03h SAK update\n"
                   "04h Secure Messaging Configuration.\n"
-                  "05h Capability data. (here change for LRP in the Desfire Light [00000000010000000000])\n"
+                  "05h Capability data. (here change for LRP in the Desfire Light [enable 00000000010000000000])\n"
                   "06h DF Name renaming (one-time)\n"
                   "08h File renaming (one-time)\n"
                   "09h Value file configuration (one-time)\n"
-                  "0Ah Failed authentication counter setting\n"
+                  "0Ah Failed authentication counter setting [disable 00ffffffff]\n"
                   "0Bh HW configuration\n"
                   "\n"
                   "hf mfdes setconfig --param 03 --data 0428 -> set SAK\n"
                   "hf mfdes setconfig --param 02 --data 0875778102637264 -> set ATS (first byte - length)\n"
-                  "hf mfdes setconfig --appisoid 01df -t aes -s ev2 --param 05 --data 00000000020000000000 -> set LRP mode enable for Desfire Light");
+                  "hf mfdes setconfig --appisoid 01df -t aes -s ev2 --param 05 --data 00000000020000000000 -> set LRP mode enable for Desfire Light\n"
+                  "hf mfdes setconfig --appisoid 01df -t aes -s ev2 --param 0a --data 00ffffffff -> Disable failed auth counters for Desfire Light");
 
     void *argtable[] = {
         arg_param_begin,
