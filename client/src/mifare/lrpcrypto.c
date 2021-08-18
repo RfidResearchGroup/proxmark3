@@ -265,3 +265,13 @@ void LRPCMAC(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
 
     LRPEvalLRP(ctx, y, CRYPTO_AES128_KEY_SIZE * 2, true, cmac);
 }
+
+void LRPCMAC8(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
+    uint8_t cmac_tmp[16] = {0};
+    memset(cmac, 0x00, 8);
+
+    LRPCMAC(ctx, data, datalen, cmac_tmp);
+
+    for (int i = 0; i < 8; i++)
+        cmac[i] = cmac_tmp[i * 2 + 1];
+}

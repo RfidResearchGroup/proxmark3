@@ -56,5 +56,6 @@ void LRPEncode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, si
 void LRPDecode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen);
 void LRPGenSubkeys(uint8_t *key, uint8_t *sk1, uint8_t *sk2);
 void LRPCMAC(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac);
+void LRPCMAC8(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac);
 
 #endif // __LRPCRYPTO_H
