@@ -23,6 +23,7 @@
 
 #include "common.h"
 #include "crypto/libpcrypto.h"
+#include "mifare/lrpcrypto.h"
 
 #define MAX_CRYPTO_BLOCK_SIZE 16
 #define DESFIRE_MAX_CRYPTO_BLOCK_SIZE 16
@@ -36,7 +37,7 @@ enum DESFIRE_CRYPTOALGO {
     T_DES = 0x00,
     T_3DES = 0x01, //aka 2K3DES
     T_3K3DES = 0x02,
-    T_AES = 0x03
+    T_AES = 0x03,
 };
 
 typedef enum DESFIRE_CRYPTOALGO DesfireCryptoAlgorythm;
@@ -76,6 +77,8 @@ typedef struct DesfireContextS {
     DesfireCryptoAlgorythm keyType;   // des/2tdea/3tdea/aes
     uint8_t key[DESFIRE_MAX_KEY_SIZE];
     uint8_t masterKey[DESFIRE_MAX_KEY_SIZE]; // source for kdf
+    
+    LRPContext lrpCtx;
 
     // KDF finction
     uint8_t kdfAlgo;
@@ -122,6 +125,8 @@ void DesfireCMACGenerateSubkeys(DesfireContext *ctx, DesfireCryptoOpKeyType key_
 void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *cmac);
 void DesfireCryptoCMACEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *data, size_t len, size_t minlen, uint8_t *cmac);
 void MifareKdfAn10922(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, const uint8_t *data, size_t len);
+
+void DesfireGenSessionKeyLRP(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool enckey, uint8_t *sessionkey);
 
 void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorythm keytype, uint8_t version);
 uint8_t DesfireDESKeyGetVersion(uint8_t *key);

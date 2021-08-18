@@ -192,6 +192,16 @@ void LRPDecode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, si
     }
 }
 
+void LRPEncDec(uint8_t *key, uint8_t *iv, bool encode, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen) {
+    LRPContext ctx = {0};
+
+    LRPSetKeyEx(&ctx, key, iv, 4 * 2, 0, false);
+    if (encode)
+        LRPEncode(&ctx, data, datalen, resp, resplen);
+    else
+        LRPDecode(&ctx, data, datalen, resp, resplen);
+}
+
 static bool shiftLeftBe(uint8_t *data, size_t length) {
     if (length == 0)
         return false;
