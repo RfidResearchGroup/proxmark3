@@ -1493,8 +1493,6 @@ static int DesfireAuthenticateLRP(DesfireContext *dctx, DesfireSecureChannel sec
         size_t declen = 0;
         LRPDecode(&ctx, recv_data, 16, data, &declen);
         memcpy(dctx->IV, ctx.counter, 4);
-PrintAndLogEx(INFO, "--decoded <%d>: %s", declen, sprint_hex(data, 16));
-PrintAndLogEx(INFO, "iv  : %s", sprint_hex(dctx->IV, 4));
 
         dctx->cmdCntr = 0;
         memcpy(dctx->TI, data, 4);
