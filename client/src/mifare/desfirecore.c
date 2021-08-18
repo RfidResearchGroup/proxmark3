@@ -258,6 +258,8 @@ const char *DesfireAuthErrorToStr(int error) {
             return "mbedtls_aes_setkey_dec failed";
         case 11:
             return "Authentication failed. Cannot verify Session Key.";
+        case 12:
+            return "Authentication failed. Cannot verify CMAC.";
         case 100:
             return "Can't find auth method for provided channel parameters.";
         case 200:
@@ -1210,7 +1212,7 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
         PrintAndLogEx(INFO, _CYAN_("Auth %s:") " cmd: 0x%02x keynum: 0x%02x key: %s", (firstauth) ? "first" : "non-first", subcommand, dctx->keyNum, sprint_hex(key, 16));
 
     // Let's send our auth command
-    uint8_t cdata[2] = {dctx->keyNum, 0x00};
+    uint8_t cdata[] = {dctx->keyNum, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     int res = DesfireExchangeEx(false, dctx, subcommand, cdata, (firstauth) ? sizeof(cdata) : 1, &respcode, recv_data, &recv_len, false, 0);
     if (res != PM3_SUCCESS) {
         return 1;
@@ -1224,12 +1226,16 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
         return 3;
     }
 
+    size_t rdataindx = 0;
     if (recv_len != CRYPTO_AES_BLOCK_SIZE) {
-        return 4;
+        if (recv_len == CRYPTO_AES_BLOCK_SIZE + 1)
+            rdataindx = 1;
+        else
+            return 4;
     }
 
     // Part 2
-    memcpy(encRndB, recv_data, 16);
+    memcpy(encRndB, &recv_data[rdataindx], 16);
 
     // Part 3
     if (aes_decode(IV, key, encRndB, RndB, CRYPTO_AES_BLOCK_SIZE))
@@ -1375,12 +1381,8 @@ static int DesfireAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel sec
 
 static int DesfireAuthenticateLRP(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool firstauth, bool verbose) {
     // Crypt constants
-    uint8_t IV[16] = {0};
     uint8_t RndA[CRYPTO_AES_BLOCK_SIZE] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16};
     uint8_t RndB[CRYPTO_AES_BLOCK_SIZE] = {0};
-    uint8_t encRndB[CRYPTO_AES_BLOCK_SIZE] = {0};
-    uint8_t rotRndA[CRYPTO_AES_BLOCK_SIZE] = {0};   //RndA'
-    uint8_t rotRndB[CRYPTO_AES_BLOCK_SIZE] = {0};   //RndB'
     uint8_t both[CRYPTO_AES_BLOCK_SIZE * 2 + 1] = {0};  // ek/dk_keyNo(RndA+RndB')
 
     uint8_t subcommand = firstauth ? MFDES_AUTHENTICATE_EV2F : MFDES_AUTHENTICATE_EV2NF;
@@ -1394,7 +1396,7 @@ static int DesfireAuthenticateLRP(DesfireContext *dctx, DesfireSecureChannel sec
         PrintAndLogEx(INFO, _CYAN_("Auth %s:") " cmd: 0x%02x keynum: 0x%02x key: %s", (firstauth) ? "first" : "non-first", subcommand, dctx->keyNum, sprint_hex(key, 16));
 
     // Let's send our auth command
-    uint8_t cdata[] = {dctx->keyNum, 0x06, 0x02, 0x00, 0x00, 0x00, 0x00, 0x02};
+    uint8_t cdata[] = {dctx->keyNum, 0x06, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00};
     int res = DesfireExchangeEx(false, dctx, subcommand, cdata, (firstauth) ? sizeof(cdata) : 1, &respcode, recv_data, &recv_len, false, 0);
     if (res != PM3_SUCCESS) {
         return 1;
@@ -1408,39 +1410,40 @@ static int DesfireAuthenticateLRP(DesfireContext *dctx, DesfireSecureChannel sec
         return 3;
     }
 
-    if (recv_len != CRYPTO_AES_BLOCK_SIZE) {
+    if (recv_len != CRYPTO_AES_BLOCK_SIZE + 1) {
         return 4;
     }
+    
+    if (recv_data[0] != 0x01) {
+        PrintAndLogEx(WARNING, "NOT LRP! rec data[0]=: 0x%02x", recv_data[0]);
+        //return 50;
+    }
 
-    // Part 2
-    memcpy(encRndB, recv_data, 16);
-
-    // Part 3
-    if (aes_decode(IV, key, encRndB, RndB, CRYPTO_AES_BLOCK_SIZE))
-        return 5;
+    // PICC return RndB in plain
+    memcpy(RndB, &recv_data[1], 16);
 
     if (g_debugMode > 1) {
-        PrintAndLogEx(DEBUG, "encRndB: %s", sprint_hex(encRndB, CRYPTO_AES_BLOCK_SIZE));
         PrintAndLogEx(DEBUG, "RndB: %s", sprint_hex(RndB, CRYPTO_AES_BLOCK_SIZE));
     }
 
-    // - Rotate RndB by 8 bits
-    memcpy(rotRndB, RndB, CRYPTO_AES_BLOCK_SIZE);
-    rol(rotRndB, CRYPTO_AES_BLOCK_SIZE);
+    // cmac(sessionkey, rnda+rndb)
+    uint8_t sessionkey[32] = {0};
+    DesfireGenSessionKeyLRP(key, RndA, RndB, false, sessionkey);
 
-    // - Encrypt our response
-    uint8_t tmp[32] = {0x00};
+    uint8_t tmp[CRYPTO_AES_BLOCK_SIZE * 4] = {0};
     memcpy(tmp, RndA, CRYPTO_AES_BLOCK_SIZE);
-    memcpy(tmp + CRYPTO_AES_BLOCK_SIZE, rotRndB, CRYPTO_AES_BLOCK_SIZE);
-    if (g_debugMode > 1) {
-        PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, CRYPTO_AES_BLOCK_SIZE));
-        PrintAndLogEx(DEBUG, "Both: %s", sprint_hex(tmp, CRYPTO_AES_BLOCK_SIZE * 2));
-    }
+    memcpy(tmp + CRYPTO_AES_BLOCK_SIZE, RndB, CRYPTO_AES_BLOCK_SIZE);
 
-    if (aes_encode(IV, key, tmp, both, CRYPTO_AES_BLOCK_SIZE * 2))
-        return 6;
+    uint8_t cmac[CRYPTO_AES_BLOCK_SIZE] = {0};
+    LRPContext ctx = {0};
+    LRPSetKey(&ctx, sessionkey, 0, true);
+    LRPCMAC(&ctx, tmp, 32, cmac);
+    
+    // response = rnda + cmac(sessionkey, rnda+rndb)
+    memcpy(both, RndA, CRYPTO_AES_BLOCK_SIZE);
+    memcpy(both + CRYPTO_AES_BLOCK_SIZE, cmac, CRYPTO_AES_BLOCK_SIZE);
     if (g_debugMode > 1) {
-        PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, CRYPTO_AES_BLOCK_SIZE * 2));
+        PrintAndLogEx(DEBUG, "Both: %s", sprint_hex(tmp, CRYPTO_AES_BLOCK_SIZE * 2));
     }
 
     res = DesfireExchangeEx(false, dctx, MFDES_ADDITIONAL_FRAME, both, CRYPTO_AES_BLOCK_SIZE * 2, &respcode, recv_data, &recv_len, false, 0);
@@ -1457,39 +1460,47 @@ static int DesfireAuthenticateLRP(DesfireContext *dctx, DesfireSecureChannel sec
     }
 
     // Part 4
-    uint8_t data[32] = {0};
+    uint8_t data[64] = {0};
 
-    if (aes_decode(IV, key, recv_data, data, recv_len))
-        return 10;
-
-    // rotate rndA to check
-    memcpy(rotRndA, RndA, CRYPTO_AES_BLOCK_SIZE);
-    rol(rotRndA, CRYPTO_AES_BLOCK_SIZE);
-
-    uint8_t *recRndA = (firstauth) ? &data[4] : data;
-
-    if (memcmp(rotRndA, recRndA, CRYPTO_AES_BLOCK_SIZE) != 0) {
+    // clear IV here
+    DesfireClearIV(dctx);
+    
+    // check mac
+    memcpy(tmp, RndB, CRYPTO_AES_BLOCK_SIZE);
+    memcpy(tmp + CRYPTO_AES_BLOCK_SIZE, RndA, CRYPTO_AES_BLOCK_SIZE);
+    memcpy(tmp + CRYPTO_AES_BLOCK_SIZE * 2, recv_data, CRYPTO_AES_BLOCK_SIZE);
+    LRPSetKey(&ctx, sessionkey, 0, true);
+    LRPCMAC(&ctx, tmp, CRYPTO_AES_BLOCK_SIZE * 3, cmac);
+    if (memcmp(&recv_data[CRYPTO_AES_BLOCK_SIZE], cmac, CRYPTO_AES_BLOCK_SIZE) != 0) {
         if (g_debugMode > 1) {
-            PrintAndLogEx(DEBUG, "Expected_RndA'  : %s", sprint_hex(rotRndA, CRYPTO_AES_BLOCK_SIZE));
-            PrintAndLogEx(DEBUG, "Generated_RndA' : %s", sprint_hex(recRndA, CRYPTO_AES_BLOCK_SIZE));
+            PrintAndLogEx(DEBUG, "Expected cmac  : %s", sprint_hex(&recv_data[CRYPTO_AES_BLOCK_SIZE], CRYPTO_AES_BLOCK_SIZE));
+            PrintAndLogEx(DEBUG, "Generated cmac : %s", sprint_hex(cmac, CRYPTO_AES_BLOCK_SIZE));
         }
-        return 11;
+        return 12;
     }
+
+    // decode data 
+    LRPSetKeyEx(&ctx, sessionkey, dctx->IV, 4 * 2, 1, false);
+    size_t declen = 0;
+    LRPDecode(&ctx, recv_data, 16, data, &declen);
+    memcpy(dctx->IV, ctx.counter, 4);
+PrintAndLogEx(INFO, "--decoded <%d>: %s", declen, sprint_hex(data, 16));
+PrintAndLogEx(INFO, "iv  : %s", sprint_hex(dctx->IV, 4));
 
     if (firstauth) {
         dctx->cmdCntr = 0;
         memcpy(dctx->TI, data, 4);
     }
-    DesfireClearIV(dctx);
-    DesfireGenSessionKeyEV2(dctx->key, RndA, RndB, true, dctx->sessionKeyEnc);
-    DesfireGenSessionKeyEV2(dctx->key, RndA, RndB, false, dctx->sessionKeyMAC);
+
+    memcpy(dctx->sessionKeyEnc, sessionkey, CRYPTO_AES_BLOCK_SIZE);
+    memcpy(dctx->sessionKeyMAC, sessionkey, CRYPTO_AES_BLOCK_SIZE);
     dctx->secureChannel = secureChannel;
 
     if (verbose) {
         if (firstauth) {
             PrintAndLogEx(INFO, "TI             : %s", sprint_hex(data, 4));
-            PrintAndLogEx(INFO, "pic            : %s", sprint_hex(&data[20], 6));
-            PrintAndLogEx(INFO, "pcd            : %s", sprint_hex(&data[26], 6));
+            PrintAndLogEx(INFO, "pic            : %s", sprint_hex(&data[4], 6));
+            PrintAndLogEx(INFO, "pcd            : %s", sprint_hex(&data[10], 6));
         } else {
             PrintAndLogEx(INFO, "TI             : %s", sprint_hex(dctx->TI, 4));
         }
