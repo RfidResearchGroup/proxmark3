@@ -857,6 +857,28 @@ static bool TestLRPCMAC(void) {
     return res;
 }
 
+// https://www.nxp.com/docs/en/application-note/AN12343.pdf
+// page 33-34
+static bool TestLRPSessionKeys(void) {
+    bool res = true;
+
+    uint8_t key[16] = {0};
+    uint8_t rnda[] = {0x74, 0xD7, 0xDF, 0x6A, 0x2C, 0xEC, 0x0B, 0x72, 0xB4, 0x12, 0xDE, 0x0D, 0x2B, 0x11, 0x17, 0xE6};
+    uint8_t rndb[] = {0x56, 0x10, 0x9A, 0x31, 0x97, 0x7C, 0x85, 0x53, 0x19, 0xCD, 0x46, 0x18, 0xC9, 0xD2, 0xAE, 0xD2};
+    uint8_t sessionkeyres[] = {0x13, 0x2D, 0x7E, 0x6F, 0x35, 0xBA, 0x86, 0x1F, 0x39, 0xB3, 0x72, 0x21, 0x21, 0x4E, 0x25, 0xA5};
+    
+    uint8_t sessionkey[16] = {0};
+    DesfireGenSessionKeyLRP(key, rnda, rndb, true, sessionkey);
+    res = res && (memcmp(sessionkey, sessionkeyres, sizeof(sessionkeyres)) == 0);
+
+    if (res)
+        PrintAndLogEx(INFO, "LRP session keys.. " _GREEN_("passed"));
+    else
+        PrintAndLogEx(ERR,  "LRP session keys.. " _RED_("fail"));
+
+    return res;
+}
+
 bool DesfireTest(bool verbose) {
     bool res = true;
 
@@ -883,6 +905,7 @@ bool DesfireTest(bool verbose) {
     res = res && TestLRPDecode();
     res = res && TestLRPSubkeys();
     res = res && TestLRPCMAC();
+    res = res && TestLRPSessionKeys();
 
     PrintAndLogEx(INFO, "---------------------------");
     if (res)

@@ -606,14 +606,9 @@ void DesfireGenSessionKeyLRP(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool en
     data[30] = 0x96;
     data[31] = 0x69;
 
-PrintAndLogEx(INFO, "rndA: %s", sprint_hex(rndA, CRYPTO_AES_BLOCK_SIZE));
-PrintAndLogEx(INFO, "rndB: %s", sprint_hex(rndB, CRYPTO_AES_BLOCK_SIZE));
-PrintAndLogEx(INFO, "data: %s", sprint_hex(data, 32));
-
     LRPContext ctx = {0};
     LRPSetKey(&ctx, key, 0, true);
     LRPCMAC(&ctx, data, 32, sessionkey);
-PrintAndLogEx(INFO, "mk: %s", sprint_hex(sessionkey, CRYPTO_AES_BLOCK_SIZE));
 }
 
 void DesfireEV2FillIV(DesfireContext *ctx, bool ivforcommand, uint8_t *iv) {
