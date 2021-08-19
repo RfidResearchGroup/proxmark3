@@ -4662,8 +4662,9 @@ static int CmdHF14ADesReadData(const char *Cmd) {
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, &securechann, DCMMACed, &appid, NULL);
+    uint32_t id = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 17, &securechann, DCMMACed, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -4693,13 +4694,6 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint32_t appisoid = 0x0000;
-    bool isoidpresent = false;
-    if (CLIGetUint32Hex(ctx, 17, 0x0000, &appisoid, &isoidpresent, 2, "Application ISO ID (for EF) must have 2 bytes length")) {
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
     uint32_t fileisoid = 0x0000;
     bool fileisoidpresent = false;
     if (CLIGetUint32Hex(ctx, 18, 0x0000, &fileisoid, &fileisoidpresent, 2, "File ISO ID (for DF) must have 2 bytes length")) {
@@ -4715,18 +4709,11 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (!isoidpresent) {
-        res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticateISO(&dctx, securechann, (appid != 0), appid, appisoid, true, fileisoid, noauth, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, id, noauth, true, fileisoid, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
+        return res;
     }
 
     if (dctx.cmdSet != DCCISO)
