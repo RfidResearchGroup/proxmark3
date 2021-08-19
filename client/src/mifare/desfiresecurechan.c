@@ -78,6 +78,7 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_GET_UID,                   DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,       DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_FILE_SETTINGS,      DACd40,  DCCNative,    DCMEncrypted},
+    {MFDES_CHANGE_CONFIGURATION,      DACd40,  DCCNative,    DCMEncrypted},
 
     {MFDES_CHANGE_KEY,                DACd40,  DCCNative,    DCMEncryptedPlain},
     {MFDES_CHANGE_KEY_EV2,            DACd40,  DCCNative,    DCMEncryptedPlain},
