@@ -5018,7 +5018,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
         if (res == PM3_SUCCESS) {
             PrintAndLogEx(INFO, _GREEN_("Commit Reader ID: "));
-            PrintAndLogEx(INFO, "Prev reader id encoded [%d]: %s", resplen, sprint_hex(resp, resplen));
+            PrintAndLogEx(INFO, "Prev reader id encoded [%zu]: %s", resplen, sprint_hex(resp, resplen));
 
             if (trkeylen > 0) {
                 uint8_t sessionkey[16] = {0};
