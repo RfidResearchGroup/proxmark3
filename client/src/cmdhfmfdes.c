@@ -1960,7 +1960,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID of application for some parameters (3 hex bytes, big endian)"),
-        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_lit0(NULL, "save",    "saves channels parameters to defaults if authentication succeeds"),
         arg_param_end
     };
@@ -2051,7 +2051,7 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID of application for some parameters (3 hex bytes, big endian)"),
-        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_str0("p",  "param",   "<HEX 1 byte>", "Parameter id (HEX 1 byte)"),
         arg_str0("d",  "data",    "<data HEX>", "Data for parameter (HEX 1..30 bytes)"),
         arg_param_end
@@ -3106,7 +3106,7 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
-        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_param_end
     };
@@ -3179,7 +3179,7 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
-        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_param_end
     };
@@ -3236,6 +3236,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes getfilesettings",
                   "Get File Settings from file from application. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
                   "hf mfdes getfilesettings --aid 123456 --fid 01 -> execute with defaults from `default` command\n"
+                  "hf mfdes getfilesettings --appisoid df01 --fid 00 --no-auth -> get file settings with select by iso id\n"
                   "hf mfdes getfilesettings -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> execute with default factory setup");
 
     void *argtable[] = {
@@ -3251,7 +3252,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
-        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_str0(NULL, "fid",     "<file id hex>", "File ID (1 hex byte). default: 1"),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_param_end
@@ -4628,7 +4629,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         arg_str0(NULL, "type",    "<auto/data/value/record/mac>", "File Type auto/data(Standard/Backup)/value/record(linear/cyclic)/mac). Auto - check file settings and then read. Default: auto"),
         arg_str0("o", "offset",   "<hex>", "File Offset (3 hex bytes, big endian). For records - record number (0 - lastest record). Default 0"),
         arg_str0("l", "length",   "<hex>", "Length to read (3 hex bytes, big endian -> 000000 = Read all data). For records - records count (0 - all). Default 0."),
-        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_str0(NULL, "fileisoid", "<isoid hex>", "File ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
         arg_param_end
     };
@@ -4807,8 +4808,8 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         arg_lit0(NULL, "debit",   "use for value file debit operation instead of credit"),
         arg_lit0(NULL, "commit",  "commit needs for backup file only. For the other file types and in the `auto` mode - command set it automatically."),
         arg_int0(NULL, "updaterec", "<record number dec>", "Record number for update record command. Updates record instead of write. Lastest record - 0"),
-        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
-        arg_str0(NULL, "fileisoid", "<isoid hex>", "File ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
+        arg_str0(NULL, "fileisoid", "<isoid hex>", "File ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO write commands."),
         arg_str0(NULL, "readerid", "<hex>", "reader id for CommitReaderID command. If present - the command issued before write command."),
         arg_str0(NULL, "trkey",   "<hex>", "key for decode previous reader id."),
         arg_param_end
@@ -5135,6 +5136,7 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_param_end
     };
