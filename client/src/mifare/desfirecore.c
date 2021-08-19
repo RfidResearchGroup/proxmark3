@@ -1029,6 +1029,10 @@ int DesfireSelectAndAuthenticateW(DesfireContext *dctx, DesfireSecureChannel sec
     return PM3_SUCCESS;
 }
 
+int DesfireSelectAndAuthenticateAppW(DesfireContext *dctx, DesfireSecureChannel secureChannel, DesfireISOSelectWay way, uint32_t id, bool noauth, bool verbose) {
+    return DesfireSelectAndAuthenticateW(dctx, secureChannel, way, id, false, 0, noauth, verbose);
+}
+
 int DesfireSelectAndAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool useaid, uint32_t aid, uint16_t isoappid, bool selectfile, uint16_t isofileid, bool noauth, bool verbose) {
     return DesfireSelectAndAuthenticateW(dctx, secureChannel, useaid ? ISW6bAID : ISWIsoID, useaid ? aid : isoappid, selectfile, isofileid, noauth, verbose);
 }
@@ -2943,7 +2947,7 @@ int DesfireSelectEx(DesfireContext *ctx, bool fieldon, DesfireISOSelectWay way, 
             return DesfireSelectAIDHexNoFieldOn(ctx, id);
     } else if (way == ISWIsoID) {
         uint8_t data[2] = {0};
-        Uint2byteToMemLe(data, id);
+        Uint2byteToMemBe(data, id);
         return DesfireISOSelectEx(ctx, fieldon, ISSMFDFEF, data, 2, resp, &resplen);
     } else if (way == ISWDFName) {
         return DesfireISOSelect(ctx, ISSMFDFEF, NULL, 0, resp, &resplen);

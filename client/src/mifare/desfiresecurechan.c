@@ -141,6 +141,10 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     // LRP channel separately
     {MFDES_AUTHENTICATE_EV2F,         DACLRP,  DCCNative,    DCMPlain},
     {MFDES_AUTHENTICATE_EV2NF,        DACLRP,  DCCNative,    DCMPlain},
+
+    {MFDES_GET_FILE_IDS,              DACLRP,  DCCNative,    DCMMACed},
+    {MFDES_GET_ISOFILE_IDS,           DACLRP,  DCCNative,    DCMMACed},
+    {MFDES_GET_FILE_SETTINGS,         DACLRP,  DCCNative,    DCMMACed},
 };
 
 #define CMD_HEADER_LEN_ALL 0xffff

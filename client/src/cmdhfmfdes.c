@@ -1984,7 +1984,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, id, false, 0, false, verbose);
+    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, false, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
         PrintAndLogEx(FAILED, "Select or authentication %s 0x%06x " _RED_("failed") ". Result [%d] %s", DesfireSelectWayToStr(selectway), id, res, DesfireAuthErrorToStr(res));
@@ -3106,6 +3106,7 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_param_end
     };
@@ -3113,12 +3114,13 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    bool noauth = arg_get_lit(ctx, 12);
+    bool noauth = arg_get_lit(ctx, 13);
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, &securechann, DCMMACed, &appid, NULL);
+    uint32_t id = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, &securechann, DCMMACed, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -3127,9 +3129,10 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
+        PrintAndLogEx(FAILED, "Select or authentication %s 0x%06x " _RED_("failed") ". Result [%d] %s", DesfireSelectWayToStr(selectway), id, res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -3148,7 +3151,7 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
         for (int i = 0; i < buflen; i++)
             PrintAndLogEx(INFO, "File ID: %02x", buf[i]);
     } else {
-        PrintAndLogEx(INFO, "There is no files in the application %06x", appid);
+        PrintAndLogEx(INFO, "There is no files in the application %06x", id);
     }
 
     DropField();
@@ -3160,7 +3163,8 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes getfileisoids",
                   "Get File IDs list from card. Master key needs to be provided or flag --no-auth set.",
                   "hf mfdes getfileisoids --aid 123456 -> execute with defaults from `default` command\n"
-                  "hf mfdes getfileisoids -n 0 -t des -k 0000000000000000 -f none --aid 123456 -> execute with default factory setup");
+                  "hf mfdes getfileisoids -n 0 -t des -k 0000000000000000 -f none --aid 123456 -> execute with default factory setup\n"
+                  "hf mfdes getfileisoids --appisoid df01 -> get file iso ids from Desfire Light with factory card settings");
 
     void *argtable[] = {
         arg_param_begin,
@@ -3175,6 +3179,7 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_param_end
     };
@@ -3182,12 +3187,13 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    bool noauth = arg_get_lit(ctx, 12);
+    bool noauth = arg_get_lit(ctx, 13);
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, &securechann, DCMMACed, &appid, NULL);
+    uint32_t id = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, &securechann, DCMMACed, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -3196,9 +3202,10 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
+        PrintAndLogEx(FAILED, "Select or authentication %s 0x%06x " _RED_("failed") ". Result [%d] %s", DesfireSelectWayToStr(selectway), id, res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -3215,9 +3222,9 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
     if (buflen > 1) {
         PrintAndLogEx(INFO, "---- " _CYAN_("File ISO ID list") " ----");
         for (int i = 0; i < buflen; i += 2)
-            PrintAndLogEx(INFO, "File ID: %02x%02x", buf[i], buf[i + 1]);
+            PrintAndLogEx(INFO, "File ID: %04x", MemLeToUint2byte(&buf[i]));
     } else {
-        PrintAndLogEx(INFO, "There is no files in the application %06x", appid);
+        PrintAndLogEx(INFO, "There is no files in the application %06x", id);
     }
 
     DropField();
