@@ -263,7 +263,7 @@ void DesfireCryptoEncDecEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type,
 
     if (ctx->secureChannel == DACLRP) {
         size_t dstlen = 0;
-        LRPEncDec(key, iv, encode, srcdata, srcdatalen, data, &dstlen);
+        LRPEncDec(key, xiv, encode, srcdata, srcdatalen, data, &dstlen);
     } else {
         size_t offset = 0;
         while (offset < srcdatalen) {

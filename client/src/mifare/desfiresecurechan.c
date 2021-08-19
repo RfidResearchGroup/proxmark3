@@ -145,6 +145,8 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_GET_FILE_IDS,              DACLRP,  DCCNative,    DCMMACed},
     {MFDES_GET_ISOFILE_IDS,           DACLRP,  DCCNative,    DCMMACed},
     {MFDES_GET_FILE_SETTINGS,         DACLRP,  DCCNative,    DCMMACed},
+
+    {MFDES_GET_UID,                   DACLRP,  DCCNative,    DCMEncrypted},
 };
 
 #define CMD_HEADER_LEN_ALL 0xffff
@@ -653,7 +655,6 @@ static void DesfireSecureChannelDecodeLRP(DesfireContext *ctx, uint8_t *srcdata,
         }
 
         if (*dstdatalen >= desfire_get_key_block_length(ctx->keyType)) {
-            DesfireEV2FillIV(ctx, false, NULL); // fill response IV to ctx
             DesfireCryptoEncDec(ctx, DCOSessionKeyEnc, srcdata, *dstdatalen, dstdata, false);
 
             size_t puredatalen = FindISO9797M2PaddingDataLen(dstdata, *dstdatalen);
