@@ -257,8 +257,9 @@ void LRPCMAC(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
     }
 
     size_t bllen = datalen - clen;
+    bllen = MIN(bllen, CRYPTO_AES128_KEY_SIZE); // coverity
     uint8_t bl[CRYPTO_AES128_KEY_SIZE] = {0};
-    memcpy(bl, &data[clen], MIN(bllen, CRYPTO_AES128_KEY_SIZE));
+    memcpy(bl, &data[clen], bllen);
 
     // last block
     if (bllen == 16) {
