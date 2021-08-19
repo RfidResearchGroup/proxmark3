@@ -192,6 +192,16 @@ void LRPDecode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, si
     }
 }
 
+void LRPEncDec(uint8_t *key, uint8_t *iv, bool encode, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen) {
+    LRPContext ctx = {0};
+
+    LRPSetKeyEx(&ctx, key, iv, 4 * 2, 0, true);
+    if (encode)
+        LRPEncode(&ctx, data, datalen, resp, resplen);
+    else
+        LRPDecode(&ctx, data, datalen, resp, resplen);
+}
+
 static bool shiftLeftBe(uint8_t *data, size_t length) {
     if (length == 0)
         return false;
@@ -264,4 +274,14 @@ void LRPCMAC(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
     }
 
     LRPEvalLRP(ctx, y, CRYPTO_AES128_KEY_SIZE * 2, true, cmac);
+}
+
+void LRPCMAC8(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
+    uint8_t cmac_tmp[16] = {0};
+    memset(cmac, 0x00, 8);
+
+    LRPCMAC(ctx, data, datalen, cmac_tmp);
+
+    for (int i = 0; i < 8; i++)
+        cmac[i] = cmac_tmp[i * 2 + 1];
 }

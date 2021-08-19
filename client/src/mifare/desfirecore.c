@@ -72,6 +72,7 @@ const CLIParserOption DesfireSecureChannelOpts[] = {
     {DACd40, "d40"},
     {DACEV1, "ev1"},
     {DACEV2, "ev2"},
+    {DACLRP, "lrp"},
     {0,    NULL},
 };
 const size_t DesfireSecureChannelOptsLen = ARRAY_LENGTH(DesfireSecureChannelOpts);
@@ -257,6 +258,12 @@ const char *DesfireAuthErrorToStr(int error) {
             return "mbedtls_aes_setkey_dec failed";
         case 11:
             return "Authentication failed. Cannot verify Session Key.";
+        case 12:
+            return "Authentication failed. Cannot verify CMAC.";
+        case 50:
+            return "PICC returned not an AES answer";
+        case 51:
+            return "PICC returned not an LRP answer";
         case 100:
             return "Can't find auth method for provided channel parameters.";
         case 200:
@@ -287,6 +294,38 @@ const char *DesfireAuthErrorToStr(int error) {
             break;
     }
     return "";
+}
+
+const char *DesfireSelectWayToStr(DesfireISOSelectWay way) {
+    switch (way) {
+        case ISW6bAID:
+            return "AID";
+        case ISWMF:
+            return "MF";
+        case ISWIsoID:
+            return "ISO ID";
+        case ISWDFName:
+            return "DF Name";
+        default:
+            break;
+    }
+    return "";
+}
+
+bool DesfireMFSelected(DesfireISOSelectWay way, uint32_t id) {
+    switch (way) {
+        case ISW6bAID:
+            return (id == 0x000000);
+        case ISWMF:
+            return true;
+        case ISWIsoID:
+            return (id == 0x3f00);
+        case ISWDFName:
+            return false;
+        default:
+            break;
+    }
+    return false;
 }
 
 uint32_t DesfireAIDByteToUint(uint8_t *data) {
@@ -887,14 +926,25 @@ int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel se
         if (verbose)
             PrintAndLogEx(INFO, "Switch to " _CYAN_("native") " for select");
     }
-
-    int res = DesfireSelectAIDHex(dctx, aid, false, 0);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
-        return 200;
+    
+    int res;
+    if (aid == 0x000000) {
+        res = DesfireAnticollision(verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire anticollision " _RED_("error") ".");
+            return 200;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "Anticollision " _GREEN_("ok"));
+    } else {
+        res = DesfireSelectAIDHex(dctx, aid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            return 200;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "App %06x " _GREEN_("selected"), aid);
     }
-    if (verbose)
-        PrintAndLogEx(INFO, "App %06x " _GREEN_("selected"), aid);
 
     if (isosw)
         dctx->cmdSet = DCCISO;
@@ -921,34 +971,36 @@ int DesfireSelectAndAuthenticate(DesfireContext *dctx, DesfireSecureChannel secu
     return DesfireSelectAndAuthenticateEx(dctx, secureChannel, aid, false, verbose);
 }
 
-int DesfireSelectAndAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool useaid, uint32_t aid, uint16_t isoappid, uint16_t isofileid, bool noauth, bool verbose) {
+int DesfireSelectAndAuthenticateW(DesfireContext *dctx, DesfireSecureChannel secureChannel, DesfireISOSelectWay way, uint32_t id, bool selectfile, uint16_t isofileid, bool noauth, bool verbose) {
     if (verbose)
         DesfirePrintContext(dctx);
 
     int res = 0;
-    if (useaid) {
+    if (way == ISW6bAID && dctx->cmdSet == DCCISO) {
         dctx->cmdSet = DCCNativeISO;
         if (verbose)
             PrintAndLogEx(INFO, "Select via " _CYAN_("native iso wrapping") " interface");
 
-        res = DesfireSelectAIDHex(dctx, aid, false, 0);
+        res = DesfireSelectAIDHex(dctx, id, false, 0);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
             return 200;
         }
         if (verbose)
-            PrintAndLogEx(INFO, "App %06x via native iso channel is " _GREEN_("selected"), aid);
+            PrintAndLogEx(INFO, "App %06x via native iso channel is " _GREEN_("selected"), id);
 
         dctx->cmdSet = DCCISO;
     } else {
-        res = DesfireSelectEx(dctx, true, ISWIsoID, isoappid, NULL);
+        res = DesfireSelectEx(dctx, true, way, id, NULL);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire iso application select " _RED_("error") ".");
+            PrintAndLogEx(ERR, "Desfire %s select " _RED_("error") ".", DesfireSelectWayToStr(way));
             return 202;
         }
         if (verbose)
-            PrintAndLogEx(INFO, "Application iso id %04x is " _GREEN_("selected"), isoappid);
+            PrintAndLogEx(INFO, "%s %0*x is " _GREEN_("selected"), DesfireSelectWayToStr(way), way == ISW6bAID ? 6 : 4, id);
+    }
 
+    if (selectfile) {
         res = DesfireSelectEx(dctx, false, ISWIsoID, isofileid, NULL);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire iso file select " _RED_("error") ".");
@@ -956,7 +1008,7 @@ int DesfireSelectAndAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel s
         }
 
         if (verbose)
-            PrintAndLogEx(INFO, "Application iso id %04x file iso id %04x is " _GREEN_("selected"), isoappid, isofileid);
+            PrintAndLogEx(INFO, "Application %s %04x file iso id %04x is " _GREEN_("selected"), DesfireSelectWayToStr(way), id, isofileid);
     }
 
     if (!noauth) {
@@ -975,6 +1027,10 @@ int DesfireSelectAndAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel s
     }
 
     return PM3_SUCCESS;
+}
+
+int DesfireSelectAndAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool useaid, uint32_t aid, uint16_t isoappid, bool selectfile, uint16_t isofileid, bool noauth, bool verbose) {
+    return DesfireSelectAndAuthenticateW(dctx, secureChannel, useaid ? ISW6bAID : ISWIsoID, useaid ? aid : isoappid, selectfile, isofileid, noauth, verbose);
 }
 
 static int DesfireAuthenticateEV1(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
@@ -1160,7 +1216,7 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
         PrintAndLogEx(INFO, _CYAN_("Auth %s:") " cmd: 0x%02x keynum: 0x%02x key: %s", (firstauth) ? "first" : "non-first", subcommand, dctx->keyNum, sprint_hex(key, 16));
 
     // Let's send our auth command
-    uint8_t cdata[2] = {dctx->keyNum, 0x00};
+    uint8_t cdata[] = {dctx->keyNum, 0x00};
     int res = DesfireExchangeEx(false, dctx, subcommand, cdata, (firstauth) ? sizeof(cdata) : 1, &respcode, recv_data, &recv_len, false, 0);
     if (res != PM3_SUCCESS) {
         return 1;
@@ -1174,12 +1230,19 @@ static int DesfireAuthenticateEV2(DesfireContext *dctx, DesfireSecureChannel sec
         return 3;
     }
 
+    size_t rdataindx = 0;
     if (recv_len != CRYPTO_AES_BLOCK_SIZE) {
-        return 4;
+        if (recv_len == CRYPTO_AES_BLOCK_SIZE + 1) {
+            if (recv_data[0] != 0x00)
+                return 50;
+            rdataindx = 1;
+        } else {
+            return 4;
+        }
     }
 
     // Part 2
-    memcpy(encRndB, recv_data, 16);
+    memcpy(encRndB, &recv_data[rdataindx], 16);
 
     // Part 3
     if (aes_decode(IV, key, encRndB, RndB, CRYPTO_AES_BLOCK_SIZE))
@@ -1323,6 +1386,138 @@ static int DesfireAuthenticateISO(DesfireContext *dctx, DesfireSecureChannel sec
     return PM3_SUCCESS;
 }
 
+static int DesfireAuthenticateLRP(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool firstauth, bool verbose) {
+    // Crypt constants
+    uint8_t RndA[CRYPTO_AES_BLOCK_SIZE] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16};
+    uint8_t RndB[CRYPTO_AES_BLOCK_SIZE] = {0};
+    uint8_t both[CRYPTO_AES_BLOCK_SIZE * 2 + 1] = {0};  // ek/dk_keyNo(RndA+RndB')
+
+    uint8_t subcommand = firstauth ? MFDES_AUTHENTICATE_EV2F : MFDES_AUTHENTICATE_EV2NF;
+    uint8_t *key = dctx->key;
+
+    size_t recv_len = 0;
+    uint8_t respcode = 0;
+    uint8_t recv_data[256] = {0};
+
+    if (verbose)
+        PrintAndLogEx(INFO, _CYAN_("Auth %s:") " cmd: 0x%02x keynum: 0x%02x key: %s", (firstauth) ? "first" : "non-first", subcommand, dctx->keyNum, sprint_hex(key, 16));
+
+    // Let's send our auth command
+    uint8_t cdata[] = {dctx->keyNum, 0x01, 0x02};
+    int res = DesfireExchangeEx(false, dctx, subcommand, cdata, (firstauth) ? sizeof(cdata) : 1, &respcode, recv_data, &recv_len, false, 0);
+    if (res != PM3_SUCCESS) {
+        return 1;
+    }
+
+    if (!recv_len) {
+        return 2;
+    }
+
+    if (respcode != MFDES_ADDITIONAL_FRAME) {
+        return 3;
+    }
+
+    if (recv_len != CRYPTO_AES_BLOCK_SIZE + 1) {
+        return 4;
+    }
+    
+    if (recv_data[0] != 0x01)
+        return 51;
+
+    // PICC return RndB in plain
+    memcpy(RndB, &recv_data[1], 16);
+
+    if (g_debugMode > 1) {
+        PrintAndLogEx(DEBUG, "RndB: %s", sprint_hex(RndB, CRYPTO_AES_BLOCK_SIZE));
+    }
+
+    // cmac(sessionkey, rnda+rndb)
+    uint8_t sessionkey[32] = {0};
+    DesfireGenSessionKeyLRP(key, RndA, RndB, false, sessionkey);
+
+    uint8_t tmp[CRYPTO_AES_BLOCK_SIZE * 4] = {0};
+    memcpy(tmp, RndA, CRYPTO_AES_BLOCK_SIZE);
+    memcpy(tmp + CRYPTO_AES_BLOCK_SIZE, RndB, CRYPTO_AES_BLOCK_SIZE);
+
+    uint8_t cmac[CRYPTO_AES_BLOCK_SIZE] = {0};
+    LRPContext ctx = {0};
+    LRPSetKey(&ctx, sessionkey, 0, true);
+    LRPCMAC(&ctx, tmp, 32, cmac);
+    
+    // response = rnda + cmac(sessionkey, rnda+rndb)
+    memcpy(both, RndA, CRYPTO_AES_BLOCK_SIZE);
+    memcpy(both + CRYPTO_AES_BLOCK_SIZE, cmac, CRYPTO_AES_BLOCK_SIZE);
+    if (g_debugMode > 1) {
+        PrintAndLogEx(DEBUG, "Both: %s", sprint_hex(tmp, CRYPTO_AES_BLOCK_SIZE * 2));
+    }
+
+    res = DesfireExchangeEx(false, dctx, MFDES_ADDITIONAL_FRAME, both, CRYPTO_AES_BLOCK_SIZE * 2, &respcode, recv_data, &recv_len, false, 0);
+    if (res != PM3_SUCCESS) {
+        return 7;
+    }
+
+    if (!recv_len) {
+        return 8;
+    }
+
+    if (respcode != MFDES_S_OPERATION_OK) {
+        return 9;
+    }
+
+    // Part 4
+    uint8_t data[64] = {0};
+
+    // clear IV here
+    DesfireClearIV(dctx);
+    
+    // check mac
+    memcpy(tmp, RndB, CRYPTO_AES_BLOCK_SIZE);
+    memcpy(tmp + CRYPTO_AES_BLOCK_SIZE, RndA, CRYPTO_AES_BLOCK_SIZE);
+    if (firstauth)
+        memcpy(tmp + CRYPTO_AES_BLOCK_SIZE * 2, recv_data, CRYPTO_AES_BLOCK_SIZE);
+    
+    LRPSetKey(&ctx, sessionkey, 0, true);
+    LRPCMAC(&ctx, tmp, (firstauth) ? CRYPTO_AES_BLOCK_SIZE * 3 : CRYPTO_AES_BLOCK_SIZE * 2, cmac);
+    uint8_t *recCMAC = &recv_data[(firstauth) ? CRYPTO_AES_BLOCK_SIZE : 0];
+    if (memcmp(recCMAC, cmac, CRYPTO_AES_BLOCK_SIZE) != 0) {
+        if (g_debugMode > 1) {
+            PrintAndLogEx(DEBUG, "Expected cmac  : %s", sprint_hex(recCMAC, CRYPTO_AES_BLOCK_SIZE));
+            PrintAndLogEx(DEBUG, "Generated cmac : %s", sprint_hex(cmac, CRYPTO_AES_BLOCK_SIZE));
+        }
+        return 12;
+    }
+
+    // decode data 
+    if (firstauth) {
+        LRPSetKeyEx(&ctx, sessionkey, dctx->IV, 4 * 2, 1, false);
+        size_t declen = 0;
+        LRPDecode(&ctx, recv_data, 16, data, &declen);
+        memcpy(dctx->IV, ctx.counter, 4);
+
+        dctx->cmdCntr = 0;
+        memcpy(dctx->TI, data, 4);
+    }
+
+    memcpy(dctx->sessionKeyEnc, sessionkey, CRYPTO_AES_BLOCK_SIZE);
+    memcpy(dctx->sessionKeyMAC, sessionkey, CRYPTO_AES_BLOCK_SIZE);
+    dctx->secureChannel = secureChannel;
+
+    if (verbose) {
+        if (firstauth) {
+            PrintAndLogEx(INFO, "TI             : %s", sprint_hex(data, 4));
+            PrintAndLogEx(INFO, "pic            : %s", sprint_hex(&data[4], 6));
+            PrintAndLogEx(INFO, "pcd            : %s", sprint_hex(&data[10], 6));
+        } else {
+            PrintAndLogEx(INFO, "TI             : %s", sprint_hex(dctx->TI, 4));
+        }
+        PrintAndLogEx(INFO, "session key ENC: %s", sprint_hex(dctx->sessionKeyEnc, 16));
+        PrintAndLogEx(INFO, "session key MAC: %s", sprint_hex(dctx->sessionKeyMAC, 16));
+    }
+
+    return PM3_SUCCESS;
+}
+
+
 int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel, bool verbose) {
     if (dctx->kdfAlgo == MFDES_KDF_ALGO_AN10922) {
         MifareKdfAn10922(dctx, DCOMasterKey, dctx->kdfInput, dctx->kdfInputLen);
@@ -1348,6 +1543,9 @@ int DesfireAuthenticate(DesfireContext *dctx, DesfireSecureChannel secureChannel
 
     if (secureChannel == DACEV2)
         return DesfireAuthenticateEV2(dctx, secureChannel, (DesfireIsAuthenticated(dctx) == false), verbose); // non first auth if there is a working secure channel
+
+    if (secureChannel == DACLRP)
+        return DesfireAuthenticateLRP(dctx, secureChannel, (DesfireIsAuthenticated(dctx) == false), verbose);
 
     return 100;
 }
@@ -2219,8 +2417,8 @@ void DesfirePrintFileSettingsOneLine(FileSettingsS *fsettings) {
 
 void DesfirePrintFileSettingsTable(bool printheader, uint8_t id, bool isoidavail, uint16_t isoid, FileSettingsS *fsettings) {
     if (printheader) {
-        PrintAndLogEx(SUCCESS, " ID |ISO ID|     File type     | Mode  | Rights: raw, r w rw ch   | File settings   ");
-        PrintAndLogEx(SUCCESS, "----------------------------------------------------------------------------------------------------------");
+        PrintAndLogEx(SUCCESS, " ID |ISO ID|     File type       | Mode  | Rights: raw, r w rw ch   | File settings   ");
+        PrintAndLogEx(SUCCESS, "------------------------------------------------------------------------------------------------------------");
     }
     PrintAndLogEx(SUCCESS, " " _GREEN_("%02x") " |" NOLF, id);
     if (isoidavail) {
@@ -2232,7 +2430,7 @@ void DesfirePrintFileSettingsTable(bool printheader, uint8_t id, bool isoidavail
         PrintAndLogEx(NORMAL, "      |" NOLF);
     }
 
-    PrintAndLogEx(NORMAL, "0x%02x " _CYAN_("%-13s") " |" NOLF, fsettings->fileType, GetDesfireFileType(fsettings->fileType));
+    PrintAndLogEx(NORMAL, "0x%02x " _CYAN_("%-15s") " |" NOLF, fsettings->fileType, GetDesfireFileType(fsettings->fileType));
     PrintAndLogEx(NORMAL, " %-5s |" NOLF, GetDesfireCommunicationMode(fsettings->fileCommMode));
 
     PrintAndLogEx(NORMAL, "%04x, %-4s %-4s %-4s %-4s |" NOLF,
@@ -2726,6 +2924,10 @@ int DesfireGetCardUID(DesfireContext *ctx) {
     ctx->uidlen = card.uidlen;
 
     return PM3_SUCCESS;
+}
+
+int DesfireAnticollision(bool verbose) {
+    return SelectCard14443A_4(false, verbose, NULL);
 }
 
 int DesfireSelectEx(DesfireContext *ctx, bool fieldon, DesfireISOSelectWay way, uint32_t id, char *dfname) {

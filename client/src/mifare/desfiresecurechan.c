@@ -137,6 +137,10 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
 
     {ISO7816_READ_BINARY,             DACEV1,  DCCISO,       DCMMACed},
     {ISO7816_READ_RECORDS,            DACEV1,  DCCISO,       DCMMACed},
+    
+    // LRP channel separately
+    {MFDES_AUTHENTICATE_EV2F,         DACLRP,  DCCNative,    DCMPlain},
+    {MFDES_AUTHENTICATE_EV2NF,        DACLRP,  DCCNative,    DCMPlain},
 };
 
 #define CMD_HEADER_LEN_ALL 0xffff
@@ -387,6 +391,7 @@ void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcda
         case DACEV2:
             DesfireSecureChannelEncodeEV2(ctx, cmd, srcdata, srcdatalen, dstdata, dstdatalen);
             break;
+        case DACLRP:
         case DACNone:
             memcpy(dstdata, srcdata, srcdatalen);
             *dstdatalen = srcdatalen;
@@ -603,6 +608,7 @@ void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t sr
         case DACEV2:
             DesfireSecureChannelDecodeEV2(ctx, srcdata, srcdatalen, respcode, dstdata, dstdatalen);
             break;
+        case DACLRP:
         case DACNone:
             memcpy(dstdata, srcdata, srcdatalen);
             *dstdatalen = srcdatalen;

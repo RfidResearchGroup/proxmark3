@@ -31,12 +31,13 @@
 #include "crc16.h"        // crc16 ccitt
 #include "crc32.h"
 #include "commonutil.h"
-#include "crypto/libpcrypto.h"
 
 void DesfireClearContext(DesfireContext *ctx) {
     ctx->keyNum = 0;
     ctx->keyType = T_DES;
     memset(ctx->key, 0, sizeof(ctx->key));
+    
+    LRPClearContext(&ctx->lrpCtx);
 
     ctx->secureChannel = DACNone;
     ctx->cmdSet = DCCNative;
@@ -116,6 +117,9 @@ size_t DesfireGetMACLength(DesfireContext *ctx) {
             mac_length = 8;
             break;
         case DACEV2:
+            mac_length = 8;
+            break;
+        case DACLRP:
             mac_length = 8;
             break;
     }
@@ -257,11 +261,16 @@ void DesfireCryptoEncDecEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type,
     if (key == NULL)
         return;
 
-    size_t offset = 0;
-    while (offset < srcdatalen) {
-        DesfireCryptoEncDecSingleBlock(key, ctx->keyType, srcdata + offset, data + offset, xiv, dir_to_send, encode);
+    if (ctx->secureChannel == DACLRP) {
+        size_t dstlen = 0;
+        LRPEncDec(key, iv, encode, srcdata, srcdatalen, data, &dstlen);
+    } else {
+        size_t offset = 0;
+        while (offset < srcdatalen) {
+            DesfireCryptoEncDecSingleBlock(key, ctx->keyType, srcdata + offset, data + offset, xiv, dir_to_send, encode);
 
-        offset += block_size;
+            offset += block_size;
+        }
     }
 
     if (iv == NULL)
@@ -580,6 +589,26 @@ void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool en
     DesfireCryptoCMAC(&ctx, data, 32, cmac);
 
     memcpy(sessionkey, cmac, CRYPTO_AES_BLOCK_SIZE);
+}
+
+// https://www.nxp.com/docs/en/data-sheet/MF2DLHX0.pdf
+// page 35
+void DesfireGenSessionKeyLRP(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool enckey, uint8_t *sessionkey) {
+    uint8_t data[64] = {0};
+    memset(sessionkey, 0, CRYPTO_AES_BLOCK_SIZE);
+
+    data[1] = 0x01;
+    data[3] = 0x80;
+    memcpy(data + 4, rndA, 8);
+    bin_xor(data + 6, rndB, 6); // xor rndb 6b
+    memcpy(data + 12, rndB + 6, 10);
+    memcpy(data + 22, rndA + 8, 8);
+    data[30] = 0x96;
+    data[31] = 0x69;
+
+    LRPContext ctx = {0};
+    LRPSetKey(&ctx, key, 0, true);
+    LRPCMAC(&ctx, data, 32, sessionkey);
 }
 
 void DesfireEV2FillIV(DesfireContext *ctx, bool ivforcommand, uint8_t *iv) {

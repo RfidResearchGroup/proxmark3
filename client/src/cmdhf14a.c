@@ -776,41 +776,10 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     *dataoutlen = 0;
 
     if (activateField) {
-        PacketResponseNG resp;
-        responseNum = 0;
-
-        // Anticollision + SELECT card
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            if (!silentMode) PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
-            return 1;
-        }
-
-        // check result
-        if (resp.oldarg[0] == 0) {
-            if (!silentMode) PrintAndLogEx(ERR, "No card in field.");
-            return 1;
-        }
-
-        if (resp.oldarg[0] != 1 && resp.oldarg[0] != 2) {
-            if (!silentMode) PrintAndLogEx(ERR, "Card not in iso14443-4. res=%" PRId64 ".", resp.oldarg[0]);
-            return 1;
-        }
-
-        if (resp.oldarg[0] == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
-            // get ATS
-            uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
-            SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
-            if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-                if (!silentMode) PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
-                return 1;
-            }
-
-            if (resp.oldarg[0] == 0) { // ats_len
-                if (!silentMode) PrintAndLogEx(ERR, "Can't get ATS.");
-                return 1;
-            }
-        }
+        // select with no disconnect and set g_frame_len
+        int selres = SelectCard14443A_4(false, !silentMode, NULL);
+        if (selres != PM3_SUCCESS)
+            return selres;
     }
 
     if (leaveSignalON)
