@@ -2035,8 +2035,9 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
                   "\n"
                   "hf mfdes setconfig --param 03 --data 0428 -> set SAK\n"
                   "hf mfdes setconfig --param 02 --data 0875778102637264 -> set ATS (first byte - length)\n"
-                  "hf mfdes setconfig --appisoid 01df -t aes -s ev2 --param 05 --data 00000000020000000000 -> set LRP mode enable for Desfire Light\n"
-                  "hf mfdes setconfig --appisoid 01df -t aes -s ev2 --param 0a --data 00ffffffff -> Disable failed auth counters for Desfire Light");
+                  "hf mfdes setconfig --appisoid df01 -t aes -s ev2 --param 05 --data 00000000020000000000 -> set LRP mode enable for Desfire Light\n"
+                  "hf mfdes setconfig --appisoid df01 -t aes -s ev2 --param 0a --data 00ffffffff -> Disable failed auth counters for Desfire Light\n"
+                  "hf mfdes setconfig --appisoid df01 -t aes -s lrp --param 0a --data 00ffffffff -> Disable failed auth counters for Desfire Light via lrp channel");
 
     void *argtable[] = {
         arg_param_begin,
@@ -3422,7 +3423,8 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
                   "Get File Settings from file from application. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
                   "hf mfdes chfilesettings --aid 123456 --fid 01 --amode plain --rrights free --wrights free --rwrights free --chrights key0 -> change file settings app=123456, file=01 with defaults from `default` command\n"
                   "hf mfdes chfilesettings -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 --rawdata 00EEEE -> execute with default factory setup\n"
-                  "hf mfdes chfilesettings --aid 123456 --fid 01 --rawdata 810000021f112f22 -> change file settings with additional rights for keys 1 and 2");
+                  "hf mfdes chfilesettings --aid 123456 --fid 01 --rawdata 810000021f112f22 -> change file settings with additional rights for keys 1 and 2\n"
+                  "hf mfdes chfilesettings --appisoid df01 --fid 00 --amode plain --rawrights eee0 -s lrp -t aes -> change file settings via lrp channel");
 
     void *argtable[] = {
         arg_param_begin,
