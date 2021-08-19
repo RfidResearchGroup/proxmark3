@@ -315,12 +315,12 @@ const char *DesfireSelectWayToStr(DesfireISOSelectWay way) {
 char *DesfireWayIDStr(DesfireISOSelectWay way, uint32_t id) {
     static char str[200] = {0};
     memset(str, 0, sizeof(str));
-    
+
     if (way == ISWMF || way == ISWDFName)
         sprintf(str, "%s", DesfireSelectWayToStr(way));
     else
         sprintf(str, "%s %0*x", DesfireSelectWayToStr(way), (way == ISW6bAID) ? 6 : 4, id);
-    
+
     return str;
 }
 

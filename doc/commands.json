@@ -3965,7 +3965,7 @@
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
                 "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
                 "--aid <app id hex> application id of application for some parameters (3 hex bytes, big endian)",
-                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian). works only for iso read commands.",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "--save saves channels parameters to defaults if authentication succeeds"
             ],
             "usage": "hf mfdes auth [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>] [--save]"
@@ -3994,7 +3994,7 @@
                 "change crypto algorithm for picc key is possible, but for app keys crypto algorithm is set by createapp command and can't be changed wo application delete",
                 "",
                 "hf mfdes changekey --aid 123456 -> execute with default factory setup. change des key 0 in the app 123456 from 00..00 to 00..00",
-                "hf mfdes changekey -t des --newalgo aes --newkey 11223344556677889900112233445566 --newver a5 -> change card master key to aes one",
+                "hf mfdes changekey --appisoid df01 -t aes -s lrp --newkeyno 01 -> change key 01 via lrp channelhf mfdes changekey -t des --newalgo aes --newkey 11223344556677889900112233445566 --newver a5 -> change card master key to aes one",
                 "hf mfdes changekey --aid 123456 -t aes --key 00000000000000000000000000000000 --newkey 11223344556677889900112233445566 -> change app master key",
                 "hf mfdes changekey --aid 123456 -t des -n 0 --newkeyno 1 --oldkey 5555555555555555 --newkey 1122334455667788 -> change key 1 with auth from key 0",
                 "hf mfdes changekey --aid 123456 -t 3tdea --newkey 11223344556677889900112233445566778899001122334 -> change 3tdea key 0 from default 00..00 to provided"
@@ -4013,6 +4013,7 @@
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
                 "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
                 "--aid <app id hex> application id of application (3 hex bytes, big endian)",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "--oldalgo <des/2tdea/3tdea/aes> old key crypto algorithm: des, 2tdea, 3tdea, aes",
                 "--oldkey <old key> old key (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
                 "--newkeyno <keyno> key number for change",
@@ -4020,7 +4021,7 @@
                 "--newkey <new key> new key (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
                 "--newver <version hex> new key's version (1 hex byte)"
             ],
-            "usage": "hf mfdes changekey [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--oldalgo <des/2tdea/3tdea/aes>] [--oldkey <old key>] [--newkeyno <keyno>] [--newalgo <des/2tdea/3tdea/aes>] [--newkey <new key>] [--newver <version hex>]"
+            "usage": "hf mfdes changekey [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>] [--oldalgo <des/2tdea/3tdea/aes>] [--oldkey <old key>] [--newkeyno <keyno>] [--newalgo <des/2tdea/3tdea/aes>] [--newkey <new key>] [--newver <version hex>]"
         },
         "hf mfdes chfilesettings": {
             "command": "hf mfdes chfilesettings",
@@ -4028,7 +4029,8 @@
             "notes": [
                 "hf mfdes chfilesettings --aid 123456 --fid 01 --amode plain --rrights free --wrights free --rwrights free --chrights key0 -> change file settings app=123456, file=01 with defaults from `default` command",
                 "hf mfdes chfilesettings -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 --rawdata 00eeee -> execute with default factory setup",
-                "hf mfdes chfilesettings --aid 123456 --fid 01 --rawdata 810000021f112f22 -> change file settings with additional rights for keys 1 and 2"
+                "hf mfdes chfilesettings --aid 123456 --fid 01 --rawdata 810000021f112f22 -> change file settings with additional rights for keys 1 and 2",
+                "hf mfdes chfilesettings --appisoid df01 --fid 00 --amode plain --rawrights eee0 -s lrp -t aes -> change file settings via lrp channel"
             ],
             "offline": false,
             "options": [
@@ -4044,6 +4046,7 @@
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
                 "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
                 "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "--fid <file id hex> file id (1 hex byte)",
                 "--rawdata <file settings hex> file settings (hex > 5 bytes). have priority over the other settings.",
                 "--amode <plain/mac/encrypt> file access mode: plain/mac/encrypt",
@@ -4054,7 +4057,7 @@
                 "--chrights <key0/../key13/free/deny> change file settings access mode: the specified key, free, deny",
                 "--no-auth execute without authentication"
             ],
-            "usage": "hf mfdes chfilesettings [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--fid <file id hex>] [--rawdata <file settings hex>] [--amode <plain/mac/encrypt>] [--rawrights <access rights hex>] [--rrights <key0/../key13/free/deny>] [--wrights <key0/../key13/free/deny>] [--rwrights <key0/../key13/free/deny>] [--chrights <key0/../key13/free/deny>] [--no-auth]"
+            "usage": "hf mfdes chfilesettings [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>] [--fid <file id hex>] [--rawdata <file settings hex>] [--amode <plain/mac/encrypt>] [--rawrights <access rights hex>] [--rrights <key0/../key13/free/deny>] [--wrights <key0/../key13/free/deny>] [--rwrights <key0/../key13/free/deny>] [--chrights <key0/../key13/free/deny>] [--no-auth]"
         },
         "hf mfdes chk": {
             "command": "hf mfdes chk",
@@ -4586,16 +4589,19 @@
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
                 "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
                 "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "--no-auth execute without authentication"
             ],
-            "usage": "hf mfdes getfileids [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--no-auth]"
+            "usage": "hf mfdes getfileids [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>] [--no-auth]"
         },
         "hf mfdes getfileisoids": {
             "command": "hf mfdes getfileisoids",
             "description": "get file ids list from card. master key needs to be provided or flag --no-auth set.",
             "notes": [
                 "hf mfdes getfileisoids --aid 123456 -> execute with defaults from `default` command",
-                "hf mfdes getfileisoids -n 0 -t des -k 0000000000000000 -f none --aid 123456 -> execute with default factory setup"
+                "hf mfdes getfileisoids -n 0 -t des -k 0000000000000000 -f none --aid 123456 -> execute with default factory setup",
+                "hf mfdes getfileisoids --appisoid df01 -> get iso file ids from desfire light with factory card settings",
+                "hf mfdes getfileisoids --appisoid df01 -s lrp -t aes -> get iso file ids from desfire light via lrp channel with default key authentication"
             ],
             "offline": false,
             "options": [
@@ -4611,15 +4617,17 @@
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
                 "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
                 "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "--no-auth execute without authentication"
             ],
-            "usage": "hf mfdes getfileisoids [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--no-auth]"
+            "usage": "hf mfdes getfileisoids [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>] [--no-auth]"
         },
         "hf mfdes getfilesettings": {
             "command": "hf mfdes getfilesettings",
             "description": "get file settings from file from application. master key needs to be provided or flag --no-auth set (depend on cards settings).",
             "notes": [
                 "hf mfdes getfilesettings --aid 123456 --fid 01 -> execute with defaults from `default` command",
+                "hf mfdes getfilesettings --appisoid df01 --fid 00 --no-auth -> get file settings with select by iso id",
                 "hf mfdes getfilesettings -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> execute with default factory setup"
             ],
             "offline": false,
@@ -4636,10 +4644,11 @@
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
                 "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
                 "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "--fid <file id hex> file id (1 hex byte). default: 1",
                 "--no-auth execute without authentication"
             ],
-            "usage": "hf mfdes getfilesettings [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--fid <file id hex>] [--no-auth]"
+            "usage": "hf mfdes getfilesettings [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>] [--fid <file id hex>] [--no-auth]"
         },
         "hf mfdes getkeysettings": {
             "command": "hf mfdes getkeysettings",
@@ -4671,7 +4680,8 @@
             "notes": [
                 "--keynum parameter: app level: key number. picc level: 00..0d - keys count, 21..23 vc keys, default 0x00.",
                 "hf mfdes getkeyversions --keynum 00 -> get picc master key version with default key/channel setup",
-                "hf mfdes getkeyversions --aid 123456 --keynum 0d -> get app 123456 all key versions with default key/channel setup"
+                "hf mfdes getkeyversions --aid 123456 --keynum 0d -> get app 123456 all key versions with default key/channel setup",
+                "hf mfdes getkeyversions --aid 123456 --keynum 0d --no-auth -> get key version without authentication"
             ],
             "offline": false,
             "options": [
@@ -4687,16 +4697,19 @@
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
                 "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
                 "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "--keynum <key number hex> key number/count (hex 1 byte). default 0x00.",
-                "--keyset <keyset num hex> keyset number (hex 1 byte)"
+                "--keyset <keyset num hex> keyset number (hex 1 byte)",
+                "--no-auth execute without authentication"
             ],
-            "usage": "hf mfdes getkeyversions [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--keynum <key number hex>] [--keyset <keyset num hex>]"
+            "usage": "hf mfdes getkeyversions [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>] [--keynum <key number hex>] [--keyset <keyset num hex>] [--no-auth]"
         },
         "hf mfdes getuid": {
             "command": "hf mfdes getuid",
-            "description": "get uid from card. get the real uid if the random uid bit is on and get the same uid as in anticollision if not. master key needs to be provided.",
+            "description": "get uid from card. get the real uid if the random uid bit is on and get the same uid as in anticollision if not. any card's key needs to be provided.",
             "notes": [
-                "hf mfdes getuid -> execute with default factory setup"
+                "hf mfdes getuid -> execute with default factory setup",
+                "hf mfdes getuid --appisoid df01 -t aes -s lrp -> for desfire lights default settings"
             ],
             "offline": false,
             "options": [
@@ -4710,9 +4723,11 @@
                 "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
                 "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
-                "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp"
+                "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
+                "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian)."
             ],
-            "usage": "hf mfdes getuid [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>]"
+            "usage": "hf mfdes getuid [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>]"
         },
         "hf mfdes help": {
             "command": "hf mfdes help",
@@ -4777,7 +4792,7 @@
             "command": "hf mfdes lsfiles",
             "description": "show file list. master key needs to be provided or flag --no-auth set (depend on cards settings).",
             "notes": [
-                "hf mfdes lsfiles --aid 123456 -> show file list for: app=123456 with defaults from `default` command"
+                "hf mfdes lsfiles --aid 123456 -> show file list for: app=123456 with defaults from `default` commandhf mfdes lsfiles --appisoid df01 --no-auth -> show files from desfire light"
             ],
             "offline": false,
             "options": [
@@ -4793,9 +4808,10 @@
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
                 "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
                 "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "--no-auth execute without authentication"
             ],
-            "usage": "hf mfdes lsfiles [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--no-auth]"
+            "usage": "hf mfdes lsfiles [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>] [--no-auth]"
         },
         "hf mfdes mad": {
             "command": "hf mfdes mad",
@@ -4861,7 +4877,7 @@
                 "--type <auto/data/value/record/mac> file type auto/data(standard/backup)/value/record(linear/cyclic)/mac). auto - check file settings and then read. default: auto",
                 "-o, --offset <hex> file offset (3 hex bytes, big endian). for records - record number (0 - lastest record). default 0",
                 "-l, --length <hex> length to read (3 hex bytes, big endian -> 000000 = read all data). for records - records count (0 - all). default 0.",
-                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian). works only for iso read commands.",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "--fileisoid <isoid hex> file iso id (iso df id) (2 hex bytes, big endian). works only for iso read commands."
             ],
             "usage": "hf mfdes read [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--fid <file id hex>] [--no-auth] [--type <auto/data/value/record/mac>] [-o <hex>] [-l <hex>] [--appisoid <isoid hex>] [--fileisoid <isoid hex>]"
@@ -4916,8 +4932,9 @@
                 "",
                 "hf mfdes setconfig --param 03 --data 0428 -> set sak",
                 "hf mfdes setconfig --param 02 --data 0875778102637264 -> set ats (first byte - length)",
-                "hf mfdes setconfig --appisoid 01df -t aes -s ev2 --param 05 --data 00000000020000000000 -> set lrp mode enable for desfire light",
-                "hf mfdes setconfig --appisoid 01df -t aes -s ev2 --param 0a --data 00ffffffff -> disable failed auth counters for desfire light"
+                "hf mfdes setconfig --appisoid df01 -t aes -s ev2 --param 05 --data 00000000020000000000 -> set lrp mode enable for desfire light",
+                "hf mfdes setconfig --appisoid df01 -t aes -s ev2 --param 0a --data 00ffffffff -> disable failed auth counters for desfire light",
+                "hf mfdes setconfig --appisoid df01 -t aes -s lrp --param 0a --data 00ffffffff -> disable failed auth counters for desfire light via lrp channel"
             ],
             "offline": false,
             "options": [
@@ -4933,7 +4950,7 @@
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
                 "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
                 "--aid <app id hex> application id of application for some parameters (3 hex bytes, big endian)",
-                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian). works only for iso read commands.",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "-p, --param <hex 1 byte> parameter id (hex 1 byte)",
                 "-d, --data <data hex> data for parameter (hex 1..30 bytes)"
             ],
@@ -5021,8 +5038,8 @@
                 "--debit use for value file debit operation instead of credit",
                 "--commit commit needs for backup file only. for the other file types and in the `auto` mode - command set it automatically.",
                 "--updaterec <record number dec> record number for update record command. updates record instead of write. lastest record - 0",
-                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian). works only for iso read commands.",
-                "--fileisoid <isoid hex> file iso id (iso df id) (2 hex bytes, big endian). works only for iso read commands.",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
+                "--fileisoid <isoid hex> file iso id (iso df id) (2 hex bytes, big endian). works only for iso write commands.",
                 "--readerid <hex> reader id for commitreaderid command. if present - the command issued before write command.",
                 "--trkey <hex> key for decode previous reader id."
             ],
@@ -9964,6 +9981,6 @@
     "metadata": {
         "commands_extracted": 589,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-08-19T10:23:32"
+        "extracted_on": "2021-08-19T16:54:30"
     }
 }

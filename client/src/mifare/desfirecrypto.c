@@ -682,7 +682,7 @@ int DesfireLRPCalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t d
     LRPContext lctx = {0};
     LRPSetKey(&lctx, ctx->sessionKeyMAC, 0, true);
     LRPCMAC8(&lctx, mdata, mdatalen, mac);
-    
+
     return 0;
 }
 
