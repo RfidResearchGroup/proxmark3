@@ -145,6 +145,7 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_GET_FILE_IDS,              DACLRP,  DCCNative,    DCMMACed},
     {MFDES_GET_ISOFILE_IDS,           DACLRP,  DCCNative,    DCMMACed},
     {MFDES_GET_FILE_SETTINGS,         DACLRP,  DCCNative,    DCMMACed},
+    {MFDES_GET_KEY_VERSION,           DACLRP,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,                   DACLRP,  DCCNative,    DCMEncrypted},
 };

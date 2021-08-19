@@ -2784,7 +2784,8 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
                   "Get key versions for card level or application level.",
                   "--keynum parameter: App level: key number. PICC level: 00..0d - keys count, 21..23 vc keys, default 0x00.\n"\
                   "hf mfdes getkeyversions --keynum 00 -> get picc master key version with default key/channel setup\n"\
-                  "hf mfdes getkeyversions --aid 123456 --keynum 0d -> get app 123456 all key versions with default key/channel setup");
+                  "hf mfdes getkeyversions --aid 123456 --keynum 0d -> get app 123456 all key versions with default key/channel setup\n"
+                  "hf mfdes getkeyversions --aid 123456 --keynum 0d --no-auth -> get key version without authentication");
 
     void *argtable[] = {
         arg_param_begin,
@@ -2799,38 +2800,42 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_str0(NULL, "keynum",  "<key number HEX>", "Key number/count (HEX 1 byte). Default 0x00."),
         arg_str0(NULL, "keyset",  "<keyset num HEX>", "Keyset number (HEX 1 byte)"),
+        arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
+    bool noauth = arg_get_lit(ctx, 15);
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, &securechann, DCMMACed, &appid, NULL);
+    uint32_t id = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, &securechann, DCMMACed, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
     }
 
     uint32_t keynum32 = 0x00;
-    if (CLIGetUint32Hex(ctx, 12, 0x00, &keynum32, NULL, 1, "Key number must have 1 byte length")) {
+    if (CLIGetUint32Hex(ctx, 13, 0x00, &keynum32, NULL, 1, "Key number must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t keysetnum32 = 0x00;
     bool keysetpresent = false;
-    if (CLIGetUint32Hex(ctx, 13, 0x00, &keysetnum32, &keysetpresent, 1, "Keyset number must have 1 byte length")) {
+    if (CLIGetUint32Hex(ctx, 14, 0x00, &keysetnum32, &keysetpresent, 1, "Keyset number must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    if (keysetpresent && appid == 0x000000) {
+    if (keysetpresent && id == 0x000000) {
         PrintAndLogEx(WARNING, "Keyset only at Application level");
         keysetpresent = false;
     }
@@ -2838,9 +2843,10 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
+    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
+        PrintAndLogEx(FAILED, "Select or authentication %s 0x%06x " _RED_("failed") ". Result [%d] %s", DesfireSelectWayToStr(selectway), id, res, DesfireAuthErrorToStr(res));
         return res;
     }
 
