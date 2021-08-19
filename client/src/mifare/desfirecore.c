@@ -398,11 +398,17 @@ void DesfirePrintContext(DesfireContext *ctx) {
 
 
     if (DesfireIsAuthenticated(ctx)) {
-        PrintAndLogEx(INFO, "Session key MAC [%d]: %s ",
-                      desfire_get_key_length(ctx->keyType),
-                      sprint_hex(ctx->sessionKeyMAC, desfire_get_key_length(ctx->keyType)));
-        PrintAndLogEx(INFO, "    ENC: %s",
-                      sprint_hex(ctx->sessionKeyEnc, desfire_get_key_length(ctx->keyType)));
+        if (memcmp(ctx->sessionKeyMAC, ctx->sessionKeyEnc, desfire_get_key_length(ctx->keyType)) == 0) {
+            PrintAndLogEx(INFO, "Session key [%d]: %s ",
+                          desfire_get_key_length(ctx->keyType),
+                          sprint_hex(ctx->sessionKeyEnc, desfire_get_key_length(ctx->keyType)));
+        } else {
+            PrintAndLogEx(INFO, "Session key MAC [%d]: %s ",
+                          desfire_get_key_length(ctx->keyType),
+                          sprint_hex(ctx->sessionKeyMAC, desfire_get_key_length(ctx->keyType)));
+            PrintAndLogEx(INFO, "    ENC: %s",
+                          sprint_hex(ctx->sessionKeyEnc, desfire_get_key_length(ctx->keyType)));
+        }
         PrintAndLogEx(INFO, "    IV [%zu]: %s",
                       desfire_get_key_block_length(ctx->keyType),
                       sprint_hex(ctx->IV, desfire_get_key_block_length(ctx->keyType)));
@@ -1526,8 +1532,7 @@ static int DesfireAuthenticateLRP(DesfireContext *dctx, DesfireSecureChannel sec
         } else {
             PrintAndLogEx(INFO, "TI             : %s", sprint_hex(dctx->TI, 4));
         }
-        PrintAndLogEx(INFO, "session key ENC: %s", sprint_hex(dctx->sessionKeyEnc, 16));
-        PrintAndLogEx(INFO, "session key MAC: %s", sprint_hex(dctx->sessionKeyMAC, 16));
+        PrintAndLogEx(INFO, "session key    : %s", sprint_hex(dctx->sessionKeyEnc, 16));
     }
 
     return PM3_SUCCESS;
