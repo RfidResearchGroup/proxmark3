@@ -3344,8 +3344,7 @@ static int DesfireCreateFileParameters(
     *datalen = 1;
 
     if (isofileid > 0) {
-        data[1] = (isofileid >> 8) & 0xff;
-        data[2] = isofileid & 0xff;
+        Uint2byteToMemLe(&data[1], isofileid);
         *datalen += 2;
     }
 
