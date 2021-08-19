@@ -2553,7 +2553,7 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, false, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s 0x%06x " _RED_("failed") ". Result [%d] %s", DesfireSelectWayToStr(selectway), id, res, DesfireAuthErrorToStr(res));
+        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -2846,7 +2846,7 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s 0x%06x " _RED_("failed") ". Result [%d] %s", DesfireSelectWayToStr(selectway), id, res, DesfireAuthErrorToStr(res));
+        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -3437,6 +3437,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_str0(NULL, "fid",     "<file id hex>", "File ID (1 hex byte)"),
         arg_str0(NULL, "rawdata", "<file settings HEX>", "File settings (HEX > 5 bytes). Have priority over the other settings."),
         arg_str0(NULL, "amode",   "<plain/mac/encrypt>", "File access mode: plain/mac/encrypt"),
@@ -3452,12 +3453,13 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    bool noauth = arg_get_lit(ctx, 20);
+    bool noauth = arg_get_lit(ctx, 21);
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, &securechann, DCMEncrypted, &appid, NULL);
+    uint32_t id = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, &securechann, DCMEncrypted, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -3467,7 +3469,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
     uint8_t *settings = &data[1];
     size_t datalen = 0;
 
-    res = DesfireCreateFileParameters(ctx, 12, 0, 14, 15, 16, 17, 18, 19, data, &datalen);
+    res = DesfireCreateFileParameters(ctx, 13, 0, 15, 16, 17, 18, 19, 20, data, &datalen);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -3475,7 +3477,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
 
     uint8_t sdata[250] = {0};
     int sdatalen = sizeof(sdata);
-    CLIGetHexWithReturn(ctx, 13, sdata, &sdatalen);
+    CLIGetHexWithReturn(ctx, 14, sdata, &sdatalen);
     if (res) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -3498,9 +3500,10 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
 
     uint8_t fileid = data[0];
 
-    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
+        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -3509,7 +3512,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
 
     // check current file settings
     DesfireCommunicationMode commMode = dctx.commMode;
-    DesfireSetCommMode(&dctx, DCMPlain);
+    DesfireSetCommMode(&dctx, DCMMACed);
     res = DesfireGetFileSettings(&dctx, fileid, buf, &buflen);
     if (res == PM3_SUCCESS && buflen > 5) {
         uint8_t chright = 0;
@@ -3533,7 +3536,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
 
     // print the new file settings
     if (verbose)
-        PrintAndLogEx(INFO, "app %06x file %02x settings[%zu]: %s", appid, fileid, datalen - 1, sprint_hex(settings, datalen - 1));
+        PrintAndLogEx(INFO, "%s file %02x settings[%zu]: %s", DesfireWayIDStr(selectway, id), fileid, datalen - 1, sprint_hex(settings, datalen - 1));
 
     DesfirePrintSetFileSettings(settings, datalen - 1);
 

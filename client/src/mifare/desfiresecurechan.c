@@ -148,6 +148,7 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_GET_KEY_VERSION,           DACLRP,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,                   DACLRP,  DCCNative,    DCMEncrypted},
+    {MFDES_CHANGE_FILE_SETTINGS,      DACLRP,  DCCNative,    DCMEncrypted},
 };
 
 #define CMD_HEADER_LEN_ALL 0xffff
