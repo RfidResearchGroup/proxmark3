@@ -2840,7 +2840,7 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (keysetpresent && id == 0x000000) {
+    if (keysetpresent && DesfireMFSelected(selectway, id)) {
         PrintAndLogEx(WARNING, "Keyset only at Application level");
         keysetpresent = false;
     }
