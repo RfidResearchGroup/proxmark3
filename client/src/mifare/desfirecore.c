@@ -2749,7 +2749,7 @@ int DesfireChangeKey(DesfireContext *dctx, bool change_master_key, uint8_t newke
             desfire_crc32(nkeybuf, nkeylen, &cdata[cdatalen]);
             cdatalen += 4;
         }
-    } else if (dctx->secureChannel == DACEV2) {
+    } else if (dctx->secureChannel == DACEV2 || dctx->secureChannel == DACLRP) {
         // EV2 : <PrevKey XOR Newkey>  [<AES NewKeyVer>]
         if (newkeynum != dctx->keyNum) {
             desfire_crc32(nkeybuf, nkeylen, &cdata[cdatalen]);
