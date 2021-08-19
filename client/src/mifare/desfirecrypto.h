@@ -144,6 +144,8 @@ void DesfireEV2FillIV(DesfireContext *ctx, bool ivforcommand, uint8_t *iv);
 int DesfireEV2CalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac);
 void DesfireGenTransSessionKey(uint8_t *key, uint32_t trCntr, uint8_t *uid, bool forMAC, uint8_t *sessionkey);
 
+int DesfireLRPCalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac);
+
 int desfire_get_key_length(DesfireCryptoAlgorythm key_type);
 size_t desfire_get_key_block_length(DesfireCryptoAlgorythm key_type);
 size_t padded_data_length(const size_t nbytes, const size_t block_size);

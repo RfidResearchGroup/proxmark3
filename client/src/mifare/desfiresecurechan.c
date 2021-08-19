@@ -141,6 +141,12 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     // LRP channel separately
     {MFDES_AUTHENTICATE_EV2F,         DACLRP,  DCCNative,    DCMPlain},
     {MFDES_AUTHENTICATE_EV2NF,        DACLRP,  DCCNative,    DCMPlain},
+
+    {MFDES_GET_FILE_IDS,              DACLRP,  DCCNative,    DCMMACed},
+    {MFDES_GET_ISOFILE_IDS,           DACLRP,  DCCNative,    DCMMACed},
+    {MFDES_GET_FILE_SETTINGS,         DACLRP,  DCCNative,    DCMMACed},
+
+    {MFDES_GET_UID,                   DACLRP,  DCCNative,    DCMEncrypted},
 };
 
 #define CMD_HEADER_LEN_ALL 0xffff
@@ -377,6 +383,42 @@ static void DesfireSecureChannelEncodeEV2(DesfireContext *ctx, uint8_t cmd, uint
     }
 }
 
+static void DesfireSecureChannelEncodeLRP(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
+    uint8_t data[1050] = {0};
+    size_t rlen = 0;
+
+    memcpy(dstdata, srcdata, srcdatalen);
+    *dstdatalen = srcdatalen;
+
+    uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd);
+
+    if (ctx->commMode == DCMMACed) {
+        uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+        DesfireLRPCalcCMAC(ctx, cmd, srcdata, srcdatalen, cmac);
+
+        memcpy(&dstdata[srcdatalen], cmac, DesfireGetMACLength(ctx));
+        *dstdatalen = srcdatalen + DesfireGetMACLength(ctx);
+    } else if (ctx->commMode == DCMEncrypted || ctx->commMode == DCMEncryptedWithPadding || ctx->commMode == DCMEncryptedPlain) {
+        memcpy(dstdata, srcdata, hdrlen);
+
+        if (srcdatalen > hdrlen) {
+            rlen = padded_data_length(srcdatalen + 1 - hdrlen, desfire_get_key_block_length(ctx->keyType));
+            memcpy(data, &srcdata[hdrlen], srcdatalen - hdrlen);
+            data[srcdatalen - hdrlen] = 0x80; // padding
+
+            DesfireCryptoEncDec(ctx, DCOSessionKeyEnc, data, rlen, &dstdata[hdrlen], true);
+        }
+
+        uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+        DesfireLRPCalcCMAC(ctx, cmd, dstdata, hdrlen + rlen, cmac);
+
+        memcpy(&dstdata[hdrlen + rlen], cmac, DesfireGetMACLength(ctx));
+
+        *dstdatalen = hdrlen + rlen + DesfireGetMACLength(ctx);
+        ctx->commMode = DCMEncrypted;
+    }
+}
+
 void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
     ctx->lastCommand = cmd;
     ctx->lastRequestZeroLen = (srcdatalen <= DesfireGetCmdHeaderLen(cmd));
@@ -392,6 +434,8 @@ void DesfireSecureChannelEncode(DesfireContext *ctx, uint8_t cmd, uint8_t *srcda
             DesfireSecureChannelEncodeEV2(ctx, cmd, srcdata, srcdatalen, dstdata, dstdatalen);
             break;
         case DACLRP:
+            DesfireSecureChannelEncodeLRP(ctx, cmd, srcdata, srcdatalen, dstdata, dstdatalen);
+            break;
         case DACNone:
             memcpy(dstdata, srcdata, srcdatalen);
             *dstdatalen = srcdatalen;
@@ -565,6 +609,63 @@ static void DesfireSecureChannelDecodeEV2(DesfireContext *ctx, uint8_t *srcdata,
     }
 }
 
+static void DesfireSecureChannelDecodeLRP(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
+    ctx->cmdCntr++;
+
+    memcpy(dstdata, srcdata, srcdatalen);
+    *dstdatalen = srcdatalen;
+    uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+
+    if (ctx->commMode == DCMMACed) {
+        if (srcdatalen < DesfireGetMACLength(ctx)) {
+            memcpy(dstdata, srcdata, srcdatalen);
+            *dstdatalen = srcdatalen;
+            return;
+        }
+
+        memcpy(dstdata, srcdata, srcdatalen - DesfireGetMACLength(ctx));
+        *dstdatalen = srcdatalen - DesfireGetMACLength(ctx);
+
+        DesfireLRPCalcCMAC(ctx, 0x00, srcdata, *dstdatalen, cmac);
+        if (memcmp(&srcdata[*dstdatalen], cmac, DesfireGetMACLength(ctx)) != 0) {
+            PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
+            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], DesfireGetMACLength(ctx)));
+            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, DesfireGetMACLength(ctx)));
+        } else {
+            if (GetAPDULogging())
+                PrintAndLogEx(INFO, "Received MAC OK");
+        }
+    } else if (ctx->commMode == DCMEncrypted || ctx->commMode == DCMEncryptedWithPadding) {
+        if (srcdatalen < DesfireGetMACLength(ctx)) {
+            memcpy(dstdata, srcdata, srcdatalen);
+            *dstdatalen = srcdatalen;
+            return;
+        }
+
+        *dstdatalen = srcdatalen - DesfireGetMACLength(ctx);
+        DesfireLRPCalcCMAC(ctx, 0x00, srcdata, *dstdatalen, cmac);
+        if (memcmp(&srcdata[*dstdatalen], cmac, DesfireGetMACLength(ctx)) != 0) {
+            PrintAndLogEx(WARNING, "Received MAC is not match with calculated");
+            PrintAndLogEx(INFO, "  received MAC:   %s", sprint_hex(&srcdata[*dstdatalen], DesfireGetMACLength(ctx)));
+            PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, DesfireGetMACLength(ctx)));
+        } else {
+            if (GetAPDULogging())
+                PrintAndLogEx(INFO, "Received MAC OK");
+        }
+
+        if (*dstdatalen >= desfire_get_key_block_length(ctx->keyType)) {
+            DesfireCryptoEncDec(ctx, DCOSessionKeyEnc, srcdata, *dstdatalen, dstdata, false);
+
+            size_t puredatalen = FindISO9797M2PaddingDataLen(dstdata, *dstdatalen);
+            if (puredatalen != 0) {
+                *dstdatalen = puredatalen;
+            } else {
+                PrintAndLogEx(WARNING, "Padding search error.");
+            }
+        }
+    }
+}
+
 static void DesfireISODecode(DesfireContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
@@ -609,6 +710,8 @@ void DesfireSecureChannelDecode(DesfireContext *ctx, uint8_t *srcdata, size_t sr
             DesfireSecureChannelDecodeEV2(ctx, srcdata, srcdatalen, respcode, dstdata, dstdatalen);
             break;
         case DACLRP:
+            DesfireSecureChannelDecodeLRP(ctx, srcdata, srcdatalen, respcode, dstdata, dstdatalen);
+            break;
         case DACNone:
             memcpy(dstdata, srcdata, srcdatalen);
             *dstdatalen = srcdatalen;

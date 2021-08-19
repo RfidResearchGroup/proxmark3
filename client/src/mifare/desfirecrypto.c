@@ -263,7 +263,7 @@ void DesfireCryptoEncDecEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type,
 
     if (ctx->secureChannel == DACLRP) {
         size_t dstlen = 0;
-        LRPEncDec(key, iv, encode, srcdata, srcdatalen, data, &dstlen);
+        LRPEncDec(key, xiv, encode, srcdata, srcdatalen, data, &dstlen);
     } else {
         size_t offset = 0;
         while (offset < srcdatalen) {
@@ -666,6 +666,24 @@ void DesfireGenTransSessionKey(uint8_t *key, uint32_t trCntr, uint8_t *uid, bool
     DesfireContext ctx = {0};
     DesfireSetKey(&ctx, 0, T_AES, key);
     DesfireCryptoCMACEx(&ctx, DCOMainKey, xiv, 16, 0, sessionkey);
+}
+
+int DesfireLRPCalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac) {
+    uint8_t mdata[1050] = {0};
+    size_t mdatalen = 0;
+
+    mdata[0] = cmd;
+    Uint2byteToMemLe(&mdata[1], ctx->cmdCntr);
+    memcpy(&mdata[3], ctx->TI, 4);
+    if (data != NULL && datalen > 0)
+        memcpy(&mdata[7], data, datalen);
+    mdatalen = 1 + 2 + 4 + datalen;
+
+    LRPContext lctx = {0};
+    LRPSetKey(&lctx, ctx->sessionKeyMAC, 0, true);
+    LRPCMAC8(&lctx, mdata, mdatalen, mac);
+    
+    return 0;
 }
 
 int desfire_get_key_length(DesfireCryptoAlgorythm key_type) {
