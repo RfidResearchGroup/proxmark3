@@ -312,6 +312,18 @@ const char *DesfireSelectWayToStr(DesfireISOSelectWay way) {
     return "";
 }
 
+char *DesfireWayIDStr(DesfireISOSelectWay way, uint32_t id) {
+    static char str[200] = {0};
+    memset(str, 0, sizeof(str));
+    
+    if (way == ISWMF || way == ISWDFName)
+        sprintf(str, "%s", DesfireSelectWayToStr(way));
+    else
+        sprintf(str, "%s %0*x", DesfireSelectWayToStr(way), (way == ISW6bAID) ? 6 : 4, id);
+    
+    return str;
+}
+
 bool DesfireMFSelected(DesfireISOSelectWay way, uint32_t id) {
     switch (way) {
         case ISW6bAID:
@@ -997,7 +1009,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext *dctx, DesfireSecureChannel sec
             return 202;
         }
         if (verbose)
-            PrintAndLogEx(INFO, "%s %0*x is " _GREEN_("selected"), DesfireSelectWayToStr(way), way == ISW6bAID ? 6 : 4, id);
+            PrintAndLogEx(INFO, "%s is " _GREEN_("selected"), DesfireWayIDStr(way, id));
     }
 
     if (selectfile) {
@@ -1008,7 +1020,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext *dctx, DesfireSecureChannel sec
         }
 
         if (verbose)
-            PrintAndLogEx(INFO, "Application %s %04x file iso id %04x is " _GREEN_("selected"), DesfireSelectWayToStr(way), id, isofileid);
+            PrintAndLogEx(INFO, "Application %s file iso id %04x is " _GREEN_("selected"), DesfireWayIDStr(way, id), isofileid);
     }
 
     if (!noauth) {
@@ -1707,7 +1719,7 @@ int DesfireFillAppList(DesfireContext *dctx, PICCInfoS *PICCInfo, AppListS appLi
         for (int i = 0; i < buflen; i++) {
             int indx = AppListSearchAID(DesfireAIDByteToUint(&buf[i * 24 + 1]), appList, PICCInfo->appCount);
             if (indx >= 0) {
-                appList[indx].appISONum = MemBeToUint2byte(&buf[i * 24 + 1 + 3]);
+                appList[indx].appISONum = MemLeToUint2byte(&buf[i * 24 + 1 + 3]);
                 memcpy(appList[indx].appDFName, &buf[i * 24 + 1 + 5], strnlen((char *)&buf[i * 24 + 1 + 5], 16));
             }
         }
@@ -2002,7 +2014,7 @@ int DesfireFillFileList(DesfireContext *dctx, FileListS FileList, size_t *filesc
     if (buflen > 0) {
         for (int i = 0; i < *filescount; i++) {
             if (FileList[i].fileSettings.fileType != 0x02 && FileList[i].fileSettings.fileType != 0x05) {
-                FileList[i].fileISONum = MemBeToUint2byte(&buf[isoindx * 2]);
+                FileList[i].fileISONum = MemLeToUint2byte(&buf[isoindx * 2]);
                 isoindx++;
             }
         }
@@ -2624,7 +2636,7 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
     size_t xlen = 1;
     if (ftyperec->mayHaveISOfid) {
         if (isoidpresent) {
-            PrintAndLogEx(SUCCESS, "File ISO number  : 0x%04x", MemBeToUint2byte(&data[xlen]));
+            PrintAndLogEx(SUCCESS, "File ISO number  : 0x%04x", MemLeToUint2byte(&data[xlen]));
             xlen += 2;
         } else {
             PrintAndLogEx(SUCCESS, "File ISO number  : n/a");

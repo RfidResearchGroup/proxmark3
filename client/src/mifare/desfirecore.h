@@ -171,6 +171,7 @@ void DesfirePrintMADAID(uint32_t appid, bool verbose);
 int DesfireGetCardUID(DesfireContext *ctx);
 
 const char *DesfireSelectWayToStr(DesfireISOSelectWay way);
+char *DesfireWayIDStr(DesfireISOSelectWay way, uint32_t id);
 bool DesfireMFSelected(DesfireISOSelectWay way, uint32_t id);
 int DesfireSelectEx(DesfireContext *ctx, bool fieldon, DesfireISOSelectWay way, uint32_t id, char *dfname);
 int DesfireSelect(DesfireContext *ctx, DesfireISOSelectWay way, uint32_t id, char *dfname);
