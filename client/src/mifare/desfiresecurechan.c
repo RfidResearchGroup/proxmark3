@@ -167,10 +167,15 @@ static const CmdHeaderLengthsS CmdHeaderLengths[] = {
     {MFDES_CHANGE_FILE_SETTINGS,   1},
     {MFDES_CREATE_TRANS_MAC_FILE,  5},
     {MFDES_READ_DATA,              7},
+    {MFDES_READ_DATA2,             7},
     {MFDES_WRITE_DATA,             7},
+    {MFDES_WRITE_DATA2,            7},
     {MFDES_READ_RECORDS,           7},
+    {MFDES_READ_RECORDS2,          7},
     {MFDES_WRITE_RECORD,           7},
+    {MFDES_WRITE_RECORD2,          7},
     {MFDES_UPDATE_RECORD,         10},
+    {MFDES_UPDATE_RECORD2,        10},
 };
 
 static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {
