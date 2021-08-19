@@ -926,7 +926,7 @@ int DesfireSelectAndAuthenticateEx(DesfireContext *dctx, DesfireSecureChannel se
         if (verbose)
             PrintAndLogEx(INFO, "Switch to " _CYAN_("native") " for select");
     }
-    
+
     int res;
     if (aid == 0x000000) {
         res = DesfireAnticollision(verbose);
@@ -1390,7 +1390,7 @@ static int DesfireAuthenticateLRP(DesfireContext *dctx, DesfireSecureChannel sec
     // Crypt constants
     uint8_t RndA[CRYPTO_AES_BLOCK_SIZE] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16};
     uint8_t RndB[CRYPTO_AES_BLOCK_SIZE] = {0};
-    uint8_t both[CRYPTO_AES_BLOCK_SIZE * 2 + 1] = {0};  // ek/dk_keyNo(RndA+RndB')
+    uint8_t both[CRYPTO_AES_BLOCK_SIZE * 2 + 1] = {0};
 
     uint8_t subcommand = firstauth ? MFDES_AUTHENTICATE_EV2F : MFDES_AUTHENTICATE_EV2NF;
     uint8_t *key = dctx->key;
@@ -1420,7 +1420,7 @@ static int DesfireAuthenticateLRP(DesfireContext *dctx, DesfireSecureChannel sec
     if (recv_len != CRYPTO_AES_BLOCK_SIZE + 1) {
         return 4;
     }
-    
+
     if (recv_data[0] != 0x01)
         return 51;
 
@@ -1443,7 +1443,7 @@ static int DesfireAuthenticateLRP(DesfireContext *dctx, DesfireSecureChannel sec
     LRPContext ctx = {0};
     LRPSetKey(&ctx, sessionkey, 0, true);
     LRPCMAC(&ctx, tmp, 32, cmac);
-    
+
     // response = rnda + cmac(sessionkey, rnda+rndb)
     memcpy(both, RndA, CRYPTO_AES_BLOCK_SIZE);
     memcpy(both + CRYPTO_AES_BLOCK_SIZE, cmac, CRYPTO_AES_BLOCK_SIZE);
@@ -1469,13 +1469,13 @@ static int DesfireAuthenticateLRP(DesfireContext *dctx, DesfireSecureChannel sec
 
     // clear IV here
     DesfireClearIV(dctx);
-    
+
     // check mac
     memcpy(tmp, RndB, CRYPTO_AES_BLOCK_SIZE);
     memcpy(tmp + CRYPTO_AES_BLOCK_SIZE, RndA, CRYPTO_AES_BLOCK_SIZE);
     if (firstauth)
         memcpy(tmp + CRYPTO_AES_BLOCK_SIZE * 2, recv_data, CRYPTO_AES_BLOCK_SIZE);
-    
+
     LRPSetKey(&ctx, sessionkey, 0, true);
     LRPCMAC(&ctx, tmp, (firstauth) ? CRYPTO_AES_BLOCK_SIZE * 3 : CRYPTO_AES_BLOCK_SIZE * 2, cmac);
     uint8_t *recCMAC = &recv_data[(firstauth) ? CRYPTO_AES_BLOCK_SIZE : 0];
@@ -1487,7 +1487,7 @@ static int DesfireAuthenticateLRP(DesfireContext *dctx, DesfireSecureChannel sec
         return 12;
     }
 
-    // decode data 
+    // decode data
     if (firstauth) {
         LRPSetKeyEx(&ctx, sessionkey, dctx->IV, 4 * 2, 1, false);
         size_t declen = 0;

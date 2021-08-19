@@ -137,7 +137,7 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
 
     {ISO7816_READ_BINARY,             DACEV1,  DCCISO,       DCMMACed},
     {ISO7816_READ_RECORDS,            DACEV1,  DCCISO,       DCMMACed},
-    
+
     // LRP channel separately
     {MFDES_AUTHENTICATE_EV2F,         DACLRP,  DCCNative,    DCMPlain},
     {MFDES_AUTHENTICATE_EV2NF,        DACLRP,  DCCNative,    DCMPlain},

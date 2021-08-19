@@ -77,7 +77,7 @@ typedef struct DesfireContextS {
     DesfireCryptoAlgorythm keyType;   // des/2tdea/3tdea/aes
     uint8_t key[DESFIRE_MAX_KEY_SIZE];
     uint8_t masterKey[DESFIRE_MAX_KEY_SIZE]; // source for kdf
-    
+
     LRPContext lrpCtx;
 
     // KDF finction
