@@ -406,7 +406,6 @@ static void DesfireSecureChannelEncodeLRP(DesfireContext *ctx, uint8_t cmd, uint
             memcpy(data, &srcdata[hdrlen], srcdatalen - hdrlen);
             data[srcdatalen - hdrlen] = 0x80; // padding
 
-            DesfireEV2FillIV(ctx, true, NULL); // fill IV to ctx
             DesfireCryptoEncDec(ctx, DCOSessionKeyEnc, data, rlen, &dstdata[hdrlen], true);
         }
 
