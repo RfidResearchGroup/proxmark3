@@ -36,7 +36,7 @@ void DesfireClearContext(DesfireContext *ctx) {
     ctx->keyNum = 0;
     ctx->keyType = T_DES;
     memset(ctx->key, 0, sizeof(ctx->key));
-    
+
     LRPClearContext(&ctx->lrpCtx);
 
     ctx->secureChannel = DACNone;

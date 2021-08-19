@@ -466,13 +466,13 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext *dct
         if (selectway)
             *selectway = ISW6bAID;
     }
-    
+
     if (appisoid && id) {
         uint32_t xisoid = 0x0000;
         bool isoidpresent = false;
         if (CLIGetUint32Hex(ctx, appisoid, 0x0000, &xisoid, &isoidpresent, 2, "Application ISO ID (for EF) must have 2 bytes length"))
             return PM3_EINVARG;
-        
+
         if (isoidpresent) {
             *id = xisoid & 0xffff;
             if (selectway)
