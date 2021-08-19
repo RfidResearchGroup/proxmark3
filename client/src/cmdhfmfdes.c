@@ -3164,7 +3164,8 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
                   "Get File IDs list from card. Master key needs to be provided or flag --no-auth set.",
                   "hf mfdes getfileisoids --aid 123456 -> execute with defaults from `default` command\n"
                   "hf mfdes getfileisoids -n 0 -t des -k 0000000000000000 -f none --aid 123456 -> execute with default factory setup\n"
-                  "hf mfdes getfileisoids --appisoid df01 -> get file iso ids from Desfire Light with factory card settings");
+                  "hf mfdes getfileisoids --appisoid df01 -> get iso file ids from Desfire Light with factory card settings\n"
+                  "hf mfdes getfileisoids --appisoid df01 -s lrp -t aes -> get iso file ids from Desfire Light via lrp channel with default key authentication");
 
     void *argtable[] = {
         arg_param_begin,
