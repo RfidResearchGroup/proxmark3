@@ -4629,6 +4629,8 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
                     transactionCounter = cnt;
                     PrintAndLogEx(SUCCESS, "Transaction counter: %d (0x%08x)", cnt, cnt);
                 } else {
+                    // For composing TMC the two subparts are concatenated as follows: actTMC || sesTMC. Both subparts are represented LSB first.
+                    // MF2DLHX0.pdf, 10.3.2.1 Transaction MAC Counter, page 41
                     uint32_t actTMC = MemLeToUint2byte(&resp[0]);
                     uint32_t sessTMC = MemLeToUint2byte(&resp[2]);
                     transactionCounter = actTMC;
