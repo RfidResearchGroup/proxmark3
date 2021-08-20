@@ -3952,7 +3952,8 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
                   "\n"
                   "hf mfdes createmacfile --aid 123456 --fid 01 --rawrights 0FF0 --mackey 00112233445566778899aabbccddeeff --mackeyver 01 -> create transaction mac file with parameters. Rights from default. Authentication with defaults from `default` command\n"
                   "hf mfdes createmacfile --aid 123456 --fid 01 --amode plain --rrights free --wrights deny --rwrights free --chrights key0 --mackey 00112233445566778899aabbccddeeff -> create file app=123456, file=01, with key, and mentioned rights with defaults from `default` command\n"
-                  "hf mfdes createmacfile -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> execute with default factory setup. key and keyver == 0x00..00");
+                  "hf mfdes createmacfile -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> execute with default factory setup. key and keyver == 0x00..00\n"
+                  "hf mfdes createmacfile --appisoid df01 --fid 0f -s lrp -t aes --defparams -> create transaction mac file via lrp channel with length of command 01 (Desfire Light)");
 
     void *argtable[] = {
         arg_param_begin,
@@ -3967,6 +3968,7 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
         arg_str0("c",  "ccset",     "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",    "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",       "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_str0(NULL, "fid",       "<file id hex>", "File ID (1 hex byte)"),
         arg_str0(NULL, "amode",     "<plain/mac/encrypt>", "File access mode: plain/mac/encrypt"),
         arg_str0(NULL, "rawrights", "<access rights HEX>", "Access rights for file (HEX 2 byte) R/W/RW/Chg, 0x0 - 0xD Key, 0xE Free, 0xF Denied"),
@@ -3977,26 +3979,29 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
         arg_lit0(NULL, "no-auth",   "execute without authentication"),
         arg_str0(NULL, "mackey",    "<hex>", "AES-128 key for MAC (16 hex bytes, big endian). Default 0x00..00"),
         arg_str0(NULL, "mackeyver", "<ver hex 1b>", "AES key version for MAC (1 hex byte). Default 0x00"),
+        arg_lit0(NULL, "defparams", "do not provide key and etc (Desfire Light)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    bool noauth = arg_get_lit(ctx, 19);
+    bool noauth = arg_get_lit(ctx, 20);
+    bool defparams = arg_get_lit(ctx, 23);
 
     uint8_t filetype = 0x05; // transaction mac file
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, &securechann, DCMEncrypted, &appid, NULL);
+    uint32_t id = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, &securechann, DCMMACed, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
     }
 
-    if (appid == 0x000000) {
+    if (DesfireMFSelected(selectway, id)) {
         PrintAndLogEx(ERR, "Can't create files at card level.");
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -4005,7 +4010,7 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
     uint8_t data[250] = {0};
     size_t datalen = 0;
 
-    res = DesfireCreateFileParameters(ctx, 12, 0, 13, 14, 15, 16, 17, 18, data, &datalen);
+    res = DesfireCreateFileParameters(ctx, 13, 0, 14, 15, 16, 17, 18, 19, data, &datalen);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -4013,7 +4018,7 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
 
     uint8_t sdata[250] = {0};
     int sdatalen = sizeof(sdata);
-    CLIGetHexWithReturn(ctx, 20, sdata, &sdatalen);
+    CLIGetHexWithReturn(ctx, 21, sdata, &sdatalen);
     if (sdatalen != 0 && sdatalen != 16) {
         PrintAndLogEx(ERR, "AES-128 key must be 16 bytes instead of %d.", sdatalen);
         CLIParserFree(ctx);
@@ -4021,7 +4026,7 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
     }
 
     uint32_t keyver = 0x00;
-    if (CLIGetUint32Hex(ctx, 21, 0x00, &keyver, NULL, 1, "Key version must have 1 bytes length")) {
+    if (CLIGetUint32Hex(ctx, 22, 0x00, &keyver, NULL, 1, "Key version must have 1 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -4037,25 +4042,37 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
     data[datalen] = keyver & 0xff;
     datalen++;
 
-    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
+        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
+    // data contains file id only
+    if (defparams)
+        datalen = 1;
+
     if (verbose)
-        PrintAndLogEx(INFO, "App: %06x. File num: 0x%02x type: 0x%02x data[%zu]: %s", appid, data[0], filetype, datalen, sprint_hex(data, datalen));
-    DesfirePrintCreateFileSettings(filetype, data, datalen);
+        PrintAndLogEx(INFO, "%s. File num: 0x%02x type: 0x%02x data[%zu]: %s", DesfireWayIDStr(selectway, id), data[0], filetype, datalen, sprint_hex(data, datalen));
+    
+    if (defparams) {
+        PrintAndLogEx(INFO, "---- " _CYAN_("Create file settings") " ----");
+        PrintAndLogEx(SUCCESS, "File type        : transaction mac");
+        PrintAndLogEx(SUCCESS, "File number      : 0x%02x (%d)", data[0], data[0]);
+        PrintAndLogEx(SUCCESS, "Default settings : true");
+    } else {        
+        DesfirePrintCreateFileSettings(filetype, data, datalen);
+    }
 
-
-    res = DesfireCreateFile(&dctx, filetype, data, datalen, true);
+    res = DesfireCreateFile(&dctx, filetype, data, datalen, !defparams); // cant check length if there is 1 byte data in the command
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire CreateFile command " _RED_("error") ". Result: %d", res);
         DropField();
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "%s file %02x in the app %06x created " _GREEN_("successfully"), GetDesfireFileType(filetype), data[0], appid);
+    PrintAndLogEx(SUCCESS, "%s file %02x in the %s created " _GREEN_("successfully"), GetDesfireFileType(filetype), data[0], DesfireWayIDStr(selectway, id));
 
     DropField();
     return PM3_SUCCESS;
