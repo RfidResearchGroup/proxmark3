@@ -4065,7 +4065,8 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes deletefile",
                   "Delete file from application. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
-                  "hf mfdes deletefile --aid 123456 --fid 01 -> delete file for: app=123456, file=01 with defaults from `default` command");
+                  "hf mfdes deletefile --aid 123456 --fid 01 -> delete file for: app=123456, file=01 with defaults from `default` command\n"
+                  "hf mfdes deletefile --appisoid df01 --fid 0f -s lrp -t aes -> delete file for lrp channel");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4080,6 +4081,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_str0(NULL, "fid",     "<file id hex>", "File ID (1 hex byte)"),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_param_end
@@ -4088,19 +4090,20 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    bool noauth = arg_get_lit(ctx, 13);
+    bool noauth = arg_get_lit(ctx, 14);
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, &securechann, DCMMACed, &appid, NULL);
+    uint32_t id = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, &securechann, DCMMACed, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
     }
 
     uint32_t fnum = 1;
-    if (CLIGetUint32Hex(ctx, 12, 1, &fnum, NULL, 1, "File ID must have 1 byte length")) {
+    if (CLIGetUint32Hex(ctx, 13, 1, &fnum, NULL, 1, "File ID must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -4113,9 +4116,10 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
+        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -4126,7 +4130,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "File %02x in the app %06x deleted " _GREEN_("successfully"), fnum, appid);
+    PrintAndLogEx(SUCCESS, "File %02x in the %s deleted " _GREEN_("successfully"), fnum, DesfireWayIDStr(selectway, id));
 
     DropField();
     return PM3_SUCCESS;
