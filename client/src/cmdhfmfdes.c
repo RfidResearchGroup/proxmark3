@@ -4219,7 +4219,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
     CLIParserFree(ctx);
 
     // iso chaining works in the lrp mode
-    dctx.isoChaining = (dctx.secureChannel == DACLRP);
+    dctx.isoChaining |= (dctx.secureChannel == DACLRP);
 
     // select
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
@@ -4493,7 +4493,7 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
     size_t reclen = 0;
     
     // iso chaining works in the lrp mode
-    dctx->isoChaining = (dctx->secureChannel == DACLRP);
+    dctx->isoChaining |= (dctx->secureChannel == DACLRP);
 
     // get file settings
     if (filetype == RFTAuto) {
@@ -4686,6 +4686,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         arg_str0("l", "length",   "<hex>", "Length to read (3 hex bytes, big endian -> 000000 = Read all data). For records - records count (0 - all). Default 0."),
         arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_str0(NULL, "fileisoid", "<isoid hex>", "File ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands."),
+        arg_lit0(NULL, "isochain", "use iso chaining commands. Switched on by default if secure channel = lrp"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4734,6 +4735,8 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
+
+    dctx.isoChaining = arg_get_lit(ctx, 19);
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
@@ -5056,7 +5059,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     }
 
     // iso chaining works in the lrp mode
-    dctx.isoChaining = (dctx.secureChannel == DACLRP);
+    dctx.isoChaining |= (dctx.secureChannel == DACLRP);
 
     // write
     if (op == RFTData) {
