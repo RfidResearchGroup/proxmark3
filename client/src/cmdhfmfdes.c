@@ -4461,6 +4461,9 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
     int res = 0;
     // length of record for record file
     size_t reclen = 0;
+    
+    // iso chaining works in the lrp mode
+    dctx->isoChaining = (dctx->secureChannel == DACLRP);
 
     // get file settings
     if (filetype == RFTAuto) {
@@ -4502,7 +4505,7 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
             if (fsettings.fileCommMode != 0 && noauth)
                 PrintAndLogEx(WARNING, "File needs communication mode `%s` but there is no authentication", CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
 
-            if ((fsettings.rAccess < 0x0e && fsettings.rAccess != dctx->keyNum) || (fsettings.rwAccess < 0x0e && fsettings.rwAccess != dctx->keyNum))
+            if ((fsettings.rAccess < 0x0e && fsettings.rAccess != dctx->keyNum) && (fsettings.rwAccess < 0x0e && fsettings.rwAccess != dctx->keyNum))
                 PrintAndLogEx(WARNING, "File needs to be authenticated with key 0x%02x or 0x%02x but current authentication key is 0x%02x", fsettings.rAccess, fsettings.rwAccess, dctx->keyNum);
 
             if (fsettings.rAccess == 0x0f && fsettings.rwAccess == 0x0f)
@@ -4630,7 +4633,8 @@ static int CmdHF14ADesReadData(const char *Cmd) {
                   "hf mfdes read --aid 123456 --fileisoid 1000 --type data -c iso -> read file via ISO channel: app=123456, iso id=1000, offset=0. Select via native ISO wrapper\n"
                   "hf mfdes read --appisoid 0102 --fileisoid 1000 --type data -c iso -> read file via ISO channel: app iso id=0102, iso id=1000, offset=0. Select via ISO commands\n"
                   "hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000001 -> get one record (number 5) from file 1100 via iso commands\n"
-                  "hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000000 -> get all record (from 5 to 1) from file 1100 via iso commands");
+                  "hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000000 -> get all record (from 5 to 1) from file 1100 via iso commands\n"
+                  "hf mfdes read --appisoid df01 --fid 00 -s lrp -t aes -> read via lrp");
 
     void *argtable[] = {
         arg_param_begin,

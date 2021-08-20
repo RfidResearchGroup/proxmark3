@@ -37,12 +37,11 @@ void DesfireClearContext(DesfireContext *ctx) {
     ctx->keyType = T_DES;
     memset(ctx->key, 0, sizeof(ctx->key));
 
-    LRPClearContext(&ctx->lrpCtx);
-
     ctx->secureChannel = DACNone;
     ctx->cmdSet = DCCNative;
     ctx->commMode = DCMNone;
 
+    ctx->isoChaining = false;
     ctx->appSelected = false;
     ctx->selectedAID = 0;
 

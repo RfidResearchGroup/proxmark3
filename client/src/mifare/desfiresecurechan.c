@@ -25,11 +25,16 @@
 static const uint8_t CommandsCanUseAnyChannel[] = {
     MFDES_S_ADDITIONAL_FRAME,
     MFDES_READ_DATA,
+    MFDES_READ_DATA2,
     MFDES_WRITE_DATA,
+    MFDES_WRITE_DATA2,
     MFDES_GET_VALUE,
     MFDES_READ_RECORDS,
+    MFDES_READ_RECORDS2,
     MFDES_WRITE_RECORD,
+    MFDES_WRITE_RECORD2,
     MFDES_UPDATE_RECORD,
+    MFDES_UPDATE_RECORD2,
 };
 
 static bool CommandCanUseAnyChannel(uint8_t cmd) {

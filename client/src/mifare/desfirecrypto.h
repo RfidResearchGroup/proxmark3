@@ -78,8 +78,6 @@ typedef struct DesfireContextS {
     uint8_t key[DESFIRE_MAX_KEY_SIZE];
     uint8_t masterKey[DESFIRE_MAX_KEY_SIZE]; // source for kdf
 
-    LRPContext lrpCtx;
-
     // KDF finction
     uint8_t kdfAlgo;
     uint8_t kdfInputLen;
@@ -89,6 +87,7 @@ typedef struct DesfireContextS {
     DesfireCommandSet cmdSet;           // native/nativeiso/iso
     DesfireCommunicationMode commMode;  // plain/mac/enc
 
+    bool isoChaining;
     bool appSelected; // for iso auth
     uint32_t selectedAID;
 
