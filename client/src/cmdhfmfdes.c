@@ -5043,7 +5043,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
                 uint8_t sessionkey[16] = {0};
                 uint8_t uid[7] = {0};
                 memcpy(uid, dctx.uid, MAX(dctx.uidlen, 7));
-                DesfireGenTransSessionKey(trkey, transactionCounter, uid, false, sessionkey);
+                DesfireGenTransSessionKeyEV2(trkey, transactionCounter, uid, false, sessionkey);
 
                 aes_decode(NULL, sessionkey, resp, resp, CRYPTO_AES_BLOCK_SIZE);
                 PrintAndLogEx(INFO, "Prev reader id [%zu]: %s", resplen, sprint_hex(resp, resplen));

@@ -462,11 +462,11 @@ static bool TestTransSessionKeys(void) {
     uint32_t trCntr = 8;
 
     uint8_t sessionkey[16] = {0};
-    DesfireGenTransSessionKey(key, trCntr, uid, true, sessionkey);
+    DesfireGenTransSessionKeyEV2(key, trCntr, uid, true, sessionkey);
     uint8_t keymac[] = {0x7C, 0x1A, 0xD2, 0xD9, 0xC5, 0xC0, 0x81, 0x54, 0xA0, 0xA4, 0x91, 0x4B, 0x40, 0x1A, 0x65, 0x98};
     res = res && (memcmp(sessionkey, keymac, sizeof(keymac)) == 0);
 
-    DesfireGenTransSessionKey(key, trCntr, uid, false, sessionkey);
+    DesfireGenTransSessionKeyEV2(key, trCntr, uid, false, sessionkey);
     uint8_t keyenc[] = {0x11, 0x9B, 0x90, 0x2A, 0x07, 0xB1, 0x8A, 0x86, 0x5B, 0x8E, 0x1B, 0x00, 0x60, 0x59, 0x47, 0x84};
     res = res && (memcmp(sessionkey, keyenc, sizeof(keyenc)) == 0);
 
