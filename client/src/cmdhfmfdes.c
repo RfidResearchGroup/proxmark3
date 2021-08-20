@@ -3995,7 +3995,7 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, &securechann, DCMMACed, &id, &selectway);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, &securechann, DCMEncrypted, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
