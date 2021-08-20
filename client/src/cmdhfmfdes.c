@@ -3953,7 +3953,8 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
                   "hf mfdes createmacfile --aid 123456 --fid 01 --rawrights 0FF0 --mackey 00112233445566778899aabbccddeeff --mackeyver 01 -> create transaction mac file with parameters. Rights from default. Authentication with defaults from `default` command\n"
                   "hf mfdes createmacfile --aid 123456 --fid 01 --amode plain --rrights free --wrights deny --rwrights free --chrights key0 --mackey 00112233445566778899aabbccddeeff -> create file app=123456, file=01, with key, and mentioned rights with defaults from `default` command\n"
                   "hf mfdes createmacfile -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> execute with default factory setup. key and keyver == 0x00..00\n"
-                  "hf mfdes createmacfile --appisoid df01 --fid 0f -s lrp -t aes --defparams -> create transaction mac file via lrp channel with length of command 01 (Desfire Light)");
+                  "hf mfdes createmacfile --appisoid df01 --fid 0f -s lrp -t aes --rawrights 0FF0 --mackey 00112233445566778899aabbccddeeff --mackeyver 01 -> create transaction mac file via lrp channel\n"
+                  "hf mfdes createmacfile --appisoid df01 --fid 0f -s lrp -t aes --rawrights 0F10 --mackey 00112233445566778899aabbccddeeff --mackeyver 01 -> create transaction mac file via lrp channel with CommitReaderID command enable");
 
     void *argtable[] = {
         arg_param_begin,
@@ -3979,7 +3980,6 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
         arg_lit0(NULL, "no-auth",   "execute without authentication"),
         arg_str0(NULL, "mackey",    "<hex>", "AES-128 key for MAC (16 hex bytes, big endian). Default 0x00..00"),
         arg_str0(NULL, "mackeyver", "<ver hex 1b>", "AES key version for MAC (1 hex byte). Default 0x00"),
-        arg_lit0(NULL, "defparams", "do not provide key and etc (Desfire Light)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3987,7 +3987,6 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 20);
-    bool defparams = arg_get_lit(ctx, 23);
 
     uint8_t filetype = 0x05; // transaction mac file
 
@@ -4049,23 +4048,12 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
         return res;
     }
 
-    // data contains file id only
-    if (defparams)
-        datalen = 1;
-
     if (verbose)
         PrintAndLogEx(INFO, "%s. File num: 0x%02x type: 0x%02x data[%zu]: %s", DesfireWayIDStr(selectway, id), data[0], filetype, datalen, sprint_hex(data, datalen));
     
-    if (defparams) {
-        PrintAndLogEx(INFO, "---- " _CYAN_("Create file settings") " ----");
-        PrintAndLogEx(SUCCESS, "File type        : transaction mac");
-        PrintAndLogEx(SUCCESS, "File number      : 0x%02x (%d)", data[0], data[0]);
-        PrintAndLogEx(SUCCESS, "Default settings : true");
-    } else {        
-        DesfirePrintCreateFileSettings(filetype, data, datalen);
-    }
+    DesfirePrintCreateFileSettings(filetype, data, datalen);
 
-    res = DesfireCreateFile(&dctx, filetype, data, datalen, !defparams); // cant check length if there is 1 byte data in the command
+    res = DesfireCreateFile(&dctx, filetype, data, datalen, true);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire CreateFile command " _RED_("error") ". Result: %d", res);
         DropField();
@@ -4636,9 +4624,17 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
                 PrintAndLogEx(WARNING, "Read wrong %zu bytes from file 0x%02x offset %u", resplen, fnum, offset);
                 print_buffer_with_offset(resp, resplen, offset, true);
             } else {
-                uint32_t cnt = MemLeToUint4byte(&resp[0]);
-                transactionCounter = cnt;
-                PrintAndLogEx(SUCCESS, "Transaction counter: %d (0x%08x)", cnt, cnt);
+                if (dctx->secureChannel != DACLRP) {
+                    uint32_t cnt = MemLeToUint4byte(&resp[0]);
+                    transactionCounter = cnt;
+                    PrintAndLogEx(SUCCESS, "Transaction counter: %d (0x%08x)", cnt, cnt);
+                } else {
+                    uint32_t actTMC = MemLeToUint2byte(&resp[0]);
+                    uint32_t sessTMC = MemLeToUint2byte(&resp[2]);
+                    transactionCounter = actTMC;
+                    PrintAndLogEx(SUCCESS, "Session tr counter : %d (0x%08x)", sessTMC, sessTMC);
+                    PrintAndLogEx(SUCCESS, "Actual tr counter  : %d (0x%08x)", actTMC, actTMC);
+                }
                 PrintAndLogEx(SUCCESS, "Transaction MAC    : %s", sprint_hex(&resp[4], 8));
             }
         } else {
