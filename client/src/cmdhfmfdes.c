@@ -4834,8 +4834,9 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, &securechann, DCMPlain, &appid, NULL);
+    uint32_t id = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 20, &securechann, DCMMACed, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -4872,13 +4873,6 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     bool commit = arg_get_lit(ctx, 18);
 
     int updaterecno = arg_get_int_def(ctx, 19, -1);
-
-    uint32_t appisoid = 0x0000;
-    bool isoidpresent = false;
-    if (CLIGetUint32Hex(ctx, 20, 0x0000, &appisoid, &isoidpresent, 2, "Application ISO ID (for EF) must have 2 bytes length")) {
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
 
     uint32_t fileisoid = 0x0000;
     bool fileisoidpresent = false;
@@ -4917,18 +4911,11 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     if (trkeylen > 0)
         DesfireGetCardUID(&dctx);
 
-    if (!isoidpresent) {
-        res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAndAuthenticateISO(&dctx, securechann, (appid != 0), appid, appisoid, true, fileisoid, noauth, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
-        }
+    res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, id, noauth, true, fileisoid, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
+        return res;
     }
 
     // ISO command set
@@ -4990,6 +4977,12 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
             if (fsettings.fileCommMode != 0 && noauth)
                 PrintAndLogEx(WARNING, "File needs communication mode `%s` but there is no authentication", CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
 
+            if ((fsettings.rAccess < 0x0e && fsettings.rAccess != dctx.keyNum) && (fsettings.rwAccess < 0x0e && fsettings.rwAccess != dctx.keyNum))
+                PrintAndLogEx(WARNING, "File needs to be authenticated with key 0x%02x or 0x%02x but current authentication key is 0x%02x", fsettings.rAccess, fsettings.rwAccess, dctx.keyNum);
+
+            if (fsettings.rAccess == 0x0f && fsettings.rwAccess == 0x0f)
+                PrintAndLogEx(WARNING, "File access denied. All read access rights is 0x0f.");
+
             if (verbose)
                 PrintAndLogEx(INFO, "Got file type: %s. Option: %s. comm mode: %s",
                               GetDesfireFileType(fsettings.fileType),
@@ -5031,6 +5024,9 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         } else
             PrintAndLogEx(WARNING, "Desfire CommitReaderID command " _RED_("error") ". Result: %d", res);
     }
+
+    // iso chaining works in the lrp mode
+    dctx.isoChaining = (dctx.secureChannel == DACLRP);
 
     // write
     if (op == RFTData) {
