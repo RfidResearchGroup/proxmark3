@@ -157,6 +157,7 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_GET_UID,                   DACLRP,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_FILE_SETTINGS,      DACLRP,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_CONFIGURATION,      DACLRP,  DCCNative,    DCMEncrypted},
+    {MFDES_CREATE_TRANS_MAC_FILE,     DACLRP,  DCCNative,    DCMEncrypted},
 
     {MFDES_CHANGE_KEY,                DACLRP,  DCCNative,    DCMEncryptedPlain},
 };
@@ -261,6 +262,8 @@ static void DesfireSecureChannelEncodeD40(DesfireContext *ctx, uint8_t cmd, uint
     *dstdatalen = srcdatalen;
 
     uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd);
+    if (srcdatalen < hdrlen)
+        hdrlen = srcdatalen;
 
     if (ctx->commMode == DCMMACed || (ctx->commMode == DCMEncrypted && srcdatalen <= hdrlen)) {
         if (srcdatalen == 0)
@@ -317,6 +320,8 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext *ctx, uint8_t cmd, uint
     *dstdatalen = srcdatalen;
 
     uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd);
+    if (srcdatalen < hdrlen)
+        hdrlen = srcdatalen;
 
     // we calc MAC anyway
     // if encypted channel and no data - we only calc MAC
@@ -371,6 +376,8 @@ static void DesfireSecureChannelEncodeEV2(DesfireContext *ctx, uint8_t cmd, uint
     *dstdatalen = srcdatalen;
 
     uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd);
+    if (srcdatalen < hdrlen)
+        hdrlen = srcdatalen;
 
     if (ctx->commMode == DCMMACed) {
         uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
@@ -408,6 +415,8 @@ static void DesfireSecureChannelEncodeLRP(DesfireContext *ctx, uint8_t cmd, uint
     *dstdatalen = srcdatalen;
 
     uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd);
+    if (srcdatalen < hdrlen)
+        hdrlen = srcdatalen;
 
     if (ctx->commMode == DCMMACed) {
         uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
