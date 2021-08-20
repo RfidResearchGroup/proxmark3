@@ -4624,16 +4624,15 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
                 PrintAndLogEx(WARNING, "Read wrong %zu bytes from file 0x%02x offset %u", resplen, fnum, offset);
                 print_buffer_with_offset(resp, resplen, offset, true);
             } else {
+                uint32_t cnt = MemLeToUint4byte(&resp[0]);
+                transactionCounter = cnt;
                 if (dctx->secureChannel != DACLRP) {
-                    uint32_t cnt = MemLeToUint4byte(&resp[0]);
-                    transactionCounter = cnt;
                     PrintAndLogEx(SUCCESS, "Transaction counter: %d (0x%08x)", cnt, cnt);
                 } else {
                     // For composing TMC the two subparts are concatenated as follows: actTMC || sesTMC. Both subparts are represented LSB first.
                     // MF2DLHX0.pdf, 10.3.2.1 Transaction MAC Counter, page 41
                     uint32_t actTMC = MemLeToUint2byte(&resp[0]);
                     uint32_t sessTMC = MemLeToUint2byte(&resp[2]);
-                    transactionCounter = actTMC;
                     PrintAndLogEx(SUCCESS, "Session tr counter : %d (0x%08x)", sessTMC, sessTMC);
                     PrintAndLogEx(SUCCESS, "Actual tr counter  : %d (0x%08x)", actTMC, actTMC);
                 }
