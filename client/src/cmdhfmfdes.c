@@ -4662,8 +4662,8 @@ static int CmdHF14ADesReadData(const char *Cmd) {
                   "hf mfdes read --appisoid 0102 --fileisoid 1000 --type data -c iso -> read file via ISO channel: app iso id=0102, iso id=1000, offset=0. Select via ISO commands\n"
                   "hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000001 -> get one record (number 5) from file 1100 via iso commands\n"
                   "hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000000 -> get all record (from 5 to 1) from file 1100 via iso commands\n"
-                  "hf mfdes read --appisoid df01 --fid 00 -s lrp -t aes -> read via lrp channel\n"
-                  "hf mfdes read --appisoid df01 --fid 00 -s ev2 -t aes --isochain -> read Desfire Light via ev2 channel");
+                  "hf mfdes read --appisoid df01 --fid 00 -s lrp -t aes --length 000010 -> read via lrp channel\n"
+                  "hf mfdes read --appisoid df01 --fid 00 -s ev2 -t aes --length 000010 --isochain -> read Desfire Light via ev2 channel");
 
     void *argtable[] = {
         arg_param_begin,
