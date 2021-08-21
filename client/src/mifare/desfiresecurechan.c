@@ -81,7 +81,6 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_FORMAT_PICC,               DACd40,  DCCNative,    DCMMACed},
     {MFDES_GET_FILE_IDS,              DACd40,  DCCNative,    DCMMACed},
     {MFDES_GET_ISOFILE_IDS,           DACd40,  DCCNative,    DCMMACed},
-    {MFDES_COMMIT_READER_ID,          DACd40,  DCCNative,    DCMMACed},
     {MFDES_ABORT_TRANSACTION,         DACd40,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,                   DACd40,  DCCNative,    DCMEncrypted},
@@ -161,6 +160,7 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_CLEAR_RECORD_FILE,         DACLRP,  DCCNative,    DCMMACed},
     {MFDES_COMMIT_TRANSACTION,        DACLRP,  DCCNative,    DCMMACed},
     {MFDES_ABORT_TRANSACTION,         DACLRP,  DCCNative,    DCMMACed},
+    {MFDES_COMMIT_READER_ID,          DACLRP,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,                   DACLRP,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_FILE_SETTINGS,      DACLRP,  DCCNative,    DCMEncrypted},
