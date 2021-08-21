@@ -169,7 +169,7 @@ int demodPyramid(bool verbose) {
                   , (checksum == checkCS) ? _GREEN_("ok") : _RED_("fail")
                  );
 
-    PrintAndLogEx(DEBUG, "DEBUG: Pyramid: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
+    PrintAndLogEx(DEBUG, "DEBUG: Pyramid: idx: %d, Len: %d, Printing DemodBuffer:", idx, 128);
     if (g_debugMode) {
         printDemodBuff(0, false, false, false);
     }

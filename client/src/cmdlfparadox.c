@@ -161,7 +161,7 @@ int demodParadox(bool verbose) {
                   rawLo
                  );
 
-    PrintAndLogEx(DEBUG, "DEBUG: Paradox idx: %d, len: %zu, Printing Demod Buffer:", idx, size);
+    PrintAndLogEx(DEBUG, "DEBUG: Paradox idx: %d, len: %zu, Printing DemodBuffer:", idx, size);
     if (g_debugMode) {
         printDemodBuff(0, false, false, false);
     }

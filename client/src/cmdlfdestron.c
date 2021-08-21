@@ -37,8 +37,8 @@ int demodDestron(bool verbose) {
         return PM3_ESOFT;
     }
 
-    size_t size = DemodBufferLen;
-    int ans = detectDestron(DemodBuffer, &size);
+    size_t size = g_DemodBufferLen;
+    int ans = detectDestron(g_DemodBuffer, &size);
     if (ans < 0) {
         if (ans == -1)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Destron: too few bits found");
@@ -52,12 +52,12 @@ int demodDestron(bool verbose) {
         return PM3_ESOFT;
     }
 
-    setDemodBuff(DemodBuffer, DESTRON_FRAME_SIZE, ans);
+    setDemodBuff(g_DemodBuffer, DESTRON_FRAME_SIZE, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     uint8_t bits[DESTRON_FRAME_SIZE - DESTRON_PREAMBLE_SIZE] = {0};
     size_t bitlen = DESTRON_FRAME_SIZE - DESTRON_PREAMBLE_SIZE;
-    memcpy(bits, DemodBuffer + DESTRON_PREAMBLE_SIZE, DESTRON_FRAME_SIZE - DESTRON_PREAMBLE_SIZE);
+    memcpy(bits, g_DemodBuffer + DESTRON_PREAMBLE_SIZE, DESTRON_FRAME_SIZE - DESTRON_PREAMBLE_SIZE);
 
     uint8_t alignPos = 0;
     uint16_t errCnt = manrawdecode(bits, &bitlen, 0, &alignPos);

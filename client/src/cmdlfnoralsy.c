@@ -46,8 +46,8 @@ int demodNoralsy(bool verbose) {
         return PM3_ESOFT;
     }
 
-    size_t size = DemodBufferLen;
-    int ans = detectNoralsy(DemodBuffer, &size);
+    size_t size = g_DemodBufferLen;
+    int ans = detectNoralsy(g_DemodBuffer, &size);
     if (ans < 0) {
         if (g_debugMode) {
             if (ans == -1)
@@ -61,13 +61,13 @@ int demodNoralsy(bool verbose) {
         }
         return PM3_ESOFT;
     }
-    setDemodBuff(DemodBuffer, 96, ans);
+    setDemodBuff(g_DemodBuffer, 96, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     //got a good demod
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
-    uint32_t raw3 = bytebits_to_byte(DemodBuffer + 64, 32);
+    uint32_t raw1 = bytebits_to_byte(g_DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
+    uint32_t raw3 = bytebits_to_byte(g_DemodBuffer + 64, 32);
 
     uint32_t cardid = ((raw2 & 0xFFF00000) >> 20) << 16;
     cardid |= (raw2 & 0xFF) << 8;
@@ -79,11 +79,11 @@ int demodNoralsy(bool verbose) {
     year += (year > 60) ? 1900 : 2000;
 
     // calc checksums
-    uint8_t calc1 = noralsy_chksum(DemodBuffer + 32, 40);
-    uint8_t calc2 = noralsy_chksum(DemodBuffer, 76);
+    uint8_t calc1 = noralsy_chksum(g_DemodBuffer + 32, 40);
+    uint8_t calc2 = noralsy_chksum(g_DemodBuffer, 76);
     uint8_t chk1 = 0, chk2 = 0;
-    chk1 = bytebits_to_byte(DemodBuffer + 72, 4);
-    chk2 = bytebits_to_byte(DemodBuffer + 76, 4);
+    chk1 = bytebits_to_byte(g_DemodBuffer + 72, 4);
+    chk2 = bytebits_to_byte(g_DemodBuffer + 76, 4);
     // test checksums
     if (chk1 != calc1) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: checksum 1 failed %x - %x\n", chk1, calc1);

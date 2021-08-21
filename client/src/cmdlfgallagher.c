@@ -88,8 +88,8 @@ int demodGallagher(bool verbose) {
         return PM3_ESOFT;
     }
 
-    size_t size = DemodBufferLen;
-    int ans = detectGallagher(DemodBuffer, &size);
+    size_t size = g_DemodBufferLen;
+    int ans = detectGallagher(g_DemodBuffer, &size);
     if (ans < 0) {
         if (ans == -1)
             PrintAndLogEx(DEBUG, "DEBUG: Error - GALLAGHER: too few bits found");
@@ -102,23 +102,23 @@ int demodGallagher(bool verbose) {
 
         return PM3_ESOFT;
     }
-    setDemodBuff(DemodBuffer, 96, ans);
+    setDemodBuff(g_DemodBuffer, 96, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     // got a good demod
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
-    uint32_t raw3 = bytebits_to_byte(DemodBuffer + 64, 32);
+    uint32_t raw1 = bytebits_to_byte(g_DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
+    uint32_t raw3 = bytebits_to_byte(g_DemodBuffer + 64, 32);
 
     // bytes
     uint8_t arr[8] = {0};
     for (int i = 0, pos = 0; i < ARRAYLEN(arr); i++) {
         pos = 16 + (9 * i);
-        arr[i] = bytebits_to_byte(DemodBuffer + pos, 8);
+        arr[i] = bytebits_to_byte(g_DemodBuffer + pos, 8);
     }
 
     // crc
-    uint8_t crc = bytebits_to_byte(DemodBuffer + 16 + (9 * 8), 8);
+    uint8_t crc = bytebits_to_byte(g_DemodBuffer + 16 + (9 * 8), 8);
     uint8_t calc_crc =  CRC8Cardx(arr, ARRAYLEN(arr));
 
     descramble(arr, ARRAYLEN(arr));

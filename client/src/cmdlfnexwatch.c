@@ -131,8 +131,8 @@ int demodNexWatch(bool verbose) {
         return PM3_ESOFT;
     }
     bool invert = false;
-    size_t size = DemodBufferLen;
-    int idx = detectNexWatch(DemodBuffer, &size, &invert);
+    size_t size = g_DemodBufferLen;
+    int idx = detectNexWatch(g_DemodBuffer, &size, &invert);
     if (idx < 0) {
         if (idx == -1)
             PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch not enough samples");
@@ -153,42 +153,42 @@ int demodNexWatch(bool verbose) {
     // skip the 4 first bits from the nexwatch preamble identification (we use 4 extra zeros..)
     idx += 4;
 
-    setDemodBuff(DemodBuffer, size, idx);
+    setDemodBuff(g_DemodBuffer, size, idx);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
 
     if (invert) {
         PrintAndLogEx(INFO, "Inverted the demodulated data");
         for (size_t i = 0; i < size; i++)
-            DemodBuffer[i] ^= 1;
+            g_DemodBuffer[i] ^= 1;
     }
 
     //got a good demod
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
-    uint32_t raw3 = bytebits_to_byte(DemodBuffer + 32 + 32, 32);
+    uint32_t raw1 = bytebits_to_byte(g_DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
+    uint32_t raw3 = bytebits_to_byte(g_DemodBuffer + 32 + 32, 32);
 
     // get rawid
     uint32_t rawid = 0;
     for (uint8_t k = 0; k < 4; k++) {
         for (uint8_t m = 0; m < 8; m++) {
-            rawid = (rawid << 1) | DemodBuffer[m + k + (m * 4)];
+            rawid = (rawid << 1) | g_DemodBuffer[m + k + (m * 4)];
         }
     }
 
     // descrambled id
     uint32_t cn = 0;
-    uint32_t scambled = bytebits_to_byte(DemodBuffer + 8 + 32, 32);
+    uint32_t scambled = bytebits_to_byte(g_DemodBuffer + 8 + 32, 32);
     nexwatch_scamble(DESCRAMBLE, &cn, &scambled);
 
-    uint8_t mode = bytebits_to_byte(DemodBuffer + 72, 4);
-    uint8_t parity = bytebits_to_byte(DemodBuffer + 76, 4);
-    uint8_t chk = bytebits_to_byte(DemodBuffer + 80, 8);
+    uint8_t mode = bytebits_to_byte(g_DemodBuffer + 72, 4);
+    uint8_t parity = bytebits_to_byte(g_DemodBuffer + 76, 4);
+    uint8_t chk = bytebits_to_byte(g_DemodBuffer + 80, 8);
 
     // parity check
     // from 32b hex id, 4b mode
     uint8_t hex[5] = {0};
     for (uint8_t i = 0; i < 5; i++) {
-        hex[i] = bytebits_to_byte(DemodBuffer + 8 + 32 + (i * 8), 8);
+        hex[i] = bytebits_to_byte(g_DemodBuffer + 8 + 32 + (i * 8), 8);
     }
     // mode is only 4 bits.
     hex[4] &= 0xf0;
@@ -584,10 +584,10 @@ int detectNexWatch(uint8_t *dest, size_t *size, bool *invert) {
 
     size_t startIdx = 0;
 
-    if (!preambleSearch(DemodBuffer, preamble, sizeof(preamble), size, &startIdx)) {
+    if (!preambleSearch(g_DemodBuffer, preamble, sizeof(preamble), size, &startIdx)) {
         // if didn't find preamble try again inverting
         uint8_t preamble_i[28] = {1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-        if (!preambleSearch(DemodBuffer, preamble_i, sizeof(preamble_i), size, &startIdx)) return -4;
+        if (!preambleSearch(g_DemodBuffer, preamble_i, sizeof(preamble_i), size, &startIdx)) return -4;
         *invert ^= 1;
     }
 

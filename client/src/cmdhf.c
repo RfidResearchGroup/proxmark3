@@ -376,7 +376,7 @@ int handle_hf_plot(void) {
     CmdHpf("");
 
     setClockGrid(0, 0);
-    DemodBufferLen = 0;
+    g_DemodBufferLen = 0;
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }

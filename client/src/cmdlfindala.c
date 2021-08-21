@@ -124,8 +124,8 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
     }
 
     uint8_t inv = 0;
-    size_t size = DemodBufferLen;
-    int idx = detectIndala(DemodBuffer, &size, &inv);
+    size_t size = g_DemodBufferLen;
+    int idx = detectIndala(g_DemodBuffer, &size, &inv);
     if (idx < 0) {
         if (idx == -1)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: not enough samples");
@@ -139,68 +139,68 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: error demoding psk idx: %d", idx);
         return PM3_ESOFT;
     }
-    setDemodBuff(DemodBuffer, size, idx);
+    setDemodBuff(g_DemodBuffer, size, idx);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
 
     //convert UID to HEX
-    uint32_t uid1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t uid2 = bytebits_to_byte(DemodBuffer + 32, 32);
+    uint32_t uid1 = bytebits_to_byte(g_DemodBuffer, 32);
+    uint32_t uid2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
     // To be checked, what's this internal ID ?
     // foo is only used for 64b ids and in that case uid1 must be only preamble, plus the following code is wrong as x<<32 & 0x1FFFFFFF is always zero
     //uint64_t foo = (((uint64_t)uid1 << 32) & 0x1FFFFFFF) | (uid2 & 0x7FFFFFFF);
     uint64_t foo = uid2 & 0x7FFFFFFF;
 
-    if (DemodBufferLen == 64) {
-        PrintAndLogEx(SUCCESS, "Indala (len %zu)  Raw: " _GREEN_("%x%08x"), DemodBufferLen, uid1, uid2);
+    if (g_DemodBufferLen == 64) {
+        PrintAndLogEx(SUCCESS, "Indala (len %zu)  Raw: " _GREEN_("%x%08x"), g_DemodBufferLen, uid1, uid2);
 
         uint16_t p1  = 0;
-        p1 |= DemodBuffer[32 + 3] << 8;
-        p1 |= DemodBuffer[32 + 6] << 5;
-        p1 |= DemodBuffer[32 + 8] << 4;
-        p1 |= DemodBuffer[32 + 9] << 3;
-        p1 |= DemodBuffer[32 + 11] << 1;
-        p1 |= DemodBuffer[32 + 16] << 6;
-        p1 |= DemodBuffer[32 + 19] << 7;
-        p1 |= DemodBuffer[32 + 20] << 10;
-        p1 |= DemodBuffer[32 + 21] << 2;
-        p1 |= DemodBuffer[32 + 22] << 0;
-        p1 |= DemodBuffer[32 + 24] << 9;
+        p1 |= g_DemodBuffer[32 + 3] << 8;
+        p1 |= g_DemodBuffer[32 + 6] << 5;
+        p1 |= g_DemodBuffer[32 + 8] << 4;
+        p1 |= g_DemodBuffer[32 + 9] << 3;
+        p1 |= g_DemodBuffer[32 + 11] << 1;
+        p1 |= g_DemodBuffer[32 + 16] << 6;
+        p1 |= g_DemodBuffer[32 + 19] << 7;
+        p1 |= g_DemodBuffer[32 + 20] << 10;
+        p1 |= g_DemodBuffer[32 + 21] << 2;
+        p1 |= g_DemodBuffer[32 + 22] << 0;
+        p1 |= g_DemodBuffer[32 + 24] << 9;
 
         uint8_t fc = 0;
-        fc |= DemodBuffer[57] << 7; // b8
-        fc |= DemodBuffer[49] << 6; // b7
-        fc |= DemodBuffer[44] << 5; // b6
-        fc |= DemodBuffer[47] << 4; // b5
-        fc |= DemodBuffer[48] << 3; // b4
-        fc |= DemodBuffer[53] << 2; // b3
-        fc |= DemodBuffer[39] << 1; // b2
-        fc |= DemodBuffer[58] << 0; // b1
+        fc |= g_DemodBuffer[57] << 7; // b8
+        fc |= g_DemodBuffer[49] << 6; // b7
+        fc |= g_DemodBuffer[44] << 5; // b6
+        fc |= g_DemodBuffer[47] << 4; // b5
+        fc |= g_DemodBuffer[48] << 3; // b4
+        fc |= g_DemodBuffer[53] << 2; // b3
+        fc |= g_DemodBuffer[39] << 1; // b2
+        fc |= g_DemodBuffer[58] << 0; // b1
 
         uint16_t csn = 0;
-        csn |= DemodBuffer[42] << 15; // b16
-        csn |= DemodBuffer[45] << 14; // b15
-        csn |= DemodBuffer[43] << 13; // b14
-        csn |= DemodBuffer[40] << 12; // b13
-        csn |= DemodBuffer[52] << 11; // b12
-        csn |= DemodBuffer[36] << 10; // b11
-        csn |= DemodBuffer[35] << 9; // b10
-        csn |= DemodBuffer[51] << 8; // b9
-        csn |= DemodBuffer[46] << 7; // b8
-        csn |= DemodBuffer[33] << 6; // b7
-        csn |= DemodBuffer[37] << 5; // b6
-        csn |= DemodBuffer[54] << 4; // b5
-        csn |= DemodBuffer[56] << 3; // b4
-        csn |= DemodBuffer[59] << 2; // b3
-        csn |= DemodBuffer[50] << 1; // b2
-        csn |= DemodBuffer[41] << 0; // b1
+        csn |= g_DemodBuffer[42] << 15; // b16
+        csn |= g_DemodBuffer[45] << 14; // b15
+        csn |= g_DemodBuffer[43] << 13; // b14
+        csn |= g_DemodBuffer[40] << 12; // b13
+        csn |= g_DemodBuffer[52] << 11; // b12
+        csn |= g_DemodBuffer[36] << 10; // b11
+        csn |= g_DemodBuffer[35] << 9; // b10
+        csn |= g_DemodBuffer[51] << 8; // b9
+        csn |= g_DemodBuffer[46] << 7; // b8
+        csn |= g_DemodBuffer[33] << 6; // b7
+        csn |= g_DemodBuffer[37] << 5; // b6
+        csn |= g_DemodBuffer[54] << 4; // b5
+        csn |= g_DemodBuffer[56] << 3; // b4
+        csn |= g_DemodBuffer[59] << 2; // b3
+        csn |= g_DemodBuffer[50] << 1; // b2
+        csn |= g_DemodBuffer[41] << 0; // b1
 
         uint8_t parity = 0;
-        parity |= DemodBuffer[34] << 1; // b2
-        parity |= DemodBuffer[38] << 0; // b1
+        parity |= g_DemodBuffer[34] << 1; // b2
+        parity |= g_DemodBuffer[38] << 0; // b1
 
         uint8_t checksum = 0;
-        checksum |= DemodBuffer[62] << 1; // b2
-        checksum |= DemodBuffer[63] << 0; // b1
+        checksum |= g_DemodBuffer[62] << 1; // b2
+        checksum |= g_DemodBuffer[63] << 0; // b1
 
         PrintAndLogEx(SUCCESS, "Fmt " _GREEN_("26") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u") " Parity: " _GREEN_("%1d%1d")
                       , fc
@@ -214,18 +214,18 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
         // This doesn't seem to line up with the hot-stamp numbers on any HID cards I have seen, but, leaving it alone since I do not know how those work. -MS
         PrintAndLogEx(SUCCESS, "    Printed     | __%04d__ [0x%X]", p1, p1);
         PrintAndLogEx(SUCCESS, "    Internal ID | %" PRIu64, foo);
-        decodeHeden2L(DemodBuffer);
+        decodeHeden2L(g_DemodBuffer);
 
     } else {
-        uint32_t uid3 = bytebits_to_byte(DemodBuffer + 64, 32);
-        uint32_t uid4 = bytebits_to_byte(DemodBuffer + 96, 32);
-        uint32_t uid5 = bytebits_to_byte(DemodBuffer + 128, 32);
-        uint32_t uid6 = bytebits_to_byte(DemodBuffer + 160, 32);
-        uint32_t uid7 = bytebits_to_byte(DemodBuffer + 192, 32);
+        uint32_t uid3 = bytebits_to_byte(g_DemodBuffer + 64, 32);
+        uint32_t uid4 = bytebits_to_byte(g_DemodBuffer + 96, 32);
+        uint32_t uid5 = bytebits_to_byte(g_DemodBuffer + 128, 32);
+        uint32_t uid6 = bytebits_to_byte(g_DemodBuffer + 160, 32);
+        uint32_t uid7 = bytebits_to_byte(g_DemodBuffer + 192, 32);
         PrintAndLogEx(
             SUCCESS
             , "Indala (len %zu)  Raw: " _GREEN_("%x%08x%08x%08x%08x%08x%08x")
-            , DemodBufferLen
+            , g_DemodBufferLen
             , uid1
             , uid2
             , uid3
@@ -237,7 +237,7 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
     }
 
     if (g_debugMode) {
-        PrintAndLogEx(DEBUG, "DEBUG: Indala - printing demodbuffer");
+        PrintAndLogEx(DEBUG, "DEBUG: Indala - printing DemodBuffer");
         printDemodBuff(0, false, false, false);
     }
     return PM3_SUCCESS;
@@ -314,7 +314,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
 
     //clear clock grid and demod plot
     setClockGrid(0, 0);
-    DemodBufferLen = 0;
+    g_DemodBufferLen = 0;
 
     // PrintAndLogEx(NORMAL, "Expecting a bit less than %d raw bits", GraphTraceLen / 32);
     // loop through raw signal - since we know it is psk1 rf/32 fc/2 skip every other value (+=2)

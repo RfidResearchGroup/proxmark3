@@ -287,8 +287,8 @@ bool t55xxAquireAndCompareBlock0(bool usepwd, uint32_t password, uint32_t known_
             continue;
         }
 
-        for (uint16_t i = 0; i < DemodBufferLen - 32; i++) {
-            uint32_t tmp = PackBits(i, 32, DemodBuffer);
+        for (uint16_t i = 0; i < g_DemodBufferLen - 32; i++) {
+            uint32_t tmp = PackBits(i, 32, g_DemodBuffer);
             if (tmp == known_block0) {
                 config.offset = i;
                 config.downlink_mode = m;
@@ -727,7 +727,7 @@ bool DecodeT55xxBlock(void) {
     int ans = 0;
     bool ST = config.ST;
     uint8_t bitRate[8] = {8, 16, 32, 40, 50, 64, 100, 128};
-    DemodBufferLen = 0x00;
+    g_DemodBufferLen = 0x00;
 
     switch (config.modulation) {
         case DEMOD_FSK:
@@ -750,7 +750,7 @@ bool DecodeT55xxBlock(void) {
         case DEMOD_PSK2: //inverted won't affect this
         case DEMOD_PSK3: //not fully implemented
             ans = PSKDemod(bitRate[config.bitrate], 0, 6, false);
-            psk1TOpsk2(DemodBuffer, DemodBufferLen);
+            psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
             break;
         case DEMOD_NRZ:
             ans = NRZrawDemod(bitRate[config.bitrate], config.inverted, 1, false);
@@ -766,7 +766,7 @@ bool DecodeT55xxBlock(void) {
 }
 
 static bool DecodeT5555TraceBlock(void) {
-    DemodBufferLen = 0x00;
+    g_DemodBufferLen = 0x00;
 
     // According to datasheet. Always: RF/64, not inverted, Manchester
     bool st = false;
@@ -1042,7 +1042,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_FSK2;
             tests[hits].bitrate = bitRate;
             tests[hits].inverted = false;
-            tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+            tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
             tests[hits].ST = false;
             tests[hits].downlink_mode = downlink_mode;
             ++hits;
@@ -1055,7 +1055,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_FSK2a;
             tests[hits].bitrate = bitRate;
             tests[hits].inverted = true;
-            tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+            tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
             tests[hits].ST = false;
             tests[hits].downlink_mode = downlink_mode;
             ++hits;
@@ -1073,7 +1073,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_ASK;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = false;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
             }
@@ -1087,7 +1087,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_ASK;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = true;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
             }
@@ -1095,7 +1095,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_BI;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = false;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
                 tests[hits].ST = false;
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
@@ -1104,7 +1104,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_BIa;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = true;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
                 tests[hits].ST = false;
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
@@ -1116,7 +1116,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_NRZ;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = false;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
                 tests[hits].ST = false;
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
@@ -1126,7 +1126,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_NRZ;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = true;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
                 tests[hits].ST = false;
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
@@ -1143,7 +1143,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_PSK1;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = false;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
                 tests[hits].ST = false;
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
@@ -1152,7 +1152,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_PSK1;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = true;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
                 tests[hits].ST = false;
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
@@ -1160,12 +1160,12 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
             //ICEMAN: are these PSKDemod calls needed?
             // PSK2 - needs a call to psk1TOpsk2.
             if (PSKDemod(0, 0, 6, false) == PM3_SUCCESS) {
-                psk1TOpsk2(DemodBuffer, DemodBufferLen);
+                psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
                 if (test(DEMOD_PSK2, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                     tests[hits].modulation = DEMOD_PSK2;
                     tests[hits].bitrate = bitRate;
                     tests[hits].inverted = false;
-                    tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+                    tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
                     tests[hits].ST = false;
                     tests[hits].downlink_mode = downlink_mode;
                     ++hits;
@@ -1173,12 +1173,12 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
             } // inverse waves does not affect this demod
             // PSK3 - needs a call to psk1TOpsk2.
             if (PSKDemod(0, 0, 6, false) == PM3_SUCCESS) {
-                psk1TOpsk2(DemodBuffer, DemodBufferLen);
+                psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
                 if (test(DEMOD_PSK3, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                     tests[hits].modulation = DEMOD_PSK3;
                     tests[hits].bitrate = bitRate;
                     tests[hits].inverted = false;
-                    tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+                    tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
                     tests[hits].ST = false;
                     tests[hits].downlink_mode = downlink_mode;
                     ++hits;
@@ -1278,17 +1278,17 @@ bool testKnownConfigBlock(uint32_t block0) {
 
 bool GetT55xxBlockData(uint32_t *blockdata) {
 
-    if (DemodBufferLen == 0)
+    if (g_DemodBufferLen == 0)
         return false;
 
     uint8_t idx = config.offset;
 
-    if (idx + 32 > DemodBufferLen) {
-        PrintAndLogEx(WARNING, "The configured offset %d is too big. Possible offset: %zu)", idx, DemodBufferLen - 32);
+    if (idx + 32 > g_DemodBufferLen) {
+        PrintAndLogEx(WARNING, "The configured offset %d is too big. Possible offset: %zu)", idx, g_DemodBufferLen - 32);
         return false;
     }
 
-    *blockdata = PackBits(0, 32, DemodBuffer + idx);
+    *blockdata = PackBits(0, 32, g_DemodBuffer + idx);
     return true;
 }
 
@@ -1303,7 +1303,7 @@ void printT55xxBlock(uint8_t blockNum, bool page1) {
 
     T55x7_SaveBlockData((page1) ? blockNum + 8 : blockNum, val);
 
-    PrintAndLogEx(SUCCESS, " %02d | %08X | %s | %s", blockNum, val, sprint_bin(DemodBuffer + config.offset, 32), sprint_ascii(bytes, 4));
+    PrintAndLogEx(SUCCESS, " %02d | %08X | %s | %s", blockNum, val, sprint_bin(g_DemodBuffer + config.offset, 32), sprint_ascii(bytes, 4));
 }
 
 static bool testModulation(uint8_t mode, uint8_t modread) {
@@ -1378,36 +1378,36 @@ static int convertQ5bitRate(uint8_t bitRateRead) {
 
 static bool testQ5(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk) {
 
-    if (DemodBufferLen < 64) return false;
+    if (g_DemodBufferLen < 64) return false;
 
     for (uint8_t idx = 28; idx < 64; idx++) {
         uint8_t si = idx;
-        if (PackBits(si, 28, DemodBuffer) == 0x00) continue;
+        if (PackBits(si, 28, g_DemodBuffer) == 0x00) continue;
 
-        uint8_t safer     = PackBits(si, 4, DemodBuffer);
+        uint8_t safer     = PackBits(si, 4, g_DemodBuffer);
         si += 4;     //master key
-        uint8_t resv      = PackBits(si, 8, DemodBuffer);
+        uint8_t resv      = PackBits(si, 8, g_DemodBuffer);
         si += 8;
         // 2nibble must be zeroed.
         if (safer != 0x6 && safer != 0x9) continue;
         if (resv > 0x00) continue;
-        //uint8_t pageSel   = PackBits(si, 1, DemodBuffer); si += 1;
-        //uint8_t fastWrite = PackBits(si, 1, DemodBuffer); si += 1;
+        //uint8_t pageSel   = PackBits(si, 1, g_DemodBuffer); si += 1;
+        //uint8_t fastWrite = PackBits(si, 1, g_DemodBuffer); si += 1;
         si += 1 + 1;
-        int bitRate       = PackBits(si, 6, DemodBuffer) * 2 + 2;
+        int bitRate       = PackBits(si, 6, g_DemodBuffer) * 2 + 2;
         si += 6;     //bit rate
         if (bitRate > 128 || bitRate < 8) continue;
 
-        //uint8_t AOR       = PackBits(si, 1, DemodBuffer); si += 1;
-        //uint8_t PWD       = PackBits(si, 1, DemodBuffer); si += 1;
-        //uint8_t pskcr     = PackBits(si, 2, DemodBuffer); si += 2;  //could check psk cr
-        //uint8_t inverse   = PackBits(si, 1, DemodBuffer); si += 1;
+        //uint8_t AOR       = PackBits(si, 1, g_DemodBuffer); si += 1;
+        //uint8_t PWD       = PackBits(si, 1, g_DemodBuffer); si += 1;
+        //uint8_t pskcr     = PackBits(si, 2, g_DemodBuffer); si += 2;  //could check psk cr
+        //uint8_t inverse   = PackBits(si, 1, g_DemodBuffer); si += 1;
         si += 1 + 1 + 2 + 1;
-        uint8_t modread   = PackBits(si, 3, DemodBuffer);
+        uint8_t modread   = PackBits(si, 3, g_DemodBuffer);
         si += 3;
-        uint8_t maxBlk    = PackBits(si, 3, DemodBuffer);
+        uint8_t maxBlk    = PackBits(si, 3, g_DemodBuffer);
         si += 3;
-        //uint8_t ST        = PackBits(si, 1, DemodBuffer); si += 1;
+        //uint8_t ST        = PackBits(si, 1, g_DemodBuffer); si += 1;
         if (maxBlk == 0) continue;
 
         //test modulation
@@ -1434,28 +1434,28 @@ static bool testBitRate(uint8_t readRate, uint8_t clk) {
 
 bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5) {
 
-    if (DemodBufferLen < 64) return false;
+    if (g_DemodBufferLen < 64) return false;
     for (uint8_t idx = 28; idx < 64; idx++) {
         uint8_t si = idx;
-        if (PackBits(si, 28, DemodBuffer) == 0x00) continue;
+        if (PackBits(si, 28, g_DemodBuffer) == 0x00) continue;
 
-        uint8_t safer    = PackBits(si, 4, DemodBuffer);
+        uint8_t safer    = PackBits(si, 4, g_DemodBuffer);
         si += 4;     //master key
-        uint8_t resv     = PackBits(si, 4, DemodBuffer);
+        uint8_t resv     = PackBits(si, 4, g_DemodBuffer);
         si += 4;     //was 7 & +=7+3 //should be only 4 bits if extended mode
         // 2nibble must be zeroed.
         // moved test to here, since this gets most faults first.
         if (resv > 0x00) continue;
 
-        int bitRate      = PackBits(si, 6, DemodBuffer);
+        int bitRate      = PackBits(si, 6, g_DemodBuffer);
         si += 6;     //bit rate (includes extended mode part of rate)
-        uint8_t extend   = PackBits(si, 1, DemodBuffer);
+        uint8_t extend   = PackBits(si, 1, g_DemodBuffer);
         si += 1;     //bit 15 extended mode
-        uint8_t modread  = PackBits(si, 5, DemodBuffer);
+        uint8_t modread  = PackBits(si, 5, g_DemodBuffer);
         si += 5 + 2 + 1;
-        //uint8_t pskcr   = PackBits(si, 2, DemodBuffer); si += 2+1;  //could check psk cr
-        //uint8_t nml01    = PackBits(si, 1, DemodBuffer); si += 1+5;   //bit 24, 30, 31 could be tested for 0 if not extended mode
-        //uint8_t nml02    = PackBits(si, 2, DemodBuffer); si += 2;
+        //uint8_t pskcr   = PackBits(si, 2, g_DemodBuffer); si += 2+1;  //could check psk cr
+        //uint8_t nml01    = PackBits(si, 1, g_DemodBuffer); si += 1+5;   //bit 24, 30, 31 could be tested for 0 if not extended mode
+        //uint8_t nml02    = PackBits(si, 2, g_DemodBuffer); si += 2;
 
         //if extended mode
         bool extMode = ((safer == 0x6 || safer == 0x9) && extend) ? true : false;
@@ -1485,7 +1485,7 @@ int CmdT55xxSpecial(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf t55xx special",
-                  "Show block changes with 64 different offsets,  data taken from Demod buffer.",
+                  "Show block changes with 64 different offsets,  data taken from DemodBuffer.",
                   "lf t55xx special\n"
                  );
 
@@ -1504,7 +1504,7 @@ int CmdT55xxSpecial(const char *Cmd) {
     for (; j < 64; ++j) {
 
         for (i = 0; i < 32; ++i)
-            bits[i] = DemodBuffer[j + i];
+            bits[i] = g_DemodBuffer[j + i];
 
         uint32_t blockData = PackBits(0, 32, bits);
 
@@ -1742,7 +1742,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         }
     }
 
-    if (DemodBufferLen == 0) {
+    if (g_DemodBufferLen == 0) {
         return PM3_ESOFT;
     }
 
@@ -1750,11 +1750,11 @@ static int CmdT55xxReadTrace(const char *Cmd) {
     uint8_t repeat = (config.offset > 5) ? 32 : 0;
 
     uint8_t si = config.offset + repeat;
-    uint32_t bl1 = PackBits(si, 32, DemodBuffer);
-    uint32_t bl2 = PackBits(si + 32, 32, DemodBuffer);
+    uint32_t bl1 = PackBits(si, 32, g_DemodBuffer);
+    uint32_t bl2 = PackBits(si + 32, 32, g_DemodBuffer);
 
     if (config.Q5) {
-        uint32_t hdr = PackBits(si, 9,  DemodBuffer);
+        uint32_t hdr = PackBits(si, 9,  g_DemodBuffer);
         si += 9;
 
         if (hdr != 0x1FF) {
@@ -1764,42 +1764,42 @@ static int CmdT55xxReadTrace(const char *Cmd) {
 
         t5555_tracedata_t data = {.bl1 = bl1, .bl2 = bl2, .icr = 0, .lotidc = '?', .lotid = 0, .wafer = 0, .dw = 0};
 
-        data.icr     = PackBits(si, 2,  DemodBuffer);
+        data.icr     = PackBits(si, 2,  g_DemodBuffer);
         si += 2;
-        data.lotidc  = 'Z' - PackBits(si, 2,  DemodBuffer);
+        data.lotidc  = 'Z' - PackBits(si, 2,  g_DemodBuffer);
         si += 3;
 
-        data.lotid   = PackBits(si, 4,  DemodBuffer);
+        data.lotid   = PackBits(si, 4,  g_DemodBuffer);
         si += 5;
         data.lotid <<= 4;
-        data.lotid  |= PackBits(si, 4,  DemodBuffer);
+        data.lotid  |= PackBits(si, 4,  g_DemodBuffer);
         si += 5;
         data.lotid <<= 4;
-        data.lotid  |= PackBits(si, 4,  DemodBuffer);
+        data.lotid  |= PackBits(si, 4,  g_DemodBuffer);
         si += 5;
         data.lotid <<= 4;
-        data.lotid  |= PackBits(si, 4,  DemodBuffer);
+        data.lotid  |= PackBits(si, 4,  g_DemodBuffer);
         si += 5;
         data.lotid <<= 1;
-        data.lotid  |= PackBits(si, 1,  DemodBuffer);
+        data.lotid  |= PackBits(si, 1,  g_DemodBuffer);
         si += 1;
 
-        data.wafer   = PackBits(si, 3,  DemodBuffer);
+        data.wafer   = PackBits(si, 3,  g_DemodBuffer);
         si += 4;
         data.wafer <<= 2;
-        data.wafer  |= PackBits(si, 2,  DemodBuffer);
+        data.wafer  |= PackBits(si, 2,  g_DemodBuffer);
         si += 2;
 
-        data.dw      = PackBits(si, 2,  DemodBuffer);
+        data.dw      = PackBits(si, 2,  g_DemodBuffer);
         si += 3;
         data.dw    <<= 4;
-        data.dw     |= PackBits(si, 4,  DemodBuffer);
+        data.dw     |= PackBits(si, 4,  g_DemodBuffer);
         si += 5;
         data.dw    <<= 4;
-        data.dw     |= PackBits(si, 4,  DemodBuffer);
+        data.dw     |= PackBits(si, 4,  g_DemodBuffer);
         si += 5;
         data.dw    <<= 4;
-        data.dw     |= PackBits(si, 4,  DemodBuffer);
+        data.dw     |= PackBits(si, 4,  g_DemodBuffer);
 
         printT5555Trace(data, repeat);
 
@@ -1807,28 +1807,28 @@ static int CmdT55xxReadTrace(const char *Cmd) {
 
         t55x7_tracedata_t data = {.bl1 = bl1, .bl2 = bl2, .acl = 0, .mfc = 0, .cid = 0, .year = 0, .quarter = 0, .icr = 0,  .lotid = 0, .wafer = 0, .dw = 0};
 
-        data.acl = PackBits(si, 8,  DemodBuffer);
+        data.acl = PackBits(si, 8,  g_DemodBuffer);
         si += 8;
         if (data.acl != 0xE0) {
             PrintAndLogEx(FAILED, "The modulation is most likely wrong since the ACL is not 0xE0. ");
             return PM3_ESOFT;
         }
 
-        data.mfc     = PackBits(si, 8,  DemodBuffer);
+        data.mfc     = PackBits(si, 8,  g_DemodBuffer);
         si += 8;
-        data.cid     = PackBits(si, 5,  DemodBuffer);
+        data.cid     = PackBits(si, 5,  g_DemodBuffer);
         si += 5;
-        data.icr     = PackBits(si, 3,  DemodBuffer);
+        data.icr     = PackBits(si, 3,  g_DemodBuffer);
         si += 3;
-        data.year    = PackBits(si, 4,  DemodBuffer);
+        data.year    = PackBits(si, 4,  g_DemodBuffer);
         si += 4;
-        data.quarter = PackBits(si, 2,  DemodBuffer);
+        data.quarter = PackBits(si, 2,  g_DemodBuffer);
         si += 2;
-        data.lotid   = PackBits(si, 14, DemodBuffer);
+        data.lotid   = PackBits(si, 14, g_DemodBuffer);
         si += 14;
-        data.wafer   = PackBits(si, 5,  DemodBuffer);
+        data.wafer   = PackBits(si, 5,  g_DemodBuffer);
         si += 5;
-        data.dw      = PackBits(si, 15, DemodBuffer);
+        data.dw      = PackBits(si, 15, g_DemodBuffer);
 
         struct tm *ct, tm_buf;
         time_t now = time(NULL);
@@ -1861,8 +1861,8 @@ void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat) {
     PrintAndLogEx(INFO, "     Die Number..... %d", data.dw);
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(INFO, " Raw Data - Page 1");
-    PrintAndLogEx(INFO, "     Block 1... %08X - %s", data.bl1, sprint_bin(DemodBuffer + config.offset + repeat, 32));
-    PrintAndLogEx(INFO, "     Block 2... %08X - %s", data.bl2, sprint_bin(DemodBuffer + config.offset + repeat + 32, 32));
+    PrintAndLogEx(INFO, "     Block 1... %08X - %s", data.bl1, sprint_bin(g_DemodBuffer + config.offset + repeat, 32));
+    PrintAndLogEx(INFO, "     Block 2... %08X - %s", data.bl2, sprint_bin(g_DemodBuffer + config.offset + repeat + 32, 32));
     PrintAndLogEx(NORMAL, "");
 
     /*
@@ -1902,8 +1902,8 @@ void printT5555Trace(t5555_tracedata_t data, uint8_t repeat) {
     PrintAndLogEx(INFO, "     Die Number..... %d", data.dw);
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(INFO, " Raw Data - Page 1");
-    PrintAndLogEx(INFO, "     Block 1... %08X - %s", data.bl1, sprint_bin(DemodBuffer + config.offset + repeat, 32));
-    PrintAndLogEx(INFO, "     Block 2... %08X - %s", data.bl2, sprint_bin(DemodBuffer + config.offset + repeat + 32, 32));
+    PrintAndLogEx(INFO, "     Block 1... %08X - %s", data.bl1, sprint_bin(g_DemodBuffer + config.offset + repeat, 32));
+    PrintAndLogEx(INFO, "     Block 2... %08X - %s", data.bl2, sprint_bin(g_DemodBuffer + config.offset + repeat + 32, 32));
 
     /*
         ** Q5 **
@@ -2109,12 +2109,12 @@ static int CmdT55xxInfo(const char *Cmd) {
         }
 
         // too little space to start with
-        if (DemodBufferLen < 32 + config.offset) {
+        if (g_DemodBufferLen < 32 + config.offset) {
             return PM3_ESOFT;
         }
 
-        //PrintAndLogEx(NORMAL, "Offset+32 ==%d\n DemodLen == %d", config.offset + 32, DemodBufferLen);
-        block0 = PackBits(config.offset, 32, DemodBuffer);
+        //PrintAndLogEx(NORMAL, "Offset+32 ==%d\n DemodLen == %d", config.offset + 32, g_DemodBufferLen);
+        block0 = PackBits(config.offset, 32, g_DemodBuffer);
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -2185,7 +2185,7 @@ static int CmdT55xxInfo(const char *Cmd) {
     if (gotdata)
         PrintAndLogEx(INFO, " " _GREEN_("%08X"), block0);
     else
-        PrintAndLogEx(INFO, " " _GREEN_("%08X") " - %s", block0, sprint_bin(DemodBuffer + config.offset, 32));
+        PrintAndLogEx(INFO, " " _GREEN_("%08X") " - %s", block0, sprint_bin(g_DemodBuffer + config.offset, 32));
 
     if (((!gotdata) && (!config.Q5)) || (gotdata && (!dataasq5))) {
         PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint") " ------------");
@@ -3518,13 +3518,13 @@ bool tryDetectP1(bool getData) {
     ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
     if (ans && ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5))) {
         if ((FSKrawDemod(0, 0, 0, 0, false) == PM3_SUCCESS) &&
-                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
+                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
             return true;
         }
         if ((FSKrawDemod(0, 1, 0, 0, false) == PM3_SUCCESS) &&
-                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
+                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
             return true;
         }
         return false;
@@ -3534,27 +3534,27 @@ bool tryDetectP1(bool getData) {
     clk = GetAskClock("", false);
     if (clk > 0) {
         if ((ASKDemod_ext(0, 0, 1, 0, false, false, false, 1, &st) == PM3_SUCCESS) &&
-                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
+                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
             return true;
         }
 
         st = true;
         if ((ASKDemod_ext(0, 1, 1, 0, false, false, false, 1, &st) == PM3_SUCCESS) &&
-                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
+                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
             return true;
         }
 
         if ((ASKbiphaseDemod(0, 0, 0, 2, false) == PM3_SUCCESS) &&
-                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
+                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
             return true;
         }
 
         if ((ASKbiphaseDemod(0, 0, 1, 2, false) == PM3_SUCCESS) &&
-                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
+                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
             return true;
         }
     }
@@ -3563,13 +3563,13 @@ bool tryDetectP1(bool getData) {
     clk = GetNrzClock("", false); //has the most false positives :(
     if (clk > 0) {
         if ((NRZrawDemod(0, 0, 1, false) == PM3_SUCCESS) &&
-                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
+                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
             return true;
         }
         if ((NRZrawDemod(0, 1, 1, false) == PM3_SUCCESS)  &&
-                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
+                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
             return true;
         }
     }
@@ -3583,22 +3583,22 @@ bool tryDetectP1(bool getData) {
         // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
         //CmdLtrim("-i 160");
         if ((PSKDemod(0, 0, 6, false) == PM3_SUCCESS) &&
-                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
+                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
             //save_restoreGB(GRAPH_RESTORE);
             return true;
         }
         if ((PSKDemod(0, 1, 6, false) == PM3_SUCCESS) &&
-                preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-                (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
+                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
             //save_restoreGB(GRAPH_RESTORE);
             return true;
         }
         // PSK2 - needs a call to psk1TOpsk2.
         if (PSKDemod(0, 0, 6, false) == PM3_SUCCESS) {
-            psk1TOpsk2(DemodBuffer, DemodBufferLen);
-            if (preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
-                    (DemodBufferLen == 32 || DemodBufferLen == 64)) {
+            psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
+            if (preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
                 //save_restoreGB(GRAPH_RESTORE);
                 return true;
             }

@@ -57,8 +57,8 @@ int demodJablotron(bool verbose) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Jablotron ASKbiphaseDemod failed");
         return PM3_ESOFT;
     }
-    size_t size = DemodBufferLen;
-    int ans = detectJablotron(DemodBuffer, &size);
+    size_t size = g_DemodBufferLen;
+    int ans = detectJablotron(g_DemodBuffer, &size);
     if (ans < 0) {
         if (g_debugMode) {
             if (ans == -1)
@@ -75,21 +75,21 @@ int demodJablotron(bool verbose) {
         return PM3_ESOFT;
     }
 
-    setDemodBuff(DemodBuffer, JABLOTRON_ARR_LEN, ans);
+    setDemodBuff(g_DemodBuffer, JABLOTRON_ARR_LEN, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     //got a good demod
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
+    uint32_t raw1 = bytebits_to_byte(g_DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
 
     // bytebits_to_byte - uint32_t
-    uint64_t rawid = ((uint64_t)(bytebits_to_byte(DemodBuffer + 16, 8) & 0xff) << 32) | bytebits_to_byte(DemodBuffer + 24, 32);
+    uint64_t rawid = ((uint64_t)(bytebits_to_byte(g_DemodBuffer + 16, 8) & 0xff) << 32) | bytebits_to_byte(g_DemodBuffer + 24, 32);
     uint64_t id = getJablontronCardId(rawid);
 
     PrintAndLogEx(SUCCESS, "Jablotron - Card: " _GREEN_("%"PRIx64) ", Raw: %08X%08X", id, raw1, raw2);
 
     uint8_t chksum = raw2 & 0xFF;
-    bool isok = (chksum == jablontron_chksum(DemodBuffer));
+    bool isok = (chksum == jablontron_chksum(g_DemodBuffer));
 
     PrintAndLogEx(DEBUG, "Checksum: %02X (%s)", chksum, isok ? _GREEN_("ok") : _RED_("Fail"));
 

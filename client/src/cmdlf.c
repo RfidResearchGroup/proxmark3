@@ -417,7 +417,7 @@ int CmdFlexdemod(const char *Cmd) {
 
     }
 
-    // iceman,  use demod buffer?  blue line?
+    // iceman,  use g_DemodBuffer?  blue line?
     // HACK writing back to graphbuffer.
     GraphTraceLen = 32 * 64;
     i = 0;
@@ -871,11 +871,11 @@ int CmdLFSim(const char *Cmd) {
 }
 
 // sim fsk data given clock, fcHigh, fcLow, invert
-// - allow pull data from DemodBuffer
+// - allow pull data from g_DemodBuffer
 int CmdLFfskSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf simfsk",
-                  "Simulate FSK tag from demodbuffer or input. There are about four FSK modulations to know of.\n"
+                  "Simulate FSK tag from DemodBuffer or input. There are about four FSK modulations to know of.\n"
                   "FSK1  -  where fc/8 = high  and fc/5 = low\n"
                   "FSK1a -  is inverted FSK1,  ie:   fc/5 = high and fc/8 = low\n"
                   "FSK2  -  where fc/10 = high  and fc/8 = low\n"
@@ -912,8 +912,8 @@ int CmdLFfskSim(const char *Cmd) {
     CLIParserFree(ctx);
 
     // No args
-    if (raw_len == 0 && DemodBufferLen == 0) {
-        PrintAndLogEx(ERR, "No user supplied data nor inside Demodbuffer");
+    if (raw_len == 0 && g_DemodBufferLen == 0) {
+        PrintAndLogEx(ERR, "No user supplied data nor inside DemodBuffer");
         return PM3_EINVARG;
     }
 
@@ -925,10 +925,10 @@ int CmdLFfskSim(const char *Cmd) {
     uint8_t bs[256] = {0x00};
     int bs_len = hextobinarray((char *)bs, raw);
     if (bs_len == 0) {
-        // Using data from DemodBuffer
-        // might be able to autodetect FC and clock from Graphbuffer if using demod buffer
+        // Using data from g_DemodBuffer
+        // might be able to autodetect FC and clock from Graphbuffer if using g_DemodBuffer
         // will need clock, fchigh, fclow and bitstream
-        PrintAndLogEx(INFO, "No user supplied data, using Demodbuffer...");
+        PrintAndLogEx(INFO, "No user supplied data, using DemodBuffer...");
 
         if (clk == 0 || fchigh == 0 || fclow == 0) {
             int firstClockEdge = 0;
@@ -939,7 +939,7 @@ int CmdLFfskSim(const char *Cmd) {
                 fclow = 0;
             }
         }
-        PrintAndLogEx(DEBUG, "Detected rf/%u, High fc/%u, Low fc/%u, n %zu ", clk, fchigh, fclow, DemodBufferLen);
+        PrintAndLogEx(DEBUG, "Detected rf/%u, High fc/%u, Low fc/%u, n %zu ", clk, fchigh, fclow, g_DemodBufferLen);
 
     } else {
         setDemodBuff(bs, bs_len, 0);
@@ -961,7 +961,7 @@ int CmdLFfskSim(const char *Cmd) {
         PrintAndLogEx(DEBUG, "Autodetection of smaller clock failed, falling back to fc/%u", fclow);
     }
 
-    size_t size = DemodBufferLen;
+    size_t size = g_DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t))) {
         PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t));
         PrintAndLogEx(INFO, "Continuing with trimmed down data");
@@ -973,7 +973,7 @@ int CmdLFfskSim(const char *Cmd) {
     payload->fclow =  fclow;
     payload->separator = separator;
     payload->clock = clk;
-    memcpy(payload->data, DemodBuffer, size);
+    memcpy(payload->data, g_DemodBuffer, size);
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_FSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_fsksim_t) + size);
@@ -984,11 +984,11 @@ int CmdLFfskSim(const char *Cmd) {
 }
 
 // sim ask data given clock, invert, manchester or raw, separator
-// - allow pull data from DemodBuffer
+// - allow pull data from g_DemodBuffer
 int CmdLFaskSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf simask",
-                  "Simulate ASK tag from demodbuffer or input",
+                  "Simulate ASK tag from DemodBuffer or input",
                   "lf simask --clk 32 --am -d 0102030405   --> simulate ASK/MAN rf/32\n"
                   "lf simask --clk 32 --bi -d 0102030405   --> simulate ASK/BIPHASE rf/32\n\n"
                   "lf simask --clk 64 --am -d ffbd8001686f1924               --> simulate a EM410x tag\n"
@@ -1033,18 +1033,18 @@ int CmdLFaskSim(const char *Cmd) {
         encoding = 0;
 
     // No args
-    if (raw_len == 0 && DemodBufferLen == 0) {
-        PrintAndLogEx(ERR, "No user supplied data nor any inside Demodbuffer");
+    if (raw_len == 0 && g_DemodBufferLen == 0) {
+        PrintAndLogEx(ERR, "No user supplied data nor any inside DemodBuffer");
         return PM3_EINVARG;
     }
 
     uint8_t bs[256] = {0x00};
     int bs_len = hextobinarray((char *)bs, raw);
     if (bs_len == 0) {
-        // Using data from DemodBuffer
-        // might be able to autodetect FC and clock from Graphbuffer if using demod buffer
+        // Using data from g_DemodBuffer
+        // might be able to autodetect FC and clock from Graphbuffer if using g_DemodBuffer
         // will need carrier, clock, and bitstream
-        PrintAndLogEx(INFO, "No user supplied data, using Demodbuffer...");
+        PrintAndLogEx(INFO, "No user supplied data, using DemodBuffer...");
 
         if (clk == 0) {
             int res = GetAskClock("0", verbose);
@@ -1055,7 +1055,7 @@ int CmdLFaskSim(const char *Cmd) {
             }
         }
 
-        PrintAndLogEx(DEBUG, "Detected rf/%u, n %zu ", clk, DemodBufferLen);
+        PrintAndLogEx(DEBUG, "Detected rf/%u, n %zu ", clk, g_DemodBufferLen);
 
     } else {
         setDemodBuff(bs, bs_len, 0);
@@ -1072,7 +1072,7 @@ int CmdLFaskSim(const char *Cmd) {
         PrintAndLogEx(DEBUG, "ASK/RAW needs half rf. Using rf/%u", clk);
     }
 
-    size_t size = DemodBufferLen;
+    size_t size = g_DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t))) {
         PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t));
         PrintAndLogEx(INFO, "Continuing with trimmed down data");
@@ -1084,7 +1084,7 @@ int CmdLFaskSim(const char *Cmd) {
     payload->invert = invert;
     payload->separator = separator;
     payload->clock = clk;
-    memcpy(payload->data, DemodBuffer, size);
+    memcpy(payload->data, g_DemodBuffer, size);
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + size);
@@ -1095,12 +1095,12 @@ int CmdLFaskSim(const char *Cmd) {
 }
 
 // sim psk data given carrier, clock, invert
-// - allow pull data from DemodBuffer or parameters
+// - allow pull data from g_DemodBuffer or parameters
 int CmdLFpskSim(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf simpsk",
-                  "Simulate PSK tag from demodbuffer or input",
+                  "Simulate PSK tag from DemodBuffer or input",
                   "lf simpsk -1 --clk 40 --fc 4 -d 01020304   --> simulate PSK1 rf/40 psksub fc/4, data 01020304\n\n"
                   "lf simpsk -1 --clk 32 --fc 2 -d a0000000bd989a11   --> simulate a indala tag manually"
                  );
@@ -1147,8 +1147,8 @@ int CmdLFpskSim(const char *Cmd) {
         psk_type = 3;
 
     // No args
-    if (raw_len == 0 && DemodBufferLen == 0) {
-        PrintAndLogEx(ERR, "No user supplied data nor any inside Demodbuffer");
+    if (raw_len == 0 && g_DemodBufferLen == 0) {
+        PrintAndLogEx(ERR, "No user supplied data nor any inside DemodBuffer");
         return PM3_EINVARG;
     }
 
@@ -1156,10 +1156,10 @@ int CmdLFpskSim(const char *Cmd) {
     int bs_len = hextobinarray((char *)bs, raw);
 
     if (bs_len == 0) {
-        // Using data from DemodBuffer
-        // might be able to autodetect FC and clock from Graphbuffer if using demod buffer
+        // Using data from g_DemodBuffer
+        // might be able to autodetect FC and clock from Graphbuffer if using g_DemodBuffer
         // will need carrier, clock, and bitstream
-        PrintAndLogEx(INFO, "No user supplied data, using Demodbuffer...");
+        PrintAndLogEx(INFO, "No user supplied data, using DemodBuffer...");
 
         int res;
         if (clk == 0) {
@@ -1180,7 +1180,7 @@ int CmdLFpskSim(const char *Cmd) {
             }
         }
 
-        PrintAndLogEx(DEBUG, "Detected rf/%u, fc/%u, n %zu ", clk, carrier, DemodBufferLen);
+        PrintAndLogEx(DEBUG, "Detected rf/%u, fc/%u, n %zu ", clk, carrier, g_DemodBufferLen);
 
     } else {
         setDemodBuff(bs, bs_len, 0);
@@ -1193,12 +1193,12 @@ int CmdLFpskSim(const char *Cmd) {
 
     if (psk_type == 2) {
         //need to convert psk2 to psk1 data before sim
-        psk2TOpsk1(DemodBuffer, DemodBufferLen);
+        psk2TOpsk1(g_DemodBuffer, g_DemodBufferLen);
     } else if (psk_type == 3) {
         PrintAndLogEx(INFO, "PSK3 not yet available. Falling back to PSK1");
     }
 
-    size_t size = DemodBufferLen;
+    size_t size = g_DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t))) {
         PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t));
         PrintAndLogEx(INFO, "Continuing with trimmed down data");
@@ -1209,7 +1209,7 @@ int CmdLFpskSim(const char *Cmd) {
     payload->carrier =  carrier;
     payload->invert = invert;
     payload->clock = clk;
-    memcpy(payload->data, DemodBuffer, size);
+    memcpy(payload->data, g_DemodBuffer, size);
     clearCommandBuffer();
     SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + size);
     free(payload);

@@ -46,7 +46,7 @@ size_t ClearGraph(bool redraw) {
     GraphStart = 0;
     GraphStop = 0;
 
-    DemodBufferLen = 0;
+    g_DemodBufferLen = 0;
     if (redraw)
         RepaintGraphWindow();
 

@@ -124,8 +124,8 @@ int demodPac(bool verbose) {
         return PM3_ESOFT;
     }
     bool invert = false;
-    size_t size = DemodBufferLen;
-    int ans = detectPac(DemodBuffer, &size, &invert);
+    size_t size = g_DemodBufferLen;
+    int ans = detectPac(g_DemodBuffer, &size, &invert);
     if (ans < 0) {
         if (ans == -1)
             PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: too few bits found");
@@ -141,21 +141,21 @@ int demodPac(bool verbose) {
 
     if (invert) {
         for (size_t i = ans; i < ans + 128; i++) {
-            DemodBuffer[i] ^= 1;
+            g_DemodBuffer[i] ^= 1;
         }
     }
-    setDemodBuff(DemodBuffer, 128, ans);
+    setDemodBuff(g_DemodBuffer, 128, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     //got a good demod
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
-    uint32_t raw3 = bytebits_to_byte(DemodBuffer + 64, 32);
-    uint32_t raw4 = bytebits_to_byte(DemodBuffer + 96, 32);
+    uint32_t raw1 = bytebits_to_byte(g_DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
+    uint32_t raw3 = bytebits_to_byte(g_DemodBuffer + 64, 32);
+    uint32_t raw4 = bytebits_to_byte(g_DemodBuffer + 96, 32);
 
     const size_t idLen = 9; // 8 bytes + null terminator
     uint8_t cardid[idLen];
-    int retval = pac_buf_to_cardid(DemodBuffer, DemodBufferLen, cardid, sizeof(cardid));
+    int retval = pac_buf_to_cardid(g_DemodBuffer, g_DemodBufferLen, cardid, sizeof(cardid));
 
     if (retval == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "PAC/Stanley - Card: " _GREEN_("%s") ", Raw: %08X%08X%08X%08X", cardid, raw1, raw2, raw3, raw4);

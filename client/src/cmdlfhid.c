@@ -146,7 +146,7 @@ int demodHID(bool verbose) {
     }
     PrintAndLogEx(INFO, "raw: " _GREEN_("%08x%08x%08x"), hi2, hi, lo);
 
-    PrintAndLogEx(DEBUG, "DEBUG: HID idx: %d, Len: %zu, Printing Demod Buffer: ", idx, size);
+    PrintAndLogEx(DEBUG, "DEBUG: HID idx: %d, Len: %zu, Printing DemodBuffer: ", idx, size);
     if (g_debugMode) {
         PrintAndLogEx(DEBUG, "raw: " _GREEN_("%08x%08x%08x"), hi2, hi, lo);
 

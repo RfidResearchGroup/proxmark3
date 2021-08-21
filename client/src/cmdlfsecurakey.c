@@ -38,8 +38,8 @@ int demodSecurakey(bool verbose) {
     if (st)
         return PM3_ESOFT;
 
-    size_t size = DemodBufferLen;
-    int ans = detectSecurakey(DemodBuffer, &size);
+    size_t size = g_DemodBufferLen;
+    int ans = detectSecurakey(g_DemodBuffer, &size);
     if (ans < 0) {
         if (ans == -1)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: too few bits found");
@@ -51,13 +51,13 @@ int demodSecurakey(bool verbose) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: ans: %d", ans);
         return PM3_ESOFT;
     }
-    setDemodBuff(DemodBuffer, 96, ans);
+    setDemodBuff(g_DemodBuffer, 96, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     //got a good demod
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
-    uint32_t raw3 = bytebits_to_byte(DemodBuffer + 64, 32);
+    uint32_t raw1 = bytebits_to_byte(g_DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
+    uint32_t raw3 = bytebits_to_byte(g_DemodBuffer + 64, 32);
 
     // 26 bit format
     // preamble     ??bitlen   reserved        EPx   xxxxxxxy   yyyyyyyy   yyyyyyyOP  CS?        CS2?
@@ -72,7 +72,7 @@ int demodSecurakey(bool verbose) {
     // standard wiegand parities.
     // unknown checksum 11 bits? at the end
     uint8_t bits_no_spacer[85];
-    memcpy(bits_no_spacer, DemodBuffer + 11, 85);
+    memcpy(bits_no_spacer, g_DemodBuffer + 11, 85);
 
     // remove marker bits (0's every 9th digit after preamble) (pType = 3 (always 0s))
     size = removeParity(bits_no_spacer, 0, 9, 3, 85);

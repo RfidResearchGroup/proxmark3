@@ -485,8 +485,8 @@ int demodFDXB(bool verbose) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B ASKbiphaseDemod failed");
         return PM3_ESOFT;
     }
-    size_t size = DemodBufferLen;
-    int preambleIndex = detectFDXB(DemodBuffer, &size);
+    size_t size = g_DemodBufferLen;
+    int preambleIndex = detectFDXB(g_DemodBuffer, &size);
     if (preambleIndex < 0) {
 
         if (preambleIndex == -1)
@@ -500,13 +500,13 @@ int demodFDXB(bool verbose) {
         return PM3_ESOFT;
     }
 
-    // set and leave DemodBuffer intact
-    setDemodBuff(DemodBuffer, 128, preambleIndex);
+    // set and leave g_DemodBuffer intact
+    setDemodBuff(g_DemodBuffer, 128, preambleIndex);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (preambleIndex * g_DemodClock));
 
 
     // remove marker bits (1's every 9th digit after preamble) (pType = 2)
-    size = removeParity(DemodBuffer, 11, 9, 2, 117);
+    size = removeParity(g_DemodBuffer, 11, 9, 2, 117);
     if (size != 104) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B error removeParity: %zu", size);
         return PM3_ESOFT;
@@ -515,42 +515,42 @@ int demodFDXB(bool verbose) {
     //got a good demod
     uint8_t offset;
     // ISO: bits 27..64
-    uint64_t NationalCode = ((uint64_t)(bytebits_to_byteLSBF(DemodBuffer + 32, 6)) << 32) | bytebits_to_byteLSBF(DemodBuffer, 32);
+    uint64_t NationalCode = ((uint64_t)(bytebits_to_byteLSBF(g_DemodBuffer + 32, 6)) << 32) | bytebits_to_byteLSBF(g_DemodBuffer, 32);
 
     offset = 38;
     // ISO: bits 17..26
-    uint16_t countryCode = bytebits_to_byteLSBF(DemodBuffer + offset, 10);
+    uint16_t countryCode = bytebits_to_byteLSBF(g_DemodBuffer + offset, 10);
 
     offset += 10;
     // ISO: bits 16
-    uint8_t dataBlockBit = DemodBuffer[offset];
+    uint8_t dataBlockBit = g_DemodBuffer[offset];
 
     offset++;
     // ISO: bits 15
-    uint8_t rudiBit = DemodBuffer[offset];
+    uint8_t rudiBit = g_DemodBuffer[offset];
 
     offset++;
     // ISO: bits 10..14
-    uint32_t reservedCode = bytebits_to_byteLSBF(DemodBuffer + offset, 5);
+    uint32_t reservedCode = bytebits_to_byteLSBF(g_DemodBuffer + offset, 5);
 
     offset += 5;
     // ISO: bits 5..9
-    uint32_t userInfo = bytebits_to_byteLSBF(DemodBuffer + offset, 5);
+    uint32_t userInfo = bytebits_to_byteLSBF(g_DemodBuffer + offset, 5);
 
     offset += 5;
     // ISO: bits 2..4
-    uint32_t replacementNr = bytebits_to_byteLSBF(DemodBuffer + offset, 3);
+    uint32_t replacementNr = bytebits_to_byteLSBF(g_DemodBuffer + offset, 3);
 
     offset += 3;
-    uint8_t animalBit = DemodBuffer[offset];
+    uint8_t animalBit = g_DemodBuffer[offset];
 
     offset++;
-    uint16_t crc = bytebits_to_byteLSBF(DemodBuffer + offset, 16);
+    uint16_t crc = bytebits_to_byteLSBF(g_DemodBuffer + offset, 16);
 
     offset += 16;
-    uint32_t extended = bytebits_to_byteLSBF(DemodBuffer + offset, 24);
+    uint32_t extended = bytebits_to_byteLSBF(g_DemodBuffer + offset, 24);
 
-    uint64_t rawid = (uint64_t)(bytebits_to_byte(DemodBuffer, 32)) << 32 | bytebits_to_byte(DemodBuffer + 32, 32);
+    uint64_t rawid = (uint64_t)(bytebits_to_byte(g_DemodBuffer, 32)) << 32 | bytebits_to_byte(g_DemodBuffer + 32, 32);
     uint8_t raw[8];
     num_to_bytes(rawid, 8, raw);
 
@@ -578,7 +578,7 @@ int demodFDXB(bool verbose) {
 
     if (g_debugMode) {
         PrintAndLogEx(DEBUG, "Start marker %d;   Size %zu", preambleIndex, size);
-        char *bin = sprint_bin_break(DemodBuffer, size, 16);
+        char *bin = sprint_bin_break(g_DemodBuffer, size, 16);
         PrintAndLogEx(DEBUG, "DEBUG bin stream:\n%s", bin);
     }
 

@@ -23,7 +23,7 @@
 #include "crc32.h"        // crc32_ex
 #include "tea.h"
 #include "legic_prng.h"
-#include "cmddata.h"      // demodbuffer
+#include "cmddata.h"      // g_DemodBuffer
 #include "graph.h"
 #include "proxgui.h"
 #include "cliparser.h"
@@ -936,7 +936,7 @@ static int CmdAnalyseNuid(const char *Cmd) {
 static int CmdAnalyseDemodBuffer(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "analyse demodbuff",
-                  "loads a binary string into demod buffer",
+                  "loads a binary string into DemodBuffer",
                   "analyse demodbuff -d 0011101001001011"
                  );
 
@@ -959,9 +959,9 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
     for (size_t i = 0; i <= strlen(s); i++) {
         char c = s[i];
         if (c == '1')
-            DemodBuffer[i] = 1;
+            g_DemodBuffer[i] = 1;
         if (c == '0')
-            DemodBuffer[i] = 0;
+            g_DemodBuffer[i] = 0;
 
         PrintAndLogEx(NORMAL, "%c" NOLF, c);
     }
@@ -969,9 +969,9 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(NORMAL, "");
-    DemodBufferLen = len;
+    g_DemodBufferLen = len;
     free(data);
-    PrintAndLogEx(HINT, "Use `" _YELLOW_("data print") "` to view demod buffer");
+    PrintAndLogEx(HINT, "Use `" _YELLOW_("data print") "` to view DemodBuffer");
     return PM3_SUCCESS;
 }
 
@@ -1164,7 +1164,7 @@ static command_t CommandTable[] = {
     {"lfsr",    CmdAnalyseLfsr,     AlwaysAvailable, "LFSR tests"},
     {"a",       CmdAnalyseA,        AlwaysAvailable, "num bits test"},
     {"nuid",    CmdAnalyseNuid,     AlwaysAvailable, "create NUID from 7byte UID"},
-    {"demodbuff", CmdAnalyseDemodBuffer, AlwaysAvailable, "Load binary string to demodbuffer"},
+    {"demodbuff", CmdAnalyseDemodBuffer, AlwaysAvailable, "Load binary string to DemodBuffer"},
     {"freq",    CmdAnalyseFreq,     AlwaysAvailable, "Calc wave lengths"},
     {"foo",     CmdAnalyseFoo,      AlwaysAvailable, "muxer"},
     {"units",   CmdAnalyseUnits,    AlwaysAvailable, "convert ETU <> US <> SSP_CLK (3.39MHz)"},

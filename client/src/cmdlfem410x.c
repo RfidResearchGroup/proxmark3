@@ -264,10 +264,10 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
     }
 
     //set GraphBuffer for clone or sim command
-    setDemodBuff(DemodBuffer, (size == 40) ? 64 : 128, idx + 1);
+    setDemodBuff(g_DemodBuffer, (size == 40) ? 64 : 128, idx + 1);
     setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx + 1)*g_DemodClock));
 
-    PrintAndLogEx(DEBUG, "DEBUG: Em410x idx: %zu, Len: %zu, Printing Demod Buffer:", idx, size);
+    PrintAndLogEx(DEBUG, "DEBUG: Em410x idx: %zu, Len: %zu, Printing DemodBuffer:", idx, size);
     if (g_debugMode) {
         printDemodBuff(0, false, false, true);
     }

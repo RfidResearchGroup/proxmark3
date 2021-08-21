@@ -27,7 +27,7 @@ int demodCOTAG(bool verbose) {
 
     uint8_t bits[COTAG_BITS] = {0};
     size_t bitlen = COTAG_BITS;
-    memcpy(bits, DemodBuffer, COTAG_BITS);
+    memcpy(bits, g_DemodBuffer, COTAG_BITS);
 
     uint8_t alignPos = 0;
     uint16_t err = manrawdecode(bits, &bitlen, 1, &alignPos);
@@ -150,8 +150,8 @@ static int CmdCOTAGReader(const char *Cmd) {
             break;
         }
         case 1: {
-            memcpy(DemodBuffer, resp.data.asBytes, resp.length);
-            DemodBufferLen = resp.length;
+            memcpy(g_DemodBuffer, resp.data.asBytes, resp.length);
+            g_DemodBufferLen = resp.length;
             return demodCOTAG(true);
         }
     }

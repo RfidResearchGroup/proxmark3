@@ -144,7 +144,7 @@ int demodIOProx(bool verbose) {
         if (crc != calccrc)
             PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox crc failed");
 
-        PrintAndLogEx(DEBUG, "DEBUG: IO prox idx: %d, Len: %zu, Printing demod buffer:", idx, size);
+        PrintAndLogEx(DEBUG, "DEBUG: IO prox idx: %d, Len: %zu, Printing DemodBuffer:", idx, size);
         printDemodBuff(0, false, false, true);
         printDemodBuff(0, false, false, false);
     }

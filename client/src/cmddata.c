@@ -29,14 +29,14 @@
 #include "cmdlft55xx.h"          // print...
 #include "crypto/asn1utils.h"    // ASN1 decode / print
 
-uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
-size_t DemodBufferLen = 0;
+uint8_t g_DemodBuffer[MAX_DEMOD_BUF_LEN];
+size_t g_DemodBufferLen = 0;
 int32_t g_DemodStartIdx = 0;
 int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
 
-//set the demod buffer with given array ofq binary (one bit per byte)
+//set the g_DemodBuffer with given array ofq binary (one bit per byte)
 //by marshmellow
 void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx) {
     if (buff == NULL) return;
@@ -45,9 +45,9 @@ void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx) {
         size = MAX_DEMOD_BUF_LEN - start_idx;
 
     for (size_t i = 0; i < size; i++)
-        DemodBuffer[i] = buff[start_idx++];
+        g_DemodBuffer[i] = buff[start_idx++];
 
-    DemodBufferLen = size;
+    g_DemodBufferLen = size;
 }
 
 bool getDemodBuff(uint8_t *buff, size_t *size) {
@@ -55,9 +55,9 @@ bool getDemodBuff(uint8_t *buff, size_t *size) {
     if (size == NULL) return false;
     if (*size == 0) return false;
 
-    *size = (*size > DemodBufferLen) ? DemodBufferLen : *size;
+    *size = (*size > g_DemodBufferLen) ? g_DemodBufferLen : *size;
 
-    memcpy(buff, DemodBuffer, *size);
+    memcpy(buff, g_DemodBuffer, *size);
     return true;
 }
 
@@ -139,7 +139,7 @@ static double compute_autoc(const int *data, size_t n, int lag) {
 }
 */
 
-// option '1' to save DemodBuffer any other to restore
+// option '1' to save g_DemodBuffer any other to restore
 void save_restoreDB(uint8_t saveOpt) {
     static uint8_t SavedDB[MAX_DEMOD_BUF_LEN];
     static size_t SavedDBlen;
@@ -149,15 +149,15 @@ void save_restoreDB(uint8_t saveOpt) {
 
     if (saveOpt == GRAPH_SAVE) { //save
 
-        memcpy(SavedDB, DemodBuffer, sizeof(DemodBuffer));
-        SavedDBlen = DemodBufferLen;
+        memcpy(SavedDB, g_DemodBuffer, sizeof(g_DemodBuffer));
+        SavedDBlen = g_DemodBufferLen;
         DB_Saved = true;
         savedDemodStartIdx = g_DemodStartIdx;
         savedDemodClock = g_DemodClock;
     } else if (DB_Saved) { //restore
 
-        memcpy(DemodBuffer, SavedDB, sizeof(DemodBuffer));
-        DemodBufferLen = SavedDBlen;
+        memcpy(g_DemodBuffer, SavedDB, sizeof(g_DemodBuffer));
+        g_DemodBufferLen = SavedDBlen;
         g_DemodClock = savedDemodClock;
         g_DemodStartIdx = savedDemodStartIdx;
     }
@@ -215,9 +215,9 @@ static int CmdSetDebugMode(const char *Cmd) {
 // max output to 512 bits if we have more
 // doesn't take inconsideration where the demod offset or bitlen found.
 int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_hex) {
-    size_t len = DemodBufferLen;
+    size_t len = g_DemodBufferLen;
     if (len == 0) {
-        PrintAndLogEx(WARNING, "Demodbuffer is empty");
+        PrintAndLogEx(WARNING, "DemodBuffer is empty");
         return PM3_EINVARG;
     }
 
@@ -226,15 +226,15 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
         PrintAndLogEx(WARNING, "dail, cannot allocate memory");
         return PM3_EMALLOC;
     }
-    memcpy(buf, DemodBuffer, len);
+    memcpy(buf, g_DemodBuffer, len);
 
     uint8_t *p = NULL;
 
     if (strip_leading) {
         p = (buf + offset);
 
-        if (len > (DemodBufferLen - offset))
-            len = (DemodBufferLen - offset);
+        if (len > (g_DemodBufferLen - offset))
+            len = (g_DemodBufferLen - offset);
 
         size_t i;
         for (i = 0; i < len; i++) {
@@ -243,8 +243,8 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
         offset += i;
     }
 
-    if (len > (DemodBufferLen - offset)) {
-        len = (DemodBufferLen - offset);
+    if (len > (g_DemodBufferLen - offset)) {
+        len = (g_DemodBufferLen - offset);
     }
 
     if (len > 512)  {
@@ -291,7 +291,7 @@ int CmdPrintDemodBuff(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("i", "inv", "invert Demodbuffer before printing"),
+        arg_lit0("i", "inv", "invert DemodBuffer before printing"),
 //        arg_int0("l","len", "<dec>", "length to print in # of bits or hex characters respectively"),
         arg_int0("o", "offset", "<dec>", "offset in # of bits"),
         arg_lit0("s", "strip", "strip leading zeroes, i.e. set offset to first bit equal to one"),
@@ -535,7 +535,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     CLIParserInit(&ctx, "data manrawdecode",
                   "Manchester decode binary stream in DemodBuffer\n"
                   "Converts 10 and 01 and converts to 0 and 1 respectively\n"
-                  " - must have binary sequence in demodbuffer (run `data rawdemod --ar` before)",
+                  " - must have binary sequence in DemodBuffer (run `data rawdemod --ar` before)",
                   "data manrawdecode"
                  );
     void *argtable[] = {
@@ -549,7 +549,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     int max_err = arg_get_int_def(ctx, 2, 20);
     CLIParserFree(ctx);
 
-    if (DemodBufferLen == 0) {
+    if (g_DemodBufferLen == 0) {
         PrintAndLogEx(WARNING, "DemodBuffer empty, run " _YELLOW_("`data rawdemod --ar`"));
         return PM3_ESOFT;
     }
@@ -559,12 +559,12 @@ static int Cmdmandecoderaw(const char *Cmd) {
     // make sure its just binary data 0|1|7 in buffer
     int high = 0, low = 0;
     size_t i = 0;
-    for (; i < DemodBufferLen; ++i) {
-        if (DemodBuffer[i] > high)
-            high = DemodBuffer[i];
-        else if (DemodBuffer[i] < low)
-            low = DemodBuffer[i];
-        bits[i] = DemodBuffer[i];
+    for (; i < g_DemodBufferLen; ++i) {
+        if (g_DemodBuffer[i] > high)
+            high = g_DemodBuffer[i];
+        else if (g_DemodBuffer[i] < low)
+            low = g_DemodBuffer[i];
+        bits[i] = g_DemodBuffer[i];
     }
 
     if (high > 7 || low < 0) {
@@ -618,10 +618,10 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
     CLIParserInit(&ctx, "data biphaserawdecode",
                   "Biphase decode binary stream in DemodBuffer\n"
                   "Converts 10 or 01 -> 1 and 11 or 00 -> 0\n"
-                  " - must have binary sequence in demodbuffer (run `data rawdemod --ar` before)\n"
+                  " - must have binary sequence in DemodBuffer (run `data rawdemod --ar` before)\n"
                   " - invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester",
-                  "data biphaserawdecode      --> decode biphase bitstream from the demodbuffer\n"
-                  "data biphaserawdecode -oi  --> decode biphase bitstream from the demodbuffer, adjust offset, and invert output"
+                  "data biphaserawdecode      --> decode biphase bitstream from the DemodBuffer\n"
+                  "data biphaserawdecode -oi  --> decode biphase bitstream from the DemodBuffer, adjust offset, and invert output"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -636,7 +636,7 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
     int max_err = arg_get_int_def(ctx, 3, 20);
     CLIParserFree(ctx);
 
-    if (DemodBufferLen == 0) {
+    if (g_DemodBufferLen == 0) {
         PrintAndLogEx(WARNING, "DemodBuffer empty, run " _YELLOW_("`data rawdemod --ar`"));
         return PM3_ESOFT;
     }
@@ -699,7 +699,7 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
     if (offset >= 1) {
         offset -= 1;
     }
-    //success set DemodBuffer and return
+    //success set g_DemodBuffer and return
     setDemodBuff(bs, size, 0);
     setClockGrid(clk, startIdx + clk * offset / 2);
     if (g_debugMode || verbose) {
@@ -853,7 +853,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
 
         CursorCPos = idx_1;
         CursorDPos = idx_1 + retval;
-        DemodBufferLen = 0;
+        g_DemodBufferLen = 0;
         RepaintGraphWindow();
     }
     free(correl_buf);
@@ -1308,7 +1308,7 @@ int PSKDemod(int clk, int invert, int maxErr, bool verbose) {
             PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) errors during Demoding (shown as 7 in bit stream): %d", errCnt);
         }
     }
-    //prime demod buffer for output
+    //prime g_DemodBuffer for output
     setDemodBuff(bits, bitlen, 0);
     setClockGrid(clk, startIdx);
     free(bits);
@@ -1317,7 +1317,7 @@ int PSKDemod(int clk, int invert, int maxErr, bool verbose) {
 
 // takes 3 arguments - clock, invert, maxErr as integers
 // attempts to demodulate nrz only
-// prints binary found and saves in demodbuffer for further commands
+// prints binary found and saves in g_DemodBuffer for further commands
 int NRZrawDemod(int clk, int invert, int maxErr, bool verbose) {
 
     int errCnt = 0, clkStartIdx = 0;
@@ -1355,7 +1355,7 @@ int NRZrawDemod(int clk, int invert, int maxErr, bool verbose) {
     }
 
     if (verbose || g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Tried NRZ Demod using Clock: %d - invert: %d - Bits Found: %zu", clk, invert, bitlen);
-    //prime demod buffer for output
+    //prime g_DemodBuffer for output
     setDemodBuff(bits, bitlen, 0);
     setClockGrid(clk, clkStartIdx);
 
@@ -1400,7 +1400,7 @@ static int CmdNRZrawDemod(const char *Cmd) {
 
 // takes 3 arguments - clock, invert, max_err as integers
 // attempts to demodulate psk only
-// prints binary found and saves in demodbuffer for further commands
+// prints binary found and saves in g_DemodBuffer for further commands
 int CmdPSK1rawDemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data rawdemod --p1",
@@ -1468,7 +1468,7 @@ static int CmdPSK2rawDemod(const char *Cmd) {
         if (g_debugMode) PrintAndLogEx(ERR, "Error demoding: %d", ans);
         return PM3_ESOFT;
     }
-    psk1TOpsk2(DemodBuffer, DemodBufferLen);
+    psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
     PrintAndLogEx(SUCCESS, _YELLOW_("PSK2") " demoded bitstream");
     PrintAndLogEx(INFO, "----------------------");
     // Now output the bitstream to the scrollback by line of 16 bits
@@ -1794,7 +1794,7 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose) {
     computeSignalProperties(bits, size);
 
     setClockGrid(0, 0);
-    DemodBufferLen = 0;
+    g_DemodBufferLen = 0;
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -1845,7 +1845,7 @@ int CmdTuneSamples(const char *Cmd) {
 #define ANTENNA_ERROR   1.00 // current algo has 3% error margin.
 
     // hide demod plot line
-    DemodBufferLen = 0;
+    g_DemodBufferLen = 0;
     setClockGrid(0, 0);
     RepaintGraphWindow();
 
@@ -2071,7 +2071,7 @@ static int CmdLoad(const char *Cmd) {
     computeSignalProperties(bits, size);
 
     setClockGrid(0, 0);
-    DemodBufferLen = 0;
+    g_DemodBufferLen = 0;
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -2663,7 +2663,7 @@ static int CmdFSKToNRZ(const char *Cmd) {
     CLIParserFree(ctx);
 
     setClockGrid(0, 0);
-    DemodBufferLen = 0;
+    g_DemodBufferLen = 0;
     int ans = FSKToNRZ(GraphBuffer, &GraphTraceLen, clk, fc_low, fc_high);
     CmdNorm("");
     RepaintGraphWindow();

@@ -77,8 +77,8 @@ int demodPresco(bool verbose) {
         PrintAndLogEx(DEBUG, "DEBUG: Error Presco ASKDemod failed");
         return PM3_ESOFT;
     }
-    size_t size = DemodBufferLen;
-    int ans = detectPresco(DemodBuffer, &size);
+    size_t size = g_DemodBufferLen;
+    int ans = detectPresco(g_DemodBuffer, &size);
     if (ans < 0) {
         if (ans == -1)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: too few bits found");
@@ -90,14 +90,14 @@ int demodPresco(bool verbose) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: ans: %d", ans);
         return PM3_ESOFT;
     }
-    setDemodBuff(DemodBuffer, 128, ans);
+    setDemodBuff(g_DemodBuffer, 128, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     //got a good demod
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
-    uint32_t raw3 = bytebits_to_byte(DemodBuffer + 64, 32);
-    uint32_t raw4 = bytebits_to_byte(DemodBuffer + 96, 32);
+    uint32_t raw1 = bytebits_to_byte(g_DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
+    uint32_t raw3 = bytebits_to_byte(g_DemodBuffer + 64, 32);
+    uint32_t raw4 = bytebits_to_byte(g_DemodBuffer + 96, 32);
     uint32_t fullcode = raw4;
     uint32_t usercode = fullcode & 0x0000FFFF;
     uint32_t sitecode = (fullcode >> 24) & 0x000000FF;

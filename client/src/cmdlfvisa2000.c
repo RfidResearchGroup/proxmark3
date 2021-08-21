@@ -87,8 +87,8 @@ int demodVisa2k(bool verbose) {
         save_restoreGB(GRAPH_RESTORE);
         return PM3_ESOFT;
     }
-    size_t size = DemodBufferLen;
-    int ans = detectVisa2k(DemodBuffer, &size);
+    size_t size = g_DemodBufferLen;
+    int ans = detectVisa2k(g_DemodBuffer, &size);
     if (ans < 0) {
         if (ans == -1)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: too few bits found");
@@ -102,13 +102,13 @@ int demodVisa2k(bool verbose) {
         save_restoreGB(GRAPH_RESTORE);
         return PM3_ESOFT;
     }
-    setDemodBuff(DemodBuffer, 96, ans);
+    setDemodBuff(g_DemodBuffer, 96, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     //got a good demod
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
-    uint32_t raw3 = bytebits_to_byte(DemodBuffer + 64, 32);
+    uint32_t raw1 = bytebits_to_byte(g_DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
+    uint32_t raw3 = bytebits_to_byte(g_DemodBuffer + 64, 32);
 
     // chksum
     uint8_t calc = visa_chksum(raw2);

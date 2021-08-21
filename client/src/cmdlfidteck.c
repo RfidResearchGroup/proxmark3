@@ -33,10 +33,10 @@ int demodIdteck(bool verbose) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck PSKDemod failed");
         return PM3_ESOFT;
     }
-    size_t size = DemodBufferLen;
+    size_t size = g_DemodBufferLen;
 
     //get binary from PSK1 wave
-    int idx = detectIdteck(DemodBuffer, &size);
+    int idx = detectIdteck(g_DemodBuffer, &size);
     if (idx < 0) {
 
         if (idx == -1)
@@ -55,7 +55,7 @@ int demodIdteck(bool verbose) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck PSKDemod failed");
             return PM3_ESOFT;
         }
-        idx = detectIdteck(DemodBuffer, &size);
+        idx = detectIdteck(g_DemodBuffer, &size);
         if (idx < 0) {
 
             if (idx == -1)
@@ -72,12 +72,12 @@ int demodIdteck(bool verbose) {
             return PM3_ESOFT;
         }
     }
-    setDemodBuff(DemodBuffer, 64, idx);
+    setDemodBuff(g_DemodBuffer, 64, idx);
 
     //got a good demod
     uint32_t id = 0;
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
+    uint32_t raw1 = bytebits_to_byte(g_DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
 
     //parity check (TBD)
     //checksum check (TBD)

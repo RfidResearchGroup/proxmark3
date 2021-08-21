@@ -34,21 +34,21 @@ int demodViking(bool verbose) {
         return PM3_ESOFT;
     }
 
-    size_t size = DemodBufferLen;
-    int ans = detectViking(DemodBuffer, &size);
+    size_t size = g_DemodBufferLen;
+    int ans = detectViking(g_DemodBuffer, &size);
     if (ans < 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Viking Demod %d %s", ans, (ans == -5) ? _RED_("[chksum error]") : "");
         return PM3_ESOFT;
     }
 
     //got a good demod
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer + ans, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + ans + 32, 32);
-    uint32_t cardid = bytebits_to_byte(DemodBuffer + ans + 24, 32);
-    uint8_t  checksum = bytebits_to_byte(DemodBuffer + ans + 32 + 24, 8);
+    uint32_t raw1 = bytebits_to_byte(g_DemodBuffer + ans, 32);
+    uint32_t raw2 = bytebits_to_byte(g_DemodBuffer + ans + 32, 32);
+    uint32_t cardid = bytebits_to_byte(g_DemodBuffer + ans + 24, 32);
+    uint8_t  checksum = bytebits_to_byte(g_DemodBuffer + ans + 32 + 24, 8);
     PrintAndLogEx(SUCCESS, "Viking - Card " _GREEN_("%08X") ", Raw: %08X%08X", cardid, raw1, raw2);
     PrintAndLogEx(DEBUG, "Checksum: %02X", checksum);
-    setDemodBuff(DemodBuffer, 64, ans);
+    setDemodBuff(g_DemodBuffer, 64, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
     return PM3_SUCCESS;
 }

@@ -34,8 +34,8 @@ int demodMotorola(bool verbose) {
         return PM3_ESOFT;
     }
 
-    size_t size = DemodBufferLen;
-    int ans = detectMotorola(DemodBuffer, &size);
+    size_t size = g_DemodBufferLen;
+    int ans = detectMotorola(g_DemodBuffer, &size);
     if (ans < 0) {
         if (ans == -1)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Motorola: too few bits found");
@@ -48,12 +48,12 @@ int demodMotorola(bool verbose) {
 
         return PM3_ESOFT;
     }
-    setDemodBuff(DemodBuffer, 64, ans);
+    setDemodBuff(g_DemodBuffer, 64, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     //got a good demod
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
+    uint32_t raw1 = bytebits_to_byte(g_DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
 
 // A0000000E308C0C1
 // 10100000000000000000000000000000 1110 0011 0000 1000 1100 0000 1100 0001
@@ -74,42 +74,42 @@ int demodMotorola(bool verbose) {
 
 // FC seems to be guess work.  Need more samples
 // guessing  printed FC is 4 digits.  1024? 10bit?
-//    fc |= DemodBuffer[38] << 9; // b10
-    fc |= DemodBuffer[34] << 8; // b9
+//    fc |= g_DemodBuffer[38] << 9; // b10
+    fc |= g_DemodBuffer[34] << 8; // b9
 
-    fc |= DemodBuffer[44] << 7; // b8
-    fc |= DemodBuffer[47] << 6; // b7
-    fc |= DemodBuffer[57] << 5; // b6
-    fc |= DemodBuffer[49] << 4; // b5
+    fc |= g_DemodBuffer[44] << 7; // b8
+    fc |= g_DemodBuffer[47] << 6; // b7
+    fc |= g_DemodBuffer[57] << 5; // b6
+    fc |= g_DemodBuffer[49] << 4; // b5
 
 // seems to match
-    fc |= DemodBuffer[53] << 3; // b4
-    fc |= DemodBuffer[48] << 2; // b3
-    fc |= DemodBuffer[58] << 1; // b2
-    fc |= DemodBuffer[39] << 0; // b1
+    fc |= g_DemodBuffer[53] << 3; // b4
+    fc |= g_DemodBuffer[48] << 2; // b3
+    fc |= g_DemodBuffer[58] << 1; // b2
+    fc |= g_DemodBuffer[39] << 0; // b1
 
 // CSN was same as Indala CSN descramble.
     uint16_t csn = 0;
-    csn |= DemodBuffer[42] << 15; // b16
-    csn |= DemodBuffer[45] << 14; // b15
-    csn |= DemodBuffer[43] << 13; // b14
-    csn |= DemodBuffer[40] << 12; // b13
-    csn |= DemodBuffer[52] << 11; // b12
-    csn |= DemodBuffer[36] << 10; // b11
-    csn |= DemodBuffer[35] << 9; // b10
-    csn |= DemodBuffer[51] << 8; // b9
-    csn |= DemodBuffer[46] << 7; // b8
-    csn |= DemodBuffer[33] << 6; // b7
-    csn |= DemodBuffer[37] << 5; // b6
-    csn |= DemodBuffer[54] << 4; // b5
-    csn |= DemodBuffer[56] << 3; // b4
-    csn |= DemodBuffer[59] << 2; // b3
-    csn |= DemodBuffer[50] << 1; // b2
-    csn |= DemodBuffer[41] << 0; // b1
+    csn |= g_DemodBuffer[42] << 15; // b16
+    csn |= g_DemodBuffer[45] << 14; // b15
+    csn |= g_DemodBuffer[43] << 13; // b14
+    csn |= g_DemodBuffer[40] << 12; // b13
+    csn |= g_DemodBuffer[52] << 11; // b12
+    csn |= g_DemodBuffer[36] << 10; // b11
+    csn |= g_DemodBuffer[35] << 9; // b10
+    csn |= g_DemodBuffer[51] << 8; // b9
+    csn |= g_DemodBuffer[46] << 7; // b8
+    csn |= g_DemodBuffer[33] << 6; // b7
+    csn |= g_DemodBuffer[37] << 5; // b6
+    csn |= g_DemodBuffer[54] << 4; // b5
+    csn |= g_DemodBuffer[56] << 3; // b4
+    csn |= g_DemodBuffer[59] << 2; // b3
+    csn |= g_DemodBuffer[50] << 1; // b2
+    csn |= g_DemodBuffer[41] << 0; // b1
 
     uint8_t checksum = 0;
-    checksum |= DemodBuffer[62] << 1; // b2
-    checksum |= DemodBuffer[63] << 0; // b1
+    checksum |= g_DemodBuffer[62] << 1; // b2
+    checksum |= g_DemodBuffer[63] << 0; // b1
 
 
     PrintAndLogEx(SUCCESS, "Motorola - fmt: " _GREEN_("26") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u") ", Raw: %08X%08X", fc, csn, raw1, raw2);

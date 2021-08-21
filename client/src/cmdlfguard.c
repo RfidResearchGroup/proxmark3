@@ -28,9 +28,9 @@
 static int CmdHelp(const char *Cmd);
 
 // attempts to demodulate and identify a G_Prox_II verex/chubb card
-// WARNING: if it fails during some points it will destroy the DemodBuffer data
+// WARNING: if it fails during some points it will destroy the g_DemodBuffer data
 // but will leave the GraphBuffer intact.
-// if successful it will push askraw data back to demod buffer ready for emulation
+// if successful it will push askraw data back to g_DemodBuffer ready for emulation
 int demodGuard(bool verbose) {
     (void) verbose; // unused so far
     //Differential Biphase
@@ -40,9 +40,9 @@ int demodGuard(bool verbose) {
         return PM3_ESOFT;
     }
 
-    size_t size = DemodBufferLen;
+    size_t size = g_DemodBufferLen;
 
-    int preambleIndex = detectGProxII(DemodBuffer, &size);
+    int preambleIndex = detectGProxII(g_DemodBuffer, &size);
     if (preambleIndex < 0) {
 
         if (preambleIndex == -1)
@@ -65,8 +65,8 @@ int demodGuard(bool verbose) {
     size_t startIdx = preambleIndex + 6; //start after 6 bit preamble
     uint8_t bits_no_spacer[90];
 
-    // not mess with raw DemodBuffer copy to a new sample array
-    memcpy(bits_no_spacer, DemodBuffer + startIdx, 90);
+    // not mess with raw g_DemodBuffer copy to a new sample array
+    memcpy(bits_no_spacer, g_DemodBuffer + startIdx, 90);
 
     // remove the 18 (90/5=18) parity bits (down to 72 bits (96-6-18=72))
     size_t len = removeParity(bits_no_spacer, 0, 5, 3, 90); //source, startloc, paritylen, ptype, length_to_run
@@ -82,7 +82,7 @@ int demodGuard(bool verbose) {
         PrintAndLogEx(DEBUG, "DEBUG: gProxII byte %zu after xor: %02x", idx, plain[idx]);
     }
 
-    setDemodBuff(DemodBuffer, 96, preambleIndex);
+    setDemodBuff(g_DemodBuffer, 96, preambleIndex);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (preambleIndex * g_DemodClock));
 
     //plain contains 8 Bytes (64 bits) of decrypted raw tag data
@@ -90,9 +90,9 @@ int demodGuard(bool verbose) {
     uint32_t FC = 0;
     uint32_t Card = 0;
     //get raw 96 bits to print
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
-    uint32_t raw3 = bytebits_to_byte(DemodBuffer + 64, 32);
+    uint32_t raw1 = bytebits_to_byte(g_DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
+    uint32_t raw3 = bytebits_to_byte(g_DemodBuffer + 64, 32);
     bool unknown = false;
     switch (fmtLen) {
         case 36:
