@@ -122,8 +122,12 @@ The card has two secure channels: EV2 and LRP. By default, EV2 is on. LRP can be
 
 Application on the card can't be selected by desfire native select. Needs to issue iso select command. All the commands that can work in LRP channel have **--appisoid** option
 
-Transaction MAC file - the only file that can be created and deleted. By default, all transaction operations (operations with Valye and Record file) need to issue CommitReaderID command. 
+Transaction MAC file - the only file that can be created and deleted. By default, all transaction operations (operations with Value and Record file) need to issue CommitReaderID command. 
 So) to fast check- it needs to delete this file) it has default file id - 0x0f.
+
+FCI sends from card to reader after selecting the application (df01 by default)
+
+If it needs to have more space for FCI - just change the id of one of the bigger files to 0x1f (and the current id to somewhere) via SetConfiguration command
 
 ## How to
 
@@ -322,3 +326,19 @@ step 1. read mac file or read all the files to get transaction mac counter
 step 2. write something to a file with CommitReaderID command and provide the key that was set by `hf mfdes createmacfile` command
 
 `hf mfdes write --aid 123456 --fid 01 -d 01020304 --readerid 010203 --trkey 00112233445566778899aabbccddeeff`
+
+### How to switch Desfire Light to LRP mode
+
+Remove failed authentication counters (if needs, but strongly recommended)
+
+`hf mfdes setconfig --appisoid df01 -t aes -s ev2 --param 0a --data 00ffffffff`
+
+or in the LRP mode
+
+`hf mfdes setconfig --appisoid df01 -t aes -s lrp --param 0a --data 00ffffffff`
+
+Switch LRP mode on
+
+`hf mfdes setconfig --appisoid df01 -t aes -s ev2 --param 05 --data 00000000010000000000`
+
+
