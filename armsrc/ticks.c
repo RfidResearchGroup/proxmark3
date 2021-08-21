@@ -65,7 +65,7 @@ void SpinDelayUs(int us) {
 // WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
 void SpinDelay(int ms) {
     if (ms > 1390) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf(_RED_("Error, SpinDelay called with %i > 1390"), ms);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf(_RED_("Error, SpinDelay called with %i > 1390"), ms);
         ms = 1390;
     }
     // convert to us and call microsecond delay function

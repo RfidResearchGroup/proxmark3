@@ -203,9 +203,9 @@ void RunMod(void) {
                 }
 
                 LED_D_OFF();
-                gLogin = false;
-                gPassword = reflect32(tag[0]);
-                gWritePasswordProcess = false;
+                g_Login = false;
+                g_Password = reflect32(tag[0]);
+                g_WritePasswordProcess = false;
                 command = EM4X50_COMMAND_STANDARD_READ;
                 no_pwd = 0;
                 memset(pwdlist, 0, sizeof(pwdlist));
@@ -223,19 +223,19 @@ void RunMod(void) {
             em4x50_handle_commands(&command, tag);
 
             // check if new password was found
-            if (gPassword != reflect32(tag[EM4X50_DEVICE_PASSWORD])) {
+            if (g_Password != reflect32(tag[EM4X50_DEVICE_PASSWORD])) {
                 if (no_pwd < MAX_NO_PWDS_TO_SAVE) {
-                    pwdlist[no_pwd] = gPassword;
+                    pwdlist[no_pwd] = g_Password;
                     no_pwd++;
                 }
-                gPassword = reflect32(tag[EM4X50_DEVICE_PASSWORD]);
+                g_Password = reflect32(tag[EM4X50_DEVICE_PASSWORD]);
             }
 
             // if timeout (e.g. no reader field) continue with standard read
             // mode and reset former authentication
             if (command == PM3_ETIMEOUT) {
                 command = EM4X50_COMMAND_STANDARD_READ;
-                gLogin = false;
+                g_Login = false;
                 LED_D_OFF();
             }
 

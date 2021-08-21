@@ -284,7 +284,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
 
     initSampleBuffer(&sample_size);
 
-    if (DBGLEVEL >= DBG_DEBUG) {
+    if (g_dbglevel >= DBG_DEBUG) {
         printSamples();
     }
 
@@ -443,7 +443,7 @@ void doT55x7Acquisition(size_t sample_size) {
 
     uint16_t checker = 0;
 
-    if (DBGLEVEL >= DBG_DEBUG) {
+    if (g_dbglevel >= DBG_DEBUG) {
         Dbprintf("doT55x7Acquisition - after init");
         print_stack_usage();
     }

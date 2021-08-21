@@ -71,7 +71,7 @@ void lf_sample_mean(void) {
     adc_avg = adc_sum >> 5;
     previous_adc_val = adc_avg;
 
-    if (DBGLEVEL >= DBG_EXTENDED)
+    if (g_dbglevel >= DBG_EXTENDED)
         Dbprintf("LF ADC average %u", adc_avg);
 }
 

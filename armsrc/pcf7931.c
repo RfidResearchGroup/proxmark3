@@ -102,7 +102,7 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
                 // Error
                 if (++warnings > 10) {
 
-                    if (DBGLEVEL >= DBG_EXTENDED) {
+                    if (g_dbglevel >= DBG_EXTENDED) {
                         Dbprintf("Error: too many detection errors, aborting");
                     }
 
@@ -218,7 +218,7 @@ void ReadPCF7931(void) {
         // exit if no block is received
         if (errors >= 10 && found_blocks == 0 && single_blocks_cnt == 0) {
 
-            if (DBGLEVEL >= DBG_INFO)
+            if (g_dbglevel >= DBG_INFO)
                 Dbprintf("[!!] Error, no tag or bad tag");
 
             return;
@@ -226,7 +226,7 @@ void ReadPCF7931(void) {
         // exit if too many errors during reading
         if (tries > 50 && (2 * errors > tries)) {
 
-            if (DBGLEVEL >= DBG_INFO) {
+            if (g_dbglevel >= DBG_INFO) {
                 Dbprintf("[!!] Error reading the tag, only partial content");
             }
 
@@ -258,7 +258,7 @@ void ReadPCF7931(void) {
             continue;
         }
 
-        if (DBGLEVEL >= DBG_EXTENDED)
+        if (g_dbglevel >= DBG_EXTENDED)
             Dbprintf("(dbg) got %d blocks (%d/%d found) (%d tries, %d errors)", n, found_blocks, (max_blocks == 0 ? found_blocks : max_blocks), tries, errors);
 
         for (i = 0; i < n; ++i) {
@@ -322,7 +322,7 @@ void ReadPCF7931(void) {
         }
         ++tries;
         if (BUTTON_PRESS()) {
-            if (DBGLEVEL >= DBG_EXTENDED)
+            if (g_dbglevel >= DBG_EXTENDED)
                 Dbprintf("Button pressed, stopping.");
 
             goto end;
@@ -437,7 +437,7 @@ static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int3
  */
 void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data) {
 
-    if (DBGLEVEL >= DBG_INFO) {
+    if (g_dbglevel >= DBG_INFO) {
         Dbprintf("Initialization delay : %d us", init_delay);
         Dbprintf("Offsets : %d us on the low pulses width, %d us on the low pulses positions", l, p);
     }
@@ -460,7 +460,7 @@ void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, ui
 void SendCmdPCF7931(uint32_t *tab) {
     uint16_t u = 0, tempo = 0;
 
-    if (DBGLEVEL >= DBG_INFO) {
+    if (g_dbglevel >= DBG_INFO) {
         Dbprintf("Sending data frame...");
     }
 

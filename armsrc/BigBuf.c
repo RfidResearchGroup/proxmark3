@@ -169,7 +169,7 @@ void BigBuf_print_status(void) {
     Dbprintf("  tracing ................ %d", tracing);
     Dbprintf("  traceLen ............... %d", trace_len);
 
-    if (DBGLEVEL >= DBG_DEBUG) {
+    if (g_dbglevel >= DBG_DEBUG) {
         DbpString(_CYAN_("Sending buffers"));
 
         uint16_t d8 = 0;
@@ -250,7 +250,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 
     if (duration > 0xFFFF) {
         /*
-        if (DBGLEVEL >= DBG_DEBUG) {
+        if (g_dbglevel >= DBG_DEBUG) {
             Dbprintf("Error in LogTrace: duration too long for 16 bits encoding: 0x%08x   start: 0x%08x end: 0x%08x", duration, timestamp_start, timestamp_end);
         }
         */

@@ -667,7 +667,7 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
 
     // Setup and start DMA.
     if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (DBGLEVEL > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
+        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
         return -4;
     }
 
@@ -743,7 +743,7 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
                         - (32 * 16)  // time for SOF transfer
                         - (dt->lastBit != SOF_PART2 ? (32 * 16) : 0); // time for EOF transfer
 
-    if (DBGLEVEL >= DBG_EXTENDED) {
+    if (g_dbglevel >= DBG_EXTENDED) {
         Dbprintf("samples = %d, ret = %d, Decoder: state = %d, lastBit = %d, len = %d, bitCount = %d, posCount = %d, maxlen = %u",
                  samples,
                  ret,
@@ -1120,7 +1120,7 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     // Setup and start DMA.
     dmabuf8_t *dma = get_dma8();
     if (FpgaSetupSscDma(dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (DBGLEVEL > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
+        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
         return -4;
     }
     uint8_t *upTo = dma->buf;
@@ -1172,7 +1172,7 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
 
     FpgaDisableSscDma();
 
-    if (DBGLEVEL >= DBG_EXTENDED) {
+    if (g_dbglevel >= DBG_EXTENDED) {
         Dbprintf("samples = %d, gotFrame = %d, Decoder: state = %d, len = %d, bitCount = %d, posCount = %d",
                  samples, gotFrame, dr->state, dr->byteCount,
                  dr->bitCount, dr->posCount);
@@ -1287,7 +1287,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
 
     // Setup and start DMA.
     if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (DBGLEVEL > DBG_ERROR) DbpString("FpgaSetupSscDma failed. Exiting");
+        if (g_dbglevel > DBG_ERROR) DbpString("FpgaSetupSscDma failed. Exiting");
         switch_off();
         return;
     }
@@ -1587,7 +1587,7 @@ static void DbdecodeIso15693Answer(int len, uint8_t *d) {
         else
             strncat(status, "[!] crc (" _RED_("fail") ")", DBD15STATLEN - strlen(status));
 
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("%s", status);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("%s", status);
     }
 }
 
@@ -1642,7 +1642,7 @@ void ReaderIso15693(uint32_t parameter, iso15_card_select_t *p_card) {
                 p_card->uidlen = 8;
             }
 
-            if (DBGLEVEL >= DBG_EXTENDED) {
+            if (g_dbglevel >= DBG_EXTENDED) {
                 Dbprintf("[+] UID = %02X%02X%02X%02X%02X%02X%02X%02X",
                          uid[0], uid[1], uid[2], uid[3],
                          uid[4], uid[5], uid[5], uid[6]
@@ -1655,7 +1655,7 @@ void ReaderIso15693(uint32_t parameter, iso15_card_select_t *p_card) {
             // asbytes = uid.
             reply_mix(CMD_ACK, 1, sizeof(uid), 0, uid, sizeof(uid));
 
-            if (DBGLEVEL >= DBG_EXTENDED) {
+            if (g_dbglevel >= DBG_EXTENDED) {
                 Dbprintf("[+] %d octets read from IDENTIFY request:", recvlen);
                 DbdecodeIso15693Answer(recvlen, answer);
                 Dbhexdump(recvlen, answer, true);

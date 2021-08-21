@@ -155,7 +155,7 @@ void FlashStop(void) {
     // SPI disable
     AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIDIS;
 
-    if (DBGLEVEL > 3) Dbprintf("FlashStop");
+    if (g_dbglevel > 3) Dbprintf("FlashStop");
 
     StopTicks();
 }
@@ -195,7 +195,7 @@ bool Flash_CheckBusy(uint32_t timeout) {
     StartCountUS();
     uint32_t _time = GetCountUS();
 
-    if (DBGLEVEL > 3) Dbprintf("Checkbusy in...");
+    if (g_dbglevel > 3) Dbprintf("Checkbusy in...");
 
     do {
         if (!(Flash_ReadStat1() & BUSY)) {
@@ -224,7 +224,7 @@ uint8_t Flash_ReadID(void) {
     uint8_t man_id = FlashSendByte(0xFF);
     uint8_t dev_id = FlashSendLastByte(0xFF);
 
-    if (DBGLEVEL > 3) Dbprintf("Flash ReadID  |  Man ID %02x | Device ID %02x", man_id, dev_id);
+    if (g_dbglevel > 3) Dbprintf("Flash ReadID  |  Man ID %02x | Device ID %02x", man_id, dev_id);
 
     if ((man_id == WINBOND_MANID) && (dev_id == WINBOND_DEVID))
         return dev_id;
@@ -331,7 +331,7 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
     }
 
     if (!FlashInit()) {
-        if (DBGLEVEL > 3) Dbprintf("Flash_WriteData init fail");
+        if (g_dbglevel > 3) Dbprintf("Flash_WriteData init fail");
         return 0;
     }
 
@@ -421,7 +421,7 @@ out:
 
 bool Flash_WipeMemoryPage(uint8_t page) {
     if (!FlashInit()) {
-        if (DBGLEVEL > 3) Dbprintf("Flash_WriteData init fail");
+        if (g_dbglevel > 3) Dbprintf("Flash_WriteData init fail");
         return false;
     }
     Flash_ReadStat1();
@@ -437,7 +437,7 @@ bool Flash_WipeMemoryPage(uint8_t page) {
 // Wipes flash memory completely, fills with 0xFF
 bool Flash_WipeMemory(void) {
     if (!FlashInit()) {
-        if (DBGLEVEL > 3) Dbprintf("Flash_WriteData init fail");
+        if (g_dbglevel > 3) Dbprintf("Flash_WriteData init fail");
         return false;
     }
     Flash_ReadStat1();
@@ -464,7 +464,7 @@ bool Flash_WipeMemory(void) {
 // enable the flash write
 void Flash_WriteEnable(void) {
     FlashSendLastByte(WRITEENABLE);
-    if (DBGLEVEL > 3) Dbprintf("Flash Write enabled");
+    if (g_dbglevel > 3) Dbprintf("Flash Write enabled");
 }
 
 // erase 4K at one time
@@ -485,7 +485,7 @@ bool Flash_Erase4k(uint8_t block, uint8_t sector) {
 // execution time: 0,3s / 300ms
 bool Flash_Erase32k(uint32_t address) {
     if (address & (32*1024 - 1)) {
-        if ( DBGLEVEL > 1 ) Dbprintf("Flash_Erase32k : Address is not align at 4096");
+        if ( g_dbglevel > 1 ) Dbprintf("Flash_Erase32k : Address is not align at 4096");
         return false;
     }
     FlashSendByte(BLOCK32ERASE);

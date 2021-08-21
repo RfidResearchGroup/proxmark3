@@ -80,7 +80,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
 
     // Setup and start DMA.
     if (!FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE)) {
-        if (DBGLEVEL > 1)
+        if (g_dbglevel > 1)
             Dbprintf("FpgaSetupSscDma failed. Exiting");
         return;
     }
@@ -150,7 +150,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
                     if (triggered) {
                         if ((receivedCmd) &&
                                 ((receivedCmd[0] == MIFARE_ULEV1_AUTH) || (receivedCmd[0] == MIFARE_ULC_AUTH_1))) {
-                            if (DBGLEVEL > 1)
+                            if (g_dbglevel > 1)
                                 Dbprintf("PWD-AUTH KEY: 0x%02x%02x%02x%02x", receivedCmd[1], receivedCmd[2],
                                          receivedCmd[3], receivedCmd[4]);
 
@@ -214,7 +214,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
 
     // Write stuff to spiffs logfile
     if (auth_attempts > 0) {
-        if (DBGLEVEL > 1)
+        if (g_dbglevel > 1)
             Dbprintf("[!] Authentication attempts = %u", auth_attempts);
 
         if (!exists_in_spiffs((char *)HF_BOG_LOGFILE)) {
@@ -224,7 +224,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
         }
     }
 
-    if (DBGLEVEL > 1)
+    if (g_dbglevel > 1)
         Dbprintf("[!] Wrote %u Authentification attempts into logfile", auth_attempts);
 
     SpinErr(LED_A, 200, 5);

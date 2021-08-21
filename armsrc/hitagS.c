@@ -222,7 +222,7 @@ static void hitag_send_bit(int bit) {
 }
 
 static void hitag_send_frame(const uint8_t *frame, size_t frame_len) {
-    if (DBGLEVEL >= DBG_EXTENDED)
+    if (g_dbglevel >= DBG_EXTENDED)
         Dbprintf("hitag_send_frame: (%i) %02X %02X %02X %02X", frame_len, frame[0], frame[1], frame[2], frame[3]);
     // The beginning of the frame is hidden in some high level; pause until our bits will have an effect
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
@@ -368,12 +368,12 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
     switch (rxlen) {
         case 5: {
             //UID request with a selected response protocol mode
-            if (DBGLEVEL >= DBG_EXTENDED)
+            if (g_dbglevel >= DBG_EXTENDED)
                 Dbprintf("UID request: length: %i first byte: %02x", rxlen, rx[0]);
             tag.pstate = HT_READY;
             tag.tstate = HT_NO_OP;
             if ((rx[0] & 0xf0) == 0x30) {
-                if (DBGLEVEL >= DBG_EXTENDED)
+                if (g_dbglevel >= DBG_EXTENDED)
                     Dbprintf("HT_STANDARD");
                 tag.mode = HT_STANDARD;
                 sof_bits = 1;
@@ -381,14 +381,14 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
             }
             if ((rx[0] & 0xf0) == 0xc0) {
                 tag.mode = HT_ADVANCED;
-                if (DBGLEVEL >= DBG_EXTENDED)
+                if (g_dbglevel >= DBG_EXTENDED)
                     Dbprintf("HT_ADVANCED");
                 sof_bits = 3;
                 m = AC2K;
             }
 
             if ((rx[0] & 0xf0) == 0xd0) {
-                if (DBGLEVEL >= DBG_EXTENDED)
+                if (g_dbglevel >= DBG_EXTENDED)
                     Dbprintf("HT_FAST_ADVANCED");
                 tag.mode = HT_FAST_ADVANCED;
                 sof_bits = 3;
@@ -402,10 +402,10 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
         break;
         case 45: {
             //select command from reader received
-            if (DBGLEVEL >= DBG_EXTENDED)
+            if (g_dbglevel >= DBG_EXTENDED)
                 DbpString("SELECT");
             if (check_select(rx, tag.uid) == 1) {
-                if (DBGLEVEL >= DBG_EXTENDED)
+                if (g_dbglevel >= DBG_EXTENDED)
                     DbpString("SELECT match");
                 //if the right tag was selected
                 *txlen = 32;
@@ -478,7 +478,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
         }
         break;
         case 40:
-            if (DBGLEVEL >= DBG_EXTENDED)
+            if (g_dbglevel >= DBG_EXTENDED)
                 Dbprintf("WRITE");
             //data received to be written
             if (tag.tstate == HT_WRITING_PAGE_DATA) {
@@ -596,7 +596,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
         }
         break;
         default:
-            if (DBGLEVEL >= DBG_EXTENDED)
+            if (g_dbglevel >= DBG_EXTENDED)
                 Dbprintf("unknown rxlen: (%i) %02X %02X %02X %02X ...", rxlen, rx[0], rx[1], rx[2], rx[3]);
             break;
     }
@@ -675,7 +675,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
                        | (uid[30] << 1)
                        | uid[31];
 
-        if (DBGLEVEL >= DBG_EXTENDED)
+        if (g_dbglevel >= DBG_EXTENDED)
             Dbprintf("UID: %02X %02X %02X %02X", uid1, uid2, uid3, uid4);
 
         tag.uid = (uid4 << 24 | uid3 << 16 | uid2 << 8 | uid1);
@@ -769,7 +769,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
         tag.LCK1 = response_bit[26];
         tag.LCK0 = response_bit[27];
 
-        if (DBGLEVEL >= DBG_EXTENDED)
+        if (g_dbglevel >= DBG_EXTENDED)
             Dbprintf("conf0: %02X conf1: %02X conf2: %02X", conf_pages[0], conf_pages[1], conf_pages[2]);
 
         if (tag.auth == 1) {
@@ -792,7 +792,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
                     tx[5] = auth_ks[1];
                     tx[6] = auth_ks[2];
                     tx[7] = auth_ks[3];
-                    if (DBGLEVEL >= DBG_EXTENDED)
+                    if (g_dbglevel >= DBG_EXTENDED)
                         Dbprintf("%02X %02X %02X %02X %02X %02X %02X %02X", tx[0],
                                  tx[1], tx[2], tx[3], tx[4], tx[5], tx[6], tx[7]);
                 } else if (htf == 01 || htf == 03) { //RHTS_CHALLENGE //WHTS_CHALLENGE
@@ -817,7 +817,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
         calc_crc(&crc, ((rx[1] & 0x0f) * 16 + ((rx[2] & 0xf0) / 16)), 8);
         calc_crc(&crc, ((rx[2] & 0x0f) * 16 + ((rx[3] & 0xf0) / 16)), 8);
         calc_crc(&crc, ((rx[3] & 0x0f) * 16 + ((rx[4] & 0xf0) / 16)), 8);
-        if (DBGLEVEL >= DBG_EXTENDED) {
+        if (g_dbglevel >= DBG_EXTENDED) {
             Dbprintf("UID:::%X", tag.uid);
             Dbprintf("RND:::%X", rnd);
         }
@@ -837,7 +837,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
                 pwdl1 = ((rx[3] & 0x0f) * 16 + ((rx[4] & 0xf0) / 16)) ^ _hitag2_byte(&state);
             }
 
-            if (DBGLEVEL >= DBG_EXTENDED)
+            if (g_dbglevel >= DBG_EXTENDED)
                 Dbprintf("pwdh0 %02X pwdl0 %02X pwdl1 %02X", pwdh0, pwdl0, pwdl1);
 
             //Dbprintf("%X %02X", rnd, ((rx[4] & 0x0f) * 16) + ((rx[5] & 0xf0) / 16));
@@ -911,7 +911,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
         tag.max_page = 8;
     if ((tag.pages[1][0] & 0x2) == 0 && (tag.pages[1][0] & 0x1) == 0)
         tag.max_page = 0;
-    if (DBGLEVEL >= DBG_EXTENDED)
+    if (g_dbglevel >= DBG_EXTENDED)
         for (i = 0; i < tag.max_page; i++)
             Dbprintf("Page[%2d]: %02X %02X %02X %02X", i,
                      (tag.pages[i][3]) & 0xff,

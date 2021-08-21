@@ -411,7 +411,7 @@ void FpgaDownloadAndGo(int bitstream_version) {
     // Send waiting time extension request as this will take a while
     send_wtx(1500);
 
-    bool verbose = (DBGLEVEL > 3);
+    bool verbose = (g_dbglevel > 3);
 
     // make sure that we have enough memory to decompress
     BigBuf_free();
@@ -525,7 +525,7 @@ int FpgaGetCurrent(void) {
 // if HF,  Disable SSC DMA
 // turn off trace and leds off.
 void switch_off(void) {
-    if (DBGLEVEL > 3) {
+    if (g_dbglevel > 3) {
         Dbprintf("switch_off");
     }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);

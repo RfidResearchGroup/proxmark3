@@ -60,8 +60,8 @@ typedef struct {
     uint8_t byte[4];
 } PACKED em4x50_word_t;
 
-extern bool gLogin;
-extern bool gWritePasswordProcess;
-extern uint32_t gPassword;
+extern bool g_Login;
+extern bool g_WritePasswordProcess;
+extern uint32_t g_Password;
 
 #endif /* EM4X50_H__ */

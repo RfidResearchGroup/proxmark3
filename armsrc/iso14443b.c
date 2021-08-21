@@ -12,7 +12,7 @@
 #include "iso14443b.h"
 
 #include "proxmark3_arm.h"
-#include "common.h"  // access to global variable: DBGLEVEL
+#include "common.h"  // access to global variable: g_dbglevel
 #include "util.h"
 #include "string.h"
 #include "crc16.h"
@@ -437,7 +437,7 @@ static void iso14b_set_timeout(uint32_t timeout_etu) {
         ssp = MAX_14B_TIMEOUT;
 
     iso14b_timeout = ssp;
-    if (DBGLEVEL >= DBG_DEBUG) {
+    if (g_dbglevel >= DBG_DEBUG) {
         Dbprintf("ISO14443B Timeout set to %ld fwt", iso14b_timeout);
     }
 }
@@ -453,7 +453,7 @@ static void iso14b_set_maxframesize(uint16_t size) {
         size = MAX_FRAME_SIZE;
 
     Uart.byteCntMax = size;
-    if (DBGLEVEL >= DBG_DEBUG) Dbprintf("ISO14443B Max frame size set to %d bytes", Uart.byteCntMax);
+    if (g_dbglevel >= DBG_DEBUG) Dbprintf("ISO14443B Max frame size set to %d bytes", Uart.byteCntMax);
 }
 
 //-----------------------------------------------------------------------------
@@ -846,19 +846,19 @@ void SimulateIso14443bTag(uint8_t *pupi) {
                     // - SLOT MARKER
                     // - ISO7816
                     // - emulate with a memory dump
-                    if (DBGLEVEL >= DBG_DEBUG)
+                    if (g_dbglevel >= DBG_DEBUG)
                         Dbprintf("new cmd from reader: len=%d, cmdsRecvd=%d", len, cmdsReceived);
 
                     // CRC Check
                     if (len >= 3) { // if crc exists
 
                         if (!check_crc(CRC_14443_B, receivedCmd, len)) {
-                            if (DBGLEVEL >= DBG_DEBUG) {
+                            if (g_dbglevel >= DBG_DEBUG) {
                                 DbpString("CRC fail");
                             }
                         }
                     } else {
-                        if (DBGLEVEL >= DBG_DEBUG) {
+                        if (g_dbglevel >= DBG_DEBUG) {
                             DbpString("CRC passed");
                         }
                     }
@@ -873,7 +873,7 @@ void SimulateIso14443bTag(uint8_t *pupi) {
         ++cmdsReceived;
     }
 
-    if (DBGLEVEL >= DBG_DEBUG)
+    if (g_dbglevel >= DBG_DEBUG)
         Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
 
     switch_off(); //simulate
@@ -1050,19 +1050,19 @@ void Simulate_iso14443b_srx_tag(uint8_t *uid) {
                     // - SLOT MARKER
                     // - ISO7816
                     // - emulate with a memory dump
-                    if (DBGLEVEL >= DBG_DEBUG)
+                    if (g_dbglevel >= DBG_DEBUG)
                         Dbprintf("new cmd from reader: len=%d, cmdsRecvd=%d", len, cmdsReceived);
 
                     // CRC Check
                     if (len >= 3) { // if crc exists
 
                         if (!check_crc(CRC_14443_B, receivedCmd, len)) {
-                            if (DBGLEVEL >= DBG_DEBUG) {
+                            if (g_dbglevel >= DBG_DEBUG) {
                                 DbpString("CRC fail");
                             }
                         }
                     } else {
-                        if (DBGLEVEL >= DBG_DEBUG) {
+                        if (g_dbglevel >= DBG_DEBUG) {
                             DbpString("CRC passed");
                         }
                     }
@@ -1077,7 +1077,7 @@ void Simulate_iso14443b_srx_tag(uint8_t *uid) {
         ++cmdsReceived;
     }
 
-    if (DBGLEVEL >= DBG_DEBUG)
+    if (g_dbglevel >= DBG_DEBUG)
         Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
 
     switch_off(); //simulate
@@ -1301,7 +1301,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
     // The DMA buffer, used to stream samples from the FPGA
     dmabuf16_t *dma = get_dma16();
     if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (DBGLEVEL > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
+        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
         return -1;
     }
 
@@ -1936,7 +1936,7 @@ static int read_srx_block(uint8_t blocknr, uint8_t *block) {
         memcpy(block, r_block, 4);
     }
 
-    if (DBGLEVEL >= DBG_DEBUG) {
+    if (g_dbglevel >= DBG_DEBUG) {
         Dbprintf("Address=%02x, Contents=%08x, CRC=%04x",
                  blocknr,
                  (r_block[3] << 24) + (r_block[2] << 16) + (r_block[1] << 8) + r_block[0],
@@ -2027,7 +2027,7 @@ void SniffIso14443b(void) {
 
     // Setup and start DMA.
     if (!FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE)) {
-        if (DBGLEVEL > DBG_ERROR) DbpString("FpgaSetupSscDma failed. Exiting");
+        if (g_dbglevel > DBG_ERROR) DbpString("FpgaSetupSscDma failed. Exiting");
         switch_off();
         return;
     }
@@ -2175,7 +2175,7 @@ void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *p) {
     // receive buffer
     uint8_t buf[PM3_CMD_DATA_SIZE];
     memset(buf, 0, sizeof(buf));
-    if (DBGLEVEL > DBG_DEBUG) {
+    if (g_dbglevel > DBG_DEBUG) {
         Dbprintf("14b raw: param, %04x", p->flags);
     }
 

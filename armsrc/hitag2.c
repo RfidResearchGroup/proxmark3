@@ -20,7 +20,7 @@
 // Anon, 2019
 // Doegox, 2020
 
-#define DBG  if (DBGLEVEL >= DBG_EXTENDED)
+#define DBG  if (g_dbglevel >= DBG_EXTENDED)
 
 #include "hitag2.h"
 #include "hitag2_crypto.h"

@@ -503,7 +503,7 @@ void LegicRfSimulate(uint8_t tagtype, bool send_reply) {
 
 OUT:
 
-    if (DBGLEVEL >= DBG_ERROR) {
+    if (g_dbglevel >= DBG_ERROR) {
         Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", get_tracing(), BigBuf_get_traceLen());
     }
 

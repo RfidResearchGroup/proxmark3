@@ -59,7 +59,7 @@ static bool fill_eml_from_file(char *dumpfile) {
         return false;
     }
     //read and load dump file
-    if (DBGLEVEL >= DBG_INFO)
+    if (g_dbglevel >= DBG_INFO)
         Dbprintf(_YELLOW_("Found dump file %s. Uploading to emulator memory..."), dumpfile);
     emlClearMem();
     uint8_t *emCARD = BigBuf_get_EM_addr();

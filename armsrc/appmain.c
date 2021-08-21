@@ -67,25 +67,25 @@
 #include "spiffs.h"
 #endif
 
-int DBGLEVEL = DBG_ERROR;
+int g_dbglevel = DBG_ERROR;
 uint8_t g_trigger = 0;
 bool g_hf_field_active = false;
 extern uint32_t _stack_start[], _stack_end[];
 struct common_area common_area __attribute__((section(".commonarea")));
 static int button_status = BUTTON_NO_CLICK;
 static bool allow_send_wtx = false;
-uint16_t tearoff_delay_us = 0;
-bool tearoff_enabled = false;
+uint16_t g_tearoff_delay_us = 0;
+bool g_tearoff_enabled = false;
 
 int tearoff_hook(void) {
-    if (tearoff_enabled) {
-        if (tearoff_delay_us == 0) {
+    if (g_tearoff_enabled) {
+        if (g_tearoff_delay_us == 0) {
             Dbprintf(_RED_("No tear-off delay configured!"));
             return PM3_SUCCESS; // SUCCESS = the hook didn't do anything
         }
-        SpinDelayUsPrecision(tearoff_delay_us);
+        SpinDelayUsPrecision(g_tearoff_delay_us);
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-        tearoff_enabled = false;
+        g_tearoff_enabled = false;
         Dbprintf(_YELLOW_("Tear-off triggered!"));
         return PM3_ETEAROFF;
     } else {
@@ -336,7 +336,7 @@ static void TimingIntervalAcquisition(void) {
 
 static void print_debug_level(void) {
     char dbglvlstr[20] = {0};
-    switch (DBGLEVEL) {
+    switch (g_dbglevel) {
         case DBG_NONE:
             sprintf(dbglvlstr, "none");
             break;
@@ -353,7 +353,7 @@ static void print_debug_level(void) {
             sprintf(dbglvlstr, "extended");
             break;
     }
-    Dbprintf("  Debug log level......... %d ( " _YELLOW_("%s")" )", DBGLEVEL, dbglvlstr);
+    Dbprintf("  Debug log level......... %d ( " _YELLOW_("%s")" )", g_dbglevel, dbglvlstr);
 }
 
 // measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
@@ -772,7 +772,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         // emulator
         case CMD_SET_DBGMODE: {
-            DBGLEVEL = packet->data.asBytes[0];
+            g_dbglevel = packet->data.asBytes[0];
             print_debug_level();
             reply_ng(CMD_SET_DBGMODE, PM3_SUCCESS, NULL, 0);
             break;
@@ -787,11 +787,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             if (payload->on && payload->off)
                 reply_ng(CMD_SET_TEAROFF, PM3_EINVARG, NULL, 0);
             if (payload->on)
-                tearoff_enabled = true;
+                g_tearoff_enabled = true;
             if (payload->off)
-                tearoff_enabled = false;
+                g_tearoff_enabled = false;
             if (payload->delay_us > 0)
-                tearoff_delay_us = payload->delay_us;
+                g_tearoff_delay_us = payload->delay_us;
             reply_ng(CMD_SET_TEAROFF, PM3_SUCCESS, NULL, 0);
             break;
         }
@@ -2094,7 +2094,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t filename[32];
             uint8_t *pfilename = packet->data.asBytes;
             memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
-            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Filename received for spiffs dump : %s", filename);
+            if (g_dbglevel >= DBG_DEBUG) Dbprintf("Filename received for spiffs dump : %s", filename);
 
             uint32_t size = packet->oldarg[1];
 
@@ -2121,7 +2121,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t filename[32];
             uint8_t *pfilename = packet->data.asBytes;
             memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
-            if (DBGLEVEL >= DBG_DEBUG) {
+            if (g_dbglevel >= DBG_DEBUG) {
                 Dbprintf("Filename received for spiffs STAT : %s", filename);
             }
 
@@ -2144,7 +2144,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
 
-            if (DBGLEVEL >= DBG_DEBUG) {
+            if (g_dbglevel >= DBG_DEBUG) {
                 Dbprintf("Filename received for spiffs REMOVE : %s", payload->fn);
             }
 
@@ -2163,7 +2163,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
 
-            if (DBGLEVEL >= DBG_DEBUG) {
+            if (g_dbglevel >= DBG_DEBUG) {
                 Dbprintf("SPIFFS RENAME");
                 Dbprintf("Source........ %s", payload->src);
                 Dbprintf("Destination... %s", payload->dest);
@@ -2183,7 +2183,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
 
-            if (DBGLEVEL >= DBG_DEBUG) {
+            if (g_dbglevel >= DBG_DEBUG) {
                 Dbprintf("SPIFFS COPY");
                 Dbprintf("Source........ %s", payload->src);
                 Dbprintf("Destination... %s", payload->dest);
@@ -2198,7 +2198,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             flashmem_write_t *payload = (flashmem_write_t *)packet->data.asBytes;
 
-            if (DBGLEVEL >= DBG_DEBUG) {
+            if (g_dbglevel >= DBG_DEBUG) {
                 Dbprintf("SPIFFS WRITE, dest `%s` with APPEND set to: %c", payload->fn, payload->append ? 'Y' : 'N');
             }
 

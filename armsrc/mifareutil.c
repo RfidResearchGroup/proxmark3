@@ -78,7 +78,7 @@ int mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *answe
     ReaderTransmit(dcmd, sizeof(dcmd), timing);
     int len = ReaderReceive(answer, answer_parity);
     if (!len) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("%02X Cmd failed. Card timeout.", cmd);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("%02X Cmd failed. Card timeout.", cmd);
         len = ReaderReceive(answer, answer_parity);
     }
     return len;
@@ -164,7 +164,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
     }
 
     // some statistic
-    if (!ntptr && (DBGLEVEL >= DBG_EXTENDED))
+    if (!ntptr && (g_dbglevel >= DBG_EXTENDED))
         Dbprintf("auth uid: %08x | nr: %08x | nt: %08x", uid, nr, nt);
 
     // save Nt
@@ -204,14 +204,14 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
     iso14a_set_timeout(save_timeout);
 
     if (!len) {
-        if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Authentication failed. Card timeout");
+        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("Authentication failed. Card timeout");
         return 2;
     }
 
     ntpp = prng_successor(nt, 32) ^ crypto1_word(pcs, 0, 0);
 
     if (ntpp != bytes_to_num(receivedAnswer, 4)) {
-        if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Authentication failed. Error card response");
+        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("Authentication failed. Error card response");
         return 3;
     }
     return 0;
@@ -226,18 +226,18 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
 
     len = mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
     if (len == 1) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd Error %02x", receivedAnswer[0]);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error %02x", receivedAnswer[0]);
         return 1;
     }
     if (len != 18) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("wrong response len %d (expected 18)", len);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("wrong response len %d (expected 18)", len);
         return 2;
     }
 
     memcpy(bt, receivedAnswer + 16, 2);
     AddCrc14A(receivedAnswer, 16);
     if (bt[0] != receivedAnswer[16] || bt[1] != receivedAnswer[17]) {
-        if (DBGLEVEL >= DBG_INFO) Dbprintf("CRC response error");
+        if (g_dbglevel >= DBG_INFO) Dbprintf("CRC response error");
         return 3;
     }
 
@@ -254,17 +254,17 @@ int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack) {
     uint8_t key[4] = {0x00, 0x00, 0x00, 0x00};
     memcpy(key, keybytes, 4);
 
-    if (DBGLEVEL >= DBG_EXTENDED)
+    if (g_dbglevel >= DBG_EXTENDED)
         Dbprintf("EV1 Auth : %02x%02x%02x%02x", key[0], key[1], key[2], key[3]);
 
     len = mifare_sendcmd(MIFARE_ULEV1_AUTH, key, sizeof(key), resp, respPar, NULL);
 
     if (len != 4) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd Error: %02x %u", resp[0], len);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x %u", resp[0], len);
         return 0;
     }
 
-    if (DBGLEVEL >= DBG_EXTENDED)
+    if (g_dbglevel >= DBG_EXTENDED)
         Dbprintf("Auth Resp: %02x%02x%02x%02x", resp[0], resp[1], resp[2], resp[3]);
 
     memcpy(pack, resp, 4);
@@ -289,7 +289,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     // REQUEST AUTHENTICATION
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULC_AUTH_1, 0x00, resp, respPar, NULL);
     if (len != 11) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
         return 0;
     }
 
@@ -302,7 +302,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     memcpy(rnd_ab, random_a, 8);
     memcpy(rnd_ab + 8, random_b, 8);
 
-    if (DBGLEVEL >= DBG_EXTENDED) {
+    if (g_dbglevel >= DBG_EXTENDED) {
         Dbprintf("enc_B: %02x %02x %02x %02x %02x %02x %02x %02x",
                  enc_random_b[0], enc_random_b[1], enc_random_b[2], enc_random_b[3], enc_random_b[4], enc_random_b[5], enc_random_b[6], enc_random_b[7]);
 
@@ -321,7 +321,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
 
     len = mifare_sendcmd(MIFARE_ULC_AUTH_2, rnd_ab, sizeof(rnd_ab), resp, respPar, NULL);
     if (len != 11) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
         return 0;
     }
 
@@ -332,11 +332,11 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     // decrypt    out, in, length, key, iv
     tdes_nxp_receive(enc_resp, resp_random_a, 8, key, enc_random_b, 2);
     if (memcmp(resp_random_a, random_a, 8) != 0) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("failed authentication");
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("failed authentication");
         return 0;
     }
 
-    if (DBGLEVEL >= DBG_EXTENDED) {
+    if (g_dbglevel >= DBG_EXTENDED) {
         Dbprintf("e_AB: %02x %02x %02x %02x %02x %02x %02x %02x",
                  rnd_ab[0], rnd_ab[1], rnd_ab[2], rnd_ab[3],
                  rnd_ab[4], rnd_ab[5], rnd_ab[6], rnd_ab[7]);
@@ -364,18 +364,18 @@ static int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
 
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
     if (len == 1) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
         return 1;
     }
     if (len != 18) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd Error: card timeout. len: %x", len);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: card timeout. len: %x", len);
         return 2;
     }
 
     memcpy(bt, receivedAnswer + 16, 2);
     AddCrc14A(receivedAnswer, 16);
     if (bt[0] != receivedAnswer[16] || bt[1] != receivedAnswer[17]) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd CRC response error.");
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd CRC response error.");
         return 3;
     }
 
@@ -416,7 +416,7 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
     len = mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
 
     if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
         return 1;
     }
 
@@ -441,7 +441,7 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
     res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 3)) << 3;
 
     if ((len != 1) || (res != 0x0A)) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd send data2 Error: %02x", res);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd send data2 Error: %02x", res);
         return 2;
     }
     return 0;
@@ -458,7 +458,7 @@ int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData) {
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
 
     if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
-        if (DBGLEVEL >= DBG_ERROR)
+        if (g_dbglevel >= DBG_ERROR)
             Dbprintf("Cmd Send Error: %02x %d", receivedAnswer[0], len);
         return 1;
     }
@@ -472,7 +472,7 @@ int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData) {
     len = ReaderReceive(receivedAnswer, receivedAnswerPar);
 
     if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
-        if (DBGLEVEL >= DBG_ERROR)
+        if (g_dbglevel >= DBG_ERROR)
             Dbprintf("Cmd Send Data Error: %02x %d", receivedAnswer[0], len);
         return 2;
     }
@@ -491,7 +491,7 @@ int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData) {
     len = mifare_sendcmd(MIFARE_ULC_WRITE, block, sizeof(block), receivedAnswer, receivedAnswerPar, NULL);
 
     if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
-        if (DBGLEVEL >= DBG_ERROR)
+        if (g_dbglevel >= DBG_ERROR)
             Dbprintf("Cmd Send Error: %02x %d", receivedAnswer[0], len);
         return 1;
     }
@@ -501,7 +501,7 @@ int mifare_classic_halt_ex(struct Crypto1State *pcs) {
     uint8_t receivedAnswer[4] = {0x00, 0x00, 0x00, 0x00};
     uint16_t len = mifare_sendcmd_short(pcs, (pcs == NULL) ? CRYPT_NONE : CRYPT_ALL, ISO14443A_CMD_HALT, 0x00, receivedAnswer, NULL, NULL);
     if (len != 0) {
-        if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("halt warning. response len: %x", len);
+        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("halt warning. response len: %x", len);
         return 1;
     }
     return 0;
@@ -515,7 +515,7 @@ int mifare_ultra_halt(void) {
     uint8_t receivedAnswer[4] = {0x00, 0x00, 0x00, 0x00};
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_HALT, 0x00, receivedAnswer, NULL, NULL);
     if (len != 0) {
-        if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("halt warning. response len: %x", len);
+        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("halt warning. response len: %x", len);
         return 1;
     }
     return 0;
@@ -624,11 +624,11 @@ void emlClearMem(void) {
 
 uint8_t SectorTrailer(uint8_t blockNo) {
     if (blockNo <= MIFARE_2K_MAXBLOCK) {
-        if (DBGLEVEL >= DBG_EXTENDED)
+        if (g_dbglevel >= DBG_EXTENDED)
             Dbprintf("Sector Trailer for block %d : %d", blockNo, (blockNo | 0x03));
         return (blockNo | 0x03);
     } else {
-        if (DBGLEVEL >= DBG_EXTENDED)
+        if (g_dbglevel >= DBG_EXTENDED)
             Dbprintf("Sector Trailer for block %d : %d", blockNo, (blockNo | 0x0f));
         return (blockNo | 0x0f);
     }
@@ -646,7 +646,7 @@ int mifare_sendcmd_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cm
     ReaderTransmit(dcmd, sizeof(dcmd), NULL);
     int len = ReaderReceive(answer, answer_parity);
     if (!len) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Authentication failed. Card timeout.");
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Authentication failed. Card timeout.");
         return 1;
     }
     return len;
@@ -661,7 +661,7 @@ int mifare_sendcmd_special2(struct Crypto1State *pcs, uint8_t crypted, uint8_t c
     ReaderTransmit(dcmd, sizeof(dcmd), NULL);
     int len = ReaderReceive(answer, answer_parity);
     if (!len) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Authentication failed. Card timeout.");
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Authentication failed. Card timeout.");
         return 1;
     }
     return len;
@@ -677,13 +677,13 @@ int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData) {
 
     len = mifare_sendcmd_special(NULL, 1, 0x02, data, receivedAnswer, receivedAnswerPar, NULL);
     if (len == 1) {
-        if (DBGLEVEL >= DBG_ERROR)
+        if (g_dbglevel >= DBG_ERROR)
             Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
         return 1;
     }
 
     if (len == 12) {
-        if (DBGLEVEL >= DBG_EXTENDED) {
+        if (g_dbglevel >= DBG_EXTENDED) {
             Dbprintf("Auth1 Resp: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
                      receivedAnswer[0], receivedAnswer[1], receivedAnswer[2], receivedAnswer[3], receivedAnswer[4],
                      receivedAnswer[5], receivedAnswer[6], receivedAnswer[7], receivedAnswer[8], receivedAnswer[9],
@@ -707,13 +707,13 @@ int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData) {
     len = mifare_sendcmd_special2(NULL, 1, 0x03, data, receivedAnswer, receivedAnswerPar, NULL);
 
     if ((receivedAnswer[0] == 0x03) && (receivedAnswer[1] == 0xae)) {
-        if (DBGLEVEL >= DBG_ERROR)
+        if (g_dbglevel >= DBG_ERROR)
             Dbprintf("Auth Error: %02x %02x", receivedAnswer[0], receivedAnswer[1]);
         return 1;
     }
 
     if (len == 12) {
-        if (DBGLEVEL >= DBG_EXTENDED) {
+        if (g_dbglevel >= DBG_EXTENDED) {
             Dbprintf("Auth2 Resp: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
                      receivedAnswer[0], receivedAnswer[1], receivedAnswer[2], receivedAnswer[3], receivedAnswer[4],
                      receivedAnswer[5], receivedAnswer[6], receivedAnswer[7], receivedAnswer[8], receivedAnswer[9],
