@@ -4542,7 +4542,7 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
                     break;
                 }
             }
-            
+
             commMode = fsettings.commMode;
             // lrp needs to point exact mode
             if (dctx->secureChannel == DACLRP) {
@@ -4579,7 +4579,7 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
             PrintAndLogEx(WARNING, "GetFileSettings error. Can't get file type.");
         }
     }
-    
+
     PrintAndLogEx(INFO, "------------------------------- " _CYAN_("File %02x data") " -------------------------------", fnum);
 
     uint8_t resp[2048] = {0};

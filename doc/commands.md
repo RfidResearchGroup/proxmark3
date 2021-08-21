@@ -867,7 +867,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf indala help         `|Y       |`This help`
-|`lf indala demod        `|Y       |`Demodulate an Indala tag (PSK1) from GraphBuffer`
+|`lf indala demod        `|Y       |`Demodulate an Indala tag (PSK1) from the GraphBuffer`
 |`lf indala altdemod     `|Y       |`Alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)`
 |`lf indala reader       `|N       |`Read an Indala tag from the antenna`
 |`lf indala clone        `|N       |`Clone Indala tag to T55x7 or Q5/T5555`
