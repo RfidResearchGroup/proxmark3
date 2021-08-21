@@ -460,6 +460,9 @@ check_script:
                 // process cmd
                 g_pendingPrompt = false;
                 int ret = CommandReceived(cmd);
+#if defined ICOPYX
+                PrintAndLogEx(NORMAL, "\nNikola.D: %d", ret);
+#endif
                 // exit or quit
                 if (ret == PM3_EFATAL)
                     break;
