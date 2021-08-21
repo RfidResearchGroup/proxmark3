@@ -5,6 +5,17 @@
 #-----------------------------------------------------------------------------
 
 include ../Makefile.defs
+ifeq ($(PLTNAME),)
+    -include ../Makefile.platform
+    -include ../.Makefile.options.cache
+    ifneq ($(PLATFORM), $(CACHED_PLATFORM))
+        $(error platform definitions have been changed, please "make clean" at the root of the project)
+    endif
+endif
+
+ifeq ($(PLATFORM),PM3ICOPYX)
+  INCLUDES += -DICOPYX
+endif
 
 INSTALLBIN = proxmark3
 INSTALLSHARE = cmdscripts lualibs luascripts pyscripts resources dictionaries

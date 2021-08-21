@@ -132,7 +132,7 @@ bootrom/%: FORCE cleanifplatformchanged
 armsrc/%: FORCE cleanifplatformchanged fpga_compress/%
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C armsrc $(patsubst armsrc/%,%,$@) DESTDIR=$(MYDESTDIR)
-client/%: FORCE
+client/%: FORCE cleanifplatformchanged
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C client $(patsubst client/%,%,$@) DESTDIR=$(MYDESTDIR)
 recovery/all: bootrom/all armsrc/all
@@ -222,6 +222,7 @@ ifeq ($(PLATFORM_CHANGED),true)
 	$(Q)$(MAKE) --no-print-directory -C bootrom clean
 	$(Q)$(MAKE) --no-print-directory -C armsrc clean
 	$(Q)$(MAKE) --no-print-directory -C recovery clean
+	$(Q)$(MAKE) --no-print-directory -C client clean
 	$(Q)$(MAKE) --no-print-directory -C tools/fpga_compress clean
 	$(Q)echo CACHED_PLATFORM=$(PLATFORM) > .Makefile.options.cache
 	$(Q)echo CACHED_PLATFORM_EXTRAS=$(PLATFORM_EXTRAS) >> .Makefile.options.cache

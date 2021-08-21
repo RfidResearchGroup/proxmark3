@@ -112,6 +112,9 @@ static void UsbPacketReceived(uint8_t *packet) {
         break;
 
         case CMD_FINISH_WRITE: {
+#if defined ICOPYX
+            if (c->arg[1] == 0xff && c->arg[2] == 0x1fd) {
+#endif
             for (int j = 0; j < 2; j++) {
                 uint32_t flash_address = arg0 + (0x100 * j);
                 AT91PS_EFC efc_bank = AT91C_BASE_EFC0;
@@ -147,6 +150,9 @@ static void UsbPacketReceived(uint8_t *packet) {
                     reply_old(CMD_NACK, sr, 0, 0, 0, 0);
                 }
             }
+#if defined ICOPYX
+            }
+#endif
         }
         break;
 

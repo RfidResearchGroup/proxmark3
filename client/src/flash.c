@@ -522,7 +522,11 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
     memset(block_buf, 0xFF, BLOCK_SIZE);
     memcpy(block_buf, data, length);
     PacketResponseNG resp;
+#if defined ICOPYX
+    SendCommandBL(CMD_FINISH_WRITE, address, 0xff, 0x1fd, block_buf, length);
+#else
     SendCommandBL(CMD_FINISH_WRITE, address, 0, 0, block_buf, length);
+#endif
     int ret = wait_for_ack(&resp);
     if (ret && resp.oldarg[0]) {
         uint32_t lock_bits = resp.oldarg[0] >> 16;
