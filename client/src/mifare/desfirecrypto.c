@@ -689,7 +689,7 @@ void DesfireGenTransSessionKeyLRP(uint8_t *key, uint32_t trCntr, uint8_t *uid, b
 
 void DesfireDecodePrevReaderID(DesfireContext *ctx, uint8_t *key, uint32_t trCntr, uint8_t *encPrevReaderID, uint8_t *prevReaderID) {
     uint8_t sessionkey[16] = {0};
-    uint8_t uid[7] = {0};
+    uint8_t uid[12] = {0};
     memcpy(uid, ctx->uid, MAX(ctx->uidlen, 7));
 
     if (ctx->secureChannel == DACEV2) {
