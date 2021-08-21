@@ -30,42 +30,42 @@ bool IfPm3Present(void) {
 bool IfPm3Rdv4Fw(void) {
     if (!IfPm3Present())
         return false;
-    return (pm3_capabilities.compiled_with_flash) || (pm3_capabilities.compiled_with_smartcard);
+    return (g_pm3_capabilities.compiled_with_flash) || (g_pm3_capabilities.compiled_with_smartcard);
 }
 
 bool IfPm3Flash(void) {
     if (!IfPm3Present())
         return false;
-    if (!pm3_capabilities.compiled_with_flash)
+    if (!g_pm3_capabilities.compiled_with_flash)
         return false;
-    return pm3_capabilities.hw_available_flash;
+    return g_pm3_capabilities.hw_available_flash;
 }
 
 bool IfPm3Smartcard(void) {
     if (!IfPm3Present())
         return false;
-    if (!pm3_capabilities.compiled_with_smartcard)
+    if (!g_pm3_capabilities.compiled_with_smartcard)
         return false;
-    return pm3_capabilities.hw_available_smartcard;
+    return g_pm3_capabilities.hw_available_smartcard;
 }
 
 bool IfPm3FpcUsart(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_fpc_usart;
+    return g_pm3_capabilities.compiled_with_fpc_usart;
 }
 
 bool IfPm3FpcUsartHost(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_fpc_usart_host;
+    return g_pm3_capabilities.compiled_with_fpc_usart_host;
 }
 
 bool IfPm3FpcUsartHostFromUsb(void) {
     // true if FPC USART Host support and if talking from USB-CDC interface
     if (!IfPm3Present())
         return false;
-    if (!pm3_capabilities.compiled_with_fpc_usart_host)
+    if (!g_pm3_capabilities.compiled_with_fpc_usart_host)
         return false;
     return !conn.send_via_fpc_usart;
 }
@@ -74,7 +74,7 @@ bool IfPm3FpcUsartDevFromUsb(void) {
     // true if FPC USART developer support and if talking from USB-CDC interface
     if (!IfPm3Present())
         return false;
-    if (!pm3_capabilities.compiled_with_fpc_usart_dev)
+    if (!g_pm3_capabilities.compiled_with_fpc_usart_dev)
         return false;
     return !conn.send_via_fpc_usart;
 }
@@ -87,92 +87,92 @@ bool IfPm3FpcUsartFromUsb(void) {
 bool IfPm3Lf(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_lf;
+    return g_pm3_capabilities.compiled_with_lf;
 }
 
 bool IfPm3Hitag(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_hitag;
+    return g_pm3_capabilities.compiled_with_hitag;
 }
 
 bool IfPm3EM4x50(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_em4x50;
+    return g_pm3_capabilities.compiled_with_em4x50;
 }
 
 bool IfPm3EM4x70(void) {
 
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_em4x70;
+    return g_pm3_capabilities.compiled_with_em4x70;
 }
 
 bool IfPm3Hfsniff(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_hfsniff;
+    return g_pm3_capabilities.compiled_with_hfsniff;
 }
 
 bool IfPm3Hfplot(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_hfplot;
+    return g_pm3_capabilities.compiled_with_hfplot;
 }
 
 bool IfPm3Iso14443a(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_iso14443a;
+    return g_pm3_capabilities.compiled_with_iso14443a;
 }
 
 bool IfPm3Iso14443b(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_iso14443b;
+    return g_pm3_capabilities.compiled_with_iso14443b;
 }
 
 bool IfPm3Iso14443(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_iso14443a || pm3_capabilities.compiled_with_iso14443b;
+    return g_pm3_capabilities.compiled_with_iso14443a || g_pm3_capabilities.compiled_with_iso14443b;
 }
 
 bool IfPm3Iso15693(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_iso15693;
+    return g_pm3_capabilities.compiled_with_iso15693;
 }
 
 bool IfPm3Felica(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_felica;
+    return g_pm3_capabilities.compiled_with_felica;
 }
 
 bool IfPm3Legicrf(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_legicrf;
+    return g_pm3_capabilities.compiled_with_legicrf;
 }
 
 bool IfPm3Iclass(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_iclass;
+    return g_pm3_capabilities.compiled_with_iclass;
 }
 
 bool IfPm3NfcBarcode(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_nfcbarcode;
+    return g_pm3_capabilities.compiled_with_nfcbarcode;
 }
 
 bool IfPm3Lcd(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_lcd;
+    return g_pm3_capabilities.compiled_with_lcd;
 }
 
 

@@ -2883,7 +2883,7 @@ static int CmdResetRead(const char *Cmd) {
 
     if (resp.status == PM3_SUCCESS) {
 
-        uint16_t gotsize = pm3_capabilities.bigbuf_size - 1;
+        uint16_t gotsize = g_pm3_capabilities.bigbuf_size - 1;
         uint8_t *got = calloc(gotsize, sizeof(uint8_t));
         if (got == NULL) {
             PrintAndLogEx(WARNING, "failed to allocate memory");
@@ -4043,7 +4043,7 @@ static int CmdT55xxSniff(const char *Cmd) {
 
     idx = 0;
     // loop though sample buffer
-    while (idx < GraphTraceLen) {
+    while (idx < g_GraphTraceLen) {
 
         int minWidth = 1000;
         int maxWidth = 0;
@@ -4059,13 +4059,13 @@ static int CmdT55xxSniff(const char *Cmd) {
         }
 
         // find high
-        while ((idx < GraphTraceLen) && (g_GraphBuffer[idx] < 0)) {
+        while ((idx < g_GraphTraceLen) && (g_GraphBuffer[idx] < 0)) {
             idx++;
         }
 
         // count high samples
         pulseSamples = 0;
-        while ((idx < GraphTraceLen) && (g_GraphBuffer[idx] > 0)) { // last bit seems to be high to zero, but can vary in width..
+        while ((idx < g_GraphTraceLen) && (g_GraphBuffer[idx] > 0)) { // last bit seems to be high to zero, but can vary in width..
             pulseSamples++;
             idx++;
         }

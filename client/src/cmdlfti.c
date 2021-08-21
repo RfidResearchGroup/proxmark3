@@ -90,7 +90,7 @@ int demodTI(bool verbose) {
     int lowTot = 0, highTot = 0;
     int retval = PM3_ESOFT;
 
-    for (i = 0; i < GraphTraceLen - convLen; i++) {
+    for (i = 0; i < g_GraphTraceLen - convLen; i++) {
         lowSum = 0;
         highSum = 0;
 
@@ -108,7 +108,7 @@ int demodTI(bool verbose) {
         g_GraphBuffer[i] = (highSum << 16) | lowSum;
     }
 
-    for (i = 0; i < GraphTraceLen - convLen - 16; i++) {
+    for (i = 0; i < g_GraphTraceLen - convLen - 16; i++) {
         lowTot = 0;
         highTot = 0;
         // 16 and 15 are f_s divided by f_l and f_h, rounded
@@ -121,7 +121,7 @@ int demodTI(bool verbose) {
         g_GraphBuffer[i] = lowTot - highTot;
     }
 
-    GraphTraceLen -= (convLen + 16);
+    g_GraphTraceLen -= (convLen + 16);
 
     RepaintGraphWindow();
 

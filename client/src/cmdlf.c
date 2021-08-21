@@ -367,12 +367,12 @@ int CmdFlexdemod(const char *Cmd) {
 #endif
     int i, j, start, bit, sum;
 
-    int data[GraphTraceLen];
-    memcpy(data, g_GraphBuffer, GraphTraceLen);
+    int data[g_GraphTraceLen];
+    memcpy(data, g_GraphBuffer, g_GraphTraceLen);
 
-    size_t size = GraphTraceLen;
+    size_t size = g_GraphTraceLen;
 
-    for (i = 0; i < GraphTraceLen; ++i)
+    for (i = 0; i < g_GraphTraceLen; ++i)
         data[i] = (data[i] < 0) ? -1 : 1;
 
     for (start = 0; start < size - LONG_WAIT; start++) {
@@ -419,7 +419,7 @@ int CmdFlexdemod(const char *Cmd) {
 
     // iceman,  use g_DemodBuffer?  blue line?
     // HACK writing back to graphbuffer.
-    GraphTraceLen = 32 * 64;
+    g_GraphTraceLen = 32 * 64;
     i = 0;
     for (bit = 0; bit < 64; bit++) {
 
@@ -765,7 +765,7 @@ int CmdLFSniff(const char *Cmd) {
 
 static void lf_chk_bitstream(void) {
     // convert to bitstream if necessary
-    for (int i = 0; i < (int)(GraphTraceLen / 2); i++) {
+    for (int i = 0; i < (int)(g_GraphTraceLen / 2); i++) {
         if (g_GraphBuffer[i] > 1 || g_GraphBuffer[i] < 0) {
             CmdGetBitStream("");
             PrintAndLogEx(INFO, "converted Graphbuffer to bitstream values (0|1)");
@@ -776,7 +776,7 @@ static void lf_chk_bitstream(void) {
 
 // Uploads g_GraphBuffer to device, in order to be used for LF SIM.
 int lfsim_upload_gb(void) {
-    PrintAndLogEx(DEBUG, "DEBUG: Uploading %zu bytes", GraphTraceLen);
+    PrintAndLogEx(DEBUG, "DEBUG: Uploading %zu bytes", g_GraphTraceLen);
 
     struct pupload {
         uint8_t flag;
@@ -796,9 +796,9 @@ int lfsim_upload_gb(void) {
 
     //can send only 512 bits at a time (1 byte sent per bit...)
     PrintAndLogEx(INFO, "." NOLF);
-    for (uint16_t i = 0; i < GraphTraceLen; i += PM3_CMD_DATA_SIZE - 3) {
+    for (uint16_t i = 0; i < g_GraphTraceLen; i += PM3_CMD_DATA_SIZE - 3) {
 
-        size_t len = MIN((GraphTraceLen - i), PM3_CMD_DATA_SIZE - 3);
+        size_t len = MIN((g_GraphTraceLen - i), PM3_CMD_DATA_SIZE - 3);
         clearCommandBuffer();
         payload_up.offset = i;
 
@@ -848,7 +848,7 @@ int CmdLFSim(const char *Cmd) {
     }
 
     // sanity check
-    if (GraphTraceLen < 20) {
+    if (g_GraphTraceLen < 20) {
         PrintAndLogEx(ERR, "No data in Graphbuffer");
         return PM3_ENODATA;
     }
@@ -862,7 +862,7 @@ int CmdLFSim(const char *Cmd) {
         uint16_t len;
         uint16_t gap;
     } PACKED payload;
-    payload.len = GraphTraceLen;
+    payload.len = g_GraphTraceLen;
     payload.gap = gap;
 
     clearCommandBuffer();
@@ -1245,7 +1245,7 @@ int CmdLFSimBidir(const char *Cmd) {
 
 int CmdVchDemod(const char *Cmd) {
 
-    if (GraphTraceLen < 4096) {
+    if (g_GraphTraceLen < 4096) {
         PrintAndLogEx(DEBUG, "debug; VchDemod - too few samples");
         return PM3_EINVARG;
     }
@@ -1274,7 +1274,7 @@ int CmdVchDemod(const char *Cmd) {
 
     // It does us no good to find the sync pattern, with fewer than 2048 samples after it.
 
-    for (i = 0; i < (GraphTraceLen - 2048); i++) {
+    for (i = 0; i < (g_GraphTraceLen - 2048); i++) {
         for (j = 0; j < ARRAYLEN(SyncPattern); j++) {
             sum += g_GraphBuffer[i + j] * SyncPattern[j];
         }
@@ -1311,11 +1311,11 @@ int CmdVchDemod(const char *Cmd) {
 
     // clone
     if (strcmp(Cmd, "clone") == 0) {
-        GraphTraceLen = 0;
+        g_GraphTraceLen = 0;
         char *s;
         for (s = bits; *s; s++) {
             for (j = 0; j < 16; j++) {
-                g_GraphBuffer[GraphTraceLen++] = (*s == '1') ? 1 : 0;
+                g_GraphBuffer[g_GraphTraceLen++] = (*s == '1') ? 1 : 0;
             }
         }
         RepaintGraphWindow();
@@ -1402,7 +1402,7 @@ int CmdLFfind(const char *Cmd) {
         lf_read(false, 30000);
 
     size_t min_length = 2000;
-    if (GraphTraceLen < min_length) {
+    if (g_GraphTraceLen < min_length) {
         PrintAndLogEx(FAILED, "Data in Graphbuffer was too small.");
         return PM3_ESOFT;
     }
@@ -1690,7 +1690,7 @@ int CmdLFfind(const char *Cmd) {
     if (search_unk) {
         //test unknown tag formats (raw mode)
         PrintAndLogEx(INFO, "\nChecking for unknown tags:\n");
-        int ans = AutoCorrelate(g_GraphBuffer, g_GraphBuffer, GraphTraceLen, 8000, false, false);
+        int ans = AutoCorrelate(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, 8000, false, false);
         if (ans > 0) {
 
             PrintAndLogEx(INFO, "Possible auto correlation of %d repeating samples", ans);

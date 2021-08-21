@@ -292,7 +292,7 @@ void SliderWidget::moveEvent(QMoveEvent *event) {
 void ProxWidget::applyOperation() {
     //printf("ApplyOperation()");
     save_restoreGB(GRAPH_SAVE);
-    memcpy(g_GraphBuffer, s_Buff, sizeof(int) * GraphTraceLen);
+    memcpy(g_GraphBuffer, s_Buff, sizeof(int) * g_GraphTraceLen);
     RepaintGraphWindow();
 }
 void ProxWidget::stickOperation() {
@@ -300,21 +300,21 @@ void ProxWidget::stickOperation() {
     //printf("stickOperation()");
 }
 void ProxWidget::vchange_autocorr(int v) {
-    int ans = AutoCorrelate(g_GraphBuffer, s_Buff, GraphTraceLen, v, true, false);
+    int ans = AutoCorrelate(g_GraphBuffer, s_Buff, g_GraphTraceLen, v, true, false);
     if (g_debugMode) printf("vchange_autocorr(w:%d): %d\n", v, ans);
     g_useOverlays = true;
     RepaintGraphWindow();
 }
 void ProxWidget::vchange_askedge(int v) {
     //extern int AskEdgeDetect(const int *in, int *out, int len, int threshold);
-    int ans = AskEdgeDetect(g_GraphBuffer, s_Buff, GraphTraceLen, v);
+    int ans = AskEdgeDetect(g_GraphBuffer, s_Buff, g_GraphTraceLen, v);
     if (g_debugMode) printf("vchange_askedge(w:%d)%d\n", v, ans);
     g_useOverlays = true;
     RepaintGraphWindow();
 }
 void ProxWidget::vchange_dthr_up(int v) {
     int down = opsController->horizontalSlider_dirthr_down->value();
-    directionalThreshold(g_GraphBuffer, s_Buff, GraphTraceLen, v, down);
+    directionalThreshold(g_GraphBuffer, s_Buff, g_GraphTraceLen, v, down);
     //printf("vchange_dthr_up(%d)", v);
     g_useOverlays = true;
     RepaintGraphWindow();
@@ -322,7 +322,7 @@ void ProxWidget::vchange_dthr_up(int v) {
 void ProxWidget::vchange_dthr_down(int v) {
     //printf("vchange_dthr_down(%d)", v);
     int up = opsController->horizontalSlider_dirthr_up->value();
-    directionalThreshold(g_GraphBuffer, s_Buff, GraphTraceLen, v, up);
+    directionalThreshold(g_GraphBuffer, s_Buff, g_GraphTraceLen, v, up);
     g_useOverlays = true;
     RepaintGraphWindow();
 }
@@ -681,13 +681,13 @@ void Plot::paintEvent(QPaintEvent *event) {
 
     painter.setFont(QFont("Courier New", 10));
 
-    if (CursorAPos > GraphTraceLen)
+    if (CursorAPos > g_GraphTraceLen)
         CursorAPos = 0;
-    if (CursorBPos > GraphTraceLen)
+    if (CursorBPos > g_GraphTraceLen)
         CursorBPos = 0;
-    if (g_CursorCPos > GraphTraceLen)
+    if (g_CursorCPos > g_GraphTraceLen)
         g_CursorCPos = 0;
-    if (g_CursorDPos > GraphTraceLen)
+    if (g_CursorDPos > g_GraphTraceLen)
         g_CursorDPos = 0;
 
     QRect plotRect(WIDTH_AXES, 0, width() - WIDTH_AXES, height() - HEIGHT_INFO);
@@ -700,7 +700,7 @@ void Plot::paintEvent(QPaintEvent *event) {
     painter.fillRect(plotRect, BLACK);
 
     //init graph variables
-    setMaxAndStart(g_GraphBuffer, GraphTraceLen, plotRect);
+    setMaxAndStart(g_GraphBuffer, g_GraphTraceLen, plotRect);
 
     // center line
     int zeroHeight = plotRect.top() + (plotRect.bottom() - plotRect.top()) / 2;
@@ -710,14 +710,14 @@ void Plot::paintEvent(QPaintEvent *event) {
     plotGridLines(&painter, plotRect);
 
     //Start painting graph
-    PlotGraph(g_GraphBuffer, GraphTraceLen, plotRect, infoRect, &painter, 0);
+    PlotGraph(g_GraphBuffer, g_GraphTraceLen, plotRect, infoRect, &painter, 0);
     if (g_DemodBufferLen > 8) {
         PlotDemod(g_DemodBuffer, g_DemodBufferLen, plotRect, infoRect, &painter, 2, g_DemodStartIdx);
     }
     if (g_useOverlays) {
         //init graph variables
-        setMaxAndStart(s_Buff, GraphTraceLen, plotRect);
-        PlotGraph(s_Buff, GraphTraceLen, plotRect, infoRect, &painter, 1);
+        setMaxAndStart(s_Buff, g_GraphTraceLen, plotRect);
+        PlotGraph(s_Buff, g_GraphTraceLen, plotRect, infoRect, &painter, 1);
     }
     // End graph drawing
 
@@ -816,7 +816,7 @@ void Plot::Zoom(double factor, uint32_t refX) {
 }
 
 void Plot::Move(int offset) {
-    if (GraphTraceLen == 0) return;
+    if (g_GraphTraceLen == 0) return;
     if (offset > 0) { // Move right
         if (g_GraphPixelsPerPoint < 20) {
             g_GraphStart += offset;
@@ -869,7 +869,7 @@ void Plot::Trim(void) {
     g_DemodStartIdx -= lref;
     for (uint32_t i = lref; i < rref; ++i)
         g_GraphBuffer[i - lref] = g_GraphBuffer[i];
-    GraphTraceLen = rref - lref;
+    g_GraphTraceLen = rref - lref;
     g_GraphStart = 0;
 }
 

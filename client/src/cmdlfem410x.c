@@ -580,7 +580,7 @@ static int CmdEM410xBrute(const char *Cmd) {
             uint16_t len;
             uint16_t gap;
         } PACKED payload;
-        payload.len = GraphTraceLen;
+        payload.len = g_GraphTraceLen;
         payload.gap = 0;
 
         clearCommandBuffer();

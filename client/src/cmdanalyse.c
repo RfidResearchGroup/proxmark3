@@ -1036,7 +1036,7 @@ static int CmdAnalyseFoo(const char *Cmd) {
     PrintAndLogEx(INFO, "Got:  %s", data3);
 
     ClearGraph(false);
-    GraphTraceLen = 15000;
+    g_GraphTraceLen = 15000;
 
     for (int i = 0; i < 4095; i++) {
         int o = 0;

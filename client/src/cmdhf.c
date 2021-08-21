@@ -340,7 +340,7 @@ int CmdHFSniff(const char *Cmd) {
                 // it reserve memory from the higher end.
                 // At the moment, sniff takes all free memory in bigbuff. If this changes,
                 // we can't start from beginning idx 0 but from that hi-to-start-of-allocated.
-                uint32_t start = pm3_capabilities.bigbuf_size - retval->len;
+                uint32_t start = g_pm3_capabilities.bigbuf_size - retval->len;
                 int res = getSamplesEx(start, start, false);
                 if (res != PM3_SUCCESS) {
                     PrintAndLogEx(WARNING, "failed to download samples to client");
@@ -368,7 +368,7 @@ int handle_hf_plot(void) {
         g_GraphBuffer[i] = ((int)buf[i]) - 128;
     }
 
-    GraphTraceLen = FPGA_TRACE_SIZE;
+    g_GraphTraceLen = FPGA_TRACE_SIZE;
 
     ShowGraphWindow();
 

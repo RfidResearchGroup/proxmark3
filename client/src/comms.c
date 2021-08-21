@@ -30,7 +30,7 @@
 static serial_port sp = NULL;
 
 communication_arg_t conn;
-capabilities_t pm3_capabilities;
+capabilities_t g_pm3_capabilities;
 
 static pthread_t communication_thread;
 static bool comm_thread_dead = false;
@@ -638,15 +638,15 @@ int TestProxmark(pm3_device *dev) {
         return PM3_ETIMEOUT;
     }
 
-    if ((resp.length != sizeof(pm3_capabilities)) || (resp.data.asBytes[0] != CAPABILITIES_VERSION)) {
+    if ((resp.length != sizeof(g_pm3_capabilities)) || (resp.data.asBytes[0] != CAPABILITIES_VERSION)) {
         PrintAndLogEx(ERR, _RED_("Capabilities structure version sent by Proxmark3 is not the same as the one used by the client!"));
         PrintAndLogEx(ERR, _RED_("Please flash the Proxmark with the same version as the client."));
         return PM3_EDEVNOTSUPP;
     }
 
-    memcpy(&pm3_capabilities, resp.data.asBytes, MIN(sizeof(capabilities_t), resp.length));
-    conn.send_via_fpc_usart = pm3_capabilities.via_fpc;
-    conn.uart_speed = pm3_capabilities.baudrate;
+    memcpy(&g_pm3_capabilities, resp.data.asBytes, MIN(sizeof(capabilities_t), resp.length));
+    conn.send_via_fpc_usart = g_pm3_capabilities.via_fpc;
+    conn.uart_speed = g_pm3_capabilities.baudrate;
 
     PrintAndLogEx(INFO, "Communicating with PM3 over %s%s%s",
                   conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),

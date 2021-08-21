@@ -510,7 +510,7 @@ static int CmdHF15Demod(const char *Cmd) {
     int max = 0, maxPos = 0;
     int skip = 4;
 
-    if (GraphTraceLen < 1000) {
+    if (g_GraphTraceLen < 1000) {
         PrintAndLogEx(FAILED, "Too few samples in GraphBuffer. Need more than 1000");
         PrintAndLogEx(HINT, "Run " _YELLOW_("`hf 15 samples`") " to collect and download data");
         return PM3_ESOFT;
@@ -566,7 +566,7 @@ static int CmdHF15Demod(const char *Cmd) {
             mask = 0x01;
         }
 
-        if ((i + (int)ARRAYLEN(FrameEOF)) >= GraphTraceLen) {
+        if ((i + (int)ARRAYLEN(FrameEOF)) >= g_GraphTraceLen) {
             PrintAndLogEx(INFO, "ran off end!");
             break;
         }

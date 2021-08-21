@@ -199,7 +199,7 @@ typedef struct {
     bool hw_available_smartcard        : 1;
 } PACKED capabilities_t;
 #define CAPABILITIES_VERSION 5
-extern capabilities_t pm3_capabilities;
+extern capabilities_t g_pm3_capabilities;
 
 // For CMD_LF_T55XX_WRITEBL
 typedef struct {

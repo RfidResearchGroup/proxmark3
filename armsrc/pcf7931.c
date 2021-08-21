@@ -21,9 +21,9 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
 
     uint8_t *dest = BigBuf_get_addr();
 
-    int GraphTraceLen = BigBuf_max_traceLen();
-    if (GraphTraceLen > 18000) {
-        GraphTraceLen = 18000;
+    int g_GraphTraceLen = BigBuf_max_traceLen();
+    if (g_GraphTraceLen > 18000) {
+        g_GraphTraceLen = 18000;
     }
 
     int i = 2, j, lastval, bitidx, half_switch;
@@ -41,7 +41,7 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
 
     /* Find first local max/min */
     if (dest[1] > dest[0]) {
-        while (i < GraphTraceLen) {
+        while (i < g_GraphTraceLen) {
             if (!(dest[i] > dest[i - 1]) && dest[i] > lmax) {
                 break;
             }
@@ -49,7 +49,7 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
         }
         dir = 0;
     } else {
-        while (i < GraphTraceLen) {
+        while (i < g_GraphTraceLen) {
             if (!(dest[i] < dest[i - 1]) && dest[i] < lmin) {
                 break;
             }
@@ -63,7 +63,7 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
     pmc = 0;
     block_done = 0;
 
-    for (bitidx = 0; i < GraphTraceLen; i++) {
+    for (bitidx = 0; i < g_GraphTraceLen; i++) {
 
         if ((dest[i - 1] > dest[i] && dir == 1 && dest[i] > lmax) || (dest[i - 1] < dest[i] && dir == 0 && dest[i] < lmin)) {
             lc = i - lastval;
@@ -131,7 +131,7 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
                 half_switch = 0;
             }
 
-            if (i < GraphTraceLen) {
+            if (i < g_GraphTraceLen) {
                 dir = (dest[i - 1] > dest[i]) ? 0 : 1;
             }
         }

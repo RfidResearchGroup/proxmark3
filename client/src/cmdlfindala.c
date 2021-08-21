@@ -303,7 +303,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
     int count = 0;
     int i, j;
 
-    // worst case with GraphTraceLen=40000 is < 4096
+    // worst case with g_GraphTraceLen=40000 is < 4096
     // under normal conditions it's < 2048
     uint8_t data[MAX_GRAPH_TRACE_LEN] = {0};
     size_t datasize = getFromGraphBuf(data);
@@ -316,7 +316,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
     setClockGrid(0, 0);
     g_DemodBufferLen = 0;
 
-    // PrintAndLogEx(NORMAL, "Expecting a bit less than %d raw bits", GraphTraceLen / 32);
+    // PrintAndLogEx(NORMAL, "Expecting a bit less than %d raw bits", g_GraphTraceLen / 32);
     // loop through raw signal - since we know it is psk1 rf/32 fc/2 skip every other value (+=2)
     for (i = 0; i < datasize - 1; i += 2) {
         count += 1;
@@ -350,7 +350,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
     }
 
     if (rawbit > 0) {
-        PrintAndLogEx(INFO, "Recovered %d raw bits, expected: %zu", rawbit, GraphTraceLen / 32);
+        PrintAndLogEx(INFO, "Recovered %d raw bits, expected: %zu", rawbit, g_GraphTraceLen / 32);
         PrintAndLogEx(INFO, "Worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
     } else {
         return PM3_ESOFT;
@@ -476,7 +476,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
     // Remodulating for tag cloning
     // HACK: 2015-01-04 this will have an impact on our new way of seening lf commands (demod)
     // since this changes graphbuffer data.
-    GraphTraceLen = 32 * uidlen;
+    g_GraphTraceLen = 32 * uidlen;
     i = 0;
     int phase;
     for (bit = 0; bit < uidlen; bit++) {

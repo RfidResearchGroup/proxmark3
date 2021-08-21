@@ -13,14 +13,14 @@
 
 #include "common.h"
 
-extern const uint8_t OddByteParity[256];
+extern const uint8_t g_OddByteParity[256];
 
 static inline uint8_t oddparity8(const uint8_t x) {
-    return OddByteParity[x];
+    return g_OddByteParity[x];
 }
 
 static inline uint8_t evenparity8(const uint8_t x) {
-    return !OddByteParity[x];
+    return !g_OddByteParity[x];
 }
 
 static inline uint8_t evenparity16(uint16_t x) {
