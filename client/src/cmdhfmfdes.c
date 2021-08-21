@@ -4658,8 +4658,8 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
                     // MF2DLHX0.pdf, 10.3.2.1 Transaction MAC Counter, page 41
                     uint32_t actTMC = MemLeToUint2byte(&resp[0]);
                     uint32_t sessTMC = MemLeToUint2byte(&resp[2]);
-                    PrintAndLogEx(SUCCESS, "Session tr counter : %d (0x%08x)", sessTMC, sessTMC);
-                    PrintAndLogEx(SUCCESS, "Actual tr counter  : %d (0x%08x)", actTMC, actTMC);
+                    PrintAndLogEx(SUCCESS, "Session tr counter : %d (0x%04x)", sessTMC, sessTMC);
+                    PrintAndLogEx(SUCCESS, "Actual tr counter  : %d (0x%04x)", actTMC, actTMC);
                 }
                 PrintAndLogEx(SUCCESS, "Transaction MAC    : %s", sprint_hex(&resp[4], 8));
             }
@@ -4853,7 +4853,8 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
                   "hf mfdes write --aid 123456 --fid 01 --type record --offset 000000 -d 11223344 -> write record to record file. use default channel settings from `default` command\n"
                   "hf mfdes write --appisoid 1234 --fileisoid 1000 --type data -c iso -d 01020304 -> write data to std/backup file via iso commandset\n"
                   "hf mfdes write --appisoid 1234 --fileisoid 2000 --type record -c iso -d 01020304 -> send record to record file via iso commandset\n"
-                  "hf mfdes write --aid 123456 --fid 01 -d 01020304 --readerid 010203 -> write data to file with CommitReaderID command before write and CommitTransaction after write");
+                  "hf mfdes write --aid 123456 --fid 01 -d 01020304 --readerid 010203 -> write data to file with CommitReaderID command before write and CommitTransaction after write\n"
+                  "hf mfdes write --appisoid df01 --fid 04 -d 01020304 --trkey 00112233445566778899aabbccddeeff --readerid 5532 -t aes -s lrp -> advanced CommitReaderID via lrp channel sample");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5166,7 +5167,16 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
             PrintAndLogEx(INFO, _GREEN_("Commit result:"));
             uint32_t cnt = MemLeToUint4byte(&resp[0]);
             transactionCounter = cnt;
-            PrintAndLogEx(SUCCESS, "Transaction counter: %d (0x%08x)", cnt, cnt);
+            if (dctx.secureChannel != DACLRP) {
+                PrintAndLogEx(SUCCESS, "Transaction counter: %d (0x%08x)", cnt, cnt);
+            } else {
+                // For composing TMC the two subparts are concatenated as follows: actTMC || sesTMC. Both subparts are represented LSB first.
+                // MF2DLHX0.pdf, 10.3.2.1 Transaction MAC Counter, page 41
+                uint32_t actTMC = MemLeToUint2byte(&resp[0]);
+                uint32_t sessTMC = MemLeToUint2byte(&resp[2]);
+                PrintAndLogEx(SUCCESS, "Session tr counter : %d (0x%04x)", sessTMC, sessTMC);
+                PrintAndLogEx(SUCCESS, "Actual tr counter  : %d (0x%04x)", actTMC, actTMC);
+            }
             PrintAndLogEx(SUCCESS, "Transaction MAC    : %s", sprint_hex(&resp[4], 8));
         }
     }
