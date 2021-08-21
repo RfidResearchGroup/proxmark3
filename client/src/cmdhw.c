@@ -970,7 +970,7 @@ void pm3_version(bool verbose, bool oneliner) {
     if (oneliner) {
         // For "proxmark3 -v", simple printf, avoid logging
         char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
-        FormatVersionInformation(temp, sizeof(temp), "Client: ", &version_information);
+        FormatVersionInformation(temp, sizeof(temp), "Client: ", &g_version_information);
         PrintAndLogEx(NORMAL, "%s compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH "\n", temp);
         return;
     }
@@ -986,7 +986,7 @@ void pm3_version(bool verbose, bool oneliner) {
         char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
         PrintAndLogEx(NORMAL, "\n [ " _CYAN_("Proxmark3 RFID instrument") " ]");
         PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("CLIENT") " ]");
-        FormatVersionInformation(temp, sizeof(temp), "  client: ", &version_information);
+        FormatVersionInformation(temp, sizeof(temp), "  client: ", &g_version_information);
         PrintAndLogEx(NORMAL, "%s", temp);
         PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
 

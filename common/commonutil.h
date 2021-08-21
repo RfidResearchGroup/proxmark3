@@ -41,7 +41,7 @@
 # define NTIME(n) for (int _index = 0; _index < n; _index++)
 #endif
 
-extern struct version_information version_information;
+extern struct version_information_t g_version_information;
 void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_info);
 
 uint32_t reflect(uint32_t v, int b); // used in crc.c ...

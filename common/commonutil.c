@@ -11,12 +11,12 @@
 #include <string.h>
 
 /* Similar to FpgaGatherVersion this formats stored version information
- * into a string representation. It takes a pointer to the struct version_information,
+ * into a string representation. It takes a pointer to the struct version_information_t,
  * verifies the magic properties, then stores a formatted string, prefixed by
  * prefix in dst.
  */
 void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_info) {
-    struct version_information *v = (struct version_information *)version_info;
+    struct version_information_t *v = (struct version_information_t *)version_info;
     dst[0] = 0;
     strncat(dst, prefix, len - 1);
     if (v->magic != VERSION_INFORMATION_MAGIC) {

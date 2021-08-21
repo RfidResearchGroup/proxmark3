@@ -38,7 +38,7 @@
 static char *g_android_executable_directory = NULL;
 static char *g_android_user_directory = NULL;
 
-char version_information[] = {""};
+char g_version_information[] = {""};
 
 const char *get_my_executable_directory(void) {
     if (g_android_executable_directory == NULL) {

@@ -39,7 +39,7 @@
 #define PACKED __attribute__((packed))
 
 #define VERSION_INFORMATION_MAGIC 0x56334d50 // "PM3V"
-struct version_information {
+struct version_information_t {
     int magic; /* Magic sequence to identify this as a correct version information structure. Must be VERSION_INFORMATION_MAGIC */
     char versionversion; /* Must be 1 */
     char present; /* 1 if the version information could be created at compile time, otherwise 0 and the remaining fields (except for magic) are empty */

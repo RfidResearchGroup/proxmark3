@@ -6,7 +6,7 @@
 #define SECTVERSINFO __attribute__((section(".version_information")))
 #endif
 
-const struct version_information SECTVERSINFO version_information = {
+const struct version_information_t SECTVERSINFO g_version_information = {
     VERSION_INFORMATION_MAGIC,
     1, /* version 1 */
     0, /* version information not present */
