@@ -2083,7 +2083,7 @@ int DesfireReadFile(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint32_
     Uint3byteToMemLe(&data[1], offset);
     Uint3byteToMemLe(&data[4], len);
 
-    return DesfireCommand(dctx, MFDES_READ_DATA, data, 7, resp, resplen, -1);
+    return DesfireCommand(dctx, (dctx->isoChaining) ? MFDES_READ_DATA2 : MFDES_READ_DATA, data, 7, resp, resplen, -1);
 }
 
 int DesfireWriteFile(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint32_t len, uint8_t *data) {
@@ -2093,7 +2093,7 @@ int DesfireWriteFile(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint32
     Uint3byteToMemLe(&xdata[4], len);
     memcpy(&xdata[7], data, len);
 
-    return DesfireCommandTxData(dctx, MFDES_WRITE_DATA, xdata, 7 + len);
+    return DesfireCommandTxData(dctx, (dctx->isoChaining) ? MFDES_WRITE_DATA2 : MFDES_WRITE_DATA, xdata, 7 + len);
 }
 
 int DesfireValueFileOperations(DesfireContext *dctx, uint8_t fid, uint8_t operation, uint32_t *value) {
@@ -2119,7 +2119,7 @@ int DesfireReadRecords(DesfireContext *dctx, uint8_t fnum, uint32_t recnum, uint
     Uint3byteToMemLe(&data[1], recnum);
     Uint3byteToMemLe(&data[4], reccount);
 
-    return DesfireCommand(dctx, MFDES_READ_RECORDS, data, 7, resp, resplen, -1);
+    return DesfireCommand(dctx, (dctx->isoChaining) ? MFDES_READ_RECORDS2 : MFDES_READ_RECORDS, data, 7, resp, resplen, -1);
 }
 
 int DesfireWriteRecord(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint32_t len, uint8_t *data) {
@@ -2129,7 +2129,7 @@ int DesfireWriteRecord(DesfireContext *dctx, uint8_t fnum, uint32_t offset, uint
     Uint3byteToMemLe(&xdata[4], len);
     memcpy(&xdata[7], data, len);
 
-    return DesfireCommandTxData(dctx, MFDES_WRITE_RECORD, xdata, 7 + len);
+    return DesfireCommandTxData(dctx, (dctx->isoChaining) ? MFDES_WRITE_RECORD2 : MFDES_WRITE_RECORD, xdata, 7 + len);
 }
 
 int DesfireUpdateRecord(DesfireContext *dctx, uint8_t fnum, uint32_t recnum, uint32_t offset, uint32_t len, uint8_t *data) {
@@ -2140,7 +2140,7 @@ int DesfireUpdateRecord(DesfireContext *dctx, uint8_t fnum, uint32_t recnum, uin
     Uint3byteToMemLe(&xdata[7], len);
     memcpy(&xdata[10], data, len);
 
-    return DesfireCommandTxData(dctx, MFDES_UPDATE_RECORD, xdata, 10 + len);
+    return DesfireCommandTxData(dctx, (dctx->isoChaining) ? MFDES_UPDATE_RECORD2 : MFDES_UPDATE_RECORD, xdata, 10 + len);
 }
 
 static void PrintKeySettingsPICC(uint8_t keysettings, uint8_t numkeys, bool print2ndbyte) {

@@ -78,8 +78,6 @@ typedef struct DesfireContextS {
     uint8_t key[DESFIRE_MAX_KEY_SIZE];
     uint8_t masterKey[DESFIRE_MAX_KEY_SIZE]; // source for kdf
 
-    LRPContext lrpCtx;
-
     // KDF finction
     uint8_t kdfAlgo;
     uint8_t kdfInputLen;
@@ -89,6 +87,7 @@ typedef struct DesfireContextS {
     DesfireCommandSet cmdSet;           // native/nativeiso/iso
     DesfireCommunicationMode commMode;  // plain/mac/enc
 
+    bool isoChaining;
     bool appSelected; // for iso auth
     uint32_t selectedAID;
 
@@ -142,7 +141,10 @@ void DesfireGenSessionKeyEV1(const uint8_t rnda[], const uint8_t rndb[], Desfire
 void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool enckey, uint8_t *sessionkey);
 void DesfireEV2FillIV(DesfireContext *ctx, bool ivforcommand, uint8_t *iv);
 int DesfireEV2CalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac);
-void DesfireGenTransSessionKey(uint8_t *key, uint32_t trCntr, uint8_t *uid, bool forMAC, uint8_t *sessionkey);
+
+void DesfireGenTransSessionKeyEV2(uint8_t *key, uint32_t trCntr, uint8_t *uid, bool forMAC, uint8_t *sessionkey);
+void DesfireGenTransSessionKeyLRP(uint8_t *key, uint32_t trCntr, uint8_t *uid, bool forMAC, uint8_t *sessionkey);
+void DesfireDecodePrevReaderID(DesfireContext *ctx, uint8_t *key, uint32_t trCntr, uint8_t *encPrevReaderID, uint8_t *prevReaderID);
 
 int DesfireLRPCalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac);
 
