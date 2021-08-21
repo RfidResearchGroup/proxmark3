@@ -691,11 +691,11 @@ void DesfireDecodePrevReaderID(DesfireContext *ctx, uint8_t *key, uint32_t trCnt
     uint8_t sessionkey[16] = {0};
     uint8_t uid[7] = {0};
     memcpy(uid, ctx->uid, MAX(ctx->uidlen, 7));
-        
+
     if (ctx->secureChannel == DACEV2) {
         DesfireGenTransSessionKeyEV2(key, trCntr, uid, false, sessionkey);
-        
-        aes_decode(NULL, sessionkey, encPrevReaderID, prevReaderID, CRYPTO_AES_BLOCK_SIZE); 
+
+        aes_decode(NULL, sessionkey, encPrevReaderID, prevReaderID, CRYPTO_AES_BLOCK_SIZE);
     } else if (ctx->secureChannel == DACLRP) {
         DesfireGenTransSessionKeyLRP(key, trCntr, uid, false, sessionkey);
 
