@@ -4853,7 +4853,8 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
                   "hf mfdes write --aid 123456 --fid 01 --type record --offset 000000 -d 11223344 -> write record to record file. use default channel settings from `default` command\n"
                   "hf mfdes write --appisoid 1234 --fileisoid 1000 --type data -c iso -d 01020304 -> write data to std/backup file via iso commandset\n"
                   "hf mfdes write --appisoid 1234 --fileisoid 2000 --type record -c iso -d 01020304 -> send record to record file via iso commandset\n"
-                  "hf mfdes write --aid 123456 --fid 01 -d 01020304 --readerid 010203 -> write data to file with CommitReaderID command before write and CommitTransaction after write");
+                  "hf mfdes write --aid 123456 --fid 01 -d 01020304 --readerid 010203 -> write data to file with CommitReaderID command before write and CommitTransaction after write\n"
+                  "hf mfdes write --appisoid df01 --fid 04 -d 01020304 --trkey 00112233445566778899aabbccddeeff --readerid 5532 -t aes -s lrp -> advanced CommitReaderID via lrp channel sample");
 
     void *argtable[] = {
         arg_param_begin,

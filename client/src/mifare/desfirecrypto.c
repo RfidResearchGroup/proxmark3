@@ -671,10 +671,16 @@ void DesfireGenTransSessionKeyEV2(uint8_t *key, uint32_t trCntr, uint8_t *uid, b
 // page 43
 void DesfireGenTransSessionKeyLRP(uint8_t *key, uint32_t trCntr, uint8_t *uid, bool forMAC, uint8_t *sessionkey) {
     uint8_t data[CRYPTO_AES_BLOCK_SIZE] = {0};
+    
+    // SV1 = 00h||01h||00h||80h||(actTMC+1)||(sesTMC+1)||UID||5Ah
+    // SV2 = 00h||01h||00h||80h||(actTMC+1)||(sesTMC+1)||UID||A5h
+    // SesTMMACKey = MACLRP (AppTransactionMACKey; SV1)
+    // SesTMENCKey = MACLRP (AppTransactionMACKey; SV2)
 
     data[1] = 0x01;
     data[3] = 0x80;
-    Uint4byteToMemLe(&data[4], trCntr + 0x00010001);
+    // we thought that CommitReaderID is the first command in the transaction (actTMC == 0 !!!)
+    Uint4byteToMemLe(&data[4], (trCntr & 0xffff) + 0x00010001);
     memcpy(&data[8], uid, 7);
     if (forMAC) {
         data[15] = 0x5a;
@@ -683,23 +689,21 @@ void DesfireGenTransSessionKeyLRP(uint8_t *key, uint32_t trCntr, uint8_t *uid, b
     }
 
     LRPContext lctx = {0};
-    LRPSetKey(&lctx, key, 0, true);
+    LRPSetKey(&lctx, key, 0, false);
     LRPCMAC(&lctx, data, sizeof(data), sessionkey);
 }
 
 void DesfireDecodePrevReaderID(DesfireContext *ctx, uint8_t *key, uint32_t trCntr, uint8_t *encPrevReaderID, uint8_t *prevReaderID) {
-    uint8_t sessionkey[16] = {0};
+    uint8_t sessionkey[CRYPTO_AES128_KEY_SIZE] = {0};
     uint8_t uid[12] = {0};
     memcpy(uid, ctx->uid, MAX(ctx->uidlen, 7));
 
     if (ctx->secureChannel == DACEV2) {
         DesfireGenTransSessionKeyEV2(key, trCntr, uid, false, sessionkey);
-
-        aes_decode(NULL, sessionkey, encPrevReaderID, prevReaderID, CRYPTO_AES_BLOCK_SIZE);
     } else if (ctx->secureChannel == DACLRP) {
         DesfireGenTransSessionKeyLRP(key, trCntr, uid, false, sessionkey);
-
     }
+    aes_decode(NULL, sessionkey, encPrevReaderID, prevReaderID, CRYPTO_AES128_KEY_SIZE);
 }
 
 int DesfireLRPCalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac) {
