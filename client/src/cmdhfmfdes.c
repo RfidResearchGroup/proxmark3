@@ -4314,7 +4314,8 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes clearrecfile",
                   "Clear record file. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
-                  "hf mfdes clearrecfile --aid 123456 --fid 01 -> clear record file for: app=123456, file=01 with defaults from `default` command");
+                  "hf mfdes clearrecfile --aid 123456 --fid 01 -> clear record file for: app=123456, file=01 with defaults from `default` command\n"
+                  "hf mfdes clearrecfile --appisoid df01 --fid 01 -s lrp -t aes -n 3 -> clear record file for lrp channel with key number 3");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4329,6 +4330,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_str0(NULL, "fid",     "<file id hex>", "File ID for clearing (1 hex byte)"),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_param_end
@@ -4337,19 +4339,20 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    bool noauth = arg_get_lit(ctx, 13);
+    bool noauth = arg_get_lit(ctx, 14);
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, &securechann, DCMMACed, &appid, NULL);
+    uint32_t id = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, &securechann, DCMMACed, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
     }
 
     uint32_t fnum = 1;
-    if (CLIGetUint32Hex(ctx, 12, 1, &fnum, NULL, 1, "File ID must have 1 byte length")) {
+    if (CLIGetUint32Hex(ctx, 13, 1, &fnum, NULL, 1, "File ID must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -4362,9 +4365,10 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
+        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -4374,8 +4378,22 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
+    
+    if (verbose)
+        PrintAndLogEx(INFO, "File cleared");
+    
+    DesfireSetCommMode(&dctx, DCMMACed);
+    res = DesfireCommitTransaction(&dctx, false, 0);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire CommitTransaction command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
 
-    PrintAndLogEx(SUCCESS, "File %02x in the app %06x cleared " _GREEN_("successfully"), fnum, appid);
+    if (verbose)
+        PrintAndLogEx(INFO, "Transaction commited");
+
+    PrintAndLogEx(SUCCESS, "File %02x in the %s cleared " _GREEN_("successfully"), fnum, DesfireWayIDStr(selectway, id));
 
     DropField();
     return PM3_SUCCESS;
@@ -5040,13 +5058,9 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
             PrintAndLogEx(INFO, "Prev reader id encoded [%zu]: %s", resplen, sprint_hex(resp, resplen));
 
             if (trkeylen > 0) {
-                uint8_t sessionkey[16] = {0};
-                uint8_t uid[7] = {0};
-                memcpy(uid, dctx.uid, MAX(dctx.uidlen, 7));
-                DesfireGenTransSessionKeyEV2(trkey, transactionCounter, uid, false, sessionkey);
-
-                aes_decode(NULL, sessionkey, resp, resp, CRYPTO_AES_BLOCK_SIZE);
-                PrintAndLogEx(INFO, "Prev reader id [%zu]: %s", resplen, sprint_hex(resp, resplen));
+                uint8_t prevReaderID[CRYPTO_AES_BLOCK_SIZE] = {0};
+                DesfireDecodePrevReaderID(&dctx, trkey, transactionCounter, resp, prevReaderID);
+                PrintAndLogEx(INFO, "Prev reader id: %s", resplen, sprint_hex(prevReaderID, CRYPTO_AES_BLOCK_SIZE));
             }
 
             readeridpushed = true;

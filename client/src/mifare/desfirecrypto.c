@@ -667,6 +667,41 @@ void DesfireGenTransSessionKeyEV2(uint8_t *key, uint32_t trCntr, uint8_t *uid, b
     DesfireCryptoCMACEx(&ctx, DCOMainKey, xiv, 16, 0, sessionkey);
 }
 
+// https://www.nxp.com/docs/en/data-sheet/MF2DLHX0.pdf
+// page 43
+void DesfireGenTransSessionKeyLRP(uint8_t *key, uint32_t trCntr, uint8_t *uid, bool forMAC, uint8_t *sessionkey) {
+    uint8_t data[CRYPTO_AES_BLOCK_SIZE] = {0};
+
+    data[1] = 0x01;
+    data[3] = 0x80;
+    Uint4byteToMemLe(&data[4], trCntr + 0x00010001);
+    memcpy(&data[8], uid, 7);
+    if (forMAC) {
+        data[15] = 0x5a;
+    } else {
+        data[15] = 0xa5;
+    }
+
+    LRPContext lctx = {0};
+    LRPSetKey(&lctx, key, 0, true);
+    LRPCMAC(&lctx, data, sizeof(data), sessionkey);
+}
+
+void DesfireDecodePrevReaderID(DesfireContext *ctx, uint8_t *key, uint32_t trCntr, uint8_t *encPrevReaderID, uint8_t *prevReaderID) {
+    uint8_t sessionkey[16] = {0};
+    uint8_t uid[7] = {0};
+    memcpy(uid, ctx->uid, MAX(ctx->uidlen, 7));
+        
+    if (ctx->secureChannel == DACEV2) {
+        DesfireGenTransSessionKeyEV2(key, trCntr, uid, false, sessionkey);
+        
+        aes_decode(NULL, sessionkey, encPrevReaderID, prevReaderID, CRYPTO_AES_BLOCK_SIZE); 
+    } else if (ctx->secureChannel == DACLRP) {
+        DesfireGenTransSessionKeyLRP(key, trCntr, uid, false, sessionkey);
+
+    }
+}
+
 int DesfireLRPCalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac) {
     uint8_t mdata[1050] = {0};
     size_t mdatalen = 0;
