@@ -253,9 +253,9 @@ static int CmdIndalaDemod(const char *Cmd) {
     CLIParserInit(&ctx, "lf indala demod",
                   "Tries to PSK demodulate the graphbuffer as Indala",
                   "lf indala demod\n"
-                  "lf indala demod --clock 32      -> demod a Indala tag from GraphBuffer using a clock of RF/32\n"
-                  "lf indala demod --clock 32 -i    -> demod a Indala tag from GraphBuffer using a clock of RF/32 and inverting data\n"
-                  "lf indala demod --clock 64 -i --maxerror 0  -> demod a Indala tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors"
+                  "lf indala demod --clock 32      -> demod a Indala tag from the GraphBuffer using a clock of RF/32\n"
+                  "lf indala demod --clock 32 -i    -> demod a Indala tag from the GraphBuffer using a clock of RF/32 and inverting data\n"
+                  "lf indala demod --clock 64 -i --maxerror 0  -> demod a Indala tag from the GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors"
                  );
 
     void *argtable[] = {
@@ -286,7 +286,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
                   "This is uses a alternative way to demodulate and was used from the beginning in the Pm3 client.\n"
                   "It's now considered obsolete but remains because it has sometimes its advantages.",
                   "lf indala altdemod\n"
-                  "lf indala altdemod --long     -> demod a Indala tag from GraphBuffer as 224 bit long format"
+                  "lf indala altdemod --long     -> demod a Indala tag from the GraphBuffer as 224 bit long format"
                  );
 
     void *argtable[] = {
@@ -486,7 +486,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
             phase = 1;
         }
         for (j = 0; j < 32; j++) {
-            GraphBuffer[i++] = phase;
+            g_GraphBuffer[i++] = phase;
             phase = !phase;
         }
     }
@@ -797,7 +797,7 @@ static int CmdIndalaClone(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",     CmdHelp,            AlwaysAvailable, "This help"},
-    {"demod",    CmdIndalaDemod,     AlwaysAvailable, "Demodulate an Indala tag (PSK1) from GraphBuffer"},
+    {"demod",    CmdIndalaDemod,     AlwaysAvailable, "Demodulate an Indala tag (PSK1) from the GraphBuffer"},
     {"altdemod", CmdIndalaDemodAlt,  AlwaysAvailable, "Alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
     {"reader",   CmdIndalaReader,    IfPm3Lf,         "Read an Indala tag from the antenna"},
     {"clone",    CmdIndalaClone,     IfPm3Lf,         "Clone Indala tag to T55x7 or Q5/T5555"},

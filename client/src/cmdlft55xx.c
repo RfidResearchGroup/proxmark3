@@ -4059,13 +4059,13 @@ static int CmdT55xxSniff(const char *Cmd) {
         }
 
         // find high
-        while ((idx < GraphTraceLen) && (GraphBuffer[idx] < 0)) {
+        while ((idx < GraphTraceLen) && (g_GraphBuffer[idx] < 0)) {
             idx++;
         }
 
         // count high samples
         pulseSamples = 0;
-        while ((idx < GraphTraceLen) && (GraphBuffer[idx] > 0)) { // last bit seems to be high to zero, but can vary in width..
+        while ((idx < GraphTraceLen) && (g_GraphBuffer[idx] > 0)) { // last bit seems to be high to zero, but can vary in width..
             pulseSamples++;
             idx++;
         }

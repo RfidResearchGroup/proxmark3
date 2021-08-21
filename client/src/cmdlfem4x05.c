@@ -2026,13 +2026,13 @@ int CmdEM4x05Sniff(const char *Cmd) {
         haveData = false;
         pwd = false;
 
-        idx = em4x05_Sniff_GetNextBitStart(idx, GraphTraceLen, GraphBuffer, &pulseSamples);
+        idx = em4x05_Sniff_GetNextBitStart(idx, GraphTraceLen, g_GraphBuffer, &pulseSamples);
         pktOffset = idx;
         if (pulseSamples >= 10)  { // Should be 18 so a bit less to allow for processing
 
             // Use first bit to get "0" bit samples as a reference
             ZeroWidth = idx;
-            idx = em4x05_Sniff_GetNextBitStart(idx, GraphTraceLen, GraphBuffer, &pulseSamples);
+            idx = em4x05_Sniff_GetNextBitStart(idx, GraphTraceLen, g_GraphBuffer, &pulseSamples);
             ZeroWidth = idx - ZeroWidth;
 
             if (ZeroWidth <= 50) {
@@ -2042,7 +2042,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
 
                 while ((idx < GraphTraceLen) && !eop) {
                     CycleWidth = idx;
-                    idx = em4x05_Sniff_GetNextBitStart(idx, GraphTraceLen, GraphBuffer, &pulseSamples);
+                    idx = em4x05_Sniff_GetNextBitStart(idx, GraphTraceLen, g_GraphBuffer, &pulseSamples);
 
                     CycleWidth = idx - CycleWidth;
                     if ((CycleWidth > 300) || (CycleWidth < (ZeroWidth - 5))) { // to long or too short

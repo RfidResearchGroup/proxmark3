@@ -263,7 +263,7 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
         return PM3_ESOFT;
     }
 
-    //set GraphBuffer for clone or sim command
+    //set g_GraphBuffer for clone or sim command
     setDemodBuff(g_DemodBuffer, (size == 40) ? 64 : 128, idx + 1);
     setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx + 1)*g_DemodClock));
 

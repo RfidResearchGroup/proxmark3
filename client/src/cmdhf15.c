@@ -520,7 +520,7 @@ static int CmdHF15Demod(const char *Cmd) {
     for (i = 0; i < 1000; i++) {
         int corr = 0;
         for (j = 0; j < ARRAYLEN(FrameSOF); j += skip) {
-            corr += FrameSOF[j] * GraphBuffer[i + (j / skip)];
+            corr += FrameSOF[j] * g_GraphBuffer[i + (j / skip)];
         }
         if (corr > max) {
             max = corr;
@@ -538,13 +538,13 @@ static int CmdHF15Demod(const char *Cmd) {
     for (;;) {
         int corr0 = 0, corr1 = 0, corrEOF = 0;
         for (j = 0; j < ARRAYLEN(Logic0); j += skip) {
-            corr0 += Logic0[j] * GraphBuffer[i + (j / skip)];
+            corr0 += Logic0[j] * g_GraphBuffer[i + (j / skip)];
         }
         for (j = 0; j < ARRAYLEN(Logic1); j += skip) {
-            corr1 += Logic1[j] * GraphBuffer[i + (j / skip)];
+            corr1 += Logic1[j] * g_GraphBuffer[i + (j / skip)];
         }
         for (j = 0; j < ARRAYLEN(FrameEOF); j += skip) {
-            corrEOF += FrameEOF[j] * GraphBuffer[i + (j / skip)];
+            corrEOF += FrameEOF[j] * g_GraphBuffer[i + (j / skip)];
         }
         // Even things out by the length of the target waveform.
         corr0 *= 4;

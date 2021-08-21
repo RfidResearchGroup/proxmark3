@@ -29,7 +29,7 @@ static int CmdHelp(const char *Cmd);
 
 // attempts to demodulate and identify a G_Prox_II verex/chubb card
 // WARNING: if it fails during some points it will destroy the g_DemodBuffer data
-// but will leave the GraphBuffer intact.
+// but will leave the g_GraphBuffer intact.
 // if successful it will push askraw data back to g_DemodBuffer ready for emulation
 int demodGuard(bool verbose) {
     (void) verbose; // unused so far

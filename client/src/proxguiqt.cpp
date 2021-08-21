@@ -292,7 +292,7 @@ void SliderWidget::moveEvent(QMoveEvent *event) {
 void ProxWidget::applyOperation() {
     //printf("ApplyOperation()");
     save_restoreGB(GRAPH_SAVE);
-    memcpy(GraphBuffer, s_Buff, sizeof(int) * GraphTraceLen);
+    memcpy(g_GraphBuffer, s_Buff, sizeof(int) * GraphTraceLen);
     RepaintGraphWindow();
 }
 void ProxWidget::stickOperation() {
@@ -300,21 +300,21 @@ void ProxWidget::stickOperation() {
     //printf("stickOperation()");
 }
 void ProxWidget::vchange_autocorr(int v) {
-    int ans = AutoCorrelate(GraphBuffer, s_Buff, GraphTraceLen, v, true, false);
+    int ans = AutoCorrelate(g_GraphBuffer, s_Buff, GraphTraceLen, v, true, false);
     if (g_debugMode) printf("vchange_autocorr(w:%d): %d\n", v, ans);
     g_useOverlays = true;
     RepaintGraphWindow();
 }
 void ProxWidget::vchange_askedge(int v) {
     //extern int AskEdgeDetect(const int *in, int *out, int len, int threshold);
-    int ans = AskEdgeDetect(GraphBuffer, s_Buff, GraphTraceLen, v);
+    int ans = AskEdgeDetect(g_GraphBuffer, s_Buff, GraphTraceLen, v);
     if (g_debugMode) printf("vchange_askedge(w:%d)%d\n", v, ans);
     g_useOverlays = true;
     RepaintGraphWindow();
 }
 void ProxWidget::vchange_dthr_up(int v) {
     int down = opsController->horizontalSlider_dirthr_down->value();
-    directionalThreshold(GraphBuffer, s_Buff, GraphTraceLen, v, down);
+    directionalThreshold(g_GraphBuffer, s_Buff, GraphTraceLen, v, down);
     //printf("vchange_dthr_up(%d)", v);
     g_useOverlays = true;
     RepaintGraphWindow();
@@ -322,7 +322,7 @@ void ProxWidget::vchange_dthr_up(int v) {
 void ProxWidget::vchange_dthr_down(int v) {
     //printf("vchange_dthr_down(%d)", v);
     int up = opsController->horizontalSlider_dirthr_up->value();
-    directionalThreshold(GraphBuffer, s_Buff, GraphTraceLen, v, up);
+    directionalThreshold(g_GraphBuffer, s_Buff, GraphTraceLen, v, up);
     g_useOverlays = true;
     RepaintGraphWindow();
 }
@@ -700,7 +700,7 @@ void Plot::paintEvent(QPaintEvent *event) {
     painter.fillRect(plotRect, BLACK);
 
     //init graph variables
-    setMaxAndStart(GraphBuffer, GraphTraceLen, plotRect);
+    setMaxAndStart(g_GraphBuffer, GraphTraceLen, plotRect);
 
     // center line
     int zeroHeight = plotRect.top() + (plotRect.bottom() - plotRect.top()) / 2;
@@ -710,7 +710,7 @@ void Plot::paintEvent(QPaintEvent *event) {
     plotGridLines(&painter, plotRect);
 
     //Start painting graph
-    PlotGraph(GraphBuffer, GraphTraceLen, plotRect, infoRect, &painter, 0);
+    PlotGraph(g_GraphBuffer, GraphTraceLen, plotRect, infoRect, &painter, 0);
     if (showDemod && g_DemodBufferLen > 8) {
         PlotDemod(g_DemodBuffer, g_DemodBufferLen, plotRect, infoRect, &painter, 2, g_DemodStartIdx);
     }
@@ -868,7 +868,7 @@ void Plot::Trim(void) {
     }
     g_DemodStartIdx -= lref;
     for (uint32_t i = lref; i < rref; ++i)
-        GraphBuffer[i - lref] = GraphBuffer[i];
+        g_GraphBuffer[i - lref] = g_GraphBuffer[i];
     GraphTraceLen = rref - lref;
     g_GraphStart = 0;
 }

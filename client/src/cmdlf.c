@@ -368,7 +368,7 @@ int CmdFlexdemod(const char *Cmd) {
     int i, j, start, bit, sum;
 
     int data[GraphTraceLen];
-    memcpy(data, GraphBuffer, GraphTraceLen);
+    memcpy(data, g_GraphBuffer, GraphTraceLen);
 
     size_t size = GraphTraceLen;
 
@@ -426,7 +426,7 @@ int CmdFlexdemod(const char *Cmd) {
         int phase = (bits[bit] == 0) ? 0 : 1;
 
         for (j = 0; j < 32; j++) {
-            GraphBuffer[i++] = phase;
+            g_GraphBuffer[i++] = phase;
             phase = !phase;
         }
     }
@@ -766,7 +766,7 @@ int CmdLFSniff(const char *Cmd) {
 static void lf_chk_bitstream(void) {
     // convert to bitstream if necessary
     for (int i = 0; i < (int)(GraphTraceLen / 2); i++) {
-        if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
+        if (g_GraphBuffer[i] > 1 || g_GraphBuffer[i] < 0) {
             CmdGetBitStream("");
             PrintAndLogEx(INFO, "converted Graphbuffer to bitstream values (0|1)");
             break;
@@ -774,7 +774,7 @@ static void lf_chk_bitstream(void) {
     }
 }
 
-// Uploads GraphBuffer to device, in order to be used for LF SIM.
+// Uploads g_GraphBuffer to device, in order to be used for LF SIM.
 int lfsim_upload_gb(void) {
     PrintAndLogEx(DEBUG, "DEBUG: Uploading %zu bytes", GraphTraceLen);
 
@@ -803,7 +803,7 @@ int lfsim_upload_gb(void) {
         payload_up.offset = i;
 
         for (uint16_t j = 0; j < len; j++)
-            payload_up.data[j] = GraphBuffer[i + j];
+            payload_up.data[j] = g_GraphBuffer[i + j];
 
         SendCommandNG(CMD_LF_UPLOAD_SIM_SAMPLES, (uint8_t *)&payload_up, sizeof(struct pupload));
         WaitForResponse(CMD_LF_UPLOAD_SIM_SAMPLES, &resp);
@@ -823,7 +823,7 @@ int lfsim_upload_gb(void) {
 }
 
 //Attempt to simulate any wave in buffer (one bit per output sample)
-// converts GraphBuffer to bitstream (based on zero crossings) if needed.
+// converts g_GraphBuffer to bitstream (based on zero crossings) if needed.
 int CmdLFSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf sim",
@@ -1276,7 +1276,7 @@ int CmdVchDemod(const char *Cmd) {
 
     for (i = 0; i < (GraphTraceLen - 2048); i++) {
         for (j = 0; j < ARRAYLEN(SyncPattern); j++) {
-            sum += GraphBuffer[i + j] * SyncPattern[j];
+            sum += g_GraphBuffer[i + j] * SyncPattern[j];
         }
         if (sum > bestCorrel) {
             bestCorrel = sum;
@@ -1293,7 +1293,7 @@ int CmdVchDemod(const char *Cmd) {
     for (i = 0; i < 2048; i += 8) {
         sum = 0;
         for (j = 0; j < 8; j++)
-            sum += GraphBuffer[bestPos + i + j];
+            sum += g_GraphBuffer[bestPos + i + j];
 
         if (sum < 0)
             bits[i / 8] = '.';
@@ -1315,7 +1315,7 @@ int CmdVchDemod(const char *Cmd) {
         char *s;
         for (s = bits; *s; s++) {
             for (j = 0; j < 16; j++) {
-                GraphBuffer[GraphTraceLen++] = (*s == '1') ? 1 : 0;
+                g_GraphBuffer[GraphTraceLen++] = (*s == '1') ? 1 : 0;
             }
         }
         RepaintGraphWindow();
@@ -1379,9 +1379,9 @@ int CmdLFfind(const char *Cmd) {
     CLIParserInit(&ctx, "lf search",
                   "Read and search for valid known tag. For offline mode, you can `data load` first then search.",
                   "lf search       -> try reading data from tag & search for known tag\n"
-                  "lf search -1    -> use data from GraphBuffer & search for known tag\n"
+                  "lf search -1    -> use data from the GraphBuffer & search for known tag\n"
                   "lf search -u    -> try reading data from tag & search for known and unknown tag\n"
-                  "lf search -1u   -> use data from GraphBuffer & search for known and unknown tag\n"
+                  "lf search -1u   -> use data from the GraphBuffer & search for known and unknown tag\n"
                  );
 
     void *argtable[] = {
@@ -1690,7 +1690,7 @@ int CmdLFfind(const char *Cmd) {
     if (search_unk) {
         //test unknown tag formats (raw mode)
         PrintAndLogEx(INFO, "\nChecking for unknown tags:\n");
-        int ans = AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, 8000, false, false);
+        int ans = AutoCorrelate(g_GraphBuffer, g_GraphBuffer, GraphTraceLen, 8000, false, false);
         if (ans > 0) {
 
             PrintAndLogEx(INFO, "Possible auto correlation of %d repeating samples", ans);

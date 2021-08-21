@@ -365,7 +365,7 @@ int handle_hf_plot(void) {
     }
 
     for (size_t i = 0; i < FPGA_TRACE_SIZE; i++) {
-        GraphBuffer[i] = ((int)buf[i]) - 128;
+        g_GraphBuffer[i] = ((int)buf[i]) - 128;
     }
 
     GraphTraceLen = FPGA_TRACE_SIZE;

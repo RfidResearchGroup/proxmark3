@@ -20,7 +20,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-// COTAG demod should be able to use GraphBuffer,
+// COTAG demod should be able to use g_GraphBuffer,
 // when data load samples
 int demodCOTAG(bool verbose) {
     (void) verbose; // unused so far
