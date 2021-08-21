@@ -1350,6 +1350,7 @@ static bool CheckChipType(bool getDeviceData) {
         goto out;
     }
 
+#if !defined ICOPYX
     // check for em4x50 chips
     if (detect_4x50_block()) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x50"));
@@ -1365,6 +1366,7 @@ static bool CheckChipType(bool getDeviceData) {
         retval = true;
         goto out;
     }
+#endif
 
     PrintAndLogEx(INFO, "Couldn't identify a chipset");
 out:
@@ -1433,6 +1435,7 @@ int CmdLFfind(const char *Cmd) {
             }
         }
 
+#if !defined ICOPYX
         if (IfPm3EM4x50()) {
             if (read_em4x50_uid() == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM4x50 ID") " found!");
@@ -1443,6 +1446,7 @@ int CmdLFfind(const char *Cmd) {
                 }
             }
         }
+#endif
 
         // only run if graphbuffer is just noise as it should be for hitag
         // The improved noise detection will find Cotag.
