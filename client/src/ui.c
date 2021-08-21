@@ -50,7 +50,6 @@ double g_GraphPixelsPerPoint = 1.f; // How many visual pixels are between each s
 static bool flushAfterWrite = 0;
 double g_GridOffset = 0;
 bool g_GridLocked = false;
-bool showDemod = true;
 
 pthread_mutex_t g_print_lock = PTHREAD_MUTEX_INITIALIZER;
 

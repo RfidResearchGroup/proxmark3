@@ -711,7 +711,7 @@ void Plot::paintEvent(QPaintEvent *event) {
 
     //Start painting graph
     PlotGraph(g_GraphBuffer, GraphTraceLen, plotRect, infoRect, &painter, 0);
-    if (showDemod && g_DemodBufferLen > 8) {
+    if (g_DemodBufferLen > 8) {
         PlotDemod(g_DemodBuffer, g_DemodBufferLen, plotRect, infoRect, &painter, 2, g_DemodStartIdx);
     }
     if (g_useOverlays) {

@@ -54,7 +54,6 @@ typedef struct {
 } session_arg_t;
 
 extern session_arg_t session;
-extern bool showDemod;
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327
 #endif
