@@ -2501,12 +2501,11 @@ void DesfirePrintFileSettingsExtended(FileSettingsS *fsettings) {
         }
     }
 
-    PrintAndLogEx(SUCCESS, "Access rights   : %04x  (r: %s w: %s rw: %s change: %s)",
-                  fsettings->rawAccessRights,
-                  GetDesfireAccessRightStr(fsettings->rAccess),
-                  GetDesfireAccessRightStr(fsettings->wAccess),
-                  GetDesfireAccessRightStr(fsettings->rwAccess),
-                  GetDesfireAccessRightStr(fsettings->chAccess));
+    PrintAndLogEx(SUCCESS, "Access rights   : %04x  (" NOLF, fsettings->rawAccessRights);
+    PrintAndLogEx(NORMAL, "r: %s " NOLF, GetDesfireAccessRightStr(fsettings->rAccess));
+    PrintAndLogEx(NORMAL, "w: %s " NOLF, GetDesfireAccessRightStr(fsettings->wAccess));
+    PrintAndLogEx(NORMAL, "rw: %s " NOLF, GetDesfireAccessRightStr(fsettings->rwAccess));
+    PrintAndLogEx(NORMAL, "change: %s)", GetDesfireAccessRightStr(fsettings->chAccess));
 }
 
 

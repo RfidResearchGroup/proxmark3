@@ -4500,7 +4500,7 @@ static int DesfileReadISOFileAndPrint(DesfireContext *dctx, bool select_current_
     return PM3_SUCCESS;
 }
 
-static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filetype, uint32_t offset, uint32_t length, bool noauth, bool verbose) {
+static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filetype, uint32_t offset, uint32_t length, uint32_t maxdatafilelength, bool noauth, bool verbose) {
     int res = 0;
     // length of record for record file
     size_t reclen = 0;
@@ -4542,8 +4542,24 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
                     break;
                 }
             }
+            
+            commMode = fsettings.commMode;
+            // lrp needs to point exact mode
+            if (dctx->secureChannel == DACLRP) {
+                // read right == free
+                if (fsettings.rAccess == 0xe)
+                    commMode = DCMPlain;
+                // get value access == free
+                if (filetype == RFTValue && (fsettings.limitedCredit & 0x02) != 0)
+                    commMode = DCMPlain;
+            }
 
-            DesfireSetCommMode(dctx, fsettings.commMode);
+            // calc max length
+            if (filetype == RFTData && maxdatafilelength && (maxdatafilelength < fsettings.fileSize)) {
+                length = maxdatafilelength;
+            }
+
+            DesfireSetCommMode(dctx, commMode);
 
             if (fsettings.fileCommMode != 0 && noauth)
                 PrintAndLogEx(WARNING, "File needs communication mode `%s` but there is no authentication", CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
@@ -4563,7 +4579,7 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
             PrintAndLogEx(WARNING, "GetFileSettings error. Can't get file type.");
         }
     }
-
+    
     PrintAndLogEx(INFO, "------------------------------- " _CYAN_("File %02x data") " -------------------------------", fnum);
 
     uint8_t resp[2048] = {0};
@@ -4777,7 +4793,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     }
 
     if (dctx.cmdSet != DCCISO)
-        res = DesfileReadFileAndPrint(&dctx, fnum, op, offset, length, noauth, verbose);
+        res = DesfileReadFileAndPrint(&dctx, fnum, op, offset, length, 0, noauth, verbose);
     else
         res = DesfileReadISOFileAndPrint(&dctx, fileisoidpresent, fnum, fileisoid, op, offset, length, noauth, verbose);
 
@@ -5330,7 +5346,8 @@ static int CmdHF14ADesDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes dump",
                   "For each application show fil list and then file content. Key needs to be provided for authentication or flag --no-auth set (depend on cards settings).",
-                  "hf mfdes dump --aid 123456 -> show file dump for: app=123456 with channel defaults from `default` command");
+                  "hf mfdes dump --aid 123456 -> show file dump for: app=123456 with channel defaults from `default` command/n"
+                  "hf mfdes dump --appisoid df01 -s lrp -t aes --length 000090 -> lrp default settings with length limit");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5345,6 +5362,8 @@ static int CmdHF14ADesDump(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
+        arg_str0("l", "length",   "<hex>", "Maximum length for read data files (3 hex bytes, big endian)."),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
         arg_param_end
     };
@@ -5352,23 +5371,31 @@ static int CmdHF14ADesDump(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    bool noauth = arg_get_lit(ctx, 12);
+    bool noauth = arg_get_lit(ctx, 14);
 
     DesfireContext dctx;
     int securechann = defaultSecureChannel;
-    uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, &securechann, (noauth) ? DCMPlain : DCMMACed, &appid, NULL);
+    uint32_t id = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, &securechann, (noauth) ? DCMPlain : DCMMACed, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
     }
 
+    uint32_t maxlength = 0;
+    if (CLIGetUint32Hex(ctx, 13, 0, &maxlength, NULL, 3, "Length parameter must have 3 byte length")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
+        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -5382,12 +5409,13 @@ static int CmdHF14ADesDump(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "Application " _CYAN_("%06x") " have " _GREEN_("%zu") " files", appid, filescount);
+    PrintAndLogEx(SUCCESS, "Application " _CYAN_("%s") " have " _GREEN_("%zu") " files", DesfireWayIDStr(selectway, id), filescount);
 
-    DesfirePrintAIDFunctions(appid);
+    if (selectway == ISW6bAID)
+        DesfirePrintAIDFunctions(id);
 
     if (filescount == 0) {
-        PrintAndLogEx(INFO, "There is no files in the application %06x", appid);
+        PrintAndLogEx(INFO, "There is no files in the application %s", DesfireWayIDStr(selectway, id));
         DropField();
         return res;
     }
@@ -5396,7 +5424,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
     for (int i = 0; i < filescount; i++) {
         if (res != PM3_SUCCESS) {
             DesfireSetCommMode(&dctx, DCMPlain);
-            res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, noauth, verbose);
+            res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
             if (res != PM3_SUCCESS) {
                 DropField();
                 return res;
@@ -5414,7 +5442,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
         }
         DesfirePrintFileSettingsExtended(&FileList[i].fileSettings);
 
-        res = DesfileReadFileAndPrint(&dctx, FileList[i].fileNum, RFTAuto, 0, 0, noauth, verbose);
+        res = DesfileReadFileAndPrint(&dctx, FileList[i].fileNum, RFTAuto, 0, 0, maxlength, noauth, verbose);
     }
 
     DropField();
