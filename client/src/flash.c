@@ -404,9 +404,9 @@ static int wait_for_ack(PacketResponseNG *ack) {
     return PM3_SUCCESS;
 }
 
-static bool g_printed_msg = false;
+static bool gs_printed_msg = false;
 static void flash_suggest_update_bootloader(void) {
-    if (g_printed_msg)
+    if (gs_printed_msg)
         return;
 
     PrintAndLogEx(ERR, _RED_("It is recommended that you first" _YELLOW_(" update your bootloader") _RED_(" alone,")));
@@ -416,7 +416,7 @@ static void flash_suggest_update_bootloader(void) {
     PrintAndLogEx(ERR, " 2)   ./pm3-flash-all");
     PrintAndLogEx(ERR, " 3)   ./pm3");
     PrintAndLogEx(INFO, "--------------------------------------------------------");
-    g_printed_msg = true;
+    gs_printed_msg = true;
 }
 
 static void flash_suggest_update_flasher(void) {

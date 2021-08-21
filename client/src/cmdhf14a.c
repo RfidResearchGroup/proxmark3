@@ -181,7 +181,7 @@ static const hintAIDList_t hintAIDList[] = {
 };
 
 // iso14a apdu input frame length
-static uint16_t g_frame_len = 0;
+static uint16_t gs_frame_len = 0;
 static uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 
 static int CmdHF14AList(const char *Cmd) {
@@ -776,7 +776,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     *dataoutlen = 0;
 
     if (activateField) {
-        // select with no disconnect and set g_frame_len
+        // select with no disconnect and set gs_frame_len
         int selres = SelectCard14443A_4(false, !silentMode, NULL);
         if (selres != PM3_SUCCESS)
             return selres;
@@ -835,7 +835,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card) {
 
     // global vars should be prefixed with g_
-    g_frame_len = 0;
+    gs_frame_len = 0;
 
     if (card) {
         memset(card, 0, sizeof(iso14a_card_select_t));
@@ -884,7 +884,7 @@ int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card
         if (resp.oldarg[0] > 1) {
             uint8_t fsci = resp.data.asBytes[1] & 0x0f;
             if (fsci < ARRAYLEN(atsFSC)) {
-                g_frame_len = atsFSC[fsci];
+                gs_frame_len = atsFSC[fsci];
             }
         }
     } else {
@@ -893,7 +893,7 @@ int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card
         if (vcard->ats_len > 1) {
             uint8_t fsci = vcard->ats[1] & 0x0f;
             if (fsci < ARRAYLEN(atsFSC)) {
-                g_frame_len = atsFSC[fsci];
+                gs_frame_len = atsFSC[fsci];
             }
         }
 
@@ -915,7 +915,7 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
     *chainingout = false;
 
     if (activateField) {
-        // select with no disconnect and set g_frame_len
+        // select with no disconnect and set gs_frame_len
         int selres = SelectCard14443A_4(false, true, NULL);
         if (selres != PM3_SUCCESS)
             return selres;
@@ -1002,14 +1002,14 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 
     // 3 byte here - 1b framing header, 2b crc16
     if (APDUInFramingEnable &&
-            ((g_frame_len && (datainlen > g_frame_len - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
+            ((gs_frame_len && (datainlen > gs_frame_len - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
 
         int clen = 0;
 
         bool vActivateField = activateField;
 
         do {
-            int vlen = MIN(g_frame_len - 3, datainlen - clen);
+            int vlen = MIN(gs_frame_len - 3, datainlen - clen);
             bool chainBlockNotLast = ((clen + vlen) < datainlen);
 
             *dataoutlen = 0;

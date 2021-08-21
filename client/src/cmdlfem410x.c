@@ -35,7 +35,7 @@
 #include "cliparser.h"
 #include "cmdhw.h"
 
-static uint64_t g_em410xid = 0;
+static uint64_t gs_em410xid = 0;
 
 static int CmdHelp(const char *Cmd);
 /* Read the ID of an EM410x tag.
@@ -273,7 +273,7 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
     }
 
     printEM410x(*hi, *lo, verbose, ans);
-    g_em410xid = *lo;
+    gs_em410xid = *lo;
     return PM3_SUCCESS;
 }
 
@@ -407,7 +407,7 @@ static int CmdEM410xReader(const char *Cmd) {
         lf_read(false, 12288);
         AskEm410xDemod(clk, invert, max_err, max_len, amplify, &hi, &lo, verbose);
 
-        if (break_first && g_em410xid != 0) {
+        if (break_first && gs_em410xid != 0) {
             break;
         }
     } while (cm && !kbd_enter_pressed());
@@ -615,9 +615,9 @@ static int CmdEM410xSpoof(const char *Cmd) {
     CLIParserFree(ctx);
 
     // loops if the captured ID was in XL-format.
-    g_em410xid = 0;
+    gs_em410xid = 0;
     CmdEM410xReader("-b@");
-    PrintAndLogEx(SUCCESS, "Replaying captured EM Tag ID "_YELLOW_("%010" PRIx64), g_em410xid);
+    PrintAndLogEx(SUCCESS, "Replaying captured EM Tag ID "_YELLOW_("%010" PRIx64), gs_em410xid);
     CmdLFSim("");
     return PM3_SUCCESS;
 }

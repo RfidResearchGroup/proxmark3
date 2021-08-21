@@ -60,7 +60,7 @@
 #include "cmdlfvisa2000.h"  // for VISA2000 menu
 #include "pm3_cmd.h"        // for LF_CMDREAD_MAX_EXTRA_SYMBOLS
 
-static bool g_lf_threshold_set = false;
+static bool gs_lf_threshold_set = false;
 
 static int CmdHelp(const char *Cmd);
 
@@ -578,7 +578,7 @@ int CmdLFConfig(const char *Cmd) {
         config.divisor = LF_DIVISOR_125;
         config.samples_to_skip = 0;
         config.trigger_threshold = 0;
-        g_lf_threshold_set = false;
+        gs_lf_threshold_set = false;
     }
 
     if (use_125)
@@ -621,7 +621,7 @@ int CmdLFConfig(const char *Cmd) {
 
     if (trigg > -1) {
         config.trigger_threshold = trigg;
-        g_lf_threshold_set = (config.trigger_threshold > 0);
+        gs_lf_threshold_set = (config.trigger_threshold > 0);
     }
 
     config.samples_to_skip = skip;
@@ -643,7 +643,7 @@ int lf_read(bool verbose, uint32_t samples) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (g_lf_threshold_set) {
+    if (gs_lf_threshold_set) {
         WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp);
     } else {
         if (!WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, 2500)) {
@@ -709,7 +709,7 @@ int lf_sniff(bool verbose, uint32_t samples) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (g_lf_threshold_set) {
+    if (gs_lf_threshold_set) {
         WaitForResponse(CMD_LF_SNIFF_RAW_ADC, &resp);
     } else {
         if (!WaitForResponseTimeout(CMD_LF_SNIFF_RAW_ADC, &resp, 2500)) {
