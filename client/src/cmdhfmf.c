@@ -1073,6 +1073,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         arg_lit0(NULL, "emu", "Fill simulator keys from found keys"),
         arg_lit0(NULL, "dump", "Dump found keys to file"),
         arg_lit0(NULL, "single", "Single sector (defaults to All)"),
+        arg_lit0(NULL, "mem", "Use dictionary from flashmemory"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1113,6 +1114,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
     bool transferToEml = arg_get_lit(ctx, 12);
     bool createDumpFile = arg_get_lit(ctx, 13);
     bool singleSector = arg_get_lit(ctx, 14);
+    bool use_flashmemory = arg_get_lit(ctx, 15);
 
     CLIParserFree(ctx);
 
@@ -1223,7 +1225,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         }
 
         PrintAndLogEx(SUCCESS, "Testing known keys. Sector count "_YELLOW_("%d"), SectorsCnt);
-        int res = mfCheckKeys_fast(SectorsCnt, true, true, 1, ARRAYLEN(g_mifare_default_keys) + 1, keyBlock, e_sector, false);
+        int res = mfCheckKeys_fast(SectorsCnt, true, true, 1, ARRAYLEN(g_mifare_default_keys) + 1, keyBlock, e_sector, use_flashmemory);
         if (res == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "Fast check found all keys");
             goto jumptoend;
