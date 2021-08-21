@@ -161,9 +161,9 @@ static bool WINAPI terminate_handler(DWORD t) {
 }
 */
 #  else
-struct sigaction old_action;
-static void terminate_handler(int signum) {
-    sigaction(SIGINT, &old_action, NULL);
+static struct sigaction gs_old_sigint_action;
+static void sigint_handler(int signum) {
+    sigaction(SIGINT, &gs_old_sigint_action, NULL);
     flush_history();
     kill(0, SIGINT);
 }
@@ -286,8 +286,8 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
 #  else
             struct sigaction action;
             memset(&action, 0, sizeof(action));
-            action.sa_handler = &terminate_handler;
-            sigaction(SIGINT, &action, &old_action);
+            action.sa_handler = &sigint_handler;
+            sigaction(SIGINT, &action, &gs_old_sigint_action);
 #  endif
             rl_catch_signals = 1;
             rl_set_signals();
