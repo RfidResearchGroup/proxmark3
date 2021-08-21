@@ -2102,9 +2102,10 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
             PrintAndLogEx(INFO, _CYAN_("%s %06x") " param ID: 0x%02x param[%d]: %s", DesfireSelectWayToStr(selectway), id, paramid, paramlen, sprint_hex(param, paramlen));
     }
 
-    res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, id, false, 0, false, verbose);
+    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, false, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
+        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -4147,7 +4148,9 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
                   "Get File Settings from file from application. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
                   "hf mfdes value --aid 123456 --fid 01  -> get value app=123456, file=01 with defaults from `default` command\n"
                   "hf mfdes value --aid 123456 --fid 01 --op credit -d 00000001 -> credit value app=123456, file=01 with defaults from `default` command\n"
-                  "hf mfdes value -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> get value with default factory setup");
+                  "hf mfdes value -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> get value with default factory setup\n"
+                  "hf mfdes val --appisoid df01 --fid 03 -s lrp -t aes -n 1 --op credit --d 00000001 -m encrypt -> credit value in the lrp encrypted mode\n"
+                  "hf mfdes val --appisoid df01 --fid 03 -s lrp -t aes -n 1 --op get -m plain -> get value in plain (nevertheless of mode) works for desfire light (look SetConfiguration option 0x09)");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4227,6 +4230,8 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
             DropField();
             return PM3_ESOFT;
         }
+        if (verbose)
+            PrintAndLogEx(INFO, "Operation %s " _GREEN_("OK"), CLIGetOptionListStr(DesfireValueFileOperOpts, op));
 
         if (op == MFDES_GET_VALUE) {
             PrintAndLogEx(SUCCESS, "Value: " _GREEN_("%d (0x%08x)"), value, value);
@@ -4238,6 +4243,8 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
                 DropField();
                 return PM3_ESOFT;
             }
+            if (verbose)
+                PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
 
             PrintAndLogEx(SUCCESS, "Value changed " _GREEN_("successfully"));
         }
@@ -4762,7 +4769,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, id, noauth, true, fileisoid, verbose);
+    res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, id, fileisoidpresent, fileisoid, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
         PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
@@ -4960,7 +4967,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     if (trkeylen > 0)
         DesfireGetCardUID(&dctx);
 
-    res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, id, noauth, true, fileisoid, verbose);
+    res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, id, fileisoidpresent, fileisoid, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
         PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));

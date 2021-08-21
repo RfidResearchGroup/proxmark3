@@ -28,13 +28,16 @@ static const uint8_t CommandsCanUseAnyChannel[] = {
     MFDES_READ_DATA2,
     MFDES_WRITE_DATA,
     MFDES_WRITE_DATA2,
-    MFDES_GET_VALUE,
     MFDES_READ_RECORDS,
     MFDES_READ_RECORDS2,
     MFDES_WRITE_RECORD,
     MFDES_WRITE_RECORD2,
     MFDES_UPDATE_RECORD,
     MFDES_UPDATE_RECORD2,
+    MFDES_GET_VALUE,
+    MFDES_CREDIT,
+    MFDES_DEBIT,
+    MFDES_LIMITED_CREDIT,
 };
 
 static bool CommandCanUseAnyChannel(uint8_t cmd) {
@@ -79,6 +82,7 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_GET_FILE_IDS,              DACd40,  DCCNative,    DCMMACed},
     {MFDES_GET_ISOFILE_IDS,           DACd40,  DCCNative,    DCMMACed},
     {MFDES_COMMIT_READER_ID,          DACd40,  DCCNative,    DCMMACed},
+    {MFDES_ABORT_TRANSACTION,         DACd40,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,                   DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,       DACd40,  DCCNative,    DCMEncrypted},
@@ -114,6 +118,7 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_COMMIT_TRANSACTION,        DACEV1,  DCCNative,    DCMMACed},
     {MFDES_CLEAR_RECORD_FILE,         DACEV1,  DCCNative,    DCMMACed},
     {MFDES_COMMIT_READER_ID,          DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_ABORT_TRANSACTION,         DACEV1,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,                   DACEV1,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,       DACEV1,  DCCNative,    DCMEncrypted},
@@ -154,6 +159,8 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_GET_FILE_SETTINGS,         DACLRP,  DCCNative,    DCMMACed},
     {MFDES_GET_KEY_VERSION,           DACLRP,  DCCNative,    DCMMACed},
     {MFDES_CLEAR_RECORD_FILE,         DACLRP,  DCCNative,    DCMMACed},
+    {MFDES_COMMIT_TRANSACTION,        DACLRP,  DCCNative,    DCMMACed},
+    {MFDES_ABORT_TRANSACTION,         DACLRP,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,                   DACLRP,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_FILE_SETTINGS,      DACLRP,  DCCNative,    DCMEncrypted},
@@ -183,6 +190,10 @@ static const CmdHeaderLengthsS CmdHeaderLengths[] = {
     {MFDES_WRITE_RECORD2,          7},
     {MFDES_UPDATE_RECORD,         10},
     {MFDES_UPDATE_RECORD2,        10},
+    {MFDES_GET_VALUE,              1},
+    {MFDES_CREDIT,                 1},
+    {MFDES_DEBIT,                  1},
+    {MFDES_LIMITED_CREDIT,         1},
 };
 
 static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {
