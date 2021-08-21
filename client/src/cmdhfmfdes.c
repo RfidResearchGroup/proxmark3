@@ -4227,6 +4227,8 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
             DropField();
             return PM3_ESOFT;
         }
+        if (verbose)
+            PrintAndLogEx(INFO, "Operation %s OK", CLIGetOptionListStr(DesfireValueFileOperOpts, op));
 
         if (op == MFDES_GET_VALUE) {
             PrintAndLogEx(SUCCESS, "Value: " _GREEN_("%d (0x%08x)"), value, value);
@@ -4238,6 +4240,8 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
                 DropField();
                 return PM3_ESOFT;
             }
+            if (verbose)
+                PrintAndLogEx(INFO, "Commit OK");
 
             PrintAndLogEx(SUCCESS, "Value changed " _GREEN_("successfully"));
         }
