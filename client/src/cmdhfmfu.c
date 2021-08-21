@@ -2520,8 +2520,13 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
         PrintAndLogEx(INFO, "authentication with keytype[%x]  %s\n", (uint8_t)(keytype & 0xff), sprint_hex(p_authkey, 4));
 
-        // otp, uid, lock, cfg1, cfg0, dynlockbits
+#if defined ICOPYX
+        // otp, uid, lock, dynlockbits, cfg0, cfg1, pwd, pack
+        uint8_t blocks[] = {3, 0, 1, 2, pages - 5, pages - 4, pages - 3, pages - 2, pages - 1};
+#else
+        // otp, uid, lock, dynlockbits, cfg0, cfg1
         uint8_t blocks[] = {3, 0, 1, 2, pages - 5, pages - 4, pages - 3};
+#endif
         for (uint8_t i = 0; i < ARRAYLEN(blocks); i++) {
             uint8_t b = blocks[i];
             memcpy(data, mem->data + (b * 4), 4);
