@@ -973,7 +973,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210819.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210821.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -4115,7 +4115,8 @@
             "command": "hf mfdes clearrecfile",
             "description": "clear record file. master key needs to be provided or flag --no-auth set (depend on cards settings).",
             "notes": [
-                "hf mfdes clearrecfile --aid 123456 --fid 01 -> clear record file for: app=123456, file=01 with defaults from `default` command"
+                "hf mfdes clearrecfile --aid 123456 --fid 01 -> clear record file for: app=123456, file=01 with defaults from `default` command",
+                "hf mfdes clearrecfile --appisoid df01 --fid 01 -s lrp -t aes -n 3 -> clear record file for lrp channel with key number 3"
             ],
             "offline": false,
             "options": [
@@ -4131,10 +4132,11 @@
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
                 "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
                 "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "--fid <file id hex> file id for clearing (1 hex byte)",
                 "--no-auth execute without authentication"
             ],
-            "usage": "hf mfdes clearrecfile [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--fid <file id hex>] [--no-auth]"
+            "usage": "hf mfdes clearrecfile [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>] [--fid <file id hex>] [--no-auth]"
         },
         "hf mfdes createapp": {
             "command": "hf mfdes createapp",
@@ -4249,7 +4251,9 @@
                 "",
                 "hf mfdes createmacfile --aid 123456 --fid 01 --rawrights 0ff0 --mackey 00112233445566778899aabbccddeeff --mackeyver 01 -> create transaction mac file with parameters. rights from default. authentication with defaults from `default` command",
                 "hf mfdes createmacfile --aid 123456 --fid 01 --amode plain --rrights free --wrights deny --rwrights free --chrights key0 --mackey 00112233445566778899aabbccddeeff -> create file app=123456, file=01, with key, and mentioned rights with defaults from `default` command",
-                "hf mfdes createmacfile -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> execute with default factory setup. key and keyver == 0x00..00"
+                "hf mfdes createmacfile -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> execute with default factory setup. key and keyver == 0x00..00",
+                "hf mfdes createmacfile --appisoid df01 --fid 0f -s lrp -t aes --rawrights 0ff0 --mackey 00112233445566778899aabbccddeeff --mackeyver 01 -> create transaction mac file via lrp channel",
+                "hf mfdes createmacfile --appisoid df01 --fid 0f -s lrp -t aes --rawrights 0f10 --mackey 00112233445566778899aabbccddeeff --mackeyver 01 -> create transaction mac file via lrp channel with commitreaderid command enable"
             ],
             "offline": false,
             "options": [
@@ -4265,6 +4269,7 @@
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
                 "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
                 "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "--fid <file id hex> file id (1 hex byte)",
                 "--amode <plain/mac/encrypt> file access mode: plain/mac/encrypt",
                 "--rawrights <access rights hex> access rights for file (hex 2 byte) r/w/rw/chg, 0x0 - 0xd key, 0xe free, 0xf denied",
@@ -4276,7 +4281,7 @@
                 "--mackey <hex> aes-128 key for mac (16 hex bytes, big endian). default 0x00..00",
                 "--mackeyver <ver hex 1b> aes key version for mac (1 hex byte). default 0x00"
             ],
-            "usage": "hf mfdes createmacfile [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--fid <file id hex>] [--amode <plain/mac/encrypt>] [--rawrights <access rights hex>] [--rrights <key0/../key13/free/deny>] [--wrights <key0/../key13/free/deny>] [--rwrights <key0/../key13/free/deny>] [--chrights <key0/../key13/free/deny>] [--no-auth] [--mackey <hex>] [--mackeyver <ver hex 1b>]"
+            "usage": "hf mfdes createmacfile [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>] [--fid <file id hex>] [--amode <plain/mac/encrypt>] [--rawrights <access rights hex>] [--rrights <key0/../key13/free/deny>] [--wrights <key0/../key13/free/deny>] [--rwrights <key0/../key13/free/deny>] [--chrights <key0/../key13/free/deny>] [--no-auth] [--mackey <hex>] [--mackeyver <ver hex 1b>]"
         },
         "hf mfdes createrecordfile": {
             "command": "hf mfdes createrecordfile",
@@ -4403,7 +4408,8 @@
             "command": "hf mfdes deletefile",
             "description": "delete file from application. master key needs to be provided or flag --no-auth set (depend on cards settings).",
             "notes": [
-                "hf mfdes deletefile --aid 123456 --fid 01 -> delete file for: app=123456, file=01 with defaults from `default` command"
+                "hf mfdes deletefile --aid 123456 --fid 01 -> delete file for: app=123456, file=01 with defaults from `default` command",
+                "hf mfdes deletefile --appisoid df01 --fid 0f -s lrp -t aes -> delete file for lrp channel"
             ],
             "offline": false,
             "options": [
@@ -4419,10 +4425,11 @@
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
                 "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
                 "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "--fid <file id hex> file id (1 hex byte)",
                 "--no-auth execute without authentication"
             ],
-            "usage": "hf mfdes deletefile [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--fid <file id hex>] [--no-auth]"
+            "usage": "hf mfdes deletefile [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>] [--fid <file id hex>] [--no-auth]"
         },
         "hf mfdes detect": {
             "command": "hf mfdes detect",
@@ -4856,7 +4863,9 @@
                 "hf mfdes read --aid 123456 --fileisoid 1000 --type data -c iso -> read file via iso channel: app=123456, iso id=1000, offset=0. select via native iso wrapper",
                 "hf mfdes read --appisoid 0102 --fileisoid 1000 --type data -c iso -> read file via iso channel: app iso id=0102, iso id=1000, offset=0. select via iso commands",
                 "hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000001 -> get one record (number 5) from file 1100 via iso commands",
-                "hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000000 -> get all record (from 5 to 1) from file 1100 via iso commands"
+                "hf mfdes read --appisoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000000 -> get all record (from 5 to 1) from file 1100 via iso commands",
+                "hf mfdes read --appisoid df01 --fid 00 -s lrp -t aes --length 000010 -> read via lrp channel",
+                "hf mfdes read --appisoid df01 --fid 00 -s ev2 -t aes --length 000010 --isochain -> read desfire light via ev2 channel"
             ],
             "offline": false,
             "options": [
@@ -4878,9 +4887,10 @@
                 "-o, --offset <hex> file offset (3 hex bytes, big endian). for records - record number (0 - lastest record). default 0",
                 "-l, --length <hex> length to read (3 hex bytes, big endian -> 000000 = read all data). for records - records count (0 - all). default 0.",
                 "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
-                "--fileisoid <isoid hex> file iso id (iso df id) (2 hex bytes, big endian). works only for iso read commands."
+                "--fileisoid <isoid hex> file iso id (iso df id) (2 hex bytes, big endian). works only for iso read commands.",
+                "--isochain use iso chaining commands. switched on by default if secure channel = lrp"
             ],
-            "usage": "hf mfdes read [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--fid <file id hex>] [--no-auth] [--type <auto/data/value/record/mac>] [-o <hex>] [-l <hex>] [--appisoid <isoid hex>] [--fileisoid <isoid hex>]"
+            "usage": "hf mfdes read [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--fid <file id hex>] [--no-auth] [--type <auto/data/value/record/mac>] [-o <hex>] [-l <hex>] [--appisoid <isoid hex>] [--fileisoid <isoid hex>] [--isochain]"
         },
         "hf mfdes selectapp": {
             "command": "hf mfdes selectapp",
@@ -4990,12 +5000,13 @@
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
                 "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
                 "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "--fid <file id hex> file id (1 hex byte)",
                 "-o, --op <get/credit/limcredit/debit/clear> operation: get(default)/credit/limcredit(limited credit)/debit/clear. operation clear: get-getopt-debit to min value",
                 "-d, --data <value hex> value for operation (hex 4 bytes)",
                 "--no-auth execute without authentication"
             ],
-            "usage": "hf mfdes value [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--fid <file id hex>] [-o <get/credit/limcredit/debit/clear>] [-d <value hex>] [--no-auth]"
+            "usage": "hf mfdes value [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>] [--fid <file id hex>] [-o <get/credit/limcredit/debit/clear>] [-d <value hex>] [--no-auth]"
         },
         "hf mfdes write": {
             "command": "hf mfdes write",
@@ -9981,6 +9992,6 @@
     "metadata": {
         "commands_extracted": 589,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-08-19T16:54:30"
+        "extracted_on": "2021-08-21T11:28:11"
     }
 }

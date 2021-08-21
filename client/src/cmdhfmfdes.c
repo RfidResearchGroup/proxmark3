@@ -4050,7 +4050,7 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
 
     if (verbose)
         PrintAndLogEx(INFO, "%s. File num: 0x%02x type: 0x%02x data[%zu]: %s", DesfireWayIDStr(selectway, id), data[0], filetype, datalen, sprint_hex(data, datalen));
-    
+
     DesfirePrintCreateFileSettings(filetype, data, datalen);
 
     res = DesfireCreateFile(&dctx, filetype, data, datalen, true);
@@ -4378,10 +4378,10 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
-    
+
     if (verbose)
         PrintAndLogEx(INFO, "File cleared");
-    
+
     DesfireSetCommMode(&dctx, DCMMACed);
     res = DesfireCommitTransaction(&dctx, false, 0);
     if (res != PM3_SUCCESS) {
@@ -4497,7 +4497,7 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
     int res = 0;
     // length of record for record file
     size_t reclen = 0;
-    
+
     // iso chaining works in the lrp mode
     dctx->isoChaining |= (dctx->secureChannel == DACLRP);
 
