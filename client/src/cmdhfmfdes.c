@@ -4658,8 +4658,8 @@ static int DesfileReadFileAndPrint(DesfireContext *dctx, uint8_t fnum, int filet
                     // MF2DLHX0.pdf, 10.3.2.1 Transaction MAC Counter, page 41
                     uint32_t actTMC = MemLeToUint2byte(&resp[0]);
                     uint32_t sessTMC = MemLeToUint2byte(&resp[2]);
-                    PrintAndLogEx(SUCCESS, "Session tr counter : %d (0x%08x)", sessTMC, sessTMC);
-                    PrintAndLogEx(SUCCESS, "Actual tr counter  : %d (0x%08x)", actTMC, actTMC);
+                    PrintAndLogEx(SUCCESS, "Session tr counter : %d (0x%04x)", sessTMC, sessTMC);
+                    PrintAndLogEx(SUCCESS, "Actual tr counter  : %d (0x%04x)", actTMC, actTMC);
                 }
                 PrintAndLogEx(SUCCESS, "Transaction MAC    : %s", sprint_hex(&resp[4], 8));
             }
@@ -5166,7 +5166,16 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
             PrintAndLogEx(INFO, _GREEN_("Commit result:"));
             uint32_t cnt = MemLeToUint4byte(&resp[0]);
             transactionCounter = cnt;
-            PrintAndLogEx(SUCCESS, "Transaction counter: %d (0x%08x)", cnt, cnt);
+            if (dctx.secureChannel != DACLRP) {
+                PrintAndLogEx(SUCCESS, "Transaction counter: %d (0x%08x)", cnt, cnt);
+            } else {
+                // For composing TMC the two subparts are concatenated as follows: actTMC || sesTMC. Both subparts are represented LSB first.
+                // MF2DLHX0.pdf, 10.3.2.1 Transaction MAC Counter, page 41
+                uint32_t actTMC = MemLeToUint2byte(&resp[0]);
+                uint32_t sessTMC = MemLeToUint2byte(&resp[2]);
+                PrintAndLogEx(SUCCESS, "Session tr counter : %d (0x%04x)", sessTMC, sessTMC);
+                PrintAndLogEx(SUCCESS, "Actual tr counter  : %d (0x%04x)", actTMC, actTMC);
+            }
             PrintAndLogEx(SUCCESS, "Transaction MAC    : %s", sprint_hex(&resp[4], 8));
         }
     }
