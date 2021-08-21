@@ -973,7 +973,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log /home/phil/.proxmark3/logs/log_20210821.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210821.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -4463,7 +4463,7 @@
             "command": "hf mfdes dump",
             "description": "for each application show fil list and then file content. key needs to be provided for authentication or flag --no-auth set (depend on cards settings).",
             "notes": [
-                "hf mfdes dump --aid 123456 -> show file dump for: app=123456 with channel defaults from `default` command"
+                "hf mfdes dump --aid 123456 -> show file dump for: app=123456 with channel defaults from `default` command/nhf mfdes dump --appisoid df01 -s lrp -t aes --length 000090 -> lrp default settings with length limit"
             ],
             "offline": false,
             "options": [
@@ -4479,9 +4479,11 @@
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
                 "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
                 "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
+                "-l, --length <hex> maximum length for read data files (3 hex bytes, big endian).",
                 "--no-auth execute without authentication"
             ],
-            "usage": "hf mfdes dump [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--no-auth]"
+            "usage": "hf mfdes dump [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>] [-l <hex>] [--no-auth]"
         },
         "hf mfdes formatpicc": {
             "command": "hf mfdes formatpicc",
@@ -4984,7 +4986,9 @@
             "notes": [
                 "hf mfdes value --aid 123456 --fid 01 -> get value app=123456, file=01 with defaults from `default` command",
                 "hf mfdes value --aid 123456 --fid 01 --op credit -d 00000001 -> credit value app=123456, file=01 with defaults from `default` command",
-                "hf mfdes value -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> get value with default factory setup"
+                "hf mfdes value -n 0 -t des -k 0000000000000000 -f none --aid 123456 --fid 01 -> get value with default factory setup",
+                "hf mfdes val --appisoid df01 --fid 03 -s lrp -t aes -n 1 --op credit --d 00000001 -m encrypt -> credit value in the lrp encrypted mode",
+                "hf mfdes val --appisoid df01 --fid 03 -s lrp -t aes -n 1 --op get -m plain -> get value in plain (nevertheless of mode) works for desfire light (look setconfiguration option 0x09)"
             ],
             "offline": false,
             "options": [
@@ -5025,7 +5029,8 @@
                 "hf mfdes write --aid 123456 --fid 01 --type record --offset 000000 -d 11223344 -> write record to record file. use default channel settings from `default` command",
                 "hf mfdes write --appisoid 1234 --fileisoid 1000 --type data -c iso -d 01020304 -> write data to std/backup file via iso commandset",
                 "hf mfdes write --appisoid 1234 --fileisoid 2000 --type record -c iso -d 01020304 -> send record to record file via iso commandset",
-                "hf mfdes write --aid 123456 --fid 01 -d 01020304 --readerid 010203 -> write data to file with commitreaderid command before write and committransaction after write"
+                "hf mfdes write --aid 123456 --fid 01 -d 01020304 --readerid 010203 -> write data to file with commitreaderid command before write and committransaction after write",
+                "hf mfdes write --appisoid df01 --fid 04 -d 01020304 --trkey 00112233445566778899aabbccddeeff --readerid 5532 -t aes -s lrp -> advanced commitreaderid via lrp channel sample"
             ],
             "offline": false,
             "options": [
@@ -5838,8 +5843,8 @@
             "command": "hw connect",
             "description": "connects to a proxmark3 device via specified serial port. baudrate here is only for physical uart or uart-bt, not for usb-cdc or blue shark add-on",
             "notes": [
-                "hw connect -p /dev/ttyacm0",
-                "hw connect -p /dev/ttyacm0 -b 115200"
+                "hw connect -p com3",
+                "hw connect -p com3 -b 115200"
             ],
             "offline": true,
             "options": [
@@ -7403,7 +7408,7 @@
             "description": "tries to psk demodulate the graphbuffer as indala this is uses a alternative way to demodulate and was used from the beginning in the pm3 client. it's now considered obsolete but remains because it has sometimes its advantages.",
             "notes": [
                 "lf indala altdemod",
-                "lf indala altdemod --long -> demod a indala tag from graphbuffer as 224 bit long format"
+                "lf indala altdemod --long -> demod a indala tag from the graphbuffer as 224 bit long format"
             ],
             "offline": true,
             "options": [
@@ -7437,12 +7442,12 @@
         },
         "lf indala help": {
             "command": "lf indala help",
-            "description": "help this help demod demodulate an indala tag (psk1) from graphbuffer altdemod alternative method to demodulate samples for indala 64 bit uid (option '224' for 224 bit) --------------------------------------------------------------------------------------- lf indala demod available offline: yes tries to psk demodulate the graphbuffer as indala",
+            "description": "help this help demod demodulate an indala tag (psk1) from the graphbuffer altdemod alternative method to demodulate samples for indala 64 bit uid (option '224' for 224 bit) --------------------------------------------------------------------------------------- lf indala demod available offline: yes tries to psk demodulate the graphbuffer as indala",
             "notes": [
                 "lf indala demod",
-                "lf indala demod --clock 32 -> demod a indala tag from graphbuffer using a clock of rf/32",
-                "lf indala demod --clock 32 -i -> demod a indala tag from graphbuffer using a clock of rf/32 and inverting data",
-                "lf indala demod --clock 64 -i --maxerror 0 -> demod a indala tag from graphbuffer using a clock of rf/64, inverting data and allowing 0 demod errors"
+                "lf indala demod --clock 32 -> demod a indala tag from the graphbuffer using a clock of rf/32",
+                "lf indala demod --clock 32 -i -> demod a indala tag from the graphbuffer using a clock of rf/32 and inverting data",
+                "lf indala demod --clock 64 -i --maxerror 0 -> demod a indala tag from the graphbuffer using a clock of rf/64, inverting data and allowing 0 demod errors"
             ],
             "offline": true,
             "options": [
@@ -8205,9 +8210,9 @@
             "description": "read and search for valid known tag. for offline mode, you can `data load` first then search.",
             "notes": [
                 "lf search -> try reading data from tag & search for known tag",
-                "lf search -1 -> use data from graphbuffer & search for known tag",
+                "lf search -1 -> use data from the graphbuffer & search for known tag",
                 "lf search -u -> try reading data from tag & search for known and unknown tag",
-                "lf search -1u -> use data from graphbuffer & search for known and unknown tag"
+                "lf search -1u -> use data from the graphbuffer & search for known and unknown tag"
             ],
             "offline": true,
             "options": [
@@ -9992,6 +9997,6 @@
     "metadata": {
         "commands_extracted": 589,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-08-21T15:11:58"
+        "extracted_on": "2021-08-21T16:13:04"
     }
 }

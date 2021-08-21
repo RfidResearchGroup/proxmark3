@@ -671,7 +671,7 @@ void DesfireGenTransSessionKeyEV2(uint8_t *key, uint32_t trCntr, uint8_t *uid, b
 // page 43
 void DesfireGenTransSessionKeyLRP(uint8_t *key, uint32_t trCntr, uint8_t *uid, bool forMAC, uint8_t *sessionkey) {
     uint8_t data[CRYPTO_AES_BLOCK_SIZE] = {0};
-    
+
     // SV1 = 00h||01h||00h||80h||(actTMC+1)||(sesTMC+1)||UID||5Ah
     // SV2 = 00h||01h||00h||80h||(actTMC+1)||(sesTMC+1)||UID||A5h
     // SesTMMACKey = MACLRP (AppTransactionMACKey; SV1)
