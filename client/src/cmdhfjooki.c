@@ -38,7 +38,7 @@ typedef struct {
 } PACKED jooki_test_t;
 
 // sample set for selftest.
-jooki_test_t jooks[] = {
+static jooki_test_t jooks[] = {
     { {0x04, 0xDA, 0xB7, 0x6A, 0xE7, 0x4C, 0x80}, "ruxow8lnn88uyeX+", 0x01, 0x00},
     { {0x04, 0xf0, 0x22, 0xc2, 0x33, 0x5e, 0x80}, "\0", 0x01, 0x00},
     { {0x04, 0x8C, 0xEC, 0xDA, 0xF0, 0x4A, 0x80}, "ONrsVf7jX6IaSNV6", 0x01, 0x01},
@@ -51,7 +51,7 @@ jooki_test_t jooks[] = {
     { {0x04, 0x28, 0xF4, 0xDA, 0xF0, 0x4A, 0x81}, "7WzlgEzqLgwTnWNy", 0x01, 0x05},
 };
 
-jooki_figure_t jooks_figures[] = {
+static jooki_figure_t jooks_figures[] = {
     {0x01, 0x00, "Dragon", "Figurine"},
     {0x01, 0x01, "Fox", "Figurine"},
     {0x01, 0x02, "Ghost", "Figurine"},
@@ -115,8 +115,8 @@ static int jooki_lookup(uint8_t tid, uint8_t fid) {
     return -1;
 }
 
-const uint8_t jooki_secret[] = {0x20, 0x20, 0x20, 0x6D, 0x24, 0x0B, 0xEB, 0x94, 0x2C, 0x80, 0x45, 0x16};
-const uint8_t NFC_SECRET[] = { 0x03, 0x9c, 0x25, 0x6f, 0xb9, 0x2e, 0xe8, 0x08, 0x09, 0x83, 0xd9, 0x33, 0x56};
+//static const uint8_t jooki_secret[] = {0x20, 0x20, 0x20, 0x6D, 0x24, 0x0B, 0xEB, 0x94, 0x2C, 0x80, 0x45, 0x16};
+static const uint8_t nfc_secret[] = { 0x03, 0x9c, 0x25, 0x6f, 0xb9, 0x2e, 0xe8, 0x08, 0x09, 0x83, 0xd9, 0x33, 0x56};
 
 #define JOOKI_UID_LEN  7
 #define JOOKI_IV_LEN   3
@@ -140,9 +140,9 @@ static int jooki_encode(uint8_t *iv, uint8_t tid, uint8_t fid, uint8_t *uid, uin
     for (uint8_t i = 0; i < JOOKI_PLAIN_LEN; i++) {
 
         if (i < 3)
-            enc[i] = d[i] ^ NFC_SECRET[i];
+            enc[i] = d[i] ^ nfc_secret[i];
         else
-            enc[i] = d[i] ^ NFC_SECRET[i] ^ d[i % 3];
+            enc[i] = d[i] ^ nfc_secret[i] ^ d[i % 3];
     }
 
     PrintAndLogEx(DEBUG, "encoded result.... %s", sprint_hex(enc, sizeof(enc)));
@@ -164,9 +164,9 @@ static int jooki_decode(uint8_t *b64, uint8_t *result) {
 
     for (uint8_t i = 0; i < JOOKI_PLAIN_LEN; i++) {
         if (i < 3)
-            result[i] = ndef[i] ^ NFC_SECRET[i];
+            result[i] = ndef[i] ^ nfc_secret[i];
         else
-            result[i] = ndef[i] ^ NFC_SECRET[i] ^ ndef[i % 3] ^ NFC_SECRET[i % 3];
+            result[i] = ndef[i] ^ nfc_secret[i] ^ ndef[i % 3] ^ nfc_secret[i % 3];
     }
     PrintAndLogEx(DEBUG, "(decode_jooki) plain......... %s", sprint_hex(result, sizeof(ndef)));
     return PM3_SUCCESS;

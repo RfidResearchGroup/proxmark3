@@ -213,7 +213,7 @@ static int CmdFDXBdemodBI(const char *Cmd) {
 // For the country part:
 // wget -q -O - "https://en.wikipedia.org/w/index.php?title=List_of_ISO_3166_country_codes&action=raw" | awk '/id=/{match($0, /\[\[([^\]|]*)/, a); name=a[1];getline;getline;getline;getline;getline;match($0, /numeric#([0-9]*)/, a);num=a[1]; if (num != "") {printf "    { %3u, \"%s\" },\n", num, name}}'
 // Beware the bottom of the list contains also Manufacturers list
-const fdxbCountryMapping_t fdxbCountryMapping[] = {
+static const fdxbCountryMapping_t fdxbCountryMapping[] = {
     {   4, "Afghanistan" },
     {   8, "Albania" },
     {  12, "Algeria" },

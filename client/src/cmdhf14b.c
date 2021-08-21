@@ -36,8 +36,8 @@
 
 // iso14b apdu input frame length
 static uint16_t apdu_frame_length = 0;
-uint16_t ats_fsc[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
-bool apdu_in_framing_enable = true;
+//static uint16_t ats_fsc[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
+static bool apdu_in_framing_enable = true;
 
 static int CmdHelp(const char *Cmd);
 

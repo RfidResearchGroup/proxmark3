@@ -45,7 +45,7 @@
 //static uint8_t bit_rates[9] = {8, 16, 32, 40, 50, 64, 100, 128, 0};
 
 // Default configuration
-t55xx_conf_block_t config = {
+static t55xx_conf_block_t config = {
     .modulation = DEMOD_ASK,
     .inverted = false,
     .offset = 0x00,

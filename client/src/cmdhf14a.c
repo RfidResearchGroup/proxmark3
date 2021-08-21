@@ -33,7 +33,7 @@
 #include "nfc/ndef.h"      // NDEFRecordsDecodeAndPrint
 #include "cmdnfc.h"        // print_type4_cc_info
 
-bool APDUInFramingEnable = true;
+static bool APDUInFramingEnable = true;
 
 static int CmdHelp(const char *Cmd);
 static int waitCmd(bool i_select, uint32_t timeout, bool verbose);
@@ -182,7 +182,7 @@ static const hintAIDListT hintAIDList[] = {
 
 // iso14a apdu input frame length
 static uint16_t g_frame_len = 0;
-uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
+static uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 
 static int CmdHF14AList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf 14a", "14a");
@@ -1573,7 +1573,7 @@ typedef struct {
     const char *desc;
 } uid_label_name;
 
-const uid_label_name uid_label_map[] = {
+static const uid_label_name uid_label_map[] = {
     // UID0, UID1, TEXT
     {0x02, 0x84, "M24SR64-Y"},
     {0x02, 0xA3, "25TA02KB-P"},

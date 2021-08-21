@@ -46,8 +46,8 @@
 #define EMRTD_AID_MRTD {0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01}
 
 // DESKey Types
-const uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
-const uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
+static const uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
+static const uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
 
 static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length, const char *path);
 static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length, const char *path);
@@ -704,8 +704,8 @@ static bool emrtd_select_and_read(uint8_t *dataout, size_t *dataoutlen, uint16_t
     return true;
 }
 
-const uint8_t jpeg_header[4] = { 0xFF, 0xD8, 0xFF, 0xE0 };
-const uint8_t jpeg2k_header[6] = { 0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50 };
+static const uint8_t jpeg_header[4] = { 0xFF, 0xD8, 0xFF, 0xE0 };
+static const uint8_t jpeg2k_header[6] = { 0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50 };
 
 static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length, const char *path) {
     int offset, datalen = 0;

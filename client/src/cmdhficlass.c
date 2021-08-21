@@ -153,7 +153,7 @@ static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t *bytes_sent) {
     }
 }
 
-const char *card_types[] = {
+static const char *card_types[] = {
     "PicoPass 16K / 16",                       // 000
     "PicoPass 32K with current book 16K / 16", // 001
     "Unknown Card Type!",                      // 010
@@ -164,7 +164,7 @@ const char *card_types[] = {
     "PicoPass 32K with current book 16K / 2",  // 111
 };
 
-uint8_t card_app2_limit[] = {
+static uint8_t card_app2_limit[] = {
     0xff,
     0xff,
     0xff,
@@ -175,7 +175,7 @@ uint8_t card_app2_limit[] = {
     0xff,
 };
 
-iclass_config_card_item_t iclass_config_types[14] =  {
+static iclass_config_card_item_t iclass_config_types[14] =  {
     {"", ""},
     {"", ""},
     {"", ""},

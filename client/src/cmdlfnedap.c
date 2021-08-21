@@ -33,9 +33,9 @@
 
 static int CmdHelp(const char *Cmd);
 
-const uint8_t translateTable[10] = {8, 2, 1, 12, 4, 5, 10, 13, 0, 9};
-const uint8_t invTranslateTable[16] = {8, 2, 1, 0xff, 4, 5, 0xff, 0xff, 0, 9, 6, 0xff, 3, 7, 0xff, 0xff};
-const uint8_t preamble[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}; // zero inside
+static const uint8_t translateTable[10] = {8, 2, 1, 12, 4, 5, 10, 13, 0, 9};
+static const uint8_t invTranslateTable[16] = {8, 2, 1, 0xff, 4, 5, 0xff, 0xff, 0, 9, 6, 0xff, 3, 7, 0xff, 0xff};
+static const uint8_t preamble[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}; // zero inside
 
 static uint8_t isEven_64_63(const uint8_t *data) { // 8
     uint32_t tmp[2];

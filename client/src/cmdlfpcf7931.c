@@ -23,7 +23,7 @@ static int CmdHelp(const char *Cmd);
 #define PCF7931_DEFAULT_OFFSET_POSITION 0
 
 // Default values - Configuration
-struct pcf7931_config configPcf = {
+static struct pcf7931_config configPcf = {
     {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
     PCF7931_DEFAULT_INITDELAY,
     PCF7931_DEFAULT_OFFSET_WIDTH,

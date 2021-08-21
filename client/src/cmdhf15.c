@@ -65,7 +65,7 @@ typedef struct {
     const char *desc;
 } productName_t;
 
-const productName_t uidmapping[] = {
+static const productName_t uidmapping[] = {
 
     // UID, #significant Bits, "Vendor(+Product)"
     { 0xE001000000000000LL, 16, "Motorola UK" },

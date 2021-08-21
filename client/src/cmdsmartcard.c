@@ -68,7 +68,7 @@ static uint8_t GetATRTA1(uint8_t *atr, size_t atrlen) {
     return 0x11; // default value is 0x11, corresponding to fmax=5 MHz, Fi=372, Di=1.
 }
 
-int DiArray[] = {
+static int DiArray[] = {
     0,  // b0000 RFU
     1,  // b0001
     2,
@@ -87,7 +87,7 @@ int DiArray[] = {
     0    // b1111 RFU
 };
 
-int FiArray[] = {
+static int FiArray[] = {
     372,    // b0000 Historical note: in ISO/IEC 7816-3:1989, this was assigned to cards with internal clock
     372,    // b0001
     558,    // b0010
@@ -106,7 +106,7 @@ int FiArray[] = {
     0       // b1111 RFU
 };
 
-float FArray[] = {
+static float FArray[] = {
     4,    // b0000 Historical note: in ISO/IEC 7816-3:1989, this was assigned to cards with internal clock
     5,    // b0001
     6,    // b0010

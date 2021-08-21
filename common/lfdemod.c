@@ -62,7 +62,7 @@ uint8_t g_debugMode = 0;
 # define prnt Dbprintf
 #endif
 
-signal_t signalprop = { 255, -255, 0, 0, true };
+static signal_t signalprop = { 255, -255, 0, 0, true };
 signal_t *getSignalProperties(void) {
     return &signalprop;
 }
