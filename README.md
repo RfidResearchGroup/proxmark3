@@ -60,8 +60,9 @@ We define generic Proxmark3 platforms as following devices.
    - **Note**: unknown pin assignments.
  - ⚠  Ryscorp Proxmark3 Pro 
    - **Note**: device has different fpga and unknown pin assignments.
- - ⚠  i-copy 
-   - **Note**: reversed hw,  experimental support maintained in [icopyx-community pm3 repo](https://github.com/iCopy-X-Community/icopyx-community-pm3)
+ - ⚠  iCopy-X
+   - **Note**: experimental support, currently incompatible with iCopy-X GUI as Proxmark client commands are now using cliparser.
+   - **Note**: see also [icopyx-community repos](https://github.com/iCopy-X-Community/) for upstream sources, reversed hw etc.
 
 **Unknown support status**
  - ⚠  VX
