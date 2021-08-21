@@ -2102,9 +2102,10 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
             PrintAndLogEx(INFO, _CYAN_("%s %06x") " param ID: 0x%02x param[%d]: %s", DesfireSelectWayToStr(selectway), id, paramid, paramlen, sprint_hex(param, paramlen));
     }
 
-    res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, id, false, 0, false, verbose);
+    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, false, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
+        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
