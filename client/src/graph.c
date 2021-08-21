@@ -43,8 +43,8 @@ size_t ClearGraph(bool redraw) {
     size_t gtl = GraphTraceLen;
     memset(GraphBuffer, 0x00, GraphTraceLen);
     GraphTraceLen = 0;
-    GraphStart = 0;
-    GraphStop = 0;
+    g_GraphStart = 0;
+    g_GraphStop = 0;
 
     g_DemodBufferLen = 0;
     if (redraw)
@@ -57,17 +57,17 @@ void save_restoreGB(uint8_t saveOpt) {
     static int SavedGB[MAX_GRAPH_TRACE_LEN];
     static size_t SavedGBlen = 0;
     static bool GB_Saved = false;
-    static int SavedGridOffsetAdj = 0;
+    static int Savedg_GridOffsetAdj = 0;
 
     if (saveOpt == GRAPH_SAVE) { //save
         memcpy(SavedGB, GraphBuffer, sizeof(GraphBuffer));
         SavedGBlen = GraphTraceLen;
         GB_Saved = true;
-        SavedGridOffsetAdj = GridOffset;
+        Savedg_GridOffsetAdj = g_GridOffset;
     } else if (GB_Saved) { //restore
         memcpy(GraphBuffer, SavedGB, sizeof(GraphBuffer));
         GraphTraceLen = SavedGBlen;
-        GridOffset = SavedGridOffsetAdj;
+        g_GridOffset = Savedg_GridOffsetAdj;
         RepaintGraphWindow();
     }
 }

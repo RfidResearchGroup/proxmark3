@@ -32,7 +32,7 @@ class ProxWidget;
 class Plot: public QWidget {
   private:
     QWidget *master;
-    double GraphPixelsPerPoint; // How many visual pixels are between each sample point (x axis)
+    double g_GraphPixelsPerPoint; // How many visual pixels are between each sample point (x axis)
     uint32_t CursorAPos;
     uint32_t CursorBPos;
     void PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRect, QPainter *painter, int graphNum);

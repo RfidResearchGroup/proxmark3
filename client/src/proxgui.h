@@ -32,13 +32,13 @@ void MainGraphics(void);
 void InitGraphics(int argc, char **argv, char *script_cmds_file, char *script_cmd, bool stayInCommandLoop);
 void ExitGraphics(void);
 
-extern double CursorScaleFactor;
-extern char CursorScaleFactorUnit[11];
-extern double PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, GridOffset;
-extern uint32_t CursorCPos, CursorDPos, GraphStart, GraphStop;
+extern double g_CursorScaleFactor;
+extern char g_CursorScaleFactorUnit[11];
+extern double g_PlotGridX, g_PlotGridY, g_PlotGridXdefault, g_PlotGridYdefault, g_GridOffset;
+extern uint32_t g_CursorCPos, g_CursorDPos, g_GraphStart, g_GraphStop;
 extern int CommandFinished;
 extern int offline;
-extern bool GridLocked;
+extern bool g_GridLocked;
 
 #define GRAPH_SAVE 1
 #define GRAPH_RESTORE 0

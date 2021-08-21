@@ -416,8 +416,8 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, b
 
     if (st) {
         *stCheck = st;
-        CursorCPos = ststart;
-        CursorDPos = stend;
+        g_CursorCPos = ststart;
+        g_CursorDPos = stend;
         if (verbose)
             PrintAndLogEx(DEBUG, "Found Sequence Terminator - First one is shown by orange / blue graph markers");
     }
@@ -851,8 +851,8 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
         } else
             setClockGrid(correlation, idx);
 
-        CursorCPos = idx_1;
-        CursorDPos = idx_1 + retval;
+        g_CursorCPos = idx_1;
+        g_CursorDPos = idx_1 + retval;
         g_DemodBufferLen = 0;
         RepaintGraphWindow();
     }
@@ -1562,16 +1562,16 @@ void setClockGrid(uint32_t clk, int offset) {
 
     if (offset > GraphTraceLen || offset < 0) return;
     if (clk < 8 || clk > GraphTraceLen) {
-        GridLocked = false;
-        GridOffset = 0;
-        PlotGridX = 0;
-        PlotGridXdefault = 0;
+        g_GridLocked = false;
+        g_GridOffset = 0;
+        g_PlotGridX = 0;
+        g_PlotGridXdefault = 0;
         RepaintGraphWindow();
     } else {
-        GridLocked = true;
-        GridOffset = offset;
-        PlotGridX = clk;
-        PlotGridXdefault = clk;
+        g_GridLocked = true;
+        g_GridOffset = offset;
+        g_PlotGridX = clk;
+        g_PlotGridXdefault = clk;
         RepaintGraphWindow();
     }
 }
@@ -1591,12 +1591,12 @@ int CmdGrid(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    PlotGridX = arg_get_dbl_def(ctx, 1, 0);
-    PlotGridY = arg_get_dbl_def(ctx, 2, 0);
+    g_PlotGridX = arg_get_dbl_def(ctx, 1, 0);
+    g_PlotGridY = arg_get_dbl_def(ctx, 2, 0);
     CLIParserFree(ctx);
-    PrintAndLogEx(INFO, "Setting X %.0f  Y %.0f", PlotGridX, PlotGridY);
-    PlotGridXdefault = PlotGridX;
-    PlotGridYdefault = PlotGridY;
+    PrintAndLogEx(INFO, "Setting X %.0f  Y %.0f", g_PlotGridX, g_PlotGridY);
+    g_PlotGridXdefault = g_PlotGridX;
+    g_PlotGridYdefault = g_PlotGridY;
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -1615,10 +1615,10 @@ static int CmdSetGraphMarkers(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CursorCPos = arg_get_u32_def(ctx, 1, 0);
-    CursorDPos = arg_get_u32_def(ctx, 2, 0);
+    g_CursorCPos = arg_get_u32_def(ctx, 1, 0);
+    g_CursorDPos = arg_get_u32_def(ctx, 2, 0);
     CLIParserFree(ctx);
-    PrintAndLogEx(INFO, "Setting orange %u blue %u", CursorCPos, CursorDPos);
+    PrintAndLogEx(INFO, "Setting orange %u blue %u", g_CursorCPos, g_CursorDPos);
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -2003,8 +2003,8 @@ int CmdTuneSamples(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor %d (blue) is %.2f kHz, %d (red) is %.2f kHz.\n\n",
                       LF_DIVISOR_134, LF_DIV2FREQ(LF_DIVISOR_134), LF_DIVISOR_125, LF_DIV2FREQ(LF_DIVISOR_125));
         GraphTraceLen = 256;
-        CursorCPos = LF_DIVISOR_125;
-        CursorDPos = LF_DIVISOR_134;
+        g_CursorCPos = LF_DIVISOR_125;
+        g_CursorDPos = LF_DIVISOR_134;
         ShowGraphWindow();
         RepaintGraphWindow();
     } else {
@@ -2277,14 +2277,14 @@ static int CmdTimeScale(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    CursorScaleFactor = arg_get_dbl_def(ctx, 1, 1);
-    if (CursorScaleFactor <= 0) {
+    g_CursorScaleFactor = arg_get_dbl_def(ctx, 1, 1);
+    if (g_CursorScaleFactor <= 0) {
         PrintAndLogEx(FAILED, "bad, can't have negative or zero timescale factor");
-        CursorScaleFactor = 1;
+        g_CursorScaleFactor = 1;
     }
     int len = 0;
-    CursorScaleFactorUnit[0] = '\x00';
-    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)CursorScaleFactorUnit, sizeof(CursorScaleFactorUnit), &len);
+    g_CursorScaleFactorUnit[0] = '\x00';
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)g_CursorScaleFactorUnit, sizeof(g_CursorScaleFactorUnit), &len);
     CLIParserFree(ctx);
     RepaintGraphWindow();
     return PM3_SUCCESS;
