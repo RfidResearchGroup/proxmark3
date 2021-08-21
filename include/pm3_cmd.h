@@ -886,10 +886,10 @@ typedef struct {
 
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
-/* Whether a bootloader that understands the common_area is present */
+/* Whether a bootloader that understands the g_common_area is present */
 #define DEVICE_INFO_FLAG_BOOTROM_PRESENT             (1<<0)
 
-/* Whether a osimage that understands the common_area is present */
+/* Whether a osimage that understands the g_common_area is present */
 #define DEVICE_INFO_FLAG_OSIMAGE_PRESENT             (1<<1)
 
 /* Set if the bootloader is currently executing */

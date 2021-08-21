@@ -12,7 +12,7 @@
 #include "proxmark3_arm.h"
 #define DEBUG 0
 
-struct common_area common_area __attribute__((section(".commonarea")));
+common_area_t g_common_area __attribute__((section(".commonarea")));
 uint32_t start_addr, end_addr;
 bool bootrom_unlocked;
 extern uint32_t _bootrom_start[], _bootrom_end[], _flash_start[], _flash_end[], _osimage_entry[];
@@ -90,7 +90,7 @@ static void UsbPacketReceived(uint8_t *packet) {
                    DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH |
                    DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO |
                    DEVICE_INFO_FLAG_UNDERSTANDS_VERSION;
-            if (common_area.flags.osimage_present)
+            if (g_common_area.flags.osimage_present)
                 arg0 |= DEVICE_INFO_FLAG_OSIMAGE_PRESENT;
 
             reply_old(CMD_DEVICE_INFO, arg0, 1, 2, 0, 0);
@@ -196,9 +196,9 @@ static void flash_mode(void) {
     end_addr = 0;
     bootrom_unlocked = false;
     uint8_t rx[sizeof(PacketCommandOLD)];
-    common_area.command = COMMON_AREA_COMMAND_NONE;
-    if (!common_area.flags.button_pressed && BUTTON_PRESS())
-        common_area.flags.button_pressed = 1;
+    g_common_area.command = COMMON_AREA_COMMAND_NONE;
+    if (!g_common_area.flags.button_pressed && BUTTON_PRESS())
+        g_common_area.flags.button_pressed = 1;
 
     usb_enable();
 
@@ -215,12 +215,12 @@ static void flash_mode(void) {
             }
         }
 
-        if (common_area.flags.button_pressed && !BUTTON_PRESS()) {
-            common_area.flags.button_pressed = 0;
+        if (g_common_area.flags.button_pressed && !BUTTON_PRESS()) {
+            g_common_area.flags.button_pressed = 0;
         }
-        if (!common_area.flags.button_pressed && BUTTON_PRESS()) {
+        if (!g_common_area.flags.button_pressed && BUTTON_PRESS()) {
             /* Perform a reset to leave flash mode */
-            common_area.flags.button_pressed = 1;
+            g_common_area.flags.button_pressed = 1;
             usb_disable();
             LED_B_ON();
             AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
@@ -292,38 +292,38 @@ void BootROM(void) {
 
     LED_A_ON();
 
-    int common_area_present = 0;
+    int g_common_area_present = 0;
     switch (AT91C_BASE_RSTC->RSTC_RSR & AT91C_RSTC_RSTTYP) {
         case AT91C_RSTC_RSTTYP_WATCHDOG:
         case AT91C_RSTC_RSTTYP_SOFTWARE:
         case AT91C_RSTC_RSTTYP_USER:
-            /* In these cases the common_area in RAM should be ok, retain it if it's there */
-            if (common_area.magic == COMMON_AREA_MAGIC && common_area.version == 1)
-                common_area_present = 1;
+            /* In these cases the g_common_area in RAM should be ok, retain it if it's there */
+            if (g_common_area.magic == COMMON_AREA_MAGIC && g_common_area.version == 1)
+                g_common_area_present = 1;
             break;
         default: /* Otherwise, initialize it from scratch */
             break;
     }
 
-    if (!common_area_present) {
+    if (!g_common_area_present) {
         /* Common area not ok, initialize it */
         size_t i;
         /* Makeshift memset, no need to drag util.c into this */
-        for (i = 0; i < sizeof(common_area); i++)
-            ((char *)&common_area)[i] = 0;
+        for (i = 0; i < sizeof(g_common_area); i++)
+            ((char *)&g_common_area)[i] = 0;
 
-        common_area.magic = COMMON_AREA_MAGIC;
-        common_area.version = 1;
+        g_common_area.magic = COMMON_AREA_MAGIC;
+        g_common_area.version = 1;
     }
-    common_area.flags.bootrom_present = 1;
+    g_common_area.flags.bootrom_present = 1;
 
-    if ((common_area.command == COMMON_AREA_COMMAND_ENTER_FLASH_MODE) ||
-            (!common_area.flags.button_pressed && BUTTON_PRESS()) ||
+    if ((g_common_area.command == COMMON_AREA_COMMAND_ENTER_FLASH_MODE) ||
+            (!g_common_area.flags.button_pressed && BUTTON_PRESS()) ||
             (*_osimage_entry == 0xffffffffU)) {
         flash_mode();
     } else {
         // clear button status, even if button still pressed
-        common_area.flags.button_pressed = 0;
+        g_common_area.flags.button_pressed = 0;
         // jump to Flash address of the osimage entry point (LSBit set for thumb mode)
         __asm("bx %0\n" : : "r"(((uint32_t)_osimage_entry) | 0x1));
     }

@@ -71,7 +71,7 @@ int g_dbglevel = DBG_ERROR;
 uint8_t g_trigger = 0;
 bool g_hf_field_active = false;
 extern uint32_t _stack_start[], _stack_end[];
-struct common_area common_area __attribute__((section(".commonarea")));
+common_area_t g_common_area __attribute__((section(".commonarea")));
 static int button_status = BUTTON_NO_CLICK;
 static bool allow_send_wtx = false;
 uint16_t g_tearoff_delay_us = 0;
@@ -303,7 +303,7 @@ static void SendVersion(void) {
 #ifndef WITH_NO_COMPRESSION
     // Send Chip ID and used flash memory
     uint32_t text_and_rodata_section_size = (uint32_t)__data_src_start__ - (uint32_t)_flash_start;
-    uint32_t compressed_data_section_size = common_area.arg1;
+    uint32_t compressed_data_section_size = g_common_area.arg1;
 #endif
 
     struct p {
@@ -2413,8 +2413,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_START_FLASH: {
-            if (common_area.flags.bootrom_present) {
-                common_area.command = COMMON_AREA_COMMAND_ENTER_FLASH_MODE;
+            if (g_common_area.flags.bootrom_present) {
+                g_common_area.command = COMMON_AREA_COMMAND_ENTER_FLASH_MODE;
             }
             usb_disable();
             AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
@@ -2424,7 +2424,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_DEVICE_INFO: {
             uint32_t dev_info = DEVICE_INFO_FLAG_OSIMAGE_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_OS;
-            if (common_area.flags.bootrom_present) {
+            if (g_common_area.flags.bootrom_present) {
                 dev_info |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
             }
             reply_old(CMD_DEVICE_INFO, dev_info, 0, 0, 0, 0);

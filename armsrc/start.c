@@ -20,7 +20,7 @@
 #include "BigBuf.h"
 #include "string.h"
 
-extern struct common_area common_area;
+extern common_area_t g_common_area;
 extern uint32_t __data_src_start__[], __data_start__[], __data_end__[], __bss_start__[], __bss_end__[];
 
 #ifndef WITH_NO_COMPRESSION
@@ -35,7 +35,7 @@ static void uncompress_data_section(void) {
     if (res < 0)
         return;
     // save the size of the compressed data section
-    common_area.arg1 = avail_in;
+    g_common_area.arg1 = avail_in;
 }
 #endif
 
@@ -43,13 +43,13 @@ void __attribute__((section(".startos"))) Vector(void);
 void Vector(void) {
     /* Stack should have been set up by the bootloader */
 
-    if (common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
+    if (g_common_area.magic != COMMON_AREA_MAGIC || g_common_area.version != 1) {
         /* Initialize common area */
-        memset(&common_area, 0, sizeof(common_area));
-        common_area.magic = COMMON_AREA_MAGIC;
-        common_area.version = 1;
+        memset(&g_common_area, 0, sizeof(g_common_area));
+        g_common_area.magic = COMMON_AREA_MAGIC;
+        g_common_area.version = 1;
     }
-    common_area.flags.osimage_present = 1;
+    g_common_area.flags.osimage_present = 1;
 
     /* Set up data segment: Copy from flash to ram */
 #ifdef WITH_NO_COMPRESSION
