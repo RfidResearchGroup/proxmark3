@@ -21,6 +21,8 @@ Known definitions:
 +--------------------------------------------+
 | PM3GENERIC      | Proxmark3 generic target |
 +--------------------------------------------+
+| PM3ICOPYX       | iCopy-X with XC3S100E    |
++--------------------------------------------+
 
 +============================================+
 | PLATFORM_EXTRAS | DESCRIPTION              |
@@ -71,15 +73,23 @@ $(HELP_DEFINITIONS)
 endef
 
 PLTNAME = Unknown Platform
+PLATFORM_FPGA = fpga-undefined
 
 ifeq ($(PLATFORM),PM3RDV4)
     PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH -DRDV4
     PLTNAME = Proxmark3 RDV4
+    PLATFORM_FPGA = xc2s30
 else ifeq ($(PLATFORM),PM3OTHER)
     $(warning PLATFORM=PM3OTHER is deprecated, please use PLATFORM=PM3GENERIC)
     PLTNAME = Proxmark3 generic target
+    PLATFORM_FPGA = xc2s30
 else ifeq ($(PLATFORM),PM3GENERIC)
     PLTNAME = Proxmark3 generic target
+    PLATFORM_FPGA = xc2s30
+else ifeq ($(PLATFORM),PM3ICOPYX)
+    PLATFORM_DEFS = -DWITH_FLASH -DICOPYX -DXC3
+    PLTNAME = iCopy-X with XC3S100E
+    PLATFORM_FPGA = xc3s100e
 
 else
     $(error Invalid or empty PLATFORM: $(PLATFORM). $(KNOWN_DEFINITIONS))
@@ -204,6 +214,7 @@ export PLATFORM_EXTRAS
 export PLATFORM_EXTRAS_INFO
 export PLATFORM_SIZE
 export PLTNAME
+export PLATFORM_FPGA
 export PLATFORM_DEFS
 export PLATFORM_DEFS_INFO
 export PLATFORM_DEFS_INFO_STANDALONE
@@ -212,6 +223,7 @@ export PLATFORM_CHANGED
 $(info ===================================================================)
 $(info Platform name:     $(PLTNAME))
 $(info PLATFORM:          $(PLATFORM))
+$(info PLATFORM_FPGA:     $(PLATFORM_FPGA))
 $(info PLATFORM_SIZE:     $(PLATFORM_SIZE))
 $(info Platform extras:   $(PLATFORM_EXTRAS_INFO))
 $(info Included options:  $(PLATFORM_DEFS_INFO))

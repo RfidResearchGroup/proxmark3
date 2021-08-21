@@ -51,11 +51,7 @@ void ReadThinFilm(void) {
 static uint16_t FpgaSendQueueDelay;
 
 static uint16_t ReadReaderField(void) {
-#if defined RDV4
-    return AvgAdc(ADC_CHAN_HF_RDV40);
-#else
     return AvgAdc(ADC_CHAN_HF);
-#endif
 }
 
 static void CodeThinfilmAsTag(const uint8_t *cmd, uint16_t len) {

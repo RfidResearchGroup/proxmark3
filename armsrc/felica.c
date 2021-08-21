@@ -445,8 +445,11 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
     if (g_dbglevel >= DBG_DEBUG) Dbprintf("Start iso18092_setup");
 
     LEDsoff();
+#if defined XC3
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+#else
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF_FELICA);
-
+#endif
     // allocate command receive buffer
     BigBuf_free();
     BigBuf_Clear_ext(false);

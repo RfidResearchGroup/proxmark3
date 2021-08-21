@@ -212,11 +212,7 @@ static void MeasureAntennaTuning(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
     SpinDelay(50);
 
-#if defined RDV4
-    payload.v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
-#else
     payload.v_hf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
-#endif
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_MEASURE_ANTENNA_TUNING, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
@@ -226,11 +222,7 @@ static void MeasureAntennaTuning(void) {
 // Measure HF in milliVolt
 static uint16_t MeasureAntennaTuningHfData(void) {
 
-#if defined RDV4
-    return (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
-#else
     return (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
-#endif
 
 }
 
@@ -610,12 +602,8 @@ void ListenReaderField(uint8_t limit) {
 
     if (limit == HF_ONLY) {
 
-#if defined RDV4
         // iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
-        hf_av = hf_max = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
-#else
         hf_av = hf_max = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
-#endif
         Dbprintf("HF 13.56MHz Baseline: %dmV", hf_av);
         hf_baseline = hf_av;
     }
@@ -666,11 +654,7 @@ void ListenReaderField(uint8_t limit) {
                     LED_B_OFF();
             }
 
-#if defined RDV4
-            hf_av_new = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
-#else
             hf_av_new = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
-#endif
             // see if there's a significant change
             if (ABS(hf_av - hf_av_new) > REPORT_CHANGE) {
                 Dbprintf("HF 13.56MHz Field Change: %5dmV", hf_av_new);

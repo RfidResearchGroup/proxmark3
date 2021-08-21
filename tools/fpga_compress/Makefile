@@ -1,7 +1,19 @@
+ifeq ($(PLTNAME),)
+    -include ../../Makefile.platform
+    -include ../../.Makefile.options.cache
+    ifneq ($(PLATFORM), $(CACHED_PLATFORM))
+        $(error platform definitions have been changed, please "make clean" at the root of the project)
+    endif
+endif
+
 MYSRCPATHS =
 MYINCLUDES = -I../../common_fpga
 MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
-MYDEFS =
+ifeq ($(PLATFORM),PM3ICOPYX)
+  MYDEFS = -DXC3
+else
+  MYDEFS =
+endif
 MYSRCS =
 MYLIBS =
 

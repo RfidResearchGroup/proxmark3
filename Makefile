@@ -123,7 +123,7 @@ nonce2key/%: FORCE
 mf_nonce_brute/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/mf_nonce_brute $(patsubst mf_nonce_brute/%,%,$@) DESTDIR=$(MYDESTDIR)
-fpga_compress/%: FORCE
+fpga_compress/%: FORCE cleanifplatformchanged
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/fpga_compress $(patsubst fpga_compress/%,%,$@) DESTDIR=$(MYDESTDIR)
 bootrom/%: FORCE cleanifplatformchanged
@@ -222,6 +222,7 @@ ifeq ($(PLATFORM_CHANGED),true)
 	$(Q)$(MAKE) --no-print-directory -C bootrom clean
 	$(Q)$(MAKE) --no-print-directory -C armsrc clean
 	$(Q)$(MAKE) --no-print-directory -C recovery clean
+	$(Q)$(MAKE) --no-print-directory -C tools/fpga_compress clean
 	$(Q)echo CACHED_PLATFORM=$(PLATFORM) > .Makefile.options.cache
 	$(Q)echo CACHED_PLATFORM_EXTRAS=$(PLATFORM_EXTRAS) >> .Makefile.options.cache
 	$(Q)echo CACHED_PLATFORM_DEFS=$(PLATFORM_DEFS) >> .Makefile.options.cache
@@ -252,7 +253,7 @@ style:
 	# Make sure astyle is installed
 	@which astyle >/dev/null || ( echo "Please install 'astyle' package first" ; exit 1 )
 	# Remove spaces & tabs at EOL, add LF at EOF if needed on *.c, *.h, *.cpp. *.lua, *.py, *.pl, Makefile, *.v, pm3
-	find . \( -not -path "./cov-int/*" -and -not -path "./fpga/xst/*" -and \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" -or -name "*.v" -or -name "pm3" \) \) \
+	find . \( -not -path "./cov-int/*" -and -not -path "./fpga*/xst/*" -and \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" -or -name "*.v" -or -name "pm3" \) \) \
 	    -exec perl -pi -e 's/[ \t]+$$//' {} \; \
 	    -exec sh -c "tail -c1 {} | xxd -p | tail -1 | grep -q -v 0a$$" \; \
 	    -exec sh -c "echo >> {}" \;

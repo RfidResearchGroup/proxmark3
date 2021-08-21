@@ -772,11 +772,7 @@ void SimulateIso14443bTag(uint8_t *pupi) {
         // find reader field
         if (cardSTATE == SIM_NOFIELD) {
 
-#if defined RDV4
-            vHf = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
-#else
             vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
-#endif
             if (vHf > MF_MINFIELDV) {
                 cardSTATE = SIM_IDLE;
                 LED_A_ON();
@@ -976,11 +972,7 @@ void Simulate_iso14443b_srx_tag(uint8_t *uid) {
         // find reader field
         if (cardSTATE == SIM_NOFIELD) {
 
-#if defined RDV4
-            vHf = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
-#else
             vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
-#endif
             if (vHf > MF_MINFIELDV) {
                 cardSTATE = SIM_IDLE;
                 LED_A_ON();
