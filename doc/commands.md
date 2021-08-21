@@ -78,7 +78,7 @@ Check column "offline" for their availability.
 |`analyse lfsr           `|Y       |`LFSR tests`
 |`analyse a              `|Y       |`num bits test`
 |`analyse nuid           `|Y       |`create NUID from 7byte UID`
-|`analyse demodbuff      `|Y       |`Load binary string to demodbuffer`
+|`analyse demodbuff      `|Y       |`Load binary string to DemodBuffer`
 |`analyse freq           `|Y       |`Calc wave lengths`
 |`analyse foo            `|Y       |`muxer`
 |`analyse units          `|Y       |`convert ETU <> US <> SSP_CLK (3.39MHz)`
