@@ -13,7 +13,7 @@
 #include "util_posix.h"
 #include "comms.h"
 
-pm3_device *pm3_open(char *port) {
+pm3_device_t *pm3_open(char *port) {
     pm3_init();
     OpenProxmark(&g_session.current_device, port, false, 20, false, USART_BAUD_RATE);
     if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS)) {
@@ -30,7 +30,7 @@ pm3_device *pm3_open(char *port) {
     return g_session.current_device;
 }
 
-void pm3_close(pm3_device *dev) {
+void pm3_close(pm3_device_t *dev) {
     // Clean up the port
     if (g_session.pm3_present) {
         clearCommandBuffer();
@@ -40,16 +40,16 @@ void pm3_close(pm3_device *dev) {
     }
 }
 
-int pm3_console(pm3_device *dev, char *Cmd) {
+int pm3_console(pm3_device_t *dev, char *Cmd) {
     // For now, there is no real device context:
     (void) dev;
     return CommandReceived(Cmd);
 }
 
-const char *pm3_name_get(pm3_device *dev) {
+const char *pm3_name_get(pm3_device_t *dev) {
     return dev->g_conn->serial_port_name;
 }
 
-pm3_device *pm3_get_current_dev(void) {
+pm3_device_t *pm3_get_current_dev(void) {
     return g_session.current_device;
 }

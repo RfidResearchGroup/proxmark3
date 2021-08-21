@@ -158,7 +158,7 @@ typedef struct {
 typedef struct {
     uint32_t blockdata;
     bool valid;
-}  t55xx_memory_item_t ;
+}  t55xx_memory_item_t;
 
 t55xx_conf_block_t Get_t55xx_Config(void);
 void Set_t55xx_Config(t55xx_conf_block_t conf);

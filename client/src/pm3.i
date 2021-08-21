@@ -12,13 +12,13 @@ typedef struct {
     %extend {
         pm3() {
 //            printf("SWIG pm3 constructor, get current pm3\n");
-            pm3_device * p = pm3_get_current_dev();
+            pm3_device_t * p = pm3_get_current_dev();
             p->script_embedded = 1;
             return p;
         }
         pm3(char *port) {
 //            printf("SWIG pm3 constructor with port, open pm3\n");
-            pm3_device * p = pm3_open(port);
+            pm3_device_t * p = pm3_open(port);
             p->script_embedded = 0;
             return p;
         }

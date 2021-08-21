@@ -63,11 +63,10 @@ typedef struct {
 
 extern communication_arg_t g_conn;
 
-typedef struct pm3_device pm3_device;
-struct pm3_device {
+typedef struct pm3_device {
     communication_arg_t *g_conn;
     int script_embedded;
-};
+} pm3_device_t;
 
 void *uart_receiver(void *targ);
 void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
@@ -78,10 +77,9 @@ void clearCommandBuffer(void);
 
 #define FLASHMODE_SPEED 460800
 bool IsCommunicationThreadDead(void);
-typedef struct pm3_device pm3_device;
-bool OpenProxmark(pm3_device **dev, char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed);
-int TestProxmark(pm3_device *dev);
-void CloseProxmark(pm3_device *dev);
+bool OpenProxmark(pm3_device_t **dev, char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed);
+int TestProxmark(pm3_device_t *dev);
+void CloseProxmark(pm3_device_t *dev);
 
 bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
 bool WaitForResponseTimeout(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout);

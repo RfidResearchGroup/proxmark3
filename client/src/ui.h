@@ -50,7 +50,7 @@ typedef struct {
 //    uint8_t device_debug_level;
     uint16_t client_exe_delay;
     char *history_path;
-    pm3_device *current_device;
+    pm3_device_t *current_device;
 } session_arg_t;
 
 extern session_arg_t g_session;

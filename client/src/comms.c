@@ -542,7 +542,7 @@ bool IsCommunicationThreadDead(void) {
     return ret;
 }
 
-bool OpenProxmark(pm3_device **dev, char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
+bool OpenProxmark(pm3_device_t **dev, char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
 
     if (!wait_for_port) {
         PrintAndLogEx(INFO, "Using UART port " _YELLOW_("%s"), port);
@@ -593,7 +593,7 @@ bool OpenProxmark(pm3_device **dev, char *port, bool wait_for_port, int timeout,
 
         fflush(stdout);
         if (*dev == NULL) {
-            *dev = calloc(sizeof(pm3_device), sizeof(uint8_t));
+            *dev = calloc(sizeof(pm3_device_t), sizeof(uint8_t));
         }
         (*dev)->g_conn = &g_conn; // TODO g_conn shouldn't be global
         return true;
@@ -601,7 +601,7 @@ bool OpenProxmark(pm3_device **dev, char *port, bool wait_for_port, int timeout,
 }
 
 // check if we can communicate with Pm3
-int TestProxmark(pm3_device *dev) {
+int TestProxmark(pm3_device_t *dev) {
 
     PacketResponseNG resp;
     uint16_t len = 32;
@@ -664,7 +664,7 @@ int TestProxmark(pm3_device *dev) {
     return PM3_SUCCESS;
 }
 
-void CloseProxmark(pm3_device *dev) {
+void CloseProxmark(pm3_device_t *dev) {
     dev->g_conn->run = false;
 
 #ifdef __BIONIC__
