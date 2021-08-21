@@ -5067,7 +5067,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
             if (trkeylen > 0) {
                 uint8_t prevReaderID[CRYPTO_AES_BLOCK_SIZE] = {0};
                 DesfireDecodePrevReaderID(&dctx, trkey, transactionCounter, resp, prevReaderID);
-                PrintAndLogEx(INFO, "Prev reader id: %s", resplen, sprint_hex(prevReaderID, CRYPTO_AES_BLOCK_SIZE));
+                PrintAndLogEx(INFO, "Prev reader id: %s", sprint_hex(prevReaderID, CRYPTO_AES_BLOCK_SIZE));
             }
 
             readeridpushed = true;
