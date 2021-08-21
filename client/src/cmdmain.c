@@ -229,12 +229,12 @@ static int CmdHints(const char *Cmd) {
     }
 
     if (turn_off) {
-        session.show_hints = false;
+        g_session.show_hints = false;
     } else if (turn_on) {
-        session.show_hints = true;
+        g_session.show_hints = true;
     }
 
-    PrintAndLogEx(INFO, "Hints are %s", (session.show_hints) ? "ON" : "OFF");
+    PrintAndLogEx(INFO, "Hints are %s", (g_session.show_hints) ? "ON" : "OFF");
     return PM3_SUCCESS;
 }
 

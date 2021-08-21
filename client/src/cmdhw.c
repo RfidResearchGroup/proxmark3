@@ -843,16 +843,16 @@ static int CmdConnect(const char *Cmd) {
         memcpy(port, g_conn.serial_port_name, sizeof(port));
     }
 
-    if (session.pm3_present) {
-        CloseProxmark(session.current_device);
+    if (g_session.pm3_present) {
+        CloseProxmark(g_session.current_device);
     }
 
     // 10 second timeout
-    OpenProxmark(&session.current_device, port, false, 10, false, baudrate);
+    OpenProxmark(&g_session.current_device, port, false, 10, false, baudrate);
 
-    if (session.pm3_present && (TestProxmark(session.current_device) != PM3_SUCCESS)) {
+    if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS)) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark3\n");
-        CloseProxmark(session.current_device);
+        CloseProxmark(g_session.current_device);
         return PM3_ENOTTY;
     }
     return PM3_SUCCESS;

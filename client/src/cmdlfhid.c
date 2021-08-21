@@ -556,7 +556,7 @@ static int CmdHIDBrute(const char *Cmd) {
     fin_hi = fin_low = false;
     do {
 
-        if (!session.pm3_present) {
+        if (!g_session.pm3_present) {
             PrintAndLogEx(WARNING, "Device offline\n");
             return PM3_ENODATA;
         }

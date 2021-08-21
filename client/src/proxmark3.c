@@ -126,27 +126,27 @@ static void prompt_compose(char *buf, size_t buflen, const char *promptctx, cons
 
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
-    if (IsCommunicationThreadDead() && session.pm3_present) {
+    if (IsCommunicationThreadDead() && g_session.pm3_present) {
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
         prompt_dev = PROXPROMPT_DEV_OFFLINE;
 #ifdef HAVE_READLINE
         char prompt[PROXPROMPT_MAX_SIZE] = {0};
         prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
         char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
-        memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
+        memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
         rl_set_prompt(prompt_filtered);
         rl_redisplay();
 #endif
-        CloseProxmark(session.current_device);
+        CloseProxmark(g_session.current_device);
     }
     msleep(10);
     return 0;
 }
 #ifdef HAVE_READLINE
 static void flush_history(void) {
-    if (session.history_path) {
-        write_history(session.history_path);
-        free(session.history_path);
+    if (g_session.history_path) {
+        write_history(g_session.history_path);
+        free(g_session.history_path);
     }
 }
 
@@ -178,7 +178,7 @@ static bool DetectWindowsAnsiSupport(void) {
 #endif
 
     // disable colors if stdin or stdout are redirected
-    if ((! session.stdinOnTTY) || (! session.stdoutOnTTY))
+    if ((! g_session.stdinOnTTY) || (! g_session.stdoutOnTTY))
         return false;
 
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -250,7 +250,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     bool stdinOnPipe = !isatty(STDIN_FILENO);
     char script_cmd_buf[256] = {0x00};  // iceman, needs lua script the same file_path_buffer as the rest
 
-    if (session.pm3_present) {
+    if (g_session.pm3_present) {
         // cache Version information now:
         if (execCommand || script_cmds_file || stdinOnPipe)
             pm3_version(false, false);
@@ -272,13 +272,13 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     }
 
 #ifdef HAVE_READLINE
-    session.history_path = NULL;
-    if (session.incognito) {
+    g_session.history_path = NULL;
+    if (g_session.incognito) {
         PrintAndLogEx(INFO, "No history will be recorded");
     } else {
-        if (searchHomeFilePath(&session.history_path, NULL, PROXHISTORY, true) != PM3_SUCCESS) {
+        if (searchHomeFilePath(&g_session.history_path, NULL, PROXHISTORY, true) != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "No history will be recorded");
-            session.history_path = NULL;
+            g_session.history_path = NULL;
         } else {
 
 #  if defined(_WIN32)
@@ -291,7 +291,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
 #  endif
             rl_catch_signals = 1;
             rl_set_signals();
-            read_history(session.history_path);
+            read_history(g_session.history_path);
         }
     }
 #endif
@@ -300,7 +300,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     while (1) {
 
         bool printprompt = false;
-        if (session.pm3_present) {
+        if (g_session.pm3_present) {
             if (g_conn.send_via_fpc_usart == false)
                 prompt_dev = PROXPROMPT_DEV_USB;
             else
@@ -380,13 +380,13 @@ check_script:
                     char prompt[PROXPROMPT_MAX_SIZE] = {0};
                     prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
                     char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
-                    memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
+                    memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
                     g_pendingPrompt = true;
 #ifdef HAVE_READLINE
                     script_cmd = readline(prompt_filtered);
 #if defined(_WIN32)
                     //Check if color support needs to be enabled again in case the window buffer did change
-                    session.supports_colors = DetectWindowsAnsiSupport();
+                    g_session.supports_colors = DetectWindowsAnsiSupport();
 #endif
                     if (script_cmd != NULL) {
                         execCommand = true;
@@ -475,7 +475,7 @@ check_script:
         }
     } // end while
 
-    if (session.pm3_present) {
+    if (g_session.pm3_present) {
         clearCommandBuffer();
         SendCommandNG(CMD_QUIT_SESSION, NULL, 0);
         msleep(100); // Make sure command is sent before killing client
@@ -496,14 +496,14 @@ check_script:
 
 #ifndef LIBPM3
 static void dumpAllHelp(int markdown, bool full_help) {
-    session.help_dump_mode = true;
+    g_session.help_dump_mode = true;
     PrintAndLogEx(NORMAL, "\n%sProxmark3 command dump%s\n\n", markdown ? "# " : "", markdown ? "" : "\n======================");
     PrintAndLogEx(NORMAL, "Some commands are available only if a Proxmark3 is actually connected.%s\n", markdown ? "  " : "");
     PrintAndLogEx(NORMAL, "Check column \"offline\" for their availability.\n");
     PrintAndLogEx(NORMAL, "\n");
     command_t *cmds = getTopLevelCommandTable();
     dumpCommandsRecursive(cmds, markdown, full_help);
-    session.help_dump_mode = false;
+    g_session.help_dump_mode = false;
     PrintAndLogEx(NORMAL, "Full help dump done.");
 }
 #endif //LIBPM3
@@ -678,7 +678,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
         PrintAndLogEx(SUCCESS, "   "_YELLOW_("%s"), filepaths[i]);
     }
 
-    if (OpenProxmark(&session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
+    if (OpenProxmark(&g_session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
         PrintAndLogEx(NORMAL, _GREEN_(" found"));
     } else {
         PrintAndLogEx(ERR, "Could not find Proxmark3 on " _RED_("%s") ".\n", serial_port_name);
@@ -718,7 +718,7 @@ finish:
     if (ret != PM3_SUCCESS)
         PrintAndLogEx(INFO, "The flashing procedure failed, follow the suggested steps!");
     ret = flash_stop_flashing();
-    CloseProxmark(session.current_device);
+    CloseProxmark(g_session.current_device);
 finish2:
     for (int i = 0 ; i < num_files; ++i) {
         if (filepaths[i] != NULL)
@@ -736,13 +736,13 @@ finish2:
 void pm3_init(void) {
     srand(time(0));
 
-    session.pm3_present = false;
-    session.help_dump_mode = false;
-    session.incognito = false;
-    session.supports_colors = false;
-    session.emoji_mode = EMO_ALTTEXT;
-    session.stdinOnTTY = false;
-    session.stdoutOnTTY = false;
+    g_session.pm3_present = false;
+    g_session.help_dump_mode = false;
+    g_session.incognito = false;
+    g_session.supports_colors = false;
+    g_session.emoji_mode = EMO_ALTTEXT;
+    g_session.stdinOnTTY = false;
+    g_session.stdoutOnTTY = false;
 
     // set global variables soon enough to get the log path
     set_my_executable_path();
@@ -788,17 +788,17 @@ int main(int argc, char *argv[]) {
     // For info, grep --color=auto is doing sth like this, plus test getenv("TERM") != "dumb":
     //   struct stat tmp_stat;
     //   if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
-    session.stdinOnTTY = isatty(STDIN_FILENO);
-    session.stdoutOnTTY = isatty(STDOUT_FILENO);
-    session.supports_colors = false;
-    session.emoji_mode = EMO_ALTTEXT;
-    if (session.stdinOnTTY && session.stdoutOnTTY) {
+    g_session.stdinOnTTY = isatty(STDIN_FILENO);
+    g_session.stdoutOnTTY = isatty(STDOUT_FILENO);
+    g_session.supports_colors = false;
+    g_session.emoji_mode = EMO_ALTTEXT;
+    if (g_session.stdinOnTTY && g_session.stdoutOnTTY) {
 #if defined(__linux__) || defined(__APPLE__)
-        session.supports_colors = true;
-        session.emoji_mode = EMO_EMOJI;
+        g_session.supports_colors = true;
+        g_session.emoji_mode = EMO_EMOJI;
 #elif defined(_WIN32)
-        session.supports_colors = DetectWindowsAnsiSupport();
-        session.emoji_mode = EMO_ALTTEXT;
+        g_session.supports_colors = DetectWindowsAnsiSupport();
+        g_session.emoji_mode = EMO_ALTTEXT;
 #endif
     }
     for (int i = 1; i < argc; i++) {
@@ -960,7 +960,7 @@ int main(int argc, char *argv[]) {
 
         // do not use history nor log files
         if (strcmp(argv[i], "--incognito") == 0) {
-            session.incognito = true;
+            g_session.incognito = true;
             continue;
         }
 
@@ -1002,14 +1002,14 @@ int main(int argc, char *argv[]) {
     preferences_load();
     // quick patch for debug level
     if (! debug_mode_forced)
-        g_debugMode = session.client_debug_level;
+        g_debugMode = g_session.client_debug_level;
     // settings_save ();
     // End Settings
 
     // even if prefs, we disable colors if stdin or stdout is not a TTY
-    if ((! session.stdinOnTTY) || (! session.stdoutOnTTY)) {
-        session.supports_colors = false;
-        session.emoji_mode = EMO_ALTTEXT;
+    if ((! g_session.stdinOnTTY) || (! g_session.stdoutOnTTY)) {
+        g_session.supports_colors = false;
+        g_session.emoji_mode = EMO_ALTTEXT;
     }
 
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
@@ -1048,36 +1048,36 @@ int main(int argc, char *argv[]) {
 
     // try to open USB connection to Proxmark
     if (port != NULL) {
-        OpenProxmark(&session.current_device, port, waitCOMPort, 20, false, speed);
+        OpenProxmark(&g_session.current_device, port, waitCOMPort, 20, false, speed);
     }
 
-    if (session.pm3_present && (TestProxmark(session.current_device) != PM3_SUCCESS)) {
+    if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS)) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark\n");
-        CloseProxmark(session.current_device);
+        CloseProxmark(g_session.current_device);
     }
 
-    if ((port != NULL) && (!session.pm3_present))
+    if ((port != NULL) && (!g_session.pm3_present))
         exit(EXIT_FAILURE);
 
-    if (!session.pm3_present)
+    if (!g_session.pm3_present)
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Check " _YELLOW_("\"%s -h\"") " if it's not what you want.\n", exec_name);
 
     // ascii art only in interactive client
-    if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY && !flash_mode)
+    if (!script_cmds_file && !script_cmd && g_session.stdinOnTTY && g_session.stdoutOnTTY && !flash_mode)
         showBanner();
 
     // Save settings if not loaded from settings json file.
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
-    if ((!session.preferences_loaded) && (!session.incognito)) {
+    if ((!g_session.preferences_loaded) && (!g_session.incognito)) {
         PrintAndLogEx(INFO, "Creating initial preferences file");  // json save reports file name, so just info msg here
         preferences_save();  // Save defaults
-        session.preferences_loaded = true;
+        g_session.preferences_loaded = true;
     } /* else {
         // Set device debug level
         PrintAndLogEx(INFO,"setting device debug loglevel");
-        if (session.pm3_present) {
-           SendCommandNG(CMD_SET_DBGMODE, &session.device_debug_level, 1);
+        if (g_session.pm3_present) {
+           SendCommandNG(CMD_SET_DBGMODE, &g_session.device_debug_level, 1);
            PacketResponseNG resp;
             if (WaitForResponseTimeout(CMD_SET_DBGMODE, &resp, 2000) == false)
                 PrintAndLogEx (INFO,"failed to set device debug loglevel");
@@ -1108,11 +1108,11 @@ int main(int argc, char *argv[]) {
 #endif
 
     // Clean up the port
-    if (session.pm3_present) {
-        CloseProxmark(session.current_device);
+    if (g_session.pm3_present) {
+        CloseProxmark(g_session.current_device);
     }
 
-    if (session.window_changed) // Plot/Overlay moved or resized
+    if (g_session.window_changed) // Plot/Overlay moved or resized
         preferences_save();
     exit(EXIT_SUCCESS);
 }

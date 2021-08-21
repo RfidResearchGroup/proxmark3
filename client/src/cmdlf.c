@@ -138,7 +138,7 @@ static int CmdLFTune(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    barMode_t style = session.bar_mode;
+    barMode_t style = g_session.bar_mode;
     if (is_bar)
         style = STYLE_BAR;
     if (is_mix)
@@ -252,7 +252,7 @@ int CmdLFCommandRead(const char *Cmd) {
     bool cm = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
-    if (session.pm3_present == false)
+    if (g_session.pm3_present == false)
         return PM3_ENOTTY;
 
 #define PAYLOAD_HEADER_SIZE (12 + (3 * LF_CMDREAD_MAX_EXTRA_SYMBOLS))
@@ -475,7 +475,7 @@ int lf_config_savereset(sample_config *config) {
 }
 
 int lf_getconfig(sample_config *config) {
-    if (!session.pm3_present) return PM3_ENOTTY;
+    if (!g_session.pm3_present) return PM3_ENOTTY;
 
     if (config == NULL)
         return PM3_EINVARG;
@@ -493,7 +493,7 @@ int lf_getconfig(sample_config *config) {
 }
 
 int lf_config(sample_config *config) {
-    if (!session.pm3_present) return PM3_ENOTTY;
+    if (!g_session.pm3_present) return PM3_ENOTTY;
 
     clearCommandBuffer();
     if (config != NULL)
@@ -548,7 +548,7 @@ int CmdLFConfig(const char *Cmd) {
     int16_t trigg = arg_get_int_def(ctx, 10, -1);
     CLIParserFree(ctx);
 
-    if (session.pm3_present == false)
+    if (g_session.pm3_present == false)
         return PM3_ENOTTY;
 
     // if called with no params, just print the device config
@@ -629,7 +629,7 @@ int CmdLFConfig(const char *Cmd) {
 }
 
 int lf_read(bool verbose, uint32_t samples) {
-    if (!session.pm3_present) return PM3_ENOTTY;
+    if (!g_session.pm3_present) return PM3_ENOTTY;
 
     struct p {
         uint32_t samples : 31;
@@ -681,7 +681,7 @@ int CmdLFRead(const char *Cmd) {
     bool cm = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    if (session.pm3_present == false)
+    if (g_session.pm3_present == false)
         return PM3_ENOTTY;
 
     if (cm) {
@@ -695,7 +695,7 @@ int CmdLFRead(const char *Cmd) {
 }
 
 int lf_sniff(bool verbose, uint32_t samples) {
-    if (!session.pm3_present) return PM3_ENOTTY;
+    if (!g_session.pm3_present) return PM3_ENOTTY;
 
     struct p {
         uint32_t samples : 31;
@@ -750,7 +750,7 @@ int CmdLFSniff(const char *Cmd) {
     bool cm = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    if (session.pm3_present == false)
+    if (g_session.pm3_present == false)
         return PM3_ENOTTY;
 
     if (cm) {
@@ -842,7 +842,7 @@ int CmdLFSim(const char *Cmd) {
     uint16_t gap = arg_get_u32_def(ctx, 1, 0);
     CLIParserFree(ctx);
 
-    if (session.pm3_present == false) {
+    if (g_session.pm3_present == false) {
         PrintAndLogEx(DEBUG, "DEBUG: no proxmark present");
         return PM3_ENOTTY;
     }
@@ -1397,7 +1397,7 @@ int CmdLFfind(const char *Cmd) {
     bool search_unk = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
     int found = 0;
-    bool is_online = (session.pm3_present && (use_gb == false));
+    bool is_online = (g_session.pm3_present && (use_gb == false));
     if (is_online)
         lf_read(false, 30000);
 

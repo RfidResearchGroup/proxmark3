@@ -15,24 +15,24 @@
 
 pm3_device *pm3_open(char *port) {
     pm3_init();
-    OpenProxmark(&session.current_device, port, false, 20, false, USART_BAUD_RATE);
-    if (session.pm3_present && (TestProxmark(session.current_device) != PM3_SUCCESS)) {
+    OpenProxmark(&g_session.current_device, port, false, 20, false, USART_BAUD_RATE);
+    if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS)) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark\n");
-        CloseProxmark(session.current_device);
+        CloseProxmark(g_session.current_device);
     }
 
-    if ((port != NULL) && (!session.pm3_present))
+    if ((port != NULL) && (!g_session.pm3_present))
         exit(EXIT_FAILURE);
 
-    if (!session.pm3_present)
+    if (!g_session.pm3_present)
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode");
     // For now, there is no real device context:
-    return session.current_device;
+    return g_session.current_device;
 }
 
 void pm3_close(pm3_device *dev) {
     // Clean up the port
-    if (session.pm3_present) {
+    if (g_session.pm3_present) {
         clearCommandBuffer();
         SendCommandNG(CMD_QUIT_SESSION, NULL, 0);
         msleep(100); // Make sure command is sent before killing client
@@ -51,5 +51,5 @@ const char *pm3_name_get(pm3_device *dev) {
 }
 
 pm3_device *pm3_get_current_dev(void) {
-    return session.current_device;
+    return g_session.current_device;
 }

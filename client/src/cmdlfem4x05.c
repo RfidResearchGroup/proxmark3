@@ -1390,7 +1390,7 @@ int CmdEM4x05Chk(const char *Cmd) {
 
         for (uint32_t c = 0; c < keycount; ++c) {
 
-            if (!session.pm3_present) {
+            if (!g_session.pm3_present) {
                 PrintAndLogEx(WARNING, "device offline\n");
                 free(keyBlock);
                 return PM3_ENODATA;
@@ -1569,7 +1569,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (session.pm3_present == false) {
+    if (g_session.pm3_present == false) {
         PrintAndLogEx(WARNING, "device offline\n");
         return PM3_ENODATA;
     }

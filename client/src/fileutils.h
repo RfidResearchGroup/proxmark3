@@ -79,7 +79,7 @@ typedef enum {
 
 int fileExists(const char *filename);
 //bool create_path(const char *dirname);
-bool setDefaultPath(savePaths_t pathIndex, const char *Path);  // set a path in the path list session.defaultPaths
+bool setDefaultPath(savePaths_t pathIndex, const char *Path);  // set a path in the path list g_session.defaultPaths
 
 char *newfilenamemcopy(const char *preferredName, const char *suffix);
 

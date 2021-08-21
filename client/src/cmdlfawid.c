@@ -520,7 +520,7 @@ static int CmdAWIDBrute(const char *Cmd) {
     // main loop
     for (;;) {
 
-        if (!session.pm3_present) {
+        if (!g_session.pm3_present) {
             PrintAndLogEx(WARNING, "Device offline\n");
             return PM3_ENODATA;
         }

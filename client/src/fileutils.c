@@ -237,14 +237,14 @@ bool create_path(const char *dirname) {
 bool setDefaultPath(savePaths_t pathIndex, const char *Path) {
 
     if (pathIndex < spItemCount) {
-        if ((Path == NULL) && (session.defaultPaths[pathIndex] != NULL)) {
-            free(session.defaultPaths[pathIndex]);
-            session.defaultPaths[pathIndex] = NULL;
+        if ((Path == NULL) && (g_session.defaultPaths[pathIndex] != NULL)) {
+            free(g_session.defaultPaths[pathIndex]);
+            g_session.defaultPaths[pathIndex] = NULL;
         }
 
         if (Path != NULL) {
-            session.defaultPaths[pathIndex] = (char *)realloc(session.defaultPaths[pathIndex], strlen(Path) + 1);
-            strcpy(session.defaultPaths[pathIndex], Path);
+            g_session.defaultPaths[pathIndex] = (char *)realloc(g_session.defaultPaths[pathIndex], strlen(Path) + 1);
+            strcpy(g_session.defaultPaths[pathIndex], Path);
         }
         return true;
     }

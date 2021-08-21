@@ -89,7 +89,7 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, v
     print_hex_break((uint8_t *)&c.d, sizeof(c.d), 32);
 #endif
 
-    if (!session.pm3_present) {
+    if (!g_session.pm3_present) {
         PrintAndLogEx(WARNING, "Sending bytes to Proxmark3 failed." _YELLOW_("offline"));
         return;
     }
@@ -120,7 +120,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
     PrintAndLogEx(INFO, "Sending %s", ng ? "NG" : "MIX");
 #endif
 
-    if (!session.pm3_present) {
+    if (!g_session.pm3_present) {
         PrintAndLogEx(INFO, "Sending bytes to proxmark failed - offline");
         return;
     }
@@ -589,7 +589,7 @@ bool OpenProxmark(pm3_device **dev, char *port, bool wait_for_port, int timeout,
 
         pthread_create(&communication_thread, NULL, &uart_communication, &g_conn);
         __atomic_clear(&comm_thread_dead, __ATOMIC_SEQ_CST);
-        session.pm3_present = true; // TODO support for multiple devices
+        g_session.pm3_present = true; // TODO support for multiple devices
 
         fflush(stdout);
         if (*dev == NULL) {
@@ -689,7 +689,7 @@ void CloseProxmark(pm3_device *dev) {
     memset(&communication_thread, 0, sizeof(pthread_t));
 #endif
 
-    session.pm3_present = false;
+    g_session.pm3_present = false;
 }
 
 // Gives a rough estimate of the communication delay based on channel & baudrate

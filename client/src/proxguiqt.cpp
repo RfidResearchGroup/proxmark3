@@ -192,7 +192,7 @@ void ProxGuiQT::MainLoop() {
 //    pictureWidget->setAttribute(Qt::WA_DeleteOnClose,true);
 
     // Set picture widget position if no settings.
-    if (session.preferences_loaded == false) {
+    if (g_session.preferences_loaded == false) {
         // Move controller widget below plot
         //pictureController->move(x(), y() + frameSize().height());
         //pictureController->resize(size().width(), 200);
@@ -250,8 +250,8 @@ ProxGuiQT::~ProxGuiQT(void) {
 // -------------------------------------------------
 PictureWidget::PictureWidget() {
     // Set the initail postion and size from settings
-//    if (session.preferences_loaded)
-//        setGeometry(session.pw.x, session.pw.y, session.pw.w, session.pw.h);
+//    if (g_session.preferences_loaded)
+//        setGeometry(g_session.pw.x, g_session.pw.y, g_session.pw.w, g_session.pw.h);
 //    else
     resize(400, 400);
 }
@@ -269,23 +269,23 @@ void PictureWidget::closeEvent(QCloseEvent *event) {
 
 SliderWidget::SliderWidget() {
     // Set the initail postion and size from settings
-    if (session.preferences_loaded)
-        setGeometry(session.overlay.x, session.overlay.y, session.overlay.w, session.overlay.h);
+    if (g_session.preferences_loaded)
+        setGeometry(g_session.overlay.x, g_session.overlay.y, g_session.overlay.w, g_session.overlay.h);
     else
         resize(800, 400);
 }
 
 void SliderWidget::resizeEvent(QResizeEvent *event) {
-    session.overlay.h = event->size().height();
-    session.overlay.w = event->size().width();
-    session.window_changed = true;
+    g_session.overlay.h = event->size().height();
+    g_session.overlay.w = event->size().width();
+    g_session.window_changed = true;
 
 }
 
 void SliderWidget::moveEvent(QMoveEvent *event) {
-    session.overlay.x = event->pos().x();
-    session.overlay.y = event->pos().y();
-    session.window_changed = true;
+    g_session.overlay.x = event->pos().x();
+    g_session.overlay.y = event->pos().y();
+    g_session.window_changed = true;
 }
 
 //--------------------
@@ -331,8 +331,8 @@ void ProxWidget::vchange_dthr_down(int v) {
 ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     this->master = master;
     // Set the initail postion and size from settings
-    if (session.preferences_loaded)
-        setGeometry(session.plot.x, session.plot.y, session.plot.w, session.plot.h);
+    if (g_session.preferences_loaded)
+        setGeometry(g_session.plot.x, g_session.plot.y, g_session.plot.w, g_session.plot.h);
     else
         resize(800, 400);
 
@@ -357,7 +357,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     QObject::connect(opsController->horizontalSlider_dirthr_down, SIGNAL(valueChanged(int)), this, SLOT(vchange_dthr_down(int)));
     QObject::connect(opsController->horizontalSlider_askedge, SIGNAL(valueChanged(int)), this, SLOT(vchange_askedge(int)));
 
-    controlWidget->setGeometry(session.overlay.x, session.overlay.y, session.overlay.w, session.overlay.h);
+    controlWidget->setGeometry(g_session.overlay.x, g_session.overlay.y, g_session.overlay.w, g_session.overlay.h);
 
     // Set up the plot widget, which does the actual plotting
     plot = new Plot(this);
@@ -373,7 +373,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     show();
 
     // Set Slider/Overlay position if no settings.
-    if (session.preferences_loaded == false) {
+    if (g_session.preferences_loaded == false) {
         // Move controller widget below plot
         controlWidget->move(x(), y() + frameSize().height());
         controlWidget->resize(size().width(), 200);
@@ -387,7 +387,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     //  controlWidget->show();
 
     // now that is up, reset pos/size change flags
-    session.window_changed = false;
+    g_session.window_changed = false;
 
 }
 
@@ -422,7 +422,7 @@ void ProxWidget::hideEvent(QHideEvent *event) {
     plot->hide();
 }
 void ProxWidget::showEvent(QShowEvent *event) {
-    if (session.overlay_sliders)
+    if (g_session.overlay_sliders)
         controlWidget->show();
     else
         controlWidget->hide();
@@ -430,14 +430,14 @@ void ProxWidget::showEvent(QShowEvent *event) {
     plot->show();
 }
 void ProxWidget::moveEvent(QMoveEvent *event) {
-    session.plot.x = event->pos().x();
-    session.plot.y = event->pos().y();
-    session.window_changed = true;
+    g_session.plot.x = event->pos().x();
+    g_session.plot.y = event->pos().y();
+    g_session.window_changed = true;
 }
 void ProxWidget::resizeEvent(QResizeEvent *event) {
-    session.plot.h = event->size().height();
-    session.plot.w = event->size().width();
-    session.window_changed = true;
+    g_session.plot.h = event->size().height();
+    g_session.plot.w = event->size().width();
+    g_session.window_changed = true;
 }
 
 //----------- Plotting

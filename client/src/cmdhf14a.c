@@ -189,7 +189,7 @@ static int CmdHF14AList(const char *Cmd) {
 }
 
 int hf14a_getconfig(hf14a_config *config) {
-    if (!session.pm3_present) return PM3_ENOTTY;
+    if (!g_session.pm3_present) return PM3_ENOTTY;
 
     if (config == NULL)
         return PM3_EINVARG;
@@ -207,7 +207,7 @@ int hf14a_getconfig(hf14a_config *config) {
 }
 
 int hf14a_setconfig(hf14a_config *config, bool verbose) {
-    if (!session.pm3_present) return PM3_ENOTTY;
+    if (!g_session.pm3_present) return PM3_ENOTTY;
 
     clearCommandBuffer();
     if (config != NULL) {
@@ -247,7 +247,7 @@ static int hf_14a_config_example(void) {
     return PM3_SUCCESS;
 }
 static int CmdHf14AConfig(const char *Cmd) {
-    if (!session.pm3_present) return PM3_ENOTTY;
+    if (!g_session.pm3_present) return PM3_ENOTTY;
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a config",

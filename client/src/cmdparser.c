@@ -22,9 +22,9 @@ bool AlwaysAvailable(void) {
 }
 
 bool IfPm3Present(void) {
-    if (session.help_dump_mode)
+    if (g_session.help_dump_mode)
         return false;
-    return session.pm3_present;
+    return g_session.pm3_present;
 }
 
 bool IfPm3Rdv4Fw(void) {
@@ -195,8 +195,8 @@ void CmdsHelp(const command_t Commands[]) {
 
 int CmdsParse(const command_t Commands[], const char *Cmd) {
 
-    if (session.client_exe_delay != 0) {
-        msleep(session.client_exe_delay);
+    if (g_session.client_exe_delay != 0) {
+        msleep(g_session.client_exe_delay);
     }
 
     // Help dump children
