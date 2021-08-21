@@ -8,7 +8,7 @@ typedef struct {
     uint8_t *buffer;
     uint32_t numbits;
     uint32_t position;
-} BitstreamOut;
+} BitstreamOut_t;
 
 typedef struct {
     int dec_counter;

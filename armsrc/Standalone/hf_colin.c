@@ -143,12 +143,12 @@ static uint64_t hex2i(const char *s) {
     "\"0x8829da9daf76\",\"0x8829da9daf76\","
     "\"0x8829da9daf76\",\"0x8829da9daf76\"]}";*/
 
-typedef struct MFC1KSchema {
+typedef struct {
     uint8_t name[32];
     uint64_t trigger;
     uint64_t keysA[16];
     uint64_t keysB[16];
-} MFC1KSchema;
+} MFC1KSchema_t;
 
 #define MAX_SCHEMAS 4
 
@@ -162,9 +162,9 @@ static void scan_keys(const char *str, int len, uint64_t *user_data) {
     }
 }
 
-static MFC1KSchema Schemas[MAX_SCHEMAS];
+static MFC1KSchema_t Schemas[MAX_SCHEMAS];
 
-/*MFC1KSchema Noralsy = {
+/*MFC1KSchema_t Noralsy = {
     .name = "Noralsy",
     .trigger = 0x414c41524f4e,
     .keysA = {0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e,
@@ -174,7 +174,7 @@ static MFC1KSchema Schemas[MAX_SCHEMAS];
               0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e,
               0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e}};
 
-MFC1KSchema InfiHexact = {.name = "Infineon/Hexact",
+MFC1KSchema_t InfiHexact = {.name = "Infineon/Hexact",
                           .trigger = 0x484558414354,
                           .keysA = {0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354,
                                     0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354,
@@ -185,7 +185,7 @@ MFC1KSchema InfiHexact = {.name = "Infineon/Hexact",
                                     0x8fa1d601d0a2, 0x89347350bd36, 0x66d2b7dc39ef, 0x6bc1e1ae547d, 0x22729a9bd40f}};
 */
 
-/*MFC1KSchema UrmetCaptive = {
+/*MFC1KSchema_t UrmetCaptive = {
     .name = "Urmet Captive",
     .trigger = 0x8829da9daf76,
     .keysA = {0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76,
@@ -198,14 +198,14 @@ MFC1KSchema InfiHexact = {.name = "Infineon/Hexact",
 
 static int total_schemas = 0;
 
-static void add_schema(MFC1KSchema *p, MFC1KSchema a, int *schemas_counter) {
+static void add_schema(MFC1KSchema_t *p, MFC1KSchema_t a, int *schemas_counter) {
     if (*schemas_counter < MAX_SCHEMAS) {
         p[*schemas_counter] = a;
         *schemas_counter += 1;
     }
 }
 /*
-static void delete_schema(MFC1KSchema *p, int *schemas_counter, int index) {
+static void delete_schema(MFC1KSchema_t *p, int *schemas_counter, int index) {
     if (*schemas_counter > 0 && index < *schemas_counter && index > -1) {
         int last_index = *schemas_counter - 1;
         for (int i = index; i < last_index; i++) {
@@ -256,7 +256,7 @@ static void add_schemas_from_json_in_spiffs(char *filename) {
     for (i = 0; json_scanf_array_elem(jsonfile, len, "", i, &t) > 0; i++) {
         char *tmpname;
         char *tmptrigger;
-        MFC1KSchema tmpscheme;
+        MFC1KSchema_t tmpscheme;
         json_scanf(t.ptr, t.len, "{ name:%Q, trigger:%Q, keysA:%M, keysB:%M}", &tmpname, &tmptrigger, scan_keys,
                    &tmpscheme.keysA, scan_keys, &tmpscheme.keysB);
         memcpy(tmpscheme.name, tmpname, 32);

@@ -44,20 +44,20 @@ typedef struct {
     uint8_t *buffer;
     uint8_t numbits;
     uint8_t position;
-} BitstreamIn;
+} BitstreamIn_t;
 
 typedef struct {
     uint8_t *buffer;
     uint8_t numbits;
     uint8_t position;
-} BitstreamOut;
+} BitstreamOut_t;
 
-bool headBit(BitstreamIn *stream);
-bool tailBit(BitstreamIn *stream);
-void pushBit(BitstreamOut *stream, bool bit);
-int bitsLeft(BitstreamIn *stream);
+bool headBit(BitstreamIn_t *stream);
+bool tailBit(BitstreamIn_t *stream);
+void pushBit(BitstreamOut_t *stream, bool bit);
+int bitsLeft(BitstreamIn_t *stream);
 
-void push6bits(BitstreamOut *stream, uint8_t bits);
+void push6bits(BitstreamOut_t *stream, uint8_t bits);
 void x_num_to_bytes(uint64_t n, size_t len, uint8_t *dest);
 uint64_t x_bytes_to_num(uint8_t *src, size_t len);
 uint8_t reversebytes(uint8_t b);

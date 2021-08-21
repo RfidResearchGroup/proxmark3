@@ -43,7 +43,7 @@
  * @param stream
  * @return
  */
-bool headBit(BitstreamIn *stream) {
+bool headBit(BitstreamIn_t *stream) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = (stream->position++) & 7; // mask out 00000111
     return (*(stream->buffer + bytepos) >> (7 - bitpos)) & 1;
@@ -53,7 +53,7 @@ bool headBit(BitstreamIn *stream) {
  * @param stream
  * @return
  */
-bool tailBit(BitstreamIn *stream) {
+bool tailBit(BitstreamIn_t *stream) {
     int bitpos = stream->numbits - 1 - (stream->position++);
 
     int bytepos = bitpos >> 3;
@@ -65,7 +65,7 @@ bool tailBit(BitstreamIn *stream) {
  * @param stream
  * @param bit
  */
-void pushBit(BitstreamOut *stream, bool bit) {
+void pushBit(BitstreamOut_t *stream, bool bit) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
     *(stream->buffer + bytepos) |= (bit) << (7 - bitpos);
@@ -79,7 +79,7 @@ void pushBit(BitstreamOut *stream, bool bit) {
  * @param stream
  * @param bits
  */
-void push6bits(BitstreamOut *stream, uint8_t bits) {
+void push6bits(BitstreamOut_t *stream, uint8_t bits) {
     pushBit(stream, bits & 0x20);
     pushBit(stream, bits & 0x10);
     pushBit(stream, bits & 0x08);
@@ -93,7 +93,7 @@ void push6bits(BitstreamOut *stream, uint8_t bits) {
  * @param stream
  * @return number of bits left in stream
  */
-int bitsLeft(BitstreamIn *stream) {
+int bitsLeft(BitstreamIn_t *stream) {
     return stream->numbits - stream->position;
 }
 /**

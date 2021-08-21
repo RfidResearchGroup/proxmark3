@@ -22,13 +22,13 @@
 
 #include "lz4.h"       // uncompress
 
-typedef struct lz4_stream_s {
+typedef struct {
     LZ4_streamDecode_t *lz4StreamDecode;
     char *next_in;
     int avail_in;
-} lz4_stream;
+} lz4_stream_t;
 
-typedef lz4_stream *lz4_streamp;
+typedef lz4_stream_t *lz4_streamp_t;
 
 // remember which version of the bitstream we have already downloaded to the FPGA
 static int downloaded_bitstream = 0;
@@ -190,7 +190,7 @@ bool FpgaSetupSscDma(uint8_t *buf, uint16_t len) {
 //----------------------------------------------------------------------------
 // Uncompress (inflate) the FPGA data. Returns one decompressed byte with each call.
 //----------------------------------------------------------------------------
-static int get_from_fpga_combined_stream(lz4_streamp compressed_fpga_stream, uint8_t *output_buffer) {
+static int get_from_fpga_combined_stream(lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
     if (fpga_image_ptr == output_buffer + FPGA_RING_BUFFER_BYTES) { // need more data
         fpga_image_ptr = output_buffer;
         int cmp_bytes;
@@ -217,7 +217,7 @@ static int get_from_fpga_combined_stream(lz4_streamp compressed_fpga_stream, uin
 // are combined into one big file:
 // 288 bytes from FPGA file 1, followed by 288 bytes from FGPA file 2, etc.
 //----------------------------------------------------------------------------
-static int get_from_fpga_stream(int bitstream_version, lz4_streamp compressed_fpga_stream, uint8_t *output_buffer) {
+static int get_from_fpga_stream(int bitstream_version, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
     while ((uncompressed_bytes_cnt / FPGA_INTERLEAVE_SIZE) % g_fpga_bitstream_num != (bitstream_version - 1)) {
         // skip undesired data belonging to other bitstream_versions
         get_from_fpga_combined_stream(compressed_fpga_stream, output_buffer);
@@ -229,7 +229,7 @@ static int get_from_fpga_stream(int bitstream_version, lz4_streamp compressed_fp
 //----------------------------------------------------------------------------
 // Initialize decompression of the respective (HF or LF) FPGA stream
 //----------------------------------------------------------------------------
-static bool reset_fpga_stream(int bitstream_version, lz4_streamp compressed_fpga_stream, uint8_t *output_buffer) {
+static bool reset_fpga_stream(int bitstream_version, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
     uint8_t header[FPGA_BITSTREAM_FIXED_HEADER_SIZE];
 
     uncompressed_bytes_cnt = 0;
@@ -267,7 +267,7 @@ static void DownloadFPGA_byte(uint8_t w) {
 }
 
 // Download the fpga image starting at current stream position with length FpgaImageLen bytes
-static void DownloadFPGA(int bitstream_version, int FpgaImageLen, lz4_streamp compressed_fpga_stream, uint8_t *output_buffer) {
+static void DownloadFPGA(int bitstream_version, int FpgaImageLen, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
     int i = 0;
 
     AT91C_BASE_PIOA->PIO_OER = GPIO_FPGA_ON;
@@ -349,7 +349,7 @@ static void DownloadFPGA(int bitstream_version, int FpgaImageLen, lz4_streamp co
  * (big endian), <length> bytes content. Except for section 'e' which has 4 bytes
  * length.
  */
-static int bitparse_find_section(int bitstream_version, char section_name, uint32_t *section_length, lz4_streamp compressed_fpga_stream, uint8_t *output_buffer) {
+static int bitparse_find_section(int bitstream_version, char section_name, uint32_t *section_length, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
 
 #define MAX_FPGA_BIT_STREAM_HEADER_SEARCH 100  // maximum number of bytes to search for the requested section
 
@@ -417,7 +417,7 @@ void FpgaDownloadAndGo(int bitstream_version) {
     BigBuf_free();
     BigBuf_Clear_ext(verbose);
 
-    lz4_stream compressed_fpga_stream;
+    lz4_stream_t compressed_fpga_stream;
     LZ4_streamDecode_t lz4StreamDecode_body = {{ 0 }};
     compressed_fpga_stream.lz4StreamDecode = &lz4StreamDecode_body;
     uint8_t *output_buffer = BigBuf_malloc(FPGA_RING_BUFFER_BYTES);

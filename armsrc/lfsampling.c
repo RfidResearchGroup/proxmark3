@@ -42,7 +42,7 @@ static sample_config def_config = {
 static sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0, true} ;
 
 // Holds bit packed struct of samples.
-static BitstreamOut data = {0, 0, 0};
+static BitstreamOut_t data = {0, 0, 0};
 
 // internal struct to keep track of samples gathered
 static sampling_t samples = {0, 0, 0, 0};
@@ -123,7 +123,7 @@ sample_config *getSamplingConfig(void) {
  * @param stream
  * @param bit
  */
-static void pushBit(BitstreamOut *stream, uint8_t bit) {
+static void pushBit(BitstreamOut_t *stream, uint8_t bit) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
     *(stream->buffer + bytepos) &= ~(1 << (7 - bitpos));
