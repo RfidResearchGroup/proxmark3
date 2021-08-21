@@ -70,7 +70,7 @@ void memcpy_filter_emoji(void *dest, const void *src, size_t n, emojiMode_t mode
 
 int searchHomeFilePath(char **foundpath, const char *subdir, const char *filename, bool create_home);
 
-extern pthread_mutex_t print_lock;
+extern pthread_mutex_t g_print_lock;
 
 void print_progress(size_t count, uint64_t max, barMode_t style);
 

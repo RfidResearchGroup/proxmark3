@@ -52,7 +52,7 @@ double g_GridOffset = 0;
 bool g_GridLocked = false;
 bool showDemod = true;
 
-pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t g_print_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static void fPrintAndLog(FILE *stream, const char *fmt, ...);
 
@@ -307,7 +307,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     char buffer2[MAX_PRINT_BUFFER] = {0};
     char buffer3[MAX_PRINT_BUFFER] = {0};
     // lock this section to avoid interlacing prints from different threads
-    pthread_mutex_lock(&print_lock);
+    pthread_mutex_lock(&g_print_lock);
     bool linefeed = true;
 
     if (logging && session.incognito) {
@@ -405,7 +405,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
         fflush(stdout);
 
     //release lock
-    pthread_mutex_unlock(&print_lock);
+    pthread_mutex_unlock(&g_print_lock);
 }
 
 void SetFlushAfterWrite(bool value) {
