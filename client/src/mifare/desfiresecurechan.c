@@ -82,6 +82,7 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_GET_FILE_IDS,              DACd40,  DCCNative,    DCMMACed},
     {MFDES_GET_ISOFILE_IDS,           DACd40,  DCCNative,    DCMMACed},
     {MFDES_COMMIT_READER_ID,          DACd40,  DCCNative,    DCMMACed},
+    {MFDES_ABORT_TRANSACTION,         DACd40,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,                   DACd40,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,       DACd40,  DCCNative,    DCMEncrypted},
@@ -117,6 +118,7 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_COMMIT_TRANSACTION,        DACEV1,  DCCNative,    DCMMACed},
     {MFDES_CLEAR_RECORD_FILE,         DACEV1,  DCCNative,    DCMMACed},
     {MFDES_COMMIT_READER_ID,          DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_ABORT_TRANSACTION,         DACEV1,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,                   DACEV1,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_KEY_SETTINGS,       DACEV1,  DCCNative,    DCMEncrypted},
@@ -158,6 +160,7 @@ static const AllowedChannelModesS AllowedChannelModes[] = {
     {MFDES_GET_KEY_VERSION,           DACLRP,  DCCNative,    DCMMACed},
     {MFDES_CLEAR_RECORD_FILE,         DACLRP,  DCCNative,    DCMMACed},
     {MFDES_COMMIT_TRANSACTION,        DACLRP,  DCCNative,    DCMMACed},
+    {MFDES_ABORT_TRANSACTION,         DACLRP,  DCCNative,    DCMMACed},
 
     {MFDES_GET_UID,                   DACLRP,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_FILE_SETTINGS,      DACLRP,  DCCNative,    DCMEncrypted},
