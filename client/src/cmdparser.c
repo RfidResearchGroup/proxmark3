@@ -67,7 +67,7 @@ bool IfPm3FpcUsartHostFromUsb(void) {
         return false;
     if (!g_pm3_capabilities.compiled_with_fpc_usart_host)
         return false;
-    return !conn.send_via_fpc_usart;
+    return !g_conn.send_via_fpc_usart;
 }
 
 bool IfPm3FpcUsartDevFromUsb(void) {
@@ -76,7 +76,7 @@ bool IfPm3FpcUsartDevFromUsb(void) {
         return false;
     if (!g_pm3_capabilities.compiled_with_fpc_usart_dev)
         return false;
-    return !conn.send_via_fpc_usart;
+    return !g_conn.send_via_fpc_usart;
 }
 
 bool IfPm3FpcUsartFromUsb(void) {

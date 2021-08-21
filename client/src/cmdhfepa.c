@@ -140,7 +140,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     // transfer the APDUs to the Proxmark
     uint8_t data[PM3_CMD_DATA_SIZE];
     // fast push mode
-    conn.block_after_ACK = true;
+    g_conn.block_after_ACK = true;
     for (int i = 0; i < ARRAYLEN(apdu_lengths); i++) {
 
         // transfer the APDU in several parts if necessary
@@ -152,7 +152,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
             }
             if ((i == ARRAYLEN(apdu_lengths) - 1) && (j * sizeof(data) >= apdu_lengths[i] - 1)) {
                 // Disable fast mode on last packet
-                conn.block_after_ACK = false;
+                g_conn.block_after_ACK = false;
             }
             memcpy(data, // + (j * sizeof(data)),
                    apdus[i] + (j * sizeof(data)),

@@ -273,7 +273,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
 
 
     // fast push mode
-    conn.block_after_ACK = true;
+    g_conn.block_after_ACK = true;
 
     while (bytes_remaining > 0) {
         uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
@@ -293,20 +293,20 @@ static int CmdFlashMemLoad(const char *Cmd) {
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_FLASHMEM_WRITE, &resp, 2000) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-            conn.block_after_ACK = false;
+            g_conn.block_after_ACK = false;
             free(data);
             return PM3_ETIMEOUT;
         }
 
         if (resp.status != PM3_SUCCESS) {
-            conn.block_after_ACK = false;
+            g_conn.block_after_ACK = false;
             PrintAndLogEx(FAILED, "Flash write fail [offset %u]", bytes_sent);
             free(data);
             return PM3_EFLASH;
         }
     }
 
-    conn.block_after_ACK = false;
+    g_conn.block_after_ACK = false;
     free(data);
     PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu")" bytes to offset "_GREEN_("%u"), datalen, offset);
     return PM3_SUCCESS;

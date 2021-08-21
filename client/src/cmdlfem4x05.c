@@ -348,13 +348,13 @@ int em4x05_clone_tag(uint32_t *blockdata, uint8_t numblocks, uint32_t pwd, bool 
         return PM3_EINVARG;
 
     // fast push mode
-    conn.block_after_ACK = true;
+    g_conn.block_after_ACK = true;
     int res = 0;
     for (int8_t i = 0; i < numblocks; i++) {
 
         // Disable fast mode on last packet
         if (i == numblocks - 1) {
-            conn.block_after_ACK = false;
+            g_conn.block_after_ACK = false;
         }
 
         if (i != 0) {

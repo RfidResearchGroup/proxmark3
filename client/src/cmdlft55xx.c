@@ -159,13 +159,13 @@ int clone_t55xx_tag(uint32_t *blockdata, uint8_t numblocks) {
     PacketResponseNG resp;
 
     // fast push mode
-    conn.block_after_ACK = true;
+    g_conn.block_after_ACK = true;
 
     for (int8_t i = 0; i < numblocks; i++) {
 
         // Disable fast mode on last packet
         if (i == numblocks - 1) {
-            conn.block_after_ACK = false;
+            g_conn.block_after_ACK = false;
         }
 
         clearCommandBuffer();

@@ -29,7 +29,7 @@
 // Serial port that we are communicating with the PM3 on.
 static serial_port sp = NULL;
 
-communication_arg_t conn;
+communication_arg_t g_conn;
 capabilities_t g_pm3_capabilities;
 
 static pthread_t communication_thread;
@@ -148,7 +148,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
     if (len > 0 && data)
         memcpy(&txBufferNG.data, data, len);
 
-    if ((conn.send_via_fpc_usart && conn.send_with_crc_on_fpc) || ((!conn.send_via_fpc_usart) && conn.send_with_crc_on_usb)) {
+    if ((g_conn.send_via_fpc_usart && g_conn.send_with_crc_on_fpc) || ((!g_conn.send_via_fpc_usart) && g_conn.send_with_crc_on_usb)) {
         uint8_t first, second;
         compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(PacketCommandNGPreamble) + len, &first, &second);
         tx_post->crc = (first << 8) + second;
@@ -354,7 +354,7 @@ __attribute__((force_align_arg_pointer))
         // Signal to main thread that communications seems off.
         // main thread will kill and restart this thread.
         if (commfailed) {
-            if (conn.last_command != CMD_HARDWARE_RESET) {
+            if (g_conn.last_command != CMD_HARDWARE_RESET) {
                 PrintAndLogEx(WARNING, "\nCommunicating with Proxmark3 device " _RED_("failed"));
             }
             __atomic_test_and_set(&comm_thread_dead, __ATOMIC_SEQ_CST);
@@ -384,7 +384,7 @@ __attribute__((force_align_arg_pointer))
                         if (rx.ng) {      // Received a valid NG frame
                             memcpy(&rx.data, &rx_raw.data, length);
                             rx.length = length;
-                            if ((rx.cmd == conn.last_command) && (rx.status == PM3_SUCCESS)) {
+                            if ((rx.cmd == g_conn.last_command) && (rx.status == PM3_SUCCESS)) {
                                 ACK_received = true;
                             }
                         } else {
@@ -504,14 +504,14 @@ __attribute__((force_align_arg_pointer))
                 if (res == PM3_EIO) {
                     commfailed = true;
                 }
-                conn.last_command = txBufferNG.pre.cmd;
+                g_conn.last_command = txBufferNG.pre.cmd;
                 txBufferNGLen = 0;
             } else {
                 res = uart_send(sp, (uint8_t *) &txBuffer, sizeof(PacketCommandOLD));
                 if (res == PM3_EIO) {
                     commfailed = true;
                 }
-                conn.last_command = txBuffer.cmd;
+                g_conn.last_command = txBuffer.cmd;
             }
 
             txBuffer_pending = false;
@@ -574,20 +574,20 @@ bool OpenProxmark(pm3_device **dev, char *port, bool wait_for_port, int timeout,
         return false;
     } else {
         // start the communication thread
-        if (port != conn.serial_port_name) {
+        if (port != g_conn.serial_port_name) {
             uint16_t len = MIN(strlen(port), FILE_PATH_SIZE - 1);
-            memset(conn.serial_port_name, 0, FILE_PATH_SIZE);
-            memcpy(conn.serial_port_name, port, len);
+            memset(g_conn.serial_port_name, 0, FILE_PATH_SIZE);
+            memcpy(g_conn.serial_port_name, port, len);
         }
-        conn.run = true;
-        conn.block_after_ACK = flash_mode;
+        g_conn.run = true;
+        g_conn.block_after_ACK = flash_mode;
         // Flags to tell where to add CRC on sent replies
-        conn.send_with_crc_on_usb = false;
-        conn.send_with_crc_on_fpc = true;
+        g_conn.send_with_crc_on_usb = false;
+        g_conn.send_with_crc_on_fpc = true;
         // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
-        conn.send_via_fpc_usart = false;
+        g_conn.send_via_fpc_usart = false;
 
-        pthread_create(&communication_thread, NULL, &uart_communication, &conn);
+        pthread_create(&communication_thread, NULL, &uart_communication, &g_conn);
         __atomic_clear(&comm_thread_dead, __ATOMIC_SEQ_CST);
         session.pm3_present = true; // TODO support for multiple devices
 
@@ -595,7 +595,7 @@ bool OpenProxmark(pm3_device **dev, char *port, bool wait_for_port, int timeout,
         if (*dev == NULL) {
             *dev = calloc(sizeof(pm3_device), sizeof(uint8_t));
         }
-        (*dev)->conn = &conn; // TODO conn shouldn't be global
+        (*dev)->g_conn = &g_conn; // TODO g_conn shouldn't be global
         return true;
     }
 }
@@ -645,16 +645,16 @@ int TestProxmark(pm3_device *dev) {
     }
 
     memcpy(&g_pm3_capabilities, resp.data.asBytes, MIN(sizeof(capabilities_t), resp.length));
-    conn.send_via_fpc_usart = g_pm3_capabilities.via_fpc;
-    conn.uart_speed = g_pm3_capabilities.baudrate;
+    g_conn.send_via_fpc_usart = g_pm3_capabilities.via_fpc;
+    g_conn.uart_speed = g_pm3_capabilities.baudrate;
 
     PrintAndLogEx(INFO, "Communicating with PM3 over %s%s%s",
-                  conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),
-                  memcmp(conn.serial_port_name, "tcp:", 4) == 0 ? " over " _YELLOW_("TCP") : "",
-                  memcmp(conn.serial_port_name, "bt:", 3) == 0 ? " over " _YELLOW_("BT") : "");
+                  g_conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),
+                  memcmp(g_conn.serial_port_name, "tcp:", 4) == 0 ? " over " _YELLOW_("TCP") : "",
+                  memcmp(g_conn.serial_port_name, "bt:", 3) == 0 ? " over " _YELLOW_("BT") : "");
 
-    if (conn.send_via_fpc_usart) {
-        PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
+    if (g_conn.send_via_fpc_usart) {
+        PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", g_conn.uart_speed);
     } else {
         int res = uart_reconfigure_timeouts(UART_USB_CLIENT_RX_TIMEOUT_MS);
         if (res != PM3_SUCCESS) {
@@ -665,7 +665,7 @@ int TestProxmark(pm3_device *dev) {
 }
 
 void CloseProxmark(pm3_device *dev) {
-    dev->conn->run = false;
+    dev->g_conn->run = false;
 
 #ifdef __BIONIC__
     if (communication_thread != 0) {
@@ -702,8 +702,8 @@ void CloseProxmark(pm3_device *dev) {
 //           ~ = 12000000 / USART_BAUD_RATE
 // Let's take 2x (maybe we need more for BT link?)
 static size_t communication_delay(void) {
-    if (conn.send_via_fpc_usart)  // needed also for Windows USB USART??
-        return 2 * (12000000 / conn.uart_speed);
+    if (g_conn.send_via_fpc_usart)  // needed also for Windows USB USART??
+        return 2 * (12000000 / g_conn.uart_speed);
     return 0;
 }
 

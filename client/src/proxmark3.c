@@ -301,7 +301,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
 
         bool printprompt = false;
         if (session.pm3_present) {
-            if (conn.send_via_fpc_usart == false)
+            if (g_conn.send_via_fpc_usart == false)
                 prompt_dev = PROXPROMPT_DEV_USB;
             else
                 prompt_dev = PROXPROMPT_DEV_FPC;

@@ -47,7 +47,7 @@ int pm3_console(pm3_device *dev, char *Cmd) {
 }
 
 const char *pm3_name_get(pm3_device *dev) {
-    return dev->conn->serial_port_name;
+    return dev->g_conn->serial_port_name;
 }
 
 pm3_device *pm3_get_current_dev(void) {

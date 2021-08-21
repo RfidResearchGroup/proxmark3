@@ -61,11 +61,11 @@ typedef struct {
     char serial_port_name[FILE_PATH_SIZE];
 } communication_arg_t;
 
-extern communication_arg_t conn;
+extern communication_arg_t g_conn;
 
 typedef struct pm3_device pm3_device;
 struct pm3_device {
-    communication_arg_t *conn;
+    communication_arg_t *g_conn;
     int script_embedded;
 };
 

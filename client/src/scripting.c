@@ -71,7 +71,7 @@ static int l_fast_push_mode(lua_State *L) {
 
     bool enable = lua_toboolean(L, 1);
 
-    conn.block_after_ACK = enable;
+    g_conn.block_after_ACK = enable;
 
     // Disable fast mode and send a dummy command to make it effective
     if (enable == false) {

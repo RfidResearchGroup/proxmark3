@@ -717,13 +717,13 @@ void legic_chk_iv(uint32_t *iv) {
 }
 void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
     // fast push mode
-    conn.block_after_ACK = true;
+    g_conn.block_after_ACK = true;
     for (size_t i = offset; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
 
         size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
         if (len == numofbytes - i) {
             // Disable fast mode on last packet
-            conn.block_after_ACK = false;
+            g_conn.block_after_ACK = false;
         }
         clearCommandBuffer();
         SendCommandOLD(CMD_HF_LEGIC_ESET, i, len, 0, src + i, len);
@@ -913,7 +913,7 @@ static int CmdLegicRestore(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Restoring to card");
 
     // fast push mode
-    conn.block_after_ACK = true;
+    g_conn.block_after_ACK = true;
 
     // transfer to device
     PacketResponseNG resp;
@@ -922,7 +922,7 @@ static int CmdLegicRestore(const char *Cmd) {
         size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
         if (len == numofbytes - i) {
             // Disable fast mode on last packet
-            conn.block_after_ACK = false;
+            g_conn.block_after_ACK = false;
         }
         clearCommandBuffer();
         SendCommandOLD(CMD_HF_LEGIC_WRITER, i, len, 0x55, data + i, len);
@@ -1129,7 +1129,7 @@ static int CmdLegicWipe(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Erasing");
     // fast push mode
-    conn.block_after_ACK = true;
+    g_conn.block_after_ACK = true;
 
     // transfer to device
     PacketResponseNG resp;
@@ -1140,7 +1140,7 @@ static int CmdLegicWipe(const char *Cmd) {
         size_t len = MIN((card.cardsize - i), PM3_CMD_DATA_SIZE);
         if (len == card.cardsize - i) {
             // Disable fast mode on last packet
-            conn.block_after_ACK = false;
+            g_conn.block_after_ACK = false;
         }
         clearCommandBuffer();
         SendCommandOLD(CMD_HF_LEGIC_WRITER, i, len, 0x55, data + i, len);

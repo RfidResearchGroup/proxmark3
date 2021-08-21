@@ -178,13 +178,13 @@ static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len
 static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
 
     // fast push mode
-    conn.block_after_ACK = true;
+    g_conn.block_after_ACK = true;
     for (size_t i = offset; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
 
         size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
         if (len == numofbytes - i) {
             // Disable fast mode on last packet
-            conn.block_after_ACK = false;
+            g_conn.block_after_ACK = false;
         }
         clearCommandBuffer();
         SendCommandOLD(CMD_LF_EM4X50_ESET, i, len, 0, src + i, len);

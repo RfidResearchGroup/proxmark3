@@ -836,11 +836,11 @@ static int CmdConnect(const char *Cmd) {
 
     // default back to previous used serial port
     if (strlen(port) == 0) {
-        if (strlen(conn.serial_port_name) == 0) {
+        if (strlen(g_conn.serial_port_name) == 0) {
             PrintAndLogEx(WARNING, "Must specify a serial port");
             return PM3_EINVARG;
         }
-        memcpy(port, conn.serial_port_name, sizeof(port));
+        memcpy(port, g_conn.serial_port_name, sizeof(port));
     }
 
     if (session.pm3_present) {

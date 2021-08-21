@@ -519,12 +519,12 @@ static int CmdHF14AJookiSim(const char *Cmd) {
 
     PrintAndLogEx(INFO, "." NOLF);
     // fast push mode
-    conn.block_after_ACK = true;
+    g_conn.block_after_ACK = true;
     uint8_t blockwidth = 4, counter = 0, blockno = 0;
     while (datalen) {
         if (datalen == blockwidth) {
             // Disable fast mode on last packet
-            conn.block_after_ACK = false;
+            g_conn.block_after_ACK = false;
         }
 
         if (mfEmlSetMem_xt(data + counter, blockno, 1, blockwidth) != PM3_SUCCESS) {

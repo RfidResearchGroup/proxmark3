@@ -462,7 +462,7 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
         uint32_t bytes_in_packet = MIN(PM3_CMD_DATA_SIZE, bytes_remaining);
         if (bytes_in_packet == bytes_remaining) {
             // Disable fast mode on last packet
-            conn.block_after_ACK = false;
+            g_conn.block_after_ACK = false;
         }
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_CRYPTORF_EML_MEMSET, bytes_sent, bytes_in_packet, 0, data + bytes_sent, bytes_in_packet);

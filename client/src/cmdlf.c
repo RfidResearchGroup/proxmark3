@@ -790,7 +790,7 @@ int lfsim_upload_gb(void) {
     payload_up.flag = 0x1;
 
     // fast push mode
-    conn.block_after_ACK = true;
+    g_conn.block_after_ACK = true;
 
     PacketResponseNG resp;
 
@@ -818,7 +818,7 @@ int lfsim_upload_gb(void) {
     PrintAndLogEx(NORMAL, "");
 
     // Disable fast mode before last command
-    conn.block_after_ACK = false;
+    g_conn.block_after_ACK = false;
     return PM3_SUCCESS;
 }
 

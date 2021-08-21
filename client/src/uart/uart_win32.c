@@ -135,7 +135,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             return INVALID_SERIAL_PORT;
         }
     }
-    conn.uart_speed = uart_get_speed(sp);
+    g_conn.uart_speed = uart_get_speed(sp);
     return sp;
 }
 
@@ -169,7 +169,7 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
     bool result = SetCommState(spw->hPort, &spw->dcb);
     PurgeComm(spw->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
     if (result)
-        conn.uart_speed = uiPortSpeed;
+        g_conn.uart_speed = uiPortSpeed;
 
     return result;
 }

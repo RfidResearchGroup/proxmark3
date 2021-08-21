@@ -126,7 +126,7 @@ static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t *bytes_sent) {
     } PACKED;
 
     // fast push mode
-    conn.block_after_ACK = true;
+    g_conn.block_after_ACK = true;
 
     //Send to device
     *bytes_sent = 0;
@@ -136,7 +136,7 @@ static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t *bytes_sent) {
         uint32_t bytes_in_packet = MIN(PM3_CMD_DATA_SIZE - 4, bytes_remaining);
         if (bytes_in_packet == bytes_remaining) {
             // Disable fast mode on last packet
-            conn.block_after_ACK = false;
+            g_conn.block_after_ACK = false;
         }
         clearCommandBuffer();
 
@@ -3056,7 +3056,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         max_chunk_size = keycount;
 
     // fast push mode
-    conn.block_after_ACK = true;
+    g_conn.block_after_ACK = true;
 
     // keep track of position of found key
     uint32_t chunk_offset = 0;
@@ -3085,7 +3085,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         // last chunk?
         if (curr_chunk_cnt == keycount - chunk_offset) {
             // Disable fast mode on last command
-            conn.block_after_ACK = false;
+            g_conn.block_after_ACK = false;
         }
 
         uint32_t tmp_plen = sizeof(iclass_chk_t) + (4 * curr_chunk_cnt);
