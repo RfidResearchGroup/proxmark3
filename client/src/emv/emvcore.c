@@ -41,9 +41,9 @@ const char *TransactionTypeStr[] = {
 typedef struct {
     enum CardPSVendor vendor;
     const char *aid;
-} TAIDList;
+} AIDList_t;
 
-static const TAIDList AIDlist [] = {
+static const AIDList_t AIDlist [] = {
     // Visa International
     { CV_VISA, "A00000000305076010" },           // VISA ELO Credit
     { CV_VISA, "A0000000031010" },               // VISA Debit/Credit (Classic)

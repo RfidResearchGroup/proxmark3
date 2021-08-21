@@ -1710,13 +1710,13 @@ int CmdHpf(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static bool _headBit(BitstreamOut *stream) {
+static bool _headBit(BitstreamOut_t *stream) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = (stream->position++) & 7; // mask out 00000111
     return (*(stream->buffer + bytepos) >> (7 - bitpos)) & 1;
 }
 
-static uint8_t getByte(uint8_t bits_per_sample, BitstreamOut *b) {
+static uint8_t getByte(uint8_t bits_per_sample, BitstreamOut_t *b) {
     uint8_t val = 0;
     for (int i = 0 ; i < bits_per_sample; i++)
         val |= (_headBit(b) << (7 - i));
@@ -1771,7 +1771,7 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose) {
 
         if (verbose) PrintAndLogEx(INFO, "Unpacking...");
 
-        BitstreamOut bout = { got, bits_per_sample * n,  0};
+        BitstreamOut_t bout = { got, bits_per_sample * n,  0};
         uint32_t j = 0;
         for (j = 0; j * bits_per_sample < n * 8 && j < n; j++) {
             uint8_t sample = getByte(bits_per_sample, &bout);
@@ -2425,7 +2425,7 @@ static int Cmdbin2hex(const char *Cmd) {
     size_t bytelen = (blen + 7) / 8;
     uint8_t *arr = (uint8_t *) calloc(bytelen, sizeof(uint8_t));
     memset(arr, 0, bytelen);
-    BitstreamOut bout = { arr, 0, 0 };
+    BitstreamOut_t bout = { arr, 0, 0 };
 
     for (int i = 0; i < blen; i++) {
         uint8_t c = binarr[i];

@@ -18,7 +18,7 @@
 #include "fileutils.h"
 #include "pm3_cmd.h"
 
-static const ApplicationDataElm ApplicationData[] = {
+static const ApplicationDataElm_t ApplicationData[] = {
     {0x82,    "AIP"},
     {0x94,    "AFL"},
 

@@ -32,7 +32,7 @@
 #include "crc32.h"
 #include "commonutil.h"
 
-void DesfireClearContext(DesfireContext *ctx) {
+void DesfireClearContext(DesfireContext_t *ctx) {
     ctx->keyNum = 0;
     ctx->keyType = T_DES;
     memset(ctx->key, 0, sizeof(ctx->key));
@@ -55,7 +55,7 @@ void DesfireClearContext(DesfireContext *ctx) {
     DesfireClearSession(ctx);
 }
 
-void DesfireClearSession(DesfireContext *ctx) {
+void DesfireClearSession(DesfireContext_t *ctx) {
     ctx->secureChannel = DACNone; // here none - not authenticared
 
     memset(ctx->IV, 0, sizeof(ctx->IV));
@@ -68,42 +68,42 @@ void DesfireClearSession(DesfireContext *ctx) {
     memset(ctx->TI, 0, sizeof(ctx->TI));
 }
 
-void DesfireClearIV(DesfireContext *ctx) {
+void DesfireClearIV(DesfireContext_t *ctx) {
     memset(ctx->IV, 0, sizeof(ctx->IV));
 }
 
-void DesfireSetKey(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key) {
+void DesfireSetKey(DesfireContext_t *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key) {
     DesfireClearContext(ctx);
     DesfireSetKeyNoClear(ctx, keyNum, keyType, key);
 }
 
-void DesfireSetKeyNoClear(DesfireContext *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key) {
+void DesfireSetKeyNoClear(DesfireContext_t *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key) {
     ctx->keyNum = keyNum;
     ctx->keyType = keyType;
     memcpy(ctx->key, key, desfire_get_key_length(keyType));
     memcpy(ctx->masterKey, key, desfire_get_key_length(keyType));
 }
 
-void DesfireSetCommandSet(DesfireContext *ctx, DesfireCommandSet cmdSet) {
+void DesfireSetCommandSet(DesfireContext_t *ctx, DesfireCommandSet cmdSet) {
     ctx->cmdSet = cmdSet;
 }
 
-void DesfireSetCommMode(DesfireContext *ctx, DesfireCommunicationMode commMode) {
+void DesfireSetCommMode(DesfireContext_t *ctx, DesfireCommunicationMode commMode) {
     ctx->commMode = commMode;
 }
 
-void DesfireSetKdf(DesfireContext *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint8_t kdfInputLen) {
+void DesfireSetKdf(DesfireContext_t *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint8_t kdfInputLen) {
     ctx->kdfAlgo = kdfAlgo;
     ctx->kdfInputLen = kdfInputLen;
     if (kdfInputLen)
         memcpy(ctx->kdfInput, kdfInput, kdfInputLen);
 }
 
-bool DesfireIsAuthenticated(DesfireContext *dctx) {
+bool DesfireIsAuthenticated(DesfireContext_t *dctx) {
     return dctx->secureChannel != DACNone;
 }
 
-size_t DesfireGetMACLength(DesfireContext *ctx) {
+size_t DesfireGetMACLength(DesfireContext_t *ctx) {
     size_t mac_length = DESFIRE_MAC_LENGTH;
     switch (ctx->secureChannel) {
         case DACNone:
@@ -162,7 +162,7 @@ size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint
     return crcposfound;
 }
 
-uint8_t *DesfireGetKey(DesfireContext *ctx, DesfireCryptoOpKeyType key_type) {
+uint8_t *DesfireGetKey(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_type) {
     if (key_type == DCOSessionKeyMac) {
         return ctx->sessionKeyMAC;
     } else if (key_type == DCOSessionKeyEnc) {
@@ -241,7 +241,7 @@ static void DesfireCryptoEncDecSingleBlock(uint8_t *key, DesfireCryptoAlgorythm 
     memcpy(dstdata, edata, block_size);
 }
 
-void DesfireCryptoEncDecEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool dir_to_send, bool encode, uint8_t *iv) {
+void DesfireCryptoEncDecEx(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_type, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool dir_to_send, bool encode, uint8_t *iv) {
     uint8_t data[1024] = {0};
     uint8_t xiv[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
 
@@ -281,7 +281,7 @@ void DesfireCryptoEncDecEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type,
         memcpy(dstdata, data, srcdatalen);
 }
 
-void DesfireCryptoEncDec(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode) {
+void DesfireCryptoEncDec(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_type, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode) {
     bool dir_to_send = encode;
     bool xencode = encode;
     if (ctx->secureChannel == DACd40)
@@ -290,7 +290,7 @@ void DesfireCryptoEncDec(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, u
     DesfireCryptoEncDecEx(ctx, key_type, srcdata, srcdatalen, dstdata, dir_to_send, xencode, NULL);
 }
 
-void DesfireCMACGenerateSubkeys(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *sk1, uint8_t *sk2) {
+void DesfireCMACGenerateSubkeys(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_type, uint8_t *sk1, uint8_t *sk2) {
     int kbs = desfire_get_key_block_length(ctx->keyType);
     const uint8_t R = (kbs == 8) ? 0x1B : 0x87;
 
@@ -321,7 +321,7 @@ void DesfireCMACGenerateSubkeys(DesfireContext *ctx, DesfireCryptoOpKeyType key_
     }
 }
 
-void DesfireCryptoCMACEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, uint8_t *data, size_t len, size_t minlen, uint8_t *cmac) {
+void DesfireCryptoCMACEx(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_type, uint8_t *data, size_t len, size_t minlen, uint8_t *cmac) {
     int kbs = desfire_get_key_block_length(ctx->keyType);
     if (kbs == 0)
         return;
@@ -351,12 +351,12 @@ void DesfireCryptoCMACEx(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, u
         memcpy(cmac, ctx->IV, kbs);
 }
 
-void DesfireCryptoCMAC(DesfireContext *ctx, uint8_t *data, size_t len, uint8_t *cmac) {
+void DesfireCryptoCMAC(DesfireContext_t *ctx, uint8_t *data, size_t len, uint8_t *cmac) {
     DesfireCryptoCMACEx(ctx, DCOSessionKeyMac, data, len, 0, cmac);
 }
 
 // This function is almot like cmac(...). but with some key differences.
-void MifareKdfAn10922(DesfireContext *ctx, DesfireCryptoOpKeyType key_type, const uint8_t *data, size_t len) {
+void MifareKdfAn10922(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_type, const uint8_t *data, size_t len) {
     if (ctx == NULL || data == NULL || len < 1 || len > 31)
         return;
 
@@ -582,7 +582,7 @@ void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool en
     memcpy(data + 24, rndA + 8, 8);
 
     uint8_t cmac[CRYPTO_AES_BLOCK_SIZE] = {0};
-    DesfireContext ctx = {0};
+    DesfireContext_t ctx = {0};
     ctx.keyType = T_AES;
     memcpy(ctx.key, key, 16); // aes-128
     DesfireCryptoCMAC(&ctx, data, 32, cmac);
@@ -605,12 +605,12 @@ void DesfireGenSessionKeyLRP(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool en
     data[30] = 0x96;
     data[31] = 0x69;
 
-    LRPContext ctx = {0};
+    LRPContext_t ctx = {0};
     LRPSetKey(&ctx, key, 0, true);
     LRPCMAC(&ctx, data, 32, sessionkey);
 }
 
-void DesfireEV2FillIV(DesfireContext *ctx, bool ivforcommand, uint8_t *iv) {
+void DesfireEV2FillIV(DesfireContext_t *ctx, bool ivforcommand, uint8_t *iv) {
     uint8_t xiv[CRYPTO_AES_BLOCK_SIZE] = {0};
 
     if (ivforcommand) {
@@ -633,7 +633,7 @@ void DesfireEV2FillIV(DesfireContext *ctx, bool ivforcommand, uint8_t *iv) {
         memcpy(iv, xiv, CRYPTO_AES_BLOCK_SIZE);
 }
 
-int DesfireEV2CalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac) {
+int DesfireEV2CalcCMAC(DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac) {
     uint8_t mdata[1050] = {0};
     size_t mdatalen = 0;
 
@@ -662,7 +662,7 @@ void DesfireGenTransSessionKeyEV2(uint8_t *key, uint32_t trCntr, uint8_t *uid, b
     Uint4byteToMemLe(&xiv[5], trCntr + 1);
     memcpy(&xiv[9], uid, 7);
 
-    DesfireContext ctx = {0};
+    DesfireContext_t ctx = {0};
     DesfireSetKey(&ctx, 0, T_AES, key);
     DesfireCryptoCMACEx(&ctx, DCOMainKey, xiv, 16, 0, sessionkey);
 }
@@ -688,12 +688,12 @@ void DesfireGenTransSessionKeyLRP(uint8_t *key, uint32_t trCntr, uint8_t *uid, b
         data[15] = 0xa5;
     }
 
-    LRPContext lctx = {0};
+    LRPContext_t lctx = {0};
     LRPSetKey(&lctx, key, 0, false);
     LRPCMAC(&lctx, data, sizeof(data), sessionkey);
 }
 
-void DesfireDecodePrevReaderID(DesfireContext *ctx, uint8_t *key, uint32_t trCntr, uint8_t *encPrevReaderID, uint8_t *prevReaderID) {
+void DesfireDecodePrevReaderID(DesfireContext_t *ctx, uint8_t *key, uint32_t trCntr, uint8_t *encPrevReaderID, uint8_t *prevReaderID) {
     uint8_t sessionkey[CRYPTO_AES128_KEY_SIZE] = {0};
     uint8_t uid[12] = {0};
     memcpy(uid, ctx->uid, MAX(ctx->uidlen, 7));
@@ -706,7 +706,7 @@ void DesfireDecodePrevReaderID(DesfireContext *ctx, uint8_t *key, uint32_t trCnt
     aes_decode(NULL, sessionkey, encPrevReaderID, prevReaderID, CRYPTO_AES128_KEY_SIZE);
 }
 
-int DesfireLRPCalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac) {
+int DesfireLRPCalcCMAC(DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac) {
     uint8_t mdata[1050] = {0};
     size_t mdatalen = 0;
 
@@ -717,7 +717,7 @@ int DesfireLRPCalcCMAC(DesfireContext *ctx, uint8_t cmd, uint8_t *data, size_t d
         memcpy(&mdata[7], data, datalen);
     mdatalen = 1 + 2 + 4 + datalen;
 
-    LRPContext lctx = {0};
+    LRPContext_t lctx = {0};
     LRPSetKey(&lctx, ctx->sessionKeyMAC, 0, true);
     LRPCMAC8(&lctx, mdata, mdatalen, mac);
 

@@ -19,7 +19,7 @@
 typedef struct {
     tlv_tag_t Tag;
     const char *Name;
-} ApplicationDataElm;
+} ApplicationDataElm_t;
 
 const char *GetApplicationDataName(tlv_tag_t tag);
 

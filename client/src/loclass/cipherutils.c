@@ -49,7 +49,7 @@
  * @param stream
  * @return
  */
-bool headBit(BitstreamIn *stream) {
+bool headBit(BitstreamIn_t *stream) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = (stream->position++) & 7; // mask out 00000111
     return (*(stream->buffer + bytepos) >> (7 - bitpos)) & 1;
@@ -59,7 +59,7 @@ bool headBit(BitstreamIn *stream) {
  * @param stream
  * @return
  */
-bool tailBit(BitstreamIn *stream) {
+bool tailBit(BitstreamIn_t *stream) {
     int bitpos = stream->numbits - 1 - (stream->position++);
 
     int bytepos = bitpos >> 3;
@@ -71,7 +71,7 @@ bool tailBit(BitstreamIn *stream) {
  * @param stream
  * @param bit
  */
-void pushBit(BitstreamOut *stream, bool bit) {
+void pushBit(BitstreamOut_t *stream, bool bit) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
     *(stream->buffer + bytepos) |= (bit) << (7 - bitpos);
@@ -85,7 +85,7 @@ void pushBit(BitstreamOut *stream, bool bit) {
  * @param stream
  * @param bits
  */
-void push6bits(BitstreamOut *stream, uint8_t bits) {
+void push6bits(BitstreamOut_t *stream, uint8_t bits) {
     pushBit(stream, bits & 0x20);
     pushBit(stream, bits & 0x10);
     pushBit(stream, bits & 0x08);
@@ -99,7 +99,7 @@ void push6bits(BitstreamOut *stream, uint8_t bits) {
  * @param stream
  * @return number of bits left in stream
  */
-int bitsLeft(BitstreamIn *stream) {
+int bitsLeft(BitstreamIn_t *stream) {
     return stream->numbits - stream->position;
 }
 /**
@@ -108,7 +108,7 @@ int bitsLeft(BitstreamIn *stream) {
  * @return Number of bits stored in stream
  */
 /*
-static int numBits(BitstreamOut *stream) {
+static int numBits(BitstreamOut_t *stream) {
     return stream->numbits;
 }
 */
@@ -187,8 +187,8 @@ void printarr_human_readable(const char *title, uint8_t *arr, int len) {
 static int testBitStream(void) {
     uint8_t input [] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t output [] = {0, 0, 0, 0, 0, 0, 0, 0};
-    BitstreamIn in = { input, sizeof(input) * 8, 0};
-    BitstreamOut out = { output, 0, 0}
+    BitstreamIn_t in = { input, sizeof(input) * 8, 0};
+    BitstreamOut_t out = { output, 0, 0}
                        ;
     while (bitsLeft(&in) > 0) {
         pushBit(&out, headBit(&in));
@@ -213,10 +213,10 @@ static int testReversedBitstream(void) {
     uint8_t input [] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t reverse [] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t output [] = {0, 0, 0, 0, 0, 0, 0, 0};
-    BitstreamIn in = { input, sizeof(input) * 8, 0};
-    BitstreamOut out = { output, 0, 0};
-    BitstreamIn reversed_in = { reverse, sizeof(input) * 8, 0};
-    BitstreamOut reversed_out = { reverse, 0, 0};
+    BitstreamIn_t in = { input, sizeof(input) * 8, 0};
+    BitstreamOut_t out = { output, 0, 0};
+    BitstreamIn_t reversed_in = { reverse, sizeof(input) * 8, 0};
+    BitstreamOut_t reversed_out = { reverse, 0, 0};
 
     while (bitsLeft(&in) > 0) {
         pushBit(&reversed_out, tailBit(&in));

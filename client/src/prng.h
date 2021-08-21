@@ -9,17 +9,17 @@
 
 #include "common.h"
 
-typedef struct prng_ctx {
+typedef struct {
     uint32_t a;
     uint32_t b;
     uint32_t c;
     uint32_t d;
-} prng_ctx;
+} prng_ctx_t;
 
-//uint32_t burtle_get( prng_ctx *x );
-uint32_t burtle_get_mod(prng_ctx *x);
-void burtle_init_mod(prng_ctx *x, uint32_t seed);
-void burtle_init(prng_ctx *x, uint32_t seed);
+//uint32_t burtle_get( prng_ctx_t *x );
+uint32_t burtle_get_mod(prng_ctx_t *x);
+void burtle_init_mod(prng_ctx_t *x, uint32_t seed);
+void burtle_init(prng_ctx_t *x, uint32_t seed);
 
 uint32_t GetSimplePrng(uint32_t seed);
 

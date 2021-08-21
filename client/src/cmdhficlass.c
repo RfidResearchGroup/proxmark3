@@ -3698,7 +3698,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
 
     uint8_t data[8];
     memset(data, 0, sizeof(data));
-    BitstreamOut bout = {data, 0, 0 };
+    BitstreamOut_t bout = {data, 0, 0 };
 
     for (int i = 0; i < 64 - bin_len - 1; i++) {
         pushBit(&bout, 0);

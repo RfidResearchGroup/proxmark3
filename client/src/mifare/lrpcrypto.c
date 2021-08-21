@@ -33,7 +33,7 @@ static uint8_t constAA[] = {0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa
 static uint8_t const55[] = {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
 static uint8_t const00[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-void LRPClearContext(LRPContext *ctx) {
+void LRPClearContext(LRPContext_t *ctx) {
     memset(ctx->key, 0, CRYPTO_AES128_KEY_SIZE);
 
     ctx->useBitPadding = false;
@@ -44,7 +44,7 @@ void LRPClearContext(LRPContext *ctx) {
     ctx->useUpdatedKeyNum = 0;
 }
 
-void LRPSetKey(LRPContext *ctx, uint8_t *key, size_t updatedKeyNum, bool useBitPadding) {
+void LRPSetKey(LRPContext_t *ctx, uint8_t *key, size_t updatedKeyNum, bool useBitPadding) {
     LRPClearContext(ctx);
 
     memcpy(ctx->key, key, CRYPTO_AES128_KEY_SIZE);
@@ -59,12 +59,12 @@ void LRPSetKey(LRPContext *ctx, uint8_t *key, size_t updatedKeyNum, bool useBitP
     ctx->counterLenNibbles = CRYPTO_AES128_KEY_SIZE;
 }
 
-void LRPSetCounter(LRPContext *ctx, uint8_t *counter, size_t counterLenNibbles) {
+void LRPSetCounter(LRPContext_t *ctx, uint8_t *counter, size_t counterLenNibbles) {
     memcpy(ctx->counter, counter, counterLenNibbles / 2);
     ctx->counterLenNibbles = counterLenNibbles;
 }
 
-void LRPSetKeyEx(LRPContext *ctx, uint8_t *key, uint8_t *counter, size_t counterLenNibbles, size_t updatedKeyNum, bool useBitPadding) {
+void LRPSetKeyEx(LRPContext_t *ctx, uint8_t *key, uint8_t *counter, size_t counterLenNibbles, size_t updatedKeyNum, bool useBitPadding) {
     LRPSetKey(ctx, key, updatedKeyNum, useBitPadding);
     LRPSetCounter(ctx, counter, counterLenNibbles);
 }
@@ -72,7 +72,7 @@ void LRPSetKeyEx(LRPContext *ctx, uint8_t *key, uint8_t *counter, size_t counter
 
 // https://www.nxp.com/docs/en/application-note/AN12304.pdf
 // Algorithm 1
-void LRPGeneratePlaintexts(LRPContext *ctx, size_t plaintextsCount) {
+void LRPGeneratePlaintexts(LRPContext_t *ctx, size_t plaintextsCount) {
     if (plaintextsCount > LRP_MAX_PLAINTEXTS_SIZE)
         return;
 
@@ -89,7 +89,7 @@ void LRPGeneratePlaintexts(LRPContext *ctx, size_t plaintextsCount) {
 
 // https://www.nxp.com/docs/en/application-note/AN12304.pdf
 // Algorithm 2
-void LRPGenerateUpdatedKeys(LRPContext *ctx, size_t updatedKeysCount) {
+void LRPGenerateUpdatedKeys(LRPContext_t *ctx, size_t updatedKeysCount) {
     if (updatedKeysCount > LRP_MAX_UPDATED_KEYS_SIZE)
         return;
 
@@ -106,7 +106,7 @@ void LRPGenerateUpdatedKeys(LRPContext *ctx, size_t updatedKeysCount) {
 
 // https://www.nxp.com/docs/en/application-note/AN12304.pdf
 // Algorithm 3
-void LRPEvalLRP(LRPContext *ctx, uint8_t *iv, size_t ivlen, bool final, uint8_t *y) {
+void LRPEvalLRP(LRPContext_t *ctx, uint8_t *iv, size_t ivlen, bool final, uint8_t *y) {
     uint8_t ry[CRYPTO_AES128_KEY_SIZE] = {0};
     memcpy(ry, ctx->updatedKeys[ctx->useUpdatedKeyNum], CRYPTO_AES128_KEY_SIZE);
 
@@ -141,7 +141,7 @@ void LRPIncCounter(uint8_t *ctr, size_t ctrlen) {
 
 // https://www.nxp.com/docs/en/application-note/AN12304.pdf
 // Algorithm 4
-void LRPEncode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen) {
+void LRPEncode(LRPContext_t *ctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen) {
     *resplen = 0;
 
     uint8_t xdata[1024] = {0};
@@ -168,7 +168,7 @@ void LRPEncode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, si
 
 // https://www.nxp.com/docs/en/application-note/AN12304.pdf
 // Algorithm 5
-void LRPDecode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen) {
+void LRPDecode(LRPContext_t *ctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen) {
     *resplen = 0;
     if (datalen % CRYPTO_AES128_KEY_SIZE)
         return;
@@ -193,7 +193,7 @@ void LRPDecode(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *resp, si
 }
 
 void LRPEncDec(uint8_t *key, uint8_t *iv, bool encode, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen) {
-    LRPContext ctx = {0};
+    LRPContext_t ctx = {0};
 
     LRPSetKeyEx(&ctx, key, iv, 4 * 2, 1, true);
     if (encode)
@@ -225,7 +225,7 @@ static void mulPolyX(uint8_t *data) {
 }
 
 void LRPGenSubkeys(uint8_t *key, uint8_t *sk1, uint8_t *sk2) {
-    LRPContext ctx = {0};
+    LRPContext_t ctx = {0};
     LRPSetKey(&ctx, key, 0, true);
 
     uint8_t y[CRYPTO_AES128_KEY_SIZE] = {0};
@@ -240,7 +240,7 @@ void LRPGenSubkeys(uint8_t *key, uint8_t *sk1, uint8_t *sk2) {
 
 // https://www.nxp.com/docs/en/application-note/AN12304.pdf
 // Algorithm 6
-void LRPCMAC(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
+void LRPCMAC(LRPContext_t *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
     uint8_t sk1[CRYPTO_AES128_KEY_SIZE] = {0};
     uint8_t sk2[CRYPTO_AES128_KEY_SIZE] = {0};
     LRPGenSubkeys(ctx->key, sk1, sk2);
@@ -277,7 +277,7 @@ void LRPCMAC(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
     LRPEvalLRP(ctx, y, CRYPTO_AES128_KEY_SIZE * 2, true, cmac);
 }
 
-void LRPCMAC8(LRPContext *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
+void LRPCMAC8(LRPContext_t *ctx, uint8_t *data, size_t datalen, uint8_t *cmac) {
     uint8_t cmac_tmp[16] = {0};
     memset(cmac, 0x00, 8);
 

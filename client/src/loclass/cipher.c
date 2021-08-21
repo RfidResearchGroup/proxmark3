@@ -60,14 +60,14 @@ typedef struct {
     uint8_t r;
     uint8_t b;
     uint16_t t;
-} State;
+} State_t;
 
 /**
 *  Definition 2. The feedback function for the top register T : F 16/2 → F 2
 *  is defined as
 *  T (x 0 x 1 . . . . . . x 15 ) = x 0 ⊕ x 1 ⊕ x 5 ⊕ x 7 ⊕ x 10 ⊕ x 11 ⊕ x 14 ⊕ x 15 .
 **/
-static bool T(State state) {
+static bool T(State_t state) {
     /*
         bool x0 = state.t & 0x8000;
         bool x1 = state.t & 0x4000;
@@ -93,7 +93,7 @@ static bool T(State state) {
 *  Similarly, the feedback function for the bottom register B : F 8/2 → F 2 is defined as
 *  B(x 0 x 1 . . . x 7 ) = x 1 ⊕ x 2 ⊕ x 3 ⊕ x 7 .
 **/
-/*static bool B(State state) {
+/*static bool B(State_t state) {
     bool x1 = state.b & 0x40;
     bool x2 = state.b & 0x20;
     bool x3 = state.b & 0x10;
@@ -169,12 +169,12 @@ static uint8_t _select(bool x, bool y, uint8_t r) {
 * @param s - state
 * @param k - array containing 8 bytes
 **/
-static State successor(uint8_t *k, State s, bool y) {
+static State_t successor(uint8_t *k, State_t s, bool y) {
     bool r0 = s.r >> 7 & 0x1;
     bool r4 = s.r >> 3 & 0x1;
     bool r7 = s.r & 0x1;
 
-    State successor = {0, 0, 0, 0};
+    State_t successor = {0, 0, 0, 0};
 
     successor.t = s.t >> 1;
     successor.t |= ((T(s)) ^ (r0) ^ (r4)) << 15;
@@ -195,7 +195,7 @@ static State successor(uint8_t *k, State s, bool y) {
 *  to multiple bit input x ∈ F n 2 which we define as
 * @param k - array containing 8 bytes
 **/
-static State suc(uint8_t *k, State s, BitstreamIn *bitstream) {
+static State_t suc(uint8_t *k, State_t s, BitstreamIn_t *bitstream) {
     if (bitsLeft(bitstream) == 0) {
         return s;
     }
@@ -211,14 +211,14 @@ static State suc(uint8_t *k, State s, BitstreamIn *bitstream) {
 *  output(k, s, x 0 . . . x n ) = output(s) · output(k, s ′ , x 1 . . . x n )
 *  where s ′ = suc(k, s, x 0 ).
 **/
-static void output(uint8_t *k, State s, BitstreamIn *in,  BitstreamOut *out) {
+static void output(uint8_t *k, State_t s, BitstreamIn_t *in,  BitstreamOut_t *out) {
     if (bitsLeft(in) == 0) {
         return;
     }
     pushBit(out, (s.r >> 2) & 1);
     //Remove first bit
     uint8_t x0 = headBit(in);
-    State ss = successor(k, s, x0);
+    State_t ss = successor(k, s, x0);
     output(k, ss, in, out);
 }
 
@@ -227,8 +227,8 @@ static void output(uint8_t *k, State s, BitstreamIn *in,  BitstreamOut *out) {
 * key k ∈ (F 82 ) 8 and outputs the initial cipher state s =< l, r, t, b >
 **/
 
-static State init(uint8_t *k) {
-    State s = {
+static State_t init(uint8_t *k) {
+    State_t s = {
         ((k[0] ^ 0x4c) + 0xEC) & 0xFF,// l
         ((k[0] ^ 0x4c) + 0x21) & 0xFF,// r
         0x4c, // b
@@ -237,10 +237,10 @@ static State init(uint8_t *k) {
     return s;
 }
 
-static void MAC(uint8_t *k, BitstreamIn input, BitstreamOut out) {
+static void MAC(uint8_t *k, BitstreamIn_t input, BitstreamOut_t out) {
     uint8_t zeroes_32[] = {0, 0, 0, 0};
-    BitstreamIn input_32_zeroes = {zeroes_32, sizeof(zeroes_32) * 8, 0};
-    State initState = suc(k, init(k), &input);
+    BitstreamIn_t input_32_zeroes = {zeroes_32, sizeof(zeroes_32) * 8, 0};
+    State_t initState = suc(k, init(k), &input);
     output(k, initState, &input_32_zeroes, &out);
 }
 
@@ -252,9 +252,9 @@ void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]) {
     memcpy(div_key, div_key_p, 8);
 
     reverse_arraybytes(cc_nr, 12);
-    BitstreamIn bitstream = {cc_nr, 12 * 8, 0};
+    BitstreamIn_t bitstream = {cc_nr, 12 * 8, 0};
     uint8_t dest [] = {0, 0, 0, 0, 0, 0, 0, 0};
-    BitstreamOut out = { dest, sizeof(dest) * 8, 0 };
+    BitstreamOut_t out = { dest, sizeof(dest) * 8, 0 };
     MAC(div_key, bitstream, out);
     //The output MAC must also be reversed
     reverse_arraybytes(dest, sizeof(dest));
@@ -270,9 +270,9 @@ void doMAC_N(uint8_t *address_data_p, uint8_t address_data_size, uint8_t *div_ke
     memcpy(div_key, div_key_p, 8);
 
     reverse_arraybytes(address_data, address_data_size);
-    BitstreamIn bitstream = {address_data, address_data_size * 8, 0};
+    BitstreamIn_t bitstream = {address_data, address_data_size * 8, 0};
     uint8_t dest [] = {0, 0, 0, 0, 0, 0, 0, 0};
-    BitstreamOut out = { dest, sizeof(dest) * 8, 0 };
+    BitstreamOut_t out = { dest, sizeof(dest) * 8, 0 };
     MAC(div_key, bitstream, out);
     //The output MAC must also be reversed
     reverse_arraybytes(dest, sizeof(dest));

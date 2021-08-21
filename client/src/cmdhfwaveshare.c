@@ -38,7 +38,7 @@ typedef struct {
     uint32_t colorreq;
     uint32_t Color_1;  //Color palette
     uint32_t Color_2;
-} PACKED BMP_HEADER;
+} PACKED bmp_header_t;
 
 #define EPD_1IN54B     0
 #define EPD_1IN54C     1
@@ -92,11 +92,11 @@ static model_t models[] = {
 static int CmdHelp(const char *Cmd);
 
 static int picture_bit_depth(const uint8_t *bmp, const size_t bmpsize, const uint8_t model_nr) {
-    if (bmpsize < sizeof(BMP_HEADER)) {
+    if (bmpsize < sizeof(bmp_header_t)) {
         return PM3_ESOFT;
     }
 
-    BMP_HEADER *pbmpheader = (BMP_HEADER *)bmp;
+    bmp_header_t *pbmpheader = (bmp_header_t *)bmp;
     PrintAndLogEx(DEBUG, "colorsused = %d", pbmpheader->colorsused);
     PrintAndLogEx(DEBUG, "pbmpheader->bpp = %d", pbmpheader->bpp);
     if ((pbmpheader->BMP_Width != models[model_nr].width) || (pbmpheader->BMP_Height != models[model_nr].height)) {
@@ -106,7 +106,7 @@ static int picture_bit_depth(const uint8_t *bmp, const size_t bmpsize, const uin
 }
 
 static int read_bmp_bitmap(const uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, uint8_t **black, uint8_t **red) {
-    BMP_HEADER *pbmpheader = (BMP_HEADER *)bmp;
+    bmp_header_t *pbmpheader = (bmp_header_t *)bmp;
     // check file is bitmap
     if (pbmpheader->bpp != 1) {
         return PM3_ESOFT;
@@ -345,7 +345,7 @@ static void map8to1(uint8_t *colormap, uint16_t width, uint16_t height, uint8_t 
 }
 
 static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, uint8_t **black, uint8_t **red, char *filename, bool save_conversions) {
-    BMP_HEADER *pbmpheader = (BMP_HEADER *)bmp;
+    bmp_header_t *pbmpheader = (bmp_header_t *)bmp;
     // check file is full color
     if ((pbmpheader->bpp != 24) && (pbmpheader->bpp != 32)) {
         return PM3_ESOFT;

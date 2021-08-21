@@ -205,7 +205,7 @@ static uint64_t check(uint64_t z) {
     return ck1 | ck2 >> 24;
 }
 
-static void permute(BitstreamIn *p_in, uint64_t z, int l, int r, BitstreamOut *out) {
+static void permute(BitstreamIn_t *p_in, uint64_t z, int l, int r, BitstreamOut_t *out) {
     if (bitsLeft(p_in) == 0)
         return;
 
@@ -290,9 +290,9 @@ void hash0(uint64_t c, uint8_t k[8]) {
 
     if (g_debugMode > 0) PrintAndLogEx(DEBUG, "     p : %02x", p);
 
-    BitstreamIn p_in = { &p, 8, 0 };
+    BitstreamIn_t p_in = { &p, 8, 0 };
     uint8_t outbuffer[] = {0, 0, 0, 0, 0, 0, 0, 0};
-    BitstreamOut out = {outbuffer, 0, 0};
+    BitstreamOut_t out = {outbuffer, 0, 0};
     permute(&p_in, zCaret, 0, 4, &out); //returns 48 bits? or 6 8-bytes
 
     //Out is now a buffer containing six-bit bytes, should be 48 bits
@@ -387,9 +387,9 @@ static void testPermute(void) {
     printarr("input_perm", mres, 8);
 
     uint8_t p = ~pi[0];
-    BitstreamIn p_in = { &p, 8, 0 };
+    BitstreamIn_t p_in = { &p, 8, 0 };
     uint8_t outbuffer[] = {0, 0, 0, 0, 0, 0, 0, 0};
-    BitstreamOut out = {outbuffer, 0, 0};
+    BitstreamOut_t out = {outbuffer, 0, 0};
 
     permute(&p_in, x, 0, 4, &out);
 
@@ -708,7 +708,7 @@ void checkParity2(uint8_t* key) {
     uint8_t stored_parity = key[7];
     PrintAndLogEx(NORMAL, "Parity byte: 0x%02x", stored_parity);
     int i, byte, fails = 0;
-    BitstreamIn bits = {key, 56, 0};
+    BitstreamIn_t bits = {key, 56, 0};
     bool parity = 0;
 
     for (i = 0; i  < 56; i++) {
@@ -736,7 +736,7 @@ void modifyKey_put_parity_last(uint8_t * key, uint8_t* output) {
 
     uint8_t paritybits = 0;
     bool parity =0;
-    BitstreamOut out = { output, 0, 0};
+    BitstreamOut_t out = { output, 0, 0};
     unsigned int bbyte, bbit;
     for (bbyte = 0; bbyte <8; bbyte++ ) {
         for(bbit = 0; bbit < 7; bbit++) {
@@ -760,8 +760,8 @@ void modifyKey_put_parity_last(uint8_t * key, uint8_t* output) {
 
 void modifyKey_put_parity_allover(uint8_t * key, uint8_t* output) {
     bool parity =0;
-    BitstreamOut out = {output, 0, 0};
-    BitstreamIn in = {key, 0, 0};
+    BitstreamOut_t out = {output, 0, 0};
+    BitstreamIn_t in = {key, 0, 0};
     unsigned int bbyte, bbit;
     for (bbit = 0; bbit < 56; bbit++) {
         if (bbit > 0 && bbit % 7 == 0) {

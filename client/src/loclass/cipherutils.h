@@ -47,22 +47,22 @@ typedef struct {
     uint8_t *buffer;
     uint8_t numbits;
     uint8_t position;
-} BitstreamIn;
+} BitstreamIn_t;
 
 typedef struct {
     uint8_t *buffer;
     uint8_t numbits;
     uint8_t position;
-} BitstreamOut;
+} BitstreamOut_t;
 
-bool headBit(BitstreamIn *stream);
-bool tailBit(BitstreamIn *stream);
-void pushBit(BitstreamOut *stream, bool bit);
-int bitsLeft(BitstreamIn *stream);
+bool headBit(BitstreamIn_t *stream);
+bool tailBit(BitstreamIn_t *stream);
+void pushBit(BitstreamOut_t *stream, bool bit);
+int bitsLeft(BitstreamIn_t *stream);
 #ifndef ON_DEVICE
 int testCipherUtils(void);
 #endif
-void push6bits(BitstreamOut *stream, uint8_t bits);
+void push6bits(BitstreamOut_t *stream, uint8_t bits);
 void EncryptDES(bool key[56], bool outBlk[64], bool inBlk[64], int verbose) ;
 void x_num_to_bytes(uint64_t n, size_t len, uint8_t *dest);
 uint64_t x_bytes_to_num(uint8_t *src, size_t len);
