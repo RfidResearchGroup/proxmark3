@@ -4768,7 +4768,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, id, noauth, true, fileisoid, verbose);
+    res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, id, fileisoidpresent, fileisoid, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
         PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
