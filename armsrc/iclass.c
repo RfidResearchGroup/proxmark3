@@ -315,9 +315,9 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     uint8_t current_page = 0;
 
     // maintain cipher states for both credit and debit key for each page
-    State cipher_state_KD[8];
-    State cipher_state_KC[8];
-    State *cipher_state = &cipher_state_KD[0];
+    State_t cipher_state_KD[8];
+    State_t cipher_state_KC[8];
+    State_t *cipher_state = &cipher_state_KD[0];
 
     uint8_t *emulator = BigBuf_get_EM_addr();
     uint8_t *csn = emulator;
