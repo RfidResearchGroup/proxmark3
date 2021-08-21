@@ -521,6 +521,7 @@ static int download_trace(void) {
     if (!GetFromDevice(BIG_BUF, g_trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 4000, true)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         free(g_trace);
+        g_trace = NULL;
         return PM3_ETIMEOUT;
     }
 
