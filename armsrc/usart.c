@@ -11,9 +11,9 @@
 #include "usart.h"
 #include "proxmark3_arm.h"
 
-volatile AT91PS_USART pUS1 = AT91C_BASE_US1;
-volatile AT91PS_PIO pPIO   = AT91C_BASE_PIOA;
-volatile AT91PS_PDC pPDC   = AT91C_BASE_PDC_US1;
+static volatile AT91PS_USART pUS1 = AT91C_BASE_US1;
+static volatile AT91PS_PIO pPIO   = AT91C_BASE_PIOA;
+static volatile AT91PS_PDC pPDC   = AT91C_BASE_PDC_US1;
 
 uint32_t g_usart_baudrate = 0;
 uint8_t g_usart_parity = 0;

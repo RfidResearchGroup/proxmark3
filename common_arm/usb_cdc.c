@@ -129,7 +129,7 @@ AT91SAM7S256  USB Device Port
 #define SET_LINE_CODING               0x2021
 #define SET_CONTROL_LINE_STATE        0x2221
 
-AT91PS_UDP pUdp = AT91C_BASE_UDP;
+static AT91PS_UDP pUdp = AT91C_BASE_UDP;
 static uint8_t btConfiguration = 0;
 static uint8_t btConnection    = 0;
 static uint8_t btReceiveBank   = AT91C_UDP_RX_DATA_BK0;
@@ -442,7 +442,7 @@ typedef struct {
     uint8_t DataBits;
 } AT91S_CDC_LINE_CODING, *AT91PS_CDC_LINE_CODING;
 
-AT91S_CDC_LINE_CODING line = { // purely informative, actual values don't matter
+static AT91S_CDC_LINE_CODING line = { // purely informative, actual values don't matter
     USART_BAUD_RATE, // baudrate
     0,               // 1 Stop Bit
     0,               // None Parity

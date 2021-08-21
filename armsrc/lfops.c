@@ -145,7 +145,7 @@ Initial values if not in flash
         { 29    , 17    , 15    , 40    , 0     , 0     , 15     }, // Leading 0
         { 29    , 17    , 15    , 31    , 47    , 63    , 15     }  // 1 of 4
 */
-t55xx_configurations_t T55xx_Timing  = {
+static t55xx_configurations_t T55xx_Timing  = {
     {
 #ifdef WITH_FLASH
 // PM3RDV4
