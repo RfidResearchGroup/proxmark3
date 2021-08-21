@@ -540,6 +540,7 @@ static int download_trace(void) {
         if (!GetFromDevice(BIG_BUF, g_trace, g_traceLen, 0, NULL, 0, NULL, 2500, false)) {
             PrintAndLogEx(WARNING, "command execution time out");
             free(g_trace);
+            g_trace = NULL;
             return PM3_ETIMEOUT;
         }
     }
@@ -578,8 +579,10 @@ static int CmdTraceLoad(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
-    if (g_trace)
+    if (g_trace) {
         free(g_trace);
+        g_trace = NULL;
+    }
 
     size_t len = 0;
     if (loadFile_safe(filename, ".trace", (void **)&g_trace, &len) != PM3_SUCCESS) {
