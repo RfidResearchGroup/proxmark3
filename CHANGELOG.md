@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added option --mem to `hf mf nested`, from icopyx source (@doegox)
+ - Port fpga-xc3s100e and icopyx source code specificities to this repo (@doegox)
  - `hf mfdes` - Transactions. commit, abort, commit reader id. (@merlokk)
  - `hf mfdes` - LRP secure channel for Desfire Light. (@merlokk)
  - `hf mfdes` - commands refactoring. now fully works: des,2tdea,3tdea,aes keys with d40,ev1,ev2 channels and native/nativeiso/iso command sets(@merlokk)
