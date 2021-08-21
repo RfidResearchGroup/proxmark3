@@ -421,7 +421,7 @@ void DesfirePrintContext(DesfireContext *ctx) {
     }
 }
 
-static int DESFIRESendApduEx(bool activate_field, sAPDU apdu, uint16_t le, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint16_t *sw) {
+static int DESFIRESendApduEx(bool activate_field, sAPDU_t apdu, uint16_t le, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint16_t *sw) {
     if (result_len) *result_len = 0;
     if (sw) *sw = 0;
 
@@ -480,7 +480,7 @@ static int DESFIRESendApduEx(bool activate_field, sAPDU apdu, uint16_t le, uint8
     return PM3_SUCCESS;
 }
 
-static int DESFIRESendApdu(bool activate_field, sAPDU apdu, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint16_t *sw) {
+static int DESFIRESendApdu(bool activate_field, sAPDU_t apdu, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint16_t *sw) {
     return DESFIRESendApduEx(activate_field, apdu, APDU_INCLUDE_LE_00, result, max_result_len, result_len, sw);
 }
 
@@ -642,7 +642,7 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext *ctx, ui
     uint32_t pos = 0;
     uint32_t i = 1;
 
-    sAPDU apdu = {0};
+    sAPDU_t apdu = {0};
     apdu.CLA = MFDES_NATIVE_ISO7816_WRAP_CLA; //0x90
     apdu.INS = cmd;
     apdu.Lc = datalen;
@@ -736,7 +736,7 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext *ctx, ui
     return PM3_SUCCESS;
 }
 
-static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, sAPDU apdu, uint16_t le, uint8_t *resp, size_t *resplen, uint16_t *sw) {
+static int DesfireExchangeISO(bool activate_field, DesfireContext *ctx, sAPDU_t apdu, uint16_t le, uint8_t *resp, size_t *resplen, uint16_t *sw) {
     uint8_t data[1050] = {0};
     uint32_t datalen = 0;
     int res = DESFIRESendApduEx(activate_field, apdu, le, data, sizeof(data), &datalen, sw);
@@ -1632,7 +1632,7 @@ static bool DesfireCheckISOAuthCmd(uint32_t appAID, char *dfname, uint8_t keyNum
     uint16_t sw = 0;
     uint8_t p1 = DesfireKeyToISOKey(keytype);
     uint8_t p2 = ((app_level) ? 0x80 : 0x00) | keyNum;
-    res = DesfireExchangeISO(false, &dctx, (sAPDU) {0x00, ISO7816_EXTERNAL_AUTHENTICATION, p1, p2, rndlen * 2, piccrnd}, 0, resp, &resplen, &sw);
+    res = DesfireExchangeISO(false, &dctx, (sAPDU_t) {0x00, ISO7816_EXTERNAL_AUTHENTICATION, p1, p2, rndlen * 2, piccrnd}, 0, resp, &resplen, &sw);
     DropField();
     return (sw == 0x9000 || sw == 0x6982);
 }
@@ -2805,7 +2805,7 @@ int DesfireISOSelectEx(DesfireContext *dctx, bool fieldon, DesfireISOSelectContr
     uint8_t xresp[250] = {0};
     size_t xresplen = 0;
     uint16_t sw = 0;
-    int res = DesfireExchangeISO(fieldon, dctx, (sAPDU) {0x00, ISO7816_SELECT_FILE, cntr, ((resp == NULL) ? 0x0C : 0x00), datalen, data}, APDU_INCLUDE_LE_00, xresp, &xresplen, &sw);
+    int res = DesfireExchangeISO(fieldon, dctx, (sAPDU_t) {0x00, ISO7816_SELECT_FILE, cntr, ((resp == NULL) ? 0x0C : 0x00), datalen, data}, APDU_INCLUDE_LE_00, xresp, &xresplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
         return PM3_ESOFT;
 
@@ -2831,7 +2831,7 @@ int DesfireISOSelectDF(DesfireContext *dctx, char *dfname, uint8_t *resp, size_t
 
 int DesfireISOGetChallenge(DesfireContext *dctx, DesfireCryptoAlgorythm keytype, uint8_t *resp, size_t *resplen) {
     uint16_t sw = 0;
-    int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_GET_CHALLENGE, 0x00, 0x00, 0x00, NULL}, DesfireGetRndLenForKey(keytype), resp, resplen, &sw);
+    int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_GET_CHALLENGE, 0x00, 0x00, 0x00, NULL}, DesfireGetRndLenForKey(keytype), resp, resplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
         return PM3_ESOFT;
 
@@ -2846,7 +2846,7 @@ int DesfireISOExternalAuth(DesfireContext *dctx, bool app_level, uint8_t keynum,
     size_t resplen = 0;
 
     uint16_t sw = 0;
-    int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_EXTERNAL_AUTHENTICATION, p1, p2, DesfireGetRndLenForKey(keytype) * 2, data}, 0, resp, &resplen, &sw);
+    int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_EXTERNAL_AUTHENTICATION, p1, p2, DesfireGetRndLenForKey(keytype) * 2, data}, 0, resp, &resplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
         return PM3_ESOFT;
 
@@ -2859,7 +2859,7 @@ int DesfireISOInternalAuth(DesfireContext *dctx, bool app_level, uint8_t keynum,
     uint8_t p2 = ((app_level) ? 0x80 : 0x00) | keynum;
 
     uint16_t sw = 0;
-    int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_INTERNAL_AUTHENTICATION, p1, p2, keylen, data}, keylen * 2, resp, resplen, &sw);
+    int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_INTERNAL_AUTHENTICATION, p1, p2, keylen, data}, keylen * 2, resp, resplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
         return PM3_ESOFT;
 
@@ -2875,7 +2875,7 @@ int DesfireISOReadBinary(DesfireContext *dctx, bool use_file_id, uint8_t fileid,
     uint8_t p2 = offset & 0xff;
 
     uint16_t sw = 0;
-    int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_READ_BINARY, p1, p2, 0, NULL}, (length == 0) ? APDU_INCLUDE_LE_00 : length, resp, resplen, &sw);
+    int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_READ_BINARY, p1, p2, 0, NULL}, (length == 0) ? APDU_INCLUDE_LE_00 : length, resp, resplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
         return PM3_ESOFT;
 
@@ -2894,7 +2894,7 @@ int DesfireISOUpdateBinary(DesfireContext *dctx, bool use_file_id, uint8_t filei
     size_t resplen = 0;
 
     uint16_t sw = 0;
-    int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_UPDATE_BINARY, p1, p2, datalen, data}, 0, resp, &resplen, &sw);
+    int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_UPDATE_BINARY, p1, p2, datalen, data}, 0, resp, &resplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
         return PM3_ESOFT;
 
@@ -2905,7 +2905,7 @@ int DesfireISOReadRecords(DesfireContext *dctx, uint8_t recordnum, bool read_all
     uint8_t p2 = ((fileid & 0x1f) << 3) | ((read_all_records) ? 0x05 : 0x04);
 
     uint16_t sw = 0;
-    int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_READ_RECORDS, recordnum, p2, 0, NULL}, (length == 0) ? APDU_INCLUDE_LE_00 : length, resp, resplen, &sw);
+    int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_READ_RECORDS, recordnum, p2, 0, NULL}, (length == 0) ? APDU_INCLUDE_LE_00 : length, resp, resplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
         return PM3_ESOFT;
 
@@ -2919,7 +2919,7 @@ int DesfireISOAppendRecord(DesfireContext *dctx, uint8_t fileid, uint8_t *data, 
     size_t resplen = 0;
 
     uint16_t sw = 0;
-    int res = DesfireExchangeISO(false, dctx, (sAPDU) {0x00, ISO7816_APPEND_RECORD, 0x00, p2, datalen, data}, 0, resp, &resplen, &sw);
+    int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_APPEND_RECORD, 0x00, p2, datalen, data}, 0, resp, &resplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
         return PM3_ESOFT;
 

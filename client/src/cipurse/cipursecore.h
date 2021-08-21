@@ -14,7 +14,7 @@
 #include <jansson.h>
 #include <stdbool.h>
 #include "common.h"
-#include "iso7816/apduinfo.h"       // sAPDU
+#include "iso7816/apduinfo.h"       // sAPDU_t
 #include "cipurse/cipursecrypto.h"
 
 

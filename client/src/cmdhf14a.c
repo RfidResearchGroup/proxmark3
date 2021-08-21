@@ -38,7 +38,7 @@ static bool APDUInFramingEnable = true;
 static int CmdHelp(const char *Cmd);
 static int waitCmd(bool i_select, uint32_t timeout, bool verbose);
 
-static const manufactureName manufactureMapping[] = {
+static const manufactureName_t manufactureMapping[] = {
     // ID,  "Vendor Country"
     { 0x01, "Motorola UK" },
     { 0x02, "ST Microelectronics SA France" },
@@ -169,7 +169,7 @@ const char *getTagInfo(uint8_t uid) {
     return manufactureMapping[ARRAYLEN(manufactureMapping) - 1].desc;
 }
 
-static const hintAIDListT hintAIDList[] = {
+static const hintAIDList_t hintAIDList[] = {
     // AID, AID len, name, hint - how to use
     { "\xA0\x00\x00\x06\x47\x2F\x00\x01", 8, "FIDO", "hf fido" },
     { "\xA0\x00\x00\x03\x08\x00\x00\x10\x00\x01\x00", 11, "PIV", "" },
@@ -1125,7 +1125,7 @@ static int CmdHF14AAPDU(const char *Cmd) {
 
         CLIGetHexBLessWithReturn(ctx, 8, apdudata, &apdudatalen, 1 + 2);
 
-        APDUStruct apdu;
+        APDU_t apdu;
         apdu.cla = header[0];
         apdu.ins = header[1];
         apdu.p1 = header[2];
@@ -1168,7 +1168,7 @@ static int CmdHF14AAPDU(const char *Cmd) {
     PrintAndLogEx(SUCCESS, ">>> %s", sprint_hex_inrow(data, datalen));
 
     if (decodeAPDU) {
-        APDUStruct apdu;
+        APDU_t apdu;
 
         if (APDUDecode(data, datalen, &apdu) == 0)
             APDUPrint(apdu);
@@ -1571,9 +1571,9 @@ typedef struct {
     uint8_t uid0;
     uint8_t uid1;
     const char *desc;
-} uid_label_name;
+} uid_label_name_t;
 
-static const uid_label_name uid_label_map[] = {
+static const uid_label_name_t uid_label_map[] = {
     // UID0, UID1, TEXT
     {0x02, 0x84, "M24SR64-Y"},
     {0x02, 0xA3, "25TA02KB-P"},

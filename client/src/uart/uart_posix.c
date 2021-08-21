@@ -69,7 +69,7 @@ typedef struct {
     int fd;           // Serial port file descriptor
     term_info tiOld;  // Terminal info before using the port
     term_info tiNew;  // Terminal info during the transaction
-} serial_port_unix;
+} serial_port_unix_t_t;
 
 // see pm3_cmd.h
 struct timeval timeout = {
@@ -87,7 +87,7 @@ int uart_reconfigure_timeouts(uint32_t value) {
 }
 
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
-    serial_port_unix *sp = calloc(sizeof(serial_port_unix), sizeof(uint8_t));
+    serial_port_unix_t_t *sp = calloc(sizeof(serial_port_unix_t_t), sizeof(uint8_t));
 
     if (sp == 0) {
         PrintAndLogEx(ERR, "UART failed to allocate memory");
@@ -345,7 +345,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 }
 
 void uart_close(const serial_port sp) {
-    serial_port_unix *spu = (serial_port_unix *)sp;
+    serial_port_unix_t_t *spu = (serial_port_unix_t_t *)sp;
     tcflush(spu->fd, TCIOFLUSH);
     tcsetattr(spu->fd, TCSANOW, &(spu->tiOld));
     struct flock fl;
@@ -379,9 +379,9 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
     do {
         // Reset file descriptor
         FD_ZERO(&rfds);
-        FD_SET(((serial_port_unix *)sp)->fd, &rfds);
+        FD_SET(((serial_port_unix_t_t *)sp)->fd, &rfds);
         tv = timeout;
-        int res = select(((serial_port_unix *)sp)->fd + 1, &rfds, NULL, NULL, &tv);
+        int res = select(((serial_port_unix_t_t *)sp)->fd + 1, &rfds, NULL, NULL, &tv);
 
         // Read error
         if (res < 0) {
@@ -400,7 +400,7 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         }
 
         // Retrieve the count of the incoming bytes
-        res = ioctl(((serial_port_unix *)sp)->fd, FIONREAD, &byteCount);
+        res = ioctl(((serial_port_unix_t_t *)sp)->fd, FIONREAD, &byteCount);
 //        PrintAndLogEx(ERR, "UART:: RX ioctl res %d byteCount %u", res, byteCount);
         if (res < 0) return PM3_ENOTTY;
 
@@ -411,7 +411,7 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         }
 
         // There is something available, read the data
-        res = read(((serial_port_unix *)sp)->fd, pbtRx + (*pszRxLen), byteCount);
+        res = read(((serial_port_unix_t_t *)sp)->fd, pbtRx + (*pszRxLen), byteCount);
 
         // Stop if the OS has some troubles reading the data
         if (res <= 0) {
@@ -437,9 +437,9 @@ int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
     while (pos < len) {
         // Reset file descriptor
         FD_ZERO(&rfds);
-        FD_SET(((serial_port_unix *)sp)->fd, &rfds);
+        FD_SET(((serial_port_unix_t_t *)sp)->fd, &rfds);
         tv = timeout;
-        int res = select(((serial_port_unix *)sp)->fd + 1, NULL, &rfds, NULL, &tv);
+        int res = select(((serial_port_unix_t_t *)sp)->fd + 1, NULL, &rfds, NULL, &tv);
 
         // Write error
         if (res < 0) {
@@ -454,7 +454,7 @@ int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
         }
 
         // Send away the bytes
-        res = write(((serial_port_unix *)sp)->fd, pbtTx + pos, len - pos);
+        res = write(((serial_port_unix_t_t *)sp)->fd, pbtTx + pos, len - pos);
 
         // Stop if the OS has some troubles sending the data
         if (res <= 0)
@@ -466,7 +466,7 @@ int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
 }
 
 bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
-    const serial_port_unix *spu = (serial_port_unix *)sp;
+    const serial_port_unix_t_t *spu = (serial_port_unix_t_t *)sp;
     speed_t stPortSpeed;
     switch (uiPortSpeed) {
         case 0:
@@ -565,7 +565,7 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
 uint32_t uart_get_speed(const serial_port sp) {
     struct termios ti;
     uint32_t uiPortSpeed;
-    const serial_port_unix *spu = (serial_port_unix *)sp;
+    const serial_port_unix_t_t *spu = (serial_port_unix_t_t *)sp;
 
     if (tcgetattr(spu->fd, &ti) == -1)
         return 0;

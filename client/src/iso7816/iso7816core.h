@@ -39,10 +39,10 @@ isodep_state_t GetISODEPState(void);
 int Iso7816Connect(Iso7816CommandChannel channel);
 
 // exchange
-int Iso7816Exchange(Iso7816CommandChannel channel, bool leave_field_on, sAPDU apdu, uint8_t *result, size_t max_result_len,
+int Iso7816Exchange(Iso7816CommandChannel channel, bool leave_field_on, sAPDU_t apdu, uint8_t *result, size_t max_result_len,
                     size_t *result_len, uint16_t *sw);
 
-int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool leave_field_on, sAPDU apdu, bool include_le,
+int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool leave_field_on, sAPDU_t apdu, bool include_le,
                       uint16_t le, uint8_t *result,  size_t max_result_len, size_t *result_len, uint16_t *sw);
 
 // search application

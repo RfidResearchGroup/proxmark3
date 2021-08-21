@@ -23,9 +23,9 @@
 #include "util.h"
 
 // context for secure channel
-CipurseContext cipurseContext;
+CipurseContext_t cipurseContext;
 
-static int CIPURSEExchangeEx(bool activate_field, bool leave_field_on, sAPDU apdu, bool include_le,
+static int CIPURSEExchangeEx(bool activate_field, bool leave_field_on, sAPDU_t apdu, bool include_le,
                              uint16_t le, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
 
     if (result_len == NULL) {
@@ -57,7 +57,7 @@ static int CIPURSEExchangeEx(bool activate_field, bool leave_field_on, sAPDU apd
         xle = le;
     }
 
-    sAPDU secapdu;
+    sAPDU_t secapdu;
     uint8_t securedata[APDU_RES_LEN] = {0};
     CipurseCAPDUReqEncode(&cipurseContext, &apdu, &secapdu, securedata, include_le, le);
 
@@ -119,7 +119,7 @@ static int CIPURSEExchangeEx(bool activate_field, bool leave_field_on, sAPDU apd
     return PM3_SUCCESS;
 }
 
-static int CIPURSEExchange(sAPDU apdu, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+static int CIPURSEExchange(sAPDU_t apdu, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
     return CIPURSEExchangeEx(false, true, apdu, true, 0, result, max_result_len, result_len, sw);
 }
 
@@ -131,41 +131,41 @@ int CIPURSESelect(bool activate_field, bool leave_field_on, uint8_t *result, siz
 }
 
 int CIPURSEChallenge(uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
-    return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0x84, 0x00, 0x00, 0x00, NULL}, true, 0x16, result, max_result_len, result_len, sw);
+    return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x00, 0x84, 0x00, 0x00, 0x00, NULL}, true, 0x16, result, max_result_len, result_len, sw);
 }
 
 int CIPURSEMutalAuthenticate(uint8_t keyindex, uint8_t *params, uint8_t paramslen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
-    return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0x82, 0x00, keyindex, paramslen, params}, true, 0x10, result, max_result_len, result_len, sw);
+    return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x00, 0x82, 0x00, keyindex, paramslen, params}, true, 0x10, result, max_result_len, result_len, sw);
 }
 
 int CIPURSECreateFile(uint8_t *attr, uint16_t attrlen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
-    return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0xe4, 0x00, 0x00, attrlen, attr}, false, 0, result, max_result_len, result_len, sw);
+    return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x00, 0xe4, 0x00, 0x00, attrlen, attr}, false, 0, result, max_result_len, result_len, sw);
 }
 
 int CIPURSEDeleteFile(uint16_t fileid, uint8_t *Result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
     uint8_t fileIdBin[] = {fileid >> 8, fileid & 0xff};
-    return CIPURSEExchangeEx(false, true, (sAPDU) {0x00, 0xe4, 0x00, 0x00, 02, fileIdBin}, false, 0, Result, max_result_len, result_len, sw);
+    return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x00, 0xe4, 0x00, 0x00, 02, fileIdBin}, false, 0, Result, max_result_len, result_len, sw);
 }
 
 int CIPURSESelectFile(uint16_t fileid, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
     uint8_t fileIdBin[] = {fileid >> 8, fileid & 0xff};
-    return CIPURSEExchange((sAPDU) {0x00, 0xa4, 0x00, 0x00, 02, fileIdBin}, result, max_result_len, result_len, sw);
+    return CIPURSEExchange((sAPDU_t) {0x00, 0xa4, 0x00, 0x00, 02, fileIdBin}, result, max_result_len, result_len, sw);
 }
 
 int CIPURSESelectMFFile(uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
-    return CIPURSEExchange((sAPDU) {0x00, 0xa4, 0x00, 0x00, 0, NULL}, result, max_result_len, result_len, sw);
+    return CIPURSEExchange((sAPDU_t) {0x00, 0xa4, 0x00, 0x00, 0, NULL}, result, max_result_len, result_len, sw);
 }
 
 int CIPURSEReadFileAttributes(uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
-    return CIPURSEExchange((sAPDU) {0x80, 0xce, 0x00, 0x00, 0, NULL}, result, max_result_len, result_len, sw);
+    return CIPURSEExchange((sAPDU_t) {0x80, 0xce, 0x00, 0x00, 0, NULL}, result, max_result_len, result_len, sw);
 }
 
 int CIPURSEReadBinary(uint16_t offset, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
-    return CIPURSEExchange((sAPDU) {0x00, 0xb0, (offset >> 8) & 0x7f, offset & 0xff, 0, NULL}, result, max_result_len, result_len, sw);
+    return CIPURSEExchange((sAPDU_t) {0x00, 0xb0, (offset >> 8) & 0x7f, offset & 0xff, 0, NULL}, result, max_result_len, result_len, sw);
 }
 
 int CIPURSEUpdateBinary(uint16_t offset, uint8_t *data, uint16_t datalen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
-    return CIPURSEExchange((sAPDU) {0x00, 0xd6, (offset >> 8) & 0x7f, offset & 0xff, datalen, data}, result, max_result_len, result_len, sw);
+    return CIPURSEExchange((sAPDU_t) {0x00, 0xd6, (offset >> 8) & 0x7f, offset & 0xff, datalen, data}, result, max_result_len, result_len, sw);
 }
 
 bool CIPURSEChannelAuthenticate(uint8_t keyindex, uint8_t *key, bool verbose) {
@@ -173,7 +173,7 @@ bool CIPURSEChannelAuthenticate(uint8_t keyindex, uint8_t *key, bool verbose) {
     size_t len = 0;
     uint16_t sw = 0;
 
-    CipurseContext cpc = {0};
+    CipurseContext_t cpc = {0};
     CipurseCSetKey(&cpc, keyindex, key);
 
     // get RP, rP
@@ -217,7 +217,7 @@ bool CIPURSEChannelAuthenticate(uint8_t keyindex, uint8_t *key, bool verbose) {
         }
 
         CipurseCChannelSetSecurityLevels(&cpc, CPSMACed, CPSMACed);
-        memcpy(&cipurseContext, &cpc, sizeof(CipurseContext));
+        memcpy(&cipurseContext, &cpc, sizeof(CipurseContext_t));
         return true;
     } else {
         if (verbose) {

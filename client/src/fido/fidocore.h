@@ -15,7 +15,7 @@
 #include "common.h"
 
 #include <jansson.h>
-#include "iso7816/apduinfo.h" // sAPDU
+#include "iso7816/apduinfo.h" // sAPDU_t
 
 typedef enum {
     fido2CmdMakeCredential      = 0x01,
@@ -36,7 +36,7 @@ typedef enum  {
 } fido2PacketType;
 
 int FIDOSelect(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
-int FIDOExchange(sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
+int FIDOExchange(sAPDU_t apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 int FIDORegister(uint8_t *params, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 int FIDOAuthentication(uint8_t *params, uint8_t paramslen, uint8_t controlb, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 int FIDO2GetInfo(uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);

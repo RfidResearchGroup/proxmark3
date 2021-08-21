@@ -59,7 +59,7 @@ static bool TestISO9797M2(void) {
 }
 
 static bool TestSMI(void) {
-    CipurseContext ctx = {0};
+    CipurseContext_t ctx = {0};
     CipurseCClearContext(&ctx);
 
     bool res = (isCipurseCChannelSecuritySet(&ctx) == false);
@@ -117,7 +117,7 @@ static bool TestMIC(void) {
 
 
 static bool TestAuth(void) {
-    CipurseContext ctx = {0};
+    CipurseContext_t ctx = {0};
     CipurseCClearContext(&ctx);
 
     bool res = (isCipurseCChannelSecuritySet(&ctx) == false);
@@ -160,7 +160,7 @@ static bool TestAuth(void) {
 }
 
 static bool TestMAC(void) {
-    CipurseContext ctx = {0};
+    CipurseContext_t ctx = {0};
 
     // authentication
     CipurseCClearContext(&ctx);
@@ -212,7 +212,7 @@ static bool TestMAC(void) {
 }
 
 static bool TestEncDec(void) {
-    CipurseContext ctx = {0};
+    CipurseContext_t ctx = {0};
 
     // authentication
     CipurseCClearContext(&ctx);
@@ -259,10 +259,10 @@ static bool TestEncDec(void) {
     return res;
 }
 
-//void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, uint8_t *dstdatabuf, bool includeLe, uint8_t Le);
-//void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen, uint16_t *sw);
+//void CipurseCAPDUReqEncode(CipurseContext_t *ctx, sAPDU_t *srcapdu, sAPDU_t *dstapdu, uint8_t *dstdatabuf, bool includeLe, uint8_t Le);
+//void CipurseCAPDURespDecode(CipurseContext_t *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen, uint16_t *sw);
 static bool TestAPDU(void) {
-    CipurseContext ctx = {0};
+    CipurseContext_t ctx = {0};
 
     // authentication
     CipurseCClearContext(&ctx);
@@ -276,8 +276,8 @@ static bool TestAPDU(void) {
     res = res && (isCipurseCChannelSecuritySet(&ctx) == true);
 
     // check APDU formatting
-    sAPDU srcAPDU = {0};
-    sAPDU dstAPDU = {0};
+    sAPDU_t srcAPDU = {0};
+    sAPDU_t dstAPDU = {0};
     uint8_t dstdata[256] = {0};
     size_t dstdatalen = 0;
 

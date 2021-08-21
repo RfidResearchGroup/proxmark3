@@ -20,14 +20,14 @@
 typedef struct {
     uint8_t uid;
     const char *desc;
-} manufactureName;
+} manufactureName_t;
 
 typedef struct {
     const char *aid;
     const uint8_t aid_length;
     const char *desc;
     const char *hint;
-} hintAIDListT;
+} hintAIDList_t;
 
 int CmdHF14A(const char *Cmd);
 int CmdHF14ASniff(const char *Cmd); // used by hf topaz sniff

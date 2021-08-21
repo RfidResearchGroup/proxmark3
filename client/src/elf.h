@@ -20,7 +20,7 @@ typedef struct {
     uint32_t p_memsz;
     uint32_t p_flags;
     uint32_t p_align;
-} PACKED Elf32_Phdr;
+} PACKED Elf32_Phdr_t;
 
 #define EI_NIDENT 16
 
@@ -39,7 +39,7 @@ typedef struct {
     uint16_t e_shentsize;
     uint16_t e_shnum;
     uint16_t e_shtrndx;
-} PACKED Elf32_Ehdr;
+} PACKED Elf32_Ehdr_t;
 
 #define PT_NULL      0
 #define PT_LOAD      1

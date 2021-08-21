@@ -12,7 +12,7 @@
 #define __CIPURSECRYPTO_H__
 
 #include "common.h"
-#include "iso7816/apduinfo.h"    // sAPDU
+#include "iso7816/apduinfo.h"    // sAPDU_t
 
 #define CIPURSE_KVV_LENGTH 4
 #define CIPURSE_AES_KEY_LENGTH 16
@@ -31,7 +31,7 @@ typedef enum {
     CPSEncrypted
 } CipurseChannelSecurityLevel;
 
-typedef struct CipurseContextS {
+typedef struct CipurseContext_tS {
     uint8_t keyId;
     uint8_t key[CIPURSE_AES_KEY_LENGTH];
 
@@ -49,34 +49,34 @@ typedef struct CipurseContextS {
 
     CipurseChannelSecurityLevel RequestSecurity;
     CipurseChannelSecurityLevel ResponseSecurity;
-} CipurseContext;
+} CipurseContext_t;
 
 uint8_t CipurseCSecurityLevelEnc(CipurseChannelSecurityLevel lvl);
 
-void CipurseCClearContext(CipurseContext *ctx);
-void CipurseCSetKey(CipurseContext *ctx, uint8_t keyId, uint8_t *key);
-void CipurseCSetRandomFromPICC(CipurseContext *ctx, uint8_t *random);
-void CipurseCSetRandomHost(CipurseContext *ctx);
-uint8_t CipurseCGetSMI(CipurseContext *ctx, bool LePresent);
+void CipurseCClearContext(CipurseContext_t *ctx);
+void CipurseCSetKey(CipurseContext_t *ctx, uint8_t keyId, uint8_t *key);
+void CipurseCSetRandomFromPICC(CipurseContext_t *ctx, uint8_t *random);
+void CipurseCSetRandomHost(CipurseContext_t *ctx);
+uint8_t CipurseCGetSMI(CipurseContext_t *ctx, bool LePresent);
 
-void CipurseCAuthenticateHost(CipurseContext *ctx, uint8_t *authdata);
-bool CipurseCCheckCT(CipurseContext *ctx, uint8_t *CT);
+void CipurseCAuthenticateHost(CipurseContext_t *ctx, uint8_t *authdata);
+bool CipurseCCheckCT(CipurseContext_t *ctx, uint8_t *CT);
 
-void CipurseCChannelSetSecurityLevels(CipurseContext *ctx, CipurseChannelSecurityLevel req, CipurseChannelSecurityLevel resp);
-bool isCipurseCChannelSecuritySet(CipurseContext *ctx);
+void CipurseCChannelSetSecurityLevels(CipurseContext_t *ctx, CipurseChannelSecurityLevel req, CipurseChannelSecurityLevel resp);
+bool isCipurseCChannelSecuritySet(CipurseContext_t *ctx);
 
-void CipurseCGenerateMAC(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
-void CipurseCCalcMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
-bool CipurseCCheckMACPadded(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
+void CipurseCGenerateMAC(CipurseContext_t *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
+void CipurseCCalcMACPadded(CipurseContext_t *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
+bool CipurseCCheckMACPadded(CipurseContext_t *ctx, uint8_t *data, size_t datalen, uint8_t *mac);
 void CipurseCGenerateMIC(uint8_t *data, size_t datalen, uint8_t *mic);
 bool CipurseCCheckMIC(uint8_t *data, size_t datalen, uint8_t *mic);
-void CipurseCEncryptDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *dstdata, bool isEncrypt);
-void CipurseCChannelEncrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *encdata, size_t *encdatalen);
-void CipurseCChannelDecrypt(CipurseContext *ctx, uint8_t *data, size_t datalen, uint8_t *plaindata, size_t *plaindatalen);
+void CipurseCEncryptDecrypt(CipurseContext_t *ctx, uint8_t *data, size_t datalen, uint8_t *dstdata, bool isEncrypt);
+void CipurseCChannelEncrypt(CipurseContext_t *ctx, uint8_t *data, size_t datalen, uint8_t *encdata, size_t *encdatalen);
+void CipurseCChannelDecrypt(CipurseContext_t *ctx, uint8_t *data, size_t datalen, uint8_t *plaindata, size_t *plaindatalen);
 void CipurseCGetKVV(uint8_t *key, uint8_t *kvv);
 
-void CipurseCAPDUReqEncode(CipurseContext *ctx, sAPDU *srcapdu, sAPDU *dstapdu, uint8_t *dstdatabuf, bool includeLe, uint8_t Le);
-void CipurseCAPDURespDecode(CipurseContext *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen, uint16_t *sw);
+void CipurseCAPDUReqEncode(CipurseContext_t *ctx, sAPDU_t *srcapdu, sAPDU_t *dstapdu, uint8_t *dstdatabuf, bool includeLe, uint8_t Le);
+void CipurseCAPDURespDecode(CipurseContext_t *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen, uint16_t *sw);
 
 
 #endif /* __CIPURSECRYPTO_H__ */

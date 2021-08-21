@@ -17,7 +17,7 @@
 #include "util.h"
 #include "commonutil.h"  // ARRAYLEN
 
-const APDUCode APDUCodeTable[] = {
+const APDUCode_t APDUCodeTable[] = {
     //  ID             Type                  Description
     {"XXXX",     APDUCODE_TYPE_NONE,         ""}, // blank string
     {"6---",     APDUCODE_TYPE_ERROR,        "Class not supported."},
@@ -283,7 +283,7 @@ static int CodeCmp(const char *code1, const char *code2) {
     return -1;
 }
 
-const APDUCode *GetAPDUCode(uint8_t sw1, uint8_t sw2) {
+const APDUCode_t *GetAPDUCode(uint8_t sw1, uint8_t sw2) {
     char buf[6] = {0};
     int mineq = ARRAYLEN(APDUCodeTable);
     int mineqindx = 0;
@@ -314,15 +314,15 @@ const APDUCode *GetAPDUCode(uint8_t sw1, uint8_t sw2) {
 }
 
 const char *GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2) {
-    const APDUCode *cd = GetAPDUCode(sw1, sw2);
+    const APDUCode_t *cd = GetAPDUCode(sw1, sw2);
     if (cd)
         return cd->Description;
     else
         return APDUCodeTable[0].Description; //empty string
 }
 
-int APDUDecode(uint8_t *data, int len, APDUStruct *apdu) {
-    ExtAPDUHeader *hapdu = (ExtAPDUHeader *)data;
+int APDUDecode(uint8_t *data, int len, APDU_t *apdu) {
+    ExtAPDUHeader_t *hapdu = (ExtAPDUHeader_t *)data;
 
     apdu->cla = hapdu->cla;
     apdu->ins = hapdu->ins;
@@ -421,7 +421,7 @@ int APDUDecode(uint8_t *data, int len, APDUStruct *apdu) {
     return 0;
 }
 
-int APDUEncode(APDUStruct *apdu, uint8_t *data, int *len) {
+int APDUEncode(APDU_t *apdu, uint8_t *data, int *len) {
     if (len)
         *len = 0;
 
@@ -473,11 +473,11 @@ int APDUEncode(APDUStruct *apdu, uint8_t *data, int *len) {
     return 0;
 }
 
-int APDUEncodeS(sAPDU *sapdu, bool extended, uint16_t le, uint8_t *data, int *len) {
+int APDUEncodeS(sAPDU_t *sapdu, bool extended, uint16_t le, uint8_t *data, int *len) {
     if (extended && le > 0x100)
         return 10;
 
-    APDUStruct apdu;
+    APDU_t apdu;
 
     apdu.cla = sapdu->CLA;
     apdu.ins = sapdu->INS;
@@ -497,11 +497,11 @@ int APDUEncodeS(sAPDU *sapdu, bool extended, uint16_t le, uint8_t *data, int *le
     return APDUEncode(&apdu, data, len);
 }
 
-void APDUPrint(APDUStruct apdu) {
+void APDUPrint(APDU_t apdu) {
     APDUPrintEx(apdu, 0);
 }
 
-void APDUPrintEx(APDUStruct apdu, size_t maxdatalen) {
+void APDUPrintEx(APDU_t apdu, size_t maxdatalen) {
     PrintAndLogEx(INFO, "APDU: %scase=0x%02x cla=0x%02x ins=0x%02x p1=0x%02x p2=0x%02x Lc=0x%02x(%d) Le=0x%02x(%d)",
                   apdu.extended_apdu ? "[e]" : "",
                   apdu.case_type,
@@ -518,7 +518,7 @@ void APDUPrintEx(APDUStruct apdu, size_t maxdatalen) {
         PrintAndLogEx(INFO, "data: %s%s", sprint_hex(apdu.data, MIN(apdu.lc, maxdatalen)), apdu.lc > maxdatalen ? "..." : "");
 }
 
-void SAPDUPrint(sAPDU apdu, size_t maxdatalen) {
+void SAPDUPrint(sAPDU_t apdu, size_t maxdatalen) {
     PrintAndLogEx(INFO, "APDU: CLA 0x%02x, INS 0x%02x, P1 0x%02x, P2 0x%02x, Lc 0x%02x(%d)",
                   apdu.CLA,
                   apdu.INS,

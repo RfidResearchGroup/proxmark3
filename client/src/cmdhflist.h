@@ -26,7 +26,7 @@ typedef struct {
     bool first_auth;    // is first authentication
     uint32_t ks2;       // ar ^ ar_enc
     uint32_t ks3;       // at ^ at_enc
-} TAuthData;
+} AuthData_t;
 
 void ClearAuthData(void);
 
@@ -53,9 +53,9 @@ void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateCryptoRF(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 
 bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen, const uint64_t *dicKeys, uint32_t dicKeysCount);
-bool NTParityChk(TAuthData *ad, uint32_t ntx);
-bool NestedCheckKey(uint64_t key, TAuthData *ad, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity);
+bool NTParityChk(AuthData_t *ad, uint32_t ntx);
+bool NestedCheckKey(uint64_t key, AuthData_t *ad, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity);
 bool CheckCrypto1Parity(uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, uint8_t *parity_enc);
-uint64_t GetCrypto1ProbableKey(TAuthData *ad);
+uint64_t GetCrypto1ProbableKey(AuthData_t *ad);
 
 #endif // CMDHFLIST

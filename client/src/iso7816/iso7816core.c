@@ -74,7 +74,7 @@ int Iso7816Connect(Iso7816CommandChannel channel) {
 }
 
 int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool leave_field_on,
-                      sAPDU apdu, bool include_le, uint16_t le, uint8_t *result,
+                      sAPDU_t apdu, bool include_le, uint16_t le, uint8_t *result,
                       size_t max_result_len, size_t *result_len, uint16_t *sw) {
 
     *result_len = 0;
@@ -175,7 +175,7 @@ int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool l
     return PM3_SUCCESS;
 }
 
-int Iso7816Exchange(Iso7816CommandChannel channel, bool leave_field_on, sAPDU apdu, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+int Iso7816Exchange(Iso7816CommandChannel channel, bool leave_field_on, sAPDU_t apdu, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
     return Iso7816ExchangeEx(channel
                              , false
                              , leave_field_on
@@ -195,7 +195,7 @@ int Iso7816Select(Iso7816CommandChannel channel, bool activate_field, bool leave
     return Iso7816ExchangeEx(channel
                              , activate_field
                              , leave_field_on
-    , (sAPDU) {0x00, 0xa4, 0x04, 0x00, aid_len, aid}
+    , (sAPDU_t) {0x00, 0xa4, 0x04, 0x00, aid_len, aid}
     , (channel == CC_CONTACTLESS)
     , 0
     , result

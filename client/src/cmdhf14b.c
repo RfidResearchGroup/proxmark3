@@ -90,7 +90,7 @@ static void hf14b_aid_search(bool verbose) {
         // COMPUTE APDU
         uint8_t apdu_data[PM3_CMD_DATA_SIZE] = {0};
         int apdu_len = 0;
-        sAPDU apdu = (sAPDU) {0x00, 0xa4, 0x04, 0x00, vaidlen, vaid};
+        sAPDU_t apdu = (sAPDU_t) {0x00, 0xa4, 0x04, 0x00, vaidlen, vaid};
 
         if (APDUEncodeS(&apdu, false, 0x00, apdu_data, &apdu_len)) {
             PrintAndLogEx(ERR, "APDU encoding error.");
@@ -1849,7 +1849,7 @@ static int CmdHF14BAPDU(const char *Cmd) {
 
         CLIGetHexBLessWithReturn(ctx, 8, apdudata, &apdudatalen, 1 + 2);
 
-        APDUStruct apdu;
+        APDU_t apdu;
         apdu.cla = header[0];
         apdu.ins = header[1];
         apdu.p1 = header[2];
@@ -1893,7 +1893,7 @@ static int CmdHF14BAPDU(const char *Cmd) {
                  );
 
     if (decode_APDU) {
-        APDUStruct apdu;
+        APDU_t apdu;
         if (APDUDecode(data, datalen, &apdu) == 0)
             APDUPrint(apdu);
         else

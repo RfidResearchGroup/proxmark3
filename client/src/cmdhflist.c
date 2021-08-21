@@ -35,7 +35,7 @@ enum MifareAuthSeq {
     masError,
 };
 static enum MifareAuthSeq MifareAuthState;
-static TAuthData AuthData;
+static AuthData_t AuthData;
 
 void ClearAuthData(void) {
     AuthData.uid = 0;
@@ -1551,7 +1551,7 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
     return *mfDataLen > 0;
 }
 
-bool NTParityChk(TAuthData *ad, uint32_t ntx) {
+bool NTParityChk(AuthData_t *ad, uint32_t ntx) {
     if (
         (oddparity8(ntx >> 8 & 0xff) ^ (ntx & 0x01) ^ ((ad->nt_enc_par >> 5) & 0x01) ^ (ad->nt_enc & 0x01)) ||
         (oddparity8(ntx >> 16 & 0xff) ^ (ntx >> 8 & 0x01) ^ ((ad->nt_enc_par >> 6) & 0x01) ^ (ad->nt_enc >> 8 & 0x01)) ||
@@ -1579,7 +1579,7 @@ bool NTParityChk(TAuthData *ad, uint32_t ntx) {
     return true;
 }
 
-bool NestedCheckKey(uint64_t key, TAuthData *ad, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity) {
+bool NestedCheckKey(uint64_t key, AuthData_t *ad, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity) {
     uint8_t buf[32] = {0};
     struct Crypto1State *pcs;
 
@@ -1627,7 +1627,7 @@ bool CheckCrypto1Parity(uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, uint8_t
 
 // Another implementation of mfkey64 attack,  more "valid" than "probable"
 //
-uint64_t GetCrypto1ProbableKey(TAuthData *ad) {
+uint64_t GetCrypto1ProbableKey(AuthData_t *ad) {
     struct Crypto1State *revstate = lfsr_recovery64(ad->ks2, ad->ks3);
     lfsr_rollback_word(revstate, 0, 0);
     lfsr_rollback_word(revstate, 0, 0);

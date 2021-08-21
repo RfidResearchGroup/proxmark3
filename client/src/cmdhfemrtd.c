@@ -178,7 +178,7 @@ static emrtd_dg_t *emrtd_fileid_to_dg(uint16_t file_id) {
 
 static int CmdHelp(const char *Cmd);
 
-static bool emrtd_exchange_commands(sAPDU apdu, bool include_le, uint16_t le, uint8_t *dataout, size_t maxdataoutlen, size_t *dataoutlen, bool activate_field, bool keep_field_on) {
+static bool emrtd_exchange_commands(sAPDU_t apdu, bool include_le, uint16_t le, uint8_t *dataout, size_t maxdataoutlen, size_t *dataoutlen, bool activate_field, bool keep_field_on) {
     uint16_t sw;
     int res = Iso7816ExchangeEx(CC_CONTACTLESS, activate_field, keep_field_on, apdu, include_le, le, dataout, maxdataoutlen, dataoutlen, &sw);
 
@@ -193,7 +193,7 @@ static bool emrtd_exchange_commands(sAPDU apdu, bool include_le, uint16_t le, ui
     return true;
 }
 
-static int emrtd_exchange_commands_noout(sAPDU apdu, bool activate_field, bool keep_field_on) {
+static int emrtd_exchange_commands_noout(sAPDU_t apdu, bool activate_field, bool keep_field_on) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     size_t resplen = 0;
 
@@ -375,25 +375,25 @@ static void _emrtd_convert_fileid(uint16_t file, uint8_t *dataout) {
 }
 
 static int emrtd_select_file_by_name(uint8_t namelen, uint8_t *name) {
-    return emrtd_exchange_commands_noout((sAPDU) {0, EMRTD_SELECT, EMRTD_P1_SELECT_BY_NAME, 0x0C, namelen, name}, false, true);
+    return emrtd_exchange_commands_noout((sAPDU_t) {0, EMRTD_SELECT, EMRTD_P1_SELECT_BY_NAME, 0x0C, namelen, name}, false, true);
 }
 
 static int emrtd_select_file_by_ef(uint16_t file_id) {
     uint8_t data[2];
     _emrtd_convert_fileid(file_id, data);
-    return emrtd_exchange_commands_noout((sAPDU) {0, EMRTD_SELECT, EMRTD_P1_SELECT_BY_EF, 0x0C, sizeof(data), data}, false, true);
+    return emrtd_exchange_commands_noout((sAPDU_t) {0, EMRTD_SELECT, EMRTD_P1_SELECT_BY_EF, 0x0C, sizeof(data), data}, false, true);
 }
 
 static int emrtd_get_challenge(int length, uint8_t *dataout, size_t maxdataoutlen, size_t *dataoutlen) {
-    return emrtd_exchange_commands((sAPDU) {0, EMRTD_GET_CHALLENGE, 0, 0, 0, NULL}, true, length, dataout, maxdataoutlen, dataoutlen, false, true);
+    return emrtd_exchange_commands((sAPDU_t) {0, EMRTD_GET_CHALLENGE, 0, 0, 0, NULL}, true, length, dataout, maxdataoutlen, dataoutlen, false, true);
 }
 
 static int emrtd_external_authenticate(uint8_t *data, int length, uint8_t *dataout, size_t maxdataoutlen, size_t *dataoutlen) {
-    return emrtd_exchange_commands((sAPDU) {0, EMRTD_EXTERNAL_AUTHENTICATE, 0, 0, length, data}, true, length, dataout, maxdataoutlen, dataoutlen, false, true);
+    return emrtd_exchange_commands((sAPDU_t) {0, EMRTD_EXTERNAL_AUTHENTICATE, 0, 0, length, data}, true, length, dataout, maxdataoutlen, dataoutlen, false, true);
 }
 
 static int _emrtd_read_binary(int offset, int bytes_to_read, uint8_t *dataout, size_t maxdataoutlen, size_t *dataoutlen) {
-    return emrtd_exchange_commands((sAPDU) {0, EMRTD_READ_BINARY, offset >> 8, offset & 0xFF, 0, NULL}, true, bytes_to_read, dataout, maxdataoutlen, dataoutlen, false, true);
+    return emrtd_exchange_commands((sAPDU_t) {0, EMRTD_READ_BINARY, offset >> 8, offset & 0xFF, 0, NULL}, true, bytes_to_read, dataout, maxdataoutlen, dataoutlen, false, true);
 }
 
 static void emrtd_bump_ssc(uint8_t *ssc) {
@@ -495,7 +495,7 @@ static bool emrtd_secure_select_file_by_ef(uint8_t *kenc, uint8_t *kmac, uint8_t
     memcpy(data + (datalen + 3), do8e, 10);
     PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, lc));
 
-    if (emrtd_exchange_commands((sAPDU) {0x0C, EMRTD_SELECT, EMRTD_P1_SELECT_BY_EF, 0x0C, lc, data}, true, 0, response, sizeof(response), &resplen, false, true) == false) {
+    if (emrtd_exchange_commands((sAPDU_t) {0x0C, EMRTD_SELECT, EMRTD_P1_SELECT_BY_EF, 0x0C, lc, data}, true, 0, response, sizeof(response), &resplen, false, true) == false) {
         return false;
     }
 
@@ -544,7 +544,7 @@ static bool _emrtd_secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, i
     memcpy(data + 3, do8e, 10);
     PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, lc));
 
-    if (emrtd_exchange_commands((sAPDU) {0x0C, EMRTD_READ_BINARY, offset >> 8, offset & 0xFF, lc, data}, true, 0, dataout, maxdataoutlen, dataoutlen, false, true) == false) {
+    if (emrtd_exchange_commands((sAPDU_t) {0x0C, EMRTD_READ_BINARY, offset >> 8, offset & 0xFF, lc, data}, true, 0, dataout, maxdataoutlen, dataoutlen, false, true) == false) {
         return false;
     }
 

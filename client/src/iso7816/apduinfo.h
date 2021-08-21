@@ -25,9 +25,9 @@ typedef struct {
     const char *ID;
     const uint8_t Type;
     const char *Description;
-} APDUCode;
+} APDUCode_t;
 
-const APDUCode *GetAPDUCode(uint8_t sw1, uint8_t sw2);
+const APDUCode_t *GetAPDUCode(uint8_t sw1, uint8_t sw2);
 const char *GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2);
 
 typedef struct {
@@ -37,7 +37,7 @@ typedef struct {
     uint8_t P2;
     uint8_t Lc;
     uint8_t *data;
-} PACKED sAPDU;
+} PACKED sAPDU_t;
 
 typedef struct {
     uint8_t cla;
@@ -45,7 +45,7 @@ typedef struct {
     uint8_t p1;
     uint8_t p2;
     uint8_t lc[3];
-} PACKED ExtAPDUHeader;
+} PACKED ExtAPDUHeader_t;
 
 typedef struct {
     uint8_t cla;
@@ -57,13 +57,13 @@ typedef struct {
     uint32_t le;
     bool extended_apdu;
     uint8_t case_type;
-} PACKED APDUStruct;
+} PACKED APDU_t;
 
-extern int APDUDecode(uint8_t *data, int len, APDUStruct *apdu);
-extern int APDUEncode(APDUStruct *apdu, uint8_t *data, int *len);
-extern int APDUEncodeS(sAPDU *sapdu, bool extended, uint16_t le, uint8_t *data, int *len);
-extern void APDUPrint(APDUStruct apdu);
-extern void APDUPrintEx(APDUStruct apdu, size_t maxdatalen);
+extern int APDUDecode(uint8_t *data, int len, APDU_t *apdu);
+extern int APDUEncode(APDU_t *apdu, uint8_t *data, int *len);
+extern int APDUEncodeS(sAPDU_t *sapdu, bool extended, uint16_t le, uint8_t *data, int *len);
+extern void APDUPrint(APDU_t apdu);
+extern void APDUPrintEx(APDU_t apdu, size_t maxdatalen);
 
-void SAPDUPrint(sAPDU apdu, size_t maxdatalen);
+void SAPDUPrint(sAPDU_t apdu, size_t maxdatalen);
 #endif
