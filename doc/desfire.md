@@ -101,6 +101,30 @@ Each application may have its own key type and set of keys. Each file can only h
   - File communication mode: plain/maced/encrypted
   - File access right: there is 4 modes: read/write/read-write/change settings. And each mode access can be: key0..keyD, E - free access, F - deny access
 
+## Desfire Light:
+
+The card has one preinstalled master file (iso id 0x3f00) and one application (0xdf01)
+
+In the application, there are 6 files:
+
+- 0x00 Standard data file with size 256 bytes
+- 0x01 Cyclic record file with 5 records with size 16 bytes each
+- 0x03 Value file
+- 0x04 Standard data file with size 256 bytes
+- 0x0f Transaction MAC file with size 256 bytes
+- 0x1f Standard data file with size 32 bytes. Used for FCI.
+
+User can't create/delete files (except Transaction MAC file).
+
+ISO file IDs and the other file and application parameters can be changed via SetConfiguration command only.
+
+The card has two secure channels: EV2 and LRP. By default, EV2 is on. LRP can be switched on by issue SetConfiguration command and after that, it can't be switched off.
+
+Application on the card can't be selected by desfire native select. Needs to issue iso select command. All the commands that can work in LRP channel have **--appisoid** option
+
+Transaction MAC file - the only file that can be created and deleted. By default, all transaction operations (operations with Valye and Record file) need to issue CommitReaderID command. 
+So) to fast check- it needs to delete this file) it has default file id - 0x0f.
+
 ## How to
 
 ### How to get card UID
