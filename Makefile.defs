@@ -21,9 +21,9 @@ TAR = tar
 TARFLAGS ?= -v --ignore-failed-read -r
 TARFLAGS += -C .. -f
 CROSS  ?= arm-none-eabi-
-CC = gcc
-CXX = g++
-LD = g++
+CC ?= gcc
+CXX ?= g++
+LD ?= g++
 SH = sh
 BASH = bash
 PERL = perl
@@ -50,7 +50,8 @@ else
 endif
 
 ifeq ($(platform),Darwin)
-  USE_BREW = 1
+  USE_BREW ?= 1
+  USE_MACPORTS ?= 0
   AR= /usr/bin/ar rcs
   RANLIB= /usr/bin/ranlib
 else
@@ -60,9 +61,13 @@ endif
 
 ifeq ($(USE_BREW),1)
   BREW_PREFIX = $(shell brew --prefix 2>/dev/null)
-  ifeq ($(strip $(BREW_PREFIX)),)
-    MACPORTS_PREFIX ?= /opt/local
+  ifneq ($(strip $(BREW_PREFIX)),)
+    USE_BREW = 0
   endif
+endif
+
+ifeq ($(USE_MACPORTS),1)
+  MACPORTS_PREFIX ?= /opt/local
 endif
 
 ifeq ($(DEBUG),1)
