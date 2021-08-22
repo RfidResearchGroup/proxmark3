@@ -228,9 +228,17 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "DEC(%d)", cmd[1]);
             break;
         case MIFARE_CMD_RESTORE:
+
             if (cmdsize == 4)
-                snprintf(exp, size, "RESTORE(%d)", cmd[1]);
+                // cmd0 == 0xC2 and cmd1 == 0xFF
+                // high probability its SELECT SECTOR COMMAND: 
+                if (cmd[1] == 0xFF) {
+                    snprintf(exp, size, "SELECT SECTOR(%d)", cmd[1]);                    
+                } else {
+                    snprintf(exp, size, "RESTORE(%d)", cmd[1]);
+                }
             else
+
                 return 0;
             break;
         case MIFARE_CMD_TRANSFER:
