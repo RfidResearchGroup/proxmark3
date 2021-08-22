@@ -195,6 +195,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 // NTAG i2k 2K  uses sector 0, and sector 1 to have access to
 // block 0x00-0xFF.  
 #define NTAG_I2C_SELECT_SECTOR      0xC2
+#define NTAG_I2C_FASTWRITE          0xA6
 
 // mifare 4bit card answers
 #define CARD_ACK      0x0A  // 1010 - ACK
