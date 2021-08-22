@@ -313,10 +313,14 @@ char *sprint_bytebits_bin_break(const uint8_t *data, const size_t len, const uin
 
         char c = data[i];
         // manchester wrong bit marker
-        if (c == 7)
+        if (c == 7) {
             c = '.';
-        else
+        } else if (c < 2) {
             c += '0';
+        } else {
+            PrintAndLogEx(ERR, "Invalid data passed to sprint_bytebits_bin_break()");
+            return buf;
+        }
 
         *(tmp++) = c;
 
