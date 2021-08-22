@@ -1294,7 +1294,7 @@ static int CmdHF14ADesList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf mfdes", "des");
 }
 
-static int DesfireAuthCheck(DesfireContext_t *dctx, uint32_t appid, DesfireSecureChannel secureChannel, uint8_t *key) {
+static int DesfireAuthCheck(DesfireContext_t *dctx, DesfireISOSelectWay way, uint32_t appID, DesfireSecureChannel secureChannel, uint8_t *key) {
     DesfireSetKeyNoClear(dctx, dctx->keyNum, dctx->keyType, key);
 
     int res = DesfireAuthenticate(dctx, secureChannel, false);
@@ -1303,7 +1303,7 @@ static int DesfireAuthCheck(DesfireContext_t *dctx, uint32_t appid, DesfireSecur
         return PM3_SUCCESS;
     } else if (res < 7) {
         DropField();
-        res = DesfireSelectAIDHex(dctx, appid, false, 0);
+        res = DesfireSelect(dctx, way, appID, NULL);
         if (res != PM3_SUCCESS) {
             return -10;
         }
@@ -1335,6 +1335,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
         arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
         arg_str0(NULL, "aid",     "<app id hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "appisoid", "<isoid hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_str0(NULL, "dict",    "<file>", "File with keys dictionary"),
         arg_lit0(NULL, "save",    "save found key and parameters to defaults"),
         arg_param_end
@@ -1346,8 +1347,9 @@ static int CmdHF14aDesDetect(const char *Cmd) {
 
     DesfireContext_t dctx;
     int securechann = defaultSecureChannel;
-    uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, &securechann, DCMMACed, &appid, NULL);
+    uint32_t id = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, &securechann, DCMMACed, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -1355,22 +1357,22 @@ static int CmdHF14aDesDetect(const char *Cmd) {
 
     uint8_t dict_filename[FILE_PATH_SIZE + 2] = {0};
     int dict_filenamelen = 0;
-    if (CLIParamStrToBuf(arg_get_str(ctx, 12), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 13), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
         PrintAndLogEx(FAILED, "File name too long or invalid.");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    bool save = arg_get_lit(ctx, 13);
+    bool save = arg_get_lit(ctx, 14);
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
     // no auth and fill KDF if needs
-    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, appid, true, verbose);
+    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, true, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select AID 0x%06x " _RED_("failed") ". Result: %d", appid, res);
+        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -1398,7 +1400,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     } else {
         // if fail - check auth commands
         AuthCommandsChk_t authCmdCheck = {0};
-        DesfireCheckAuthCommands(appid, NULL, 0, &authCmdCheck);
+        DesfireCheckAuthCommands(selectway, id, NULL, 0, &authCmdCheck);
         if (authCmdCheck.checked) {
             if (authCmdCheck.auth) {
                 keytypes[T_DES] = true;
@@ -1416,18 +1418,19 @@ static int CmdHF14aDesDetect(const char *Cmd) {
             keytypes[T_DES] = true;
         }
 
-        res = DesfireSelectAIDHex(&dctx, appid, false, 0);
+        res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, true, verbose);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            DropField();
+            PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
             return res;
         }
     }
 
     if (verbose) {
-        if (appid == 0)
+        if (DesfireMFSelected(selectway, id))
             PrintAndLogEx(INFO, "Check PICC key num: %d (0x%02x)", dctx.keyNum, dctx.keyNum);
         else
-            PrintAndLogEx(INFO, "Check app: %06x key num: %d (0x%02x)", appid, dctx.keyNum, dctx.keyNum);
+            PrintAndLogEx(INFO, "Check: %s key num: %d (0x%02x)", DesfireWayIDStr(selectway, id), dctx.keyNum, dctx.keyNum);
         PrintAndLogEx(INFO, "keys: DES: %s 2TDEA: %s 3TDEA: %s AES: %s",
                       keytypes[T_DES] ? _GREEN_("YES") : _RED_("NO"),
                       keytypes[T_3DES] ? _GREEN_("YES") : _RED_("NO"),
@@ -1455,7 +1458,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                 if (ktype == T_3K3DES)
                     memcpy(&key[16], key, 8);
 
-                res = DesfireAuthCheck(&dctx, appid, securechann, key);
+                res = DesfireAuthCheck(&dctx, selectway, id, securechann, key);
                 if (res == PM3_SUCCESS) {
                     found = true;
                     break; // all the params already in the dctx
@@ -1490,7 +1493,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                     break;
 
                 for (int i = 0; i < keyListLen; i++) {
-                    res = DesfireAuthCheck(&dctx, appid, securechann, &keyList[i * keylen]);
+                    res = DesfireAuthCheck(&dctx, selectway, id, securechann, &keyList[i * keylen]);
                     if (res == PM3_SUCCESS) {
                         found = true;
                         break; // all the params already in the dctx
@@ -1523,10 +1526,10 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     }
 
     if (found) {
-        if (appid == 0)
+        if (DesfireMFSelected(selectway, id))
             PrintAndLogEx(INFO, _GREEN_("Found") " key num: %d (0x%02x)", dctx.keyNum, dctx.keyNum);
         else
-            PrintAndLogEx(INFO, "Found key for app: %06x key num: %d (0x%02x)", appid, dctx.keyNum, dctx.keyNum);
+            PrintAndLogEx(INFO, "Found key for: %s key num: %d (0x%02x)", DesfireWayIDStr(selectway, id), dctx.keyNum, dctx.keyNum);
 
         PrintAndLogEx(INFO, "key " _GREEN_("%s") " [%d]: " _GREEN_("%s"),
                       CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType),
