@@ -61,7 +61,7 @@ endif
 
 ifeq ($(USE_BREW),1)
   BREW_PREFIX = $(shell brew --prefix 2>/dev/null)
-  ifneq ($(strip $(BREW_PREFIX)),)
+  ifeq ($(strip $(BREW_PREFIX)),)
     USE_BREW = 0
   endif
 endif
