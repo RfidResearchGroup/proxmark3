@@ -110,7 +110,7 @@ typedef struct {
     uint8_t numKeysRaw;
     bool isoFileIDEnabled;          // from numKeysRaw
     uint8_t numberOfKeys;           // from numKeysRaw
-    DesfireCryptoAlgorythm keyType; // from numKeysRaw
+    DesfireCryptoAlgorithm keyType; // from numKeysRaw
 
     uint8_t keyVersions[16];
 
@@ -205,7 +205,7 @@ int DesfireChangeKeySettings(DesfireContext_t *dctx, uint8_t *data, size_t len);
 void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool print2ndbyte);
 
 int DesfireChangeKeyCmd(DesfireContext_t *dctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen);
-int DesfireChangeKey(DesfireContext_t *dctx, bool change_master_key, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey, bool verbose);
+int DesfireChangeKey(DesfireContext_t *dctx, bool change_master_key, uint8_t newkeynum, DesfireCryptoAlgorithm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorithm oldkeytype, uint8_t *oldkey, bool verbose);
 
 int DesfireSetConfigurationCmd(DesfireContext_t *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen);
 int DesfireSetConfiguration(DesfireContext_t *dctx, uint8_t paramid, uint8_t *param, size_t paramlen);
@@ -253,9 +253,9 @@ int DesfireISOSelectDF(DesfireContext_t *dctx, char *dfname, uint8_t *resp, size
 int DesfireISOSelect(DesfireContext_t *dctx, DesfireISOSelectControl cntr, uint8_t *data, uint8_t datalen, uint8_t *resp, size_t *resplen);
 int DesfireISOSelectFile(DesfireContext_t *dctx, char *appdfname, uint16_t appid, uint16_t fileid);
 int DesfireISOSelectEx(DesfireContext_t *dctx, bool fieldon, DesfireISOSelectControl cntr, uint8_t *data, uint8_t datalen, uint8_t *resp, size_t *resplen);
-int DesfireISOGetChallenge(DesfireContext_t *dctx, DesfireCryptoAlgorythm keytype, uint8_t *resp, size_t *resplen);
-int DesfireISOExternalAuth(DesfireContext_t *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data);
-int DesfireISOInternalAuth(DesfireContext_t *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data, uint8_t *resp, size_t *resplen);
+int DesfireISOGetChallenge(DesfireContext_t *dctx, DesfireCryptoAlgorithm keytype, uint8_t *resp, size_t *resplen);
+int DesfireISOExternalAuth(DesfireContext_t *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorithm keytype, uint8_t *data);
+int DesfireISOInternalAuth(DesfireContext_t *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorithm keytype, uint8_t *data, uint8_t *resp, size_t *resplen);
 
 int DesfireISOReadBinary(DesfireContext_t *dctx, bool use_file_id, uint8_t fileid, uint16_t offset, uint8_t length, uint8_t *resp, size_t *resplen);
 int DesfireISOUpdateBinary(DesfireContext_t *dctx, bool use_file_id, uint8_t fileid, uint16_t offset, uint8_t *data, size_t datalen);

@@ -350,7 +350,7 @@ void DesfireAIDUintToByte(uint32_t aid, uint8_t *data) {
     data[2] = (aid >> 16) & 0xff;
 }
 
-static uint8_t DesfireKeyToISOKey(DesfireCryptoAlgorythm keytype) {
+static uint8_t DesfireKeyToISOKey(DesfireCryptoAlgorithm keytype) {
     switch (keytype) {
         case T_DES:
             return 0x02;
@@ -364,7 +364,7 @@ static uint8_t DesfireKeyToISOKey(DesfireCryptoAlgorythm keytype) {
     return 0x00;
 }
 
-static uint8_t DesfireGetRndLenForKey(DesfireCryptoAlgorythm keytype) {
+static uint8_t DesfireGetRndLenForKey(DesfireCryptoAlgorithm keytype) {
     switch (keytype) {
         case T_DES:
             return 0x08;
@@ -1592,7 +1592,7 @@ static bool DesfireCheckAuthCmd(uint32_t appAID, uint8_t keyNum, uint8_t authcmd
     return (res == PM3_SUCCESS && respcode == 0xaf);
 }
 
-static bool DesfireCheckISOAuthCmd(uint32_t appAID, char *dfname, uint8_t keyNum, DesfireCryptoAlgorythm keytype) {
+static bool DesfireCheckISOAuthCmd(uint32_t appAID, char *dfname, uint8_t keyNum, DesfireCryptoAlgorithm keytype) {
 
     DesfireContext_t dctx = {0};
     dctx.keyNum = keyNum;
@@ -2683,7 +2683,7 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
     xlen += reclen;
 }
 
-int DesfireChangeKey(DesfireContext_t *dctx, bool change_master_key, uint8_t newkeynum, DesfireCryptoAlgorythm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorythm oldkeytype, uint8_t *oldkey, bool verbose) {
+int DesfireChangeKey(DesfireContext_t *dctx, bool change_master_key, uint8_t newkeynum, DesfireCryptoAlgorithm newkeytype, uint32_t newkeyver, uint8_t *newkey, DesfireCryptoAlgorithm oldkeytype, uint8_t *oldkey, bool verbose) {
 
     uint8_t okeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
     uint8_t nkeybuf[DESFIRE_MAX_KEY_SIZE] = {0};
@@ -2829,7 +2829,7 @@ int DesfireISOSelectDF(DesfireContext_t *dctx, char *dfname, uint8_t *resp, size
     return DesfireISOSelect(dctx, ISSDFName, (uint8_t *)dfname, strnlen(dfname, 16), resp, resplen);
 }
 
-int DesfireISOGetChallenge(DesfireContext_t *dctx, DesfireCryptoAlgorythm keytype, uint8_t *resp, size_t *resplen) {
+int DesfireISOGetChallenge(DesfireContext_t *dctx, DesfireCryptoAlgorithm keytype, uint8_t *resp, size_t *resplen) {
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_GET_CHALLENGE, 0x00, 0x00, 0x00, NULL}, DesfireGetRndLenForKey(keytype), resp, resplen, &sw);
     if (res == PM3_SUCCESS && sw != 0x9000)
@@ -2838,7 +2838,7 @@ int DesfireISOGetChallenge(DesfireContext_t *dctx, DesfireCryptoAlgorythm keytyp
     return res;
 }
 
-int DesfireISOExternalAuth(DesfireContext_t *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data) {
+int DesfireISOExternalAuth(DesfireContext_t *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorithm keytype, uint8_t *data) {
     uint8_t p1 = DesfireKeyToISOKey(keytype);
     uint8_t p2 = ((app_level) ? 0x80 : 0x00) | keynum;
 
@@ -2853,7 +2853,7 @@ int DesfireISOExternalAuth(DesfireContext_t *dctx, bool app_level, uint8_t keynu
     return res;
 }
 
-int DesfireISOInternalAuth(DesfireContext_t *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorythm keytype, uint8_t *data, uint8_t *resp, size_t *resplen) {
+int DesfireISOInternalAuth(DesfireContext_t *dctx, bool app_level, uint8_t keynum, DesfireCryptoAlgorithm keytype, uint8_t *data, uint8_t *resp, size_t *resplen) {
     uint8_t keylen = DesfireGetRndLenForKey(keytype);
     uint8_t p1 = DesfireKeyToISOKey(keytype);
     uint8_t p2 = ((app_level) ? 0x80 : 0x00) | keynum;

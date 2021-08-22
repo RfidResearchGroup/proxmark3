@@ -72,12 +72,12 @@ void DesfireClearIV(DesfireContext_t *ctx) {
     memset(ctx->IV, 0, sizeof(ctx->IV));
 }
 
-void DesfireSetKey(DesfireContext_t *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key) {
+void DesfireSetKey(DesfireContext_t *ctx, uint8_t keyNum, DesfireCryptoAlgorithm keyType, uint8_t *key) {
     DesfireClearContext(ctx);
     DesfireSetKeyNoClear(ctx, keyNum, keyType, key);
 }
 
-void DesfireSetKeyNoClear(DesfireContext_t *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key) {
+void DesfireSetKeyNoClear(DesfireContext_t *ctx, uint8_t keyNum, DesfireCryptoAlgorithm keyType, uint8_t *key) {
     ctx->keyNum = keyNum;
     ctx->keyType = keyType;
     memcpy(ctx->key, key, desfire_get_key_length(keyType));
@@ -175,15 +175,15 @@ uint8_t *DesfireGetKey(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_type) {
 }
 
 
-static void DesfireCryptoEncDecSingleBlock(uint8_t *key, DesfireCryptoAlgorythm keyType, uint8_t *data, uint8_t *dstdata, uint8_t *ivect, bool dir_to_send, bool encode) {
+static void DesfireCryptoEncDecSingleBlock(uint8_t *key, DesfireCryptoAlgorithm keyType, uint8_t *data, uint8_t *dstdata, uint8_t *ivect, bool dir_to_send, bool encode) {
     size_t block_size = desfire_get_key_block_length(keyType);
-    uint8_t sdata[MAX_CRYPTO_BLOCK_SIZE] = {0};
+    uint8_t sdata[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
     memcpy(sdata, data, block_size);
     if (dir_to_send) {
         bin_xor(sdata, ivect, block_size);
     }
 
-    uint8_t edata[MAX_CRYPTO_BLOCK_SIZE] = {0};
+    uint8_t edata[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
 
     switch (keyType) {
         case T_DES:
@@ -414,7 +414,7 @@ void MifareKdfAn10922(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_type, co
     }
 }
 
-void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorythm keytype, uint8_t version) {
+void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorithm keytype, uint8_t version) {
     if (keytype == T_AES)
         return;
 
@@ -447,7 +447,7 @@ uint8_t DesfireDESKeyGetVersion(uint8_t *key) {
     return version;
 }
 
-DesfireCryptoAlgorythm DesfireKeyTypeToAlgo(uint8_t keyType) {
+DesfireCryptoAlgorithm DesfireKeyTypeToAlgo(uint8_t keyType) {
     switch (keyType) {
         case 00:
             return T_3DES;
@@ -460,7 +460,7 @@ DesfireCryptoAlgorythm DesfireKeyTypeToAlgo(uint8_t keyType) {
     }
 }
 
-uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType) {
+uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorithm keyType) {
     switch (keyType) {
         case T_DES:
             return 0x00;
@@ -530,7 +530,7 @@ uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode) {
     return fmode;
 }
 
-void DesfireGenSessionKeyEV1(const uint8_t rnda[], const uint8_t rndb[], DesfireCryptoAlgorythm keytype, uint8_t *key) {
+void DesfireGenSessionKeyEV1(const uint8_t rnda[], const uint8_t rndb[], DesfireCryptoAlgorithm keytype, uint8_t *key) {
     switch (keytype) {
         case T_DES:
             memcpy(key, rnda, 4);
@@ -724,7 +724,7 @@ int DesfireLRPCalcCMAC(DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t
     return 0;
 }
 
-int desfire_get_key_length(DesfireCryptoAlgorythm key_type) {
+int desfire_get_key_length(DesfireCryptoAlgorithm key_type) {
     switch (key_type) {
         case T_DES:
             return 8;
@@ -738,7 +738,7 @@ int desfire_get_key_length(DesfireCryptoAlgorythm key_type) {
     return 0;
 }
 
-size_t desfire_get_key_block_length(DesfireCryptoAlgorythm key_type) {
+size_t desfire_get_key_block_length(DesfireCryptoAlgorithm key_type) {
     size_t block_size = 8;
     switch (key_type) {
         case T_DES:

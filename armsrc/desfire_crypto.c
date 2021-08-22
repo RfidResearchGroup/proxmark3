@@ -342,15 +342,15 @@ size_t key_block_size(const desfirekey_t key) {
  * Size of MACing produced with the key.
  */
 static size_t key_macing_length(const desfirekey_t key) {
-    size_t mac_length = MAC_LENGTH;
+    size_t mac_length = DESFIRE_MAC_LENGTH;
     switch (key->type) {
         case T_DES:
         case T_3DES:
-            mac_length = MAC_LENGTH;
+            mac_length = DESFIRE_MAC_LENGTH;
             break;
         case T_3K3DES:
         case T_AES:
-            mac_length = CMAC_LENGTH;
+            mac_length = DESFIRE_CMAC_LENGTH;
             break;
     }
     return mac_length;
@@ -461,8 +461,8 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
                         size_t len = maced_data_length(key, *nbytes);
                         (void)++len;
                         memcpy(res, data, *nbytes);
-                        memcpy(res + *nbytes, DESFIRE(tag)->cmac, CMAC_LENGTH);
-                        *nbytes += CMAC_LENGTH;
+                        memcpy(res + *nbytes, DESFIRE(tag)->cmac, DESFIRE_CMAC_LENGTH);
+                        *nbytes += DESFIRE_CMAC_LENGTH;
                     }
                     break;
             }
@@ -746,14 +746,14 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
 
 
 void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect, MifareCryptoDirection direction, MifareCryptoOperation operation, size_t block_size) {
-    uint8_t ovect[MAX_CRYPTO_BLOCK_SIZE];
+    uint8_t ovect[DESFIRE_MAX_CRYPTO_BLOCK_SIZE];
     if (direction == MCD_SEND) {
         xor(ivect, data, block_size);
     } else {
         memcpy(ovect, data, block_size);
     }
 
-    uint8_t edata[MAX_CRYPTO_BLOCK_SIZE];
+    uint8_t edata[DESFIRE_MAX_CRYPTO_BLOCK_SIZE];
 
     switch (key->type) {
         case T_DES:
@@ -855,7 +855,7 @@ void mifare_cypher_blocks_chained(desfiretag_t tag, desfirekey_t key, uint8_t *i
 
         switch (DESFIRE(tag)->authentication_scheme) {
             case AS_LEGACY:
-                memset(ivect, 0, MAX_CRYPTO_BLOCK_SIZE);
+                memset(ivect, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
                 break;
             case AS_NEW:
                 break;

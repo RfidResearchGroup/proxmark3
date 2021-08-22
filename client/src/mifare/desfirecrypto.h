@@ -22,25 +22,11 @@
 #define __DESFIRECRYPTO_H
 
 #include "common.h"
+#include "desfire.h"
 #include "crypto/libpcrypto.h"
 #include "mifare/lrpcrypto.h"
 
-#define MAX_CRYPTO_BLOCK_SIZE 16
-#define DESFIRE_MAX_CRYPTO_BLOCK_SIZE 16
-#define DESFIRE_MAX_KEY_SIZE  24
-#define DESFIRE_MAC_LENGTH 4
-#define DESFIRE_CMAC_LENGTH 8
-
 #define DESFIRE_GET_ISO_STATUS(x) ( ((uint16_t)(0x91<<8)) + (uint16_t)x )
-
-enum DESFIRE_CRYPTOALGO {
-    T_DES = 0x00,
-    T_3DES = 0x01, //aka 2K3DES
-    T_3K3DES = 0x02,
-    T_AES = 0x03,
-};
-
-typedef enum DESFIRE_CRYPTOALGO DesfireCryptoAlgorythm;
 
 typedef enum {
     DACNone,
@@ -74,7 +60,7 @@ typedef enum {
 
 typedef struct {
     uint8_t keyNum;
-    DesfireCryptoAlgorythm keyType;   // des/2tdea/3tdea/aes
+    DesfireCryptoAlgorithm keyType;   // des/2tdea/3tdea/aes
     uint8_t key[DESFIRE_MAX_KEY_SIZE];
     uint8_t masterKey[DESFIRE_MAX_KEY_SIZE]; // source for kdf
 
@@ -107,8 +93,8 @@ typedef struct {
 void DesfireClearContext(DesfireContext_t *ctx);
 void DesfireClearSession(DesfireContext_t *ctx);
 void DesfireClearIV(DesfireContext_t *ctx);
-void DesfireSetKey(DesfireContext_t *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key);
-void DesfireSetKeyNoClear(DesfireContext_t *ctx, uint8_t keyNum, enum DESFIRE_CRYPTOALGO keyType, uint8_t *key);
+void DesfireSetKey(DesfireContext_t *ctx, uint8_t keyNum, DesfireCryptoAlgorithm keyType, uint8_t *key);
+void DesfireSetKeyNoClear(DesfireContext_t *ctx, uint8_t keyNum, DesfireCryptoAlgorithm keyType, uint8_t *key);
 void DesfireSetCommandSet(DesfireContext_t *ctx, DesfireCommandSet cmdSet);
 void DesfireSetCommMode(DesfireContext_t *ctx, DesfireCommunicationMode commMode);
 void DesfireSetKdf(DesfireContext_t *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint8_t kdfInputLen);
@@ -127,17 +113,17 @@ void MifareKdfAn10922(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_type, co
 
 void DesfireGenSessionKeyLRP(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool enckey, uint8_t *sessionkey);
 
-void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorythm keytype, uint8_t version);
+void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorithm keytype, uint8_t version);
 uint8_t DesfireDESKeyGetVersion(uint8_t *key);
 
-DesfireCryptoAlgorythm DesfireKeyTypeToAlgo(uint8_t keyType);
-uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorythm keyType);
+DesfireCryptoAlgorithm DesfireKeyTypeToAlgo(uint8_t keyType);
+uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorithm keyType);
 void DesfirePrintCardKeyType(uint8_t keyType);
 
 DesfireCommunicationMode DesfireFileCommModeToCommMode(uint8_t file_comm_mode);
 uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode);
 
-void DesfireGenSessionKeyEV1(const uint8_t rnda[], const uint8_t rndb[], DesfireCryptoAlgorythm keytype, uint8_t *key);
+void DesfireGenSessionKeyEV1(const uint8_t rnda[], const uint8_t rndb[], DesfireCryptoAlgorithm keytype, uint8_t *key);
 void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool enckey, uint8_t *sessionkey);
 void DesfireEV2FillIV(DesfireContext_t *ctx, bool ivforcommand, uint8_t *iv);
 int DesfireEV2CalcCMAC(DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac);
@@ -148,8 +134,8 @@ void DesfireDecodePrevReaderID(DesfireContext_t *ctx, uint8_t *key, uint32_t trC
 
 int DesfireLRPCalcCMAC(DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac);
 
-int desfire_get_key_length(DesfireCryptoAlgorythm key_type);
-size_t desfire_get_key_block_length(DesfireCryptoAlgorythm key_type);
+int desfire_get_key_length(DesfireCryptoAlgorithm key_type);
+size_t desfire_get_key_block_length(DesfireCryptoAlgorithm key_type);
 size_t padded_data_length(const size_t nbytes, const size_t block_size);
 
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc);

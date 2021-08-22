@@ -370,7 +370,7 @@ static void swap24(uint8_t *data) {
 
 // default parameters
 static uint8_t defaultKeyNum = 0;
-static enum DESFIRE_CRYPTOALGO defaultAlgoId = T_DES;
+static DesfireCryptoAlgorithm defaultAlgoId = T_DES;
 static uint8_t defaultKey[DESFIRE_MAX_KEY_SIZE] = {0};
 static int defaultKdfAlgo = MFDES_KDF_ALGO_NONE;
 static int defaultKdfInputLen = 0;
