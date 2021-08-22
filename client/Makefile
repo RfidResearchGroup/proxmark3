@@ -25,19 +25,20 @@ vpath %.dic dictionaries
 OBJDIR = obj
 
 ifeq ($(USE_BREW),1)
-	ifdef MACPORTS_PREFIX
-		INCLUDES += -I$(MACPORTS_PREFIX)/include
-		LDLIBS += -L$(MACPORTS_PREFIX)/lib
-		PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(MACPORTS_PREFIX)/lib/pkgconfig
-		PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(MACPORTS_PREFIX)/libexec/qt/lib/pkgconfig
-		PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(MACPORTS_PREFIX)/libexec/qt5/lib/pkgconfig
-	else
-		INCLUDES += -I$(BREW_PREFIX)/include
-		LDLIBS += -L$(BREW_PREFIX)/lib
-		PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt/lib/pkgconfig
-		PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt5/lib/pkgconfig
-	endif
+	INCLUDES += -I$(BREW_PREFIX)/include
+	LDLIBS += -L$(BREW_PREFIX)/lib
+	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt/lib/pkgconfig
+	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt5/lib/pkgconfig
 endif
+
+ifdef ($(USE_MACPORTS),1)
+	INCLUDES += -I$(MACPORTS_PREFIX)/include
+	LDLIBS += -L$(MACPORTS_PREFIX)/lib
+	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(MACPORTS_PREFIX)/lib/pkgconfig
+endif
+
+
+PM3INCLUDES =
 
 ###################
 # local libraries #
@@ -120,19 +121,19 @@ MBEDTLSLIBCLIENTRELPATH = ../../client
 # not distributed as system library
 STATICLIBS += $(AMIIBOLIB)
 LDLIBS += $(AMIIBOLIBLD)
-INCLUDES += $(AMIIBOLIBINC)
+PM3INCLUDES += $(AMIIBOLIBINC)
 
 ## Cliparser / Argtable3
 # not distributed as system library
 STATICLIBS += $(CLIPARSERLIB)
 LDLIBS += $(CLIPARSERLIBLD)
-INCLUDES += $(CLIPARSERLIBINC)
+PM3INCLUDES += $(CLIPARSERLIBINC)
 
 ## Hardnested
 # not distributed as system library
 STATICLIBS += $(HARDNESTEDLIB)
 LDLIBS +=$(HARDNESTEDLIBLD)
-INCLUDES += $(HARDNESTEDLIBINC)
+PM3INCLUDES += $(HARDNESTEDLIBINC)
 
 ## Lua
 ifneq ($(SKIPLUASYSTEM),1)
@@ -152,7 +153,7 @@ ifneq ($(SKIPLUASYSTEM),1)
 endif
 STATICLIBS += $(LUALIB)
 LDLIBS += $(LUALIBLD)
-INCLUDES += $(LUALIBINC)
+PM3INCLUDES += $(LUALIBINC)
 
 ## Jansson
 # Jansson section needs to be after Lua to avoid interferences on macOS if a locally incompatible Lua was available, see PR 1155
@@ -168,25 +169,25 @@ ifneq ($(SKIPJANSSONSYSTEM),1)
 endif
 STATICLIBS += $(JANSSONLIB)
 LDLIBS += $(JANSSONLIBLD)
-INCLUDES += $(JANSSONLIBINC)
+PM3INCLUDES += $(JANSSONLIBINC)
 
 ## mbed TLS
 # system library cannot be used because it is compiled by default without CMAC support
 STATICLIBS += $(MBEDTLSLIB)
 LDLIBS += $(MBEDTLSLIBLD)
-INCLUDES += $(MBEDTLSLIBINC)
+PM3INCLUDES += $(MBEDTLSLIBINC)
 
 ## Reveng
 # not distributed as system library
 STATICLIBS += $(REVENGLIB)
 LDLIBS += $(REVENGLIBLD)
-INCLUDES += $(REVENGLIBINC)
+PM3INCLUDES += $(REVENGLIBINC)
 
 ## Tinycbor
 # not distributed as system library
 STATICLIBS += $(TINYCBORLIB)
 LDLIBS += $(TINYCBORLIBLD)
-INCLUDES += $(TINYCBORLIBINC)
+PM3INCLUDES += $(TINYCBORLIBINC)
 
 ## Whereami
 ifneq ($(SKIPWHEREAMISYSTEM),1)
@@ -199,7 +200,7 @@ ifneq ($(SKIPWHEREAMISYSTEM),1)
 endif
 STATICLIBS += $(WHEREAMILIB)
 LDLIBS += $(WHEREAMILIBLD)
-INCLUDES += $(WHEREAMILIBINC)
+PM3INCLUDES += $(WHEREAMILIBINC)
 
 ####################
 # system libraries #
@@ -227,7 +228,7 @@ ifneq ($(SKIPBT),1)
     endif
 endif
 LDLIBS += $(BTLIBLD)
-INCLUDES += $(BTLIBINC)
+PM3INCLUDES += $(BTLIBINC)
 
 ## Math
 LDLIBS += -lm
@@ -258,7 +259,7 @@ ifneq ($(SKIPPYTHON),1)
     endif
 endif
 LDLIBS += $(PYTHONLIBLD)
-INCLUDES += $(PYTHONLIBINC)
+PM3INCLUDES += $(PYTHONLIBINC)
 
 ## QT5 (or QT4 fallback) (optional)
 ifneq ($(SKIPQT),1)
@@ -303,13 +304,14 @@ CXXINCLUDES += $(QTINCLUDES)
 ## Readline
 ifneq ($(SKIPREADLINE),1)
     ifeq ($(USE_BREW),1)
-        ifdef MACPORTS_PREFIX
-            INCLUDES += -I$(MACPORTS_PREFIX)/include/readline
-        else
-            LDLIBS += -L$(BREW_PREFIX)/opt/readline/lib
-            INCLUDES += -I$(BREW_PREFIX)/opt/readline/include
-        endif
+        LDLIBS += -L$(BREW_PREFIX)/opt/readline/lib
+        PM3INCLUDES += -I$(BREW_PREFIX)/opt/readline/include
     endif
+
+    ifeq ($(USE_MACPORTS),1)
+        PM3INCLUDES += -I$(MACPORTS_PREFIX)/include/readline
+    endif
+
     LDLIBS += -lreadline
     READLINE_FOUND = 1
 endif
@@ -331,7 +333,7 @@ endif
 CFLAGS ?= $(DEFCFLAGS)
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS)
-PM3CFLAGS += -I./src -I./include -I../include -I../common -I../common_fpga $(INCLUDES)
+PM3CFLAGS += -I./src -I./include -I../include -I../common -I../common_fpga $(PM3INCLUDES) $(INCLUDES)
 # WIP Testing
 #PM3CFLAGS += -std=c11 -pedantic
 
