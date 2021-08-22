@@ -2032,7 +2032,7 @@ int DesfireFillFileList(DesfireContext_t *dctx, FileList_t FileList, size_t *fil
 
     *isopresent = (isoindx > 0);
 
-    return res;
+    return PM3_SUCCESS;
 }
 
 int DesfireCreateFile(DesfireContext_t *dctx, uint8_t ftype, uint8_t *fdata, size_t fdatalen, bool checklen) {
