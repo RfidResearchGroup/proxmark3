@@ -67,6 +67,7 @@ typedef enum TAGTYPE_UL {
     NTAG_210u        = 0x80000000,
     UL_MAGIC         = UL | MAGIC,
     UL_C_MAGIC       = UL_C | MAGIC,
+    // Don't forget to fill UL_TYPES_ARRAY and UL_MEMORY_ARRAY if new types are added
     UL_ERROR         = 0xFFFFFF,
 } TagTypeUL_t;
 

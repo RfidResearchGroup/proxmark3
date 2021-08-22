@@ -37,6 +37,7 @@
 #define MAX_NTAG_215        0x86
 #define MAX_NTAG_216        0xE6
 #define MAX_NTAG_I2C_1K     0xE9
+#define MAX_NTAG_I2C_2K     0xE9
 #define MAX_MY_D_NFC        0xFF
 #define MAX_MY_D_MOVE       0x25
 #define MAX_MY_D_MOVE_LEAN  0x0F
@@ -60,19 +61,36 @@ static uint8_t default_pwd_pack[][4] = {
 };
 
 static uint32_t UL_TYPES_ARRAY[] = {
-    UNKNOWN,    UL,          UL_C,        UL_EV1_48,       UL_EV1_128,      NTAG,
-    NTAG_203,   NTAG_210,    NTAG_212,    NTAG_213,        NTAG_215,        NTAG_216,
-    MY_D,       MY_D_NFC,    MY_D_MOVE,   MY_D_MOVE_NFC,   MY_D_MOVE_LEAN,  FUDAN_UL,
-    UL_EV1,     NTAG_213_F,  NTAG_216_F,  UL_NANO_40,      NTAG_I2C_1K,     NTAG_213_TT,
-    NTAG_213_C, NTAG_210u
+    UNKNOWN,            UL,                 UL_C,                UL_EV1_48,          UL_EV1_128,
+    NTAG,               NTAG_203,           NTAG_210,            NTAG_212,
+    NTAG_213,           NTAG_215,           NTAG_216,
+    MY_D,               MY_D_NFC,           MY_D_MOVE,           MY_D_MOVE_NFC,      MY_D_MOVE_LEAN,
+    NTAG_I2C_1K,        NTAG_I2C_2K,        NTAG_I2C_1K_PLUS,    NTAG_I2C_2K_PLUS,
+    FUDAN_UL,           NTAG_213_F,         NTAG_216_F,          UL_EV1,             UL_NANO_40,
+    NTAG_213_TT,        NTAG_213_C,
+    MAGIC_1A,           MAGIC_1B,           MAGIC_NTAG,
+    NTAG_210u,          UL_MAGIC,           UL_C_MAGIC
 };
 
 static uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
-    MAX_UL_BLOCKS,     MAX_UL_BLOCKS, MAX_ULC_BLOCKS, MAX_ULEV1a_BLOCKS, MAX_ULEV1b_BLOCKS,  MAX_NTAG_203,
-    MAX_NTAG_203,      MAX_NTAG_210,  MAX_NTAG_212,   MAX_NTAG_213,      MAX_NTAG_215,       MAX_NTAG_216,
-    MAX_UL_BLOCKS,     MAX_MY_D_NFC,  MAX_MY_D_MOVE,  MAX_MY_D_MOVE,     MAX_MY_D_MOVE_LEAN, MAX_UL_BLOCKS,
-    MAX_ULEV1a_BLOCKS, MAX_NTAG_213,  MAX_NTAG_216,   MAX_UL_NANO_40,    MAX_NTAG_I2C_1K,    MAX_NTAG_213,
-    MAX_NTAG_213,      MAX_NTAG_210
+//  UNKNOWN,            UL,                 UL_C,                UL_EV1_48,          UL_EV1_128,
+    MAX_UL_BLOCKS,      MAX_UL_BLOCKS,      MAX_ULC_BLOCKS,      MAX_ULEV1a_BLOCKS,  MAX_ULEV1b_BLOCKS,
+//  NTAG,               NTAG_203,           NTAG_210,            NTAG_212,
+    MAX_NTAG_203,       MAX_NTAG_203,       MAX_NTAG_210,        MAX_NTAG_212,
+//  NTAG_213,           NTAG_215,           NTAG_216,
+    MAX_NTAG_213,       MAX_NTAG_215,       MAX_NTAG_216,
+//  MY_D,               MY_D_NFC,           MY_D_MOVE,           MY_D_MOVE_NFC,      MY_D_MOVE_LEAN,
+    MAX_UL_BLOCKS,      MAX_MY_D_NFC,       MAX_MY_D_MOVE,       MAX_MY_D_MOVE,      MAX_MY_D_MOVE_LEAN,
+//  NTAG_I2C_1K,        NTAG_I2C_2K,        NTAG_I2C_1K_PLUS,    NTAG_I2C_2K_PLUS,
+    MAX_NTAG_I2C_1K,    MAX_NTAG_I2C_2K,    MAX_NTAG_I2C_1K,     MAX_NTAG_I2C_2K,
+//  FUDAN_UL,           NTAG_213_F,         NTAG_216_F,          UL_EV1,             UL_NANO_40,
+    MAX_UL_BLOCKS,      MAX_NTAG_213,       MAX_NTAG_216,        MAX_ULEV1a_BLOCKS,  MAX_UL_NANO_40,
+//  NTAG_213_TT,        NTAG_213_C,
+    MAX_NTAG_213,       MAX_NTAG_213,
+//  MAGIC_1A,           MAGIC_1B,           MAGIC_NTAG,
+    MAX_UL_BLOCKS,      MAX_UL_BLOCKS,      MAX_NTAG_216,
+//  NTAG_210u,          UL_MAGIC,           UL_C_MAGIC
+    MAX_NTAG_210,       MAX_UL_BLOCKS,      MAX_ULC_BLOCKS
 };
 
 //------------------------------------
