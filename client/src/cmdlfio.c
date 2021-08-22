@@ -93,7 +93,7 @@ int demodIOProx(bool verbose) {
     if (idx == 0) {
         if (g_debugMode) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox data not found - FSK Bits: %zu", size);
-            if (size > 92) PrintAndLogEx(DEBUG, "%s", sprint_bin_break(bits, 92, 16));
+            if (size > 92) PrintAndLogEx(DEBUG, "%s", sprint_bytebits_bin_break(bits, 92, 16));
         }
         return PM3_ESOFT;
     }
@@ -419,7 +419,7 @@ int getIOProxBits(uint8_t version, uint8_t fc, uint16_t cn, uint8_t *bits) {
 
     memcpy(bits, pre, sizeof(pre));
 
-    PrintAndLogEx(SUCCESS, "IO raw bits:\n %s \n", sprint_bin(bits, 64));
+    PrintAndLogEx(SUCCESS, "IO raw bits:\n %s \n", sprint_bytebits_bin(bits, 64));
     return PM3_SUCCESS;
 }
 

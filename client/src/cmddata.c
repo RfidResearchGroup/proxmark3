@@ -274,7 +274,7 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
         }
         PrintAndLogEx(SUCCESS, "DemodBuffer:\n%s", hex);
     } else {
-        PrintAndLogEx(SUCCESS, "DemodBuffer:\n%s", sprint_bin_break(buf + offset, len, 32));
+        PrintAndLogEx(SUCCESS, "DemodBuffer:\n%s", sprint_bytebits_bin_break(buf + offset, len, 32));
     }
 
     p = NULL;
@@ -585,7 +585,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Manchester decoded %s", (invert) ? "( inverted )" : "");
-    PrintAndLogEx(INFO, "%s", sprint_bin_break(bits, size, 32));
+    PrintAndLogEx(INFO, "%s", sprint_bytebits_bin_break(bits, size, 32));
 
     // try decode EM410x
     if (err_cnt == 0) {
@@ -660,7 +660,7 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Biphase decoded using offset %d%s", offset, (invert) ? "( inverted )" : "");
-    PrintAndLogEx(INFO, "%s", sprint_bin_break(bits, size, 32));
+    PrintAndLogEx(INFO, "%s", sprint_bytebits_bin_break(bits, size, 32));
 
     setDemodBuff(bits, size, 0);
     setClockGrid(g_DemodClock * 2, g_DemodStartIdx + g_DemodClock * offset);

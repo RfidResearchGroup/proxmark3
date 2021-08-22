@@ -69,7 +69,7 @@ static void em410x_construct_emul_graph(uint8_t *uid, uint8_t clock, uint8_t gap
         for (uint8_t j = 0; j < 8; j++) {
             bs[j] = (uid[i] >> (7 - j) & 1);
         }
-        PrintAndLogEx(DEBUG, "EM ID[%d] 0x%02x (%s)", i, uid[i], sprint_bin(bs, 4));
+        PrintAndLogEx(DEBUG, "EM ID[%d] 0x%02x (%s)", i, uid[i], sprint_bytebits_bin(bs, 4));
 
         for (uint8_t j = 0; j < 2; j++) {
             // append each bit

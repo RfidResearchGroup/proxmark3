@@ -298,7 +298,7 @@ char *sprint_hex_inrow_spaces(const uint8_t *data, const size_t len, size_t spac
     return buf;
 }
 
-char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks) {
+char *sprint_bytebits_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks) {
 
     // make sure we don't go beyond our char array memory
     size_t rowlen = (len > MAX_BIN_BREAK_LENGTH) ? MAX_BIN_BREAK_LENGTH : len;
@@ -369,8 +369,15 @@ void sprint_bin_break_ex(uint8_t *src, size_t srclen, char *dest , uint8_t break
 }
 */
 
+char *sprint_bytebits_bin(const uint8_t *data, const size_t len) {
+    return sprint_bytebits_bin_break(data, len, 0);
+}
+
 char *sprint_bin(const uint8_t *data, const size_t len) {
-    return sprint_bin_break(data, len, 0);
+    size_t binlen = (len*8 > MAX_BIN_BREAK_LENGTH) ? MAX_BIN_BREAK_LENGTH : len*8;
+    static uint8_t buf[MAX_BIN_BREAK_LENGTH];
+    bytes_to_bytebits(data, binlen/8, buf);
+    return sprint_bytebits_bin_break(buf, binlen, 0);
 }
 
 char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
@@ -474,14 +481,15 @@ void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest) {
     }
 }
 
-void bytes_to_bytebits(void *src, size_t srclen, void *dest) {
+void bytes_to_bytebits(const void *src, const size_t srclen, void *dest) {
 
     uint8_t *s = (uint8_t *)src;
     uint8_t *d = (uint8_t *)dest;
 
     uint32_t i = srclen * 8;
-    while (srclen--) {
-        uint8_t b = s[srclen];
+    size_t j = srclen;
+    while (j--) {
+        uint8_t b = s[j];
         d[--i] = (b >> 0) & 1;
         d[--i] = (b >> 1) & 1;
         d[--i] = (b >> 2) & 1;

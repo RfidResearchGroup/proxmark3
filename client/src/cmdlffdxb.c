@@ -203,7 +203,7 @@ static int CmdFDXBdemodBI(const char *Cmd) {
 
     if (g_debugMode) {
         PrintAndLogEx(DEBUG, "Start marker %d;   Size %d", preambleIndex, size);
-        char *bin = sprint_bin_break(bs, size, 16);
+        char *bin = sprint_bytebits_bin_break(bs, size, 16);
         PrintAndLogEx(DEBUG, "DEBUG BinStream:\n%s", bin);
     }
     return PM3_SUCCESS;
@@ -578,7 +578,7 @@ int demodFDXB(bool verbose) {
 
     if (g_debugMode) {
         PrintAndLogEx(DEBUG, "Start marker %d;   Size %zu", preambleIndex, size);
-        char *bin = sprint_bin_break(g_DemodBuffer, size, 16);
+        char *bin = sprint_bytebits_bin_break(g_DemodBuffer, size, 16);
         PrintAndLogEx(DEBUG, "DEBUG bin stream:\n%s", bin);
     }
 

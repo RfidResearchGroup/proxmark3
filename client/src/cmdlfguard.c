@@ -427,7 +427,7 @@ int getGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
         num_to_bytebitsLSBF(rawbytes[i], 8, pre + (i * 8));
 
     PrintAndLogEx(DEBUG, " Raw | %s", sprint_hex(rawbytes, sizeof(rawbytes)));
-    PrintAndLogEx(DEBUG, " Raw | %s", sprint_bin(pre, 96));
+    PrintAndLogEx(DEBUG, " Raw | %s", sprint_bytebits_bin(pre, 96));
 
     // add spacer bit 0 every 4 bits, starting with index 0,
     // 12 bytes, 24 nibbles.  24+1 extra bites. 3bytes.  ie 9bytes | 1byte xorkey, 8bytes rawdata (72bits, should be enough for a 40bit wiegand)
@@ -441,7 +441,7 @@ int getGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
     guardBits[4] = 1;
     guardBits[5] = 0;
 
-    PrintAndLogEx(DEBUG, " FIN | %s\n", sprint_bin(guardBits, 96));
+    PrintAndLogEx(DEBUG, " FIN | %s\n", sprint_bytebits_bin(guardBits, 96));
     return PM3_SUCCESS;
 }
 

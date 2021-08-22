@@ -1303,7 +1303,7 @@ void printT55xxBlock(uint8_t blockNum, bool page1) {
 
     T55x7_SaveBlockData((page1) ? blockNum + 8 : blockNum, val);
 
-    PrintAndLogEx(SUCCESS, " %02d | %08X | %s | %s", blockNum, val, sprint_bin(g_DemodBuffer + config.offset, 32), sprint_ascii(bytes, 4));
+    PrintAndLogEx(SUCCESS, " %02d | %08X | %s | %s", blockNum, val, sprint_bytebits_bin(g_DemodBuffer + config.offset, 32), sprint_ascii(bytes, 4));
 }
 
 static bool testModulation(uint8_t mode, uint8_t modread) {
@@ -1508,7 +1508,7 @@ int CmdT55xxSpecial(const char *Cmd) {
 
         uint32_t blockData = PackBits(0, 32, bits);
 
-        PrintAndLogEx(NORMAL, "%02d | 0x%08X | %s", j, blockData, sprint_bin(bits, 32));
+        PrintAndLogEx(NORMAL, "%02d | 0x%08X | %s", j, blockData, sprint_bytebits_bin(bits, 32));
     }
     return PM3_SUCCESS;
 }
@@ -1861,8 +1861,8 @@ void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat) {
     PrintAndLogEx(INFO, "     Die Number..... %d", data.dw);
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(INFO, " Raw Data - Page 1");
-    PrintAndLogEx(INFO, "     Block 1... %08X - %s", data.bl1, sprint_bin(g_DemodBuffer + config.offset + repeat, 32));
-    PrintAndLogEx(INFO, "     Block 2... %08X - %s", data.bl2, sprint_bin(g_DemodBuffer + config.offset + repeat + 32, 32));
+    PrintAndLogEx(INFO, "     Block 1... %08X - %s", data.bl1, sprint_bytebits_bin(g_DemodBuffer + config.offset + repeat, 32));
+    PrintAndLogEx(INFO, "     Block 2... %08X - %s", data.bl2, sprint_bytebits_bin(g_DemodBuffer + config.offset + repeat + 32, 32));
     PrintAndLogEx(NORMAL, "");
 
     /*
@@ -1902,8 +1902,8 @@ void printT5555Trace(t5555_tracedata_t data, uint8_t repeat) {
     PrintAndLogEx(INFO, "     Die Number..... %d", data.dw);
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(INFO, " Raw Data - Page 1");
-    PrintAndLogEx(INFO, "     Block 1... %08X - %s", data.bl1, sprint_bin(g_DemodBuffer + config.offset + repeat, 32));
-    PrintAndLogEx(INFO, "     Block 2... %08X - %s", data.bl2, sprint_bin(g_DemodBuffer + config.offset + repeat + 32, 32));
+    PrintAndLogEx(INFO, "     Block 1... %08X - %s", data.bl1, sprint_bytebits_bin(g_DemodBuffer + config.offset + repeat, 32));
+    PrintAndLogEx(INFO, "     Block 2... %08X - %s", data.bl2, sprint_bytebits_bin(g_DemodBuffer + config.offset + repeat + 32, 32));
 
     /*
         ** Q5 **
@@ -2185,7 +2185,7 @@ static int CmdT55xxInfo(const char *Cmd) {
     if (gotdata)
         PrintAndLogEx(INFO, " " _GREEN_("%08X"), block0);
     else
-        PrintAndLogEx(INFO, " " _GREEN_("%08X") " - %s", block0, sprint_bin(g_DemodBuffer + config.offset, 32));
+        PrintAndLogEx(INFO, " " _GREEN_("%08X") " - %s", block0, sprint_bytebits_bin(g_DemodBuffer + config.offset, 32));
 
     if (((!gotdata) && (!config.Q5)) || (gotdata && (!dataasq5))) {
         PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint") " ------------");

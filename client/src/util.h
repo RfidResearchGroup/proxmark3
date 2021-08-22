@@ -47,7 +47,8 @@ char *sprint_hex_inrow(const uint8_t *data, const size_t len);
 char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const size_t min_str_len);
 char *sprint_hex_inrow_spaces(const uint8_t *data, const size_t len, size_t spaces_between);
 char *sprint_bin(const uint8_t *data, const size_t len);
-char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks);
+char *sprint_bytebits_bin(const uint8_t *data, const size_t len);
+char *sprint_bytebits_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks);
 char *sprint_hex_ascii(const uint8_t *data, const size_t len);
 char *sprint_ascii(const uint8_t *data, const size_t len);
 char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_str_len);
@@ -59,7 +60,7 @@ void print_blocks(uint32_t *data, size_t len);
 int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValueLen);
 void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest);
 void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
-void bytes_to_bytebits(void *src, size_t srclen, void *dest);
+void bytes_to_bytebits(const void *src, const size_t srclen, void *dest);
 
 // Swap endian on arrays up to 64bytes.
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);

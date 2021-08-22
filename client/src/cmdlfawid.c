@@ -620,7 +620,7 @@ int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
     if (bitLen != 88)
         return PM3_ESOFT;
 
-    PrintAndLogEx(DEBUG, "awid raw bits:\n %s \n", sprint_bin(bits, bitLen));
+    PrintAndLogEx(DEBUG, "awid raw bits:\n %s \n", sprint_bytebits_bin(bits, bitLen));
 
     return PM3_SUCCESS;
 }
