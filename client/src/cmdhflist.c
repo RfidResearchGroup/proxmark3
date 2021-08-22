@@ -345,7 +345,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             break;
         }
         case NTAG_I2C_FASTWRITE: 
-            if (size == 69) {
+            if (cmdsize == 69) {
                 snprintf(exp, size, "FAST WRITE (%d - %d)", cmd[1], cmd[2]);
             }
             break;
