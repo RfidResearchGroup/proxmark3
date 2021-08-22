@@ -2576,8 +2576,8 @@ static int CmdHF14AMfUSim(const char *Cmd) {
                   "ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n"
                   "from emulator memory.  See `hf mfu eload` first. \n"
                   "See `hf 14a sim -h` to see available types. You want 2 or 7 usually.",
-                  "hf mfu sim -t 2 --uid 1122344556677        -> MIFARE Ultralight\n"
-                  "hf mfu sim -t 7 --uid 1122344556677 -n 5   -> AMIIBO (NTAG 215),  pack 0x8080"
+                  "hf mfu sim -t 2 --uid 11223344556677        -> MIFARE Ultralight\n"
+                  "hf mfu sim -t 7 --uid 11223344556677 -n 5   -> AMIIBO (NTAG 215),  pack 0x8080"
                  );
 
     void *argtable[] = {
