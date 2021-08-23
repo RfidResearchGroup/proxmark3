@@ -64,7 +64,7 @@ typedef struct {
     uint8_t key[DESFIRE_MAX_KEY_SIZE];
     uint8_t masterKey[DESFIRE_MAX_KEY_SIZE]; // source for kdf
 
-    // KDF finction
+    // KDF function
     uint8_t kdfAlgo;
     uint8_t kdfInputLen;
     uint8_t kdfInput[31];
