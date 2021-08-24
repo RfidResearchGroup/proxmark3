@@ -505,15 +505,6 @@ void bytes_to_bytebits(const void *src, const size_t srclen, void *dest) {
     }
 }
 
-// Compare two arrays
-bool bytes_compare(const uint8_t *b1, const uint8_t *b2, const size_t n) {
-    for (size_t i = 0; i < n; i++) {
-        if (b1[i] != b2[i])
-            return false;
-    }
-    return true;
-}
-
 // aa,bb,cc,dd,ee,ff,gg,hh, ii,jj,kk,ll,mm,nn,oo,pp
 // to
 // hh,gg,ff,ee,dd,cc,bb,aa, pp,oo,nn,mm,ll,kk,jj,ii

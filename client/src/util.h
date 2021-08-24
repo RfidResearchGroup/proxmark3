@@ -61,7 +61,6 @@ int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValue
 void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest);
 void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
 void bytes_to_bytebits(const void *src, const size_t srclen, void *dest);
-bool bytes_compare(const uint8_t *b1, const uint8_t *b2, const size_t n);
 
 // Swap endian on arrays up to 64bytes.
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);
