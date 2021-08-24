@@ -696,15 +696,15 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         if (card.sak == 0x20) {
 
             if (card.ats_len >= 5) {
-                if (!memcmp(card.ats + 1, STANDALONE_DESFIRE, 4)) {
+                if (0 == memcmp(card.ats + 1, STANDALONE_DESFIRE, 4)) {
                     PrintAndLogEx(INFO, "Standalone DESFire");
                 }
-                if (!memcmp(card.ats + 1, JCOP_DESFIRE, 4)) {
+                if (0 == memcmp(card.ats + 1, JCOP_DESFIRE, 4)) {
                     PrintAndLogEx(INFO, "JCOP DESFire");
                 }
             }
             if (card.ats_len == 4) {
-                if (!memcmp(card.ats + 1, JCOP3_DESFIRE, 4)) {
+                if (0 == memcmp(card.ats + 1, JCOP3_DESFIRE, 4)) {
                     PrintAndLogEx(INFO, "JCOP3 DESFire");
                 }
             }
