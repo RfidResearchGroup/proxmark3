@@ -689,23 +689,22 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     iso14a_card_select_t card;
     res = SelectCard14443A_4(true, false, &card);
     if (res == PM3_SUCCESS) {
-        // convert to str by adding \0 to the end. so we can use strlen() to calc length
-        static const char STANDALONE_DESFIRE[] = { 0x75, 0x77, 0x81, 0x02, '\0' };
-        static const char JCOP_DESFIRE[] = { 0x75, 0xf7, 0xb1, 0x02, '\0' };
-        static const char JCOP3_DESFIRE[] = { 0x78, 0x77, 0x71, 0x02, '\0' };
+        static const uint8_t STANDALONE_DESFIRE[] = { 0x75, 0x77, 0x81, 0x02 };
+        static const uint8_t JCOP_DESFIRE[] = { 0x75, 0xf7, 0xb1, 0x02 };
+        static const uint8_t JCOP3_DESFIRE[] = { 0x78, 0x77, 0x71, 0x02 };
 
         if (card.sak == 0x20) {
 
             if (card.ats_len >= 5) {
-                if (str_startswith((const char *)card.ats + 1, STANDALONE_DESFIRE)) {
+                if (bytes_compare((const uint8_t *)card.ats + 1, STANDALONE_DESFIRE, 4)) {
                     PrintAndLogEx(INFO, "Standalone DESFire");
                 }
-                if (str_startswith((const char *)card.ats + 1, JCOP_DESFIRE)) {
+                if (bytes_compare((const uint8_t *)card.ats + 1, JCOP_DESFIRE, 4)) {
                     PrintAndLogEx(INFO, "JCOP DESFire");
                 }
             }
             if (card.ats_len == 4) {
-                if (str_startswith((const char *)card.ats + 1, JCOP3_DESFIRE)) {
+                if (bytes_compare((const uint8_t *)card.ats + 1, JCOP3_DESFIRE, 4)) {
                     PrintAndLogEx(INFO, "JCOP3 DESFire");
                 }
             }
