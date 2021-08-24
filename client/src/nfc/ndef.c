@@ -11,6 +11,7 @@
 #include "ndef.h"
 
 #include <string.h>
+#include <stdlib.h>
 
 #include "ui.h"
 #include "util.h" // sprint_hex...
@@ -637,7 +638,7 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
                 break;
             }
 
-            char begin[ndef->TypeLen];
+            char *begin = calloc(ndef->TypeLen + 1,sizeof(char));
             memcpy(begin, ndef->Type, ndef->TypeLen);
             str_lower(begin);
 
@@ -651,6 +652,8 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
                 ndefDecodeMime_bt(ndef);
             }
 
+            free(begin);
+            begin = NULL;
             break;
         }
         case tnfAbsoluteURIRecord:
