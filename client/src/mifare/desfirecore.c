@@ -1571,7 +1571,7 @@ int DesfireAuthenticate(DesfireContext_t *dctx, DesfireSecureChannel secureChann
     return 100;
 }
 
-static bool DesfireCheckAuthCmd(DesfireISOSelectWay way, uint32_t appID, uint8_t keyNum, uint8_t authcmd, bool checklrp) {
+bool DesfireCheckAuthCmd(DesfireISOSelectWay way, uint32_t appID, uint8_t keyNum, uint8_t authcmd, bool checklrp) {
     size_t recv_len = 0;
     uint8_t respcode = 0;
     uint8_t recv_data[256] = {0};

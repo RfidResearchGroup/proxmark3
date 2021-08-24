@@ -683,8 +683,24 @@ static int CmdHF14ADesInfo(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "   Card doesn't support 'free mem' cmd");
         }
     }
-    PrintAndLogEx(NORMAL, "");
+    
+    if (cardtype == DESFIRE_LIGHT) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("Desfire Light info"));
 
+        if (DesfireSelect(&dctx, ISWIsoID, 0xdf01, NULL) == PM3_SUCCESS)
+            PrintAndLogEx(SUCCESS, "   Card have " _GREEN_("default (0xdf01)") " iso id for application");
+        else
+            PrintAndLogEx(SUCCESS, "   Card have " _RED_("not a default") " iso id for application");
+
+        if (DesfireCheckAuthCmd(ISWIsoID, 0x3f00, 1, MFDES_AUTHENTICATE_EV2F, false)) {
+            PrintAndLogEx(SUCCESS, "   Card in the " _GREEN_("AES") " mode");
+        } else if (DesfireCheckAuthCmd(ISWIsoID, 0x3f00, 1, MFDES_AUTHENTICATE_EV2F, true)) {
+            PrintAndLogEx(SUCCESS, "   Card in the " _GREEN_("LRP") " mode");
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
 
     iso14a_card_select_t card;
     res = SelectCard14443A_4(true, false, &card);
