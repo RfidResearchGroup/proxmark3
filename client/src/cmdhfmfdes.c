@@ -1320,7 +1320,8 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                   "hf mfdes detect -> detect key 0 from PICC level\n"
                   "hf mfdes detect -s d40 -> detect key 0 from PICC level via secure channel D40\n"
                   "hf mfdes detect --dict mfdes_default_keys -> detect key 0 from PICC level with help of the standard dictionary\n"
-                  "hf mfdes detect --aid 123456 -n 2 --save -> detect key 2 from app 123456 and if succeed - save params to defaults (`default` command)");
+                  "hf mfdes detect --aid 123456 -n 2 --save -> detect key 2 from app 123456 and if succeed - save params to defaults (`default` command)\n"
+                  "hf mfdes detect --appisoid df01 --save -> detect key 0 and save to defaults with card in the LRP mode");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1377,6 +1378,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     }
 
     bool keytypes[4] = {0};
+    bool uselrp = false;
 
     uint8_t data[250] = {0};
     size_t datalen = 0;
@@ -1413,6 +1415,11 @@ static int CmdHF14aDesDetect(const char *Cmd) {
             if (authCmdCheck.authAES || authCmdCheck.authEV2) {
                 keytypes[T_AES] = true;
             }
+            if (authCmdCheck.authLRP) {
+                keytypes[T_AES] = true;
+                uselrp = true;
+                securechann = DACLRP;
+            }
         } else {
             // if nothing helps - we check DES only
             keytypes[T_DES] = true;
@@ -1431,11 +1438,12 @@ static int CmdHF14aDesDetect(const char *Cmd) {
             PrintAndLogEx(INFO, "Check PICC key num: %d (0x%02x)", dctx.keyNum, dctx.keyNum);
         else
             PrintAndLogEx(INFO, "Check: %s key num: %d (0x%02x)", DesfireWayIDStr(selectway, id), dctx.keyNum, dctx.keyNum);
-        PrintAndLogEx(INFO, "keys: DES: %s 2TDEA: %s 3TDEA: %s AES: %s",
+        PrintAndLogEx(INFO, "keys: DES: %s 2TDEA: %s 3TDEA: %s AES: %s LRP: %s",
                       keytypes[T_DES] ? _GREEN_("YES") : _RED_("NO"),
                       keytypes[T_3DES] ? _GREEN_("YES") : _RED_("NO"),
                       keytypes[T_3K3DES] ? _GREEN_("YES") : _RED_("NO"),
-                      keytypes[T_AES] ? _GREEN_("YES") : _RED_("NO")
+                      keytypes[T_AES] ? _GREEN_("YES") : _RED_("NO"),
+                      uselrp ? _GREEN_("YES") : _RED_("NO")
                      );
     }
 
@@ -1531,7 +1539,8 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         else
             PrintAndLogEx(INFO, "Found key for: %s key num: %d (0x%02x)", DesfireWayIDStr(selectway, id), dctx.keyNum, dctx.keyNum);
 
-        PrintAndLogEx(INFO, "key " _GREEN_("%s") " [%d]: " _GREEN_("%s"),
+        PrintAndLogEx(INFO, "channel " _GREEN_("%s") " key " _GREEN_("%s") " [%d]: " _GREEN_("%s"),
+                      CLIGetOptionListStr(DesfireSecureChannelOpts, securechann),
                       CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType),
                       desfire_get_key_length(dctx.keyType),
                       sprint_hex(dctx.key, desfire_get_key_length(dctx.keyType)));
