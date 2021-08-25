@@ -1571,7 +1571,7 @@ int DesfireAuthenticate(DesfireContext_t *dctx, DesfireSecureChannel secureChann
     return 100;
 }
 
-static bool DesfireCheckAuthCmd(uint32_t appAID, uint8_t keyNum, uint8_t authcmd) {
+bool DesfireCheckAuthCmd(DesfireISOSelectWay way, uint32_t appID, uint8_t keyNum, uint8_t authcmd, bool checklrp) {
     size_t recv_len = 0;
     uint8_t respcode = 0;
     uint8_t recv_data[256] = {0};
@@ -1579,45 +1579,36 @@ static bool DesfireCheckAuthCmd(uint32_t appAID, uint8_t keyNum, uint8_t authcmd
     DesfireContext_t dctx = {0};
     dctx.keyNum = keyNum;
     dctx.commMode = DCMPlain;
-    dctx.cmdSet = DCCNative;
+    dctx.cmdSet = DCCNativeISO;
 
     // if cant select - return false
-    int res = DesfireSelectAIDHex(&dctx, appAID, false, 0);
+    int res = DesfireSelect(&dctx, way, appID, NULL);
     if (res != PM3_SUCCESS)
         return false;
 
-    uint8_t data[] = {keyNum, 0x00};
-    res = DesfireExchangeEx(false, &dctx, authcmd, data, (authcmd == MFDES_AUTHENTICATE_EV2F) ? 2 : 1, &respcode, recv_data, &recv_len, false, 0);
+    uint8_t data[] = {keyNum, 0x01, (checklrp) ? 0x02 : 0x00};
+    uint8_t datalen = (authcmd == MFDES_AUTHENTICATE_EV2F) ? 3 : 1;
+    res = DesfireExchangeEx(false, &dctx, authcmd, data, datalen, &respcode, recv_data, &recv_len, false, 0);
     DropField();
-    return (res == PM3_SUCCESS && respcode == 0xaf);
+    
+    if (checklrp)
+        return (res == PM3_SUCCESS && respcode == 0xaf && recv_len == 17 && recv_data[0] == 0x01);
+    else
+        return (res == PM3_SUCCESS && respcode == 0xaf);
 }
 
-static bool DesfireCheckISOAuthCmd(uint32_t appAID, char *dfname, uint8_t keyNum, DesfireCryptoAlgorithm keytype) {
+static bool DesfireCheckISOAuthCmd(DesfireISOSelectWay way, uint32_t appID, char *dfname, uint8_t keyNum, DesfireCryptoAlgorithm keytype) {
 
     DesfireContext_t dctx = {0};
     dctx.keyNum = keyNum;
     dctx.commMode = DCMPlain;
     dctx.cmdSet = DCCISO;
 
-    bool app_level = (appAID != 0x000000);
-    int res = 0;
-    if (dfname == NULL || strnlen(dfname, 16) == 0) {
-        if (appAID == 0x000000) {
-            res = DesfireISOSelect(&dctx, ISSMFDFEF, NULL, 0, NULL, NULL);
-            if (res != PM3_SUCCESS)
-                return false;
-        } else {
-            res = DesfireSelectAIDHex(&dctx, appAID, false, 0);
-            if (res != PM3_SUCCESS)
-                return false;
-        }
-    } else {
-        res = DesfireISOSelectDF(&dctx, dfname, NULL, NULL);
-        if (res != PM3_SUCCESS)
-            return false;
-        app_level = true;
-    }
+    int res = DesfireSelect(&dctx, way, appID, dfname);
+    if (res != PM3_SUCCESS)
+        return false;
 
+    bool app_level = !DesfireMFSelected(way, appID);
     uint8_t rndlen = DesfireGetRndLenForKey(keytype);
 
     uint8_t piccrnd[64] = {0};
@@ -1637,24 +1628,26 @@ static bool DesfireCheckISOAuthCmd(uint32_t appAID, char *dfname, uint8_t keyNum
     return (sw == 0x9000 || sw == 0x6982);
 }
 
-void DesfireCheckAuthCommands(uint32_t appAID, char *dfname, uint8_t keyNum, AuthCommandsChk_t *authCmdCheck) {
+void DesfireCheckAuthCommands(DesfireISOSelectWay way, uint32_t appID, char *dfname, uint8_t keyNum, AuthCommandsChk_t *authCmdCheck) {
     memset(authCmdCheck, 0, sizeof(AuthCommandsChk_t));
 
-    authCmdCheck->auth = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE);
-    authCmdCheck->authISO = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE_ISO);
-    authCmdCheck->authAES = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE_AES);
-    authCmdCheck->authEV2 = DesfireCheckAuthCmd(appAID, keyNum, MFDES_AUTHENTICATE_EV2F);
-    authCmdCheck->authISONative = DesfireCheckISOAuthCmd(appAID, dfname, keyNum, T_DES);
+    authCmdCheck->auth = DesfireCheckAuthCmd(way, appID, keyNum, MFDES_AUTHENTICATE, false);
+    authCmdCheck->authISO = DesfireCheckAuthCmd(way, appID, keyNum, MFDES_AUTHENTICATE_ISO, false);
+    authCmdCheck->authAES = DesfireCheckAuthCmd(way, appID, keyNum, MFDES_AUTHENTICATE_AES, false);
+    authCmdCheck->authEV2 = DesfireCheckAuthCmd(way, appID, keyNum, MFDES_AUTHENTICATE_EV2F, false);
+    authCmdCheck->authISONative = DesfireCheckISOAuthCmd(way, appID, dfname, keyNum, T_DES);
+    authCmdCheck->authLRP = DesfireCheckAuthCmd(way, appID, keyNum, MFDES_AUTHENTICATE_EV2F, true);
     authCmdCheck->checked = true;
 }
 
 void DesfireCheckAuthCommandsPrint(AuthCommandsChk_t *authCmdCheck) {
-    PrintAndLogEx(NORMAL, "auth: %s auth iso: %s auth aes: %s auth ev2: %s auth iso native: %s",
+    PrintAndLogEx(NORMAL, "auth: %s auth iso: %s auth aes: %s auth ev2: %s auth iso native: %s auth lrp: %s",
                   authCmdCheck->auth ? _GREEN_("YES") : _RED_("NO"),
                   authCmdCheck->authISO ? _GREEN_("YES") : _RED_("NO"),
                   authCmdCheck->authAES ? _GREEN_("YES") : _RED_("NO"),
                   authCmdCheck->authEV2 ? _GREEN_("YES") : _RED_("NO"),
-                  authCmdCheck->authISONative ? _GREEN_("YES") : _RED_("NO")
+                  authCmdCheck->authISONative ? _GREEN_("YES") : _RED_("NO"),
+                  authCmdCheck->authLRP ? _GREEN_("YES") : _RED_("NO")
                  );
 }
 
@@ -1688,7 +1681,7 @@ int DesfireFillPICCInfo(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, bool deepm
 
     // field on-off zone
     if (deepmode)
-        DesfireCheckAuthCommands(0x000000, NULL, 0, &PICCInfo->authCmdCheck);
+        DesfireCheckAuthCommands(ISW6bAID, 0x000000, NULL, 0, &PICCInfo->authCmdCheck);
 
     return PM3_SUCCESS;
 }
@@ -1770,7 +1763,7 @@ int DesfireFillAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS ap
     // field on-off zone
     if (fillAppSettings && PICCInfo->appCount > 0 && deepmode) {
         for (int i = 0; i < PICCInfo->appCount; i++) {
-            DesfireCheckAuthCommands(appList[i].appNum, appList[i].appDFName, 0, &appList[i].authCmdCheck);
+            DesfireCheckAuthCommands(ISW6bAID, appList[i].appNum, appList[i].appDFName, 0, &appList[i].authCmdCheck);
         }
     }
 
@@ -2955,18 +2948,31 @@ int DesfireSelectEx(DesfireContext_t *ctx, bool fieldon, DesfireISOSelectWay way
     size_t resplen = 0;
 
     if (way == ISWMF || (way == ISWDFName && dfname == NULL)) {
-        return DesfireISOSelect(ctx, ISSMFDFEF, NULL, 0, resp, &resplen);
+        return DesfireISOSelectEx(ctx, fieldon, ISSMFDFEF, NULL, 0, resp, &resplen);
     } else if (way == ISW6bAID) {
+        if (id == 0x000000 && fieldon)
+            return DesfireAnticollision(false);
+
+        DesfireCommandSet cmdset = ctx->cmdSet;
+        int res;
+
+        // if we try to select 6b AID via ISO channel - we can only switch the channel via the over channel because there is no equivalent command in the iso commands
+        if (ctx->cmdSet == DCCISO)
+            ctx->cmdSet = DCCNativeISO;
+
         if (fieldon)
-            return DesfireSelectAIDHex(ctx, id, false, 0);
+            res = DesfireSelectAIDHex(ctx, id, false, 0);
         else
-            return DesfireSelectAIDHexNoFieldOn(ctx, id);
+            res = DesfireSelectAIDHexNoFieldOn(ctx, id);
+
+        ctx->cmdSet = cmdset;
+        return res;
     } else if (way == ISWIsoID) {
         uint8_t data[2] = {0};
         Uint2byteToMemBe(data, id);
         return DesfireISOSelectEx(ctx, fieldon, ISSMFDFEF, data, 2, resp, &resplen);
     } else if (way == ISWDFName) {
-        return DesfireISOSelect(ctx, ISSMFDFEF, NULL, 0, resp, &resplen);
+        return DesfireISOSelectEx(ctx, fieldon, ISSMFDFEF, NULL, 0, resp, &resplen);
     }
     return PM3_ESOFT;
 }
