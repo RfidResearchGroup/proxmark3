@@ -1056,7 +1056,7 @@ typedef struct {
     uint32_t (*Pwd)(uint8_t *uid);
     uint16_t (*Pack)(uint8_t *uid);
     const char *hint;
-} PACKED mfu_identify_t;
+} mfu_identify_t;
 
 static mfu_identify_t mfu_ident_table[] = {
     {
