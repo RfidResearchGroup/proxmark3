@@ -1579,7 +1579,7 @@ bool DesfireCheckAuthCmd(DesfireISOSelectWay way, uint32_t appID, uint8_t keyNum
     DesfireContext_t dctx = {0};
     dctx.keyNum = keyNum;
     dctx.commMode = DCMPlain;
-    dctx.cmdSet = (checklrp || way != ISW6bAID) ? DCCNativeISO : DCCNative;
+    dctx.cmdSet = DCCNativeISO;
 
     // if cant select - return false
     int res = DesfireSelect(&dctx, way, appID, NULL);
