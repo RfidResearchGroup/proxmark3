@@ -216,7 +216,7 @@ typedef struct {
     uint8_t keylen;
     const char *desc;
     const char *value;
-} PACKED ndef_publickey_t;
+} ndef_publickey_t;
 
 static int ndef_print_signature(uint8_t *data, uint8_t data_len, uint8_t *signature, uint8_t sign_len) {
 
