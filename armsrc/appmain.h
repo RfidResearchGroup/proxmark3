@@ -19,11 +19,11 @@ void hf_field_off(void);
 int tearoff_hook(void);
 
 #if defined RDV4 || defined ICOPYX
-  // ADC Vref = 3300mV, and an (10000k+240k):240k voltage divider on the LF input can measure voltages up to 140800 mV
-  #define MAX_ADC_HF_VOLTAGE 140800
+// ADC Vref = 3300mV, and an (10000k+240k):240k voltage divider on the LF input can measure voltages up to 140800 mV
+#define MAX_ADC_HF_VOLTAGE 140800
 #else
-  // ADC Vref = 3300mV, and an (10M+1M):1M voltage divider on the HF input can measure voltages up to 36300 mV
-  #define MAX_ADC_HF_VOLTAGE 36300
+// ADC Vref = 3300mV, and an (10M+1M):1M voltage divider on the HF input can measure voltages up to 36300 mV
+#define MAX_ADC_HF_VOLTAGE 36300
 #endif
 // ADC Vref = 3300mV,  (240k-10M):240k voltage divider,  140800 mV
 #define MAX_ADC_LF_VOLTAGE 140800

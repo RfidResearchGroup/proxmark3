@@ -193,7 +193,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MIFARE_ULNANO_LOCKSIG       0xAC
 
 // NTAG i2k 2K  uses sector 0, and sector 1 to have access to
-// block 0x00-0xFF.  
+// block 0x00-0xFF.
 #define NTAG_I2C_SELECT_SECTOR      0xC2
 #define NTAG_I2C_FASTWRITE          0xA6
 

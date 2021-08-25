@@ -973,7 +973,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210821.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log e:\\proxspace\\pm3/.proxmark3/logs/log_20210825.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -3726,9 +3726,10 @@
                 "--tb target b key",
                 "--emu fill simulator keys from found keys",
                 "--dump dump found keys to file",
-                "--single single sector (defaults to all)"
+                "--single single sector (defaults to all)",
+                "--mem use dictionary from flashmemory"
             ],
-            "usage": "hf mf nested [-hab] [-k <hex>] [--mini] [--1k] [--2k] [--4k] [--blk <dec>] [--tblk <dec>] [--ta] [--tb] [--emu] [--dump] [--single]"
+            "usage": "hf mf nested [-hab] [-k <hex>] [--mini] [--1k] [--2k] [--4k] [--blk <dec>] [--tblk <dec>] [--ta] [--tb] [--emu] [--dump] [--single] [--mem]"
         },
         "hf mf personalize": {
             "command": "hf mf personalize",
@@ -4438,7 +4439,8 @@
                 "hf mfdes detect -> detect key 0 from picc level",
                 "hf mfdes detect -s d40 -> detect key 0 from picc level via secure channel d40",
                 "hf mfdes detect --dict mfdes_default_keys -> detect key 0 from picc level with help of the standard dictionary",
-                "hf mfdes detect --aid 123456 -n 2 --save -> detect key 2 from app 123456 and if succeed - save params to defaults (`default` command)"
+                "hf mfdes detect --aid 123456 -n 2 --save -> detect key 2 from app 123456 and if succeed - save params to defaults (`default` command)",
+                "hf mfdes detect --appisoid df01 --save -> detect key 0 and save to defaults with card in the lrp mode"
             ],
             "offline": false,
             "options": [
@@ -4454,10 +4456,11 @@
                 "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
                 "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
                 "--aid <app id hex> application id (3 hex bytes, big endian)",
+                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "--dict <file> file with keys dictionary",
                 "--save save found key and parameters to defaults"
             ],
-            "usage": "hf mfdes detect [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--dict <file>] [--save]"
+            "usage": "hf mfdes detect [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>] [--dict <file>] [--save]"
         },
         "hf mfdes dump": {
             "command": "hf mfdes dump",
@@ -5468,8 +5471,8 @@
             "command": "hf mfu sim",
             "description": "simulate mifare ultralight family type based upon iso/iec 14443 type a tag with 4,7 or 10 byte uid from emulator memory. see `hf mfu eload` first. see `hf 14a sim -h` to see available types. you want 2 or 7 usually.",
             "notes": [
-                "hf mfu sim -t 2 --uid 1122344556677 -> mifare ultralight",
-                "hf mfu sim -t 7 --uid 1122344556677 -n 5 -> amiibo (ntag 215), pack 0x8080"
+                "hf mfu sim -t 2 --uid 11223344556677 -> mifare ultralight",
+                "hf mfu sim -t 7 --uid 11223344556677 -n 5 -> amiibo (ntag 215), pack 0x8080"
             ],
             "offline": false,
             "options": [
@@ -7239,7 +7242,7 @@
         },
         "lf hitag info": {
             "command": "lf hitag info",
-            "description": "sniff traffic between hitag reader and tag.",
+            "description": "hitag2 tag information",
             "notes": [
                 "lf hitag info"
             ],
@@ -9997,6 +10000,6 @@
     "metadata": {
         "commands_extracted": 589,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-08-21T16:13:04"
+        "extracted_on": "2021-08-25T11:37:52"
     }
 }

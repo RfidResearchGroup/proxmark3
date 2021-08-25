@@ -378,9 +378,9 @@ char *sprint_bytebits_bin(const uint8_t *data, const size_t len) {
 }
 
 char *sprint_bin(const uint8_t *data, const size_t len) {
-    size_t binlen = (len*8 > MAX_BIN_BREAK_LENGTH) ? MAX_BIN_BREAK_LENGTH : len*8;
+    size_t binlen = (len * 8 > MAX_BIN_BREAK_LENGTH) ? MAX_BIN_BREAK_LENGTH : len * 8;
     static uint8_t buf[MAX_BIN_BREAK_LENGTH];
-    bytes_to_bytebits(data, binlen/8, buf);
+    bytes_to_bytebits(data, binlen / 8, buf);
     return sprint_bytebits_bin_break(buf, binlen, 0);
 }
 

@@ -638,7 +638,7 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
                 break;
             }
 
-            char *begin = calloc(ndef->TypeLen + 1,sizeof(char));
+            char *begin = calloc(ndef->TypeLen + 1, sizeof(char));
             memcpy(begin, ndef->Type, ndef->TypeLen);
             str_lower(begin);
 

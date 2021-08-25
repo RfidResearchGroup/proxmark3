@@ -444,8 +444,7 @@ static bool FpgaConfCurrentMode(int bitstream_version) {
 
         if (bitstream_version == FPGA_BITSTREAM_LF) {
             LOW(GPIO_FPGA_SWITCH);
-        }
-        else {
+        } else {
             HIGH(GPIO_FPGA_SWITCH);
         }
         // update downloaded_bitstream

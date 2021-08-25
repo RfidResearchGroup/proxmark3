@@ -44,9 +44,9 @@
 #define GPIO_USB_PU         AT91C_PIO_PA24
 #define GPIO_RELAY          AT91C_PIO_PA25
 #if defined XC3
-  #define GPIO_FPGA_SWITCH    AT91C_PIO_PA26
+#define GPIO_FPGA_SWITCH    AT91C_PIO_PA26
 #else
-  #define GPIO_FPGA_ON        AT91C_PIO_PA26
+#define GPIO_FPGA_ON        AT91C_PIO_PA26
 #endif
 #define GPIO_FPGA_DONE      AT91C_PIO_PA27
 #define GPIO_FPGA_NPROGRAM  AT91C_PIO_PA28
