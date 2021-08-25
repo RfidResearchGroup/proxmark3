@@ -1586,14 +1586,14 @@ bool DesfireCheckAuthCmd(DesfireISOSelectWay way, uint32_t appID, uint8_t keyNum
     if (res != PM3_SUCCESS)
         return false;
 
-    uint8_t data[] = {keyNum, (checklrp) ? 0x01 : 0x00, 0x02};
+    uint8_t data[] = {keyNum, 0x01, (checklrp) ? 0x02 : 0x00};
     uint8_t datalen = (authcmd == MFDES_AUTHENTICATE_EV2F) ? 2 : 1;
-    if (checklrp) 
+    if (checklrp)
         datalen = 3;
     res = DesfireExchangeEx(false, &dctx, authcmd, data, datalen, &respcode, recv_data, &recv_len, false, 0);
     DropField();
     
-    if (checklrp) 
+    if (checklrp)
         return (res == PM3_SUCCESS && respcode == 0xaf && recv_len == 17 && recv_data[0] == 0x01);
     else
         return (res == PM3_SUCCESS && respcode == 0xaf);
@@ -1606,9 +1606,11 @@ static bool DesfireCheckISOAuthCmd(DesfireISOSelectWay way, uint32_t appID, char
     dctx.commMode = DCMPlain;
     dctx.cmdSet = DCCISO;
 
-    bool app_level = DesfireMFSelected(way, appID);
     int res = DesfireSelect(&dctx, way, appID, dfname);
+    if (res != PM3_SUCCESS)
+        return false;
 
+    bool app_level = !DesfireMFSelected(way, appID);
     uint8_t rndlen = DesfireGetRndLenForKey(keytype);
 
     uint8_t piccrnd[64] = {0};
@@ -2948,18 +2950,31 @@ int DesfireSelectEx(DesfireContext_t *ctx, bool fieldon, DesfireISOSelectWay way
     size_t resplen = 0;
 
     if (way == ISWMF || (way == ISWDFName && dfname == NULL)) {
-        return DesfireISOSelect(ctx, ISSMFDFEF, NULL, 0, resp, &resplen);
+        return DesfireISOSelectEx(ctx, fieldon, ISSMFDFEF, NULL, 0, resp, &resplen);
     } else if (way == ISW6bAID) {
+        if (id == 0x000000 && fieldon)
+            return DesfireAnticollision(false);
+
+        DesfireCommandSet cmdset = ctx->cmdSet;
+        int res;
+
+        // if we try to select 6b AID via ISO channel - we can only switch the channel via the over channel because there is no equivalent command in the iso commands
+        if (ctx->cmdSet == DCCISO)
+            ctx->cmdSet = DCCNativeISO;
+
         if (fieldon)
-            return DesfireSelectAIDHex(ctx, id, false, 0);
+            res = DesfireSelectAIDHex(ctx, id, false, 0);
         else
-            return DesfireSelectAIDHexNoFieldOn(ctx, id);
+            res = DesfireSelectAIDHexNoFieldOn(ctx, id);
+
+        ctx->cmdSet = cmdset;
+        return res;
     } else if (way == ISWIsoID) {
         uint8_t data[2] = {0};
         Uint2byteToMemBe(data, id);
         return DesfireISOSelectEx(ctx, fieldon, ISSMFDFEF, data, 2, resp, &resplen);
     } else if (way == ISWDFName) {
-        return DesfireISOSelect(ctx, ISSMFDFEF, NULL, 0, resp, &resplen);
+        return DesfireISOSelectEx(ctx, fieldon, ISSMFDFEF, NULL, 0, resp, &resplen);
     }
     return PM3_ESOFT;
 }
