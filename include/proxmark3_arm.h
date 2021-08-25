@@ -29,9 +29,9 @@
 
 #define ADC_CHAN_LF                             4
 #if defined RDV4 || defined ICOPYX
-  #define ADC_CHAN_HF                             7
+#define ADC_CHAN_HF                             7
 #else
-  #define ADC_CHAN_HF                             5
+#define ADC_CHAN_HF                             5
 #endif
 #define ADC_MODE_PRESCALE(x)                    ((x) << 8)
 #define ADC_MODE_STARTUP_TIME(x)                ((x) << 16)

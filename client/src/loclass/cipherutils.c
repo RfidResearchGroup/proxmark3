@@ -189,7 +189,7 @@ static int testBitStream(void) {
     uint8_t output [] = {0, 0, 0, 0, 0, 0, 0, 0};
     BitstreamIn_t in = { input, sizeof(input) * 8, 0};
     BitstreamOut_t out = { output, 0, 0}
-                       ;
+                         ;
     while (bitsLeft(&in) > 0) {
         pushBit(&out, headBit(&in));
         //printf("Bits left: %d\n", bitsLeft(&in));

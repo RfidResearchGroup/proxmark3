@@ -683,7 +683,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "   Card doesn't support 'free mem' cmd");
         }
     }
-    
+
     if (cardtype == DESFIRE_LIGHT) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Desfire Light info"));

@@ -838,7 +838,7 @@ Check column "offline" for their availability.
 |`lf hitag help          `|Y       |`This help`
 |`lf hitag eload         `|N       |`Load Hitag dump file into emulator memory`
 |`lf hitag list          `|Y       |`List Hitag trace history`
-|`lf hitag info          `|N       |`Tag information`
+|`lf hitag info          `|N       |`Hitag2 tag information`
 |`lf hitag reader        `|N       |`Act like a Hitag reader`
 |`lf hitag sim           `|N       |`Simulate Hitag transponder`
 |`lf hitag sniff         `|N       |`Eavesdrop Hitag communication`

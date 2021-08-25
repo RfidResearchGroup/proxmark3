@@ -1590,7 +1590,7 @@ bool DesfireCheckAuthCmd(DesfireISOSelectWay way, uint32_t appID, uint8_t keyNum
     uint8_t datalen = (authcmd == MFDES_AUTHENTICATE_EV2F) ? 3 : 1;
     res = DesfireExchangeEx(false, &dctx, authcmd, data, datalen, &respcode, recv_data, &recv_len, false, 0);
     DropField();
-    
+
     if (checklrp)
         return (res == PM3_SUCCESS && respcode == 0xaf && recv_len == 17 && recv_data[0] == 0x01);
     else
