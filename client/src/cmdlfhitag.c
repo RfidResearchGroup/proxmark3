@@ -341,7 +341,7 @@ static int CmdLFHitagSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void printHitagConfiguration(uint8_t config) {
+static void printHitag2Configuration(uint8_t config) {
 
     char msg[100];
     memset(msg, 0, sizeof(msg));
@@ -449,7 +449,7 @@ static void printHitagConfiguration(uint8_t config) {
     PrintAndLogEx(INFO, "------------------------------------");
 }
 
-static bool getHitagUid(uint32_t *uid) {
+static bool getHitag2Uid(uint32_t *uid) {
     hitag_data htd;
     memset(&htd, 0, sizeof(htd));
     clearCommandBuffer();
@@ -474,7 +474,7 @@ static bool getHitagUid(uint32_t *uid) {
 static int CmdLFHitagInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag info",
-                  "Sniff traffic between Hitag reader and tag.",
+                  "Hitag2 tag information",
                   "lf hitag info"
                  );
 
@@ -487,7 +487,7 @@ static int CmdLFHitagInfo(const char *Cmd) {
 
     // read UID
     uint32_t uid = 0;
-    if (getHitagUid(&uid) == false)
+    if (getHitag2Uid(&uid) == false)
         return PM3_ESOFT;
 
     PrintAndLogEx(NORMAL, "");
@@ -496,15 +496,15 @@ static int CmdLFHitagInfo(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "     UID: " _GREEN_("%08X"), uid);
     PrintAndLogEx(SUCCESS, "    TYPE: " _GREEN_("%s"), getHitagTypeStr(uid));
 
-    // how to detemine Hitag types?
+    // how to determine Hitag types?
     // read block3,  get configuration byte.
 
     // common configurations.
-    // printHitagConfiguration(0x06);
-    //printHitagConfiguration( 0x0E );
-    //printHitagConfiguration( 0x02 );
-    //printHitagConfiguration( 0x00 );
-    //printHitagConfiguration( 0x04 );
+    // printHitag2Configuration(0x06);
+    //printHitag2Configuration( 0x0E );
+    //printHitag2Configuration( 0x02 );
+    //printHitag2Configuration( 0x00 );
+    //printHitag2Configuration( 0x04 );
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     return PM3_SUCCESS;
 }
@@ -641,7 +641,7 @@ static int CmdLFHitagReader(const char *Cmd) {
     if (htf != RHT2F_UID_ONLY) {
 
         // block3, 1 byte
-        printHitagConfiguration(data[4 * 3]);
+        printHitag2Configuration(data[4 * 3]);
     }
     return PM3_SUCCESS;
 }
@@ -946,7 +946,7 @@ static command_t CommandTable[] = {
     {"help",   CmdHelp,               AlwaysAvailable, "This help"},
     {"eload",  CmdLFHitagEload,       IfPm3Hitag,      "Load Hitag dump file into emulator memory"},
     {"list",   CmdLFHitagList,        AlwaysAvailable, "List Hitag trace history"},
-    {"info",   CmdLFHitagInfo,        IfPm3Hitag,      "Tag information"},
+    {"info",   CmdLFHitagInfo,        IfPm3Hitag,      "Hitag2 tag information"},
     {"reader", CmdLFHitagReader,      IfPm3Hitag,      "Act like a Hitag reader"},
     {"sim",    CmdLFHitagSim,         IfPm3Hitag,      "Simulate Hitag transponder"},
     {"sniff",  CmdLFHitagSniff,       IfPm3Hitag,      "Eavesdrop Hitag communication"},
