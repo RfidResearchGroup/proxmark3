@@ -372,10 +372,10 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
 
     if (isResponse == false)  {
         uint8_t c = cmd[0] & 0x0F;
-        uint8_t parity = 0;
-        for (uint8_t i = 0; i < 7; i++) {
-            parity ^= (cmd[0] >> i) & 1;
-        }
+//        uint8_t parity = 0;
+//        for (uint8_t i = 0; i < 7; i++) {
+//            parity ^= (cmd[0] >> i) & 1;
+//        }
 
         switch (c) {
             case ICLASS_CMD_HALT:

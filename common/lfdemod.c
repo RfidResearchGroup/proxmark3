@@ -2045,7 +2045,8 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
     uint8_t curPhase = *invert;
     uint8_t fc = 0;
     size_t i = 0, numBits = 0, waveStart = 1, waveEnd, firstFullWave = 0, lastClkBit = 0;
-    uint16_t fullWaveLen = 0, waveLenCnt, avgWaveVal = 0;
+    uint16_t fullWaveLen = 0, waveLenCnt;
+    //uint16_t avgWaveVal = 0;
     uint16_t errCnt = 0, errCnt2 = 0;
 
     *clock = DetectPSKClock(dest, *size, *clock, &firstFullWave, &curPhase, &fc);
@@ -2085,7 +2086,7 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
         if (dest[i] + fc < dest[i + 1] && dest[i + 1] >= dest[i + 2]) {
             if (waveStart == 0) {
                 waveStart = i + 1;
-                avgWaveVal = dest[i + 1];
+                //avgWaveVal = dest[i + 1];
             } else { //waveEnd
                 waveEnd = i + 1;
                 waveLenCnt = waveEnd - waveStart;
@@ -2115,14 +2116,14 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *s
                 } else if (waveLenCnt < fc - 1) { //wave is smaller than field clock (shouldn't happen often)
                     errCnt2++;
                     if (errCnt2 > 101) return errCnt2;
-                    avgWaveVal += dest[i + 1];
+                    //avgWaveVal += dest[i + 1];
                     continue;
                 }
-                avgWaveVal = 0;
+                //avgWaveVal = 0;
                 waveStart = i + 1;
             }
         }
-        avgWaveVal += dest[i + 1];
+        //avgWaveVal += dest[i + 1];
     }
     *size = numBits;
     return errCnt;
