@@ -688,15 +688,20 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Desfire Light info"));
 
-        if (DesfireSelect(&dctx, ISWIsoID, 0xdf01, NULL) == PM3_SUCCESS)
+        if (DesfireSelect(&dctx, ISWIsoID, 0xdf01, NULL) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "   Card have " _GREEN_("default (0xdf01)") " iso id for application");
-        else
-            PrintAndLogEx(SUCCESS, "   Card have " _RED_("not a default") " iso id for application");
 
-        if (DesfireCheckAuthCmd(ISWIsoID, 0x3f00, 1, MFDES_AUTHENTICATE_EV2F, false)) {
-            PrintAndLogEx(SUCCESS, "   Card in the " _GREEN_("AES") " mode");
-        } else if (DesfireCheckAuthCmd(ISWIsoID, 0x3f00, 1, MFDES_AUTHENTICATE_EV2F, true)) {
-            PrintAndLogEx(SUCCESS, "   Card in the " _GREEN_("LRP") " mode");
+            if (DesfireCheckAuthCmd(ISWIsoID, 0xdf01, 0, MFDES_AUTHENTICATE_EV2F, false)) {
+                PrintAndLogEx(SUCCESS, "   Card in the " _GREEN_("AES") " mode");
+            } else if (DesfireCheckAuthCmd(ISWIsoID, 0xdf01, 0, MFDES_AUTHENTICATE_EV2F, true)) {
+                PrintAndLogEx(SUCCESS, "   Card in the " _GREEN_("LRP") " mode");
+            }
+        } else {
+            PrintAndLogEx(SUCCESS, "   Card have " _RED_("not a default") " iso id for application");
+        }
+
+        if (DesfireCheckAuthCmd(ISWIsoID, 0x3f00, 1, MFDES_AUTHENTICATE_EV2F, true)) {
+            PrintAndLogEx(SUCCESS, "   Card have " _GREEN_("LRP") " key in the MF/key1");
         }
     }
 

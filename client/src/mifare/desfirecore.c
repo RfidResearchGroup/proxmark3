@@ -1579,7 +1579,7 @@ bool DesfireCheckAuthCmd(DesfireISOSelectWay way, uint32_t appID, uint8_t keyNum
     DesfireContext_t dctx = {0};
     dctx.keyNum = keyNum;
     dctx.commMode = DCMPlain;
-    dctx.cmdSet = (checklrp) ? DCCNativeISO : DCCNative;
+    dctx.cmdSet = (checklrp || way != ISW6bAID) ? DCCNativeISO : DCCNative;
 
     // if cant select - return false
     int res = DesfireSelect(&dctx, way, appID, NULL);
@@ -1587,9 +1587,7 @@ bool DesfireCheckAuthCmd(DesfireISOSelectWay way, uint32_t appID, uint8_t keyNum
         return false;
 
     uint8_t data[] = {keyNum, 0x01, (checklrp) ? 0x02 : 0x00};
-    uint8_t datalen = (authcmd == MFDES_AUTHENTICATE_EV2F) ? 2 : 1;
-    if (checklrp)
-        datalen = 3;
+    uint8_t datalen = (authcmd == MFDES_AUTHENTICATE_EV2F) ? 3 : 1;
     res = DesfireExchangeEx(false, &dctx, authcmd, data, datalen, &respcode, recv_data, &recv_len, false, 0);
     DropField();
     
