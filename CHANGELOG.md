@@ -34,6 +34,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fix - move des functions to libcrypto (@merlokk)
  - Added `CLIGetOptionList` to cliparser that makes it easier to implement text options in the cli (@merlokk) 
  - Added experimental support for macOS users utilizing MacPorts instead of Homebrew (@linuxgemini)
+ - Added additional support for macOS users utilizing MacPorts (@linuxgemini)
  - Added `pm3_online_check.py` - a script to verify and initialize a Proxmark3 RDV4 device (@iceman1001)
 
 ## [midsummer.4.13441][2021-06-25]

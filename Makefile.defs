@@ -50,7 +50,8 @@ else
 endif
 
 ifeq ($(platform),Darwin)
-  USE_BREW = 1
+  USE_BREW ?= 1
+  USE_MACPORTS ?= 0
   AR= /usr/bin/ar rcs
   RANLIB= /usr/bin/ranlib
 else
@@ -61,8 +62,12 @@ endif
 ifeq ($(USE_BREW),1)
   BREW_PREFIX = $(shell brew --prefix 2>/dev/null)
   ifeq ($(strip $(BREW_PREFIX)),)
-    MACPORTS_PREFIX ?= /opt/local
+    USE_BREW = 0
   endif
+endif
+
+ifeq ($(USE_MACPORTS),1)
+  MACPORTS_PREFIX ?= /opt/local
 endif
 
 ifeq ($(DEBUG),1)
