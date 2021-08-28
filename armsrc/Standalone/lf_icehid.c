@@ -98,7 +98,7 @@ static uint32_t IceEM410xdemod(void) {
 
     int type = Em410xDecode(dest, &size, &idx, &hi, &lo);
     // Did we find a Short EM or a Long EM?
-    if ((type & (0x1 | 0x2)) == 0) {
+    if ((type < 0) || ((type & (0x1 | 0x2)) == 0)) {
         BigBuf_free();
         return PM3_ESOFT;
     }

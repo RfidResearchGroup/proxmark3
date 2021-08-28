@@ -1477,50 +1477,52 @@ int lf_em410x_watch(int findone, uint32_t *high, uint64_t *low) {
         WDT_HIT();
 
         int type = Em410xDecode(dest, &size, &idx, &hi, &lo);
-        if (type & 0x1) {
-            Dbprintf("EM TAG ID: " _GREEN_("%02x%08x") " - ( %05d_%03d_%08d )",
-                     (uint32_t)(lo >> 32),
-                     (uint32_t)lo,
-                     (uint32_t)(lo & 0xFFFF),
-                     (uint32_t)((lo >> 16LL) & 0xFF),
-                     (uint32_t)(lo & 0xFFFFFF));
-        }
-        if (type & 0x2) {
-            Dbprintf("EM XL TAG ID: " _GREEN_("%06x%08x%08x") " - ( %05d_%03d_%08d )",
-                     hi,
-                     (uint32_t)(lo >> 32),
-                     (uint32_t)lo,
-                     (uint32_t)(lo & 0xFFFF),
-                     (uint32_t)((lo >> 16LL) & 0xFF),
-                     (uint32_t)(lo & 0xFFFFFF));
-        }
-        if (type & 0x4) {
-            uint64_t data = (lo << 20) >> 20;
-            // Convert back to Short ID
-            uint64_t id = ((uint64_t)hi << 16) | (lo >> 48);
-            if ((data & 0xFFFFFFFF) == 0) {
-                Dbprintf("EM TAG ID: " _GREEN_("%02x%08x") " - ( %05d_%03d_%08d ) Electra "_GREEN_("%i"),
-                         (uint32_t)(id >> 32),
-                         (uint32_t)id,
-                         (uint32_t)(id & 0xFFFF),
-                         (uint32_t)((id >> 16LL) & 0xFF),
-                         (uint32_t)(id & 0xFFFFFF),
-                         (uint32_t)(data >> 32));
-            } else {
-                Dbprintf("EM TAG ID: " _GREEN_("%02x%08x") " - ( %05d_%03d_%08d ) on 128b frame with data "_GREEN_("%03x%08x"),
-                         (uint32_t)(id >> 32),
-                         (uint32_t)id,
-                         (uint32_t)(id & 0xFFFF),
-                         (uint32_t)((id >> 16LL) & 0xFF),
-                         (uint32_t)(id & 0xFFFFFF),
-                         (uint32_t)(data >> 32),
-                         (uint32_t)data);
+        if (type > 0) {
+            if (type & 0x1) {
+                Dbprintf("EM TAG ID: " _GREEN_("%02x%08x") " - ( %05d_%03d_%08d )",
+                        (uint32_t)(lo >> 32),
+                        (uint32_t)lo,
+                        (uint32_t)(lo & 0xFFFF),
+                        (uint32_t)((lo >> 16LL) & 0xFF),
+                        (uint32_t)(lo & 0xFFFFFF));
             }
-        }
-        if ((type > 0) && findone) {
-            *high = hi;
-            *low = lo;
-            break;
+            if (type & 0x2) {
+                Dbprintf("EM XL TAG ID: " _GREEN_("%06x%08x%08x") " - ( %05d_%03d_%08d )",
+                        hi,
+                        (uint32_t)(lo >> 32),
+                        (uint32_t)lo,
+                        (uint32_t)(lo & 0xFFFF),
+                        (uint32_t)((lo >> 16LL) & 0xFF),
+                        (uint32_t)(lo & 0xFFFFFF));
+            }
+            if (type & 0x4) {
+                uint64_t data = (lo << 20) >> 20;
+                // Convert back to Short ID
+                uint64_t id = ((uint64_t)hi << 16) | (lo >> 48);
+                if ((data & 0xFFFFFFFF) == 0) {
+                    Dbprintf("EM TAG ID: " _GREEN_("%02x%08x") " - ( %05d_%03d_%08d ) Electra "_GREEN_("%i"),
+                            (uint32_t)(id >> 32),
+                            (uint32_t)id,
+                            (uint32_t)(id & 0xFFFF),
+                            (uint32_t)((id >> 16LL) & 0xFF),
+                            (uint32_t)(id & 0xFFFFFF),
+                            (uint32_t)(data >> 32));
+                } else {
+                    Dbprintf("EM TAG ID: " _GREEN_("%02x%08x") " - ( %05d_%03d_%08d ) on 128b frame with data "_GREEN_("%03x%08x"),
+                            (uint32_t)(id >> 32),
+                            (uint32_t)id,
+                            (uint32_t)(id & 0xFFFF),
+                            (uint32_t)((id >> 16LL) & 0xFF),
+                            (uint32_t)(id & 0xFFFFFF),
+                            (uint32_t)(data >> 32),
+                            (uint32_t)data);
+                }
+            }
+            if (findone) {
+                *high = hi;
+                *low = lo;
+                break;
+            }
         }
         hi = lo = size = idx = 0;
         clk = invert = 0;
