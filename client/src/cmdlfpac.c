@@ -54,7 +54,7 @@ static int pac_buf_to_cardid(uint8_t *src, const size_t src_size, uint8_t *dst, 
             PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: Parity check failed");
             return PM3_ESOFT;
         }
-        if (idx < dataLength - 1) checksum ^= byte;
+        if (idx < dataLength - 1) checksum ^= dst[idx];
     }
     if (dst[dataLength - 1] != checksum) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: Bad checksum - expected: %02X, actual: %02X", dst[dataLength - 1], checksum);
