@@ -10,6 +10,6 @@ jobs:
       uses: peterjgrainger/action-changelog-reminder@v1.2.0
       with:
         changelog_regex: '/CHANGELOG.md'
-        customPrMessage: 'You're welcome to add an entry to the CHANGELOG.md as well'
+        customPrMessage: 'You are welcome to add an entry to the CHANGELOG.md as well'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
