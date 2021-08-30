@@ -789,11 +789,11 @@ static int CmdHFMFPRdsc(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v", "verbose", "show internal data."),
-        arg_lit0("b", "keyb", "use key B (by default keyA)."),
-        arg_lit0("p", "plain", "plain communication mode between reader and card."),
-        arg_int1(NULL, "sn", "<dec>", "sector number (0..255)"),
-        arg_str0("k", "key", "<hex>", "key, 16 hex bytes"),
+        arg_lit0("v",  "verbose", "show internal data."),
+        arg_lit0("b",  "keyb",    "use key B (by default keyA)."),
+        arg_lit0("p",  "plain",   "plain communication mode between reader and card."),
+        arg_int1(NULL, "sn",      "<dec>", "sector number (0..255)"),
+        arg_str0("k",  "key",     "<hex>", "key, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -886,11 +886,11 @@ static int CmdHFMFPWrbl(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v", "verbose", "show internal data."),
-        arg_lit0("b", "keyb", "use key B (by default keyA)."),
-        arg_int1(NULL, "blk", "<dec>", "block number (0..255)"),
-        arg_str1("d", "data", "<hex>", "data, 16 hex bytes"),
-        arg_str0("k", "key", "<hex>", "key, 16 hex bytes"),
+        arg_lit0("v",  "verbose", "show internal data."),
+        arg_lit0("b",  "keyb",    "use key B (by default keyA)."),
+        arg_int1(NULL, "blk",     "<dec>", "block number (0..255)"),
+        arg_str1("d",  "data",    "<hex>", "data, 16 hex bytes"),
+        arg_str0("k",  "key",     "<hex>", "key, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1105,9 +1105,9 @@ static int CmdHFMFPChk(const char *Cmd) {
         arg_int0("e",  "endsec",    "End sector Num (0..255)", NULL),
         arg_str0("k",  "key",       "<Key>", "Key for checking (HEX 16 bytes)"),
         arg_str0("d",  "dict",      "<file>", "file with keys dictionary"),
-        arg_lit0(NULL,  "pattern1b", "check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
-        arg_lit0(NULL,  "pattern2b", "check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
-        arg_str0(NULL,  "startp2b",  "<Pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
+        arg_lit0(NULL, "pattern1b", "check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
+        arg_lit0(NULL, "pattern2b", "check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
+        arg_str0(NULL, "startp2b",  "<Pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
         arg_str0("j",  "json",      "<file>",  "json file to save keys"),
         arg_lit0("v",  "verbose",   "verbose mode."),
         arg_param_end
@@ -1324,16 +1324,16 @@ static int CmdHFMFPMAD(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfp mad",
                   "Checks and prints Mifare Application Directory (MAD)",
                   "hf mfp mad -> shows MAD if exists\n"
-                  "hf mfp mad -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data if exists");
+                  "hf mfp mad --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> read and print NDEF data from mad aid if exists");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v",  "verbose",  "show technical data"),
-        arg_str0(NULL,    "aid",      "<aid>", "print all sectors with aid"),
+        arg_str0(NULL, "aid",      "<aid>", "print all sectors with aid"),
         arg_str0("k",  "key",      "<key>", "key for printing sectors"),
         arg_lit0("b",  "keyb",     "use key B for access printing sectors (by default: key A)"),
-        arg_lit0(NULL,    "be",       "(optional, BigEndian)"),
-        arg_lit0(NULL,    "dch",      "decode Card Holder information"),
+        arg_lit0(NULL, "be",       "(optional, BigEndian)"),
+        arg_lit0(NULL, "dch",      "decode Card Holder information"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1465,12 +1465,12 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
                   "Prints NFC Data Exchange Format (NDEF)",
                   "hf mfp ndefread -> shows NDEF data\n"
                   "hf mfp ndefread -vv -> shows NDEF parsed and raw data\n"
-                  "hf mfp ndefread -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key");
+                  "hf mfp ndefread --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key");
 
     void *argtable[] = {
         arg_param_begin,
         arg_litn("v",  "verbose",  0, 2, "show technical data"),
-        arg_str0(NULL,    "aid",      "<aid>", "replace default aid for NDEF"),
+        arg_str0(NULL, "aid",      "<aid>", "replace default aid for NDEF"),
         arg_str0("k",  "key",      "<key>", "replace default key for NDEF"),
         arg_lit0("b",  "keyb",     "use key B for access sectors (by default: key A)"),
         arg_param_end
@@ -1577,15 +1577,15 @@ static command_t CommandTable[] = {
     {"help",             CmdHelp,                 AlwaysAvailable, "This help"},
     {"info",             CmdHFMFPInfo,            IfPm3Iso14443a,  "Info about Mifare Plus tag"},
     {"wrp",              CmdHFMFPWritePerso,      IfPm3Iso14443a,  "Write Perso command"},
-    {"initp",            CmdHFMFPInitPerso,       IfPm3Iso14443a,  "Fills all the card's keys"},
+    {"initp",            CmdHFMFPInitPerso,       IfPm3Iso14443a,  "Fill all the card's keys in SL0 mode"},
     {"commitp",          CmdHFMFPCommitPerso,     IfPm3Iso14443a,  "Move card to SL1 or SL3 mode"},
     {"auth",             CmdHFMFPAuth,            IfPm3Iso14443a,  "Authentication"},
     {"rdbl",             CmdHFMFPRdbl,            IfPm3Iso14443a,  "Read blocks"},
     {"rdsc",             CmdHFMFPRdsc,            IfPm3Iso14443a,  "Read sectors"},
     {"wrbl",             CmdHFMFPWrbl,            IfPm3Iso14443a,  "Write blocks"},
     {"chk",              CmdHFMFPChk,             IfPm3Iso14443a,  "Check keys"},
-    {"mad",              CmdHFMFPMAD,             IfPm3Iso14443a,  "Checks and prints MAD"},
-    {"ndefread",         CmdHFMFPNDEFRead,        IfPm3Iso14443a,  "Prints NDEF records from card"},
+    {"mad",              CmdHFMFPMAD,             IfPm3Iso14443a,  "Check and print MAD"},
+    {"ndefread",         CmdHFMFPNDEFRead,        IfPm3Iso14443a,  "Read and print NDEF records from card"},
     {NULL,               NULL,                    0, NULL}
 };
 
