@@ -461,15 +461,15 @@ Check column "offline" for their availability.
 |`hf mfp help            `|Y       |`This help`
 |`hf mfp info            `|N       |`Info about Mifare Plus tag`
 |`hf mfp wrp             `|N       |`Write Perso command`
-|`hf mfp initp           `|N       |`Fills all the card's keys`
+|`hf mfp initp           `|N       |`Fill all the card's keys in SL0 mode`
 |`hf mfp commitp         `|N       |`Move card to SL1 or SL3 mode`
 |`hf mfp auth            `|N       |`Authentication`
 |`hf mfp rdbl            `|N       |`Read blocks`
 |`hf mfp rdsc            `|N       |`Read sectors`
 |`hf mfp wrbl            `|N       |`Write blocks`
 |`hf mfp chk             `|N       |`Check keys`
-|`hf mfp mad             `|N       |`Checks and prints MAD`
-|`hf mfp ndefread        `|N       |`Prints NDEF records from card`
+|`hf mfp mad             `|N       |`Check and print MAD`
+|`hf mfp ndefread        `|N       |`Read and print NDEF records from card`
 
 
 ### hf mfu
