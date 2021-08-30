@@ -1576,7 +1576,7 @@ bool DesfireCheckAuthCmd(DesfireISOSelectWay way, uint32_t appID, uint8_t keyNum
     uint8_t respcode = 0;
     uint8_t recv_data[256] = {0};
 
-    DesfireContext_t dctx = {0};
+    DesfireContext_t dctx = {0};  
     dctx.keyNum = keyNum;
     dctx.commMode = DCMPlain;
     dctx.cmdSet = DCCNativeISO;
