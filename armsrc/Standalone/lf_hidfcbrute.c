@@ -22,6 +22,7 @@
  */
 
 #include "standalone.h"
+#include <inttypes.h>
 #include "lf_hidfcbrute.h"
 
 #include "proxmark3_arm.h"
