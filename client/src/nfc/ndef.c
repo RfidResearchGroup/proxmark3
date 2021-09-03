@@ -435,6 +435,7 @@ static int ndefDecodePayloadDeviceInfo(uint8_t *payload, size_t len) {
     n = *(p++);
     PrintAndLogEx(INFO, "Unique name... " _YELLOW_("%.*s"), n, p);
     p += n + 1;
+    p++;
     //uuid string
     // record.uuid_string = '123e4567-e89b-12d3-a456-426655440000'
     //  8-4-4-4-12
