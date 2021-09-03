@@ -678,7 +678,7 @@ static int CmdIndalaClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (!got_26 & fmt4041x) {
+    if ((!got_26) && fmt4041x) {
         PrintAndLogEx(FAILED, "You must specify a facility code and card number when using 4041X format");
         return PM3_EINVARG;
     }
