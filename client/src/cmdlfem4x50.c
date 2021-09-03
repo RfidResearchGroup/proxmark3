@@ -612,7 +612,6 @@ int CmdEM4x50Read(const char *Cmd) {
 
     // init
     memset(&etd, 0x00, sizeof(em4x50_data_t));
-    etd.addr_given = false;
     etd.pwd_given = false;
     etd.addresses = (addr << 8) | addr;
     etd.addr_given = true;
