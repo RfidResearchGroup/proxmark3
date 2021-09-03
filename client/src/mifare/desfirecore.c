@@ -1945,8 +1945,8 @@ int DesfireChangeKeySettings(DesfireContext_t *dctx, uint8_t *data, size_t len) 
     return DesfireCommandTxData(dctx, MFDES_CHANGE_KEY_SETTINGS, data, len);
 }
 
-int DesfireChangeKeyCmd(DesfireContext_t *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen) {
-    return DesfireCommand(dctx, MFDES_CHANGE_KEY, data, len, resp, resplen, -1);
+int DesfireChangeKeyCmd(DesfireContext_t *dctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen) {
+    return DesfireCommand(dctx, MFDES_CHANGE_KEY, data, datalen, resp, resplen, -1);
 }
 
 int DesfireSetConfigurationCmd(DesfireContext_t *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen) {

@@ -134,7 +134,7 @@ int CIPURSEChallenge(uint8_t *result, size_t max_result_len, size_t *result_len,
     return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x00, 0x84, 0x00, 0x00, 0x00, NULL}, true, 0x16, result, max_result_len, result_len, sw);
 }
 
-int CIPURSEMutalAuthenticate(uint8_t keyindex, uint8_t *params, uint8_t paramslen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+int CIPURSEMutualAuthenticate(uint8_t keyindex, uint8_t *params, uint8_t paramslen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
     return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x00, 0x82, 0x00, keyindex, paramslen, params}, true, 0x10, result, max_result_len, result_len, sw);
 }
 
@@ -142,9 +142,9 @@ int CIPURSECreateFile(uint8_t *attr, uint16_t attrlen, uint8_t *result, size_t m
     return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x00, 0xe4, 0x00, 0x00, attrlen, attr}, false, 0, result, max_result_len, result_len, sw);
 }
 
-int CIPURSEDeleteFile(uint16_t fileid, uint8_t *Result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+int CIPURSEDeleteFile(uint16_t fileid, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
     uint8_t fileIdBin[] = {fileid >> 8, fileid & 0xff};
-    return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x00, 0xe4, 0x00, 0x00, 02, fileIdBin}, false, 0, Result, max_result_len, result_len, sw);
+    return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x00, 0xe4, 0x00, 0x00, 02, fileIdBin}, false, 0, result, max_result_len, result_len, sw);
 }
 
 int CIPURSESelectFile(uint16_t fileid, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
@@ -191,7 +191,7 @@ bool CIPURSEChannelAuthenticate(uint8_t keyindex, uint8_t *key, bool verbose) {
     CipurseCAuthenticateHost(&cpc, authparams);
 
     // authenticate
-    res = CIPURSEMutalAuthenticate(keyindex, authparams, sizeof(authparams), buf, sizeof(buf), &len, &sw);
+    res = CIPURSEMutualAuthenticate(keyindex, authparams, sizeof(authparams), buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000 || len != 16) {
         if (sw == 0x6988) {
             if (verbose) {
