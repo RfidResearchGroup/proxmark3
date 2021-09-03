@@ -555,7 +555,9 @@ void memcpy_filter_emoji(void *dest, const void *src, size_t n, emojiMode_t mode
                 }
             }
         }
-        memcpy(rdest + si, current_token, current_token_length);
+        if (current_token_length > 0) {
+            memcpy(rdest + si, current_token, current_token_length);
+        }
     }
 }
 
