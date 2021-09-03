@@ -1,20 +1,20 @@
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date:    16:09:14 05/13/2020 
-// Design Name: 
-// Module Name:    fpga_all_in_one 
-// Project Name: 
-// Target Devices: 
-// Tool versions: 
-// Description: 
+// Company:
+// Engineer:
 //
-// Dependencies: 
+// Create Date:    16:09:14 05/13/2020
+// Design Name:
+// Module Name:    fpga_all_in_one
+// Project Name:
+// Target Devices:
+// Tool versions:
+// Description:
 //
-// Revision: 
+// Dependencies:
+//
+// Revision:
 // Revision 0.01 - File Created
-// Additional Comments: 
+// Additional Comments:
 //
 //////////////////////////////////////////////////////////////////////////////////
 module fpga_hf(
@@ -29,8 +29,8 @@ module fpga_hf(
 	 output PWR_LO_EN,
 	 input FPGA_SWITCH
     );
-	 
-	 
+
+
 fpga_hfmod hfmod(
     hfspck, hfmiso, hfmosi, hfncs,
     hfpck0, hfck_1356meg, hfck_1356megb,
