@@ -645,8 +645,8 @@ static int CmdFdxBReader(const char *Cmd) {
 
     config.verbose = false;
 
-    int16_t old_div = config.divisor;
     int16_t curr_div = config.divisor;
+    int16_t old_div = curr_div;
 
     if (cm) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
