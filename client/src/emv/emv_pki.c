@@ -190,8 +190,7 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
                                   rem_tlv,
                                   exp_tlv,
                                   add_tlv,
-                                  sdatl_tlv,
-                                  NULL);
+                                  sdatl_tlv);
     if (!data || data_len < 11 + pan_length) {
         PrintAndLogEx(WARNING, "ERROR: Can't decode message");
         return NULL;
@@ -364,8 +363,7 @@ struct tlvdb *emv_pki_recover_dac_ex(const struct emv_pk *enc_pk, const struct t
                                                  tlvdb_get(db, 0x93, NULL),
                                                  3,
                                                  sda_tlv,
-                                                 &sda_tdata,
-                                                 NULL);
+                                                 &sda_tdata);
 
     free(sdatl); // malloc here: emv_pki_sdatl_fill
 
@@ -395,8 +393,7 @@ struct tlvdb *emv_pki_recover_idn_ex(const struct emv_pk *enc_pk, const struct t
     unsigned char *data = emv_pki_decode_message(enc_pk, 5, &data_len,
                                                  tlvdb_get(db, 0x9f4b, NULL),
                                                  2,
-                                                 dyn_tlv,
-                                                 NULL);
+                                                 dyn_tlv);
 
     if (!data || data_len < 3)
         return NULL;
@@ -431,8 +428,7 @@ struct tlvdb *emv_pki_recover_atc_ex(const struct emv_pk *enc_pk, const struct t
                                                  tlvdb_get(db, 0x9f37, NULL),
                                                  tlvdb_get(db, 0x9f02, NULL),
                                                  tlvdb_get(db, 0x5f2a, NULL),
-                                                 tlvdb_get(db, 0x9f69, NULL),
-                                                 NULL);
+                                                 tlvdb_get(db, 0x9f69, NULL));
 
     if (!data || data_len < 3)
         return NULL;
@@ -501,8 +497,7 @@ struct tlvdb *emv_pki_perform_cda_ex(const struct emv_pk *enc_pk, const struct t
     unsigned char *data = emv_pki_decode_message(enc_pk, 5, &data_len,
                                                  tlvdb_get(this_db, 0x9f4b, NULL),
                                                  2,
-                                                 un_tlv,
-                                                 NULL);
+                                                 un_tlv);
     if (!data || data_len < 3) {
         PrintAndLogEx(WARNING, "ERROR: can't decode message. [%zu bytes]", data_len);
         return NULL;

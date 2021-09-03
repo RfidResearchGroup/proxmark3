@@ -342,8 +342,7 @@ static int CmdHFFidoRegister(const char *cmd) {
                          &data[32], 32,           // application parameter
                          &data[0], 32,            // challenge parameter
                          &buf[67], keyHandleLen,  // keyHandle
-                         &buf[1], 65,             // user public key
-                         NULL, 0);
+                         &buf[1], 65);            // user public key
         (void)res;
         //PrintAndLogEx(INFO, "--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
         res = ecdsa_signature_verify(MBEDTLS_ECP_DP_SECP256R1, public_key, xbuf, xbuflen, &buf[hashp], len - hashp, true);
@@ -615,8 +614,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
                              &data[32], 32, // application parameter
                              &buf[0], 1,    // user presence
                              &buf[1], 4,    // counter
-                             data, 32,      // challenge parameter
-                             NULL, 0);
+                             data, 32);     // challenge parameter
             (void)res;
             //PrintAndLogEx(INFO, "--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
             res = ecdsa_signature_verify(MBEDTLS_ECP_DP_SECP256R1, public_key, xbuf, xbuflen, &buf[5], len - 5, true);
