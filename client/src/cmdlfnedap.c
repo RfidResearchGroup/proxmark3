@@ -459,7 +459,7 @@ static int CmdLFNedapClone(const char *Cmd) {
 
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(INFO, "The block 0 was changed (eXtended) which can be hard to detect.");
-        PrintAndLogEx(INFO,  "Configure it manually " _YELLOW_("`lf t55xx config -b 64 --BI -i -o 32`"));
+        PrintAndLogEx(INFO,  "Configure it manually " _YELLOW_("`lf t55xx config --rate 64 --BI -i -o 32`"));
     } else {
         PrintAndLogEx(NORMAL, "");
     }
