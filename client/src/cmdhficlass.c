@@ -79,7 +79,7 @@ static int cmp_uint32(const void *a, const void *b) {
 bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t *rmac, uint8_t *tmac, uint8_t *key) {
 
     iclass_prekey_t *prekey = calloc(ICLASS_KEYS_MAX, sizeof(iclass_prekey_t));
-    if (prekey == false) {
+    if (prekey == NULL) {
         return false;
     }
 
