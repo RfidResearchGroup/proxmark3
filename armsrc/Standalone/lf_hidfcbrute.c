@@ -126,7 +126,7 @@ void RunMod(void) {
         if (BUTTON_PRESS()) {
             memset(entry, 0, sizeof(entry));
 
-            sprintf((char *)entry, "FC: %li\n", fc);
+            sprintf((char *)entry, "FC: %"PRIu32"\n", fc);
             append(entry, strlen((char *)entry));
         }
 
