@@ -87,7 +87,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | LF_ICEHID       | LF HID collector to flashmem - Iceman1001
 | LF_NEXID        | Nexwatch credentials detection mode - jrjgjk & Zolorah
 | LF_PROXBRUTE    | HID ProxII bruteforce - Brad Antoniewicz
-| LF_SAMYRUN      | HID26 read/clone/sim - Samy Kamkar
+| LF_SAMYRUN (def)| HID26 read/clone/sim - Samy Kamkar
 | LF_SKELETON     | standalone mode skeleton - Iceman1001
 | LF_THAREXDE     | LF EM4x50 simulator/read standalone mode - tharexde
 | HF_14ASNIFF     | 14a sniff storing to flashmem - Micolous
@@ -99,13 +99,13 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_LEGIC        | HF Legic Prime standalone - uhei
 | HF_MATTYRUN     | Mifare sniff/clone - Matías A. Ré Medina
 | HF_MFCSIM       | Simulate Mifare Classic 1k card storing in flashmem - Ray Lee
-| HF_MSDSAL  (def)| EMV Read and emulation - Salvador Mendoza
+| HF_MSDSAL       | EMV Read and emulation - Salvador Mendoza
 | HF_REBLAY       | 14A relay over BT  - Salvador Mendoza
 | HF_TCPRST       | IKEA Rothult ST25TA, Standalone Master Key Dump/Emulation - Nick Draffen
 | HF_TMUDFORD     | Read and emulate ISO15693 card UID - Tim Mudford
 | HF_YOUNG        | Mifare sniff/simulation - Craig Young
 
-By default `STANDALONE=HF_MSDSAL`.
+By default `STANDALONE=LF_SAMYRUN`.
 
 ## 256kb versions
 
