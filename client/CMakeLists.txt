@@ -413,6 +413,12 @@ if (WHEREAMI_FOUND)
 endif (WHEREAMI_FOUND)
 
 message(STATUS "===================================================================")
+execute_process(
+    COMMAND sh ${PM3_ROOT}/tools/mkversion.sh --short
+    OUTPUT_VARIABLE version_pm3
+)
+string(STRIP ${version_pm3} version_pm3)
+message(STATUS "Version info:      ${version_pm3}")
 if (SKIPQT EQUAL 1)
     message(STATUS "GUI support:       skipped")
 else (SKIPQT EQUAL 1)
