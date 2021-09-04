@@ -2,7 +2,7 @@
 
 ```
 sudo yum -y update
-sudo yum -y install python-pip
+sudo yum -y install cmake python-pip
 python3 -m pip install ansicolors sslcrypto
 tools/pm3_tests.sh --long
 ```
