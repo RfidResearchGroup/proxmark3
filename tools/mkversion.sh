@@ -8,6 +8,12 @@
 export LC_ALL="C"
 export LANG="C"
 
+SHORT=false
+if [ "$1" = "--short" ]; then
+    SHORT=true
+    shift
+fi
+
 # if you are making your own fork,  change this line to reflect your fork-name
 fullgitinfo="RRG/Iceman"
 # GIT status  0 = dirty,  1 = clean ,  2 = undecided
@@ -39,6 +45,10 @@ else
     dl_time=$(stat --printf="%y" ../README.md)
     # POSIX way...
     ctime=${dl_time%.*}
+fi
+if $SHORT; then
+    echo "$fullgitinfo"
+    exit 0
 fi
 
 # Crop so it fits within 50 characters C string, so max 49 chars

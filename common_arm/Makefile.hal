@@ -221,6 +221,7 @@ export PLATFORM_DEFS_INFO_STANDALONE
 export PLATFORM_CHANGED
 
 $(info ===================================================================)
+$(info Version info:      $(shell tools/mkversion.sh --short 2>/dev/null || ../tools/mkversion.sh --short 2>/dev/null))
 $(info Platform name:     $(PLTNAME))
 $(info PLATFORM:          $(PLATFORM))
 $(info PLATFORM_FPGA:     $(PLATFORM_FPGA))

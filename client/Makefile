@@ -390,6 +390,7 @@ endif
 ###################
 
 $(info ===================================================================)
+$(info Version info:      $(shell ../tools/mkversion.sh --short 2>/dev/null))
 $(info Client platform:   $(platform))
 
 ifeq ($(SKIPQT),1)
