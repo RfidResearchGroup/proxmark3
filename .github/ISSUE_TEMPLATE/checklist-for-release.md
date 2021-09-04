@@ -11,6 +11,7 @@ assignees: doegox, iceman1001
 
 - [ ] CHANGELOG.md
 - [ ] `make style`
+- [ ] `make miscchecks`
 - [ ] `make clean; make client CC=clang CXX=clang++ LD=clang++` on recent Debian or Ubuntu
 - [ ] `mymanualchecks.sh`
 - [ ] `mycppcheck.sh` no alarming warning?
