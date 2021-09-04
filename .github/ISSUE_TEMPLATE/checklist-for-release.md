@@ -44,7 +44,8 @@ make -j PLATFORM=PM3RDV4 PLATFORM_EXTRAS=BTADDON && sudo make install PLATFORM=P
 - [ ] Ubuntu21
 - [ ] ParrotOS
 - [ ] Fedora
-- [ ] OpenSuse
+- [ ] OpenSuse Leap
+- [ ] OpenSuse Tumbleweed
 - [ ] OSX
 - [ ] Android
 - [ ] Termux
