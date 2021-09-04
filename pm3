@@ -58,7 +58,7 @@ function get_pm3_list_Linux {
         exit 1
     fi
     for DEV in $(find /dev/ttyACM* 2>/dev/null); do
-        if which udevadm >/dev/null; then
+        if command -v udevadm >/dev/null; then
             if udevadm info -q property -n "$DEV" | grep -q "ID_VENDOR=proxmark.org"; then
                 PM3LIST+=("$DEV")
                 if [ ${#PM3LIST[*]} -ge "$N" ]; then
@@ -77,7 +77,7 @@ function get_pm3_list_Linux {
     if $FINDBTDONGLE; then
         # check if the HC-06-USB white dongle is present (still, that doesn't tell us if it's paired with a Proxmark3...)
         for DEV in $(find /dev/ttyUSB* 2>/dev/null); do
-            if which udevadm >/dev/null; then
+            if command -v udevadm >/dev/null; then
                 if udevadm info -q property -n "$DEV" | grep -q "ID_MODEL=CP2104_USB_to_UART_Bridge_Controller"; then
                     PM3LIST+=("$DEV")
                     if [ ${#PM3LIST[*]} -ge "$N" ]; then
@@ -440,7 +440,7 @@ HOSTOS=$(uname | awk '{print toupper($0)}')
 if [ "$HOSTOS" = "LINUX" ]; then
     if uname -a|grep -q Microsoft; then
         # First try finding it using the PATH environment variable
-        PSHEXE=$(which powershell.exe 2>/dev/null)
+        PSHEXE=$(command -v powershell.exe 2>/dev/null)
 
         # If it fails (such as if WSLENV is not set), try using the default installation path
         if [ -z "$PSHEXE" ]; then
