@@ -149,6 +149,7 @@ int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtab
     int len = strlen(str);
     memset(ctx->buf, 0x00, ARRAYLEN(ctx->buf));
     char *bufptr = ctx->buf;
+    char *bufptrend = ctx->buf + ARRAYLEN(ctx->buf) - 1;
     char *spaceptr = NULL;
     enum ParserState state = PS_FIRST;
 
@@ -197,6 +198,11 @@ int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtab
                 *bufptr = str[i];
                 bufptr++;
                 break;
+        }
+        if (bufptr > bufptrend) {
+            PrintAndLogEx(ERR, "ERROR: Line too long\n");
+            fflush(stdout);
+            return 2;
         }
     }
 
