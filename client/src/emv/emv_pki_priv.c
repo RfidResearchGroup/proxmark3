@@ -203,7 +203,8 @@ static struct tlvdb *emv_pki_sign_key(const struct crypto_pk *cp,
                                             cert_tag, rem_tag,
                                             msg, pos,
                                             tlvdb_get(exp_db, exp_tag, NULL),
-                                            add_tlv);
+                                            add_tlv,
+                                            NULL);
     free(msg);
     if (!db) {
         free(exp_db);
@@ -242,7 +243,8 @@ struct tlvdb *emv_pki_sign_dac(const struct crypto_pk *cp, const struct tlv *dac
     struct tlvdb *db = emv_pki_sign_message(cp,
                                             0x93, 0,
                                             msg, pos,
-                                            sda_tlv);
+                                            sda_tlv,
+                                            NULL);
 
     free(msg);
 
@@ -266,7 +268,8 @@ struct tlvdb *emv_pki_sign_idn(const struct crypto_pk *cp, const struct tlv *idn
     struct tlvdb *db = emv_pki_sign_message(cp,
                                             0x9f4b, 0,
                                             msg, pos,
-                                            dyn_tlv);
+                                            dyn_tlv,
+                                            NULL);
 
     free(msg);
 
