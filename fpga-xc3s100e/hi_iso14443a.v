@@ -38,7 +38,7 @@ begin
     else if(adc_d < 8) after_hysteresis <= 1'b0;        // U <  1,04V   -> after_hysteresis = 0
     // Note: was >= 3,53V and <= 1,19V. The new trigger values allow more reliable detection of the first bit
     // (it might not reach 3,53V due to the high time constant of the high pass filter in the analogue RF part).
-    // In addition, the new values are more in line with ISO14443-2: "The PICC shall detect the ”End of Pause�?after the field exceeds
+    // In addition, the new values are more in line with ISO14443-2: "The PICC shall detect the ”End of Pause” after the field exceeds
     // 5% of H_INITIAL and before it exceeds 60% of H_INITIAL." Depending on the signal strength, 60% might well be less than 3,53V.
 
 
