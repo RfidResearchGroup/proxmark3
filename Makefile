@@ -292,7 +292,7 @@ else
 	@echo "Files with tabs: (rerun with EDIT=1 if you want to convert them with vim)"
 endif
 # to remove tabs within lines, one can try with: vi $file -c ':set tabstop=4' -c ':set et|retab' -c ':wq'
-	@find . \( -not -path "./cov-int/*" -and -not -path "./client/deps/*" -and \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" -or -name "*.v" -or -name "pm3" \) \) \
+	@find . \( -not -path "./cov-int/*" -and -not -path "./client/deps/*" -and -not -wholename "./client/src/pm3_*wrap.c" -and \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" -or -name "*.v" -or -name "pm3" \) \) \
 	      -exec sh -c "$(TABSCMD)" \;
 #	@echo "Files with printf \\\\t:"
 #	@find . \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" -or -name "*.v" \) \

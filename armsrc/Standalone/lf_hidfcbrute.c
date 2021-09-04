@@ -120,7 +120,7 @@ void RunMod(void) {
         /*
         int button_pressed = BUTTON_HELD(1000); // 1 second
         if (button_pressed == BUTTON_HOLD) {
-        	break;
+            break;
         }
         */
         // If a user pressed the button once, briefly, output the current FC to the log file

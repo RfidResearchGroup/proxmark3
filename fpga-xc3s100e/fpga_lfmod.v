@@ -42,7 +42,7 @@ module fpga_lfmod(
     output ssp_frame, output ssp_din, input ssp_dout, output ssp_clk,
     input cross_hi, input cross_lo,
     output dbg,
-	 output PWR_LO_EN
+    output PWR_LO_EN
 );
 
 //-----------------------------------------------------------------------------
@@ -228,7 +228,7 @@ mux8 mux_pwr_lo      (major_mode, pwr_lo,    lr_pwr_lo,    le_pwr_lo,    lp_pwr_
 mux8 mux_pwr_hi      (major_mode, pwr_hi,    lr_pwr_hi,    le_pwr_hi,    lp_pwr_hi,   la_pwr_hi,    1'b0, 1'b0, 1'b0, 1'b0);
 mux8 mux_adc_clk     (major_mode, adc_clk,   lr_adc_clk,   le_adc_clk,   lp_adc_clk,  la_adc_clk,   1'b0, 1'b0, 1'b0, 1'b0);
 mux8 mux_dbg         (major_mode, dbg,       lr_dbg,       le_dbg,       lp_dbg,      la_dbg,       1'b0, 1'b0, 1'b0, 1'b0);
-mux8 mux_ant			(major_mode, PWR_LO_EN, 1'b1,         1'b1,       	 1'b1,        1'b1,         1'b0, 1'b0, 1'b0, 1'b0);
+mux8 mux_ant         (major_mode, PWR_LO_EN, 1'b1,         1'b1,         1'b1,        1'b1,         1'b0, 1'b0, 1'b0, 1'b0);
 
 // In all modes, let the ADC's outputs be enabled.
 assign adc_noe = 1'b0;

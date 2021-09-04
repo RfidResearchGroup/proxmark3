@@ -142,7 +142,7 @@ begin
     end
 
     // adjust internal timer counter if necessary:
-	if (negedge_cnt[3:0] == 4'd13 && (mod_type == `FPGA_HF_ISO14443A_SNIFFER || mod_type == `FPGA_HF_ISO14443A_TAGSIM_LISTEN) && deep_modulation)
+    if (negedge_cnt[3:0] == 4'd13 && (mod_type == `FPGA_HF_ISO14443A_SNIFFER || mod_type == `FPGA_HF_ISO14443A_TAGSIM_LISTEN) && deep_modulation)
     begin
         if (reader_falling_edge_time == 4'd1)           // reader signal changes right after sampling. Better sample earlier next time.
         begin
@@ -176,7 +176,7 @@ reg [3:0] mod_detect_reset_time;
 
 always @(negedge adc_clk)
 begin
-	if (mod_type == `FPGA_HF_ISO14443A_READER_LISTEN)
+    if (mod_type == `FPGA_HF_ISO14443A_READER_LISTEN)
     // (our) reader signal changes at negedge_cnt[3:0]=9, tag response expected to start n*16+4 ticks later, further delayed by
     // 3 ticks ADC conversion. The maximum filter output (edge detected) will be detected after subcarrier zero crossing (+7 ticks).
     // To allow some timing variances, we want to have the maximum filter outputs well within the detection window, i.e.
@@ -186,7 +186,7 @@ begin
         mod_detect_reset_time <= 4'd4;
     end
     else
-	if (mod_type == `FPGA_HF_ISO14443A_SNIFFER)
+    if (mod_type == `FPGA_HF_ISO14443A_SNIFFER)
     begin
         // detect a rising edge of reader's signal and sync modulation detector to the tag's answer:
         if (~pre_after_hysteresis && after_hysteresis && deep_modulation)
@@ -216,22 +216,22 @@ always @(negedge adc_clk)
 begin
     if(negedge_cnt[3:0] == mod_detect_reset_time)
     begin
-		  if (mod_type == `FPGA_HF_ISO14443A_SNIFFER)
-		  begin
-			  // detect modulation signal: if modulating, there must have been a falling AND a rising edge
-			  if ((rx_mod_falling_edge_max > `EDGE_DETECT_THRESHOLDHIGH) && (rx_mod_rising_edge_max < -`EDGE_DETECT_THRESHOLDHIGH))
-						 curbit <= 1'b1; // modulation
-					else
-						 curbit <= 1'b0; // no modulation
-		  end
-		  else
-		  begin
-		  			  // detect modulation signal: if modulating, there must have been a falling AND a rising edge
-			  if ((rx_mod_falling_edge_max > `EDGE_DETECT_THRESHOLD) && (rx_mod_rising_edge_max < -`EDGE_DETECT_THRESHOLD))
-						 curbit <= 1'b1; // modulation
-					else
-						 curbit <= 1'b0; // no modulation
-		  end
+          if (mod_type == `FPGA_HF_ISO14443A_SNIFFER)
+          begin
+              // detect modulation signal: if modulating, there must have been a falling AND a rising edge
+              if ((rx_mod_falling_edge_max > `EDGE_DETECT_THRESHOLDHIGH) && (rx_mod_rising_edge_max < -`EDGE_DETECT_THRESHOLDHIGH))
+                         curbit <= 1'b1; // modulation
+                    else
+                         curbit <= 1'b0; // no modulation
+          end
+          else
+          begin
+                      // detect modulation signal: if modulating, there must have been a falling AND a rising edge
+              if ((rx_mod_falling_edge_max > `EDGE_DETECT_THRESHOLD) && (rx_mod_rising_edge_max < -`EDGE_DETECT_THRESHOLD))
+                         curbit <= 1'b1; // modulation
+                    else
+                         curbit <= 1'b0; // no modulation
+          end
         // reset modulation detector
         rx_mod_rising_edge_max <= 0;
         rx_mod_falling_edge_max <= 0;
@@ -366,7 +366,7 @@ reg mod_sig_coil;
 
 always @(negedge adc_clk)
 begin
-	if (mod_type == `FPGA_HF_ISO14443A_TAGSIM_MOD)			 // need to take care of proper fdt timing
+    if (mod_type == `FPGA_HF_ISO14443A_TAGSIM_MOD)           // need to take care of proper fdt timing
     begin
         if(fdt_counter == `FDT_COUNT)
         begin
@@ -441,7 +441,7 @@ always @(negedge adc_clk)
 begin
     if (negedge_cnt[5:0] == 6'd63)                          // fill the buffer
     begin
-		if (mod_type == `FPGA_HF_ISO14443A_SNIFFER)
+        if (mod_type == `FPGA_HF_ISO14443A_SNIFFER)
         begin
             if(deep_modulation)                             // a reader is sending (or there's no field at all)
             begin
@@ -458,7 +458,7 @@ begin
         end
     end
 
-	if(negedge_cnt[2:0] == 3'b000 && mod_type == `FPGA_HF_ISO14443A_SNIFFER)	// shift at double speed
+    if(negedge_cnt[2:0] == 3'b000 && mod_type == `FPGA_HF_ISO14443A_SNIFFER)    // shift at double speed
     begin
         // Don't shift if we just loaded new data, obviously.
         if(negedge_cnt[5:0] != 6'd0)
@@ -467,7 +467,7 @@ begin
         end
     end
 
-	if(negedge_cnt[3:0] == 4'b0000 && mod_type != `FPGA_HF_ISO14443A_SNIFFER)
+    if(negedge_cnt[3:0] == 4'b0000 && mod_type != `FPGA_HF_ISO14443A_SNIFFER)
     begin
         // Don't shift if we just loaded new data, obviously.
         if(negedge_cnt[6:0] != 7'd0)
@@ -487,8 +487,8 @@ reg ssp_frame;
 
 always @(negedge adc_clk)
 begin
-	if(mod_type == `FPGA_HF_ISO14443A_SNIFFER)
-	// FPGA_HF_ISO14443A_SNIFFER mode (ssp_clk = adc_clk / 8, ssp_frame clock = adc_clk / 64)):
+    if(mod_type == `FPGA_HF_ISO14443A_SNIFFER)
+    // FPGA_HF_ISO14443A_SNIFFER mode (ssp_clk = adc_clk / 8, ssp_frame clock = adc_clk / 64)):
     begin
         if(negedge_cnt[2:0] == 3'd0)
             ssp_clk <= 1'b1;
@@ -508,7 +508,7 @@ begin
         if(negedge_cnt[3:0] == 4'd8)
             ssp_clk <= 1'b0;
 
-		if(negedge_cnt[6:0] == 7'd7)	// ssp_frame rising edge indicates start of frame, sampled on falling edge of ssp_clk
+        if(negedge_cnt[6:0] == 7'd7)    // ssp_frame rising edge indicates start of frame, sampled on falling edge of ssp_clk
             ssp_frame <= 1'b1;
         if(negedge_cnt[6:0] == 7'd23)
             ssp_frame <= 1'b0;
@@ -528,23 +528,23 @@ begin
     if(negedge_cnt[3:0] == 4'd0)
     begin
         // What do we communicate to the ARM
-		if(mod_type == `FPGA_HF_ISO14443A_TAGSIM_LISTEN)
+        if(mod_type == `FPGA_HF_ISO14443A_TAGSIM_LISTEN)
             sendbit = after_hysteresis;
-		else if(mod_type == `FPGA_HF_ISO14443A_TAGSIM_MOD)
+        else if(mod_type == `FPGA_HF_ISO14443A_TAGSIM_MOD)
             /* if(fdt_counter > 11'd772) sendbit = mod_sig_coil; // huh?
             else */
             sendbit = fdt_indicator;
-		else if (mod_type == `FPGA_HF_ISO14443A_READER_LISTEN)
+        else if (mod_type == `FPGA_HF_ISO14443A_READER_LISTEN)
             sendbit = curbit;
         else
             sendbit = 1'b0;
     end
 
 
-	if(mod_type == `FPGA_HF_ISO14443A_SNIFFER)
+    if(mod_type == `FPGA_HF_ISO14443A_SNIFFER)
         // send sampled reader and tag data:
         bit_to_arm = to_arm[7];
-	else if (mod_type == `FPGA_HF_ISO14443A_TAGSIM_MOD && fdt_elapsed && temp_buffer_reset)
+    else if (mod_type == `FPGA_HF_ISO14443A_TAGSIM_MOD && fdt_elapsed && temp_buffer_reset)
         // send timing information:
         bit_to_arm = to_arm[7];
     else
