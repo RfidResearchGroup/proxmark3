@@ -144,7 +144,7 @@ void LRPIncCounter(uint8_t *ctr, size_t ctrlen) {
 void LRPEncode(LRPContext_t *ctx, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen) {
     *resplen = 0;
 
-    if (data == NULL) {
+    if ((datalen > 0) && (data == NULL)) {
         return;
     }
     uint8_t xdata[1024] = {0};
