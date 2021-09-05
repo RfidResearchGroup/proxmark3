@@ -5,7 +5,7 @@
 //including header
 #include <malloc.h>
 #include <jni_tools.h>
-#include "stdbool.h"
+#include <stdbool.h>
 
 // native thread attach label
 static bool g_IsAttach;
