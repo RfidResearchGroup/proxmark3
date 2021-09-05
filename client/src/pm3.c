@@ -40,10 +40,10 @@ void pm3_close(pm3_device_t *dev) {
     }
 }
 
-int pm3_console(pm3_device_t *dev, char *Cmd) {
+int pm3_console(pm3_device_t *dev, char *cmd) {
     // For now, there is no real device context:
     (void) dev;
-    return CommandReceived(Cmd);
+    return CommandReceived(cmd);
 }
 
 const char *pm3_name_get(pm3_device_t *dev) {
