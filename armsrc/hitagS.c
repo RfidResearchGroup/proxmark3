@@ -858,7 +858,6 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
 
 //    int frame_count = 0;
     int response = 0, overflow = 0;
-    int i, j;
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
     bQuiet = false;
@@ -885,8 +884,8 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
 
     // read tag data into memory
     if (tag_mem_supplied) {
-        for (i = 0; i < 16; i++)
-            for (j = 0; j < 4; j++)
+        for (int i = 0; i < 16; i++)
+            for (int j = 0; j < 4; j++)
                 tag.pages[i][j] = 0x0;
 
         DbpString("Loading hitagS memory...");
@@ -912,7 +911,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
     if ((tag.pages[1][0] & 0x2) == 0 && (tag.pages[1][0] & 0x1) == 0)
         tag.max_page = 0;
     if (g_dbglevel >= DBG_EXTENDED)
-        for (i = 0; i < tag.max_page; i++)
+        for (int i = 0; i < tag.max_page; i++)
             Dbprintf("Page[%2d]: %02X %02X %02X %02X", i,
                      (tag.pages[i][3]) & 0xff,
                      (tag.pages[i][2]) & 0xff,

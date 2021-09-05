@@ -1871,9 +1871,8 @@ void T55xxDangerousRawTest(uint8_t *data) {
     // Trigger T55x7 in mode.
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     WaitUS(T55xx_Timing.m[0].start_gap);
-    uint8_t sendbits;
     for (uint8_t i = 0; i < len; i++) {
-        sendbits = (bs[BITSTREAM_BYTE(i)] >> BITSTREAM_BIT(i));
+        uint8_t sendbits = (bs[BITSTREAM_BYTE(i)] >> BITSTREAM_BIT(i));
         T55xxWriteBit(sendbits & 1, 0);
     }
     TurnReadLFOn(c->time);

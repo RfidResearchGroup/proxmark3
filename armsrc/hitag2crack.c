@@ -296,8 +296,6 @@ bool hitag2crack_read_page(uint8_t *responsestr, uint8_t pagenum, uint8_t *nrar,
     uint8_t cmd[10];
     uint8_t e_cmd[10];
     uint8_t e_responsestr[9];
-    uint8_t e_response[32];
-    uint8_t response[32];
 
     if (pagenum > 7) {
         UserMessage("hitag2crack_read_page:\r\n invalid pagenum\r\n");
@@ -326,6 +324,8 @@ bool hitag2crack_read_page(uint8_t *responsestr, uint8_t pagenum, uint8_t *nrar,
     if (hitag2crack_send_e_cmd(e_responsestr, nrar, e_cmd, 10)) {
         // check if it is valid
         if (strcmp(e_responsestr, ERROR_RESPONSE) != 0) {
+            uint8_t e_response[32];
+            uint8_t response[32];
             // convert to binarray
             hextobinarray(e_response, e_responsestr);
             // decrypt response
@@ -792,13 +792,12 @@ bool hitag2crack_extend_keystream(uint8_t *keybits, int *kslen, int ksoffset, ui
 
 bool hitag2_reader(uint8_t *response, uint8_t *key, bool interactive) {
     uint8_t tmp[9];
-    int i;
 
     response[0] = '\0';
     // auth to tag
     if (hitag2_crypto_auth(tmp, key)) {
         // read tag, one page at a time
-        for (i = 0; i <= 7; ++i) {
+        for (int i = 0; i <= 7; ++i) {
             if (!read_tag(tmp, i, i)) {
                 // if read fails, it could be because of auth,
                 // so try to reauth

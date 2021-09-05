@@ -100,16 +100,13 @@ static void create_tables(struct table *tt) {
 
 // free the table memory
 static void free_tables(struct table *tt) {
-    int i;
-    struct table *ttmp;
-
     if (!tt) {
-        printf("free_tables: t is NULL\n");
+        printf("free_tables: tt is NULL\n");
         exit(1);
     }
 
-    for (i = 0; i < 0x10000; i++) {
-        ttmp = tt + i;
+    for (int i = 0; i < 0x10000; i++) {
+        struct table *ttmp = tt + i;
         free(ttmp->data);
     }
 }
@@ -279,10 +276,7 @@ static void jumpnsteps(Hitag_State *hstate, int table) {
 static void *buildtable(void *dd) {
     Hitag_State hstate;
     Hitag_State hstate2;
-    unsigned long i;
     unsigned long maxentries = 1;
-    uint32_t ks1;
-    uint32_t ks2;
     int index = (int)(long)dd;
     int tnum = NUM_BUILD_THREADS;
 
@@ -291,7 +285,7 @@ static void *buildtable(void *dd) {
     buildlfsr(&hstate);
 
     /* jump to offset using jump table 2 (2048) */
-    for (i = 0; i < index; i++) {
+    for (unsigned long i = 0; i < index; i++) {
         jumpnsteps(&hstate, 2);
     }
 
@@ -309,7 +303,7 @@ static void *buildtable(void *dd) {
     }
 
     /* make the entries */
-    for (i = 0; i < maxentries; i++) {
+    for (unsigned long i = 0; i < maxentries; i++) {
 
         // copy the current state
         hstate2.shiftreg = hstate.shiftreg;
@@ -317,8 +311,8 @@ static void *buildtable(void *dd) {
 
         // get 48 bits of keystream from hstate2
         // this is split into 2 x 24 bit
-        ks1 = hitag2_nstep(&hstate2, 24);
-        ks2 = hitag2_nstep(&hstate2, 24);
+        uint32_t ks1 = hitag2_nstep(&hstate2, 24);
+        uint32_t ks2 = hitag2_nstep(&hstate2, 24);
 
         write_ks_s(ks1, ks2, hstate.shiftreg);
 
@@ -457,10 +451,6 @@ static void *sorttable(void *dd) {
 int main(int argc, char *argv[]) {
     pthread_t threads[NUM_BUILD_THREADS];
     void *status;
-    long i;
-    int ret;
-    struct table *t1;
-
 
     // make the table of tables
     t = (struct table *)malloc(sizeof(struct table) * 65536);
@@ -482,8 +472,8 @@ int main(int argc, char *argv[]) {
     builddi(2048, 2);
 
     // start the threads
-    for (i = 0; i < NUM_BUILD_THREADS; i++) {
-        ret = pthread_create(&(threads[i]), NULL, buildtable, (void *)(i));
+    for (long i = 0; i < NUM_BUILD_THREADS; i++) {
+        int ret = pthread_create(&(threads[i]), NULL, buildtable, (void *)(i));
         if (ret) {
             printf("cannot start buildtable thread %ld\n", i);
             exit(1);
@@ -493,8 +483,8 @@ int main(int argc, char *argv[]) {
     if (debug) printf("main, started buildtable threads\n");
 
     // wait for threads to finish
-    for (i = 0; i < NUM_BUILD_THREADS; i++) {
-        ret = pthread_join(threads[i], &status);
+    for (long i = 0; i < NUM_BUILD_THREADS; i++) {
+        int ret = pthread_join(threads[i], &status);
         if (ret) {
             printf("cannot join buildtable thread %ld\n", i);
             exit(1);
@@ -503,8 +493,8 @@ int main(int argc, char *argv[]) {
     }
 
     // write all remaining files
-    for (i = 0; i < 0x10000; i++) {
-        t1 = t + i;
+    for (long i = 0; i < 0x10000; i++) {
+        struct table *t1 = t + i;
         if (t1->ptr > t1->data) {
             writetable(t1);
         }
@@ -520,8 +510,8 @@ int main(int argc, char *argv[]) {
 
 
     // start the threads
-    for (i = 0; i < NUM_SORT_THREADS; i++) {
-        ret = pthread_create(&(threads[i]), NULL, sorttable, (void *)(i));
+    for (long i = 0; i < NUM_SORT_THREADS; i++) {
+        int ret = pthread_create(&(threads[i]), NULL, sorttable, (void *)(i));
         if (ret) {
             printf("cannot start sorttable thread %ld\n", i);
             exit(1);
@@ -531,8 +521,8 @@ int main(int argc, char *argv[]) {
     if (debug) printf("main, started sorttable threads\n");
 
     // wait for threads to finish
-    for (i = 0; i < NUM_SORT_THREADS; i++) {
-        ret = pthread_join(threads[i], &status);
+    for (long i = 0; i < NUM_SORT_THREADS; i++) {
+        int ret = pthread_join(threads[i], &status);
         if (ret) {
             printf("cannot join sorttable thread %ld\n", i);
             exit(1);

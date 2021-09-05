@@ -126,11 +126,10 @@ static void append(const char *filename, uint8_t *entry, size_t entry_len) {
 }
 
 static void save_pwds(uint32_t *pwdlist, size_t no_pwd) {
-    uint8_t entry[10] = {0};
-
     if (no_pwd > 0) {
         Dbprintf("");
         for (int i = 0; i < no_pwd; i++) {
+            uint8_t entry[10] = {0};
             sprintf((char *)entry, "%08"PRIx32"\n", pwdlist[i]);
             append(LF_EM4X50_LOGFILE_SIM, entry, strlen((char *)entry));
             Dbprintf("received password: %08"PRIx32"", pwdlist[i]);

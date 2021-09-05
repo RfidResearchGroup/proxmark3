@@ -389,10 +389,9 @@ int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
             return 1;
         }
 
-        bool fileFound = false;
-
         struct tlvdb *t = tlvdb_parse_multi(data, datalen);
         if (t) {
+            bool fileFound = false;
             // PSE/PPSE with SFI
             struct tlvdb *tsfi = tlvdb_find_path(t, (tlv_tag_t[]) {0x6f, 0xa5, 0x88, 0x00});
             if (tsfi) {
@@ -473,7 +472,6 @@ int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveField
     size_t datalen = 0;
     uint16_t sw = 0;
 
-    int res = 0;
     int retrycnt = 0;
     for (int i = 0; i < ARRAYLEN(AIDlist); i ++) {
 
@@ -483,7 +481,7 @@ int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveField
         }
 
         param_gethex_to_eol(AIDlist[i].aid, 0, aidbuf, sizeof(aidbuf), &aidlen);
-        res = EMVSelect(channel, (i == 0) ? ActivateField : false, true, aidbuf, aidlen, data, sizeof(data), &datalen, &sw, tlv);
+        int res = EMVSelect(channel, (i == 0) ? ActivateField : false, true, aidbuf, aidlen, data, sizeof(data), &datalen, &sw, tlv);
         // retry if error and not returned sw error
         if (res && res != 5) {
             if (++retrycnt < 3) {

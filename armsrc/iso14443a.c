@@ -1329,8 +1329,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data, uint8_t
     int retval = PM3_SUCCESS;
 
     // Just to allow some checks
-    int happened = 0;
-    int happened2 = 0;
+//    int happened = 0;
+//    int happened2 = 0;
     int cmdsRecvd = 0;
     uint32_t numReads = 0; //Counts numer of times reader reads a block
 
@@ -1781,8 +1781,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data, uint8_t
     BigBuf_free_keep_EM();
 
     if (g_dbglevel >= DBG_EXTENDED) {
-        Dbprintf("-[ Wake ups after halt  [%d]", happened);
-        Dbprintf("-[ Messages after halt  [%d]", happened2);
+//        Dbprintf("-[ Wake ups after halt  [%d]", happened);
+//        Dbprintf("-[ Messages after halt  [%d]", happened2);
         Dbprintf("-[ Num of received cmd  [%d]", cmdsRecvd);
         Dbprintf("-[ Num of moebius tries [%d]", moebius_count);
     }

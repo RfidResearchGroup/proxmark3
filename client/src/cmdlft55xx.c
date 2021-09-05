@@ -4047,7 +4047,6 @@ static int CmdT55xxSniff(const char *Cmd) {
 
         int minWidth = 1000;
         int maxWidth = 0;
-        uint16_t dataLen = 0;
         data[0] = 0;
         bool have_data = false;
         sprintf(modeText, "Default");
@@ -4125,7 +4124,7 @@ static int CmdT55xxSniff(const char *Cmd) {
 
             // Fixed bit - Default
             if (have_data == false && (APPROX_EQ(pulseBuffer[0], maxWidth, tolerance))) {
-                dataLen = t55sniff_get_packet(pulseBuffer, data, minWidth, maxWidth, tolerance);
+                uint16_t dataLen = t55sniff_get_packet(pulseBuffer, data, minWidth, maxWidth, tolerance);
 
                 //   if ((dataLen == 39) )
                 //           printf ("Fixed | Data end of 80 samples | offset : %llu - datalen %-2d - data : %s  --- - Bit 0 width : %d\n",idx,dataLen,data,pulseBuffer[0]);
@@ -4209,7 +4208,7 @@ static int CmdT55xxSniff(const char *Cmd) {
             if (have_data == false && (APPROX_EQ(pulseBuffer[0], minWidth, tolerance))) {
                 // leading 0 (should = 0 width)
                 // 1 of 4 (leads with 00)
-                dataLen = t55sniff_get_packet(pulseBuffer, data, minWidth, maxWidth, tolerance);
+                uint16_t dataLen = t55sniff_get_packet(pulseBuffer, data, minWidth, maxWidth, tolerance);
                 // **** Should check to 0 to be actual 0 as well i.e. 01 .... data ....
                 if ((data[0] == '0') && (data[1] == '1')) {
                     if (dataLen == 73) {

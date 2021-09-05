@@ -429,9 +429,6 @@ static double score(uint64_t s, unsigned int size, uint64_t ks, unsigned int kss
 
 /* score_traces runs score for each encrypted nonce */
 static void score_traces(struct guess *g, unsigned int size) {
-    uint64_t lfsr;
-    unsigned int i;
-    double sc;
     double total_score = 0.0;
 
     // don't bother scoring traces that are already losers
@@ -439,12 +436,12 @@ static void score_traces(struct guess *g, unsigned int size) {
         return;
     }
 
-    for (i = 0; i < num_nRaR; i++) {
+    for (unsigned int i = 0; i < num_nRaR; i++) {
         // calc next b
         // create lfsr - lower 32 bits is uid, upper 16 bits are lower 16 bits of key
         // then shift by size - 16, insert upper key XOR enc_nonce XOR bitstream,
         // and calc new bit b
-        lfsr = (uid >> (size - 16)) | ((g->key << (48 - size)) ^
+        uint64_t lfsr = (uid >> (size - 16)) | ((g->key << (48 - size)) ^
                                        ((nonces[i].enc_nR ^ g->b0to31[i]) << (64 - size)));
         g->b0to31[i] = g->b0to31[i] | (ht2crypt(lfsr) << (size - 16));
 
@@ -452,7 +449,7 @@ static void score_traces(struct guess *g, unsigned int size) {
         // bits 16-47 are upper bits of key XOR enc_nonce XOR bitstream
         lfsr = g->key ^ ((nonces[i].enc_nR ^ g->b0to31[i]) << 16);
 
-        sc = score(lfsr, size, nonces[i].ks, 32);
+        double sc = score(lfsr, size, nonces[i].ks, 32);
 
         // look out for losers
         if (sc == 0.0) {
@@ -616,17 +613,13 @@ static void execute_round(unsigned int size) {
 
 /* crack is the main cracking algo; it executes the rounds */
 static void crack(void) {
-    unsigned int i;
-    uint64_t revkey;
-    uint64_t foundkey;
-
-    for (i = 16; i <= 48; i++) {
+    for (unsigned int i = 16; i <= 48; i++) {
         fprintf(stderr, "round %2u, size=%2u\n", i - 16, i);
         execute_round(i);
 
         // print some metrics
-        revkey = rev64(guesses[0].key);
-        foundkey = ((revkey >> 40) & 0xff) | ((revkey >> 24) & 0xff00) | ((revkey >> 8) & 0xff0000) | ((revkey << 8) & 0xff000000) | ((revkey << 24) & 0xff00000000) | ((revkey << 40) & 0xff0000000000);
+        uint64_t revkey = rev64(guesses[0].key);
+        uint64_t foundkey = ((revkey >> 40) & 0xff) | ((revkey >> 24) & 0xff00) | ((revkey >> 8) & 0xff0000) | ((revkey << 8) & 0xff000000) | ((revkey << 24) & 0xff00000000) | ((revkey << 40) & 0xff0000000000);
         fprintf(stderr, " guess=%012" PRIx64 ", num_guesses = %u, top score=%1.10f, min score=%1.10f\n", foundkey, num_guesses, guesses[0].score, guesses[num_guesses - 1].score);
     }
 }

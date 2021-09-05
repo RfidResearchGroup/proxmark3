@@ -259,9 +259,8 @@ static int demodNexWatch(void) {
     // output
     Dbprintf(" NexWatch raw id : " _YELLOW_("0x%08"PRIx32), rawid);
 
-    uint8_t temp_checksum;
     for (; magic < 255; magic++) {
-        temp_checksum = nexwatch_checksum(magic, cn, calc_parity);
+        uint8_t temp_checksum = nexwatch_checksum(magic, cn, calc_parity);
         if (temp_checksum == chk) {
             Dbprintf("    Magic number : " _GREEN_("0x%X"),  magic);
             break;

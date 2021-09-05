@@ -329,10 +329,9 @@ static void *bf_thread(void *thread_arg) {
     memcpy(bytes_to_recover, targ->bytes_to_recover, sizeof(bytes_to_recover));
     memcpy(keytable, targ->keytable, sizeof(keytable));
 
-    int found;
     while (!(brute & endmask)) {
 
-        found = __atomic_load_n(&loclass_found, __ATOMIC_SEQ_CST);
+        int found = __atomic_load_n(&loclass_found, __ATOMIC_SEQ_CST);
 
         if (found != 0xFF) return NULL;
 

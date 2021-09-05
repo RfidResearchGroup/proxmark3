@@ -124,9 +124,7 @@ static int is_kmiddle_badguess(uint64_t z, struct Tklower *Tk, int max, int aR0)
 // function to test if a partial key is valid
 static int testkey(uint64_t *out, uint64_t uid, uint64_t pkey, uint64_t nR, uint64_t aR) {
     uint64_t kupper;
-    uint64_t key;
     Hitag_State hstate;
-    uint64_t b;
     uint32_t revaR;
     uint32_t normaR;
 
@@ -136,9 +134,9 @@ static int testkey(uint64_t *out, uint64_t uid, uint64_t pkey, uint64_t nR, uint
 
     // search for remaining 14 bits
     for (kupper = 0; kupper < 0x3fff; kupper++) {
-        key = (kupper << 34) | pkey;
+        uint64_t key = (kupper << 34) | pkey;
         hitag2_init(&hstate, key, uid, nR);
-        b = hitag2_nstep(&hstate, 32);
+        uint64_t b = hitag2_nstep(&hstate, 32);
         if ((normaR ^ b) == 0xffffffff) {
             *out = key;
             return 1;
@@ -183,7 +181,6 @@ static void *crack(void *d) {
     uint64_t klower, kmiddle, klowery;
     uint64_t y, b, z, bit;
     uint64_t ytmp;
-    unsigned int count;
     uint64_t foundkey, revkey;
     int ret;
     unsigned int found;
@@ -210,7 +207,7 @@ static void *crack(void *d) {
     for (klower = data->klowerstart; klower < (data->klowerstart + data->klowerrange); klower++) {
         printf("trying klower = 0x%05"PRIx64"\n", klower);
         // build table
-        count = 0;
+        unsigned int count = 0;
         for (y = 0; y < 0x40000; y++) {
             // create klowery
             klowery = (y << 16) | klower;

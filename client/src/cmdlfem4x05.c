@@ -539,10 +539,8 @@ int CmdEM4x05Dump(const char *Cmd) {
     uint32_t data[16];
 
     int success = PM3_SUCCESS;
-    int status, status14, status15;
     uint32_t lock_bits = 0x00; // no blocks locked
     bool gotLockBits = false;
-    bool lockInPW2 = false;
     uint32_t word = 0;
 
     const char *info[] = {"Info/User", "UID", "Password", "User", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "Lock", "Lock"};
@@ -555,7 +553,7 @@ int CmdEM4x05Dump(const char *Cmd) {
 
     if (usePwd) {
         // Test first if the password is correct
-        status = em4x05_login_ext(pwd);
+        int status = em4x05_login_ext(pwd);
         if (status == PM3_SUCCESS) {
             PrintAndLogEx(INFO, "password is " _GREEN_("correct"));
         } else if (status == PM3_EFAILED) {
@@ -572,11 +570,10 @@ int CmdEM4x05Dump(const char *Cmd) {
     PrintAndLogEx(INFO, "-----+----------+-------+---+-----");
 
     if (card_type == EM_4205 || card_type == EM_4305 || card_type == EM_UNKNOWN) {
-
-
+        bool lockInPW2 = false;
         // To flag any blocks locked we need to read blocks 14 and 15 first
         // dont swap endian until we get block lock flags.
-        status14 = em4x05_read_word_ext(EM4305_PROT1_BLOCK, pwd, usePwd, &word);
+        int status14 = em4x05_read_word_ext(EM4305_PROT1_BLOCK, pwd, usePwd, &word);
         if (status14 == PM3_SUCCESS) {
             if ((word & 0x00008000) != 0x00) {
                 lock_bits = word;
@@ -586,7 +583,7 @@ int CmdEM4x05Dump(const char *Cmd) {
         } else {
             success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
         }
-        status15 = em4x05_read_word_ext(EM4305_PROT2_BLOCK, pwd, usePwd, &word);
+        int status15 = em4x05_read_word_ext(EM4305_PROT2_BLOCK, pwd, usePwd, &word);
         if (status15 == PM3_SUCCESS) {
             if ((word & 0x00008000) != 0x00) { // assume block 15 is the current lock block
                 lock_bits = word;
@@ -612,7 +609,7 @@ int CmdEM4x05Dump(const char *Cmd) {
                 }
             } else {
                 // success &= em4x05_read_word_ext(addr, pwd, usePwd, &word);
-                status = em4x05_read_word_ext(addr, pwd, usePwd, &word); // Get status for single read
+                int status = em4x05_read_word_ext(addr, pwd, usePwd, &word); // Get status for single read
                 if (status != PM3_SUCCESS)
                     success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
                 data[addr] = BSWAP_32(word);
@@ -647,7 +644,7 @@ int CmdEM4x05Dump(const char *Cmd) {
 
         // To flag any blocks locked we need to read block 3 first
         // dont swap endian until we get block lock flags.
-        status14 = em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word);
+        int status14 = em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word);
         if (status14 == PM3_SUCCESS) {
             lock_bits = word;
             gotLockBits = true;
@@ -656,10 +653,8 @@ int CmdEM4x05Dump(const char *Cmd) {
             success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
         }
 
-        uint32_t lockbit;
-
         for (; addr < 16; addr++) {
-            lockbit = (lock_bits >> (addr * 2)) & 3;
+            uint32_t lockbit = (lock_bits >> (addr * 2)) & 3;
             if (addr == 2) {
                 if (usePwd) {
                     data[addr] = BSWAP_32(pwd);
@@ -671,7 +666,7 @@ int CmdEM4x05Dump(const char *Cmd) {
                 }
             } else {
 
-                status = em4x05_read_word_ext(addr, pwd, usePwd, &word);
+                int status = em4x05_read_word_ext(addr, pwd, usePwd, &word);
                 if (status != PM3_SUCCESS) {
                     success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
                 }
@@ -1970,9 +1965,6 @@ uint32_t static em4x05_Sniff_GetBlock(char *bits, bool fwd) {
 
 int CmdEM4x05Sniff(const char *Cmd) {
 
-    bool pwd = false, fwd = false;
-    bool haveData, sampleData = true;
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x05 sniff",
                   "Sniff EM4x05 commands sent from a programmer",
@@ -1988,8 +1980,8 @@ int CmdEM4x05Sniff(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    sampleData = (arg_get_lit(ctx, 1) == false);
-    fwd = arg_get_lit(ctx, 2);
+    bool sampleData = (arg_get_lit(ctx, 1) == false);
+    bool fwd = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     char cmdText[100];
@@ -1999,9 +1991,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
     int i, bitidx;
     int ZeroWidth;    // 32-42 "1" is 32
     int CycleWidth;
-    size_t idx = 0, pulseSamples, pktOffset;
-    uint32_t tmpValue;
-    bool eop = false;
+    size_t pulseSamples;
 
     // setup and sample data from Proxmark
     // if not directed to existing sample/graphbuffer
@@ -2019,15 +2009,16 @@ int CmdEM4x05Sniff(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "offset | Command     |   Data   | blk | raw");
     PrintAndLogEx(SUCCESS, "-------+-------------+----------+-----+------------------------------------------------------------");
 
-    idx = 0;
+    size_t idx = 0;
     // loop though sample buffer
     while (idx < g_GraphTraceLen) {
-        eop = false;
-        haveData = false;
-        pwd = false;
+        bool eop = false;
+        bool haveData = false;
+        bool pwd = false;
+        uint32_t tmpValue;
 
         idx = em4x05_Sniff_GetNextBitStart(idx, g_GraphTraceLen, g_GraphBuffer, &pulseSamples);
-        pktOffset = idx;
+        size_t pktOffset = idx;
         if (pulseSamples >= 10)  { // Should be 18 so a bit less to allow for processing
 
             // Use first bit to get "0" bit samples as a reference
