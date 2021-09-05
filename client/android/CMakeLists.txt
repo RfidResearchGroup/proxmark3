@@ -202,7 +202,6 @@ add_library(pm3rrg_rdv4 SHARED
 target_include_directories(pm3rrg_rdv4 PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${BZIP2_INCLUDE_DIRS}
-        ${PM3_ROOT}/include/
         ${PM3_ROOT}/common
         ${PM3_ROOT}/common_fpga
         ${PM3_ROOT}/include
