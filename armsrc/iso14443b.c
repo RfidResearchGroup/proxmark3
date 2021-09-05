@@ -2095,7 +2095,6 @@ void SniffIso14443b(void) {
                 // And ready to receive another command.
                 Uart14bReset();
                 Demod14bReset();
-                reader_is_active = false;
                 expect_tag_answer = true;
             }
 
@@ -2112,7 +2111,6 @@ void SniffIso14443b(void) {
                 // And ready to receive another command
                 Uart14bReset();
                 Demod14bReset();
-                reader_is_active = false;
                 expect_tag_answer = true;
             }
 
