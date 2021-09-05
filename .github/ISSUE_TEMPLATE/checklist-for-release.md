@@ -16,6 +16,8 @@ assignees: doegox, iceman1001
 - [ ] `mymanualchecks.sh`
 - [ ] `mycppcheck.sh` no alarming warning?
 - [ ] `mystandalone_makes.sh` check that the script contains all standalone modes then compile all standalone modes (linux only)
+- [ ] `experimental_lib` compilation & tests
+- [ ] `experimental_client_with_swig` compilation & tests
 - [ ] GitHub Actions - green across the board ( MacOS, Ubuntu, Windows)
 - [ ] [Appveyor](https://ci.appveyor.com/project/RfidResearchGroup/proxmark3/history) green (PS)
 
