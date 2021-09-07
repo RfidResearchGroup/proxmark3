@@ -472,8 +472,8 @@ void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 uint8_t block = 0;
                 if (cmdsize == 5)
                     block = cmd[2];
-                else if (cmdsize == 13) // with UID
-                    block = cmd[10];
+                else if (cmdsize == 5 + 8) // with UID
+                    block = cmd[2 + 8];
 
                 snprintf(exp, size, "READBLOCK(%d)", block);
                 return;
