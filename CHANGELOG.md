@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix `hf 15 restore` write command and `trace list -t 15` write command (@doegox)
  - Changed default standalone mode to LF_SAMYRUN (@iceman1001)
  - Add MIFARE Plus SL3 mode traces (@iceman1001)
  - Fix PAC/Stanley checksum calculation (@rknoll)

@@ -2028,7 +2028,7 @@ static int CmdHF15Restore(const char *Cmd) {
     uint16_t i = 0;
     while (bytes < datalen) {
 
-        req[reqlen + 1] = i;
+        req[reqlen] = i;
         // copy over the data to the request
         memcpy(req + reqlen + 1, data + bytes, blocksize);
         AddCrc15(req, reqlen + 1 + blocksize);
