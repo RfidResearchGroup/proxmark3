@@ -1843,7 +1843,7 @@ static int DesfireCommandEx(DesfireContext_t *dctx, uint8_t cmd, uint8_t *data, 
         *resplen = 0;
 
     uint8_t respcode = 0xff;
-    uint8_t xresp[257] = {0};
+    uint8_t xresp[2050] = {0};
     size_t xresplen = 0;
     int res = DesfireExchangeEx(false, dctx, cmd, data, datalen, &respcode, xresp, &xresplen, true, splitbysize);
     if (res != PM3_SUCCESS)
