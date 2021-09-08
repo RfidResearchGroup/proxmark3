@@ -1,7 +1,7 @@
 
-include Makefile.defs
 -include Makefile.platform
 -include .Makefile.options.cache
+include Makefile.defs
 include common_arm/Makefile.hal
 
 # preserve relative DESTDIR path for subdir makes

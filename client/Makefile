@@ -4,7 +4,6 @@
 # the license.
 #-----------------------------------------------------------------------------
 
-include ../Makefile.defs
 ifeq ($(PLTNAME),)
     -include ../Makefile.platform
     -include ../.Makefile.options.cache
@@ -12,6 +11,7 @@ ifeq ($(PLTNAME),)
         $(error platform definitions have been changed, please "make clean" at the root of the project)
     endif
 endif
+include ../Makefile.defs
 
 ifeq ($(PLATFORM),PM3ICOPYX)
   INCLUDES += -DICOPYX
