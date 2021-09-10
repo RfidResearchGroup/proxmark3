@@ -363,8 +363,8 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     }
     uint8_t blockno = (uint8_t)b;
 
-    PrintAndLogEx(INFO, "--block no %d, key %c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
-    PrintAndLogEx(INFO, "--data: %s", sprint_hex(block, sizeof(block)));
+    PrintAndLogEx(INFO, "Writing block no %d, key %c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
+    PrintAndLogEx(INFO, "data: %s", sprint_hex(block, sizeof(block)));
 
     uint8_t data[26];
     memcpy(data, key, sizeof(key));

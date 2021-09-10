@@ -230,7 +230,7 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
     // time to convert the returned data.
     uint8_t curr_keys = resp.oldarg[0];
 
-    PrintAndLogEx(INFO, "Chunk: %.1fs | found %u/%u keys (%u)", (float)(t2 / 1000.0), curr_keys, (sectorsCnt << 1), size);
+    PrintAndLogEx(INFO, "Chunk %.1fs | found %u/%u keys (%u)", (float)(t2 / 1000.0), curr_keys, (sectorsCnt << 1), size);
 
     // all keys?
     if (curr_keys == sectorsCnt * 2 || lastChunk) {
@@ -306,7 +306,7 @@ int mfCheckKeys_file(uint8_t *destfn, uint64_t *key) {
 
         retry--;
         if (retry == 0) {
-            PrintAndLogEx(WARNING, "Chk keys file, timeouted");
+            PrintAndLogEx(WARNING, "Chk keys file, time out");
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
             return PM3_ETIMEOUT;
         }
@@ -364,7 +364,7 @@ int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultk
 
         // progress
         if (counter % 20 == 0)
-            PrintAndLogEx(SUCCESS, "tried : %s.. \t %u keys", sprint_hex(candidates + i, 6),  counter * KEYS_IN_BLOCK);
+            PrintAndLogEx(SUCCESS, "tried %s.. \t %u keys", sprint_hex(candidates + i, 6),  counter * KEYS_IN_BLOCK);
     }
     return found;
 }
@@ -545,7 +545,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             free(statelists[1].head.slhead);
             num_to_bytes(key64, 6, resultKey);
 
-            PrintAndLogEx(SUCCESS, "\ntarget block:%3u key type: %c  -- found valid key [ " _GREEN_("%s") " ]",
+            PrintAndLogEx(SUCCESS, "\ntarget block: %3u key type: %c  -- found valid key [ " _GREEN_("%s") " ]",
                           package->block,
                           package->keytype ? 'B' : 'A',
                           sprint_hex_inrow(resultKey, 6)
@@ -558,7 +558,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     }
 
 out:
-    PrintAndLogEx(SUCCESS, "\ntarget block:%3u key type: %c",
+    PrintAndLogEx(SUCCESS, "\ntarget block: %3u key type: %c",
                   package->block,
                   package->keytype ? 'B' : 'A'
                  );
@@ -724,7 +724,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
             num_to_bytes(key64, 6, resultKey);
 
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _GREEN_("%s") " ]",
+            PrintAndLogEx(SUCCESS, "target block: %3u key type: %c  -- found valid key [ " _GREEN_("%s") " ]",
                           package->block,
                           package->keytype ? 'B' : 'A',
                           sprint_hex_inrow(resultKey, 6)
@@ -744,7 +744,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     free(mem);
 
 out:
-    PrintAndLogEx(SUCCESS, "\ntarget block:%3u key type: %c",
+    PrintAndLogEx(SUCCESS, "\ntarget block: %3u key type: %c",
                   package->block,
                   package->keytype ? 'B' : 'A'
                  );
