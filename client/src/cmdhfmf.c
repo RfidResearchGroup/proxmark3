@@ -3452,7 +3452,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
         }
         showSectorTable(k_sector, k_sectorsCount);
     } else {
-        PrintAndLogEx(INFO, "Press pm3-button or abort simulation");
+        PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
     }
     return PM3_SUCCESS;
 }
