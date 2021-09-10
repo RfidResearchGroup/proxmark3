@@ -3451,6 +3451,8 @@ static int CmdHF14AMfSim(const char *Cmd) {
             readerAttack(k_sector, k_sectorsCount, data[0], setEmulatorMem, verbose);
         }
         showSectorTable(k_sector, k_sectorsCount);
+    } else {
+        PrintAndLogEx(INFO, "Press pm3-button or abort simulation");
     }
     return PM3_SUCCESS;
 }
