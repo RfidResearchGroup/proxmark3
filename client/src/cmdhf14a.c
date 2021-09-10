@@ -525,9 +525,9 @@ plot:
 
     } while (continuous);
 
-    if (disconnectAfter) {
+    if (disconnectAfter == false) {
         if (silent == false) {
-            PrintAndLogEx(INFO, "field dropped.");
+            PrintAndLogEx(INFO, "field is on");
         }
     }
 
