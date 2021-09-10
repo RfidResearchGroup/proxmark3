@@ -1167,7 +1167,7 @@ bool smart_select(bool verbose, smart_card_atr_t *atr) {
     SendCommandNG(CMD_SMART_ATR, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_SMART_ATR, &resp, 2500) == false) {
-        if (verbose) PrintAndLogEx(WARNING, "smart card select timeouted");
+        if (verbose) PrintAndLogEx(WARNING, "smart card select timeout");
         return false;
     }
 
