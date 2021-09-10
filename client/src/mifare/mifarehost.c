@@ -306,7 +306,7 @@ int mfCheckKeys_file(uint8_t *destfn, uint64_t *key) {
 
         retry--;
         if (retry == 0) {
-            PrintAndLogEx(WARNING, "Chk keys file, time out");
+            PrintAndLogEx(WARNING, "Chk keys file, command execution time out");
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
             return PM3_ETIMEOUT;
         }
