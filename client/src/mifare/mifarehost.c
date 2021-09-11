@@ -667,12 +667,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         return PM3_EMALLOC;
     }
 
-    uint8_t *p_keyblock = mem + 5;
-    mem[0] = statelists[0].keyType;
-    mem[1] = statelists[0].blockNo;
-    mem[2] = 1;
-    mem[3] = ((max_keys_chunk >> 8) & 0xFF);
-    mem[4] = (max_keys_chunk & 0xFF);
+    uint8_t *p_keyblock = mem;
 
     uint8_t destfn[32];
     strncpy((char *)destfn, "static_nested_000.bin", sizeof(destfn) - 1);
@@ -713,7 +708,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
             }
             res = mfCheckKeys_file(destfn, &key64);
         } else {
-            res = mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, chunk, mem, &key64);
+            res = mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, true, chunk, mem, &key64);
         }
 
         if (res == PM3_SUCCESS) {
