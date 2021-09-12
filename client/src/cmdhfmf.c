@@ -3541,7 +3541,7 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
                       _YELLOW_("R") ":Reused / "
                       _YELLOW_("N") ":Nested / "
                       _YELLOW_("H") ":Hardnested / "
-                      _YELLOW_("C") ":statiCnested / "
+                      _YELLOW_("C") ":staticNested / "
                       _YELLOW_("A") ":keyA "
                       " )"
                      );
