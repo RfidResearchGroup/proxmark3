@@ -175,7 +175,6 @@ static void *crack(void *d) {
     struct nRaR *TnRaR;
     unsigned int numnrar;
 
-    Hitag_State hstate;
     int i, j;
 
     uint64_t klower, kmiddle, klowery;
@@ -217,17 +216,15 @@ static void *crack(void *d) {
                 // store klowery
                 Tk[count].klowery = klowery;
                 // build the initial prng state
-                hstate.shiftreg = (klower << 32) | uid;
-                // zero the lfsr so only 0s are inserted
-                hstate.lfsr = 0;
+                uint64_t shiftreg = (klower << 32) | uid;
                 // insert y into shiftreg and extract keystream, reversed order
                 b = 0;
                 ytmp = y;
                 for (j = 0; j < 2; j++) {
-                    hstate.shiftreg = hstate.shiftreg | ((ytmp & 0xffff) << 48);
+                    shiftreg = shiftreg | ((ytmp & 0xffff) << 48);
                     for (i = 0; i < 16; i++) {
-                        hstate.shiftreg = hstate.shiftreg >> 1;
-                        bit = hitag2_crypt(hstate.shiftreg);
+                        shiftreg = shiftreg >> 1;
+                        bit = hitag2_crypt(shiftreg);
                         b = (b >> 1) | (bit << 31);
                     }
                     ytmp = ytmp >> 16;
@@ -239,8 +236,8 @@ static void *crack(void *d) {
                 // get and store inverse of next bit from prng
                 // don't need to worry about shifting in the new bit because
                 // it doesn't affect the filter function anyway
-                hstate.shiftreg = hstate.shiftreg >> 1;
-                Tk[count].notb32 = hitag2_crypt(hstate.shiftreg) ^ 0x1;
+                shiftreg = shiftreg >> 1;
+                Tk[count].notb32 = hitag2_crypt(shiftreg) ^ 0x1;
 
                 // increase count
                 count++;
