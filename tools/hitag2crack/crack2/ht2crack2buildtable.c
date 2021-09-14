@@ -369,7 +369,6 @@ static void *sorttable(void *dd) {
     char outfile[64];
     unsigned char *data = NULL;
     struct stat filestat;
-    uint64_t numentries = 0;
     int index = (int)(long)dd;
     int space = 0x100 / NUM_SORT_THREADS;
 
@@ -410,7 +409,7 @@ static void *sorttable(void *dd) {
             // copy data into table
             memcpy(table, data, filestat.st_size);
 
-            numentries = filestat.st_size / DATASIZE;
+            uint64_t numentries = filestat.st_size / DATASIZE;
 
             // unmap file and close it
             if (munmap(data, filestat.st_size)) {
