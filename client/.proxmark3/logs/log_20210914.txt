@@ -1,0 +1,166 @@
+[+] About to use the following files:
+[+]    bootrom.elf
+[+]    fullimage.elf
+[+] Waiting for Proxmark3 to appear on COM3
+ found
+[+] Entering bootloader...
+[+] (Press and release the button only to abort)
+[+] Waiting for Proxmark3 to appear on COM3
+ found
+[=] Available memory on this board: 512K bytes
+
+[=] Permitted flash range: 0x00100000-0x00180000
+[+] Loading ELF file bootrom.elf
+[+] Loading usable ELF segments:
+[+]    0: V 0x00100000 P 0x00100000 (0x00000200->0x00000200) [R X] @0x94
+[+]    1: V 0x00200000 P 0x00100200 (0x00000d1c->0x00000d1c) [R X] @0x298
+
+[+] Loading ELF file fullimage.elf
+[+] Loading usable ELF segments:
+[+]    0: V 0x00102000 P 0x00102000 (0x0003ff80->0x0003ff80) [R X] @0x94
+[+]    1: V 0x00200000 P 0x00141f80 (0x00001740->0x00001740) [RW ] @0x40014
+[=] Note: Extending previous segment from 0x3ff80 to 0x416c0 bytes
+
+[+] Flashing...
+[+] Writing segments for file: bootrom.elf
+[+]  0x00100000..0x001001ff [0x200 / 1 blocks]
+ OK
+[+]  0x00100200..0x00100f1b [0xd1c / 7 blocks]
+ OK
+
+[+] Writing segments for file: fullimage.elf
+[+]  0x00102000..0x001436bf [0x416c0 / 524 blocks]
+ OK
+
+[+] All done
+
+[=] Have a nice day!
+
+[+] About to use the following file:
+[+]    bootrom.elf
+[+] Waiting for Proxmark3 to appear on COM3
+ found
+[+] Entering bootloader...
+[+] (Press and release the button only to abort)
+[+] Waiting for Proxmark3 to appear on COM3
+ found
+[=] Available memory on this board: 512K bytes
+
+[=] Permitted flash range: 0x00100000-0x00180000
+[+] Loading ELF file bootrom.elf
+[+] Loading usable ELF segments:
+[+]    0: V 0x00100000 P 0x00100000 (0x00000200->0x00000200) [R X] @0x94
+[+]    1: V 0x00200000 P 0x00100200 (0x00000d1c->0x00000d1c) [R X] @0x298
+
+[+] Flashing...
+[+] Writing segments for file: bootrom.elf
+[+]  0x00100000..0x001001ff [0x200 / 1 blocks]
+ OK
+[+]  0x00100200..0x00100f1b [0xd1c / 7 blocks]
+ OK
+
+[+] All done
+
+[=] Have a nice day!
+
+[+] About to use the following file:
+[+]    fullimage.elf
+[+] Waiting for Proxmark3 to appear on COM3
+ found
+[+] Entering bootloader...
+[+] (Press and release the button only to abort)
+[+] Waiting for Proxmark3 to appear on COM3
+ found
+[=] Available memory on this board: 512K bytes
+
+[=] Permitted flash range: 0x00102000-0x00180000
+[+] Loading ELF file fullimage.elf
+[+] Loading usable ELF segments:
+[+]    0: V 0x00102000 P 0x00102000 (0x0003ff80->0x0003ff80) [R X] @0x94
+[+]    1: V 0x00200000 P 0x00141f80 (0x00001740->0x00001740) [RW ] @0x40014
+[=] Note: Extending previous segment from 0x3ff80 to 0x416c0 bytes
+
+[+] Flashing...
+[+] Writing segments for file: fullimage.elf
+[+]  0x00102000..0x001436bf [0x416c0 / 524 blocks]
+ OK
+
+[+] All done
+
+[=] Have a nice day!
+
+[+] About to use the following files:
+[+]    bootrom.elf
+[+]    fullimage.elf
+[+] Waiting for Proxmark3 to appear on COM3
+ found
+[+] Entering bootloader...
+[+] (Press and release the button only to abort)
+[+] Waiting for Proxmark3 to appear on COM3
+ found
+[=] Available memory on this board: 512K bytes
+
+[=] Permitted flash range: 0x00100000-0x00180000
+[+] Loading ELF file bootrom.elf
+[+] Loading usable ELF segments:
+[+]    0: V 0x00100000 P 0x00100000 (0x00000200->0x00000200) [R X] @0x94
+[+]    1: V 0x00200000 P 0x00100200 (0x00000d1c->0x00000d1c) [R X] @0x298
+
+[+] Loading ELF file fullimage.elf
+[+] Loading usable ELF segments:
+[+]    0: V 0x00102000 P 0x00102000 (0x0003ff80->0x0003ff80) [R X] @0x94
+[+]    1: V 0x00200000 P 0x00141f80 (0x00001740->0x00001740) [RW ] @0x40014
+[=] Note: Extending previous segment from 0x3ff80 to 0x416c0 bytes
+
+[+] Flashing...
+[+] Writing segments for file: bootrom.elf
+[+]  0x00100000..0x001001ff [0x200 / 1 blocks]
+ OK
+[+]  0x00100200..0x00100f1b [0xd1c / 7 blocks]
+ OK
+
+[+] Writing segments for file: fullimage.elf
+[+]  0x00102000..0x001436bf [0x416c0 / 524 blocks]
+ OK
+
+[+] All done
+
+[=] Have a nice day!
+
+[=] Using UART port COM3
+[=] Communicating with PM3 over USB-CDC
+[=] Creating initial preferences file
+[=] Saving preferences...
+[+] saved to json file C:\Users\Usuario\source\repos\proxmark4\client\/.proxmark3/preferences.json
+
+ [ Proxmark3 RFID instrument ]
+
+ [ CLIENT ]
+  client: RRG/Iceman/master/v4.13441-982-gefbfe4884 2021-09-12 20:53:01
+  compiled with MinGW-w64 10.3.0 OS:Windows (64b) ARCH:x86_64
+
+ [ PROXMARK3 ]
+  firmware.................. PM3 GENERIC
+
+ [ ARM ]
+  bootrom: RRG/Iceman/master/v4.13441-982-gefbfe4884 2021-09-12 20:52:47
+       os: RRG/Iceman/master/v4.13441-982-gefbfe4884 2021-09-12 20:52:56
+  compiled with GCC 10.1.0
+
+ [ FPGA ] 
+  LF image built for 2s30vq100 on 2020-07-08 at 23:08:07
+  HF image built for 2s30vq100 on 2020-07-08 at 23:08:19
+  HF FeliCa image built for 2s30vq100 on 2020-07-08 at 23:08:30
+
+ [ Hardware ]
+  --= uC: AT91SAM7S512 Rev A
+  --= Embedded Processor: ARM7TDMI
+  --= Internal SRAM size: 64K bytes
+  --= Architecture identifier: AT91SAM7Sxx Series
+  --= Embedded flash memory 512K bytes ( 53% used )
+
+
+[!] Communicating with Proxmark3 device failed
+
+[=] Running in OFFLINE mode. Use "hw connect" to reconnect
+
