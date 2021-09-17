@@ -36,9 +36,9 @@
 #include "preferences.h"
 
 #ifndef LIBPM3
-#define BANNERMSG1 "      Iceman :coffee:"
-#define BANNERMSG2 "  :snowflake: bleeding edge"
-#define BANNERMSG3 "  https://github.com/rfidresearchgroup/proxmark3/"
+#define BANNERMSG1 ""
+#define BANNERMSG2 "   [ :snowflake: Iceman :snowflake: ]"
+#define BANNERMSG3 ""
 
 typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
 

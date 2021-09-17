@@ -145,14 +145,7 @@ This repo compiles nicely on
 
 
 ## Precompiled binaries
-We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where package maintainer [@gator96100](https://github.com/gator96100) has set up a AWS bucket with precompiled Proxspace (MinGW) binaries which are recompiled every night and with that also up-to-date. We link to these files here as to make it easier for users. If you are having troubles with these files, we suggest to read the [homepage of his proxmark builds](https://www.proxmarkbuilds.org/) or read the [sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763) 
-
-### Proxmark3 RDV4 devices
-- [Precompiled builds for RDV40 dedicated x64](https://www.proxmarkbuilds.org/#rdv40-64/)
-- [Precompiled builds for RDV40 dedicated with Bluetooth addon x64](https://www.proxmarkbuilds.org/#rdv40_bt-64/)
-
-### Generic Proxmark3 devices
-- [Precompiled builds for RRG / Iceman repository x64](https://www.proxmarkbuilds.org/#rrg_other-64/)
+See [Proxmark3 precompiled builds](https://www.proxmarkbuilds.org/) 
 
 
 ## Official channels
@@ -178,14 +171,6 @@ The official PM3-GUI from Gaucho will not work. Not to mention is quite old and 
 
 - [Proxmark3 GUI cross-compiled](https://github.com/wh201906/Proxmark3GUI/) which is recently updated and claims to support latest source of this repo.
 - [Proxmark3_GUI](https://github.com/Phreak87/Proxmark3_GUI) simple gui in vb.net
-
-# Donations
-
-Nothing says thank you as much as a donation. 
-
-If you feel the love, do feel free to become a [Iceman patron](https://www.patreon.com/iceman1001).
-
-If you are using @gator96100 's Proxspace with pre-compiled binaries do consider buy him a coffee for his efforts.
 
 
 ## Citation
