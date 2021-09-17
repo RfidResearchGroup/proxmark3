@@ -158,7 +158,7 @@ int CalculateMAC(mf4Session_t *mf4session, MACType_t mtype, uint8_t blockNum, ui
     }
 
     if (verbose)
-        PrintAndLogEx(NORMAL, "MAC data[%d]: %s", macdatalen, sprint_hex(macdata, macdatalen));
+        PrintAndLogEx(INFO, "MAC data[%d]: %s", macdatalen, sprint_hex(macdata, macdatalen));
 
     return aes_cmac8(NULL, mf4session->Kmac, macdata, mac, macdatalen);
 }
