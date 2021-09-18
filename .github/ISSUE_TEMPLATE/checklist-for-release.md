@@ -9,7 +9,7 @@ assignees: doegox, iceman1001
 
 # Checklist
 
-- [ ] CHANGELOG.md
+- [ ] CHANGELOG.md: add title: `## [releasename][YYYY-MM-DD]`
 - [ ] `make style`
 - [ ] `make miscchecks`
 - [ ] `make clean; make client CC=clang CXX=clang++ LD=clang++` on recent Debian or Ubuntu
@@ -57,15 +57,22 @@ make hitag2crack/clean && make hitag2crack && tools/pm3_tests.sh hitag2crack || 
 - [ ] Termux
 
 # creating release
-`make release RELEASE_NAME="ice awesome"`
-last line of output,  gives you next command to run
-Sample:  `git push && git push origin v4.15000`
+
+- [ ] `make release RELEASE_NAME="ice awesome"`
+  - last line of output,  gives you next command to run.
+  - Sample:  `git push && git push origin v4.15000`
+- [ ] CHANGELOG.md: edit title to add version info: `## [releasename.4.12345][YYYY-MM-DD]`
 
 ## Step Github releases
-Go to Github releases,  create release based on the new created tag and publish
+
+- [ ] Go to Github releases,  create release based on the new created tag and publish
 
 ## Step Homebrew updates
-update homebrew repo, file `proxmark3.rb` with a SHA256 sum of the file `v4.15000.tar.gz`  
+
+- [ ] update homebrew repo, file `proxmark3.rb`
+  - with a SHA256 sum of the file `v4.15000.tar.gz`
+  - with updated list of standalone modes
 
 ## Step package maintains
-make a list of new standalone modes,  so when we alert package maintainers they have a sporting chance of adding them
+
+- [ ] make a list of new standalone modes, so when we alert package maintainers they have a sporting chance of adding them
