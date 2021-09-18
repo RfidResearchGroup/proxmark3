@@ -1,5 +1,5 @@
 #include "common.h"
-/* This is the default version_pm3.c file that Makefile.common falls back to if neither sh nor perl are available */
+/* Generated file, do not edit */
 #ifndef ON_DEVICE
 #define SECTVERSINFO
 #else
@@ -8,8 +8,9 @@
 
 const struct version_information_t SECTVERSINFO g_version_information = {
     VERSION_INFORMATION_MAGIC,
-    1, /* version 1 */
-    0, /* version information not present */
-    2, /* cleanliness couldn't be determined */
-    /* Remaining fields: zero */
+    1,
+    1,
+    1,
+    "RRG/Iceman/master/v4.14434",
+    "2021-09-18 21:44:55",
 };
