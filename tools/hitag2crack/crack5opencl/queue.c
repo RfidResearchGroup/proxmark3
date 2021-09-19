@@ -371,8 +371,6 @@ int wu_queue_destroy(wu_queue_ctx_t *ctx) {
     if (!ctx) return ERROR_CTX_NULL;
     if (!ctx->init) return ERROR_CTX_IS_NOT_INIT;
 
-    pthread_mutex_lock(&ctx->queue_mutex);
-
     int ret = -1;
 
     // unload the queue
@@ -397,8 +395,6 @@ int wu_queue_destroy(wu_queue_ctx_t *ctx) {
     ctx->queue_head = 0; //NULL;
     ctx->queue_tail = 0; //NULL;
     ctx->init = 0;
-
-    pthread_mutex_unlock(&ctx->queue_mutex);
 
     pthread_mutex_destroy(&ctx->queue_mutex);
     pthread_mutexattr_destroy(&ctx->queue_mutex_attr);

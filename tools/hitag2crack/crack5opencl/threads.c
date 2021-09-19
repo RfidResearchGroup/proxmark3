@@ -504,15 +504,15 @@ void *computing_process(void *arg) {
     off = wu.off;
     a->slice = wu.id + 1;
 
-    float progress = (((wu.id + 1) * 100.0) / wu.max);
     if (ctx->queue_ctx.queue_type == QUEUE_TYPE_RANDOM) {
-
+        float progress = 100.0 - (((wu.rem + 1) * 100.0) / wu.max);
 #if DEBUGME > 0
         printf("[%zu] Slice %zu (off %zu), max %zu, remain %zu slice(s)\n", z, wu.id + 1, wu.off, wu.max, wu.rem);
 #else
         printf("\r[%zu] Slice %zu/%zu (%zu remain) ( %2.1f%% )", z, wu.id + 1, wu.max, wu.rem, progress);
 #endif // DEBUGME
     } else {
+        float progress = (((wu.id + 1) * 100.0) / wu.max);
 #if DEBUGME > 0
         printf("[%zu] Slice %zu/%zu, off %zu\n", z, wu.id + 1, wu.max, wu.off);
 #else
@@ -659,14 +659,15 @@ void *computing_process_async(void *arg) {
             uint32_t off = wu.off;
             a->slice = wu.id + 1;
 
-            float progress = (((wu.id + 1) * 100.0) / wu.max);
             if (ctx->queue_ctx.queue_type == QUEUE_TYPE_RANDOM) {
+                float progress = 100.0 - (((wu.rem + 1) * 100.0) / wu.max);
 #if DEBUGME > 0
                 printf("[%zu] Slice %zu (off %zu), max %zu, remain %zu slice(s)\n", z, wu.id + 1, wu.off, wu.max, wu.rem);
 #else
-                printf("[%zu] Slice %zu/%zu (%zu remain) ( %2.1f%% )", z, wu.id + 1, wu.max, wu.rem, progress);
+                printf("\r[%zu] Slice %zu/%zu (%zu remain) ( %2.1f%% )", z, wu.id + 1, wu.max, wu.rem, progress);
 #endif // DEBUGME
             } else {
+                float progress = (((wu.id + 1) * 100.0) / wu.max);
 #if DEBUGME > 0
                 printf("[%zu] Slice %zu/%zu, off %zu\n", z, wu.id + 1, wu.max, wu.off);
 #else
