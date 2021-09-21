@@ -159,7 +159,7 @@ FPGA_COMPRESSOR = ../tools/fpga_compress/fpga_compress
 all: showinfo $(OBJS)
 
 showinfo:
-	$(info compiler version:  $(shell $(CC) --version|head -n 1))
+	$(info compiler version:  $(shell $(CROSS_CC) --version|head -n 1))
 
 .DELETE_ON_ERROR:
 
@@ -174,7 +174,7 @@ fpga_version_info.c: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
 
 $(OBJDIR)/fpga_all.o: $(OBJDIR)/fpga_all.bit.z
 	$(info [-] GEN $@)
-	$(Q)$(OBJCOPY) -O elf32-littlearm -I binary -B arm --prefix-sections=fpga_all_bit $^ $@
+	$(Q)$(CROSS_OBJCOPY) -O elf32-littlearm -I binary -B arm --prefix-sections=fpga_all_bit $^ $@
 
 $(OBJDIR)/fpga_all.bit.z: $(FPGA_BITSTREAMS) | $(FPGA_COMPRESSOR)
 	$(info [-] GEN $@)
@@ -190,19 +190,19 @@ $(FPGA_COMPRESSOR):
 
 $(OBJDIR)/fullimage.stage1.elf: $(VERSIONOBJ) $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
 	$(info [=] LD $@)
-	$(Q)$(CC) $(CROSS_LDFLAGS) -Wl,-T,ldscript,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
+	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -Wl,-T,ldscript,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 $(OBJDIR)/fullimage.nodata.bin: $(OBJDIR)/fullimage.stage1.elf
 	$(info [-] GEN $@)
-	$(Q)$(OBJCOPY) -O binary -I elf32-littlearm --remove-section .data $^ $@
+	$(Q)$(CROSS_OBJCOPY) -O binary -I elf32-littlearm --remove-section .data $^ $@
 
 $(OBJDIR)/fullimage.nodata.o: $(OBJDIR)/fullimage.nodata.bin
 	$(info [-] GEN $@)
-	$(Q)$(OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=stage1_image $^ $@
+	$(Q)$(CROSS_OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=stage1_image $^ $@
 
 $(OBJDIR)/fullimage.data.bin: $(OBJDIR)/fullimage.stage1.elf
 	$(info [-] GEN $@)
-	$(Q)$(OBJCOPY) -O binary -I elf32-littlearm --only-section .data $^ $@
+	$(Q)$(CROSS_OBJCOPY) -O binary -I elf32-littlearm --only-section .data $^ $@
 
 $(OBJDIR)/fullimage.data.bin.z: $(OBJDIR)/fullimage.data.bin | $(FPGA_COMPRESSOR)
 	$(info [-] GEN $@)
@@ -214,12 +214,12 @@ endif
 
 $(OBJDIR)/fullimage.data.o: $(OBJDIR)/fullimage.data.bin.z
 	$(info [-] GEN $@)
-	$(Q)$(OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=compressed_data $^ $@
+	$(Q)$(CROSS_OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=compressed_data $^ $@
 
 $(OBJDIR)/fullimage.elf: $(OBJDIR)/fullimage.nodata.o $(OBJDIR)/fullimage.data.o
 ifeq (,$(findstring WITH_NO_COMPRESSION,$(APP_CFLAGS)))
 	$(info [=] LD $@)
-	$(Q)$(CC) $(CROSS_LDFLAGS) -Wl,-T,ldscript,-e,_osimage_entry,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^
+	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -Wl,-T,ldscript,-e,_osimage_entry,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^
 else
 	$(Q)$(CP) $(OBJDIR)/fullimage.stage1.elf $@
 endif

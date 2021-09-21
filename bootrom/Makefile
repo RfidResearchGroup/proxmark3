@@ -44,7 +44,7 @@ version_pm3.c: default_version_pm3.c
 all: showinfo $(OBJS)
 
 showinfo:
-	$(info compiler version:  $(shell $(CC) --version|head -n 1))
+	$(info compiler version:  $(shell $(CROSS_CC) --version|head -n 1))
 
 tarbin: $(OBJS)
 	$(info [=] GEN $@)
@@ -52,7 +52,7 @@ tarbin: $(OBJS)
 
 $(OBJDIR)/bootrom.elf: $(VERSIONOBJ) $(ASMOBJ) $(ARMOBJ) $(THUMBOBJ)
 	$(info [=] LD $@)
-	$(Q)$(CC) $(CROSS_LDFLAGS) -Wl,-T,ldscript-flash,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
+	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -Wl,-T,ldscript-flash,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 clean:
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o

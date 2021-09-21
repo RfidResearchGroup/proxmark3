@@ -51,9 +51,9 @@ For verbose usage and see the actual commands being executed, add `V=1`.
 
 `CFLAGS` and `LDFLAGS` can be overriden by environment variables for client-side components.
 
-`CROSS_CFLAGS` and `CROSS_LDFLAGS` can be overriden by environment variables for ARM-side components.
+Default compiler is gcc but you can use clang for the non-ARM parts with e.g. `make client CC=clang CXX=clang++ LD=clang++`. Note that `CC`, `CXX` and `LD` must be provided as explicit arguments, they won't be overriden by environment variables.
 
-Default compiler is gcc but you can use clang for the non-ARM parts with e.g. `make client CC=clang CXX=clang++ LD=clang++`.
+Similarly, for ARM-side components, `CROSS_CFLAGS` and `CROSS_LDFLAGS` can be overriden by environment variables and `CROSS_CC`, `CROSS_LD` and `CROSS_OBJCOPY` can be provided as explicit arguments.
 
 If your platform needs specific lib/include paths for the client, you can use `LDLIBS` and `INCLUDES_CLIENT` *as envvars*, e.g. `LDLIBS="-L/some/more/lib" INCLUDES_CLIENT="-I/some/more/include" make client ...`
 

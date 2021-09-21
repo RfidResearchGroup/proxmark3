@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `CROSS_CC` and similar args for maintainers, see Maintainers.md (@doegox)
  - crack5opencl: fix deadlock in wu_queue_destroy() + minor changes on threads.c (@matrix)
 
 ## [crimson.4.14434][2021-09-18]
