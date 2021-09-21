@@ -135,7 +135,23 @@ function get_pm3_list_macOS {
 function get_pm3_list_Windows {
     N=$1
     PM3LIST=()
-    # Need to look for this first,  the call to Win32_serialport "crashes" then native bt serial port.  Don't ask why.
+	
+	# Normal SERIAL PORTS (COM)
+    for DEV in $(wmic /locale:ms_409 path Win32_SerialPort Where "PNPDeviceID LIKE '%VID_9AC4&PID_4B8F%' Or PNPDeviceID LIKE '%VID_2D2D&PID_504D%'" Get DeviceID 2>/dev/null | awk -b '/^COM/{print $1}'); do
+        DEV=${DEV/ */}
+        #prevent soft bricking when using pm3-flash-all on an outdated bootloader
+        if [ $(basename -- "$0") = "pm3-flash-all" ]; then
+            if [ ! $(wmic /locale:ms_409 path Win32_SerialPort Where "DeviceID='$DEV'" Get PNPDeviceID 2>/dev/null | awk -b '/^USB/{print $1}') = "USB\VID_9AC4&PID_4B8F\ICEMAN" ]; then
+                echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
+                exit 1
+            fi
+        fi
+        PM3LIST+=("$DEV")
+        if [ ${#PM3LIST[*]} -ge "$N" ]; then
+            return
+        fi
+    done
+	
     #BT direct SERIAL PORTS (COM)
     if $FINDBTRFCOMM; then
         for DEV in $(wmic /locale:ms_409 path Win32_PnPEntity Where "Caption LIKE '%Bluetooth%(COM%'" Get Name 2> /dev/null | awk -b 'match($0,/(COM[0-9]+)/,m){print m[1]}'); do
@@ -146,23 +162,6 @@ function get_pm3_list_Windows {
             fi
         done
     fi
-
-    # Normal SERIAL PORTS (COM)
-    for DEV in $(wmic /locale:ms_409 path Win32_SerialPort Where "PNPDeviceID LIKE '%VID_9AC4&PID_4B8F%' Or PNPDeviceID LIKE '%VID_2D2D&PID_504D%'" Get DeviceID 2>/dev/null | awk -b '/^COM/{print $1}'); do
-        DEV=${DEV/ */}
-        #prevent soft bricking when using pm3-flash-all on an outdated bootloader
-        if [ $(basename -- "$0") = "pm3-flash-all" ]; then
-            if [ ! $(wmic /locale:ms_409 path Win32_SerialPort Where "DeviceID='$DEV'" Get PNPDeviceID 2>/dev/null | awk -b '/^USB/{print $1}') = "USB\VID_9AC4&PID_4B8F\ICEMAN" ]; then
-                echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
-                exit 1
-            fi
-        fi
-        #Prioritise USB connections
-        PM3LIST=("$DEV" "${PM3LIST[@]}")
-        if [ ${#PM3LIST[*]} -ge "$N" ]; then
-            return
-        fi
-    done
 
     #white BT dongle SERIAL PORTS (COM)
     if $FINDBTDONGLE; then
@@ -179,8 +178,31 @@ function get_pm3_list_Windows {
 function get_pm3_list_WSL {
     N=$1
     PM3LIST=()
+	
+	# Normal SERIAL PORTS (COM)
+    for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.PNPDeviceID -like '*VID_9AC4&PID_4B8F*' -or \$_.PNPDeviceID -like '*VID_2D2D&PID_504D*'} | Select -expandproperty DeviceID" 2>/dev/null | tr -dc '[:print:]'); do
+        _comport=$DEV
+        DEV=$(echo $DEV | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p')
+        # ttyS counterpart takes some more time to appear
+        if [ -e "$DEV" ]; then
+            #prevent soft bricking when using pm3-flash-all on an outdated bootloader
+            if [ $(basename -- "$0") = "pm3-flash-all" ]; then
+                if [ ! $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.DeviceID -eq '$_comport'} | Select -expandproperty PNPDeviceID" 2>/dev/null | tr -dc '[:print:]') = "USB\VID_9AC4&PID_4B8F\ICEMAN" ]; then
+                    echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
+                    exit 1
+                fi
+            fi
+            PM3LIST+=("$DEV")
+            if [ ! -w "$DEV" ]; then
+                echo "[!] Let's give users read/write access to $DEV"
+                sudo chmod 666 "$DEV"
+            fi
+            if [ ${#PM3LIST[*]} -ge "$N" ]; then
+                return
+            fi
+        fi
+    done
 
-    # Need to look for this first,  the call to Win32_serialport "crashes" then native bt serial port.  Don't ask why.
     #BT direct SERIAL PORTS (COM)
     if $FINDBTRFCOMM; then
         for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_PnPEntity | Where-Object Caption -like 'Standard Serial over Bluetooth link (COM*' | Select Name" 2> /dev/null | sed -nr 's#.*\bCOM([0-9]+)\b.*#/dev/ttyS\1#p'); do
@@ -198,31 +220,6 @@ function get_pm3_list_WSL {
 
         done
     fi
-
-    # Normal SERIAL PORTS (COM)
-    for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.PNPDeviceID -like '*VID_9AC4&PID_4B8F*' -or \$_.PNPDeviceID -like '*VID_2D2D&PID_504D*'} | Select -expandproperty DeviceID" 2>/dev/null | tr -dc '[:print:]'); do
-        _comport=$DEV
-        DEV=$(echo $DEV | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p')
-        # ttyS counterpart takes some more time to appear
-        if [ -e "$DEV" ]; then
-            #prevent soft bricking when using pm3-flash-all on an outdated bootloader
-            if [ $(basename -- "$0") = "pm3-flash-all" ]; then
-                if [ ! $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.DeviceID -eq '$_comport'} | Select -expandproperty PNPDeviceID" 2>/dev/null | tr -dc '[:print:]') = "USB\VID_9AC4&PID_4B8F\ICEMAN" ]; then
-                    echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
-                    exit 1
-                fi
-            fi
-            #Prioritise USB connections
-            PM3LIST=("$DEV" "${PM3LIST[@]}")
-            if [ ! -w "$DEV" ]; then
-                echo "[!] Let's give users read/write access to $DEV"
-                sudo chmod 666 "$DEV"
-            fi
-            if [ ${#PM3LIST[*]} -ge "$N" ]; then
-                return
-            fi
-        fi
-    done
 
     #white BT dongle SERIAL PORTS (COM)
     if $FINDBTDONGLE; then
