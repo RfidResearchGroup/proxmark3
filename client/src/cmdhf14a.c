@@ -1746,7 +1746,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         break;
                     }
                     case 0x0A: {
-                        printTag("FM11RF005SH (Shanghai Metro)");
+                        if (card.atqa[0] == 0x03)
+                            // Uses MIFARE Crypto-1 algo
+                            printTag("FM11RF005M (FUDAN MIFARE Classic clone)");
+                        else if (card.atqa[0] == 0x05)
+                            // Uses Shanghai algo
+                            printTag("FM11RF005SH (FUDAN Shanghai Metro)");
                         break;
                     }
                     case 0x20: {
