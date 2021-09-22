@@ -19,6 +19,7 @@
 #include "cmdhfthinfilm.h"
 #include "cmdhftopaz.h"
 #include "cmdnfc.h"
+#include "fileutils.h"
 
 void print_type4_cc_info(uint8_t *d, uint8_t n) {
     if (n < 0x0F) {
@@ -60,14 +61,17 @@ static int CmdNfcDecode(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "nfc decode",
-                  "Decode and print NFC Data Exchange Format (NDEF)",
+                  "Decode and print NFC Data Exchange Format (NDEF)\n"
+                  "You must provide either data in hex or a filename, but not both",
                   "nfc decode -d 9101085402656e48656c6c6f5101085402656e576f726c64\n"
                   "nfc decode -d 0103d020240203e02c040300fe\n"
+                  "nfc decode -f myfilename"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_strx0("d",  "data", "<hex>", "NDEF data to decode"),
+        arg_str0("f", "file", "<fn>", "file to load"),
         arg_lit0("v",  "verbose", "verbose mode"),
         arg_param_end
     };
@@ -76,16 +80,38 @@ static int CmdNfcDecode(const char *Cmd) {
     int datalen = 0;
     uint8_t data[MAX_NDEF_LEN] = {0};
     CLIGetHexWithReturn(ctx, 1, data, &datalen);
-    bool verbose = arg_get_lit(ctx, 2);
 
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool verbose = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
-    if (datalen == 0)
+    if (((datalen != 0) && (fnlen != 0)) || ((datalen == 0) && (fnlen == 0))){
+        PrintAndLogEx(ERR, "You must provide either data in hex or a filename");
         return PM3_EINVARG;
-
-    int res = NDEFDecodeAndPrint(data, datalen, verbose);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
-        res = NDEFRecordsDecodeAndPrint(data, datalen);
+    }
+    int res = PM3_SUCCESS;
+    if (fnlen != 0) {
+        size_t dumplen = 0;
+        uint8_t *dump = NULL;
+        if (loadFile_safe(filename, ".bin", (void **)&dump, &dumplen) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "error, something went wrong when loading file");
+            free(dump);
+            return PM3_EFILE;
+        }
+        res = NDEFDecodeAndPrint(dump, dumplen, verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
+            res = NDEFRecordsDecodeAndPrint(dump, dumplen);
+        }
+        free(dump);
+    } else {
+        res = NDEFDecodeAndPrint(data, datalen, verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
+            res = NDEFRecordsDecodeAndPrint(data, datalen);
+        }
     }
     return res;
 }

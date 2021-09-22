@@ -23,6 +23,7 @@
 #include "crc16.h"
 #include "protocols.h"
 #include "nfc/ndef.h"
+#include "fileutils.h"     // saveFile
 
 #define TOPAZ_STATIC_MEMORY (0x0f * 8)  // 15 blocks with 8 Bytes each
 
@@ -388,10 +389,6 @@ static void topaz_print_lifecycle_state(uint8_t *data) {
     // to be done
 }
 
-static int topaz_print_NDEF(uint8_t *data, size_t maxsize) {
-    return NDEFDecodeAndPrint(data, maxsize, true);
-}
-
 static int CmdHFTopazReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf topaz reader",
@@ -417,16 +414,22 @@ int CmdHFTopazInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf topaz info",
                   "Get info from Topaz tags",
-                  "hf topaz info");
+                  "hf topaz info\n"
+                  "hf topaz info -f myfilename -> save raw NDEF to file\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = arg_get_lit(ctx, 1);
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool verbose = arg_get_lit(ctx, 2);
 
     CLIParserFree(ctx);
 
@@ -482,7 +485,10 @@ int CmdHFTopazInfo(const char *Cmd) {
 
     topaz_print_lifecycle_state(&topaz_tag.data_blocks[1][0]);
 
-    topaz_print_NDEF(&topaz_tag.data_blocks[1][0], TOPAZ_STATIC_MEMORY);
+    if (fnlen != 0) {
+        saveFile(filename, ".bin", &topaz_tag.data_blocks[1][0], TOPAZ_STATIC_MEMORY);
+    }
+    NDEFDecodeAndPrint(&topaz_tag.data_blocks[1][0], TOPAZ_STATIC_MEMORY, true);
 
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     topaz_switch_off_field();

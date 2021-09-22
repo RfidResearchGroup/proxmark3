@@ -278,15 +278,21 @@ int CmdHFST25TANdefRead(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf st25ta ndefread",
                   "Read NFC Data Exchange Format (NDEF) file on ST25TA",
-                  "hf st25ta ndefread -p 82E80053D4CA5C0B656D852CC696C8A1\n");
+                  "hf st25ta ndefread -p 82E80053D4CA5C0B656D852CC696C8A1\n"
+                  "hf st25ta ndefread -f myfilename -> save raw NDEF to file"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("p", "pwd", "<hex>", "16 byte read password"),
+        arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIGetHexWithReturn(ctx, 1, pwd, &pwdlen);
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
     if (pwdlen == 0) {
@@ -394,6 +400,9 @@ int CmdHFST25TANdefRead(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    if (fnlen != 0) {
+        saveFile(filename, ".bin", response + 2, resplen - 4);
+    }
     NDEFRecordsDecodeAndPrint(response + 2, resplen - 4);
     return PM3_SUCCESS;
 }

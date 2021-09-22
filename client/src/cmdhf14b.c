@@ -25,6 +25,7 @@
 #include "iso7816/apduinfo.h"  // GetAPDUCodeDescription
 #include "nfc/ndef.h"   // NDEFRecordsDecodeAndPrint
 #include "aidsearch.h"
+#include "fileutils.h"     // saveFile
 
 #define MAX_14B_TIMEOUT_MS (4949U)
 
@@ -1921,13 +1922,18 @@ int CmdHF14BNdefRead(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b ndefread",
                   "Print NFC Data Exchange Format (NDEF)",
-                  "hf 14b ndefread"
+                  "hf 14b ndefread\n"
+                  "hf 14b ndefread -f myfilename   -> save raw NDEF to file"
                  );
     void *argtable[] = {
         arg_param_begin,
+        arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
     bool activate_field = true;
@@ -2011,6 +2017,9 @@ int CmdHF14BNdefRead(const char *Cmd) {
         goto out;
     }
 
+    if (fnlen != 0) {
+        saveFile(filename, ".bin", response + 2, resplen - 4);
+    }
     res = NDEFRecordsDecodeAndPrint(response + 2, resplen - 4);
 
 out:

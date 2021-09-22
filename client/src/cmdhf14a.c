@@ -32,6 +32,7 @@
 #include "iso7816/apduinfo.h"  // GetAPDUCodeDescription
 #include "nfc/ndef.h"      // NDEFRecordsDecodeAndPrint
 #include "cmdnfc.h"        // print_type4_cc_info
+#include "fileutils.h"     // saveFile
 
 static bool APDUInFramingEnable = true;
 
@@ -2382,13 +2383,19 @@ int CmdHF14ANdefRead(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a ndefread",
                   "Read NFC Data Exchange Format (NDEF) file on Type 4 NDEF tag",
-                  "hf 14a ndefread\n");
+                  "hf 14a ndefread\n"
+                  "hf 14a ndefread -f myfilename -> save raw NDEF to file"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
     bool activate_field = true;
@@ -2468,7 +2475,6 @@ int CmdHF14ANdefRead(const char *Cmd) {
         DropField();
         return res;
     }
-
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "reading CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
@@ -2560,6 +2566,9 @@ int CmdHF14ANdefRead(const char *Cmd) {
             return PM3_ESOFT;
         }
         memcpy(ndef_file + (i - offset), response, segment_size);
+    }
+    if (fnlen != 0) {
+        saveFile(filename, ".bin", ndef_file, ndef_size);
     }
     NDEFRecordsDecodeAndPrint(ndef_file, ndef_size);
     free(ndef_file);

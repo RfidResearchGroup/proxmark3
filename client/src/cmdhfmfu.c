@@ -25,6 +25,7 @@
 #include "cmdmain.h"
 #include "amiibo.h"     // amiiboo fcts
 #include "base64.h"
+#include "fileutils.h"     // saveFile
 
 #define MAX_UL_BLOCKS       0x0F
 #define MAX_ULC_BLOCKS      0x2F
@@ -3810,17 +3811,23 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfu ndefread",
                   "Prints NFC Data Exchange Format (NDEF)",
                   "hf mfu ndefread -> shows NDEF data\n"
-                  "hf mfu ndefread -k ffffffff -> shows NDEF data with key");
+                  "hf mfu ndefread -k ffffffff -> shows NDEF data with key\n"
+                  "hf mfu ndefread -f myfilename -> save raw NDEF to file"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("k", "key", "replace default key for NDEF", NULL),
         arg_lit0("l", NULL, "swap entered key's endianness"),
+        arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIGetHexWithReturn(ctx, 1, key, &keylen);
     swapEndian = arg_get_lit(ctx, 2);
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
     switch (keylen) {
@@ -3901,6 +3908,9 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     }
 
     DropField();
+    if (fnlen != 0) {
+        saveFile(filename, ".bin", records, (size_t)maxsize);
+    }
     status = NDEFRecordsDecodeAndPrint(records, (size_t)maxsize);
     if (status != PM3_SUCCESS) {
         status = NDEFDecodeAndPrint(records, (size_t)maxsize, true);

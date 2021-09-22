@@ -1465,7 +1465,9 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
                   "Prints NFC Data Exchange Format (NDEF)",
                   "hf mfp ndefread \n"
                   "hf mfp ndefread -vv                                            -> shows NDEF parsed and raw data\n"
-                  "hf mfp ndefread --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key");
+                  "hf mfp ndefread --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key\n"
+                  "hf mfp ndefread -f myfilename -> save raw NDEF to file"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1473,6 +1475,7 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
         arg_str0(NULL, "aid",      "<aid>", "replace default aid for NDEF"),
         arg_str0("k",  "key",      "<key>", "replace default key for NDEF"),
         arg_lit0("b",  "keyb",     "use key B for access sectors (by default: key A)"),
+        arg_str0("f",  "file", "<fn>", "save raw NDEF to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1487,6 +1490,9 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
     bool keyB = arg_get_lit(ctx, 4);
 
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
     uint16_t ndefAID = 0xe103;
@@ -1568,6 +1574,9 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
         print_buffer(data, datalen, 1);
     }
 
+    if (fnlen != 0) {
+        saveFile(filename, ".bin", data, datalen);
+    }
     NDEFDecodeAndPrint(data, datalen, verbose);
     PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndefread -vv`") " for more details");
     return PM3_SUCCESS;
