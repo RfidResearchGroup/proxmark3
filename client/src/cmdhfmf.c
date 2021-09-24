@@ -623,6 +623,24 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
     char *fptr;
 
+    // Select card to get UID/UIDLEN/ATQA/SAK information
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "iso14443a card select timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    uint64_t select_status = resp.oldarg[0];
+    if (select_status == 0) {
+        PrintAndLogEx(WARNING, "iso14443a card select failed");
+        return select_status;
+    }
+
+    // store card info
+    iso14a_card_select_t card;
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
     if (keyFilename[0] == 0x00) {
         fptr = GenerateFilename("hf-mf-", "-key.bin");
         if (fptr == NULL)
@@ -799,7 +817,12 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
     saveFile(dataFilename, ".bin", (uint8_t *)carddata, bytes);
     saveFileEML(dataFilename, (uint8_t *)carddata, bytes, MFBLOCK_SIZE);
-    saveFileJSON(dataFilename, jsfCardMemory, (uint8_t *)carddata, bytes, NULL);
+
+    iso14a_mf_extdump_t xdump;
+    xdump.card_info = card;
+    xdump.dump = (uint8_t *)carddata;
+    xdump.dumplen = bytes;
+    saveFileJSON(dataFilename, jsfCardMemory, (uint8_t*)&xdump, sizeof(xdump), NULL);
     return PM3_SUCCESS;
 }
 
@@ -1972,6 +1995,25 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
 // ------------------------------
 
+    // Select card to get UID/UIDLEN/ATQA/SAK information
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "iso14443a card select timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    uint64_t select_status = resp.oldarg[0];
+    if (select_status == 0) {
+        PrintAndLogEx(WARNING, "iso14443a card select failed");
+        return select_status;
+    }
+
+    // store card info
+    iso14a_card_select_t card;
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
     // create/initialize key storage structure
     uint32_t e_sector_size = sector_cnt > sectorno ? sector_cnt : sectorno + 1;
     res = initSectorTable(&e_sector, e_sector_size);
@@ -2314,7 +2356,6 @@ noValidKeyFound:
                         clearCommandBuffer();
                         SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
 
-                        PacketResponseNG resp;
                         if (!WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500)) goto skipReadBKey;
 
                         if (resp.status != PM3_SUCCESS) goto skipReadBKey;
@@ -2558,7 +2599,11 @@ all_found:
 
     saveFile(filename, ".bin", dump, bytes);
     saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
-    saveFileJSON(filename, jsfCardMemory, dump, bytes, NULL);
+    iso14a_mf_extdump_t xdump;
+    xdump.card_info = card;
+    xdump.dump = dump;
+    xdump.dumplen = bytes;
+    saveFileJSON(filename, jsfCardMemory, (uint8_t*)&xdump, sizeof(xdump), NULL);
 
     // Generate and show statistics
     t1 = msclock() - t1;
@@ -3942,7 +3987,28 @@ static int CmdHF14AMfESave(const char *Cmd) {
 
     saveFile(filename, ".bin", dump, bytes);
     saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
-    saveFileJSON(filename, jsfCardMemory, dump, bytes, NULL);
+
+    iso14a_mf_extdump_t xdump = {0};
+    xdump.card_info.ats_len = 0;
+    // Check for 4 bytes uid: bcc corrected and single size uid bits in ATQA
+    if ((dump[0] ^ dump[1] ^ dump[2] ^ dump[3]) == dump[4] && (dump[6] & 0xc0) == 0) {
+        xdump.card_info.uidlen = 4;
+        memcpy(xdump.card_info.uid, dump, xdump.card_info.uidlen);
+        xdump.card_info.sak = dump[5];
+        memcpy(xdump.card_info.atqa, &dump[6], sizeof(xdump.card_info.atqa));
+    }
+    // Check for 7 bytes UID: double size uid bits in ATQA
+    else if ((dump[8] & 0xc0) == 0x40) {
+        xdump.card_info.uidlen = 7;
+        memcpy(xdump.card_info.uid, dump, xdump.card_info.uidlen);
+        xdump.card_info.sak = dump[7];
+        memcpy(xdump.card_info.atqa, &dump[8], sizeof(xdump.card_info.atqa));
+    } else {
+        PrintAndLogEx(WARNING, "Invalid dump. UID/SAK/ATQA not found");
+    }
+    xdump.dump = dump;
+    xdump.dumplen = bytes;
+    saveFileJSON(filename, jsfCardMemory, (uint8_t*)&xdump, sizeof(xdump), NULL);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -4775,7 +4841,11 @@ static int CmdHF14AMfCSave(const char *Cmd) {
 
     saveFile(filename, ".bin", dump, bytes);
     saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
-    saveFileJSON(filename, jsfCardMemory, dump, bytes, NULL);
+    iso14a_mf_extdump_t xdump;
+    xdump.card_info = card;
+    xdump.dump = dump;
+    xdump.dumplen = bytes;
+    saveFileJSON(filename, jsfCardMemory, (uint8_t*)&xdump, sizeof(xdump), NULL);
     free(dump);
     return PM3_SUCCESS;
 }

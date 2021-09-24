@@ -375,29 +375,25 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             break;
         }
         case jsfCardMemory: {
+            iso14a_mf_extdump_t* xdump = (iso14a_mf_extdump_t*) data;
             JsonSaveStr(root, "FileType", "mfcard");
-            for (size_t i = 0; i < (datalen / 16); i++) {
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", xdump->card_info.uid, xdump->card_info.uidlen);
+            JsonSaveBufAsHexCompact(root, "$.Card.ATQA", xdump->card_info.atqa, 2);
+            JsonSaveBufAsHexCompact(root, "$.Card.SAK", &(xdump->card_info.sak), 1);
+            for (size_t i = 0; i < (xdump->dumplen / 16); i++) {
                 char path[PATH_MAX_LENGTH] = {0};
                 sprintf(path, "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, &data[i * 16], 16);
-
-                if (i == 0) {
-                    JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 4);
-                    JsonSaveBufAsHexCompact(root, "$.Card.SAK", &data[5], 1);
-                    JsonSaveBufAsHexCompact(root, "$.Card.ATQA", &data[6], 2);
-                }
-
+                JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * 16], 16);
                 if (mfIsSectorTrailer(i)) {
-
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.KeyA", mfSectorNum(i));
-                    JsonSaveBufAsHexCompact(root, path, &data[i * 16], 6);
+                    JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * 16], 6);
 
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.KeyB", mfSectorNum(i));
-                    JsonSaveBufAsHexCompact(root, path, &data[i * 16 + 10], 6);
+                    JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * 16 + 10], 6);
 
-                    uint8_t *adata = &data[i * 16 + 6];
+                    uint8_t *adata = &xdump->dump[i * 16 + 6];
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.AccessConditions", mfSectorNum(i));
-                    JsonSaveBufAsHexCompact(root, path, &data[i * 16 + 6], 4);
+                    JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * 16 + 6], 4);
 
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i - 3);
                     JsonSaveStr(root, path, mfGetAccessConditionsDesc(0, adata));

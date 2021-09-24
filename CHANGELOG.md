@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix `hf mf dump/auto/csave` MFC JSON dumps - save real ATQA/SAK (@doegox)
  - Added option to load raw NDEF to `nfc decode` command (@doegox)
  - Added option to save raw NDEF to all `hf * ndefread` commands (@doegox)
  - Changed `hf 14a info` - different FUDAN clone detection (@iceman1001)

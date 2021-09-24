@@ -48,6 +48,12 @@ typedef struct {
     uint8_t ats[256];
 } PACKED iso14a_card_select_t;
 
+typedef struct {
+    iso14a_card_select_t card_info;
+    uint8_t *dump;
+    uint16_t dumplen;
+} iso14a_mf_extdump_t;
+
 typedef enum ISO14A_COMMAND {
     ISO14A_CONNECT = (1 << 0),
     ISO14A_NO_DISCONNECT = (1 << 1),
