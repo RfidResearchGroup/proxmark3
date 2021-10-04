@@ -711,7 +711,7 @@
             "description": "executes generate challenge command. it returns 4 or 8-byte random number from card. needs a emv applet to be selected and gpo to be executed.",
             "notes": [
                 "emv challenge -> get challenge",
-                "emv challenge -k -> get challenge, keep fileld on"
+                "emv challenge -k -> get challenge, keep filled on"
             ],
             "offline": false,
             "options": [
@@ -1052,7 +1052,7 @@
                 "--p2 <hex> start value of p2 (1 hex byte)",
                 "-r, --reset <number> minimum secondes before resetting the tag (to prevent timeout issues). default is 5 minutes",
                 "-e, --error-limit <number> maximum times an status word other than 0x9000 or 0x6d00 is shown. default is 512.",
-                "-s, --skip-ins <hex> do not test an instructions (can be specifed multiple times)",
+                "-s, --skip-ins <hex> do not test an instructions (can be specified multiple times)",
                 "-l, --with-le serach for apdus with le=0 (case 2s) as well",
                 "-v, --verbose verbose output"
             ],
@@ -4153,9 +4153,9 @@
                 "2: free create/delete without master key",
                 "0: createfile/deletefile only with amk auth",
                 "1: createfile/deletefile always",
-                "3: configuration changable",
+                "3: configuration changeable",
                 "0: configuration frozen",
-                "1: configuration changable if authenticated with amk (default)",
+                "1: configuration changeable if authenticated with amk (default)",
                 "4-7: changekey access rights",
                 "0: application master key needed (default)",
                 "0x1..0xd: auth with specific key needed to change any key",

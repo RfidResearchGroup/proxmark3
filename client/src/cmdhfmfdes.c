@@ -2305,9 +2305,9 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
                   "  2:   Free create/delete without master key\n"\
                   "       0:  CreateFile/DeleteFile only with AMK auth\n"\
                   "       1:  CreateFile/DeleteFile always\n"\
-                  "  3:   Configuration changable\n"\
+                  "  3:   Configuration changeable\n"\
                   "       0: Configuration frozen\n"\
-                  "       1: Configuration changable if authenticated with AMK (default)\n"\
+                  "       1: Configuration changeable if authenticated with AMK (default)\n"\
                   "  4-7: ChangeKey Access Rights\n"\
                   "       0: Application master key needed (default)\n"\
                   "       0x1..0xD: Auth with specific key needed to change any key\n"\
@@ -4337,10 +4337,10 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
             }
 
             if (verbose)
-                PrintAndLogEx(INFO, "Transaction commited");
+                PrintAndLogEx(INFO, "Transaction committed");
         } else {
             if (verbose)
-                PrintAndLogEx(INFO, "Nothing to clear. Vallue allready in the minimum level.");
+                PrintAndLogEx(INFO, "Nothing to clear. Value already in the minimum level.");
         }
 
         PrintAndLogEx(SUCCESS, "Value cleared " _GREEN_("successfully"));
@@ -4431,7 +4431,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     }
 
     if (verbose)
-        PrintAndLogEx(INFO, "Transaction commited");
+        PrintAndLogEx(INFO, "Transaction committed");
 
     PrintAndLogEx(SUCCESS, "File %02x in the %s cleared " _GREEN_("successfully"), fnum, DesfireWayIDStr(selectway, id));
 

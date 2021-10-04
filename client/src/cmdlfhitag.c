@@ -861,7 +861,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(WARNING, "to be implememted...");
+    PrintAndLogEx(WARNING, "to be implemented...");
 
     /*
         PrintAndLogEx(SUCCESS, "Dumping tag memory...");

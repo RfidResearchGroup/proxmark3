@@ -303,7 +303,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
     if (strstr(o->desc, "Keyroll") != NULL) {
 
         if (got_kr == false) {
-            PrintAndLogEx(ERR, "please specifiy KEYROLL key!");
+            PrintAndLogEx(ERR, "please specify KEYROLL key!");
             free(data);
             return PM3_EINVARG;
         }
@@ -3882,7 +3882,7 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
         const iclass_config_card_item_t *item = get_config_card_item(ccidx);
         if (strstr(item->desc, "Keyroll") != NULL) {
             if (got_kr == false) {
-                PrintAndLogEx(ERR, "please specifiy KEYROLL key!");
+                PrintAndLogEx(ERR, "please specify KEYROLL key!");
                 return PM3_EINVARG;
             }
         }

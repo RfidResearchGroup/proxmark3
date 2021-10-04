@@ -2237,8 +2237,8 @@ static int CmdHf14AFindapdu(const char *Cmd) {
         arg_str0(NULL, "p2",            "<hex>",    "Start value of P2 (1 hex byte)"),
         arg_u64_0("r", "reset",         "<number>", "Minimum secondes before resetting the tag (to prevent timeout issues). Default is 5 minutes"),
         arg_u64_0("e", "error-limit",   "<number>", "Maximum times an status word other than 0x9000 or 0x6D00 is shown. Default is 512."),
-        arg_strx0("s", "skip-ins",      "<hex>",    "Do not test an instructions (can be specifed multiple times)"),
-        arg_lit0("l",  "with-le",                   "Serach  for APDUs with Le=0 (case 2S) as well"),
+        arg_strx0("s", "skip-ins",      "<hex>",    "Do not test an instructions (can be specified multiple times)"),
+        arg_lit0("l",  "with-le",                   "Search  for APDUs with Le=0 (case 2S) as well"),
         arg_lit0("v",  "verbose",                   "Verbose output"),
         arg_param_end
     };
@@ -2365,7 +2365,7 @@ retry_ins:
                 DropField();
                 activate_field = true;
                 t_last_reset = msclock();
-                PrintAndLogEx(INFO, "Last reset was %" PRIu64 " seconds ago. Reseting the tag to prevent timeout issues", t_since_last_reset);
+                PrintAndLogEx(INFO, "Last reset was %" PRIu64 " seconds ago. Resetting the tag to prevent timeout issues", t_since_last_reset);
             }
             PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
         } while (p1 != p1_arg[0] || p2 != p2_arg[0]);

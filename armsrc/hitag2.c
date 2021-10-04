@@ -460,7 +460,7 @@ static bool hitag_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *tx
                     }
                 }
                 if (blocknr > 63) {
-                    DbpString("Read succesful!");
+                    DbpString("Read successful!");
                     *txlen = 0;
                     bSuccessful = true;
                     return false;
@@ -477,7 +477,7 @@ static bool hitag_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *tx
         }
         break;
         default: {
-            Dbprintf("Uknown frame length: %d", rxlen);
+            Dbprintf("Unknown frame length: %d", rxlen);
             return false;
         }
         break;
@@ -578,13 +578,13 @@ static bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
                 memcpy(tag.sectors[blocknr], rx, 4);
                 blocknr++;
                 if (blocknr > 63) {
-                    DbpString("Read succesful!");
+                    DbpString("Read successful!");
                     bSuccessful = true;
                     return false;
                 }
 
                 // TEST
-                Dbprintf("Succesfully authenticated with logdata:");
+                Dbprintf("Successfully authenticated with logdata:");
                 Dbhexdump(4, logdata_1, false);
                 bSuccessful = true;
                 return false;
@@ -601,7 +601,7 @@ static bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
         }
         break;
         default: {
-            Dbprintf("Uknown frame length: %d", rxlen);
+            Dbprintf("Unknown frame length: %d", rxlen);
             return false;
         }
         break;

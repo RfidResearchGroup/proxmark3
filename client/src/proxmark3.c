@@ -627,7 +627,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "\nExamples:");
         PrintAndLogEx(NORMAL, "\n  to run Proxmark3 client:\n");
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H"                       -- runs the pm3 client", exec_name);
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -f                    -- flush output everytime", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -f                    -- flush output every time", exec_name);
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -w                    -- wait for serial port", exec_name);
         PrintAndLogEx(NORMAL, "      %s                                    -- runs the pm3 client in OFFLINE mode", exec_name);
         PrintAndLogEx(NORMAL, "\n  to execute different commands from terminal:\n");

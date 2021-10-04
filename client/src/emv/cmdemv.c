@@ -528,7 +528,7 @@ static int CmdEMVGenerateChallenge(const char *Cmd) {
                   "Executes Generate Challenge command. It returns 4 or 8-byte random number from card.\n"
                   "Needs a EMV applet to be selected and GPO to be executed.",
                   "emv challenge     -> get challenge\n"
-                  "emv challenge -k  -> get challenge, keep fileld ON\n");
+                  "emv challenge -k  -> get challenge, keep filled ON\n");
 
     void *argtable[] = {
         arg_param_begin,

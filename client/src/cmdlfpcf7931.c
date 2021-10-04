@@ -36,7 +36,7 @@ int pcf7931_resetConfig(void) {
     configPcf.InitDelay = PCF7931_DEFAULT_INITDELAY;
     configPcf.OffsetWidth = PCF7931_DEFAULT_OFFSET_WIDTH;
     configPcf.OffsetPosition = PCF7931_DEFAULT_OFFSET_POSITION;
-    PrintAndLogEx(INFO, "Configuration resetted");
+    PrintAndLogEx(INFO, "Configuration reset");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf pcf7931 config`") " to view current settings");
     return PM3_SUCCESS;
 }

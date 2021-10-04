@@ -1127,9 +1127,9 @@ static int CmdAnalyseUnits(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
 
         PrintAndLogEx(INFO, "SSP CLK 3.39MHz to US conversions");
-        PrintAndLogEx(INFO, "  32 SSP = %u US (expext 9 or 10) " _GREEN_("ok"), SSP_TO_US(32));
-        PrintAndLogEx(INFO, " 320 SSP = %u US (expext 94 or 95) " _GREEN_("ok"), SSP_TO_US(320));
-        PrintAndLogEx(INFO, "1024 SSP = %u US (expext 302) " _GREEN_("ok"), SSP_TO_US(1024));
+        PrintAndLogEx(INFO, "  32 SSP = %u US (expect 9 or 10) " _GREEN_("ok"), SSP_TO_US(32));
+        PrintAndLogEx(INFO, " 320 SSP = %u US (expect 94 or 95) " _GREEN_("ok"), SSP_TO_US(320));
+        PrintAndLogEx(INFO, "1024 SSP = %u US (expect 302) " _GREEN_("ok"), SSP_TO_US(1024));
         PrintAndLogEx(NORMAL, "");
 
         PrintAndLogEx(INFO, "ETU to SSP CLK 3.39MHz conversions");

@@ -269,7 +269,7 @@ const char *DesfireAuthErrorToStr(int error) {
         case 200:
             return "Can't select application.";
         case 201:
-            return "Authentication retured no error but channel not authenticated.";
+            return "Authentication returned no error but channel not authenticated.";
         case 202:
             return "Can't select application by ISO ID.";
         case 203:
@@ -289,7 +289,7 @@ const char *DesfireAuthErrorToStr(int error) {
         case 307:
             return "Crypto decode piccrnd2 error.";
         case 308:
-            return "Random numbers dont match. Authentication failed.";
+            return "Random numbers don't match. Authentication failed.";
         default:
             break;
     }

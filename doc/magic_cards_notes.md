@@ -509,7 +509,7 @@ Note: It doesn't seem to follow a APDU structure per default,
 * UID: 4b, 7b and 10b versions
 * ATQA/SAK: changeable
 * BCC: 
-* ATS: changable
+* ATS: changeable
 * Card Type:  changeable
 * Shadow mode:  GTU
 * Backdoor password mode:
