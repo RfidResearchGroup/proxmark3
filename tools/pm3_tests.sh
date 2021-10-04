@@ -216,11 +216,13 @@ if [ "$TRAVIS_COMMIT" ]; then
   fi
 fi
 
-echo -n "git branch: "
-git describe --all
-echo -n "git sha: "
-git rev-parse HEAD
-echo ""
+if command -v git >/dev/null && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo -n "git branch: "
+  git describe --all
+  echo -n "git sha: "
+  git rev-parse HEAD
+  echo ""
+fi
 
 while true; do
     if $TESTALL || $TESTCOMMON; then
