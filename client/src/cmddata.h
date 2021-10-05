@@ -71,6 +71,7 @@ int NRZrawDemod(int clk, int invert, int maxErr, bool verbose);                 
 int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_hex);
 
 void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx);
+void setDemodBuff2(uint8_t *buff, size_t size, size_t start_idx, uint8_t *bitRange);
 bool getDemodBuff(uint8_t *buff, size_t *size);
 void save_restoreDB(uint8_t saveOpt);// option '1' to save g_DemodBuffer any other to restore
 int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveGrph, bool verbose);
@@ -84,6 +85,7 @@ int AskEdgeDetect(const int *in, int *out, int len, int threshold);
 
 #define MAX_DEMOD_BUF_LEN (1024*128)
 extern uint8_t g_DemodBuffer[MAX_DEMOD_BUF_LEN];
+extern uint8_t g_DemodBitRangeBuffer[MAX_DEMOD_BUF_LEN];
 extern size_t g_DemodBufferLen;
 
 extern int g_DemodClock;

@@ -30,6 +30,7 @@
 #include "crypto/asn1utils.h"    // ASN1 decode / print
 
 uint8_t g_DemodBuffer[MAX_DEMOD_BUF_LEN];
+uint8_t g_DemodBitRangeBuffer[MAX_DEMOD_BUF_LEN];
 size_t g_DemodBufferLen = 0;
 int32_t g_DemodStartIdx = 0;
 int g_DemodClock = 0;
@@ -41,6 +42,10 @@ static int CmdHelp(const char *Cmd);
 void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx) {
     if (buff == NULL) return;
 
+    // By default, disable bit range buffer by setting a 
+    // zero value (tested in proxguiqt.cpp)
+    g_DemodBitRangeBuffer[0] = 0;
+
     if (size > MAX_DEMOD_BUF_LEN - start_idx)
         size = MAX_DEMOD_BUF_LEN - start_idx;
 
@@ -49,6 +54,16 @@ void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx) {
 
     g_DemodBufferLen = size;
 }
+
+//set the g_DemodBuffer with given array ofq binary (one bit per byte)
+//by marshmellow
+void setDemodBuff2(uint8_t *buff, size_t size, size_t start_idx, uint8_t *bitRange) {
+    uint8_t b = bitRange[0];
+    setDemodBuff(buff, size, start_idx);
+    if (bitRange)
+        g_DemodBitRangeBuffer[0] = b;
+}
+
 
 bool getDemodBuff(uint8_t *buff, size_t *size) {
     if (buff == NULL) return false;

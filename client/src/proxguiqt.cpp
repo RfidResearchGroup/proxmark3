@@ -510,7 +510,8 @@ void Plot::setMaxAndStart(int *buffer, size_t len, QRect plotRect) {
     gs_absVMax = (int)(gs_absVMax * 1.25 + 1);
 }
 
-void Plot::PlotDemod(uint8_t *buffer, size_t len, QRect plotRect, QRect annotationRect, QPainter *painter, int graphNum, uint32_t plotOffset) {
+void Plot::PlotDemod(uint8_t *buffer, size_t len, QRect plotRect, QRect annotationRect, QPainter *painter,
+                    int graphNum, uint32_t plotOffset, uint8_t *bitRange) {
     if (len == 0 || g_PlotGridX <= 0) return;
     //clock_t begin = clock();
     QPainterPath penPath;
@@ -535,8 +536,19 @@ void Plot::PlotDemod(uint8_t *buffer, size_t len, QRect plotRect, QRect annotati
     int absVMax = (int)(100 * 1.05 + 1);
     delta_x = 0;
     int clk = first_delta_x;
+    if (bitRange) {
+        int shift = grid_delta_x-first_delta_x; // can be negative
+        if (shift <= bitRange[BitStart])
+            clk = bitRange[BitStart] - shift;
+        else {
+            clk = bitRange[BitStart+1] - (shift - bitRange[BitStart]);
+            BitStart++;
+       }
+    }
+    //printf("old %d new %d BitStart %d\n", first_delta_x, clk, BitStart);
+
     for (int i = BitStart; i < (int)len && xCoordOf(delta_x + DemodStart, plotRect) < plotRect.right(); i++) {
-        for (int j = 0; j < (clk) && i < (int)len && xCoordOf(DemodStart + delta_x + j, plotRect) < plotRect.right() ; j++) {
+        for (int j = 0; j < (clk) && i <= (int)len && xCoordOf(DemodStart + delta_x + j, plotRect) < plotRect.right() ; j++) {
             int x = xCoordOf(DemodStart + delta_x + j, plotRect);
             int v = buffer[i] * 200 - 100;
 
@@ -556,8 +568,14 @@ void Plot::PlotDemod(uint8_t *buffer, size_t len, QRect plotRect, QRect annotati
                 painter->drawText(x - 8, y + ((buffer[i] > 0) ? 18 : -6), str);
             }
         }
-        delta_x += clk;
-        clk = grid_delta_x;
+
+        if (bitRange) {
+            delta_x += (clk);
+            clk = bitRange[i+1];
+        } else {
+            delta_x += clk;
+            clk = grid_delta_x;
+        }
     }
 
     // Graph annotations
@@ -711,8 +729,11 @@ void Plot::paintEvent(QPaintEvent *event) {
 
     //Start painting graph
     PlotGraph(g_GraphBuffer, g_GraphTraceLen, plotRect, infoRect, &painter, 0);
-    if (g_DemodBufferLen > 8) {
-        PlotDemod(g_DemodBuffer, g_DemodBufferLen, plotRect, infoRect, &painter, 2, g_DemodStartIdx);
+    if (g_DemodBufferLen >= 5) {
+        if (g_DemodBitRangeBuffer[0])
+            PlotDemod(g_DemodBuffer, g_DemodBufferLen, plotRect, infoRect, &painter, 2, g_DemodStartIdx, g_DemodBitRangeBuffer);
+        else
+            PlotDemod(g_DemodBuffer, g_DemodBufferLen, plotRect, infoRect, &painter, 2, g_DemodStartIdx, NULL);
     }
     if (gs_useOverlays) {
         //init graph variables
