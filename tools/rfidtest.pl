@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
 # -samy kamkar, rfid@samy.pl
 
 use strict;
