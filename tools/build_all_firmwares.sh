@@ -42,7 +42,7 @@ for mode in "${STANDALONE_MODES[@]}"; do
   make $MKFLAGS PLATFORM=PM3GENERIC PLATFORM_EXTRAS= STANDALONE=$mode fullimage || exit 1
   chmod 644 armsrc/obj/fullimage.elf
   mv armsrc/obj/fullimage.elf "$DEST/PM3GENERIC_${mode/_/}.elf"
-  $STATS && ( LANG=C arm-none-eabi-size armsrc/obj/[hl]f_*.o |grep -v "filename" >> standalones_stats.txt )
+  ! $STATS || ( LANG=C arm-none-eabi-size armsrc/obj/[hl]f_*.o |grep -v "filename" >> standalones_stats.txt )
 done
 
 # PM3RDV4
@@ -57,7 +57,7 @@ for mode in "${STANDALONE_MODES[@]}"; do
   make $MKFLAGS PLATFORM=PM3RDV4 PLATFORM_EXTRAS= STANDALONE=$mode fullimage || exit 1
   chmod 644 armsrc/obj/fullimage.elf
   mv armsrc/obj/fullimage.elf "$DEST/PM3RDV4_${mode/_/}.elf"
-  $STATS && ( LANG=C arm-none-eabi-size armsrc/obj/[hl]f_*.o |grep -v "filename" >> standalones_stats.txt )
+  ! $STATS || ( LANG=C arm-none-eabi-size armsrc/obj/[hl]f_*.o |grep -v "filename" >> standalones_stats.txt )
 done
 
 # PM4RDV4 + BTADDON
@@ -71,5 +71,5 @@ for mode in "${STANDALONE_MODES[@]}"; do
   make $MKFLAGS PLATFORM=PM3RDV4 PLATFORM_EXTRAS=BTADDON STANDALONE=$mode fullimage || exit 1
   chmod 644 armsrc/obj/fullimage.elf
   mv armsrc/obj/fullimage.elf "$DEST/PM3RDV4_BTADDON_${mode/_/}.elf"
-  $STATS && ( LANG=C arm-none-eabi-size armsrc/obj/[hl]f_*.o |grep -v "filename" >> standalones_stats.txt )
+  ! $STATS || ( LANG=C arm-none-eabi-size armsrc/obj/[hl]f_*.o |grep -v "filename" >> standalones_stats.txt )
 done
