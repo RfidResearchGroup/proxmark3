@@ -243,7 +243,7 @@ void sm_auth(const uint8_t *Gc, const uint8_t *Ci, const uint8_t *Q, uint8_t *Ch
 
     initialize(false, Gc, Ci, Q, 1, s);
 
-    // Generate challange answer for Tag and Reader
+    // Generate challenge answer for Tag and Reader
     for (pos = 0; pos < 8; pos++) {
         Ci_1[pos] = sm_byte(s);
         Ch[pos] = sm_byte(s);
@@ -255,7 +255,7 @@ void cm_auth(const uint8_t *Gc, const uint8_t *Ci, const uint8_t *Q, uint8_t *Ch
 
     initialize(true, Gc, Ci, Q, 3, s);
 
-    // Construct the reader-answer (challange)
+    // Construct the reader-answer (challenge)
     next_n(true, 6, 0, s);
     Ch[0] = cm_byte(s);
     for (pos = 1; pos < 8; pos++) {

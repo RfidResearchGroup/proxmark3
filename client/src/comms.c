@@ -100,7 +100,7 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, v
     but comm thread just spins here. Not good.../holiman
     **/
     while (txBuffer_pending) {
-        // wait for communication thread to complete sending a previous commmand
+        // wait for communication thread to complete sending a previous command
         pthread_cond_wait(&txBufferSig, &txBufferMutex);
     }
 
@@ -137,7 +137,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
     but comm thread just spins here. Not good.../holiman
     **/
     while (txBuffer_pending) {
-        // wait for communication thread to complete sending a previous commmand
+        // wait for communication thread to complete sending a previous command
         pthread_cond_wait(&txBufferSig, &txBufferMutex);
     }
 

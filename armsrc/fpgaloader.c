@@ -530,7 +530,7 @@ void FpgaSendCommand(uint16_t cmd, uint16_t v) {
 //-----------------------------------------------------------------------------
 // Write the FPGA setup word (that determines what mode the logic is in, read
 // vs. clone vs. etc.). This is now a special case of FpgaSendCommand() to
-// avoid changing this function's occurence everywhere in the source code.
+// avoid changing this function's occurrence everywhere in the source code.
 //-----------------------------------------------------------------------------
 void FpgaWriteConfWord(uint16_t v) {
     FpgaSendCommand(FPGA_CMD_SET_CONFREG, v);

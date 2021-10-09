@@ -194,7 +194,7 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 *
 * Elementary Time Unit (ETU)
 * --------------------------
-* ETU is used to denotate 1 bit period i.e. how long one bit transfer takes.
+* ETU is used to denote 1 bit period i.e. how long one bit transfer takes.
 *
 * - 128 Carrier cycles / 13.56MHz = 8 Subcarrier units / 848kHz = 1/106kHz = 9.4395 µS
 * - 16 Carrier cycles = 1 Subcarrier unit  = 1.17 µS
@@ -203,7 +203,7 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 * ----------
 * 1 ETU =  128 / ( D x fc )
 * where
-*    D = divisor.  Which inital is 1
+*    D = divisor.  Which initial is 1
 *   fc = carrier frequency
 * gives
 *   1 ETU = 128 / fc
@@ -267,7 +267,7 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 * --------------------------
 * The mode FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK which we use to simulate tag
 * works like this:
-* Simulation per definition is "inversed" effect on the reader antenna.
+* Simulation per definition is "inverted" effect on the reader antenna.
 * - A 1-bit input to the FPGA becomes 8 pulses at 847.5kHz (1.18µS / pulse) == 9.44us
 * - A 0-bit input to the FPGA becomes an unmodulated time of 1.18µS  or does it become 8 nonpulses for 9.44us
 *

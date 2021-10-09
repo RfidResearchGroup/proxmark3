@@ -1365,13 +1365,13 @@ static int CmdEMVExec(const char *Cmd) {
                 }
                 PrintAndLogEx(NORMAL, "raw ARPC: %s", sprint_hex(rawARPC, rawARPClen));
 
-                // here must be calculation of ARPC, but we dont know a bank keys.
+                // here must be calculation of ARPC, but we don't know a bank keys.
                 PrintAndLogEx(NORMAL, "ARPC: n/a");
 
             } else {
                 PrintAndLogEx(WARNING, "Application Cryptogram (AC) not found.");
             }
-            // here must be external authenticate, but we dont know ARPC
+            // here must be external authenticate, but we don't know ARPC
         }
 
         // needs to send AC2 command (res == ARQC)
@@ -1386,7 +1386,7 @@ static int CmdEMVExec(const char *Cmd) {
 
             PrintAndLogEx(NORMAL, "CDOL2 data[%zu]: %s", cdol2_data_tlv->len, sprint_hex(cdol2_data_tlv->value, cdol2_data_tlv->len));
             //PrintAndLogEx(NORMAL, "* * AC2");
-            // here must be AC2, but we dont make external authenticate (
+            // here must be AC2, but we don't make external authenticate (
             /*          // AC2
                         PRINT_INDENT(level);
                         if ((CID & EMVAC_AC2_MASK) == EMVAC_AAC2)     PrintAndLogEx(NORMAL, "\tAC2: AAC (Transaction declined)");

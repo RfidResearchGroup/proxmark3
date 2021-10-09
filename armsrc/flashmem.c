@@ -172,7 +172,7 @@ uint16_t FlashSendByte(uint32_t data) {
 
     //while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TDRE) == 0){};
 
-    // wait recive transfer is complete
+    // wait receive transfer is complete
     while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF) == 0) {};
 
     // reading incoming data
@@ -285,7 +285,7 @@ void Flash_TransferAdresse(uint32_t address) {
     FlashSendByte((address >> 0) & 0xFF);
 }
 
-/* This ensure we can ReadData without having to cycle through initialization everytime */
+/* This ensures we can ReadData without having to cycle through initialization every time */
 uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len) {
 
     // length should never be zero

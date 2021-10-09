@@ -83,7 +83,7 @@ local function main(args)
     2. lf em 4x05_write
     3. lf em 4x05_read
 
-    The first two commands dont need a feedback from the system, so going with core.console commands.
+    The first two commands don't need a feedback from the system, so going with core.console commands.
     Since the read needs demodulation of signal I opted to add that function from cmdlfem4x.c to the core lua scripting
         core.em4x05_read(addr, password)
 

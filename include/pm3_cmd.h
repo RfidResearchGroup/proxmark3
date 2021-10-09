@@ -852,7 +852,7 @@ typedef struct {
 #define PM3_EFAILED           -21
 // partial success                      client/pm3: when trying to dump a tag and fails on some blocks.  Partial dump.
 #define PM3_EPARTIAL          -22
-// tearoff occured                      client/pm3: when a tearoff hook was called and a tearoff actually happened
+// tearoff occurred                      client/pm3: when a tearoff hook was called and a tearoff actually happened
 #define PM3_ETEAROFF          -23
 
 // Got bad CRC                          client/pm3: error in transfer of data,  crc mismatch.

@@ -291,7 +291,7 @@ static void copy_in_spiffs(const char *src, const char *dst) {
 ////// Abstract Operations for base Safetyness /////////////////////////////////
 //
 // mount if not already
-// As an "hint" to the behavior one should adopt after his or her lazyness
+// As an "hint" to the behavior one should adopt after his or her laziness
 // it will return 0 if the call was a noop, either because it did not need to
 // change OR because it wasn't ABLE to change :)
 //                1 if the mount status actually changed
@@ -384,7 +384,7 @@ int rdv40_spiffs_lazy_mount_rollback(int changed) {
 }
 ///////////////////////////////////////////////////////////////////////////////
 
-// High level functions with SatefetyLevel
+// High level functions with SafetyLevel
 // Beware that different safety level makes different return behavior
 //
 // RDV40_SPIFFS_SAFETY_NORMAL : will operate withtout further change on mount
@@ -396,7 +396,7 @@ int rdv40_spiffs_lazy_mount_rollback(int changed) {
 //                            mount state had to change will return SPIFFS_OK /
 //                            0 / false if everything went well
 
-// TODO : this functions are common enought to be unified with a switchcase
+// TODO : this functions are common enough to be unified with a switchcase
 // statement or some function taking function parameters
 // TODO : forbid writing to a filename which already exists as lnk !
 // TODO : forbid writing to a filename.lnk which already exists without lnk !
@@ -468,7 +468,7 @@ int rdv40_spiffs_is_symlink(const char *s) {
 // since FILENAME can't be longer than 32Bytes as of hard configuration, we're
 // safe with Such maximum. So the "size" variable is actually the known/intended
 // size of DESTINATION file, may it be known (may we provide a "stat from
-// symlinkk ?")
+// symlink ?")
 // ATTENTION : you must NOT provide the whole filename (so please do not include the .lnk extension)
 // TODO : integrate in read_function
 int rdv40_spiffs_read_as_symlink(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level) {
@@ -499,7 +499,7 @@ int rdv40_spiffs_read_as_symlink(char *filename, uint8_t *dst, uint32_t size, RD
 // Eg :
 // rdv40_spiffs_make_symlink((uint8_t *)"hello", (uint8_t *)"world", RDV40_SPIFFS_SAFETY_SAFE)
 //   will generate a file named "world.lnk" with the path to file "hello" written in
-//   wich you can then read back with :
+//   which you can then read back with :
 //   rdv40_spiffs_read_as_symlink((uint8_t *)"world",(uint8_t *) buffer, orig_file_size, RDV40_SPIFFS_SAFETY_SAFE);
 // TODO : FORBID creating a symlink with a basename (before.lnk) which already exists as a file !
 int rdv40_spiffs_make_symlink(char *linkdest, char *filename, RDV40SpiFFSSafetyLevel level) {
@@ -513,8 +513,8 @@ int rdv40_spiffs_make_symlink(char *linkdest, char *filename, RDV40SpiFFSSafetyL
 // filename and filename.lnk will both the existence-checked
 // if filename exists, read will be used, if filename.lnk exists, read_as_symlink will be used
 // Both existence is not handled right now and should not happen or create a default fallback behavior
-// Still, this case won't happend when the write(s) functions will check for both symlink and real file
-// preexistance, avoiding a link being created if filename exists, or avoiding a file being created if
+// Still, this case won't happen when the write(s) functions will check for both symlink and real file
+// preexistence, avoiding a link being created if filename exists, or avoiding a file being created if
 // symlink exists with same name
 int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
@@ -537,7 +537,7 @@ int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, R
 // TODO regarding reads/write and symlinks :
 // Provide a higher level readFile function which
 //   - don't need a size to be provided, getting it from STAT call and using bigbuff malloc
-//   - send back the whole readed file as return Result
+//   - send back the whole read file as return Result
 // Maybe a good think to implement a VFS api here.
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -566,10 +566,10 @@ void rdv40_spiffs_safe_print_fsinfo(void) {
 // this function is safe and WILL rollback since it is only a PRINTING function,
 // not a function intended to give any sort of struct to manipulate the FS
 // objects
-// TODO : Fake the Directory availability by spliting strings , buffering,
-// maintaining prefix list sorting, unique_checking, THEN outputing precomputed
-// tree Other solutio nwould be to add directory support to SPIFFS, but that we
-// dont want, as prefix are way easier and lighter in every aspect.
+// TODO : Fake the Directory availability by splitting strings , buffering,
+// maintaining prefix list sorting, unique_checking, THEN outputting precomputed
+// tree Other solution would be to add directory support to SPIFFS, but that we
+// don't want, as prefix are way easier and lighter in every aspect.
 void rdv40_spiffs_safe_print_tree(void) {
     int changed = rdv40_spiffs_lazy_mount();
     spiffs_DIR d;
@@ -643,7 +643,7 @@ void test_spiffs(void) {
 
     Dbprintf("  Writing 'I love Proxmark3 RDV4' in a testspiffs.txt");
 
-    // Since We lazy_mounted manually before hand, the wrte safety level will
+    // Since We lazy_mounted manually before hand, the write safety level will
     // just imply noops
     rdv40_spiffs_write((char *)"testspiffs.txt", (uint8_t *)"I love Proxmark3 RDV4", 21, RDV40_SPIFFS_SAFETY_SAFE);
 

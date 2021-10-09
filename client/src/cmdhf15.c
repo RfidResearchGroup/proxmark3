@@ -2,7 +2,7 @@
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
 // Modified 2010-2012 by <adrian -at- atrox.at>
 // Modified 2012 by <vsza at vsza.hu>
-// Modfified 2018 by <iceman>
+// Modified 2018 by <iceman>
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of

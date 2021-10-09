@@ -8,8 +8,8 @@
 //-----------------------------------------------------------------------------
 // LF rswb   -  This mode can simulate ID from selected slot, read ID to
 //              selected slot, write from selected slot to T5555/T55x7 tag and store
-//              readed ID to flash (only RDV4).
-//              Predefined its is not recomended because you can incedently rewrite your MANDATORY tag data.
+//              read ID to flash (only RDV4).
+//              Predefining it is not recommended because you can incidentally rewrite your MANDATORY tag data.
 //
 //              To recall stored ID from flash execute:
 //                  mem spifss dump o emdump p
@@ -23,12 +23,12 @@
 // 0 - READ         Read source card ID and store it to current slot
 //                  Will switch to SIM mode automatically.
 //
-// 1 - SIM          Simulate readed ID
+// 1 - SIM          Simulate read ID
 //
-// 2 - WRITE(CLONE) Write readed ID to T55x7 card
-//                  !!! Warning, card id WILL BE OVERRWRITED
+// 2 - WRITE(CLONE) Write read ID to T55x7 card
+//                  !!! Warning, card id WILL BE OVERWRITTEN
 //
-// 3 - BRUTE        Brute upper or down from readed card)
+// 3 - BRUTE        Brute upper or down from read card)
 //                  You can PRESS SINGLE to exit brute mode OR
 //                  PRESS DOUBLE to save bruted ID to current slot (will automatically switch to SIM mode) AND
 //                  Also You can HOLD button to change brute speeds.

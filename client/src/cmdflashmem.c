@@ -376,20 +376,20 @@ static int CmdFlashMemWipe(const char *Cmd) {
                   "Wipe flash memory on device, which fills it with 0xFF\n"
                   _WHITE_("[ ") _RED_("!!! OBS") _WHITE_(" ] use with caution"),
                   "mem wipe -p 0   -> wipes first page"
-//                  "mem wipe -i   -> inital total wipe"
+//                  "mem wipe -i   -> initial total wipe"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_int0("p", NULL, "<dec>", "0,1,2 page memory"),
-//        arg_lit0("i", NULL, "inital total wipe"),
+//        arg_lit0("i", NULL, "initial total wipe"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool initalwipe = false;
+    bool initialwipe = false;
     int page = arg_get_int_def(ctx, 1, -1);
-//    initalwipe = arg_get_lit(ctx, 2);
+//    initialwipe = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     if (page < 0 || page > 2) {
@@ -398,7 +398,7 @@ static int CmdFlashMemWipe(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_FLASHMEM_WIPE, page, initalwipe, 0, NULL, 0);
+    SendCommandMIX(CMD_FLASHMEM_WIPE, page, initialwipe, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 8000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");

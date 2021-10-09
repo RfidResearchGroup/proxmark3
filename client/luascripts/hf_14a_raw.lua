@@ -29,7 +29,7 @@ arguments = [[
     -o              do not connect - use this only if you previously used -k to stay connected
     -r              do not read response
     -c              calculate and append CRC
-    -k              stay connected - dont inactivate the field
+    -k              stay connected - don't inactivate the field
     -x <payload>    Data to send (NO SPACES!)
     -d              Debug flag
     -t              Topaz mode

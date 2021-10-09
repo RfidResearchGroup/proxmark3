@@ -84,7 +84,7 @@ local function tablelen(T)
 end
 ---
 -- helper function, gives a sorted table from table t,
--- order can be a seperate sorting-order function.
+-- order can be a separate sorting-order function.
 local function spairs(t, order)
     -- collect the keys
     local keys = {}

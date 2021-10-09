@@ -38,10 +38,10 @@ static crc_t legic_crc;
 //  - 100us for a 1 (RWD_TIME_1)
 //
 // The data dependent timing makes writing comprehensible code significantly
-// harder. The current aproach forwards the prng data based if there is data on
+// harder. The current approach forwards the prng data based if there is data on
 // air and time based, using GET_TICKS, during computational and wait periodes.
 //
-// To not have the necessity to calculate/guess exection time dependend timeouts
+// To not have the necessity to calculate/guess execution time dependend timeouts
 // tx_frame and rx_frame use a shared timestamp to coordinate tx and rx timeslots.
 //-----------------------------------------------------------------------------
 
@@ -79,10 +79,10 @@ static uint16_t rx_frame_from_fpga(void) {
 // Demodulation (Reader)
 //-----------------------------------------------------------------------------
 
-// Returns a demedulated bit
+// Returns a demodulated bit
 //
 // The FPGA running xcorrelation samples the subcarrier at ~13.56 MHz. The mode
-// was initialy designed to receive BSPK/2-PSK. Hance, it reports an I/Q pair
+// was initially designed to receive BSPK/2-PSK. Hance, it reports an I/Q pair
 // every 4.7us (8 bits i and 8 bits q).
 //
 // The subcarrier amplitude can be calculated using Pythagoras sqrt(i^2 + q^2).
@@ -93,7 +93,7 @@ static uint16_t rx_frame_from_fpga(void) {
 // and averages the next (most stable) 8 samples. The final 8 samples are dropped
 // also.
 //
-// The demodulated should be alligned to the bit period by the caller. This is
+// The demodulated should be aligned to the bit period by the caller. This is
 // done in rx_bit and rx_ack.
 //
 // Note: The demodulator would be drifting (18.9us * 5 != 100us), rx_frame

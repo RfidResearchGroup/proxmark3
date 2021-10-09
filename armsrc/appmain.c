@@ -2011,7 +2011,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 reply_ng(CMD_LF_UPLOAD_SIM_SAMPLES, PM3_EOVFLOW, NULL, 0);
                 break;
             }
-            // ensure len bytes copied wont go past end of bigbuf
+            // ensure len bytes copied won't go past end of bigbuf
             uint16_t len = MIN(BigBuf_get_size() - payload->offset, sizeof(payload->data));
 
             uint8_t *mem = BigBuf_get_addr();
@@ -2250,9 +2250,9 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_FLASHMEM_WIPE: {
             LED_B_ON();
             uint8_t page = packet->oldarg[0];
-            uint8_t initalwipe = packet->oldarg[1];
+            uint8_t initialwipe = packet->oldarg[1];
             bool isok = false;
-            if (initalwipe) {
+            if (initialwipe) {
                 isok = Flash_WipeMemory();
                 reply_mix(CMD_ACK, isok, 0, 0, 0, 0);
                 LED_B_OFF();

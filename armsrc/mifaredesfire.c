@@ -544,7 +544,7 @@ void MifareDES_Auth1(uint8_t *datain) {
      memcpy(cmd+19,buff3,8);
 
      // The command always times out on the first attempt, this will retry until a response
-     // is recieved.
+     // is received.
      len = 0;
      while(!len) {
      len = DesfireAPDU(cmd,27,resp);
@@ -587,7 +587,7 @@ void MifareDES_Auth1(uint8_t *datain) {
     memcpy(cmd+19,buff3,8);
 
     // The command always times out on the first attempt, this will retry until a response
-    // is recieved.
+    // is received.
     len = 0;
     while(!len) {
         len = DesfireAPDU(cmd,27,resp);

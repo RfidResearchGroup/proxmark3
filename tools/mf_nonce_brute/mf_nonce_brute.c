@@ -127,7 +127,7 @@ static int param_gethex_to_eol(const char *line, int paramnum, uint8_t *data, in
         }
 
         if (*datalen >= maxdatalen) {
-            // if we dont have space in buffer and have symbols to translate
+            // if we don't have space in buffer and have symbols to translate
             return 2;
         }
 

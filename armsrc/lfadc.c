@@ -113,7 +113,7 @@ static size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
             if (wait == false) {
                 // Test if we are locating a field modulation (100% ASK = complete field drop)
                 if (detect_gap) {
-                    // Only return when the field completely dissapeared
+                    // Only return when the field completely disappeared
                     if (adc_val == 0) {
                         return periods;
                     }

@@ -411,7 +411,7 @@ int main(void) {
         { 16384, 5 }, // 0, best for Intel GPU's with Neo
         { 8192,  6 }, // 1, only for Intel NEO
         { 4096,  7 }, // 2 (old 0) seems the best for all others (also NVIDIA) :D Apple/Intel GPU's stable here
-        { 2048,  8 }, // 3 (old 1) usefull for any kind of CPU's
+        { 2048,  8 }, // 3 (old 1) usefulfor any kind of CPU's
         { 1024,  9 },
         { 512,  10 },
         { 256,  11 },

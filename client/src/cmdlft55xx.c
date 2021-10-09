@@ -188,7 +188,7 @@ int clone_t55xx_tag(uint32_t *blockdata, uint8_t numblocks) {
 
         if (i == 0) {
             SetConfigWithBlock0(blockdata[0]);
-            if (t55xxAquireAndCompareBlock0(false, 0, blockdata[0], false))
+            if (t55xxAcquireAndCompareBlock0(false, 0, blockdata[0], false))
                 continue;
         }
 
@@ -273,7 +273,7 @@ static bool t55xxProtect(bool lock, bool usepwd, uint8_t override, uint32_t pass
     }
 }
 
-bool t55xxAquireAndCompareBlock0(bool usepwd, uint32_t password, uint32_t known_block0, bool verbose) {
+bool t55xxAcquireAndCompareBlock0(bool usepwd, uint32_t password, uint32_t known_block0, bool verbose) {
 
     if (verbose)
         PrintAndLogEx(INFO, "Block0 write detected, running `detect` to see if validation is possible");
@@ -299,7 +299,7 @@ bool t55xxAquireAndCompareBlock0(bool usepwd, uint32_t password, uint32_t known_
     return false;
 }
 
-bool t55xxAquireAndDetect(bool usepwd, uint32_t password, uint32_t known_block0, bool verbose) {
+bool t55xxAcquireAndDetect(bool usepwd, uint32_t password, uint32_t known_block0, bool verbose) {
 
     if (verbose)
         PrintAndLogEx(INFO, "Block0 write detected, running `detect` to see if validation is possible");
@@ -334,11 +334,11 @@ bool t55xxVerifyWrite(uint8_t block, bool page1, bool usepwd, uint8_t override, 
 
     } else if (res == PM3_EWRONGANSWER) {
 
-        // could't decode.  Lets see if this was a block 0 write and try read/detect it auto.
-        // this messes up with ppls config..
+        // couldn't decode.  Lets see if this was a block 0 write and try read/detect it auto.
+        // this messes up with ppl config..
         if (block == 0 && page1 == false) {
 
-            if (t55xxAquireAndDetect(usepwd, password, data, true) == false)
+            if (t55xxAcquireAndDetect(usepwd, password, data, true) == false)
                 return false;
 
             return t55xxVerifyWrite(block, page1, usepwd, 2, password, config.downlink_mode, data);
@@ -474,7 +474,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     }
 
     // Not these flags are used to Toggle the values.
-    // If not flag then dont set or reset, leave as is since the call may just be be setting a different value.
+    // If not flag then don't set or reset, leave as is since the call may just be be setting a different value.
     bool invert = arg_get_lit(ctx, idx++);
     bool use_q5 = arg_get_lit(ctx, idx++);
     bool use_st = arg_get_lit(ctx, idx++);
@@ -1727,7 +1727,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         bool pwdmode = false;
         uint32_t password = 0;
 
-        // REGULAR_READ_MODE_BLOCK - yeilds correct Page 1 Block 2 data i.e. + 32 bit offset.
+        // REGULAR_READ_MODE_BLOCK - yields correct Page 1 Block 2 data i.e. + 32 bit offset.
         if (!AcquireData(T55x7_PAGE1, REGULAR_READ_MODE_BLOCK, pwdmode, password, downlink_mode))
             return PM3_ENODATA;
     }
@@ -1867,7 +1867,7 @@ void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat) {
 
     /*
     Trace info.
-      M1, M2  has the about ATMEL defintion of trace data.
+      M1, M2  has the about ATMEL definition of trace data.
       M3 has unique format following industry defacto standard with row/col parity
 
     TRACE - BLOCK O
@@ -3212,7 +3212,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
             PrintAndLogEx(INFO, "testing %08"PRIX32, curr_password);
             for (dl_mode = downlink_mode; dl_mode <= 3; dl_mode++) {
-                // If aquire fails, then we still need to check if we are only trying a single downlink mode.
+                // If acquire fails, then we still need to check if we are only trying a single downlink mode.
                 // If we continue on fail, it will skip that test and try the next downlink mode; thus slowing down the check
                 // when on a single downlink mode is wanted.
                 if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr_password, dl_mode)) {
@@ -3288,7 +3288,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
     }
 
     uint8_t downlink_mode = refFixedBit; // if no downlink mode suppliled use fixed bit/default as the is the most common
-    // Since we dont know the password the config.downlink mode is of little value.
+    // Since we don't know the password the config.downlink mode is of little value.
 //   if (r0 || ra) // if try all (ra) then start at fixed bit for correct try all
 //       downlink_mode = refFixedBit;
 //    else
@@ -4071,7 +4071,7 @@ static int CmdT55xxSniff(const char *Cmd) {
 
         if (pulseSamples > 0) {
             pulseBuffer[pulseIdx++] = pulseSamples;
-            if (pulseIdx > 79) { // make room for next sample - if not used by now, it wont be.
+            if (pulseIdx > 79) { // make room for next sample - if not used by now, it won't be.
                 t55sniff_trim_samples(pulseBuffer, &pulseIdx, 1);
             }
 
@@ -4111,14 +4111,14 @@ static int CmdT55xxSniff(const char *Cmd) {
             // At this point we should have
             // - a min of 6 samples
             // - the 0 and 1 sample widths
-            // - min 0 and min seperations (worst case)
+            // - min 0 and min separations (worst case)
             // No max checks done (yet) as have seen samples > then specs in use.
 
             // Check first bit.
 
             // Long leading 0
             if (have_data == false && (APPROX_EQ(pulseBuffer[0], 136 + minWidth, tolerance) && APPROX_EQ(pulseBuffer[1], maxWidth, tolerance))) {
-                // printf ("Long Leading 0 - not yet hanled | have 1 Fisrt bit | Min : %-3d - Max : %-3d : diff : %d\n",minWidth,maxWidth, maxWidth-minWidth);
+                // printf ("Long Leading 0 - not yet handled | have 1 First bit | Min : %-3d - Max : %-3d : diff : %d\n",minWidth,maxWidth, maxWidth-minWidth);
                 continue;
             }
 

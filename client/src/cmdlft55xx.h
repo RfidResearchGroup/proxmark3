@@ -181,8 +181,8 @@ void printT5xxHeader(uint8_t page);
 void printT55xxBlock(uint8_t blockNum, bool page1);
 int  printConfiguration(t55xx_conf_block_t b);
 
-bool t55xxAquireAndCompareBlock0(bool usepwd, uint32_t password, uint32_t known_block0, bool verbose);
-bool t55xxAquireAndDetect(bool usepwd, uint32_t password, uint32_t known_block0, bool verbose);
+bool t55xxAcquireAndCompareBlock0(bool usepwd, uint32_t password, uint32_t known_block0, bool verbose);
+bool t55xxAcquireAndDetect(bool usepwd, uint32_t password, uint32_t known_block0, bool verbose);
 bool t55xxVerifyWrite(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, uint32_t data);
 int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode);
 int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, bool verbose);

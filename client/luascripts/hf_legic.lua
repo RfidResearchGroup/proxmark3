@@ -136,10 +136,10 @@ it's kinda interactive with following commands in three categories:
 
  lf: 'load file'        - load a (xored) binary file (*.bin) from the local Filesystem into the 'virtual inTag'
  sf: 'save file'        - saves the 'virtual inTag' to the local Filesystem as eml and bin (xored with Tag-MCC)
- xf: 'xor file'         - saves the 'virtual inTag' to the local Filesystem (xored with choosen MCC - use '00' for plain values)
+ xf: 'xor file'         - saves the 'virtual inTag' to the local Filesystem (xored with chosen MCC - use '00' for plain values)
 
- ct: 'copy tag'         - copy the 'virtual Tag' to a second 'virtual TAG' - not usefull yet, but inernally needed
- tc: 'copy tag'         - copy the 'second virtual Tag' to 'virtual TAG' - not usefull yet, but inernally needed
+ ct: 'copy tag'         - copy the 'virtual Tag' to a second 'virtual TAG' - not useful yet, but inernally needed
+ tc: 'copy tag'         - copy the 'second virtual Tag' to 'virtual TAG' - not useful yet, but inernally needed
  tt: 'toggle tag'       - copy mainTag to BackupTag and backupTag to mainTag
 
  di: 'dump mainTag'     - shows the current content of the 'virtual Tag'
@@ -155,7 +155,7 @@ it's kinda interactive with following commands in three categories:
  cc: 'check Segment-CRC'- checks & calculates (if check failed) the Segment-CRC of all Segments
  ck: 'check KGH-CRC'    - checks the and calculates a 'Kaba Group Header' if one was detected
                           'Kaba Group Header CRC calculation'
- tk: 'toggle KGH'       - toglle the (script-internal) flag for kgh-calculation for a segment
+ tk: 'toggle KGH'       - toggle the (script-internal) flag for kgh-calculation for a segment
  xc: 'etra c'           - show string that was used to calculate the kgh-crc of a segment
 
 dlc: 'dump Legic-Cash'  - show balance and checksums of a Legic-Cash Segment
@@ -359,7 +359,7 @@ function getInputBytes(infile)
     local line
     local bytes = {}
     local fhi,err = io.open(infile,"rb")
-    if err then oops("faild to read from file ".. infile); return false; end
+    if err then oops("failed to read from file ".. infile); return false; end
 
     file_data = fhi:read("*a");
     for i = 1, #file_data do
@@ -767,7 +767,7 @@ local function saveTagMap(map, filename)
 
     local line
     local fho,err = io.open(filename, "w")
-    if err then oops("OOps ... faild to open output-file "..acyellow..filename..acoff) end
+    if err then oops("OOps ... failed to open output-file "..acyellow..filename..acoff) end
 
     -- write line to new file
     for k, v in pairs(map) do
@@ -1871,7 +1871,7 @@ function getSegmentStamp(seg, bytes)
   -- with stamps smaller 3 bytes (except: Master-Token)
   -- WRP -> Read/Write Protection
   -- WRC -> Read/Write Condition
-  -- RD depends on WRC - if WRC > 0 and RD=1: only reader with matching #WRC of Stamp-bytes in thier Database have Read-Access to the Tag
+  -- RD depends on WRC - if WRC > 0 and RD=1: only reader with matching #WRC of Stamp-bytes in their Database have Read-Access to the Tag
   if (seg.WRP<7) then stamp_len=(seg.WRP) end
   for i=1, (stamp_len) do
     stamp=stamp..seg.data[i-1]
@@ -2780,7 +2780,7 @@ function main(args)
 
     bytes=tagToBytes(inTAG)
     if (cfs) then
-      -- xor willl be done in function writeFile
+      -- xor will be done in function writeFile
       -- with the value of byte[5]
       bytes[5]=crc
     end

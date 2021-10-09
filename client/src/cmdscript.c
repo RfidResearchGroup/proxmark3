@@ -271,7 +271,7 @@ static int CmdScriptRun(const char *Cmd) {
     }
     CLIParserFree(ctx);
 
-    // try to detect a valid script file extention, case-insensitive
+    // try to detect a valid script file extension, case-insensitive
     char *extension_chk;
     extension_chk = str_dup(filename);
     str_lower(extension_chk);

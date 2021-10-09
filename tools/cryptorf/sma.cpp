@@ -179,7 +179,7 @@ static inline uint8_t bit_rotate_r(uint8_t a, uint8_t n_bits) {
     return ((a >> 1) | ((a & 1) << (n_bits - 1)));
 }
 
-static uint8_t lookup_left_substraction[0x400];
+static uint8_t lookup_left_subtraction[0x400];
 static uint8_t lookup_right_subtraction[0x400];
 static lookup_entry lookup_left[0x100000];
 static lookup_entry lookup_right[0x8000];
@@ -211,15 +211,15 @@ static inline void init_lookup_right() {
     }
 }
 
-static void init_lookup_left_substraction() {
+static void init_lookup_left_subtraction() {
     for (int index = 0; index < 0x400 ; index++) {
         uint8_t b3 = (index >> 5 & 0x1f);
         uint8_t bx = (index & 0x1f);
-        lookup_left_substraction[index] = bit_rotate_r(mod((bx + 0x1f) - b3, 0x1f), 5);
+        lookup_left_subtraction[index] = bit_rotate_r(mod((bx + 0x1f) - b3, 0x1f), 5);
     }
 }
 
-static void init_lookup_right_substraction() {
+static void init_lookup_right_subtraction() {
     for (int index = 0; index < 0x400 ; index++) {
         int b16 = (index >> 5);
         uint8_t bx = (index & 0x1f);
@@ -248,7 +248,7 @@ static inline void previous_left(uint8_t in, vector<cs_t> *candidate_states) {
                 state->l ^= (((uint64_t)in & 0x1f) << 20);
             }
         } else {
-            uint8_t b6 = lookup_left_substraction[b3 | bx];
+            uint8_t b6 = lookup_left_subtraction[b3 | bx];
             state->l = (state->l & 0x7ffffffe0ull) | b6;
             state->l ^= (((uint64_t)in & 0x1f) << 20);
 
@@ -790,8 +790,8 @@ int main(int argc, const char *argv[]) {
     printf("Initializing lookup tables for increasing cipher speed\n");
     init_lookup_left();
     init_lookup_right();
-    init_lookup_left_substraction();
-    init_lookup_right_substraction();
+    init_lookup_left_subtraction();
+    init_lookup_right_subtraction();
 
     // Load in the ci (tag-nonce), together with the first half of Q (reader-nonce)
     rstate_before_gc = 0;

@@ -310,7 +310,7 @@ void WriteTagToFlash(uint32_t uid, size_t size) {
     num_to_bytes(uid, 4, buid);
     sprintf(dest, "hf_colin/mf_%02x%02x%02x%02x.bin", buid[0], buid[1], buid[2], buid[3]);
 
-    // TODO : by using safe function for multiple writes we are both breaking cache mecanisms and making useless and
+    // TODO : by using safe function for multiple writes we are both breaking cache mechanisms and making useless and
     // unoptimized mount operations we should manage at out level the mount status before and after the whole
     // standalone mode
     rdv40_spiffs_write((char *)dest, (uint8_t *)data, len, RDV40_SPIFFS_SAFETY_SAFE);

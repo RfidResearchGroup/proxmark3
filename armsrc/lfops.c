@@ -52,7 +52,7 @@ Short note about timers on Proxmark device ARM.  They are a bit differently impl
 SAM7S has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
  TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
 
-New timer implemenation in ticks.c, which is used in LFOPS.c
+New timer implementation in ticks.c, which is used in LFOPS.c
        1 μs = 1.5 ticks
  1 fc = 8 μs = 12 ticks
 
@@ -135,7 +135,7 @@ Initial values if not in flash
    WG = Write gap
    RG = Read gap
 
- Explainations for array T55xx_Timing below
+ Explanations for array T55xx_Timing below
 
                            0        1       2       3
          SG     WG    Bit 00   Bit 01  Bit 10  Bit 11   RG
@@ -1680,7 +1680,7 @@ static void T55xxWriteBit(uint8_t bit, uint8_t downlink_idx) {
 // Function to abstract an Arbitrary length byte array to store bit pattern.
 // bit_array    - Array to hold data/bit pattern
 // start_offset - bit location to start storing new bits.
-// data         - upto 32 bits of data to store
+// data         - up to 32 bits of data to store
 // num_bits     - how many bits (low x bits of data)  Max 32 bits at a time
 // max_len      - how many bytes can the bit_array hold (ensure no buffer overflow)
 // returns "Next" bit offset / bits stored (for next store)
@@ -1927,7 +1927,7 @@ void T55xxWriteBlock(uint8_t *data) {
         // as the tag should repeat back the new block
         // until it is reset, but to confirm it we would
         // need to know the current block 0 config mode for
-        // modulation clock an other details to demod the response...
+        // modulation clock another details to demod the response...
         // response should be (for t55x7) a 0 bit then (ST if on)
         // block data written in on repeat until reset.
 
@@ -2446,7 +2446,7 @@ static uint8_t Prepare_Cmd(uint8_t cmd) {
     cmd >>= 1;
     *forward_ptr++ = cmd;
 
-    return 6; //return number of emited bits
+    return 6; //return number of emitted bits
 }
 
 //====================================================================
@@ -2467,7 +2467,7 @@ static uint8_t Prepare_Addr(uint8_t addr) {
 
     *forward_ptr++ = (line_parity & 1);
 
-    return 7; //return number of emited bits
+    return 7; //return number of emitted bits
 }
 
 //====================================================================
@@ -2502,7 +2502,7 @@ static uint8_t Prepare_Data(uint16_t data_low, uint16_t data_hi) {
     }
     *forward_ptr = 0;
 
-    return 45; //return number of emited bits
+    return 45; //return number of emitted bits
 }
 
 //====================================================================

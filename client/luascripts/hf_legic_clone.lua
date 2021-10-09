@@ -224,7 +224,7 @@ end
 -- write to file
 local function writeOutputBytes(bytes, outfile)
     local fho,err = io.open(outfile, "wb")
-    if err then print("OOps ... faild to open output-file ".. outfile); return false; end
+    if err then print("OOps ... failed to open output-file ".. outfile); return false; end
 
     for i = 1, #bytes do
         fho:write(string.char(tonumber(bytes[i], 16)))

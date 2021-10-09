@@ -75,7 +75,7 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
 
             r = MAX(r & 0xFF, r >> 8);
 
-            // 180 (0xB4) arbitary value to see if a strong RF field is near.
+            // 180 (0xB4) arbitrary value to see if a strong RF field is near.
             if (r > 180) {
 
                 if (++trigger_cnt > triggersToSkip) {

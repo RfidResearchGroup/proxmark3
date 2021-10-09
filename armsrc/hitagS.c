@@ -603,7 +603,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
 }
 
 /*
- * to autenticate to a tag with the given key or challenge
+ * to authenticate to a tag with the given key or challenge
  */
 static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrAr, uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
     uint8_t rx_air[HITAG_FRAME_LEN];
@@ -1015,7 +1015,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
                 // Capture reader frame
                 if (ra >= HITAG_T_STOP) {
                     if (rxlen != 0) {
-                        //DbpString("wierd0?");
+                        //DbpString("weird0?");
                     }
                     // Capture the T0 periods that have passed since last communication or field drop (reset)
                     response = (ra - HITAG_T_LOW);
@@ -1110,10 +1110,10 @@ static void hitagS_receive_frame(uint8_t *rx, size_t *rxlen, int *response) {
             // Capture tag frame (manchester decoding using only falling edges)
             if (ra >= HITAG_T_EOF) {
                 if (*rxlen != 0) {
-                    //DbpString("wierd1?");
+                    //DbpString("weird1?");
                 }
                 // Capture the T0 periods that have passed since last communication or field drop (reset)
-                // We always recieve a 'one' first, which has the falling edge after a half period |-_|
+                // We always receive a 'one' first, which has the falling edge after a half period |-_|
                 *response = ra - HITAG_T_TAG_HALF_PERIOD;
             } else if (ra >= HITAG_T_TAG_CAPTURE_FOUR_HALF) {
                 // Manchester coding example |-_|_-|-_| (101)
@@ -1143,12 +1143,12 @@ static void hitagS_receive_frame(uint8_t *rx, size_t *rxlen, int *response) {
                     (*rxlen)++;
                 }
             } else {
-                // Ignore wierd value, is to small to mean anything
+                // Ignore weird value, is to small to mean anything
                 errorCount++;
             }
         }
 
-        // if we saw over 100 wierd values break it probably isn't hitag...
+        // if we saw over 100 weird values break it probably isn't hitag...
         if (errorCount > 100) break;
 
         // We can break this loop if we received the last bit from a frame
@@ -1255,7 +1255,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
     // TC0: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
     AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
 
-    // TC1: Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
+    // TC1: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
     // external trigger rising edge, load RA on falling edge of TIOA.
     AT91C_BASE_TC1->TC_CMR =
         AT91C_TC_CLKS_TIMER_DIV1_CLOCK  |
@@ -1320,13 +1320,13 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
                 }
             }
             k = 0;
-            for (i = 4; i < 36; i++) { // ignore first 4 bits: SOF (actualy 1 or 6 depending on response protocol)
+            for (i = 4; i < 36; i++) { // ignore first 4 bits: SOF (actually 1 or 6 depending on response protocol)
                 pageData[k] = response_bit[i];
                 k++;
             }
             for (i = 0; i < 4; i++)     // set page bytes to 0
                 tag.pages[pageNum][i] = 0x0;
-            for (i = 0; i < 4; i++) {   // set page bytes from recieved bits
+            for (i = 0; i < 4; i++) {   // set page bytes from received bits
                 tag.pages[pageNum][i] += ((pageData[i * 8] << 7)
                                           | (pageData[1 + (i * 8)] << 6)
                                           | (pageData[2 + (i * 8)] << 5)
@@ -1554,7 +1554,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
             Dbprintf("no write access on page %d", page);
             bStop = !false;
         } else if (rxlen == 0 && tag.tstate != HT_WRITING_PAGE_DATA) {
-            //start the authetication
+            //start the authentication
             txlen = 5;
             memcpy(tx, "\xc0", nbytes(txlen));
             tag.pstate = HT_READY;
@@ -1581,7 +1581,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
             tx[2] = 0x00 + (crc % 16) * 16;
         } else if (tag.pstate == HT_SELECTED && tag.tstate == HT_WRITING_PAGE_ACK
                    && rxlen == 6 && rx[0] == 0xf4) {
-            //ACK recieved to write the page. send data
+            //ACK received to write the page. send data
             tag.tstate = HT_WRITING_PAGE_DATA;
             txlen = 40;
             crc = CRC_PRESET;

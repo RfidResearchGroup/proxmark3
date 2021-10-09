@@ -9,7 +9,7 @@
 //                                         many others who came before
 //
 // NOTES:
-// LF Demod functions are placed here to allow the flexability to use client or
+// LF Demod functions are placed here to allow the flexibility to use client or
 // device side. Most BUT NOT ALL of these functions are currenlty safe for
 // device side use currently. (DetectST for example...)
 //
@@ -1883,7 +1883,7 @@ static size_t fsk_wave_demod(uint8_t *dest, size_t size, uint8_t fchigh, uint8_t
 
     // process:
     // count width from 0-1 transition to  1-0.
-    // determine the width is withing FUZZ_min and FUZZ_max tolerances
+    // determine the width is within FUZZ_min and FUZZ_max tolerances
     // width should be divided with exp_one.  i:e 6+7+6+2=21,  21/5 = 4,
     // the 1-0 to 0-1  width should be divided with exp_zero.   Ie: 3+5+6+7 = 21/6 = 3
 

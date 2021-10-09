@@ -62,7 +62,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `nfc parser` - now also identify xvcard types (@iceman1001)
  - Added `hf mf gview` - view contents of a magic Gen3 GTU (@iceman1001)
  - Added Standalone mode for nexwatch ID credentials (@Guilhem7, @MaximeBosca)
- - Fix `lf em 4x50/4x70 *`  reverted a missunderstanding in byte order macros (@iceman1001)
+ - Fix `lf em 4x50/4x70 *`  reverted a misunderstanding in byte order macros (@iceman1001)
  - Added more keys (@equipter)
  - Changed `hf nfc ndefread` - ndef parser now handles more types (@iceman1001)
  - Fix `hf desfire` changekey, GetUID, 3DES sesson key tweak. (@mwalker33)
@@ -109,9 +109,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `smart raw` - now uses NG (@iceman1001)
  - Added `hf iclass configcard` - now can download / generate config card dumps with a cardhelper [WIP] (@iceman1001)
  - Fix swapped DESELECT and WTX annotations (@VortixDev)
- - Fixed `hf 15 findafi` - cliparser bug, and loop is user interruptable (@iceman1001)
+ - Fixed `hf 15 findafi` - cliparser bug, and loop is user interruptible (@iceman1001)
  - Added `hf mf wipe` - takes a keyfile and wipes a MFC to default values (@iceman1001)
- - Changed `pm3 shell` - now prioritise USB connections in WSL1 (@gator96100)
+ - Changed `pm3 shell` - now prioritize USB connections in WSL1 (@gator96100)
  - Added `hf mf restore -w` - now supports usage of specified keyfile to authenticate with instead of default FFFFFF key (@iceman1001)
  - Added `mem info --pem`- now supports loading of private key in PEM format (@iceman1001)
  - Changed `hf mfp auth` - more verbose message (@vortixdev)
@@ -286,7 +286,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Change pushed some ARM source to compile with THUMB.  Saves a lot of space of ARM flash memory (@slurdge)
  - Change from using ZLIB compression of FPGA images in ARM to LZ4.  15%+ speedups when swapping between HF & LF now (@slurdge)
  - Fix `emv scan -w` - hash mismatch, solution similar to below (@iceman1001)
- - Fix 'emv roca' - hash mismatch, merged from offical repo (@pwpiwi)
+ - Fix 'emv roca' - hash mismatch, merged from official repo (@pwpiwi)
  - Fix 'lf ti demod' - now calculates correct crc (@iceman1001)
  - Add Python3 as possible script engine (@iceman1001, @doegox)
  - Add doc/mfu_binary_format_notes.md (@iceman1001)
@@ -905,9 +905,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [3.0.0][2017-08-29]
   Notes on this release
-  this version includes a merge with the PM3 offical v3.0.1 code, a.k.a the "Monster merge"
+  this version includes a merge with the PM3 official v3.0.1 code, a.k.a the "Monster merge"
   There is a lot of changes,  command breaking changes, which is the cause for the JUMP in version number.
-  It is set to v3.0.0 to show that it is on par with PM3 Offical v3 release.
+  It is set to v3.0.0 to show that it is on par with PM3 Official v3 release.
 
  - Updated `mkversion.pl` to write a date based on file when repo is downloaded as a zip file from github (@iceman1001)
  - Update `readme.md` to fit GitHubs markup(@joanbono)

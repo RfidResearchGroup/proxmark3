@@ -107,7 +107,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     }
 
     // Prepare the device control
-    // doesn't matter since PM3 device ignors this CDC command:  set_line_coding in usb_cdc.c
+    // doesn't matter since PM3 device ignores this CDC command:  set_line_coding in usb_cdc.c
     memset(&sp->dcb, 0, sizeof(DCB));
     sp->dcb.DCBlength = sizeof(DCB);
     if (!BuildCommDCBA("baud=115200 parity=N data=8 stop=1", &sp->dcb)) {

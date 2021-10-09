@@ -11,7 +11,7 @@
 // Created for the live streamed talk 'DEFCON 28 Wireless Village-Omikron and Iceman - Ghosting the PACS-man: New Tools and Techniques'
 // https://www.youtube.com/watch?v=ghiHXK4GEzE
 //
-//  I created a youtube video demostrating the HF_ICECLASS standalone mode
+//  I created a youtube video demonstrating the HF_ICECLASS standalone mode
 //  https://youtu.be/w_1GnAscNIU
 //
 //
@@ -43,7 +43,7 @@
 
 // ====================================================
 // Select which standalone function to be active.
-// 5 possiblities.  Uncomment the one you wanna use.
+// 5 possibilities.  Uncomment the one you wanna use.
 
 #define ICE_USE               ICE_STATE_FULLSIM
 //#define ICE_USE               ICE_STATE_ATTACK

@@ -2326,7 +2326,7 @@ int ReaderReceive(uint8_t *receivedAnswer, uint8_t *par) {
 
 // This function misstreats the ISO 14443a anticollision procedure.
 // by fooling the reader there is a collision and forceing the reader to
-// increase the uid bytes.   The might be an overflow, DoS will occure.
+// increase the uid bytes.   The might be an overflow, DoS will occur.
 void iso14443a_antifuzz(uint32_t flags) {
 
     // We need to listen to the high-frequency, peak-detected path.
@@ -3136,7 +3136,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
             received_nack = true;
         else if (resp_res == 4) {
             // did we get lucky and got our dummykey to be valid?
-            // however we dont feed key w uid it the prng..
+            // however we don't feed key w uid it the prng..
             isOK = -6;
             break;
         }
@@ -3520,7 +3520,7 @@ void DetectNACKbug(void) {
         consecutive_resyncs = 0;
     } // end for loop
 
-    // num_nacks = number of nacks recieved. should be only 1. if not its a clone card which always sends NACK (parity == 0) ?
+    // num_nacks = number of nacks received. should be only 1. if not its a clone card which always sends NACK (parity == 0) ?
     // i  =  number of authentications sent.  Not always 256, since we are trying to sync but close to it.
     FpgaDisableTracing();
 

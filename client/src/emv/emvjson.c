@@ -218,7 +218,7 @@ int JsonSaveTLVTree(json_t *root, json_t *elm, const char *path, struct tlvdb *t
             if (!pelm)
                 return 1;
 
-            // check childs element and add it if not found
+            // check children element and add it if not found
             json_t *chjson = json_path_get(pelm, "$.Childs");
             if (!chjson) {
                 json_object_set_new(pelm, "Childs", json_array());

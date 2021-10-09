@@ -59,7 +59,7 @@ static bool command_parity = true;
 #define EM4X70_COMMAND_WRITE                0x05
 #define EM4X70_COMMAND_UM2                  0x07
 
-// Constants used to determing high/low state of signal
+// Constants used to determine high/low state of signal
 #define EM4X70_NOISE_THRESHOLD  13  // May depend on noise in environment
 #define HIGH_SIGNAL_THRESHOLD  (127 + EM4X70_NOISE_THRESHOLD)
 #define LOW_SIGNAL_THRESHOLD   (127 - EM4X70_NOISE_THRESHOLD)
@@ -539,7 +539,7 @@ static bool em4x70_read_um2(void) {
 }
 
 static bool find_em4x70_tag(void) {
-    // function is used to check wether a tag on the proxmark is an
+    // function is used to check whether a tag on the proxmark is an
     // EM4170 tag or not -> speed up "lf search" process
     return find_listen_window(false);
 }

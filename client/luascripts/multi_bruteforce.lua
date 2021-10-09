@@ -26,7 +26,7 @@ It uses both LF and HF simulations.
     -- Author note
     -- I wrote this as i was doing a PACS audit. This is far from complete, but is easily expandable.
     -- The idea was based on proxbrute, but i needed more options, and support for different readers.
-    -- I dont know LUA, so I used Brian Redbeards lf_hid_bulkclone.lua script as a starting point, sorry if its kludgy.
+    -- I don't know LUA, so I used Brian Redbeards lf_hid_bulkclone.lua script as a starting point, sorry if its kludgy.
 
 ]]
 example = [[

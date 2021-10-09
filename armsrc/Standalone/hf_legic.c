@@ -124,7 +124,7 @@ void RunMod(void) {
         DbpString("[=] looking for tags");
         int read_success = PM3_ESOFT;
 
-        //search for legic card until reading successfull or button pressed
+        //search for legic card until reading successful or button pressed
         do {
             LED_C_ON();
             SpinDelay(500);

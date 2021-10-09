@@ -1454,7 +1454,7 @@ void Iso15693InitReader(void) {
 
 ///////////////////////////////////////////////////////////////////////
 // ISO 15693 Part 3 - Air Interface
-// This section basicly contains transmission and receiving of bits
+// This section basically contains transmission and receiving of bits
 ///////////////////////////////////////////////////////////////////////
 
 // Encode an identify request, which is the first
@@ -1504,7 +1504,7 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
 
     } else {
 
-        *eof_time = start_time + 32 * ((8 * ts->max) - 4); // substract the 4 padding bits after EOF
+        *eof_time = start_time + 32 * ((8 * ts->max) - 4); // subtract the 4 padding bits after EOF
         LogTrace_ISO15693(send, sendlen, (start_time * 4), (*eof_time * 4), NULL, true);
         if (recv != NULL) {
             res = GetIso15693AnswerFromTag(recv, max_recv_len, timeout, eof_time);
@@ -1518,7 +1518,7 @@ int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, ui
     CodeIso15693AsReaderEOF();
     tosend_t *ts = get_tosend();
     TransmitTo15693Tag(ts->buf, ts->max, &start_time);
-    uint32_t end_time = start_time + 32 * (8 * ts->max - 4); // substract the 4 padding bits after EOF
+    uint32_t end_time = start_time + 32 * (8 * ts->max - 4); // subtract the 4 padding bits after EOF
     LogTrace_ISO15693(NULL, 0, (start_time * 4), (end_time * 4), NULL, true);
 
     int res = 0;
@@ -1858,7 +1858,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
     Iso15693InitReader();
 
     // first without AFI
-    // Tags should respond wihtout AFI and with AFI=0 even when AFI is active
+    // Tags should respond without AFI and with AFI=0 even when AFI is active
 
     data[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
     data[1] = ISO15693_INVENTORY;

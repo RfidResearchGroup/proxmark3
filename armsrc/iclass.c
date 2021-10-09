@@ -1246,7 +1246,7 @@ static void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time,
     CodeIso15693AsReader(frame, len);
     tosend_t *ts = get_tosend();
     TransmitTo15693Tag(ts->buf, ts->max, start_time);
-    *end_time = *start_time + (32 * ((8 * ts->max) - 4)); // substract the 4 padding bits after EOF
+    *end_time = *start_time + (32 * ((8 * ts->max) - 4)); // subtract the 4 padding bits after EOF
     LogTrace_ISO15693(frame, len, (*start_time * 4), (*end_time * 4), NULL, true);
 }
 

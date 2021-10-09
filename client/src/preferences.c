@@ -9,7 +9,7 @@
 //      To add a new setting
 //      Add the new setting to the session_arg_t; in ui.h
 //      Add the default value for the setting in the settings_load page below
-//      Update the preferences_load_callback to load your setting into the stucture
+//      Update the preferences_load_callback to load your setting into the structure
 //      Update the preferences_save_callback to ensure your setting gets saved when needed.
 //      use the preference as needed : g_session.<preference name>
 //      Can use (g_session.preferences_loaded) to check if json settings file was used
@@ -515,7 +515,7 @@ static void showClientExeDelayState(void) {
 static int setCmdEmoji(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "prefs set emoji ",
-                  "Set presistent preference of using emojis in the client",
+                  "Set persistent preference of using emojis in the client",
                   "prefs set emoji --alias"
                  );
 
@@ -569,7 +569,7 @@ static int setCmdEmoji(const char *Cmd) {
 static int setCmdColor(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "prefs set color ",
-                  "Set presistent preference of using colors in the client",
+                  "Set persistent preference of using colors in the client",
                   "prefs set color --ansi"
                  );
 
@@ -613,7 +613,7 @@ static int setCmdColor(const char *Cmd) {
 static int setCmdDebug(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "prefs set clientdebug ",
-                  "Set presistent preference of using clientside debug level",
+                  "Set persistent preference of using clientside debug level",
                   "prefs set clientdebug --simple"
                  );
 
@@ -664,7 +664,7 @@ static int setCmdDeviceDebug (const char *Cmd)
 {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "prefs set devicedebug ",
-                  "Set presistent preference of device side debug level",
+                  "Set persistent preference of device side debug level",
                   "prefs set devicedebug --on"
                  );
 
@@ -732,7 +732,7 @@ static int setCmdDeviceDebug (const char *Cmd)
 static int setCmdExeDelay(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "prefs set clientdelay",
-                  "Set presistent preference of delay before executing a command in the client",
+                  "Set persistent preference of delay before executing a command in the client",
                   "prefs set clientdelay --ms 0     --> unsets any delay\n"
                   "prefs set clientdelay --ms 1000  --> sets 1000ms delay"
                  );
@@ -760,7 +760,7 @@ static int setCmdExeDelay(const char *Cmd) {
 static int setCmdHint(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "prefs set hints ",
-                  "Set presistent preference of showing hint messages in the client",
+                  "Set persistent preference of showing hint messages in the client",
                   "prefs set hints --on"
                  );
 
@@ -803,7 +803,7 @@ static int setCmdHint(const char *Cmd) {
 static int setCmdPlotSliders(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "prefs set plotsliders",
-                  "Set presistent preference of showing the plotslider control in the client",
+                  "Set persistent preference of showing the plotslider control in the client",
                   "prefs set plotsliders --on"
                  );
 
@@ -845,7 +845,7 @@ static int setCmdPlotSliders(const char *Cmd) {
 static int setCmdSavePaths(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "prefs set savepaths",
-                  "Set presistent preference of file paths in the client",
+                  "Set persistent preference of file paths in the client",
                   "prefs set savepaths --dump /home/mydumpfolder      -> all dump files will be saved into this folder\n"
                   "prefs set savepaths --def /home/myfolder -c    -> create if needed, all files will be saved into this folder"
                  );
@@ -926,7 +926,7 @@ static int setCmdSavePaths(const char *Cmd) {
 static int setCmdBarMode(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "prefs set barmode",
-                  "Set presistent preference of HF/LF tune command styled output in the client",
+                  "Set persistent preference of HF/LF tune command styled output in the client",
                   "prefs set barmode --mix"
                  );
 

@@ -160,7 +160,7 @@
    (Mikron's European Patent EP 0473569 A2 was filed 23 August 1991, with a
    priority date of 23 Aug 1990.)
    Mikron was subsequently acquired by Philips Semiconductors in 1995.
-   Philips Semiconductors divsion subsequently became NXP.
+   Philips Semiconductors division subsequently became NXP.
 
    + Modulation read/write device -> transponder: 100 % ASK and binary pulse
      length coding

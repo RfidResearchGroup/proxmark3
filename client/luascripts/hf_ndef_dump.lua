@@ -15,7 +15,7 @@ It also write the dump to an eml-file <uid>.eml.
 
 (The difference between an .eml-file and a .bin-file is that the eml file contains
 ASCII representation of the hex-data, with linebreaks between 'rows'. A .bin-file contains the
-raw data, but when saving into that for, we lose the infromation about how the memory is structured.
+raw data, but when saving into that for, we lose the information about how the memory is structured.
 For example: 24 bytes could be 6 blocks of 4 bytes, or vice versa.
 Therefore, the .eml is better to use file when saving dumps.)
 

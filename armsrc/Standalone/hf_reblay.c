@@ -33,7 +33,7 @@ void ModInfo(void) {
 *
 * Instructions:
 *
-* I recommend setting up & run the other end before start sending or receving data in this Proxmark3
+* I recommend setting up & run the other end before start sending or receiving data in this Proxmark3
 * standalone.
 *
 * For the reading mode:

@@ -36,7 +36,7 @@
 #include "cmdlfhitag.h"     // for hitag menu
 #include "cmdlfidteck.h"    // for idteck menu
 #include "cmdlfio.h"        // for ioprox menu
-#include "cmdlfcotag.h"     // for COTAG meny
+#include "cmdlfcotag.h"     // for COTAG menu
 #include "cmdlfdestron.h"   // for FDX-A FECAVA Destron menu
 #include "cmdlffdxb.h"      // for FDX-B menu
 #include "cmdlfgallagher.h" // for GALLAGHER menu
@@ -47,7 +47,7 @@
 #include "cmdlfmotorola.h"  // for Motorola menu
 #include "cmdlfnedap.h"     // for NEDAP menu
 #include "cmdlfnexwatch.h"  // for nexwatch menu
-#include "cmdlfnoralsy.h"   // for NORALSY meny
+#include "cmdlfnoralsy.h"   // for NORALSY menu
 #include "cmdlfpac.h"       // for pac menu
 #include "cmdlfparadox.h"   // for paradox menu
 #include "cmdlfpcf7931.h"   // for pcf7931 menu

@@ -727,7 +727,7 @@ bool hitag2crack_consume_keystream(uint8_t *keybits, int kslen, int *ksoffset, u
         return false;
     }
 
-    // dont bother decrypting the response - we already know the keybits
+    // don't bother decrypting the response - we already know the keybits
 
     // update ksoffset with command length and response
     *ksoffset += (numcmds * 10) + 32;

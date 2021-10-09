@@ -121,7 +121,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
     return false;
 }
 
-// Print extented information about tag.
+// Print extended information about tag.
 static int infoHFCryptoRF(bool verbose) {
     iso14b_raw_cmd_t packet = {
         .flags = (ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT),

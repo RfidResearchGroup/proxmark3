@@ -27,7 +27,7 @@ Mifare
     C2 = Restore
     B0 = Transfer
 Ultralight C
-    A0 = Compatibility Write (to accomodate MIFARE commands)
+    A0 = Compatibility Write (to accommodate MIFARE commands)
     1A = Step1 Authenticate
     AF = Step2 Authenticate
 

@@ -168,7 +168,7 @@ static int CmdHFFidoRegister(const char *cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    // deafault name
+    // default name
     if (fnlen == 0) {
         strcat(filename, DEF_FIDO_PARAM_FILE);
         fnlen = strlen(filename);
@@ -438,7 +438,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    // deafault name
+    // default name
     if (fnlen == 0) {
         strcat(filename, DEF_FIDO_PARAM_FILE);
         fnlen = strlen(filename);
@@ -683,7 +683,7 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
-    // deafault name
+    // default name
     if (fnlen == 0) {
         strcat(filename, DEF_FIDO_PARAM_FILE);
         fnlen = strlen(filename);
@@ -802,7 +802,7 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
-    // deafault name
+    // default name
     if (fnlen == 0) {
         strcat(filename, DEF_FIDO_PARAM_FILE);
         fnlen = strlen(filename);

@@ -1413,7 +1413,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         if (keyCount == 0)
             goto OUT;
 
-        // limit size of availlable for keys in bigbuff
+        // limit size of available for keys in bigbuff
         // a key is 6bytes
         uint16_t key_mem_available = MIN(BigBuf_get_size(), keyCount * 6);
 

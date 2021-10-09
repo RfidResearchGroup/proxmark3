@@ -742,7 +742,7 @@ s32_t SPIFFS_tell(spiffs *fs, spiffs_file fh);
  * in this callback will mess things up for sure - do not do this.
  * This can be used to track where files are and move around during garbage
  * collection, which in turn can be used to build location tables in ram.
- * Used in conjuction with SPIFFS_open_by_page this may improve performance
+ * Used in conjunction with SPIFFS_open_by_page this may improve performance
  * when opening a lot of files.
  * Must be invoked after mount.
  *

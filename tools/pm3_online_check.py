@@ -21,7 +21,7 @@
 #    GNU General Public License for more details.
 #
 #
-# Dependecies:
+# Dependencies:
 #
 # pip3 install pexpect ansicolors
 #
@@ -247,10 +247,10 @@ def main():
             must_update_fw = 1
 
         if flash_mem in msg:
-            print("[+] Flash memory accessable ", color('[OK]', fg='green'))
+            print("[+] Flash memory accessible ", color('[OK]', fg='green'))
             res += 1
         else:
-            print("[-] Flash memory accessable ", color('[FAIL]', fg='red'))
+            print("[-] Flash memory accessible ", color('[FAIL]', fg='red'))
 
         # extract slow clock and verify its OK...
         # slow clock check:

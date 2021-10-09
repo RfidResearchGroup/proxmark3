@@ -25,7 +25,7 @@ script run hf_15_magic -h -u <uid>
 arguments = [[
     -h             : this help
     -u <UID>       : UID (16 hexsymbols)
-    -a             : use offical pm3 repo ISO15 commands instead of iceman fork.
+    -a             : use official pm3 repo ISO15 commands instead of iceman fork.
 ]]
 
 local DEBUG = true
@@ -74,9 +74,9 @@ local function magicUID_iceman(b0, b1)
     core.console('hf 15 raw -2 -c -d 022139'..b0)
 end
 --
---- Set UID on magic command enabled,  OFFICAL REPO
-local function magicUID_offical(b0, b1)
-    print('Using backdoor Magic tag function OFFICAL REPO')
+--- Set UID on magic command enabled,  OFFICIAL REPO
+local function magicUID_official(b0, b1)
+    print('Using backdoor Magic tag function OFFICIAL REPO')
     core.console('hf 15 cmd raw -c 02213E00000000')
     core.console('hf 15 cmd raw -c 02213F69960000')
     core.console('hf 15 cmd raw -c 022138'..b1)
@@ -117,7 +117,7 @@ function main(args)
     if use_iceman then
         magicUID_iceman(block0, block1)
     else
-        magicUID_offical(block0, block1)
+        magicUID_official(block0, block1)
     end
 end
 

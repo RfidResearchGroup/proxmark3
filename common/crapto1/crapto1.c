@@ -475,7 +475,7 @@ static struct Crypto1State *check_pfx_parity(uint32_t prefix, uint32_t rresp, ui
 
 #if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks malloc()/free()
 /** lfsr_common_prefix
- * Implentation of the common prefix attack.
+ * Implementation of the common prefix attack.
  * Requires the 28 bit constant prefix used as reader nonce (pfx)
  * The reader response used (rr)
  * The keystream used to encrypt the observed NACK's (ks)

@@ -36,7 +36,7 @@
 
 //RESPONSE FLAGS
 #define ISO15_RES_ERROR                  0x01
-#define ISO15_RES_EXT                    0x08 // Protocol Extention
+#define ISO15_RES_EXT                    0x08 // Protocol Extension
 
 // RESPONSE ERROR CODES
 #define ISO15_NOERROR                    0x00

@@ -23,8 +23,8 @@
 #include "mbedtls/sha1.h"
 #include "crc16.h"        // crc16 ccitt
 
-// Implemetation tips:
-// For each implementation of the algos, I recommend adding a self test for easy "simple unit" tests when Travic CI / Appveyour runs.
+// Implementation tips:
+// For each implementation of the algos, I recommend adding a self test for easy "simple unit" tests when Travis CI / Appveyor runs.
 // See special note for MFC based algos.
 
 //------------------------------------

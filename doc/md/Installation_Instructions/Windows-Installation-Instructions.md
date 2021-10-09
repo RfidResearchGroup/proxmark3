@@ -83,7 +83,7 @@ Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmar
 # Installing pre-compiled binaries with ProxSpace
 ^[Top](#top)
 
-There are a community effort by @gator96100 to make up-to-date precompiled version of the offical repository and this repository.
+There are a community effort by @gator96100 to make up-to-date precompiled version of the official repository and this repository.
 [www.proxmarkbuilds.org](https://www.proxmarkbuilds.org/)
 
 It has excellent instructions to follow. 

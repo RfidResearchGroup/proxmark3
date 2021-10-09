@@ -897,7 +897,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                                  response[14], response[15]);
                     }
 
-                    // Access permission managment:
+                    // Access permission management:
                     //
                     // Sector Trailer:
                     // - KEY A access
@@ -907,7 +907,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                     // Data block:
                     // - Data access
 
-                    // If permission is not allowed, data is cleared (00) in emulator memeory.
+                    // If permission is not allowed, data is cleared (00) in emulator memory.
                     // ex: a0a1a2a3a4a561e789c1b0b1b2b3b4b5 => 00000000000061e789c1b0b1b2b3b4b5
 
 

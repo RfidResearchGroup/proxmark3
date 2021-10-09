@@ -67,7 +67,7 @@ static unsigned int profiles[11][2] = {
     { 16384, 5 }, // 0, best for Intel GPU's with Neo
     { 8192,  6 }, // 1, only for Intel NEO
     { 4096,  7 }, // 2 (old 0) seems the best for all others (also NVIDIA) :D Apple/Intel GPU's stable here
-    { 2048,  8 }, // 3 (old 1) usefull for any kind of CPU's
+    { 2048,  8 }, // 3 (old 1) usefulfor any kind of CPU's
     { 1024,  9 },
     { 512,  10 },
     { 256,  11 },
@@ -1008,7 +1008,7 @@ int main(int argc, char **argv) {
         exit(3);
     }
 
-    // at this point z is the max value, still usefull for free's
+    // at this point z is the max value, still usefulfor free's
 
 #if DEBUGME > 0
     printf("[debug] Lower profile between %u device(s) is: %d\n", selected_devices_cnt, profile);

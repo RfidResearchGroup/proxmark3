@@ -3208,7 +3208,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     PrintAndLogEx(INFO, "Starting Tear-off test");
     PrintAndLogEx(INFO, "Target block no: %u", blockno);
     if (use_data) {
-        PrintAndLogEx(INFO, "Target inital block data : %s", sprint_hex_inrow(data, 4));
+        PrintAndLogEx(INFO, "Target initial block data : %s", sprint_hex_inrow(data, 4));
     }
     PrintAndLogEx(INFO, "Target write block data  : %s", sprint_hex_inrow(teardata, 4));
     if (use_match) {
@@ -3498,28 +3498,28 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t inital_cnt[3] = {0, 0, 0};
-    int len = ulev1_readCounter(cnt_no, inital_cnt, sizeof(inital_cnt));
-    if ( len != sizeof(inital_cnt) ) {
+    uint8_t initial_cnt[3] = {0, 0, 0};
+    int len = ulev1_readCounter(cnt_no, initial_cnt, sizeof(initial_cnt));
+    if ( len != sizeof(initial_cnt) ) {
         PrintAndLogEx(WARNING, "failed to read counter");
         return PM3_ESOFT;
     }
 
-    uint8_t inital_tear[1] = {0};
-    len = ulev1_readTearing(cnt_no, inital_tear, sizeof(inital_tear));
+    uint8_t initial_tear[1] = {0};
+    len = ulev1_readTearing(cnt_no, initial_tear, sizeof(initial_tear));
     DropField();
-    if ( len != sizeof(inital_tear) ) {
+    if ( len != sizeof(initial_tear) ) {
         PrintAndLogEx(WARNING, "failed to read ANTITEAR,  exiting...  %d", len);
         return PM3_ESOFT;
     }
 
     uint32_t wr_value = ( newvalue[0] | newvalue[1] << 8 | newvalue[2] << 16 );
-    uint32_t inital_value = ( inital_cnt[0] | inital_cnt[1] << 8 | inital_cnt[2] << 16 );;
+    uint32_t initial_value = ( initial_cnt[0] | initial_cnt[1] << 8 | initial_cnt[2] << 16 );;
 
     PrintAndLogEx(INFO, "----------------- " _CYAN_("MFU Ev1 Counter Tear off") " ---------------------");
     PrintAndLogEx(INFO, "Target counter no     [ " _GREEN_("%u") " ]", counter);
-    PrintAndLogEx(INFO, "       counter value  [ " _GREEN_("%s") " ]", sprint_hex_inrow(inital_cnt, sizeof(inital_cnt)));
-    PrintAndLogEx(INFO, "     anti-tear value  [ " _GREEN_("%02X") " ]", inital_tear[0]);
+    PrintAndLogEx(INFO, "       counter value  [ " _GREEN_("%s") " ]", sprint_hex_inrow(initial_cnt, sizeof(initial_cnt)));
+    PrintAndLogEx(INFO, "     anti-tear value  [ " _GREEN_("%02X") " ]", initial_tear[0]);
     PrintAndLogEx(INFO, "       increase value [ " _GREEN_("%s") " ]", sprint_hex_inrow(newvalue, newvaluelen));
     PrintAndLogEx(INFO, "----------------------------------------------------");
 
@@ -3630,20 +3630,20 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
             PrintAndLogEx(NORMAL, "");
 
-            if (inital_value != a ) {
+            if (initial_value != a ) {
 
-                if ( inital_value != b )
-                    PrintAndLogEx(INFO, "pre %08x, post %08x != inital %08x  |  tear:  0x%02X  == 0x%02X", a, b, inital_value, pre_tear, post_tear);
+                if ( initial_value != b )
+                    PrintAndLogEx(INFO, "pre %08x, post %08x != initial %08x  |  tear:  0x%02X  == 0x%02X", a, b, initial_value, pre_tear, post_tear);
                 else
-                    PrintAndLogEx(INFO, "pre %08x != inital and post %08x == inital %08x |  tear:  0x%02X  == 0x%02X", a, b, inital_value, pre_tear, post_tear);
+                    PrintAndLogEx(INFO, "pre %08x != initial and post %08x == initial %08x |  tear:  0x%02X  == 0x%02X", a, b, initial_value, pre_tear, post_tear);
             } else {
 
-                if ( inital_value != b )
-                    PrintAndLogEx(INFO, "pre %08x == inital and post %08x != inital  %08x |  tear:  0x%02X  == 0x%02X", a, b, inital_value, pre_tear, post_tear);
+                if ( initial_value != b )
+                    PrintAndLogEx(INFO, "pre %08x == initial and post %08x != initial  %08x |  tear:  0x%02X  == 0x%02X", a, b, initial_value, pre_tear, post_tear);
             }
 
             if ( b == 0 ) {
-                PrintAndLogEx(INFO, _CYAN_("Tear off occured  (ZEROS value!) ->  ") "%s vs " _GREEN_("%s") "  Tear status:  0x%02X == 0x%02X   ( %s )"
+                PrintAndLogEx(INFO, _CYAN_("Tear off occurred  (ZEROS value!) ->  ") "%s vs " _GREEN_("%s") "  Tear status:  0x%02X == 0x%02X   ( %s )"
                     , prestr
                     , poststr
                     , pre_tear
@@ -3654,7 +3654,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
             }
 
             if ( a > b ) {
-                PrintAndLogEx(INFO, _CYAN_("Tear off occured  " _RED_("( LESS )") " ->  ") "%s vs " _GREEN_("%s") "  Tear status:  0x%02X == 0x%02X   ( %s )"
+                PrintAndLogEx(INFO, _CYAN_("Tear off occurred  " _RED_("( LESS )") " ->  ") "%s vs " _GREEN_("%s") "  Tear status:  0x%02X == 0x%02X   ( %s )"
                     , prestr
                     , poststr
                     , pre_tear
@@ -3688,7 +3688,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
             } else  {
 
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(INFO, _CYAN_("Tear off occured  (+1)  (too late) ->  ") "%s vs %s   Tear:  0x%02X == 0x%02X   ( %s )"
+                PrintAndLogEx(INFO, _CYAN_("Tear off occurred  (+1)  (too late) ->  ") "%s vs %s   Tear:  0x%02X == 0x%02X   ( %s )"
                     , prestr
                     , poststr
                     , pre_tear
@@ -3696,7 +3696,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
                     , post_tear_check ? _GREEN_("OK") : _RED_("DETECTED")
                 );
 
-                if ( post_tear_check  && b == inital_value) {
+                if ( post_tear_check  && b == initial_value) {
                     PrintAndLogEx(INFO, "Reverted to previous value");
                     break;
                 }
@@ -3708,7 +3708,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
                     newvalue[1] = 0;
                     newvalue[2] = 0;
 
-                    if ( b >= (inital_value + (2 * wr_value))) {
+                    if ( b >= (initial_value + (2 * wr_value))) {
                         PrintAndLogEx(INFO, "Large " _YELLOW_("( JUMP )") " detected");
 
 
@@ -3750,7 +3750,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
                     continue;
                 }
 
-                if ( b == inital_value ) {
+                if ( b == initial_value ) {
                     PrintAndLogEx(INFO, "Reverted to previous value");
                     break;
                 }

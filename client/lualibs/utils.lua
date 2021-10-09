@@ -203,7 +203,7 @@ local Utils =
 
 
     -- input parameter is a string
-    -- Swaps the endianess and returns a number,
+    -- Swaps the endianness and returns a number,
     -- IE:  'cd7a' -> '7acd'  -> 0x7acd
     SwapEndianness = function(s, len)
         if s == nil then return nil end

@@ -18,7 +18,7 @@ Always use the latest repository commits from *master* branch. There are always 
   * [File not found](#file-not-found)
   * [Pixmap / pixbuf warnings](#pixmap--pixbuf-warnings)
   * [Usb cable](#usb-cable)
-  * [WSL explorer.exe . doesnt work](#WSL)
+  * [WSL explorer.exe . doesn't work](#WSL)
   * [Troubles with running the Proxmark3 client](#troubles-with-running-the-proxmark3-client)
   * [libQt5Core.so.5 not found](#libQt5Coreso5-not-found)
   * [Target attribute is not supported on this machine](#target-attribute-is-not-supported-on-this-machine)

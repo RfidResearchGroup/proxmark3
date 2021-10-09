@@ -153,8 +153,8 @@ static int CmdMotorolaReader(const char *Cmd) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
-    // Motorola Flexpass seem to work at 74 kHz
-    // and take about 4400 samples to befor modulating
+    // Motorola Flexpass seems to work at 74 kHz
+    // and take about 4400 samples too before modulating
     sample_config sc = {
         .decimation = -1,
         .bits_per_sample = -1,

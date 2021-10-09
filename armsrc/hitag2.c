@@ -1141,7 +1141,7 @@ void SniffHitag2(void) {
     // Disable timer during configuration
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 
-    // Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
+    // Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
     // external trigger rising edge, load RA on rising edge of TIOA.
     AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_ETRGEDG_BOTH | AT91C_TC_ABETRG | AT91C_TC_LDRA_BOTH;
 
@@ -1225,7 +1225,7 @@ void SniffHitag2(void) {
                         //DbpString("wierd1?");
 //                      }
                         // Capture the T0 periods that have passed since last communication or field drop (reset)
-                        // We always recieve a 'one' first, which has the falling edge after a half period |-_|
+                        // We always receive a 'one' first, which has the falling edge after a half period |-_|
                         response = ra - HITAG_T_TAG_HALF_PERIOD;
 
                     } else if (ra >= HITAG_T_TAG_CAPTURE_FOUR_HALF) {

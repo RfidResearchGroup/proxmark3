@@ -69,7 +69,7 @@
 # Block 59: Success: isOk:01
 # Block 63: Success: isOk:01
 #
-# Thats it! Your S50 7byte UID card is wiped back. Now you can return back to Step 1 of this manual.
+# That's it! Your S50 7byte UID card is wiped back. Now you can return back to Step 1 of this manual.
 #
 #
 

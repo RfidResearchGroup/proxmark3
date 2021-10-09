@@ -206,7 +206,7 @@ int thread_start_scheduler(thread_ctx_t *ctx, thread_args_t *t_arg, wu_queue_ctx
                 }
             }
 
-            // internel err
+            // internal err
             if (error && err == 0) {
                 thread_destroy(ctx);
                 err = THREAD_ERROR_INTERNAL;

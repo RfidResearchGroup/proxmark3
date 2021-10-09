@@ -225,7 +225,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
     }
 
     if (g_dbglevel > 1)
-        Dbprintf("[!] Wrote %u Authentification attempts into logfile", auth_attempts);
+        Dbprintf("[!] Wrote %u Authentication attempts into logfile", auth_attempts);
 
     SpinErr(LED_A, 200, 5);
     SpinDelay(100);

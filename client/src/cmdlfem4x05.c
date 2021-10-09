@@ -572,7 +572,7 @@ int CmdEM4x05Dump(const char *Cmd) {
     if (card_type == EM_4205 || card_type == EM_4305 || card_type == EM_UNKNOWN) {
         bool lockInPW2 = false;
         // To flag any blocks locked we need to read blocks 14 and 15 first
-        // dont swap endian until we get block lock flags.
+        // don't swap endian until we get block lock flags.
         int status14 = em4x05_read_word_ext(EM4305_PROT1_BLOCK, pwd, usePwd, &word);
         if (status14 == PM3_SUCCESS) {
             if ((word & 0x00008000) != 0x00) {
@@ -643,7 +643,7 @@ int CmdEM4x05Dump(const char *Cmd) {
     } else if (card_type == EM_4369 || card_type == EM_4469) {
 
         // To flag any blocks locked we need to read block 3 first
-        // dont swap endian until we get block lock flags.
+        // don't swap endian until we get block lock flags.
         int status14 = em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word);
         if (status14 == PM3_SUCCESS) {
             lock_bits = word;
@@ -1579,7 +1579,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
     uint32_t search_value = 0;
     uint32_t write_value = 0;
     //
-    // inital phase
+    // initial phase
     //
     // read word 14
     uint32_t init_14 = 0;

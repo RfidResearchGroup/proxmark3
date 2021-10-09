@@ -34,10 +34,10 @@ TAG a3 76 dc df c1 42 e0 ee c6 75 a4 ca eb 0c da eb 46 a0  // 18 bytes = 16 byte
 
 -------Until this line we can recover key or decrypt communication with no troubles (see mfkey64 tool)--------------------------------
 
-TAG 52 6e af 8b                                            // nested auth encrypted tag nonce that we dont know
+TAG 52 6e af 8b                                            // nested auth encrypted tag nonce that we don't know
     8e 21 3a 29 a4 80 7e 02                                // nr_enc = nr^ks1, ar_enc = ar^ks2
 TAG b9 43 74 8d                                            // at_enc = at^ks3
-    e2 25 f8 32                                            // probably next command (actually is read block cmd, but we dont know it yet)
+    e2 25 f8 32                                            // probably next command (actually is read block cmd, but we don't know it yet)
 TAG 1f 26 82 8d 12 21 dd 42 c2 84 3e d0 26 7f 6b 2a 81 a9  // probably data
     ba 85 1d 36                                            // probably read cmd
 TAG 62 a8 78 69 ee 36 22 16 1c ff 4b 4e 69 cb 27 c2 e8 7e  // probably data

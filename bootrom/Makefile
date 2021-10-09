@@ -25,7 +25,7 @@ VERSIONSRC = version_pm3.c
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant
 APP_CFLAGS = -I. -ffunction-sections -fdata-sections
 
-# stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc,  no-common makes sure uninitalized vars doesn't end up in COMMON area
+# stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc,  no-common makes sure uninitialized vars don't end up in COMMON area
 APP_CFLAGS += -fno-stack-protector -fno-pie -fno-common
 
 

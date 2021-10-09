@@ -5,7 +5,7 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Routines to support the German eletronic "Personalausweis" (ID card)
+// Routines to support the German electronic "Personalausweis" (ID card)
 //-----------------------------------------------------------------------------
 
 #ifndef __EPA_H

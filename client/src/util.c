@@ -447,7 +447,7 @@ int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValue
         }
 
         if (maxBytesValueLen && bytesValueLen >= maxBytesValueLen) {
-            // if we dont have space in buffer and have symbols to translate
+            // if we don't have space in buffer and have symbols to translate
             return -2;
         }
 
@@ -718,7 +718,7 @@ int param_gethex_to_eol(const char *line, int paramnum, uint8_t *data, int maxda
         }
 
         if (*datalen >= maxdatalen) {
-            // if we dont have space in buffer and have symbols to translate
+            // if we don't have space in buffer and have symbols to translate
             return 2;
         }
 
@@ -763,7 +763,7 @@ int param_getbin_to_eol(const char *line, int paramnum, uint8_t *data, int maxda
         }
 
         if (*datalen >= maxdatalen) {
-            // if we dont have space in buffer and have symbols to translate
+            // if we don't have space in buffer and have symbols to translate
             return 2;
         }
 

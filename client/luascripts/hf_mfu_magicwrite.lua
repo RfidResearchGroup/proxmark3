@@ -367,7 +367,7 @@ local function write_version(data)
     end
 end
 ---
--- writen TYPE which card is based on.
+-- write TYPE which card is based on.
 -- 00 = 213,  01 = 215, 02 = 216
 local function write_type(data)
     -- type string checks
@@ -390,7 +390,7 @@ end
 ---
 -- Set tag type.  Predefinde version data together with magic type set.
 -- Since cmd always gives 10 bytes len (data+crc) we can impersonate the following types
--- we only truely be three types NTAG 213,215 and 216
+-- we only truly be three types NTAG 213,215 and 216
 local function set_type(tagtype)
 
     -- tagtype checks

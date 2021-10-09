@@ -4356,7 +4356,7 @@ int arg_parse(int argc, char * *argv, void * *argtable) {
         /* parse the command line (local copy) for untagged options */
         arg_parse_untagged(argc, argvcopy, table, endtable);
 
-        /* if no errors so far then perform post-parse checks otherwise dont bother */
+        /* if no errors so far then perform post-parse checks otherwise don't bother */
         if (endtable->count == 0)
             arg_parse_check(table, endtable);
 

@@ -434,7 +434,7 @@ local function main(args)
 
     local fairy = blocks[9]:sub(1,8)
     --FD0F = Left, FF0F = Right
-    local path = 'not choosen'
+    local path = 'not chosen'
     if fairy:sub(2,2) == 'D' then
         path = 'Left'
     elseif fairy:sub(2,2) == 'F' then

@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
         printf("\n");
     }
 
-    // Generate lfsr succesors of the tag challenge
+    // Generate lfsr successors of the tag challenge
     printf("\nLFSR successors of the tag challenge:\n");
     uint32_t p64 = prng_successor(nt, 64);
     printf("  nt': %08x\n", p64);

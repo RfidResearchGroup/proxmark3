@@ -74,7 +74,7 @@ Recovering key for:
 {enc7}: 4abd964b07d3563aa066ed0a2eac7f6312bf
 {enc8}: 9f9149ea
 
-LFSR succesors of the tag challenge:
+LFSR successors of the tag challenge:
   nt': 76d4468d
  nt'': d5f3c476
 

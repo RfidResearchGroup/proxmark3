@@ -443,7 +443,7 @@ static int find_double_listen_window(bool bcommand) {
     return PM3_EFAILED;
 }
 
-// function is used to check wether a tag on the proxmark is an
+// function is used to check whether a tag on the proxmark is an
 // EM4x50 tag or not -> speed up "lf search" process
 static bool find_em4x50_tag(void) {
     return find_single_listen_window();
@@ -458,7 +458,7 @@ static int request_receive_mode(void) {
 
 // returns true if signal structue corresponds to ACK, anything else is
 // counted as NAK (-> false)
-// Only relevant for pasword writing function:
+// Only relevant for password writing function:
 // If <bliw> is true then within the single listen window right after the
 // ack signal a RM request has to be sent.
 static bool check_ack(bool bliw) {
@@ -1796,7 +1796,7 @@ void em4x50_sim(uint32_t *password) {
         g_Login = false;
         g_WritePasswordProcess = false;
 
-        // start with inital command = standard read mode
+        // start with initial command = standard read mode
         command = EM4X50_COMMAND_STANDARD_READ;
 
         for (;;) {

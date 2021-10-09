@@ -180,7 +180,7 @@ static int CmdLegicInfo(const char *Cmd) {
                      );
     }
 
-    // Makes no sence to show this on blank media...
+    // Makes no sense to show this on blank media...
     if (dcf != 0xFFFF) {
 
         if (bIsSegmented) {

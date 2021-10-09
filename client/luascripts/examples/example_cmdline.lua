@@ -1,7 +1,7 @@
 #!/usr/bin/env -S pm3 -l
 
 --[[
-A sampe script file on how to implement at cmd line inteface.
+A sampe script file on how to implement at cmd line interface.
 It also demonstrates how the script can be used with a shebang.
 --]]
 

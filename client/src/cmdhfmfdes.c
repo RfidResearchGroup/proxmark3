@@ -2689,7 +2689,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
 static int CmdHF14ADesGetFreeMem(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes getfreemem",
-                  "Get card's free memory. Can be done with ot without authentication. Master key may be provided.",
+                  "Get card's free memory. Can be done with or without authentication. Master key may be provided.",
                   "hf mfdes getfreemem -> execute with default factory setup");
 
     void *argtable[] = {

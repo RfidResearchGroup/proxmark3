@@ -49,7 +49,7 @@ static tosend_t toSend = {
 };
 //=============================================================================
 // The dmaBuf 16bit buffer.
-// A buffer where we recive IQ samples sent from the FPGA, for demodulating
+// A buffer where we receive IQ samples sent from the FPGA, for demodulating
 //=============================================================================
 static dmabuf16_t dma_16 = {
     .size = DMA_BUFFER_SIZE,

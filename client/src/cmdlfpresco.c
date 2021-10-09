@@ -53,7 +53,7 @@ static int getWiegandFromPrintedPresco(void *arr,  uint32_t *fullcode) {
 
         *fullcode += val;
 
-        // last digit is only added, not multipled.
+        // last digit is only added, not multiplied.
         if (i < strlen(s) - 1)
             *fullcode *= 12;
     }

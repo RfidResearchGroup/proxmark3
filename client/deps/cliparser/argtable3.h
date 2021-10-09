@@ -75,7 +75,7 @@ typedef void (arg_errorfn)(void *parent, FILE *fp, int error, const char *argval
 * that particular arg_xxx arguments, performing post-parse checks, and
 * reporting errors.
 * These functions are private to the individual arg_xxx source code
-* and are the pointer to them are initiliased by that arg_xxx struct's
+* and are the pointer to them are initialised by that arg_xxx struct's
 * constructor function. The user could alter them after construction
 * if desired, but the original intention is for them to be set by the
 * constructor and left unaltered.
@@ -83,11 +83,11 @@ typedef void (arg_errorfn)(void *parent, FILE *fp, int error, const char *argval
 struct arg_hdr {
     char         flag;        /* Modifier flags: ARG_TERMINATOR, ARG_HASVALUE. */
     const char  *shortopts;   /* String defining the short options */
-    const char  *longopts;    /* String defiing the long options */
+    const char  *longopts;    /* String defining the long options */
     const char  *datatype;    /* Description of the argument data type */
     const char  *glossary;    /* Description of the option as shown by arg_print_glossary function */
-    int          mincount;    /* Minimum number of occurences of this option accepted */
-    int          maxcount;    /* Maximum number of occurences if this option accepted */
+    int          mincount;    /* Minimum number of occurrences of this option accepted */
+    int          maxcount;    /* Maximum number of occurrences if this option accepted */
     void        *parent;      /* Pointer to parent arg_xxx struct */
     arg_resetfn *resetfn;     /* Pointer to parent arg_xxx reset function */
     arg_scanfn  *scanfn;      /* Pointer to parent arg_xxx scan function */
