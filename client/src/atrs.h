@@ -13,6 +13,7 @@ const char *getAtrInfo(const char *atr_str);
 
 // atr_t array are expected to be NULL terminated
 const static atr_t AtrTable[] = {
+    { "3BDF18FFC080B1FE751F033078464646462026204963656D616E1D", "Cardhelper by 0xFFFF and Iceman" },
     { "3B021450", "Schlumberger Multiflex 3k" },
     { "3B025301", "Gemplus GemClub Memo SuperShop clubcard" },
     { "3B0400000000", "Laundromat payment card Spanish ID ('DNIe: Documento Nacional de Identidad electronico). http://www.dnie.es/" },
@@ -1618,7 +1619,7 @@ const static atr_t AtrTable[] = {
     { "3FFF9500FF918171FE47005449474552363031205265764D383013", "Spanish pay TV card for GOLTV" },
     { "3FFF9500FF918171FF4700444E4153505330312044736836303916", "PayTV card for DishNetwork Sat receiver http://www.dishnetwork.com/ Cards were obsoleted in nationwide system update in 2009." },
     { "3FFF9500FF918171FF470054494745523030332052657632353064", "Tivu' Sat (Italy) CAM card www.tivu.tv" },
-    {NULL, "no ATR info available"}
+    {NULL, "N/A"}
 };
 
 #endif

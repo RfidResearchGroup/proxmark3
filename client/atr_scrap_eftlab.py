@@ -75,11 +75,12 @@ typedef struct atr_s {
 const char *getAtrInfo(const char *atr_str);
 
 // atr_t array are expected to be NULL terminated
-const static atr_t AtrTable[] = {""")
+const static atr_t AtrTable[] = {
+    { "3BDF18FFC080B1FE751F033078464646462026204963656D616E1D", "Cardhelper by 0xFFFF and Iceman" },""")
 
     print_atr(df)
 
-    print("""    {NULL, "no ATR info available"}
+    print("""    {NULL, "N/A"}
 };
 
 #endif""")
