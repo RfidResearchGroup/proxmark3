@@ -37,26 +37,26 @@ def main():
     print(
     """#ifndef ATRS_H__
 
-    #define ATRS_H__
+#define ATRS_H__
 
-    #include <stddef.h>
+#include <stddef.h>
 
-    typedef struct atr_s {
-        const char *bytes;
-        const char *desc;
-    } atr_t;
+typedef struct atr_s {
+    const char *bytes;
+    const char *desc;
+} atr_t;
 
-    const char *getAtrInfo(const char *atr_str);
+const char *getAtrInfo(const char *atr_str);
 
-    // atr_t array are expected to be NULL terminated
-    const static atr_t AtrTable[] = {""")
+// atr_t array are expected to be NULL terminated
+const static atr_t AtrTable[] = {""")
 
     print_atr(df)
 
     print("""    {NULL, "no ATR info available"}
-    };
+};
 
-    #endif""")
+#endif""")
 
 if __name__ == "__main__":
     main()
