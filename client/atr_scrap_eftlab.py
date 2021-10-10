@@ -20,7 +20,7 @@ def print_atr(df):
         if (len(a) == 0 or len(b) == 0):
             continue
 
-        b = b.replace('\\', '\\\\')
+        b = b.replace('\\', '\\\\').replace('’', '')
 
         print(f'    {{ "{a}", "{b}" }},')
 

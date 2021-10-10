@@ -20,22 +20,27 @@ const char *getAtrInfo(const char *atr_str) {
     int match = -1;
     // skip last element of AtrTable
     for (int i = 0; i < ARRAYLEN(AtrTable) - 1; ++i) {
+
         if (strlen(AtrTable[i].bytes) != slen)
             continue;
+
         if (strstr(AtrTable[i].bytes, "..") != NULL) {
-            char *tmp_atr = malloc(slen);
-            if (!tmp_atr) {
-                PrintAndLogEx(ERR, "Out of memory error in getAtrInfo(). Aborting...");
+            char *tmp_atr = calloc(slen, sizeof(uint8_t));
+            if (tmp_atr == NULL) {
+                PrintAndLogEx(FAILED, "failed to allocate memory");
                 return NULL;
             }
+
             for (int j = 0; j < slen; j++) {
                 tmp_atr[j] = AtrTable[i].bytes[j]=='.' ? '.' : atr_str[j];
             }
+
             if (strncmp(tmp_atr, AtrTable[i].bytes, slen) == 0) {
                 // record partial match but continue looking for full match
                 match = i;
             }
             free(tmp_atr);
+
         } else {
             if (strncmp(atr_str, AtrTable[i].bytes, slen) == 0) return AtrTable[i].desc;
         }
