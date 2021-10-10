@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "commonutil.h"   // ARRAYLEN
+#include "ui.h" // PrintAndLogEx
 
 // get a ATR description based on the atr bytes
 // returns description of the best match
@@ -23,6 +24,10 @@ const char *getAtrInfo(const char *atr_str) {
             continue;
         if (strstr(AtrTable[i].bytes, "..") != NULL) {
             char *tmp_atr = malloc(slen);
+            if (!tmp_atr) {
+                PrintAndLogEx(ERR, "Out of memory error in getAtrInfo(). Aborting...");
+                return NULL;
+            }
             for (int j = 0; j < slen; j++) {
                 tmp_atr[j] = AtrTable[i].bytes[j]=='.' ? '.' : atr_str[j];
             }
