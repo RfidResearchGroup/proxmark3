@@ -490,6 +490,7 @@ POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d && $(TOUCH) $@
 
 SRCS =  mifare/aiddesfire.c \
 		aidsearch.c \
+		atrs.c \
 		cmdanalyse.c \
 		cmdcrc.c \
 		cmddata.c \

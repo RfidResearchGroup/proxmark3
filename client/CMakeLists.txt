@@ -238,6 +238,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/ui/overlays.ui
         ${PM3_ROOT}/client/src/ui/image.ui
         ${PM3_ROOT}/client/src/aidsearch.c
+        ${PM3_ROOT}/client/src/atrs.c
         ${PM3_ROOT}/client/src/cmdanalyse.c
         ${PM3_ROOT}/client/src/cmdcrc.c
         ${PM3_ROOT}/client/src/cmddata.c
