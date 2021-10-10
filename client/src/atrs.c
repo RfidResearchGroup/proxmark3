@@ -8,54 +8,37 @@
 // ATR information lookup
 //-----------------------------------------------------------------------------
 #include "atrs.h"
-#include <ctype.h>
 #include <string.h>
-#include <regex.h>        // regex?
+#include <stdlib.h>
 #include "commonutil.h"   // ARRAYLEN
-#include "ui.h"           // get PrintAndLogEx
-#include "util.h"         // startswith
 
 // get a ATR description based on the atr bytes
 // returns description of the best match
 const char *getAtrInfo(const char *atr_str) {
-
-    for (int i = 0; i < ARRAYLEN(AtrTable); ++i) {
-
-        // check for dots in atr table. 
-        // dots indicate those bytes at those positions are optional.
-        // need a special case for them
-        if (strstr(AtrTable[i].bytes, ".") != NULL) {
-
-            regex_t r;
-            int ret = regcomp(&r, AtrTable[i].bytes, 0);
-            if (ret) {
-                // take next ATR value.
-                PrintAndLogEx(DEBUG, "can't compile regex");
-                continue;
+    size_t slen = strlen(atr_str);
+    int match = -1;
+    // skip last element of AtrTable
+    for (int i = 0; i < ARRAYLEN(AtrTable) - 1; ++i) {
+        if (strlen(AtrTable[i].bytes) != slen)
+            continue;
+        if (strstr(AtrTable[i].bytes, "..") != NULL) {
+            char *tmp_atr = malloc(slen);
+            for (int j = 0; j < slen; j++) {
+                tmp_atr[j] = AtrTable[i].bytes[j]=='.' ? '.' : atr_str[j];
             }
-
-            /* Execute regular expression */
-            ret = regexec(&r, atr_str, 0, NULL, 0);
-            regfree(&r);
-
-            if (!ret) {
-                return AtrTable[i].desc;
+            if (strncmp(tmp_atr, AtrTable[i].bytes, slen) == 0) {
+                // record partial match but continue looking for full match
+                match = i;
             }
-            else if (ret == REG_NOMATCH) {
-                continue;
-            }
-            else {
-                PrintAndLogEx(DEBUG, "regex failed");
-                continue;
-            }
-
+            free(tmp_atr);
         } else {
-            if (str_startswith(atr_str, AtrTable[i].bytes)) {
-                return AtrTable[i].desc;
-            }
+            if (strncmp(atr_str, AtrTable[i].bytes, slen) == 0) return AtrTable[i].desc;
         }
     }
-
-    //No match, return default
-    return AtrTable[ARRAYLEN(AtrTable) - 1].desc;
+    if (match >= 0) {
+        return AtrTable[match].desc;
+    } else {
+        //No match, return default = last element of AtrTable
+        return AtrTable[ARRAYLEN(AtrTable) - 1].desc;
+    }
 }

@@ -695,7 +695,7 @@ static int CmdSmartInfo(const char *Cmd) {
 
     PrintAndLogEx(INFO, "http://smartcard-atr.apdu.fr/parse?ATR=%s", sprint_hex_inrow(card.atr, card.atr_len));
 
-    //PrintAndLogEx(INFO, "ATR loopup : %s", getAtrInfo("3FFF112503108041B00669FF4A50700000415A010011"));
+    //PrintAndLogEx(INFO, "ATR lookup : %s", getAtrInfo("3FFF112503108041B00669FF4A50700000415A010011"));
 
     // print ATR
     PrintAndLogEx(INFO, "ATR");
@@ -761,15 +761,15 @@ static int CmdSmartReader(const char *Cmd) {
     PrintAndLogEx(INFO, "ISO7816-3 ATR : %s", sprint_hex(card->atr, card->atr_len));
 
     // test with normal lookup, with existing ATR in table
-    PrintAndLogEx(INFO, "ATR loopup : %s", getAtrInfo("3FFF112503108041B00669FF4A50700000415A010011")); // Astro (Pay TV)
+    PrintAndLogEx(INFO, "ATR lookup : %s", getAtrInfo("3FFF112503108041B00669FF4A50700000415A010011")); // Astro (Pay TV)
 
-  //PrintAndLogEx(INFO, "ATR loopup : %s", getAtrInfo("3FFD13250250800F..B0..69FF4A50D08000495403"));
+  //PrintAndLogEx(INFO, "ATR lookup : %s", getAtrInfo("3FFD13250250800F..B0..69FF4A50D08000495403"));
 
     // test with random bytes in .. space
-    PrintAndLogEx(INFO, "ATR loopup : %s", getAtrInfo("3FFD13250250800FEEB00269FF4A50D08000495403")); // Sky (Italy) VideoGuard CAM card
+    PrintAndLogEx(INFO, "ATR lookup : %s", getAtrInfo("3FFD13250250800FEEB00269FF4A50D08000495403")); // Sky (Italy) VideoGuard CAM card
 
     // test w shorted str,  not in ATR table
-    PrintAndLogEx(INFO, "ATR loopup : %s", getAtrInfo("3FFD13250250800FEEB00269FF4A50D080004954")); // Sky (Italy) VideoGuard CAM card
+    PrintAndLogEx(INFO, "ATR lookup : %s", getAtrInfo("3FFD13250250800FEEB00269FF4A50D080004954")); // Sky (Italy) VideoGuard CAM card
     
     return PM3_SUCCESS;
 }
