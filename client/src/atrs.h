@@ -12,7 +12,7 @@
     const char *getAtrInfo(const char *atr_str);
 
     // atr_t array are expected to be NULL terminated
-    static atr_t AtrTable[] = {
+    const static atr_t AtrTable[] = {
     { "3B021450", "Schlumberger Multiflex 3k" },
     { "3B025301", "Gemplus GemClub Memo SuperShop clubcard" },
     { "3B0400000000", "Laundromat payment card Spanish ID (“DNIe: Documento Nacional de Identidad electrónico). http://www.dnie.es/" },

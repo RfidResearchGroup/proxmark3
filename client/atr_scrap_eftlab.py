@@ -36,7 +36,7 @@ def main():
 
     print(
     """#ifndef ATRS_H__
-    
+
     #define ATRS_H__
 
     #include <stddef.h>
@@ -49,7 +49,7 @@ def main():
     const char *getAtrInfo(const char *atr_str);
 
     // atr_t array are expected to be NULL terminated
-    static atr_t AtrTable[] = {""")
+    const static atr_t AtrTable[] = {""")
 
     print_atr(df)
 

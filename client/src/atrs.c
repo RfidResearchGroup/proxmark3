@@ -10,7 +10,9 @@
 #include "atrs.h"
 #include <ctype.h>
 #include <string.h>
+#include <regex.h>        // regex?
 #include "commonutil.h"   // ARRAYLEN
+#include "ui.h"           // get PrintAndLogEx
 #include "util.h"         // startswith
 
 // get a ATR description based on the atr bytes
@@ -22,26 +24,30 @@ const char *getAtrInfo(const char *atr_str) {
         // check for dots in atr table. 
         // dots indicate those bytes at those positions are optional.
         // need a special case for them
-        if (strstr(AtrTable[i].bytes, "..") != NULL) {
+        if (strstr(AtrTable[i].bytes, ".") != NULL) {
 
-            // need to loop
-            const char *foo = atr_str;
-            int j = 0;
-            while (foo++, j++) {
-                
-                char c = foo[0];
-                if (c == '.') {
-                    continue;
-                }
-
-                // mismatch,  return default message
-                if (c != AtrTable[i].bytes[j]) {
-                    return AtrTable[ARRAYLEN(AtrTable) - 1].desc;
-                }
-
+            regex_t r;
+            int ret = regcomp(&r, AtrTable[i].bytes, 0);
+            if (ret) {
+                // take next ATR value.
+                PrintAndLogEx(DEBUG, "can't compile regex");
+                continue;
             }
 
-            return AtrTable[i].desc;
+            /* Execute regular expression */
+            ret = regexec(&r, atr_str, 0, NULL, 0);
+            regfree(&r);
+
+            if (!ret) {
+                return AtrTable[i].desc;
+            }
+            else if (ret == REG_NOMATCH) {
+                continue;
+            }
+            else {
+                PrintAndLogEx(DEBUG, "regex failed");
+                continue;
+            }
 
         } else {
             if (str_startswith(atr_str, AtrTable[i].bytes)) {
