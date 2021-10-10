@@ -33,6 +33,7 @@
 #include "nfc/ndef.h"      // NDEFRecordsDecodeAndPrint
 #include "cmdnfc.h"        // print_type4_cc_info
 #include "fileutils.h"     // saveFile
+#include "atrs.h"          // getATRinfo
 
 static bool APDUInFramingEnable = true;
 
@@ -504,8 +505,9 @@ static int CmdHF14AReader(const char *Cmd) {
                 if (card.ats_len >= 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
                     if (card.ats_len == card.ats[0] + 2)
                         PrintAndLogEx(SUCCESS, " ATS: "  _GREEN_("%s"), sprint_hex(card.ats, card.ats[0]));
-                    else
+                    else {
                         PrintAndLogEx(SUCCESS, " ATS: [%d] "  _GREEN_("%s"), card.ats_len, sprint_hex(card.ats, card.ats_len));
+                    }
                 }
             }
             if (!disconnectAfter) {
@@ -1992,7 +1994,13 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         break;
                 }
             } else {
-                PrintAndLogEx(SUCCESS, "   %s", sprint_hex_inrow(card.ats + pos, calen));
+
+                if (card.ats[pos] == 0x80)
+                    PrintAndLogEx(SUCCESS, "   %s  (compact TLV data object)", sprint_hex_inrow(card.ats + pos, calen));
+                else
+                    PrintAndLogEx(SUCCESS, "   %s", sprint_hex_inrow(card.ats + pos, calen));
+
+                PrintAndLogEx(NORMAL, "");
             }
         }
 
