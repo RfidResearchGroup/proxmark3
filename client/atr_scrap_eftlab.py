@@ -4,6 +4,7 @@
 import sys
 import pandas as pd
 import requests
+import re
 
 ATR_URL = 'https://www.eftlab.co.uk/knowledge-base/171-atr-list-full/'
 
@@ -15,18 +16,43 @@ def print_atr(df):
 
         if type(a) is not str or type(b) is not str:
             continue
+
         a = a.replace(' ','')
+        a = a.replace('…', '..')
 
         if (len(a) == 0 or len(b) == 0):
             continue
 
-        b = b.replace('\\', '\\\\').replace('’', '')
+
+        b = b.replace('\\', '\\\\')
+        b = b.replace('’', '\'')
+        b = b.replace('‘', '\'')
+        b = b.replace('“', '\'')
+        b = b.replace('”', '\'')
+        b = b.replace('ó', 'o')
+        b = b.replace('ú', 'u')
+        b = b.replace('–', '-')
+        b = b.replace('—', '-')        
+        b = b.replace('€', '')
+        b = b.replace('Č', 'C')
+        b = b.replace('á', 'a')
+        b = b.replace('ř', 'r')
+        b = b.replace('ę', 'e')
+        b = b.replace('ł', 'l')
+        b = b.replace('İ', 'I')
+        b = b.replace('…', '...')
+        
+        #b = re.sub('[^A-Za-zs ]+', '', b)
 
         print(f'    {{ "{a}", "{b}" }},')
 
 
 
 def main():
+
+    # making sure we print UTF-8
+    sys.stdout = open(1, 'w', encoding='utf-8', closefd=False)
+
     r = requests.get(ATR_URL)
     r.status_code
     list_atr = pd.read_html(r.text, header=0, keep_default_na=False)
