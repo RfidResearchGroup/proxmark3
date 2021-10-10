@@ -899,13 +899,31 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         snprintf(exp, size, "DELETE FILE");
                         break;
                     case MFDES_AUTHENTICATE:
-                        snprintf(exp, size, "AUTH NATIVE (keyNo %d)", cmd[pos + 4]);
+                        if (cmdsize > 6) {
+                            //Assume wrapped
+                            snprintf(exp, size, "AUTH NATIVE (keyNo %d)", cmd[pos + 4]);
+                        } else {
+                            //Assume unwrapped
+                            snprintf(exp, size, "AUTH NATIVE (keyNo %d)", cmd[pos + 1]);
+                        }
                         break;  // AUTHENTICATE_NATIVE
                     case MFDES_AUTHENTICATE_ISO:
-                        snprintf(exp, size, "AUTH ISO (keyNo %d)", cmd[pos + 4]);
+                        if (cmdsize > 6) {
+                            //Assume wrapped
+                            snprintf(exp, size, "AUTH ISO (keyNo %d)", cmd[pos + 4]);
+                        } else {
+                            //Assume unwrapped
+                            snprintf(exp, size, "AUTH ISO (keyNo %d)", cmd[pos + 1]);
+                        }
                         break;  // AUTHENTICATE_STANDARD
                     case MFDES_AUTHENTICATE_AES:
-                        snprintf(exp, size, "AUTH AES (keyNo %d)", cmd[pos + 4]);
+                        if (cmdsize > 6) {
+                            //Assume wrapped
+                            snprintf(exp, size, "AUTH AES (keyNo %d)", cmd[pos + 4]);
+                        } else {
+                            //Assume unwrapped
+                            snprintf(exp, size, "AUTH AES (keyNo %d)", cmd[pos + 1]);
+                        }
                         break;
                     case MFDES_AUTHENTICATE_EV2F:
                         snprintf(exp, size, "AUTH EV2 First");
