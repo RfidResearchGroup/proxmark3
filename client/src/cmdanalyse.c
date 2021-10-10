@@ -979,14 +979,22 @@ static int CmdAnalyseFreq(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "analyse freq",
                   "calc wave lengths",
-                  "analyse freq"
+                  "analyse freq\n"
+                  ""
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_int0("F", "freq", "<int>", "resonating frequency F in hertz (Hz)"),
+        arg_int0("L", "cap",  "<int>", "capacitance C in micro farads (F)"),
+        arg_int0("C", "ind",  "<int>", "inductance in micro henries (H)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int F = arg_get_int_def(ctx, 1, 0);
+    int L = arg_get_int_def(ctx, 2, 0);
+    int C = arg_get_int_def(ctx, 3, 0);
     CLIParserFree(ctx);
 
     const double c = 299792458;
@@ -1002,6 +1010,35 @@ static int CmdAnalyseFreq(const char *Cmd) {
     PrintAndLogEx(INFO, "   125 kHz has %f m, rf range %f m", len_125, rf_range_125);
     PrintAndLogEx(INFO, "   134 kHz has %f m, rf range %f m", len_134, rf_range_134);
     PrintAndLogEx(INFO, " 13.56 mHz has %f m, rf range %f m", len_1356, rf_range_1356);
+
+
+    if (F == 0 && C == 0 && L == 0) 
+        return PM3_SUCCESS;
+
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "Resonant frequency calculator");
+
+    // From  https://goodcalculators.com/resonant-frequency-calculator/
+    // Calc Resonant Frequency [Hz]
+    // f = 1 / (2π √L C)  
+    if (F == 0) {
+        double calc_freq = 1 / (2 * M_PI * sqrtf((L * C)) );
+        PrintAndLogEx(INFO, "Resonating Frequency  %lf Hz", calc_freq);
+    }
+    // Calc Inductance [H]
+    // L = 1 / (4π2 f2 C) 
+    if (L == 0) {
+        double calc_inductance = 1 / (4 * (M_PI * M_PI) * (F * F) * C );
+        PrintAndLogEx(INFO, "Inductance %lf Henries", calc_inductance);
+    }
+
+    // Capacitance [F]
+    //  C = 1 / (4π2 f2 L)
+    if (C == 0) {
+        double calc_capacitance = 1 / (4 * (M_PI * M_PI) * (F * F) * L);        
+        PrintAndLogEx(INFO, "Capacitance %lf Farads", calc_capacitance);
+    }
     return PM3_SUCCESS;
 }
 
