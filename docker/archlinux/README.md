@@ -15,7 +15,7 @@ EOF
 
 sudo pacman -Sy
 
-# serch available versions
+# search available versions
 pacman -Ss '^arm-none-eabi-gcc$'
 pacman -Ss '^gcc$'
 
@@ -32,7 +32,6 @@ sudo pacman -S gcc
 Add first the mirrors, see above
 
 ```
-sudo pacman -S python
 sudo pacman -S python-pip
 python3 -m pip install ansicolors sslcrypto
 tools/pm3_tests.sh --long
