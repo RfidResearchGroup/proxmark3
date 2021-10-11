@@ -967,9 +967,10 @@ void pm3_version(bool verbose, bool oneliner) {
 # define PM3HOSTARCH " ARCH:unknown"
 #endif
 
+    char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
+
     if (oneliner) {
         // For "proxmark3 -v", simple printf, avoid logging
-        char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
         FormatVersionInformation(temp, sizeof(temp), "Client: ", &g_version_information);
         PrintAndLogEx(NORMAL, "%s compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH "\n", temp);
         return;
@@ -978,63 +979,65 @@ void pm3_version(bool verbose, bool oneliner) {
     if (!verbose)
         return;
 
-    PacketResponseNG resp;
-    clearCommandBuffer();
-    SendCommandNG(CMD_VERSION, NULL, 0);
+    PrintAndLogEx(NORMAL, "\n [ " _CYAN_("Proxmark3 RFID instrument") " ]");
+    PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("CLIENT") " ]");
+    FormatVersionInformation(temp, sizeof(temp), "  client: ", &g_version_information);
+    PrintAndLogEx(NORMAL, "%s", temp);
+    PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
 
-    if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
-        char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
-        PrintAndLogEx(NORMAL, "\n [ " _CYAN_("Proxmark3 RFID instrument") " ]");
-        PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("CLIENT") " ]");
-        FormatVersionInformation(temp, sizeof(temp), "  client: ", &g_version_information);
-        PrintAndLogEx(NORMAL, "%s", temp);
-        PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
-
+    if (g_session.pm3_present) {
         PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3") " ]");
-        if (IfPm3Rdv4Fw()) {
 
-            bool is_genuine_rdv4 = false;
-            // validate signature data
-            rdv40_validation_t mem;
-            if (rdv4_get_signature(&mem) == PM3_SUCCESS) {
-                if (rdv4_validate(&mem) == PM3_SUCCESS) {
-                    is_genuine_rdv4 = true;
+        PacketResponseNG resp;
+        clearCommandBuffer();
+        SendCommandNG(CMD_VERSION, NULL, 0);
+
+        if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
+            if (IfPm3Rdv4Fw()) {
+
+                bool is_genuine_rdv4 = false;
+                // validate signature data
+                rdv40_validation_t mem;
+                if (rdv4_get_signature(&mem) == PM3_SUCCESS) {
+                    if (rdv4_validate(&mem) == PM3_SUCCESS) {
+                        is_genuine_rdv4 = true;
+                    }
+                }
+
+                PrintAndLogEx(NORMAL, "  device.................... %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _RED_("device / fw mismatch"));
+                PrintAndLogEx(NORMAL, "  firmware.................. %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _YELLOW_("RDV4"));
+                PrintAndLogEx(NORMAL, "  external flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
+                PrintAndLogEx(NORMAL, "  smartcard reader.......... %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
+                PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
+            } else {
+                PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3 GENERIC"));
+                if (IfPm3FpcUsartHost()) {
+                    PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", _GREEN_("present"));
                 }
             }
 
-            PrintAndLogEx(NORMAL, "  device.................... %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _RED_("device / fw mismatch"));
-            PrintAndLogEx(NORMAL, "  firmware.................. %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _YELLOW_("RDV4"));
-            PrintAndLogEx(NORMAL, "  external flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
-            PrintAndLogEx(NORMAL, "  smartcard reader.......... %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
-            PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
-        } else {
-            PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3 GENERIC"));
-            if (IfPm3FpcUsartHost()) {
-                PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", _GREEN_("present"));
+            if (IfPm3FpcUsartDevFromUsb()) {
+                PrintAndLogEx(NORMAL, "  FPC USART for developer... %s", _GREEN_("present"));
             }
+
+            PrintAndLogEx(NORMAL, "");
+
+            struct p {
+                uint32_t id;
+                uint32_t section_size;
+                uint32_t versionstr_len;
+                char versionstr[PM3_CMD_DATA_SIZE - 12];
+            } PACKED;
+
+            struct p *payload = (struct p *)&resp.data.asBytes;
+
+            PrintAndLogEx(NORMAL,  payload->versionstr);
+            if (strstr(payload->versionstr, "2s30vq100") == NULL) {
+                PrintAndLogEx(NORMAL, "  FPGA firmware... %s", _RED_("chip mismatch"));
+            }
+
+            lookupChipID(payload->id, payload->section_size);
         }
-
-        if (IfPm3FpcUsartDevFromUsb()) {
-            PrintAndLogEx(NORMAL, "  FPC USART for developer... %s", _GREEN_("present"));
-        }
-
-        PrintAndLogEx(NORMAL, "");
-
-        struct p {
-            uint32_t id;
-            uint32_t section_size;
-            uint32_t versionstr_len;
-            char versionstr[PM3_CMD_DATA_SIZE - 12];
-        } PACKED;
-
-        struct p *payload = (struct p *)&resp.data.asBytes;
-
-        PrintAndLogEx(NORMAL,  payload->versionstr);
-        if (strstr(payload->versionstr, "2s30vq100") == NULL) {
-            PrintAndLogEx(NORMAL, "  FPGA firmware... %s", _RED_("chip mismatch"));
-        }
-
-        lookupChipID(payload->id, payload->section_size);
     }
     PrintAndLogEx(NORMAL, "");
 }
