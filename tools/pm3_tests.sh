@@ -173,14 +173,15 @@ function CheckExecute() {
   fi
 
   printf "%-40s" "$1 "
+  RESULT=0
 
   if $SLOWTEST && ! $SLOWTESTS; then
     echo -e "[ ${C_YELLOW}SKIPPED${C_NC} ] ( slow )"
-    return 0
+    return $RESULT
   fi
   if $GPUTEST && ! $GPUTESTS; then
     echo -e "[ ${C_YELLOW}SKIPPED${C_NC} ] ( gpu )"
-    return 0
+    return $RESULT
   fi
 
   for I in $RETRY
@@ -188,11 +189,12 @@ function CheckExecute() {
     RES=$(eval "$2")
     if echo "$RES" | grep -q "$3"; then
       echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
-      return 0
+      return $RESULT
     fi
     if [ ! $I == "e" ]; then echo "retry $I"; fi
   done
 
+  RESULT=1
   if $IGNOREFAILURE; then
     echo -e "[ ${C_YELLOW}IGNORED${C_NC} ]"
     return 0
@@ -200,7 +202,7 @@ function CheckExecute() {
 
   echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
   echo -e "Execution trace:\n$RES"
-  return 1
+  return $RESULT
 }
 
 echo -e "\n${C_BLUE}RRG/Iceman Proxmark3 test tool ${C_NC}\n"
@@ -359,6 +361,15 @@ while true; do
       if ! CheckExecute "proxmark multi stdin 2/4"         "echo 'rem foo;rem bar;quit' |$CLIENTBIN" "remark: bar"; then break; fi
       if ! CheckExecute "proxmark multi stdin 3/4"         "echo -e 'rem foo\nrem bar;quit' |$CLIENTBIN" "remark: foo"; then break; fi
       if ! CheckExecute "proxmark multi stdin 4/4"         "echo -e 'rem foo\nrem bar;quit' |$CLIENTBIN" "remark: bar"; then break; fi
+
+      echo -e "\n${C_BLUE}Testing scripts:${C_NC}"
+      if ! CheckExecute "script run cmdscript"             "$CLIENTBIN -c 'script run example.cmd'" "remark: world"; then break; fi
+      if ! CheckExecute "script run luascript"             "$CLIENTBIN -c 'script run data_hex_crc -b 010203040506070809'" "CDMA2000.*7B02"; then break; fi
+
+      CheckExecute ignore "check Python support"        "$CLIENTBIN -c 'hw version'" "Python script.*present"
+      if [ $RESULT -eq 0 ]; then
+        if ! CheckExecute "script run pyscript"              "$CLIENTBIN -c 'script run parity.py 10 1234'" "Even parity"; then break; fi
+      fi
 
       echo -e "\n${C_BLUE}Testing data manipulation:${C_NC}"
       if ! CheckExecute "reveng readline test"    "$CLIENTBIN -c 'reveng -h;reveng -D'" "CRC-64/GO-ISO"; then break; fi
