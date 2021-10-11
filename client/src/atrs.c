@@ -31,11 +31,6 @@ const char *getAtrInfo(const char *atr_str) {
                 return NULL;
             }
 
-            // iceman:  how do your loop handle these?  
-            //                                       +++++               +
-            // { "3BFF1100008171404200002101314252000[0,5]63........9000.*", "Smart Card 'The Smart Way to Login' Used on Acer TravelMate to secure boot" },
-
-
             for (int j = 0; j < slen; j++) {
                 tmp_atr[j] = AtrTable[i].bytes[j]=='.' ? '.' : atr_str[j];
             }
