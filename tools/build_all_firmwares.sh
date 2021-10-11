@@ -3,7 +3,7 @@
 
 # These vars can be overriden by env variables
 echo "Makefile flags: ${MKFLAGS:=-j8}"
-echo "Destination:    ${DEST:=firmwares}"
+echo "Destination:    ${DEST:=firmware}"
 echo "Produce stats?: ${STATS:=false}"
 
 # Which parts to skip for the 256kb version?
