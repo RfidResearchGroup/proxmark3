@@ -928,43 +928,43 @@ void pm3_version(bool verbose, bool oneliner) {
 #endif
 
 #if defined(__APPLE__) || defined(__MACH__)
-# define PM3HOSTOS " OS:OSX"
+# define PM3HOSTOS "OSX"
 #elif defined(__ANDROID__) || defined(ANDROID)
 // must be tested before __linux__
-# define PM3HOSTOS " OS:Android"
+# define PM3HOSTOS "Android"
 #elif defined(__linux__)
-# define PM3HOSTOS " OS:Linux"
+# define PM3HOSTOS "Linux"
 #elif defined(__FreeBSD__)
-# define PM3HOSTOS " OS:FreeBSD"
+# define PM3HOSTOS "FreeBSD"
 #elif defined(__NetBSD__)
-# define PM3HOSTOS " OS:NetBSD"
+# define PM3HOSTOS "NetBSD"
 #elif defined(__OpenBSD__)
-# define PM3HOSTOS " OS:OpenBSD"
+# define PM3HOSTOS "OpenBSD"
 #elif defined(__CYGWIN__)
-# define PM3HOSTOS " OS:Cygwin"
+# define PM3HOSTOS "Cygwin"
 #elif defined(_WIN64) || defined(__WIN64__)
 // must be tested before _WIN32
-# define PM3HOSTOS " OS:Windows (64b)"
+# define PM3HOSTOS "Windows (64b)"
 #elif defined(_WIN32) || defined(__WIN32__)
-# define PM3HOSTOS " OS:Windows (32b)"
+# define PM3HOSTOS "Windows (32b)"
 #else
-# define PM3HOSTOS " OS:unknown"
+# define PM3HOSTOS "unknown"
 #endif
 
 #if defined(__x86_64__)
-# define PM3HOSTARCH " ARCH:x86_64"
+# define PM3HOSTARCH "x86_64"
 #elif defined(__i386__)
-# define PM3HOSTARCH " ARCH:x86"
+# define PM3HOSTARCH "x86"
 #elif defined(__aarch64__)
-# define PM3HOSTARCH " ARCH:aarch64"
+# define PM3HOSTARCH "aarch64"
 #elif defined(__arm__)
-# define PM3HOSTARCH " ARCH:arm"
+# define PM3HOSTARCH "arm"
 #elif defined(__powerpc64__)
-# define PM3HOSTARCH " ARCH:powerpc64"
+# define PM3HOSTARCH "powerpc64"
 #elif defined(__mips__)
-# define PM3HOSTARCH " ARCH:mips"
+# define PM3HOSTARCH "mips"
 #else
-# define PM3HOSTARCH " ARCH:unknown"
+# define PM3HOSTARCH "unknown"
 #endif
 
     char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
@@ -972,7 +972,7 @@ void pm3_version(bool verbose, bool oneliner) {
     if (oneliner) {
         // For "proxmark3 -v", simple printf, avoid logging
         FormatVersionInformation(temp, sizeof(temp), "Client: ", &g_version_information);
-        PrintAndLogEx(NORMAL, "%s compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH "\n", temp);
+        PrintAndLogEx(NORMAL, "%s compiled with " PM3CLIENTCOMPILER __VERSION__ " OS:" PM3HOSTOS " ARCH:" PM3HOSTARCH "\n", temp);
         return;
     }
 
@@ -981,9 +981,40 @@ void pm3_version(bool verbose, bool oneliner) {
 
     PrintAndLogEx(NORMAL, "\n [ " _CYAN_("Proxmark3 RFID instrument") " ]");
     PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("CLIENT") " ]");
-    FormatVersionInformation(temp, sizeof(temp), "  client: ", &g_version_information);
+    FormatVersionInformation(temp, sizeof(temp), "  ", &g_version_information);
     PrintAndLogEx(NORMAL, "%s", temp);
-    PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
+    PrintAndLogEx(NORMAL, "  compiled with............. " PM3CLIENTCOMPILER __VERSION__);
+    PrintAndLogEx(NORMAL, "  platform.................. " PM3HOSTOS " / " PM3HOSTARCH);
+#ifdef HAVE_READLINE
+    PrintAndLogEx(NORMAL, "  Readline support.......... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  Readline support.......... " _YELLOW_("absent"));
+#endif
+#ifdef HAVE_GUI
+    PrintAndLogEx(NORMAL, "  QT GUI support............ " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  QT GUI support............ " _YELLOW_("absent"));
+#endif
+#ifdef HAVE_BLUEZ
+    PrintAndLogEx(NORMAL, "  native BT support......... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  native BT support......... " _YELLOW_("absent"));
+#endif
+#ifdef HAVE_PYTHON
+    PrintAndLogEx(NORMAL, "  Python script support..... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  Python script support..... " _YELLOW_("absent"));
+#endif
+#ifdef HAVE_LUA_SWIG
+    PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _YELLOW_("absent"));
+#endif
+#ifdef HAVE_PYTHON_SWIG
+    PrintAndLogEx(NORMAL, "  Python SWIG support....... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  Python SWIG support....... " _YELLOW_("absent"));
+#endif
 
     if (g_session.pm3_present) {
         PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3") " ]");
