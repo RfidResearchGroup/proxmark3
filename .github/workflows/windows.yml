@@ -24,6 +24,7 @@ jobs:
     env:
       PATH: C:/ProxSpace/msys2/mingw64/bin;C:/ProxSpace/msys2/usr/local/bin;C:/ProxSpace/msys2/usr/bin;C:/ProxSpace/msys2/bin
       MSYSTEM: MINGW64
+      PYTHONHOME: /mingw64
 
     steps:
       - name: ProxSpace download
