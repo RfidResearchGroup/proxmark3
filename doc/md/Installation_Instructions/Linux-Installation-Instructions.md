@@ -25,44 +25,52 @@ Install the requirements
 
 ```sh
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
-libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev libbz2-dev libbluetooth-dev
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev libbz2-dev libbluetooth-dev libpython3-dev
 ```
 
 If you don't need the native Bluetooth support in the client, you can skip the installation of `libbluetooth-dev`.
 
 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qtbase5-dev`.
 
+If you don't need support for Python3 scripts in the Proxmark3 client, you can skip the installation of `libpython3-dev`.
+
 If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to load module "canberra-gtk-module"_ you may have to install `libcanberra-gtk-module`.
 
 ## On ArchLinux
 
 ```sh
-sudo pacman -Sy git base-devel readline bzip2 arm-none-eabi-gcc arm-none-eabi-newlib qt5-base bluez --needed
+sudo pacman -Sy git base-devel readline bzip2 arm-none-eabi-gcc arm-none-eabi-newlib qt5-base bluez python --needed
 ```
 
 If you don't need the native Bluetooth support in the client, you can skip the installation of `bluez`.
 
 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qt5-base`.
 
+If you don't need support for Python3 scripts in the Proxmark3 client, you can skip the installation of `python`.
+
 ## On Fedora
 
 ```sh
-sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel bzip2-devel qt5-qtbase-devel bluez-libs-devel libatomic
+sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel bzip2-devel qt5-qtbase-devel bluez-libs-devel python3-devel libatomic
 ```
 
 If you don't need the native Bluetooth support in the client, you can skip the installation of `bluez-libs-devel`.
 
 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qt5-qtbase-devel`.
 
+If you don't need support for Python3 scripts in the Proxmark3 client, you can skip the installation of `python3-devel`.
+
 ## On openSUSE
 
 ```sh
-sudo zypper install git patterns-devel-base-devel_basis gcc-c++ readline-devel libbz2-devel cross-arm-none-gcc9 cross-arm-none-newlib-devel libqt5-qtbase-devel
+sudo zypper install git patterns-devel-base-devel_basis gcc-c++ readline-devel libbz2-devel cross-arm-none-gcc9 cross-arm-none-newlib-devel python3-devel libqt5-qtbase-devel
 ```
+
+Note that Bluez is not available on openSUSE so the native Bluetooth support won't be available in the client.
 
 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `libqt5-qtbase-devel`.
 
-Note that Bluez is not available on openSUSE so the native Bluetooth support won't be available in the client.
+If you don't need support for Python3 scripts in the Proxmark3 client, you can skip the installation of `python3-devel`.
 
 # Clone the RRG/Iceman repository
 
