@@ -624,7 +624,7 @@ static int CmdTune(const char *Cmd) {
 static int CmdVersion(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw version",
-                  "Show version information about the connected Proxmark3",
+                  "Show version information about the client and the connected Proxmark3",
                   "hw version"
                  );
 
@@ -898,7 +898,7 @@ static command_t CommandTable[] = {
     {"tearoff",       CmdTearoff,      IfPm3Present,    "Program a tearoff hook for the next command supporting tearoff"},
     {"tia",           CmdTia,          IfPm3Present,    "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
     {"tune",          CmdTune,         IfPm3Present,    "Measure antenna tuning"},
-    {"version",       CmdVersion,      IfPm3Present,    "Show version information about the connected Proxmark3"},
+    {"version",       CmdVersion,      AlwaysAvailable, "Show version information about the client and the connected Proxmark3, if any"},
     {NULL, NULL, NULL, NULL}
 };
 
