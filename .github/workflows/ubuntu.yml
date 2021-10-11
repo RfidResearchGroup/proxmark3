@@ -101,7 +101,12 @@ jobs:
           if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
 
       - name: Prepare Build Folders
-        run: mkdir -p client/build
+        run: |
+          mkdir -p client/build
+          ln -s ../cmdscripts client/build/
+          ln -s ../luascripts client/build/
+          ln -s ../pyscripts client/build/
+          ln -s ../lualibs client/build/
 
       - name: Initiate cmake environment
         run: cmake ..
