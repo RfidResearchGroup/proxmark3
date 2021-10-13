@@ -89,6 +89,7 @@
 |hf_14a_reader_4b_rats.trace              |Execution of `hf 14a reader` against a 4b UID card with RATS|
 |hf_14a_reader_7b_rats.trace              |Execution of `hf 14a reader` against a 7b UID card with RATS|
 |hf_14a_mfu.trace                         |Reading of a password-protected MFU|
+|hf_14a_mfuc.trace                        |Reading of a UL-C with 3DES authentication|
 |hf_14a_mfu-sim.trace                     |Trace seen from a Proxmark3 simulating a MFU|
 |hf_14b_reader.trace                      |Execution of `hf 14b reader` against a card|
 |hf_14b_cryptorf_select.trace             |Sniff of libnfc select / anticollision ofa cryptoRF tag|
