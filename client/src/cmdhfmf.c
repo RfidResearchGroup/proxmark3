@@ -837,7 +837,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                   "\n"
                   "`--uid` param is used for filename templates `hf-mf-<uid>-dump.bin` and `hf-mf-<uid>-key.bin.\n"
                   "        If not specified, it will read the card uid instead.\n"
-                  "   `-w` param you can indicate that the key file should be used for authentication instead.\n"
+                  " `--ka` param you can indicate that the key file should be used for authentication instead.\n"
                   "        if so we also try both B/A keys",
                   "hf mf restore\n"
                   "hf mf restore --1k --uid 04010203\n"
