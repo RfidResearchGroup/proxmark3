@@ -2629,7 +2629,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes)"),
+        arg_str0(NULL, "key", "<hex>", "key for authentication (UL-C 16 bytes)"),
         arg_lit0("l", NULL, "swap entered key's endianness"),
         arg_lit0("k", NULL, "keep field on (only if a password is provided too)"),
         arg_param_end
