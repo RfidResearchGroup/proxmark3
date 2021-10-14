@@ -163,9 +163,7 @@ static void MeasureAntennaTuning(void) {
         uint8_t results[256];
     } PACKED payload;
 
-    // Need to clear all values to ensure non-random responses.
-    memset(&payload, 0, sizeof(payload));
-    // memset(payload.results, 0, sizeof(payload.results));
+    memset(payload.results, 0, sizeof(payload.results));
 
     sample_config *sc = getSamplingConfig();
     payload.divisor = sc->divisor;
