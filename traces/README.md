@@ -96,4 +96,7 @@
 |hf_15_reader.trace                       |Execution of `hf 15 reader` against a card|
 |hf_mfp_mad_sl3.trace                     |`hf mfp mad`|
 |hf_mfp_read_sc0_sl3.trace                |`hf mfp rdsc --sn 0 -k ...`|
+|hf_visa_apple_ecp.trace                  |Sniff of VISA Apple ECP transaction|
+|hf_visa_apple_normal.trace               |Sniff of VISA Apple normal transaction|
+|hf_visa_apple_transit_bypass.trace       |Sniff of VISA Apple transaction bypass|
 
