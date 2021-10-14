@@ -255,6 +255,65 @@ static int ulc_authentication(uint8_t *key, bool switch_off_field) {
     return 0;
 }
 
+static int trace_mfuc_try_key(uint8_t *key, int state, uint8_t (*authdata)[16]) {
+    uint8_t iv[8] = {0};
+    uint8_t RndB[8] = {0};
+    uint8_t RndARndB[16] = {0};
+    uint8_t RndA[8] = {0};
+    mbedtls_des3_context ctx_des3;
+    switch (state) {
+        case 2:
+            mbedtls_des3_set2key_dec(&ctx_des3, key);
+            mbedtls_des3_crypt_cbc(&ctx_des3, MBEDTLS_DES_DECRYPT,
+                                   8, iv, authdata[0], RndB);
+            mbedtls_des3_crypt_cbc(&ctx_des3, MBEDTLS_DES_DECRYPT,
+                                   16, iv, authdata[1], RndARndB);
+            if ((memcmp(&RndB[1], &RndARndB[8], 7) == 0) &&
+                (RndB[0] == RndARndB[15])) {
+                    return PM3_SUCCESS;
+            }
+            break;
+        case 3:
+            if (key == NULL) {// if no key was found
+                return PM3_ESOFT;
+            }
+            memcpy(iv, authdata[0], 8);
+            mbedtls_des3_set2key_dec(&ctx_des3, key);
+            mbedtls_des3_crypt_cbc(&ctx_des3, MBEDTLS_DES_DECRYPT,
+                                   16, iv, authdata[1], RndARndB);
+            mbedtls_des3_crypt_cbc(&ctx_des3, MBEDTLS_DES_DECRYPT,
+                                   8, iv, authdata[2], RndA);
+            if ((memcmp(&RndARndB[1], RndA, 7) == 0) &&
+                (RndARndB[0] == RndA[7])) {
+                    return PM3_SUCCESS;
+            }
+            break;
+        default:
+            return PM3_EINVARG;
+    }
+    return PM3_ESOFT;
+}
+
+int trace_mfuc_try_default_3des_keys(uint8_t **correct_key, int state, uint8_t (*authdata)[16]) {
+    switch (state) {
+        case 2:
+            for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
+                uint8_t *key = default_3des_keys[i];
+                if (trace_mfuc_try_key(key, state, authdata) == PM3_SUCCESS) {
+                    *correct_key = key;
+                    return PM3_SUCCESS;
+                }
+            }
+            break;
+        case 3:
+            return trace_mfuc_try_key(*correct_key, state, authdata);
+            break;
+        default:
+            return PM3_EINVARG;
+    }
+    return PM3_ESOFT;
+}
+
 static int try_default_3des_keys(uint8_t **correct_key) {
     PrintAndLogEx(INFO, "Trying some default 3des keys");
     for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {

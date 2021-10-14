@@ -37,7 +37,7 @@ uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint8_t len);
 uint8_t iso15693_CRC_check(uint8_t *d, uint8_t n);
 uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n);
 
-int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
 
 void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool isResponse);
 void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
@@ -46,7 +46,7 @@ void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
-void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
 void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, uint8_t paritysize, bool isResponse);
 void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);

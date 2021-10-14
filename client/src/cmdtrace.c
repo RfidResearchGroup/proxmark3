@@ -334,6 +334,10 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     // Always annotate these protocols both reader/tag messages
     switch (protocol) {
+        case ISO_14443A:
+        case ISO_7816_4:
+            annotateIso14443a(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+            break;
         case PROTO_MIFARE:
             annotateMifare(explanation, sizeof(explanation), frame, data_len, parityBytes, TRACELOG_PARITY_LEN(hdr), hdr->isResponse);
             break;
@@ -359,9 +363,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case LEGIC:
                 annotateLegic(explanation, sizeof(explanation), frame, data_len);
                 break;
-            case ISO_14443A:
-                annotateIso14443a(explanation, sizeof(explanation), frame, data_len);
-                break;
             case MFDES:
                 annotateMfDesfire(explanation, sizeof(explanation), frame, data_len);
                 break;
@@ -372,7 +373,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 annotateTopaz(explanation, sizeof(explanation), frame, data_len);
                 break;
             case ISO_7816_4:
-                annotateIso14443a(explanation, sizeof(explanation), frame, data_len);
                 annotateIso7816(explanation, sizeof(explanation), frame, data_len);
                 break;
             case ISO_15693:
@@ -466,9 +466,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (protocol == PROTO_MIFARE) {
         if (DecodeMifareData(frame, data_len, parityBytes, hdr->isResponse, mfData, &mfDataLen, mfDicKeys, mfDicKeysCount)) {
             memset(explanation, 0x00, sizeof(explanation));
-            if (hdr->isResponse == false) {
-                annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen);
-            }
+            annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen, hdr->isResponse);
             uint8_t crcc = iso14443A_CRC_check(hdr->isResponse, mfData, mfDataLen);
             PrintAndLogEx(NORMAL, "            |            |  *  |%-72s | %-4s| %s",
                           sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
