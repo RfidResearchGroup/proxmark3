@@ -249,7 +249,7 @@ ProxGuiQT::~ProxGuiQT(void) {
 // Event override functions
 // -------------------------------------------------
 PictureWidget::PictureWidget() {
-    // Set the initial postion and size from settings
+    // Set the initial position and size from settings
 //    if (g_session.preferences_loaded)
 //        setGeometry(g_session.pw.x, g_session.pw.y, g_session.pw.w, g_session.pw.h);
 //    else
@@ -268,7 +268,7 @@ void PictureWidget::closeEvent(QCloseEvent *event) {
 // -------------------------------------------------
 
 SliderWidget::SliderWidget() {
-    // Set the initial postion and size from settings
+    // Set the initial position and size from settings
     if (g_session.preferences_loaded)
         setGeometry(g_session.overlay.x, g_session.overlay.y, g_session.overlay.w, g_session.overlay.h);
     else
@@ -330,7 +330,7 @@ void ProxWidget::vchange_dthr_down(int v) {
 
 ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     this->master = master;
-    // Set the initial postion and size from settings
+    // Set the initial position and size from settings
     if (g_session.preferences_loaded)
         setGeometry(g_session.plot.x, g_session.plot.y, g_session.plot.w, g_session.plot.h);
     else
@@ -379,7 +379,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
         controlWidget->resize(size().width(), 200);
     }
 
-    // Olverlays / slider window title
+    // Overlays / slider window title
     QString ct = QString("[*]Slider [ %1 ]").arg(g_conn.serial_port_name);
     controlWidget->setWindowTitle(ct);
 

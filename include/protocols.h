@@ -490,7 +490,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_E_PARAMETER_ERROR         0x9E
 #define MFDES_E_APPLICATION_NOT_FOUND   0xA0
 #define MFDES_E_APPL_INTEGRITY          0xA1
-#define MFDES_E_AUTHENTIFICATION_ERROR  0xAE
+#define MFDES_E_AUTHENTICATION_ERROR  0xAE
 #define MFDES_E_BOUNDARY                0xBE
 #define MFDES_E_PICC_INTEGRITY          0xC1
 #define MFDES_E_COMMAND_ABORTED         0xCA

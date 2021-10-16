@@ -376,7 +376,7 @@ static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int3
     //programming mode (0 or 1)
     AddBitPCF7931(0, tab, l, p);
 
-    //block adress on 6 bits
+    //block address on 6 bits
     for (u = 0; u < 6; ++u) {
         if (address & (1 << u)) { // bit 1
             ++parity;

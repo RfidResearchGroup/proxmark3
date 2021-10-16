@@ -1,7 +1,7 @@
 #!/bin/bash
 # (Need bash because of Bash Arrays)
 
-# These vars can be overriden by env variables
+# These vars can be overridden by env variables
 echo "Makefile flags: ${MKFLAGS:=-j8}"
 echo "Destination:    ${DEST:=firmware}"
 echo "Produce stats?: ${STATS:=false}"

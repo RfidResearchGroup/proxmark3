@@ -612,7 +612,7 @@ static int CmdHFiClassSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass sim",
                   "Simulate a iCLASS legacy/standard tag",
-                  "hf iclass sim -t 0 --csn 031FEC8AF7FF12E0   --> simulate with specficied CSN\n"
+                  "hf iclass sim -t 0 --csn 031FEC8AF7FF12E0   --> simulate with specified CSN\n"
                   "hf iclass sim -t 1                          --> simulate with default CSN\n"
                   "hf iclass sim -t 2                          --> execute loclass attack online part\n"
                   "hf iclass sim -t 3                          --> simulate full iCLASS 2k tag\n"
@@ -3923,7 +3923,7 @@ static command_t CommandTable[] = {
     {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "Encrypt given block data"},
     {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "Decrypt given block data or tag dump file" },
     {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "Manage keys to use with iclass commands"},
-    {"permutekey",  CmdHFiClassPermuteKey,      IfPm3Iclass,     "Permute function from 'heart of darkness' paper"},
+    {"permutekey",  CmdHFiClassPermuteKey,      AlwaysAvailable, "Permute function from 'heart of darkness' paper"},
     {"view",        CmdHFiClassView,            AlwaysAvailable, "Display content from tag dump file"},
     {NULL, NULL, NULL, NULL}
 };

@@ -19,7 +19,7 @@ paper and the fourth attack comes from the second paper.
 
 
 _note_
-There are no Proxmark3 client implemented commands for these attacks. Only seperate executables to be compiled and run on your own system.
+There are no Proxmark3 client implemented commands for these attacks. Only separate executables to be compiled and run on your own system.
 No guarantees of working binaries on all systems.  Some work on linux only. 
 There is no easy way to extract the needed data from a live system and use with these tools.
 You can use the `RFIdler` device but the Proxmark3 client needs some more love.  Feel free to contribute.

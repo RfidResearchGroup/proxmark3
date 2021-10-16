@@ -160,7 +160,7 @@ void MifareDesfireGetInformation(void) {
     len =  DesfireAPDU(cmd, cmd_len, resp);
     if (!len) {
         print_result("ERROR <--: ", resp, len);
-        payload.isOK = 3;  // 3 == DOESNT ANSWER TO GET_VERSION
+        payload.isOK = 3;  // 3 == DOESN'T ANSWER TO GET_VERSION
         reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
         switch_off();
         return;
@@ -173,7 +173,7 @@ void MifareDesfireGetInformation(void) {
     len =  DesfireAPDU(cmd, cmd_len, resp);
     if (!len) {
         print_result("ERROR <--: ", resp, len);
-        payload.isOK = 3;  // 3 == DOESNT ANSWER TO GET_VERSION
+        payload.isOK = 3;  // 3 == DOESN'T ANSWER TO GET_VERSION
         reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
         switch_off();
         return;
@@ -184,7 +184,7 @@ void MifareDesfireGetInformation(void) {
     len =  DesfireAPDU(cmd, cmd_len, resp);
     if (!len) {
         print_result("ERROR <--: ", resp, len);
-        payload.isOK = 3;  // 3 == DOESNT ANSWER TO GET_VERSION
+        payload.isOK = 3;  // 3 == DOESN'T ANSWER TO GET_VERSION
         reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
         switch_off();
         return;

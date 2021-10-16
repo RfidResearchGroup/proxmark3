@@ -41,7 +41,7 @@ static crc_t legic_crc;
 // harder. The current approach forwards the prng data based if there is data on
 // air and time based, using GET_TICKS, during computational and wait periodes.
 //
-// To not have the necessity to calculate/guess execution time dependend timeouts
+// To not have the necessity to calculate/guess execution time dependent timeouts
 // tx_frame and rx_frame use a shared timestamp to coordinate tx and rx timeslots.
 //-----------------------------------------------------------------------------
 

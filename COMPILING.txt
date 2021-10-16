@@ -1,2 +1,2 @@
 
-Refer to doc/md/Installation_Instructions/ for up-to-date intructions for various platforms.
+Refer to doc/md/Installation_Instructions/ for up-to-date instructions for various platforms.

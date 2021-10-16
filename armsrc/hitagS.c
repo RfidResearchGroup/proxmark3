@@ -739,7 +739,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
                          | (response_bit[6] << 5) | (response_bit[7] << 4)
                          | (response_bit[8] << 3) | (response_bit[9] << 2)
                          | (response_bit[10] << 1) | response_bit[11]);
-        //check wich memorysize this tag has
+        //check which memorysize this tag has
         if (response_bit[10] == 0 && response_bit[11] == 0)
             tag.max_page = 32 / 32;
         if (response_bit[10] == 0 && response_bit[11] == 1)
@@ -1028,7 +1028,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
                     rx[rxlen / 8] |= 0 << (7 - (rxlen % 8));
                     rxlen++;
                 } else {
-                    // Ignore wierd value, is to small to mean anything
+                    // Ignore weird value, is to small to mean anything
                 }
             }
         }
@@ -1509,7 +1509,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 
-    // Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
+    // Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
     AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
     // external trigger rising edge, load RA on falling edge of TIOA.
     AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK

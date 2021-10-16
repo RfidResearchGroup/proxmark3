@@ -11,7 +11,7 @@
  *
  *****************************************************************************
  *
- * This file is part of loclass. It is a reconstructon of the cipher engine
+ * This file is part of loclass. It is a reconstruction of the cipher engine
  * used in iClass, and RFID techology.
  *
  * The implementation is based on the work performed by

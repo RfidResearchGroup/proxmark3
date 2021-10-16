@@ -145,7 +145,7 @@ static const char *getstatus(uint16_t *sw) {
             case MFDES_E_APPL_INTEGRITY:
                 return "Application integrity error, application will be disabled";
 
-            case MFDES_E_AUTHENTIFICATION_ERROR:
+            case MFDES_E_AUTHENTICATION_ERROR:
                 return "Current authentication status does not allow the requested command";
 
             case MFDES_E_BOUNDARY:

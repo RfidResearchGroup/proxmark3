@@ -225,7 +225,7 @@ local Utils =
     end,
 
     -- input parameter is a string
-    -- Swaps the endianess and returns a string,
+    -- Swaps the endianness and returns a string,
     -- IE:  'cd7a' -> '7acd'  -> 0x7acd
     SwapEndiannessStr = function(s, len)
         if s == nil then return nil end

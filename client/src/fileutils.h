@@ -11,13 +11,6 @@
  *
  *****************************************************************************
  *
- * This file is part of loclass. It is a reconstructon of the cipher engine
- * used in iClass, and RFID techology.
- *
- * The implementation is based on the work performed by
- * Flavio D. Garcia, Gerhard de Koning Gans, Roel Verdult and
- * Milosch Meriac in the paper "Dismantling IClass".
- *
  * Copyright (C) 2014 Martin Holst Swende
  *
  * This is free software: you can redistribute it and/or modify
