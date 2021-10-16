@@ -147,6 +147,7 @@ static void flush_history(void) {
     if (g_session.history_path) {
         write_history(g_session.history_path);
         free(g_session.history_path);
+        g_session.history_path = NULL;
     }
 }
 
