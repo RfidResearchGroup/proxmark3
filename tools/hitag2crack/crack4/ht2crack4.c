@@ -442,7 +442,7 @@ static void score_traces(struct guess *g, unsigned int size) {
         // then shift by size - 16, insert upper key XOR enc_nonce XOR bitstream,
         // and calc new bit b
         uint64_t lfsr = (uid >> (size - 16)) | ((g->key << (48 - size)) ^
-                                       ((nonces[i].enc_nR ^ g->b0to31[i]) << (64 - size)));
+                                                ((nonces[i].enc_nR ^ g->b0to31[i]) << (64 - size)));
         g->b0to31[i] = g->b0to31[i] | (ht2crypt(lfsr) << (size - 16));
 
         // create lfsr - lower 16 bits are lower 16 bits of key

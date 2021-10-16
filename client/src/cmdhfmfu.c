@@ -269,8 +269,8 @@ static int trace_mfuc_try_key(uint8_t *key, int state, uint8_t (*authdata)[16]) 
             mbedtls_des3_crypt_cbc(&ctx_des3, MBEDTLS_DES_DECRYPT,
                                    16, iv, authdata[1], RndARndB);
             if ((memcmp(&RndB[1], &RndARndB[8], 7) == 0) &&
-                (RndB[0] == RndARndB[15])) {
-                    return PM3_SUCCESS;
+                    (RndB[0] == RndARndB[15])) {
+                return PM3_SUCCESS;
             }
             break;
         case 3:
@@ -284,8 +284,8 @@ static int trace_mfuc_try_key(uint8_t *key, int state, uint8_t (*authdata)[16]) 
             mbedtls_des3_crypt_cbc(&ctx_des3, MBEDTLS_DES_DECRYPT,
                                    8, iv, authdata[2], RndA);
             if ((memcmp(&RndARndB[1], RndA, 7) == 0) &&
-                (RndARndB[0] == RndA[7])) {
-                    return PM3_SUCCESS;
+                    (RndARndB[0] == RndA[7])) {
+                return PM3_SUCCESS;
             }
             break;
         default:

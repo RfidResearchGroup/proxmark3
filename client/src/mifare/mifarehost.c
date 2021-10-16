@@ -662,9 +662,9 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     uint32_t max_keys_chunk = keycnt > maxkeysinblock ? maxkeysinblock : keycnt;
 
     uint8_t *mem = NULL;
-    uint8_t *p_keyblock = NULL;    
+    uint8_t *p_keyblock = NULL;
 
-    if (IfPm3Flash()) {    
+    if (IfPm3Flash()) {
 
         // used for mfCheckKeys_file, which needs a header
         mem = calloc((maxkeysinblock * 6) + 5, sizeof(uint8_t));

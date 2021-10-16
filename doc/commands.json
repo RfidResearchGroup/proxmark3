@@ -88,9 +88,12 @@
             ],
             "offline": true,
             "options": [
-                "-h, --help this help"
+                "-h, --help this help",
+                "-f, --freq <int> resonating frequency f in hertz (hz)",
+                "-l, --cap <int> capacitance c in micro farads (f)",
+                "-c, --ind <int> inductance in micro henries (h)"
             ],
-            "usage": "analyse freq [-h]"
+            "usage": "analyse freq [-h] [-f <int>] [-l <int>] [-c <int>]"
         },
         "analyse help": {
             "command": "analyse help",
@@ -973,7 +976,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log /home/phil/.proxmark3/logs/log_20210903.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log /home/phil/.proxmark3/logs/log_20211016.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -1053,7 +1056,7 @@
                 "-r, --reset <number> minimum secondes before resetting the tag (to prevent timeout issues). default is 5 minutes",
                 "-e, --error-limit <number> maximum times an status word other than 0x9000 or 0x6d00 is shown. default is 512.",
                 "-s, --skip-ins <hex> do not test an instructions (can be specified multiple times)",
-                "-l, --with-le serach for apdus with le=0 (case 2s) as well",
+                "-l, --with-le search for apdus with le=0 (case 2s) as well",
                 "-v, --verbose verbose output"
             ],
             "usage": "hf 14a apdufind [-hlv] [-c <hex>] [-i <hex>] [--p1 <hex>] [--p2 <hex>] [-r <number>] [-e <number>] [-s <hex>]..."
@@ -1111,13 +1114,15 @@
             "command": "hf 14a ndefread",
             "description": "read nfc data exchange format (ndef) file on type 4 ndef tag",
             "notes": [
-                "hf 14a ndefread"
+                "hf 14a ndefread",
+                "hf 14a ndefread -f myfilename -> save raw ndef to file"
             ],
             "offline": false,
             "options": [
-                "-h, --help this help"
+                "-h, --help this help",
+                "-f, --file <fn> save raw ndef to file"
             ],
-            "usage": "hf 14a ndefread [-h]"
+            "usage": "hf 14a ndefread [-h] [-f <fn>]"
         },
         "hf 14a raw": {
             "command": "hf 14a raw",
@@ -1279,13 +1284,15 @@
             "command": "hf 14b ndefread",
             "description": "print nfc data exchange format (ndef)",
             "notes": [
-                "hf 14b ndefread"
+                "hf 14b ndefread",
+                "hf 14b ndefread -f myfilename -> save raw ndef to file"
             ],
             "offline": false,
             "options": [
-                "-h, --help this help"
+                "-h, --help this help",
+                "-f, --file <fn> save raw ndef to file"
             ],
-            "usage": "hf 14b ndefread [-h]"
+            "usage": "hf 14b ndefread [-h] [-f <fn>]"
         },
         "hf 14b raw": {
             "command": "hf 14b raw",
@@ -2485,7 +2492,7 @@
         },
         "hf iclass help": {
             "command": "hf iclass help",
-            "description": "----------- --------------------- operations --------------------- help this help info tag information list list iclass history ----------- --------------------- recovery --------------------- loclass use loclass to perform bruteforce reader attack lookup uses authentication trace to check for key in dictionary file ----------- --------------------- simulation --------------------- ----------- --------------------- utils --------------------- configcard reader configuration card calcnewkey calc diversified keys (blocks 3 & 4) to write new keys encode encode binary wiegand to block 7 encrypt encrypt given block data decrypt decrypt given block data or tag dump file managekeys manage keys to use with iclass commands view display content from tag dump file --------------------------------------------------------------------------------------- hf iclass dump available offline: no dump all memory from a iclass tag",
+            "description": "----------- --------------------- operations --------------------- help this help info tag information list list iclass history ----------- --------------------- recovery --------------------- loclass use loclass to perform bruteforce reader attack lookup uses authentication trace to check for key in dictionary file ----------- --------------------- simulation --------------------- ----------- --------------------- utils --------------------- configcard reader configuration card calcnewkey calc diversified keys (blocks 3 & 4) to write new keys encode encode binary wiegand to block 7 encrypt encrypt given block data decrypt decrypt given block data or tag dump file managekeys manage keys to use with iclass commands permutekey permute function from 'heart of darkness' paper view display content from tag dump file --------------------------------------------------------------------------------------- hf iclass dump available offline: no dump all memory from a iclass tag",
             "notes": [
                 "hf iclass dump -k 001122334455667b",
                 "hf iclass dump -k aaaaaaaaaaaaaaaa --credit 001122334455667b",
@@ -2603,7 +2610,7 @@
                 "hf iclass permutekey --reverse --key 0123456789abcdef",
                 "hf iclass permutekey --key ff55330f0055330f"
             ],
-            "offline": false,
+            "offline": true,
             "options": [
                 "-h, --help this help",
                 "-r, --reverse reverse permuted key",
@@ -2673,7 +2680,7 @@
             "command": "hf iclass sim",
             "description": "simulate a iclass legacy/standard tag",
             "notes": [
-                "hf iclass sim -t 0 --csn 031fec8af7ff12e0 -> simulate with specficied csn",
+                "hf iclass sim -t 0 --csn 031fec8af7ff12e0 -> simulate with specified csn",
                 "hf iclass sim -t 1 -> simulate with default csn",
                 "hf iclass sim -t 2 -> execute loclass attack online part",
                 "hf iclass sim -t 3 -> simulate full iclass 2k tag",
@@ -3688,7 +3695,8 @@
             "notes": [
                 "hf mf ndefread -> shows ndef parsed data",
                 "hf mf ndefread -vv -> shows ndef parsed and raw data",
-                "hf mf ndefread --aid e103 -k ffffffffffff -b -> shows ndef data with custom aid, key and with key b"
+                "hf mf ndefread --aid e103 -k ffffffffffff -b -> shows ndef data with custom aid, key and with key b",
+                "hf mf ndefread -f myfilename -> save raw ndef to file"
             ],
             "offline": false,
             "options": [
@@ -3696,9 +3704,10 @@
                 "-v, --verbose show technical data",
                 "--aid <aid> replace default aid for ndef",
                 "-k, --key <key> replace default key for ndef",
-                "-b, --keyb use key b for access sectors (by default: key a)"
+                "-b, --keyb use key b for access sectors (by default: key a)",
+                "-f, --file <fn> save raw ndef to file"
             ],
-            "usage": "hf mf ndefread [-hvb] [--aid <aid>] [-k <key>]"
+            "usage": "hf mf ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>]"
         },
         "hf mf nested": {
             "command": "hf mf nested",
@@ -3791,7 +3800,7 @@
         },
         "hf mf restore": {
             "command": "hf mf restore",
-            "description": "restore mifare classic binary file to tag. the key file and data file will program the card sector trailers. by default we authenticate to card with key b 0xffffffffffff. `--uid` param is used for filename templates `hf-mf-<uid>-dump.bin` and `hf-mf-<uid>-key.bin. if not specified, it will read the card uid instead. `-w` param you can indicate that the key file should be used for authentication instead. if so we also try both b/a keys",
+            "description": "restore mifare classic binary file to tag. the key file and data file will program the card sector trailers. by default we authenticate to card with key b 0xffffffffffff. `--uid` param is used for filename templates `hf-mf-<uid>-dump.bin` and `hf-mf-<uid>-key.bin. if not specified, it will read the card uid instead. `--ka` param you can indicate that the key file should be used for authentication instead. if so we also try both b/a keys",
             "notes": [
                 "hf mf restore",
                 "hf mf restore --1k --uid 04010203",
@@ -4513,7 +4522,7 @@
         },
         "hf mfdes freemem": {
             "command": "hf mfdes freemem",
-            "description": "get card's free memory. can be done with ot without authentication. master key may be provided.",
+            "description": "get card's free memory. can be done with or without authentication. master key may be provided.",
             "notes": [
                 "hf mfdes getfreemem -> execute with default factory setup"
             ],
@@ -5149,8 +5158,8 @@
             "command": "hf mfp mad",
             "description": "checks and prints mifare application directory (mad)",
             "notes": [
-                "hf mfp mad -> shows mad if exists",
-                "hf mfp mad --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> read and print ndef data from mad aid if exists"
+                "hf mfp mad",
+                "hf mfp mad --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> read and print ndef data from mad aid"
             ],
             "offline": false,
             "options": [
@@ -5168,9 +5177,10 @@
             "command": "hf mfp ndefread",
             "description": "prints nfc data exchange format (ndef)",
             "notes": [
-                "hf mfp ndefread -> shows ndef data",
+                "hf mfp ndefread",
                 "hf mfp ndefread -vv -> shows ndef parsed and raw data",
-                "hf mfp ndefread --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows ndef data with custom aid and key"
+                "hf mfp ndefread --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows ndef data with custom aid and key",
+                "hf mfp ndefread -f myfilename -> save raw ndef to file"
             ],
             "offline": false,
             "options": [
@@ -5178,9 +5188,10 @@
                 "-v, --verbose show technical data",
                 "--aid <aid> replace default aid for ndef",
                 "-k, --key <key> replace default key for ndef",
-                "-b, --keyb use key b for access sectors (by default: key a)"
+                "-b, --keyb use key b for access sectors (by default: key a)",
+                "-f, --file <fn> save raw ndef to file"
             ],
-            "usage": "hf mfp ndefread [-hvb] [--aid <aid>] [-k <key>]"
+            "usage": "hf mfp ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>]"
         },
         "hf mfp rdbl": {
             "command": "hf mfp rdbl",
@@ -5205,8 +5216,8 @@
             "command": "hf mfp rdsc",
             "description": "reads one sector from mifare plus card",
             "notes": [
-                "hf mfp rdsc --sn 0 --key 000102030405060708090a0b0c0d0e0f -> executes authentication and read sector 0 data",
-                "hf mfp rdsc --sn 1 -v -> executes authentication and shows sector 1 data with default key"
+                "hf mfp rdsc -s 0 --key 000102030405060708090a0b0c0d0e0f -> executes authentication and read sector 0 data",
+                "hf mfp rdsc -s 1 -v -> executes authentication and shows sector 1 data with default key"
             ],
             "offline": false,
             "options": [
@@ -5214,17 +5225,17 @@
                 "-v, --verbose show internal data.",
                 "-b, --keyb use key b (by default keya).",
                 "-p, --plain plain communication mode between reader and card.",
-                "--sn <dec> sector number (0..255)",
+                "-s, --sn <dec> sector number (0..255)",
                 "-k, --key <hex> key, 16 hex bytes"
             ],
-            "usage": "hf mfp rdsc [-hvbp] --sn <dec> [-k <hex>]"
+            "usage": "hf mfp rdsc [-hvbp] -s <dec> [-k <hex>]"
         },
         "hf mfp wrbl": {
             "command": "hf mfp wrbl",
             "description": "writes one block to mifare plus card",
             "notes": [
-                "hf mfp wrbl --blk 1 -d ff0000000000000000000000000000ff --key 000102030405060708090a0b0c0d0e0f -> writes block 1 data",
-                "hf mfp wrbl --blk 2 -d ff0000000000000000000000000000ff -v -> writes block 2 data with default key 0xff..0xff"
+                "hf mfp wrbl --blk 1 -d ff0000000000000000000000000000ff --key 000102030405060708090a0b0c0d0e0f -> write block 1 data",
+                "hf mfp wrbl --blk 2 -d ff0000000000000000000000000000ff -v -> write block 2 data with default key 0xff..0xff"
             ],
             "offline": false,
             "options": [
@@ -5248,10 +5259,10 @@
             "options": [
                 "-h, --help this help",
                 "-v, --verbose show internal data.",
-                "-i, --ki <hex> key number, 2 hex bytes",
+                "--ki <hex> key number, 2 hex bytes",
                 "--key <hex> key, 16 hex bytes"
             ],
-            "usage": "hf mfp wrp [-hv] -i <hex> [--key <hex>]..."
+            "usage": "hf mfp wrp [-hv] --ki <hex> [--key <hex>]..."
         },
         "hf mfu cauth": {
             "command": "hf mfu cauth",
@@ -5263,11 +5274,11 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-k, --key <hex> key for authentication (ul-c 16 bytes)",
+                "--key <hex> key for authentication (ul-c 16 bytes)",
                 "-l swap entered key's endianness",
                 "-k keep field on (only if a password is provided too)"
             ],
-            "usage": "hf mfu cauth [-hlk] [-k <hex>]"
+            "usage": "hf mfu cauth [-hlk] [--key <hex>]"
         },
         "hf mfu dump": {
             "command": "hf mfu dump",
@@ -5354,14 +5365,16 @@
             "description": "prints nfc data exchange format (ndef)",
             "notes": [
                 "hf mfu ndefread -> shows ndef data",
-                "hf mfu ndefread -k ffffffff -> shows ndef data with key"
+                "hf mfu ndefread -k ffffffff -> shows ndef data with key",
+                "hf mfu ndefread -f myfilename -> save raw ndef to file"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-l swap entered key's endianness"
+                "-l swap entered key's endianness",
+                "-f, --file <fn> save raw ndef to file"
             ],
-            "usage": "hf mfu ndefread [-hl] [-k replace default key for ndef]"
+            "usage": "hf mfu ndefread [-hl] [-k replace default key for ndef] [-f <fn>]"
         },
         "hf mfu otptear": {
             "command": "hf mfu otptear",
@@ -5416,7 +5429,7 @@
                 "-h, --help this help",
                 "-k, --key <hex> key for authentication (ul-c 16 bytes, ev1/ntag 4 bytes)",
                 "-l swap entered key's endianness",
-                "-b, --block <dec> block number to write"
+                "-b, --block <dec> block number to read"
             ],
             "usage": "hf mfu rdbl [-hl] [-k <hex>] -b <dec>"
         },
@@ -5601,14 +5614,16 @@
             "command": "hf st25ta ndefread",
             "description": "read nfc data exchange format (ndef) file on st25ta",
             "notes": [
-                "hf st25ta ndefread -p 82e80053d4ca5c0b656d852cc696c8a1"
+                "hf st25ta ndefread -p 82e80053d4ca5c0b656d852cc696c8a1",
+                "hf st25ta ndefread -f myfilename -> save raw ndef to file"
             ],
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-p, --pwd <hex> 16 byte read password"
+                "-p, --pwd <hex> 16 byte read password",
+                "-f, --file <fn> save raw ndef to file"
             ],
-            "usage": "hf st25ta ndefread [-h] [-p <hex>]"
+            "usage": "hf st25ta ndefread [-h] [-p <hex>] [-f <fn>]"
         },
         "hf st25ta protect": {
             "command": "hf st25ta protect",
@@ -5730,14 +5745,16 @@
             "command": "hf topaz info",
             "description": "get info from topaz tags",
             "notes": [
-                "hf topaz info"
+                "hf topaz info",
+                "hf topaz info -f myfilename -> save raw ndef to file"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
+                "-f, --file <fn> save raw ndef to file",
                 "-v, --verbose verbose output"
             ],
-            "usage": "hf topaz info [-hv]"
+            "usage": "hf topaz info [-hv] [-f <fn>]"
         },
         "hf topaz raw": {
             "command": "hf topaz raw",
@@ -5902,7 +5919,7 @@
         },
         "hw help": {
             "command": "hw help",
-            "description": "------------- ----------------------- hardware ----------------------- help this help connect connect proxmark3 to serial port --------------------------------------------------------------------------------------- hw break available offline: no send break loop package",
+            "description": "------------- ----------------------- hardware ----------------------- help this help connect connect proxmark3 to serial port version show version information about the client and the connected proxmark3, if any --------------------------------------------------------------------------------------- hw break available offline: no send break loop package",
             "notes": [
                 "hw break"
             ],
@@ -6076,11 +6093,11 @@
         },
         "hw version": {
             "command": "hw version",
-            "description": "show version information about the connected proxmark3",
+            "description": "show version information about the client and the connected proxmark3",
             "notes": [
                 "hw version"
             ],
-            "offline": false,
+            "offline": true,
             "options": [
                 "-h, --help this help"
             ],
@@ -9282,18 +9299,20 @@
         },
         "nfc help": {
             "command": "nfc help",
-            "description": "-------- --------------------- nfc tags -------------------- type1 { nfc forum tag type 1... } type2 { nfc forum tag type 2... } type4a { nfc forum tag type 4 iso14443a... } type4b { nfc forum tag type 4 iso14443b... } mf { nfc type mifare classic/plus tag... } barcode { nfc barcode tag... } -------- --------------------- general --------------------- help this help decode decode ndef records --------------------------------------------------------------------------------------- nfc decode available offline: yes decode and print nfc data exchange format (ndef)",
+            "description": "-------- --------------------- nfc tags -------------------- type1 { nfc forum tag type 1... } type2 { nfc forum tag type 2... } type4a { nfc forum tag type 4 iso14443a... } type4b { nfc forum tag type 4 iso14443b... } mf { nfc type mifare classic/plus tag... } barcode { nfc barcode tag... } -------- --------------------- general --------------------- help this help decode decode ndef records --------------------------------------------------------------------------------------- nfc decode available offline: yes decode and print nfc data exchange format (ndef) you must provide either data in hex or a filename, but not both",
             "notes": [
                 "nfc decode -d 9101085402656e48656c6c6f5101085402656e576f726c64",
-                "nfc decode -d 0103d020240203e02c040300fe"
+                "nfc decode -d 0103d020240203e02c040300fe",
+                "nfc decode -f myfilename"
             ],
             "offline": true,
             "options": [
                 "-h, --help this help",
                 "-d, --data <hex> ndef data to decode",
+                "-f, --file <fn> file to load",
                 "-v, --verbose verbose mode"
             ],
-            "usage": "nfc decode [-hv] [-d <hex>]..."
+            "usage": "nfc decode [-hv] [-d <hex>]... [-f <fn>]"
         },
         "nfc mf help": {
             "command": "nfc mf help",
@@ -9311,9 +9330,10 @@
             "command": "nfc mf pread",
             "description": "prints nfc data exchange format (ndef)",
             "notes": [
-                "hf mfp ndefread -> shows ndef data",
+                "hf mfp ndefread",
                 "hf mfp ndefread -vv -> shows ndef parsed and raw data",
-                "hf mfp ndefread --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows ndef data with custom aid and key"
+                "hf mfp ndefread --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows ndef data with custom aid and key",
+                "hf mfp ndefread -f myfilename -> save raw ndef to file"
             ],
             "offline": false,
             "options": [
@@ -9321,73 +9341,84 @@
                 "-v, --verbose show technical data",
                 "--aid <aid> replace default aid for ndef",
                 "-k, --key <key> replace default key for ndef",
-                "-b, --keyb use key b for access sectors (by default: key a)"
+                "-b, --keyb use key b for access sectors (by default: key a)",
+                "-f, --file <fn> save raw ndef to file"
             ],
-            "usage": "hf mfp ndefread [-hvb] [--aid <aid>] [-k <key>]"
+            "usage": "hf mfp ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>]"
         },
         "nfc type1 help": {
             "command": "nfc type1 help",
             "description": "-------- -------------- nfc forum tag type 1 --------------- -------- --------------------- general --------------------- help this help ======================================================================================= nfc type2 { nfc forum tag type 2... } --------------------------------------------------------------------------------------- nfc type2 read available offline: no prints nfc data exchange format (ndef)",
             "notes": [
                 "hf mfu ndefread -> shows ndef data",
-                "hf mfu ndefread -k ffffffff -> shows ndef data with key"
+                "hf mfu ndefread -k ffffffff -> shows ndef data with key",
+                "hf mfu ndefread -f myfilename -> save raw ndef to file"
             ],
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-l swap entered key's endianness"
+                "-l swap entered key's endianness",
+                "-f, --file <fn> save raw ndef to file"
             ],
-            "usage": "hf mfu ndefread [-hl] [-k replace default key for ndef]"
+            "usage": "hf mfu ndefread [-hl] [-k replace default key for ndef] [-f <fn>]"
         },
         "nfc type1 read": {
             "command": "nfc type1 read",
             "description": "get info from topaz tags",
             "notes": [
-                "hf topaz info"
+                "hf topaz info",
+                "hf topaz info -f myfilename -> save raw ndef to file"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
+                "-f, --file <fn> save raw ndef to file",
                 "-v, --verbose verbose output"
             ],
-            "usage": "hf topaz info [-hv]"
+            "usage": "hf topaz info [-hv] [-f <fn>]"
         },
         "nfc type2 help": {
             "command": "nfc type2 help",
             "description": "-------- -------------- nfc forum tag type 2 --------------- -------- --------------------- general --------------------- help this help ======================================================================================= nfc type4a { nfc forum tag type 4 iso14443a... } --------------------------------------------------------------------------------------- nfc type4a read available offline: no read nfc data exchange format (ndef) file on type 4 ndef tag",
             "notes": [
-                "hf 14a ndefread"
+                "hf 14a ndefread",
+                "hf 14a ndefread -f myfilename -> save raw ndef to file"
             ],
             "offline": true,
             "options": [
-                "-h, --help this help"
+                "-h, --help this help",
+                "-f, --file <fn> save raw ndef to file"
             ],
-            "usage": "hf 14a ndefread [-h]"
+            "usage": "hf 14a ndefread [-h] [-f <fn>]"
         },
         "nfc type4a help": {
             "command": "nfc type4a help",
             "description": "-------- --------- nfc forum tag type 4 iso14443a ---------- -------- --------------------- general --------------------- help this help ======================================================================================= nfc type4b { nfc forum tag type 4 iso14443b... } --------------------------------------------------------------------------------------- nfc type4b read available offline: no print nfc data exchange format (ndef)",
             "notes": [
-                "hf 14b ndefread"
+                "hf 14b ndefread",
+                "hf 14b ndefread -f myfilename -> save raw ndef to file"
             ],
             "offline": true,
             "options": [
-                "-h, --help this help"
+                "-h, --help this help",
+                "-f, --file <fn> save raw ndef to file"
             ],
-            "usage": "hf 14b ndefread [-h]"
+            "usage": "hf 14b ndefread [-h] [-f <fn>]"
         },
         "nfc type4a st25taread": {
             "command": "nfc type4a st25taread",
             "description": "read nfc data exchange format (ndef) file on st25ta",
             "notes": [
-                "hf st25ta ndefread -p 82e80053d4ca5c0b656d852cc696c8a1"
+                "hf st25ta ndefread -p 82e80053d4ca5c0b656d852cc696c8a1",
+                "hf st25ta ndefread -f myfilename -> save raw ndef to file"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-p, --pwd <hex> 16 byte read password"
+                "-p, --pwd <hex> 16 byte read password",
+                "-f, --file <fn> save raw ndef to file"
             ],
-            "usage": "hf st25ta ndefread [-h] [-p <hex>]"
+            "usage": "hf st25ta ndefread [-h] [-p <hex>] [-f <fn>]"
         },
         "nfc type4b help": {
             "command": "nfc type4b help",
@@ -9395,7 +9426,8 @@
             "notes": [
                 "hf mf ndefread -> shows ndef parsed data",
                 "hf mf ndefread -vv -> shows ndef parsed and raw data",
-                "hf mf ndefread --aid e103 -k ffffffffffff -b -> shows ndef data with custom aid, key and with key b"
+                "hf mf ndefread --aid e103 -k ffffffffffff -b -> shows ndef data with custom aid, key and with key b",
+                "hf mf ndefread -f myfilename -> save raw ndef to file"
             ],
             "offline": true,
             "options": [
@@ -9403,9 +9435,10 @@
                 "-v, --verbose show technical data",
                 "--aid <aid> replace default aid for ndef",
                 "-k, --key <key> replace default key for ndef",
-                "-b, --keyb use key b for access sectors (by default: key a)"
+                "-b, --keyb use key b for access sectors (by default: key a)",
+                "-f, --file <fn> save raw ndef to file"
             ],
-            "usage": "hf mf ndefread [-hvb] [--aid <aid>] [-k <key>]"
+            "usage": "hf mf ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>]"
         },
         "prefs get barmode": {
             "command": "prefs get barmode",
@@ -9517,7 +9550,7 @@
         },
         "prefs set clientdebug": {
             "command": "prefs set clientdebug",
-            "description": "set presistent preference of using clientside debug level",
+            "description": "set persistent preference of using clientside debug level",
             "notes": [
                 "prefs set clientdebug --simple"
             ],
@@ -9532,7 +9565,7 @@
         },
         "prefs set clientdelay": {
             "command": "prefs set clientdelay",
-            "description": "set presistent preference of delay before executing a command in the client",
+            "description": "set persistent preference of delay before executing a command in the client",
             "notes": [
                 "prefs set clientdelay --ms 0 -> unsets any delay",
                 "prefs set clientdelay --ms 1000 -> sets 1000ms delay"
@@ -9546,7 +9579,7 @@
         },
         "prefs set color": {
             "command": "prefs set color",
-            "description": "set presistent preference of using colors in the client",
+            "description": "set persistent preference of using colors in the client",
             "notes": [
                 "prefs set color --ansi"
             ],
@@ -9560,7 +9593,7 @@
         },
         "prefs set emoji": {
             "command": "prefs set emoji",
-            "description": "set presistent preference of using emojis in the client",
+            "description": "set persistent preference of using emojis in the client",
             "notes": [
                 "prefs set emoji --alias"
             ],
@@ -9576,7 +9609,7 @@
         },
         "prefs set help": {
             "command": "prefs set help",
-            "description": "help this help barmode set bar mode clientdebug set client debug level clientdelay set client execution delay color set color support emoji set emoji display hints set hint display savepaths ... to be adjusted next ... plotsliders set plot slider display --------------------------------------------------------------------------------------- prefs set barmode available offline: yes set presistent preference of hf/lf tune command styled output in the client",
+            "description": "help this help barmode set bar mode clientdebug set client debug level clientdelay set client execution delay color set color support emoji set emoji display hints set hint display savepaths ... to be adjusted next ... plotsliders set plot slider display --------------------------------------------------------------------------------------- prefs set barmode available offline: yes set persistent preference of hf/lf tune command styled output in the client",
             "notes": [
                 "prefs set barmode --mix"
             ],
@@ -9591,7 +9624,7 @@
         },
         "prefs set hints": {
             "command": "prefs set hints",
-            "description": "set presistent preference of showing hint messages in the client",
+            "description": "set persistent preference of showing hint messages in the client",
             "notes": [
                 "prefs set hints --on"
             ],
@@ -9605,7 +9638,7 @@
         },
         "prefs set plotsliders": {
             "command": "prefs set plotsliders",
-            "description": "set presistent preference of showing the plotslider control in the client",
+            "description": "set persistent preference of showing the plotslider control in the client",
             "notes": [
                 "prefs set plotsliders --on"
             ],
@@ -9619,7 +9652,7 @@
         },
         "prefs set savepaths": {
             "command": "prefs set savepaths",
-            "description": "set presistent preference of file paths in the client",
+            "description": "set persistent preference of file paths in the client",
             "notes": [
                 "prefs set savepaths --dump /home/mydumpfolder -> all dump files will be saved into this folder",
                 "prefs set savepaths --def /home/myfolder -c -> create if needed, all files will be saved into this folder"
@@ -10000,6 +10033,6 @@
     "metadata": {
         "commands_extracted": 589,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-09-03T21:05:08"
+        "extracted_on": "2021-10-16T21:43:45"
     }
 }

@@ -2479,9 +2479,9 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     PrintAndLogEx(INFO, " block#  | data                    | ascii    |lck| info");
     PrintAndLogEx(INFO, "---------+-------------------------+----------+---+--------------");
     PrintAndLogEx(INFO, "  0/0x00 | " _GREEN_("%s") "| " _GREEN_("%s") " |   | CSN "
-        , sprint_hex(iclass_dump, 8)
-        , sprint_ascii(iclass_dump, 8)
-        );
+                  , sprint_hex(iclass_dump, 8)
+                  , sprint_ascii(iclass_dump, 8)
+                 );
 
     if (i != 1)
         PrintAndLogEx(INFO, "....");
@@ -2535,12 +2535,12 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
             }
 
             PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s "
-                , i
-                , i
-                , sprint_hex_ascii(blk, 8)
-                , lockstr
-                , s
-                );
+                          , i
+                          , i
+                          , sprint_hex_ascii(blk, 8)
+                          , lockstr
+                          , s
+                         );
 
         } else {
             const char *info_ks[] = {"CSN", "Config", "E-purse", "Debit", "Credit", "AIA", "User"};
@@ -2550,13 +2550,13 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
             }
             if (i >= 6 && i <= 9) {
                 PrintAndLogEx(INFO, "%3d/0x%02X | " _YELLOW_("%s") "| " _YELLOW_("%s") " | %s | %s "
-                    , i
-                    , i
-                    , sprint_hex(blk, 8)
-                    , sprint_ascii(blk, 8)
-                    , lockstr
-                    , s
-                    );
+                              , i
+                              , i
+                              , sprint_hex(blk, 8)
+                              , sprint_ascii(blk, 8)
+                              , lockstr
+                              , s
+                             );
             } else {
                 PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s ", i, i, sprint_hex_ascii(blk, 8), lockstr, s);
             }

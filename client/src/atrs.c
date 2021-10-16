@@ -32,7 +32,7 @@ const char *getAtrInfo(const char *atr_str) {
             }
 
             for (int j = 0; j < slen; j++) {
-                tmp_atr[j] = AtrTable[i].bytes[j]=='.' ? '.' : atr_str[j];
+                tmp_atr[j] = AtrTable[i].bytes[j] == '.' ? '.' : atr_str[j];
             }
 
             if (strncmp(tmp_atr, AtrTable[i].bytes, slen) == 0) {

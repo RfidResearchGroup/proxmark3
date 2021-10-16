@@ -288,7 +288,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 snprintf(exp, size, "AUTH-1 ");
                 break;
             case MIFARE_ULC_AUTH_2:
-                if ((gs_mfuc_state == 2) && (cmdsize==19)){
+                if ((gs_mfuc_state == 2) && (cmdsize == 19)) {
                     memcpy(gs_mfuc_authdata[1], &cmd[1], 16);
                     if (trace_mfuc_try_default_3des_keys(&gs_mfuc_key, gs_mfuc_state, gs_mfuc_authdata) == PM3_SUCCESS) {
 // buffer too small to print the full key,
@@ -371,26 +371,26 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 return 0;
         }
     } else {
-        if (gs_mfuc_state==1) {
-            if ((cmd[0]==0xAF) && (cmdsize==11)) {
+        if (gs_mfuc_state == 1) {
+            if ((cmd[0] == 0xAF) && (cmdsize == 11)) {
                 // register RndB
                 memcpy(gs_mfuc_authdata[0], &cmd[1], 8);
-                gs_mfuc_state=2;
+                gs_mfuc_state = 2;
             } else {
-                gs_mfuc_state=0;
+                gs_mfuc_state = 0;
             }
         }
-        if (gs_mfuc_state==3) {
-            if ((cmd[0]==0x00) && (cmdsize==11)) {
+        if (gs_mfuc_state == 3) {
+            if ((cmd[0] == 0x00) && (cmdsize == 11)) {
                 // register RndA'
                 memcpy(gs_mfuc_authdata[2], &cmd[1], 8);
                 if (trace_mfuc_try_default_3des_keys(&gs_mfuc_key, gs_mfuc_state, gs_mfuc_authdata) == PM3_SUCCESS) {
                     snprintf(exp, size, "AUTH-2 ANSW OK");
-                    gs_mfuc_state=0;
+                    gs_mfuc_state = 0;
                     return 1;
                 }
             }
-            gs_mfuc_state=0;
+            gs_mfuc_state = 0;
         }
         return 0;
     }

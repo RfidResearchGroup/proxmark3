@@ -1012,7 +1012,7 @@ static int CmdAnalyseFreq(const char *Cmd) {
     PrintAndLogEx(INFO, " 13.56 mHz has %f m, rf range %f m", len_1356, rf_range_1356);
 
 
-    if (F == 0 && C == 0 && L == 0) 
+    if (F == 0 && C == 0 && L == 0)
         return PM3_SUCCESS;
 
 
@@ -1021,22 +1021,22 @@ static int CmdAnalyseFreq(const char *Cmd) {
 
     // From  https://goodcalculators.com/resonant-frequency-calculator/
     // Calc Resonant Frequency [Hz]
-    // f = 1 / (2π √L C)  
+    // f = 1 / (2π √L C)
     if (F == 0) {
-        double calc_freq = 1 / (2 * M_PI * sqrtf((L * C)) );
+        double calc_freq = 1 / (2 * M_PI * sqrtf((L * C)));
         PrintAndLogEx(INFO, "Resonating Frequency  %lf Hz", calc_freq);
     }
     // Calc Inductance [H]
-    // L = 1 / (4π2 f2 C) 
+    // L = 1 / (4π2 f2 C)
     if (L == 0) {
-        double calc_inductance = 1 / (4 * (M_PI * M_PI) * (F * F) * C );
+        double calc_inductance = 1 / (4 * (M_PI * M_PI) * (F * F) * C);
         PrintAndLogEx(INFO, "Inductance %lf Henries", calc_inductance);
     }
 
     // Capacitance [F]
     //  C = 1 / (4π2 f2 L)
     if (C == 0) {
-        double calc_capacitance = 1 / (4 * (M_PI * M_PI) * (F * F) * L);        
+        double calc_capacitance = 1 / (4 * (M_PI * M_PI) * (F * F) * L);
         PrintAndLogEx(INFO, "Capacitance %lf Farads", calc_capacitance);
     }
     return PM3_SUCCESS;

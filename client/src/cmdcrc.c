@@ -454,7 +454,7 @@ static int CmdrevengSearch(const char *Cmd) {
         memset(result, 0, 30);
         char *inCRC = calloc(crcChars + 1, sizeof(char));
         if (inCRC == NULL) {
-            return 0;   
+            return 0;
         }
 
         memcpy(inCRC, inHexStr + (dataLen - crcChars), crcChars);

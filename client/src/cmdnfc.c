@@ -87,7 +87,7 @@ static int CmdNfcDecode(const char *Cmd) {
 
     bool verbose = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
-    if (((datalen != 0) && (fnlen != 0)) || ((datalen == 0) && (fnlen == 0))){
+    if (((datalen != 0) && (fnlen != 0)) || ((datalen == 0) && (fnlen == 0))) {
         PrintAndLogEx(ERR, "You must provide either data in hex or a filename");
         return PM3_EINVARG;
     }

@@ -358,7 +358,7 @@ Check column "offline" for their availability.
 |`hf iclass encrypt      `|Y       |`Encrypt given block data`
 |`hf iclass decrypt      `|Y       |`Decrypt given block data or tag dump file`
 |`hf iclass managekeys   `|Y       |`Manage keys to use with iclass commands`
-|`hf iclass permutekey   `|N       |`Permute function from 'heart of darkness' paper`
+|`hf iclass permutekey   `|Y       |`Permute function from 'heart of darkness' paper`
 |`hf iclass view         `|Y       |`Display content from tag dump file`
 
 
@@ -630,7 +630,7 @@ Check column "offline" for their availability.
 |`hw tearoff             `|N       |`Program a tearoff hook for the next command supporting tearoff`
 |`hw tia                 `|N       |`Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider`
 |`hw tune                `|N       |`Measure antenna tuning`
-|`hw version             `|N       |`Show version information about the connected Proxmark3`
+|`hw version             `|Y       |`Show version information about the client and the connected Proxmark3, if any`
 
 
 ### lf
