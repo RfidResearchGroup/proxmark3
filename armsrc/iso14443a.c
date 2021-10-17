@@ -2429,7 +2429,7 @@ static void iso14a_set_ATS_times(uint8_t *ats) {
 
 static int GetATQA(uint8_t *resp, uint8_t *resp_par, bool use_ecp) {
 
-#define ECP_DELAY 1000
+#define ECP_DELAY 15
 #define WUPA_RETRY_TIMEOUT 10    // 10ms
 
     uint8_t wupa[] = { ISO14443A_CMD_WUPA };  // 0x26 - REQA  0x52 - WAKE-UP
