@@ -174,6 +174,11 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
             return 1;
         }
 
+        if (cmdsize > 10 && (memcmp(cmd, "\x6a\x02\xC8\x01\x00\x03\x00\x02\x79", 9) == 0)) {
+            snprintf(exp, size, "ECP");
+            return 1;
+        }
+
         gs_ntag_i2c_state = 0;
         switch (cmd[0]) {
             case ISO14443A_CMD_WUPA:
