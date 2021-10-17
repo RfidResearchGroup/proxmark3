@@ -425,6 +425,7 @@ static int CmdHF14AReader(const char *Cmd) {
         arg_lit0("s", "silent", "silent (no messages)"),
         arg_lit0(NULL, "drop", "just drop the signal field"),
         arg_lit0(NULL, "skip", "ISO14443-3 select only (skip RATS)"),
+        arg_lit0(NULL, "ecp", "Use enhanced contactless polling"),
         arg_lit0("@", NULL, "continuous reader mode"),
         arg_param_end
     };
@@ -446,7 +447,11 @@ static int CmdHF14AReader(const char *Cmd) {
         cm |= ISO14A_NO_RATS;
     }
 
-    bool continuous = arg_get_lit(ctx, 5);
+    if (arg_get_lit(ctx, 5)) {
+        cm |= ISO14A_USE_ECP;
+    }
+
+    bool continuous = arg_get_lit(ctx, 6);
 
     CLIParserFree(ctx);
 
@@ -1214,6 +1219,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         arg_int0("t",  "timeout", "<ms>", "timeout in milliseconds"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_lit0(NULL, "topaz", "use Topaz protocol to send command"),
+        arg_lit0(NULL, "ecp", "Use enhanced contactless polling"),        
         arg_strx1(NULL, NULL, "<hex>", "raw bytes to send"),
         arg_param_end
     };
@@ -1229,10 +1235,11 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     uint32_t timeout = (uint32_t)arg_get_int_def(ctx, 8, 0);
     bool verbose = arg_get_lit(ctx, 9);
     bool topazmode = arg_get_lit(ctx, 10);
+    bool use_ecp = arg_get_lit(ctx, 11);
 
     int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE];
-    CLIGetHexWithReturn(ctx, 11, data, &datalen);
+    CLIGetHexWithReturn(ctx, 12, data, &datalen);
     CLIParserFree(ctx);
 
     bool bTimeout = (timeout) ? true : false;
@@ -1287,6 +1294,9 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     }
     if (no_rats) {
         flags |= ISO14A_NO_RATS;
+    }
+    if (use_ecp){
+        flags |= ISO14A_USE_ECP;
     }
 
     // Max buffer is PM3_CMD_DATA_SIZE
