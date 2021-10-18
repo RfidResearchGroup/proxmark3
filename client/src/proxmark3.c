@@ -597,7 +597,11 @@ static void set_my_user_directory(void) {
 static void show_help(bool showFullHelp, char *exec_name) {
 
     PrintAndLogEx(NORMAL, "\nsyntax: %s [-h|-t|-m|--fulltext]", exec_name);
+#ifdef HAVE_PYTHON
+    PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-c <command>]|[-l <lua_script_file>]|[-y <python_script_file>]|[-s <cmd_script_file>] [-i] [-d <0|1|2>]", exec_name);
+#else // HAVE_PYTHON
     PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i] [-d <0|1|2>]", exec_name);
+#endif // HAVE_PYTHON
     PrintAndLogEx(NORMAL, "        %s [-p] <port> --flash [--unlock-bootloader] [--image <imagefile>]+ [-w] [-f] [-d <0|1|2>]", exec_name);
 
     if (showFullHelp) {
@@ -615,7 +619,11 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      -m/--markdown                       dump all interactive command list at once in markdown syntax");
         PrintAndLogEx(NORMAL, "      -b/--baud                           serial port speed (only needed for physical UART, not for USB-CDC or BT)");
         PrintAndLogEx(NORMAL, "      -c/--command <command>              execute one Proxmark3 command (or several separated by ';').");
-        PrintAndLogEx(NORMAL, "      -l/--lua <lua script file>          execute lua script.");
+        PrintAndLogEx(NORMAL, "      -l/--lua <lua_script_file>          execute Lua script.");
+#ifdef HAVE_PYTHON
+        // Technically, --lua and --py are identical and interexchangeable
+        PrintAndLogEx(NORMAL, "      -y/--py <python_script_file>        execute Python script.");
+#endif // HAVE_PYTHON
         PrintAndLogEx(NORMAL, "      -s/--script-file <cmd_script_file>  script file with one Proxmark3 command per line");
         PrintAndLogEx(NORMAL, "      -i/--interactive                    enter interactive mode after executing the script or the command");
         PrintAndLogEx(NORMAL, "      --incognito                         do not use history, prefs file nor log files");
@@ -631,7 +639,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      %s                                    -- runs the pm3 client in OFFLINE mode", exec_name);
         PrintAndLogEx(NORMAL, "\n  to execute different commands from terminal:\n");
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -c \"hf mf chk --1k\"   -- execute cmd and quit client", exec_name);
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -l hf_read            -- execute lua script `hf_read` and quit client", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -l hf_read            -- execute Lua script `hf_read` and quit client", exec_name);
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -s mycmds.txt         -- execute each pm3 cmd in file and quit client", exec_name);
         PrintAndLogEx(NORMAL, "\n  to flash fullimage and bootloader:\n");
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" --flash --unlock-bootloader --image bootrom.elf --image fullimage.elf", exec_name);
@@ -756,7 +764,7 @@ void pm3_init(void) {
 int main(int argc, char *argv[]) {
     pm3_init();
     bool waitCOMPort = false;
-    bool addLuaExec = false;
+    bool addScriptExec = false;
     bool stayInCommandLoop = false;
     char *script_cmds_file = NULL;
     char *script_cmd = NULL;
@@ -939,10 +947,10 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        // execute lua script
+        // execute Lua script
         if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--lua") == 0) {
             if (i + 1 == argc || strlen(argv[i + 1]) == 0) {
-                PrintAndLogEx(ERR, _RED_("ERROR:") " missing lua script specification after -l\n");
+                PrintAndLogEx(ERR, _RED_("ERROR:") " missing Lua script specification after --lua\n");
                 show_help(false, exec_name);
                 return 1;
             }
@@ -950,10 +958,25 @@ int main(int argc, char *argv[]) {
             if (script_cmd == NULL || strlen(script_cmd) == 0) {
                 return 1;
             }
-            addLuaExec = true;
+            addScriptExec = true;
             continue;
         }
-
+#ifdef HAVE_PYTHON
+        // execute Python script
+        if (strcmp(argv[i], "-y") == 0 || strcmp(argv[i], "--py") == 0) {
+            if (i + 1 == argc || strlen(argv[i + 1]) == 0) {
+                PrintAndLogEx(ERR, _RED_("ERROR:") " missing Python script specification after --py\n");
+                show_help(false, exec_name);
+                return 1;
+            }
+            script_cmd = argv[++i];
+            if (script_cmd == NULL || strlen(script_cmd) == 0) {
+                return 1;
+            }
+            addScriptExec = true;
+            continue;
+        }
+#endif // HAVE_PYTHON
         // go to interactive instead of quitting after a script/command
         if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--interactive") == 0) {
             stayInCommandLoop = true;
@@ -1032,7 +1055,7 @@ int main(int argc, char *argv[]) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " execute command: " _YELLOW_("command not found") ".\n");
             return 2;
         } else {
-            if (addLuaExec) {
+            if (addScriptExec) {
                 // add "script run " to command
                 int len = strlen(script_cmd) + 11 + 1;
                 char *ctmp = (char *) calloc(len, sizeof(uint8_t));
