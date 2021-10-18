@@ -415,7 +415,7 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
              * integrity later.
              *
              * The only difference with CMACed data transmission is that the CMAC
-             * is not apended to the data send by the PCD to the PICC.
+             * is not appended to the data send by the PCD to the PICC.
              */
 
             append_mac = false;

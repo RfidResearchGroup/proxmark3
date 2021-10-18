@@ -5,9 +5,9 @@ _byte_most_common_password.dic files are extracted from the top 10 million passw
 
 _byte_words_uppercase files are extracted from a common English dictionary.
 
-Since most evidence (how ever small) shows that uppercase passwords are normally used with RFID these lists have been coverted to upper case added.
+Since most evidence (how ever small) shows that uppercase passwords are normally used with RFID these lists have been converted to upper case added.
 
-Two sets for ascii numnber lists have also been in the event the password is an ascii number.
+Two sets for ascii number lists have also been in the event the password is an ascii number.
 
 
 **A better dictionary to use is:**
@@ -36,7 +36,7 @@ Mifare Pluse uses a 16 characters password
 
 50415353 spells out PASS
 ```
-These wouldn't be found in the most common password list, but they would be in the upercase dictionary. Again, the more efficent way to do this would have been to run the t55xx_default_pwds.dic from https://github.com/RfidResearchGroup/proxmark3/tree/master/client/dictionaries. If they had not published that great default password list, then we still would have been able to find these passwords without needing to try all possiblities which could take years.
+These wouldn't be found in the most common password list, but they would be in the uppercase dictionary. Again, the more efficient way to do this would have been to run the t55xx_default_pwds.dic from https://github.com/RfidResearchGroup/proxmark3/tree/master/client/dictionaries. If they had not published that great default password list, then we still would have been able to find these passwords without needing to try all possibilities which could take years.
  
 When looking at the Mifare Plus list in mfp_default_keys.dic, we see that there is some corresponding to ASCII with the passwords: 
 ```
