@@ -10,10 +10,11 @@
 
 #include "common.h"
 
-#define CRC16_POLY_CCITT   0x1021
-#define CRC16_POLY_KERMIT  0x8408
-#define CRC16_POLY_LEGIC   0xc6c6 //0x6363
-#define CRC16_POLY_DNP     0x3d65
+#define CRC16_POLY_CCITT     0x1021
+#define CRC16_POLY_KERMIT    0x8408
+#define CRC16_POLY_LEGIC     0xc6c6 //0x6363
+#define CRC16_POLY_LEGIC_16  0x002d
+#define CRC16_POLY_DNP       0x3d65
 
 #define X25_CRC_CHECK     ((uint16_t)(~0xF0B8 & 0xFFFF)) // use this for checking of a correct crc
 
@@ -26,6 +27,7 @@ typedef enum {
     CRC_ICLASS,
     CRC_FELICA,
     CRC_LEGIC,
+    CRC_LEGIC_16,
     CRC_CCITT,
     CRC_KERMIT,
     CRC_XMODEM,

@@ -683,12 +683,28 @@ static int l_aes128encrypt_ecb(lua_State *L) {
 
 static int l_crc8legic(lua_State *L) {
     size_t size;
-    const char *p_str = luaL_checklstring(L, 1, &size);
-
-    uint16_t retval = CRC8Legic((uint8_t *) p_str, size);
+    const char *p_hexstr = luaL_checklstring(L, 1, &size);
+    uint16_t retval = CRC8Legic((uint8_t *)p_hexstr, size);
     lua_pushunsigned(L, retval);
     return 1;
 }
+
+static int l_crc16legic(lua_State *L) {
+    size_t hexsize, uidsize;
+
+    // data as hex string
+    const char *p_hexstr = luaL_checklstring(L, 1, &hexsize);
+
+    // calc uid crc based on uid hex
+    const char *p_uid = luaL_checklstring(L, 2, &uidsize);
+    uint16_t uidcrc = CRC8Legic((uint8_t *)p_uid, uidsize);
+
+    init_table(CRC_LEGIC_16);
+    uint16_t retval = crc16_legic((uint8_t *)p_hexstr, hexsize, uidcrc);
+    lua_pushunsigned(L, retval);
+    return 1;
+}
+
 
 static int l_crc16(lua_State *L) {
     size_t size;
@@ -1359,6 +1375,7 @@ int set_pm3_libraries(lua_State *L) {
         {"aes128_encrypt",              l_aes128encrypt_cbc},
         {"aes128_encrypt_ecb",          l_aes128encrypt_ecb},
         {"crc8legic",                   l_crc8legic},
+        {"crc16legic",                  l_crc16legic},
         {"crc16",                       l_crc16},
         {"crc64",                       l_crc64},
         {"crc64_ecma182",               l_crc64_ecma182},
