@@ -417,7 +417,11 @@ static int CmdHF14AReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a reader",
                   "Act as a ISO-14443a reader to identify tag. Look for ISO-14443a tags until Enter or the pm3 button is pressed",
-                  "hf 14a reader -@   -> Continuous mode");
+                  "hf 14a reader\n"
+                  "hf 14a reader -@     -> Continuous mode\n"
+                  "hf 14a reader --ecp  -> trigger apple enhanced contactless polling\n"
+                  "hf 14a reader --mag  -> trigger apple magsafe polling\n"
+                  );
 
     void *argtable[] = {
         arg_param_begin,
@@ -426,6 +430,7 @@ static int CmdHF14AReader(const char *Cmd) {
         arg_lit0(NULL, "drop", "just drop the signal field"),
         arg_lit0(NULL, "skip", "ISO14443-3 select only (skip RATS)"),
         arg_lit0(NULL, "ecp", "Use enhanced contactless polling"),
+        arg_lit0(NULL, "mag", "Use Apple magsafe polling"),
         arg_lit0("@", NULL, "continuous reader mode"),
         arg_param_end
     };
@@ -451,7 +456,11 @@ static int CmdHF14AReader(const char *Cmd) {
         cm |= ISO14A_USE_ECP;
     }
 
-    bool continuous = arg_get_lit(ctx, 6);
+    if (arg_get_lit(ctx, 6)) {
+        cm |= ISO14A_USE_MAGSAFE;
+    }
+
+    bool continuous = arg_get_lit(ctx, 7);
 
     CLIParserFree(ctx);
 
@@ -1219,7 +1228,8 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         arg_int0("t",  "timeout", "<ms>", "timeout in milliseconds"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_lit0(NULL, "topaz", "use Topaz protocol to send command"),
-        arg_lit0(NULL, "ecp", "Use enhanced contactless polling"),        
+        arg_lit0(NULL, "ecp", "Use enhanced contactless polling"),
+        arg_lit0(NULL, "mag", "Use Apple magsafe polling"),
         arg_strx1(NULL, NULL, "<hex>", "raw bytes to send"),
         arg_param_end
     };
@@ -1236,10 +1246,11 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 9);
     bool topazmode = arg_get_lit(ctx, 10);
     bool use_ecp = arg_get_lit(ctx, 11);
+    bool use_magsafe = arg_get_lit(ctx, 12);
 
     int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE];
-    CLIGetHexWithReturn(ctx, 12, data, &datalen);
+    CLIGetHexWithReturn(ctx, 13, data, &datalen);
     CLIParserFree(ctx);
 
     bool bTimeout = (timeout) ? true : false;
@@ -1292,12 +1303,18 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     if (topazmode) {
         flags |= ISO14A_TOPAZMODE;
     }
+
     if (no_rats) {
         flags |= ISO14A_NO_RATS;
     }
+
     if (use_ecp){
         flags |= ISO14A_USE_ECP;
     }
+
+    if (use_magsafe){
+        flags |= ISO14A_USE_MAGSAFE;
+    }    
 
     // Max buffer is PM3_CMD_DATA_SIZE
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;

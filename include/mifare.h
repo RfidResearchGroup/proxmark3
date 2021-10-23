@@ -66,7 +66,8 @@ typedef enum ISO14A_COMMAND {
     ISO14A_TOPAZMODE = (1 << 8),
     ISO14A_NO_RATS = (1 << 9),
     ISO14A_SEND_CHAINING = (1 << 10),
-    ISO14A_USE_ECP = (1 << 11)
+    ISO14A_USE_ECP = (1 << 11),
+    ISO14A_USE_MAGSAFE = (1 << 12)
 } iso14a_command_t;
 
 typedef struct {
