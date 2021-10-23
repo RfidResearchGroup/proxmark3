@@ -143,7 +143,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ICLASS_DEBIT(x)             (((x) & 0x80) == 0x80)
 
 
-// U7bit 
+// 7bit Apple Magsafe wake up command
 #define MAGSAFE_CMD_WUPA            0x7A
 
 #define ISO14443A_CMD_REQA          0x26

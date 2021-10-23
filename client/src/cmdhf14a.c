@@ -421,7 +421,7 @@ static int CmdHF14AReader(const char *Cmd) {
                   "hf 14a reader -@     -> Continuous mode\n"
                   "hf 14a reader --ecp  -> trigger apple enhanced contactless polling\n"
                   "hf 14a reader --mag  -> trigger apple magsafe polling\n"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1308,13 +1308,13 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         flags |= ISO14A_NO_RATS;
     }
 
-    if (use_ecp){
+    if (use_ecp) {
         flags |= ISO14A_USE_ECP;
     }
 
-    if (use_magsafe){
+    if (use_magsafe) {
         flags |= ISO14A_USE_MAGSAFE;
-    }    
+    }
 
     // Max buffer is PM3_CMD_DATA_SIZE
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
