@@ -144,7 +144,10 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 
 // 7bit Apple Magsafe wake up command
-#define MAGSAFE_CMD_WUPA            0x7A
+#define MAGSAFE_CMD_WUPA_1          0x7A
+#define MAGSAFE_CMD_WUPA_2          0x7B
+#define MAGSAFE_CMD_WUPA_3          0x7C
+#define MAGSAFE_CMD_WUPA_4          0x7D
 
 #define ISO14443A_CMD_REQA          0x26
 #define ISO14443A_CMD_READBLOCK     0x30

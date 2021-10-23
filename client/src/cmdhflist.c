@@ -181,7 +181,10 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
 
         gs_ntag_i2c_state = 0;
         switch (cmd[0]) {
-            case MAGSAFE_CMD_WUPA:
+            case MAGSAFE_CMD_WUPA_1:
+            case MAGSAFE_CMD_WUPA_2:
+            case MAGSAFE_CMD_WUPA_3:
+            case MAGSAFE_CMD_WUPA_4:
                 snprintf(exp, size, "MAGSAFE WUPA");
                 break;
             case ISO14443A_CMD_WUPA:
