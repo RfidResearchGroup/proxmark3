@@ -1592,7 +1592,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         if (credit_key_nr < ICLASS_KEYS_MAX) {
             auth = true;
             have_credit_key = true;
-            memcpy(key, iClass_Key_Table[credit_key_nr], 8);
+            memcpy(credit_key, iClass_Key_Table[credit_key_nr], 8);
             PrintAndLogEx(SUCCESS, "Using AA2 (credit) key[%d] " _GREEN_("%s"), credit_key_nr, sprint_hex(iClass_Key_Table[credit_key_nr], 8));
         } else {
             PrintAndLogEx(ERR, "Key number is invalid");
