@@ -2174,5 +2174,13 @@
         "Name": "Cipurse transport card",
         "Description": "Cipurse transport card",
         "Type": "transport"
-    }
+    },
+    {
+        "AID": "A00000084600CC68E88C0101",
+        "Vendor": "VivoKey",
+        "Country": "United States",
+        "Name": "VivoKey Apex",
+        "Description": "vivokey.com/apex",
+        "Type": ""
+    },
 ]
