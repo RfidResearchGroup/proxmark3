@@ -423,7 +423,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_AUTHENTICATE_AES          0xAA
 
 //  Leakage Resilient Primitive (LRP)
-#define MFDES_AUTHENTICATE_EV2F         0x71  // LRP, AuthenticateLRPFirst    
+#define MFDES_AUTHENTICATE_EV2F         0x71  // LRP, AuthenticateLRPFirst
 #define MFDES_AUTHENTICATE_EV2NF        0x77  // LRP, AuthenticateLRPNonFirst
 
 #define MFDES_CREDIT                    0x0C
