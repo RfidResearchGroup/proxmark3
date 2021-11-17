@@ -901,7 +901,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycl
 OUT:
     StopTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LED_D_OFF();
+    if (ledcontrol) LED_D_OFF();
 }
 
 void SimulateTagLowFrequency(int period, int gap, bool ledcontrol) {
