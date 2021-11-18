@@ -681,9 +681,9 @@ void felica_sim_lite(uint8_t *uid) {
     }
 
     // calculate and set CRC
-    AddCrc(resp_poll0, resp_poll0[2]);
-    AddCrc(resp_poll1, resp_poll1[2]);
-    AddCrc(resp_readblk, resp_readblk[2]);
+    AddCrc(&resp_poll0[2], resp_poll0[2]);
+    AddCrc(&resp_poll1[2], resp_poll1[2]);
+    AddCrc(&resp_readblk[2], resp_readblk[2]);
 
     iso18092_setup(FPGA_HF_ISO18092_FLAG_NOMOD);
 
