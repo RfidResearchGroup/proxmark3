@@ -119,8 +119,8 @@ static void calc_crc(unsigned char *crc, unsigned char data, unsigned char Bitco
     } while (--Bitcount);
 }
 
-static void hitag_send_bit(int bit) {
-    LED_A_ON();
+static void hitag_send_bit(int bit, bool ledcontrol) {
+    if (ledcontrol) LED_A_ON();
     // Reset clock for the next bit
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
 
@@ -149,7 +149,7 @@ static void hitag_send_bit(int bit) {
                 while (AT91C_BASE_TC0->TC_CV < T0 * 64) {};
 
             }
-            LED_A_OFF();
+            if (ledcontrol) LED_A_OFF();
             break;
         case AC4K:
             if (bit == 0) {
@@ -174,7 +174,7 @@ static void hitag_send_bit(int bit) {
                 LOW(GPIO_SSC_DOUT);
                 while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
             }
-            LED_A_OFF();
+            if (ledcontrol) LED_A_OFF();
             break;
         case MC4K:
             if (bit == 0) {
@@ -194,7 +194,7 @@ static void hitag_send_bit(int bit) {
                 while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
 
             }
-            LED_A_OFF();
+            if (ledcontrol) LED_A_OFF();
             break;
         case MC8K:
             if (bit == 0) {
@@ -214,14 +214,14 @@ static void hitag_send_bit(int bit) {
                 while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
 
             }
-            LED_A_OFF();
+            if (ledcontrol) LED_A_OFF();
             break;
         default:
             break;
     }
 }
 
-static void hitag_send_frame(const uint8_t *frame, size_t frame_len) {
+static void hitag_send_frame(const uint8_t *frame, size_t frame_len, bool ledcontrol) {
     if (g_dbglevel >= DBG_EXTENDED)
         Dbprintf("hitag_send_frame: (%i) %02X %02X %02X %02X", frame_len, frame[0], frame[1], frame[2], frame[3]);
     // The beginning of the frame is hidden in some high level; pause until our bits will have an effect
@@ -240,20 +240,20 @@ static void hitag_send_frame(const uint8_t *frame, size_t frame_len) {
 
     // SOF - send start of frame
     for (size_t i = 0; i < sof_bits; i++) {
-        hitag_send_bit(1);
+        hitag_send_bit(1, ledcontrol);
     }
 
     // Send the content of the frame
     for (size_t i = 0; i < frame_len; i++) {
-        hitag_send_bit((frame[i / 8] >> (7 - (i % 8))) & 1);
+        hitag_send_bit((frame[i / 8] >> (7 - (i % 8))) & 1, ledcontrol);
     }
 
     LOW(GPIO_SSC_DOUT);
 }
 
-static void hitag_reader_send_bit(int bit) {
+static void hitag_reader_send_bit(int bit, bool ledcontrol) {
 
-    LED_A_ON();
+    if (ledcontrol) LED_A_ON();
     // Reset clock for the next bit
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
 
@@ -290,16 +290,16 @@ static void hitag_reader_send_bit(int bit) {
     }
 #endif
 
-    LED_A_OFF();
+    if (ledcontrol) LED_A_OFF();
 }
 
-static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) {
+static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len, bool ledcontrol) {
     // Send the content of the frame
     for (size_t i = 0; i < frame_len; i++) {
 //        if (frame[0] == 0xf8) {
         //Dbprintf("BIT: %d",(frame[i / 8] >> (7 - (i % 8))) & 1);
 //        }
-        hitag_reader_send_bit((frame[i / 8] >> (7 - (i % 8))) & 1);
+        hitag_reader_send_bit((frame[i / 8] >> (7 - (i % 8))) & 1, ledcontrol);
     }
     // send EOF
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
@@ -852,7 +852,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
 /*
  * Emulates a Hitag S Tag with the given data from the .hts file
  */
-void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
+void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data, bool ledcontrol) {
 
     StopTicks();
 
@@ -877,7 +877,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
     clear_trace();
 
     DbpString("Starting HitagS simulation");
-    LED_D_ON();
+    if (ledcontrol) LED_D_ON();
 
     tag.pstate = HT_READY;
     tag.tstate = HT_NO_OP;
@@ -1010,7 +1010,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
                 // Reset timer every frame, we have to capture the last edge for timing
                 AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
-                LED_B_ON();
+                if (ledcontrol) LED_B_ON();
 
                 // Capture reader frame
                 if (ra >= HITAG_T_STOP) {
@@ -1054,7 +1054,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
             // Send and store the tag answer (if there is any)
             if (txlen > 0) {
                 // Transmit the tag frame
-                hitag_send_frame(tx, txlen);
+                hitag_send_frame(tx, txlen, ledcontrol);
                 LogTrace(tx, nbytes(txlen), 0, 0, NULL, false);
             }
 
@@ -1065,7 +1065,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
             memset(rx, 0x00, sizeof(rx));
             response = 0;
 
-            LED_B_OFF();
+            if (ledcontrol) LED_B_OFF();
         }
         // Reset the frame length
         rxlen = 0;
@@ -1077,14 +1077,14 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
     }
 
     set_tracing(false);
-    lf_finalize();
+    lf_finalize(ledcontrol);
     // release allocated memory from BigBuff.
     BigBuf_free();
 
     DbpString("Sim Stopped");
 }
 
-static void hitagS_receive_frame(uint8_t *rx, size_t *rxlen, int *response) {
+static void hitagS_receive_frame(uint8_t *rx, size_t *rxlen, int *response, bool ledcontrol) {
 
     // Reset values for receiving frames
     memset(rx, 0x00, HITAG_FRAME_LEN * sizeof(uint8_t));
@@ -1105,7 +1105,7 @@ static void hitagS_receive_frame(uint8_t *rx, size_t *rxlen, int *response) {
             // Reset timer every frame, we have to capture the last edge for timing
             AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
 
-            LED_B_ON();
+            if (ledcontrol) LED_B_ON();
 
             // Capture tag frame (manchester decoding using only falling edges)
             if (ra >= HITAG_T_EOF) {
@@ -1164,7 +1164,7 @@ static void hitagS_receive_frame(uint8_t *rx, size_t *rxlen, int *response) {
  * If the key was given the password will be decrypted.
  * Reads every page of a hitag S transpoder.
  */
-void ReadHitagS(hitag_function htf, hitag_data *htd) {
+void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
 
     StopTicks();
 
@@ -1227,7 +1227,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
 
     bQuiet = false;
 
-    LED_D_ON();
+    if (ledcontrol) LED_D_ON();
 
     // Set fpga in edge detect with reader field, we can modulate as reader now
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
@@ -1399,7 +1399,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
         while (AT91C_BASE_TC0->TC_CV < T0 * (t_wait + (HITAG_T_TAG_HALF_PERIOD * lastbit))) {};
 
         // Transmit the reader frame
-        hitag_reader_send_frame(tx, txlen);
+        hitag_reader_send_frame(tx, txlen, ledcontrol);
 
         // Enable and reset external trigger in timer for capturing future frames
         AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
@@ -1410,12 +1410,12 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
             LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, HITAG_T_WAIT_2, NULL, true);
         }
 
-        hitagS_receive_frame(rx, &rxlen, &response);
+        hitagS_receive_frame(rx, &rxlen, &response, ledcontrol);
     }
     end = false;
     set_tracing(false);
 
-    lf_finalize();
+    lf_finalize(ledcontrol);
     reply_mix(CMD_ACK, bSuccessful, 0, 0, 0, 0);
 }
 
@@ -1423,7 +1423,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
  * Authenticates to the Tag with the given Key or Challenge.
  * Writes the given 32Bit data into page_
  */
-void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
+void WritePageHitagS(hitag_function htf, hitag_data *htd, int page, bool ledcontrol) {
 
     StopTicks();
 
@@ -1484,7 +1484,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
     tag.pstate = HT_READY;
     tag.tstate = HT_NO_OP;
 
-    LED_D_ON();
+    if (ledcontrol) LED_D_ON();
 
     // Configure output and enable pin that is connected to the FPGA (for modulating)
     AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
@@ -1614,7 +1614,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
         while (AT91C_BASE_TC0->TC_CV < T0 * (t_wait + (HITAG_T_TAG_HALF_PERIOD * lastbit))) {};
 
         // Transmit the reader frame
-        hitag_reader_send_frame(tx, txlen);
+        hitag_reader_send_frame(tx, txlen, ledcontrol);
 
         // Enable and reset external trigger in timer for capturing future frames
         AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
@@ -1625,13 +1625,13 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
             LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, HITAG_T_WAIT_2, NULL, true);
         }
 
-        hitagS_receive_frame(rx, &rxlen, &response);
+        hitagS_receive_frame(rx, &rxlen, &response, ledcontrol);
 
     }
     end = false;
     set_tracing(false);
 
-    lf_finalize();
+    lf_finalize(ledcontrol);
 
     reply_mix(CMD_ACK, bSuccessful, 0, 0, 0, 0);
 }
@@ -1643,7 +1643,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
  * is not received correctly due to Antenna problems. This function
  * detects these challenges.
  */
-void check_challenges(bool file_given, uint8_t *data) {
+void check_challenges(bool file_given, uint8_t *data, bool ledcontrol) {
     int i, j, z, k;
 //    int frame_count = 0;
     int response = 0;
@@ -1671,7 +1671,7 @@ void check_challenges(bool file_given, uint8_t *data) {
 
     bQuiet = false;
 
-    LED_D_ON();
+    if (ledcontrol) LED_D_ON();
 
     // Configure output and enable pin that is connected to the FPGA (for modulating)
     AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
@@ -1853,7 +1853,7 @@ void check_challenges(bool file_given, uint8_t *data) {
         while (AT91C_BASE_TC0->TC_CV < T0 * (t_wait + (HITAG_T_TAG_HALF_PERIOD * lastbit))) {};
 
         // Transmit the reader frame
-        hitag_reader_send_frame(tx, txlen);
+        hitag_reader_send_frame(tx, txlen, ledcontrol);
 
         // Enable and reset external trigger in timer for capturing future frames
         AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
@@ -1864,10 +1864,10 @@ void check_challenges(bool file_given, uint8_t *data) {
             LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, HITAG_T_WAIT_2, NULL, true);
         }
 
-        hitagS_receive_frame(rx, &rxlen, &response);
+        hitagS_receive_frame(rx, &rxlen, &response, ledcontrol);
     }
 
     set_tracing(false);
-    lf_finalize();
+    lf_finalize(ledcontrol);
     reply_mix(CMD_ACK, bSuccessful, 0, 0, 0, 0);
 }

@@ -812,7 +812,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 bool     verbose : 1;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            uint32_t bits = SampleLF(payload->verbose, payload->samples);
+            uint32_t bits = SampleLF(payload->verbose, payload->samples, true);
             reply_ng(CMD_LF_ACQ_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
             break;
         }
@@ -831,7 +831,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint16_t period_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
             memcpy(symbol_extra, payload->symbol_extra, sizeof(symbol_extra));
             memcpy(period_extra, payload->period_extra, sizeof(period_extra));
-            ModThenAcquireRawAdcSamples125k(payload->delay, payload->period_0, payload->period_1, symbol_extra, period_extra, packet->data.asBytes + sizeof(struct p), payload->verbose, payload->samples);
+            ModThenAcquireRawAdcSamples125k(payload->delay, payload->period_0, payload->period_1, symbol_extra, period_extra, packet->data.asBytes + sizeof(struct p), payload->verbose, payload->samples, true);
             break;
         }
         case CMD_LF_SNIFF_RAW_ADC: {
@@ -840,13 +840,13 @@ static void PacketReceived(PacketCommandNG *packet) {
                 bool     verbose : 1;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            uint32_t bits = SniffLF(payload->verbose, payload->samples);
+            uint32_t bits = SniffLF(payload->verbose, payload->samples, true);
             reply_ng(CMD_LF_SNIFF_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
             break;
         }
         case CMD_LF_HID_WATCH: {
             uint32_t high, low;
-            int res = lf_hid_watch(0, &high, &low);
+            int res = lf_hid_watch(0, &high, &low, true);
             reply_ng(CMD_LF_HID_WATCH, res, NULL, 0);
             break;
         }
@@ -877,19 +877,19 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_HID_CLONE: {
             lf_hidsim_t *payload = (lf_hidsim_t *)packet->data.asBytes;
-            CopyHIDtoT55x7(payload->hi2, payload->hi, payload->lo, payload->longFMT, payload->Q5, payload->EM);
+            CopyHIDtoT55x7(payload->hi2, payload->hi, payload->lo, payload->longFMT, payload->Q5, payload->EM, true);
             break;
         }
         case CMD_LF_IO_WATCH: {
             uint32_t high, low;
-            int res = lf_io_watch(0, &high, &low);
+            int res = lf_io_watch(0, &high, &low, true);
             reply_ng(CMD_LF_IO_WATCH, res, NULL, 0);
             break;
         }
         case CMD_LF_EM410X_WATCH: {
             uint32_t high;
             uint64_t low;
-            int res = lf_em410x_watch(0, &high, &low);
+            int res = lf_em410x_watch(0, &high, &low, true);
             reply_ng(CMD_LF_EM410X_WATCH, res, NULL, 0);
             break;
         }
@@ -901,12 +901,12 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint32_t low;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            int res = copy_em410x_to_t55xx(payload->card, payload->clock, payload->high, payload->low);
+            int res = copy_em410x_to_t55xx(payload->card, payload->clock, payload->high, payload->low, true);
             reply_ng(CMD_LF_EM410X_WRITE, res, NULL, 0);
             break;
         }
         case CMD_LF_TI_READ: {
-            ReadTItag();
+            ReadTItag(true);
             break;
         }
         case CMD_LF_TI_WRITE: {
@@ -916,7 +916,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint16_t crc;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            WriteTItag(payload->high, payload->low, packet->crc);
+            WriteTItag(payload->high, payload->low, packet->crc, true);
             break;
         }
         case CMD_LF_SIMULATE: {
@@ -945,16 +945,16 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t  downlink_mode;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            T55xxReadBlock(payload->page, payload->pwdmode, false, payload->blockno, payload->password, payload->downlink_mode);
+            T55xxReadBlock(payload->page, payload->pwdmode, false, payload->blockno, payload->password, payload->downlink_mode, true);
             break;
         }
         case CMD_LF_T55XX_WRITEBL: {
             // uses NG format
-            T55xxWriteBlock(packet->data.asBytes);
+            T55xxWriteBlock(packet->data.asBytes, true);
             break;
         }
         case CMD_LF_T55XX_DANGERRAW: {
-            T55xxDangerousRawTest(packet->data.asBytes);
+            T55xxDangerousRawTest(packet->data.asBytes, true);
             break;
         }
         case CMD_LF_T55XX_WAKEUP: {
@@ -963,19 +963,19 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t flags;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            T55xxWakeUp(payload->password, payload->flags);
+            T55xxWakeUp(payload->password, payload->flags, true);
             break;
         }
         case CMD_LF_T55XX_RESET_READ: {
-            T55xxResetRead(packet->data.asBytes[0] & 0xff);
+            T55xxResetRead(packet->data.asBytes[0] & 0xff, true);
             break;
         }
         case CMD_LF_T55XX_CHK_PWDS: {
-            T55xx_ChkPwds(packet->data.asBytes[0] & 0xff);
+            T55xx_ChkPwds(packet->data.asBytes[0] & 0xff, true);
             break;
         }
         case CMD_LF_PCF7931_READ: {
-            ReadPCF7931();
+            ReadPCF7931(true);
             break;
         }
         case CMD_LF_PCF7931_WRITE: {
@@ -985,7 +985,8 @@ static void PacketReceived(PacketCommandNG *packet) {
                 packet->data.asBytes[7] - 128, packet->data.asBytes[8] - 128,
                 packet->oldarg[0],
                 packet->oldarg[1],
-                packet->oldarg[2]
+                packet->oldarg[2],
+                true
             );
             break;
         }
@@ -994,7 +995,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint32_t password;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            EM4xLogin(payload->password);
+            EM4xLogin(payload->password, true);
             break;
         }
         case CMD_LF_EM4X_BF: {
@@ -1003,7 +1004,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint32_t n;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            EM4xBruteforce(payload->start_pwd, payload->n);
+            EM4xBruteforce(payload->start_pwd, payload->n, true);
             break;
         }
         case CMD_LF_EM4X_READWORD: {
@@ -1013,7 +1014,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t usepwd;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            EM4xReadWord(payload->address, payload->password, payload->usepwd);
+            EM4xReadWord(payload->address, payload->password, payload->usepwd, true);
             break;
         }
         case CMD_LF_EM4X_WRITEWORD: {
@@ -1024,7 +1025,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t usepwd;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            EM4xWriteWord(payload->address, payload->data, payload->password, payload->usepwd);
+            EM4xWriteWord(payload->address, payload->data, payload->password, payload->usepwd, true);
             break;
         }
         case CMD_LF_EM4X_PROTECTWORD: {
@@ -1034,12 +1035,12 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t usepwd;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            EM4xProtectWord(payload->data, payload->password, payload->usepwd);
+            EM4xProtectWord(payload->data, payload->password, payload->usepwd, true);
             break;
         }
         case CMD_LF_AWID_WATCH:  {
             uint32_t high, low;
-            int res = lf_awid_watch(0, &high, &low);
+            int res = lf_awid_watch(0, &high, &low, true);
             reply_ng(CMD_LF_AWID_WATCH, res, NULL, 0);
             break;
         }
@@ -1050,7 +1051,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t blocks[8];
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            CopyVikingtoT55xx(payload->blocks, payload->Q5, payload->EM);
+            CopyVikingtoT55xx(payload->blocks, payload->Q5, payload->EM, true);
             break;
         }
         case CMD_LF_COTAG_READ: {
@@ -1058,43 +1059,43 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t mode;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            Cotag(payload->mode);
+            Cotag(payload->mode, true);
             break;
         }
 #endif
 
 #ifdef WITH_HITAG
         case CMD_LF_HITAG_SNIFF: { // Eavesdrop Hitag tag, args = type
-            SniffHitag2();
+            SniffHitag2(true);
 //            SniffHitag2(packet->oldarg[0]);
             reply_ng(CMD_LF_HITAG_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_LF_HITAG_SIMULATE: { // Simulate Hitag tag, args = memory content
-            SimulateHitag2();
+            SimulateHitag2(true);
             break;
         }
         case CMD_LF_HITAG_READER: { // Reader for Hitag tags, args = type and function
-            ReaderHitag((hitag_function)packet->oldarg[0], (hitag_data *)packet->data.asBytes);
+            ReaderHitag((hitag_function)packet->oldarg[0], (hitag_data *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_HITAGS_SIMULATE: { // Simulate Hitag s tag, args = memory content
-            SimulateHitagSTag((bool)packet->oldarg[0], packet->data.asBytes);
+            SimulateHitagSTag((bool)packet->oldarg[0], packet->data.asBytes, true);
             break;
         }
         case CMD_LF_HITAGS_TEST_TRACES: { // Tests every challenge within the given file
-            check_challenges((bool)packet->oldarg[0], packet->data.asBytes);
+            check_challenges((bool)packet->oldarg[0], packet->data.asBytes, true);
             break;
         }
         case CMD_LF_HITAGS_READ: { //Reader for only Hitag S tags, args = key or challenge
-            ReadHitagS((hitag_function)packet->oldarg[0], (hitag_data *)packet->data.asBytes);
+            ReadHitagS((hitag_function)packet->oldarg[0], (hitag_data *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_HITAGS_WRITE: { //writer for Hitag tags args=data to write,page and key or challenge
             if ((hitag_function)packet->oldarg[0] < 10) {
-                WritePageHitagS((hitag_function)packet->oldarg[0], (hitag_data *)packet->data.asBytes, packet->oldarg[2]);
+                WritePageHitagS((hitag_function)packet->oldarg[0], (hitag_data *)packet->data.asBytes, packet->oldarg[2], true);
             } else {
-                WriterHitag((hitag_function)packet->oldarg[0], (hitag_data *)packet->data.asBytes, packet->oldarg[2]);
+                WriterHitag((hitag_function)packet->oldarg[0], (hitag_data *)packet->data.asBytes, packet->oldarg[2], true);
             }
             break;
         }
@@ -1108,27 +1109,27 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_EM4x50
         case CMD_LF_EM4X50_INFO: {
-            em4x50_info((em4x50_data_t *)packet->data.asBytes);
+            em4x50_info((em4x50_data_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X50_WRITE: {
-            em4x50_write((em4x50_data_t *)packet->data.asBytes);
+            em4x50_write((em4x50_data_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X50_WRITEPWD: {
-            em4x50_writepwd((em4x50_data_t *)packet->data.asBytes);
+            em4x50_writepwd((em4x50_data_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X50_READ: {
-            em4x50_read((em4x50_data_t *)packet->data.asBytes);
+            em4x50_read((em4x50_data_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X50_BRUTE: {
-            em4x50_brute((em4x50_data_t *)packet->data.asBytes);
+            em4x50_brute((em4x50_data_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X50_LOGIN: {
-            em4x50_login((uint32_t *)packet->data.asBytes);
+            em4x50_login((uint32_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X50_SIM: {
@@ -1138,11 +1139,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             // destroy the Emulator Memory.
             //-----------------------------------------------------------------------------
             FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-            em4x50_sim((uint32_t *)packet->data.asBytes);
+            em4x50_sim((uint32_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X50_READER: {
-            em4x50_reader();
+            em4x50_reader(true);
             break;
         }
         case CMD_LF_EM4X50_ESET: {
@@ -1162,34 +1163,34 @@ static void PacketReceived(PacketCommandNG *packet) {
             // destroy the Emulator Memory.
             //-----------------------------------------------------------------------------
             FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-            em4x50_chk((uint8_t *)packet->data.asBytes);
+            em4x50_chk((uint8_t *)packet->data.asBytes, true);
             break;
         }
 #endif
 
 #ifdef WITH_EM4x70
         case CMD_LF_EM4X70_INFO: {
-            em4x70_info((em4x70_data_t *)packet->data.asBytes);
+            em4x70_info((em4x70_data_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X70_WRITE: {
-            em4x70_write((em4x70_data_t *)packet->data.asBytes);
+            em4x70_write((em4x70_data_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X70_UNLOCK: {
-            em4x70_unlock((em4x70_data_t *)packet->data.asBytes);
+            em4x70_unlock((em4x70_data_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X70_AUTH: {
-            em4x70_auth((em4x70_data_t *)packet->data.asBytes);
+            em4x70_auth((em4x70_data_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X70_WRITEPIN: {
-            em4x70_write_pin((em4x70_data_t *)packet->data.asBytes);
+            em4x70_write_pin((em4x70_data_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X70_WRITEKEY: {
-            em4x70_write_key((em4x70_data_t *)packet->data.asBytes);
+            em4x70_write_key((em4x70_data_t *)packet->data.asBytes, true);
             break;
         }
 #endif

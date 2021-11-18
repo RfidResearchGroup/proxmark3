@@ -390,7 +390,7 @@ void loadT55xxConfig(void) {
  * @param period_1
  * @param command (in binary char array)
  */
-void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint16_t period_1, uint8_t *symbol_extra, uint16_t *period_extra, uint8_t *command, bool verbose, uint32_t samples) {
+void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint16_t period_1, uint8_t *symbol_extra, uint16_t *period_extra, uint8_t *command, bool verbose, uint32_t samples, bool ledcontrol) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
@@ -424,7 +424,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint
         if (period_0 < hack_cnt || period_1 < hack_cnt) {
             DbpString("[!] Warning periods cannot be less than 7us in bit bang mode");
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-            LED_D_OFF();
+            if (ledcontrol) LED_D_OFF();
             reply_ng(CMD_LF_MOD_THEN_ACQ_RAW_ADC, PM3_EINVARG, NULL, 0);
             return;
         }
@@ -447,7 +447,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint
                 // if field already off leave alone (affects timing otherwise)
                 if (off == false) {
                     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-                    LED_D_OFF();
+                    if (ledcontrol) LED_D_OFF();
                     off = true;
                 }
                 // note we appear to take about 7us to switch over (or run the if statements/loop...)
@@ -457,7 +457,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint
                 // if field already on leave alone (affects timing otherwise)
                 if (off) {
                     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
-                    LED_D_ON();
+                    if (ledcontrol) LED_D_ON();
                     off = false;
                 }
                 // note we appear to take about 7us to switch over (or run the if statements/loop...)
@@ -466,7 +466,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint
         }
     } else { // old mode of cmd read using delay as off period
         while (*command != '\0' && *command != ' ') {
-            LED_D_ON();
+            if (ledcontrol) LED_D_ON();
             if (*command == '0') {
                 TurnReadLFOn(period_0);
             } else if (*command == '1') {
@@ -480,7 +480,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint
                 }
             }
             command++;
-            LED_D_OFF();
+            if (ledcontrol) LED_D_OFF();
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
             WaitUS(delay_off);
         }
@@ -491,7 +491,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
 
     // now do the read
-    DoAcquisition_config(verbose, samples);
+    DoAcquisition_config(verbose, samples, ledcontrol);
 
     // Turn off antenna
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -509,7 +509,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint
 
 [5555fe852c5555555555555555fe0000]
 */
-void ReadTItag(void) {
+void ReadTItag(bool ledcontrol) {
     StartTicks();
     // some hardcoded initial params
     // when we read a TI tag we sample the zerocross line at 2MHz
@@ -541,7 +541,7 @@ void ReadTItag(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
 
     // get TI tag data into the buffer
-    AcquireTiType();
+    AcquireTiType(ledcontrol);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
@@ -662,7 +662,7 @@ static void WriteTIbyte(uint8_t b) {
     }
 }
 
-void AcquireTiType(void) {
+void AcquireTiType(bool ledcontrol) {
     int i, j, n;
     // tag transmission is <20ms, sampling at 2M gives us 40K samples max
     // each sample is 1 bit stuffed into a uint32_t so we need 1250 uint32_t
@@ -696,7 +696,7 @@ void AcquireTiType(void) {
     // Transmit Frame Mode Register
     AT91C_BASE_SSC->SSC_TFMR = 0;
     // iceman, FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER) ?? the code above? can it be replaced?
-    LED_D_ON();
+    if (ledcontrol) LED_D_ON();
 
     // modulate antenna
     HIGH(GPIO_SSC_DOUT);
@@ -707,7 +707,7 @@ void AcquireTiType(void) {
     // stop modulating antenna and listen
     LOW(GPIO_SSC_DOUT);
 
-    LED_D_OFF();
+    if (ledcontrol) LED_D_OFF();
 
     i = 0;
     for (;;) {
@@ -744,7 +744,7 @@ void AcquireTiType(void) {
 // arguments: 64bit data split into 32bit idhi:idlo and optional 16bit crc
 // if crc provided, it will be written with the data verbatim (even if bogus)
 // if not provided a valid crc will be computed from the data and written.
-void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc) {
+void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc, bool ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     if (crc == 0) {
         crc = update_crc16(crc, (idlo) & 0xff);
@@ -767,7 +767,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
     StartTicks();
 
-    LED_A_ON();
+    if (ledcontrol) LED_A_ON();
 
     // steal this pin from the SSP and use it to control the modulation
     AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
@@ -804,10 +804,10 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc) {
     HIGH(GPIO_SSC_DOUT);
     WaitMS(50); // programming time
 
-    LED_A_OFF();
+    if (ledcontrol) LED_A_OFF();
 
     // get TI tag data into the buffer
-    AcquireTiType();
+    AcquireTiType(ledcontrol);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     DbpString("Now use `lf ti reader` to check");
@@ -1241,7 +1241,7 @@ void CmdNRZsimTAG(uint8_t invert, uint8_t separator, uint8_t clk, uint16_t size,
 }
 
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
-int lf_hid_watch(int findone, uint32_t *high, uint32_t *low) {
+int lf_hid_watch(int findone, uint32_t *high, uint32_t *low, bool ledcontrol) {
 
     size_t size;
     uint32_t hi2 = 0, hi = 0, lo = 0;
@@ -1267,7 +1267,7 @@ int lf_hid_watch(int findone, uint32_t *high, uint32_t *low) {
             break;
         }
 
-        DoAcquisition_default(-1, false);
+        DoAcquisition_default(-1, false, ledcontrol);
 
         // FSK demodulator
         // 50 * 128 * 2 - big enough to catch 2 sequences of largest format
@@ -1342,12 +1342,12 @@ int lf_hid_watch(int findone, uint32_t *high, uint32_t *low) {
     }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     BigBuf_free();
-    LEDsoff();
+    if (ledcontrol) LEDsoff();
     return res;
 }
 
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
-int lf_awid_watch(int findone, uint32_t *high, uint32_t *low) {
+int lf_awid_watch(int findone, uint32_t *high, uint32_t *low, bool ledcontrol) {
 
     size_t size;
     int dummyIdx = 0;
@@ -1369,7 +1369,7 @@ int lf_awid_watch(int findone, uint32_t *high, uint32_t *low) {
             break;
         }
 
-        DoAcquisition_default(-1, false);
+        DoAcquisition_default(-1, false, ledcontrol);
         // FSK demodulator
 
         size = MIN(12800, BigBuf_max_traceLen());
@@ -1439,11 +1439,11 @@ int lf_awid_watch(int findone, uint32_t *high, uint32_t *low) {
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     BigBuf_free();
-    LEDsoff();
+    if (ledcontrol) LEDsoff();
     return res;
 }
 
-int lf_em410x_watch(int findone, uint32_t *high, uint64_t *low) {
+int lf_em410x_watch(int findone, uint32_t *high, uint64_t *low, bool ledcontrol) {
 
     size_t size, idx = 0;
     int clk = 0, invert = 0, maxErr = 20;
@@ -1466,7 +1466,7 @@ int lf_em410x_watch(int findone, uint32_t *high, uint64_t *low) {
             break;
         }
 
-        DoAcquisition_default(-1, false);
+        DoAcquisition_default(-1, false, ledcontrol);
 
         size = MIN(16385, BigBuf_max_traceLen());
 
@@ -1530,11 +1530,11 @@ int lf_em410x_watch(int findone, uint32_t *high, uint64_t *low) {
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     BigBuf_free();
-    LEDsoff();
+    if (ledcontrol) LEDsoff();
     return res;
 }
 
-int lf_io_watch(int findone, uint32_t *high, uint32_t *low) {
+int lf_io_watch(int findone, uint32_t *high, uint32_t *low, bool ledcontrol) {
 
     int dummyIdx = 0;
     uint32_t code = 0, code2 = 0;
@@ -1559,7 +1559,7 @@ int lf_io_watch(int findone, uint32_t *high, uint32_t *low) {
             break;
         }
 
-        DoAcquisition_default(-1, false);
+        DoAcquisition_default(-1, false, ledcontrol);
 
         size_t size = MIN(12000, BigBuf_max_traceLen());
 
@@ -1614,7 +1614,7 @@ int lf_io_watch(int findone, uint32_t *high, uint32_t *low) {
     }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     BigBuf_free();
-    LEDsoff();
+    if (ledcontrol) LEDsoff();
     return res;
 }
 
@@ -1820,12 +1820,12 @@ static void T55xx_SendCMD(uint32_t data, uint32_t pwd, uint16_t arg) {
 }
 
 // Send T5577 reset command then read stream (see if we can identify the start of the stream)
-void T55xxResetRead(uint8_t flags) {
+void T55xxResetRead(uint8_t flags, bool ledcontrol) {
 
     uint8_t downlink_mode = ((flags >> 3) & 3);
     uint8_t arg           = 0x80 | downlink_mode;
 
-    LED_A_ON();
+    if (ledcontrol) LED_A_ON();
 
     //clear buffer now so it does not interfere with timing later
     BigBuf_Clear_keep_EM();
@@ -1835,15 +1835,15 @@ void T55xxResetRead(uint8_t flags) {
     TurnReadLFOn(T55xx_Timing.m[downlink_mode].read_gap);
 
     // Acquisition
-    DoPartialAcquisition(0, false, BigBuf_max_traceLen(), 0);
+    DoPartialAcquisition(0, false, BigBuf_max_traceLen(), 0, ledcontrol);
 
     // Turn the field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_LF_T55XX_RESET_READ, PM3_SUCCESS, NULL, 0);
-    LED_A_OFF();
+    if (ledcontrol) LED_A_OFF();
 }
 
-void T55xxDangerousRawTest(uint8_t *data) {
+void T55xxDangerousRawTest(uint8_t *data, bool ledcontrol) {
     // supports only default downlink mode
     t55xx_test_block_t *c = (t55xx_test_block_t *)data;
 
@@ -1864,7 +1864,7 @@ void T55xxDangerousRawTest(uint8_t *data) {
         }
     }
 
-    LED_A_ON();
+    if (ledcontrol) LED_A_ON();
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
     // make sure tag is fully powered up...
     WaitMS(start_wait);
@@ -1878,12 +1878,12 @@ void T55xxDangerousRawTest(uint8_t *data) {
     TurnReadLFOn(c->time);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_LF_T55XX_DANGERRAW, PM3_SUCCESS, NULL, 0);
-    LED_A_OFF();
+    if (ledcontrol) LED_A_OFF();
 }
 
 // Write one card block in page 0, no lock
 //void T55xxWriteBlockExt(uint32_t data, uint8_t blockno, uint32_t pwd, uint8_t flags) {
-void T55xxWriteBlock(uint8_t *data) {
+void T55xxWriteBlock(uint8_t *data, bool ledcontrol) {
 
     /*
     flag bits
@@ -1903,7 +1903,7 @@ void T55xxWriteBlock(uint8_t *data) {
 
     c->flags &= (0xff ^ 0x40); // Called for a write, so ensure it is clear/0
 
-    LED_A_ON();
+    if (ledcontrol) LED_A_ON();
     T55xx_SendCMD(c->data, c->pwd, c->flags | (c->blockno << 9));
 
     // Perform write (nominal is 5.6 ms for T55x7 and 18ms for E5550,
@@ -1931,13 +1931,13 @@ void T55xxWriteBlock(uint8_t *data) {
         // response should be (for t55x7) a 0 bit then (ST if on)
         // block data written in on repeat until reset.
 
-        //DoPartialAcquisition(20, false, 12000);
+        //DoPartialAcquisition(20, false, 12000, ledcontrol);
     }
     // turn field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     reply_ng(CMD_LF_T55XX_WRITEBL, PM3_SUCCESS, NULL, 0);
-    LED_A_OFF();
+    if (ledcontrol) LED_A_OFF();
 }
 
 /*
@@ -1950,7 +1950,7 @@ void T55xxWriteBlock(uint8_t *data) {
 */
 /*
 // Read one card block in page [page]
-void T55xxReadBlockExt(uint16_t flags, uint8_t block, uint32_t pwd) {
+void T55xxReadBlockExt(uint16_t flags, uint8_t block, uint32_t pwd, bool ledcontrol) {
     / *
     flag bits
     xxxx xxxxxxx1 0x0001 PwdMode
@@ -1965,7 +1965,7 @@ void T55xxReadBlockExt(uint16_t flags, uint8_t block, uint32_t pwd) {
     size_t samples = 12000;
 bool brute_mem = (flags & 0x0100) >> 8;
 
-    LED_A_ON();
+    if (ledcontrol) LED_A_ON();
 
     if (brute_mem) samples = 1024;
 
@@ -1992,18 +1992,18 @@ bool brute_mem = (flags & 0x0100) >> 8;
 
     // Acquisition
     // Now do the acquisition
-    DoPartialAcquisition(0, false, samples, 0);
+    DoPartialAcquisition(0, false, samples, 0, ledcontrol);
 
     // Turn the field off
     if (!brute_mem) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         reply_ng(CMD_LF_T55XX_READBL, PM3_SUCCESS, NULL, 0);
-        LED_A_OFF();
+        if (ledcontrol) LED_A_OFF();
     }
 }
 */
 // Read one card block in page [page]
-void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, uint32_t pwd, uint8_t downlink_mode) {
+void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, uint32_t pwd, uint8_t downlink_mode, bool ledcontrol) {
     /*
     flag bits
     xxxx xxxxxxx1 0x0001 PwdMode
@@ -2030,7 +2030,7 @@ void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, 
 
     size_t samples = 12000;
 
-    LED_A_ON();
+    if (ledcontrol) LED_A_ON();
 
     if (brute_mem) samples = 2048;
 
@@ -2057,13 +2057,13 @@ void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, 
 
     // Acquisition
     // Now do the acquisition
-    DoPartialAcquisition(0, false, samples, 1000);
+    DoPartialAcquisition(0, false, samples, 1000, ledcontrol);
 
     // Turn the field off
     if (brute_mem == false) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         reply_ng(CMD_LF_T55XX_READBL, PM3_SUCCESS, NULL, 0);
-        LED_A_OFF();
+        if (ledcontrol) LED_A_OFF();
     }
 
     // reset back to old / save config
@@ -2071,7 +2071,7 @@ void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, 
 }
 
 
-void T55xx_ChkPwds(uint8_t flags) {
+void T55xx_ChkPwds(uint8_t flags, bool ledcontrol) {
 
 #define CHK_SAMPLES_SIGNAL 2048
 
@@ -2092,7 +2092,7 @@ void T55xx_ChkPwds(uint8_t flags) {
     uint8_t x = 32;
     while (x--) {
         b1 = 0;
-        T55xxReadBlock(0, 0, true, 0, 0, downlink_mode);
+        T55xxReadBlock(0, 0, true, 0, 0, downlink_mode, ledcontrol);
         for (uint16_t j = 0; j < CHK_SAMPLES_SIGNAL; ++j) {
             b1 += (buf[j] * buf[j]);
         }
@@ -2152,7 +2152,7 @@ void T55xx_ChkPwds(uint8_t flags) {
 
         uint32_t pwd = bytes_to_num(pwds + (i * 4), 4);
 
-        T55xxReadBlock(0, true, true, 0, pwd, downlink_mode);
+        T55xxReadBlock(0, true, true, 0, pwd, downlink_mode, ledcontrol);
 
         uint64_t sum = 0;
         for (uint16_t j = 0; j < CHK_SAMPLES_SIGNAL; ++j) {
@@ -2183,15 +2183,15 @@ OUT:
 #endif
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LEDsoff();
+    if (ledcontrol) LEDsoff();
     reply_ng(CMD_LF_T55XX_CHK_PWDS, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
     BigBuf_free();
 }
 
-void T55xxWakeUp(uint32_t pwd, uint8_t flags) {
+void T55xxWakeUp(uint32_t pwd, uint8_t flags, bool ledcontrol) {
 
     flags |= 0x01 | 0x40 | 0x20; //Password | Read Call (no data) | reg_read no block
-    LED_B_ON();
+    if (ledcontrol) LED_B_ON();
 
     T55xx_SendCMD(0, pwd, flags);
 
@@ -2201,7 +2201,7 @@ void T55xxWakeUp(uint32_t pwd, uint8_t flags) {
 }
 
 /*-------------- Cloning routines -----------*/
-static void WriteT55xx(uint32_t *blockdata, uint8_t startblock, uint8_t numblocks) {
+static void WriteT55xx(uint32_t *blockdata, uint8_t startblock, uint8_t numblocks, bool ledcontrol) {
     t55xx_write_block_t cmd;
     cmd.pwd     = 0;
     cmd.flags   = 0;
@@ -2209,7 +2209,7 @@ static void WriteT55xx(uint32_t *blockdata, uint8_t startblock, uint8_t numblock
     for (uint8_t i = numblocks + startblock; i > startblock; i--) {
         cmd.data    = blockdata[i - 1];
         cmd.blockno = i - 1;
-        T55xxWriteBlock((uint8_t *)&cmd);
+        T55xxWriteBlock((uint8_t *)&cmd, ledcontrol);
     }
 }
 /* disabled until verified.
@@ -2222,7 +2222,7 @@ static void WriteEM4x05(uint32_t *blockdata, uint8_t startblock, uint8_t numbloc
 
 
 // Copy HID id to card and setup block 0 config
-void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool q5, bool em) {
+void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool q5, bool em, bool ledcontrol) {
     uint32_t data[] = {0, 0, 0, 0, 0, 0, 0};
     uint8_t last_block = 0;
 
@@ -2266,7 +2266,7 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
         data[0] = (EM4x05_SET_BITRATE(50) | EM4x05_MODULATION_FSK2 | EM4x05_INVERT | EM4x05_SET_NUM_BLOCKS(last_block));
     }
 
-    LED_D_ON();
+    if (ledcontrol) LED_D_ON();
     if (em) {
         Dbprintf("Clone HID Prox to EM4x05 is untested and disabled until verified");
         if (g_dbglevel == DBG_DEBUG) {
@@ -2280,14 +2280,14 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
         }
         //WriteEM4x05(data, 0, last_block + 1);
     } else {
-        WriteT55xx(data, 0, last_block + 1);
+        WriteT55xx(data, 0, last_block + 1, ledcontrol);
     }
-    LED_D_OFF();
+    if (ledcontrol) LED_D_OFF();
     reply_ng(CMD_LF_HID_CLONE, PM3_SUCCESS, NULL, 0);
 }
 
 // clone viking tag to T55xx
-void CopyVikingtoT55xx(uint8_t *blocks, bool q5, bool em) {
+void CopyVikingtoT55xx(uint8_t *blocks, bool q5, bool em, bool ledcontrol) {
 
     uint32_t data[] = {T55x7_BITRATE_RF_32 | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT), 0, 0};
     if (q5) {
@@ -2304,13 +2304,13 @@ void CopyVikingtoT55xx(uint8_t *blocks, bool q5, bool em) {
         Dbprintf("Clone Viking to EM4x05 is untested and disabled until verified");
         //WriteEM4x05(data, 0, 3);
     } else {
-        WriteT55xx(data, 0, 3);
+        WriteT55xx(data, 0, 3, ledcontrol);
     }
-    LED_D_OFF();
+    if (ledcontrol) LED_D_OFF();
     reply_ng(CMD_LF_VIKING_CLONE, PM3_SUCCESS, NULL, 0);
 }
 
-int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t id_lo) {
+int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t id_lo, bool ledcontrol) {
 
 // Define 9bit header for EM410x tags
 #define EM410X_HEADER    0x1FF
@@ -2379,7 +2379,7 @@ int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t i
     // Add stop bit
     id <<= 1;
 
-    LED_D_ON();
+    if (ledcontrol) LED_D_ON();
 
     // Write EM410x ID
     uint32_t data[] = {0, (uint32_t)(id >> 32), (uint32_t)(id & 0xFFFFFFFF)};
@@ -2394,9 +2394,9 @@ int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t i
         data[0] = T5555_SET_BITRATE(clock) | T5555_MODULATION_MANCHESTER | (2 << T5555_MAXBLOCK_SHIFT);
     }
 
-    WriteT55xx(data, 0, 3);
+    WriteT55xx(data, 0, 3, ledcontrol);
 
-    LEDsoff();
+    if (ledcontrol) LEDsoff();
     Dbprintf("Tag %s written with 0x%08x%08x\n",
              card ? "T55x7" : "T5555",
              (uint32_t)(id >> 32),
@@ -2556,13 +2556,13 @@ static void EM4xLoginEx(uint32_t pwd) {
     // 0000 0001 fail
 }
 
-void EM4xBruteforce(uint32_t start_pwd, uint32_t n) {
+void EM4xBruteforce(uint32_t start_pwd, uint32_t n, bool ledcontrol) {
     // With current timing, 18.6 ms per test = 53.8 pwds/s
     reply_ng(CMD_LF_EM4X_BF, PM3_SUCCESS, NULL, 0);
     StartTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     WaitMS(20);
-    LED_A_ON();
+    if (ledcontrol) LED_A_ON();
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
     uint32_t candidates_found = 0;
     for (uint32_t pwd = start_pwd; pwd < 0xFFFFFFFF; pwd++) {
@@ -2585,7 +2585,7 @@ void EM4xBruteforce(uint32_t start_pwd, uint32_t n) {
         SendForward(len, true);
 
         WaitUS(400);
-        DoPartialAcquisition(0, false, 350, 1000);
+        DoPartialAcquisition(0, false, 350, 1000, ledcontrol);
         uint8_t *mem = BigBuf_get_addr();
         if (mem[334] < 128) {
             candidates_found++;
@@ -2600,16 +2600,16 @@ void EM4xBruteforce(uint32_t start_pwd, uint32_t n) {
     }
     StopTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LEDsoff();
+    if (ledcontrol) LEDsoff();
 }
 
-void EM4xLogin(uint32_t pwd) {
+void EM4xLogin(uint32_t pwd, bool ledcontrol) {
 
     StartTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     WaitMS(20);
 
-    LED_A_ON();
+    if (ledcontrol) LED_A_ON();
 
     // clear buffer now so it does not interfere with timing later
     BigBuf_Clear_ext(false);
@@ -2618,21 +2618,21 @@ void EM4xLogin(uint32_t pwd) {
 
     WaitUS(400);
     // We need to acquire more than needed, to help demodulators finding the proper modulation
-    DoPartialAcquisition(0, false, 6000, 1000);
+    DoPartialAcquisition(0, false, 6000, 1000, ledcontrol);
 
     StopTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_LF_EM4X_LOGIN, PM3_SUCCESS, NULL, 0);
-    LEDsoff();
+    if (ledcontrol) LEDsoff();
 }
 
-void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
+void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd, bool ledcontrol) {
 
     StartTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     WaitMS(20);
 
-    LED_A_ON();
+    if (ledcontrol) LED_A_ON();
 
     // clear buffer now so it does not interfere with timing later
     BigBuf_Clear_ext(false);
@@ -2653,21 +2653,21 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
 
     WaitUS(400);
 
-    DoPartialAcquisition(0, false, 6000, 1000);
+    DoPartialAcquisition(0, false, 6000, 1000, ledcontrol);
 
     StopTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_LF_EM4X_READWORD, PM3_SUCCESS, NULL, 0);
-    LEDsoff();
+    if (ledcontrol) LEDsoff();
 }
 
-void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
+void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd, bool ledcontrol) {
 
     StartTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     WaitMS(50);
 
-    LED_A_ON();
+    if (ledcontrol) LED_A_ON();
 
     // clear buffer now so it does not interfere with timing later
     BigBuf_Clear_ext(false);
@@ -2695,22 +2695,22 @@ void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
         // No, when write is denied, err preamble comes much sooner
         //WaitUS(10820); // tPC+tWEE
 
-        DoPartialAcquisition(0, false, 6000, 1000);
+        DoPartialAcquisition(0, false, 6000, 1000, ledcontrol);
 
         StopTicks();
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         reply_ng(CMD_LF_EM4X_WRITEWORD, PM3_SUCCESS, NULL, 0);
     }
-    LEDsoff();
+    if (ledcontrol) LEDsoff();
 }
 
-void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd) {
+void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd, bool ledcontrol) {
 
     StartTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     WaitMS(50);
 
-    LED_A_ON();
+    if (ledcontrol) LED_A_ON();
 
     // clear buffer now so it does not interfere with timing later
     BigBuf_Clear_ext(false);
@@ -2737,12 +2737,12 @@ void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd) {
         // No, when write is denied, err preamble comes much sooner
         //WaitUS(13640); // tPC+tPR
 
-        DoPartialAcquisition(0, false, 6000, 1000);
+        DoPartialAcquisition(0, false, 6000, 1000, ledcontrol);
         StopTicks();
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         reply_ng(CMD_LF_EM4X_PROTECTWORD, PM3_SUCCESS, NULL, 0);
     }
-    LEDsoff();
+    if (ledcontrol) LEDsoff();
 }
 
 /*
@@ -2778,7 +2778,7 @@ pulse 3.6 ms
 This triggers COTAG tag to response
 
 */
-void Cotag(uint32_t arg0) {
+void Cotag(uint32_t arg0, bool ledcontrol) {
 #ifndef OFF
 # define OFF(x)  { FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS((x)); }
 #endif
@@ -2787,7 +2787,7 @@ void Cotag(uint32_t arg0) {
 #endif
     uint8_t rawsignal = arg0 & 0xF;
 
-    LED_A_ON();
+    if (ledcontrol) LED_A_ON();
 
     LFSetupFPGAForADC(LF_FREQ2DIV(132), true);  //132
 
@@ -2823,7 +2823,7 @@ void Cotag(uint32_t arg0) {
             break;
         }
         case 2: {
-            DoAcquisition_config(false, 0);
+            DoAcquisition_config(false, 0, ledcontrol);
             reply_ng(CMD_LF_COTAG_READ, PM3_SUCCESS, NULL, 0);
             break;
         }
@@ -2836,7 +2836,7 @@ void Cotag(uint32_t arg0) {
 
     // Turn the field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LEDsoff();
+    if (ledcontrol) LEDsoff();
 }
 
 /*

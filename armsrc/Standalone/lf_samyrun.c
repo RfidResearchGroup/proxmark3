@@ -77,7 +77,7 @@ void RunMod(void) {
 
             // findone, high, low, no ledcontrol (A)
             uint32_t hi = 0, lo = 0;
-            lf_hid_watch(1, &hi, &lo);
+            lf_hid_watch(1, &hi, &lo, true);
             high[selected] = hi;
             low[selected] = lo;
 
@@ -121,7 +121,7 @@ void RunMod(void) {
             Dbprintf("[=]    cloning %x | %x%08x", selected, high[selected], low[selected]);
 
             // high2, high, low,  no longFMT
-            CopyHIDtoT55x7(0, high[selected], low[selected], 0, false, false);
+            CopyHIDtoT55x7(0, high[selected], low[selected], 0, false, false, true);
 
             DbpString("[=] cloned done");
 
