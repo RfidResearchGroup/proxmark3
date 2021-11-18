@@ -33,6 +33,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed `hf mfdes` - fix buffer overflow (@AxisRay)
  - Changed `hf mfdes` - detect LRP mode and info updates (@merlokk)
  - Fixed `hf mfdes` - increase response buffer length (@merlokk)
+ - Fixed `SimulateTagLowFrequencyEx` ignoring the `ledcontrol` argument (@zabszk)
 
 ## [crimson.4.14434][2021-09-18]
  - Fixed `hf mf staticnested` - flashmem / non loop now works (@horrordash)
