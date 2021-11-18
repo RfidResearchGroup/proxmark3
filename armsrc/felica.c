@@ -745,7 +745,7 @@ void felica_sim_lite(uint8_t *uid) {
                             if (FelicaFrame.framebytes[6] == 1) {
                                 curresp = resp_poll1;
                                 curlen = R_POLL1_LEN;
-                                listenmode = true;
+                                listenmode = false;
                             }
                         }
 
