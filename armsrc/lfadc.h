@@ -29,11 +29,11 @@ bool lf_get_reader_modulation(void);
 
 void lf_wait_periods(size_t periods);
 //void lf_init(bool reader);
-void lf_init(bool reader, bool simulate);
-void lf_finalize(void);
+void lf_init(bool reader, bool simulate, bool ledcontrol);
+void lf_finalize(bool ledcontrol);
 size_t lf_detect_field_drop(size_t max);
 
-bool lf_manchester_send_bytes(const uint8_t *frame, size_t frame_len);
+bool lf_manchester_send_bytes(const uint8_t *frame, size_t frame_len, bool ledcontrol);
 void lf_modulation(bool modulation);
 
 #endif // __LFADC_H__

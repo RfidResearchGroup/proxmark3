@@ -219,7 +219,7 @@ void RunMod(void) {
                 SpinDelay(200);
             }
 
-            em4x50_handle_commands(&command, tag);
+            em4x50_handle_commands(&command, tag, true);
 
             // check if new password was found
             if (g_Password != reflect32(tag[EM4X50_DEVICE_PASSWORD])) {

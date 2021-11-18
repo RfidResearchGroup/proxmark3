@@ -323,7 +323,7 @@ void RunMod(void) {
 
 
         size_t size = MIN(16385, BigBuf_max_traceLen());
-        DoAcquisition_config(false, size);
+        DoAcquisition_config(false, size, true);
         res = demodNexWatch();
         if (res == PM3_SUCCESS) {
             LED_A_OFF();

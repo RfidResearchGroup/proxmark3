@@ -172,7 +172,7 @@ void RunMod(void) {
                     state = 3;
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - exit to select mode
-                    lf_em410x_watch(1, &high[selected], &low[selected]);
+                    lf_em410x_watch(1, &high[selected], &low[selected], true);
                     flash_leds(100, 5);
 #ifdef WITH_FLASH
                     SaveIDtoFlash(selected, low[selected]);
@@ -208,7 +208,7 @@ void RunMod(void) {
                     state = 0;
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - write ID to tag
-                    copy_em410x_to_t55xx(0, LF_CLOCK, (uint32_t)(low[selected] >> 32), (uint32_t)(low[selected] & 0xffffffff));
+                    copy_em410x_to_t55xx(0, LF_CLOCK, (uint32_t)(low[selected] >> 32), (uint32_t)(low[selected] & 0xffffffff), true);
                     led_slot(selected);
                     state = 0; // Switch to select mode
                 }

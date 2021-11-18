@@ -75,7 +75,7 @@ void RunMod(void) {
             // record
             DbpString("[=] starting recording");
 
-            lf_hid_watch(1, &high[selected], &low[selected]);
+            lf_hid_watch(1, &high[selected], &low[selected], true);
             Dbprintf("[=] recorded %x %x %08x", selected, high[selected], low[selected]);
 
             LEDsoff();
@@ -95,7 +95,7 @@ void RunMod(void) {
 
             WAIT_BUTTON_RELEASED();
 
-            CopyHIDtoT55x7(0, high[selected], low[selected], 0, false, false);
+            CopyHIDtoT55x7(0, high[selected], low[selected], 0, false, false, true);
             Dbprintf("[=] cloned %x %x %08x", selected, high[selected], low[selected]);
 
             LEDsoff();

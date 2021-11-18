@@ -28,25 +28,25 @@ uint16_t doCotagAcquisitionManchester(uint8_t *dest, uint16_t destlen);
 * acquisition of T55x7 LF signal. Similar to other LF, but adjusted with @marshmellows thresholds
 * the data is collected in BigBuf.
 **/
-void doT55x7Acquisition(size_t sample_size);
+void doT55x7Acquisition(size_t sample_size, bool ledcontrol);
 
 /**
 * Initializes the FPGA for reader-mode (field on), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SampleLF(bool verbose, uint32_t sample_size);
+uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol);
 
 /**
 * Initializes the FPGA for sniff-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SniffLF(bool verbose, uint32_t sample_size);
+uint32_t SniffLF(bool verbose, uint32_t sample_size, bool ledcontrol);
 
 uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, int16_t trigger_threshold,
-                       bool verbose, uint32_t sample_size, uint32_t cancel_after, int32_t samples_to_skip);
+                       bool verbose, uint32_t sample_size, uint32_t cancel_after, int32_t samples_to_skip, bool ledcontrol);
 
 // adds sample size to default options
-uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t sample_size, uint32_t cancel_after);
+uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t sample_size, uint32_t cancel_after, bool ledcontrol);
 
 /**
  * @brief Does sample acquisition, ignoring the config values set in the sample_config.
@@ -56,7 +56,7 @@ uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t samp
  * @param verbose
  * @return number of bits sampled
  */
-uint32_t DoAcquisition_default(int trigger_threshold, bool verbose);
+uint32_t DoAcquisition_default(int trigger_threshold, bool verbose, bool ledcontrol);
 /**
  * @brief Does sample acquisition, using the config values set in the sample_config.
  * @param trigger_threshold
@@ -64,7 +64,7 @@ uint32_t DoAcquisition_default(int trigger_threshold, bool verbose);
  * @return number of bits sampled
  */
 
-uint32_t DoAcquisition_config(bool verbose, uint32_t sample_size);
+uint32_t DoAcquisition_config(bool verbose, uint32_t sample_size, bool ledcontrol);
 
 /**
  * Refactoring of lf sampling buffer

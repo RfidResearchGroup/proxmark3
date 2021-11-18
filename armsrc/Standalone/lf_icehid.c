@@ -354,21 +354,21 @@ void RunMod(void) {
 
         // since we steal 12800 from bigbuffer, no need to sample it.
         size_t size = MIN(28000, BigBuf_max_traceLen());
-        DoAcquisition_config(false, size);
+        DoAcquisition_config(false, size, true);
         res = IceHIDDemod();
         if (res == PM3_SUCCESS) {
             LED_A_OFF();
             continue;
         }
 
-        DoAcquisition_config(false, size);
+        DoAcquisition_config(false, size, true);
         res = IceAWIDdemod();
         if (res == PM3_SUCCESS) {
             LED_A_OFF();
             continue;
         }
 
-        DoAcquisition_config(false, size);
+        DoAcquisition_config(false, size, true);
         res = IceIOdemod();
         if (res == PM3_SUCCESS) {
             LED_A_OFF();
@@ -376,7 +376,7 @@ void RunMod(void) {
         }
 
         size = MIN(20000, BigBuf_max_traceLen());
-        DoAcquisition_config(false, size);
+        DoAcquisition_config(false, size, true);
         res = IceEM410xdemod();
         if (res == PM3_SUCCESS) {
             LED_A_OFF();

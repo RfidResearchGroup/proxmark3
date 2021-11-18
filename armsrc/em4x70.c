@@ -624,7 +624,7 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
     return bit_pos;
 }
 
-void em4x70_info(em4x70_data_t *etd) {
+void em4x70_info(em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
 
@@ -641,11 +641,11 @@ void em4x70_info(em4x70_data_t *etd) {
     }
 
     StopTicks();
-    lf_finalize();
+    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_INFO, status, tag.data, sizeof(tag.data));
 }
 
-void em4x70_write(em4x70_data_t *etd) {
+void em4x70_write(em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
 
@@ -671,11 +671,11 @@ void em4x70_write(em4x70_data_t *etd) {
     }
 
     StopTicks();
-    lf_finalize();
+    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_WRITE, status, tag.data, sizeof(tag.data));
 }
 
-void em4x70_unlock(em4x70_data_t *etd) {
+void em4x70_unlock(em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
 
@@ -704,11 +704,11 @@ void em4x70_unlock(em4x70_data_t *etd) {
     }
 
     StopTicks();
-    lf_finalize();
+    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_UNLOCK, status, tag.data, sizeof(tag.data));
 }
 
-void em4x70_auth(em4x70_data_t *etd) {
+void em4x70_auth(em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
     uint8_t response[3] = {0};
@@ -726,11 +726,11 @@ void em4x70_auth(em4x70_data_t *etd) {
     }
 
     StopTicks();
-    lf_finalize();
+    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_AUTH, status, response, sizeof(response));
 }
 
-void em4x70_write_pin(em4x70_data_t *etd) {
+void em4x70_write_pin(em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
 
@@ -766,11 +766,11 @@ void em4x70_write_pin(em4x70_data_t *etd) {
     }
 
     StopTicks();
-    lf_finalize();
+    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_WRITEPIN, status, tag.data, sizeof(tag.data));
 }
 
-void em4x70_write_key(em4x70_data_t *etd) {
+void em4x70_write_key(em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
 
@@ -804,6 +804,6 @@ void em4x70_write_key(em4x70_data_t *etd) {
     }
 
     StopTicks();
-    lf_finalize();
+    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_WRITEKEY, status, tag.data, sizeof(tag.data));
 }
