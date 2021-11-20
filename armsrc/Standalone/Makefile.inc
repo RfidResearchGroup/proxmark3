@@ -101,3 +101,7 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_MFCSIM,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_mfcsim.c
 endif
+
+ifneq (,$(findstring WITH_STANDALONE_DANKARMULTI,$(APP_CFLAGS)))
+    SRC_STANDALONE = dankarmulti.c
+endif
