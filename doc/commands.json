@@ -992,7 +992,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log /home/iceman/.proxmark3/logs/log_20211108.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program [=] session log /home/iceman/.proxmark3/logs/log_20211118.txt --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
             "notes": [
                 "auto"
             ],
@@ -1145,7 +1145,8 @@
             "description": "sends raw bytes over iso14443a. with option to use topaz 14a mode.",
             "notes": [
                 "hf 14a raw -sc 3000 -> select, crc, where 3000 == 'read block 00'",
-                "hf 14a raw -ak -b 7 40 -> send 7 bit byte 0x40"
+                "hf 14a raw -ak -b 7 40 -> send 7 bit byte 0x40",
+                "hf 14a raw --ecp -s -> send ecp before select"
             ],
             "offline": false,
             "options": [
@@ -10056,6 +10057,6 @@
     "metadata": {
         "commands_extracted": 590,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-11-08T09:54:30"
+        "extracted_on": "2021-11-18T23:46:29"
     }
 }
