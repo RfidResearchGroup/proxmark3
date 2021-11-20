@@ -735,6 +735,7 @@ void felica_sim_lite(uint8_t *uid) {
                     if (FelicaFrame.crc_ok) {
 
                         if (FelicaFrame.framebytes[2] == 6 && FelicaFrame.framebytes[3] == 0) {
+                            static uint8_t timeslot = 0;
 
                             // polling... there are two types of polling we answer to
                             if (FelicaFrame.framebytes[6] == 0) {
@@ -747,6 +748,13 @@ void felica_sim_lite(uint8_t *uid) {
                                 curlen = R_POLL1_LEN;
                                 listenmode = false;
                             }
+                            if (timeslot > FelicaFrame.framebytes[7]) {
+                                // framebytes[7] contains the maximum time slot in which we are allowed to respond (#0..#15)
+                                timeslot = 0;
+                            }
+                            // first time slot (#0) starts after 512 * 64 / fc, slot length equals 256 * 64 / fc
+                            felica_nexttransfertime = GetCountSspClk() - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + (512 + timeslot * 256) * 64 / 16 + 1;
+                            timeslot++; // we should use a random time slot, but responding in incremental slots should do just fine for now
                         }
 
                         if (FelicaFrame.framebytes[2] > 5 && FelicaFrame.framebytes[3] == 0x06) {
