@@ -382,6 +382,8 @@ int wu_queue_destroy(wu_queue_ctx_t *ctx) {
 #endif
         return ret;
     }
+    
+    pthread_mutex_lock(&ctx->queue_mutex); 
 
 #if TEST_UNIT == 1
     printf("ret from wu_queue_pop() (%d): %s\n", ret, wu_queue_strerror(ret));
@@ -395,7 +397,9 @@ int wu_queue_destroy(wu_queue_ctx_t *ctx) {
     ctx->queue_head = 0; //NULL;
     ctx->queue_tail = 0; //NULL;
     ctx->init = 0;
-
+    
+    pthread_mutex_unlock(&ctx->queue_mutex);
+    
     pthread_mutex_destroy(&ctx->queue_mutex);
     pthread_mutexattr_destroy(&ctx->queue_mutex_attr);
 
