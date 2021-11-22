@@ -2169,7 +2169,7 @@
     },
     {
         "AID": "4144204631",
-        "Vendor": "Cipurse",
+        "Vendor": "CIPURSE",
         "Country": "",
         "Name": "Cipurse transport card",
         "Description": "Cipurse transport card",
@@ -2182,5 +2182,21 @@
         "Name": "VivoKey Apex",
         "Description": "vivokey.com/apex",
         "Type": ""
+    },
+    {
+        "AID": "D2760000028002000000000000000310",
+        "Vendor": "CIPURSE",
+        "Country": "",
+        "Name": "CPM Master SAM",
+        "Description": "Application specific master keys",
+        "Type": "transport"
+    },
+    {
+        "AID": "D2760000028002000000000000000311",
+        "Vendor": "CIPURSE",
+        "Country": "",
+        "Name": "CPM Person SAM",
+        "Description": "Personalization of end user cards",
+        "Type": "transport"
     },
 ]
