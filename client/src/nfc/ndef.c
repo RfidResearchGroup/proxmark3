@@ -25,8 +25,10 @@
 
 #define NDEF_WIFIAPPL   "application/vnd.wfa"
 #define NDEF_BLUEAPPL   "application/vnd.bluetooth"
+#define NDEF_JSONAPPL   "application/json"
 #define NDEF_VCARDTEXT  "text/vcard"
 #define NDEF_XVCARDTEXT "text/x-vcard"
+
 
 static const char *TypeNameFormat_s[] = {
     "Empty Record",
@@ -517,6 +519,14 @@ static int ndefDecodeMime_vcard(NDEFHeader_t *ndef) {
     }
     return PM3_SUCCESS;
 }
+static int ndefDecodeMime_json(NDEFHeader_t *ndef) {
+    PrintAndLogEx(INFO, _CYAN_("JSON details"));
+    if (ndef->PayloadLen > 1) {
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(INFO, _GREEN_("%.*s"), (int)ndef->PayloadLen, ndef->Payload);
+    }
+    return PM3_SUCCESS;
+}
 
 static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
     PrintAndLogEx(INFO, "Type............ " _YELLOW_("%.*s"), (int)ndef->TypeLen, ndef->Type);
@@ -651,6 +661,9 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
             if (str_startswith(begin, NDEF_BLUEAPPL)) {
                 ndefDecodeMime_bt(ndef);
             }
+            if (str_startswith(begin, NDEF_JSONAPPL)) {
+                ndefDecodeMime_json(ndef);
+            }
 
             free(begin);
             begin = NULL;
@@ -673,6 +686,7 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
             PrintAndLogEx(INFO, "- decoder to be impl -");
             break;
     }
+    PrintAndLogEx(INFO, "");
     return PM3_SUCCESS;
 }
 
