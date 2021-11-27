@@ -31,6 +31,28 @@
  *     to create the list of modes. You need to use the same names
  *     here as defined earlier.
  *
+ *  How this works:
+ *  The basic idea is to simply include several c-files with additional
+ *  modes into this file. Hopefully the only collision of symbols are
+ *  the RunMod and ModInfo, and these are solved by dankarmulti.h.
+ *
+ *  First, dankarmulti.h is included once by itself to define some macros
+ *  used later.
+ *
+ *  For each mode to be included we define MODE_NAME which is a unique
+ *  name to give the mode and MODE_FILE which is the name of the C-file
+ *  for the mode. dankarmulti.h will make sure that RunMod and
+ *  ModInfo is renamed to RunMod_NAME where name is what we defined. It
+ *  will also include the actual mode source code and create a struct
+ *  with function pointer to the run and info functions of the mode.
+ *  At the end of dankarmulti.h it does #undef on MODE_NAME and MODE_FILE
+ *  so that they can be redefined for the next mode to include.
+ *
+ *  To create a list of the modes we now have available, it is necessary
+ *  to use the START_MODE_LIST, ADD_MODE and END_MODE_LIST macros. This
+ *  could also have been done with some linker magic and a new section,
+ *  or by some other dirty hack. But this works for now.
+ *
  *  Usage:
  *  Single press to cycle between the modes.
  *  The LEDs will show the currently selected mode.
