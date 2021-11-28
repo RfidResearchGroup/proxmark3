@@ -75,7 +75,7 @@ THE SOFTWARE.
 //#define WRITE_BENCH_FILE
 
 // debugging options
-#define DEBUG_KEY_ELIMINATION
+#define DEBUG_KEY_ELIMINATION           1
 // #define DEBUG_BRUTE_FORCE
 
 typedef enum {
@@ -173,7 +173,7 @@ crack_states_thread(void *x) {
 
                 char progress_text[80];
                 char keystr[19];
-                sprintf(keystr, "%012" PRIx64 "  ", key);
+                sprintf(keystr, "%012" PRIX64 "  ", key);
                 sprintf(progress_text, "Brute force phase completed.  Key found: " _GREEN_("%s"), keystr);
                 hardnested_print_progress(thread_arg->num_acquired_nonces, progress_text, 0.0, 0);
                 break;
