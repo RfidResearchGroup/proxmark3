@@ -8,7 +8,7 @@ It is based on pm3_help2JSON.py by
 Original Authors / Maintainers:
  - Samuel Windall
 
-This version 
+This version
  - Iceman
 
 Note:
@@ -92,7 +92,7 @@ const static vocabulory_t vocabulory[] = {\n""")
     args.output_file.write("""    {0, NULL}\n};
 
 
-char **rl_command_completion(const char *text, int start, int end) {   
+char **rl_command_completion(const char *text, int start, int end) {
     rl_attempted_completion_over = 1;
     return rl_completion_matches (text, rl_command_generator);
 }
