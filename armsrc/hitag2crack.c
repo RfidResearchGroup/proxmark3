@@ -731,6 +731,8 @@ bool hitag2crack_consume_keystream(uint8_t *keybits, int kslen, int *ksoffset, u
 
     // update ksoffset with command length and response
     *ksoffset += (numcmds * 10) + 32;
+
+    return true;
 }
 
 // hitag2crack_extend_keystream sends an extended command to retrieve more keybits.
