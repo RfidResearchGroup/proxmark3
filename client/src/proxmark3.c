@@ -18,6 +18,7 @@
 #ifdef HAVE_READLINE
 #include <readline/readline.h>
 #include <readline/history.h>
+#include "rl_vocabulory.h"
 #include <signal.h>
 #endif
 #include <ctype.h>
@@ -774,6 +775,9 @@ int main(int argc, char *argv[]) {
 #ifdef HAVE_READLINE
     /* initialize history */
     using_history();
+
+    rl_readline_name = "PM3";
+    rl_attempted_completion_function = rl_command_completion;
 
 #ifdef RL_STATE_READCMD
     rl_extend_line_buffer(1024);

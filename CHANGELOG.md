@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added for readline, <tab> autocomplete work inside pm3 client (@iceman1001)
  - Fixed `hf iclass dump` - now uses the right key when suppling credit key (@iceman1001)
  - Changed crc16_legic to be supported in lua (@iceman1001)
  - Changed `trace list -t 14a` - now annotate magsafe wupa (@iceman1001)
