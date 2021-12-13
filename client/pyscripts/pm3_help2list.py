@@ -93,7 +93,7 @@ const static vocabulory_t vocabulory[] = {\n""")
 
 
 char **rl_command_completion(const char *text, int start, int end) {
-    rl_attempted_completion_over = 1;
+    rl_attempted_completion_over = 0;
     return rl_completion_matches (text, rl_command_generator);
 }
 
