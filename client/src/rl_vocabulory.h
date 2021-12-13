@@ -77,7 +77,6 @@ const static vocabulory_t vocabulory[] = {
     { 1, "data fsktonrz" }, 
     { 1, "data manrawdecode" }, 
     { 1, "data modulation" }, 
-    { 1, "data pwmdemod" }, 
     { 1, "data rawdemod" }, 
     { 1, "data askedgedetect" }, 
     { 1, "data autocorr" }, 
