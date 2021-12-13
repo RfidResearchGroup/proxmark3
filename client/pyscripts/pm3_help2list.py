@@ -12,8 +12,8 @@ This version
  - Iceman
 
 Note:
-    This file is used as a helper script to generate the rl_vocabulory.h file need.
-    It also needs a working proxmark3 client to extract the help text.
+    This script is used as a helper script to generate the rl_vocabulory.h file.
+    It need a working proxmark3 client to extract the help text.
 
     Ie: this script can't be used inside the normal build sequence.
 """
@@ -69,6 +69,7 @@ extern "C" {
 #include <string.h>
 #include <readline/readline.h>
 #include "ui.h"                          // g_session
+#include "util.h"                        // str_ndup
 
 char* rl_command_generator(const char *text, int state);
 char **rl_command_completion(const char *text, int start, int end);
@@ -124,9 +125,9 @@ char* rl_command_generator(const char *text, int state) {
             const char *next = command + (rlen - len);
             const char *space = strstr(next, " ");
             if (space != NULL) {
-                return strndup(next, space - next);
+                return str_ndup(next, space - next);
             }
-            return strdup(next);
+            return str_dup(next);
         }
     }
 

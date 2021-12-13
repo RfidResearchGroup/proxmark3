@@ -20,6 +20,7 @@ extern "C" {
 #include <string.h>
 #include <readline/readline.h>
 #include "ui.h"                          // g_session
+#include "util.h"                        // str_ndup
 
 char* rl_command_generator(const char *text, int state);
 char **rl_command_completion(const char *text, int start, int end);
@@ -76,6 +77,7 @@ const static vocabulory_t vocabulory[] = {
     { 1, "data fsktonrz" }, 
     { 1, "data manrawdecode" }, 
     { 1, "data modulation" }, 
+    { 1, "data pwmdemod" }, 
     { 1, "data rawdemod" }, 
     { 1, "data askedgedetect" }, 
     { 1, "data autocorr" }, 
@@ -734,9 +736,9 @@ char* rl_command_generator(const char *text, int state) {
             const char *next = command + (rlen - len);
             const char *space = strstr(next, " ");
             if (space != NULL) {
-                return strndup(next, space - next);
+                return str_ndup(next, space - next);
             }
-            return strdup(next);
+            return str_dup(next);
         }
     }
 
