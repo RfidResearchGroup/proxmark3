@@ -121,7 +121,12 @@ char* rl_command_generator(const char *text, int state) {
         index++;
 
         if (strncmp (command, rl_line_buffer, rlen) == 0) {
-            return strdup(command + (rlen - len));
+            const char *next = command + (rlen - len);
+            const char *space = strstr(next, " ");
+            if (space != NULL) {
+                return strndup(next, space - next);
+            }
+            return strdup(next);
         }
     }
 
