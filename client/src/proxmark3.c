@@ -93,8 +93,8 @@ static void showBanner_logo(LogoMode mode) {
 }
 
 static void showBanner(void) {
-
-    g_printAndLog = PRINTANDLOG_PRINT;
+    uint8_t old_printAndLog = g_printAndLog;
+    g_printAndLog &= PRINTANDLOG_PRINT;
     PrintAndLogEx(NORMAL, "\n");
 
 #if defined(_WIN32)
@@ -114,7 +114,7 @@ static void showBanner(void) {
 //    PrintAndLogEx(NORMAL, "\nMonero: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
     PrintAndLogEx(NORMAL, "");
     fflush(stdout);
-    g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
+    g_printAndLog = old_printAndLog;
 }
 #endif //LIBPM3
 
@@ -436,8 +436,9 @@ check_script:
             cmd[strlen(cmd) - off] = '\0';
 
             if (cmd[0] != '\0') {
+                uint8_t old_printAndLog = g_printAndLog;
                 if (!printprompt) {
-                    g_printAndLog = PRINTANDLOG_LOG;
+                    g_printAndLog &= PRINTANDLOG_LOG;
                 }
                 char prompt[PROXPROMPT_MAX_SIZE] = {0};
                 prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
@@ -445,7 +446,7 @@ check_script:
                 char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                 memcpy_filter_rlmarkers(prompt_filtered, prompt, sizeof(prompt_filtered));
                 PrintAndLogEx(NORMAL, "%s%s", prompt_filtered, cmd);
-                g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
+                g_printAndLog = old_printAndLog;
 
 #ifdef HAVE_READLINE
                 // add to history if not from a script

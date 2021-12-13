@@ -182,7 +182,7 @@ void CmdsHelp(const command_t Commands[]) {
     while (Commands[i].Name) {
         if (Commands[i].IsAvailable()) {
             uint8_t old_printAndLog = g_printAndLog;
-            g_printAndLog = PRINTANDLOG_PRINT;
+            g_printAndLog &= PRINTANDLOG_PRINT;
             if (Commands[i].Name[0] == '-' || Commands[i].Name[0] == ' ') {
                 PrintAndLogEx(NORMAL, "%-16s %s", Commands[i].Name, Commands[i].Help);
             } else {

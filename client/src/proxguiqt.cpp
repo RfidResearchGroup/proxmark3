@@ -1005,8 +1005,9 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             }
             break;
 
-        case Qt::Key_H:
-            g_printAndLog = PRINTANDLOG_PRINT;
+        case Qt::Key_H: {
+            uint8_t old_printAndLog = g_printAndLog;
+            g_printAndLog &= PRINTANDLOG_PRINT;
             PrintAndLogEx(NORMAL, "\n\n" _CYAN_("PLOT window keystrokes and mouse events"));
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Move:"));
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("Home") "/" _RED_("End"), "Move to the start/end of the graph");
@@ -1031,9 +1032,9 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _YELLOW_("Right mouse click"), "Set purple cursor");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("h"), "Show this help");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("q"), "Close plot window");
-            g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
+            g_printAndLog = old_printAndLog;
             break;
-
+        }
         case Qt::Key_L:
             g_GridLocked = !g_GridLocked;
             if (g_GridLocked)
