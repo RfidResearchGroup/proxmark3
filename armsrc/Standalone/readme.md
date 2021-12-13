@@ -5,8 +5,9 @@ This contains functionality for different StandAlone modes. The fullimage will b
 If you want to implement a new standalone mode, you need to implement the methods provided in `standalone.h`.
 Have a look at the skeleton standalone mode, in the file `lf_skeleton.c`.
 
-As it is now, you can only have one standalone mode installed at the time.  
+As it is now, you can only have one standalone mode installed at the time unless you use the dankarmulti mode (see `dankarmulti.c` on how to use it).
 
+To avoid clashes between standalone modes, protect all your static variables with a specific namespace. See how it is done in the existing standalone modes.
 ## Implementing a standalone mode
 
 We suggest you keep your standalone code inside the `armsrc/Standalone` folder. And that you name your files according to your standalone mode name.
