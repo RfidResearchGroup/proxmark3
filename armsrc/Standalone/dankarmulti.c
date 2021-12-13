@@ -77,20 +77,20 @@
 
 #include "dankarmulti.h"
 
-#define MODE_NAME sniff14a
-#define MODE_FILE "hf_14asniff.c"
+#define MODE_NAME mattyrun
+#define MODE_FILE "hf_mattyrun.c"
 #include "dankarmulti.h"
 #define MODE_NAME em4100
 #define MODE_FILE "lf_em4100rswb.c"
 #include "dankarmulti.h"
-#define MODE_NAME icehid
-#define MODE_FILE "lf_icehid.c"
+#define MODE_NAME tcprst
+#define MODE_FILE "hf_tcprst.c"
 #include "dankarmulti.h"
 
 START_MODE_LIST
-ADD_MODE(sniff14a)
+ADD_MODE(mattyrun)
 ADD_MODE(em4100)
-ADD_MODE(icehid)
+ADD_MODE(tcprst)
 END_MODE_LIST
 
 /*******************
