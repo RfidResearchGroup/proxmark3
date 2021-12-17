@@ -66,6 +66,17 @@ AccessConditions_t MFAccessConditionsTrailer[] = {
     {0x07, "read ACCESS by AB", ""}
 };
 
+bool mfValidateAccessConditions(uint8_t *data) {
+    uint8_t ndata1 = (data[0]) & 0x0f;
+    uint8_t ndata2 = (data[0] >> 4) & 0x0f;
+    uint8_t ndata3 = (data[1]) & 0x0f;
+    uint8_t data1  = (data[1] >> 4) & 0x0f;
+    uint8_t data2  = (data[2]) & 0x0f;
+    uint8_t data3  = (data[2] >> 4) & 0x0f;
+
+    return ((ndata1 == (data1 ^ 0xF)) && (ndata2 == (data2 ^ 0xF)) && (ndata3 == (data3 ^ 0xF)));
+}
+
 const char *mfGetAccessConditionsDesc(uint8_t blockn, uint8_t *data) {
     uint8_t data1 = ((data[1] >> 4) & 0x0f) >> blockn;
     uint8_t data2 = ((data[2]) & 0x0f) >> blockn;

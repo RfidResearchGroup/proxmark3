@@ -166,6 +166,10 @@ static void decode_print_st(uint16_t blockno, uint8_t *data) {
         PrintAndLogEx(INFO, "  # | Access rights");
         PrintAndLogEx(INFO, "----+-----------------------------------------------------------------");
 
+        if (! mfValidateAccessConditions(&data[6])) {
+            PrintAndLogEx(WARNING, _RED_("Invalid Access Conditions"));
+        }
+
         int bln = mfFirstBlockOfSector(mfSectorNum(blockno));
         int blinc = (mfNumBlocksPerSector(mfSectorNum(blockno)) > 4) ? 5 : 1;
         for (int i = 0; i < 4; i++) {
@@ -289,7 +293,9 @@ static int CmdHF14AMfAcl(const char *Cmd) {
     if (memcmp(acl, "\xFF\x07\x80", 3) == 0) {
         PrintAndLogEx(INFO, "ACL... " _GREEN_("%s") " (transport configuration)", sprint_hex(acl, sizeof(acl)));
     }
-
+    if (! mfValidateAccessConditions(acl)) {
+        PrintAndLogEx(ERR, _RED_("Invalid Access Conditions, NEVER write these on a card!"));
+    }
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "  # | Access rights");
     PrintAndLogEx(INFO, "----+-----------------------------------------------------------------");
