@@ -39,6 +39,7 @@ typedef enum {
 typedef struct {
     uint8_t cond;
     const char *description;
+    const char *application;
 } AccessConditions_t;
 
 

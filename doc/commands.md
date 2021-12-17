@@ -417,6 +417,7 @@ Check column "offline" for their availability.
 |`hf mf decrypt          `|Y       |`[nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace`
 |`hf mf supercard        `|N       |`Extract info from a `super card``
 |`hf mf auth4            `|N       |`ISO14443-4 AES authentication`
+|`hf mf acl              `|Y       |`Decode and print MIFARE Classic access rights bytes`
 |`hf mf dump             `|N       |`Dump MIFARE Classic tag to binary file`
 |`hf mf mad              `|N       |`Checks and prints MAD`
 |`hf mf ndefread         `|N       |`Prints NDEF records from card`

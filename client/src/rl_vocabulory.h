@@ -278,6 +278,7 @@ const static vocabulory_t vocabulory[] = {
     { 1, "hf mf decrypt" }, 
     { 0, "hf mf supercard" }, 
     { 0, "hf mf auth4" }, 
+    { 1, "hf mf acl" }, 
     { 0, "hf mf dump" }, 
     { 0, "hf mf mad" }, 
     { 0, "hf mf ndefread" }, 

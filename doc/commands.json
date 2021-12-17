@@ -3109,6 +3109,20 @@
             ],
             "usage": "hf lto wrbl [-h] -d <hex> --block <dec>"
         },
+        "hf mf acl": {
+            "command": "hf mf acl",
+            "description": "print decoded mifare access rights (acl), a = key a b = key b ab = both key a and b access = access bytes inside sector trailer block increment, decrement, transfer, restore is for value blocks",
+            "notes": [
+                "hf mf acl",
+                "hf mf acl -d ff0780"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "-d, --data <hex> acl bytes specified as 3 hex bytes"
+            ],
+            "usage": "hf mf acl [-h] -d <hex>"
+        },
         "hf mf auth4": {
             "command": "hf mf auth4",
             "description": "executes aes authentication command in iso14443-4",
@@ -3645,7 +3659,7 @@
         },
         "hf mf help": {
             "command": "hf mf help",
-            "description": "help this help list list mifare history hardnested nested attack for hardened mifare classic cards decrypt [nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace view display content from tag dump file --------------------------------------------------------------------------------------- hf mf list available offline: yes alias of `trace list -t mf` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
+            "description": "help this help list list mifare history hardnested nested attack for hardened mifare classic cards decrypt [nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace acl decode and print mifare classic access rights bytes view display content from tag dump file --------------------------------------------------------------------------------------- hf mf list available offline: yes alias of `trace list -t mf` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf mf list -f -> show frame delay times",
                 "hf mf list -1 -> use trace buffer"
@@ -10039,8 +10053,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 589,
+        "commands_extracted": 591,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-12-13T02:15:15"
+        "extracted_on": "2021-12-17T02:04:29"
     }
 }
