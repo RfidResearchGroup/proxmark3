@@ -823,7 +823,8 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint16_t period_1;
                 uint8_t  symbol_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
                 uint16_t period_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
-                uint32_t samples : 31;
+                uint32_t samples : 30;
+                bool     keep : 1;
                 bool     verbose : 1;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
@@ -831,7 +832,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint16_t period_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
             memcpy(symbol_extra, payload->symbol_extra, sizeof(symbol_extra));
             memcpy(period_extra, payload->period_extra, sizeof(period_extra));
-            ModThenAcquireRawAdcSamples125k(payload->delay, payload->period_0, payload->period_1, symbol_extra, period_extra, packet->data.asBytes + sizeof(struct p), payload->verbose, payload->samples, true);
+            ModThenAcquireRawAdcSamples125k(payload->delay, payload->period_0, payload->period_1, symbol_extra, period_extra, packet->data.asBytes + sizeof(struct p), payload->verbose, payload->keep, payload->samples, true);
             break;
         }
         case CMD_LF_SNIFF_RAW_ADC: {

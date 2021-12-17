@@ -383,6 +383,8 @@ void loadT55xxConfig(void) {
 #endif
 }
 
+static bool prev_keep = false;
+
 /**
  * Function to do a modulation and then get samples.
  * @param delay_off
@@ -390,24 +392,26 @@ void loadT55xxConfig(void) {
  * @param period_1
  * @param command (in binary char array)
  */
-void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint16_t period_1, uint8_t *symbol_extra, uint16_t *period_extra, uint8_t *command, bool verbose, uint32_t samples, bool ledcontrol) {
+void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint16_t period_1, uint8_t *symbol_extra, uint16_t *period_extra, uint8_t *command, bool verbose, bool keep_field_on, uint32_t samples, bool ledcontrol) {
 
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-
+    if (!prev_keep){
+        FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    }
     // use lf config settings
     sample_config *sc = getSamplingConfig();
-
     LFSetupFPGAForADC(sc->divisor, true);
     // this causes the field to turn on for uncontrolled amount of time, so we'll turn it off
 
-    // Make sure the tag is reset
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    if (!prev_keep){
+
+        // Make sure the tag is reset
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    }
 
     // start timer
     StartTicks();
 
     WaitMS(100);
-
     // clear read buffer
     BigBuf_Clear_keep_EM();
 
@@ -494,8 +498,10 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint
     DoAcquisition_config(verbose, samples, ledcontrol);
 
     // Turn off antenna
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-
+    if (!keep_field_on) {
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    }
+    prev_keep = keep_field_on;
     // tell client we are done
     reply_ng(CMD_LF_MOD_THEN_ACQ_RAW_ADC, PM3_SUCCESS, NULL, 0);
 }
