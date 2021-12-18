@@ -233,7 +233,7 @@ int CmdLFCommandRead(const char *Cmd) {
         arg_u64_0("s", "samples", "<dec>", "number of samples to collect"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0("k", "keep", "keep signal field ON after receive"),
-        arg_lit0(NULL, "crc", "calculate and append CRC-8 Hitag/ZX8211"),
+        arg_lit0(NULL, "crc-ht", "calculate and append CRC-8/HITAG (also for ZX8211)"),
         arg_lit0("@", NULL, "continuous mode"),
         arg_param_end
     };
@@ -253,7 +253,7 @@ int CmdLFCommandRead(const char *Cmd) {
     uint32_t samples = arg_get_u32_def(ctx, 6, 0);
     bool verbose = arg_get_lit(ctx, 7);
     bool keep_field_on = arg_get_lit(ctx, 8);
-    bool add_crc = arg_get_lit(ctx, 9);
+    bool add_crc_ht = arg_get_lit(ctx, 9);
     bool cm = arg_get_lit(ctx, 10);
     CLIParserFree(ctx);
 
@@ -279,7 +279,9 @@ int CmdLFCommandRead(const char *Cmd) {
     payload.keep_field_on = keep_field_on;
     payload.verbose = verbose;
 
-    if (add_crc && (cmd_len <= 120)) {
+    if (add_crc_ht && (cmd_len <= 120)) {
+        // Hitag 1, Hitag S, ZX8211
+        // width=8 poly=0x1d init=0xff refin=false refout=false xorout=0x00 check=0xb4 residue=0x00 name="CRC-8/HITAG"
         crc_t crc;
         uint8_t data = 0;
         uint8_t n = 0;

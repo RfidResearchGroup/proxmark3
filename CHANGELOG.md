@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added option `--crc-ht` to `lf cmdread` to compute and add CRC-8/HITAG (@doegox)
  - Added option `-k` to `lf cmdread` to keep field on (@doegox)
  - Added `hf mf acl` - decode and print MIFARE access rights (@iceman1001)
  - Added for readline, <tab> autocomplete work inside pm3 client (@iceman1001)
