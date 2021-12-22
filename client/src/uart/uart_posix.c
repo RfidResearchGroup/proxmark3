@@ -161,16 +161,14 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             close(sfd);
         }
 
+        freeaddrinfo(addr);
+        free(addrstr);
+
         if (rp == NULL) {               /* No address succeeded */
             PrintAndLogEx(ERR, "error: Could not connect");
-            freeaddrinfo(addr);
-            free(addrstr);
             free(sp);
             return INVALID_SERIAL_PORT;
         }
-
-        freeaddrinfo(addr);
-        free(addrstr);
 
         sp->fd = sfd;
 
