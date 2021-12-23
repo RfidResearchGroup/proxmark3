@@ -795,6 +795,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     if (activateField) {
         // select with no disconnect and set gs_frame_len
         int selres = SelectCard14443A_4(false, !silentMode, NULL);
+        responseNum = 0;
         if (selres != PM3_SUCCESS)
             return selres;
     }
