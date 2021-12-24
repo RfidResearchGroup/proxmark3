@@ -11,7 +11,6 @@
 #define __LFZX_H
 
 #include "common.h"
-#include "pm3_cmd.h" // struct
 #include "zx8211.h"
 
 int zx8211_read(zx8211_data_t *zxd, bool ledcontrol);

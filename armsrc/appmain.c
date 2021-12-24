@@ -48,7 +48,7 @@
 #include "ticks.h"
 #include "commonutil.h"
 #include "crc16.h"
-#include "zx8211.h"
+#include "lfzx.h"
 
 
 #ifdef WITH_LCD
