@@ -181,6 +181,7 @@ typedef struct {
     bool compiled_with_hitag           : 1;
     bool compiled_with_em4x50          : 1;
     bool compiled_with_em4x70          : 1;
+    bool compiled_with_xc8211          : 1;
     // hf
     bool compiled_with_hfsniff         : 1;
     bool compiled_with_hfplot          : 1;
@@ -198,7 +199,7 @@ typedef struct {
     bool hw_available_flash            : 1;
     bool hw_available_smartcard        : 1;
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 5
+#define CAPABILITIES_VERSION 6
 extern capabilities_t g_pm3_capabilities;
 
 // For CMD_LF_T55XX_WRITEBL

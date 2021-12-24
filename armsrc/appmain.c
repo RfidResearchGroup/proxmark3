@@ -48,6 +48,7 @@
 #include "ticks.h"
 #include "commonutil.h"
 #include "crc16.h"
+#include "zx8211.h"
 
 
 #ifdef WITH_LCD
@@ -541,6 +542,13 @@ static void SendCapabilities(void) {
 #else
     capabilities.compiled_with_lcd = false;
 #endif
+
+#ifdef WITH_ZX8211
+    capabilities.compiled_with_zx8211 = true;
+#else
+    capabilities.compiled_with_zx8211 = false;
+#endif
+
     reply_ng(CMD_CAPABILITIES, PM3_SUCCESS, (uint8_t *)&capabilities, sizeof(capabilities));
 }
 
@@ -1192,6 +1200,17 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_EM4X70_WRITEKEY: {
             em4x70_write_key((em4x70_data_t *)packet->data.asBytes, true);
+            break;
+        }
+#endif
+
+#ifdef WITH_ZX8211
+        case CMD_LF_ZX_READ: {
+            zx8211_read((zx8211_data_t *)packet->data.asBytes, true);
+            break;
+        }
+        case CMD_LF_ZX_WRITE: {
+            zx8211_write((zx8211_data_t *)packet->data.asBytes, true);
             break;
         }
 #endif

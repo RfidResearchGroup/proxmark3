@@ -81,6 +81,12 @@ else
     SRC_LCD =
 endif
 
+ifneq (,$(findstring WITH_ZX8211,$(APP_CFLAGS)))
+    SRC_ZX = lfxz.c
+else
+    SRC_ZX =
+endif
+
 # Generic standalone Mode injection of source code
 include Standalone/Makefile.inc
 
@@ -122,6 +128,7 @@ THUMBSRC = start.c \
     $(SRC_CRC) \
     $(SRC_FELICA) \
     $(SRC_STANDALONE) \
+    $(SRC_ZX) \
     appmain.c \
     printf.c \
     dbprint.c \
