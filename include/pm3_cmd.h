@@ -580,6 +580,11 @@ typedef struct {
 #define CMD_LF_T55XX_CHK_PWDS                                             0x0230
 #define CMD_LF_T55XX_DANGERRAW                                            0x0231
 
+
+// ZX8211 
+#define CMD_LF_ZX_READ                                                    0x0270
+#define CMD_LF_ZX_WRITE                                                   0x0271
+
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
 // For the 13.56 MHz tags
