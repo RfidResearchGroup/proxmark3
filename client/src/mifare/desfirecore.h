@@ -18,6 +18,7 @@
 #include "mifare/desfirecrypto.h"
 
 #define DESFIRE_TX_FRAME_MAX_LEN 54
+#define DESFIRE_BUFFER_SIZE 65538
 
 enum DesfireISOSelectControlEnum {
     ISSMFDFEF     = 0x00,
