@@ -181,7 +181,7 @@ typedef struct {
     bool compiled_with_hitag           : 1;
     bool compiled_with_em4x50          : 1;
     bool compiled_with_em4x70          : 1;
-    bool compiled_with_xc8211          : 1;
+    bool compiled_with_zx8211          : 1;
     // hf
     bool compiled_with_hfsniff         : 1;
     bool compiled_with_hfplot          : 1;
