@@ -530,7 +530,9 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
     if (respcode)
         *respcode = 0xff;
 
-    uint8_t buf[255 * 5]  = {0x00};
+    uint8_t *buf  = calloc(DESFIRE_BUFFER_SIZE, 1);
+    if (buf == NULL)
+        return PM3_EMALLOC;
     uint32_t buflen = 0;
     uint32_t pos = 0;
     uint32_t i = 1;
@@ -560,10 +562,11 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
             cdata[sendindx] = MFDES_ADDITIONAL_FRAME;
         }
 
-        res = DESFIRESendRaw(activate_field, &cdata[sendindx], sendlen, buf, sizeof(buf), &buflen, &rcode);
+        res = DESFIRESendRaw(activate_field, &cdata[sendindx], sendlen, buf, DESFIRE_BUFFER_SIZE, &buflen, &rcode);
         if (res != PM3_SUCCESS) {
             uint16_t ssw = DESFIRE_GET_ISO_STATUS(rcode);
             PrintAndLogEx(DEBUG, "error DESFIRESendRaw %s", DesfireGetErrorString(res, &ssw));
+            free(buf);
             return res;
         }
 
@@ -594,13 +597,14 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
             if (resplen)
                 *resplen = pos;
         }
+        free(buf);
         return PM3_SUCCESS;
     }
 
     while (rcode == MFDES_ADDITIONAL_FRAME) {
         cdata[0] = MFDES_ADDITIONAL_FRAME; //0xAF
 
-        res = DESFIRESendRaw(false, cdata, 1, buf, sizeof(buf), &buflen, &rcode);
+        res = DESFIRESendRaw(false, cdata, 1, buf, DESFIRE_BUFFER_SIZE, &buflen, &rcode);
         if (res != PM3_SUCCESS) {
             uint16_t ssw = DESFIRE_GET_ISO_STATUS(rcode);
             PrintAndLogEx(DEBUG, "error DESFIRESendRaw %s", DesfireGetErrorString(res, &ssw));
@@ -627,6 +631,7 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
     if (resplen)
         *resplen = (splitbysize) ? i : pos;
 
+    free(buf);
     return PM3_SUCCESS;
 }
 
@@ -637,7 +642,9 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
         *respcode = 0xff;
 
     uint16_t sw = 0;
-    uint8_t buf[255 * 5]  = {0x00};
+    uint8_t *buf  = calloc(DESFIRE_BUFFER_SIZE, 1);
+    if (buf == NULL)
+        return PM3_EMALLOC;
     uint32_t buflen = 0;
     uint32_t pos = 0;
     uint32_t i = 1;
@@ -663,9 +670,10 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
         if (sentdatalen > 0)
             apdu.INS = MFDES_ADDITIONAL_FRAME;
 
-        res = DESFIRESendApdu(activate_field, apdu, buf, sizeof(buf), &buflen, &sw);
+        res = DESFIRESendApdu(activate_field, apdu, buf, DESFIRE_BUFFER_SIZE, &buflen, &sw);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(DEBUG, "error DESFIRESendApdu %s", DesfireGetErrorString(res, &sw));
+            free(buf);
             return res;
         }
 
@@ -696,6 +704,7 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
             if (resplen)
                 *resplen = pos;
         }
+        free(buf);
         return PM3_SUCCESS;
     }
 
@@ -707,9 +716,10 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
         apdu.P2 = 0;
         apdu.data = NULL;
 
-        res = DESFIRESendApdu(false, apdu, buf, sizeof(buf), &buflen, &sw);
+        res = DESFIRESendApdu(false, apdu, buf, DESFIRE_BUFFER_SIZE, &buflen, &sw);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(DEBUG, "error DESFIRESendApdu %s", DesfireGetErrorString(res, &sw));
+            free(buf);
             return res;
         }
 
@@ -733,17 +743,21 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
     if (resplen)
         *resplen = (splitbysize) ? i : pos;
 
+    free(buf);
     return PM3_SUCCESS;
 }
 
 static int DesfireExchangeISO(bool activate_field, DesfireContext_t *ctx, sAPDU_t apdu, uint16_t le, uint8_t *resp, size_t *resplen, uint16_t *sw) {
-    uint8_t data[1050] = {0};
+    uint8_t *data  = calloc(DESFIRE_BUFFER_SIZE, 1);
+    if (data == NULL)
+        return PM3_EMALLOC;
     uint32_t datalen = 0;
-    int res = DESFIRESendApduEx(activate_field, apdu, le, data, sizeof(data), &datalen, sw);
+    int res = DESFIRESendApduEx(activate_field, apdu, le, data, DESFIRE_BUFFER_SIZE, &datalen, sw);
 
     if (res == PM3_SUCCESS)
         DesfireSecureChannelDecode(ctx, data, datalen, 0, resp, resplen);
 
+    free(data);
     return res;
 }
 
