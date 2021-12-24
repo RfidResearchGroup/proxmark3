@@ -4615,7 +4615,12 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx, uint8_t fnum, int fil
 
     PrintAndLogEx(INFO, "------------------------------- " _CYAN_("File %02x data") " -------------------------------", fnum);
 
-    uint8_t resp[2048] = {0};
+    uint8_t *resp  = calloc(DESFIRE_BUFFER_SIZE, 1);
+    if (resp == NULL) {
+        PrintAndLogEx(ERR, "Desfire calloc " _RED_("error"));
+        DropField();
+        return PM3_EMALLOC;
+    }
     size_t resplen = 0;
 
     if (filetype == RFTData) {
@@ -4623,6 +4628,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx, uint8_t fnum, int fil
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire ReadFile command " _RED_("error") ". Result: %d", res);
             DropField();
+            free(resp);
             return PM3_ESOFT;
         }
 
@@ -4640,6 +4646,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx, uint8_t fnum, int fil
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire GetValue operation " _RED_("error") ". Result: %d", res);
             DropField();
+            free(resp);
             return PM3_ESOFT;
         }
         PrintAndLogEx(SUCCESS, "Read file 0x%02x value: %d (0x%08x)", fnum, value, value);
@@ -4652,6 +4659,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx, uint8_t fnum, int fil
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Desfire ReadRecords (len=1) command " _RED_("error") ". Result: %d", res);
                 DropField();
+                free(resp);
                 return PM3_ESOFT;
             }
             reclen = resplen;
@@ -4666,6 +4674,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx, uint8_t fnum, int fil
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Desfire ReadRecords command " _RED_("error") ". Result: %d", res);
                 DropField();
+                free(resp);
                 return PM3_ESOFT;
             }
         }
@@ -4690,6 +4699,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx, uint8_t fnum, int fil
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire ReadFile command " _RED_("error") ". Result: %d", res);
             DropField();
+            free(resp);
             return PM3_ESOFT;
         }
 
@@ -4717,6 +4727,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx, uint8_t fnum, int fil
         }
     }
 
+    free(resp);
     return PM3_SUCCESS;
 }
 

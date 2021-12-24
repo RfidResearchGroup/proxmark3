@@ -1861,20 +1861,31 @@ static int DesfireCommandEx(DesfireContext_t *dctx, uint8_t cmd, uint8_t *data, 
         *resplen = 0;
 
     uint8_t respcode = 0xff;
-    uint8_t xresp[2050] = {0};
+    uint8_t *xresp  = calloc(DESFIRE_BUFFER_SIZE, 1);
+    if (xresp == NULL)
+        return PM3_EMALLOC;
+
     size_t xresplen = 0;
     int res = DesfireExchangeEx(false, dctx, cmd, data, datalen, &respcode, xresp, &xresplen, true, splitbysize);
-    if (res != PM3_SUCCESS)
+    if (res != PM3_SUCCESS) {
+        free(xresp);
         return res;
-    if (respcode != MFDES_S_OPERATION_OK)
+    }
+    if (respcode != MFDES_S_OPERATION_OK) {
+        free(xresp);
         return PM3_EAPDU_FAIL;
-    if (checklength >= 0 && xresplen != checklength)
+    }
+    if (checklength >= 0 && xresplen != checklength) {
+        free(xresp);
         return PM3_EAPDU_FAIL;
+    }
 
     if (resplen)
         *resplen = xresplen;
     if (resp)
         memcpy(resp, xresp, (splitbysize == 0) ? xresplen : xresplen * splitbysize);
+
+    free(xresp);
     return PM3_SUCCESS;
 }
 
