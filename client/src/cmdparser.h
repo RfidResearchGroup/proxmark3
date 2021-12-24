@@ -47,6 +47,7 @@ bool IfPm3Legicrf(void);
 bool IfPm3Iclass(void);
 bool IfPm3NfcBarcode(void);
 bool IfPm3Lcd(void);
+bool IfPm3Zx8211(void);
 
 // Print help for each command in the command array
 void CmdsHelp(const command_t Commands[]);

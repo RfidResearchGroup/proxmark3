@@ -175,6 +175,12 @@ bool IfPm3Lcd(void) {
     return g_pm3_capabilities.compiled_with_lcd;
 }
 
+bool IfPm3Zx8211(void) {
+    if (!IfPm3Present())
+        return false;
+    return g_pm3_capabilities.compiled_with_zx8211;
+}
+
 
 void CmdsHelp(const command_t Commands[]) {
     if (Commands[0].Name == NULL) return;
