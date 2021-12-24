@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `hf mfdes` - works with dynamic apdu and encode/decode buffers (@merlokk)
  - Added luascript `hf_ntag_bruteforce.lua` - ntag password bruteforce with the option to do NFC Tools MD5 versions of passwords (@keldnorman)
  - Added option `--crc-ht` to `lf cmdread` to compute and add CRC-8/HITAG (@doegox)
  - Added option `-k` to `lf cmdread` to keep field on (@doegox)
