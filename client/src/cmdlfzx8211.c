@@ -25,8 +25,8 @@
 #include "protocols.h"     // for T55xx config register definitions
 #include "lfdemod.h"       // parityTest
 #include "cmdlft55xx.h"    // write verify
-#include "cmdlfem4x05.h"   //
 #include "cliparser.h"
+#include "zx8211.h"
 
 static int CmdHelp(const char *Cmd);
 

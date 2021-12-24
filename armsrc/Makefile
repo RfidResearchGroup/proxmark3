@@ -82,7 +82,7 @@ else
 endif
 
 ifneq (,$(findstring WITH_ZX8211,$(APP_CFLAGS)))
-    SRC_ZX = lfxz.c
+    SRC_ZX = lfzx.c
 else
     SRC_ZX =
 endif

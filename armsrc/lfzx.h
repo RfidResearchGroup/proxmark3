@@ -7,12 +7,12 @@
 //-----------------------------------------------------------------------------
 // Low frequency ZX8211 funtions
 //-----------------------------------------------------------------------------
-#ifndef __LFOPS_H
-#define __LFOPS_H
+#ifndef __LFZX_H
+#define __LFZX_H
 
 #include "common.h"
 #include "pm3_cmd.h" // struct
-
+#include "zx8211.h"
 
 int zx8211_read(zx8211_data_t *zxd, bool ledcontrol);
 int zx8211_write(zx8211_data_t *zxd, bool ledcontrol);
