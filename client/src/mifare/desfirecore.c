@@ -799,7 +799,9 @@ int DesfireExchangeEx(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, u
     if (!PrintChannelModeWarning(cmd, ctx->secureChannel, ctx->cmdSet, ctx->commMode))
         DesfirePrintContext(ctx);
 
-    uint8_t databuf[250 * 5] = {0};
+    uint8_t *databuf  = calloc(DESFIRE_BUFFER_SIZE, 1);
+    if (databuf == NULL)
+        return PM3_EMALLOC;
     size_t databuflen = 0;
 
     switch (ctx->cmdSet) {
@@ -828,10 +830,12 @@ int DesfireExchangeEx(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, u
             }
             break;
         case DCCISO:
+            free(databuf);
             return PM3_EAPDU_FAIL;
             break;
     }
 
+    free(databuf);
     return res;
 }
 
