@@ -98,6 +98,9 @@ void RunMod(void) {
                     } else if (card.sak == 0x20 && card.atqa[0] == 0x04 && card.atqa[1] == 0x03) {
                         DbpString("Mifare DESFire");
                         SimulateIso14443aTag(3, flags, card.uid, 0);
+                    } else if (card.sak == 0x20 && card.atqa[0] == 0x44 && card.atqa[1] == 0x03) {
+                        DbpString("Mifare DESFire Ev1/Plus/JCOP");
+                        SimulateIso14443aTag(3, flags, card.uid, 0);
                     } else {
                         Dbprintf("Unrecognized tag type -- defaulting to Mifare Classic emulation");
                         SimulateIso14443aTag(1, flags, card.uid, 0);
