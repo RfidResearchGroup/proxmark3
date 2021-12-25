@@ -660,7 +660,7 @@ static int NxpSysInfo(uint8_t *uid) {
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "iso15693 timeout");
         DropField();
         return PM3_ETIMEOUT;
@@ -1344,8 +1344,7 @@ static int CmdHF15Dump(const char *Cmd) {
     uint8_t data[256 * 4] = {0};
     memset(data, 0, sizeof(data));
 
-    PrintAndLogEx(INFO, "." NOLF);
-    for (int retry = 0; retry < 5; retry++) {
+    for (int retry = 0; (retry < 5 && blocknum < 0x100); retry++) {
 
         req[10] = blocknum;
         AddCrc15(req, 11);
@@ -1392,14 +1391,13 @@ static int CmdHF15Dump(const char *Cmd) {
             retry = 0;
             blocknum++;
 
-            PrintAndLogEx(NORMAL, "." NOLF);
-            fflush(stdout);
+            PrintAndLogEx(INPLACE, "blk %3d", blocknum );
         }
     }
 
     DropField();
 
-    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "\n");
     PrintAndLogEx(INFO, "block#   | data         |lck| ascii");
     PrintAndLogEx(INFO, "---------+--------------+---+----------");
     for (int i = 0; i < blocknum; i++) {

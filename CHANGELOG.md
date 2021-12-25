@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `hf 15 dump` - now correctly dumps 256 blocks w/o crashing the client (@iceman1001)
  - Changed `hf 14a sim -t 3` - anticollision for DESFire simulation now uses different RATS (@mosci)
  - Fixed `hf mfdes` - works with dynamic apdu and encode/decode buffers (@merlokk)
  - Added luascript `hf_ntag_bruteforce.lua` - ntag password bruteforce with the option to do NFC Tools MD5 versions of passwords (@keldnorman)
