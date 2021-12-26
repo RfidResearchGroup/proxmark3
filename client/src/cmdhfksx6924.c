@@ -42,7 +42,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-static void getAndPrintBalance() {
+static void getAndPrintBalance(void) {
     uint32_t balance;
     bool ret = KSX6924GetBalance(&balance);
     if (!ret) {
