@@ -237,6 +237,55 @@ static int CmdHFKSX6924Select(const char *Cmd) {
     return 0;
 }
 
+static int CmdHFKSX6924InitializeCard(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf ksx6924 initializecard",
+                  "Perform transaction initialization. (Mpda)\n",
+                  "Usage:\n\thf ksx6924 initializecard 000003e8 -> Mpda\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("kK",  "keep",    "keep field ON for next command"),
+        arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
+        arg_strx1(NULL,  NULL,     "<Mpda 4byte hex>", NULL),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool leaveSignalON = arg_get_lit(ctx, 1);
+    bool APDULogging = arg_get_lit(ctx, 2);
+    uint8_t data[APDU_RES_LEN] = {0};
+    int datalen = 0;
+    CLIGetHexWithReturn(ctx, 3, data, &datalen);
+    CLIParserFree(ctx);
+    SetAPDULogging(APDULogging);
+
+    if (datalen != 4) {
+        PrintAndLogEx(WARNING, "Mpda parameter must be 4 byte long (eg: 000003e8)");
+        goto end;
+    }
+
+    bool ret = KSX6924TrySelect();
+    if (!ret) {
+        goto end;
+    }
+
+    PrintAndLogEx(NORMAL, "Initialize Card : Mpda -> %02X %02X %02X %02X", data[0], data[1], data[2], data[3]);
+    uint8_t response[25];
+    if (!KSX6924InitializeCard(data[0], data[1], data[2], data[3], response)) {
+        PrintAndLogEx(FAILED, "Initialize Card Error");
+        goto end;
+    }
+
+    PrintAndLogEx(NORMAL, "Response : %s", sprint_hex(response, sizeof(response)));
+
+end:
+    if (!leaveSignalON) {
+        DropField();
+    }
+    return 0;
+}
+
 static int CmdHFKSX6924PRec(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf ksx6924 prec",

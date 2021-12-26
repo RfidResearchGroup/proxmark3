@@ -86,6 +86,9 @@ bool KSX6924TrySelect(void);
 // selected.
 bool KSX6924GetBalance(uint32_t *result);
 
+// Perform transaction initialization.
+bool KSX6924InitializeCard(uint8_t mpda1, uint8_t mpda2, uint8_t mpda3, uint8_t mpda4, uint8_t *result);
+
 // Proprietary get record command. Function unknown.
 // result must be 10 bytes long.
 bool KSX6924ProprietaryGetRecord(

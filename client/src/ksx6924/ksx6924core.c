@@ -446,6 +446,41 @@ fail:
 
 
 /**
+ * Perform transaction initialization.
+ */
+bool KSX6924InitializeCard(uint8_t mpda1, uint8_t mpda2, uint8_t mpda3, uint8_t mpda4, uint8_t *result) {
+    if (result == NULL) {
+        return false;
+    }
+
+    uint16_t sw;
+    size_t result_len;
+    uint8_t rawResult[1 /* ALGep */ + 1 /* VKep */ + 4 /* BALep */ + 1 /* IDcenter */ + 8 /* IDep */ + 4 /* NTep */ + 4 /* Sign1 */ + 2 /* sw */];
+    memset(rawResult, 0, sizeof(rawResult));
+    uint8_t data[] = {mpda1, mpda2, mpda3, mpda4};
+    int res = FIDOExchange((sAPDU_t) {0x90, 0x02, 0x00, 0x00, 0x04, data}, rawResult, sizeof(rawResult),
+    &result_len, &sw);
+    if (res) {
+        // error communicating
+        goto fail;
+    }
+
+    if (sw != 0x9000) {
+        // card returned error
+        goto fail;
+    }
+
+    //*result = ntohl(*(uint32_t*)(rawResult));
+    memcpy(result, rawResult, result_len + 2 /* sw */);
+    return true;
+
+fail:
+    *result = 0;
+    return false;
+}
+
+
+/**
  * Issues a proprietary "get record" command (CLA=90, INS=4C).
  *
  * The function of these records is not known, but they are present on KS X
