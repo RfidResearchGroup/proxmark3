@@ -505,6 +505,7 @@ SRCS =  mifare/aiddesfire.c \
 		cmdhfemrtd.c \
 		cmdhffelica.c \
 		cmdhffido.c \
+		cmdhfksx6924.c \
 		cmdhfcipurse.c \
 		cmdhficlass.c \
 		cmdhflegic.c \
@@ -590,6 +591,7 @@ SRCS =  mifare/aiddesfire.c \
 		fido/cose.c \
 		fido/cbortools.c \
 		fido/fidocore.c \
+		ksx6924/ksx6924core.c \
 		cipurse/cipursecore.c \
 		cipurse/cipursecrypto.c \
 		cipurse/cipursetest.c \
