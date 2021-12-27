@@ -1967,6 +1967,7 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
         }
     }
     // note: this prevents using hf 15 cmd with s option - which isn't implemented yet anyway
+    // also prevents hf 15 raw -k  keep_field on ...
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LED_D_OFF();
 }
