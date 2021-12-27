@@ -1,4 +1,3 @@
-// -*- mode: c; indent-tabs-mode: nil; tab-width: 3 -*-
 //-----------------------------------------------------------------------------
 // Copyright (C) 2019 micolous+git@gmail.com
 //

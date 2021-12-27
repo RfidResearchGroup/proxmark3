@@ -1,4 +1,3 @@
-// -*- mode: c; indent-tabs-mode: nil; tab-width: 3 -*-
 //-----------------------------------------------------------------------------
 // Copyright (C) 2019 micolous+git@gmail.com
 //
@@ -42,66 +41,65 @@
 
 static int CmdHelp(const char *Cmd);
 
-static void getAndPrintBalance(void) {
-    uint32_t balance;
-    bool ret = KSX6924GetBalance(&balance);
-    if (!ret) {
+static int get_and_print_balance(void) {
+    uint32_t balance = 0;
+    if (KSX6924GetBalance(&balance) == false) {
         PrintAndLogEx(ERR, "Error getting balance");
-        return;
+        return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Current balance: %ld won/cents", balance);
+    PrintAndLogEx(SUCCESS, "Current balance: " _YELLOW_("%ld") " won/cents", balance);
+    return PM3_SUCCESS;
 }
 
 static int CmdHFKSX6924Balance(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf ksx6924 balance",
-                  "Gets the current purse balance.\n",
-                  "Usage:\n\thf ksx6924 balance\n");
+                  "Gets the current purse balance",
+                  "hf ksx6924 balance\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("kK",  "keep",    "keep field ON for next command"),
-        arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
+        arg_lit0("k", "keep", "keep field ON for next command"),
+        arg_lit0("a", "apdu", "show APDU reqests and responses"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool leaveSignalON = arg_get_lit(ctx, 1);
+    bool keep = arg_get_lit(ctx, 1);
     bool APDULogging = arg_get_lit(ctx, 2);
 
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
 
-    bool ret = KSX6924TrySelect();
-    if (!ret) {
-        goto end;
+    if ( KSX6924TrySelect()) {
+        get_and_print_balance();
     }
 
-    getAndPrintBalance();
-
-end:
-    if (!leaveSignalON) {
+    if (keep == false) {
         DropField();
     }
-    return 0;
+
+    return PM3_SUCCESS;
 }
 
 static int CmdHFKSX6924Info(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf ksx6924 info",
-                  "Get info about a KS X 6924 transit card.\nThis application is used by T-Money (South Korea) and Snapper+ (Wellington, New Zealand).\n",
-                  "Usage:\n\thf ksx6924 info\n");
+                  "Get info about a KS X 6924 transit card.\n"
+                  "This application is used by T-Money (South Korea) and\n"
+                  "Snapper+ (Wellington, New Zealand).",
+                  "hf ksx6924 info\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("kK",  "keep",    "keep field ON for next command"),
-        arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
+        arg_lit0("k", "keep", "keep field ON for next command"),
+        arg_lit0("a", "apdu", "show APDU reqests and responses"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool leaveSignalON = arg_get_lit(ctx, 1);
+    bool keep = arg_get_lit(ctx, 1);
     bool APDULogging = arg_get_lit(ctx, 2);
 
     CLIParserFree(ctx);
@@ -114,7 +112,7 @@ static int CmdHFKSX6924Info(const char *Cmd) {
     int res = KSX6924Select(true, true, buf, sizeof(buf), &len, &sw);
 
     if (res) {
-        if (!leaveSignalON) {
+        if (keep == false) {
             DropField();
         }
         return res;
@@ -200,24 +198,24 @@ static int CmdHFKSX6924Info(const char *Cmd) {
 
     KSX6924PrintPurseInfo(&purseInfo);
 
-    getAndPrintBalance();
+    get_and_print_balance();
 
 end:
-    if (!leaveSignalON) {
+    if (keep == false) {
         DropField();
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHFKSX6924Select(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf ksx6924 select",
-                  "Selects KS X 6924 application, and leaves field up.\n",
-                  "Usage:\n\thf ksx6924 select\n");
+                  "Selects KS X 6924 application, and leaves field up",
+                  "hf ksx6924 select\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
+        arg_lit0("a", "apdu", "show APDU reqests and responses"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -226,133 +224,139 @@ static int CmdHFKSX6924Select(const char *Cmd) {
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
 
-    bool ret = KSX6924TrySelect();
-    if (ret) {
-        PrintAndLogEx(SUCCESS, "OK");
+    if (KSX6924TrySelect()) {
+        PrintAndLogEx(SUCCESS, "Card is selected and field is up");
     } else {
         // Wrong app, drop field.
         DropField();
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
-static int CmdHFKSX6924InitializeCard(const char *Cmd) {
+static int CmdHFKSX6924Initialize(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf ksx6924 initializecard",
-                  "Perform transaction initialization. (Mpda)\n",
-                  "Usage:\n\thf ksx6924 initializecard 000003e8 -> Mpda\n");
+    CLIParserInit(&ctx, "hf ksx6924 initialize",
+                  "Perform transaction initialization (mpda)",
+                  "hf ksx6924 initialize 000003e8 -> mpda\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("kK",  "keep",    "keep field ON for next command"),
-        arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
-        arg_strx1(NULL,  NULL,     "<Mpda 4byte hex>", NULL),
+        arg_lit0("k",  "keep", "keep field ON for next command"),
+        arg_lit0("a",  "apdu", "show APDU reqests and responses"),
+        arg_strx1(NULL, NULL,  "<mpda 4byte hex>", NULL),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool leaveSignalON = arg_get_lit(ctx, 1);
+    bool keep = arg_get_lit(ctx, 1);
     bool APDULogging = arg_get_lit(ctx, 2);
+
     uint8_t data[APDU_RES_LEN] = {0};
     int datalen = 0;
     CLIGetHexWithReturn(ctx, 3, data, &datalen);
+
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
 
     if (datalen != 4) {
         PrintAndLogEx(WARNING, "Mpda parameter must be 4 byte long (eg: 000003e8)");
+        return PM3_EINVARG;
+    }
+
+    // try selecting card
+    if (KSX6924TrySelect() == false) {
         goto end;
     }
 
-    bool ret = KSX6924TrySelect();
-    if (!ret) {
-        goto end;
-    }
+    PrintAndLogEx(SUCCESS, "Initialize Card : Mpda -> %02X %02X %02X %02X", data[0], data[1], data[2], data[3]);
 
-    PrintAndLogEx(NORMAL, "Initialize Card : Mpda -> %02X %02X %02X %02X", data[0], data[1], data[2], data[3]);
-    uint8_t response[25];
-    if (!KSX6924InitializeCard(data[0], data[1], data[2], data[3], response)) {
+    uint8_t response[25] = {0};
+    if (KSX6924InitializeCard(data[0], data[1], data[2], data[3], response) ) {
+        PrintAndLogEx(SUCCESS, "Response : %s", sprint_hex(response, sizeof(response)));
+    } else {
         PrintAndLogEx(FAILED, "Initialize Card Error");
-        goto end;
     }
-
-    PrintAndLogEx(NORMAL, "Response : %s", sprint_hex(response, sizeof(response)));
 
 end:
-    if (!leaveSignalON) {
+    if (keep == false) {
         DropField();
     }
-    return 0;
+
+    return PM3_SUCCESS;
 }
 
 static int CmdHFKSX6924PRec(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf ksx6924 prec",
-                  "Executes proprietary read record command.\nData format is unknown. Other records are available with 'emv getrec'.\n",
-                  "Usage:\n\thf ksx6924 prec 0b -> read proprietary record 0x0b\n");
+                  "Executes proprietary read record command.\n"
+                  "Data format is unknown. Other records are available with 'emv getrec'.\n",
+                  "hf ksx6924 prec 0b -> read proprietary record 0x0b");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("kK",  "keep",    "keep field ON for next command"),
-        arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
-        arg_strx1(NULL,  NULL,     "<record 1byte HEX>", NULL),
+        arg_lit0("k",   "keep", "keep field ON for next command"),
+        arg_lit0("a",   "apdu", "show APDU reqests and responses"),
+        arg_strx1(NULL,  NULL,  "<record 1byte HEX>", NULL),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool leaveSignalON = arg_get_lit(ctx, 1);
+    bool keep = arg_get_lit(ctx, 1);
     bool APDULogging = arg_get_lit(ctx, 2);
+
     uint8_t data[APDU_RES_LEN] = {0};
     int datalen = 0;
     CLIGetHexWithReturn(ctx, 3, data, &datalen);
+
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
 
     if (datalen != 1) {
         PrintAndLogEx(WARNING, "Record parameter must be 1 byte long (eg: 0f)");
+        return PM3_EINVARG;
+    }
+
+    if (KSX6924TrySelect() == false) {
         goto end;
     }
 
-    bool ret = KSX6924TrySelect();
-    if (!ret) {
-        goto end;
-    }
+    PrintAndLogEx(SUCCESS, "Getting record %02x ...", data[0]);
 
-    PrintAndLogEx(NORMAL, "Getting record %02x...", data[0]);
-    uint8_t recordData[0x10];
-    if (!KSX6924ProprietaryGetRecord(data[0], recordData, sizeof(recordData))) {
+    uint8_t recordData[0x10] = {0};
+    if (KSX6924ProprietaryGetRecord(data[0], recordData, sizeof(recordData))) {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_hex(recordData, sizeof(recordData)));
+    } else {
         PrintAndLogEx(FAILED, "Error getting record");
-        goto end;
     }
-
-    PrintAndLogEx(NORMAL, "  %s", sprint_hex(recordData, sizeof(recordData)));
 
 end:
-    if (!leaveSignalON) {
+    if (keep == false) {
         DropField();
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,             AlwaysAvailable, "This help."},
-    {"info",    CmdHFKSX6924Info,    AlwaysAvailable, "Get info about a KS X 6924 (T-Money, Snapper+) transit card"},
-    {"select",  CmdHFKSX6924Select,  AlwaysAvailable, "Select application, and leave field up"},
-    {"balance", CmdHFKSX6924Balance, AlwaysAvailable, "Get current purse balance"},
-    {"initializecard", CmdHFKSX6924InitializeCard, AlwaysAvailable, "Perform transaction initialization (Mpda)"},
-    {"prec",    CmdHFKSX6924PRec,    AlwaysAvailable, "Send proprietary get record command (CLA=90, INS=4C)"},
+    {"help",       CmdHelp,                AlwaysAvailable, "This help"},
+    {"balance",    CmdHFKSX6924Balance,    IfPm3Iso14443a,  "Get current purse balance"},
+    {"info",       CmdHFKSX6924Info,       IfPm3Iso14443a,  "Get info about a KS X 6924 (T-Money, Snapper+) transit card"},
+    {"initialize", CmdHFKSX6924Initialize, IfPm3Iso14443a,  "Perform transaction initialization (Mpda)"},
+    {"prec",       CmdHFKSX6924PRec,       IfPm3Iso14443a,  "Send proprietary get record command (CLA=90, INS=4C)"},
+    {"select",     CmdHFKSX6924Select,     IfPm3Iso14443a,  "Select application, and leave field up"},
     {NULL, NULL, NULL, NULL}
 };
 
-int CmdHFKSX6924(const char *Cmd) {
-    (void)WaitForResponseTimeout(CMD_ACK, NULL, 100);
-    CmdsParse(CommandTable, Cmd);
-    return 0;
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return PM3_SUCCESS;
 }
 
-static int CmdHelp(const char *Cmd) {
-    CmdsHelp(CommandTable);
-    return 0;
+int CmdHFKSX6924(const char *Cmd) {
+    clearCommandBuffer();
+    return CmdsParse(CommandTable, Cmd);
 }
+
+
 
