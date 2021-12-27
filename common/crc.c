@@ -96,16 +96,18 @@ static void print_crc(crc_t *crc) {
 uint32_t CRC8Maxim(uint8_t *buff, size_t size) {
     crc_t crc;
     crc_init_ref(&crc, 8, 0x31, 0, 0, true, true);
-    for (size_t i = 0; i < size; ++i)
+    for (size_t i = 0; i < size; ++i) {
         crc_update2(&crc, buff[i], 8);
+    }
     return crc_finish(&crc);
 }
 // width=8 poly=0x1d, init=0xc7 (0xe3 - WRONG! but it mentioned in MAD datasheet) refin=false  refout=false  xorout=0x00 name="CRC-8/MIFARE-MAD"
 uint32_t CRC8Mad(uint8_t *buff, size_t size) {
     crc_t crc;
     crc_init_ref(&crc, 8, 0x1d, 0xc7, 0, false, false);
-    for (size_t i = 0; i < size; ++i)
+    for (size_t i = 0; i < size; ++i) {
         crc_update2(&crc, buff[i], 8);
+    }
     return crc_finish(&crc);
 }
 // width=4  poly=0xC, reversed poly=0x7  init=0x5   refin=true  refout=true  xorout=0x0000  check=  name="CRC-4/LEGIC"
@@ -122,15 +124,26 @@ uint32_t CRC4Legic(uint8_t *buff, size_t size) {
 uint32_t CRC8Legic(uint8_t *buff, size_t size) {
     crc_t crc;
     crc_init_ref(&crc, 8, 0x63, 0x55, 0, true, true);
-    for (size_t i = 0; i < size; ++i)
+    for (size_t i = 0; i < size; ++i) {
         crc_update2(&crc, buff[i], 8);
+    }
     return reflect8(crc_finish(&crc));
 }
 // width=8  poly=0x7, init=0x2C  refin=false  refout=false  xorout=0x0000  check=0 name="CRC-8/CARDX"
 uint32_t CRC8Cardx(uint8_t *buff, size_t size) {
     crc_t crc;
     crc_init_ref(&crc, 8, 0x7, 0x2C, 0, false, false);
-    for (size_t i = 0; i < size; ++i)
+    for (size_t i = 0; i < size; ++i) {
         crc_update2(&crc, buff[i], 8);
+    }
+    return crc_finish(&crc);
+}
+
+uint32_t CRC8Hitag1(uint8_t *buff, size_t size) {
+    crc_t crc;
+    crc_init_ref(&crc, 8, 0x1d, 0xff, 0, false, false);
+    for (size_t i = 0; i < size; i++) {
+        crc_update2(&crc, buff[i], 8);
+    }
     return crc_finish(&crc);
 }

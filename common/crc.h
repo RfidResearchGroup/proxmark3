@@ -75,4 +75,8 @@ uint32_t CRC8Legic(uint8_t *buff, size_t size);
 
 // Calculate CRC-8/Cardx checksum
 uint32_t CRC8Cardx(uint8_t *buff, size_t size);
+
+// Calculate CRC-8/Hitag1, ZX8211 checksum
+uint32_t CRC8Hitag1(uint8_t *buff, size_t size);
+
 #endif /* __CRC_H */
