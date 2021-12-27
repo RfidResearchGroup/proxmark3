@@ -213,6 +213,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/fido/fidocore.c
         ${PM3_ROOT}/client/src/iso7816/apduinfo.c
         ${PM3_ROOT}/client/src/iso7816/iso7816core.c
+        ${PM3_ROOT}/client/src/ksx6924/ksx6924core.c
         ${PM3_ROOT}/client/src/cipurse/cipursecrypto.c
         ${PM3_ROOT}/client/src/cipurse/cipursecore.c
         ${PM3_ROOT}/client/src/cipurse/cipursetest.c
@@ -256,6 +257,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfcipurse.c
         ${PM3_ROOT}/client/src/cmdhficlass.c
         ${PM3_ROOT}/client/src/cmdhfjooki.c
+        ${PM3_ROOT}/client/src/cmdhfksx6924.c
         ${PM3_ROOT}/client/src/cmdhflegic.c
         ${PM3_ROOT}/client/src/cmdhflist.c
         ${PM3_ROOT}/client/src/cmdhflto.c
