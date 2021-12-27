@@ -53,7 +53,8 @@ void T55xxWakeUp(uint32_t pwd, uint8_t flags, bool ledcontrol);
 void T55xx_ChkPwds(uint8_t flags, bool ledcontrol);
 void T55xxDangerousRawTest(uint8_t *data, bool ledcontrol);
 
-void TurnReadLFOn(uint32_t delay);
+void turn_read_lf_on(uint32_t delay);
+void turn_read_lf_off(uint32_t delay);
 
 void EM4xLogin(uint32_t pwd, bool ledcontrol);
 void EM4xBruteforce(uint32_t start_pwd, uint32_t n, bool ledcontrol);
