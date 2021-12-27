@@ -112,10 +112,10 @@ MAKE_ENUM_CONST(Alg, uint8_t,
 MAKE_ENUM_CONST(TMoneyIDCenter, uint8_t,
    { 0x00, "reserved" },
    { 0x01, "Korea Financial Telecommunications and Clearings Institute" },
-   { 0x02, "A-Cash ?? 에이캐시" }, // FIXME: translation
+   { 0x02, "A-Cash" },
    { 0x03, "Mybi" },
 
-   { 0x05, "V-Cash ?? 브이캐시" }, // FIXME: translation
+   { 0x05, "V-Cash" },
    { 0x06, "Mondex Korea" },
    { 0x07, "Korea Expressway Corporation" },
    { 0x08, "Korea Smart Card Corporation" },
@@ -133,7 +133,7 @@ MAKE_ENUM_CONST(TMoneyUserCode, uint8_t,
 
    { 0x04, "Youth" },
 
-   { 0x06, "Route ?? 경로" }, // FIXME: "route" doesn't make sense, documentation error?
+   { 0x06, "elderly" },
 
    { 0x0f, "Test" },
    { 0xff, "Inactive" },
@@ -146,8 +146,8 @@ MAKE_ENUM_CONST(TMoneyDisRate, uint8_t,
    { 0x10, "Disabled, basic" },
    { 0x11, "Disabled, companion" },
 
-   { 0x20, "Well, basic ?? 유공, 기본" }, // FIXME: "well" doesn't make sense?
-   { 0x21, "Well, companion ?? 유공, 동반 무임" }, // FIXME: "well" doesn't make sense?
+   { 0x20, "Merit, basic" },
+   { 0x21, "Merit, companion" },
 );
 
 // KSX6924LookupTMoneyTCode
@@ -169,7 +169,7 @@ MAKE_ENUM_CONST(TMoneyCCode, uint8_t,
    { 0x06, "Shinhan Bank" },
    { 0x07, "Citibank Korea" },
    { 0x08, "Korea Exchange Bank" },
-   { 0x09, "우리" }, // FIXME: translation
+   { 0x09, "Woori" },
    { 0x0a, "Hana SK Card" },
    { 0x0b, "Hyundai Capital Services" },
 );
