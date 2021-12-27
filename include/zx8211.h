@@ -11,10 +11,11 @@
 #ifndef ZX8211_H__
 #define ZX8211_H__
 
+#include <stdbool.h>
+
 #define ZX8211_NUM_BLOCKS 32
 
 // Common word/block addresses
-
 
 typedef struct {
     bool parity;

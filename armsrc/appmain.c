@@ -39,6 +39,7 @@
 #include "hfsnoop.h"
 #include "lfops.h"
 #include "lfsampling.h"
+#include "lfzx.h"
 #include "mifarecmd.h"
 #include "mifaredesfire.h"
 #include "mifaresim.h"
@@ -48,7 +49,6 @@
 #include "ticks.h"
 #include "commonutil.h"
 #include "crc16.h"
-#include "lfzx.h"
 
 
 #ifdef WITH_LCD

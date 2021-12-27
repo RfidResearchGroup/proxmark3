@@ -7,25 +7,91 @@
 //-----------------------------------------------------------------------------
 // Low frequency ZX8211 funtions
 //-----------------------------------------------------------------------------
-#ifndef __LFOPS_H
-#define __LFOPS_H
-
 #include "lfzx.h"
-#include "fpgaloader.h"
-#include "ticks.h"
-#include "dbprint.h"
-#include "lfadc.h"
-#include "pm3_cmd.h" // struct
 #include "zx8211.h"
+
+#include "BigBuf.h"
+#include "crc.h"        // CRC-8 / Hitag1 / ZX8211
+#include "fpgaloader.h"
+#include "dbprint.h"
+#include "lfops.h"      // turn_read_lf_on / off
+#include "lfadc.h"
+#include "lfsampling.h" // getSamplingConfig
+#include "pm3_cmd.h"    // struct
+#include "ticks.h"
+
+/*
+ZX8211
+
+RWE to tag
+----------
+ASK w 100% modulation index
+When power field is:
+   off, its considered LOW field
+   on,  its considered HIGH field
+
+
+Binary Pulse Length Coding (BPLC)
+
+ZERO = 8 off,  8 on  (14-22)
+ONE  = 8 off, 28 on  (26-32)
+EOF  = 8 off, 30 on  (38 or more)
+
+Protection
+----------
+32bit read password
+32bit write password
+
+Config bits
+-------------
+
+Timings
+-------
+
+Tx = 8us = 1fc
+*/
+
+#define ZX_START_GAP        170
+#define ZX_WAIT_GAP         90
+#define ZX_GAP              8    // 4 - 10
+#define ZX_T0               18
+#define ZX_T0_MIN           14   
+#define ZX_T0_MAX           22
+#define ZX_T1               28
+#define ZX_T1_MIN           26
+#define ZX_T1_MAX           32
+#define ZX_TEOF             38
+#define ZX_RESET_GAP        35000 // 35ms
+#define ZX_RESPONSE_GAP     208
+
+#define ZX_PROG             716
+#define ZX_PROG_CT          4470
+
+// TTF switch to RTF
+#define ZX_SWITCH_RTF 350
+
+// ZX commands
+#define LF_ZX_GET_UID  0b00110
+#define LF_ZX_READ
+#define LF_ZX_WRITE
 
 
 static void zx8211_setup_read(void) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+
+    // Make sure the tag is reset
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
+    // use lf config settings
+    sample_config *sc = getSamplingConfig();
+    LFSetupFPGAForADC(sc->divisor, true);
+
+
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
 
     // 50ms for the resonant antenna to settle.
-    SpinDelay(50);
+    WaitMS(50);
 
     // Now set up the SSC to get the ADC samples that are now streaming at us.
     FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER);
@@ -35,14 +101,6 @@ static void zx8211_setup_read(void) {
     // Connect the A/D to the peak-detected low-frequency path.
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 
-    // Steal this pin from the SSP (SPI communication channel with fpga) and
-    // use it to control the modulation
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-
-    // Disable modulation at default, which means enable the field
-    LOW(GPIO_SSC_DOUT);
-
     // Start the timer
     StartTicks();
 
@@ -50,9 +108,45 @@ static void zx8211_setup_read(void) {
     WDT_HIT();
 }
 
+static void zx_send(uint8_t *cmd, uint8_t clen) {
+
+    if (clen == 0)
+        return;
+
+    turn_read_lf_on(ZX_START_GAP);
+
+    // now start writing with bitbanging the antenna.
+    while (clen-- > 0) {
+
+        turn_read_lf_off(ZX_GAP * 8);
+
+        if (((*cmd++) & 1) == 1) {
+            turn_read_lf_on(ZX_T1 * 8);
+        } else {
+            turn_read_lf_on(ZX_T0 * 8);
+        }
+    }
+
+    // send eof
+    turn_read_lf_off(ZX_GAP * 8);
+    turn_read_lf_on(ZX_TEOF * 8);
+}
+
 
 int zx8211_read(zx8211_data_t *zxd, bool ledcontrol) {
     zx8211_setup_read();
+
+    // clear buffer now so it does not interfere with timing later
+    BigBuf_Clear_ext(false);
+
+    if (ledcontrol) LED_A_ON();
+
+    // send GET_UID
+    zx_send(NULL, 0);
+
+    //uint32_t cs = CRC8Hitag1(uint8_t *buff, size_t size);
+
+    if (ledcontrol) LEDsoff();
 
     StopTicks();
     lf_finalize(ledcontrol);
@@ -68,5 +162,3 @@ int zx8211_write(zx8211_data_t *zxd, bool ledcontrol) {
     //reply_ng(CMD_LF_ZX_WRITE, status, tag.data, sizeof(tag.data));
     return PM3_SUCCESS;
 }
-
-#endif

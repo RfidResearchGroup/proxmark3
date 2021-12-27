@@ -30,14 +30,14 @@
 
 static int CmdHelp(const char *Cmd);
 
-//see ASKDemod for what args are accepted
+// see ASKDemod for what args are accepted
 int demodzx(bool verbose) {
     (void) verbose; // unused so far
     save_restoreGB(GRAPH_SAVE);
 
-    //CmdAskEdgeDetect("");
+    // CmdAskEdgeDetect("");
 
-    //ASK / Manchester
+    // ASK / Manchester
     bool st = true;
     if (ASKDemod_ext(64, 0, 0, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - ZX: ASK/Manchester Demod failed");
@@ -62,7 +62,7 @@ int demodzx(bool verbose) {
     setDemodBuff(g_DemodBuffer, 96, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
-    //got a good demod
+    // got a good demod
     uint32_t raw1 = bytebits_to_byte(g_DemodBuffer, 32);
 
     // chksum
@@ -139,15 +139,14 @@ int CmdLFZx8211(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-// find Visa2000 preamble in already demoded data
 int detectzx(uint8_t *dest, size_t *size) {
-    if (*size < 96) return -1; //make sure buffer has data
+    if (*size < 96) return -1; // make sure buffer has data
     size_t startIdx = 0;
     uint8_t preamble[] = {0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0};
     if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
-        return -2; //preamble not found
-    if (*size != 96) return -3; //wrong demoded size
-    //return start position
+        return -2; // preamble not found
+    if (*size != 96) return -3; // wrong demoded size
+    // return start position
     return (int)startIdx;
 }
 
