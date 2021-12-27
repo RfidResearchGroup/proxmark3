@@ -24,22 +24,22 @@ local DEBUG = true
 -- SPEEDTEST
 -------------------------------------------------------------------------------------------------------------
 -- BRUTEFORCE ALL HEX COMBINATIONS:
--- 
+--
 -- With the -t 10 ( lowest possible delay ) and FFFFFFFF attempts or in decimal 4.294.967.295 combinations
--- 
+--
 -- My test showed that this script can do 255 password attempts in approxemately 170 seconds
--- 
--- That is : 255 / 170 = 1,5 attempt/second                                                                                                                                                                                      
---                                                                                                                                                                                                                               
--- So ..  4.294.967.295 combinations / 1,5 per second = 2.863.311.530 seconds and it is roughly 90 years                                                                                                                         
---                                                                                                                                                                                                                               
--------------------------------------------------------------------------------------------------------------                                                                                                                    
--- PASSWORD LISTS:                                                                                                                                                                                                               
+--
+-- That is : 255 / 170 = 1,5 attempt/second
+--
+-- So ..  4.294.967.295 combinations / 1,5 per second = 2.863.311.530 seconds and it is roughly 90 years
+--
 -------------------------------------------------------------------------------------------------------------
--- Crunch can generate all (14.776.336) combinations of 4 chars with a-z + A-Z + 0-9 like this: 
+-- PASSWORD LISTS:
+-------------------------------------------------------------------------------------------------------------
+-- Crunch can generate all (14.776.336) combinations of 4 chars with a-z + A-Z + 0-9 like this:
 --
 -- crunch 4 4 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" -o keys/4_chars_and_digits.list
--- 
+--
 -- for LINE in $(cat keys/4_chars_and_digits.list) ; do echo -n ${LINE} |xxd -p -u;done > keys/4_chars_and_digits_hex.list
 --
 -------------------------------------------------------------------------------------------------------------
@@ -79,11 +79,11 @@ desc      = [[Description : Bruteforces 7 byte UID NTAG protected with a 32 bit 
 example = [[
 Example of how to run the script with bruteforcing of continuously HEX numbers with 1 secound delay between tests:
 
-    script run ntag_bruteforce -s 00000000 -e FFFFFFFF -t 1000  -o /var/log/ntag_bruteforce.log 
+    script run ntag_bruteforce -s 00000000 -e FFFFFFFF -t 1000  -o /var/log/ntag_bruteforce.log
 
 Example of how to run the script and bruteforc the card using passwords from the input file with 1s delay between tests
 
-    script run ntag_bruteforce -i /home/my_4_char_passwords_list.txt -o /var/log/ntag_bruteforce.log 
+    script run ntag_bruteforce -i /home/my_4_char_passwords_list.txt -o /var/log/ntag_bruteforce.log
 ]]
 
 -------------------------------------------------------------------------------------------------------------
@@ -91,7 +91,7 @@ usage = [[
 script run ntag_bruteforce [-s <start_id>] [-e <end_id>] [-t <timeout>] [ -o <output_file> ] [ -p ] [ -h for help ]
 script run ntag_bruteforce [-i <input_file>] [-t <timeout>] [ -o <output_file> ] [ -n | -x ] [ -p ] [ -h for help ]
 
-DESCRIPTION 
+DESCRIPTION
 This script will test either an 8 digit hexadecimal code or 4 char stings (will be converted to an 8 digit hex string )
 against NFC cards of the type NTAG21x protected by a 32 bit password.
 Read more about NTAGs here: https://www.nxp.com/docs/en/data-sheet/NTAG213_215_216.pdf
@@ -109,9 +109,9 @@ arguments = [[
     -s       0-0xFFFFFFFF         Start HEX value
     -e       0-0xFFFFFFFF         End   HEX value
 
-    # Or use a list of passwords from a file: 
+    # Or use a list of passwords from a file:
     -x       Passwords in HEX     Password file (-i) contains HEX values (4 x 2hex -> 32 bit/line like: 00112233)
-    -n       NTAG Tools format    Bruteforce with first 8 hex values of a md5 hash of the password 
+    -n       NTAG Tools format    Bruteforce with first 8 hex values of a md5 hash of the password
                                   The password will be prefixed with hex value 20 (space) if the string/password is < 4 chars
 ]]
 -------------------------------------------------------------------------------------------------------------
@@ -132,7 +132,7 @@ end
 local function read_lines_from(file)
  print(ansicolors.yellow..'\nPlease wait while loading password file..'..ansicolors.reset)
  readlines = {}
- for line in io.lines(file) do 
+ for line in io.lines(file) do
   readlines[#readlines + 1] = line
  end
  print(ansicolors.yellow..'\nLoading password file finished'..ansicolors.reset)
@@ -142,7 +142,7 @@ end
 -- write to file
 local function writeOutputBytes(bytes, outfile)
  local fileout,err = io.open(outfile,"wb")
- if err then 
+ if err then
   print("### ERROR - Faild to open output-file "..outfile)
   return false
  end
@@ -265,34 +265,34 @@ local function main(args)
    return help()
   end
   -- start hex value
-  if option == 's' then 
+  if option == 's' then
    start_id = argument
   end
   -- end hex value
-  if option == 'e' then 
+  if option == 'e' then
    end_id = argument
   end
   -- timeout
-  if option == 't' then 
+  if option == 't' then
    timeout = argument
   end
   -- input file
-  if option == 'i' then 
+  if option == 'i' then
    infile = argument
-   if (file_check(infile) == false) then 
-    return oops('Input file: '..infile..' not found') 
+   if (file_check(infile) == false) then
+    return oops('Input file: '..infile..' not found')
    else
     input_file_valid = true
    end
    bruteforce = false
   end
   -- skip ping
-  if option == 'p' then 
+  if option == 'p' then
    use_ping = false
   end
   -- passwordlist is hex values
-  if option == 'x' then 
-   password_is_ascii = false 
+  if option == 'x' then
+   password_is_ascii = false
    pass_text = "Passwords in file is treated as: HEX"
    bruteforce = false
   end
@@ -301,8 +301,8 @@ local function main(args)
    outfile = argument
    if (file_check(argument)) then
     local answer = utils.confirm('\nThe output-file '..argument..' already exists!\nthis will delete the previous content!\ncontinue?')
-    if (answer == false) then 
-     return oops('Quiting') 
+    if (answer == false) then
+     return oops('Quiting')
     end
    end
   end
@@ -312,21 +312,21 @@ local function main(args)
    bruteforce = false
   end
   -- help
-  if option == 'h' then 
+  if option == 'h' then
    return help()
   end
  end
  -- min timeout is set to 1 sec if it is empty
  timeout = tonumber(timeout)
- if timeout < 10 then 
-  timeout = 10 
- end 
+ if timeout < 10 then
+  timeout = 10
+ end
 -------------------------------------------------------------------------------------------------------------
 -- BRUTEFORCE
 -------------------------------------------------------------------------------------------------------------
  -- select bruteforce method
  if bruteforce then
-  if not check_if_number_is_hex(start_id) then 
+  if not check_if_number_is_hex(start_id) then
    print(ansicolors.red..'\n### ERROR - start_id value '..start_id..' is out of the range of a 32-bit integer (0 to 0xFFFFFFFF) - Did you forget to add 0x ?'..ansicolors.reset)
    return
   end
@@ -346,7 +346,7 @@ local function main(args)
    end
    local cmd = string.format( command, hexvalue )
    core.console(cmd)
-   print('[=] Tested password '..ansicolors.yellow..ansicolors.bright..string.format("%08X",hexvalue)..ansicolors.reset) 
+   print('[=] Tested password '..ansicolors.yellow..ansicolors.bright..string.format("%08X",hexvalue)..ansicolors.reset)
    print('[=] Ran command: "'..cmd..'"')
    --core.console('msleep -t'..timeout);
    if use_ping then
@@ -359,8 +359,8 @@ local function main(args)
   -- END BRUTEFORCE WITH CONTINUOUSLY HEX NUMBERS    --
   -----------------------------------------------------
  else
-  if not input_file_valid then 
-   return oops('Can not bruteforce without a password list file ( -i password_list_file.txt ) ') 
+  if not input_file_valid then
+   return oops('Can not bruteforce without a password list file ( -i password_list_file.txt ) ')
   end
   -----------------------------------------------------
   -- START BRUTEFORCE WITH PASSWORDS FROM A FILE    --
@@ -385,7 +385,7 @@ local function main(args)
    else
     if password_is_ascii then
      ------------
-     -- ASCII 
+     -- ASCII
      ------------
      if string.len(password) > 4 then
       print('[!] Skipping password to long: '..password)

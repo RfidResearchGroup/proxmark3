@@ -72,7 +72,7 @@ static int CmdHFKSX6924Balance(const char *Cmd) {
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
 
-    if ( KSX6924TrySelect()) {
+    if (KSX6924TrySelect()) {
         get_and_print_balance();
     }
 
@@ -272,7 +272,7 @@ static int CmdHFKSX6924Initialize(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Initialize Card : Mpda -> %02X %02X %02X %02X", data[0], data[1], data[2], data[3]);
 
     uint8_t response[25] = {0};
-    if (KSX6924InitializeCard(data[0], data[1], data[2], data[3], response) ) {
+    if (KSX6924InitializeCard(data[0], data[1], data[2], data[3], response)) {
         PrintAndLogEx(SUCCESS, "Response : %s", sprint_hex(response, sizeof(response)));
     } else {
         PrintAndLogEx(FAILED, "Initialize Card Error");

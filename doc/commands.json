@@ -2317,7 +2317,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- high frequency ----------------------- 14a { iso14443a rfids... } 14b { iso14443b rfids... } 15 { iso15693 rfids... } cipurse { cipurse transport cards... } epa { german identification card... } emrtd { machine readable travel document... } felica { iso18092 / felica rfids... } fido { fido and fido2 authenticators... } jooki { jooki rfids... } iclass { iclass rfids... } legic { legic rfids... } lto { lto cartridge memory rfids... } mf { mifare rfids... } mfp { mifare plus rfids... } mfu { mifare ultralight rfids... } mfdes { mifare desfire rfids... } seos { seos rfids... } st25ta { st25ta rfids... } thinfilm { thinfilm rfids... } topaz { topaz (nfc type 1) rfids... } waveshare { waveshare nfc epaper... } ----------- --------------------- general --------------------- help this help list list protocol data in trace buffer search search for known hf tags --------------------------------------------------------------------------------------- hf list available offline: yes alias of `trace list -t raw` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
+            "description": "-------- ----------------------- high frequency ----------------------- 14a { iso14443a rfids... } 14b { iso14443b rfids... } 15 { iso15693 rfids... } cipurse { cipurse transport cards... } epa { german identification card... } emrtd { machine readable travel document... } felica { iso18092 / felica rfids... } fido { fido and fido2 authenticators... } ksx6924 { ks x 6924 (t-money, snapper+) rfids } jooki { jooki rfids... } iclass { iclass rfids... } legic { legic rfids... } lto { lto cartridge memory rfids... } mf { mifare rfids... } mfp { mifare plus rfids... } mfu { mifare ultralight rfids... } mfdes { mifare desfire rfids... } seos { seos rfids... } st25ta { st25ta rfids... } thinfilm { thinfilm rfids... } topaz { topaz (nfc type 1) rfids... } waveshare { waveshare nfc epaper... } ----------- --------------------- general --------------------- help this help list list protocol data in trace buffer search search for known hf tags --------------------------------------------------------------------------------------- hf list available offline: yes alias of `trace list -t raw` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf list -f -> show frame delay times",
                 "hf list -1 -> use trace buffer"
@@ -2833,6 +2833,75 @@
                 "-b, --b64 <base64> base64 url parameter"
             ],
             "usage": "hf jooki sim [-h] [-b <base64>]"
+        },
+        "hf ksx6924 help": {
+            "command": "hf ksx6924 help",
+            "description": "help this help --------------------------------------------------------------------------------------- hf ksx6924 balance available offline: no gets the current purse balance",
+            "notes": [
+                "hf ksx6924 balance"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "-k, --keep keep field on for next command",
+                "-a, --apdu show apdu reqests and responses"
+            ],
+            "usage": "hf ksx6924 balance [-hka]"
+        },
+        "hf ksx6924 info": {
+            "command": "hf ksx6924 info",
+            "description": "get info about a ks x 6924 transit card. this application is used by t-money (south korea) and snapper+ (wellington, new zealand).",
+            "notes": [
+                "hf ksx6924 info"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-k, --keep keep field on for next command",
+                "-a, --apdu show apdu reqests and responses"
+            ],
+            "usage": "hf ksx6924 info [-hka]"
+        },
+        "hf ksx6924 initialize": {
+            "command": "hf ksx6924 initialize",
+            "description": "perform transaction initialization (mpda)",
+            "notes": [
+                "hf ksx6924 initialize 000003e8 -> mpda"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-k, --keep keep field on for next command",
+                "-a, --apdu show apdu reqests and responses"
+            ],
+            "usage": "hf ksx6924 initialize [-hka] <mpda 4byte hex> [<mpda 4byte hex>]..."
+        },
+        "hf ksx6924 prec": {
+            "command": "hf ksx6924 prec",
+            "description": "executes proprietary read record command. data format is unknown. other records are available with 'emv getrec'.",
+            "notes": [
+                "hf ksx6924 prec 0b -> read proprietary record 0x0b"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-k, --keep keep field on for next command",
+                "-a, --apdu show apdu reqests and responses"
+            ],
+            "usage": "hf ksx6924 prec [-hka] <record 1byte hex> [<record 1byte hex>]..."
+        },
+        "hf ksx6924 select": {
+            "command": "hf ksx6924 select",
+            "description": "selects ks x 6924 application, and leaves field up",
+            "notes": [
+                "hf ksx6924 select"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu reqests and responses"
+            ],
+            "usage": "hf ksx6924 select [-ha]"
         },
         "hf legic crc": {
             "command": "hf legic crc",
@@ -6236,9 +6305,11 @@
                 "-z, --zero <us> zero time period",
                 "-s, --samples <dec> number of samples to collect",
                 "-v, --verbose verbose output",
+                "-k, --keep keep signal field on after receive",
+                "--crc-ht calculate and append crc-8/hitag (also for zx8211)",
                 "-@ continuous mode"
             ],
-            "usage": "lf cmdread [-hv@] [-d <us>] [-c <0|1|...>] [-e <us>]... [-o <us>] [-z <us>] [-s <dec>]"
+            "usage": "lf cmdread [-hvk@] [-d <us>] [-c <0|1|...>] [-e <us>]... [-o <us>] [-z <us>] [-s <dec>] [--crc-ht]"
         },
         "lf cotag help": {
             "command": "lf cotag help",
@@ -7099,7 +7170,7 @@
         },
         "lf help": {
             "command": "lf help",
-            "description": "help this help ----------- -------------- low frequency -------------- awid { awid rfids... } cotag { cotag chips... } destron { fdx-a destron rfids... } em { em chips & rfids... } fdxb { fdx-b rfids... } gallagher { gallagher rfids... } gproxii { guardall prox ii rfids... } hid { hid prox rfids... } hitag { hitag chips... } idteck { idteck rfids... } indala { indala rfids... } io { ioprox rfids... } jablotron { jablotron rfids... } keri { keri rfids... } motorola { motorola rfids... } nedap { nedap rfids... } nexwatch { nexwatch rfids... } noralsy { noralsy rfids... } pac { pac/stanley rfids... } paradox { paradox rfids... } pcf7931 { pcf7931 chips... } presco { presco rfids... } pyramid { farpointe/pyramid rfids... } securakey { securakey rfids... } ti { ti chips... } t55xx { t55xx chips... } viking { viking rfids... } visa2000 { visa2000 rfids... } ----------- --------------------- general --------------------- search read and search for valid known tag --------------------------------------------------------------------------------------- lf config available offline: no get/set config for lf sampling, bit/sample, decimation, frequency these changes are temporary, will be reset after a power cycle. - use `lf read` performs a read (active field) - use `lf sniff` performs a sniff (no active field)",
+            "description": "help this help ----------- -------------- low frequency -------------- awid { awid rfids... } cotag { cotag chips... } destron { fdx-a destron rfids... } em { em chips & rfids... } fdxb { fdx-b rfids... } gallagher { gallagher rfids... } gproxii { guardall prox ii rfids... } hid { hid prox rfids... } hitag { hitag chips... } idteck { idteck rfids... } indala { indala rfids... } io { ioprox rfids... } jablotron { jablotron rfids... } keri { keri rfids... } motorola { motorola rfids... } nedap { nedap rfids... } nexwatch { nexwatch rfids... } noralsy { noralsy rfids... } pac { pac/stanley rfids... } paradox { paradox rfids... } pcf7931 { pcf7931 chips... } presco { presco rfids... } pyramid { farpointe/pyramid rfids... } securakey { securakey rfids... } ti { ti chips... } t55xx { t55xx chips... } viking { viking rfids... } visa2000 { visa2000 rfids... } zx { zx8211 rfids... } ----------- --------------------- general --------------------- search read and search for valid known tag --------------------------------------------------------------------------------------- lf config available offline: no get/set config for lf sampling, bit/sample, decimation, frequency these changes are temporary, will be reset after a power cycle. - use `lf read` performs a read (active field) - use `lf sniff` performs a sniff (no active field)",
             "notes": [
                 "lf config -> shows current config",
                 "lf config -b 8 --125 -> samples at 125 khz, 8 bps",
@@ -9020,6 +9091,31 @@
             ],
             "usage": "lf visa2000 sim [-h] --cn <dec>"
         },
+        "lf zx help": {
+            "command": "lf zx help",
+            "description": "help this help demod demodulate an zx 8211 tag from the graphbuffer --------------------------------------------------------------------------------------- lf zx demod available offline: yes try to find zx8211 preamble, if found decode / descramble data",
+            "notes": [
+                "lf zx demod"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "lf zx demod [-h]"
+        },
+        "lf zx reader": {
+            "command": "lf zx reader",
+            "description": "read a zx tag",
+            "notes": [
+                "lf zx reader -@ -> continuous reader mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-@ optional - continuous reader mode"
+            ],
+            "usage": "lf zx reader [-h@]"
+        },
         "mem dump": {
             "command": "mem dump",
             "description": "dumps flash memory on device into a file or view in console",
@@ -10053,8 +10149,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 591,
+        "commands_extracted": 597,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-12-17T02:04:29"
+        "extracted_on": "2021-12-27T18:30:34"
     }
 }

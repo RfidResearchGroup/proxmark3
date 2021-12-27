@@ -394,7 +394,7 @@ static bool prev_keep = false;
  */
 void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint16_t period_1, uint8_t *symbol_extra, uint16_t *period_extra, uint8_t *command, bool verbose, bool keep_field_on, uint32_t samples, bool ledcontrol) {
 
-    if (!prev_keep){
+    if (!prev_keep) {
         FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     }
     // use lf config settings
@@ -402,7 +402,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint
     LFSetupFPGAForADC(sc->divisor, true);
     // this causes the field to turn on for uncontrolled amount of time, so we'll turn it off
 
-    if (!prev_keep){
+    if (!prev_keep) {
 
         // Make sure the tag is reset
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);

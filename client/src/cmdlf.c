@@ -288,14 +288,14 @@ int CmdLFCommandRead(const char *Cmd) {
         uint8_t n = 0;
         crc_init_ref(&crc, 8, 0x1d, 0xff, 0, false, false);
         uint8_t i;
-        for (i=0;i<cmd_len;i++) {
+        for (i = 0; i < cmd_len; i++) {
             if ((cmd[i] != '0') && (cmd[i] != '1')) {
                 continue;
             }
             data <<= 1;
             data += cmd[i] - '0';
             n += 1;
-            if (n==8) {
+            if (n == 8) {
                 crc_update2(&crc, data, n);
                 n = 0;
                 data = 0;
@@ -305,7 +305,7 @@ int CmdLFCommandRead(const char *Cmd) {
             crc_update2(&crc, data, n);
         }
         uint8_t crc_final = crc_finish(&crc);
-        for (int j=7; j>=0; j--) {
+        for (int j = 7; j >= 0; j--) {
             cmd[cmd_len] = ((crc_final >> j) & 1) ? '1' : '0';
             cmd_len++;
         }

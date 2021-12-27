@@ -317,6 +317,20 @@ Check column "offline" for their availability.
 |`hf fido assert         `|N       |`FIDO2 GetAssertion command.`
 
 
+### hf ksx6924
+
+ { KS X 6924 (T-Money, Snapper+) RFIDs }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf ksx6924 help        `|Y       |`This help`
+|`hf ksx6924 balance     `|N       |`Get current purse balance`
+|`hf ksx6924 info        `|N       |`Get info about a KS X 6924 (T-Money, Snapper+) transit card`
+|`hf ksx6924 initialize  `|N       |`Perform transaction initialization (Mpda)`
+|`hf ksx6924 prec        `|N       |`Send proprietary get record command (CLA=90, INS=4C)`
+|`hf ksx6924 select      `|N       |`Select application, and leave field up`
+
+
 ### hf jooki
 
  { Jooki RFIDs...                      }
@@ -1110,6 +1124,17 @@ Check column "offline" for their availability.
 |`lf visa2000 reader     `|N       |`attempt to read and extract tag data`
 |`lf visa2000 clone      `|N       |`clone Visa2000 tag to T55x7 or Q5/T5555`
 |`lf visa2000 sim        `|N       |`simulate Visa2000 tag`
+
+
+### lf zx
+
+ { ZX8211 RFIDs...            }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf zx help             `|Y       |`This help`
+|`lf zx demod            `|Y       |`demodulate an ZX 8211 tag from the GraphBuffer`
+|`lf zx reader           `|N       |`attempt to read and extract tag data`
 
 
 ### mem

@@ -21,4 +21,4 @@ typedef struct {
     bool parity;
 } zx8211_data_t;
 
-#endif // ZX8211_H__ 
+#endif // ZX8211_H__

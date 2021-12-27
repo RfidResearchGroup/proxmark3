@@ -581,7 +581,7 @@ typedef struct {
 #define CMD_LF_T55XX_DANGERRAW                                            0x0231
 
 
-// ZX8211 
+// ZX8211
 #define CMD_LF_ZX_READ                                                    0x0270
 #define CMD_LF_ZX_WRITE                                                   0x0271
 

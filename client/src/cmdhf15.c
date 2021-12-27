@@ -1391,7 +1391,7 @@ static int CmdHF15Dump(const char *Cmd) {
             retry = 0;
             blocknum++;
 
-            PrintAndLogEx(INPLACE, "blk %3d", blocknum );
+            PrintAndLogEx(INPLACE, "blk %3d", blocknum);
         }
     }
 

@@ -55,7 +55,7 @@ Tx = 8us = 1fc
 #define ZX_WAIT_GAP         90
 #define ZX_GAP              8    // 4 - 10
 #define ZX_T0               18
-#define ZX_T0_MIN           14   
+#define ZX_T0_MIN           14
 #define ZX_T0_MAX           22
 #define ZX_T1               28
 #define ZX_T1_MIN           26
