@@ -76,6 +76,7 @@ LUALIBLD =
 LUAPLATFORM = generic
 ifneq (,$(findstring MINGW,$(platform)))
     LUAPLATFORM = mingw
+	LDLIBS += -lws2_32
 else
     ifeq ($(platform),Darwin)
         LUAPLATFORM = macosx
