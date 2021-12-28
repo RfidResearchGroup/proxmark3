@@ -423,6 +423,17 @@ static size_t findModStart(uint8_t *src, size_t size, uint8_t expWaveSize) {
     return i;
 }
 
+static size_t findModStart2(uint8_t *src, size_t size, uint8_t expWaveSize) {
+    uint32_t i = 0;
+    uint8_t threshold = signalprop.amplitude / 10; // 10 %
+    for (; i < size - 20; i++) {
+        if (abs(src[i] - signalprop.mean) > threshold) {
+            break;
+        }
+    }
+    return i;
+}
+
 static int getClosestClock(int testclk) {
     uint16_t clocks[] = {8, 16, 32, 40, 50, 64, 100, 128, 256, 384};
     uint8_t limit[]  = {1,  2,  4,  4,  5,  8,   8,   8,   8,   8};
@@ -1834,6 +1845,83 @@ int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int *startId
     }
     *size = numBits;
     return 0;
+}
+
+size_t HitagPWMDemod(uint8_t *dest, size_t size, uint8_t *fchigh, uint8_t *fclow, uint32_t *startIdx, uint8_t *bitRange) {
+    printSignal();
+
+    if (g_debugMode == 2)
+        prnt("HitagWMDemod startIdx:%d low period:%d high period:%d", *startIdx, *fclow, *fchigh);
+    
+    size_t idx = 0, numBits = 0;
+
+    //find start of modulating data in trace
+    if (*startIdx == 0) {
+        idx = findModStart2(dest, size, *fchigh);
+        *startIdx = idx;
+        if (g_debugMode == 2)
+            prnt("detected start %d", idx);
+    }
+
+    uint8_t wave_min = 255;
+    uint8_t wave_max = 0;
+    uint8_t sub_idx = 0;
+    uint32_t idx_min = 0;
+    uint32_t idx_max = 0;
+    uint32_t last_wave_start = idx;
+    uint8_t meanCrossCount = 0;
+    for (; idx < size - 20; idx++, sub_idx++) {
+
+        if (dest[idx] < wave_min) {
+            wave_min = dest[idx];
+            idx_min = idx;
+        }
+        if (dest[idx] > wave_max) {
+            wave_max = dest[idx];
+            idx_max = idx;
+        }
+
+        uint32_t period = idx - last_wave_start;
+        if (period > (*fchigh)*1.5) {
+            if (g_debugMode == 2)
+                prnt("period %d is too big", period);
+            break;
+        }    
+
+        if ((dest[idx] >= signalprop.mean && dest[idx+1] < signalprop.mean) ||
+            (dest[idx] <= signalprop.mean && dest[idx+1] > signalprop.mean)) {
+            meanCrossCount++;
+            if (meanCrossCount > 2) return 0;
+            }
+        // wait to pass the beginning of the wave (> *fclow/2) and detect the next cross
+        // of the mean line. 
+        if ((sub_idx > (*fclow)/2) && meanCrossCount == 2) {
+            if ((wave_max - wave_min) < signalprop.amplitude/2) {
+                if (g_debugMode == 2)
+                    prnt("wave not strong enough, probably end of signal");
+                break;
+            }
+
+            if (g_debugMode == 2)
+                prnt("wave %d ends at %d [min:%d,%d,max:%d,%d], [%d -> %d] period=%d", 
+                    numBits+1, idx, idx_min, wave_min, idx_max, wave_max, last_wave_start, idx-1, period);
+            last_wave_start = idx;
+            
+            sub_idx = 0;
+            idx_min = idx_max = 0;
+            wave_max = 0;
+            wave_min = 255;
+            meanCrossCount = 0;
+
+            // TODO : don't just compare high and low but verifty the period match to a certain %
+            bitRange[numBits] = period;
+            if (abs(period-*fchigh) > abs(period-*fclow))
+                dest[numBits++] = 0;
+            else
+                dest[numBits++] = 1;
+        }
+    }
+    return numBits;
 }
 
 //translate wave to 11111100000 (1 for each short wave [higher freq] 0 for each long wave [lower freq])

@@ -18,6 +18,11 @@
 #include "protocols.h"   // defines
 #include "cliparser.h"
 
+#include "graph.h" // MAX_GRAPH_TRACE_LEN
+#include "lfdemod.h"
+#include "cmddata.h" // setDemodBuff
+
+
 static int CmdHelp(const char *Cmd);
 
 static const char *getHitagTypeStr(uint32_t uid) {
@@ -883,6 +888,71 @@ static int CmdLFHitag2Dump(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdLFHitag2PWMDemod(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hitag pwmdemod",
+                  "Demodulate the data in the GraphBuffer and output binary\n",
+                  "lf hitag pwmdemod -t 65              --> specify first wave index\n"
+                  "lf hitag pwmdemod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("t", "start", "<dec>", "first wave index"),
+        arg_param_end
+    };
+    
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t start_idx = (uint32_t)arg_get_int_def(ctx, 1, 0);
+    CLIParserFree(ctx);
+
+    uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(INFO, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    size_t size = getFromGraphBuf(bits);
+
+    PrintAndLogEx(DEBUG, "DEBUG: (Hitag2PWM) #samples from graphbuff: %zu", size);
+
+    if (size < 255) {
+        free(bits);
+        return PM3_ESOFT;
+    }
+
+    // TODO autodetect
+    uint8_t fchigh = 29;
+    uint8_t fclow = 20;
+
+    size = HitagPWMDemod(bits, size, &fchigh, &fclow, &start_idx, g_DemodBitRangeBuffer);
+    PrintAndLogEx(DEBUG, "DEBUG: start_idx=%d, size=%d", start_idx, size);
+    if (size > 0) {
+        setDemodBuff2(bits, size, 0, g_DemodBitRangeBuffer);
+        setClockGrid(32, start_idx);
+        uint32_t total = 0;
+        for (int i=0; i<size; i++) {
+            total += g_DemodBitRangeBuffer[i];
+            PrintAndLogEx(SUCCESS, "%d", g_DemodBitRangeBuffer[i]);
+        }
+        PrintAndLogEx(SUCCESS, "total %d", total);
+    }
+    
+    if (size == 0) {
+        PrintAndLogEx(DEBUG, "DEBUG: (Hitag2PWM) No wave detected");
+        free(bits);
+        return PM3_ESOFT;
+    }
+    
+
+    PrintAndLogEx(SUCCESS, _YELLOW_("HITAG/PWM") " - decoded bitstream");
+    PrintAndLogEx(INFO, "--------------------------------------");
+    printDemodBuff(0, false, false, false);
+    
+    free(bits);
+    return PM3_SUCCESS;
+}
 
 // Annotate HITAG protocol
 void annotateHitag1(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
@@ -943,16 +1013,17 @@ void annotateHitagS(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
 }
 
 static command_t CommandTable[] = {
-    {"help",   CmdHelp,               AlwaysAvailable, "This help"},
-    {"eload",  CmdLFHitagEload,       IfPm3Hitag,      "Load Hitag dump file into emulator memory"},
-    {"list",   CmdLFHitagList,        AlwaysAvailable, "List Hitag trace history"},
-    {"info",   CmdLFHitagInfo,        IfPm3Hitag,      "Hitag2 tag information"},
-    {"reader", CmdLFHitagReader,      IfPm3Hitag,      "Act like a Hitag reader"},
-    {"sim",    CmdLFHitagSim,         IfPm3Hitag,      "Simulate Hitag transponder"},
-    {"sniff",  CmdLFHitagSniff,       IfPm3Hitag,      "Eavesdrop Hitag communication"},
-    {"writer", CmdLFHitagWriter,      IfPm3Hitag,      "Act like a Hitag writer"},
-    {"dump",   CmdLFHitag2Dump,       IfPm3Hitag,      "Dump Hitag2 tag"},
-    {"cc",     CmdLFHitagCheckChallenges, IfPm3Hitag,  "Test all challenges"},
+    {"help",     CmdHelp,               AlwaysAvailable, "This help"},
+    {"eload",    CmdLFHitagEload,       IfPm3Hitag,      "Load Hitag dump file into emulator memory"},
+    {"list",     CmdLFHitagList,        AlwaysAvailable, "List Hitag trace history"},
+    {"info",     CmdLFHitagInfo,        IfPm3Hitag,      "Hitag2 tag information"},
+    {"reader",   CmdLFHitagReader,      IfPm3Hitag,      "Act like a Hitag reader"},
+    {"sim",      CmdLFHitagSim,         IfPm3Hitag,      "Simulate Hitag transponder"},
+    {"sniff",    CmdLFHitagSniff,       IfPm3Hitag,      "Eavesdrop Hitag communication"},
+    {"writer",   CmdLFHitagWriter,      IfPm3Hitag,      "Act like a Hitag writer"},
+    {"dump",     CmdLFHitag2Dump,       IfPm3Hitag,      "Dump Hitag2 tag"},
+    {"pwmdemod", CmdLFHitag2PWMDemod,   AlwaysAvailable, "PWM Hitag2 reader message demodulation"},
+    {"cc",       CmdLFHitagCheckChallenges, IfPm3Hitag,  "Test all challenges"},
     { NULL, NULL, 0, NULL }
 };
 

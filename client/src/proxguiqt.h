@@ -36,7 +36,8 @@ class Plot: public QWidget {
     uint32_t CursorAPos;
     uint32_t CursorBPos;
     void PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRect, QPainter *painter, int graphNum);
-    void PlotDemod(uint8_t *buffer, size_t len, QRect plotRect, QRect annotationRect, QPainter *painter, int graphNum, uint32_t plotOffset);
+    void PlotDemod(uint8_t *buffer, size_t len, QRect plotRect, QRect annotationRect, QPainter *painter, 
+                   int graphNum, uint32_t plotOffset, uint8_t* bitRange);
     void plotGridLines(QPainter *painter, QRect r);
     int xCoordOf(int i, QRect r);
     int yCoordOf(int v, QRect r, int maxVal);

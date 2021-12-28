@@ -73,6 +73,7 @@ int      pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, i
 void     psk2TOpsk1(uint8_t *bits, size_t size);
 void     psk1TOpsk2(uint8_t *bits, size_t size);
 size_t   removeParity(uint8_t *bits, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen);
+size_t   HitagPWMDemod(uint8_t *dest, size_t size, uint8_t *fchigh, uint8_t *fclow, uint32_t *startIdx, uint8_t *bitRange);
 
 //tag specific
 int detectAWID(uint8_t *dest, size_t *size, int *waveStartIdx);
