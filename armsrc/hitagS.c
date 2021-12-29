@@ -1036,7 +1036,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data, bool ledcontrol) {
         // Check if frame was captured
         if (rxlen > 0) {
 //            frame_count++;
-            LogTrace(rx, nbytes(rxlen), response, response, NULL, true);
+            LogTraceBits(rx, rxlen, response, response, true);
 
             // Disable timer 1 with external trigger to avoid triggers during our own modulation
             AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
@@ -1055,7 +1055,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data, bool ledcontrol) {
             if (txlen > 0) {
                 // Transmit the tag frame
                 hitag_send_frame(tx, txlen, ledcontrol);
-                LogTrace(tx, nbytes(txlen), 0, 0, NULL, false);
+                LogTraceBits(tx, txlen, 0, 0, false);
             }
 
             // Enable and reset external trigger in timer for capturing future frames
@@ -1278,7 +1278,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
         // Check if frame was captured and store it
         if (rxlen > 0) {
 //            frame_count++;
-            LogTrace(rx, nbytes(rxlen), response, response, NULL, false);
+            LogTraceBits(rx, rxlen, response, response, false);
         }
 
         // By default reset the transmission buffer
@@ -1407,7 +1407,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
         // Add transmitted frame to total count
         if (txlen > 0) {
 //            frame_count++;
-            LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, HITAG_T_WAIT_2, NULL, true);
+            LogTraceBits(tx, txlen, HITAG_T_WAIT_2, HITAG_T_WAIT_2, true);
         }
 
         hitagS_receive_frame(rx, &rxlen, &response, ledcontrol);
@@ -1535,7 +1535,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page, bool ledcont
         // Check if frame was captured and store it
         if (rxlen > 0) {
 //            frame_count++;
-            LogTrace(rx, nbytes(rxlen), response, response, NULL, false);
+            LogTraceBits(rx, rxlen, response, response, false);
         }
 
         //check for valid input
@@ -1622,7 +1622,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page, bool ledcont
         // Add transmitted frame to total count
         if (txlen > 0) {
 //            frame_count++;
-            LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, HITAG_T_WAIT_2, NULL, true);
+            LogTraceBits(tx, txlen, HITAG_T_WAIT_2, HITAG_T_WAIT_2, true);
         }
 
         hitagS_receive_frame(rx, &rxlen, &response, ledcontrol);
@@ -1729,7 +1729,7 @@ void check_challenges(bool file_given, uint8_t *data, bool ledcontrol) {
         // Check if frame was captured and store it
         if (rxlen > 0) {
 //            frame_count++;
-            LogTrace(rx, nbytes(rxlen), response, response, NULL, false);
+            LogTraceBits(rx, rxlen, response, response, false);
         }
 
         uint8_t *tx = txbuf;
@@ -1861,7 +1861,7 @@ void check_challenges(bool file_given, uint8_t *data, bool ledcontrol) {
         // Add transmitted frame to total count
         if (txlen > 0) {
 //            frame_count++;
-            LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, HITAG_T_WAIT_2, NULL, true);
+            LogTraceBits(tx, txlen, HITAG_T_WAIT_2, HITAG_T_WAIT_2, true);
         }
 
         hitagS_receive_frame(rx, &rxlen, &response, ledcontrol);

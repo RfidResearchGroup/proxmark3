@@ -240,7 +240,8 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             sprintf(line[0], "<empty trace - possible error>");
         }
     }
-
+    uint8_t partialbytebuff = 0;
+    uint8_t offset = 0;
     for (int j = 0; j < data_len && j / 18 < 18; j++) {
         uint8_t parityBits = parityBytes[j >> 3];
         if (protocol != LEGIC
@@ -270,6 +271,18 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
             }
 
+        } else if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAG2) || (protocol == PROTO_HITAGS)) && (parityBytes[0] > 0)){
+            // handle partial bytes
+            uint8_t nbits = parityBytes[0];
+            if (j==0) {
+                partialbytebuff = frame[0] << nbits;
+                snprintf(line[0], 120, "%02x(%i) ", frame[0] >> (8 - nbits), nbits);
+                offset = 2;
+            } else {
+                uint8_t byte = partialbytebuff | (frame[j] >> (8 - nbits));
+                partialbytebuff = frame[j] << nbits;
+                snprintf(line[j / 18] + ((j % 18) * 4) + offset, 120, "%02x  ", byte);
+            }
         } else {
             snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x  ", frame[j]);
         }
@@ -278,11 +291,23 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     if (markCRCBytes) {
         //CRC-command
-        if (crcStatus == 0 || crcStatus == 1) {
-            char *pos1 = line[(data_len - 2) / 18] + (((data_len - 2) % 18) * 4) - 1;
+        if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAGS)) && (data_len > 1)) {
+            // notes hitag S:
+            // pm3 is using UID REQUEST Adv -> SOF is 111(AC) then 111111(MC)
+            // first tag response is AC encoded Currently, recorded trace is garbage
+            // for unknown reason, recorded SOF in trace is 1111 instead of 111111 (or should be even skipped)
+            // CRC on tag response is SOF excluded
+            char *pos1 = line[(data_len - 1) / 18] + (((data_len - 1) % 18) * 4) + offset - 1;
             (*pos1) = '[';
-            char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4) - 1;
+            char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4) + offset - 2;
             sprintf(pos2, "%c", ']');
+        } else {
+            if (crcStatus == 0 || crcStatus == 1) {
+                char *pos1 = line[(data_len - 2) / 18] + (((data_len - 2) % 18) * 4) - 1;
+                (*pos1) = '[';
+                char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4) - 1;
+                sprintf(pos2, "%c", ']');
+            }
         }
     }
 

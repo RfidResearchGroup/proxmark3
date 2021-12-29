@@ -314,8 +314,8 @@ static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_
         break;
     }
 
-    // LogTrace(rx, nbytes(rxlen), 0, 0, NULL, false);
-    // LogTrace(tx, nbytes(txlen), 0, 0, NULL, true);
+    // LogTraceBits(rx, rxlen, 0, 0, false);
+    // LogTraceBits(tx, txlen, 0, 0, true);
 
     if (tag.crypto_active) {
         hitag2_cipher_transcrypt(&(tag.cs), tx, *txlen / 8, *txlen % 8);
@@ -1100,7 +1100,7 @@ void SniffHitag2(bool ledcontrol) {
                 if (rxlen == 0)
                     continue;
 
-                LogTrace(rx, nbytes(rxlen), 0, 0, NULL, false);
+                LogTraceBits(rx, rxlen, 0, 0, false);
                 total_count += nbytes(rxlen);
             } else {
                 // decode reader comms
@@ -1108,7 +1108,7 @@ void SniffHitag2(bool ledcontrol) {
                 total_count += rxlen;
                 // Pack the response into a byte array
 
-                // LogTrace(rx, nbytes(rdr), 0, 0, NULL, true);
+                // LogTraceBits(rx, rdr, 0, 0, true);
                 // total_count += nbytes(rdr);
             }
             if (ledcontrol) LED_A_INV();
@@ -1265,7 +1265,7 @@ void SniffHitag2(bool ledcontrol) {
         // Check if frame was captured
         if (rxlen) {
             frame_count++;
-            LogTrace(rx, nbytes(rxlen), response, 0, NULL, reader_frame);
+            LogTraceBits(rx, rxlen, response, 0, reader_frame);
 
             // Check if we recognize a valid authentication attempt
             if (nbytes(rxlen) == 8) {
@@ -1495,7 +1495,7 @@ void SimulateHitag2(bool ledcontrol) {
         // Check if frame was captured
         if (rxlen > 4) {
 
-            LogTrace(rx, nbytes(rxlen), response, response, NULL, true);
+            LogTraceBits(rx, rxlen, response, response, true);
 
             // Process the incoming frame (rx) and prepare the outgoing frame (tx)
             hitag2_handle_reader_command(rx, rxlen, tx, &txlen);
@@ -1514,7 +1514,7 @@ void SimulateHitag2(bool ledcontrol) {
                 lf_manchester_send_bytes(tx, txlen, ledcontrol);
 
                 // Store the frame in the trace
-                LogTrace(tx, nbytes(txlen), 0, 0, NULL, false);
+                LogTraceBits(tx, txlen, 0, 0, false);
             }
 
             // Reset the received frame and response timing info
@@ -1844,7 +1844,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd, bool ledcontrol) {
         // and to be able to overwrite the first samples with the trace (since they currently
         // still use the same memory space)
         if (txlen > 0) {
-            LogTrace(tx, nbytes(txlen), command_start, command_start + command_duration, NULL, true);
+            LogTraceBits(tx, txlen, command_start, command_start + command_duration, true);
         }
 
         // Reset values for receiving frames
@@ -1904,7 +1904,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd, bool ledcontrol) {
         // Check if frame was captured and store it
         if (rxlen > 0) {
 
-            LogTrace(rx, nbytes(rxlen), response_start, response_start + response_duration, NULL, false);
+            LogTraceBits(rx, rxlen, response_start, response_start + response_duration, false);
 
 // TODO when using cumulative time for command_start, pm3 doesn't reply anymore, e.g. on lf hitag reader --23 -k 4F4E4D494B52
 // Use delta time?
@@ -2167,7 +2167,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page, bool ledcontrol)
         // and to be able to overwrite the first samples with the trace (since they currently
         // still use the same memory space)
         if (txlen > 0) {
-            LogTrace(tx, nbytes(txlen), command_start, command_start + command_duration, NULL, true);
+            LogTraceBits(tx, txlen, command_start, command_start + command_duration, true);
         }
 
         // Reset values for receiving frames
@@ -2225,7 +2225,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page, bool ledcontrol)
 
         // Check if frame was captured and store it
         if (rxlen > 0) {
-            LogTrace(rx, nbytes(rxlen), response_start, response_start + response_duration, NULL, false);
+            LogTraceBits(rx, rxlen, response_start, response_start + response_duration, false);
             command_start = 0;
         }
     }
