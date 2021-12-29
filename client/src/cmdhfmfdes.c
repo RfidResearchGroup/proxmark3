@@ -155,6 +155,17 @@ typedef struct aidhdr {
     uint8_t name[16];
 } PACKED aidhdr_t;
 
+typedef struct {
+    const char *aid;
+    const char *comment;
+} mfdesCommonAID_t;
+
+static const mfdesCommonAID_t commonAids[] = {
+    // AID, name/comment
+    { "\xf4\x81\x2f", "Gallagher card data application" },
+    { "\xf4\x81\x20", "Gallagher card application directory" }, // Can be 0xF48120 - 0xF4812B, but I've only ever seen 0xF48120
+};
+
 static int CmdHelp(const char *Cmd);
 
 static int CLIGetUint32Hex(CLIParserContext *ctx, uint8_t paramnum, uint32_t defaultValue, uint32_t *value, bool *valuePresent, uint8_t nlen, const char *lengthErrorStr) {
@@ -242,6 +253,16 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
     return buf;
 
 //04 01 01 01 00 1A 05
+}
+
+static char noCommentStr[1] = { 0x00 };
+static const char *getAidCommentStr(uint8_t *aid) {
+    for (int i = 0; i < ARRAYLEN(commonAids); i++) {
+        if (memcmp(aid, commonAids[i].aid, 3) == 0) {
+            return commonAids[i].comment;
+        }
+    }
+    return noCommentStr;
 }
 
 static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
@@ -3056,8 +3077,13 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
 
     if (buflen >= 3) {
         PrintAndLogEx(INFO, "---- " _CYAN_("AID list") " ----");
-        for (int i = 0; i < buflen; i += 3)
-            PrintAndLogEx(INFO, "AID: %06x", DesfireAIDByteToUint(&buf[i]));
+        for (int i = 0; i < buflen; i += 3) {
+            const char* commentStr = getAidCommentStr(&buf[i]);
+            if ((void *) commentStr == &noCommentStr)
+                PrintAndLogEx(INFO, "AID: %06x", DesfireAIDByteToUint(&buf[i]));
+            else
+                PrintAndLogEx(INFO, "AID: %06x (%s)", DesfireAIDByteToUint(&buf[i]), commentStr);
+        }
     } else {
         PrintAndLogEx(INFO, "There is no applications on the card");
     }
