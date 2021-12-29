@@ -485,19 +485,19 @@ If the card is an Ultimate Magic Card, it returns 30 bytes.
 Special commands summary:
 
 ```
- CF <passwd> 32 <00-03>                           // Configure GTU shadow mode
- CF <passwd> 34 <1b length><0-16b ATS>            // Configure ATS
- CF <passwd> 35 <2b ATQA><1b SAK>                 // Configure ATQA/SAK (swap ATQA bytes)
- CF <passwd> 68 <00-02>                           // Configure UID length
- CF <passwd> 69 <00-01>                           // (De)Activate Ultralight mode
- CF <passwd> 6A <00-??>                           // Select Ultralight mode
- CF <passwd> C6                                   // Dump configuration
- CF <passwd> CC <???>                             // ???
- CF <passwd> CD <1b block number><16b block data> // Backdoor write 16b block
- CF <passwd> CE <1b block number>                 // Backdoor read 16b block
- CF <passwd> F0 <30b configuration data>          // Configure all params in one cmd
- CF <passwd> F1 <30b configuration data>          // Configure all params in one cmd (and fuse??)
- CF <passwd> FE <4b new_password>                 // change password
+CF <passwd> 32 <00-03>                           // Configure GTU shadow mode
+CF <passwd> 34 <1b length><0-16b ATS>            // Configure ATS
+CF <passwd> 35 <2b ATQA><1b SAK>                 // Configure ATQA/SAK (swap ATQA bytes)
+CF <passwd> 68 <00-02>                           // Configure UID length
+CF <passwd> 69 <00-01>                           // (De)Activate Ultralight mode
+CF <passwd> 6A <00-03>                           // Select Ultralight mode
+CF <passwd> C6                                   // Dump configuration
+CF <passwd> CC                                   // Factory test, returns 6666
+CF <passwd> CD <1b block number><16b block data> // Backdoor write 16b block
+CF <passwd> CE <1b block number>                 // Backdoor read 16b block
+CF <passwd> F0 <30b configuration data>          // Configure all params in one cmd
+CF <passwd> F1 <30b configuration data>          // Configure all params in one cmd and fuse the configuration permanently
+CF <passwd> FE <4b new_password>                 // change password
 ```
 Default `<passwd>`: `00000000`
 
@@ -627,7 +627,7 @@ hf 14b reader
 => UID 00010203  
 => ATQB 0405060708090A
 
-### Set Ultralight mode
+### (De)Activate Ultralight mode
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>69<1b param>
@@ -651,7 +651,19 @@ In this mode, if SAK=`00` and ATQA=`0044`, it acts as an Ultralight card
 hf 14a raw -s -c -t 1000 CF<passwd>6A<1b param>
 ```
 
-👉 **TODO** should correspond to selection of EV1/ULC/... mode in the GUI.
+ * `<param>`
+   * `00`: UL EV1
+   * `01`: NTAG
+   * `02`: UL-C
+   * `03`: UL
+
+⚠ it supposes Ultralight mode was activated (cf command `69`)
+
+Example: set Ultralight mode to Ultralight-C, default pwd
+```
+hf 14a raw -s -c -t 1000 CF000000006A02
+```
+Now the card supports the 3DES UL-C authentication.
 ### Set shadow mode (GTU)
 
 This mode is divided into four states: off (pre-write), on (on restore), don’t care, and high-speed read and write.
@@ -739,7 +751,7 @@ Example: Write factory configuration, using default password
 hf 14a raw -s -c -t 1000 CF00000000F000000000000002000978009102DABC191010111213141516040008004F6B
 ```
 
-👉 **TODO** Variant with command `F1` sets configuration and fuses it ?
+⚠ Variant with command `F1` instead of `F0` will set and fuse permanently the configuration. Backdoor R/W will still work.
 
 ## MIFARE Classic Super
 
