@@ -15,7 +15,7 @@ Useful docs:
   * [MIFARE Classic DirectWrite, UFUID version](#mifare-classic-directwrite-ufuid-version)
   * [MIFARE Classic, other versions](#mifare-classic-other-versions)
   * [MIFARE Classic Gen3 aka APDU](#mifare-classic-gen3-aka-apdu)
-  * [MIFARE Classic Gen3 aka GTU](#mifare-classic-gen3-aka-gtu)
+  * [Ultimate Magic Card aka Gen3 GTU](#ultimate-magic-card-aka-gen3-gtu)
   * [MIFARE Classic Super](#mifare-classic-super)
 - [MIFARE Ultralight](#mifare-ultralight)
   * [MIFARE Ultralight blocks 0..2](#mifare-ultralight-blocks-02)
@@ -468,51 +468,47 @@ hf 14a raw -s -c  -t 2000  90F0CCCC10 041219c3219316984200e32000000000
 # lock (uid/block0?) forever:
 hf 14a raw -s -c 90FD111100
 ```
----------
-## MIFARE Classic Gen3 aka GTU
+## Ultimate Magic Card aka Gen3 GTU
 
+Can emulate MIFARE Classic and Ultralight/NTAG families
 ### Identify
 
-Tag doesn't get identified by latest Proxmark3 client correct but instead mislabled as Gen2/CUID
-
-```
-hf 14a info
-...
-[+] Magic capabilities : Gen 2 / CUID
-```
-
+Tag doesn't get identified correctly by latest Proxmark3 client (it might get mislabeled as MFC Gen2/CUID, Gen3/APDU or NTAG21x Modifiable, depending on configured UID/ATQA/SAK/ATS)
 
 ### Magic commands
 
 Android compatible - unknown status
 
-* issue special APDUs
+* special APDUs summary
 
 ```
-cla ins p1 p2 len
- CF  00 00 00 00 32 <param>
- CF  00 00 00 00 35 <ATQA><SAK>
- CF  00 00 00 00 34 <length><ATS>
- CF  00 00 00 00 68 <param>
- CF  00 00 00 00 69 <00>
- CF  00 00 00 00 CE <block number>                    // Backdoor read card
- CF  00 00 00 00 CD <block number><single block data> // Backdoor write card
- CF  00 00 00 00 FE aabbccdd                          // set password to AABBCCDD
- CF  00 00 00 00 F1                                   // fuse is set  ???
- CF  00 00 00 00 F0                                   // fuse ???
+ CF <passwd> 32 <00-03>                           // Configure GTU shadow mode
+ CF <passwd> 34 <length><ATS>                     // Configure ATS
+ CF <passwd> 35 <ATQA><SAK>                       // Configure ATQA/SAK (swap ATQA bytes)
+ CF <passwd> 68 <00-02>                           // Configure UID length
+ CF <passwd> 69 <00-01>                           // (De)Activate Ultralight mode
+ CF <passwd> 6A <00-??>                           // Select Ultralight mode
+ CF <passwd> C6                                   // Dump configuration
+ CF <passwd> CC <???>                             // ???
+ CF <passwd> CD <block number><single block data> // Backdoor write block
+ CF <passwd> CE <block number>                    // Backdoor read block
+ CF <passwd> F0 <configuration data>              // Configure all params in one cmd
+ CF <passwd> F1 <configuration data>              // Configure all params in one cmd (and fuse??)
+ CF <passwd> FE <new_password>                    // change password (4 bytes)
 ```
-Note: It doesn't seem to follow a APDU structure per default,
+Default `<passwd>`: `00000000`
 
+Note: It doesn't follow the standard CLA/INS/P1/P2 APDU structure.
 
 ### Characteristics
 
 * UID: 4b, 7b and 10b versions
 * ATQA/SAK: changeable
-* BCC: 
-* ATS: changeable
+* BCC: auto
+* ATS: changeable, can be disabled
 * Card Type:  changeable
 * Shadow mode:  GTU
-* Backdoor password mode:
+* Backdoor password mode
 
 #### Possible card types
 Known Preset Change Available:
@@ -528,94 +524,182 @@ Known Preset Change Available:
 * Ultralight Ev1
 * NTAG
 
-
-
 ### Proxmark3 commands
 
 ```
 # view contents of tag memory:
 hf mf gview
 ```
+Note: `hf mf gview` is currently missing Ultralight memory maps and support for non-default password
 
 Equivalent:
 
-
-change ATQA / SAK
-=================
 ```
-hf 14a raw -s -c -t 1000 cf0000000035<ATQA><SAK>
-hf 14a raw -s -c -t 1000 cf0000000035440028    //  ATQA 00 44 SAK 28
+hf 14a raw -s -c -t 1000 cf00000000CE00
+hf 14a raw -s -c -t 1000 cf00000000CE01
+hf 14a raw -s -c -t 1000 cf00000000CE02
+...
 ```
 
-change ATS
-==========
-It should be noted that when SAK=20,28, ATS must be turned on, otherwise the card will not be recognized!
+### Change ATQA / SAK
+```
+hf 14a raw -s -c -t 1000 cf<passwd>35<ATQA><SAK>
+hf 14a raw -s -c -t 1000 cf<passwd>35440028    //  ATQA 0044 SAK 28
+```
+Note that ATQA bytes are swapped in the command
+
+### Change ATS
+
+It should be noted that when SAK=20 or 28, ATS must be turned on, otherwise the card may not be recognized by some readers!
 
 ```
-hf 14a raw -s -c -t 1000 cf0000000034<length><ATS>
-hf 14a raw -s -c -t 1000 cf000000003406067577810280  // ATS to 0606757781028002F0
+hf 14a raw -s -c -t 1000 cf<passwd>34<length><ATS>
+hf 14a raw -s -c -t 1000 cf<passwd>3406067577810280  // ATS to 0606757781028002F0
 ```
- * length 0, ATS is not sent
- * when SAK is 20 or 28, ATS must be set, otherwise the card cannot be read
- * the last two digits of ATS are CRC and cannot be counted as length
+ * `<length>`: ATS length byte, set to `00` to disable ATS
+ * when SAK is 20 or 28, ATS must be turned on, otherwise the card may not be recognized by some readers!
+ * ATS CRC will be added automatically, don't configure it
+ * Max length: 16 bytes (+CRC)
 
-set UID length (4, 7, 10)
-=========================
+### Set UID length (4, 7, 10)
+
 ```
-hf 14a raw -s -c -t 1000 cf0000000068<Param>
-hf 14a raw -s -c -t 1000 cf000000006801  // set UID length to 7 bytes
+hf 14a raw -s -c -t 1000 cf<passwd>68<param>
+hf 14a raw -s -c -t 1000 cf<passwd>6801  // set UID length to 7 bytes
 ```
- * param=00: 4 bytes 01: 7 bytes 02: 10 bytes
+ * `<param>`
+   * `00`: 4 bytes
+   * `01`: 7 bytes
+   * `02`: 10 bytes
 
-Set 14443A/B-UID
-================
--->  missing instructions.
+### Set 14443A UID
 
+UID is configured according to block0 with a backdoor write.
 
-
-Set Ultralight mode
-===================
+E.g., preparing first two blocks:
 ```
-hf 14a raw -s -c -t 1000 cf0000000069<00>
+hf 14a raw -s -c -t 1000 cf00000000cd00000102030405060708090a0b0c0d0e0f
+hf 14a raw -s -c -t 1000 cf00000000cd01101112131415161718191a1b1c1d1e1f
+hf 14a reader
 ```
- * 01: UL agreement opened
- * 00: UL agreement closed
- * in this mode, if SAK=00 ATQA=0044 (Pm3 sequence), it can become an Ultralight card
+MFC mode, 4b UID  
+=> UID `00010203`
 
+MFC mode, 7b UID  
+=> UID `00010203040506`
 
-set shadow mode (GTU)
-=====================
+MFC mode, 10b UID  
+=> UID `00010203040506070809`
+
+Ultralight mode, 4b UID  
+=> UID `00010203`
+
+Ultralight mode, 7b UID  
+=> UID `00010210111213`  
+(note how the UID is composed of first two blocks as in regular Ultralights)
+
+Ultralight mode, 10b UID  
+=> UID `00010203040506070809`  
+(note how the UID is composed only from block0)
+
+### Set 14443B UID and ATQB
+
+UID and ATQB are configured according to block0 with a (14a) backdoor write.
+
+UID size is always 4 bytes.
+
+E.g.:
+```
+hf 14a raw -s -c -t 1000 cf00000000cd00000102030405060708090a0b0c0d0e0f
+hf 14b reader
+```
+=> UID 00010203
+=> ATQB 0405060708090A
+
+### Set Ultralight mode
+
+```
+hf 14a raw -s -c -t 1000 cf<passwd>69<param>
+```
+ * `<param>`
+   * `00`: MIFARE Classic mode
+   * `01`: MIFARE Ultralight/NTAG mode
+
+In this mode, if SAK=00 and ATQA=0044, it acts as an Ultralight card
+
+Note that only the first four bytes of each block will be mapped in the Ultralight memory map.
+
+### Select Ultralight mode
+
+```
+hf 14a raw -s -c -t 1000 cf<passwd>6a<param>
+```
+
+**TODO** should correspond to selection of EV1 mode in the GUI.
+### Set shadow mode (GTU)
 
 This mode is divided into four states: off (pre-write), on (on restore), don’t care, and high-speed read and write.
 If you use it, please enter the pre-write mode first. At this time, write the full card data.
 After writing, set it to on. At this time, after writing the data, the first time you read the data just written, the next time you read It is the pre-written data. All modes support this operation. It should be noted that using any block to read and write in this mode may give wrong results.
 
 ```
-hf 14a raw -s -c -t 1000 cf0000000032<param>
+hf 14a raw -s -c -t 1000 cf<passwd>32<param>
 ```
-Param | Description
- 00   | Closed, shadow data can be written at this time
- 01   | Open, start restore
- 02   | Turn it off completely, as a normal card
- 03   | High-speed read and write mode
+ * `<param>`
+   * `00`: pre-write, shadow data can be written
+   * `01`: restore mode
+   * `02`: disabled
+   * `03`: disabled, high speed R/W mode for Ultralight?
 
-Any block read and write
-========================
-Using the backdoor command can read and write any area without password, similar to UID card, it should be noted that this command must be used to modify UID.
+### Direct block read and write
+
+Using the backdoor command, one can read and write any area without MFC password, similarly to MFC Gen1 card. It should be noted that this command must be used to modify UID.
 
 ```
-hf 14a raw -s -c -t 1000 cf00000000CE<block number>                    // Backdoor read card
-hf 14a raw -s -c -t 1000 cf00000000CD<block number><single block data> // Backdoor write card
-```
-
-set backdoor password
-=====================
-All backdoor operations are protected by passwords. If password is forgotten, the card will be scrapped
-default password is 00000000
-```
-hf 14a raw -s -c -t 1000 cf00000000feaabbccdd   // set password to AABBCCDD
+hf 14a raw -s -c -t 1000 cf<passwd>CE<block number>                    // Backdoor read card
+hf 14a raw -s -c -t 1000 cf<passwd>CD<block number><single block data> // Backdoor write card
 ```
 
+Read/Write operations work on 16 bytes, no matter the Ultralight mode.
+
+Note that only the first four bytes of each block will be mapped in the Ultralight memory map.
+
+### Set backdoor password
+
+All backdoor operations are protected by a password. If password is forgotten, the card can't be recovered. Default password is `00000000`.
+```
+hf 14a raw -s -c -t 1000 cf00000000feaabbccdd   // change password from 00000000 to AABBCCDD
+hf 14a raw -s -c -t 1000 cfaabbccddfe00000000   // change password from AABBCCDD to 00000000
+```
+
+### Dump configuration
+
+```
+hf 14a raw -s -c -t 1000 cf<passwd>c6
+default configuration:
+00000000000002000978009102DABC191010111213141516040008004F6B
+                                                        ^^^^ ??
+                                                      ^^ cf cmd 6a: UL mode
+                                                ^^^^^^ cf cmd 35: ATQA/SAK
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cf cmd 34: ATS length & content
+            ^^ cf cmd 32: GTU mode
+    ^^^^^^^^ cf cmd fe: password
+  ^^ cf cmd 68: UID length
+^^ cf cmd 69: Ultralight protocol
+```
+### Fast configuration
+
+```
+hf 14a raw -s -c -t 1000 cf<passwd>f0<configuration_data>
+```
+cf **Dump configuration** for configuration data description.
+
+Example: Write factory configuration, using default password
+```
+hf 14a raw -s -c -t 1000 cf00000000f000000000000002000978009102DABC191010111213141516040008004F6B
+```
+
+**TODO** Variant with command `f1` sets configuration and fuses it ?
 
 ## MIFARE Classic Super
 
