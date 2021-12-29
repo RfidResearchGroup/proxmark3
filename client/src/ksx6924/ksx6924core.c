@@ -93,82 +93,82 @@ MAKE_ENUM_TYPE(uint8_t);
 
 // KSX6924LookupCardType
 MAKE_ENUM_CONST(CardType, uint8_t,
-   { 0x00, "Pre-paid" },
-   { 0x10, "Post-pay" },
-   { 0x20, "Mobile post-pay" },
-);
+{ 0x00, "Pre-paid" },
+{ 0x10, "Post-pay" },
+{ 0x20, "Mobile post-pay" },
+               );
 
 // KSX6924LookupAlg
 MAKE_ENUM_CONST(Alg, uint8_t,
-   { 0x00, "SEED" },
-   { 0x10, "3DES" },
-);
+{ 0x00, "SEED" },
+{ 0x10, "3DES" },
+               );
 
 // KSX6924LookupTMoneyIDCenter
 MAKE_ENUM_CONST(TMoneyIDCenter, uint8_t,
-   { 0x00, "reserved" },
-   { 0x01, "Korea Financial Telecommunications and Clearings Institute" },
-   { 0x02, "A-Cash" },
-   { 0x03, "Mybi" },
+{ 0x00, "reserved" },
+{ 0x01, "Korea Financial Telecommunications and Clearings Institute" },
+{ 0x02, "A-Cash" },
+{ 0x03, "Mybi" },
 
-   { 0x05, "V-Cash" },
-   { 0x06, "Mondex Korea" },
-   { 0x07, "Korea Expressway Corporation" },
-   { 0x08, "Korea Smart Card Corporation" },
-   { 0x09, "KORAIL Networks" },
+{ 0x05, "V-Cash" },
+{ 0x06, "Mondex Korea" },
+{ 0x07, "Korea Expressway Corporation" },
+{ 0x08, "Korea Smart Card Corporation" },
+{ 0x09, "KORAIL Networks" },
 
-   { 0x0b, "EB Card Corporation" },
-   { 0x0c, "Seoul Bus Transport Association" },
-   { 0x0d, "Cardnet" },
-);
+{ 0x0b, "EB Card Corporation" },
+{ 0x0c, "Seoul Bus Transport Association" },
+{ 0x0d, "Cardnet" },
+               );
 
 // KSX6924LookupTMoneyUserCode
 MAKE_ENUM_CONST(TMoneyUserCode, uint8_t,
-   { 0x01, "Regular/normal" },
-   { 0x02, "Child" },
+{ 0x01, "Regular/normal" },
+{ 0x02, "Child" },
 
-   { 0x04, "Youth" },
+{ 0x04, "Youth" },
 
-   { 0x06, "elderly" },
+{ 0x06, "elderly" },
 
-   { 0x0f, "Test" },
-   { 0xff, "Inactive" },
-);
+{ 0x0f, "Test" },
+{ 0xff, "Inactive" },
+               );
 
 // KSX6924LookupTMoneyDisRate
 MAKE_ENUM_CONST(TMoneyDisRate, uint8_t,
-   { 0x00, "No discount" },
+{ 0x00, "No discount" },
 
-   { 0x10, "Disabled, basic" },
-   { 0x11, "Disabled, companion" },
+{ 0x10, "Disabled, basic" },
+{ 0x11, "Disabled, companion" },
 
-   { 0x20, "Merit, basic" },
-   { 0x21, "Merit, companion" },
-);
+{ 0x20, "Merit, basic" },
+{ 0x21, "Merit, companion" },
+               );
 
 // KSX6924LookupTMoneyTCode
 MAKE_ENUM_CONST(TMoneyTCode, uint8_t,
-   { 0x00, "None" },
-   { 0x01, "SK Telecom" },
-   { 0x02, "Korea Telecom" },
-   { 0x03, "LG Uplus" },
-);
+{ 0x00, "None" },
+{ 0x01, "SK Telecom" },
+{ 0x02, "Korea Telecom" },
+{ 0x03, "LG Uplus" },
+               );
 
 // KSX6924LookupTMoneyCCode
 MAKE_ENUM_CONST(TMoneyCCode, uint8_t,
-   { 0x00, "None" },
-   { 0x01, "KB Kookmin Bank" },
-   { 0x02, "Nonghyup Bank" },
-   { 0x03, "Lotte Card" },
-   { 0x04, "BC Card" },
-   { 0x05, "Samsung Card" },
-   { 0x06, "Shinhan Bank" },
-   { 0x07, "Citibank Korea" },
-   { 0x08, "Korea Exchange Bank" },
-   { 0x09, "Woori" },
-   { 0x0a, "Hana SK Card" },
-   { 0x0b, "Hyundai Capital Services" },
-);
+{ 0x00, "None" },
+{ 0x01, "KB Kookmin Bank" },
+{ 0x02, "Nonghyup Bank" },
+{ 0x03, "Lotte Card" },
+{ 0x04, "BC Card" },
+{ 0x05, "Samsung Card" },
+{ 0x06, "Shinhan Bank" },
+{ 0x07, "Citibank Korea" },
+{ 0x08, "Korea Exchange Bank" },
+{ 0x09, "Woori" },
+{ 0x0a, "Hana SK Card" },
+{ 0x0b, "Hyundai Capital Services" },
+               );
 
 static const char *KSX6924_UNKNOWN = "Unknown";
 
@@ -226,7 +226,7 @@ static int64_t bcdToLong(const uint8_t *buf, size_t len) {
 /**
  * Converts a date from on-card format to ksx6924_date format.
  */
-static bool convert_internal_date( const _ksx6924_internal_date_t i, struct ksx6924_date *ret) {
+static bool convert_internal_date(const _ksx6924_internal_date_t i, struct ksx6924_date *ret) {
 
     int64_t year = bcdToLong(i.year, 2);
     int16_t month = bcdToInteger(i.month[0]);
@@ -276,7 +276,7 @@ bool KSX6924ParsePurseInfo(const uint8_t *purseInfo, size_t purseLen, struct ksx
                   0,    // min_str_len
                   0,    // spaces_between
                   false // uppercase
-                  );
+                 );
 
     int64_t idtr = bcdToLong(internalPurseInfo->idtr, 5);
     if (idtr < 0) {
@@ -294,8 +294,8 @@ bool KSX6924ParsePurseInfo(const uint8_t *purseInfo, size_t purseLen, struct ksx
     convert_internal_date(internalPurseInfo->issueDate, &(ret->issueDate));
     convert_internal_date(internalPurseInfo->expiryDate, &(ret->expiryDate));
 
-    ret->balMax = MemBeToUint4byte((uint8_t*)internalPurseInfo->balMax);
-    ret->mmax = MemBeToUint4byte((uint8_t*)internalPurseInfo->mmax);
+    ret->balMax = MemBeToUint4byte((uint8_t *)internalPurseInfo->balMax);
+    ret->mmax = MemBeToUint4byte((uint8_t *)internalPurseInfo->mmax);
 
     memcpy(&ret->rfu, &internalPurseInfo->rfu, 8);
 
@@ -367,7 +367,7 @@ int KSX6924Select(bool ActivateField, bool LeaveFieldON, uint8_t *Result, size_t
                      ResultLen,
                      sw,
                      NULL
-            );
+                    );
 }
 
 /**
@@ -390,7 +390,7 @@ bool KSX6924TrySelect(void) {
                           "Not a KS X 6924 card! APDU response: %04x - %s",
                           sw,
                           GetAPDUCodeDescription(sw >> 8, sw & 0xff)
-                );
+                         );
         } else {
             PrintAndLogEx(FAILED, "APDU exchange error. Card returns 0x0000.");
         }
@@ -430,8 +430,8 @@ bool KSX6924GetBalance(uint32_t *result) {
         return false;
     }
 
-    *result =  MemBeToUint4byte((uint8_t*)arr);
-    return true;   
+    *result =  MemBeToUint4byte((uint8_t *)arr);
+    return true;
 }
 
 
@@ -448,7 +448,7 @@ bool KSX6924InitializeCard(uint8_t mpda1, uint8_t mpda2, uint8_t mpda3, uint8_t 
     uint16_t sw = 0;
     size_t rlen = 0;
 
-    //  ALGep +  VKep + BALep + IDcenter + IDep + NTep + Sign1 +  sw 
+    //  ALGep +  VKep + BALep + IDcenter + IDep + NTep + Sign1 +  sw
     uint8_t arr[1 + 1 + 4 + 1 + 8 + 4 + 4 + 2];
     memset(arr, 0, sizeof(arr));
 
