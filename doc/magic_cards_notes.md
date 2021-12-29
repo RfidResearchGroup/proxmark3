@@ -511,20 +511,6 @@ Default `<passwd>`: `00000000`
 * Shadow mode:  GTU
 * Backdoor password mode
 
-#### Possible card types
-Known Preset Change Available:
-* MIFARE Mini
-* MIFARE 1k S50 4 byte UID
-* MIFARE 1k S50 7 byte UID
-* MIFARE 1k S50 10 byte UID
-* MIFARE 4k S70 4 byte UID
-* MIFARE 4k S70 7 byte UID
-* MIFARE 4k S70 10 byte UID
-* Ultralight
-* Ultralight-C
-* Ultralight Ev1
-* NTAG
-
 ### Proxmark3 commands
 
 ```
@@ -752,6 +738,60 @@ hf 14a raw -s -c -t 1000 CF00000000F000000000000002000978009102DABC1910101112131
 ```
 
 ⚠ Variant with command `F1` instead of `F0` will set and fuse permanently the configuration. Backdoor R/W will still work.
+
+### Presets
+
+Here are some presets available in the FuseTool (but with all ATS disabled)
+
+**MIFARE Mini S20 4-byte UID**
+```
+hf 14a raw -s -c -t 1000 CF00000000F000000000000002000978009102DABC19101011121314151604000900
+```
+
+**MIFARE Mini S20 7-byte UID**
+```
+hf 14a raw -s -c -t 1000 CF00000000F000010000000002000978009102DABC19101011121314151644000900
+```
+
+**MIFARE 1k S50 4-byte UID** (this is the factory setting)
+```
+hf 14a raw -s -c -t 1000 CF00000000F000000000000002000978009102DABC19101011121314151604000800
+```
+
+**MIFARE 1k S50 7-byte UID**
+```
+hf 14a raw -s -c -t 1000 CF00000000F000010000000002000978009102DABC19101011121314151644000800
+```
+
+**MIFARE 4k S70 4-byte UID**
+```
+hf 14a raw -s -c -t 1000 CF00000000F000000000000002000978009102DABC19101011121314151602001800
+```
+
+**MIFARE 4k S70 7 byte UID**
+```
+hf 14a raw -s -c -t 1000 CF00000000F000010000000002000978009102DABC19101011121314151642001800
+```
+
+**Ultralight**
+```
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000003
+```
+
+**Ultralight-C**
+```
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000002
+```
+
+**Ultralight EV1**
+```
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000000
+```
+
+**NTAG21x**
+```
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000001
+```
 
 ## MIFARE Classic Super
 
