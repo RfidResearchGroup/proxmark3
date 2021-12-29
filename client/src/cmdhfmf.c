@@ -444,7 +444,7 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf rdbl",
                   "Read MIFARE Classic block",
                   "hf mf rdbl --blk 0 -k FFFFFFFFFFFF\n"
-                  "hf mf rdbl -b 3 -v   -> get block 3, decode sector trailer\n"
+                  "hf mf rdbl --blk 3 -v   -> get block 3, decode sector trailer\n"
                  );
     void *argtable[] = {
         arg_param_begin,
