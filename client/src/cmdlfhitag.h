@@ -19,4 +19,5 @@ int readHitagUid(void);
 void annotateHitag1(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
 void annotateHitag2(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
 void annotateHitagS(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
+uint8_t hitag1_CRC_check(uint8_t *d, uint32_t nbit);
 #endif

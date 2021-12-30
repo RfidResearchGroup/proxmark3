@@ -216,10 +216,11 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case ISO_15693:
                 crcStatus = iso15693_CRC_check(frame, data_len);
                 break;
-            case PROTO_CRYPTORF:
             case PROTO_HITAG1:
-            case PROTO_HITAG2:
             case PROTO_HITAGS:
+                crcStatus = hitag1_CRC_check(frame, (data_len * 8) - ((8 - parityBytes[0]) % 8));
+            case PROTO_CRYPTORF:
+            case PROTO_HITAG2:
             default:
                 break;
         }
@@ -292,10 +293,8 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (markCRCBytes) {
         //CRC-command
         if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAGS)) && (data_len > 1)) {
-            // notes hitag S:
-            // pm3 is using UID REQUEST Adv -> SOF is 111(AC) then 111111(MC)
-            // for unknown reason, recorded SOF in trace is 1111 instead of 111111 (or should be even skipped)
-            // CRC on tag response is SOF excluded
+            // Note that UID REQUEST response has no CRC, but we don't know
+            // if the response we see is a UID
             char *pos1 = line[(data_len - 1) / 18] + (((data_len - 1) % 18) * 4) + offset - 1;
             (*pos1) = '[';
             char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4) + offset - 2;
