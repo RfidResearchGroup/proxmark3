@@ -38,7 +38,7 @@
 
 #ifndef LIBPM3
 #define BANNERMSG1 ""
-#define BANNERMSG2 "   [ :snowflake: Iceman :snowflake: ]"
+#define BANNERMSG2 "   [ Iceman :snowflake: ]"
 #define BANNERMSG3 ""
 
 typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
