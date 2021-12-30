@@ -1168,10 +1168,10 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
 
     StopTicks();
 
-    int i, j, z, k;
+    int i, k;
 //    int frame_count = 0;
     int response = 0;
-    int response_bit[200];
+    uint8_t response_bit[200];
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
     uint8_t txbuf[HITAG_FRAME_LEN];
@@ -1181,9 +1181,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
     int t_wait = HITAG_T_WAIT_MAX;
     bool bStop = false;
     int pageNum = 0;
-    unsigned char mask = 1;
     unsigned char crc;
-    unsigned char pageData[32];
     page_to_be_written = 0;
 
     //read given key/challenge
@@ -1275,12 +1273,6 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
 
         WDT_HIT();
 
-        // Check if frame was captured and store it
-        if (rxlen > 0) {
-//            frame_count++;
-            LogTraceBits(rx, rxlen, response, response, false);
-        }
-
         // By default reset the transmission buffer
         tx = txbuf;
         txlen = 0;
@@ -1296,6 +1288,30 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
                 bStop = !false;
         }
 
+        unsigned char response_bytes[ARRAYLEN(response_bit)/8] = {0};
+        k = 0;
+        // Check if frame was captured and store it
+        if (rxlen > 0) {
+            for (i = 0; i < rxlen; i++) {
+                response_bit[i] = (rx[i/8] >> (7 - (i % 8))) & 1;
+            }
+            if (tag.pstate == HT_INIT) {
+                // Tag Response is AC encoded
+                for (i = 5; i < rxlen; i += 2) {
+                    response_bytes[k/8] |= response_bit[i] << (7 - (k % 8));
+                    k++;
+                    if (k >= 8*ARRAYLEN(response_bytes))
+                        break;
+                }
+            } else {
+                for (i = 4; i < rxlen; i++) { // ignore first 4 bits: SOF (actually 1 or 6 depending on response protocol)
+                    response_bytes[k/8] |= response_bit[i] << (7 - (k % 8));
+                    k++;
+                }
+            }
+//            frame_count++;
+            LogTraceBits(response_bytes, k, response, response, false);
+        }
         if (tag.pstate == HT_SELECTED && tag.tstate == HT_NO_OP && rxlen > 0) {
             //send read request
             tag.tstate = HT_READING_PAGE;
@@ -1310,31 +1326,8 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
                    && tag.tstate == HT_READING_PAGE
                    && rxlen > 0) {
             //save received data - 40 bits
-            z = 0;
-            for (i = 0; i < 5; i++) {
-                for (j = 0; j < 8; j++) {
-                    response_bit[z] = 0;
-                    if ((rx[i] & ((mask << 7) >> j)) != 0)
-                        response_bit[z] = 1;
-                    z++;
-                }
-            }
-            k = 0;
-            for (i = 4; i < 36; i++) { // ignore first 4 bits: SOF (actually 1 or 6 depending on response protocol)
-                pageData[k] = response_bit[i];
-                k++;
-            }
-            for (i = 0; i < 4; i++)     // set page bytes to 0
-                tag.pages[pageNum][i] = 0x0;
-            for (i = 0; i < 4; i++) {   // set page bytes from received bits
-                tag.pages[pageNum][i] += ((pageData[i * 8] << 7)
-                                          | (pageData[1 + (i * 8)] << 6)
-                                          | (pageData[2 + (i * 8)] << 5)
-                                          | (pageData[3 + (i * 8)] << 4)
-                                          | (pageData[4 + (i * 8)] << 3)
-                                          | (pageData[5 + (i * 8)] << 2)
-                                          | (pageData[6 + (i * 8)] << 1)
-                                          | pageData[7 + (i * 8)]);
+            for (i = 0; i < 4 && i < k; i++) {   // set page bytes from received bits
+                tag.pages[pageNum][i] = response_bytes[i];
             }
             if (tag.auth && tag.LKP && pageNum == 1) {
                 Dbprintf("Page[%2d]: %02X %02X %02X %02X", pageNum, pwdh0,
@@ -1429,6 +1422,8 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page, bool ledcont
 
 //    int frame_count = 0;
     int response = 0;
+    int i, k;
+    uint8_t response_bit[200];
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
     uint8_t txbuf[HITAG_FRAME_LEN];
@@ -1533,9 +1528,30 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page, bool ledcont
         WDT_HIT();
 
         // Check if frame was captured and store it
+        // Check if frame was captured and store it
         if (rxlen > 0) {
+            for (i = 0; i < rxlen; i++) {
+                response_bit[i] = (rx[i/8] >> (7 - (i % 8))) & 1;
+            }
+            unsigned char response_bytes[ARRAYLEN(response_bit)/8] = {0};
+            if (tag.pstate == HT_INIT) {
+                // Tag Response is AC encoded
+                k = 0;
+                for (i = 5; i < rxlen; i += 2) {
+                    response_bytes[k/8] |= response_bit[i] << (7 - (k % 8));
+                    k++;
+                    if (k >= 8*ARRAYLEN(response_bytes))
+                        break;
+                }
+            } else {
+                k = 0;
+                for (i = 4; i < rxlen; i++) { // ignore first 4 bits: SOF (actually 1 or 6 depending on response protocol)
+                    response_bytes[k/8] |= response_bit[i] << (7 - (k % 8));
+                    k++;
+                }
+            }
 //            frame_count++;
-            LogTraceBits(rx, rxlen, response, response, false);
+            LogTraceBits(response_bytes, k, response, response, false);
         }
 
         //check for valid input

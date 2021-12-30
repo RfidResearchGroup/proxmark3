@@ -294,7 +294,7 @@ bool LogTrace_ISO15693(const uint8_t *bytes, uint16_t len, uint32_t ts_start, ui
 bool RAMFUNC LogTraceBits(const uint8_t *btBytes, uint16_t bitLen, uint32_t timestamp_start, uint32_t timestamp_end, bool readerToTag) {
     uint8_t parity[(nbytes(bitLen) - 1) / 8 + 1];
     memset(parity, 0x00, sizeof(parity));
-    parity[0] = ((bitLen - 1) % 8) + 1;
+    parity[0] = bitLen % 8;
     return LogTrace(btBytes, nbytes(bitLen), timestamp_start, timestamp_end, parity, readerToTag);
 }
 

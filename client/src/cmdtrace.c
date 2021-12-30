@@ -294,7 +294,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAGS)) && (data_len > 1)) {
             // notes hitag S:
             // pm3 is using UID REQUEST Adv -> SOF is 111(AC) then 111111(MC)
-            // first tag response is AC encoded Currently, recorded trace is garbage
             // for unknown reason, recorded SOF in trace is 1111 instead of 111111 (or should be even skipped)
             // CRC on tag response is SOF excluded
             char *pos1 = line[(data_len - 1) / 18] + (((data_len - 1) % 18) * 4) + offset - 1;
