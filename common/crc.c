@@ -156,7 +156,7 @@ uint32_t CRC8Hitag1Bits(uint8_t *buff, size_t bitsize) {
     uint8_t i;
     for (i = 0; i < bitsize; i++) {
         data <<= 1;
-        data += (buff[i/8] >> (7 - (i % 8))) & 1;
+        data += (buff[i / 8] >> (7 - (i % 8))) & 1;
         n += 1;
         if (n == 8) {
             crc_update2(&crc, data, n);

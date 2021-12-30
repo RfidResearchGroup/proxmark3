@@ -272,10 +272,10 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
             }
 
-        } else if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAG2) || (protocol == PROTO_HITAGS)) && (parityBytes[0] > 0)){
+        } else if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAG2) || (protocol == PROTO_HITAGS)) && (parityBytes[0] > 0)) {
             // handle partial bytes
             uint8_t nbits = parityBytes[0];
-            if (j==0) {
+            if (j == 0) {
                 partialbytebuff = frame[0] << nbits;
                 snprintf(line[0], 120, "%02x(%i) ", frame[0] >> (8 - nbits), nbits);
                 offset = 2;

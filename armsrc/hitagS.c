@@ -1288,24 +1288,24 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
                 bStop = !false;
         }
 
-        unsigned char response_bytes[ARRAYLEN(response_bit)/8] = {0};
+        unsigned char response_bytes[ARRAYLEN(response_bit) / 8] = {0};
         k = 0;
         // Check if frame was captured and store it
         if (rxlen > 0) {
             for (i = 0; i < rxlen; i++) {
-                response_bit[i] = (rx[i/8] >> (7 - (i % 8))) & 1;
+                response_bit[i] = (rx[i / 8] >> (7 - (i % 8))) & 1;
             }
             if (tag.pstate == HT_INIT) {
                 // Tag Response is AC encoded
                 for (i = 5; i < rxlen; i += 2) {
-                    response_bytes[k/8] |= response_bit[i] << (7 - (k % 8));
+                    response_bytes[k / 8] |= response_bit[i] << (7 - (k % 8));
                     k++;
-                    if (k >= 8*ARRAYLEN(response_bytes))
+                    if (k >= 8 * ARRAYLEN(response_bytes))
                         break;
                 }
             } else {
                 for (i = 4; i < rxlen; i++) { // ignore first 4 bits: SOF (actually 1 or 6 depending on response protocol)
-                    response_bytes[k/8] |= response_bit[i] << (7 - (k % 8));
+                    response_bytes[k / 8] |= response_bit[i] << (7 - (k % 8));
                     k++;
                 }
             }
@@ -1531,22 +1531,22 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page, bool ledcont
         // Check if frame was captured and store it
         if (rxlen > 0) {
             for (i = 0; i < rxlen; i++) {
-                response_bit[i] = (rx[i/8] >> (7 - (i % 8))) & 1;
+                response_bit[i] = (rx[i / 8] >> (7 - (i % 8))) & 1;
             }
-            unsigned char response_bytes[ARRAYLEN(response_bit)/8] = {0};
+            unsigned char response_bytes[ARRAYLEN(response_bit) / 8] = {0};
             if (tag.pstate == HT_INIT) {
                 // Tag Response is AC encoded
                 k = 0;
                 for (i = 5; i < rxlen; i += 2) {
-                    response_bytes[k/8] |= response_bit[i] << (7 - (k % 8));
+                    response_bytes[k / 8] |= response_bit[i] << (7 - (k % 8));
                     k++;
-                    if (k >= 8*ARRAYLEN(response_bytes))
+                    if (k >= 8 * ARRAYLEN(response_bytes))
                         break;
                 }
             } else {
                 k = 0;
                 for (i = 4; i < rxlen; i++) { // ignore first 4 bits: SOF (actually 1 or 6 depending on response protocol)
-                    response_bytes[k/8] |= response_bit[i] << (7 - (k % 8));
+                    response_bytes[k / 8] |= response_bit[i] << (7 - (k % 8));
                     k++;
                 }
             }

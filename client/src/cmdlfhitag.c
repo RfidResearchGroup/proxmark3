@@ -972,7 +972,7 @@ int readHitagUid(void) {
     return (CmdLFHitagReader("--26") == PM3_SUCCESS);
 }
 
-uint8_t hitag1_CRC_check(uint8_t *d, uint32_t nbit){
+uint8_t hitag1_CRC_check(uint8_t *d, uint32_t nbit) {
     if (nbit < 9) return 2;
     return (CRC8Hitag1Bits(d, nbit) == 0);
 }

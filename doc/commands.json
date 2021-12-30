@@ -3859,7 +3859,7 @@
             "description": "read mifare classic block",
             "notes": [
                 "hf mf rdbl --blk 0 -k ffffffffffff",
-                "hf mf rdbl -b 3 -v -> get block 3, decode sector trailer"
+                "hf mf rdbl --blk 3 -v -> get block 3, decode sector trailer"
             ],
             "offline": false,
             "options": [
@@ -5520,9 +5520,10 @@
                 "-h, --help this help",
                 "-k, --key <hex> key for authentication (ul-c 16 bytes, ev1/ntag 4 bytes)",
                 "-l swap entered key's endianness",
-                "-b, --block <dec> block number to read"
+                "-b, --block <dec> block number to read",
+                "--force force operation even if address is out of range"
             ],
-            "usage": "hf mfu rdbl [-hl] [-k <hex>] -b <dec>"
+            "usage": "hf mfu rdbl [-hl] [-k <hex>] -b <dec> [--force]"
         },
         "hf mfu restore": {
             "command": "hf mfu restore",
@@ -5602,9 +5603,10 @@
                 "-k, --key <hex> key for authentication (ul-c 16 bytes, ev1/ntag 4 bytes)",
                 "-l swap entered key's endianness",
                 "-b, --block <dec> block number to write",
-                "-d, --data <hex> block data (4 or 16 hex bytes, 16 hex bytes will do a compatibility write)"
+                "-d, --data <hex> block data (4 or 16 hex bytes, 16 hex bytes will do a compatibility write)",
+                "--force force operation even if address is out of range"
             ],
-            "usage": "hf mfu wrbl [-hl] [-k <hex>] -b <dec> -d <hex>"
+            "usage": "hf mfu wrbl [-hl] [-k <hex>] -b <dec> -d <hex> [--force]"
         },
         "hf plot": {
             "command": "hf plot",
@@ -10151,6 +10153,6 @@
     "metadata": {
         "commands_extracted": 597,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-12-29T15:28:13"
+        "extracted_on": "2021-12-30T11:40:54"
     }
 }
