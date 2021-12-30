@@ -793,6 +793,46 @@ hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC1910101112131
 hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000001
 ```
 
+### Version and Signature
+
+Ultralight EV1 and NTAG Version info and Signature are stored respectively in blocks 250-251 and 242-249.
+
+Example for an Ultralight EV1 128b with the signature sample from tools/recover_pk.py
+```
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000000
+hf mfu wrbl -b 0 -d 04C12865
+hf mfu wrbl -b 1 -d 5A373080
+hf mfu wrbl -b 242 -d CEA2EB0B --force
+hf mfu wrbl -b 243 -d 3C95D084 --force
+hf mfu wrbl -b 244 -d 4A95B824 --force
+hf mfu wrbl -b 245 -d A7553703 --force
+hf mfu wrbl -b 246 -d B3702378 --force
+hf mfu wrbl -b 247 -d 033BF098 --force
+hf mfu wrbl -b 248 -d 7899DB70 --force
+hf mfu wrbl -b 249 -d 151A19E7 --force
+hf mfu wrbl -b 250 -d 00040301 --force
+hf mfu wrbl -b 251 -d 01000E03 --force
+hf mfu info
+```
+
+Example for an NTAG216 with the signature sample from tools/recover_pk.py
+```
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000001
+hf mfu wrbl -b 0 -d 04E10C61
+hf mfu wrbl -b 1 -d DA993C80
+hf mfu wrbl -b 242 -d 8B76052E --force
+hf mfu wrbl -b 243 -d E42F5567 --force
+hf mfu wrbl -b 244 -d BEB53238 --force
+hf mfu wrbl -b 245 -d B3E3F995 --force
+hf mfu wrbl -b 246 -d 0707C0DC --force
+hf mfu wrbl -b 247 -d C956B5C5 --force
+hf mfu wrbl -b 248 -d EFCFDB70 --force
+hf mfu wrbl -b 249 -d 9B2D82B3 --force
+hf mfu wrbl -b 250 -d 00040402 --force
+hf mfu wrbl -b 251 -d 01001303 --force
+hf mfu info
+```
+
 ## MIFARE Classic Super
 
 It behaves like DirectWrite but records reader auth attempts.

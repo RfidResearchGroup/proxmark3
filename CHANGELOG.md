@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added option `--force` to `hf mfu rdb/wrbl` to force operation even if address is out of range (@doegox)
+ - Added documentation for detailed usage of the Ultimate Magic Card (@doegox)
+ - Changed HitagS trace record and parsing to deal with partial bytes and to check CRC8 (@doegox)
  - Added support for KS X 6924 (South Korea's T-money card) (@toucan12)
  - Fixed `hf 15 dump` - now correctly dumps 256 blocks w/o crashing the client (@iceman1001)
  - Changed `hf 14a sim -t 3` - anticollision for DESFire simulation now uses different RATS (@mosci)
