@@ -1,4 +1,4 @@
-name: Ubuntu Build and Test
+name: Ubuntu Build, Test, and Upload Firmware
 
 on:
   push:
@@ -45,6 +45,12 @@ jobs:
 
       - name: Test
         run: make check
+        
+      - name: Upload firmware
+        uses: actions/upload-artifact@v2.3.1
+        with:
+          name: firmware
+          path: armsrc/obj/fullimage.elf
 
   ubuntu-make-btaddon:
     if: always()
