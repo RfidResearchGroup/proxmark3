@@ -1,4 +1,16 @@
-## 1. Validating proxmark client functionality
+<a id="Top"></a>
+
+# 1. Validating proxmark client functionality
+
+# Table of Contents
+- [1. Validating proxmark client functionality](#1-validating-proxmark-client-functionality)
+- [Table of Contents](#table-of-contents)
+    - [To get interactive help](#to-get-interactive-help)
+    - [First tests](#first-tests)
+    - [To quit the client](#to-quit-the-client)
+  - [Next steps](#next-steps)
+
+
 
 If all went well you should get some information about the firmware and memory usage as well as the prompt,  something like this.
 
@@ -55,10 +67,12 @@ This `[usb] pm3 --> ` is the Proxmark3 interactive prompt.
 
 
 ### To get interactive help
+^[Top](#top)
 
 For basic help type `help`. Or for help on a set of sub commands type the command followed by `help`. For example `hf mf help`.
 
 ### First tests
+^[Top](#top)
 
 These commands will return some info about your Proxmark software and hardware status.
 ```
@@ -70,12 +84,15 @@ These commands will return some info about your Proxmark software and hardware s
 You are now ready to use your newly flashed proxmark3 device.  Many commands uses the `h` parameter to show a help text.
 
 ### To quit the client
+^[Top](#top)
+
 ```
 [usb] pm3 --> quit
 ```
 or simple press `CTRL-D`.
 
 ## Next steps
+^[Top](#top)
 
 Some configuration steps are still needed.
 

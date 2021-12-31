@@ -1,4 +1,18 @@
+<a id="Top"></a>
+
+# 2. Configuration and Verification
+
+# Table of Contents
+- [2. Configuration and Verification](#2-configuration-and-verification)
+- [Table of Contents](#table-of-contents)
+    - [First things on your Proxmark3 RDV4](#first-things-on-your-proxmark3-rdv4)
+    - [Verify sim module firmware version](#verify-sim-module-firmware-version)
+  - [Next steps](#next-steps)
+
+
+
 ### First things on your Proxmark3 RDV4
+^[Top](#top)
 
 You will need to run these commands to make sure your RDV4 is prepared
 ```
@@ -22,6 +36,7 @@ Set all t55xx settings to defaults (will set all 4 at once)
 
 
 ### Verify sim module firmware version
+^[Top](#top)
 
 To make sure you got the latest sim module firmware.
 
@@ -91,6 +106,7 @@ Run hw status command to verify that the upgrade went well.
 ```
 
 ## Next steps
+^[Top](#top)
 
 For the next steps, please read the following page:
 
