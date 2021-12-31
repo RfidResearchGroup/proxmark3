@@ -6,6 +6,9 @@ This document is based mostly on information posted on http://www.proxmark.org/f
 Useful docs:
 * [AN10833 MIFARE Type Identification Procedure](https://www.nxp.com/docs/en/application-note/AN10833.pdf)
 
+
+# Table of Contents
+
 - [ISO14443A](#iso14443a)
   * [Identifying broken ISO14443A magic](#identifying-broken-iso14443a-magic)
 - [MIFARE Classic](#mifare-classic)
@@ -36,7 +39,7 @@ Useful docs:
 - [ISO15693](#iso15693)
   * [ISO15693 magic](#iso15693-magic)
 - [Multi](#multi)
-  * [Ultimate Magic Card](#ultimate-magic-card)
+  * [Gen 4 GTU](#gen-4-gtu)
 
 
 # ISO14443A
