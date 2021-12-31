@@ -6137,7 +6137,7 @@ static int CmdHF14AGen4View(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf gview",
-                  "View `magic gen3 gtu` card memory",
+                  "View `magic gen4 gtu` card memory",
                   "hf mf gview\n"
                   "hf mf gview --4k"
                  );
@@ -6147,7 +6147,7 @@ static int CmdHF14AGen4View(const char *Cmd) {
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
-        arg_strx0("p", "pwd", "<hex>", "password 4bytes"),
+        arg_str0("p", "pwd", "<hex>", "password 4bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
