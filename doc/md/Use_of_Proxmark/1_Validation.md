@@ -1,9 +1,9 @@
 <a id="Top"></a>
 
-# 1. Validating proxmark client functionality
+# 1. Validating Proxmark3 client functionality
 
 # Table of Contents
-- [1. Validating proxmark client functionality](#1-validating-proxmark-client-functionality)
+- [1. Validating Proxmark3 client functionality](#1-validating-proxmark3-client-functionality)
 - [Table of Contents](#table-of-contents)
     - [To get interactive help](#to-get-interactive-help)
     - [First tests](#first-tests)
