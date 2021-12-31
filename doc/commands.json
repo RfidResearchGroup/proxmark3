@@ -3673,7 +3673,7 @@
         },
         "hf mf gview": {
             "command": "hf mf gview",
-            "description": "view `magic gen3 gtu` card memory",
+            "description": "view `magic gen4 gtu` card memory",
             "notes": [
                 "hf mf gview",
                 "hf mf gview --4k"
@@ -3684,9 +3684,10 @@
                 "--mini mifare classic mini / s20",
                 "--1k mifare classic 1k / s50 (def)",
                 "--2k mifare classic/plus 2k",
-                "--4k mifare classic 4k / s70"
+                "--4k mifare classic 4k / s70",
+                "-p, --pwd <hex> password 4bytes"
             ],
-            "usage": "hf mf gview [-h] [--mini] [--1k] [--2k] [--4k]"
+            "usage": "hf mf gview [-h] [--mini] [--1k] [--2k] [--4k] [-p <hex>]"
         },
         "hf mf hardnested": {
             "command": "hf mf hardnested",
@@ -7134,13 +7135,15 @@
             "command": "lf gproxii help",
             "description": "help this help demod demodulate a g prox ii tag from the graphbuffer --------------------------------------------------------------------------------------- lf gproxii demod available offline: yes try to find guardall prox-ii preamble, if found decode / descramble data",
             "notes": [
-                "lf gproxii demod"
+                "lf gproxii demod -> use graphbuffer to decode",
+                "lf gproxii demod --raw fb8ee718ee3b8cc785c11b92 ->"
             ],
             "offline": true,
             "options": [
-                "-h, --help this help"
+                "-h, --help this help",
+                "-r, --raw <hex> raw bytes"
             ],
-            "usage": "lf gproxii demod [-h]"
+            "usage": "lf gproxii demod [-h] [-r <hex>]..."
         },
         "lf gproxii reader": {
             "command": "lf gproxii reader",
@@ -10153,6 +10156,6 @@
     "metadata": {
         "commands_extracted": 597,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2021-12-30T11:40:54"
+        "extracted_on": "2021-12-31T11:53:15"
     }
 }
