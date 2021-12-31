@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed various notes to have ToC and top links (@iceman1001)
  - Added option `lf gprox demod --raw` - now supports decoding of raw bytes (@iceman1001)
  - Added option `hf mf gview --pwd` - now supports user supplied password (@iceman1001)
  - Added option `--force` to `hf mfu rdb/wrbl` to force operation even if address is out of range (@doegox)
