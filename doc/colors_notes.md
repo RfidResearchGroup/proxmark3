@@ -1,9 +1,9 @@
-# Notes on Color usage.
+# Notes on Color usage
 <a id="Top"></a>
 
 
 # Table of Contents
-- [Notes on Color usage.](#notes-on-color-usage)
+- [Notes on Color usage](#notes-on-color-usage)
 - [Table of Contents](#table-of-contents)
   - [style/color](#stylecolor)
     - [Definition](#definition)
