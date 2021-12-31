@@ -1574,12 +1574,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareGen3Freez();
             break;
         }
-        case CMD_HF_MIFARE_G3_RDBL: {
+        case CMD_HF_MIFARE_G4_RDBL: {
             struct p {
                 uint8_t blockno;
+                uint8_t pwd[4];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            MifareG3ReadBlk(payload->blockno);
+            MifareG4ReadBlk(payload->blockno, payload->pwd);
             break;
         }
         case CMD_HF_MIFARE_PERSONALIZE_UID: {

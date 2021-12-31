@@ -6133,7 +6133,7 @@ static int CmdHF14AMfView(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14AGen3View(const char *Cmd) {
+static int CmdHF14AGen4View(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf gview",
@@ -6147,6 +6147,7 @@ static int CmdHF14AGen3View(const char *Cmd) {
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_strx0("p", "pwd", "<hex>", "password 4bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -6154,9 +6155,18 @@ static int CmdHF14AGen3View(const char *Cmd) {
     bool m1 = arg_get_lit(ctx, 2);
     bool m2 = arg_get_lit(ctx, 3);
     bool m4 = arg_get_lit(ctx, 4);
+
+    int pwd_len = 0;
+    uint8_t pwd[4] = {0};
+    CLIGetHexWithReturn(ctx, 5, pwd, &pwd_len);
     CLIParserFree(ctx);
 
     // validations
+    if (pwd_len != 4 && pwd_len != 0) {
+        PrintAndLogEx(FAILED, "Must specify 4 bytes, got " _YELLOW_("%u"), pwd_len);
+        return PM3_EINVARG;
+    }
+
     if ((m0 + m1 + m2 + m4) > 1) {
         PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
         return PM3_EINVARG;
@@ -6183,7 +6193,7 @@ static int CmdHF14AGen3View(const char *Cmd) {
         PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
         return PM3_EINVARG;
     }
-    PrintAndLogEx(SUCCESS, "View magic gen3 GTU MIFARE Classic " _GREEN_("%s"), s);
+    PrintAndLogEx(SUCCESS, "View magic gen4 GTU MIFARE Classic " _GREEN_("%s"), s);
     PrintAndLogEx(INFO, "." NOLF);
 
     // Select card to get UID/UIDLEN information
@@ -6221,7 +6231,7 @@ static int CmdHF14AGen3View(const char *Cmd) {
 
     for (uint16_t i = 0; i < block_cnt; i++) {
 
-        if (mfG3GetBlock(i, dump + (i * MFBLOCK_SIZE)) !=  PM3_SUCCESS) {
+        if (mfG4GetBlock(pwd, i, dump + (i * MFBLOCK_SIZE)) !=  PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Can't get magic card block: %u", i);
             PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             free(dump);
@@ -6290,8 +6300,8 @@ static command_t CommandTable[] = {
     {"gen3uid",     CmdHf14AGen3UID,        IfPm3Iso14443a,  "Set UID without changing manufacturer block"},
     {"gen3blk",     CmdHf14AGen3Block,      IfPm3Iso14443a,  "Overwrite manufacturer block"},
     {"gen3freeze",  CmdHf14AGen3Freeze,     IfPm3Iso14443a,  "Perma lock UID changes. irreversible"},
-    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic gen3 GTU") " -----------------------"},
-    {"gview",       CmdHF14AGen3View,       IfPm3Iso14443a,  "View card"},
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic gen4 GTU") " -----------------------"},
+    {"gview",       CmdHF14AGen4View,       IfPm3Iso14443a,  "View card"},
 //    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("i") " -----------------------"},
 //    {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},
     {NULL, NULL, NULL, NULL}

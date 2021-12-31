@@ -85,7 +85,7 @@ int mfGen3UID(uint8_t *uid, uint8_t uidlen, uint8_t *oldUid);
 int mfGen3Block(uint8_t *block, int blockLen, uint8_t *newBlock);
 int mfGen3Freeze(void);
 
-int mfG3GetBlock(uint8_t blockno, uint8_t *data);
+int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data);
 
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len);
 
