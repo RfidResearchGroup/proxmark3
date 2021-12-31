@@ -1,7 +1,10 @@
 # Notes on device side clocks
 The device side firmware uses a range of different clocks.  Here is an attempt to document the clocks in use and for what they are used.
 
+
+# Table of Contents
 - [Notes on device side clocks](#notes-on-device-side-clocks)
+- [Table of Contents](#table-of-contents)
   - [Slow clock](#slow-clock)
   - [Main Oscillator / MAINCK](#main-oscillator--mainck)
   - [PLL clock](#pll-clock)

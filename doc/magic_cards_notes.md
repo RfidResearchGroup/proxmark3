@@ -1,3 +1,5 @@
+<a id="top"></a>
+
 # Notes on Magic Cards, aka UID changeable
 This document is based mostly on information posted on http://www.proxmark.org/forum/viewtopic.php?pid=35372#p35372
 
@@ -866,9 +868,13 @@ or (ignore errors):
 script run hf_15_magic -u E004013344556677  
 ```
 
+<a id="g4top"></a>
+
 # Multi
 
-## Ultimate Magic Card
+## Gen 4 GTU
+A.k.a ultimate magic card,  most promenent feature is shadow mode (GTU) and optional password protected backdoor commands.
+
 
 Can emulate MIFARE Classic, Ultralight/NTAG families, 14b UID & App Data
 
@@ -893,6 +899,7 @@ Can emulate MIFARE Classic, Ultralight/NTAG families, 14b UID & App Data
 
 
 ### Identify
+^[Top](#top) ^^[Gen4](#g4top)
 
 👉 **TODO** Tag doesn't get identified correctly by latest Proxmark3 client (it might get mislabeled as MFC Gen2/CUID, Gen3/APDU or NTAG21x Modifiable, depending on configured UID/ATQA/SAK/ATS)
 
@@ -902,6 +909,7 @@ hf 14a raw -s -c -t 1000 CF00000000C6
 ```
 If the card is an Ultimate Magic Card, it returns 30 bytes.
 ### Magic commands
+^[Top](#top) ^^[Gen4](#g4top)
 
 Special commands summary:
 
@@ -923,6 +931,7 @@ CF <passwd> FE <4b new_password>                 // change password
 Default `<passwd>`: `00000000`
 
 ### Characteristics
+^[Top](#top) ^^[Gen4](#g4top)
 
 * UID: 4b, 7b and 10b versions
 * ATQA/SAK: changeable
@@ -933,12 +942,13 @@ Default `<passwd>`: `00000000`
 * Backdoor password mode
 
 ### Proxmark3 commands
+^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 # view contents of tag memory:
 hf mf gview
 ```
-👉 **TODO** `hf mf gview` is currently missing Ultralight memory maps and support for non-default password
+👉 **TODO** `hf mf gview` is currently missing Ultralight memory maps 
 
 Equivalent:
 
@@ -950,6 +960,8 @@ hf 14a raw -s -c -t 1000 CF00000000CE02
 ```
 
 ### Change ATQA / SAK
+^[Top](#top) ^^[Gen4](#g4top)
+
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>35<2b ATQA><1b SAK>
 ```
@@ -962,6 +974,7 @@ Example: ATQA 0044 SAK 28, default pwd
 hf 14a raw -s -c -t 1000 CF0000000035440028
 ```
 ### Change ATS
+^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>34<1b length><0-16b ATS>
@@ -977,6 +990,7 @@ hf 14a raw -s -c -t 1000 CF000000003406067577810280
 ```
 
 ### Set UID length (4, 7, 10)
+^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>68<1b param>
@@ -991,6 +1005,7 @@ Example: set UID length to 7 bytes, default pwd
 hf 14a raw -s -c -t 1000 CF000000006801
 ```
 ### Set 14443A UID
+^[Top](#top) ^^[Gen4](#g4top)
 
 UID is configured according to block0 with a backdoor write.
 
@@ -1021,6 +1036,7 @@ Ultralight mode, 10b UID
 👉 the UID is composed only from block0
 
 ### Set 14443B UID and ATQB
+^[Top](#top) ^^[Gen4](#g4top)
 
 UID and ATQB are configured according to block0 with a (14a) backdoor write.
 
@@ -1035,6 +1051,7 @@ hf 14b reader
 => ATQB 0405060708090A
 
 ### (De)Activate Ultralight mode
+^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>69<1b param>
@@ -1053,6 +1070,7 @@ In this mode, if SAK=`00` and ATQA=`0044`, it acts as an Ultralight card
 ⚠ only the first four bytes of each block will be mapped in the Ultralight memory map (so the Ultralight block numbers follow backdoor R/W block numbers).
 
 ### Select Ultralight mode
+^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>6A<1b param>
@@ -1072,6 +1090,7 @@ hf 14a raw -s -c -t 1000 CF000000006A02
 ```
 Now the card supports the 3DES UL-C authentication.
 ### Set shadow mode (GTU)
+^[Top](#top) ^^[Gen4](#g4top)
 
 This mode is divided into four states: off (pre-write), on (on restore), don’t care, and high-speed read and write.
 If you use it, please enter the pre-write mode first. At this time, write the full card data.
@@ -1087,6 +1106,7 @@ hf 14a raw -s -c -t 1000 CF<passwd>32<1b param>
    * `03`: disabled, high speed R/W mode for Ultralight?
 
 ### Direct block read and write
+^[Top](#top) ^^[Gen4](#g4top)
 
 Using the backdoor command, one can read and write any area without MFC password, similarly to MFC Gen1 card. It should be noted that this command must be used to modify UID.
 
@@ -1113,6 +1133,7 @@ hf 14a raw -s -c -t 1000 CF00000000CD00112233441C000011778185BA18000000
 ```
 
 ### Change backdoor password
+^[Top](#top) ^^[Gen4](#g4top)
 
 All backdoor operations are protected by a password. If password is forgotten, the card can't be recovered. Default password is `00000000`.
 
@@ -1130,6 +1151,7 @@ hf 14a raw -s -c -t 1000 CFAABBCCDDFE00000000
 ```
 
 ### Dump configuration
+^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>C6
@@ -1147,6 +1169,7 @@ Default configuration:
 ^^ cf cmd 69: Ultralight protocol
 ```
 ### Fast configuration
+^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>F0<30b configuration data>
@@ -1161,6 +1184,7 @@ hf 14a raw -s -c -t 1000 CF00000000F000000000000002000978009102DABC1910101112131
 ⚠ Variant with command `F1` instead of `F0` will set and fuse permanently the configuration. Backdoor R/W will still work.
 
 ### Presets
+^[Top](#top) ^^[Gen4](#g4top)
 
 Here are some presets available in the FuseTool (but with all ATS disabled)
 
@@ -1215,6 +1239,7 @@ hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC1910101112131
 ```
 
 ### Version and Signature
+^[Top](#top) ^^[Gen4](#g4top)
 
 Ultralight EV1 and NTAG Version info and Signature are stored respectively in blocks 250-251 and 242-249.
 
