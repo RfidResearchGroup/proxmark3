@@ -1,11 +1,20 @@
 # Notes on MFU binary formats
+<a id="Top"></a>
 
-  - new mfu format
-  - old mfu format
-  - plain mfu format
-  - future mfu format
+
+# Table of Contents
+- [Notes on MFU binary formats](#notes-on-mfu-binary-formats)
+- [Table of Contents](#table-of-contents)
+  - [New mfu format](#new-mfu-format)
+  - [Old mfu format](#old-mfu-format)
+  - [Plain mfu format](#plain-mfu-format)
+  - [future mfu format](#future-mfu-format)
+
+
   
 ## New mfu format
+^[Top](#top)
+
 The new mfu binary format was created to compensate for different manufactures tag functions.
 Like UL-Ev1 has three counter and tearing bytes,  while NTAG only has one counter and tearing byte.
 PACK was removed from header, since its just normally part of the tag memory,  unreadable,  but when 
@@ -29,6 +38,8 @@ typedef struct {
 ```
 
 ## Old mfu format
+^[Top](#top)
+
 The old binary format saved the extra data on tag in order for the Proxmark3 to able to simulate a real tag.
 
 ```
@@ -47,6 +58,8 @@ typedef struct {
 ```
 
 ## Plain mfu format
+^[Top](#top)
+
 The first binary format for MFU was just a memory dump from the tag block 0 to end.
 No extra data was saved.  
 ```
@@ -54,6 +67,8 @@ No extra data was saved.
 ```
 
 ## future mfu format
+^[Top](#top)
+
 For developers of apps and other tools, like libnfc,   we don't recommend using binary formats.
 We decided to adopt a JSON based format,  which is much more flexible to changes of new tag functionality.
 

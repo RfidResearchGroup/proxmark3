@@ -1,4 +1,11 @@
-# About LOCLASS attack
+# Notes about the LOCLASS attack
+<a id="top"></a>
+
+# Table of Contents
+- [Notes about the LOCLASS attack](#notes-about-the-loclass-attack)
+- [Table of Contents](#table-of-contents)
+- [Unit testing](#unit-testing)
+
 
 This document is primarily intended for understanding `hf iclass loclass` and files used with it.
 
@@ -15,6 +22,8 @@ If you don't have access to a iClass SE reader configured in Elite mode there is
 
 
 # Unit testing
+^[Top](#top)
+
 In order to verify that loclass is actually working, there is a "unit" test mode.
 run `hf iclass loclass --test`.
 

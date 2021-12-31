@@ -1,6 +1,5 @@
-<a id="Top"></a>
-
 # Notes on Cloner guns
+<a id="Top"></a>
 
 This document is based mostly on information posted on http://www.proxmark.org/forum/viewtopic.php?pid=39903#p39903
 
