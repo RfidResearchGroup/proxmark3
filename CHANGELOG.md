@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf mf gview` - now supports user supplied password (@iceman1001)
  - Added option `--force` to `hf mfu rdb/wrbl` to force operation even if address is out of range (@doegox)
  - Added documentation for detailed usage of the Ultimate Magic Card (@doegox)
  - Changed HitagS trace record and parsing to deal with partial bytes and to check CRC8 (@doegox)
