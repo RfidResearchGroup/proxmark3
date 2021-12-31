@@ -1,7 +1,25 @@
 # EMV commands
 <a id="top"></a>
 
-### EMV Implemented parts:
+Notes on EMV works on Proxmark3
+
+# Table of Contents
+- [EMV commands](#emv-commands)
+- [Table of Contents](#table-of-contents)
+    - [EMV Implemented parts](#emv-implemented-parts)
+    - [Working parts of qVSDC](#working-parts-of-qvsdc)
+    - [`not implemented` parts of EMV](#not-implemented-parts-of-emv)
+    - [Commands](#commands)
+    - [VISA(r) transactions](#visar-transactions)
+    - [Mastercard(r) transactions](#mastercardr-transactions)
+    - [all commands](#all-commands)
+    - [Useful links](#useful-links)
+    - [EMV kernels](#emv-kernels)
+
+
+
+### EMV Implemented parts
+^[Top](#top)
 
 - Get ATR|ATS
 - Get AID by PSE (`emv pse`)
@@ -22,7 +40,7 @@
 - Check ARQC cryptogram (`not implemented`)
 - Issuer scripts processing (`not implemented`)
 
-### Working parts of qVSDC:
+### Working parts of qVSDC
 ^[Top](#top)
 
 - Get ATR|ATS
@@ -58,7 +76,7 @@ command `emv exec` executes EMV transaction. it have parameters:
 ```
 It works for VISA(r) and Mastercard(r) transactions. It may work with other EMV payment system's card (and it works in general cases that is described in EMV).
 
-### VISA(r) transactions:
+### VISA(r) transactions
 ^[Top](#top)
 
 MSD - Magnetic Stripe mode
@@ -74,7 +92,7 @@ M/Chip - contact and contactless transaction
 Different cards have different modes on/of and different behavior in them. So needs to check card in all this modes.
 MSD - compatibility mode. Now it work always. But it less secure and in near future it will be slowly) disabled.
 
-### all commands:
+### all commands
 ^[Top](#top)
 
 ```
@@ -101,7 +119,7 @@ All main commands are parts of EMV specification. Commands than not described th
 
 `emv test` - test all crypto code from emv part of proxmark.
 
-### Useful links:
+### Useful links
 ^[Top](#top)
 
 EMV specifications
