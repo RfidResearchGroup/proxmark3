@@ -1,4 +1,24 @@
+
+<a id="Top"></a>
+
+# Modem Manager must be discarded
+
+
+# Table of Contents
+- [Modem Manager must be discarded](#modem-manager-must-be-discarded)
+- [Table of Contents](#table-of-contents)
+- [If you're a Linux user](#if-youre-a-linux-user)
+- [Solution 1: remove ModemManager](#solution-1-remove-modemmanager)
+- [Solution 2: disable ModemManager](#solution-2-disable-modemmanager)
+- [Solution 3: use filtering udev rules](#solution-3-use-filtering-udev-rules)
+- [Solution 4: use global ttyACM filtering rule](#solution-4-use-global-ttyacm-filtering-rule)
+- [Testing ModemManager filtering effectiveness](#testing-modemmanager-filtering-effectiveness)
+- [I didn't read carefully this page and now my Proxmark3 is not responding](#i-didnt-read-carefully-this-page-and-now-my-proxmark3-is-not-responding)
+  - [Only the fullimage is damaged](#only-the-fullimage-is-damaged)
+  - [The bootloader is damaged](#the-bootloader-is-damaged)
+
 # If you're a Linux user
+^[Top](#top)
 
 ModemManager is a real threat that can lead to a bricked Proxmark3, read this very attentively.
 
@@ -14,6 +34,7 @@ Yes it makes the flashing failing. And if it happens while you're flashing the b
 ModemManager is a threat for the Proxmark3, but also for many other embedded devices, such as some Arduino platforms.
 
 # Solution 1: remove ModemManager
+^[Top](#top)
 
 If you don't need ModemManager, the safest is to remove it entirely.
 
@@ -27,6 +48,7 @@ sudo pacman -R modemmanager
 ```
 
 # Solution 2: disable ModemManager
+^[Top](#top)
 
 ```sh
 sudo systemctl stop ModemManager
@@ -34,6 +56,7 @@ sudo systemctl disable ModemManager
 ```
 
 # Solution 3: use filtering udev rules
+^[Top](#top)
 
 If you *really* need ModemManager, e.g. for your 4G device, you'll have to use some filtering rules to make sure it doesn't interfere with the Proxmark3. 
 
@@ -59,6 +82,7 @@ If it's using `filter-policy=strict`, either look at [solution 4](#solution-4-us
 In any case, it's very important that you test if the filtering is effective before attempting to flash your Proxmark3, see section [Testing ModemManager filtering effectiveness](#Testing-ModemManager-filtering-effectiveness).
 
 # Solution 4: use global ttyACM filtering rule
+^[Top](#top)
 
 Edit the system ModemManager configuration:
 ```sh
@@ -77,6 +101,7 @@ sudo service ModemManager restart
 It's very important that you test if the filtering is effective before attempting to flash your Proxmark3, see section [Testing ModemManager filtering effectiveness](#Testing-ModemManager-filtering-effectiveness).
 
 # Testing ModemManager filtering effectiveness
+^[Top](#top)
 
 If you chose to keep ModemManager, test the filtering effectiveness before attempting to flash Proxmark3.
 
@@ -107,12 +132,14 @@ sudo mmcli -G ERR
 ```
 
 # I didn't read carefully this page and now my Proxmark3 is not responding
+^[Top](#top)
 
 First of all, follow the instructions above to make sure ModemManager will not interfere with the Proxmark3 anymore.
 
 Now there are two possibilities:
 
 ## Only the fullimage is damaged
+^[Top](#top)
 
 If the flashing of the fullimage failed, you can still force the Proxmark to start in bootloader mode by keeping the button pressed while you're plugging it in and while you're attempting to flash it again.
 
@@ -126,7 +153,9 @@ In short:
 * release button
 * un/plug device
 
+
 ## The bootloader is damaged
+^[Top](#top)
 
 If attempting to flash via the button fails, this means your bootloader is corrupted.
 You'll have no other choice than flashing it via an external JTAG instrument.
