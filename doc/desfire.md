@@ -1,10 +1,9 @@
+# Notes on MIFARE DESFire
 <a id="Top"></a>
-
-# DESFire card
 
 # Table of Contents
 
-- [DESFire card](#desfire-card)
+- [Notes on MIFARE DESFire](#notes-on-mifare-desfire)
 - [Table of Contents](#table-of-contents)
   - [Documentation](#documentation)
   - [Source code](#source-code)
