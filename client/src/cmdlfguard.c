@@ -27,7 +27,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int demod_guard_raw(uint8_t* raw, uint8_t rlen) {
+static int demod_guard_raw(uint8_t *raw, uint8_t rlen) {
 
     if (rlen != 12) {
         return PM3_EINVARG;

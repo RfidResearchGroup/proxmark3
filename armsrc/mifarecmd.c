@@ -2611,7 +2611,7 @@ void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd) {
     LED_B_ON();
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
     iso14a_set_timeout(13560000 / 1000 / (8 * 16) * 1000); // 2 seconds timeout
-    
+
     uint8_t cmd[] = { 0xCF, 0x00, 0x00, 0x00, 0x00, 0xCE, blockno, 0x00, 0x00};
 
     memcpy(cmd + 1, pwd, 4);

@@ -450,7 +450,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                                  REV32((rx[3] << 24) + (rx[2] << 16) + (rx[1] << 8) + rx[0])
                                 );
             Dbprintf(",{0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X}",
-                     rx[0], rx[1], rx[2], rx[3], 
+                     rx[0], rx[1], rx[2], rx[3],
                      rx[4], rx[5], rx[6], rx[7]
                     );
 
@@ -734,7 +734,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
 
             for (int j = 0; j < 8; j++) {
                 response_bit[i] = 0;
-                if ((crc & ((mask << 7) >> j)) != 0){
+                if ((crc & ((mask << 7) >> j)) != 0) {
                     response_bit[i] = 1;
                 }
                 i++;
@@ -1275,7 +1275,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
             DbpString("Authenticating using nr,ar pair:");
             memcpy(NrAr_, htd->auth.NrAr, 8);
             Dbhexdump(8, NrAr_, false);
-            NrAr = NrAr_[7] | 
+            NrAr = NrAr_[7] |
                    ((uint64_t)NrAr_[6]) <<  8 |
                    ((uint64_t)NrAr_[5]) << 16 |
                    ((uint64_t)NrAr_[4]) << 24 |
@@ -1283,7 +1283,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
                    ((uint64_t)NrAr_[2]) << 40 |
                    ((uint64_t)NrAr_[1]) << 48 |
                    ((uint64_t)NrAr_[0]) << 56
-                ;
+                   ;
             break;
         }
         case RHTSF_KEY: {
@@ -1296,7 +1296,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
                   ((uint64_t)key_[2]) << 24 |
                   ((uint64_t)key_[1]) << 32 |
                   ((uint64_t)key_[0]) << 40
-                ;
+                  ;
             break;
         }
         default: {
@@ -1554,7 +1554,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page, bool ledcont
                    ((uint64_t)NrAr_[2]) << 40 |
                    ((uint64_t)NrAr_[1]) << 48 |
                    ((uint64_t)NrAr_[0]) << 56
-                ;
+                   ;
             break;
         }
 
@@ -1569,7 +1569,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page, bool ledcont
                   ((uint64_t)key_[2]) << 24 |
                   ((uint64_t)key_[1]) << 32 |
                   ((uint64_t)key_[0]) << 40
-                ;
+                  ;
             break;
         }
         default: {
