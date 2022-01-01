@@ -1414,7 +1414,7 @@ int HIDFindCardFormat(const char *format) {
 bool HIDPack(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (format_idx < 0 || format_idx >= ARRAYLEN(FormatTable))
+    if (format_idx < 0 || format_idx >= ARRAYLEN(FormatTable) - 1)
         return false;
 
     return FormatTable[format_idx].Pack(card, packed, preamble);
