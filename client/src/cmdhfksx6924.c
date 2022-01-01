@@ -111,7 +111,7 @@ static int CmdHFKSX6924Info(const char *Cmd) {
     uint16_t sw = 0;
     int res = KSX6924Select(true, true, buf, sizeof(buf), &len, &sw);
 
-    if (res) {
+    if (res || (len == 0)) {
         if (keep == false) {
             DropField();
         }
@@ -134,6 +134,7 @@ static int CmdHFKSX6924Info(const char *Cmd) {
     // FCI Response is a BER-TLV, we are interested in tag 6F,B0 only.
     const uint8_t *p = buf;
     struct tlv fci_tag;
+    memset(&fci_tag, 0, sizeof(fci_tag));
 
     while (len > 0) {
         memset(&fci_tag, 0, sizeof(fci_tag));
