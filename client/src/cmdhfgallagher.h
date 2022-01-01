@@ -16,5 +16,7 @@
 
 int CmdHFGallagher(const char *Cmd);
 
-#endif
+#define HF_GALLAGHER_RETURN_IF_ERROR(res) if (res != PM3_SUCCESS) { return res; }
+#define HF_GALLAGHER_FAIL_IF_ERROR(res, verbose, reason) if (res != PM3_SUCCESS) { if (verbose) PrintAndLogEx(ERR, reason " Error code %d", res); DropField(); return res; }
 
+#endif
