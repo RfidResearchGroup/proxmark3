@@ -729,7 +729,7 @@ static int CmdHfLTRestore(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>", "specify a filename for dumpfile"),
+        arg_str1("f", "file", "<fn>", "specify a filename for dumpfile"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

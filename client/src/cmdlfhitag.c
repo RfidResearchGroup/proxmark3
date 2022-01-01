@@ -215,7 +215,7 @@ static int CmdLFHitagEload(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>", "filename of dump"),
+        arg_str1("f", "file", "<fn>", "Specfiy dump filename"),
         arg_lit0("1", NULL, "Card type Hitag1"),
         arg_lit0("2", NULL, "Card type Hitag2"),
         arg_lit0("s", NULL, "Card type HitagS"),
@@ -832,7 +832,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "file name"),
+        arg_str0("f", "file", "<fn>", "specify file name"),
         arg_str0("k", "key", "<hex>", "key, 4 or 6 hex bytes"),
         arg_str0(NULL, "nrar", "<hex>", "nonce / answer reader, 8 hex bytes"),
         arg_param_end

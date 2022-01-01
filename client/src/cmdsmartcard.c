@@ -499,7 +499,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>", "firmware file name"),
+        arg_str1("f", "file", "<fn>", "Specify firmware file name"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

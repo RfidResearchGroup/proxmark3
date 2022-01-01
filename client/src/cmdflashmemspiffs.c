@@ -196,7 +196,7 @@ static int CmdFlashMemSpiFFSRemove(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "filename", "<fn>", "file to remove"),
+        arg_str1("f", "file", "<fn>", "file to remove"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

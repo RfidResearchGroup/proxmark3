@@ -590,7 +590,7 @@ static int CmdTraceLoad(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>", "trace file to load"),
+        arg_str1("f", "file", "<fn>", "Specify trace file to load"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -629,7 +629,7 @@ static int CmdTraceSave(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>", "trace file to save"),
+        arg_str1("f", "file", "<fn>", "Specify trace file to save"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

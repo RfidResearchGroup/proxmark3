@@ -1276,7 +1276,7 @@ static int CmdHF14BDump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<filename>", "(optional) filename,  if no <name> UID will be used as filename"),
+        arg_str0("f", "file", "<fn>", "(optional) filename,  if no <name> UID will be used as filename"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
