@@ -729,7 +729,7 @@ int CmdTraceList(const char *Cmd) {
         arg_str0(NULL, "dict", "<file>", "use dictionary keys file"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool use_buffer = arg_get_lit(ctx, 1);
     bool show_wait_cycles = arg_get_lit(ctx, 2);
@@ -775,6 +775,11 @@ int CmdTraceList(const char *Cmd) {
     else if (strcmp(type, "lto") == 0)      protocol = LTO;
     else if (strcmp(type, "cryptorf") == 0) protocol = PROTO_CRYPTORF;
     else if (strcmp(type, "raw") == 0)      protocol = -1;
+    else if (strcmp(type, "") == 0)         protocol = -1;
+    else {
+        PrintAndLogEx(FAILED, "Unknown protocol \"%s\"", type);
+        return PM3_EINVARG;
+    }
 
     if (use_buffer == false) {
         download_trace();
