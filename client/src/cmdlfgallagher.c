@@ -75,15 +75,12 @@ int demodGallagher(bool verbose) {
     uint8_t crc = bytebits_to_byte(g_DemodBuffer + 16 + (9 * 8), 8);
     uint8_t calc_crc =  CRC8Cardx(arr, ARRAYLEN(arr));
 
-    uint8_t region_code, issue_level;
-    uint16_t facility_code;
-    uint32_t card_number;
-
-    decodeCardholderCredentials(arr, &region_code, &facility_code, &card_number, &issue_level);
+    GallagherCredentials_t creds = {0};
+    decodeCardholderCredentials(arr, &creds);
 
     PrintAndLogEx(SUCCESS, "GALLAGHER - Region: " _GREEN_("%u") " Facility: " _GREEN_("%u") " Card No.: " _GREEN_("%u") " Issue Level: " _GREEN_("%u"),
-        region_code, facility_code, card_number, issue_level);
-    PrintAndLogEx(SUCCESS, "   Displayed: " _GREEN_("%C%u"), region_code + 'A', facility_code);
+        creds.region_code, creds.facility_code, creds.card_number, creds.issue_level);
+    PrintAndLogEx(SUCCESS, "   Displayed: " _GREEN_("%C%u"), creds.region_code + 'A', creds.facility_code);
     PrintAndLogEx(SUCCESS, "   Raw: %08X%08X%08X", raw1, raw2, raw3);
     PrintAndLogEx(SUCCESS, "   CRC: %02X - %02X (%s)", crc, calc_crc, (crc == calc_crc) ? "ok" : "fail");
     return PM3_SUCCESS;
@@ -142,10 +139,10 @@ static void setBitsInBlocks(uint32_t *blocks, uint8_t *pos, uint32_t data, uint8
     }
 }
 
-static void createBlocks(uint32_t *blocks, uint8_t rc, uint16_t fc, uint32_t cn, uint8_t il) {
+static void createBlocks(uint32_t *blocks, GallagherCredentials_t *creds) {
     // put data into the correct places (Gallagher obfuscation)
-    uint8_t arr[8] = { 0x00 };
-    encodeCardholderCredentials(arr, rc, fc, cn, il);
+    uint8_t arr[8] = {0};
+    encodeCardholderCredentials(arr, creds);
 
     blocks[0] = blocks[1] = blocks[2] = 0;
     uint8_t pos = 0;
@@ -236,8 +233,14 @@ static int CmdGallagherClone(const char *Cmd) {
             blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
         }
     } else {
+        GallagherCredentials_t creds = {
+            .region_code = region_code,
+            .facility_code = facility_code,
+            .card_number = card_number,
+            .issue_level = issue_level,
+        };
         // fill blocks 1 to 3 with Gallagher data
-        createBlocks(blocks + 1, region_code, facility_code, card_number, issue_level);
+        createBlocks(blocks + 1, &creds);
     }
 
     //Pac - compat mode, NRZ, data rate 40, 3 data blocks
@@ -326,8 +329,14 @@ static int CmdGallagherSim(const char *Cmd) {
 
     if (!use_raw) {
         // generate Gallagher data
+        GallagherCredentials_t creds = {
+            .region_code = region_code,
+            .facility_code = facility_code,
+            .card_number = card_number,
+            .issue_level = issue_level,
+        };
         uint32_t blocks[3];
-        createBlocks(blocks, region_code, facility_code, card_number, issue_level);
+        createBlocks(blocks, &creds);
 
         // convert to the normal 'raw' format
         for (int i = 0; i < ARRAYLEN(blocks); i++) {

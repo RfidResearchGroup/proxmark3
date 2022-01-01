@@ -12,10 +12,18 @@
 #define MIFARE_GALLAGHERCORE_H__
 
 #include "common.h"
+#include <stdint.h>
 
-void encodeCardholderCredentials(uint8_t *eight_bytes, uint8_t region_code, uint16_t facility_code, uint32_t card_number, uint8_t issue_level);
+typedef struct {
+    uint8_t region_code;
+    uint16_t facility_code;
+    uint32_t card_number;
+    uint8_t issue_level;
+} GallagherCredentials_t;
 
-void decodeCardholderCredentials(uint8_t *eight_bytes, uint8_t *region_code, uint16_t *facility_code, uint32_t *card_number, uint8_t *issue_level);
+void encodeCardholderCredentials(uint8_t *eight_bytes, GallagherCredentials_t *creds);
+
+void decodeCardholderCredentials(uint8_t *eight_bytes, GallagherCredentials_t *creds);
 
 bool isValidGallagherCredentials(uint64_t region_code, uint64_t facility_code, uint64_t card_number, uint64_t issue_level);
 

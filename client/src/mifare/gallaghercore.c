@@ -62,34 +62,39 @@ static void descramble(uint8_t *arr, uint8_t len) {
     }
 }
 
-void decodeCardholderCredentials(uint8_t *eight_bytes, uint8_t *region_code, uint16_t *facility_code, uint32_t *card_number, uint8_t *issue_level) {
+void decodeCardholderCredentials(uint8_t *eight_bytes, GallagherCredentials_t *creds) {
     uint8_t *arr = eight_bytes;
 
     descramble(arr, 8);
 
     // 4bit region code
-    *region_code = (arr[3] & 0x1E) >> 1;
+    creds->region_code = (arr[3] & 0x1E) >> 1;
 
     // 16bit facility code
-    *facility_code = (arr[5] & 0x0F) << 12 | arr[1] << 4 | ((arr[7] >> 4) & 0x0F);
+    creds->facility_code = (arr[5] & 0x0F) << 12 | arr[1] << 4 | ((arr[7] >> 4) & 0x0F);
 
     // 24bit card number
-    *card_number = arr[0] << 16 | (arr[4] & 0x1F) << 11 | arr[2] << 3 | (arr[3] & 0xE0) >> 5;
+    creds->card_number = arr[0] << 16 | (arr[4] & 0x1F) << 11 | arr[2] << 3 | (arr[3] & 0xE0) >> 5;
 
     // 4bit issue level
-    *issue_level = arr[7] & 0x0F;
+    creds->issue_level = arr[7] & 0x0F;
 }
 
-void encodeCardholderCredentials(uint8_t *eight_bytes, uint8_t region_code, uint16_t facility_code, uint32_t card_number, uint8_t issue_level) {
+void encodeCardholderCredentials(uint8_t *eight_bytes, GallagherCredentials_t *creds) {
+    uint8_t rc = creds->region_code;
+    uint8_t fc = creds->facility_code;
+    uint8_t cn = creds->card_number;
+    uint8_t il = creds->issue_level;
+
     // put data into the correct places (Gallagher obfuscation)
-    eight_bytes[0] = (card_number & 0xffffff) >> 16;
-    eight_bytes[1] = (facility_code & 0xfff) >> 4;
-    eight_bytes[2] = (card_number & 0x7ff) >> 3;
-    eight_bytes[3] = (card_number & 0x7) << 5 | (region_code & 0xf) << 1;
-    eight_bytes[4] = (card_number & 0xffff) >> 11;
-    eight_bytes[5] = (facility_code & 0xffff) >> 12;
+    eight_bytes[0] = (cn & 0xffffff) >> 16;
+    eight_bytes[1] = (fc & 0xfff) >> 4;
+    eight_bytes[2] = (cn & 0x7ff) >> 3;
+    eight_bytes[3] = (cn & 0x7) << 5 | (rc & 0xf) << 1;
+    eight_bytes[4] = (cn & 0xffff) >> 11;
+    eight_bytes[5] = (fc & 0xffff) >> 12;
     eight_bytes[6] = 0;
-    eight_bytes[7] = (facility_code & 0xf) << 4 | (issue_level & 0xf);
+    eight_bytes[7] = (fc & 0xf) << 4 | (il & 0xf);
 
     // more obfuscation
     scramble(eight_bytes, 8);
