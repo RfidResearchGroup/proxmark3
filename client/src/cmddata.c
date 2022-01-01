@@ -2407,7 +2407,7 @@ static int Cmdbin2hex(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("d", "data", "<bin>", "binary string to convert"),
+        arg_str1("d", "data", "<bin>", "binary string to convert"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

@@ -244,7 +244,7 @@ static int CmdHFKSX6924Initialize(const char *Cmd) {
         arg_param_begin,
         arg_lit0("k",  "keep", "keep field ON for next command"),
         arg_lit0("a",  "apdu", "show APDU reqests and responses"),
-        arg_strx1(NULL, NULL,  "<mpda 4byte hex>", NULL),
+        arg_str1(NULL, NULL,  "<mpda 4byte hex>", NULL),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -297,7 +297,7 @@ static int CmdHFKSX6924PRec(const char *Cmd) {
         arg_param_begin,
         arg_lit0("k",   "keep", "keep field ON for next command"),
         arg_lit0("a",   "apdu", "show APDU reqests and responses"),
-        arg_strx1(NULL,  NULL,  "<record 1byte HEX>", NULL),
+        arg_str1(NULL,  NULL,  "<record 1byte HEX>", NULL),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

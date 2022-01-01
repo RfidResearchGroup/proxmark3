@@ -81,10 +81,10 @@ static int CmdEMVSelect(const char *Cmd) {
         arg_param_begin,
         arg_lit0("sS",  "select",  "activate field and select card"),
         arg_lit0("kK",  "keep",    "keep field for next command"),
-        arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
+        arg_lit0("aA",  "apdu",    "show APDU requests and responses"),
         arg_lit0("tT",  "tlv",     "TLV decode results"),
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
-        arg_strx0(NULL,  NULL,     "<HEX applet AID>", NULL),
+        arg_str1(NULL,  NULL,     "<HEX applet AID>", NULL),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

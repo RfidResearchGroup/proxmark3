@@ -70,7 +70,7 @@ static int CmdNfcDecode(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("d",  "data", "<hex>", "NDEF data to decode"),
+        arg_str0("d",  "data", "<hex>", "NDEF data to decode"),
         arg_str0("f", "file", "<fn>", "file to load"),
         arg_lit0("v",  "verbose", "verbose mode"),
         arg_param_end

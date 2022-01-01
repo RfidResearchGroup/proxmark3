@@ -112,7 +112,7 @@ static int CmdIdteckClone(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("r", "raw", "<hex>", "raw bytes"),
+        arg_str1("r", "raw", "<hex>", "raw bytes"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
@@ -178,7 +178,7 @@ static int CmdIdteckSim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("r", "raw", "<hex>", "raw bytes"),
+        arg_str1("r", "raw", "<hex>", "raw bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

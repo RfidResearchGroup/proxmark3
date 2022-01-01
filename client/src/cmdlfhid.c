@@ -246,7 +246,7 @@ static int CmdHIDSim(const char *Cmd) {
         arg_u64_0(NULL, "cn",      "<dec>", "card number"),
         arg_u64_0("i",    NULL,     "<dec>", "issue level"),
         arg_u64_0("o",   "oem",     "<dec>", "OEM code"),
-        arg_strx0("r",  "raw",     "<hex>", "raw bytes"),
+        arg_str0("r",  "raw",     "<hex>", "raw bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -330,7 +330,7 @@ static int CmdHIDClone(const char *Cmd) {
         arg_u64_0(NULL, "cn",      "<dec>", "card number"),
         arg_int0("i",    NULL,     "<dec>", "issue level"),
         arg_int0("o",   "oem",     "<dec>", "OEM code"),
-        arg_strx0("r",  "raw",     "<hex>", "raw bytes"),
+        arg_str0("r",  "raw",     "<hex>", "raw bytes"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),

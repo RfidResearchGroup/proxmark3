@@ -221,7 +221,7 @@ static int CmdHF14BSim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("u", "uid", "hex", "4byte UID/PUPI"),
+        arg_str1("u", "uid", "hex", "4byte UID/PUPI"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -288,7 +288,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
         arg_lit0("r", NULL, "do not read response from card"),
         arg_int0("t", "timeout", "<dec>", "timeout in ms"),
         arg_lit0("v", "verbose", "verbose"),
-        arg_strx0("d", "data", "<hex>", "data, bytes to send"),
+        arg_str0("d", "data", "<hex>", "data, bytes to send"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1276,7 +1276,7 @@ static int CmdHF14BDump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("f", "file", "<filename>", "(optional) filename,  if no <name> UID will be used as filename"),
+        arg_str0("f", "file", "<filename>", "(optional) filename,  if no <name> UID will be used as filename"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1822,7 +1822,7 @@ static int CmdHF14BAPDU(const char *Cmd) {
                  "                                   must be 4 bytes: <CLA INS P1 P2>"),
         arg_lit0("e",  "extended", "make extended length apdu if `m` parameter included"),
         arg_int0("l",  "le",       "<int>", "Le apdu parameter if `m` parameter included"),
-        arg_strx1("d", "data",     "<hex>", "<APDU | data> if `m` parameter included"),
+        arg_str1("d", "data",     "<hex>", "<APDU | data> if `m` parameter included"),
         arg_int0(NULL, "timeout",   "<dec>", "timeout in ms"),
         arg_param_end
     };

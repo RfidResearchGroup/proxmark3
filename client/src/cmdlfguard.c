@@ -182,7 +182,7 @@ static int CmdGuardDemod(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("r", "raw", "<hex>", "raw bytes"),
+        arg_str0("r", "raw", "<hex>", "raw bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

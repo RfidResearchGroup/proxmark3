@@ -167,7 +167,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
         arg_lit0("m", "mifare,mfc", "upload 6 bytes keys (mifare key dictionary)"),
         arg_lit0("i", "iclass", "upload 8 bytes keys (iClass key dictionary)"),
         arg_lit0("t", "t55xx", "upload 4 bytes keys (password dictionary)"),
-        arg_strx0("f", "file", "<filename>", "file name"),
+        arg_str1("f", "file", "<filename>", "file name"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -327,7 +327,7 @@ static int CmdFlashMemDump(const char *Cmd) {
         arg_int0("o", "offset", "<dec>", "offset in memory"),
         arg_int0("l", "len", "<dec>", "length"),
         arg_lit0("v", "view", "view dump"),
-        arg_strx0("f", "file", "<filename>", "file name"),
+        arg_str0("f", "file", "<filename>", "file name"),
         arg_int0("c", "cols", "<dec>", "column breaks (def 32)"),
         arg_param_end
     };

@@ -590,7 +590,7 @@ static int CmdTraceLoad(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("f", "file", "<filename>", "trace file to load"),
+        arg_str1("f", "file", "<filename>", "trace file to load"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -629,7 +629,7 @@ static int CmdTraceSave(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("f", "file", "<filename>", "trace file to save"),
+        arg_str1("f", "file", "<filename>", "trace file to save"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -677,7 +677,7 @@ int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) 
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
                  "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
-        arg_strx0(NULL, "dict", "<file>", "use dictionary keys file"),
+        arg_str0(NULL, "dict", "<file>", "use dictionary keys file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -725,8 +725,8 @@ int CmdTraceList(const char *Cmd) {
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
                  "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
-        arg_strx0("t", "type", NULL, "protocol to annotate the trace"),
-        arg_strx0(NULL, "dict", "<file>", "use dictionary keys file"),
+        arg_str0("t", "type", NULL, "protocol to annotate the trace"),
+        arg_str0(NULL, "dict", "<file>", "use dictionary keys file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

@@ -1052,7 +1052,7 @@ static int CmdAnalyseFoo(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("r", "raw",  "<hex>", "raw bytes (strx)"),
+        arg_str1("r", "raw",  "<hex>", "raw bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

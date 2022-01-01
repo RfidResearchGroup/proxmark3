@@ -1035,7 +1035,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0(NULL,  "aid",      "<aid>", "Use specific AID (3 hex bytes, big endian)"),
+        arg_str0(NULL,  "aid",      "<aid>", "Use specific AID (3 hex bytes, big endian)"),
         arg_str0("k",  "key",       "<Key>", "Key for checking (HEX 16 bytes)"),
         arg_str0("d",  "dict",      "<file>", "File with keys dictionary"),
         arg_lit0(NULL,  "pattern1b", "Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
@@ -1893,8 +1893,8 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("s",  "start", "<hex>", "Starting App ID as hex bytes (3 bytes, big endian)"),
-        arg_strx0("e",  "end",   "<hex>", "Last App ID as hex bytes (3 bytes, big endian)"),
+        arg_str0("s",  "start", "<hex>", "Starting App ID as hex bytes (3 bytes, big endian)"),
+        arg_str0("e",  "end",   "<hex>", "Last App ID as hex bytes (3 bytes, big endian)"),
         arg_int0("i",   "step",  "<dec>", "Increment step when bruteforcing"),
         arg_lit0("m",   "mad",   "Only bruteforce the MAD range"),
         arg_param_end

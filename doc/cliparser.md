@@ -139,7 +139,7 @@ e.g. lf indala clone -r a0000000a0002021 -> this uses .....
         arg_param_begin,
         arg_lit0("l", "long", "optional - long UID 224 bits"),
         arg_int0("c", "heden", "<decimal>", "Cardnumber for Heden 2L format"),
-        arg_strx0("r", "raw", "<hex>", "raw bytes"),
+        arg_str0("r", "raw", "<hex>", "raw bytes"),
         arg_lit0("q", "Q5", "optional - specify writing to Q5/T5555 tag"),
         arg_int0(NULL, "fc", "<decimal>", "Facility Code (26 bit format)"),
         arg_int0(NULL, "cn", "<decimal>", "Cardnumber (26 bit format)"),
