@@ -90,8 +90,7 @@ bool KSX6924InitializeCard(uint8_t mpda1, uint8_t mpda2, uint8_t mpda3, uint8_t 
 
 // Proprietary get record command. Function unknown.
 // result must be 10 bytes long.
-bool KSX6924ProprietaryGetRecord(
-    uint8_t id, uint8_t *result, size_t resultLen);
+bool KSX6924ProprietaryGetRecord(uint8_t id, uint8_t *result, size_t result_len);
 
 #endif /* __KSX6924CORE_H__ */
 
