@@ -1094,7 +1094,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HITAGS_TEST_TRACES: { // Tests every challenge within the given file
-            check_challenges((bool)packet->oldarg[0], packet->data.asBytes, true);
+            Hitag_check_challenges(packet->data.asBytes, packet->oldarg[0], true);
             break;
         }
         case CMD_LF_HITAGS_READ: { //Reader for only Hitag S tags, args = key or challenge

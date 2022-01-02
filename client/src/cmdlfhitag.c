@@ -576,8 +576,8 @@ static int CmdLFHitagReader(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (nalen != 0 && nalen != 6) {
-        PrintAndLogEx(WARNING, "Wrong NR/AR len expected 0 or 6, got %d", nalen);
+    if (nalen != 0 && nalen != 8) {
+        PrintAndLogEx(WARNING, "Wrong NR/AR len expected 0 or 8, got %d", nalen);
         return PM3_EINVARG;
     }
 
@@ -629,7 +629,6 @@ static int CmdLFHitagReader(const char *Cmd) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
-
     if (resp.oldarg[0] == false) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
         return PM3_ESOFT;
@@ -658,7 +657,7 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename to load ( w/o ext )"),
+        arg_str1("f", "file", "<fn>", "filename to load ( w/o ext )"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -671,22 +670,18 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
 
     clearCommandBuffer();
 
-    if (fnlen > 0) {
-        uint8_t *data = NULL;
-        size_t datalen = 0;
-        int res = loadFile_safe(filename, ".cc", (void **)&data, &datalen);
-        if (res == PM3_SUCCESS) {
-            if (datalen == (8 * 60)) {
-                SendCommandOLD(CMD_LF_HITAGS_TEST_TRACES, 1, 0, 0, data, datalen);
-            } else {
-                PrintAndLogEx(ERR, "Error, file length mismatch. Expected %d, got %zu", 8 * 60, datalen);
-            }
+    uint8_t *data = NULL;
+    size_t datalen = 0;
+    int res = loadFile_safe(filename, ".cc", (void **)&data, &datalen);
+    if (res == PM3_SUCCESS) {
+        if (datalen % 8 == 0) {
+            SendCommandMIX(CMD_LF_HITAGS_TEST_TRACES, datalen, 0, 0, data, datalen);
+        } else {
+            PrintAndLogEx(ERR, "Error, file length mismatch. Expected multiple of 8, got %zu", datalen);
         }
-        if (data) {
-            free(data);
-        }
-    } else {
-        SendCommandMIX(CMD_LF_HITAGS_TEST_TRACES, 0, 0, 0, NULL, 0);
+    }
+    if (data) {
+        free(data);
     }
 
     return PM3_SUCCESS;

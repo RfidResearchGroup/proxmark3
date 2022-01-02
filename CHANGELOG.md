@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed drastically Hitag S ARM code to remove state machines and ease way to build new commands (@doegox)
+ - Fixed Hitag S crypto mode with key or NrAr, fixed `lf hitag cc`, fixed pwd dump in hitagS dump with LKP (@doegox)
  - Changed `trace list -h` - textual change (@iceman1001)
  - Fixed `hf iclass config` - not get stuck when trying to make a keyroll config card (@iceman1001)
  - Changed textual output for iclass (@iceman1001)

@@ -19,6 +19,5 @@
 void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data, bool ledcontrol);
 void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol);
 void WritePageHitagS(hitag_function htf, hitag_data *htd, int page, bool ledcontrol);
-void check_challenges(bool file_given, uint8_t *data, bool ledcontrol);
-
+void Hitag_check_challenges(uint8_t *data, uint32_t datalen, bool ledcontrol);
 #endif
