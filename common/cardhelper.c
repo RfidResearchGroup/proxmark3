@@ -53,7 +53,7 @@ static bool executeCrypto(uint8_t ins, uint8_t *src, uint8_t *dest) {
 
     int resp_len = 0;
     uint8_t dec[11] = {0};
-    ExchangeAPDUSC(false, cmd, sizeof(cmd), false, true, dec, sizeof(dec), &resp_len);
+    ExchangeAPDUSC(false, cmd, sizeof(cmd), true, true, dec, sizeof(dec), &resp_len);
     if (resp_len == 10) {
         memcpy(dest, dec, 8);
         return true;
