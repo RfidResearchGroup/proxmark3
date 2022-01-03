@@ -744,9 +744,10 @@
                 "-m, -m, --make make cdoldata from cdol (tag 8c and 8d) and parameters (by default uses default parameters)",
                 "-a, -a, --apdu show apdu reqests and responses",
                 "-t, -t, --tlv tlv decode results of selected applets",
-                "-w, -w, --wired send data via contact (iso7816) interface. contactless interface set by default."
+                "-w, -w, --wired send data via contact (iso7816) interface. contactless interface set by default.",
+                "<hex> cdoldata/cdol"
             ],
-            "usage": "emv genac [-hkcpmatw] [-d <aac|tc|arqc>] <hex cdoldata/cdol> [<hex cdoldata/cdol>]..."
+            "usage": "emv genac [-hkcpmatw] [-d <aac|tc|arqc>] <hex> [<hex>]..."
         },
         "emv gpo": {
             "command": "emv gpo",
@@ -764,9 +765,10 @@
                 "-m, -m, --make make pdoldata from pdol (tag 9f38) and parameters (by default uses default parameters)",
                 "-a, -a, --apdu show apdu reqests and responses",
                 "-t, -t, --tlv tlv decode results of selected applets",
-                "-w, -w, --wired send data via contact (iso7816) interface. contactless interface set by default."
+                "-w, -w, --wired send data via contact (iso7816) interface. contactless interface set by default.",
+                "<hex> pdoldata/pdol"
             ],
-            "usage": "emv gpo [-hkpmatw] [<hex pdoldata/pdol>]..."
+            "usage": "emv gpo [-hkpmatw] [<hex>]..."
         },
         "emv help": {
             "command": "emv help",
@@ -808,9 +810,10 @@
                 "-m, -m, --make make ddoldata from ddol (tag 9f49) and parameters (by default uses default parameters)",
                 "-a, -a, --apdu show apdu reqests and responses",
                 "-t, -t, --tlv tlv decode results of selected applets",
-                "-w, -w, --wired send data via contact (iso7816) interface. contactless interface set by default."
+                "-w, -w, --wired send data via contact (iso7816) interface. contactless interface set by default.",
+                "<hex> ddoldata/ddol"
             ],
-            "usage": "emv intauth [-hkpmatw] <hex ddoldata/ddol> [<hex ddoldata/ddol>]..."
+            "usage": "emv intauth [-hkpmatw] <hex> [<hex>]..."
         },
         "emv list": {
             "command": "emv list",
@@ -866,9 +869,10 @@
                 "-k, -k, --keep keep field on for next command",
                 "-a, -a, --apdu show apdu reqests and responses",
                 "-t, -t, --tlv tlv decode results of selected applets",
-                "-w, -w, --wired send data via contact (iso7816) interface. contactless interface set by default."
+                "-w, -w, --wired send data via contact (iso7816) interface. contactless interface set by default.",
+                "<hex> <sfi 1 byte><sfirecord 1 byte"
             ],
-            "usage": "emv readrec [-hkatw] <sfi 1byte hex><sfirecord 1byte hex> [<sfi 1byte hex><sfirecord 1byte hex>]..."
+            "usage": "emv readrec [-hkatw] <hex> [<hex>]..."
         },
         "emv roca": {
             "command": "emv roca",
@@ -907,9 +911,9 @@
                 "-g, -g, --acgpo visa. generate ac from gpo.",
                 "-m, -m, --merge merge output file with card's data. (warning: the file may be corrupted!)",
                 "-w, -w, --wired send data via contact (iso7816) interface. contactless interface set by default.",
-                "output.json json output file name"
+                "<fn> json output filename"
             ],
-            "usage": "emv scan [-hatejvcxgmw] by default: output.json"
+            "usage": "emv scan [-hatejvcxgmw] by default: <fn>"
         },
         "emv search": {
             "command": "emv search",
@@ -943,9 +947,10 @@
                 "-k, -k, --keep keep field for next command",
                 "-a, -a, --apdu show apdu requests and responses",
                 "-t, -t, --tlv tlv decode results",
-                "-w, -w, --wired send data via contact (iso7816) interface. contactless interface set by default."
+                "-w, -w, --wired send data via contact (iso7816) interface. contactless interface set by default.",
+                "<hex> applet aid"
             ],
-            "usage": "emv select [-hskatw] <hex applet aid>"
+            "usage": "emv select [-hskatw] <hex>"
         },
         "emv test": {
             "command": "emv test",
@@ -1224,9 +1229,9 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --file <filename> (optional) filename, if no <name> uid will be used as filename"
+                "-f, --file <fn> (optional) filename, if no <name> uid will be used as filename"
             ],
-            "usage": "hf 14b dump [-h] [-f <filename>]"
+            "usage": "hf 14b dump [-h] [-f <fn>]"
         },
         "hf 14b help": {
             "command": "hf 14b help",
@@ -2930,7 +2935,7 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --file <fn> specify a filename for dump file",
+                "-f, --file <fn> dump filename",
                 "--de deobfuscate dump data (xor with mcc)"
             ],
             "usage": "hf legic dump [-h] [-f <fn>] [--de]"
@@ -2946,11 +2951,11 @@
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-f, --file <filename> specify a filename to restore",
+                "-f, --file <fn> filename to restore",
                 "-t, --type <dec> tag type to simulate.",
                 "--obfuscate obfuscate dump data (xor with mcc)"
             ],
-            "usage": "hf legic eload [-h] -f <filename> [-t <dec>] [--obfuscate]"
+            "usage": "hf legic eload [-h] -f <fn> [-t <dec>] [--obfuscate]"
         },
         "hf legic esave": {
             "command": "hf legic esave",
@@ -2964,7 +2969,7 @@
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-f, --file <fn> specify a filename to save",
+                "-f, --file <fn> filename to save",
                 "-t, --type <dec> tag type",
                 "--deobfuscate de-obfuscate dump data (xor with mcc)"
             ],
@@ -3043,10 +3048,10 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --file <filename> specify a filename to restore",
+                "-f, --file <fn> filename to restore",
                 "--ob obfuscate dump data (xor with mcc)"
             ],
-            "usage": "hf legic restore [-h] -f <filename> [--ob]"
+            "usage": "hf legic restore [-h] -f <fn> [--ob]"
         },
         "hf legic sim": {
             "command": "hf legic sim",
@@ -3160,9 +3165,9 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --file <filename> specify a filename for dumpfile"
+                "-f, --file <fn> specify a filename for dumpfile"
             ],
-            "usage": "hf lto restore [-h] -f <filename>"
+            "usage": "hf lto restore [-h] -f <fn>"
         },
         "hf lto wrbl": {
             "command": "hf lto wrbl",
@@ -5934,9 +5939,9 @@
                 "-h, --help this help",
                 "-m <nr> model number [0 - 7] of your tag",
                 "-s, --save save dithered version in filename-[n].bmp, only for rgb bmp",
-                "-f, --file <filename> filename[.bmp] to upload to tag"
+                "-f, --file <fn> specify filename[.bmp] to upload to tag"
             ],
-            "usage": "hf waveshare loadbmp [-hs] -m <nr> -f <filename>"
+            "usage": "hf waveshare loadbmp [-hs] -m <nr> -f <fn>"
         },
         "hints": {
             "command": "hints",
@@ -6667,7 +6672,7 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --file <fn> dictionary filename"
+                "-f, --file <fn> specify dictionary filename"
             ],
             "usage": "lf em 4x50 chk [-h] [-f <fn>]"
         },
@@ -6683,7 +6688,7 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --file <fn> dump filename (bin/eml/json)",
+                "-f, --file <fn> specify dump filename (bin/eml/json)",
                 "-p, --pwd <hex> password, 4 hex bytes, lsb"
             ],
             "usage": "lf em 4x50 dump [-h] [-f <fn>] [-p <hex>]"
@@ -6697,7 +6702,7 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --filename <fn> dump filename (bin/eml/json)"
+                "-f, --file <fn> dump filename (bin/eml/json)"
             ],
             "usage": "lf em 4x50 eload [-h] -f <fn>"
         },
@@ -6711,7 +6716,7 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --file <fn> save filename"
+                "-f, --file <fn> specifiy filename"
             ],
             "usage": "lf em 4x50 esave [-h] [-f <fn>]"
         },
@@ -6812,7 +6817,7 @@
             "options": [
                 "-h, --help this help",
                 "-u, --uid <hex> uid, 4 hex bytes, msb",
-                "-f, --file <fn> dump filename (bin/eml/json)",
+                "-f, --file <fn> specify dump filename (bin/eml/json)",
                 "-p, --pwd <hex> password, 4 hex bytes, lsb"
             ],
             "usage": "lf em 4x50 restore [-h] [-u <hex>] [-f <fn>] [-p <hex>]"
@@ -7320,7 +7325,7 @@
                 "-h, --help this help",
                 "-f, --file <fn> filename to load ( w/o ext )"
             ],
-            "usage": "lf hitag cc [-h] [-f <fn>]"
+            "usage": "lf hitag cc [-h] -f <fn>"
         },
         "lf hitag dump": {
             "command": "lf hitag dump",
@@ -7332,7 +7337,7 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --file <fn> file name",
+                "-f, --file <fn> specify file name",
                 "-k, --key <hex> key, 4 or 6 hex bytes",
                 "--nrar <hex> nonce / answer reader, 8 hex bytes"
             ],
@@ -7347,13 +7352,13 @@
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-f, --file <filename> filename of dump",
+                "-f, --file <fn> specfiy dump filename",
                 "-1 card type hitag1",
                 "-2 card type hitag2",
                 "-s card type hitags",
                 "-m card type hitagm"
             ],
-            "usage": "lf hitag eload [-h12sm] -f <filename>"
+            "usage": "lf hitag eload [-h12sm] -f <fn>"
         },
         "lf hitag info": {
             "command": "lf hitag info",
@@ -9135,10 +9140,10 @@
                 "-o, --offset <dec> offset in memory",
                 "-l, --len <dec> length",
                 "-v, --view view dump",
-                "-f, --file <filename> file name",
+                "-f, --file <fn> save filename",
                 "-c, --cols <dec> column breaks (def 32)"
             ],
-            "usage": "mem dump [-hv] [-o <dec>] [-l <dec>] [-f <filename>] [-c <dec>]"
+            "usage": "mem dump [-hv] [-o <dec>] [-l <dec>] [-f <fn>] [-c <dec>]"
         },
         "mem help": {
             "command": "mem help",
@@ -9186,9 +9191,9 @@
                 "-m, --mifare, --mfc upload 6 bytes keys (mifare key dictionary)",
                 "-i, --iclass upload 8 bytes keys (iclass key dictionary)",
                 "-t, --t55xx upload 4 bytes keys (password dictionary)",
-                "-f, --file <filename> file name"
+                "-f, --file <fn> file name"
             ],
-            "usage": "mem load [-hmit] [-o <dec>] -f <filename>"
+            "usage": "mem load [-hmit] [-o <dec>] -f <fn>"
         },
         "mem spiffs check": {
             "command": "mem spiffs check",
@@ -9265,7 +9270,7 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --filename <fn> file to remove"
+                "-f, --file <fn> file to remove"
             ],
             "usage": "mem spiffs remove [-h] -f <fn>"
         },
@@ -9926,31 +9931,32 @@
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-f, --file <filename> firmware file name"
+                "-f, --file <fn> specify firmware file name"
             ],
-            "usage": "smart upgrade [-h] -f <filename>"
+            "usage": "smart upgrade [-h] -f <fn>"
         },
         "trace help": {
             "command": "trace help",
             "description": "help this help list list protocol data in trace buffer load load trace from file save save trace buffer to file --------------------------------------------------------------------------------------- trace list available offline: yes annotate trace buffer with selected protocol data you can load a trace from file (see `trace load -h`) or it be downloaded from device by default",
             "notes": [
                 "trace list -t raw -> just show raw data without annotations",
-                "trace list -t 14a -> interpret as iso14443-a communications",
-                "trace list -t thinfilm -> interpret as thinfilm communications",
-                "trace list -t topaz -> interpret as topaz communications",
-                "trace list -t mf -> interpret as mifare classic communications and decrypt crypto1 stream",
-                "trace list -t des -> interpret as mifare desfire communications",
-                "trace list -t 14b -> interpret as iso14443-b communications",
-                "trace list -t 7816 -> interpret as iso7816-4 communications",
-                "trace list -t 15 -> interpret as iso15693 communications",
-                "trace list -t iclass -> interpret as iclass communications",
-                "trace list -t legic -> interpret as legic communications",
-                "trace list -t felica -> interpret as iso18092 / felica communications",
-                "trace list -t hitag1 -> interpret as hitag1 communications",
-                "trace list -t hitag2 -> interpret as hitag2 communications",
-                "trace list -t hitags -> interpret as hitags communications",
-                "trace list -t lto -> interpret as lto-cm communications",
-                "trace list -t cryptorf -> interpret as cryptorf communitcations",
+                "trace list -t 14a -> interpret as iso14443-a",
+                "trace list -t thinfilm -> interpret as thinfilm",
+                "trace list -t topaz -> interpret as topaz",
+                "trace list -t mf -> interpret as mifare classic and decrypt crypto1 stream",
+                "trace list -t des -> interpret as mifare desfire",
+                "trace list -t 14b -> interpret as iso14443-b",
+                "trace list -t 7816 -> interpret as iso7816-4",
+                "trace list -t 15 -> interpret as iso15693",
+                "trace list -t iclass -> interpret as iclass",
+                "trace list -t legic -> interpret as legic",
+                "trace list -t felica -> interpret as iso18092 / felica",
+                "trace list -t hitag1 -> interpret as hitag1",
+                "trace list -t hitag2 -> interpret as hitag2",
+                "trace list -t hitags -> interpret as hitags",
+                "trace list -t lto -> interpret as lto-cm",
+                "trace list -t cryptorf -> interpret as cryptorf",
+                "",
                 "trace list -t mf --dict <mfc_default_keys> -> use dictionary keys file",
                 "trace list -t 14a -f -> show frame delay times",
                 "trace list -t 14a -1 -> use trace buffer"
@@ -9966,9 +9972,9 @@
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into wireshark using encapsulation type \"iso 14443\"",
                 "-t, --type <string> protocol to annotate the trace",
-                "--dict <file> use dictionary keys file"
+                "--dict <fn> use dictionary keys file"
             ],
-            "usage": "trace list [-h1fcrux] [-t <string>] [--dict <file>]"
+            "usage": "trace list [-h1fcrux] [-t <string>] [--dict <fn>]"
         },
         "trace load": {
             "command": "trace load",
@@ -9979,9 +9985,9 @@
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-f, --file <filename> trace file to load"
+                "-f, --file <fn> specify trace file to load"
             ],
-            "usage": "trace load [-h] -f <filename>"
+            "usage": "trace load [-h] -f <fn>"
         },
         "trace save": {
             "command": "trace save",
@@ -9992,9 +9998,9 @@
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "-f, --file <filename> trace file to save"
+                "-f, --file <fn> specify trace file to save"
             ],
-            "usage": "trace save [-h] -f <filename>"
+            "usage": "trace save [-h] -f <fn>"
         },
         "usart btfactory": {
             "command": "usart btfactory",
@@ -10156,6 +10162,6 @@
     "metadata": {
         "commands_extracted": 597,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-01-01T01:38:04"
+        "extracted_on": "2022-01-03T21:45:26"
     }
 }
