@@ -13,8 +13,23 @@
 #define CMDHFGALLAGHER_H__
 
 #include "common.h"
+#include <stdint.h>
 
 int CmdHFGallagher(const char *Cmd);
+
+/**
+ * @brief Create Gallagher Application Master Key by diversifying
+ * the MIFARE Site Key with card UID, key number, and application ID.
+ * 
+ * @param sitekey MIFARE Site Key (16 bytes).
+ * @param uid Card unique ID (4 or 7 bytes).
+ * @param uidLen Length of UID.
+ * @param keyNum Key number (0 <= keyNum <= 2).
+ * @param aid Application ID (0x2?81F4 where 0 <= ? <= B).
+ * @param keyOut Buffer to copy the diversified key into (must be 16 bytes).
+ * @return PM3_SUCCESS if successful, PM3_EINVARG if an argument is invalid.
+ */
+int GallagherDiversifyKey(uint8_t *sitekey, uint8_t *uid, uint8_t uidLen, uint8_t keyNum, uint32_t aid, uint8_t *keyOut);
 
 #define HF_GALLAGHER_RETURN_IF_ERROR(res) if (res != PM3_SUCCESS) { return res; }
 #define HF_GALLAGHER_FAIL_IF_ERROR(res, verbose, reason) if (res != PM3_SUCCESS) { if (verbose) PrintAndLogEx(ERR, reason " Error code %d", res); DropField(); return res; }
