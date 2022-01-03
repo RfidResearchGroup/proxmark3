@@ -82,8 +82,8 @@ void decodeCardholderCredentials(uint8_t *eight_bytes, GallagherCredentials_t *c
 
 void encodeCardholderCredentials(uint8_t *eight_bytes, GallagherCredentials_t *creds) {
     uint8_t rc = creds->region_code;
-    uint8_t fc = creds->facility_code;
-    uint8_t cn = creds->card_number;
+    uint16_t fc = creds->facility_code;
+    uint32_t cn = creds->card_number;
     uint8_t il = creds->issue_level;
 
     // put data into the correct places (Gallagher obfuscation)
