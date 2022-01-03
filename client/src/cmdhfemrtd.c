@@ -201,7 +201,7 @@ static int emrtd_exchange_commands_noout(sAPDU_t apdu, bool activate_field, bool
 }
 
 static char emrtd_calculate_check_digit(char *data) {
-    int mrz_weight[] = {7, 3, 1};
+    const int mrz_weight[] = {7, 3, 1};
     int value, cd = 0;
 
     for (int i = 0; i < strlen(data); i++) {
@@ -295,7 +295,7 @@ static void des3_decrypt_cbc(uint8_t *iv, uint8_t *key, uint8_t *input, int inpu
 }
 
 static int pad_block(uint8_t *input, int inputlen, uint8_t *output) {
-    uint8_t padding[8] = {0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    const uint8_t padding[8] = {0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     memcpy(output, input, inputlen);
 

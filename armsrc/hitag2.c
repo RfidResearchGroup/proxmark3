@@ -1369,10 +1369,12 @@ void SimulateHitag2(bool ledcontrol) {
         // use malloc
         initSampleBufferEx(&signal_size, true);
 
-        if (ledcontrol) LED_D_ON();
+        if (ledcontrol) {
+            LED_D_ON();
+            LED_A_OFF();
+        }
 
 //        lf_reset_counter();
-        if (ledcontrol) LED_A_OFF();
         WDT_HIT();
 
         /*

@@ -132,7 +132,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
 
     uint8_t apdu_lengths[5] = {msesa_len, gn_len, map_len, pka_len, ma_len};
     // pointers to the arrays to be able to iterate
-    uint8_t *apdus[] = {msesa_apdu, gn_apdu, map_apdu, pka_apdu, ma_apdu};
+    const uint8_t *apdus[] = {msesa_apdu, gn_apdu, map_apdu, pka_apdu, ma_apdu};
 
     // Proxmark response
     PacketResponseNG resp;

@@ -135,7 +135,7 @@ static int jooki_encode(uint8_t *iv, uint8_t tid, uint8_t fid, uint8_t *uid, uin
         return PM3_EINVARG;
     }
 
-    uint8_t d[JOOKI_PLAIN_LEN] = {iv[0], iv[1], iv[2], tid, fid, uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6]};
+    const uint8_t d[JOOKI_PLAIN_LEN] = {iv[0], iv[1], iv[2], tid, fid, uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6]};
     uint8_t enc[JOOKI_PLAIN_LEN] = {0};
     for (uint8_t i = 0; i < JOOKI_PLAIN_LEN; i++) {
 

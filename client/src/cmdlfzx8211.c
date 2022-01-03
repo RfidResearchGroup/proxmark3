@@ -74,6 +74,17 @@ int demodzx(bool verbose) {
 }
 
 static int lf_Zx_read(void) {
+
+    PacketResponseNG resp;
+    clearCommandBuffer();
+
+    SendCommandNG(CMD_LF_ZX_READ, NULL, 0);
+
+    if (WaitForResponseTimeout(CMD_LF_ZX_READ, &resp, 1000) == false) {
+        PrintAndLogEx(ERR, "Error occurred, device did not respond during read operation.");
+        return PM3_ETIMEOUT;
+    }
+
     return PM3_SUCCESS;
 }
 
