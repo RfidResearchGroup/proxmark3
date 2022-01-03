@@ -13,7 +13,7 @@
 #define __ICLASS_H
 
 #include "common.h"
-#include "pm3_cmd.h"
+#include "iclass_cmd.h"
 
 void SniffIClass(uint8_t jam_search_len, uint8_t *jam_search_string);
 void ReaderIClass(uint8_t flags);

@@ -23,6 +23,7 @@
 #include "printf.h"
 #include "legicrf.h"
 #include "BigBuf.h"
+#include "iclass_cmd.h"
 #include "iso14443a.h"
 #include "iso14443b.h"
 #include "iso15693.h"
@@ -1685,7 +1686,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_READER: {
-            ReaderIClass(packet->oldarg[0]);
+            iclass_card_select_t *payload = (iclass_card_select_t *) packet->data.asBytes;
+            ReaderIClass(payload->flags);
             break;
         }
         case CMD_HF_ICLASS_EML_MEMSET: {

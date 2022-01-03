@@ -34,6 +34,7 @@
 #include "protocols.h"
 #include "ticks.h"
 #include "iso15693.h"
+#include "iclass_cmd.h"              /* iclass_card_select_t struct */
 
 static uint8_t get_pagemap(const picopass_hdr_t *hdr) {
     return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
@@ -1402,13 +1403,8 @@ bool select_iclass_tag(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_t
 // turn off afterwards
 void ReaderIClass(uint8_t flags) {
 
-    picopass_hdr_t hdr = {0};
-//    uint8_t last_csn[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
-    memset(resp, 0xFF, sizeof(resp));
-
-//    bool flag_readonce = flags & FLAG_ICLASS_READER_ONLY_ONCE;    // flag to read until one tag is found successfully
-    bool use_credit_key = flags & FLAG_ICLASS_READER_CREDITKEY;     // flag to use credit key
+    // flag to use credit key
+    bool use_credit_key = ((flags & FLAG_ICLASS_READER_CREDITKEY) == FLAG_ICLASS_READER_CREDITKEY);
 
     if ((flags & FLAG_ICLASS_READER_INIT) == FLAG_ICLASS_READER_INIT) {
         Iso15693InitReader();
@@ -1418,13 +1414,14 @@ void ReaderIClass(uint8_t flags) {
         clear_trace();
     }
 
-    uint8_t result_status = 0;
+
+    uint8_t res = 0;
     uint32_t eof_time = 0;
-    bool status = select_iclass_tag_ex(&hdr, use_credit_key, &eof_time, &result_status);
-    if (status == false) {
-        reply_mix(CMD_ACK, 0xFF, 0, 0, NULL, 0);
-        switch_off();
-        return;
+    picopass_hdr_t hdr = {0};
+
+    if (select_iclass_tag_ex(&hdr, use_credit_key, &eof_time, &res) == false) {
+        reply_ng(CMD_HF_ICLASS_READER, PM3_ERFTRANS, NULL, 0);
+        goto out;
     }
 
     // Page mapping for secure mode
@@ -1443,30 +1440,14 @@ void ReaderIClass(uint8_t flags) {
     // Return to client, e 6 * 8 bytes of data.
     // with 0xFF:s in block 3 and 4.
 
-    LED_B_ON();
-    reply_mix(CMD_ACK, result_status, 0, 0, (uint8_t *)&hdr, sizeof(hdr));
+    iclass_card_select_resp_t payload = {
+        .status = res
+    };
+    memcpy(&payload.header.hdr, &hdr, sizeof(picopass_hdr_t));
 
-    //Send back to client, but don't bother if we already sent this -
-    //  only useful if looping in arm (not try_once && not abort_after_read)
-    /*
-    if (memcmp(last_csn, card_data, 8) != 0) {
+    reply_ng(CMD_HF_ICLASS_READER, PM3_SUCCESS, (uint8_t*)&payload, sizeof(iclass_card_select_resp_t));
 
-        reply_mix(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data));
-        if (flag_readonce) {
-            LED_B_OFF();
-            return;
-        }
-        LED_B_OFF();
-    }
-    */
-
-//    if (userCancelled) {
-//        reply_mix(CMD_ACK, 0xFF, 0, 0, card_data, 0);
-//        switch_off();
-//    } else {
-//        reply_mix(CMD_ACK, result_status, 0, 0, card_data, 0);
-//    }
-
+out: 
     switch_off();
 }
 

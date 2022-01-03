@@ -13,21 +13,7 @@
 
 #include "common.h"
 #include "fileutils.h"
-#include "pm3_cmd.h"
-
-typedef struct iclass_block {
-    uint8_t d[8];
-} iclass_block_t;
-
-typedef struct iclass_prekey {
-    uint8_t mac[4];
-    uint8_t key[8];
-} iclass_prekey_t;
-
-typedef struct {
-    char desc[70];
-    uint8_t data[16];
-} iclass_config_card_item_t;
+#include "iclass_cmd.h"
 
 int CmdHFiClass(const char *Cmd);
 
