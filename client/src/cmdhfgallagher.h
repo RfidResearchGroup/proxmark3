@@ -31,7 +31,12 @@ int CmdHFGallagher(const char *Cmd);
  */
 int GallagherDiversifyKey(uint8_t *sitekey, uint8_t *uid, uint8_t uidLen, uint8_t keyNum, uint32_t aid, uint8_t *keyOut);
 
-#define HF_GALLAGHER_RETURN_IF_ERROR(res) if (res != PM3_SUCCESS) { return res; }
-#define HF_GALLAGHER_FAIL_IF_ERROR(res, verbose, reason) if (res != PM3_SUCCESS) { if (verbose) PrintAndLogEx(ERR, reason " Error code %d", res); DropField(); return res; }
+// Return error
+#define HFGAL_RET_ERR(err, ...)  { PrintAndLogEx(ERR, __VA_ARGS__); return err; }
+
+// HF GALlagher RETurn IF ERRor
+#define HFGAL_RET_IF_ERR(res)                          if (res != PM3_SUCCESS) {                                               return res; }
+#define HFGAL_RET_IF_ERR_WITH_MSG(res, ...)            if (res != PM3_SUCCESS) {              PrintAndLogEx(ERR, __VA_ARGS__); return res; }
+#define HFGAL_RET_IF_ERR_MAYBE_MSG(res, verbose, ...)  if (res != PM3_SUCCESS) { if (verbose) PrintAndLogEx(ERR, __VA_ARGS__); return res; }
 
 #endif
