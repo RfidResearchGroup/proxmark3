@@ -116,6 +116,7 @@ static int authenticate(DesfireContext_t *ctx, bool verbose) {
     // TODO: do these both need to be set?
     DesfireSetCommMode(ctx, DCMPlain);
     DesfireSetCommandSet(ctx, DCCNativeISO);
+    DesfireClearSession(ctx);
 
     int res = DesfireAuthenticate(ctx, DACEV1, false);
     if (res != PM3_SUCCESS) {
@@ -295,7 +296,7 @@ static int readCard(uint32_t aid, uint8_t *sitekey, bool verbose, bool quiet) {
         numEntries = 1;
     } else {
         res = readCardApplicationDirectory(&dctx, cad, ARRAYLEN(cad), &numEntries, verbose);
-        HFGAL_RET_IF_ERR_MAYBE_MSG(res, !quiet, "Failed reading card application directory");
+        HFGAL_RET_IF_ERR_MAYBE_MSG(res, !quiet, "Failed reading Card Application Directory");
     }
 
     // Loop through each application in the CAD
@@ -372,6 +373,28 @@ static int CmdGallagherReader(const char *Cmd) {
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     while (!kbd_enter_pressed())
         readCard(aid, sitekey, verbose, !verbose);
+    return PM3_SUCCESS;
+}
+
+/**
+ * @brief Delete the CAD or an application that contains cardholder credentials.
+ * 
+ * @param sitekey MIFARE site key.
+ * @param aid Application ID to remove.
+ */
+static int deleteGallagherApplication(DesfireContext_t *ctx, uint8_t *sitekey, uint32_t aid, bool verbose) {
+    // Select application & authenticate
+    DesfireSetKeyNoClear(ctx, 0, T_AES, sitekey);
+    DesfireSetKdf(ctx, MFDES_KDF_ALGO_GALLAGHER, NULL, 0);
+    int res = selectAidAndAuthenticate(ctx, aid, verbose);
+    HFGAL_RET_IF_ERR(res);
+
+    // Delete application
+    DesfireSetCommMode(ctx, DCMMACed);
+    res = DesfireDeleteApplication(ctx, aid);
+    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed deleting AID %06X", aid);
+    
+    PrintAndLogEx(INFO, "Successfully deleted AID %06X", aid);
     return PM3_SUCCESS;
 }
 
@@ -556,7 +579,7 @@ static int createGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, bool verb
  * @param aid Application ID to add to the CAD.
  * @param creds Gallagher cardholder credentials (region_code & facility_code are required).
  */
-static int updateGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, uint32_t aid, GallagherCredentials_t *creds, bool verbose) {
+static int addToGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, uint32_t aid, GallagherCredentials_t *creds, bool verbose) {
     // Check if CAD exists
     uint8_t cad[36 * 3] = {0};
     uint8_t numEntries = 0;
@@ -630,14 +653,84 @@ static int updateGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, uint32_t 
             PrintAndLogEx(INFO, "Created file %d in CAD (currently has empty contents)", fileId);
 
         // Write file
-        res = DesfireWriteFile(ctx, fileId, 0, 36, entry);
-    } else {
+        res = DesfireWriteFile(ctx, fileId, 0, 36, &cad[fileId * 36]);
+    } else
         // Write file
         res = DesfireWriteFile(ctx, fileId, entryNum * 6, 6, entry);
-    }
     HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed writing data to file %d in CAD (AID %06X)", fileId, CAD_AID);
     
     PrintAndLogEx(INFO, "Successfully added new entry for %06X to the Card Application Directory", aid);
+    return PM3_SUCCESS;
+}
+
+/**
+ * @brief Remove an entry from the Gallagher Card Application Directory.
+ * 
+ * @param sitekey MIFARE site key.
+ * @param aid Application ID to add to the CAD.
+ */
+static int removeFromGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, uint32_t aid, bool verbose) {
+    // Check if CAD exists
+    uint8_t cad[36 * 3] = {0};
+    uint8_t numEntries = 0;
+    
+    int res = readCardApplicationDirectory(ctx, cad, ARRAYLEN(cad), &numEntries, verbose);
+    HFGAL_RET_IF_ERR(res);
+
+    // Check if facility already exists in CAD
+    uint8_t entryNum = 0;
+    for (; entryNum < numEntries; entryNum++) {
+        if (aid > 0 && aid == cadAidByteToUint(&cad[entryNum * 6 + 3]))
+            break;
+    }
+    if (entryNum >= numEntries)
+        HFGAL_RET_ERR(PM3_EINVARG, "Specified facility or AID does not exist in the Card Application Directory");
+
+    // Remove entry (shift all entries left, then clear the last entry)
+    memmove(&cad[entryNum * 6], &cad[(entryNum + 1) * 6], ARRAYLEN(cad) - (entryNum + 1) * 6);
+    memset(&cad[ARRAYLEN(cad) - 6], 0, 6);
+
+    // Select application & authenticate
+    DesfireSetKeyNoClear(ctx, 0, T_AES, sitekey);
+    DesfireSetKdf(ctx, MFDES_KDF_ALGO_GALLAGHER, NULL, 0);
+    res = selectAidAndAuthenticate(ctx, CAD_AID, verbose);
+    HFGAL_RET_IF_ERR(res);
+
+    // Determine what files we need to update
+    uint8_t fileIdStart = (entryNum - 1) / 6;
+    uint8_t fileIdStop = (numEntries - 1) / 6;
+
+    for (uint8_t fileId = fileIdStart; fileId <= fileIdStop; fileId++) {
+        // Write file
+        res = DesfireWriteFile(ctx, fileId, 0, 36, &cad[fileId * 36]);
+        HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed writing data to file %d in CAD (AID %06X)", fileId, CAD_AID);
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Updated file %d in CAD", fileId);
+    }
+
+    // Delete empty files if necessary
+    if (fileIdStart != fileIdStop) {
+        uint8_t fileId = fileIdStop;
+
+        DesfireSetCommMode(ctx, DCMMACed);
+        res = DesfireDeleteFile(ctx, fileId);
+        HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed deleting file %d from CAD (AID %06X)", fileId, CAD_AID);
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Deleted unnecessary file %d from CAD (AID %06X)", fileId, CAD_AID);
+
+        // Delete the Card Application Directory if necessary (if we just deleted the last file in it)
+        if (fileId == 0) {
+            res = deleteGallagherApplication(ctx, sitekey, CAD_AID, verbose);
+            HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed deleting file %d from CAD (AID %06X)", fileId, CAD_AID);
+
+            if (verbose)
+                PrintAndLogEx(INFO, "Removed CAD because it was empty");
+        }
+    }
+    
+    PrintAndLogEx(INFO, "Successfully removed %06X from the Card Application Directory", aid);
     return PM3_SUCCESS;
 }
 
@@ -737,11 +830,11 @@ static int CmdGallagherClone(const char *Cmd) {
             HFGAL_RET_ERR(PM3_EFATAL, "Could not find an available AID, card is full");
     }
 
-    // Update card application directory
+    // Update Card Application Directory
     DesfireSetKeyNoClear(&dctx, keyNum, algo, key);
     DesfireSetKdf(&dctx, MFDES_KDF_ALGO_NONE, NULL, 0);
-    res = updateGallagherCAD(&dctx, sitekey, aid, &creds, verbose);
-    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed updating Gallagher card application directory");
+    res = addToGallagherCAD(&dctx, sitekey, aid, &creds, verbose);
+    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed updating Gallagher Card Application Directory");
 
     // Create application
     DesfireSetKeyNoClear(&dctx, keyNum, algo, key);
@@ -753,6 +846,72 @@ static int CmdGallagherClone(const char *Cmd) {
     // Don't need to set keys here, they're generated automatically
     res = createGallagherCredentialsFile(&dctx, sitekey, aid, &creds, verbose);
     HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed creating Gallagher credential file");
+
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf gallagher reader`") " to verify");
+    return PM3_SUCCESS;
+}
+
+static int CmdGallagherDelete(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf gallagher delete",
+                    "delete Gallagher application from a DESFire card",
+                    "hf gallagher delete --aid 2081f4 --sitekey 00112233445566778899aabbccddeeff"
+                );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "apdu",                  "show APDU requests and responses"),
+        arg_lit0("v",  "verbose",               "Verbose mode"),
+
+        arg_str1(NULL,  "aid",     "<hex>",     "Application ID to delete (3 bytes)"),
+        arg_str0(NULL,  "sitekey", "<hex>",     "Master site key to compute diversified keys (16 bytes) [default=3112B738D8862CCD34302EB299AAB456]"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    SetAPDULogging(arg_get_lit(ctx, 1));
+    bool verbose = arg_get_lit(ctx, 2);
+
+    int aidLen = 0;
+    uint8_t aidBuf[3] = {0};
+    uint32_t aid = 0;
+    CLIGetHexWithReturn(ctx, 3, aidBuf, &aidLen);
+
+    if (aidLen != 3)
+        HFGAL_RET_ERR(PM3_EINVARG, "--aid must be 3 bytes");
+    reverseAid(aidBuf); // PM3 displays AIDs backwards
+    aid = DesfireAIDByteToUint(aidBuf);
+
+    // Check that the AID is in the expected range
+    if (memcmp(aidBuf, "\xF4\x81", 2) != 0 || aidBuf[2] < 0x20 || aidBuf[2] > 0x2B)
+        // TODO: this should probably be a warning, but key diversification will throw an error later even if we don't
+        HFGAL_RET_ERR(PM3_EINVARG, "Invalid Gallagher AID %06X, expected 2?81F4, where 0 <= ? <= 0xB", aid);
+    
+    int sitekeyLen = 0;
+    uint8_t sitekey[16] = {0};
+    memcpy(sitekey, DEFAULT_SITE_KEY, ARRAYLEN(sitekey));
+    CLIGetHexWithReturn(ctx, 4, sitekey, &sitekeyLen);
+    if (sitekeyLen > 0 && sitekeyLen != 16)
+        HFGAL_RET_ERR(PM3_EINVARG, "--sitekey must be 16 bytes");
+    CLIParserFree(ctx);
+
+    // Set up context
+    DropField();
+    DesfireContext_t dctx = {0};
+    DesfireClearContext(&dctx);
+
+    // Get card UID (for key diversification)
+    int res = DesfireGetCardUID(&dctx);
+    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed retrieving card UID");
+    
+    // Update Card Application Directory
+    res = removeFromGallagherCAD(&dctx, sitekey, aid, verbose);
+    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed removing %06X from the Card Application Directory");
+
+    // Delete application
+    res = deleteGallagherApplication(&dctx, sitekey, aid, verbose);
+    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed deleting Gallagher application");
 
     PrintAndLogEx(SUCCESS, "Done");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf gallagher reader`") " to verify");
@@ -798,7 +957,8 @@ static int CmdHelp(const char *Cmd);
 static command_t CommandTable[] = {
     {"help",   CmdHelp,            AlwaysAvailable, "This help"},
     {"reader", CmdGallagherReader, IfPm3Iso14443,   "attempt to read and extract tag data"},
-    {"clone",  CmdGallagherClone,  IfPm3Iso14443,   "clone GALLAGHER tag to a blank DESFire card"},
+    {"clone",  CmdGallagherClone,  IfPm3Iso14443,   "add Gallagher credentials to a DESFire card"},
+    {"delete", CmdGallagherDelete, IfPm3Iso14443,   "delete Gallagher application from a DESFire card"},
     {"sim",    CmdGallagherSim,    IfPm3Iso14443,   "simulate GALLAGHER tag"},
     {NULL, NULL, NULL, NULL}
 };
