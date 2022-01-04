@@ -23,6 +23,9 @@
 #include "cliparser.h"
 #include "ui.h"
 
+/** Application ID for the Gallagher Card Application Directory */
+static const uint32_t CAD_AID = 0x2F81F4;
+
 /**
  * @brief Reverses the bytes in aid. Used when encoding/decoding Card Application Directory entries.
  */
@@ -50,7 +53,7 @@ static int readCardApplicationDirectory(DesfireContext_t *ctx, uint8_t *destBuf,
 
     // Get card AIDs from Card Application Directory (which contains 1 to 3 files)
     DesfireSetCommMode(ctx, DCMPlain);
-    int res = DesfireSelectAIDHex(ctx, 0x2F81F4, false, 0);
+    int res = DesfireSelectAIDHex(ctx, CAD_AID, false, 0);
     HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed selecting Card Application Directory, does AID F4812F exist?");
 
     // Read up to 3 files with 6x 6-byte entries each
@@ -400,38 +403,37 @@ static int createGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, bool verb
     HFGAL_RET_IF_ERR(res);
 
     // Create application
-    uint32_t aid = 0x2F81F4;
     DesfireCryptoAlgorithm dstalgo = T_AES;
     uint8_t keycount = 1;
     uint8_t ks1 = 0x0B;
     uint8_t ks2 = (DesfireKeyAlgoToType(dstalgo) << 6) | keycount;;
 
     uint8_t data[5] = {0};
-    DesfireAIDUintToByte(aid, &data[0]);
+    DesfireAIDUintToByte(CAD_AID, &data[0]);
     data[3] = ks1;
     data[4] = ks2;
 
     DesfireSetCommMode(ctx, DCMMACed);
     res = DesfireCreateApplication(ctx, data, ARRAYLEN(data));
-    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed creating Card Application Directory. Does it already exist?", aid);
+    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed creating Card Application Directory. Does it already exist?", CAD_AID);
 
     if (verbose)
-        PrintAndLogEx(INFO, "Created Card Application Directory (AID %06X, current has empty contents & blank keys)", aid);
+        PrintAndLogEx(INFO, "Created Card Application Directory (AID %06X, current has empty contents & blank keys)", CAD_AID);
 
     // Select & authenticate
     uint8_t blankKey[DESFIRE_MAX_KEY_SIZE] = {0};
     DesfireSetKeyNoClear(ctx, 0, T_AES, blankKey);
     DesfireSetCommMode(ctx, DCMPlain);
     DesfireSetCommandSet(ctx, DCCNativeISO);
-    res = DesfireSelectAndAuthenticateAppW(ctx, DACEV1, ISW6bAID, aid, false, verbose);
+    res = DesfireSelectAndAuthenticateAppW(ctx, DACEV1, ISW6bAID, CAD_AID, false, verbose);
     HFGAL_RET_IF_ERR(res);
 
     // Diversify key
     uint8_t buf[CRYPTO_AES128_KEY_SIZE] = {0};
-    res = GallagherDiversifyKey(sitekey, ctx->uid, ctx->uidlen, 0, aid, buf);
-    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed diversifying key 0 for AID %06X", aid);
+    res = GallagherDiversifyKey(sitekey, ctx->uid, ctx->uidlen, 0, CAD_AID, buf);
+    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed diversifying key 0 for AID %06X", CAD_AID);
     
-    PrintAndLogEx(INFO, "Diversified key 0 for CAD (AID %06X): " _GREEN_("%s"), aid, sprint_hex_inrow(buf, ARRAYLEN(buf)));
+    PrintAndLogEx(INFO, "Diversified key 0 for CAD (AID %06X): " _GREEN_("%s"), CAD_AID, sprint_hex_inrow(buf, ARRAYLEN(buf)));
 
     // Change key
     DesfireSetCommMode(ctx, DCMEncryptedPlain);
@@ -441,7 +443,7 @@ static int createGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, bool verb
     if (verbose)
         PrintAndLogEx(INFO, "Successfully set key 0 for CAD");
 
-    PrintAndLogEx(INFO, "Successfully created Card Application Directory (AID %06X)", aid);
+    PrintAndLogEx(INFO, "Successfully created Card Application Directory (AID %06X)", CAD_AID);
     return PM3_SUCCESS;
 }
 
@@ -453,12 +455,10 @@ static int createGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, bool verb
  * @param creds Gallagher cardholder credentials (region_code & facility_code are required).
  */
 static int updateGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, uint32_t aid, GallagherCredentials_t *creds, bool verbose) {
-    uint32_t cadAid = 0x2F81F4;
-
     // Check if CAD exists
     uint8_t cad[36 * 3] = {0};
     uint8_t numEntries = 0;
-    int res = DesfireSelectEx(ctx, true, ISW6bAID, cadAid, NULL);
+    int res = DesfireSelectEx(ctx, true, ISW6bAID, CAD_AID, NULL);
     if (res == PM3_SUCCESS) {
         if (verbose)
             PrintAndLogEx(INFO, "Card Application Directory exists, reading entries...");
@@ -498,7 +498,7 @@ static int updateGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, uint32_t 
     DesfireSetCommandSet(ctx, DCCNativeISO);
 
     // Select application
-    res = DesfireSelectAndAuthenticateAppW(ctx, DACEV1, ISW6bAID, cadAid, false, verbose);
+    res = DesfireSelectAndAuthenticateAppW(ctx, DACEV1, ISW6bAID, CAD_AID, false, verbose);
     HFGAL_RET_IF_ERR(res);
 
     // Create file if necessary
@@ -521,7 +521,7 @@ static int updateGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, uint32_t 
 
         // Create file
         res = DesfireCreateFile(ctx, fileType, data, ARRAYLEN(data), false);
-        HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed creating file %d in CAD (AID %06X)", fileId, cadAid);
+        HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed creating file %d in CAD (AID %06X)", fileId, CAD_AID);
 
         if (verbose)
             PrintAndLogEx(INFO, "Created file %d in CAD (current has empty contents)", fileId);
@@ -532,7 +532,7 @@ static int updateGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, uint32_t 
         // Write file
         res = DesfireWriteFile(ctx, fileId, entryNum * 6, 6, entry);
     }
-    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed writing data to file %d in CAD (AID %06X)", fileId, cadAid);
+    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed writing data to file %d in CAD (AID %06X)", fileId, CAD_AID);
     
     PrintAndLogEx(INFO, "Successfully added new entry for %06X to the Card Application Directory", aid);
     return PM3_SUCCESS;
