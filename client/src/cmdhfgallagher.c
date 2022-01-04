@@ -27,13 +27,31 @@
 static const uint32_t CAD_AID = 0x2F81F4;
 
 /**
- * @brief Reverses the bytes in AID. Used when encoding/decoding Card Application Directory entries.
+ * @brief Reverses the bytes in AID. Used when parsing CLI args (because Proxmark displays AIDs in reverse byte order).
  */
 static void reverseAid(uint8_t *aid) {
     uint8_t tmp = aid[0];
     aid[0] = aid[2];
     aid[2] = tmp;
-};
+}
+
+/**
+ * @brief Converts a Card Application Directory format application ID to an integer.
+ * Note that the CAD stores AIDs in reverse order, so this function is different to DesfireAIDByteToUint().
+ */
+static uint32_t cadAidByteToUint(uint8_t *data) {
+    return data[2] + (data[1] << 8) + (data[0] << 16);
+}
+
+/**
+ * @brief Converts an integer application ID to Card Application Directory format.
+ * Note that the CAD stores AIDs in reverse order, so this function is different to DesfireAIDUintToByte().
+ */
+static void cadAidUintToByte(uint32_t aid, uint8_t *data) {
+    data[2] = aid & 0xff;
+    data[1] = (aid >> 8) & 0xff;
+    data[0] = (aid >> 16) & 0xff;
+}
 
 /**
  * @brief Select application ID.
@@ -43,9 +61,6 @@ static int selectAid(DesfireContext_t *ctx, uint32_t aid, bool verbose) {
     DesfireSetCommMode(ctx, DCMPlain);
     DesfireSetCommandSet(ctx, DCCNativeISO);
 
-    if (verbose)
-        DesfirePrintContext(ctx);
-
     int res = DesfireSelectEx(ctx, true, ISW6bAID, aid, NULL);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire AID %06X select " _RED_("error") ".", aid);
@@ -53,7 +68,7 @@ static int selectAid(DesfireContext_t *ctx, uint32_t aid, bool verbose) {
     }
 
     if (verbose)
-        PrintAndLogEx(INFO, "AID %06X is " _GREEN_("selected"), aid);
+        PrintAndLogEx(INFO, "Selected AID %06X", aid);
 
     return PM3_SUCCESS;
 }
@@ -66,7 +81,7 @@ static int authenticate(DesfireContext_t *ctx, bool verbose) {
     DesfireSetCommMode(ctx, DCMPlain);
     DesfireSetCommandSet(ctx, DCCNativeISO);
 
-    int res = DesfireAuthenticate(ctx, DACEV1, verbose);
+    int res = DesfireAuthenticate(ctx, DACEV1, false);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: [%d] %s", res, DesfireAuthErrorToStr(res));
         return res;
@@ -74,7 +89,7 @@ static int authenticate(DesfireContext_t *ctx, bool verbose) {
 
     if (DesfireIsAuthenticated(ctx)) {
         if (verbose)
-            PrintAndLogEx(INFO, "Desfire " _GREEN_("authenticated"));
+            PrintAndLogEx(INFO, "Authenticated to AID %06X", ctx->selectedAID);
     } else
         return 201;
 
@@ -131,8 +146,7 @@ static int readCardApplicationDirectory(DesfireContext_t *ctx, uint8_t *destBuf,
         // Print what we found
         PrintAndLogEx(SUCCESS, "Card Application Directory contains:" NOLF);
         for (int i = 0; i < *numEntries; i++)
-            // TODO: check this prints correct byte order
-            PrintAndLogEx(NORMAL, "%s %06X" NOLF, (i == 0) ? "" : ",", DesfireAIDByteToUint(&destBuf[i*6 + 3]));
+            PrintAndLogEx(NORMAL, "%s %06X" NOLF, (i == 0) ? "" : ",", cadAidByteToUint(&destBuf[i*6 + 3]));
         PrintAndLogEx(NORMAL, "");
     }
 
@@ -207,8 +221,7 @@ static int readCard(uint32_t aid, uint8_t *sitekey, bool verbose, bool quiet) {
     uint8_t cad[36 * 3] = {0};
     uint8_t numEntries = 0;
     if (aid != 0) {
-        DesfireAIDUintToByte(aid, &cad[3]);
-        reverseAid(&cad[3]); // CAD stores AIDs backwards
+        cadAidUintToByte(aid, &cad[3]);
         numEntries = 1;
     } else {
         res = readCardApplicationDirectory(&dctx, cad, ARRAYLEN(cad), &numEntries, verbose);
@@ -219,12 +232,7 @@ static int readCard(uint32_t aid, uint8_t *sitekey, bool verbose, bool quiet) {
     for (uint8_t i = 0; i < numEntries * 6; i += 6) {
         uint16_t regionCode = cad[i + 0];
         uint16_t facilityCode = (cad[i + 1] << 8) + cad[i + 2];
-
-        // Copy AID out of CAD record
-        uint8_t currentAidBuf[3];
-        memcpy(currentAidBuf, &cad[3], 3);
-        reverseAid(currentAidBuf); // CAD stores AIDs backwards
-        uint32_t currentAid = DesfireAIDByteToUint(currentAidBuf);
+        uint32_t currentAid = cadAidByteToUint(&cad[i + 3]);
 
         if (verbose) {
             if (regionCode > 0 || facilityCode > 0)
@@ -527,8 +535,7 @@ static int updateGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, uint32_t 
     entry[0] = creds->region_code;
     entry[1] = (creds->facility_code >> 8) & 0xFF;
     entry[2] = creds->facility_code & 0xFF;
-    DesfireAIDUintToByte(aid, &entry[3]);
-    reverseAid(&entry[3]); // CAD stores AIDs backwards
+    cadAidUintToByte(aid, &entry[3]);
 
     if (verbose)
         PrintAndLogEx(INFO, "Adding entry to CAD (position %d in file %d): %s", entryNum, fileId, sprint_hex_inrow(entry, 6));
