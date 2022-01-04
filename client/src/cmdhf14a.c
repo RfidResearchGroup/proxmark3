@@ -743,13 +743,16 @@ int CmdHF14ASim(const char *Cmd) {
         keypress = kbd_enter_pressed();
     }
 
-    if (keypress && (flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
-        // inform device to break the sim loop since client has exited
-        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-    }
+    if (keypress) {
+        if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
+            // inform device to break the sim loop since client has exited
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        }
 
-    if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK))
-        showSectorTable(k_sector, k_sectorsCount);
+        if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK)) {
+            showSectorTable(k_sector, k_sectorsCount);
+        }
+    }
 
     PrintAndLogEx(INFO, "Done");
     return PM3_SUCCESS;
