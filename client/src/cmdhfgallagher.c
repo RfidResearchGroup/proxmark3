@@ -56,6 +56,32 @@ static void cadAidUintToByte(uint32_t aid, uint8_t *data) {
     data[0] = (aid >> 16) & 0xff;
 }
 
+/*
+ * See header file for description :)
+ */
+int GallagherDiversifyKey(uint8_t *sitekey, uint8_t *uid, uint8_t uidLen, uint8_t keyNo, uint32_t aid, uint8_t *keyOut) {
+    // Generate diversification input
+    uint8_t kdfInputLen = 11;
+    int res = mfdes_kdf_input_gallagher(uid, uidLen, keyNo, aid, keyOut, &kdfInputLen);
+    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed generating Gallagher key diversification input.");
+
+    if (sitekey == NULL) {
+        PrintAndLogEx(INFO, "GallagherDiversifyKey is using default site key: %s",
+            sprint_hex_inrow(DEFAULT_SITE_KEY, ARRAYLEN(DEFAULT_SITE_KEY)));
+        sitekey = (uint8_t *) &DEFAULT_SITE_KEY;
+    }
+
+    // Make temporary DesfireContext
+    DesfireContext_t dctx = {0};
+    DesfireSetKey(&dctx, 0, T_AES, sitekey);
+    
+    // Diversify input & copy to output buffer
+    MifareKdfAn10922(&dctx, DCOMasterKey, keyOut, kdfInputLen);
+    memcpy(keyOut, dctx.key, CRYPTO_AES128_KEY_SIZE);
+
+    return PM3_SUCCESS;
+}
+
 /**
  * @brief Select application ID.
  */
@@ -99,6 +125,9 @@ static int authenticate(DesfireContext_t *ctx, bool verbose) {
     return PM3_SUCCESS;
 }
 
+/**
+ * @brief Select application ID & authenticate. Uses existing authentication keys in context.
+ */
 static int selectAidAndAuthenticate(DesfireContext_t *ctx, uint32_t aid, bool verbose) {
     int res = selectAid(ctx, aid, verbose);
     HFGAL_RET_IF_ERR(res);
@@ -307,29 +336,6 @@ static int CmdGallagherReader(const char *Cmd) {
     while (!kbd_enter_pressed()) {
         readCard(aid, sitekey, verbose, !verbose);
     }
-    return PM3_SUCCESS;
-}
-
-int GallagherDiversifyKey(uint8_t *sitekey, uint8_t *uid, uint8_t uidLen, uint8_t keyNo, uint32_t aid, uint8_t *keyOut) {
-    // Generate diversification input
-    uint8_t kdfInputLen = 11;
-    int res = mfdes_kdf_input_gallagher(uid, uidLen, keyNo, aid, keyOut, &kdfInputLen);
-    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed generating Gallagher key diversification input.");
-
-    if (sitekey == NULL) {
-        PrintAndLogEx(INFO, "GallagherDiversifyKey is using default site key: %s",
-            sprint_hex_inrow(DEFAULT_SITE_KEY, ARRAYLEN(DEFAULT_SITE_KEY)));
-        sitekey = (uint8_t *) &DEFAULT_SITE_KEY;
-    }
-
-    // Make temporary DesfireContext
-    DesfireContext_t dctx = {0};
-    DesfireSetKey(&dctx, 0, T_AES, sitekey);
-    
-    // Diversify input & copy to output buffer
-    MifareKdfAn10922(&dctx, DCOMasterKey, keyOut, kdfInputLen);
-    memcpy(keyOut, dctx.key, CRYPTO_AES128_KEY_SIZE);
-
     return PM3_SUCCESS;
 }
 
