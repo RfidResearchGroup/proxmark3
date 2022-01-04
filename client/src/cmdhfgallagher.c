@@ -139,6 +139,37 @@ static int selectAidAndAuthenticate(DesfireContext_t *ctx, uint32_t aid, bool ve
 }
 
 /**
+ * @brief Returns true if the specified application exists, false otherwise.
+ */
+static bool aidExists(DesfireContext_t *ctx, uint32_t aid, bool verbose) {
+    // TODO: do these both need to be set?
+    DesfireSetCommMode(ctx, DCMPlain);
+    DesfireSetCommandSet(ctx, DCCNativeISO);
+
+    int res = DesfireSelectAIDHex(ctx, aid, false, 0);
+    if (res != PM3_SUCCESS && res != PM3_EAPDU_FAIL)
+        HFGAL_RET_ERR(false, "Select failed with error %d, assuming AID %06X does not exist", res, aid);
+
+    if (verbose)
+        PrintAndLogEx(INFO, "AID %06X %s", aid, res == PM3_SUCCESS ? "exists" : "does not exist");
+
+    return res == PM3_SUCCESS;
+}
+
+/**
+ * @brief Returns the lowest available Gallagher application ID. 
+ * @return 0 if no AID is available, or an AID in the range 0x2?81F4, where 0 <= ? <= 0xB.
+ */
+static uint32_t findAvailableGallagherAid(DesfireContext_t *ctx, bool verbose) {
+    for (uint8_t i = 0x0; i <= 0xB; i++) {
+        uint32_t aid = 0x2081F4 | (i << 16);
+        if (!aidExists(ctx, aid, verbose))
+            return aid;
+    }
+    return 0;
+}
+
+/**
  * @brief Read Gallagher Card Application Directory from card.
  * 
  * @param destBuf Buffer to copy Card Application Directory into.
@@ -278,8 +309,8 @@ static int readCard(uint32_t aid, uint8_t *sitekey, bool verbose, bool quiet) {
         res = readCardApplicationCredentials(&dctx, currentAid, sitekey, &creds, verbose);
         HFGAL_RET_IF_ERR_MAYBE_MSG(res, !quiet, "Failed reading card application credentials.");
 
-        PrintAndLogEx(SUCCESS, "GALLAGHER - Region: " _GREEN_("%u") ", Facility: " _GREEN_("%u") ", Card No.: " _GREEN_("%u") ", Issue Level: " _GREEN_("%u"),
-            creds.region_code, creds.facility_code, creds.card_number, creds.issue_level);
+        PrintAndLogEx(SUCCESS, "GALLAGHER (AID %06X) - Region: " _GREEN_("%u") ", Facility: " _GREEN_("%u") ", Card No.: " _GREEN_("%u") ", Issue Level: " _GREEN_("%u"),
+            currentAid, creds.region_code, creds.facility_code, creds.card_number, creds.issue_level);
     }
 
     return PM3_SUCCESS;
@@ -326,16 +357,14 @@ static int CmdGallagherReader(const char *Cmd) {
     bool continuousMode = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
-    if (!continuousMode) {
+    if (!continuousMode)
         // Read single card
         return readCard(aid, sitekey, verbose, false);
-    }
 
     // Loop until <Enter> is pressed
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
-    while (!kbd_enter_pressed()) {
+    while (!kbd_enter_pressed())
         readCard(aid, sitekey, verbose, !verbose);
-    }
     return PM3_SUCCESS;
 }
 
@@ -524,12 +553,11 @@ static int updateGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, uint32_t 
     // Check if CAD exists
     uint8_t cad[36 * 3] = {0};
     uint8_t numEntries = 0;
-    int res = selectAid(ctx, CAD_AID, verbose);
-    if (res == PM3_SUCCESS) {
+    if (aidExists(ctx, CAD_AID, verbose)) {
         if (verbose)
             PrintAndLogEx(INFO, "Card Application Directory exists, reading entries...");
 
-        res = readCardApplicationDirectory(ctx, cad, ARRAYLEN(cad), &numEntries, verbose);
+        int res = readCardApplicationDirectory(ctx, cad, ARRAYLEN(cad), &numEntries, verbose);
         HFGAL_RET_IF_ERR(res);
 
         // Check that there is space for the new entry
@@ -539,7 +567,7 @@ static int updateGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, uint32_t 
         if (verbose)
             PrintAndLogEx(INFO, "Card Application Directory does not exist, creating it now...");
 
-        res = createGallagherCAD(ctx, sitekey, verbose);
+        int res = createGallagherCAD(ctx, sitekey, verbose);
         HFGAL_RET_IF_ERR(res);
     }
 
@@ -559,7 +587,7 @@ static int updateGallagherCAD(DesfireContext_t *ctx, uint8_t *sitekey, uint32_t 
     // Select application & authenticate
     DesfireSetKeyNoClear(ctx, 0, T_AES, sitekey);
     DesfireSetKdf(ctx, MFDES_KDF_ALGO_GALLAGHER, NULL, 0);
-    res = selectAidAndAuthenticate(ctx, CAD_AID, verbose);
+    int res = selectAidAndAuthenticate(ctx, CAD_AID, verbose);
     HFGAL_RET_IF_ERR(res);
 
     // Create file if necessary
@@ -618,14 +646,14 @@ static int CmdGallagherClone(const char *Cmd) {
         arg_u64_1(NULL, "fc",      "<decimal>", "Facility code. 2 bytes max"),
         arg_u64_1(NULL, "cn",      "<decimal>", "Card number. 3 bytes max"),
         arg_u64_1(NULL, "il",      "<decimal>", "Issue level. 4 bits max"),
-        arg_str0(NULL,  "aid",     "<hex>",     "Application ID to write (3 bytes) [default=2081F4]"),
+        arg_str0(NULL,  "aid",     "<hex>",     "Application ID to write (3 bytes) [default finds lowest available in range 0x2?81F4, where 0 <= ? <= 0xB]"),
         arg_str0(NULL,  "sitekey", "<hex>",     "Master site key to compute diversified keys (16 bytes) [default=3112B738D8862CCD34302EB299AAB456]"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     SetAPDULogging(arg_get_lit(ctx, 1));
-    bool verbose = arg_get_lit(ctx, 2) || true;
+    bool verbose = arg_get_lit(ctx, 2);
     int keyNum = arg_get_int_def(ctx, 3, 0);
     
     int algo = T_DES;
@@ -634,13 +662,11 @@ static int CmdGallagherClone(const char *Cmd) {
     int keyLen = 0;
     uint8_t key[DESFIRE_MAX_KEY_SIZE] = {0};
     CLIGetHexWithReturn(ctx, 5, key, &keyLen);
-    if (keyLen && keyLen != desfire_get_key_length(algo)) {
+    if (keyLen && keyLen != desfire_get_key_length(algo))
         HFGAL_RET_ERR(PM3_EINVARG, "%s key must have %d bytes length instead of %d", CLIGetOptionListStr(DesfireAlgoOpts, algo), desfire_get_key_length(algo), keyLen);
-    }
-    if (keyLen == 0) {
+    if (keyLen == 0)
         // Default to a key of all zeros
         keyLen = desfire_get_key_length(algo);
-    }
 
     uint64_t region_code = arg_get_u64(ctx, 6); // uint16, will be validated later
     uint64_t facility_code = arg_get_u64(ctx, 7); // uint32, will be validated later
@@ -648,18 +674,20 @@ static int CmdGallagherClone(const char *Cmd) {
     uint64_t issue_level = arg_get_u64(ctx, 9); // uint32, will be validated later
 
     int aidLen = 0;
-    uint8_t aidBuf[3] = "\x20\x81\xF4";
+    uint8_t aidBuf[3] = {0};
+    uint32_t aid = 0;
     CLIGetHexWithReturn(ctx, 10, aidBuf, &aidLen);
-    if (aidLen > 0 && aidLen != 3) {
-        HFGAL_RET_ERR(PM3_EINVARG, "--aid must be 3 bytes");
-    }
-    reverseAid(aidBuf); // PM3 displays AIDs backwards
-    uint32_t aid = DesfireAIDByteToUint(aidBuf);
+    if (aidLen > 0) {
+        if (aidLen != 3)
+            HFGAL_RET_ERR(PM3_EINVARG, "--aid must be 3 bytes");
+        reverseAid(aidBuf); // PM3 displays AIDs backwards
+        aid = DesfireAIDByteToUint(aidBuf);
 
-    // Check that the AID is in the expected range
-    if (memcmp(aidBuf, "\xF4\x81", 2) != 0 || aidBuf[2] < 0x20 || aidBuf[2] > 0x2B)
-        // TODO: this should probably be a warning, but key diversification will throw an error later even if we don't
-        HFGAL_RET_ERR(PM3_EINVARG, "Invalid Gallagher AID %06X, expected 2?81F4, where 0 <= ? <= 0xB", aid);
+        // Check that the AID is in the expected range
+        if (memcmp(aidBuf, "\xF4\x81", 2) != 0 || aidBuf[2] < 0x20 || aidBuf[2] > 0x2B)
+            // TODO: this should probably be a warning, but key diversification will throw an error later even if we don't
+            HFGAL_RET_ERR(PM3_EINVARG, "Invalid Gallagher AID %06X, expected 2?81F4, where 0 <= ? <= 0xB", aid);
+    }
     
     int sitekeyLen = 0;
     uint8_t sitekey[16] = {0};
@@ -687,6 +715,13 @@ static int CmdGallagherClone(const char *Cmd) {
     // Get card UID (for key diversification)
     int res = DesfireGetCardUID(&dctx);
     HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed retrieving card UID");
+
+    // Find available Gallagher AID if the user did not specify one
+    if (aidLen == 0) {
+        aid = findAvailableGallagherAid(&dctx, verbose);
+        if (aid == 0)
+            HFGAL_RET_ERR(PM3_EFATAL, "Could not find an available AID, card is full");
+    }
 
     // Create application
     DesfireSetKeyNoClear(&dctx, keyNum, algo, key);
