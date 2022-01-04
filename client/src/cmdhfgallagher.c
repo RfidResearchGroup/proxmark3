@@ -26,6 +26,9 @@
 /** Application ID for the Gallagher Card Application Directory */
 static const uint32_t CAD_AID = 0x2F81F4;
 
+/** Default MIFARE Site Key */
+static const uint8_t DEFAULT_SITE_KEY[] = { 0x31, 0x12, 0xB7, 0x38, 0xD8, 0x86, 0x2C, 0xCD, 0x34, 0x30, 0x2E, 0xB2, 0x99, 0xAA, 0xB4, 0x56 };
+
 /**
  * @brief Reverses the bytes in AID. Used when parsing CLI args (because Proxmark displays AIDs in reverse byte order).
  */
@@ -265,7 +268,7 @@ static int CmdGallagherReader(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "aid",     "<hex>",   "Application ID to read (3 bytes)"),
-        arg_str1("k",  "sitekey", "<hex>",   "Master site key to compute diversified keys (16 bytes)"),
+        arg_str0("k",  "sitekey", "<hex>",   "Master site key to compute diversified keys (16 bytes) [default=3112B738D8862CCD34302EB299AAB456]"),
         arg_lit0(NULL, "apdu",               "show APDU requests and responses"),
         arg_lit0("v",  "verbose",            "Verbose mode"),
         arg_lit0("@",  "continuous",         "Continuous reader mode"),
@@ -284,6 +287,7 @@ static int CmdGallagherReader(const char *Cmd) {
     
     int sitekeyLen = 0;
     uint8_t sitekey[16] = {0};
+    memcpy(sitekey, DEFAULT_SITE_KEY, ARRAYLEN(sitekey));
     CLIGetHexWithReturn(ctx, 2, sitekey, &sitekeyLen);
     if (sitekeyLen > 0 && sitekeyLen != 16)
         HFGAL_RET_ERR(PM3_EINVARG, "--sitekey must be 16 bytes");
@@ -311,6 +315,12 @@ int GallagherDiversifyKey(uint8_t *sitekey, uint8_t *uid, uint8_t uidLen, uint8_
     uint8_t kdfInputLen = 11;
     int res = mfdes_kdf_input_gallagher(uid, uidLen, keyNo, aid, keyOut, &kdfInputLen);
     HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed generating Gallagher key diversification input.");
+
+    if (sitekey == NULL) {
+        PrintAndLogEx(INFO, "GallagherDiversifyKey is using default site key: %s",
+            sprint_hex_inrow(DEFAULT_SITE_KEY, ARRAYLEN(DEFAULT_SITE_KEY)));
+        sitekey = (uint8_t *) &DEFAULT_SITE_KEY;
+    }
 
     // Make temporary DesfireContext
     DesfireContext_t dctx = {0};
@@ -603,7 +613,7 @@ static int CmdGallagherClone(const char *Cmd) {
         arg_u64_1(NULL, "cn",      "<decimal>", "Card number. 3 bytes max"),
         arg_u64_1(NULL, "il",      "<decimal>", "Issue level. 4 bits max"),
         arg_str0(NULL,  "aid",     "<hex>",     "Application ID to write (3 bytes) [default=2081F4]"),
-        arg_str1(NULL,  "sitekey", "<hex>",     "Master site key to compute diversified keys (16 bytes)"),
+        arg_str0(NULL,  "sitekey", "<hex>",     "Master site key to compute diversified keys (16 bytes) [default=3112B738D8862CCD34302EB299AAB456]"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -647,6 +657,7 @@ static int CmdGallagherClone(const char *Cmd) {
     
     int sitekeyLen = 0;
     uint8_t sitekey[16] = {0};
+    memcpy(sitekey, DEFAULT_SITE_KEY, ARRAYLEN(sitekey));
     CLIGetHexWithReturn(ctx, 11, sitekey, &sitekeyLen);
     if (sitekeyLen > 0 && sitekeyLen != 16)
         HFGAL_RET_ERR(PM3_EINVARG, "--sitekey must be 16 bytes");
