@@ -280,7 +280,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         HFiClassCalcDivKey(cc->csn, iClass_Key_Table[0], cc->key_d, false);
     } else {
         PrintAndLogEx(FAILED, "failed to read a card");
-        PrintAndLogEx(INFO,"falling back to default config card");
+        PrintAndLogEx(INFO, "falling back to default config card");
     }
 
     // generate dump file
@@ -338,7 +338,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         if (Encrypt(ffs, ffs) == false) {
             PrintAndLogEx(WARNING, "failed to encrypt FF");
         } else {
-            PrintAndLogEx(NORMAL,"( " _GREEN_("ok") " )");
+            PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
         }
 
         // local key copy
@@ -349,7 +349,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         if (Encrypt(lkey, enckey1) == false) {
             PrintAndLogEx(WARNING, "failed to encrypt key1");
         } else {
-            PrintAndLogEx(NORMAL,"( " _GREEN_("ok") " )");
+            PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
         }
 
         PrintAndLogEx(INFO, "Copy data... " NOLF);
@@ -362,7 +362,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         for (uint8_t i = 0xD; i < 0x14; i++) {
             memcpy(data + (i * 8), ffs, sizeof(ffs));
         }
-        PrintAndLogEx(NORMAL,"( " _GREEN_("ok") " )");
+        PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
 
         // encrypted partial keyroll key 14
         PrintAndLogEx(INFO, "Setting encrypted partial key14... " NOLF);
@@ -373,7 +373,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
             PrintAndLogEx(WARNING, "failed to encrypt partial 1");
         }
         memcpy(data + (0x14 * 8), enckey2, sizeof(enckey2));
-        PrintAndLogEx(NORMAL,"( " _GREEN_("ok") " )");
+        PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
 
 
         // encrypted partial keyroll key 15
@@ -384,14 +384,14 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
             PrintAndLogEx(WARNING, "failed to encrypt partial 2");
         }
         memcpy(data + (0x15 * 8), enckey2, sizeof(enckey2));
-        PrintAndLogEx(NORMAL,"( " _GREEN_("ok") " )");
+        PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
 
         // encrypted 0xFF
         PrintAndLogEx(INFO, "Setting 0xFF's... " NOLF);
         for (uint8_t i = 0x16; i <= app1_limit; i++) {
             memcpy(data + (i * 8), ffs, sizeof(ffs));
-        }        
-        PrintAndLogEx(NORMAL,"( " _GREEN_("ok") " )");
+        }
+        PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
 
         // revert potential modified app1_limit
         cc->conf.app_limit = old_limit;
@@ -541,7 +541,7 @@ static void mem_app_config(const picopass_hdr_t *hdr) {
     uint8_t app_areas = 2;
     uint8_t books = 1;
     uint8_t pages = 1;
-        
+
     getMemConfig(mem, chip, &app_areas, &kb, &books, &pages);
 
     uint8_t type = get_mem_config(hdr);
@@ -558,25 +558,25 @@ static void mem_app_config(const picopass_hdr_t *hdr) {
     }
 
     PrintAndLogEx(INFO, " %u KBits/%u App Areas ( " _YELLOW_("%u") " bytes )"
-        , kb
-        , app_areas
-        , ((app2_limit + 1) * 8) * books * pages);
+                  , kb
+                  , app_areas
+                  , ((app2_limit + 1) * 8) * books * pages);
 
     PrintAndLogEx(INFO, "    %u books / %u pages"
-        , books
-        , pages
-    );
+                  , books
+                  , pages
+                 );
     PrintAndLogEx(INFO, " First book / first page configuration");
     PrintAndLogEx(INFO, "    Config | 0 - 5 ( 0x00 - 0x05 ) - 6 blocks ");
     PrintAndLogEx(INFO, "    AA1    | 6 - %2d ( 0x06 - 0x%02X ) - %u blocks", app1_limit + 5, app1_limit + 5, app1_limit);
-    if (app1_limit + 5 < app2_limit ) {
+    if (app1_limit + 5 < app2_limit) {
         PrintAndLogEx(INFO, "    AA2    | %2d - %2d ( 0x%02X - 0x%02X ) - %u blocks", app1_limit + 5 + 1, app2_limit, app1_limit + 5 + 1, app2_limit, app2_limit - app1_limit);
     }
-/*
-[=]  32 KBits/3 App Areas ( 2048 bytes )
-[=]     AA1 blocks 250 { 0x06 - 0xFF (06 - 255) }
-[=]     AA2 blocks 5 { 0x100 - 0xFF (256 - 255) }
-*/
+    /*
+    [=]  32 KBits/3 App Areas ( 2048 bytes )
+    [=]     AA1 blocks 250 { 0x06 - 0xFF (06 - 255) }
+    [=]     AA2 blocks 5 { 0x100 - 0xFF (256 - 255) }
+    */
 
     PrintAndLogEx(INFO, "------------------------- " _CYAN_("KeyAccess") " ------------------------");
     PrintAndLogEx(INFO, " * Kd, Debit key, AA1    Kc, Credit key, AA2 *");
@@ -898,7 +898,7 @@ static int CmdHFiClassInfo(const char *Cmd) {
 int read_iclass_csn(bool loop, bool verbose) {
 
     iclass_card_select_t payload = {
-        .flags =  (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
+        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
     };
 
     int res = PM3_SUCCESS;
@@ -906,11 +906,11 @@ int read_iclass_csn(bool loop, bool verbose) {
     do {
         clearCommandBuffer();
         PacketResponseNG resp;
-        SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t*)&payload, sizeof(iclass_card_select_t));
+        SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t *)&payload, sizeof(iclass_card_select_t));
 
         if (WaitForResponseTimeout(CMD_HF_ICLASS_READER, &resp, 2000)) {
 
-            iclass_card_select_resp_t *r = (iclass_card_select_resp_t*)resp.data.asBytes;
+            iclass_card_select_resp_t *r = (iclass_card_select_resp_t *)resp.data.asBytes;
             if (loop) {
                 if (resp.status == PM3_ERFTRANS) {
                     continue;
@@ -1537,7 +1537,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
     } else {
         iclass_encrypt_block_data(blk_data, key);
     }
-    
+
     PrintAndLogEx(SUCCESS, "encrypted... " _YELLOW_("%s"), sprint_hex_inrow(blk_data, sizeof(blk_data)));
     return PM3_SUCCESS;
 }
@@ -1545,19 +1545,19 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool verbose) {
 
     iclass_card_select_t payload = {
-        .flags =  (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
+        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
     };
 
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t*)&payload, sizeof(iclass_card_select_t));
+    SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t *)&payload, sizeof(iclass_card_select_t));
 
     if (WaitForResponseTimeout(CMD_HF_ICLASS_READER, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "command execute timeout");
         return false;
     }
 
-    iclass_card_select_resp_t *r = (iclass_card_select_resp_t*)resp.data.asBytes;
+    iclass_card_select_resp_t *r = (iclass_card_select_resp_t *)resp.data.asBytes;
     picopass_hdr_t *hdr = &r->header.hdr;
 
     // no tag found or button pressed
@@ -1700,11 +1700,11 @@ static int CmdHFiClassDump(const char *Cmd) {
 
 
     iclass_card_select_t payload_rdr = {
-        .flags =  (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
+        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
     };
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t*)&payload_rdr, sizeof(iclass_card_select_t));
+    SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t *)&payload_rdr, sizeof(iclass_card_select_t));
 
     if (WaitForResponseTimeout(CMD_HF_ICLASS_READER, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "command execute timeout");
@@ -1719,7 +1719,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    iclass_card_select_resp_t *r = (iclass_card_select_resp_t*)resp.data.asBytes;
+    iclass_card_select_resp_t *r = (iclass_card_select_resp_t *)resp.data.asBytes;
     if (r->status == FLAG_ICLASS_NULL) {
         PrintAndLogEx(FAILED, "failed to read block 0,1,2");
         return PM3_ESOFT;
@@ -4038,11 +4038,11 @@ int CmdHFiClass(const char *Cmd) {
 int info_iclass(void) {
 
     iclass_card_select_t payload = {
-        .flags =  (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
+        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
     };
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t*)&payload, sizeof(iclass_card_select_t));
+    SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t *)&payload, sizeof(iclass_card_select_t));
 
     if (WaitForResponseTimeout(CMD_HF_ICLASS_READER, &resp, 2000) == false) {
         DropField();
@@ -4050,7 +4050,7 @@ int info_iclass(void) {
     }
     DropField();
 
-    iclass_card_select_resp_t *r = (iclass_card_select_resp_t*)resp.data.asBytes;
+    iclass_card_select_resp_t *r = (iclass_card_select_resp_t *)resp.data.asBytes;
 
     // no tag found or button pressed
     if (r->status == FLAG_ICLASS_NULL || resp.status == PM3_ERFTRANS) {
@@ -4093,7 +4093,7 @@ int info_iclass(void) {
         } else {
             PrintAndLogEx(SUCCESS, "     Kc: %s credit key ( hidden )", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
         }
-        
+
 
         if ((r->status & FLAG_ICLASS_AIA) == FLAG_ICLASS_AIA) {
             PrintAndLogEx(SUCCESS, "    AIA: %s application issuer area", sprint_hex(hdr->app_issuer_area, sizeof(hdr->app_issuer_area)));

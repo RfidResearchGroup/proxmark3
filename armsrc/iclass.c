@@ -1445,9 +1445,9 @@ void ReaderIClass(uint8_t flags) {
     };
     memcpy(&payload.header.hdr, &hdr, sizeof(picopass_hdr_t));
 
-    reply_ng(CMD_HF_ICLASS_READER, PM3_SUCCESS, (uint8_t*)&payload, sizeof(iclass_card_select_resp_t));
+    reply_ng(CMD_HF_ICLASS_READER, PM3_SUCCESS, (uint8_t *)&payload, sizeof(iclass_card_select_resp_t));
 
-out: 
+out:
     switch_off();
 }
 
