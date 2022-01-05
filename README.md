@@ -25,6 +25,7 @@
  9. [Official channels](#official-channels)
 10. [Maintainers](#maintainers)
 11. [Citation](#citation)
+12. [Copyright and licensing terms](#copyright-and-licensing-terms)
 
 # PROXMARK3 INSTALLATION AND OVERVIEW
 
