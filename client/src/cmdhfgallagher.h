@@ -20,7 +20,7 @@ int CmdHFGallagher(const char *Cmd);
 /**
  * @brief Create Gallagher Application Master Key by diversifying
  * the MIFARE Site Key with card UID, key number, and application ID.
- * 
+ *
  * @param sitekey MIFARE Site Key (16 bytes).
  * @param uid Card unique ID (4 or 7 bytes).
  * @param uidLen Length of UID.

@@ -79,7 +79,7 @@ int demodGallagher(bool verbose) {
     decodeCardholderCredentials(arr, &creds);
 
     PrintAndLogEx(SUCCESS, "GALLAGHER - Region: " _GREEN_("%u") " Facility: " _GREEN_("%u") " Card No.: " _GREEN_("%u") " Issue Level: " _GREEN_("%u"),
-        creds.region_code, creds.facility_code, creds.card_number, creds.issue_level);
+                  creds.region_code, creds.facility_code, creds.card_number, creds.issue_level);
     PrintAndLogEx(SUCCESS, "   Displayed: " _GREEN_("%C%u"), creds.region_code + 'A', creds.facility_code);
     PrintAndLogEx(SUCCESS, "   Raw: %08X%08X%08X", raw1, raw2, raw3);
     PrintAndLogEx(SUCCESS, "   CRC: %02X - %02X (%s)", crc, calc_crc, (crc == calc_crc) ? "ok" : "fail");

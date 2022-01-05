@@ -3078,7 +3078,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     if (buflen >= 3) {
         PrintAndLogEx(INFO, "---- " _CYAN_("AID list") " ----");
         for (int i = 0; i < buflen; i += 3) {
-            const char* commentStr = getAidCommentStr(&buf[i]);
+            const char *commentStr = getAidCommentStr(&buf[i]);
             if ((void *) commentStr == &noCommentStr)
                 PrintAndLogEx(INFO, "AID: %06x", DesfireAIDByteToUint(&buf[i]));
             else
