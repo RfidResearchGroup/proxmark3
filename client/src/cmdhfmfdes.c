@@ -2355,7 +2355,6 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    bool noauth = arg_get_lit(ctx, 19);
 
     DesfireContext_t dctx;
     int securechann = defaultSecureChannel;
@@ -2401,6 +2400,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     }
 
     int keycount = arg_get_int_def(ctx, 18, 0x0e);
+    bool noauth = arg_get_lit(ctx, 19);
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
