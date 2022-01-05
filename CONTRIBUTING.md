@@ -266,17 +266,26 @@ For these reasons, vague and general filenames (e.g. `util.*`, `global.*`, `misc
 License/description header first:
 ```c
 //-----------------------------------------------------------------------------
-// YOUR COPYRIGHT LINE GOES HERE
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // FILE DESCRIPTION GOES HERE
 //-----------------------------------------------------------------------------
 ```
-If you modify a file in any non-trivial way (add code, etc.), add your copyright
-to the top with the current year.
+
+To avoid a huge mess of copyright notices in the source files, it has been chosen to keep this generic notice. Don't worry, you still hold the copyright on your respective contributions and date and authorship are tracked by the Git history, as explained in [AUTHORS](AUTHORS.md).
+In January 2022, the Git history has recorded 293 different authors.
 
 ## Header files
 

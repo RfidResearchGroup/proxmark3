@@ -234,6 +234,6 @@ The Proxmark3 source code is covered by the following licensing terms, usually r
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-A copy of the GPLv3 is available in [LICENSE](LICENSE.TXT).  
+A copy of the GPLv3 is available in [LICENSE](LICENSE.txt).  
 
 Some dependencies may be under other free licensing terms compatible with the Proxmark3 licensing terms, see their respective description.
