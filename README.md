@@ -216,3 +216,23 @@ If you need to refer to a specific state of the repository, use a commit number 
   note = {Accessed: commit 12327f71a27da23831901847886aaf20e8ad3ca0}
   note = {Accessed: 2021-01-01}
 ```
+
+## Copyright and licensing terms
+
+Each contribution is under the copyright of its author. See [AUTHORS](AUTHORS.md).
+
+The Proxmark3 source code is covered by the following licensing terms, usually referred as **GPLv3 or later**.
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+A copy of the GPLv3 is available in [LICENSE](LICENSE.TXT).  
+
+Some dependencies may be under other free licensing terms compatible with the Proxmark3 licensing terms, see their respective description.
