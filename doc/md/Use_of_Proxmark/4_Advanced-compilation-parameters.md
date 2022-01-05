@@ -1,4 +1,19 @@
-# Advanced compilation parameters
+<a id="Top"></a>
+
+# 4. Advanced compilation parameters
+
+# Table of Contents
+- [4. Advanced compilation parameters](#4-advanced-compilation-parameters)
+- [Table of Contents](#table-of-contents)
+  - [Client](#client)
+  - [Firmware](#firmware)
+  - [PLATFORM](#platform)
+  - [PLATFORM_EXTRAS](#platform_extras)
+  - [STANDALONE](#standalone)
+  - [256kb versions](#256kb-versions)
+  - [Next step](#next-step)
+
+
 
 The client and the Proxmark3 firmware should always be in sync.
 Nevertheless, the firmware can be tuned depending on the Proxmark3 platform and options.
@@ -7,7 +22,10 @@ Indeed, the RRG/Iceman fork can be used on other Proxmark3 hardware platforms as
 
 Via some definitions, you can adjust the firmware for a given platform, but also to add features like the support of the Blue Shark add-on or to select which standalone mode to embed.
 
+
+
 ## Client
+^[Top](#top)
 
 The client doesn't depend on the capabilities of the Proxmark3 it's connected to.
 So you can use the same client for different Proxmark3 platforms, given that everything is running the same version.
@@ -28,6 +46,7 @@ make SKIPBT=1
 
 
 ## Firmware
+^[Top](#top)
 
 By default, the firmware is of course tuned for the Proxmark3 RDV4 device, which has built-in support for 256kb onboard flash SPI memory, Sim module (smart card support), FPC connector.
 These features make it very different from all other Proxmark3 devices, there is non other like this one.
@@ -38,6 +57,7 @@ If you need to tune things and save the configuration, create a file `Makefile.p
 For an up-to-date exhaustive list of options, you can run `make PLATFORM=`.
 
 ## PLATFORM
+^[Top](#top)
 
 Here are the supported values you can assign to `PLATFORM` in `Makefile.platform`:
 
@@ -58,6 +78,7 @@ Known issues:
 * Proxmark Pro:  it has different fpga and unknown pin assignments.  Unsupported.
 
 ## PLATFORM_EXTRAS
+^[Top](#top)
 
 Here are the supported values you can assign to `PLATFORM_EXTRAS` in `Makefile.platform`:
 
@@ -71,6 +92,7 @@ If you have installed a Blue Shark add-on on your RDV4, define `PLATFORM_EXTRAS=
 
 
 ## STANDALONE
+^[Top](#top)
 
 The RRG/Iceman repository gives you to easily choose which standalone mode to embed in the firmware.
 
@@ -109,6 +131,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 By default `STANDALONE=LF_SAMYRUN`.
 
 ## 256kb versions
+^[Top](#top)
 
 If you own a Proxmark3 Easy with only 256kb, you can use a few definitions to help you getting a smaller firmware.
 
@@ -154,5 +177,6 @@ Situation might change when the firmware is growing of course, requiring to skip
 Last note: if you skip a tech, be careful not to use a standalone mode which requires that same tech, else the firmware size reduction won't be much.
 
 ## Next step
+^[Top](#top)
 
 See [Compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md)

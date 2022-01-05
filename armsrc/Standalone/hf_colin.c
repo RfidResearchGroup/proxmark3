@@ -564,7 +564,7 @@ failtag:
                 err = 1;
                 allKeysFound = false;
                 // used in portable imlementation on microcontroller: it reports back the fail and open the
-                // standalone lock reply_old(CMD_CJB_FSMSTATE_MENU, 0, 0, 0, 0, 0);
+                // standalone lock reply_ng(CMD_CJB_FSMSTATE_MENU, NULL, 0);
                 break;
             } else if (key == -2) {
                 err = 1; // Can't select card.

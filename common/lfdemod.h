@@ -35,8 +35,8 @@ signal_t *getSignalProperties(void);
 
 void computeSignalProperties(uint8_t *samples, uint32_t size);
 void removeSignalOffset(uint8_t *samples, uint32_t size);
-void getNextLow(uint8_t *samples, size_t size, int low, size_t *i);
-void getNextHigh(uint8_t *samples, size_t size, int high, size_t *i);
+void getNextLow(const uint8_t *samples, size_t size, int low, size_t *i);
+void getNextHigh(const uint8_t *samples, size_t size, int high, size_t *i);
 bool loadWaveCounters(uint8_t *samples, size_t size, int lowToLowWaveLen[], int highToLowWaveLen[], int *waveCnt, int *skip, int *minClk, int *high, int *low);
 size_t pskFindFirstPhaseShift(uint8_t *samples, size_t size, uint8_t *curPhase, size_t waveStart, uint16_t fc, uint16_t *fullWaveLen);
 

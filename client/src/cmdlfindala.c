@@ -542,7 +542,7 @@ static int CmdIndalaSim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("r", "raw", "<hex>", "raw bytes"),
+        arg_str0("r", "raw", "<hex>", "raw bytes"),
         arg_int0(NULL, "heden", "<decimal>", "Cardnumber for Heden 2L format"),
         arg_param_end
     };
@@ -639,7 +639,7 @@ static int CmdIndalaClone(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("r", "raw", "<hex>", "raw bytes"),
+        arg_str0("r", "raw", "<hex>", "raw bytes"),
         arg_int0(NULL, "heden", "<decimal>", "Card number for Heden 2L format"),
         arg_int0(NULL, "fc", "<decimal>", "Facility code (26 bit H10301 format)"),
         arg_int0(NULL, "cn", "<decimal>", "Card number (26 bit H10301 format)"),

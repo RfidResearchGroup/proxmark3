@@ -113,7 +113,7 @@ int CmdWiegandDecode(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("r", "raw", "<hex>", "raw hex to be decoded"),
+        arg_str0("r", "raw", "<hex>", "raw hex to be decoded"),
         arg_str0("b", "bin", "<bin>", "binary string to be decoded"),
         arg_param_end
     };

@@ -147,3 +147,25 @@ uint32_t CRC8Hitag1(uint8_t *buff, size_t size) {
     }
     return crc_finish(&crc);
 }
+
+uint32_t CRC8Hitag1Bits(uint8_t *buff, size_t bitsize) {
+    crc_t crc;
+    uint8_t data = 0;
+    uint8_t n = 0;
+    crc_init_ref(&crc, 8, 0x1d, 0xff, 0, false, false);
+    uint8_t i;
+    for (i = 0; i < bitsize; i++) {
+        data <<= 1;
+        data += (buff[i / 8] >> (7 - (i % 8))) & 1;
+        n += 1;
+        if (n == 8) {
+            crc_update2(&crc, data, n);
+            n = 0;
+            data = 0;
+        }
+    }
+    if (n > 0) {
+        crc_update2(&crc, data, n);
+    }
+    return crc_finish(&crc);
+}

@@ -193,7 +193,7 @@ static int CmdMotorolaClone(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx1("r", "raw", "<hex>", "raw hex bytes. 8 bytes"),
+        arg_str1("r", "raw", "<hex>", "raw hex bytes. 8 bytes"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end

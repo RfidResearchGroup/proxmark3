@@ -3,6 +3,18 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed drastically Hitag S ARM code to remove state machines and ease way to build new commands (@doegox)
+ - Fixed Hitag S crypto mode with key or NrAr, fixed `lf hitag cc`, fixed pwd dump in hitagS dump with LKP (@doegox)
+ - Changed `trace list -h` - textual change (@iceman1001)
+ - Fixed `hf iclass config` - not get stuck when trying to make a keyroll config card (@iceman1001)
+ - Changed textual output for iclass (@iceman1001)
+ - Changed `hf iclass reader` to use NG (@iceman1001)
+ - Changed various notes to have ToC and top links (@iceman1001)
+ - Added option `lf gprox demod --raw` - now supports decoding of raw bytes (@iceman1001)
+ - Added option `hf mf gview --pwd` - now supports user supplied password (@iceman1001)
+ - Added option `--force` to `hf mfu rdb/wrbl` to force operation even if address is out of range (@doegox)
+ - Added documentation for detailed usage of the Ultimate Magic Card (@doegox)
+ - Changed HitagS trace record and parsing to deal with partial bytes and to check CRC8 (@doegox)
  - Added support for KS X 6924 (South Korea's T-money card) (@toucan12)
  - Fixed `hf 15 dump` - now correctly dumps 256 blocks w/o crashing the client (@iceman1001)
  - Changed `hf 14a sim -t 3` - anticollision for DESFire simulation now uses different RATS (@mosci)

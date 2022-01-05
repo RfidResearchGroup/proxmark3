@@ -23,6 +23,7 @@
 #include "printf.h"
 #include "legicrf.h"
 #include "BigBuf.h"
+#include "iclass_cmd.h"
 #include "iso14443a.h"
 #include "iso14443b.h"
 #include "iso15693.h"
@@ -1093,7 +1094,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HITAGS_TEST_TRACES: { // Tests every challenge within the given file
-            check_challenges((bool)packet->oldarg[0], packet->data.asBytes, true);
+            Hitag_check_challenges(packet->data.asBytes, packet->oldarg[0], true);
             break;
         }
         case CMD_LF_HITAGS_READ: { //Reader for only Hitag S tags, args = key or challenge
@@ -1574,12 +1575,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareGen3Freez();
             break;
         }
-        case CMD_HF_MIFARE_G3_RDBL: {
+        case CMD_HF_MIFARE_G4_RDBL: {
             struct p {
                 uint8_t blockno;
+                uint8_t pwd[4];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            MifareG3ReadBlk(payload->blockno);
+            MifareG4ReadBlk(payload->blockno, payload->pwd);
             break;
         }
         case CMD_HF_MIFARE_PERSONALIZE_UID: {
@@ -1684,7 +1686,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_READER: {
-            ReaderIClass(packet->oldarg[0]);
+            iclass_card_select_t *payload = (iclass_card_select_t *) packet->data.asBytes;
+            ReaderIClass(payload->flags);
             break;
         }
         case CMD_HF_ICLASS_EML_MEMSET: {

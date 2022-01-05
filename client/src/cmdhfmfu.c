@@ -1772,6 +1772,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         arg_lit0("l", NULL, "swap entered key's endianness"),
         arg_int1("b", "block", "<dec>", "block number to write"),
         arg_str1("d", "data", "<hex>", "block data (4 or 16 hex bytes, 16 hex bytes will do a compatibility write)"),
+        arg_lit0(NULL, "force", "force operation even if address is out of range"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1786,6 +1787,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
     int datalen = 0;
     uint8_t data[16] = {0x00};
     CLIGetHexWithReturn(ctx, 4, data, &datalen);
+    bool force = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     bool has_auth_key = false;
@@ -1823,7 +1825,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
             break;
         }
     }
-    if (blockno > maxblockno) {
+    if ((blockno > maxblockno) && (!force)) {
         PrintAndLogEx(WARNING, "block number too large. Max block is %u/0x%02X \n", maxblockno, maxblockno);
         return PM3_EINVARG;
     }
@@ -1901,6 +1903,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
         arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
         arg_lit0("l", NULL, "swap entered key's endianness"),
         arg_int1("b", "block", "<dec>", "block number to read"),
+        arg_lit0(NULL, "force", "force operation even if address is out of range"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1910,6 +1913,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
     bool swap_endian = arg_get_lit(ctx, 2);
     int blockno = arg_get_int_def(ctx, 3, -1);
+    bool force = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
     bool has_auth_key = false;
@@ -1942,7 +1946,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
             break;
         }
     }
-    if (blockno > maxblockno) {
+    if ((blockno > maxblockno) && (!force)) {
         PrintAndLogEx(WARNING, "block number to large. Max block is %u/0x%02X \n", maxblockno, maxblockno);
         return PM3_EINVARG;
     }

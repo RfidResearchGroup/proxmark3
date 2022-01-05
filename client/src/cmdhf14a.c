@@ -743,13 +743,16 @@ int CmdHF14ASim(const char *Cmd) {
         keypress = kbd_enter_pressed();
     }
 
-    if (keypress && (flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
-        // inform device to break the sim loop since client has exited
-        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-    }
+    if (keypress) {
+        if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
+            // inform device to break the sim loop since client has exited
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        }
 
-    if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK))
-        showSectorTable(k_sector, k_sectorsCount);
+        if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK)) {
+            showSectorTable(k_sector, k_sectorsCount);
+        }
+    }
 
     PrintAndLogEx(INFO, "Done");
     return PM3_SUCCESS;
@@ -2274,7 +2277,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
         arg_str0(NULL, "p2",            "<hex>",    "Start value of P2 (1 hex byte)"),
         arg_u64_0("r", "reset",         "<number>", "Minimum secondes before resetting the tag (to prevent timeout issues). Default is 5 minutes"),
         arg_u64_0("e", "error-limit",   "<number>", "Maximum times an status word other than 0x9000 or 0x6D00 is shown. Default is 512."),
-        arg_strx0("s", "skip-ins",      "<hex>",    "Do not test an instructions (can be specified multiple times)"),
+        arg_strx0("s", "skip-ins",      "<hex>",    "Do not test an instruction (can be specified multiple times)"),
         arg_lit0("l",  "with-le",                   "Search  for APDUs with Le=0 (case 2S) as well"),
         arg_lit0("v",  "verbose",                   "Verbose output"),
         arg_param_end

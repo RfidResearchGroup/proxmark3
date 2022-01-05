@@ -1,6 +1,25 @@
+<a id="Top"></a>
+
 # Compilation instructions
 
+# Table of Contents
+- [Compilation instructions](#compilation-instructions)
+- [Table of Contents](#table-of-contents)
+  - [Tuning compilation parameters](#tuning-compilation-parameters)
+    - [Compile for Proxmark3 RDV4](#compile-for-proxmark3-rdv4)
+    - [Compile for generic Proxmark3 platforms](#compile-for-generic-proxmark3-platforms)
+  - [Get the latest commits](#get-the-latest-commits)
+  - [Clean and compile everything](#clean-and-compile-everything)
+    - [if you got an error](#if-you-got-an-error)
+  - [Install](#install)
+  - [Flash the BOOTROM & FULLIMAGE](#flash-the-bootrom--fullimage)
+  - [Run the client](#run-the-client)
+  - [Next steps](#next-steps)
+
+
+
 ## Tuning compilation parameters
+^[Top](#top)
 
 The client and the Proxmark3 firmware should always be in sync.
 Nevertheless, the firmware can be tuned depending on the Proxmark3 platform and options.
@@ -10,13 +29,18 @@ Indeed, the RRG/Iceman fork can be used on other Proxmark3 hardware platforms as
 Via some definitions, you can adjust the firmware for a given platform, but also to add features like the support of the Blue Shark add-on or to select which standalone mode to embed. To learn how to adjust the firmware, please read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md).
 
 ### Compile for Proxmark3 RDV4
+^[Top](#top)
+
 The repo defaults for compiling a firmware and client suitable for Proxmark3 RDV4.
 
 ### Compile for generic Proxmark3 platforms
+^[Top](#top)
+
 In order to build this repo for generic Proxmark3 platforms we urge you to read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
 
 
 ## Get the latest commits
+^[Top](#top)
 
 ```sh
 cd proxmark3
@@ -24,12 +48,15 @@ git pull
 ```
 
 ## Clean and compile everything
+^[Top](#top)
 
 ```sh
 make clean && make -j
 ```
 
 ### if you got an error
+^[Top](#top)
+
 Read the [troubleshooting guide](/doc/md/Installation_Instructions/Troubleshooting.md), 
 
 For instance,  on WSl-1 you usually get the `libQt5Core.so.5 not found` message
@@ -37,6 +64,7 @@ For instance,  on WSl-1 you usually get the `libQt5Core.so.5 not found` message
 
 
 ## Install
+^[Top](#top)
 
 This is an optional step. If you do
 
@@ -51,6 +79,7 @@ The commands given in the documentation assume you did the installation step. If
 e.g. calling `./pm3` or `client/proxmark3` instead of just `pm3` or `proxmark3`.
 
 ## Flash the BOOTROM & FULLIMAGE
+^[Top](#top)
 
 In most cases, you can run the following script which try to auto-detect the port to use, on several OS:
 
@@ -77,6 +106,7 @@ proxmark3 /dev/ttyACM0 --flash --unlock-bootloader --image /tmp/my-bootrom.elf -
 ```
 
 ## Run the client
+^[Top](#top)
 
 In most cases, you can run the script `pm3` which try to auto-detect the port to use, on several OS.
 ```sh
@@ -98,6 +128,7 @@ client/proxmark3 /dev/ttyACM0
 ```
 
 ## Next steps
+^[Top](#top)
 
 For the next steps, please read the following pages:
 

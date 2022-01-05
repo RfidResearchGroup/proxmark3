@@ -1,8 +1,13 @@
 # Notes on Cloner guns
+<a id="Top"></a>
 
 This document is based mostly on information posted on http://www.proxmark.org/forum/viewtopic.php?pid=39903#p39903
 
+
+# Table of Contents
+
 - [Notes on Cloner guns](#notes-on-cloner-guns)
+- [Table of Contents](#table-of-contents)
 - [Blue and black cloners](#blue-and-black-cloners)
 - [White cloner (pre 2015)](#white-cloner-pre-2015)
 - [White cloner (after 2016)](#white-cloner-after-2016)
@@ -12,6 +17,7 @@ This document is based mostly on information posted on http://www.proxmark.org/f
 
 
 # Blue and black cloners
+^[Top](#top)
 
 3 variants: 
 1. EM cloner
@@ -26,6 +32,7 @@ Standard password is normally:    51243648
 **Be sure to purchase the EM/HID version**
 
 # White cloner (pre 2015)
+^[Top](#top)
 
 Multifrequency
 Buttons light up BLUE
@@ -38,6 +45,8 @@ Standard password 13,56mHz:       individual per white cloner
 
 
 # White cloner (after 2016)
+^[Top](#top)
+
 Multifrequency
 Buttons light up  WHITE
 Data scrambled (variable per individual cloner, possibly due to prevent legal issues)
@@ -49,6 +58,8 @@ Standard password 13,56mHz:       individual per white cloner
 
 
 # White cloner (after 2016 D Quality)
+^[Top](#top)
+
 Multifrequency (it says so but it doesn't)
 Only works for EM/HID card (125kHz)
 High frequency not working
@@ -59,12 +70,16 @@ Standard password is normally (for T55xx):  AA55BBBB
 
 
 # Restore page1 data
+^[Top](#top)
+
 ```
 lf t55xx write -b 1 -d E0150A48 --pg1
 If t55xx write -b 2 -d 2D782308 --pg1
 ```
 
 # Sniffing the comms
+^[Top](#top)
+
 The T55x7 protocol uses a pwm based protocol for writing to tags.  In order to make decoding easier try the new command as seen below instead. It will try to extract the data written.
 
 ```

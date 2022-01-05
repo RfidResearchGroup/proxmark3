@@ -1,8 +1,13 @@
+<a id="top"></a>
+
 # Notes on Magic Cards, aka UID changeable
 This document is based mostly on information posted on http://www.proxmark.org/forum/viewtopic.php?pid=35372#p35372
 
 Useful docs:
 * [AN10833 MIFARE Type Identification Procedure](https://www.nxp.com/docs/en/application-note/AN10833.pdf)
+
+
+# Table of Contents
 
 - [ISO14443A](#iso14443a)
   * [Identifying broken ISO14443A magic](#identifying-broken-iso14443a-magic)
@@ -15,7 +20,6 @@ Useful docs:
   * [MIFARE Classic DirectWrite, UFUID version](#mifare-classic-directwrite-ufuid-version)
   * [MIFARE Classic, other versions](#mifare-classic-other-versions)
   * [MIFARE Classic Gen3 aka APDU](#mifare-classic-gen3-aka-apdu)
-  * [MIFARE Classic Gen3 aka GTU](#mifare-classic-gen3-aka-gtu)
   * [MIFARE Classic Super](#mifare-classic-super)
 - [MIFARE Ultralight](#mifare-ultralight)
   * [MIFARE Ultralight blocks 0..2](#mifare-ultralight-blocks-02)
@@ -34,11 +38,14 @@ Useful docs:
   * [ISO14443B magic](#iso14443b-magic)
 - [ISO15693](#iso15693)
   * [ISO15693 magic](#iso15693-magic)
+- [Multi](#multi)
+  * [Gen 4 GTU](#gen-4-gtu)
 
 
 # ISO14443A
 
 ## Identifying broken ISO14443A magic
+^[Top](#top)
 
 When a magic card configuration is really messed up and the card is not labeled, it may be hard to find out which type of card it is.
 
@@ -62,10 +69,12 @@ To restore anticollision config of the Proxmark3:
 hf 14a config --std
 ```
 # MIFARE Classic
+^[Top](#top)
 
 Referred as M1, S50 (1k), S70 (4k)
 
 ## MIFARE Classic block0
+^[Top](#top)
 
 UID 4b: (actually NUID as there are no more "unique" IDs on 4b)
 
@@ -95,8 +104,10 @@ UID 7b:
 ```
 
 ## MIFARE Classic Gen1A aka UID
+^[Top](#top)
 
 ### Identify
+^[Top](#top)
 
 ```
 hf 14a info
@@ -105,12 +116,14 @@ hf 14a info
 ```
 
 ### Magic commands
+^[Top](#top)
 
 * Wipe: `40(7)`, `41` (use 2000ms timeout)
 * Read: `40(7)`, `43`, `30xx`+crc
 * Write: `40(7)`, `43`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
 ### Characteristics
+^[Top](#top)
 
 * UID: Only 4b versions
 * ATQA:
@@ -125,48 +138,56 @@ hf 14a info
   * no card with ATS
 
 #### MIFARE Classic Gen1A flavour 1
+^[Top](#top)
 
 * SAK: play blindly the block0 SAK byte, beware!
 * PRNG: static 01200145
 * Wipe: filled with 0xFF
 
 #### MIFARE Classic Gen1A flavour 2
+^[Top](#top)
 
 * SAK: play blindly the block0 SAK byte, beware!
 * PRNG: static 01200145
 * Wipe: filled with 0x00
 
 #### MIFARE Classic Gen1A flavour 3
+^[Top](#top)
 
 * SAK: 08
 * PRNG: static 01200145
 * Wipe: filled with 0xFF
 
 #### MIFARE Classic Gen1A flavour 4
+^[Top](#top)
 
 * SAK: 08
 * PRNG: weak
 * Wipe: timeout, no wipe
 
 #### MIFARE Classic Gen1A flavour 5
+^[Top](#top)
 
 * SAK: 08
 * PRNG: weak
 * Wipe: reply ok but no wipe performed
 
 #### MIFARE Classic Gen1A flavour 6
+^[Top](#top)
 
 * SAK: 08 or 88 if block0_SAK most significant bit is set
 * PRNG: weak
 * Wipe: timeout, no wipe
 
 #### MIFARE Classic Gen1A flavour 7
+^[Top](#top)
 
 * SAK: 08 or 88 if block0_SAK most significant bit is set
 * PRNG: weak
 * Wipe: filled with 0x00
 
 ### Proxmark3 commands
+^[Top](#top)
 
 ```
 hf mf csetuid
@@ -213,6 +234,7 @@ hf 14a raw -t 1000          41
 ```
 
 ### libnfc commands
+^[Top](#top)
 
 ```
 nfc-mfsetuid
@@ -221,10 +243,12 @@ nfc-mfclassic W a u mydump
 ```
 
 ## MIFARE Classic Gen1B
+^[Top](#top)
 
 Similar to Gen1A, but supports directly read/write after command 40
 
 ### Identify
+^[Top](#top)
 
 ```
 hf 14a info
@@ -233,15 +257,18 @@ hf 14a info
 ```
 
 ### Magic commands
+^[Top](#top)
 
 * Read: `40(7)`, `30xx`
 * Write: `40(7)`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
 ## MIFARE Classic DirectWrite aka Gen2 aka CUID
+^[Top](#top)
 
 (also referred as MCT compatible by some sellers)
 
 ### Identify
+^[Top](#top)
 
 ```
 hf 14a info
@@ -254,12 +281,14 @@ Not all Gen2 cards can be identified with `hf 14a info`, only those replying to 
 To identify the other ones, you've to try to write to block0 and see if it works...
 
 ### Magic commands
+^[Top](#top)
 
 Android compatible
 
 * issue regular write to block0
 
 ### Characteristics
+^[Top](#top)
 
 * UID: 4b and 7b versions
 * ATQA:
@@ -276,6 +305,7 @@ Android compatible
   * some reply with an ATS
 
 #### MIFARE Classic DirectWrite flavour 1
+^[Top](#top)
 
 * UID 4b
 * ATQA: play blindly the block0 ATQA bytes, beware!
@@ -285,6 +315,7 @@ Android compatible
 * PRNG: weak
 
 #### MIFARE Classic DirectWrite flavour 2
+^[Top](#top)
 
 * UID 4b
 * ATQA: fixed
@@ -294,6 +325,7 @@ Android compatible
 * PRNG: weak
 
 #### MIFARE Classic DirectWrite flavour 3
+^[Top](#top)
 
 * UID 4b
 * ATQA: play blindly the block0 ATQA bytes, beware!
@@ -303,6 +335,7 @@ Android compatible
 * PRNG: weak
 
 #### MIFARE Classic DirectWrite flavour 4
+^[Top](#top)
 
 * UID 7b
 * ATQA: fixed
@@ -312,6 +345,7 @@ Android compatible
 * PRNG: static 00000000
 
 #### MIFARE Classic DirectWrite flavour 5
+^[Top](#top)
 
 * UID 4b
 * ATQA: fixed
@@ -321,6 +355,7 @@ Android compatible
 * PRNG: weak
 
 #### MIFARE Classic DirectWrite flavour 6
+^[Top](#top)
 
 **TODO** need more info
 
@@ -328,6 +363,7 @@ Android compatible
 * ATS: 0D780071028849A13020150608563D
 
 ### Proxmark3 commands
+^[Top](#top)
 
 ```
 hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 11223344440804006263646566676869
@@ -361,12 +397,14 @@ hf 14a config --std
 hf 14a reader
 ```
 ## MIFARE Classic DirectWrite, FUID version aka 1-write
+^[Top](#top)
 
 Same as MIFARE Classic DirectWrite, but block0 can be written only once.
 
 Initial UID is AA55C396
 
 ### Identify
+^[Top](#top)
 
 Only possible before personalization.
 
@@ -377,14 +415,17 @@ hf 14a info
 ```
 
 ## MIFARE Classic DirectWrite, UFUID version
+^[Top](#top)
 
 Same as MIFARE Classic DirectWrite, but block0 can be locked with special command.
 
 ### Identify
+^[Top](#top)
 
 **TODO**
 
 ### Proxmark3 commands
+^[Top](#top)
 
 To lock definitively block0:
 ```
@@ -395,6 +436,7 @@ hf 14a raw       -c   85000000000000000000000000000008
 ```
 
 ## MIFARE Classic, other versions
+^[Top](#top)
 
 **TODO**
 
@@ -402,8 +444,10 @@ hf 14a raw       -c   85000000000000000000000000000008
 * Some cards exhibit a specific SAK=28 ??
 
 ## MIFARE Classic Gen3 aka APDU
+^[Top](#top)
 
 ### Identify
+^[Top](#top)
 
 ```
 hf 14a info
@@ -412,6 +456,7 @@ hf 14a info
 ```
 
 ### Magic commands
+^[Top](#top)
 
 Android compatible
 
@@ -436,6 +481,7 @@ Writing to block 0 has some side-effects:
 * On 4-byte UID cards, BCC byte is automatically corrected.
 
 ### Characteristics
+^[Top](#top)
 
 * UID: 4b and 7b versions
 * ATQA/SAK: fixed
@@ -443,6 +489,7 @@ Writing to block 0 has some side-effects:
 * ATS: none
 
 ### Proxmark3 commands
+^[Top](#top)
 
 ```
 # change just UID:
@@ -468,156 +515,9 @@ hf 14a raw -s -c  -t 2000  90F0CCCC10 041219c3219316984200e32000000000
 # lock (uid/block0?) forever:
 hf 14a raw -s -c 90FD111100
 ```
----------
-## MIFARE Classic Gen3 aka GTU
-
-### Identify
-
-Tag doesn't get identified by latest Proxmark3 client correct but instead mislabled as Gen2/CUID
-
-```
-hf 14a info
-...
-[+] Magic capabilities : Gen 2 / CUID
-```
-
-
-### Magic commands
-
-Android compatible - unknown status
-
-* issue special APDUs
-
-```
-cla ins p1 p2 len
- CF  00 00 00 00 32 <param>
- CF  00 00 00 00 35 <ATQA><SAK>
- CF  00 00 00 00 34 <length><ATS>
- CF  00 00 00 00 68 <param>
- CF  00 00 00 00 69 <00>
- CF  00 00 00 00 CE <block number>                    // Backdoor read card
- CF  00 00 00 00 CD <block number><single block data> // Backdoor write card
- CF  00 00 00 00 FE aabbccdd                          // set password to AABBCCDD
- CF  00 00 00 00 F1                                   // fuse is set  ???
- CF  00 00 00 00 F0                                   // fuse ???
-```
-Note: It doesn't seem to follow a APDU structure per default,
-
-
-### Characteristics
-
-* UID: 4b, 7b and 10b versions
-* ATQA/SAK: changeable
-* BCC: 
-* ATS: changeable
-* Card Type:  changeable
-* Shadow mode:  GTU
-* Backdoor password mode:
-
-#### Possible card types
-Known Preset Change Available:
-* MIFARE Mini
-* MIFARE 1k S50 4 byte UID
-* MIFARE 1k S50 7 byte UID
-* MIFARE 1k S50 10 byte UID
-* MIFARE 4k S70 4 byte UID
-* MIFARE 4k S70 7 byte UID
-* MIFARE 4k S70 10 byte UID
-* Ultralight
-* Ultralight-C
-* Ultralight Ev1
-* NTAG
-
-
-
-### Proxmark3 commands
-
-```
-# view contents of tag memory:
-hf mf gview
-```
-
-Equivalent:
-
-
-change ATQA / SAK
-=================
-```
-hf 14a raw -s -c -t 1000 cf0000000035<ATQA><SAK>
-hf 14a raw -s -c -t 1000 cf0000000035440028    //  ATQA 00 44 SAK 28
-```
-
-change ATS
-==========
-It should be noted that when SAK=20,28, ATS must be turned on, otherwise the card will not be recognized!
-
-```
-hf 14a raw -s -c -t 1000 cf0000000034<length><ATS>
-hf 14a raw -s -c -t 1000 cf000000003406067577810280  // ATS to 0606757781028002F0
-```
- * length 0, ATS is not sent
- * when SAK is 20 or 28, ATS must be set, otherwise the card cannot be read
- * the last two digits of ATS are CRC and cannot be counted as length
-
-set UID length (4, 7, 10)
-=========================
-```
-hf 14a raw -s -c -t 1000 cf0000000068<Param>
-hf 14a raw -s -c -t 1000 cf000000006801  // set UID length to 7 bytes
-```
- * param=00: 4 bytes 01: 7 bytes 02: 10 bytes
-
-Set 14443A/B-UID
-================
--->  missing instructions.
-
-
-
-Set Ultralight mode
-===================
-```
-hf 14a raw -s -c -t 1000 cf0000000069<00>
-```
- * 01: UL agreement opened
- * 00: UL agreement closed
- * in this mode, if SAK=00 ATQA=0044 (Pm3 sequence), it can become an Ultralight card
-
-
-set shadow mode (GTU)
-=====================
-
-This mode is divided into four states: off (pre-write), on (on restore), don’t care, and high-speed read and write.
-If you use it, please enter the pre-write mode first. At this time, write the full card data.
-After writing, set it to on. At this time, after writing the data, the first time you read the data just written, the next time you read It is the pre-written data. All modes support this operation. It should be noted that using any block to read and write in this mode may give wrong results.
-
-```
-hf 14a raw -s -c -t 1000 cf0000000032<param>
-```
-Param | Description
- 00   | Closed, shadow data can be written at this time
- 01   | Open, start restore
- 02   | Turn it off completely, as a normal card
- 03   | High-speed read and write mode
-
-Any block read and write
-========================
-Using the backdoor command can read and write any area without password, similar to UID card, it should be noted that this command must be used to modify UID.
-
-```
-hf 14a raw -s -c -t 1000 cf00000000CE<block number>                    // Backdoor read card
-hf 14a raw -s -c -t 1000 cf00000000CD<block number><single block data> // Backdoor write card
-```
-
-set backdoor password
-=====================
-All backdoor operations are protected by passwords. If password is forgotten, the card will be scrapped
-default password is 00000000
-```
-hf 14a raw -s -c -t 1000 cf00000000feaabbccdd   // set password to AABBCCDD
-```
-
 
 ## MIFARE Classic Super
+^[Top](#top)
 
 It behaves like DirectWrite but records reader auth attempts.
 
@@ -629,6 +529,7 @@ To do reader-only attack: at least two versions exist.
 * type 2: https://github.com/netscylla/super-card/blob/master/libnfc-1.7.1/utils/nfc-super.c for ??
 
 ### Identify
+^[Top](#top)
 
 Only type 1 at the moment:
 
@@ -639,8 +540,10 @@ hf 14a info
 ```
 
 # MIFARE Ultralight
+^[Top](#top)
 
 ## MIFARE Ultralight blocks 0..2
+^[Top](#top)
 
 ```
 SN0  SN1  SN2  BCC0
@@ -660,6 +563,7 @@ Anticol shortcut (CL1/3000) is supported for UL, ULC, NTAG except NTAG I2C
 
 
 ## MIFARE Ultralight Gen1A
+^[Top](#top)
 
 ### Identify
 
@@ -680,6 +584,7 @@ Only 7b versions
 **TODO** need more tests
 
 ### Proxmark3 commands
+^[Top](#top)
 
 ```
 script run hf_mfu_setuid -h
@@ -693,8 +598,10 @@ script run hf_mf_magicrevive -u
 ```
 
 ## MIFARE Ultralight DirectWrite
+^[Top](#top)
 
 ### Identify
+^[Top](#top)
 
 ```
 hf 14a info
@@ -705,10 +612,12 @@ hf 14a info
 It seems so far that all MFUL DW have an ATS.
 
 ### Magic commands
+^[Top](#top)
 
 Issue three regular MFU write commands in a row to write first three blocks.
 
 ### Characteristics
+^[Top](#top)
 
 * UID: Only 7b versions
 * ATQA:
@@ -722,18 +631,21 @@ Issue three regular MFU write commands in a row to write first three blocks.
   * all cards reply with an ATS
 
 #### MIFARE Ultralight DirectWrite flavour 1
+^[Top](#top)
 
 * BCC: computed
 * ATS: 0A78008102DBA0C119402AB5
 * Anticol shortcut (CL1/3000): fails
 
 #### MIFARE Ultralight DirectWrite flavour 2
+^[Top](#top)
 
 * BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
 * ATS: 850000A00A000AB00000000000000000184D
 * Anticol shortcut (CL1/3000): succeeds
 
 ### Proxmark3 commands
+^[Top](#top)
 
 ```
 hf mfu setuid -h
@@ -762,6 +674,7 @@ hf 14a reader
 ```
 
 ### libnfc commands
+^[Top](#top)
 
 ```
 nfc-mfultralight -h
@@ -769,14 +682,17 @@ nfc-mfultralight -h
 See `--uid` and `--full`
 
 ### Android
+^[Top](#top)
 
 * MIFARE++ Ultralight
 
 ## MIFARE Ultralight EV1 DirectWrite
+^[Top](#top)
 
 Similar to MFUL DirectWrite
 
 ### Identify
+^[Top](#top)
 
 ```
 hf 14a info
@@ -785,6 +701,7 @@ hf 14a info
 ```
 
 ### Characteristics
+^[Top](#top)
 
 * UID: Only 7b versions
 * ATQA:
@@ -797,24 +714,29 @@ hf 14a info
   * all cards reply with an ATS
 
 #### MIFARE Ultralight EV1 DirectWrite flavour 1
+^[Top](#top)
 
 * BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
 * ATS: 850000A000000AC30004030101000B0341DF
 
 #### MIFARE Ultralight EV1 DirectWrite flavour 2
+^[Top](#top)
 
 * BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
 * ATS: 850000A00A000AC30004030101000B0316D7
 
 ## MIFARE Ultralight C Gen1A
+^[Top](#top)
 
 Similar to MFUL Gen1A
 
 ## MIFARE Ultralight C DirectWrite
+^[Top](#top)
 
 Similar to MFUL DirectWrite
 
 ### Identify
+^[Top](#top)
 
 ```
 hf 14a info
@@ -823,6 +745,7 @@ hf 14a info
 ```
 
 ### Characteristics
+^[Top](#top)
 
 * UID: Only 7b versions
 * ATQA:
@@ -835,18 +758,22 @@ hf 14a info
   * all cards reply with an ATS
 
 #### MIFARE Ultralight C DirectWrite flavour 1
+^[Top](#top)
 
 * BCC: computed
 * ATS: 0A78008102DBA0C119402AB5
 * Anticol shortcut (CL1/3000): fails
 
 # NTAG
+^[Top](#top)
 
 ## NTAG213 DirectWrite
+^[Top](#top)
 
 Similar to MFUL DirectWrite
 
 ### Identify
+^[Top](#top)
 
 ```
 hf 14a info
@@ -855,6 +782,7 @@ hf 14a info
 ```
 
 ### Characteristics
+^[Top](#top)
 
 * UID: Only 7b versions
 * ATQA:
@@ -867,14 +795,17 @@ hf 14a info
   * all cards reply with an ATS
 
 #### NTAG213 DirectWrite flavour 1
+^[Top](#top)
 
 * BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
 * ATS: 0A78008102DBA0C119402AB5
 * Anticol shortcut (CL1/3000): succeeds
 
 ## NTAG21x
+^[Top](#top)
 
 ### Identify
+^[Top](#top)
 
 ```
 hf 14a info
@@ -883,6 +814,7 @@ hf 14a info
 ```
 
 ### Characteristics
+^[Top](#top)
 
 Emulates fully NTAG213, 213F, 215, 216, 216F
 
@@ -891,12 +823,14 @@ Emulates partially  UL EV1 48k/128k, NTAG210, NTAG212, NTAGI2C 1K/2K, NTAGI2C 1K
 Anticol shortcut (CL1/3000): fails
 
 ### Proxmark3 commands
+^[Top](#top)
 
 ```
 script run hf_mfu_magicwrite -h
 ```
 
 # DESFire
+^[Top](#top)
 
 ## "DESFire" APDU, 7b UID
 
@@ -911,6 +845,7 @@ Android compatible
 * issue special APDUs
 
 ### Characteristics
+^[Top](#top)
 
 * ATQA: 0344
 * SAK: 20
@@ -919,6 +854,7 @@ Android compatible
 Only mimics DESFire anticollision (but wrong ATS), no further DESFire support
 
 ### Proxmark commands
+^[Top](#top)
 
 UID 04112233445566
 ```
@@ -930,6 +866,7 @@ hf 14a apdu -s 00ab00000704112233445566
 ```
 
 ### libnfc commands
+^[Top](#top)
 
 ```
 pn53x-tamashell
@@ -937,14 +874,17 @@ pn53x-tamashell
 420200ab00000704112233445566
 ```
 ## "DESFire" APDU, 4b UID
+^[Top](#top)
 
 ### Magic commands
+^[Top](#top)
 
 Android compatible
 
 * issue special APDUs
 
 ### Characteristics
+^[Top](#top)
 
 * ATQA: 0008 ??? This is not DESFire, 0008/20 doesn't match anything
 * SAK: 20
@@ -953,6 +893,7 @@ Android compatible
 Only mimics DESFire anticollision (but wrong ATS), no further DESFire support
 
 ### Proxmark commands
+^[Top](#top)
 
 UID 04112233445566
 ```
@@ -966,12 +907,14 @@ hf 14a apdu -s 00ab00000411223344
 It accepts longer UID but that doesn't affect BCC/ATQA/SAK
 
 ### pn53x-tamashell commands
+^[Top](#top)
 ```
 4a0100
 420200ab00000411223344
 ```
 
 ### Remarks
+^[Top](#top)
 
 The same effect (with better ATQA!) can be obtained with a MFC Gen1A that uses SAK defined in block0:
 
@@ -986,22 +929,27 @@ hf 14a info
 ```
 
 # ISO14443B
+^[Top](#top)
 
 ## ISO14443B magic
+^[Top](#top)
 
 No such card is available.
 
 Some vendor allow to specify an ID (PUPI) when ordering a card.
 
 # ISO15693
+^[Top](#top)
 
 ## ISO15693 magic
+^[Top](#top)
 
 ### Identify
 
 **TODO**
 
 ### Proxmark3 commands
+^[Top](#top)
 
 Always set a UID starting with `E0`.
 
@@ -1012,3 +960,418 @@ or (ignore errors):
 ```
 script run hf_15_magic -u E004013344556677  
 ```
+
+<a id="g4top"></a>
+
+# Multi
+^[Top](#top)
+
+## Gen 4 GTU
+^[Top](#top)
+
+A.k.a ultimate magic card,  most promenent feature is shadow mode (GTU) and optional password protected backdoor commands.
+
+
+Can emulate MIFARE Classic, Ultralight/NTAG families, 14b UID & App Data
+
+- [Identify](#identify)
+- [Magic commands](#magic-commands)
+- [Characteristics](#characteristics)
+- [Proxmark3 commands](#proxmark3-commands)
+- [Change ATQA / SAK](#change-atqa--sak)
+- [Change ATS](#change-ats)
+- [Set UID length (4, 7, 10)](#set-uid-length-4-7-10)
+- [Set 14443A UID](#set-14443a-uid)
+- [Set 14443B UID and ATQB](#set-14443b-uid-and-atqb)
+- [(De)Activate Ultralight mode](#deactivate-ultralight-mode)
+- [Select Ultralight mode](#select-ultralight-mode)
+- [Set shadow mode (GTU)](#set-shadow-mode-gtu)
+- [Direct block read and write](#direct-block-read-and-write)
+- [Change backdoor password](#change-backdoor-password)
+- [Dump configuration](#dump-configuration)
+- [Fast configuration](#fast-configuration)
+- [Presets](#presets)
+- [Version and Signature](#version-and-signature)
+
+
+### Identify
+^[Top](#top) ^^[Gen4](#g4top)
+
+👉 **TODO** Tag doesn't get identified correctly by latest Proxmark3 client (it might get mislabeled as MFC Gen2/CUID, Gen3/APDU or NTAG21x Modifiable, depending on configured UID/ATQA/SAK/ATS)
+
+One can identify manually such card if the password is still the default one, with the command to get the current configuration:
+```
+hf 14a raw -s -c -t 1000 CF00000000C6
+```
+If the card is an Ultimate Magic Card, it returns 30 bytes.
+### Magic commands
+^[Top](#top) ^^[Gen4](#g4top)
+
+Special commands summary:
+
+```
+CF <passwd> 32 <00-03>                           // Configure GTU shadow mode
+CF <passwd> 34 <1b length><0-16b ATS>            // Configure ATS
+CF <passwd> 35 <2b ATQA><1b SAK>                 // Configure ATQA/SAK (swap ATQA bytes)
+CF <passwd> 68 <00-02>                           // Configure UID length
+CF <passwd> 69 <00-01>                           // (De)Activate Ultralight mode
+CF <passwd> 6A <00-03>                           // Select Ultralight mode
+CF <passwd> C6                                   // Dump configuration
+CF <passwd> CC                                   // Factory test, returns 6666
+CF <passwd> CD <1b block number><16b block data> // Backdoor write 16b block
+CF <passwd> CE <1b block number>                 // Backdoor read 16b block
+CF <passwd> F0 <30b configuration data>          // Configure all params in one cmd
+CF <passwd> F1 <30b configuration data>          // Configure all params in one cmd and fuse the configuration permanently
+CF <passwd> FE <4b new_password>                 // change password
+```
+Default `<passwd>`: `00000000`
+
+### Characteristics
+^[Top](#top) ^^[Gen4](#g4top)
+
+* UID: 4b, 7b and 10b versions
+* ATQA/SAK: changeable
+* BCC: auto
+* ATS: changeable, can be disabled
+* Card Type:  changeable
+* Shadow mode:  GTU
+* Backdoor password mode
+
+### Proxmark3 commands
+^[Top](#top) ^^[Gen4](#g4top)
+
+```
+# view contents of tag memory:
+hf mf gview
+```
+👉 **TODO** `hf mf gview` is currently missing Ultralight memory maps 
+
+Equivalent:
+
+```
+hf 14a raw -s -c -t 1000 CF00000000CE00
+hf 14a raw -s -c -t 1000 CF00000000CE01
+hf 14a raw -s -c -t 1000 CF00000000CE02
+...
+```
+
+### Change ATQA / SAK
+^[Top](#top) ^^[Gen4](#g4top)
+
+```
+hf 14a raw -s -c -t 1000 CF<passwd>35<2b ATQA><1b SAK>
+```
+* ⚠ ATQA bytes are swapped in the command
+* ⚠ when SAK bit 6 is set (e.g. SAK=20 or 28), ATS must be turned on, otherwise the card may not be recognized by some readers!
+* ⚠ never set SAK bit 3 (e.g. SAK=04), it indicates an extra cascade level is required (see `hf 14a config --cl2 skip` or `hf 14a config --cl3 skip` to recover a misconfigured card)
+ 
+Example: ATQA 0044 SAK 28, default pwd
+```
+hf 14a raw -s -c -t 1000 CF0000000035440028
+```
+### Change ATS
+^[Top](#top) ^^[Gen4](#g4top)
+
+```
+hf 14a raw -s -c -t 1000 CF<passwd>34<1b length><0-16b ATS>
+```
+ * `<length>`: ATS length byte, set to `00` to disable ATS
+ * ⚠ when SAK bit 6 is set (e.g. SAK=20 or 28), ATS must be turned on, otherwise the card may not be recognized by some readers!
+ * ATS CRC will be added automatically, don't configure it
+ * Max ATS length: 16 bytes (+CRC)
+
+Example: ATS to 0606757781028002F0, default pwd
+```
+hf 14a raw -s -c -t 1000 CF000000003406067577810280
+```
+
+### Set UID length (4, 7, 10)
+^[Top](#top) ^^[Gen4](#g4top)
+
+```
+hf 14a raw -s -c -t 1000 CF<passwd>68<1b param>
+```
+ * `<param>`
+   * `00`: 4 bytes
+   * `01`: 7 bytes
+   * `02`: 10 bytes
+
+Example: set UID length to 7 bytes, default pwd
+```
+hf 14a raw -s -c -t 1000 CF000000006801
+```
+### Set 14443A UID
+^[Top](#top) ^^[Gen4](#g4top)
+
+UID is configured according to block0 with a backdoor write.
+
+Example: preparing first two blocks:
+```
+hf 14a raw -s -c -t 1000 CF00000000CD00000102030405060708090A0B0C0D0E0F
+hf 14a raw -s -c -t 1000 CF00000000CD01101112131415161718191A1B1C1D1E1F
+hf 14a reader
+```
+MFC mode, 4b UID  
+=> UID `00010203`
+
+MFC mode, 7b UID  
+=> UID `00010203040506`
+
+MFC mode, 10b UID  
+=> UID `00010203040506070809`
+
+Ultralight mode, 4b UID  
+=> UID `00010203`
+
+Ultralight mode, 7b UID  
+=> UID `00010210111213`  
+👉 the UID is composed of first two blocks as in regular Ultralights
+
+Ultralight mode, 10b UID  
+=> UID `00010203040506070809`  
+👉 the UID is composed only from block0
+
+### Set 14443B UID and ATQB
+^[Top](#top) ^^[Gen4](#g4top)
+
+UID and ATQB are configured according to block0 with a (14a) backdoor write.
+
+UID size is always 4 bytes.
+
+Example:
+```
+hf 14a raw -s -c -t 1000 CF00000000CD00000102030405060708090A0B0C0D0E0F
+hf 14b reader
+```
+=> UID 00010203  
+=> ATQB 0405060708090A
+
+### (De)Activate Ultralight mode
+^[Top](#top) ^^[Gen4](#g4top)
+
+```
+hf 14a raw -s -c -t 1000 CF<passwd>69<1b param>
+```
+ * `<param>`
+   * `00`: MIFARE Classic mode
+   * `01`: MIFARE Ultralight/NTAG mode
+
+Example: activate Ultralight protocol, default pwd
+```
+hf 14a raw -s -c -t 1000 CF000000006901
+```
+
+In this mode, if SAK=`00` and ATQA=`0044`, it acts as an Ultralight card
+
+⚠ only the first four bytes of each block will be mapped in the Ultralight memory map (so the Ultralight block numbers follow backdoor R/W block numbers).
+
+### Select Ultralight mode
+^[Top](#top) ^^[Gen4](#g4top)
+
+```
+hf 14a raw -s -c -t 1000 CF<passwd>6A<1b param>
+```
+
+ * `<param>`
+   * `00`: UL EV1
+   * `01`: NTAG
+   * `02`: UL-C
+   * `03`: UL
+
+⚠ it supposes Ultralight mode was activated (cf command `69`)
+
+Example: set Ultralight mode to Ultralight-C, default pwd
+```
+hf 14a raw -s -c -t 1000 CF000000006A02
+```
+Now the card supports the 3DES UL-C authentication.
+### Set shadow mode (GTU)
+^[Top](#top) ^^[Gen4](#g4top)
+
+This mode is divided into four states: off (pre-write), on (on restore), don’t care, and high-speed read and write.
+If you use it, please enter the pre-write mode first. At this time, write the full card data.
+After writing, set it to on. At this time, after writing the data, the first time you read the data just written, the next time you read It is the pre-written data. All modes support this operation. It should be noted that using any block to read and write in this mode may give wrong results.
+
+```
+hf 14a raw -s -c -t 1000 CF<passwd>32<1b param>
+```
+ * `<param>`
+   * `00`: pre-write, shadow data can be written
+   * `01`: restore mode
+   * `02`: disabled
+   * `03`: disabled, high speed R/W mode for Ultralight?
+
+### Direct block read and write
+^[Top](#top) ^^[Gen4](#g4top)
+
+Using the backdoor command, one can read and write any area without MFC password, similarly to MFC Gen1 card. It should be noted that this command must be used to modify UID.
+
+Backdoor read 16b block:
+```
+hf 14a raw -s -c -t 1000 CF<passwd>CE<1b block number>
+```
+Backdoor write 16b block:
+```
+hf 14a raw -s -c -t 1000 CF<passwd>CD<1b block number><16b block data>
+```
+
+Read/Write operations work on 16 bytes, no matter the Ultralight mode.
+
+Note that only the first four bytes of each block will be mapped in the Ultralight memory map.
+
+Example: read block0, default pwd
+```
+hf 14a raw -s -c -t 1000 CF00000000CE00
+```
+Example: write block0 with factory data, default pwd
+```
+hf 14a raw -s -c -t 1000 CF00000000CD00112233441C000011778185BA18000000
+```
+
+### Change backdoor password
+^[Top](#top) ^^[Gen4](#g4top)
+
+All backdoor operations are protected by a password. If password is forgotten, the card can't be recovered. Default password is `00000000`.
+
+Change password:
+```
+hf 14a raw -s -c -t 1000 CF <passwd> FE <4b new_password>
+```
+Example: change password from 00000000 to AABBCCDD
+```
+hf 14a raw -s -c -t 1000 CF00000000FEAABBCCDD
+```
+Example: change password from AABBCCDD back to 00000000
+```
+hf 14a raw -s -c -t 1000 CFAABBCCDDFE00000000
+```
+
+### Dump configuration
+^[Top](#top) ^^[Gen4](#g4top)
+
+```
+hf 14a raw -s -c -t 1000 CF<passwd>C6
+```
+Default configuration:
+```
+00000000000002000978009102DABC191010111213141516040008004F6B
+                                                        ^^^^ ??
+                                                      ^^ cf cmd 6a: UL mode
+                                                ^^^^^^ cf cmd 35: ATQA/SAK
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cf cmd 34: ATS length & content
+            ^^ cf cmd 32: GTU mode
+    ^^^^^^^^ cf cmd fe: password
+  ^^ cf cmd 68: UID length
+^^ cf cmd 69: Ultralight protocol
+```
+### Fast configuration
+^[Top](#top) ^^[Gen4](#g4top)
+
+```
+hf 14a raw -s -c -t 1000 CF<passwd>F0<30b configuration data>
+```
+cf **Dump configuration** for configuration data description.
+
+Example: Write factory configuration, using default password
+```
+hf 14a raw -s -c -t 1000 CF00000000F000000000000002000978009102DABC191010111213141516040008004F6B
+```
+
+⚠ Variant with command `F1` instead of `F0` will set and fuse permanently the configuration. Backdoor R/W will still work.
+
+### Presets
+^[Top](#top) ^^[Gen4](#g4top)
+
+Here are some presets available in the FuseTool (but with all ATS disabled)
+
+**MIFARE Mini S20 4-byte UID**
+```
+hf 14a raw -s -c -t 1000 CF00000000F000000000000002000978009102DABC19101011121314151604000900
+```
+
+**MIFARE Mini S20 7-byte UID**
+```
+hf 14a raw -s -c -t 1000 CF00000000F000010000000002000978009102DABC19101011121314151644000900
+```
+
+**MIFARE 1k S50 4-byte UID** (this is the factory setting)
+```
+hf 14a raw -s -c -t 1000 CF00000000F000000000000002000978009102DABC19101011121314151604000800
+```
+
+**MIFARE 1k S50 7-byte UID**
+```
+hf 14a raw -s -c -t 1000 CF00000000F000010000000002000978009102DABC19101011121314151644000800
+```
+
+**MIFARE 4k S70 4-byte UID**
+```
+hf 14a raw -s -c -t 1000 CF00000000F000000000000002000978009102DABC19101011121314151602001800
+```
+
+**MIFARE 4k S70 7 byte UID**
+```
+hf 14a raw -s -c -t 1000 CF00000000F000010000000002000978009102DABC19101011121314151642001800
+```
+
+**Ultralight**
+```
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000003
+```
+
+**Ultralight-C**
+```
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000002
+```
+
+**Ultralight EV1**
+```
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000000
+```
+
+**NTAG21x**
+```
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000001
+```
+
+### Version and Signature
+^[Top](#top) ^^[Gen4](#g4top)
+
+Ultralight EV1 and NTAG Version info and Signature are stored respectively in blocks 250-251 and 242-249.
+
+Example for an Ultralight EV1 128b with the signature sample from tools/recover_pk.py
+```
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000000
+hf mfu wrbl -b 0 -d 04C12865
+hf mfu wrbl -b 1 -d 5A373080
+hf mfu wrbl -b 242 -d CEA2EB0B --force
+hf mfu wrbl -b 243 -d 3C95D084 --force
+hf mfu wrbl -b 244 -d 4A95B824 --force
+hf mfu wrbl -b 245 -d A7553703 --force
+hf mfu wrbl -b 246 -d B3702378 --force
+hf mfu wrbl -b 247 -d 033BF098 --force
+hf mfu wrbl -b 248 -d 7899DB70 --force
+hf mfu wrbl -b 249 -d 151A19E7 --force
+hf mfu wrbl -b 250 -d 00040301 --force
+hf mfu wrbl -b 251 -d 01000E03 --force
+hf mfu info
+```
+
+Example for an NTAG216 with the signature sample from tools/recover_pk.py
+```
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000001
+hf mfu wrbl -b 0 -d 04E10C61
+hf mfu wrbl -b 1 -d DA993C80
+hf mfu wrbl -b 242 -d 8B76052E --force
+hf mfu wrbl -b 243 -d E42F5567 --force
+hf mfu wrbl -b 244 -d BEB53238 --force
+hf mfu wrbl -b 245 -d B3E3F995 --force
+hf mfu wrbl -b 246 -d 0707C0DC --force
+hf mfu wrbl -b 247 -d C956B5C5 --force
+hf mfu wrbl -b 248 -d EFCFDB70 --force
+hf mfu wrbl -b 249 -d 9B2D82B3 --force
+hf mfu wrbl -b 250 -d 00040402 --force
+hf mfu wrbl -b 251 -d 01001303 --force
+hf mfu info
+```
+

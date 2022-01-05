@@ -423,7 +423,7 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>", "filename of dump"),
+        arg_str1("f", "file", "<fn>", "filename of dump"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

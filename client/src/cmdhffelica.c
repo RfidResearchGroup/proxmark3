@@ -2122,7 +2122,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
         arg_u64_0("n", NULL, "<dec>", "number of bits"),
         arg_lit0("r",  NULL, "do not read response"),
         arg_lit0("s",  NULL, "active signal field ON with select"),
-        arg_strx1(NULL, NULL, "<hex>", "raw bytes to send"),
+        arg_str1(NULL, NULL, "<hex>", "raw bytes to send"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

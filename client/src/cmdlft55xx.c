@@ -1368,7 +1368,7 @@ static bool testQ5Modulation(uint8_t mode, uint8_t modread) {
 }
 
 static int convertQ5bitRate(uint8_t bitRateRead) {
-    uint8_t expected[] = {8, 16, 32, 40, 50, 64, 100, 128};
+    const uint8_t expected[] = {8, 16, 32, 40, 50, 64, 100, 128};
     for (int i = 0; i < 8; i++)
         if (expected[i] == bitRateRead)
             return i;
@@ -1425,7 +1425,7 @@ static bool testQ5(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk) 
 }
 
 static bool testBitRate(uint8_t readRate, uint8_t clk) {
-    uint8_t expected[] = {8, 16, 32, 40, 50, 64, 100, 128};
+    const uint8_t expected[] = {8, 16, 32, 40, 50, 64, 100, 128};
     if (expected[readRate] == clk)
         return true;
 

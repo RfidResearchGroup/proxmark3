@@ -111,7 +111,7 @@ static int CmdVikingClone(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0(NULL, "cn", "<hex>", "8 digit hex viking card number"),
+        arg_str1(NULL, "cn", "<hex>", "8 digit hex viking card number"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
@@ -185,7 +185,7 @@ static int CmdVikingSim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0(NULL, "cn", "<hex>", "8 digit hex viking card number"),
+        arg_str1(NULL, "cn", "<hex>", "8 digit hex viking card number"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

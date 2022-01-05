@@ -47,7 +47,7 @@ double g_PlotGridX = 0, g_PlotGridY = 0, g_PlotGridXdefault = 64, g_PlotGridYdef
 uint32_t g_CursorCPos = 0, g_CursorDPos = 0, g_GraphStop = 0;
 uint32_t g_GraphStart = 0; // Starting point/offset for the left side of the graph
 double g_GraphPixelsPerPoint = 1.f; // How many visual pixels are between each sample point (x axis)
-static bool flushAfterWrite = 0;
+static bool flushAfterWrite = false;
 double g_GridOffset = 0;
 bool g_GridLocked = false;
 
@@ -409,6 +409,10 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
 
 void SetFlushAfterWrite(bool value) {
     flushAfterWrite = value;
+}
+
+bool GetFlushAfterWrite(void) {
+    return flushAfterWrite;
 }
 
 void memcpy_filter_rlmarkers(void *dest, const void *src, size_t n) {

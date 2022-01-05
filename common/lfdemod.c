@@ -424,8 +424,8 @@ static size_t findModStart(uint8_t *src, size_t size, uint8_t expWaveSize) {
 }
 
 static int getClosestClock(int testclk) {
-    uint16_t clocks[] = {8, 16, 32, 40, 50, 64, 100, 128, 256, 384};
-    uint8_t limit[]  = {1,  2,  4,  4,  5,  8,   8,   8,   8,   8};
+    const uint16_t clocks[] = {8, 16, 32, 40, 50, 64, 100, 128, 256, 384};
+    const uint8_t limit[]  = {1,  2,  4,  4,  5,  8,   8,   8,   8,   8};
 
     for (uint8_t i = 0; i < 10; i++) {
         if (testclk >= clocks[i] - limit[i] && testclk <= clocks[i] + limit[i])
@@ -434,12 +434,12 @@ static int getClosestClock(int testclk) {
     return 0;
 }
 
-void getNextLow(uint8_t *samples, size_t size, int low, size_t *i) {
+void getNextLow(const uint8_t *samples, size_t size, int low, size_t *i) {
     while ((samples[*i] > low) && (*i < size))
         *i += 1;
 }
 
-void getNextHigh(uint8_t *samples, size_t size, int high, size_t *i) {
+void getNextHigh(const uint8_t *samples, size_t size, int high, size_t *i) {
     while ((samples[*i] < high) && (*i < size))
         *i += 1;
 }

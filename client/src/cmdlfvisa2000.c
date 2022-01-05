@@ -44,12 +44,11 @@ static uint8_t visa_chksum(uint32_t id) {
 
 static uint8_t visa_parity(uint32_t id) {
     // 4bit parity LUT
-    uint8_t par_lut[] = {
-        0, 1, 1, 0
-        , 1, 0, 0, 1
-        , 1, 0, 0, 1
-        , 0, 1, 1, 0
+    const uint8_t par_lut[] = {
+        0, 1, 1, 0, 1, 0, 0, 1,
+        1, 0, 0, 1, 0, 1, 1, 0
     };
+
     uint8_t par = 0;
     par |= par_lut[(id >> 28) & 0xF ] << 7;
     par |= par_lut[(id >> 24) & 0xF ] << 6;

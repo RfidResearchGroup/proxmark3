@@ -1,6 +1,25 @@
-# Homebrew (Mac OS X), automatic installation
+
+<a id="Top"></a>
+
+# Mac OS X - Homebrew automatic installation
+
+
+# Table of Contents
+- [Mac OS X - Homebrew automatic installation](#mac-os-x---homebrew-automatic-installation)
+- [Table of Contents](#table-of-contents)
+  - [Apple Silicon (M1) Notes](#apple-silicon-m1-notes)
+  - [Install Proxmark3 tools](#install-proxmark3-tools)
+  - [Upgrade HomeBrew tap formula](#upgrade-homebrew-tap-formula)
+  - [Flash the BOOTROM & FULLIMAGE](#flash-the-bootrom--fullimage)
+  - [Run the client](#run-the-client)
+  - [Next steps](#next-steps)
+- [Homebrew (Mac OS X), developer installation](#homebrew-mac-os-x-developer-installation)
+  - [Compile and use the project](#compile-and-use-the-project)
+
+
 
 ## Apple Silicon (M1) Notes
+^[Top](#top)
 
 Ensure Rosetta 2 is installed as it's currently needed to run `arm-none-eabi-gcc` as it's delivered as a precombiled x86_64 binary.
 
@@ -12,11 +31,13 @@ bad CPU type in executable
 
 Then you are missing Rosetta 2 and need to install it: `/usr/sbin/softwareupdate --install-rosetta`
 
-Homebrew has changed their prefix to differentiate between native Apple Silicon and Intel compiled binaries.  The Makefile attempts to account for this but please note that whichever terminal or application you're using must be running under Architecture "Apple" as seen by Activity Monitor as all child processes inherit the Rosetta 2 environment of their parent.  You can check which architecture you're currently running under with a `uname -m` in your terminal.
+Homebrew has changed their prefix to differentiate between native Apple Silicon and Intel compiled binaries.  The Makefile attempts to account for this but please note that 
+whichever terminal or application you're using must be running under Architecture "Apple" as seen by Activity Monitor as all child processes inherit the Rosetta 2 environment of their parent.  You can check which architecture you're currently running under with a `uname -m` in your terminal.
 
 Visual Studio Code still runs under Rosetta 2 and if you're developing for proxmark3 on an Apple Silicon Mac you might want to consider running the Insiders build which has support for running natively on Apple Silicon.
 
 ## Install Proxmark3 tools
+^[Top](#top)
 
 These instructions comes from \@Chrisfu, where we got the proxmark3.rb scriptfile from.
 For further questions about Mac & Homebrew, contact [\@Chrisfu on Twitter](https://github.com/chrisfu/)
@@ -40,6 +61,7 @@ For further questions about Mac & Homebrew, contact [\@Chrisfu on Twitter](https
 For more info, go to https://github.com/RfidResearchGroup/homebrew-proxmark3
 
 ## Upgrade HomeBrew tap formula
+^[Top](#top)
 
 *This method is useful for those looking to run bleeding-edge versions of RRG/iceman's client. Keep this in mind when attempting to update your HomeBrew tap formula as this procedure could easily cause a build to break if an update is unstable on macOS.* 
 
@@ -54,6 +76,7 @@ brew upgrade --fetch-HEAD proxmark3
 ```
 
 ## Flash the BOOTROM & FULLIMAGE
+^[Top](#top)
 
 With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark3 as you plug it into a USB port. You can release the button, two of the four LEDs should stay on. You're in bootloader mode, ready for the next step. In case the two LEDs don't stay on when you're releasing the button, you've an old bootloader, start over and keep the button pressed during the whole flashing procedure.
 
@@ -73,6 +96,7 @@ proxmark3 /dev/tty.usbmodemiceman1 --flash --unlock-bootloader --image /usr/loca
 
 
 ## Run the client
+^[Top](#top)
 
 ```sh
 pm3
@@ -85,6 +109,7 @@ proxmark3 /dev/tty.usbmodemiceman1
 ```
 
 ## Next steps
+^[Top](#top)
 
 For the next steps, please read the following pages:
 
@@ -96,6 +121,7 @@ For the next steps, please read the following pages:
 
 
 # Homebrew (Mac OS X), developer installation
+^[Top](#top)
 
 These instructions will show how to setup the environment on OSX to the point where you'll be able to clone and compile the repo by yourself, as on Linux, Windows, etc.
 
@@ -115,6 +141,7 @@ brew install astyle
 
 
 ## Compile and use the project
+^[Top](#top)
 
 To use the compiled client, the only difference is that the Proxmark3 port is `/dev/tty.usbmodemiceman1`, so commands become:
 

@@ -456,7 +456,7 @@ static int CmdHFMFPWritePerso(const char *Cmd) {
         arg_param_begin,
         arg_lit0("v", "verbose", "show internal data."),
         arg_str1(NULL, "ki",  "<hex>", " key number, 2 hex bytes"),
-        arg_strx0(NULL, "key", "<hex>", " key, 16 hex bytes"),
+        arg_str0(NULL, "key", "<hex>", " key, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -521,7 +521,7 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_litn("v",  "verbose", 0, 2, "show internal data."),
-        arg_strx0("k", "key", "<hex>", "key, 16 hex bytes"),
+        arg_str0("k", "key", "<hex>", "key, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

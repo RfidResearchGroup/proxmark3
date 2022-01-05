@@ -3086,7 +3086,7 @@ static void ssl_calc_finished_tls_sha384(
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
-    mbedtls_sha512_finish_ret( &sha512, padbuf );
+    mbedtls_sha512_finish_ret(&sha512, padbuf);
 #if defined(__GNUC__) && __GNUC__ >= 11
 #pragma GCC diagnostic pop
 #endif

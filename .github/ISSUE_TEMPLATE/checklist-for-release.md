@@ -51,7 +51,8 @@ make hitag2crack/clean && make hitag2crack && tools/pm3_tests.sh hitag2crack || 
 - [ ] Fedora
 - [ ] OpenSuse Leap
 - [ ] OpenSuse Tumbleweed
-- [ ] OSX
+- [ ] OSX (MacPorts)
+- [ ] OSX (Homebrew)
 - [ ] Android
 - [ ] Termux
 

@@ -762,7 +762,7 @@ static int CmdLegicDump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "specify a filename for dump file"),
+        arg_str0("f", "file", "<fn>", "Dump filename"),
         arg_lit0(NULL, "de", "deobfuscate dump data (xor with MCC)"),
         arg_param_end
     };
@@ -859,7 +859,7 @@ static int CmdLegicRestore(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>", "specify a filename to restore"),
+        arg_str1("f", "file", "<fn>", "Filename to restore"),
         arg_lit0(NULL, "ob", "obfuscate dump data (xor with MCC)"),
         arg_param_end
     };
@@ -963,7 +963,7 @@ static int CmdLegicELoad(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>", "Specify a filename to restore"),
+        arg_str1("f", "file", "<fn>", "Filename to restore"),
         arg_int0("t", "type", "<dec>", "Tag type to simulate."),
         arg_lit0(NULL, "obfuscate", "Obfuscate dump data (xor with MCC)"),
         arg_param_end
@@ -1032,7 +1032,7 @@ static int CmdLegicESave(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "Specify a filename to save"),
+        arg_str0("f", "file", "<fn>", "Filename to save"),
         arg_int0("t", "type", "<dec>", "Tag type"),
         arg_lit0(NULL, "deobfuscate", "De-obfuscate dump data (xor with MCC)"),
         arg_param_end

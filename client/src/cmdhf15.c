@@ -1450,7 +1450,7 @@ static int CmdHF15Raw(const char *Cmd) {
         arg_lit0("c",  "crc", "calculate and append CRC"),
         arg_lit0("k",  NULL, "keep signal field ON after receive"),
         arg_lit0("r",  NULL, "do not read response"),
-        arg_strx1("d", "data", "<hex>", "raw bytes to send"),
+        arg_str1("d", "data", "<hex>", "raw bytes to send"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

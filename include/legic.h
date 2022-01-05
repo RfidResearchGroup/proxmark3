@@ -24,4 +24,6 @@ typedef struct {
     uint16_t cardsize;
 } legic_card_select_t;
 
+// iceman: todo :  this should be packed
+
 #endif // _LEGIC_H_
