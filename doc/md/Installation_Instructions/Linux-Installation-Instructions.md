@@ -65,7 +65,7 @@ If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to 
 ^[Top](#top)
 
 ```sh
-sudo pacman -Sy git base-devel readline bzip2 arm-none-eabi-gcc arm-none-eabi-newlib qt5-base bluez python --needed
+sudo pacman -Syu git base-devel readline bzip2 arm-none-eabi-gcc arm-none-eabi-newlib qt5-base bluez python --needed
 ```
 
 If you don't need the native Bluetooth support in the client, you can skip the installation of `bluez`.
