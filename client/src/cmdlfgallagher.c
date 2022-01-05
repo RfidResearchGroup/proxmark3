@@ -76,7 +76,7 @@ int demodGallagher(bool verbose) {
     uint8_t calc_crc =  CRC8Cardx(arr, ARRAYLEN(arr));
 
     GallagherCredentials_t creds = {0};
-    decodeCardholderCredentials(arr, &creds);
+    gallagher_decode_creds(arr, &creds);
 
     PrintAndLogEx(SUCCESS, "GALLAGHER - Region: " _GREEN_("%u") " Facility: " _GREEN_("%u") " Card No.: " _GREEN_("%u") " Issue Level: " _GREEN_("%u"),
                   creds.region_code, creds.facility_code, creds.card_number, creds.issue_level);
@@ -142,7 +142,7 @@ static void setBitsInBlocks(uint32_t *blocks, uint8_t *pos, uint32_t data, uint8
 static void createBlocks(uint32_t *blocks, GallagherCredentials_t *creds) {
     // put data into the correct places (Gallagher obfuscation)
     uint8_t arr[8] = {0};
-    encodeCardholderCredentials(arr, creds);
+    gallagher_encode_creds(arr, creds);
 
     blocks[0] = blocks[1] = blocks[2] = 0;
     uint8_t pos = 0;
@@ -222,7 +222,7 @@ static int CmdGallagherClone(const char *Cmd) {
             PrintAndLogEx(FAILED, "Can't specify both raw and rc/fc/cn/il at the same time");
             return PM3_EINVARG;
         }
-        if (!isValidGallagherCredentials(region_code, facility_code, card_number, issue_level)) {
+        if (!gallagher_is_valid_creds(region_code, facility_code, card_number, issue_level)) {
             return PM3_EINVARG;
         }
     }
@@ -322,7 +322,7 @@ static int CmdGallagherSim(const char *Cmd) {
             PrintAndLogEx(FAILED, "Can't specify both raw and rc/fc/cn/il at the same time");
             return PM3_EINVARG;
         }
-        if (!isValidGallagherCredentials(region_code, facility_code, card_number, issue_level)) {
+        if (!gallagher_is_valid_creds(region_code, facility_code, card_number, issue_level)) {
             return PM3_EINVARG;
         }
     }

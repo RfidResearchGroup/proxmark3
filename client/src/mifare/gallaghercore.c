@@ -62,7 +62,7 @@ static void descramble(uint8_t *arr, uint8_t len) {
     }
 }
 
-void decodeCardholderCredentials(uint8_t *eight_bytes, GallagherCredentials_t *creds) {
+void gallagher_decode_creds(uint8_t *eight_bytes, GallagherCredentials_t *creds) {
     uint8_t *arr = eight_bytes;
 
     descramble(arr, 8);
@@ -80,7 +80,7 @@ void decodeCardholderCredentials(uint8_t *eight_bytes, GallagherCredentials_t *c
     creds->issue_level = arr[7] & 0x0F;
 }
 
-void encodeCardholderCredentials(uint8_t *eight_bytes, GallagherCredentials_t *creds) {
+void gallagher_encode_creds(uint8_t *eight_bytes, GallagherCredentials_t *creds) {
     uint8_t rc = creds->region_code;
     uint16_t fc = creds->facility_code;
     uint32_t cn = creds->card_number;
@@ -100,25 +100,25 @@ void encodeCardholderCredentials(uint8_t *eight_bytes, GallagherCredentials_t *c
     scramble(eight_bytes, 8);
 }
 
-bool isValidGallagherCredentials(uint64_t region_code, uint64_t facility_code, uint64_t card_number, uint64_t issue_level) {
-    bool isValid = true;
+bool gallagher_is_valid_creds(uint64_t region_code, uint64_t facility_code, uint64_t card_number, uint64_t issue_level) {
+    bool is_valid = true;
 
     // validate input
     if (region_code > 0x0f) {
         PrintAndLogEx(ERR, "Region code must be 0 <= rc <= 15 (4 bits), received: %d", region_code);
-        isValid = false;
+        is_valid = false;
     }
     if (facility_code > 0xffff) {
         PrintAndLogEx(ERR, "Facility code must be 0 <= fc <= 65535 (2 bytes), received: %d", facility_code);
-        isValid = false;
+        is_valid = false;
     }
     if (card_number > 0xffffff) {
         PrintAndLogEx(ERR, "Card number must be 0 <= cn <= 16777215 (3 bytes), received: %d", card_number);
-        isValid = false;
+        is_valid = false;
     }
     if (issue_level > 0x0f) {
         PrintAndLogEx(ERR, "Issue level must be 0 <= il <= 15 (4 bits), received: %d", issue_level);
-        isValid = false;
+        is_valid = false;
     }
-    return isValid;
+    return is_valid;
 }

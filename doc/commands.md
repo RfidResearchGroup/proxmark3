@@ -324,9 +324,9 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf gallagher help      `|Y       |`This help`
-|`hf gallagher reader    `|N       |`Attempt to read and extract tag data`
+|`hf gallagher reader    `|N       |`Read & decode all Gallagher credentials on the DESFire card`
 |`hf gallagher clone     `|N       |`Add Gallagher credentials to a DESFire card`
-|`hf gallagher delete    `|N       |`Delete Gallagher application from a DESFire card`
+|`hf gallagher delete    `|N       |`Delete Gallagher credentials from a DESFire card`
 
 
 ### hf ksx6924

@@ -21,10 +21,10 @@ typedef struct {
     uint8_t issue_level;
 } GallagherCredentials_t;
 
-void encodeCardholderCredentials(uint8_t *eight_bytes, GallagherCredentials_t *creds);
+void gallagher_encode_creds(uint8_t *eight_bytes, GallagherCredentials_t *creds);
 
-void decodeCardholderCredentials(uint8_t *eight_bytes, GallagherCredentials_t *creds);
+void gallagher_decode_creds(uint8_t *eight_bytes, GallagherCredentials_t *creds);
 
-bool isValidGallagherCredentials(uint64_t region_code, uint64_t facility_code, uint64_t card_number, uint64_t issue_level);
+bool gallagher_is_valid_creds(uint64_t region_code, uint64_t facility_code, uint64_t card_number, uint64_t issue_level);
 
 #endif
