@@ -164,7 +164,6 @@ static void createBlocks(uint32_t *blocks, GallagherCredentials_t *creds) {
 }
 
 static int CmdGallagherClone(const char *Cmd) {
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf gallagher clone",
                   "clone a GALLAGHER tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
@@ -198,10 +197,10 @@ static int CmdGallagherClone(const char *Cmd) {
 
     bool q5 = arg_get_lit(ctx, 2);
     bool em = arg_get_lit(ctx, 3);
-    uint64_t region_code = arg_get_u64_def(ctx, 4, -1); // uint16, will be validated later
-    uint64_t facility_code = arg_get_u64_def(ctx, 5, -1); // uint32, will be validated later
-    uint64_t card_number = arg_get_u64_def(ctx, 6, -1); // uint64
-    uint64_t issue_level = arg_get_u64_def(ctx, 7, -1); // uint32, will be validated later
+    uint64_t region_code = arg_get_u64_def(ctx, 4, -1); // uint4, input will be validated later
+    uint64_t facility_code = arg_get_u64_def(ctx, 5, -1); // uint16
+    uint64_t card_number = arg_get_u64_def(ctx, 6, -1); // uint24
+    uint64_t issue_level = arg_get_u64_def(ctx, 7, -1); // uint4
     CLIParserFree(ctx);
 
     bool use_raw = raw_len > 0;
@@ -303,10 +302,10 @@ static int CmdGallagherSim(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint64_t region_code = arg_get_u64_def(ctx, 2, -1); // uint16, will be validated later
-    uint64_t facility_code = arg_get_u64_def(ctx, 3, -1); // uint32, will be validated later
-    uint64_t card_number = arg_get_u64_def(ctx, 4, -1); // uint64
-    uint64_t issue_level = arg_get_u64_def(ctx, 5, -1); // uint32, will be validated later
+    uint64_t region_code = arg_get_u64_def(ctx, 2, -1); // uint4, input will be validated later
+    uint64_t facility_code = arg_get_u64_def(ctx, 3, -1); // uint16
+    uint64_t card_number = arg_get_u64_def(ctx, 4, -1); // uint24
+    uint64_t issue_level = arg_get_u64_def(ctx, 5, -1); // uint4
     CLIParserFree(ctx);
 
     bool use_raw = raw_len > 0;
