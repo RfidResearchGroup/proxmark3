@@ -1,6 +1,7 @@
 # version
 message(STATUS "CMake ${CMAKE_VERSION}")
 cmake_minimum_required(VERSION 3.4.1)
+project(proxmark3)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -fvisibility=hidden -w")
 
@@ -174,7 +175,6 @@ add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/util.c
         ${PM3_ROOT}/client/src/wiegand_formats.c
         ${PM3_ROOT}/client/src/wiegand_formatutils.c
-        ${CMAKE_BINARY_DIR}/version_pm3.c
         ${PM3_ROOT}/client/src/proxmark3.c
         )
 
