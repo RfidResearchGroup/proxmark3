@@ -1,4 +1,5 @@
 //-----------------------------------------------------------------------------
+// Copyright (C) Gerhard de Koning Gans - May 2008
 // Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
 // This program is free software: you can redistribute it and/or modify

@@ -1,5 +1,6 @@
 //-----------------------------------------------------------------------------
-// Borrowed initially from hitag2crack
+// Borrowed initially from https://github.com/factoritbv/hitag2hell
+// and https://github.com/AdamLaurie/RFIDler/blob/master/firmware/Pic32/RFIDler.X/src/hitag2crack.c
 // Copyright (C) Kevin Sheldrake <kev@headhacking.com>, Aug 2018
 // Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
