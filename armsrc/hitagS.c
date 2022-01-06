@@ -1268,7 +1268,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
     uint8_t tx[HITAG_FRAME_LEN];
-    size_t txlen = 0;
+    size_t txlen;
     int t_wait = HITAG_T_WAIT_MAX;
 
 

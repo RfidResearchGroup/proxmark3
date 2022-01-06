@@ -1114,7 +1114,7 @@ typedef struct {
     uint8_t mlen;
     const char *match;
     uint32_t (*Pwd)(const uint8_t *uid);
-    uint16_t (*Pack)(uint8_t *uid);
+    uint16_t (*Pack)(const uint8_t *uid);
     const char *hint;
 } mfu_identify_t;
 

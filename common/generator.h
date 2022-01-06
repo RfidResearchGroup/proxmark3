@@ -19,10 +19,10 @@ uint32_t ul_ev1_pwdgenB(const uint8_t *uid);
 uint32_t ul_ev1_pwdgenC(const uint8_t *uid);
 uint32_t ul_ev1_pwdgenD(const uint8_t *uid);
 
-uint16_t ul_ev1_packgen_def(uint8_t *uid);
+uint16_t ul_ev1_packgen_def(const uint8_t *uid);
 uint16_t ul_ev1_packgenA(const uint8_t *uid);
-uint16_t ul_ev1_packgenB(uint8_t *uid);
-uint16_t ul_ev1_packgenC(uint8_t *uid);
+uint16_t ul_ev1_packgenB(const uint8_t *uid);
+uint16_t ul_ev1_packgenC(const uint8_t *uid);
 uint16_t ul_ev1_packgenD(const uint8_t *uid);
 
 int mfc_algo_ving_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);

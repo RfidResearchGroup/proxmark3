@@ -348,7 +348,7 @@ void RunMod(void) {
                 state = STATE_READ;
                 DbpString(_YELLOW_("[ ") "Initialized reading mode" _YELLOW_(" ]"));
                 DbpString("\n" _YELLOW_("!!") "Waiting for a Visa card...");
-                break;
+                continue;
             }
 
             // We need to listen to the high-frequency, peak-detected path.

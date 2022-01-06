@@ -157,10 +157,10 @@ uint16_t ul_ev1_packgenA(const uint8_t *uid) {
     uint16_t pack = (uid[0] ^ uid[1] ^ uid[2]) << 8 | (uid[2] ^ 8);
     return pack;
 }
-uint16_t ul_ev1_packgenB(uint8_t *uid) {
+uint16_t ul_ev1_packgenB(const uint8_t *uid) {
     return 0x8080;
 }
-uint16_t ul_ev1_packgenC(uint8_t *uid) {
+uint16_t ul_ev1_packgenC(const uint8_t *uid) {
     return 0xaa55;
 }
 uint16_t ul_ev1_packgenD(const uint8_t *uid) {
@@ -182,10 +182,11 @@ uint16_t ul_ev1_packgenD(const uint8_t *uid) {
     return BSWAP_16(p & 0xFFFF);
 }
 
+// default shims
 uint32_t ul_ev1_pwdgen_def(const uint8_t *uid) {
     return 0xFFFFFFFF;
 }
-uint16_t ul_ev1_packgen_def(uint8_t *uid) {
+uint16_t ul_ev1_packgen_def(const uint8_t *uid) {
     return 0x0000;
 }
 

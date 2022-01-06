@@ -1146,7 +1146,7 @@ void SniffHitag2(bool ledcontrol) {
     AT91C_BASE_TCB->TCB_BCR = 1;
 
     int frame_count = 0, response = 0, overflow = 0, lastbit = 1, tag_sof = 4;
-    bool rising_edge = false, reader_frame = false, bSkip = true;
+    bool rising_edge, reader_frame = false, bSkip = true;
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
 
@@ -1915,6 +1915,11 @@ out:
 
     // release allocated memory from BigBuff.
     BigBuf_free();
+    //
+    if (checked == -1) {
+        // user interupted
+        reply_mix(CMD_ACK, false, 0, 0, 0, 0);
+    }
 
     if (bSuccessful)
         reply_mix(CMD_ACK, bSuccessful, 0, 0, (uint8_t *)tag.sectors, tag_size);
@@ -2233,5 +2238,9 @@ out:
     // release allocated memory from BigBuff.
     BigBuf_free();
 
-    reply_mix(CMD_ACK, bSuccessful, 0, 0, (uint8_t *)tag.sectors, tag_size);
+    if (checked == -1) {
+        reply_mix(CMD_ACK, false, 0, 0, 0, 0);
+    } else {
+        reply_mix(CMD_ACK, bSuccessful, 0, 0, (uint8_t *)tag.sectors, tag_size);
+    }
 }

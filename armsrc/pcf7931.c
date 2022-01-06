@@ -210,7 +210,7 @@ void ReadPCF7931(bool ledcontrol) {
     uint8_t single_blocks[8][17]; // PFC blocks with unknown position
     int single_blocks_cnt = 0;
 
-    size_t n = 0; // transmitted blocks
+    size_t n; // transmitted blocks
     uint8_t tmp_blocks[4][16]; // temporary read buffer
 
     uint8_t found_0_1 = 0; // flag: blocks 0 and 1 were found

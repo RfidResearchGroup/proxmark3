@@ -99,7 +99,7 @@ void RunMod() {
 
     // For received Bluetooth package
     uint8_t rpacket[MAX_FRAME_SIZE] = { 0x00 };
-    uint16_t lenpacket = 0;
+    uint16_t lenpacket;
 
     // For answering the commands
     uint8_t apdubuffer[MAX_FRAME_SIZE] = { 0x00 };
@@ -268,7 +268,7 @@ void RunMod() {
                 SpinDelay(500);
                 state = STATE_READ;
                 DbpString(_YELLOW_("[ ") "Initialized reading mode" _YELLOW_(" ]"));
-                break;
+                continue;
             }
 
             // We need to listen to the high-frequency, peak-detected path.
