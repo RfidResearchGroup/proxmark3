@@ -2322,26 +2322,26 @@
         },
         "hf gallagher clone": {
             "command": "hf gallagher clone",
-            "description": "clone a gallagher card to a blank desfire card",
+            "description": "clone gallagher credentials to a writable desfire card",
             "notes": [
                 "hf gallagher clone --rc 1 --fc 22 --cn 3333 --il 4 --sitekey 00112233445566778899aabbccddeeff"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "--apdu show apdu requests and responses",
-                "-v, --verbose verbose mode",
-                "-n, --keyno <decimal> key number [default=0]",
+                "-n, --keynum <decimal> key number [default=0]",
                 "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
-                "-k, --key <hex> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-k, --key <hex> key for authentication to the picc (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
                 "--rc <decimal> region code. 4 bits max",
                 "--fc <decimal> facility code. 2 bytes max",
                 "--cn <decimal> card number. 3 bytes max",
                 "--il <decimal> issue level. 4 bits max",
                 "--aid <hex> application id to write (3 bytes) [default finds lowest available in range 0x2?81f4, where 0 <= ? <= 0xb]",
-                "--sitekey <hex> master site key to compute diversified keys (16 bytes) [default=3112b738d8862ccd34302eb299aab456]"
+                "--sitekey <hex> mifare site key to compute diversified keys (16 bytes, required if using non-default key)",
+                "--apdu show apdu requests and responses",
+                "-v, --verbose verbose mode"
             ],
-            "usage": "hf gallagher clone [-hv] [--apdu] [-n <decimal>] [-t <des/2tdea/3tdea/aes>] [-k <hex>] --rc <decimal> --fc <decimal> --cn <decimal> --il <decimal> [--aid <hex>] [--sitekey <hex>]"
+            "usage": "hf gallagher clone [-hv] [-n <decimal>] [-t <des/2tdea/3tdea/aes>] [-k <hex>] --rc <decimal> --fc <decimal> --cn <decimal> --il <decimal> [--aid <hex>] [--sitekey <hex>] [--apdu]"
         },
         "hf gallagher delete": {
             "command": "hf gallagher delete",
@@ -2352,33 +2352,33 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "--apdu show apdu requests and responses",
-                "-v, --verbose verbose mode",
                 "--aid <hex> application id to delete (3 bytes)",
-                "--sitekey <hex> mifare site key to compute diversified keys (16 bytes) [default=3112b738d8862ccd34302eb299aab456]"
+                "--sitekey <hex> mifare site key to compute diversified keys (16 bytes, required if using non-default key)",
+                "--apdu show apdu requests and responses",
+                "-v, --verbose verbose mode"
             ],
-            "usage": "hf gallagher delete [-hv] [--apdu] --aid <hex> [--sitekey <hex>]"
+            "usage": "hf gallagher delete [-hv] --aid <hex> [--sitekey <hex>] [--apdu]"
         },
         "hf gallagher diversifykey": {
             "command": "hf gallagher diversifykey",
             "description": "diversify gallagher key",
             "notes": [
-                "hf gallagher diversify --uid 11223344556677 --aid 2081f4 -> diversify"
+                "hf gallagher diversify --uid 11223344556677 --aid 2081f4"
             ],
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "--apdu show apdu requests and responses",
                 "--aid <hex> application id for diversification (3 bytes)",
                 "--keynum <decimal> key number [default=0]",
                 "--uid <hex> card uid to delete (4 or 7 bytes)",
-                "--sitekey <hex> mifare site key to compute diversified keys (16 bytes, required if using non-default key)"
+                "--sitekey <hex> mifare site key to compute diversified keys (16 bytes, required if using non-default key)",
+                "--apdu show apdu requests and responses"
             ],
-            "usage": "hf gallagher diversify [-h] [--apdu] --aid <hex> [--keynum <decimal>] [--uid <hex>] [--sitekey <hex>]"
+            "usage": "hf gallagher diversify [-h] --aid <hex> [--keynum <decimal>] [--uid <hex>] [--sitekey <hex>] [--apdu]"
         },
         "hf gallagher help": {
             "command": "hf gallagher help",
-            "description": "help this help diversifykey diversify gallagher key --------------------------------------------------------------------------------------- hf gallagher reader available offline: no read a gallagher tag",
+            "description": "help this help diversifykey diversify gallagher key --------------------------------------------------------------------------------------- hf gallagher reader available offline: no read a gallagher desfire tag",
             "notes": [
                 "hf gallagher reader --aid 2081f4 --sitekey 00112233445566778899aabbccddeeff -> act as a reader that skips reading the card application directory and uses a non-default site key",
                 "hf gallagher reader -@ -> continuous reader mode"
@@ -2386,13 +2386,13 @@
             "offline": true,
             "options": [
                 "-h, --help this help",
-                "--aid <hex> application id to read (3 bytes)",
-                "-k, --sitekey <hex> master site key to compute diversified keys (16 bytes) [default=3112b738d8862ccd34302eb299aab456]",
+                "--aid <hex> application id to read (3 bytes). if specified, then the card application directory is not used",
+                "--sitekey <hex> mifare site key to compute diversified keys (16 bytes, required if using non-default key)",
+                "-@, --continuous continuous reader mode",
                 "--apdu show apdu requests and responses",
-                "-v, --verbose verbose mode",
-                "-@, --continuous continuous reader mode"
+                "-v, --verbose verbose mode"
             ],
-            "usage": "hf gallagher reader [-hv@] [--aid <hex>] [-k <hex>] [--apdu]"
+            "usage": "hf gallagher reader [-h@v] [--aid <hex>] [--sitekey <hex>] [--apdu]"
         },
         "hf help": {
             "command": "hf help",
@@ -6036,8 +6036,8 @@
             "command": "hw connect",
             "description": "connects to a proxmark3 device via specified serial port. baudrate here is only for physical uart or uart-bt, not for usb-cdc or blue shark add-on",
             "notes": [
-                "hw connect -p /dev/ttyacm0",
-                "hw connect -p /dev/ttyacm0 -b 115200"
+                "hw connect -p com3",
+                "hw connect -p com3 -b 115200"
             ],
             "offline": true,
             "options": [
@@ -10236,6 +10236,6 @@
     "metadata": {
         "commands_extracted": 601,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-01-06T11:03:41"
+        "extracted_on": "2022-01-06T12:03:19"
     }
 }

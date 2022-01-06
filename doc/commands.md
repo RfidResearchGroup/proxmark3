@@ -324,7 +324,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf gallagher help      `|Y       |`This help`
-|`hf gallagher reader    `|N       |`Read & decode all Gallagher credentials on the DESFire card`
+|`hf gallagher reader    `|N       |`Read & decode all Gallagher credentials on a DESFire card`
 |`hf gallagher clone     `|N       |`Add Gallagher credentials to a DESFire card`
 |`hf gallagher delete    `|N       |`Delete Gallagher credentials from a DESFire card`
 |`hf gallagher diversifykey`|Y       |`Diversify Gallagher key`
