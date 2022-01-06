@@ -1354,8 +1354,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data, uint8_t
 
     // main loop
     bool finished = false;
-    bool button_pushed = BUTTON_PRESS();
-    while (!button_pushed && !finished) {
+    while (finished == false) {
+        // BUTTON_PRESS check done in GetIso14443aCommandFromReader
         WDT_HIT();
 
         tag_response_info_t *p_response = NULL;
