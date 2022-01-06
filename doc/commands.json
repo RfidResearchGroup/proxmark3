@@ -2320,9 +2320,83 @@
             ],
             "usage": "hf fido reg [-havt] [-f <fn>] [--cp <ascii>] [--ap <ascii>] [--cpx <hex>] [--apx <hex>]"
         },
+        "hf gallagher clone": {
+            "command": "hf gallagher clone",
+            "description": "clone gallagher credentials to a writable desfire card",
+            "notes": [
+                "hf gallagher clone --rc 1 --fc 22 --cn 3333 --il 4 --sitekey 00112233445566778899aabbccddeeff"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-n, --keynum <decimal> key number [default=0]",
+                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <hex> key for authentication to the picc (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "--rc <decimal> region code. 4 bits max",
+                "--fc <decimal> facility code. 2 bytes max",
+                "--cn <decimal> card number. 3 bytes max",
+                "--il <decimal> issue level. 4 bits max",
+                "--aid <hex> application id to write (3 bytes) [default finds lowest available in range 0x2?81f4, where 0 <= ? <= 0xb]",
+                "--sitekey <hex> mifare site key to compute diversified keys (16 bytes, required if using non-default key)",
+                "--apdu show apdu requests and responses",
+                "-v, --verbose verbose mode"
+            ],
+            "usage": "hf gallagher clone [-hv] [-n <decimal>] [-t <des/2tdea/3tdea/aes>] [-k <hex>] --rc <decimal> --fc <decimal> --cn <decimal> --il <decimal> [--aid <hex>] [--sitekey <hex>] [--apdu]"
+        },
+        "hf gallagher delete": {
+            "command": "hf gallagher delete",
+            "description": "delete gallagher application from a desfire card",
+            "notes": [
+                "hf gallagher delete --aid 2081f4 --sitekey 00112233445566778899aabbccddeeff"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "--aid <hex> application id to delete (3 bytes)",
+                "--sitekey <hex> mifare site key to compute diversified keys (16 bytes, required if using non-default key)",
+                "--apdu show apdu requests and responses",
+                "-v, --verbose verbose mode"
+            ],
+            "usage": "hf gallagher delete [-hv] --aid <hex> [--sitekey <hex>] [--apdu]"
+        },
+        "hf gallagher diversifykey": {
+            "command": "hf gallagher diversifykey",
+            "description": "diversify gallagher key",
+            "notes": [
+                "hf gallagher diversify --uid 11223344556677 --aid 2081f4"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "--aid <hex> application id for diversification (3 bytes)",
+                "--keynum <decimal> key number [default=0]",
+                "--uid <hex> card uid to delete (4 or 7 bytes)",
+                "--sitekey <hex> mifare site key to compute diversified keys (16 bytes, required if using non-default key)",
+                "--apdu show apdu requests and responses"
+            ],
+            "usage": "hf gallagher diversify [-h] --aid <hex> [--keynum <decimal>] [--uid <hex>] [--sitekey <hex>] [--apdu]"
+        },
+        "hf gallagher help": {
+            "command": "hf gallagher help",
+            "description": "help this help diversifykey diversify gallagher key --------------------------------------------------------------------------------------- hf gallagher reader available offline: no read a gallagher desfire tag",
+            "notes": [
+                "hf gallagher reader --aid 2081f4 --sitekey 00112233445566778899aabbccddeeff -> act as a reader that skips reading the card application directory and uses a non-default site key",
+                "hf gallagher reader -@ -> continuous reader mode"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "--aid <hex> application id to read (3 bytes). if specified, then the card application directory is not used",
+                "--sitekey <hex> mifare site key to compute diversified keys (16 bytes, required if using non-default key)",
+                "-@, --continuous continuous reader mode",
+                "--apdu show apdu requests and responses",
+                "-v, --verbose verbose mode"
+            ],
+            "usage": "hf gallagher reader [-h@v] [--aid <hex>] [--sitekey <hex>] [--apdu]"
+        },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- high frequency ----------------------- 14a { iso14443a rfids... } 14b { iso14443b rfids... } 15 { iso15693 rfids... } cipurse { cipurse transport cards... } epa { german identification card... } emrtd { machine readable travel document... } felica { iso18092 / felica rfids... } fido { fido and fido2 authenticators... } ksx6924 { ks x 6924 (t-money, snapper+) rfids } jooki { jooki rfids... } iclass { iclass rfids... } legic { legic rfids... } lto { lto cartridge memory rfids... } mf { mifare rfids... } mfp { mifare plus rfids... } mfu { mifare ultralight rfids... } mfdes { mifare desfire rfids... } seos { seos rfids... } st25ta { st25ta rfids... } thinfilm { thinfilm rfids... } topaz { topaz (nfc type 1) rfids... } waveshare { waveshare nfc epaper... } ----------- --------------------- general --------------------- help this help list list protocol data in trace buffer search search for known hf tags --------------------------------------------------------------------------------------- hf list available offline: yes alias of `trace list -t raw` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
+            "description": "-------- ----------------------- high frequency ----------------------- 14a { iso14443a rfids... } 14b { iso14443b rfids... } 15 { iso15693 rfids... } cipurse { cipurse transport cards... } epa { german identification card... } emrtd { machine readable travel document... } felica { iso18092 / felica rfids... } fido { fido and fido2 authenticators... } gallagher { gallagher desfire rfids... } ksx6924 { ks x 6924 (t-money, snapper+) rfids } jooki { jooki rfids... } iclass { iclass rfids... } legic { legic rfids... } lto { lto cartridge memory rfids... } mf { mifare rfids... } mfp { mifare plus rfids... } mfu { mifare ultralight rfids... } mfdes { mifare desfire rfids... } seos { seos rfids... } st25ta { st25ta rfids... } thinfilm { thinfilm rfids... } topaz { topaz (nfc type 1) rfids... } waveshare { waveshare nfc epaper... } ----------- --------------------- general --------------------- help this help list list protocol data in trace buffer search search for known hf tags --------------------------------------------------------------------------------------- hf list available offline: yes alias of `trace list -t raw` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf list -f -> show frame delay times",
                 "hf list -1 -> use trace buffer"
@@ -5963,8 +6037,8 @@
             "command": "hw connect",
             "description": "connects to a proxmark3 device via specified serial port. baudrate here is only for physical uart or uart-bt, not for usb-cdc or blue shark add-on",
             "notes": [
-                "hw connect -p /dev/ttyacm0",
-                "hw connect -p /dev/ttyacm0 -b 115200"
+                "hw connect -p com3",
+                "hw connect -p com3 -b 115200"
             ],
             "offline": true,
             "options": [
@@ -10161,8 +10235,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 597,
+        "commands_extracted": 601,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-01-05T16:57:29"
+        "extracted_on": "2022-01-06T12:03:19"
     }
 }

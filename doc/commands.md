@@ -317,6 +317,19 @@ Check column "offline" for their availability.
 |`hf fido assert         `|N       |`FIDO2 GetAssertion command.`
 
 
+### hf gallagher
+
+ { Gallagher DESFire RFIDs...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf gallagher help      `|Y       |`This help`
+|`hf gallagher reader    `|N       |`Read & decode all Gallagher credentials on a DESFire card`
+|`hf gallagher clone     `|N       |`Add Gallagher credentials to a DESFire card`
+|`hf gallagher delete    `|N       |`Delete Gallagher credentials from a DESFire card`
+|`hf gallagher diversifykey`|Y       |`Diversify Gallagher key`
+
+
 ### hf ksx6924
 
  { KS X 6924 (T-Money, Snapper+) RFIDs }

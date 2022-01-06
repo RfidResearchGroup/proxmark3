@@ -233,6 +233,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/mifare/desfiresecurechan.c
         ${PM3_ROOT}/client/src/mifare/desfirecore.c
         ${PM3_ROOT}/client/src/mifare/desfiretest.c
+        ${PM3_ROOT}/client/src/mifare/gallaghercore.c
         ${PM3_ROOT}/client/src/uart/uart_posix.c
         ${PM3_ROOT}/client/src/uart/uart_win32.c
         ${PM3_ROOT}/client/src/ui/overlays.ui
@@ -253,6 +254,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfepa.c
         ${PM3_ROOT}/client/src/cmdhffelica.c
         ${PM3_ROOT}/client/src/cmdhffido.c
+        ${PM3_ROOT}/client/src/cmdhfgallagher.c
         ${PM3_ROOT}/client/src/cmdhfcipurse.c
         ${PM3_ROOT}/client/src/cmdhficlass.c
         ${PM3_ROOT}/client/src/cmdhfjooki.c

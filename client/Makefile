@@ -506,6 +506,7 @@ SRCS =  mifare/aiddesfire.c \
 		cmdhfemrtd.c \
 		cmdhffelica.c \
 		cmdhffido.c \
+		cmdhfgallagher.c \
 		cmdhfksx6924.c \
 		cmdhfcipurse.c \
 		cmdhficlass.c \
@@ -612,6 +613,7 @@ SRCS =  mifare/aiddesfire.c \
 		mifare/desfirecore.c \
         mifare/desfiresecurechan.c \
         mifare/desfiretest.c \
+		mifare/gallaghercore.c \
 		mifare/mad.c \
 		mifare/mfkey.c \
 		mifare/mifare4.c \
