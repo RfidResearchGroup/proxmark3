@@ -21,9 +21,9 @@
 
 #include "pm3_cmd.h" // struct
 
-void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint16_t period_1, 
-                   const uint8_t *symbol_extra, uint16_t *period_extra, uint8_t *command, bool verbose, 
-                   bool keep_field_on, uint32_t samples, bool ledcontrol);
+void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint16_t period_1,
+                                     const uint8_t *symbol_extra, uint16_t *period_extra, uint8_t *command, bool verbose,
+                                     bool keep_field_on, uint32_t samples, bool ledcontrol);
 
 void ReadTItag(bool ledcontrol);
 void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc, bool ledcontrol);
@@ -38,8 +38,8 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
 void CmdHIDsimTAG(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool ledcontrol);
 
 void CmdFSKsimTAGEx(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen,
-                  uint8_t *bits, bool ledcontrol, int numcycles);
-void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen, 
+                    uint8_t *bits, bool ledcontrol, int numcycles);
+void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen,
                   uint8_t *bits, bool ledcontrol);
 void CmdASKsimTAG(uint8_t encoding, uint8_t invert, uint8_t separator, uint8_t clk, uint16_t size,
                   const uint8_t *bits, bool ledcontrol);
@@ -62,7 +62,7 @@ void T55xxResetRead(uint8_t flags, bool ledcontrol);
 //id T55xxWriteBlock(uint32_t data, uint8_t blockno, uint32_t pwd, uint8_t flags, bool ledcontrol);
 void T55xxWriteBlock(uint8_t *data, bool ledcontrol);
 // void T55xxWriteBlockExt(uint32_t data, uint8_t blockno, uint32_t pwd, uint8_t flags);
-void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, uint32_t pwd, 
+void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, uint32_t pwd,
                     uint8_t downlink_mode, bool ledcontrol);
 void T55xxWakeUp(uint32_t pwd, uint8_t flags, bool ledcontrol);
 void T55xx_ChkPwds(uint8_t flags, bool ledcontrol);

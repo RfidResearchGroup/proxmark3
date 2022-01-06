@@ -596,8 +596,8 @@ SIMDExecInstr GetSIMDInstrAuto(void) {
 
 // determine the available instruction set at runtime and call the correct function
 uint64_t crack_states_bitsliced_dispatch(uint32_t cuid, uint8_t *best_first_bytes, statelist_t *p,
-                                         uint32_t *keys_found, uint64_t *num_keys_tested, 
-                                         uint32_t nonces_to_bruteforce, const uint8_t *bf_test_nonce_2nd_byte, 
+                                         uint32_t *keys_found, uint64_t *num_keys_tested,
+                                         uint32_t nonces_to_bruteforce, const uint8_t *bf_test_nonce_2nd_byte,
                                          noncelist_t *nonces) {
     switch (GetSIMDInstrAuto()) {
 #if defined(COMPILER_HAS_SIMD_AVX512)
