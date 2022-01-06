@@ -20,7 +20,7 @@
 
 void writebuf(unsigned char *buf, uint64_t val, uint16_t len);
 void shexdump(unsigned char *data, int data_len);
-void printbin(unsigned char *c);
+void printbin(const unsigned char *c);
 void printbin2(uint64_t val, unsigned int size);
 void printstate(Hitag_State *hstate);
 unsigned char hex2bin(unsigned char c);

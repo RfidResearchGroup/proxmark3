@@ -14,8 +14,6 @@ struct rngdata {
     int len;
 };
 
-
-
 static int datacmp(const void *p1, const void *p2) {
     unsigned char *d1 = (unsigned char *)p1;
     unsigned char *d2 = (unsigned char *)p2;
@@ -116,7 +114,7 @@ static int makecand(unsigned char *c, struct rngdata *r, int bitoffset) {
 
 
 // test the candidate against the next or previous rng data
-static int testcand(unsigned char *f, unsigned char *rt, int fwd) {
+static int testcand(const unsigned char *f, unsigned char *rt, int fwd) {
     Hitag_State hstate;
     int i;
     uint32_t ks1;
@@ -273,10 +271,7 @@ static int findmatch(struct rngdata *r, unsigned char *outmatch, unsigned char *
     return 0;
 }
 
-
-
-
-static void rollbackrng(Hitag_State *hstate, unsigned char *s, int offset) {
+static void rollbackrng(Hitag_State *hstate, const unsigned char *s, int offset) {
     int i;
 
     if (!s) {

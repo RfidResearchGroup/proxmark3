@@ -511,7 +511,7 @@ static inline void search_gc_candidates_right(const uint64_t rstate_before_gc, c
     }
 }
 
-static inline void sm_left(const uint8_t *ks, uint8_t *mask, vector<cs_t> *pcstates) {
+static inline void sm_left(const uint8_t *ks, const uint8_t *mask, vector<cs_t> *pcstates) {
     map<uint64_t, cs_t> bincstates;
     map<uint64_t, cs_t>::iterator it;
     uint64_t counter, lstate;

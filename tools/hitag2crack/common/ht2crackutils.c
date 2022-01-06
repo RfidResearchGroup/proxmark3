@@ -34,7 +34,7 @@ void shexdump(unsigned char *data, int data_len) {
 
 
 
-void printbin(unsigned char *c) {
+void printbin(const unsigned char *c) {
     if (!c) {
         printf("printbin: invalid params\n");
         return;

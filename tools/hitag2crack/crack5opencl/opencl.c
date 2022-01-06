@@ -24,7 +24,8 @@ License: GNU General Public License v3 or any later version (see LICENSE.txt)
 
 #include "opencl.h"
 
-bool plat_dev_enabled(unsigned int id, unsigned int *sel, unsigned int cnt, unsigned int cur_type, unsigned int allow_type) {
+bool plat_dev_enabled(unsigned int id, const unsigned int *sel, 
+                      unsigned int cnt, unsigned int cur_type, unsigned int allow_type) {
     // usefulonly with devices
     if (allow_type != CL_DEVICE_TYPE_ALL) {
         if (cur_type != allow_type) return false;
@@ -67,7 +68,11 @@ unsigned int get_smallest_profile(compute_platform_ctx_t *cd_ctx, size_t ocl_pla
     return profile;
 }
 
-int discoverDevices(unsigned int profile_selected, uint32_t device_types_selected, cl_uint *platform_detected_cnt, size_t *selected_platforms_cnt, size_t *selected_devices_cnt, compute_platform_ctx_t **cd_ctx, unsigned int *plat_sel, unsigned int plat_cnt, unsigned int *dev_sel, unsigned int dev_cnt, bool verbose, bool show) {
+int discoverDevices(unsigned int profile_selected, uint32_t device_types_selected,
+                   cl_uint *platform_detected_cnt, size_t *selected_platforms_cnt,
+                   size_t *selected_devices_cnt, compute_platform_ctx_t **cd_ctx,
+                   unsigned int *plat_sel, unsigned int plat_cnt, unsigned int *dev_sel,
+                   unsigned int dev_cnt, bool verbose, bool show) {
     int err = 0;
     unsigned int ocl_platform_max = MAX_OPENCL_DEVICES; // 16
     cl_uint ocl_platform_cnt;

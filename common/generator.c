@@ -73,7 +73,7 @@ static void transform_D(uint8_t *ru) {
 }
 
 // Transport system (IT) pwd generation algo nickname A.
-uint32_t ul_ev1_pwdgenA(uint8_t *uid) {
+uint32_t ul_ev1_pwdgenA(const uint8_t *uid) {
 
     uint8_t pos = (uid[3] ^ uid[4] ^ uid[5] ^ uid[6]) % 32;
 
@@ -98,7 +98,7 @@ uint32_t ul_ev1_pwdgenA(uint8_t *uid) {
 }
 
 // Amiibo pwd generation algo nickname B. (very simple)
-uint32_t ul_ev1_pwdgenB(uint8_t *uid) {
+uint32_t ul_ev1_pwdgenB(const uint8_t *uid) {
 
     uint8_t pwd[] = {0x00, 0x00, 0x00, 0x00};
 
@@ -128,7 +128,7 @@ uint32_t ul_ev1_pwdgenC(uint8_t *uid) {
 }
 
 // XYZ 3d printing pwd generation algo nickname D.
-uint32_t ul_ev1_pwdgenD(uint8_t *uid) {
+uint32_t ul_ev1_pwdgenD(const uint8_t *uid) {
 
     uint8_t i;
     // rotation offset
@@ -153,7 +153,7 @@ uint32_t ul_ev1_pwdgenD(uint8_t *uid) {
 }
 
 // pack generation for algo 1-3
-uint16_t ul_ev1_packgenA(uint8_t *uid) {
+uint16_t ul_ev1_packgenA(const uint8_t *uid) {
     uint16_t pack = (uid[0] ^ uid[1] ^ uid[2]) << 8 | (uid[2] ^ 8);
     return pack;
 }
@@ -163,7 +163,7 @@ uint16_t ul_ev1_packgenB(uint8_t *uid) {
 uint16_t ul_ev1_packgenC(uint8_t *uid) {
     return 0xaa55;
 }
-uint16_t ul_ev1_packgenD(uint8_t *uid) {
+uint16_t ul_ev1_packgenD(const uint8_t *uid) {
     uint8_t i;
     //Rotate
     uint8_t r = (uid[2] + uid[5]) & 7; //Rotation offset
@@ -260,7 +260,7 @@ int mfc_algo_saflok_all(uint8_t *uid, uint8_t *keys) {
 }
 
 // MIZIP algo
-int mfc_algo_mizip_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
+int mfc_algo_mizip_one(const uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
     if (sector > 4) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
     if (keytype > 2) return PM3_EINVARG;
