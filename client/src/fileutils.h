@@ -127,7 +127,7 @@ int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool
  * @param datalen the length of the data
  * @return 0 for ok
  */
-int saveFileWAVE(const char *preferredName, int *data, size_t datalen);
+int saveFileWAVE(const char *preferredName, const int *data, size_t datalen);
 
 /** STUB
  * @brief Utility function to save PM3 data to a file. This method takes a preferred name, but if that

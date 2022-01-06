@@ -686,7 +686,7 @@ int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool
     return PM3_EFILE;
 }
 
-int saveFileWAVE(const char *preferredName, int *data, size_t datalen) {
+int saveFileWAVE(const char *preferredName, const int *data, size_t datalen) {
 
     if (data == NULL) return PM3_EINVARG;
     char *fileName = newfilenamemcopy(preferredName, ".wav");

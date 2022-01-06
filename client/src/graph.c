@@ -72,8 +72,8 @@ void save_restoreGB(uint8_t saveOpt) {
     }
 }
 
-void setGraphBuf(uint8_t *buff, size_t size) {
-    if (buff == NULL) return;
+void setGraphBuf(const uint8_t *src, size_t size) {
+    if (src == NULL) return;
 
     ClearGraph(false);
 
@@ -81,14 +81,14 @@ void setGraphBuf(uint8_t *buff, size_t size) {
         size = MAX_GRAPH_TRACE_LEN;
 
     for (size_t i = 0; i < size; ++i)
-        g_GraphBuffer[i] = buff[i] - 128;
+        g_GraphBuffer[i] = src[i] - 128;
 
     g_GraphTraceLen = size;
     RepaintGraphWindow();
 }
 
-size_t getFromGraphBuf(uint8_t *buff) {
-    if (buff == NULL) return 0;
+size_t getFromGraphBuf(uint8_t *dest) {
+    if (dest == NULL) return 0;
     if (g_GraphTraceLen == 0) return 0;
 
     size_t i;
@@ -96,7 +96,7 @@ size_t getFromGraphBuf(uint8_t *buff) {
         //trim
         if (g_GraphBuffer[i] > 127) g_GraphBuffer[i] = 127;
         if (g_GraphBuffer[i] < -127) g_GraphBuffer[i] = -127;
-        buff[i] = (uint8_t)(g_GraphBuffer[i] + 128);
+        dest[i] = (uint8_t)(g_GraphBuffer[i] + 128);
     }
     return i;
 }

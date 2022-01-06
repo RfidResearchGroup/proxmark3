@@ -20,9 +20,9 @@ extern "C" {
 void AppendGraph(bool redraw, uint16_t clock, int bit);
 size_t ClearGraph(bool redraw);
 bool HasGraphData(void);
-void setGraphBuf(uint8_t *buff, size_t size);
+void setGraphBuf(const uint8_t *src, size_t size);
 void save_restoreGB(uint8_t saveOpt);
-size_t getFromGraphBuf(uint8_t *buff);
+size_t getFromGraphBuf(uint8_t *dest);
 void convertGraphFromBitstream(void);
 void convertGraphFromBitstreamEx(int hi, int low);
 bool isGraphBitstream(void);
