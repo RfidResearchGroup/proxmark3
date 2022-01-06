@@ -1,10 +1,18 @@
 //-----------------------------------------------------------------------------
-// Jonathan Westhues, April 2006
-// iZsh <izsh at fail0verflow.com>, 2014
+// Copyright (C) Jonathan Westhues, April 2006
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Routines to load the FPGA image, and then to configure the FPGA's major
 // mode once it is configured.

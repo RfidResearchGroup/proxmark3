@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added support for MIFARE DESFire application creation without authentication (@joswr1ght)
  - Changed drastically Hitag S ARM code to remove state machines and ease way to build new commands (@doegox)
  - Fixed Hitag S crypto mode with key or NrAr, fixed `lf hitag cc`, fixed pwd dump in hitagS dump with LKP (@doegox)
  - Changed `trace list -h` - textual change (@iceman1001)
@@ -93,7 +94,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed `hf_msdsal` standalone in simulation flow (@salmg)
  - Added a picture viewer in QT. To be used with `hf emrtd info` (@iceman1001)
  - Fixed - move des functions to libcrypto (@merlokk)
- - Added `CLIGetOptionList` to cliparser that makes it easier to implement text options in the cli (@merlokk) 
+ - Added `CLIGetOptionList` to cliparser that makes it easier to implement text options in the cli (@merlokk)
  - Added experimental support for macOS users utilizing MacPorts instead of Homebrew (@linuxgemini)
  - Added `pm3_online_check.py` - a script to verify and initialize a Proxmark3 RDV4 device (@iceman1001)
 
@@ -113,9 +114,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added more keys (@equipter)
  - Changed `hf nfc ndefread` - ndef parser now handles more types (@iceman1001)
  - Fixed `hf desfire` changekey, GetUID, 3DES session key tweak. (@mwalker33)
- - Fixed `hf fido` commands now works correctly (@merlokk) 
+ - Fixed `hf fido` commands now works correctly (@merlokk)
  - Moved / renamed  `client/resource/fido2_defparams.json` ->  `client/resource/hf_fido2_defparams.json` (@merlokk)
- - Added `hf cipurse` commands to work with cipurse transport cards (@merlokk) 
+ - Added `hf cipurse` commands to work with cipurse transport cards (@merlokk)
  - Added `--gap` option to lf em 410x sim for more control over sim data (@mwalker)
  - Changed `hf fido` - refactored load/save json objects (@iceman1001)
  - Moved / renamed  `fido2.json` ->  `client/resource/fido2_defparams.json` (@iceman1001)
@@ -145,8 +146,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `lf pac demod` - now also search for inverted bitstreams (@iceman1001)
  - Changed `hf 14b reader` - now supports continuous mode (@iceman1001)
  - Fixed `hf search` - now doesn't false identify ISO15693 (@iceman1001)
- - Changed emv commands now works with tokenized cards (@merlokk) 
- - Changed `hf 15 restore` - now also support EML/JSON (@iceman1001) 
+ - Changed emv commands now works with tokenized cards (@merlokk)
+ - Changed `hf 15 restore` - now also support EML/JSON (@iceman1001)
  - Changed - all commands now use cliparser (@iceman1001)
  - Changed `lf t55xx restore` - now also support JSON (@iceman1001)
  - Changed `hf mf csetuid` - adapted to accept 7byte uids ~untested~  (@iceman1001)
@@ -233,7 +234,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `hf emrtd` ePassport dumping and parsing (@aveao)
  - Added `aidsearch` to `hf 14b info` (@iceman1001)
  - Added `ICE_STATE_DUMP_SIM` - standalone mode for dumping/simming one iClass tag (@iconicsec)
- - Added  `lf em 4x50 eview` - show uploaded EM4x50 data in emul memory (@tharexde) 
+ - Added  `lf em 4x50 eview` - show uploaded EM4x50 data in emul memory (@tharexde)
  - Fixed `data rawdemod` parsing for psk2 and user defined clock (@cyberpunk-re)
  - Added `hf iclass encode` - encode a wiegand binary to a encrypted credential (@iceman1001)
  - Changed `recoverpk.py` - now tests more ECDSA curves (@doegox)
@@ -320,7 +321,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `lf em 4x50_info` (@tharexde)
  - Added `4x50_write` (@tharexde)
  - Added `4x50_write_password` (@tharexde)
- - Fixed em4x50 demodulation error (@tharexde)  
+ - Fixed em4x50 demodulation error (@tharexde)
  - Fixed `hf mfdes` authentication issues, DES working (@bkerler)
  - Added Android cross-compilation to client cmake (@dxl, @doegox)
  - Fixed `emv scan` - now saves in current folder and uses unique names (@iceman1001)
@@ -450,7 +451,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed enforce PACKED structs [compiler trials] (@iceman1001)
  - Changed adjust number of threads according to cpu (@iceman1001)
  - Changed `hitag2crack` compile flags(@doegox)
- - Changed msdsal fix bug after var de-shadowing (@doegox) 
+ - Changed msdsal fix bug after var de-shadowing (@doegox)
  - Changed lighter msg for loading prefs, json will anyway always tell the filename (@doegox)
  - Changed make sure colors and emoji are disabled when not on TTY (@doegox)
  - Added `pref` command. PM3 client now support user preferences saved to a json file. (@mwalker33)
@@ -1108,7 +1109,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Updated the Reveng 1.30 sourcecode to 1.31 from Reveng project homepage (@iceman1001)
  - Updated the Reveng 1.31 sourcecode to 1.40 from Reveng project homepage (@iceman1001)
  - Added possibility to write direct to a Legic Prime Tag (MIM256/1024) without using values from the `BigBuffer` -> `hf legic writeRaw <addr> <value>` (@icsom)
- - Added possibility to decrease DCF values at address 0x05 & 0x06 on a Legic Prime Tag  
+ - Added possibility to decrease DCF values at address 0x05 & 0x06 on a Legic Prime Tag
    DCF-value will be pulled from the BigBuffer (address 0x05 & 0x06) so you have to
    load the data into the BigBuffer before with `hf legic load <path/to/legic.dump>` & then
    write the DCF-Values (both at once) with `hf legic write 0x05 0x02`  (@icsom)

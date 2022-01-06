@@ -142,12 +142,12 @@ typedef struct {
 } PACKED picopass_ns_hdr_t;
 
 // reader flags
-typedef struct {    
+typedef struct {
     uint8_t flags;
 } PACKED iclass_card_select_t;
 
 // reader flags
-typedef struct {    
+typedef struct {
     uint8_t status;
     union {
         picopass_hdr_t hdr;

@@ -4376,9 +4376,10 @@
                 "--ks1 <key settings hex> key settings 1 (hex 1 byte). application master key settings. default 0x0f",
                 "--ks2 <key settings hex> key settings 2 (hex 1 byte). default 0x0e",
                 "--dstalgo <des/2tdea/3tdea/aes> application key crypt algo: des, 2tdea, 3tdea, aes. default des",
-                "--numkeys <number of keys> keys count. 0x00..0x0e. default 0x0e"
+                "--numkeys <number of keys> keys count. 0x00..0x0e. default 0x0e",
+                "--no-auth execute without authentication"
             ],
-            "usage": "hf mfdes createapp [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--rawdata <rawdata hex>] [--aid <app id hex>] [--fid <file id hex>] [--dfname <df name str>] [--ks1 <key settings hex>] [--ks2 <key settings hex>] [--dstalgo <des/2tdea/3tdea/aes>] [--numkeys <number of keys>]"
+            "usage": "hf mfdes createapp [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--rawdata <rawdata hex>] [--aid <app id hex>] [--fid <file id hex>] [--dfname <df name str>] [--ks1 <key settings hex>] [--ks2 <key settings hex>] [--dstalgo <des/2tdea/3tdea/aes>] [--numkeys <number of keys>] [--no-auth]"
         },
         "hf mfdes createfile": {
             "command": "hf mfdes createfile",

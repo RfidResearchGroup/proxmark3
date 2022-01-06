@@ -1,10 +1,25 @@
+//-----------------------------------------------------------------------------
+// Copyright (C) Stephen Shkardoon proxmark@ss23.geek.nz - ss23
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
 /**
  * Bruteforce a HID system using a static card number but incrementing FC
  *
  * This is only going to work if the system has a card number registered that you know,
  * or if you can determine whether a given FC is valid based on external information.
  *
- * Author: proxmark@ss23.geek.nz - ss23
  * Based on lf_hidbrute
  *
  * To retrieve log file from flash:

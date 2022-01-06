@@ -1,24 +1,18 @@
 //-----------------------------------------------------------------------------
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
-//-----------------------------------------------------------------------------
-// Hitag2 emulation
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// (c) 2009 Henryk Plötz <henryk@ploetzli.ch>
-//-----------------------------------------------------------------------------
-// Hitag2 complete rewrite of the code
-// - Fixed modulation/encoding issues
-// - Rewrote code for transponder emulation
-// - Added sniffing of transponder communication
-// - Added reader functionality
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
 //
-// (c) 2012 Roel Verdult
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// Piwi, 2019
-// Iceman, 2019
-// Anon, 2019
-// Doegox, 2020
 
 #define DBG  if (g_dbglevel >= DBG_EXTENDED)
 
