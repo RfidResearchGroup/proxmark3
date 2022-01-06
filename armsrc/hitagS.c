@@ -808,7 +808,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data, bool ledcontrol) {
     // synchronized startup procedure
     while (AT91C_BASE_TC0->TC_CV > 0); // wait until TC0 returned to zero
 
-    while (!BUTTON_PRESS() && !data_available()) {
+    while ((BUTTON_PRESS() == false) && (data_available() == false)) {
 
         WDT_HIT();
 
@@ -1279,7 +1279,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
         return;
     }
     int pageNum = 0;
-    while (!BUTTON_PRESS() && !data_available())  {
+    while ((BUTTON_PRESS() == false) && (data_available() == false)) {
 
         WDT_HIT();
 
@@ -1457,7 +1457,7 @@ void Hitag_check_challenges(uint8_t *data, uint32_t datalen, bool ledcontrol) {
     uint8_t tx[HITAG_FRAME_LEN];
     int t_wait = HITAG_T_WAIT_MAX;
 
-    while (BUTTON_PRESS() == false && data_available() == false) {
+    while ((BUTTON_PRESS() == false) && (data_available() == false)) {
         // Watchdog hit
         WDT_HIT();
 

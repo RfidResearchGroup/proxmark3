@@ -830,7 +830,7 @@ void felica_dump_lite_s(void) {
     uint16_t cnt = 0, cntfails = 0;
     uint8_t *dest = BigBuf_get_addr();
 
-    while (!BUTTON_PRESS() && !data_available()) {
+    while ((BUTTON_PRESS() == false) && (data_available() == false)) {
         WDT_HIT();
         // polling?
         //TransmitFor18092_AsReader(poll, 10, GetCountSspClk()+512, 1, 0);

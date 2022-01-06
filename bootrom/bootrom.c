@@ -232,7 +232,7 @@ static void flash_mode(void) {
             }
         }
 
-        if (g_common_area.flags.button_pressed && !BUTTON_PRESS()) {
+        if (g_common_area.flags.button_pressed && BUTTON_PRESS() == false) {
             g_common_area.flags.button_pressed = 0;
         }
         if (!g_common_area.flags.button_pressed && BUTTON_PRESS()) {

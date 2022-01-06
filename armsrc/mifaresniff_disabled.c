@@ -96,7 +96,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
     uint32_t sniffCounter = 0;
     // loop and listen
-    while (!BUTTON_PRESS()) {
+    while (BUTTON_PRESS() == false) {
         WDT_HIT();
         LED_A_ON();
         /*

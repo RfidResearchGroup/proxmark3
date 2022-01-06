@@ -204,7 +204,7 @@ int BUTTON_CLICKED(int ms) {
     int ticks = ((MCK / 1000) * (ms ? ms : 1000)) >> 10;
 
     // If we're not even pressed, forget about it!
-    if (!BUTTON_PRESS())
+    if (BUTTON_PRESS() == false)
         return BUTTON_NO_CLICK;
 
     // Borrow a PWM unit for my real-time clock
@@ -223,7 +223,7 @@ int BUTTON_CLICKED(int ms) {
         // We haven't let off the button yet
         if (!letoff) {
             // We just let it off!
-            if (!BUTTON_PRESS()) {
+            if (BUTTON_PRESS() == false) {
                 letoff = 1;
 
                 // reset our timer for 500ms
@@ -268,7 +268,7 @@ int BUTTON_HELD(int ms) {
     int ticks = (48000 * (ms ? ms : 1000)) >> 10;
 
     // If we're not even pressed, forget about it!
-    if (!BUTTON_PRESS())
+    if (BUTTON_PRESS() == false)
         return BUTTON_NO_CLICK;
 
     // Borrow a PWM unit for my real-time clock
@@ -284,7 +284,7 @@ int BUTTON_HELD(int ms) {
         uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
         // As soon as our button let go, we didn't hold long enough
-        if (!BUTTON_PRESS())
+        if (BUTTON_PRESS() == false)
             return BUTTON_SINGLE_CLICK;
 
         // Have we waited the full second?

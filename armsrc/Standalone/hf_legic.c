@@ -140,7 +140,7 @@ void RunMod(void) {
             // we just read 1024 bytes
             read_success = LegicRfReaderEx(0, 1024, 0x55);
 
-        } while (read_success == PM3_ESOFT && !BUTTON_PRESS());
+        } while ((read_success == PM3_ESOFT) && (BUTTON_PRESS() == false));
 
         LEDsoff();
 

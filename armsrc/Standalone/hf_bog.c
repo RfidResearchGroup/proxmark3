@@ -113,7 +113,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
     SpinDelay(50);
 
     // loop and listen
-    while (!BUTTON_PRESS()) {
+    while (BUTTON_PRESS() == false) {
         WDT_HIT();
         LED_A_ON();
 
