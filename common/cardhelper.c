@@ -17,7 +17,7 @@
 
 #define CARD_INS_DECRYPT    0x01
 #define CARD_INS_ENCRYPT    0x02
-#define CARD_INS_VEIRFY_RRG 0x05
+#define CARD_INS_VERIFY_RRG 0x05
 #define CARD_INS_DECODE     0x06
 #define CARD_INS_NUMBLOCKS  0x07
 #define CARD_INS_PINSIZE    0x08
@@ -177,7 +177,7 @@ int VerifyRdv4Signature(uint8_t *memid, uint8_t *signature) {
 
     int resp_len = 0;
     uint8_t resp[254] = {0};
-    uint8_t c[5 + 8 + 128] = {0x96, CARD_INS_VEIRFY_RRG, 0x00, 0x00, 8 + 128};
+    uint8_t c[5 + 8 + 128] = {0x96, CARD_INS_VERIFY_RRG, 0x00, 0x00, 8 + 128};
 
     memcpy(c + 5, memid, 8);
     memcpy(c + 5 + 8, signature, 128);

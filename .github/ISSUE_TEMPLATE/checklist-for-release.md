@@ -18,6 +18,7 @@ assignees: doegox, iceman1001
 - [ ] `tools/build_all_firmwares.sh` check that the script contains all standalone modes then compile all standalone modes (linux only)
 - [ ] `experimental_lib` compilation & tests
 - [ ] `experimental_client_with_swig` compilation & tests
+- [ ] Check Android `CMakeLists.txt` list of source file
 - [ ] GitHub Actions - green across the board ( MacOS, Ubuntu, Windows)
 
 # OS compilation and tests
