@@ -386,7 +386,7 @@ static int hfgal_create_creds_file(DesfireContext_t *ctx, uint8_t *site_key, uin
  * @param num_entries Will be set to the number of entries in the Card Application Directory.
  */
 static int hfgal_read_cad(DesfireContext_t *ctx, uint8_t *dest_buf,
-                          uint8_t dest_buf_len, uint8_t *num_entries, bool verbose) {
+                          uint8_t dest_buf_len, uint8_t *num_entries_out, bool verbose) {
     if (dest_buf_len < 3 * 36) {
         PrintAndLogEx(ERR, "hfgal_read_cad destination buffer is incorrectly sized. "
                       "Received length %d, must be at least %d", dest_buf_len, 3 * 36);
@@ -409,16 +409,19 @@ static int hfgal_read_cad(DesfireContext_t *ctx, uint8_t *dest_buf,
     }
 
     // Count number of entries (i.e. count until we hit a NULL entry)
-    *num_entries = 0;
+    uint8_t num_entries = 0;
     for (uint8_t i = 0; i < dest_buf_len; i += 6) {
         if (memcmp(&dest_buf[i], "\0\0\0\0\0\0", 6) == 0) break;
-        *num_entries += 1;
+        num_entries++;
     }
+    *num_entries_out = num_entries;
 
-    if (verbose) {
+    if (num_entries == 0) {
+        PrintAndLogEx(WARNING, "Card Application Directory is empty");
+    } else if (verbose) {
         // Print what we found
         PrintAndLogEx(SUCCESS, "Card Application Directory contains:" NOLF);
-        for (int i = 0; i < *num_entries; i++)
+        for (int i = 0; i < num_entries; i++)
             PrintAndLogEx(NORMAL, "%s %06X" NOLF, (i == 0) ? "" : ",",
                           cad_aid_byte_to_uint(&dest_buf[i * 6 + 3]));
         PrintAndLogEx(NORMAL, "");
@@ -594,19 +597,19 @@ static int hfgal_remove_aid_from_cad(DesfireContext_t *ctx, uint8_t *site_key,
     HFGAL_RET_IF_ERR(res);
 
     // Check if facility already exists in CAD
-    uint8_t entry_num = 0;
-    for (; entry_num < num_entries; entry_num++) {
-        if (aid > 0 && aid == cad_aid_byte_to_uint(&cad[entry_num * 6 + 3]))
+    uint8_t entry_idx;
+    for (entry_idx = 0; entry_idx < num_entries; entry_idx++) {
+        if (aid > 0 && aid == cad_aid_byte_to_uint(&cad[entry_idx * 6 + 3]))
             break;
     }
-    if (entry_num >= num_entries)
+    if (entry_idx >= num_entries)
         HFGAL_RET_ERR(PM3_EINVARG, "Specified facility or AID does not exist in the Card Application Directory");
 
     // Remove entry (shift all entries left, then clear the last entry)
     memmove(
-        &cad[entry_num * 6],
-        &cad[(entry_num + 1) * 6],
-        ARRAYLEN(cad) - (entry_num + 1) * 6
+        &cad[entry_idx * 6],
+        &cad[(entry_idx + 1) * 6],
+        ARRAYLEN(cad) - (entry_idx + 1) * 6
     );
     memset(&cad[ARRAYLEN(cad) - 6], 0, 6);
 
@@ -617,10 +620,11 @@ static int hfgal_remove_aid_from_cad(DesfireContext_t *ctx, uint8_t *site_key,
     HFGAL_RET_IF_ERR(res);
 
     // Determine what files we need to update
-    uint8_t file_id_start = (entry_num - 1) / 6;
+    uint8_t file_id_start = entry_idx / 6;
     uint8_t file_id_stop = (num_entries - 1) / 6;
+    bool delete_last_file = (num_entries - 1) % 6 == 0;
 
-    for (uint8_t file_id = file_id_start; file_id <= file_id_stop; file_id++) {
+    for (uint8_t file_id = file_id_start; file_id <= file_id_stop - delete_last_file; file_id++) {
         // Write file
         res = DesfireWriteFile(ctx, file_id, 0, 36, &cad[file_id * 36]);
         HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed writing data to file %d in CAD (AID %06X)", file_id, CAD_AID);
@@ -629,8 +633,8 @@ static int hfgal_remove_aid_from_cad(DesfireContext_t *ctx, uint8_t *site_key,
             PrintAndLogEx(INFO, "Updated file %d in CAD", file_id);
     }
 
-    // Delete empty files if necessary
-    if (file_id_start != file_id_stop) {
+    // Delete empty file if necessary
+    if (delete_last_file) {
         uint8_t file_id = file_id_stop;
 
         DesfireSetCommMode(ctx, DCMMACed);
@@ -639,16 +643,6 @@ static int hfgal_remove_aid_from_cad(DesfireContext_t *ctx, uint8_t *site_key,
 
         if (verbose)
             PrintAndLogEx(INFO, "Deleted unnecessary file %d from CAD (AID %06X)", file_id, CAD_AID);
-
-        // Delete the Card Application Directory if necessary
-        // (if we just deleted the last file in it)
-        if (file_id == 0) {
-            res = hfgal_delete_app(ctx, site_key, CAD_AID, verbose);
-            HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed deleting file %d from CAD (AID %06X)", file_id, CAD_AID);
-
-            if (verbose)
-                PrintAndLogEx(INFO, "Removed CAD because it was empty");
-        }
     }
 
     PrintAndLogEx(INFO, "Successfully removed %06X from the Card Application Directory", aid);
