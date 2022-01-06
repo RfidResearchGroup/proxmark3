@@ -1,9 +1,20 @@
-/*
- * spiffs_nucleus.h
- *
- *  Created on: Jun 15, 2013
- *      Author: petera
- */
+//-----------------------------------------------------------------------------
+// Borrowed initially from https://github.com/pellepl/spiffs
+// Copyright (c) 2013-2017 Peter Andersson (pelleplutt1976 at gmail.com)
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
 
 /* SPIFFS layout
  *
