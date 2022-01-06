@@ -219,10 +219,7 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     // concat all strings in argstr into tmpstr[]
     //
     int res = CLIParamStrToBuf(argstr, tmpstr, sizeof(tmpstr), &tmplen);
-    if (res) {
-        return res;
-    }
-    if (tmplen == 0) {
+    if (res || (tmplen == 0)) {
         return res;
     }
 

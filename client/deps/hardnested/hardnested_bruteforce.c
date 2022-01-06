@@ -117,7 +117,7 @@ inline uint8_t trailing_zeros(uint8_t byte) {
 }
 
 
-bool verify_key(uint32_t cuid, noncelist_t *nonces, uint8_t *best_first_bytes, uint32_t odd, uint32_t even) {
+bool verify_key(uint32_t cuid, noncelist_t *nonces, const uint8_t *best_first_bytes, uint32_t odd, uint32_t even) {
     struct Crypto1State pcs;
     for (uint16_t test_first_byte = 1; test_first_byte < 256; test_first_byte++) {
         noncelistentry_t *test_nonce = nonces[best_first_bytes[test_first_byte]].first;

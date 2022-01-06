@@ -592,6 +592,9 @@ static int CmdLFHitagReader(const char *Cmd) {
 
     hitag_function htf;
     hitag_data htd;
+    memset(&htd, 0, sizeof(htd));
+
+
     uint16_t cmd = CMD_LF_HITAG_READER;
     if (s01) {
         cmd = CMD_LF_HITAGS_READ;
@@ -778,6 +781,8 @@ static int CmdLFHitagWriter(const char *Cmd) {
 
     hitag_function htf;
     hitag_data htd;
+    memset(&htd, 0, sizeof(htd));
+
     if (s03) {
         htf = WHTSF_CHALLENGE;
         memcpy(htd.auth.NrAr, nrar, sizeof(nrar));
@@ -881,10 +886,10 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
 
 // Annotate HITAG protocol
-void annotateHitag1(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+void annotateHitag1(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 }
 
-void annotateHitag2(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 
     // iceman: live decrypt of trace?
     if (is_response) {
@@ -935,7 +940,7 @@ void annotateHitag2(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
 }
 
 
-void annotateHitagS(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 }
 
 static command_t CommandTable[] = {

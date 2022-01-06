@@ -86,7 +86,7 @@ static uint64_t computeNLM48(uint64_t x, uint64_t y) {
     return res;
 }
 
-static void computeNLM(uint8_t *res, uint8_t *x, uint8_t *y) {
+static void computeNLM(uint8_t *res, const uint8_t *x, const uint8_t *y) {
     uint64_t x64 = 0;
     uint64_t y64 = 0;
 
@@ -213,7 +213,7 @@ bool CipurseCCheckCT(CipurseContext_t *ctx, uint8_t *CT) {
     return (memcmp(CT, ctx->CT, CIPURSE_AES_KEY_LENGTH) == 0);
 }
 
-static uint16_t CipurseCComputeMICCRC(uint8_t *data, size_t len) {
+static uint16_t CipurseCComputeMICCRC(const uint8_t *data, size_t len) {
     uint16_t initCRC = 0x6363;
     for (size_t i = 0; i < len; i++) {
         uint8_t ch = data[i] ^ initCRC;

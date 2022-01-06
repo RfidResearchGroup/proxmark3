@@ -354,9 +354,13 @@ static size_t _ftoa(out_fct_type out, char *buffer, size_t idx, size_t maxlen, d
         prec = PRINTF_DEFAULT_FLOAT_PRECISION;
     }
     // limit precision to 9, cause a prec >= 10 can lead to overflow errors
-    while ((len < PRINTF_FTOA_BUFFER_SIZE) && (prec > 9U)) {
+    while ((len < PRINTF_FTOA_BUFFER_SIZE)) {
         buf[len++] = '0';
         prec--;
+    }
+
+    if (prec > 9U) {
+        prec = 9U;
     }
 
     int whole = (int)value;
@@ -379,7 +383,7 @@ static size_t _ftoa(out_fct_type out, char *buffer, size_t idx, size_t maxlen, d
 
     if (prec == 0U) {
         diff = value - (double)whole;
-        if ((!(diff < 0.5) || (diff > 0.5)) && (whole & 1)) {
+        if (((diff < 0.5) == false) || (whole & 1)) {
             // exactly 0.5 and ODD, then round up
             // 1.5 -> 2, but 2.5 -> 2
             ++whole;

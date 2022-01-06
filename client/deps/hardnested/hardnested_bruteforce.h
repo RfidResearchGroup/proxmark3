@@ -57,6 +57,6 @@ void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte);
 bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint32_t num_acquired_nonces, uint64_t maximum_states, noncelist_t *nonces, uint8_t *best_first_bytes, uint64_t *found_key);
 float brute_force_benchmark(void);
 uint8_t trailing_zeros(uint8_t byte);
-bool verify_key(uint32_t cuid, noncelist_t *nonces, uint8_t *best_first_bytes, uint32_t odd, uint32_t even);
+bool verify_key(uint32_t cuid, noncelist_t *nonces, const uint8_t *best_first_bytes, uint32_t odd, uint32_t even);
 
 #endif
