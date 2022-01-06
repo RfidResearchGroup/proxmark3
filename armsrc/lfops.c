@@ -403,9 +403,9 @@ static bool prev_keep = false;
  * @param period_1
  * @param command (in binary char array)
  */
-void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint16_t period_1, 
-                   const uint8_t *symbol_extra, uint16_t *period_extra, uint8_t *command,
-                   bool verbose, bool keep_field_on, uint32_t samples, bool ledcontrol) {
+void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint16_t period_1,
+                                     const uint8_t *symbol_extra, uint16_t *period_extra, uint8_t *command,
+                                     bool verbose, bool keep_field_on, uint32_t samples, bool ledcontrol) {
 
     if (!prev_keep) {
         FpgaDownloadAndGo(FPGA_BITSTREAM_LF);

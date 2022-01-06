@@ -6037,8 +6037,8 @@
             "command": "hw connect",
             "description": "connects to a proxmark3 device via specified serial port. baudrate here is only for physical uart or uart-bt, not for usb-cdc or blue shark add-on",
             "notes": [
-                "hw connect -p com3",
-                "hw connect -p com3 -b 115200"
+                "hw connect -p /dev/ttyacm0",
+                "hw connect -p /dev/ttyacm0 -b 115200"
             ],
             "offline": true,
             "options": [
@@ -10237,6 +10237,6 @@
     "metadata": {
         "commands_extracted": 601,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-01-06T12:03:19"
+        "extracted_on": "2022-01-06T19:05:01"
     }
 }
