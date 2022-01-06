@@ -3603,7 +3603,7 @@ static void permute_rev(uint8_t *data, uint8_t len, uint8_t *output) {
     permute(output, len, data);
     permute(data, len, output);
 }
-static void simple_crc(uint8_t *data, uint8_t len, uint8_t *output) {
+static void simple_crc(const uint8_t *data, uint8_t len, uint8_t *output) {
     uint8_t crc = 0;
     for (uint8_t i = 0; i < len; ++i) {
         // seventh byte contains the crc.

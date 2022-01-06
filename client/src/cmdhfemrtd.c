@@ -1118,7 +1118,7 @@ static void emrtd_print_legal_sex(char *legal_sex) {
     PrintAndLogEx(SUCCESS, "Legal Sex Marker......: " _YELLOW_("%s"), sex);
 }
 
-static int emrtd_mrz_determine_length(char *mrz, int offset, int max_length) {
+static int emrtd_mrz_determine_length(const char *mrz, int offset, int max_length) {
     int i;
     for (i = max_length; i >= 1; i--) {
         if (mrz[offset + i - 1] != '<') {
@@ -1129,7 +1129,7 @@ static int emrtd_mrz_determine_length(char *mrz, int offset, int max_length) {
     return 0;
 }
 
-static int emrtd_mrz_determine_separator(char *mrz, int offset, int max_length) {
+static int emrtd_mrz_determine_separator(const char *mrz, int offset, int max_length) {
     // Note: this function does not account for len=0
     int i;
     for (i = max_length - 1; i > 0; i--) {

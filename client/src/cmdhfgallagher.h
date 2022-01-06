@@ -15,7 +15,7 @@
 #include "common.h"
 #include <stdint.h>
 
-int CmdHFGallagher(const char *Cmd);
+int CmdHFGallagher(const char *cmd);
 
 /**
  * @brief Create Gallagher Application Master Key by diversifying
@@ -29,7 +29,8 @@ int CmdHFGallagher(const char *Cmd);
  * @param keyOut Buffer to copy the diversified key into (must be 16 bytes).
  * @return PM3_SUCCESS if successful, PM3_EINVARG if an argument is invalid.
  */
-int hfgal_diversify_key(uint8_t *sitekey, uint8_t *uid, uint8_t uidLen, uint8_t keyNum, uint32_t aid, uint8_t *keyOut);
+int hfgal_diversify_key(uint8_t *site_key, uint8_t *uid, uint8_t uid_len,
+                        uint8_t key_num, uint32_t aid, uint8_t *key_output);
 
 // Return error
 #define HFGAL_RET_ERR(err, ...)  { PrintAndLogEx(ERR, __VA_ARGS__); return err; }

@@ -1403,7 +1403,8 @@ void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     }
 }
 
-void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, uint8_t paritysize, bool isResponse) {
+void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize,
+                    const uint8_t *parity, uint8_t paritysize, bool isResponse) {
     if (!isResponse && cmdsize == 1) {
         switch (cmd[0]) {
             case ISO14443A_CMD_WUPA:
@@ -1716,7 +1717,7 @@ bool NestedCheckKey(uint64_t key, AuthData_t *ad, uint8_t *cmd, uint8_t cmdsize,
     return true;
 }
 
-bool CheckCrypto1Parity(uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, uint8_t *parity_enc) {
+bool CheckCrypto1Parity(const uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, const uint8_t *parity_enc) {
     for (int i = 0; i < cmdsize - 1; i++) {
         if (oddparity8(cmd[i]) ^ (cmd[i + 1] & 0x01) ^ ((parity_enc[i / 8] >> (7 - i % 8)) & 0x01) ^ (cmd_enc[i + 1] & 0x01))
             return false;

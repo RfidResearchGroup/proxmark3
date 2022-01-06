@@ -82,7 +82,7 @@ static void reverse_aid(uint8_t *aid) {
  * @brief Converts a Card Application Directory format application ID to an integer.
  * Note: the CAD stores AIDs in reverse order, so this is different to DesfireAIDByteToUint().
  */
-static uint32_t cad_aid_byte_to_uint(uint8_t *data) {
+static uint32_t cad_aid_byte_to_uint(const uint8_t *data) {
     return data[2] + (data[1] << 8) + (data[0] << 16);
 }
 
@@ -100,7 +100,7 @@ static void cad_aid_uint_to_byte(uint32_t aid, uint8_t *data) {
  * @brief Returns true if the Card Application Directory entry
  * is for the specified region & facility, false otherwise.
  */
-static bool cad_facility_match(uint8_t *entry, uint8_t region_code, uint16_t facility_code) {
+static bool cad_facility_match(const uint8_t *entry, uint8_t region_code, uint16_t facility_code) {
     return entry[0] == region_code && (entry[1] << 8) + entry[2] == facility_code;
 }
 

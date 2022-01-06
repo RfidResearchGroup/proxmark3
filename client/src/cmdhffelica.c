@@ -560,7 +560,7 @@ static int send_wr_plain(uint8_t flags, uint16_t datalen, uint8_t *data, bool ve
  * @param length in bytes of the master secret.
  * @param reverse_master_key output in which the reversed secret is stored.
  */
-static void reverse_3des_key(uint8_t *master_key, int length, uint8_t *reverse_master_key) {
+static void reverse_3des_key(const uint8_t *master_key, int length, uint8_t *reverse_master_key) {
     for (int i = 0; i < length; i++) {
         reverse_master_key[i] = master_key[(length - 1) - i];
     }
