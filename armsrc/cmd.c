@@ -71,7 +71,7 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *d
     return PM3_SUCCESS;
 }
 
-static int reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t len, bool ng) {
+static int reply_ng_internal(uint16_t cmd, int16_t status, const uint8_t *data, size_t len, bool ng) {
     PacketResponseNGRaw txBufferNG;
     size_t txBufferNGLen;
 

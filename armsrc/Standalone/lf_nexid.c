@@ -90,7 +90,7 @@ static uint8_t nexwatch_parity_swap(uint8_t parity) {
 }
 // parity check
 // from 32b hex id, 4b mode,
-static uint8_t nexwatch_parity(uint8_t hexid[5]) {
+static uint8_t nexwatch_parity(const uint8_t hexid[5]) {
     uint8_t p = 0;
     for (uint8_t i = 0; i < 5; i++) {
         p ^= NIBBLE_HIGH(hexid[i]);

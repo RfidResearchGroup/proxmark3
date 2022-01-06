@@ -65,7 +65,7 @@ void ModInfo(void) {
 static uint8_t ppdol [255] = {0x80, 0xA8, 0x00, 0x00, 0x02, 0x83, 0x00};
 
 // Generate GET PROCESSING
-static uint8_t treatPDOL(uint8_t *apdu) {
+static uint8_t treatPDOL(const uint8_t *apdu) {
 
     uint8_t plen = 7;
 

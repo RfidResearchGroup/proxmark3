@@ -286,7 +286,7 @@ bool hitag2crack_test_e_p0cmd(uint8_t *keybits, uint8_t *nrar, uint8_t *e_cmd, u
 
 // hitag2crack_xor XORs the source with the pad to produce the target.
 // source, target and pad are binarrays of length len.
-void hitag2crack_xor(uint8_t *target, uint8_t *source, uint8_t *pad, unsigned int len) {
+void hitag2crack_xor(uint8_t *target, const uint8_t *source, const uint8_t *pad, unsigned int len) {
 
     for (int i = 0; i < len; i++) {
         target[i] = source[i] ^ pad[i];

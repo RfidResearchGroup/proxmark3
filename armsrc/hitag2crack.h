@@ -22,7 +22,7 @@ bool hitag2_crack(uint8_t *response, uint8_t *nrarhex);
 bool hitag2crack_find_valid_e_cmd(uint8_t e_cmd[], uint8_t nrar[]);
 bool hitag2crack_find_e_page0_cmd(uint8_t keybits[], uint8_t e_firstcmd[], uint8_t nrar[], uint8_t uid[]);
 bool hitag2crack_test_e_p0cmd(uint8_t *keybits, uint8_t *nrar, uint8_t *e_cmd, uint8_t *uid, uint8_t *e_uid);
-void hitag2crack_xor(uint8_t *target, uint8_t *source, uint8_t *pad, unsigned int len);
+void hitag2crack_xor(uint8_t *target, const uint8_t *source, const uint8_t *pad, unsigned int len);
 bool hitag2crack_read_page(uint8_t *responsestr, uint8_t pagenum, uint8_t *nrar, uint8_t *keybits);
 bool hitag2crack_send_e_cmd(uint8_t *responsestr, uint8_t *nrar, uint8_t *cmd, int len);
 bool hitag2crack_tx_rx(uint8_t *responsestr, uint8_t *msg, int len, int state, bool reset);

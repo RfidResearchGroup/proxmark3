@@ -320,7 +320,7 @@ static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len, bool
 /*
  * to check if the right uid was selected
  */
-static int check_select(uint8_t *rx, uint32_t uid) {
+static int check_select(const uint8_t *rx, uint32_t uid) {
     unsigned char resp[48];
     uint32_t ans = 0x0;
     for (int i = 0; i < 48; i++)
@@ -1039,7 +1039,7 @@ static void sendReceiveHitagS(uint8_t *tx, size_t txlen, uint8_t *rx, size_t siz
     *prxbits = k;
 }
 
-static size_t concatbits(uint8_t *dstbuf, size_t dstbufskip, uint8_t *srcbuf, size_t srcbufstart, size_t srcbuflen) {
+static size_t concatbits(uint8_t *dstbuf, size_t dstbufskip, const uint8_t *srcbuf, size_t srcbufstart, size_t srcbuflen) {
     // erase dstbuf bits that will be overriden
     dstbuf[dstbufskip / 8] &= 0xFF - ((1 << (7 - (dstbufskip % 8) + 1)) - 1);
     for (size_t i = (dstbufskip / 8) + 1; i <= (dstbufskip + srcbuflen) / 8; i++) {
@@ -1357,11 +1357,11 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
  * Authenticates to the Tag with the given Key or Challenge.
  * Writes the given 32Bit data into page_
  */
-void WritePageHitagS(hitag_function htf, hitag_data *htd, int pageNum, bool ledcontrol) {
+void WritePageHitagS(hitag_function htf, hitag_data *htd, int page, bool ledcontrol) {
 
     bool bSuccessful = false;
     //check for valid input
-    if (pageNum == 0) {
+    if (page == 0) {
         Dbprintf("Error, invalid page");
         reply_mix(CMD_ACK, bSuccessful, 0, 0, 0, 0);
         return;
@@ -1378,7 +1378,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int pageNum, bool ledc
     }
 
     //check if the given page exists
-    if (pageNum > tag.max_page) {
+    if (page > tag.max_page) {
         Dbprintf("page number too big for this tag");
         goto write_end;
     }
@@ -1387,7 +1387,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int pageNum, bool ledc
     txlen = 0;
     uint8_t cmd = 0x08;
     txlen = concatbits(tx, txlen, &cmd, 8 - 4, 4);
-    uint8_t addr = pageNum;
+    uint8_t addr = page;
     txlen = concatbits(tx, txlen, &addr, 0, 8);
     uint8_t crc = CRC8Hitag1Bits(tx, txlen);
     txlen = concatbits(tx, txlen, &crc, 0, 8);
@@ -1395,7 +1395,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int pageNum, bool ledc
     sendReceiveHitagS(tx, txlen, rx, ARRAYLEN(rx), &rxlen, t_wait, ledcontrol, false);
 
     if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x1)) {
-        Dbprintf("no write access on page %d", pageNum);
+        Dbprintf("no write access on page %d", page);
         goto write_end;
     }
 
@@ -1425,9 +1425,9 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int pageNum, bool ledc
     sendReceiveHitagS(tx, txlen, rx, ARRAYLEN(rx), &rxlen, t_wait, ledcontrol, false);
 
     if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x1)) {
-        Dbprintf("write on page %d failed", pageNum);
+        Dbprintf("write on page %d failed", page);
     } else {
-        Dbprintf("write on page %d successful", pageNum);
+        Dbprintf("write on page %d successful", page);
         bSuccessful = true;
     }
 
@@ -1457,25 +1457,31 @@ void Hitag_check_challenges(uint8_t *data, uint32_t datalen, bool ledcontrol) {
     uint8_t tx[HITAG_FRAME_LEN];
     int t_wait = HITAG_T_WAIT_MAX;
 
-    while (!BUTTON_PRESS() && !data_available()) {
+    while (BUTTON_PRESS() == false && data_available() == false) {
         // Watchdog hit
         WDT_HIT();
 
         hitag_data htd;
+        memset(&htd, 0, sizeof(htd));
+
         memcpy(htd.auth.NrAr, data + dataoffset, 8);
 
         int res = selectHitagS(RHTSF_CHALLENGE, &htd, tx, ARRAYLEN(tx), rx, ARRAYLEN(rx), t_wait, ledcontrol);
-        Dbprintf("Challenge %s: %02X %02X %02X %02X %02X %02X %02X %02X", res == -1 ? "failed " : "success",
+        Dbprintf("Challenge %s: %02X %02X %02X %02X %02X %02X %02X %02X",
+                 res == -1 ? "failed " : "success",
                  htd.auth.NrAr[0], htd.auth.NrAr[1],
                  htd.auth.NrAr[2], htd.auth.NrAr[3],
                  htd.auth.NrAr[4], htd.auth.NrAr[5],
-                 htd.auth.NrAr[6], htd.auth.NrAr[7]);
+                 htd.auth.NrAr[6], htd.auth.NrAr[7]
+                );
+
         if (res == -1) {
             // Need to do a dummy UID select that will fail
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
             SpinDelay(2);
             selectHitagS(RHTSF_CHALLENGE, &htd, tx, ARRAYLEN(tx), rx, ARRAYLEN(rx), t_wait, ledcontrol);
         }
+
         dataoffset += 8;
         if (dataoffset >= datalen - 8)
             break;
@@ -1484,6 +1490,7 @@ void Hitag_check_challenges(uint8_t *data, uint32_t datalen, bool ledcontrol) {
         // min t_reset = 2ms
         SpinDelay(2);
     }
+
     set_tracing(false);
     lf_finalize(ledcontrol);
     reply_mix(CMD_ACK, 1, 0, 0, 0, 0);

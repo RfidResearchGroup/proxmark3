@@ -94,7 +94,7 @@ void SniffIClass(uint8_t jam_search_len, uint8_t *jam_search_string) {
     SniffIso15693(jam_search_len, jam_search_string);
 }
 
-static void rotateCSN(uint8_t *original_csn, uint8_t *rotated_csn) {
+static void rotateCSN(const uint8_t *original_csn, uint8_t *rotated_csn) {
     for (uint8_t i = 0; i < 8; i++) {
         rotated_csn[i] = (original_csn[i] >> 3) | (original_csn[(i + 1) % 8] << 5);
     }
