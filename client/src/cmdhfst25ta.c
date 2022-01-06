@@ -103,7 +103,7 @@ static void print_st25ta_system_info(uint8_t *d, uint8_t n) {
     */
 }
 
-static uint16_t get_sw(uint8_t *d, uint8_t n) {
+static uint16_t get_sw(const uint8_t *d, uint8_t n) {
     if (n < 2)
         return 0;
 

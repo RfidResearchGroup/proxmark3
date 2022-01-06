@@ -1213,9 +1213,11 @@ static int CmdHFMFPChk(const char *Cmd) {
     if (dict_filenamelen) {
         uint32_t keycnt = 0;
         res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, 16, &keycnt, 0, &endFilePosition, true);
-        keyListLen = keycnt;
-        if (endFilePosition)
+
+        if (res == PM3_SUCCESS && endFilePosition) {
+            keyListLen = keycnt;
             PrintAndLogEx(SUCCESS, "First part of dictionary successfully loaded.");
+        }
     }
 
     if (keyListLen == 0) {
@@ -1255,7 +1257,9 @@ static int CmdHFMFPChk(const char *Cmd) {
 
             uint32_t keycnt = 0;
             res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
-            keyListLen = keycnt;
+            if (res == PM3_SUCCESS && endFilePosition) {
+                keyListLen = keycnt;
+            }
             continue;
         }
         break;

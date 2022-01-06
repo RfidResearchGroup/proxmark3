@@ -24,7 +24,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-static uint16_t get_sw(uint8_t *d, uint8_t n) {
+static uint16_t get_sw(const uint8_t *d, uint8_t n) {
     if (n < 2)
         return 0;
 
