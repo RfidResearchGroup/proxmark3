@@ -54,14 +54,6 @@ static int switch_off_field_14b(void) {
     return PM3_SUCCESS;
 }
 
-static uint16_t get_sw(uint8_t *d, uint8_t n) {
-    if (n < 2)
-        return 0;
-
-    n -= 2;
-    return d[n] * 0x0100 + d[n + 1];
-}
-
 static void hf14b_aid_search(bool verbose) {
 
     json_t *root = AIDSearchInit(verbose);

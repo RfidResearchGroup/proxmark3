@@ -12,6 +12,7 @@
 #define CMDDATA_H__
 
 #include "common.h"
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -70,7 +71,7 @@ int NRZrawDemod(int clk, int invert, int maxErr, bool verbose);                 
 
 int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_hex);
 
-void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx);
+void setDemodBuff(const uint8_t *buff, size_t size, size_t start_idx);
 bool getDemodBuff(uint8_t *buff, size_t *size);
 void save_restoreDB(uint8_t saveOpt);// option '1' to save g_DemodBuffer any other to restore
 int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveGrph, bool verbose);

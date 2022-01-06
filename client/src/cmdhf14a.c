@@ -2234,14 +2234,6 @@ int infoHF14A4Applications(bool verbose) {
     return found;
 }
 
-static uint16_t get_sw(uint8_t *d, uint8_t n) {
-    if (n < 2) {
-        return 0;
-    }
-    n -= 2;
-    return d[n] * 0x0100 + d[n + 1];
-}
-
 static uint64_t inc_sw_error_occurrence(uint16_t sw, uint64_t all_sw[256][256]) {
     uint8_t sw1 = (uint8_t)(sw >> 8);
     uint8_t sw2 = (uint8_t)(0xff & sw);

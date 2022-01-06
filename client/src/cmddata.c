@@ -36,9 +36,8 @@ int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
 
-//set the g_DemodBuffer with given array ofq binary (one bit per byte)
-//by marshmellow
-void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx) {
+// set the g_DemodBuffer with given array ofq binary (one bit per byte)
+void setDemodBuff(const uint8_t *buff, size_t size, size_t start_idx) {
     if (buff == NULL) return;
 
     if (size > MAX_DEMOD_BUF_LEN - start_idx)

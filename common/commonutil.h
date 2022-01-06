@@ -75,4 +75,6 @@ void htole24(uint32_t val, uint8_t data[3]);
 // rol on a u32
 uint32_t rotl(uint32_t a, uint8_t n);
 uint32_t rotr(uint32_t a, uint8_t n);
+
+uint16_t get_sw(const uint8_t *d, uint8_t n);
 #endif

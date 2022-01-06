@@ -12,16 +12,17 @@
 #include "cmdhfst.h"
 #include <ctype.h>
 #include "fileutils.h"
-#include "cmdparser.h"     // command_t
-#include "comms.h"         // clearCommandBuffer
+#include "cmdparser.h"         // command_t
+#include "comms.h"             // clearCommandBuffer
 #include "cmdtrace.h"
 #include "cliparser.h"
 #include "crc16.h"
 #include "cmdhf14a.h"
-#include "protocols.h"     // definitions of ISO14A/7816 protocol
+#include "protocols.h"         // definitions of ISO14A/7816 protocol
 #include "iso7816/apduinfo.h"  // GetAPDUCodeDescription
-#include "nfc/ndef.h"      // NDEFRecordsDecodeAndPrint
-#include "cmdnfc.h"        // print_type4_cc_info
+#include "nfc/ndef.h"          // NDEFRecordsDecodeAndPrint
+#include "cmdnfc.h"            // print_type4_cc_info
+#include "commonutil.h"        // get_sw
 
 #define TIMEOUT 2000
 
@@ -101,14 +102,6 @@ static void print_st25ta_system_info(uint8_t *d, uint8_t n) {
     0012
     80000000001302E2007D0E8DCC
     */
-}
-
-static uint16_t get_sw(const uint8_t *d, uint8_t n) {
-    if (n < 2)
-        return 0;
-
-    n -= 2;
-    return d[n] * 0x0100 + d[n + 1];
 }
 
 // ST25TA

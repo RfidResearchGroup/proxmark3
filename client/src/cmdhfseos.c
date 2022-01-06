@@ -19,18 +19,11 @@
 #include "ui.h"
 #include "cmdhf14a.h"           // manufacture
 #include "protocols.h"          // definitions of ISO14A/7816 protocol
-#include "iso7816/apduinfo.h"       // GetAPDUCodeDescription
+#include "iso7816/apduinfo.h"   // GetAPDUCodeDescription
 #include "crypto/asn1utils.h"   // ASN1 decode / print
+#include "commonutil.h"         // get_sw
 
 static int CmdHelp(const char *Cmd);
-
-static uint16_t get_sw(const uint8_t *d, uint8_t n) {
-    if (n < 2)
-        return 0;
-
-    n -= 2;
-    return d[n] * 0x0100 + d[n + 1];
-}
 
 static int seos_select(void) {
     bool activate_field = true;

@@ -1237,7 +1237,7 @@ static int CmdHFMFPChk(const char *Cmd) {
     }
 
     if (verbose == false)
-        PrintAndLogEx(NORMAL, "Search keys");
+        PrintAndLogEx(INFO, "Search keys");
 
     while (true) {
         res = MFPKeyCheck(startSector, endSector, startKeyAB, endKeyAB, keyList, keyListLen, foundKeys, verbose);
