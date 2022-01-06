@@ -129,27 +129,27 @@ uint64_t bytes_to_num(uint8_t *src, size_t len) {
     return num;
 }
 
-uint16_t MemLeToUint2byte(uint8_t *data) {
+uint16_t MemLeToUint2byte(const uint8_t *data) {
     return (data[1] << 8) + data[0];
 }
 
-uint32_t MemLeToUint3byte(uint8_t *data) {
+uint32_t MemLeToUint3byte(const uint8_t *data) {
     return (data[2] << 16) + (data[1] << 8) + data[0];
 }
 
-uint32_t MemLeToUint4byte(uint8_t *data) {
+uint32_t MemLeToUint4byte(const uint8_t *data) {
     return (data[3] << 24) + (data[2] << 16) + (data[1] << 8) + data[0];
 }
 
-uint16_t MemBeToUint2byte(uint8_t *data) {
+uint16_t MemBeToUint2byte(const uint8_t *data) {
     return (data[0] << 8) + data[1];
 }
 
-uint32_t MemBeToUint3byte(uint8_t *data) {
+uint32_t MemBeToUint3byte(const uint8_t *data) {
     return (data[0] << 16) + (data[1] << 8) + data[2];
 }
 
-uint32_t MemBeToUint4byte(uint8_t *data) {
+uint32_t MemBeToUint4byte(const uint8_t *data) {
     return (data[0] << 24) + (data[1] << 16) + (data[2] << 8) + data[3];
 }
 
@@ -207,7 +207,7 @@ void lsl(uint8_t *data, size_t len) {
 
 
 // BSWAP24 of array[3]
-uint32_t le24toh(uint8_t data[3]) {
+uint32_t le24toh(const uint8_t data[3]) {
     return (data[2] << 16) | (data[1] << 8) | data[0];
 }
 
