@@ -110,7 +110,7 @@ uint32_t ul_ev1_pwdgenB(const uint8_t *uid) {
 }
 
 // Lego Dimension pwd generation algo nickname C.
-uint32_t ul_ev1_pwdgenC(uint8_t *uid) {
+uint32_t ul_ev1_pwdgenC(const uint8_t *uid) {
     uint32_t pwd = 0;
     uint32_t base[] = {
         0xffffffff, 0x28ffffff,
@@ -182,7 +182,7 @@ uint16_t ul_ev1_packgenD(const uint8_t *uid) {
     return BSWAP_16(p & 0xFFFF);
 }
 
-uint32_t ul_ev1_pwdgen_def(uint8_t *uid) {
+uint32_t ul_ev1_pwdgen_def(const uint8_t *uid) {
     return 0xFFFFFFFF;
 }
 uint16_t ul_ev1_packgen_def(uint8_t *uid) {

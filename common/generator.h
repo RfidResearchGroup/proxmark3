@@ -13,10 +13,10 @@
 
 #include "common.h"
 
-uint32_t ul_ev1_pwdgen_def(uint8_t *uid);
+uint32_t ul_ev1_pwdgen_def(const uint8_t *uid);
 uint32_t ul_ev1_pwdgenA(const uint8_t *uid);
 uint32_t ul_ev1_pwdgenB(const uint8_t *uid);
-uint32_t ul_ev1_pwdgenC(uint8_t *uid);
+uint32_t ul_ev1_pwdgenC(const uint8_t *uid);
 uint32_t ul_ev1_pwdgenD(const uint8_t *uid);
 
 uint16_t ul_ev1_packgen_def(uint8_t *uid);
