@@ -21,7 +21,7 @@
 
 #include "common.h"
 
-uint8_t getParity(uint8_t *bits, uint8_t len, uint8_t type);
+uint8_t getParity(const uint8_t *bits, uint8_t len, uint8_t type);
 uint8_t checkParity(uint32_t bits, uint8_t len, uint8_t type);
 
 void num_to_wiegand_bytes(uint64_t oem, uint64_t fc, uint64_t cn, uint8_t *dest, uint8_t formatlen);

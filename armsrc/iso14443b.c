@@ -678,7 +678,7 @@ static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
     return false;
 }
 
-static void TransmitFor14443b_AsTag(uint8_t *response, uint16_t len) {
+static void TransmitFor14443b_AsTag(const uint8_t *response, uint16_t len) {
 
     // Signal field is off with the appropriate LED
     LED_D_OFF();

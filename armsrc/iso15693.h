@@ -35,8 +35,8 @@
 
 void Iso15693InitReader(void);
 void Iso15693InitTag(void);
-void CodeIso15693AsReader(uint8_t *cmd, int n);
-void CodeIso15693AsTag(uint8_t *cmd, size_t len);
+void CodeIso15693AsReader(const uint8_t *cmd, int n);
+void CodeIso15693AsTag(const uint8_t *cmd, size_t len);
 
 void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time, uint32_t slot_time, bool slow);
 int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time);
@@ -57,7 +57,7 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
 
 int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time);
 
-void SetTag15693Uid(uint8_t *uid);
+void SetTag15693Uid(const uint8_t *uid);
 
 void DisablePrivacySlixLIso15693(uint8_t *password);
 #endif

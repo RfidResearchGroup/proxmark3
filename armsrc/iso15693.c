@@ -140,7 +140,7 @@ static uint8_t encode15_lut[] = {
     0x01  // 00000001
 };
 
-void CodeIso15693AsReader(uint8_t *cmd, int n) {
+void CodeIso15693AsReader(const uint8_t *cmd, int n) {
 
     tosend_reset();
     tosend_t *ts = get_tosend();
@@ -181,7 +181,7 @@ static void CodeIso15693AsReaderEOF(void) {
 // encode data using "1 out of 256" scheme
 // data rate is 1,66 kbit/s (fc/8192)
 // is designed for more robust communication over longer distances
-static void CodeIso15693AsReader256(uint8_t *cmd, int n) {
+static void CodeIso15693AsReader256(const uint8_t *cmd, int n) {
 
     tosend_reset();
     tosend_t *ts = get_tosend();
@@ -218,7 +218,7 @@ static const uint8_t encode_4bits[16] = {
     0xa5, 0x65, 0x95, 0x55
 };
 
-void CodeIso15693AsTag(uint8_t *cmd, size_t len) {
+void CodeIso15693AsTag(const uint8_t *cmd, size_t len) {
     /*
      * SOF comprises 3 parts;
      * * An unmodulated time of 56.64 us
@@ -2094,7 +2094,7 @@ void LockPassSlixIso15693(uint32_t pass_id, uint32_t password) {
 //-----------------------------------------------------------------------------
 
 // Set the UID on Magic ISO15693 tag (based on Iceman's LUA-script).
-void SetTag15693Uid(uint8_t *uid) {
+void SetTag15693Uid(const uint8_t *uid) {
 
     LED_A_ON();
 
@@ -2135,7 +2135,7 @@ void SetTag15693Uid(uint8_t *uid) {
     switch_off();
 }
 
-static void init_password_15693_slixl(uint8_t *buffer, uint8_t *pwd, uint8_t *rnd) {
+static void init_password_15693_slixl(uint8_t *buffer, uint8_t *pwd, const uint8_t *rnd) {
     memcpy(buffer, pwd, 4);
     if (rnd) {
         buffer[0] ^= rnd[0];

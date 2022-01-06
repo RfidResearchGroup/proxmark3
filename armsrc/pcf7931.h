@@ -20,9 +20,9 @@
 
 size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol);
 bool IsBlock0PCF7931(uint8_t *block);
-bool IsBlock1PCF7931(uint8_t *block);
+bool IsBlock1PCF7931(const uint8_t *block);
 void ReadPCF7931(bool ledcontrol);
-void SendCmdPCF7931(uint32_t *tab, bool ledcontrol);
+void SendCmdPCF7931(const uint32_t *tab, bool ledcontrol);
 bool AddBytePCF7931(uint8_t byte, uint32_t *tab, int32_t l, int32_t p);
 bool AddBitPCF7931(bool b, uint32_t *tab, int32_t l, int32_t p);
 bool AddPatternPCF7931(uint32_t a, uint32_t b, uint32_t c, uint32_t *tab);

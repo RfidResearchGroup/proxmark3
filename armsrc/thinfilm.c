@@ -78,7 +78,7 @@ static void CodeThinfilmAsTag(const uint8_t *cmd, uint16_t len) {
     ts->max++;
 }
 
-static int EmSendCmdThinfilmRaw(uint8_t *resp, uint16_t respLen) {
+static int EmSendCmdThinfilmRaw(const uint8_t *resp, uint16_t respLen) {
     volatile uint8_t b;
     uint16_t i = 0;
     uint32_t ThisTransferTime;

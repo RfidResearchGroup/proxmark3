@@ -154,7 +154,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
 int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades);
 void iso14a_set_trigger(bool enable);
 
-int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen);
+int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen);
 int EmSend4bit(uint8_t resp);
 int EmSendCmd(uint8_t *resp, uint16_t respLen);
 int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool collision);

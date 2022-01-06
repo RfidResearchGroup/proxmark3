@@ -172,7 +172,7 @@ static void opt_successor(const uint8_t *k, State_t *s, uint8_t y) {
     s->l = s->r + r;
 }
 
-static void opt_suc(const uint8_t *k, State_t *s, uint8_t *in, uint8_t length, bool add32Zeroes) {
+static void opt_suc(const uint8_t *k, State_t *s, const uint8_t *in, uint8_t length, bool add32Zeroes) {
     for (int i = 0; i < length; i++) {
         uint8_t head;
         head = in[i];

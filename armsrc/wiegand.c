@@ -25,7 +25,7 @@
 * @param type     use the defined values  EVEN|ODD
 * @return parity bit required to match type
 */
-uint8_t getParity(uint8_t *bits, uint8_t len, uint8_t type) {
+uint8_t getParity(const uint8_t *bits, uint8_t len, uint8_t type) {
     uint8_t x = 0;
     for (; len > 0; --len)
         x += bits[len - 1];
@@ -89,7 +89,7 @@ size_t removeParity(uint8_t *bits, size_t startIdx, uint8_t pLen, uint8_t pType,
 * @param pType      EVEN|ODD|2 (always 1's)|3 (always 0's)
 * @return
 */
-size_t addParity(uint8_t *src, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType) {
+size_t addParity(const uint8_t *src, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType) {
     uint32_t parityWd = 0;
     size_t j = 0, bitCnt = 0;
     for (int word = 0; word < sourceLen; word += pLen - 1) {

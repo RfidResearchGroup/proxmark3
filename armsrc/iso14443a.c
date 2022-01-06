@@ -801,7 +801,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 //-----------------------------------------------------------------------------
 // Prepare tag messages
 //-----------------------------------------------------------------------------
-static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *par, bool collision) {
+static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, const uint8_t *par, bool collision) {
 
     tosend_reset();
 
@@ -2047,7 +2047,7 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
     }
 }
 
-int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen) {
+int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
     volatile uint8_t b;
     uint16_t i = 0;
     uint32_t ThisTransferTime;
@@ -2412,7 +2412,7 @@ void iso14443a_antifuzz(uint32_t flags) {
     BigBuf_free_keep_EM();
 }
 
-static void iso14a_set_ATS_times(uint8_t *ats) {
+static void iso14a_set_ATS_times(const uint8_t *ats) {
 
     if (ats[0] > 1) {                           // there is a format byte T0
         if ((ats[1] & 0x20) == 0x20) {          // there is an interface byte TB(1)

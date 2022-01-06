@@ -663,7 +663,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
 }
 
 // Return 1 if the nonce is invalid else return 0
-static int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, uint8_t *parity) {
+static int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, const uint8_t *parity) {
     return (
                (oddparity8((Nt >> 24) & 0xFF) == ((parity[0]) ^ oddparity8((NtEnc >> 24) & 0xFF) ^ BIT(Ks1, 16))) && \
                (oddparity8((Nt >> 16) & 0xFF) == ((parity[1]) ^ oddparity8((NtEnc >> 16) & 0xFF) ^ BIT(Ks1, 8))) && \
@@ -1300,7 +1300,7 @@ static uint8_t chkKey_readb(struct chk_t *c, uint8_t *keyb) {
     return res;
 }
 
-static void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) {
+static void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, const uint8_t *sectorcnt, uint8_t *foundkeys) {
     for (uint8_t s = 0; s < *sectorcnt; s++) {
 
         // skip already found A keys
@@ -1318,7 +1318,7 @@ static void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *fo
     }
 }
 
-static void chkKey_scanB(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) {
+static void chkKey_scanB(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, const uint8_t *sectorcnt, uint8_t *foundkeys) {
     for (uint8_t s = 0; s < *sectorcnt; s++) {
 
         // skip already found B keys

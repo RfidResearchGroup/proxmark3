@@ -180,7 +180,7 @@ bool IsBlock0PCF7931(uint8_t *block) {
     return false;
 }
 
-bool IsBlock1PCF7931(uint8_t *block) {
+bool IsBlock1PCF7931(const uint8_t *block) {
     // assuming all RFU bits are set to 0
 
     uint8_t rb1 = block[14] & 0x80;
@@ -472,7 +472,7 @@ void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, ui
  * @param tab : array of the data frame
  */
 
-void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
+void SendCmdPCF7931(const uint32_t *tab, bool ledcontrol) {
     uint16_t u = 0, tempo = 0;
 
     if (g_dbglevel >= DBG_INFO) {

@@ -30,7 +30,7 @@
 #include "desfire_crypto.h"
 
 // crypto1 helpers
-void mf_crypto1_decryptEx(struct Crypto1State *pcs, uint8_t *data_in, int len, uint8_t *data_out) {
+void mf_crypto1_decryptEx(struct Crypto1State *pcs, const uint8_t *data_in, int len, uint8_t *data_out) {
     if (len != 1) {
         for (int i = 0; i < len; i++)
             data_out[i] = crypto1_byte(pcs, 0x00, 0) ^ data_in[i];
@@ -53,7 +53,7 @@ void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, uint16_t len, u
     mf_crypto1_encryptEx(pcs, data, NULL, data, len, par);
 }
 
-void mf_crypto1_encryptEx(struct Crypto1State *pcs, uint8_t *data_in, uint8_t *keystream, uint8_t *data_out, uint16_t len, uint8_t *par) {
+void mf_crypto1_encryptEx(struct Crypto1State *pcs, const uint8_t *data_in, uint8_t *keystream, uint8_t *data_out, uint16_t len, uint8_t *par) {
     int i;
     par[0] = 0;
 
