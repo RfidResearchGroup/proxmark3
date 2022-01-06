@@ -47,11 +47,11 @@ char *ecdsa_get_error(int ret);
 
 int ecdsa_nist_test(bool verbose);
 
-void bin_xor(uint8_t *d1, uint8_t *d2, size_t len);
+void bin_xor(uint8_t *d1, const uint8_t *d2, size_t len);
 
 #define ISO9797_M2_PAD_BYTE 0x80
 void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_t sdatalen, size_t blocklen);
-size_t FindISO9797M2PaddingDataLen(uint8_t *data, size_t datalen);
+size_t FindISO9797M2PaddingDataLen(const uint8_t *data, size_t datalen);
 
 
 #endif /* libpcrypto.h */

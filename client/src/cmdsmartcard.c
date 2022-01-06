@@ -59,7 +59,7 @@ out:
     return retval;
 }
 
-static uint8_t GetATRTA1(uint8_t *atr, size_t atrlen) {
+static uint8_t GetATRTA1(const uint8_t *atr, size_t atrlen) {
     if (atrlen > 2) {
         uint8_t T0 = atr[1];
         if (T0 & 0x10)
@@ -258,7 +258,7 @@ static void PrintATR(uint8_t *atr, size_t atrlen) {
 
 static int smart_wait(uint8_t *out, int maxoutlen, bool verbose) {
     int i = 4;
-    uint32_t len = 0;
+    uint32_t len;
     do {
         clearCommandBuffer();
         PacketResponseNG resp;

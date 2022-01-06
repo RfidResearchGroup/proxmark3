@@ -32,10 +32,10 @@
 
 static int CmdHelp(const char *Cmd);
 
-static uint8_t calculateLRC(uint8_t *bytes, uint8_t len) {
+static uint8_t calculateLRC(const uint8_t *d, uint8_t n) {
     uint8_t lcr = 0;
-    for (uint8_t i = 0; i < len; i++)
-        lcr ^= bytes[i];
+    for (uint8_t i = 0; i < n; i++)
+        lcr ^= d[i];
     return lcr;
 }
 /*

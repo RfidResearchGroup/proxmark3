@@ -521,7 +521,7 @@ static char *get_st_chip_model(uint8_t data) {
     return retStr;
 }
 
-static char *get_st_lock_info(uint8_t model, uint8_t *lockbytes, uint8_t blk) {
+static char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uint8_t blk) {
 
     static char str[16];
     char *s = str;
@@ -687,11 +687,11 @@ static char *get_st_lock_info(uint8_t model, uint8_t *lockbytes, uint8_t blk) {
     return s;
 }
 
-static uint8_t get_st_chipid(uint8_t *uid) {
+static uint8_t get_st_chipid(const uint8_t *uid) {
     return uid[5] >> 2;
 }
 
-static uint8_t get_st_cardsize(uint8_t *uid) {
+static uint8_t get_st_cardsize(const uint8_t *uid) {
     uint8_t chipid = get_st_chipid(uid);
     switch (chipid) {
         case 0x0:

@@ -3905,7 +3905,7 @@ static int CmdT55xxProtect(const char *Cmd) {
 // if the difference between a and b is less then or eq to d  i.e. does a = b +/- d
 #define APPROX_EQ(a, b, d) ((abs(a - b) <= d) ? true : false)
 
-static uint8_t t55sniff_get_packet(int *pulseBuffer, char *data, uint8_t width0, uint8_t width1, uint8_t tolerance) {
+static uint8_t t55sniff_get_packet(const int *pulseBuffer, char *data, uint8_t width0, uint8_t width1, uint8_t tolerance) {
     int i = 0;
     bool ok = true;
     uint8_t len = 0;

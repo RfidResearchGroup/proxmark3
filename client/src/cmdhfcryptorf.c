@@ -314,7 +314,7 @@ static int CmdHFCryptoRFDump(const char *Cmd) {
     PacketResponseNG resp;
 
     // select
-    int status = 0;
+    int status;
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
         status = resp.oldarg[0];
         if (status < 0) {

@@ -74,7 +74,7 @@ static const char *em_get_card_str(uint32_t config) {
 }
 
 // even parity COLUMN
-static bool em4x05_col_parity_test(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
+static bool em4x05_col_parity_test(const uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
     if (rows * cols > size) return false;
     uint8_t colP = 0;
 
@@ -1889,7 +1889,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
     return exit_code;
 }
 
-static size_t em4x05_Sniff_GetNextBitStart(size_t idx, size_t sc, int *data, size_t *pulsesamples) {
+static size_t em4x05_Sniff_GetNextBitStart(size_t idx, size_t sc, const int *data, size_t *pulsesamples) {
     while ((idx < sc) && (data[idx] <= 10)) // find a going high
         idx++;
 
@@ -1905,7 +1905,7 @@ static size_t em4x05_Sniff_GetNextBitStart(size_t idx, size_t sc, int *data, siz
     return idx;
 }
 
-uint32_t static em4x05_Sniff_GetBlock(char *bits, bool fwd) {
+static uint32_t em4x05_Sniff_GetBlock(const char *bits, bool fwd) {
     uint32_t value = 0;
     uint8_t idx;
     bool parityerror = false;

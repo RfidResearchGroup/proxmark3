@@ -585,7 +585,7 @@ exit:
     return res;
 }
 
-void bin_xor(uint8_t *d1, uint8_t *d2, size_t len) {
+void bin_xor(uint8_t *d1, const uint8_t *d2, size_t len) {
     for (size_t i = 0; i < len; i++)
         d1[i] = d1[i] ^ d2[i];
 }
@@ -598,7 +598,7 @@ void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_
     ddata[sdatalen] = ISO9797_M2_PAD_BYTE;
 }
 
-size_t FindISO9797M2PaddingDataLen(uint8_t *data, size_t datalen) {
+size_t FindISO9797M2PaddingDataLen(const uint8_t *data, size_t datalen) {
     for (int i = datalen; i > 0; i--) {
         if (data[i - 1] == 0x80)
             return i - 1;
