@@ -947,13 +947,94 @@ static int CmdGallagherDelete(const char *cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdGallagherDiversify(const char *cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf gallagher diversify",
+                  "Diversify Gallagher key",
+                  "hf gallagher diversify --uid 11223344556677 --aid 2081f4"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "apdu",                  "Show APDU requests and responses"),
+
+        arg_str1(NULL,  "aid",     "<hex>",     "Application ID for diversification (3 bytes)"),
+        arg_int0(NULL,  "keynum",  "<decimal>", "Key number [default=0]"),
+        arg_str0(NULL,  "uid",     "<hex>",     "Card UID to delete (4 or 7 bytes)"),
+        arg_str0(NULL,  "sitekey", "<hex>",     "MIFARE site key to compute diversified keys (16 bytes, required if using non-default key)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, cmd, argtable, false);
+
+    SetAPDULogging(arg_get_lit(ctx, 1));
+
+    int aid_len = 0;
+    uint8_t aid_buf[3] = {0};
+    uint32_t aid = 0;
+    CLIGetHexWithReturn(ctx, 2, aid_buf, &aid_len);
+
+    if (aid_len != 3)
+        HFGAL_RET_ERR(PM3_EINVARG, "--aid must be 3 bytes");
+    reverse_aid(aid_buf); // PM3 displays AIDs backwards
+    aid = DesfireAIDByteToUint(aid_buf);
+
+    // Check that the AID is in the expected range
+    if (memcmp(aid_buf, "\xF4\x81", 2) != 0 || aid_buf[2] < 0x20 || aid_buf[2] > 0x2B)
+        // TODO: this should probably be a warning, but key diversification will throw an error later even if we don't
+        HFGAL_RET_ERR(PM3_EINVARG, "Invalid Gallagher AID %06X, expected 2?81F4, where 0 <= ? <= 0xB", aid);
+
+    int key_num = arg_get_int_def(ctx, 3, 0);
+
+    int uid_len = 0;
+    uint8_t uid[7] = {0};
+    CLIGetHexWithReturn(ctx, 4, uid, &uid_len);
+    if (uid_len > 0 && uid_len != 4 && uid_len != 7)
+        HFGAL_RET_ERR(PM3_EINVARG, "--uid must be 4 or 7 bytes");
+
+    int site_key_len = 0;
+    uint8_t site_key[16] = {0};
+    memcpy(site_key, DEFAULT_SITE_KEY, ARRAYLEN(site_key));
+    CLIGetHexWithReturn(ctx, 5, site_key, &site_key_len);
+    if (site_key_len > 0 && site_key_len != 16)
+        HFGAL_RET_ERR(PM3_EINVARG, "--sitekey must be 16 bytes");
+    CLIParserFree(ctx);
+
+    if (uid_len == 0) {
+        // Set up context
+        DropField();
+        DesfireContext_t dctx = {0};
+        DesfireClearContext(&dctx);
+
+        // Get card UID (for key diversification)
+        int res = DesfireGetCardUID(&dctx);
+        HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed retrieving card UID");
+
+        uid_len = dctx.uidlen;
+        memcpy(uid, dctx.uid, uid_len);
+    }
+
+    // Diversify key
+    uint8_t key[CRYPTO_AES128_KEY_SIZE] = {0};
+    int res = hfgal_diversify_key(site_key, uid, uid_len, key_num, aid, key);
+    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed diversifying key");
+
+    char *key_str = sprint_hex_inrow(key, ARRAYLEN(key));
+    PrintAndLogEx(SUCCESS, "Successfully diversified key: " _GREEN_("%s"), key_str);
+
+    if (IfPm3Iso14443())
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes auth --aid %06X --keyno %d "
+                                                  "--algo AES --key %s`") " to verify", aid, key_num, key_str);
+    return PM3_SUCCESS;
+}
+
 static int CmdHelp(const char *cmd);
 
 static command_t CommandTable[] = {
-    {"help",   CmdHelp,            AlwaysAvailable, "This help"},
-    {"reader", CmdGallagherReader, IfPm3Iso14443,   "Read & decode all Gallagher credentials on the DESFire card"},
-    {"clone",  CmdGallagherClone,  IfPm3Iso14443,   "Add Gallagher credentials to a DESFire card"},
-    {"delete", CmdGallagherDelete, IfPm3Iso14443,   "Delete Gallagher credentials from a DESFire card"},
+    {"help",         CmdHelp,               AlwaysAvailable, "This help"},
+    {"reader",       CmdGallagherReader,    IfPm3Iso14443,   "Read & decode all Gallagher credentials on the DESFire card"},
+    {"clone",        CmdGallagherClone,     IfPm3Iso14443,   "Add Gallagher credentials to a DESFire card"},
+    {"delete",       CmdGallagherDelete,    IfPm3Iso14443,   "Delete Gallagher credentials from a DESFire card"},
+    {"diversifykey", CmdGallagherDiversify, AlwaysAvailable, "Diversify Gallagher key"},
     {NULL, NULL, NULL, NULL}
 };
 

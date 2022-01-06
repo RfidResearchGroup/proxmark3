@@ -2359,9 +2359,26 @@
             ],
             "usage": "hf gallagher delete [-hv] [--apdu] --aid <hex> [--sitekey <hex>]"
         },
+        "hf gallagher diversifykey": {
+            "command": "hf gallagher diversifykey",
+            "description": "diversify gallagher key",
+            "notes": [
+                "hf gallagher diversify --uid 11223344556677 --aid 2081f4 -> diversify"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "--apdu show apdu requests and responses",
+                "--aid <hex> application id for diversification (3 bytes)",
+                "--keynum <decimal> key number [default=0]",
+                "--uid <hex> card uid to delete (4 or 7 bytes)",
+                "--sitekey <hex> mifare site key to compute diversified keys (16 bytes, required if using non-default key)"
+            ],
+            "usage": "hf gallagher diversify [-h] [--apdu] --aid <hex> [--keynum <decimal>] [--uid <hex>] [--sitekey <hex>]"
+        },
         "hf gallagher help": {
             "command": "hf gallagher help",
-            "description": "help this help --------------------------------------------------------------------------------------- hf gallagher reader available offline: no read a gallagher tag",
+            "description": "help this help diversifykey diversify gallagher key --------------------------------------------------------------------------------------- hf gallagher reader available offline: no read a gallagher tag",
             "notes": [
                 "hf gallagher reader --aid 2081f4 --sitekey 00112233445566778899aabbccddeeff -> act as a reader that skips reading the card application directory and uses a non-default site key",
                 "hf gallagher reader -@ -> continuous reader mode"
@@ -10217,8 +10234,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 600,
+        "commands_extracted": 601,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-01-05T09:45:02"
+        "extracted_on": "2022-01-06T11:03:41"
     }
 }

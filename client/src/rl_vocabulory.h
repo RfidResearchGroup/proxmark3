@@ -220,6 +220,7 @@ const static vocabulory_t vocabulory[] = {
     { 0, "hf gallagher reader" }, 
     { 0, "hf gallagher clone" }, 
     { 0, "hf gallagher delete" }, 
+    { 1, "hf gallagher diversifykey" }, 
     { 1, "hf ksx6924 help" }, 
     { 0, "hf ksx6924 balance" }, 
     { 0, "hf ksx6924 info" }, 
