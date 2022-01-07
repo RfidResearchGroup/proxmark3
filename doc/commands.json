@@ -2329,19 +2329,22 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-n, --keynum <decimal> key number [default=0]",
-                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
-                "-k, --key <hex> key for authentication to the picc (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-n, --keynum <decimal> picc key number [default=0]",
+                "-t, --algo <des/2tdea/3tdea/aes> picc key algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <hex> key for authentication to the picc to create applications (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
                 "--rc <decimal> region code. 4 bits max",
                 "--fc <decimal> facility code. 2 bytes max",
                 "--cn <decimal> card number. 3 bytes max",
                 "--il <decimal> issue level. 4 bits max",
-                "--aid <hex> application id to write (3 bytes) [default finds lowest available in range 0x2?81f4, where 0 <= ? <= 0xb]",
+                "--aid <hex> application id to write (3 bytes) [default automatically chooses an aid]",
                 "--sitekey <hex> mifare site key to compute diversified keys (16 bytes, required if using non-default key)",
+                "--cadkey <hex> custom aes key 0 to modify the card application directory (16 bytes)",
+                "--nocadupdate don't modify the card application directory (only creates the app)",
+                "--noappcreate don't create the application (only modifies the cad)",
                 "--apdu show apdu requests and responses",
                 "-v, --verbose verbose mode"
             ],
-            "usage": "hf gallagher clone [-hv] [-n <decimal>] [-t <des/2tdea/3tdea/aes>] [-k <hex>] --rc <decimal> --fc <decimal> --cn <decimal> --il <decimal> [--aid <hex>] [--sitekey <hex>] [--apdu]"
+            "usage": "hf gallagher clone [-hv] [-n <decimal>] [-t <des/2tdea/3tdea/aes>] [-k <hex>] --rc <decimal> --fc <decimal> --cn <decimal> --il <decimal> [--aid <hex>] [--sitekey <hex>] [--cadkey <hex>] [--nocadupdate] [--noappcreate] [--apdu]"
         },
         "hf gallagher delete": {
             "command": "hf gallagher delete",
@@ -2354,10 +2357,13 @@
                 "-h, --help this help",
                 "--aid <hex> application id to delete (3 bytes)",
                 "--sitekey <hex> mifare site key to compute diversified keys (16 bytes, required if using non-default key)",
+                "--cadkey <hex> custom aes key 0 to modify the card application directory (16 bytes)",
+                "--nocadupdate don't modify the card application directory (only deletes the app)",
+                "--noappdelete don't delete the application (only modifies the cad)",
                 "--apdu show apdu requests and responses",
                 "-v, --verbose verbose mode"
             ],
-            "usage": "hf gallagher delete [-hv] --aid <hex> [--sitekey <hex>] [--apdu]"
+            "usage": "hf gallagher delete [-hv] --aid <hex> [--sitekey <hex>] [--cadkey <hex>] [--nocadupdate] [--noappdelete] [--apdu]"
         },
         "hf gallagher diversifykey": {
             "command": "hf gallagher diversifykey",
@@ -10237,6 +10243,6 @@
     "metadata": {
         "commands_extracted": 601,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-01-06T19:05:01"
+        "extracted_on": "2022-01-07T10:53:54"
     }
 }
