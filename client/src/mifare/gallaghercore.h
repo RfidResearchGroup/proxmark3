@@ -1,13 +1,18 @@
-/**
- * Matt Moran (@DarkMatterMatt), 2021
- * -----------------------------------------------------------------------------
- * This program is free software: you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation, either version 3 of the License, or (at your
- * option) any later version.
- * -----------------------------------------------------------------------------
- * Common functionality for low/high-frequency GALLAGHER tag encoding & decoding.
- */
+//-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
 #ifndef MIFARE_GALLAGHERCORE_H__
 #define MIFARE_GALLAGHERCORE_H__
 

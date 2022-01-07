@@ -1,11 +1,21 @@
-/*
- * Copyright (c) 2012 Rogerz Zhang <rogerz.zhang@gmail.com>
- *
- * Jansson is free software; you can redistribute it and/or modify
- * it under the terms of the MIT license. See LICENSE for details.
- *
- * source here https://github.com/rogerz/jansson/blob/json_path/src/path.c
- */
+//-----------------------------------------------------------------------------
+// Borrowed initially from
+// https://github.com/rogerz/jansson/blob/json_path/src/path.c
+// Copyright (c) 2012 Rogerz Zhang <rogerz.zhang@gmail.com>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
 
 #include <string.h>
 #include <assert.h>

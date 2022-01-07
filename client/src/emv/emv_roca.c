@@ -1,24 +1,22 @@
-/* roca.c - ROCA (CVE-2017-15361) fingerprint checker.
- * Written by Rob Stradling (based on https://github.com/crocs-muni/roca/blob/master/roca/detect.py)
- * Copyright (C) 2017-2018 Sectigo Limited
- * modified 2018 iceman  (dropped openssl bignum,  now use mbedtls lib)
- * modified 2018 merlok
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
 //-----------------------------------------------------------------------------
-// EMV roca commands
+// Borrowed initially from https://gist.github.com/robstradling/f525d423c79690b72e650e2ad38a161d
+// Copyright (C) 2017-2018 Rob Stradling
+// Copyright (C) 2017-2018 Sectigo Limited
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+// roca.c - ROCA (CVE-2017-15361) fingerprint checker.
 //-----------------------------------------------------------------------------
 
 #include "emv_roca.h"
