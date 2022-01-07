@@ -329,7 +329,6 @@ static int EMVSelectWithRetry(Iso7816CommandChannel channel, bool ActivateField,
                     return 1;
                 }
 
-                retrycnt = 0;
                 PrintAndLogEx(FAILED, "Retry failed [%s]. Skipped...", sprint_hex_inrow(AID, AIDLen));
                 return res;
             }

@@ -1263,20 +1263,18 @@ int loadFileJSONroot(const char *preferredName, void **proot, bool verbose) {
     if (root == NULL) {
         PrintAndLogEx(ERR, "ERROR: json " _YELLOW_("%s") " error on line %d: %s", preferredName, error.line, error.text);
         retval = PM3_ESOFT;
-        goto out;
     }
 
-    if (!json_is_object(root)) {
+    if (json_is_object(root) == false) {
         PrintAndLogEx(ERR, "ERROR: Invalid json " _YELLOW_("%s") " format. root must be an object.", preferredName);
         retval = PM3_ESOFT;
-        goto out;
     }
 
-    *proot = root;
-    return PM3_SUCCESS;
+    if (retval == PM3_ESOFT)
+        json_decref(root);
+    else
+        *proot = root;
 
-out:
-    json_decref(root);
     return retval;
 }
 

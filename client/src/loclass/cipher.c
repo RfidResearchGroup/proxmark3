@@ -169,7 +169,7 @@ static uint8_t _select(bool x, bool y, uint8_t r) {
 * @param s - state
 * @param k - array containing 8 bytes
 **/
-static State_t successor(uint8_t *k, State_t s, bool y) {
+static State_t successor(const uint8_t *k, State_t s, bool y) {
     bool r0 = s.r >> 7 & 0x1;
     bool r4 = s.r >> 3 & 0x1;
     bool r7 = s.r & 0x1;
@@ -227,7 +227,7 @@ static void output(uint8_t *k, State_t s, BitstreamIn_t *in,  BitstreamOut_t *ou
 * key k ∈ (F 82 ) 8 and outputs the initial cipher state s =< l, r, t, b >
 **/
 
-static State_t init(uint8_t *k) {
+static State_t init(const uint8_t *k) {
     State_t s = {
         ((k[0] ^ 0x4c) + 0xEC) & 0xFF,// l
         ((k[0] ^ 0x4c) + 0x21) & 0xFF,// r

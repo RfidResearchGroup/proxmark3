@@ -115,7 +115,7 @@ const CLIParserOption DesfireReadFileTypeOpts[] = {
     {0,    NULL},
 };
 
-static const char *getstatus(uint16_t *sw) {
+static const char *getstatus(const uint16_t *sw) {
     if (sw == NULL) return "--> sw argument error. This should never happen !";
     if (((*sw >> 8) & 0xFF) == 0x91) {
         switch (*sw & 0xFF) {
@@ -340,7 +340,8 @@ bool DesfireMFSelected(DesfireISOSelectWay way, uint32_t id) {
     return false;
 }
 
-uint32_t DesfireAIDByteToUint(uint8_t *data) {
+// iceman todo:  use commonutil.c instead
+uint32_t DesfireAIDByteToUint(const uint8_t *data) {
     return data[0] + (data[1] << 8) + (data[2] << 16);
 }
 
@@ -544,8 +545,8 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
     memcpy(&cdata[1], data, datalen);
     cdatalen = datalen + 1;
 
-    int res = 0;
-    size_t len = 0;
+    int res;
+    size_t len;
     // tx chaining
     size_t sentdatalen = 0;
     while (cdatalen >= sentdatalen) {
@@ -638,26 +639,28 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
 static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
     if (resplen)
         *resplen = 0;
+
     if (respcode)
         *respcode = 0xff;
 
     uint16_t sw = 0;
     uint8_t *buf  = calloc(DESFIRE_BUFFER_SIZE, 1);
-    if (buf == NULL)
+    if (buf == NULL) {
         return PM3_EMALLOC;
+    }
+
     uint32_t buflen = 0;
     uint32_t pos = 0;
     uint32_t i = 1;
 
-    sAPDU_t apdu = {0};
-    apdu.CLA = MFDES_NATIVE_ISO7816_WRAP_CLA; //0x90
-    apdu.INS = cmd;
-    apdu.Lc = datalen;
-    apdu.P1 = 0;
-    apdu.P2 = 0;
-    apdu.data = data;
+    sAPDU_t apdu = {
+        .CLA = MFDES_NATIVE_ISO7816_WRAP_CLA, //0x90
+        .INS = cmd,
+        .P1 = 0,
+        .P2 = 0,
+    };
 
-    int res = 0;
+    int res;
     // tx chaining
     size_t sentdatalen = 0;
     while (datalen >= sentdatalen) {
@@ -665,6 +668,7 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
             apdu.Lc = DESFIRE_TX_FRAME_MAX_LEN;
         else
             apdu.Lc = datalen - sentdatalen;
+
         apdu.data = &data[sentdatalen];
 
         if (sentdatalen > 0)
@@ -2330,7 +2334,7 @@ void DesfireEncodeFileAcessMode(uint8_t *mode, uint8_t r, uint8_t w, uint8_t rw,
     mode[1] = (w & 0x0f) | ((r << 4) & 0xf0);
 }
 
-void DesfireDecodeFileAcessMode(uint8_t *mode, uint8_t *r, uint8_t *w, uint8_t *rw, uint8_t *ch) {
+void DesfireDecodeFileAcessMode(const uint8_t *mode, uint8_t *r, uint8_t *w, uint8_t *rw, uint8_t *ch) {
     // read
     if (r)
         *r = (mode[1] >> 4) & 0x0f; // hi 2b
@@ -2972,7 +2976,7 @@ int DesfireAnticollision(bool verbose) {
     return SelectCard14443A_4(false, verbose, NULL);
 }
 
-int DesfireSelectEx(DesfireContext_t *ctx, bool fieldon, DesfireISOSelectWay way, uint32_t id, char *dfname) {
+int DesfireSelectEx(DesfireContext_t *ctx, bool fieldon, DesfireISOSelectWay way, uint32_t id, const char *dfname) {
     uint8_t resp[250] = {0};
     size_t resplen = 0;
 
