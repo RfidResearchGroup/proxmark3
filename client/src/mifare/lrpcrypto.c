@@ -106,7 +106,7 @@ void LRPGenerateUpdatedKeys(LRPContext_t *ctx, size_t updatedKeysCount) {
 
 // https://www.nxp.com/docs/en/application-note/AN12304.pdf
 // Algorithm 3
-void LRPEvalLRP(LRPContext_t *ctx, uint8_t *iv, size_t ivlen, bool final, uint8_t *y) {
+void LRPEvalLRP(LRPContext_t *ctx, const uint8_t *iv, size_t ivlen, bool final, uint8_t *y) {
     uint8_t ry[CRYPTO_AES128_KEY_SIZE] = {0};
     memcpy(ry, ctx->updatedKeys[ctx->useUpdatedKeyNum], CRYPTO_AES128_KEY_SIZE);
 

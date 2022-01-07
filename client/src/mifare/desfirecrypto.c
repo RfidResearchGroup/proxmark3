@@ -439,7 +439,7 @@ void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorithm keytype, uint8
     }
 }
 
-uint8_t DesfireDESKeyGetVersion(uint8_t *key) {
+uint8_t DesfireDESKeyGetVersion(const uint8_t *key) {
     uint8_t version = 0;
     for (int n = 0; n < 8; n++)
         version |= ((key[n] & 1) << (7 - n));

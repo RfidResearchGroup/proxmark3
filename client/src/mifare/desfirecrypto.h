@@ -114,7 +114,7 @@ void MifareKdfAn10922(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_type, co
 void DesfireGenSessionKeyLRP(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool enckey, uint8_t *sessionkey);
 
 void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorithm keytype, uint8_t version);
-uint8_t DesfireDESKeyGetVersion(uint8_t *key);
+uint8_t DesfireDESKeyGetVersion(const uint8_t *key);
 
 DesfireCryptoAlgorithm DesfireKeyTypeToAlgo(uint8_t keyType);
 uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorithm keyType);

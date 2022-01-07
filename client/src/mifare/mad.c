@@ -159,7 +159,7 @@ static int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
     return PM3_SUCCESS;
 }
 
-static uint16_t madGetAID(uint8_t *sector, bool swapmad, int MADver, int sectorNo) {
+static uint16_t madGetAID(const uint8_t *sector, bool swapmad, int MADver, int sectorNo) {
     uint16_t mad;
     if (MADver == 1)
         mad = (sector[16 + 2 + (sectorNo - 1) * 2 + 1] << 8) + (sector[16 + 2 + (sectorNo - 1) * 2]);
@@ -267,7 +267,7 @@ int MADCardHolderInfoDecode(uint8_t *data, size_t datalen, bool verbose) {
     return PM3_SUCCESS;
 }
 
-static int MADInfoByteDecode(uint8_t *sector, bool swapmad, int mad_ver, bool verbose) {
+static int MADInfoByteDecode(const uint8_t *sector, bool swapmad, int mad_ver, bool verbose) {
     uint8_t info;
     if (mad_ver == 1) {
         info = sector[16 + 1] & 0x3f;

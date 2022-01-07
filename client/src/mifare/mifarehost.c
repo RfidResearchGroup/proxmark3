@@ -327,7 +327,7 @@ int mfCheckKeys_file(uint8_t *destfn, uint64_t *key) {
 
 // PM3 imp of J-Run mf_key_brute (part 2)
 // ref: https://github.com/J-Run/mf_key_brute
-int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey) {
+int mfKeyBrute(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint64_t *resultkey) {
 
     uint64_t key64;
     uint8_t found = false;
@@ -655,7 +655,6 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") " key candidates", keycnt);
 
     memset(resultKey, 0, 6);
-    uint64_t key64 = -1;
 
     // The list may still contain several key candidates. Test each of them with mfCheckKeys
     uint32_t maxkeysinblock = IfPm3Flash() ? 1000 : KEYS_IN_BLOCK;
@@ -706,7 +705,8 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         }
 
         int res = 0;
-        key64 = 0;
+        uint64_t key64 = 0;
+
         uint32_t chunk = keycnt - i > max_keys_chunk ? max_keys_chunk : keycnt - i;
 
         // copy x keys to device.
