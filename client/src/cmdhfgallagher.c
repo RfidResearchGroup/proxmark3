@@ -758,7 +758,6 @@ static int CmdGallagherReader(const char *cmd) {
     CLIGetHexWithReturn(ctx, 1, aid_buf, &aid_len);
     if (aid_len > 0 && aid_len != 3)
         HFGAL_RET_ERR(PM3_EINVARG, "--aid must be 3 bytes");
-
     reverse_aid(aid_buf); // PM3 displays AIDs backwards
     uint32_t aid = DesfireAIDByteToUint(aid_buf);
 
@@ -832,19 +831,11 @@ static int CmdGallagherClone(const char *cmd) {
 
     int aid_len = 0;
     uint8_t aid_buf[3] = {0};
-    uint32_t aid = 0;
     CLIGetHexWithReturn(ctx, 8, aid_buf, &aid_len);
-    if (aid_len > 0) {
-        if (aid_len != 3)
-            HFGAL_RET_ERR(PM3_EINVARG, "--aid must be 3 bytes");
-        reverse_aid(aid_buf); // PM3 displays AIDs backwards
-        aid = DesfireAIDByteToUint(aid_buf);
-
-        // Check that the AID is in the expected range
-        if (memcmp(aid_buf, "\xF4\x81", 2) != 0 || aid_buf[2] < 0x20 || aid_buf[2] > 0x2B)
-            // TODO: this should probably be a warning, but key diversification will throw an error later even if we don't
-            HFGAL_RET_ERR(PM3_EINVARG, "Invalid Gallagher AID %06X, expected 2?81F4, where 0 <= ? <= 0xB", aid);
-    }
+    if (aid_len > 0 && aid_len != 3)
+        HFGAL_RET_ERR(PM3_EINVARG, "--aid must be 3 bytes");
+    reverse_aid(aid_buf); // PM3 displays AIDs backwards
+    uint32_t aid = DesfireAIDByteToUint(aid_buf);
 
     int site_key_len = 0;
     uint8_t site_key[16] = {0};
@@ -925,18 +916,11 @@ static int CmdGallagherDelete(const char *cmd) {
 
     int aid_len = 0;
     uint8_t aid_buf[3] = {0};
-    uint32_t aid = 0;
     CLIGetHexWithReturn(ctx, 1, aid_buf, &aid_len);
-
     if (aid_len != 3)
         HFGAL_RET_ERR(PM3_EINVARG, "--aid must be 3 bytes");
     reverse_aid(aid_buf); // PM3 displays AIDs backwards
-    aid = DesfireAIDByteToUint(aid_buf);
-
-    // Check that the AID is in the expected range
-    if (memcmp(aid_buf, "\xF4\x81", 2) != 0 || aid_buf[2] < 0x20 || aid_buf[2] > 0x2B)
-        // TODO: this should probably be a warning, but key diversification will throw an error later even if we don't
-        HFGAL_RET_ERR(PM3_EINVARG, "Invalid Gallagher AID %06X, expected 2?81F4, where 0 <= ? <= 0xB", aid);
+    uint32_t aid = DesfireAIDByteToUint(aid_buf);
 
     int site_key_len = 0;
     uint8_t site_key[16] = {0};
@@ -992,18 +976,11 @@ static int CmdGallagherDiversify(const char *cmd) {
 
     int aid_len = 0;
     uint8_t aid_buf[3] = {0};
-    uint32_t aid = 0;
     CLIGetHexWithReturn(ctx, 1, aid_buf, &aid_len);
-
     if (aid_len != 3)
         HFGAL_RET_ERR(PM3_EINVARG, "--aid must be 3 bytes");
     reverse_aid(aid_buf); // PM3 displays AIDs backwards
-    aid = DesfireAIDByteToUint(aid_buf);
-
-    // Check that the AID is in the expected range
-    if (memcmp(aid_buf, "\xF4\x81", 2) != 0 || aid_buf[2] < 0x20 || aid_buf[2] > 0x2B)
-        // TODO: this should probably be a warning, but key diversification will throw an error later even if we don't
-        HFGAL_RET_ERR(PM3_EINVARG, "Invalid Gallagher AID %06X, expected 2?81F4, where 0 <= ? <= 0xB", aid);
+    uint32_t aid = DesfireAIDByteToUint(aid_buf);
 
     int key_num = arg_get_int_def(ctx, 2, 0);
 

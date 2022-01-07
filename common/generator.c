@@ -441,14 +441,6 @@ int mfdes_kdf_input_gallagher(uint8_t *uid, uint8_t uidLen, uint8_t keyNo, uint3
         return PM3_EINVARG;
     }
 
-    // Verify the AppID is a valid Gallagher AppID
-    if ((aid & 0xF0FFFF) != 0x2081F4) {
-        if (g_debugMode) {
-            PrintAndLogEx(WARNING, "Invalid Gallagher AID %06X", aid);
-        }
-        return PM3_EINVARG;
-    }
-
     int len = 0;
     // If the keyNo == 1, then omit the UID.
     if (keyNo != 1) {
