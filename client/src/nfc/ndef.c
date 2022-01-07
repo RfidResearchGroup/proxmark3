@@ -105,7 +105,7 @@ static const char *URI_s[] = {
 static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen);
 static int ndefDecodePayload(NDEFHeader_t *ndef);
 
-static uint16_t ndefTLVGetLength(uint8_t *data, size_t *indx) {
+static uint16_t ndefTLVGetLength(const uint8_t *data, size_t *indx) {
     uint16_t len = 0;
     if (data[0] == 0xff) {
         len = (data[1] << 8) + data[2];

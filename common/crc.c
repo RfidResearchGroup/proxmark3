@@ -148,7 +148,7 @@ uint32_t CRC8Hitag1(uint8_t *buff, size_t size) {
     return crc_finish(&crc);
 }
 
-uint32_t CRC8Hitag1Bits(uint8_t *buff, size_t bitsize) {
+uint32_t CRC8Hitag1Bits(const uint8_t *buff, size_t bitsize) {
     crc_t crc;
     uint8_t data = 0;
     uint8_t n = 0;

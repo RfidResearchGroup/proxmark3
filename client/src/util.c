@@ -843,7 +843,7 @@ int hextobinstring(char *target, char *source) {
 
 // convert binary array of 0x00/0x01 values to hex
 // return number of bits converted
-int binarraytohex(char *target, const size_t targetlen, char *source, size_t srclen) {
+int binarraytohex(char *target, const size_t targetlen, const char *source, size_t srclen) {
     uint8_t i = 0, x = 0;
     uint32_t t = 0; // written target chars
     uint32_t r = 0; // consumed bits
@@ -914,7 +914,7 @@ int binstring2binarray(uint8_t *target, char *source, int length) {
 }
 
 // return parity bit required to match type
-uint8_t GetParity(uint8_t *bits, uint8_t type, int length) {
+uint8_t GetParity(const uint8_t *bits, uint8_t type, int length) {
     int x;
     for (x = 0 ; length > 0 ; --length)
         x += bits[length - 1];
@@ -939,7 +939,7 @@ void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length
 }
 
 // Pack a bitarray into a uint32_t.
-uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bits) {
+uint32_t PackBits(uint8_t start, uint8_t len, const uint8_t *bits) {
 
     if (len > 32) return 0;
 
@@ -1082,7 +1082,7 @@ int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str)
  *
  * Returns the number of bits entered.
  */
-int binarray_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, uint8_t *arr, int arrlen) {
+int binarray_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const uint8_t *arr, int arrlen) {
     int i = 0;
     for (; i < arrlen; i++) {
         uint8_t n = arr[i];

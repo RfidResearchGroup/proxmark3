@@ -43,7 +43,7 @@ struct Crypto1State *lfsr_recovery64(uint32_t ks2, uint32_t ks3);
 struct Crypto1State *
 lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8], uint32_t no_par);
 #endif
-uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd);
+uint32_t *lfsr_prefix_ks(const uint8_t ks[8], int isodd);
 
 
 uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb);

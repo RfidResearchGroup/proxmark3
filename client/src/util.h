@@ -86,17 +86,17 @@ int param_getstr(const char *line, int paramnum, char *str, size_t buffersize);
 
 int hextobinarray(char *target, char *source);
 int hextobinstring(char *target, char *source);
-int binarraytohex(char *target, const size_t targetlen, char *source, size_t srclen);
+int binarraytohex(char *target, const size_t targetlen, const char *source, size_t srclen);
 void binarraytobinstring(char *target,  char *source, int length);
 int binstring2binarray(uint8_t *target, char *source, int length);
 
-uint8_t GetParity(uint8_t *bits, uint8_t type, int length);
+uint8_t GetParity(const uint8_t *bits, uint8_t type, int length);
 void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
 void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length);
 
 //void xor(unsigned char *dst, unsigned char *src, size_t len);
 
-uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bits);
+uint32_t PackBits(uint8_t start, uint8_t len, const uint8_t *bits);
 uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);
 
 int num_CPUs(void); // number of logical CPUs
@@ -111,7 +111,7 @@ char *str_dup(const char *src);
 char *str_ndup(const char *src, size_t len);
 int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
 int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
-int binarray_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, uint8_t *arr, int arrlen);
+int binarray_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const uint8_t *arr, int arrlen);
 
 uint32_t bitcount32(uint32_t a);
 uint64_t bitcount64(uint64_t a);
