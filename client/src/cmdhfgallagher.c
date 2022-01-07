@@ -153,9 +153,28 @@ static int authenticate(DesfireContext_t *ctx, bool verbose) {
  * @brief Select application ID & authenticate.
  * Uses existing authentication keys in context.
  */
-static int select_aid_and_authenticate(DesfireContext_t *ctx, uint32_t aid, bool verbose) {
+static int select_aid_and_auth(DesfireContext_t *ctx, uint32_t aid, bool verbose) {
     int res = select_aid(ctx, aid, verbose);
     HFGAL_RET_IF_ERR(res);
+
+    res = authenticate(ctx, verbose);
+    HFGAL_RET_IF_ERR(res);
+
+    return PM3_SUCCESS;
+}
+
+/**
+ * @brief Select application ID & authenticate with specified AES key.
+ */
+static int select_aid_and_auth_with_key(DesfireContext_t *ctx, uint32_t aid, uint8_t *key,
+                                        uint8_t key_num, bool should_diversify, bool verbose) {
+    int res = select_aid(ctx, aid, verbose);
+    HFGAL_RET_IF_ERR(res);
+
+    // Set key & diversification algorithm.
+    uint8_t kdf_algo = should_diversify ? MFDES_KDF_ALGO_GALLAGHER : MFDES_KDF_ALGO_NONE;
+    DesfireSetKeyNoClear(ctx, key_num, T_AES, key);
+    DesfireSetKdf(ctx, kdf_algo, NULL, 0);
 
     res = authenticate(ctx, verbose);
     HFGAL_RET_IF_ERR(res);
@@ -193,6 +212,7 @@ static uint32_t find_available_gallagher_aid(DesfireContext_t *ctx, bool verbose
         if (!aid_exists(ctx, aid, verbose))
             return aid;
     }
+    //DesfireGetAIDList
     return 0;
 }
 
@@ -205,9 +225,7 @@ static uint32_t find_available_gallagher_aid(DesfireContext_t *ctx, bool verbose
 static int hfgal_delete_app(DesfireContext_t *ctx, uint8_t *site_key,
                             uint32_t aid, bool verbose) {
     // Select application & authenticate
-    DesfireSetKeyNoClear(ctx, 0, T_AES, site_key);
-    DesfireSetKdf(ctx, MFDES_KDF_ALGO_GALLAGHER, NULL, 0);
-    int res = select_aid_and_authenticate(ctx, aid, verbose);
+    int res = select_aid_and_auth_with_key(ctx, aid, site_key, 0, true, verbose);
     HFGAL_RET_IF_ERR(res);
 
     // Delete application
@@ -234,9 +252,7 @@ static int hfgal_read_creds_app(DesfireContext_t *ctx, uint32_t aid, uint8_t *si
                       "(required for key diversification)");
 
     // Select application & authenticate
-    DesfireSetKeyNoClear(ctx, 2, T_AES, site_key);
-    DesfireSetKdf(ctx, MFDES_KDF_ALGO_GALLAGHER, NULL, 0);
-    int res = select_aid_and_authenticate(ctx, aid, verbose);
+    int res = select_aid_and_auth_with_key(ctx, aid, site_key, 0, true, verbose);
     HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed selecting/authenticating to AID %06X", aid);
 
     // Read file 0 (contains credentials)
@@ -274,7 +290,7 @@ static int hfgal_read_creds_app(DesfireContext_t *ctx, uint32_t aid, uint8_t *si
  */
 static int hfgal_create_creds_app(DesfireContext_t *ctx, uint8_t *site_key, uint32_t aid, bool verbose) {
     // Select application & authenticate
-    int res = select_aid_and_authenticate(ctx, 0x000000, verbose);
+    int res = select_aid_and_auth(ctx, 0x000000, verbose);
     HFGAL_RET_IF_ERR(res);
 
     // UID is required for key diversification
@@ -347,9 +363,7 @@ static int hfgal_create_creds_app(DesfireContext_t *ctx, uint8_t *site_key, uint
 static int hfgal_create_creds_file(DesfireContext_t *ctx, uint8_t *site_key, uint32_t aid,
                                    GallagherCredentials_t *creds, bool verbose) {
     // Select application & authenticate
-    DesfireSetKeyNoClear(ctx, 0, T_AES, site_key);
-    DesfireSetKdf(ctx, MFDES_KDF_ALGO_GALLAGHER, NULL, 0);
-    int res = select_aid_and_authenticate(ctx, aid, verbose);
+    int res = select_aid_and_auth_with_key(ctx, aid, site_key, 0, true, verbose);
     HFGAL_RET_IF_ERR(res);
 
     // Prepare create file command
@@ -446,18 +460,18 @@ static int hfgal_read_cad(DesfireContext_t *ctx, uint8_t *dest_buf,
 /**
  * @brief Create the Gallagher Card Application Directory.
  *
- * @param site_key MIFARE site key. Not used if cad_key is provided.
- * @param cad_key Custom AES key 0 for the CAD (if not using the site_key).
+ * @param key MIFARE site key, or custom CAD key.
+ * @param should_diversify True if using a site_key, false if using a custom CAD key.
  */
-static int hfgal_create_cad(DesfireContext_t *ctx, uint8_t *site_key,
-                            uint8_t *cad_key, bool verbose) {
+static int hfgal_create_cad(DesfireContext_t *ctx, uint8_t *key,
+                            bool should_diversify, bool verbose) {
     // Check that card UID has been set
     if (ctx->uidlen == 0)
         HFGAL_RET_ERR(PM3_EINVARG, "Card UID must be set in DesfireContext "
                       "(required for key diversification)");
 
     // Select application & authenticate
-    int res = select_aid_and_authenticate(ctx, 0x000000, verbose);
+    int res = select_aid_and_auth(ctx, 0x000000, verbose);
     HFGAL_RET_IF_ERR(res);
 
     // Create application
@@ -482,29 +496,25 @@ static int hfgal_create_cad(DesfireContext_t *ctx, uint8_t *site_key,
 
     // Select application & authenticate
     uint8_t blank_key[CRYPTO_AES128_KEY_SIZE] = {0};
-    DesfireSetKeyNoClear(ctx, 0, T_AES, blank_key);
-    DesfireSetKdf(ctx, MFDES_KDF_ALGO_NONE, NULL, 0);
-    res = select_aid_and_authenticate(ctx, CAD_AID, verbose);
+    res = select_aid_and_auth_with_key(ctx, CAD_AID, blank_key, 0, false, verbose);
     HFGAL_RET_IF_ERR(res);
 
     uint8_t buf[CRYPTO_AES128_KEY_SIZE] = {0};
-    if (cad_key != NULL) {
-        if (verbose)
-            PrintAndLogEx(INFO, "Using provided key 0 for CAD (AID %06X): " _GREEN_("%s"),
-                          CAD_AID, sprint_hex_inrow(cad_key, CRYPTO_AES128_KEY_SIZE));
-    } else {
+    if (should_diversify) {
         // Diversify key
-        res = hfgal_diversify_key(site_key, ctx->uid, ctx->uidlen, 0, CAD_AID, buf);
+        res = hfgal_diversify_key(key, ctx->uid, ctx->uidlen, 0, CAD_AID, buf);
         HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed diversifying key 0 for AID %06X", CAD_AID);
 
         PrintAndLogEx(INFO, "Diversified key 0 for CAD (AID %06X): " _GREEN_("%s"),
-                    CAD_AID, sprint_hex_inrow(buf, ARRAYLEN(buf)));
-        cad_key = buf;
-    }
+                      CAD_AID, sprint_hex_inrow(buf, ARRAYLEN(buf)));
+        key = buf;
+    } else if (verbose)
+        PrintAndLogEx(INFO, "Using provided key 0 for CAD (AID %06X): " _GREEN_("%s"),
+                      CAD_AID, sprint_hex_inrow(key, CRYPTO_AES128_KEY_SIZE));
 
     // Change key
     DesfireSetCommMode(ctx, DCMEncryptedPlain);
-    res = DesfireChangeKey(ctx, false, 0, app_algo, 1, cad_key, app_algo, blank_key, verbose);
+    res = DesfireChangeKey(ctx, false, 0, app_algo, 1, key, app_algo, blank_key, verbose);
     HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed setting key 0 for CAD");
 
     if (verbose)
@@ -518,12 +528,12 @@ static int hfgal_create_cad(DesfireContext_t *ctx, uint8_t *site_key,
 /**
  * @brief Update the Gallagher Card Application Directory with a new entry.
  *
- * @param site_key MIFARE site key. Not used if cad_key is provided.
- * @param cad_key Custom AES key 0 for the CAD (if not using the site_key).
+ * @param key MIFARE site key, or custom CAD key.
+ * @param should_diversify True if using a site_key, false if using a custom CAD key.
  * @param aid Application ID to add to the CAD.
  * @param creds Gallagher cardholder credentials (region_code & facility_code are required).
  */
-static int hfgal_add_aid_to_cad(DesfireContext_t *ctx, uint8_t *site_key, uint8_t *cad_key,
+static int hfgal_add_aid_to_cad(DesfireContext_t *ctx, uint8_t *key, bool should_diversify,
                                 uint32_t aid, GallagherCredentials_t *creds, bool verbose) {
     // Check if CAD exists
     uint8_t cad[36 * 3] = {0};
@@ -543,7 +553,7 @@ static int hfgal_add_aid_to_cad(DesfireContext_t *ctx, uint8_t *site_key, uint8_
         if (verbose)
             PrintAndLogEx(INFO, "Card Application Directory does not exist, creating it now...");
 
-        int res = hfgal_create_cad(ctx, site_key, cad_key, verbose);
+        int res = hfgal_create_cad(ctx, key, should_diversify, verbose);
         HFGAL_RET_IF_ERR(res);
     }
 
@@ -569,14 +579,7 @@ static int hfgal_add_aid_to_cad(DesfireContext_t *ctx, uint8_t *site_key, uint8_
                       entry_num, file_id, sprint_hex_inrow(entry, 6));
 
     // Select application & authenticate
-    if (cad_key != NULL) {
-        DesfireSetKeyNoClear(ctx, 0, T_AES, cad_key);
-        DesfireSetKdf(ctx, MFDES_KDF_ALGO_NONE, NULL, 0);
-    } else {
-        DesfireSetKeyNoClear(ctx, 0, T_AES, site_key);
-        DesfireSetKdf(ctx, MFDES_KDF_ALGO_GALLAGHER, NULL, 0);
-    }
-    int res = select_aid_and_authenticate(ctx, CAD_AID, verbose);
+    int res = select_aid_and_auth_with_key(ctx, aid, key, 0, should_diversify, verbose);
     HFGAL_RET_IF_ERR(res);
 
     // Create file if necessary
@@ -622,16 +625,15 @@ static int hfgal_add_aid_to_cad(DesfireContext_t *ctx, uint8_t *site_key, uint8_
 /**
  * @brief Remove an entry from the Gallagher Card Application Directory.
  *
- * @param site_key MIFARE site key. Not used if cad_key is provided.
- * @param cad_key Custom AES key 0 for the CAD (if not using the site_key).
+ * @param key MIFARE site key, or custom CAD key.
+ * @param should_diversify True if using a site_key, false if using a custom CAD key.
  * @param aid Application ID to remove from the CAD.
  */
-static int hfgal_remove_aid_from_cad(DesfireContext_t *ctx, uint8_t *site_key,
-                                     uint8_t *cad_key, uint32_t aid, bool verbose) {
-    // Check if CAD exists
+static int hfgal_remove_aid_from_cad(DesfireContext_t *ctx, uint8_t *key,
+                                     bool should_diversify, uint32_t aid, bool verbose) {
+    // Read CAD
     uint8_t cad[36 * 3] = {0};
     uint8_t num_entries = 0;
-
     int res = hfgal_read_cad(ctx, cad, ARRAYLEN(cad), &num_entries, verbose);
     HFGAL_RET_IF_ERR(res);
 
@@ -654,14 +656,7 @@ static int hfgal_remove_aid_from_cad(DesfireContext_t *ctx, uint8_t *site_key,
     memset(&cad[ARRAYLEN(cad) - 6], 0, 6);
 
     // Select application & authenticate
-    if (cad_key != NULL) {
-        DesfireSetKeyNoClear(ctx, 0, T_AES, cad_key);
-        DesfireSetKdf(ctx, MFDES_KDF_ALGO_NONE, NULL, 0);
-    } else {
-        DesfireSetKeyNoClear(ctx, 0, T_AES, site_key);
-        DesfireSetKdf(ctx, MFDES_KDF_ALGO_GALLAGHER, NULL, 0);
-    }
-    res = select_aid_and_authenticate(ctx, CAD_AID, verbose);
+    res = select_aid_and_auth_with_key(ctx, CAD_AID, key, 0, should_diversify, verbose);
     HFGAL_RET_IF_ERR(res);
 
     // Determine what files we need to update
@@ -814,15 +809,15 @@ static int CmdGallagherClone(const char *cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("n",  "keynum",  "<decimal>",  "Key number [default=0]"),
-        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>", "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
-        arg_str0("k",  "key",     "<hex>",      "Key for authentication to the PICC (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_int0("n",  "keynum",  "<decimal>",  "PICC key number [default=0]"),
+        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>", "PICC key algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<hex>",      "Key for authentication to the PICC to create applications (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
 
         arg_u64_1(NULL, "rc",      "<decimal>", "Region code. 4 bits max"),
         arg_u64_1(NULL, "fc",      "<decimal>", "Facility code. 2 bytes max"),
         arg_u64_1(NULL, "cn",      "<decimal>", "Card number. 3 bytes max"),
         arg_u64_1(NULL, "il",      "<decimal>", "Issue level. 4 bits max"),
-        arg_str0(NULL,  "aid",     "<hex>",     "Application ID to write (3 bytes) [default finds lowest available in range 0x2?81F4, where 0 <= ? <= 0xB]"),
+        arg_str0(NULL,  "aid",     "<hex>",     "Application ID to write (3 bytes) [default automatically chooses an AID]"),
         arg_str0(NULL,  "sitekey", "<hex>",     "MIFARE site key to compute diversified keys (16 bytes, required if using non-default key)"),
         arg_str0(NULL,  "cadkey",  "<hex>",     "Custom AES key 0 to modify the Card Application Directory (16 bytes)"),
         arg_lit0(NULL,  "nocadupdate",          "Don't modify the Card Application Directory (only creates the app)"),
@@ -835,19 +830,19 @@ static int CmdGallagherClone(const char *cmd) {
     CLIExecWithReturn(ctx, cmd, argtable, false);
     uint8_t arg = 1;
 
-    int key_num = arg_get_int_def(ctx, arg++, 0);
+    int picc_key_num = arg_get_int_def(ctx, arg++, 0);
 
-    int key_algo = T_DES;
-    if (CLIGetOptionList(arg_get_str(ctx, arg++), DesfireAlgoOpts, &key_algo)) return PM3_ESOFT;
+    int picc_key_algo = T_DES;
+    if (CLIGetOptionList(arg_get_str(ctx, arg++), DesfireAlgoOpts, &picc_key_algo)) return PM3_ESOFT;
 
-    int key_len = 0;
-    uint8_t key[DESFIRE_MAX_KEY_SIZE] = {0};
-    CLIGetHexWithReturn(ctx, arg++, key, &key_len);
-    if (key_len && key_len != desfire_get_key_length(key_algo))
-        HFGAL_RET_ERR(PM3_EINVARG, "%s key must have %d bytes length instead of %d", CLIGetOptionListStr(DesfireAlgoOpts, key_algo), desfire_get_key_length(key_algo), key_len);
-    if (key_len == 0)
+    int picc_key_len = 0;
+    uint8_t picc_key[DESFIRE_MAX_KEY_SIZE] = {0};
+    CLIGetHexWithReturn(ctx, arg++, picc_key, &picc_key_len);
+    if (picc_key_len && picc_key_len != desfire_get_key_length(picc_key_algo))
+        HFGAL_RET_ERR(PM3_EINVARG, "%s key must have %d bytes length instead of %d", CLIGetOptionListStr(DesfireAlgoOpts, picc_key_algo), desfire_get_key_length(picc_key_algo), picc_key_len);
+    if (picc_key_len == 0)
         // Default to a key of all zeros
-        key_len = desfire_get_key_length(key_algo);
+        picc_key_len = desfire_get_key_length(picc_key_algo);
 
     uint64_t region_code = arg_get_u64(ctx, arg++); // uint4, input will be validated later
     uint64_t facility_code = arg_get_u64(ctx, arg++); // uint16
@@ -874,7 +869,7 @@ static int CmdGallagherClone(const char *cmd) {
     CLIGetHexWithReturn(ctx, arg++, cad_key, &cad_key_len);
     if (cad_key_len > 0 && cad_key_len != 16)
         HFGAL_RET_ERR(PM3_EINVARG, "--cadkey must be 16 bytes");
-        
+
     bool no_cad_update = arg_get_lit(ctx, arg++);
     bool no_app_create = arg_get_lit(ctx, arg++);
 
@@ -910,17 +905,24 @@ static int CmdGallagherClone(const char *cmd) {
 
     // Update Card Application Directory
     if (!no_cad_update) {
-        DesfireSetKeyNoClear(&dctx, key_num, key_algo, key);
+        // Set keys so that hfgal_add_aid_to_cad can auth to 0x000000
+        // if it needs to create the CAD application.
+        DesfireSetKeyNoClear(&dctx, picc_key_num, picc_key_algo, picc_key);
         DesfireSetKdf(&dctx, MFDES_KDF_ALGO_NONE, NULL, 0);
-        uint8_t *cad_key_ = cad_key_len > 0 ? cad_key : NULL;
-        res = hfgal_add_aid_to_cad(&dctx, site_key, cad_key_, aid, &creds, verbose);
+
+        bool should_diversify = cad_key_len == 0;
+        uint8_t *key = should_diversify ? site_key : cad_key;
+        res = hfgal_add_aid_to_cad(&dctx, key, should_diversify, aid, &creds, verbose);
         HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed updating Gallagher Card Application Directory");
     }
 
     // Create application
     if (!no_app_create) {
-        DesfireSetKeyNoClear(&dctx, key_num, key_algo, key);
+        // Set keys so that hfgal_create_creds_app can auth to 0x000000
+        // when it creates the application.
+        DesfireSetKeyNoClear(&dctx, picc_key_num, picc_key_algo, picc_key);
         DesfireSetKdf(&dctx, MFDES_KDF_ALGO_NONE, NULL, 0);
+
         res = hfgal_create_creds_app(&dctx, site_key, aid, verbose);
         HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed creating Gallagher application");
     }
@@ -977,7 +979,7 @@ static int CmdGallagherDelete(const char *cmd) {
     CLIGetHexWithReturn(ctx, arg++, cad_key, &cad_key_len);
     if (cad_key_len > 0 && cad_key_len != 16)
         HFGAL_RET_ERR(PM3_EINVARG, "--cadkey must be 16 bytes");
-        
+
     bool no_cad_update = arg_get_lit(ctx, arg++);
     bool no_app_delete = arg_get_lit(ctx, arg++);
 
@@ -996,8 +998,9 @@ static int CmdGallagherDelete(const char *cmd) {
 
     // Update Card Application Directory
     if (!no_cad_update) {
-        uint8_t *cad_key_ = cad_key_len > 0 ? cad_key : NULL;
-        res = hfgal_remove_aid_from_cad(&dctx, site_key, cad_key_, aid, verbose);
+        bool should_diversify = cad_key_len == 0;
+        uint8_t *key = should_diversify ? site_key : cad_key;
+        res = hfgal_remove_aid_from_cad(&dctx, key, should_diversify, aid, verbose);
         HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed removing %06X from the Card Application Directory");
     }
 
