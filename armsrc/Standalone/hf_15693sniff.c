@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2020 Michael Farrell <micolous+git@gmail.com>
+// Copyright 2021 Nathan Glaser <startrk1995@gmail.com>
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -9,10 +9,10 @@
 //-----------------------------------------------------------------------------
 
 /*
+ * This is 95% the same code as Michael Farrell's hf_14ASNIFF Standalone mode.
+ *
  * `hf_15693sniff` passively sniffs ISO15693 frames, and stores them in internal
  * flash. It requires RDV4 hardware (for flash and battery).
- *
- * This module is similar to hf_bog (which only logs ULC/NTAG/ULEV1 auth).
  *
  * On entering stand-alone mode, this module will start sniffing ISO15693 frames.
  * This will be stored in the normal trace buffer (ie: in RAM -- will be lost
@@ -38,7 +38,6 @@
  *    Loads trace data from a file into PC-side buffers.
  *
  * 3. For ISO15693: trace list -t 15 -1
- *    For MIFARE Classic: trace list -t mf -1
  *
  *    Lists trace data from buffer without requesting it from PM3.
  *
@@ -83,7 +82,7 @@ static void DownloadTraceInstructions(void) {
 
 void ModInfo(void) {
     DbpString(" HF 15693 SNIFF,  a ISO15693 sniffer with storing in flashmem");
-    DownloadTraceInstructions();
+//    DownloadTraceInstructions();
 }
 
 void RunMod(void) {
