@@ -204,16 +204,49 @@ static bool aid_exists(DesfireContext_t *ctx, uint32_t aid, bool verbose) {
 
 /**
  * @brief Returns the lowest available Gallagher application ID.
- * @return 0 if no AID is available, or an AID in the range 0x2?81F4, where 0 <= ? <= 0xB.
+ * @return The lowest AID in the range 0x??81F4, where 0x20 <= ?? <= 0xFE.
  */
 static uint32_t find_available_gallagher_aid(DesfireContext_t *ctx, bool verbose) {
-    for (uint8_t i = 0x0; i <= 0xB; i++) {
-        uint32_t aid = 0x2081F4 | (i << 16);
-        if (!aid_exists(ctx, aid, verbose))
-            return aid;
+    // Select PICC
+    select_aid(ctx, 0x000000, verbose);
+    
+    // Retrieve the AID list
+    uint8_t aid_buf[0xFF] = {0};
+    size_t aid_buf_len = 0;
+    int res = DesfireGetAIDList(ctx, aid_buf, &aid_buf_len);
+    if (res != PM3_SUCCESS)
+        HFGAL_RET_ERR(0, "Failed retrieving AID list");
+
+    if (verbose) {
+        // Print what we got
+        PrintAndLogEx(INFO, "Retrieved AID list:" NOLF);
+        for (int i = 0; i < aid_buf_len; i += 3)
+            PrintAndLogEx(NORMAL, "%s %06X" NOLF, (i == 0) ? "" : ",",
+                          DesfireAIDByteToUint(&aid_buf[i]));
+        PrintAndLogEx(NORMAL, "");
     }
-    //DesfireGetAIDList
-    return 0;
+
+    // Find lowest available in range F48120 -> F481FE, excluding the CAD
+    for (uint8_t aid_increment = 0x20; aid_increment < 0xFF; aid_increment++) {
+        uint32_t aid = 0x0081F4 | (aid_increment << 16);
+        if (aid == CAD_AID)
+            continue;
+
+        // Check if AID exists in aid_buf
+        bool aid_exists = false;
+        for (uint8_t idx = 0; idx < aid_buf_len; idx += 3) {
+            if (DesfireAIDByteToUint(&aid_buf[idx]) == aid) {
+                aid_exists = true;
+                break;
+            }
+        }
+        if (!aid_exists)
+            return aid; 
+    }
+
+    // Failed to find an available AID. This shouldn't be possible since
+    // we check 255 different AIDs and cards don't hold that many.
+    HFGAL_RET_ERR(0, "All AIDs exist. This shouldn't be possible.");
 }
 
 /**
@@ -579,7 +612,7 @@ static int hfgal_add_aid_to_cad(DesfireContext_t *ctx, uint8_t *key, bool should
                       entry_num, file_id, sprint_hex_inrow(entry, 6));
 
     // Select application & authenticate
-    int res = select_aid_and_auth_with_key(ctx, aid, key, 0, should_diversify, verbose);
+    int res = select_aid_and_auth_with_key(ctx, CAD_AID, key, 0, should_diversify, verbose);
     HFGAL_RET_IF_ERR(res);
 
     // Create file if necessary
@@ -896,11 +929,17 @@ static int CmdGallagherClone(const char *cmd) {
     int res = DesfireGetCardUID(&dctx);
     HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed retrieving card UID");
 
-    // Find available Gallagher AID if the user did not specify one
     if (aid_len == 0) {
+        // Find available Gallagher AID if the user did not specify one
         aid = find_available_gallagher_aid(&dctx, verbose);
         if (aid == 0)
-            HFGAL_RET_ERR(PM3_EFATAL, "Could not find an available AID, card is full");
+            HFGAL_RET_ERR(PM3_EFATAL, "Could not find an available AID, please specify with --aid");
+        if (verbose)
+            PrintAndLogEx(INFO, "Using available AID: %06X", aid);
+    } else {
+        // Check that AID is available
+        if (aid_exists(&dctx, aid, verbose))
+            HFGAL_RET_ERR(PM3_EINVARG, "AID already exists: %06X", aid);
     }
 
     // Update Card Application Directory
