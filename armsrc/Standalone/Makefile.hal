@@ -1,18 +1,3 @@
-#-----------------------------------------------------------------------------
-# Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# See LICENSE.txt for the text of the license.
-#-----------------------------------------------------------------------------
 # Default standalone if no standalone specified
 DEFAULT_STANDALONE=LF_SAMYRUN
 HELP_EXAMPLE_STANDALONE=LF_SAMYRUN
@@ -62,6 +47,9 @@ define KNOWN_STANDALONE_DEFINITIONS
 | HF_14ASNIFF     | 14a sniff to flashmem                  |
 | (RDV4 only)     |                                        |
 +----------------------------------------------------------+
+| HF_15693SNIFF   | 15693 sniff to flashmem                |
+| (RDV4 only)     |                                        |
++----------------------------------------------------------+
 | HF_AVEFUL       | Mifare ultralight read/simulation      |
 |                 | - Ave Ozkal                            |
 +----------------------------------------------------------+
@@ -107,10 +95,10 @@ define KNOWN_STANDALONE_DEFINITIONS
 endef
 
 STANDALONE_MODES := LF_SKELETON LF_EM4100EMUL LF_EM4100RSWB LF_EM4100RWC LF_HIDBRUTE LF_HIDFCBRUTE LF_ICEHID LF_PROXBRUTE LF_SAMYRUN LF_THAREXDE LF_NEXID
-STANDALONE_MODES += HF_14ASNIFF HF_AVEFUL HF_BOG HF_COLIN HF_CRAFTBYTE HF_ICECLASS HF_LEGIC HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_TCPRST HF_TMUDFORD HF_YOUNG HF_REBLAY DANKARMULTI
+STANDALONE_MODES += HF_14ASNIFF HF_15693SNIFF HF_AVEFUL HF_BOG HF_COLIN HF_CRAFTBYTE HF_ICECLASS HF_LEGIC HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_TCPRST HF_TMUDFORD HF_YOUNG HF_REBLAY DANKARMULTI
 STANDALONE_MODES_REQ_BT := HF_REBLAY
 STANDALONE_MODES_REQ_SMARTCARD :=
-STANDALONE_MODES_REQ_FLASH := LF_HIDFCBRUTE LF_ICEHID LF_NEXID LF_THAREXDE HF_14ASNIFF HF_BOG HF_COLIN HF_ICECLASS HF_MFCSIM
+STANDALONE_MODES_REQ_FLASH := LF_HIDFCBRUTE LF_ICEHID LF_NEXID LF_THAREXDE HF_14ASNIFF HF_15693SNIFF HF_BOG HF_COLIN HF_ICECLASS HF_MFCSIM
 ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES)),)
     STANDALONE_PLATFORM_DEFS += -DWITH_STANDALONE_$(STANDALONE)
     ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES_REQ_SMARTCARD)),)

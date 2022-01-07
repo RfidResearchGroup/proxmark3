@@ -1,20 +1,4 @@
-#-----------------------------------------------------------------------------
-# Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# See LICENSE.txt for the text of the license.
-#-----------------------------------------------------------------------------
 # Generic standalone Mode injection of source code
-#-----------------------------------------------------------------------------
 
 SRC_STANDALONE = placeholder.c
 # WITH_STANDALONE_LF_SKELETON
@@ -56,6 +40,10 @@ endif
 # WITH_STANDALONE_HF_14ASNIFF
 ifneq (,$(findstring WITH_STANDALONE_HF_14ASNIFF,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_14asniff.c
+endif
+# WITH_STANDALONE_HF_15693SNIFF
+ifneq (,$(findstring WITH_STANDALONE_HF_15693SNIFF,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_15693sniff.c
 endif
 # WITH_STANDALONE_HF_AVEFUL
 ifneq (,$(findstring WITH_STANDALONE_HF_AVEFUL,$(APP_CFLAGS)))
