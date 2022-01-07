@@ -58,6 +58,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed `SimulateTagLowFrequencyEx` ignoring the `ledcontrol` argument (@zabszk)
  - Added ledcontrol argument to LF operations (@zabszk)
  - Added new standalone mode `dankarmulti` -  select and run multiple standalone modes (@dankar)
+ - Added `hf gallagher` commands for read/writing DESFire cards (@DarkMatterMatt)
 
 ## [crimson.4.14434][2021-09-18]
  - Fixed `hf mf staticnested` - flashmem / non loop now works (@horrordash)
