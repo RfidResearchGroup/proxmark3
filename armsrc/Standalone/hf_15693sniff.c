@@ -81,7 +81,7 @@ static void DownloadTraceInstructions(void) {
 }
 
 void ModInfo(void) {
-    DbpString(" HF 15693 SNIFF,  a ISO15693 sniffer with storing in flashmem");
+    DbpString(" HF 15693 SNIFF,  a ISO15693 sniffer with storing in flashmem (Nathan Glaser)");
 //    DownloadTraceInstructions();
 }
 
