@@ -38,6 +38,14 @@ extern bool g_pendingPrompt;
 #define PRINTANDLOG_PRINT 1
 #define PRINTANDLOG_LOG   2
 
+// Return error
+#define PM3_RET_ERR(err, ...)  { PrintAndLogEx(ERR, __VA_ARGS__); return err; }
+
+// RETurn IF ERRor
+#define PM3_RET_IF_ERR(res)                          if (res != PM3_SUCCESS) {                                               return res; }
+#define PM3_RET_IF_ERR_WITH_MSG(res, ...)            if (res != PM3_SUCCESS) {              PrintAndLogEx(ERR, __VA_ARGS__); return res; }
+#define PM3_RET_IF_ERR_MAYBE_MSG(res, verbose, ...)  if (res != PM3_SUCCESS) { if (verbose) PrintAndLogEx(ERR, __VA_ARGS__); return res; }
+
 int kbd_enter_pressed(void);
 void FillFileNameByUID(char *filenamePrefix, const uint8_t *uid, const char *ext, const int uidlen);
 // fill buffer from structure [{uint8_t data, size_t length},...]

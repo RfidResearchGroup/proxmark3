@@ -40,12 +40,4 @@ int CmdHFGallagher(const char *cmd);
 int hfgal_diversify_key(uint8_t *site_key, uint8_t *uid, uint8_t uid_len,
                         uint8_t key_num, uint32_t aid, uint8_t *key_output);
 
-// Return error
-#define HFGAL_RET_ERR(err, ...)  { PrintAndLogEx(ERR, __VA_ARGS__); return err; }
-
-// HF GALlagher RETurn IF ERRor
-#define HFGAL_RET_IF_ERR(res)                          if (res != PM3_SUCCESS) {                                               return res; }
-#define HFGAL_RET_IF_ERR_WITH_MSG(res, ...)            if (res != PM3_SUCCESS) {              PrintAndLogEx(ERR, __VA_ARGS__); return res; }
-#define HFGAL_RET_IF_ERR_MAYBE_MSG(res, verbose, ...)  if (res != PM3_SUCCESS) { if (verbose) PrintAndLogEx(ERR, __VA_ARGS__); return res; }
-
 #endif
