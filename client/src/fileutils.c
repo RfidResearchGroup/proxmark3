@@ -354,7 +354,7 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             break;
         }
         case jsfCardMemory: {
-            iso14a_mf_extdump_t *xdump = (iso14a_mf_extdump_t *) data;
+            iso14a_mf_extdump_t *xdump = (iso14a_mf_extdump_t *)(void *) data;
             JsonSaveStr(root, "FileType", "mfcard");
             JsonSaveBufAsHexCompact(root, "$.Card.UID", xdump->card_info.uid, xdump->card_info.uidlen);
             JsonSaveBufAsHexCompact(root, "$.Card.ATQA", xdump->card_info.atqa, 2);
