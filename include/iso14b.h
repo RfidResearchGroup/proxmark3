@@ -60,10 +60,10 @@ typedef struct {
 #define US_TO_SSP(x)   ( (uint32_t)((x) * 3.39) )
 #define SSP_TO_US(x)   ( (uint32_t)((x) / 3.39) )
 
-#define ETU_TO_SSP(x)  ((x) * 32)
-#define SSP_TO_ETU(x)  ((x) / 32)
+#define ETU_TO_SSP(x)  ((uint32_t)((x) * 32))
+#define SSP_TO_ETU(x)  ((uint32_t)((x) / 32))
 
-#define ETU_TO_US(x)   ((((x) * 9440000) / 1000000) + 0.5)
-#define US_TO_ETU(x)   ((((x) * 1000000 / 9440000) + 0.5))
+#define ETU_TO_US(x)   ((uint32_t)((((x) * 9440000) / 1000000) + 0.5))
+#define US_TO_ETU(x)   ((uint32_t)(((x) * 1000000 / 9440000) + 0.5))
 
 #endif // _ISO14B_H_
