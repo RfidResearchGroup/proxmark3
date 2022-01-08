@@ -238,7 +238,7 @@ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statel
     memset(bs_zeroes.bytes, 0x00, VECTOR_SIZE);
 
     // bitslice all the even states
-    bitslice_t **restrict bitsliced_even_states = (bitslice_t **)malloc(((p->len[EVEN_STATE] - 1) / MAX_BITSLICES + 1) * sizeof(bitslice_t *));
+    bitslice_t **restrict bitsliced_even_states = (bitslice_t **)calloc(1, ((p->len[EVEN_STATE] - 1) / MAX_BITSLICES + 1) * sizeof(bitslice_t *));
     if (bitsliced_even_states == NULL) {
         PrintAndLogEx(WARNING, "Out of memory error in brute_force. Aborting...");
         exit(4);
