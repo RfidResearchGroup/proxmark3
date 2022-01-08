@@ -771,7 +771,12 @@ static int hfgal_read_card(uint32_t aid, uint8_t *site_key, bool verbose, bool q
         // Read & decode credentials
         GallagherCredentials_t creds = {0};
         res = hfgal_read_creds_app(&dctx, current_aid, site_key, &creds, verbose);
-        HFGAL_RET_IF_ERR_MAYBE_MSG(res, !quiet, "Failed reading card application credentials");
+        if (res != PM3_SUCCESS && res != HFGAL_AUTH_FAIL)
+            HFGAL_RET_IF_ERR_MAYBE_MSG(res, !quiet, "Failed reading card application credentials");
+        if (res == HFGAL_AUTH_FAIL) {
+            PrintAndLogEx(WARNING, "Invalid site key for AID %06X", current_aid);
+            continue;
+        }
 
         PrintAndLogEx(SUCCESS, "GALLAGHER (AID %06X) - Region: " _GREEN_("%u") ", Facility: " _GREEN_("%u")
                       ", Card No.: " _GREEN_("%u") ", Issue Level: " _GREEN_("%u"), current_aid,

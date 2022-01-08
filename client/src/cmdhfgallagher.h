@@ -40,4 +40,8 @@ int hfgal_diversify_key(uint8_t *site_key, uint8_t *uid, uint8_t uid_len,
 #define HFGAL_RET_IF_ERR_WITH_MSG(res, ...)            if (res != PM3_SUCCESS) {              PrintAndLogEx(ERR, __VA_ARGS__); return res; }
 #define HFGAL_RET_IF_ERR_MAYBE_MSG(res, verbose, ...)  if (res != PM3_SUCCESS) { if (verbose) PrintAndLogEx(ERR, __VA_ARGS__); return res; }
 
+// The response code when an invalid key is used for authentication
+// Returned in /client/src/mifare/desfirecore.c, line 1185 (if DesfireExchangeEx fails)
+#define HFGAL_AUTH_FAIL 7
+
 #endif
