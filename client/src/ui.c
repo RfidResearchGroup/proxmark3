@@ -648,6 +648,10 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
     int rows;
     rl_reset_screen_size(); // refresh Readline idea of the actual screen width
     rl_get_screen_size(&rows, &cols);
+
+    if (cols < 36)
+        return;
+
     (void) rows;
     if (prev_cols > cols) {
         PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ "");
@@ -655,8 +659,6 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
     prev_cols = cols;
 #endif
     int width = cols - 35;
-    if (width < 1)
-        return;
 
 #define PERCENTAGE(V, T)   ((V * width) / T)
     // x/8 fractional part of the percentage

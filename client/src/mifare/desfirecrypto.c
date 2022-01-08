@@ -72,10 +72,17 @@ void DesfireClearIV(DesfireContext_t *ctx) {
 
 void DesfireSetKey(DesfireContext_t *ctx, uint8_t keyNum, DesfireCryptoAlgorithm keyType, uint8_t *key) {
     DesfireClearContext(ctx);
+    if (key == NULL)
+        return;
+
     DesfireSetKeyNoClear(ctx, keyNum, keyType, key);
 }
 
 void DesfireSetKeyNoClear(DesfireContext_t *ctx, uint8_t keyNum, DesfireCryptoAlgorithm keyType, uint8_t *key) {
+
+    if (key == NULL)
+        return;
+
     ctx->keyNum = keyNum;
     ctx->keyType = keyType;
     memcpy(ctx->key, key, desfire_get_key_length(keyType));
@@ -93,8 +100,9 @@ void DesfireSetCommMode(DesfireContext_t *ctx, DesfireCommunicationMode commMode
 void DesfireSetKdf(DesfireContext_t *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint8_t kdfInputLen) {
     ctx->kdfAlgo = kdfAlgo;
     ctx->kdfInputLen = kdfInputLen;
-    if (kdfInputLen)
+    if (kdfInputLen) {
         memcpy(ctx->kdfInput, kdfInput, kdfInputLen);
+    }
 }
 
 bool DesfireIsAuthenticated(DesfireContext_t *dctx) {
