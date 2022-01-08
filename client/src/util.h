@@ -39,7 +39,16 @@ extern bool g_pendingPrompt;
 #define PRINTANDLOG_LOG   2
 
 // Return error
-#define PM3_RET_ERR(err, ...)  { PrintAndLogEx(ERR, __VA_ARGS__); return err; }
+#define PM3_RET_ERR(err, ...)  { \
+    PrintAndLogEx(ERR, __VA_ARGS__); \
+    return err; \
+}
+
+#define PM3_RET_ERR_FREE(err, ...)  { \
+    CLIParserFree(ctx); \
+    PrintAndLogEx(ERR, __VA_ARGS__); \
+    return err; \
+}
 
 // RETurn IF ERRor
 #define PM3_RET_IF_ERR(res)                          if (res != PM3_SUCCESS) {                                               return res; }
