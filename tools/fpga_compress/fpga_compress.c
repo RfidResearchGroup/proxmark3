@@ -250,9 +250,8 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
             fclose(outfiles[j]);
         }
     }
-    if (outbufall) {
-        free(outbufall);
-    }
+
+    free(outbufall);
     return (EXIT_SUCCESS);
 }
 
