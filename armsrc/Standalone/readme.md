@@ -173,7 +173,9 @@ Make sure it says your standalone mode name.
 Once you're ready to share your mode, please
 
 * add a line in CHANGELOG.md
-* add your mode in the modes table in doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md
+* add your mode in the modes table in `doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md`
+* add your mode in `tools/build_all_firmwares.sh`
+
 
 and submit your PR.
 
