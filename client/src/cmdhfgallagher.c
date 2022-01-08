@@ -251,7 +251,7 @@ static int hfgal_read_creds_app(DesfireContext_t *ctx, uint32_t aid, uint8_t *si
                                 GallagherCredentials_t *creds, bool verbose) {
     // Check that card UID has been set
     if (ctx->uidlen == 0) {
-        PM3_RET_ERR(PM3_EINVARG, "Card UID must be set in DesfireContext (required for key diversification)");
+        PM3_RET_ERR(PM3_EINVARG, "Card UID must be set in DesfireContext (required for key div)");
     }
 
     // Select application & authenticate
@@ -269,7 +269,7 @@ static int hfgal_read_creds_app(DesfireContext_t *ctx, uint32_t aid, uint8_t *si
 
     // Check file contained 16 bytes of data
     if (read_len != 16) {
-        PM3_RET_ERR(PM3_EFAILED, "Failed reading file 0 in AID %06X, expected 16 bytes, got %d bytes",
+        PM3_RET_ERR(PM3_EFAILED, "Failed reading file 0 in AID %06X, expected 16 bytes, got %zu bytes",
                       aid,
                       read_len
                     );
@@ -282,6 +282,7 @@ static int hfgal_read_creds_app(DesfireContext_t *ctx, uint32_t aid, uint8_t *si
 
     if (memcmp(buf, &buf[8], 8) != 0) {
         PM3_RET_ERR(PM3_EFAILED, "Invalid cardholder data in file 0 in AID %06X. Received %s",
+                      aid,
                       sprint_hex_inrow(buf, 16)
                     );
     }
@@ -414,7 +415,7 @@ static int hfgal_create_creds_file(DesfireContext_t *ctx, uint8_t *site_key, uin
     // Write file
     DesfireSetCommMode(ctx, DCMEncrypted);
     res = DesfireWriteFile(ctx, file_id, 0, ARRAYLEN(contents), contents);
-    PM3_RET_IF_ERR_WITH_MSG(res, "Failed writing data to file 0 in AID %06X");
+    PM3_RET_IF_ERR_WITH_MSG(res, "Failed writing data to file 0 in AID %06X", aid);
 
     PrintAndLogEx(INFO, "Successfully wrote cardholder credentials to file " _YELLOW_("0") " in AID " _YELLOW_("%06X"), aid);
     return PM3_SUCCESS;
@@ -510,7 +511,7 @@ static int hfgal_create_cad(DesfireContext_t *ctx, uint8_t *site_key, bool verbo
 
     DesfireSetCommMode(ctx, DCMMACed);
     res = DesfireCreateApplication(ctx, data, ARRAYLEN(data));
-    PM3_RET_IF_ERR_WITH_MSG(res, "Failed creating Card Application Directory. Does it already exist?", CAD_AID);
+    PM3_RET_IF_ERR_WITH_MSG(res, "Failed creating Card Application Directory (AID " _YELLOW_("%06X")"). Does it already exist?", CAD_AID);
 
     if (verbose) {
         PrintAndLogEx(INFO, "Created Card Application Directory (AID " _YELLOW_("%06X") ", empty contents & blank keys)",

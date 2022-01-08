@@ -56,7 +56,7 @@ static int get_and_print_balance(void) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Current balance: " _YELLOW_("%ld") " won/cents", balance);
+    PrintAndLogEx(SUCCESS, "Current balance: " _YELLOW_("%u") " won/cents", balance);
     return PM3_SUCCESS;
 }
 
