@@ -7,11 +7,11 @@
 // as the HITAG2 original implementation, with some minor changes
 
 #define i4(x,a,b,c,d) ((uint32_t)((((x)>>(a))&1)<<3)|(((x)>>(b))&1)<<2|(((x)>>(c))&1)<<1|(((x)>>(d))&1))
-#define f(state) ((0xdd3929b >> ( (((0x3c65 >> i4(state, 2, 3, 5, 6) ) & 1) <<4) \
+#define f(state) ((uint32_t)((0xdd3929b >> ( (((0x3c65 >> i4(state, 2, 3, 5, 6) ) & 1) <<4) \
                                 | ((( 0xee5 >> i4(state, 8,12,14,15) ) & 1) <<3) \
                                 | ((( 0xee5 >> i4(state,17,21,23,26) ) & 1) <<2) \
                                 | ((( 0xee5 >> i4(state,28,29,31,33) ) & 1) <<1) \
-                                | (((0x3c65 >> i4(state,34,43,44,46) ) & 1) ))) & 1)
+                                | (((0x3c65 >> i4(state,34,43,44,46) ) & 1) ))) & 1))
 
 #define get_bit(n, word) ((word >> (n)) & 1)
 
