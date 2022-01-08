@@ -112,19 +112,19 @@ bool gallagher_is_valid_creds(uint64_t region_code, uint64_t facility_code, uint
 
     // validate input
     if (region_code > 0x0f) {
-        PrintAndLogEx(ERR, "Region code must be 0 <= rc <= 15 (4 bits), received: %d", region_code);
+        PrintAndLogEx(ERR, "Region code must be 0 <= rc <= 15 (4 bits), received: %"PRIu64, region_code);
         is_valid = false;
     }
     if (facility_code > 0xffff) {
-        PrintAndLogEx(ERR, "Facility code must be 0 <= fc <= 65535 (2 bytes), received: %d", facility_code);
+        PrintAndLogEx(ERR, "Facility code must be 0 <= fc <= 65535 (2 bytes), received: %"PRIu64, facility_code);
         is_valid = false;
     }
     if (card_number > 0xffffff) {
-        PrintAndLogEx(ERR, "Card number must be 0 <= cn <= 16777215 (3 bytes), received: %d", card_number);
+        PrintAndLogEx(ERR, "Card number must be 0 <= cn <= 16777215 (3 bytes), received: %"PRIu64, card_number);
         is_valid = false;
     }
     if (issue_level > 0x0f) {
-        PrintAndLogEx(ERR, "Issue level must be 0 <= il <= 15 (4 bits), received: %d", issue_level);
+        PrintAndLogEx(ERR, "Issue level must be 0 <= il <= 15 (4 bits), received: %"PRIu64, issue_level);
         is_valid = false;
     }
     return is_valid;

@@ -77,7 +77,7 @@ int demodzx(bool verbose) {
 
     // test checksums
 
-    PrintAndLogEx(SUCCESS, "ZX8211 - Card " _GREEN_("%u") ", Raw: %08X", raw1);
+    PrintAndLogEx(SUCCESS, "ZX8211 - Card " _GREEN_("%u"), raw1);
     return PM3_SUCCESS;
 }
 
