@@ -310,7 +310,7 @@ struct emv_pk *emv_pki_recover_icc_cert(const struct emv_pk *pk, struct tlvdb *d
                                             sda_tlv,
                                             &sda_tdata);
 
-    free(sdatl); // malloc here: emv_pki_sdatl_fill
+    free(sdatl); // calloc here: emv_pki_sdatl_fill
     return res;
 }
 
@@ -345,7 +345,7 @@ unsigned char *emv_pki_sdatl_fill(const struct tlvdb *db, size_t *sdatl_len) {
 
     if (len) {
         *sdatl_len = len;
-        unsigned char *value = malloc(len);
+        unsigned char *value = calloc(1, len);
         memcpy(value, buf, len);
         return value;
     }
@@ -372,7 +372,7 @@ struct tlvdb *emv_pki_recover_dac_ex(const struct emv_pk *enc_pk, const struct t
                                                  &sda_tdata,
                                                  (uint8_t *)NULL);
 
-    free(sdatl); // malloc here: emv_pki_sdatl_fill
+    free(sdatl); // calloc here: emv_pki_sdatl_fill
 
     if (!data || data_len < 5)
         return NULL;

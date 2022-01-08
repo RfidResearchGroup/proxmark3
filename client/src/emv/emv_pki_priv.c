@@ -90,15 +90,15 @@ static struct tlvdb *emv_pki_sign_message(const struct crypto_pk *cp,
                                           ... /* A list of tlv pointers, end with NULL */
                                          ) {
     size_t tmp_len = (crypto_pk_get_nbits(cp) + 7) / 8;
-    unsigned char *tmp = malloc(tmp_len);
-    if (!tmp)
+    unsigned char *tmp = calloc(1, tmp_len);
+    if (!tmp) {
         return NULL;
+    }
 
     // XXX
     struct crypto_hash *ch = crypto_hash_open(HASH_SHA_1);
     if (!ch) {
         free(tmp);
-
         return NULL;
     }
 
@@ -179,7 +179,7 @@ static struct tlvdb *emv_pki_sign_key(const struct crypto_pk *cp,
                                       const struct tlv *add_tlv
                                      ) {
     unsigned pos = 0;
-    unsigned char *msg = malloc(1 + pan_len + 2 + 3 + 1 + 1 + 1 + 1 + ipk->mlen);
+    unsigned char *msg = calloc(1, 1 + pan_len + 2 + 3 + 1 + 1 + 1 + 1 + ipk->mlen);
 
     if (!msg)
         return NULL;
@@ -235,7 +235,7 @@ struct tlvdb *emv_pki_sign_icc_pe_cert(const struct crypto_pk *cp, struct emv_pk
 
 struct tlvdb *emv_pki_sign_dac(const struct crypto_pk *cp, const struct tlv *dac_tlv, const struct tlv *sda_tlv) {
     unsigned pos = 0;
-    unsigned char *msg = malloc(1 + 1 + dac_tlv->len);
+    unsigned char *msg = calloc(1, 1 + 1 + dac_tlv->len);
 
     if (!msg)
         return NULL;
@@ -258,7 +258,7 @@ struct tlvdb *emv_pki_sign_dac(const struct crypto_pk *cp, const struct tlv *dac
 
 struct tlvdb *emv_pki_sign_idn(const struct crypto_pk *cp, const struct tlv *idn_tlv, const struct tlv *dyn_tlv) {
     unsigned pos = 0;
-    unsigned char *msg = malloc(1 + 1 + 1 + 1 + idn_tlv->len);
+    unsigned char *msg = calloc(1, 1 + 1 + 1 + 1 + idn_tlv->len);
 
     if (!msg)
         return NULL;

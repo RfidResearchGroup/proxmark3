@@ -26,6 +26,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #define TLV_TAG_CLASS_MASK  0xc0
 #define TLV_TAG_COMPLEX     0x20
@@ -163,7 +164,7 @@ static struct tlvdb *tlvdb_parse_children(struct tlvdb *parent) {
     struct tlvdb *tlvdb, *first = NULL, *prev = NULL;
 
     while (left != 0) {
-        tlvdb = malloc(sizeof(*tlvdb));
+        tlvdb = calloc(1, sizeof(*tlvdb));
         if (prev)
             prev->next = tlvdb;
         else
@@ -192,7 +193,7 @@ struct tlvdb *tlvdb_parse(const unsigned char *buf, size_t len) {
     if (!len || !buf)
         return NULL;
 
-    root = malloc(sizeof(*root) + len);
+    root = calloc(1, sizeof(*root) + len);
     root->len = len;
     memcpy(root->buf, buf, len);
 
@@ -221,7 +222,7 @@ struct tlvdb *tlvdb_parse_multi(const unsigned char *buf, size_t len) {
     if (!len || !buf)
         return NULL;
 
-    root = malloc(sizeof(*root) + len);
+    root = calloc(1, sizeof(*root) + len);
     root->len = len;
     memcpy(root->buf, buf, len);
 
@@ -232,7 +233,7 @@ struct tlvdb *tlvdb_parse_multi(const unsigned char *buf, size_t len) {
         goto err;
 
     while (left != 0) {
-        struct tlvdb *db = malloc(sizeof(*db));
+        struct tlvdb *db = calloc(1, sizeof(*db));
         if (!tlvdb_parse_one(db, NULL, &tmp, &left)) {
             free(db);
             goto err;
@@ -250,7 +251,7 @@ err:
 }
 
 struct tlvdb *tlvdb_fixed(tlv_tag_t tag, size_t len, const unsigned char *value) {
-    struct tlvdb_root *root = malloc(sizeof(*root) + len);
+    struct tlvdb_root *root = calloc(1, sizeof(*root) + len);
 
     root->len = len;
     memcpy(root->buf, value, len);
@@ -264,7 +265,7 @@ struct tlvdb *tlvdb_fixed(tlv_tag_t tag, size_t len, const unsigned char *value)
 }
 
 struct tlvdb *tlvdb_external(tlv_tag_t tag, size_t len, const unsigned char *value) {
-    struct tlvdb_root *root = malloc(sizeof(*root));
+    struct tlvdb_root *root = calloc(1, sizeof(*root));
 
     root->len = 0;
 
@@ -489,7 +490,7 @@ unsigned char *tlv_encode(const struct tlv *tlv, size_t *len) {
     else
         size += 1;
 
-    data = malloc(size);
+    data = calloc(1, size);
     if (!data) {
         *len = 0;
         return NULL;

@@ -225,9 +225,9 @@ static uint64_t packstate(uint64_t s) {
 
 /* create_guess_table mallocs the tables */
 static void create_guess_table(void) {
-    guesses = (struct guess *)malloc(sizeof(struct guess) * maxtablesize);
+    guesses = (struct guess *)calloc(1, sizeof(struct guess) * maxtablesize);
     if (!guesses) {
-        printf("cannot malloc guess table\n");
+        printf("cannot allocate memory for guess table\n");
         exit(1);
     }
 }
@@ -264,9 +264,9 @@ static void init_guess_table(char *filename, char *uidstr) {
     }
 
     num_nRaR = 0;
-    buf = (char *)malloc(lenbuf);
+    buf = (char *)calloc(1, lenbuf);
     if (!buf) {
-        printf("cannot malloc buf\n");
+        printf("cannot calloc buf\n");
         exit(1);
     }
 

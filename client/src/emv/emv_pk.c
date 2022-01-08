@@ -202,7 +202,7 @@ struct emv_pk *emv_pk_parse_pk(char *buf, size_t buflen) {
         goto out;
     buf += l;
 
-    r->modulus = malloc(2048 / 8);
+    r->modulus = calloc(1, (2048 / 8));
     l = emv_pk_read_bin(buf, buflen, r->modulus, 2048 / 8, &r->mlen);
     if (l <= 0)
         goto out2;
@@ -267,8 +267,8 @@ static size_t emv_pk_write_str(char *out, size_t outlen, const char *str) {
 
 char *emv_pk_dump_pk(const struct emv_pk *pk) {
     size_t outpos = 0;
-    size_t outsize = 1024; /* should be enough */
-    char *out = malloc(outsize); /* should be enough */
+    size_t outsize = 1024; // should be enough
+    char *out = calloc(1, outsize); // should be enough
     if (!out)
         return NULL;
 

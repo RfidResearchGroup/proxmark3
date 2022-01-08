@@ -63,7 +63,7 @@ static struct crypto_hash *crypto_hash_polarssl_open(enum crypto_algo_hash hash)
     if (hash != HASH_SHA_1)
         return NULL;
 
-    struct crypto_hash_polarssl *ch = malloc(sizeof(*ch));
+    struct crypto_hash_polarssl *ch = calloc(1, sizeof(*ch));
 
     mbedtls_sha1_starts(&(ch->ctx));
 
@@ -81,7 +81,7 @@ struct crypto_pk_polarssl {
 };
 
 static struct crypto_pk *crypto_pk_polarssl_open_rsa(va_list vl) {
-    struct crypto_pk_polarssl *cp = malloc(sizeof(*cp));
+    struct crypto_pk_polarssl *cp = calloc(1, sizeof(*cp));
     memset(cp, 0x00, sizeof(*cp));
 
     char *mod = va_arg(vl, char *); // N
@@ -106,7 +106,7 @@ static struct crypto_pk *crypto_pk_polarssl_open_rsa(va_list vl) {
 }
 
 static struct crypto_pk *crypto_pk_polarssl_open_priv_rsa(va_list vl) {
-    struct crypto_pk_polarssl *cp = malloc(sizeof(*cp));
+    struct crypto_pk_polarssl *cp = calloc(1, sizeof(*cp));
     memset(cp, 0x00, sizeof(*cp));
     char *mod = va_arg(vl, char *);
     int modlen = va_arg(vl, size_t);
@@ -166,7 +166,7 @@ static int myrand(void *rng_state, unsigned char *output, size_t len) {
 }
 
 static struct crypto_pk *crypto_pk_polarssl_genkey_rsa(va_list vl) {
-    struct crypto_pk_polarssl *cp = malloc(sizeof(*cp));
+    struct crypto_pk_polarssl *cp = calloc(1, sizeof(*cp));
     memset(cp, 0x00, sizeof(*cp));
 
     int transient = va_arg(vl, int);
@@ -198,7 +198,7 @@ static unsigned char *crypto_pk_polarssl_encrypt(const struct crypto_pk *_cp, co
     *clen = 0;
     size_t keylen = mbedtls_mpi_size(&cp->ctx.N);
 
-    unsigned char *result = malloc(keylen);
+    unsigned char *result = calloc(1, keylen);
     if (!result) {
         PrintAndLogEx(WARNING, "RSA encrypt failed. Can't allocate result memory");
         return NULL;
@@ -220,7 +220,7 @@ static unsigned char *crypto_pk_polarssl_decrypt(const struct crypto_pk *_cp, co
     *clen = 0;
     size_t keylen = mbedtls_mpi_size(&cp->ctx.N);
 
-    unsigned char *result = malloc(keylen);
+    unsigned char *result = calloc(1, keylen);
     if (!result) {
         PrintAndLogEx(WARNING, "RSA encrypt failed. Can't allocate result memory");
         return NULL;
@@ -250,7 +250,7 @@ static unsigned char *crypto_pk_polarssl_get_parameter(const struct crypto_pk *_
         // mod
         case 0:
             *plen = mbedtls_mpi_size(&cp->ctx.N);
-            result = malloc(*plen);
+            result = calloc(1, *plen);
             memset(result, 0x00, *plen);
             res = mbedtls_mpi_write_binary(&cp->ctx.N, result, *plen);
             if (res < 0) {
@@ -262,7 +262,7 @@ static unsigned char *crypto_pk_polarssl_get_parameter(const struct crypto_pk *_
         // exp
         case 1:
             *plen = mbedtls_mpi_size(&cp->ctx.E);
-            result = malloc(*plen);
+            result = calloc(1, *plen);
             memset(result, 0x00, *plen);
             res = mbedtls_mpi_write_binary(&cp->ctx.E, result, *plen);
             if (res < 0) {

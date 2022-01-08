@@ -1340,7 +1340,7 @@ bool DetectST(uint8_t *buffer, size_t *size, int *foundclock, size_t *ststart, s
     int tol = 0;
     int j = 0, high, low, skip = 0, start = 0, end = 0, minClk = 255;
     size_t i = 0;
-    //probably should malloc... || test if memory is available ... handle device side? memory danger!!! [marshmellow]
+    //probably should calloc... || test if memory is available ... handle device side? memory danger!!! [marshmellow]
     int tmpbuff[bufsize / LOWEST_DEFAULT_CLOCK]; // low to low wave count //guess rf/32 clock, if click is smaller we will only have room for a fraction of the samples captured
     int waveLen[bufsize / LOWEST_DEFAULT_CLOCK]; // high to low wave count //if clock is larger then we waste memory in array size that is not needed...
     //size_t testsize = (bufsize < 512) ? bufsize : 512;

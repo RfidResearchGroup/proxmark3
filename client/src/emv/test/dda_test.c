@@ -23,7 +23,7 @@
 #endif
 
 #include <string.h>     // memcpy
-#include <stdlib.h>     // malloc
+#include <stdlib.h>     // calloc
 
 #include "dda_test.h"
 #include "../emv_pk.h"
@@ -169,7 +169,7 @@ static int dda_test_raw(bool verbose) {
     }
 
     size_t ipk_pk_len = ipk_data[13];
-    unsigned char *ipk_pk = malloc(ipk_pk_len);
+    unsigned char *ipk_pk = calloc(1, ipk_pk_len);
     memcpy(ipk_pk, ipk_data + 15, ipk_data_len - 36);
     memcpy(ipk_pk + ipk_data_len - 36, d_issuer_rem, sizeof(d_issuer_rem));
 
@@ -228,7 +228,7 @@ static int dda_test_raw(bool verbose) {
     }
 
     size_t iccpk_pk_len = iccpk_data[19];
-    unsigned char *iccpk_pk = malloc(iccpk_pk_len);
+    unsigned char *iccpk_pk = calloc(1, iccpk_pk_len);
     memcpy(iccpk_pk, iccpk_data + 21, /*iccpk_data_len - 36*/iccpk_pk_len);
     /*memcpy(iccpk_pk + iccpk_data_len - 36, icc_rem, sizeof(icc_rem));*/
 

@@ -60,9 +60,9 @@ static void create_table(struct table *tt, int d_1, int d_2) {
     }
 
     // create some space
-    tt->data = (unsigned char *)malloc(DATAMAX);
+    tt->data = (unsigned char *)calloc(1, DATAMAX);
     if (!(tt->data)) {
-        printf("create_table: cannot malloc data\n");
+        printf("create_table: cannot calloc data\n");
         exit(1);
     }
 
@@ -373,9 +373,9 @@ static void *sorttable(void *dd) {
     int space = 0x100 / NUM_SORT_THREADS;
 
     // create table - 50MB should be enough
-    unsigned char *table = (unsigned char *)malloc(50UL * 1024UL * 1024UL);
+    unsigned char *table = (unsigned char *)calloc(1, 50UL * 1024UL * 1024UL);
     if (!table) {
-        printf("sorttable: cannot malloc table\n");
+        printf("sorttable: cannot calloc table\n");
         exit(1);
     }
 

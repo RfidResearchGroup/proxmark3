@@ -141,9 +141,9 @@ struct Crypto1State *lfsr_recovery32(uint32_t ks2, uint32_t in) {
     for (i = 30; i >= 0; i -= 2)
         eks = eks << 1 | BEBIT(ks2, i);
 
-    odd_head = odd_tail = malloc(sizeof(uint32_t) << 21);
-    even_head = even_tail = malloc(sizeof(uint32_t) << 21);
-    statelist =  malloc(sizeof(struct Crypto1State) << 18);
+    odd_head = odd_tail = calloc(1, sizeof(uint32_t) << 21);
+    even_head = even_tail = calloc(1, sizeof(uint32_t) << 21);
+    statelist =  calloc(1, sizeof(struct Crypto1State) << 18);
     if (!odd_tail-- || !even_tail-- || !statelist) {
         free(statelist);
         statelist = 0;
@@ -157,7 +157,7 @@ struct Crypto1State *lfsr_recovery32(uint32_t ks2, uint32_t in) {
 
     for (i = 0; i < 2; i++) {
         for (uint32_t j = 0; j <= 0xff; j++) {
-            bucket[i][j].head = malloc(sizeof(uint32_t) << 14);
+            bucket[i][j].head = calloc(1, sizeof(uint32_t) << 14);
             if (!bucket[i][j].head) {
                 goto out;
             }
@@ -227,7 +227,7 @@ struct Crypto1State *lfsr_recovery64(uint32_t ks2, uint32_t ks3) {
     uint32_t *tail, table[1 << 16];
     int i, j;
 
-    sl = statelist = malloc(sizeof(struct Crypto1State) << 4);
+    sl = statelist = calloc(1, sizeof(struct Crypto1State) << 4);
     if (!sl)
         return 0;
     sl->odd = sl->even = 0;
@@ -488,7 +488,7 @@ struct Crypto1State *lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8]
     odd = lfsr_prefix_ks(ks, 1);
     even = lfsr_prefix_ks(ks, 0);
 
-    s = statelist = malloc((sizeof * statelist) << 24); // was << 20. Need more for no_par special attack. Enough???
+    s = statelist = calloc(1, (sizeof * statelist) << 24); // was << 20. Need more for no_par special attack. Enough???
     if (!s || !odd || !even) {
         free(statelist);
         statelist = 0;

@@ -23,7 +23,7 @@
 #endif
 
 #include <string.h>     // memcpy
-#include <stdlib.h>     // malloc
+#include <stdlib.h>     // calloc
 #include <inttypes.h>
 #include "crypto_test.h"
 

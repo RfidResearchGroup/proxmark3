@@ -54,7 +54,7 @@ static size_t dol_calculate_len(const struct tlv *tlv, size_t data_len) {
 struct tlv *dol_process(const struct tlv *tlv, const struct tlvdb *tlvdb, tlv_tag_t tag) {
     size_t res_len;
     if (!tlv || !(res_len = dol_calculate_len(tlv, 0))) {
-        struct tlv *res_tlv = malloc(sizeof(*res_tlv));
+        struct tlv *res_tlv = calloc(1, sizeof(*res_tlv));
 
         res_tlv->tag = tag;
         res_tlv->len = 0;
@@ -63,7 +63,7 @@ struct tlv *dol_process(const struct tlv *tlv, const struct tlvdb *tlvdb, tlv_ta
         return res_tlv;
     }
 
-    struct tlv *res_tlv = malloc(sizeof(*res_tlv) + res_len);
+    struct tlv *res_tlv = calloc(1, sizeof(*res_tlv) + res_len);
     if (!res_tlv)
         return NULL;
 

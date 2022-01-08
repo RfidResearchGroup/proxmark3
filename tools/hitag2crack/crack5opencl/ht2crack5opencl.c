@@ -413,9 +413,9 @@ int main(int argc, char **argv) {
     int freeListIdx = 0;
 
     // todo, calculate the max number of allocations to remove 0x40
-    void **freeList = (void **) malloc(0x40 * sizeof(void *));
+    void **freeList = (void **) calloc(1, 0x40 * sizeof(void *));
     if (!freeList) {
-        printf("Error: malloc (freeList) failed (%d): %s\n", errno, strerror(errno));
+        printf("Error: calloc (freeList) failed (%d): %s\n", errno, strerror(errno));
         exit(3);
     }
 

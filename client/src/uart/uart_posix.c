@@ -82,7 +82,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
     char *prefix = strdup(pcPortName);
     if (prefix == NULL) {
-        PrintAndLogEx(ERR, "error: malloc");
+        PrintAndLogEx(ERR, "error:  string duplication");
         free(sp);
         return INVALID_SERIAL_PORT;
     }
@@ -100,7 +100,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
         char *addrstr = strdup(pcPortName + 4);
         if (addrstr == NULL) {
-            PrintAndLogEx(ERR, "error: malloc");
+            PrintAndLogEx(ERR, "error: string duplication");
             free(sp);
             return INVALID_SERIAL_PORT;
         }
@@ -175,7 +175,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
         char *addrstr = strndup(pcPortName + 3, 17);
         if (addrstr == NULL) {
-            PrintAndLogEx(ERR, "error: malloc");
+            PrintAndLogEx(ERR, "error: string duplication");
             free(sp);
             return INVALID_SERIAL_PORT;
         }

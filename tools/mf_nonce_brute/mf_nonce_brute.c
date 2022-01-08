@@ -641,7 +641,7 @@ int main(int argc, char *argv[]) {
 
     // threads
     for (int i = 0; i < thread_count; ++i) {
-        struct thread_key_args *b = malloc(sizeof(struct thread_key_args));
+        struct thread_key_args *b = calloc(1, sizeof(struct thread_key_args));
         b->thread = i;
         b->idx = i;
         b->uid = uid;
