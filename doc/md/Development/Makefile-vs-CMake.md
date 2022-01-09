@@ -95,7 +95,7 @@ At the moment both are maintained because they don't perfectly overlap yet.
 
 | Feature | Makefile | Remarks |
 |-----|---|---|
-| Skip GPU-dependent code | `SKIPGPU=1` | to skip ht2crack5gpu tool when compiling the hitag2crack toolsuite |
+| Skip OpenCL-dependent code | `SKIPOPENCL=1` | to skip ht2crack5opencl tool when compiling the hitag2crack toolsuite |
 
 ## ARM
 ^[Top](#top)
