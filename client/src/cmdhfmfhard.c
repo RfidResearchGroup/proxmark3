@@ -60,7 +60,7 @@
 static uint16_t sums[NUM_SUMS] = {0, 32, 56, 64, 80, 96, 104, 112, 120, 128, 136, 144, 152, 160, 176, 192, 200, 224, 256};
 
 // number of possible partial sum property values
-#define NUM_PART_SUMS                  9 
+#define NUM_PART_SUMS                  9
 
 typedef enum {
     EVEN_STATE = 0,

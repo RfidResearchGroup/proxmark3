@@ -48,7 +48,7 @@ static const uint64_t g_mifare_default_keys[] = {
     0x4E3552426B32, // ID06
     0x6A1987C40A21, // Salto
     0xef1232ab18a0, // Schlage
-    0x3B7E4FD575AD, // 
+    0x3B7E4FD575AD, //
     0xb7bf0c13066e, // Gallagher
     0x135b88a94b8b, // Saflock
     0x5a7a52d5e20d, // Bosch

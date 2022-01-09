@@ -1311,7 +1311,7 @@ uint8_t detectFSKClk(const uint8_t *bits, size_t size, uint8_t fcHigh, uint8_t f
 
 
 // look for Sequence Terminator - should be pulses of clk*(1 or 2), clk*2, clk*(1.5 or 2), by idx we mean graph position index...
-static bool findST(int *stStopLoc, int *stStartIdx, 
+static bool findST(int *stStopLoc, int *stStartIdx,
                    const int lowToLowWaveLen[], const int highToLowWaveLen[],
                    int clk, int tol, int buffSize, size_t *i) {
     if (buffSize < *i + 4) return false;

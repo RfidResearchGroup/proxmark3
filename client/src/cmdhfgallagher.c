@@ -116,7 +116,7 @@ static void cad_aid_uint_to_byte(uint32_t aid, uint8_t *data) {
  * is for the specified region & facility, false otherwise.
  */
 static bool cad_facility_match(const uint8_t *entry, uint8_t region_code, uint16_t facility_code) {
-    return (entry[0] == region_code) && 
+    return (entry[0] == region_code) &&
            ((entry[1] << 8) + entry[2] == facility_code);
 }
 
@@ -152,9 +152,9 @@ static int authenticate(DesfireContext_t *ctx, bool verbose) {
     int res = DesfireAuthenticate(ctx, DACEV1, false);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: [%d] %s",
-                       res,
-                       DesfireAuthErrorToStr(res)
-                    );
+                      res,
+                      DesfireAuthErrorToStr(res)
+                     );
         return res;
     }
 
@@ -200,7 +200,7 @@ static bool aid_exists(DesfireContext_t *ctx, uint32_t aid, bool verbose) {
         PrintAndLogEx(INFO, "AID %06X %s",
                       aid,
                       res == PM3_SUCCESS ? "exists" : "does not exist"
-                    );
+                     );
     }
 
     return (res == PM3_SUCCESS);
@@ -273,9 +273,9 @@ static int hfgal_read_creds_app(DesfireContext_t *ctx, uint32_t aid, uint8_t *si
     // Check file contained 16 bytes of data
     if (read_len != 16) {
         PM3_RET_ERR(PM3_EFAILED, "Failed reading file 0 in AID %06X, expected 16 bytes, got %zu bytes",
-                      aid,
-                      read_len
-                    );
+                    aid,
+                    read_len
+                   );
     }
 
     // Check second half of file is the bitwise inverse of the first half
@@ -285,9 +285,9 @@ static int hfgal_read_creds_app(DesfireContext_t *ctx, uint32_t aid, uint8_t *si
 
     if (memcmp(buf, &buf[8], 8) != 0) {
         PM3_RET_ERR(PM3_EFAILED, "Invalid cardholder data in file 0 in AID %06X. Received %s",
-                      aid,
-                      sprint_hex_inrow(buf, 16)
-                    );
+                    aid,
+                    sprint_hex_inrow(buf, 16)
+                   );
     }
 
     gallagher_decode_creds(buf, creds);
@@ -312,7 +312,7 @@ static int hfgal_create_creds_app(DesfireContext_t *ctx, uint8_t *site_key, uint
     // UID is required for key diversification
     if (ctx->uidlen == 0)
         PM3_RET_ERR(PM3_EINVARG, "UID is required for key diversification. "
-                      "Please fetch it before calling `hfgal_create_creds_app`");
+                    "Please fetch it before calling `hfgal_create_creds_app`");
 
     // Create application
     DesfireCryptoAlgorithm app_algo = T_AES;
@@ -348,7 +348,7 @@ static int hfgal_create_creds_app(DesfireContext_t *ctx, uint8_t *site_key, uint
                       i,
                       aid,
                       sprint_hex_inrow(buf, ARRAYLEN(buf))
-                    );
+                     );
 
         // Authenticate
         uint8_t blank_key[CRYPTO_AES128_KEY_SIZE] = {0};
@@ -437,7 +437,7 @@ static int hfgal_read_cad(DesfireContext_t *ctx, uint8_t *dest_buf,
         PrintAndLogEx(ERR, "hfgal_read_cad destination buffer is incorrectly sized. Received len %d, must be at least %d",
                       dest_buf_len,
                       3 * 36
-                    );
+                     );
         return PM3_EINVARG;
     }
 
@@ -477,9 +477,9 @@ static int hfgal_read_cad(DesfireContext_t *ctx, uint8_t *dest_buf,
         PrintAndLogEx(SUCCESS, "Card Application Directory contains:" NOLF);
         for (int i = 0; i < num_entries; i++) {
             PrintAndLogEx(NORMAL, "%s %06X" NOLF,
-                        (i == 0) ? "" : ",",
-                        cad_aid_byte_to_uint(&dest_buf[i * 6 + 3])
-                    );
+                          (i == 0) ? "" : ",",
+                          cad_aid_byte_to_uint(&dest_buf[i * 6 + 3])
+                         );
         }
         PrintAndLogEx(NORMAL, "");
     }
@@ -518,8 +518,8 @@ static int hfgal_create_cad(DesfireContext_t *ctx, uint8_t *site_key, bool verbo
 
     if (verbose) {
         PrintAndLogEx(INFO, "Created Card Application Directory (AID " _YELLOW_("%06X") ", empty contents & blank keys)",
-                     CAD_AID
-                    );
+                      CAD_AID
+                     );
     }
 
     // Select application & authenticate
@@ -537,7 +537,7 @@ static int hfgal_create_cad(DesfireContext_t *ctx, uint8_t *site_key, bool verbo
     PrintAndLogEx(INFO, "Diversified key " _YELLOW_("0") " for CAD (AID " _YELLOW_("%06X") "): " _GREEN_("%s"),
                   CAD_AID,
                   sprint_hex_inrow(buf, ARRAYLEN(buf))
-                );
+                 );
 
     // Change key
     DesfireSetCommMode(ctx, DCMEncryptedPlain);
@@ -587,15 +587,15 @@ static int hfgal_add_aid_to_cad(DesfireContext_t *ctx, uint8_t *site_key, uint32
     }
 
     // 6 entries per file
-    uint8_t file_id = num_entries / 6; 
+    uint8_t file_id = num_entries / 6;
     uint8_t entry_num = num_entries % 6;
 
     // Check if facility already exists in CAD.
     for (uint8_t i = 0; i < ARRAYLEN(cad); i += 6) {
         if (cad_facility_match(&cad[i], creds->region_code, creds->facility_code))
             PM3_RET_ERR(PM3_EFATAL, "Facility already exists in CAD, delete or update AID %06X",
-                           cad_aid_byte_to_uint(&cad[i + 3])
-                        );
+                        cad_aid_byte_to_uint(&cad[i + 3])
+                       );
     }
 
     // Create entry
@@ -610,7 +610,7 @@ static int hfgal_add_aid_to_cad(DesfireContext_t *ctx, uint8_t *site_key, uint32
                       entry_num,
                       file_id,
                       sprint_hex_inrow(entry, 6)
-                    );
+                     );
     }
 
     // Select application & authenticate
@@ -721,9 +721,9 @@ static int hfgal_remove_aid_from_cad(DesfireContext_t *ctx, uint8_t *site_key,
 
         if (verbose) {
             PrintAndLogEx(INFO, "Deleted unnecessary file " _YELLOW_("%d") " from CAD (AID " _YELLOW_("%06X")")",
-                         file_id,
-                         CAD_AID
-                    );
+                          file_id,
+                          CAD_AID
+                         );
         }
     }
 
@@ -775,7 +775,7 @@ static int hfgal_read_card(uint32_t aid, uint8_t *site_key, bool verbose, bool q
                               current_aid,
                               region_code,
                               facility_code
-                            );
+                             );
             } else {
                 PrintAndLogEx(INFO, "Reading AID: " _YELLOW_("%06X"), current_aid);
             }
@@ -786,7 +786,7 @@ static int hfgal_read_card(uint32_t aid, uint8_t *site_key, bool verbose, bool q
         res = hfgal_read_creds_app(&dctx, current_aid, site_key, &creds, verbose);
         PM3_RET_IF_ERR_MAYBE_MSG(res, !quiet, "Failed reading card application credentials");
 
-        PrintAndLogEx(SUCCESS, "Gallagher (AID %06X) - region: " _GREEN_("%u") 
+        PrintAndLogEx(SUCCESS, "Gallagher (AID %06X) - region: " _GREEN_("%u")
                       ", fc: " _GREEN_("%u")
                       ", cn: " _GREEN_("%u")
                       ", issue level: " _GREEN_("%u"),
@@ -795,7 +795,7 @@ static int hfgal_read_card(uint32_t aid, uint8_t *site_key, bool verbose, bool q
                       creds.facility_code,
                       creds.card_number,
                       creds.issue_level
-                    );
+                     );
     }
     return PM3_SUCCESS;
 }
@@ -899,10 +899,10 @@ static int CmdGallagherClone(const char *cmd) {
     CLIGetHexWithReturn(ctx, 3, key, &key_len);
     if (key_len && key_len != desfire_get_key_length(key_algo)) {
         PM3_RET_ERR_FREE(PM3_EINVARG, "%s key must have %d bytes length instead of %d",
-                     CLIGetOptionListStr(DesfireAlgoOpts, key_algo),
-                     desfire_get_key_length(key_algo),
-                     key_len
-                    );
+                         CLIGetOptionListStr(DesfireAlgoOpts, key_algo),
+                         desfire_get_key_length(key_algo),
+                         key_len
+                        );
     }
     if (key_len == 0) {
         // Default to a key of all zeros
@@ -927,11 +927,11 @@ static int CmdGallagherClone(const char *cmd) {
 
         // Check that the AID is in the expected range
         if ((memcmp(aid_buf, "\xF4\x81", 2) != 0) ||
-            (aid_buf[2] < 0x20) ||
-            (aid_buf[2] > 0x2B)) {
-                // TODO: this should probably be a warning, but key diversification will throw an error later even if we don't
-                PM3_RET_ERR_FREE(PM3_EINVARG, "Invalid Gallagher AID %06X, expected 2?81F4, where 0 <= ? <= 0xB", aid);
-            }
+                (aid_buf[2] < 0x20) ||
+                (aid_buf[2] > 0x2B)) {
+            // TODO: this should probably be a warning, but key diversification will throw an error later even if we don't
+            PM3_RET_ERR_FREE(PM3_EINVARG, "Invalid Gallagher AID %06X, expected 2?81F4, where 0 <= ? <= 0xB", aid);
+        }
     }
 
     int site_key_len = 0;
@@ -1026,8 +1026,8 @@ static int CmdGallagherDelete(const char *cmd) {
 
     // Check that the AID is in the expected range
     if ((memcmp(aid_buf, "\xF4\x81", 2) != 0) ||
-        (aid_buf[2] < 0x20) ||
-        (aid_buf[2] > 0x2B)) {
+            (aid_buf[2] < 0x20) ||
+            (aid_buf[2] > 0x2B)) {
         // TODO: this should probably be a warning, but key diversification will throw an error later even if we don't
         PM3_RET_ERR_FREE(PM3_EINVARG, "Invalid Gallagher AID %06X, expected 2?81F4, where 0 <= ? <= 0xB", aid);
     }
@@ -1098,9 +1098,9 @@ static int CmdGallagherDiversify(const char *cmd) {
     aid = DesfireAIDByteToUint(aid_buf);
 
     // Check that the AID is in the expected range
-    if ((memcmp(aid_buf, "\xF4\x81", 2) != 0) || 
-        (aid_buf[2] < 0x20) || 
-        (aid_buf[2] > 0x2B)) {
+    if ((memcmp(aid_buf, "\xF4\x81", 2) != 0) ||
+            (aid_buf[2] < 0x20) ||
+            (aid_buf[2] > 0x2B)) {
         // TODO: this should probably be a warning, but key diversification will throw an error later even if we don't
         PM3_RET_ERR_FREE(PM3_EINVARG, "Invalid Gallagher AID %06X, expected 2?81F4, where 0 <= ? <= 0xB", aid);
     }
@@ -1152,7 +1152,7 @@ static int CmdGallagherDiversify(const char *cmd) {
                       aid,
                       key_num,
                       key_str
-                    );
+                     );
     }
     return PM3_SUCCESS;
 }

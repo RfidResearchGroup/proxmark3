@@ -367,7 +367,7 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "found valid key: "_GREEN_("%012" PRIx64), key);
             break;
     }
-    PrintAndLogEx(SUCCESS, "time in darkside " _YELLOW_("%.0f") " seconds\n",(float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "time in darkside " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
     return PM3_SUCCESS;
 }
 

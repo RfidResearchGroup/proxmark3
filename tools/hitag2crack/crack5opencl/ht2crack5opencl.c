@@ -94,8 +94,8 @@ static uint64_t expand(uint64_t mask, uint64_t value) {
 static void bitslice(const uint64_t value, bitslice_t *restrict bitsliced_value) {
     // set constants
     bitslice_t bs_zeroes, bs_ones;
-    memset((uint8_t*)&bs_ones, 0xff, VECTOR_SIZE);
-    memset((uint8_t*)&bs_zeroes, 0x00, VECTOR_SIZE);
+    memset((uint8_t *)&bs_ones, 0xff, VECTOR_SIZE);
+    memset((uint8_t *)&bs_zeroes, 0x00, VECTOR_SIZE);
 
     for (size_t bit_idx = 0; bit_idx < 32; bit_idx++) {
         const bool bit = get_bit(32 - 1 - bit_idx, value);
