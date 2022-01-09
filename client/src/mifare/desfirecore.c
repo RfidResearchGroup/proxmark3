@@ -50,7 +50,7 @@ const CLIParserOption DesfireAlgoOpts[] = {
     {T_AES,    "aes"},
     {0,    NULL},
 };
-const size_t DesfireAlgoOptsLen = ARRAY_LENGTH(DesfireAlgoOpts);
+const size_t DesfireAlgoOptsLen = ARRAYLEN(DesfireAlgoOpts);
 
 const CLIParserOption DesfireKDFAlgoOpts[] = {
     {MFDES_KDF_ALGO_NONE,      "none"},
@@ -58,7 +58,7 @@ const CLIParserOption DesfireKDFAlgoOpts[] = {
     {MFDES_KDF_ALGO_GALLAGHER, "gallagher"},
     {0,    NULL},
 };
-const size_t DesfireKDFAlgoOptsLen = ARRAY_LENGTH(DesfireKDFAlgoOpts);
+const size_t DesfireKDFAlgoOptsLen = ARRAYLEN(DesfireKDFAlgoOpts);
 
 const CLIParserOption DesfireCommunicationModeOpts[] = {
     {DCMPlain,     "plain"},
@@ -66,7 +66,7 @@ const CLIParserOption DesfireCommunicationModeOpts[] = {
     {DCMEncrypted, "encrypt"},
     {0,    NULL},
 };
-const size_t DesfireCommunicationModeOptsLen = ARRAY_LENGTH(DesfireCommunicationModeOpts);
+const size_t DesfireCommunicationModeOptsLen = ARRAYLEN(DesfireCommunicationModeOpts);
 
 const CLIParserOption DesfireCommandSetOpts[] = {
     {DCCNative,    "native"},
@@ -74,7 +74,7 @@ const CLIParserOption DesfireCommandSetOpts[] = {
     {DCCISO,       "iso"},
     {0,    NULL},
 };
-const size_t DesfireCommandSetOptsLen = ARRAY_LENGTH(DesfireCommandSetOpts);
+const size_t DesfireCommandSetOptsLen = ARRAYLEN(DesfireCommandSetOpts);
 
 const CLIParserOption DesfireSecureChannelOpts[] = {
     {DACd40, "d40"},
@@ -83,7 +83,7 @@ const CLIParserOption DesfireSecureChannelOpts[] = {
     {DACLRP, "lrp"},
     {0,    NULL},
 };
-const size_t DesfireSecureChannelOptsLen = ARRAY_LENGTH(DesfireSecureChannelOpts);
+const size_t DesfireSecureChannelOptsLen = ARRAYLEN(DesfireSecureChannelOpts);
 
 const CLIParserOption DesfireFileAccessModeOpts[] = {
     {0x00, "key0"},

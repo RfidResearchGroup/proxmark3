@@ -205,7 +205,7 @@ static const CmdHeaderLengths_t CmdHeaderLengths[] = {
 };
 
 static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {
-    for (int i = 0; i < ARRAY_LENGTH(CmdHeaderLengths); i++)
+    for (int i = 0; i < ARRAYLEN(CmdHeaderLengths); i++)
         if (CmdHeaderLengths[i].cmd == cmd)
             return CmdHeaderLengths[i].len;
 
@@ -229,7 +229,7 @@ static bool DesfireEV1D40TransmitMAC(DesfireContext_t *ctx, uint8_t cmd) {
     if (ctx->secureChannel != DACd40 && ctx->secureChannel != DACEV1)
         return true;
 
-    for (int i = 0; i < ARRAY_LENGTH(EV1D40TransmitMAC); i++)
+    for (int i = 0; i < ARRAYLEN(EV1D40TransmitMAC); i++)
         if (EV1D40TransmitMAC[i] == cmd)
             return true;
 
@@ -248,7 +248,7 @@ static bool DesfireEV1D40ReceiveMAC(DesfireContext_t *ctx, uint8_t cmd) {
     if (ctx->secureChannel != DACd40)
         return true;
 
-    for (int i = 0; i < ARRAY_LENGTH(D40ReceiveMAC); i++)
+    for (int i = 0; i < ARRAYLEN(D40ReceiveMAC); i++)
         if (D40ReceiveMAC[i] == cmd)
             return true;
 
@@ -267,7 +267,7 @@ static const uint8_t ISOChannelValidCmd[] = {
 };
 
 static bool DesfireISOChannelValidCmd(uint8_t cmd) {
-    for (int i = 0; i < ARRAY_LENGTH(ISOChannelValidCmd); i++)
+    for (int i = 0; i < ARRAYLEN(ISOChannelValidCmd); i++)
         if (ISOChannelValidCmd[i] == cmd)
             return true;
 
@@ -828,7 +828,7 @@ bool PrintChannelModeWarning(uint8_t cmd, DesfireSecureChannel secureChannel, De
     }
 
     bool found = false;
-    for (int i = 0; i < ARRAY_LENGTH(AllowedChannelModes); i++)
+    for (int i = 0; i < ARRAYLEN(AllowedChannelModes); i++)
         if (AllowedChannelModes[i].cmd == cmd) {
             // full compare
             if (AllowedChannelModes[i].secureChannel == secureChannel &&

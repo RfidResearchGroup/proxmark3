@@ -24,8 +24,6 @@
 #include <endian.h>
 #endif
 
-#define ARRAY_LENGTH( array ) ( sizeof( array ) / sizeof( *( array ) ) )
-
 // used for save/load files
 #ifndef FILE_PATH_SIZE
 # define FILE_PATH_SIZE 1000
