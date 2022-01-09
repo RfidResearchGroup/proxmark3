@@ -1,7 +1,7 @@
 FROM archlinux:base
 
 ENV LANG C
-RUN pacman -Syy
+RUN pacman -Syu --noconfirm
 RUN pacman-db-upgrade
 # qt5-base skipped
 # bluez skipped, can't be installed in docker

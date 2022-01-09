@@ -13,7 +13,7 @@ Include = /etc/pacman.d/mirrorlist
 Include = /etc/pacman.d/mirrorlist
 EOF
 
-sudo pacman -Sy
+sudo pacman -Syu
 
 # search available versions
 pacman -Ss '^arm-none-eabi-gcc$'
