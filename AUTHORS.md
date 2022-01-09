@@ -15,8 +15,8 @@ Therefore, only the following copyright notices are left untouched in the corres
 - copyright notices of standalone modes initial authors
 - copyright notices of dependencies (client/deps, common)
 
-Since then, copyright of each contribution is tracked by the Git history. See the output of `git shortlog -nse` for a full list or `git log --pretty=short --follow <path/to/sourcefile> |git shortlog -ne` to track a specific file. See also [the Contributors page on Github](https://github.com/RfidResearchGroup/proxmark3/graphs/contributors).
+Since then, copyright of each contribution is tracked by the Git history. See the output of `git shortlog -nse` for a full list or `git log --pretty=short --follow <path/to/sourcefile> |git shortlog -ne` to track a specific file. See also [the Contributors page on Github](https://github.com/RfidResearchGroup/proxmark3/graphs/contributors) and [this Gource animation](https://www.youtube.com/watch?v=N7vpk0iIq9s) retracing the commits history from March 2009 until January 2022.
 
-A [mailmap](.mailmap) is maintained to map author and committer names and email addresses to canonical real names and email addresses.
+A [mailmap](.mailmap) is maintained to map author and committer names and email addresses to canonical names and email addresses.
 
 If by accident a copyright was removed from a file and is *not* directly deducible from the Git history, please submit a PR.
