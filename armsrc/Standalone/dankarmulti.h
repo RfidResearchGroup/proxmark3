@@ -47,7 +47,7 @@ typedef struct mode_t {
 
 #define START_MODE_LIST mode_t *mode_list[] = {
 #define ADD_MODE(name) &MODE_INTERNAL_NAME(name),
-#define END_MODE_LIST }; static const int NUM_MODES = sizeof(mode_list) / sizeof(mode_t*);
+#define END_MODE_LIST }; static const int NUM_MODES = ARRAYLEN(mode_list);
 
 #else
 
