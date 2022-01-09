@@ -57,7 +57,6 @@ endif ()
 add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/common/commonutil.c
         ${PM3_ROOT}/common/util_posix.c
-        ${PM3_ROOT}/common/parity.c
         ${PM3_ROOT}/common/bucketsort.c
         ${PM3_ROOT}/common/crapto1/crapto1.c
         ${PM3_ROOT}/common/crapto1/crypto1.c

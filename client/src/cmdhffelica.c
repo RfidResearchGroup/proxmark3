@@ -177,12 +177,6 @@ static int print_authentication2(void) {
 
 static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
     // source: mainly https://www.sony.net/Products/felica/business/tech-support/list.html
-
-    if (ic_type >= 0x14 && ic_type <= 0x1F) {
-        return "FeliCa Mobile IC Chip V3.0";
-    }
-
-
     switch (ic_type) {
         // FeliCa Standard Products:
         case 0x46:
@@ -239,7 +233,7 @@ static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
         case 0x1D:
         case 0x1E:
         case 0x1F:
-            return "Mobile FeliCa IC Chip V3.0";
+            return "FeliCa Mobile IC Chip V3.0";
         case 0x10:
         case 0x11:
         case 0x12:

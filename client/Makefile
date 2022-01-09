@@ -660,7 +660,6 @@ SRCS += bucketsort.c \
 		iso15693tools.c \
 		legic_prng.c \
 		lfdemod.c \
-		parity.c \
 		util_posix.c
 
 # swig
