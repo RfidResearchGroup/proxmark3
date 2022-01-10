@@ -17,13 +17,9 @@
 //-----------------------------------------------------------------------------
 #include "cmdhflegic.h"
 
-#include <stdio.h> // for Mingw readline
 #include <ctype.h> // tolower
 
-#ifdef HAVE_READLINE
-#include <readline/readline.h>
-#endif
-
+#include "pm3line.h"      // pm3line_read, pm3line_free
 #include "cliparser.h"
 #include "cmdparser.h"    // command_t
 #include "comms.h"        // clearCommandBuffer
@@ -553,19 +549,9 @@ static int CmdLegicWrbl(const char *Cmd) {
         PrintAndLogEx(INFO, "#####################################");
         const char *confirm = "Do you really want to continue? y(es)/n(o) : ";
         bool overwrite = false;
-#ifdef HAVE_READLINE
-        char *answer = readline(confirm);
+        char *answer = pm3line_read(confirm);
         overwrite = (answer[0] == 'y' || answer[0] == 'Y');
-#else
-        PrintAndLogEx(NORMAL, "%s" NOLF, confirm);
-        char *answer = NULL;
-        size_t anslen = 0;
-        if (getline(&answer, &anslen, stdin) > 0) {
-            overwrite = (answer[0] == 'y' || answer[0] == 'Y');
-        }
-        PrintAndLogEx(NORMAL, "");
-#endif
-        free(answer);
+        pm3line_free(answer);
         if (overwrite == false) {
             PrintAndLogEx(WARNING, "command cancelled");
             return PM3_EOPABORTED;

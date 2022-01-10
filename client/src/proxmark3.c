@@ -19,18 +19,12 @@
 #include "proxmark3.h"
 
 #include <stdlib.h>
-#include <stdio.h>         // for Mingw readline
 #include <limits.h>
 #include <unistd.h>
-#ifdef HAVE_READLINE
-#include <readline/readline.h>
-#include <readline/history.h>
-#include "rl_vocabulory.h"
-#include <signal.h>
-#endif
 #include <ctype.h>
 #include <libgen.h>        // basename
 
+#include "pm3line.h"
 #include "usart_defs.h"
 #include "util_posix.h"
 #include "proxgui.h"
@@ -137,48 +131,16 @@ static int check_comm(void) {
     if (IsCommunicationThreadDead() && g_session.pm3_present) {
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
         prompt_dev = PROXPROMPT_DEV_OFFLINE;
-#ifdef HAVE_READLINE
         char prompt[PROXPROMPT_MAX_SIZE] = {0};
         prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
         char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
         memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
-        rl_set_prompt(prompt_filtered);
-        rl_redisplay();
-#endif
+        pm3line_update_prompt(prompt_filtered);
         CloseProxmark(g_session.current_device);
     }
     msleep(10);
     return 0;
 }
-#ifdef HAVE_READLINE
-static void flush_history(void) {
-    if (g_session.history_path) {
-        write_history(g_session.history_path);
-        free(g_session.history_path);
-        g_session.history_path = NULL;
-    }
-}
-
-#  if defined(_WIN32)
-/*
-static bool WINAPI terminate_handler(DWORD t) {
-    if (t == CTRL_C_EVENT) {
-        flush_history();
-        return true;
-    }
-    return false;
-}
-*/
-#  else
-static struct sigaction gs_old_sigint_action;
-static void sigint_handler(int signum) {
-    sigaction(SIGINT, &gs_old_sigint_action, NULL);
-    flush_history();
-    kill(0, SIGINT);
-}
-#endif
-
-#endif
 
 #if defined(_WIN32)
 static bool DetectWindowsAnsiSupport(void) {
@@ -278,30 +240,22 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
         }
     }
 
-#ifdef HAVE_READLINE
     g_session.history_path = NULL;
     if (g_session.incognito) {
         PrintAndLogEx(INFO, "No history will be recorded");
     } else {
+        bool loaded_history = false;
         if (searchHomeFilePath(&g_session.history_path, NULL, PROXHISTORY, true) != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "No history will be recorded");
             g_session.history_path = NULL;
         } else {
-
-#  if defined(_WIN32)
-            //        SetConsoleCtrlHandler((PHANDLER_ROUTINE)terminate_handler, true);
-#  else
-            struct sigaction action;
-            memset(&action, 0, sizeof(action));
-            action.sa_handler = &sigint_handler;
-            sigaction(SIGINT, &action, &gs_old_sigint_action);
-#  endif
-            rl_catch_signals = 1;
-            rl_set_signals();
-            read_history(g_session.history_path);
+            loaded_history = (pm3line_load_history(g_session.history_path) == PM3_SUCCESS);
+        }
+        if (loaded_history) {
+            pm3line_install_signals();
+        } else {
+            PrintAndLogEx(ERR, "No history will be recorded");
         }
     }
-#endif
 
     // loops every time enter is pressed...
     while (1) {
@@ -378,19 +332,14 @@ check_script:
                     strcleanrn(script_cmd, script_cmd_len);
                     goto check_script;
                 } else {
-#ifdef HAVE_READLINE
-                    rl_event_hook = check_comm;
-#else
-                    check_comm();
-#endif
+                    pm3line_check(check_comm);
                     prompt_ctx = PROXPROMPT_CTX_INTERACTIVE;
                     char prompt[PROXPROMPT_MAX_SIZE] = {0};
                     prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
                     char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                     memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
                     g_pendingPrompt = true;
-#ifdef HAVE_READLINE
-                    script_cmd = readline(prompt_filtered);
+                    cmd = pm3line_read(prompt_filtered);
 #if defined(_WIN32)
                     //Check if color support needs to be enabled again in case the window buffer did change
                     g_session.supports_colors = DetectWindowsAnsiSupport();
@@ -405,18 +354,6 @@ check_script:
                         strcleanrn(script_cmd, script_cmd_len);
                         goto check_script;
                     }
-#else
-                    printf("%s", prompt_filtered);
-                    cmd = NULL;
-                    size_t len = 0;
-                    int ret;
-                    if ((ret = getline(&cmd, &len, stdin)) < 0) {
-                        // TODO this happens also when kbd_enter_pressed() is used, with a key pressed or not
-                        printf("GETLINE ERR %i", ret);
-                        free(cmd);
-                        cmd = NULL;
-                    }
-#endif
                     fflush(NULL);
                 }
             }
@@ -455,16 +392,10 @@ check_script:
                 PrintAndLogEx(NORMAL, "%s%s", prompt_filtered, cmd);
                 g_printAndLog = old_printAndLog;
 
-#ifdef HAVE_READLINE
                 // add to history if not from a script
                 if (!current_cmdscriptfile()) {
-                    HIST_ENTRY *entry = history_get(history_length);
-                    // add if not identical to latest recorded cmd
-                    if ((!entry) || (strcmp(entry->line, cmd) != 0)) {
-                        add_history(cmd);
-                    }
+                    pm3line_add_history(cmd);
                 }
-#endif
                 // process cmd
                 g_pendingPrompt = false;
                 int ret = CommandReceived(cmd);
@@ -495,9 +426,7 @@ check_script:
     while (current_cmdscriptfile())
         pop_cmdscriptfile();
 
-#ifdef HAVE_READLINE
-    flush_history();
-#endif
+    pm3line_flush_history();
 
     if (cmd) {
         free(cmd);
@@ -780,17 +709,7 @@ int main(int argc, char *argv[]) {
     char *port = NULL;
     uint32_t speed = 0;
 
-#ifdef HAVE_READLINE
-    /* initialize history */
-    using_history();
-
-    rl_readline_name = "PM3";
-    rl_attempted_completion_function = rl_command_completion;
-
-#ifdef RL_STATE_READCMD
-    rl_extend_line_buffer(1024);
-#endif // RL_STATE_READCMD
-#endif // HAVE_READLINE
+    pm3line_init();
 
     char exec_name[100] = {0};
     strncpy(exec_name, basename(argv[0]), sizeof(exec_name) - 1);

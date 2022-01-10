@@ -28,7 +28,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#ifdef HAVE_READLINE
+#if defined(HAVE_READLINE)
 //Load readline after stdio.h
 #include <readline/readline.h>
 #endif
@@ -643,7 +643,7 @@ void iceSimple_Filter(int *data, const size_t len, uint8_t k) {
 
 void print_progress(size_t count, uint64_t max, barMode_t style) {
     int cols = 100 + 35;
-#ifdef HAVE_READLINE
+#if defined(HAVE_READLINE)
     static int prev_cols = 0;
     int rows;
     rl_reset_screen_size(); // refresh Readline idea of the actual screen width

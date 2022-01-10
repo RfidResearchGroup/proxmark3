@@ -993,7 +993,7 @@ void pm3_version(bool verbose, bool oneliner) {
     PrintAndLogEx(NORMAL, "%s", temp);
     PrintAndLogEx(NORMAL, "  compiled with............. " PM3CLIENTCOMPILER __VERSION__);
     PrintAndLogEx(NORMAL, "  platform.................. " PM3HOSTOS " / " PM3HOSTARCH);
-#ifdef HAVE_READLINE
+#if defined(HAVE_READLINE)
     PrintAndLogEx(NORMAL, "  Readline support.......... " _GREEN_("present"));
 #else
     PrintAndLogEx(NORMAL, "  Readline support.......... " _YELLOW_("absent"));

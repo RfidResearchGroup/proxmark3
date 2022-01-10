@@ -340,6 +340,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/pm3.c
         ${PM3_ROOT}/client/src/pm3_binlib.c
         ${PM3_ROOT}/client/src/pm3_bitlib.c
+        ${PM3_ROOT}/client/src/pm3line.c
         ${PM3_ROOT}/client/src/prng.c
         ${PM3_ROOT}/client/src/scandir.c
         ${PM3_ROOT}/client/src/scripting.c
@@ -578,6 +579,7 @@ endif (NOT APPLE)
 if (NOT JANSSON_FOUND)
     set(ADDITIONAL_LNK pm3rrg_rdv4_jansson ${ADDITIONAL_LNK})
 endif (NOT JANSSON_FOUND)
+
 if (NOT WHEREAMI_FOUND)
     set(ADDITIONAL_LNK pm3rrg_rdv4_whereami ${ADDITIONAL_LNK})
 endif (NOT WHEREAMI_FOUND)
