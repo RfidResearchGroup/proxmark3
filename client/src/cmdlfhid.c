@@ -279,7 +279,7 @@ static int CmdHIDSim(const char *Cmd) {
     memset(&packed, 0, sizeof(wiegand_message_t));
 
     // format validation
-    int format_idx = HIDFindCardFormat((char *)format);
+    int format_idx = HIDFindCardFormat(format);
     if (format_idx == -1 && raw_len == 0) {
         PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
         return PM3_EINVARG;
@@ -383,7 +383,7 @@ static int CmdHIDClone(const char *Cmd) {
     memset(&packed, 0, sizeof(wiegand_message_t));
 
     // format validation
-    int format_idx = HIDFindCardFormat((char *)format);
+    int format_idx = HIDFindCardFormat(format);
     if (format_idx == -1 && raw_len == 0) {
         PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
         return PM3_EINVARG;
@@ -509,7 +509,7 @@ static int CmdHIDBrute(const char *Cmd) {
     formatLen = sizeof(format);
     CLIGetStrWithReturn(ctx, 2, format, &formatLen);
 
-    format_idx = HIDFindCardFormat((char *) format);
+    format_idx = HIDFindCardFormat(format);
     if (format_idx == -1) {
         PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
         CLIParserFree(ctx);

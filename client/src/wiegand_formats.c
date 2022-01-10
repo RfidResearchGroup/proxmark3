@@ -1391,7 +1391,7 @@ void HIDListFormats(void) {
         ++i;
     }
     PrintAndLogEx(INFO, "------------------------------------------------------------");
-    PrintAndLogEx(INFO, "Available card formats: " _YELLOW_("%" PRIu64), ARRAYLEN(FormatTable));
+    PrintAndLogEx(INFO, "Available card formats: " _YELLOW_("%" PRIu64), ARRAYLEN(FormatTable) - 1);
     PrintAndLogEx(NORMAL, "");
     return;
 }
@@ -1402,27 +1402,33 @@ cardformat_t HIDGetCardFormat(int idx) {
 
 int HIDFindCardFormat(const char *format) {
 
-    if (FormatTable[0].Name == NULL)
-        return -1;
+    char* s = str_dup(format);
+    str_lower(s);
 
     int i = 0;
+    while (FormatTable[i].Name) {
 
-// str_lower
+        char* a = str_dup(FormatTable[i].Name);
+        str_lower(a);
 
-    while (FormatTable[i].Name && strcmp(FormatTable[i].Name, format)) {
+        if (strcmp(a, s) == 0) {
+            free(a);
+            free(s);
+            return i;
+        }
+
+        free(a);
         ++i;
     }
 
-    if (FormatTable[i].Name)
-        return i;
-
+    free(s);
     return -1;
 }
 
 bool HIDPack(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if ((format_idx < 0) || (format_idx >= ARRAYLEN(FormatTable) - 1))
+    if ((format_idx < 0) || (format_idx > ARRAYLEN(FormatTable) - 2))
         return false;
 
     return FormatTable[format_idx].Pack(card, packed, preamble);

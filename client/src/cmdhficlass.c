@@ -3830,7 +3830,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
         wiegand_message_t packed;
         memset(&packed, 0, sizeof(wiegand_message_t));
 
-        int format_idx = HIDFindCardFormat((char *)format);
+        int format_idx = HIDFindCardFormat(format);
         if (format_idx == -1) {
             PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
             return PM3_EINVARG;
