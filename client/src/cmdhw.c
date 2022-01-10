@@ -995,8 +995,10 @@ void pm3_version(bool verbose, bool oneliner) {
     PrintAndLogEx(NORMAL, "  platform.................. " PM3HOSTOS " / " PM3HOSTARCH);
 #if defined(HAVE_READLINE)
     PrintAndLogEx(NORMAL, "  Readline support.......... " _GREEN_("present"));
+#elif defined(HAVE_LINENOISE)
+    PrintAndLogEx(NORMAL, "  Linenoise support......... " _GREEN_("present"));
 #else
-    PrintAndLogEx(NORMAL, "  Readline support.......... " _YELLOW_("absent"));
+    PrintAndLogEx(NORMAL, "  Readline/Linenoise support." _YELLOW_("absent"));
 #endif
 #ifdef HAVE_GUI
     PrintAndLogEx(NORMAL, "  QT GUI support............ " _GREEN_("present"));

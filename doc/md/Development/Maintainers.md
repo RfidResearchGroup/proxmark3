@@ -66,6 +66,11 @@ It's also possible to skip parts even if libraries are present in the compilatio
 * `make client SKIPJANSSONSYSTEM=1` to skip system Jansson lib even if libjansson is present, use embedded Jansson lib instead
 * `make client SKIPWHEREAMISYSTEM=1` to skip system Whereami lib even if libwhereami is present, use embedded whereami lib instead
 
+By default, the client is using Readline, but this can be disabled:
+* `make client SKIPREADLINE=1` to skip system Readline lib even if libreadline is present
+
+When Readline is disabled, it is possible to use Linenoise instead. Note that Linenoise-ng contains `ConvertUTF.cpp` which is under a redistribution-only license, therefore think twice before including it in a release. To get Linenoise-ng, see `client/deps/get_linenoise.sh`.
+
 If you're cross-compiling, these ones might be useful:
 
 * `make client SKIPREVENGTEST=1` to skip compilation and execution of a consistency test for reveng, which can be problematic in case of cross-compilation

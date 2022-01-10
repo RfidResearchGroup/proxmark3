@@ -62,7 +62,7 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | dep libm | sys | sys | |
 | libm detection | **none** | **none** (1) | (1) cf https://cmake.org/pipermail/cmake/2019-March/069168.html ? |
 | dep mbedtls | in_common | in_common | no sys lib: missing support for CMAC in def conf (btw no .pc available) |
-| dep python3 | opt, sys, <3.8 & 3.8 | opt, sys, <3.8 & 3.8 |   |
+| dep python3 | opt, sys, < 3.8 & 3.8 | opt, sys, < 3.8 & 3.8 |   |
 | python3 detection | pc | pkg_search_module | |
 | `SKIPPYTHON`  | yes | yes |   |
 | dep pthread | sys | sys |  |
@@ -74,6 +74,7 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | dep readline | sys  | sys |  |
 | readline detection | **none** (1) | find*(2), Cross:getzip | (1) OSX: hardcoded path (2) additional paths for OSX |
 | `SKIPREADLINE` | yes | yes | CLI not fully functional without Readline |
+| `SKIPLINENOISE` | yes | yes | replacement of Readline, not as complete |
 | dep reveng | in_deps | in_deps | |
 | `SKIPREVENGTEST` | yes(1) | **no**(2) | (1) e.g. if cross-compilation (2) tests aren't compiled/ran with cmake |
 | dep tinycbor | in_deps | in_deps |   |

@@ -24,6 +24,8 @@
 #if defined(HAVE_READLINE)
 #include <readline/readline.h>
 #include <readline/history.h>
+#elif defined(HAVE_LINENOISE)
+#include "linenoise.h"
 #endif
 #include "pm3line_vocabulory.h"
 #include "pm3_cmd.h"
@@ -73,6 +75,39 @@ static char **rl_command_completion(const char *text, int start, int end) {
     return rl_completion_matches(text, rl_command_generator);
 }
 
+#elif defined(HAVE_LINENOISE)
+static void ln_command_completion(const char *text, linenoiseCompletions *lc) {
+    int index = 0;
+    const char *prev_match = "";
+    size_t prev_match_len = 0;
+    size_t len = strlen(text);
+    const char *command;
+    while ((command = vocabulory[index].name))  {
+
+        // When no pm3 device present
+        // and the command is not available offline,
+        // we skip it.
+        if ((g_session.pm3_present == false) && (vocabulory[index].offline == false ))  {
+            index++;
+            continue;
+        }
+
+        index++;
+
+        if (strncmp (command, text, len) == 0) {
+            const char *space = strstr(command + len, " ");
+            if (space != NULL) {
+                if ((prev_match_len == 0) || (strncmp (prev_match, command, prev_match_len < space - command ? prev_match_len : space - command) != 0)) {
+                    linenoiseAddCompletion(lc, str_ndup(command, space - command + 1));
+                    prev_match = command;
+                    prev_match_len = space - command + 1;
+                }
+            } else {
+                linenoiseAddCompletion(lc, command);
+            }
+        }
+    }
+}
 #endif // HAVE_READLINE
 
 #  if defined(_WIN32)
@@ -119,12 +154,17 @@ void pm3line_init(void) {
 #ifdef RL_STATE_READCMD
     rl_extend_line_buffer(1024);
 #endif // RL_STATE_READCMD
+#elif defined(HAVE_LINENOISE)
+    linenoiseInstallWindowChangeHandler();
+    linenoiseSetCompletionCallback(ln_command_completion);
 #endif // HAVE_READLINE
 }
 
 char *pm3line_read(const char *s) {
 #if defined(HAVE_READLINE)
     return readline(s);
+#elif defined(HAVE_LINENOISE)
+    return linenoise(s);
 #else
     printf("%s", s);
     char *answer = NULL;
@@ -160,6 +200,12 @@ int pm3line_load_history(const char *path) {
     } else {
         return PM3_ESOFT;
     }
+#elif defined(HAVE_LINENOISE)
+    if (linenoiseHistoryLoad(path) == 0) {
+        return PM3_SUCCESS;
+    } else {
+        return PM3_ESOFT;
+    }
 #else
     (void) path;
     return PM3_ENOTIMPL;
@@ -173,6 +219,9 @@ void pm3line_add_history(const char *line) {
     if ((!entry) || (strcmp(entry->line, line) != 0)) {
         add_history(line);
     }
+#elif defined(HAVE_LINENOISE)
+    // linenoiseHistoryAdd takes already care of duplicate entries
+    linenoiseHistoryAdd(line);
 #else
     (void) line;
 #endif
@@ -182,6 +231,8 @@ void pm3line_flush_history(void) {
     if (g_session.history_path) {
 #if defined(HAVE_READLINE)
         write_history(g_session.history_path);
+#elif defined(HAVE_LINENOISE)
+        linenoiseHistorySave(g_session.history_path);
 #endif // HAVE_READLINE
         free(g_session.history_path);
         g_session.history_path = NULL;
