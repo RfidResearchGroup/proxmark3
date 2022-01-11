@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
-## [Frostbit] [2022-01-11]
+## [Frostbit.4.14831] [2022-01-11]
  - Changed Wiegand format lookup - now case-insensitive (@iceman1001)
  - Added new standalone mode `hf_15SNIFF` - Same as `hf_14ASNIFF` standalone mode for RDV4 - flashmem (@startrk1995)
  - Added support for MIFARE DESFire application creation without authentication (@joswr1ght)
