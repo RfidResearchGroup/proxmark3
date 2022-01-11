@@ -267,7 +267,7 @@ static size_t emv_pk_write_str(char *out, size_t outlen, const char *str) {
 
 char *emv_pk_dump_pk(const struct emv_pk *pk) {
     size_t outpos = 0;
-    size_t outsize = 1024; // should be enough
+    size_t outsize = 1048;          // should be enough
     char *out = calloc(1, outsize); // should be enough
     if (!out)
         return NULL;
