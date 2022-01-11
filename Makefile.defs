@@ -89,8 +89,8 @@ ifeq ($(DEBUG),1)
   DEFCFLAGS = -g -O0 -fstrict-aliasing -pipe
   DEFLDFLAGS =
 else
-  DEFCXXFLAGS = -Wall -Werror -O3 -pipe
-  DEFCFLAGS = -Wall -Werror -O3 -fstrict-aliasing -pipe
+  DEFCXXFLAGS = -Wall -O3 -pipe
+  DEFCFLAGS = -Wall -O3 -fstrict-aliasing -pipe
   DEFLDFLAGS =
 endif
 
