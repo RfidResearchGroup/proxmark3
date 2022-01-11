@@ -1402,13 +1402,13 @@ cardformat_t HIDGetCardFormat(int idx) {
 
 int HIDFindCardFormat(const char *format) {
 
-    char* s = str_dup(format);
+    char *s = str_dup(format);
     str_lower(s);
 
     int i = 0;
     while (FormatTable[i].Name) {
 
-        char* a = str_dup(FormatTable[i].Name);
+        char *a = str_dup(FormatTable[i].Name);
         str_lower(a);
 
         if (strcmp(a, s) == 0) {

@@ -7255,7 +7255,7 @@
         },
         "lf help": {
             "command": "lf help",
-            "description": "help this help ----------- -------------- low frequency -------------- awid { awid rfids... } cotag { cotag chips... } destron { fdx-a destron rfids... } em { em chips & rfids... } fdxb { fdx-b rfids... } gallagher { gallagher rfids... } gproxii { guardall prox ii rfids... } hid { hid prox rfids... } hitag { hitag chips... } idteck { idteck rfids... } indala { indala rfids... } io { ioprox rfids... } jablotron { jablotron rfids... } keri { keri rfids... } motorola { motorola rfids... } nedap { nedap rfids... } nexwatch { nexwatch rfids... } noralsy { noralsy rfids... } pac { pac/stanley rfids... } paradox { paradox rfids... } pcf7931 { pcf7931 chips... } presco { presco rfids... } pyramid { farpointe/pyramid rfids... } securakey { securakey rfids... } ti { ti chips... } t55xx { t55xx chips... } viking { viking rfids... } visa2000 { visa2000 rfids... } zx { zx8211 rfids... } ----------- --------------------- general --------------------- search read and search for valid known tag --------------------------------------------------------------------------------------- lf config available offline: no get/set config for lf sampling, bit/sample, decimation, frequency these changes are temporary, will be reset after a power cycle. - use `lf read` performs a read (active field) - use `lf sniff` performs a sniff (no active field)",
+            "description": "help this help ----------- -------------- low frequency -------------- awid { awid rfids... } cotag { cotag chips... } destron { fdx-a destron rfids... } em { em chips & rfids... } fdxb { fdx-b rfids... } gallagher { gallagher rfids... } gproxii { guardall prox ii rfids... } hid { hid prox rfids... } hitag { hitag chips... } idteck { idteck rfids... } indala { indala rfids... } io { ioprox rfids... } jablotron { jablotron rfids... } keri { keri rfids... } motorola { motorola rfids... } nedap { nedap rfids... } nexwatch { nexwatch rfids... } noralsy { noralsy rfids... } pac { pac/stanley rfids... } paradox { paradox rfids... } pcf7931 { pcf7931 chips... } presco { presco rfids... } pyramid { farpointe/pyramid rfids... } securakey { securakey rfids... } ti { ti chips... } t55xx { t55xx chips... } viking { viking rfids... } visa2000 { visa2000 rfids... } ----------- --------------------- general --------------------- search read and search for valid known tag --------------------------------------------------------------------------------------- lf config available offline: no get/set config for lf sampling, bit/sample, decimation, frequency these changes are temporary, will be reset after a power cycle. - use `lf read` performs a read (active field) - use `lf sniff` performs a sniff (no active field)",
             "notes": [
                 "lf config -> shows current config",
                 "lf config -b 8 --125 -> samples at 125 khz, 8 bps",
@@ -9176,31 +9176,6 @@
             ],
             "usage": "lf visa2000 sim [-h] --cn <dec>"
         },
-        "lf zx help": {
-            "command": "lf zx help",
-            "description": "help this help demod demodulate an zx 8211 tag from the graphbuffer --------------------------------------------------------------------------------------- lf zx demod available offline: yes try to find zx8211 preamble, if found decode / descramble data",
-            "notes": [
-                "lf zx demod"
-            ],
-            "offline": true,
-            "options": [
-                "-h, --help this help"
-            ],
-            "usage": "lf zx demod [-h]"
-        },
-        "lf zx reader": {
-            "command": "lf zx reader",
-            "description": "read a zx tag",
-            "notes": [
-                "lf zx reader -@ -> continuous reader mode"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-@ optional - continuous reader mode"
-            ],
-            "usage": "lf zx reader [-h@]"
-        },
         "mem dump": {
             "command": "mem dump",
             "description": "dumps flash memory on device into a file or view in console",
@@ -10235,8 +10210,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 601,
+        "commands_extracted": 599,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-01-09T13:10:14"
+        "extracted_on": "2022-01-11T01:15:20"
     }
 }
