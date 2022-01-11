@@ -98,6 +98,9 @@ int demodTI(bool verbose) {
     int lowTot = 0, highTot = 0;
     int retval = PM3_ESOFT;
 
+    if (g_GraphTraceLen < convLen) {
+        return retval;
+    }
     for (i = 0; i < g_GraphTraceLen - convLen; i++) {
         lowSum = 0;
         highSum = 0;
