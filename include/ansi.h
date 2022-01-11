@@ -32,12 +32,17 @@
 #define _CLEAR_ "\x1b[2J"
 #define _TOP_   "\x1b[1;1f"
 
+
+#if defined(HAVE_READLINE)
 // https://wiki.hackzine.org/development/misc/readline-color-prompt.html
 // Applications may indicate that the prompt contains
 // characters that take up no physical screen space when displayed by
 // bracketing a sequence of such characters with the special markers
 // RL_PROMPT_START_IGNORE = '\001' and RL_PROMPT_END_IGNORE = '\002'
 #define RL_ESC(a) "\001" a "\002"
+#else
+#define RL_ESC(a) a
+#endif // HAVE_READLINE
 
 #define _RL_RED_(s) RL_ESC("\x1b[31m") s RL_ESC(AEND)
 #define _RL_GREEN_(s) RL_ESC("\x1b[32m") s RL_ESC(AEND)
