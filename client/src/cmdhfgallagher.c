@@ -209,7 +209,7 @@ static bool aid_exists(DesfireContext_t *ctx, uint32_t aid, bool verbose) {
 static uint32_t find_available_gallagher_aid(DesfireContext_t *ctx, bool verbose) {
     // Select PICC
     select_aid(ctx, 0x000000, verbose);
-    
+
     // Retrieve the AID list
     uint8_t aid_buf[0xFF] = {0};
     size_t aid_buf_len = 0;
@@ -241,7 +241,7 @@ static uint32_t find_available_gallagher_aid(DesfireContext_t *ctx, bool verbose
             }
         }
         if (!aid_exists)
-            return aid; 
+            return aid;
     }
 
     // Failed to find an available AID. This shouldn't be possible since
@@ -941,11 +941,10 @@ static int CmdGallagherClone(const char *cmd) {
             HFGAL_RET_ERR(PM3_EFATAL, "Could not find an available AID, please specify with --aid");
         if (verbose)
             PrintAndLogEx(INFO, "Using available AID: %06X", aid);
-    } else {
-        // Check that AID is available
-        if (aid_exists(&dctx, aid, verbose))
-            HFGAL_RET_ERR(PM3_EINVARG, "AID already exists: %06X", aid);
     }
+    // Check that AID is available
+    else if (!no_app_create && aid_exists(&dctx, aid, verbose))
+        HFGAL_RET_ERR(PM3_EINVARG, "AID already exists: %06X", aid);
 
     // Update Card Application Directory
     if (!no_cad_update) {
@@ -969,12 +968,12 @@ static int CmdGallagherClone(const char *cmd) {
 
         res = hfgal_create_creds_app(&dctx, site_key, aid, verbose);
         HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed creating Gallagher application");
-    }
 
-    // Create credential files
-    // Don't need to set keys here, they're generated automatically
-    res = hfgal_create_creds_file(&dctx, site_key, aid, &creds, verbose);
-    HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed creating Gallagher credential file");
+        // Create credential files
+        // Don't need to set keys here, they're generated automatically
+        res = hfgal_create_creds_file(&dctx, site_key, aid, &creds, verbose);
+        HFGAL_RET_IF_ERR_WITH_MSG(res, "Failed creating Gallagher credential file");
+    }
 
     PrintAndLogEx(SUCCESS, "Done");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf gallagher reader`") " to verify");
