@@ -1,4 +1,4 @@
-# RRG / Iceman - Proxmark3
+# Iceman - Proxmark3
 
 
 | Latest Release | Coverity | Contributors |
