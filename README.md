@@ -1,4 +1,4 @@
-# Iceman - Proxmark3
+# Proxmark3
 
 
 | Latest Release | Coverity | Contributors |
