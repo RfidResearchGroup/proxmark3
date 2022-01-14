@@ -1,19 +1,22 @@
-/*
- * libopenemv - a library to work with EMV family of smart cards
- * Copyright (C) 2012, 2015 Dmitry Eremin-Solenikov
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * https://github.com/lumag/emv-tools/blob/master/lib/tlv.c
- */
+//-----------------------------------------------------------------------------
+// Borrowed initially from https://github.com/lumag/emv-tools/
+// Copyright (C) 2012, 2015 Dmitry Eremin-Solenikov
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+// libopenemv - a library to work with EMV family of smart cards
+//-----------------------------------------------------------------------------
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -23,6 +26,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #define TLV_TAG_CLASS_MASK  0xc0
 #define TLV_TAG_COMPLEX     0x20
@@ -160,7 +164,7 @@ static struct tlvdb *tlvdb_parse_children(struct tlvdb *parent) {
     struct tlvdb *tlvdb, *first = NULL, *prev = NULL;
 
     while (left != 0) {
-        tlvdb = malloc(sizeof(*tlvdb));
+        tlvdb = calloc(1, sizeof(*tlvdb));
         if (prev)
             prev->next = tlvdb;
         else
@@ -189,7 +193,7 @@ struct tlvdb *tlvdb_parse(const unsigned char *buf, size_t len) {
     if (!len || !buf)
         return NULL;
 
-    root = malloc(sizeof(*root) + len);
+    root = calloc(1, sizeof(*root) + len);
     root->len = len;
     memcpy(root->buf, buf, len);
 
@@ -218,7 +222,7 @@ struct tlvdb *tlvdb_parse_multi(const unsigned char *buf, size_t len) {
     if (!len || !buf)
         return NULL;
 
-    root = malloc(sizeof(*root) + len);
+    root = calloc(1, sizeof(*root) + len);
     root->len = len;
     memcpy(root->buf, buf, len);
 
@@ -229,7 +233,7 @@ struct tlvdb *tlvdb_parse_multi(const unsigned char *buf, size_t len) {
         goto err;
 
     while (left != 0) {
-        struct tlvdb *db = malloc(sizeof(*db));
+        struct tlvdb *db = calloc(1, sizeof(*db));
         if (!tlvdb_parse_one(db, NULL, &tmp, &left)) {
             free(db);
             goto err;
@@ -247,7 +251,7 @@ err:
 }
 
 struct tlvdb *tlvdb_fixed(tlv_tag_t tag, size_t len, const unsigned char *value) {
-    struct tlvdb_root *root = malloc(sizeof(*root) + len);
+    struct tlvdb_root *root = calloc(1, sizeof(*root) + len);
 
     root->len = len;
     memcpy(root->buf, value, len);
@@ -261,7 +265,7 @@ struct tlvdb *tlvdb_fixed(tlv_tag_t tag, size_t len, const unsigned char *value)
 }
 
 struct tlvdb *tlvdb_external(tlv_tag_t tag, size_t len, const unsigned char *value) {
-    struct tlvdb_root *root = malloc(sizeof(*root));
+    struct tlvdb_root *root = calloc(1, sizeof(*root));
 
     root->len = 0;
 
@@ -486,7 +490,7 @@ unsigned char *tlv_encode(const struct tlv *tlv, size_t *len) {
     else
         size += 1;
 
-    data = malloc(size);
+    data = calloc(1, size);
     if (!data) {
         *len = 0;
         return NULL;

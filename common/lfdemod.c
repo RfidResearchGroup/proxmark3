@@ -1,12 +1,19 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2014
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// Low frequency demod/decode commands   - by marshmellow, holiman, iceman and
-//                                         many others who came before
+// Low frequency demod/decode commands
 //
 // NOTES:
 // LF Demod functions are placed here to allow the flexibility to use client or
@@ -1304,7 +1311,7 @@ uint8_t detectFSKClk(const uint8_t *bits, size_t size, uint8_t fcHigh, uint8_t f
 
 
 // look for Sequence Terminator - should be pulses of clk*(1 or 2), clk*2, clk*(1.5 or 2), by idx we mean graph position index...
-static bool findST(int *stStopLoc, int *stStartIdx, 
+static bool findST(int *stStopLoc, int *stStartIdx,
                    const int lowToLowWaveLen[], const int highToLowWaveLen[],
                    int clk, int tol, int buffSize, size_t *i) {
     if (buffSize < *i + 4) return false;
@@ -1333,7 +1340,7 @@ bool DetectST(uint8_t *buffer, size_t *size, int *foundclock, size_t *ststart, s
     int tol = 0;
     int j = 0, high, low, skip = 0, start = 0, end = 0, minClk = 255;
     size_t i = 0;
-    //probably should malloc... || test if memory is available ... handle device side? memory danger!!! [marshmellow]
+    //probably should calloc... || test if memory is available ... handle device side? memory danger!!! [marshmellow]
     int tmpbuff[bufsize / LOWEST_DEFAULT_CLOCK]; // low to low wave count //guess rf/32 clock, if click is smaller we will only have room for a fraction of the samples captured
     int waveLen[bufsize / LOWEST_DEFAULT_CLOCK]; // high to low wave count //if clock is larger then we waste memory in array size that is not needed...
     //size_t testsize = (bufsize < 512) ? bufsize : 512;

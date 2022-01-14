@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Marshmellow
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Low frequency Farpoint G Prox II / Pyramid tag commands
 // Biphase, rf/ , 96 bits  (unknown key calc + some bits)
@@ -236,8 +244,8 @@ static int CmdGuardClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf gproxii clone",
                   "clone a Guardall tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
-                  "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.\n"
-                  "Currently work only on 26bit",
+                  "The facility-code is 8-bit and the card number is 20-bit.  Larger values are truncated.\n"
+                  "Currently work only on 26 | 36 bit format",
                   "lf gproxii clone --fmt 26 --fc 123 --cn 1337\n"
                   "lf gproxii clone --q5 --fmt 26 --fc 123 --cn 1337   -> encode for Q5/T5555 tag\n"
                   "lf gproxii clone --em --fmt 26 --fc 123 --cn 1337   -> encode for EM4305/4469"
@@ -268,7 +276,7 @@ static int CmdGuardClone(const char *Cmd) {
 
     fmtlen &= 0x7f;
     uint32_t facilitycode = (fc & 0x000000FF);
-    uint32_t cardnumber = (cn & 0x0000FFFF);
+    uint32_t cardnumber = (cn & 0x00FFFFFF);
 
     //GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
     uint8_t *bs = calloc(96, sizeof(uint8_t));
@@ -323,7 +331,7 @@ static int CmdGuardSim(const char *Cmd) {
                   "Enables simulation of Guardall card with specified card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.\n"
                   "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.\n"
-                  "Currently work only on 26bit",
+                  "Currently work only on 26 | 36 bit format",
                   "lf gproxii sim --fmt 26 --fc 123 --cn 1337\n"
                  );
 
@@ -343,7 +351,7 @@ static int CmdGuardSim(const char *Cmd) {
 
     fmtlen &= 0x7F;
     uint32_t facilitycode = (fc & 0x000000FF);
-    uint32_t cardnumber = (cn & 0x0000FFFF);
+    uint32_t cardnumber = (cn & 0x000FFFFF);
 
     uint8_t bs[96];
     memset(bs, 0x00, sizeof(bs));

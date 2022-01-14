@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2011,2012 Merlok
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // High frequency MIFARE commands
 //-----------------------------------------------------------------------------
@@ -306,7 +314,6 @@ static int CmdHF14AMfAcl(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-
 static int CmdHF14AMfDarkside(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf darkside",
@@ -335,31 +342,32 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint64_t key = 0;
-
+    uint64_t t1 = msclock();
     int isOK = mfDarkside(blockno, key_type, &key);
-    PrintAndLogEx(NORMAL, "");
+    t1 = msclock() - t1;
+
     switch (isOK) {
         case -1 :
-            PrintAndLogEx(WARNING, "button pressed. Aborted.");
+            PrintAndLogEx(WARNING, "button pressed, aborted");
             return PM3_ESOFT;
         case -2 :
-            PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).");
+            PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests)");
             return PM3_ESOFT;
         case -3 :
-            PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (its random number generator is not predictable).");
+            PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (its random number generator is not predictable)");
             return PM3_ESOFT;
         case -4 :
             PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
-            PrintAndLogEx(FAILED, "generating polynomial with 16 effective bits only, but shows unexpected behaviour.");
+            PrintAndLogEx(FAILED, "generating polynomial with 16 effective bits only, but shows unexpected behaviour");
             return PM3_ESOFT;
-        case -5 :
-            PrintAndLogEx(WARNING, "aborted via keyboard.");
-            return PM3_ESOFT;
+        case PM3_EOPABORTED :
+            PrintAndLogEx(WARNING, "aborted via keyboard");
+            return PM3_EOPABORTED;
         default :
-            PrintAndLogEx(SUCCESS, "found valid key: "_YELLOW_("%012" PRIx64), key);
+            PrintAndLogEx(SUCCESS, "found valid key: "_GREEN_("%012" PRIx64), key);
             break;
     }
-    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "time in darkside " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
     return PM3_SUCCESS;
 }
 

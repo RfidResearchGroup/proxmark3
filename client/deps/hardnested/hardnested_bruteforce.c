@@ -436,8 +436,8 @@ static bool read_bench_data(statelist_t *test_candidates) {
 float brute_force_benchmark(void) {
     statelist_t test_candidates[NUM_BRUTE_FORCE_THREADS];
 
-    test_candidates[0].states[ODD_STATE] = malloc((TEST_BENCH_SIZE + 1) * sizeof(uint32_t));
-    test_candidates[0].states[EVEN_STATE] = malloc((TEST_BENCH_SIZE + 1) * sizeof(uint32_t));
+    test_candidates[0].states[ODD_STATE] = calloc(1, (TEST_BENCH_SIZE + 1) * sizeof(uint32_t));
+    test_candidates[0].states[EVEN_STATE] = calloc(1, (TEST_BENCH_SIZE + 1) * sizeof(uint32_t));
     for (uint8_t i = 0; i < NUM_BRUTE_FORCE_THREADS - 1; i++) {
         test_candidates[i].next = test_candidates + i + 1;
         test_candidates[i + 1].states[ODD_STATE] = test_candidates[0].states[ODD_STATE];

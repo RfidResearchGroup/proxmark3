@@ -1912,7 +1912,7 @@ SWIGRUNTIME PyObject *
 SwigPyPacked_New(void *ptr, size_t size, swig_type_info *ty) {
     SwigPyPacked *sobj = PyObject_NEW(SwigPyPacked, SwigPyPacked_type());
     if (sobj) {
-        void *pack = malloc(size);
+        void *pack = calloc(1, size);
         if (pack) {
             memcpy(pack, ptr, size);
             sobj->pack = pack;

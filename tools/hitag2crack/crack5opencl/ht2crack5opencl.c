@@ -53,7 +53,7 @@
 typedef unsigned int __attribute__((aligned(VECTOR_SIZE))) __attribute__((vector_size(VECTOR_SIZE))) bitslice_value_t;
 typedef union {
     bitslice_value_t value;
-    uint8_t bytes[MAX_BITSLICES / 8];
+    uint8_t bytes[VECTOR_SIZE];
 } bitslice_t;
 
 static bitslice_t keystream[32];
@@ -94,8 +94,8 @@ static uint64_t expand(uint64_t mask, uint64_t value) {
 static void bitslice(const uint64_t value, bitslice_t *restrict bitsliced_value) {
     // set constants
     bitslice_t bs_zeroes, bs_ones;
-    memset(bs_ones.bytes, 0xff, VECTOR_SIZE);
-    memset(bs_zeroes.bytes, 0x00, VECTOR_SIZE);
+    memset((uint8_t *)&bs_ones, 0xff, VECTOR_SIZE);
+    memset((uint8_t *)&bs_zeroes, 0x00, VECTOR_SIZE);
 
     for (size_t bit_idx = 0; bit_idx < 32; bit_idx++) {
         const bool bit = get_bit(32 - 1 - bit_idx, value);
@@ -413,9 +413,9 @@ int main(int argc, char **argv) {
     int freeListIdx = 0;
 
     // todo, calculate the max number of allocations to remove 0x40
-    void **freeList = (void **) malloc(0x40 * sizeof(void *));
+    void **freeList = (void **) calloc(1, 0x40 * sizeof(void *));
     if (!freeList) {
-        printf("Error: malloc (freeList) failed (%d): %s\n", errno, strerror(errno));
+        printf("Error: calloc (freeList) failed (%d): %s\n", errno, strerror(errno));
         exit(3);
     }
 

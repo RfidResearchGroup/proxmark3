@@ -1,11 +1,19 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 Romain Tartiere.
-// Copyright (C) 2014 Iceman
-// Copyright (C) 2021 Merlok
+// Borrowed initially from https://github.com/nfc-tools/libfreefare
+// Copyright (C) 2010, Romain Tartiere.
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // High frequency Desfire secure channel functions
 //-----------------------------------------------------------------------------
@@ -63,6 +71,7 @@ static const AllowedChannelModes_t AllowedChannelModes[] = {
     {MFDES_CREATE_VALUE_FILE,         DACd40,  DCCNative,    DCMMACed},
     {MFDES_CREATE_LINEAR_RECORD_FILE, DACd40,  DCCNative,    DCMMACed},
     {MFDES_CREATE_CYCLIC_RECORD_FILE, DACd40,  DCCNative,    DCMMACed},
+    {MFDES_DELETE_FILE,               DACd40,  DCCNative,    DCMMACed},
     {MFDES_COMMIT_TRANSACTION,        DACd40,  DCCNative,    DCMMACed},
     {MFDES_CLEAR_RECORD_FILE,         DACd40,  DCCNative,    DCMMACed},
     {MFDES_GET_FILE_SETTINGS,         DACd40,  DCCNative,    DCMMACed},
@@ -110,6 +119,7 @@ static const AllowedChannelModes_t AllowedChannelModes[] = {
     {MFDES_CREATE_VALUE_FILE,         DACEV1,  DCCNative,    DCMMACed},
     {MFDES_CREATE_LINEAR_RECORD_FILE, DACEV1,  DCCNative,    DCMMACed},
     {MFDES_CREATE_CYCLIC_RECORD_FILE, DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_DELETE_FILE,               DACEV1,  DCCNative,    DCMMACed},
     {MFDES_GET_VALUE,                 DACEV1,  DCCNative,    DCMMACed},
     {MFDES_CREDIT,                    DACEV1,  DCCNative,    DCMMACed},
     {MFDES_LIMITED_CREDIT,            DACEV1,  DCCNative,    DCMMACed},
@@ -197,7 +207,7 @@ static const CmdHeaderLengths_t CmdHeaderLengths[] = {
 };
 
 static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {
-    for (int i = 0; i < ARRAY_LENGTH(CmdHeaderLengths); i++)
+    for (int i = 0; i < ARRAYLEN(CmdHeaderLengths); i++)
         if (CmdHeaderLengths[i].cmd == cmd)
             return CmdHeaderLengths[i].len;
 
@@ -221,7 +231,7 @@ static bool DesfireEV1D40TransmitMAC(DesfireContext_t *ctx, uint8_t cmd) {
     if (ctx->secureChannel != DACd40 && ctx->secureChannel != DACEV1)
         return true;
 
-    for (int i = 0; i < ARRAY_LENGTH(EV1D40TransmitMAC); i++)
+    for (int i = 0; i < ARRAYLEN(EV1D40TransmitMAC); i++)
         if (EV1D40TransmitMAC[i] == cmd)
             return true;
 
@@ -240,7 +250,7 @@ static bool DesfireEV1D40ReceiveMAC(DesfireContext_t *ctx, uint8_t cmd) {
     if (ctx->secureChannel != DACd40)
         return true;
 
-    for (int i = 0; i < ARRAY_LENGTH(D40ReceiveMAC); i++)
+    for (int i = 0; i < ARRAYLEN(D40ReceiveMAC); i++)
         if (D40ReceiveMAC[i] == cmd)
             return true;
 
@@ -259,7 +269,7 @@ static const uint8_t ISOChannelValidCmd[] = {
 };
 
 static bool DesfireISOChannelValidCmd(uint8_t cmd) {
-    for (int i = 0; i < ARRAY_LENGTH(ISOChannelValidCmd); i++)
+    for (int i = 0; i < ARRAYLEN(ISOChannelValidCmd); i++)
         if (ISOChannelValidCmd[i] == cmd)
             return true;
 
@@ -820,7 +830,7 @@ bool PrintChannelModeWarning(uint8_t cmd, DesfireSecureChannel secureChannel, De
     }
 
     bool found = false;
-    for (int i = 0; i < ARRAY_LENGTH(AllowedChannelModes); i++)
+    for (int i = 0; i < ARRAYLEN(AllowedChannelModes); i++)
         if (AllowedChannelModes[i].cmd == cmd) {
             // full compare
             if (AllowedChannelModes[i].secureChannel == secureChannel &&

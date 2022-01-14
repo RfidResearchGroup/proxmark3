@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2016 iceman
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Analyse bytes commands
 //-----------------------------------------------------------------------------
@@ -21,7 +29,6 @@
 #include "crc.h"
 #include "crc16.h"        // crc16 ccitt
 #include "crc32.h"        // crc32_ex
-#include "tea.h"
 #include "legic_prng.h"
 #include "cmddata.h"      // g_DemodBuffer
 #include "graph.h"
@@ -478,55 +485,6 @@ static int CmdAnalyseDates(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
     PrintAndLogEx(NORMAL, "To be implemented. Feel free to contribute!");
-    return PM3_SUCCESS;
-}
-
-static int CmdAnalyseTEASelfTest(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "analyse tea",
-                  "Crypto TEA self tests",
-                  "analyse tea -d 1122334455667788"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str1("d", "data", "<hex>", "bytes to encrypt ( 8 hex bytes )"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    int dlen = 0;
-    uint8_t data[8] = {0x00};
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
-    CLIParserFree(ctx);
-    if (res) {
-        PrintAndLogEx(FAILED, "Error parsing bytes");
-        return PM3_EINVARG;
-    }
-
-    uint8_t v_le[8];
-    memset(v_le, 0x00, sizeof(v_le));
-    uint8_t *v_ptr = v_le;
-
-    SwapEndian64ex(data, 8, 4, v_ptr);
-
-    // ENCRYPTION KEY:
-    uint8_t key[16] = {0x55, 0xFE, 0xF6, 0x30, 0x62, 0xBF, 0x0B, 0xC1, 0xC9, 0xB3, 0x7C, 0x34, 0x97, 0x3E, 0x29, 0xFB };
-    uint8_t keyle[16];
-    uint8_t *key_ptr = keyle;
-    SwapEndian64ex(key, sizeof(key), 4, key_ptr);
-
-    PrintAndLogEx(INFO, "TEA crypto testing");
-    PrintAndLogEx(INFO, "-----------------------------------+---------");
-    PrintAndLogEx(INFO, "LE enc.... %s", sprint_hex_ascii(v_ptr, 8));
-
-    tea_decrypt(v_ptr, key_ptr);
-    PrintAndLogEx(INFO, "LE dec.... %s", sprint_hex_ascii(v_ptr, 8));
-
-    tea_encrypt(v_ptr, key_ptr);
-    PrintAndLogEx(INFO, "enc1...... %s", sprint_hex_ascii(v_ptr, 8));
-    tea_encrypt(v_ptr, key_ptr);
-    PrintAndLogEx(INFO, "enc2...... %s", sprint_hex_ascii(v_ptr, 8));
-    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -1181,11 +1139,11 @@ static int CmdAnalyseUnits(const char *Cmd) {
         PrintAndLogEx(INFO, "  32 SSP = %u ETU (expect 1) " _GREEN_("ok"), SSP_TO_ETU(32));
     } else if (etu) {
 
-        PrintAndLogEx(INFO, " %d ETU = %u us ", ETU_TO_US(etu));
-        PrintAndLogEx(INFO, " %d ETU = %u SSP ", ETU_TO_SSP(etu));
+        PrintAndLogEx(INFO, " %d ETU = %u us ", ETU_TO_US(etu), 0);
+        PrintAndLogEx(INFO, " %d ETU = %u SSP ", ETU_TO_SSP(etu), 0);
     } else if (us) {
-        PrintAndLogEx(INFO, " %d us = %u ETU ", US_TO_ETU(us));
-        PrintAndLogEx(INFO, " %d us = %u SSP ", US_TO_SSP(us));
+        PrintAndLogEx(INFO, " %d us = %u ETU ", US_TO_ETU(us), 0);
+        PrintAndLogEx(INFO, " %d us = %u SSP ", US_TO_SSP(us), 0);
     }
 
     return PM3_SUCCESS;
@@ -1197,7 +1155,6 @@ static command_t CommandTable[] = {
     {"crc",     CmdAnalyseCRC,      AlwaysAvailable, "Stub method for CRC evaluations"},
     {"chksum",  CmdAnalyseCHKSUM,   AlwaysAvailable, "Checksum with adding, masking and one's complement"},
     {"dates",   CmdAnalyseDates,    AlwaysAvailable, "Look for datestamps in a given array of bytes"},
-    {"tea",     CmdAnalyseTEASelfTest, AlwaysAvailable, "Crypto TEA test"},
     {"lfsr",    CmdAnalyseLfsr,     AlwaysAvailable, "LFSR tests"},
     {"a",       CmdAnalyseA,        AlwaysAvailable, "num bits test"},
     {"nuid",    CmdAnalyseNuid,     AlwaysAvailable, "create NUID from 7byte UID"},

@@ -1,10 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2018 Merlok
-// Copyright (C) 2018 drHatson
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // iso14443-4 mifare commands
 //-----------------------------------------------------------------------------
@@ -63,8 +70,8 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
 int MFPGetSignature(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 int MFPGetVersion(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 
-bool mfValidateAccessConditions(uint8_t *data);
-const char *mfGetAccessConditionsDesc(uint8_t blockn, uint8_t *data);
+bool mfValidateAccessConditions(const uint8_t *data);
+const char *mfGetAccessConditionsDesc(uint8_t blockn, const uint8_t *data);
 
 uint8_t mfNumBlocksPerSector(uint8_t sectorNo);
 uint8_t mfFirstBlockOfSector(uint8_t sectorNo);

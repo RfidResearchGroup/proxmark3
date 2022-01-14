@@ -59,9 +59,9 @@ static int loadrngdata(struct rngdata *r, char *file) {
     r->len = filestat.st_size / 2;
 //    printf("r->len = %d\n", r->len);
 
-    r->data = (unsigned char *)malloc(r->len);
+    r->data = (unsigned char *)calloc(1, r->len);
     if (!(r->data)) {
-        printf("cannot malloc\n");
+        printf("cannot calloc\n");
         exit(1);
     }
 

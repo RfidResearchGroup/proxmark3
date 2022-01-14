@@ -1,11 +1,19 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2017 October, Satsuoni
-// 2017,2021 iceman
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// High frequency ISO18092 / FeliCa commands
+// High frequency ISO 18002 / FeliCa commands
 //-----------------------------------------------------------------------------
 #include "cmdhffelica.h"
 #include <stdio.h>
@@ -169,12 +177,6 @@ static int print_authentication2(void) {
 
 static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
     // source: mainly https://www.sony.net/Products/felica/business/tech-support/list.html
-
-    if (ic_type >= 0x14 && ic_type <= 0x1F) {
-        return "FeliCa Mobile IC Chip V3.0";
-    }
-
-
     switch (ic_type) {
         // FeliCa Standard Products:
         case 0x46:
@@ -231,7 +233,7 @@ static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
         case 0x1D:
         case 0x1E:
         case 0x1F:
-            return "Mobile FeliCa IC Chip V3.0";
+            return "FeliCa Mobile IC Chip V3.0";
         case 0x10:
         case 0x11:
         case 0x12:

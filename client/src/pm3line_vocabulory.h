@@ -1,29 +1,29 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2021 <iceman>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // readline auto complete utilities
 //-----------------------------------------------------------------------------
 
-#ifndef RL_VOCABULORY_H__
-#define RL_VOCABULORY_H__
+#ifndef PM3LINE_VOCABULORY_H__
+#define PM3LINE_VOCABULORY_H__
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#ifdef HAVE_READLINE
-#include <stdlib.h>
-#include <string.h>
-#include <readline/readline.h>
-#include "ui.h"                          // g_session
-#include "util.h"                        // str_ndup
-
-char* rl_command_generator(const char *text, int state);
-char **rl_command_completion(const char *text, int start, int end);
+#include <stdbool.h>
 
 typedef struct vocabulory_s {
     bool offline;
@@ -646,9 +646,6 @@ const static vocabulory_t vocabulory[] = {
     { 0, "lf visa2000 reader" }, 
     { 0, "lf visa2000 clone" }, 
     { 0, "lf visa2000 sim" }, 
-    { 1, "lf zx help" }, 
-    { 1, "lf zx demod" }, 
-    { 0, "lf zx reader" }, 
     { 1, "mem help" }, 
     { 0, "mem baudrate" }, 
     { 0, "mem dump" }, 
@@ -716,50 +713,6 @@ const static vocabulory_t vocabulory[] = {
     { 1, "wiegand decode" }, 
     {0, NULL}
 };
-
-
-char **rl_command_completion(const char *text, int start, int end) {
-    rl_attempted_completion_over = 0;
-    return rl_completion_matches (text, rl_command_generator);
-}
-
-char* rl_command_generator(const char *text, int state) {
-    static int index;
-    static size_t len;
-    size_t rlen = strlen(rl_line_buffer);
-    const char *command;
-
-    if (!state) {
-        index = 0;
-        len = strlen(text);
-    }
-
-    while ((command = vocabulory[index].name))  {
-
-        // When no pm3 device present
-        // and the command is not available offline,
-        // we skip it.
-        if ((g_session.pm3_present == false) && (vocabulory[index].offline == false ))  {
-            index++;
-            continue;
-        }
-
-        index++;
-
-        if (strncmp (command, rl_line_buffer, rlen) == 0) {
-            const char *next = command + (rlen - len);
-            const char *space = strstr(next, " ");
-            if (space != NULL) {
-                return str_ndup(next, space - next);
-            }
-            return str_dup(next);
-        }
-    }
-
-    return NULL;
-}
-
-#endif
 
 #ifdef __cplusplus
 }

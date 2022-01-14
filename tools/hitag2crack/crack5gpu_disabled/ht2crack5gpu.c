@@ -261,9 +261,9 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    ctx.kernelSource = (char *)malloc(filestat.st_size);
+    ctx.kernelSource = (char *)calloc(1, filestat.st_size);
     if (!ctx.kernelSource) {
-        printf("Cannot malloc kernelSource\n");
+        printf("Cannot calloc kernelSource\n");
         exit(1);
     }
 

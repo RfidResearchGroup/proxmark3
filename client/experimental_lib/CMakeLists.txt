@@ -1,3 +1,19 @@
+#-----------------------------------------------------------------------------
+# Copyright (C) Jonathan Westhues, Mar 2006
+# Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# See LICENSE.txt for the text of the license.
+#-----------------------------------------------------------------------------
 # Usage:
 #  mkdir build
 #  cd build
@@ -174,7 +190,6 @@ add_subdirectory(${PM3_ROOT}/client/deps deps)
 set (TARGET_SOURCES
         ${PM3_ROOT}/common/commonutil.c
         ${PM3_ROOT}/common/util_posix.c
-        ${PM3_ROOT}/common/parity.c
         ${PM3_ROOT}/common/bucketsort.c
         ${PM3_ROOT}/common/crapto1/crapto1.c
         ${PM3_ROOT}/common/crapto1/crypto1.c
@@ -326,10 +341,9 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/pm3.c
         ${PM3_ROOT}/client/src/pm3_binlib.c
         ${PM3_ROOT}/client/src/pm3_bitlib.c
-        ${PM3_ROOT}/client/src/prng.c
+        ${PM3_ROOT}/client/src/pm3line.c
         ${PM3_ROOT}/client/src/scandir.c
         ${PM3_ROOT}/client/src/scripting.c
-        ${PM3_ROOT}/client/src/tea.c
         ${PM3_ROOT}/client/src/ui.c
         ${PM3_ROOT}/client/src/util.c
         ${PM3_ROOT}/client/src/wiegand_formats.c
@@ -566,6 +580,7 @@ endif (NOT APPLE)
 if (NOT JANSSON_FOUND)
     set(ADDITIONAL_LNK pm3rrg_rdv4_jansson ${ADDITIONAL_LNK})
 endif (NOT JANSSON_FOUND)
+
 if (NOT WHEREAMI_FOUND)
     set(ADDITIONAL_LNK pm3rrg_rdv4_whereami ${ADDITIONAL_LNK})
 endif (NOT WHEREAMI_FOUND)

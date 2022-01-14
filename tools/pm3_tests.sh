@@ -7,7 +7,7 @@ DICPATH="./client/dictionaries"
 RESOURCEPATH="./client/resources"
 
 SLOWTESTS=false
-GPUTESTS=false
+OPENCLTESTS=false
 TESTALL=true
 TESTMFKEY=false
 TESTNONCE2KEY=false
@@ -26,9 +26,9 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--long] [--gpu] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|fpga_compress|bootrom|armsrc|client|recovery|common]
+Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|fpga_compress|bootrom|armsrc|client|recovery|common]
     --long:          Enable slow tests
-    --gpu:           Enable tests requiring GPU
+    --opencl:        Enable tests requiring OpenCL (preferably a Nvidia GPU)
     --clientbin ...: Specify path to proxmark3 binary to test
     If no target given, all targets will be tested
 """
@@ -38,8 +38,8 @@ Usage: $0 [--long] [--gpu] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_
       SLOWTESTS=true
       shift
       ;;
-    --gpu)
-      GPUTESTS=true
+    --opencl)
+      OPENCLTESTS=true
       shift
       ;;
     --clientbin)
@@ -141,9 +141,9 @@ function CheckFileExist() {
   return 1
 }
 
-# [slow] [gpu] [retry] [ignore] <title> <command_line> <check_result_regex>
+# [slow] [opencl] [retry] [ignore] <title> <command_line> <check_result_regex>
 # slow:   test takes more than ~5s
-# gpu:    test requires GPU presence
+# opencl: test requires OpenCL
 # retry:  test repeated up to 3 times in case of failure
 # ignore: test failure is not fatal
 function CheckExecute() {
@@ -153,11 +153,11 @@ function CheckExecute() {
   else
     local SLOWTEST=false
   fi
-  if [ "$1" == "gpu" ]; then
-    local GPUTEST=true
+  if [ "$1" == "opencl" ]; then
+    local OPENCLTEST=true
     shift
   else
-    local GPUTEST=false
+    local OPENCLTEST=false
   fi
   if [ "$1" == "retry" ]; then
     local RETRY="1 2 3 e"
@@ -179,8 +179,8 @@ function CheckExecute() {
     echo -e "[ ${C_YELLOW}SKIPPED${C_NC} ] ( slow )"
     return $RESULT
   fi
-  if $GPUTEST && ! $GPUTESTS; then
-    echo -e "[ ${C_YELLOW}SKIPPED${C_NC} ] ( gpu )"
+  if $OPENCLTEST && ! $OPENCLTESTS; then
+    echo -e "[ ${C_YELLOW}SKIPPED${C_NC} ] ( opencl )"
     return $RESULT
   fi
 
@@ -327,15 +327,6 @@ while true; do
       # Order of magnitude to crack it: ~12s on 1 core, ~3s on 4 cores -> tagged as "slow"
       if ! CheckExecute slow "ht2crack5 test"              "cd $HT2CRACK5PATH; ./ht2crack5 $HT2CRACK5UID $HT2CRACK5NRAR" "Key: $HT2CRACK5KEY"; then break; fi
 
-      echo -e "\n${C_BLUE}Testing ht2crack5gpu:${C_NC} ${HT2CRACK5GPUPATH:=./tools/hitag2crack/crack5gpu/}"
-      if ! CheckFileExist "ht2crack5gpu exists"            "$HT2CRACK5GPUPATH/ht2crack5gpu"; then break; fi
-      HT2CRACK5GPUUID=12345678
-      HT2CRACK5GPUKEY=AABBCCDDEEFF
-      # The speed depends on the nRaR so we'll use two pairs known to work fast
-      HT2CRACK5GPUNRAR="B438220C 944FFD74 942C59E3 3D450B34"
-      # Order of magnitude to crack it: ~15s -> tagged as "slow"
-      if ! CheckExecute slow gpu "ht2crack5gpu test"        "cd $HT2CRACK5GPUPATH; ./ht2crack5gpu $HT2CRACK5GPUUID $HT2CRACK5GPUNRAR" "Key: $HT2CRACK5GPUKEY"; then break; fi
-
       echo -e "\n${C_BLUE}Testing ht2crack5opencl:${C_NC} ${HT2CRACK5OPENCLPATH:=./tools/hitag2crack/crack5opencl/}"
       if ! CheckFileExist "ht2crack5opencl exists"            "$HT2CRACK5OPENCLPATH/ht2crack5opencl"; then break; fi
       HT2CRACK5OPENCLUID=12345678
@@ -343,7 +334,7 @@ while true; do
       # The speed depends on the nRaR so we'll use two pairs known to work fast
       HT2CRACK5OPENCLNRAR="B438220C 944FFD74 942C59E3 3D450B34"
       # Order of magnitude to crack it: ~15s -> tagged as "slow"
-      if ! CheckExecute slow gpu "ht2crack5opencl test"        "cd $HT2CRACK5OPENCLPATH; ./ht2crack5opencl $HT2CRACK5OPENCLUID $HT2CRACK5OPENCLNRAR" "Key found.*: $HT2CRACK5OPENCLKEY"; then break; fi
+      if ! CheckExecute slow opencl "ht2crack5opencl test"     "cd $HT2CRACK5OPENCLPATH; ./ht2crack5opencl $HT2CRACK5OPENCLUID $HT2CRACK5OPENCLNRAR" "Key found.*$HT2CRACK5OPENCLKEY"; then break; fi
     fi
     if $TESTALL || $TESTCLIENT; then
       echo -e "\n${C_BLUE}Testing client:${C_NC} ${CLIENTBIN:=./client/proxmark3}"

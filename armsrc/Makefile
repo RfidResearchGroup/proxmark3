@@ -155,7 +155,6 @@ THUMBSRC = start.c \
 
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \
-    parity.c \
     usb_cdc.c \
     cmd.c
 

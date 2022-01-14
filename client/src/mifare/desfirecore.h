@@ -1,11 +1,19 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 Romain Tartiere.
-// Copyright (C) 2014 Iceman
-// Copyright (C) 2021 Merlok
+// Borrowed initially from https://github.com/nfc-tools/libfreefare
+// Copyright (C) 2010, Romain Tartiere.
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // High frequency Desfire core functions
 //-----------------------------------------------------------------------------
@@ -153,7 +161,7 @@ extern const CLIParserOption DesfireValueFileOperOpts[];
 extern const CLIParserOption DesfireReadFileTypeOpts[];
 
 const char *DesfireGetErrorString(int res, uint16_t *sw);
-uint32_t DesfireAIDByteToUint(uint8_t *data);
+uint32_t DesfireAIDByteToUint(const uint8_t *data);
 void DesfireAIDUintToByte(uint32_t aid, uint8_t *data);
 
 void DesfirePrintContext(DesfireContext_t *ctx);
@@ -175,7 +183,7 @@ int DesfireGetCardUID(DesfireContext_t *ctx);
 const char *DesfireSelectWayToStr(DesfireISOSelectWay way);
 char *DesfireWayIDStr(DesfireISOSelectWay way, uint32_t id);
 bool DesfireMFSelected(DesfireISOSelectWay way, uint32_t id);
-int DesfireSelectEx(DesfireContext_t *ctx, bool fieldon, DesfireISOSelectWay way, uint32_t id, char *dfname);
+int DesfireSelectEx(DesfireContext_t *ctx, bool fieldon, DesfireISOSelectWay way, uint32_t id, const char *dfname);
 int DesfireSelect(DesfireContext_t *ctx, DesfireISOSelectWay way, uint32_t id, char *dfname);
 
 const char *DesfireAuthErrorToStr(int error);
@@ -230,7 +238,7 @@ const DesfireCreateFileCommands_t *GetDesfireFileCmdRec(uint8_t type);
 const char *GetDesfireAccessRightStr(uint8_t right);
 const char *GetDesfireAccessRightShortStr(uint8_t right);
 void DesfireEncodeFileAcessMode(uint8_t *mode, uint8_t r, uint8_t w, uint8_t rw, uint8_t ch);
-void DesfireDecodeFileAcessMode(uint8_t *mode, uint8_t *r, uint8_t *w, uint8_t *rw, uint8_t *ch);
+void DesfireDecodeFileAcessMode(const uint8_t *mode, uint8_t *r, uint8_t *w, uint8_t *rw, uint8_t *ch);
 void DesfirePrintAccessRight(uint8_t *data);
 void DesfirePrintFileSettings(uint8_t *data, size_t len);
 void DesfirePrintSetFileSettings(uint8_t *data, size_t len);

@@ -1139,17 +1139,6 @@ Check column "offline" for their availability.
 |`lf visa2000 sim        `|N       |`simulate Visa2000 tag`
 
 
-### lf zx
-
- { ZX8211 RFIDs...            }
-
-|command                  |offline |description
-|-------                  |------- |-----------
-|`lf zx help             `|Y       |`This help`
-|`lf zx demod            `|Y       |`demodulate an ZX 8211 tag from the GraphBuffer`
-|`lf zx reader           `|N       |`attempt to read and extract tag data`
-
-
 ### mem
 
  { Flash memory manipulation... }

@@ -1,17 +1,22 @@
-/*
- * libopenemv - a library to work with EMV family of smart cards
- * Copyright (C) 2015 Dmitry Eremin-Solenikov
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- */
+//-----------------------------------------------------------------------------
+// Borrowed initially from https://github.com/lumag/emv-tools/
+// Copyright (C) 2012, 2015 Dmitry Eremin-Solenikov
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+// libopenemv - a library to work with EMV family of smart cards
+//-----------------------------------------------------------------------------
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -305,7 +310,7 @@ struct emv_pk *emv_pki_recover_icc_cert(const struct emv_pk *pk, struct tlvdb *d
                                             sda_tlv,
                                             &sda_tdata);
 
-    free(sdatl); // malloc here: emv_pki_sdatl_fill
+    free(sdatl); // calloc here: emv_pki_sdatl_fill
     return res;
 }
 
@@ -340,7 +345,7 @@ unsigned char *emv_pki_sdatl_fill(const struct tlvdb *db, size_t *sdatl_len) {
 
     if (len) {
         *sdatl_len = len;
-        unsigned char *value = malloc(len);
+        unsigned char *value = calloc(1, len);
         memcpy(value, buf, len);
         return value;
     }
@@ -367,7 +372,7 @@ struct tlvdb *emv_pki_recover_dac_ex(const struct emv_pk *enc_pk, const struct t
                                                  &sda_tdata,
                                                  (uint8_t *)NULL);
 
-    free(sdatl); // malloc here: emv_pki_sdatl_fill
+    free(sdatl); // calloc here: emv_pki_sdatl_fill
 
     if (!data || data_len < 5)
         return NULL;

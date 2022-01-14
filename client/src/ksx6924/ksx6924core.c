@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2019 micolous+git@gmail.com
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // KS X 6924 (T-Money, Snapper+) protocol implementation
 //-----------------------------------------------------------------------------
@@ -322,7 +330,7 @@ void KSX6924PrintPurseInfo(const struct ksx6924_purse_info *purseInfo) {
     PrintAndLogEx(INFO, "  idCenter (issuer ID) .................. %02x ( %s )", purseInfo->idCenter,
                   KSX6924LookupTMoneyIDCenter(purseInfo->idCenter, KSX6924_UNKNOWN));
     PrintAndLogEx(INFO, "  CSN (card number) ..................... %s", purseInfo->csn);
-    PrintAndLogEx(INFO, "  idtr (card usage authentication ID) ... %i", purseInfo->idtr);
+    PrintAndLogEx(INFO, "  idtr (card usage authentication ID) ... %" PRIu64, purseInfo->idtr);
     PrintAndLogEx(INFO, "  issue date ............................ %04i-%02i-%02i",
                   purseInfo->issueDate.year,
                   purseInfo->issueDate.month,
@@ -335,9 +343,9 @@ void KSX6924PrintPurseInfo(const struct ksx6924_purse_info *purseInfo) {
                   KSX6924LookupTMoneyUserCode(purseInfo->userCode, KSX6924_UNKNOWN));
     PrintAndLogEx(INFO, "  disRate (discount type) ............... %02x ( %s )", purseInfo->disRate,
                   KSX6924LookupTMoneyDisRate(purseInfo->disRate, KSX6924_UNKNOWN));
-    PrintAndLogEx(INFO, "  balMax (in won/cents) ................. %ld", purseInfo->balMax);
+    PrintAndLogEx(INFO, "  balMax (in won/cents) ................. %" PRIu32, purseInfo->balMax);
     PrintAndLogEx(INFO, "  bra (branch code) ..................... %04x", purseInfo->bra);
-    PrintAndLogEx(INFO, "  mmax (one-time transaction limit) ..... %ld", purseInfo->mmax);
+    PrintAndLogEx(INFO, "  mmax (one-time transaction limit) ..... %" PRIu32, purseInfo->mmax);
     PrintAndLogEx(INFO, "  tcode (telecom carrier ID) ............ %02x ( %s )", purseInfo->tcode,
                   KSX6924LookupTMoneyTCode(purseInfo->tcode, KSX6924_UNKNOWN));
     PrintAndLogEx(INFO, "  ccode (credit card company ID) ........ %02x ( %s )", purseInfo->ccode,

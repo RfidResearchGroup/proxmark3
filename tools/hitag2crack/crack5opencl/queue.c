@@ -249,9 +249,9 @@ int wu_queue_push(wu_queue_ctx_t *ctx, size_t id, size_t off, size_t max) {
 
     if (ctx->queue_head == 0) first = 1;
 
-    if (!(ptr = (wu_queue_item_t *) malloc(sizeof(wu_queue_item_t)))) {
+    if (!(ptr = (wu_queue_item_t *) calloc(1, sizeof(wu_queue_item_t)))) {
 #if TEST_UNIT == 1
-        fprintf(stderr, "! Error: malloc() failed (%d): %s\n", errno, strerror(errno));
+        fprintf(stderr, "! Error: calloc() failed (%d): %s\n", errno, strerror(errno));
 #endif
         pthread_mutex_unlock(&ctx->queue_mutex);
         return ERROR_ALLOC;

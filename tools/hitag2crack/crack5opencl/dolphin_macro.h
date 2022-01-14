@@ -27,12 +27,76 @@ License: GNU General Public License v3 or any later version (see LICENSE.txt)
 // too many allocations, too many free to manage, I need dolphin macros :)
 // they could be buggy, but if you know how to fix them, do it
 
-#define MEMORY_FREE_ADD(a)      { freeList[freeListIdx++] = (void *)(a); }
-#define MEMORY_FREE_ALL         { int t=freeListIdx; while (t-- > 0) if (freeList[t]!=NULL) { free (freeList[t]); freeList[t]=NULL; } if (freeList!=NULL) { free (freeList); freeList=NULL; } }
-#define MEMORY_FREE_DEL(a)      { for (int i=0;i<freeListIdx;i++) { if(freeList[i] && a==freeList[i]) { free(freeList[i]); freeList[i]=NULL; break; } } }
-#define MEMORY_FREE_LIST(a,i)   { if (i > 0) { int t=(int)i; do { if (a[t]!=NULL) { free(a[t]); a[t]=NULL; } } while (--t >= 0); MEMORY_FREE_DEL(a) } }
-#define MEMORY_FREE_LIST_Z(a,i) { int t=(int)i; do { if (a[t]!=NULL) { free(a[t]); a[t]=NULL; } } while (--t >= 0); MEMORY_FREE_DEL(a) }
-#define MEMORY_FREE_OPENCL(c,i) { int t=(int)i; do { if (c.contexts[t]) clReleaseContext (c.contexts[t]); if (c.keystreams[t]) clReleaseMemObject (c.keystreams[t]); \
-                                  if (c.candidates[t]) clReleaseMemObject (c.candidates[t]); if (c.matches[t]) clReleaseMemObject (c.matches[t]); \
-                                  if (c.matches_found[t]) clReleaseMemObject (c.matches_found[t]); if (c.commands[t]) clReleaseCommandQueue (c.commands[t]); \
-                                  if (c.kernels[t]) clReleaseKernel (c.kernels[t]); if (c.programs[t]) clReleaseProgram (c.programs[t]); } while (--t >= 0); }
+#define MEMORY_FREE_ADD(a)      { \
+    freeList[freeListIdx++] = (void *)(a); \
+}
+
+#define MEMORY_FREE_ALL         { \
+    int t = freeListIdx; \
+    while (t-- > 0) { \
+        if (freeList[t] != NULL) { \
+            free (freeList[t]); \
+            freeList[t] = NULL; \
+        }\
+        if (freeList != NULL) { \
+            free (freeList); \
+            freeList = NULL; \
+        } \
+    } \
+}
+
+#define MEMORY_FREE_DEL(a)      { \
+    for (int i = 0; i < freeListIdx; i++) { \
+        if (freeList[i] && a == freeList[i]) { \
+            free(freeList[i]); \
+            freeList[i] = NULL; \
+            break; \
+        } \
+    } \
+}
+
+#define MEMORY_FREE_LIST(a,i)   { \
+    if (i > 0) { \
+        int t=(int)i; \
+        do { \
+            if (a[t] != NULL) { \
+                free(a[t]); \
+                a[t]=NULL; \
+            } \
+        } while (--t >= 0); \
+        MEMORY_FREE_DEL(a) \
+    } \
+}
+
+#define MEMORY_FREE_LIST_Z(a,i) { \
+    int t = (int)i; \
+    do { \
+        if (a[t] != NULL) { \
+            free(a[t]); \
+            a[t] = NULL; \
+        } \
+    } while (--t >= 0); \
+    MEMORY_FREE_DEL(a) \
+}
+
+#define MEMORY_FREE_OPENCL(c,i) { \
+    int t = (int)i; \
+    do { \
+        if (c.contexts[t]) \
+            clReleaseContext (c.contexts[t]); \
+        if (c.keystreams[t]) \
+            clReleaseMemObject (c.keystreams[t]); \
+        if (c.candidates[t]) \
+            clReleaseMemObject (c.candidates[t]); \
+        if (c.matches[t]) \
+            clReleaseMemObject (c.matches[t]); \
+        if (c.matches_found[t]) \
+            clReleaseMemObject (c.matches_found[t]); \
+        if (c.commands[t]) \
+            clReleaseCommandQueue (c.commands[t]); \
+        if (c.kernels[t]) \
+            clReleaseKernel (c.kernels[t]); \
+        if (c.programs[t]) \
+            clReleaseProgram (c.programs[t]); \
+    } while (--t >= 0); \
+ }

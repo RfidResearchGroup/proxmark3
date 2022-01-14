@@ -1,11 +1,19 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 Romain Tartiere.
-// Copyright (C) 2014 Iceman
-// Copyright (C) 2021 Merlok
+// Borrowed initially from https://github.com/nfc-tools/libfreefare
+// Copyright (C) 2010, Romain Tartiere.
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // High frequency Desfire core functions
 //-----------------------------------------------------------------------------
@@ -42,7 +50,7 @@ const CLIParserOption DesfireAlgoOpts[] = {
     {T_AES,    "aes"},
     {0,    NULL},
 };
-const size_t DesfireAlgoOptsLen = ARRAY_LENGTH(DesfireAlgoOpts);
+const size_t DesfireAlgoOptsLen = ARRAYLEN(DesfireAlgoOpts);
 
 const CLIParserOption DesfireKDFAlgoOpts[] = {
     {MFDES_KDF_ALGO_NONE,      "none"},
@@ -50,7 +58,7 @@ const CLIParserOption DesfireKDFAlgoOpts[] = {
     {MFDES_KDF_ALGO_GALLAGHER, "gallagher"},
     {0,    NULL},
 };
-const size_t DesfireKDFAlgoOptsLen = ARRAY_LENGTH(DesfireKDFAlgoOpts);
+const size_t DesfireKDFAlgoOptsLen = ARRAYLEN(DesfireKDFAlgoOpts);
 
 const CLIParserOption DesfireCommunicationModeOpts[] = {
     {DCMPlain,     "plain"},
@@ -58,7 +66,7 @@ const CLIParserOption DesfireCommunicationModeOpts[] = {
     {DCMEncrypted, "encrypt"},
     {0,    NULL},
 };
-const size_t DesfireCommunicationModeOptsLen = ARRAY_LENGTH(DesfireCommunicationModeOpts);
+const size_t DesfireCommunicationModeOptsLen = ARRAYLEN(DesfireCommunicationModeOpts);
 
 const CLIParserOption DesfireCommandSetOpts[] = {
     {DCCNative,    "native"},
@@ -66,7 +74,7 @@ const CLIParserOption DesfireCommandSetOpts[] = {
     {DCCISO,       "iso"},
     {0,    NULL},
 };
-const size_t DesfireCommandSetOptsLen = ARRAY_LENGTH(DesfireCommandSetOpts);
+const size_t DesfireCommandSetOptsLen = ARRAYLEN(DesfireCommandSetOpts);
 
 const CLIParserOption DesfireSecureChannelOpts[] = {
     {DACd40, "d40"},
@@ -75,7 +83,7 @@ const CLIParserOption DesfireSecureChannelOpts[] = {
     {DACLRP, "lrp"},
     {0,    NULL},
 };
-const size_t DesfireSecureChannelOptsLen = ARRAY_LENGTH(DesfireSecureChannelOpts);
+const size_t DesfireSecureChannelOptsLen = ARRAYLEN(DesfireSecureChannelOpts);
 
 const CLIParserOption DesfireFileAccessModeOpts[] = {
     {0x00, "key0"},
@@ -115,7 +123,7 @@ const CLIParserOption DesfireReadFileTypeOpts[] = {
     {0,    NULL},
 };
 
-static const char *getstatus(uint16_t *sw) {
+static const char *getstatus(const uint16_t *sw) {
     if (sw == NULL) return "--> sw argument error. This should never happen !";
     if (((*sw >> 8) & 0xFF) == 0x91) {
         switch (*sw & 0xFF) {
@@ -340,7 +348,8 @@ bool DesfireMFSelected(DesfireISOSelectWay way, uint32_t id) {
     return false;
 }
 
-uint32_t DesfireAIDByteToUint(uint8_t *data) {
+// iceman todo:  use commonutil.c instead
+uint32_t DesfireAIDByteToUint(const uint8_t *data) {
     return data[0] + (data[1] << 8) + (data[2] << 16);
 }
 
@@ -544,8 +553,8 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
     memcpy(&cdata[1], data, datalen);
     cdatalen = datalen + 1;
 
-    int res = 0;
-    size_t len = 0;
+    int res;
+    size_t len;
     // tx chaining
     size_t sentdatalen = 0;
     while (cdatalen >= sentdatalen) {
@@ -638,26 +647,28 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
 static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
     if (resplen)
         *resplen = 0;
+
     if (respcode)
         *respcode = 0xff;
 
     uint16_t sw = 0;
     uint8_t *buf  = calloc(DESFIRE_BUFFER_SIZE, 1);
-    if (buf == NULL)
+    if (buf == NULL) {
         return PM3_EMALLOC;
+    }
+
     uint32_t buflen = 0;
     uint32_t pos = 0;
     uint32_t i = 1;
 
-    sAPDU_t apdu = {0};
-    apdu.CLA = MFDES_NATIVE_ISO7816_WRAP_CLA; //0x90
-    apdu.INS = cmd;
-    apdu.Lc = datalen;
-    apdu.P1 = 0;
-    apdu.P2 = 0;
-    apdu.data = data;
+    sAPDU_t apdu = {
+        .CLA = MFDES_NATIVE_ISO7816_WRAP_CLA, //0x90
+        .INS = cmd,
+        .P1 = 0,
+        .P2 = 0,
+    };
 
-    int res = 0;
+    int res;
     // tx chaining
     size_t sentdatalen = 0;
     while (datalen >= sentdatalen) {
@@ -665,6 +676,7 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
             apdu.Lc = DESFIRE_TX_FRAME_MAX_LEN;
         else
             apdu.Lc = datalen - sentdatalen;
+
         apdu.data = &data[sentdatalen];
 
         if (sentdatalen > 0)
@@ -2330,7 +2342,7 @@ void DesfireEncodeFileAcessMode(uint8_t *mode, uint8_t r, uint8_t w, uint8_t rw,
     mode[1] = (w & 0x0f) | ((r << 4) & 0xf0);
 }
 
-void DesfireDecodeFileAcessMode(uint8_t *mode, uint8_t *r, uint8_t *w, uint8_t *rw, uint8_t *ch) {
+void DesfireDecodeFileAcessMode(const uint8_t *mode, uint8_t *r, uint8_t *w, uint8_t *rw, uint8_t *ch) {
     // read
     if (r)
         *r = (mode[1] >> 4) & 0x0f; // hi 2b
@@ -2972,7 +2984,7 @@ int DesfireAnticollision(bool verbose) {
     return SelectCard14443A_4(false, verbose, NULL);
 }
 
-int DesfireSelectEx(DesfireContext_t *ctx, bool fieldon, DesfireISOSelectWay way, uint32_t id, char *dfname) {
+int DesfireSelectEx(DesfireContext_t *ctx, bool fieldon, DesfireISOSelectWay way, uint32_t id, const char *dfname) {
     uint8_t resp[250] = {0};
     size_t resplen = 0;
 

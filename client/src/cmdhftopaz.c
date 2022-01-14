@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2015 Piwi
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // High frequency Topaz (NFC Type 1) commands
 //-----------------------------------------------------------------------------
@@ -41,8 +49,8 @@ static struct {
     uint8_t uid[7];
     uint16_t size;
     uint8_t data_blocks[TOPAZ_STATIC_MEMORY / 8][8]; // this memory is always there
-    uint8_t *dynamic_memory;                       // this memory can be there
-    dynamic_lock_area_t *dynamic_lock_areas;       // lock area descriptors
+    uint8_t *dynamic_memory;                         // this memory can be there
+    dynamic_lock_area_t *dynamic_lock_areas;         // lock area descriptors
 } topaz_tag;
 
 static void topaz_switch_on_field(void) {
@@ -193,6 +201,11 @@ static bool topaz_byte_is_locked(uint16_t byteno) {
         if (lock_area == NULL) {
             return false;
         } else {
+
+            if ((lock_area->byte_offset - TOPAZ_STATIC_MEMORY) < 0) {
+                return false;
+            }
+
             lockbits = &topaz_tag.dynamic_memory[lock_area->byte_offset - TOPAZ_STATIC_MEMORY];
             locked_bytes_per_bit = lock_area->bytes_locked_per_bit;
             byteno = byteno - lock_area->first_locked_byte;

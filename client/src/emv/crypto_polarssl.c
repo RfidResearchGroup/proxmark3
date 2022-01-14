@@ -1,18 +1,22 @@
-/*
- * libopenemv - a library to work with EMV family of smart cards
- * Copyright (C) 2015 Dmitry Eremin-Solenikov
- * Copyright (C) 2017 Merlok
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * Lesser General Public License for more details.
- */
+//-----------------------------------------------------------------------------
+// Borrowed initially from https://github.com/lumag/emv-tools/
+// Copyright (C) 2012, 2015 Dmitry Eremin-Solenikov
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+// libopenemv - a library to work with EMV family of smart cards
+//-----------------------------------------------------------------------------
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -59,7 +63,7 @@ static struct crypto_hash *crypto_hash_polarssl_open(enum crypto_algo_hash hash)
     if (hash != HASH_SHA_1)
         return NULL;
 
-    struct crypto_hash_polarssl *ch = malloc(sizeof(*ch));
+    struct crypto_hash_polarssl *ch = calloc(1, sizeof(*ch));
 
     mbedtls_sha1_starts(&(ch->ctx));
 
@@ -77,7 +81,7 @@ struct crypto_pk_polarssl {
 };
 
 static struct crypto_pk *crypto_pk_polarssl_open_rsa(va_list vl) {
-    struct crypto_pk_polarssl *cp = malloc(sizeof(*cp));
+    struct crypto_pk_polarssl *cp = calloc(1, sizeof(*cp));
     memset(cp, 0x00, sizeof(*cp));
 
     char *mod = va_arg(vl, char *); // N
@@ -102,7 +106,7 @@ static struct crypto_pk *crypto_pk_polarssl_open_rsa(va_list vl) {
 }
 
 static struct crypto_pk *crypto_pk_polarssl_open_priv_rsa(va_list vl) {
-    struct crypto_pk_polarssl *cp = malloc(sizeof(*cp));
+    struct crypto_pk_polarssl *cp = calloc(1, sizeof(*cp));
     memset(cp, 0x00, sizeof(*cp));
     char *mod = va_arg(vl, char *);
     int modlen = va_arg(vl, size_t);
@@ -162,7 +166,7 @@ static int myrand(void *rng_state, unsigned char *output, size_t len) {
 }
 
 static struct crypto_pk *crypto_pk_polarssl_genkey_rsa(va_list vl) {
-    struct crypto_pk_polarssl *cp = malloc(sizeof(*cp));
+    struct crypto_pk_polarssl *cp = calloc(1, sizeof(*cp));
     memset(cp, 0x00, sizeof(*cp));
 
     int transient = va_arg(vl, int);
@@ -194,7 +198,7 @@ static unsigned char *crypto_pk_polarssl_encrypt(const struct crypto_pk *_cp, co
     *clen = 0;
     size_t keylen = mbedtls_mpi_size(&cp->ctx.N);
 
-    unsigned char *result = malloc(keylen);
+    unsigned char *result = calloc(1, keylen);
     if (!result) {
         PrintAndLogEx(WARNING, "RSA encrypt failed. Can't allocate result memory");
         return NULL;
@@ -216,7 +220,7 @@ static unsigned char *crypto_pk_polarssl_decrypt(const struct crypto_pk *_cp, co
     *clen = 0;
     size_t keylen = mbedtls_mpi_size(&cp->ctx.N);
 
-    unsigned char *result = malloc(keylen);
+    unsigned char *result = calloc(1, keylen);
     if (!result) {
         PrintAndLogEx(WARNING, "RSA encrypt failed. Can't allocate result memory");
         return NULL;
@@ -246,7 +250,7 @@ static unsigned char *crypto_pk_polarssl_get_parameter(const struct crypto_pk *_
         // mod
         case 0:
             *plen = mbedtls_mpi_size(&cp->ctx.N);
-            result = malloc(*plen);
+            result = calloc(1, *plen);
             memset(result, 0x00, *plen);
             res = mbedtls_mpi_write_binary(&cp->ctx.N, result, *plen);
             if (res < 0) {
@@ -258,7 +262,7 @@ static unsigned char *crypto_pk_polarssl_get_parameter(const struct crypto_pk *_
         // exp
         case 1:
             *plen = mbedtls_mpi_size(&cp->ctx.E);
-            result = malloc(*plen);
+            result = calloc(1, *plen);
             memset(result, 0x00, *plen);
             res = mbedtls_mpi_write_binary(&cp->ctx.E, result, *plen);
             if (res < 0) {
