@@ -341,10 +341,8 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/pm3_binlib.c
         ${PM3_ROOT}/client/src/pm3_bitlib.c
         ${PM3_ROOT}/client/src/pm3line.c
-        ${PM3_ROOT}/client/src/prng.c
         ${PM3_ROOT}/client/src/scandir.c
         ${PM3_ROOT}/client/src/scripting.c
-        ${PM3_ROOT}/client/src/tea.c
         ${PM3_ROOT}/client/src/ui.c
         ${PM3_ROOT}/client/src/util.c
         ${PM3_ROOT}/client/src/wiegand_formats.c

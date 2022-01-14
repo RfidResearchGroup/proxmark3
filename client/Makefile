@@ -634,14 +634,12 @@ SRCS =  mifare/aiddesfire.c \
 		pm3_binlib.c \
 		pm3_bitlib.c \
 		preferences.c \
-		prng.c \
 		pm3line.c \
 		proxmark3.c \
 		scandir.c \
 		uart/uart_posix.c \
 		uart/uart_win32.c \
 		scripting.c \
-		tea.c \
 		ui.c \
 		util.c \
 		version_pm3.c \

@@ -29,7 +29,6 @@
 #include "crc.h"
 #include "crc16.h"        // crc16 ccitt
 #include "crc32.h"        // crc32_ex
-#include "tea.h"
 #include "legic_prng.h"
 #include "cmddata.h"      // g_DemodBuffer
 #include "graph.h"
@@ -486,55 +485,6 @@ static int CmdAnalyseDates(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
     PrintAndLogEx(NORMAL, "To be implemented. Feel free to contribute!");
-    return PM3_SUCCESS;
-}
-
-static int CmdAnalyseTEASelfTest(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "analyse tea",
-                  "Crypto TEA self tests",
-                  "analyse tea -d 1122334455667788"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str1("d", "data", "<hex>", "bytes to encrypt ( 8 hex bytes )"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    int dlen = 0;
-    uint8_t data[8] = {0x00};
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
-    CLIParserFree(ctx);
-    if (res) {
-        PrintAndLogEx(FAILED, "Error parsing bytes");
-        return PM3_EINVARG;
-    }
-
-    uint8_t v_le[8];
-    memset(v_le, 0x00, sizeof(v_le));
-    uint8_t *v_ptr = v_le;
-
-    SwapEndian64ex(data, 8, 4, v_ptr);
-
-    // ENCRYPTION KEY:
-    uint8_t key[16] = {0x55, 0xFE, 0xF6, 0x30, 0x62, 0xBF, 0x0B, 0xC1, 0xC9, 0xB3, 0x7C, 0x34, 0x97, 0x3E, 0x29, 0xFB };
-    uint8_t keyle[16];
-    uint8_t *key_ptr = keyle;
-    SwapEndian64ex(key, sizeof(key), 4, key_ptr);
-
-    PrintAndLogEx(INFO, "TEA crypto testing");
-    PrintAndLogEx(INFO, "-----------------------------------+---------");
-    PrintAndLogEx(INFO, "LE enc.... %s", sprint_hex_ascii(v_ptr, 8));
-
-    tea_decrypt(v_ptr, key_ptr);
-    PrintAndLogEx(INFO, "LE dec.... %s", sprint_hex_ascii(v_ptr, 8));
-
-    tea_encrypt(v_ptr, key_ptr);
-    PrintAndLogEx(INFO, "enc1...... %s", sprint_hex_ascii(v_ptr, 8));
-    tea_encrypt(v_ptr, key_ptr);
-    PrintAndLogEx(INFO, "enc2...... %s", sprint_hex_ascii(v_ptr, 8));
-    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -1205,7 +1155,6 @@ static command_t CommandTable[] = {
     {"crc",     CmdAnalyseCRC,      AlwaysAvailable, "Stub method for CRC evaluations"},
     {"chksum",  CmdAnalyseCHKSUM,   AlwaysAvailable, "Checksum with adding, masking and one's complement"},
     {"dates",   CmdAnalyseDates,    AlwaysAvailable, "Look for datestamps in a given array of bytes"},
-    {"tea",     CmdAnalyseTEASelfTest, AlwaysAvailable, "Crypto TEA test"},
     {"lfsr",    CmdAnalyseLfsr,     AlwaysAvailable, "LFSR tests"},
     {"a",       CmdAnalyseA,        AlwaysAvailable, "num bits test"},
     {"nuid",    CmdAnalyseNuid,     AlwaysAvailable, "create NUID from 7byte UID"},
