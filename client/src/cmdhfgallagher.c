@@ -228,14 +228,14 @@ static bool aid_exists(DesfireContext_t *ctx, uint32_t aid, bool verbose) {
 
 /**
  * @brief Returns the lowest available Gallagher application ID.
- * @return The lowest AID in the range 0x??81F4, where ?? >= 0x20.
+ * @return The lowest available AID in the range 0x??81F4, where ?? >= 0x20.
  */
 static uint32_t find_available_gallagher_aid(DesfireContext_t *ctx, bool verbose) {
     // Select PICC
     select_aid(ctx, 0x000000, verbose);
 
     // Retrieve the AID list
-    uint8_t aid_buf[0xFF] = {0};
+    uint8_t aid_buf[DESFIRE_BUFFER_SIZE] = {0};
     size_t aid_buf_len = 0;
     int res = DesfireGetAIDList(ctx, aid_buf, &aid_buf_len);
     if (res != PM3_SUCCESS) {
@@ -274,9 +274,9 @@ static uint32_t find_available_gallagher_aid(DesfireContext_t *ctx, bool verbose
         }
     }
 
-    // Failed to find an available AID. This shouldn't be possible since
-    // we check 255 different AIDs and cards don't hold that many.
-    PM3_RET_ERR(0, "All AIDs exist. This shouldn't be possible.");
+    // Failed to find an available AID. This is very unlikely to occur as
+    // DESFire cards rarely have more than 1 application on them
+    PM3_RET_ERR(0, "Checked 200+ AIDs and all exist, abandoning search");
 }
 
 /**
@@ -1007,7 +1007,7 @@ static int CmdGallagherClone(const char *cmd) {
     uint8_t cad_key[16] = {0};
     CLIGetHexWithReturn(ctx, arg++, cad_key, &cad_key_len);
     if (cad_key_len > 0 && cad_key_len != 16) {
-        PM3_RET_ERR(PM3_EINVARG, "--cadkey must be 16 bytes");
+        PM3_RET_ERR_FREE(PM3_EINVARG, "--cadkey must be 16 bytes");
     }
 
     bool no_cad_update = arg_get_lit(ctx, arg++);
@@ -1100,7 +1100,6 @@ static int CmdGallagherDelete(const char *cmd) {
         arg_str0(NULL, "cadkey",  "<hex>", "Custom AES key 0 to modify the Card Application Directory (16 bytes)"),
         arg_lit0(NULL, "nocadupdate",      "Don't modify the Card Application Directory (only deletes the app)"),
         arg_lit0(NULL, "noappdelete",      "Don't delete the application (only modifies the CAD)"),
-
         arg_lit0(NULL, "apdu",             "Show APDU requests and responses"),
         arg_lit0("v",  "verbose",          "Verbose mode"),
         arg_param_end
@@ -1129,7 +1128,7 @@ static int CmdGallagherDelete(const char *cmd) {
     uint8_t cad_key[16] = {0};
     CLIGetHexWithReturn(ctx, arg++, cad_key, &cad_key_len);
     if (cad_key_len > 0 && cad_key_len != 16) {
-        PM3_RET_ERR(PM3_EINVARG, "--cadkey must be 16 bytes");
+        PM3_RET_ERR_FREE(PM3_EINVARG, "--cadkey must be 16 bytes");
     }
 
     bool no_cad_update = arg_get_lit(ctx, arg++);
@@ -1177,11 +1176,11 @@ static int CmdGallagherDiversify(const char *cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1(NULL,  "aid",     "<hex>", "Application ID for diversification (3 bytes)"),
-        arg_int0(NULL,  "keynum",  "<dec>", "Key number [default = 0]"),
-        arg_str0(NULL,  "uid",     "<hex>", "Card UID to delete (4 or 7 bytes)"),
-        arg_str0(NULL,  "sitekey", "<hex>", "Site key to compute diversified keys (16 bytes)"),
-        arg_lit0(NULL, "apdu",              "Show APDU requests and responses"),
+        arg_str1(NULL, "aid",     "<hex>", "Application ID for diversification (3 bytes)"),
+        arg_int0(NULL, "keynum",  "<dec>", "Key number [default = 0]"),
+        arg_str0(NULL, "uid",     "<hex>", "Card UID to delete (4 or 7 bytes)"),
+        arg_str0(NULL, "sitekey", "<hex>", "Site key to compute diversified keys (16 bytes)"),
+        arg_lit0(NULL, "apdu",             "Show APDU requests and responses"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, cmd, argtable, false);
