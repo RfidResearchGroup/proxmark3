@@ -134,8 +134,9 @@ static int select_aid(DesfireContext_t *ctx, uint32_t aid, bool verbose) {
         return 202;
     }
 
-    if (verbose)
+    if (verbose) {
         PrintAndLogEx(INFO, "Selected AID %06X", aid);
+    }
 
     return PM3_SUCCESS;
 }
@@ -364,9 +365,10 @@ static int hfgal_create_creds_app(DesfireContext_t *ctx, uint8_t *site_key, uint
     PM3_RET_IF_ERR(res);
 
     // UID is required for key diversification
-    if (ctx->uidlen == 0)
+    if (ctx->uidlen == 0) {
         PM3_RET_ERR(PM3_EINVARG, "UID is required for key diversification. "
                     "Please fetch it before calling `hfgal_create_creds_app`");
+    }
 
     // Create application
     DesfireCryptoAlgorithm app_algo = T_AES;
@@ -548,8 +550,9 @@ static int hfgal_read_cad(DesfireContext_t *ctx, uint8_t *dest_buf,
 static int hfgal_create_cad(DesfireContext_t *ctx, uint8_t *key,
                             bool should_diversify, bool verbose) {
     // Check that card UID has been set
-    if (ctx->uidlen == 0)
+    if (ctx->uidlen == 0) {
         PM3_RET_ERR(PM3_EINVARG, "Card UID must be set in DesfireContext (required for key div)");
+    }
 
     // Select application & authenticate
     int res = select_aid_and_auth(ctx, 0x000000, verbose);
@@ -604,8 +607,9 @@ static int hfgal_create_cad(DesfireContext_t *ctx, uint8_t *key,
     res = DesfireChangeKey(ctx, false, 0, app_algo, 1, buf, app_algo, blank_key, verbose);
     PM3_RET_IF_ERR_WITH_MSG(res, "Failed setting key 0 for CAD");
 
-    if (verbose)
+    if (verbose) {
         PrintAndLogEx(INFO, "Successfully set key " _YELLOW_("0") " for CAD");
+    }
 
     PrintAndLogEx(INFO, "Successfully created Card Application Directory (AID " _YELLOW_("%06X") ")", CAD_AID);
     return PM3_SUCCESS;
@@ -653,10 +657,11 @@ static int hfgal_add_aid_to_cad(DesfireContext_t *ctx, uint8_t *key, bool should
 
     // Check if facility already exists in CAD.
     for (uint8_t i = 0; i < ARRAYLEN(cad); i += 6) {
-        if (cad_facility_match(&cad[i], creds->region_code, creds->facility_code))
+        if (cad_facility_match(&cad[i], creds->region_code, creds->facility_code)) {
             PM3_RET_ERR(PM3_EFATAL, "Facility already exists in CAD, delete or update AID %06X",
                         cad_aid_byte_to_uint(&cad[i + 3])
                        );
+        }
     }
 
     // Create entry
@@ -701,14 +706,16 @@ static int hfgal_add_aid_to_cad(DesfireContext_t *ctx, uint8_t *key, bool should
         res = DesfireCreateFile(ctx, file_type, data, ARRAYLEN(data), false);
         PM3_RET_IF_ERR_WITH_MSG(res, "Failed creating file %d in CAD (AID %06X)", file_id, CAD_AID);
 
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "Created file " _YELLOW_("%d") " in CAD (empty contents)", file_id);
+        }
 
         // Write file
         res = DesfireWriteFile(ctx, file_id, 0, 36, &cad[file_id * 36]);
-    } else
+    } else {
         // Write file
         res = DesfireWriteFile(ctx, file_id, entry_num * 6, 6, entry);
+    }
     PM3_RET_IF_ERR_WITH_MSG(res, "Failed writing data to file %d in CAD AID %06X)", file_id, CAD_AID);
 
     PrintAndLogEx(INFO, "Successfully added new entry for " _YELLOW_("%06X") " to the Card Application Directory", aid);
@@ -999,8 +1006,9 @@ static int CmdGallagherClone(const char *cmd) {
     int cad_key_len = 0;
     uint8_t cad_key[16] = {0};
     CLIGetHexWithReturn(ctx, arg++, cad_key, &cad_key_len);
-    if (cad_key_len > 0 && cad_key_len != 16)
+    if (cad_key_len > 0 && cad_key_len != 16) {
         PM3_RET_ERR(PM3_EINVARG, "--cadkey must be 16 bytes");
+    }
 
     bool no_cad_update = arg_get_lit(ctx, arg++);
     bool no_app_create = arg_get_lit(ctx, arg++);
@@ -1009,8 +1017,9 @@ static int CmdGallagherClone(const char *cmd) {
     bool verbose = arg_get_lit(ctx, arg++);
     CLIParserFree(ctx);
 
-    if (gallagher_is_valid_creds(region_code, facility_code, card_number, issue_level) == false)
+    if (gallagher_is_valid_creds(region_code, facility_code, card_number, issue_level) == false) {
         return PM3_EINVARG;
+    }
 
     GallagherCredentials_t creds = {
         .region_code = region_code,
@@ -1039,8 +1048,9 @@ static int CmdGallagherClone(const char *cmd) {
         }
     }
     // Check that AID is available
-    else if (!no_app_create && aid_exists(&dctx, aid, verbose))
+    else if (!no_app_create && aid_exists(&dctx, aid, verbose)) {
         PM3_RET_ERR(PM3_EINVARG, "AID already exists: %06X", aid);
+    }
 
     // Update Card Application Directory
     if (!no_cad_update) {
@@ -1102,8 +1112,9 @@ static int CmdGallagherDelete(const char *cmd) {
     int aid_len = 0;
     uint8_t aid_buf[3] = {0};
     CLIGetHexWithReturn(ctx, arg++, aid_buf, &aid_len);
-    if (aid_len != 3)
+    if (aid_len != 3) {
         PM3_RET_ERR_FREE(PM3_EINVARG, "--aid must be 3 bytes");
+    }
     reverse_aid(aid_buf); // PM3 displays AIDs backwards
     uint32_t aid = DesfireAIDByteToUint(aid_buf);
 
@@ -1118,8 +1129,9 @@ static int CmdGallagherDelete(const char *cmd) {
     int cad_key_len = 0;
     uint8_t cad_key[16] = {0};
     CLIGetHexWithReturn(ctx, arg++, cad_key, &cad_key_len);
-    if (cad_key_len > 0 && cad_key_len != 16)
+    if (cad_key_len > 0 && cad_key_len != 16) {
         PM3_RET_ERR(PM3_EINVARG, "--cadkey must be 16 bytes");
+    }
 
     bool no_cad_update = arg_get_lit(ctx, arg++);
     bool no_app_delete = arg_get_lit(ctx, arg++);
