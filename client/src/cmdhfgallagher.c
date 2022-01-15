@@ -49,7 +49,7 @@ static const uint8_t DEFAULT_SITE_KEY[] = {
  * @param uid Card unique ID (4 or 7 bytes).
  * @param uid_len Length of UID.
  * @param key_num Key number (0 <= key_num <= 2).
- * @param aid Application ID (0x2?81F4 where 0 <= ? <= 0xB).
+ * @param aid Application ID (3 bytes, e.g. 0x2081F4).
  * @param key_output Buffer to copy the diversified key into (must be 16 bytes).
  * @return PM3_SUCCESS if successful, PM3_EINVARG if an argument is invalid.
  */
@@ -228,7 +228,7 @@ static bool aid_exists(DesfireContext_t *ctx, uint32_t aid, bool verbose) {
 
 /**
  * @brief Returns the lowest available Gallagher application ID.
- * @return The lowest AID in the range 0x??81F4, where 0x20 <= ?? <= 0xFE.
+ * @return The lowest AID in the range 0x??81F4, where ?? >= 0x20.
  */
 static uint32_t find_available_gallagher_aid(DesfireContext_t *ctx, bool verbose) {
     // Select PICC
@@ -357,7 +357,7 @@ static int hfgal_read_creds_app(DesfireContext_t *ctx, uint32_t aid, uint8_t *si
  * @brief Create a new application to store Gallagher cardholder credentials.
  *
  * @param site_key MIFARE site key.
- * @param aid New application ID. Should be 0x2?81F4, where 0 <= ? <= 0xB.
+ * @param aid New application ID. 3 bytes, e.g. 0x2081F4.
  */
 static int hfgal_create_creds_app(DesfireContext_t *ctx, uint8_t *site_key, uint32_t aid, bool verbose) {
     // Select application & authenticate
@@ -933,21 +933,21 @@ static int CmdGallagherClone(const char *cmd) {
                   "   DES 8 bytes\n"
                   "   2TDEA or AES 16 bytes\n"
                   "   3TDEA 24 bytes\n"
-                  "AID id, default finds lowest available in range 0x2?81F4, where 0 <= ? <= 0xB.",
+                  "AID, default finds lowest available in range 0x??81F4, where ?? >= 0x20.",
                   "hf gallagher clone --rc 1 --fc 22 --cn 3333 --il 4 --sitekey 00112233445566778899aabbccddeeff"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("n",   "keynum",  "<dec>", "PICC key number [default=0]"),
-        arg_str0("t",   "algo",    "<DES/2TDEA/3TDEA/AES>", "PICC key algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_int0("n",   "keynum",  "<dec>", "PICC key number [default = 0]"),
+        arg_str0("t",   "algo",    "<DES|2TDEA|3TDEA|AES>", "PICC crypt algo: DES, 2TDEA, 3TDEA, AES"),
         arg_str0("k",   "key",     "<hex>", "Key for authentication to the PICC to create applications (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
         arg_u64_1(NULL, "rc",      "<dec>", "Region code. 4 bits max"),
         arg_u64_1(NULL, "fc",      "<dec>", "Facility code. 2 bytes max"),
         arg_u64_1(NULL, "cn",      "<dec>", "Card number. 3 bytes max"),
         arg_u64_1(NULL, "il",      "<dec>", "Issue level. 4 bits max"),
         arg_str0(NULL,  "aid",     "<hex>", "Application ID to write (3 bytes) [default automatically chooses an AID]"),
-        arg_str0(NULL,  "sitekey", "<hex>", "MIFARE site key to compute diversified keys (16 bytes, required if using non-default key)"),
+        arg_str0(NULL,  "sitekey", "<hex>", "Site key to compute diversified keys (16 bytes)"),
         arg_str0(NULL,  "cadkey",  "<hex>", "Custom AES key 0 to modify the Card Application Directory (16 bytes)"),
         arg_lit0(NULL,  "nocadupdate",      "Don't modify the Card Application Directory (only creates the app)"),
         arg_lit0(NULL,  "noappcreate",      "Don't create the application (only modifies the CAD)"),
@@ -1046,14 +1046,13 @@ static int CmdGallagherClone(const char *cmd) {
         if (verbose) {
             PrintAndLogEx(INFO, "Using available AID: %06X", aid);
         }
-    }
-    // Check that AID is available
-    else if (!no_app_create && aid_exists(&dctx, aid, verbose)) {
+    } else if (no_app_create == false && aid_exists(&dctx, aid, verbose)) {
+        // AID was specified but is not available
         PM3_RET_ERR(PM3_EINVARG, "AID already exists: %06X", aid);
     }
 
     // Update Card Application Directory
-    if (!no_cad_update) {
+    if (no_cad_update == false) {
         // Set keys so that hfgal_add_aid_to_cad can auth to 0x000000
         // if it needs to create the CAD application.
         DesfireSetKeyNoClear(&dctx, picc_key_num, picc_key_algo, picc_key);
@@ -1066,7 +1065,7 @@ static int CmdGallagherClone(const char *cmd) {
     }
 
     // Create application
-    if (!no_app_create) {
+    if (no_app_create == false) {
         // Set keys so that hfgal_create_creds_app can auth to 0x000000
         // when it creates the application.
         DesfireSetKeyNoClear(&dctx, picc_key_num, picc_key_algo, picc_key);
@@ -1097,7 +1096,7 @@ static int CmdGallagherDelete(const char *cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "aid",     "<hex>", "Application ID to delete (3 bytes)"),
-        arg_str0(NULL, "sitekey", "<hex>", "MIFARE site key to compute diversified keys (16 bytes, required if using non-default key)"),
+        arg_str0(NULL, "sitekey", "<hex>", "Site key to compute diversified keys (16 bytes)"),
         arg_str0(NULL, "cadkey",  "<hex>", "Custom AES key 0 to modify the Card Application Directory (16 bytes)"),
         arg_lit0(NULL, "nocadupdate",      "Don't modify the Card Application Directory (only deletes the app)"),
         arg_lit0(NULL, "noappdelete",      "Don't delete the application (only modifies the CAD)"),
@@ -1150,7 +1149,7 @@ static int CmdGallagherDelete(const char *cmd) {
     PM3_RET_IF_ERR_WITH_MSG(res, "Failed retrieving card UID");
 
     // Update Card Application Directory
-    if (!no_cad_update) {
+    if (no_cad_update == false) {
         bool should_diversify = cad_key_len == 0;
         uint8_t *key = should_diversify ? site_key : cad_key;
         res = hfgal_remove_aid_from_cad(&dctx, key, should_diversify, aid, verbose);
@@ -1158,7 +1157,7 @@ static int CmdGallagherDelete(const char *cmd) {
     }
 
     // Delete application
-    if (!no_app_delete) {
+    if (no_app_delete == false) {
         res = hfgal_delete_app(&dctx, site_key, aid, verbose);
         PM3_RET_IF_ERR_WITH_MSG(res, "Failed deleting Gallagher application");
     }
