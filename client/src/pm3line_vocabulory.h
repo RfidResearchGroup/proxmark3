@@ -63,7 +63,6 @@ const static vocabulory_t vocabulory[] = {
     { 1, "analyse crc" }, 
     { 1, "analyse chksum" }, 
     { 1, "analyse dates" }, 
-    { 1, "analyse tea" }, 
     { 1, "analyse lfsr" }, 
     { 1, "analyse a" }, 
     { 1, "analyse nuid" }, 

@@ -97,7 +97,7 @@
         },
         "analyse help": {
             "command": "analyse help",
-            "description": "help this help lcr generate final byte for xor lrc crc stub method for crc evaluations chksum checksum with adding, masking and one's complement dates look for datestamps in a given array of bytes tea crypto tea test lfsr lfsr tests a num bits test nuid create nuid from 7byte uid demodbuff load binary string to demodbuffer freq calc wave lengths foo muxer units convert etu <> us <> ssp_clk (3.39mhz) --------------------------------------------------------------------------------------- analyse lcr available offline: yes specifying the bytes of a uid with a known lrc will find the last byte value needed to generate that lrc with a rolling xor. all bytes should be specified in hex.",
+            "description": "help this help lcr generate final byte for xor lrc crc stub method for crc evaluations chksum checksum with adding, masking and one's complement dates look for datestamps in a given array of bytes lfsr lfsr tests a num bits test nuid create nuid from 7byte uid demodbuff load binary string to demodbuffer freq calc wave lengths foo muxer units convert etu <> us <> ssp_clk (3.39mhz) --------------------------------------------------------------------------------------- analyse lcr available offline: yes specifying the bytes of a uid with a known lrc will find the last byte value needed to generate that lrc with a rolling xor. all bytes should be specified in hex.",
             "notes": [
                 "analyse lcr -d 04008064ba -> target (ba) requires final lrc xor byte value: 5a"
             ],
@@ -135,19 +135,6 @@
                 "-t, --test self test"
             ],
             "usage": "analyse nuid [-ht] [-d <hex>]"
-        },
-        "analyse tea": {
-            "command": "analyse tea",
-            "description": "crypto tea self tests",
-            "notes": [
-                "analyse tea -d 1122334455667788"
-            ],
-            "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-d, --data <hex> bytes to encrypt ( 8 hex bytes )"
-            ],
-            "usage": "analyse tea [-h] -d <hex>"
         },
         "analyse units": {
             "command": "analyse units",
@@ -2322,26 +2309,29 @@
         },
         "hf gallagher clone": {
             "command": "hf gallagher clone",
-            "description": "clone gallagher credentials to a writable desfire card specify site key is required if using non-default key key, lengths for the different crypto: des 8 bytes 2tdea or aes 16 bytes 3tdea 24 bytes aid id, default finds lowest available in range 0x2?81f4, where 0 <= ? <= 0xb.",
+            "description": "clone gallagher credentials to a writable desfire card specify site key is required if using non-default key key, lengths for the different crypto: des 8 bytes 2tdea or aes 16 bytes 3tdea 24 bytes aid, default finds lowest available in range 0x??81f4, where ?? >= 0x20.",
             "notes": [
                 "hf gallagher clone --rc 1 --fc 22 --cn 3333 --il 4 --sitekey 00112233445566778899aabbccddeeff"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-n, --keynum <dec> key number [default = 0]",
-                "-t, --algo <des|2tdea|3tdea|aes> crypt algo: des, 2tdea, 3tdea, aes",
-                "-k, --key <hex> key for authentication to the picc",
+                "-n, --keynum <dec> picc key number [default = 0]",
+                "-t, --algo <des|2tdea|3tdea|aes> picc crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <hex> key for authentication to the picc to create applications (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
                 "--rc <dec> region code. 4 bits max",
                 "--fc <dec> facility code. 2 bytes max",
                 "--cn <dec> card number. 3 bytes max",
                 "--il <dec> issue level. 4 bits max",
-                "--aid <hex> application id to write (3 bytes)",
+                "--aid <hex> application id to write (3 bytes) [default automatically chooses an aid]",
                 "--sitekey <hex> site key to compute diversified keys (16 bytes)",
+                "--cadkey <hex> custom aes key 0 to modify the card application directory (16 bytes)",
+                "--nocadupdate don't modify the card application directory (only creates the app)",
+                "--noappcreate don't create the application (only modifies the cad)",
                 "--apdu show apdu requests and responses",
                 "-v, --verbose verbose mode"
             ],
-            "usage": "hf gallagher clone [-hv] [-n <dec>] [-t <des|2tdea|3tdea|aes>] [-k <hex>] --rc <dec> --fc <dec> --cn <dec> --il <dec> [--aid <hex>] [--sitekey <hex>] [--apdu]"
+            "usage": "hf gallagher clone [-hv] [-n <dec>] [-t <des|2tdea|3tdea|aes>] [-k <hex>] --rc <dec> --fc <dec> --cn <dec> --il <dec> [--aid <hex>] [--sitekey <hex>] [--cadkey <hex>] [--nocadupdate] [--noappcreate] [--apdu]"
         },
         "hf gallagher delete": {
             "command": "hf gallagher delete",
@@ -2354,10 +2344,13 @@
                 "-h, --help this help",
                 "--aid <hex> application id to delete (3 bytes)",
                 "--sitekey <hex> site key to compute diversified keys (16 bytes)",
+                "--cadkey <hex> custom aes key 0 to modify the card application directory (16 bytes)",
+                "--nocadupdate don't modify the card application directory (only deletes the app)",
+                "--noappdelete don't delete the application (only modifies the cad)",
                 "--apdu show apdu requests and responses",
                 "-v, --verbose verbose mode"
             ],
-            "usage": "hf gallagher delete [-hv] --aid <hex> [--sitekey <hex>] [--apdu]"
+            "usage": "hf gallagher delete [-hv] --aid <hex> [--sitekey <hex>] [--cadkey <hex>] [--nocadupdate] [--noappdelete] [--apdu]"
         },
         "hf gallagher diversifykey": {
             "command": "hf gallagher diversifykey",
@@ -10210,8 +10203,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 599,
+        "commands_extracted": 598,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-01-11T01:15:20"
+        "extracted_on": "2022-01-15T01:07:16"
     }
 }
