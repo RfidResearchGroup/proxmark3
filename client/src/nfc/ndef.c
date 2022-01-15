@@ -22,12 +22,13 @@
 #include <stdlib.h>
 
 #include "ui.h"
-#include "util.h" // sprint_hex...
+#include "util.h"                // sprint_hex
 #include "crypto/asn1utils.h"
 #include "crypto/libpcrypto.h"
 #include "ecp.h"
-#include "commonutil.h"  // ARRAYLEN
+#include "commonutil.h"         // ARRAYLEN
 #include "pm3_cmd.h"
+#include "proxgui.h"            // Base64 Picture Window
 
 #define STRBOOL(p) ((p) ? "1" : "0")
 
@@ -520,10 +521,36 @@ static int ndefDecodeMime_wifi(NDEFHeader_t *ndef) {
 }
 
 static int ndefDecodeMime_vcard(NDEFHeader_t *ndef) {
+    if (ndef->PayloadLen == 0) {
+        PrintAndLogEx(INFO, "no payload");
+        return PM3_SUCCESS;
+    }
     PrintAndLogEx(INFO, _CYAN_("VCARD details"));
-    if (ndef->PayloadLen > 1) {
-        PrintAndLogEx(INFO, "");
-        PrintAndLogEx(INFO, "%.*s", (int)ndef->PayloadLen, ndef->Payload);
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "%.*s", (int)ndef->PayloadLen, ndef->Payload);
+
+    char *s = strstr((char*)ndef->Payload, "PHOTO");
+    if (s) {
+        s = strtok(s, ";");
+        while (s) {
+            char *tmp = s;
+            if (strncmp(tmp, "ENCODING", 8) == 0) {
+            } else if (strncmp(tmp, "TYPE", 4) == 0) {
+                
+                char *part = strtok(tmp + 4, ":");
+                while (part) {
+
+                    if (strncmp(part, "=image/", 7) == 0) {
+                    } else if (strncmp(part, "VCARD", 5) == 0) {
+                    } else  {
+                        // should be in the BASE64 data part now.
+                        ShowBase64PictureWindow(part);
+                    }
+                    part = strtok(NULL, ":");
+                }
+            }
+            s = strtok(NULL, ";");
+        }
     }
     return PM3_SUCCESS;
 }

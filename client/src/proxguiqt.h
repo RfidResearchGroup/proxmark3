@@ -157,6 +157,7 @@ class ProxGuiQT : public QObject {
 
     // hook up picture viewer
     void ShowPictureWindow(char *fn);
+    void ShowBase64PictureWindow(char *b64);
     void HidePictureWindow(void);
     void RepaintPictureWindow(void);
 
@@ -170,6 +171,7 @@ class ProxGuiQT : public QObject {
 
     // hook up picture viewer
     void _ShowPictureWindow(char *fn);
+    void _ShowBase64PictureWindow(char *b64);
     void _HidePictureWindow(void);
     void _RepaintPictureWindow(void);
 
@@ -184,6 +186,7 @@ class ProxGuiQT : public QObject {
 
     // hook up picture viewer signals
     void ShowPictureWindowSignal(char *fn);
+    void ShowBase64PictureWindowSignal(char *b64);
     void HidePictureWindowSignal(void);
     void RepaintPictureWindowSignal(void);
 };

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add `nfc decode` - now NDEF vCard messages with a PHOTO in base64 format is shown (@iceman1001)
 
 ## [Frostbit.4.14831] [2022-01-11]
  - Changed Wiegand format lookup - now case-insensitive (@iceman1001)
