@@ -393,6 +393,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define PROTO_HITAG2    13
 #define PROTO_HITAGS    14
 #define PROTO_CRYPTORF  15
+#define SEOS            16
 
 // Picopass fuses
 #define FUSE_FPERS   0x80
