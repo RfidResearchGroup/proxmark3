@@ -401,9 +401,7 @@ check_script:
                 // process cmd
                 g_pendingPrompt = false;
                 mainret = CommandReceived(cmd);
-#if defined ICOPYX
-                PrintAndLogEx(NORMAL, "\nNikola.D: %d", ret);
-#endif
+
                 // exit or quit
                 if (mainret == PM3_EFATAL)
                     break;
