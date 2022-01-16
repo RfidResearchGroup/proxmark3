@@ -38,7 +38,7 @@ def main():
     Should produce the output:
 
     \tTarget (BA) requires final LRC XOR byte value: 5A\n""".format(sys.argv[0]))
-        return 0
+        return 1
 
     target= int(sys.argv[len(sys.argv) - 1],16)
 
@@ -48,4 +48,4 @@ def main():
     print('\nTarget (%02X) requires final LRC XOR byte value: %02X\n' % (target,lrc))
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
