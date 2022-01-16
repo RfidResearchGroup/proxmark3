@@ -407,6 +407,11 @@ check_script:
                 // exit or quit
                 if (mainret == PM3_EFATAL)
                     break;
+                if (mainret == PM3_SQUIT) {
+                    // Normal quit, map to 0
+                    mainret = PM3_SUCCESS;
+                    break;
+                }
             }
             free(cmd);
             cmd = NULL;

@@ -706,6 +706,8 @@ typedef struct {
 
 // Error codes                          Usages:
 
+// Success, regular quit
+#define PM3_SQUIT               2
 // Success, transfer nonces            pm3:        Sending nonces back to client
 #define PM3_SNONCES             1
 // Success (no error)
