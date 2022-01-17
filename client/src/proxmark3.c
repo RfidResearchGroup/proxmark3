@@ -37,14 +37,14 @@
 #include "flash.h"
 #include "preferences.h"
 
+static int mainret = PM3_ESOFT;
+
 #ifndef LIBPM3
 #define BANNERMSG1 ""
 #define BANNERMSG2 "   [ Iceman :snowflake: ]"
 #define BANNERMSG3 ""
 
 typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
-
-static int mainret = PM3_ESOFT;
 
 static void showBanner_logo(LogoMode mode) {
     switch (mode) {
