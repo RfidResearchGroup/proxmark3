@@ -780,8 +780,8 @@ static bool Pack_P10004(wiegand_card_t *card, wiegand_message_t *packed, bool pr
 
     packed->Length = 37; // Set number of bits
 
-    set_linear_field(packed, card->FacilityCode, 1, 13);
-    set_linear_field(packed, card->CardNumber, 14, 18);
+    set_linear_field(packed, card->FacilityCode, 2, 13);
+    set_linear_field(packed, card->CardNumber, 15, 18);
 
     set_bit_by_position(packed, evenparity32(get_linear_field(packed, 1, 18)), 0);
     set_bit_by_position(packed, oddparity32(get_linear_field(packed, 18, 18)), 36);
