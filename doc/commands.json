@@ -2318,12 +2318,12 @@
                 "-h, --help this help",
                 "-n, --keynum <dec> picc key number [default = 0]",
                 "-t, --algo <des|2tdea|3tdea|aes> picc crypt algo: des, 2tdea, 3tdea, aes",
-                "-k, --key <hex> key for authentication to the picc to create applications (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-k, --key <hex> key for authentication to the picc to create applications",
                 "--rc <dec> region code. 4 bits max",
                 "--fc <dec> facility code. 2 bytes max",
                 "--cn <dec> card number. 3 bytes max",
                 "--il <dec> issue level. 4 bits max",
-                "--aid <hex> application id to write (3 bytes) [default automatically chooses an aid]",
+                "--aid <hex> application id to write (3 bytes) [default automatically chooses]",
                 "--sitekey <hex> site key to compute diversified keys (16 bytes)",
                 "--cadkey <hex> custom aes key 0 to modify the card application directory (16 bytes)",
                 "--nocadupdate don't modify the card application directory (only creates the app)",
@@ -10205,6 +10205,6 @@
     "metadata": {
         "commands_extracted": 598,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-01-15T01:07:16"
+        "extracted_on": "2022-01-17T10:37:00"
     }
 }
