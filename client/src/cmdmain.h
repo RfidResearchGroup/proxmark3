@@ -22,7 +22,7 @@
 #include "common.h"
 #include "cmdparser.h"    // command_t
 
-int CommandReceived(char *Cmd);
+int CommandReceived(const char *Cmd);
 int CmdRem(const char *Cmd);
 command_t *getTopLevelCommandTable(void);
 

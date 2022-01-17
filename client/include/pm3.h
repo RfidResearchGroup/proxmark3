@@ -18,8 +18,8 @@
 
 typedef struct pm3_device pm3;
 
-pm3 *pm3_open(char *port);
-int pm3_console(pm3 *dev, char *cmd);
+pm3 *pm3_open(const char *port);
+int pm3_console(pm3 *dev, const char *cmd);
 const char *pm3_name_get(pm3 *dev);
 void pm3_close(pm3 *dev);
 pm3 *pm3_get_current_dev(void);

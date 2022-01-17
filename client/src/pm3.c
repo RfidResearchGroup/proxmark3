@@ -27,7 +27,7 @@
 #include "util_posix.h"
 #include "comms.h"
 
-pm3_device_t *pm3_open(char *port) {
+pm3_device_t *pm3_open(const char *port) {
     pm3_init();
     OpenProxmark(&g_session.current_device, port, false, 20, false, USART_BAUD_RATE);
     if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS)) {
@@ -54,7 +54,7 @@ void pm3_close(pm3_device_t *dev) {
     }
 }
 
-int pm3_console(pm3_device_t *dev, char *cmd) {
+int pm3_console(pm3_device_t *dev, const char *cmd) {
     // For now, there is no real device context:
     (void) dev;
     return CommandReceived(cmd);
