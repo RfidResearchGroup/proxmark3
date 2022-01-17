@@ -74,7 +74,6 @@ Check column "offline" for their availability.
 |`analyse crc            `|Y       |`Stub method for CRC evaluations`
 |`analyse chksum         `|Y       |`Checksum with adding, masking and one's complement`
 |`analyse dates          `|Y       |`Look for datestamps in a given array of bytes`
-|`analyse tea            `|Y       |`Crypto TEA test`
 |`analyse lfsr           `|Y       |`LFSR tests`
 |`analyse a              `|Y       |`num bits test`
 |`analyse nuid           `|Y       |`create NUID from 7byte UID`
