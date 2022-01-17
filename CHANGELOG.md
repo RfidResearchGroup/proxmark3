@@ -4,10 +4,12 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Add `nfc decode` - now NDEF vCard messages with a PHOTO in base64 format is shown (@iceman1001)
+ - Remove AID limitations when using Gallagher key diversification (@DarkMatterMatt)
 
 ## [Frostbit.4.14831] [2022-01-11]
  - Changed Wiegand format lookup - now case-insensitive (@iceman1001)
  - Added new standalone mode `hf_15SNIFF` - Same as `hf_14ASNIFF` standalone mode for RDV4 - flashmem (@startrk1995)
+ - Added `hf gallagher` commands for read/writing DESFire cards (@DarkMatterMatt)
  - Added support for MIFARE DESFire application creation without authentication (@joswr1ght)
  - Changed drastically Hitag S ARM code to remove state machines and ease way to build new commands (@doegox)
  - Fixed Hitag S crypto mode with key or NrAr, fixed `lf hitag cc`, fixed pwd dump in hitagS dump with LKP (@doegox)

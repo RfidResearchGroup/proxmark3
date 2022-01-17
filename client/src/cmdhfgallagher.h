@@ -40,4 +40,8 @@ int CmdHFGallagher(const char *cmd);
 int hfgal_diversify_key(uint8_t *site_key, uint8_t *uid, uint8_t uid_len,
                         uint8_t key_num, uint32_t aid, uint8_t *key_output);
 
+// The response code when an invalid key is used for authentication
+// Returned in /client/src/mifare/desfirecore.c, line 1185 (if DesfireExchangeEx fails)
+#define HFGAL_AUTH_FAIL 7
+
 #endif
