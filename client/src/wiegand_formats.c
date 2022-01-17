@@ -803,13 +803,13 @@ static bool Pack_P10004(wiegand_card_t *card, wiegand_message_t *packed, bool pr
     return true;
 }
 
-static bool Unpack_P10003(wiegand_message_t *packed, wiegand_card_t *card) {
+static bool Unpack_P10004(wiegand_message_t *packed, wiegand_card_t *card) {
     memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 37) return false; // Wrong length? Stop here.
 
-    card->FacilityCode = get_linear_field(packed, 2, 13);
-    card->CardNumber = get_linear_field(packed, 15, 18);
+    card->FacilityCode = get_linear_field(packed, 1, 13);
+    card->CardNumber = get_linear_field(packed, 14, 18);
     card->ParityValid =
         (get_bit_by_position(packed, 0) == evenparity32(get_linear_field(packed, 1, 18))) &&
         (get_bit_by_position(packed, 36) == oddparity32(get_linear_field(packed, 18, 18)));
