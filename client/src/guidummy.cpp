@@ -38,6 +38,14 @@ extern "C" void ShowPictureWindow(char *fn) {
         warned = 1;
     }
 }
+extern "C" void ShowBase64PictureWindow(char *b64) {
+    static int warned = 0;
+
+    if (!warned) {
+        printf("No GUI in this build!\n");
+        warned = 1;
+    }
+}
 extern "C" void HidePictureWindow(void) {}
 extern "C" void RepaintPictureWindow(void) {}
 

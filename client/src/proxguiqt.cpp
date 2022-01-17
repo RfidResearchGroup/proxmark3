@@ -69,6 +69,10 @@ void ProxGuiQT::ShowPictureWindow(char *fn) {
     emit ShowPictureWindowSignal(fn);
 }
 
+void ProxGuiQT::ShowBase64PictureWindow(char *b64) {
+    emit ShowBase64PictureWindowSignal(b64);
+}
+
 void ProxGuiQT::RepaintPictureWindow(void) {
     emit RepaintPictureWindowSignal();
 }
@@ -161,6 +165,55 @@ void ProxGuiQT::_ShowPictureWindow(char *fn) {
     pictureWidget->show();
 }
 
+void ProxGuiQT::_ShowBase64PictureWindow(char *b64) {
+
+    if (!plotapp)
+        return;
+
+    if (b64 == NULL)
+        return;
+
+    size_t slen = strlen(b64);
+    if (slen == 0)
+        return;
+
+   char *myb64data = (char *)calloc(slen + 1, sizeof(uint8_t));
+    if (myb64data == NULL)
+        return;
+
+    memcpy(myb64data, b64, slen);
+
+    if (!pictureWidget) {
+
+#if defined(__MACH__) && defined(__APPLE__)
+        makeFocusable();
+#endif
+
+        pictureWidget = new PictureWidget();
+    }
+
+    QPixmap pm;
+    if (pm.loadFromData(QByteArray::fromBase64(myb64data), "PNG") == false) {
+        qWarning("Failed to read base64 data: %s", myb64data);
+    }
+    free(myb64data);
+    //free(b64);
+
+    pictureController->lbl_pm->setPixmap(pm);
+    pictureController->lbl_pm->setScaledContents(false);
+    pictureController->lbl_pm->setAlignment(Qt::AlignCenter);
+
+    QString s = QString("w: %1  h: %2")
+                .arg(pm.size().width())
+                .arg(pm.size().height()
+                    );
+    pictureController->lbl_sz->setText(s);
+    pictureWidget->show();
+
+    if(!pm.isNull())
+        pm.save("img", "png");
+}
+
 void ProxGuiQT::_RepaintPictureWindow(void) {
     if (!plotapp || !pictureWidget)
         return;
@@ -214,6 +267,7 @@ void ProxGuiQT::MainLoop() {
 
     // hook up picture viewer signals
     connect(this, SIGNAL(ShowPictureWindowSignal(char *)), this, SLOT(_ShowPictureWindow(char *)));
+    connect(this, SIGNAL(ShowBase64PictureWindowSignal(char *)), this, SLOT(_ShowBase64PictureWindow(char *)));
     connect(this, SIGNAL(RepaintPictureWindowSignal()), this, SLOT(_RepaintPictureWindow()));
     connect(this, SIGNAL(HidePictureWindowSignal()), this, SLOT(_HidePictureWindow()));
 

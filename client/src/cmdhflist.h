@@ -61,6 +61,8 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize,
 void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateCryptoRF(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 
+void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+
 bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen, const uint64_t *dicKeys, uint32_t dicKeysCount);
 bool NTParityChk(AuthData_t *ad, uint32_t ntx);
 bool NestedCheckKey(uint64_t key, AuthData_t *ad, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity);

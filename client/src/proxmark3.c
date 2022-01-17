@@ -44,6 +44,8 @@
 
 typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
 
+static int mainret = PM3_ESOFT;
+
 static void showBanner_logo(LogoMode mode) {
     switch (mode) {
         case UTF8: {
@@ -398,13 +400,16 @@ check_script:
                 }
                 // process cmd
                 g_pendingPrompt = false;
-                int ret = CommandReceived(cmd);
-#if defined ICOPYX
-                PrintAndLogEx(NORMAL, "\nNikola.D: %d", ret);
-#endif
+                mainret = CommandReceived(cmd);
+
                 // exit or quit
-                if (ret == PM3_EFATAL)
+                if (mainret == PM3_EFATAL)
                     break;
+                if (mainret == PM3_SQUIT) {
+                    // Normal quit, map to 0
+                    mainret = PM3_SUCCESS;
+                    break;
+                }
             }
             free(cmd);
             cmd = NULL;
@@ -1070,6 +1075,6 @@ int main(int argc, char *argv[]) {
 
     if (g_session.window_changed) // Plot/Overlay moved or resized
         preferences_save();
-    exit(EXIT_SUCCESS);
+    return mainret;
 }
 #endif //LIBPM3

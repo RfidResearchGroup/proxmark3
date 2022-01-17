@@ -206,6 +206,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case ISO_14443A:
             case MFDES:
             case LTO:
+            case SEOS:
                 crcStatus = iso14443A_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case ISO_7816_4:
@@ -265,7 +266,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && protocol != FELICA
                 && protocol != LTO
                 && protocol != PROTO_CRYPTORF
-                && (hdr->isResponse || protocol == ISO_14443A || protocol == PROTO_MIFARE)
+                && (hdr->isResponse || protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == SEOS)
                 && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 
             snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
@@ -417,6 +418,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 break;
             case PROTO_CRYPTORF:
                 annotateCryptoRF(explanation, sizeof(explanation), frame, data_len);
+                break;
+            case SEOS:
+                annotateSeos(explanation, sizeof(explanation), frame, data_len);            
                 break;
             default:
                 break;
@@ -703,22 +707,25 @@ int CmdTraceList(const char *Cmd) {
                   "Annotate trace buffer with selected protocol data\n"
                   "You can load a trace from file (see `trace load -h`) or it be downloaded from device by default\n",
                   "trace list -t raw      -> just show raw data without annotations\n"
+                  "\n"
                   "trace list -t 14a      -> interpret as " _YELLOW_("ISO14443-A") "\n"
-                  "trace list -t thinfilm -> interpret as " _YELLOW_("Thinfilm") "\n"
-                  "trace list -t topaz    -> interpret as " _YELLOW_("Topaz") "\n"
-                  "trace list -t mf       -> interpret as " _YELLOW_("MIFARE Classic") " and decrypt crypto1 stream\n"
-                  "trace list -t des      -> interpret as " _YELLOW_("MIFARE DESFire") "\n"
                   "trace list -t 14b      -> interpret as " _YELLOW_("ISO14443-B") "\n"
-                  "trace list -t 7816     -> interpret as " _YELLOW_("ISO7816-4") "\n"
                   "trace list -t 15       -> interpret as " _YELLOW_("ISO15693") "\n"
-                  "trace list -t iclass   -> interpret as " _YELLOW_("iCLASS") "\n"
-                  "trace list -t legic    -> interpret as " _YELLOW_("LEGIC") "\n"
+                  "trace list -t 7816     -> interpret as " _YELLOW_("ISO7816-4") "\n"
+                  "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") "\n\n"
+                  "trace list -t des      -> interpret as " _YELLOW_("MIFARE DESFire") "\n"
                   "trace list -t felica   -> interpret as " _YELLOW_("ISO18092 / FeliCa") "\n"
                   "trace list -t hitag1   -> interpret as " _YELLOW_("Hitag1") "\n"
                   "trace list -t hitag2   -> interpret as " _YELLOW_("Hitag2") "\n"
                   "trace list -t hitags   -> interpret as " _YELLOW_("HitagS") "\n"
+                  "trace list -t iclass   -> interpret as " _YELLOW_("iCLASS") "\n"
+                  "trace list -t legic    -> interpret as " _YELLOW_("LEGIC") "\n"
                   "trace list -t lto      -> interpret as " _YELLOW_("LTO-CM") "\n"
-                  "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") "\n\n"
+                  "trace list -t mf       -> interpret as " _YELLOW_("MIFARE Classic") " and decrypt crypto1 stream\n"
+                  "trace list -t seos     -> interpret as " _YELLOW_("SEOS") "\n"
+                  "trace list -t thinfilm -> interpret as " _YELLOW_("Thinfilm") "\n"
+                  "trace list -t topaz    -> interpret as " _YELLOW_("Topaz") "\n"                  
+                  "\n"
                   "trace list -t mf --dict <mfc_default_keys>    -> use dictionary keys file\n"
                   "trace list -t 14a -f                          -> show frame delay times\n"
                   "trace list -t 14a -1                          -> use trace buffer "
@@ -766,23 +773,24 @@ int CmdTraceList(const char *Cmd) {
     uint8_t protocol = -1;
 
     // validate type of output
-    if (strcmp(type,      "iclass") == 0)   protocol = ICLASS;
-    else if (strcmp(type, "14a") == 0)      protocol = ISO_14443A;
+    if      (strcmp(type, "14a") == 0)      protocol = ISO_14443A;
     else if (strcmp(type, "14b") == 0)      protocol = ISO_14443B;
-    else if (strcmp(type, "topaz") == 0)    protocol = TOPAZ;
-    else if (strcmp(type, "7816") == 0)     protocol = ISO_7816_4;
-    else if (strcmp(type, "des") == 0)      protocol = MFDES;
-    else if (strcmp(type, "legic") == 0)    protocol = LEGIC;
     else if (strcmp(type, "15") == 0)       protocol = ISO_15693;
+    else if (strcmp(type, "7816") == 0)     protocol = ISO_7816_4;
+    else if (strcmp(type, "cryptorf") == 0) protocol = PROTO_CRYPTORF;
+    else if (strcmp(type, "des") == 0)      protocol = MFDES;
     else if (strcmp(type, "felica") == 0)   protocol = FELICA;
-    else if (strcmp(type, "mf") == 0)       protocol = PROTO_MIFARE;
     else if (strcmp(type, "hitag1") == 0)   protocol = PROTO_HITAG1;
     else if (strcmp(type, "hitag2") == 0)   protocol = PROTO_HITAG2;
     else if (strcmp(type, "hitags") == 0)   protocol = PROTO_HITAGS;
-    else if (strcmp(type, "thinfilm") == 0) protocol = THINFILM;
+    else if (strcmp(type, "iclass") == 0)   protocol = ICLASS;
+    else if (strcmp(type, "legic") == 0)    protocol = LEGIC;
     else if (strcmp(type, "lto") == 0)      protocol = LTO;
-    else if (strcmp(type, "cryptorf") == 0) protocol = PROTO_CRYPTORF;
+    else if (strcmp(type, "mf") == 0)       protocol = PROTO_MIFARE;
     else if (strcmp(type, "raw") == 0)      protocol = -1;
+    else if (strcmp(type, "seos") == 0)     protocol = SEOS;
+    else if (strcmp(type, "thinfilm") == 0) protocol = THINFILM;
+    else if (strcmp(type, "topaz") == 0)    protocol = TOPAZ;
     else if (strcmp(type, "") == 0)         protocol = -1;
     else {
         PrintAndLogEx(FAILED, "Unknown protocol \"%s\"", type);

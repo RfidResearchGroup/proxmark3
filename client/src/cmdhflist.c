@@ -174,16 +174,16 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
 
 int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 
-    if (! is_response) {
+    if (is_response == false) {
         if ((gs_ntag_i2c_state == 1) && (cmdsize == 6) && (memcmp(cmd + 1, "\x00\x00\x00", 3) == 0)) {
             snprintf(exp, size, "SECTOR(%d)", cmd[0]);
             gs_ntag_i2c_state = 0;
-            return 1;
+            return PM3_SUCCESS;
         }
 
         if (cmdsize > 10 && (memcmp(cmd, "\x6a\x02\xC8\x01\x00\x03\x00\x02\x79", 9) == 0)) {
             snprintf(exp, size, "ECP");
-            return 1;
+            return PM3_SUCCESS;
         }
 
         gs_ntag_i2c_state = 0;
@@ -263,7 +263,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 break;
             case MIFARE_CMD_RESTORE:
 
-                if (cmdsize == 4)
+                if (cmdsize == 4) {
                     // cmd0 == 0xC2 and cmd1 == 0xFF
                     // high probability its SELECT SECTOR COMMAND:
                     if (cmd[1] == 0xFF) {
@@ -271,8 +271,11 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                         gs_ntag_i2c_state = 1;
                     } else {
                         snprintf(exp, size, "RESTORE(%d)", cmd[1]);
-                    } else
-                    return 0;
+                    } 
+                } else {
+                    return PM3_ESOFT;
+                }
+
                 break;
             case MIFARE_CMD_TRANSFER:
                 snprintf(exp, size, "TRANSFER(%d)", cmd[1]);
@@ -318,7 +321,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                     }
                     gs_mfuc_state = 3;
                 } else {
-                    return 0;
+                    return PM3_ESOFT;
                 }
                 break;
             case MIFARE_ULEV1_AUTH:
@@ -386,7 +389,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
 
                 break;
             default:
-                return 0;
+                return PM3_ESOFT;
         }
     } else {
         if (gs_mfuc_state == 1) {
@@ -405,14 +408,14 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 if (trace_mfuc_try_default_3des_keys(&gs_mfuc_key, gs_mfuc_state, gs_mfuc_authdata) == PM3_SUCCESS) {
                     snprintf(exp, size, "AUTH-2 ANSW OK");
                     gs_mfuc_state = 0;
-                    return 1;
+                    return PM3_SUCCESS;
                 }
             }
             gs_mfuc_state = 0;
         }
-        return 0;
+        return PM3_ESOFT;
     }
-    return 1;
+    return PM3_SUCCESS;
 }
 
 void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
@@ -829,7 +832,7 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
     // it's basically a ISO14443a tag, so try annotation from there
-    if (applyIso14443a(exp, size, cmd, cmdsize, false) == 0) {
+    if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS ) {
 
         // S-block 11xxx010
         if ((cmd[0] & 0xC0) && (cmdsize == 3)) {
@@ -1173,6 +1176,22 @@ void annotateCryptoRF(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     }
 }
 
+void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+
+    // it's basically a ISO14443a tag, so try annotation from there
+    if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS) {
+
+//        switch (cmd[0]) {
+//            default: 
+//                break;
+//        };
+
+          // apply ISO7816 annotations?
+//        if (annotateIso7816(exp, size, cmd, cmdsize) == 0) {
+//        }
+          // apply SEOS annotations?
+    }
+}
 
 // LEGIC
 // 1 = read

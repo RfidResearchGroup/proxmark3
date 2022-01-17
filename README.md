@@ -90,6 +90,8 @@ We define generic Proxmark3 platforms as following devices.
 **Unknown support status**
  - ⚠  VX
    - **Note**: unknown device hw
+-  ⚠ Proxmark3 X 
+   - **Note**: unknown device hw.  
 
 
 **256kb flash memory size of generic Proxmark3 platforms**
