@@ -783,7 +783,7 @@ static bool Unpack_H10302(wiegand_message_t *packed, wiegand_card_t *card) {
 
 
 
-static bool Pack_P10003(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_P10004(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
     if (card->FacilityCode > 0x0000FFFF) return false; // Can't encode FC.
@@ -793,8 +793,8 @@ static bool Pack_P10003(wiegand_card_t *card, wiegand_message_t *packed, bool pr
 
     packed->Length = 37; // Set number of bits
 
-    set_linear_field(packed, card->FacilityCode, 2, 13);
-    set_linear_field(packed, card->CardNumber, 15, 18);
+    set_linear_field(packed, card->FacilityCode, 1, 13);
+    set_linear_field(packed, card->CardNumber, 14, 18);
 
     set_bit_by_position(packed, evenparity32(get_linear_field(packed, 1, 18)), 0);
     set_bit_by_position(packed, oddparity32(get_linear_field(packed, 18, 18)), 36);
@@ -1433,7 +1433,7 @@ static const cardformat_t FormatTable[] = {
     {"H10320",  Pack_H10320,  Unpack_H10320,  "HID H10320 36-bit BCD",      {1, 0, 0, 0, 1}}, // from Proxmark forums
     {"H10302",  Pack_H10302,  Unpack_H10302,  "HID H10302 37-bit huge ID",  {1, 0, 0, 0, 1}}, // from Proxmark forums
     {"H10304",  Pack_H10304,  Unpack_H10304,  "HID H10304 37-bit",          {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
-    {"P10003",  Pack_P10003,  Unpack_P10003,  "HID P10003 37-bit PCSC",     {1, 1, 0, 0, 1}}, // from BT
+    {"P10003",  Pack_P10004,  Unpack_P10004,  "HID P10004 37-bit PCSC",     {1, 1, 0, 0, 1}}, // from BT
     {"HGen37",  Pack_HGeneric37, Unpack_HGeneric37,  "HID Generic 37-bit", {1, 0, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"MDI37",   Pack_MDI37,   Unpack_MDI37,   "PointGuard MDI 37-bit",         {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"BQT38",   Pack_bqt38,   Unpack_bqt38,   "BQT 38-bit",                    {1, 1, 1, 0, 1}}, // from cardinfo.barkweb.com.au
