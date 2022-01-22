@@ -1395,7 +1395,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HF_ISO14443A_SIMULATE: {
             struct p {
                 uint8_t tagtype;
-                uint8_t flags;
+                uint16_t flags;
                 uint8_t uid[10];
                 uint8_t exitAfter;
             } PACKED;

@@ -676,7 +676,7 @@ int CmdHF14ASim(const char *Cmd) {
     uint8_t uid[10] = {0};
     CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
 
-    uint8_t flags = 0;
+    uint16_t flags = 0;
     bool useUIDfromEML = true;
 
     if (uid_len > 0) {
@@ -719,7 +719,7 @@ int CmdHF14ASim(const char *Cmd) {
 
     struct {
         uint8_t tagtype;
-        uint8_t flags;
+        uint16_t flags;
         uint8_t uid[10];
         uint8_t exitAfter;
     } PACKED payload;

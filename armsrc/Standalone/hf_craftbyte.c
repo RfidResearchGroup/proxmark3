@@ -78,7 +78,7 @@ void RunMod(void) {
                     state = STATE_EMUL;
                 }
             } else if (state == STATE_EMUL) {
-                uint8_t flags = 0;
+                uint16_t flags = 0;
                 if (card.uidlen == 4) {
                     flags |= FLAG_4B_UID_IN_DATA;
                 } else if (card.uidlen == 7) {

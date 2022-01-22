@@ -248,7 +248,7 @@ void RunMod(void) {
                     state = STATE_SEARCH;
                 }
             } else if (state == STATE_EMUL) {
-                uint8_t flags = FLAG_7B_UID_IN_DATA;
+                uint16_t flags = FLAG_7B_UID_IN_DATA;
 
                 Dbprintf("Starting simulation, press pm3-button to stop and go back to search state.");
                 SimulateIso14443aTag(7, flags, card.uid, 0);
