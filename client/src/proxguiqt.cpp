@@ -210,8 +210,6 @@ void ProxGuiQT::_ShowBase64PictureWindow(char *b64) {
     pictureController->lbl_sz->setText(s);
     pictureWidget->show();
 
-    if(!pm.isNull())
-        pm.save("img", "png");
 }
 
 void ProxGuiQT::_RepaintPictureWindow(void) {
