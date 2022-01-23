@@ -2373,7 +2373,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     // format and add keys to block dump output
     // only add keys if not partial read, and complete pages read
-    if (!is_partial && pages == card_mem_size && has_auth_key) {
+    if (!is_partial && pages == card_mem_size && (has_auth_key || has_pwd)) {
         // if we didn't swapendian before - do it now for the sprint_hex call
         // NOTE: default entry is bigendian (unless swapped), sprint_hex outputs little endian
         //       need to swap to keep it the same
