@@ -1157,12 +1157,14 @@ static mfu_identify_t mfu_ident_table[] = {
         NULL, NULL,
         "hf mfu dump -k %08x"
     },
+    /*
     {
-        "Amiibo", "0004040201001103",
-        9, 9, "480FE0F110FFEEA500",
-        ul_ev1_pwdgenB, ul_ev1_packgenB,
+        "Xiaomi AIR Purifier", "0004040201000F03",
+        0, 0, "",
+        ul_ev1_pwdgenE, ul_ev1_packgen_def,
         "hf mfu dump -k %08x"
     },
+    */
     {NULL, NULL, 0, 0, NULL, NULL, NULL, NULL}
 };
 
@@ -3177,18 +3179,19 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(INFO, "---------------------------------");
+    PrintAndLogEx(INFO, "------------------.---------------");
     PrintAndLogEx(INFO, " Using UID : %s", sprint_hex(uid, 7));
-    PrintAndLogEx(INFO, "---------------------------------");
-    PrintAndLogEx(INFO, " algo           | pwd      | pack");
-    PrintAndLogEx(INFO, "----------------+----------+-----");
-    PrintAndLogEx(INFO, " EV1            | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
-    PrintAndLogEx(INFO, " Amiibo         | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
-    PrintAndLogEx(INFO, " Lego Dimension | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
-    PrintAndLogEx(INFO, " XYZ 3D printer | %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
-    PrintAndLogEx(INFO, "----------------+----------+-----");
+    PrintAndLogEx(INFO, "----------------------------------");
+    PrintAndLogEx(INFO, " algo            | pwd      | pack");
+    PrintAndLogEx(INFO, "-----------------+----------+-----");
+    PrintAndLogEx(INFO, " EV1             | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
+    PrintAndLogEx(INFO, " Amiibo          | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
+    PrintAndLogEx(INFO, " Lego Dimension  | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
+    PrintAndLogEx(INFO, " XYZ 3D printer  | %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
+    PrintAndLogEx(INFO, " Xiaomi purifier | %08X | %04X", ul_ev1_pwdgenE(uid), ul_ev1_packgen_def(uid));
+    PrintAndLogEx(INFO, "-----------------+----------+-----");
     PrintAndLogEx(INFO, " Vingcard algo");
-    PrintAndLogEx(INFO, "---------------------------------");
+    PrintAndLogEx(INFO, "----------------------------------");
     return PM3_SUCCESS;
 }
 

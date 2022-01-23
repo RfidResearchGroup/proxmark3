@@ -3,10 +3,11 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf mfu pwdgen` - now generate xiaomi air purifier pwd/pack (@doegox)
  - Fix `hf 14a sim` - sneaky detection of user supplied UID might be empty (@iceman1001)
- - Adds support for PCSC's proprietary HID 37bit format P10004 (@bthedorff)
- - Add `nfc decode` - now NDEF vCard messages with a PHOTO in base64 format is shown (@iceman1001)
- - Remove AID limitations when using Gallagher key diversification (@DarkMatterMatt)
+ - Added support for PCSC's proprietary HID 37bit format P10004 (@bthedorff)
+ - Added `nfc decode` - now NDEF vCard messages with a PHOTO in base64 format is shown (@iceman1001)
+ - Changed - AID limitations when using Gallagher key diversification (@DarkMatterMatt)
 
 ## [Frostbit.4.14831] [2022-01-11]
  - Changed Wiegand format lookup - now case-insensitive (@iceman1001)

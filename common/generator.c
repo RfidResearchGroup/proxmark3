@@ -160,6 +160,18 @@ uint32_t ul_ev1_pwdgenD(const uint8_t *uid) {
     return BSWAP_32(pwd);
 }
 
+// AIR purifier Xiaomi
+uint32_t ul_ev1_pwdgenE(const uint8_t *uid) {
+    uint8_t hash[20];
+    mbedtls_sha1(uid, 7, hash);
+    uint32_t pwd = 0;
+    pwd |= ( hash[ hash[0] % 20 ] ) << 24 ;
+    pwd |= ( hash[ (hash[0] + 5 ) % 20 ] ) << 16;
+    pwd |= ( hash[ (hash[0] + 13) % 20 ] ) << 8;
+    pwd |= ( hash[ (hash[0] + 17) % 20 ] );
+    return pwd;
+}
+
 // pack generation for algo 1-3
 uint16_t ul_ev1_packgenA(const uint8_t *uid) {
     uint16_t pack = (uid[0] ^ uid[1] ^ uid[2]) << 8 | (uid[2] ^ 8);
@@ -543,6 +555,17 @@ int generator_selftest(void) {
     if (success)
         testresult++;
     PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid4, 7), pwd4, success ? "OK" : "->72B1EC61<--");
+
+
+    uint8_t uid5[] = {0x04, 0xA0, 0x3C, 0xAA, 0x1E, 0x70, 0x80};
+    uint32_t pwd5 = ul_ev1_pwdgenE(uid5);
+    success = (pwd5 == 0xCD91AFCC);
+//    if (success)
+//        testresult++;
+
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid5, 7), pwd5, success ? "OK" : "->CD91AFCC<--");
+
+
 
 //    uint8_t uid5[] = {0x11, 0x22, 0x33, 0x44};
 //    uint64_t key1 = mfc_algo_a(uid5);
