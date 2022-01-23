@@ -3,8 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `hf mfu dump -k` - insert PWD in dump (@doegox)
  - Changed `hf mfu pwdgen` - now generate xiaomi air purifier pwd/pack (@doegox)
- - Fix `hf 14a sim` - sneaky detection of user supplied UID might be empty (@iceman1001)
+ - Fixed `hf 14a sim` - sneaky detection of user supplied UID might be empty (@iceman1001)
  - Added support for PCSC's proprietary HID 37bit format P10004 (@bthedorff)
  - Added `nfc decode` - now NDEF vCard messages with a PHOTO in base64 format is shown (@iceman1001)
  - Changed - AID limitations when using Gallagher key diversification (@DarkMatterMatt)
