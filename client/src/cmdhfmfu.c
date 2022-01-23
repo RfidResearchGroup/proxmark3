@@ -1157,6 +1157,12 @@ static mfu_identify_t mfu_ident_table[] = {
         NULL, NULL,
         "hf mfu dump -k %08x"
     },
+    {
+        "Amiibo", "0004040201001103",
+        9, 9, "480FE0F110FFEEA500",
+        ul_ev1_pwdgenB, ul_ev1_packgenB,
+        "hf mfu dump -k %08x"
+    },
     /*
     {
         "Xiaomi AIR Purifier", "0004040201000F03",
