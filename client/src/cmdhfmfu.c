@@ -1228,7 +1228,7 @@ static int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
     return PM3_SUCCESS;
 }
 
-static int mfu_fingerprint(void) {
+static int mfu_fingerprint(TagTypeUL_t tagtype, bool hasAuthKey, uint8_t *authkey, int ak_len) {
 
     uint8_t *data = NULL;
     int res = PM3_SUCCESS;
@@ -1251,8 +1251,16 @@ static int mfu_fingerprint(void) {
     uint8_t pages = (maxbytes / 4);
     PrintAndLogEx(INFO, "Reading tag memory...");
 
+    uint8_t keytype = 0;
+    if (hasAuthKey) {
+        if (tagtype & UL_C)
+            keytype = 1; //UL_C auth
+        else
+            keytype = 2; //UL_EV1/NTAG auth
+    }
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, keytype, authkey, ak_len);
+
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "Command execute time-out");
@@ -1757,7 +1765,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         }
     }
 
-    mfu_fingerprint();
+    mfu_fingerprint(tagtype, has_auth_key, authkeyptr, ak_len);
 
 out:
     DropField();
