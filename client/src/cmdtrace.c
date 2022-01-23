@@ -420,7 +420,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 annotateCryptoRF(explanation, sizeof(explanation), frame, data_len);
                 break;
             case SEOS:
-                annotateSeos(explanation, sizeof(explanation), frame, data_len);            
+                annotateSeos(explanation, sizeof(explanation), frame, data_len);
                 break;
             default:
                 break;
@@ -724,7 +724,7 @@ int CmdTraceList(const char *Cmd) {
                   "trace list -t mf       -> interpret as " _YELLOW_("MIFARE Classic") " and decrypt crypto1 stream\n"
                   "trace list -t seos     -> interpret as " _YELLOW_("SEOS") "\n"
                   "trace list -t thinfilm -> interpret as " _YELLOW_("Thinfilm") "\n"
-                  "trace list -t topaz    -> interpret as " _YELLOW_("Topaz") "\n"                  
+                  "trace list -t topaz    -> interpret as " _YELLOW_("Topaz") "\n"
                   "\n"
                   "trace list -t mf --dict <mfc_default_keys>    -> use dictionary keys file\n"
                   "trace list -t 14a -f                          -> show frame delay times\n"
@@ -773,7 +773,7 @@ int CmdTraceList(const char *Cmd) {
     uint8_t protocol = -1;
 
     // validate type of output
-    if      (strcmp(type, "14a") == 0)      protocol = ISO_14443A;
+    if (strcmp(type, "14a") == 0)      protocol = ISO_14443A;
     else if (strcmp(type, "14b") == 0)      protocol = ISO_14443B;
     else if (strcmp(type, "15") == 0)       protocol = ISO_15693;
     else if (strcmp(type, "7816") == 0)     protocol = ISO_7816_4;

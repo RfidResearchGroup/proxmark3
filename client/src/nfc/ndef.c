@@ -529,14 +529,14 @@ static int ndefDecodeMime_vcard(NDEFHeader_t *ndef) {
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "%.*s", (int)ndef->PayloadLen, ndef->Payload);
 
-    char *s = strstr((char*)ndef->Payload, "PHOTO");
+    char *s = strstr((char *)ndef->Payload, "PHOTO");
     if (s) {
         s = strtok(s, ";");
         while (s) {
             char *tmp = s;
             if (strncmp(tmp, "ENCODING", 8) == 0) {
             } else if (strncmp(tmp, "TYPE", 4) == 0) {
-                
+
                 char *part = strtok(tmp + 4, ":");
                 while (part) {
 

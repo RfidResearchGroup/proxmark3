@@ -165,10 +165,10 @@ uint32_t ul_ev1_pwdgenE(const uint8_t *uid) {
     uint8_t hash[20];
     mbedtls_sha1(uid, 7, hash);
     uint32_t pwd = 0;
-    pwd |= ( hash[ hash[0] % 20 ] ) << 24 ;
-    pwd |= ( hash[ (hash[0] + 5 ) % 20 ] ) << 16;
-    pwd |= ( hash[ (hash[0] + 13) % 20 ] ) << 8;
-    pwd |= ( hash[ (hash[0] + 17) % 20 ] );
+    pwd |= (hash[ hash[0] % 20 ]) << 24 ;
+    pwd |= (hash[(hash[0] + 5) % 20 ]) << 16;
+    pwd |= (hash[(hash[0] + 13) % 20 ]) << 8;
+    pwd |= (hash[(hash[0] + 17) % 20 ]);
     return pwd;
 }
 
@@ -205,7 +205,7 @@ uint16_t ul_ev1_packgenD(const uint8_t *uid) {
 uint16_t ul_ev1_packgenE(const uint8_t *uid) {
 
     uint32_t pwd = ul_ev1_pwdgenE(uid);
-    return (0xAD << 8 | ((pwd >> 24) & 0xFF) );
+    return (0xAD << 8 | ((pwd >> 24) & 0xFF));
 }
 
 

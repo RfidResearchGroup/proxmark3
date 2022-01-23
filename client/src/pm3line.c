@@ -32,7 +32,7 @@
 
 #if defined(HAVE_READLINE)
 
-static char* rl_command_generator(const char *text, int state) {
+static char *rl_command_generator(const char *text, int state) {
     static int index;
     static size_t len;
     size_t rlen = strlen(rl_line_buffer);
@@ -48,14 +48,14 @@ static char* rl_command_generator(const char *text, int state) {
         // When no pm3 device present
         // and the command is not available offline,
         // we skip it.
-        if ((g_session.pm3_present == false) && (vocabulory[index].offline == false ))  {
+        if ((g_session.pm3_present == false) && (vocabulory[index].offline == false))  {
             index++;
             continue;
         }
 
         index++;
 
-        if (strncmp (command, rl_line_buffer, rlen) == 0) {
+        if (strncmp(command, rl_line_buffer, rlen) == 0) {
             const char *next = command + (rlen - len);
             const char *space = strstr(next, " ");
             if (space != NULL) {
@@ -70,7 +70,7 @@ static char* rl_command_generator(const char *text, int state) {
 
 static char **rl_command_completion(const char *text, int start, int end) {
     rl_attempted_completion_over = 0;
-    return rl_completion_matches (text, rl_command_generator);
+    return rl_completion_matches(text, rl_command_generator);
 }
 
 #endif // HAVE_READLINE
@@ -94,7 +94,7 @@ static void sigint_handler(int signum) {
 }
 #endif
 
-void pm3line_install_signals(void){
+void pm3line_install_signals(void) {
 #  if defined(_WIN32)
 //    SetConsoleCtrlHandler((PHANDLER_ROUTINE)terminate_handler, true);
 #  else

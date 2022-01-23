@@ -177,7 +177,7 @@ void ProxGuiQT::_ShowBase64PictureWindow(char *b64) {
     if (slen == 0)
         return;
 
-   char *myb64data = (char *)calloc(slen + 1, sizeof(uint8_t));
+    char *myb64data = (char *)calloc(slen + 1, sizeof(uint8_t));
     if (myb64data == NULL)
         return;
 

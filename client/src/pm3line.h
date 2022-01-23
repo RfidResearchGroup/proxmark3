@@ -21,7 +21,7 @@
 
 void pm3line_init(void);
 void pm3line_install_signals(void);
-char *pm3line_read(const char* s);
+char *pm3line_read(const char *s);
 void pm3line_free(void *ref);
 void pm3line_update_prompt(const char *prompt);
 int pm3line_load_history(const char *path);

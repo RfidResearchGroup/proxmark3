@@ -271,7 +271,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                         gs_ntag_i2c_state = 1;
                     } else {
                         snprintf(exp, size, "RESTORE(%d)", cmd[1]);
-                    } 
+                    }
                 } else {
                     return PM3_ESOFT;
                 }
@@ -832,7 +832,7 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
     // it's basically a ISO14443a tag, so try annotation from there
-    if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS ) {
+    if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS) {
 
         // S-block 11xxx010
         if ((cmd[0] & 0xC0) && (cmdsize == 3)) {
@@ -1182,14 +1182,14 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS) {
 
 //        switch (cmd[0]) {
-//            default: 
+//            default:
 //                break;
 //        };
 
-          // apply ISO7816 annotations?
+        // apply ISO7816 annotations?
 //        if (annotateIso7816(exp, size, cmd, cmdsize) == 0) {
 //        }
-          // apply SEOS annotations?
+        // apply SEOS annotations?
     }
 }
 
