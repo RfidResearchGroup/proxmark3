@@ -202,6 +202,13 @@ uint16_t ul_ev1_packgenD(const uint8_t *uid) {
     return BSWAP_16(p & 0xFFFF);
 }
 
+uint16_t ul_ev1_packgenE(const uint8_t *uid) {
+
+    uint32_t pwd = ul_ev1_pwdgenE(uid);
+    return (0xAD << 8 | ((pwd >> 24) & 0xFF) );
+}
+
+
 // default shims
 uint32_t ul_ev1_pwdgen_def(const uint8_t *uid) {
     return 0xFFFFFFFF;
