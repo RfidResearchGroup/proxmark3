@@ -1399,7 +1399,7 @@ static const cardformat_t FormatTable[] = {
     {"H10320",  Pack_H10320,  Unpack_H10320,  "HID H10320 36-bit BCD",      {1, 0, 0, 0, 1}}, // from Proxmark forums
     {"H10302",  Pack_H10302,  Unpack_H10302,  "HID H10302 37-bit huge ID",  {1, 0, 0, 0, 1}}, // from Proxmark forums
     {"H10304",  Pack_H10304,  Unpack_H10304,  "HID H10304 37-bit",          {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
-    {"P10004",  Pack_P10004,  Unpack_P10004,  "HID P10004 37-bit PCSC",     {1, 1, 0, 0, 0}}, // from BT
+    {"P10004",  Pack_P10004,  Unpack_P10004,  "HID P10004 37-bit PCSC",     {1, 1, 0, 0, 0}}, // from @bthedorff; PR #1559
     {"HGen37",  Pack_HGeneric37, Unpack_HGeneric37,  "HID Generic 37-bit", {1, 0, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"MDI37",   Pack_MDI37,   Unpack_MDI37,   "PointGuard MDI 37-bit",         {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"BQT38",   Pack_bqt38,   Unpack_bqt38,   "BQT 38-bit",                    {1, 1, 1, 0, 1}}, // from cardinfo.barkweb.com.au
