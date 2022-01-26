@@ -341,7 +341,7 @@ check_script:
                     char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                     memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
                     g_pendingPrompt = true;
-                    cmd = pm3line_read(prompt_filtered);
+                    script_cmd = pm3line_read(prompt_filtered);
 #if defined(_WIN32)
                     //Check if color support needs to be enabled again in case the window buffer did change
                     g_session.supports_colors = DetectWindowsAnsiSupport();
