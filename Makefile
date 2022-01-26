@@ -29,7 +29,7 @@ ifneq (,$(DESTDIR))
     endif
 endif
 
-all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/% mf_nonce_brute/% fpga_compress/%
+all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/% mf_nonce_brute/% mfd_aes_brute/% fpga_compress/%
 # hitag2crack toolsuite is not yet integrated in "all", it must be called explicitly: "make hitag2crack"
 #all clean install uninstall check: %: hitag2crack/%
 
@@ -105,6 +105,9 @@ nonce2key/check: FORCE
 mf_nonce_brute/check: FORCE
 	$(info [*] CHECK $(patsubst %/check,%,$@))
 	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
+mfd_aes_brute/check: FORCE
+	$(info [*] CHECK $(patsubst %/check,%,$@))
+	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
 fpga_compress/check: FORCE
 	$(info [*] CHECK $(patsubst %/check,%,$@))
 	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
@@ -138,6 +141,9 @@ nonce2key/%: FORCE
 mf_nonce_brute/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/mf_nonce_brute $(patsubst mf_nonce_brute/%,%,$@) DESTDIR=$(MYDESTDIR)
+mfd_aes_brute/%: FORCE
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C tools/mfd_aes_brute $(patsubst mfd_aes_brute/%,%,$@) DESTDIR=$(MYDESTDIR)
 fpga_compress/%: FORCE cleanifplatformchanged
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/fpga_compress $(patsubst fpga_compress/%,%,$@) DESTDIR=$(MYDESTDIR)
@@ -180,6 +186,7 @@ help:
 	@echo "+ mfkey           - Make tools/mfkey"
 	@echo "+ nonce2key       - Make tools/nonce2key"
 	@echo "+ mf_nonce_brute  - Make tools/mf_nonce_brute"
+	@echo "+ mf_aes_brute    - Make tools/mfd_aes_brute"
 	@echo "+ hitag2crack     - Make tools/hitag2crack"
 	@echo "+ fpga_compress   - Make tools/fpga_compress"
 	@echo
@@ -217,6 +224,8 @@ mfkey: mfkey/all
 nonce2key: nonce2key/all
 
 mf_nonce_brute: mf_nonce_brute/all
+
+mfd_aes_brute: mfd_aes_brute/all
 
 fpga_compress: fpga_compress/all
 
