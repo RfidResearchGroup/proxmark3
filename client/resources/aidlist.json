@@ -2198,5 +2198,13 @@
         "Name": "CPM Person SAM",
         "Description": "Personalization of end user cards",
         "Type": "transport"
+    },
+    {
+        "AID": "A0000008381010",
+        "Vendor": "SL ",
+        "Country": "Sweden",
+        "Name": "SL Resekort",
+        "Description": "transport card",
+        "Type": "transport"
     }
 ]

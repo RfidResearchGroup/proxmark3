@@ -151,9 +151,12 @@ static int CmdEMVSearch(const char *Cmd) {
     bool leaveSignalON = arg_get_lit(ctx, 2);
     bool APDULogging = arg_get_lit(ctx, 3);
     bool decodeTLV = arg_get_lit(ctx, 4);
+
     Iso7816CommandChannel channel = CC_CONTACTLESS;
-    if (arg_get_lit(ctx, 5))
+    if (arg_get_lit(ctx, 5)) {
         channel = CC_CONTACT;
+    }
+
     PrintChannel(channel);
     CLIParserFree(ctx);
 
@@ -170,7 +173,7 @@ static int CmdEMVSearch(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Search completed.");
 
     // print list here
-    if (!decodeTLV) {
+    if (decodeTLV == false) {
         TLVPrintAIDlistFromSelectTLV(t);
     }
 
@@ -841,17 +844,23 @@ static int CmdEMVExec(const char *Cmd) {
     bool forceSearch = arg_get_lit(ctx, 5);
 
     enum TransactionType TrType = TT_MSD;
+
     if (arg_get_lit(ctx, 7))
         TrType = TT_QVSDCMCHIP;
+
     if (arg_get_lit(ctx, 8))
         TrType = TT_CDA;
+
     if (arg_get_lit(ctx, 9))
         TrType = TT_VSDC;
 
     bool GenACGPO = arg_get_lit(ctx, 10);
+
     Iso7816CommandChannel channel = CC_CONTACTLESS;
-    if (arg_get_lit(ctx, 11))
+    if (arg_get_lit(ctx, 11)) {
         channel = CC_CONTACT;
+    }
+
     PrintChannel(channel);
     uint8_t psenum = (channel == CC_CONTACT) ? 1 : 2;
     CLIParserFree(ctx);
