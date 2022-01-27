@@ -77,10 +77,18 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     }
 
     if (sw != 0x9000) {
-        if (sw)
-            PrintAndLogEx(INFO, "Not a CIPURSE card. APDU response: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        else
+        if (sw == 0x0000) {
             PrintAndLogEx(ERR, "APDU exchange error. Card returns 0x0000");
+        } else {
+            uint16_t swsel = sw;
+            res = CIPURSESelectMF(true, true, buf, sizeof(buf), &len, &sw);
+
+            if (sw != 0x9000 || res) {
+                PrintAndLogEx(INFO, "Not a CIPURSE card. APDU response: %04x - %s", sw, GetAPDUCodeDescription(swsel >> 8, swsel & 0xff));
+            } else {
+                PrintAndLogEx(INFO, "MF select OK. Maybe CIPURSE card in the perso state");
+            }
+        }
 
         DropField();
         return PM3_SUCCESS;
@@ -614,7 +622,7 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
 static int CmdHFCipurseDeleteFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse delete",
-                  "Read file by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
+                  "Delete file by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
                   "hf cipurse delete --fid 2ff7   -> Authenticate with keyID 1, delete file with id 2ff7\n"
                   "hf cipurse delete -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> Authenticate keyID 2 and delete file\n");
 
