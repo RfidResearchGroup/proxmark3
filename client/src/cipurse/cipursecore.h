@@ -31,6 +31,9 @@
 void CIPURSEPrintInfoFile(uint8_t *data, size_t len);
 
 int CIPURSESelect(bool activate_field, bool leave_field_on, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
+int CIPURSESelectMF(bool activate_field, bool leave_field_on, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
+int CIPURSESelectFID(bool activate_field, bool leave_field_on, uint16_t fid, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
+int CIPURSESelectAID(bool activate_field, bool leave_field_on, uint8_t *aid, size_t aidlen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
 
 int CIPURSEChallenge(uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
 int CIPURSEMutualAuthenticate(uint8_t keyindex, uint8_t *params, uint8_t paramslen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);

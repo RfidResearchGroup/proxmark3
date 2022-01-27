@@ -131,11 +131,27 @@ static int CIPURSEExchange(sAPDU_t apdu, uint8_t *result, size_t max_result_len,
     return CIPURSEExchangeEx(false, true, apdu, true, 0, result, max_result_len, result_len, sw);
 }
 
-int CIPURSESelect(bool activate_field, bool leave_field_on, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
-    uint8_t data[] = {0x41, 0x44, 0x20, 0x46, 0x31};
+int CIPURSESelectMF(bool activate_field, bool leave_field_on, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+    return CIPURSESelectFID(activate_field, leave_field_on, 0x3f00, result, max_result_len, result_len, sw);
+}
+
+int CIPURSESelectFID(bool activate_field, bool leave_field_on, uint16_t fid, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+    uint8_t data[] = {fid >> 8, fid & 0xff};
     CipurseCClearContext(&cipurseContext);
 
-    return EMVSelect(CC_CONTACTLESS, activate_field, leave_field_on, data, sizeof(data), result, max_result_len, result_len, sw, NULL);
+    return CIPURSEExchangeEx(activate_field, leave_field_on, (sAPDU_t) {0x00, 0xa4, 0x00, 0x00, 2, data}, true, 0, result, max_result_len, result_len, sw);
+}
+
+int CIPURSESelectAID(bool activate_field, bool leave_field_on, uint8_t *aid, size_t aidlen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+    CipurseCClearContext(&cipurseContext);
+
+    return EMVSelect(CC_CONTACTLESS, activate_field, leave_field_on, aid, aidlen, result, max_result_len, result_len, sw, NULL);
+}
+
+int CIPURSESelect(bool activate_field, bool leave_field_on, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+    uint8_t aid[] = {0x41, 0x44, 0x20, 0x46, 0x31};
+
+    return CIPURSESelectAID(activate_field, leave_field_on, aid, sizeof(aid), result, max_result_len, result_len, sw);
 }
 
 int CIPURSEChallenge(uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
@@ -147,7 +163,7 @@ int CIPURSEMutualAuthenticate(uint8_t keyindex, uint8_t *params, uint8_t paramsl
 }
 
 int CIPURSECreateFile(uint8_t *attr, uint16_t attrlen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
-    return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x00, 0xe4, 0x00, 0x00, attrlen, attr}, false, 0, result, max_result_len, result_len, sw);
+    return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x00, 0xe0, 0x00, 0x00, attrlen, attr}, false, 0, result, max_result_len, result_len, sw);
 }
 
 int CIPURSEDeleteFile(uint16_t fileid, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
