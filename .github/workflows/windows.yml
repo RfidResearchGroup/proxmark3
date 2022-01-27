@@ -117,6 +117,7 @@ jobs:
             python3-pip
             python3-dev
             libpython3-all-dev
+            libssl-dev
 
       - name: Install Python dependencies
         run: |
