@@ -59,8 +59,8 @@ static const PxSE_AID_t PxSE_AID_LIST[] = {
 static uint8_t defaultKeyId = 1;
 static uint8_t defaultKey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
 #define CIPURSE_MAX_AID_LENGTH 16
-//static uint8_t defaultAID[CIPURSE_MAX_AID_LENGTH] = {0x41, 0x44, 0x20, 0x46, 0x31, 0x00};
-//static size_t defaultAIDLength = 5;
+static uint8_t defaultAID[CIPURSE_MAX_AID_LENGTH] = {0x41, 0x44, 0x20, 0x46, 0x31, 0x00};
+static size_t defaultAIDLength = 5;
 static uint16_t defaultFileId = 0x2ff7;
 
 static int CmdHelp(const char *Cmd);
@@ -152,7 +152,6 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-//    {"select",    CmdHFCipurseSelect,        IfPm3Iso14443a,  "Select CIPURSE application or file"},
 static int CmdHFCipurseSelect(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse select",
@@ -768,6 +767,13 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFCipurseCreateDGI(const char *Cmd) {
+
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
 static int CmdHFCipurseDeleteFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse delete",
@@ -781,9 +787,12 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "show technical data"),
         arg_int0("n",  NULL,      "<dec>", "key ID"),
         arg_str0("k",  "key",     "<hex>", "Auth key"),
-        arg_str0(NULL, "fid",     "<hex>", "file ID"),
+        arg_str0(NULL, "fid",     "<hex>", "file ID for delete"),
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID) for delete"),
         arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
         arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
+        arg_lit0(NULL, "no-auth", "execute without authentication"),
+        arg_lit0(NULL, "commit",  "commit "),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -795,7 +804,7 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     CipurseChannelSecurityLevel sreq = CPSMACed;
     CipurseChannelSecurityLevel sresp = CPSMACed;
     uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
-    int res = CLIParseKeyAndSecurityLevels(ctx, 4, 6, 7, key, &sreq, &sresp);
+    int res = CLIParseKeyAndSecurityLevels(ctx, 4, 7, 8, key, &sreq, &sresp);
     if (res) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -811,52 +820,97 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     }
 
     uint16_t fileId = defaultFileId;
-    if (hdatalen)
+    bool useFileID = false;
+    if (hdatalen) {
         fileId = (hdata[0] << 8) + hdata[1];
+        useFileID = true;
+    }
 
-    SetAPDULogging(APDULogging);
+    hdatalen = sizeof(hdata);
+    CLIGetHexWithReturn(ctx, 6, hdata, &hdatalen);
+    if (hdatalen && (hdatalen < 1 || hdatalen > 16)) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " application id length must be 1-16 bytes only");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t aid[16] = {0};
+    size_t aidLen = 0;
+    if (hdatalen) {
+        memcpy(aid, hdata, hdatalen);
+        aidLen = hdatalen;
+    } else {
+        memcpy(aid, defaultAID, defaultAIDLength);
+        aidLen = defaultAIDLength;
+    }
+
+    bool noauth = arg_get_lit(ctx, 9);
+    bool needCommit = arg_get_lit(ctx, 10);
 
     CLIParserFree(ctx);
+    SetAPDULogging(APDULogging);
 
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
 
-    res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
+    res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Cipurse select " _RED_("error") ". Card returns 0x%04x", sw);
+        PrintAndLogEx(ERR, "Cipurse masterfile select " _RED_("error") ". Card returns 0x%04x", sw);
         DropField();
         return PM3_ESOFT;
     }
 
     if (verbose) {
-        PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " key id " _YELLOW_("%d") " key " _YELLOW_("%s")
-                      , fileId
-                      , keyId
-                      , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
-                     );
+        if (useFileID)
+            PrintAndLogEx(INFO, "File id " _CYAN_("%x"), fileId);
+        else
+            PrintAndLogEx(INFO, "Application ID " _CYAN_("%s"), sprint_hex_inrow(aid, aidLen));
+
+        if (!noauth)
+            PrintAndLogEx(INFO, "key id " _YELLOW_("%d") " key " _YELLOW_("%s")
+                        , keyId
+                        , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
+                        );
     }
 
-    bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
-    if (bres == false) {
-        if (verbose == false)
-            PrintAndLogEx(ERR, "Authentication ( " _RED_("fail") " )");
-        DropField();
-        return PM3_ESOFT;
+    if (!noauth) {
+        bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
+        if (bres == false) {
+            if (verbose)
+                PrintAndLogEx(ERR, "Authentication ( " _RED_("fail") " )");
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        // set channel security levels
+        CIPURSECSetActChannelSecurityLevels(sreq, sresp);
     }
 
-    // set channel security levels
-    CIPURSECSetActChannelSecurityLevels(sreq, sresp);
-
-    res = CIPURSEDeleteFile(fileId, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
-        if (verbose == false)
-            PrintAndLogEx(ERR, "File select " _RED_("ERROR") ". Card returns 0x%04x", sw);
-        DropField();
-        return PM3_ESOFT;
+    if (useFileID) {
+        res = CIPURSEDeleteFile(fileId, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Delete file " _CYAN_("%04x ") _RED_("ERROR") ". Card returns 0x%04x", fileId, sw);
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "File id " _CYAN_("%04x") " deleted " _GREEN_("succesfully"), fileId);
+    } else {
+        res = CIPURSEDeleteFileAID(aid, aidLen, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Delete application " _CYAN_("%s ") _RED_("error") ". Card returns 0x%04x", sprint_hex_inrow(aid, aidLen), sw);
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Delete application " _CYAN_("%s ") _GREEN_("OK"), sprint_hex_inrow(aid, aidLen));
     }
 
-    PrintAndLogEx(INFO, "File id " _YELLOW_("%04x") " deleted " _GREEN_("succesfully"), fileId);
+    if (needCommit) {
+        sw = 0;
+        res = CIPURSECommitTransaction(&sw);
+        if (res != 0 || sw != 0x9000)
+            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+    }
 
     DropField();
     return PM3_SUCCESS;
@@ -946,7 +1000,7 @@ static command_t CommandTable[] = {
     {"read",      CmdHFCipurseReadFile,      IfPm3Iso14443a,  "Read binary file"},
     {"write",     CmdHFCipurseWriteFile,     IfPm3Iso14443a,  "Write binary file"},
     {"aread",     CmdHFCipurseReadFileAttr,  IfPm3Iso14443a,  "Read file attributes"},
-    //{"create",    CmdHFCipurseCreateDGI,     IfPm3Iso14443a,  "Create file, application, key via DGI record"},
+    {"create",    CmdHFCipurseCreateDGI,     IfPm3Iso14443a,  "Create file, application, key via DGI record"},
     {"delete",    CmdHFCipurseDeleteFile,    IfPm3Iso14443a,  "Delete file"},
     {"default",   CmdHFCipurseDefault,       IfPm3Iso14443a,  "Set default key and file id for all the other commands"},
     {"test",      CmdHFCipurseTest,          AlwaysAvailable, "Tests"},
