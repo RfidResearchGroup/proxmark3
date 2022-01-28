@@ -156,17 +156,17 @@ static int CmdHFCipurseInfo(const char *Cmd) {
 static int CmdHFCipurseSelect(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse select",
-                  "Select AID or file",
-                  "hf cipurse select --aid A0000005070100  -> Select PTSE application by AUD\n"
+                  "Select application or file",
+                  "hf cipurse select --aid A0000005070100  -> Select PTSE application by AID\n"
                   "hf cipurse select --fid 3f00            -> Select master file by FID 3f00\n"
                   "hf cipurse select --fid 2ff7            -> Select attribute file by FID 2ff7\n"
-                  "hf cipurse select --mfd                 -> Select default file by empty FID\n");
+                  "hf cipurse select --mfd -vt             -> Select default file by empty FID and show response data in plain and TLV decoded format\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "show APDU requests and responses"),
         arg_lit0("v",  "verbose", "show technical data"),
-        arg_lit0("t",  "tlv",     "TLV decode data from select"),
+        arg_lit0("t",  "tlv",     "TLV decode returned data"),
         arg_str0("k",  "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
         arg_str0(NULL, "fid",     "<hex 2 bytes>", "file ID (FID)"),
         arg_lit0(NULL, "mfd",     "select masterfile by empty id"),
@@ -247,11 +247,11 @@ static int CmdHFCipurseSelect(const char *Cmd) {
     } else {
         res = CIPURSESelect(true, false, buf, sizeof(buf), &len, &sw);
         if (res != 0 || sw != 0x9000) {
-            PrintAndLogEx(ERR, "Cipurse select " _RED_("error") ". Card returns 0x%04x", sw);
+            PrintAndLogEx(ERR, "Cipurse select default application " _RED_("error") ". Card returns 0x%04x", sw);
             DropField();
             return PM3_ESOFT;
         }
-        PrintAndLogEx(INFO, "Cipurse select application " _GREEN_("OK"));
+        PrintAndLogEx(INFO, "Cipurse select default application " _GREEN_("OK"));
     }
 
     if (len > 0) {
