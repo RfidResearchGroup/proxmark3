@@ -67,6 +67,12 @@ static const APDUSpcCodeDescription_t SelectAPDUCodeDescriptions[] = {
     {0x6A89, "AID already exists" }
 };
 
+static const APDUSpcCodeDescription_t DeleteAPDUCodeDescriptions[] = {
+    {0x6985, "Referenced PxSE application cannot be deleted due to reference to CIPURSE application" },
+    {0x6986, "Deletion of MF or predefined EFs is not allowed" },
+    {0x6A82, "File not found" }
+};
+
 static uint8_t defaultKeyId = 1;
 static uint8_t defaultKey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
 #define CIPURSE_MAX_AID_LENGTH 16
@@ -867,7 +873,8 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
     CLIParserInit(&ctx, "hf cipurse create",
                   "Create application/file/key by provide appropriate DGI. If no key is supplied, default key of 737373...7373 will be used",
                   "hf cipurse create -d 9200123F00200008000062098407A0000005070100 -> create PTSE file with FID 0x2000 and space for 8 AIDs\n"
-                  "hf cipurse create -d  -> create default file with FID 5F00\n");
+                  "hf cipurse create -d 92002438613F010A05020000FFFFFF021009021009621084054144204631D407A0000005070100A00F28"
+                        "73737373737373737373737373737373015FD67B000102030405060708090A0B0C0D0E0F01C6A13B -> create default file with FID 3F01 and 2 keys\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1081,7 +1088,8 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     if (useFileID) {
         res = CIPURSEDeleteFile(fileId, buf, sizeof(buf), &len, &sw);
         if (res != 0 || sw != 0x9000) {
-            PrintAndLogEx(ERR, "Delete file " _CYAN_("%04x ") _RED_("ERROR") ". Card returns 0x%04x", fileId, sw);
+            PrintAndLogEx(ERR, "Delete file " _CYAN_("%04x ") _RED_("ERROR") ". Card returns:\n  0x%04x - %s", fileId, sw, 
+                GetSpecificAPDUCodeDesc(DeleteAPDUCodeDescriptions, ARRAYLEN(DeleteAPDUCodeDescriptions), sw));
             DropField();
             return PM3_ESOFT;
         }
@@ -1089,7 +1097,10 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     } else {
         res = CIPURSEDeleteFileAID(aid, aidLen, buf, sizeof(buf), &len, &sw);
         if (res != 0 || sw != 0x9000) {
-            PrintAndLogEx(ERR, "Delete application " _CYAN_("%s ") _RED_("error") ". Card returns 0x%04x", sprint_hex_inrow(aid, aidLen), sw);
+            PrintAndLogEx(ERR, "Delete application " _CYAN_("%s ") _RED_("ERROR") ". Card returns:\n  0x%04x - %s", 
+                sprint_hex_inrow(aid, aidLen), 
+                sw, 
+                GetSpecificAPDUCodeDesc(DeleteAPDUCodeDescriptions, ARRAYLEN(DeleteAPDUCodeDescriptions), sw));
             DropField();
             return PM3_ESOFT;
         }
