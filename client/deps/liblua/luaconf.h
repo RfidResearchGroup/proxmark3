@@ -8,6 +8,15 @@
 #ifndef lconfig_h
 #define lconfig_h
 
+#if defined(__APPLE__)
+     #include "TargetConditionals.h"
+     #if TARGET_OS_IOS || TARGET_OS_WATCH || TARGET_OS_TV
+         #define system(s) ((s)==NULL ? 0 : -1)
+     #endif // end iOS
+#elif defined(__ANDROID__)
+     #define system(s) ((s)==NULL ? 0 : -1)
+#endif
+
 #include <limits.h>
 #include <stddef.h>
 
