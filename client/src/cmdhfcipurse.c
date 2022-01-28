@@ -40,8 +40,13 @@
 #include "util.h"
 #include "fileutils.h"   // laodFileJSONroot
 
+const uint8_t PxSE_AID[] = {0xA0, 0x00, 0x00, 0x05, 0x07, 0x01, 0x00};
+
 static uint8_t defaultKeyId = 1;
 static uint8_t defaultKey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
+#define CIPURSE_MAX_AID_LENGTH 16
+//static uint8_t defaultAID[CIPURSE_MAX_AID_LENGTH] = {0x41, 0x44, 0x20, 0x46, 0x31, 0x00};
+//static size_t defaultAIDLength = 5;
 static uint16_t defaultFileId = 0x2ff7;
 
 static int CmdHelp(const char *Cmd);
@@ -49,7 +54,7 @@ static int CmdHelp(const char *Cmd);
 static int CmdHFCipurseInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse info",
-                  "Get info from cipurse tags",
+                  "Get info from CIPURSE tags",
                   "hf cipurse info");
 
     void *argtable[] = {
@@ -64,13 +69,32 @@ static int CmdHFCipurseInfo(const char *Cmd) {
 
     // CIPURSE info
     PrintAndLogEx(INFO, "-----------" _CYAN_("CIPURSE Info") "---------------------------------");
-    SetAPDULogging(false);
+    SetAPDULogging(true);
 
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
-    int res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
 
+    bool mfExist = false;
+    int res = CIPURSESelectMF(true, false, buf, sizeof(buf), &len, &sw);
+    if (res == PM3_SUCCESS && sw == 0x9000) {
+        mfExist = true;
+        PrintAndLogEx(INFO, "MasterFile exist and can be selected.");
+    }
+
+    //for (int n = 1; n < 7; n++)
+    uint8_t pxseaid[sizeof(PxSE_AID)] = {0};
+    memcpy(pxseaid, PxSE_AID, sizeof(PxSE_AID));
+    res = CIPURSESelectAID(true, false, pxseaid, sizeof(pxseaid), buf, sizeof(buf), &len, &sw);
+    if (res == PM3_SUCCESS && sw == 0x9000) {
+        mfExist = true;
+        PrintAndLogEx(INFO, "PxSE exist.");
+        if (len > 0) {
+            TLVPrintFromBuffer(buf, len);
+        }
+    }
+
+    res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
     if (res) {
         DropField();
         return res;
@@ -80,14 +104,10 @@ static int CmdHFCipurseInfo(const char *Cmd) {
         if (sw == 0x0000) {
             PrintAndLogEx(ERR, "APDU exchange error. Card returns 0x0000");
         } else {
-            uint16_t swsel = sw;
-            res = CIPURSESelectMF(true, true, buf, sizeof(buf), &len, &sw);
-
-            if (sw != 0x9000 || res) {
-                PrintAndLogEx(INFO, "Not a CIPURSE card. APDU response: %04x - %s", sw, GetAPDUCodeDescription(swsel >> 8, swsel & 0xff));
-            } else {
-                PrintAndLogEx(INFO, "MF select OK. Maybe CIPURSE card in the perso state");
-            }
+            if (!mfExist)
+                PrintAndLogEx(INFO, "Not a CIPURSE card. APDU response: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+            else
+                PrintAndLogEx(INFO, "Unknown AID and MasterFile can be selected. Maybe CIPURSE card in the perso state");
         }
 
         DropField();
@@ -792,10 +812,12 @@ static int CmdHFCipurseDefault(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",      CmdHelp,                   AlwaysAvailable, "This help."},
     {"info",      CmdHFCipurseInfo,          IfPm3Iso14443a,  "Get info about CIPURSE tag"},
+    //{"select",    CmdHFCipurseSelect,        IfPm3Iso14443a,  "Select CIPURSE application or file"},
     {"auth",      CmdHFCipurseAuth,          IfPm3Iso14443a,  "Authenticate CIPURSE tag"},
     {"read",      CmdHFCipurseReadFile,      IfPm3Iso14443a,  "Read binary file"},
     {"write",     CmdHFCipurseWriteFile,     IfPm3Iso14443a,  "Write binary file"},
     {"aread",     CmdHFCipurseReadFileAttr,  IfPm3Iso14443a,  "Read file attributes"},
+    //{"create",    CmdHFCipurseCreateDGI,     IfPm3Iso14443a,  "Create file, application, key via DGI record"},
     {"delete",    CmdHFCipurseDeleteFile,    IfPm3Iso14443a,  "Delete file"},
     {"default",   CmdHFCipurseDefault,       IfPm3Iso14443a,  "Set default key and file id for all the other commands"},
     {"test",      CmdHFCipurseTest,          AlwaysAvailable, "Tests"},
