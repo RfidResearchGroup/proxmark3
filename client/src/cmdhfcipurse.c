@@ -56,6 +56,30 @@ static const PxSE_AID_t PxSE_AID_LIST[] = {
     {{0xA0, 0x00, 0x00, 0x05, 0x07, 0x06, 0x00}, "Proximity Micro-Payment System Environment (PMSE)" }
 };
 
+typedef struct {
+    const uint16_t Code;
+    const char *Description;
+} APDUSpcCodeDescription_t;
+
+static const APDUSpcCodeDescription_t SelectAPDUCodeDescriptions[] = {
+    {0x6984, "Key is blocked for use as key encryption key" },
+    {0x6985, "Command not allowed on deactivated ADF or maximum files count already reached" },
+    {0x6A80, "Incorrect creation parameters in the command data field for the EF/ADF creation" },
+    {0x6A81, "Command for creation of ADF is not permitted on ADF level" },
+    {0x6A84, "Not enough memory space" },
+    {0x6A88, "Invalid key number (outside the range supported by the currend DF)" },
+    {0x6A89, "FileID / SFID already exists" },
+    {0x6A89, "AID already exists" }
+};
+
+static const char *GetSpecificAPDUCodeDesc(const APDUSpcCodeDescription_t *desc, const size_t desclen, uint16_t code) {
+    for (int i = 0; i < desclen; i++) {
+        if (desc[i].Code == code)
+            return desc[i].Description;
+    }
+    return GetAPDUCodeDescription(code >> 8, code & 0xff);
+}
+
 static uint8_t defaultKeyId = 1;
 static uint8_t defaultKey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
 #define CIPURSE_MAX_AID_LENGTH 16
@@ -871,7 +895,7 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
         arg_lit0(NULL, "commit",  "commit "),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
@@ -880,7 +904,7 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
     CipurseChannelSecurityLevel sreq = CPSMACed;
     CipurseChannelSecurityLevel sresp = CPSMACed;
     uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
-    int res = CLIParseKeyAndSecurityLevels(ctx, 4, 7, 8, key, &sreq, &sresp);
+    int res = CLIParseKeyAndSecurityLevels(ctx, 4, 6, 7, key, &sreq, &sresp);
     if (res) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -889,39 +913,14 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
     uint8_t hdata[250] = {0};
     int hdatalen = sizeof(hdata);
     CLIGetHexWithReturn(ctx, 5, hdata, &hdatalen);
-    if (hdatalen && hdatalen != 2) {
-        PrintAndLogEx(ERR, _RED_("ERROR:") " file id length must be 2 bytes only");
+    if (hdatalen < 4 || hdatalen > 200) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " data length must be 4-200 bytes only");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    uint16_t fileId = defaultFileId;
-    bool useFileID = false;
-    if (hdatalen) {
-        fileId = (hdata[0] << 8) + hdata[1];
-        useFileID = true;
-    }
-
-    hdatalen = sizeof(hdata);
-    CLIGetHexWithReturn(ctx, 6, hdata, &hdatalen);
-    if (hdatalen && (hdatalen < 1 || hdatalen > 16)) {
-        PrintAndLogEx(ERR, _RED_("ERROR:") " application id length must be 1-16 bytes only");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
-    uint8_t aid[16] = {0};
-    size_t aidLen = 0;
-    if (hdatalen) {
-        memcpy(aid, hdata, hdatalen);
-        aidLen = hdatalen;
-    } else {
-        memcpy(aid, defaultAID, defaultAIDLength);
-        aidLen = defaultAIDLength;
-    }
-
-    bool noauth = arg_get_lit(ctx, 9);
-    bool needCommit = arg_get_lit(ctx, 10);
+    bool noauth = arg_get_lit(ctx, 8);
+    bool needCommit = arg_get_lit(ctx, 9);
 
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
@@ -938,11 +937,6 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
     }
 
     if (verbose) {
-        if (useFileID)
-            PrintAndLogEx(INFO, "File id " _CYAN_("%x"), fileId);
-        else
-            PrintAndLogEx(INFO, "Application ID " _CYAN_("%s"), sprint_hex_inrow(aid, aidLen));
-
         if (!noauth)
             PrintAndLogEx(INFO, "key id " _YELLOW_("%d") " key " _YELLOW_("%s")
                         , keyId
@@ -963,13 +957,14 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
         CIPURSECSetActChannelSecurityLevels(sreq, sresp);
     }
 
-
-
-
-
-
-
-
+    res = CIPURSECreateFile(hdata, hdatalen, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000) {
+        PrintAndLogEx(ERR, "Create file command " _RED_("ERROR") ". Card returns:\n  0x%04x - %s", sw, 
+            GetSpecificAPDUCodeDesc(SelectAPDUCodeDescriptions, ARRAYLEN(SelectAPDUCodeDescriptions), sw));
+        DropField();
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(INFO, "File created " _GREEN_("succesfully"));
 
     if (needCommit) {
         sw = 0;
