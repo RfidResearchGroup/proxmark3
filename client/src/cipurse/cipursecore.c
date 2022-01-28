@@ -173,6 +173,7 @@ int CIPURSESelectMF(uint8_t *result, size_t max_result_len, size_t *result_len, 
 }
 
 int CIPURSESelectFileEx(bool activate_field, bool leave_field_on, uint16_t fileid, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+    CipurseCClearContext(&cipurseContext);
     uint8_t fileIdBin[] = {fileid >> 8, fileid & 0xff};
     return CIPURSEExchangeEx(activate_field, leave_field_on, (sAPDU_t) {0x00, 0xa4, 0x00, 0x00, 02, fileIdBin}, true, 0, result, max_result_len, result_len, sw);
 }
@@ -198,6 +199,18 @@ int CIPURSEReadBinary(uint16_t offset, uint8_t *result, size_t max_result_len, s
 
 int CIPURSEUpdateBinary(uint16_t offset, uint8_t *data, uint16_t datalen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
     return CIPURSEExchange((sAPDU_t) {0x00, 0xd6, (offset >> 8) & 0x7f, offset & 0xff, datalen, data}, result, max_result_len, result_len, sw);
+}
+
+int CIPURSECommitTransaction(uint16_t *sw) {
+    uint8_t result[APDU_RES_LEN] = {0};
+    size_t result_len = 0;
+    return CIPURSEExchange((sAPDU_t) {0x80, 0x7e, 0x00, 0x00, 0, NULL}, result, sizeof(result), &result_len, sw);
+}
+
+int CIPURSECancelTransaction(uint16_t *sw) {
+    uint8_t result[APDU_RES_LEN] = {0};
+    size_t result_len = 0;
+    return CIPURSEExchange((sAPDU_t) {0x80, 0x7c, 0x00, 0x00, 0, NULL}, result, sizeof(result), &result_len, sw);
 }
 
 bool CIPURSEChannelAuthenticate(uint8_t keyindex, uint8_t *key, bool verbose) {

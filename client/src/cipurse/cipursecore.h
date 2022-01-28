@@ -51,6 +51,9 @@ int CIPURSEReadFileAttributes(uint8_t *result, size_t max_result_len, size_t *re
 int CIPURSEReadBinary(uint16_t offset, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
 int CIPURSEUpdateBinary(uint16_t offset, uint8_t *data, uint16_t datalen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
 
+int CIPURSECommitTransaction(uint16_t *sw);
+int CIPURSECancelTransaction(uint16_t *sw);
+
 bool CIPURSEChannelAuthenticate(uint8_t keyindex, uint8_t *key, bool verbose);
 void CIPURSECSetActChannelSecurityLevels(CipurseChannelSecurityLevel req, CipurseChannelSecurityLevel resp);
 
