@@ -90,7 +90,7 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     uint16_t sw = 0;
 
     bool mfExist = false;
-    int res = CIPURSESelectMF(true, true, buf, sizeof(buf), &len, &sw);
+    int res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
     if (res == PM3_SUCCESS && sw == 0x9000) {
         mfExist = true;
         PrintAndLogEx(INFO, _CYAN_("MasterFile") " exist and can be selected.");
@@ -149,6 +149,121 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     }
 
     DropField();
+    return PM3_SUCCESS;
+}
+
+//    {"select",    CmdHFCipurseSelect,        IfPm3Iso14443a,  "Select CIPURSE application or file"},
+static int CmdHFCipurseSelect(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf cipurse select",
+                  "Select AID or file",
+                  "hf cipurse select --aid A0000005070100  -> Select PTSE application by AUD\n"
+                  "hf cipurse select --fid 3f00            -> Select master file by FID 3f00\n"
+                  "hf cipurse select --fid 2ff7            -> Select attribute file by FID 2ff7\n"
+                  "hf cipurse select --mfd                 -> Select default file by empty FID\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_lit0("t",  "tlv",     "TLV decode data from select"),
+        arg_str0("k",  "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
+        arg_str0(NULL, "fid",     "<hex 2 bytes>", "file ID (FID)"),
+        arg_lit0(NULL, "mfd",     "select masterfile by empty id"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool showTLV = arg_get_lit(ctx, 3);
+
+    uint8_t hdata[250] = {0};
+    int hdatalen = sizeof(hdata);
+    CLIGetHexWithReturn(ctx, 4, hdata, &hdatalen);
+    if (hdatalen && (hdatalen < 1 || hdatalen > 16)) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " application id length must be 1-16 bytes only");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t aid[16] = {0};
+    size_t aidLen = 0;
+    if (hdatalen) {
+        memcpy(aid, hdata, hdatalen);
+        aidLen = hdatalen;
+    }
+
+    hdatalen = sizeof(hdata);
+    CLIGetHexWithReturn(ctx, 5, hdata, &hdatalen);
+    if (hdatalen && hdatalen != 2) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " file id length must be 2 bytes only");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint16_t fileId = 0;
+    bool useFileID = false;
+    if (hdatalen) {
+        fileId = (hdata[0] << 8) + hdata[1];
+        useFileID = true;
+    }
+
+    bool selmfd = arg_get_lit(ctx, 6);
+
+    SetAPDULogging(APDULogging);
+
+    CLIParserFree(ctx);
+
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+    int res = 0;
+
+    if (aidLen > 0) {
+        res = CIPURSESelectAID(true, false, aid, aidLen, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Cipurse select application " _GREEN_("%s ") _RED_("error") ". Card returns 0x%04x", sprint_hex_inrow(aid, aidLen), sw);
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s ") _GREEN_("OK"), sprint_hex_inrow(aid, aidLen));
+    } else if (useFileID) {
+        res = CIPURSESelectFileEx(true, false, fileId, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Cipurse select file 0x%04x " _RED_("error") ". Card returns 0x%04x", fileId, sw);
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Cipurse select file " _CYAN_("0x%04x ") _GREEN_("OK"), fileId);
+    } else if (selmfd) {
+        res = CIPURSESelectMFDefaultFileEx(true, false, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Cipurse select default file " _RED_("error") ". Card returns 0x%04x", sw);
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Cipurse select default file " _GREEN_("OK"));
+    } else {
+        res = CIPURSESelect(true, false, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Cipurse select " _RED_("error") ". Card returns 0x%04x", sw);
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Cipurse select application " _GREEN_("OK"));
+    }
+
+    if (len > 0) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "File data:");
+            print_buffer(buf, len, 1);
+        }
+
+        if (showTLV)
+            TLVPrintFromBuffer(buf, len);
+    }
+
     return PM3_SUCCESS;
 }
 
@@ -615,7 +730,7 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
 
     if (seladf == false) {
         if (selmf)
-            res = CIPURSESelectMFFile(buf, sizeof(buf), &len, &sw);
+            res = CIPURSESelectMFDefaultFile(buf, sizeof(buf), &len, &sw);
         else
             res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
 
@@ -826,7 +941,7 @@ static int CmdHFCipurseDefault(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",      CmdHelp,                   AlwaysAvailable, "This help."},
     {"info",      CmdHFCipurseInfo,          IfPm3Iso14443a,  "Get info about CIPURSE tag"},
-    //{"select",    CmdHFCipurseSelect,        IfPm3Iso14443a,  "Select CIPURSE application or file"},
+    {"select",    CmdHFCipurseSelect,        IfPm3Iso14443a,  "Select CIPURSE application or file"},
     {"auth",      CmdHFCipurseAuth,          IfPm3Iso14443a,  "Authenticate CIPURSE tag"},
     {"read",      CmdHFCipurseReadFile,      IfPm3Iso14443a,  "Read binary file"},
     {"write",     CmdHFCipurseWriteFile,     IfPm3Iso14443a,  "Write binary file"},

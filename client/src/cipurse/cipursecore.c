@@ -131,17 +131,6 @@ static int CIPURSEExchange(sAPDU_t apdu, uint8_t *result, size_t max_result_len,
     return CIPURSEExchangeEx(false, true, apdu, true, 0, result, max_result_len, result_len, sw);
 }
 
-int CIPURSESelectMF(bool activate_field, bool leave_field_on, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
-    return CIPURSESelectFID(activate_field, leave_field_on, 0x3f00, result, max_result_len, result_len, sw);
-}
-
-int CIPURSESelectFID(bool activate_field, bool leave_field_on, uint16_t fid, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
-    uint8_t data[] = {fid >> 8, fid & 0xff};
-    CipurseCClearContext(&cipurseContext);
-
-    return CIPURSEExchangeEx(activate_field, leave_field_on, (sAPDU_t) {0x00, 0xa4, 0x00, 0x00, 2, data}, true, 0, result, max_result_len, result_len, sw);
-}
-
 int CIPURSESelectAID(bool activate_field, bool leave_field_on, uint8_t *aid, size_t aidlen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
     CipurseCClearContext(&cipurseContext);
 
@@ -171,13 +160,28 @@ int CIPURSEDeleteFile(uint16_t fileid, uint8_t *result, size_t max_result_len, s
     return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x00, 0xe4, 0x00, 0x00, 02, fileIdBin}, false, 0, result, max_result_len, result_len, sw);
 }
 
-int CIPURSESelectFile(uint16_t fileid, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
-    uint8_t fileIdBin[] = {fileid >> 8, fileid & 0xff};
-    return CIPURSEExchange((sAPDU_t) {0x00, 0xa4, 0x00, 0x00, 02, fileIdBin}, result, max_result_len, result_len, sw);
+int CIPURSESelectMFEx(bool activate_field, bool leave_field_on, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+    return CIPURSESelectFileEx(activate_field, leave_field_on, 0x3f00, result, max_result_len, result_len, sw);
 }
 
-int CIPURSESelectMFFile(uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
-    return CIPURSEExchange((sAPDU_t) {0x00, 0xa4, 0x00, 0x00, 0, NULL}, result, max_result_len, result_len, sw);
+int CIPURSESelectMF(uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+    return CIPURSESelectMFEx(false, true, result, max_result_len, result_len, sw);
+}
+
+int CIPURSESelectFileEx(bool activate_field, bool leave_field_on, uint16_t fileid, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+    uint8_t fileIdBin[] = {fileid >> 8, fileid & 0xff};
+    return CIPURSEExchangeEx(activate_field, leave_field_on, (sAPDU_t) {0x00, 0xa4, 0x00, 0x00, 02, fileIdBin}, true, 0, result, max_result_len, result_len, sw);
+}
+
+int CIPURSESelectFile(uint16_t fileid, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+    return CIPURSESelectFileEx(false, true, fileid, result, max_result_len, result_len, sw);
+}
+
+int CIPURSESelectMFDefaultFileEx(bool activate_field, bool leave_field_on, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+    return CIPURSEExchangeEx(activate_field, leave_field_on, (sAPDU_t) {0x00, 0xa4, 0x00, 0x00, 0, NULL}, true, 0, result, max_result_len, result_len, sw);
+}
+int CIPURSESelectMFDefaultFile(uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+    return CIPURSESelectMFDefaultFileEx(false, true, result, max_result_len, result_len, sw);
 }
 
 int CIPURSEReadFileAttributes(uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
