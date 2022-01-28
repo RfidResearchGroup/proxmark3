@@ -40,8 +40,27 @@
 #include "util.h"
 #include "fileutils.h"   // laodFileJSONroot
 
+const uint8_t PxSE_AID[] = {0xA0, 0x00, 0x00, 0x05, 0x07, 0x01, 0x00};
+#define PxSE_AID_LENGTH 7
+typedef struct {
+    uint8_t aid[PxSE_AID_LENGTH];
+    const char *name;
+} PxSE_AID_t;
+
+static const PxSE_AID_t PxSE_AID_LIST[] = {
+    {{0xA0, 0x00, 0x00, 0x05, 0x07, 0x01, 0x00}, "Proximity Transport System Environment (PTSE)" },
+    {{0xA0, 0x00, 0x00, 0x05, 0x07, 0x02, 0x00}, "Proximity Facility Access System Environment (PASE)" },
+    {{0xA0, 0x00, 0x00, 0x05, 0x07, 0x03, 0x00}, "Proximity Digital Identity System Environment (PDSE)" },
+    {{0xA0, 0x00, 0x00, 0x05, 0x07, 0x04, 0x00}, "Proximity Event Ticketing System Environment (PESE)" },
+    {{0xA0, 0x00, 0x00, 0x05, 0x07, 0x05, 0x00}, "Proximity Couponing System Environment (PCSE)" },
+    {{0xA0, 0x00, 0x00, 0x05, 0x07, 0x06, 0x00}, "Proximity Micro-Payment System Environment (PMSE)" }
+};
+
 static uint8_t defaultKeyId = 1;
 static uint8_t defaultKey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
+#define CIPURSE_MAX_AID_LENGTH 16
+//static uint8_t defaultAID[CIPURSE_MAX_AID_LENGTH] = {0x41, 0x44, 0x20, 0x46, 0x31, 0x00};
+//static size_t defaultAIDLength = 5;
 static uint16_t defaultFileId = 0x2ff7;
 
 static int CmdHelp(const char *Cmd);
@@ -49,7 +68,7 @@ static int CmdHelp(const char *Cmd);
 static int CmdHFCipurseInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse info",
-                  "Get info from cipurse tags",
+                  "Get info from CIPURSE tags",
                   "hf cipurse info");
 
     void *argtable[] = {
@@ -63,24 +82,47 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     infoHF14A(false, false, false);
 
     // CIPURSE info
-    PrintAndLogEx(INFO, "-----------" _CYAN_("CIPURSE Info") "---------------------------------");
+    PrintAndLogEx(INFO, "------------------- " _CYAN_("CIPURSE Info") " --------------------");
     SetAPDULogging(false);
 
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
-    int res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
 
+    bool mfExist = false;
+    int res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
+    if (res == PM3_SUCCESS && sw == 0x9000) {
+        mfExist = true;
+        PrintAndLogEx(INFO, _CYAN_("MasterFile") " exist and can be selected.");
+    }
+
+    for (int i = 0; i < ARRAYLEN(PxSE_AID_LIST); i++) {
+        res = CIPURSESelectAID(false, true, (uint8_t *)PxSE_AID_LIST[i].aid, PxSE_AID_LENGTH, buf, sizeof(buf), &len, &sw);
+        if (res == PM3_SUCCESS && sw == 0x9000) {
+            mfExist = true;
+            PrintAndLogEx(INFO, _CYAN_("PxSE") " exist: %s", PxSE_AID_LIST[i].name);
+            if (len > 0) {
+                PrintAndLogEx(INFO, "PxSE data:");
+                TLVPrintFromBuffer(buf, len);
+            }
+        }
+    }
+
+    res = CIPURSESelect(false, true, buf, sizeof(buf), &len, &sw);
     if (res) {
         DropField();
         return res;
     }
 
     if (sw != 0x9000) {
-        if (sw)
-            PrintAndLogEx(INFO, "Not a CIPURSE card. APDU response: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        else
+        if (sw == 0x0000) {
             PrintAndLogEx(ERR, "APDU exchange error. Card returns 0x0000");
+        } else {
+            if (!mfExist)
+                PrintAndLogEx(INFO, "Not a CIPURSE card. APDU response: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+            else
+                PrintAndLogEx(INFO, "Unknown AID and MasterFile can be selected. Maybe CIPURSE card in the " _CYAN_("perso") " state");
+        }
 
         DropField();
         return PM3_SUCCESS;
@@ -107,6 +149,121 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     }
 
     DropField();
+    return PM3_SUCCESS;
+}
+
+//    {"select",    CmdHFCipurseSelect,        IfPm3Iso14443a,  "Select CIPURSE application or file"},
+static int CmdHFCipurseSelect(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf cipurse select",
+                  "Select application or file",
+                  "hf cipurse select --aid A0000005070100  -> Select PTSE application by AID\n"
+                  "hf cipurse select --fid 3f00            -> Select master file by FID 3f00\n"
+                  "hf cipurse select --fid 2ff7            -> Select attribute file by FID 2ff7\n"
+                  "hf cipurse select --mfd -vt             -> Select default file by empty FID and show response data in plain and TLV decoded format\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_lit0("t",  "tlv",     "TLV decode returned data"),
+        arg_str0("k",  "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
+        arg_str0(NULL, "fid",     "<hex 2 bytes>", "file ID (FID)"),
+        arg_lit0(NULL, "mfd",     "select masterfile by empty id"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool showTLV = arg_get_lit(ctx, 3);
+
+    uint8_t hdata[250] = {0};
+    int hdatalen = sizeof(hdata);
+    CLIGetHexWithReturn(ctx, 4, hdata, &hdatalen);
+    if (hdatalen && (hdatalen < 1 || hdatalen > 16)) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " application id length must be 1-16 bytes only");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t aid[16] = {0};
+    size_t aidLen = 0;
+    if (hdatalen) {
+        memcpy(aid, hdata, hdatalen);
+        aidLen = hdatalen;
+    }
+
+    hdatalen = sizeof(hdata);
+    CLIGetHexWithReturn(ctx, 5, hdata, &hdatalen);
+    if (hdatalen && hdatalen != 2) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " file id length must be 2 bytes only");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint16_t fileId = 0;
+    bool useFileID = false;
+    if (hdatalen) {
+        fileId = (hdata[0] << 8) + hdata[1];
+        useFileID = true;
+    }
+
+    bool selmfd = arg_get_lit(ctx, 6);
+
+    SetAPDULogging(APDULogging);
+
+    CLIParserFree(ctx);
+
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+    int res = 0;
+
+    if (aidLen > 0) {
+        res = CIPURSESelectAID(true, false, aid, aidLen, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Cipurse select application " _GREEN_("%s ") _RED_("error") ". Card returns 0x%04x", sprint_hex_inrow(aid, aidLen), sw);
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s ") _GREEN_("OK"), sprint_hex_inrow(aid, aidLen));
+    } else if (useFileID) {
+        res = CIPURSESelectFileEx(true, false, fileId, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Cipurse select file 0x%04x " _RED_("error") ". Card returns 0x%04x", fileId, sw);
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Cipurse select file " _CYAN_("0x%04x ") _GREEN_("OK"), fileId);
+    } else if (selmfd) {
+        res = CIPURSESelectMFDefaultFileEx(true, false, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Cipurse select default file " _RED_("error") ". Card returns 0x%04x", sw);
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Cipurse select default file " _GREEN_("OK"));
+    } else {
+        res = CIPURSESelect(true, false, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Cipurse select default application " _RED_("error") ". Card returns 0x%04x", sw);
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Cipurse select default application " _GREEN_("OK"));
+    }
+
+    if (len > 0) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "File data:");
+            print_buffer(buf, len, 1);
+        }
+
+        if (showTLV)
+            TLVPrintFromBuffer(buf, len);
+    }
+
     return PM3_SUCCESS;
 }
 
@@ -573,7 +730,7 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
 
     if (seladf == false) {
         if (selmf)
-            res = CIPURSESelectMFFile(buf, sizeof(buf), &len, &sw);
+            res = CIPURSESelectMFDefaultFile(buf, sizeof(buf), &len, &sw);
         else
             res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
 
@@ -614,7 +771,7 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
 static int CmdHFCipurseDeleteFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse delete",
-                  "Read file by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
+                  "Delete file by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
                   "hf cipurse delete --fid 2ff7   -> Authenticate with keyID 1, delete file with id 2ff7\n"
                   "hf cipurse delete -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> Authenticate keyID 2 and delete file\n");
 
@@ -784,10 +941,12 @@ static int CmdHFCipurseDefault(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",      CmdHelp,                   AlwaysAvailable, "This help."},
     {"info",      CmdHFCipurseInfo,          IfPm3Iso14443a,  "Get info about CIPURSE tag"},
+    {"select",    CmdHFCipurseSelect,        IfPm3Iso14443a,  "Select CIPURSE application or file"},
     {"auth",      CmdHFCipurseAuth,          IfPm3Iso14443a,  "Authenticate CIPURSE tag"},
     {"read",      CmdHFCipurseReadFile,      IfPm3Iso14443a,  "Read binary file"},
     {"write",     CmdHFCipurseWriteFile,     IfPm3Iso14443a,  "Write binary file"},
     {"aread",     CmdHFCipurseReadFileAttr,  IfPm3Iso14443a,  "Read file attributes"},
+    //{"create",    CmdHFCipurseCreateDGI,     IfPm3Iso14443a,  "Create file, application, key via DGI record"},
     {"delete",    CmdHFCipurseDeleteFile,    IfPm3Iso14443a,  "Delete file"},
     {"default",   CmdHFCipurseDefault,       IfPm3Iso14443a,  "Set default key and file id for all the other commands"},
     {"test",      CmdHFCipurseTest,          AlwaysAvailable, "Tests"},
