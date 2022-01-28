@@ -1,10 +1,18 @@
-<a id="top"></a>
 # Notes about the tracelog
+<a id="top"></a>
 
-## Table of Contents
- * [Command](#trace-command)
- * [File format](#tracelog-format)
- * [Wireshark dissector interoperability](#trace-and-wireshark)
+
+# Table of Contents
+- [Notes about the tracelog](#notes-about-the-tracelog)
+- [Table of Contents](#table-of-contents)
+  - [Trace command](#trace-command)
+    - [Timing](#timing)
+    - [Sources](#sources)
+    - [Data](#data)
+    - [CRC](#crc)
+    - [Annotation](#annotation)
+  - [Tracelog format](#tracelog-format)
+  - [Trace and Wireshark](#trace-and-wireshark)
 
 
 ## Trace command

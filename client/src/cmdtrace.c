@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2018 iceman <iceman at iuse.se>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Trace commands
 //-----------------------------------------------------------------------------
@@ -198,6 +206,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case ISO_14443A:
             case MFDES:
             case LTO:
+            case SEOS:
                 crcStatus = iso14443A_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case ISO_7816_4:
@@ -216,10 +225,11 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case ISO_15693:
                 crcStatus = iso15693_CRC_check(frame, data_len);
                 break;
-            case PROTO_CRYPTORF:
             case PROTO_HITAG1:
-            case PROTO_HITAG2:
             case PROTO_HITAGS:
+                crcStatus = hitag1_CRC_check(frame, (data_len * 8) - ((8 - parityBytes[0]) % 8));
+            case PROTO_CRYPTORF:
+            case PROTO_HITAG2:
             default:
                 break;
         }
@@ -240,7 +250,8 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             sprintf(line[0], "<empty trace - possible error>");
         }
     }
-
+    uint8_t partialbytebuff = 0;
+    uint8_t offset = 0;
     for (int j = 0; j < data_len && j / 18 < 18; j++) {
         uint8_t parityBits = parityBytes[j >> 3];
         if (protocol != LEGIC
@@ -255,7 +266,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && protocol != FELICA
                 && protocol != LTO
                 && protocol != PROTO_CRYPTORF
-                && (hdr->isResponse || protocol == ISO_14443A || protocol == PROTO_MIFARE)
+                && (hdr->isResponse || protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == SEOS)
                 && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 
             snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
@@ -270,6 +281,18 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
             }
 
+        } else if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAG2) || (protocol == PROTO_HITAGS)) && (parityBytes[0] > 0)) {
+            // handle partial bytes
+            uint8_t nbits = parityBytes[0];
+            if (j == 0) {
+                partialbytebuff = frame[0] << nbits;
+                snprintf(line[0], 120, "%02x(%i) ", frame[0] >> (8 - nbits), nbits);
+                offset = 2;
+            } else {
+                uint8_t byte = partialbytebuff | (frame[j] >> (8 - nbits));
+                partialbytebuff = frame[j] << nbits;
+                snprintf(line[j / 18] + ((j % 18) * 4) + offset, 120, "%02x  ", byte);
+            }
         } else {
             snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x  ", frame[j]);
         }
@@ -278,11 +301,20 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     if (markCRCBytes) {
         //CRC-command
-        if (crcStatus == 0 || crcStatus == 1) {
-            char *pos1 = line[(data_len - 2) / 18] + (((data_len - 2) % 18) * 4) - 1;
+        if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAGS)) && (data_len > 1)) {
+            // Note that UID REQUEST response has no CRC, but we don't know
+            // if the response we see is a UID
+            char *pos1 = line[(data_len - 1) / 18] + (((data_len - 1) % 18) * 4) + offset - 1;
             (*pos1) = '[';
-            char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4) - 1;
+            char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4) + offset - 2;
             sprintf(pos2, "%c", ']');
+        } else {
+            if (crcStatus == 0 || crcStatus == 1) {
+                char *pos1 = line[(data_len - 2) / 18] + (((data_len - 2) % 18) * 4) - 1;
+                (*pos1) = '[';
+                char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4) - 1;
+                sprintf(pos2, "%c", ']');
+            }
         }
     }
 
@@ -334,6 +366,10 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     // Always annotate these protocols both reader/tag messages
     switch (protocol) {
+        case ISO_14443A:
+        case ISO_7816_4:
+            annotateIso14443a(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+            break;
         case PROTO_MIFARE:
             annotateMifare(explanation, sizeof(explanation), frame, data_len, parityBytes, TRACELOG_PARITY_LEN(hdr), hdr->isResponse);
             break;
@@ -359,9 +395,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case LEGIC:
                 annotateLegic(explanation, sizeof(explanation), frame, data_len);
                 break;
-            case ISO_14443A:
-                annotateIso14443a(explanation, sizeof(explanation), frame, data_len);
-                break;
             case MFDES:
                 annotateMfDesfire(explanation, sizeof(explanation), frame, data_len);
                 break;
@@ -372,7 +405,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 annotateTopaz(explanation, sizeof(explanation), frame, data_len);
                 break;
             case ISO_7816_4:
-                annotateIso14443a(explanation, sizeof(explanation), frame, data_len);
                 annotateIso7816(explanation, sizeof(explanation), frame, data_len);
                 break;
             case ISO_15693:
@@ -386,6 +418,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 break;
             case PROTO_CRYPTORF:
                 annotateCryptoRF(explanation, sizeof(explanation), frame, data_len);
+                break;
+            case SEOS:
+                annotateSeos(explanation, sizeof(explanation), frame, data_len);
                 break;
             default:
                 break;
@@ -466,9 +501,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (protocol == PROTO_MIFARE) {
         if (DecodeMifareData(frame, data_len, parityBytes, hdr->isResponse, mfData, &mfDataLen, mfDicKeys, mfDicKeysCount)) {
             memset(explanation, 0x00, sizeof(explanation));
-            if (hdr->isResponse == false) {
-                annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen);
-            }
+            annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen, hdr->isResponse);
             uint8_t crcc = iso14443A_CRC_check(hdr->isResponse, mfData, mfDataLen);
             PrintAndLogEx(NORMAL, "            |            |  *  |%-72s | %-4s| %s",
                           sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
@@ -569,7 +602,7 @@ static int CmdTraceLoad(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("f", "file", "<filename>", "trace file to load"),
+        arg_str1("f", "file", "<fn>", "Specify trace file to load"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -608,7 +641,7 @@ static int CmdTraceSave(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("f", "file", "<filename>", "trace file to save"),
+        arg_str1("f", "file", "<fn>", "Specify trace file to save"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -656,7 +689,7 @@ int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) 
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
                  "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
-        arg_strx0(NULL, "dict", "<file>", "use dictionary keys file"),
+        arg_str0(NULL, "dict", "<file>", "use dictionary keys file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -674,22 +707,25 @@ int CmdTraceList(const char *Cmd) {
                   "Annotate trace buffer with selected protocol data\n"
                   "You can load a trace from file (see `trace load -h`) or it be downloaded from device by default\n",
                   "trace list -t raw      -> just show raw data without annotations\n"
-                  "trace list -t 14a      -> interpret as " _YELLOW_("ISO14443-A") " communications\n"
-                  "trace list -t thinfilm -> interpret as " _YELLOW_("Thinfilm") " communications\n"
-                  "trace list -t topaz    -> interpret as " _YELLOW_("Topaz") " communications\n"
-                  "trace list -t mf       -> interpret as " _YELLOW_("MIFARE Classic") " communications and decrypt crypto1 stream\n"
-                  "trace list -t des      -> interpret as " _YELLOW_("MIFARE DESFire") " communications\n"
-                  "trace list -t 14b      -> interpret as " _YELLOW_("ISO14443-B") " communications\n"
-                  "trace list -t 7816     -> interpret as " _YELLOW_("ISO7816-4") " communications\n"
-                  "trace list -t 15       -> interpret as " _YELLOW_("ISO15693") " communications\n"
-                  "trace list -t iclass   -> interpret as " _YELLOW_("iCLASS") " communications\n"
-                  "trace list -t legic    -> interpret as " _YELLOW_("LEGIC") " communications\n"
-                  "trace list -t felica   -> interpret as " _YELLOW_("ISO18092 / FeliCa") " communications\n"
-                  "trace list -t hitag1   -> interpret as " _YELLOW_("Hitag1") " communications\n"
-                  "trace list -t hitag2   -> interpret as " _YELLOW_("Hitag2") " communications\n"
-                  "trace list -t hitags   -> interpret as " _YELLOW_("HitagS") " communications\n"
-                  "trace list -t lto      -> interpret as " _YELLOW_("LTO-CM") " communications\n"
-                  "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") " communitcations\n"
+                  "\n"
+                  "trace list -t 14a      -> interpret as " _YELLOW_("ISO14443-A") "\n"
+                  "trace list -t 14b      -> interpret as " _YELLOW_("ISO14443-B") "\n"
+                  "trace list -t 15       -> interpret as " _YELLOW_("ISO15693") "\n"
+                  "trace list -t 7816     -> interpret as " _YELLOW_("ISO7816-4") "\n"
+                  "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") "\n\n"
+                  "trace list -t des      -> interpret as " _YELLOW_("MIFARE DESFire") "\n"
+                  "trace list -t felica   -> interpret as " _YELLOW_("ISO18092 / FeliCa") "\n"
+                  "trace list -t hitag1   -> interpret as " _YELLOW_("Hitag1") "\n"
+                  "trace list -t hitag2   -> interpret as " _YELLOW_("Hitag2") "\n"
+                  "trace list -t hitags   -> interpret as " _YELLOW_("HitagS") "\n"
+                  "trace list -t iclass   -> interpret as " _YELLOW_("iCLASS") "\n"
+                  "trace list -t legic    -> interpret as " _YELLOW_("LEGIC") "\n"
+                  "trace list -t lto      -> interpret as " _YELLOW_("LTO-CM") "\n"
+                  "trace list -t mf       -> interpret as " _YELLOW_("MIFARE Classic") " and decrypt crypto1 stream\n"
+                  "trace list -t seos     -> interpret as " _YELLOW_("SEOS") "\n"
+                  "trace list -t thinfilm -> interpret as " _YELLOW_("Thinfilm") "\n"
+                  "trace list -t topaz    -> interpret as " _YELLOW_("Topaz") "\n"
+                  "\n"
                   "trace list -t mf --dict <mfc_default_keys>    -> use dictionary keys file\n"
                   "trace list -t 14a -f                          -> show frame delay times\n"
                   "trace list -t 14a -1                          -> use trace buffer "
@@ -704,11 +740,11 @@ int CmdTraceList(const char *Cmd) {
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
                  "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
-        arg_strx0("t", "type", NULL, "protocol to annotate the trace"),
-        arg_strx0(NULL, "dict", "<file>", "use dictionary keys file"),
+        arg_str0("t", "type", NULL, "protocol to annotate the trace"),
+        arg_str0(NULL, "dict", "<fn>", "use dictionary keys file"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool use_buffer = arg_get_lit(ctx, 1);
     bool show_wait_cycles = arg_get_lit(ctx, 2);
@@ -737,23 +773,29 @@ int CmdTraceList(const char *Cmd) {
     uint8_t protocol = -1;
 
     // validate type of output
-    if (strcmp(type,      "iclass") == 0)   protocol = ICLASS;
-    else if (strcmp(type, "14a") == 0)      protocol = ISO_14443A;
+    if (strcmp(type, "14a") == 0)      protocol = ISO_14443A;
     else if (strcmp(type, "14b") == 0)      protocol = ISO_14443B;
-    else if (strcmp(type, "topaz") == 0)    protocol = TOPAZ;
-    else if (strcmp(type, "7816") == 0)     protocol = ISO_7816_4;
-    else if (strcmp(type, "des") == 0)      protocol = MFDES;
-    else if (strcmp(type, "legic") == 0)    protocol = LEGIC;
     else if (strcmp(type, "15") == 0)       protocol = ISO_15693;
+    else if (strcmp(type, "7816") == 0)     protocol = ISO_7816_4;
+    else if (strcmp(type, "cryptorf") == 0) protocol = PROTO_CRYPTORF;
+    else if (strcmp(type, "des") == 0)      protocol = MFDES;
     else if (strcmp(type, "felica") == 0)   protocol = FELICA;
-    else if (strcmp(type, "mf") == 0)       protocol = PROTO_MIFARE;
     else if (strcmp(type, "hitag1") == 0)   protocol = PROTO_HITAG1;
     else if (strcmp(type, "hitag2") == 0)   protocol = PROTO_HITAG2;
     else if (strcmp(type, "hitags") == 0)   protocol = PROTO_HITAGS;
-    else if (strcmp(type, "thinfilm") == 0) protocol = THINFILM;
+    else if (strcmp(type, "iclass") == 0)   protocol = ICLASS;
+    else if (strcmp(type, "legic") == 0)    protocol = LEGIC;
     else if (strcmp(type, "lto") == 0)      protocol = LTO;
-    else if (strcmp(type, "cryptorf") == 0) protocol = PROTO_CRYPTORF;
+    else if (strcmp(type, "mf") == 0)       protocol = PROTO_MIFARE;
     else if (strcmp(type, "raw") == 0)      protocol = -1;
+    else if (strcmp(type, "seos") == 0)     protocol = SEOS;
+    else if (strcmp(type, "thinfilm") == 0) protocol = THINFILM;
+    else if (strcmp(type, "topaz") == 0)    protocol = TOPAZ;
+    else if (strcmp(type, "") == 0)         protocol = -1;
+    else {
+        PrintAndLogEx(FAILED, "Unknown protocol \"%s\"", type);
+        return PM3_EINVARG;
+    }
 
     if (use_buffer == false) {
         download_trace();

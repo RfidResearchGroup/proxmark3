@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2009 Michael Gernoth <michael at gernoth.net>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // GUI (QT)
 //-----------------------------------------------------------------------------
@@ -59,6 +67,10 @@ void ProxGuiQT::HideGraphWindow(void) {
 // emit picture viewer signals
 void ProxGuiQT::ShowPictureWindow(char *fn) {
     emit ShowPictureWindowSignal(fn);
+}
+
+void ProxGuiQT::ShowBase64PictureWindow(char *b64) {
+    emit ShowBase64PictureWindowSignal(b64);
 }
 
 void ProxGuiQT::RepaintPictureWindow(void) {
@@ -153,6 +165,53 @@ void ProxGuiQT::_ShowPictureWindow(char *fn) {
     pictureWidget->show();
 }
 
+void ProxGuiQT::_ShowBase64PictureWindow(char *b64) {
+
+    if (!plotapp)
+        return;
+
+    if (b64 == NULL)
+        return;
+
+    size_t slen = strlen(b64);
+    if (slen == 0)
+        return;
+
+    char *myb64data = (char *)calloc(slen + 1, sizeof(uint8_t));
+    if (myb64data == NULL)
+        return;
+
+    memcpy(myb64data, b64, slen);
+
+    if (!pictureWidget) {
+
+#if defined(__MACH__) && defined(__APPLE__)
+        makeFocusable();
+#endif
+
+        pictureWidget = new PictureWidget();
+    }
+
+    QPixmap pm;
+    if (pm.loadFromData(QByteArray::fromBase64(myb64data), "PNG") == false) {
+        qWarning("Failed to read base64 data: %s", myb64data);
+    }
+    free(myb64data);
+    //free(b64);
+
+    pictureController->lbl_pm->setPixmap(pm);
+    pictureController->lbl_pm->setScaledContents(false);
+    pictureController->lbl_pm->setAlignment(Qt::AlignCenter);
+
+    QString s = QString("w: %1  h: %2")
+                .arg(pm.size().width())
+                .arg(pm.size().height()
+                    );
+    pictureController->lbl_sz->setText(s);
+    pictureWidget->show();
+
+}
+
 void ProxGuiQT::_RepaintPictureWindow(void) {
     if (!plotapp || !pictureWidget)
         return;
@@ -206,6 +265,7 @@ void ProxGuiQT::MainLoop() {
 
     // hook up picture viewer signals
     connect(this, SIGNAL(ShowPictureWindowSignal(char *)), this, SLOT(_ShowPictureWindow(char *)));
+    connect(this, SIGNAL(ShowBase64PictureWindowSignal(char *)), this, SLOT(_ShowBase64PictureWindow(char *)));
     connect(this, SIGNAL(RepaintPictureWindowSignal()), this, SLOT(_RepaintPictureWindow()));
     connect(this, SIGNAL(HidePictureWindowSignal()), this, SLOT(_HidePictureWindow()));
 
@@ -249,7 +309,7 @@ ProxGuiQT::~ProxGuiQT(void) {
 // Event override functions
 // -------------------------------------------------
 PictureWidget::PictureWidget() {
-    // Set the initial postion and size from settings
+    // Set the initial position and size from settings
 //    if (g_session.preferences_loaded)
 //        setGeometry(g_session.pw.x, g_session.pw.y, g_session.pw.w, g_session.pw.h);
 //    else
@@ -268,7 +328,7 @@ void PictureWidget::closeEvent(QCloseEvent *event) {
 // -------------------------------------------------
 
 SliderWidget::SliderWidget() {
-    // Set the initial postion and size from settings
+    // Set the initial position and size from settings
     if (g_session.preferences_loaded)
         setGeometry(g_session.overlay.x, g_session.overlay.y, g_session.overlay.w, g_session.overlay.h);
     else
@@ -330,7 +390,7 @@ void ProxWidget::vchange_dthr_down(int v) {
 
 ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     this->master = master;
-    // Set the initial postion and size from settings
+    // Set the initial position and size from settings
     if (g_session.preferences_loaded)
         setGeometry(g_session.plot.x, g_session.plot.y, g_session.plot.w, g_session.plot.h);
     else
@@ -379,7 +439,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
         controlWidget->resize(size().width(), 200);
     }
 
-    // Olverlays / slider window title
+    // Overlays / slider window title
     QString ct = QString("[*]Slider [ %1 ]").arg(g_conn.serial_port_name);
     controlWidget->setWindowTitle(ct);
 
@@ -1005,8 +1065,9 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             }
             break;
 
-        case Qt::Key_H:
-            g_printAndLog = PRINTANDLOG_PRINT;
+        case Qt::Key_H: {
+            uint8_t old_printAndLog = g_printAndLog;
+            g_printAndLog &= PRINTANDLOG_PRINT;
             PrintAndLogEx(NORMAL, "\n\n" _CYAN_("PLOT window keystrokes and mouse events"));
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Move:"));
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("Home") "/" _RED_("End"), "Move to the start/end of the graph");
@@ -1031,9 +1092,9 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _YELLOW_("Right mouse click"), "Set purple cursor");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("h"), "Show this help");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("q"), "Close plot window");
-            g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
+            g_printAndLog = old_printAndLog;
             break;
-
+        }
         case Qt::Key_L:
             g_GridLocked = !g_GridLocked;
             if (g_GridLocked)

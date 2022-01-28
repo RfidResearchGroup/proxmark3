@@ -1,7 +1,17 @@
 //-----------------------------------------------------------------------------
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // CRC16
 //-----------------------------------------------------------------------------
@@ -40,6 +50,9 @@ void init_table(CrcType_t crctype) {
             break;
         case CRC_LEGIC:
             generate_table(CRC16_POLY_LEGIC, true);
+            break;
+        case CRC_LEGIC_16:
+            generate_table(CRC16_POLY_LEGIC_16, true);
             break;
         case CRC_CCITT:
             generate_table(CRC16_POLY_CCITT, false);
@@ -194,6 +207,7 @@ void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8
             crc = crc16_fdxb(d, n);
             break;
         case CRC_LEGIC:
+        case CRC_LEGIC_16:
             // TODO
             return;
         case CRC_NONE:
@@ -227,6 +241,7 @@ uint16_t Crc16ex(CrcType_t ct, const uint8_t *d, size_t n) {
         case CRC_11784:
             return crc16_fdxb(d, n);
         case CRC_LEGIC:
+        case CRC_LEGIC_16:
             // TODO
             return 0;
         case CRC_NONE:
@@ -272,6 +287,7 @@ bool check_crc(CrcType_t ct, const uint8_t *d, size_t n) {
         case CRC_11784:
             return (crc16_fdxb(d, n) == 0);
         case CRC_LEGIC:
+        case CRC_LEGIC_16:
             // TODO
             return false;
         case CRC_NONE:
@@ -330,7 +346,7 @@ uint16_t crc16_iclass(uint8_t const *d, size_t n) {
 // This CRC-16 is used in Legic Advant systems.
 // poly=0xB400,  init=depends  refin=true  refout=true  xorout=0x0000  check=  name="CRC-16/LEGIC"
 uint16_t crc16_legic(uint8_t const *d, size_t n, uint8_t uidcrc) {
-    uint16_t initial = uidcrc << 8 | uidcrc;
-    return crc16_fast(d, n, initial, true, true);
+    uint16_t initial = (uidcrc << 8 | uidcrc);
+    return crc16_fast(d, n, initial, true, false);
 }
 

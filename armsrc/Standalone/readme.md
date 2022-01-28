@@ -1,13 +1,31 @@
 # Standalone Modes
+<a id="Top"></a>
+
+
+# Table of Contents
+- [Standalone Modes](#standalone-modes)
+- [Table of Contents](#table-of-contents)
+  - [Implementing a standalone mode](#implementing-a-standalone-mode)
+  - [Naming your standalone mode](#naming-your-standalone-mode)
+  - [Update MAKEFILE.HAL](#update-makefilehal)
+  - [Update MAKEFILE.INC](#update-makefileinc)
+  - [Adding identification string of your mode](#adding-identification-string-of-your-mode)
+  - [Compiling your standalone mode](#compiling-your-standalone-mode)
+  - [Submitting your code](#submitting-your-code)
+
+
 
 This contains functionality for different StandAlone modes. The fullimage will be built given the correct compiler flags used. Build targets for these files are contained in `Makefile.inc` and `Makefile.hal`
 
 If you want to implement a new standalone mode, you need to implement the methods provided in `standalone.h`.
 Have a look at the skeleton standalone mode, in the file `lf_skeleton.c`.
 
-As it is now, you can only have one standalone mode installed at the time.  
+As it is now, you can only have one standalone mode installed at the time unless you use the dankarmulti mode (see `dankarmulti.c` on how to use it).
+
+To avoid clashes between standalone modes, protect all your static variables with a specific namespace. See how it is done in the existing standalone modes.
 
 ## Implementing a standalone mode
+^[Top](#top)
 
 We suggest you keep your standalone code inside the `armsrc/Standalone` folder. And that you name your files according to your standalone mode name.
 
@@ -41,6 +59,7 @@ void RunMod(void) {
 ````
 
 ## Naming your standalone mode
+^[Top](#top)
 
 We suggest that you follow these guidelines:
 - Use HF/LF to denote which frequency your mode is targeting.  
@@ -57,6 +76,7 @@ This leads to your next step, your DEFINE name needed in Makefile.
 
 
 ## Update MAKEFILE.HAL
+^[Top](#top)
 
 Add your mode to the `Makefile.hal` help and modes list (alphabetically):
 ```
@@ -81,6 +101,8 @@ STANDALONE_MODES_REQ_BT :=
 ```
 
 ## Update MAKEFILE.INC
+^[Top](#top)
+
 Add your source code files like the following sample in the `Makefile.inc`
 
 ```
@@ -96,6 +118,8 @@ endif
 ```
 
 ## Adding identification string of your mode
+^[Top](#top)
+
 Do please add a identification string in a function called `ModInfo` inside your source code file.
 This will enable an easy way to detect on client side which standalone mode has been installed on the device.
 
@@ -106,6 +130,8 @@ void ModInfo(void) {
 ````
 
 ## Compiling your standalone mode
+^[Top](#top)
+
 Once all this is done, you and others can now easily compile different standalone modes by just selecting one of the standalone modes (list in `Makefile.hal` or ) , e.g.:
 
 - rename  Makefile.platform.sample -> Makefile.platform
@@ -142,12 +168,16 @@ When compiling you will see a header showing what configurations your project co
 Make sure it says your standalone mode name.  
 
 ## Submitting your code
+^[Top](#top)
 
 Once you're ready to share your mode, please
 
 * add a line in CHANGELOG.md
-* add your mode in the modes table in doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md
+* add your mode in the modes table in `doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md`
+* add your mode in `tools/build_all_firmwares.sh`
 
 and submit your PR.
+
+Once approved, add also your mode in https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode
 
 Happy hacking!

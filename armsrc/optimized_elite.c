@@ -1,40 +1,36 @@
-/*****************************************************************************
- * WARNING
- *
- * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY.
- *
- * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL
- * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL,
- * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES.
- *
- * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS.
- *
- *****************************************************************************
- *
- * This file is part of loclass. It is a reconstructon of the cipher engine
- * used in iClass, and RFID techology.
- *
- * The implementation is based on the work performed by
- * Flavio D. Garcia, Gerhard de Koning Gans, Roel Verdult and
- * Milosch Meriac in the paper "Dismantling IClass".
- *
- * Copyright (C) 2014 Martin Holst Swende
- *
- * This is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as published
- * by the Free Software Foundation, or, at your option, any later version.
- *
- * This file is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
- *
- *
- *
- ****************************************************************************/
+//-----------------------------------------------------------------------------
+// Borrowed initially from https://github.com/holiman/loclass
+// Copyright (C) 2014 Martin Holst Swende
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+// WARNING
+//
+// THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY.
+//
+// USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL
+// PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL,
+// AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES.
+//
+// THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS.
+//-----------------------------------------------------------------------------
+// It is a reconstruction of the cipher engine used in iClass, and RFID techology.
+//
+// The implementation is based on the work performed by
+// Flavio D. Garcia, Gerhard de Koning Gans, Roel Verdult and
+// Milosch Meriac in the paper "Dismantling IClass".
+//-----------------------------------------------------------------------------
 #include "optimized_elite.h"
 
 #include <stdint.h>
@@ -64,7 +60,7 @@
  * @param key
  * @param dest
  */
-void permutekey(uint8_t key[8], uint8_t dest[8]) {
+void permutekey(const uint8_t key[8], uint8_t dest[8]) {
     int i;
     for (i = 0 ; i < 8 ; i++) {
         dest[i] = (((key[7] & (0x80 >> i)) >> (7 - i)) << 7) |
@@ -83,7 +79,7 @@ void permutekey(uint8_t key[8], uint8_t dest[8]) {
  * @param key
  * @param dest
  */
-void permutekey_rev(uint8_t key[8], uint8_t dest[8]) {
+void permutekey_rev(const uint8_t key[8], uint8_t dest[8]) {
     int i;
     for (i = 0 ; i < 8 ; i++) {
         dest[7 - i] = (((key[0] & (0x80 >> i)) >> (7 - i)) << 7) |
@@ -133,7 +129,7 @@ static uint8_t swap(uint8_t val) {
  * @param csn the CSN used
  * @param k output
  */
-void hash1(uint8_t csn[], uint8_t k[]) {
+void hash1(const uint8_t csn[], uint8_t k[]) {
     k[0] = csn[0] ^ csn[1] ^ csn[2] ^ csn[3] ^ csn[4] ^ csn[5] ^ csn[6] ^ csn[7];
     k[1] = csn[0] + csn[1] + csn[2] + csn[3] + csn[4] + csn[5] + csn[6] + csn[7];
     k[2] = rr(swap(csn[2] + k[1]));

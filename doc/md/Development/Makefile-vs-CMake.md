@@ -1,6 +1,21 @@
 # Makefile vs CMake
+<a id="Top"></a>
+
+
+# Table of Contents
+- [Makefile vs CMake](#makefile-vs-cmake)
+- [Table of Contents](#table-of-contents)
+  - [Client](#client)
+  - [Tools](#tools)
+  - [ARM](#arm)
+    - [Features to be used via `Makefile.platform`](#features-to-be-used-via-makefileplatform)
+    - [Other features](#other-features)
+  - [Global](#global)
+  
+
 
 ## Client
+^[Top](#top)
 
 The client can be compiled both with the historical Makefile and with a newer CMakeLists.txt.
 At the moment both are maintained because they don't perfectly overlap yet.
@@ -74,18 +89,21 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | libpm3 with SWIG Lua+Python| **no** | *ongoing* | cf libpm3_experiments branch |
 
 ## Tools
+^[Top](#top)
 
 `makefile` only at the moment
 
 | Feature | Makefile | Remarks |
 |-----|---|---|
-| Skip GPU-dependent code | `SKIPGPU=1` | to skip ht2crack5gpu tool when compiling the hitag2crack toolsuite |
+| Skip OpenCL-dependent code | `SKIPOPENCL=1` | to skip ht2crack5opencl tool when compiling the hitag2crack toolsuite |
 
 ## ARM
+^[Top](#top)
 
 `makefile` only at the moment
 
-### Features to be used via `Makefile.platform`:
+### Features to be used via `Makefile.platform`
+^[Top](#top)
 
 `SKIP_*`, `STANDALONE`
 
@@ -97,7 +115,8 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | Skip LF/HF techs in the firmware | `SKIP_`*`=1` | see `common_arm/Makefile.hal` for a list |
 | Standalone mode choice | `STANDALONE=` | see `doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md` for a list |
 
-### Other features:
+### Other features
+^[Top](#top)
 
 | Feature | Makefile | Remarks |
 |-----|---|---|
@@ -107,5 +126,6 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | Tag firmware image | `FWTAG=` | for maintainers |
 
 ## Global
+^[Top](#top)
 
 `makefile` only at the moment

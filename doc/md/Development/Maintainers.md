@@ -77,7 +77,7 @@ On some architectures, pthread library is not present:
 
 One tool requires a CUDA compilation environment, it can be skipped as well:
 
-* `make hitag2crack SKIPGPU=1` to skip ht2crack5gpu tool when compiling the hitag2crack toolsuite.
+* `make hitag2crack SKIPOPENCL=1` to skip ht2crack5opencl tool when compiling the hitag2crack toolsuite.
 
 Some unittests are available via `make check`, which is actually triggering individual targets as for `make install`.
 

@@ -1,11 +1,19 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020 sirloins based on em4x50
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// Low frequency EM4170 commands
+// Low frequency EM4x70 commands
 //-----------------------------------------------------------------------------
 
 #include "fpgaloader.h"
@@ -624,7 +632,7 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
     return bit_pos;
 }
 
-void em4x70_info(em4x70_data_t *etd) {
+void em4x70_info(em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
 
@@ -641,11 +649,11 @@ void em4x70_info(em4x70_data_t *etd) {
     }
 
     StopTicks();
-    lf_finalize();
+    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_INFO, status, tag.data, sizeof(tag.data));
 }
 
-void em4x70_write(em4x70_data_t *etd) {
+void em4x70_write(em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
 
@@ -671,11 +679,11 @@ void em4x70_write(em4x70_data_t *etd) {
     }
 
     StopTicks();
-    lf_finalize();
+    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_WRITE, status, tag.data, sizeof(tag.data));
 }
 
-void em4x70_unlock(em4x70_data_t *etd) {
+void em4x70_unlock(em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
 
@@ -704,11 +712,11 @@ void em4x70_unlock(em4x70_data_t *etd) {
     }
 
     StopTicks();
-    lf_finalize();
+    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_UNLOCK, status, tag.data, sizeof(tag.data));
 }
 
-void em4x70_auth(em4x70_data_t *etd) {
+void em4x70_auth(em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
     uint8_t response[3] = {0};
@@ -726,11 +734,11 @@ void em4x70_auth(em4x70_data_t *etd) {
     }
 
     StopTicks();
-    lf_finalize();
+    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_AUTH, status, response, sizeof(response));
 }
 
-void em4x70_write_pin(em4x70_data_t *etd) {
+void em4x70_write_pin(em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
 
@@ -766,11 +774,11 @@ void em4x70_write_pin(em4x70_data_t *etd) {
     }
 
     StopTicks();
-    lf_finalize();
+    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_WRITEPIN, status, tag.data, sizeof(tag.data));
 }
 
-void em4x70_write_key(em4x70_data_t *etd) {
+void em4x70_write_key(em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
 
@@ -804,6 +812,6 @@ void em4x70_write_key(em4x70_data_t *etd) {
     }
 
     StopTicks();
-    lf_finalize();
+    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_WRITEKEY, status, tag.data, sizeof(tag.data));
 }

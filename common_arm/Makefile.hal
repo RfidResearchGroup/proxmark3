@@ -1,3 +1,18 @@
+#-----------------------------------------------------------------------------
+# Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# See LICENSE.txt for the text of the license.
+#-----------------------------------------------------------------------------
 # Default platform if no platform specified
 PLATFORM?=PM3RDV4
 
@@ -64,6 +79,7 @@ SKIP_FELICA=1
 SKIP_NFCBARCODE=1
 SKIP_HFSNIFF=1
 SKIP_HFPLOT=1
+SKIP_ZX8211=1
 endef
 
 define KNOWN_DEFINITIONS
@@ -121,6 +137,9 @@ ifneq ($(SKIP_EM4x50),1)
 endif
 ifneq ($(SKIP_EM4x70),1)
     PLATFORM_DEFS += -DWITH_EM4x70
+endif
+ifneq ($(SKIP_ZX8211),1)
+    PLATFORM_DEFS += -DWITH_ZX8211
 endif
 
 # common HF support

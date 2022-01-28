@@ -24,6 +24,7 @@ jobs:
     env:
       PATH: C:/ProxSpace/msys2/mingw64/bin;C:/ProxSpace/msys2/usr/local/bin;C:/ProxSpace/msys2/usr/bin;C:/ProxSpace/msys2/bin
       MSYSTEM: MINGW64
+      PYTHONHOME: /mingw64
 
     steps:
       - name: ProxSpace download
@@ -71,7 +72,12 @@ jobs:
         run: make clean
 
       - name: Prepare cmake build folders
-        run: mkdir -p client/build
+        run: |
+          mkdir -p client/build
+          ln -s ../cmdscripts client/build/
+          ln -s ../luascripts client/build/
+          ln -s ../pyscripts client/build/
+          ln -s ../lualibs client/build/
 
       - name: Initiate cmake environment
         run: cmake -G"MSYS Makefiles" ..
@@ -111,6 +117,7 @@ jobs:
             python3-pip
             python3-dev
             libpython3-all-dev
+            libssl-dev
 
       - name: Install Python dependencies
         run: |
@@ -151,7 +158,12 @@ jobs:
         run: make clean
 
       - name: Prepare cmake build folders
-        run: mkdir -p client/build
+        run: |
+          mkdir -p client/build
+          ln -s ../cmdscripts client/build/
+          ln -s ../luascripts client/build/
+          ln -s ../pyscripts client/build/
+          ln -s ../lualibs client/build/
 
       - name: Initiate cmake environment
         run: cmake ..

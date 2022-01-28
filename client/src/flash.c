@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 Hector Martin "marcan" <marcan@marcansoft.com>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // ELF file flasher
 //-----------------------------------------------------------------------------
@@ -411,11 +419,15 @@ static void flash_suggest_update_bootloader(void) {
 
     PrintAndLogEx(ERR, _RED_("It is recommended that you first" _YELLOW_(" update your bootloader") _RED_(" alone,")));
     PrintAndLogEx(ERR, _RED_("reboot the Proxmark3 then only update the main firmware") "\n");
-    PrintAndLogEx(ERR, "Follow these steps :");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(ERR, "------------- " _CYAN_("Follow these steps") " -------------------");
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(ERR, " 1)   ./pm3-flash-bootrom");
     PrintAndLogEx(ERR, " 2)   ./pm3-flash-all");
     PrintAndLogEx(ERR, " 3)   ./pm3");
-    PrintAndLogEx(INFO, "--------------------------------------------------------");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---------------------------------------------------");
+    PrintAndLogEx(NORMAL, "");
     gs_printed_msg = true;
 }
 

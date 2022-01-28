@@ -1,9 +1,19 @@
-// Merlok, 2011, 2012, 2019
-// people from mifare@nethemba.com, 2010
+//-----------------------------------------------------------------------------
+// Borrowed initially from https://nethemba.com/tag/darkside-attack/
+// Copyright (C) mifare@nethemba.com, 2010
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // mifare commands
 //-----------------------------------------------------------------------------
@@ -34,10 +44,8 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     bool first_run = true;
 
     // message
-    PrintAndLogEx(INFO, "--------------------------------------------------------------------------------");
-    PrintAndLogEx(INFO, "Executing darkside attack. Expected execution time: 25sec on average");
-    PrintAndLogEx(INFO, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client");
-    PrintAndLogEx(INFO, "--------------------------------------------------------------------------------");
+    PrintAndLogEx(INFO, "Expected execution time is about 25seconds on average");
+    PrintAndLogEx(INFO, "Press pm3-button to abort");
 
     while (true) {
         clearCommandBuffer();
@@ -53,16 +61,19 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
         //flush queue
         while (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
             return PM3_EOPABORTED;
         }
 
-        PrintAndLogEx(INFO, "." NOLF);
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Running darkside " NOLF);
 
         // wait cycle
         while (true) {
             PrintAndLogEx(NORMAL, "." NOLF);
 
             if (kbd_enter_pressed()) {
+                SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
                 return PM3_EOPABORTED;
             }
 
@@ -102,7 +113,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
                 break;
             }
         }
-        PrintAndLogEx(NORMAL, "\n");
+        PrintAndLogEx(NORMAL, "");
 
         if (par_list == 0 && first_run == true) {
             PrintAndLogEx(SUCCESS, "Parity is all zero. Most likely this card sends NACK on every authentication.");
@@ -112,8 +123,9 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         uint32_t keycount = nonce2key(uid, nt, nr, ar, par_list, ks_list, &keylist);
 
         if (keycount == 0) {
-            PrintAndLogEx(FAILED, "key not found (lfsr_common_prefix list is null). Nt=%08x", nt);
-            PrintAndLogEx(FAILED, "this is expected to happen in 25%% of all cases. Trying again with a different reader nonce...");
+            PrintAndLogEx(FAILED, "Key not found (lfsr_common_prefix list is null). Nt = %08x", nt);
+            PrintAndLogEx(FAILED, "This is expected to happen in 25%% of all cases.");
+            PrintAndLogEx(FAILED, "Trying again with a different reader nonce...");
             continue;
         }
 
@@ -124,12 +136,12 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
             if (keycount == 0) {
                 free(last_keylist);
                 last_keylist = keylist;
-                PrintAndLogEx(FAILED, "no candidates found, trying again");
+                PrintAndLogEx(FAILED, "No candidates found, trying again");
                 continue;
             }
         }
 
-        PrintAndLogEx(SUCCESS, "found " _YELLOW_("%u") " candidate key%s", keycount, (keycount > 1) ? "s." : ".");
+        PrintAndLogEx(SUCCESS, "found " _YELLOW_("%u") " candidate key%s", keycount, (keycount > 1) ? "s" : "");
 
         *key = UINT64_C(-1);
         uint8_t keyBlock[PM3_CMD_DATA_SIZE];
@@ -154,7 +166,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         if (*key != UINT64_C(-1)) {
             break;
         } else {
-            PrintAndLogEx(FAILED, "all key candidates failed. Restarting darkside attack");
+            PrintAndLogEx(FAILED, "All key candidates failed. Restarting darkside");
             free(last_keylist);
             last_keylist = keylist;
             first_run = true;
@@ -327,7 +339,7 @@ int mfCheckKeys_file(uint8_t *destfn, uint64_t *key) {
 
 // PM3 imp of J-Run mf_key_brute (part 2)
 // ref: https://github.com/J-Run/mf_key_brute
-int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey) {
+int mfKeyBrute(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint64_t *resultkey) {
 
     uint64_t key64;
     uint8_t found = false;
@@ -545,7 +557,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             free(statelists[1].head.slhead);
             num_to_bytes(key64, 6, resultKey);
 
-            PrintAndLogEx(SUCCESS, "\ntarget block: %3u key type: %c  -- found valid key [ " _GREEN_("%s") " ]",
+            PrintAndLogEx(SUCCESS, "\ntarget block %4u key type %c -- found valid key [ " _GREEN_("%s") " ]",
                           package->block,
                           package->keytype ? 'B' : 'A',
                           sprint_hex_inrow(resultKey, 6)
@@ -558,7 +570,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     }
 
 out:
-    PrintAndLogEx(SUCCESS, "\ntarget block: %3u key type: %c",
+    PrintAndLogEx(SUCCESS, "\ntarget block %4u key type %c",
                   package->block,
                   package->keytype ? 'B' : 'A'
                  );
@@ -655,16 +667,15 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") " key candidates", keycnt);
 
     memset(resultKey, 0, 6);
-    uint64_t key64 = -1;
 
     // The list may still contain several key candidates. Test each of them with mfCheckKeys
     uint32_t maxkeysinblock = IfPm3Flash() ? 1000 : KEYS_IN_BLOCK;
     uint32_t max_keys_chunk = keycnt > maxkeysinblock ? maxkeysinblock : keycnt;
 
     uint8_t *mem = NULL;
-    uint8_t *p_keyblock = NULL;    
+    uint8_t *p_keyblock = NULL;
 
-    if (IfPm3Flash()) {    
+    if (IfPm3Flash()) {
 
         // used for mfCheckKeys_file, which needs a header
         mem = calloc((maxkeysinblock * 6) + 5, sizeof(uint8_t));
@@ -706,7 +717,8 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         }
 
         int res = 0;
-        key64 = 0;
+        uint64_t key64 = 0;
+
         uint32_t chunk = keycnt - i > max_keys_chunk ? max_keys_chunk : keycnt - i;
 
         // copy x keys to device.
@@ -880,7 +892,7 @@ int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidt
 }
 
 // "MAGIC" CARD
-int mfCSetUID(uint8_t *uid, uint8_t uidlen, uint8_t *atqa, uint8_t *sak, uint8_t *old_uid, uint8_t *verifed_uid, uint8_t wipecard) {
+int mfCSetUID(uint8_t *uid, uint8_t uidlen, const uint8_t *atqa, const uint8_t *sak, uint8_t *old_uid, uint8_t *verifed_uid, uint8_t wipecard) {
 
     uint8_t params = MAGIC_SINGLE;
     uint8_t block0[16];
@@ -945,7 +957,7 @@ int mfCSetUID(uint8_t *uid, uint8_t uidlen, uint8_t *atqa, uint8_t *sak, uint8_t
     return res;
 }
 
-int mfCWipe(uint8_t *uid, uint8_t *atqa, uint8_t *sak) {
+int mfCWipe(uint8_t *uid, const uint8_t *atqa, const uint8_t *sak) {
     uint8_t block0[16] = {0x01, 0x02, 0x03, 0x04, 0x04, 0x08, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBE, 0xAF};
     uint8_t blockD[16] = {0x00};
     uint8_t blockK[16] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x08, 0x77, 0x8F, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -1069,18 +1081,21 @@ int mfGen3Freeze(void) {
     }
 }
 
-int mfG3GetBlock(uint8_t blockno, uint8_t *data) {
+int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data) {
     struct p {
         uint8_t blockno;
+        uint8_t pwd[4];
     } PACKED payload;
     payload.blockno = blockno;
+    memcpy(payload.pwd, pwd, sizeof(payload.pwd));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_G3_RDBL, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_MIFARE_G4_RDBL, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_G3_RDBL, &resp, 1500)) {
-        if (resp.status != PM3_SUCCESS)
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_RDBL, &resp, 1500)) {
+        if (resp.status != PM3_SUCCESS) {
             return PM3_EUNDEF;
+        }
         memcpy(data, resp.data.asBytes, 16);
     } else {
         PrintAndLogEx(WARNING, "command execute timeout");

@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2019 Merlok
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // MIFARE Application Directory (MAD) functions
 //-----------------------------------------------------------------------------
@@ -159,7 +167,7 @@ static int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
     return PM3_SUCCESS;
 }
 
-static uint16_t madGetAID(uint8_t *sector, bool swapmad, int MADver, int sectorNo) {
+static uint16_t madGetAID(const uint8_t *sector, bool swapmad, int MADver, int sectorNo) {
     uint16_t mad;
     if (MADver == 1)
         mad = (sector[16 + 2 + (sectorNo - 1) * 2 + 1] << 8) + (sector[16 + 2 + (sectorNo - 1) * 2]);
@@ -267,7 +275,7 @@ int MADCardHolderInfoDecode(uint8_t *data, size_t datalen, bool verbose) {
     return PM3_SUCCESS;
 }
 
-static int MADInfoByteDecode(uint8_t *sector, bool swapmad, int mad_ver, bool verbose) {
+static int MADInfoByteDecode(const uint8_t *sector, bool swapmad, int mad_ver, bool verbose) {
     uint8_t info;
     if (mad_ver == 1) {
         info = sector[16 + 1] & 0x3f;

@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // utilities
 //-----------------------------------------------------------------------------
@@ -16,8 +24,6 @@
 #include <endian.h>
 #endif
 
-#define ARRAY_LENGTH( array ) ( sizeof( array ) / sizeof( *( array ) ) )
-
 // used for save/load files
 #ifndef FILE_PATH_SIZE
 # define FILE_PATH_SIZE 1000
@@ -29,6 +35,23 @@ extern bool g_pendingPrompt;
 
 #define PRINTANDLOG_PRINT 1
 #define PRINTANDLOG_LOG   2
+
+// Return error
+#define PM3_RET_ERR(err, ...)  { \
+    PrintAndLogEx(ERR, __VA_ARGS__); \
+    return err; \
+}
+
+#define PM3_RET_ERR_FREE(err, ...)  { \
+    CLIParserFree(ctx); \
+    PrintAndLogEx(ERR, __VA_ARGS__); \
+    return err; \
+}
+
+// RETurn IF ERRor
+#define PM3_RET_IF_ERR(res)                          if (res != PM3_SUCCESS) {                                               return res; }
+#define PM3_RET_IF_ERR_WITH_MSG(res, ...)            if (res != PM3_SUCCESS) {              PrintAndLogEx(ERR, __VA_ARGS__); return res; }
+#define PM3_RET_IF_ERR_MAYBE_MSG(res, verbose, ...)  if (res != PM3_SUCCESS) { if (verbose) PrintAndLogEx(ERR, __VA_ARGS__); return res; }
 
 int kbd_enter_pressed(void);
 void FillFileNameByUID(char *filenamePrefix, const uint8_t *uid, const char *ext, const int uidlen);
@@ -86,17 +109,17 @@ int param_getstr(const char *line, int paramnum, char *str, size_t buffersize);
 
 int hextobinarray(char *target, char *source);
 int hextobinstring(char *target, char *source);
-int binarraytohex(char *target, const size_t targetlen, char *source, size_t srclen);
+int binarraytohex(char *target, const size_t targetlen, const char *source, size_t srclen);
 void binarraytobinstring(char *target,  char *source, int length);
 int binstring2binarray(uint8_t *target, char *source, int length);
 
-uint8_t GetParity(uint8_t *bits, uint8_t type, int length);
+uint8_t GetParity(const uint8_t *bits, uint8_t type, int length);
 void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
 void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length);
 
 //void xor(unsigned char *dst, unsigned char *src, size_t len);
 
-uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bits);
+uint32_t PackBits(uint8_t start, uint8_t len, const uint8_t *bits);
 uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);
 
 int num_CPUs(void); // number of logical CPUs
@@ -111,7 +134,7 @@ char *str_dup(const char *src);
 char *str_ndup(const char *src, size_t len);
 int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
 int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
-int binarray_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, uint8_t *arr, int arrlen);
+int binarray_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const uint8_t *arr, int arrlen);
 
 uint32_t bitcount32(uint32_t a);
 uint64_t bitcount64(uint64_t a);

@@ -1,10 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2014 Iceman
-// Copyright (C) 2021 Merlok
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // High frequency MIFARE Desfire commands
 //-----------------------------------------------------------------------------
@@ -155,6 +162,17 @@ typedef struct aidhdr {
     uint8_t name[16];
 } PACKED aidhdr_t;
 
+typedef struct {
+    const char *aid;
+    const char *comment;
+} mfdesCommonAID_t;
+
+static const mfdesCommonAID_t commonAids[] = {
+    // AID, name/comment
+    { "\xf4\x81\x2f", "Gallagher card data application" },
+    { "\xf4\x81\x20", "Gallagher card application directory" }, // Can be 0xF48120 - 0xF4812B, but I've only ever seen 0xF48120
+};
+
 static int CmdHelp(const char *Cmd);
 
 static int CLIGetUint32Hex(CLIParserContext *ctx, uint8_t paramnum, uint32_t defaultValue, uint32_t *value, bool *valuePresent, uint8_t nlen, const char *lengthErrorStr) {
@@ -242,6 +260,16 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
     return buf;
 
 //04 01 01 01 00 1A 05
+}
+
+static char noCommentStr[1] = { 0x00 };
+static const char *getAidCommentStr(uint8_t *aid) {
+    for (int i = 0; i < ARRAYLEN(commonAids); i++) {
+        if (memcmp(aid, commonAids[i].aid, 3) == 0) {
+            return commonAids[i].comment;
+        }
+    }
+    return noCommentStr;
 }
 
 static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
@@ -794,7 +822,7 @@ static void DesFill2bPattern(
 
 static int AuthCheckDesfire(DesfireContext_t *dctx,
                             DesfireSecureChannel secureChannel,
-                            uint8_t *aid,
+                            const uint8_t *aid,
                             uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t deskeyListLen,
                             uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t aeskeyListLen,
                             uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t k3kkeyListLen,
@@ -1035,7 +1063,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0(NULL,  "aid",      "<aid>", "Use specific AID (3 hex bytes, big endian)"),
+        arg_str0(NULL,  "aid",      "<aid>", "Use specific AID (3 hex bytes, big endian)"),
         arg_str0("k",  "key",       "<Key>", "Key for checking (HEX 16 bytes)"),
         arg_str0("d",  "dict",      "<file>", "File with keys dictionary"),
         arg_lit0(NULL,  "pattern1b", "Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
@@ -1893,8 +1921,8 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("s",  "start", "<hex>", "Starting App ID as hex bytes (3 bytes, big endian)"),
-        arg_strx0("e",  "end",   "<hex>", "Last App ID as hex bytes (3 bytes, big endian)"),
+        arg_str0("s",  "start", "<hex>", "Starting App ID as hex bytes (3 bytes, big endian)"),
+        arg_str0("e",  "end",   "<hex>", "Last App ID as hex bytes (3 bytes, big endian)"),
         arg_int0("i",   "step",  "<dec>", "Increment step when bruteforcing"),
         arg_lit0("m",   "mad",   "Only bruteforce the MAD range"),
         arg_param_end
@@ -2318,36 +2346,37 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
                   "  0..3: Number of keys stored within the application (max. 14 keys)\n"\
                   "  4:    ks3 is present\n"\
                   "  5:    Use of 2 byte ISO FID, 0: No, 1: Yes\n"\
-                  "  6..7: Crypto Method 00: DES/2TDEA, 01: 3TDEA, 10: AES, 11: RFU\n"\
+                  "  6..7: Crypto Method 00: DES|2TDEA, 01: 3TDEA, 10: AES, 11: RFU\n"\
                   "  Example:\n"\
-                  "       2E = with FID, DES/2TDEA, 14 keys\n"\
+                  "       2E = with FID, DES|2TDEA, 14 keys\n"\
                   "       6E = with FID, 3TDEA, 14 keys\n"\
                   "       AE = with FID, AES, 14 keys\n"\
                   "\n"\
-                  "hf mfdes createapp --rawdata 5634122F2E4523616964313233343536 -> execute create by rawdata\n"\
-                  "hf mfdes createapp --aid 123456 --fid 2345 --dfname aid123456 -> app aid, iso file id, and iso df name is specified\n"
+                  "hf mfdes createapp --rawdata 5634122F2E4523616964313233343536      -> execute create by rawdata\n"\
+                  "hf mfdes createapp --aid 123456 --fid 2345 --dfname aid123456      -> app aid, iso file id, and iso df name is specified\n"
                   "hf mfdes createapp --aid 123456 --fid 2345 --dfname aid123456 --dstalgo aes -> with algorithm for key AES");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "show APDU requests and responses"),
         arg_lit0("v",  "verbose", "show technical data"),
-        arg_int0("n",  "keyno",   "<keyno>", "Key number"),
-        arg_str0("t",  "algo",    "<DES/2TDEA/3TDEA/AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
-        arg_str0("k",  "key",     "<Key>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
-        arg_str0("f",  "kdf",     "<none/AN10922/gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
+        arg_int0("n",  "keyno",   "<dec>", "Key number"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo: DES, 2TDEA, 3TDEA, AES"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("f",  "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF): None, AN10922, Gallagher"),
         arg_str0("i",  "kdfi",    "<kdfi>",  "KDF input (HEX 1-31 bytes)"),
-        arg_str0("m",  "cmode",   "<plain/mac/encrypt>", "Communicaton mode: plain/mac/encrypt"),
-        arg_str0("c",  "ccset",   "<native/niso/iso>", "Communicaton command set: native/niso/iso"),
-        arg_str0("s",  "schann",  "<d40/ev1/ev2/lrp>", "Secure channel: d40/ev1/ev2/lrp"),
-        arg_str0(NULL, "rawdata", "<rawdata hex>", "Rawdata that sends to command"),
-        arg_str0(NULL, "aid",     "<app id hex>", "Application ID for create. Mandatory. (3 hex bytes, big endian)"),
-        arg_str0(NULL, "fid",     "<file id hex>", "ISO file ID. Forbidden values: 0000 3F00, 3FFF, FFFF. (2 hex bytes, big endian). If specified - enable iso file id over all the files in the app."),
-        arg_str0(NULL, "dfname",  "<df name str>", "ISO DF Name 1..16 chars string"),
-        arg_str0(NULL, "ks1",     "<key settings HEX>", "Key settings 1 (HEX 1 byte). Application Master Key Settings. default 0x0f"),
-        arg_str0(NULL, "ks2",     "<key settings HEX>", "Key settings 2 (HEX 1 byte). default 0x0e"),
-        arg_str0(NULL, "dstalgo", "<DES/2TDEA/3TDEA/AES>",  "Application key crypt algo: DES, 2TDEA, 3TDEA, AES. default DES"),
-        arg_int0(NULL, "numkeys", "<number of keys>",  "Keys count. 0x00..0x0e. default 0x0e"),
+        arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode: plain/mac/encrypt"),
+        arg_str0("c",  "ccset",   "<native|niso|iso>", "Communicaton command set: native/niso/iso"),
+        arg_str0("s",  "schann",  "<d40|ev1|ev2|lrp>", "Secure channel: d40/ev1/ev2/lrp"),
+        arg_str0(NULL, "rawdata", "<hex>", "Raw data that sends to command"),
+        arg_str0(NULL, "aid",     "<hex>", "Application ID for create. Mandatory. (3 hex bytes, big endian)"),
+        arg_str0(NULL, "fid",     "<hex>", "ISO file ID. Forbidden values: 0000 3F00, 3FFF, FFFF. (2 hex bytes, big endian). If specified - enable iso file id over all the files in the app."),
+        arg_str0(NULL, "dfname",  "<string>", "ISO DF Name 1..16 chars string"),
+        arg_str0(NULL, "ks1",     "<hex>", "Key settings 1 (HEX 1 byte). Application Master Key Settings. default 0x0f"),
+        arg_str0(NULL, "ks2",     "<hex>", "Key settings 2 (HEX 1 byte). default 0x0e"),
+        arg_str0(NULL, "dstalgo", "<DES|2TDEA|3TDEA|AES>",  "Application key crypt algo: DES, 2TDEA, 3TDEA, AES. default DES"),
+        arg_int0(NULL, "numkeys", "<dec>",  "Number of keys 0x00..0x0e. default 0x0e"),
+        arg_lit0(NULL, "no-auth", "Execute without authentication"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2399,6 +2428,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     }
 
     int keycount = arg_get_int_def(ctx, 18, 0x0e);
+    bool noauth = arg_get_lit(ctx, 19);
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
@@ -2423,7 +2453,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, 0x000000, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
@@ -3056,8 +3086,13 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
 
     if (buflen >= 3) {
         PrintAndLogEx(INFO, "---- " _CYAN_("AID list") " ----");
-        for (int i = 0; i < buflen; i += 3)
-            PrintAndLogEx(INFO, "AID: %06x", DesfireAIDByteToUint(&buf[i]));
+        for (int i = 0; i < buflen; i += 3) {
+            const char *commentStr = getAidCommentStr(&buf[i]);
+            if ((void *) commentStr == &noCommentStr)
+                PrintAndLogEx(INFO, "AID: %06x", DesfireAIDByteToUint(&buf[i]));
+            else
+                PrintAndLogEx(INFO, "AID: %06x (%s)", DesfireAIDByteToUint(&buf[i]), commentStr);
+        }
     } else {
         PrintAndLogEx(INFO, "There is no applications on the card");
     }
@@ -4615,7 +4650,12 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx, uint8_t fnum, int fil
 
     PrintAndLogEx(INFO, "------------------------------- " _CYAN_("File %02x data") " -------------------------------", fnum);
 
-    uint8_t resp[2048] = {0};
+    uint8_t *resp  = calloc(DESFIRE_BUFFER_SIZE, 1);
+    if (resp == NULL) {
+        PrintAndLogEx(ERR, "Desfire calloc " _RED_("error"));
+        DropField();
+        return PM3_EMALLOC;
+    }
     size_t resplen = 0;
 
     if (filetype == RFTData) {
@@ -4623,6 +4663,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx, uint8_t fnum, int fil
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire ReadFile command " _RED_("error") ". Result: %d", res);
             DropField();
+            free(resp);
             return PM3_ESOFT;
         }
 
@@ -4640,6 +4681,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx, uint8_t fnum, int fil
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire GetValue operation " _RED_("error") ". Result: %d", res);
             DropField();
+            free(resp);
             return PM3_ESOFT;
         }
         PrintAndLogEx(SUCCESS, "Read file 0x%02x value: %d (0x%08x)", fnum, value, value);
@@ -4652,6 +4694,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx, uint8_t fnum, int fil
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Desfire ReadRecords (len=1) command " _RED_("error") ". Result: %d", res);
                 DropField();
+                free(resp);
                 return PM3_ESOFT;
             }
             reclen = resplen;
@@ -4666,6 +4709,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx, uint8_t fnum, int fil
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Desfire ReadRecords command " _RED_("error") ". Result: %d", res);
                 DropField();
+                free(resp);
                 return PM3_ESOFT;
             }
         }
@@ -4690,6 +4734,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx, uint8_t fnum, int fil
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire ReadFile command " _RED_("error") ". Result: %d", res);
             DropField();
+            free(resp);
             return PM3_ESOFT;
         }
 
@@ -4717,6 +4762,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx, uint8_t fnum, int fil
         }
     }
 
+    free(resp);
     return PM3_SUCCESS;
 }
 

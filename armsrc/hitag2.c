@@ -1,24 +1,18 @@
 //-----------------------------------------------------------------------------
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
-//-----------------------------------------------------------------------------
-// Hitag2 emulation
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// (c) 2009 Henryk Plötz <henryk@ploetzli.ch>
-//-----------------------------------------------------------------------------
-// Hitag2 complete rewrite of the code
-// - Fixed modulation/encoding issues
-// - Rewrote code for transponder emulation
-// - Added sniffing of transponder communication
-// - Added reader functionality
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
 //
-// (c) 2012 Roel Verdult
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// Piwi, 2019
-// Iceman, 2019
-// Anon, 2019
-// Doegox, 2020
 
 #define DBG  if (g_dbglevel >= DBG_EXTENDED)
 
@@ -153,8 +147,8 @@ static void hitag2_init(void) {
 
 /*
 // sim
-static void hitag_send_bit(int bit) {
-    LED_A_ON();
+static void hitag_send_bit(int bit, bool ledcontrol) {
+    if (ledcontrol) LED_A_ON();
 
     // Reset clock for the next bit
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
@@ -174,7 +168,7 @@ static void hitag_send_bit(int bit) {
         LOW(GPIO_SSC_DOUT);
         while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * HITAG_T_TAG_FULL_PERIOD);
     }
-    LED_A_OFF();
+    if (ledcontrol) LED_A_OFF();
 }
 
 // sim
@@ -314,8 +308,8 @@ static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_
         break;
     }
 
-    // LogTrace(rx, nbytes(rxlen), 0, 0, NULL, false);
-    // LogTrace(tx, nbytes(txlen), 0, 0, NULL, true);
+    // LogTraceBits(rx, rxlen, 0, 0, false);
+    // LogTraceBits(tx, txlen, 0, 0, true);
 
     if (tag.crypto_active) {
         hitag2_cipher_transcrypt(&(tag.cs), tx, *txlen / 8, *txlen % 8);
@@ -324,9 +318,9 @@ static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_
 
 // reader/writer
 // returns how long it took
-static uint32_t hitag_reader_send_bit(int bit) {
+static uint32_t hitag_reader_send_bit(int bit, bool ledcontrol) {
     uint32_t wait = 0;
-    LED_A_ON();
+    if (ledcontrol) LED_A_ON();
     // Binary pulse length modulation (BPLM) is used to encode the data stream
     // This means that a transmission of a one takes longer than that of a zero
 
@@ -350,17 +344,17 @@ static uint32_t hitag_reader_send_bit(int bit) {
         wait += HITAG_T_1 - HITAG_T_LOW;
     }
 
-    LED_A_OFF();
+    if (ledcontrol) LED_A_OFF();
     return wait;
 }
 
 // reader / writer commands
-static uint32_t hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) {
+static uint32_t hitag_reader_send_frame(const uint8_t *frame, size_t frame_len, bool ledcontrol) {
 
     uint32_t wait = 0;
     // Send the content of the frame
     for (size_t i = 0; i < frame_len; i++) {
-        wait += hitag_reader_send_bit((frame[i / 8] >> (7 - (i % 8))) & 1);
+        wait += hitag_reader_send_bit((frame[i / 8] >> (7 - (i % 8))) & 1, ledcontrol);
     }
 
     // Enable modulation, which means, drop the field
@@ -633,7 +627,7 @@ static bool hitag2_write_page(uint8_t *rx, const size_t rxlen, uint8_t *tx, size
                 memcpy(tx, writedata, 4);
                 writestate = WRITE_STATE_PROG;
             } else {
-                Dbprintf("hitag2_write_page: Page number was not received correctly: rxlen=%d rx=%02x%02x%02x%02x",
+                Dbprintf("hitag2_write_page: Page number was not received correctly: rxlen %d rx %02x%02x%02x%02x",
                          rxlen, rx[0], rx[1], rx[2], rx[3]);
                 bSuccessful = false;
                 return false;
@@ -648,7 +642,7 @@ static bool hitag2_write_page(uint8_t *rx, const size_t rxlen, uint8_t *tx, size
             }
             return false;
         default:
-            DbpString("hitag2_write_page: Unknown state %d");
+            Dbprintf("hitag2_write_page: Unknown state %d", writestate);
             bSuccessful = false;
             return false;
     }
@@ -660,8 +654,8 @@ static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
     // Reset the transmission frame length
     *txlen = 0;
 
-    if (bPwd && !bAuthenticating && write) {
-        if (!hitag2_write_page(rx, rxlen, tx, txlen)) {
+    if (bPwd && (bAuthenticating == false) && write) {
+        if (hitag2_write_page(rx, rxlen, tx, txlen) == false) {
             return false;
         }
     } else {
@@ -682,7 +676,7 @@ static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
             // Received UID, tag password
             case 32: {
                 // stage 1, got UID
-                if (!bPwd) {
+                if (bPwd == false) {
                     bPwd = true;
                     bAuthenticating = true;
                     memcpy(tx, password, 4);
@@ -916,7 +910,7 @@ static bool hitag2_test_auth_attempts(uint8_t *rx, const size_t rxlen, uint8_t *
 
         // Received UID, crypto tag answer, or read block response
         case 32: {
-            if (!bCrypto) {
+            if (bCrypto == false) {
                 *txlen = 64;
                 memcpy(tx, NrAr, 8);
                 bCrypto = true;
@@ -994,9 +988,9 @@ void EloadHitag(uint8_t *data, uint16_t len) {
 // T1     26-32 fc  (total time ONE)
 // Tstop  36 >  fc  (high field stop limit)
 // Tlow   4-10  fc  (reader field low time)
-void SniffHitag2(void) {
+void SniffHitag2(bool ledcontrol) {
     DbpString("Starting Hitag2 sniffing");
-    LED_D_ON();
+    if (ledcontrol) LED_D_ON();
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
@@ -1006,7 +1000,7 @@ void SniffHitag2(void) {
     set_tracing(true);
 
     /*
-        lf_init(false, false);
+        lf_init(false, false, ledcontrol);
 
         // no logging of the raw signal
         g_logging = lf_get_reader_modulation();
@@ -1100,7 +1094,7 @@ void SniffHitag2(void) {
                 if (rxlen == 0)
                     continue;
 
-                LogTrace(rx, nbytes(rxlen), 0, 0, NULL, false);
+                LogTraceBits(rx, rxlen, 0, 0, false);
                 total_count += nbytes(rxlen);
             } else {
                 // decode reader comms
@@ -1108,13 +1102,13 @@ void SniffHitag2(void) {
                 total_count += rxlen;
                 // Pack the response into a byte array
 
-                // LogTrace(rx, nbytes(rdr), 0, 0, NULL, true);
+                // LogTraceBits(rx, rdr, 0, 0, true);
                 // total_count += nbytes(rdr);
             }
-            LED_A_INV();
+            if (ledcontrol) LED_A_INV();
         }
 
-        lf_finalize();
+        lf_finalize(ledcontrol);
 
         Dbprintf("Collected %u bytes", total_count);
 
@@ -1152,7 +1146,7 @@ void SniffHitag2(void) {
     AT91C_BASE_TCB->TCB_BCR = 1;
 
     int frame_count = 0, response = 0, overflow = 0, lastbit = 1, tag_sof = 4;
-    bool rising_edge = false, reader_frame = false, bSkip = true;
+    bool rising_edge, reader_frame = false, bSkip = true;
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
 
@@ -1183,7 +1177,7 @@ void SniffHitag2(void) {
                 // Shorter periods will only happen with reader frames
                 if (reader_frame == false && rising_edge && ra < HITAG_T_TAG_CAPTURE_ONE_HALF) {
                     // Switch from tag to reader capture
-                    LED_C_OFF();
+                    if (ledcontrol) LED_C_OFF();
                     reader_frame = true;
                     rxlen = 0;
                 }
@@ -1199,7 +1193,7 @@ void SniffHitag2(void) {
                 overflow = 0;
 
                 if (reader_frame) {
-                    LED_B_ON();
+                    if (ledcontrol) LED_B_ON();
                     // Capture reader frame
                     if (ra >= HITAG_T_STOP) {
 //                      if (rxlen != 0) {
@@ -1218,7 +1212,7 @@ void SniffHitag2(void) {
                     }
 
                 } else {
-                    LED_C_ON();
+                    if (ledcontrol) LED_C_ON();
                     // Capture tag frame (manchester decoding using only falling edges)
                     if (ra >= HITAG_T_EOF) {
 //                      if (rxlen != 0) {
@@ -1265,7 +1259,7 @@ void SniffHitag2(void) {
         // Check if frame was captured
         if (rxlen) {
             frame_count++;
-            LogTrace(rx, nbytes(rxlen), response, 0, NULL, reader_frame);
+            LogTraceBits(rx, rxlen, response, 0, reader_frame);
 
             // Check if we recognize a valid authentication attempt
             if (nbytes(rxlen) == 8) {
@@ -1285,8 +1279,10 @@ void SniffHitag2(void) {
             tag_sof = 4;
             overflow = 0;
 
-            LED_B_OFF();
-            LED_C_OFF();
+            if (ledcontrol) {
+                LED_B_OFF();
+                LED_C_OFF();
+            }
         } else {
             // Save the timer overflow, will be 0 when frame was received
             overflow += (AT91C_BASE_TC1->TC_CV / HITAG_T0);
@@ -1301,7 +1297,7 @@ void SniffHitag2(void) {
         AT91C_BASE_TCB->TCB_BCR = 1;
     }
 
-    LEDsoff();
+    if (ledcontrol) LEDsoff();
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
 
@@ -1314,7 +1310,7 @@ void SniffHitag2(void) {
 }
 
 // Hitag2 simulation
-void SimulateHitag2(void) {
+void SimulateHitag2(bool ledcontrol) {
 
     BigBuf_free();
     BigBuf_Clear_ext(false);
@@ -1322,7 +1318,7 @@ void SimulateHitag2(void) {
     set_tracing(true);
 
     // empties bigbuff etc
-    lf_init(false, true);
+    lf_init(false, true, ledcontrol);
 
     int response = 0;
     uint8_t rx[HITAG_FRAME_LEN] = {0};
@@ -1367,10 +1363,12 @@ void SimulateHitag2(void) {
         // use malloc
         initSampleBufferEx(&signal_size, true);
 
-        LED_D_ON();
+        if (ledcontrol) {
+            LED_D_ON();
+            LED_A_OFF();
+        }
 
 //        lf_reset_counter();
-        LED_A_OFF();
         WDT_HIT();
 
         /*
@@ -1409,7 +1407,7 @@ void SimulateHitag2(void) {
                 break;
             }
 
-            LED_A_ON();
+            if (ledcontrol) LED_A_ON();
 
             // Are we dealing with the first incoming edge
             if (waiting_for_first_edge) {
@@ -1448,12 +1446,12 @@ void SimulateHitag2(void) {
             }
         }
 
-        LED_D_OFF();
+        if (ledcontrol) LED_D_OFF();
 
         // If there is no response, just repeat the loop
         if (!detected_modulation) continue;
 
-        LED_A_OFF();
+        if (ledcontrol) LED_A_OFF();
 
         // Make sure we always have an even number of samples. This fixes the problem
         // of ending the manchester decoding with a zero. See the example below where
@@ -1466,7 +1464,7 @@ void SimulateHitag2(void) {
             nrz_samples[nrzs++] = reader_modulation;
         }
 
-        LED_B_ON();
+        if (ledcontrol) LED_B_ON();
 
         // decode bitstream
         manrawdecode((uint8_t *)nrz_samples, &nrzs, true, 0);
@@ -1493,7 +1491,7 @@ void SimulateHitag2(void) {
         // Check if frame was captured
         if (rxlen > 4) {
 
-            LogTrace(rx, nbytes(rxlen), response, response, NULL, true);
+            LogTraceBits(rx, rxlen, response, response, true);
 
             // Process the incoming frame (rx) and prepare the outgoing frame (tx)
             hitag2_handle_reader_command(rx, rxlen, tx, &txlen);
@@ -1509,21 +1507,21 @@ void SimulateHitag2(void) {
             if (txlen) {
                 // Transmit the tag frame
                 //hitag_send_frame(tx, txlen);
-                lf_manchester_send_bytes(tx, txlen);
+                lf_manchester_send_bytes(tx, txlen, ledcontrol);
 
                 // Store the frame in the trace
-                LogTrace(tx, nbytes(txlen), 0, 0, NULL, false);
+                LogTraceBits(tx, txlen, 0, 0, false);
             }
 
             // Reset the received frame and response timing info
             memset(rx, 0x00, sizeof(rx));
             response = 0;
 
-            LED_B_OFF();
+            if (ledcontrol) LED_B_OFF();
         }
     }
 
-    lf_finalize();
+    lf_finalize(ledcontrol);
 
     // release allocated memory from BigBuff.
     BigBuf_free();
@@ -1533,7 +1531,7 @@ void SimulateHitag2(void) {
 //    reply_ng(CMD_LF_HITAG_SIMULATE, (checked == -1) ? PM3_EOPABORTED : PM3_SUCCESS, (uint8_t *)tag.sectors, tag_size);
 }
 
-void ReaderHitag(hitag_function htf, hitag_data *htd) {
+void ReaderHitag(hitag_function htf, hitag_data *htd, bool ledcontrol) {
 
     uint32_t command_start = 0, command_duration = 0;
     uint32_t response_start = 0, response_duration = 0;
@@ -1644,7 +1642,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         }
     }
 
-    LED_D_ON();
+    if (ledcontrol) LED_D_ON();
 
     // hitag2 state machine?
     hitag2_init();
@@ -1677,7 +1675,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     }
 
     // init as reader
-    lf_init(true, false);
+    lf_init(true, false, ledcontrol);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     uint8_t tag_modulation;
@@ -1762,7 +1760,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             command_start += t_wait_2;
         }
         // Transmit the reader frame
-        command_duration = hitag_reader_send_frame(tx, txlen);
+        command_duration = hitag_reader_send_frame(tx, txlen, ledcontrol);
         response_start = command_start + command_duration;
 
         // Let the antenna and ADC values settle
@@ -1842,7 +1840,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         // and to be able to overwrite the first samples with the trace (since they currently
         // still use the same memory space)
         if (txlen > 0) {
-            LogTrace(tx, nbytes(txlen), command_start, command_start + command_duration, NULL, true);
+            LogTraceBits(tx, txlen, command_start, command_start + command_duration, true);
         }
 
         // Reset values for receiving frames
@@ -1863,7 +1861,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             nrz_samples[nrzs++] = tag_modulation;
         }
 
-        LED_B_ON();
+        if (ledcontrol) LED_B_ON();
 
         // decode bitstream
         manrawdecode((uint8_t *)nrz_samples, &nrzs, true, 0);
@@ -1902,7 +1900,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         // Check if frame was captured and store it
         if (rxlen > 0) {
 
-            LogTrace(rx, nbytes(rxlen), response_start, response_start + response_duration, NULL, false);
+            LogTraceBits(rx, rxlen, response_start, response_start + response_duration, false);
 
 // TODO when using cumulative time for command_start, pm3 doesn't reply anymore, e.g. on lf hitag reader --23 -k 4F4E4D494B52
 // Use delta time?
@@ -1913,10 +1911,15 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     }
 
 out:
-    lf_finalize();
+    lf_finalize(ledcontrol);
 
     // release allocated memory from BigBuff.
     BigBuf_free();
+    //
+    if (checked == -1) {
+        // user interupted
+        reply_mix(CMD_ACK, false, 0, 0, 0, 0);
+    }
 
     if (bSuccessful)
         reply_mix(CMD_ACK, bSuccessful, 0, 0, (uint8_t *)tag.sectors, tag_size);
@@ -1924,7 +1927,7 @@ out:
         reply_mix(CMD_ACK, bSuccessful, 0, 0, 0, 0);
 }
 
-void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
+void WriterHitag(hitag_function htf, hitag_data *htd, int page, bool ledcontrol) {
 
     uint32_t command_start = 0;
     uint32_t command_duration = 0;
@@ -1986,12 +1989,12 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         break;
     }
 
-    LED_D_ON();
+    if (ledcontrol) LED_D_ON();
 
     hitag2_init();
 
     // init as reader
-    lf_init(true, false);
+    lf_init(true, false, ledcontrol);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     // Tag specific configuration settings (sof, timings, etc.)
@@ -2081,7 +2084,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         }
 
         // Transmit the reader frame
-        command_duration = hitag_reader_send_frame(tx, txlen);
+        command_duration = hitag_reader_send_frame(tx, txlen, ledcontrol);
 
         response_start = command_start + command_duration;
 
@@ -2165,7 +2168,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         // and to be able to overwrite the first samples with the trace (since they currently
         // still use the same memory space)
         if (txlen > 0) {
-            LogTrace(tx, nbytes(txlen), command_start, command_start + command_duration, NULL, true);
+            LogTraceBits(tx, txlen, command_start, command_start + command_duration, true);
         }
 
         // Reset values for receiving frames
@@ -2186,7 +2189,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
             nrz_samples[nrzs++] = tag_modulation;
         }
 
-        LED_B_ON();
+        if (ledcontrol) LED_B_ON();
 
         // decode bitstream
         manrawdecode((uint8_t *)nrz_samples, &nrzs, true, 0);
@@ -2223,17 +2226,21 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
 
         // Check if frame was captured and store it
         if (rxlen > 0) {
-            LogTrace(rx, nbytes(rxlen), response_start, response_start + response_duration, NULL, false);
+            LogTraceBits(rx, rxlen, response_start, response_start + response_duration, false);
             command_start = 0;
         }
     }
 
 
 out:
-    lf_finalize();
+    lf_finalize(ledcontrol);
 
     // release allocated memory from BigBuff.
     BigBuf_free();
 
-    reply_mix(CMD_ACK, bSuccessful, 0, 0, (uint8_t *)tag.sectors, tag_size);
+    if (checked == -1) {
+        reply_mix(CMD_ACK, false, 0, 0, 0, 0);
+    } else {
+        reply_mix(CMD_ACK, bSuccessful, 0, 0, (uint8_t *)tag.sectors, tag_size);
+    }
 }

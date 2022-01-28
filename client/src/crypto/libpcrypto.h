@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2018, 2021 Merlok
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // crypto commands
 //-----------------------------------------------------------------------------
@@ -47,11 +55,11 @@ char *ecdsa_get_error(int ret);
 
 int ecdsa_nist_test(bool verbose);
 
-void bin_xor(uint8_t *d1, uint8_t *d2, size_t len);
+void bin_xor(uint8_t *d1, const uint8_t *d2, size_t len);
 
 #define ISO9797_M2_PAD_BYTE 0x80
 void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_t sdatalen, size_t blocklen);
-size_t FindISO9797M2PaddingDataLen(uint8_t *data, size_t datalen);
+size_t FindISO9797M2PaddingDataLen(const uint8_t *data, size_t datalen);
 
 
 #endif /* libpcrypto.h */

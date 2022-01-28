@@ -388,7 +388,7 @@ void find_state(const uint candidate_index_base,
 	for (uint i = lid; i < 4; i+= lsize) checks[i] = _checks[i];
 	#endif
 
-	// threads syncronization
+	// threads synchronization
 	barrier (CLK_LOCAL_MEM_FENCE);
 	#else
 	#define keystream _keystream

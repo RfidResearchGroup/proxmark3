@@ -79,7 +79,7 @@ begin
         to_arm_shiftreg <= adc_d;
     else begin
         to_arm_shiftreg[7:1] <= to_arm_shiftreg[6:0];
-        // simulation showed a glitch occuring due to the LSB of the shifter
+        // simulation showed a glitch occurring due to the LSB of the shifter
         // not being set as we shift bits out
         // this ensures the ssp_din remains low after a transfer and suppresses
         // the glitch that would occur when the last data shifted out ended in

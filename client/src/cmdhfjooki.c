@@ -1,10 +1,19 @@
 //-----------------------------------------------------------------------------
-// Ultralight Code (c) 2021 Iceman
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// High frequency MIFARE ULTRALIGHT / Jooki commands
+// High frequency Jooki commands
 //-----------------------------------------------------------------------------
 #include "cmdhfjooki.h"
 #include <ctype.h>
@@ -135,7 +144,7 @@ static int jooki_encode(uint8_t *iv, uint8_t tid, uint8_t fid, uint8_t *uid, uin
         return PM3_EINVARG;
     }
 
-    uint8_t d[JOOKI_PLAIN_LEN] = {iv[0], iv[1], iv[2], tid, fid, uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6]};
+    const uint8_t d[JOOKI_PLAIN_LEN] = {iv[0], iv[1], iv[2], tid, fid, uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6]};
     uint8_t enc[JOOKI_PLAIN_LEN] = {0};
     for (uint8_t i = 0; i < JOOKI_PLAIN_LEN; i++) {
 

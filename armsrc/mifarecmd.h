@@ -1,12 +1,18 @@
 //-----------------------------------------------------------------------------
-// Jonathan Westhues, Aug 2005
-// Gerhard de Koning Gans, April 2008, May 2011
+// Copyright (C) Gerhard de Koning Gans - May 2008
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
-//-----------------------------------------------------------------------------
-// Definitions internal to the app source.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 #ifndef __MIFARECMD_H
 #define __MIFARECMD_H
@@ -49,8 +55,8 @@ void MifareGen3UID(uint8_t uidlen, uint8_t *uid); // Gen 3 magic card set UID wi
 void MifareGen3Blk(uint8_t block_len, uint8_t *block); // Gen 3 magic card overwrite manufacturer block
 void MifareGen3Freez(void); // Gen 3 magic card lock further UID changes
 
-// MFC GEN3 GTU
-void MifareG3ReadBlk(uint8_t blockno);
+// MFC GEN4 GTU
+void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd);
 
 void MifareSetMod(uint8_t *datain);
 void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key);

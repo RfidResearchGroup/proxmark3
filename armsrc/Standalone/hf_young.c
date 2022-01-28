@@ -1,10 +1,18 @@
 //-----------------------------------------------------------------------------
-// Craig Young, 2014
-// Christian Herrmann, 2017
+// Copyright (C) Craig Young, 2014
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // main code for HF standalone mode Mifare /sniff/emulation by Craig Young
 //-----------------------------------------------------------------------------
@@ -228,7 +236,7 @@ void RunMod(void) {
                 int button_pressed = BUTTON_HELD(1000);
                 if (button_pressed == BUTTON_NO_CLICK) {  // No button action, proceed with sim
 
-                    uint8_t flags = FLAG_4B_UID_IN_DATA;
+                    uint16_t flags = FLAG_4B_UID_IN_DATA;
                     uint8_t data[PM3_CMD_DATA_SIZE] = {0}; // in case there is a read command received we shouldn't break
 
                     memcpy(data, uids[selected].uid, uids[selected].uidlen);
@@ -256,6 +264,9 @@ void RunMod(void) {
                         SimulateIso14443aTag(2, flags, data, 0);
                     } else if (uids[selected].sak == 0x20 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0x03) {
                         DbpString("Mifare DESFire");
+                        SimulateIso14443aTag(3, flags, data, 0);
+                    } else if (uids[selected].sak == 0x20 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0x03) {
+                        DbpString("Mifare DESFire Ev1/Plus/JCOP");
                         SimulateIso14443aTag(3, flags, data, 0);
                     } else {
                         Dbprintf("Unrecognized tag type -- defaulting to Mifare Classic emulation");

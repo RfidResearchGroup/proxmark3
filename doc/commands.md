@@ -74,7 +74,6 @@ Check column "offline" for their availability.
 |`analyse crc            `|Y       |`Stub method for CRC evaluations`
 |`analyse chksum         `|Y       |`Checksum with adding, masking and one's complement`
 |`analyse dates          `|Y       |`Look for datestamps in a given array of bytes`
-|`analyse tea            `|Y       |`Crypto TEA test`
 |`analyse lfsr           `|Y       |`LFSR tests`
 |`analyse a              `|Y       |`num bits test`
 |`analyse nuid           `|Y       |`create NUID from 7byte UID`
@@ -317,6 +316,33 @@ Check column "offline" for their availability.
 |`hf fido assert         `|N       |`FIDO2 GetAssertion command.`
 
 
+### hf gallagher
+
+ { Gallagher DESFire RFIDs...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf gallagher help      `|Y       |`This help`
+|`hf gallagher reader    `|N       |`Read & decode all Gallagher credentials on a DESFire card`
+|`hf gallagher clone     `|N       |`Add Gallagher credentials to a DESFire card`
+|`hf gallagher delete    `|N       |`Delete Gallagher credentials from a DESFire card`
+|`hf gallagher diversifykey`|Y       |`Diversify Gallagher key`
+
+
+### hf ksx6924
+
+ { KS X 6924 (T-Money, Snapper+) RFIDs }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf ksx6924 help        `|Y       |`This help`
+|`hf ksx6924 balance     `|N       |`Get current purse balance`
+|`hf ksx6924 info        `|N       |`Get info about a KS X 6924 (T-Money, Snapper+) transit card`
+|`hf ksx6924 initialize  `|N       |`Perform transaction initialization (Mpda)`
+|`hf ksx6924 prec        `|N       |`Send proprietary get record command (CLA=90, INS=4C)`
+|`hf ksx6924 select      `|N       |`Select application, and leave field up`
+
+
 ### hf jooki
 
  { Jooki RFIDs...                      }
@@ -358,7 +384,7 @@ Check column "offline" for their availability.
 |`hf iclass encrypt      `|Y       |`Encrypt given block data`
 |`hf iclass decrypt      `|Y       |`Decrypt given block data or tag dump file`
 |`hf iclass managekeys   `|Y       |`Manage keys to use with iclass commands`
-|`hf iclass permutekey   `|N       |`Permute function from 'heart of darkness' paper`
+|`hf iclass permutekey   `|Y       |`Permute function from 'heart of darkness' paper`
 |`hf iclass view         `|Y       |`Display content from tag dump file`
 
 
@@ -417,6 +443,7 @@ Check column "offline" for their availability.
 |`hf mf decrypt          `|Y       |`[nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace`
 |`hf mf supercard        `|N       |`Extract info from a `super card``
 |`hf mf auth4            `|N       |`ISO14443-4 AES authentication`
+|`hf mf acl              `|Y       |`Decode and print MIFARE Classic access rights bytes`
 |`hf mf dump             `|N       |`Dump MIFARE Classic tag to binary file`
 |`hf mf mad              `|N       |`Checks and prints MAD`
 |`hf mf ndefread         `|N       |`Prints NDEF records from card`
@@ -630,7 +657,7 @@ Check column "offline" for their availability.
 |`hw tearoff             `|N       |`Program a tearoff hook for the next command supporting tearoff`
 |`hw tia                 `|N       |`Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider`
 |`hw tune                `|N       |`Measure antenna tuning`
-|`hw version             `|N       |`Show version information about the connected Proxmark3`
+|`hw version             `|Y       |`Show version information about the client and the connected Proxmark3, if any`
 
 
 ### lf

@@ -1,12 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
-// Modified 2010-2012 by <adrian -at- atrox.at>
-// Modified 2012 by <vsza at vsza.hu>
-// Modified 2018 by <iceman>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // High frequency ISO15693 commands
 //-----------------------------------------------------------------------------
@@ -660,7 +665,7 @@ static int NxpSysInfo(uint8_t *uid) {
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "iso15693 timeout");
         DropField();
         return PM3_ETIMEOUT;
@@ -1344,8 +1349,7 @@ static int CmdHF15Dump(const char *Cmd) {
     uint8_t data[256 * 4] = {0};
     memset(data, 0, sizeof(data));
 
-    PrintAndLogEx(INFO, "." NOLF);
-    for (int retry = 0; retry < 5; retry++) {
+    for (int retry = 0; (retry < 5 && blocknum < 0x100); retry++) {
 
         req[10] = blocknum;
         AddCrc15(req, 11);
@@ -1392,14 +1396,13 @@ static int CmdHF15Dump(const char *Cmd) {
             retry = 0;
             blocknum++;
 
-            PrintAndLogEx(NORMAL, "." NOLF);
-            fflush(stdout);
+            PrintAndLogEx(INPLACE, "blk %3d", blocknum);
         }
     }
 
     DropField();
 
-    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "\n");
     PrintAndLogEx(INFO, "block#   | data         |lck| ascii");
     PrintAndLogEx(INFO, "---------+--------------+---+----------");
     for (int i = 0; i < blocknum; i++) {
@@ -1452,7 +1455,7 @@ static int CmdHF15Raw(const char *Cmd) {
         arg_lit0("c",  "crc", "calculate and append CRC"),
         arg_lit0("k",  NULL, "keep signal field ON after receive"),
         arg_lit0("r",  NULL, "do not read response"),
-        arg_strx1("d", "data", "<hex>", "raw bytes to send"),
+        arg_str1("d", "data", "<hex>", "raw bytes to send"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

@@ -1,8 +1,17 @@
 //-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Low frequency Honeywell NexWatch tag commands
 // PSK1 RF/16, RF/2, 128 bits long (known)
@@ -44,7 +53,7 @@ static uint8_t nexwatch_parity_swap(uint8_t parity) {
 }
 // parity check
 // from 32b hex id, 4b mode,
-static uint8_t nexwatch_parity(uint8_t hexid[5]) {
+static uint8_t nexwatch_parity(const uint8_t hexid[5]) {
     uint8_t p = 0;
     for (uint8_t i = 0; i < 5; i++) {
         p ^= NIBBLE_HIGH(hexid[i]);
@@ -72,7 +81,7 @@ static uint8_t nexwatch_checksum(uint8_t magic, uint32_t id, uint8_t parity) {
 static int nexwatch_scamble(NexWatchScramble_t action, uint32_t *id, uint32_t *scambled) {
 
     // 255 = Not used/Unknown other values are the bit offset in the ID/FC values
-    uint8_t hex_2_id [] = {
+    const uint8_t hex_2_id [] = {
         31, 27, 23, 19, 15, 11, 7, 3,
         30, 26, 22, 18, 14, 10, 6, 2,
         29, 25, 21, 17, 13, 9, 5, 1,

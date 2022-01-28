@@ -1,10 +1,19 @@
 //-----------------------------------------------------------------------------
-// Jonathan Westhues, Aug 2005
-// Gerhard de Koning Gans, April 2008, May 2011
+// Copyright (C) Jonathan Westhues, Nov 2006
+// Copyright (C) Greg Jones, Jan 2009
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Definitions internal to the app source.
 //-----------------------------------------------------------------------------
@@ -26,8 +35,8 @@
 
 void Iso15693InitReader(void);
 void Iso15693InitTag(void);
-void CodeIso15693AsReader(uint8_t *cmd, int n);
-void CodeIso15693AsTag(uint8_t *cmd, size_t len);
+void CodeIso15693AsReader(const uint8_t *cmd, int n);
+void CodeIso15693AsTag(const uint8_t *cmd, size_t len);
 
 void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time, uint32_t slot_time, bool slow);
 int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time);
@@ -48,7 +57,7 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
 
 int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time);
 
-void SetTag15693Uid(uint8_t *uid);
+void SetTag15693Uid(const uint8_t *uid);
 
 void DisablePrivacySlixLIso15693(uint8_t *password);
 #endif

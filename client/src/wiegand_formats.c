@@ -1,11 +1,19 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2018 grauerfuchs
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// HID card format packing/unpacking routines
+// Wiegand format packing/unpacking routines
 //-----------------------------------------------------------------------------
 #include "wiegand_formats.h"
 #include <stdlib.h>
@@ -762,6 +770,35 @@ static bool Unpack_H10302(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
+static bool Pack_P10004(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+    memset(packed, 0, sizeof(wiegand_message_t));
+
+    if (card->FacilityCode > 0x00001FFF) return false; // Can't encode FC.
+    if (card->CardNumber > 0x0003FFFF) return false; // Can't encode CN.
+    if (card->IssueLevel > 0) return false; // Not used in this format
+    if (card->OEM > 0) return false; // Not used in this format
+
+    packed->Length = 37; // Set number of bits
+
+    set_linear_field(packed, card->FacilityCode, 1, 13);
+    set_linear_field(packed, card->CardNumber, 14, 18);
+    // unknown parity scheme
+    if (preamble)
+        return add_HID_header(packed);
+    return true;
+}
+
+static bool Unpack_P10004(wiegand_message_t *packed, wiegand_card_t *card) {
+    memset(card, 0, sizeof(wiegand_card_t));
+
+    if (packed->Length != 37) return false; // Wrong length? Stop here.
+
+    card->FacilityCode = get_linear_field(packed, 1, 13);
+    card->CardNumber = get_linear_field(packed, 14, 18);
+    // unknown parity scheme
+    return true;
+}
+
 static bool Pack_H10304(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
@@ -1251,6 +1288,11 @@ static bool Unpack_bc40(wiegand_message_t *packed, wiegand_card_t *card) {
 
 void print_desc_wiegand(cardformat_t *fmt, wiegand_message_t *packed) {
 
+    // return if invalid card format
+    if (fmt->Name == NULL) {
+        return;
+    }
+
     char *s = calloc(128, sizeof(uint8_t));
     sprintf(s, _YELLOW_("%-10s")" %-32s",  fmt->Name, fmt->Descrp);
 
@@ -1357,6 +1399,7 @@ static const cardformat_t FormatTable[] = {
     {"H10320",  Pack_H10320,  Unpack_H10320,  "HID H10320 36-bit BCD",      {1, 0, 0, 0, 1}}, // from Proxmark forums
     {"H10302",  Pack_H10302,  Unpack_H10302,  "HID H10302 37-bit huge ID",  {1, 0, 0, 0, 1}}, // from Proxmark forums
     {"H10304",  Pack_H10304,  Unpack_H10304,  "HID H10304 37-bit",          {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
+    {"P10004",  Pack_P10004,  Unpack_P10004,  "HID P10004 37-bit PCSC",     {1, 1, 0, 0, 0}}, // from @bthedorff; PR #1559
     {"HGen37",  Pack_HGeneric37, Unpack_HGeneric37,  "HID Generic 37-bit", {1, 0, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"MDI37",   Pack_MDI37,   Unpack_MDI37,   "PointGuard MDI 37-bit",         {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"BQT38",   Pack_bqt38,   Unpack_bqt38,   "BQT 38-bit",                    {1, 1, 1, 0, 1}}, // from cardinfo.barkweb.com.au
@@ -1383,38 +1426,49 @@ void HIDListFormats(void) {
         ++i;
     }
     PrintAndLogEx(INFO, "------------------------------------------------------------");
-    PrintAndLogEx(INFO, "Available card formats: " _YELLOW_("%" PRIu64), ARRAYLEN(FormatTable));
+    PrintAndLogEx(INFO, "Available card formats: " _YELLOW_("%" PRIu64), ARRAYLEN(FormatTable) - 1);
     PrintAndLogEx(NORMAL, "");
     return;
 }
 
 cardformat_t HIDGetCardFormat(int idx) {
+
+    // if idx is out-of-bounds, return the last item
+    if ((idx < 0) || (idx > ARRAYLEN(FormatTable) - 2)) {
+        return FormatTable[ARRAYLEN(FormatTable) - 1];
+    }
     return FormatTable[idx];
 }
 
 int HIDFindCardFormat(const char *format) {
 
-    if (FormatTable[0].Name == NULL)
-        return -1;
+    char *s = str_dup(format);
+    str_lower(s);
 
     int i = 0;
+    while (FormatTable[i].Name) {
 
-// str_lower
+        char *a = str_dup(FormatTable[i].Name);
+        str_lower(a);
 
-    while (FormatTable[i].Name && strcmp(FormatTable[i].Name, format)) {
+        if (strcmp(a, s) == 0) {
+            free(a);
+            free(s);
+            return i;
+        }
+
+        free(a);
         ++i;
     }
 
-    if (FormatTable[i].Name)
-        return i;
-
+    free(s);
     return -1;
 }
 
 bool HIDPack(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (format_idx < 0 || format_idx >= ARRAYLEN(FormatTable))
+    if ((format_idx < 0) || (format_idx > ARRAYLEN(FormatTable) - 2))
         return false;
 
     return FormatTable[format_idx].Pack(card, packed, preamble);

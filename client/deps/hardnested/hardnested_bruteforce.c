@@ -75,7 +75,7 @@ THE SOFTWARE.
 //#define WRITE_BENCH_FILE
 
 // debugging options
-#define DEBUG_KEY_ELIMINATION
+#define DEBUG_KEY_ELIMINATION           1
 // #define DEBUG_BRUTE_FORCE
 
 typedef enum {
@@ -117,7 +117,7 @@ inline uint8_t trailing_zeros(uint8_t byte) {
 }
 
 
-bool verify_key(uint32_t cuid, noncelist_t *nonces, uint8_t *best_first_bytes, uint32_t odd, uint32_t even) {
+bool verify_key(uint32_t cuid, noncelist_t *nonces, const uint8_t *best_first_bytes, uint32_t odd, uint32_t even) {
     struct Crypto1State pcs;
     for (uint16_t test_first_byte = 1; test_first_byte < 256; test_first_byte++) {
         noncelistentry_t *test_nonce = nonces[best_first_bytes[test_first_byte]].first;
@@ -173,7 +173,7 @@ crack_states_thread(void *x) {
 
                 char progress_text[80];
                 char keystr[19];
-                sprintf(keystr, "%012" PRIx64 "  ", key);
+                sprintf(keystr, "%012" PRIX64 "  ", key);
                 sprintf(progress_text, "Brute force phase completed.  Key found: " _GREEN_("%s"), keystr);
                 hardnested_print_progress(thread_arg->num_acquired_nonces, progress_text, 0.0, 0);
                 break;
@@ -436,8 +436,8 @@ static bool read_bench_data(statelist_t *test_candidates) {
 float brute_force_benchmark(void) {
     statelist_t test_candidates[NUM_BRUTE_FORCE_THREADS];
 
-    test_candidates[0].states[ODD_STATE] = malloc((TEST_BENCH_SIZE + 1) * sizeof(uint32_t));
-    test_candidates[0].states[EVEN_STATE] = malloc((TEST_BENCH_SIZE + 1) * sizeof(uint32_t));
+    test_candidates[0].states[ODD_STATE] = calloc(1, (TEST_BENCH_SIZE + 1) * sizeof(uint32_t));
+    test_candidates[0].states[EVEN_STATE] = calloc(1, (TEST_BENCH_SIZE + 1) * sizeof(uint32_t));
     for (uint8_t i = 0; i < NUM_BRUTE_FORCE_THREADS - 1; i++) {
         test_candidates[i].next = test_candidates + i + 1;
         test_candidates[i + 1].states[ODD_STATE] = test_candidates[0].states[ODD_STATE];

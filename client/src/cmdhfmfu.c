@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Ultralight Code (c) 2013,2014 Midnitesnake & Andy Davies of Pentura
-// 2015,2016,2017 Iceman, Marshmellow
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // High frequency MIFARE ULTRALIGHT (C) commands
 //-----------------------------------------------------------------------------
@@ -255,6 +263,65 @@ static int ulc_authentication(uint8_t *key, bool switch_off_field) {
     return 0;
 }
 
+static int trace_mfuc_try_key(uint8_t *key, int state, uint8_t (*authdata)[16]) {
+    uint8_t iv[8] = {0};
+    uint8_t RndB[8] = {0};
+    uint8_t RndARndB[16] = {0};
+    uint8_t RndA[8] = {0};
+    mbedtls_des3_context ctx_des3;
+    switch (state) {
+        case 2:
+            mbedtls_des3_set2key_dec(&ctx_des3, key);
+            mbedtls_des3_crypt_cbc(&ctx_des3, MBEDTLS_DES_DECRYPT,
+                                   8, iv, authdata[0], RndB);
+            mbedtls_des3_crypt_cbc(&ctx_des3, MBEDTLS_DES_DECRYPT,
+                                   16, iv, authdata[1], RndARndB);
+            if ((memcmp(&RndB[1], &RndARndB[8], 7) == 0) &&
+                    (RndB[0] == RndARndB[15])) {
+                return PM3_SUCCESS;
+            }
+            break;
+        case 3:
+            if (key == NULL) {// if no key was found
+                return PM3_ESOFT;
+            }
+            memcpy(iv, authdata[0], 8);
+            mbedtls_des3_set2key_dec(&ctx_des3, key);
+            mbedtls_des3_crypt_cbc(&ctx_des3, MBEDTLS_DES_DECRYPT,
+                                   16, iv, authdata[1], RndARndB);
+            mbedtls_des3_crypt_cbc(&ctx_des3, MBEDTLS_DES_DECRYPT,
+                                   8, iv, authdata[2], RndA);
+            if ((memcmp(&RndARndB[1], RndA, 7) == 0) &&
+                    (RndARndB[0] == RndA[7])) {
+                return PM3_SUCCESS;
+            }
+            break;
+        default:
+            return PM3_EINVARG;
+    }
+    return PM3_ESOFT;
+}
+
+int trace_mfuc_try_default_3des_keys(uint8_t **correct_key, int state, uint8_t (*authdata)[16]) {
+    switch (state) {
+        case 2:
+            for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
+                uint8_t *key = default_3des_keys[i];
+                if (trace_mfuc_try_key(key, state, authdata) == PM3_SUCCESS) {
+                    *correct_key = key;
+                    return PM3_SUCCESS;
+                }
+            }
+            break;
+        case 3:
+            return trace_mfuc_try_key(*correct_key, state, authdata);
+            break;
+        default:
+            return PM3_EINVARG;
+    }
+    return PM3_ESOFT;
+}
+
 static int try_default_3des_keys(uint8_t **correct_key) {
     PrintAndLogEx(INFO, "Trying some default 3des keys");
     for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
@@ -416,7 +483,7 @@ static int ul_print_default(uint8_t *data, uint8_t *real_uid) {
     return PM3_SUCCESS;
 }
 
-static int ndef_get_maxsize(uint8_t *data) {
+static int ndef_get_maxsize(const uint8_t *data) {
     // no NDEF message
     if (data[0] != 0xE1)
         return 0;
@@ -1054,8 +1121,8 @@ typedef struct {
     uint8_t mpos;
     uint8_t mlen;
     const char *match;
-    uint32_t (*Pwd)(uint8_t *uid);
-    uint16_t (*Pack)(uint8_t *uid);
+    uint32_t (*Pwd)(const uint8_t *uid);
+    uint16_t (*Pack)(const uint8_t *uid);
     const char *hint;
 } mfu_identify_t;
 
@@ -1096,6 +1163,14 @@ static mfu_identify_t mfu_ident_table[] = {
         ul_ev1_pwdgenB, ul_ev1_packgenB,
         "hf mfu dump -k %08x"
     },
+    /*
+    {
+        "Xiaomi AIR Purifier", "0004040201000F03",
+        0, 0, "",
+        ul_ev1_pwdgenE, ul_ev1_packgenE,
+        "hf mfu dump -k %08x"
+    },
+    */
     {NULL, NULL, 0, 0, NULL, NULL, NULL, NULL}
 };
 
@@ -1153,7 +1228,7 @@ static int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
     return PM3_SUCCESS;
 }
 
-static int mfu_fingerprint(void) {
+static int mfu_fingerprint(TagTypeUL_t tagtype, bool hasAuthKey, uint8_t *authkey, int ak_len) {
 
     uint8_t *data = NULL;
     int res = PM3_SUCCESS;
@@ -1176,8 +1251,16 @@ static int mfu_fingerprint(void) {
     uint8_t pages = (maxbytes / 4);
     PrintAndLogEx(INFO, "Reading tag memory...");
 
+    uint8_t keytype = 0;
+    if (hasAuthKey) {
+        if (tagtype & UL_C)
+            keytype = 1; //UL_C auth
+        else
+            keytype = 2; //UL_EV1/NTAG auth
+    }
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, keytype, authkey, ak_len);
+
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "Command execute time-out");
@@ -1682,7 +1765,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         }
     }
 
-    mfu_fingerprint();
+    mfu_fingerprint(tagtype, has_auth_key, authkeyptr, ak_len);
 
 out:
     DropField();
@@ -1713,6 +1796,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         arg_lit0("l", NULL, "swap entered key's endianness"),
         arg_int1("b", "block", "<dec>", "block number to write"),
         arg_str1("d", "data", "<hex>", "block data (4 or 16 hex bytes, 16 hex bytes will do a compatibility write)"),
+        arg_lit0(NULL, "force", "force operation even if address is out of range"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1727,6 +1811,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
     int datalen = 0;
     uint8_t data[16] = {0x00};
     CLIGetHexWithReturn(ctx, 4, data, &datalen);
+    bool force = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     bool has_auth_key = false;
@@ -1764,7 +1849,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
             break;
         }
     }
-    if (blockno > maxblockno) {
+    if ((blockno > maxblockno) && (!force)) {
         PrintAndLogEx(WARNING, "block number too large. Max block is %u/0x%02X \n", maxblockno, maxblockno);
         return PM3_EINVARG;
     }
@@ -1842,6 +1927,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
         arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
         arg_lit0("l", NULL, "swap entered key's endianness"),
         arg_int1("b", "block", "<dec>", "block number to read"),
+        arg_lit0(NULL, "force", "force operation even if address is out of range"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1851,6 +1937,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
     bool swap_endian = arg_get_lit(ctx, 2);
     int blockno = arg_get_int_def(ctx, 3, -1);
+    bool force = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
     bool has_auth_key = false;
@@ -1883,7 +1970,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
             break;
         }
     }
-    if (blockno > maxblockno) {
+    if ((blockno > maxblockno) && (!force)) {
         PrintAndLogEx(WARNING, "block number to large. Max block is %u/0x%02X \n", maxblockno, maxblockno);
         return PM3_EINVARG;
     }
@@ -2286,7 +2373,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     // format and add keys to block dump output
     // only add keys if not partial read, and complete pages read
-    if (!is_partial && pages == card_mem_size && has_auth_key) {
+    if (!is_partial && pages == card_mem_size && (has_auth_key || has_pwd)) {
         // if we didn't swapendian before - do it now for the sprint_hex call
         // NOTE: default entry is bigendian (unless swapped), sprint_hex outputs little endian
         //       need to swap to keep it the same
@@ -2629,7 +2716,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes)"),
+        arg_str0(NULL, "key", "<hex>", "key for authentication (UL-C 16 bytes)"),
         arg_lit0("l", NULL, "swap entered key's endianness"),
         arg_lit0("k", NULL, "keep field on (only if a password is provided too)"),
         arg_param_end
@@ -3106,18 +3193,19 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(INFO, "---------------------------------");
+    PrintAndLogEx(INFO, "------------------.---------------");
     PrintAndLogEx(INFO, " Using UID : %s", sprint_hex(uid, 7));
-    PrintAndLogEx(INFO, "---------------------------------");
-    PrintAndLogEx(INFO, " algo           | pwd      | pack");
-    PrintAndLogEx(INFO, "----------------+----------+-----");
-    PrintAndLogEx(INFO, " EV1            | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
-    PrintAndLogEx(INFO, " Amiibo         | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
-    PrintAndLogEx(INFO, " Lego Dimension | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
-    PrintAndLogEx(INFO, " XYZ 3D printer | %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
-    PrintAndLogEx(INFO, "----------------+----------+-----");
+    PrintAndLogEx(INFO, "----------------------------------");
+    PrintAndLogEx(INFO, " algo            | pwd      | pack");
+    PrintAndLogEx(INFO, "-----------------+----------+-----");
+    PrintAndLogEx(INFO, " EV1             | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
+    PrintAndLogEx(INFO, " Amiibo          | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
+    PrintAndLogEx(INFO, " Lego Dimension  | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
+    PrintAndLogEx(INFO, " XYZ 3D printer  | %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
+    PrintAndLogEx(INFO, " Xiaomi purifier | %08X | %04X", ul_ev1_pwdgenE(uid), ul_ev1_packgenE(uid));
+    PrintAndLogEx(INFO, "-----------------+----------+-----");
     PrintAndLogEx(INFO, " Vingcard algo");
-    PrintAndLogEx(INFO, "---------------------------------");
+    PrintAndLogEx(INFO, "----------------------------------");
     return PM3_SUCCESS;
 }
 

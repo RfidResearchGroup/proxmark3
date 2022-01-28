@@ -1,9 +1,12 @@
 # T5577 Introduction Guide
+<a id="Top"></a>
 
 ### Based on RRG/Iceman Proxmark3 repo
 
 ### Ver.1 8 Sep 2019
 ### Ver.2 7 March 2021
+
+# Table of Contents
 
 | Contents                                                                            |
 | ----------------------------------------------------------------------------------- |
@@ -21,8 +24,10 @@
 | [The configuration Block – Block 3 Page 1](#the-configuration-block-block-3-page-1) |
 
 # Part 1
+^[Top](#top)
 
 ## Introduction
+^[Top](#top)
 
 The T5577 is a generic LF (Low Frequency) RFID card that is used in the
 125 Khz frequency space. It is a good card to use to learn about RFID and
@@ -49,6 +54,7 @@ try these as we go. To do so, have a blank T5577 card that you can use
 for this purpose.
 
 ## T5577 Overview
+^[Top](#top)
 
 The T5577 is a chip that can hold data and a configuration (Section
 4.12).
@@ -63,6 +69,7 @@ the chip how to behave.
  
 
 ## What data is on my T5577
+^[Top](#top)
 
 Let’s have a look and see what a card might look like in the proxmark3
 software. Since we can change the configuration of how the T5577 will
@@ -121,6 +128,7 @@ I will cover the meaning of this data as we go, but for now, lets keep
 it simple.
 
 ## Read and Write Blocks of Data
+^[Top](#top)
 
 The basic function of using the proxmark3 with rfid cards is to read and
 write data. This reading and writing must be done in the correct way
@@ -224,6 +232,7 @@ can see the card)
     ```
 
 ### Exercise 1
+^[Top](#top)
 
 Using the read and write commands you have learnt see if you can make
 the lf t55 dump command show the following data for blocks 1-7 (Page 0).
@@ -261,6 +270,7 @@ If you forget this data/password, you won't be able to read or write
 to the card.
 
 ## How do I use a password
+^[Top](#top)
 
 This can be a little tricky for beginners. 
 ***If you forget your password you will lose access to your card***.
@@ -521,6 +531,7 @@ required, please do not proceed.
     Yes we can!  We can see Block 0 is the correct config 00088040
 
 # Part 2 – Configuration Blocks
+^[Top](#top)
 
 One of the things a lot of people have trouble with or miss, is that the
 T5577 has two different and separate communications protocols, each with
@@ -539,6 +550,7 @@ from Block 3 Page 1. If the command is not encoded correctly it will
 ignore the command and revert back to default read mode.
 
 ## The configuration Block – Block 0 Page 0
+^[Top](#top)
 
 For this configuration the settings chosen will be for the purpose of
 the card when used in production. E.G. If you want the card to act like
@@ -685,6 +697,7 @@ password set (if not, review and get you card back to this state).
     (Max Block = 2). On the T5577 these will be Blocks 1 and 2.
 
 ## Exercise 2
+^[Top](#top)
 
 Using the skills form part 1, see if you can view the data in blocks 1 and 2.
 
@@ -699,3 +712,6 @@ it, we can follow the password section and update the config from
 ***Important : Don’t forget to set a valid password in block 7 and remember it.***
 
 ## The configuration Block – Block 3 Page 1
+^[Top](#top)
+
+_to be written_

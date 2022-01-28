@@ -19,7 +19,7 @@ fullgitinfo="RRG/Iceman"
 # GIT status  0 = dirty,  1 = clean ,  2 = undecided
 clean=2
 
-# Do we have acces to git command?
+# Do we have access to git command?
 commandGIT=$(env git)
 
 if [ "$commandGIT" != "" ]; then

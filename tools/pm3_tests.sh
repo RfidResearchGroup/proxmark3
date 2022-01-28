@@ -7,11 +7,12 @@ DICPATH="./client/dictionaries"
 RESOURCEPATH="./client/resources"
 
 SLOWTESTS=false
-GPUTESTS=false
+OPENCLTESTS=false
 TESTALL=true
 TESTMFKEY=false
 TESTNONCE2KEY=false
 TESTMFNONCEBRUTE=false
+TESTMFDAESBRUTE=false
 TESTHITAG2CRACK=false
 TESTFPGACOMPRESS=false
 TESTBOOTROM=false
@@ -26,9 +27,9 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--long] [--gpu] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|fpga_compress|bootrom|armsrc|client|recovery|common]
+Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|mfd_aes_brute|fpga_compress|bootrom|armsrc|client|recovery|common]
     --long:          Enable slow tests
-    --gpu:           Enable tests requiring GPU
+    --opencl:        Enable tests requiring OpenCL (preferably a Nvidia GPU)
     --clientbin ...: Specify path to proxmark3 binary to test
     If no target given, all targets will be tested
 """
@@ -38,8 +39,8 @@ Usage: $0 [--long] [--gpu] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_
       SLOWTESTS=true
       shift
       ;;
-    --gpu)
-      GPUTESTS=true
+    --opencl)
+      OPENCLTESTS=true
       shift
       ;;
     --clientbin)
@@ -64,6 +65,11 @@ Usage: $0 [--long] [--gpu] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_
     mf_nonce_brute)
       TESTALL=false
       TESTMFNONCEBRUTE=true
+      shift
+      ;;
+    mfd_aes_brute)
+      TESTALL=false
+      TESTMFDAESBRUTE=true
       shift
       ;;
     fpga_compress)
@@ -141,9 +147,9 @@ function CheckFileExist() {
   return 1
 }
 
-# [slow] [gpu] [retry] [ignore] <title> <command_line> <check_result_regex>
+# [slow] [opencl] [retry] [ignore] <title> <command_line> <check_result_regex>
 # slow:   test takes more than ~5s
-# gpu:    test requires GPU presence
+# opencl: test requires OpenCL
 # retry:  test repeated up to 3 times in case of failure
 # ignore: test failure is not fatal
 function CheckExecute() {
@@ -153,11 +159,11 @@ function CheckExecute() {
   else
     local SLOWTEST=false
   fi
-  if [ "$1" == "gpu" ]; then
-    local GPUTEST=true
+  if [ "$1" == "opencl" ]; then
+    local OPENCLTEST=true
     shift
   else
-    local GPUTEST=false
+    local OPENCLTEST=false
   fi
   if [ "$1" == "retry" ]; then
     local RETRY="1 2 3 e"
@@ -173,14 +179,15 @@ function CheckExecute() {
   fi
 
   printf "%-40s" "$1 "
+  RESULT=0
 
   if $SLOWTEST && ! $SLOWTESTS; then
     echo -e "[ ${C_YELLOW}SKIPPED${C_NC} ] ( slow )"
-    return 0
+    return $RESULT
   fi
-  if $GPUTEST && ! $GPUTESTS; then
-    echo -e "[ ${C_YELLOW}SKIPPED${C_NC} ] ( gpu )"
-    return 0
+  if $OPENCLTEST && ! $OPENCLTESTS; then
+    echo -e "[ ${C_YELLOW}SKIPPED${C_NC} ] ( opencl )"
+    return $RESULT
   fi
 
   for I in $RETRY
@@ -188,11 +195,12 @@ function CheckExecute() {
     RES=$(eval "$2")
     if echo "$RES" | grep -q "$3"; then
       echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
-      return 0
+      return $RESULT
     fi
     if [ ! $I == "e" ]; then echo "retry $I"; fi
   done
 
+  RESULT=1
   if $IGNOREFAILURE; then
     echo -e "[ ${C_YELLOW}IGNORED${C_NC} ]"
     return 0
@@ -200,7 +208,7 @@ function CheckExecute() {
 
   echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
   echo -e "Execution trace:\n$RES"
-  return 1
+  return $RESULT
 }
 
 echo -e "\n${C_BLUE}RRG/Iceman Proxmark3 test tool ${C_NC}\n"
@@ -279,6 +287,12 @@ while true; do
       if ! CheckFileExist "mf_nonce_brute exists"          "$MFNONCEBRUTEBIN"; then break; fi
       if ! CheckExecute slow "mf_nonce_brute test 1/2"         "$MFNONCEBRUTEBIN 9c599b32 5a920d85 1011 98d76b77 d6c6e870 0000 ca7e0b63 0111 3e709c8a" "Key found \[.*ffffffffffff.*\]"; then break; fi
       if ! CheckExecute slow "mf_nonce_brute test 2/2"         "$MFNONCEBRUTEBIN 96519578 d7e3c6ac 0011 cd311951 9da49e49 0010 2bb22e00 0100 a4f7f398" "Key found \[.*3b7e4fd575ad.*\]"; then break; fi
+    fi    
+    if $TESTALL || $TESTMFDAESBRUTE; then
+      echo -e "\n${C_BLUE}Testing mfd_aes_brute:${C_NC} ${MFDASEBRUTEBIN:=./tools/mfd_aes_brute/mfd_aes_brute}"
+      if ! CheckFileExist "mfd_aes_brute exists"          "$MFDASEBRUTEBIN"; then break; fi
+      if ! CheckExecute      "mfd_aes_brute test 1/2"         "$MFDASEBRUTEBIN 1605394800 bb6aea729414a5b1eff7b16328ce37fd 82f5f498dbc29f7570102397a2e5ef2b6dc14a864f665b3c54d11765af81e95c" "key.................... .*261C07A23F2BC8262F69F10A5BDF3764"; then break; fi
+      if ! CheckExecute slow "mfd_aes_brute test 2/2"         "$MFDASEBRUTEBIN 1136073600 3fda933e2953ca5e6cfbbf95d1b51ddf 97fe4b5de24188458d102959b888938c988e96fb98469ce7426f50f108eaa583" "key.................... .*E757178E13516A4F3171BC6EA85E165A"; then break; fi
     fi
     # hitag2crack not yet part of "all"
     # if $TESTALL || $TESTHITAG2CRACK; then
@@ -325,15 +339,6 @@ while true; do
       # Order of magnitude to crack it: ~12s on 1 core, ~3s on 4 cores -> tagged as "slow"
       if ! CheckExecute slow "ht2crack5 test"              "cd $HT2CRACK5PATH; ./ht2crack5 $HT2CRACK5UID $HT2CRACK5NRAR" "Key: $HT2CRACK5KEY"; then break; fi
 
-      echo -e "\n${C_BLUE}Testing ht2crack5gpu:${C_NC} ${HT2CRACK5GPUPATH:=./tools/hitag2crack/crack5gpu/}"
-      if ! CheckFileExist "ht2crack5gpu exists"            "$HT2CRACK5GPUPATH/ht2crack5gpu"; then break; fi
-      HT2CRACK5GPUUID=12345678
-      HT2CRACK5GPUKEY=AABBCCDDEEFF
-      # The speed depends on the nRaR so we'll use two pairs known to work fast
-      HT2CRACK5GPUNRAR="B438220C 944FFD74 942C59E3 3D450B34"
-      # Order of magnitude to crack it: ~15s -> tagged as "slow"
-      if ! CheckExecute slow gpu "ht2crack5gpu test"        "cd $HT2CRACK5GPUPATH; ./ht2crack5gpu $HT2CRACK5GPUUID $HT2CRACK5GPUNRAR" "Key: $HT2CRACK5GPUKEY"; then break; fi
-
       echo -e "\n${C_BLUE}Testing ht2crack5opencl:${C_NC} ${HT2CRACK5OPENCLPATH:=./tools/hitag2crack/crack5opencl/}"
       if ! CheckFileExist "ht2crack5opencl exists"            "$HT2CRACK5OPENCLPATH/ht2crack5opencl"; then break; fi
       HT2CRACK5OPENCLUID=12345678
@@ -341,7 +346,7 @@ while true; do
       # The speed depends on the nRaR so we'll use two pairs known to work fast
       HT2CRACK5OPENCLNRAR="B438220C 944FFD74 942C59E3 3D450B34"
       # Order of magnitude to crack it: ~15s -> tagged as "slow"
-      if ! CheckExecute slow gpu "ht2crack5opencl test"        "cd $HT2CRACK5OPENCLPATH; ./ht2crack5opencl $HT2CRACK5OPENCLUID $HT2CRACK5OPENCLNRAR" "Key found.*: $HT2CRACK5OPENCLKEY"; then break; fi
+      if ! CheckExecute slow opencl "ht2crack5opencl test"     "cd $HT2CRACK5OPENCLPATH; ./ht2crack5opencl $HT2CRACK5OPENCLUID $HT2CRACK5OPENCLNRAR" "Key found.*$HT2CRACK5OPENCLKEY"; then break; fi
     fi
     if $TESTALL || $TESTCLIENT; then
       echo -e "\n${C_BLUE}Testing client:${C_NC} ${CLIENTBIN:=./client/proxmark3}"
@@ -360,6 +365,15 @@ while true; do
       if ! CheckExecute "proxmark multi stdin 3/4"         "echo -e 'rem foo\nrem bar;quit' |$CLIENTBIN" "remark: foo"; then break; fi
       if ! CheckExecute "proxmark multi stdin 4/4"         "echo -e 'rem foo\nrem bar;quit' |$CLIENTBIN" "remark: bar"; then break; fi
 
+      echo -e "\n${C_BLUE}Testing scripts:${C_NC}"
+      if ! CheckExecute "script run cmdscript"             "$CLIENTBIN -c 'script run example.cmd'" "remark: world"; then break; fi
+      if ! CheckExecute "script run luascript"             "$CLIENTBIN -c 'script run data_hex_crc -b 010203040506070809'" "CDMA2000.*7B02"; then break; fi
+
+      CheckExecute ignore "check Python support"        "$CLIENTBIN -c 'hw version'" "Python script.*present"
+      if [ $RESULT -eq 0 ]; then
+        if ! CheckExecute "script run pyscript"              "$CLIENTBIN -c 'script run parity.py 10 1234'" "Even parity"; then break; fi
+      fi
+
       echo -e "\n${C_BLUE}Testing data manipulation:${C_NC}"
       if ! CheckExecute "reveng readline test"    "$CLIENTBIN -c 'reveng -h;reveng -D'" "CRC-64/GO-ISO"; then break; fi
       if ! CheckExecute "reveng -g test"          "$CLIENTBIN -c 'reveng -g abda202c'" "CRC-16/ISO-IEC-14443-3-A"; then break; fi
@@ -372,6 +386,7 @@ while true; do
       if ! CheckExecute "nfc decode test - oob"           "$CLIENTBIN -c 'nfc decode -d DA2010016170706C69636174696F6E2F766E642E626C7565746F6F74682E65702E6F6F62301000649201B96DFB0709466C65782032'" "Flex 2"; then break; fi
       if ! CheckExecute "nfc decode test - device info"   "$CLIENTBIN -c 'nfc decode -d d1025744690004536f6e79010752432d533338300220426c61636b204e46432052656164657220636f6e6e656374656420746f2050430310123e4567e89b12d3a45642665544000004124e464320506f72742d3130302076312e3032'" "NFC Port-100 v1.02"; then break; fi
       if ! CheckExecute "nfc decode test - vcard"         "$CLIENTBIN -c 'nfc decode -d d20ca3746578742f782d7643617264424547494e3a56434152440a56455253494f4e3a332e300a4e3a43687269733b4963656d616e3b3b3b0a464e3a476f7468656e627572670a5245563a323032312d30362d32345432303a31353a30385a0a6974656d322e582d4142444154453b747970653d707265663a323032302d30362d32340a4954454d322e582d41424c4142454c3a5f24213c416e6e69766572736172793e21245f0a454e443a56434152440a'" "END:VCARD"; then break; fi
+      if ! CheckExecute "nfc decode test - apple wallet"  "$CLIENTBIN -c 'nfc decode -d 031AD10116550077616C6C65743A2F2F61637469766174652F6E6663FE'" "activate/nfc"; then break; fi
 
       echo -e "\n${C_BLUE}Testing LF:${C_NC}"
       if ! CheckExecute "lf AWID test"          "$CLIENTBIN -c 'data load -f traces/lf_AWID-15-259.pm3;lf search -1'" "AWID ID found"; then break; fi
@@ -409,7 +424,7 @@ while true; do
                                                                      "temperature     95.2 F / 35.1 C"; then break; fi
       if ! CheckExecute slow "lf T55 gallagher test"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gallagher.pm3; lf search -1'" "GALLAGHER ID found"; then break; fi
       if ! CheckExecute slow "lf T55 gallagher test2"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gallagher.pm3; lf gallagher demod'" \
-                                                                     "GALLAGHER - Region: 1 FC: 16640 CN: 201 Issue Level: 1"; then break; fi
+                                                                     "GALLAGHER - Region: 1 Facility: 16640 Card No.: 201 Issue Level: 1"; then break; fi
       if ! CheckExecute slow "lf T55 gproxii test"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gproxii.pm3; lf search -1'" "Guardall G-Prox II ID found"; then break; fi
       if ! CheckExecute slow "lf T55 gproxii test2"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gproxii.pm3; lf gproxii demod'" \
                                                                      "G-Prox-II - len: 26 FC: 123 Card: 11223, Raw: f98c7038c63356c7ac26398c"; then break; fi

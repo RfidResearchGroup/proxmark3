@@ -1,24 +1,20 @@
-/*-
- * Copyright (C) 2021 Merlok
- *
- * This program is free software: you can redistribute it and/or modify it
- * under the terms of the GNU Lesser General Public License as published by the
- * Free Software Foundation, either version 3 of the License, or (at your
- * option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>
- *
- * $Id$
- *
- * description here: Leakage Resilient Primitive (LRP) Specification, https://www.nxp.com/docs/en/application-note/AN12304.pdf
- *
- */
+//-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+// description here: Leakage Resilient Primitive (LRP) Specification, https://www.nxp.com/docs/en/application-note/AN12304.pdf
+//-----------------------------------------------------------------------------
 
 #include "lrpcrypto.h"
 
@@ -106,7 +102,7 @@ void LRPGenerateUpdatedKeys(LRPContext_t *ctx, size_t updatedKeysCount) {
 
 // https://www.nxp.com/docs/en/application-note/AN12304.pdf
 // Algorithm 3
-void LRPEvalLRP(LRPContext_t *ctx, uint8_t *iv, size_t ivlen, bool final, uint8_t *y) {
+void LRPEvalLRP(LRPContext_t *ctx, const uint8_t *iv, size_t ivlen, bool final, uint8_t *y) {
     uint8_t ry[CRYPTO_AES128_KEY_SIZE] = {0};
     memcpy(ry, ctx->updatedKeys[ctx->useUpdatedKeyNum], CRYPTO_AES128_KEY_SIZE);
 

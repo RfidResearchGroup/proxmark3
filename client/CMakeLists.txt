@@ -1,3 +1,18 @@
+#-----------------------------------------------------------------------------
+# Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# See LICENSE.txt for the text of the license.
+#-----------------------------------------------------------------------------
 # Usage:
 #  mkdir build
 #  cd build
@@ -174,7 +189,6 @@ add_subdirectory(${PM3_ROOT}/client/deps deps)
 set (TARGET_SOURCES
         ${PM3_ROOT}/common/commonutil.c
         ${PM3_ROOT}/common/util_posix.c
-        ${PM3_ROOT}/common/parity.c
         ${PM3_ROOT}/common/bucketsort.c
         ${PM3_ROOT}/common/crapto1/crapto1.c
         ${PM3_ROOT}/common/crapto1/crypto1.c
@@ -213,6 +227,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/fido/fidocore.c
         ${PM3_ROOT}/client/src/iso7816/apduinfo.c
         ${PM3_ROOT}/client/src/iso7816/iso7816core.c
+        ${PM3_ROOT}/client/src/ksx6924/ksx6924core.c
         ${PM3_ROOT}/client/src/cipurse/cipursecrypto.c
         ${PM3_ROOT}/client/src/cipurse/cipursecore.c
         ${PM3_ROOT}/client/src/cipurse/cipursetest.c
@@ -233,6 +248,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/mifare/desfiresecurechan.c
         ${PM3_ROOT}/client/src/mifare/desfirecore.c
         ${PM3_ROOT}/client/src/mifare/desfiretest.c
+        ${PM3_ROOT}/client/src/mifare/gallaghercore.c
         ${PM3_ROOT}/client/src/uart/uart_posix.c
         ${PM3_ROOT}/client/src/uart/uart_win32.c
         ${PM3_ROOT}/client/src/ui/overlays.ui
@@ -253,9 +269,11 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfepa.c
         ${PM3_ROOT}/client/src/cmdhffelica.c
         ${PM3_ROOT}/client/src/cmdhffido.c
+        ${PM3_ROOT}/client/src/cmdhfgallagher.c
         ${PM3_ROOT}/client/src/cmdhfcipurse.c
         ${PM3_ROOT}/client/src/cmdhficlass.c
         ${PM3_ROOT}/client/src/cmdhfjooki.c
+        ${PM3_ROOT}/client/src/cmdhfksx6924.c
         ${PM3_ROOT}/client/src/cmdhflegic.c
         ${PM3_ROOT}/client/src/cmdhflist.c
         ${PM3_ROOT}/client/src/cmdhflto.c
@@ -304,6 +322,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfti.c
         ${PM3_ROOT}/client/src/cmdlfviking.c
         ${PM3_ROOT}/client/src/cmdlfvisa2000.c
+        ${PM3_ROOT}/client/src/cmdlfzx8211.c
         ${PM3_ROOT}/client/src/cmdmain.c
         ${PM3_ROOT}/client/src/cmdnfc.c
         ${PM3_ROOT}/client/src/cmdparser.c
@@ -321,10 +340,9 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/pm3.c
         ${PM3_ROOT}/client/src/pm3_binlib.c
         ${PM3_ROOT}/client/src/pm3_bitlib.c
-        ${PM3_ROOT}/client/src/prng.c
+        ${PM3_ROOT}/client/src/pm3line.c
         ${PM3_ROOT}/client/src/scandir.c
         ${PM3_ROOT}/client/src/scripting.c
-        ${PM3_ROOT}/client/src/tea.c
         ${PM3_ROOT}/client/src/ui.c
         ${PM3_ROOT}/client/src/util.c
         ${PM3_ROOT}/client/src/wiegand_formats.c
@@ -559,6 +577,7 @@ endif (NOT APPLE)
 if (NOT JANSSON_FOUND)
     set(ADDITIONAL_LNK pm3rrg_rdv4_jansson ${ADDITIONAL_LNK})
 endif (NOT JANSSON_FOUND)
+
 if (NOT WHEREAMI_FOUND)
     set(ADDITIONAL_LNK pm3rrg_rdv4_whereami ${ADDITIONAL_LNK})
 endif (NOT WHEREAMI_FOUND)

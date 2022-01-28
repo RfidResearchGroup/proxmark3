@@ -1,3 +1,20 @@
+//-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+// High frequency MIFARE ULTRALIGHT (C) commands
+//-----------------------------------------------------------------------------
 #ifndef CMDHFMFU_H__
 #define CMDHFMFU_H__
 
@@ -24,6 +41,7 @@ uint32_t GetHF14AMfU_Type(void);
 int ul_print_type(uint32_t tagtype, uint8_t spaces);
 void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage);
 int ul_read_uid(uint8_t *uid);
+int trace_mfuc_try_default_3des_keys(uint8_t **correct_key, int state, uint8_t (*authdata)[16]);
 
 int CmdHFMFUltra(const char *Cmd);
 int CmdHF14MfuNDEFRead(const char *Cmd);

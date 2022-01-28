@@ -1,10 +1,17 @@
 //-----------------------------------------------------------------------------
-// Jonathan Westhues, Aug 2005
-// Gerhard de Koning Gans, April 2008, May 2011
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // BigBuf and functions to allocate/free parts of it.
 //-----------------------------------------------------------------------------
@@ -13,6 +20,7 @@
 #include "string.h"
 #include "dbprint.h"
 #include "pm3_cmd.h"
+#include "util.h" // nbytes
 
 extern uint32_t _stack_start[], __bss_end__[];
 
@@ -289,6 +297,13 @@ bool LogTrace_ISO15693(const uint8_t *bytes, uint16_t len, uint32_t ts_start, ui
     return LogTrace(bytes, len, ts_start, ts_end, parity, reader2tag);
 }
 
+// specific LogTrace function for bitstreams: the partial byte size is stored in first parity byte. E.g. bitstream "1100 00100010" -> partial byte: 4 bits
+bool RAMFUNC LogTraceBits(const uint8_t *btBytes, uint16_t bitLen, uint32_t timestamp_start, uint32_t timestamp_end, bool readerToTag) {
+    uint8_t parity[(nbytes(bitLen) - 1) / 8 + 1];
+    memset(parity, 0x00, sizeof(parity));
+    parity[0] = bitLen % 8;
+    return LogTrace(btBytes, nbytes(bitLen), timestamp_start, timestamp_end, parity, readerToTag);
+}
 
 // Emulator memory
 uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length) {

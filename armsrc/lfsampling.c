@@ -1,7 +1,17 @@
 //-----------------------------------------------------------------------------
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Miscellaneous routines for low frequency sampling.
 //-----------------------------------------------------------------------------
@@ -280,7 +290,7 @@ void LFSetupFPGAForADC(int divisor, bool reader_field) {
  * @return the number of bits occupied by the samples.
  */
 uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, int16_t trigger_threshold,
-                       bool verbose, uint32_t sample_size, uint32_t cancel_after, int32_t samples_to_skip) {
+                       bool verbose, uint32_t sample_size, uint32_t cancel_after, int32_t samples_to_skip, bool ledcontrol) {
 
     initSampleBuffer(&sample_size);
 
@@ -308,7 +318,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
 
         WDT_HIT();
 
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+        if (ledcontrol && (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY)) {
             LED_D_ON();
         }
 
@@ -316,7 +326,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
             volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
             // Test point 8 (TP8) can be used to trigger oscilloscope
-            LED_D_OFF();
+            if (ledcontrol) LED_D_OFF();
 
             // threshold either high or low values 128 = center 0.  if trigger = 178
             if (trigger_hit == false) {
@@ -366,10 +376,10 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
  * @param verbose
  * @return number of bits sampled
  */
-uint32_t DoAcquisition_default(int trigger_threshold, bool verbose) {
-    return DoAcquisition(1, 8, 0, trigger_threshold, verbose, 0, 0, 0);
+uint32_t DoAcquisition_default(int trigger_threshold, bool verbose, bool ledcontrol) {
+    return DoAcquisition(1, 8, 0, trigger_threshold, verbose, 0, 0, 0, ledcontrol);
 }
-uint32_t DoAcquisition_config(bool verbose, uint32_t sample_size) {
+uint32_t DoAcquisition_config(bool verbose, uint32_t sample_size, bool ledcontrol) {
     return DoAcquisition(config.decimation
                          , config.bits_per_sample
                          , config.averaging
@@ -377,10 +387,11 @@ uint32_t DoAcquisition_config(bool verbose, uint32_t sample_size) {
                          , verbose
                          , sample_size
                          , 0    // cancel_after
-                         , config.samples_to_skip);
+                         , config.samples_to_skip
+                         , ledcontrol);
 }
 
-uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t sample_size, uint32_t cancel_after) {
+uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t sample_size, uint32_t cancel_after, bool ledcontrol) {
     return DoAcquisition(config.decimation
                          , config.bits_per_sample
                          , config.averaging
@@ -388,15 +399,16 @@ uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t samp
                          , verbose
                          , sample_size
                          , cancel_after
-                         , 0);  // samples to skip
+                         , 0
+                         , ledcontrol);  // samples to skip
 }
 
-static uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size) {
+static uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size, bool ledcontrol) {
     if (verbose)
         printLFConfig();
 
     LFSetupFPGAForADC(config.divisor, reader_field);
-    uint32_t ret = DoAcquisition_config(verbose, sample_size);
+    uint32_t ret = DoAcquisition_config(verbose, sample_size, ledcontrol);
     StopTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     return ret;
@@ -406,24 +418,24 @@ static uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size) {
 * Initializes the FPGA for reader-mode (field on), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SampleLF(bool verbose, uint32_t sample_size) {
+uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol) {
     BigBuf_Clear_ext(false);
-    return ReadLF(true, verbose, sample_size);
+    return ReadLF(true, verbose, sample_size, ledcontrol);
 }
 /**
 * Initializes the FPGA for sniffer-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SniffLF(bool verbose, uint32_t sample_size) {
+uint32_t SniffLF(bool verbose, uint32_t sample_size, bool ledcontrol) {
     BigBuf_Clear_ext(false);
-    return ReadLF(false, verbose, sample_size);
+    return ReadLF(false, verbose, sample_size, ledcontrol);
 }
 
 /**
 * acquisition of T55x7 LF signal. Similar to other LF, but adjusted with @marshmellows thresholds
 * the data is collected in BigBuf.
 **/
-void doT55x7Acquisition(size_t sample_size) {
+void doT55x7Acquisition(size_t sample_size, bool ledcontrol) {
 
 #define T55xx_READ_UPPER_THRESHOLD 128+60  // 60 grph
 #define T55xx_READ_LOWER_THRESHOLD 128-60  // -60 grph
@@ -464,13 +476,13 @@ void doT55x7Acquisition(size_t sample_size) {
 
         WDT_HIT();
 
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+        if (ledcontrol && (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY)) {
             LED_D_ON();
         }
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-            LED_D_OFF();
+            if (ledcontrol) LED_D_OFF();
 
             // skip until the first high sample above threshold
             if (!startFound && sample > T55xx_READ_UPPER_THRESHOLD) {

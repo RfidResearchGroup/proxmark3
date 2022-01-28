@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Jonathan Westhues, Sept 2005
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Utility functions used in many places, not specific to any piece of code.
 //-----------------------------------------------------------------------------
@@ -129,27 +137,27 @@ uint64_t bytes_to_num(uint8_t *src, size_t len) {
     return num;
 }
 
-uint16_t MemLeToUint2byte(uint8_t *data) {
+uint16_t MemLeToUint2byte(const uint8_t *data) {
     return (data[1] << 8) + data[0];
 }
 
-uint32_t MemLeToUint3byte(uint8_t *data) {
+uint32_t MemLeToUint3byte(const uint8_t *data) {
     return (data[2] << 16) + (data[1] << 8) + data[0];
 }
 
-uint32_t MemLeToUint4byte(uint8_t *data) {
+uint32_t MemLeToUint4byte(const uint8_t *data) {
     return (data[3] << 24) + (data[2] << 16) + (data[1] << 8) + data[0];
 }
 
-uint16_t MemBeToUint2byte(uint8_t *data) {
+uint16_t MemBeToUint2byte(const uint8_t *data) {
     return (data[0] << 8) + data[1];
 }
 
-uint32_t MemBeToUint3byte(uint8_t *data) {
+uint32_t MemBeToUint3byte(const uint8_t *data) {
     return (data[0] << 16) + (data[1] << 8) + data[2];
 }
 
-uint32_t MemBeToUint4byte(uint8_t *data) {
+uint32_t MemBeToUint4byte(const uint8_t *data) {
     return (data[0] << 24) + (data[1] << 16) + (data[2] << 8) + data[3];
 }
 
@@ -207,7 +215,7 @@ void lsl(uint8_t *data, size_t len) {
 
 
 // BSWAP24 of array[3]
-uint32_t le24toh(uint8_t data[3]) {
+uint32_t le24toh(const uint8_t data[3]) {
     return (data[2] << 16) | (data[1] << 8) | data[0];
 }
 
@@ -229,4 +237,12 @@ uint32_t rotl(uint32_t a, uint8_t n) {
 uint32_t rotr(uint32_t a, uint8_t n) {
     n &= 31;
     return (a >> n) | (a << (32 - n));
+}
+
+uint16_t get_sw(const uint8_t *d, uint8_t n) {
+    if (n < 2)
+        return 0;
+
+    n -= 2;
+    return d[n] * 0x0100 + d[n + 1];
 }

@@ -34,7 +34,11 @@ def guess_curvename(signature):
 
 def recover(data, signature, curvename, alghash=None):
     recovered = set()
-    curve = sslcrypto.ecc.get_curve(curvename)
+    try:
+        curve = sslcrypto.ecc.get_curve(curvename)
+    except ValueError:
+        print("Warning, your OpenSSL doesn't provide support for curve", curvename)
+        return recovered
     recoverable = len(signature) % 1 == 1
     if (recoverable):
         try:

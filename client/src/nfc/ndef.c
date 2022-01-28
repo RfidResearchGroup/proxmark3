@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2019 Merlok
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // NFC Data Exchange Format (NDEF) functions
 //-----------------------------------------------------------------------------
@@ -14,19 +22,22 @@
 #include <stdlib.h>
 
 #include "ui.h"
-#include "util.h" // sprint_hex...
+#include "util.h"                // sprint_hex
 #include "crypto/asn1utils.h"
 #include "crypto/libpcrypto.h"
 #include "ecp.h"
-#include "commonutil.h"  // ARRAYLEN
+#include "commonutil.h"         // ARRAYLEN
 #include "pm3_cmd.h"
+#include "proxgui.h"            // Base64 Picture Window
 
 #define STRBOOL(p) ((p) ? "1" : "0")
 
 #define NDEF_WIFIAPPL   "application/vnd.wfa"
 #define NDEF_BLUEAPPL   "application/vnd.bluetooth"
+#define NDEF_JSONAPPL   "application/json"
 #define NDEF_VCARDTEXT  "text/vcard"
 #define NDEF_XVCARDTEXT "text/x-vcard"
+
 
 static const char *TypeNameFormat_s[] = {
     "Empty Record",
@@ -103,7 +114,7 @@ static const char *URI_s[] = {
 static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen);
 static int ndefDecodePayload(NDEFHeader_t *ndef);
 
-static uint16_t ndefTLVGetLength(uint8_t *data, size_t *indx) {
+static uint16_t ndefTLVGetLength(const uint8_t *data, size_t *indx) {
     uint16_t len = 0;
     if (data[0] == 0xff) {
         len = (data[1] << 8) + data[2];
@@ -510,10 +521,44 @@ static int ndefDecodeMime_wifi(NDEFHeader_t *ndef) {
 }
 
 static int ndefDecodeMime_vcard(NDEFHeader_t *ndef) {
+    if (ndef->PayloadLen == 0) {
+        PrintAndLogEx(INFO, "no payload");
+        return PM3_SUCCESS;
+    }
     PrintAndLogEx(INFO, _CYAN_("VCARD details"));
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "%.*s", (int)ndef->PayloadLen, ndef->Payload);
+
+    char *s = strstr((char *)ndef->Payload, "PHOTO");
+    if (s) {
+        s = strtok(s, ";");
+        while (s) {
+            char *tmp = s;
+            if (strncmp(tmp, "ENCODING", 8) == 0) {
+            } else if (strncmp(tmp, "TYPE", 4) == 0) {
+
+                char *part = strtok(tmp + 4, ":");
+                while (part) {
+
+                    if (strncmp(part, "=image/", 7) == 0) {
+                    } else if (strncmp(part, "VCARD", 5) == 0) {
+                    } else  {
+                        // should be in the BASE64 data part now.
+                        ShowBase64PictureWindow(part);
+                    }
+                    part = strtok(NULL, ":");
+                }
+            }
+            s = strtok(NULL, ";");
+        }
+    }
+    return PM3_SUCCESS;
+}
+static int ndefDecodeMime_json(NDEFHeader_t *ndef) {
+    PrintAndLogEx(INFO, _CYAN_("JSON details"));
     if (ndef->PayloadLen > 1) {
         PrintAndLogEx(INFO, "");
-        PrintAndLogEx(INFO, "%.*s", (int)ndef->PayloadLen, ndef->Payload);
+        PrintAndLogEx(INFO, _GREEN_("%.*s"), (int)ndef->PayloadLen, ndef->Payload);
     }
     return PM3_SUCCESS;
 }
@@ -651,6 +696,9 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
             if (str_startswith(begin, NDEF_BLUEAPPL)) {
                 ndefDecodeMime_bt(ndef);
             }
+            if (str_startswith(begin, NDEF_JSONAPPL)) {
+                ndefDecodeMime_json(ndef);
+            }
 
             free(begin);
             begin = NULL;
@@ -673,6 +721,7 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
             PrintAndLogEx(INFO, "- decoder to be impl -");
             break;
     }
+    PrintAndLogEx(INFO, "");
     return PM3_SUCCESS;
 }
 

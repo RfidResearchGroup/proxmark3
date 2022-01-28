@@ -1,7 +1,17 @@
 //-----------------------------------------------------------------------------
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // CRC16
 //-----------------------------------------------------------------------------
@@ -10,10 +20,11 @@
 
 #include "common.h"
 
-#define CRC16_POLY_CCITT   0x1021
-#define CRC16_POLY_KERMIT  0x8408
-#define CRC16_POLY_LEGIC   0xc6c6 //0x6363
-#define CRC16_POLY_DNP     0x3d65
+#define CRC16_POLY_CCITT     0x1021
+#define CRC16_POLY_KERMIT    0x8408
+#define CRC16_POLY_LEGIC     0xc6c6 //0x6363
+#define CRC16_POLY_LEGIC_16  0x002d
+#define CRC16_POLY_DNP       0x3d65
 
 #define X25_CRC_CHECK     ((uint16_t)(~0xF0B8 & 0xFFFF)) // use this for checking of a correct crc
 
@@ -26,6 +37,7 @@ typedef enum {
     CRC_ICLASS,
     CRC_FELICA,
     CRC_LEGIC,
+    CRC_LEGIC_16,
     CRC_CCITT,
     CRC_KERMIT,
     CRC_XMODEM,

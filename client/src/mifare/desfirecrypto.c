@@ -1,22 +1,20 @@
-/*-
- * Copyright (C) 2010, Romain Tartiere.
- * Copyright (C) 2021 Merlok
- *
- * This program is free software: you can redistribute it and/or modify it
- * under the terms of the GNU Lesser General Public License as published by the
- * Free Software Foundation, either version 3 of the License, or (at your
- * option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>
- *
- * $Id$
- */
+//-----------------------------------------------------------------------------
+// Borrowed initially from https://github.com/nfc-tools/libfreefare
+// Copyright (C) 2010, Romain Tartiere.
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
 
 #include "desfirecrypto.h"
 
@@ -74,10 +72,17 @@ void DesfireClearIV(DesfireContext_t *ctx) {
 
 void DesfireSetKey(DesfireContext_t *ctx, uint8_t keyNum, DesfireCryptoAlgorithm keyType, uint8_t *key) {
     DesfireClearContext(ctx);
+    if (key == NULL)
+        return;
+
     DesfireSetKeyNoClear(ctx, keyNum, keyType, key);
 }
 
 void DesfireSetKeyNoClear(DesfireContext_t *ctx, uint8_t keyNum, DesfireCryptoAlgorithm keyType, uint8_t *key) {
+
+    if (key == NULL)
+        return;
+
     ctx->keyNum = keyNum;
     ctx->keyType = keyType;
     memcpy(ctx->key, key, desfire_get_key_length(keyType));
@@ -95,8 +100,9 @@ void DesfireSetCommMode(DesfireContext_t *ctx, DesfireCommunicationMode commMode
 void DesfireSetKdf(DesfireContext_t *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint8_t kdfInputLen) {
     ctx->kdfAlgo = kdfAlgo;
     ctx->kdfInputLen = kdfInputLen;
-    if (kdfInputLen)
+    if (kdfInputLen) {
         memcpy(ctx->kdfInput, kdfInput, kdfInputLen);
+    }
 }
 
 bool DesfireIsAuthenticated(DesfireContext_t *dctx) {
@@ -439,7 +445,7 @@ void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorithm keytype, uint8
     }
 }
 
-uint8_t DesfireDESKeyGetVersion(uint8_t *key) {
+uint8_t DesfireDESKeyGetVersion(const uint8_t *key) {
     uint8_t version = 0;
     for (int n = 0; n < 8; n++)
         version |= ((key[n] & 1) << (7 - n));

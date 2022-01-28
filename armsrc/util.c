@@ -1,9 +1,18 @@
 //-----------------------------------------------------------------------------
-// Jonathan Westhues, Sept 2005
+// Copyright (C) Jonathan Westhues, Sept 2005
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Utility functions used in many places, not specific to any piece of code.
 //-----------------------------------------------------------------------------
@@ -195,7 +204,7 @@ int BUTTON_CLICKED(int ms) {
     int ticks = ((MCK / 1000) * (ms ? ms : 1000)) >> 10;
 
     // If we're not even pressed, forget about it!
-    if (!BUTTON_PRESS())
+    if (BUTTON_PRESS() == false)
         return BUTTON_NO_CLICK;
 
     // Borrow a PWM unit for my real-time clock
@@ -214,7 +223,7 @@ int BUTTON_CLICKED(int ms) {
         // We haven't let off the button yet
         if (!letoff) {
             // We just let it off!
-            if (!BUTTON_PRESS()) {
+            if (BUTTON_PRESS() == false) {
                 letoff = 1;
 
                 // reset our timer for 500ms
@@ -259,7 +268,7 @@ int BUTTON_HELD(int ms) {
     int ticks = (48000 * (ms ? ms : 1000)) >> 10;
 
     // If we're not even pressed, forget about it!
-    if (!BUTTON_PRESS())
+    if (BUTTON_PRESS() == false)
         return BUTTON_NO_CLICK;
 
     // Borrow a PWM unit for my real-time clock
@@ -275,7 +284,7 @@ int BUTTON_HELD(int ms) {
         uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
         // As soon as our button let go, we didn't hold long enough
-        if (!BUTTON_PRESS())
+        if (BUTTON_PRESS() == false)
             return BUTTON_SINGLE_CLICK;
 
         // Have we waited the full second?

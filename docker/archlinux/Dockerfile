@@ -1,10 +1,11 @@
 FROM archlinux:base
 
 ENV LANG C
-RUN pacman -Syy
+RUN pacman -Syu --noconfirm
 RUN pacman-db-upgrade
 # qt5-base skipped
-RUN pacman -S --noconfirm sudo git base-devel cmake libusb readline bzip2 arm-none-eabi-gcc arm-none-eabi-newlib --needed
+# bluez skipped, can't be installed in docker
+RUN pacman -S --noconfirm sudo git base-devel cmake libusb readline bzip2 arm-none-eabi-gcc arm-none-eabi-newlib python --needed
 
 # Create rrg user
 RUN useradd -ms /bin/bash rrg

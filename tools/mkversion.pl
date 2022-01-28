@@ -19,7 +19,7 @@ my $ctime;
 # GIT status  0 = dirty,  1 = clean ,  2 = undecided
 my $clean = 2;
 my $undecided = (defined $ARGV[0]) && ($ARGV[0] =~ '--undecided');
-# Do we have acces to git command?
+# Do we have access to git command?
 #######
 # solves some bug on macos i.e:
 ##

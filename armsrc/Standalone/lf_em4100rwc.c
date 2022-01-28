@@ -1,9 +1,18 @@
 //-----------------------------------------------------------------------------
-// Artyom Gnatyuk, 2020
+// Copyright (C) Artyom Gnatyuk, 2020
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // LF rwc   -   This mode can simulate ID from selected slot, read ID to
 //              selected slot, write from selected slot to T5555 tag and store
@@ -36,13 +45,13 @@
 #define MAX_IND 16 // 4 LEDs - 2^4 combinations
 #define LF_CLOCK 64   // for 125kHz
 
-// low & high - array for storage IDs. Its length must be equal.
-// Predefined IDs must be stored in low[].
-// In high[] must be nulls
-static uint64_t low[] = {0x565AF781C7, 0x540053E4E2, 0x1234567890, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-static uint32_t high[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-static uint8_t slots_count;
-static int buflen;
+// em4100rwc_low & em4100rwc_high - array for storage IDs. Its length must be equal.
+// Predefined IDs must be stored in em4100rwc_low[].
+// In em4100rwc_high[] must be nulls
+static uint64_t em4100rwc_low[] = {0x565AF781C7, 0x540053E4E2, 0x1234567890, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static uint32_t em4100rwc_high[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static uint8_t em4100rwc_slots_count;
+static int em4100rwc_buflen;
 
 void ModInfo(void) {
     DbpString("  LF EM4100 read/write/clone mode");
@@ -58,10 +67,10 @@ static uint64_t rev_quads(uint64_t bits) {
 
 static void fill_buff(uint8_t bit) {
     uint8_t *bba = BigBuf_get_addr();
-    memset(bba + buflen, bit, LF_CLOCK / 2);
-    buflen += (LF_CLOCK / 2);
-    memset(bba + buflen, bit ^ 1, LF_CLOCK / 2);
-    buflen += (LF_CLOCK / 2);
+    memset(bba + em4100rwc_buflen, bit, LF_CLOCK / 2);
+    em4100rwc_buflen += (LF_CLOCK / 2);
+    memset(bba + em4100rwc_buflen, bit ^ 1, LF_CLOCK / 2);
+    em4100rwc_buflen += (LF_CLOCK / 2);
 }
 
 static void construct_EM410x_emul(uint64_t id) {
@@ -69,7 +78,7 @@ static void construct_EM410x_emul(uint64_t id) {
     int i, j;
     int binary[4] = {0, 0, 0, 0};
     int parity[4] = {0, 0, 0, 0};
-    buflen = 0;
+    em4100rwc_buflen = 0;
 
     for (i = 0; i < 9; i++)
         fill_buff(1);
@@ -94,10 +103,10 @@ static void construct_EM410x_emul(uint64_t id) {
 
 static void led_slot(int i) {
     LEDsoff();
-    if (slots_count > 4) {
-        LED(i % MAX_IND, 0); //binary indication, usefully for slots_count > 4
+    if (em4100rwc_slots_count > 4) {
+        LED(i % MAX_IND, 0); //binary indication, usefully for em4100rwc_slots_count > 4
     } else {
-        LED(1 << i, 0); //simple indication for slots_count <=4
+        LED(1 << i, 0); //simple indication for em4100rwc_slots_count <=4
     }
 }
 
@@ -138,7 +147,7 @@ void RunMod(void) {
     //      2 - simulate tag from selected slot
     //      3 - write to T5555 tag
     uint8_t state = 0;
-    slots_count = ARRAYLEN(low);
+    em4100rwc_slots_count = ARRAYLEN(em4100rwc_low);
     led_slot(selected);
     for (;;) {
 
@@ -159,7 +168,7 @@ void RunMod(void) {
                     state = 2;
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - switch to next slot
-                    selected = (selected + 1) % slots_count;
+                    selected = (selected + 1) % em4100rwc_slots_count;
                     led_slot(selected);
                 }
                 break;
@@ -172,10 +181,10 @@ void RunMod(void) {
                     state = 3;
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - exit to select mode
-                    lf_em410x_watch(1, &high[selected], &low[selected]);
+                    lf_em410x_watch(1, &em4100rwc_high[selected], &em4100rwc_low[selected], true);
                     flash_leds(100, 5);
 #ifdef WITH_FLASH
-                    SaveIDtoFlash(selected, low[selected]);
+                    SaveIDtoFlash(selected, em4100rwc_low[selected]);
 #endif
                     state = 0;
                 }
@@ -191,10 +200,10 @@ void RunMod(void) {
                     // Click - start simulating. Click again to exit from simulate mode
                     led_slot(selected);
 
-                    construct_EM410x_emul(rev_quads(low[selected]));
+                    construct_EM410x_emul(rev_quads(em4100rwc_low[selected]));
                     flash_leds(100, 5);
 
-                    SimulateTagLowFrequency(buflen, 0, true);
+                    SimulateTagLowFrequency(em4100rwc_buflen, 0, true);
                     led_slot(selected);
                     state = 0; // Switch to select mode
                 }
@@ -208,7 +217,7 @@ void RunMod(void) {
                     state = 0;
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - write ID to tag
-                    copy_em410x_to_t55xx(0, LF_CLOCK, (uint32_t)(low[selected] >> 32), (uint32_t)(low[selected] & 0xffffffff));
+                    copy_em410x_to_t55xx(0, LF_CLOCK, (uint32_t)(em4100rwc_low[selected] >> 32), (uint32_t)(em4100rwc_low[selected] & 0xffffffff), true);
                     led_slot(selected);
                     state = 0; // Switch to select mode
                 }

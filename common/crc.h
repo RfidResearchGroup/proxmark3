@@ -1,7 +1,17 @@
 //-----------------------------------------------------------------------------
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Generic CRC calculation code.
 //-----------------------------------------------------------------------------
@@ -75,4 +85,9 @@ uint32_t CRC8Legic(uint8_t *buff, size_t size);
 
 // Calculate CRC-8/Cardx checksum
 uint32_t CRC8Cardx(uint8_t *buff, size_t size);
+
+// Calculate CRC-8/Hitag1, ZX8211 checksum
+uint32_t CRC8Hitag1(uint8_t *buff, size_t size);
+uint32_t CRC8Hitag1Bits(const uint8_t *buff, size_t bitsize);
+
 #endif /* __CRC_H */

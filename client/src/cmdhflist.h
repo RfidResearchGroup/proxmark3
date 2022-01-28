@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) Merlok - 2017
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Command: hf mf list. It shows data from arm buffer.
 //-----------------------------------------------------------------------------
@@ -37,7 +45,7 @@ uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint8_t len);
 uint8_t iso15693_CRC_check(uint8_t *d, uint8_t n);
 uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n);
 
-int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
 
 void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool isResponse);
 void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
@@ -46,16 +54,19 @@ void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
-void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
 void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
-void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, uint8_t paritysize, bool isResponse);
+void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize,
+                    const uint8_t *parity, uint8_t paritysize, bool isResponse);
 void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateCryptoRF(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+
+void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 
 bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen, const uint64_t *dicKeys, uint32_t dicKeysCount);
 bool NTParityChk(AuthData_t *ad, uint32_t ntx);
 bool NestedCheckKey(uint64_t key, AuthData_t *ad, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity);
-bool CheckCrypto1Parity(uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, uint8_t *parity_enc);
+bool CheckCrypto1Parity(const uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, const uint8_t *parity_enc);
 uint64_t GetCrypto1ProbableKey(AuthData_t *ad);
 
 #endif // CMDHFLIST

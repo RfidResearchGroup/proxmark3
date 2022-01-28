@@ -408,7 +408,7 @@ static inline uint32_t sm_right(const uint8_t *ks, uint8_t *mask, vector<uint64_
     for (it = bincstates.begin(); it != bincstates.end(); ++it) {
         pcrstates->push_back(it->second);
     }
-    // Reverse the vector order (so the higest bin comes first)
+    // Reverse the vector order (so the highest bin comes first)
     reverse(pcrstates->begin(), pcrstates->end());
 
     return topbits;
@@ -511,7 +511,7 @@ static inline void search_gc_candidates_right(const uint64_t rstate_before_gc, c
     }
 }
 
-static inline void sm_left(const uint8_t *ks, uint8_t *mask, vector<cs_t> *pcstates) {
+static inline void sm_left(const uint8_t *ks, const uint8_t *mask, vector<cs_t> *pcstates) {
     map<uint64_t, cs_t> bincstates;
     map<uint64_t, cs_t>::iterator it;
     uint64_t counter, lstate;
@@ -588,7 +588,7 @@ static inline void sm_left(const uint8_t *ks, uint8_t *mask, vector<cs_t> *pcsta
     for (it = bincstates.begin(); it != bincstates.end(); ++it) {
         pcstates->push_back(it->second);
     }
-    // Reverse the vector order (so the higest bin comes first)
+    // Reverse the vector order (so the highest bin comes first)
     reverse(pcstates->begin(), pcstates->end());
 }
 
@@ -733,8 +733,8 @@ int main(int argc, const char *argv[]) {
 
     uint64_t nCi;   // Card random
     uint64_t nQ;    // Reader random
-    uint64_t nCh;   // Reader challange
-    uint64_t nCi_1; // Card anwser
+    uint64_t nCh;   // Reader challenge
+    uint64_t nCi_1; // Card answer
 
     if ((argc != 2) && (argc != 5)) {
         printf("SecureMemory recovery - (c) Radboud University Nijmegen\n\n");

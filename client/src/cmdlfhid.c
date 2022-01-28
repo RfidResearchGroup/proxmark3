@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
-// 2016,2017, marshmellow, iceman
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Low frequency HID commands (known)
 //
@@ -246,7 +254,7 @@ static int CmdHIDSim(const char *Cmd) {
         arg_u64_0(NULL, "cn",      "<dec>", "card number"),
         arg_u64_0("i",    NULL,     "<dec>", "issue level"),
         arg_u64_0("o",   "oem",     "<dec>", "OEM code"),
-        arg_strx0("r",  "raw",     "<hex>", "raw bytes"),
+        arg_str0("r",  "raw",     "<hex>", "raw bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -271,7 +279,7 @@ static int CmdHIDSim(const char *Cmd) {
     memset(&packed, 0, sizeof(wiegand_message_t));
 
     // format validation
-    int format_idx = HIDFindCardFormat((char *)format);
+    int format_idx = HIDFindCardFormat(format);
     if (format_idx == -1 && raw_len == 0) {
         PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
         return PM3_EINVARG;
@@ -330,7 +338,7 @@ static int CmdHIDClone(const char *Cmd) {
         arg_u64_0(NULL, "cn",      "<dec>", "card number"),
         arg_int0("i",    NULL,     "<dec>", "issue level"),
         arg_int0("o",   "oem",     "<dec>", "OEM code"),
-        arg_strx0("r",  "raw",     "<hex>", "raw bytes"),
+        arg_str0("r",  "raw",     "<hex>", "raw bytes"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
@@ -375,7 +383,7 @@ static int CmdHIDClone(const char *Cmd) {
     memset(&packed, 0, sizeof(wiegand_message_t));
 
     // format validation
-    int format_idx = HIDFindCardFormat((char *)format);
+    int format_idx = HIDFindCardFormat(format);
     if (format_idx == -1 && raw_len == 0) {
         PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
         return PM3_EINVARG;
@@ -461,16 +469,6 @@ static int CmdHIDClone(const char *Cmd) {
 */
 
 static int CmdHIDBrute(const char *Cmd) {
-
-    uint32_t delay = 1000;
-    int format_idx = -1;
-    int direction = 0;
-    uint8_t format[16] = {0};
-    int formatLen;
-
-    wiegand_card_t cn_hi, cn_low;
-    memset(&cn_hi, 0, sizeof(wiegand_card_t));
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hid brute",
                   "Enables bruteforce of HID readers with specified facility code.\n"
@@ -498,22 +496,29 @@ static int CmdHIDBrute(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool verbose = arg_get_lit(ctx, 1);
-    formatLen = sizeof(format);
-    CLIGetStrWithReturn(ctx, 2, format, &formatLen);
 
-    format_idx = HIDFindCardFormat((char *) format);
+    char format[16] = {0};
+    int format_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)format, sizeof(format), &format_len);
+
+    int format_idx = HIDFindCardFormat(format);
     if (format_idx == -1) {
         PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
+    wiegand_card_t cn_hi, cn_low;
+    memset(&cn_hi, 0, sizeof(wiegand_card_t));
+
     cn_hi.FacilityCode = arg_get_u32_def(ctx, 3, 0);
     cn_hi.CardNumber = arg_get_u32_def(ctx, 4, 0);
     cn_hi.IssueLevel = arg_get_u32_def(ctx, 5, 0);
     cn_hi.OEM = arg_get_u32_def(ctx, 6, 0);
-    delay = arg_get_u32_def(ctx, 7, 1000);
 
+    uint32_t delay = arg_get_u32_def(ctx, 7, 1000);
+
+    int direction = 0;
     if (arg_get_lit(ctx, 8) && arg_get_lit(ctx, 9)) {
         direction = 0;
     } else if (arg_get_lit(ctx, 8)) {

@@ -1,7 +1,17 @@
 //-----------------------------------------------------------------------------
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // NFC commands
 //-----------------------------------------------------------------------------
@@ -70,7 +80,7 @@ static int CmdNfcDecode(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("d",  "data", "<hex>", "NDEF data to decode"),
+        arg_str0("d",  "data", "<hex>", "NDEF data to decode"),
         arg_str0("f", "file", "<fn>", "file to load"),
         arg_lit0("v",  "verbose", "verbose mode"),
         arg_param_end
@@ -87,23 +97,44 @@ static int CmdNfcDecode(const char *Cmd) {
 
     bool verbose = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
-    if (((datalen != 0) && (fnlen != 0)) || ((datalen == 0) && (fnlen == 0))){
+    if (((datalen != 0) && (fnlen != 0)) || ((datalen == 0) && (fnlen == 0))) {
         PrintAndLogEx(ERR, "You must provide either data in hex or a filename");
         return PM3_EINVARG;
     }
     int res = PM3_SUCCESS;
     if (fnlen != 0) {
-        size_t dumplen = 0;
+
         uint8_t *dump = NULL;
-        if (loadFile_safe(filename, ".bin", (void **)&dump, &dumplen) != PM3_SUCCESS) {
+        size_t bytes_read = 4096;
+        DumpFileType_t dftype = getfiletype(filename);
+        switch (dftype) {
+            case BIN: {
+                res = loadFile_safe(filename, ".bin", (void **)&dump, &bytes_read);
+                break;
+            }
+            case EML: {
+                res = loadFileEML_safe(filename, (void **)&dump, &bytes_read);
+                break;
+            }
+            case JSON:
+            case DICTIONARY: {
+                free(dump);
+                PrintAndLogEx(ERR, "Error: Only BIN/EML formats allowed");
+                return PM3_EINVARG;
+            }
+        }
+
+        if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "error, something went wrong when loading file");
             free(dump);
             return PM3_EFILE;
         }
-        res = NDEFDecodeAndPrint(dump, dumplen, verbose);
+
+
+        res = NDEFDecodeAndPrint(dump, bytes_read, verbose);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
-            res = NDEFRecordsDecodeAndPrint(dump, dumplen);
+            res = NDEFRecordsDecodeAndPrint(dump, bytes_read);
         }
         free(dump);
     } else {

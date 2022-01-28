@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2016 iceman
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Analyse bytes commands
 //-----------------------------------------------------------------------------
@@ -21,7 +29,6 @@
 #include "crc.h"
 #include "crc16.h"        // crc16 ccitt
 #include "crc32.h"        // crc32_ex
-#include "tea.h"
 #include "legic_prng.h"
 #include "cmddata.h"      // g_DemodBuffer
 #include "graph.h"
@@ -32,10 +39,10 @@
 
 static int CmdHelp(const char *Cmd);
 
-static uint8_t calculateLRC(uint8_t *bytes, uint8_t len) {
+static uint8_t calculateLRC(const uint8_t *d, uint8_t n) {
     uint8_t lcr = 0;
-    for (uint8_t i = 0; i < len; i++)
-        lcr ^= bytes[i];
+    for (uint8_t i = 0; i < n; i++)
+        lcr ^= d[i];
     return lcr;
 }
 /*
@@ -56,7 +63,7 @@ static uint16_t shiftadd ( uint8_t* bytes, uint8_t len){
     return 0;
 }
 */
-static uint16_t calcSumCrumbAdd(uint8_t *bytes, uint8_t len, uint32_t mask) {
+static uint16_t calcSumCrumbAdd(const uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum += CRUMB(bytes[i], 0);
@@ -67,10 +74,10 @@ static uint16_t calcSumCrumbAdd(uint8_t *bytes, uint8_t len, uint32_t mask) {
     sum &= mask;
     return (sum & 0xFFFF);
 }
-static uint16_t calcSumCrumbAddOnes(uint8_t *bytes, uint8_t len, uint32_t mask) {
+static uint16_t calcSumCrumbAddOnes(const uint8_t *bytes, uint8_t len, uint32_t mask) {
     return (~calcSumCrumbAdd(bytes, len, mask) & mask);
 }
-static uint16_t calcSumNibbleAdd(uint8_t *bytes, uint8_t len, uint32_t mask) {
+static uint16_t calcSumNibbleAdd(const uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum += NIBBLE_LOW(bytes[i]);
@@ -82,7 +89,7 @@ static uint16_t calcSumNibbleAdd(uint8_t *bytes, uint8_t len, uint32_t mask) {
 static uint16_t calcSumNibbleAddOnes(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return (~calcSumNibbleAdd(bytes, len, mask) & mask);
 }
-static uint16_t calcSumCrumbXor(uint8_t *bytes, uint8_t len, uint32_t mask) {
+static uint16_t calcSumCrumbXor(const uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum ^= CRUMB(bytes[i], 0);
@@ -93,7 +100,7 @@ static uint16_t calcSumCrumbXor(uint8_t *bytes, uint8_t len, uint32_t mask) {
     sum &= mask;
     return (sum & 0xFFFF);
 }
-static uint16_t calcSumNibbleXor(uint8_t *bytes, uint8_t len, uint32_t mask) {
+static uint16_t calcSumNibbleXor(const uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum ^= NIBBLE_LOW(bytes[i]);
@@ -102,7 +109,7 @@ static uint16_t calcSumNibbleXor(uint8_t *bytes, uint8_t len, uint32_t mask) {
     sum &= mask;
     return (sum & 0xFFFF);
 }
-static uint16_t calcSumByteXor(uint8_t *bytes, uint8_t len, uint32_t mask) {
+static uint16_t calcSumByteXor(const uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum ^= bytes[i];
@@ -110,7 +117,7 @@ static uint16_t calcSumByteXor(uint8_t *bytes, uint8_t len, uint32_t mask) {
     sum &= mask;
     return (sum & 0xFFFF);
 }
-static uint16_t calcSumByteAdd(uint8_t *bytes, uint8_t len, uint32_t mask) {
+static uint16_t calcSumByteAdd(const uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum += bytes[i];
@@ -123,7 +130,7 @@ static uint16_t calcSumByteAddOnes(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return (~calcSumByteAdd(bytes, len, mask) & mask);
 }
 
-static uint16_t calcSumByteSub(uint8_t *bytes, uint8_t len, uint32_t mask) {
+static uint16_t calcSumByteSub(const uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum -= bytes[i];
@@ -134,7 +141,7 @@ static uint16_t calcSumByteSub(uint8_t *bytes, uint8_t len, uint32_t mask) {
 static uint16_t calcSumByteSubOnes(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return (~calcSumByteSub(bytes, len, mask) & mask);
 }
-static uint16_t calcSumNibbleSub(uint8_t *bytes, uint8_t len, uint32_t mask) {
+static uint16_t calcSumNibbleSub(const uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum -= NIBBLE_LOW(bytes[i]);
@@ -148,7 +155,7 @@ static uint16_t calcSumNibbleSubOnes(uint8_t *bytes, uint8_t len, uint32_t mask)
 }
 
 // BSD shift checksum 8bit version
-static uint16_t calcBSDchecksum8(uint8_t *bytes, uint8_t len, uint32_t mask) {
+static uint16_t calcBSDchecksum8(const uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum = ((sum & 0xFF) >> 1) | ((sum & 0x1) << 7);   // rotate accumulator
@@ -159,7 +166,7 @@ static uint16_t calcBSDchecksum8(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return (sum & 0xFFFF);
 }
 // BSD shift checksum 4bit version
-static uint16_t calcBSDchecksum4(uint8_t *bytes, uint8_t len, uint32_t mask) {
+static uint16_t calcBSDchecksum4(const uint8_t *bytes, uint8_t len, uint32_t mask) {
     uint32_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum = ((sum & 0xF) >> 1) | ((sum & 0x1) << 3);   // rotate accumulator
@@ -478,55 +485,6 @@ static int CmdAnalyseDates(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
     PrintAndLogEx(NORMAL, "To be implemented. Feel free to contribute!");
-    return PM3_SUCCESS;
-}
-
-static int CmdAnalyseTEASelfTest(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "analyse tea",
-                  "Crypto TEA self tests",
-                  "analyse tea -d 1122334455667788"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str1("d", "data", "<hex>", "bytes to encrypt ( 8 hex bytes )"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    int dlen = 0;
-    uint8_t data[8] = {0x00};
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
-    CLIParserFree(ctx);
-    if (res) {
-        PrintAndLogEx(FAILED, "Error parsing bytes");
-        return PM3_EINVARG;
-    }
-
-    uint8_t v_le[8];
-    memset(v_le, 0x00, sizeof(v_le));
-    uint8_t *v_ptr = v_le;
-
-    SwapEndian64ex(data, 8, 4, v_ptr);
-
-    // ENCRYPTION KEY:
-    uint8_t key[16] = {0x55, 0xFE, 0xF6, 0x30, 0x62, 0xBF, 0x0B, 0xC1, 0xC9, 0xB3, 0x7C, 0x34, 0x97, 0x3E, 0x29, 0xFB };
-    uint8_t keyle[16];
-    uint8_t *key_ptr = keyle;
-    SwapEndian64ex(key, sizeof(key), 4, key_ptr);
-
-    PrintAndLogEx(INFO, "TEA crypto testing");
-    PrintAndLogEx(INFO, "-----------------------------------+---------");
-    PrintAndLogEx(INFO, "LE enc.... %s", sprint_hex_ascii(v_ptr, 8));
-
-    tea_decrypt(v_ptr, key_ptr);
-    PrintAndLogEx(INFO, "LE dec.... %s", sprint_hex_ascii(v_ptr, 8));
-
-    tea_encrypt(v_ptr, key_ptr);
-    PrintAndLogEx(INFO, "enc1...... %s", sprint_hex_ascii(v_ptr, 8));
-    tea_encrypt(v_ptr, key_ptr);
-    PrintAndLogEx(INFO, "enc2...... %s", sprint_hex_ascii(v_ptr, 8));
-    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -1012,7 +970,7 @@ static int CmdAnalyseFreq(const char *Cmd) {
     PrintAndLogEx(INFO, " 13.56 mHz has %f m, rf range %f m", len_1356, rf_range_1356);
 
 
-    if (F == 0 && C == 0 && L == 0) 
+    if (F == 0 && C == 0 && L == 0)
         return PM3_SUCCESS;
 
 
@@ -1021,22 +979,22 @@ static int CmdAnalyseFreq(const char *Cmd) {
 
     // From  https://goodcalculators.com/resonant-frequency-calculator/
     // Calc Resonant Frequency [Hz]
-    // f = 1 / (2π √L C)  
+    // f = 1 / (2π √L C)
     if (F == 0) {
-        double calc_freq = 1 / (2 * M_PI * sqrtf((L * C)) );
+        double calc_freq = 1 / (2 * M_PI * sqrtf((L * C)));
         PrintAndLogEx(INFO, "Resonating Frequency  %lf Hz", calc_freq);
     }
     // Calc Inductance [H]
-    // L = 1 / (4π2 f2 C) 
+    // L = 1 / (4π2 f2 C)
     if (L == 0) {
-        double calc_inductance = 1 / (4 * (M_PI * M_PI) * (F * F) * C );
+        double calc_inductance = 1 / (4 * (M_PI * M_PI) * (F * F) * C);
         PrintAndLogEx(INFO, "Inductance %lf Henries", calc_inductance);
     }
 
     // Capacitance [F]
     //  C = 1 / (4π2 f2 L)
     if (C == 0) {
-        double calc_capacitance = 1 / (4 * (M_PI * M_PI) * (F * F) * L);        
+        double calc_capacitance = 1 / (4 * (M_PI * M_PI) * (F * F) * L);
         PrintAndLogEx(INFO, "Capacitance %lf Farads", calc_capacitance);
     }
     return PM3_SUCCESS;
@@ -1052,7 +1010,7 @@ static int CmdAnalyseFoo(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("r", "raw",  "<hex>", "raw bytes (strx)"),
+        arg_str1("r", "raw",  "<hex>", "raw bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1181,11 +1139,11 @@ static int CmdAnalyseUnits(const char *Cmd) {
         PrintAndLogEx(INFO, "  32 SSP = %u ETU (expect 1) " _GREEN_("ok"), SSP_TO_ETU(32));
     } else if (etu) {
 
-        PrintAndLogEx(INFO, " %d ETU = %u us ", ETU_TO_US(etu));
-        PrintAndLogEx(INFO, " %d ETU = %u SSP ", ETU_TO_SSP(etu));
+        PrintAndLogEx(INFO, " %d ETU = %u us ", ETU_TO_US(etu), 0);
+        PrintAndLogEx(INFO, " %d ETU = %u SSP ", ETU_TO_SSP(etu), 0);
     } else if (us) {
-        PrintAndLogEx(INFO, " %d us = %u ETU ", US_TO_ETU(us));
-        PrintAndLogEx(INFO, " %d us = %u SSP ", US_TO_SSP(us));
+        PrintAndLogEx(INFO, " %d us = %u ETU ", US_TO_ETU(us), 0);
+        PrintAndLogEx(INFO, " %d us = %u SSP ", US_TO_SSP(us), 0);
     }
 
     return PM3_SUCCESS;
@@ -1197,7 +1155,6 @@ static command_t CommandTable[] = {
     {"crc",     CmdAnalyseCRC,      AlwaysAvailable, "Stub method for CRC evaluations"},
     {"chksum",  CmdAnalyseCHKSUM,   AlwaysAvailable, "Checksum with adding, masking and one's complement"},
     {"dates",   CmdAnalyseDates,    AlwaysAvailable, "Look for datestamps in a given array of bytes"},
-    {"tea",     CmdAnalyseTEASelfTest, AlwaysAvailable, "Crypto TEA test"},
     {"lfsr",    CmdAnalyseLfsr,     AlwaysAvailable, "LFSR tests"},
     {"a",       CmdAnalyseA,        AlwaysAvailable, "num bits test"},
     {"nuid",    CmdAnalyseNuid,     AlwaysAvailable, "create NUID from 7byte UID"},

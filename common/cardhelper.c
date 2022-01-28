@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Iceman, February 2020
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Support functions for smart card
 //-----------------------------------------------------------------------------
@@ -17,7 +25,7 @@
 
 #define CARD_INS_DECRYPT    0x01
 #define CARD_INS_ENCRYPT    0x02
-#define CARD_INS_VEIRFY_RRG 0x05
+#define CARD_INS_VERIFY_RRG 0x05
 #define CARD_INS_DECODE     0x06
 #define CARD_INS_NUMBLOCKS  0x07
 #define CARD_INS_PINSIZE    0x08
@@ -53,7 +61,7 @@ static bool executeCrypto(uint8_t ins, uint8_t *src, uint8_t *dest) {
 
     int resp_len = 0;
     uint8_t dec[11] = {0};
-    ExchangeAPDUSC(false, cmd, sizeof(cmd), false, true, dec, sizeof(dec), &resp_len);
+    ExchangeAPDUSC(false, cmd, sizeof(cmd), true, true, dec, sizeof(dec), &resp_len);
     if (resp_len == 10) {
         memcpy(dest, dec, 8);
         return true;
@@ -177,7 +185,7 @@ int VerifyRdv4Signature(uint8_t *memid, uint8_t *signature) {
 
     int resp_len = 0;
     uint8_t resp[254] = {0};
-    uint8_t c[5 + 8 + 128] = {0x96, CARD_INS_VEIRFY_RRG, 0x00, 0x00, 8 + 128};
+    uint8_t c[5 + 8 + 128] = {0x96, CARD_INS_VERIFY_RRG, 0x00, 0x00, 8 + 128};
 
     memcpy(c + 5, memid, 8);
     memcpy(c + 5 + 8, signature, 128);

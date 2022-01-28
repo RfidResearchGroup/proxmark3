@@ -223,7 +223,7 @@ typedef struct {
 #define FLAG_NR_AR_ATTACK       0x20
 
 //Iclass reader flags
-#define FLAG_ICLASS_READER_ONLY_ONCE    0x01
+//#define FLAG_ICLASS_READER_ONLY_ONCE    0x01
 #define FLAG_ICLASS_READER_CC           0x02
 #define FLAG_ICLASS_READER_CSN          0x04
 #define FLAG_ICLASS_READER_CONF         0x08

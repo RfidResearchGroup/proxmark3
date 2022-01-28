@@ -1,3 +1,18 @@
+//-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
 #include "felica.h"
 #include "proxmark3_arm.h"
 #include "BigBuf.h"
@@ -282,7 +297,7 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
 // Felica standard has a different file system, AFAIK,
 // 8-byte IDm, number of blocks, blocks numbers
 // number of blocks limited to 4 for FelicaLite(S)
-static void BuildFliteRdblk(uint8_t *idm, int blocknum, uint16_t *blocks) {
+static void BuildFliteRdblk(const uint8_t *idm, int blocknum, const uint16_t *blocks) {
     if (blocknum > 4 || blocknum <= 0)
         Dbprintf("Invalid number of blocks, %d != 4", blocknum);
 
@@ -681,9 +696,9 @@ void felica_sim_lite(uint8_t *uid) {
     }
 
     // calculate and set CRC
-    AddCrc(resp_poll0, resp_poll0[2]);
-    AddCrc(resp_poll1, resp_poll1[2]);
-    AddCrc(resp_readblk, resp_readblk[2]);
+    AddCrc(&resp_poll0[2], resp_poll0[2]);
+    AddCrc(&resp_poll1[2], resp_poll1[2]);
+    AddCrc(&resp_readblk[2], resp_readblk[2]);
 
     iso18092_setup(FPGA_HF_ISO18092_FLAG_NOMOD);
 
@@ -735,6 +750,7 @@ void felica_sim_lite(uint8_t *uid) {
                     if (FelicaFrame.crc_ok) {
 
                         if (FelicaFrame.framebytes[2] == 6 && FelicaFrame.framebytes[3] == 0) {
+                            static uint8_t timeslot = 0;
 
                             // polling... there are two types of polling we answer to
                             if (FelicaFrame.framebytes[6] == 0) {
@@ -745,8 +761,15 @@ void felica_sim_lite(uint8_t *uid) {
                             if (FelicaFrame.framebytes[6] == 1) {
                                 curresp = resp_poll1;
                                 curlen = R_POLL1_LEN;
-                                listenmode = true;
+                                listenmode = false;
                             }
+                            if (timeslot > FelicaFrame.framebytes[7]) {
+                                // framebytes[7] contains the maximum time slot in which we are allowed to respond (#0..#15)
+                                timeslot = 0;
+                            }
+                            // first time slot (#0) starts after 512 * 64 / fc, slot length equals 256 * 64 / fc
+                            felica_nexttransfertime = GetCountSspClk() - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + (512 + timeslot * 256) * 64 / 16 + 1;
+                            timeslot++; // we should use a random time slot, but responding in incremental slots should do just fine for now
                         }
 
                         if (FelicaFrame.framebytes[2] > 5 && FelicaFrame.framebytes[3] == 0x06) {
@@ -807,7 +830,7 @@ void felica_dump_lite_s(void) {
     uint16_t cnt = 0, cntfails = 0;
     uint8_t *dest = BigBuf_get_addr();
 
-    while (!BUTTON_PRESS() && !data_available()) {
+    while ((BUTTON_PRESS() == false) && (data_available() == false)) {
         WDT_HIT();
         // polling?
         //TransmitFor18092_AsReader(poll, 10, GetCountSspClk()+512, 1, 0);

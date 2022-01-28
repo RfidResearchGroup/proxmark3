@@ -1,11 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
-// modified Marshmellow,
-// modified Iceman 2019, 2020, 2021
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Data and Graph commands
 //-----------------------------------------------------------------------------
@@ -36,9 +42,8 @@ int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
 
-//set the g_DemodBuffer with given array ofq binary (one bit per byte)
-//by marshmellow
-void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx) {
+// set the g_DemodBuffer with given array ofq binary (one bit per byte)
+void setDemodBuff(const uint8_t *buff, size_t size, size_t start_idx) {
     if (buff == NULL) return;
 
     if (size > MAX_DEMOD_BUF_LEN - start_idx)
@@ -2407,7 +2412,7 @@ static int Cmdbin2hex(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("d", "data", "<bin>", "binary string to convert"),
+        arg_str1("d", "data", "<bin>", "binary string to convert"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

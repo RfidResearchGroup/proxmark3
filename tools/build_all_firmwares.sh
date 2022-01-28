@@ -1,9 +1,24 @@
 #!/bin/bash
 # (Need bash because of Bash Arrays)
+#-----------------------------------------------------------------------------
+# Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# See LICENSE.txt for the text of the license.
+#-----------------------------------------------------------------------------
 
-# These vars can be overriden by env variables
+# These vars can be overridden by env variables
 echo "Makefile flags: ${MKFLAGS:=-j8}"
-echo "Destination:    ${DEST:=firmwares}"
+echo "Destination:    ${DEST:=firmware}"
 echo "Produce stats?: ${STATS:=false}"
 
 # Which parts to skip for the 256kb version?
@@ -16,10 +31,10 @@ mv bootrom/obj/bootrom.elf "$DEST/PM3BOOTROM.elf"
 
 # cf armsrc/Standalone/Makefile.hal
 STANDALONE_MODES=(LF_SKELETON LF_EM4100EMUL LF_EM4100RSWB LF_EM4100RWC LF_HIDBRUTE LF_HIDFCBRUTE LF_ICEHID LF_PROXBRUTE LF_SAMYRUN LF_THAREXDE LF_NEXID)
-STANDALONE_MODES+=(HF_14ASNIFF HF_AVEFUL HF_BOG HF_COLIN HF_CRAFTBYTE HF_ICECLASS HF_LEGIC HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_TCPRST HF_TMUDFORD HF_YOUNG HF_REBLAY)
+STANDALONE_MODES+=(HF_14ASNIFF HF_15SNIFF HF_AVEFUL HF_BOG HF_COLIN HF_CRAFTBYTE HF_ICECLASS HF_LEGIC HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_TCPRST HF_TMUDFORD HF_YOUNG HF_REBLAY DANKARMULTI)
 STANDALONE_MODES_REQ_BT=(HF_REBLAY)
 STANDALONE_MODES_REQ_SMARTCARD=()
-STANDALONE_MODES_REQ_FLASH=(LF_HIDFCBRUTE LF_ICEHID LF_NEXID LF_THAREXDE HF_14ASNIFF HF_BOG HF_COLIN HF_ICECLASS HF_MFCSIM)
+STANDALONE_MODES_REQ_FLASH=(LF_HIDFCBRUTE LF_ICEHID LF_NEXID LF_THAREXDE HF_14ASNIFF HF_15SNIFF HF_BOG HF_COLIN HF_ICECLASS HF_MFCSIM)
 
 # PM3GENERIC 256kb, no flash, need to skip some parts to reduce size
 

@@ -1,5 +1,6 @@
-<a id="top"></a>
 # Proxmark 3 on Android
+<a id="top"></a>
+
 ## Table of Contents
   * [ Requirements ](#requirements)
   * [ Notes ](#notes)
@@ -209,6 +210,7 @@ Alternatively, if you have made the client in the git repo:
 ^[Top](#top)
 
 #### BTADDON Missing in Firmware of PM3
+^[Top](#top)
 
 1. Phone and pm3 are connected, blue led is on and *not* blinking
 2. BTUART Tool TCP Server at Port 4321 
@@ -231,4 +233,3 @@ Solution:
 Make sure you have installed a firmware with BTADDON compiled. 
 See: https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#platform_extras  
 
-ENJOY !

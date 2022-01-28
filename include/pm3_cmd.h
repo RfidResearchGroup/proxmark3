@@ -1,10 +1,17 @@
 //-----------------------------------------------------------------------------
-// Jonathan Westhues, Mar 2006
-// Edits by Gerhard de Koning Gans, Sep 2007
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Definitions for all the types of commands that may be sent over USB; our
 // own protocol.
@@ -181,6 +188,7 @@ typedef struct {
     bool compiled_with_hitag           : 1;
     bool compiled_with_em4x50          : 1;
     bool compiled_with_em4x70          : 1;
+    bool compiled_with_zx8211          : 1;
     // hf
     bool compiled_with_hfsniff         : 1;
     bool compiled_with_hfplot          : 1;
@@ -198,7 +206,7 @@ typedef struct {
     bool hw_available_flash            : 1;
     bool hw_available_smartcard        : 1;
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 5
+#define CAPABILITIES_VERSION 6
 extern capabilities_t g_pm3_capabilities;
 
 // For CMD_LF_T55XX_WRITEBL
@@ -288,92 +296,6 @@ typedef struct {
     const char *desc;
     const char *value;
 } PACKED ecdsa_publickey_t;
-
-
-// iCLASS auth request data structure
-// used with read block, dump, write block
-typedef struct {
-    uint8_t key[8];
-    bool use_raw;
-    bool use_elite;
-    bool use_credit_key;
-    bool use_replay;
-    bool send_reply;
-    bool do_auth;
-    uint8_t blockno;
-} PACKED iclass_auth_req_t;
-
-// iCLASS read block response data structure
-typedef struct {
-    bool isOK;
-    uint8_t div_key[8];
-    uint8_t mac[4];
-    uint8_t data[8];
-} PACKED iclass_readblock_resp_t;
-
-// iCLASS dump data structure
-typedef struct {
-    iclass_auth_req_t req;
-    uint8_t start_block;
-    uint8_t end_block;
-} PACKED iclass_dump_req_t;
-
-// iCLASS write block request data structure
-typedef struct {
-    iclass_auth_req_t req;
-    uint8_t data[8];
-} PACKED iclass_writeblock_req_t;
-
-// iCLASS dump data structure
-typedef struct {
-    uint8_t blockno;
-    uint8_t data[8];
-} PACKED iclass_restore_item_t;
-
-typedef struct {
-    iclass_auth_req_t req;
-    uint8_t item_cnt;
-    iclass_restore_item_t blocks[];
-} PACKED iclass_restore_req_t;
-
-typedef struct iclass_premac {
-    uint8_t mac[4];
-} PACKED iclass_premac_t;
-
-typedef struct {
-    bool use_credit_key;
-    uint8_t count;
-    iclass_premac_t items[];
-} PACKED iclass_chk_t;
-
-
-// iclass / picopass chip config structures and shared routines
-typedef struct {
-    uint8_t app_limit;      //[8]
-    uint8_t otp[2];         //[9-10]
-    uint8_t block_writelock;//[11]
-    uint8_t chip_config;    //[12]
-    uint8_t mem_config;     //[13]
-    uint8_t eas;            //[14]
-    uint8_t fuses;          //[15]
-} PACKED picopass_conf_block_t;
-
-// iCLASS secure mode memory mapping
-typedef struct {
-    uint8_t csn[8];
-    picopass_conf_block_t conf;
-    uint8_t epurse[8];
-    uint8_t key_d[8];
-    uint8_t key_c[8];
-    uint8_t app_issuer_area[8];
-} PACKED picopass_hdr_t;
-
-// iCLASS non-secure mode memory mapping
-typedef struct {
-    uint8_t csn[8];
-    picopass_conf_block_t conf;
-    uint8_t app_issuer_area[8];
-} PACKED picopass_ns_hdr_t;
 
 
 typedef struct {
@@ -579,6 +501,11 @@ typedef struct {
 #define CMD_LF_T55XX_CHK_PWDS                                             0x0230
 #define CMD_LF_T55XX_DANGERRAW                                            0x0231
 
+
+// ZX8211
+#define CMD_LF_ZX_READ                                                    0x0270
+#define CMD_LF_ZX_WRITE                                                   0x0271
+
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
 // For the 13.56 MHz tags
@@ -740,8 +667,8 @@ typedef struct {
 #define CMD_HF_MIFARE_GEN3BLK                                             0x0851
 #define CMD_HF_MIFARE_GEN3FREEZ                                           0x0852
 
-// Gen 3 GTU magic cards
-#define CMD_HF_MIFARE_G3_RDBL                                             0x0860
+// Gen 4 GTU magic cards
+#define CMD_HF_MIFARE_G4_RDBL                                             0x0860
 
 #define CMD_UNKNOWN                                                       0xFFFF
 
@@ -761,28 +688,6 @@ typedef struct {
 #define FLAG_CVE21_0430         0x2000
 
 
-// iCLASS reader flags
-#define FLAG_ICLASS_READER_INIT        0x01
-#define FLAG_ICLASS_READER_CLEARTRACE  0x02
-#define FLAG_ICLASS_READER_ONLY_ONCE   0x04
-#define FLAG_ICLASS_READER_CREDITKEY   0x08
-#define FLAG_ICLASS_READER_AIA         0x10
-
-// iCLASS reader status flags
-#define FLAG_ICLASS_CSN         0x01
-#define FLAG_ICLASS_CC          0x02
-#define FLAG_ICLASS_CONF        0x04
-#define FLAG_ICLASS_AIA         0x08
-
-// iCLASS simulation modes
-#define ICLASS_SIM_MODE_CSN                   0
-#define ICLASS_SIM_MODE_CSN_DEFAULT           1
-#define ICLASS_SIM_MODE_READER_ATTACK         2
-#define ICLASS_SIM_MODE_FULL                  3
-#define ICLASS_SIM_MODE_READER_ATTACK_KEYROLL 4
-#define ICLASS_SIM_MODE_EXIT_AFTER_MAC        5  // note: device internal only
-#define ICLASS_SIM_MODE_CONFIG_CARD           6
-
 #define MODE_SIM_CSN        0
 #define MODE_EXIT_AFTER_MAC 1
 #define MODE_FULLSIM        2
@@ -801,6 +706,8 @@ typedef struct {
 
 // Error codes                          Usages:
 
+// Success, regular quit
+#define PM3_SQUIT               2
 // Success, transfer nonces            pm3:        Sending nonces back to client
 #define PM3_SNONCES             1
 // Success (no error)

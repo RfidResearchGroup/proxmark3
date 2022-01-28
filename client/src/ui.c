@@ -1,10 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2009 Michael Gernoth <michael at gernoth.net>
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // UI utilities
 //-----------------------------------------------------------------------------
@@ -21,7 +28,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#ifdef HAVE_READLINE
+#if defined(HAVE_READLINE)
 //Load readline after stdio.h
 #include <readline/readline.h>
 #endif
@@ -47,7 +54,7 @@ double g_PlotGridX = 0, g_PlotGridY = 0, g_PlotGridXdefault = 64, g_PlotGridYdef
 uint32_t g_CursorCPos = 0, g_CursorDPos = 0, g_GraphStop = 0;
 uint32_t g_GraphStart = 0; // Starting point/offset for the left side of the graph
 double g_GraphPixelsPerPoint = 1.f; // How many visual pixels are between each sample point (x axis)
-static bool flushAfterWrite = 0;
+static bool flushAfterWrite = false;
 double g_GridOffset = 0;
 bool g_GridLocked = false;
 
@@ -411,6 +418,10 @@ void SetFlushAfterWrite(bool value) {
     flushAfterWrite = value;
 }
 
+bool GetFlushAfterWrite(void) {
+    return flushAfterWrite;
+}
+
 void memcpy_filter_rlmarkers(void *dest, const void *src, size_t n) {
     uint8_t *rdest = (uint8_t *)dest;
     uint8_t *rsrc = (uint8_t *)src;
@@ -632,11 +643,15 @@ void iceSimple_Filter(int *data, const size_t len, uint8_t k) {
 
 void print_progress(size_t count, uint64_t max, barMode_t style) {
     int cols = 100 + 35;
-#ifdef HAVE_READLINE
+#if defined(HAVE_READLINE)
     static int prev_cols = 0;
     int rows;
     rl_reset_screen_size(); // refresh Readline idea of the actual screen width
     rl_get_screen_size(&rows, &cols);
+
+    if (cols < 36)
+        return;
+
     (void) rows;
     if (prev_cols > cols) {
         PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ "");
@@ -644,8 +659,6 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
     prev_cols = cols;
 #endif
     int width = cols - 35;
-    if (width < 1)
-        return;
 
 #define PERCENTAGE(V, T)   ((V * width) / T)
     // x/8 fractional part of the percentage

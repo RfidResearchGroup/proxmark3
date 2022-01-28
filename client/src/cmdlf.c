@@ -1,13 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
-// Modified by
-//    Marshellow
-//    Iceman
-//    Doegox
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Low frequency commands
 //-----------------------------------------------------------------------------
@@ -58,6 +62,8 @@
 #include "cmdlfti.h"        // for ti menu
 #include "cmdlfviking.h"    // for viking menu
 #include "cmdlfvisa2000.h"  // for VISA2000 menu
+#include "cmdlfzx8211.h"    // for ZX8211 menu
+#include "crc.h"
 #include "pm3_cmd.h"        // for LF_CMDREAD_MAX_EXTRA_SYMBOLS
 
 static bool gs_lf_threshold_set = false;
@@ -231,6 +237,8 @@ int CmdLFCommandRead(const char *Cmd) {
         arg_u64_0("z", "zero", "<us>", "ZERO time period"),
         arg_u64_0("s", "samples", "<dec>", "number of samples to collect"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("k", "keep", "keep signal field ON after receive"),
+        arg_lit0(NULL, "crc-ht", "calculate and append CRC-8/HITAG (also for ZX8211)"),
         arg_lit0("@", NULL, "continuous mode"),
         arg_param_end
     };
@@ -249,7 +257,9 @@ int CmdLFCommandRead(const char *Cmd) {
     uint16_t period_0 = arg_get_u32_def(ctx, 5, 0);
     uint32_t samples = arg_get_u32_def(ctx, 6, 0);
     bool verbose = arg_get_lit(ctx, 7);
-    bool cm = arg_get_lit(ctx, 8);
+    bool keep_field_on = arg_get_lit(ctx, 8);
+    bool add_crc_ht = arg_get_lit(ctx, 9);
+    bool cm = arg_get_lit(ctx, 10);
     CLIParserFree(ctx);
 
     if (g_session.pm3_present == false)
@@ -262,7 +272,8 @@ int CmdLFCommandRead(const char *Cmd) {
         uint16_t period_1;
         uint8_t  symbol_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
         uint16_t period_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
-        uint32_t samples : 31;
+        uint32_t samples : 30;
+        bool     keep_field_on : 1;
         bool     verbose : 1;
         uint8_t data[PM3_CMD_DATA_SIZE - PAYLOAD_HEADER_SIZE];
     } PACKED payload;
@@ -270,7 +281,40 @@ int CmdLFCommandRead(const char *Cmd) {
     payload.period_1 = period_1;
     payload.period_0 = period_0;
     payload.samples = samples;
+    payload.keep_field_on = keep_field_on;
     payload.verbose = verbose;
+
+    if (add_crc_ht && (cmd_len <= 120)) {
+        // Hitag 1, Hitag S, ZX8211
+        // width=8 poly=0x1d init=0xff refin=false refout=false xorout=0x00 check=0xb4 residue=0x00 name="CRC-8/HITAG"
+        crc_t crc;
+        uint8_t data = 0;
+        uint8_t n = 0;
+        crc_init_ref(&crc, 8, 0x1d, 0xff, 0, false, false);
+        uint8_t i;
+        for (i = 0; i < cmd_len; i++) {
+            if ((cmd[i] != '0') && (cmd[i] != '1')) {
+                continue;
+            }
+            data <<= 1;
+            data += cmd[i] - '0';
+            n += 1;
+            if (n == 8) {
+                crc_update2(&crc, data, n);
+                n = 0;
+                data = 0;
+            }
+        }
+        if (n > 0) {
+            crc_update2(&crc, data, n);
+        }
+        uint8_t crc_final = crc_finish(&crc);
+        for (int j = 7; j >= 0; j--) {
+            cmd[cmd_len] = ((crc_final >> j) & 1) ? '1' : '0';
+            cmd_len++;
+        }
+    }
+
     memcpy(payload.data, cmd, cmd_len);
 
     // extra symbol definition
@@ -1786,6 +1830,7 @@ static command_t CommandTable[] = {
     {"t55xx",       CmdLFT55XX,         AlwaysAvailable, "{ T55xx CHIPs...             }"},
     {"viking",      CmdLFViking,        AlwaysAvailable, "{ Viking RFIDs...            }"},
     {"visa2000",    CmdLFVisa2k,        AlwaysAvailable, "{ Visa2000 RFIDs...          }"},
+//    {"zx",          CmdLFZx8211,        AlwaysAvailable, "{ ZX8211 RFIDs...            }"},
     {"-----------", CmdHelp,            AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"config",      CmdLFConfig,        IfPm3Lf,         "Get/Set config for LF sampling, bit/sample, decimation, frequency"},
     {"cmdread",     CmdLFCommandRead,   IfPm3Lf,         "Modulate LF reader field to send command before read"},

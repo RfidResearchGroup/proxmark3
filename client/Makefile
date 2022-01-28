@@ -1,7 +1,17 @@
 #-----------------------------------------------------------------------------
-# This code is licensed to you under the terms of the GNU GPL, version 2 or,
-# at your option, any later version. See the LICENSE.txt file for the text of
-# the license.
+# Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# See LICENSE.txt for the text of the license.
 #-----------------------------------------------------------------------------
 
 ifeq ($(PLTNAME),)
@@ -76,6 +86,7 @@ LUALIBLD =
 LUAPLATFORM = generic
 ifneq (,$(findstring MINGW,$(platform)))
     LUAPLATFORM = mingw
+	LDLIBS += -lws2_32
 else
     ifeq ($(platform),Darwin)
         LUAPLATFORM = macosx
@@ -505,6 +516,8 @@ SRCS =  mifare/aiddesfire.c \
 		cmdhfemrtd.c \
 		cmdhffelica.c \
 		cmdhffido.c \
+		cmdhfgallagher.c \
+		cmdhfksx6924.c \
 		cmdhfcipurse.c \
 		cmdhficlass.c \
 		cmdhflegic.c \
@@ -556,6 +569,7 @@ SRCS =  mifare/aiddesfire.c \
 		cmdlfti.c \
 		cmdlfviking.c \
 		cmdlfvisa2000.c \
+		cmdlfzx8211.c \
 		cmdmain.c \
 		cmdnfc.c \
 		cmdparser.c \
@@ -589,6 +603,7 @@ SRCS =  mifare/aiddesfire.c \
 		fido/cose.c \
 		fido/cbortools.c \
 		fido/fidocore.c \
+		ksx6924/ksx6924core.c \
 		cipurse/cipursecore.c \
 		cipurse/cipursecrypto.c \
 		cipurse/cipursetest.c \
@@ -608,6 +623,7 @@ SRCS =  mifare/aiddesfire.c \
 		mifare/desfirecore.c \
         mifare/desfiresecurechan.c \
         mifare/desfiretest.c \
+		mifare/gallaghercore.c \
 		mifare/mad.c \
 		mifare/mfkey.c \
 		mifare/mifare4.c \
@@ -618,13 +634,12 @@ SRCS =  mifare/aiddesfire.c \
 		pm3_binlib.c \
 		pm3_bitlib.c \
 		preferences.c \
-		prng.c \
+		pm3line.c \
 		proxmark3.c \
 		scandir.c \
 		uart/uart_posix.c \
 		uart/uart_win32.c \
 		scripting.c \
-		tea.c \
 		ui.c \
 		util.c \
 		version_pm3.c \
@@ -644,7 +659,6 @@ SRCS += bucketsort.c \
 		iso15693tools.c \
 		legic_prng.c \
 		lfdemod.c \
-		parity.c \
 		util_posix.c
 
 # swig

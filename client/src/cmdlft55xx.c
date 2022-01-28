@@ -1,8 +1,17 @@
 //-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Low frequency T55xx commands
 //-----------------------------------------------------------------------------
@@ -1368,7 +1377,7 @@ static bool testQ5Modulation(uint8_t mode, uint8_t modread) {
 }
 
 static int convertQ5bitRate(uint8_t bitRateRead) {
-    uint8_t expected[] = {8, 16, 32, 40, 50, 64, 100, 128};
+    const uint8_t expected[] = {8, 16, 32, 40, 50, 64, 100, 128};
     for (int i = 0; i < 8; i++)
         if (expected[i] == bitRateRead)
             return i;
@@ -1425,7 +1434,7 @@ static bool testQ5(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk) 
 }
 
 static bool testBitRate(uint8_t readRate, uint8_t clk) {
-    uint8_t expected[] = {8, 16, 32, 40, 50, 64, 100, 128};
+    const uint8_t expected[] = {8, 16, 32, 40, 50, 64, 100, 128};
     if (expected[readRate] == clk)
         return true;
 
@@ -3905,7 +3914,7 @@ static int CmdT55xxProtect(const char *Cmd) {
 // if the difference between a and b is less then or eq to d  i.e. does a = b +/- d
 #define APPROX_EQ(a, b, d) ((abs(a - b) <= d) ? true : false)
 
-static uint8_t t55sniff_get_packet(int *pulseBuffer, char *data, uint8_t width0, uint8_t width1, uint8_t tolerance) {
+static uint8_t t55sniff_get_packet(const int *pulseBuffer, char *data, uint8_t width0, uint8_t width1, uint8_t tolerance) {
     int i = 0;
     bool ok = true;
     uint8_t len = 0;

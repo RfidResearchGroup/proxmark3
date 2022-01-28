@@ -54,6 +54,7 @@ cov-int/
 
 !client/resources/hardnested/*.bin
 !client/resources/hardnested_tables/*.z
+client/src/ui/ui_image.h
 client/src/ui/ui_overlays.h
 client/deps/reveng/bmptst
 
@@ -75,6 +76,8 @@ tools/cryptorf/sma_multi
 tools/mf_nonce_brute/mf_nonce_brute
 tools/mf_nonce_brute/mf_trace_brute
 tools/jtag_openocd/openocd_configuration
+tools/mfd_aes_brute/mfd_aes_brute
+tools/mfd_aes_brute/brute_key
 
 fpga/*
 !fpga/tests

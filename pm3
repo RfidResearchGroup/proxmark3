@@ -135,8 +135,8 @@ function get_pm3_list_macOS {
 function get_pm3_list_Windows {
     N=$1
     PM3LIST=()
-	
-	# Normal SERIAL PORTS (COM)
+
+    # Normal SERIAL PORTS (COM)
     for DEV in $(wmic /locale:ms_409 path Win32_SerialPort Where "PNPDeviceID LIKE '%VID_9AC4&PID_4B8F%' Or PNPDeviceID LIKE '%VID_2D2D&PID_504D%'" Get DeviceID 2>/dev/null | awk -b '/^COM/{print $1}'); do
         DEV=${DEV/ */}
         #prevent soft bricking when using pm3-flash-all on an outdated bootloader
@@ -151,7 +151,7 @@ function get_pm3_list_Windows {
             return
         fi
     done
-	
+
     #BT direct SERIAL PORTS (COM)
     if $FINDBTRFCOMM; then
         for DEV in $(wmic /locale:ms_409 path Win32_PnPEntity Where "Caption LIKE '%Bluetooth%(COM%'" Get Name 2> /dev/null | awk -b 'match($0,/(COM[0-9]+)/,m){print m[1]}'); do
@@ -178,8 +178,8 @@ function get_pm3_list_Windows {
 function get_pm3_list_WSL {
     N=$1
     PM3LIST=()
-	
-	# Normal SERIAL PORTS (COM)
+
+    # Normal SERIAL PORTS (COM)
     for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.PNPDeviceID -like '*VID_9AC4&PID_4B8F*' -or \$_.PNPDeviceID -like '*VID_2D2D&PID_504D*'} | Select -expandproperty DeviceID" 2>/dev/null | tr -dc '[:print:]'); do
         _comport=$DEV
         DEV=$(echo $DEV | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p')

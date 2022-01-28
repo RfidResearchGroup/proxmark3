@@ -1,10 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) Merlok - 2017
-// iceman 2018
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Command: hf mf list. It shows data from arm buffer.
 //-----------------------------------------------------------------------------
@@ -47,6 +54,9 @@ void ClearAuthData(void) {
 
 
 static int gs_ntag_i2c_state = 0;
+static int gs_mfuc_state = 0;
+static uint8_t gs_mfuc_authdata[3][16] = {0};
+static uint8_t *gs_mfuc_key = NULL;
 
 /**
  * @brief iso14443A_CRC_check Checks CRC in command or response
@@ -162,202 +172,254 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
 }
 
 
-int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 
-    if ((gs_ntag_i2c_state == 1) && (cmdsize == 6) && (memcmp(cmd + 1, "\x00\x00\x00", 3) == 0)) {
-        snprintf(exp, size, "SECTOR(%d)", cmd[0]);
+    if (is_response == false) {
+        if ((gs_ntag_i2c_state == 1) && (cmdsize == 6) && (memcmp(cmd + 1, "\x00\x00\x00", 3) == 0)) {
+            snprintf(exp, size, "SECTOR(%d)", cmd[0]);
+            gs_ntag_i2c_state = 0;
+            return PM3_SUCCESS;
+        }
+
+        if (cmdsize > 10 && (memcmp(cmd, "\x6a\x02\xC8\x01\x00\x03\x00\x02\x79", 9) == 0)) {
+            snprintf(exp, size, "ECP");
+            return PM3_SUCCESS;
+        }
+
         gs_ntag_i2c_state = 0;
-        return 1;
-    }
-
-    gs_ntag_i2c_state = 0;
-
-    switch (cmd[0]) {
-        case ISO14443A_CMD_WUPA:
-            snprintf(exp, size, "WUPA");
-            break;
-        case ISO14443A_CMD_ANTICOLL_OR_SELECT: {
-            // 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
-            // 93 50 = Bit oriented anti-collision (usage: 9350+ up to 5bytes, 9350 answer - up to 5bytes UID+BCC)
-            // 93 70 = Select (usage: 9370+5bytes 9370 answer - answer: 1byte SAK)
-            if (cmd[1] == 0x70)
-                snprintf(exp, size, "SELECT_UID");
-            else if (cmd[1] == 0x20 || cmd[1] == 0x50)
-                snprintf(exp, size, "ANTICOLL");
-            else
-                snprintf(exp, size, "SELECT_XXX");
-            break;
-        }
-        case ISO14443A_CMD_ANTICOLL_OR_SELECT_2: {
-            //95 20 = Anticollision of cascade level2
-            //95 50 = Bit oriented anti-collision level2
-            //95 70 = Select of cascade level2
-            if (cmd[1] == 0x70)
-                snprintf(exp, size, "SELECT_UID-2");
-            else if (cmd[1] == 0x20 || cmd[1] == 0x50)
-                snprintf(exp, size, "ANTICOLL-2");
-            else
-                snprintf(exp, size, "SELECT_XXX-2");
-            break;
-        }
-        case ISO14443A_CMD_ANTICOLL_OR_SELECT_3: {
-            //97 20 = Anticollision of cascade level3
-            //97 50 = Bit oriented anti-collision level3
-            //97 70 = Select of cascade level3
-            if (cmd[1] == 0x70)
-                snprintf(exp, size, "SELECT_UID-3");
-            else if (cmd[1] == 0x20 || cmd[1] == 0x50)
-                snprintf(exp, size, "ANTICOLL-3");
-            else
-                snprintf(exp, size, "SELECT_XXX-3");
-            break;
-        }
-        case ISO14443A_CMD_REQA:
-            snprintf(exp, size, "REQA");
-            break;
-        case ISO14443A_CMD_READBLOCK:
-            snprintf(exp, size, "READBLOCK(%d)", cmd[1]);
-            break;
-        case ISO14443A_CMD_WRITEBLOCK:
-            snprintf(exp, size, "WRITEBLOCK(%d)", cmd[1]);
-            break;
-        case ISO14443A_CMD_HALT:
-            snprintf(exp, size, "HALT");
-            MifareAuthState = masNone;
-            break;
-        case ISO14443A_CMD_RATS:
-            snprintf(exp, size, "RATS");
-            break;
-        case ISO14443A_CMD_PPS:
-            snprintf(exp, size, "PPS");
-            break;
-        case ISO14443A_CMD_OPTS:
-            snprintf(exp, size, "OPTIONAL TIMESLOT");
-            break;
-        case MIFARE_CMD_INC:
-            snprintf(exp, size, "INC(%d)", cmd[1]);
-            break;
-        case MIFARE_CMD_DEC:
-            snprintf(exp, size, "DEC(%d)", cmd[1]);
-            break;
-        case MIFARE_CMD_RESTORE:
-
-            if (cmdsize == 4)
-                // cmd0 == 0xC2 and cmd1 == 0xFF
-                // high probability its SELECT SECTOR COMMAND:
-                if (cmd[1] == 0xFF) {
-                    snprintf(exp, size, "SELECT SECTOR");
-                    gs_ntag_i2c_state = 1;
-                } else {
-                    snprintf(exp, size, "RESTORE(%d)", cmd[1]);
-                } else
-                return 0;
-            break;
-        case MIFARE_CMD_TRANSFER:
-            snprintf(exp, size, "TRANSFER(%d)", cmd[1]);
-            break;
-        case MIFARE_AUTH_KEYA: {
-            if (cmdsize > 3) {
-                snprintf(exp, size, "AUTH-A(%d)", cmd[1]);
-                MifareAuthState = masNt;
-            } else {
-                // case MIFARE_ULEV1_VERSION :  both 0x60.
-                snprintf(exp, size, "EV1 VERSION");
+        switch (cmd[0]) {
+            case MAGSAFE_CMD_WUPA_1:
+            case MAGSAFE_CMD_WUPA_2:
+            case MAGSAFE_CMD_WUPA_3:
+            case MAGSAFE_CMD_WUPA_4:
+                snprintf(exp, size, "MAGSAFE WUPA");
+                break;
+            case ISO14443A_CMD_WUPA:
+                snprintf(exp, size, "WUPA");
+                break;
+            case ISO14443A_CMD_ANTICOLL_OR_SELECT: {
+                // 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
+                // 93 50 = Bit oriented anti-collision (usage: 9350+ up to 5bytes, 9350 answer - up to 5bytes UID+BCC)
+                // 93 70 = Select (usage: 9370+5bytes 9370 answer - answer: 1byte SAK)
+                if (cmd[1] == 0x70)
+                    snprintf(exp, size, "SELECT_UID");
+                else if (cmd[1] == 0x20 || cmd[1] == 0x50)
+                    snprintf(exp, size, "ANTICOLL");
+                else
+                    snprintf(exp, size, "SELECT_XXX");
+                break;
             }
-            break;
-        }
-        case MIFARE_AUTH_KEYB: {
-            MifareAuthState = masNt;
-            snprintf(exp, size, "AUTH-B(%d)", cmd[1]);
-            break;
-        }
-        case MIFARE_MAGICWUPC1:
-            snprintf(exp, size, "MAGIC WUPC1");
-            break;
-        case MIFARE_MAGICWUPC2:
-            snprintf(exp, size, "MAGIC WUPC2");
-            break;
-        case MIFARE_MAGICWIPEC:
-            snprintf(exp, size, "MAGIC WIPEC");
-            break;
-        case MIFARE_ULC_AUTH_1:
-            snprintf(exp, size, "AUTH ");
-            break;
-        case MIFARE_ULC_AUTH_2:
-            snprintf(exp, size, "AUTH_ANSW");
-            break;
-        case MIFARE_ULEV1_AUTH:
-            if (cmdsize == 7)
-                snprintf(exp, size, "PWD-AUTH KEY: " _YELLOW_("0x%02x%02x%02x%02x"), cmd[1], cmd[2], cmd[3], cmd[4]);
-            else
-                snprintf(exp, size, "PWD-AUTH");
-            break;
-        case MIFARE_ULEV1_FASTREAD : {
-            if (cmdsize >= 3 && cmd[2] <= 0xE6)
-                snprintf(exp, size, "READ RANGE (%d-%d)", cmd[1], cmd[2]);
-            else
-                // outside limits, useful for some tags...
-                snprintf(exp, size, "READ RANGE (%d-%d) (?)", cmd[1], cmd[2]);
-            break;
-        }
-        case MIFARE_ULC_WRITE : {
-            if (cmd[1] < 0x21)
+            case ISO14443A_CMD_ANTICOLL_OR_SELECT_2: {
+                //95 20 = Anticollision of cascade level2
+                //95 50 = Bit oriented anti-collision level2
+                //95 70 = Select of cascade level2
+                if (cmd[1] == 0x70)
+                    snprintf(exp, size, "SELECT_UID-2");
+                else if (cmd[1] == 0x20 || cmd[1] == 0x50)
+                    snprintf(exp, size, "ANTICOLL-2");
+                else
+                    snprintf(exp, size, "SELECT_XXX-2");
+                break;
+            }
+            case ISO14443A_CMD_ANTICOLL_OR_SELECT_3: {
+                //97 20 = Anticollision of cascade level3
+                //97 50 = Bit oriented anti-collision level3
+                //97 70 = Select of cascade level3
+                if (cmd[1] == 0x70)
+                    snprintf(exp, size, "SELECT_UID-3");
+                else if (cmd[1] == 0x20 || cmd[1] == 0x50)
+                    snprintf(exp, size, "ANTICOLL-3");
+                else
+                    snprintf(exp, size, "SELECT_XXX-3");
+                break;
+            }
+            case ISO14443A_CMD_REQA:
+                snprintf(exp, size, "REQA");
+                break;
+            case ISO14443A_CMD_READBLOCK:
+                snprintf(exp, size, "READBLOCK(%d)", cmd[1]);
+                break;
+            case ISO14443A_CMD_WRITEBLOCK:
                 snprintf(exp, size, "WRITEBLOCK(%d)", cmd[1]);
-            else
-                // outside limits, useful for some tags...
-                snprintf(exp, size, "WRITEBLOCK(%d) (?)", cmd[1]);
-            break;
-        }
-        case MIFARE_ULEV1_READ_CNT : {
-            if (cmd[1] < 5)
-                snprintf(exp, size, "READ CNT(%d)", cmd[1]);
-            else
-                snprintf(exp, size, "?");
-            break;
-        }
-        case MIFARE_ULEV1_INCR_CNT : {
-            if (cmd[1] < 5)
-                snprintf(exp, size, "INCR(%d)", cmd[1]);
-            else
-                snprintf(exp, size, "?");
-            break;
-        }
-        case MIFARE_ULEV1_READSIG:
-            snprintf(exp, size, "READ SIG");
-            break;
-        case MIFARE_ULEV1_CHECKTEAR:
-            snprintf(exp, size, "CHK TEARING(%d)", cmd[1]);
-            break;
-        case MIFARE_ULEV1_VCSL:
-            snprintf(exp, size, "VCSL");
-            break;
-        case MIFARE_ULNANO_WRITESIG:
-            snprintf(exp, size, "WRITE SIG");
-            break;
-        case MIFARE_ULNANO_LOCKSIG: {
-            if (cmd[1] == 0)
-                snprintf(exp, size, "UNLOCK SIG");
-            else if (cmd[1] == 2)
-                snprintf(exp, size, "LOCK SIG");
-            else
-                snprintf(exp, size, "?");
-            break;
-        }
-        case NTAG_I2C_FASTWRITE:
-            if (cmdsize == 69)
-                snprintf(exp, size, "FAST WRITE (%d - %d)", cmd[1], cmd[2]);
-            else
-                snprintf(exp, size, "?");
+                break;
+            case ISO14443A_CMD_HALT:
+                snprintf(exp, size, "HALT");
+                MifareAuthState = masNone;
+                break;
+            case ISO14443A_CMD_RATS:
+                snprintf(exp, size, "RATS");
+                break;
+            case ISO14443A_CMD_PPS:
+                snprintf(exp, size, "PPS");
+                break;
+            case ISO14443A_CMD_OPTS:
+                snprintf(exp, size, "OPTIONAL TIMESLOT");
+                break;
+            case MIFARE_CMD_INC:
+                snprintf(exp, size, "INC(%d)", cmd[1]);
+                break;
+            case MIFARE_CMD_DEC:
+                snprintf(exp, size, "DEC(%d)", cmd[1]);
+                break;
+            case MIFARE_CMD_RESTORE:
 
-            break;
-        default:
-            return 0;
+                if (cmdsize == 4) {
+                    // cmd0 == 0xC2 and cmd1 == 0xFF
+                    // high probability its SELECT SECTOR COMMAND:
+                    if (cmd[1] == 0xFF) {
+                        snprintf(exp, size, "SELECT SECTOR");
+                        gs_ntag_i2c_state = 1;
+                    } else {
+                        snprintf(exp, size, "RESTORE(%d)", cmd[1]);
+                    }
+                } else {
+                    return PM3_ESOFT;
+                }
+
+                break;
+            case MIFARE_CMD_TRANSFER:
+                snprintf(exp, size, "TRANSFER(%d)", cmd[1]);
+                break;
+            case MIFARE_AUTH_KEYA: {
+                if (cmdsize > 3) {
+                    snprintf(exp, size, "AUTH-A(%d)", cmd[1]);
+                    MifareAuthState = masNt;
+                } else {
+                    // case MIFARE_ULEV1_VERSION :  both 0x60.
+                    snprintf(exp, size, "EV1 VERSION");
+                }
+                break;
+            }
+            case MIFARE_AUTH_KEYB: {
+                MifareAuthState = masNt;
+                snprintf(exp, size, "AUTH-B(%d)", cmd[1]);
+                break;
+            }
+            case MIFARE_MAGICWUPC1:
+                snprintf(exp, size, "MAGIC WUPC1");
+                break;
+            case MIFARE_MAGICWUPC2:
+                snprintf(exp, size, "MAGIC WUPC2");
+                break;
+            case MIFARE_MAGICWIPEC:
+                snprintf(exp, size, "MAGIC WIPEC");
+                break;
+            case MIFARE_ULC_AUTH_1:
+                gs_mfuc_state = 1;
+                snprintf(exp, size, "AUTH-1 ");
+                break;
+            case MIFARE_ULC_AUTH_2:
+                if ((gs_mfuc_state == 2) && (cmdsize == 19)) {
+                    memcpy(gs_mfuc_authdata[1], &cmd[1], 16);
+                    if (trace_mfuc_try_default_3des_keys(&gs_mfuc_key, gs_mfuc_state, gs_mfuc_authdata) == PM3_SUCCESS) {
+// buffer too small to print the full key,
+// so we give just a hint that one of the default keys was used
+//                        snprintf(exp, size, "AUTH-2 KEY: " _YELLOW_("%s"), sprint_hex(gs_mfuc_key, 16));
+                        snprintf(exp, size, "AUTH-2 KEY: " _YELLOW_("%02x%02x%02x%02x..."), gs_mfuc_key[0], gs_mfuc_key[1], gs_mfuc_key[2], gs_mfuc_key[3]);
+                    } else {
+                        snprintf(exp, size, "AUTH-2");
+                    }
+                    gs_mfuc_state = 3;
+                } else {
+                    return PM3_ESOFT;
+                }
+                break;
+            case MIFARE_ULEV1_AUTH:
+                if (cmdsize == 7)
+                    snprintf(exp, size, "PWD-AUTH KEY: " _YELLOW_("0x%02x%02x%02x%02x"), cmd[1], cmd[2], cmd[3], cmd[4]);
+                else
+                    snprintf(exp, size, "PWD-AUTH");
+                break;
+            case MIFARE_ULEV1_FASTREAD : {
+                if (cmdsize >= 3 && cmd[2] <= 0xE6)
+                    snprintf(exp, size, "READ RANGE (%d-%d)", cmd[1], cmd[2]);
+                else
+                    // outside limits, useful for some tags...
+                    snprintf(exp, size, "READ RANGE (%d-%d) (?)", cmd[1], cmd[2]);
+                break;
+            }
+            case MIFARE_ULC_WRITE : {
+                if (cmd[1] < 0x21)
+                    snprintf(exp, size, "WRITEBLOCK(%d)", cmd[1]);
+                else
+                    // outside limits, useful for some tags...
+                    snprintf(exp, size, "WRITEBLOCK(%d) (?)", cmd[1]);
+                break;
+            }
+            case MIFARE_ULEV1_READ_CNT : {
+                if (cmd[1] < 5)
+                    snprintf(exp, size, "READ CNT(%d)", cmd[1]);
+                else
+                    snprintf(exp, size, "?");
+                break;
+            }
+            case MIFARE_ULEV1_INCR_CNT : {
+                if (cmd[1] < 5)
+                    snprintf(exp, size, "INCR(%d)", cmd[1]);
+                else
+                    snprintf(exp, size, "?");
+                break;
+            }
+            case MIFARE_ULEV1_READSIG:
+                snprintf(exp, size, "READ SIG");
+                break;
+            case MIFARE_ULEV1_CHECKTEAR:
+                snprintf(exp, size, "CHK TEARING(%d)", cmd[1]);
+                break;
+            case MIFARE_ULEV1_VCSL:
+                snprintf(exp, size, "VCSL");
+                break;
+            case MIFARE_ULNANO_WRITESIG:
+                snprintf(exp, size, "WRITE SIG");
+                break;
+            case MIFARE_ULNANO_LOCKSIG: {
+                if (cmd[1] == 0)
+                    snprintf(exp, size, "UNLOCK SIG");
+                else if (cmd[1] == 2)
+                    snprintf(exp, size, "LOCK SIG");
+                else
+                    snprintf(exp, size, "?");
+                break;
+            }
+            case NTAG_I2C_FASTWRITE:
+                if (cmdsize == 69)
+                    snprintf(exp, size, "FAST WRITE (%d - %d)", cmd[1], cmd[2]);
+                else
+                    snprintf(exp, size, "?");
+
+                break;
+            default:
+                return PM3_ESOFT;
+        }
+    } else {
+        if (gs_mfuc_state == 1) {
+            if ((cmd[0] == 0xAF) && (cmdsize == 11)) {
+                // register RndB
+                memcpy(gs_mfuc_authdata[0], &cmd[1], 8);
+                gs_mfuc_state = 2;
+            } else {
+                gs_mfuc_state = 0;
+            }
+        }
+        if (gs_mfuc_state == 3) {
+            if ((cmd[0] == 0x00) && (cmdsize == 11)) {
+                // register RndA'
+                memcpy(gs_mfuc_authdata[2], &cmd[1], 8);
+                if (trace_mfuc_try_default_3des_keys(&gs_mfuc_key, gs_mfuc_state, gs_mfuc_authdata) == PM3_SUCCESS) {
+                    snprintf(exp, size, "AUTH-2 ANSW OK");
+                    gs_mfuc_state = 0;
+                    return PM3_SUCCESS;
+                }
+            }
+            gs_mfuc_state = 0;
+        }
+        return PM3_ESOFT;
     }
-    return 1;
+    return PM3_SUCCESS;
 }
 
-void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
-    applyIso14443a(exp, size, cmd, cmdsize);
+void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+    applyIso14443a(exp, size, cmd, cmdsize, is_response);
 }
 
 void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool isResponse) {
@@ -770,7 +832,7 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
     // it's basically a ISO14443a tag, so try annotation from there
-    if (applyIso14443a(exp, size, cmd, cmdsize) == 0) {
+    if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS) {
 
         // S-block 11xxx010
         if ((cmd[0] & 0xC0) && (cmdsize == 3)) {
@@ -1114,6 +1176,22 @@ void annotateCryptoRF(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     }
 }
 
+void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+
+    // it's basically a ISO14443a tag, so try annotation from there
+    if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS) {
+
+//        switch (cmd[0]) {
+//            default:
+//                break;
+//        };
+
+        // apply ISO7816 annotations?
+//        if (annotateIso7816(exp, size, cmd, cmdsize) == 0) {
+//        }
+        // apply SEOS annotations?
+    }
+}
 
 // LEGIC
 // 1 = read
@@ -1351,7 +1429,8 @@ void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     }
 }
 
-void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, uint8_t paritysize, bool isResponse) {
+void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize,
+                    const uint8_t *parity, uint8_t paritysize, bool isResponse) {
     if (!isResponse && cmdsize == 1) {
         switch (cmd[0]) {
             case ISO14443A_CMD_WUPA:
@@ -1428,8 +1507,8 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8
             break;
     }
 
-    if (!isResponse && ((MifareAuthState == masNone) || (MifareAuthState == masError)))
-        annotateIso14443a(exp, size, cmd, cmdsize);
+    if ((MifareAuthState == masNone) || (MifareAuthState == masError))
+        annotateIso14443a(exp, size, cmd, cmdsize, isResponse);
 
 }
 
@@ -1664,7 +1743,7 @@ bool NestedCheckKey(uint64_t key, AuthData_t *ad, uint8_t *cmd, uint8_t cmdsize,
     return true;
 }
 
-bool CheckCrypto1Parity(uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, uint8_t *parity_enc) {
+bool CheckCrypto1Parity(const uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, const uint8_t *parity_enc) {
     for (int i = 0; i < cmdsize - 1; i++) {
         if (oddparity8(cmd[i]) ^ (cmd[i + 1] & 0x01) ^ ((parity_enc[i / 8] >> (7 - i % 8)) & 0x01) ^ (cmd_enc[i + 1] & 0x01))
             return false;

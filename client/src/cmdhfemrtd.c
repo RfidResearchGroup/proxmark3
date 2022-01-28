@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020 A. Ozkal
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // High frequency Electronic Machine Readable Travel Document commands
 //-----------------------------------------------------------------------------
@@ -201,7 +209,7 @@ static int emrtd_exchange_commands_noout(sAPDU_t apdu, bool activate_field, bool
 }
 
 static char emrtd_calculate_check_digit(char *data) {
-    int mrz_weight[] = {7, 3, 1};
+    const int mrz_weight[] = {7, 3, 1};
     int value, cd = 0;
 
     for (int i = 0; i < strlen(data); i++) {
@@ -295,7 +303,7 @@ static void des3_decrypt_cbc(uint8_t *iv, uint8_t *key, uint8_t *input, int inpu
 }
 
 static int pad_block(uint8_t *input, int inputlen, uint8_t *output) {
-    uint8_t padding[8] = {0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    const uint8_t padding[8] = {0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     memcpy(output, input, inputlen);
 
@@ -1118,7 +1126,7 @@ static void emrtd_print_legal_sex(char *legal_sex) {
     PrintAndLogEx(SUCCESS, "Legal Sex Marker......: " _YELLOW_("%s"), sex);
 }
 
-static int emrtd_mrz_determine_length(char *mrz, int offset, int max_length) {
+static int emrtd_mrz_determine_length(const char *mrz, int offset, int max_length) {
     int i;
     for (i = max_length; i >= 1; i--) {
         if (mrz[offset + i - 1] != '<') {
@@ -1129,7 +1137,7 @@ static int emrtd_mrz_determine_length(char *mrz, int offset, int max_length) {
     return 0;
 }
 
-static int emrtd_mrz_determine_separator(char *mrz, int offset, int max_length) {
+static int emrtd_mrz_determine_separator(const char *mrz, int offset, int max_length) {
     // Note: this function does not account for len=0
     int i;
     for (i = max_length - 1; i > 0; i--) {

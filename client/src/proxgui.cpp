@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2009 Michael Gernoth <michael at gernoth.net>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // GUI functions
 //-----------------------------------------------------------------------------
@@ -71,6 +79,20 @@ extern "C" void ShowPictureWindow(char *fn) {
     }
 
     gui->ShowPictureWindow(fn);
+}
+
+extern "C" void ShowBase64PictureWindow(char *b64) {
+    if (!gui) {
+        // Show a notice if X11/XQuartz isn't available
+#if defined(__MACH__) && defined(__APPLE__)
+        PrintAndLogEx(WARNING, "You appear to be on a MacOS device without XQuartz.\nYou may need to install XQuartz (https://www.xquartz.org/) to make the plot work.");
+#else
+        PrintAndLogEx(WARNING, "You appear to be on an environment without an X11 server or without DISPLAY environment variable set.\nPlot may not work until you resolve these issues.");
+#endif
+        return;
+    }
+
+    gui->ShowBase64PictureWindow(b64);
 }
 
 extern "C" void HidePictureWindow(void) {

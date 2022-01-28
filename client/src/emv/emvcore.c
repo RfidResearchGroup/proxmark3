@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2017 Merlok
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // EMV core functions
 //-----------------------------------------------------------------------------
@@ -129,6 +137,7 @@ static const AIDList_t AIDlist [] = {
     { CV_OTHER, "D5280050218002" },              // The Netherlands - ? - (Netherlands)
     { CV_OTHER, "D5780000021010" },              // Bankaxept    Norway  Bankaxept   Norwegian domestic debit card
     { CV_OTHER, "F0000000030001" },              // BRADESCO - Brazilian Bank Banco Bradesco
+    { CV_OTHER, "A0000008381010" },              // SL Resekort - Swedish domestic transportation card with payment
 };
 
 enum CardPSVendor GetCardPSVendor(uint8_t *AID, size_t AIDlen) {
@@ -329,7 +338,6 @@ static int EMVSelectWithRetry(Iso7816CommandChannel channel, bool ActivateField,
                     return 1;
                 }
 
-                retrycnt = 0;
                 PrintAndLogEx(FAILED, "Retry failed [%s]. Skipped...", sprint_hex_inrow(AID, AIDLen));
                 return res;
             }
@@ -489,7 +497,7 @@ int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveField
             } else {
                 // (1) - card select error, (4) reply timeout, (200) - result length = 0
                 if (res == 1 || res == 4 || res == 200) {
-                    if (!LeaveFieldON)
+                    if (LeaveFieldON == false)
                         DropFieldEx(channel);
 
                     PrintAndLogEx(WARNING, "exiting...");
@@ -515,8 +523,9 @@ int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveField
         }
     }
 
-    if (!LeaveFieldON)
+    if (LeaveFieldON == false) {
         DropFieldEx(channel);
+    }
 
     return 0;
 }

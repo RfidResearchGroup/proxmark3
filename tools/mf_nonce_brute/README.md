@@ -1,14 +1,14 @@
 mf_nonce_brute
 ==============
 
-Nested authentificated sector key recovery tool
+Nested auntenticated sector key recovery tool
 -----------------------------------------------
 
 Compatible tags:
 * Mifare Classic 1k (4k)
 * Mifare Plus in SL1 mode
 
-To recover keys to nested authentificated sectors you need a reader-card communication log. To get it use 
+To recover keys to nested auntenticated sectors you need a reader-card communication log. To get it use 
 hardware tools that able to sniff communication (for example Proxmark3 or HydraNFC).
 
 This enhanced version:  

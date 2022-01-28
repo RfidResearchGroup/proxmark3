@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Graph utilities
 //-----------------------------------------------------------------------------
@@ -72,8 +80,8 @@ void save_restoreGB(uint8_t saveOpt) {
     }
 }
 
-void setGraphBuf(uint8_t *buff, size_t size) {
-    if (buff == NULL) return;
+void setGraphBuf(const uint8_t *src, size_t size) {
+    if (src == NULL) return;
 
     ClearGraph(false);
 
@@ -81,14 +89,14 @@ void setGraphBuf(uint8_t *buff, size_t size) {
         size = MAX_GRAPH_TRACE_LEN;
 
     for (size_t i = 0; i < size; ++i)
-        g_GraphBuffer[i] = buff[i] - 128;
+        g_GraphBuffer[i] = src[i] - 128;
 
     g_GraphTraceLen = size;
     RepaintGraphWindow();
 }
 
-size_t getFromGraphBuf(uint8_t *buff) {
-    if (buff == NULL) return 0;
+size_t getFromGraphBuf(uint8_t *dest) {
+    if (dest == NULL) return 0;
     if (g_GraphTraceLen == 0) return 0;
 
     size_t i;
@@ -96,7 +104,7 @@ size_t getFromGraphBuf(uint8_t *buff) {
         //trim
         if (g_GraphBuffer[i] > 127) g_GraphBuffer[i] = 127;
         if (g_GraphBuffer[i] < -127) g_GraphBuffer[i] = -127;
-        buff[i] = (uint8_t)(g_GraphBuffer[i] + 128);
+        dest[i] = (uint8_t)(g_GraphBuffer[i] + 128);
     }
     return i;
 }

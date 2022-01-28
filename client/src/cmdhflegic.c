@@ -1,21 +1,25 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // High frequency Legic commands
 //-----------------------------------------------------------------------------
 #include "cmdhflegic.h"
 
-#include <stdio.h> // for Mingw readline
 #include <ctype.h> // tolower
 
-#ifdef HAVE_READLINE
-#include <readline/readline.h>
-#endif
-
+#include "pm3line.h"      // pm3line_read, pm3line_free
 #include "cliparser.h"
 #include "cmdparser.h"    // command_t
 #include "comms.h"        // clearCommandBuffer
@@ -545,19 +549,9 @@ static int CmdLegicWrbl(const char *Cmd) {
         PrintAndLogEx(INFO, "#####################################");
         const char *confirm = "Do you really want to continue? y(es)/n(o) : ";
         bool overwrite = false;
-#ifdef HAVE_READLINE
-        char *answer = readline(confirm);
+        char *answer = pm3line_read(confirm);
         overwrite = (answer[0] == 'y' || answer[0] == 'Y');
-#else
-        PrintAndLogEx(NORMAL, "%s" NOLF, confirm);
-        char *answer = NULL;
-        size_t anslen = 0;
-        if (getline(&answer, &anslen, stdin) > 0) {
-            overwrite = (answer[0] == 'y' || answer[0] == 'Y');
-        }
-        PrintAndLogEx(NORMAL, "");
-#endif
-        free(answer);
+        pm3line_free(answer);
         if (overwrite == false) {
             PrintAndLogEx(WARNING, "command cancelled");
             return PM3_EOPABORTED;
@@ -762,7 +756,7 @@ static int CmdLegicDump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "specify a filename for dump file"),
+        arg_str0("f", "file", "<fn>", "Dump filename"),
         arg_lit0(NULL, "de", "deobfuscate dump data (xor with MCC)"),
         arg_param_end
     };
@@ -859,7 +853,7 @@ static int CmdLegicRestore(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>", "specify a filename to restore"),
+        arg_str1("f", "file", "<fn>", "Filename to restore"),
         arg_lit0(NULL, "ob", "obfuscate dump data (xor with MCC)"),
         arg_param_end
     };
@@ -963,7 +957,7 @@ static int CmdLegicELoad(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>", "Specify a filename to restore"),
+        arg_str1("f", "file", "<fn>", "Filename to restore"),
         arg_int0("t", "type", "<dec>", "Tag type to simulate."),
         arg_lit0(NULL, "obfuscate", "Obfuscate dump data (xor with MCC)"),
         arg_param_end
@@ -1032,7 +1026,7 @@ static int CmdLegicESave(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "Specify a filename to save"),
+        arg_str0("f", "file", "<fn>", "Filename to save"),
         arg_int0("t", "type", "<dec>", "Tag type"),
         arg_lit0(NULL, "deobfuscate", "De-obfuscate dump data (xor with MCC)"),
         arg_param_end

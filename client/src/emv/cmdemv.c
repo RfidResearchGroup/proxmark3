@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2017 Merlok
-// modified 2017 iceman
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // EMV commands
 //-----------------------------------------------------------------------------
@@ -81,10 +89,10 @@ static int CmdEMVSelect(const char *Cmd) {
         arg_param_begin,
         arg_lit0("sS",  "select",  "activate field and select card"),
         arg_lit0("kK",  "keep",    "keep field for next command"),
-        arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
+        arg_lit0("aA",  "apdu",    "show APDU requests and responses"),
         arg_lit0("tT",  "tlv",     "TLV decode results"),
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
-        arg_strx0(NULL,  NULL,     "<HEX applet AID>", NULL),
+        arg_str1(NULL, NULL, "<hex>", "Applet AID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -143,9 +151,12 @@ static int CmdEMVSearch(const char *Cmd) {
     bool leaveSignalON = arg_get_lit(ctx, 2);
     bool APDULogging = arg_get_lit(ctx, 3);
     bool decodeTLV = arg_get_lit(ctx, 4);
+
     Iso7816CommandChannel channel = CC_CONTACTLESS;
-    if (arg_get_lit(ctx, 5))
+    if (arg_get_lit(ctx, 5)) {
         channel = CC_CONTACT;
+    }
+
     PrintChannel(channel);
     CLIParserFree(ctx);
 
@@ -162,7 +173,7 @@ static int CmdEMVSearch(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Search completed.");
 
     // print list here
-    if (!decodeTLV) {
+    if (decodeTLV == false) {
         TLVPrintAIDlistFromSelectTLV(t);
     }
 
@@ -247,7 +258,7 @@ static int CmdEMVGPO(const char *Cmd) {
         arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
         arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
-        arg_strx0(NULL,  NULL,     "<HEX PDOLdata/PDOL>", NULL),
+        arg_strx0(NULL,  NULL,     "<hex>", "PDOLdata/PDOL"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -354,7 +365,7 @@ static int CmdEMVReadRecord(const char *Cmd) {
         arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
         arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
-        arg_strx1(NULL,  NULL,     "<SFI 1byte HEX><SFIrecord 1byte HEX>", NULL),
+        arg_strx1(NULL,  NULL,     "<hex>", "<SFI 1 byte><SFIrecord 1 byte"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -418,7 +429,7 @@ static int CmdEMVAC(const char *Cmd) {
         arg_lit0("aA",  "apdu",     "show APDU reqests and responses"),
         arg_lit0("tT",  "tlv",      "TLV decode results of selected applets"),
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
-        arg_strx1(NULL,  NULL,      "<HEX CDOLdata/CDOL>", NULL),
+        arg_strx1(NULL,  NULL,      "<hex>", "CDOLdata/CDOL"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -590,7 +601,7 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
         arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
         arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
-        arg_strx1(NULL,  NULL,     "<HEX DDOLdata/DDOL>", NULL),
+        arg_strx1(NULL,  NULL,     "<hex>", "DDOLdata/DDOL"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -833,17 +844,23 @@ static int CmdEMVExec(const char *Cmd) {
     bool forceSearch = arg_get_lit(ctx, 5);
 
     enum TransactionType TrType = TT_MSD;
+
     if (arg_get_lit(ctx, 7))
         TrType = TT_QVSDCMCHIP;
+
     if (arg_get_lit(ctx, 8))
         TrType = TT_CDA;
+
     if (arg_get_lit(ctx, 9))
         TrType = TT_VSDC;
 
     bool GenACGPO = arg_get_lit(ctx, 10);
+
     Iso7816CommandChannel channel = CC_CONTACTLESS;
-    if (arg_get_lit(ctx, 11))
+    if (arg_get_lit(ctx, 11)) {
         channel = CC_CONTACT;
+    }
+
     PrintChannel(channel);
     uint8_t psenum = (channel == CC_CONTACT) ? 1 : 2;
     CLIParserFree(ctx);
@@ -1442,7 +1459,7 @@ static int CmdEMVScan(const char *Cmd) {
         arg_lit0("gG",  "acgpo",    "VISA. generate AC from GPO."),
         arg_lit0("mM",  "merge",    "Merge output file with card's data. (warning: the file may be corrupted!)"),
         arg_lit0("wW",  "wired",    "Send data via contact (iso7816) interface. Contactless interface set by default."),
-        arg_str1(NULL,  NULL,       "output.json", "JSON output file name"),
+        arg_str1(NULL,  NULL,       "<fn>", "JSON output filename"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

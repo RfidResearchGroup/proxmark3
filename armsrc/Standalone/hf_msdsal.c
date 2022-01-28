@@ -1,9 +1,18 @@
 //-----------------------------------------------------------------------------
-// Salvador Mendoza (salmg.net), 2020
+// Copyright (C) Salvador Mendoza (salmg.net), 2020
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Code for reading and emulating 14a technology aka MSDSal by Salvador Mendoza
 //-----------------------------------------------------------------------------
@@ -56,7 +65,7 @@ void ModInfo(void) {
 static uint8_t ppdol [255] = {0x80, 0xA8, 0x00, 0x00, 0x02, 0x83, 0x00};
 
 // Generate GET PROCESSING
-static uint8_t treatPDOL(uint8_t *apdu) {
+static uint8_t treatPDOL(const uint8_t *apdu) {
 
     uint8_t plen = 7;
 
@@ -339,7 +348,7 @@ void RunMod(void) {
                 state = STATE_READ;
                 DbpString(_YELLOW_("[ ") "Initialized reading mode" _YELLOW_(" ]"));
                 DbpString("\n" _YELLOW_("!!") "Waiting for a Visa card...");
-                break;
+                continue;
             }
 
             // We need to listen to the high-frequency, peak-detected path.

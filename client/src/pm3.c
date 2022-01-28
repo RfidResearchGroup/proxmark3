@@ -1,4 +1,18 @@
 //-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
 // User API
 //-----------------------------------------------------------------------------
 
@@ -13,7 +27,7 @@
 #include "util_posix.h"
 #include "comms.h"
 
-pm3_device_t *pm3_open(char *port) {
+pm3_device_t *pm3_open(const char *port) {
     pm3_init();
     OpenProxmark(&g_session.current_device, port, false, 20, false, USART_BAUD_RATE);
     if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS)) {
@@ -40,7 +54,7 @@ void pm3_close(pm3_device_t *dev) {
     }
 }
 
-int pm3_console(pm3_device_t *dev, char *cmd) {
+int pm3_console(pm3_device_t *dev, const char *cmd) {
     // For now, there is no real device context:
     (void) dev;
     return CommandReceived(cmd);

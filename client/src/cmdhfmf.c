@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2011,2012 Merlok
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // High frequency MIFARE commands
 //-----------------------------------------------------------------------------
@@ -166,6 +174,10 @@ static void decode_print_st(uint16_t blockno, uint8_t *data) {
         PrintAndLogEx(INFO, "  # | Access rights");
         PrintAndLogEx(INFO, "----+-----------------------------------------------------------------");
 
+        if (! mfValidateAccessConditions(&data[6])) {
+            PrintAndLogEx(WARNING, _RED_("Invalid Access Conditions"));
+        }
+
         int bln = mfFirstBlockOfSector(mfSectorNum(blockno));
         int blinc = (mfNumBlocksPerSector(mfSectorNum(blockno)) > 4) ? 5 : 1;
         for (int i = 0; i < 4; i++) {
@@ -258,6 +270,50 @@ static void mf_print_sector_hdr(uint8_t sector) {
     PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
 }
 
+static int CmdHF14AMfAcl(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf acl",
+                  "Print decoded MIFARE access rights (ACL), \n"
+                  "  A = key A\n"
+                  "  B = key B\n"
+                  "  AB = both key A and B\n"
+                  "  ACCESS = access bytes inside sector trailer block\n"
+                  "  Increment, decrement, transfer, restore is for value blocks",
+                  "hf mf acl\n"
+                  "hf mf acl -d FF0780\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "ACL bytes specified as 3 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int acllen = 0;
+    uint8_t acl[3] = {0};
+    CLIGetHexWithReturn(ctx, 1, acl, &acllen);
+
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(NORMAL, "");
+
+    // look up common default ACL bytes and print a fingerprint line about it.
+    if (memcmp(acl, "\xFF\x07\x80", 3) == 0) {
+        PrintAndLogEx(INFO, "ACL... " _GREEN_("%s") " (transport configuration)", sprint_hex(acl, sizeof(acl)));
+    }
+    if (! mfValidateAccessConditions(acl)) {
+        PrintAndLogEx(ERR, _RED_("Invalid Access Conditions, NEVER write these on a card!"));
+    }
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "  # | Access rights");
+    PrintAndLogEx(INFO, "----+-----------------------------------------------------------------");
+    for (int i = 0; i < 4; i++) {
+        PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), i, mfGetAccessConditionsDesc(i, acl));
+    }
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14AMfDarkside(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf darkside",
@@ -286,31 +342,32 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint64_t key = 0;
-
+    uint64_t t1 = msclock();
     int isOK = mfDarkside(blockno, key_type, &key);
-    PrintAndLogEx(NORMAL, "");
+    t1 = msclock() - t1;
+
     switch (isOK) {
         case -1 :
-            PrintAndLogEx(WARNING, "button pressed. Aborted.");
+            PrintAndLogEx(WARNING, "button pressed, aborted");
             return PM3_ESOFT;
         case -2 :
-            PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).");
+            PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests)");
             return PM3_ESOFT;
         case -3 :
-            PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (its random number generator is not predictable).");
+            PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (its random number generator is not predictable)");
             return PM3_ESOFT;
         case -4 :
             PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
-            PrintAndLogEx(FAILED, "generating polynomial with 16 effective bits only, but shows unexpected behaviour.");
+            PrintAndLogEx(FAILED, "generating polynomial with 16 effective bits only, but shows unexpected behaviour");
             return PM3_ESOFT;
-        case -5 :
-            PrintAndLogEx(WARNING, "aborted via keyboard.");
-            return PM3_ESOFT;
+        case PM3_EOPABORTED :
+            PrintAndLogEx(WARNING, "aborted via keyboard");
+            return PM3_EOPABORTED;
         default :
-            PrintAndLogEx(SUCCESS, "found valid key: "_YELLOW_("%012" PRIx64), key);
+            PrintAndLogEx(SUCCESS, "found valid key: "_GREEN_("%012" PRIx64), key);
             break;
     }
-    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "time in darkside " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
     return PM3_SUCCESS;
 }
 
@@ -395,7 +452,7 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf rdbl",
                   "Read MIFARE Classic block",
                   "hf mf rdbl --blk 0 -k FFFFFFFFFFFF\n"
-                  "hf mf rdbl -b 3 -v   -> get block 3, decode sector trailer\n"
+                  "hf mf rdbl --blk 3 -v   -> get block 3, decode sector trailer\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -822,7 +879,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     xdump.card_info = card;
     xdump.dump = (uint8_t *)carddata;
     xdump.dumplen = bytes;
-    saveFileJSON(dataFilename, jsfCardMemory, (uint8_t*)&xdump, sizeof(xdump), NULL);
+    saveFileJSON(dataFilename, jsfCardMemory, (uint8_t *)&xdump, sizeof(xdump), NULL);
     return PM3_SUCCESS;
 }
 
@@ -837,7 +894,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                   "\n"
                   "`--uid` param is used for filename templates `hf-mf-<uid>-dump.bin` and `hf-mf-<uid>-key.bin.\n"
                   "        If not specified, it will read the card uid instead.\n"
-                  "   `-w` param you can indicate that the key file should be used for authentication instead.\n"
+                  " `--ka` param you can indicate that the key file should be used for authentication instead.\n"
                   "        if so we also try both B/A keys",
                   "hf mf restore\n"
                   "hf mf restore --1k --uid 04010203\n"
@@ -2603,7 +2660,7 @@ all_found:
     xdump.card_info = card;
     xdump.dump = dump;
     xdump.dumplen = bytes;
-    saveFileJSON(filename, jsfCardMemory, (uint8_t*)&xdump, sizeof(xdump), NULL);
+    saveFileJSON(filename, jsfCardMemory, (uint8_t *)&xdump, sizeof(xdump), NULL);
 
     // Generate and show statistics
     t1 = msclock() - t1;
@@ -4008,7 +4065,7 @@ static int CmdHF14AMfESave(const char *Cmd) {
     }
     xdump.dump = dump;
     xdump.dumplen = bytes;
-    saveFileJSON(filename, jsfCardMemory, (uint8_t*)&xdump, sizeof(xdump), NULL);
+    saveFileJSON(filename, jsfCardMemory, (uint8_t *)&xdump, sizeof(xdump), NULL);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -4845,7 +4902,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     xdump.card_info = card;
     xdump.dump = dump;
     xdump.dumplen = bytes;
-    saveFileJSON(filename, jsfCardMemory, (uint8_t*)&xdump, sizeof(xdump), NULL);
+    saveFileJSON(filename, jsfCardMemory, (uint8_t *)&xdump, sizeof(xdump), NULL);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -5275,7 +5332,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
     bool got_first = true;
     if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector0) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
+        PrintAndLogEx(WARNING, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
         got_first = false;
     } else {
         PrintAndLogEx(INFO, "Authentication ( " _GREEN_("OK") " )");
@@ -5285,7 +5342,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     if (got_first == false && keylen == 6) {
         PrintAndLogEx(INFO, "Trying user specified key...");
         if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, userkey, sector0) != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't the custom key is wrong");
+            PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or the custom key is wrong");
         } else {
             PrintAndLogEx(INFO, "Authentication ( " _GREEN_("OK") " )");
             got_first = true;
@@ -5306,7 +5363,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
     if (haveMAD2) {
         if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector10)) {
-            PrintAndLogEx(ERR, "error, read sector 0x10. card don't have MAD or don't have MAD on default keys");
+            PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD or doesn't have MAD on default keys");
             return PM3_ESOFT;
         }
 
@@ -5450,7 +5507,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
         PrintAndLogEx(INFO, "reading MAD v1 sector");
 
     if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector0)) {
-        PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
+        PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
         PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
         return PM3_ESOFT;
     }
@@ -5467,7 +5524,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
             PrintAndLogEx(INFO, "reading MAD v2 sector");
 
         if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector10)) {
-            PrintAndLogEx(ERR, "error, read sector 0x10. card don't have MAD or don't have MAD on default keys");
+            PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD or doesn't have MAD on default keys");
             PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
             return PM3_ESOFT;
         }
@@ -6084,11 +6141,11 @@ static int CmdHF14AMfView(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14AGen3View(const char *Cmd) {
+static int CmdHF14AGen4View(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf gview",
-                  "View `magic gen3 gtu` card memory",
+                  "View `magic gen4 gtu` card memory",
                   "hf mf gview\n"
                   "hf mf gview --4k"
                  );
@@ -6098,6 +6155,7 @@ static int CmdHF14AGen3View(const char *Cmd) {
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_str0("p", "pwd", "<hex>", "password 4bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -6105,9 +6163,18 @@ static int CmdHF14AGen3View(const char *Cmd) {
     bool m1 = arg_get_lit(ctx, 2);
     bool m2 = arg_get_lit(ctx, 3);
     bool m4 = arg_get_lit(ctx, 4);
+
+    int pwd_len = 0;
+    uint8_t pwd[4] = {0};
+    CLIGetHexWithReturn(ctx, 5, pwd, &pwd_len);
     CLIParserFree(ctx);
 
     // validations
+    if (pwd_len != 4 && pwd_len != 0) {
+        PrintAndLogEx(FAILED, "Must specify 4 bytes, got " _YELLOW_("%u"), pwd_len);
+        return PM3_EINVARG;
+    }
+
     if ((m0 + m1 + m2 + m4) > 1) {
         PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
         return PM3_EINVARG;
@@ -6134,7 +6201,7 @@ static int CmdHF14AGen3View(const char *Cmd) {
         PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
         return PM3_EINVARG;
     }
-    PrintAndLogEx(SUCCESS, "View magic gen3 GTU MIFARE Classic " _GREEN_("%s"), s);
+    PrintAndLogEx(SUCCESS, "View magic gen4 GTU MIFARE Classic " _GREEN_("%s"), s);
     PrintAndLogEx(INFO, "." NOLF);
 
     // Select card to get UID/UIDLEN information
@@ -6172,7 +6239,7 @@ static int CmdHF14AGen3View(const char *Cmd) {
 
     for (uint16_t i = 0; i < block_cnt; i++) {
 
-        if (mfG3GetBlock(i, dump + (i * MFBLOCK_SIZE)) !=  PM3_SUCCESS) {
+        if (mfG4GetBlock(pwd, i, dump + (i * MFBLOCK_SIZE)) !=  PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Can't get magic card block: %u", i);
             PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             free(dump);
@@ -6190,12 +6257,12 @@ static int CmdHF14AGen3View(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                AlwaysAvailable, "This help"},
-    {"list",        CmdHF14AMfList,         AlwaysAvailable,  "List MIFARE history"},
+    {"list",        CmdHF14AMfList,         AlwaysAvailable, "List MIFARE history"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("recovery") " -----------------------"},
     {"darkside",    CmdHF14AMfDarkside,     IfPm3Iso14443a,  "Darkside attack"},
     {"nested",      CmdHF14AMfNested,       IfPm3Iso14443a,  "Nested attack"},
     {"hardnested",  CmdHF14AMfNestedHard,   AlwaysAvailable, "Nested attack for hardened MIFARE Classic cards"},
-    {"staticnested", CmdHF14AMfNestedStatic, IfPm3Iso14443a,  "Nested attack against static nonce MIFARE Classic cards"},
+    {"staticnested", CmdHF14AMfNestedStatic, IfPm3Iso14443a, "Nested attack against static nonce MIFARE Classic cards"},
     {"autopwn",     CmdHF14AMfAutoPWN,      IfPm3Iso14443a,  "Automatic key recovery tool for MIFARE Classic"},
 //    {"keybrute",    CmdHF14AMfKeyBrute,     IfPm3Iso14443a,  "J_Run's 2nd phase of multiple sector nested authentication key recovery"},
     {"nack",        CmdHf14AMfNack,         IfPm3Iso14443a,  "Test for MIFARE NACK bug"},
@@ -6205,6 +6272,7 @@ static command_t CommandTable[] = {
     {"supercard",   CmdHf14AMfSuperCard,    IfPm3Iso14443a,  "Extract info from a `super card`"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
     {"auth4",       CmdHF14AMfAuth4,        IfPm3Iso14443a,  "ISO14443-4 AES authentication"},
+    {"acl",         CmdHF14AMfAcl,          AlwaysAvailable, "Decode and print MIFARE Classic access rights bytes"},
     {"dump",        CmdHF14AMfDump,         IfPm3Iso14443a,  "Dump MIFARE Classic tag to binary file"},
     {"mad",         CmdHF14AMfMAD,          IfPm3Iso14443a,  "Checks and prints MAD"},
     {"ndefread",    CmdHFMFNDEFRead,        IfPm3Iso14443a,  "Prints NDEF records from card"},
@@ -6213,7 +6281,7 @@ static command_t CommandTable[] = {
     {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE Classic sector"},
     {"restore",     CmdHF14AMfRestore,      IfPm3Iso14443a,  "Restore MIFARE Classic binary file to BLANK tag"},
     {"setmod",      CmdHf14AMfSetMod,       IfPm3Iso14443a,  "Set MIFARE Classic EV1 load modulation strength"},
-    {"view",        CmdHF14AMfView,         AlwaysAvailable,  "Display content from tag dump file"},
+    {"view",        CmdHF14AMfView,         AlwaysAvailable, "Display content from tag dump file"},
     {"wipe",        CmdHF14AMfWipe,         IfPm3Iso14443a,  "Wipe card to zeros and default keys/acc"},
     {"wrbl",        CmdHF14AMfWrBl,         IfPm3Iso14443a,  "Write MIFARE Classic block"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
@@ -6240,8 +6308,8 @@ static command_t CommandTable[] = {
     {"gen3uid",     CmdHf14AGen3UID,        IfPm3Iso14443a,  "Set UID without changing manufacturer block"},
     {"gen3blk",     CmdHf14AGen3Block,      IfPm3Iso14443a,  "Overwrite manufacturer block"},
     {"gen3freeze",  CmdHf14AGen3Freeze,     IfPm3Iso14443a,  "Perma lock UID changes. irreversible"},
-    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic gen3 GTU") " -----------------------"},
-    {"gview",       CmdHF14AGen3View,       IfPm3Iso14443a,  "View card"},
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GTU") " --------------------------"},
+    {"gview",       CmdHF14AGen4View,       IfPm3Iso14443a,  "View card"},
 //    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("i") " -----------------------"},
 //    {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},
     {NULL, NULL, NULL, NULL}

@@ -1,9 +1,18 @@
 //-----------------------------------------------------------------------------
-// A. Ozkal, 2020
+// Copyright (C) A. Ozkal, 2020
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // main code for HF Mifare Ultralight read/simulation by Ave Ozkal
 //-----------------------------------------------------------------------------
@@ -239,7 +248,7 @@ void RunMod(void) {
                     state = STATE_SEARCH;
                 }
             } else if (state == STATE_EMUL) {
-                uint8_t flags = FLAG_7B_UID_IN_DATA;
+                uint16_t flags = FLAG_7B_UID_IN_DATA;
 
                 Dbprintf("Starting simulation, press pm3-button to stop and go back to search state.");
                 SimulateIso14443aTag(7, flags, card.uid, 0);

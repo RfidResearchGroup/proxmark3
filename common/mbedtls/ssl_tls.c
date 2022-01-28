@@ -3020,8 +3020,6 @@ static void ssl_calc_finished_tls_sha256(
 
 #if defined(MBEDTLS_SHA512_C)
 
-typedef int (*finish_sha384_t)(mbedtls_sha512_context *, unsigned char *);
-
 static void ssl_calc_finished_tls_sha384(
     mbedtls_ssl_context *ssl, unsigned char *buf, int from) {
     int len = 12;
@@ -3078,12 +3076,20 @@ static void ssl_calc_finished_tls_sha384(
                           sha512.state, sizeof(sha512.state));
 #endif
     /*
-     * For SHA-384, we can save 16 bytes by keeping padbuf 48 bytes long.
-     * However, to avoid stringop-overflow warning in gcc, we have to cast
-     * mbedtls_sha512_finish_ret().
+     * From https://github.com/ARMmbed/mbedtls/pull/4493/files
+     * mbedtls_sha512_finish_ret's output parameter is declared as a
+     * 64-byte buffer, but since we're using SHA-384, we know that the
+     * output fits in 48 bytes. This is correct C, but GCC 11.1 warns
+     * about it.
      */
-    finish_sha384_t finish = (finish_sha384_t)mbedtls_sha512_finish_ret;
-    finish(&sha512, padbuf);
+#if defined(__GNUC__) && __GNUC__ >= 11
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
+    mbedtls_sha512_finish_ret(&sha512, padbuf);
+#if defined(__GNUC__) && __GNUC__ >= 11
+#pragma GCC diagnostic pop
+#endif
 
     mbedtls_sha512_free(&sha512);
 #endif

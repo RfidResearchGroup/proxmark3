@@ -1,7 +1,17 @@
 //-----------------------------------------------------------------------------
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // LF ADC read/write implementation
 //-----------------------------------------------------------------------------
@@ -186,7 +196,7 @@ void lf_wait_periods(size_t periods) {
     lf_count_edge_periods_ex(periods, true, false);
 }
 
-void lf_init(bool reader, bool simulate) {
+void lf_init(bool reader, bool simulate, bool ledcontrol) {
 
     StopTicks();
 
@@ -240,7 +250,7 @@ void lf_init(bool reader, bool simulate) {
     AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV4_CLOCK;
 
     // Clear all leds
-    LEDsoff();
+    if (ledcontrol) LEDsoff();
 
     // Reset and enable timers
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
@@ -258,7 +268,7 @@ void lf_init(bool reader, bool simulate) {
     lf_sample_mean();
 }
 
-void lf_finalize(void) {
+void lf_finalize(bool ledcontrol) {
     // Disable timers
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
@@ -269,7 +279,7 @@ void lf_finalize(void) {
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
-    LEDsoff();
+    if (ledcontrol) LEDsoff();
 
     StartTicks();
 }
@@ -329,9 +339,9 @@ static void lf_manchester_send_bit(uint8_t bit) {
 }
 
 // simulation
-bool lf_manchester_send_bytes(const uint8_t *frame, size_t frame_len) {
+bool lf_manchester_send_bytes(const uint8_t *frame, size_t frame_len, bool ledcontrol) {
 
-    LED_B_ON();
+    if (ledcontrol) LED_B_ON();
 
     lf_manchester_send_bit(1);
     lf_manchester_send_bit(1);
@@ -344,6 +354,6 @@ bool lf_manchester_send_bytes(const uint8_t *frame, size_t frame_len) {
         lf_manchester_send_bit((frame[i / 8] >> (7 - (i % 8))) & 1);
     }
 
-    LED_B_OFF();
+    if (ledcontrol) LED_B_OFF();
     return true;
 }

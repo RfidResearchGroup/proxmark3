@@ -1,3 +1,18 @@
+//-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
 #ifndef PROTOCOLS_H
 #define PROTOCOLS_H
 
@@ -142,6 +157,12 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ICLASS_CREDIT(x)            (((x) & 0x10) == 0x10)
 #define ICLASS_DEBIT(x)             (((x) & 0x80) == 0x80)
 
+
+// 7bit Apple Magsafe wake up command
+#define MAGSAFE_CMD_WUPA_1          0x7A
+#define MAGSAFE_CMD_WUPA_2          0x7B
+#define MAGSAFE_CMD_WUPA_3          0x7C
+#define MAGSAFE_CMD_WUPA_4          0x7D
 
 #define ISO14443A_CMD_REQA          0x26
 #define ISO14443A_CMD_READBLOCK     0x30
@@ -372,6 +393,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define PROTO_HITAG2    13
 #define PROTO_HITAGS    14
 #define PROTO_CRYPTORF  15
+#define SEOS            16
 
 // Picopass fuses
 #define FUSE_FPERS   0x80
@@ -416,8 +438,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_AUTHENTICATE_ISO          0x1A  // AUTHENTICATE_STANDARD
 #define MFDES_AUTHENTICATE_AES          0xAA
 
-#define MFDES_AUTHENTICATE_EV2F         0x71
-#define MFDES_AUTHENTICATE_EV2NF        0x77
+//  Leakage Resilient Primitive (LRP)
+#define MFDES_AUTHENTICATE_EV2F         0x71  // LRP, AuthenticateLRPFirst
+#define MFDES_AUTHENTICATE_EV2NF        0x77  // LRP, AuthenticateLRPNonFirst
 
 #define MFDES_CREDIT                    0x0C
 #define MFDES_LIMITED_CREDIT            0x1C
@@ -490,7 +513,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_E_PARAMETER_ERROR         0x9E
 #define MFDES_E_APPLICATION_NOT_FOUND   0xA0
 #define MFDES_E_APPL_INTEGRITY          0xA1
-#define MFDES_E_AUTHENTIFICATION_ERROR  0xAE
+#define MFDES_E_AUTHENTICATION_ERROR  0xAE
 #define MFDES_E_BOUNDARY                0xBE
 #define MFDES_E_PICC_INTEGRITY          0xC1
 #define MFDES_E_COMMAND_ABORTED         0xCA

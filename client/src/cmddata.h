@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Data and Graph commands
 //-----------------------------------------------------------------------------
@@ -12,6 +20,7 @@
 #define CMDDATA_H__
 
 #include "common.h"
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -70,7 +79,7 @@ int NRZrawDemod(int clk, int invert, int maxErr, bool verbose);                 
 
 int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_hex);
 
-void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx);
+void setDemodBuff(const uint8_t *buff, size_t size, size_t start_idx);
 bool getDemodBuff(uint8_t *buff, size_t *size);
 void save_restoreDB(uint8_t saveOpt);// option '1' to save g_DemodBuffer any other to restore
 int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveGrph, bool verbose);

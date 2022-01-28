@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Marshmellow
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Low frequency Farpoint G Prox II / Pyramid tag commands
 // Biphase, rf/ , 96 bits  (unknown key calc + some bits)
@@ -26,6 +34,64 @@
 #include "cmdlfem4x05.h"  // EM defines
 
 static int CmdHelp(const char *Cmd);
+
+static int demod_guard_raw(uint8_t *raw, uint8_t rlen) {
+
+    if (rlen != 12) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t bits[96] = {0x00};
+    bytes_to_bytebits(raw, rlen, bits);
+
+    // start after 6 bit preamble
+    size_t start_idx = 6;
+    uint8_t bits_no_spacer[90];
+    memcpy(bits_no_spacer, bits + start_idx, 90);
+
+    // remove the 18 (90/5=18) parity bits (down to 72 bits (96-6-18=72))
+    size_t len = removeParity(bits_no_spacer, 0, 5, 3, 90); // source, startloc, paritylen, ptype, length_to_run
+    if (len != 72) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII spacer removal did not produce 72 bits: %zu, start: %zu", len, start_idx);
+        return PM3_ESOFT;
+    }
+
+    uint8_t plain[8] = {0x00};
+
+    // get key and then get all 8 bytes of payload decoded
+    uint8_t xorKey = (uint8_t)bytebits_to_byteLSBF(bits_no_spacer, 8);
+    for (size_t idx = 0; idx < 8; idx++) {
+        plain[idx] = ((uint8_t)bytebits_to_byteLSBF(bits_no_spacer + 8 + (idx * 8), 8)) ^ xorKey;
+        PrintAndLogEx(DEBUG, "DEBUG: gProxII byte %zu after xor: %02x", idx, plain[idx]);
+    }
+
+    // plain contains 8 Bytes (64 bits) of decrypted raw tag data
+    uint8_t fmtlen = plain[0] >> 2;
+    uint32_t FC = 0;
+    uint32_t Card = 0;
+
+    bool unknown = false;
+    switch (fmtlen) {
+        case 36:
+            FC = ((plain[3] & 0x7F) << 7) | (plain[4] >> 1);
+            Card = ((plain[4] & 1) << 19) | (plain[5] << 11) | (plain[6] << 3) | ((plain[7] & 0xE0) >> 5);
+            break;
+        case 26:
+            FC = ((plain[3] & 0x7F) << 1) | (plain[4] >> 7);
+            Card = ((plain[4] & 0x7F) << 9) | (plain[5] << 1) | (plain[6] >> 7);
+            break;
+        default :
+            unknown = true;
+            break;
+    }
+
+    if (unknown)
+        PrintAndLogEx(SUCCESS, "G-Prox-II - Unknown len: " _GREEN_("%u") ", Raw: %s", fmtlen, sprint_hex_inrow(raw, rlen));
+    else
+        PrintAndLogEx(SUCCESS, "G-Prox-II - len: " _GREEN_("%u")" FC: " _GREEN_("%u") " Card: " _GREEN_("%u") ", Raw: %s", fmtlen, FC, Card,  sprint_hex_inrow(raw, rlen));
+
+    return PM3_SUCCESS;
+}
 
 // attempts to demodulate and identify a G_Prox_II verex/chubb card
 // WARNING: if it fails during some points it will destroy the g_DemodBuffer data
@@ -59,7 +125,6 @@ int demodGuard(bool verbose) {
     }
 
     // got a good demod of 96 bits
-
     uint8_t plain[8] = {0x00};
     uint8_t xorKey = 0;
     size_t startIdx = preambleIndex + 6; //start after 6 bit preamble
@@ -119,16 +184,32 @@ static int CmdGuardDemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf gproxii demod",
                   "Try to find Guardall Prox-II preamble, if found decode / descramble data",
-                  "lf gproxii demod"
+                  "lf gproxii demod -> use graphbuffer to decode\n"
+                  "lf gproxii demod --raw fb8ee718ee3b8cc785c11b92   ->"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_str0("r", "raw", "<hex>", "raw bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int raw_len = 0;
+    uint8_t raw[12] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+
     CLIParserFree(ctx);
-    return demodGuard(true);
+
+    if (raw_len != 12 && raw_len != 0) {
+        PrintAndLogEx(FAILED, "Must specify 12 bytes, got " _YELLOW_("%u"), raw_len);
+        return PM3_EINVARG;
+    }
+
+    if (raw_len == 0)
+        return demodGuard(true);
+    else
+        return demod_guard_raw(raw, raw_len);
 }
 
 static int CmdGuardReader(const char *Cmd) {
@@ -163,8 +244,8 @@ static int CmdGuardClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf gproxii clone",
                   "clone a Guardall tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
-                  "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.\n"
-                  "Currently work only on 26bit",
+                  "The facility-code is 8-bit and the card number is 20-bit.  Larger values are truncated.\n"
+                  "Currently work only on 26 | 36 bit format",
                   "lf gproxii clone --fmt 26 --fc 123 --cn 1337\n"
                   "lf gproxii clone --q5 --fmt 26 --fc 123 --cn 1337   -> encode for Q5/T5555 tag\n"
                   "lf gproxii clone --em --fmt 26 --fc 123 --cn 1337   -> encode for EM4305/4469"
@@ -195,7 +276,7 @@ static int CmdGuardClone(const char *Cmd) {
 
     fmtlen &= 0x7f;
     uint32_t facilitycode = (fc & 0x000000FF);
-    uint32_t cardnumber = (cn & 0x0000FFFF);
+    uint32_t cardnumber = (cn & 0x00FFFFFF);
 
     //GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
     uint8_t *bs = calloc(96, sizeof(uint8_t));
@@ -250,7 +331,7 @@ static int CmdGuardSim(const char *Cmd) {
                   "Enables simulation of Guardall card with specified card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.\n"
                   "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.\n"
-                  "Currently work only on 26bit",
+                  "Currently work only on 26 | 36 bit format",
                   "lf gproxii sim --fmt 26 --fc 123 --cn 1337\n"
                  );
 
@@ -270,7 +351,7 @@ static int CmdGuardSim(const char *Cmd) {
 
     fmtlen &= 0x7F;
     uint32_t facilitycode = (fc & 0x000000FF);
-    uint32_t cardnumber = (cn & 0x0000FFFF);
+    uint32_t cardnumber = (cn & 0x000FFFFF);
 
     uint8_t bs[96];
     memset(bs, 0x00, sizeof(bs));

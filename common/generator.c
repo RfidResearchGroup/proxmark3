@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2019 iceman <iceman at iuse.se>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Generator commands
 //-----------------------------------------------------------------------------
@@ -73,7 +81,7 @@ static void transform_D(uint8_t *ru) {
 }
 
 // Transport system (IT) pwd generation algo nickname A.
-uint32_t ul_ev1_pwdgenA(uint8_t *uid) {
+uint32_t ul_ev1_pwdgenA(const uint8_t *uid) {
 
     uint8_t pos = (uid[3] ^ uid[4] ^ uid[5] ^ uid[6]) % 32;
 
@@ -98,7 +106,7 @@ uint32_t ul_ev1_pwdgenA(uint8_t *uid) {
 }
 
 // Amiibo pwd generation algo nickname B. (very simple)
-uint32_t ul_ev1_pwdgenB(uint8_t *uid) {
+uint32_t ul_ev1_pwdgenB(const uint8_t *uid) {
 
     uint8_t pwd[] = {0x00, 0x00, 0x00, 0x00};
 
@@ -110,7 +118,7 @@ uint32_t ul_ev1_pwdgenB(uint8_t *uid) {
 }
 
 // Lego Dimension pwd generation algo nickname C.
-uint32_t ul_ev1_pwdgenC(uint8_t *uid) {
+uint32_t ul_ev1_pwdgenC(const uint8_t *uid) {
     uint32_t pwd = 0;
     uint32_t base[] = {
         0xffffffff, 0x28ffffff,
@@ -128,7 +136,7 @@ uint32_t ul_ev1_pwdgenC(uint8_t *uid) {
 }
 
 // XYZ 3d printing pwd generation algo nickname D.
-uint32_t ul_ev1_pwdgenD(uint8_t *uid) {
+uint32_t ul_ev1_pwdgenD(const uint8_t *uid) {
 
     uint8_t i;
     // rotation offset
@@ -152,18 +160,30 @@ uint32_t ul_ev1_pwdgenD(uint8_t *uid) {
     return BSWAP_32(pwd);
 }
 
+// AIR purifier Xiaomi
+uint32_t ul_ev1_pwdgenE(const uint8_t *uid) {
+    uint8_t hash[20];
+    mbedtls_sha1(uid, 7, hash);
+    uint32_t pwd = 0;
+    pwd |= (hash[ hash[0] % 20 ]) << 24 ;
+    pwd |= (hash[(hash[0] + 5) % 20 ]) << 16;
+    pwd |= (hash[(hash[0] + 13) % 20 ]) << 8;
+    pwd |= (hash[(hash[0] + 17) % 20 ]);
+    return pwd;
+}
+
 // pack generation for algo 1-3
-uint16_t ul_ev1_packgenA(uint8_t *uid) {
+uint16_t ul_ev1_packgenA(const uint8_t *uid) {
     uint16_t pack = (uid[0] ^ uid[1] ^ uid[2]) << 8 | (uid[2] ^ 8);
     return pack;
 }
-uint16_t ul_ev1_packgenB(uint8_t *uid) {
+uint16_t ul_ev1_packgenB(const uint8_t *uid) {
     return 0x8080;
 }
-uint16_t ul_ev1_packgenC(uint8_t *uid) {
+uint16_t ul_ev1_packgenC(const uint8_t *uid) {
     return 0xaa55;
 }
-uint16_t ul_ev1_packgenD(uint8_t *uid) {
+uint16_t ul_ev1_packgenD(const uint8_t *uid) {
     uint8_t i;
     //Rotate
     uint8_t r = (uid[2] + uid[5]) & 7; //Rotation offset
@@ -182,10 +202,18 @@ uint16_t ul_ev1_packgenD(uint8_t *uid) {
     return BSWAP_16(p & 0xFFFF);
 }
 
-uint32_t ul_ev1_pwdgen_def(uint8_t *uid) {
+uint16_t ul_ev1_packgenE(const uint8_t *uid) {
+
+    uint32_t pwd = ul_ev1_pwdgenE(uid);
+    return (0xAD << 8 | ((pwd >> 24) & 0xFF));
+}
+
+
+// default shims
+uint32_t ul_ev1_pwdgen_def(const uint8_t *uid) {
     return 0xFFFFFFFF;
 }
-uint16_t ul_ev1_packgen_def(uint8_t *uid) {
+uint16_t ul_ev1_packgen_def(const uint8_t *uid) {
     return 0x0000;
 }
 
@@ -260,7 +288,7 @@ int mfc_algo_saflok_all(uint8_t *uid, uint8_t *keys) {
 }
 
 // MIZIP algo
-int mfc_algo_mizip_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
+int mfc_algo_mizip_one(const uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
     if (sector > 4) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
     if (keytype > 2) return PM3_EINVARG;
@@ -440,14 +468,6 @@ int mfdes_kdf_input_gallagher(uint8_t *uid, uint8_t uidLen, uint8_t keyNo, uint3
         return PM3_EINVARG;
     }
 
-    // Verify the AppID is a valid Gallagher AppID
-    if ((aid & 0xF0FFFF) != 0x2081F4) {
-        if (g_debugMode) {
-            PrintAndLogEx(WARNING, "Invalid Gallagher AID %06X", aid);
-        }
-        return PM3_EINVARG;
-    }
-
     int len = 0;
     // If the keyNo == 1, then omit the UID.
     if (keyNo != 1) {
@@ -542,6 +562,17 @@ int generator_selftest(void) {
     if (success)
         testresult++;
     PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid4, 7), pwd4, success ? "OK" : "->72B1EC61<--");
+
+
+    uint8_t uid5[] = {0x04, 0xA0, 0x3C, 0xAA, 0x1E, 0x70, 0x80};
+    uint32_t pwd5 = ul_ev1_pwdgenE(uid5);
+    success = (pwd5 == 0xCD91AFCC);
+//    if (success)
+//        testresult++;
+
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid5, 7), pwd5, success ? "OK" : "->CD91AFCC<--");
+
+
 
 //    uint8_t uid5[] = {0x11, 0x22, 0x33, 0x44};
 //    uint64_t key1 = mfc_algo_a(uid5);

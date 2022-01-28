@@ -463,7 +463,7 @@ static void *brute_thread(void *arguments) {
 static void *brute_key_thread(void *arguments) {
 
     struct thread_key_args *args = (struct thread_key_args *) arguments;
-    uint64_t key = args->part_key;
+    uint64_t key;
     uint8_t local_enc[args->enc_len];
     memcpy(local_enc, args->enc, args->enc_len);
 
@@ -641,7 +641,7 @@ int main(int argc, char *argv[]) {
 
     // threads
     for (int i = 0; i < thread_count; ++i) {
-        struct thread_key_args *b = malloc(sizeof(struct thread_key_args));
+        struct thread_key_args *b = calloc(1, sizeof(struct thread_key_args));
         b->thread = i;
         b->idx = i;
         b->uid = uid;

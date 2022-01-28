@@ -1,17 +1,22 @@
-/*
- * libopenemv - a library to work with EMV family of smart cards
- * Copyright (C) 2015 Dmitry Eremin-Solenikov
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- */
+//-----------------------------------------------------------------------------
+// Borrowed initially from https://github.com/lumag/emv-tools/
+// Copyright (C) 2012, 2015 Dmitry Eremin-Solenikov
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+// libopenemv - a library to work with EMV family of smart cards
+//-----------------------------------------------------------------------------
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -49,7 +54,7 @@ static size_t dol_calculate_len(const struct tlv *tlv, size_t data_len) {
 struct tlv *dol_process(const struct tlv *tlv, const struct tlvdb *tlvdb, tlv_tag_t tag) {
     size_t res_len;
     if (!tlv || !(res_len = dol_calculate_len(tlv, 0))) {
-        struct tlv *res_tlv = malloc(sizeof(*res_tlv));
+        struct tlv *res_tlv = calloc(1, sizeof(*res_tlv));
 
         res_tlv->tag = tag;
         res_tlv->len = 0;
@@ -58,7 +63,7 @@ struct tlv *dol_process(const struct tlv *tlv, const struct tlvdb *tlvdb, tlv_ta
         return res_tlv;
     }
 
-    struct tlv *res_tlv = malloc(sizeof(*res_tlv) + res_len);
+    struct tlv *res_tlv = calloc(1, sizeof(*res_tlv) + res_len);
     if (!res_tlv)
         return NULL;
 

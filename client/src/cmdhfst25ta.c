@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020 iceman1001
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // High frequency ISO14443A / ST25TA  commands
 //-----------------------------------------------------------------------------
@@ -12,16 +20,17 @@
 #include "cmdhfst.h"
 #include <ctype.h>
 #include "fileutils.h"
-#include "cmdparser.h"     // command_t
-#include "comms.h"         // clearCommandBuffer
+#include "cmdparser.h"         // command_t
+#include "comms.h"             // clearCommandBuffer
 #include "cmdtrace.h"
 #include "cliparser.h"
 #include "crc16.h"
 #include "cmdhf14a.h"
-#include "protocols.h"     // definitions of ISO14A/7816 protocol
+#include "protocols.h"         // definitions of ISO14A/7816 protocol
 #include "iso7816/apduinfo.h"  // GetAPDUCodeDescription
-#include "nfc/ndef.h"      // NDEFRecordsDecodeAndPrint
-#include "cmdnfc.h"        // print_type4_cc_info
+#include "nfc/ndef.h"          // NDEFRecordsDecodeAndPrint
+#include "cmdnfc.h"            // print_type4_cc_info
+#include "commonutil.h"        // get_sw
 
 #define TIMEOUT 2000
 
@@ -101,14 +110,6 @@ static void print_st25ta_system_info(uint8_t *d, uint8_t n) {
     0012
     80000000001302E2007D0E8DCC
     */
-}
-
-static uint16_t get_sw(uint8_t *d, uint8_t n) {
-    if (n < 2)
-        return 0;
-
-    n -= 2;
-    return d[n] * 0x0100 + d[n + 1];
 }
 
 // ST25TA

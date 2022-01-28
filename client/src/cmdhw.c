@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Hardware commands
 // low-level hardware control
@@ -624,7 +632,7 @@ static int CmdTune(const char *Cmd) {
 static int CmdVersion(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw version",
-                  "Show version information about the connected Proxmark3",
+                  "Show version information about the client and the connected Proxmark3",
                   "hw version"
                  );
 
@@ -898,7 +906,7 @@ static command_t CommandTable[] = {
     {"tearoff",       CmdTearoff,      IfPm3Present,    "Program a tearoff hook for the next command supporting tearoff"},
     {"tia",           CmdTia,          IfPm3Present,    "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
     {"tune",          CmdTune,         IfPm3Present,    "Measure antenna tuning"},
-    {"version",       CmdVersion,      IfPm3Present,    "Show version information about the connected Proxmark3"},
+    {"version",       CmdVersion,      AlwaysAvailable, "Show version information about the client and the connected Proxmark3, if any"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -928,113 +936,147 @@ void pm3_version(bool verbose, bool oneliner) {
 #endif
 
 #if defined(__APPLE__) || defined(__MACH__)
-# define PM3HOSTOS " OS:OSX"
+# define PM3HOSTOS "OSX"
 #elif defined(__ANDROID__) || defined(ANDROID)
 // must be tested before __linux__
-# define PM3HOSTOS " OS:Android"
+# define PM3HOSTOS "Android"
 #elif defined(__linux__)
-# define PM3HOSTOS " OS:Linux"
+# define PM3HOSTOS "Linux"
 #elif defined(__FreeBSD__)
-# define PM3HOSTOS " OS:FreeBSD"
+# define PM3HOSTOS "FreeBSD"
 #elif defined(__NetBSD__)
-# define PM3HOSTOS " OS:NetBSD"
+# define PM3HOSTOS "NetBSD"
 #elif defined(__OpenBSD__)
-# define PM3HOSTOS " OS:OpenBSD"
+# define PM3HOSTOS "OpenBSD"
 #elif defined(__CYGWIN__)
-# define PM3HOSTOS " OS:Cygwin"
+# define PM3HOSTOS "Cygwin"
 #elif defined(_WIN64) || defined(__WIN64__)
 // must be tested before _WIN32
-# define PM3HOSTOS " OS:Windows (64b)"
+# define PM3HOSTOS "Windows (64b)"
 #elif defined(_WIN32) || defined(__WIN32__)
-# define PM3HOSTOS " OS:Windows (32b)"
+# define PM3HOSTOS "Windows (32b)"
 #else
-# define PM3HOSTOS " OS:unknown"
+# define PM3HOSTOS "unknown"
 #endif
 
 #if defined(__x86_64__)
-# define PM3HOSTARCH " ARCH:x86_64"
+# define PM3HOSTARCH "x86_64"
 #elif defined(__i386__)
-# define PM3HOSTARCH " ARCH:x86"
+# define PM3HOSTARCH "x86"
 #elif defined(__aarch64__)
-# define PM3HOSTARCH " ARCH:aarch64"
+# define PM3HOSTARCH "aarch64"
 #elif defined(__arm__)
-# define PM3HOSTARCH " ARCH:arm"
+# define PM3HOSTARCH "arm"
 #elif defined(__powerpc64__)
-# define PM3HOSTARCH " ARCH:powerpc64"
+# define PM3HOSTARCH "powerpc64"
 #elif defined(__mips__)
-# define PM3HOSTARCH " ARCH:mips"
+# define PM3HOSTARCH "mips"
 #else
-# define PM3HOSTARCH " ARCH:unknown"
+# define PM3HOSTARCH "unknown"
 #endif
+
+    char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
 
     if (oneliner) {
         // For "proxmark3 -v", simple printf, avoid logging
-        char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
         FormatVersionInformation(temp, sizeof(temp), "Client: ", &g_version_information);
-        PrintAndLogEx(NORMAL, "%s compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH "\n", temp);
+        PrintAndLogEx(NORMAL, "%s compiled with " PM3CLIENTCOMPILER __VERSION__ " OS:" PM3HOSTOS " ARCH:" PM3HOSTARCH "\n", temp);
         return;
     }
 
     if (!verbose)
         return;
 
-    PacketResponseNG resp;
-    clearCommandBuffer();
-    SendCommandNG(CMD_VERSION, NULL, 0);
+    PrintAndLogEx(NORMAL, "\n [ " _CYAN_("Proxmark3 RFID instrument") " ]");
+    PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("CLIENT") " ]");
+    FormatVersionInformation(temp, sizeof(temp), "  ", &g_version_information);
+    PrintAndLogEx(NORMAL, "%s", temp);
+    PrintAndLogEx(NORMAL, "  compiled with............. " PM3CLIENTCOMPILER __VERSION__);
+    PrintAndLogEx(NORMAL, "  platform.................. " PM3HOSTOS " / " PM3HOSTARCH);
+#if defined(HAVE_READLINE)
+    PrintAndLogEx(NORMAL, "  Readline support.......... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  Readline support.......... " _YELLOW_("absent"));
+#endif
+#ifdef HAVE_GUI
+    PrintAndLogEx(NORMAL, "  QT GUI support............ " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  QT GUI support............ " _YELLOW_("absent"));
+#endif
+#ifdef HAVE_BLUEZ
+    PrintAndLogEx(NORMAL, "  native BT support......... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  native BT support......... " _YELLOW_("absent"));
+#endif
+#ifdef HAVE_PYTHON
+    PrintAndLogEx(NORMAL, "  Python script support..... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  Python script support..... " _YELLOW_("absent"));
+#endif
+#ifdef HAVE_LUA_SWIG
+    PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _YELLOW_("absent"));
+#endif
+#ifdef HAVE_PYTHON_SWIG
+    PrintAndLogEx(NORMAL, "  Python SWIG support....... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  Python SWIG support....... " _YELLOW_("absent"));
+#endif
 
-    if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
-        char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
-        PrintAndLogEx(NORMAL, "\n [ " _CYAN_("Proxmark3 RFID instrument") " ]");
-        PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("CLIENT") " ]");
-        FormatVersionInformation(temp, sizeof(temp), "  client: ", &g_version_information);
-        PrintAndLogEx(NORMAL, "%s", temp);
-        PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
-
+    if (g_session.pm3_present) {
         PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3") " ]");
-        if (IfPm3Rdv4Fw()) {
 
-            bool is_genuine_rdv4 = false;
-            // validate signature data
-            rdv40_validation_t mem;
-            if (rdv4_get_signature(&mem) == PM3_SUCCESS) {
-                if (rdv4_validate(&mem) == PM3_SUCCESS) {
-                    is_genuine_rdv4 = true;
+        PacketResponseNG resp;
+        clearCommandBuffer();
+        SendCommandNG(CMD_VERSION, NULL, 0);
+
+        if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
+            if (IfPm3Rdv4Fw()) {
+
+                bool is_genuine_rdv4 = false;
+                // validate signature data
+                rdv40_validation_t mem;
+                if (rdv4_get_signature(&mem) == PM3_SUCCESS) {
+                    if (rdv4_validate(&mem) == PM3_SUCCESS) {
+                        is_genuine_rdv4 = true;
+                    }
+                }
+
+                PrintAndLogEx(NORMAL, "  device.................... %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _RED_("device / fw mismatch"));
+                PrintAndLogEx(NORMAL, "  firmware.................. %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _YELLOW_("RDV4"));
+                PrintAndLogEx(NORMAL, "  external flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
+                PrintAndLogEx(NORMAL, "  smartcard reader.......... %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
+                PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
+            } else {
+                PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3 GENERIC"));
+                if (IfPm3FpcUsartHost()) {
+                    PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", _GREEN_("present"));
                 }
             }
 
-            PrintAndLogEx(NORMAL, "  device.................... %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _RED_("device / fw mismatch"));
-            PrintAndLogEx(NORMAL, "  firmware.................. %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _YELLOW_("RDV4"));
-            PrintAndLogEx(NORMAL, "  external flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
-            PrintAndLogEx(NORMAL, "  smartcard reader.......... %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
-            PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
-        } else {
-            PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3 GENERIC"));
-            if (IfPm3FpcUsartHost()) {
-                PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", _GREEN_("present"));
+            if (IfPm3FpcUsartDevFromUsb()) {
+                PrintAndLogEx(NORMAL, "  FPC USART for developer... %s", _GREEN_("present"));
             }
+
+            PrintAndLogEx(NORMAL, "");
+
+            struct p {
+                uint32_t id;
+                uint32_t section_size;
+                uint32_t versionstr_len;
+                char versionstr[PM3_CMD_DATA_SIZE - 12];
+            } PACKED;
+
+            struct p *payload = (struct p *)&resp.data.asBytes;
+
+            PrintAndLogEx(NORMAL,  payload->versionstr);
+            if (strstr(payload->versionstr, "2s30vq100") == NULL) {
+                PrintAndLogEx(NORMAL, "  FPGA firmware... %s", _RED_("chip mismatch"));
+            }
+
+            lookupChipID(payload->id, payload->section_size);
         }
-
-        if (IfPm3FpcUsartDevFromUsb()) {
-            PrintAndLogEx(NORMAL, "  FPC USART for developer... %s", _GREEN_("present"));
-        }
-
-        PrintAndLogEx(NORMAL, "");
-
-        struct p {
-            uint32_t id;
-            uint32_t section_size;
-            uint32_t versionstr_len;
-            char versionstr[PM3_CMD_DATA_SIZE - 12];
-        } PACKED;
-
-        struct p *payload = (struct p *)&resp.data.asBytes;
-
-        PrintAndLogEx(NORMAL,  payload->versionstr);
-        if (strstr(payload->versionstr, "2s30vq100") == NULL) {
-            PrintAndLogEx(NORMAL, "  FPGA firmware... %s", _RED_("chip mismatch"));
-        }
-
-        lookupChipID(payload->id, payload->section_size);
     }
     PrintAndLogEx(NORMAL, "");
 }

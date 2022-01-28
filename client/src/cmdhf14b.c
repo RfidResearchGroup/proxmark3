@@ -1,10 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
-// Modified 2018, 2020 iceman
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // High frequency ISO14443B commands
 //-----------------------------------------------------------------------------
@@ -52,14 +59,6 @@ static int switch_off_field_14b(void) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
     return PM3_SUCCESS;
-}
-
-static uint16_t get_sw(uint8_t *d, uint8_t n) {
-    if (n < 2)
-        return 0;
-
-    n -= 2;
-    return d[n] * 0x0100 + d[n + 1];
 }
 
 static void hf14b_aid_search(bool verbose) {
@@ -221,7 +220,7 @@ static int CmdHF14BSim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("u", "uid", "hex", "4byte UID/PUPI"),
+        arg_str1("u", "uid", "hex", "4byte UID/PUPI"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -288,7 +287,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
         arg_lit0("r", NULL, "do not read response from card"),
         arg_int0("t", "timeout", "<dec>", "timeout in ms"),
         arg_lit0("v", "verbose", "verbose"),
-        arg_strx0("d", "data", "<hex>", "data, bytes to send"),
+        arg_str0("d", "data", "<hex>", "data, bytes to send"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -529,7 +528,7 @@ static char *get_st_chip_model(uint8_t data) {
     return retStr;
 }
 
-static char *get_st_lock_info(uint8_t model, uint8_t *lockbytes, uint8_t blk) {
+static char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uint8_t blk) {
 
     static char str[16];
     char *s = str;
@@ -695,11 +694,11 @@ static char *get_st_lock_info(uint8_t model, uint8_t *lockbytes, uint8_t blk) {
     return s;
 }
 
-static uint8_t get_st_chipid(uint8_t *uid) {
+static uint8_t get_st_chipid(const uint8_t *uid) {
     return uid[5] >> 2;
 }
 
-static uint8_t get_st_cardsize(uint8_t *uid) {
+static uint8_t get_st_cardsize(const uint8_t *uid) {
     uint8_t chipid = get_st_chipid(uid);
     switch (chipid) {
         case 0x0:
@@ -1276,7 +1275,7 @@ static int CmdHF14BDump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("f", "file", "<filename>", "(optional) filename,  if no <name> UID will be used as filename"),
+        arg_str0("f", "file", "<fn>", "(optional) filename,  if no <name> UID will be used as filename"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1822,7 +1821,7 @@ static int CmdHF14BAPDU(const char *Cmd) {
                  "                                   must be 4 bytes: <CLA INS P1 P2>"),
         arg_lit0("e",  "extended", "make extended length apdu if `m` parameter included"),
         arg_int0("l",  "le",       "<int>", "Le apdu parameter if `m` parameter included"),
-        arg_strx1("d", "data",     "<hex>", "<APDU | data> if `m` parameter included"),
+        arg_str1("d", "data",     "<hex>", "<APDU | data> if `m` parameter included"),
         arg_int0(NULL, "timeout",   "<dec>", "timeout in ms"),
         arg_param_end
     };

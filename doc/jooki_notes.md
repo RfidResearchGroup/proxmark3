@@ -1,15 +1,35 @@
 # Jooki Figurine Notes
+<a id="top"></a>
+
+# Table of Contents
+- [Jooki Figurine Notes](#jooki-figurine-notes)
+- [Table of Contents](#table-of-contents)
+  - [Jooki proxmark commands](#jooki-proxmark-commands)
+    - [Decoding NDEF URL parameter](#decoding-ndef-url-parameter)
+    - [Encoding NDEF record](#encoding-ndef-record)
+    - [Simulation](#simulation)
+    - [Cloning to a NTAG213 tag](#cloning-to-a-ntag213-tag)
+    - [List of known figurine types](#list-of-known-figurine-types)
+
+
+
 - NTAG213 (Should be tested if other NTAG2xx work)
 - A single NDEF record of type URL
 - Physical figurines are Fox, Dragon, Knight, Ghost, Whale, Generic Flat. Than there are variations of those figures with different colors.
 
 ## Jooki proxmark commands
+^[Top](#top)
+
 You can `encode`, `decode` a NDEF record, write with `clone` a record to a card or simulate with`sim`.
 
 ### Decoding NDEF URL parameter
+^[Top](#top)
+
 `hf jooki decode -d g+t07s57aX1bB6tk`
 
 ### Encoding NDEF record
+^[Top](#top)
+
 You can either use figurine abbreviation arguments:
 ```
     --dragon 
@@ -49,6 +69,8 @@ Output:
 Use `-r` parameter to read UID directly from tag.
 
 ### Simulation
+^[Top](#top)
+
 To simulate the above figurine use the encoded URL parameter given in `encode` output and type following command into your proxmark:
  
 `hf jooki sim -b g+t07s57aX1bB6tk`
@@ -56,6 +78,8 @@ To simulate the above figurine use the encoded URL parameter given in `encode` o
 If no parameter is given to the simulation command, last loaded dump is used.
 
 ### Cloning to a NTAG213 tag
+^[Top](#top)
+
 ```
     hf jooki clone [-h] [-b <base64>] [-d <hex>] [-p <hex>]
 
@@ -81,6 +105,8 @@ or use the base64 encoded parameter to clone:
 Note: Jooki doesn't like more than one NDEF record, so make sure you just have one. Check with `hf mfu ndefread`
 
 ### List of known figurine types
+^[Top](#top)
+
 `Value`|`Figurine Type`|
 |------|---------------|
 **01** | Stones |

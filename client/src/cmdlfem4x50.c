@@ -1,11 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020 tharexde
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// modified iceman, 2020
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Low frequency EM4x50 commands
 //-----------------------------------------------------------------------------
@@ -200,7 +206,7 @@ int CmdEM4x50ELoad(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "filename", "<fn>", "dump filename (bin/eml/json)"),
+        arg_str1("f", "file", "<fn>", "dump filename (bin/eml/json)"),
         arg_param_end
     };
 
@@ -237,7 +243,7 @@ int CmdEM4x50ESave(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "save filename"),
+        arg_str0("f", "file", "<fn>", "specifiy filename"),
         arg_param_end
     };
 
@@ -441,7 +447,7 @@ int CmdEM4x50Chk(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "dictionary filename"),
+        arg_str0("f", "file", "<fn>", "specify dictionary filename"),
         arg_param_end
     };
 
@@ -749,7 +755,7 @@ int CmdEM4x50Dump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "dump filename (bin/eml/json)"),
+        arg_str0("f", "file", "<fn>", "specify dump filename (bin/eml/json)"),
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
         arg_param_end
     };
@@ -1060,7 +1066,7 @@ int CmdEM4x50Restore(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("u", "uid", "<hex>", "uid, 4 hex bytes, msb"),
-        arg_str0("f", "file", "<fn>", "dump filename (bin/eml/json)"),
+        arg_str0("f", "file", "<fn>", "specify dump filename (bin/eml/json)"),
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
         arg_param_end
     };

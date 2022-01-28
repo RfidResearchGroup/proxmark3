@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Command parser
 //-----------------------------------------------------------------------------
@@ -175,19 +183,26 @@ bool IfPm3Lcd(void) {
     return g_pm3_capabilities.compiled_with_lcd;
 }
 
+bool IfPm3Zx8211(void) {
+    if (!IfPm3Present())
+        return false;
+    return g_pm3_capabilities.compiled_with_zx8211;
+}
+
 
 void CmdsHelp(const command_t Commands[]) {
     if (Commands[0].Name == NULL) return;
     int i = 0;
     while (Commands[i].Name) {
         if (Commands[i].IsAvailable()) {
-            g_printAndLog = PRINTANDLOG_PRINT;
+            uint8_t old_printAndLog = g_printAndLog;
+            g_printAndLog &= PRINTANDLOG_PRINT;
             if (Commands[i].Name[0] == '-' || Commands[i].Name[0] == ' ') {
                 PrintAndLogEx(NORMAL, "%-16s %s", Commands[i].Name, Commands[i].Help);
             } else {
                 PrintAndLogEx(NORMAL, _GREEN_("%-16s")" %s", Commands[i].Name, Commands[i].Help);
             }
-            g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
+            g_printAndLog = old_printAndLog;
         }
         ++i;
     }

@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2012 Roel Verdult
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Low frequency Hitag support
 //-----------------------------------------------------------------------------
@@ -17,6 +25,7 @@
 #include "fileutils.h"   // savefile
 #include "protocols.h"   // defines
 #include "cliparser.h"
+#include "crc.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -214,7 +223,7 @@ static int CmdLFHitagEload(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<filename>", "filename of dump"),
+        arg_str1("f", "file", "<fn>", "Specfiy dump filename"),
         arg_lit0("1", NULL, "Card type Hitag1"),
         arg_lit0("2", NULL, "Card type Hitag2"),
         arg_lit0("s", NULL, "Card type HitagS"),
@@ -575,8 +584,8 @@ static int CmdLFHitagReader(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (nalen != 0 && nalen != 6) {
-        PrintAndLogEx(WARNING, "Wrong NR/AR len expected 0 or 6, got %d", nalen);
+    if (nalen != 0 && nalen != 8) {
+        PrintAndLogEx(WARNING, "Wrong NR/AR len expected 0 or 8, got %d", nalen);
         return PM3_EINVARG;
     }
 
@@ -591,6 +600,9 @@ static int CmdLFHitagReader(const char *Cmd) {
 
     hitag_function htf;
     hitag_data htd;
+    memset(&htd, 0, sizeof(htd));
+
+
     uint16_t cmd = CMD_LF_HITAG_READER;
     if (s01) {
         cmd = CMD_LF_HITAGS_READ;
@@ -628,7 +640,6 @@ static int CmdLFHitagReader(const char *Cmd) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
-
     if (resp.oldarg[0] == false) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
         return PM3_ESOFT;
@@ -657,7 +668,7 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename to load ( w/o ext )"),
+        arg_str1("f", "file", "<fn>", "filename to load ( w/o ext )"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -670,22 +681,18 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
 
     clearCommandBuffer();
 
-    if (fnlen > 0) {
-        uint8_t *data = NULL;
-        size_t datalen = 0;
-        int res = loadFile_safe(filename, ".cc", (void **)&data, &datalen);
-        if (res == PM3_SUCCESS) {
-            if (datalen == (8 * 60)) {
-                SendCommandOLD(CMD_LF_HITAGS_TEST_TRACES, 1, 0, 0, data, datalen);
-            } else {
-                PrintAndLogEx(ERR, "Error, file length mismatch. Expected %d, got %zu", 8 * 60, datalen);
-            }
+    uint8_t *data = NULL;
+    size_t datalen = 0;
+    int res = loadFile_safe(filename, ".cc", (void **)&data, &datalen);
+    if (res == PM3_SUCCESS) {
+        if (datalen % 8 == 0) {
+            SendCommandMIX(CMD_LF_HITAGS_TEST_TRACES, datalen, 0, 0, data, datalen);
+        } else {
+            PrintAndLogEx(ERR, "Error, file length mismatch. Expected multiple of 8, got %zu", datalen);
         }
-        if (data) {
-            free(data);
-        }
-    } else {
-        SendCommandMIX(CMD_LF_HITAGS_TEST_TRACES, 0, 0, 0, NULL, 0);
+    }
+    if (data) {
+        free(data);
     }
 
     return PM3_SUCCESS;
@@ -782,6 +789,8 @@ static int CmdLFHitagWriter(const char *Cmd) {
 
     hitag_function htf;
     hitag_data htd;
+    memset(&htd, 0, sizeof(htd));
+
     if (s03) {
         htf = WHTSF_CHALLENGE;
         memcpy(htd.auth.NrAr, nrar, sizeof(nrar));
@@ -831,7 +840,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "file name"),
+        arg_str0("f", "file", "<fn>", "specify file name"),
         arg_str0("k", "key", "<hex>", "key, 4 or 6 hex bytes"),
         arg_str0(NULL, "nrar", "<hex>", "nonce / answer reader, 8 hex bytes"),
         arg_param_end
@@ -885,10 +894,10 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
 
 // Annotate HITAG protocol
-void annotateHitag1(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+void annotateHitag1(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 }
 
-void annotateHitag2(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 
     // iceman: live decrypt of trace?
     if (is_response) {
@@ -939,7 +948,7 @@ void annotateHitag2(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
 }
 
 
-void annotateHitagS(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 }
 
 static command_t CommandTable[] = {
@@ -969,4 +978,9 @@ int CmdLFHitag(const char *Cmd) {
 
 int readHitagUid(void) {
     return (CmdLFHitagReader("--26") == PM3_SUCCESS);
+}
+
+uint8_t hitag1_CRC_check(uint8_t *d, uint32_t nbit) {
+    if (nbit < 9) return 2;
+    return (CRC8Hitag1Bits(d, nbit) == 0);
 }

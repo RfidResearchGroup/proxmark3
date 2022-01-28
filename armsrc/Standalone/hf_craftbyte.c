@@ -1,16 +1,22 @@
 //-----------------------------------------------------------------------------
-// Copyright 2020 Anze Jensterle <dev@anze.dev>
+// Copyright (C) 2020 Anze Jensterle <dev@anze.dev>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // main code for hf_craftbyte
+// `hf_craftyte` continuously scans for ISO14443a card UID and then emulates it.
 //-----------------------------------------------------------------------------
-//
-//
-// `hf_craftyte` continuesly scans for ISO14443a card UID and then emulates it.
-//
 
 #include "standalone.h"
 #include "proxmark3_arm.h"
@@ -72,7 +78,7 @@ void RunMod(void) {
                     state = STATE_EMUL;
                 }
             } else if (state == STATE_EMUL) {
-                uint8_t flags = 0;
+                uint16_t flags = 0;
                 if (card.uidlen == 4) {
                     flags |= FLAG_4B_UID_IN_DATA;
                 } else if (card.uidlen == 7) {
@@ -86,7 +92,25 @@ void RunMod(void) {
                 }
 
                 Dbprintf("Starting simulation, press pm3-button to stop and go back to search state.");
-                SimulateIso14443aTag(3, flags, card.uid, 0);
+                if (card.sak == 0x08 && card.atqa[0] == 0x04 && card.atqa[1] == 0) {
+                    DbpString("Mifare Classic 1k");
+                    SimulateIso14443aTag(1, flags, card.uid, 0);
+                } else if (card.sak == 0x08 && card.atqa[0] == 0x44 && card.atqa[1] == 0) {
+                    DbpString("Mifare Classic 4k ");
+                    SimulateIso14443aTag(8, flags, card.uid, 0);
+                } else if (card.sak == 0x00 && card.atqa[0] == 0x44 && card.atqa[1] == 0) {
+                    DbpString("Mifare Ultralight");
+                    SimulateIso14443aTag(2, flags, card.uid, 0);
+                } else if (card.sak == 0x20 && card.atqa[0] == 0x04 && card.atqa[1] == 0x03) {
+                    DbpString("Mifare DESFire");
+                    SimulateIso14443aTag(3, flags, card.uid, 0);
+                } else if (card.sak == 0x20 && card.atqa[0] == 0x44 && card.atqa[1] == 0x03) {
+                    DbpString("Mifare DESFire Ev1/Plus/JCOP");
+                    SimulateIso14443aTag(3, flags, card.uid, 0);
+                } else {
+                    Dbprintf("Unrecognized tag type -- defaulting to Mifare Classic emulation");
+                    SimulateIso14443aTag(1, flags, card.uid, 0);
+                }
 
                 // Go back to search state if user presses pm3-button
                 state = STATE_READ;

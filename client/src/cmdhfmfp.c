@@ -1,10 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2018 Merlok
-// Copyright (C) 2018 drHatson
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // High frequency MIFARE  Plus commands
 //-----------------------------------------------------------------------------
@@ -456,7 +463,7 @@ static int CmdHFMFPWritePerso(const char *Cmd) {
         arg_param_begin,
         arg_lit0("v", "verbose", "show internal data."),
         arg_str1(NULL, "ki",  "<hex>", " key number, 2 hex bytes"),
-        arg_strx0(NULL, "key", "<hex>", " key, 16 hex bytes"),
+        arg_str0(NULL, "key", "<hex>", " key, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -521,7 +528,7 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_litn("v",  "verbose", 0, 2, "show internal data."),
-        arg_strx0("k", "key", "<hex>", "key, 16 hex bytes"),
+        arg_str0("k", "key", "<hex>", "key, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1213,9 +1220,11 @@ static int CmdHFMFPChk(const char *Cmd) {
     if (dict_filenamelen) {
         uint32_t keycnt = 0;
         res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, 16, &keycnt, 0, &endFilePosition, true);
-        keyListLen = keycnt;
-        if (endFilePosition)
+
+        if (res == PM3_SUCCESS && endFilePosition) {
+            keyListLen = keycnt;
             PrintAndLogEx(SUCCESS, "First part of dictionary successfully loaded.");
+        }
     }
 
     if (keyListLen == 0) {
@@ -1235,7 +1244,7 @@ static int CmdHFMFPChk(const char *Cmd) {
     }
 
     if (verbose == false)
-        PrintAndLogEx(NORMAL, "Search keys");
+        PrintAndLogEx(INFO, "Search keys");
 
     while (true) {
         res = MFPKeyCheck(startSector, endSector, startKeyAB, endKeyAB, keyList, keyListLen, foundKeys, verbose);
@@ -1255,7 +1264,9 @@ static int CmdHFMFPChk(const char *Cmd) {
 
             uint32_t keycnt = 0;
             res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
-            keyListLen = keycnt;
+            if (res == PM3_SUCCESS && endFilePosition) {
+                keyListLen = keycnt;
+            }
             continue;
         }
         break;
@@ -1360,7 +1371,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
 
     if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
+        PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
         return 2;
     }
 
@@ -1380,7 +1391,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
     if (haveMAD2) {
         if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector10, verbose)) {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(ERR, "error, read sector 0x10. card don't have MAD or don't have MAD on default keys");
+            PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD or doesn't have MAD on default keys");
             return 2;
         }
 
@@ -1514,7 +1525,7 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
         PrintAndLogEx(INFO, "reading MAD v1 sector");
 
     if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
-        PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
+        PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
         PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndefread -k `") " with your custom key");
         return PM3_ESOFT;
     }
@@ -1532,7 +1543,7 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
             PrintAndLogEx(INFO, "reading MAD v2 sector");
 
         if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector10, verbose)) {
-            PrintAndLogEx(ERR, "error, read sector 0x10. card don't have MAD or don't have MAD on default keys");
+            PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD or doesn't have MAD on default keys");
             PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndefread -k `") " with your custom key");
             return PM3_ESOFT;
         }

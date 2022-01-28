@@ -122,7 +122,7 @@ local Utils =
         return nil
     end,
 
-    ------------ CRC-8 Legic checksums
+    ------------ CRC-8 Legic checksum
     -- Takes a hex string and calculates a crc8
     Crc8Legic = function(s)
         if s == nil then return nil end
@@ -130,13 +130,29 @@ local Utils =
         if  type(s) == 'string' then
             local utils = require('utils')
             local asc = utils.ConvertHexToAscii(s)
-            local hash = core.crc8legic(asc)
-            return hash
+            return core.crc8legic(asc)
+        end
+        return nil
+    end,
+    ------------ CRC-16 Legic checksum
+    -- Takes data as hex string, uid hex and calculates a crc16 legic
+    Crc16Legic = function(s, uid)
+        if s == nil then return nil end
+        if #s == 0 then return nil end
+        if uid == nil then return nil end
+        if #uid == 0 then return nil end
+
+        if  type(s) == 'string' then
+            local utils = require('utils')
+            local asc = utils.ConvertHexToAscii(s)
+            local uidstr = utils.ConvertHexToAscii(uid)
+            return core.crc16legic(asc, uidstr)
         end
         return nil
     end,
 
-    ------------ CRC-16 ccitt checksums
+
+    ------------ CRC-16 ccitt checksum
     -- Takes a hex string and calculates a crc16
     Crc16 = function(s)
         if s == nil then return nil end
@@ -151,7 +167,7 @@ local Utils =
     end,
 
 
-    ------------ CRC-64 ecma checksums
+    ------------ CRC-64 ecma checksum
     -- Takes a hex string and calculates a crc64 ecma hash
     Crc64 = function(s)
         if s == nil then return nil end
@@ -164,7 +180,7 @@ local Utils =
         end
         return nil
     end,
-    ------------ CRC-64 ecma 182 checksums
+    ------------ CRC-64 ecma 182 checksum
     -- Takes a hex string and calculates a crc64 ecma182 hash
     Crc64_ecma182 = function(s)
         if s == nil then return nil end
@@ -225,7 +241,7 @@ local Utils =
     end,
 
     -- input parameter is a string
-    -- Swaps the endianess and returns a string,
+    -- Swaps the endianness and returns a string,
     -- IE:  'cd7a' -> '7acd'  -> 0x7acd
     SwapEndiannessStr = function(s, len)
         if s == nil then return nil end

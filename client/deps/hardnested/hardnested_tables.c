@@ -93,41 +93,49 @@ static inline void clear_bitarray24(uint32_t *bitarray) {
     memset(bitarray, 0x00, sizeof(uint32_t) * (1 << 19));
 }
 
-
-static inline uint32_t test_bit24(uint32_t *bitarray, uint32_t index) {
+static inline uint32_t test_bit24(const uint32_t *bitarray, uint32_t index) {
     return bitarray[index >> 5] & (0x80000000 >> (index & 0x0000001f));
 }
-
 
 static inline void set_bit24(uint32_t *bitarray, uint32_t index) {
     bitarray[index >> 5] |= 0x80000000 >> (index & 0x0000001f);
 }
 
+static inline uint32_t next_state(const uint32_t *bitset, uint32_t state) {
+    if (++state == 1 << 24) {
+        return 1 << 24;
+    }
 
-static inline uint32_t next_state(uint32_t *bitset, uint32_t state) {
-    if (++state == 1 << 24) return 1 << 24;
     uint32_t index = state >> 5;
     uint_fast8_t bit = state & 0x1f;
     uint32_t line = bitset[index] << bit;
     while (bit <= 0x1f) {
-        if (line & 0x80000000) return state;
+        if (line & 0x80000000) {
+            return state;
+        }
         state++;
         bit++;
         line <<= 1;
     }
+
     index++;
     while (bitset[index] == 0x00000000 && state < 1 << 24) {
         index++;
         state += 0x20;
     }
-    if (state >= 1 << 24) return 1 << 24;
+
+    if (state >= 1 << 24) {
+        return 1 << 24;
+    }
 #if defined __GNUC__
     return state + __builtin_clz(bitset[index]);
 #else
     bit = 0x00;
     line = bitset[index];
     while (bit <= 0x1f) {
-        if (line & 0x80000000) return state;
+        if (line & 0x80000000) {
+            return state;
+        }
         state++;
         bit++;
         line <<= 1;
@@ -137,7 +145,7 @@ static inline uint32_t next_state(uint32_t *bitset, uint32_t state) {
 }
 
 
-static inline uint32_t next_not_state(uint32_t *bitset, uint32_t state) {
+static inline uint32_t next_not_state(const uint32_t *bitset, uint32_t state) {
     if (++state == 1 << 24) return 1 << 24;
     uint32_t index = state >> 5;
     uint_fast8_t bit = state & 0x1f;

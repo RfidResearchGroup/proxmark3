@@ -1,12 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>, Hagen Fritsch
-// 2011, 2017 - 2019 Merlok
-// 2014, Peter Fillmore
-// 2015, 2016, 2017 Iceman
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // High frequency ISO14443A commands
 //-----------------------------------------------------------------------------
@@ -417,7 +422,11 @@ static int CmdHF14AReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a reader",
                   "Act as a ISO-14443a reader to identify tag. Look for ISO-14443a tags until Enter or the pm3 button is pressed",
-                  "hf 14a reader -@   -> Continuous mode");
+                  "hf 14a reader\n"
+                  "hf 14a reader -@     -> Continuous mode\n"
+                  "hf 14a reader --ecp  -> trigger apple enhanced contactless polling\n"
+                  "hf 14a reader --mag  -> trigger apple magsafe polling\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -425,6 +434,8 @@ static int CmdHF14AReader(const char *Cmd) {
         arg_lit0("s", "silent", "silent (no messages)"),
         arg_lit0(NULL, "drop", "just drop the signal field"),
         arg_lit0(NULL, "skip", "ISO14443-3 select only (skip RATS)"),
+        arg_lit0(NULL, "ecp", "Use enhanced contactless polling"),
+        arg_lit0(NULL, "mag", "Use Apple magsafe polling"),
         arg_lit0("@", NULL, "continuous reader mode"),
         arg_param_end
     };
@@ -446,7 +457,15 @@ static int CmdHF14AReader(const char *Cmd) {
         cm |= ISO14A_NO_RATS;
     }
 
-    bool continuous = arg_get_lit(ctx, 5);
+    if (arg_get_lit(ctx, 5)) {
+        cm |= ISO14A_USE_ECP;
+    }
+
+    if (arg_get_lit(ctx, 6)) {
+        cm |= ISO14A_USE_MAGSAFE;
+    }
+
+    bool continuous = arg_get_lit(ctx, 7);
 
     CLIParserFree(ctx);
 
@@ -657,7 +676,7 @@ int CmdHF14ASim(const char *Cmd) {
     uint8_t uid[10] = {0};
     CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
 
-    uint8_t flags = 0;
+    uint16_t flags = 0;
     bool useUIDfromEML = true;
 
     if (uid_len > 0) {
@@ -700,7 +719,7 @@ int CmdHF14ASim(const char *Cmd) {
 
     struct {
         uint8_t tagtype;
-        uint8_t flags;
+        uint16_t flags;
         uint8_t uid[10];
         uint8_t exitAfter;
     } PACKED payload;
@@ -729,13 +748,16 @@ int CmdHF14ASim(const char *Cmd) {
         keypress = kbd_enter_pressed();
     }
 
-    if (keypress && (flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
-        // inform device to break the sim loop since client has exited
-        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-    }
+    if (keypress) {
+        if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
+            // inform device to break the sim loop since client has exited
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        }
 
-    if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK))
-        showSectorTable(k_sector, k_sectorsCount);
+        if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK)) {
+            showSectorTable(k_sector, k_sectorsCount);
+        }
+    }
 
     PrintAndLogEx(INFO, "Done");
     return PM3_SUCCESS;
@@ -781,6 +803,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     if (activateField) {
         // select with no disconnect and set gs_frame_len
         int selres = SelectCard14443A_4(false, !silentMode, NULL);
+        responseNum = 0;
         if (selres != PM3_SUCCESS)
             return selres;
     }
@@ -1200,6 +1223,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
                   "Sends raw bytes over ISO14443a. With option to use TOPAZ 14a mode.",
                   "hf 14a raw -sc 3000     -> select, crc, where 3000 == 'read block 00'\n"
                   "hf 14a raw -ak -b 7 40  -> send 7 bit byte 0x40\n"
+                  "hf 14a raw --ecp -s     -> send ECP before select"
                  );
 
     void *argtable[] = {
@@ -1214,6 +1238,8 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         arg_int0("t",  "timeout", "<ms>", "timeout in milliseconds"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_lit0(NULL, "topaz", "use Topaz protocol to send command"),
+        arg_lit0(NULL, "ecp", "use enhanced contactless polling"),
+        arg_lit0(NULL, "mag", "use Apple magsafe polling"),
         arg_strx1(NULL, NULL, "<hex>", "raw bytes to send"),
         arg_param_end
     };
@@ -1229,10 +1255,12 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     uint32_t timeout = (uint32_t)arg_get_int_def(ctx, 8, 0);
     bool verbose = arg_get_lit(ctx, 9);
     bool topazmode = arg_get_lit(ctx, 10);
+    bool use_ecp = arg_get_lit(ctx, 11);
+    bool use_magsafe = arg_get_lit(ctx, 12);
 
     int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE];
-    CLIGetHexWithReturn(ctx, 11, data, &datalen);
+    CLIGetHexWithReturn(ctx, 13, data, &datalen);
     CLIParserFree(ctx);
 
     bool bTimeout = (timeout) ? true : false;
@@ -1285,8 +1313,17 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     if (topazmode) {
         flags |= ISO14A_TOPAZMODE;
     }
+
     if (no_rats) {
         flags |= ISO14A_NO_RATS;
+    }
+
+    if (use_ecp) {
+        flags |= ISO14A_USE_ECP;
+    }
+
+    if (use_magsafe) {
+        flags |= ISO14A_USE_MAGSAFE;
     }
 
     // Max buffer is PM3_CMD_DATA_SIZE
@@ -2202,14 +2239,6 @@ int infoHF14A4Applications(bool verbose) {
     return found;
 }
 
-static uint16_t get_sw(uint8_t *d, uint8_t n) {
-    if (n < 2) {
-        return 0;
-    }
-    n -= 2;
-    return d[n] * 0x0100 + d[n + 1];
-}
-
 static uint64_t inc_sw_error_occurrence(uint16_t sw, uint64_t all_sw[256][256]) {
     uint8_t sw1 = (uint8_t)(sw >> 8);
     uint8_t sw2 = (uint8_t)(0xff & sw);
@@ -2245,7 +2274,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
         arg_str0(NULL, "p2",            "<hex>",    "Start value of P2 (1 hex byte)"),
         arg_u64_0("r", "reset",         "<number>", "Minimum secondes before resetting the tag (to prevent timeout issues). Default is 5 minutes"),
         arg_u64_0("e", "error-limit",   "<number>", "Maximum times an status word other than 0x9000 or 0x6D00 is shown. Default is 512."),
-        arg_strx0("s", "skip-ins",      "<hex>",    "Do not test an instructions (can be specified multiple times)"),
+        arg_strx0("s", "skip-ins",      "<hex>",    "Do not test an instruction (can be specified multiple times)"),
         arg_lit0("l",  "with-le",                   "Search  for APDUs with Le=0 (case 2S) as well"),
         arg_lit0("v",  "verbose",                   "Verbose output"),
         arg_param_end

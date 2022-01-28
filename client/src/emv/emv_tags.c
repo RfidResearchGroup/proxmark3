@@ -1,17 +1,22 @@
-/*
- * libopenemv - a library to work with EMV family of smart cards
- * Copyright (C) 2015 Dmitry Eremin-Solenikov
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- */
+//-----------------------------------------------------------------------------
+// Borrowed initially from https://github.com/lumag/emv-tools/
+// Copyright (C) 2012, 2015 Dmitry Eremin-Solenikov
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+// libopenemv - a library to work with EMV family of smart cards
+//-----------------------------------------------------------------------------
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -462,6 +467,7 @@ static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *ta
         unsigned char val = tlv->value[byte - 1];
         PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
         PrintAndLogEx(NORMAL, "    Byte %u (%02x)", byte, val);
+        
         for (bit = 8; bit > 0; bit--, val <<= 1) {
             if (val & 0x80) {
                 PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
@@ -485,8 +491,7 @@ static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, i
         const struct emv_tag *doltag;
 
         if (!tlv_parse_tl(&buf, &left, &doltlv)) {
-            PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
-            PrintAndLogEx(NORMAL, "Invalid Tag-Len");
+            PrintAndLogEx(INFO, "%*sInvalid Tag-Len" , (level * 4), " ");
             continue;
         }
 
@@ -498,7 +503,7 @@ static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, i
 }
 
 static void emv_tag_dump_string(const struct tlv *tlv, const struct emv_tag *tag, int level) {
-    PrintAndLogEx(NORMAL, "    String value '%s'", sprint_hex_inrow(tlv->value, tlv->len));
+    PrintAndLogEx(NORMAL, "    String value '" _YELLOW_("%s")"'", sprint_hex_inrow(tlv->value, tlv->len));
 }
 
 static unsigned long emv_value_numeric(const struct tlv *tlv, unsigned start, unsigned end) {
@@ -533,12 +538,12 @@ static unsigned long emv_value_numeric(const struct tlv *tlv, unsigned start, un
 
 static void emv_tag_dump_numeric(const struct tlv *tlv, const struct emv_tag *tag, int level) {
     PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
-    PrintAndLogEx(NORMAL, "    Numeric value %lu", emv_value_numeric(tlv, 0, tlv->len * 2));
+    PrintAndLogEx(NORMAL, "    Numeric value " _YELLOW_("%lu"), emv_value_numeric(tlv, 0, tlv->len * 2));
 }
 
 static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag, int level) {
     PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
-    PrintAndLogEx(NORMAL, "    Date: 20%02lu.%lu.%lu",
+    PrintAndLogEx(NORMAL, "    Date: " _YELLOW_("20%02lu.%lu.%lu"),
                   emv_value_numeric(tlv, 0, 2),
                   emv_value_numeric(tlv, 2, 4),
                   emv_value_numeric(tlv, 4, 6)
@@ -552,14 +557,12 @@ static uint32_t emv_get_binary(const unsigned char *S) {
 // https://github.com/binaryfoo/emv-bertlv/blob/master/src/main/resources/fields/visa-cvr.txt
 static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, int level) {
     if (tlv == NULL || tlv->len < 1) {
-        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
-        PrintAndLogEx(NORMAL, "    INVALID length!");
+        PrintAndLogEx(INFO, "%*s    INVALID length!" , (level * 4), " ");
         return;
     }
 
     if (tlv->len != 5 && tlv->len != tlv->value[0] + 1) {
-        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
-        PrintAndLogEx(NORMAL, "    INVALID length!");
+        PrintAndLogEx(INFO, "%*s    INVALID length!", (level * 4), " ");
         return;
     }
 
@@ -628,8 +631,7 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, i
 // EMV Book 3
 static void emv_tag_dump_cid(const struct tlv *tlv, const struct emv_tag *tag, int level) {
     if (tlv == NULL || tlv->len < 1) {
-        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
-        PrintAndLogEx(NORMAL, "    INVALID!");
+        PrintAndLogEx(INFO, "%*s    INVALID!", (level * 4), " ");
         return;
     }
 
@@ -677,8 +679,7 @@ static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *t
     int i;
 
     if (tlv->len < 10 || tlv->len % 2) {
-        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
-        PrintAndLogEx(NORMAL, "    INVALID!");
+        PrintAndLogEx(INFO, "%*s    INVALID!", (level * 4), " ");
         return;
     }
 
@@ -776,8 +777,7 @@ static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *t
 
 static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, int level) {
     if (tlv->len < 4 || tlv->len % 4) {
-        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
-        PrintAndLogEx(NORMAL, "    INVALID!");
+        PrintAndLogEx(INFO, "%*s    INVALID!", (level * 4), " ");
         return;
     }
 

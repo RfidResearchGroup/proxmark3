@@ -1,3 +1,18 @@
+//-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
 #include "mifaredesfire.h"
 
 #include "common.h"
@@ -160,7 +175,7 @@ void MifareDesfireGetInformation(void) {
     len =  DesfireAPDU(cmd, cmd_len, resp);
     if (!len) {
         print_result("ERROR <--: ", resp, len);
-        payload.isOK = 3;  // 3 == DOESNT ANSWER TO GET_VERSION
+        payload.isOK = 3;  // 3 == DOESN'T ANSWER TO GET_VERSION
         reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
         switch_off();
         return;
@@ -173,7 +188,7 @@ void MifareDesfireGetInformation(void) {
     len =  DesfireAPDU(cmd, cmd_len, resp);
     if (!len) {
         print_result("ERROR <--: ", resp, len);
-        payload.isOK = 3;  // 3 == DOESNT ANSWER TO GET_VERSION
+        payload.isOK = 3;  // 3 == DOESN'T ANSWER TO GET_VERSION
         reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
         switch_off();
         return;
@@ -184,7 +199,7 @@ void MifareDesfireGetInformation(void) {
     len =  DesfireAPDU(cmd, cmd_len, resp);
     if (!len) {
         print_result("ERROR <--: ", resp, len);
-        payload.isOK = 3;  // 3 == DOESNT ANSWER TO GET_VERSION
+        payload.isOK = 3;  // 3 == DOESN'T ANSWER TO GET_VERSION
         reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
         switch_off();
         return;

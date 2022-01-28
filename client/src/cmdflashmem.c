@@ -1,9 +1,17 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2018 iceman
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Proxmark3 RDV40 Flash memory commands
 //-----------------------------------------------------------------------------
@@ -167,7 +175,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
         arg_lit0("m", "mifare,mfc", "upload 6 bytes keys (mifare key dictionary)"),
         arg_lit0("i", "iclass", "upload 8 bytes keys (iClass key dictionary)"),
         arg_lit0("t", "t55xx", "upload 4 bytes keys (password dictionary)"),
-        arg_strx0("f", "file", "<filename>", "file name"),
+        arg_str1("f", "file", "<fn>", "file name"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -327,7 +335,7 @@ static int CmdFlashMemDump(const char *Cmd) {
         arg_int0("o", "offset", "<dec>", "offset in memory"),
         arg_int0("l", "len", "<dec>", "length"),
         arg_lit0("v", "view", "view dump"),
-        arg_strx0("f", "file", "<filename>", "file name"),
+        arg_str0("f", "file", "<fn>", "save filename"),
         arg_int0("c", "cols", "<dec>", "column breaks (def 32)"),
         arg_param_end
     };

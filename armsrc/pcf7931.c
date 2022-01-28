@@ -1,3 +1,18 @@
+//-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
 #include "pcf7931.h"
 
 #include "proxmark3_arm.h"
@@ -13,7 +28,7 @@
 #define T0_PCF 8 //period for the pcf7931 in us
 #define ALLOC 16
 
-size_t DemodPCF7931(uint8_t **outBlocks) {
+size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
 
     // 2021 iceman, memor
     uint8_t bits[256] = {0x00};
@@ -37,7 +52,7 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
 
     BigBuf_Clear_keep_EM();
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
-    DoAcquisition_default(0, true);
+    DoAcquisition_default(0, true, ledcontrol);
 
     /* Find first local max/min */
     if (dest[1] > dest[0]) {
@@ -165,7 +180,7 @@ bool IsBlock0PCF7931(uint8_t *block) {
     return false;
 }
 
-bool IsBlock1PCF7931(uint8_t *block) {
+bool IsBlock1PCF7931(const uint8_t *block) {
     // assuming all RFU bits are set to 0
 
     uint8_t rb1 = block[14] & 0x80;
@@ -188,14 +203,14 @@ bool IsBlock1PCF7931(uint8_t *block) {
     return false;
 }
 
-void ReadPCF7931(void) {
+void ReadPCF7931(bool ledcontrol) {
     int found_blocks = 0; // successfully read blocks
     int max_blocks = 8;   // readable blocks
     uint8_t memory_blocks[8][17]; // PCF content
     uint8_t single_blocks[8][17]; // PFC blocks with unknown position
     int single_blocks_cnt = 0;
 
-    size_t n = 0; // transmitted blocks
+    size_t n; // transmitted blocks
     uint8_t tmp_blocks[4][16]; // temporary read buffer
 
     uint8_t found_0_1 = 0; // flag: blocks 0 and 1 were found
@@ -211,7 +226,7 @@ void ReadPCF7931(void) {
         i = 0;
 
         memset(tmp_blocks, 0, 4 * 16 * sizeof(uint8_t));
-        n = DemodPCF7931((uint8_t **)tmp_blocks);
+        n = DemodPCF7931((uint8_t **)tmp_blocks, ledcontrol);
         if (!n)
             ++errors;
 
@@ -353,7 +368,7 @@ end:
     reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
 }
 
-static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data) {
+static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data, bool ledcontrol) {
     uint32_t tab[1024] = {0}; // data times frame
     uint32_t u = 0;
     uint8_t parity = 0;
@@ -376,7 +391,7 @@ static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int3
     //programming mode (0 or 1)
     AddBitPCF7931(0, tab, l, p);
 
-    //block adress on 6 bits
+    //block address on 6 bits
     for (u = 0; u < 6; ++u) {
         if (address & (1 << u)) { // bit 1
             ++parity;
@@ -427,7 +442,7 @@ static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int3
             }
     }
 
-    SendCmdPCF7931(tab);
+    SendCmdPCF7931(tab, ledcontrol);
 }
 
 /* Write on a byte of a PCF7931 tag
@@ -435,7 +450,7 @@ static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int3
    @param byte : address of the byte to write
     @param data : data to write
  */
-void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data) {
+void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data, bool ledcontrol) {
 
     if (g_dbglevel >= DBG_INFO) {
         Dbprintf("Initialization delay : %d us", init_delay);
@@ -449,7 +464,7 @@ void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, ui
 
     uint8_t password[7] = {pass1, pass2, pass3, pass4, pass5, pass6, pass7};
 
-    RealWritePCF7931(password, init_delay, l, p, address, byte, data);
+    RealWritePCF7931(password, init_delay, l, p, address, byte, data, ledcontrol);
 }
 
 
@@ -457,7 +472,7 @@ void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, ui
  * @param tab : array of the data frame
  */
 
-void SendCmdPCF7931(uint32_t *tab) {
+void SendCmdPCF7931(const uint32_t *tab, bool ledcontrol) {
     uint16_t u = 0, tempo = 0;
 
     if (g_dbglevel >= DBG_INFO) {
@@ -468,7 +483,7 @@ void SendCmdPCF7931(uint32_t *tab) {
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125); //125kHz
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
 
-    LED_A_ON();
+    if (ledcontrol) LED_A_ON();
 
     // steal this pin from the SSP and use it to control the modulation
     AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
@@ -505,7 +520,7 @@ void SendCmdPCF7931(uint32_t *tab) {
         }
     }
 
-    LED_A_OFF();
+    if (ledcontrol) LED_A_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     SpinDelay(200);
 

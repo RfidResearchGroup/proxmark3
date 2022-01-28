@@ -1,10 +1,18 @@
 //-----------------------------------------------------------------------------
-// Monster1024
-// based on code by: Artyom Gnatyuk, 2020
+// Copyright (C) 2020 Dmitriy Loginoov
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // LF rswb   -  This mode can simulate ID from selected slot, read ID to
 //              selected slot, write from selected slot to T5555/T55x7 tag and store
@@ -68,15 +76,15 @@
 
 // Predefined bruteforce speed
 // avg: 1s, 1.2s, 1.5s, 2s
-static int bruteforceSpeedCurrent = 1;
-static int bruteforceSpeed[] = {10, 12, 14, 16};
+static int em4100rswb_bruteforceSpeedCurrent = 1;
+static int em4100rswb_bruteforceSpeed[] = {10, 12, 14, 16};
 
-// low & high - array for storage IDs. Its length must be equal.
-// Predefined IDs must be stored in low[].
-// In high[] must be nulls
-static uint64_t low[] = {0, 0, 0, 0};
-static uint32_t high[] = {0, 0, 0, 0};
-static int buflen;
+// em4100rswb_low & em4100rswb_high - array for storage IDs. Its length must be equal.
+// Predefined IDs must be stored in em4100rswb_low[].
+// In em4100rswb_high[] must be nulls
+static uint64_t em4100rswb_low[] = {0, 0, 0, 0};
+static uint32_t em4100rswb_high[] = {0, 0, 0, 0};
+static int em4100rswb_buflen;
 
 void ModInfo(void) {
     DbpString("  LF EM4100 read/sim/write/brute mode");
@@ -92,17 +100,17 @@ static uint64_t rev_quads(uint64_t bits) {
 
 static void fill_buff(uint8_t bit) {
     uint8_t *bba = BigBuf_get_addr();
-    memset(bba + buflen, bit, LF_CLOCK / 2);
-    buflen += (LF_CLOCK / 2);
-    memset(bba + buflen, bit ^ 1, LF_CLOCK / 2);
-    buflen += (LF_CLOCK / 2);
+    memset(bba + em4100rswb_buflen, bit, LF_CLOCK / 2);
+    em4100rswb_buflen += (LF_CLOCK / 2);
+    memset(bba + em4100rswb_buflen, bit ^ 1, LF_CLOCK / 2);
+    em4100rswb_buflen += (LF_CLOCK / 2);
 }
 
 static void construct_EM410x_emul(uint64_t id) {
     int i, j;
     int binary[4] = {0, 0, 0, 0};
     int parity[4] = {0, 0, 0, 0};
-    buflen = 0;
+    em4100rswb_buflen = 0;
 
     for (i = 0; i < 9; i++)
         fill_buff(1);
@@ -227,7 +235,7 @@ static int BruteEMTag(uint64_t originalCard, int slot) {
         uint64_t currentCard = PackEmID(originalCard, cardnum);
         Dbprintf("[=] >>  Simulating card id %"PRIx64" <<", currentCard);
         construct_EM410x_emul(rev_quads(currentCard));
-        SimulateTagLowFrequencyEx(buflen, 0, 1, bruteforceSpeed[bruteforceSpeedCurrent] * 10000);
+        SimulateTagLowFrequencyEx(em4100rswb_buflen, 0, 1, em4100rswb_bruteforceSpeed[em4100rswb_bruteforceSpeedCurrent] * 10000);
 
         int button_pressed = BUTTON_CLICKED(1000);
         if (button_pressed == BUTTON_SINGLE_CLICK) {
@@ -236,17 +244,17 @@ static int BruteEMTag(uint64_t originalCard, int slot) {
         } else if (button_pressed == BUTTON_DOUBLE_CLICK) {
             FlashLEDs(100, 10);
             Dbprintf("[=] >>  Saving bruteforced card to current slot  <<");
-            low[slot] = currentCard;
+            em4100rswb_low[slot] = currentCard;
 #ifdef WITH_FLASH
-            SaveIDtoFlash(slot, low[slot]);
+            SaveIDtoFlash(slot, em4100rswb_low[slot]);
 #endif
             return LF_RWSB_BRUTE_SAVED;
         } else if (button_pressed == BUTTON_HOLD) {
             FlashLEDs(100, 1);
             WAIT_BUTTON_RELEASED();
-            bruteforceSpeedCurrent = (bruteforceSpeedCurrent + 1) % speed_count;
-            FlashLEDs(100, bruteforceSpeedCurrent + 1);
-            Dbprintf("[=] >>  Setting speed to %d (%d) <<", bruteforceSpeedCurrent, bruteforceSpeed[bruteforceSpeedCurrent]);
+            em4100rswb_bruteforceSpeedCurrent = (em4100rswb_bruteforceSpeedCurrent + 1) % speed_count;
+            FlashLEDs(100, em4100rswb_bruteforceSpeedCurrent + 1);
+            Dbprintf("[=] >>  Setting speed to %d (%d) <<", em4100rswb_bruteforceSpeedCurrent, em4100rswb_bruteforceSpeed[em4100rswb_bruteforceSpeedCurrent]);
         }
     }
     return LF_RWSB_BRUTE_STOPED;
@@ -260,27 +268,27 @@ static int ExecuteMode(int mode, int slot) {
         //default first mode is simulate
         case LF_RWSB_MODE_READ:
             Dbprintf("[=] >>  Read mode started  <<");
-            lf_em410x_watch(1, &high[slot], &low[slot]);
+            lf_em410x_watch(1, &em4100rswb_high[slot], &em4100rswb_low[slot], true);
             LED_Update(mode, slot);
             Dbprintf("[=] >>  Tag found. Saving. <<");
             FlashLEDs(100, 5);
-            PrintFcAndCardNum(low[slot]);
+            PrintFcAndCardNum(em4100rswb_low[slot]);
 #ifdef WITH_FLASH
-            SaveIDtoFlash(slot, low[slot]);
+            SaveIDtoFlash(slot, em4100rswb_low[slot]);
 #endif
             return LF_RWSB_UNKNOWN_RESULT;
         case LF_RWSB_MODE_SIM:
             Dbprintf("[=] >>  Sim mode started  <<");
-            construct_EM410x_emul(rev_quads(low[slot]));
-            SimulateTagLowFrequency(buflen, 0, true);
+            construct_EM410x_emul(rev_quads(em4100rswb_low[slot]));
+            SimulateTagLowFrequency(em4100rswb_buflen, 0, true);
             return LF_RWSB_UNKNOWN_RESULT;
         case LF_RWSB_MODE_WRITE:
             Dbprintf("[!!] >>  Write mode started  <<");
-            copy_em410x_to_t55xx(LF_RWSB_T55XX_TYPE, LF_CLOCK, (uint32_t)(low[slot] >> 32), (uint32_t)(low[slot] & 0xffffffff));
+            copy_em410x_to_t55xx(LF_RWSB_T55XX_TYPE, LF_CLOCK, (uint32_t)(em4100rswb_low[slot] >> 32), (uint32_t)(em4100rswb_low[slot] & 0xffffffff), true);
             return LF_RWSB_UNKNOWN_RESULT;
         case LF_RWSB_MODE_BRUTE:
             Dbprintf("[=] >>  Bruteforce mode started  <<");
-            return BruteEMTag(low[slot], slot);
+            return BruteEMTag(em4100rswb_low[slot], slot);
     }
     return LF_RWSB_UNKNOWN_RESULT;
 }

@@ -1,14 +1,16 @@
-# RRG / Iceman - Proxmark3
+# Iceman - Proxmark3 a RFID / NFC project.
+
+The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the vast majority of RFID tags on a global scale. Originally built by Jonathan Westhues, the device is now the goto tool for RFID Analysis for the enthusiast. Iceman repository is considered to be the pinnacle of features and functionality, enabling a huge range of extremely useful and convenient commands and LUA scripts to automate chip identification, penetration testing, and programming
 
 
-| Releases     | Coverity    | Contributors |
-| ------------------- | -------------------:| -------------------:|
+| Latest Release | Coverity | Contributors |
+|:--------------:|:--------:|:------------:|
 | [![Latest release](https://img.shields.io/github/v/release/rfidresearchgroup/proxmark3)](https://github.com/RfidResearchGroup/proxmark3/releases/latest) | [![Coverity Status](https://scan.coverity.com/projects/19334/badge.svg)](https://scan.coverity.com/projects/proxmark3-rrg-iceman-repo)| ![GitHub contributors](https://img.shields.io/github/contributors/rfidresearchgroup/proxmark3) |
 
 
-| Actions OSX CI    |  Actions Ubuntu CI    | Windows CI |
-| ------------------- | -------------------:| -------------------:|
-| ![MacOS Build and Test](https://github.com/RfidResearchGroup/proxmark3/workflows/MacOS%20Build%20and%20Test/badge.svg?branch=master) | ![Ubuntu Build and Test](https://github.com/RfidResearchGroup/proxmark3/workflows/Ubuntu%20Build%20and%20Test/badge.svg?branch=master) | [![Build status](https://ci.appveyor.com/api/projects/status/b4gwrhq3nc876cuu/branch/master?svg=true)](https://ci.appveyor.com/project/RfidResearchGroup/proxmark3/branch/master) |
+| Actions OSX CI |  Actions Ubuntu CI | Actions Windows CI |
+|:--------------:|:------------------:|:------------------:|
+| ![MacOS Build and Test](https://github.com/RfidResearchGroup/proxmark3/workflows/MacOS%20Build%20and%20Test/badge.svg?branch=master) | ![Ubuntu Build and Test](https://github.com/RfidResearchGroup/proxmark3/workflows/Ubuntu%20Build%20and%20Test/badge.svg?branch=master) | [![Windows Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml) |
 
 
 # Table of Contents
@@ -25,21 +27,23 @@
  9. [Official channels](#official-channels)
 10. [Maintainers](#maintainers)
 11. [Citation](#citation)
+12. [Copyright and licensing terms](#copyright-and-licensing-terms)
 
 # PROXMARK3 INSTALLATION AND OVERVIEW
 
-| FAQ's & Updates     | Installation        | Use of the Proxmark |
-| ------------------- |:-------------------:| -------------------:|
-|[What has changed?](#what-has-changed)  | **[Setup and build for Linux](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md)** | [Compilation Instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md)|
-|[Development](#development) | **[Important notes on ModemManager for Linux users](/doc/md/Installation_Instructions/ModemManager-Must-Be-Discarded.md)** | [Validating proxmark client functionality](/doc/md/Use_of_Proxmark/1_Validation.md) |
-|[Maintainers](#maintainers--package-distro-)| **[Homebrew (Mac OS X) & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md)** | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
-|[Proxmark3 GUI](#proxmark3-gui)|**[Setup and build for Windows](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md)**|[Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
-|[Pre-compiled binaries](#precompiled-binaries)|[Blue shark manual](/doc/bt_manual_v10.md) ||
-|[Donations](#donations)||[Command Cheat sheet](/doc/cheatsheet.md)|
-||[Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)|[More cheat sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
-||**[Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md)**|[Complete client command set](/doc/commands.md)|
-||**[JTAG](/doc/jtag_notes.md)**|[T5577 Introduction Guide](/doc/T5577_Guide.md)|
-||**[MacPorts (Mac OS X, experimental)](/doc/md/Installation_Instructions/Mac-OS-X-MacPorts-Installation-Instructions.md)** |
+| Installation         | Use of the Proxmark3 |
+| :------------------: | :------------------: |
+| [Linux - Setup and Build](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) | [Compilation Instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md)|
+| [Linux - Important notes on ModemManager](/doc/md/Installation_Instructions/ModemManager-Must-Be-Discarded.md) | [Validating Proxmark3 Client Functionality](/doc/md/Use_of_Proxmark/1_Validation.md)|
+| [Mac OS X - Homebrew & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md) | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
+| [Mac OS X - MacPorts](/doc/md/Installation_Instructions/Mac-OS-X-MacPorts-Installation-Instructions.md) | [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
+| [Windows - Setup and Build](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md) ||
+| [Termux / Android - Setup and Build](/doc/termux_notes.md) ||
+| [Blue Shark Manual](/doc/bt_manual_v10.md) | [Command Cheat Sheet](/doc/cheatsheet.md)|
+| [Advanced Compilation Parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md) | [More Cheat Sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
+| [Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md) | [Complete Client Command Set](/doc/commands.md) |
+| [JTAG](/doc/jtag_notes.md) | [T5577 Introduction Guide](/doc/T5577_Guide.md)|
+
 
 
 ## Notes / helpful documents
@@ -52,7 +56,7 @@
 |[Notes on file formats used with Proxmark3](/doc/extensions_notes.md)|[Notes on MFU binary format](/doc/mfu_binary_format_notes.md)|[Notes on FPGA & ARM](/doc/fpga_arm_notes.md)|
 |[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)|[Notes on Magic cards](/doc/magic_cards_notes.md)|
 |[Notes on Color usage](/doc/colors_notes.md)|[Makefile vs CMake](/doc/md/Development/Makefile-vs-CMake.md)|[Notes on Cloner guns](/doc/cloner_notes.md)|
-|[Notes on cliparser usage](/doc/cliparser.md)|[Notes on clocks](/doc/clocks.md)|[Notes on DESFire usage](/doc/desfire.md)|
+|[Notes on cliparser usage](/doc/cliparser.md)|[Notes on clocks](/doc/clocks.md)|[Notes on MIFARE DESFire](/doc/desfire.md)|
 
 # How to build?
 
@@ -77,13 +81,17 @@ We define generic Proxmark3 platforms as following devices.
    - **Note**: unknown pin assignments.
  - ⚠  Ryscorp Proxmark3 Pro 
    - **Note**: device has different fpga and unknown pin assignments.
+   - **Note**: Company have dissappared, leaving their customers in the dark.
  - ⚠  iCopy-X
    - **Note**: experimental support, currently incompatible with iCopy-X GUI as Proxmark client commands are now using cliparser.
    - **Note**: see also [icopyx-community repos](https://github.com/iCopy-X-Community/) for upstream sources, reversed hw etc.
+   - **Note**: Uses DRM to lock down tags, ignores the open source licences. Use on your own risk. 
 
 **Unknown support status**
  - ⚠  VX
    - **Note**: unknown device hw
+-  ⚠ Proxmark3 X 
+   - **Note**: unknown device hw.  
 
 
 **256kb flash memory size of generic Proxmark3 platforms**
@@ -112,6 +120,7 @@ Proxmark3 RDV4 hardware modifications:
 
 This repo vs official Proxmark3 repo:
 see the [Changelog file](CHANGELOG.md) which we try to keep updated. In short this repo gives you a completely different user experience when it comes to Proxmark3.
+  * Supports command tab complete
   * richer CLI with use of colors / emojis
   * help text system implemented everywhere
   * hints system
@@ -157,7 +166,7 @@ The [public roadmap](https://github.com/RfidResearchGroup/proxmark3/wiki/Public-
 
 This repo compiles nicely on 
    - WSL1 on Windows 10
-   - Proxspace enviroment [release v3.10](https://github.com/Gator96100/ProxSpace/releases)
+   - Proxspace environment [release v3.10](https://github.com/Gator96100/ProxSpace/releases)
    - Windows/MinGW environment
    - Ubuntu, ParrotOS, Gentoo, Pentoo, Kali, NetHunter, Arch Linux, Fedora, Debian, Raspbian
    - Android / Termux
@@ -177,14 +186,13 @@ See [Proxmark3 precompiled builds](https://www.proxmarkbuilds.org/)
 The official PM3-GUI from Gaucho will not work. Not to mention is quite old and not maintained any longer.
 
 - [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) will work more or less.
-
 - [Proxmark3 GUI cross-compiled](https://github.com/wh201906/Proxmark3GUI/) which is recently updated and claims to support latest source of this repo.
 - [Proxmark3_GUI](https://github.com/Phreak87/Proxmark3_GUI) simple gui in vb.net
 
 
 ## Official channels
 Where do you find the community?
-   - [RFID Hacking community discord server](https://discord.gg/QfPvGFRQxH)
+   - [RFID Hacking community discord server](https://discord.gg/iceman)
    - [Proxmark3 IRC channel](https://web.libera.chat/?channels=#proxmark3)
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
    - [Proxmark3 forum](http://www.proxmark.org/forum/index.php)
@@ -203,9 +211,9 @@ This document will be helpful for you
 ## Citation
 Use this bibtex to cite this repository globally:
 ```
-@misc{proxmark3rrg,
+@misc{proxmark3,
   author = {C. {Herrmann} and P. {Teuwen} and O. {Moiseenko} and M. {Walker} and others},
-  title = {{Proxmark3 -- RRG / Iceman repo}},
+  title = {{Proxmark3 -- Iceman repo}},
   howpublished = {\url{https://github.com/RfidResearchGroup/proxmark3}},
   keywords = {rfid nfc iceman proxmark3 125khz 134khz 13.56mhz},
 }
@@ -215,3 +223,23 @@ If you need to refer to a specific state of the repository, use a commit number 
   note = {Accessed: commit 12327f71a27da23831901847886aaf20e8ad3ca0}
   note = {Accessed: 2021-01-01}
 ```
+
+## Copyright and licensing terms
+
+Each contribution is under the copyright of its author. See [AUTHORS](AUTHORS.md).
+
+The Proxmark3 source code is covered by the following licensing terms, usually referred as **GPLv3 or later**.
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+A copy of the GPLv3 is available in [LICENSE](LICENSE.txt).  
+
+Some dependencies may be under other free licensing terms compatible with the Proxmark3 licensing terms, see their respective description.
