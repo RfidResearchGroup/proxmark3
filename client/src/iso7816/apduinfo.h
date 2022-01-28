@@ -39,6 +39,13 @@ const APDUCode_t *GetAPDUCode(uint8_t sw1, uint8_t sw2);
 const char *GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2);
 
 typedef struct {
+    const uint16_t Code;
+    const char *Description;
+} APDUSpcCodeDescription_t;
+
+const char *GetSpecificAPDUCodeDesc(const APDUSpcCodeDescription_t *desc, const size_t desclen, uint16_t code);
+
+typedef struct {
     uint8_t CLA;
     uint8_t INS;
     uint8_t P1;

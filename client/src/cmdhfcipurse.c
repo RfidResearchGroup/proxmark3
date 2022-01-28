@@ -56,11 +56,6 @@ static const PxSE_AID_t PxSE_AID_LIST[] = {
     {{0xA0, 0x00, 0x00, 0x05, 0x07, 0x06, 0x00}, "Proximity Micro-Payment System Environment (PMSE)" }
 };
 
-typedef struct {
-    const uint16_t Code;
-    const char *Description;
-} APDUSpcCodeDescription_t;
-
 static const APDUSpcCodeDescription_t SelectAPDUCodeDescriptions[] = {
     {0x6984, "Key is blocked for use as key encryption key" },
     {0x6985, "Command not allowed on deactivated ADF or maximum files count already reached" },
@@ -71,14 +66,6 @@ static const APDUSpcCodeDescription_t SelectAPDUCodeDescriptions[] = {
     {0x6A89, "FileID / SFID already exists" },
     {0x6A89, "AID already exists" }
 };
-
-static const char *GetSpecificAPDUCodeDesc(const APDUSpcCodeDescription_t *desc, const size_t desclen, uint16_t code) {
-    for (int i = 0; i < desclen; i++) {
-        if (desc[i].Code == code)
-            return desc[i].Description;
-    }
-    return GetAPDUCodeDescription(code >> 8, code & 0xff);
-}
 
 static uint8_t defaultKeyId = 1;
 static uint8_t defaultKey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
