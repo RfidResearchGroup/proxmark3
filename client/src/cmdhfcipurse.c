@@ -873,7 +873,7 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
     CLIParserInit(&ctx, "hf cipurse create",
                   "Create application/file/key by provide appropriate DGI. If no key is supplied, default key of 737373...7373 will be used",
                   "hf cipurse create -d 9200123F00200008000062098407A0000005070100 -> create PTSE file with FID 0x2000 and space for 8 AIDs\n"
-                  "hf cipurse create -d 92002438613F010A05020000FFFFFF021009021009621084054144204631D407A0000005070100A00F28"
+                  "hf cipurse create -d 92002438613F010A050200004040FF021009021009621084054144204631D407A0000005070100A00F28"
                         "73737373737373737373737373737373015FD67B000102030405060708090A0B0C0D0E0F01C6A13B -> create default file with FID 3F01 and 2 keys\n");
 
     void *argtable[] = {
