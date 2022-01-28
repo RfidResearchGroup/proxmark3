@@ -172,6 +172,12 @@ int CIPURSESelectMF(uint8_t *result, size_t max_result_len, size_t *result_len, 
     return CIPURSESelectMFEx(false, true, result, max_result_len, result_len, sw);
 }
 
+int CIPURSEFormatAll(uint16_t *sw) {
+    uint8_t result[APDU_RES_LEN] = {0};
+    size_t result_len = 0;
+    return CIPURSEExchange((sAPDU_t) {0x80, 0xfc, 0x00, 0x00, 7, (uint8_t *)"ConfirM"}, result, sizeof(result), &result_len, sw);
+}
+
 int CIPURSESelectFileEx(bool activate_field, bool leave_field_on, uint16_t fileid, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
     CipurseCClearContext(&cipurseContext);
     uint8_t fileIdBin[] = {fileid >> 8, fileid & 0xff};
