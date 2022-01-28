@@ -38,6 +38,7 @@ int CIPURSEMutualAuthenticate(uint8_t keyindex, uint8_t *params, uint8_t paramsl
 
 int CIPURSECreateFile(uint8_t *attr, uint16_t attrlen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
 int CIPURSEDeleteFile(uint16_t fileid, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
+int CIPURSEDeleteFileAID(uint8_t *aid, size_t aidLen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
 
 int CIPURSESelectFileEx(bool activate_field, bool leave_field_on, uint16_t fileid, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
 int CIPURSESelectFile(uint16_t fileid, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);

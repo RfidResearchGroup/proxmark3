@@ -160,6 +160,10 @@ int CIPURSEDeleteFile(uint16_t fileid, uint8_t *result, size_t max_result_len, s
     return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x00, 0xe4, 0x00, 0x00, 02, fileIdBin}, false, 0, result, max_result_len, result_len, sw);
 }
 
+int CIPURSEDeleteFileAID(uint8_t *aid, size_t aidLen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+    return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x00, 0xe4, 0x04, 0x00, aidLen, aid}, false, 0, result, max_result_len, result_len, sw);
+}
+
 int CIPURSESelectMFEx(bool activate_field, bool leave_field_on, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
     return CIPURSESelectFileEx(activate_field, leave_field_on, 0x3f00, result, max_result_len, result_len, sw);
 }
