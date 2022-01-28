@@ -23,6 +23,7 @@ Always use the latest repository commits from *master* branch. There are always 
   * [libQt5Core.so.5 not found](#libQt5Coreso5-not-found)
   * [Target attribute is not supported on this machine](#target-attribute-is-not-supported-on-this-machine)
   * [Qt: Session management error:](#qt-session-management-error)
+  * [Poorly tuned antenna which only works from time to time](#poorly-tuned-antenna-which-only-works-from-time-to-time)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -259,3 +260,10 @@ Try running the client without the SESSION_MANAGER environment variable.
 ```
 env -u SESSION_MANAGER ./pm3
 ```
+
+## Poorly tuned antenna which only works from time to time
+^[Top](#top)
+
+If your Proxmark3 is poorly built(often happens with a Proxmark3 easy), and you sometimes got random error when reading/writing tag, putting aluminium foil around the antenna and tag could help. Remember to ensure enough insulation.  
+
+![an example](https://user-images.githubusercontent.com/20812356/151568893-425eb17a-93cf-4b1d-8ebd-934f24ec9690.jpg)
