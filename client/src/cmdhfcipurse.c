@@ -41,6 +41,20 @@
 #include "fileutils.h"   // laodFileJSONroot
 
 const uint8_t PxSE_AID[] = {0xA0, 0x00, 0x00, 0x05, 0x07, 0x01, 0x00};
+#define PxSE_AID_LENGTH 7
+typedef struct {
+    uint8_t aid[PxSE_AID_LENGTH];
+    const char *name;
+} PxSE_AID_t;
+
+static const PxSE_AID_t PxSE_AID_LIST[] = {
+    {{0xA0, 0x00, 0x00, 0x05, 0x07, 0x01, 0x00}, "Proximity Transport System Environment (PTSE)" },
+    {{0xA0, 0x00, 0x00, 0x05, 0x07, 0x02, 0x00}, "Proximity Facility Access System Environment (PASE)" },
+    {{0xA0, 0x00, 0x00, 0x05, 0x07, 0x03, 0x00}, "Proximity Digital Identity System Environment (PDSE)" },
+    {{0xA0, 0x00, 0x00, 0x05, 0x07, 0x04, 0x00}, "Proximity Event Ticketing System Environment (PESE)" },
+    {{0xA0, 0x00, 0x00, 0x05, 0x07, 0x05, 0x00}, "Proximity Couponing System Environment (PCSE)" },
+    {{0xA0, 0x00, 0x00, 0x05, 0x07, 0x06, 0x00}, "Proximity Micro-Payment System Environment (PMSE)" }
+};
 
 static uint8_t defaultKeyId = 1;
 static uint8_t defaultKey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
@@ -68,33 +82,33 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     infoHF14A(false, false, false);
 
     // CIPURSE info
-    PrintAndLogEx(INFO, "-----------" _CYAN_("CIPURSE Info") "---------------------------------");
-    SetAPDULogging(true);
+    PrintAndLogEx(INFO, "------------------- " _CYAN_("CIPURSE Info") " --------------------");
+    SetAPDULogging(false);
 
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
 
     bool mfExist = false;
-    int res = CIPURSESelectMF(true, false, buf, sizeof(buf), &len, &sw);
+    int res = CIPURSESelectMF(true, true, buf, sizeof(buf), &len, &sw);
     if (res == PM3_SUCCESS && sw == 0x9000) {
         mfExist = true;
-        PrintAndLogEx(INFO, "MasterFile exist and can be selected.");
+        PrintAndLogEx(INFO, _CYAN_("MasterFile") " exist and can be selected.");
     }
 
-    //for (int n = 1; n < 7; n++)
-    uint8_t pxseaid[sizeof(PxSE_AID)] = {0};
-    memcpy(pxseaid, PxSE_AID, sizeof(PxSE_AID));
-    res = CIPURSESelectAID(true, false, pxseaid, sizeof(pxseaid), buf, sizeof(buf), &len, &sw);
-    if (res == PM3_SUCCESS && sw == 0x9000) {
-        mfExist = true;
-        PrintAndLogEx(INFO, "PxSE exist.");
-        if (len > 0) {
-            TLVPrintFromBuffer(buf, len);
+    for (int i = 0; i < ARRAYLEN(PxSE_AID_LIST); i++) {
+        res = CIPURSESelectAID(false, true, (uint8_t *)PxSE_AID_LIST[i].aid, PxSE_AID_LENGTH, buf, sizeof(buf), &len, &sw);
+        if (res == PM3_SUCCESS && sw == 0x9000) {
+            mfExist = true;
+            PrintAndLogEx(INFO, _CYAN_("PxSE") " exist: %s", PxSE_AID_LIST[i].name);
+            if (len > 0) {
+                PrintAndLogEx(INFO, "PxSE data:");
+                TLVPrintFromBuffer(buf, len);
+            }
         }
     }
 
-    res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
+    res = CIPURSESelect(false, true, buf, sizeof(buf), &len, &sw);
     if (res) {
         DropField();
         return res;
@@ -107,7 +121,7 @@ static int CmdHFCipurseInfo(const char *Cmd) {
             if (!mfExist)
                 PrintAndLogEx(INFO, "Not a CIPURSE card. APDU response: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
             else
-                PrintAndLogEx(INFO, "Unknown AID and MasterFile can be selected. Maybe CIPURSE card in the perso state");
+                PrintAndLogEx(INFO, "Unknown AID and MasterFile can be selected. Maybe CIPURSE card in the " _CYAN_("perso") " state");
         }
 
         DropField();
