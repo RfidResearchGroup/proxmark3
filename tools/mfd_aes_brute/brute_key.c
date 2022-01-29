@@ -149,7 +149,7 @@ int main (int argc, char* argv[]) {
         if (dec_tag[15] != dec_rdr[30]) continue;
 
 
-        printf("\btimestamp: %i\nkey: ", timestamp);
+        printf("\btimestamp: %lu\nkey: ", timestamp);
         for (int i = 0; i < 16; i++) {
             printf("%02x", key[i]);
         }
