@@ -978,7 +978,6 @@ int num_CPUs(void) {
     GetSystemInfo(&sysinfo);
     return sysinfo.dwNumberOfProcessors;
 #else
-#include <unistd.h>
     int count = sysconf(_SC_NPROCESSORS_ONLN);
     if (count <= 0)
         count = 1;
