@@ -367,7 +367,7 @@ Check column "offline" for their availability.
 |`hf iclass info         `|Y       |`Tag information`
 |`hf iclass list         `|Y       |`List iclass history`
 |`hf iclass rdbl         `|N       |`Read Picopass / iCLASS block`
-|`hf iclass reader       `|N       |`Act like an Picopass / iCLASS reader`
+|`hf iclass reader       `|N       |`Act like a Picopass / iCLASS reader`
 |`hf iclass restore      `|N       |`Restore a dump file onto a Picopass / iCLASS tag`
 |`hf iclass sniff        `|N       |`Eavesdrop Picopass / iCLASS communication`
 |`hf iclass wrbl         `|N       |`Write Picopass / iCLASS block`
