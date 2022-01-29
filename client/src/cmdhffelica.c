@@ -1702,14 +1702,11 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
 
     uint8_t datalen = 13; // length (1) + CMD (1) + IDm(8) + Node Number (1) + Node Code List (2)
 
-    uint8_t flags = FELICA_APPEND_CRC;
+    uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
     if (custom_IDm) {
         flags |= FELICA_NO_SELECT;
     }
 
-    if (datalen > 0) {
-        flags |= FELICA_RAW;
-    }
     // Todo activate once datalen isn't hardcoded anymore...
     if (custom_IDm == false && check_last_idm(data, datalen) == false) {
         return PM3_EINVARG;
