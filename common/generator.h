@@ -27,6 +27,7 @@ uint32_t ul_ev1_pwdgenB(const uint8_t *uid);
 uint32_t ul_ev1_pwdgenC(const uint8_t *uid);
 uint32_t ul_ev1_pwdgenD(const uint8_t *uid);
 uint32_t ul_ev1_pwdgenE(const uint8_t *uid);
+uint32_t ul_ev1_pwdgenF(const uint8_t *uid);
 
 uint16_t ul_ev1_packgen_def(const uint8_t *uid);
 uint16_t ul_ev1_packgenA(const uint8_t *uid);
