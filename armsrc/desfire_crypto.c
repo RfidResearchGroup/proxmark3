@@ -67,8 +67,10 @@ void des_decrypt(void *out, const void *in, const void *key) {
 
 void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode) {
     if (length % 8) return;
-    if (keymode == 2) mbedtls_des3_set2key_dec(&ctx3, key);
-    else mbedtls_des3_set3key_dec(&ctx3, key);
+    if (keymode == 2)
+        mbedtls_des3_set2key_dec(&ctx3, key);
+    else 
+        mbedtls_des3_set3key_dec(&ctx3, key);
 
     uint8_t i;
     unsigned char temp[8];
@@ -93,8 +95,10 @@ void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key,
 
 void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode) {
     if (length % 8) return;
-    if (keymode == 2) mbedtls_des3_set2key_enc(&ctx3, key);
-    else mbedtls_des3_set3key_enc(&ctx3, key);
+    if (keymode == 2)
+        mbedtls_des3_set2key_enc(&ctx3, key);
+    else
+        mbedtls_des3_set3key_enc(&ctx3, key);
 
     uint8_t i;
     uint8_t *tin = (uint8_t *) in;
