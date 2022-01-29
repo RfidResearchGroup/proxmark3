@@ -388,13 +388,11 @@ static int CmdPyramidSim(const char *Cmd) {
             return PM3_EINVARG;
         }
     } else {
+        // --raw and --fc/cn are mutually exclusive
         if (use_raw) {
-            // --raw and --fc/cn are mutually exclusive
-            if (use_raw) {
-                PrintAndLogEx(FAILED, "Can't specify both raw and fc/cn at the same time");
-                return PM3_EINVARG;
-            }  
-        }
+            PrintAndLogEx(FAILED, "Can't specify both raw and fc/cn at the same time");
+            return PM3_EINVARG;
+        }  
     }
 
     uint8_t bs[sizeof(raw) * 8];
