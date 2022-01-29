@@ -3985,7 +3985,7 @@ static command_t CommandTable[] = {
     {"info",        CmdHFiClassInfo,            AlwaysAvailable, "Tag information"},
     {"list",        CmdHFiClassList,            AlwaysAvailable, "List iclass history"},
     {"rdbl",        CmdHFiClass_ReadBlock,      IfPm3Iclass,     "Read Picopass / iCLASS block"},
-    {"reader",      CmdHFiClassReader,          IfPm3Iclass,     "Act like an Picopass / iCLASS reader"},
+    {"reader",      CmdHFiClassReader,          IfPm3Iclass,     "Act like a Picopass / iCLASS reader"},
     {"restore",     CmdHFiClassRestore,        IfPm3Iclass,      "Restore a dump file onto a Picopass / iCLASS tag"},
     {"sniff",       CmdHFiClassSniff,           IfPm3Iclass,     "Eavesdrop Picopass / iCLASS communication"},
     {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "Write Picopass / iCLASS block"},
