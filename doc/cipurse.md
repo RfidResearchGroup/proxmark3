@@ -58,6 +58,7 @@ Each file can only have an access control list that specifies what operation the
 ## How to
 
 ### How to personalize card
+^[Top](#top)
 
 1. Format card (if it needs) 
 ```hf cipurse formatall```
@@ -71,7 +72,7 @@ The following command creates PTSE file with FID 0x2000, AID A0000005070100, and
 ```
 9200123F00200008000062098407A0000005070100
           ----                               FID
-              --                             Num of AID
+              --                             Num of AIDs in list
                             --------------   AID
 ```
 
