@@ -232,13 +232,14 @@ static bool aid_exists(DesfireContext_t *ctx, uint32_t aid, bool verbose) {
  */
 static uint32_t find_available_gallagher_aid(DesfireContext_t *ctx, bool verbose) {
     // Select PICC
-    select_aid(ctx, 0x000000, verbose);
+    int res = select_aid(ctx, 0x000000, verbose);
+    PM3_RET_IF_ERR(res);
 
     // Retrieve the AID list
     uint8_t aid_buf[DESFIRE_BUFFER_SIZE] = {0};
     size_t aid_buf_len = 0;
 
-    int res = DesfireGetAIDList(ctx, aid_buf, &aid_buf_len);
+    res = DesfireGetAIDList(ctx, aid_buf, &aid_buf_len);
     if (res != PM3_SUCCESS) {
         PM3_RET_ERR(0, "Failed retrieving AID list");
     }
