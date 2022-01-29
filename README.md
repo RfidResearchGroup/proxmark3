@@ -54,7 +54,7 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 |[Notes on frame format](/doc/new_frame_format.md)|[Notes on tracelog / wireshark](/doc/trace_notes.md)|[Notes on EMV](/doc/emv_notes.md)|
 |[Notes on external flash](/doc/ext_flash_notes.md)|[Notes on loclass](/doc/loclass_notes.md)|[Notes on Coverity Scan Config & Run](/doc/md/Development/Coverity-Scan-Config-and-Run.md)|
 |[Notes on file formats used with Proxmark3](/doc/extensions_notes.md)|[Notes on MFU binary format](/doc/mfu_binary_format_notes.md)|[Notes on FPGA & ARM](/doc/fpga_arm_notes.md)|
-|[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)|[Notes on Magic cards](/doc/magic_cards_notes.md)|
+|[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)|[Notes on Magic UID cards](/doc/magic_cards_notes.md)|
 |[Notes on Color usage](/doc/colors_notes.md)|[Makefile vs CMake](/doc/md/Development/Makefile-vs-CMake.md)|[Notes on Cloner guns](/doc/cloner_notes.md)|
 |[Notes on cliparser usage](/doc/cliparser.md)|[Notes on clocks](/doc/clocks.md)|[Notes on MIFARE DESFire](/doc/desfire.md)|
 |[Notes on CIPURSE](/doc/cipurse.md)|||
@@ -120,37 +120,43 @@ Proxmark3 RDV4 hardware modifications:
   * ABS case
 
 This repo vs official Proxmark3 repo:
-see the [Changelog file](CHANGELOG.md) which we try to keep updated. In short this repo gives you a completely different user experience when it comes to Proxmark3.
+
+See the [Changelog file](CHANGELOG.md) which we try to keep updated.
+
+In short this repo gives you a completely different user experience when it comes to Proxmark3.
+
   * Supports command tab complete
-  * richer CLI with use of colors / emojis
-  * help text system implemented everywhere
-  * hints system
-  * user preference settings
-  * extensive testing with continuous integration build systems on Linux, OSX and Windows, and regular usage of static analysis tools like 
+  * Richer CLI with use of colors / emojis
+  * Help text system implemented everywhere
+  * Hints system
+  * User preference settings
+  * Extensive testing with continuous integration build systems on Linux, OSX and Windows, and regular usage of static analysis tools like 
     * [Coverity Scan](https://scan.coverity.com/projects/proxmark3-rrg-iceman-repo/)
-    * Cppcheck
+    * Cppcheck (v2.6)
     * GCC and Clang aggressive enforcement of diagnostic flags
-  * auto detection of serial ports and seamless integration with Bluetooth addon
-  * reconnect to device from inside client
+  * Auto detection of serial ports and seamless integration with Bluetooth addon
+  * Reconnect to device from inside client
   * Supports tearoff attacks
   * Supports NFC NDEF type1, type2, type4a, type4b, mifare, barcode
   * Supports pm3 client scripts,  lua scripts,  python scripts
   * Most comprehensive collection of scripts available
   * Wiegand encoding, decoding.
   * Supports EMV
+  * Supports CIPURSE
   * Most standalone modes available with easy compilation
-  * extensive test script for client and external tools
+  * Extensive test script for client and external tools
   * Most comprehensive compiled known keys dictionaries
   * Slimed down usb communications with NG-frames
-  * the most compiled public known key recovery software
-  * the fastest implementations of said software
-  * support multiple fileformats for dump files (BIN/EML/JSON) 
-  * interoperability of said fileformats with libnfc, MFC tool app etc
+  * The most compiled public known key recovery software
+  * The fastest implementations of said software
+  * Support multiple fileformats for dump files (BIN/EML/JSON) 
+  * Interoperability of said fileformats with libnfc, MFC tool app etc
   * Supports more RFID based protocols than ever
   * Easy install for package maintainers, distro maintainers
   * Supports cmake, make
-  * Builds without errors or warnings on more OS/platforms than ever.
-  * More documentation 
+  * Builds without errors or warnings on more OS/platforms than ever
+  * Available as package on known distros like Gentoo, Kali, Termux, Macports, Homebrew
+  * Much more documentation 
 
 
 # Development
@@ -173,7 +179,7 @@ This repo compiles nicely on
    - Android / Termux
    - Mac OS X / Homebrew (or MacPorts, experimental) / Apple Silicon M1
    - Docker container
-      - [ RRG / Iceman repo based ubuntu 18.04 container ](https://hub.docker.com/r/secopsconsult/proxmark3)
+      - [ Iceman repo based ubuntu 18.04 container ](https://hub.docker.com/r/secopsconsult/proxmark3)
       - [ Iceman fork based container v1.7 ](https://hub.docker.com/r/iceman1001/proxmark3/)
 
 
