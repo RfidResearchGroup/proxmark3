@@ -1777,13 +1777,11 @@ static int CmdHFFelicaSniff(const char *Cmd) {
     if (payload.samples > 9999) {
         payload.samples = 9999;
         PrintAndLogEx(INFO, "Too large samples to skip value, using max value 9999");
-        return PM3_EINVARG;
     }
 
     if (payload.triggers  > 9999) {
         payload.triggers  = 9999;
         PrintAndLogEx(INFO, "Too large trigger to skip value, using max value 9999");
-        return PM3_EINVARG;
     }
 
 
