@@ -25,10 +25,12 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <limits.h>
+#include <string.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
-#include <string.h>
+
 
 uint32_t seed = 0;
 
@@ -149,7 +151,7 @@ int main (int argc, char* argv[]) {
         if (dec_tag[15] != dec_rdr[30]) continue;
 
 
-        printf("\btimestamp: %lu\nkey: ", timestamp);
+        printf("\btimestamp: %" PRIu64 "\nkey: ", timestamp);
         for (int i = 0; i < 16; i++) {
             printf("%02x", key[i]);
         }
