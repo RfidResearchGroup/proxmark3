@@ -101,3 +101,4 @@
 |hf_visa_apple_normal.trace               |Sniff of VISA Apple normal transaction|
 |hf_visa_apple_transit_bypass.trace       |Sniff of VISA Apple transaction bypass|
 |hf_mfdes_sniff.trace                     |Sniff of HID reader reading a MIFARE DESFire SIO card|
+|hf_iclass_sniff.trace                    |Sniff of HID reader reading a Picopass 2k card|
