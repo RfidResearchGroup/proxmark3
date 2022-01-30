@@ -1008,7 +1008,62 @@ If the card is an Ultimate Magic Card, it returns 30 bytes.
 ### Magic commands
 ^[Top](#top) ^^[Gen4](#g4top)
 
-Special commands summary:
+script run hf_mf_ultimatecard.lua -h
+```
+This script enables easy programming of an Ultimate Mifare Magic card
+Usage
+script run hf_mf_ultimatecard -h -k <passwd> -c -w <type> -u <uid> -t <type> -p <passwd> -a <pack> -s <signature> -o <otp> -v <version> -q <atqa/sak> -g <gtu> -z <ats> -m <ul-mode> -n <ul-protocol>
+
+Arguments
+    -h      this help
+    -c      read magic configuration
+    -u      UID (8-14 hexsymbols), set UID on tag
+    -t      tag type to impersonate
+                 1 = Mifare Mini S20 4-byte     12 = NTAG 210
+                 2 = Mifare Mini S20 7-byte     13 = NTAG 212
+                 3 = Mifare 1k S50 4-byte       14 = NTAG 213
+                 4 = Mifare 1k S50 7-byte       15 = NTAG 215
+                 5 = Mifare 4k S70 4-byte       16 = NTAG 216
+                 6 = Mifare 4k S70 7-byte       17 = NTAG I2C 1K
+            ***  7 = UL -   NOT WORKING FULLY   18 = NTAG I2C 2K
+            ***  8 = UL-C - NOT WORKING FULLY   19 = NTAG I2C 1K PLUS
+                 9 = UL EV1 48b                 20 = NTAG I2C 2K PLUS
+                10 = UL EV1 128b                21 = NTAG 213F
+            *** 11 = UL Plus - NOT WORKING YET  22 = NTAG 216F
+
+    -p      NTAG password (8 hexsymbols),  set NTAG password on tag.
+    -a      NTAG pack ( 4 hexsymbols), set NTAG pack on tag.
+    -s      Signature data (64 hexsymbols), set signature data on tag.
+    -o      OTP data (8 hexsymbols), set `One-Time Programmable` data on tag.
+    -v      Version data (16 hexsymbols), set version data on tag.
+    -q      ATQA/SAK (<2b ATQA><1b SAK> hexsymbols), set ATQA/SAK on tag.
+    -g      GTU Mode (1 hexsymbol), set GTU shadow mode.
+    -z      ATS (<1b length><0-16 ATS> hexsymbols), Configure ATS. Length set to 00 will disable ATS.
+    -w      Wipe tag. 0 for Mifare or 1 for UL. Fills tag with zeros and put default values for type selected.
+    -m      Ultralight mode (00 UL EV1, 01 NTAG, 02 UL-C, 03 UL) Set type of UL.
+    -n      Ultralight protocol (00 MFC, 01 UL), switches between UL and MFC mode
+    -k      Ultimate Magic Card Key (IF DIFFERENT THAN DEFAULT 00000000)
+
+Example usage
+    -- read magic tag configuration
+    script run hf_mf_ultimatecard -c
+    -- set uid
+    script run hf_mf_ultimatecard -u 04112233445566
+    -- set NTAG pwd / pack
+    script run hf_mf_ultimatecard -p 11223344 -a 8080
+    -- set version to NTAG213
+    script run hf_mf_ultimatecard -v 0004040201000f03
+    -- set ATQA/SAK to [00 44] [08]
+    script run hf_mf_ultimatecard -q 004408
+    -- wipe tag with a NTAG213 or Mifare 1k S50 4 byte
+    script run hf_mf_ultimatecard -w 1
+    -- use a non default UMC key. Only use this if the default key for the MAGIC CARD was changed.
+    script run hf_mf_ultimatecard -k ffffffff -w 1
+    -- Wipe tag, turn into NTAG215, set sig, version, NTAG pwd/pak, and OTP.
+    script run hf_mf_ultimatecard -w 1 -t 15 -u 04112233445566 -s 112233445566778899001122334455667788990011223344556677 -p FFFFFFFF -a 8080 -o 11111111
+```
+
+Special raw commands summary:
 
 ```
 CF <passwd> 32 <00-03>                           // Configure GTU shadow mode
@@ -1063,12 +1118,17 @@ hf 14a raw -s -c -t 1000 CF00000000CE02
 hf 14a raw -s -c -t 1000 CF<passwd>35<2b ATQA><1b SAK>
 ```
 * ⚠ ATQA bytes are swapped in the command
+* ⚠ ATQA bytes that result in `iso14443a card select failed` (I.E.  ATQA=0040 in raw form) can be corrected with `hf 14a config --atqa force`
 * ⚠ when SAK bit 6 is set (e.g. SAK=20 or 28), ATS must be turned on, otherwise the card may not be recognized by some readers!
 * ⚠ never set SAK bit 3 (e.g. SAK=04), it indicates an extra cascade level is required (see `hf 14a config --cl2 skip` or `hf 14a config --cl3 skip` to recover a misconfigured card)
  
 Example: ATQA 0044 SAK 28, default pwd
 ```
 hf 14a raw -s -c -t 1000 CF0000000035440028
+```
+OR (Note the script will correct the ATQA correctly)
+```
+script run hf_mf_ultimatecard -q 004428
 ```
 ### Change ATS
 ^[Top](#top) ^^[Gen4](#g4top)
@@ -1084,6 +1144,7 @@ hf 14a raw -s -c -t 1000 CF<passwd>34<1b length><0-16b ATS>
 Example: ATS to 0606757781028002F0, default pwd
 ```
 hf 14a raw -s -c -t 1000 CF000000003406067577810280
+script run hf_mf_ultimatecard -z 06067577810280
 ```
 
 ### Set UID length (4, 7, 10)
@@ -1104,29 +1165,35 @@ hf 14a raw -s -c -t 1000 CF000000006801
 ### Set 14443A UID
 ^[Top](#top) ^^[Gen4](#g4top)
 
-UID is configured according to block0 with a backdoor write.
+UID is configured according to block0 with a backdoor write.  (Script commands are below the UID length examples)
 
-Example: preparing first two blocks:
+Example: preparing first two blocks: (Note the UMC has to be in MFC mode and the correct UID byte length set)
 ```
 hf 14a raw -s -c -t 1000 CF00000000CD00000102030405060708090A0B0C0D0E0F
 hf 14a raw -s -c -t 1000 CF00000000CD01101112131415161718191A1B1C1D1E1F
 hf 14a reader
 ```
-MFC mode, 4b UID  
+MFC 1k S50 4b UID  
 => UID `00010203`
+`script run hf_mf_ultimatecard -t 3 -u 00010203`
 
-MFC mode, 7b UID  
+MFC 4k S70 7b UID  
 => UID `00010203040506`
+`script run hf_mf_ultimatecard -t 3 -u 00010203040506`
 
-MFC mode, 10b UID  
+MFC mode, 10b UID  (script does not support 10b UID yet)
 => UID `00010203040506070809`
 
-Ultralight mode, 4b UID  
+Ultralight mode, 4b UID 
 => UID `00010203`
 
 Ultralight mode, 7b UID  
 => UID `00010210111213`  
 👉 the UID is composed of first two blocks as in regular Ultralights
+ * Examples
+   * UL-EV1 48b = `script run hf_mf_ultimatecard -t 9 -u 00010203040506`
+   * UL EV1 128b = `script run hf_mf_ultimatecard -t 10 -u 00010203040506`
+   * NTAG 215 = `script run hf_mf_ultimatecard -t 15 -u 00010203040506`
 
 Ultralight mode, 10b UID  
 => UID `00010203040506070809`  
@@ -1136,6 +1203,8 @@ Ultralight mode, 10b UID
 ^[Top](#top) ^^[Gen4](#g4top)
 
 UID and ATQB are configured according to block0 with a (14a) backdoor write.
+
+👉 hf_mf_ultimatecard.lua does not support 14443B commands yet.
 
 UID size is always 4 bytes.
 
@@ -1160,6 +1229,7 @@ hf 14a raw -s -c -t 1000 CF<passwd>69<1b param>
 Example: activate Ultralight protocol, default pwd
 ```
 hf 14a raw -s -c -t 1000 CF000000006901
+script run hf_mf_ultimatecard -n 01
 ```
 
 In this mode, if SAK=`00` and ATQA=`0044`, it acts as an Ultralight card
@@ -1184,6 +1254,7 @@ hf 14a raw -s -c -t 1000 CF<passwd>6A<1b param>
 Example: set Ultralight mode to Ultralight-C, default pwd
 ```
 hf 14a raw -s -c -t 1000 CF000000006A02
+script run hf_mf_ultimatecard -m 02
 ```
 Now the card supports the 3DES UL-C authentication.
 ### Set shadow mode (GTU)
@@ -1192,6 +1263,22 @@ Now the card supports the 3DES UL-C authentication.
 This mode is divided into four states: off (pre-write), on (on restore), don’t care, and high-speed read and write.
 If you use it, please enter the pre-write mode first. At this time, write the full card data.
 After writing, set it to on. At this time, after writing the data, the first time you read the data just written, the next time you read It is the pre-written data. All modes support this operation. It should be noted that using any block to read and write in this mode may give wrong results.
+
+Example: 
+`script run hf_mf_ultimatecard -w 1 -g 00 -t 15 -u 04112233445566 -s 112233445566778899001122334455667788990011223344556677 -p FFFFFFFF -a 8080 -o 11111111 -g 01`
+   * -w 1 = wipe the card in Ultralight Mode
+   * -g 00 = turn on pre-write mode
+   * -t 15 = change the type of card to NTAG 215
+   * -u = set the uid
+   * -s = set the signature
+   * -p = set the NTAG password
+   * -a = set the PACK
+   * -o = set the OTP
+   * -g 01 = turn on restore mode 
+
+At this point the card is set to a unwritten NTAG 215. Now any data written to the card will only last for 1 read.  Write a popular game toy to it, read it, now it is back to the unwritten NTAG 215.
+👉 Remember to disable GTU mode to get the card back to a normal state.
+`script run hf_mf_ultimatecard -g 03`
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>32<1b param>
