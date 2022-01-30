@@ -1008,6 +1008,15 @@ If the card is an Ultimate Magic Card, it returns 30 bytes.
 ### Magic commands
 ^[Top](#top) ^^[Gen4](#g4top)
 
+There are two ways to program this card. 
+
+   1.  Use the raw commands designated by the `hf 14a` examples.
+    
+   ***OR***
+
+   2.  Use the hf_mf_ultimatecard.lua script commands designated but the `script run hf_mf_ulimatecard` examples.
+
+
 script run hf_mf_ultimatecard.lua -h
 ```
 This script enables easy programming of an Ultimate Mifare Magic card
@@ -1144,7 +1153,12 @@ hf 14a raw -s -c -t 1000 CF<passwd>34<1b length><0-16b ATS>
 Example: ATS to 0606757781028002F0, default pwd
 ```
 hf 14a raw -s -c -t 1000 CF000000003406067577810280
-script run hf_mf_ultimatecard -z 06067577810280
+```
+
+Or
+
+```
+script run hf_mf_ultimatecard -z 06067577810280`
 ```
 
 ### Set UID length (4, 7, 10)
@@ -1173,22 +1187,30 @@ hf 14a raw -s -c -t 1000 CF00000000CD00000102030405060708090A0B0C0D0E0F
 hf 14a raw -s -c -t 1000 CF00000000CD01101112131415161718191A1B1C1D1E1F
 hf 14a reader
 ```
-MFC 1k S50 4b UID  
+MFC mode 4b UID  
+
 => UID `00010203`
+
 `script run hf_mf_ultimatecard -t 3 -u 00010203`
 
-MFC 4k S70 7b UID  
+MFC mode 7b UID  
+
 => UID `00010203040506`
+
 `script run hf_mf_ultimatecard -t 3 -u 00010203040506`
 
-MFC mode, 10b UID  (script does not support 10b UID yet)
+MFC mode, 10b UID
+
 => UID `00010203040506070809`
 
 Ultralight mode, 4b UID 
+
 => UID `00010203`
 
 Ultralight mode, 7b UID  
+
 => UID `00010210111213`  
+
 👉 the UID is composed of first two blocks as in regular Ultralights
  * Examples
    * UL-EV1 48b = `script run hf_mf_ultimatecard -t 9 -u 00010203040506`
@@ -1203,8 +1225,6 @@ Ultralight mode, 10b UID
 ^[Top](#top) ^^[Gen4](#g4top)
 
 UID and ATQB are configured according to block0 with a (14a) backdoor write.
-
-👉 hf_mf_ultimatecard.lua does not support 14443B commands yet.
 
 UID size is always 4 bytes.
 
@@ -1227,8 +1247,14 @@ hf 14a raw -s -c -t 1000 CF<passwd>69<1b param>
    * `01`: MIFARE Ultralight/NTAG mode
 
 Example: activate Ultralight protocol, default pwd
+
 ```
 hf 14a raw -s -c -t 1000 CF000000006901
+```
+
+Or
+
+```
 script run hf_mf_ultimatecard -n 01
 ```
 
@@ -1252,10 +1278,16 @@ hf 14a raw -s -c -t 1000 CF<passwd>6A<1b param>
 ⚠ it supposes Ultralight mode was activated (cf command `69`)
 
 Example: set Ultralight mode to Ultralight-C, default pwd
+
 ```
 hf 14a raw -s -c -t 1000 CF000000006A02
+```
+Or
+
+```
 script run hf_mf_ultimatecard -m 02
 ```
+
 Now the card supports the 3DES UL-C authentication.
 ### Set shadow mode (GTU)
 ^[Top](#top) ^^[Gen4](#g4top)
@@ -1277,7 +1309,9 @@ Example:
    * -g 01 = turn on restore mode 
 
 At this point the card is set to a unwritten NTAG 215. Now any data written to the card will only last for 1 read.  Write a popular game toy to it, read it, now it is back to the unwritten NTAG 215.
+
 👉 Remember to disable GTU mode to get the card back to a normal state.
+
 `script run hf_mf_ultimatecard -g 03`
 
 ```
