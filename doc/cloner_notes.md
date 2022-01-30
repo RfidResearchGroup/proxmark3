@@ -13,6 +13,7 @@ This document is based mostly on information posted on http://www.proxmark.org/f
 - [White cloner (after 2016)](#white-cloner-after-2016)
 - [White cloner (after 2016 D Quality)](#white-cloner-after-2016-d-quality)
 - [Restore page1 data](#restore-page1-data)
+- [Remove password by wiping](#remove-password-by-wiping)
 - [Sniffing the comms](#sniffing-the-comms)
 
 
@@ -76,6 +77,17 @@ Standard password is normally (for T55xx):  AA55BBBB
 lf t55xx write -b 1 -d E0150A48 --pg1
 If t55xx write -b 2 -d 2D782308 --pg1
 ```
+
+
+# Remove password by wiping
+^[Top](top)
+
+If a cloner has added a (known) password to a tag, and you don't care about preserving *anything* on the tag, you can simply wipe it to remove the password.  You'll need to specify the password in the command.  For instance:
+
+```
+lf t55xx wipe -p 51243648
+```
+
 
 # Sniffing the comms
 ^[Top](#top)
