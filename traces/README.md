@@ -79,6 +79,7 @@
 |--------|-----------|
 |hf_sniff_14b_scl3711.pm3                 |`hf sniff 15000 2` <> `nfc-list -t 8`: PUPI: c12c8b1b AppData: 00000000 ProtInfo: 917171|
 
+
 # Demodulated acquisitions
 
 ## HF demodulated traces
@@ -99,4 +100,4 @@
 |hf_visa_apple_ecp.trace                  |Sniff of VISA Apple ECP transaction|
 |hf_visa_apple_normal.trace               |Sniff of VISA Apple normal transaction|
 |hf_visa_apple_transit_bypass.trace       |Sniff of VISA Apple transaction bypass|
-
+|hf_mfdes_sniff.trace                     |Sniff of HID reader reading a MIFARE DESFire SIO card|
