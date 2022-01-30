@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `trace extract` - extract authentication parts from trace (@iceman1001)
  - Added luascript `hf_mf_ultimatecard.lua` - Script for Ultimate Magic Card (GEN4) (@startrk1995)
  - Added new tool `brute_key` - MIFARE DESFire Telenot access AES recovery (@x41sec)
  - Fixed `hf mfu dump -k` - insert PWD in dump (@doegox)
