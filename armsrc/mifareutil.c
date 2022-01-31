@@ -174,7 +174,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 
     // some statistic
     if (!ntptr && (g_dbglevel >= DBG_EXTENDED))
-        Dbprintf("auth uid: %08x | nr: %08x | nt: %08x", uid, nr, nt);
+        Dbprintf("auth uid: %08x | nr: %02x%02x%02x%02x | nt: %08x", uid, nr[0], nr[1], nr[2], nr[3], nt);
 
     // save Nt
     if (ntptr)
