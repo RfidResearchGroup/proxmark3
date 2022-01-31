@@ -22,8 +22,12 @@ ifneq (,$(findstring MINGW,$(platform)))
 endif
 
 # OS X needs linking to openssl
-ifeq ($(platform),Darwin)
-    MYLDFLAGS += -L/usr/local/opt/openssl@3/lib
+ifeq ($(USE_BREW),1)
+    MYLDFLAGS += -L$(BREW_PREFIX)/opt/openssl@3/lib -L$(BREW_PREFIX)/opt/openssl@1.1/lib
+endif
+
+ifeq ($(USE_MACPORTS),1)
+    MYLDFLAGS += -L$(MACPORTS_PREFIX)/lib/openssl-3 -L$(MACPORTS_PREFIX)/lib/openssl-1.1
 endif
 
 brute_key : $(OBJDIR)/brute_key.o $(MYOBJS)
