@@ -18,7 +18,7 @@
 
 #define __STDC_FORMAT_MACROS
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__APPLE__)
     #define _POSIX_C_SOURCE 200112L  // need localtime_r()
 #endif
 
