@@ -57,6 +57,27 @@ Each file can only have an access control list that specifies what operation the
 
 ## How to
 
+### How to select application or file
+^[Top](#top)
+
+1. select PTSE
+```hf cipurse select --aid a0000005070100```
+
+select it with display output in raw and tlv views options
+```hf cipurse select --aid a0000005070100 -vt```
+
+2. select application by Application ID (AID)
+```hf cipurse select --aid 4144204631```
+
+3. select application/file by file ID (FID)
+```hf cipurse select --fid 2000```
+
+4. select master file by file ID (FID)
+```hf cipurse select --fid 3F00```
+
+5. select default file (usually it master file)
+```hf cipurse select --mfd```
+
 ### How to personalize card
 ^[Top](#top)
 
