@@ -279,7 +279,7 @@ static int SelectCommand(bool selectDefaultFile, bool useAID, uint8_t *aid, size
                         uint8_t *buf, size_t bufSize, size_t *len, uint16_t *sw) {
     int res = 0;
     if (useAID && aidLen > 0) {
-        res = CIPURSESelectAID(true, false, aid, aidLen, buf, bufSize, len, sw);
+        res = CIPURSESelectAID(true, true, aid, aidLen, buf, bufSize, len, sw);
         if (res != 0 || *sw != 0x9000) {
             if (verbose)
                 PrintAndLogEx(ERR, "Cipurse select application " _GREEN_("%s ") _RED_("error") ". Card returns 0x%04x", sprint_hex_inrow(aid, aidLen), *sw);
@@ -288,7 +288,7 @@ static int SelectCommand(bool selectDefaultFile, bool useAID, uint8_t *aid, size
         if (verbose)
             PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s ") _GREEN_("OK"), sprint_hex_inrow(aid, aidLen));
     } else if (useFID) {
-        res = CIPURSESelectFileEx(true, false, fileId, buf, bufSize, len, sw);
+        res = CIPURSESelectFileEx(true, true, fileId, buf, bufSize, len, sw);
         if (res != 0 || *sw != 0x9000) {
             if (verbose)
                 PrintAndLogEx(ERR, "Cipurse select file 0x%04x " _RED_("error") ". Card returns 0x%04x", fileId, *sw);
@@ -297,7 +297,7 @@ static int SelectCommand(bool selectDefaultFile, bool useAID, uint8_t *aid, size
         if (verbose)
             PrintAndLogEx(INFO, "Cipurse select file " _CYAN_("0x%04x ") _GREEN_("OK"), fileId);
     } else if (selectDefaultFile) {
-        res = CIPURSESelectMFDefaultFileEx(true, false, buf, bufSize, len, sw);
+        res = CIPURSESelectMFDefaultFileEx(true, true, buf, bufSize, len, sw);
         if (res != 0 || *sw != 0x9000) {
             if (verbose)
                 PrintAndLogEx(ERR, "Cipurse select default file " _RED_("error") ". Card returns 0x%04x", *sw);
@@ -306,7 +306,7 @@ static int SelectCommand(bool selectDefaultFile, bool useAID, uint8_t *aid, size
         if (verbose)
             PrintAndLogEx(INFO, "Cipurse select default file " _GREEN_("OK"));
     } else {
-        res = CIPURSESelect(true, false, buf, bufSize, len, sw);
+        res = CIPURSESelect(true, true, buf, bufSize, len, sw);
         if (res != 0 || *sw != 0x9000) {
             if (verbose)
                 PrintAndLogEx(ERR, "Cipurse select default application " _RED_("error") ". Card returns 0x%04x", *sw);
@@ -381,6 +381,7 @@ static int CmdHFCipurseSelect(const char *Cmd) {
             TLVPrintFromBuffer(buf, len);
     }
 
+    DropField();
     return PM3_SUCCESS;
 }
 
@@ -395,6 +396,9 @@ static int CmdHFCipurseAuth(const char *Cmd) {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "show APDU requests and responses"),
         arg_lit0("v",  "verbose", "show technical data"),
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
+        arg_str0(NULL, "fid",     "<hex 2 bytes>", "file ID (FID)"),
+        arg_lit0(NULL, "mfd",     "select masterfile by empty id"),
         arg_int0("n",  NULL,      "<dec>", "key ID"),
         arg_str0("k",  "key",     "<hex>", "Auth key"),
         arg_param_end
@@ -403,34 +407,32 @@ static int CmdHFCipurseAuth(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    uint8_t keyId = arg_get_int_def(ctx, 3, defaultKeyId);
 
-    uint8_t hdata[250] = {0};
-    int hdatalen = sizeof(hdata);
-    CLIGetHexWithReturn(ctx, 4, hdata, &hdatalen);
-    if (hdatalen && hdatalen != 16) {
-        PrintAndLogEx(ERR, _RED_("ERROR:") " key length for AES128 must be 16 bytes only");
+    uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
+    uint8_t aid[16] = {0};
+    size_t aidLen = 0;
+    bool useAID = false;
+    uint16_t fileId = defaultFileId;
+    bool useFID = false;
+    int res = CLIParseCommandParameters(ctx, 7, 3, 4, 0, 0, key, aid, &aidLen, &useAID, &fileId, &useFID, NULL, NULL);
+    if (res || (useAID && useFID)) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
-    if (hdatalen)
-        memcpy(key, hdata, CIPURSE_AES_KEY_LENGTH);
-    else
-        memcpy(key, defaultKey, sizeof(defaultKey));
-
-    SetAPDULogging(APDULogging);
+    bool selmfd = arg_get_lit(ctx, 5);
+    uint8_t keyId = arg_get_int_def(ctx, 6, defaultKeyId);
 
     CLIParserFree(ctx);
+
+    SetAPDULogging(APDULogging);
 
     size_t len = 0;
     uint16_t sw = 0;
     uint8_t buf[APDU_RES_LEN] = {0};
 
-    int res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
+    res = SelectCommand(selmfd, useAID, aid, aidLen, useFID, fileId, true, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Cipurse select " _RED_("error") ". Card returns 0x%04x", sw);
         DropField();
         return PM3_ESOFT;
     }
