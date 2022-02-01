@@ -78,6 +78,18 @@ select it with display output in raw and tlv views options
 5. select default file (usually it master file)
 ```hf cipurse select --mfd```
 
+### How to delete application or file
+^[Top](#top)
+
+1. delete PTSE by AID
+```hf cipurse delete --aid a0000005070100```
+
+2. delete application by AID
+```hf cipurse select --aid 4144204631```
+
+3. delete application/file by FID
+```hf cipurse select --fid 2000```
+
 ### How to personalize card
 ^[Top](#top)
 
@@ -108,7 +120,7 @@ This command creates a application with following details:
   - App type............... 61
   - Max files count........ 10
   - Max SFID count......... 5
-  - Minimum command's group security levels plain/plain/plain/plain (0000)
+  - Minimum command's group security levels: plain/plain/plain/plain (0000)
   - Access rights.......... all two keys can do anything (FFFFFF)
   - Key attributes......... 021009
   - 2 keys.........
@@ -116,3 +128,17 @@ This command creates a application with following details:
     - `0001..0e0f` (01/C6A13B)
   - Register in the PxSE... A0000005070100
 
+4. Create elementary file (EF) in the application
+
+```hf cipurse create --aid 4144204631 -d 92010C010001020030020000FFFFFF```
+
+```
+  - parent application ID.. 4144204631
+  - file type.............. 0x01 (binary file wo transaction)
+  - SFID................... 0x00
+  - FID.................... 0x0102
+  - File size.............. 0x0030 (48 bytes)
+  - Number of keys......... 0x02 (as in the parent application)
+  - Minimum command's group security levels: plain/plain/plain/plain (0000)
+  - Access rights.......... all two keys can do anything (FFFFFF)
+```
