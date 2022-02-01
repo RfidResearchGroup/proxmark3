@@ -275,6 +275,51 @@ static int CLIParseCommandParameters(CLIParserContext *ctx, size_t keyid, size_t
     return PM3_SUCCESS;
 }
 
+static int SelectCommand(bool selectDefaultFile, bool useAID, uint8_t *aid, size_t aidLen, bool useFID, uint16_t fileId, bool verbose,
+                        uint8_t *buf, size_t bufSize, size_t *len, uint16_t *sw) {
+    int res = 0;
+    if (useAID && aidLen > 0) {
+        res = CIPURSESelectAID(true, false, aid, aidLen, buf, bufSize, len, sw);
+        if (res != 0 || *sw != 0x9000) {
+            if (verbose)
+                PrintAndLogEx(ERR, "Cipurse select application " _GREEN_("%s ") _RED_("error") ". Card returns 0x%04x", sprint_hex_inrow(aid, aidLen), *sw);
+            return PM3_ESOFT;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s ") _GREEN_("OK"), sprint_hex_inrow(aid, aidLen));
+    } else if (useFID) {
+        res = CIPURSESelectFileEx(true, false, fileId, buf, bufSize, len, sw);
+        if (res != 0 || *sw != 0x9000) {
+            if (verbose)
+                PrintAndLogEx(ERR, "Cipurse select file 0x%04x " _RED_("error") ". Card returns 0x%04x", fileId, *sw);
+            return PM3_ESOFT;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "Cipurse select file " _CYAN_("0x%04x ") _GREEN_("OK"), fileId);
+    } else if (selectDefaultFile) {
+        res = CIPURSESelectMFDefaultFileEx(true, false, buf, bufSize, len, sw);
+        if (res != 0 || *sw != 0x9000) {
+            if (verbose)
+                PrintAndLogEx(ERR, "Cipurse select default file " _RED_("error") ". Card returns 0x%04x", *sw);
+            return PM3_ESOFT;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "Cipurse select default file " _GREEN_("OK"));
+    } else {
+        res = CIPURSESelect(true, false, buf, bufSize, len, sw);
+        if (res != 0 || *sw != 0x9000) {
+            if (verbose)
+                PrintAndLogEx(ERR, "Cipurse select default application " _RED_("error") ". Card returns 0x%04x", *sw);
+            return PM3_ESOFT;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "Cipurse select default application " _GREEN_("OK"));
+    }
+
+    return PM3_SUCCESS;
+}
+
+
 static int CmdHFCipurseSelect(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse select",
@@ -300,80 +345,30 @@ static int CmdHFCipurseSelect(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool showTLV = arg_get_lit(ctx, 3);
 
-    uint8_t hdata[250] = {0};
-    int hdatalen = sizeof(hdata);
-    CLIGetHexWithReturn(ctx, 4, hdata, &hdatalen);
-    if (hdatalen && (hdatalen < 1 || hdatalen > 16)) {
-        PrintAndLogEx(ERR, _RED_("ERROR:") " application id length must be 1-16 bytes only");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
     uint8_t aid[16] = {0};
     size_t aidLen = 0;
-    if (hdatalen) {
-        memcpy(aid, hdata, hdatalen);
-        aidLen = hdatalen;
-    }
-
-    hdatalen = sizeof(hdata);
-    CLIGetHexWithReturn(ctx, 5, hdata, &hdatalen);
-    if (hdatalen && hdatalen != 2) {
-        PrintAndLogEx(ERR, _RED_("ERROR:") " file id length must be 2 bytes only");
+    bool useAID = false;
+    uint16_t fileId = defaultFileId;
+    bool useFID = false;
+    int res = CLIParseCommandParameters(ctx, 0, 4, 5, 0, 0, NULL, aid, &aidLen, &useAID, &fileId, &useFID, NULL, NULL);
+    if (res || (useAID && useFID)) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
-    }
-
-    uint16_t fileId = 0;
-    bool useFileID = false;
-    if (hdatalen) {
-        fileId = (hdata[0] << 8) + hdata[1];
-        useFileID = true;
     }
 
     bool selmfd = arg_get_lit(ctx, 6);
 
-    SetAPDULogging(APDULogging);
-
     CLIParserFree(ctx);
+
+    SetAPDULogging(APDULogging);
 
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
-    int res = 0;
-
-    if (aidLen > 0) {
-        res = CIPURSESelectAID(true, false, aid, aidLen, buf, sizeof(buf), &len, &sw);
-        if (res != 0 || sw != 0x9000) {
-            PrintAndLogEx(ERR, "Cipurse select application " _GREEN_("%s ") _RED_("error") ". Card returns 0x%04x", sprint_hex_inrow(aid, aidLen), sw);
-            DropField();
-            return PM3_ESOFT;
-        }
-        PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s ") _GREEN_("OK"), sprint_hex_inrow(aid, aidLen));
-    } else if (useFileID) {
-        res = CIPURSESelectFileEx(true, false, fileId, buf, sizeof(buf), &len, &sw);
-        if (res != 0 || sw != 0x9000) {
-            PrintAndLogEx(ERR, "Cipurse select file 0x%04x " _RED_("error") ". Card returns 0x%04x", fileId, sw);
-            DropField();
-            return PM3_ESOFT;
-        }
-        PrintAndLogEx(INFO, "Cipurse select file " _CYAN_("0x%04x ") _GREEN_("OK"), fileId);
-    } else if (selmfd) {
-        res = CIPURSESelectMFDefaultFileEx(true, false, buf, sizeof(buf), &len, &sw);
-        if (res != 0 || sw != 0x9000) {
-            PrintAndLogEx(ERR, "Cipurse select default file " _RED_("error") ". Card returns 0x%04x", sw);
-            DropField();
-            return PM3_ESOFT;
-        }
-        PrintAndLogEx(INFO, "Cipurse select default file " _GREEN_("OK"));
-    } else {
-        res = CIPURSESelect(true, false, buf, sizeof(buf), &len, &sw);
-        if (res != 0 || sw != 0x9000) {
-            PrintAndLogEx(ERR, "Cipurse select default application " _RED_("error") ". Card returns 0x%04x", sw);
-            DropField();
-            return PM3_ESOFT;
-        }
-        PrintAndLogEx(INFO, "Cipurse select default application " _GREEN_("OK"));
+    res = SelectCommand(selmfd, useAID, aid, aidLen, useFID, fileId, true, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000) {
+        DropField();
+        return PM3_ESOFT;
     }
 
     if (len > 0) {
