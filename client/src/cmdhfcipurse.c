@@ -887,7 +887,8 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
                   "Create application/file/key by provide appropriate DGI. If no key is supplied, default key of 737373...7373 will be used",
                   "hf cipurse create -d 9200123F00200008000062098407A0000005070100 -> create PTSE file with FID 0x2000 and space for 8 AIDs\n"
                   "hf cipurse create -d 92002438613F010A050200004040FF021009021009621084054144204631D407A0000005070100A00F28"
-                        "73737373737373737373737373737373015FD67B000102030405060708090A0B0C0D0E0F01C6A13B -> create default file with FID 3F01 and 2 keys\n");
+                        "73737373737373737373737373737373015FD67B000102030405060708090A0B0C0D0E0F01C6A13B -> create default file with FID 3F01 and 2 keys\n"
+                  "hf cipurse create --aid 4144204631 -d 92010C010001020030020000FFFFFF -> create 0x0102 binary data EF under application 4144204631\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -895,11 +896,16 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
         arg_lit0("v",  "verbose", "show technical data"),
         arg_int0("n",  NULL,      "<dec>", "key ID"),
         arg_str0("k",  "key",     "<hex>", "Auth key"),
+
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
+        arg_str0(NULL, "fid",     "<hex 2 bytes>", "file ID (FID)"),
+        arg_lit0(NULL, "mfd",     "select masterfile by empty id"),
+
         arg_str0("d",  "data",    "<hex>", "data with DGI for create"),
         arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
         arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
-        arg_lit0(NULL, "commit",  "commit "),
+        arg_lit0(NULL, "commit",  "need commit after create"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -912,25 +918,30 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
     CipurseChannelSecurityLevel sresp = CPSMACed;
     uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
 
+    uint8_t aid[16] = {0};
+    size_t aidLen = 0;
+    bool useAID = false;
     uint16_t fileId = defaultFileId;
     bool useFID = false;
-    int res = CLIParseCommandParameters(ctx, 4, 0, 0, 6, 7, key, NULL, NULL, NULL, &fileId, &useFID, &sreq, &sresp);
+    int res = CLIParseCommandParameters(ctx, 4, 5, 6, 9, 10, key, aid, &aidLen, &useAID, &fileId, &useFID, &sreq, &sresp);
     if (res) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
+    bool selmfd = arg_get_lit(ctx, 7);
+
     uint8_t hdata[250] = {0};
     int hdatalen = sizeof(hdata);
-    CLIGetHexWithReturn(ctx, 5, hdata, &hdatalen);
+    CLIGetHexWithReturn(ctx, 8, hdata, &hdatalen);
     if (hdatalen < 4 || hdatalen > 200) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " data length must be 4-200 bytes only");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    bool noauth = arg_get_lit(ctx, 8);
-    bool needCommit = arg_get_lit(ctx, 9);
+    bool noauth = arg_get_lit(ctx, 11);
+    bool needCommit = arg_get_lit(ctx, 12);
 
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
@@ -939,11 +950,21 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
     size_t len = 0;
     uint16_t sw = 0;
 
-    res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Cipurse masterfile select " _RED_("error") ". Card returns 0x%04x", sw);
-        DropField();
-        return PM3_ESOFT;
+    if (useAID || useFID || selmfd) {
+        res = SelectCommand(selmfd, useAID, aid, aidLen, useFID, fileId, verbose, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            DropField();
+            return PM3_ESOFT;
+        }
+    } else {
+        res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Cipurse masterfile select " _RED_("error") ". Card returns 0x%04x", sw);
+            DropField();
+            return PM3_ESOFT;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "Cipurse masterfile " _GREEN_("selected"));
     }
 
     if (verbose) {
@@ -981,6 +1002,9 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
         res = CIPURSECommitTransaction(&sw);
         if (res != 0 || sw != 0x9000)
             PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
     }
 
     DropField();
