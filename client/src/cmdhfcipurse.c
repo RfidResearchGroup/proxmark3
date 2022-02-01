@@ -76,7 +76,7 @@ static const APDUSpcCodeDescription_t DeleteAPDUCodeDescriptions[] = {
 static uint8_t defaultKeyId = 1;
 static uint8_t defaultKey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
 #define CIPURSE_MAX_AID_LENGTH 16
-static uint8_t defaultAID[CIPURSE_MAX_AID_LENGTH] = {0x41, 0x44, 0x20, 0x46, 0x31, 0x00};
+static uint8_t defaultAID[CIPURSE_MAX_AID_LENGTH] = CIPURSE_DEFAULT_AID;
 static size_t defaultAIDLength = 5;
 static uint16_t defaultFileId = 0x2ff7;
 
@@ -1125,14 +1125,17 @@ static int CmdHFCipurseDefault(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse default",
                   "Set default parameters for access to cipurse card",
-                  "hf cipurse default -n 1 -k 65656565656565656565656565656565 --fid 2ff7 -> Set key, key id and file id\n");
+                  "hf cipurse default --reset -> reset parameters to default\n"
+                  "hf cipurse default -n 1 -k 65656565656565656565656565656565 --fid 2ff7 -> Set key, key id and file id\n"
+                  "hf cipurse default --aid 4144204632 -> set default application id\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0(NULL, "clear",   "resets to defaults"),
         arg_int0("n",  NULL,      "<dec>", "Key ID"),
         arg_str0("k",  "key",     "<hex>", "Authentication key"),
-        arg_str0(NULL, "fid",     "<hex>", "File ID"),
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
+        arg_str0(NULL, "fid",     "<hex 2 bytes>", "File ID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1143,43 +1146,41 @@ static int CmdHFCipurseDefault(const char *Cmd) {
         defaultFileId = 0x2ff7;
         uint8_t ckey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
         memcpy(defaultKey, ckey, CIPURSE_AES_KEY_LENGTH);
+        uint8_t aid[CIPURSE_MAX_AID_LENGTH] = CIPURSE_DEFAULT_AID;
+        memcpy(defaultAID, aid, CIPURSE_MAX_AID_LENGTH);
     }
 
     defaultKeyId = arg_get_int_def(ctx, 2, defaultKeyId);
 
-    uint8_t hdata[250] = {0};
-    int hdatalen = sizeof(hdata);
-    CLIGetHexWithReturn(ctx, 3, hdata, &hdatalen);
-    if (hdatalen && hdatalen != 16) {
-        PrintAndLogEx(ERR, _RED_("ERROR:") " key length for AES128 must be 16 bytes only");
+    uint8_t aid[CIPURSE_MAX_AID_LENGTH] = {0};
+    size_t aidLen = 0;
+    bool useAID = false;
+    uint16_t fileId = defaultFileId;
+    bool useFID = false;
+    int res = CLIParseCommandParameters(ctx, 3, 4, 5, 0, 0, defaultKey, aid, &aidLen, &useAID, &fileId, &useFID, NULL, NULL);
+    if (res) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    if (hdatalen)
-        memcpy(defaultKey, hdata, CIPURSE_AES_KEY_LENGTH);
+    if (useFID)
+        defaultFileId = fileId;
 
-    memset(hdata, 0, sizeof(hdata));
-    hdatalen = sizeof(hdata);
-    CLIGetHexWithReturn(ctx, 4, hdata, &hdatalen);
-    if (hdatalen && hdatalen != 2) {
-        PrintAndLogEx(ERR, _RED_("ERROR:") " file id length must be 2 bytes only");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
+    if (useAID) {
+        memcpy(defaultAID, aid, CIPURSE_MAX_AID_LENGTH);
+        defaultAIDLength = aidLen;
     }
-
-    if (hdatalen)
-        defaultFileId = (hdata[0] << 8) + hdata[1];
 
     CLIParserFree(ctx);
 
 
-    PrintAndLogEx(INFO, "-----------" _CYAN_("Default parameters") "---------------------------------");
+    PrintAndLogEx(INFO, "------------------- " _CYAN_("Default parameters") " -------------------");
 
     PrintAndLogEx(INFO, "Key ID : %d", defaultKeyId);
     PrintAndLogEx(INFO, "Key    : %s", sprint_hex(defaultKey, sizeof(defaultKey)));
+    PrintAndLogEx(INFO, "AID    : %s", sprint_hex(defaultAID, defaultAIDLength));
     PrintAndLogEx(INFO, "File ID: 0x%04x", defaultFileId);
-
+    
     return PM3_SUCCESS;
 }
 
