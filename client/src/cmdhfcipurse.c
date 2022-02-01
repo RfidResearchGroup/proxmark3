@@ -169,6 +169,112 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CLIParseCommandParameters(CLIParserContext *ctx, size_t keyid, size_t aidid, size_t fidid,  size_t sreqid, size_t srespid, 
+                    uint8_t *key, uint8_t *aid, size_t *aidlen, bool *useaid, uint16_t *fid, bool *usefid, CipurseChannelSecurityLevel *sreq, CipurseChannelSecurityLevel *sresp) {
+    uint8_t hdata[250] = {0};
+    int hdatalen = sizeof(hdata);
+    if (keyid) {
+        if (CLIParamHexToBuf(arg_get_str(ctx, keyid), hdata, hdatalen, &hdatalen))
+            return PM3_ESOFT;
+
+        if (hdatalen && hdatalen != 16) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " key length for AES128 must be 16 bytes only");
+            return PM3_EINVARG;
+        }
+        if (hdatalen)
+            memcpy(key, hdata, CIPURSE_AES_KEY_LENGTH);
+        else
+            memcpy(key, defaultKey, sizeof(defaultKey));
+    }
+
+    if (useaid)
+        *useaid = false;
+    if (aidid && aid && aidlen) {
+        hdatalen = sizeof(hdata);
+        CLIGetHexWithReturn(ctx, aidid, hdata, &hdatalen);
+        if (hdatalen && (hdatalen < 1 || hdatalen > 16)) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " application id length must be 1-16 bytes only");
+            return PM3_EINVARG;
+        }
+
+        *aidlen = 0;
+        if (hdatalen) {
+            memcpy(aid, hdata, hdatalen);
+            *aidlen = hdatalen;
+            if (useaid)
+                *useaid = true;
+        } else {
+            memcpy(aid, defaultAID, defaultAIDLength);
+            *aidlen = defaultAIDLength;            
+        }
+    }
+
+    if (usefid)
+        *usefid = false;
+    if (fidid && fid) {
+        hdatalen = sizeof(hdata);
+        CLIGetHexWithReturn(ctx, fidid, hdata, &hdatalen);
+        if (hdatalen && hdatalen != 2) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " file id length must be 2 bytes only");
+            return PM3_EINVARG;
+        }
+
+        *fid = defaultFileId;
+        if (hdatalen) {
+            *fid = (hdata[0] << 8) + hdata[1];
+            if (usefid)
+                *usefid = true;
+        }
+    }
+
+    if (sreqid && srespid && sreq && sresp) {
+        *sreq = CPSMACed;
+        *sresp = CPSMACed;
+
+        char cdata[250] = {0};
+        int cdatalen = sizeof(cdata);
+        cdatalen--; // for trailer 0x00
+        if (CLIParamStrToBuf(arg_get_str(ctx, sreqid), (uint8_t *)cdata, cdatalen, &cdatalen))
+            return PM3_ESOFT;
+
+        if (cdatalen) {
+            str_lower(cdata);
+            if (strcmp(cdata, "plain") == 0)
+                *sreq = CPSPlain;
+            else if (strcmp(cdata, "mac") == 0)
+                *sreq = CPSMACed;
+            else if (strcmp(cdata, "enc") == 0 || strcmp(cdata, "encode") == 0 || strcmp(cdata, "encrypted") == 0)
+                *sreq = CPSEncrypted;
+            else {
+                PrintAndLogEx(ERR, _RED_("ERROR:") " security level can be only: plain | mac | encode");
+                return PM3_EINVARG;
+            }
+        }
+
+        cdatalen = sizeof(cdata);
+        memset(cdata, 0, cdatalen);
+        cdatalen--; // for trailer 0x00
+        if (CLIParamStrToBuf(arg_get_str(ctx, srespid), (uint8_t *)cdata, cdatalen, &cdatalen))
+            return PM3_ESOFT;
+
+        if (cdatalen) {
+            str_lower(cdata);
+            if (strcmp(cdata, "plain") == 0)
+                *sresp = CPSPlain;
+            else if (strcmp(cdata, "mac") == 0)
+                *sresp = CPSMACed;
+            else if (strcmp(cdata, "enc") == 0 || strcmp(cdata, "encode") == 0 || strcmp(cdata, "encrypted") == 0)
+                *sresp = CPSEncrypted;
+            else {
+                PrintAndLogEx(ERR, _RED_("ERROR:") " security level can be only: plain | mac | encode");
+                return PM3_EINVARG;
+            }
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHFCipurseSelect(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse select",
@@ -183,7 +289,7 @@ static int CmdHFCipurseSelect(const char *Cmd) {
         arg_lit0("a",  "apdu",    "show APDU requests and responses"),
         arg_lit0("v",  "verbose", "show technical data"),
         arg_lit0("t",  "tlv",     "TLV decode returned data"),
-        arg_str0("k",  "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
         arg_str0(NULL, "fid",     "<hex 2 bytes>", "file ID (FID)"),
         arg_lit0(NULL, "mfd",     "select masterfile by empty id"),
         arg_param_end
@@ -355,112 +461,6 @@ static int CmdHFCipurseAuth(const char *Cmd) {
 
     DropField();
     return (bres) ? PM3_SUCCESS : PM3_ESOFT;
-}
-
-static int CLIParseCommandParameters(CLIParserContext *ctx, size_t keyid, size_t aidid, size_t fidid,  size_t sreqid, size_t srespid, 
-                    uint8_t *key, uint8_t *aid, size_t *aidlen, bool *useaid, uint16_t *fid, bool *usefid, CipurseChannelSecurityLevel *sreq, CipurseChannelSecurityLevel *sresp) {
-    uint8_t hdata[250] = {0};
-    int hdatalen = sizeof(hdata);
-    if (keyid) {
-        if (CLIParamHexToBuf(arg_get_str(ctx, keyid), hdata, hdatalen, &hdatalen))
-            return PM3_ESOFT;
-
-        if (hdatalen && hdatalen != 16) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " key length for AES128 must be 16 bytes only");
-            return PM3_EINVARG;
-        }
-        if (hdatalen)
-            memcpy(key, hdata, CIPURSE_AES_KEY_LENGTH);
-        else
-            memcpy(key, defaultKey, sizeof(defaultKey));
-    }
-
-    if (useaid)
-        *useaid = false;
-    if (aidid && aid && aidlen) {
-        hdatalen = sizeof(hdata);
-        CLIGetHexWithReturn(ctx, aidid, hdata, &hdatalen);
-        if (hdatalen && (hdatalen < 1 || hdatalen > 16)) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " application id length must be 1-16 bytes only");
-            return PM3_EINVARG;
-        }
-
-        *aidlen = 0;
-        if (hdatalen) {
-            memcpy(aid, hdata, hdatalen);
-            *aidlen = hdatalen;
-            if (useaid)
-                *useaid = true;
-        } else {
-            memcpy(aid, defaultAID, defaultAIDLength);
-            *aidlen = defaultAIDLength;            
-        }
-    }
-
-    if (usefid)
-        *usefid = false;
-    if (fidid && fid) {
-        hdatalen = sizeof(hdata);
-        CLIGetHexWithReturn(ctx, fidid, hdata, &hdatalen);
-        if (hdatalen && hdatalen != 2) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " file id length must be 2 bytes only");
-            return PM3_EINVARG;
-        }
-
-        *fid = defaultFileId;
-        if (hdatalen) {
-            *fid = (hdata[0] << 8) + hdata[1];
-            if (usefid)
-                *usefid = true;
-        }
-    }
-
-    if (sreqid && srespid && sreq && sresp) {
-        *sreq = CPSMACed;
-        *sresp = CPSMACed;
-
-        char cdata[250] = {0};
-        int cdatalen = sizeof(cdata);
-        cdatalen--; // for trailer 0x00
-        if (CLIParamStrToBuf(arg_get_str(ctx, sreqid), (uint8_t *)cdata, cdatalen, &cdatalen))
-            return PM3_ESOFT;
-
-        if (cdatalen) {
-            str_lower(cdata);
-            if (strcmp(cdata, "plain") == 0)
-                *sreq = CPSPlain;
-            else if (strcmp(cdata, "mac") == 0)
-                *sreq = CPSMACed;
-            else if (strcmp(cdata, "enc") == 0 || strcmp(cdata, "encode") == 0 || strcmp(cdata, "encrypted") == 0)
-                *sreq = CPSEncrypted;
-            else {
-                PrintAndLogEx(ERR, _RED_("ERROR:") " security level can be only: plain | mac | encode");
-                return PM3_EINVARG;
-            }
-        }
-
-        cdatalen = sizeof(cdata);
-        memset(cdata, 0, cdatalen);
-        cdatalen--; // for trailer 0x00
-        if (CLIParamStrToBuf(arg_get_str(ctx, srespid), (uint8_t *)cdata, cdatalen, &cdatalen))
-            return PM3_ESOFT;
-
-        if (cdatalen) {
-            str_lower(cdata);
-            if (strcmp(cdata, "plain") == 0)
-                *sresp = CPSPlain;
-            else if (strcmp(cdata, "mac") == 0)
-                *sresp = CPSMACed;
-            else if (strcmp(cdata, "enc") == 0 || strcmp(cdata, "encode") == 0 || strcmp(cdata, "encrypted") == 0)
-                *sresp = CPSEncrypted;
-            else {
-                PrintAndLogEx(ERR, _RED_("ERROR:") " security level can be only: plain | mac | encode");
-                return PM3_EINVARG;
-            }
-        }
-    }
-
-    return PM3_SUCCESS;
 }
 
 static int CmdHFCipurseReadFile(const char *Cmd) {
