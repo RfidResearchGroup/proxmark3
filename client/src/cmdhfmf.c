@@ -944,6 +944,15 @@ static int CmdHF14AMfRestore(const char *Cmd) {
         m1 = true;
     }
 
+    if(datafnlen > 4 && !strcmp(datafilename + strlen(datafilename) - 4, ".eml")) {
+        PrintAndLogEx(WARNING, "File must be a binary dump, not a .eml");
+        return PM3_EINVARG;
+    }
+    if(datafnlen > 5 && !strcmp(datafilename + strlen(datafilename) - 5, ".json")) {
+        PrintAndLogEx(WARNING, "File must be a binary dump, not a .json");
+        return PM3_EINVARG;
+    }
+
     uint8_t sectors = MIFARE_1K_MAXSECTOR;
 
     if (m0) {
