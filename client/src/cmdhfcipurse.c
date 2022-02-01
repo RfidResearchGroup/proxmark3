@@ -1009,7 +1009,7 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
         arg_lit0(NULL, "commit",  "commit "),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
