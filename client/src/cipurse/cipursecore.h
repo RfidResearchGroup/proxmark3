@@ -61,5 +61,6 @@ bool CIPURSEChannelAuthenticate(uint8_t keyindex, uint8_t *key, bool verbose);
 void CIPURSECSetActChannelSecurityLevels(CipurseChannelSecurityLevel req, CipurseChannelSecurityLevel resp);
 
 void CIPURSEPrintFileAttr(uint8_t *attr, size_t len);
+void CIPURSEPrintFileDescriptor(uint8_t desc);
 
 #endif /* __CIPURSECORE_H__ */

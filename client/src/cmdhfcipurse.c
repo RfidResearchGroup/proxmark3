@@ -1014,11 +1014,14 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
 
-    if (verbose && hdatalen > 1) {
+    if (verbose && hdatalen > 3) {
         if (hdata[0] == 0x92 && hdata[1] == 0x00)
             PrintAndLogEx(INFO, "DGI 9200 - ADF file attributes");
-        if (hdata[0] == 0x92 && hdata[1] == 0x01)
+        if (hdata[0] == 0x92 && hdata[1] == 0x01) {
             PrintAndLogEx(INFO, "DGI 9201 - EF file attributes");
+            PrintAndLogEx(INFO, "File type:");
+            CIPURSEPrintFileDescriptor(hdata[3]);
+        }
         if (hdata[0] == 0xa0 && hdata[1] == 0x0f)
             PrintAndLogEx(INFO, "DGI a00f - All key values");
     }
