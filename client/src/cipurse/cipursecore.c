@@ -372,11 +372,10 @@ const char *CIPURSEGetSMR(uint8_t smr) {
 }
 
 void CIPURSEPrintSMR(uint8_t *smrrec) {
-    PrintAndLogEx(INFO, "%s/%s/%s/%s", 
-        CIPURSEGetSMR((smrrec[0] >> 8) & 0x03),
-        CIPURSEGetSMR(smrrec[0] & 0x03),
-        CIPURSEGetSMR((smrrec[1] >> 8) & 0x03),
-        CIPURSEGetSMR(smrrec[1] & 0x03));
+    PrintAndLogEx(INFO, "1. %s/%s", CIPURSEGetSMR((smrrec[0] >> 6) & 0x03), CIPURSEGetSMR((smrrec[0] >> 4) & 0x03));
+    PrintAndLogEx(INFO, "2. %s/%s", CIPURSEGetSMR((smrrec[0] >> 2) & 0x03), CIPURSEGetSMR((smrrec[0] >> 0) & 0x03));
+    PrintAndLogEx(INFO, "3. %s/%s", CIPURSEGetSMR((smrrec[1] >> 6) & 0x03), CIPURSEGetSMR((smrrec[1] >> 4) & 0x03));
+    PrintAndLogEx(INFO, "4. %s/%s", CIPURSEGetSMR((smrrec[1] >> 2) & 0x03), CIPURSEGetSMR((smrrec[1] >> 0) & 0x03));
 }
 
 void CIPURSEPrintART(uint8_t *artrec, size_t artlen) {
@@ -405,11 +404,14 @@ void CIPURSEPrintFileAttr(uint8_t *attr, size_t len) {
     }
 
     PrintAndLogEx(INFO, "--- " _CYAN_("File Attributes") "---------------------");
-    if (attr[0] == 0x38) {
+    if (attr[0] == 0x38 || attr[0] == 0x3F) {
         PrintAndLogEx(INFO, "Type... MF, ADF");
 
         if (attr[1] == 0x00) {
-            PrintAndLogEx(INFO, "Type... MF");
+            if (attr[0] == 0x3F)
+                PrintAndLogEx(INFO, "Type... PxSE");
+            else
+                PrintAndLogEx(INFO, "Type... MF");
         } else {
             if ((attr[1] & 0xe0) == 0x00)
                 PrintAndLogEx(INFO, "Type... Unknown");
@@ -441,37 +443,43 @@ void CIPURSEPrintFileAttr(uint8_t *attr, size_t len) {
         uint8_t keynum = attr[6];
         PrintAndLogEx(INFO, "Keys assigned... %d", keynum);
 
-        if (len >= 9) {
-            PrintAndLogEx(INFO, "SMR entries... %02x%02x", attr[7], attr[8]);
-            CIPURSEPrintSMR(&attr[7]);
-        }
-
-        if (len >= 9 + keynum + 1) {
-            PrintAndLogEx(INFO, "ART... %s", sprint_hex(&attr[9], keynum + 1));
-            CIPURSEPrintART(&attr[9], keynum + 1);
-            PrintAndLogEx(NORMAL, "");
-        }
-
-        if (len >= 9 + keynum + 1 + keynum * 7) {
-            for (int i = 0; i < keynum; i++) {
-                PrintAndLogEx(INFO, "Key %d Attributes... %s", i + 1, sprint_hex(&attr[9 + keynum + 1 + i * 7], 7));
-                CIPURSEPrintKeyAttrib(&attr[9 + keynum + 1 + i * 7]);
+        int idx = 7;
+        if ( keynum > 0) {
+            if (len >= idx + 2) {
+                PrintAndLogEx(INFO, "SMR entries... %02x%02x", attr[idx], attr[idx + 1]);
+                CIPURSEPrintSMR(&attr[idx]);
             }
+            idx += 2;
+
+            if (len >= idx + keynum + 1) {
+                PrintAndLogEx(INFO, "ART... %s", sprint_hex(&attr[idx], keynum + 1));
+                CIPURSEPrintART(&attr[idx], keynum + 1);
+                PrintAndLogEx(NORMAL, "");
+            }
+            idx += keynum + 1;
+
+            if (len >= idx + keynum * 7) {
+                for (int i = 0; i < keynum; i++) {
+                    PrintAndLogEx(INFO, "Key %d Attributes... %s", i + 1, sprint_hex(&attr[idx + i * 7], 7));
+                    CIPURSEPrintKeyAttrib(&attr[idx + i * 7]);
+                }
+            }
+            idx += keynum * 7;
         }
         // FCP
-        if (len >= 9 + keynum + 1 + keynum * 7 + 1) {
-            int xlen = len - (9 + keynum + 1 + keynum * 7);
+        if (len >= idx + 1) {
+            int xlen = len - idx;
             // for MF only
-            if (attr[1] == 0x00)
+            if (attr[1] == 0x00 && attr[0] != 0x3F)
                 xlen = xlen - 6;
             if (xlen > 0 && xlen < 200) {
-                PrintAndLogEx(INFO, "TLV file control parameters... [%d] %s", xlen, sprint_hex(&attr[9 + keynum + 1 + keynum * 7], xlen));
-                TLVPrintFromBuffer(&attr[9 + keynum + 1 + keynum * 7], xlen);
+                PrintAndLogEx(INFO, "TLV file control parameters... [%d] %s", xlen, sprint_hex(&attr[idx], xlen));
+                TLVPrintFromBuffer(&attr[idx], xlen);
                 PrintAndLogEx(NORMAL, "");
             }
         }
         // MF only
-        if (attr[1] == 0x00) {
+        if (attr[1] == 0x00 && attr[0] != 0x3F) {
             PrintAndLogEx(INFO, "Total memory size... %d", (attr[len - 6] << 16) + (attr[len - 5] << 8) + attr[len - 4]);
             PrintAndLogEx(INFO, "Free memory size.... %d", (attr[len - 3] << 16) + (attr[len - 2] << 8) + attr[len - 1]);
 
