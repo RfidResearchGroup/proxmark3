@@ -9,6 +9,7 @@
   - [Source code](#source-code)
   - [Communication channel with a card](#communication-channel-with-a-card)
   - [Card architecture](#card-architecture)
+  - [Card structure](#card-structure)
   - [How to](#how-to)
     - [How to personalize card](#how-to-personalize-card)
 
@@ -42,6 +43,7 @@ After authentication reader can specify the mode for each channel for each comma
 
 Card answers if the mode that sets by the reader matches the mode of the file and the command matches the key via an access list.
 
+
 ## Card architecture
 ^[Top](#top)
 
@@ -54,6 +56,26 @@ Each application has keys and an access control list that sets what commands can
 Master file have keys and an access control list that works at the card level.
 
 Each file can only have an access control list that specifies what operation the key can do with this file.
+
+
+## Card structure
+^[Top](#top)
+
+- Master file (MF)
+- Keys
+- Group security levels and access rights
+- files under master file (EF). Usually have no access to them.
+
+- PxSE files (directory files)
+
+- Application 1. Have AID (up to 16-bytes) and FID (2-bytes id)
+-- Application keys
+-- Group security levels and access rights
+-- Application files (EF). Have type (1-byte) and FID ((2-bytes id))
+
+- Application 2
+- ...
+
 
 ## How to
 
@@ -78,6 +100,7 @@ select it with display output in raw and tlv views options
 5. select default file (usually it master file)
 ```hf cipurse select --mfd```
 
+
 ### How to delete application or file
 ^[Top](#top)
 
@@ -85,10 +108,15 @@ select it with display output in raw and tlv views options
 ```hf cipurse delete --aid a0000005070100```
 
 2. delete application by AID
-```hf cipurse select --aid 4144204631```
+```hf cipurse delete --aid 4144204631```
 
-3. delete application/file by FID
-```hf cipurse select --fid 2000```
+3. delete application/top level file by FID
+```hf cipurse delete --fid 2000```
+
+3. delete file by FID from default application `AD F1`
+
+```hf cipurse delete --aid 4144204631 --chfid 0102```
+
 
 ### How to personalize card
 ^[Top](#top)
@@ -128,7 +156,7 @@ This command creates a application with following details:
     - `0001..0e0f` (01/C6A13B)
   - Register in the PxSE... A0000005070100
 
-4. Create elementary file (EF) in the application
+4. Create elementary file(s) (EF) inside the application
 
 ```hf cipurse create --aid 4144204631 -d 92010C010001020030020000FFFFFF```
 
