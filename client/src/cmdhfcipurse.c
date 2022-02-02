@@ -786,12 +786,12 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
         arg_lit0("v",  "verbose", "show technical data"),
         arg_int0("n",  NULL,      "<dec>", "key ID"),
         arg_str0("k",  "key",     "<hex>", "Auth key"),
+        arg_lit0(NULL, "mfd",     "show info about master file"),
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "select application ID (AID)"),
         arg_str0(NULL, "fid",     "<hex>", "file ID"),
         arg_lit0(NULL, "noauth",  "read file attributes without authentication"),
         arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
         arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
-        arg_lit0(NULL, "sel-adf", "show info about ADF itself"),
-        arg_lit0(NULL, "sel-mf",  "show info about master file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -799,34 +799,37 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
     uint8_t keyId = arg_get_int_def(ctx, 3, defaultKeyId);
+    bool selmfd = arg_get_lit(ctx, 5);
 
     CipurseChannelSecurityLevel sreq = CPSMACed;
     CipurseChannelSecurityLevel sresp = CPSMACed;
     uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
 
+    uint8_t aid[16] = {0};
+    size_t aidLen = 0;
+    bool useAID = false;
     uint16_t fileId = defaultFileId;
     bool useFID = false;
-    int res = CLIParseCommandParameters(ctx, 4, 0, 5, 7, 8, key, NULL, NULL, NULL, &fileId, &useFID, &sreq, &sresp);
-    if (res || useFID == false) {
+    uint16_t childFileId = defaultFileId;
+    bool useChildFID = false;
+    int res = CLIParseCommandParametersEx(ctx, 4, 6, 7, 0, 9, 10, key, aid, &aidLen, &useAID, &fileId, &useFID, &childFileId, &useChildFID, &sreq, &sresp);
+    if (res) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    bool noAuth = arg_get_lit(ctx, 6);
-    bool seladf = arg_get_lit(ctx, 9);
-    bool selmf = arg_get_lit(ctx, 10);
-
-    SetAPDULogging(APDULogging);
+    bool noAuth = arg_get_lit(ctx, 8);
 
     CLIParserFree(ctx);
+
+    SetAPDULogging(APDULogging);
 
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
 
-    res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
+    res = SelectCommandEx(selmfd, useAID, aid, aidLen, useFID, fileId, useChildFID, childFileId, verbose, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Cipurse select " _RED_("error") ". Card returns 0x%04x", sw);
         DropField();
         return PM3_ESOFT;
     }
@@ -851,23 +854,6 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
         // set channel security levels
         CIPURSECSetActChannelSecurityLevels(sreq, sresp);
     }
-
-    if (seladf == false) {
-        if (selmf)
-            res = CIPURSESelectMFDefaultFile(buf, sizeof(buf), &len, &sw);
-        else
-            res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
-
-        if (res != 0 || sw != 0x9000) {
-            if (verbose == false)
-                PrintAndLogEx(ERR, "File select " _RED_("ERROR") ". Card returns 0x%04x", sw);
-            DropField();
-            return PM3_ESOFT;
-        }
-    }
-
-    if (verbose)
-        PrintAndLogEx(INFO, "Select file 0x%x ( " _GREEN_("ok") " )", fileId);
 
     res = CIPURSEReadFileAttributes(buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
