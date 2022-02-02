@@ -169,8 +169,9 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CLIParseCommandParameters(CLIParserContext *ctx, size_t keyid, size_t aidid, size_t fidid,  size_t sreqid, size_t srespid, 
-                    uint8_t *key, uint8_t *aid, size_t *aidlen, bool *useaid, uint16_t *fid, bool *usefid, CipurseChannelSecurityLevel *sreq, CipurseChannelSecurityLevel *sresp) {
+static int CLIParseCommandParametersEx(CLIParserContext *ctx, size_t keyid, size_t aidid, size_t fidid, size_t chfidid, size_t sreqid, size_t srespid, 
+                    uint8_t *key, uint8_t *aid, size_t *aidlen, bool *useaid, uint16_t *fid, bool *usefid, uint16_t *chfid, bool *usechfid,
+                    CipurseChannelSecurityLevel *sreq, CipurseChannelSecurityLevel *sresp) {
     uint8_t hdata[250] = {0};
     int hdatalen = sizeof(hdata);
     if (keyid) {
@@ -219,11 +220,29 @@ static int CLIParseCommandParameters(CLIParserContext *ctx, size_t keyid, size_t
             return PM3_EINVARG;
         }
 
-        *fid = defaultFileId;
+        *fid = 0;
         if (hdatalen) {
             *fid = (hdata[0] << 8) + hdata[1];
             if (usefid)
                 *usefid = true;
+        }
+    }
+
+    if (usechfid)
+        *usechfid = false;
+    if (chfidid && chfid) {
+        hdatalen = sizeof(hdata);
+        CLIGetHexWithReturn(ctx, chfidid, hdata, &hdatalen);
+        if (hdatalen && hdatalen != 2) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " child file id length must be 2 bytes only");
+            return PM3_EINVARG;
+        }
+
+        *chfid = defaultFileId;
+        if (hdatalen) {
+            *chfid = (hdata[0] << 8) + hdata[1];
+            if (usechfid)
+                *usechfid = true;
         }
     }
 
@@ -275,9 +294,19 @@ static int CLIParseCommandParameters(CLIParserContext *ctx, size_t keyid, size_t
     return PM3_SUCCESS;
 }
 
-static int SelectCommand(bool selectDefaultFile, bool useAID, uint8_t *aid, size_t aidLen, bool useFID, uint16_t fileId, bool verbose,
+static int CLIParseCommandParameters(CLIParserContext *ctx, size_t keyid, size_t aidid, size_t fidid,  size_t sreqid, size_t srespid, 
+                    uint8_t *key, uint8_t *aid, size_t *aidlen, bool *useaid, uint16_t *fid, bool *usefid, 
+                    CipurseChannelSecurityLevel *sreq, CipurseChannelSecurityLevel *sresp) {
+    return CLIParseCommandParametersEx(ctx, keyid, aidid, fidid, 0, sreqid, srespid, 
+                    key, aid, aidlen, useaid, fid, usefid, NULL, NULL, sreq, sresp);
+}
+
+static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, size_t aidLen, bool useFID, uint16_t fileId, 
+                        bool selChildFile, uint16_t childFileId, bool verbose, 
                         uint8_t *buf, size_t bufSize, size_t *len, uint16_t *sw) {
     int res = 0;
+    if (verbose && selChildFile)
+        PrintAndLogEx(INFO, "Select top level application/file");
     if (useAID && aidLen > 0) {
         res = CIPURSESelectAID(true, true, aid, aidLen, buf, bufSize, len, sw);
         if (res != 0 || *sw != 0x9000) {
@@ -316,9 +345,27 @@ static int SelectCommand(bool selectDefaultFile, bool useAID, uint8_t *aid, size
             PrintAndLogEx(INFO, "Cipurse select default application " _GREEN_("OK"));
     }
 
+    if (selChildFile) {
+        if (verbose)
+            PrintAndLogEx(INFO, "Select child file");
+
+        res = CIPURSESelectFileEx(false, true, childFileId, buf, bufSize, len, sw);
+        if (res != 0 || *sw != 0x9000) {
+            if (verbose)
+                PrintAndLogEx(ERR, "Select child file 0x%04x " _RED_("error") ". Card returns 0x%04x", childFileId, *sw);
+            return PM3_ESOFT;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "Select child file " _CYAN_("0x%04x ") _GREEN_("OK"), childFileId);
+    }
+
     return PM3_SUCCESS;
 }
 
+static int SelectCommand(bool selectDefaultFile, bool useAID, uint8_t *aid, size_t aidLen, bool useFID, uint16_t fileId, bool verbose,
+                        uint8_t *buf, size_t bufSize, size_t *len, uint16_t *sw) {
+    return SelectCommandEx(selectDefaultFile, useAID, aid, aidLen, useFID, fileId, false, 0, verbose, buf, bufSize, len, sw);
+}
 
 static int CmdHFCipurseSelect(const char *Cmd) {
     CLIParserContext *ctx;
@@ -335,8 +382,9 @@ static int CmdHFCipurseSelect(const char *Cmd) {
         arg_lit0("v",  "verbose", "show technical data"),
         arg_lit0("t",  "tlv",     "TLV decode returned data"),
         arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
-        arg_str0(NULL, "fid",     "<hex 2 bytes>", "file ID (FID)"),
+        arg_str0(NULL, "fid",     "<hex 2 bytes>", "top level file (or application) ID (FID)"),
         arg_lit0(NULL, "mfd",     "select masterfile by empty id"),
+        arg_str0(NULL, "chfid",   "<hex 2 bytes>", "child file ID (EF under application/master file)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -348,9 +396,11 @@ static int CmdHFCipurseSelect(const char *Cmd) {
     uint8_t aid[16] = {0};
     size_t aidLen = 0;
     bool useAID = false;
-    uint16_t fileId = defaultFileId;
+    uint16_t fileId = 0;
     bool useFID = false;
-    int res = CLIParseCommandParameters(ctx, 0, 4, 5, 0, 0, NULL, aid, &aidLen, &useAID, &fileId, &useFID, NULL, NULL);
+    uint16_t childFileId = defaultFileId;
+    bool useChildFID = false;
+    int res = CLIParseCommandParametersEx(ctx, 0, 4, 5, 7, 0, 0, NULL, aid, &aidLen, &useAID, &fileId, &useFID, &childFileId, &useChildFID, NULL, NULL);
     if (res || (useAID && useFID)) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -365,7 +415,7 @@ static int CmdHFCipurseSelect(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
-    res = SelectCommand(selmfd, useAID, aid, aidLen, useFID, fileId, true, buf, sizeof(buf), &len, &sw);
+    res = SelectCommandEx(selmfd, useAID, aid, aidLen, useFID, fileId, useChildFID, childFileId, true, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
         DropField();
         return PM3_ESOFT;
