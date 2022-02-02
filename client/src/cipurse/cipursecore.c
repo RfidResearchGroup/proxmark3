@@ -388,8 +388,8 @@ void CIPURSEPrintART(uint8_t *artrec, size_t artlen) {
         else
             PrintAndLogEx(INFO, "key %d : " NOLF, i);
 
-        for (int n = 0; n < 8; n++)
-            if ((artrec[i] >> n) && 0x01)
+        for (int n = 7; n >= 0; n--)
+            if ((artrec[i] >> n) & 0x01)
                 PrintAndLogEx(NORMAL, "%d " NOLF, n + 1);
             else
                 PrintAndLogEx(NORMAL, "  " NOLF);
