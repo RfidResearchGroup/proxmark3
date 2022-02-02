@@ -71,9 +71,9 @@ transaction mechanism. All the rest changes needs to issue COMMIT command (`--co
 - PxSE files (directory files)
 
 - Application 1. Have AID (up to 16-bytes) and FID (2-bytes id)
--- Application keys
--- Group security levels and access rights
--- Application files (EF). Have type (1-byte) and FID ((2-bytes id))
+    - Application keys
+    - Group security levels and access rights
+    - Application files (EF). Have type (1-byte) and FID ((2-bytes id))
 
 - Application 2
 - ...
