@@ -84,7 +84,7 @@ transaction mechanism. All the rest changes needs to issue COMMIT command (`--co
 ### How to select application or file
 ^[Top](#top)
 
-1. select PTSE
+**1. select PTSE**
 ```hf cipurse select --aid a0000005070100```
 
 select it with display output in raw and tlv views options
@@ -123,10 +123,10 @@ select it with display output in raw and tlv views options
 ### How to personalize card
 ^[Top](#top)
 
-1. Format card (if it needs) 
+**1. Format card (if it needs)**
 ```hf cipurse formatall```
 
-2. Create create PxSE file
+**2. Create create PxSE file**
 
 The following command creates PTSE file with FID 0x2000, AID A0000005070100, and space for 8 AIDs
 
@@ -140,7 +140,7 @@ The following command creates PTSE file with FID 0x2000, AID A0000005070100, and
 ```
 
 
-3. Create application file
+**3. Create application file**
 
 ```hf cipurse create -d 92002438613F010A05020000FFFFFF021009021009621084054144204631D407A0000005070100A00F2873737373737373737373737373737373015FD67B000102030405060708090A0B0C0D0E0F01C6A13B```
 
@@ -158,7 +158,7 @@ This command creates a application with following details:
     - `0001..0e0f` (01/C6A13B)
   - Register in the PxSE... A0000005070100
 
-4. Create elementary file(s) (EF) inside the application
+**4. Create elementary file(s) (EF) inside the application**
 
 ```hf cipurse create --aid 4144204631 -d 92010C010001020030020000FFFFFF --commit```
 
@@ -173,7 +173,7 @@ This command creates a application with following details:
   - Access rights.......... all two keys can do anything (FFFFFF)
 ```
 
-5. Save data to elementary file(s) (EF)
+**5. Save data to elementary file(s) (EF)**
 
 ```hf cipurse write --fid 0102 -d 010203040506070809```
 
@@ -183,7 +183,7 @@ or if file with transaction mechanism
 ```hf cipurse write --fid 0102 -d 010203040506070809 --commit```
 
 
-6. Check file(s) contents (if needs)
+**6. Check file(s) contents (if needs)**
 ```hf cipurse read --fid 0102```
 
 
