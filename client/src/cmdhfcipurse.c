@@ -447,7 +447,7 @@ static int CmdHFCipurseAuth(const char *Cmd) {
         arg_lit0("a",  "apdu",    "show APDU requests and responses"),
         arg_lit0("v",  "verbose", "show technical data"),
         arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
-        arg_str0(NULL, "fid",     "<hex 2 bytes>", "file ID (FID)"),
+        arg_str0(NULL, "fid",     "<hex 2 bytes>", "top file/application ID (FID)"),
         arg_lit0(NULL, "mfd",     "select masterfile by empty id"),
         arg_int0("n",  NULL,      "<dec>", "key ID"),
         arg_str0("k",  "key",     "<hex>", "Auth key"),
@@ -996,6 +996,15 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
 
+    if (verbose && hdatalen > 1) {
+        if (hdata[0] == 0x92 && hdata[1] == 0x00)
+            PrintAndLogEx(INFO, "DGI 9200 - ADF file attributes");
+        if (hdata[0] == 0x92 && hdata[1] == 0x01)
+            PrintAndLogEx(INFO, "DGI 9201 - EF file attributes");
+        if (hdata[0] == 0xa0 && hdata[1] == 0x0f)
+            PrintAndLogEx(INFO, "DGI a00f - All key values");
+    }
+
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
@@ -1065,9 +1074,10 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse delete",
                   "Delete file by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
-                  "hf cipurse delete --fid 2ff7       -> Authenticate with keyID 1, delete file with id 2ff7\n"
+                  "hf cipurse delete --fid 2ff7       -> Authenticate with keyID 1, delete file with id 2ff7 at top level\n"
                   "hf cipurse delete -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> Authenticate keyID 2 and delete file\n"
-                  "hf cipurse delete --aid --no-auth  -> delete PTSE file with AID A0000005070100 without authentication\n");
+                  "hf cipurse delete --aid A0000005070100 --no-auth  -> delete PTSE file with AID A0000005070100 without authentication\n"
+                  "hf cipurse delete --aid 4144204631 --chfid 0102  -> delete EF with FID 0x0102 under default application\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1075,8 +1085,9 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "show technical data"),
         arg_int0("n",  NULL,      "<dec>", "key ID"),
         arg_str0("k",  "key",     "<hex>", "Auth key"),
-        arg_str0(NULL, "fid",     "<hex>", "file ID for delete"),
+        arg_str0(NULL, "fid",     "<hex>", "file/application ID under MF for delete"),
         arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID) for delete"),
+        arg_str0(NULL, "chfid",   "<hex 2 bytes>", "child file ID (EF under application/master file)"),
         arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
         arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
@@ -1098,29 +1109,20 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     bool useAID = false;
     uint16_t fileId = defaultFileId;
     bool useFID = false;
-    int res = CLIParseCommandParameters(ctx, 4, 6, 5, 7, 8, key, aid, &aidLen, &useAID, &fileId, &useFID, &sreq, &sresp);
+    uint16_t childFileId = defaultFileId;
+    bool useChildFID = false;
+    int res = CLIParseCommandParametersEx(ctx, 4, 6, 5, 7, 8, 9, key, aid, &aidLen, &useAID, &fileId, &useFID, &childFileId, &useChildFID, &sreq, &sresp);
     // useAID and useFID in the same state
     if (res || !(useAID ^ useFID)) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    bool noauth = arg_get_lit(ctx, 9);
-    bool needCommit = arg_get_lit(ctx, 10);
+    bool noauth = arg_get_lit(ctx, 10);
+    bool needCommit = arg_get_lit(ctx, 11);
 
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
-
-    uint8_t buf[APDU_RES_LEN] = {0};
-    size_t len = 0;
-    uint16_t sw = 0;
-
-    res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Cipurse masterfile select " _RED_("error") ". Card returns 0x%04x", sw);
-        DropField();
-        return PM3_ESOFT;
-    }
 
     if (verbose) {
         if (useFID)
@@ -1128,11 +1130,34 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
         else
             PrintAndLogEx(INFO, "Application ID " _CYAN_("%s"), sprint_hex_inrow(aid, aidLen));
 
+        if (useChildFID)
+            PrintAndLogEx(INFO, "Child file id " _CYAN_("%x"), childFileId);
+
         if (!noauth)
             PrintAndLogEx(INFO, "key id " _YELLOW_("%d") " key " _YELLOW_("%s")
                         , keyId
                         , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
                         );
+    }
+
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+
+    if (useChildFID) {
+        res = SelectCommand(false, useAID, aid, aidLen, useFID, fileId, verbose, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Top level select " _RED_("error") ". Card returns 0x%04x", sw);
+            DropField();
+            return PM3_ESOFT;
+        }
+    } else {
+    res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Cipurse masterfile select " _RED_("error") ". Card returns 0x%04x", sw);
+            DropField();
+            return PM3_ESOFT;
+        }
     }
 
     if (!noauth) {
@@ -1148,7 +1173,16 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
         CIPURSECSetActChannelSecurityLevels(sreq, sresp);
     }
 
-    if (useFID) {
+    if (useChildFID) {
+        res = CIPURSEDeleteFile(childFileId, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Delete child file " _CYAN_("%04x ") _RED_("ERROR") ". Card returns:\n  0x%04x - %s", childFileId, sw, 
+                GetSpecificAPDUCodeDesc(DeleteAPDUCodeDescriptions, ARRAYLEN(DeleteAPDUCodeDescriptions), sw));
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Child file id " _CYAN_("%04x") " deleted " _GREEN_("succesfully"), childFileId);
+    } else if (useFID) {
         res = CIPURSEDeleteFile(fileId, buf, sizeof(buf), &len, &sw);
         if (res != 0 || sw != 0x9000) {
             PrintAndLogEx(ERR, "Delete file " _CYAN_("%04x ") _RED_("ERROR") ". Card returns:\n  0x%04x - %s", fileId, sw, 
@@ -1175,6 +1209,9 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
         res = CIPURSECommitTransaction(&sw);
         if (res != 0 || sw != 0x9000)
             PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
     }
 
     DropField();
