@@ -643,7 +643,8 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
                   "Write file in the application by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
                   "hf cipurse write --fid 2ff7 -d aabb  -> Authenticate with keyID 1, write file with id 2ff7\n"
                   "hf cipurse write -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -d aabb -> Authenticate keyID 2 and write file\n"
-                  "hf cipurse write --aid 4144204631 --fid 0102 -d aabb  -> write file with id 0102 in the 4144204631 application\n");
+                  "hf cipurse write --aid 4144204631 --fid 0102 -d aabb  -> write file with id 0102 in the 4144204631 application\n"
+                  "hf cipurse write --fid 0102 -d aabb --commit  -> write file with id 0102 and perform commit after write\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -658,6 +659,7 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
         arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
         arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
         arg_str0("d",  "data",    "<hex>", "hex data to write to new file"),
+        arg_lit0(NULL, "commit",  "need commit after write"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -695,9 +697,11 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    SetAPDULogging(APDULogging);
+    bool needCommit = arg_get_lit(ctx, 12);
 
     CLIParserFree(ctx);
+
+    SetAPDULogging(APDULogging);
 
     size_t len = 0;
     uint16_t sw = 0;
@@ -754,6 +758,16 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " successfully written", fileId);
+
+    if (needCommit) {
+        sw = 0;
+        res = CIPURSECommitTransaction(&sw);
+        if (res != 0 || sw != 0x9000)
+            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
+    }
 
     DropField();
     return PM3_SUCCESS;
