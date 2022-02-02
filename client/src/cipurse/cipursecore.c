@@ -361,6 +361,43 @@ static void CIPURSEPrintKeyAttrib(uint8_t *attr) {
     PrintAndLogEx(NORMAL, "");
 }
 
+const char *CIPURSEGetSMR(uint8_t smr) {
+    switch (smr) {
+        case 0x00: return "plain";
+        case 0x01: return "mac";
+        case 0x02: return "enc";
+        default: return "unknown";
+    }
+    return "unknown";
+}
+
+void CIPURSEPrintSMR(uint8_t *smrrec) {
+    PrintAndLogEx(INFO, "%s/%s/%s/%s", 
+        CIPURSEGetSMR((smrrec[0] >> 8) & 0x03),
+        CIPURSEGetSMR(smrrec[0] & 0x03),
+        CIPURSEGetSMR((smrrec[1] >> 8) & 0x03),
+        CIPURSEGetSMR(smrrec[1] & 0x03));
+}
+
+void CIPURSEPrintART(uint8_t *artrec, size_t artlen) {
+    if (artlen < 1 || artlen > 9)
+        return;
+    for (int i = 0; i < artlen; i++) {
+        if (i == 0)
+            PrintAndLogEx(INFO, "always: " NOLF);
+        else
+            PrintAndLogEx(INFO, "key %d : " NOLF, i);
+
+        for (int n = 0; n < 8; n++)
+            if ((artrec[i] >> n) && 0x01)
+                PrintAndLogEx(NORMAL, "%d " NOLF, n + 1);
+            else
+                PrintAndLogEx(NORMAL, "  " NOLF);
+
+        PrintAndLogEx(NORMAL, "");
+    }
+}
+
 void CIPURSEPrintFileAttr(uint8_t *attr, size_t len) {
     if (len < 7) {
         PrintAndLogEx(FAILED, "Attributes length too short");
@@ -406,10 +443,12 @@ void CIPURSEPrintFileAttr(uint8_t *attr, size_t len) {
 
         if (len >= 9) {
             PrintAndLogEx(INFO, "SMR entries... %02x%02x", attr[7], attr[8]);
+            CIPURSEPrintSMR(&attr[7]);
         }
 
         if (len >= 10 + keynum + 1) {
             PrintAndLogEx(INFO, "ART... %s", sprint_hex(&attr[9], keynum + 1));
+            CIPURSEPrintART(&attr[9], keynum + 1);
         }
 
         if (len >= 11 + keynum + 1 + keynum * 7) {
@@ -449,10 +488,12 @@ void CIPURSEPrintFileAttr(uint8_t *attr, size_t len) {
 
         if (len >= 9) {
             PrintAndLogEx(INFO, "SMR entries... %02x%02x", attr[7], attr[8]);
+            CIPURSEPrintSMR(&attr[7]);
         }
 
         if (len >= 10) {
             PrintAndLogEx(INFO, "ART... %s", sprint_hex(&attr[9], len - 9));
+            CIPURSEPrintART(&attr[9], len - 9);
 
             if (attr[6] + 1 != len - 9) {
                 PrintAndLogEx(WARNING, "ART length is wrong");
