@@ -82,6 +82,28 @@ static uint16_t defaultFileId = 0x2ff7;
 
 static int CmdHelp(const char *Cmd);
 
+static int SelectAndPrintInfoFile(void) {
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+
+    int res = CIPURSESelectFile(0x2ff7, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000)
+        return PM3_EAPDU_FAIL;
+
+    res = CIPURSEReadBinary(0, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000)
+        return PM3_EAPDU_FAIL;
+
+    if (len > 0) {
+        PrintAndLogEx(INFO, "Info file ( " _GREEN_("ok") " )");
+        PrintAndLogEx(INFO, "[%zu]: %s", len, sprint_hex(buf, len));
+        CIPURSEPrintInfoFile(buf, len);
+        PrintAndLogEx(INFO, "");
+    }
+    return PM3_SUCCESS;
+}
+
 static int CmdHFCipurseInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse info",
@@ -107,10 +129,14 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     uint16_t sw = 0;
 
     bool mfExist = false;
+    bool infoPrinted = false;
     int res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
     if (res == PM3_SUCCESS && sw == 0x9000) {
         mfExist = true;
         PrintAndLogEx(INFO, _CYAN_("MasterFile") " exist and can be selected.");
+
+        res = SelectAndPrintInfoFile();
+        infoPrinted = (res == PM3_SUCCESS);
     }
 
     for (int i = 0; i < ARRAYLEN(PxSE_AID_LIST); i++) {
@@ -122,6 +148,7 @@ static int CmdHFCipurseInfo(const char *Cmd) {
                 PrintAndLogEx(INFO, "PxSE data:");
                 TLVPrintFromBuffer(buf, len);
             }
+            PrintAndLogEx(INFO, "");
         }
     }
 
@@ -130,6 +157,7 @@ static int CmdHFCipurseInfo(const char *Cmd) {
         DropField();
         return res;
     }
+    PrintAndLogEx(INFO, "Application `AF F1` selected " _GREEN_("successfully"));
 
     if (sw != 0x9000) {
         if (sw == 0x0000) {
@@ -147,22 +175,12 @@ static int CmdHFCipurseInfo(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Cipurse card ( " _GREEN_("ok") " )");
 
-    res = CIPURSESelectFile(0x2ff7, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
-        DropField();
-        return PM3_SUCCESS;
-    }
-
-    res = CIPURSEReadBinary(0, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
-        DropField();
-        return PM3_SUCCESS;
-    }
-
-    if (len > 0) {
-        PrintAndLogEx(INFO, "Info file ( " _GREEN_("ok") " )");
-        PrintAndLogEx(INFO, "[%zu]: %s", len, sprint_hex(buf, len));
-        CIPURSEPrintInfoFile(buf, len);
+    if (!infoPrinted) {
+        res = SelectAndPrintInfoFile();
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return PM3_SUCCESS;
+        }
     }
 
     DropField();
