@@ -446,20 +446,21 @@ void CIPURSEPrintFileAttr(uint8_t *attr, size_t len) {
             CIPURSEPrintSMR(&attr[7]);
         }
 
-        if (len >= 10 + keynum + 1) {
+        if (len >= 9 + keynum + 1) {
             PrintAndLogEx(INFO, "ART... %s", sprint_hex(&attr[9], keynum + 1));
             CIPURSEPrintART(&attr[9], keynum + 1);
+            PrintAndLogEx(NORMAL, "");
         }
 
-        if (len >= 11 + keynum + 1 + keynum * 7) {
+        if (len >= 9 + keynum + 1 + keynum * 7) {
             for (int i = 0; i < keynum; i++) {
-                PrintAndLogEx(INFO, "Key %d Attributes... %s", i, sprint_hex(&attr[11 + keynum + 1 + i * 7], 7));
-                CIPURSEPrintKeyAttrib(&attr[11 + keynum + 1 + i * 7]);
+                PrintAndLogEx(INFO, "Key %d Attributes... %s", i + 1, sprint_hex(&attr[9 + keynum + 1 + i * 7], 7));
+                CIPURSEPrintKeyAttrib(&attr[9 + keynum + 1 + i * 7]);
             }
         }
         // MF
         if (attr[1] == 0x00) {
-            PrintAndLogEx(INFO, "Total memory size... %d", (attr[len - 6] << 16) + (attr[len - 1] << 5) + attr[len - 4]);
+            PrintAndLogEx(INFO, "Total memory size... %d", (attr[len - 6] << 16) + (attr[len - 5] << 8) + attr[len - 4]);
             PrintAndLogEx(INFO, "Free memory size.... %d", (attr[len - 3] << 16) + (attr[len - 2] << 8) + attr[len - 1]);
 
         } else {
