@@ -330,7 +330,7 @@ void CIPURSEPrintInfoFile(uint8_t *data, size_t len) {
         CIPURSEPrintManufacturerInfo(data[8]);
 }
 
-static void CIPURSEPrintFileDescriptor(uint8_t desc) {
+void CIPURSEPrintFileDescriptor(uint8_t desc) {
     if (desc == 0x01)
         PrintAndLogEx(INFO, "Binary file");
     else if (desc == 0x11)

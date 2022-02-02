@@ -9,6 +9,7 @@
   - [Source code](#source-code)
   - [Communication channel with a card](#communication-channel-with-a-card)
   - [Card architecture](#card-architecture)
+  - [Card structure](#card-structure)
   - [How to](#how-to)
     - [How to personalize card](#how-to-personalize-card)
 
@@ -42,6 +43,7 @@ After authentication reader can specify the mode for each channel for each comma
 
 Card answers if the mode that sets by the reader matches the mode of the file and the command matches the key via an access list.
 
+
 ## Card architecture
 ^[Top](#top)
 
@@ -54,6 +56,28 @@ Each application has keys and an access control list that sets what commands can
 Master file have keys and an access control list that works at the card level.
 
 Each file can only have an access control list that specifies what operation the key can do with this file.
+
+Card have transaction mechanism. Transaction not needs for control structure at application level and to change files without 
+transaction mechanism. All the rest changes needs to issue COMMIT command (`--commit` key)
+
+## Card structure
+^[Top](#top)
+
+- Master file (MF)
+- Keys
+- Group security levels and access rights
+- files under master file (EF). Usually have no access to them.
+
+- PxSE files (directory files)
+
+- Application 1. Have AID (up to 16-bytes) and FID (2-bytes id)
+-- Application keys
+-- Group security levels and access rights
+-- Application files (EF). Have type (1-byte) and FID ((2-bytes id))
+
+- Application 2
+- ...
+
 
 ## How to
 
@@ -77,6 +101,24 @@ select it with display output in raw and tlv views options
 
 5. select default file (usually it master file)
 ```hf cipurse select --mfd```
+
+
+### How to delete application or file
+^[Top](#top)
+
+1. delete PTSE by AID
+```hf cipurse delete --aid a0000005070100```
+
+2. delete application by AID
+```hf cipurse delete --aid 4144204631```
+
+3. delete application/top level file by FID
+```hf cipurse delete --fid 2000```
+
+3. delete file by FID from default application `AD F1`
+
+```hf cipurse delete --aid 4144204631 --chfid 0102```
+
 
 ### How to personalize card
 ^[Top](#top)
@@ -108,11 +150,40 @@ This command creates a application with following details:
   - App type............... 61
   - Max files count........ 10
   - Max SFID count......... 5
-  - Minimum command's group security levels plain/plain/plain/plain (0000)
+  - Minimum command's group security levels: plain/plain/plain/plain (0000)
   - Access rights.......... all two keys can do anything (FFFFFF)
   - Key attributes......... 021009
   - 2 keys.........
     - `73..73`     (add. info 01 / kvv 5FD67B)
     - `0001..0e0f` (01/C6A13B)
   - Register in the PxSE... A0000005070100
+
+4. Create elementary file(s) (EF) inside the application
+
+```hf cipurse create --aid 4144204631 -d 92010C010001020030020000FFFFFF --commit```
+
+```
+  - parent application ID.. 4144204631
+  - file type.............. 0x01 (binary file wo transaction)
+  - SFID................... 0x00
+  - FID.................... 0x0102
+  - File size.............. 0x0030 (48 bytes)
+  - Number of keys......... 0x02 (as in the parent application)
+  - Minimum command's group security levels: plain/plain/plain/plain (0000)
+  - Access rights.......... all two keys can do anything (FFFFFF)
+```
+
+5. Save data to elementary file(s) (EF)
+
+```hf cipurse write --fid 0102 -d 010203040506070809```
+
+or if file with transaction mechanism
+
+
+```hf cipurse write --fid 0102 -d 010203040506070809 --commit```
+
+
+6. Check file(s) contents (if needs)
+```hf cipurse read --fid 0102```
+
 
