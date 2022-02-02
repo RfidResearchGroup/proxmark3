@@ -458,6 +458,15 @@ void CIPURSEPrintFileAttr(uint8_t *attr, size_t len) {
                 CIPURSEPrintKeyAttrib(&attr[9 + keynum + 1 + i * 7]);
             }
         }
+        // MF + FCP
+        if (attr[1] == 0x00 && len >= 9 + keynum + 1 + keynum * 7 + 1) {
+            int xlen = len - (9 + keynum + 1 + keynum * 7) - 6;
+            if (xlen > 0 && xlen < 200) {
+                PrintAndLogEx(INFO, "FCP... [%d] %s", xlen, sprint_hex(&attr[9 + keynum + 1 + keynum * 7], xlen));
+                TLVPrintFromBuffer(&attr[9 + keynum + 1 + keynum * 7], xlen);
+                PrintAndLogEx(INFO, "");
+            }
+        }
         // MF
         if (attr[1] == 0x00) {
             PrintAndLogEx(INFO, "Total memory size... %d", (attr[len - 6] << 16) + (attr[len - 5] << 8) + attr[len - 4]);
