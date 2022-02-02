@@ -57,6 +57,8 @@ Master file have keys and an access control list that works at the card level.
 
 Each file can only have an access control list that specifies what operation the key can do with this file.
 
+Card have transaction mechanism. Transaction not needs for control structure at application level and to change files without 
+transaction mechanism. All the rest changes needs to issue COMMIT command (`--commit` key)
 
 ## Card structure
 ^[Top](#top)
@@ -158,7 +160,7 @@ This command creates a application with following details:
 
 4. Create elementary file(s) (EF) inside the application
 
-```hf cipurse create --aid 4144204631 -d 92010C010001020030020000FFFFFF```
+```hf cipurse create --aid 4144204631 -d 92010C010001020030020000FFFFFF --commit```
 
 ```
   - parent application ID.. 4144204631
@@ -170,3 +172,18 @@ This command creates a application with following details:
   - Minimum command's group security levels: plain/plain/plain/plain (0000)
   - Access rights.......... all two keys can do anything (FFFFFF)
 ```
+
+5. Save data to elementary file(s) (EF)
+
+```hf cipurse write --fid 0102 -d 010203040506070809```
+
+or if file with transaction mechanism
+
+
+```hf cipurse write --fid 0102 -d 010203040506070809 --commit```
+
+
+6. Check file(s) contents (if needs)
+```hf cipurse read --fid 0102```
+
+
