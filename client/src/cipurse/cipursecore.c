@@ -352,12 +352,20 @@ void CIPURSEPrintFileDescriptor(uint8_t desc) {
         PrintAndLogEx(INFO, "Unknown file 0x%02x", desc);
 }
 
+static void CIPURSEPrintKeySecurityAttributes(uint8_t attr) {
+    PrintAndLogEx(INFO, "Update right:              %s", (attr & 0x01) ? "self" : "any");
+    PrintAndLogEx(INFO, "Change key and rights:     %s", (attr & 0x02) ? "ok" : "frozen");
+    PrintAndLogEx(INFO, "Use as key encryption key: %s", (attr & 0x04) ? "blocked" : "ok");
+    PrintAndLogEx(INFO, "Key validity:              %s", (attr & 0x80) ? "invalid" : "valid");
+}
+
 static void CIPURSEPrintKeyAttrib(uint8_t *attr) {
     PrintAndLogEx(INFO, "--- " _CYAN_("Key Attributes") "---------------------");
     PrintAndLogEx(INFO, "Additional info... 0x%02x", attr[0]);
     PrintAndLogEx(INFO, "Key length........ %d", attr[1]);
-    PrintAndLogEx(INFO, "Algorithm ID...... 0x%02x", attr[2]);
+    PrintAndLogEx(INFO, "Algorithm ID...... 0x%02x (%s)", attr[2], (attr[2] == 0x09) ? "AES" : "unknown");
     PrintAndLogEx(INFO, "Security attr..... 0x%02x", attr[3]);
+    CIPURSEPrintKeySecurityAttributes(attr[3]);
     PrintAndLogEx(INFO, "KVV............... 0x%02x%02x%02x", attr[4], attr[5], attr[6]);
     PrintAndLogEx(NORMAL, "");
 }
