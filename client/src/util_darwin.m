@@ -27,10 +27,41 @@
 #import <AppKit/NSApplication.h>
 #endif
 
+#if !defined(USING_ARC)
+#  if __has_feature(objc_arc)
+#     define USING_ARC 1
+#  else
+#    define USING_ARC 0
+#  endif
+#elif EMPTY_DEFINE(USING_ARC)
+#   undef USING_ARC
+#   define USING_ARC 1
+#endif
+
 static id activity = nil;
 
 //OS X Version 10.10 is defined in OS X 10.10 and later
 #if defined(MAC_OS_X_VERSION_10_10)
+#if USING_ARC
+@implementation AppDelegate {
+    id <NSObject> activity;
+}
+void disableAppNap(const char* reason) {
+    if(activity == nil) {
+        //NSLog(@"disableAppNap: %@", @(reason));
+        activity = [[NSProcessInfo processInfo] beginActivityWithOptions:NSActivityBackground reason:@(reason)];
+    }
+}
+
+void enableAppNap() {
+    if(activity != nil) {
+        //NSLog(@"enableAppNap");
+        [[NSProcessInfo processInfo] endActivity:activity];
+        activity = nil;
+    }
+}
+@end
+#else
 void disableAppNap(const char* reason) {
     if(activity == nil) {
         //NSLog(@"disableAppNap: %@", @(reason));
@@ -47,6 +78,7 @@ void enableAppNap() {
         activity = nil;
     }
 }
+#endif
 
 #else
 void disableAppNap(const char* reason) { }
