@@ -777,7 +777,10 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse aread",
                   "Read file attributes by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
-                  "hf cipurse aread --fid 2ff7   -> Authenticate with keyID 1, read file attributes with id 2ff7\n"
+                  "hf cipurse aread --fid 2ff7  -> Select MF, Authenticate with keyID 1, read file attributes with id 2ff7\n"
+                  "hf cipurse aread --mfd   -> read file attributes for master file (MF)\n"
+                  "hf cipurse aread --chfid 0102  -> read file 0102 attributes in the default application\n"
+                  "hf cipurse aread --aid 4144204632 --chfid 0102  -> read file 0102 attributes in the 4144204632 application\n"
                   "hf cipurse aread -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> Authenticate keyID 2, read file attributes\n");
 
     void *argtable[] = {
@@ -789,6 +792,7 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
         arg_lit0(NULL, "mfd",     "show info about master file"),
         arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "select application ID (AID)"),
         arg_str0(NULL, "fid",     "<hex>", "file ID"),
+        arg_str0(NULL, "chfid",   "<hex 2 bytes>", "child file ID (EF under application/master file)"),
         arg_lit0(NULL, "noauth",  "read file attributes without authentication"),
         arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
         arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
@@ -812,13 +816,13 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
     bool useFID = false;
     uint16_t childFileId = defaultFileId;
     bool useChildFID = false;
-    int res = CLIParseCommandParametersEx(ctx, 4, 6, 7, 0, 9, 10, key, aid, &aidLen, &useAID, &fileId, &useFID, &childFileId, &useChildFID, &sreq, &sresp);
+    int res = CLIParseCommandParametersEx(ctx, 4, 6, 7, 8, 10, 11, key, aid, &aidLen, &useAID, &fileId, &useFID, &childFileId, &useChildFID, &sreq, &sresp);
     if (res) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    bool noAuth = arg_get_lit(ctx, 8);
+    bool noAuth = arg_get_lit(ctx, 9);
 
     CLIParserFree(ctx);
 
@@ -830,16 +834,27 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
 
     res = SelectCommandEx(selmfd, useAID, aid, aidLen, useFID, fileId, useChildFID, childFileId, verbose, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
+    PrintAndLogEx(WARNING, "useaid=%d res=%d sw=%x", useAID, res, sw);
         DropField();
         return PM3_ESOFT;
     }
 
     if (verbose) {
-        PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " key id " _YELLOW_("%d") " key " _YELLOW_("%s")
-                      , fileId
-                      , keyId
-                      , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
-                     );
+        if (selmfd)
+            PrintAndLogEx(INFO, "File " _CYAN_("Master File"));
+        else if (useFID)
+            PrintAndLogEx(INFO, "File id " _CYAN_("%04x"), fileId);
+        else
+            PrintAndLogEx(INFO, "Application ID " _CYAN_("%s"), sprint_hex_inrow(aid, aidLen));
+
+        if (useChildFID)
+            PrintAndLogEx(INFO, "Child file id " _CYAN_("%04x"), childFileId);
+
+        if (!noAuth)
+            PrintAndLogEx(INFO, "Key id " _YELLOW_("%d") " key " _YELLOW_("%s")
+                        , keyId
+                        , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
+                        );
     }
 
     if (noAuth == false) {
@@ -864,13 +879,13 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
     }
 
     if (len == 0) {
-        PrintAndLogEx(WARNING, "File id " _YELLOW_("%x") " attributes is empty", fileId);
+        PrintAndLogEx(WARNING, "File attributes is empty");
         DropField();
         return PM3_SUCCESS;
     }
 
     if (verbose)
-        PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " attributes[%zu]: %s", fileId, len, sprint_hex(buf, len));
+        PrintAndLogEx(INFO, "Attributes raw data [%zu]: %s", len, sprint_hex(buf, len));
 
     CIPURSEPrintFileAttr(buf, len);
 

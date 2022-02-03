@@ -189,6 +189,7 @@ int CIPURSESelectFile(uint16_t fileid, uint8_t *result, size_t max_result_len, s
 }
 
 int CIPURSESelectMFDefaultFileEx(bool activate_field, bool leave_field_on, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+    CipurseCClearContext(&cipurseContext);
     return CIPURSEExchangeEx(activate_field, leave_field_on, (sAPDU_t) {0x00, 0xa4, 0x00, 0x00, 0, NULL}, true, 0, result, max_result_len, result_len, sw);
 }
 int CIPURSESelectMFDefaultFile(uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
