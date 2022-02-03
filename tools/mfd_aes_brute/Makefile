@@ -1,7 +1,7 @@
 MYSRCPATHS = ../../common ../../common/mbedtls
 MYSRCS = util_posix.c
 MYINCLUDES =  -I../../include -I../../common -I../../common/mbedtls
-MYCFLAGS = -march=native -Ofast -msse2 -msse -maes
+MYCFLAGS = -march=native -Ofast
 MYDEFS =
 MYLDLIBS = -lcrypto
 
