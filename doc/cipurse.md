@@ -173,6 +173,24 @@ or with default application
 ```hf cipurse aread --aid 4144204632 --chfid 0102```
 
 
+### How set file attributes
+^[Top](#top)
+
+set elementary file attributes (EF)
+
+  full access wo keys
+```hf cipurse awrite --chfid 0102 -d 020000ffffff```
+
+  read access wo keys and full with all 2 keys
+```hf cipurse awrite --chfid 0102 -d 02000040ffff```
+
+set EF.ID_INFO file attributes
+```hf cipurse awrite --fid 2ff7 -d 080000C1C1C1C1C1C1C1C1C1``` (as default)
+
+set master file (MF) file attributes
+```hf cipurse awrite --mfd -d 080000FFFFFFFFFFFFFFFFFF86023232 --commit``` (full access with/wo keys and tag 86 is set by `22`)
+
+
 ### How to personalize card
 ^[Top](#top)
 
@@ -239,4 +257,20 @@ or if file with transaction mechanism
 **6. Check file(s) contents (if needs)**
 ```hf cipurse read --fid 0102```
 
+
+**8. Set the keys and needed key attributes**
+
+TBW
+
+
+**8. Set the file attributes**
+
+Set file attributes for:
+1. All the elementary files (EF)
+2. Info files (EF.ID_INFO)
+3. Application(s)
+4. PxSE application
+5. Master file itself (MF)
+
+*(in this specific order!!!)*
 
