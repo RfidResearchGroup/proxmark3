@@ -417,7 +417,7 @@ static int CmdScriptRun(const char *Cmd) {
         //int argc, char ** argv
         char *argv[128];
         int argc = split(arguments, argv);
-        wchar_t *py_args[argc];
+        wchar_t *py_args[argc + 1];
         py_args[0] = Py_DecodeLocale(filename, NULL);
         for (int i = 0; i < argc; i++) {
             py_args[i + 1] = Py_DecodeLocale(argv[i], NULL);
