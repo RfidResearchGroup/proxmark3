@@ -120,6 +120,59 @@ select it with display output in raw and tlv views options
 ```hf cipurse delete --aid 4144204631 --chfid 0102```
 
 
+### How read file
+^[Top](#top)
+
+with default key and aid
+```hf cipurse read --fid 0102```
+
+with default key and specified aid
+```hf cipurse read --aid a0000005070100```
+
+with default key and aid without authentication
+```hf cipurse read --fid 0102 --no-auth```
+
+
+### How write file
+^[Top](#top)
+
+with default key and aid
+```hf cipurse read --fid 0102 -d abbbccdd```
+
+with default key and specified aid
+```hf cipurse read --aid a0000005070100 -d abbbccdd```
+
+with default key and aid without authentication
+```hf cipurse read --fid 0102 -d abbbccdd --no-auth```
+
+with default key and aid, perform commit (works for files with transactions mechanism switched on)
+```hf cipurse read --fid 0102 -d abbbccdd --commit```
+
+
+### How read file attributes
+^[Top](#top)
+
+read master file attributes
+```hf cipurse aread --mfd```
+
+read EF.ID_INFO root file attributes
+```hf cipurse aread --fid 2ff7```
+
+read PxSE application attributes
+```hf cipurse aread --aid a0000005070100```
+
+read application attributes
+```hf cipurse aread --aid 4144204632```
+
+read file (EF) attributes
+
+```hf cipurse aread --aid 4144204632 --chfid 0102```
+
+or with default application
+
+```hf cipurse aread --aid 4144204632 --chfid 0102```
+
+
 ### How to personalize card
 ^[Top](#top)
 

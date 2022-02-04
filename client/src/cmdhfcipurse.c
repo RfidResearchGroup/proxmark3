@@ -531,9 +531,10 @@ static int CmdHFCipurseAuth(const char *Cmd) {
 static int CmdHFCipurseReadFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse read",
-                  "Read file by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
+                  "Read file in the application by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
                   "hf cipurse read --fid 2ff7   -> Authenticate with keyID 1, read file with id 2ff7\n"
-                  "hf cipurse read -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> Authenticate keyID 2 and read file\n");
+                  "hf cipurse read -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> Authenticate keyID 2 and read file\n"
+                  "hf cipurse read --aid 4144204631 --fid 0102 -> read file with id 0102 from application 4144204631\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -541,6 +542,7 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "show technical data"),
         arg_int0("n",  NULL,      "<dec>", "key ID"),
         arg_str0("k",  "key",     "<hex>", "Auth key"),
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
         arg_str0(NULL, "fid",    "<hex>", "file ID"),
         arg_int0("o",  "offset",  "<dec>", "offset for reading data from file"),
         arg_lit0(NULL, "noauth",  "read file without authentication"),
@@ -559,17 +561,20 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
     CipurseChannelSecurityLevel sresp = CPSMACed;
     uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
 
+    uint8_t aid[16] = {0};
+    size_t aidLen = 0;
+    bool useAID = false;
     uint16_t fileId = defaultFileId;
     bool useFID = false;
-    int res = CLIParseCommandParameters(ctx, 4, 0, 5, 8, 9, key, NULL, NULL, NULL, &fileId, &useFID, &sreq, &sresp);
+    int res = CLIParseCommandParameters(ctx, 4, 5, 6, 9, 10, key, aid, &aidLen, &useAID, &fileId, &useFID, &sreq, &sresp);
     if (res || useFID == false) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    size_t offset = arg_get_int_def(ctx, 6, 0);
+    size_t offset = arg_get_int_def(ctx, 7, 0);
 
-    bool noAuth = arg_get_lit(ctx, 7);
+    bool noAuth = arg_get_lit(ctx, 8);
 
     SetAPDULogging(APDULogging);
 
@@ -579,15 +584,17 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
     uint16_t sw = 0;
     uint8_t buf[APDU_RES_LEN] = {0};
 
-    res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
+    res = CIPURSESelectAID(true, true, aid, aidLen, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Cipurse select " _RED_("error") ". Card returns 0x%04x", sw);
+        PrintAndLogEx(ERR, "Cipurse select application " _CYAN_("%s") " ( " _RED_("error") " ). Card returns 0x%04x", sprint_hex_inrow(aid, aidLen), sw);
         DropField();
         return PM3_ESOFT;
     }
 
-    if (verbose)
+    if (verbose) {
+        PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s") " ( " _GREEN_("ok") " )", sprint_hex_inrow(aid, aidLen));
         PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " offset " _YELLOW_("%zu") " key id " _YELLOW_("%d") " key " _YELLOW_("%s"), fileId, offset, keyId, sprint_hex(key, CIPURSE_AES_KEY_LENGTH));
+    }
 
     if (noAuth == false) {
         bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
@@ -605,7 +612,7 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
     res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
         if (verbose == false)
-            PrintAndLogEx(ERR, "File select " _RED_("ERROR") ". Card returns 0x%04x", sw);
+            PrintAndLogEx(ERR, "File select ( " _RED_("error") " ). Card returns 0x%04x", sw);
         DropField();
         return PM3_ESOFT;
     }
@@ -633,9 +640,11 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
 static int CmdHFCipurseWriteFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse write",
-                  "Write file by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
-                  "hf cipurse write --fid 2ff7   -> Authenticate with keyID 1, write file with id 2ff7\n"
-                  "hf cipurse write -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> Authenticate keyID 2 and write file\n");
+                  "Write file in the application by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
+                  "hf cipurse write --fid 2ff7 -d aabb  -> Authenticate with keyID 1, write file with id 2ff7\n"
+                  "hf cipurse write -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -d aabb -> Authenticate keyID 2 and write file\n"
+                  "hf cipurse write --aid 4144204631 --fid 0102 -d aabb  -> write file with id 0102 in the 4144204631 application\n"
+                  "hf cipurse write --fid 0102 -d aabb --commit  -> write file with id 0102 and perform commit after write\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -643,12 +652,14 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "show technical data"),
         arg_int0("n",  NULL,      "<dec>", "key ID"),
         arg_str0("k",  "key",     "<hex>", "Auth key"),
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
         arg_str0(NULL, "fid",    "<hex>", "file ID"),
         arg_int0("o",  "offset",  "<dec>", "offset for reading data from file"),
         arg_lit0(NULL, "noauth",  "read file without authentication"),
         arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
         arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
         arg_str0("d",  "data",    "<hex>", "hex data to write to new file"),
+        arg_lit0(NULL, "commit",  "need commit after write"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -662,43 +673,49 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
 
     uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
 
+    uint8_t aid[16] = {0};
+    size_t aidLen = 0;
+    bool useAID = false;
     uint16_t fileId = defaultFileId;
     bool useFID = false;
-    int res = CLIParseCommandParameters(ctx, 4, 0, 5, 8, 9, key, NULL, NULL, NULL, &fileId, &useFID, &sreq, &sresp);
+    int res = CLIParseCommandParameters(ctx, 4, 5, 6, 9, 10, key, aid, &aidLen, &useAID, &fileId, &useFID, &sreq, &sresp);
     if (res || useFID == false) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    size_t offset = arg_get_int_def(ctx, 6, 0);
+    size_t offset = arg_get_int_def(ctx, 7, 0);
 
-    bool noAuth = arg_get_lit(ctx, 7);
+    bool noAuth = arg_get_lit(ctx, 8);
 
     uint8_t hdata[250] = {0};
     int hdatalen = sizeof(hdata);
-    CLIGetHexWithReturn(ctx, 10, hdata, &hdatalen);
+    CLIGetHexWithReturn(ctx, 11, hdata, &hdatalen);
     if (hdatalen == 0) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " file content length must be more 0");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    SetAPDULogging(APDULogging);
+    bool needCommit = arg_get_lit(ctx, 12);
 
     CLIParserFree(ctx);
+
+    SetAPDULogging(APDULogging);
 
     size_t len = 0;
     uint16_t sw = 0;
     uint8_t buf[APDU_RES_LEN] = {0};
 
-    res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
+    res = CIPURSESelectAID(true, true, aid, aidLen, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Cipurse select " _RED_("error") ". Card returns 0x%04x", sw);
+        PrintAndLogEx(ERR, "Cipurse select application " _CYAN_("%s") " ( " _RED_("error") " ). Card returns 0x%04x", sprint_hex_inrow(aid, aidLen), sw);
         DropField();
         return PM3_ESOFT;
     }
 
     if (verbose) {
+        PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s") " ( " _GREEN_("ok") " )", sprint_hex_inrow(aid, aidLen));
         PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " offset " _YELLOW_("%zu") " key id " _YELLOW_("%d") " key " _YELLOW_("%s")
                       , fileId
                       , offset
@@ -742,6 +759,16 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
 
     PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " successfully written", fileId);
 
+    if (needCommit) {
+        sw = 0;
+        res = CIPURSECommitTransaction(&sw);
+        if (res != 0 || sw != 0x9000)
+            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
+    }
+
     DropField();
     return PM3_SUCCESS;
 }
@@ -750,7 +777,10 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cipurse aread",
                   "Read file attributes by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
-                  "hf cipurse aread --fid 2ff7   -> Authenticate with keyID 1, read file attributes with id 2ff7\n"
+                  "hf cipurse aread --fid 2ff7  -> Select MF, Authenticate with keyID 1, read file attributes with id 2ff7\n"
+                  "hf cipurse aread --mfd   -> read file attributes for master file (MF)\n"
+                  "hf cipurse aread --chfid 0102  -> read file 0102 attributes in the default application\n"
+                  "hf cipurse aread --aid 4144204632 --chfid 0102  -> read file 0102 attributes in the 4144204632 application\n"
                   "hf cipurse aread -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> Authenticate keyID 2, read file attributes\n");
 
     void *argtable[] = {
@@ -759,12 +789,13 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
         arg_lit0("v",  "verbose", "show technical data"),
         arg_int0("n",  NULL,      "<dec>", "key ID"),
         arg_str0("k",  "key",     "<hex>", "Auth key"),
+        arg_lit0(NULL, "mfd",     "show info about master file"),
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "select application ID (AID)"),
         arg_str0(NULL, "fid",     "<hex>", "file ID"),
+        arg_str0(NULL, "chfid",   "<hex 2 bytes>", "child file ID (EF under application/master file)"),
         arg_lit0(NULL, "noauth",  "read file attributes without authentication"),
         arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
         arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
-        arg_lit0(NULL, "sel-adf", "show info about ADF itself"),
-        arg_lit0(NULL, "sel-mf",  "show info about master file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -772,44 +803,58 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
     uint8_t keyId = arg_get_int_def(ctx, 3, defaultKeyId);
+    bool selmfd = arg_get_lit(ctx, 5);
 
     CipurseChannelSecurityLevel sreq = CPSMACed;
     CipurseChannelSecurityLevel sresp = CPSMACed;
     uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
 
+    uint8_t aid[16] = {0};
+    size_t aidLen = 0;
+    bool useAID = false;
     uint16_t fileId = defaultFileId;
     bool useFID = false;
-    int res = CLIParseCommandParameters(ctx, 4, 0, 5, 7, 8, key, NULL, NULL, NULL, &fileId, &useFID, &sreq, &sresp);
-    if (res || useFID == false) {
+    uint16_t childFileId = defaultFileId;
+    bool useChildFID = false;
+    int res = CLIParseCommandParametersEx(ctx, 4, 6, 7, 8, 10, 11, key, aid, &aidLen, &useAID, &fileId, &useFID, &childFileId, &useChildFID, &sreq, &sresp);
+    if (res) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    bool noAuth = arg_get_lit(ctx, 6);
-    bool seladf = arg_get_lit(ctx, 9);
-    bool selmf = arg_get_lit(ctx, 10);
-
-    SetAPDULogging(APDULogging);
+    bool noAuth = arg_get_lit(ctx, 9);
 
     CLIParserFree(ctx);
+
+    SetAPDULogging(APDULogging);
 
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
 
-    res = CIPURSESelect(true, true, buf, sizeof(buf), &len, &sw);
+    res = SelectCommandEx(selmfd, useAID, aid, aidLen, useFID, fileId, useChildFID, childFileId, verbose, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Cipurse select " _RED_("error") ". Card returns 0x%04x", sw);
+    PrintAndLogEx(WARNING, "useaid=%d res=%d sw=%x", useAID, res, sw);
         DropField();
         return PM3_ESOFT;
     }
 
     if (verbose) {
-        PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " key id " _YELLOW_("%d") " key " _YELLOW_("%s")
-                      , fileId
-                      , keyId
-                      , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
-                     );
+        if (selmfd)
+            PrintAndLogEx(INFO, "File " _CYAN_("Master File"));
+        else if (useFID)
+            PrintAndLogEx(INFO, "File id " _CYAN_("%04x"), fileId);
+        else
+            PrintAndLogEx(INFO, "Application ID " _CYAN_("%s"), sprint_hex_inrow(aid, aidLen));
+
+        if (useChildFID)
+            PrintAndLogEx(INFO, "Child file id " _CYAN_("%04x"), childFileId);
+
+        if (!noAuth)
+            PrintAndLogEx(INFO, "Key id " _YELLOW_("%d") " key " _YELLOW_("%s")
+                        , keyId
+                        , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
+                        );
     }
 
     if (noAuth == false) {
@@ -825,23 +870,6 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
         CIPURSECSetActChannelSecurityLevels(sreq, sresp);
     }
 
-    if (seladf == false) {
-        if (selmf)
-            res = CIPURSESelectMFDefaultFile(buf, sizeof(buf), &len, &sw);
-        else
-            res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
-
-        if (res != 0 || sw != 0x9000) {
-            if (verbose == false)
-                PrintAndLogEx(ERR, "File select " _RED_("ERROR") ". Card returns 0x%04x", sw);
-            DropField();
-            return PM3_ESOFT;
-        }
-    }
-
-    if (verbose)
-        PrintAndLogEx(INFO, "Select file 0x%x ( " _GREEN_("ok") " )", fileId);
-
     res = CIPURSEReadFileAttributes(buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
         if (verbose == false)
@@ -851,13 +879,13 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
     }
 
     if (len == 0) {
-        PrintAndLogEx(WARNING, "File id " _YELLOW_("%x") " attributes is empty", fileId);
+        PrintAndLogEx(WARNING, "File attributes is empty");
         DropField();
         return PM3_SUCCESS;
     }
 
     if (verbose)
-        PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " attributes[%zu]: %s", fileId, len, sprint_hex(buf, len));
+        PrintAndLogEx(INFO, "Attributes raw data [%zu]: %s", len, sprint_hex(buf, len));
 
     CIPURSEPrintFileAttr(buf, len);
 
@@ -1014,17 +1042,8 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
 
-    if (verbose && hdatalen > 3) {
-        if (hdata[0] == 0x92 && hdata[1] == 0x00)
-            PrintAndLogEx(INFO, "DGI 9200 - ADF file attributes");
-        if (hdata[0] == 0x92 && hdata[1] == 0x01) {
-            PrintAndLogEx(INFO, "DGI 9201 - EF file attributes");
-            PrintAndLogEx(INFO, "File type:");
-            CIPURSEPrintFileDescriptor(hdata[3]);
-        }
-        if (hdata[0] == 0xa0 && hdata[1] == 0x0f)
-            PrintAndLogEx(INFO, "DGI a00f - All key values");
-    }
+    if (verbose && hdatalen > 3)
+        CIPURSEPrintDGIArray(hdata, hdatalen);
 
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
@@ -1280,6 +1299,7 @@ static int CmdHFCipurseDefault(const char *Cmd) {
         memcpy(defaultKey, ckey, CIPURSE_AES_KEY_LENGTH);
         uint8_t aid[CIPURSE_MAX_AID_LENGTH] = CIPURSE_DEFAULT_AID;
         memcpy(defaultAID, aid, CIPURSE_MAX_AID_LENGTH);
+        defaultAIDLength = 5;
     }
 
     defaultKeyId = arg_get_int_def(ctx, 2, defaultKeyId);
