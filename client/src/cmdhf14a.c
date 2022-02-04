@@ -1849,7 +1849,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(SUCCESS, "ATS: " _YELLOW_("%s")"[ %02x %02x ]", sprint_hex(card.ats, card.ats_len - 2), card.ats[card.ats_len - 1], card.ats[card.ats_len]);
         PrintAndLogEx(INFO, "     " _YELLOW_("%02x") "...............  TL    length is " _GREEN_("%d") " bytes", card.ats[0], card.ats[0]);
 
-        if (card.ats[0] > 1) { // there is a format byte (T0)
+        if ((card.ats[0] > 1) && (card.ats_len > 1)) { // there is a format byte (T0)
             ta1 = (card.ats[1] & 0x10) == 0x10;
             tb1 = (card.ats[1] & 0x20) == 0x20;
             tc1 = (card.ats[1] & 0x40) == 0x40;
@@ -1866,7 +1866,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                          );
         }
         int pos = 2;
-        if (ta1) {
+        if (ta1 && (card.ats_len > pos)) {
             char dr[16], ds[16];
             dr[0] = ds[0] = '\0';
             if (card.ats[pos] & 0x10) strcat(ds, "2, ");
@@ -1888,7 +1888,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             pos++;
         }
 
-        if (tb1) {
+        if (tb1 && (card.ats_len > pos)) {
             uint32_t sfgi = card.ats[pos] & 0x0F;
             uint32_t fwi = card.ats[pos] >> 4;
 
@@ -1903,7 +1903,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             pos++;
         }
 
-        if (tc1) {
+        if (tc1 && (card.ats_len > pos)) {
             PrintAndLogEx(INFO, "                 " _YELLOW_("%02X") "...  TC1   NAD is%s supported, CID is%s supported",
                           card.ats[pos],
                           (card.ats[pos] & 0x01) ? "" : _RED_(" NOT"),
