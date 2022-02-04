@@ -200,6 +200,10 @@ int CIPURSEReadFileAttributes(uint8_t *result, size_t max_result_len, size_t *re
     return CIPURSEExchange((sAPDU_t) {0x80, 0xce, 0x00, 0x00, 0, NULL}, result, max_result_len, result_len, sw);
 }
 
+int CIPURSEUpdateFileAttributes(uint8_t *data, uint16_t datalen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
+    return CIPURSEExchange((sAPDU_t) {0x80, 0xde, 0x00, 0x00, datalen, data}, result, max_result_len, result_len, sw);
+}
+
 int CIPURSEReadBinary(uint16_t offset, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
     return CIPURSEExchange((sAPDU_t) {0x00, 0xb0, (offset >> 8) & 0x7f, offset & 0xff, 0, NULL}, result, max_result_len, result_len, sw);
 }
@@ -609,4 +613,35 @@ void CIPURSEPrintFileAttrEx(uint8_t *attr, size_t len, bool isDGI) {
 
 void CIPURSEPrintFileAttr(uint8_t *attr, size_t len) {
     return CIPURSEPrintFileAttrEx(attr, len, false);
+}
+
+void CIPURSEPrintFileUpdateAttr(uint8_t *attr, size_t len) {
+    uint8_t keynum = attr[0];
+    PrintAndLogEx(INFO, "Keys assigned... %d", keynum);
+
+    size_t idx = 1;
+    if ( keynum > 0) {
+        if (len >= idx + 2) {
+            PrintAndLogEx(INFO, "SMR entries... %02x%02x", attr[idx], attr[idx + 1]);
+            CIPURSEPrintSMR(&attr[idx]);
+        }
+        idx += 2;
+
+        if (len >= idx + keynum + 1) {
+            PrintAndLogEx(INFO, "ART... %s", sprint_hex(&attr[idx], keynum + 1));
+            CIPURSEPrintART(&attr[idx], keynum + 1);
+            PrintAndLogEx(NORMAL, "");
+        }
+        idx += keynum + 1;
+    }
+
+    // FCI
+    if (len >= idx + 1) {
+        int xlen = len - idx;
+        if (xlen > 0 && xlen < 200) {
+            PrintAndLogEx(INFO, "TLV file control parameters... [%d] %s", xlen, sprint_hex(&attr[idx], xlen));
+            TLVPrintFromBuffer(&attr[idx], xlen);
+            PrintAndLogEx(NORMAL, "");
+        }
+    }
 }
