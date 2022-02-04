@@ -1190,6 +1190,7 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
     if (useAID || useFID || selmfd) {
         res = SelectCommand(selmfd, useAID, aid, aidLen, useFID, fileId, verbose, buf, sizeof(buf), &len, &sw);
         if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Select command ( " _RED_("error") " )");
             DropField();
             return PM3_ESOFT;
         }
