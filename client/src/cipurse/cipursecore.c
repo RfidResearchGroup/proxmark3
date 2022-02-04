@@ -378,7 +378,7 @@ void CIPURSEPrintDGI(uint8_t *dgi, size_t dgilen) {
         PrintAndLogEx(WARNING, "DGI too small. Length: %zu", dgilen);
         return;
     }
-    
+
     uint8_t len = dgi[2];
     if (len + 3 != dgilen) {
         PrintAndLogEx(ERR, "DGI size does not match with record size. Length of record: %zu, DGI size: %d", dgilen, len);
@@ -446,10 +446,14 @@ static void CIPURSEPrintKeyAttribDGI(uint8_t *attr) {
 
 const char *CIPURSEGetSMR(uint8_t smr) {
     switch (smr) {
-        case 0x00: return "plain";
-        case 0x01: return "mac";
-        case 0x02: return "enc";
-        default: return "unknown";
+        case 0x00:
+            return "plain";
+        case 0x01:
+            return "mac";
+        case 0x02:
+            return "enc";
+        default:
+            return "unknown";
     }
     return "unknown";
 }
@@ -481,35 +485,35 @@ void CIPURSEPrintART(uint8_t *artrec, size_t artlen) {
 }
 
 void CIPURSEPrintEFFileAttr(uint8_t *attr, size_t len) {
-        CIPURSEPrintFileDescriptor(attr[0]);
+    CIPURSEPrintFileDescriptor(attr[0]);
 
-        if (attr[1] == 0)
-            PrintAndLogEx(INFO, "SFI.... not assigned");
-        else
-            PrintAndLogEx(INFO, "SFI.... 0x%02x", attr[1]);
+    if (attr[1] == 0)
+        PrintAndLogEx(INFO, "SFI.... not assigned");
+    else
+        PrintAndLogEx(INFO, "SFI.... 0x%02x", attr[1]);
 
-        PrintAndLogEx(INFO, "File ID... 0x%02x%02x", attr[2], attr[3]);
+    PrintAndLogEx(INFO, "File ID... 0x%02x%02x", attr[2], attr[3]);
 
-        if (attr[0] == 0x01 || attr[0] == 0x11)
-            PrintAndLogEx(INFO, "File size... %d", (attr[4] << 8) + attr[5]);
-        else
-            PrintAndLogEx(INFO, "Record num " _YELLOW_("%d") " record size " _YELLOW_("%d"), attr[4], attr[5]);
+    if (attr[0] == 0x01 || attr[0] == 0x11)
+        PrintAndLogEx(INFO, "File size... %d", (attr[4] << 8) + attr[5]);
+    else
+        PrintAndLogEx(INFO, "Record num " _YELLOW_("%d") " record size " _YELLOW_("%d"), attr[4], attr[5]);
 
-        PrintAndLogEx(INFO, "Keys assigned... %d", attr[6]);
+    PrintAndLogEx(INFO, "Keys assigned... %d", attr[6]);
 
-        if (len >= 9) {
-            PrintAndLogEx(INFO, "SMR entries... %02x%02x", attr[7], attr[8]);
-            CIPURSEPrintSMR(&attr[7]);
+    if (len >= 9) {
+        PrintAndLogEx(INFO, "SMR entries... %02x%02x", attr[7], attr[8]);
+        CIPURSEPrintSMR(&attr[7]);
+    }
+
+    if (len >= 10) {
+        PrintAndLogEx(INFO, "ART... %s", sprint_hex(&attr[9], len - 9));
+        CIPURSEPrintART(&attr[9], len - 9);
+
+        if (attr[6] + 1 != len - 9) {
+            PrintAndLogEx(WARNING, "ART length is wrong");
         }
-
-        if (len >= 10) {
-            PrintAndLogEx(INFO, "ART... %s", sprint_hex(&attr[9], len - 9));
-            CIPURSEPrintART(&attr[9], len - 9);
-
-            if (attr[6] + 1 != len - 9) {
-                PrintAndLogEx(WARNING, "ART length is wrong");
-            }
-        }
+    }
 }
 
 void CIPURSEPrintFileAttrEx(uint8_t *attr, size_t len, bool isDGI) {
@@ -559,7 +563,7 @@ void CIPURSEPrintFileAttrEx(uint8_t *attr, size_t len, bool isDGI) {
         PrintAndLogEx(INFO, "Keys assigned... %d", keynum);
 
         int idx = 7;
-        if ( keynum > 0) {
+        if (keynum > 0) {
             if (len >= idx + 2) {
                 PrintAndLogEx(INFO, "SMR entries... %02x%02x", attr[idx], attr[idx + 1]);
                 CIPURSEPrintSMR(&attr[idx]);
@@ -620,7 +624,7 @@ void CIPURSEPrintFileUpdateAttr(uint8_t *attr, size_t len) {
     PrintAndLogEx(INFO, "Keys assigned... %d", keynum);
 
     size_t idx = 1;
-    if ( keynum > 0) {
+    if (keynum > 0) {
         if (len >= idx + 2) {
             PrintAndLogEx(INFO, "SMR entries... %02x%02x", attr[idx], attr[idx + 1]);
             CIPURSEPrintSMR(&attr[idx]);

@@ -1693,7 +1693,10 @@
             "command": "hf cipurse aread",
             "description": "read file attributes by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
             "notes": [
-                "hf cipurse aread --fid 2ff7 -> authenticate with keyid 1, read file attributes with id 2ff7",
+                "hf cipurse aread --fid 2ff7 -> select mf, authenticate with keyid 1, read file attributes with id 2ff7",
+                "hf cipurse aread --mfd -> read file attributes for master file (mf)",
+                "hf cipurse aread --chfid 0102 -> read file 0102 attributes in the default application",
+                "hf cipurse aread --aid 4144204632 --chfid 0102 -> read file 0102 attributes in the 4144204632 application",
                 "hf cipurse aread -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> authenticate keyid 2, read file attributes"
             ],
             "offline": false,
@@ -1703,14 +1706,15 @@
                 "-v, --verbose show technical data",
                 "-n <dec> key id",
                 "-k, --key <hex> auth key",
+                "--mfd show info about master file",
+                "--aid <hex 1..16 bytes> select application id (aid)",
                 "--fid <hex> file id",
+                "--chfid <hex 2 bytes> child file id (ef under application/master file)",
                 "--noauth read file attributes without authentication",
                 "--sreq <plain|mac(default)|encode> communication reader-picc security level",
-                "--sresp <plain|mac(default)|encode> communication picc-reader security level",
-                "--sel-adf show info about adf itself",
-                "--sel-mf show info about master file"
+                "--sresp <plain|mac(default)|encode> communication picc-reader security level"
             ],
-            "usage": "hf cipurse aread [-hav] [-n <dec>] [-k <hex>] [--fid <hex>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [--sel-adf] [--sel-mf]"
+            "usage": "hf cipurse aread [-hav] [-n <dec>] [-k <hex>] [--mfd] [--aid <hex 1..16 bytes>] [--fid <hex>] [--chfid <hex 2 bytes>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>]"
         },
         "hf cipurse auth": {
             "command": "hf cipurse auth",
@@ -1724,33 +1728,22 @@
                 "-h, --help this help",
                 "-a, --apdu show apdu requests and responses",
                 "-v, --verbose show technical data",
+                "--aid <hex 1..16 bytes> application id (aid)",
+                "--fid <hex 2 bytes> top file/application id (fid)",
+                "--mfd select masterfile by empty id",
                 "-n <dec> key id",
                 "-k, --key <hex> auth key"
             ],
-            "usage": "hf cipurse auth [-hav] [-n <dec>] [-k <hex>]"
+            "usage": "hf cipurse auth [-hav] [--aid <hex 1..16 bytes>] [--fid <hex 2 bytes>] [--mfd] [-n <dec>] [-k <hex>]"
         },
-        "hf cipurse default": {
-            "command": "hf cipurse default",
-            "description": "set default parameters for access to cipurse card",
+        "hf cipurse awrite": {
+            "command": "hf cipurse awrite",
+            "description": "write file attributes by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
             "notes": [
-                "hf cipurse default -n 1 -k 65656565656565656565656565656565 --fid 2ff7 -> set key, key id and file id"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help this help",
-                "--clear resets to defaults",
-                "-n <dec> key id",
-                "-k, --key <hex> authentication key",
-                "--fid <hex> file id"
-            ],
-            "usage": "hf cipurse default [-h] [--clear] [-n <dec>] [-k <hex>] [--fid <hex>]"
-        },
-        "hf cipurse delete": {
-            "command": "hf cipurse delete",
-            "description": "read file by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
-            "notes": [
-                "hf cipurse delete --fid 2ff7 -> authenticate with keyid 1, delete file with id 2ff7",
-                "hf cipurse delete -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> authenticate keyid 2 and delete file"
+                "hf cipurse awrite --fid 2ff7 -d 080000c1c1c1c1c1c1c1c1c1 -> write default file attributes with id 2ff7",
+                "hf cipurse awrite --mfd -d 080000ffffffffffffffffff86023232 --commit -> write file attributes for master file (mf)",
+                "hf cipurse awrite --chfid 0102 -d 020000ffffff -> write file 0102 attributes in the default application to full access",
+                "hf cipurse awrite --chfid 0102 -d 02000040ffff -> write file 0102 attributes in the default application to full access with keys 1 and 2"
             ],
             "offline": false,
             "options": [
@@ -1759,11 +1752,109 @@
                 "-v, --verbose show technical data",
                 "-n <dec> key id",
                 "-k, --key <hex> auth key",
+                "--mfd show info about master file",
+                "--aid <hex 1..16 bytes> select application id (aid)",
                 "--fid <hex> file id",
+                "--chfid <hex 2 bytes> child file id (ef under application/master file)",
+                "--noauth read file attributes without authentication",
                 "--sreq <plain|mac(default)|encode> communication reader-picc security level",
-                "--sresp <plain|mac(default)|encode> communication picc-reader security level"
+                "--sresp <plain|mac(default)|encode> communication picc-reader security level",
+                "-d, --data <hex> file attributes",
+                "--commit need commit after write"
             ],
-            "usage": "hf cipurse delete [-hav] [-n <dec>] [-k <hex>] [--fid <hex>] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>]"
+            "usage": "hf cipurse awrite [-hav] [-n <dec>] [-k <hex>] [--mfd] [--aid <hex 1..16 bytes>] [--fid <hex>] [--chfid <hex 2 bytes>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [-d <hex>] [--commit]"
+        },
+        "hf cipurse create": {
+            "command": "hf cipurse create",
+            "description": "create application/file/key by provide appropriate dgi. if no key is supplied, default key of 737373...7373 will be used",
+            "notes": [
+                "hf cipurse create -d 9200123f00200008000062098407a0000005070100 -> create ptse file with fid 0x2000 and space for 8 aids",
+                "hf cipurse create -d 92002438613f010a050200004040ff021009021009621084054144204631d407a0000005070100a00f2873737373737373737373737373737373015fd67b000102030405060708090a0b0c0d0e0f01c6a13b -> create default file with fid 3f01 and 2 keys",
+                "hf cipurse create --aid 4144204631 -d 92010c010001020030020000ffffff -> create 0x0102 binary data ef under application 4144204631"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n <dec> key id",
+                "-k, --key <hex> auth key",
+                "--aid <hex 1..16 bytes> application id (aid)",
+                "--fid <hex 2 bytes> file id (fid)",
+                "--mfd select masterfile by empty id",
+                "-d, --data <hex> data with dgi for create",
+                "--sreq <plain|mac(default)|encode> communication reader-picc security level",
+                "--sresp <plain|mac(default)|encode> communication picc-reader security level",
+                "--no-auth execute without authentication",
+                "--commit need commit after create"
+            ],
+            "usage": "hf cipurse create [-hav] [-n <dec>] [-k <hex>] [--aid <hex 1..16 bytes>] [--fid <hex 2 bytes>] [--mfd] [-d <hex>] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [--no-auth] [--commit]"
+        },
+        "hf cipurse default": {
+            "command": "hf cipurse default",
+            "description": "set default parameters for access to cipurse card",
+            "notes": [
+                "hf cipurse default --reset -> reset parameters to default",
+                "hf cipurse default -n 1 -k 65656565656565656565656565656565 --fid 2ff7 -> set key, key id and file id",
+                "hf cipurse default --aid 4144204632 -> set default application id"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "--clear resets to defaults",
+                "-n <dec> key id",
+                "-k, --key <hex> authentication key",
+                "--aid <hex 1..16 bytes> application id (aid)",
+                "--fid <hex 2 bytes> file id"
+            ],
+            "usage": "hf cipurse default [-h] [--clear] [-n <dec>] [-k <hex>] [--aid <hex 1..16 bytes>] [--fid <hex 2 bytes>]"
+        },
+        "hf cipurse delete": {
+            "command": "hf cipurse delete",
+            "description": "delete file by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
+            "notes": [
+                "hf cipurse delete --fid 2ff7 -> authenticate with keyid 1, delete file with id 2ff7 at top level",
+                "hf cipurse delete -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> authenticate keyid 2 and delete file",
+                "hf cipurse delete --aid a0000005070100 --no-auth -> delete ptse file with aid a0000005070100 without authentication",
+                "hf cipurse delete --aid 4144204631 --chfid 0102 -> delete ef with fid 0x0102 under default application"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n <dec> key id",
+                "-k, --key <hex> auth key",
+                "--fid <hex> file/application id under mf for delete",
+                "--aid <hex 1..16 bytes> application id (aid) for delete",
+                "--chfid <hex 2 bytes> child file id (ef under application/master file)",
+                "--sreq <plain|mac(default)|encode> communication reader-picc security level",
+                "--sresp <plain|mac(default)|encode> communication picc-reader security level",
+                "--no-auth execute without authentication",
+                "--commit commit"
+            ],
+            "usage": "hf cipurse delete [-hav] [-n <dec>] [-k <hex>] [--fid <hex>] [--aid <hex 1..16 bytes>] [--chfid <hex 2 bytes>] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [--no-auth] [--commit]"
+        },
+        "hf cipurse formatall": {
+            "command": "hf cipurse formatall",
+            "description": "format card. erases all the data at the card level!",
+            "notes": [
+                "hf cipurse formatall -> format card with default key",
+                "hf cipurse formatall -n 2 -k 65656565656565656565656565656565 -> format card with keyid 2",
+                "hf cipurse formatall --no-auth -> format card without authentication. works for card in perso state"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-n <dec> key id",
+                "-k, --key <hex> auth key",
+                "--sreq <plain|mac(default)|encode> communication reader-picc security level",
+                "--sresp <plain|mac(default)|encode> communication picc-reader security level",
+                "--no-auth execute without authentication"
+            ],
+            "usage": "hf cipurse formatall [-hav] [-n <dec>] [-k <hex>] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [--no-auth]"
         },
         "hf cipurse help": {
             "command": "hf cipurse help",
@@ -1779,10 +1870,11 @@
         },
         "hf cipurse read": {
             "command": "hf cipurse read",
-            "description": "read file by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
+            "description": "read file in the application by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
             "notes": [
                 "hf cipurse read --fid 2ff7 -> authenticate with keyid 1, read file with id 2ff7",
-                "hf cipurse read -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> authenticate keyid 2 and read file"
+                "hf cipurse read -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> authenticate keyid 2 and read file",
+                "hf cipurse read --aid 4144204631 --fid 0102 -> read file with id 0102 from application 4144204631"
             ],
             "offline": false,
             "options": [
@@ -1791,13 +1883,36 @@
                 "-v, --verbose show technical data",
                 "-n <dec> key id",
                 "-k, --key <hex> auth key",
+                "--aid <hex 1..16 bytes> application id (aid)",
                 "--fid <hex> file id",
                 "-o, --offset <dec> offset for reading data from file",
                 "--noauth read file without authentication",
                 "--sreq <plain|mac(default)|encode> communication reader-picc security level",
                 "--sresp <plain|mac(default)|encode> communication picc-reader security level"
             ],
-            "usage": "hf cipurse read [-hav] [-n <dec>] [-k <hex>] [--fid <hex>] [-o <dec>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>]"
+            "usage": "hf cipurse read [-hav] [-n <dec>] [-k <hex>] [--aid <hex 1..16 bytes>] [--fid <hex>] [-o <dec>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>]"
+        },
+        "hf cipurse select": {
+            "command": "hf cipurse select",
+            "description": "select application or file",
+            "notes": [
+                "hf cipurse select --aid a0000005070100 -> select ptse application by aid",
+                "hf cipurse select --fid 3f00 -> select master file by fid 3f00",
+                "hf cipurse select --fid 2ff7 -> select attribute file by fid 2ff7",
+                "hf cipurse select --mfd -vt -> select default file by empty fid and show response data in plain and tlv decoded format"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-a, --apdu show apdu requests and responses",
+                "-v, --verbose show technical data",
+                "-t, --tlv tlv decode returned data",
+                "--aid <hex 1..16 bytes> application id (aid)",
+                "--fid <hex 2 bytes> top level file (or application) id (fid)",
+                "--mfd select masterfile by empty id",
+                "--chfid <hex 2 bytes> child file id (ef under application/master file)"
+            ],
+            "usage": "hf cipurse select [-havt] [--aid <hex 1..16 bytes>] [--fid <hex 2 bytes>] [--mfd] [--chfid <hex 2 bytes>]"
         },
         "hf cipurse test": {
             "command": "hf cipurse test",
@@ -1816,10 +1931,12 @@
         },
         "hf cipurse write": {
             "command": "hf cipurse write",
-            "description": "write file by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
+            "description": "write file in the application by file id with key id and key. if no key is supplied, default key of 737373...7373 will be used",
             "notes": [
-                "hf cipurse write --fid 2ff7 -> authenticate with keyid 1, write file with id 2ff7",
-                "hf cipurse write -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -> authenticate keyid 2 and write file"
+                "hf cipurse write --fid 2ff7 -d aabb -> authenticate with keyid 1, write file with id 2ff7",
+                "hf cipurse write -n 2 -k 65656565656565656565656565656565 --fid 2ff7 -d aabb -> authenticate keyid 2 and write file",
+                "hf cipurse write --aid 4144204631 --fid 0102 -d aabb -> write file with id 0102 in the 4144204631 application",
+                "hf cipurse write --fid 0102 -d aabb --commit -> write file with id 0102 and perform commit after write"
             ],
             "offline": false,
             "options": [
@@ -1828,14 +1945,16 @@
                 "-v, --verbose show technical data",
                 "-n <dec> key id",
                 "-k, --key <hex> auth key",
+                "--aid <hex 1..16 bytes> application id (aid)",
                 "--fid <hex> file id",
                 "-o, --offset <dec> offset for reading data from file",
                 "--noauth read file without authentication",
                 "--sreq <plain|mac(default)|encode> communication reader-picc security level",
                 "--sresp <plain|mac(default)|encode> communication picc-reader security level",
-                "-d, --data <hex> hex data to write to new file"
+                "-d, --data <hex> hex data to write to new file",
+                "--commit need commit after write"
             ],
-            "usage": "hf cipurse write [-hav] [-n <dec>] [-k <hex>] [--fid <hex>] [-o <dec>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [-d <hex>]"
+            "usage": "hf cipurse write [-hav] [-n <dec>] [-k <hex>] [--aid <hex 1..16 bytes>] [--fid <hex>] [-o <dec>] [--noauth] [--sreq <plain|mac(default)|encode>] [--sresp <plain|mac(default)|encode>] [-d <hex>] [--commit]"
         },
         "hf emrtd help": {
             "command": "hf emrtd help",
@@ -4130,19 +4249,19 @@
                 "-h, --help this help",
                 "-a, --apdu show apdu requests and responses",
                 "-v, --verbose show technical data",
-                "-n, --keyno <keyno> key number",
-                "-t, --algo <des/2tdea/3tdea/aes> crypt algo: des, 2tdea, 3tdea, aes",
-                "-k, --key <key> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
-                "-f, --kdf <none/an10922/gallagher> key derivation function (kdf): none, an10922, gallagher",
-                "-i, --kdfi <kdfi> kdf input (hex 1-31 bytes)",
-                "-m, --cmode <plain/mac/encrypt> communicaton mode: plain/mac/encrypt",
-                "-c, --ccset <native/niso/iso> communicaton command set: native/niso/iso",
-                "-s, --schann <d40/ev1/ev2/lrp> secure channel: d40/ev1/ev2/lrp",
-                "--aid <app id hex> application id of application for some parameters (3 hex bytes, big endian)",
-                "--appisoid <isoid hex> application iso id (iso df id) (2 hex bytes, big endian).",
+                "-n, --keyno <dec> key number",
+                "-t, --algo <des|2tdea|3tdea|aes> crypt algo: des, 2tdea, 3tdea, aes",
+                "-k, --key <hex> key for authenticate (hex 8(des), 16(2tdea or aes) or 24(3tdea) bytes)",
+                "-f, --kdf <none|an10922|gallagher> key derivation function (kdf): none, an10922, gallagher",
+                "-i, --kdfi <hex> kdf input (hex 1-31 bytes)",
+                "-m, --cmode <plain|mac|encrypt> communicaton mode: plain/mac/encrypt",
+                "-c, --ccset <native|niso|iso> communicaton command set: native/niso/iso",
+                "-s, --schann <d40|ev1|ev2|lrp> secure channel: d40/ev1/ev2/lrp",
+                "--aid <hex> application id of application for some parameters (3 hex bytes, big endian)",
+                "--appisoid <hex> application iso id (iso df id) (2 hex bytes, big endian).",
                 "--save saves channels parameters to defaults if authentication succeeds"
             ],
-            "usage": "hf mfdes auth [-hav] [-n <keyno>] [-t <des/2tdea/3tdea/aes>] [-k <key>] [-f <none/an10922/gallagher>] [-i <kdfi>] [-m <plain/mac/encrypt>] [-c <native/niso/iso>] [-s <d40/ev1/ev2/lrp>] [--aid <app id hex>] [--appisoid <isoid hex>] [--save]"
+            "usage": "hf mfdes auth [-hav] [-n <dec>] [-t <des|2tdea|3tdea|aes>] [-k <hex>] [-f <none|an10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [-s <d40|ev1|ev2|lrp>] [--aid <hex>] [--appisoid <hex>] [--save]"
         },
         "hf mfdes bruteaid": {
             "command": "hf mfdes bruteaid",
@@ -8328,6 +8447,7 @@
             "description": "clone a farpointe/pyramid tag to a t55x7, q5/t5555 or em4305/4469 tag. the facility-code is 8-bit and the card number is 16-bit. larger values are truncated. currently only works on 26bit",
             "notes": [
                 "lf pyramid clone --fc 123 --cn 11223",
+                "lf pyramid clone --raw 0001010101010101010440013223921c",
                 "lf pyramid clone --fc 123 --cn 11223 --q5 -> encode for q5/t5555 tag",
                 "lf pyramid clone --fc 123 --cn 11223 --em -> encode for em4305/4469"
             ],
@@ -8337,9 +8457,10 @@
                 "--fc <dec> 8-bit value facility code",
                 "--cn <dec> 16-bit value card number",
                 "--q5 optional - specify writing to q5/t5555 tag",
-                "--em optional - specify writing to em4305/4469 tag"
+                "--em optional - specify writing to em4305/4469 tag",
+                "-r, --raw <hex> raw hex data. 16 bytes"
             ],
-            "usage": "lf pyramid clone [-h] --fc <dec> --cn <dec> [--q5] [--em]"
+            "usage": "lf pyramid clone [-h] [--fc <dec>] [--cn <dec>] [--q5] [--em] [-r <hex>]"
         },
         "lf pyramid help": {
             "command": "lf pyramid help",
@@ -8370,15 +8491,17 @@
             "command": "lf pyramid sim",
             "description": "enables simulation of farpointe/pyramid card with specified card number. simulation runs until the button is pressed or another usb command is issued. the facility-code is 8-bit and the card number is 16-bit. larger values are truncated. currently work only on 26bit",
             "notes": [
-                "lf pyramid sim --fc 123 --cn 1337"
+                "lf pyramid sim --fc 123 --cn 1337",
+                "lf pyramid clone --raw 0001010101010101010440013223921c"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
                 "--fc <dec> 8-bit value facility code",
-                "--cn <dec> 16-bit value card number"
+                "--cn <dec> 16-bit value card number",
+                "-r, --raw <hex> raw hex data. 16 bytes"
             ],
-            "usage": "lf pyramid sim [-h] --fc <dec> --cn <dec>"
+            "usage": "lf pyramid sim [-h] [--fc <dec>] [--cn <dec>] [-r <hex>]"
         },
         "lf read": {
             "command": "lf read",
@@ -9980,7 +10103,21 @@
         },
         "trace help": {
             "command": "trace help",
-            "description": "help this help list list protocol data in trace buffer load load trace from file save save trace buffer to file --------------------------------------------------------------------------------------- trace list available offline: yes annotate trace buffer with selected protocol data you can load a trace from file (see `trace load -h`) or it be downloaded from device by default",
+            "description": "help this help extract extract authentication challenges found in trace list list protocol data in trace buffer load load trace from file save save trace buffer to file --------------------------------------------------------------------------------------- trace extract available offline: yes extracts protocol authentication challenges from trace buffer",
+            "notes": [
+                "trace extract",
+                "trace extract -1"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "-1, --buffer use data from trace buffer"
+            ],
+            "usage": "trace extract [-h1]"
+        },
+        "trace list": {
+            "command": "trace list",
+            "description": "annotate trace buffer with selected protocol data you can load a trace from file (see `trace load -h`) or it be downloaded from device by default",
             "notes": [
                 "trace list -t raw -> just show raw data without annotations",
                 "",
@@ -10206,8 +10343,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 598,
+        "commands_extracted": 603,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-01-23T19:02:27"
+        "extracted_on": "2022-02-04T13:37:03"
     }
 }

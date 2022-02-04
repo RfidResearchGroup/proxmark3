@@ -467,7 +467,7 @@ static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *ta
         unsigned char val = tlv->value[byte - 1];
         PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
         PrintAndLogEx(NORMAL, "    Byte %u (%02x)", byte, val);
-        
+
         for (bit = 8; bit > 0; bit--, val <<= 1) {
             if (val & 0x80) {
                 PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
@@ -491,7 +491,7 @@ static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, i
         const struct emv_tag *doltag;
 
         if (!tlv_parse_tl(&buf, &left, &doltlv)) {
-            PrintAndLogEx(INFO, "%*sInvalid Tag-Len" , (level * 4), " ");
+            PrintAndLogEx(INFO, "%*sInvalid Tag-Len", (level * 4), " ");
             continue;
         }
 
@@ -557,7 +557,7 @@ static uint32_t emv_get_binary(const unsigned char *S) {
 // https://github.com/binaryfoo/emv-bertlv/blob/master/src/main/resources/fields/visa-cvr.txt
 static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, int level) {
     if (tlv == NULL || tlv->len < 1) {
-        PrintAndLogEx(INFO, "%*s    INVALID length!" , (level * 4), " ");
+        PrintAndLogEx(INFO, "%*s    INVALID length!", (level * 4), " ");
         return;
     }
 
