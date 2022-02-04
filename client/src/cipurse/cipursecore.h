@@ -63,7 +63,9 @@ void CIPURSECSetActChannelSecurityLevels(CipurseChannelSecurityLevel req, Cipurs
 const char *CIPURSEGetSMR(uint8_t smr);
 void CIPURSEPrintSMR(uint8_t *smrrec);
 void CIPURSEPrintART(uint8_t *artrec, size_t artlen);
+void CIPURSEPrintEFFileAttr(uint8_t *attr, size_t len);
 void CIPURSEPrintFileAttr(uint8_t *attr, size_t len);
 void CIPURSEPrintFileDescriptor(uint8_t desc);
+void CIPURSEPrintDGI(uint8_t *dgi, size_t dgilen);
 
 #endif /* __CIPURSECORE_H__ */

@@ -352,6 +352,51 @@ void CIPURSEPrintFileDescriptor(uint8_t desc) {
         PrintAndLogEx(INFO, "Unknown file 0x%02x", desc);
 }
 
+void CIPURSEPrintDGI(uint8_t *dgi, size_t dgilen) {
+    if (dgilen < 3) {
+        PrintAndLogEx(WARNING, "DGI too small. Length: %zu", dgilen);
+        return;
+    }
+    
+    uint8_t len = dgi[2];
+    if (len + 3 != dgilen) {
+        PrintAndLogEx(ERR, "DGI size does not match with record size. Length of record: %zu, DGI size: %d", dgilen, len);
+        return;
+    }
+
+    // check DGI
+    if (dgi[0] == 0x92 && dgi[1] == 0x00) {
+        PrintAndLogEx(INFO, "DGI 9200 - ADF file attributes");
+
+    } else if (dgi[0] == 0x92 && dgi[1] == 0x01) {
+        PrintAndLogEx(INFO, "DGI 9201 - EF file attributes");
+        PrintAndLogEx(INFO, "File type:");
+        CIPURSEPrintEFFileAttr(&dgi[3], len);
+        PrintAndLogEx(NORMAL, "");
+
+    } else if (dgi[0] == 0xa0 && dgi[1] == 0x0f) {
+        PrintAndLogEx(INFO, "DGI a00f - All key values");
+
+        if (len % 20 != 0) {
+            PrintAndLogEx(ERR, "Key values size must be array of 20-bite record. ADF size: %d", len);
+            return;
+        }
+
+        for (int i = 0; i < len / 20; i++) {
+            PrintAndLogEx(INFO, "Key[%d]............ %s", i + 1, sprint_hex_inrow(&dgi[3 + i * 20 + 0], 16));
+            PrintAndLogEx(INFO, " Additional info.. 0x%02x", dgi[3 + i * 20 + 16]);
+            uint8_t kvv[CIPURSE_KVV_LENGTH] = {0};
+            CipurseCGetKVV(&dgi[3 + i * 20 + 0], kvv);
+            bool kvvvalid = (memcmp(kvv, &dgi[3 + i * 20 + 17], 3) == 0);
+            PrintAndLogEx(INFO, " KVV.............. %s (%s)", sprint_hex_inrow(&dgi[3 + i * 20 + 17], 3), (kvvvalid) ? _GREEN_("valid") : _RED_("invalid"));
+        }
+        PrintAndLogEx(NORMAL, "");
+
+    } else {
+        PrintAndLogEx(WARNING, "Unknown DGI %02x%02x", dgi[0], dgi[1]);
+    }
+}
+
 static void CIPURSEPrintKeySecurityAttributes(uint8_t attr) {
     PrintAndLogEx(INFO, "Update right:              %s", (attr & 0x01) ? "self" : "any");
     PrintAndLogEx(INFO, "Change key and rights:     %s", (attr & 0x02) ? "ok" : "frozen");
@@ -404,6 +449,38 @@ void CIPURSEPrintART(uint8_t *artrec, size_t artlen) {
 
         PrintAndLogEx(NORMAL, "");
     }
+}
+
+void CIPURSEPrintEFFileAttr(uint8_t *attr, size_t len) {
+        CIPURSEPrintFileDescriptor(attr[0]);
+
+        if (attr[1] == 0)
+            PrintAndLogEx(INFO, "SFI.... not assigned");
+        else
+            PrintAndLogEx(INFO, "SFI.... 0x%02x", attr[1]);
+
+        PrintAndLogEx(INFO, "File ID... 0x%02x%02x", attr[2], attr[3]);
+
+        if (attr[0] == 0x01 || attr[0] == 0x11)
+            PrintAndLogEx(INFO, "File size... %d", (attr[4] << 8) + attr[5]);
+        else
+            PrintAndLogEx(INFO, "Record num " _YELLOW_("%d") " record size " _YELLOW_("%d"), attr[4], attr[5]);
+
+        PrintAndLogEx(INFO, "Keys assigned... %d", attr[6]);
+
+        if (len >= 9) {
+            PrintAndLogEx(INFO, "SMR entries... %02x%02x", attr[7], attr[8]);
+            CIPURSEPrintSMR(&attr[7]);
+        }
+
+        if (len >= 10) {
+            PrintAndLogEx(INFO, "ART... %s", sprint_hex(&attr[9], len - 9));
+            CIPURSEPrintART(&attr[9], len - 9);
+
+            if (attr[6] + 1 != len - 9) {
+                PrintAndLogEx(WARNING, "ART length is wrong");
+            }
+        }
 }
 
 void CIPURSEPrintFileAttr(uint8_t *attr, size_t len) {
@@ -495,36 +572,7 @@ void CIPURSEPrintFileAttr(uint8_t *attr, size_t len) {
         }
     } else {
         PrintAndLogEx(INFO, "Type... EF");
-        CIPURSEPrintFileDescriptor(attr[0]);
-
-        if (attr[1] == 0)
-            PrintAndLogEx(INFO, "SFI.... not assigned");
-        else
-            PrintAndLogEx(INFO, "SFI.... 0x%02x", attr[1]);
-
-        PrintAndLogEx(INFO, "File ID... 0x%02x%02x", attr[2], attr[3]);
-
-        if (attr[0] == 0x01 || attr[0] == 0x11)
-            PrintAndLogEx(INFO, "File size... %d", (attr[4] << 8) + attr[5]);
-        else
-            PrintAndLogEx(INFO, "Record num " _YELLOW_("%d") " record size " _YELLOW_("%d"), attr[4], attr[5]);
-
-        PrintAndLogEx(INFO, "Keys assigned... %d", attr[6]);
-
-        if (len >= 9) {
-            PrintAndLogEx(INFO, "SMR entries... %02x%02x", attr[7], attr[8]);
-            CIPURSEPrintSMR(&attr[7]);
-        }
-
-        if (len >= 10) {
-            PrintAndLogEx(INFO, "ART... %s", sprint_hex(&attr[9], len - 9));
-            CIPURSEPrintART(&attr[9], len - 9);
-
-            if (attr[6] + 1 != len - 9) {
-                PrintAndLogEx(WARNING, "ART length is wrong");
-            }
-        }
-
+        CIPURSEPrintEFFileAttr(attr, len);
     }
 
 
