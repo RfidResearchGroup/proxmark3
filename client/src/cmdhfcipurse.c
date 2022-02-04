@@ -1043,7 +1043,7 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
     SetAPDULogging(APDULogging);
 
     if (verbose && hdatalen > 3)
-        CIPURSEPrintDGI(hdata, hdatalen);
+        CIPURSEPrintDGIArray(hdata, hdatalen);
 
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;

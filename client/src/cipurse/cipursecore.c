@@ -352,6 +352,23 @@ void CIPURSEPrintFileDescriptor(uint8_t desc) {
         PrintAndLogEx(INFO, "Unknown file 0x%02x", desc);
 }
 
+void CIPURSEPrintDGIArray(uint8_t *dgi, size_t dgilen) {
+    if (dgilen < 3) {
+        PrintAndLogEx(WARNING, "DGI too small. Length: %zu", dgilen);
+        return;
+    }
+
+    uint8_t *dgiptr = dgi;
+    size_t reslen = 0;
+    while (dgilen > reslen + 2) {
+        uint8_t len = dgiptr[2];
+        CIPURSEPrintDGI(dgiptr, len + 3);
+
+        dgiptr += len + 3;
+        reslen += len + 3;
+    }
+}
+
 void CIPURSEPrintDGI(uint8_t *dgi, size_t dgilen) {
     if (dgilen < 3) {
         PrintAndLogEx(WARNING, "DGI too small. Length: %zu", dgilen);
@@ -367,12 +384,11 @@ void CIPURSEPrintDGI(uint8_t *dgi, size_t dgilen) {
     // check DGI
     if (dgi[0] == 0x92 && dgi[1] == 0x00) {
         PrintAndLogEx(INFO, "DGI 9200 - ADF file attributes");
+        CIPURSEPrintFileAttrEx(&dgi[3], len, true);
 
     } else if (dgi[0] == 0x92 && dgi[1] == 0x01) {
         PrintAndLogEx(INFO, "DGI 9201 - EF file attributes");
-        PrintAndLogEx(INFO, "File type:");
-        CIPURSEPrintEFFileAttr(&dgi[3], len);
-        PrintAndLogEx(NORMAL, "");
+        CIPURSEPrintFileAttrEx(&dgi[3], len, true);
 
     } else if (dgi[0] == 0xa0 && dgi[1] == 0x0f) {
         PrintAndLogEx(INFO, "DGI a00f - All key values");
@@ -398,10 +414,10 @@ void CIPURSEPrintDGI(uint8_t *dgi, size_t dgilen) {
 }
 
 static void CIPURSEPrintKeySecurityAttributes(uint8_t attr) {
-    PrintAndLogEx(INFO, "Update right:              %s", (attr & 0x01) ? "self" : "any");
-    PrintAndLogEx(INFO, "Change key and rights:     %s", (attr & 0x02) ? "ok" : "frozen");
-    PrintAndLogEx(INFO, "Use as key encryption key: %s", (attr & 0x04) ? "blocked" : "ok");
-    PrintAndLogEx(INFO, "Key validity:              %s", (attr & 0x80) ? "invalid" : "valid");
+    PrintAndLogEx(INFO, " Update right:              %s", (attr & 0x01) ? "self" : "any");
+    PrintAndLogEx(INFO, " Change key and rights:     %s", (attr & 0x02) ? "ok" : "frozen");
+    PrintAndLogEx(INFO, " Use as key encryption key: %s", (attr & 0x04) ? "blocked" : "ok");
+    PrintAndLogEx(INFO, " Key validity:              %s", (attr & 0x80) ? "invalid" : "valid");
 }
 
 static void CIPURSEPrintKeyAttrib(uint8_t *attr) {
@@ -412,6 +428,15 @@ static void CIPURSEPrintKeyAttrib(uint8_t *attr) {
     PrintAndLogEx(INFO, "Security attr..... 0x%02x", attr[3]);
     CIPURSEPrintKeySecurityAttributes(attr[3]);
     PrintAndLogEx(INFO, "KVV............... 0x%02x%02x%02x", attr[4], attr[5], attr[6]);
+    PrintAndLogEx(NORMAL, "");
+}
+
+static void CIPURSEPrintKeyAttribDGI(uint8_t *attr) {
+    PrintAndLogEx(INFO, "--- " _CYAN_("DGI Key Attributes") "---------------------");
+    PrintAndLogEx(INFO, "Security attr..... 0x%02x", attr[0]);
+    CIPURSEPrintKeySecurityAttributes(attr[0]);
+    PrintAndLogEx(INFO, "Key length........ %d", attr[1]);
+    PrintAndLogEx(INFO, "Algorithm ID...... 0x%02x (%s)", attr[2], (attr[2] == 0x09) ? "AES" : "unknown");
     PrintAndLogEx(NORMAL, "");
 }
 
@@ -483,7 +508,7 @@ void CIPURSEPrintEFFileAttr(uint8_t *attr, size_t len) {
         }
 }
 
-void CIPURSEPrintFileAttr(uint8_t *attr, size_t len) {
+void CIPURSEPrintFileAttrEx(uint8_t *attr, size_t len, bool isDGI) {
     if (len < 7) {
         PrintAndLogEx(FAILED, "Attributes length too short");
         return;
@@ -544,13 +569,17 @@ void CIPURSEPrintFileAttr(uint8_t *attr, size_t len) {
             }
             idx += keynum + 1;
 
-            if (len >= idx + keynum * 7) {
+            size_t reclen = (isDGI) ? 3 : 7;
+            if (len >= idx + keynum * reclen) {
                 for (int i = 0; i < keynum; i++) {
-                    PrintAndLogEx(INFO, "Key %d Attributes... %s", i + 1, sprint_hex(&attr[idx + i * 7], 7));
-                    CIPURSEPrintKeyAttrib(&attr[idx + i * 7]);
+                    PrintAndLogEx(INFO, "Key %d Attributes... %s", i + 1, sprint_hex(&attr[idx + i * reclen], reclen));
+                    if (isDGI)
+                        CIPURSEPrintKeyAttribDGI(&attr[idx + i * reclen]);
+                    else
+                        CIPURSEPrintKeyAttrib(&attr[idx + i * reclen]);
                 }
             }
-            idx += keynum * 7;
+            idx += keynum * reclen;
         }
         // FCP
         if (len >= idx + 1) {
@@ -573,9 +602,11 @@ void CIPURSEPrintFileAttr(uint8_t *attr, size_t len) {
     } else {
         PrintAndLogEx(INFO, "Type... EF");
         CIPURSEPrintEFFileAttr(attr, len);
+        PrintAndLogEx(NORMAL, "");
     }
-
 
 }
 
-
+void CIPURSEPrintFileAttr(uint8_t *attr, size_t len) {
+    return CIPURSEPrintFileAttrEx(attr, len, false);
+}
