@@ -51,6 +51,7 @@ int CIPURSESelectMFEx(bool activate_field, bool leave_field_on, uint8_t *result,
 int CIPURSESelectMF(uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
 
 int CIPURSEReadFileAttributes(uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
+int CIPURSEUpdateFileAttributes(uint8_t *data, uint16_t datalen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
 int CIPURSEReadBinary(uint16_t offset, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
 int CIPURSEUpdateBinary(uint16_t offset, uint8_t *data, uint16_t datalen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
 
@@ -66,6 +67,7 @@ void CIPURSEPrintART(uint8_t *artrec, size_t artlen);
 void CIPURSEPrintEFFileAttr(uint8_t *attr, size_t len);
 void CIPURSEPrintFileAttrEx(uint8_t *attr, size_t len, bool isDGI);
 void CIPURSEPrintFileAttr(uint8_t *attr, size_t len);
+void CIPURSEPrintFileUpdateAttr(uint8_t *attr, size_t len);
 void CIPURSEPrintFileDescriptor(uint8_t desc);
 void CIPURSEPrintDGIArray(uint8_t *dgi, size_t dgilen);
 void CIPURSEPrintDGI(uint8_t *dgi, size_t dgilen);

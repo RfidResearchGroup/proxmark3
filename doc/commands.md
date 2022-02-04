@@ -243,10 +243,14 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf cipurse help        `|Y       |`This help.`
 |`hf cipurse info        `|N       |`Get info about CIPURSE tag`
+|`hf cipurse select      `|N       |`Select CIPURSE application or file`
 |`hf cipurse auth        `|N       |`Authenticate CIPURSE tag`
 |`hf cipurse read        `|N       |`Read binary file`
 |`hf cipurse write       `|N       |`Write binary file`
 |`hf cipurse aread       `|N       |`Read file attributes`
+|`hf cipurse awrite      `|N       |`Write file attributes`
+|`hf cipurse formatall   `|N       |`Erase all the data from chip`
+|`hf cipurse create      `|N       |`Create file, application, key via DGI record`
 |`hf cipurse delete      `|N       |`Delete file`
 |`hf cipurse default     `|N       |`Set default key and file id for all the other commands`
 |`hf cipurse test        `|Y       |`Tests`
@@ -1287,6 +1291,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`trace help             `|Y       |`This help`
+|`trace extract          `|Y       |`Extract authentication challenges found in trace`
 |`trace list             `|Y       |`List protocol data in trace buffer`
 |`trace load             `|Y       |`Load trace from file`
 |`trace save             `|Y       |`Save trace buffer to file`
