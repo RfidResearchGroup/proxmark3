@@ -98,15 +98,22 @@ void RunMod(void) {
     StandAloneMode();
 
     Dbprintf(_YELLOW_("HF 15693 SNIFF started"));
+#ifdef WITH_FLASH
     rdv40_spiffs_lazy_mount();
+#endif
 
     SniffIso15693(0, NULL);
 
     Dbprintf("Stopped sniffing");
     SpinDelay(200);
 
-    // Write stuff to spiffs logfile
     uint32_t trace_len = BigBuf_get_traceLen();
+#ifndef WITH_FLASH
+    // Keep stuff in BigBuf for USB/BT dumping
+    if (trace_len > 0)
+        Dbprintf("[!] Trace length (bytes) = %u", trace_len);
+#else
+    // Write stuff to spiffs logfile
     if (trace_len > 0) {
         Dbprintf("[!] Trace length (bytes) = %u", trace_len);
 
@@ -130,6 +137,7 @@ void RunMod(void) {
 
     SpinErr(LED_A, 200, 5);
     SpinDelay(100);
+#endif
 
     Dbprintf("-=[ exit ]=-");
     LEDsoff();
