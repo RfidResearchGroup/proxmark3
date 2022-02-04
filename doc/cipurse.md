@@ -149,6 +149,30 @@ with default key and aid, perform commit (works for files with transactions mech
 ```hf cipurse read --fid 0102 -d abbbccdd --commit```
 
 
+### How read file attributes
+^[Top](#top)
+
+read master file attributes
+```hf cipurse aread --mfd```
+
+read EF.ID_INFO root file attributes
+```hf cipurse aread --fid 2ff7```
+
+read PxSE application attributes
+```hf cipurse aread --aid a0000005070100```
+
+read application attributes
+```hf cipurse aread --aid 4144204632```
+
+read file (EF) attributes
+
+```hf cipurse aread --aid 4144204632 --chfid 0102```
+
+or with default application
+
+```hf cipurse aread --aid 4144204632 --chfid 0102```
+
+
 ### How to personalize card
 ^[Top](#top)
 
