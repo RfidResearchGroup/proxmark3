@@ -319,7 +319,7 @@ required, please do not proceed.
     [=]  Password set...... No                      
     ```
     
-    If block 0 does not hold the hex data **0x00088040 resolve this
+    If block 0 does not hold the hex data **0x000880E0 resolve this
     first before proceeding.**
 
 3)  Set the password we want to use. For this example lets use the
@@ -373,10 +373,10 @@ required, please do not proceed.
     We will cover other things in the configuration later. But the key
     note here, is we ONLY want to change bit 28 and nothing else.
     
-    Current Block 0 : ***00088040***  
-    New Block 0     : ***00088050***
+    Current Block 0 : ***000880E0***  
+    New Block 0     : ***000880F0***
     
-    To understand what happened to get from 00088040 to 00088050 we need
+    To understand what happened to get from 000880E0 to 000880F0 we need
     to look at the binary data.
     
     While this can be confusing, it is important to understand this as we
@@ -388,30 +388,28 @@ required, please do not proceed.
     
     | Hex Data | Binary Data                            |
     |:--------:|:---------------------------------------|
-    | 00088040 | 000000000000100010000000010***0***0000 |
-    | 00088050 | 000000000000100010000000010***1***0000 |
+    | 00088040 | 000000000000100010000000111***0***0000 |
+    | 00088050 | 000000000000100010000000111***1***0000 |
     
-    
-
     See how in the above we changed the bit in location 28 from a 0 to 1  
     0 = No Password, 1 = Use Password
 
     Note how we did NOT change any other part of the configuration, only bit 28.
 
     To re-cap.  
-        We put the card into a known configuration Block 0 : 00088040  
+        We put the card into a known configuration Block 0 : 000880E0  
         We set the a known password Block 7 : 12345678  
         We altered the config data to tell the T5577 to use the password.  
-            New Block 0 : 00088050  
+            New Block 0 : 000880F0  
 
     If you have completed all steps and have the exact same results, we are
     ready to apply the new configuration.
     ```
-    [usb] pm3 --> lf t55xx write -b 0 -d 00088050
+    [usb] pm3 --> lf t55xx write -b 0 -d 000880F0
     ```
     result:
     ```
-    [=] Writing page 0  block: 00  data: 0x00088050
+    [=] Writing page 0  block: 00  data: 0x000880F0
     ```
 
 6)  Lets check what happens when the password is set.
@@ -440,7 +438,7 @@ required, please do not proceed.
     [=]  Inverted.......... No
     [=]  Offset............ 33
     [=]  Seq. terminator... Yes
-    [=]  Block0............ 00088050 (auto detect)
+    [=]  Block0............ 000880F0 (auto detect)
     [=]  Downlink mode..... default/fixed bit length
     [=]  Password set...... Yes
     [=]  Password.......... 12345678
@@ -504,13 +502,13 @@ required, please do not proceed.
     to read the config, and set bit 28 to 0, rather than just overwrite
     the config and change the way the card works.
     
-    In our examples we know what it should be : 00088040
+    In our examples we know what it should be : 000880E0
     ```
-    [usb] pm3 --> lf t55xx write -b 0 -d 00088040 -p 12345678
+    [usb] pm3 --> lf t55xx write -b 0 -d 000880E0 -p 12345678
     ```
     result:
     ```
-    [=] Writing page 0  block: 00  data: 0x00088040 pwd: 0x12345678
+    [=] Writing page 0  block: 00  data: 0x000880E0 pwd: 0x12345678
     ```
     Now check if we can detect without a password
     ```
@@ -524,7 +522,7 @@ required, please do not proceed.
     [=]  Inverted.......... No                       
     [=]  Offset............ 33                       
     [=]  Seq. terminator... Yes                      
-    [=]  Block0............ 00088040 (auto detect)   
+    [=]  Block0............ 000880E0 (auto detect)   
     [=]  Downlink mode..... default/fixed bit length 
     [=]  Password set...... No                       
     ```
