@@ -834,7 +834,7 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
 
     res = SelectCommandEx(selmfd, useAID, aid, aidLen, useFID, fileId, useChildFID, childFileId, verbose, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
-    PrintAndLogEx(WARNING, "useaid=%d res=%d sw=%x", useAID, res, sw);
+        PrintAndLogEx(ERR, "Select command ( " _RED_("error") " )");
         DropField();
         return PM3_ESOFT;
     }
@@ -888,6 +888,144 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
         PrintAndLogEx(INFO, "Attributes raw data [%zu]: %s", len, sprint_hex(buf, len));
 
     CIPURSEPrintFileAttr(buf, len);
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
+static int CmdHFCipurseWriteFileAttr(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf cipurse awrite",
+                  "Write file attributes by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
+                  "hf cipurse awrite --fid 2ff7 -d 080000C1C1C1C1C1C1C1C1C1 -> write default file attributes with id 2ff7\n"
+                  "hf cipurse awrite --mfd -d 080000FFFFFFFFFFFFFFFFFF86023232 --commit -> write file attributes for master file (MF)\n"
+                  "hf cipurse awrite --chfid 0102 -d 020000ffffff  -> write file 0102 attributes in the default application to full access\n"
+                  "hf cipurse awrite --chfid 0102 -d 02000040ffff  -> write file 0102 attributes in the default application to full access with keys 1 and 2\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  NULL,      "<dec>", "key ID"),
+        arg_str0("k",  "key",     "<hex>", "Auth key"),
+        arg_lit0(NULL, "mfd",     "show info about master file"),
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "select application ID (AID)"),
+        arg_str0(NULL, "fid",     "<hex>", "file ID"),
+        arg_str0(NULL, "chfid",   "<hex 2 bytes>", "child file ID (EF under application/master file)"),
+        arg_lit0(NULL, "noauth",  "read file attributes without authentication"),
+        arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
+        arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
+        arg_str0("d",  "data",    "<hex>", "file attributes"),
+        arg_lit0(NULL, "commit",  "need commit after write"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    uint8_t keyId = arg_get_int_def(ctx, 3, defaultKeyId);
+    bool selmfd = arg_get_lit(ctx, 5);
+
+    CipurseChannelSecurityLevel sreq = CPSMACed;
+    CipurseChannelSecurityLevel sresp = CPSMACed;
+    uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
+
+    uint8_t aid[16] = {0};
+    size_t aidLen = 0;
+    bool useAID = false;
+    uint16_t fileId = defaultFileId;
+    bool useFID = false;
+    uint16_t childFileId = defaultFileId;
+    bool useChildFID = false;
+    int res = CLIParseCommandParametersEx(ctx, 4, 6, 7, 8, 10, 11, key, aid, &aidLen, &useAID, &fileId, &useFID, &childFileId, &useChildFID, &sreq, &sresp);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool noAuth = arg_get_lit(ctx, 9);
+
+    uint8_t hdata[250] = {0};
+    int hdatalen = sizeof(hdata);
+    CLIGetHexWithReturn(ctx, 12, hdata, &hdatalen);
+    if (hdatalen == 0) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " file attributes length must be more 0");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool needCommit = arg_get_lit(ctx, 13);
+
+    CLIParserFree(ctx);
+
+    SetAPDULogging(APDULogging);
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "attribtes data[%zu]: %s", hdatalen, sprint_hex(hdata, hdatalen));
+        CIPURSEPrintFileUpdateAttr(hdata, hdatalen);
+    }
+
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+
+    res = SelectCommandEx(selmfd, useAID, aid, aidLen, useFID, fileId, useChildFID, childFileId, verbose, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000) {
+        PrintAndLogEx(ERR, "Select command ( " _RED_("error") " )");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (verbose) {
+        if (selmfd)
+            PrintAndLogEx(INFO, "File " _CYAN_("Master File"));
+        else if (useFID)
+            PrintAndLogEx(INFO, "File id " _CYAN_("%04x"), fileId);
+        else
+            PrintAndLogEx(INFO, "Application ID " _CYAN_("%s"), sprint_hex_inrow(aid, aidLen));
+
+        if (useChildFID)
+            PrintAndLogEx(INFO, "Child file id " _CYAN_("%04x"), childFileId);
+
+        if (!noAuth)
+            PrintAndLogEx(INFO, "Key id " _YELLOW_("%d") " key " _YELLOW_("%s")
+                        , keyId
+                        , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
+                        );
+    }
+
+    if (noAuth == false) {
+        bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
+        if (bres == false) {
+            if (verbose == false)
+                PrintAndLogEx(ERR, "Authentication ( " _RED_("fail") " )");
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        // set channel security levels
+        CIPURSECSetActChannelSecurityLevels(sreq, sresp);
+    }
+
+    res = CIPURSEUpdateFileAttributes(hdata, hdatalen, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000) {
+        if (verbose == false)
+            PrintAndLogEx(ERR, "File attributes update " _RED_("ERROR") ". Card returns 0x%04x", sw);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "File attributes updated ( " _GREEN_("ok") " )");
+
+    if (needCommit) {
+        sw = 0;
+        res = CIPURSECommitTransaction(&sw);
+        if (res != 0 || sw != 0x9000)
+            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
+    }
 
     DropField();
     return PM3_SUCCESS;
@@ -1344,6 +1482,7 @@ static command_t CommandTable[] = {
     {"read",      CmdHFCipurseReadFile,      IfPm3Iso14443a,  "Read binary file"},
     {"write",     CmdHFCipurseWriteFile,     IfPm3Iso14443a,  "Write binary file"},
     {"aread",     CmdHFCipurseReadFileAttr,  IfPm3Iso14443a,  "Read file attributes"},
+    {"awrite",    CmdHFCipurseWriteFileAttr, IfPm3Iso14443a,  "Write file attributes"},
     {"formatall", CmdHFCipurseFormatAll,     IfPm3Iso14443a,  "Erase all the data from chip"},
     {"create",    CmdHFCipurseCreateDGI,     IfPm3Iso14443a,  "Create file, application, key via DGI record"},
     {"delete",    CmdHFCipurseDeleteFile,    IfPm3Iso14443a,  "Delete file"},
