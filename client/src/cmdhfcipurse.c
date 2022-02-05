@@ -210,7 +210,9 @@ static int CLIParseCommandParametersEx(CLIParserContext *ctx, size_t keyid, size
         *useaid = false;
     if (aidid && aid && aidlen) {
         hdatalen = sizeof(hdata);
-        CLIGetHexWithReturn(ctx, aidid, hdata, &hdatalen);
+        if (CLIParamHexToBuf(arg_get_str(ctx, aidid), hdata, hdatalen, &hdatalen))
+            return PM3_ESOFT;
+            
         if (hdatalen && (hdatalen < 1 || hdatalen > 16)) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " application id length must be 1-16 bytes only");
             return PM3_EINVARG;
@@ -232,7 +234,9 @@ static int CLIParseCommandParametersEx(CLIParserContext *ctx, size_t keyid, size
         *usefid = false;
     if (fidid && fid) {
         hdatalen = sizeof(hdata);
-        CLIGetHexWithReturn(ctx, fidid, hdata, &hdatalen);
+        if (CLIParamHexToBuf(arg_get_str(ctx, fidid), hdata, hdatalen, &hdatalen))
+            return PM3_ESOFT;
+
         if (hdatalen && hdatalen != 2) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " file id length must be 2 bytes only");
             return PM3_EINVARG;
@@ -250,7 +254,8 @@ static int CLIParseCommandParametersEx(CLIParserContext *ctx, size_t keyid, size
         *usechfid = false;
     if (chfidid && chfid) {
         hdatalen = sizeof(hdata);
-        CLIGetHexWithReturn(ctx, chfidid, hdata, &hdatalen);
+        if (CLIParamHexToBuf(arg_get_str(ctx, chfidid), hdata, hdatalen, &hdatalen))
+            return PM3_ESOFT;
         if (hdatalen && hdatalen != 2) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " child file id length must be 2 bytes only");
             return PM3_EINVARG;
