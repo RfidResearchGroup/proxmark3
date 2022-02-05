@@ -425,7 +425,7 @@ void CIPURSEPrintDGI(uint8_t *dgi, size_t dgilen) {
     }
 }
 
-static void CIPURSEPrintKeySecurityAttributes(uint8_t attr) {
+void CIPURSEPrintKeySecurityAttributes(uint8_t attr) {
     PrintAndLogEx(INFO, " Update right:              %s", (attr & 0x01) ? "self" : "any");
     PrintAndLogEx(INFO, " Change key and rights:     %s", (attr & 0x02) ? "ok" : "frozen");
     PrintAndLogEx(INFO, " Use as key encryption key: %s", (attr & 0x04) ? "blocked" : "ok");
