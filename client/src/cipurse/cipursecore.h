@@ -55,6 +55,9 @@ int CIPURSEUpdateFileAttributes(uint8_t *data, uint16_t datalen, uint8_t *result
 int CIPURSEReadBinary(uint16_t offset, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
 int CIPURSEUpdateBinary(uint16_t offset, uint8_t *data, uint16_t datalen, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
 
+int CIPURSEUpdateKeyAttrib(uint8_t key_attrib, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
+int CIPURSEUpdateKey(uint8_t encryt_key_num, uint8_t udate_key_num, uint8_t *key, uint16_t key_len, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
+
 int CIPURSECommitTransaction(uint16_t *sw);
 int CIPURSECancelTransaction(uint16_t *sw);
 
