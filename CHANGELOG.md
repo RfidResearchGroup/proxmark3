@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Fixes `hf mf restore` - now takes bin/eml/json as dump files (@iceman1001)
+ - Fixes `script run some_python_script` segfault on armhf architecture (@doegox)
  - Added `trace extract` - extract authentication parts from trace (@iceman1001)
  - Added luascript `hf_mf_ultimatecard.lua` - Script for Ultimate Magic Card (GEN4) (@startrk1995)
  - Added new tool `brute_key` - MIFARE DESFire Telenot access AES recovery (@x41sec)
