@@ -1402,6 +1402,20 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+//    {"updkey",    CmdHFCipurseUpdateKey,     IfPm3Iso14443a,  "Update key"},
+static int CmdHFCipurseUpdateKey(const char *Cmd) {
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
+//    {"updakey",   CmdHFCipurseUpdateKeyAttr, IfPm3Iso14443a,  "Update key attributes"},
+static int CmdHFCipurseUpdateKeyAttr(const char *Cmd) {
+    
+    DropField();
+    return PM3_SUCCESS;
+}
+
 bool CheckCardCipurse(void) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
@@ -1491,6 +1505,8 @@ static command_t CommandTable[] = {
     {"formatall", CmdHFCipurseFormatAll,     IfPm3Iso14443a,  "Erase all the data from chip"},
     {"create",    CmdHFCipurseCreateDGI,     IfPm3Iso14443a,  "Create file, application, key via DGI record"},
     {"delete",    CmdHFCipurseDeleteFile,    IfPm3Iso14443a,  "Delete file"},
+    {"updkey",    CmdHFCipurseUpdateKey,     IfPm3Iso14443a,  "Update key"},
+    {"updakey",   CmdHFCipurseUpdateKeyAttr, IfPm3Iso14443a,  "Update key attributes"},
     {"default",   CmdHFCipurseDefault,       IfPm3Iso14443a,  "Set default key and file id for all the other commands"},
     {"test",      CmdHFCipurseTest,          AlwaysAvailable, "Tests"},
     {NULL, NULL, 0, NULL}
