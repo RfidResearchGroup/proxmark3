@@ -455,7 +455,6 @@ const char *CIPURSEGetSMR(uint8_t smr) {
         default:
             return "unknown";
     }
-    return "unknown";
 }
 
 void CIPURSEPrintSMR(uint8_t *smrrec) {
