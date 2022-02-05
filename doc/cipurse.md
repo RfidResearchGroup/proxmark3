@@ -260,7 +260,13 @@ or if file with transaction mechanism
 
 **8. Set the keys and needed key attributes**
 
-TBW
+keys for application usually filled at create time with DGI `A00F`
+
+keys for masterfile needs to be updated manually with command:
+```hf cipurse updakey```
+
+update key attributes with default attributes
+```hf cipurse updakey --aid 4144204631 --trgkey 1 --attr 02 -v --commit```
 
 
 **8. Set the file attributes**
