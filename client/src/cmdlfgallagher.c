@@ -266,9 +266,9 @@ static int CmdGallagherClone(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Preparing to clone Gallagher to " _YELLOW_("%s") " from %s.",
-                cardtype,
-                use_raw ? "raw hex" : "specified data"
-                );
+                  cardtype,
+                  use_raw ? "raw hex" : "specified data"
+                 );
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     if (em) {

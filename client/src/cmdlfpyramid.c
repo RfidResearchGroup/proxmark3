@@ -236,7 +236,7 @@ static int CmdPyramidClone(const char *Cmd) {
                   "The facility-code is 8-bit and the card number is 16-bit. Larger values are truncated.\n"
                   "Currently only works on 26bit",
                   "lf pyramid clone --fc 123 --cn 11223\n"
-                  "lf pyramid clone --raw 0001010101010101010440013223921c\n"                  
+                  "lf pyramid clone --raw 0001010101010101010440013223921c\n"
                   "lf pyramid clone --fc 123 --cn 11223 --q5  -> encode for Q5/T5555 tag\n"
                   "lf pyramid clone --fc 123 --cn 11223 --em  -> encode for EM4305/4469\n"
                  );
@@ -285,7 +285,7 @@ static int CmdPyramidClone(const char *Cmd) {
         if (use_raw) {
             PrintAndLogEx(FAILED, "Can't specify both raw and fc/cn at the same time");
             return PM3_EINVARG;
-        }  
+        }
     }
 
     uint32_t blocks[5];
@@ -332,9 +332,9 @@ static int CmdPyramidClone(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Preparing to clone Farpointe/Pyramid to " _YELLOW_("%s") " from %s.",
-                cardtype,
-                use_raw ? "raw hex" : "specified data"
-                );
+                  cardtype,
+                  use_raw ? "raw hex" : "specified data"
+                 );
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     if (em) {
@@ -392,12 +392,12 @@ static int CmdPyramidSim(const char *Cmd) {
         if (use_raw) {
             PrintAndLogEx(FAILED, "Can't specify both raw and fc/cn at the same time");
             return PM3_EINVARG;
-        }  
+        }
     }
 
     uint8_t bs[sizeof(raw) * 8];
     memset(bs, 0x00, sizeof(bs));
-    
+
     if (use_raw == false) {
         uint32_t facilitycode = (fc & 0x000000FF);
         uint32_t cardnumber = (cn & 0x0000FFFF);

@@ -4083,7 +4083,7 @@
         },
         "hf mf restore": {
             "command": "hf mf restore",
-            "description": "restore mifare classic binary file to tag. the key file and data file will program the card sector trailers. by default we authenticate to card with key b 0xffffffffffff. `--uid` param is used for filename templates `hf-mf-<uid>-dump.bin` and `hf-mf-<uid>-key.bin. if not specified, it will read the card uid instead. `--ka` param you can indicate that the key file should be used for authentication instead. if so we also try both b/a keys",
+            "description": "restore mifare classic dump file to tag. the key file and dump file will program the card sector trailers. by default we authenticate to card with key b 0xffffffffffff. if access rights in dump file is all zeros, it will be replaced with default values `--uid` param is used for filename templates `hf-mf-<uid>-dump.bin` and `hf-mf-<uid>-key.bin. if not specified, it will read the card uid instead. `--ka` param you can indicate that the key file should be used for authentication instead. if so we also try both b/a keys",
             "notes": [
                 "hf mf restore",
                 "hf mf restore --1k --uid 04010203",
@@ -4098,7 +4098,7 @@
                 "--2k mifare classic/plus 2k",
                 "--4k mifare classic 4k / s70",
                 "-u, --uid <hex> uid, 6 hex bytes",
-                "-f, --file <fn> data filename",
+                "-f, --file <fn> specify dump filename (bin/eml/json)",
                 "-k, --kfn <fn> key filename",
                 "--ka use specified keyfile to authenticate"
             ],
@@ -4152,24 +4152,24 @@
         },
         "hf mf staticnested": {
             "command": "hf mf staticnested",
-            "description": "execute nested attack against mifare classic card with static nonce for key recovery",
+            "description": "execute nested attack against mifare classic card with static nonce for key recovery. supply a known key from one block to recover all keys",
             "notes": [
-                "hf mf staticnested --mini --blk 0 -a -k ffffffffffff -> key recovery against mifare mini",
-                "hf mf staticnested --1k --blk 0 -a -k ffffffffffff -> key recovery against mifare classic 1k",
-                "hf mf staticnested --2k --blk 0 -a -k ffffffffffff -> key recovery against mifare 2k",
-                "hf mf staticnested --4k --blk 0 -a -k ffffffffffff -> key recovery against mifare 4k"
+                "hf mf staticnested --mini --blk 0 -a -k ffffffffffff",
+                "hf mf staticnested --1k --blk 0 -a -k ffffffffffff",
+                "hf mf staticnested --2k --blk 0 -a -k ffffffffffff",
+                "hf mf staticnested --4k --blk 0 -a -k ffffffffffff"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-k, --key <hex> key specified as 12 hex symbols",
+                "-k, --key <hex> known key (12 hex symbols)",
                 "--mini mifare classic mini / s20",
                 "--1k mifare classic 1k / s50",
                 "--2k mifare classic/plus 2k",
                 "--4k mifare classic 4k / s70",
                 "--blk <dec> input block number",
-                "-a input key specified is a key (default)",
-                "-b input key specified is b key",
+                "-a input key specified is keya (def)",
+                "-b input key specified is keyb",
                 "-e, --emukeys fill simulator keys from found keys",
                 "--dumpkeys dump found keys to file"
             ],
@@ -10345,6 +10345,6 @@
     "metadata": {
         "commands_extracted": 603,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-02-04T13:37:03"
+        "extracted_on": "2022-02-05T11:30:03"
     }
 }

@@ -1050,7 +1050,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", datafilename);
 
-    // main loop for restoreing. 
+    // main loop for restoreing.
     // a bit more complicated than needed
     // this is because of two things.
     // 1. we are setting keys from a key file or using the existing ones in the dump
@@ -1060,11 +1060,11 @@ static int CmdHF14AMfRestore(const char *Cmd) {
         for (uint8_t b = 0; b < mfNumBlocksPerSector(s); b++) {
 
             uint8_t bldata[MFBLOCK_SIZE] = {0x00};
-            
+
             memcpy(bldata, dump, MFBLOCK_SIZE);
 
             // if sector trailer
-            if (mfNumBlocksPerSector(s)-1 == b) {
+            if (mfNumBlocksPerSector(s) - 1 == b) {
                 if (use_keyfile_for_auth == false) {
                     // replace KEY A
                     bldata[0]  = (keyA[s][0]);

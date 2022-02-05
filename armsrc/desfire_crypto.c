@@ -69,7 +69,7 @@ void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key,
     if (length % 8) return;
     if (keymode == 2)
         mbedtls_des3_set2key_dec(&ctx3, key);
-    else 
+    else
         mbedtls_des3_set3key_dec(&ctx3, key);
 
     uint8_t i;

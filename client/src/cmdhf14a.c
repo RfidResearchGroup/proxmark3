@@ -797,7 +797,7 @@ int CmdHF14ASniff(const char *Cmd) {
 }
 
 int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool silentMode) {
-    
+
     uint16_t cmdc = 0;
     *dataoutlen = 0;
 
