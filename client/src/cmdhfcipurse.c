@@ -961,7 +961,7 @@ static int CmdHFCipurseWriteFileAttr(const char *Cmd) {
     SetAPDULogging(APDULogging);
 
     if (verbose) {
-        PrintAndLogEx(INFO, "attribtes data[%zu]: %s", hdatalen, sprint_hex(hdata, hdatalen));
+        PrintAndLogEx(INFO, "attribtes data[%d]: %s", hdatalen, sprint_hex(hdata, hdatalen));
         CIPURSEPrintFileUpdateAttr(hdata, hdatalen);
     }
 
