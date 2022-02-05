@@ -1063,10 +1063,9 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             
             memcpy(bldata, dump, MFBLOCK_SIZE);
 
-            if (use_keyfile_for_auth == false) {
-
-                // if sector trailer replace key 
-                if (mfNumBlocksPerSector(s)-1 == b) {
+            // if sector trailer
+            if (mfNumBlocksPerSector(s)-1 == b) {
+                if (use_keyfile_for_auth == false) {
                     // replace KEY A
                     bldata[0]  = (keyA[s][0]);
                     bldata[1]  = (keyA[s][1]);
@@ -1082,11 +1081,10 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                     bldata[14] = (keyB[s][4]);
                     bldata[15] = (keyB[s][5]);
                 }
-            }
 
-            if (mfNumBlocksPerSector(s)-1 == b) {
-                // ensure accessright isn't messed up.
-                if (memcmp(bldata + 6, "\x00\x00\x00\x00", 4) == 0) {
+                // ensure access right isn't messed up.
+                if (! mfValidateAccessConditions(&bldata[6])) {
+                    PrintAndLogEx(WARNING, "Invalid Access Conditions on sector %i, replacing by default values", s);
                     memcpy(bldata + 6, "\xFF\x07\x80\x69", 4);
                 }
             }
