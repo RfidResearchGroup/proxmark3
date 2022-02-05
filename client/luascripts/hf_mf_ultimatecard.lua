@@ -67,7 +67,7 @@ arguments = [[
     -s      Signature data (64 hexsymbols), set signature data on tag.
     -o      OTP data (8 hexsymbols), set `One-Time Programmable` data on tag.
     -v      Version data (16 hexsymbols), set version data on tag.
-    -q      ATQA/SAK (<2b ATQA><1b SAK> hexsymbols), set ATQA/SAK on tag. 
+    -q      ATQA/SAK (<2b ATQA><1b SAK> hexsymbols), set ATQA/SAK on tag.
     -g      GTU Mode (1 hexsymbol), set GTU shadow mode.
     -z      ATS (<1b length><0-16 ATS> hexsymbols), Configure ATS. Length set to 00 will disable ATS.
     -w      Wipe tag. 0 for Mifare or 1 for UL. Fills tag with zeros and put default values for type selected.
@@ -177,7 +177,7 @@ local function read_config()
     local info = connect()
     if not info then return false, "Can't select card" end
     -- read Ultimate Magic Card CONFIG
-    if magicconfig == nil then 
+    if magicconfig == nil then
 	magicconfig = send("CF".._key.."C6")
     else print('No Config')
     end
@@ -195,7 +195,7 @@ local function read_config()
     if ats:sub(1,2) == '00' then atsstr = 'Disabled'
     else atsstr = (string.sub(ats, 3))
     end
-    if ulprotocol == '00' then 	
+    if ulprotocol == '00' then
 	cardprotocol = 'MIFARE Classic Protocol'
 	ultype = 'Disabled'
 	if uidlength == '00' then
@@ -211,11 +211,11 @@ local function read_config()
 		elseif atqaf == '00 42' and sak == '18' then cardtype = 'MIFARE 4k S70 7-byte UID'
 		end
 	end
-    elseif ulprotocol == '01' then 
+    elseif ulprotocol == '01' then
 	-- Read Ultralight config only if UL protocol is enabled
 	cardprotocol = 'MIFARE Ultralight/NTAG'
 	block0 = send("3000")
-	uid0 = block0:sub(1,6)	
+	uid0 = block0:sub(1,6)
 	uid = uid0..block0:sub(9,16)
 	if ulmode == '00' then ultype = 'Ultralight EV1'
 	elseif ulmode == '01' then ultype = 'NTAG21x'
@@ -241,7 +241,7 @@ local function read_config()
 	elseif cversion == '0004040502021503' then versionstr = 'NTAG I2C 2K PLUS'
 	elseif cversion == '0004040401000F03' then versionstr = 'NTAG 213F'
 	elseif cversion == '0004040401001303' then versionstr = 'NTAG 216F'
-	end	
+	end
 	-- read PWD
 	cpwd = send("30F0"):sub(1,8)
 	pwd = send("30E5"):sub(1,8)
@@ -256,7 +256,7 @@ local function read_config()
 	lib14a.disconnect()
     end
     if _print < 1 then
-	print(string.rep('=', 88)) 
+	print(string.rep('=', 88))
 	print('\t\t\tUltimate Magic Card Configuration')
 	print(string.rep('=', 88))
 	print(' - Raw Config      ', string.sub(magicconfig, 1, -9))
@@ -273,10 +273,10 @@ local function read_config()
 	print(' - ATQA          ', atqaf)
 	print(' - SAK          ', sak)
 	if ulprotocol == '01' then
-		print('') 
-		print(string.rep('=', 88)) 
+		print('')
+		print(string.rep('=', 88))
 		print('\t\t\tMagic UL/NTAG 21* Configuration')
-		print(string.rep('=', 88)) 
+		print(string.rep('=', 88))
 		print(' - ATS          ', atsstr)
 		print(' - Password     ', '[0xE5] '..pwd, '[0xF0] '..cpwd)
 		print(' - Pack         ', '[0xE6] '..pack, '[0xF1] '..cpack)
@@ -307,7 +307,7 @@ local function write_uid(useruid)
 	local uidbytes = utils.ConvertHexToBytes(useruid)
 	local bcc1 = bxor(bxor(bxor(uidbytes[1], uidbytes[2]), uidbytes[3]), uidbytes[4])
 	local block0 = string.format('%02X%02X%02X%02X%02X', uidbytes[1], uidbytes[2], uidbytes[3], uidbytes[4], bcc1)
-	local resp = send('CF'.._key..'CD00'..block0)        
+	local resp = send('CF'.._key..'CD00'..block0)
     -- Writes a MFUL UID with bcc1, bcc2 using NTAG21xx commands.
     elseif ulprotocol == '01' then
 	-- uid string checks
@@ -339,7 +339,7 @@ end
 -- Write ATQA/SAK
   local function write_atqasak(atqasak)
     -- read CONFIG
-    if not magicconfig then  
+    if not magicconfig then
 	_print = 1
 	read_config()
     end
@@ -350,16 +350,16 @@ end
     local atqauser2 = atqasak:sub(3,4)
     local atqauserf = atqauser2..atqauser1
     local sakuser = atqasak:sub(5,6)
-    if sakuser == '04' then 
+    if sakuser == '04' then
 	print('Never set SAK bit 3 (e.g. SAK=04), it indicates an extra cascade level is required')
 	return nil
-    elseif (sakuser == '20' or sakuser == '28') and atslen == '00' then 
+    elseif (sakuser == '20' or sakuser == '28') and atslen == '00' then
 	print('When SAK equals 20 or 28, ATS must be turned on')
-	return nil 
-    elseif atqauser2 == '40' then 
+	return nil
+    elseif atqauser2 == '40' then
 	print('ATQA of [00 40] will cause the card to not answer.')
-	return nil 
-    else 
+	return nil
+    else
 	local info = connect()
 	if not info then return false, "Can't select card" end
 	print('New ATQA: '..atqauser1..' '..atqauser2..'  New SAK: '..sakuser)
@@ -376,7 +376,7 @@ end
 -- Write NTAG PWD
 local function write_ntagpwd(ntagpwd)
     -- read CONFIG
-    if not magicconfig then  
+    if not magicconfig then
 	_print = 1
 	read_config()
     end
@@ -389,7 +389,7 @@ local function write_ntagpwd(ntagpwd)
     if not info then return false, "Can't select card" end
     print('Writing new NTAG PWD ', ntagpwd)
     local resp = send('A2E5'..ntagpwd) -- must add both for password to be read by the reader command B1
-    local resp = send('A2F0'..ntagpwd) 
+    local resp = send('A2F0'..ntagpwd)
     lib14a.disconnect()
     if resp == nil then
         return nil, 'Failed to write password'
@@ -401,7 +401,7 @@ end
 -- Write PACK
 local function write_pack(userpack)
     -- read CONFIG
-    if not magicconfig then  
+    if not magicconfig then
 	_print = 1
 	read_config()
     end
@@ -426,7 +426,7 @@ local function write_otp(block3)
     if #block3 == 0 then return nil, 'empty OTP string' end
     if #block3 ~= 8 then return nil, 'OTP wrong length. Should be 4 hex bytes' end
     -- read CONFIG
-    if not magicconfig then  
+    if not magicconfig then
 	_print = 1
 	read_config()
     end
@@ -450,7 +450,7 @@ local function write_version(data)
     if #data == 0 then return nil, 'empty version string' end
     if #data ~= 16 then return nil, 'version wrong length. Should be 8 hex bytes' end
     -- read CONFIG
-    if not magicconfig then  
+    if not magicconfig then
 	_print = 1
 	read_config()
     end
@@ -478,7 +478,7 @@ local function write_signature(data)
     if #data == 0 then return nil, 'empty data string' end
     if #data ~= 64 then return nil, 'data wrong length. Should be 32 hex bytes' end
     -- read CONFIG
-    if not magicconfig then  
+    if not magicconfig then
 	_print = 1
 	read_config()
     end
@@ -510,16 +510,16 @@ local function write_gtu(gtu)
     if not info then return false, "Can't select card" end
     if gtu == '00' then
 	print('Enabling GTU Pre-Write')
-	send('CF'.._key..'32'..gtu)    
+	send('CF'.._key..'32'..gtu)
     elseif gtu == '01' then
 	print('Enabling GTU Restore Mode')
-	send('CF'.._key..'32'..gtu)    
+	send('CF'.._key..'32'..gtu)
     elseif gtu == '02' then
 	print('Disabled GTU')
-	send('CF'.._key..'32'..gtu)    
+	send('CF'.._key..'32'..gtu)
     elseif gtu == '03' then
 	print('Disabled GTU, high speed R/W mode for Ultralight')
-	send('CF'.._key..'32'..gtu)    
+	send('CF'.._key..'32'..gtu)
     else
 	print('Failed to set GTU mode')
     end
@@ -536,7 +536,7 @@ local function write_ats(atsuser)
     local atscardlen = atsuser:sub(1,2)
     local atscardlendecimal = tonumber(atscardlen, 16)
     local atsf = string.sub(atsuser, 3)
-    if (#atsf / 2) ~= atscardlendecimal then 
+    if (#atsf / 2) ~= atscardlendecimal then
 	oops('Given length of ATS ('..atscardlendecimal..') does not match the ATS_length ('..(#atsf / 2)..')')
 	return true, 'Ok'
     else
@@ -556,7 +556,7 @@ local function write_ulp(ulp)
     if #ulp > 2 then return nil, 'type wrong length. Should be 1 hex byte' end
     local info = connect()
     if not info then return false, "Can't select card" end
-    if ulp == '00' then 
+    if ulp == '00' then
 	print('Changing card to Mifare Classic Protocol')
 	send("CF".._key.."69"..ulp)
     elseif ulp == '01' then
@@ -576,7 +576,7 @@ local function write_ulm(ulm)
     if #ulm > 2 then return nil, 'type wrong length. Should be 1  hex byte' end
     local info = connect()
     if not info then return false, "Can't select card" end
-    if ulm == '00' then 
+    if ulm == '00' then
 	print('Changing card UL mode to Ultralight EV1')
 	send("CF".._key.."6A"..ulm)
     elseif ulm == '01' then
@@ -855,7 +855,7 @@ local function wipe(wtype)
         send("CF".._key.."CD000102030404080400000000000000BEAF")
 	local err, msg, resp
 	local cmd_empty = 'CF'.._key..'CD%02X00000000000000000000000000000000'
-	local cmd_cfg1 = 'CF'.._key..'CD%02XFFFFFFFFFFFFFF078069FFFFFFFFFFFF' 
+	local cmd_cfg1 = 'CF'.._key..'CD%02XFFFFFFFFFFFFFF078069FFFFFFFFFFFF'
 	for b = 1, 0xFB do
 		if b == 0x03 or b == 0x07 or b == 0x0B or b == 0x0F or b == 0x13 or b == 0x17 or b == 0x1B or b == 0x1F or b == 0x23 or b == 0x27 or b == 0x2B or b == 0x2F or b == 0x33 or b == 0x37 or b == 0x3B or b == 0x3F then
 			local cmd = (cmd_cfg1):format(b)

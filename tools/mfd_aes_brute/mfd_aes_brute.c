@@ -19,7 +19,7 @@
 #define __STDC_FORMAT_MACROS
 
 #if !defined(_WIN32) && !defined(__APPLE__)
-    #define _POSIX_C_SOURCE 200112L  // need localtime_r()
+#define _POSIX_C_SOURCE 200112L  // need localtime_r()
 #endif
 
 #include <stdio.h>
@@ -53,7 +53,7 @@ typedef struct thread_args {
     uint64_t starttime;
     uint64_t stoptime;
     uint8_t tag[16];
-    uint8_t rdr[32]; 
+    uint8_t rdr[32];
 } targs;
 
 static void make_key(uint32_t seed, uint8_t key[]) {
@@ -134,9 +134,9 @@ static void print_time(uint64_t at) {
     struct tm lt;
 
 #if defined(_WIN32)
-        (void)localtime_s(&lt, &t);
+    (void)localtime_s(&lt, &t);
 #else
-        (void)localtime_r(&t, &lt);
+    (void)localtime_r(&t, &lt);
 #endif
 
     char res[32];
@@ -151,9 +151,9 @@ static void *brute_thread(void *arguments) {
 
     uint64_t starttime = args->starttime;
 
-    uint64_t stoptime = args->stoptime;  
+    uint64_t stoptime = args->stoptime;
     uint8_t local_tag[16];
-    uint8_t local_rdr[32]; 
+    uint8_t local_rdr[32];
     memcpy(local_tag, args->tag, 16);
     memcpy(local_rdr, args->rdr, 32);
 
@@ -213,7 +213,7 @@ static void *brute_thread(void *arguments) {
     return NULL;
 }
 
-static int usage(const char* s) {
+static int usage(const char *s) {
     printf(_YELLOW_("syntax:") "\n");
     printf("    %s <unix timestamp> <16 byte tag challenge> <32 byte reader response challenge>\n", s);
     printf("\n");
@@ -223,7 +223,7 @@ static int usage(const char* s) {
     return 1;
 }
 
-int main (int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
 
     printf("\n");
     printf(_CYAN_("Telenot access MIFARE DESFire AES key recovery tool") "\n");
@@ -252,7 +252,7 @@ int main (int argc, char* argv[]) {
     printf("Rdr Resp & Challenge... ");
     print_hex(rdr_resp_challenge, sizeof(rdr_resp_challenge));
 
-   
+
     uint64_t t1 = msclock();
 
 #if !defined(_WIN32) || !defined(__WIN32__)
@@ -269,7 +269,7 @@ int main (int argc, char* argv[]) {
     pthread_mutex_init(&print_lock, NULL);
 
     // threads
-    uint64_t stop_time = time(NULL); 
+    uint64_t stop_time = time(NULL);
     for (int i = 0; i < thread_count; ++i) {
         struct thread_args *a = calloc(1, sizeof(struct thread_args));
         a->thread = i;

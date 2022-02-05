@@ -87,17 +87,17 @@ static void ln_command_completion(const char *text, linenoiseCompletions *lc) {
         // When no pm3 device present
         // and the command is not available offline,
         // we skip it.
-        if ((g_session.pm3_present == false) && (vocabulory[index].offline == false ))  {
+        if ((g_session.pm3_present == false) && (vocabulory[index].offline == false))  {
             index++;
             continue;
         }
 
         index++;
 
-        if (strncmp (command, text, len) == 0) {
+        if (strncmp(command, text, len) == 0) {
             const char *space = strstr(command + len, " ");
             if (space != NULL) {
-                if ((prev_match_len == 0) || (strncmp (prev_match, command, prev_match_len < space - command ? prev_match_len : space - command) != 0)) {
+                if ((prev_match_len == 0) || (strncmp(prev_match, command, prev_match_len < space - command ? prev_match_len : space - command) != 0)) {
                     linenoiseAddCompletion(lc, str_ndup(command, space - command + 1));
                     prev_match = command;
                     prev_match_len = space - command + 1;

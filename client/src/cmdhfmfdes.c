@@ -3404,7 +3404,7 @@ static int DesfireCreateFileParameters(
     uint8_t pfileid, uint8_t pisofileid,
     uint8_t amodeid, uint8_t frightsid,
     uint8_t r_modeid, uint8_t w_modeid, uint8_t rw_modeid, uint8_t ch_modeid,
-    uint8_t *data, size_t *datalen ) {
+    uint8_t *data, size_t *datalen) {
 
     *datalen = 0;
 
@@ -4475,10 +4475,10 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
 }
 
 static int DesfileReadISOFileAndPrint(DesfireContext_t *dctx,
-          bool select_current_file, uint8_t fnum,
-          uint16_t fisoid, int filetype, 
-          uint32_t offset, uint32_t length,
-          bool noauth, bool verbose) {
+                                      bool select_current_file, uint8_t fnum,
+                                      uint16_t fisoid, int filetype,
+                                      uint32_t offset, uint32_t length,
+                                      bool noauth, bool verbose) {
 
     if (filetype == RFTAuto) {
         PrintAndLogEx(ERR, "ISO mode needs to specify file type");
@@ -4572,10 +4572,10 @@ static int DesfileReadISOFileAndPrint(DesfireContext_t *dctx,
     return PM3_SUCCESS;
 }
 
-static int DesfileReadFileAndPrint(DesfireContext_t *dctx, 
-          uint8_t fnum, int filetype,
-          uint32_t offset, uint32_t length,
-          uint32_t maxdatafilelength, bool noauth, bool verbose) {
+static int DesfileReadFileAndPrint(DesfireContext_t *dctx,
+                                   uint8_t fnum, int filetype,
+                                   uint32_t offset, uint32_t length,
+                                   uint32_t maxdatafilelength, bool noauth, bool verbose) {
 
     int res;
     // length of record for record file
@@ -4889,10 +4889,10 @@ static int CmdHF14ADesReadData(const char *Cmd) {
 }
 
 static int DesfileWriteISOFile(DesfireContext_t *dctx,
-          bool select_current_file, uint8_t fnum,
-          uint16_t fisoid, int filetype,
-          uint32_t offset, uint8_t *data,
-          uint32_t datalen, bool verbose) {
+                               bool select_current_file, uint8_t fnum,
+                               uint16_t fisoid, int filetype,
+                               uint32_t offset, uint8_t *data,
+                               uint32_t datalen, bool verbose) {
 
     if (filetype == RFTAuto) {
         PrintAndLogEx(ERR, "ISO mode needs to specify file type");
