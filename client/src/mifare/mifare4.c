@@ -502,6 +502,7 @@ uint8_t mfFirstBlockOfSector(uint8_t sectorNo) {
         return 32 * 4 + (sectorNo - 32) * 16;
 }
 
+// assumes blockno is 0-255..
 uint8_t mfSectorTrailer(uint8_t blockNo) {
     if (blockNo < 32 * 4) {
         return (blockNo | 0x03);
@@ -510,10 +511,12 @@ uint8_t mfSectorTrailer(uint8_t blockNo) {
     }
 }
 
+// assumes blockno is 0-255..
 bool mfIsSectorTrailer(uint8_t blockNo) {
     return (blockNo == mfSectorTrailer(blockNo));
 }
 
+// assumes blockno is 0-255..
 uint8_t mfSectorNum(uint8_t blockNo) {
     if (blockNo < 32 * 4)
         return blockNo / 4;
