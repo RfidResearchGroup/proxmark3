@@ -73,6 +73,13 @@ static const APDUSpcCodeDescription_t DeleteAPDUCodeDescriptions[] = {
     {0x6A82, "File not found" }
 };
 
+static const APDUSpcCodeDescription_t UAPDpdateKeyAttrCodeDescriptions[] = {
+    {0x6581, "Transaction mechanism capabilities exceeded" },
+    {0x6982, "Key is frozen or only the key itself has the rights to update" },
+    {0x6985, "Deactivated file" },
+    {0x6A88, "Invalid key number (outside the range supported by the current DF)" }
+};
+
 static uint8_t defaultKeyId = 1;
 static uint8_t defaultKey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
 #define CIPURSE_MAX_AID_LENGTH 16
@@ -1409,9 +1416,144 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-//    {"updakey",   CmdHFCipurseUpdateKeyAttr, IfPm3Iso14443a,  "Update key attributes"},
 static int CmdHFCipurseUpdateKeyAttr(const char *Cmd) {
-    
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf cipurse updakey",
+                  "Update key attributes. Factory default - 0x02.\n"
+                  "b0 - Update right - 1 self\n"
+                  "b1 - Change key and rights - 0 frozen\n"
+                  "b2 - Use as key encryption key - 1 blocked\n"
+                  "b8 - Key validity - 0 valid",
+                  "hf cipurse updakey --trgkey 2 --attr 80 ->  block key 2 for lifetime (WARNING!)\n"
+                  "hf cipurse updakey --trgkey 1 --attr 02 --commit ->  for key 1");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  NULL,      "<dec>", "key ID for authentication"),
+        arg_str0("k",  "key",     "<hex>", "Auth key"),
+
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
+        arg_str0(NULL, "fid",     "<hex 2 bytes>", "file ID (FID)"),
+        arg_lit0(NULL, "mfd",     "select masterfile by empty id"),
+
+        arg_int0(NULL, "trgkey",  "<dec>", "target key ID"),
+        arg_str0(NULL, "attr",    "<hex 1 byte>", "key attributes 1 byte"),
+        arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
+        arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
+        arg_lit0(NULL, "no-auth", "execute without authentication"),
+        arg_lit0(NULL, "commit",  "commit "),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    uint8_t keyId = arg_get_int_def(ctx, 3, defaultKeyId);
+
+    CipurseChannelSecurityLevel sreq = CPSMACed;
+    CipurseChannelSecurityLevel sresp = CPSMACed;
+    uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
+
+    uint8_t aid[16] = {0};
+    size_t aidLen = 0;
+    bool useAID = false;
+    uint16_t fileId = defaultFileId;
+    bool useFID = false;
+    int res = CLIParseCommandParameters(ctx, 4, 5, 6, 10, 11, key, aid, &aidLen, &useAID, &fileId, &useFID, &sreq, &sresp);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool selmfd = arg_get_lit(ctx, 7);
+
+    uint8_t trgKeyId = arg_get_int_def(ctx, 8, defaultKeyId);
+
+    uint8_t hdata[250] = {0};
+    int hdatalen = sizeof(hdata);
+    CLIGetHexWithReturn(ctx, 9, hdata, &hdatalen);
+    if (hdatalen != 1) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " key attributes must be 1 bytes only and must be specified.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool noauth = arg_get_lit(ctx, 12);
+    bool needCommit = arg_get_lit(ctx, 13);
+
+    CLIParserFree(ctx);
+    SetAPDULogging(APDULogging);
+
+    if (verbose && hdatalen == 1) {
+        PrintAndLogEx(INFO, "Decoded attributes:");
+        CIPURSEPrintKeySecurityAttributes(hdata[0]);
+        PrintAndLogEx(NORMAL, "");
+    }
+
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+
+    if (useAID || useFID || selmfd) {
+        res = SelectCommand(selmfd, useAID, aid, aidLen, useFID, fileId, verbose, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Select command ( " _RED_("error") " )");
+            DropField();
+            return PM3_ESOFT;
+        }
+    } else {
+        res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Cipurse masterfile select " _RED_("error") ". Card returns 0x%04x", sw);
+            DropField();
+            return PM3_ESOFT;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "Cipurse masterfile " _GREEN_("selected"));
+    }
+
+    if (verbose) {
+        if (!noauth)
+            PrintAndLogEx(INFO, "key id " _YELLOW_("%d") " key " _YELLOW_("%s")
+                          , keyId
+                          , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
+                         );
+    }
+
+    if (!noauth) {
+        bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
+        if (bres == false) {
+            if (verbose)
+                PrintAndLogEx(ERR, "Authentication ( " _RED_("fail") " )");
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        // set channel security levels
+        CIPURSECSetActChannelSecurityLevels(sreq, sresp);
+    }
+
+    res = CIPURSEUpdateKeyAttrib(trgKeyId, hdata[0], buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000) {
+        PrintAndLogEx(ERR, "Update key attributes command " _RED_("ERROR") ". Card returns:\n  0x%04x - %s", sw,
+                      GetSpecificAPDUCodeDesc(UAPDpdateKeyAttrCodeDescriptions, ARRAYLEN(UAPDpdateKeyAttrCodeDescriptions), sw));
+        DropField();
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(INFO, "Key attributes updated " _GREEN_("succesfully"));
+
+    if (needCommit) {
+        sw = 0;
+        res = CIPURSECommitTransaction(&sw);
+        if (res != 0 || sw != 0x9000)
+            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+    }
+
     DropField();
     return PM3_SUCCESS;
 }
