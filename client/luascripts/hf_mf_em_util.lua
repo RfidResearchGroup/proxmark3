@@ -22,27 +22,20 @@ example = [[
 
     -- Define access bits and User byte
     3. script run hf_mf_em_util -x 00f0ff -u 12
-
-    -- Format as 4K card
-    4. script run hf_mf_em_util -4
 ]]
-
 -- Usage info
 usage = [[
 script run hf_mf_em_util [-h] [-4] [-a <hex>] [-b <hex>] [-x <hex>] [-u <hex>]
 ]]
-
 -- Arguments
 arguments = [[
     -h          this help
-    -4		Format as 4K card instead of the default 1K
+    -4          format as 4K card
     -a <hex>    define key A
     -b <hex>    define key B
     -x <hex>    define Access Bytes
-    -u <hex>	define User Byte
-
+    -u <hex>    define User Byte
 ]]
-
 -- Help function
 local function help()
     print(copyright)
@@ -56,81 +49,60 @@ local function help()
     print(ansicolors.cyan..'Example usage'..ansicolors.reset)
     print(example)
 end
-
 -- Print error
 local function oops(err)
     print('ERROR:', err)
-    core.clearCommandBuffer()
-    return nil, err
+    return nil,err
 end
 
---  Command function
-local function cmdFormatEmul()
-    local arr = {}
-    for i = 0, 15 do
-        local blk = 3 + (4*i)
-        arr[i] = 'hf mf esetblk --blk '..blk..' -d '..KeyA..''..Accessbit..''..User..''..KeyB..''
-    end
-
--- This looks horrible, but I don't know anything about Lua
-    if S70 then
-	for i = 16, 31 do
-	local blk = 3 + (4*i)
-        arr[i] = 'hf mf esetblk --blk '..blk..' -d '..KeyA..''..Accessbit..''..User..''..KeyB..''
-	end
-	for i = 32, 40 do
-		local blk = 127 + (16*(i-32))
-	        arr[i] = 'hf mf esetblk --blk '..blk..' -d '..KeyA..''..Accessbit..''..User..''..KeyB..''
-	end
-    end
-    return arr
-end
-local function sendCmds( cmds )
-    for i = 0, #cmds do
-        if cmds[i]  then
-            print ( cmds[i]  )
-            core.console( cmds[i] )
-            core.clearCommandBuffer()
+-- Memory formatting
+local function card_format(key_a,key_b,ab,user,s70)
+    local blocks = {3,7,11,15,19,23,27,31,35,39,43,47,51,55,59,63,67,71,75,79,83,87,91,95,99,103,107,111,115,119,123,127,143,159,175,191,207,223,239,255}
+    for k,v in ipairs(blocks) do
+        local cmd = string.format("hf mf esetblk --blk %s -d %s%s%s%s",v,key_a,ab,user,key_b)
+        core.console(cmd)
+        print(cmd)
+        core.clearCommandBuffer()
+	if s70 == false and k > 15 then
+		return
         end
     end
 end
 
--- main function
-function main(args)
+local function main(args)
+    -- Receive parameters
+    for o, a in getopt.getopt(args, 'ha:b:x:u:4') do
+        if o == 'h' then return help() end
+        if o == 'a' then KeyA = a end
+        if o == 'b' then KeyB = a end
+        if o == 'x' then Accessbit = a end
+        if o == 'u' then User = a end
+        if o == '4' then kkkk = true end
+    end
 
-	local i
-	local cmds = {}
+    local KeyA = KeyA or 'FFFFFFFFFFFF'
+    if #(KeyA) ~= 12 then
+            return oops( string.format('Wrong length of the Key A, receveid %d, expected 12', #KeyA))
+    end
 
-	-- Receive parameters
-	for o, a in getopt.getopt(args, 'ha:b:x:u:4') do
-		if o == 'h' then return help() end
-		if o == 'a' then KeyA = a end
-		if o == 'b' then KeyB = a end
-		if o == 'x' then Accessbit = a end
-		if o == 'u' then User = a end
-		if o == '4' then S70 = true end
-	end
+    local KeyB = KeyB or 'FFFFFFFFFFFF'
+    if #(KeyB) ~= 12 then
+            return oops( string.format('Wrong length of the Key B, received %d, expected 12', #KeyB))
+    end
 
-	-- Validate inputs
-	KeyA = KeyA or 'FFFFFFFFFFFF'
-	if #(KeyA) ~= 12 then
-		return oops( string.format('Wrong length of the Key A (was %d) expected 12', #KeyA))
-	end
-	KeyB = KeyB or 'FFFFFFFFFFFF'
-	if #(KeyB) ~= 12 then
-		return oops( string.format('Wrong length of the Key B (was %d) expected 12', #KeyB))
-	end
-	Accessbit = Accessbit or 'FF0780'
-	if #(Accessbit) ~= 6 then
-		return oops( string.format('Wrong length of the Acces bit (was %d) expected 6', #Accessbit))
-	end
-	User = User or '00'
-	if #(User) ~= 2 then
-		return oops( string.format('Wrong lenght for the user defined byte, (was %d) expected 2', #User))
-	end
+    local Accessbit = Accessbit or 'FF0780'
+    if #(Accessbit) ~= 6 then
+            return oops( string.format('Wrong length of the Access bit, received %d, expected 6', #Accessbit))
+    end
 
-	-- Send commands to proxmark
-	core.clearCommandBuffer()
-	sendCmds( cmdFormatEmul() )
+    local User = User or '00'
+    if #(User) ~= 2 then
+            return oops( string.format('Wrong lenght for the user defined byte, received %d, expected 2', #User))
+    end
+
+    local kkkk = kkkk or false
+
+    -- Call card_format function
+    card_format(KeyA,KeyB,Accessbit,User,kkkk)
 end
 main (args)
