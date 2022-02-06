@@ -15,21 +15,21 @@ The Access Bytes are set to 0xFF0780 and User Bytes to 0x00.
 ]]
 example = [[
     -- Use default formatting
-    1. script run hf_mf_efmt
+    1. script run hf_mf_em_util
 
     -- Change keys A and B
-    2. script run hf_mf_efmt -a 112233445566 -b AABBCCDDEEFF
+    2. script run hf_mf_em_util -a 112233445566 -b AABBCCDDEEFF
 
     -- Define access bits and User byte
-    3. script run hf_mf_efmt -x 00f0ff -u 12
+    3. script run hf_mf_em_util -x 00f0ff -u 12
 
     -- Format as 4K card
-    4. script run hf_mf_efmt -4
+    4. script run hf_mf_em_util -4
 ]]
 
 -- Usage info
 usage = [[
-script run hf_mf_efmt [-h] [-4] [-a <hex>] [-b <hex>] [-x <hex>] [-u <hex>]
+script run hf_mf_em_util [-h] [-4] [-a <hex>] [-b <hex>] [-x <hex>] [-u <hex>]
 ]]
 
 -- Arguments
@@ -38,7 +38,7 @@ arguments = [[
     -4		Format as 4K card instead of the default 1K
     -a <hex>    define key A
     -b <hex>    define key B
-    -x <hex>    define Access Byts
+    -x <hex>    define Access Bytes
     -u <hex>	define User Byte
 
 ]]
@@ -100,7 +100,7 @@ function main(args)
 
 	local i
 	local cmds = {}
-	
+
 	-- Receive parameters
 	for o, a in getopt.getopt(args, 'ha:b:x:u:4') do
 		if o == 'h' then return help() end
