@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Addes luascript `hf_mf_em_util.lua` - Script for emulator configuration (@nisgola)
  - Fixes `hf mf restore` - now takes bin/eml/json as dump files (@iceman1001)
  - Fixes `script run some_python_script` segfault on armhf architecture (@doegox)
  - Added `trace extract` - extract authentication parts from trace (@iceman1001)
