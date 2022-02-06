@@ -123,6 +123,31 @@ static char *getProductTypeStr(uint8_t id) {
     return buf;
 }
 
+static int ul_print_nxp_silicon_info(uint8_t *card_uid) {
+
+    uint8_t uid[7];
+    memcpy(&uid, card_uid, 7);
+
+    if (uid[0] != 0x04) {
+        return PM3_SUCCESS;
+    }
+
+    uint8_t maskedBit1 = uid[6] & -1;
+    uint8_t maskedBit2 = uid[3] & -1;
+    unsigned long waferCoordX = ((maskedBit1 & 3) << 8) | (uid[1] & -1);
+    unsigned long waferCoordY = ((maskedBit1 & 12) << 6) | (uid[2] & -1);
+    unsigned long waferCounter = ((uid[4] & -1) << 5) | ((maskedBit1 & 240) << 17) | ((uid[5] & -1) << 13) | (maskedBit2 >> 3);
+    unsigned long testSite = maskedBit2 & 7;
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Silicon Information"));
+    PrintAndLogEx(INFO, "       Wafer Counter: %ld (0x%02lX)", waferCounter, waferCounter);
+    PrintAndLogEx(INFO, "   Wafer Coordinates: [%ld, %ld] (0x%02lX, 0x%02lX)", waferCoordX, waferCoordY, waferCoordX, waferCoordY);
+    PrintAndLogEx(INFO, "           Test Site: %ld", testSite);
+
+    return PM3_SUCCESS;
+}
+
 /*
   The 7 MSBits (=n) code the storage size itself based on 2^n,
   the LSBit is set to '0' if the size is exactly 2^n
@@ -1643,6 +1668,9 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 return PM3_ESOFT;
             }
         }
+
+        // print silicon info
+        ul_print_nxp_silicon_info(card.uid);
 
         // Get Version
         uint8_t version[10] = {0x00};
