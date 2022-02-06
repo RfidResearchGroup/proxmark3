@@ -3008,7 +3008,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
         arg_param_begin,
         arg_strx0("k", "key", "<hex>", "Key specified as 12 hex symbols"),
         arg_int0(NULL, "blk", "<dec>", "Input block number"),
-        arg_lit0("a", NULL, "Target Key A, if found also check Key B for duplicate"),
+        arg_lit0("a", NULL, "Target Key A"),
         arg_lit0("b", NULL, "Target Key B"),
         arg_lit0("*", "all", "Target both key A & B (default)"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
@@ -3017,7 +3017,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "emu", "Fill simulator keys from found keys"),
         arg_lit0(NULL, "dump", "Dump found keys to binary file"),
-        arg_str0("f", "file", "<fn>", "filename of dictionary"),
+        arg_str0("f", "file", "<fn>", "Filename of dictionary"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
