@@ -39,6 +39,7 @@
 #include "cmdtrace.h"
 #include "util.h"
 #include "fileutils.h"   // laodFileJSONroot
+#include "crypto/libpcrypto.h"
 
 const uint8_t PxSE_AID[] = {0xA0, 0x00, 0x00, 0x05, 0x07, 0x01, 0x00};
 #define PxSE_AID_LENGTH 7
@@ -71,6 +72,21 @@ static const APDUSpcCodeDescription_t DeleteAPDUCodeDescriptions[] = {
     {0x6985, "Referenced PxSE application cannot be deleted due to reference to CIPURSE application" },
     {0x6986, "Deletion of MF or predefined EFs is not allowed" },
     {0x6A82, "File not found" }
+};
+
+static const APDUSpcCodeDescription_t UAPDpdateKeyAttrCodeDescriptions[] = {
+    {0x6581, "Transaction mechanism capabilities exceeded" },
+    {0x6982, "Key is frozen or only the key itself has the rights to update" },
+    {0x6985, "Deactivated file" },
+    {0x6A88, "Invalid key number (outside the range supported by the current DF)" }
+};
+
+static const APDUSpcCodeDescription_t UAPDpdateKeyCodeDescriptions[] = {
+    {0x6982, "Key is frozen or only the key itself has the rights to update" },
+    {0x6984, "key enc key is blocked or invalid" },
+    {0x6985, "Deactivated file" },
+    {0x6A80, "invalid algo, key length or kvv" },
+    {0x6A88, "Invalid key number (outside the range supported by the current DF)" }
 };
 
 static uint8_t defaultKeyId = 1;
@@ -1429,6 +1445,346 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFCipurseUpdateKey(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf cipurse updakey",
+                  "Update key. ",
+                  "hf cipurse updkey --aid 4144204631 --newkeyn 2 --newkeya 00 --newkey 73737373737373737373737373737373 -> update default application key 2 with default value 73..73\n"
+                  "hf cipurse updkey --newkeyn 1 --newkeya 00 --newkey 0102030405060708090a0b0c0d0e0f10 --commit ->  for key 1");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  NULL,      "<dec>", "key ID for authentication"),
+        arg_str0("k",  "key",     "<hex>", "Auth key"),
+
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
+        arg_str0(NULL, "fid",     "<hex 2 bytes>", "file ID (FID)"),
+        arg_lit0(NULL, "mfd",     "select masterfile by empty id"),
+
+        arg_int0(NULL, "newkeyn", "<dec>", "target key ID"),
+        arg_str0(NULL, "newkey",  "<hex 16 byte>", "new key"),
+        arg_str0(NULL, "newkeya", "<hex 1 byte>", "new key additional info. 0x00 by default"),
+        
+        arg_int0(NULL, "enckeyn", "<dec>", "encrypt key ID (must be equal to the key on the card)"),
+        arg_str0(NULL, "enckey",  "<hex 16 byte>", "encrypt key (must be equal to the key on the card)"),
+
+        arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
+        arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
+        arg_lit0(NULL, "no-auth", "execute without authentication"),
+        arg_lit0(NULL, "commit",  "commit "),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    uint8_t keyId = arg_get_int_def(ctx, 3, defaultKeyId);
+
+    CipurseChannelSecurityLevel sreq = CPSMACed;
+    CipurseChannelSecurityLevel sresp = CPSMACed;
+    uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
+
+    uint8_t aid[16] = {0};
+    size_t aidLen = 0;
+    bool useAID = false;
+    uint16_t fileId = defaultFileId;
+    bool useFID = false;
+    int res = CLIParseCommandParameters(ctx, 4, 5, 6, 13, 14, key, aid, &aidLen, &useAID, &fileId, &useFID, &sreq, &sresp);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool selmfd = arg_get_lit(ctx, 7);
+
+    uint8_t newKeyId = arg_get_int_def(ctx, 8, 0);
+    if (newKeyId == 0) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " new key id must be specified.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t hdata[250] = {0};
+    int hdatalen = sizeof(hdata);
+    CLIGetHexWithReturn(ctx, 9, hdata, &hdatalen);
+    if (hdatalen != 16) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " new key must be 16 bytes only and must be specified.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t newKey[CIPURSE_AES_KEY_LENGTH] = {0};
+    memcpy(newKey, hdata, CIPURSE_AES_KEY_LENGTH);
+
+    hdatalen = sizeof(hdata);
+    CLIGetHexWithReturn(ctx, 10, hdata, &hdatalen);
+    if (hdatalen && hdatalen != 1) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " new key additional info must be 1 byte only.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t newKeyAInfo = (hdatalen) ? hdata[0] : 0x00;
+
+    uint8_t encKeyId = arg_get_int_def(ctx, 11, 0);
+
+    hdatalen = sizeof(hdata);
+    CLIGetHexWithReturn(ctx, 12, hdata, &hdatalen);
+    if (hdatalen && hdatalen != 16) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " encode key must be 16 bytes only and must be specified.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t encKey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
+    if (hdatalen)
+        memcpy(encKey, hdata, CIPURSE_AES_KEY_LENGTH);
+   
+    bool noauth = arg_get_lit(ctx, 15);
+    bool needCommit = arg_get_lit(ctx, 16);
+
+    CLIParserFree(ctx);
+    SetAPDULogging(APDULogging);
+
+    uint8_t kvv[CIPURSE_KVV_LENGTH] = {0};
+    CipurseCGetKVV(newKey, kvv);
+
+    uint8_t keydata[3 + 16 + 3] = {newKeyAInfo, 0x10, 0x09, 0x00};
+    memcpy(&keydata[3], newKey, 16);
+    memcpy(&keydata[3 + 16], kvv, 3);
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "New key number: %d", newKeyId);
+        PrintAndLogEx(INFO, "New key additional info: 0x%02x", newKeyAInfo);
+        PrintAndLogEx(INFO, "New key: %s", sprint_hex_inrow(newKey, 16));
+        PrintAndLogEx(INFO, "New key kvv: %s", sprint_hex_inrow(kvv, 3));
+        PrintAndLogEx(INFO, "New key data: %s", sprint_hex_inrow(keydata, sizeof(keydata)));
+        if (encKeyId) {
+            PrintAndLogEx(INFO, "Encode key number: %d", encKeyId);
+            PrintAndLogEx(INFO, "Encode key: %s", sprint_hex_inrow(encKey, 16));
+
+            aes_encode(NULL, encKey, newKey, &keydata[3], CIPURSE_AES_KEY_LENGTH);
+
+            PrintAndLogEx(INFO, "Encoded new key data: %s", sprint_hex_inrow(keydata, sizeof(keydata)));
+        }
+        PrintAndLogEx(NORMAL, "");
+    }
+
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+
+    if (useAID || useFID || selmfd) {
+        res = SelectCommand(selmfd, useAID, aid, aidLen, useFID, fileId, verbose, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Select command ( " _RED_("error") " )");
+            DropField();
+            return PM3_ESOFT;
+        }
+    } else {
+        res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Cipurse masterfile select " _RED_("error") ". Card returns 0x%04x", sw);
+            DropField();
+            return PM3_ESOFT;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "Cipurse masterfile " _GREEN_("selected"));
+    }
+
+    if (verbose) {
+        if (!noauth)
+            PrintAndLogEx(INFO, "key id " _YELLOW_("%d") " key " _YELLOW_("%s")
+                          , keyId
+                          , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
+                         );
+    }
+
+    if (!noauth) {
+        bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
+        if (bres == false) {
+            if (verbose)
+                PrintAndLogEx(ERR, "Authentication ( " _RED_("fail") " )");
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        // set channel security levels
+        CIPURSECSetActChannelSecurityLevels(sreq, sresp);
+    }
+
+    res = CIPURSEUpdateKey(encKeyId, newKeyId, keydata, sizeof(keydata), buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000) {
+        PrintAndLogEx(ERR, "Update key command " _RED_("ERROR") ". Card returns:\n  0x%04x - %s", sw,
+                      GetSpecificAPDUCodeDesc(UAPDpdateKeyCodeDescriptions, ARRAYLEN(UAPDpdateKeyCodeDescriptions), sw));
+        DropField();
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(INFO, "Key updated " _GREEN_("succesfully"));
+
+    if (needCommit) {
+        sw = 0;
+        res = CIPURSECommitTransaction(&sw);
+        if (res != 0 || sw != 0x9000)
+            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+    }
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
+static int CmdHFCipurseUpdateKeyAttr(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf cipurse updakey",
+                  "Update key attributes. Factory default - 0x02.\n"
+                  "b0 - Update right - 1 self\n"
+                  "b1 - Change key and rights - 0 frozen\n"
+                  "b2 - Use as key encryption key - 1 blocked\n"
+                  "b8 - Key validity - 0 valid",
+                  "hf cipurse updakey --trgkeyn 2 --attr 80 ->  block key 2 for lifetime (WARNING!)\n"
+                  "hf cipurse updakey --trgkeyn 1 --attr 02 --commit ->  for key 1");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "show technical data"),
+        arg_int0("n",  NULL,      "<dec>", "key ID for authentication"),
+        arg_str0("k",  "key",     "<hex>", "Auth key"),
+
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
+        arg_str0(NULL, "fid",     "<hex 2 bytes>", "file ID (FID)"),
+        arg_lit0(NULL, "mfd",     "select masterfile by empty id"),
+
+        arg_int0(NULL, "trgkeyn", "<dec>", "target key ID"),
+        arg_str0(NULL, "attr",    "<hex 1 byte>", "key attributes 1 byte"),
+        arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
+        arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
+        arg_lit0(NULL, "no-auth", "execute without authentication"),
+        arg_lit0(NULL, "commit",  "commit "),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    uint8_t keyId = arg_get_int_def(ctx, 3, defaultKeyId);
+
+    CipurseChannelSecurityLevel sreq = CPSMACed;
+    CipurseChannelSecurityLevel sresp = CPSMACed;
+    uint8_t key[CIPURSE_AES_KEY_LENGTH] = {0};
+
+    uint8_t aid[16] = {0};
+    size_t aidLen = 0;
+    bool useAID = false;
+    uint16_t fileId = defaultFileId;
+    bool useFID = false;
+    int res = CLIParseCommandParameters(ctx, 4, 5, 6, 10, 11, key, aid, &aidLen, &useAID, &fileId, &useFID, &sreq, &sresp);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool selmfd = arg_get_lit(ctx, 7);
+
+    uint8_t trgKeyId = arg_get_int_def(ctx, 8, 0);
+    if (trgKeyId == 0) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " target key id must be specified.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t hdata[250] = {0};
+    int hdatalen = sizeof(hdata);
+    CLIGetHexWithReturn(ctx, 9, hdata, &hdatalen);
+    if (hdatalen != 1) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " key attributes must be 1 bytes only and must be specified.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool noauth = arg_get_lit(ctx, 12);
+    bool needCommit = arg_get_lit(ctx, 13);
+
+    CLIParserFree(ctx);
+    SetAPDULogging(APDULogging);
+
+    if (verbose && hdatalen == 1) {
+        PrintAndLogEx(INFO, "Decoded attributes:");
+        CIPURSEPrintKeySecurityAttributes(hdata[0]);
+        PrintAndLogEx(NORMAL, "");
+    }
+
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+
+    if (useAID || useFID || selmfd) {
+        res = SelectCommand(selmfd, useAID, aid, aidLen, useFID, fileId, verbose, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Select command ( " _RED_("error") " )");
+            DropField();
+            return PM3_ESOFT;
+        }
+    } else {
+        res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
+        if (res != 0 || sw != 0x9000) {
+            PrintAndLogEx(ERR, "Cipurse masterfile select " _RED_("error") ". Card returns 0x%04x", sw);
+            DropField();
+            return PM3_ESOFT;
+        }
+        if (verbose)
+            PrintAndLogEx(INFO, "Cipurse masterfile " _GREEN_("selected"));
+    }
+
+    if (verbose) {
+        if (!noauth)
+            PrintAndLogEx(INFO, "key id " _YELLOW_("%d") " key " _YELLOW_("%s")
+                          , keyId
+                          , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
+                         );
+    }
+
+    if (!noauth) {
+        bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
+        if (bres == false) {
+            if (verbose)
+                PrintAndLogEx(ERR, "Authentication ( " _RED_("fail") " )");
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        // set channel security levels
+        CIPURSECSetActChannelSecurityLevels(sreq, sresp);
+    }
+
+    res = CIPURSEUpdateKeyAttrib(trgKeyId, hdata[0], buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != 0x9000) {
+        PrintAndLogEx(ERR, "Update key attributes command " _RED_("ERROR") ". Card returns:\n  0x%04x - %s", sw,
+                      GetSpecificAPDUCodeDesc(UAPDpdateKeyAttrCodeDescriptions, ARRAYLEN(UAPDpdateKeyAttrCodeDescriptions), sw));
+        DropField();
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(INFO, "Key attributes updated " _GREEN_("succesfully"));
+
+    if (needCommit) {
+        sw = 0;
+        res = CIPURSECommitTransaction(&sw);
+        if (res != 0 || sw != 0x9000)
+            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+    }
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
 bool CheckCardCipurse(void) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
@@ -1518,6 +1874,8 @@ static command_t CommandTable[] = {
     {"formatall", CmdHFCipurseFormatAll,     IfPm3Iso14443a,  "Erase all the data from chip"},
     {"create",    CmdHFCipurseCreateDGI,     IfPm3Iso14443a,  "Create file, application, key via DGI record"},
     {"delete",    CmdHFCipurseDeleteFile,    IfPm3Iso14443a,  "Delete file"},
+    {"updkey",    CmdHFCipurseUpdateKey,     IfPm3Iso14443a,  "Update key"},
+    {"updakey",   CmdHFCipurseUpdateKeyAttr, IfPm3Iso14443a,  "Update key attributes"},
     {"default",   CmdHFCipurseDefault,       IfPm3Iso14443a,  "Set default key and file id for all the other commands"},
     {"test",      CmdHFCipurseTest,          AlwaysAvailable, "Tests"},
     {NULL, NULL, 0, NULL}
