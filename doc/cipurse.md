@@ -266,7 +266,7 @@ keys for masterfile needs to be updated manually with command:
 ```hf cipurse updakey```
 
 update key attributes with default attributes
-```hf cipurse updakey --aid 4144204631 --trgkey 1 --attr 02 -v --commit```
+```hf cipurse updakey --aid 4144204631 --trgkeyn 1 --attr 02 -v --commit```
 
 
 **8. Set the file attributes**
