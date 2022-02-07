@@ -92,7 +92,7 @@ local function main(args)
         if o == 'e' then end_id = a end
         if o == 't' then timeout = a end
         if o == 'x' then mftype = a end
-        if o == 'h' then return print(usage) end
+        if o == 'h' then return help() end
     end
 
     -- template
