@@ -2252,10 +2252,11 @@ static const DesfireCreateFileCommands_t DesfireFileCommands[] = {
 };
 
 const DesfireCreateFileCommands_t *GetDesfireFileCmdRec(uint8_t type) {
-    for (int i = 0; i < ARRAYLEN(DesfireFileCommands); i++)
-        if (DesfireFileCommands[i].id == type)
+    for (int i = 0; i < ARRAYLEN(DesfireFileCommands); i++) {
+        if (DesfireFileCommands[i].id == type) {
             return &DesfireFileCommands[i];
-
+        }
+    }
     return NULL;
 }
 
@@ -2303,6 +2304,7 @@ const char *GetDesfireAccessRightStr(uint8_t right) {
         sprintf(int_access_str, "key 0x%02x", right);
         return int_access_str;
     }
+
     if (right == 0x0e)
         return DesfireFreeStr;
 
@@ -2332,8 +2334,9 @@ const char *AccessRightShortStr[] = {
 };
 
 const char *GetDesfireAccessRightShortStr(uint8_t right) {
-    if (right > 0x0f)
+    if (right > 0x0F) {
         return DesfireNAStr;
+    }
 
     return AccessRightShortStr[right];
 }
@@ -2346,23 +2349,20 @@ void DesfireEncodeFileAcessMode(uint8_t *mode, uint8_t r, uint8_t w, uint8_t rw,
 void DesfireDecodeFileAcessMode(const uint8_t *mode, uint8_t *r, uint8_t *w, uint8_t *rw, uint8_t *ch) {
     // read
     if (r)
-        *r = (mode[1] >> 4) & 0x0f; // hi 2b
+        *r = (mode[1] >> 4) & 0x0F; // hi 2b
     // write
     if (w)
-        *w = mode[1] & 0x0f;
+        *w = mode[1] & 0x0F;
     // read/write
     if (rw)
-        *rw = (mode[0] >> 4) & 0x0f; // low 2b
+        *rw = (mode[0] >> 4) & 0x0F; // low 2b
     // change
     if (ch)
-        *ch = mode[0] & 0x0f;
+        *ch = mode[0] & 0x0F;
 }
 
 void DesfirePrintAccessRight(uint8_t *data) {
-    uint8_t r = 0;
-    uint8_t w = 0;
-    uint8_t rw = 0;
-    uint8_t ch = 0;
+    uint8_t r = 0, w = 0, rw = 0, ch = 0;
     DesfireDecodeFileAcessMode(data, &r, &w, &rw, &ch);
     PrintAndLogEx(SUCCESS, "read     : %s", GetDesfireAccessRightStr(r));
     PrintAndLogEx(SUCCESS, "write    : %s", GetDesfireAccessRightStr(w));

@@ -11,11 +11,11 @@ desc =[[
 This script bruteforces 4 or 7 byte UID Mifare classic card numbers.
 ]]
 example =[[
-Bruteforce a 4 byte UID Mifare classic card number, starting at 11223344, ending at 11223346.
+Bruteforce a 4 bytes UID Mifare classic card number, starting at 11223344, ending at 11223346.
 
     script run hf_mf_uidbruteforce -s 0x11223344 -e 0x11223346 -t 1000 -x mfc
 
-Bruteforce a 7 byte UID Mifare Ultralight card number, starting at 11223344556677, ending at 11223344556679.
+Bruteforce a 7 bytes UID Mifare Ultralight card number, starting at 11223344556677, ending at 11223344556679.
 
     script run hf_mf_uidbruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -x mfu
 ]]
@@ -28,8 +28,9 @@ arguments = [[
     -e       0-0xFFFFFFFF         end id
     -t       0-99999, pause       timeout (ms) between cards
                                   (use the word 'pause' to wait for user input)
-    -x       mfc, mfu             mifare type:
+    -x       mfc, mfc4, mfu       mifare type:
                                     mfc for Mifare Classic (default)
+                                    mfc4 for Mifare Classic 4K
                                     mfu for Mifare Ultralight EV1
 ]]
 
@@ -86,23 +87,32 @@ local function main(args)
     local start_id = 0
     local end_id = 0xFFFFFFFFFFFFFF
     local mftype = 'mfc'
+    local uid_format = '%14x'
 
     for o, a in getopt.getopt(args, 'e:s:t:x:h') do
         if o == 's' then start_id = a end
         if o == 'e' then end_id = a end
         if o == 't' then timeout = a end
         if o == 'x' then mftype = a end
-        if o == 'h' then return print(usage) end
+        if o == 'h' then return help() end
     end
 
     -- template
     local command = ''
 
+    -- if the end_id is equals or inferior to 0xFFFFFFFF then use the 4 bytes UID format by default
+    if string.len(end_id) <= 10 then
+        uid_format = '%08x'
+    end
+
     if mftype == 'mfc' then
-        command = 'hf 14a sim -t 1 -u %014x'
+        command = 'hf 14a sim -t 1 -u ' .. uid_format
         msg('Bruteforcing Mifare Classic card numbers')
+    elseif mftype == 'mfc4' then
+	    command = 'hf 14a sim -t 8 -u ' .. uid_format
+	    msg('Bruteforcing Mifare Classic 4K card numbers')
     elseif mftype == 'mfu' then
-        command = 'hf 14a sim -t 2 -u %014x'
+        command = 'hf 14a sim -t 2 -u ' .. uid_format
         msg('Bruteforcing Mifare Ultralight card numbers')
     else
         return print(usage)
