@@ -17,6 +17,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed - AID limitations when using Gallagher key diversification (@DarkMatterMatt)
  - Fixed build issues that may happen from building `mfd_aes_brute` (@linuxgemini)
  - Added silicon data parsing logic for NXP chips in `hf mfu info` (@linuxgemini)
+ - Added Mifare Classic 4K, enhance UID length management and fix help in `hf_mf_uidbruteforce` (@cactuschibre)
 
 ## [Frostbit.4.14831] [2022-01-11]
  - Changed Wiegand format lookup - now case-insensitive (@iceman1001)
