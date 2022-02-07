@@ -217,7 +217,7 @@ int CIPURSEUpdateKeyAttrib(uint8_t key_num, uint8_t key_attrib, uint8_t *result,
 }
 
 int CIPURSEUpdateKey(uint8_t encrypt_key_num, uint8_t key_num, uint8_t *key, uint16_t key_len, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
-    return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x80, 0xd6, encrypt_key_num, key_num, key_len, key}, false, 0, result, max_result_len, result_len, sw);
+    return CIPURSEExchangeEx(false, true, (sAPDU_t) {0x80, 0x52, encrypt_key_num, key_num, key_len, key}, false, 0, result, max_result_len, result_len, sw);
 }
 
 int CIPURSECommitTransaction(uint16_t *sw) {
