@@ -11,6 +11,13 @@
   - [Card architecture](#card-architecture)
   - [Card structure](#card-structure)
   - [How to](#how-to)
+  - [How to select application or file](#how-to-select-application-or-file)
+  - [How to delete application or file](#how-to-delete-application-or-file)
+  - [How to read file](#how-to-read-file)
+  - [How to write file](#how-to-write-file)
+  - [How to read file attributes](#how-to-read-file-attributes)
+  - [How to set file attributes](#how-to-set-file-attributes)
+  - [How to update key](#how-to-update-key)
     - [How to personalize card](#how-to-personalize-card)
 
 
@@ -120,7 +127,7 @@ select it with display output in raw and tlv views options
 ```hf cipurse delete --aid 4144204631 --chfid 0102```
 
 
-### How read file
+### How to read file
 ^[Top](#top)
 
 with default key and aid
@@ -133,7 +140,7 @@ with default key and aid without authentication
 ```hf cipurse read --fid 0102 --no-auth```
 
 
-### How write file
+### How to write file
 ^[Top](#top)
 
 with default key and aid
@@ -149,7 +156,7 @@ with default key and aid, perform commit (works for files with transactions mech
 ```hf cipurse read --fid 0102 -d abbbccdd --commit```
 
 
-### How read file attributes
+### How to read file attributes
 ^[Top](#top)
 
 read master file attributes
@@ -173,7 +180,7 @@ or with default application
 ```hf cipurse aread --aid 4144204632 --chfid 0102```
 
 
-### How set file attributes
+### How to set file attributes
 ^[Top](#top)
 
 set elementary file attributes (EF)
@@ -189,6 +196,16 @@ set EF.ID_INFO file attributes
 
 set master file (MF) file attributes
 ```hf cipurse awrite --mfd -d 080000FFFFFFFFFFFFFFFFFF86023232 --commit``` (full access with/wo keys and tag 86 is set by `22`)
+
+
+### How to update key
+^[Top](#top)
+
+update key for master application
+```hf cipurse updakey --newkeyn 1 --newkeya 00 --newkey 73737373737373737373737373737373 --commit```
+
+update key for application
+```hf cipurse updakey --aid 4144204631 --newkeyn 1 --newkeya 00 --newkey 73737373737373737373737373737373 --commit```
 
 
 ### How to personalize card
@@ -263,10 +280,13 @@ or if file with transaction mechanism
 keys for application usually filled at create time with DGI `A00F`
 
 keys for masterfile needs to be updated manually with command:
-```hf cipurse updakey```
+```hf cipurse updakey --newkeyn 1 --newkeya 00 --newkey 73737373737373737373737373737373 --commit```
+
+update key for application (if needs)
+```hf cipurse updakey --aid 4144204631 --newkeyn 1 --newkeya 00 --newkey 73737373737373737373737373737373 --commit```
 
 update key attributes with default attributes
-```hf cipurse updakey --aid 4144204631 --newkeyn 1 --newkeya 00 --newkey 73737373737373737373737373737373 --commit```
+```hf cipurse updakey --aid 4144204631 --trgkeyn 1 --attr 02 -v --commit```
 
 
 **8. Set the file attributes**
