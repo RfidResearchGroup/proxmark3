@@ -86,6 +86,7 @@ local function main(args)
     local start_id = 0
     local end_id = 0xFFFFFFFFFFFFFF
     local mftype = 'mfc'
+    local uid_format = '%14x'
 
     for o, a in getopt.getopt(args, 'e:s:t:x:h') do
         if o == 's' then start_id = a end
@@ -98,11 +99,16 @@ local function main(args)
     -- template
     local command = ''
 
+    -- if the end_id is equals or inferior to 0xFFFFFFFF then use the 4 bytes UID format by default
+    if string.len(end_id) <= 10 then
+        uid_format = '%08x'
+    end
+
     if mftype == 'mfc' then
-        command = 'hf 14a sim -t 1 -u %014x'
+        command = 'hf 14a sim -t 1 -u ' .. uid_format
         msg('Bruteforcing Mifare Classic card numbers')
     elseif mftype == 'mfu' then
-        command = 'hf 14a sim -t 2 -u %014x'
+        command = 'hf 14a sim -t 2 -u ' .. uid_format
         msg('Bruteforcing Mifare Ultralight card numbers')
     else
         return print(usage)
