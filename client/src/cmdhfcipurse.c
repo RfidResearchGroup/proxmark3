@@ -39,6 +39,7 @@
 #include "cmdtrace.h"
 #include "util.h"
 #include "fileutils.h"   // laodFileJSONroot
+#include "crypto/libpcrypto.h"
 
 const uint8_t PxSE_AID[] = {0xA0, 0x00, 0x00, 0x05, 0x07, 0x01, 0x00};
 #define PxSE_AID_LENGTH 7
@@ -1466,6 +1467,9 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
         arg_str0(NULL, "newkey",  "<hex 16 byte>", "new key"),
         arg_str0(NULL, "newkeya", "<hex 1 byte>", "new key additional info. 0x00 by default"),
         
+        arg_int0(NULL, "enckeyn", "<dec>", "encrypt key ID (must be equal to the key on the card)"),
+        arg_str0(NULL, "enckey",  "<hex 16 byte>", "encrypt key (must be equal to the key on the card)"),
+
         arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
         arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
         arg_lit0(NULL, "no-auth", "execute without authentication"),
@@ -1487,7 +1491,7 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
     bool useAID = false;
     uint16_t fileId = defaultFileId;
     bool useFID = false;
-    int res = CLIParseCommandParameters(ctx, 4, 5, 6, 11, 12, key, aid, &aidLen, &useAID, &fileId, &useFID, &sreq, &sresp);
+    int res = CLIParseCommandParameters(ctx, 4, 5, 6, 13, 14, key, aid, &aidLen, &useAID, &fileId, &useFID, &sreq, &sresp);
     if (res) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -1511,8 +1515,8 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t newKey[16] = {0};
-    memcpy(newKey, hdata, 16);
+    uint8_t newKey[CIPURSE_AES_KEY_LENGTH] = {0};
+    memcpy(newKey, hdata, CIPURSE_AES_KEY_LENGTH);
 
     hdatalen = sizeof(hdata);
     CLIGetHexWithReturn(ctx, 10, hdata, &hdatalen);
@@ -1524,8 +1528,22 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
 
     uint8_t newKeyAInfo = (hdatalen) ? hdata[0] : 0x00;
 
-    bool noauth = arg_get_lit(ctx, 13);
-    bool needCommit = arg_get_lit(ctx, 14);
+    uint8_t encKeyId = arg_get_int_def(ctx, 11, 0);
+
+    hdatalen = sizeof(hdata);
+    CLIGetHexWithReturn(ctx, 12, hdata, &hdatalen);
+    if (hdatalen && hdatalen != 16) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " encode key must be 16 bytes only and must be specified.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t encKey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
+    if (hdatalen)
+        memcpy(encKey, hdata, CIPURSE_AES_KEY_LENGTH);
+   
+    bool noauth = arg_get_lit(ctx, 15);
+    bool needCommit = arg_get_lit(ctx, 16);
 
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
@@ -1540,9 +1558,17 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
     if (verbose) {
         PrintAndLogEx(INFO, "New key number: %d", newKeyId);
         PrintAndLogEx(INFO, "New key additional info: 0x%02x", newKeyAInfo);
-        PrintAndLogEx(INFO, "New key: %s", sprint_hex_inrow(key, 16));
+        PrintAndLogEx(INFO, "New key: %s", sprint_hex_inrow(newKey, 16));
         PrintAndLogEx(INFO, "New key kvv: %s", sprint_hex_inrow(kvv, 3));
         PrintAndLogEx(INFO, "New key data: %s", sprint_hex_inrow(keydata, sizeof(keydata)));
+        if (encKeyId) {
+            PrintAndLogEx(INFO, "Encode key number: %d", encKeyId);
+            PrintAndLogEx(INFO, "Encode key: %s", sprint_hex_inrow(encKey, 16));
+
+            aes_encode(NULL, encKey, newKey, &keydata[3], CIPURSE_AES_KEY_LENGTH);
+
+            PrintAndLogEx(INFO, "Encoded new key data: %s", sprint_hex_inrow(keydata, sizeof(keydata)));
+        }
         PrintAndLogEx(NORMAL, "");
     }
 
@@ -1589,7 +1615,7 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
         CIPURSECSetActChannelSecurityLevels(sreq, sresp);
     }
 
-    res = CIPURSEUpdateKey(0, newKeyId, keydata, sizeof(keydata), buf, sizeof(buf), &len, &sw);
+    res = CIPURSEUpdateKey(encKeyId, newKeyId, keydata, sizeof(keydata), buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
         PrintAndLogEx(ERR, "Update key command " _RED_("ERROR") ". Card returns:\n  0x%04x - %s", sw,
                       GetSpecificAPDUCodeDesc(UAPDpdateKeyCodeDescriptions, ARRAYLEN(UAPDpdateKeyCodeDescriptions), sw));
