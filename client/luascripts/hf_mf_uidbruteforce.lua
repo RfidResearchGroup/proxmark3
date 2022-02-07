@@ -28,8 +28,9 @@ arguments = [[
     -e       0-0xFFFFFFFF         end id
     -t       0-99999, pause       timeout (ms) between cards
                                   (use the word 'pause' to wait for user input)
-    -x       mfc, mfu             mifare type:
+    -x       mfc, mfc4, mfu       mifare type:
                                     mfc for Mifare Classic (default)
+                                    mfc4 for Mifare Classic 4K
                                     mfu for Mifare Ultralight EV1
 ]]
 
@@ -107,6 +108,9 @@ local function main(args)
     if mftype == 'mfc' then
         command = 'hf 14a sim -t 1 -u ' .. uid_format
         msg('Bruteforcing Mifare Classic card numbers')
+    elseif mftype == 'mfc4' then
+	    command = 'hf 14a sim -t 8 -u ' .. uid_format
+	    msg('Bruteforcing Mifare Classic 4K card numbers')
     elseif mftype == 'mfu' then
         command = 'hf 14a sim -t 2 -u ' .. uid_format
         msg('Bruteforcing Mifare Ultralight card numbers')
