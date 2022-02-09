@@ -2563,7 +2563,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- high frequency ----------------------- 14a { iso14443a rfids... } 14b { iso14443b rfids... } 15 { iso15693 rfids... } cipurse { cipurse transport cards... } epa { german identification card... } emrtd { machine readable travel document... } felica { iso18092 / felica rfids... } fido { fido and fido2 authenticators... } gallagher { gallagher desfire rfids... } ksx6924 { ks x 6924 (t-money, snapper+) rfids } jooki { jooki rfids... } iclass { iclass rfids... } legic { legic rfids... } lto { lto cartridge memory rfids... } mf { mifare rfids... } mfp { mifare plus rfids... } mfu { mifare ultralight rfids... } mfdes { mifare desfire rfids... } seos { seos rfids... } st25ta { st25ta rfids... } thinfilm { thinfilm rfids... } topaz { topaz (nfc type 1) rfids... } waveshare { waveshare nfc epaper... } ----------- --------------------- general --------------------- help this help list list protocol data in trace buffer search search for known hf tags --------------------------------------------------------------------------------------- hf list available offline: yes alias of `trace list -t raw` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
+            "description": "-------- ----------------------- high frequency ----------------------- 14a { iso14443a rfids... } 14b { iso14443b rfids... } 15 { iso15693 rfids... } cipurse { cipurse transport cards... } epa { german identification card... } emrtd { machine readable travel document... } felica { iso18092 / felica rfids... } fido { fido and fido2 authenticators... } gallagher { gallagher desfire rfids... } ksx6924 { ks x 6924 (t-money, snapper+) rfids } jooki { jooki rfids... } iclass { iclass rfids... } legic { legic rfids... } lto { lto cartridge memory rfids... } mf { mifare rfids... } mfp { mifare plus rfids... } mfu { mifare ultralight rfids... } mfdes { mifare desfire rfids... } mfdesbrute { mifare desfire ev1 brute forcing... } seos { seos rfids... } st25ta { st25ta rfids... } thinfilm { thinfilm rfids... } topaz { topaz (nfc type 1) rfids... } waveshare { waveshare nfc epaper... } ----------- --------------------- general --------------------- help this help list list protocol data in trace buffer search search for known hf tags --------------------------------------------------------------------------------------- hf list available offline: yes alias of `trace list -t raw` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf list -f -> show frame delay times",
                 "hf list -1 -> use trace buffer"
@@ -5323,15 +5323,17 @@
         },
         "hf mfdes test": {
             "command": "hf mfdes test",
-            "description": "[=] ------ desfire tests ------ [!] no space for crc. pos: 1 [=] crc16............. passed [!] no space for crc. pos: 2 [=] crc32............. passed [=] cmac subkeys...... passed [=] an10922 aes....... passed [=] an10922 2tdea..... passed [=] an10922 3tdea..... passed [=] cmac 3tdea........ passed [=] cmac 2tdea........ passed [=] cmac des.......... passed [=] ev2 session keys.. passed [=] ev2 iv calc....... passed [=] ev2 mac calc...... passed [=] trans session key. passed [=] lrp plaintexts.... passed [=] lrp updated keys.. passed [=] lrp eval.......... passed [=] lrp inc counter... passed [=] lrp encode........ passed [=] lrp decode........ passed [=] lrp subkeys....... passed [=] lrp cmac.......... passed [=] lrp session keys.. passed [=] --------------------------- [+] tests [ ok ] ======================================================================================= hf seos { seos rfids... } --------------------------------------------------------------------------------------- hf seos help available offline: yes help this help list list seos history --------------------------------------------------------------------------------------- hf seos info available offline: no get info from seos tags",
+            "description": "[=] ------ desfire tests ------ [!] no space for crc. pos: 1 [=] crc16............. passed [!] no space for crc. pos: 2 [=] crc32............. passed [=] cmac subkeys...... passed [=] an10922 aes....... passed [=] an10922 2tdea..... passed [=] an10922 3tdea..... passed [=] cmac 3tdea........ passed [=] cmac 2tdea........ passed [=] cmac des.......... passed [=] ev2 session keys.. passed [=] ev2 iv calc....... passed [=] ev2 mac calc...... passed [=] trans session key. passed [=] lrp plaintexts.... passed [=] lrp updated keys.. passed [=] lrp eval.......... passed [=] lrp inc counter... passed [=] lrp encode........ passed [=] lrp decode........ passed [=] lrp subkeys....... passed [=] lrp cmac.......... passed [=] lrp session keys.. passed [=] --------------------------- [+] tests [ ok ] ======================================================================================= hf mfdesbrute { mifare desfire ev1 brute forcing... } --------------------------------------------------------------------------------------- hf mfdesbrute help available offline: yes help this help --------------------------------------------------------------------------------------- hf mfdesbrute get_challenge available offline: no tools for attacking weakly generated keys",
             "notes": [
-                "hf seos info"
+                "hf mfdesbrute get_challenge -t <tag type> -u <uid>"
             ],
             "offline": true,
             "options": [
-                "-h, --help this help"
+                "-h, --help this help",
+                "-t, --type <1-10> simulation type to use",
+                "-u, --uid <hex> 7 byte uid"
             ],
-            "usage": "hf seos info [-h]"
+            "usage": "hf mfdesbrute get_challenge [-h] -t <1-10> [-u <hex>]"
         },
         "hf mfdes value": {
             "command": "hf mfdes value",
@@ -5413,6 +5415,21 @@
                 "--trkey <hex> key for decode previous reader id"
             ],
             "usage": "hf mfdes write [-hav] [-n <dec>] [-t <des|2tdea|3tdea|aes>] [-k <hex>] [--kdf <none|an10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--fid <hex>] [--no-auth] [--type <auto|data|value|record|mac>] [-o <hex>] [-d <hex>] [--debit] [--commit] [--updaterec <dec>] [--isoid <hex>] [--fileisoid <hex>] [--readerid <hex>] [--trkey <hex>]"
+        },
+        "hf mfdesbrute open_door": {
+            "command": "hf mfdesbrute open_door",
+            "description": "tools for attacking weakly generated keys",
+            "notes": [
+                "hf mfdesbrute open_door -t <tag type> -u <uid> -k <key>"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-t, --type <1-10> simulation type to use",
+                "-u, --uid <hex> 7 byte uid",
+                "-k, --key <hex> 16 byte key"
+            ],
+            "usage": "hf mfdesbrute open_door [-h] -t <1-10> [-u <hex>] [-k <hex>]"
         },
         "hf mfp auth": {
             "command": "hf mfp auth",
@@ -5885,6 +5902,18 @@
                 "-v, --verbose verbose output"
             ],
             "usage": "hf search [-hv]"
+        },
+        "hf seos help": {
+            "command": "hf seos help",
+            "description": "help this help list list seos history --------------------------------------------------------------------------------------- hf seos info available offline: no get info from seos tags",
+            "notes": [
+                "hf seos info"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "hf seos info [-h]"
         },
         "hf seos list": {
             "command": "hf seos list",
@@ -10402,8 +10431,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 605,
+        "commands_extracted": 607,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-02-09T14:20:29"
+        "extracted_on": "2022-02-09T14:29:46"
     }
 }

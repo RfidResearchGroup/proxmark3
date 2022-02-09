@@ -576,6 +576,17 @@ Check column "offline" for their availability.
 |`hf mfdes test          `|Y       |`Test crypto`
 
 
+### hf mfdesbrute
+
+ { MIFARE DESFIRE EV1 Brute Forcing... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf mfdesbrute help     `|Y       |`This help`
+|`hf mfdesbrute get_challenge`|N       |`Get a challenge from a lock`
+|`hf mfdesbrute open_door`|N       |`AES auth simulation for Telenot Complex systems`
+
+
 ### hf seos
 
  { SEOS RFIDs...                       }

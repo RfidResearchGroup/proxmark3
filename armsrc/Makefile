@@ -36,7 +36,7 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
 
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
-SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c
+SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c mfdessimulate.c
 #UNUSED: mifaresniff.c
 SRC_ISO14443b = iso14443b.c
 SRC_FELICA = felica.c
