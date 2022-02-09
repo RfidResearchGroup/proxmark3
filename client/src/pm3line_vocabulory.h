@@ -185,6 +185,8 @@ const static vocabulory_t vocabulory[] = {
     { 0, "hf cipurse formatall" }, 
     { 0, "hf cipurse create" }, 
     { 0, "hf cipurse delete" }, 
+    { 0, "hf cipurse updkey" }, 
+    { 0, "hf cipurse updakey" }, 
     { 0, "hf cipurse default" }, 
     { 1, "hf cipurse test" }, 
     { 1, "hf epa help" }, 

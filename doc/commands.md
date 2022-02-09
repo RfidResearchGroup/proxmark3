@@ -137,17 +137,17 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`emv help               `|Y       |`This help`
-|`emv exec               `|N       |`Executes EMV contactless transaction.`
-|`emv pse                `|N       |`Execute PPSE. It selects 2PAY.SYS.DDF01 or 1PAY.SYS.DDF01 directory.`
-|`emv search             `|N       |`Try to select all applets from applets list and print installed applets.`
-|`emv select             `|N       |`Select applet.`
-|`emv gpo                `|N       |`Execute GetProcessingOptions.`
-|`emv readrec            `|N       |`Read files from card.`
-|`emv genac              `|N       |`Generate ApplicationCryptogram.`
-|`emv challenge          `|N       |`Generate challenge.`
-|`emv intauth            `|N       |`Internal authentication.`
-|`emv scan               `|N       |`Scan EMV card and save it contents to json file for emulator.`
-|`emv test               `|Y       |`Crypto logic test.`
+|`emv exec               `|N       |`Executes EMV contactless transaction`
+|`emv pse                `|N       |`Execute PPSE. It selects 2PAY.SYS.DDF01 or 1PAY.SYS.DDF01 directory`
+|`emv search             `|N       |`Try to select all applets from applets list and print installed applets`
+|`emv select             `|N       |`Select applet`
+|`emv gpo                `|N       |`Execute GetProcessingOptions`
+|`emv readrec            `|N       |`Read files from card`
+|`emv genac              `|N       |`Generate ApplicationCryptogram`
+|`emv challenge          `|N       |`Generate challenge`
+|`emv intauth            `|N       |`Internal authentication`
+|`emv scan               `|N       |`Scan EMV card and save it contents to json file for emulator`
+|`emv test               `|Y       |`Crypto logic test`
 |`emv list               `|Y       |`List ISO7816 history`
 |`emv roca               `|N       |`Extract public keys and run ROCA test`
 
@@ -252,6 +252,8 @@ Check column "offline" for their availability.
 |`hf cipurse formatall   `|N       |`Erase all the data from chip`
 |`hf cipurse create      `|N       |`Create file, application, key via DGI record`
 |`hf cipurse delete      `|N       |`Delete file`
+|`hf cipurse updkey      `|N       |`Update key`
+|`hf cipurse updakey     `|N       |`Update key attributes`
 |`hf cipurse default     `|N       |`Set default key and file id for all the other commands`
 |`hf cipurse test        `|Y       |`Tests`
 
