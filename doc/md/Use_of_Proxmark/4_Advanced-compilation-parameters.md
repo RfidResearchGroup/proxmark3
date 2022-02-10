@@ -103,6 +103,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 |                 | No standalone mode
 | LF_EM4100EMUL   | LF EM4100 simulator standalone mode - temskiy
 | LF_EM4100RSWB   | LF EM4100 read/write/clone/brute mode - Monster1024
+| LF_EM4100RSWW   | LF EM4100 read/write/clone/validate/wipe mode - Łukasz "zabszk" Jurczyk
 | LF_EM4100RWC    | LF EM4100 read/write/clone mode - temskiy
 | LF_HIDBRUTE     | HID corporate 1000 bruteforce - Federico dotta & Maurizio Agazzini
 | LF_HIDFCBRUTE   | LF HID facility code bruteforce - ss23
