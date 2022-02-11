@@ -177,7 +177,6 @@ uint32_t ul_ev1_pwdgenE(const uint8_t *uid) {
 uint32_t ul_ev1_pwdgenF(const uint8_t *uid) {
     uint8_t hash[16];
     mbedtls_md5(uid, 7, hash);
-    PrintAndLogEx(INFO, "md5 %s", sprint_hex_inrow(hash, sizeof(hash)));
     uint32_t pwd = 0;
     pwd |= hash[0] << 24;
     pwd |= hash[1] << 16;
