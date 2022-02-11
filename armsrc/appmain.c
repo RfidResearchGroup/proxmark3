@@ -1236,7 +1236,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO15693_COMMAND: {
-            DirectTag15693Command(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            DirectTag15693Command(true, packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            break;
+        }
+        case CMD_HF_ISO15693_COMMAND_NEXT: {
+            DirectTag15693Command(false, packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
             break;
         }
         case CMD_HF_ISO15693_FINDAFI: {

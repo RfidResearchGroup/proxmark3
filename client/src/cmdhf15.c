@@ -1454,6 +1454,7 @@ static int CmdHF15Raw(const char *Cmd) {
         arg_lit0("2", NULL, "use slower '1 out of 256' mode"),
         arg_lit0("c",  "crc", "calculate and append CRC"),
         arg_lit0("k",  NULL, "keep signal field ON after receive"),
+        arg_lit0("n",  NULL, "next command - assume field ON before sending"),
         arg_lit0("r",  NULL, "do not read response"),
         arg_str1("d", "data", "<hex>", "raw bytes to send"),
         arg_param_end
@@ -1462,10 +1463,11 @@ static int CmdHF15Raw(const char *Cmd) {
     int fast = (arg_get_lit(ctx, 1) == false);
     bool crc = arg_get_lit(ctx, 2);
     bool keep_field_on = arg_get_lit(ctx, 3);
-    bool read_respone = (arg_get_lit(ctx, 4) == false);
+    bool next_cmd = arg_get_lit(ctx, 4);
+    bool read_respone = (arg_get_lit(ctx, 5) == false);
     int datalen = 0;
     uint8_t data[300];
-    CLIGetHexWithReturn(ctx, 5, data, &datalen);
+    CLIGetHexWithReturn(ctx, 6, data, &datalen);
     CLIParserFree(ctx);
 
     if (crc) {
@@ -1479,7 +1481,7 @@ static int CmdHF15Raw(const char *Cmd) {
     // arg2 (recv == 1 == expect a response)
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, datalen, fast, read_respone, data, datalen);
+    SendCommandMIX(next_cmd?CMD_HF_ISO15693_COMMAND_NEXT:CMD_HF_ISO15693_COMMAND, datalen, fast, read_respone, data, datalen);
 
     if (read_respone) {
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
