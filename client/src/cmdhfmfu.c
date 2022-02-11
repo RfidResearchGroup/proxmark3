@@ -135,22 +135,22 @@ static int ul_print_nxp_silicon_info(uint8_t *card_uid) {
     uint16_t waferCoordX = ((uid[6] & 3) << 8) | uid[1];
     uint16_t waferCoordY = ((uid[6] & 12) << 6) | uid[2];
     uint32_t waferCounter = (
-                (uid[4] << 5) |
-                ((uid[6] & 0xF0) << 17) |
-                (uid[5] << 13) |
-                (uid[3] >> 3)
-            );
+                                (uid[4] << 5) |
+                                ((uid[6] & 0xF0) << 17) |
+                                (uid[5] << 13) |
+                                (uid[3] >> 3)
+                            );
     uint8_t testSite = uid[3] & 7;
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Silicon Information"));
     PrintAndLogEx(INFO, "       Wafer Counter: %" PRId32 " ( 0x%02" PRIX32 " )", waferCounter, waferCounter);
     PrintAndLogEx(INFO, "   Wafer Coordinates: x %" PRId16 ", y %" PRId16 " (0x%02" PRIX16 ", 0x%02" PRIX16 ")"
-            , waferCoordX
-            , waferCoordY
-            , waferCoordX
-            , waferCoordY
-        );
+                  , waferCoordX
+                  , waferCoordY
+                  , waferCoordX
+                  , waferCoordY
+                 );
     PrintAndLogEx(INFO, "           Test Site: %u", testSite);
     return PM3_SUCCESS;
 }

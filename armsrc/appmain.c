@@ -52,6 +52,7 @@
 #include "lfzx.h"
 #include "mifarecmd.h"
 #include "mifaredesfire.h"
+#include "mfdessimulate.h"
 #include "mifaresim.h"
 #include "pcf7931.h"
 #include "Standalone/standalone.h"
@@ -1655,6 +1656,28 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_MIFARE_STATIC_NONCE: {
             MifareHasStaticNonce();
+            break;
+        }
+        case CMD_HF_MIFARE_EV1_GET_LOCK_CHALLENGE: {
+            struct p {
+                uint8_t tagtype;
+                uint16_t flags;
+                uint8_t uid[10];
+                uint8_t key[16];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            SimulateMfDesfireEv1(payload->tagtype, payload->flags, payload->uid, payload->key, CMD_HF_MIFARE_EV1_GET_LOCK_CHALLENGE);
+            break;
+        }
+        case CMD_HF_MIFARE_EV1_OPEN_DOOR: {
+            struct p {
+                uint8_t tagtype;
+                uint16_t flags;
+                uint8_t uid[10];
+                uint8_t key[16];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            SimulateMfDesfireEv1(payload->tagtype, payload->flags, payload->uid, payload->key, CMD_HF_MIFARE_EV1_OPEN_DOOR);
             break;
         }
 #endif

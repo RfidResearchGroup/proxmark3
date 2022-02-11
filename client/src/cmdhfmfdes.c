@@ -4998,7 +4998,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         arg_lit0(NULL, "debit",   "use for value file debit operation instead of credit"),
         arg_lit0(NULL, "commit",  "commit needs for backup file only. For the other file types and in the `auto` mode - command set it automatically"),
         arg_int0(NULL, "updaterec", "<dec>", "Record number for update record command. Updates record instead of write. Lastest record - 0"),
-        arg_str0(NULL, "isoid"   ,  "<hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)"),
+        arg_str0(NULL, "isoid",  "<hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)"),
         arg_str0(NULL, "fileisoid", "<hex>", "File ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO write commands"),
         arg_str0(NULL, "readerid",  "<hex>", "reader id for CommitReaderID command. If present - the command issued before write command"),
         arg_str0(NULL, "trkey",     "<hex>", "key for decode previous reader id"),

@@ -285,6 +285,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhflto.c
         ${PM3_ROOT}/client/src/cmdhfmf.c
         ${PM3_ROOT}/client/src/cmdhfmfdes.c
+        ${PM3_ROOT}/client/src/cmdhfmfdesbrute.c
         ${PM3_ROOT}/client/src/cmdhfmfhard.c
         ${PM3_ROOT}/client/src/cmdhfmfp.c
         ${PM3_ROOT}/client/src/cmdhfmfu.c

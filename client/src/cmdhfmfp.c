@@ -893,7 +893,7 @@ static int CmdHFMFPWrbl(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "Verbose mode"),        
+        arg_lit0("v",  "verbose", "Verbose mode"),
         arg_lit0("b",  "keyb",    "Use key B (def: keyA)"),
         arg_int1(NULL, "blk",     "<0..255>", "Block number"),
         arg_str1("d",  "data",    "<hex>", "Data, 16 hex bytes"),
