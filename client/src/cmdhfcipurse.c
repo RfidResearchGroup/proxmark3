@@ -1447,10 +1447,10 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
 
 static int CmdHFCipurseUpdateKey(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf cipurse updakey",
-                  "Update key. ",
-                  "hf cipurse updkey --aid 4144204631 --newkeyn 2 --newkeya 00 --newkey 73737373737373737373737373737373 -> update default application key 2 with default value 73..73\n"
-                  "hf cipurse updkey --newkeyn 1 --newkeya 00 --newkey 0102030405060708090a0b0c0d0e0f10 --commit ->  for key 1");
+    CLIParserInit(&ctx, "hf cipurse updkey",
+                  "Update key",
+                  "hf cipurse updkey --aid 4144204631 --newkeyn 2 --newkeya 00 --newkey 73737373737373737373737373737373   -> update default application key 2 with default value 73..73\n"
+                  "hf cipurse updkey --newkeyn 1 --newkeya 00 --newkey 0102030405060708090a0b0c0d0e0f10 --commit           ->  for key 1");
 
     void *argtable[] = {
         arg_param_begin,
