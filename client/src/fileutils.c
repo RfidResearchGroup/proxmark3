@@ -1137,14 +1137,16 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             sprintf(blocks, "$.blocks.%d", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &mem->data[sptr], 4, &len);
+            JsonLoadBufAsHex(root, blocks, &mem->data[sptr], MFU_BLOCK_SIZE, &len);
             if (!len)
                 break;
 
             sptr += len;
             mem->pages++;
         }
-
+        // remove one, since pages indicates a index rather than number of available pages
+        --mem->pages;
+        
         *datalen += sptr;
     }
 

@@ -22,6 +22,11 @@
 
 #include "mifare.h" // structs
 
+
+#define MFU_BLOCK_SIZE      0x04
+#define MFU_MAX_BLOCKS      0xFF
+#define MFU_MAX_BYTES       (MFU_MAX_BLOCKS * MFU_BLOCK_SIZE)
+
 // Old Ultralight/NTAG dump file format
 // It is used only for converting
 #define OLD_MFU_DUMP_PREFIX_LENGTH 48
