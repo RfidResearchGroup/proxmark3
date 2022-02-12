@@ -233,7 +233,7 @@ static int CLIParseCommandParametersEx(CLIParserContext *ctx, size_t keyid, size
         if (CLIParamHexToBuf(arg_get_str(ctx, aidid), hdata, hdatalen, &hdatalen)) {
             return PM3_ESOFT;
         }
-            
+
         if (hdatalen && (hdatalen < 1 || hdatalen > 16)) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " application id length must be 1-16 bytes only");
             return PM3_EINVARG;
@@ -1466,7 +1466,7 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
         arg_int0(NULL, "newkeyn", "<dec>", "target key ID"),
         arg_str0(NULL, "newkey",  "<hex 16 byte>", "new key"),
         arg_str0(NULL, "newkeya", "<hex 1 byte>", "new key additional info. 0x00 by default"),
-        
+
         arg_int0(NULL, "enckeyn", "<dec>", "encrypt key ID (must be equal to the key on the card)"),
         arg_str0(NULL, "enckey",  "<hex 16 byte>", "encrypt key (must be equal to the key on the card)"),
 
@@ -1541,7 +1541,7 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
     uint8_t encKey[CIPURSE_AES_KEY_LENGTH] = CIPURSE_DEFAULT_KEY;
     if (hdatalen)
         memcpy(encKey, hdata, CIPURSE_AES_KEY_LENGTH);
-   
+
     bool noauth = arg_get_lit(ctx, 15);
     bool needCommit = arg_get_lit(ctx, 16);
 

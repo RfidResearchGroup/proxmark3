@@ -135,22 +135,22 @@ static int ul_print_nxp_silicon_info(uint8_t *card_uid) {
     uint16_t waferCoordX = ((uid[6] & 3) << 8) | uid[1];
     uint16_t waferCoordY = ((uid[6] & 12) << 6) | uid[2];
     uint32_t waferCounter = (
-                (uid[4] << 5) |
-                ((uid[6] & 0xF0) << 17) |
-                (uid[5] << 13) |
-                (uid[3] >> 3)
-            );
+                                (uid[4] << 5) |
+                                ((uid[6] & 0xF0) << 17) |
+                                (uid[5] << 13) |
+                                (uid[3] >> 3)
+                            );
     uint8_t testSite = uid[3] & 7;
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Silicon Information"));
     PrintAndLogEx(INFO, "       Wafer Counter: %" PRId32 " ( 0x%02" PRIX32 " )", waferCounter, waferCounter);
     PrintAndLogEx(INFO, "   Wafer Coordinates: x %" PRId16 ", y %" PRId16 " (0x%02" PRIX16 ", 0x%02" PRIX16 ")"
-            , waferCoordX
-            , waferCoordY
-            , waferCoordX
-            , waferCoordY
-        );
+                  , waferCoordX
+                  , waferCoordY
+                  , waferCoordX
+                  , waferCoordY
+                 );
     PrintAndLogEx(INFO, "           Test Site: %u", testSite);
     return PM3_SUCCESS;
 }
@@ -2063,7 +2063,7 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
     PrintAndLogEx(INFO, "Version..... " _YELLOW_("%s"), sprint_hex(card->version, sizeof(card->version)));
     PrintAndLogEx(INFO, "TBD 0....... %s", sprint_hex(card->tbo, sizeof(card->tbo)));
     PrintAndLogEx(INFO, "TBD 1....... %s", sprint_hex(card->tbo1, sizeof(card->tbo1)));
-    PrintAndLogEx(INFO, "Signature... %s", sprint_hex(card->signature, 16 ));
+    PrintAndLogEx(INFO, "Signature... %s", sprint_hex(card->signature, 16));
     PrintAndLogEx(INFO, "             %s", sprint_hex(card->signature + 16, sizeof(card->signature) - 16));
     for (uint8_t i = 0; i < 3; i ++) {
         PrintAndLogEx(INFO, "Counter %d... %s", i, sprint_hex(card->counter_tearing[i], 3));
@@ -2535,7 +2535,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         free(fptr);
     }
 
-   // reserve memory
+    // reserve memory
     uint8_t *dump = NULL;
     size_t bytes_read = 0;
     int res = 0;
@@ -2589,7 +2589,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
     if (pages - 1 != mem->pages) {
         PrintAndLogEx(ERR, "Error, invalid dump, wrong page count");
-        PrintAndLogEx(INFO, " %u  vs mempg %u", pages -1 ,  mem->pages);
+        PrintAndLogEx(INFO, " %u  vs mempg %u", pages - 1,  mem->pages);
         free(dump);
         return PM3_ESOFT;
     }
@@ -4152,7 +4152,7 @@ static int CmdHF14AMfuEView(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    printMFUdumpEx( (mfu_dump_t *)dump, blocks, 0);
+    printMFUdumpEx((mfu_dump_t *)dump, blocks, 0);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -4225,14 +4225,14 @@ static int CmdHF14AMfuView(const char *Cmd) {
         return res;
     }
 
-    uint16_t block_cnt =  ((bytes_read - MFU_DUMP_PREFIX_LENGTH) / MFU_BLOCK_SIZE);
+    uint16_t block_cnt = ((bytes_read - MFU_DUMP_PREFIX_LENGTH) / MFU_BLOCK_SIZE);
 
     if (verbose) {
         PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
     }
 
-    printMFUdumpEx( (mfu_dump_t *)dump, block_cnt, 0);
+    printMFUdumpEx((mfu_dump_t *)dump, block_cnt, 0);
     free(dump);
     return PM3_SUCCESS;
 }

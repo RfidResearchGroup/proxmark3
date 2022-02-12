@@ -1112,7 +1112,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
     if (!strcmp(ctype, "mfu")) {
 
-        mfu_dump_t* mem = (mfu_dump_t *)udata;
+        mfu_dump_t *mem = (mfu_dump_t *)udata;
 
         JsonLoadBufAsHex(root, "$.Card.Version", mem->version, sizeof(mem->version), datalen);
         JsonLoadBufAsHex(root, "$.Card.TBO_0", mem->tbo, sizeof(mem->tbo), datalen);
@@ -1124,7 +1124,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         JsonLoadBufAsHex(root, "$.Card.Tearing1", &mem->counter_tearing[1][3], 1, datalen);
         JsonLoadBufAsHex(root, "$.Card.Counter2", &mem->counter_tearing[2][0], 3, datalen);
         JsonLoadBufAsHex(root, "$.Card.Tearing2", &mem->counter_tearing[2][3], 1, datalen);
-        *datalen = MFU_DUMP_PREFIX_LENGTH;        
+        *datalen = MFU_DUMP_PREFIX_LENGTH;
 
         size_t sptr = 0;
         for (int i = 0; i < 256; i++) {
@@ -1146,7 +1146,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         }
         // remove one, since pages indicates a index rather than number of available pages
         --mem->pages;
-        
+
         *datalen += sptr;
     }
 
