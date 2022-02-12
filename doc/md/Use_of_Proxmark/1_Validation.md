@@ -97,7 +97,7 @@ You are now ready to use your newly flashed proxmark3 device.  Many commands use
 ```
 [usb] pm3 --> quit
 ```
-or simple press `CTRL-D`.
+or simple press `CTRL-D`  on an empty line.
 
 ## Next steps
 ^[Top](#top)
