@@ -2451,8 +2451,9 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         strcat(filename, "hf-mfu-");
         FillFileNameByUID(filename, uid, "-dump", sizeof(uid));
     }
-    uint16_t datalen = pages * 4 + MFU_DUMP_PREFIX_LENGTH;
+    uint16_t datalen = pages * MFU_BLOCK_SIZE + MFU_DUMP_PREFIX_LENGTH;
     saveFile(filename, ".bin", (uint8_t *)&dump_file_data, datalen);
+    saveFileEML(filename, (uint8_t *)&dump_file_data, datalen, MFU_BLOCK_SIZE);
     saveFileJSON(filename, jsfMfuMemory, (uint8_t *)&dump_file_data, datalen, NULL);
 
     if (is_partial)
