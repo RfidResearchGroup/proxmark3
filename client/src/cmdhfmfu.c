@@ -2212,7 +2212,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu dump",
-                  "Dump MIFARE Ultralight/NTAG tag to binary/json files.\n"
+                  "Dump MIFARE Ultralight/NTAG tag to binary/eml/json files.\n"
                   "It autodetects card type."
                   "Supports:\n"
                   "Ultralight, Ultralight-C, Ultralight EV1\n"
