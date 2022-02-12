@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf mfu view` - view contents of MFU dump files (@iceman1001)
  - Changed `hf_mf_uidbruteforce` - added support for S70, enhance UID length management (@cactuschibre)
  - Fixed build issues that may happen from building `mfd_aes_brute` (@linuxgemini)
  - Added silicon data parsing logic for NXP chips in `hf mfu info` (@linuxgemini)
