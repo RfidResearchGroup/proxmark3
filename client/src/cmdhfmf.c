@@ -3876,8 +3876,8 @@ int CmdHF14AMfELoad(const char *Cmd) {
     } else if (m4) {
         block_cnt = MIFARE_4K_MAXBLOCK;
     } else if (mu) {
-        block_cnt = 255;
-        block_width = 4;
+        block_cnt = MFU_MAX_BLOCKS;
+        block_width = MFU_BLOCK_SIZE;
     } else {
         PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
         return PM3_EINVARG;
@@ -3932,7 +3932,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
     }
 
     // convert plain or old mfu format to new format
-    if (block_width == 4) {
+    if (block_width == MFU_BLOCK_SIZE) {
         res = convert_mfu_dump_format(&data, &datalen, true);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Failed convert on load to new Ultralight/NTAG format");
@@ -3944,7 +3944,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         printMFUdumpEx(mfu_dump, mfu_dump->pages + 1, 0);
 
         // update expected blocks to match converted data.
-        block_cnt = datalen / 4;
+        block_cnt = datalen / MFU_BLOCK_SIZE;
         PrintAndLogEx(INFO, "MIFARE Ultralight override, will use %d blocks ( %u bytes )", block_cnt, block_cnt * block_width);
     }
 
@@ -3978,7 +3978,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
     free(data);
     PrintAndLogEx(NORMAL, "");
 
-    if (block_width == 4) {
+    if (block_width == MFU_BLOCK_SIZE) {
         PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf mfu sim -h`"));
         // MFU / NTAG
         if ((cnt != block_cnt)) {
