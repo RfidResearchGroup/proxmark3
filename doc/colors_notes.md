@@ -28,9 +28,9 @@ The following definition has be crystallized out from these experiments.  Its no
 ### Definition
 ^[Top](#top)
 
-- blue - system related headers, banner
+- blue - system related headers
 - white  - normal
-- cyan - headers
+- cyan - headers, banner
 - red - warning, error,  catastrophic failures
 - yellow - informative  (to make things stick out from white blob)
 - green - successful,  (to make things stick out from white blob)
