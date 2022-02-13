@@ -48,3 +48,9 @@ To get info on a ISO14443-A tag:
 ```
 [usb] pm3 --> hf 14a info
 ```
+
+A good starting point is the following [Cheat sheet](/doc/cheatsheet.md)
+
+Or 
+
+this compilation of links to [Proxmark3 walk throughs](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)
