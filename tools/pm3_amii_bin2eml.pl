@@ -6,7 +6,7 @@
 #
 # -samy kamkar 05/28/2017
 #
-# hf mf eload --ul FILENAME_MINUS_EML
+# hf mf eload -f FILENAME_MINUS_EML
 # hf 14a sim -t 7 -u UID
 
 # perl -lne 'chomp; s/\s+(\S+)$//;$f=$1;if($f=~s/-(\S+)//){$g=hex($1);}else{$g=hex($f)}$f=hex($f); for$m($f..$g){print "0x" . substr(unpack("H4",pack("n",$m)),1) ." => \"$_\","}' /tmp/game  >> game2
@@ -684,7 +684,7 @@ print STDERR "\n";
 $uid = uc $uid;
 #print STDERR "amiitool -d -k ../client/amiitool/key_retail.bin -i $input -o $input.decrypted\n";
 $input =~ s/\....$//;
-print STDERR "hf mfu eload --u $input\n";
+print STDERR "hf mfu eload -f $input\n";
 print STDERR "hf 14a sim -t 7 -u $uid\n";
 
 

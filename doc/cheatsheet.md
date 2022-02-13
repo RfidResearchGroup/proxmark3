@@ -377,7 +377,7 @@ pm3 --> hf mfu info
 Clone MIFARE Ultralight EV1 Sequence
 ```
 pm3 --> hf mfu dump -k FFFFFFFF
-pm3 --> hf mfu eload -u -f hf-mfu-XXXX-dump.bin
+pm3 --> hf mfu eload -f hf-mfu-XXXX-dump.bin
 pm3 --> hf mfu sim -t 7
 ```
 

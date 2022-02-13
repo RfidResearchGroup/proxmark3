@@ -337,7 +337,7 @@ local function main(args)
   -----------------------------------------------------
   -- START BRUTEFORCE WITH CONTINUOUSLY HEX NUMBERS  --
   -----------------------------------------------------
-  command = 'hf mfu i -k %08X'
+  command = 'hf mfu info -k %08X'
   msg('Bruteforcing NTAG Passwords\n\nStart value: '..start_id..'\nStop value : '..end_id..'\nDelay between tests: '..timeout..' ms')
   for hexvalue = start_id, end_id do
    if core.kbd_enter_pressed() then -- abort if key is pressed
@@ -409,7 +409,7 @@ local function main(args)
     end
    end
    if skip_to_next == 0 then
-   command = 'hf mfu i -k %4s'
+   command = 'hf mfu info -k %4s'
     local cmd = string.format( command, password )
     core.console(cmd)
     if lines[counter] ~= password then -- show hex value (if not the password was a hex value already)
