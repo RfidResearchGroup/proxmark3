@@ -987,7 +987,7 @@ void pm3_version(bool verbose, bool oneliner) {
     if (!verbose)
         return;
 
-    PrintAndLogEx(NORMAL, "\n [ " _CYAN_("Proxmark3 RFID instrument") " ]");
+    PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Proxmark3 RFID instrument") " ]");
     PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("CLIENT") " ]");
     FormatVersionInformation(temp, sizeof(temp), "  ", &g_version_information);
     PrintAndLogEx(NORMAL, "%s", temp);
