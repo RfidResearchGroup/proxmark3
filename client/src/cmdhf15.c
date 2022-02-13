@@ -654,7 +654,7 @@ static int NxpSysInfo(uint8_t *uid) {
     uint16_t reqlen = 0;
 
     req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
-    req[reqlen++] = ISO15693_GET_SYSTEM_INFO;
+    req[reqlen++] = ISO15693_GET_NXP_SYSTEM_INFO;
     req[reqlen++] = 0x04; // IC manufacturer code
     memcpy(req + 3, uid, 8); // add UID
     reqlen += 8;
