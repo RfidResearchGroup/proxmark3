@@ -49,6 +49,8 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, void *vers
 
     strncat(dst, " ", len - strlen(dst) - 1);
     strncat(dst, v->buildtime, len - strlen(dst) - 1);
+    strncat(dst, " ", len - strlen(dst) - 1);
+    strncat(dst, v->armsrc, len - strlen(dst) - 1);
 }
 
 /*
