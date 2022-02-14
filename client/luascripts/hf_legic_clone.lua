@@ -170,14 +170,9 @@ end
 -- read LEGIC data
 local function readlegicdata(offset, length, iv)
     -- Read data
-    local command = Command:newMIX{
-                    cmd = cmds.CMD_HF_LEGIC_READER
-                    , arg1 = offset
-                    , arg2 = length
-                    , arg3 = iv
-                    , data = nil
-                    }
-    local result, err = command:sendMIX()
+    local d0 = ('%04X%04X%02X'):format(offset, len, iv)
+    local c = Command:newNG{cmd = cmds.CMD_HF_LEGIC_READER, data = d0}
+    local result, err = c:sendNG()
     if not result then return oops(err) end
     -- result is a packed data structure, data starts at offset 33
     return result
