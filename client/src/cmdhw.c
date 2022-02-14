@@ -1072,22 +1072,27 @@ void pm3_version(bool verbose, bool oneliner) {
 
             struct p *payload = (struct p *)&resp.data.asBytes;
 
-            PrintAndLogEx(NORMAL,  payload->versionstr);
+            bool armsrc_mismatch = false;
             char *ptr = strstr(payload->versionstr, " os: ");
             if (ptr != NULL) {
                 ptr = strstr(ptr, "\n");
-                if (ptr != NULL) {
+                if ((ptr != NULL) && (strlen(g_version_information.armsrc) == 9)) {
                     if (strncmp(ptr-9, g_version_information.armsrc, 9) != 0) {
-                        PrintAndLogEx(NORMAL, "\n:warning:  " _RED_("ARM os does not match the source at the time the client was compiled") " :warning:");
-                        PrintAndLogEx(NORMAL,  "Make sure to flash a correct and up-to-date version");
+                        armsrc_mismatch = true;
                     }
                 }
             }
+            PrintAndLogEx(NORMAL,  payload->versionstr);
             if (strstr(payload->versionstr, "2s30vq100") == NULL) {
                 PrintAndLogEx(NORMAL, "  FPGA firmware... %s", _RED_("chip mismatch"));
             }
 
             lookupChipID(payload->id, payload->section_size);
+            if (armsrc_mismatch) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(WARNING, _RED_("ARM firmware does not match the source at the time the client was compiled"));
+                PrintAndLogEx(WARNING,  "Make sure to flash a correct and up-to-date version");
+            }
         }
     }
     PrintAndLogEx(NORMAL, "");

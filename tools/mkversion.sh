@@ -59,9 +59,11 @@ if [ "$fullgitinfoextra" != "$fullgitinfo" ]; then
     fullgitinfo="${fullgitinfo46}..."
 fi
 sha=$(
-  pm3path=$(dirname -- "$0")/..
-  cd "$pm3path" || return
-  ls armsrc/*.[ch] common_arm/*.[ch]|grep -v disabled|grep -v version_pm3|xargs sha256sum|sha256sum|grep -o '^.........'
+    pm3path=$(dirname -- "$0")/..
+    cd "$pm3path" || return
+    # did we find the src?
+    [ -f armsrc/appmain.c ] || return
+    ls armsrc/*.[ch] common_arm/*.[ch]|grep -v disabled|grep -v version_pm3|xargs sha256sum|sha256sum|grep -o '^.........'
 )
 cat <<EOF
 #include "common.h"
