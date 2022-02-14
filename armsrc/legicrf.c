@@ -520,7 +520,7 @@ void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
     }
 
     // OK
-    reply_ng(CMD_HF_LEGIC_READER, PM3_SUCCESS, (uint8_t*)&len, sizeof(len));
+    reply_ng(CMD_HF_LEGIC_READER, PM3_SUCCESS, (uint8_t *)&len, sizeof(len));
 
 OUT:
     switch_off();
@@ -559,7 +559,7 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
     }
 
     // OK
-    reply_ng(CMD_HF_LEGIC_WRITER, PM3_SUCCESS, (uint8_t*)&len, sizeof(len));
+    reply_ng(CMD_HF_LEGIC_WRITER, PM3_SUCCESS, (uint8_t *)&len, sizeof(len));
 
 OUT:
     switch_off();

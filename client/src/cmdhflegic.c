@@ -448,7 +448,7 @@ static int CmdLegicSim(const char *Cmd) {
                   "Simulates a LEGIC Prime tag.\n"
                   "Following types supported (MIM22, MIM256, MIM1024)",
                   "hf legic sim --22\n"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -580,7 +580,7 @@ static int CmdLegicWrbl(const char *Cmd) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_LEGIC_WRITER, (uint8_t*)payload, sizeof(legic_packet_t) + dlen);
+    SendCommandNG(CMD_HF_LEGIC_WRITER, (uint8_t *)payload, sizeof(legic_packet_t) + dlen);
     free(payload);
 
     uint8_t timeout = 0;
@@ -593,7 +593,7 @@ static int CmdLegicWrbl(const char *Cmd) {
         }
     }
     PrintAndLogEx(NORMAL, "");
-    
+
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Failed writing tag");
         return PM3_ERFTRANS;
@@ -655,7 +655,7 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
     payload->len = len;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_LEGIC_READER, (uint8_t*)payload, sizeof(legic_packet_t));
+    SendCommandNG(CMD_HF_LEGIC_READER, (uint8_t *)payload, sizeof(legic_packet_t));
     PacketResponseNG resp;
 
     uint8_t timeout = 0;
@@ -750,7 +750,7 @@ void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
         memcpy(payload->data, src + i, len);
 
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_LEGIC_ESET, (uint8_t*)payload, sizeof(legic_packet_t) + len);
+        SendCommandNG(CMD_HF_LEGIC_ESET, (uint8_t *)payload, sizeof(legic_packet_t) + len);
         free(payload);
     }
 }
@@ -818,7 +818,7 @@ static int CmdLegicDump(const char *Cmd) {
     payload->len = dumplen;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_LEGIC_READER, (uint8_t*)payload, sizeof(legic_packet_t));
+    SendCommandNG(CMD_HF_LEGIC_READER, (uint8_t *)payload, sizeof(legic_packet_t));
     PacketResponseNG resp;
 
     uint8_t timeout = 0;
@@ -985,7 +985,7 @@ static int CmdLegicRestore(const char *Cmd) {
         memcpy(payload->data, data + i, len);
 
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_LEGIC_WRITER, (uint8_t*)payload, sizeof(legic_packet_t) + len);
+        SendCommandNG(CMD_HF_LEGIC_WRITER, (uint8_t *)payload, sizeof(legic_packet_t) + len);
         free(payload);
 
         uint8_t timeout = 0;
@@ -1019,7 +1019,7 @@ static int CmdLegicELoad(const char *Cmd) {
                   "Loads a LEGIC Prime dump file into emulator memory",
                   "hf legic eload -f myfile\n"
                   "hf legic eload -f myfile --obfuscate\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1073,8 +1073,8 @@ static int CmdLegicELoad(const char *Cmd) {
 
     // validation
     if (bytes_read != LEGIC_PRIME_MIM22 &&
-        bytes_read != LEGIC_PRIME_MIM256 &&
-        bytes_read != LEGIC_PRIME_MIM1024) {
+            bytes_read != LEGIC_PRIME_MIM256 &&
+            bytes_read != LEGIC_PRIME_MIM1024) {
         PrintAndLogEx(ERR, "File content error. Read %zu bytes", bytes_read);
         free(data);
         return PM3_EFILE;
@@ -1099,7 +1099,7 @@ static int CmdLegicESave(const char *Cmd) {
                   "hf legic esave                    --> uses UID as filename\n"
                   "hf legic esave -f myfile --22\n"
                   "hf legic esave -f myfile --22 --de\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1282,7 +1282,7 @@ static int CmdLegicWipe(const char *Cmd) {
         memcpy(payload->data, data + i, len);
 
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_LEGIC_WRITER, (uint8_t*)payload, sizeof(legic_packet_t) + len);
+        SendCommandNG(CMD_HF_LEGIC_WRITER, (uint8_t *)payload, sizeof(legic_packet_t) + len);
         free(payload);
 
         uint8_t timeout = 0;
@@ -1369,11 +1369,11 @@ static int CmdLegicView(const char *Cmd) {
     PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
     print_hex_break(dump, bytes_read, 16);
     free(dump);
-    return PM3_SUCCESS;    
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] =  {
-    {"-----------", CmdHelp,      AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},    
+    {"-----------", CmdHelp,      AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
     {"help",    CmdHelp,          AlwaysAvailable, "This help"},
     {"dump",    CmdLegicDump,     IfPm3Legicrf,    "Dump LEGIC Prime tag to binary file"},
     {"info",    CmdLegicInfo,     IfPm3Legicrf,    "Display deobfuscated and decoded LEGIC Prime tag data"},

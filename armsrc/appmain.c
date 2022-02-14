@@ -1285,12 +1285,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_LEGIC_WRITER: {
-            legic_packet_t *payload = (legic_packet_t*) packet->data.asBytes;
+            legic_packet_t *payload = (legic_packet_t *) packet->data.asBytes;
             LegicRfWriter(payload->offset, payload->len, payload->iv, payload->data);
             break;
         }
         case CMD_HF_LEGIC_READER: {
-            legic_packet_t *payload = (legic_packet_t*) packet->data.asBytes;
+            legic_packet_t *payload = (legic_packet_t *) packet->data.asBytes;
             LegicRfReader(payload->offset, payload->len, payload->iv);
             break;
         }
@@ -1305,7 +1305,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             // destroy the Emulator Memory.
             //-----------------------------------------------------------------------------
             FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-            legic_packet_t *payload = (legic_packet_t*) packet->data.asBytes;
+            legic_packet_t *payload = (legic_packet_t *) packet->data.asBytes;
             emlSet(payload->data, payload->offset, payload->len);
             break;
         }
