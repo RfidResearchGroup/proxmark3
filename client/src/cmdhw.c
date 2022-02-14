@@ -375,8 +375,8 @@ static int CmdDetectReader(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("L", "LF", "detect low frequence 125/134 kHz"),
-        arg_lit0("H", "HF", "detect high frequence 13.56 MHZ"),
+        arg_lit0("L", "LF", "detect low frequency 125/134 kHz"),
+        arg_lit0("H", "HF", "detect high frequency 13.56 MHZ"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -385,7 +385,7 @@ static int CmdDetectReader(const char *Cmd) {
     CLIParserFree(ctx);
 
     if ((lf + hf) > 1) {
-        PrintAndLogEx(INFO, "Can only set one frequence");
+        PrintAndLogEx(INFO, "Can only set one frequency");
         return PM3_EINVARG;
     }
 
