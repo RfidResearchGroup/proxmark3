@@ -14,7 +14,7 @@
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 #include "common.h"
-/* This is the default version_pm3.c file that Makefile.common falls back to if neither sh nor perl are available */
+/* This is the default version_pm3.c file that Makefile.common falls back to if sh is not available */
 #ifndef ON_DEVICE
 #define SECTVERSINFO
 #else
