@@ -933,12 +933,10 @@ static int CmdHF15Info(const char *Cmd) {
     PrintAndLogEx(DEBUG, "Byte 6 :: %02x   Byte 7 :: %02x   Byte 8 :: %02x", data[6], data[7], data[8]);
 
     // SLIX2 uses xxx0 1xxx format on data[6] of UID
-    // Convert to bits to check if pattern match
-    uint8_t data6_bits[sizeof(data[6]) * 8];
-    bytes_to_bytebits(&data[6], sizeof(data[6]), data6_bits);
-    PrintAndLogEx(DEBUG, "Card Type: %u, %u", data6_bits[3], data6_bits[4]);
+    uint8_t nxpversion = data[6] & 0x18;
+    PrintAndLogEx(DEBUG, "NXP Version: %02x", nxpversion);
 
-    if (data[8] == 0x04 && data[7] == 0x01 && data6_bits[3]==0 && data6_bits[4]==1) {
+    if (data[8] == 0x04 && data[7] == 0x01 && nxpversion == 0x08) {
         PrintAndLogEx(DEBUG, "SLIX2 Detected, getting NXP System Info");
         return NxpSysInfo(uid);
     }
