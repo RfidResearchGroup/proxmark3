@@ -210,14 +210,6 @@ $(OBJDIR)/fullimage.stage1.elf: $(VERSIONOBJ) $(OBJDIR)/fpga_all.o $(THUMBOBJ) $
 	$(info [=] LD $@)
 	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -Wl,-T,ldscript,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
-$(OBJDIR)/fullimage.nodata.bin: $(OBJDIR)/fullimage.stage1.elf
-	$(info [-] GEN $@)
-	$(Q)$(CROSS_OBJCOPY) -O binary -I elf32-littlearm --remove-section .data $^ $@
-
-$(OBJDIR)/fullimage.nodata.o: $(OBJDIR)/fullimage.nodata.bin
-	$(info [-] GEN $@)
-	$(Q)$(CROSS_OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=stage1_image $^ $@
-
 $(OBJDIR)/fullimage.data.bin: $(OBJDIR)/fullimage.stage1.elf
 	$(info [-] GEN $@)
 	$(Q)$(CROSS_OBJCOPY) -O binary -I elf32-littlearm --only-section .data $^ $@
@@ -230,14 +222,10 @@ else
 	$(FPGA_COMPRESSOR) $(filter %.bin,$^) $@
 endif
 
-$(OBJDIR)/fullimage.data.o: $(OBJDIR)/fullimage.data.bin.z
-	$(info [-] GEN $@)
-	$(Q)$(CROSS_OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=compressed_data $^ $@
-
-$(OBJDIR)/fullimage.elf: $(OBJDIR)/fullimage.nodata.o $(OBJDIR)/fullimage.data.o
+$(OBJDIR)/fullimage.elf: $(OBJDIR)/fullimage.stage1.elf $(OBJDIR)/fullimage.data.bin.z
 ifeq (,$(findstring WITH_NO_COMPRESSION,$(APP_CFLAGS)))
 	$(info [=] LD $@)
-	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -Wl,-T,ldscript,-e,_osimage_entry,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^
+	$(Q)$(CROSS_OBJCOPY) -O elf32-littlearm -I elf32-littlearm --strip-all --update-section .data=$(OBJDIR)/fullimage.data.bin.z $(OBJDIR)/fullimage.stage1.elf $@
 else
 	$(Q)$(CP) $(OBJDIR)/fullimage.stage1.elf $@
 endif

@@ -24,7 +24,6 @@ SECTIONS
     } >osimage :text
 
     .text : {
-        KEEP(*(stage1_image))
         *(.text)
         *(.text.*)
         *(.eh_frame)
@@ -36,12 +35,10 @@ SECTIONS
         *(.rodata)
         *(.rodata.*)
         *(fpga_all_bit.data)
-        KEEP(*(.version_information))
         . = ALIGN(8);
     } >osimage :text
 
     .data : {
-        KEEP(*(compressed_data))
         *(.data)
         *(.data.*)
         *(.ramfunc)
@@ -52,9 +49,9 @@ SECTIONS
     __data_start__ = ADDR(.data);
     __data_end__ = __data_start__ + SIZEOF(.data);
     __os_size__ = SIZEOF(.text) + SIZEOF(.data) + SIZEOF(.rodata);
-    
+
     .bss : {
-        __bss_start__ = .; 
+        __bss_start__ = .;
         *(.bss)
         *(.bss.*) 
         . = ALIGN(4);
