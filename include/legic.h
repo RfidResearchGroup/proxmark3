@@ -30,7 +30,14 @@ typedef struct {
     uint8_t cmdsize;
     uint8_t addrsize;
     uint16_t cardsize;
-} legic_card_select_t;
+} PACKED legic_card_select_t;
+
+typedef struct {
+    uint16_t offset;
+    uint16_t len;
+    uint8_t iv;
+    uint8_t data[];
+} PACKED legic_packet_t;
 
 // iceman: todo :  this should be packed
 

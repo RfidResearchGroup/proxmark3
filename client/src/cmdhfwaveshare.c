@@ -390,18 +390,18 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
         return PM3_ESOFT;
     }
 
-    int16_t *chanR = calloc(width * height, sizeof(int16_t));
+    int16_t *chanR = calloc(((size_t)width) * height, sizeof(int16_t));
     if (chanR == NULL) {
         return PM3_EMALLOC;
     }
 
-    int16_t *chanG = calloc(width * height, sizeof(int16_t));
+    int16_t *chanG = calloc(((size_t)width) * height, sizeof(int16_t));
     if (chanG == NULL) {
         free(chanR);
         return PM3_EMALLOC;
     }
 
-    int16_t *chanB = calloc(width * height, sizeof(int16_t));
+    int16_t *chanB = calloc(((size_t)width) * height, sizeof(int16_t));
     if (chanB == NULL) {
         free(chanR);
         free(chanG);
@@ -423,14 +423,14 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
 
     if ((model_nr == M1in54B) || (model_nr == M2in13B)) {
         // for BW+Red screens:
-        uint8_t *mapBlack = calloc((uint32_t)(width * height), sizeof(uint8_t));
+        uint8_t *mapBlack = calloc(((size_t)width) * height, sizeof(uint8_t));
         if (mapBlack == NULL) {
             free(chanR);
             free(chanG);
             free(chanB);
             return PM3_EMALLOC;
         }
-        uint8_t *mapRed = calloc((uint32_t)(width * height), sizeof(uint8_t));
+        uint8_t *mapRed = calloc(((size_t)width) * height, sizeof(uint8_t));
         if (mapRed == NULL) {
             free(chanR);
             free(chanG);
@@ -490,7 +490,7 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
         free(mapRed);
     } else {
         // for BW-only screens:
-        int16_t *chanGrey = calloc(width * height, sizeof(int16_t));
+        int16_t *chanGrey = calloc(((size_t)width) * height, sizeof(int16_t));
         if (chanGrey == NULL) {
             free(chanR);
             free(chanG);
@@ -500,7 +500,7 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
         rgb_to_gray(chanR, chanG, chanB, width, height, chanGrey);
         dither_chan_inplace(chanGrey, width, height);
 
-        uint8_t *mapBlack = calloc(width * height, sizeof(uint8_t));
+        uint8_t *mapBlack = calloc(((size_t)width) * height, sizeof(uint8_t));
         if (mapBlack == NULL) {
             free(chanR);
             free(chanG);

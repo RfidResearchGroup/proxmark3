@@ -401,18 +401,20 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf legic help          `|Y       |`This help`
-|`hf legic list          `|Y       |`List LEGIC history`
-|`hf legic reader        `|N       |`LEGIC Prime Reader UID and tag info`
-|`hf legic info          `|N       |`Display deobfuscated and decoded LEGIC Prime tag data`
 |`hf legic dump          `|N       |`Dump LEGIC Prime tag to binary file`
-|`hf legic restore       `|N       |`Restore a dump file onto a LEGIC Prime tag`
+|`hf legic info          `|N       |`Display deobfuscated and decoded LEGIC Prime tag data`
+|`hf legic list          `|Y       |`List LEGIC history`
 |`hf legic rdbl          `|N       |`Read bytes from a LEGIC Prime tag`
-|`hf legic sim           `|N       |`Start tag simulator`
-|`hf legic wrbl          `|N       |`Write data to a LEGIC Prime tag`
-|`hf legic crc           `|Y       |`Calculate Legic CRC over given bytes`
-|`hf legic eload         `|Y       |`Load binary dump to emulator memory`
-|`hf legic esave         `|Y       |`Save emulator memory to binary file`
+|`hf legic reader        `|N       |`LEGIC Prime Reader UID and tag info`
+|`hf legic restore       `|N       |`Restore a dump file onto a LEGIC Prime tag`
 |`hf legic wipe          `|N       |`Wipe a LEGIC Prime tag`
+|`hf legic wrbl          `|N       |`Write data to a LEGIC Prime tag`
+|`hf legic sim           `|N       |`Start tag simulator`
+|`hf legic eload         `|N       |`Load binary dump to emulator memory`
+|`hf legic esave         `|N       |`Save emulator memory to binary file`
+|`hf legic eview         `|N       |`View emulator memory`
+|`hf legic crc           `|Y       |`Calculate Legic CRC over given bytes`
+|`hf legic view          `|Y       |`Display content from tag dump file`
 
 
 ### hf lto

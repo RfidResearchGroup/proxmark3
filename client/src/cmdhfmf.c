@@ -4152,7 +4152,6 @@ static int CmdHF14AMfEView(const char *Cmd) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
         return PM3_EMALLOC;
     }
-    memset(dump, 0, bytes);
 
     PrintAndLogEx(INFO, "downloading emulator memory");
     if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {

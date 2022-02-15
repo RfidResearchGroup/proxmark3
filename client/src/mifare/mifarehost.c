@@ -872,7 +872,7 @@ int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidt
         uint8_t data[];
     } PACKED;
 
-    size_t size = blocksCount * blockBtWidth;
+    size_t size = ((size_t) blocksCount) * blockBtWidth;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(struct p))) {
         return PM3_ESOFT;
     }

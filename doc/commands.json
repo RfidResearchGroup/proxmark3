@@ -3165,15 +3165,65 @@
             ],
             "usage": "hf legic crc [-h] -d <hex> [--mcc <hex>] [-t <dec>]"
         },
-        "hf legic dump": {
-            "command": "hf legic dump",
-            "description": "read all memory from legic prime mim22, mim256, mim1024 and saves bin/eml/json dump file it autodetects card type.",
+        "hf legic eload": {
+            "command": "hf legic eload",
+            "description": "loads a legic prime dump file into emulator memory",
             "notes": [
-                "hf legic dump -> use uid as filename",
-                "hf legic dump -f myfile -> use user specified filename",
-                "hf legic dump --de -> use uid as filename and deobfuscate data"
+                "hf legic eload -f myfile",
+                "hf legic eload -f myfile --obfuscate"
             ],
             "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-f, --file <fn> filename to load",
+                "--obfuscate obfuscate dump data (xor with mcc)"
+            ],
+            "usage": "hf legic eload [-h] -f <fn> [--obfuscate]"
+        },
+        "hf legic esave": {
+            "command": "hf legic esave",
+            "description": "saves a (bin/eml/json) dump file of emulator memory",
+            "notes": [
+                "hf legic esave -> uses uid as filename",
+                "hf legic esave -f myfile --22",
+                "hf legic esave -f myfile --22 --de"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-f, --file <fn> filename to save",
+                "--22 legic prime mim22",
+                "--256 legic prime mim256 (def)",
+                "--1024 legic prime mim1024",
+                "--de de-obfuscate dump data (xor with mcc)"
+            ],
+            "usage": "hf legic esave [-h] [-f <fn>] [--22] [--256] [--1024] [--de]"
+        },
+        "hf legic eview": {
+            "command": "hf legic eview",
+            "description": "it displays emulator memory",
+            "notes": [
+                "hf legic eview",
+                "hf legic eview --22"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "--22 legic prime mim22",
+                "--256 legic prime mim256 (def)",
+                "--1024 legic prime mim1024"
+            ],
+            "usage": "hf legic eview [-h] [--22] [--256] [--1024]"
+        },
+        "hf legic help": {
+            "command": "hf legic help",
+            "description": "----------- --------------------- operations --------------------- help this help list list legic history ----------- --------------------- simulation --------------------- ----------- --------------------- utils --------------------- crc calculate legic crc over given bytes view display content from tag dump file --------------------------------------------------------------------------------------- hf legic dump available offline: no read all memory from legic prime tags and saves to (bin/eml/json) dump file it autodetects card type (mim22, mim256, mim1024)",
+            "notes": [
+                "hf legic dump -> use uid as filename",
+                "hf legic dump -f myfile",
+                "hf legic dump --de -> use uid as filename and deobfuscate data"
+            ],
+            "offline": true,
             "options": [
                 "-h, --help this help",
                 "-f, --file <fn> dump filename",
@@ -3181,44 +3231,21 @@
             ],
             "usage": "hf legic dump [-h] [-f <fn>] [--de]"
         },
-        "hf legic eload": {
-            "command": "hf legic eload",
-            "description": "loads a legic binary dump into emulator memory",
+        "hf legic info": {
+            "command": "hf legic info",
+            "description": "gets information from a legic prime tag like systemarea, user areas, etc",
             "notes": [
-                "hf legic eload -f myfile -t 0 -> simulate type mim22",
-                "hf legic eload -f myfile -t 1 -> simulate type mim256 (default)",
-                "hf legic eload -f myfile -t 2 -> simulate type mim1024"
+                "hf legic info"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
-                "-h, --help this help",
-                "-f, --file <fn> filename to restore",
-                "-t, --type <dec> tag type to simulate.",
-                "--obfuscate obfuscate dump data (xor with mcc)"
+                "-h, --help this help"
             ],
-            "usage": "hf legic eload [-h] -f <fn> [-t <dec>] [--obfuscate]"
+            "usage": "hf legic info [-h]"
         },
-        "hf legic esave": {
-            "command": "hf legic esave",
-            "description": "saves bin/eml/json dump file of emulator memory",
-            "notes": [
-                "hf legic esave -> uses uid as filename",
-                "hf legic esave -f myfile -t 0 -> type mim22",
-                "hf legic esave -f myfile -t 1 -> type mim256 (default)",
-                "hf legic esave -f myfile -t 2 -> type mim1024"
-            ],
-            "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-f, --file <fn> filename to save",
-                "-t, --type <dec> tag type",
-                "--deobfuscate de-obfuscate dump data (xor with mcc)"
-            ],
-            "usage": "hf legic esave [-h] [-f <fn>] [-t <dec>] [--deobfuscate]"
-        },
-        "hf legic help": {
-            "command": "hf legic help",
-            "description": "help this help list list legic history crc calculate legic crc over given bytes eload load binary dump to emulator memory esave save emulator memory to binary file --------------------------------------------------------------------------------------- hf legic list available offline: yes alias of `trace list -t legic` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
+        "hf legic list": {
+            "command": "hf legic list",
+            "description": "alias of `trace list -t legic` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf legic list -f -> show frame delay times",
                 "hf legic list -1 -> use trace buffer"
@@ -3237,25 +3264,13 @@
             ],
             "usage": "hf legic list [-h1fcrux] [--dict <file>]"
         },
-        "hf legic info": {
-            "command": "hf legic info",
-            "description": "gets information from a legic prime tag like systemarea, user areas, etc",
-            "notes": [
-                "hf legic info"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help this help"
-            ],
-            "usage": "hf legic info [-h]"
-        },
         "hf legic rdbl": {
             "command": "hf legic rdbl",
             "description": "read data from a legic prime tag",
             "notes": [
-                "hf legic rdbl -o 0 -l 16 -> reads from byte[0] 16 bytes(system header)",
-                "hf legic rdbl -o 0 -l 4 --iv 55 -> reads from byte[0] 4 bytes with iv 0x55",
-                "hf legic rdbl -o 0 -l 256 --iv 55 -> reads from byte[0] 256 bytes with iv 0x55"
+                "hf legic rdbl -o 0 -l 16 -> read 16 bytes from offset 0 (system header)",
+                "hf legic rdbl -o 0 -l 4 --iv 55 -> read 4 bytes from offset 0",
+                "hf legic rdbl -o 0 -l 256 --iv 55 -> read 256 bytes from offset 0"
             ],
             "offline": false,
             "options": [
@@ -3264,7 +3279,7 @@
                 "-l, --length <dec> number of bytes to read",
                 "--iv <hex> initialization vector to use. must be odd and 7bits max"
             ],
-            "usage": "hf legic rdbl [-h] -o <dec> -l <dec> [--iv <hex>]"
+            "usage": "hf legic rdbl [-h] [-o <dec>] [-l <dec>] [--iv <hex>]"
         },
         "hf legic reader": {
             "command": "hf legic reader",
@@ -3281,7 +3296,7 @@
         },
         "hf legic restore": {
             "command": "hf legic restore",
-            "description": "reads binary file and it autodetects card type and verifies that the file has the same size then write the data back to card. all bytes except the first 7bytes [uid(4) mcc(1) dcf(2)]",
+            "description": "reads (bin/eml/json) file and it autodetects card type and verifies that the file has the same size then write the data back to card. all bytes except the first 7bytes [uid(4) mcc(1) dcf(2)]",
             "notes": [
                 "hf legic restore -f myfile -> use user specified filename",
                 "hf legic restore -f myfile --ob -> use uid as filename and obfuscate data"
@@ -3296,18 +3311,31 @@
         },
         "hf legic sim": {
             "command": "hf legic sim",
-            "description": "simulates a legic prime tag. mim22, mim256, mim1024 types can be emulated",
+            "description": "simulates a legic prime tag. following types supported (mim22, mim256, mim1024)",
             "notes": [
-                "hf legic sim -t 0 -> simulate type mim22",
-                "hf legic sim -t 1 -> simulate type mim256 (default)",
-                "hf legic sim -t 2 -> simulate type mim1024"
+                "hf legic sim --22"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-t, --type <dec> tag type to simulate."
+                "--22 legic prime mim22",
+                "--256 legic prime mim256 (def)",
+                "--1024 legic prime mim1024"
             ],
-            "usage": "hf legic sim [-h] [-t <dec>]"
+            "usage": "hf legic sim [-h] [--22] [--256] [--1024]"
+        },
+        "hf legic view": {
+            "command": "hf legic view",
+            "description": "print a legic prime dump file (bin/eml/json)",
+            "notes": [
+                "hf legic view -f hf-legic-01020304-dump.bin"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "-f, --file <fn> filename of dump"
+            ],
+            "usage": "hf legic view [-h] -f <fn>"
         },
         "hf legic wipe": {
             "command": "hf legic wipe",
@@ -6258,8 +6286,8 @@
             "offline": false,
             "options": [
                 "-h, --help this help",
-                "-l, --lf detect low frequence 125/134 khz",
-                "-h, --hf detect high frequence 13.56 mhz"
+                "-l, --lf detect low frequency 125/134 khz",
+                "-h, --hf detect high frequency 13.56 mhz"
             ],
             "usage": "hw detectreader [-hlh]"
         },
@@ -10415,8 +10443,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 606,
+        "commands_extracted": 608,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-02-13T11:23:34"
+        "extracted_on": "2022-02-14T20:43:01"
     }
 }
