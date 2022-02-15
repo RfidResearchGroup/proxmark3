@@ -217,7 +217,7 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
         // seeking for trailing zeroes
         long offset = 0;
         long outfilesizes[10] = {0};
-        for (uint16_t k = 0; k < *outsize / (FPGA_INTERLEAVE_SIZE * num_outfiles); k++) {
+        for (long k = 0; k < *outsize / (FPGA_INTERLEAVE_SIZE * num_outfiles); k++) {
             for (uint16_t j = 0; j < num_outfiles; j++) {
                 for (long i = 0; i < FPGA_INTERLEAVE_SIZE; i++) {
                     if (outbufall[offset + i]) {
@@ -234,7 +234,7 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
             total_size += outfilesizes[j];
         }
         offset = 0;
-        for (uint16_t k = 0; k < *outsize / (FPGA_INTERLEAVE_SIZE * num_outfiles); k++) {
+        for (long k = 0; k < *outsize / (FPGA_INTERLEAVE_SIZE * num_outfiles); k++) {
             for (uint16_t j = 0; j < num_outfiles; j++) {
                 if (k * FPGA_INTERLEAVE_SIZE < outfilesizes[j]) {
                     uint16_t chunk = outfilesizes[j] - (k * FPGA_INTERLEAVE_SIZE) < FPGA_INTERLEAVE_SIZE ? outfilesizes[j] - (k * FPGA_INTERLEAVE_SIZE) : FPGA_INTERLEAVE_SIZE;
@@ -275,7 +275,7 @@ static int bitparse_find_section(FILE *infile, char section_name, unsigned int *
             /* Strange section name, abort */
             break;
         }
-        unsigned int current_length = 0;
+        uint32_t current_length = 0;
         int tmp;
         switch (current_name) {
             case 'e':
@@ -313,7 +313,7 @@ static int bitparse_find_section(FILE *infile, char section_name, unsigned int *
             break;
         }
 
-        for (uint16_t i = 0; i < current_length && numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH; i++) {
+        for (uint32_t i = 0; i < current_length && numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH; i++) {
             (void)fgetc(infile);
             numbytes++;
         }
@@ -322,7 +322,7 @@ static int bitparse_find_section(FILE *infile, char section_name, unsigned int *
 }
 
 static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len) {
-    unsigned int fpga_info_len;
+    uint32_t fpga_info_len;
     char tempstr[40] = {0x00};
 
     dst[0] = '\0';
@@ -344,7 +344,7 @@ static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len
     strncat(dst, " image built", len - strlen(dst) - 1);
     if (bitparse_find_section(infile, 'b', &fpga_info_len)) {
         strncat(dst, " for ", len - strlen(dst) - 1);
-        for (uint16_t i = 0; i < fpga_info_len; i++) {
+        for (uint32_t i = 0; i < fpga_info_len; i++) {
             char c = (char)fgetc(infile);
             if (i < sizeof(tempstr)) {
                 tempstr[i] = c;
@@ -355,7 +355,7 @@ static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len
 
     if (bitparse_find_section(infile, 'c', &fpga_info_len)) {
         strncat(dst, " on ", len - strlen(dst) - 1);
-        for (uint16_t i = 0; i < fpga_info_len; i++) {
+        for (uint32_t i = 0; i < fpga_info_len; i++) {
             char c = (char)fgetc(infile);
             if (i < sizeof(tempstr)) {
                 if (c == '/') c = '-';
@@ -368,7 +368,7 @@ static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len
 
     if (bitparse_find_section(infile, 'd', &fpga_info_len)) {
         strncat(dst, " at ", len - strlen(dst) - 1);
-        for (uint16_t i = 0; i < fpga_info_len; i++) {
+        for (uint32_t i = 0; i < fpga_info_len; i++) {
             char c = (char)fgetc(infile);
             if (i < sizeof(tempstr)) {
                 if (c == ' ') c = '0';
@@ -428,10 +428,10 @@ int main(int argc, char **argv) {
             usage();
             return (EXIT_FAILURE);
         }
-        int num_output_files = argc - 3;
+        uint8_t num_output_files = argc - 3;
         FILE **outfiles = calloc(num_output_files, sizeof(FILE *));
         char **outfile_names = calloc(num_output_files, sizeof(char *));
-        for (uint16_t i = 0; i < num_output_files; i++) {
+        for (uint8_t i = 0; i < num_output_files; i++) {
             outfile_names[i] = argv[i + 3];
             outfiles[i] = fopen(outfile_names[i], "wb");
             if (outfiles[i] == NULL) {
@@ -463,7 +463,7 @@ int main(int argc, char **argv) {
     } else { // Compress or generate version info
 
         bool generate_version_file = false;
-        int num_input_files = 0;
+        uint8_t num_input_files = 0;
         if (!strcmp(argv[1], "-v")) {  // generate version info
             generate_version_file = true;
             num_input_files = argc - 3;
@@ -473,7 +473,7 @@ int main(int argc, char **argv) {
 
         FILE **infiles = calloc(num_input_files, sizeof(FILE *));
         char **infile_names = calloc(num_input_files, sizeof(char *));
-        for (uint16_t i = 0; i < num_input_files; i++) {
+        for (uint8_t i = 0; i < num_input_files; i++) {
             infile_names[i] = argv[i + (generate_version_file ? 2 : 1)];
             infiles[i] = fopen(infile_names[i], "rb");
             if (infiles[i] == NULL) {
