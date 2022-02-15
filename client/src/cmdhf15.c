@@ -930,8 +930,16 @@ static int CmdHF15Info(const char *Cmd) {
     }
 
     // Check if SLIX2 and attempt to get NXP System Information
-    PrintAndLogEx(DEBUG, "4 & 08 :: %02x   7 == 1 :: %u   8 == 4 :: %u", data[4], data[7], data[8]);
-    if (data[8] == 0x04 && data[7] == 0x01 && data[4] & 0x80) {
+    PrintAndLogEx(DEBUG, "Byte 6 :: %02x   Byte 7 :: %02x   Byte 8 :: %02x", data[6], data[7], data[8]);
+
+    // SLIX2 uses xxx0 1xxx format on data[6] of UID
+    // Convert to bits to check if pattern match
+    uint8_t data6_bits[sizeof(data[6]) * 8];
+    bytes_to_bytebits(&data[6], sizeof(data[6]), data6_bits);
+    PrintAndLogEx(DEBUG, "Card Type: %u, %u", data6_bits[3], data6_bits[4]);
+
+    if (data[8] == 0x04 && data[7] == 0x01 && data6_bits[3]==0 && data6_bits[4]==1) {
+        PrintAndLogEx(DEBUG, "SLIX2 Detected, getting NXP System Info");
         return NxpSysInfo(uid);
     }
 
