@@ -345,8 +345,8 @@ int flash_check(flash_file_t *ctx, const char *name) {
         goto fail;
     }
 
-    for(uint16_t i=0; i<ehdr.e_shnum; i++) {
-        if (strcmp(((char *)shstr) + shdrs[i].sh_name, ".version_information")==0){
+    for (uint16_t i = 0; i < ehdr.e_shnum; i++) {
+        if (strcmp(((char *)shstr) + shdrs[i].sh_name, ".version_information") == 0) {
             vi = calloc(shdrs[i].sh_size, sizeof(uint8_t));
             if (!vi) {
                 PrintAndLogEx(ERR, "Out of memory");
@@ -365,8 +365,8 @@ int flash_check(flash_file_t *ctx, const char *name) {
             }
             if (strlen(g_version_information.armsrc) == 9) {
                 if (strncmp(vi->armsrc, g_version_information.armsrc, 9) != 0) {
-                        PrintAndLogEx(WARNING, _RED_("ARM firmware does not match the source at the time the client was compiled"));
-                        PrintAndLogEx(WARNING,  "Make sure to flash a correct and up-to-date version");
+                    PrintAndLogEx(WARNING, _RED_("ARM firmware does not match the source at the time the client was compiled"));
+                    PrintAndLogEx(WARNING,  "Make sure to flash a correct and up-to-date version");
 // TODO: prompt user to continue or abort
                 }
             }

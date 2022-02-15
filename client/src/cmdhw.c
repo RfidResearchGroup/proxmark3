@@ -1077,7 +1077,7 @@ void pm3_version(bool verbose, bool oneliner) {
             if (ptr != NULL) {
                 ptr = strstr(ptr, "\n");
                 if ((ptr != NULL) && (strlen(g_version_information.armsrc) == 9)) {
-                    if (strncmp(ptr-9, g_version_information.armsrc, 9) != 0) {
+                    if (strncmp(ptr - 9, g_version_information.armsrc, 9) != 0) {
                         armsrc_mismatch = true;
                     }
                 }
