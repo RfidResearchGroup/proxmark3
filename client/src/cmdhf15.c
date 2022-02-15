@@ -931,12 +931,10 @@ static int CmdHF15Info(const char *Cmd) {
 
     // Check if SLIX2 and attempt to get NXP System Information
     PrintAndLogEx(DEBUG, "Byte 6 :: %02x   Byte 7 :: %02x   Byte 8 :: %02x", data[6], data[7], data[8]);
-
     // SLIX2 uses xxx0 1xxx format on data[6] of UID
-    uint8_t nxpversion = data[6] & 0x18;
-    PrintAndLogEx(DEBUG, "NXP Version: %02x", nxpversion);
-
-    if (data[8] == 0x04 && data[7] == 0x01 && nxpversion == 0x08) {
+    uint8_t nxp_version = data[6] & 0x18;
+    PrintAndLogEx(DEBUG, "NXP Version: %02x", nxp_version);
+    if (data[8] == 0x04 && data[7] == 0x01 && nxp_version == 0x08) {
         PrintAndLogEx(DEBUG, "SLIX2 Detected, getting NXP System Info");
         return NxpSysInfo(uid);
     }
